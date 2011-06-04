@@ -1,78 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 4 Jun 2011 17:20:54 +0400
+Date: Sat, 4 Jun 2011 22:19:11 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110604132054.GC2583@openwall.com>
-References: <20110603191153.GB514@openwall.com> <20110604054758.GA4063@albatros>
+Message-ID: <20110604181911.GC5034@openwall.com>
+References: <20110518150601.GA2921@albatros> <20110524023409.GC12486@openwall.com> <20110524151246.GA3401@albatros> <4DE139FE.8050808@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110604054758.GA4063@albatros>
-Subject: Re: [kernel-hardening] procfs mount options
+In-Reply-To: <4DE139FE.8050808@gmail.com>
+Subject: [kernel-hardening] /proc/PID directory hiding (was: [owl-dev] segoon's status report - #1 of 15)
 To: kernel-hardening@lists.openwall.com
+Cc: Pavel Labushev <p.labushev@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy,
+Pavel, Vasiliy -
 
-On Sat, Jun 04, 2011 at 09:47:58AM +0400, Vasiliy Kulikov wrote:
-> I think it should be done with separate mount options for /proc/self/net
-> (/proc/net is a symlink to /proc/self/net since net namespaces
-> introduction) and for /proc/PID.
-
-OK.  What do we call these?  pmask (for "p"rocesses) and nmask (for
-"n"etwork)?  Doesn't this deviation from umask reduce the chances of the
-patch getting accepted?..  And is there really much reason to let a user
-see others' processes, but not network connections, or vice versa?
-(Maybe there is.)
-
-> All other files should be e.g.
-> chmod'ed go= and then some white list should be chmod'ed to the relaxed
-> perms.
-
-Where would this logic be implemented - hard-coded in the kernel
-(enabled with some mount option?) or done by a script in the userspace
-post-mount?
-
-> > Indeed, we could set some of these perms with chmod post-mount, but as
-> > discussed this has drawbacks.
+On Sun, May 29, 2011 at 02:07:58AM +0800, Pavel Labushev wrote:
+> 24.05.2011 23:12, Vasiliy Kulikov wrote:
 > 
-> Where its drawbacks were discussed?
-
-IIRC, you, I, and some others discussed them via Jabber.
-
-> I cannot find anything on
-> owl-dev.  Do you mean some possible diffirences between procfs files
-> among different kernel versions?  If so, white list instead of black
-> list should partly solve it.
-
-No, I meant race conditions, which you had to deal with by mounting
-under a parent directory with restricted perms, then mount --move'ing.
-Part of the intent of us patching the kernel is to avoid having to do
-things like that.  Also, an admin might just "mount /proc", not knowing
-that special userspace magic was implemented by the distro.
-
-A possible approach is to implement mount options gid=... and restricted
-(name suggested by spender), where the latter would enable a hard-coded
-set of permissions.  This is not generic, but at least it's simple, not
-confusing, and it allows for future changes (we may change what exactly
-restricted means).
-
-> > So ideally our preferred configuration
-> > (which will be the default on Owl) should be achievable with mount
-> > options alone.
+> > I've implemented restricted perms, but didn't do actual hiding
+> > directories.  In grsecurity it is implemented by hiding directories from
+> > processes that cannot access them.
+> > 
+> > I think it may be defective by design because there are many other ways
 > 
-> At least for sysfs it is unreachable if we go in the current direction -
-> umask doesn't change perms of already created files, and additional
-> "chmod -R" is needed anyway.
+> It is:
+> $ python -c 'import os; print os.stat("/proc/1")'
+> posix.stat_result(st_mode=16744, st_ino=535821L, st_dev=3L, st_nlink=6,
+> st_uid=0, st_gid=0, st_size=0L, st_atime=1306605485, st_mtime=1306605485,
+> st_ctime=1306605485)
+> 
+> It's a known flaw and AFAIR it was considered irrelevant.
 
-Hmm.  I guess I still don't understand your umask vs. mode stuff.
+Is the above on grsecurity?
 
-Ideally, I'd have umask apply to each instance of sysfs (and other
-special filesystems) individually, affecting all files under that
-instance (both those already existing in the kernel at the time of mount
-and those appearing after mount).  But perhaps that's not how the kernel
-keeps track of permissions for those filesystems currently?  (Sorry, I
-haven't played with this since Linux 2.4, which didn't even have sysfs.)
+I think we may choose to restrict more than just directory listing -
+that is, have these entries invisible even when referenced by full
+pathnames.
 
-Thanks,
+As to probing for PIDs with syscalls such as kill(2), we may deal with
+that as well (but we'd need to consider potential performance impact, as
+well as timing attacks), or may choose not to do it.  Arguably, we
+primarily want to hide UIDs/GIDs of running processes, not their PIDs.
 
 Alexander
