@@ -1,129 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 5 Jun 2011 23:47:46 +0400
+Date: Sun, 5 Jun 2011 23:53:43 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110605194746.GA6484@albatros>
+Message-ID: <20110605195343.GA6608@albatros>
 References: <20110603191153.GB514@openwall.com>
  <20110604054758.GA4063@albatros>
  <20110604132054.GC2583@openwall.com>
  <20110604200948.GA5850@shinshilla>
  <20110604205955.GA5972@openwall.com>
- <20110605182430.GA5789@albatros>
- <20110605192641.GA9240@openwall.com>
+ <20110605191747.GA6174@albatros>
+ <20110605194052.GA9370@openwall.com>
 MIME-Version: 1.0
 Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="RnlQjJ0d97Da+TV1"
+	protocol="application/pgp-signature"; boundary="uAKRQypu60I7Lcqm"
 Content-Disposition: inline
-In-Reply-To: <20110605192641.GA9240@openwall.com>
-Subject: Re: [kernel-hardening] [RFC v1] procfs mount options
+In-Reply-To: <20110605194052.GA9370@openwall.com>
+Subject: Re: [kernel-hardening] procfs mount options
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---RnlQjJ0d97Da+TV1
+--uAKRQypu60I7Lcqm
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
 
 Solar,
 
-On Sun, Jun 05, 2011 at 23:26 +0400, Solar Designer wrote:
-> On Sun, Jun 05, 2011 at 10:24:31PM +0400, Vasiliy Kulikov wrote:
-> > This patch introduces support of procfs mount options and adds mount
-> > options to restrict access to /proc/PID/ directories and /proc/PID/net/
-> > contents.  The default backward-compatible behaviour is left untouched.
-> >=20
-> > The first mount option is called "hidepid" and its value defines how mu=
-ch
-> > info about processes we want to be available for non-owners:
-> >=20
-> > hidepid=3D0 (default) means the current behaviour - anybody may read all
-> > /proc/PID/* files.
->=20
-> Aren't some /prod/PID/* files restricted by default, in stock kernels?
-> I think several are (auxv, fd/, mem).  So perhaps re-word this.
+On Sun, Jun 05, 2011 at 23:40 +0400, Solar Designer wrote:
+> Since recent versions of OpenVZ build upon the namespaces code that has
+> been upstream'ed, I guess this will rely on upstream's namespaces code
+> (once we move to RHEL6'ish OpenVZ kernels and beyond), correct?
 
-Yes, I've mentioned still accessible files in hidepid=3D1.  Will do.
+Namespaces - yes.  But AFAIK, only a pair of sysctls is accessible in
+containers, IIRC, only net sysctls.
 
-> > hidepid=3D1 means all files not running as current user and group are
->=20
-> "... files not running ..." needs to be re-worded.
+> Now, leaving sysctl's aside and speaking of mount options only for now,
+> what happens when a container mounts /proc with umask=3D007, but then
+> another container mounts /proc without that option or with umask=3D0?
+> Does the first container retain its restricted perms, including for
+> newly appearing entries under its /proc?  If so, where is this different
+> setting stored?  Is it per mount (preferable)?  Is it per pid namespace
+> (OK)?
 
-Oops, made a mistake while rewording.
+It is per-pid_namespace, it should be fully consistent with OpenVZ.
 
-> > TODO/thoughs:
-> >   - /proc/pid/net/ currently doesn't show ANYTHING, even "." and "..".
-> >     This is confusing :)
->=20
-> Ouch.  Can't you simply restrict its perms such that this directory
-> can't be listed unless you have privs?
-
-Well, yes, but it would touch too many code - currently it is handled as
-an entry in a static table.  Changing this would touch many high level
-loops of the table handling.  Hiding its contents is just simplier.
-
-Another solution - create a fake net namespace and process this
-namespace if not enough permissions :)  It also removes weird netstat
-errors like "seems like networking was disabled for this kernel".
-
->  It should act as a normal mode
-> 550 directory on a regular filesystem.
-
-What 550 perms would give?  /proc/pid/net/ contains all network
-information about _all_ network connections in current net namespace.
-So, /proc/1/net and /proc/2/net are logically the same directory.
-
-However, changing the mode to 550 _and_ changing uid and gid will help.
-
-> >   - need to alter "(inode->i_mode =3D=3D (S_IFDIR|S_IRUGO|S_IXUGO))" ch=
-ecks
-> >     to honour non-pid directories.
->=20
-> I see this in the patch, but can't really comment without reviewing the
-> code in full context myself.
-
-As Spender commented, this is a weird thing to recognize pids from other
-files, which is needed due to some weird caching :)
-
-> >   - what if one keeps open /proc/PID/ while executing set*id/capable
-> >     binary?
->=20
-> Then they deliberately grant this privilege to this process (and maybe
-> to its heirs).  I see no problem with that.
-
-Ehh...  I mean another thing:
-
-Process A with UID=3D1000 opens /proc/123/, while 123 has UID=3D1000.
-
-123 exec's setuid binary, /proc/123/ becomes unaccessible to A.
-
-However, A still keeps the directory opened and may read its contents.
-
-> > +	if (pid->hide_net &&
-> > +	    (!capable(CAP_NET_ADMIN) && !in_group_p(pid->pid_gid)))
->=20
-> capable() sets a flag when it makes use of the capability (or at least
-> it used to), visible via pacct.  So, unless anything has changed in this
-> area, it is best to check capable() last, such that it's only reached
-> when it actually makes a difference.  Thus, I'd write:
->=20
-> 	if (pid->hide_net && !in_group_p(pid->pid_gid) &&
-> 	    !capable(CAP_NET_ADMIN))
-
-OK.
-
-> Also, what did you mean by the extra braces?  Just separating the
-> setting check from the permissions check for readability?
-
-Initially I wrote some ||, so the braces were needed.  Will remove.
-
-
-Thanks you for the comments, will fix and repost,
+Thanks,
 
 --=20
 Vasiliy
 
---RnlQjJ0d97Da+TV1
+--uAKRQypu60I7Lcqm
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: Digital signature
 Content-Disposition: inline
@@ -131,19 +58,19 @@ Content-Disposition: inline
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iQIcBAEBAgAGBQJN691cAAoJEBoUx9gkVaZcCmwP/RffSn81sl+iwg5gpQY+t4cY
-SM9WEOC5qGdMRUmFE5B6Ihx/johHze5uHWlUlY6XqUsUQE4PyDsfNzy4j4OUBCkF
-IUptEVATQg/bhU3Vz42BCpGgGRuZX9RCJI/weYslXxzxC7wTp3WZNyn6nuvvMBE6
-Ap2MJgPA/I13VP6MmDUAHG77FOECEMPGcXqP0D0YbmSgoCU58nwevEF1wyD1phJ1
-3LL1Yz11+d99aVFlsgnil1B5UMLssTtH8C0gFhvpSHSe0PawbqhCqWnVlm+P62ph
-dqXKKeg2f9KzcRaDGSRm6WBFwRq0wBWITM/k2aSStgwtJUWfPP7wuWYCotwTYan+
-ObcCs5FUVYkF2xVm3T4qhLXa5nvANLczVL/xGHWx5E/ibnfU16tPRnmLO7u12MQ6
-Q2nkE1B9XGI54SaUtJT+59ALdv/Lho9jz3HLP/b6Z4Gswklgkvx8+5ZBdSPRvdR4
-M/dJmP0bCwOybe4jo3I/21ZaQdAjkpc3bqoPF5IKkzyl2fzDME1iFjUInE17TtG5
-OzsgvEz6/uGI8AS/amwm0B8Luw8gwsn99I8uobHqML8fi6XplYz60ZdGWbh1E3S5
-sLKqnxrHpjPz8Yf0ZZkvvXZ9yy+CyigwkgQsM/3ph4lbLqIqeC5Molv+3MQHEy18
-bXFoYSprbDESvqaeREF9
-=AFhC
+iQIcBAEBAgAGBQJN697HAAoJEBoUx9gkVaZciOcP/j/L7K3LiD7cmEH6jnBoEHYU
+REHRU8cC/Mrns8gmnX3EXBE3aScc6yStMflIwCYJSw30S8lWJjWnsl8+21VQGOPP
++Z0hD7sYU46MNMLdrVCXRooLLezokDKnXMiqd4g8wI2QW7puQUIp3Xjj+gXRCR+L
+kP2cUg79BYhuQSJeN4Nd1odNfIZ7Ak5y070so01skNvo4RfQRhdJx/fYXKQr9QSG
+91ul0lBxQPO/jWrzyZsyMA14vogA8RzZ/Njv2o2bCXE7siQUKgo8hH0YC9uu014/
+FCYY9iK4gTPLWlaGnXKt6oZDl+ddOi80/YiPxkI7QulRcNBEP1FYvR5szlLz67EY
+VxlP0aXnKDD/1s6sjAzRawP6ZsFlGMcYfRYS5ZK/88HMfCGG1qmkr4h0YZx3bxw5
+oubXyq99EbUlwJG4Ivnktv/6aD/qqa8ZfFJ+z8HM/SvrvXJeJpfyBCSfGZGaWvBo
+RxZNfbHM7XyT7MJeF7BXWz8vcKty9Hnem4kruM0dHnF6KCKcvFPeBi55zkwMW3S0
++tqMji8BZI9i9Dh29eCyTP4CFBLNxoV8rfKESszfxqy2meXdyXEN8orfhCZ3hjUG
+dx+woYqBGt+nKL9jLyhx37YcrhnNFiQOd5n7ojmxiz5KY5oVSRXakOrAvZ+bT2mW
+7wYU3UxFc8MviPNnIzM5
+=ZZuI
 -----END PGP SIGNATURE-----
 
---RnlQjJ0d97Da+TV1--
+--uAKRQypu60I7Lcqm--
