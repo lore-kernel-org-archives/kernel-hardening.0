@@ -1,64 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 6 Jun 2011 00:04:40 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110605200438.GA7344@albatros>
-References: <20110605182830.GB5789@albatros>
- <20110605183027.GA5859@albatros>
- <20110605194440.GA9413@openwall.com>
-MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="n8g4imXOkfNTN/H1"
+Date: Mon, 6 Jun 2011 00:10:25 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20110605201025.GA9541@openwall.com>
+References: <20110603191153.GB514@openwall.com> <20110604054758.GA4063@albatros> <20110604132054.GC2583@openwall.com> <20110604200948.GA5850@shinshilla> <20110604205955.GA5972@openwall.com> <20110605182430.GA5789@albatros> <20110605192641.GA9240@openwall.com> <20110605194746.GA6484@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110605194440.GA9413@openwall.com>
-Subject: Re: [kernel-hardening] [RFC v1] debugfs mount options
+In-Reply-To: <20110605194746.GA6484@albatros>
+Subject: Re: [kernel-hardening] [RFC v1] procfs mount options
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sun, Jun 05, 2011 at 11:47:46PM +0400, Vasiliy Kulikov wrote:
+> On Sun, Jun 05, 2011 at 23:26 +0400, Solar Designer wrote:
+> > On Sun, Jun 05, 2011 at 10:24:31PM +0400, Vasiliy Kulikov wrote:
+> > > TODO/thoughs:
+> > >   - /proc/pid/net/ currently doesn't show ANYTHING, even "." and "..".
+> > >     This is confusing :)
+> > 
+> > Ouch.  Can't you simply restrict its perms such that this directory
+> > can't be listed unless you have privs?
+> 
+> Well, yes, but it would touch too many code - currently it is handled as
+> an entry in a static table.  Changing this would touch many high level
+> loops of the table handling.  Hiding its contents is just simplier.
+> 
+> Another solution - create a fake net namespace and process this
+> namespace if not enough permissions :)  It also removes weird netstat
+> errors like "seems like networking was disabled for this kernel".
 
---n8g4imXOkfNTN/H1
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+This sounds good to me, although I am not familiar with namespaces.
 
-Solar,
+> > It should act as a normal mode 550 directory on a regular filesystem.
+> 
+> What 550 perms would give?  /proc/pid/net/ contains all network
+> information about _all_ network connections in current net namespace.
+> So, /proc/1/net and /proc/2/net are logically the same directory.
+> 
+> However, changing the mode to 550 _and_ changing uid and gid will help.
 
-On Sun, Jun 05, 2011 at 23:44 +0400, Solar Designer wrote:
-> However, please note that some Linux distros running in containers will
-> happen to mount sysfs, which with OpenVZ provides some very limited
-> functionality (just to make those distros happy).  Perhaps whatever you
-> implement will need to be consistent/compatible with that.
+I implied that the gid would be the one set by our gid option.
 
-Ah, I used OpenVZ with sysfs feature disabled.  I thought it is just
-left blank.  In the code I see it is indeed functional.  Will look into
-this.
+> > >   - what if one keeps open /proc/PID/ while executing set*id/capable
+> > >     binary?
+> > 
+> > Then they deliberately grant this privilege to this process (and maybe
+> > to its heirs).  I see no problem with that.
+> 
+> Ehh...  I mean another thing:
+> 
+> Process A with UID=1000 opens /proc/123/, while 123 has UID=1000.
+> 
+> 123 exec's setuid binary, /proc/123/ becomes unaccessible to A.
+> 
+> However, A still keeps the directory opened and may read its contents.
 
-Thanks!
+Oh, this is a valid concern.  Please research this.  Perhaps there
+should be a may-ptrace check (or maybe more than one).
 
---=20
-Vasiliy
+As it relates to privacy, there's little need for this, because the user
+started those processes on their own (in fact, this is a reason why the
+user may want to be able to see those processes, despite of procfs perms).
 
---n8g4imXOkfNTN/H1
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-Content-Disposition: inline
+However, if our concern is that the processes may leak sensitive data
+the user is not supposed to see, then we need to restrict this.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.10 (GNU/Linux)
+Overall, it makes sense either to relax things such that /proc/PID have
+real UID rather than effective UID as their owner (so we make such
+access to almost-own processes legitimate) or to have the proper
+may-ptrace checks in place (such that permissions are actually enforced).
+Maybe this should be another mount option.  But this feels like too much
+complexity for an obscure option that few people will understand and use.
 
-iQIcBAEBAgAGBQJN6+FRAAoJEBoUx9gkVaZcq4cQAI/NKe74YDfByP5OvsP1uc6a
-si6yOVHxu4twxUVfYdNBL9rTDGLD1qfquu7msJ8xHcTvAPJJAPQ1ZJSN3gbv3u8J
-TYoZQRDMwRgZ18amCPF70hXgNVFJliGfRl7o/OAoNfNErV40/dOs8li5P/XXQljM
-+FtElcA8vGkIkJz4sW5Xs9HCYLovfNPsVs6KIRGHAeWRykWQ9xtc3xfSfhz6X/MG
-YBgHcX2pIRcDHexn7CUgkII6DUA+dHeoLKCTf3JWbWfsL7xhyODX6tElv+a0q9TO
-hlR5gBCgWQ3S491UEhG8Bw7tc1BoZX2PglQhwVx/iS3P7zCB92+8yLxCqhvXmw03
-j7UUzRNUjsZ1dNmfMZZ8wIuRol2D0b/SEz4WsI+SY1P60sWMhPnbI4PodJ312cQM
-48H7TwhnCxzNjc287/1bN0W2EnXFSbxdK+jmkGa11TpF+0ewfcnhjxnT6yqxK7eB
-xApZ068RSJ3oNJRSICr950ijzyCISX4YiCO3q7l7nBY8heM7T5MzE6tb4EmegyZZ
-12aQLbcfg13Bn90YVqKgR4J+cDuRHqZ/o+m4dpO4F+/zvmwGdv8LiStBiRWUhZWh
-klcVfK2z3ewv+DqnLKAHRRQBf0IHr13lgadRGoTnl9jD31HBnc9ifEKPbEOLPHL0
-ziInIjShNWci6X/NPLk0
-=D4wE
------END PGP SIGNATURE-----
+Thanks,
 
---n8g4imXOkfNTN/H1--
+Alexander
