@@ -1,33 +1,27 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 5 Jun 2011 01:03:15 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110604210315.GA6051@openwall.com>
+Message-ID: <4DEAC96B.1010107@gmail.com>
+Date: Sun, 05 Jun 2011 08:10:19 +0800
+From: Pavel Labushev <p.labushev@gmail.com>
+MIME-Version: 1.0
 References: <20110518150601.GA2921@albatros> <20110524023409.GC12486@openwall.com> <20110524151246.GA3401@albatros> <4DE139FE.8050808@gmail.com> <20110604181911.GC5034@openwall.com> <20110604202018.GA8019@shinshilla>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
 In-Reply-To: <20110604202018.GA8019@shinshilla>
-Subject: Re: [kernel-hardening] /proc/PID directory hiding (was: [owl-dev] segoon's status report - #1 of 15)
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] /proc/PID directory hiding
 To: kernel-hardening@lists.openwall.com
-Cc: Pavel Labushev <p.labushev@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 05, 2011 at 12:20:47AM +0400, Vasiliy Kulikov wrote:
-> On Sat, Jun 04, 2011 at 22:19 +0400, Solar Designer wrote:
-> > As to probing for PIDs with syscalls such as kill(2), we may deal with
-> > that as well
+05.06.2011 04:20, Vasiliy Kulikov пишет:
+
+>> Is the above on grsecurity?
 > 
-> I'd not do this.  There are too many paths using pids, I don't think
-> there is some universal way (read: a bottleneck) to filter all accesses.
+> No, grsecurity hides uid/gid from both *stat*(2) and getdents*(2) functions
+> (implemented as proc_pid_readdir() and pid_getattr()).
 
-Something like this is done for containers, but I agree with you.
+Yes, it's on grsecurity. Just try it and see.
 
-> And the award is not too high to bother.
-
-Yes, perhaps, and it'd be difficult to avoid timing leaks.
-
-Anyhow, this would be a separate task.  Let's deal with the filesystems
-first, and then proceed with other hardening measures already
-implemented in patches and needing proper submission upstream.
-
-Alexander
+$ uname -r
+2.6.39-grsec
+$ find /proc -maxdepth 1 -type d -name 1
+$ ls -ld /proc/1
+dr-xr-x--- 6 root root 0 Jun  4 21:05 /proc/1
