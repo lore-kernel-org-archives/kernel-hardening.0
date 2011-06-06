@@ -1,77 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 6 Jun 2011 00:10:25 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110605201025.GA9541@openwall.com>
-References: <20110603191153.GB514@openwall.com> <20110604054758.GA4063@albatros> <20110604132054.GC2583@openwall.com> <20110604200948.GA5850@shinshilla> <20110604205955.GA5972@openwall.com> <20110605182430.GA5789@albatros> <20110605192641.GA9240@openwall.com> <20110605194746.GA6484@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 6 Jun 2011 22:08:06 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110606180806.GA3986@albatros>
+References: <20110603191153.GB514@openwall.com>
+ <20110604054758.GA4063@albatros>
+ <20110604132054.GC2583@openwall.com>
+ <20110604200948.GA5850@shinshilla>
+ <20110604205955.GA5972@openwall.com>
+ <20110605182430.GA5789@albatros>
+ <20110605192641.GA9240@openwall.com>
+ <20110605194746.GA6484@albatros>
+ <20110605201025.GA9541@openwall.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="BXVAT5kNtrzKuDFl"
 Content-Disposition: inline
-In-Reply-To: <20110605194746.GA6484@albatros>
+In-Reply-To: <20110605201025.GA9541@openwall.com>
 Subject: Re: [kernel-hardening] [RFC v1] procfs mount options
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 05, 2011 at 11:47:46PM +0400, Vasiliy Kulikov wrote:
-> On Sun, Jun 05, 2011 at 23:26 +0400, Solar Designer wrote:
-> > On Sun, Jun 05, 2011 at 10:24:31PM +0400, Vasiliy Kulikov wrote:
-> > > TODO/thoughs:
-> > >   - /proc/pid/net/ currently doesn't show ANYTHING, even "." and "..".
-> > >     This is confusing :)
-> > 
-> > Ouch.  Can't you simply restrict its perms such that this directory
-> > can't be listed unless you have privs?
-> 
-> Well, yes, but it would touch too many code - currently it is handled as
-> an entry in a static table.  Changing this would touch many high level
-> loops of the table handling.  Hiding its contents is just simplier.
-> 
-> Another solution - create a fake net namespace and process this
-> namespace if not enough permissions :)  It also removes weird netstat
-> errors like "seems like networking was disabled for this kernel".
 
-This sounds good to me, although I am not familiar with namespaces.
+--BXVAT5kNtrzKuDFl
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-> > It should act as a normal mode 550 directory on a regular filesystem.
-> 
-> What 550 perms would give?  /proc/pid/net/ contains all network
-> information about _all_ network connections in current net namespace.
-> So, /proc/1/net and /proc/2/net are logically the same directory.
-> 
-> However, changing the mode to 550 _and_ changing uid and gid will help.
+On Mon, Jun 06, 2011 at 00:10 +0400, Solar Designer wrote:
+> > Process A with UID=3D1000 opens /proc/123/, while 123 has UID=3D1000.
+> >=20
+> > 123 exec's setuid binary, /proc/123/ becomes unaccessible to A.
+> >=20
+> > However, A still keeps the directory opened and may read its contents.
+>=20
+> Oh, this is a valid concern.  Please research this.  Perhaps there
+> should be a may-ptrace check (or maybe more than one).
 
-I implied that the gid would be the one set by our gid option.
+This is similar to CVE-2011-1020:
 
-> > >   - what if one keeps open /proc/PID/ while executing set*id/capable
-> > >     binary?
-> > 
-> > Then they deliberately grant this privilege to this process (and maybe
-> > to its heirs).  I see no problem with that.
-> 
-> Ehh...  I mean another thing:
-> 
-> Process A with UID=1000 opens /proc/123/, while 123 has UID=1000.
-> 
-> 123 exec's setuid binary, /proc/123/ becomes unaccessible to A.
-> 
-> However, A still keeps the directory opened and may read its contents.
+https://lkml.org/lkml/2011/2/7/368
+http://seclists.org/fulldisclosure/2011/Jan/421
 
-Oh, this is a valid concern.  Please research this.  Perhaps there
-should be a may-ptrace check (or maybe more than one).
+The proposed solution for separate procfs files is implementing
+additional runtime checks (besides POSIX perms), however, it probably
+doesn't scale for the whole PID directory.
 
-As it relates to privacy, there's little need for this, because the user
-started those processes on their own (in fact, this is a reason why the
-user may want to be able to see those processes, despite of procfs perms).
+Will try to invent some simple way to deal with it.
 
-However, if our concern is that the processes may leak sensitive data
-the user is not supposed to see, then we need to restrict this.
+--=20
+Vasiliy
 
-Overall, it makes sense either to relax things such that /proc/PID have
-real UID rather than effective UID as their owner (so we make such
-access to almost-own processes legitimate) or to have the proper
-may-ptrace checks in place (such that permissions are actually enforced).
-Maybe this should be another mount option.  But this feels like too much
-complexity for an obscure option that few people will understand and use.
+--BXVAT5kNtrzKuDFl
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+Content-Disposition: inline
 
-Thanks,
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.10 (GNU/Linux)
 
-Alexander
+iQIcBAEBAgAGBQJN7ReBAAoJEBoUx9gkVaZccFAP/1AdknhciHbADdLBG+2+AsMS
+qEQ9Kij+mYJC8UMGx7DnJn5YJXTIHa8OTd60rSmKpgWEGe91gTwHrBlB2iAIvz56
+GhE8oDTTlndsHZuRNfK0R+9p1yP2NP8qxJcVg09EtXVC5BdE8fh6xdMD4TeQwMS2
+ZopjQt7J7eUjhajmOrGH03AcOJ8XbtpYEbouSOcGrceAxk5KaN5iL2/8h+by6G5x
+9lkQgwO+t0wNay6GUVsID53NtDtopKzxLSBAtps7/ZHjqtl2ENh65npjbZzgaYiW
+Y5lrTapKmULDefm5DY/iSGfS2oOcIH2z1JQhR74AfV6SO/VljWwSs2qgNBBGye1O
+kQhnEgf72s3TQQtqWKuoedGgdC9aP39JFM2hFCbxLQJwz4rLAluN+OHVFQ+3bgek
+yo9NyS2Wkm9a63/5DzeEhtYrLUUQbnqFi4tr2NSlBA1Sgp77eaKadDyvj0PV0G8U
++xIP938mDuaOgaft7YXpSFHXQledLCEQCYfbTzyrFrYoPttWgjfrPZDI05YbV2h4
+zpbQyw9Cu0ItuLSVOvlN+IONxT2tCEmI0AhrQhL3esClekB3aydunkol9gClskc1
+gqHF2EXWPlLzalfg9/0IJXY80Y7kbBAOq2lYaTaWaFs/CkXar+oe0BUVuzHY8+pb
+bdBfDZVC0tpbfAGxJBoT
+=eWEO
+-----END PGP SIGNATURE-----
+
+--BXVAT5kNtrzKuDFl--
