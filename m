@@ -1,43 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 8 Jun 2011 21:43:06 +0400
+Date: Wed, 8 Jun 2011 22:41:52 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110608174306.GA4401@albatros>
-References: <20110604132054.GC2583@openwall.com>
- <20110604200948.GA5850@shinshilla>
- <20110604205955.GA5972@openwall.com>
- <20110605182430.GA5789@albatros>
- <20110605192641.GA9240@openwall.com>
- <20110605194746.GA6484@albatros>
- <20110605201025.GA9541@openwall.com>
- <20110606180806.GA3986@albatros>
- <20110606183358.GA14711@openwall.com>
- <20110608172307.GA3380@albatros>
+Message-ID: <20110608184151.GA5537@albatros>
 MIME-Version: 1.0
 Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="sdtB3X0nJg68CQEu"
+	protocol="application/pgp-signature"; boundary="FL5UXtIhxfXey3p5"
 Content-Disposition: inline
-In-Reply-To: <20110608172307.GA3380@albatros>
-Subject: Re: [kernel-hardening] [RFC v2] procfs mount options
+Subject: [kernel-hardening] segoon's status report - #4 of 15
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---sdtB3X0nJg68CQEu
+--FL5UXtIhxfXey3p5
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
 
-On Wed, Jun 08, 2011 at 21:23 +0400, Vasiliy Kulikov wrote:
-> I think this version of the patch is ready for LKML review.
+Sorry, I'm late, was busy with the last exam.
 
-I mean the patch is OK except net part, that's why LKML is needed now :)
+Accomplishments:
+
+  * Totally solved all tasks related to the university.
+  * Discussed actual assignment of procfs features among actual mount
+    options.
+  * Got fully working implementation of procfs patch.
+  * Discussed debugfs and sysfs particularities.
+
+Priorities:
+
+  * Cleanup & send procfs patch to LKML.
+  * Ease (remove uid/mode options) & resend sysfs patch to LKML.
+  * Send debugfs & configfs patch with sysctl umask/gid options to LKML.
+
 
 --=20
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
 
---sdtB3X0nJg68CQEu
+--FL5UXtIhxfXey3p5
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: Digital signature
 Content-Disposition: inline
@@ -45,19 +45,19 @@ Content-Disposition: inline
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iQIcBAEBAgAGBQJN77SkAAoJEBoUx9gkVaZchmkP/1ln2cQf4no/QfXHsbwI3YVY
-KDJfCpEdXKJmLbwGPQmnYBKUswsI83MbrLBdBmufdUk7IbAvC6Rmd12Pup1ihoql
-9/K5Vft7T6YjyJWq8HBqz4UBEVOXuT5hxV2uKmxcanvcXx58BtYdeR43F2M8yUCq
-wIm2kjfwW5/s72o9vjxMZGRxl9dkiAU5rcBN05SlgtCnfUXzccEXoYKSkk8bW0JR
-9GIi9Tv4Ohbj7sKF7UuWdh3ZUm8PD/xuyYEmLCdsHHiVY4TxxUT2rZVyeIKHYHnX
-cDQ1xyMQxH96icJnSzGnEcZvP0yBBjs+6XinJ4snAlVwT1G278EUP3zRB0dNuT7F
-NuLZ2N6HWmc5ZrTOBPKm2eOMUqd06OkjEewgdeYYNShiiALuNegd4Es6XMQ9/3ts
-xEjF4/riAQZlJoWcgzfCd54gx8k2iZa10jlKErNIL7cx011IhXdnJVoxI1mUD9Hi
-oodLtjnV8zHseSDUJ7gaaAAN0dzT0gjhg7PL8TPS35RvM8VeB5EoZoTzPFkeqdlB
-XRhxapKh81nTluCsKqySb1fPMXfH3HDHJ8L0kXxKbdRkM4fJF2ykKczCMlr+n8YY
-LiQSJ3eX5hWYP5P00wW+Xagauj4hHAxfkJMLhS2BbAyP+raPeI9598AnVtnOmJG6
-v0Hsf4PGG4wJExwqhoDg
-=UAb6
+iQIcBAEBAgAGBQJN78JqAAoJEBoUx9gkVaZcD+YQALX22a31RHtUmaCO3PK3SaUG
+OsBaYi5Tps7ZzAmMwgNWRfpyESXA8pMLiAb6f9GyVI/Sf+ykIo2b0Ugwt5ch54nb
+AZQbWka96I8PKGZXI1ns9dHTpjOt3KERu0heddFdLCVn6qSWXiLtuVOtF3ntxink
+0VCPVK4VBlJDvrBl0CnnnvjjH24JB17JuGkNDaJFW/Tqi0cVo1/+dW7Odx5b9pT4
+fbccBdXMdAIb3fHkhM4HChCPZ9woNfLqllZqq/lDa3WV7FEQJ/mhbwh3LycooJi5
+3xvK3VDbHjRxr+LRiR3G0y5YX/NK+u17zGw2fNuKUnnHpGb9CgQTTH1KHsUIOwNc
+VMPBukaBcpmEdD/uhd7Oz20yXiCz49jfHN0lDPu2a24pO7mb2EdgcVaQHE+PHh+6
+nMx5+E80UnF7rYsaHVPHobzOzLlx/3taPk7neM7iTIo3sYd6o8fQe1R/7JqQQVWO
+geojWpUPrPLN9ULbOYV6JAuROvPpLO9vOCuBOtzhMAp1o3JHnm6kRnkwTbxiAyyW
+lWmJF20gdiRl/IwYpCxWiNmNpWe5igIa2zVrS6SwfuA0IfsP+fCQGH68v9kXNYjx
+2ckMm9v2guFVe4rUadFef0qVKLDlA7L3MCbKkdZIInrC1SLWoXh4Zy1/iXImknD7
+0wmVGTKIDRXv02w0khxQ
+=XLeC
 -----END PGP SIGNATURE-----
 
---sdtB3X0nJg68CQEu--
+--FL5UXtIhxfXey3p5--
