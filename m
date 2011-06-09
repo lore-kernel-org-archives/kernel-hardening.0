@@ -1,43 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 8 Jun 2011 22:41:52 +0400
+Date: Thu, 9 Jun 2011 18:17:45 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110608184151.GA5537@albatros>
+Message-ID: <20110609141745.GA11957@albatros>
 MIME-Version: 1.0
 Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="FL5UXtIhxfXey3p5"
+	protocol="application/pgp-signature"; boundary="3V7upXqbjpZ4EhLz"
 Content-Disposition: inline
-Subject: [kernel-hardening] segoon's status report - #4 of 15
+Subject: [kernel-hardening] rlimit_nproc check
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---FL5UXtIhxfXey3p5
+--3V7upXqbjpZ4EhLz
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
 
-Sorry, I'm late, was busy with the last exam.
+Solar, all -
 
-Accomplishments:
+I found 8-years old patch that enables RLIMIT_NPROC check at setuid (and
+similar) calls:
 
-  * Totally solved all tasks related to the university.
-  * Discussed actual assignment of procfs features among actual mount
-    options.
-  * Got fully working implementation of procfs patch.
-  * Discussed debugfs and sysfs particularities.
+http://lkml.org/lkml/2003/7/13/226
 
-Priorities:
+So, checking it on execve() is a bit redundant.  But it means that
+setuid() may fail if it follows setrlimit() call and the target user
+has already reached the limit (asserted on the test C program).  If the
+limit is defined in pam_limit, the attack becomes real.
 
-  * Cleanup & send procfs patch to LKML.
-  * Ease (remove uid/mode options) & resend sysfs patch to LKML.
-  * Send debugfs & configfs patch with sysctl umask/gid options to LKML.
 
+Thanks,
 
 --=20
 Vasiliy
 
---FL5UXtIhxfXey3p5
+--3V7upXqbjpZ4EhLz
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: Digital signature
 Content-Disposition: inline
@@ -45,19 +43,19 @@ Content-Disposition: inline
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iQIcBAEBAgAGBQJN78JqAAoJEBoUx9gkVaZcD+YQALX22a31RHtUmaCO3PK3SaUG
-OsBaYi5Tps7ZzAmMwgNWRfpyESXA8pMLiAb6f9GyVI/Sf+ykIo2b0Ugwt5ch54nb
-AZQbWka96I8PKGZXI1ns9dHTpjOt3KERu0heddFdLCVn6qSWXiLtuVOtF3ntxink
-0VCPVK4VBlJDvrBl0CnnnvjjH24JB17JuGkNDaJFW/Tqi0cVo1/+dW7Odx5b9pT4
-fbccBdXMdAIb3fHkhM4HChCPZ9woNfLqllZqq/lDa3WV7FEQJ/mhbwh3LycooJi5
-3xvK3VDbHjRxr+LRiR3G0y5YX/NK+u17zGw2fNuKUnnHpGb9CgQTTH1KHsUIOwNc
-VMPBukaBcpmEdD/uhd7Oz20yXiCz49jfHN0lDPu2a24pO7mb2EdgcVaQHE+PHh+6
-nMx5+E80UnF7rYsaHVPHobzOzLlx/3taPk7neM7iTIo3sYd6o8fQe1R/7JqQQVWO
-geojWpUPrPLN9ULbOYV6JAuROvPpLO9vOCuBOtzhMAp1o3JHnm6kRnkwTbxiAyyW
-lWmJF20gdiRl/IwYpCxWiNmNpWe5igIa2zVrS6SwfuA0IfsP+fCQGH68v9kXNYjx
-2ckMm9v2guFVe4rUadFef0qVKLDlA7L3MCbKkdZIInrC1SLWoXh4Zy1/iXImknD7
-0wmVGTKIDRXv02w0khxQ
-=XLeC
+iQIcBAEBAgAGBQJN8NYEAAoJEBoUx9gkVaZcJ9YQAIMMdhJK1GeFXqDzaQnqv8Tn
++rdgGwoJhkrv9Km6hiwU69vU/kjwmoWy+PmB+yasyiVzoNWuxJXIOp3irwyVII6c
+QERmFfM4zwLIAewcmdzVqw2xUPTPVW5of47TnPEUM6DnHcd83xHlPM2xu364roFw
+0XxG+vufHgMuwHq2nSsOLXQbmBuKtmV67VihlBfwI7Y8drRdXJvwpqB1gizeP1qs
+1eGiJXTNhwzdDDjjATEthVHl8MmuRLBdj58Tg2cAeEVAlw+NaYJDXzEKSpyqwiU7
+tY7vVSs8gZJN23yUlh+tcmo8DHP67MlHnvrpfgnVjsIURIaldeORywZkih6iEHka
+Nmcay0/pfD2C/Z3PCHh897zPSs5ykPH+/lPL5/nODpsAn+RmoyfLUFsM4lG1qYMO
+iZSj0okY4ICLGOHeUCe65d6SFyEUh+0KmQ7V57gje17X22uJ4AaCt7Az1mE8ALEQ
+o5sb8hPMw3Nnl7PX59ps9/1eKKnKqcmiudMNE3Vb/vtq/vzP8lDzZzhgtFJP75bk
+99W3SniNxAqXG56gRWB8coj0T1Fa5emwXFiHnOLbt2qJRdU9avbGKP3ApMb0b0x3
+O/Ix8aPkXvTDMLWahLFB76NttQLX/tVtbnDIh5NBd57g50SRuyaMnqFpqse26Dbn
+wwKkxzGVN4POSxi+5va9
+=9QpT
 -----END PGP SIGNATURE-----
 
---FL5UXtIhxfXey3p5--
+--3V7upXqbjpZ4EhLz--
