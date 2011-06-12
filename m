@@ -1,90 +1,83 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
 From: Vasiliy Kulikov <segoon@openwall.com>
-Date: Sun, 12 Jun 2011 18:46:23 +0400
-Message-Id: <1307889983-6350-1-git-send-email-segoon@openwall.com>
-Subject: [kernel-hardening] [RFC v2 03/04] procfs: add hidenet modes as mount options
+Date: Sun, 12 Jun 2011 18:47:42 +0400
+Message-Id: <1307890063-6399-1-git-send-email-segoon@openwall.com>
+Subject: [kernel-hardening] [RFC v2 04/04] procfs: document mount options
 To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>
+Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Randy Dunlap <rdunlap@xenotime.net>, Nikanth Karthikesan <knikanth@suse.de>, David Rientjes <rientjes@google.com>, Matt Mackall <mpm@selenic.com>, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch adds mount options to restrict access to /proc/PID/net/
-contents.  The default backward-compatible behaviour is left untouched.
-
-'hidenet' mount option means /proc/PID/net will be accessible to processes
-with CAP_NET_ADMIN capability or to members of a special group (gid=
-argument).
-
-In current version hidenet works for CONFIG_NET_NS=y via creating a
-"fake" net namespace and slipping it to nonauthorized users, resulting
-in users observing blank net files (like nobody use the network, which
-is true for this fake namespace).  It is a small compatibility
-workaround for old programs assuming that files like /proc/net/tcp and
-similar always exist and are accessible.  If they look like in normal
-situation but contain no information, nothing is broken and network
-information access is still successfully restricted.  For
-CONFIG_NET_NS=n /proc/net/ simply has no entries.
-
-
-Similar feature is implemented for old kernels in -ow patches (for
-Linux 2.2 and 2.4) and for Linux 2.6 in -grsecurity (but it is
-implemented as a configure options, not cofigurable in runtime, and
-without fake_net).
+Describe procfs mount options in documentation.
 
 Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
 ---
- fs/proc/proc_net.c |   26 ++++++++++++++++++++++++++
- 1 files changed, 26 insertions(+), 0 deletions(-)
+ Documentation/filesystems/proc.txt |   51 ++++++++++++++++++++++++++++++++++++
+ 1 files changed, 51 insertions(+), 0 deletions(-)
 
-diff --git a/fs/proc/proc_net.c b/fs/proc/proc_net.c
-index 9020ac1..a2a1f08 100644
---- a/fs/proc/proc_net.c
-+++ b/fs/proc/proc_net.c
-@@ -22,10 +22,13 @@
- #include <linux/mount.h>
- #include <linux/nsproxy.h>
- #include <net/net_namespace.h>
-+#include <linux/pid_namespace.h>
- #include <linux/seq_file.h>
+diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
+index 23cae65..4fd35c4 100644
+--- a/Documentation/filesystems/proc.txt
++++ b/Documentation/filesystems/proc.txt
+@@ -41,6 +41,8 @@ Table of Contents
+   3.5	/proc/<pid>/mountinfo - Information about mounts
+   3.6	/proc/<pid>/comm  & /proc/<pid>/task/<tid>/comm
  
- #include "internal.h"
++  4	Configuring procfs
++  4.1	Mount options
  
-+static struct net *fake_net;
+ ------------------------------------------------------------------------------
+ Preface
+@@ -1535,3 +1537,52 @@ a task to set its own or one of its thread siblings comm value. The comm value
+ is limited in size compared to the cmdline value, so writing anything longer
+ then the kernel's TASK_COMM_LEN (currently 16 chars) will result in a truncated
+ comm value.
 +
- 
- static struct net *get_proc_net(const struct inode *inode)
- {
-@@ -105,6 +108,15 @@ static struct net *get_proc_task_net(struct inode *dir)
- 	struct task_struct *task;
- 	struct nsproxy *ns;
- 	struct net *net = NULL;
-+	struct pid_namespace *pid = dir->i_sb->s_fs_info;
 +
-+	if (pid->hide_net &&
-+	    !in_group_p(pid->pid_gid) &&
-+	    !capable(CAP_NET_ADMIN)) {
-+		if (fake_net)
-+			get_net(fake_net);
-+		return fake_net;
-+	}
- 
- 	rcu_read_lock();
- 	task = pid_task(proc_pid(dir), PIDTYPE_PID);
-@@ -239,3 +251,17 @@ int __init proc_net_init(void)
- 
- 	return register_pernet_subsys(&proc_net_ns_ops);
- }
++------------------------------------------------------------------------------
++Configuring procfs
++------------------------------------------------------------------------------
 +
-+#ifdef CONFIG_NET_NS
-+int __init proc_net_initcall(void)
-+{
-+	fake_net = net_create();
-+	if (fake_net == NULL)
-+		return -ENOMEM;
++4.1	Mount options
++---------------------
 +
-+	get_net(fake_net);
-+	return 0;
-+}
++The following mount options are supported:
 +
-+late_initcall(proc_net_initcall);
-+#endif
++	hidepid=	Set /proc/<pid>/ access mode.
++	hidenet		Hide /proc/<pid>/net/ from nonauthorized users.
++	nohidenet	Don't hide /proc/<pid>/net/ from nonauthorized users.
++	gid=		Set the group authorized to learn processes and
++			networking information.
++
++hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
++(default).
++
++hidepid=1 means users may not access any /proc/<pid>/ directories, but their
++own.  Sensitive files like cmdline, io, sched*, status, wchan are now protected
++against other users.  This makes impossible to learn whether any user runs
++specific program (given the program doesn't reveal itself by its behaviour).
++As an additional bonus, as /proc/<pid>/cmdline is unaccessible for other users,
++poorly written programs passing sensitive information via program arguments are
++now protected against local eavesdroppers.
++
++hidepid=2 means hidepid=1 plus all /proc/<pid>/ will be fully invisible to other
++users.  It doesn't mean that it hides a fact whether a process with a specific
++pid value exists (it can be learned by other means, e.g. by sending signals),
++but it hides process' uid and gid, which may be learned by stat()'ing
++/proc/<pid>/ otherwise.  It greatly complicates intruder's task of gathering info
++about running processes, whether some daemon runs with elevated privileges,
++whether other user runs some sensitive program, whether other users run any
++program at all, etc.
++
++hidenet means /proc/<pid>/net/ will be accessible to processes with
++CAP_NET_ADMIN capability or to members of a special group.  It means
++nonauthorized users may not learn any networking connections information.  If
++network namespaces support is enabled (CONFIG_NET_NS=y) then common users would
++obtain net directory, but all files would indicate no networking activity at
++all.  If network namespaces are disabled, net directory is unaccessible to
++common users.
++
++gid= means group authorized to learn processes information prohibited by
++hidepid= and networking information prohibited by hidenet.  If you use some
++daemon like identd which have to learn information about net/processes
++information, just add identd to this group.
