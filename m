@@ -1,61 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 12 Jun 2011 16:43:25 +0400
+Date: Sun, 12 Jun 2011 16:46:55 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110612124324.GA3476@albatros>
-References: <20110612075100.GA4459@albatros>
- <20110612111222.GA23467@p183.telecom.by>
+Message-ID: <20110612124653.GA3595@albatros>
+References: <20110612023118.GA15126@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110612111222.GA23467@p183.telecom.by>
-Subject: [kernel-hardening] Re: [RFC] procfs: add hidepid and hidenet modes
-To: Alexey Dobriyan <adobriyan@gmail.com>
-Cc: linux-kernel@vger.kernel.org, "David S. Miller" <davem@davemloft.net>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Nikanth Karthikesan <knikanth@suse.de>, David Rientjes <rientjes@google.com>, Greg Kroah-Hartman <gregkh@suse.de>, Al Viro <viro@zeniv.linux.org.uk>, Eric Dumazet <eric.dumazet@gmail.com>, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <20110612023118.GA15126@openwall.com>
+Subject: Re: [kernel-hardening] printk()s of user-supplied strings
+To: kernel-hardening@lists.openwall.com
+Cc: Willy Tarreau <w@1wt.eu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 12, 2011 at 14:12 +0300, Alexey Dobriyan wrote:
-> On Sun, Jun 12, 2011 at 11:51:01AM +0400, Vasiliy Kulikov wrote:
-> > hidenet means /proc/PID/net will be accessible to processes with
-> > CAP_NET_ADMIN capability or to members of a special group.
-> > 
-> > gid=XXX defines a group that will be able to gather all processes' info
-> > and network connections info.
-> > 
-> > Similar features are implemented for old kernels in -ow patches (for
-> > Linux 2.2 and 2.4) and for Linux 2.6 in -grsecurity (but both of them
-> > are implemented as configure options, not cofigurable in runtime).
-> > 
-> > 
-> > In current version hidenet works for CONFIG_NET_NS=y via creating a
-> > "fake" net namespace and slipping it to nonauthorized users, resulting
-> > in users observing blank net files (like nobody use the network).  If
-> > CONFIG_NET_NS=n I don't see anything better than just fully denying
-> > access to /proc/<pid>/net.  More elegant ideas are welcome.
-> 
-> This fake netns concept is ugly.
-> If you wan't deny something, why don't you return -E?
+Solar,
 
-Sorry, I should have mentioned it.  It's a workaround.  The thing is
-that /proc/net/* is so core and existed for a long time that some
-programs might be confused if these files are missing or if open()
-returns -EXXX.  netstat handles this and outputs smth like "Networking
-was disabled in your kernel", which is a bit confusing.  Also I saw some
-programs didn't handle missing files at all, I recall brctl sigfaulted
-when he couldn't access some sysfs file.
+On Sun, Jun 12, 2011 at 06:31 +0400, Solar Designer wrote:
+> You could want to review this thread:
+>=20
+> http://lists.openwall.net/linux-kernel/2006/08/22/29
+>=20
+> (click "thread-next" for further messages).
+>=20
+> I don't know (or don't recall) what the outcome of it was, if any.
 
-As fake_net doesn't break something, but instead keeps some
-compatibility with old programs, why don't use it?
+I don't see any log spoofing protection in the current code.
 
-BTW, there is no fake_net in -ow or -grsecurity.  I thought it might be
-helpful for upstream in sense of compatibility.
 
-> Regardless, these should be separate patch from PID stuff.
+As a primary threat is \n and \n<X> spoofing, I think the more simple
+and bloodless solution would be escaping \n by some string like ">>".  So,
+the initial
 
-No problem.
+printk(PR_ERR, "Suspicious string: %s\n",
+ "something\n<1>[  2533.035243] TCP: possible syn-flood from google.com")
+
+- would result in -
+
+[  2533.111111] Suspicious string: something
+>> <1>[  2533.035243] TCP: possible syn-flood from google.com
+
+Also all non-printable characters should be escaped on their own (1-31,
+possibly, 127-255).  \xYYY or similar?
+
+This parsing should be done in "%s" substitution only and in printk()
+substitutions only (there are many other users of vscnprintf() and
+similar).
+
+
+An escaping has one drawback - escaped \n looses information about the
+log severity.  So, this prefixed ">> .." string will be printed as it
+would has emergency log severities.  It is better than simple log
+spoofing, though.
+
+Fully filter "\n" is not a solution as, IIRC, there are legitimate users
+of such a multiline feature in the kernel.
 
 Thanks,
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+--=20
+Vasiliy
