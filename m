@@ -1,45 +1,78 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 13 Jun 2011 10:42:52 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Date: Sun, 12 Jun 2011 18:43:43 +0400
-Message-Id: <1307889823-6169-1-git-send-email-segoon@openwall.com>
-Subject: [kernel-hardening] [RFC v2 01/04] net: make net_create() globally visible
-To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Eric Dumazet <eric.dumazet@gmail.com>, netdev@vger.kernel.org
+Message-ID: <20110613064252.GB3877@albatros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] destroy unused shmem segments
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Make net_create() visible outside of net/core/net_namespace.c to be able
-to create additional network namespaces inside of fs/proc/proc_net.c.
+Solar,
 
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
----
- include/net/net_namespace.h |    2 ++
- net/core/net_namespace.c    |    2 +-
- 2 files changed, 3 insertions(+), 1 deletions(-)
+I'm looking into the -ow patch and I see this code:
 
-diff --git a/include/net/net_namespace.h b/include/net/net_namespace.h
-index 1bf812b..d40c61c 100644
---- a/include/net/net_namespace.h
-+++ b/include/net/net_namespace.h
-@@ -113,6 +113,8 @@ static inline struct net *copy_net_ns(unsigned long flags, struct net *net_ns)
- }
- #endif /* CONFIG_NET */
- 
-+extern struct net *net_create(void);
-+
- 
- extern struct list_head net_namespace_list;
- 
-diff --git a/net/core/net_namespace.c b/net/core/net_namespace.c
-index 3f86026..c7c7310 100644
---- a/net/core/net_namespace.c
-+++ b/net/core/net_namespace.c
-@@ -216,7 +216,7 @@ static void net_free(struct net *net)
- 	kmem_cache_free(net_cachep, net);
- }
- 
--static struct net *net_create(void)
-+struct net *net_create(void)
- {
- 	struct net *net;
- 	int rv;
+	#ifdef CONFIG_HARDEN_SHM
+	void shm_exit (void)
+	{
+		int i;
+		struct shmid_kernel *shp;
+
+		for (i = 0; i <= shm_ids.max_id; i++) {
+			shp = shm_get(i);
+			if (!shp) continue;
+
+			if (shp->shm_cprid != current->pid) continue;
+
+			if (shp->shm_nattch <= 0) {
+				shp->shm_flags |= SHM_DEST;
+				shm_destroy (shp);
+			}
+		}
+	}
+	#endif
+
+
+	NORET_TYPE void do_exit(long code)
+	{
+		...
+	#ifdef CONFIG_HARDEN_SHM
+		shm_exit();
+	#endif
+		...
+	}
+
+However, the shm segment should be already freed by exit_mm() => vma->close():
+
+	static struct vm_operations_struct shm_vm_ops = {
+		open:	shm_open,	/* callback for a new vm-area open */
+		close:	shm_close,	/* callback for when the vm-area is released */
+		nopage:	shmem_nopage,
+	};
+
+	static void shm_close (struct vm_area_struct *shmd)
+	{
+		...
+		shp->shm_nattch--;
+	#ifdef CONFIG_HARDEN_SHM
+		if(shp->shm_nattch == 0) {
+			shp->shm_flags |= SHM_DEST;
+			shm_destroy (shp);
+		}
+	#else
+		if(shp->shm_nattch == 0 &&
+		   shp->shm_flags & SHM_DEST)
+			shm_destroy (shp);
+	#endif
+		...
+	}
+
+Is it some additional "safety" check or a workaround for some dubious
+race?  I see no explicit need of such freeing cycle in do_exit().
+
+Thanks,
+
+-- 
+Vasiliy
