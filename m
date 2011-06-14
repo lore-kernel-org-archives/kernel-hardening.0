@@ -1,53 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 14 Jun 2011 12:35:59 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110614083559.GB7973@albatros>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 14 Jun 2011 15:54:50 +0200
+References: <1307889901-6226-1-git-send-email-segoon@openwall.com>
+In-Reply-To: <1307889901-6226-1-git-send-email-segoon@openwall.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] HARDEN_VM86
-To: kernel-hardening@lists.openwall.com
+Content-Type: Text/Plain;
+  charset="iso-8859-15"
+Content-Transfer-Encoding: 7bit
+Message-Id: <201106141554.50945.arnd@arndb.de>
+Subject: [kernel-hardening] Re: [RFC v2 02/04] procfs: add hidepid modes as mount options
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, David Rientjes <rientjes@google.com>, Al Viro <viro@zeniv.linux.org.uk>, Nick Piggin <npiggin@kernel.dk>, Miklos Szeredi <mszeredi@suse.cz>, Alexey Dobriyan <adobriyan@gmail.com>, Frederic Weisbecker <fweisbec@gmail.com>, WANG Cong <xiyou.wangcong@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar, all -
+On Sunday 12 June 2011, Vasiliy Kulikov wrote:
+> +static const match_table_t tokens = {
+> +       {Opt_hidepid, "hidepid=%u"},
+> +       {Opt_gid, "gid=%u"},
+> +       {Opt_hidenet, "hidenet"},
+> +       {Opt_nohidenet, "nohidenet"},
+> +       {Opt_err, NULL},
+> +};
 
-While actual implementation of CONFIG_HARDEN_VM86 is trivial, the most
-important part of pushing the feature into upstream is clarifying to
-what security domain vm86(2)/vm86old(2) should be restricted.  In -ow
-and -grsecurity it is restricted to CAP_SYS_RAWIO.
+I don't really have an opinion on your patch, but it seems that it does more than
+the description explains: The hidenet/nohidenet option is in the patch as well,
+although it doesn't have much of an effect.
 
-I see 3 possibilities:
-
-1) Restrict it to CAP_SYS_RAWIO and make it configurable via sysctl
-kernel.vm86_restricted.  0 means current behaviour, 1 means
-CAP_SYS_RAWIO-only.
-
-2) The same as (1), but CAP_SYS_ADMIN.
-
-3) Restrict it to some group or CAP_SYS_ADMIN, configurable via
-kernel.vm86_group_allowed.  As vm86 is a rarely used thing, group range
-makes little sense for me.  0 means root only, -1 means current
-behaviour, X>0 means group X.
-
-
-
-For people not familiar with CONFIG_HARDEN_VM86:
-
-CONFIG_HARDEN_VM86
-  On x86 processors, the Virtual 8086 (VM86) mode allows the execution
-  of real mode operating systems and applications (primarily DOS) under
-  protected mode operating systems such as Linux (with dosemu).  This
-  requires support from the kernel.  Although the amount of kernel code
-  needed to support the VM86 mode is small and no security problems
-  with it are currently known, that code is unused on most Linux systems
-  and as such it poses an unreasonable risk.  This option restricts
-  access to system calls used to enter the VM86 mode to processes that
-  possess the CAP_SYS_RAWIO capability.  The effect is that any potential
-  security bugs in the VM86 mode support code are neutralized.
-
-
-Thanks,
-
--- 
-Vasiliy
+	Arnd
