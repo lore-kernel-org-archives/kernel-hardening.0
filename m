@@ -1,43 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 13 Jun 2011 11:07:00 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110613070700.GA22659@openwall.com>
-References: <20110613064252.GB3877@albatros>
-Mime-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 14 Jun 2011 12:32:22 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110614083222.GA7973@albatros>
+References: <20110603200011.GA737@openwall.com>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110613064252.GB3877@albatros>
-Subject: Re: [kernel-hardening] destroy unused shmem segments
+In-Reply-To: <20110603200011.GA737@openwall.com>
+Subject: [kernel-hardening] Re: add mount options to sysfs
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy,
+Solar,
 
-On Mon, Jun 13, 2011 at 10:42:52AM +0400, Vasiliy Kulikov wrote:
-> Is it some additional "safety" check or a workaround for some dubious
-> race?
+On Sat, Jun 04, 2011 at 00:00 +0400, Solar Designer wrote:
+> Also, I see no need for the uid= option.  Maybe leave just gid= and
+> umask= for sysfs, debugfs, and configfs (pipacs reminded me of this one).
 
-Neither.  IIRC, I thought that this was needed, and not as a workaround,
-nor because of a race.  However, your analysis appears to be correct to
-me.  This leaves us with the following three possibilities:
+While I've implemented gid= and umask= for sysfs as mount options, and
+for debugfs & configfs as sysctl variables (as they are not
+per-namespace, but global to the kernel), I think it makes much sense to
+implement CONFIG_{SYSFS,DEBUG_FS,CONFIGFS_FS}_{UMASK,GID} to be able to
+control permissions of files already created before userspace is able to
+change default permissions.  Without configurable default umask/gid via
+CONFIG_* one should use "chmod -R /sys/" to alter already created files'
+perms, which is a bit inconsistent.
 
-- The extra code was never needed.  This is unlikely because I was
-adding those pieces of code based on my testing results.
+Actual restrictions are simple, but sysctl handler for octal values
+(umask) and support of octal CONFIG_* values are needed.  The former 
+already exists, but witout octal printing.  You may do:
 
-- The extra code was needed for some older kernel version (maybe older
-than 2.4), then forward-ported (not carefully enough to spot this).
-(Most CONFIG_HARDEN_* features 2.4.x-ow date back to my patches for 2.0.)
+echo '0007' > /proc/sys/debug/debugfs_umask
 
-- We're missing something now.
+and it is parsed correctly.  But output will be decimal.
 
-I think that you don't need to figure out which it is.  Rather, you
-need to implement the functionality for 3.0 and test it.  Then do it for
-RHEL6/OpenVZ as well.
+For CONFIG_*_UMASK one may not define octal values (more than 7), and
+numerics beginning from "0" are not parsed at all.
 
-> I see no explicit need of such freeing cycle in do_exit().
+sysctl part is not hard, but for CONFIG_ parsing I have to dive into
+kbuild sources, which I didn't touch yet at all.  Looking at the number
+of places where e.g. S_HEX is used (parsing of hex values) I suppose it
+will be time consuming task.
 
-Yes, it appears so from your analysis.
+
+So, I think sysfs/debugfs/configfs umask=/gid= may be defered until all
+obviously necessary hardening features are applied into the upstream or
+at least discussed.
 
 Thanks,
 
-Alexander
+-- 
+Vasiliy
