@@ -1,38 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 15 Jun 2011 18:42:45 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110615144245.GC32753@openwall.com>
-References: <20110613064252.GB3877@albatros> <20110613070700.GA22659@openwall.com> <20110614083318.GA8710@albatros>
-Mime-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Wed, 15 Jun 2011 19:38:45 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110615153845.GA10715@albatros>
+References: <20110614083559.GB7973@albatros>
+ <20110615143844.GB32753@openwall.com>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110614083318.GA8710@albatros>
-Subject: Re: [kernel-hardening] destroy unused shmem segments
+In-Reply-To: <20110615143844.GB32753@openwall.com>
+Subject: Re: [kernel-hardening] HARDEN_VM86
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy,
+Solar,
 
-On Tue, Jun 14, 2011 at 12:33:45PM +0400, Vasiliy Kulikov wrote:
-> It is used in case shmem segment was created, but never used.  In this
-> case refcount is never incremented and never decremented, shm_clone()
-> isn't called.
-> 
-> If shmctl() sets IPC_RMID, it is deleted, but as you have implemented
-> implicit semantics (like IPC_RMID is always set), actual check in
-> shmget()+exit() is needed.
-> 
-> Spotted by reading -ow README and testing :)
+On Wed, Jun 15, 2011 at 18:38 +0400, Solar Designer wrote:
+> If upstream is fine with sysctl's setting gids, and this appears to be
+> the case, then let's go for this.
 
-Oh, right.  Having documentation is good.
+I see one problem with gid style - as gid is a per pid_namespace thing,
+it should be configurable per pid_namespace.
 
-> I think forcing IPC_RMID should be configurable via sysctl like other
-> ipc variables.  Something like /proc/sys/kernel/shm_orphans_denied.
-> And I think changing it from 0 to 1 should destroy already orphaned
-> segments without users.
+But on the other hand, a potential bug might lead to a privilege
+escalation (not a in-namespace root, but e.g. arbitrary write into any
+physical address) due to the nature of the syscall.  So, in-namespace
+root shouldn't be able to configure who is able to do vm86(2), otherwise
+it is able to gain full root.
 
-OK.
+I'm confused :\
 
-Thanks,
-
-Alexander
+-- 
+Vasiliy
