@@ -1,87 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
 From: Vasiliy Kulikov <segoon@openwall.com>
-Date: Wed, 15 Jun 2011 22:51:59 +0400
-Message-Id: <1308163920-6198-1-git-send-email-segoon@openwall.com>
-Subject: [kernel-hardening] [RFC 5/5 v4] procfs: add documentation for procfs mount options
+Date: Wed, 15 Jun 2011 22:51:35 +0400
+Message-Id: <1308163895-5963-1-git-send-email-segoon@openwall.com>
+Subject: [kernel-hardening] [RFC 0/5 v4] procfs: introduce hidepid=, hidenet=, gid= mount options
 To: linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, Randy Dunlap <rdunlap@xenotime.net>, Nikanth Karthikesan <knikanth@suse.de>, David Rientjes <rientjes@google.com>, Matt Mackall <mpm@selenic.com>, linux-doc@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add documentation for procfs mount options.
+This patch series adds support of procfs mount options and adds
+mount options to restrict /proc/<pid>/ directories to owners and
+/proc/<pid>/net/* to root.  Additional group may be defined via
+gid=, and this group will be privileged to study others /proc/<pid>/
+and networking information.
 
-v4 - grammar fixes.
+Similar features are implemented for old kernels in -ow patches (for
+Linux 2.2 and 2.4) and for Linux 2.6 in -grsecurity, but both of them
+are implemented as configure options, not cofigurable in runtime, with
+changes of gid of /proc/<pid>/, and without backward-compatible
+/proc/<pid>/net/* handling.
 
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
----
- Documentation/filesystems/proc.txt |   51 ++++++++++++++++++++++++++++++++++++
- 1 files changed, 51 insertions(+), 0 deletions(-)
 
-diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
-index f481780..327a640 100644
---- a/Documentation/filesystems/proc.txt
-+++ b/Documentation/filesystems/proc.txt
-@@ -41,6 +41,8 @@ Table of Contents
-   3.5	/proc/<pid>/mountinfo - Information about mounts
-   3.6	/proc/<pid>/comm  & /proc/<pid>/task/<tid>/comm
- 
-+  4	Configuring procfs
-+  4.1	Mount options
- 
- ------------------------------------------------------------------------------
- Preface
-@@ -1541,3 +1543,52 @@ a task to set its own or one of its thread siblings comm value. The comm value
- is limited in size compared to the cmdline value, so writing anything longer
- then the kernel's TASK_COMM_LEN (currently 16 chars) will result in a truncated
- comm value.
-+
-+
-+------------------------------------------------------------------------------
-+Configuring procfs
-+------------------------------------------------------------------------------
-+
-+4.1	Mount options
-+---------------------
-+
-+The following mount options are supported:
-+
-+	hidepid=	Set /proc/<pid>/ access mode.
-+	hidenet		Hide /proc/<pid>/net/ from nonauthorized users.
-+	nohidenet	Don't hide /proc/<pid>/net/ from nonauthorized users.
-+	gid=		Set the group authorized to learn processes and
-+			networking information.
-+
-+hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
-+(default).
-+
-+hidepid=1 means users may not access any /proc/<pid>/ directories but their
-+own.  Sensitive files like cmdline, io, sched*, status, wchan are now protected
-+against other users.  This makes it impossible to learn whether any user runs
-+specific program (given the program doesn't reveal itself by its behaviour).
-+As an additional bonus, as /proc/<pid>/cmdline is unaccessible for other users,
-+poorly written programs passing sensitive information via program arguments are
-+now protected against local eavesdroppers.
-+
-+hidepid=2 means hidepid=1 plus all /proc/<pid>/ will be fully invisible to other
-+users.  It doesn't mean that it hides whether a process with a specific
-+pid value exists (it can be learned by other means, e.g. by sending signals),
-+but it hides process' uid and gid, which may be learned by stat()'ing
-+/proc/<pid>/ otherwise.  It greatly complicates an intruder's task of gathering
-+information about running processes, whether some daemon runs with elevated privileges,
-+whether another user runs some sensitive program, whether other users run any
-+program at all, etc.
-+
-+hidenet means /proc/<pid>/net/ will be accessible to processes with
-+CAP_NET_ADMIN capability or to members of a special group.  It means
-+nonauthorized users may not learn any networking connections information.  If
-+network namespaces support is enabled (CONFIG_NET_NS=y) then common users would
-+obtain net directory, but all files would indicate no networking activity at
-+all.  If network namespaces are disabled, net directory is unaccessible to
-+common users.
-+
-+gid= means group authorized to learn processes information prohibited by
-+hidepid= and networking information prohibited by hidenet.  If you use some
-+daemon like identd which has to learn information about net/processes
-+information, just add identd to this group.
--- 
-1.7.0.4
+The first patch introduces mount option parsing without any new options.
+The second patch adds options of /proc/<pid>/ restrictions.
+The third patch makes net_create() globally visible.
+The fourth patch adds options of /proc/<pid>/net/ restrictions.
+The fifth patch adds documentations for options above.
+
+Vasiliy Kulikov (5):
+  procfs: parse mount options
+  procfs: add hidepid= and gid= mount options
+  net: restore net_create and make it globally visible
+  procfs: Add hidenet/nohidenet procfs mount options.
+  procfs: add documentation for procfs mount options
+
+ Documentation/filesystems/proc.txt |   51 ++++++++++++++++++++++
+ fs/proc/base.c                     |   62 ++++++++++++++++++++++++++-
+ fs/proc/inode.c                    |   20 +++++++++
+ fs/proc/internal.h                 |    1 +
+ fs/proc/proc_net.c                 |   26 +++++++++++
+ fs/proc/root.c                     |   83 +++++++++++++++++++++++++++++++++++-
+ include/linux/pid_namespace.h      |    3 +
+ include/net/net_namespace.h        |    2 +
+ net/core/net_namespace.c           |   12 +++--
+ 9 files changed, 253 insertions(+), 7 deletions(-)
