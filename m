@@ -1,34 +1,27 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 15 Jun 2011 19:38:45 +0400
+Date: Wed, 15 Jun 2011 20:31:48 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110615153845.GA10715@albatros>
-References: <20110614083559.GB7973@albatros>
- <20110615143844.GB32753@openwall.com>
+Message-ID: <20110615163147.GA17087@albatros>
+References: <1308146299-13015-1-git-send-email-segoon@openwall.com>
+ <20110615092221.b143c45a.rdunlap@xenotime.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110615143844.GB32753@openwall.com>
-Subject: Re: [kernel-hardening] HARDEN_VM86
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20110615092221.b143c45a.rdunlap@xenotime.net>
+Subject: [kernel-hardening] Re: [RFC 5/5 v3] procfs: add documentation for procfs mount options
+To: Randy Dunlap <rdunlap@xenotime.net>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, Nikanth Karthikesan <knikanth@suse.de>, David Rientjes <rientjes@google.com>, Matt Mackall <mpm@selenic.com>, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+On Wed, Jun 15, 2011 at 09:22 -0700, Randy Dunlap wrote:
+> On Wed, 15 Jun 2011 17:58:19 +0400 Vasiliy Kulikov wrote:
+> > +hidepid=1 means users may not access any /proc/<pid>/ directories, but their
+> 
+> comma not needed above. [...]
 
-On Wed, Jun 15, 2011 at 18:38 +0400, Solar Designer wrote:
-> If upstream is fine with sysctl's setting gids, and this appears to be
-> the case, then let's go for this.
-
-I see one problem with gid style - as gid is a per pid_namespace thing,
-it should be configurable per pid_namespace.
-
-But on the other hand, a potential bug might lead to a privilege
-escalation (not a in-namespace root, but e.g. arbitrary write into any
-physical address) due to the nature of the syscall.  So, in-namespace
-root shouldn't be able to configure who is able to do vm86(2), otherwise
-it is able to gain full root.
-
-I'm confused :\
+Indeed, thank you for the fixes!
 
 -- 
-Vasiliy
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
