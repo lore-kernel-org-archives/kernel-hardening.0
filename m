@@ -1,49 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <4DF96953.8090002@jp.fujitsu.com>
-Date: Thu, 16 Jun 2011 11:24:19 +0900
-From: KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>
-MIME-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Thu, 16 Jun 2011 12:47:20 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110616084720.GA2897@albatros>
 References: <1308163906-6054-1-git-send-email-segoon@openwall.com>
-In-Reply-To: <1308163906-6054-1-git-send-email-segoon@openwall.com>
-Content-Type: text/plain; charset=ISO-2022-JP
-Content-Transfer-Encoding: 7bit
+ <4DF96953.8090002@jp.fujitsu.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <4DF96953.8090002@jp.fujitsu.com>
 Subject: [kernel-hardening] Re: [RFC 2/5 v4] procfs: add hidepid= and gid= mount options
-To: segoon@openwall.com
+To: KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, akpm@linux-foundation.org, gregkh@suse.de, davem@davemloft.net, arnd@arndb.de, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, daniel.lezcano@free.fr, ebiederm@xmission.com, serge@hallyn.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(2011/06/16 3:51), Vasiliy Kulikov wrote:
-> This patch adds support of mount options to restrict access to
-> /proc/PID/ directories.  The default backward-compatible 'relaxed'
-> behaviour is left untouched.
-> 
-> The first mount option is called "hidepid" and its value defines how much
-> info about processes we want to be available for non-owners:
-> 
-> hidepid=0 (default) means the current behaviour - anybody may read all
-> world-readable /proc/PID/* files.
-> 
-> hidepid=1 means users may not access any /proc/<pid>/ directories, but their
-> own.  Sensitive files like cmdline, io, sched*, status, wchan are now
-> protected against other users.  As permission checking done in
-> proc_pid_permission() and files' permissions are left untouched,
-> programs expecting specific files' permissions are not confused.
-> 
-> hidepid=2 means hidepid=1 plus all /proc/PID/ will be invisible to
-> other users.  It doesn't mean that it hides a fact whether a process
-> exists (it can be learned by other means, e.g. by sending signals), but
-> it hides process' euid and egid.  It greatly compicates intruder's task of
-> gathering info about running processes, whether some daemon runs with
-> elevated privileges, whether other user runs some sensitive program,
-> whether other users run any program at all, etc.
-> 
-> gid=XXX defines a group that will be able to gather all processes' info.
+Hi KOSAKI,
 
-Hmm...
+On Thu, Jun 16, 2011 at 11:24 +0900, KOSAKI Motohiro wrote:
+> Maybe I missed patch [0/5] or I haven't got it. Anyway I haven't see it.
 
-Maybe I missed patch [0/5] or I haven't got it. Anyway I haven't see it.
-Can you please describe your use case? Why do we need two new hidepid mode?
-Moreover, if we use hidepid=[12], it may break some procps tools. What do
-you think about compatibility issue? And, why don't you use just pid namespace?
+0/5: https://lkml.org/lkml/2011/6/15/172 As 0's description doesn't go
+into "git log", I didn't put exhaustive explaination there.
 
-I'm sorry if you already answered.
+Documentation: https://lkml.org/lkml/2011/6/15/176
+
+
+> Can you please describe your use case? Why do we need two new hidepid mode?
+
+It can be used everywhere where a confidence is an issue.  The most
+visible part is cmdline and comm hiding, which forbids learning what
+binaries other users run.  status, perhaps io, stat and sched may be
+indirectly used for the same purpose.  These and other files may be used
+for gaining indirect infomation about what kinds (and/or what amount) of
+computations were performed.
+
+Changing all these files' permissions is arguable (it's not obvious what
+files are sources of potential infoleaks and in what cases), it might
+lead to compatibility issues.
+
+
+> Moreover, if we use hidepid=[12], it may break some procps tools. What do
+> you think about compatibility issue?
+
+Good question :)  In times of -ow patch there was a pstree patch to show
+independent process trees:
+
+http://cvsweb.openwall.com/cgi/cvsweb.cgi/Owl/packages/psmisc/psmisc-21.5-owl-restricted-proc.diff?rev=1.2;content-type=text%2Fplain
+
+It is simple to port it to the latest version of pstree.  Current
+version of pstree prints only one tree:
+
+?─┬─bonobo-activati───{bonobo-activat}
+  ├─clock-applet
+  ├─cpufreq-applet
+  ├─dbus-daemon
+  ├─dbus-launch
+[...]
+
+
+I didn't spot any visibility issues with other process related tools - 
+ps and similar just print accessible processes' information skipping
+nonaccessible ones.
+
+
+> And, why don't you use just pid namespace?
+
+Pid namespaces are somewhat good, but it is already possible to use
+different security domains (uid and gid) inside of pid_namespace without
+any trust between them (OK, root is an exception :)).  Hidepid enhances
+already implemented separation.   Sometimes pid namespace's separation
+may be too strong (no process-related communications between processes
+of different namespaces unless they are parent and child namespaces).
+Besides, namespaces are very expensive resource in sense of memory.
+
+
+Thanks,
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
