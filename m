@@ -1,43 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 18 Jun 2011 22:28:12 +0400
+Date: Sun, 19 Jun 2011 17:34:35 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110618182812.GA16457@albatros>
-References: <20110618104207.GA13752@albatros>
+Message-ID: <20110619133435.GA2670@albatros>
+References: <20110609141745.GA11957@albatros>
+ <20110612022833.GB14976@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110618104207.GA13752@albatros>
-Subject: [kernel-hardening] Re: proc info restrictions problem
+In-Reply-To: <20110612022833.GB14976@openwall.com>
+Subject: Re: [kernel-hardening] rlimit_nproc check
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+On Sun, Jun 12, 2011 at 06:28 +0400, Solar Designer wrote:
+> Right.  Dealing with setuid() failing to drop privs yet returning, which
+> many apps don't expect, is definitely something we (you) need to do
+> under this project.  In Linux 2.4.x-ow, I simply do:
+> 
+> --- linux-2.4.37.9.orig/kernel/sys.c	2010-02-01 21:04:46 +0000
+> +++ linux-2.4.37.9/kernel/sys.c	2010-02-18 14:04:42 +0000
+> @@ -514,8 +514,10 @@ static int set_user(uid_t new_ruid, int 
+>  	struct user_struct *new_user;
+>  
+>  	new_user = alloc_uid(new_ruid);
+> -	if (!new_user)
+> +	if (!new_user) {
+> +		force_sig(SIGSEGV, current);
+>  		return -EAGAIN;
+> +	}
+>  	switch_uid(new_user);
+>  
+>  	if(dumpclear)
+> 
+> As an option, you could propose to revert that 8-year old change and
+> introduce the check on execve().  Unrealistic?
 
-On Sat, Jun 18, 2011 at 14:42 +0400, Vasiliy Kulikov wrote:
-> I feel doubt whether ptrace_may_access() may be changed to something
-> more simple.  Both -ow and -grsecurity use changed posix permissions and
-> gid on procfs files, so maybe just match subject's euid vs. object's uid?
+I have slightly another idea.  Introduce mechanism (e.g. sysctl
+variable) to make all capabilities dropping function cause SIGSEGV if
+actual dropping process fails for any of several reasons.
 
-Another choise - remove hidepid=2 at all.  As proc connector uses struct
-proc_event as an information send to listeners, hidepid=1 is not related
-to proc connector:
+The initial list should look like this:
 
-http://lxr.free-electrons.com/source/include/linux/cn_proc.h?a=avr32#L45
+    set*{u,g}id
+    {set,init}groups
+    unshare
+    prctl(PR_CAPBSET_DROP, ...)
+    prctl(PR_SET_SECCOMP, ...)
+    capset
 
-It means that with hidepid=1 only procfs and taskstats should be
-restricted.  Taskstats uses direct "unicast" information sending, so
-ptrace_task_may_access_current() and ptrace_may_access() should work
-(with a patch I've recently sent to lsm list as RFC).
+But any such list looks a bit not complete because there are many
+different functions that might drop some capabilities in some
+situations, like close(), *chdir(), rlimit(), nice(), fcntl(), ioctl(),
+chroot(), which are, well, might fail in very common situations without
+any actual secuity risk.
 
-
-It is sad that hidepid=2 is losen and processes may spy on other users'
-processes, but I don't see any technical solution for hidepid=2 and
-cn_proc problem.
+So, IMO this solution might not be enough consistent for upstream
+inclusion.
 
 
 Thanks,
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
