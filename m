@@ -1,57 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 20 Jun 2011 10:51:24 -0500
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20110620155124.GA16444@mail.hallyn.com>
-References: <20110617171152.GA1389@albatros>
- <4DFF5795.9080609@redhat.com>
- <20110620150001.GF12469@mail.hallyn.com>
- <20110620154429.GA12879@albatros>
+Message-ID: <4DFF7A59.40200@redhat.com>
+Date: Mon, 20 Jun 2011 12:50:33 -0400
+From: Eric Paris <eparis@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110620154429.GA12879@albatros>
+References: <20110617171152.GA1389@albatros> <4DFF5795.9080609@redhat.com> <20110620150001.GF12469@mail.hallyn.com>
+In-Reply-To: <20110620150001.GF12469@mail.hallyn.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [RFC v2] security: intoduce ptrace_task_may_access_current
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Serge Hallyn <serge.hallyn@canonical.com>, Eric Paris <eparis@redhat.com>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, apparmor@lists.ubuntu.com, "selinux@tycho.nsa.gov Stephen Smalley" <sds@tycho.nsa.gov>, James Morris <jmorris@namei.org>, Eric Paris <eparis@parisplace.org>, John Johansen <john.johansen@canonical.com>, kernel-hardening@lists.openwall.com, serge@hallyn.com, Andrew Morgan <morgan@kernel.org>
+To: Serge Hallyn <serge.hallyn@canonical.com>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, apparmor@lists.ubuntu.com, "selinux@tycho.nsa.gov Stephen Smalley" <sds@tycho.nsa.gov>, James Morris <jmorris@namei.org>, Eric Paris <eparis@parisplace.org>, John Johansen <john.johansen@canonical.com>, kernel-hardening@lists.openwall.com, serge@hallyn.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Vasiliy Kulikov (segoon@openwall.com):
-> On Mon, Jun 20, 2011 at 10:00 -0500, Serge Hallyn wrote:
-> > > >diff --git a/kernel/capability.c b/kernel/capability.c
-> > > >index 283c529..bc9b07f 100644
-> > > >--- a/kernel/capability.c
-> > > >+++ b/kernel/capability.c
-> > > >@@ -356,6 +356,30 @@ bool capable(int cap)
-> > > >  }
-> > > >  EXPORT_SYMBOL(capable);
-> > > >
-> > > >+bool task_capable(struct task_struct *task, int cap)
-> > > >+{
-> > > >+	return ns_task_capable(task,&init_user_ns, cap);
-> > > >+}
-> > > >+EXPORT_SYMBOL(task_capable);
-> > > 
-> > > Why do we keep adding things like task_capable?  Can't we just stop
-> > > adding non-lsm functions and just call the right LSM functions from
-> > > now on?  This is my original comments mostly directed at Serge.  I'm
-> > > to the point where I want to NAK anything new in kernel/capability.c
-> > > (and yes, I know i'm guilty in the paste)
-> > > 
-> > > >+bool ns_task_capable(struct task_struct *task, struct user_namespace *ns, int cap)
-> > 
-> > Can you just use has_ns_capability() at the places where you wanted to
-> > use your new ns_task_capable()?  It won't set PF_SUPERPRIV, but you
-> > can't set that on another task anyway IIRC.
+On 06/20/2011 11:00 AM, Serge Hallyn wrote:
+> Quoting Eric Paris (eparis@redhat.com):
+>> Ahhhh, I feel so unhappy with capability code these days.  Serge can
+>> you come to the rescue?  I'm really really starting to dislike the
+>> fact that we have lots of code flows that goes
+>> kernel->kernel/capablities->LSM->security/capabilities.  Which is a
+>> very strange calling convention.  I'd like to stop adding any calls
+>> to kernel/capability.c and everything from now on needs to be done
+>> with an LSM function named security_*.  I'd really like to see
+>> kernel/capabilities stripped back to nothing but syscall handling
+>> and move all of has_capability, has_ns_capability, ns_capable,
+>> task_ns_capable, and all that crap moved to normal LSM calls.
 > 
-> has_ns_capability() doesn't touch LSMs, but ns_task_capable() uses
-> security_task_capable() which uses LSMs.
+> I can see why you'd feel that way, but I'd like to hold off on that
+> until we get targeted capabilities and VFS user namespace support ironed
+> out.  I'm working on it right now (at
+> http://kernel.ubuntu.com/git?p=serge/userns-2.6.git;a=summary)
+> 
+> I certainly do not want the targeted stuff duplicated in every LSM.
+> Maybe we can move that stuff into security/security.c though.
+> 
+> Anyway I'm just coming back after leave, and only ever took a
+> quick glance at this patch.  I'll look again.
 
-I don't understand what you mean by "doesn't touch LSMs."
-has_ns_capability() uses security_real_capable() which calls
-security_ops->capable().
+I'm certainly not asking for you to throw down everything you have to do
+and rewrite all of this code!  But I'd like to see a slow move towards
+the elimination of kernel/capability.c and wondered if you agreed that
+was a good idea.  If so, this can be the first place we start to think
+about how to move intelligently to use LSM functions rather than direct
+capability calls.  I like the idea that he use the has_* functions
+instead of creating new ones in there.
 
-The difference between 'has_capability' and 'capable' functions is
-that the latter, as implied, have current as the subject, while
-the former ask about another task.
+Hopefully you can help guide us on the right path Serge!
 
--serge
+-Eric
