@@ -1,50 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 21 Jun 2011 22:28:27 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110621182827.GA8960@albatros>
-References: <alpine.LRH.2.00.1106192154220.7503@taiga.selinuxproject.org>
- <alpine.LRH.2.00.1106201455560.6055@tundra.namei.org>
- <20110620103917.GA5230@albatros>
- <alpine.LRH.2.00.1106202040400.10448@tundra.namei.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.LRH.2.00.1106202040400.10448@tundra.namei.org>
-Subject: [kernel-hardening] Re: [RFC 2/5 v4] procfs: add hidepid= and gid= mount options
-To: James Morris <jmorris@namei.org>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Date: Tue, 21 Jun 2011 15:31:02 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20110621153102.762557f3.akpm@linux-foundation.org>
+In-Reply-To: <1308163895-5963-1-git-send-email-segoon@openwall.com>
+References: <1308163895-5963-1-git-send-email-segoon@openwall.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC 0/5 v4] procfs: introduce hidepid=, hidenet=, gid= mount
+ options
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, Alexey Dobriyan <adobriyan@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 20, 2011 at 20:43 +1000, James Morris wrote:
-> On Mon, 20 Jun 2011, Vasiliy Kulikov wrote:
+
+Plese cc Alexey on procfs things.
+
+On Wed, 15 Jun 2011 22:51:35 +0400
+Vasiliy Kulikov <segoon@openwall.com> wrote:
+
+> This patch series adds support of procfs mount options and adds
+> mount options to restrict /proc/<pid>/ directories to owners and
+> /proc/<pid>/net/* to root.  Additional group may be defined via
+> gid=, and this group will be privileged to study others /proc/<pid>/
+> and networking information.
 > 
-> > > Can you provide evidence that this is a useful feature?  e.g. examples of 
-> > > exploits / techniques which would be _usefully_ hampered or blocked.
-> > 
-> > First, most of these files are usefull in sense of statistics gathering
-> > and debugging.  There is no reason to provide this information to the
-> > world.
-> > 
-> > Second, yes, it blocks one source of information used in timing attacks,
-> > just use reading the counters as more or less precise time measurement
-> > when actual timing measurements are not precise enough.
-> 
-> Can you provide concrete examples?
+> Similar features are implemented for old kernels in -ow patches (for
+> Linux 2.2 and 2.4) and for Linux 2.6 in -grsecurity, but both of them
+> are implemented as configure options, not cofigurable in runtime, with
+> changes of gid of /proc/<pid>/, and without backward-compatible
+> /proc/<pid>/net/* handling.
 
-This is a PoC of ~user/.ssh/authorized_keys presence infoleak (and
-whether it is empty) using taskstats interface:
+This all seems highly specific to one particular set of requirements. 
+We have one set of access permission rules and then dive into procfs
+and hard-wire those rules into the implementation?  What happens if
+someone else has a similar but slightly different set of requirements? 
+More kernel patches?
 
-http://www.openwall.com/lists/oss-security/2011/06/21/12
-
-/proc/PID/io can be used too.
-
-More close interaction with ssh client would gain authorized_keys' size or,
-probably, what pam module denied the access.
+IOW is there some more general way of doing all this?  <handwaving>Like
+better permissions/chmod support in procfs and an inherited-across-fork
+per-process procfs permissions mask.</handwaving>
 
 
-Thanks,
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Does all this code support `mount -o remount' as expected?
