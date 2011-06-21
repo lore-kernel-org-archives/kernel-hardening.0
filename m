@@ -1,34 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 21 Jun 2011 09:19:34 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <20110620170600.GA25601@albatros>
-Message-ID: <alpine.LRH.2.00.1106210918290.14297@tundra.namei.org>
-References: <alpine.LRH.2.00.1106192154220.7503@taiga.selinuxproject.org> <alpine.LRH.2.00.1106201455560.6055@tundra.namei.org> <20110620103917.GA5230@albatros> <alpine.LRH.2.00.1106202040400.10448@tundra.namei.org> <20110620170600.GA25601@albatros>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 21 Jun 2011 22:28:27 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110621182827.GA8960@albatros>
+References: <alpine.LRH.2.00.1106192154220.7503@taiga.selinuxproject.org>
+ <alpine.LRH.2.00.1106201455560.6055@tundra.namei.org>
+ <20110620103917.GA5230@albatros>
+ <alpine.LRH.2.00.1106202040400.10448@tundra.namei.org>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.LRH.2.00.1106202040400.10448@tundra.namei.org>
 Subject: [kernel-hardening] Re: [RFC 2/5 v4] procfs: add hidepid= and gid= mount options
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, "Eric W. Biederman" <ebiederm@xmission.com>
+To: James Morris <jmorris@namei.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 20 Jun 2011, Vasiliy Kulikov wrote:
+On Mon, Jun 20, 2011 at 20:43 +1000, James Morris wrote:
+> On Mon, 20 Jun 2011, Vasiliy Kulikov wrote:
+> 
+> > > Can you provide evidence that this is a useful feature?  e.g. examples of 
+> > > exploits / techniques which would be _usefully_ hampered or blocked.
+> > 
+> > First, most of these files are usefull in sense of statistics gathering
+> > and debugging.  There is no reason to provide this information to the
+> > world.
+> > 
+> > Second, yes, it blocks one source of information used in timing attacks,
+> > just use reading the counters as more or less precise time measurement
+> > when actual timing measurements are not precise enough.
+> 
+> Can you provide concrete examples?
 
-> > If they depend on specific permissions, yes.
-> 
-> Could you please then clarify why does this patch changes
-> pid_revalidate() behaviour:
-> 
-> http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=99f895518368252ba862cc15ce4eb98ebbe1bec6
-> 
-> It changes files permissions to allow userspace apps to quickly stat
-> files, not looking into /proc/PID/status.  So, uid and gid are explicit
-> ABI.  Breaking procfs uid/gid attributes would break these apps.
-> 
+This is a PoC of ~user/.ssh/authorized_keys presence infoleak (and
+whether it is empty) using taskstats interface:
 
-Right, but I'm saying that apps which depend on specific permissions are 
-broken, which is not the uid / gid attributes.
+http://www.openwall.com/lists/oss-security/2011/06/21/12
 
+/proc/PID/io can be used too.
+
+More close interaction with ssh client would gain authorized_keys' size or,
+probably, what pam module denied the access.
+
+
+Thanks,
 
 -- 
-James Morris
-<jmorris@namei.org>
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
