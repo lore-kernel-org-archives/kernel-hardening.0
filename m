@@ -1,92 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 22 Jun 2011 10:45:45 +0400
+Date: Wed, 22 Jun 2011 13:53:41 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110622064545.GA3605@albatros>
-References: <1308163895-5963-1-git-send-email-segoon@openwall.com>
- <20110621153102.762557f3.akpm@linux-foundation.org>
+Message-ID: <20110622095341.GA3353@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110621153102.762557f3.akpm@linux-foundation.org>
-Subject: [kernel-hardening] Re: [RFC 0/5 v4] procfs: introduce hidepid=, hidenet=, gid= mount
- options
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, Alexey Dobriyan <adobriyan@gmail.com>, linux-security-module@vger.kernel.org
+Subject: [kernel-hardening] [PATCH] kernel: escape non-ASCII and control characters in printk()
+To: Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Cc: security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+This patch escapes all characters outside of allowed '\n' plus 0x20-0x7E
+charset passed to printk().
 
-First of all, to make it clear, this specific patch is not proposed
-anymore because it doesn't restrict taskstats which can be used to
-gather similar information.  The patch working with taskstats (and
-without hidepid=2) was not yet posted on LKML, but is available here:
+There are numerous printk() instances with user supplied input as "%s"
+data, and unprivileged user may craft log messages with substrings
+containing control characters via these printk()s.  Control characters
+might fool root viewing the logs via tty.
 
-http://www.openwall.com/lists/kernel-hardening/2011/06/19/3
+Printing non-ASCII characters is not portable since not everyone sees
+the same characters after 0xFF.  If any driver use it to print some
+binary data, it should be fixed.  Not fixed code will print hex codes
+of the binary data.
 
-On Tue, Jun 21, 2011 at 15:31 -0700, Andrew Morton wrote:
-> > This patch series adds support of procfs mount options and adds
-> > mount options to restrict /proc/<pid>/ directories to owners and
-> > /proc/<pid>/net/* to root.  Additional group may be defined via
-> > gid=, and this group will be privileged to study others /proc/<pid>/
-> > and networking information.
-> > 
-> > Similar features are implemented for old kernels in -ow patches (for
-> > Linux 2.2 and 2.4) and for Linux 2.6 in -grsecurity, but both of them
-> > are implemented as configure options, not cofigurable in runtime, with
-> > changes of gid of /proc/<pid>/, and without backward-compatible
-> > /proc/<pid>/net/* handling.
-> 
-> This all seems highly specific to one particular set of requirements. 
+On testing Samsung Q310 laptop there are no users of chars outside of the
+restricted charset.
 
-Yes, I admit this.  The problem with procfs is that it's possible to
-chmod/chown some procfs files, but not /proc/PID/*.  Even if make it
-possible to chmod/chown them (and introducing an inodes revalidation on
-execve() setuid and similar binaries) it is still racy - new processes
-would have /proc/PID/ and some files inside with perms=0555.  So, for
-more generic mechanism something like umask is needed.  The patch in
-question implements 2 border cases:
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+---
 
-1) relaxed.  umask=0555.
+ This patch does nothing with crafted "%s" data with '\n' inside.  It
+ allows unprivileged user to craft arbitrary log messages via breaking
+ log lines boundaries.  It is a bit tricky to fix it compatible way.
+ Limiting "%s" to one line in vscnprintf() would break legitimate users
+ of the multiline feature.  Intoducing new "%S" format for single lines
+ makes little sense as there are tons of printk() calls that should be
+ already restricted to one line.
 
-2) restricted.  umask=0550 (with tricky gid) and files are still not
-chmod'able.
+ Proposals about '\n' inside of '%s" are welcome.
 
 
-More generic solution (I'm not suggesting it, but merely discussing)
-would use some user-supplied set of files to restrict access to (or,
-better, the set of allowed files because white list is almost always
-better than black list).  Maybe this one:
+ kernel/printk.c |   16 +++++++++++++++-
+ 1 files changed, 15 insertions(+), 1 deletions(-)
 
-    mount -t proc -o "pid_allow=exe,status,comm,oom_*" proc /proc
-
-And without pid_allow it would behave like pid_allow=*.  "pid_allow=."
-would deny access to the whole /proc/PID.
-
-This would be a bit inconsistent with current permissions because e.g.
-if use pid_allow=environ then environ file would not be accessible
-because of posix permissions.  Hierarchical mode (pid_allow=fd/1) is not
-allowed too.
-
-
-But it wouldn't work with taskstats.  It needs its own set of allowed
-fields or field sets like delayacct,csw,bacct,xacct.
-
-
-> IOW is there some more general way of doing all this?  <handwaving>Like
-> better permissions/chmod support in procfs and an inherited-across-fork
-> per-process procfs permissions mask.</handwaving>
-
-I don't know such way, but it would ease procfs logic.
-
-
-> Does all this code support `mount -o remount' as expected?
-
-Yes.
-
-
-Thanks,
-
+diff --git a/kernel/printk.c b/kernel/printk.c
+index 3518539..1f23988 100644
+--- a/kernel/printk.c
++++ b/kernel/printk.c
+@@ -671,6 +671,20 @@ static void emit_log_char(char c)
+ 		logged_chars++;
+ }
+ 
++static void emit_log_char_escaped(char c)
++{
++	char buffer[8];
++	int i, len;
++
++	if ((c >= ' ' && c < 127) || c == '\n')
++		emit_log_char(c);
++	else {
++		len = sprintf(buffer, "#%02x", c);
++		for (i = 0; i < len; i++)
++			emit_log_char(buffer[i]);
++	}
++}
++
+ /*
+  * Zap console related locks when oopsing. Only zap at most once
+  * every 10 seconds, to leave time for slow consoles to print a
+@@ -938,7 +952,7 @@ asmlinkage int vprintk(const char *fmt, va_list args)
+ 				break;
+ 		}
+ 
+-		emit_log_char(*p);
++		emit_log_char_escaped(*p);
+ 		if (*p == '\n')
+ 			new_text_line = 1;
+ 	}
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+1.7.0.4
