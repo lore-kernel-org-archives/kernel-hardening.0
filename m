@@ -1,46 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 22 Jun 2011 21:48:12 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110622174812.GA13392@albatros>
+Date: Wed, 22 Jun 2011 19:10:22 +0100
+From: Alan Cox <alan@lxorguk.ukuu.org.uk>
+Message-ID: <20110622191022.66135615@lxorguk.ukuu.org.uk>
+In-Reply-To: <1308760683.10423.16.camel@Joe-Laptop>
 References: <20110622095341.GA3353@albatros>
- <1308760683.10423.16.camel@Joe-Laptop>
- <20110622165355.GB11803@albatros>
- <1308762841.10423.28.camel@Joe-Laptop>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1308762841.10423.28.camel@Joe-Laptop>
+	<1308760683.10423.16.camel@Joe-Laptop>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH] kernel: escape non-ASCII and control characters in
  printk()
 To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, security@kernel.org
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 22, 2011 at 10:14 -0700, Joe Perches wrote:
-> On Wed, 2011-06-22 at 20:53 +0400, Vasiliy Kulikov wrote:
-> > On Wed, Jun 22, 2011 at 09:38 -0700, Joe Perches wrote:
-> > > > +	if ((c >= ' ' && c < 127) || c == '\n')
-> > > 	if (isprint(c))
-> > #define isprint(c)	((__ismask(c)&(_P|_U|_L|_D|_SP)) != 0)
-> > It slightly differs from what I've written.  It (1) lacks '\n',
-> 
-> You still need tab,
+On Wed, 22 Jun 2011 09:38:03 -0700
+Joe Perches <joe@perches.com> wrote:
 
-Correct.
+> On Wed, 2011-06-22 at 13:53 +0400, Vasiliy Kulikov wrote:
+> > This patch escapes all characters outside of allowed '\n' plus 0x20-0x7E
+> > charset passed to printk().
 
-> so:
-> 
-> if (isprint(c) || isspace(c))
+I think this is fundamentally wrong.
 
-No, it also allows vertical tabs.  Looking into __ctype only ' ', '\n' and
-'\t' should be allowed among all _S, so
+It makes sense for some interfaces but not others and arbitarily doing it
+makes a nasty mess of anything like file name printing in non English
+languages.
 
-if (isprint(c) || (c == '\n') || (c == '\t'))
+The right way to do this IMHO is for the console device itself to have a
+filter function, the default would be the 0x20-0x7E but for example with
+any console which has an accompanying tty device the right behaviour
+depends upon the port UTF8 flag (IUTF8).
 
+If that is set you shouldn't be filtering out unicode, just control codes.
 
-Thanks,
+Minor other nit is that you might want to allow BEL through and you
+certainly want to allow tab through.
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+The core code should not be hardcoding policy assumptions about symbol
+sets and ASCII, for an awful lot of consoles today that assumption is
+just plain wrong, for others it makes sense
+
+So with tty maintainer hat on - NAK to the current approach but a good
+idea to do it properly.
