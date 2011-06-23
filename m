@@ -1,76 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 23 Jun 2011 19:21:37 +0400
+Date: Thu, 23 Jun 2011 21:11:43 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110623152137.GA2536@albatros>
+Message-ID: <20110623171143.GA3927@albatros>
+References: <20110609141745.GA11957@albatros>
+ <20110612022833.GB14976@openwall.com>
+ <20110619133435.GA2670@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH v2] kernel: escape non-ASCII and control characters in
- printk()
-To: Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>
+In-Reply-To: <20110619133435.GA2670@albatros>
+Subject: Re: [kernel-hardening] rlimit_nproc check
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch escapes control characters fed to printk() except '\n' and '\t'.
+On Sun, Jun 19, 2011 at 17:34 +0400, Vasiliy Kulikov wrote:
+> I have slightly another idea.  Introduce mechanism (e.g. sysctl
+> variable) to make all capabilities dropping function cause SIGSEGV if
+> actual dropping process fails for any of several reasons.
+> 
+> The initial list should look like this:
+> 
+>     set*{u,g}id
+>     {set,init}groups
+>     unshare
+>     prctl(PR_CAPBSET_DROP, ...)
+>     prctl(PR_SET_SECCOMP, ...)
+>     capset
+> [...]
 
-There are numerous printk() instances with user supplied input as "%s"
-data, and unprivileged user may craft log messages with substrings
-containing control characters via these printk()s.  Control characters
-might fool root viewing the logs via tty, e.g. using ^[1A to suppress
-the previous log line.
+The scheme actually is harmfull in some situations.  E.g. nfs daemon
+with one process architecture switches to another user via setfsuid()
+or similar, handles the request, switches back to the root.  If
+setfsuid() fails (rlimit or some other reason) nfsd is DoS'ed by the
+signal.  Any other daemon with similar architecture will be DoS'ed too.
 
-On the testing Samsung Q310 laptop there are no users of chars outside
-of the restricted charset. 
+So, the list of SIGKILL'able syscalls should be selected _very_
+carefully (I don't know whether the safe list is nonempty).
 
-v2 - Allow chars with code >127.  Allow tabs.
 
-Reported-by: Solar Designer <solar@openwall.com>
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
----
- kernel/printk.c |   17 ++++++++++++++++-
- 1 files changed, 16 insertions(+), 1 deletions(-)
+Thanks,
 
----
-diff --git a/kernel/printk.c b/kernel/printk.c
-index 3518539..727ff7d 100644
---- a/kernel/printk.c
-+++ b/kernel/printk.c
-@@ -41,6 +41,7 @@
- #include <linux/cpu.h>
- #include <linux/notifier.h>
- #include <linux/rculist.h>
-+#include <linux/ctype.h>
- 
- #include <asm/uaccess.h>
- 
-@@ -671,6 +672,20 @@ static void emit_log_char(char c)
- 		logged_chars++;
- }
- 
-+static void emit_log_char_escaped(char c)
-+{
-+	char buffer[8];
-+	int i, len;
-+
-+	if (!iscntrl(c) || (c == '\n') || (c == '\t'))
-+		emit_log_char(c);
-+	else {
-+		len = sprintf(buffer, "#x%02x", c);
-+		for (i = 0; i < len; i++)
-+			emit_log_char(buffer[i]);
-+	}
-+}
-+
- /*
-  * Zap console related locks when oopsing. Only zap at most once
-  * every 10 seconds, to leave time for slow consoles to print a
-@@ -938,7 +953,7 @@ asmlinkage int vprintk(const char *fmt, va_list args)
- 				break;
- 		}
- 
--		emit_log_char(*p);
-+		emit_log_char_escaped(*p);
- 		if (*p == '\n')
- 			new_text_line = 1;
- 	}
----
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
