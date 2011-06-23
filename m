@@ -1,52 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: geert.uytterhoeven@gmail.com
-In-Reply-To: <20110622190739.GB14351@albatros>
+Date: Thu, 23 Jun 2011 14:44:21 -0700
+From: Greg KH <gregkh@suse.de>
+Message-ID: <20110623214421.GC7184@suse.de>
 References: <20110622095341.GA3353@albatros>
-	<1308760683.10423.16.camel@Joe-Laptop>
-	<20110622191022.66135615@lxorguk.ukuu.org.uk>
-	<20110622190739.GB14351@albatros>
-Date: Thu, 23 Jun 2011 20:11:46 +0200
-Message-ID: <BANLkTimQxzqstxLnO-_dDMoRbWbGPQJrvA@mail.gmail.com>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH] kernel: escape non-ASCII and control characters in printk()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Joe Perches <joe@perches.com>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, security@kernel.org
+ <20110622153742.GA18983@suse.de>
+ <20110623133605.GA28333@srcf.ucam.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110623133605.GA28333@srcf.ucam.org>
+Subject: [kernel-hardening] Re: [PATCH] kernel: escape non-ASCII and control characters in
+ printk()
+To: Matthew Garrett <mjg59@srcf.ucam.org>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Ingo Molnar <mingo@elte.hu>, Namhyung Kim <namhyung@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 22, 2011 at 21:07, Vasiliy Kulikov <segoon@openwall.com> wrote:
-> On Wed, Jun 22, 2011 at 19:10 +0100, Alan Cox wrote:
->> If that is set you shouldn't be filtering out unicode, just control code=
-s.
->
-> OK.
->
->> Minor other nit is that you might want to allow BEL through and you
->> certainly want to allow tab through.
->
-> In what situation do you think BEL makes sense in kernel log? =C2=A0I can=
-not
-> image the situation. =C2=A0Alarms should use KERN_EMERG/KERN_ALERT log le=
-vel.
+On Thu, Jun 23, 2011 at 02:36:05PM +0100, Matthew Garrett wrote:
+> On Wed, Jun 22, 2011 at 08:37:42AM -0700, Greg KH wrote:
+> > On Wed, Jun 22, 2011 at 01:53:41PM +0400, Vasiliy Kulikov wrote:
+> > > This patch escapes all characters outside of allowed '\n' plus 0x20-0x7E
+> > > charset passed to printk().
+> > > 
+> > > There are numerous printk() instances with user supplied input as "%s"
+> > > data, and unprivileged user may craft log messages with substrings
+> > > containing control characters via these printk()s.  Control characters
+> > > might fool root viewing the logs via tty.
+> > 
+> > There are "numerous" places this could happen?
+> 
+> USB product identifiers?
 
-Does BEL work? Last time I tried fancy things (e.g. color output
-depending on the
-message level), it didn't work. I only got strange characters.
+That's one, sure, but the ability to overwrite something else that you
+don't want someone to see based on plugging in a USB device is pretty
+slim.  If I can plug any type of USB device I want into the system, odds
+are I just owned it anyway...
 
-Gr{oetje,eeting}s,
-
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 Geert
-
---
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k=
-.org
-
-In personal conversations with technical people, I call myself a hacker. Bu=
-t
-when I'm talking to journalists I just say "programmer" or something like t=
-hat.
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=
-=A0 =C2=A0 =C2=A0 =C2=A0=C2=A0 =C2=A0=C2=A0 -- Linus Torvalds
+greg k-h
