@@ -1,54 +1,83 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 25 Jun 2011 22:52:34 +0200
-From: Willy Tarreau <w@1wt.eu>
-Message-ID: <20110625205234.GA8743@1wt.eu>
-References: <20110622095341.GA3353@albatros> <1308760683.10423.16.camel@Joe-Laptop> <20110622191022.66135615@lxorguk.ukuu.org.uk> <20110622190739.GB14351@albatros>
-Mime-Version: 1.0
+Date: Sun, 26 Jun 2011 12:39:15 +0200
+From: Ingo Molnar <mingo@elte.hu>
+Message-ID: <20110626103915.GB11093@elte.hu>
+References: <20110623152137.GA2536@albatros>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110622190739.GB14351@albatros>
-Subject: [kernel-hardening] Re: [Security] [PATCH] kernel: escape non-ASCII and control characters in printk()
+In-Reply-To: <20110623152137.GA2536@albatros>
+Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in
+ printk()
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, security@kernel.org, kernel-hardening@lists.openwall.com, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, James Morris <jmorris@namei.org>, linux-kernel@vger.kernel.org, Joe Perches <joe@perches.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Vasiliy,
 
-On Wed, Jun 22, 2011 at 11:07:39PM +0400, Vasiliy Kulikov wrote:
-> The final check should be:
+* Vasiliy Kulikov <segoon@openwall.com> wrote:
+
+> This patch escapes control characters fed to printk() except '\n' and '\t'.
 > 
->     if (iscntrl(c) && (c != '\n') && (c != '\t'))
+> There are numerous printk() instances with user supplied input as "%s"
+> data, and unprivileged user may craft log messages with substrings
+> containing control characters via these printk()s.  Control characters
+> might fool root viewing the logs via tty, e.g. using ^[1A to suppress
+> the previous log line.
 > 
-> Any comments against this variant?
+> On the testing Samsung Q310 laptop there are no users of chars outside
+> of the restricted charset. 
+> 
+> v2 - Allow chars with code >127.  Allow tabs.
+> 
+> Reported-by: Solar Designer <solar@openwall.com>
+> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+> ---
+>  kernel/printk.c |   17 ++++++++++++++++-
+>  1 files changed, 16 insertions(+), 1 deletions(-)
+> 
+> ---
+> diff --git a/kernel/printk.c b/kernel/printk.c
+> index 3518539..727ff7d 100644
+> --- a/kernel/printk.c
+> +++ b/kernel/printk.c
+> @@ -41,6 +41,7 @@
+>  #include <linux/cpu.h>
+>  #include <linux/notifier.h>
+>  #include <linux/rculist.h>
+> +#include <linux/ctype.h>
+>  
+>  #include <asm/uaccess.h>
+>  
+> @@ -671,6 +672,20 @@ static void emit_log_char(char c)
+>  		logged_chars++;
+>  }
+>  
+> +static void emit_log_char_escaped(char c)
+> +{
+> +	char buffer[8];
+> +	int i, len;
+> +
+> +	if (!iscntrl(c) || (c == '\n') || (c == '\t'))
+> +		emit_log_char(c);
+> +	else {
+> +		len = sprintf(buffer, "#x%02x", c);
+> +		for (i = 0; i < len; i++)
+> +			emit_log_char(buffer[i]);
+> +	}
 
-In fact, I'm not sure we're adding that much protection with such a check
-because as long as the '\n' is allowed, it's easy to fake logs. For instance :
+Nit: please use balanced curly braces.
 
-$ cd /tmp
-$ echo "main() { *(int*)0=0; }" | gcc -xc -o fail -
-$ ln -s fail $'Oops: 000\nklogd'
-$ ./Oops*
-$ dmesg|tail -2
-Oops: 000
-klogd[1927]: segfault at 0 ip 0000000008048337 sp 00000000ffb54ba4 error 6 in fail[8048000+1000]
-$
+Also, i think it would be better to make this opt-out, i.e. exclude 
+the handful of control characters that are harmful (such as backline 
+and console escape), instead of trying to include the known-useful 
+ones.
 
-In an ideal world, only \n should be escaped since it's the only delimitor,
-and klogd would get the raw logs with lines correctly sequenced. Other
-characters should probably be escaped before going to log files if those
-files are supposed to be readable on a terminal.
+The whole non-ASCII-languages issue would not have happened if such 
+an approach was taken.
 
-But I recall it was not possible to escape \n when we worked on the subject
-several years ago on 2.4, because some drivers used to send multi-line logs
-in a single printk().
+It's also the better approach for the kernel: we handle known harmful 
+things and are permissive otherwise.
 
-The fundamental issue we're facing is that neither inputs nor outputs have
-been clearly typed in the past. I tend to consider that a log file is readable
-by "tail -f" and a such should not contain dangerous chars, however I also
-tend to prefer sending raw logs over the network when they are archived by
-different means. In the end it makes sense for the kernel and klogd to
-exchange raw logs and syslogd should encode them when pushing them to a
-file.
+Thanks,
 
-Best regards,
-Willy
+	Ingo
