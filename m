@@ -1,116 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 27 Jun 2011 00:01:26 +0200
-From: Ingo Molnar <mingo@elte.hu>
-Message-ID: <20110626220126.GA24004@elte.hu>
-References: <20110623152137.GA2536@albatros>
- <20110626103915.GB11093@elte.hu>
- <20110626165409.GA2584@albatros>
- <20110626182628.GA20158@elte.hu>
- <20110626190622.GB4217@albatros>
- <20110626194618.GA21740@elte.hu>
- <20110626202518.GA4915@albatros>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 27 Jun 2011 11:03:00 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110627070300.GA4463@albatros>
+References: <1308917318-4749-1-git-send-email-segoon@openwall.com>
+ <4E07F1C0.2070305@jp.fujitsu.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110626202518.GA4915@albatros>
-Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in
- printk()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>
+In-Reply-To: <4E07F1C0.2070305@jp.fujitsu.com>
+Subject: [kernel-hardening] Re: [PATCH 1/2] proc: restrict access to /proc/PID/io
+To: KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>
+Cc: linux-kernel@vger.kernel.org, balbir@linux.vnet.ibm.com, akpm@linux-foundation.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, eparis@redhat.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Vasiliy Kulikov <segoon@openwall.com> wrote:
-
-> On Sun, Jun 26, 2011 at 21:46 +0200, Ingo Molnar wrote:
-> > > > > > Also, i think it would be better to make this opt-out, i.e. 
-> > > > > > exclude the handful of control characters that are harmful 
-> > > > > > (such as backline and console escape), instead of trying to 
-> > > > > > include the known-useful ones.
-> > > > > 
-> > > > > Do you see any issue with the check above?
-> > > > 
-> > > > There were clear problems with the first version you posted and 
-> > > > that's enough proof to request the exclusion of known-dangerous 
-> > > > characters instead of including known-useful characters.
-> > > 
-> > > It doesn't proof anything.  If I/someone else did a mistake with 
-> > > blacklisting would you say it is enough proof to request the 
-> > > inclusion of well-known allowed characters?
+On Mon, Jun 27, 2011 at 11:58 +0900, KOSAKI Motohiro wrote:
+> (2011/06/24 21:08), Vasiliy Kulikov wrote:
+> > /proc/PID/io may be used for gathering private information.  E.g. for
+> > openssh and vsftpd daemons wchars/rchars may be used to learn the
+> > precise password length.  Restrict it to processes being able to ptrace
+> > the target process.
 > > 
-> > No, because the problems such a mistake causes are not equivalent: it 
-> > would have been far more harmful to not print out the *very real* 
-> > product names written in some non-US language than to accidentally 
-> > include some control character you did not think of.
-> 
-> ???
-> 
-> Not "not print", but print in "crypted" form.  The information is 
-> still not lost, you can obviously restore it to the original form, 
-> with some effort, but possible.  Compare it with the harm of log 
-> spoofing - it is not "restorable".
-
-The harm of 'potential' log spoofing affecting exactly zero known 
-users right now, versus the harm of obfuscating the output for a 
-known space of USB devices that print in non-US characters, at 
-minimum.
-
-> > > > A black list is well-defined: it disables the display of 
-> > > > certain characters because they are *known to be dangerous*.
-> > > 
-> > > What do you do with dangerous characters that are *not yet known* 
-> > > to be dangerous?
+> > ptrace_may_access() is needed to prevent keeping open file descriptor of
+> > "io" file, executing setuid binary and gathering io information of the
+> > setuid'ed process.
 > > 
-> > I'm ready to act on facts only.
+> > Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
 > 
-> The *fact* is you/anybody/everybody might not know all bad things.  
-> If you just don't care because it is yet unknown then you will be 
-> vulnerable as soon as it disclosured.
+> This description seems makes sense to me. But Vasilly, I have one question.
+> Doesn't this change break iotop command or other userland tools?
 
-Erm, do you claim that it's not possible to know which characters are 
-dangerous and which ones not?
+I don't use iotop, but after reading the sources it looks like it uses
+taskstats for information gathering, which will be broken for sure by
+the second patch.  All other userland tools using alien io files will be
+broken too.
 
-> > Also, i really prefer the policy of acting on known dangers 
-> > instead of being afraid of the unknown.
-> 
-> Do you know the principle "Attacks always get better, never worse"?  
-> If you are protected against only of known attack, you will be 
-> vulnerable to *every* danger not known to you.
-> 
-> Maybe you don't know, but it is really possible to be protected 
-> against some *yet unknown* attack techniques.  (The assessment of 
-> what attacks it protects against is undefined too, though.)  And 
-> upstream Linux is *already* protected against some *yet unknown* 
-> bugs, not the whole bug classes, but at least small kinds of it.
+I'd say the whole approach of world readable debugging/statistics
+information was broken from the beginning, now we are stuck with these
+interfaces because of acient mistakes.
 
-This claim is silly - do you claim some 'unknown bug' in the ASCII 
-printout space?
+BTW, what to do with sched and status?  It stores some sensitive
+information too (execution times and vm space, respectively).
 
-Cannot you be bothered to enumerate the known 'bad' control and 
-escape characters?
 
-You *clearly* did not consider the full utility spectrum in the first 
-version of the patch so i think it's necessary due diligence on our 
-part to ask you to be more thoughtful with this ...
-
-> > > > A white list on the other hand does it the wrong way around: 
-> > > > it tries to put the 'burden of proof' on the useful, good 
-> > > > guys - and that's counter-productive really.
-> > > 
-> > > Really?  I think strict API definition is productive, unlike 
-> > > using it in cases where it looks like working, but creating 
-> > > tricky and obscure bugs.
+> > ---
+> >  fs/proc/base.c |    7 +++++--
+> >  1 files changed, 5 insertions(+), 2 deletions(-)
 > > 
-> > You werent really creating a well-defined API here, were you?
+> > diff --git a/fs/proc/base.c b/fs/proc/base.c
+> > index 14def99..5ae25d1 100644
+> > --- a/fs/proc/base.c
+> > +++ b/fs/proc/base.c
+> > @@ -2712,6 +2712,9 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
+> >  	struct task_io_accounting acct = task->ioac;
+> >  	unsigned long flags;
+> >  
+> > +	if (!ptrace_may_access(task, PTRACE_MODE_READ))
+> > +		return -EACCES;
+> > +
 > 
-> No, I was - only ascii chars and \n are allowed.  In v2 all ascii 
-> chars, the upper charset and 2 control chars are allowed.  Rather 
-> clear, IMO.
+> I think this check need a comment. Usually procfs don't use ptrace_may_access() directly
+> (see mm_for_maps) because it's racy against exec().
 
-Please enumerate the space you excluded and the reason for exclusion.
+This makes sense.  Reading /proc/self/io and exec'ing setuid program
+would cause the race.  What lock should I use to block execve()?
 
-Terminals are not some unknown and unknowable space.
+
+Also I'm worried about these statistics after dropping the privileges.
+After setuid() and similar things not changing pid unprivileged user
+gets some information about the previous io activity of this task being
+privileged.  In some situations it doesn't reveal any sensitive
+information, in some it might.  Clearing taskstats on credential
+changing functions would totally break taskstats' interfaces; and should
+be temporary changing fsuid/euid followed by reverting it considered
+harmfull?  I don't know.
+
+
+> However I think your code is ok.
+> because a few bytes io accounting leak has no big matter.
+
+Please don't do any assumptions about the significance of these few
+bytes.  It can be not "few" bytes if either the scheduler's granularity
+is significant or the scheduler does wrong assumptions about CPU speeds.
+Also if someone gets CAP_SYS_NICE he may totally break these assumptions.
+
+My ssh example is just a proof that io stat is harmfull *sometimes*.
+I didn't investigate in what cases it is harmless for sure (if it's
+possible at all).
+
 
 Thanks,
 
-	Ingo
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
