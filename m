@@ -1,173 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20110627085242.GA6635@albatros>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 28 Jun 2011 11:50:53 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110628075053.GA4009@albatros>
 References: <1308917318-4749-1-git-send-email-segoon@openwall.com>
-	<4E07F1C0.2070305@jp.fujitsu.com>
-	<20110627070300.GA4463@albatros>
-	<4E08324D.9040605@jp.fujitsu.com>
-	<20110627085242.GA6635@albatros>
-Date: Tue, 28 Jun 2011 06:54:25 +0530
-Message-ID: <BANLkTimFkb1TK_u+Xqp6LnRgzMAv21jFHg@mail.gmail.com>
-From: Balbir Singh <bsingharora@gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+ <4E07F1C0.2070305@jp.fujitsu.com>
+ <20110627070300.GA4463@albatros>
+ <4E08324D.9040605@jp.fujitsu.com>
+ <20110627085242.GA6635@albatros>
+ <BANLkTimFkb1TK_u+Xqp6LnRgzMAv21jFHg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <BANLkTimFkb1TK_u+Xqp6LnRgzMAv21jFHg@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH 1/2] proc: restrict access to /proc/PID/io
-To: Vasiliy Kulikov <segoon@openwall.com>
+To: Balbir Singh <bsingharora@gmail.com>
 Cc: KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, linux-kernel@vger.kernel.org, balbir@linux.vnet.ibm.com, akpm@linux-foundation.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, eparis@redhat.com, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 27, 2011 at 2:22 PM, Vasiliy Kulikov <segoon@openwall.com> wrot=
-e:
-> (cc'ed Linus)
->
-> On Mon, Jun 27, 2011 at 16:33 +0900, KOSAKI Motohiro wrote:
->> (2011/06/27 16:03), Vasiliy Kulikov wrote:
->> > On Mon, Jun 27, 2011 at 11:58 +0900, KOSAKI Motohiro wrote:
->> >> (2011/06/24 21:08), Vasiliy Kulikov wrote:
->> >>> /proc/PID/io may be used for gathering private information. =A0E.g. =
-for
->> >>> openssh and vsftpd daemons wchars/rchars may be used to learn the
->> >>> precise password length. =A0Restrict it to processes being able to p=
-trace
->> >>> the target process.
->> >>>
->> >>> ptrace_may_access() is needed to prevent keeping open file descripto=
-r of
->> >>> "io" file, executing setuid binary and gathering io information of t=
-he
->> >>> setuid'ed process.
->> >>>
->> >>> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
->> >>
->> >> This description seems makes sense to me. But Vasilly, I have one que=
-stion.
->> >> Doesn't this change break iotop command or other userland tools?
->> >
->> > I don't use iotop, but after reading the sources it looks like it uses
->> > taskstats for information gathering, which will be broken for sure by
->> > the second patch. =A0All other userland tools using alien io files wil=
-l be
->> > broken too.
->> >
->> > I'd say the whole approach of world readable debugging/statistics
->> > information was broken from the beginning, now we are stuck with these
->> > interfaces because of acient mistakes.
->>
->> Just idea. (perhaps it's too dumb).
->>
->> If a user want to know throughput, usually they only need KB/s granulari=
-ty.
->> If a user want to know password hints, they need to know strict bytes gr=
-anularity.
->> So, adding some random bytes to this statistics may help to obscure key =
-data,
->> or just "stat =3D ROUND_UP(stat, 1024)".
->>
->> But, I hope to wait another experts response. they may know better appro=
-ach. :)
->
-> Yep, Linus has already suggested a similar thing:
-> http://www.openwall.com/lists/oss-security/2011/06/27/4
->
+On Tue, Jun 28, 2011 at 06:54 +0530, Balbir Singh wrote:
+> > As to rounding - this is a workaround, not a fix.  What if some program
+> > reads one byte from tty and then do some io activity exactly of 1kb-1?
+> > Then you just measure kbs and get original tty activity.  (just a crazy
+> > example to show that it is not a full solution.)
+> >
+> 
+> That would happen with a probability of 1/1024
 
-I think this is a good idea
+I'd not claim about probability here, but anyway rounding would be not
+a fix, just a workaround.  Also note that the random value is program
+dependent, it is not chosen at the program start time or anything
+similar.  IOW, if the program is vulnerable, it is vulnerable with 100%
+probability.
 
-> As to random bytes - if it is very predictable (e.g. rand() % 10000) one
-> may restore the original value. =A0But it would still do much harm to goo=
-d
-> programs (io stats going up and down!). =A0Adding really random bytes
-> seems somewhat too complicated for these needs to me.
->
-> As to rounding - this is a workaround, not a fix. =A0What if some program
-> reads one byte from tty and then do some io activity exactly of 1kb-1?
-> Then you just measure kbs and get original tty activity. =A0(just a crazy
-> example to show that it is not a full solution.)
->
 
-That would happen with a probability of 1/1024
+> >> > Also I'm worried about these statistics after dropping the privileges.
+> >> > After setuid() and similar things not changing pid unprivileged user
+> >> > gets some information about the previous io activity of this task being
+> >> > privileged.  In some situations it doesn't reveal any sensitive
+> >> > information, in some it might.  Clearing taskstats on credential
+> >> > changing functions would totally break taskstats' interfaces; and should
+> >> > be temporary changing fsuid/euid followed by reverting it considered
+> >> > harmfull?  I don't know.
+> >>
+> >> Can you please explain more? I'm feeling "reset at credential change" is
+> >> reasonable idea. How broken is there?
+> >
+> > In the code I see taskstats statistics is kept untouched, so it would
+> > break userspace assumptions about the statistics.
+> >
+> 
+> Could you please elaborate on this point?
 
->
-> Without any proof/estimate, just an idea: it's possible to get not only
-> password length, which needs as much granularity as possible, but
-> another information, which doesn't need any strict value. =A0E.g.
-> statistics changing, what should indicate that some significant event
-> has just happened.
->
+It's better to consider my phrase as a question :)  Like this: don't
+userspace programs rely on the fact that all statistic information
+wouldn't be cleared after execve()/set*id()/prctl() ?  I'm not familiar
+with taskstats at all, so I don't know whether this assumption makes
+sense to userspace application.
 
-Statistics would change a KB granularity, so yes if large KB's of IO
-happen, you can figure things are changing (even top can give that
-information), but that also means you have larger area to look at,
-with small changes they might go unnoticed unless the KB boundary is
-hit.
 
->
->> >>> ---
->> >>> =A0fs/proc/base.c | =A0 =A07 +++++--
->> >>> =A01 files changed, 5 insertions(+), 2 deletions(-)
->> >>>
->> >>> diff --git a/fs/proc/base.c b/fs/proc/base.c
->> >>> index 14def99..5ae25d1 100644
->> >>> --- a/fs/proc/base.c
->> >>> +++ b/fs/proc/base.c
->> >>> @@ -2712,6 +2712,9 @@ static int do_io_accounting(struct task_struct=
- *task, char *buffer, int whole)
->> >>> =A0 struct task_io_accounting acct =3D task->ioac;
->> >>> =A0 unsigned long flags;
->> >>>
->> >>> + if (!ptrace_may_access(task, PTRACE_MODE_READ))
->> >>> + =A0 =A0 =A0 =A0 return -EACCES;
->> >>> +
->> >>
->> >> I think this check need a comment. Usually procfs don't use ptrace_ma=
-y_access() directly
->> >> (see mm_for_maps) because it's racy against exec().
->> >
->> > This makes sense. =A0Reading /proc/self/io and exec'ing setuid program
->> > would cause the race. =A0What lock should I use to block execve()?
->> >
->> >
->> > Also I'm worried about these statistics after dropping the privileges.
->> > After setuid() and similar things not changing pid unprivileged user
->> > gets some information about the previous io activity of this task bein=
-g
->> > privileged. =A0In some situations it doesn't reveal any sensitive
->> > information, in some it might. =A0Clearing taskstats on credential
->> > changing functions would totally break taskstats' interfaces; and shou=
-ld
->> > be temporary changing fsuid/euid followed by reverting it considered
->> > harmfull? =A0I don't know.
->>
->> Can you please explain more? I'm feeling "reset at credential change" is
->> reasonable idea. How broken is there?
->
-> In the code I see taskstats statistics is kept untouched, so it would
-> break userspace assumptions about the statistics.
->
+Thanks,
 
-Could you please elaborate on this point?
-
->
->> >> However I think your code is ok.
->> >> because a few bytes io accounting leak has no big matter.
->> >
->> > Please don't do any assumptions about the significance of these few
->> > bytes. =A0It can be not "few" bytes if either the scheduler's granular=
-ity
->> > is significant or the scheduler does wrong assumptions about CPU speed=
-s.
->> > Also if someone gets CAP_SYS_NICE he may totally break these assumptio=
-ns.
->> >
->> > My ssh example is just a proof that io stat is harmfull *sometimes*.
->> > I didn't investigate in what cases it is harmless for sure (if it's
->> > possible at all).
->>
->> Umm. reasonable. task->signal->cred_guard_mutex can be used for preventi=
-ng
->> exec() race, I think. (see check_mem_permission() and et al).
->
-> (the same should go into the taskstats fix)
->
-> Looks sane, thank you!
-
-Balbir Singh
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
