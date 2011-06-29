@@ -1,53 +1,35 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 29 Jun 2011 23:16:15 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110629191615.GA9343@albatros>
-References: <1308163895-5963-1-git-send-email-segoon@openwall.com>
- <20110621153102.762557f3.akpm@linux-foundation.org>
- <20110622064545.GA3605@albatros>
-MIME-Version: 1.0
+Date: Wed, 29 Jun 2011 23:43:39 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20110629194339.GA15379@openwall.com>
+References: <20110626183321.GA3867@albatros> <20110629182505.GC14873@openwall.com> <20110629183728.GA8163@albatros>
+Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110622064545.GA3605@albatros>
-Subject: [kernel-hardening] Re: [RFC 0/5 v4] procfs: introduce hidepid=, hidenet=, gid= mount
- options
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, Alexey Dobriyan <adobriyan@gmail.com>, linux-security-module@vger.kernel.org
+In-Reply-To: <20110629183728.GA8163@albatros>
+Subject: Re: [kernel-hardening] overview of PaX features
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 22, 2011 at 10:45 +0400, Vasiliy Kulikov wrote:
-> > This all seems highly specific to one particular set of requirements. 
-> 
-> Yes, I admit this.  The problem with procfs is that it's possible to
-> chmod/chown some procfs files, but not /proc/PID/*.  Even if make it
-> possible to chmod/chown them (and introducing an inodes revalidation on
-> execve() setuid and similar binaries) it is still racy - new processes
-> would have /proc/PID/ and some files inside with perms=0555.  So, for
-> more generic mechanism something like umask is needed.  The patch in
-> question implements 2 border cases:
-> 
-> 1) relaxed.  umask=0555.
-> 
-> 2) restricted.  umask=0550 (with tricky gid) and files are still not
-> chmod'able.
-> 
-> 
-> More generic solution (I'm not suggesting it, but merely discussing)
-> would use some user-supplied set of files to restrict access to (or,
-> better, the set of allowed files because white list is almost always
-> better than black list).  Maybe this one:
-> 
->     mount -t proc -o "pid_allow=exe,status,comm,oom_*" proc /proc
+Vasiliy,
 
-Does this scheme make sense?  Should I rensend the patch with these
-architecture?
+On Wed, Jun 29, 2011 at 10:37:28PM +0400, Vasiliy Kulikov wrote:
+> That's not only about old apps, but also a default relaxed policy for
+> the toolchain:
+> 
+> http://www.gentoo.org/proj/en/hardened/gnu-stack.xml
 
-pid_allow=, tid_allow=, attr_allow= and watch_gid= or smth like that.
+Of course.  In my experience, most programs that currently get
+executable stack actually don't need it.
 
+And for gcc trampolines we can include the emulation code in the kernel.
+
+> For upstream linux the default policy is if no GNU_STACK present, the
+> stack flags is defined by a constant.  I think it makes sense for
+> the upsteam to change it to per pid namespace, with the same default.
+
+Sounds good.  Then we'll have less code to maintain in our patch.
 
 Thanks,
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Alexander
