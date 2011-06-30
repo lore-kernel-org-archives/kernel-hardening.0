@@ -1,90 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 29 Jun 2011 15:14:36 -0700
-From: Andrew Morton <akpm@linux-foundation.org>
-Message-Id: <20110629151436.9be479fb.akpm@linux-foundation.org>
-In-Reply-To: <20110622152514.GA9521@albatros>
-References: <20110622152514.GA9521@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Oleg Nesterov <oleg@redhat.com>, Tejun Heo <tj@kernel.org>, Ingo Molnar <mingo@elte.hu>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Thu, 30 Jun 2011 11:57:16 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110630075716.GB3377@albatros>
+References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
+ <BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [Security] [PATCH 2/2] taskstats: restrict access to user
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Shailabh Nagar <nagar@us.ibm.com>, Balbir Singh <bsingharora@gmail.com>, linux-kernel@vger.kernel.org, security@kernel.org, Eric Paris <eparis@redhat.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Balbir Singh <balbir@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 22 Jun 2011 19:25:14 +0400
-Vasiliy Kulikov <segoon@openwall.com> wrote:
-
-> This patch adds support for shm_rmid_forced sysctl.  If set to 1, all
-> shared memory objects in current ipc namespace will be automatically
-> forced to use IPC_RMID.  POSIX way of handling shmem allows to create
-> shm objects and call shmdt() leaving shm object associated with no
-> process, thus consuming memory not counted via rlimits.  With
-> shm_rmid_forced=1 the shared memory object is counted at least for one
-> process, so OOM killer may effectively kill the fat process holding
-> the shared memory.
+On Wed, Jun 29, 2011 at 13:09 -0700, Linus Torvalds wrote:
+> Ok, having looked at this some more, I'm quite ready to just mark the
+> whole TASKSTATS config option as BROKEN. It does seem to be a horrible
+> security hazard, and very little seems to use it.
 > 
-> It obviously breaks POSIX, some programs relying on the feature would
-> stop working.  So, set shm_rmid_forced=1 only if you're sure nobody uses
-> "orphaned" memory.  shm_rmid_forced=0 by default for compatability
-> reasons.
+> It also seems to be really fundamentally broken. Afaik, there's no way
+> to filter taskstats not only by security issues (Vasiliy's patch
+> really is very ugly), but it seems to be some global cross-namespace
+> thing too, so it exposes taskstats across pid namespaces afaik.
+
+The problem here is that it keeps a pid in a global list.  This list is
+then browsed by all namespaces.  Looking into the code, I see 2 real
+problems (didn't check, though):
+
+1) If there are 2+ pid namespaces, one listener in pid_ns #1 and some
+process dies in pid_ns #2, then the dying task wouldn't find the
+listener via find_task_by_vpid() and would just delete the listener from
+listeners list.  Looks like this problem was created by optimization
+patch f9fd8914c1acca0.
+
+2) Netlink sockets are per net namespace, but this accounting thing is per
+pid namespace.  So, if the dying task and the listener are in a single
+pid namespace, but in different net namespaces, the message will not be
+sent via genlmsg_unicast().  I suspect it is a problem of all non-net
+netlink sockets.
+
+
+> It
+> does that even with Vasiliy's patch, afaik, although then I think you
+> need to have collissions in the namespaces if I read the code
+> correctly.
 > 
-> The feature was previously impemented in -ow as a configure option.
+> I suspect that could be fixed by adding a pid namespace to the
+> 'listener' structure. Also adding a 'cred' pointer (or the actual
+> listener thread pointer) to it would make Vasiliy's patch more
+> palatable, since then you wouldn't need to look up the credentials at
+> send_cpu_listeners() time.
 > 
+> Maybe I have mis-read the code. But it does all make me shudder. There
+> doesn't even seem to be all that many _users_ of the thing, so the
+> problems it has really makes me go "is that code worth it"? We
+> probably should never have merged it in the first place.
 
-What a horrid patch.  But given the POSIX (mis?)feature I don't see a
-better way, and the feature seems desirable.  Sigh.
+> but it seems to be some global cross-namespace
+> thing too, so it exposes taskstats across pid namespaces afaik.
 
-What sort of users would want to turn this on, and why?
 
-> --- a/include/linux/ipc_namespace.h
-> +++ b/include/linux/ipc_namespace.h
-> @@ -44,6 +44,7 @@ struct ipc_namespace {
->  	size_t		shm_ctlall;
->  	int		shm_ctlmni;
->  	int		shm_tot;
-> +	int		shm_rmid_forced;
->  
->  	struct notifier_block ipcns_nb;
+Thanks,
 
-Please send a patch which adds a nice comment to this field.
-
-Perhaps shm_rmid_forced should have had bool type.
-
-> --- a/ipc/shm.c
-> +++ b/ipc/shm.c
-> @@ -74,6 +74,7 @@ void shm_init_ns(struct ipc_namespace *ns)
->  	ns->shm_ctlmax = SHMMAX;
->  	ns->shm_ctlall = SHMALL;
->  	ns->shm_ctlmni = SHMMNI;
-> +	ns->shm_rmid_forced = 0;
->  	ns->shm_tot = 0;
->  	ipc_init_ids(&shm_ids(ns));
->  }
-
-The problem is that nobody will test your feature.  So for testing
-purposes, let's enable the feature by default.  I assume this:
-
---- a/ipc/shm.c~ipc-introduce-shm_rmid_forced-sysctl-ipc-introduce-shm_rmid_forced-sysctl-testing
-+++ a/ipc/shm.c
-@@ -74,7 +74,7 @@ void shm_init_ns(struct ipc_namespace *n
- 	ns->shm_ctlmax = SHMMAX;
- 	ns->shm_ctlall = SHMALL;
- 	ns->shm_ctlmni = SHMMNI;
--	ns->shm_rmid_forced = 0;
-+	ns->shm_rmid_forced = 1;
- 	ns->shm_tot = 0;
- 	ipc_init_ids(&shm_ids(ns));
- }
-
-will do that?
-
-> +static bool shm_may_destroy(struct ipc_namespace *ns, struct shmid_kernel *shp)
-> +{
-> +	return (shp->shm_nattch == 0) &&
-> +	       (ns->shm_rmid_forced ||
-> +		(shp->shm_perm.mode & SHM_DEST));
-> +}
-
-Just because the existing code is crappily documented doesn't mean that
-we have to copy that ;)
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
