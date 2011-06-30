@@ -1,27 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 30 Jun 2011 17:08:02 +0400
+Date: Thu, 30 Jun 2011 17:57:18 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110630130802.GA12620@albatros>
-References: <20110622152514.GA9521@albatros>
- <20110629151436.9be479fb.akpm@linux-foundation.org>
- <20110630092103.GA4252@albatros>
+Message-ID: <20110630135718.GA13406@albatros>
+References: <201106292214.p5TMEtHg015372@imap1.linux-foundation.org>
+ <20110630134855.GA6165@mail.hallyn.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110630092103.GA4252@albatros>
-Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Oleg Nesterov <oleg@redhat.com>, Tejun Heo <tj@kernel.org>, Ingo Molnar <mingo@elte.hu>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20110630134855.GA6165@mail.hallyn.com>
+Subject: [kernel-hardening] Re: + ipc-introduce-shm_rmid_forced-sysctl.patch added to -mm tree
+To: Serge Hallyn <serge.hallyn@canonical.com>
+Cc: akpm@linux-foundation.org, mm-commits@vger.kernel.org, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, oleg@redhat.com, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 30, 2011 at 13:21 +0400, Vasiliy Kulikov wrote:
-> > Perhaps shm_rmid_forced should have had bool type.
-> 
-> OK.  The sysctl handler should parse it OK if feed it with sizeof(bool).
+Hi Serge,
 
-I was wrong, maxlen must not be less than sizeof(int), it makes sense
-for arrays only.  So, it is kept being int.
+On Thu, Jun 30, 2011 at 08:48 -0500, Serge Hallyn wrote:
+> Quoting akpm@linux-foundation.org (akpm@linux-foundation.org):
+> > +static int shm_try_destroy_orphaned(int id, void *p, void *data)
+> > +{
+> > +	struct ipc_namespace *ns = data;
+> > +	struct shmid_kernel *shp = shm_lock(ns, id);
+> > +	struct task_struct *task;
+> > +
+> > +	if (IS_ERR(shp))
+> > +		return 0;
+> > +
+> > +	/*
+> > +	 * We want to destroy segments without users and with already
+> > +	 * exit'ed originating process.
+> > +	 *
+> > +	 * XXX: the originating process may exist in another pid namespace.
+> > +	 */
+> 
+> (Sorry, I no longer have the original patch.  I'd meant to take a closer
+> look at the time...)
+> 
+> So shp should store a reference to the struct pid, which you can check
+> here?  I think that'll do exactly what you need.
+
+Documentation/namespaces/compatibility-list.txt says that IPC and PID
+namespaces have not been fully separated yet.  This is a core problem.
+If I store a reference to pid namespace, it would solve only this little
+problem, but the global problem of pid vs. ipc namespaces is left
+unsolved.  It would be much more consistent to fix the whole ipc code in
+one step (if ever).
+
+
+Thanks,
 
 -- 
 Vasiliy Kulikov
