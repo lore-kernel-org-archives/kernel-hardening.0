@@ -1,55 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 30 Jun 2011 17:57:18 +0400
+Date: Thu, 30 Jun 2011 20:03:45 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110630135718.GA13406@albatros>
-References: <201106292214.p5TMEtHg015372@imap1.linux-foundation.org>
- <20110630134855.GA6165@mail.hallyn.com>
+Message-ID: <20110630160345.GA15258@albatros>
+References: <20110626183321.GA3867@albatros>
+ <20110629182505.GC14873@openwall.com>
+ <20110629183728.GA8163@albatros>
+ <20110629194339.GA15379@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110630134855.GA6165@mail.hallyn.com>
-Subject: [kernel-hardening] Re: + ipc-introduce-shm_rmid_forced-sysctl.patch added to -mm tree
-To: Serge Hallyn <serge.hallyn@canonical.com>
-Cc: akpm@linux-foundation.org, mm-commits@vger.kernel.org, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, oleg@redhat.com, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20110629194339.GA15379@openwall.com>
+Subject: Re: [kernel-hardening] overview of PaX features
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Serge,
+Solar,
 
-On Thu, Jun 30, 2011 at 08:48 -0500, Serge Hallyn wrote:
-> Quoting akpm@linux-foundation.org (akpm@linux-foundation.org):
-> > +static int shm_try_destroy_orphaned(int id, void *p, void *data)
-> > +{
-> > +	struct ipc_namespace *ns = data;
-> > +	struct shmid_kernel *shp = shm_lock(ns, id);
-> > +	struct task_struct *task;
-> > +
-> > +	if (IS_ERR(shp))
-> > +		return 0;
-> > +
-> > +	/*
-> > +	 * We want to destroy segments without users and with already
-> > +	 * exit'ed originating process.
-> > +	 *
-> > +	 * XXX: the originating process may exist in another pid namespace.
-> > +	 */
+On Wed, Jun 29, 2011 at 23:43 +0400, Solar Designer wrote:
+> On Wed, Jun 29, 2011 at 10:37:28PM +0400, Vasiliy Kulikov wrote:
+> > That's not only about old apps, but also a default relaxed policy for
+> > the toolchain:
+> > 
+> > http://www.gentoo.org/proj/en/hardened/gnu-stack.xml
 > 
-> (Sorry, I no longer have the original patch.  I'd meant to take a closer
-> look at the time...)
+> Of course.  In my experience, most programs that currently get
+> executable stack actually don't need it.
 > 
-> So shp should store a reference to the struct pid, which you can check
-> here?  I think that'll do exactly what you need.
+> And for gcc trampolines we can include the emulation code in the kernel.
 
-Documentation/namespaces/compatibility-list.txt says that IPC and PID
-namespaces have not been fully separated yet.  This is a core problem.
-If I store a reference to pid namespace, it would solve only this little
-problem, but the global problem of pid vs. ipc namespaces is left
-unsolved.  It would be much more consistent to fix the whole ipc code in
-one step (if ever).
+I've looked over -ow and PaX' implementations of trampolines emulation.
+Two notes:
+
+1) Are trampolines the only widespread user of executable stack?
+(widespread among executable stack needings ;)
+
+2) In -ow patch the trampolines emulation is very tolerant: it supports
+up to 8 movs and then one of 2 jmps.  PaX' version distinguishes only 2
+specific trampolines implementations and alerts if the code doesn't fit
+into these strict patterns.  Taking into consideration how long PaX
+patch exists, I suppose the restricted version cover all (or almost all)
+realworld trampolines implementations.   The -ow variant would relax the
+stack too much.
+
+
+Btw, there is a tool to change executable stack settings per binary,
+written by Jakub Jelinek (Red Hat):
+
+http://linux.die.net/man/8/execstack
 
 
 Thanks,
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
