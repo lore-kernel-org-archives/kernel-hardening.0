@@ -1,42 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 1 Jul 2011 15:20:51 +0100
-From: Alan Cox <alan@lxorguk.ukuu.org.uk>
-Message-ID: <20110701152051.763fd594@lxorguk.ukuu.org.uk>
-In-Reply-To: <20110701125411.GA21551@albatros>
-References: <20110626182628.GA20158@elte.hu>
-	<20110626190622.GB4217@albatros>
-	<20110626194618.GA21740@elte.hu>
-	<20110626202518.GA4915@albatros>
-	<20110626220126.GA24004@elte.hu>
-	<20110627083633.GA5846@albatros>
-	<20110627104058.45e93c41@pyx>
-	<20110627183829.GA16033@albatros>
-	<BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
-	<20110701120059.GL20990@elte.hu>
-	<20110701125411.GA21551@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and
- control characters in printk()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, linux-kernel@vger.kernel.org
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Fri, 1 Jul 2011 18:37:57 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110701143757.GA22567@albatros>
+References: <20110626165409.GA2584@albatros>
+ <20110626182628.GA20158@elte.hu>
+ <20110626190622.GB4217@albatros>
+ <20110626194618.GA21740@elte.hu>
+ <20110626202518.GA4915@albatros>
+ <20110626220126.GA24004@elte.hu>
+ <20110627083633.GA5846@albatros>
+ <20110627104058.45e93c41@pyx>
+ <20110627183829.GA16033@albatros>
+ <BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in
+ printk()
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> $ dmesg | tail
-> ...
-> [16291.982492] init[21579]: segfault at 0 ip 00007f527186028a sp 00007fff08251dd8 error 4 in libc-2.11.1.so[7f52717d8000+17a000]
-> [16379.001357] fail[21586]: segfault at 0 ip 00007f332831028a sp 00007fffc52de568 error 4 in libc-2.11.1.so[7f3328288000+17a000]
-> $ 
-> (see 1234 => init change)
-> 
-> As you see here, the previous log entry was showed not as it was
-> initally logged.  Core dump message was chosen fully arbitrary, just to
-> show that some specific part of it can be "edited".
+On Tue, Jun 28, 2011 at 12:30 -0700, Linus Torvalds wrote:
+> And the most dangerous character seems to be one that you don't
+> filter: the one we really do react to is '\n', and you could possibly
+> make confusing log messages by embedding a newline in your string and
+> then trying to make the rest look like something bad (say, an oops).
 
-Your syslog daemon appears to need improvement and that would be the
-right fix for dmesg etc.
+Btw, I've already outlined this problem in patch v1 comment, but
+received no single comment on the suggested 2 possible ways:
 
-The other case is the actual printk direct to console case, particularly
-on a serial port. That one actually has more potential for actual
-annoyance.
+http://www.openwall.com/lists/kernel-hardening/2011/06/22/2
+
+"This patch does nothing with crafted "%s" data with '\n' inside.  It
+ allows unprivileged user to craft arbitrary log messages via breaking
+ log lines boundaries.  It is a bit tricky to fix it compatible way.
+ Limiting "%s" to one line in vscnprintf() would break legitimate users
+ of the multiline feature.  Intoducing new "%S" format for single lines
+ makes little sense as there are tons of printk() calls that should be
+ already restricted to one line.
+
+ Proposals about '\n' inside of '%s" are welcome."
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
