@@ -1,45 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 1 Jul 2011 15:49:47 +0100
-From: Alan Cox <alan@lxorguk.ukuu.org.uk>
-Message-ID: <20110701154947.133c30f5@lxorguk.ukuu.org.uk>
-In-Reply-To: <20110701143757.GA22567@albatros>
-References: <20110626165409.GA2584@albatros>
-	<20110626182628.GA20158@elte.hu>
-	<20110626190622.GB4217@albatros>
-	<20110626194618.GA21740@elte.hu>
-	<20110626202518.GA4915@albatros>
-	<20110626220126.GA24004@elte.hu>
-	<20110627083633.GA5846@albatros>
-	<20110627104058.45e93c41@pyx>
-	<20110627183829.GA16033@albatros>
-	<BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
-	<20110701143757.GA22567@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in
- printk()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Sat, 2 Jul 2011 11:36:25 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110702073625.GA3318@albatros>
+References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
+ <BANLkTi=dTHGK1QVs+g2tA6WocQ64SPPF3g@mail.gmail.com>
+ <20110629201718.GA11071@albatros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20110629201718.GA11071@albatros>
+Subject: [kernel-hardening] Re: [PATCH 2/2] taskstats: restrict access to user
+To: Balbir Singh <bsingharora@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, security@kernel.org, Eric Paris <eparis@redhat.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
->  of the multiline feature.  Intoducing new "%S" format for single lines
->  makes little sense as there are tons of printk() calls that should be
->  already restricted to one line.
+On Thu, Jun 30, 2011 at 00:17 +0400, Vasiliy Kulikov wrote:
+> On Wed, Jun 29, 2011 at 06:57 +0530, Balbir Singh wrote:
+> > On Fri, Jun 24, 2011 at 5:39 PM, Vasiliy Kulikov <segoon@openwall.com> wrote:
+> > > +               task = find_task_by_vpid(s->pid);
+> > > +               if (!task || __task_cred(task)->euid != cred->euid) {
+> 
+> If consider this patch for inclusion, it also needs some check for
+> the listener root ability.  __task_cred(task)->euid == 0 or smth like
+> that.  But ptrace_task_may_access_current() is better.
 
-You don't need a new format string surely. Your expectation for printk is 
+So...  What to do with this patch?  Should I resend it with euid==0 and
+rcu optimication, wait for the new ptrace interface or what?
 
-"multiple new lines are cool providing they are in the format string"
 
-So that bit isn't hard to deal with, 
+Thanks,
 
-You make vprintk take an extra arg (trusted/untrusted args)
-You make printk pass 'untrusted'
-You make %s quote the arguments for control codes if untrusted is set but
-you don't mangle format string controls.
-
-End of problem ?
-
-At which point your attacker has more work to do but given a long string
-yawns and stars using the right number of spaces for the likely 80 col
-screen :)
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
