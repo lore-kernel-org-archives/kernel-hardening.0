@@ -1,10 +1,8 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 2 Jul 2011 12:10:22 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110702081022.GA2755@albatros>
-References: <20110626190622.GB4217@albatros>
- <20110626194618.GA21740@elte.hu>
+Date: Sat, 2 Jul 2011 08:08:01 -0700
+From: Greg KH <gregkh@suse.de>
+Message-ID: <20110702150801.GA14453@suse.de>
+References: <20110626194618.GA21740@elte.hu>
  <20110626202518.GA4915@albatros>
  <20110626220126.GA24004@elte.hu>
  <20110627083633.GA5846@albatros>
@@ -13,65 +11,32 @@ References: <20110626190622.GB4217@albatros>
  <BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
  <20110701143757.GA22567@albatros>
  <20110701154947.133c30f5@lxorguk.ukuu.org.uk>
+ <20110702081022.GA2755@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110701154947.133c30f5@lxorguk.ukuu.org.uk>
+In-Reply-To: <20110702081022.GA2755@albatros>
 Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in
  printk()
-To: Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg Kroah-Hartman <gregkh@suse.de>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jul 01, 2011 at 15:49 +0100, Alan Cox wrote:
-> >  of the multiline feature.  Intoducing new "%S" format for single lines
-> >  makes little sense as there are tons of printk() calls that should be
-> >  already restricted to one line.
-> 
-> You don't need a new format string surely. Your expectation for printk is 
-> 
-> "multiple new lines are cool providing they are in the format string"
-> 
-> So that bit isn't hard to deal with, 
-> 
-> You make vprintk take an extra arg (trusted/untrusted args)
+On Sat, Jul 02, 2011 at 12:10:22PM +0400, Vasiliy Kulikov wrote:
+> Greg - do you know any devices supplying multibyte strings, but not in
+> UTF-8 encoding?  If yes, then CSI filtering is a bad idea :\
 
-Not vprintk, but vscnprintf(), vsnprintf() and string() because
-vprintk() is used in tens of places besides of printk().  Or better
-implement _vscnprintf(.., bool untrusted) and 
+USB is "supposed" to have UTF-16 strings, but there's devices out there
+that have crazy stuff in them.  And of course, anyone can put anything
+in the device string if they know how to write a bit of firmware, so we
+have to watch out for that.  Hopefully we handle that properly in the
+usb_string() function in the kernel but review of it is always nice to
+have.
 
-vscnprintf(...) { return _vscnprintf(..., false); }
+Other than that, I don't know of any multi-byte strings in devices at
+the moment.  I haven't seen the Thunderbolt specs though, so who knows
+what is coming next.
 
-to leave current users of it as is.
+Hope this helps,
 
-But yes, I got the idea.
-
-
-> You make printk pass 'untrusted'
-> You make %s quote the arguments for control codes
-
-What to do with CSI?  It is a valid byte inside of a UTF-8 string.
-Parsing a supplied string assuming it is UTF-8 string and filtering CSI
-iff it is not a part of UTF-8 symbol is something a bit ugly IMO.
-
-
-Greg - do you know any devices supplying multibyte strings, but not in
-UTF-8 encoding?  If yes, then CSI filtering is a bad idea :\
-
-
-> At which point your attacker has more work to do but given a long string
-> yawns and stars using the right number of spaces for the likely 80 col
-> screen :)
-
-Yeah, but introducing some artificial limit for string length is IMO
-more harmfull: there is no universal limit for all situations, somewhere
-the resulting string is already 70 chars and even 20 bytes would
-overflow the col;  in rare cases a string of 50 bytes might be still
-acceptable.
-
-
-Thanks,
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+greg k-h
