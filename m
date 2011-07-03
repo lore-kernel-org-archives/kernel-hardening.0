@@ -1,35 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 3 Jul 2011 22:25:39 +0100
-From: Alan Cox <alan@lxorguk.ukuu.org.uk>
-Message-ID: <20110703222539.7d872051@lxorguk.ukuu.org.uk>
-In-Reply-To: <20110703193808.GA17797@elte.hu>
-References: <20110622152514.GA9521@albatros>
-	<20110629151436.9be479fb.akpm@linux-foundation.org>
-	<20110701112534.GG20990@elte.hu>
-	<20110701113533.GA19945@albatros>
-	<20110701120453.GA28008@elte.hu>
-	<20110701151827.7061dcda@lxorguk.ukuu.org.uk>
-	<20110703193808.GA17797@elte.hu>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
-To: Ingo Molnar <mingo@elte.hu>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, solar@openwall.com, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Oleg Nesterov <oleg@redhat.com>, Tejun Heo <tj@kernel.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+MIME-Version: 1.0
+In-Reply-To: <20110703221031.15cc2278@lxorguk.ukuu.org.uk>
+References: <20110626190622.GB4217@albatros> <20110626194618.GA21740@elte.hu>
+ <20110626202518.GA4915@albatros> <20110626220126.GA24004@elte.hu>
+ <20110627083633.GA5846@albatros> <20110627104058.45e93c41@pyx>
+ <20110627183829.GA16033@albatros> <BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
+ <20110701143757.GA22567@albatros> <20110701154947.133c30f5@lxorguk.ukuu.org.uk>
+ <20110703100131.GA2472@albatros> <CA+55aFz08cObjcHxxZ-FQexP56hwHvML+c+UULQitKMum3MoTA@mail.gmail.com>
+ <20110703221031.15cc2278@lxorguk.ukuu.org.uk>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sun, 3 Jul 2011 14:34:39 -0700
+Message-ID: <CA+55aFwWkfYQbdgxYg3Wo-9o1XqPQcOPt9=u1E0zeMzZe30R9w@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and control characters in printk()
+To: Alan Cox <alan@lxorguk.ukuu.org.uk>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> This is a simple extension of the OOM killer being able to ... kill 
-> things on OOM, ok? 'to kill' implies 'to break'.
+On Sun, Jul 3, 2011 at 2:10 PM, Alan Cox <alan@lxorguk.ukuu.org.uk> wrote:
+>
+> In which case we can't do it because we need \n in proc content so that's
+> a complete and utter non starter.
 
-If you do it on the OOM killer then yes that aspect makes sense. The real
-problem is that Linux has shipped a broken default for the past ten years.
+You didn't read the original email I sent, did you?
 
-The number of times I have to explain to industrial and business
-customers that Linux doesn't suck but the defaults are stupid is
-astounding, and they then wonder why either the authors or their vendor is
-a complete and utter moron.
+For people who _want_ the unsafe versions with \n and other control
+characters, they'd use a "raw string" format. Something like our
+extended "%p" formats. Maybe '%p[]' - we could allow extensions later
+that describe which characters to escape inside the brackets (for
+example, we currently have ad-hoc escaping of things like pathnames:
+with '/' not being legal in a path component)
 
-But yes from an OOM perspective killing an unattached SHM segment makes
-as much sense as killing anything else.
+The point being that that way it would be (a) safe by default (b)
+require _thought_ when you actually wanted to print control characters
+and (c) be easily greppable too.
 
-Alan
+                           Linus
