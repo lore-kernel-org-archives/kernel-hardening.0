@@ -1,59 +1,27 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 3 Jul 2011 21:38:08 +0200
-From: Ingo Molnar <mingo@elte.hu>
-Message-ID: <20110703193808.GA17797@elte.hu>
-References: <20110622152514.GA9521@albatros>
- <20110629151436.9be479fb.akpm@linux-foundation.org>
- <20110701112534.GG20990@elte.hu>
- <20110701113533.GA19945@albatros>
- <20110701120453.GA28008@elte.hu>
- <20110701151827.7061dcda@lxorguk.ukuu.org.uk>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110701151827.7061dcda@lxorguk.ukuu.org.uk>
-Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
-To: Alan Cox <alan@lxorguk.ukuu.org.uk>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, solar@openwall.com, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Oleg Nesterov <oleg@redhat.com>, Tejun Heo <tj@kernel.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+From: Joe Perches <joe@perches.com>
+In-Reply-To: <20110703192442.GA9504@albatros>
+References: <20110703111028.GA2862@albatros>
+	 <CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com>
+	 <20110703185709.GA7414@albatros>
+	 <CA+55aFwuvk7xifqCX=E3DtV=JCJEzyODcF4o6xLL0U1N_P-Rbg@mail.gmail.com>
+	 <20110703192442.GA9504@albatros>
+Content-Type: text/plain; charset="UTF-8"
+Date: Sun, 03 Jul 2011 12:37:55 -0700
+Message-ID: <1309721875.18925.30.camel@Joe-Laptop>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [RFC v1] implement SL*B and stack
+ usercopy runtime checks
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sun, 2011-07-03 at 23:24 +0400, Vasiliy Kulikov wrote:
+> Btw, if the perfomance will be acceptable, what do you think about
+> logging/reacting on the spotted overflows?
 
-* Alan Cox <alan@lxorguk.ukuu.org.uk> wrote:
+If you do, it might be useful to track the found location(s)
+and only emit the overflow log entry once as found.
 
-> > As we really prefer working systems over non-working ones (and lots 
-> > of unattached shm segments can clearly result in a non-working 
-> > system) we can only accept the "this will break stuff" argument if 
-> > it's *demonstrated* to break stuff and if the failure scenario is 
-> > carefully described in the commit.
-> > 
-> > It would take a serious breakage to override a "system locks up 
-> > swapping itself to death" failure scenario.
-> 
-> Ths shared memory interface is defined to be persistent for good 
-> reason and all sorts of apps rely upon that so no you can't just 
-> ignore that. As a configurable alternative it makes sense (indeed 
-> many SYS5 admins used to run shared memory segment sweepers to 
-> clean up long idle ones)
-> 
-> However if it's locking the machine up and not being properly 
-> handled by resource management then
-> 
-> a) your resource management is broken so fix that instead
-> b) if your resource management is busted or you are not properly
-> tracking resource commits then the user is going to be able to achieve the
-> same result by other means (eg a unix domain socket bomb)
-> 
-> If you've got no overcommit set you shouldn't be able to swap to 
-> death, it may be the sysv shared memory objects need to be 
-> accounted for specifically somewhere but that would be the right 
-> thing to fix and the mechanisms to do it exist.
-
-But the majority of systems have overcommit enabled - that is our 
-default.
-
-This is a simple extension of the OOM killer being able to ... kill 
-things on OOM, ok? 'to kill' implies 'to break'.
-
-Thanks,
-
-	Ingo
+Maybe use __builtin_return_address(depth) for tracking.
