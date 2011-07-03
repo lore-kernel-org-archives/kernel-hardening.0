@@ -1,73 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 3 Jul 2011 23:24:42 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110703192442.GA9504@albatros>
-References: <20110703111028.GA2862@albatros>
- <CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com>
- <20110703185709.GA7414@albatros>
- <CA+55aFwuvk7xifqCX=E3DtV=JCJEzyODcF4o6xLL0U1N_P-Rbg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFwuvk7xifqCX=E3DtV=JCJEzyODcF4o6xLL0U1N_P-Rbg@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC v1] implement SL*B and stack
- usercopy runtime checks
-To: kernel-hardening@lists.openwall.com
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org
+In-Reply-To: <20110703103925.GA2283@albatros>
+References: <20110703103925.GA2283@albatros>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sun, 3 Jul 2011 12:24:39 -0700
+Message-ID: <CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [PATCH] proc: fix a race in do_io_accounting()
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: linux-kernel@vger.kernel.org, akpm@linux-foundation.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 03, 2011 at 12:10 -0700, Linus Torvalds wrote:
-> On Sun, Jul 3, 2011 at 11:57 AM, Vasiliy Kulikov <segoon@openwall.com> wrote:
-> >> If you seriously clean it up (that at a minimum includes things like
-> >> making it configurable using some pretty helper function that just
-> >> compiles away for all the normal cases,
-> >
-> > Hm, it is not as simple as it looks at the first glance - even if the
-> > object size is known at the compile time (__compiletime_object_size), it
-> > might be a field of a structure, which crosses the slab object
-> > boundaries because of an overflow.
-> 
-> No, I was more talking about having something like
-> 
->   #ifdef CONFIG_EXPENSIVE_CHECK_USERCOPY
->   extern int check_user_copy(const void *kptr, unsigned long size);
->   #else
->   static inline int check_user_copy(const void *kptr, unsigned long size)
->   { return 0; }
->   #endif
+On Sun, Jul 3, 2011 at 3:39 AM, Vasiliy Kulikov <segoon@openwall.com> wrote:
+>
+> The order of locking is similar to the one inside of
+> ptrace_attach(): first goes cred_guard_mutex, then lock_task_sighand().
 
-Sure, will do.  This is what I mean by kernel_access_ok() as it is a
-weak equivalent of access_ok(), check_user_copy() is a bit confusing
-name IMO.
+Hmm. mm_for_maps() uses mutex_lock_killable(), as does lock_trace.
 
+And neither proc_pid_wchan() nor the fd following ones
+(proc_pid_follow_link etc) use anything at all.
 
-> so that the actual user-copy routines end up being clean and not have
-> #ifdefs in them or any implementation details like what you check
-> (stack, slab, page cache - whatever)
-> 
-> If you can also make it automatically not generate any code for cases
-> that are somehow obviously safe, then that's an added bonus.
+So I'm not sure. And do we really even care about the theoretical
+race? Even if we do hit the race window and happen to get it just as a
+process turns setuid, it would seem to be totally harmless (we're not
+going to see any of the sensitive IO anyway).
 
-OK, then let's stop on "checks for overflows" and remove the check if
-__compiletime_object_size() says something or length is constant.  It
-should remove most of the checks in fast pathes.
+So considering the lack of consistency in this area, I can't really
+find it in myself to care very deeply.
 
+That said, the lack of consistency itself is a bit annoying and
+worrisome. Maybe some kind of helper like we do have for
+"mm_for_maps()" would be a good idea - not because the potential races
+are all that worrisome, but because inconsistencies in the kernel are
+always signs of confusion, and confusion is always bad and a breeding
+ground for potential bugs.
 
-> But my concern is that performance is a real issue, and the strict
-> user-copy checking sounds like mostly a "let's enable this for testing
-> kernels when chasing some particular issue" feature, the way
-> DEBUG_PAGEALLOC is.
-
-I will measure the perfomance penalty tomorrow.
-
-
-Btw, if the perfomance will be acceptable, what do you think about
-logging/reacting on the spotted overflows?
-
-
-Thanks,
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+                           Linus
