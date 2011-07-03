@@ -1,35 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 3 Jul 2011 22:00:28 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110703180028.GA26742@albatros>
-References: <201106292214.p5TMEtHg015372@imap1.linux-foundation.org>
- <20110630134855.GA6165@mail.hallyn.com>
- <20110630135718.GA13406@albatros>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110630135718.GA13406@albatros>
-Subject: [kernel-hardening] Re: + ipc-introduce-shm_rmid_forced-sysctl.patch added to -mm tree
-To: Serge Hallyn <serge.hallyn@canonical.com>
-Cc: akpm@linux-foundation.org, mm-commits@vger.kernel.org, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, oleg@redhat.com, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20110703111028.GA2862@albatros>
+References: <20110703111028.GA2862@albatros>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sun, 3 Jul 2011 11:27:47 -0700
+Message-ID: <CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [RFC v1] implement SL*B and stack usercopy runtime checks
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 30, 2011 at 17:57 +0400, Vasiliy Kulikov wrote:
-> > So shp should store a reference to the struct pid, which you can check
-> > here?  I think that'll do exactly what you need.
-> 
-> Documentation/namespaces/compatibility-list.txt says that IPC and PID
-> namespaces have not been fully separated yet.
+That patch is entirely insane. No way in hell will that ever get merged.
 
-Looks like I've misunderstood the documentation.  It says that
-identifiers from the same ipc namespace shouldn't travel between
-different pid namespaces, not about incomplete implementaiton.   So yes,
-storing pid or task will help.  I'll send a patch after some testing.
+copy_to/from_user() is some of the most performance-critical code, and
+runs a *lot*, often for fairly small structures (ie 'fstat()' etc).
 
+Adding random ad-hoc tests to it is entirely inappropriate. Doing so
+unconditionally is insane.
 
-Thanks,
+So NAK, NAK, NAK.
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+If you seriously clean it up (that at a minimum includes things like
+making it configurable using some pretty helper function that just
+compiles away for all the normal cases, and not writing out
+
+   if (!slab_access_ok(to, n) || !stack_access_ok(to, n))
+
+multiple times, for chrissake) it _might_ be acceptable.
+
+But in its current form it's just total crap. It's exactly the kind of
+"crazy security people who don't care about anything BUT security"
+crap that I refuse to see.
+
+Some balance and sanity.
+
+                      Linus
