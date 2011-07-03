@@ -1,39 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sun, 3 Jul 2011 21:38:08 +0200
+From: Ingo Molnar <mingo@elte.hu>
+Message-ID: <20110703193808.GA17797@elte.hu>
+References: <20110622152514.GA9521@albatros>
+ <20110629151436.9be479fb.akpm@linux-foundation.org>
+ <20110701112534.GG20990@elte.hu>
+ <20110701113533.GA19945@albatros>
+ <20110701120453.GA28008@elte.hu>
+ <20110701151827.7061dcda@lxorguk.ukuu.org.uk>
 MIME-Version: 1.0
-In-Reply-To: <20110703103925.GA2283@albatros>
-References: <20110703103925.GA2283@albatros>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sun, 3 Jul 2011 12:24:39 -0700
-Message-ID: <CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH] proc: fix a race in do_io_accounting()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: linux-kernel@vger.kernel.org, akpm@linux-foundation.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110701151827.7061dcda@lxorguk.ukuu.org.uk>
+Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
+To: Alan Cox <alan@lxorguk.ukuu.org.uk>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, solar@openwall.com, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Oleg Nesterov <oleg@redhat.com>, Tejun Heo <tj@kernel.org>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 3, 2011 at 3:39 AM, Vasiliy Kulikov <segoon@openwall.com> wrote:
->
-> The order of locking is similar to the one inside of
-> ptrace_attach(): first goes cred_guard_mutex, then lock_task_sighand().
 
-Hmm. mm_for_maps() uses mutex_lock_killable(), as does lock_trace.
+* Alan Cox <alan@lxorguk.ukuu.org.uk> wrote:
 
-And neither proc_pid_wchan() nor the fd following ones
-(proc_pid_follow_link etc) use anything at all.
+> > As we really prefer working systems over non-working ones (and lots 
+> > of unattached shm segments can clearly result in a non-working 
+> > system) we can only accept the "this will break stuff" argument if 
+> > it's *demonstrated* to break stuff and if the failure scenario is 
+> > carefully described in the commit.
+> > 
+> > It would take a serious breakage to override a "system locks up 
+> > swapping itself to death" failure scenario.
+> 
+> Ths shared memory interface is defined to be persistent for good 
+> reason and all sorts of apps rely upon that so no you can't just 
+> ignore that. As a configurable alternative it makes sense (indeed 
+> many SYS5 admins used to run shared memory segment sweepers to 
+> clean up long idle ones)
+> 
+> However if it's locking the machine up and not being properly 
+> handled by resource management then
+> 
+> a) your resource management is broken so fix that instead
+> b) if your resource management is busted or you are not properly
+> tracking resource commits then the user is going to be able to achieve the
+> same result by other means (eg a unix domain socket bomb)
+> 
+> If you've got no overcommit set you shouldn't be able to swap to 
+> death, it may be the sysv shared memory objects need to be 
+> accounted for specifically somewhere but that would be the right 
+> thing to fix and the mechanisms to do it exist.
 
-So I'm not sure. And do we really even care about the theoretical
-race? Even if we do hit the race window and happen to get it just as a
-process turns setuid, it would seem to be totally harmless (we're not
-going to see any of the sensitive IO anyway).
+But the majority of systems have overcommit enabled - that is our 
+default.
 
-So considering the lack of consistency in this area, I can't really
-find it in myself to care very deeply.
+This is a simple extension of the OOM killer being able to ... kill 
+things on OOM, ok? 'to kill' implies 'to break'.
 
-That said, the lack of consistency itself is a bit annoying and
-worrisome. Maybe some kind of helper like we do have for
-"mm_for_maps()" would be a good idea - not because the potential races
-are all that worrisome, but because inconsistencies in the kernel are
-always signs of confusion, and confusion is always bad and a breeding
-ground for potential bugs.
+Thanks,
 
-                           Linus
+	Ingo
