@@ -1,40 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 4 Jul 2011 17:08:59 +0200
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20110704150859.GB6893@redhat.com>
-References: <20110622152514.GA9521@albatros>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 4 Jul 2011 19:26:36 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110704152636.GA21350@albatros>
+References: <201106292214.p5TMEtHg015372@imap1.linux-foundation.org>
+ <20110630134855.GA6165@mail.hallyn.com>
+ <20110630135718.GA13406@albatros>
+ <20110703180028.GA26742@albatros>
+ <20110704115523.GA11252@albatros>
+ <20110704150513.GA6893@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110622152514.GA9521@albatros>
-Subject: [kernel-hardening] Re: [RFC] ipc: introduce shm_rmid_forced sysctl
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, Randy Dunlap <rdunlap@xenotime.net>, Andrew Morton <akpm@linux-foundation.org>, "Eric W. Biederman" <ebiederm@xmission.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, Daniel Lezcano <daniel.lezcano@free.fr>, Tejun Heo <tj@kernel.org>, Ingo Molnar <mingo@elte.hu>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20110704150513.GA6893@redhat.com>
+Subject: [kernel-hardening] Re: [PATCH] shm: handle separate PID namespaces case
+To: Oleg Nesterov <oleg@redhat.com>
+Cc: akpm@linux-foundation.org, Serge Hallyn <serge.hallyn@canonical.com>, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/22, Vasiliy Kulikov wrote:
->
-> +void exit_shm(struct task_struct *task)
-> +{
-> +	struct nsproxy *nsp = task->nsproxy;
-> +	struct ipc_namespace *ns;
-> +
-> +	if (!nsp)
-> +		return;
-> +	ns = nsp->ipc_ns;
-> +	if (!ns || !ns->shm_rmid_forced)
+On Mon, Jul 04, 2011 at 17:05 +0200, Oleg Nesterov wrote:
+> On 07/04, Vasiliy Kulikov wrote:
+> >
+> > @@ -239,7 +239,23 @@ static int shm_try_destroy_current(int id, void *p, void *data)
+> >  	if (IS_ERR(shp))
+> >  		return 0;
+> >
+> > -	if (shp->shm_cprid != task_tgid_vnr(current)) {
+> > +	if (shp->shm_creator != current) {
+> > +		shm_unlock(shp);
+> > +		return 0;
+> 
+> I know absolutely nothing about ipc/, so probably I am wrong. But do
+> we really need shm_lock()
 
-This looks confusing, imho. How it is possible that ->nsproxy or
-->ipc_ns is NULL?
+It is needed to protect against parallel reads.  To read one may just
+hold shm_lock, but to write both shm_lock and rw_mutex are needed.
 
-> +		return;
-> +
-> +	/* Destroy all already created segments, but not mapped yet */
-> +	down_write(&shm_ids(ns).rw_mutex);
-> +	idr_for_each(&shm_ids(ns).ipcs_idr, &shm_try_destroy_current, ns);
->  	up_write(&shm_ids(ns).rw_mutex);
 
-Again, I do not pretend I understand ipc/, but it seems we can check
-ns->ipc_ids[].in_use != 0 before the slow path, no?
+> (which also another idr_find)
 
-Oleg.
+Yes, this is a waste of time, actually.  Directly locking
+->shm_perm->lock is what is needed here and in shm_try_destroy_orphaned().
+
+
+Thanks for looking into this!
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
