@@ -1,76 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 5 Jul 2011 00:13:39 +0400
+Date: Tue, 5 Jul 2011 18:50:33 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110704201339.GA5645@albatros>
-References: <20110703103925.GA2283@albatros>
- <CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
+Message-ID: <20110705145033.GA3052@albatros>
+References: <201106292214.p5TMEtHg015372@imap1.linux-foundation.org>
+ <20110630134855.GA6165@mail.hallyn.com>
+ <20110630135718.GA13406@albatros>
+ <20110703180028.GA26742@albatros>
+ <20110704115523.GA11252@albatros>
+ <20110705142659.GA18290@peqn>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
-Subject: [kernel-hardening] [PATCH v2] proc: fix a race in do_io_accounting()
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, akpm@linux-foundation.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20110705142659.GA18290@peqn>
+Subject: [kernel-hardening] Re: [PATCH] shm: handle separate PID namespaces case
+To: Serge Hallyn <serge.hallyn@canonical.com>
+Cc: akpm@linux-foundation.org, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, oleg@redhat.com, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-There is a ptrace_may_access() check in do_io_accounting() to prevent
-gathering information of setuid'ed and similar binaries.  However, there
-is a race against execve().  Holding task->signal->cred_guard_mutex
-while gathering the information should protect against the race.
+Hi Serge,
 
-The order of locking is similar to the one inside of
-ptrace_attach(): first goes cred_guard_mutex, then lock_task_sighand().
+On Tue, Jul 05, 2011 at 09:26 -0500, Serge Hallyn wrote:
+> > diff --git a/ipc/shm.c b/ipc/shm.c
+> > index 22006f1..3baae98 100644
+> > --- a/ipc/shm.c
+> > +++ b/ipc/shm.c
+> > @@ -239,7 +239,23 @@ static int shm_try_destroy_current(int id, void *p, void *data)
+> >  	if (IS_ERR(shp))
+> >  		return 0;
+> >  
+> > -	if (shp->shm_cprid != task_tgid_vnr(current)) {
+> > +	if (shp->shm_creator != current) {
+> > +		shm_unlock(shp);
+> > +		return 0;
+> > +	}
+> > +
+> > +	/*
+> > +	 * Mark it as orphaned to destroy the segment when
+> > +	 * kernel.shm_forced_rmid is changed.
+> > +	 * It is noop if the following shm_may_destroy() returns true.
+> > +	 */
+> > +	shp->shm_creator = NULL;
+> 
+> This function, shm_try_destroy_current(), only gets called by shm_exit()
+> if the shm_forced_rmid is set, right?  So something funky can happen if
+> first shm_forced_rmid is 0 and some get created and the creating tasks
+> exits, then shm_forced_rmid gets set to one, and the task pointer gets
+> reused?
 
-v2 - use mutex_lock_killable() instead of mutex_lock().
+No, sinse this patch exit_shm() iterates all segments regardless of
+shm_forced_rmid value (it is tried to _destroy_ the segment only if
+shm_forced_rmid==1).  The ->shm_creator is set when the segment is
+created and explicitly NULL'ed when the task exits.  As it has such
+explicit rules, the ref counting is not needed at all.
 
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
-Cc: stable@kernel.org
----
- fs/proc/base.c |   16 +++++++++++++---
- 1 files changed, 13 insertions(+), 3 deletions(-)
+Also ->shm_creator is not needed for anything, but for tracking whether
+the creator has already exited, so keeping a reference neither to task
+nor to pid is needed at all.
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 083a4f2..4b9f159 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -2711,9 +2711,16 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
- {
- 	struct task_io_accounting acct = task->ioac;
- 	unsigned long flags;
-+	int result;
- 
--	if (!ptrace_may_access(task, PTRACE_MODE_READ))
--		return -EACCES;
-+	result = mutex_lock_killable(&task->signal->cred_guard_mutex);
-+	if (result)
-+		return result;
-+
-+	if (!ptrace_may_access(task, PTRACE_MODE_READ)) {
-+		result = -EACCES;
-+		goto out_unlock;
-+	}
- 
- 	if (whole && lock_task_sighand(task, &flags)) {
- 		struct task_struct *t = task;
-@@ -2724,7 +2731,7 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
- 
- 		unlock_task_sighand(task, &flags);
- 	}
--	return sprintf(buffer,
-+	result = sprintf(buffer,
- 			"rchar: %llu\n"
- 			"wchar: %llu\n"
- 			"syscr: %llu\n"
-@@ -2739,6 +2746,9 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
- 			(unsigned long long)acct.read_bytes,
- 			(unsigned long long)acct.write_bytes,
- 			(unsigned long long)acct.cancelled_write_bytes);
-+out_unlock:
-+	mutex_unlock(&task->signal->cred_guard_mutex);
-+	return result;
- }
- 
- static int proc_tid_io_accounting(struct task_struct *task, char *buffer)
+
+Thanks,
+
 -- 
-1.7.0.4
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
