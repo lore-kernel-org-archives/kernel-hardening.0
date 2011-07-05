@@ -1,36 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 5 Jul 2011 21:49:22 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110705174922.GA6419@albatros>
-References: <20110626202518.GA4915@albatros>
- <20110626220126.GA24004@elte.hu>
- <20110627083633.GA5846@albatros>
- <20110627104058.45e93c41@pyx>
- <20110627183829.GA16033@albatros>
- <BANLkTikyzxXgfFuwBRdDLvrRN4+fExMwWA@mail.gmail.com>
- <20110701143757.GA22567@albatros>
- <20110701154947.133c30f5@lxorguk.ukuu.org.uk>
- <20110703100131.GA2472@albatros>
- <CA+55aFz08cObjcHxxZ-FQexP56hwHvML+c+UULQitKMum3MoTA@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFz08cObjcHxxZ-FQexP56hwHvML+c+UULQitKMum3MoTA@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v2] kernel: escape non-ASCII and
- control characters in printk()
-To: kernel-hardening@lists.openwall.com
-Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, James Morris <jmorris@namei.org>, Namhyung Kim <namhyung@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, linux-kernel@vger.kernel.org
+Date: Tue, 5 Jul 2011 14:13:01 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20110705141301.0d3594e0.akpm@linux-foundation.org>
+In-Reply-To: <20110704201339.GA5645@albatros>
+References: <20110703103925.GA2283@albatros>
+	<CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
+	<20110704201339.GA5645@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2] proc: fix a race in do_io_accounting()
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 03, 2011 at 10:42 -0700, Linus Torvalds wrote:
-> So saying "%s is for pure 7-bit ASCII with no control codes" is
-> annoying, but would really fix it.
+<wakes up>
 
-Hmm..  It breaks usb UTF-8 strings for sure.  I see some printks in
-debugging code.  There might be other users of UTF-8 strings fed to
-printk().
+On Tue, 5 Jul 2011 00:13:39 +0400
+Vasiliy Kulikov <segoon@openwall.com> wrote:
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+> There is a ptrace_may_access() check in do_io_accounting() to prevent
+> gathering information of setuid'ed and similar binaries.  However, there
+> is a race against execve().  Holding task->signal->cred_guard_mutex
+> while gathering the information should protect against the race.
+> 
+> The order of locking is similar to the one inside of
+> ptrace_attach(): first goes cred_guard_mutex, then lock_task_sighand().
+> 
+> v2 - use mutex_lock_killable() instead of mutex_lock().
+> 
+> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+> Cc: stable@kernel.org
+
+If a patch is to be backported into -stable then its changelog had
+better explain why such a thing is needed.  This one doesn't.
+
+Please provide a full description of the conseuqences of the bug.  One
+which will permit the -stable maintainers to understand why they're
+merging the patch, and one which will help distribution maintainers
+decide whether they want to merge it as well.
