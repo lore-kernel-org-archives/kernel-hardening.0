@@ -1,43 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 6 Jul 2011 20:08:32 +0200
+From: Oleg Nesterov <oleg@redhat.com>
+Message-ID: <20110706180831.GA15379@redhat.com>
+References: <20110630134855.GA6165@mail.hallyn.com> <20110630135718.GA13406@albatros> <20110703180028.GA26742@albatros> <20110704115523.GA11252@albatros> <20110705142659.GA18290@peqn> <20110705145033.GA3052@albatros> <20110705155755.GB14784@peqn> <20110705174200.GC6102@albatros> <20110706163140.GA24949@peqn> <20110706165732.GA4820@albatros>
 MIME-Version: 1.0
-In-Reply-To: <20110706173631.GA5431@albatros>
-References: <20110612130953.GA3709@albatros> <20110706173631.GA5431@albatros>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 6 Jul 2011 11:01:47 -0700
-Message-ID: <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: RLIMIT_NPROC check in set_user()
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110706165732.GA4820@albatros>
+Subject: Re: [kernel-hardening] Re: [PATCH] shm: handle separate PID
+	namespaces case
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, Neil Brown <neilb@suse.de>, kernel-hardening@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com, akpm@linux-foundation.org, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, rdunlap@xenotime.net, tj@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 6, 2011 at 10:36 AM, Vasiliy Kulikov <segoon@openwall.com> wrot=
-e:
-> On Sun, Jun 12, 2011 at 17:09 +0400, Vasiliy Kulikov wrote:
->> I'd be happy to hear opinions about improving the fixes above or
->> alternative fixes.
+On 07/06, Vasiliy Kulikov wrote:
 >
-> No comments? =A0Even "Sigh, what a nasty problem. =A0But we cannot really
-> fix it without significantly breaking the stuff. =A0Go and drink somethin=
-g." ?
+> > > +void exit_shm(struct task_struct *task)
+> > > +{
+> > > +	struct ipc_namespace *ns = task->nsproxy->ipc_ns;
+> > > +
+> > > +	/* Destroy all already created segments, but not mapped yet */
+> > > +	down_write(&shm_ids(ns).rw_mutex);
+> > > +	if (&shm_ids(ns).in_use)
+> > > +		idr_for_each(&shm_ids(ns).ipcs_idr, &shm_try_destroy_current, ns);
+> > > +	up_write(&shm_ids(ns).rw_mutex);
+> >
+> > Having exit_shm() call shm_destroy_orphaned(task->nsproxy->ipc_ns) seems
+> > more future-proof?
+>
+> shm_destroy_orphaned() doesn't clear ->shm_creator.  Logically it sovles
+> another problem - it is used ONLY to be consistent while changing
+> kernel.shm_rmid_forced (having orphans with shm_rmid_forced=1 is not
+> honest).
 
-Thanks for reminding me.
+Yes, there are different things.
 
-My reaction is: "let's just remote the crazy check from set_user()
-entirely". If somebody has credentials to change users, they damn well
-have credentials to override the RLIMIT_NPROC too, and as you say,
-failure is likely a bigger security threat than success.
+Cough. I stil think exit_shm() should check .in_use != 0 lockless.
 
-The whole point of RLIMIT_NPROC is to avoid fork-bombs. If we go over
-the limit for some other reason that is controlled by the super-user,
-who cares?
-
-So let's keep it in kernel/fork.c where we actually create a *new*
-process (and where everybody knows exactly what the limit means, and
-people who don't check for error cases are just broken). And remove it
-from everywhere else.
-
-Hmm?
-
-                     Linus
+Oleg.
