@@ -1,87 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Jonathan Hawthorne <j.hawthorne@f5.com>
-Date: Wed, 6 Jul 2011 03:39:45 +0000
-Message-ID: <CA39234A.70E01%j.hawthorne@f5.com>
-In-Reply-To: <CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <1E2B9FF4591BA846A472B5844CF127E2@F5.com>
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [RFC v1] implement SL*B and stack
- usercopy runtime checks
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Vasiliy Kulikov <segoon@openwall.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H.
- Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>
+In-Reply-To: <20110629191615.GA9343@albatros>
+References: <1308163895-5963-1-git-send-email-segoon@openwall.com>
+	<20110621153102.762557f3.akpm@linux-foundation.org>
+	<20110622064545.GA3605@albatros>
+	<20110629191615.GA9343@albatros>
+Date: Wed, 6 Jul 2011 14:25:33 +0300
+Message-ID: <CACVxJT-R-+Nji5Cu_by1phJSSor_fT2_Pwtn24vpK49PZ_LHEg@mail.gmail.com>
+From: Alexey Dobriyan <adobriyan@gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC 0/5 v4] procfs: introduce hidepid=, hidenet=, gid= mount options
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Greg Kroah-Hartman <gregkh@suse.de>, "David S. Miller" <davem@davemloft.net>, Arnd Bergmann <arnd@arndb.de>, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-Linus is correct to push back on system call auditing in the general case.
- There should be a trust boundary that contains where we optimize speed at
-the cost of security.  Small pockets of trust will best compromise between
-speed and security.
-
-In the case of FreeBSD or Solaris, these can be smaller than a single
-machine; in fact they may scale from a single process, a process group, to
-a physical machine.  Scripted environments can go smaller, giving as
-little as a 64KB environment.
-
-Between those pockets of trust, isolated (preferably air-gap) auditors are
-a must have.  Auditors from independent vendors are ideal; these minimize
-herd failure.
-
-Network auditors are a clear first foundation, but after they do the heavy
-lifting at the transaction boundary, statistical auditors between
-subsystems would be strategically valuable at a minimal incident cost.
-These systems can integrate well with self-balancing health monitors.
-
-But in the tight loops, performance should be king.  If the trust fails to
-that point, well, trust can always fail somewhere.  The granularity of the
-trust bubbles makes a best effort to contain exploitation or failure in
-compromise for throughput and latency.
-
-Systems like MAC (Manditory Access Control) are a good compromise in UNIX
-systems.  These audit cross-process communication on an access-list basis
-and often benefit from a control plane that merges pattern-plus-remedy
-rule sets into a single inspection dictionary and exception handler.
-
-Imagine a coloring system.  Each piece of data is marked with a color.
-When two colors of data are used together, the result is tainted by both
-colors.  Rules exist that limit the colors that may be mixed on a
-case-by-case basis using scenario-oriented configuration scripts.
-
-__
-Jonathan Hawthorne | Software Architect
-t: +1.206.272.6624 | e: j.hawthorne@f5.com
-
-
-
-
-
-
-On 7/3/11 11:27 AM, "Linus Torvalds" <torvalds@linux-foundation.org> wrote:
-
->That patch is entirely insane. No way in hell will that ever get merged.
+On Wed, Jun 29, 2011 at 10:16 PM, Vasiliy Kulikov <segoon@openwall.com> wro=
+te:
+>> =A0 =A0 mount -t proc -o "pid_allow=3Dexe,status,comm,oom_*" proc /proc
 >
->copy_to/from_user() is some of the most performance-critical code, and
->runs a *lot*, often for fairly small structures (ie 'fstat()' etc).
+> Does this scheme make sense? =A0Should I rensend the patch with these
+> architecture?
 >
->Adding random ad-hoc tests to it is entirely inappropriate. Doing so
->unconditionally is insane.
->
->So NAK, NAK, NAK.
->
->If you seriously clean it up (that at a minimum includes things like
->making it configurable using some pretty helper function that just
->compiles away for all the normal cases, and not writing out
->
->   if (!slab_access_ok(to, n) || !stack_access_ok(to, n))
->
->multiple times, for chrissake) it _might_ be acceptable.
->
->But in its current form it's just total crap. It's exactly the kind of
->"crazy security people who don't care about anything BUT security"
->crap that I refuse to see.
->
->Some balance and sanity.
->
->                      Linus
+> pid_allow=3D, tid_allow=3D, attr_allow=3D and watch_gid=3D or smth like t=
+hat.
+
+Wildcards are scary, can we please not do them from the beginning.
