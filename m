@@ -1,60 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 7 Jul 2011 12:19:30 +0400
+Date: Thu, 7 Jul 2011 12:55:51 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110707081930.GA4393@albatros>
-References: <20110612130953.GA3709@albatros>
- <20110706173631.GA5431@albatros>
- <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com>
- <20110706185932.GB3299@albatros>
- <20110707075610.GA3411@albatros>
+Message-ID: <20110707085551.GA4718@albatros>
+References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
+ <BANLkTi=dTHGK1QVs+g2tA6WocQ64SPPF3g@mail.gmail.com>
+ <20110629201718.GA11071@albatros>
+ <20110702073625.GA3318@albatros>
+ <CAKTCnzmjaddz-ihxJ_qme28S==BAPGRmC2j3iE5fqm8TPi0knA@mail.gmail.com>
+ <20110704174540.GA3321@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110707075610.GA3411@albatros>
-Subject: Re: [kernel-hardening] Re: RLIMIT_NPROC check in set_user()
-To: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, Neil Brown <neilb@suse.de>
+In-Reply-To: <20110704174540.GA3321@albatros>
+Subject: [kernel-hardening] Re: [PATCH 2/2] taskstats: restrict access to user
+To: Balbir Singh <bsingharora@gmail.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, security@kernel.org, Eric Paris <eparis@redhat.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(Sorry, I've dropped Linus from CC somehow ;-)
+On Mon, Jul 04, 2011 at 21:45 +0400, Vasiliy Kulikov wrote:
+> The already known danger is these io fields.
 
-On Wed, Jul 06, 2011 at 22:59 +0400, Vasiliy Kulikov wrote:
-> On Wed, Jul 06, 2011 at 11:01 -0700, Linus Torvalds wrote:
-> > My reaction is: "let's just remote the crazy check from set_user()
-> > entirely".
-> 
-> Honestly, I didn't expect such a positive reaction from you in the first
-> reply :)
-> 
-> 
-> > The whole point of RLIMIT_NPROC is to avoid fork-bombs.
-> 
-> It is also used in cases where there is implicit or explicit limit on
-> some other resource per process leading to the global limit of
-> RLIMIT_NPROC*X.  The most obvious case of X is RLIMIT_AS.
-> 
-> Purely pragmatic approach is introducing the check in execve() to
-> heuristically limit the number of user processes.  If the program uses
-> PAM to register a user session, maxlogins from pam_limits is the Right
-> Way.  But many programs simply don't use PAM because of the performance
-> issues.  E.g. apache doesn't use PAM.  On a shared web hosting this is a
-> real issue.
-> 
-> In -ow patch execve() checked for the exceeded RLIMIT_NPROC, which
-> effectively solved Apache's problem.
-> 
-> ...and execve() error handling is hard to miss ;-)
-> 
-> 
-> > So let's keep it in kernel/fork.c where we actually create a *new*
-> > process (and where everybody knows exactly what the limit means, and
-> > people who don't check for error cases are just broken). And remove it
-> > from everywhere else.
-> 
-> There are checks only in copy_process() and set_user().
-> 
-> Thanks,
+Two more things:
+
+1) unblocking netlink socket on task exit is a rather useful help to win
+different races.  E.g. if the vulnerable program has the code -
+
+    wait(NULL);
+    do_smth_racy();
+
+- then the attacker's task listening for the taskstats event will be
+effectively woken up just before the racy code.  It might greatly
+increase the chanses to win the race => to exploit the bug.
+(The same defect exists in inotify.)
+
+
+2) taskstats gives the task information at the precisely specific moment
+- task death.  So, the attacker shouldn't guess whether some event
+occured or not.  The formula of gotten information is _exactly_ task
+activity during the life.  On the contrary, getting the same information
+from procfs files might result in some inaccuracy because of measuring
+time inaccuracy (scheduler's variability, different disks' load, etc.).
+
+Of cource, (2) makes sense only if some sensible information is still
+available through taskstats.
+
+
+Thanks,
 
 -- 
 Vasiliy Kulikov
