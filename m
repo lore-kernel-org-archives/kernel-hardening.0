@@ -1,18 +1,19 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 7 Jul 2011 11:56:10 +0400
+Date: Thu, 7 Jul 2011 12:19:30 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110707075610.GA3411@albatros>
+Message-ID: <20110707081930.GA4393@albatros>
 References: <20110612130953.GA3709@albatros>
  <20110706173631.GA5431@albatros>
  <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com>
  <20110706185932.GB3299@albatros>
+ <20110707075610.GA3411@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110706185932.GB3299@albatros>
+In-Reply-To: <20110707075610.GA3411@albatros>
 Subject: Re: [kernel-hardening] Re: RLIMIT_NPROC check in set_user()
-To: kernel-hardening@lists.openwall.com
+To: kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>
 Cc: linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, Neil Brown <neilb@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
