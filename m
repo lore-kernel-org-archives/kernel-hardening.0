@@ -1,68 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 11 Jul 2011 22:56:35 +0400
+Date: Tue, 12 Jul 2011 17:27:23 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110711185635.GA2072@albatros>
+Message-ID: <20110712132723.GA3193@albatros>
 References: <20110612130953.GA3709@albatros>
  <20110706173631.GA5431@albatros>
  <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com>
  <20110706185932.GB3299@albatros>
- <20110711165900.GA14319@openwall.com>
+ <20110707075610.GA3411@albatros>
+ <20110707081930.GA4393@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110711165900.GA14319@openwall.com>
-Subject: Re: [kernel-hardening] RLIMIT_NPROC check in set_user()
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20110707081930.GA4393@albatros>
+Subject: [kernel-hardening] [PATCH] move RLIMIT_NPROC check from set_user() to
+ do_execve_common()
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, kernel-hardening@lists.openwall.com, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, Neil Brown <neilb@suse.de>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+The patch http://lkml.org/lkml/2003/7/13/226 introduced a RLIMIT_NPROC
+check in set_user() to check for NPROC exceeding via setuid() and
+similar functions.  Before the check there was a possibility to greatly
+exceed the allowed number of processes by an unprivileged user if the
+program relied on rlimit only.  But the check created new security
+threat: many poorly written programs simply don't check setuid() return
+code and believe it cannot fail if executed with root privileges.  So,
+the check is removed in this patch because of too often privilege
+escalations related to buggy programs.
 
-On Mon, Jul 11, 2011 at 20:59 +0400, Solar Designer wrote:
-> On Wed, Jul 06, 2011 at 10:59:32PM +0400, Vasiliy Kulikov wrote:
-> > On Wed, Jul 06, 2011 at 11:01 -0700, Linus Torvalds wrote:
-> > > My reaction is: "let's just remote the crazy check from set_user()
-> > > entirely".
-> > 
-> > Honestly, I didn't expect such a positive reaction from you in the first
-> > reply :)
-> 
-> After this is taken care of, please also consider other ways set*id()
-> syscalls might fail on errors unrelated to the process possessing
-> appropriate privileges.  IIRC, set_user() could also fail when it's not
-> able to allocate an instance of "struct user" - unlikely, but possible.
-> I think the process must be killed on those errors.  There's no better
-> action to take on them.
+The NPROC can still be enforced in the common code flow of daemons
+spawning user processes.  Most of daemons do fork()+setuid()+execve().
+The check introduced in execve() enforces the same limit as in setuid()
+and doesn't create similar security issues.
 
-As Spender has noticed, small allocations may not fail, they are forced
-to use __GFP_NOFAIL.
+Similar check was introduced in -ow patches.
 
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+---
+ fs/exec.c    |   13 +++++++++++++
+ kernel/sys.c |    6 ------
+ 2 files changed, 13 insertions(+), 6 deletions(-)
 
-/*
- * PAGE_ALLOC_COSTLY_ORDER is the order at which allocations are deemed
- * costly to service.  That is between allocation orders which should
- * coelesce naturally under reasonable reclaim pressure and those which
- * will not.
- */
-#define PAGE_ALLOC_COSTLY_ORDER 3
-
-int should_alloc_retry() {
-
-...
-	/*
-	 * In this implementation, order <= PAGE_ALLOC_COSTLY_ORDER
-	 * means __GFP_NOFAIL, but that may not be true in other
-	 * implementations.
-	 */
-	if (order <= PAGE_ALLOC_COSTLY_ORDER)
-		return 1;
-...
-}
-
-So, all these allocations are fail-safe.  I see no reasons to fail for
-these privilege dropping functions.
-
-Thanks,
-
+diff --git a/fs/exec.c b/fs/exec.c
+index ea5f748..0baf5c9 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1436,6 +1436,19 @@ static int do_execve_common(const char *filename,
+ 	struct files_struct *displaced;
+ 	bool clear_in_exec;
+ 	int retval;
++	const struct cred *cred = current_cred();
++
++	/*
++	 * We check for RLIMIT_NPROC in execve() instead of set_user() because
++	 * too many poorly written programs don't check setuid() return code.
++	 * The check in execve() does the same thing for programs doing
++	 * setuid()+execve(), but without similar security issues.
++	 */
++	if (atomic_read(&cred->user->processes) > rlimit(RLIMIT_NPROC) &&
++	    cred->user != INIT_USER) {
++		retval = -EAGAIN;
++		goto out_ret;
++	}
+ 
+ 	retval = unshare_files(&displaced);
+ 	if (retval)
+diff --git a/kernel/sys.c b/kernel/sys.c
+index e4128b2..0e7509a 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -591,12 +591,6 @@ static int set_user(struct cred *new)
+ 	if (!new_user)
+ 		return -EAGAIN;
+ 
+-	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
+-			new_user != INIT_USER) {
+-		free_uid(new_user);
+-		return -EAGAIN;
+-	}
+-
+ 	free_uid(new->user);
+ 	new->user = new_user;
+ 	return 0;
 -- 
-Vasiliy
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
