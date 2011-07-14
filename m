@@ -1,39 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 14 Jul 2011 10:11:57 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CA+55aFwQKqvNvzTMYXVW_yKkFtNsyv8uuBiWiwYLof-nPqPu9w@mail.gmail.com>
-Message-ID: <alpine.LRH.2.00.1107141009510.17067@tundra.namei.org>
-References: <20110612130953.GA3709@albatros> <20110706173631.GA5431@albatros> <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com> <20110706185932.GB3299@albatros> <20110707075610.GA3411@albatros> <20110707081930.GA4393@albatros>
- <20110712132723.GA3193@albatros> <CA+55aFysXOeBqEvmVbuqL3i0jRFDcE=vDuVhmYL38XQ0+x=deQ@mail.gmail.com> <20110713091408.0d456352@notabene.brown> <20110713063142.GA19976@openwall.com> <20110713170657.59dae548@notabene.brown>
- <CA+55aFwQKqvNvzTMYXVW_yKkFtNsyv8uuBiWiwYLof-nPqPu9w@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] move RLIMIT_NPROC check from set_user() to
- do_execve_common()
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: NeilBrown <neilb@suse.de>, Solar Designer <solar@openwall.com>, Vasiliy Kulikov <segoon@openwall.com>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, kernel-hardening@lists.openwall.com, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>
+Date: Thu, 14 Jul 2011 18:15:57 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20110714141557.GA29900@openwall.com>
+References: <20110612130953.GA3709@albatros> <20110706173631.GA5431@albatros> <CA+55aFyfjG1h2zkkGai_VPM8p5bhWhvNXs1HvuWMgxv4RSywYw@mail.gmail.com> <20110706185932.GB3299@albatros> <20110711165900.GA14319@openwall.com> <20110711185635.GA2072@albatros> <20110713094856.GA20924@openwall.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110713094856.GA20924@openwall.com>
+Subject: Re: [kernel-hardening] RLIMIT_NPROC check in set_user()
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 13 Jul 2011, Linus Torvalds wrote:
+Vasiliy,
 
-> It sounds like people are effectively Ack'ing the patch, but with this
-> kind of patch I don't want to add the "implicit Ack" that I often do
-> for regular stuff.
-> 
-> So could people who think that the patch is ok in its current form
-> just send me their acked-by or reviewed-by? I haven't heard any actual
-> objection to it, and I think it's valid for the current -rc.
-> 
-> Alternatively, feel free to send a comment like "I think it's the
-> right thing, but maybe it should wait for the next merge window"..
+On Wed, Jul 13, 2011 at 01:48:56PM +0400, Solar Designer wrote:
+> LKML discussion a few years ago, ...
 
-Count me in the latter.
+I found it:
 
-It does look ok to me, but I'd be happier if it had more testing first (in 
--mm perhaps).  I think some security folk may be on summer vacation, too.
+Subject: [PATCH] set*uid() must not fail-and-return on OOM/rlimits
+http://lists.openwall.net/linux-kernel/2006/08/20/4
 
+and lots of followups.  Alan NAK'ed the change at the time.  I think he
+was wrong.  Anyway, there's useful info in that thread - please read it.
 
-- James
--- 
-James Morris
-<jmorris@namei.org>
+I think we should only bring the process killing suggestion up when the
+move of RLIMIT_NPROC check is committed.
+
+Alexander
