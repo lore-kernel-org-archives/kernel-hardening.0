@@ -1,28 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Jeff Garzik <jgpobox@gmail.com>
-Message-ID: <4E1FE51B.70009@pobox.com>
-Date: Fri, 15 Jul 2011 02:58:35 -0400
-From: Jeff Garzik <jgarzik@pobox.com>
-MIME-Version: 1.0
-References: <20110625170752.GA10458@albatros> <20110715063526.GB3166@albatros>
-In-Reply-To: <20110715063526.GB3166@albatros>
-Content-Type: text/plain; charset=ISO-8859-1; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] acpi: constify ops structs
+Date: Fri, 15 Jul 2011 17:04:09 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20110715130409.GA2700@openwall.com>
+References: <20110713063142.GA19976@openwall.com> <20110713170657.59dae548@notabene.brown> <CA+55aFwQKqvNvzTMYXVW_yKkFtNsyv8uuBiWiwYLof-nPqPu9w@mail.gmail.com> <alpine.LRH.2.00.1107141009510.17067@tundra.namei.org> <20110714112751.1bfd998f@notabene.brown> <20110714150602.GA30019@openwall.com> <20110715133013.4fa38d19@notabene.brown> <20110715063113.GA3166@albatros> <20110715170650.585f1dad@notabene.brown> <20110715073823.GA3821@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110715073823.GA3821@albatros>
+Subject: [kernel-hardening] Re: [PATCH] move RLIMIT_NPROC check from set_user() to do_execve_common()
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Len Brown <lenb@kernel.org>, kernel-hardening@lists.openwall.com, Shaohua Li <shaohua.li@intel.com>, Zhang Rui <rui.zhang@intel.com>, Jesse Barnes <jbarnes@virtuousgeek.org>, linux-acpi@vger.kernel.org, linux-kernel@vger.kernel.org, linux-ide@vger.kernel.org, linux-pci@vger.kernel.org
+Cc: NeilBrown <neilb@suse.de>, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Willy Tarreau <w@1wt.eu>, Sebastian Krahmer <krahmer@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/15/2011 02:35 AM, Vasiliy Kulikov wrote:
-> Hi Len,
->
-> On Sat, Jun 25, 2011 at 21:07 +0400, Vasiliy Kulikov wrote:
->> Structs battery_file, acpi_dock_ops, file_operations,
->> thermal_cooling_device_ops, thermal_zone_device_ops, kernel_param_ops
->> are not changed in runtime.  It is safe to make them const.
->> register_hotplug_dock_device() was altered to take const "ops" argument
->> to respect acpi_dock_ops' const notion.
->>
->> Signed-off-by: Vasiliy Kulikov<segoon@openwall.com>
+Neil, Vasiliy -
 
-Acked-by: Jeff Garzik <jgarzik@redhat.com>
+On Fri, Jul 15, 2011 at 11:38:23AM +0400, Vasiliy Kulikov wrote:
+> On Fri, Jul 15, 2011 at 17:06 +1000, NeilBrown wrote:
+> > How about this then?
+> 
+> AFAIU, with this patch:
+> 
+> 1) setuid() doesn't fail in NPROC exceed case.
+> 2) NPROC is forced on execve() after setuid().
+> 3) execve() fails only if NPROC was exceeded during setuid() execution.
+> 4) Other processes of the same user doesn't suffer from "occasional"
+> execve() failures.
+> 
+> If it is correct, then I like the patch :)
+
+I'm not convinced this has any advantages over the patch Vasiliy had
+posted (which simply moved the RLIMIT_NPROC check), but I don't mind,
+with one important correction:
+
+Although in the primary use cases we're considering, setuid() is very
+soon followed by execve(), this doesn't always have to be the case.
+There may be cases where the process would sleep between these two calls
+(for a variety of reasons).  It would be surprising to see a process
+fail on execve() because of RLIMIT_NPROC when that limit had been
+reached, say, days ago and is no longer reached at the time of execve().
+
+Thus, if we go with Neil's proposal (adding/checking an extra flag), we
+should also re-check the process count against RLIMIT_NPROC on execve(),
+and fail the exec only when both the flag is set and the current process
+count is excessive (still or again).
+
+Also, if we go with a patch like this, it brings up the question of
+whether the flag should be preserved or reset on fork().  I think it
+should be preserved.
+
+> It does RLIMIT_NPROC
+> enforcement without mixing other execve() calls like -ow patch did.
+
+"Mixing other execve() calls" (4 on the list above) is not obviously
+undesirable.  Thus, either Vasiliy's original patch or Neil's patch with
+the addition mentioned above would be fine by me.
+
+Thanks,
+
+Alexander
