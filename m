@@ -1,97 +1,124 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Fri, 15 Jul 2011 10:38:01 +0400
+Date: Fri, 15 Jul 2011 10:45:42 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110715063801.GC3166@albatros>
-References: <20110703103925.GA2283@albatros>
- <CA+55aFwfr-oAa-2L9O_rd9iZDyVr0b+gFQS=_R5PUxmhh3JEsg@mail.gmail.com>
- <20110704201339.GA5645@albatros>
- <20110705141301.0d3594e0.akpm@linux-foundation.org>
- <20110706163412.GA4743@albatros>
+Message-ID: <20110715064542.GA3650@albatros>
+References: <20110705173746.GA6102@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110706163412.GA4743@albatros>
-Subject: [kernel-hardening] Re: [PATCH v3] proc: fix a race in do_io_accounting()
-To: Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, viro@zeniv.linux.org.uk, rientjes@google.com, wilsons@start.ca, security@kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20110705173746.GA6102@albatros>
+Subject: [kernel-hardening] Re: [PATCH v2] shm: handle separate PID namespaces case
+To: akpm@linux-foundation.org
+Cc: Oleg Nesterov <oleg@redhat.com>, Serge Hallyn <serge.hallyn@canonical.com>, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Linus,
+Hi Andrew,
 
-On Wed, Jul 06, 2011 at 20:34 +0400, Vasiliy Kulikov wrote:
-> If inode's mode permits to open /proc/PID/io and the resulted file
-> descriptor is kept across execve() of setuid or similar binary, the
-> ptrace_may_access() check tries to prevent using this fd against the
-> task with escalated privileges.  Unfortunately, there is a race of the
-> check against execve().  If execve() is processed after the ptrace
-> check, but before the actual io information gathering, io statistics
-> will be gathered from the privileged process.  At least in theory this
-> might lead to gathering sensible information (like ssh/ftp password
-> length) that wouldn't be available otherwise.
+On Tue, Jul 05, 2011 at 21:37 +0400, Vasiliy Kulikov wrote:
+> shm_try_destroy_orphaned() and shm_try_destroy_current() didn't handle
+> the case of separate PID namespaces, but a single IPC namespace.  If
+> there are tasks with the same PID values using the same shmem object,
+> the wrong destroy decision could be reached.
 > 
-> Holding task->signal->cred_guard_mutex while gathering the io
-> information should protect against the race.
-> 
-> The order of locking is similar to the one inside of
-> ptrace_attach(): first goes cred_guard_mutex, then lock_task_sighand().
+> On shm segment creation store the pointer to the creator task in
+> shmid_kernel->shm_creator field and zero it on task exit.  Then
+> use the ->shm_creator insread of shm_cprid in both functions.  As
+> shmid_kernel object is already locked at this stage, no additional
+> locking is needed.
 
-Any problems with the patch?
+Can you please pick these 2 patches?  This one is a bug fix and another
+is a cleanup/speedup.  Thanks!
 
-> v3 - better description.
-> v2 - use mutex_lock_killable() instead of mutex_lock().
-> 
 > Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
-> Cc: stable@kernel.org
 > ---
->  fs/proc/base.c |   16 +++++++++++++---
->  1 files changed, 13 insertions(+), 3 deletions(-)
+>  include/linux/shm.h |    3 +++
+>  ipc/shm.c           |   27 ++++++++++++++++++++-------
+>  2 files changed, 23 insertions(+), 7 deletions(-)
 > 
-> diff --git a/fs/proc/base.c b/fs/proc/base.c
-> index 083a4f2..4b9f159 100644
-> --- a/fs/proc/base.c
-> +++ b/fs/proc/base.c
-> @@ -2711,9 +2711,16 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
->  {
->  	struct task_io_accounting acct = task->ioac;
->  	unsigned long flags;
-> +	int result;
->  
-> -	if (!ptrace_may_access(task, PTRACE_MODE_READ))
-> -		return -EACCES;
-> +	result = mutex_lock_killable(&task->signal->cred_guard_mutex);
-> +	if (result)
-> +		return result;
+> diff --git a/include/linux/shm.h b/include/linux/shm.h
+> index b030a4e..12d2234 100644
+> --- a/include/linux/shm.h
+> +++ b/include/linux/shm.h
+> @@ -95,6 +95,9 @@ struct shmid_kernel /* private to the kernel */
+>  	pid_t			shm_cprid;
+>  	pid_t			shm_lprid;
+>  	struct user_struct	*mlock_user;
 > +
-> +	if (!ptrace_may_access(task, PTRACE_MODE_READ)) {
-> +		result = -EACCES;
-> +		goto out_unlock;
+> +	/* The task created the shm object.  NULL if the task is dead. */
+> +	struct task_struct	*shm_creator;
+>  };
+>  
+>  /* shm_mode upper byte flags */
+> diff --git a/ipc/shm.c b/ipc/shm.c
+> index 22006f1..3baae98 100644
+> --- a/ipc/shm.c
+> +++ b/ipc/shm.c
+> @@ -239,7 +239,23 @@ static int shm_try_destroy_current(int id, void *p, void *data)
+>  	if (IS_ERR(shp))
+>  		return 0;
+>  
+> -	if (shp->shm_cprid != task_tgid_vnr(current)) {
+> +	if (shp->shm_creator != current) {
+> +		shm_unlock(shp);
+> +		return 0;
 > +	}
->  
->  	if (whole && lock_task_sighand(task, &flags)) {
->  		struct task_struct *t = task;
-> @@ -2724,7 +2731,7 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
->  
->  		unlock_task_sighand(task, &flags);
+> +
+> +	/*
+> +	 * Mark it as orphaned to destroy the segment when
+> +	 * kernel.shm_rmid_forced is changed.
+> +	 * It is noop if the following shm_may_destroy() returns true.
+> +	 */
+> +	shp->shm_creator = NULL;
+> +
+> +	/*
+> +	 * Don't even try to destroy it.  If shm_rmid_forced=0 and IPC_RMID
+> +	 * is not set, it shouldn't be deleted here.
+> +	 */
+> +	if (!ns->shm_rmid_forced) {
+>  		shm_unlock(shp);
+>  		return 0;
 >  	}
-> -	return sprintf(buffer,
-> +	result = sprintf(buffer,
->  			"rchar: %llu\n"
->  			"wchar: %llu\n"
->  			"syscr: %llu\n"
-> @@ -2739,6 +2746,9 @@ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
->  			(unsigned long long)acct.read_bytes,
->  			(unsigned long long)acct.write_bytes,
->  			(unsigned long long)acct.cancelled_write_bytes);
-> +out_unlock:
-> +	mutex_unlock(&task->signal->cred_guard_mutex);
-> +	return result;
->  }
+> @@ -255,7 +271,6 @@ static int shm_try_destroy_orphaned(int id, void *p, void *data)
+>  {
+>  	struct ipc_namespace *ns = data;
+>  	struct shmid_kernel *shp = shm_lock(ns, id);
+> -	struct task_struct *task;
 >  
->  static int proc_tid_io_accounting(struct task_struct *task, char *buffer)
+>  	if (IS_ERR(shp))
+>  		return 0;
+> @@ -263,11 +278,8 @@ static int shm_try_destroy_orphaned(int id, void *p, void *data)
+>  	/*
+>  	 * We want to destroy segments without users and with already
+>  	 * exit'ed originating process.
+> -	 *
+> -	 * XXX: the originating process may exist in another pid namespace.
+>  	 */
+> -	task = find_task_by_vpid(shp->shm_cprid);
+> -	if (task != NULL) {
+> +	if (shp->shm_creator != NULL) {
+>  		shm_unlock(shp);
+>  		return 0;
+>  	}
+> @@ -295,7 +307,7 @@ void exit_shm(struct task_struct *task)
+>  	if (!nsp)
+>  		return;
+>  	ns = nsp->ipc_ns;
+> -	if (!ns || !ns->shm_rmid_forced)
+> +	if (!ns)
+>  		return;
+>  
+>  	/* Destroy all already created segments, but not mapped yet */
+> @@ -494,6 +506,7 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
+>  	shp->shm_segsz = size;
+>  	shp->shm_nattch = 0;
+>  	shp->shm_file = file;
+> +	shp->shm_creator = current;
+>  	/*
+>  	 * shmid gets reported as "inode#" in /proc/pid/maps.
+>  	 * proc-ps tools use this. Changing this will break them.
 > -- 
 > 1.7.0.4
-> 
 
 -- 
 Vasiliy Kulikov
