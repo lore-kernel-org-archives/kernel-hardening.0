@@ -1,125 +1,184 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Fri, 15 Jul 2011 10:45:42 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110715064542.GA3650@albatros>
-References: <20110705173746.GA6102@albatros>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110705173746.GA6102@albatros>
-Subject: [kernel-hardening] Re: [PATCH v2] shm: handle separate PID namespaces case
-To: akpm@linux-foundation.org
-Cc: Oleg Nesterov <oleg@redhat.com>, Serge Hallyn <serge.hallyn@canonical.com>, daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu, rdunlap@xenotime.net, tj@kernel.org, kernel-hardening@lists.openwall.com
+Date: Fri, 15 Jul 2011 17:06:50 +1000
+From: NeilBrown <neilb@suse.de>
+Message-ID: <20110715170650.585f1dad@notabene.brown>
+In-Reply-To: <20110715063113.GA3166@albatros>
+References: <20110712132723.GA3193@albatros>
+	<CA+55aFysXOeBqEvmVbuqL3i0jRFDcE=vDuVhmYL38XQ0+x=deQ@mail.gmail.com>
+	<20110713091408.0d456352@notabene.brown>
+	<20110713063142.GA19976@openwall.com>
+	<20110713170657.59dae548@notabene.brown>
+	<CA+55aFwQKqvNvzTMYXVW_yKkFtNsyv8uuBiWiwYLof-nPqPu9w@mail.gmail.com>
+	<alpine.LRH.2.00.1107141009510.17067@tundra.namei.org>
+	<20110714112751.1bfd998f@notabene.brown>
+	<20110714150602.GA30019@openwall.com>
+	<20110715133013.4fa38d19@notabene.brown>
+	<20110715063113.GA3166@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Re: [PATCH] move RLIMIT_NPROC check from
+ set_user() to do_execve_common()
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Solar Designer <solar@openwall.com>, James Morris <jmorris@namei.org>, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Willy Tarreau <w@1wt.eu>, Sebastian Krahmer <krahmer@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Andrew,
+On Fri, 15 Jul 2011 10:31:13 +0400 Vasiliy Kulikov <segoon@openwall.com>
+wrote:
 
-On Tue, Jul 05, 2011 at 21:37 +0400, Vasiliy Kulikov wrote:
-> shm_try_destroy_orphaned() and shm_try_destroy_current() didn't handle
-> the case of separate PID namespaces, but a single IPC namespace.  If
-> there are tasks with the same PID values using the same shmem object,
-> the wrong destroy decision could be reached.
-> 
-> On shm segment creation store the pointer to the creator task in
-> shmid_kernel->shm_creator field and zero it on task exit.  Then
-> use the ->shm_creator insread of shm_cprid in both functions.  As
-> shmid_kernel object is already locked at this stage, no additional
-> locking is needed.
+> Neil,
+>=20
+> On Fri, Jul 15, 2011 at 13:30 +1000, NeilBrown wrote:
+> > I'm still bothers that the proposed patch can cause exec to fail for an
+> > separate 'innocent' process.
+> > It also seems to 'hide' the problem - just shuffling code around.
+> > The comment in do_execve_common helps.  A similar comment in set_user
+> > wouldn't hurt.
+> >=20
+> > But what do you think of this.  It sure that only the process which ign=
+ored
+> > the return value from setuid is inconvenienced.
+>=20
+> I don't like it.  You're mixing the main problem and an RLIMIT check
+> enforcement.  The main goal is denying setuid() to fail unless there is n=
+ot
+> enough privileges, RLIMIT in execve() is just an *attempt* to still count
+> NPROC in *some* widespread cases.  But you're trying to fix setuid()
+> where RLIMIT accounting is simple :\
+>=20
+> Your patch doesn't address the core issue in this situation:
+>=20
+>     setuid(); /* it fails because of RLIMIT */
+>     do_some_fs();
+>     execve();
+>=20
+> do_some_fs() should be called ONLY if root is dropped.  In your scheme
+> the process may interact with FS as root while thinking it is nonroot,
+> which almost always leads to privilege escalation.
+>=20
+> Thanks,
+>=20
 
-Can you please pick these 2 patches?  This one is a bug fix and another
-is a cleanup/speedup.  Thanks!
+How about this then?
 
-> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
-> ---
->  include/linux/shm.h |    3 +++
->  ipc/shm.c           |   27 ++++++++++++++++++++-------
->  2 files changed, 23 insertions(+), 7 deletions(-)
-> 
-> diff --git a/include/linux/shm.h b/include/linux/shm.h
-> index b030a4e..12d2234 100644
-> --- a/include/linux/shm.h
-> +++ b/include/linux/shm.h
-> @@ -95,6 +95,9 @@ struct shmid_kernel /* private to the kernel */
->  	pid_t			shm_cprid;
->  	pid_t			shm_lprid;
->  	struct user_struct	*mlock_user;
-> +
-> +	/* The task created the shm object.  NULL if the task is dead. */
-> +	struct task_struct	*shm_creator;
->  };
->  
->  /* shm_mode upper byte flags */
-> diff --git a/ipc/shm.c b/ipc/shm.c
-> index 22006f1..3baae98 100644
-> --- a/ipc/shm.c
-> +++ b/ipc/shm.c
-> @@ -239,7 +239,23 @@ static int shm_try_destroy_current(int id, void *p, void *data)
->  	if (IS_ERR(shp))
->  		return 0;
->  
-> -	if (shp->shm_cprid != task_tgid_vnr(current)) {
-> +	if (shp->shm_creator != current) {
-> +		shm_unlock(shp);
-> +		return 0;
-> +	}
-> +
-> +	/*
-> +	 * Mark it as orphaned to destroy the segment when
-> +	 * kernel.shm_rmid_forced is changed.
-> +	 * It is noop if the following shm_may_destroy() returns true.
-> +	 */
-> +	shp->shm_creator = NULL;
-> +
-> +	/*
-> +	 * Don't even try to destroy it.  If shm_rmid_forced=0 and IPC_RMID
-> +	 * is not set, it shouldn't be deleted here.
-> +	 */
-> +	if (!ns->shm_rmid_forced) {
->  		shm_unlock(shp);
->  		return 0;
->  	}
-> @@ -255,7 +271,6 @@ static int shm_try_destroy_orphaned(int id, void *p, void *data)
->  {
->  	struct ipc_namespace *ns = data;
->  	struct shmid_kernel *shp = shm_lock(ns, id);
-> -	struct task_struct *task;
->  
->  	if (IS_ERR(shp))
->  		return 0;
-> @@ -263,11 +278,8 @@ static int shm_try_destroy_orphaned(int id, void *p, void *data)
->  	/*
->  	 * We want to destroy segments without users and with already
->  	 * exit'ed originating process.
-> -	 *
-> -	 * XXX: the originating process may exist in another pid namespace.
->  	 */
-> -	task = find_task_by_vpid(shp->shm_cprid);
-> -	if (task != NULL) {
-> +	if (shp->shm_creator != NULL) {
->  		shm_unlock(shp);
->  		return 0;
->  	}
-> @@ -295,7 +307,7 @@ void exit_shm(struct task_struct *task)
->  	if (!nsp)
->  		return;
->  	ns = nsp->ipc_ns;
-> -	if (!ns || !ns->shm_rmid_forced)
-> +	if (!ns)
->  		return;
->  
->  	/* Destroy all already created segments, but not mapped yet */
-> @@ -494,6 +506,7 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
->  	shp->shm_segsz = size;
->  	shp->shm_nattch = 0;
->  	shp->shm_file = file;
-> +	shp->shm_creator = current;
->  	/*
->  	 * shmid gets reported as "inode#" in /proc/pid/maps.
->  	 * proc-ps tools use this. Changing this will break them.
-> -- 
-> 1.7.0.4
+=46rom 4a1411d10c90510a4eedf94bfd6b2578425271ba Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.de>
+Date: Fri, 15 Jul 2011 13:20:09 +1000
+Subject: [PATCH] Protect execve from being used after 'setuid' exceeds RLIM=
+IT_NPROC
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Many programs to not check setuid for failure so it is not safe
+for it to fail.  So impose the RLIMIT_NPROC limit by noting the
+excess in set_user with a process flag, and failing exec() if the
+flag is set.
+
+The patch http://lkml.org/lkml/2003/7/13/226 introduced a RLIMIT_NPROC
+check in set_user() to check for NPROC exceeding via setuid() and
+similar functions.  Before the check there was a possibility to greatly
+exceed the allowed number of processes by an unprivileged user if the
+program relied on rlimit only.  But the check created new security
+threat: many poorly written programs simply don't check setuid() return
+code and believe it cannot fail if executed with root privileges.  So,
+when the check fails we set a process flag which causes execve to fail.
+
+Following examples of vulnerabilities due to processes not checking
+error from setuid provided by Solar Designer <solar@openwall.com>:
+
+Here are some examples for 2011-2010:
+
+"... missing setuid() retval check in opielogin which leads to easy root
+compromise":
+
+http://www.openwall.com/lists/oss-security/2011/06/22/6
+
+"The /usr/lib/libgnomesu/gnomesu-pam-backend suid binary which belongs
+to the libgnomesu package is not checking setuid() return values.
+
+As a result, two cooperating users, or users with access to guest,
+cgi or web accounts can run arbitrary commands as root very easily."
+
+http://www.openwall.com/lists/oss-security/2011/05/30/2
+
+pam_xauth (exploitable if pam_limits is also used):
+
+http://www.openwall.com/lists/oss-security/2010/08/16/2
+
+A collection of examples from 2006:
+
+http://lists.openwall.net/linux-kernel/2006/08/20/156
+
+Signed-off-by: NeilBrown <neilb@suse.de>
+
+diff --git a/fs/exec.c b/fs/exec.c
+index 6075a1e..dfe9c61 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1434,6 +1434,17 @@ static int do_execve_common(const char *filename,
+ 	bool clear_in_exec;
+ 	int retval;
+=20
++	if (current->flags & PF_NPROC_EXCEEDED) {
++		/* setuid noticed that RLIMIT_NPROC was
++		 * exceeded, but didn't fail as that easily
++		 * leads to privileges leaking.  So fail
++		 * here instead - we still limit the number of
++		 * processes running the user's code.
++		 */
++		retval =3D -EAGAIN;
++		goto out_ret;
++	}
++
+ 	retval =3D unshare_files(&displaced);
+ 	if (retval)
+ 		goto out_ret;
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 496770a..f024c63 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1759,6 +1759,7 @@ extern void thread_group_times(struct task_struct *p,=
+ cputime_t *ut, cputime_t *
+ #define PF_DUMPCORE	0x00000200	/* dumped core */
+ #define PF_SIGNALED	0x00000400	/* killed by a signal */
+ #define PF_MEMALLOC	0x00000800	/* Allocating memory */
++#define PF_NPROC_EXCEEDED 0x00001000	/* set_user noticed that RLIMIT_NPROC=
+ was exceeded */
+ #define PF_USED_MATH	0x00002000	/* if unset the fpu must be initialized be=
+fore use */
+ #define PF_FREEZING	0x00004000	/* freeze in progress. do not account to lo=
+ad */
+ #define PF_NOFREEZE	0x00008000	/* this thread should not be frozen */
+diff --git a/kernel/cred.c b/kernel/cred.c
+index 174fa84..8ef31f5 100644
+--- a/kernel/cred.c
++++ b/kernel/cred.c
+@@ -508,10 +508,8 @@ int commit_creds(struct cred *new)
+ 		key_fsgid_changed(task);
+=20
+ 	/* do it
+-	 * - What if a process setreuid()'s and this brings the
+-	 *   new uid over his NPROC rlimit?  We can check this now
+-	 *   cheaply with the new uid cache, so if it matters
+-	 *   we should be checking for it.  -DaveM
++	 * RLIMIT_NPROC limits on user->processes have already been checked
++	 * in set_user().
+ 	 */
+ 	alter_cred_subscribers(new, 2);
+ 	if (new->user !=3D old->user)
+diff --git a/kernel/sys.c b/kernel/sys.c
+index e4128b2..dd1fb9d 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -592,10 +592,9 @@ static int set_user(struct cred *new)
+ 		return -EAGAIN;
+=20
+ 	if (atomic_read(&new_user->processes) >=3D rlimit(RLIMIT_NPROC) &&
+-			new_user !=3D INIT_USER) {
+-		free_uid(new_user);
+-		return -EAGAIN;
+-	}
++			new_user !=3D INIT_USER)
++		/* Cause any subsequent 'exec' to fail */
++		current->flags |=3D PF_NPROC_EXCEEDED;
+=20
+ 	free_uid(new->user);
+ 	new->user =3D new_user;
