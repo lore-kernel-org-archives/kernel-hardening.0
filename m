@@ -1,78 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 18 Jul 2011 23:48:03 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110718194803.GA5337@albatros>
+Date: Mon, 18 Jul 2011 16:18:05 -0500 (CDT)
+From: Christoph Lameter <cl@linux.com>
+In-Reply-To: <20110718183951.GA3748@albatros>
+Message-ID: <alpine.DEB.2.00.1107181610350.31576@router.home>
+References: <20110703111028.GA2862@albatros> <CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com> <20110718183951.GA3748@albatros>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] GNU_STACK policy problem
-To: kernel-hardening@lists.openwall.com
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [RFC v2] implement SL*B and stack usercopy runtime checks
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Mon, 18 Jul 2011, Vasiliy Kulikov wrote:
 
-I've written kernel part of PT_GNU_STACK NX enforcement for binaries and
-trampolines emulation (the latter is taken from PaX as-is).  It Just
-Works for both 32 and 64 bits.
+> --- a/mm/slab.c
+> +++ b/mm/slab.c
+> @@ -3844,6 +3844,40 @@ unsigned int kmem_cache_size(struct kmem_cache *cachep)
+>  EXPORT_SYMBOL(kmem_cache_size);
+>
+>  /*
+> + * Returns false if and only if [ptr; ptr+len) touches the slab,
+> + * but breaks objects boundaries.  It doesn't check whether the
+> + * accessed object is actually allocated.
+> + */
+> +bool slab_access_ok(const void *ptr, unsigned long len)
+> +{
+> +	struct page *page;
+> +	struct kmem_cache *cachep = NULL;
 
-But there is a major problem - it also needs support from libc to handle
-DSO's GNU_STACK.  As for now, GNU_STACK of the binary is handled by the
-kernel and GNU_STACK of the DSO is handled by glibc.  So, if there is
-some DSO with GNU_STACK=X, which is loaded for an executable with
-GNU_STACK=NX, the stack will be made =X by glibc in the runtime.  This
-case is fully handled by the userspace, there is nothing kernel can
-enforce.
+Why = NULL?
 
-(Unless hook mprotect and identify it is related to the stack, which is
-ugly.  Btw, stacks for all threads should be altered in multi-threaded
-app.).
+> +	struct slab *slabp;
+> +	unsigned int objnr;
+> +	unsigned long offset;
+> +
+> +	if (!len)
+> +		return true;
+> +	if (!virt_addr_valid(ptr))
+> +		return true;
+> +	page = virt_to_head_page(ptr);
+> +	if (!PageSlab(page))
+> +		return true;
+> +
+> +	cachep = page_get_cache(page);
+> +	slabp = page_get_slab(page);
+> +	objnr = obj_to_index(cachep, slabp, (void *)ptr);
+> +	BUG_ON(objnr >= cachep->num);
+> +	offset = (const char *)ptr - obj_offset(cachep) -
+> +	    (const char *)index_to_obj(cachep, slabp, objnr);
+> +	if (offset <= obj_size(cachep) && len <= obj_size(cachep) - offset)
+> +		return true;
+> +
+> +	return false;
+> +}
+> +EXPORT_SYMBOL(slab_access_ok);
+> +
+> +/*
+>   * This initializes kmem_list3 or resizes various caches for all nodes.
+>   */
+>  static int alloc_kmemlist(struct kmem_cache *cachep, gfp_t gfp)
 
-As I've implemented it as sysctl kernel.execstack_mode, there is a
-possibility to patch libc to look at this sysctl while loading a DSO (1).
-However, it will not work if either procfs is not mounted (it is fully
-legitimate case for simple DSO loading, e.g. for early boot tasks) or
-the task is chrooted into a very restricted tree (or /proc is restricted
-by some LSM).
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -2623,6 +2623,34 @@ unsigned int kmem_cache_size(struct kmem_cache *s)
+>  }
+>  EXPORT_SYMBOL(kmem_cache_size);
+>
+> +/*
+> + * Returns false if and only if [ptr; ptr+len) touches the slab,
+> + * but breaks objects boundaries.  It doesn't check whether the
+> + * accessed object is actually allocated.
+> + */
+> +bool slab_access_ok(const void *ptr, unsigned long len)
+> +{
+> +	struct page *page;
+> +	struct kmem_cache *s = NULL;
 
-I don't see a simple generic way to handle it as the kernel has 2
-policies for GNU_STACK - if it is X and if it is completely missing.
-So, libc should handle these 2 situations of DSO's according to the
-kernel policy.  Some fs-free way to pass these 2 bits from kernel to
-userspace is needed.
+No need to assign NULL.
 
-One solution I see is somehow passing this information (GNU_STACK
-handling policy for 2 cases) at the task creation time.  Something like
-VDSO symbol (2) or auxv entry (3).  VDSO case is complicated as IIRC now
-it is global to the kernel and is not per pid namespace (I recall a
-problem in OpenVZ kernel when kernel version symbol was globally removed
-to fool some pid namespaces expecting new kernel).  auxv is complicated
-as it is ELF ABI changing :-(
+> +	unsigned long offset;
+> +
+> +	if (len == 0)
+> +		return true;
+> +	if (!virt_addr_valid(ptr))
+> +		return true;
+> +	page = virt_to_head_page(ptr);
+> +	if (!PageSlab(page))
+> +		return true;
+> +
+> +	s = page->slab;
+> +	offset = ((const char *)ptr - (const char *)page_address(page)) % s->size;
 
-Fundamentally different way (4) - in the kernel implement trampolines
-emulation only.  The policy of handling GNU_STACK is fully userspace
-thing.  Store the variable in some /etc/ config file (any existing
-file?).  As libc already relies on /etc/ld.so* files presence, it
-shouldn't be a problem (unlike procfs).  But given we're trying to
-harden mainline kernel/libc, the glibc maintainer, Ulrich Drepper,
-should accept this change.  It is very unlikely, given he "supports
-glibc only for the mainline kernel" and, AFAIU, he is fully satisfied
-with current GNU_STACK situation.
+Are the casts necessary? Both are pointers to void *
 
-Fallback "solution" - "recommend" distros to force GNU_STACK=NX for all
-binaries and libraries via execstack(1) and implement trampolines
-emulation in the kernel (with sysctl) (5).  This is bad in sense there is
-*some* way to execute code on the stack (however, I might overestimate
-the significance as the code is very restricted and can be executed by
-ret2libc anyway).  Or "enhance" GNU_STACK to have additional value (6) -
-whether trampolines should be emulated or not (this will be set by
-execstack).  It might not be accepted by glibc as it is a gcc-specific
-hack.
 
-I'm not sure what to do in this situation - all solutions above are far
-from ideal.  I'd be glad to hear any comments.
+> +	if (offset <= s->objsize && len <= s->objsize - offset)
 
-Thanks,
-
--- 
-Vasiliy
+If offset == s->objsize then we access the first byte after the object.
