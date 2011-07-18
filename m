@@ -1,46 +1,230 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 18 Jul 2011 22:46:32 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110718184632.GB3748@albatros>
-References: <20110628172108.GA3156@albatros>
- <20110714161309.GA30371@albatros>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110714161309.GA30371@albatros>
-Subject: [kernel-hardening] Re: PAX_USERCOPY testing
-To: kernel-hardening@lists.openwall.com
+Date: Mon, 18 Jul 2011 11:52:37 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20110718115237.14d96c03.akpm@linux-foundation.org>
+In-Reply-To: <20110718183951.GA3748@albatros>
+References: <20110703111028.GA2862@albatros>
+	<CA+55aFzXEoTyK0Sm-y=6xGmLMWzQiSQ7ELJ2-WL_PrP3r44MSg@mail.gmail.com>
+	<20110718183951.GA3748@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC v2] implement SL*B and stack usercopy runtime checks
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Mon, 18 Jul 2011 22:39:51 +0400
+Vasiliy Kulikov <segoon@openwall.com> wrote:
 
-On Thu, Jul 14, 2011 at 20:13 +0400, Vasiliy Kulikov wrote:
-> This is a version of PAX_USERCOPY I want to send to LKML.  However, the
-> patch without performance testing would be incomplete.  I have some
-> syscalls measurements, the worst case is gethostname() with 6-7% penalty
-> on x86-64 (Intel Core 2 Duo 2Ghz).
+>   */
+>  #define access_ok(type, addr, size) (likely(__range_not_ok(addr, size) == 0))
+>  
+> +#if defined(CONFIG_FRAME_POINTER)
 
-The previous benchmarks are totally wrong.  I didn't disable background
-daemons, which created significant error, and used on-demand CPU
-governor, which finally smashed results.
+#ifdef is conventional in this case
 
-Measurements with maximum governor and with minimum processes showed
-great "boost":
+> +/*
+> + * MUST be always_inline to correctly count stack frame numbers.
+> + *
+> + * low ----------------------------------------------> high
+> + * [saved bp][saved ip][args][local vars][saved bp][saved ip]
+> + *		       ^----------------^
+> + *		  allow copies only within here
+> +*/
+> +#undef arch_check_object_on_stack_frame
+> +inline static __attribute__((always_inline))
 
-The worst case of tiny syscalls, gethostname(), has 0,9% slowdown.
+static inline __always_inline
 
-Real workflows - find /usr, git log -Sredirect, make in kernel tree,
-files copying - are not affected by the feature at all (the slowdown is
-so low that I cannot effectively measure it, so it is less than 0,1%).
+> +bool arch_check_object_on_stack_frame(const void *stack,
+> +	     const void *stackend, const void *obj, unsigned long len)
+> +{
+> +	const void *frame = NULL;
+> +	const void *oldframe;
+> +
+> +	/*
+> +	 * Get the kernel_access_ok() caller frame.
+> +	 * __builtin_frame_address(0) returns kernel_access_ok() frame
+> +	 * as arch_ and stack_ are inline and kernel_ is noinline.
+> +	 */
+> +	oldframe = __builtin_frame_address(0);
+> +	if (oldframe)
+> +		frame = __builtin_frame_address(1);
+> +
+> +	while (stack <= frame && frame < stackend) {
+> +		/*
+> +		 * If obj + len extends past the last frame, this
+> +		 * check won't pass and the next frame will be 0,
+> +		 * causing us to bail out and correctly report
+> +		 * the copy as invalid.
+> +		 */
+> +		if (obj + len <= frame) {
+> +			/* EBP + EIP */
+> +			int protected_regs_size = 2*sizeof(void *);
 
-So, I've sent RFCv2 to LKML as-is :-)
+size_t?
 
-I suppose no sysctl to control the behaviour is needed - the permormance
-is acceptable for real workflows IMO.
+> +			if (obj >= oldframe + protected_regs_size)
+> +				return true;
+> +			return false;
+> +		}
+> +		oldframe = frame;
+> +		frame = *(const void * const *)frame;
+> +	}
+> +	return false;
+> +}
+> +#endif
+> +
+>  /*
+>   * The exception table consists of pairs of addresses: the first is the
+>   * address of an instruction that is allowed to fault, and the second is
+>
+> ...
+>
+> @@ -205,11 +209,30 @@ static inline unsigned long __must_check copy_from_user(void *to,
+>  {
+>  	int sz = __compiletime_object_size(to);
+>  
+> -	if (likely(sz == -1 || sz >= n))
+> -		n = _copy_from_user(to, from, n);
+> -	else
+> +	if (likely(sz == -1 || sz >= n)) {
+> +		if (kernel_access_ok(to, n))
+> +			n = _copy_from_user(to, from, n);
+> +	} else {
+>  		copy_from_user_overflow();
+> +	}
+> +
+> +	return n;
+> +}
+> +
+> +#undef copy_from_user_uncheched
 
-Thanks,
+typo
 
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+> +static inline unsigned long __must_check copy_from_user_uncheched(void *to,
+
+typo
+
+> +					  const void __user *from,
+> +					  unsigned long n)
+> +{
+> +	return _copy_from_user(to, from, n);
+> +}
+>  
+> +#undef copy_to_user_uncheched
+
+typo
+
+> +static inline unsigned long copy_to_user_unchecked(void __user *to,
+> +     const void *from, unsigned long n)
+> +{
+> +	if (access_ok(VERIFY_WRITE, to, n))
+> +		n = __copy_to_user(to, from, n);
+>  	return n;
+>  }
+>  
+> diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
+> index 1c66d30..10c5a0a 100644
+> --- a/arch/x86/include/asm/uaccess_64.h
+> +++ b/arch/x86/include/asm/uaccess_64.h
+> @@ -50,8 +50,10 @@ static inline unsigned long __must_check copy_from_user(void *to,
+>  	int sz = __compiletime_object_size(to);
+
+size_t? (ssize_t?)
+
+>  	might_fault();
+> -	if (likely(sz == -1 || sz >= n))
+> -		n = _copy_from_user(to, from, n);
+> +	if (likely(sz == -1 || sz >= n)) {
+> +		if (kernel_access_ok(to, n))
+> +			n = _copy_from_user(to, from, n);
+> +	}
+>  #ifdef CONFIG_DEBUG_VM
+>  	else
+>  		WARN(1, "Buffer overflow detected!\n");
+>
+> ...
+>
+> --- a/mm/maccess.c
+> +++ b/mm/maccess.c
+> @@ -3,8 +3,11 @@
+>   */
+>  #include <linux/module.h>
+>  #include <linux/mm.h>
+> +#include <linux/sched.h>
+>  #include <linux/uaccess.h>
+>  
+> +extern bool slab_access_ok(const void *ptr, unsigned long len);
+
+no externs in .c - use a header
+
+> +
+>  /**
+>   * probe_kernel_read(): safely attempt to read from a location
+>   * @dst: pointer to the buffer that shall take the data
+> @@ -60,3 +63,56 @@ long __probe_kernel_write(void *dst, const void *src, size_t size)
+>  	return ret ? -EFAULT : 0;
+>  }
+>  EXPORT_SYMBOL_GPL(probe_kernel_write);
+> +
+> +#ifdef CONFIG_DEBUG_RUNTIME_USER_COPY_CHECKS
+> +/*
+> + * stack_access_ok() checks whether object is on the stack and
+> + * whether it fits in a single stack frame (in case arch allows
+> + * to learn this information).
+> + *
+> + * Returns true in cases:
+> + * a) object is not a stack object at all
+> + * b) object is located on the stack and fits in a single frame
+> + *
+> + * MUST be inline not to confuse arch_check_object_on_stack_frame.
+> + */
+> +inline static bool __attribute__((always_inline))
+
+__always_inline
+
+> +stack_access_ok(const void *obj, unsigned long len)
+> +{
+> +	const void * const stack = task_stack_page(current);
+> +	const void * const stackend = stack + THREAD_SIZE;
+> +
+> +	/* Does obj+len overflow vm space? */
+> +	if (unlikely(obj + len < obj))
+> +		return false;
+> +
+> +	/* Does [obj; obj+len) at least touch our stack? */
+> +	if (unlikely(obj + len <= stack || stackend <= obj))
+> +		return true;
+> +
+> +	/* Does [obj; obj+len) overflow/underflow the stack? */
+> +	if (unlikely(obj < stack || stackend < obj + len))
+> +		return false;
+> +
+> +	return arch_check_object_on_stack_frame(stack, stackend, obj, len);
+> +}
+> +
+> +noinline bool __kernel_access_ok(const void *ptr, unsigned long len)
+
+noinline seems unneeded
+
+> +{
+> +	if (!slab_access_ok(ptr, len)) {
+> +		pr_alert("slab_access_ok failed, ptr = %p, length = %lu\n",
+> +			ptr, len);
+> +		dump_stack();
+> +		return false;
+> +	}
+> +	if (!stack_access_ok(ptr, len)) {
+> +		pr_alert("stack_access_ok failed, ptr = %p, length = %lu\n",
+> +			ptr, len);
+> +		dump_stack();
+> +		return false;
+> +	}
+> +
+> +	return true;
+> +}
+>
+> ...
+>
