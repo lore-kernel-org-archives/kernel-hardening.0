@@ -1,160 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 19 Jul 2011 13:27:07 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110719092707.GA23019@albatros>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] GSoC midterm accomplishments
-To: kernel-hardening@lists.openwall.com
+Date: Thu, 21 Jul 2011 14:09:36 +1000
+From: NeilBrown <neilb@suse.de>
+Message-ID: <20110721140936.632d2c8b@notabene.brown>
+In-Reply-To: <1310759683.30257.123.camel@moss-pluto>
+References: <20110713170657.59dae548@notabene.brown>
+	<CA+55aFwQKqvNvzTMYXVW_yKkFtNsyv8uuBiWiwYLof-nPqPu9w@mail.gmail.com>
+	<alpine.LRH.2.00.1107141009510.17067@tundra.namei.org>
+	<20110714112751.1bfd998f@notabene.brown>
+	<20110714150602.GA30019@openwall.com>
+	<20110715133013.4fa38d19@notabene.brown>
+	<20110715063113.GA3166@albatros>
+	<20110715170650.585f1dad@notabene.brown>
+	<20110715073823.GA3821@albatros>
+	<1310738313.30257.27.camel@moss-pluto>
+	<20110715152641.GA6286@albatros>
+	<1310759683.30257.123.camel@moss-pluto>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH] move RLIMIT_NPROC check from
+ set_user() to do_execve_common()
+To: Stephen Smalley <sds@tycho.nsa.gov>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, kernel-hardening@lists.openwall.com, Solar Designer <solar@openwall.com>, James Morris <jmorris@namei.org>, Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Willy Tarreau <w@1wt.eu>, Sebastian Krahmer <krahmer@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Fri, 15 Jul 2011 15:54:43 -0400 Stephen Smalley <sds@tycho.nsa.gov> wrote:
 
-This is a summary what is done and what is to be done for upstream kernel
-hardening during my GSoC participation.
+> On Fri, 2011-07-15 at 19:26 +0400, Vasiliy Kulikov wrote:
+> > Hi Stephen,
+> > 
+> > On Fri, Jul 15, 2011 at 09:58 -0400, Stephen Smalley wrote:
+> > > Does this have implications for Android's zygote model?  There you have
+> > > a long running uid 0 / all caps process (the zygote), which forks itself
+> > > upon receiving a request to spawn an app and then calls
+> > 
+> > > setgroups();
+> > > setrlimit(); setgid(); setuid();
+> > 
+> > Is RLIMIT_NPROC forced in your model and setuid() is expected to fail
+> > because of NPROC exceeding?  If no, then it is not touched at all.
+> 
+> I don't know what their intent is.  But it is an example of a case where
+> moving the enforcement from setuid() to a subsequent execve() causes the
+> check to never get applied.  As to whether or not they care, I don't
+> know.  An app that calls fork() repeatedly will still be stopped, but an
+> app that repeatedly connects to the zygote and asks to spawn another
+> instance of itself would be unlimited.
+> 
+> OTOH, the current RLIMIT_NPROC check and lack of setuid() error checking
+> has been a repeated issue for Android.
+> 
 
-[+] means success (applied or to be applied)
-[-] means failure
-[...] means "patch needs reworking" or additional patches are required
-[F] means "didn't try, but will work on it"
+So where does this leave us?  Between a rock and a hard place?
 
+It says to me that moving the check from set_user to execve is simply
+Wrong(TM).  It may be convenient and do TheRightThing in certain common
+cases, but it also can do the Wrong thing in other cases and I don't think
+that is an acceptable trade off.
 
-HARDEN_VM86 [-]
+Having setuid succeed when it should fail is simply incorrect.
 
-Currently it lacks a proper configuration mechanism.  Given more generic
-feature (slightly different, though), seccomp, was rejected, there is no
-way it is applied in the current form.  New thoughts are needed.
+The problem - as we all know - is that user space doesn't always check error
+status properly.  If we were to look for precedent I would point to SIGPIPE.
+The only reason for that to exist is because programs don't always check that
+a "write" succeeds so we have a mechanism to kill off processes that don't
+check the error status and keep sending.
 
+I would really like to apply that to this problem ... but that has already
+been suggested (years ago) and found wanting.  Maybe we can revisit it?
 
-HARDEN_PROC [...]
-
-The first try was unsuccessful as it is not enough generic.  More
-generic list of world-r/w files was suggested, I'll try implement this
-variant.  In the future it can be extended by the feature suggested by
-Andrew Morton, chmod'able and chown'able /proc/PID/* files inheritable
-via fork (this specific feature seems unrelated to our goal).
-
-Another interface of getting proc information, taskstats, should be
-restricted too.  However, given procfs restriction is not yes/no
-anymore, taskstats and procfs restrictions have to be separated.  Also
-there is a little chance taskstats will be restricted by default
-(recalling Linus' complains).
-
-As to networking restrictions, NETLINK_INET_DIAG netlink socket should
-be restricted too.  I don't know yet how to define these restrictions
-consistent way, though (for procfs and netlink).
-
-While stating the usefulness of the feature, 2 security bugs were fixed
-- taskstats local DoS and taskstats/procfs io infoleak which could be
-used to learn e.g. alien's password length.  (The taskstats fix is
-pending, however.)
-
-Also discussions on LKML generated some new thoughts in my mind, see
-below.
-
-
-HARDEN_SHM [+]
-
-The code was accepted into -mm tree of Andrew Morton and even got some
-feedback about optimizations.  I hope it will be accepted into Linux 3.1.
-
-
-HARDEN_EXECVE [+]
-
-This feature was accepted by Linus (surprise for me).  It is not yet
-applied, pending...
+The value of the SIGPIPE approach (whether it is SIGPIPE or SIGXCPU or
+SIGVEC ... if only there were a SIGXNPROC) is that the program remains in
+complete control.  It can find out if the NPROC limit has been exceeded at
+the "right" time.
 
 
-HARDEN_STACK{,_SMART} [...]
+The only other solution that I can think of which isn't "Wrong(TM)" is my
+first patch which introduced PF_SETUSER_FAILED.
+With this patch setuid() still fails if it should, so the calling process
+still remains in control.   But if it fails to exercise that control, the
+kernel steps in.
 
-I've posted the current issues with the feature as the separate thread.
-The way kernel and glibc handle GNU_STACK it is not as simple as just say
-"kernel, enforce NX stack".
+Vasiliy didn't like that because it allows a process to ignore the setuid
+failure, perform some in-process activity as root when expecting it to be as
+some-other-user, and only fails when execve is attempted - possibly too late.
 
+Against this I ask: what exactly is our goal here?
+Is it to stop all possible abuses?  I think not.  That is impossible.
+Is it to stop certain known and commonly repeated errors?  I think so. That
+is clearly valuable.
 
-GRKERNSEC_SYSFS_RESTRICT [-/...]
+We know (Thanks to Solar Designer's list) that unchecked setuid followed by
+execve is a commonly repeated error, so trapping that can be justified.
+Do we know that accessing the filesystem first is a commonly repeated error?
+If not, there is no clear motive to deal with that problem.
+If, however, it is then maybe a check for PF_SETUSER_FAILED in
+inode_permission() would be the right thing.
 
-sysfs umask=/gid= mount options were rejected by GregKH as provided threats
-are not impressive enough.  Probably we need to state the threats more
-clearly or identify other threats like side channel attacks or learning
-some information that might be used to adjust future attack's direction.
+Or maybe we just set PF_SETUSER_FAILED and leave it up to some security
+module to decide what to disable or report when that is set?
 
-Also debugfs mount options introduction worth trying.  As GregKH states,
-"there are no rules in debugfs", so breaking something via debugfs
-restriction is probably not a big deal (unless it is perf :-).
+In short:  I don't think there can be a solution that is both completely
+correct and completely safe.  I would go for "as correct as possible" with
+"closes common vulnerabilities".
 
-
-GRKERNSEC_MODHARDEN [F]
-
-I didn't try to push it yet.  To do so, I have to ping Dan to identify
-what has blocked its appliance.
-
-
-GRKERNSEC_SOCKET [F]
-
-Didn't try it yet.  I'll try to implement it, but it is a low priority
-task for me.
-
-
-PAX_USERCOPY [...]
-
-RFCv1 was NAK'ed by Linus as a crazy thing.  I wrongly thought that a
-"release early" is a good strategy for the kernel :)  v2 got some
-feedback, which I'll address soon.
-
-
-PAX_MPROTECT [F]
-
-This is really worth trying to push.
-
-
-PAX_KERNEXEC [+/...]
-
-I'll try to push some minor bits of it (I'll have no time for learning
-this part of PaX, it is much more complicated than USERCOPY/MPROTECT) -
-at least struct *ops constification parts.
-
-
-PAX_REFCOUNT [F]
-
-I'll try to push it.  At least it is a source of clarification what
-atomic_t is for ;-)
-
-
-printk() user supplied strings [+/F]
-
-One solution of the issue was accepted by Linus - %s is for 7bit ASCII
-strings only without control characters.  The fix needs identifying and
-patching %s data with \n inside and UTF-8 strings (the latter needs
-introducing new format string without filtering).
-
-With the help of coccinelle I hope I'll finish it.
-
-
-Solar recommended to create a wiki page to track accomplishment and
-anchor links to LKML discussions, I'll create it soon.
-
-
-Now about newly created tasks.  While thinking about arguments to
-agitate to restrict world access to procfs files and taskstats, I've
-identified some sources of possible infoleaks that could be used in side
-channel attacks.  The files/interfaces are as follows:
-
-/proc/PID/{limits,sched_*,stat,statm,status,wchan}
-inotify_add_watch(2)
-ustat(2)
-*statfs(2)
-*statvfs(2)
-sysinfo(2)
-
-I didn't precisely investigate in what situations these infoleaks might
-be useful to an attacker, but I found some cases where inotify
-disclosures somewhat private information.  I'll post about it in a few
-days when I adjust my thoughts.
-
-Thanks,
-
--- 
-Vasiliy
+NeilBrown
