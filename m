@@ -1,64 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 23 Jul 2011 20:05:53 +0400
+Date: Sat, 23 Jul 2011 20:22:51 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110723160553.GA11320@openwall.com>
-References: <20110723114038.GA3281@albatros>
+Message-ID: <20110723162251.GA11485@openwall.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110723114038.GA3281@albatros>
-Subject: Re: [kernel-hardening] securelevel'ish restrictions in Linux
+Subject: [kernel-hardening] base address for shared libs
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy, all -
+Vasiliy,
 
-On Sat, Jul 23, 2011 at 03:40:38PM +0400, Vasiliy Kulikov wrote:
-> Before starting to think about porting grsecurity features restricting
-> root, I'd want to discuss the global problem here.
+At least on rhel5/openvz kernels, 32-bit processes get their shared libs
+loaded at different kinds of addresses on i686 vs. x86_64 kernels.
 
-I am not very interested in these.  Besides the general issues with
-securelevel'ish restrictions (BTW, I did use securelevel on 2.0 kernels
-in late 1990s), we sort of have similar restrictions (and more) when we
-use OpenVZ containers anyway (and presumably when we use LXC later). :-)
+Here's an example:
 
-Of course, in practice we need to consider vulnerabilities that make it
-possible for in-container root to escape the container, but my
-expectation is that most of such vulnerabilities would be kernel bugs,
-at least on systems that we manage. ;-)  And most (or at least many) of
-such kernel bugs would allow for arbitrary code execution in the kernel
-anyway.
+32-bit kernel and userland (OpenVZ container):
 
-So these restrictions might not really add a layer of security for
-typical systems that we set up and manage these days (with nothing
-non-essential to system administration running outside of containers).
+$ ldd /bin/ls
+        librt.so.1 => /lib/librt.so.1 (0x00a99000)
+        libtermcap.so.2 => /lib/libtermcap.so.2 (0x00c1a000)
+        libc.so.6 => /lib/libc.so.6 (0x0014d000)
+        libpthread.so.0 => /lib/libpthread.so.0 (0x00617000)
+        /lib/ld-linux.so.2 (0x0012e000)
 
-Oh, of course there's an important detail: ease of reliable introduction
-of a backdoor.  Yes, module loading, if allowed, may be easier and more
-reliable than having to hack the running kernel more directly.  However,
-I think there's already a way to disable module loading, and your
-proposal is specifically about things such as /dev/*mem, which are
-perhaps not much easier to use than patching the memory via an arbitrary
-code execution vulnerability in the kernel is.
+64-bit kernel, 32-bit userland (OpenVZ container):
 
-OK, if we consider a script kiddie who has a root exploit via a kernel
-bug and a kernel rootkit to install as two separate pieces of software -
-and lacks skills or time or motivation to combine the two into one -
-then, yes, restricting /dev/*mem could help.
+$ ldd /bin/ls
+        librt.so.1 => /lib/librt.so.1 (0xb7fcf000)
+        libtermcap.so.2 => /lib/libtermcap.so.2 (0xb7fca000)
+        libc.so.6 => /lib/libc.so.6 (0xb7eae000)
+        libpthread.so.0 => /lib/libpthread.so.0 (0xb7e5b000)
+        /lib/ld-linux.so.2 (0xb7fe6000)
 
-So this does make some sense, after all, but:
+Notice how the 32-bit kernel produces addresses that are safer against
+attacks via C strings (contain NULs).  This is the approach I used in
+-ow patches (using 0x00110000 as the base address, considering vm86
+needs for the first 1 MB + 64 KB).  I'd like 64-bit kernels to do the
+same when running 32-bit binaries.
 
-I'd rather spend my/our time discussing other things first, and revisit
-this topic later.  For example, I find the ability to set a container
-(pid namespace?) to 32-bit only or 64-bit only (restricting the
-available syscalls accordingly) far more desirable and more relevant to
-systems we run.
-
-That said, I don't mind you working on this and submitting such patches
-to LKML when you would otherwise be idle (waiting for feedback on
-something else).
-
-I'd appreciate comments on the above, including other opinions.
+Can you please look into this and likely fix it for mainline, as well as
+for rhel6/openvz when we're ready to move to those kernels?  A fix for
+rhel5/openvz would also be welcome if it's easy to do.
 
 Thanks,
 
