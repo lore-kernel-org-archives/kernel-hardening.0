@@ -1,62 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 24 Jul 2011 18:27:10 +0400
+Date: Sun, 24 Jul 2011 18:32:31 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110724142710.GB18345@openwall.com>
-References: <20110723162251.GA11485@openwall.com> <20110724084200.GB3659@albatros>
+Message-ID: <20110724143231.GA18453@openwall.com>
+References: <20110714150602.GA30019@openwall.com> <20110715133013.4fa38d19@notabene.brown> <20110715063113.GA3166@albatros> <20110715170650.585f1dad@notabene.brown> <20110715073823.GA3821@albatros> <1310738313.30257.27.camel@moss-pluto> <20110715152641.GA6286@albatros> <1310759683.30257.123.camel@moss-pluto> <20110721140936.632d2c8b@notabene.brown> <20110721124830.GA1325@openwall.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110724084200.GB3659@albatros>
-Subject: Re: [kernel-hardening] base address for shared libs
+In-Reply-To: <20110721124830.GA1325@openwall.com>
+Subject: Re: [kernel-hardening] [PATCH] move RLIMIT_NPROC check from set_user() to do_execve_common()
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy, all -
+Vasiliy,
 
-On Sun, Jul 24, 2011 at 12:51:42PM +0400, Vasiliy Kulikov wrote:
-> On Sat, Jul 23, 2011 at 20:22 +0400, Solar Designer wrote:
-> > At least on rhel5/openvz kernels, 32-bit processes get their shared libs
-> > loaded at different kinds of addresses on i686 vs. x86_64 kernels.
-> [...]
-> > Can you please look into this and likely fix it for mainline, as well as
-> > for rhel6/openvz when we're ready to move to those kernels?  A fix for
-> > rhel5/openvz would also be welcome if it's easy to do.
+On Thu, Jul 21, 2011 at 04:48:30PM +0400, Solar Designer wrote:
+> Here's my current proposal:
 > 
-> I'll look into it.  However, I don't know whether upstream is OK with
-> force zeroing high order byte of libs address and artificially limiting
-> effective task's vm size.  If not, it's probably should be made
-> configurable via kernel.randomize_va_space sysctl.
+> 1. Apply Vasiliy's patch to move the RLIMIT_NPROC check from setuid() to
+> execve(), optionally enhanced with setting PF_SETUSER_FAILED on
+> would-be-failed setuid() and checking this flag in execve() (in addition
+> to repeating the RLIMIT_NPROC check).
+> 
+> 2. With a separate patch, add a prctl() to read the PF_SETUSER_FAILED flag.
+> Android will be able to use this if it wants to.
 
-I think you misunderstood me.  I don't suggest forcing the high order
-byte to be zero; I merely suggest that the starting address should be
-0x00110000.  If the combined size of shared libs plus the random offset
-exceed 15 MB - 64 KB, then some addresses won't have their high order
-byte at NUL, and that's life.  I think this is what happens on i686
-kernels now, and I'd like the same to be happening with x86_64 kernels
-running 32-bit programs.
+Can you please implement these two patches and post them to LKML?
+(Include the PF_SETUSER_FAILED implementation in the first patch.)
 
-I think something like 8 MB may be used for randomization (11 bits at
-4 KB page size), which leaves almost 7 MB for shared libs until we no
-longer have NULs on some of their addresses.  So programs with
-relatively few shared libs will benefit not only from randomization, but
-also from the NULs.
-
-A drawback is that we'd be unnecessarily limiting the amount of
-randomization for programs that have lots of shared libs (way beyond 7 MB).
-
-Or maybe we should use 4 MB for randomization (10 bits), leaving almost
-11 MB for NUL-protected shared libs.
-
-Oh, when vm86 is disallowed, I think we can start at mmap_min_addr,
-which gives us an extra megabyte (if mmap_min_addr is relatively low,
-like 96 KB, which is what we use on Owl).  Similarly, when mmap_min_addr
-is not 0 and we're not running with CAP_SYS_RAWIO, perhaps we can start
-at mmap_min_addr because some low addresses would not be available to
-the process anyway (even if it wanted to use them to run DOS).
-
-I'd appreciate comments and other opinions on all of the above.
-
-What does PaX do here?
+Or do you have a different suggestion on how to proceed?
 
 Thanks,
 
