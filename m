@@ -1,60 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 24 Jul 2011 22:18:55 +0400
+Date: Sun, 24 Jul 2011 22:55:21 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110724181657.GA6429@albatros>
-References: <20110723162251.GA11485@openwall.com>
- <20110724084200.GB3659@albatros>
- <20110724142710.GB18345@openwall.com>
+Message-ID: <20110724185521.GA2974@albatros>
+References: <20110604200948.GA5850@shinshilla>
+ <20110604205955.GA5972@openwall.com>
+ <20110605182430.GA5789@albatros>
+ <20110605192641.GA9240@openwall.com>
+ <20110605194746.GA6484@albatros>
+ <20110605201025.GA9541@openwall.com>
+ <20110606180806.GA3986@albatros>
+ <20110606183358.GA14711@openwall.com>
+ <20110608172307.GA3380@albatros>
+ <20110612023916.GC14976@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110724142710.GB18345@openwall.com>
-Subject: Re: [kernel-hardening] base address for shared libs
+In-Reply-To: <20110612023916.GC14976@openwall.com>
+Subject: Re: [kernel-hardening] [RFC v2] procfs mount options
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+Hi,
 
-On Sun, Jul 24, 2011 at 18:27 +0400, Solar Designer wrote:
-> On Sun, Jul 24, 2011 at 12:51:42PM +0400, Vasiliy Kulikov wrote:
-> > On Sat, Jul 23, 2011 at 20:22 +0400, Solar Designer wrote:
-> > > At least on rhel5/openvz kernels, 32-bit processes get their shared libs
-> > > loaded at different kinds of addresses on i686 vs. x86_64 kernels.
-> > [...]
-> > > Can you please look into this and likely fix it for mainline, as well as
-> > > for rhel6/openvz when we're ready to move to those kernels?  A fix for
-> > > rhel5/openvz would also be welcome if it's easy to do.
-> > 
-> > I'll look into it.  However, I don't know whether upstream is OK with
-> > force zeroing high order byte of libs address and artificially limiting
-> > effective task's vm size.  If not, it's probably should be made
-> > configurable via kernel.randomize_va_space sysctl.
-> 
-> I think you misunderstood me.  I don't suggest forcing the high order
-> byte to be zero; I merely suggest that the starting address should be
-> 0x00110000.
+A small follow-up of my current work.
 
-Ah, sure.  Best effort vs. enforcement.
+I'm implementing the scheme I've proposed on LKML.  Instead of on/off
+semantics a mask of allowed files is passed as a mount option.  Like
+this:
 
+    mount -o tgid_allowed=.;cmdline;mounts;smaps /proc
 
-> Oh, when vm86 is disallowed,
+All files not enumerated in tgid_allowed= will be restricted to
+processes being able to ptrace the task.  Files enumerated in
+tgid_allowed= are not additionally restricted and classic POSIX
+permission checking rules are applied here.  So, it's impossible to
+_relax_ procfs permissions with my scheme.
 
-BTW, vm86 support is not even compiled on x86-64, even for x86-32
-compatibility:
+";" is used instead of "," as a comma is already used as options
+separator.
 
-config VM86
-	bool "Enable VM86 support" if EXPERT
-	default y
-	depends on X86_32
+Besides tgid_allowed= there will be attr_allowed= and tid_allowed= to
+enumerated files in appropriate subdirectories.
+
+As a "side effect" it will effectively fix all holes of poor permission
+checking of setuid binaries (including check and execve() race) without
+massive code refactoring.  (All future procfs files are already
+protected too ;-))
 
 
-> What does PaX do here?
+Currently I have a working implementation of per-files restriction, but
+without mount option parsing.  I'll post the code when I have a working
+implementation of at least parsing and handling tgid_allowed=XXX.  Also
+there is a (minor, I hope) issue with /proc/PID/maps handling, where
+the ptrace check is too restrictive.
 
-I didn't hear PaX does some NUL protection of lib addresses.  I'll look
-into this.
+TODO: net restriction, privileged monitoring gid.
 
 Thanks,
 
 -- 
-Vasiliy
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
