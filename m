@@ -1,55 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jul 2011 14:11:18 +1000
-From: NeilBrown <neilb@suse.de>
-Message-ID: <20110726141118.32f948e0@notabene.brown>
-In-Reply-To: <20110726011629.GA24610@openwall.com>
-References: <1310738313.30257.27.camel@moss-pluto>
-	<20110715152641.GA6286@albatros>
-	<1310759683.30257.123.camel@moss-pluto>
-	<20110721140936.632d2c8b@notabene.brown>
-	<20110721124830.GA1325@openwall.com>
-	<CA+55aFy4ybatb0McQr2f4A56ympZVLqK2sbp2=73idu58_4RxQ@mail.gmail.com>
-	<20110721193939.GA3914@openwall.com>
-	<20110725171423.GA3739@albatros>
-	<20110725234013.GB24110@openwall.com>
-	<20110726104713.37273143@notabene.brown>
-	<20110726011629.GA24610@openwall.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH] move RLIMIT_NPROC check from
- set_user() to do_execve_common()
-To: Solar Designer <solar@openwall.com>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Stephen Smalley <sds@tycho.nsa.gov>, kernel-hardening@lists.openwall.com, James Morris <jmorris@namei.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Willy Tarreau <w@1wt.eu>, Sebastian Krahmer <krahmer@suse.de>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 26 Jul 2011 16:07:04 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110726120704.GA3912@albatros>
+References: <20110718194803.GA5337@albatros>
+ <20110723150658.GA11156@openwall.com>
+ <20110724083907.GA3659@albatros>
+ <20110724140631.GA18345@openwall.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110724140631.GA18345@openwall.com>
+Subject: Re: [kernel-hardening] GNU_STACK policy problem
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 26 Jul 2011 05:16:29 +0400 Solar Designer <solar@openwall.com> wrote:
+Solar, Eugene,
 
-
-> > Let me try another suggestion.  Instead of catching the error in
-> > do_execve_common, how about we catch it in do_mmap_pgoff.
-> > i.e. if the flag is set and an attempt it made to create an executable
-> > mapping, we check the user->processes against the limit then - either failing
-> > or clearing the flag and succeeding.
+On Sun, Jul 24, 2011 at 18:06 +0400, Solar Designer wrote:
+> On Sun, Jul 24, 2011 at 12:39:07PM +0400, Vasiliy Kulikov wrote:
+> > On Sat, Jul 23, 2011 at 19:06 +0400, Solar Designer wrote:
+> > > I started looking into this, and here's what I found in RHEL 5 kernels:
 > > 
-> > This will stop an execve, and an attempt to load a shared library and call it.
+> > Very interesting.  The same code is present in RHEL 6.  However, I don't
+> > see the problem of GNU_STACK in DSOs is somehow solved.  Maybe RHEL 6
+> > glibc has appropriate patches for loader?
 > 
-> This sounds too hackish to me, although if others are (unexpectedly) OK
-> with it, I don't mind.
+> I don't know.  Please take a look.
 
-Thanks ... I think :-)
+I failed to find anything GNU_STACK related in RHEL6 glibc patches.
+Weird.  Probably they really decided to enforce NX GNU_STACK of binaries
+only, leaving libraries' GNU_STACK as is (without NX enforcement)
+because of the same reasons.
 
-I don't really see that failing mmap is any more hackish than failing execve.
+Thanks,
 
-Both are certainly hacks.  It is setuid that should fail, but that is
-problematic.
-
-We seem to agree that it is acceptable to delay the failure until the process
-actually tries to run some code for the user.  I just think that
-mapping-a-file-for-exec is a more direct measure of "trying to run some code
-for the user" than "execve" is.
-
-So they are both hacks, but one it more thorough than the other.  In the
-world of security I would hope that "thorough" would win.
-
-NeilBrown
+-- 
+Vasiliy
