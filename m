@@ -1,202 +1,372 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 26 Jul 2011 18:48:48 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110726144848.GA7133@albatros>
-References: <1310759683.30257.123.camel@moss-pluto>
- <20110721140936.632d2c8b@notabene.brown>
- <20110721124830.GA1325@openwall.com>
- <CA+55aFy4ybatb0McQr2f4A56ympZVLqK2sbp2=73idu58_4RxQ@mail.gmail.com>
- <20110721193939.GA3914@openwall.com>
- <20110725171423.GA3739@albatros>
- <20110725234013.GB24110@openwall.com>
- <20110726104713.37273143@notabene.brown>
- <20110726011629.GA24610@openwall.com>
- <20110726141118.32f948e0@notabene.brown>
-MIME-Version: 1.0
+Date: Wed, 27 Jul 2011 03:27:30 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20110726232730.GA28171@openwall.com>
+Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110726141118.32f948e0@notabene.brown>
-Subject: [kernel-hardening] [patch v2] move RLIMIT_NPROC check from set_user() to
- do_execve_common()
+Subject: [kernel-hardening] Fwd: [patch 36/64] ipc: introduce shm_rmid_forced sysctl
 To: kernel-hardening@lists.openwall.com
-Cc: Solar Designer <solar@openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Stephen Smalley <sds@tycho.nsa.gov>, James Morris <jmorris@namei.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-fsdevel@vger.kernel.org, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Eric Paris <eparis@redhat.com>, Willy Tarreau <w@1wt.eu>, Sebastian Krahmer <krahmer@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Neil, Solar,
+This is being applied.
 
-On Tue, Jul 26, 2011 at 14:11 +1000, NeilBrown wrote:
-> I don't really see that failing mmap is any more hackish than failing execve.
-> 
-> Both are certainly hacks.  It is setuid that should fail, but that is
-> problematic.
-> 
-> We seem to agree that it is acceptable to delay the failure until the process
-> actually tries to run some code for the user.  I just think that
-> mapping-a-file-for-exec is a more direct measure of "trying to run some code
-> for the user" than "execve" is.
-> 
-> So they are both hacks, but one it more thorough than the other.  In the
-> world of security I would hope that "thorough" would win.
+----- Forwarded message from akpm@linux-foundation.org -----
 
-Well, I don't mind against something more generic than the check in
-execve(), however, the usefulness of the check in mmap() is unclear to
-me.  You want to make more programs fail after setuid(), but does mmap
-stops really many programs?  Do you know any program doing mmap/dlopen
-after setuid() call?  What if the program will not do any mmap/dlopen
-and e.g. start to handle network connections or do some computations?
-I suppose the latter case is much more often than mmap/dlopen.
+Subject: [patch 36/64] ipc: introduce shm_rmid_forced sysctl
+To: torvalds@linux-foundation.org
+Cc: akpm@linux-foundation.org, segoon@openwall.com, alan@lxorguk.ukuu.org.uk,
+        daniel.lezcano@free.fr, ebiederm@xmission.com, mingo@elte.hu,
+        oleg@redhat.com, rdunlap@xenotime.net, serge.hallyn@canonical.com,
+        solar@openwall.com, tj@kernel.org
+From: akpm@linux-foundation.org
+Date: Tue, 26 Jul 2011 16:08:48 -0700
 
-(Also, reading significant amount of data could be gained via read()
-without any mmap.)
-
-More generic place is all resource allocation syscalls, but it start to
-be too complex for this sort of things IMO.
-
-
-Meanwhile, the patch with the cleared PF on successful fork/exec is as
-follows:
-
--------------------------------------------
 From: Vasiliy Kulikov <segoon@openwall.com>
-Subject: [patch v2] move RLIMIT_NPROC check from set_user() to do_execve_common()
 
-The patch http://lkml.org/lkml/2003/7/13/226 introduced an RLIMIT_NPROC
-check in set_user() to check for NPROC exceeding via setuid() and
-similar functions.  Before the check there was a possibility to greatly
-exceed the allowed number of processes by an unprivileged user if the
-program relied on rlimit only.  But the check created new security
-threat: many poorly written programs simply don't check setuid() return
-code and believe it cannot fail if executed with root privileges.  So,
-the check is removed in this patch because of too often privilege
-escalations related to buggy programs.
+Add support for the shm_rmid_forced sysctl.  If set to 1, all
+shared memory objects in current ipc namespace will be automatically
+forced to use IPC_RMID.
 
-The NPROC can still be enforced in the common code flow of daemons
-spawning user processes.  Most of daemons do fork()+setuid()+execve().
-The check introduced in execve() (1) enforces the same limit as in
-setuid() and (2) doesn't create similar security issues.
+The POSIX way of handling shmem allows one to create shm objects and call
+shmdt(), leaving shm object associated with no process, thus consuming
+memory not counted via rlimits.
 
-Neil Brown suggested to track what specific process has exceeded the
-limit by setting PF_NPROC_EXCEEDED process flag.  With the change only
-this process would fail on execve(), and other processes' execve()
-behaviour is not changed.
+With shm_rmid_forced=1 the shared memory object is counted at least for
+one process, so OOM killer may effectively kill the fat process holding
+the shared memory.
 
-Solar Designer suggested to re-check whether NPROC limit is still
-exceeded at the moment of execve().  If the process was sleeping for
-days between set*uid() and execve(), and the NPROC counter step down
-under the limit, the defered execve() failure because NPROC limit was
-exceeded days ago would be unexpected.  If the limit is not exceeded
-anymore, we clear the flag on both execve() and fork().
+It obviously breaks POSIX - some programs relying on the feature would
+stop working.  So set shm_rmid_forced=1 only if you're sure nobody uses
+"orphaned" memory.  Use shm_rmid_forced=0 by default for compatability
+reasons.
 
-Similar check was introduced in -ow patches (without the process flag).
+The feature was previously impemented in -ow as a configure option.
 
+[akpm@linux-foundation.org: fix documentation, per Randy]
+[akpm@linux-foundation.org: fix warning]
+[akpm@linux-foundation.org: readability/conventionality tweaks]
+[akpm@linux-foundation.org: fix shm_rmid_forced/shm_forced_rmid confusion, use standard comment layout]
 Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Randy Dunlap <rdunlap@xenotime.net>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: "Serge E. Hallyn" <serge.hallyn@canonical.com>
+Cc: Daniel Lezcano <daniel.lezcano@free.fr>
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Ingo Molnar <mingo@elte.hu>
+Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>
+Cc: Solar Designer <solar@openwall.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
 ---
- fs/exec.c             |   17 +++++++++++++++++
- include/linux/sched.h |    1 +
- kernel/cred.c         |    7 +++----
- kernel/fork.c         |    2 +-
- kernel/sys.c          |   13 +++++++++----
- 5 files changed, 31 insertions(+), 9 deletions(-)
 
----
-diff --git a/fs/exec.c b/fs/exec.c
-index 6075a1e..e8b7c1a 100644
---- a/fs/exec.c
-+++ b/fs/exec.c
-@@ -1433,6 +1433,23 @@ static int do_execve_common(const char *filename,
- 	struct files_struct *displaced;
- 	bool clear_in_exec;
- 	int retval;
-+	const struct cred *cred = current_cred();
+ Documentation/sysctl/kernel.txt |   22 ++++++
+ include/linux/ipc_namespace.h   |    7 ++
+ include/linux/shm.h             |    4 +
+ ipc/ipc_sysctl.c                |   36 +++++++++++
+ ipc/shm.c                       |   97 ++++++++++++++++++++++++++++--
+ kernel/exit.c                   |    1 
+ 6 files changed, 163 insertions(+), 4 deletions(-)
+
+diff -puN Documentation/sysctl/kernel.txt~ipc-introduce-shm_rmid_forced-sysctl Documentation/sysctl/kernel.txt
+--- a/Documentation/sysctl/kernel.txt~ipc-introduce-shm_rmid_forced-sysctl
++++ a/Documentation/sysctl/kernel.txt
+@@ -61,6 +61,7 @@ show up in /proc/sys/kernel:
+ - rtsig-nr
+ - sem
+ - sg-big-buff                 [ generic SCSI device (sg) ]
++- shm_rmid_forced
+ - shmall
+ - shmmax                      [ sysv ipc ]
+ - shmmni
+@@ -518,6 +519,27 @@ kernel.  This value defaults to SHMMAX.
+ 
+ ==============================================================
+ 
++shm_rmid_forced:
 +
++Linux lets you set resource limits, including how much memory one
++process can consume, via setrlimit(2).  Unfortunately, shared memory
++segments are allowed to exist without association with any process, and
++thus might not be counted against any resource limits.  If enabled,
++shared memory segments are automatically destroyed when their attach
++count becomes zero after a detach or a process termination.  It will
++also destroy segments that were created, but never attached to, on exit
++from the process.  The only use left for IPC_RMID is to immediately
++destroy an unattached segment.  Of course, this breaks the way things are
++defined, so some applications might stop working.  Note that this
++feature will do you no good unless you also configure your resource
++limits (in particular, RLIMIT_AS and RLIMIT_NPROC).  Most systems don't
++need this.
++
++Note that if you change this from 0 to 1, already created segments
++without users and with a dead originative process will be destroyed.
++
++==============================================================
++
+ softlockup_thresh:
+ 
+ This value can be used to lower the softlockup tolerance threshold.  The
+diff -puN include/linux/ipc_namespace.h~ipc-introduce-shm_rmid_forced-sysctl include/linux/ipc_namespace.h
+--- a/include/linux/ipc_namespace.h~ipc-introduce-shm_rmid_forced-sysctl
++++ a/include/linux/ipc_namespace.h
+@@ -44,6 +44,11 @@ struct ipc_namespace {
+ 	size_t		shm_ctlall;
+ 	int		shm_ctlmni;
+ 	int		shm_tot;
 +	/*
-+	 * We move the actual failure in case of RLIMIT_NPROC excess from
-+	 * set*uid() to execve() because too many poorly written programs
-+	 * don't check setuid() return code.  Here we additionally recheck
-+	 * whether NPROC limit is still exceeded.
++	 * Defines whether IPC_RMID is forced for _all_ shm segments regardless
++	 * of shmctl()
 +	 */
-+	if ((current->flags & PF_NPROC_EXCEEDED) &&
-+	    atomic_read(&cred->user->processes) > rlimit(RLIMIT_NPROC)) {
-+		retval = -EAGAIN;
-+		goto out_ret;
++	int		shm_rmid_forced;
+ 
+ 	struct notifier_block ipcns_nb;
+ 
+@@ -72,6 +77,7 @@ extern int register_ipcns_notifier(struc
+ extern int cond_register_ipcns_notifier(struct ipc_namespace *);
+ extern void unregister_ipcns_notifier(struct ipc_namespace *);
+ extern int ipcns_notify(unsigned long);
++extern void shm_destroy_orphaned(struct ipc_namespace *ns);
+ #else /* CONFIG_SYSVIPC */
+ static inline int register_ipcns_notifier(struct ipc_namespace *ns)
+ { return 0; }
+@@ -79,6 +85,7 @@ static inline int cond_register_ipcns_no
+ { return 0; }
+ static inline void unregister_ipcns_notifier(struct ipc_namespace *ns) { }
+ static inline int ipcns_notify(unsigned long l) { return 0; }
++static inline void shm_destroy_orphaned(struct ipc_namespace *ns) {}
+ #endif /* CONFIG_SYSVIPC */
+ 
+ #ifdef CONFIG_POSIX_MQUEUE
+diff -puN include/linux/shm.h~ipc-introduce-shm_rmid_forced-sysctl include/linux/shm.h
+--- a/include/linux/shm.h~ipc-introduce-shm_rmid_forced-sysctl
++++ a/include/linux/shm.h
+@@ -106,6 +106,7 @@ struct shmid_kernel /* private to the ke
+ #ifdef CONFIG_SYSVIPC
+ long do_shmat(int shmid, char __user *shmaddr, int shmflg, unsigned long *addr);
+ extern int is_file_shm_hugepages(struct file *file);
++extern void exit_shm(struct task_struct *task);
+ #else
+ static inline long do_shmat(int shmid, char __user *shmaddr,
+ 				int shmflg, unsigned long *addr)
+@@ -116,6 +117,9 @@ static inline int is_file_shm_hugepages(
+ {
+ 	return 0;
+ }
++static inline void exit_shm(struct task_struct *task)
++{
++}
+ #endif
+ 
+ #endif /* __KERNEL__ */
+diff -puN ipc/ipc_sysctl.c~ipc-introduce-shm_rmid_forced-sysctl ipc/ipc_sysctl.c
+--- a/ipc/ipc_sysctl.c~ipc-introduce-shm_rmid_forced-sysctl
++++ a/ipc/ipc_sysctl.c
+@@ -31,12 +31,37 @@ static int proc_ipc_dointvec(ctl_table *
+ 	void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+ 	struct ctl_table ipc_table;
++
+ 	memcpy(&ipc_table, table, sizeof(ipc_table));
+ 	ipc_table.data = get_ipc(table);
+ 
+ 	return proc_dointvec(&ipc_table, write, buffer, lenp, ppos);
+ }
+ 
++static int proc_ipc_dointvec_minmax(ctl_table *table, int write,
++	void __user *buffer, size_t *lenp, loff_t *ppos)
++{
++	struct ctl_table ipc_table;
++
++	memcpy(&ipc_table, table, sizeof(ipc_table));
++	ipc_table.data = get_ipc(table);
++
++	return proc_dointvec_minmax(&ipc_table, write, buffer, lenp, ppos);
++}
++
++static int proc_ipc_dointvec_minmax_orphans(ctl_table *table, int write,
++	void __user *buffer, size_t *lenp, loff_t *ppos)
++{
++	struct ipc_namespace *ns = current->nsproxy->ipc_ns;
++	int err = proc_ipc_dointvec_minmax(table, write, buffer, lenp, ppos);
++
++	if (err < 0)
++		return err;
++	if (ns->shm_rmid_forced)
++		shm_destroy_orphaned(ns);
++	return err;
++}
++
+ static int proc_ipc_callback_dointvec(ctl_table *table, int write,
+ 	void __user *buffer, size_t *lenp, loff_t *ppos)
+ {
+@@ -125,6 +150,8 @@ static int proc_ipcauto_dointvec_minmax(
+ #else
+ #define proc_ipc_doulongvec_minmax NULL
+ #define proc_ipc_dointvec	   NULL
++#define proc_ipc_dointvec_minmax   NULL
++#define proc_ipc_dointvec_minmax_orphans   NULL
+ #define proc_ipc_callback_dointvec NULL
+ #define proc_ipcauto_dointvec_minmax NULL
+ #endif
+@@ -155,6 +182,15 @@ static struct ctl_table ipc_kern_table[]
+ 		.proc_handler	= proc_ipc_dointvec,
+ 	},
+ 	{
++		.procname	= "shm_rmid_forced",
++		.data		= &init_ipc_ns.shm_rmid_forced,
++		.maxlen		= sizeof(init_ipc_ns.shm_rmid_forced),
++		.mode		= 0644,
++		.proc_handler	= proc_ipc_dointvec_minmax_orphans,
++		.extra1		= &zero,
++		.extra2		= &one,
++	},
++	{
+ 		.procname	= "msgmax",
+ 		.data		= &init_ipc_ns.msg_ctlmax,
+ 		.maxlen		= sizeof (init_ipc_ns.msg_ctlmax),
+diff -puN ipc/shm.c~ipc-introduce-shm_rmid_forced-sysctl ipc/shm.c
+--- a/ipc/shm.c~ipc-introduce-shm_rmid_forced-sysctl
++++ a/ipc/shm.c
+@@ -74,6 +74,7 @@ void shm_init_ns(struct ipc_namespace *n
+ 	ns->shm_ctlmax = SHMMAX;
+ 	ns->shm_ctlall = SHMALL;
+ 	ns->shm_ctlmni = SHMMNI;
++	ns->shm_rmid_forced = 0;
+ 	ns->shm_tot = 0;
+ 	ipc_init_ids(&shm_ids(ns));
+ }
+@@ -187,6 +188,23 @@ static void shm_destroy(struct ipc_names
+ }
+ 
+ /*
++ * shm_may_destroy - identifies whether shm segment should be destroyed now
++ *
++ * Returns true if and only if there are no active users of the segment and
++ * one of the following is true:
++ *
++ * 1) shmctl(id, IPC_RMID, NULL) was called for this shp
++ *
++ * 2) sysctl kernel.shm_rmid_forced is set to 1.
++ */
++static bool shm_may_destroy(struct ipc_namespace *ns, struct shmid_kernel *shp)
++{
++	return (shp->shm_nattch == 0) &&
++	       (ns->shm_rmid_forced ||
++		(shp->shm_perm.mode & SHM_DEST));
++}
++
++/*
+  * remove the attach descriptor vma.
+  * free memory for segment if it is marked destroyed.
+  * The descriptor has already been removed from the current->mm->mmap list
+@@ -206,11 +224,83 @@ static void shm_close(struct vm_area_str
+ 	shp->shm_lprid = task_tgid_vnr(current);
+ 	shp->shm_dtim = get_seconds();
+ 	shp->shm_nattch--;
+-	if(shp->shm_nattch == 0 &&
+-	   shp->shm_perm.mode & SHM_DEST)
++	if (shm_may_destroy(ns, shp))
++		shm_destroy(ns, shp);
++	else
++		shm_unlock(shp);
++	up_write(&shm_ids(ns).rw_mutex);
++}
++
++static int shm_try_destroy_current(int id, void *p, void *data)
++{
++	struct ipc_namespace *ns = data;
++	struct shmid_kernel *shp = shm_lock(ns, id);
++
++	if (IS_ERR(shp))
++		return 0;
++
++	if (shp->shm_cprid != task_tgid_vnr(current)) {
++		shm_unlock(shp);
++		return 0;
 +	}
 +
-+	/* If we steep below the limit, we don't want to make following
-+	 * execve() fail. */
-+	current->flags &= ~PF_NPROC_EXCEEDED;
- 
- 	retval = unshare_files(&displaced);
- 	if (retval)
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 496770a..f024c63 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1759,6 +1759,7 @@ extern void thread_group_times(struct task_struct *p, cputime_t *ut, cputime_t *
- #define PF_DUMPCORE	0x00000200	/* dumped core */
- #define PF_SIGNALED	0x00000400	/* killed by a signal */
- #define PF_MEMALLOC	0x00000800	/* Allocating memory */
-+#define PF_NPROC_EXCEEDED 0x00001000	/* set_user noticed that RLIMIT_NPROC was exceeded */
- #define PF_USED_MATH	0x00002000	/* if unset the fpu must be initialized before use */
- #define PF_FREEZING	0x00004000	/* freeze in progress. do not account to load */
- #define PF_NOFREEZE	0x00008000	/* this thread should not be frozen */
-diff --git a/kernel/cred.c b/kernel/cred.c
-index 174fa84..52f4342 100644
---- a/kernel/cred.c
-+++ b/kernel/cred.c
-@@ -508,11 +508,10 @@ int commit_creds(struct cred *new)
- 		key_fsgid_changed(task);
- 
- 	/* do it
--	 * - What if a process setreuid()'s and this brings the
--	 *   new uid over his NPROC rlimit?  We can check this now
--	 *   cheaply with the new uid cache, so if it matters
--	 *   we should be checking for it.  -DaveM
-+	 * RLIMIT_NPROC limits on user->processes have already been checked
-+	 * in set_user().
- 	 */
++	if (shm_may_destroy(ns, shp))
++		shm_destroy(ns, shp);
++	else
++		shm_unlock(shp);
++	return 0;
++}
 +
- 	alter_cred_subscribers(new, 2);
- 	if (new->user != old->user)
- 		atomic_inc(&new->user->processes);
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 0276c30..0f44484 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -995,7 +995,7 @@ static void copy_flags(unsigned long clone_flags, struct task_struct *p)
- {
- 	unsigned long new_flags = p->flags;
- 
--	new_flags &= ~(PF_SUPERPRIV | PF_WQ_WORKER);
-+	new_flags &= ~(PF_SUPERPRIV | PF_WQ_WORKER | PF_NPROC_EXCEEDED);
- 	new_flags |= PF_FORKNOEXEC;
- 	new_flags |= PF_STARTING;
- 	p->flags = new_flags;
-diff --git a/kernel/sys.c b/kernel/sys.c
-index e4128b2..fc40cbc 100644
---- a/kernel/sys.c
-+++ b/kernel/sys.c
-@@ -591,11 +591,16 @@ static int set_user(struct cred *new)
- 	if (!new_user)
- 		return -EAGAIN;
- 
++static int shm_try_destroy_orphaned(int id, void *p, void *data)
++{
++	struct ipc_namespace *ns = data;
++	struct shmid_kernel *shp = shm_lock(ns, id);
++	struct task_struct *task;
++
++	if (IS_ERR(shp))
++		return 0;
++
 +	/*
-+	 * We don't fail in case of NPROC limit excess here because too many
-+	 * poorly written programs don't check set*uid() return code, assuming
-+	 * it never fails if called by root.  We may still enforce NPROC limit
-+	 * for programs doing set*uid()+execve() by harmlessly defering the
-+	 * failure to the execve() stage.
++	 * We want to destroy segments without users and with already
++	 * exit'ed originating process.
++	 *
++	 * XXX: the originating process may exist in another pid namespace.
 +	 */
- 	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
--			new_user != INIT_USER) {
--		free_uid(new_user);
--		return -EAGAIN;
--	}
-+			new_user != INIT_USER)
-+		current->flags |= PF_NPROC_EXCEEDED;
++	task = find_task_by_vpid(shp->shm_cprid);
++	if (task != NULL) {
++		shm_unlock(shp);
++		return 0;
++	}
++
++	if (shm_may_destroy(ns, shp))
+ 		shm_destroy(ns, shp);
+ 	else
+ 		shm_unlock(shp);
++	return 0;
++}
++
++void shm_destroy_orphaned(struct ipc_namespace *ns)
++{
++	down_write(&shm_ids(ns).rw_mutex);
++	idr_for_each(&shm_ids(ns).ipcs_idr, &shm_try_destroy_orphaned, ns);
++	up_write(&shm_ids(ns).rw_mutex);
++}
++
++
++void exit_shm(struct task_struct *task)
++{
++	struct nsproxy *nsp = task->nsproxy;
++	struct ipc_namespace *ns;
++
++	if (!nsp)
++		return;
++	ns = nsp->ipc_ns;
++	if (!ns || !ns->shm_rmid_forced)
++		return;
++
++	/* Destroy all already created segments, but not mapped yet */
++	down_write(&shm_ids(ns).rw_mutex);
++	idr_for_each(&shm_ids(ns).ipcs_idr, &shm_try_destroy_current, ns);
+ 	up_write(&shm_ids(ns).rw_mutex);
+ }
  
- 	free_uid(new->user);
- 	new->user = new_user;
----
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+@@ -950,8 +1040,7 @@ out_nattch:
+ 	shp = shm_lock(ns, shmid);
+ 	BUG_ON(IS_ERR(shp));
+ 	shp->shm_nattch--;
+-	if(shp->shm_nattch == 0 &&
+-	   shp->shm_perm.mode & SHM_DEST)
++	if (shm_may_destroy(ns, shp))
+ 		shm_destroy(ns, shp);
+ 	else
+ 		shm_unlock(shp);
+diff -puN kernel/exit.c~ipc-introduce-shm_rmid_forced-sysctl kernel/exit.c
+--- a/kernel/exit.c~ipc-introduce-shm_rmid_forced-sysctl
++++ a/kernel/exit.c
+@@ -980,6 +980,7 @@ NORET_TYPE void do_exit(long code)
+ 	trace_sched_process_exit(tsk);
+ 
+ 	exit_sem(tsk);
++	exit_shm(tsk);
+ 	exit_files(tsk);
+ 	exit_fs(tsk);
+ 	check_stack_usage();
+_
+
+----- End forwarded message -----
