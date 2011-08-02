@@ -1,31 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 2 Aug 2011 14:29:25 +0100
-From: Marc Zyngier <marc.zyngier@arm.com>
-Message-ID: <20110802142925.4a42a603@taxman.wild-wind.fr.eu.org>
-In-Reply-To: <20110802124530.GA2543@albatros>
-References: <20110801180151.GA26686@albatros>
-	<20110801112021.25ec9041.akpm@linux-foundation.org>
-	<20110801190341.GA6898@albatros>
-	<CA+55aFw2kHWY1N=ox1er7c-3WL4OA8x0M=Keu7hvAncKUZd1tQ@mail.gmail.com>
-	<20110802124530.GA2543@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] shm: fix a race between shm_exit() and shm_init()
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Manuel Lauss <manuel.lauss@googlemail.com>, linux-kernel@vger.kernel.org, Richard Weinberger <richard@nod.at>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@elte.hu>, kernel-hardening@lists.openwall.com, "Paul E.
- McKenney" <paul.mckenney@linaro.org>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 2 Aug 2011 18:48:39 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110802144839.GA3598@albatros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] segoon's status report - #12 of 15
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2 Aug 2011 16:45:30 +0400
-Vasiliy Kulikov <segoon@openwall.com> wrote:
+Accomplishments:
 
-> Manuel, Richard, Marc - can you test this patch, please?
+ * Got applied shm fixes (separate pid namespaces, optimization) to 3.1
+   tree.
+ * Got a new task: remove remains of a.out parts of ELF format
+   interpreter.
+ * Proposed mmap guard pages.
+ * Posted v3 of RLIMIT_NRPOC patch to LKML.
+ * Reviewed GNU_STACK handling in RHEL glibc and kernel.
+ * Posted an early version of procfs *_allowed= feature on k-h list.
+ * Posted a list of -ow features and their status in sense of upstream
+   acceptance.
 
-Works fine here (tested on an EB11MP).
+Priorities:
 
-FWIW: Tested-by: Marc Zyngier <marc.zyngier@arm.com>
+ * See RLIMIT_NPROC applied.
+ * Resend USERCOPY (as a patch).
+ * Finish procfs patch.
+ * Discuss base address for libs, GNU_STACK, 32/64-bit restrictions.
 
-	M.
 -- 
-I'm the slime oozin' out from your TV set...
+Vasiliy
