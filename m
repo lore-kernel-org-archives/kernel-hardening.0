@@ -1,98 +1,133 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 7 Aug 2011 15:00:25 +0400
+Date: Mon, 8 Aug 2011 18:36:03 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110807110025.GA3778@albatros>
+Message-ID: <20110808143603.GA3695@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] 32/64 bitness restriction for pid namespace
-To: kernel-hardening@lists.openwall.com
-Cc: Will Drewry <wad@chromium.org>
+Subject: [kernel-hardening] [PATCH] Remove a.out library support in ELF loader
+To: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: kernel-hardening@lists.openwall.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, Andi Kleen <andi@firstfloor.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar, Will, all -
+Commit d20894a23708c2 has removed the part of a.out code related to the
+executables, but kept a.out library code as-is.  Remove it.
 
-The new sysctl is introduced, abi.bitness_locked.  If set to 1, it locks
-all tasks inside of current pid namespace to the bitness of init task
-(pid_ns->child_reaper).  After that (1) all syscalls of other bitness
-return -ENOSYS and (2) loading ELF binaries of another bitness is
-prohibited (as if the corresponding CONFIG_BINFMT_*=N).  If there is any
-task which differs in bitness, the lockup fails.
-
-TODO:
-
- * Fix a race of sysctl against fork().
- * Denied syscall should behave as if it doesn't exist.
-
-The patch was tested very roughly.
-
-diff --git a/arch/x86/kernel/syscall_restrict.c b/arch/x86/kernel/syscall_restrict.c
-index 1a2bf1c..b2bfd8f 100644
---- a/arch/x86/kernel/syscall_restrict.c
-+++ b/arch/x86/kernel/syscall_restrict.c
-@@ -31,8 +31,8 @@ static int task_get_bitness(struct task_struct *task)
- static bool pidns_locked(struct pid_namespace *pid_ns)
- {
- 	struct task_struct *init = pid_ns->child_reaper;
--	return (test_ti_thread_flag(task_thread_info(task), TIF_SYSCALL32_DENIED) ||
--		test_ti_thread_flag(task_thread_info(task), TIF_SYSCALL64_DENIED));
-+	return (test_ti_thread_flag(task_thread_info(init), TIF_SYSCALL32_DENIED) ||
-+		test_ti_thread_flag(task_thread_info(init), TIF_SYSCALL64_DENIED));
- }
- 
- static int bits_to_flags(int bits)
-@@ -69,7 +69,7 @@ static int __pidns_may_lock_bitness(struct pid_namespace *pid_ns, int bits)
- }
- 
- /* Called with hold tasklist_lock and rcu */
--static int __change_syscall_restrict(struct pid_namespace *pid_ns, int bits)
-+static int __bitness_lock(struct pid_namespace *pid_ns, int bits)
- {
- 	u32 clear_bit_nr;
- 	struct task_struct *p, *thread;
-@@ -90,7 +90,7 @@ static int __change_syscall_restrict(struct pid_namespace *pid_ns, int bits)
- 	return 0;
- }
- 
--static int syscall_bitness_lock(struct pid_namespace *pid_ns)
-+static int bitness_lock(struct pid_namespace *pid_ns)
- {
- 	int rc, new_bits;
- 
-@@ -100,14 +100,14 @@ static int syscall_bitness_lock(struct pid_namespace *pid_ns)
- 	new_bits = task_get_bitness(pid_ns->child_reaper);
- 	rc = __pidns_may_lock_bitness(pid_ns, new_bits);
- 	if (!rc)
--		rc = __change_syscall_restrict(pid_ns, new_bits);
-+		rc = __bitness_lock(pid_ns, new_bits);
- 
- 	write_unlock_irq(&tasklist_lock);
- 	rcu_read_unlock();
- 	return rc;
- }
- 
--static int syscall_bitness_locked_handler(struct ctl_table *table, int write,
-+static int bitness_locked_handler(struct ctl_table *table, int write,
- 				void __user *buffer, size_t *lenp,
- 				loff_t *ppos)
- {
-@@ -128,14 +128,14 @@ static int syscall_bitness_locked_handler(struct ctl_table *table, int write,
- 		return -EACCES;
- 	if (new_bits && old_bits)
- 		return 0;
--	return syscall_bitness_lock(current->nsproxy->pid_ns);
-+	return bitness_lock(current->nsproxy->pid_ns);
- }
- 
- static struct ctl_table abi_syscall_restrict[] = {
- 	{
--		.procname = "syscall_bitness_locked",
-+		.procname = "bitness_locked",
- 		.mode = 0644,
--		.proc_handler = syscall_bitness_locked_handler
-+		.proc_handler = bitness_locked_handler
- 	},
- 	{}
- };
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
 ---
+ fs/binfmt_elf.c |   85 -------------------------------------------------------
+ 1 files changed, 0 insertions(+), 85 deletions(-)
+
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 303983f..3416674 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -37,7 +37,6 @@
+ #include <asm/page.h>
+ 
+ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs);
+-static int load_elf_library(struct file *);
+ static unsigned long elf_map(struct file *, unsigned long, struct elf_phdr *,
+ 				int, int, unsigned long);
+ 
+@@ -68,7 +67,6 @@ static int elf_core_dump(struct coredump_params *cprm);
+ static struct linux_binfmt elf_format = {
+ 	.module		= THIS_MODULE,
+ 	.load_binary	= load_elf_binary,
+-	.load_shlib	= load_elf_library,
+ 	.core_dump	= elf_core_dump,
+ 	.min_coredump	= ELF_EXEC_PAGESIZE,
+ };
+@@ -994,89 +992,6 @@ out_free_ph:
+ 	goto out;
+ }
+ 
+-/* This is really simpleminded and specialized - we are loading an
+-   a.out library that is given an ELF header. */
+-static int load_elf_library(struct file *file)
+-{
+-	struct elf_phdr *elf_phdata;
+-	struct elf_phdr *eppnt;
+-	unsigned long elf_bss, bss, len;
+-	int retval, error, i, j;
+-	struct elfhdr elf_ex;
+-
+-	error = -ENOEXEC;
+-	retval = kernel_read(file, 0, (char *)&elf_ex, sizeof(elf_ex));
+-	if (retval != sizeof(elf_ex))
+-		goto out;
+-
+-	if (memcmp(elf_ex.e_ident, ELFMAG, SELFMAG) != 0)
+-		goto out;
+-
+-	/* First of all, some simple consistency checks */
+-	if (elf_ex.e_type != ET_EXEC || elf_ex.e_phnum > 2 ||
+-	    !elf_check_arch(&elf_ex) || !file->f_op || !file->f_op->mmap)
+-		goto out;
+-
+-	/* Now read in all of the header information */
+-
+-	j = sizeof(struct elf_phdr) * elf_ex.e_phnum;
+-	/* j < ELF_MIN_ALIGN because elf_ex.e_phnum <= 2 */
+-
+-	error = -ENOMEM;
+-	elf_phdata = kmalloc(j, GFP_KERNEL);
+-	if (!elf_phdata)
+-		goto out;
+-
+-	eppnt = elf_phdata;
+-	error = -ENOEXEC;
+-	retval = kernel_read(file, elf_ex.e_phoff, (char *)eppnt, j);
+-	if (retval != j)
+-		goto out_free_ph;
+-
+-	for (j = 0, i = 0; i<elf_ex.e_phnum; i++)
+-		if ((eppnt + i)->p_type == PT_LOAD)
+-			j++;
+-	if (j != 1)
+-		goto out_free_ph;
+-
+-	while (eppnt->p_type != PT_LOAD)
+-		eppnt++;
+-
+-	/* Now use mmap to map the library into memory. */
+-	down_write(&current->mm->mmap_sem);
+-	error = do_mmap(file,
+-			ELF_PAGESTART(eppnt->p_vaddr),
+-			(eppnt->p_filesz +
+-			 ELF_PAGEOFFSET(eppnt->p_vaddr)),
+-			PROT_READ | PROT_WRITE | PROT_EXEC,
+-			MAP_FIXED | MAP_PRIVATE | MAP_DENYWRITE,
+-			(eppnt->p_offset -
+-			 ELF_PAGEOFFSET(eppnt->p_vaddr)));
+-	up_write(&current->mm->mmap_sem);
+-	if (error != ELF_PAGESTART(eppnt->p_vaddr))
+-		goto out_free_ph;
+-
+-	elf_bss = eppnt->p_vaddr + eppnt->p_filesz;
+-	if (padzero(elf_bss)) {
+-		error = -EFAULT;
+-		goto out_free_ph;
+-	}
+-
+-	len = ELF_PAGESTART(eppnt->p_filesz + eppnt->p_vaddr +
+-			    ELF_MIN_ALIGN - 1);
+-	bss = eppnt->p_memsz + eppnt->p_vaddr;
+-	if (bss > len) {
+-		down_write(&current->mm->mmap_sem);
+-		do_brk(len, bss - len);
+-		up_write(&current->mm->mmap_sem);
+-	}
+-	error = 0;
+-
+-out_free_ph:
+-	kfree(elf_phdata);
+-out:
+-	return error;
+-}
+ 
+ #ifdef CONFIG_ELF_CORE
+ /*
+-- 
+1.7.0.4
