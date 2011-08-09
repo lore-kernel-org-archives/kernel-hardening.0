@@ -1,409 +1,170 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 8 Aug 2011 21:39:13 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110808173913.GA16028@albatros>
-References: <20110807110025.GA3778@albatros>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110807110025.GA3778@albatros>
-Subject: [kernel-hardening] Re: 32/64 bitness restriction for pid namespace
-To: kernel-hardening@lists.openwall.com
-Cc: Will Drewry <wad@chromium.org>
+Date: Tue, 9 Aug 2011 12:16:32 +1000
+From: NeilBrown <neilb@suse.de>
+Message-ID: <20110809121632.18aef937@notabene.brown>
+In-Reply-To: <20110808150204.GA4252@albatros>
+References: <20110808150204.GA4252@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v3 -resend] move RLIMIT_NPROC check from set_user() to
+ do_execve_common()
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Aug 07, 2011 at 15:00 +0400, Vasiliy Kulikov wrote:
-> Solar, Will, all -
+On Mon, 8 Aug 2011 19:02:04 +0400 Vasiliy Kulikov <segoon@openwall.com> wrote:
+
+> The patch http://lkml.org/lkml/2003/7/13/226 introduced an RLIMIT_NPROC
+> check in set_user() to check for NPROC exceeding via setuid() and
+> similar functions.  Before the check there was a possibility to greatly
+> exceed the allowed number of processes by an unprivileged user if the
+> program relied on rlimit only.  But the check created new security
+> threat: many poorly written programs simply don't check setuid() return
+> code and believe it cannot fail if executed with root privileges.  So,
+> the check is removed in this patch because of too often privilege
+> escalations related to buggy programs.
 > 
-> The new sysctl is introduced, abi.bitness_locked.  If set to 1, it locks
-> all tasks inside of current pid namespace to the bitness of init task
-> (pid_ns->child_reaper).  After that (1) all syscalls of other bitness
-> return -ENOSYS and (2) loading ELF binaries of another bitness is
-> prohibited (as if the corresponding CONFIG_BINFMT_*=N).  If there is any
-> task which differs in bitness, the lockup fails.
+> The NPROC can still be enforced in the common code flow of daemons
+> spawning user processes.  Most of daemons do fork()+setuid()+execve().
+> The check introduced in execve() (1) enforces the same limit as in
+> setuid() and (2) doesn't create similar security issues.
 > 
-> TODO:
+> Neil Brown suggested to track what specific process has exceeded the
+> limit by setting PF_NPROC_EXCEEDED process flag.  With the change only
+> this process would fail on execve(), and other processes' execve()
+> behaviour is not changed.
 > 
->  * Fix a race of sysctl against fork().
+> Solar Designer suggested to re-check whether NPROC limit is still
+> exceeded at the moment of execve().  If the process was sleeping for
+> days between set*uid() and execve(), and the NPROC counter step down
+> under the limit, the defered execve() failure because NPROC limit was
+> exceeded days ago would be unexpected.  If the limit is not exceeded
+> anymore, we clear the flag on successful calls to execve() and fork().
+> 
+> The flag is also cleared on successful calls to set_user() as the limit
+> was exceeded for the previous user, not the current one.
+> 
+> Similar check was introduced in -ow patches (without the process flag).
+> 
+> v3 - clear PF_NPROC_EXCEEDED on successful calls to set_user().
+> 
+> Reviewed-by: James Morris <jmorris@namei.org>
+> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
 
-Done.
+Acked-by: NeilBrown <neilb@suse.de>
 
->  * Denied syscall should behave as if it doesn't exist.
+I'm not 100% happy with this for reasons that have been mentioned, but there
+is a real problem, and this is a real fix, and I think it is as good as we
+are likely to be able to achieve.
 
-I suppose the best way of handling denied 32 bit syscalls is pretending
-IA32_EMULATION=n, 64 bit syscalls - as if it is 32-bit kernel on 64-bit
-CPU.  Simplified handling copied from interrupts handling with proper
-signal delivery will be implemented.
+Thanks for persisting.
 
-
-64 bit SYSCALL - #UD => SIGILL.
-
-32-bit SYSCALL - 64-bit kernel without IA32_EMULATION simply returns -ENOSYS here.
-
-32-bit SYSENTER - #GP(0) => SIGSEGV.
-
-32-bit int 80h - #NP => SIGBUS.
+NeilBrown
 
 
-Other changes:
- - fixed an unitialized variable usage.
- - moved the check before "orl $TS_COMPAT,TI_status(%r10)".
- - sysctl is persistent with IA32_EMULATION=n.
 
-
-The new version:
-
-diff --git a/arch/x86/ia32/ia32entry.S b/arch/x86/ia32/ia32entry.S
-index a0e866d..39a6544 100644
---- a/arch/x86/ia32/ia32entry.S
-+++ b/arch/x86/ia32/ia32entry.S
-@@ -151,6 +151,8 @@ ENTRY(ia32_sysenter_target)
-  	.quad 1b,ia32_badarg
-  	.previous	
- 	GET_THREAD_INFO(%r10)
-+	testl  $_TIF_SYSCALL32_DENIED,TI_flags(%r10)
-+	jnz ia32_deniedsys
- 	orl    $TS_COMPAT,TI_status(%r10)
- 	testl  $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%r10)
- 	CFI_REMEMBER_STATE
-@@ -310,6 +312,8 @@ ENTRY(ia32_cstar_target)
- 	.quad 1b,ia32_badarg
- 	.previous	
- 	GET_THREAD_INFO(%r10)
-+	testl  $_TIF_SYSCALL32_DENIED,TI_flags(%r10)
-+	jnz ia32_deniedsys
- 	orl   $TS_COMPAT,TI_status(%r10)
- 	testl $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%r10)
- 	CFI_REMEMBER_STATE
-@@ -421,6 +425,8 @@ ENTRY(ia32_syscall)
- 	   this could be a problem. */
- 	SAVE_ARGS 0,1,0
- 	GET_THREAD_INFO(%r10)
-+	testl  $_TIF_SYSCALL32_DENIED,TI_flags(%r10)
-+	jnz ia32_deniedsys
- 	orl   $TS_COMPAT,TI_status(%r10)
- 	testl $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%r10)
- 	jnz ia32_tracesys
-@@ -453,6 +459,12 @@ ia32_badsys:
- 	movq $-ENOSYS,%rax
- 	jmp ia32_sysret
- 
-+ia32_deniedsys:
-+	/* FIXME: need SIGSEGV delivery or similar */
-+	movq $0,ORIG_RAX-ARGOFFSET(%rsp)
-+	movq $-ENOSYS,%rax
-+	jmp ia32_sysret
-+
- quiet_ni_syscall:
- 	movq $-ENOSYS,%rax
- 	ret
-diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
-index f2ad216..fb054c7 100644
---- a/arch/x86/include/asm/elf.h
-+++ b/arch/x86/include/asm/elf.h
-@@ -153,9 +153,10 @@ do {						\
-  * This is used to ensure we don't load something for the wrong architecture.
-  */
- #define elf_check_arch(x)			\
--	((x)->e_machine == EM_X86_64)
-+	((x)->e_machine == EM_X86_64 && !test_thread_flag(TIF_SYSCALL64_DENIED))
- 
--#define compat_elf_check_arch(x)	elf_check_arch_ia32(x)
-+#define compat_elf_check_arch(x)		\
-+	(elf_check_arch_ia32(x) && !test_thread_flag(TIF_SYSCALL32_DENIED))
- 
- static inline void elf_common_init(struct thread_struct *t,
- 				   struct pt_regs *regs, const u16 ds)
-diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-index a1fe5c1..7faebde 100644
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -95,6 +95,8 @@ struct thread_info {
- #define TIF_BLOCKSTEP		25	/* set when we want DEBUGCTLMSR_BTF */
- #define TIF_LAZY_MMU_UPDATES	27	/* task is updating the mmu lazily */
- #define TIF_SYSCALL_TRACEPOINT	28	/* syscall tracepoint instrumentation */
-+#define TIF_SYSCALL32_DENIED	29	/* 32 bit syscalls are allowed */
-+#define TIF_SYSCALL64_DENIED	30	/* 64 bit syscalls are allowed */
- 
- #define _TIF_SYSCALL_TRACE	(1 << TIF_SYSCALL_TRACE)
- #define _TIF_NOTIFY_RESUME	(1 << TIF_NOTIFY_RESUME)
-@@ -117,6 +119,8 @@ struct thread_info {
- #define _TIF_BLOCKSTEP		(1 << TIF_BLOCKSTEP)
- #define _TIF_LAZY_MMU_UPDATES	(1 << TIF_LAZY_MMU_UPDATES)
- #define _TIF_SYSCALL_TRACEPOINT	(1 << TIF_SYSCALL_TRACEPOINT)
-+#define _TIF_SYSCALL32_DENIED	(1 << TIF_SYSCALL32_DENIED)
-+#define _TIF_SYSCALL64_DENIED	(1 << TIF_SYSCALL64_DENIED)
- 
- /* work to do in syscall_trace_enter() */
- #define _TIF_WORK_SYSCALL_ENTRY	\
-@@ -259,9 +263,14 @@ static inline void set_restore_sigmask(void)
- 	ti->status |= TS_RESTORE_SIGMASK;
- 	set_bit(TIF_SIGPENDING, (unsigned long *)&ti->flags);
- }
--#endif	/* !__ASSEMBLY__ */
- 
--#ifndef __ASSEMBLY__
-+#ifdef CONFIG_IA32_EMULATION
-+#define __HAVE_ARCH_POST_FORK
-+
-+extern void arch_post_fork(struct task_struct *task);
-+
-+#endif /* CONFIG_IA32_EMULATION */
-+
- extern void arch_task_cache_init(void);
- extern void free_thread_info(struct thread_info *ti);
- extern int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src);
-diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
-index 0410557..a200ff3 100644
---- a/arch/x86/kernel/Makefile
-+++ b/arch/x86/kernel/Makefile
-@@ -86,6 +86,7 @@ obj-$(CONFIG_DOUBLEFAULT) 	+= doublefault_32.o
- obj-$(CONFIG_KGDB)		+= kgdb.o
- obj-$(CONFIG_VM86)		+= vm86_32.o
- obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
-+obj-$(CONFIG_SYSCTL)		+= syscall_restrict.o
- 
- obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
- obj-$(CONFIG_APB_TIMER)		+= apb_timer.o
-diff --git a/arch/x86/kernel/entry_64.S b/arch/x86/kernel/entry_64.S
-index e13329d..1774685 100644
---- a/arch/x86/kernel/entry_64.S
-+++ b/arch/x86/kernel/entry_64.S
-@@ -474,6 +474,8 @@ ENTRY(system_call_after_swapgs)
- 	movq  %rcx,RIP-ARGOFFSET(%rsp)
- 	CFI_REL_OFFSET rip,RIP-ARGOFFSET
- 	GET_THREAD_INFO(%rcx)
-+	testl $_TIF_SYSCALL64_DENIED,TI_flags(%rcx)
-+	jnz deniedsys
- 	testl $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%rcx)
- 	jnz tracesys
- system_call_fastpath:
-@@ -541,6 +543,10 @@ sysret_signal:
- badsys:
- 	movq $-ENOSYS,RAX-ARGOFFSET(%rsp)
- 	jmp ret_from_sys_call
-+deniedsys:
-+	/* FIXME: need SIGSEGV delivery or similar */
-+	movq $-ENOSYS,RAX-ARGOFFSET(%rsp)
-+	jmp ret_from_sys_call
- 
- #ifdef CONFIG_AUDITSYSCALL
- 	/*
-diff --git a/arch/x86/kernel/syscall_restrict.c b/arch/x86/kernel/syscall_restrict.c
-new file mode 100644
-index 0000000..a5c8ffa
---- /dev/null
-+++ b/arch/x86/kernel/syscall_restrict.c
-@@ -0,0 +1,187 @@
-+#include <linux/thread_info.h>
-+#include <linux/pid_namespace.h>
-+#include <linux/sysctl.h>
-+
-+#ifdef CONFIG_IA32_EMULATION
-+
-+static bool pid_ns_contains_task(struct pid_namespace *pid_ns,
-+				 struct task_struct *task)
-+{
-+	struct pid_namespace *ns = NULL;
-+
-+	if (task->nsproxy)
-+		ns = task->nsproxy->pid_ns;
-+
-+	for (; ns; ns = ns->parent) {
-+		if (ns == pid_ns)
-+			return true;
-+	}
-+
-+	return false;
-+}
-+
-+static int task_get_bitness(struct task_struct *task)
-+{
-+	if (test_ti_thread_flag(task_thread_info(task), TIF_IA32))
-+		return 32;
-+	else
-+		return 64;
-+}
-+
-+static bool pidns_locked(struct pid_namespace *pid_ns)
-+{
-+	struct thread_info *ti = task_thread_info(pid_ns->child_reaper);
-+
-+	return test_ti_thread_flag(ti, TIF_SYSCALL32_DENIED) ||
-+	       test_ti_thread_flag(ti, TIF_SYSCALL64_DENIED);
-+}
-+
-+static int bits_to_flags(int bits)
-+{
-+	switch (bits) {
-+	case 32:
-+		return TIF_SYSCALL64_DENIED;
-+	case 64:
-+		return TIF_SYSCALL32_DENIED;
-+	default:
-+		return -EINVAL;
-+	}
-+}
-+
-+static int __pidns_may_lock_bitness(struct pid_namespace *pid_ns, int bits)
-+{
-+	struct task_struct *p, *thread;
-+	int old_bits;
-+
-+	do_each_thread(p, thread) {
-+		if (!pid_ns_contains_task(pid_ns, thread))
-+			continue;
-+
-+		old_bits = task_get_bitness(thread);
-+		if (old_bits != bits) {
-+			pr_err("Inconsistent syscall restriction detected! "
-+				"Parent ns tries to restrict syscalls to %d "
-+				"bits while some task is %d bit.",
-+				bits, old_bits);
-+			return -EINVAL;
-+		}
-+	} while_each_thread(p, thread);
-+
-+	return 0;
-+}
-+
-+void arch_post_fork(struct task_struct *task)
-+{
-+	int clear_bit_nr;
-+
-+	if (!pidns_locked(current->nsproxy->pid_ns))
-+		return;
-+
-+	clear_bit_nr = bits_to_flags(task_get_bitness(current));
-+	set_tsk_thread_flag(task, clear_bit_nr);
-+}
-+
-+/* Called with hold tasklist_lock and rcu */
-+static int __bitness_lock(struct pid_namespace *pid_ns, int bits)
-+{
-+	u32 clear_bit_nr;
-+	struct task_struct *p, *thread;
-+
-+	clear_bit_nr = bits_to_flags(bits);
-+
-+	/* Yes, it is awfully slow, but it is called once per ns (if any) */
-+	do_each_thread(p, thread) {
-+		if (!pid_ns_contains_task(pid_ns, thread))
-+			continue;
-+
-+		set_tsk_thread_flag(thread, clear_bit_nr);
-+	} while_each_thread(p, thread);
-+
-+	return 0;
-+}
-+
-+static int bitness_lock(struct pid_namespace *pid_ns)
-+{
-+	int rc, new_bits;
-+
-+	rcu_read_lock();
-+	write_lock_irq(&tasklist_lock);
-+
-+	new_bits = task_get_bitness(pid_ns->child_reaper);
-+	rc = __pidns_may_lock_bitness(pid_ns, new_bits);
-+	if (!rc)
-+		rc = __bitness_lock(pid_ns, new_bits);
-+
-+	write_unlock_irq(&tasklist_lock);
-+	rcu_read_unlock();
-+	return rc;
-+}
-+
-+static int bitness_locked_handler(struct ctl_table *table, int write,
-+				void __user *buffer, size_t *lenp,
-+				loff_t *ppos)
-+{
-+	int rc, new_bits, old_bits;
-+	struct ctl_table tbl = {
-+		.procname	= table->procname,
-+		.data		= &new_bits,
-+		.maxlen		= sizeof(unsigned int),
-+		.mode		= 0644,
-+	};
-+
-+	old_bits = new_bits = pidns_locked(current->nsproxy->pid_ns);
-+	rc = proc_dointvec(&tbl, write, buffer, lenp, ppos);
-+	if (rc || !write)
-+		return rc;
-+
-+	if (!capable(CAP_SYS_ADMIN) || (new_bits == 0 && old_bits))
-+		return -EACCES;
-+	if (new_bits && old_bits)
-+		return 0;
-+	return bitness_lock(current->nsproxy->pid_ns);
-+}
-+
-+static struct ctl_table abi_syscall_restrict[] = {
-+	{
-+		.procname = "bitness_locked",
-+		.mode = 0644,
-+		.proc_handler = bitness_locked_handler
-+	},
-+	{}
-+};
-+
-+#else /* CONFIG_IA32_EMULATION */
-+
-+static int one = 1;
-+
-+static struct ctl_table abi_syscall_restrict[] = {
-+	{
-+		.procname	= "bitness_locked",
-+		.data		= &one,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec_minmax,
-+		.extra1		= &one,
-+		.extra2		= &one,
-+	},
-+	{}
-+};
-+
-+#endif /* CONFIG_IA32_EMULATION */
-+
-+
-+static struct ctl_table abi_root[] = {
-+	{
-+		.procname = "abi",
-+		.mode = 0555,
-+		.child = abi_syscall_restrict
-+	},
-+	{}
-+};
-+
-+__init int syscall_restrict_init(void)
-+{
-+	register_sysctl_table(abi_root);
-+	return 0;
-+}
-+device_initcall(syscall_restrict_init);
-diff --git a/kernel/fork.c b/kernel/fork.c
-index e7ceaca..55e4455 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -1039,6 +1039,10 @@ static void posix_cpu_timers_init(struct task_struct *tsk)
- 	INIT_LIST_HEAD(&tsk->cpu_timers[2]);
- }
- 
-+#ifndef __HAVE_ARCH_POST_FORK
-+#define arch_post_fork(p)
-+#endif
-+
- /*
-  * This creates a new process as a copy of the old one,
-  * but does not actually start it yet.
-@@ -1374,6 +1378,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
- 	total_forks++;
- 	spin_unlock(&current->sighand->siglock);
- 	write_unlock_irq(&tasklist_lock);
-+	arch_post_fork(p);
- 	proc_fork_connector(p);
- 	cgroup_post_fork(p);
- 	if (clone_flags & CLONE_THREAD)
---
+> ---
+>  fs/exec.c             |   17 +++++++++++++++++
+>  include/linux/sched.h |    1 +
+>  kernel/cred.c         |    6 ++----
+>  kernel/fork.c         |    1 +
+>  kernel/sys.c          |   15 +++++++++++----
+>  5 files changed, 32 insertions(+), 8 deletions(-)
+> 
+> diff --git a/fs/exec.c b/fs/exec.c
+> index da80612..25dcbe5 100644
+> --- a/fs/exec.c
+> +++ b/fs/exec.c
+> @@ -1459,6 +1459,23 @@ static int do_execve_common(const char *filename,
+>  	struct files_struct *displaced;
+>  	bool clear_in_exec;
+>  	int retval;
+> +	const struct cred *cred = current_cred();
+> +
+> +	/*
+> +	 * We move the actual failure in case of RLIMIT_NPROC excess from
+> +	 * set*uid() to execve() because too many poorly written programs
+> +	 * don't check setuid() return code.  Here we additionally recheck
+> +	 * whether NPROC limit is still exceeded.
+> +	 */
+> +	if ((current->flags & PF_NPROC_EXCEEDED) &&
+> +	    atomic_read(&cred->user->processes) > rlimit(RLIMIT_NPROC)) {
+> +		retval = -EAGAIN;
+> +		goto out_ret;
+> +	}
+> +
+> +	/* We're below the limit (still or again), so we don't want to make
+> +	 * further execve() calls fail. */
+> +	current->flags &= ~PF_NPROC_EXCEEDED;
+>  
+>  	retval = unshare_files(&displaced);
+>  	if (retval)
+> diff --git a/include/linux/sched.h b/include/linux/sched.h
+> index 20b03bf..4ac2c05 100644
+> --- a/include/linux/sched.h
+> +++ b/include/linux/sched.h
+> @@ -1767,6 +1767,7 @@ extern void thread_group_times(struct task_struct *p, cputime_t *ut, cputime_t *
+>  #define PF_DUMPCORE	0x00000200	/* dumped core */
+>  #define PF_SIGNALED	0x00000400	/* killed by a signal */
+>  #define PF_MEMALLOC	0x00000800	/* Allocating memory */
+> +#define PF_NPROC_EXCEEDED 0x00001000	/* set_user noticed that RLIMIT_NPROC was exceeded */
+>  #define PF_USED_MATH	0x00002000	/* if unset the fpu must be initialized before use */
+>  #define PF_FREEZING	0x00004000	/* freeze in progress. do not account to load */
+>  #define PF_NOFREEZE	0x00008000	/* this thread should not be frozen */
+> diff --git a/kernel/cred.c b/kernel/cred.c
+> index 174fa84..8ef31f5 100644
+> --- a/kernel/cred.c
+> +++ b/kernel/cred.c
+> @@ -508,10 +508,8 @@ int commit_creds(struct cred *new)
+>  		key_fsgid_changed(task);
+>  
+>  	/* do it
+> -	 * - What if a process setreuid()'s and this brings the
+> -	 *   new uid over his NPROC rlimit?  We can check this now
+> -	 *   cheaply with the new uid cache, so if it matters
+> -	 *   we should be checking for it.  -DaveM
+> +	 * RLIMIT_NPROC limits on user->processes have already been checked
+> +	 * in set_user().
+>  	 */
+>  	alter_cred_subscribers(new, 2);
+>  	if (new->user != old->user)
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index e7ceaca..8e6b6f4 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -1111,6 +1111,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
+>  		    p->real_cred->user != INIT_USER)
+>  			goto bad_fork_free;
+>  	}
+> +	current->flags &= ~PF_NPROC_EXCEEDED;
+>  
+>  	retval = copy_creds(p, clone_flags);
+>  	if (retval < 0)
+> diff --git a/kernel/sys.c b/kernel/sys.c
+> index a101ba3..dd948a1 100644
+> --- a/kernel/sys.c
+> +++ b/kernel/sys.c
+> @@ -621,11 +621,18 @@ static int set_user(struct cred *new)
+>  	if (!new_user)
+>  		return -EAGAIN;
+>  
+> +	/*
+> +	 * We don't fail in case of NPROC limit excess here because too many
+> +	 * poorly written programs don't check set*uid() return code, assuming
+> +	 * it never fails if called by root.  We may still enforce NPROC limit
+> +	 * for programs doing set*uid()+execve() by harmlessly deferring the
+> +	 * failure to the execve() stage.
+> +	 */
+>  	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
+> -			new_user != INIT_USER) {
+> -		free_uid(new_user);
+> -		return -EAGAIN;
+> -	}
+> +			new_user != INIT_USER)
+> +		current->flags |= PF_NPROC_EXCEEDED;
+> +	else
+> +		current->flags &= ~PF_NPROC_EXCEEDED;
+>  
+>  	free_uid(new->user);
+>  	new->user = new_user;
