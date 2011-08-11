@@ -1,59 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 11 Aug 2011 12:32:59 +0400
+Date: Thu, 11 Aug 2011 21:18:12 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110811083259.GA5429@albatros>
-References: <20110723162251.GA11485@openwall.com>
- <20110724084200.GB3659@albatros>
- <20110724142710.GB18345@openwall.com>
- <20110725192048.GA21675@albatros>
+Message-ID: <20110811171812.GA17346@albatros>
+References: <20110808150204.GA4252@albatros>
+ <20110809121632.18aef937@notabene.brown>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110725192048.GA21675@albatros>
-Subject: Re: [kernel-hardening] base address for shared libs
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20110809121632.18aef937@notabene.brown>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 -resend] move RLIMIT_NPROC
+ check from set_user() to do_execve_common()
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: NeilBrown <neilb@suse.de>, linux-kernel@vger.kernel.org, Greg Kroah-Hartman <gregkh@suse.de>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Jiri Slaby <jslaby@suse.cz>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+Hi Linus,
 
-The problem with ASCII-armor is that it contradicts good ALSR entropy.
-E.g. with 12 bits of entropy the maximum library size to fit in low 16
-MB is zero bytes.
+On Tue, Aug 09, 2011 at 12:16 +1000, NeilBrown wrote:
+> On Mon, 8 Aug 2011 19:02:04 +0400 Vasiliy Kulikov <segoon@openwall.com> wrote:
+> 
+> > The patch http://lkml.org/lkml/2003/7/13/226 introduced an RLIMIT_NPROC
+> > check in set_user() to check for NPROC exceeding via setuid() and
+> > similar functions.  Before the check there was a possibility to greatly
+> > exceed the allowed number of processes by an unprivileged user if the
+> > program relied on rlimit only.  But the check created new security
+> > threat: many poorly written programs simply don't check setuid() return
+> > code and believe it cannot fail if executed with root privileges.  So,
+> > the check is removed in this patch because of too often privilege
+> > escalations related to buggy programs.
+...
+> > Reviewed-by: James Morris <jmorris@namei.org>
+> Acked-by: NeilBrown <neilb@suse.de>
 
-PaX has 16 bits of entropy, so ASCII-armor would only hurt entropy.
+It got 2 positive feedbacks and seems nobody has better solution.
+Is it possible to see it in 3.1?
 
-Ubuntu (and most of distros) has 12 bits.  Kees says it makes sense to
-enable ASCII-armor for exec-shield only, as e-s already has very poor
-entropy.
-
-Upstream has 8 bits for some reason, but AFAICS every distro increase
-the limit.
-
-
-It makes sense to have e.g. 10 bits of entropy for 32-bit environments,
-but it would help only for tiny programs (hopefully, most of Owl
-programs).  It would not work for any python/GUI/Java, Apache with many
-modules, TomCat, etc.
-
-pipacs' position is that exploitation of C-string buffer overflows is
-rather rare nowadays, and heap overflows, buffer overflows, math
-miscalculation, etc. are much more often => C-string buffer overflow is
-not something which worth specific protection.
-
-
-IMO it makes sense for Owl to have e.g. 10 bits of entropy for libs and
-use ASCII-armor.  But it makes very little sense for upstream.  Or even
-use 16 bits as PaX does and don't use ASCII-armor at all.  ASCII-armor
-has rather limited usage - prevention of ret2libc via exploitation of
-C-string buffer overflows.  But it is already included in ASLR, which
-does much more.  Probably we should concentrate on more generic things,
-like ASLR?
-
-Solar, what do you think?
-
-
-Thanks,
+Thanks!
 
 -- 
 Vasiliy Kulikov
