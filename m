@@ -1,39 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 13 Aug 2011 20:32:52 +0400
+Date: Sat, 13 Aug 2011 20:55:02 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110813163252.GA18458@albatros>
-References: <20110812150304.GC16880@albatros>
- <4E45884B.8030303@zytor.com>
- <20110813062246.GC3851@albatros>
- <36fcaf94-2e99-47cb-a835-aefb79856429@email.android.com>
+Message-ID: <20110813165502.GA9328@albatros>
+References: <20110810132715.GA8993@albatros>
+ <20110810142609.GA31434@openwall.com>
+ <20110810150257.GA12198@albatros>
+ <20110810154059.GA31860@openwall.com>
+ <20110810162101.GA2833@albatros>
+ <20110810164225.GA32177@openwall.com>
+ <20110812120747.GA14598@albatros>
+ <20110812122343.GA7859@openwall.com>
+ <20110813151220.GA8388@albatros>
+ <20110813151947.GA12495@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <36fcaf94-2e99-47cb-a835-aefb79856429@email.android.com>
-Subject: Re: [kernel-hardening] Re: [RFC] x86: restrict pid namespaces to
- 32 or 64 bit syscalls
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, James Morris <jmorris@namei.org>, x86@kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20110813151947.GA12495@openwall.com>
+Subject: Re: [kernel-hardening] 32/64 bitness restriction for pid namespace
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 13, 2011 at 10:41 -0500, H. Peter Anvin wrote:
-> IA64 is totally different.
+Solar,
 
-I didn't say all IA-32 compatibility layer of x86 is a crap, surely no.
-But there is some code, which is poorly tested exactly because it is
-compatibility code.  One relatively recent example:
+Some thoughts about prctl() approach.
 
-http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=3e645d6b485446c54c6745c5e2cf5c528fe4deec
+I've decided to go with 2 flags of prctl() - whether 32 bit executable
+is allowed on the next execve(), whether 64 bit exec is allowed.  If set
+both, any bitness is allowed, and the bitness lock depends on the binary
+bitness.  If none set, don't lock at all.
 
->  I'm extremely sceptical to this patch;
-> it feels like putting code in a super-hot path to paper over a problem that has to be fixed anyway.
+Questions here:
 
-I'll move the check to the tracesys branch, which is not a hot path, in
-the next RFC version, so this should not be a problem.
+1) If execve() fails, e.g. because of missing binary, drop the flag or
+keep it?  I think dropping is safer.
+
+2) If the binary is non-ELF, e.g. a misc binary?  I think execve()
+should fail as we expect to run 64/32 bit ELF.
 
 Thanks,
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
