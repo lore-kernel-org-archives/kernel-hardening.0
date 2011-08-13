@@ -1,76 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 13 Aug 2011 10:22:47 +0400
+Date: Sat, 13 Aug 2011 10:26:14 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110813062246.GC3851@albatros>
-References: <20110812150304.GC16880@albatros>
- <4E45884B.8030303@zytor.com>
+Message-ID: <20110813062614.GD3851@albatros>
+References: <20110812102954.GA3496@albatros>
+ <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <4E45884B.8030303@zytor.com>
-Subject: [kernel-hardening] Re: [RFC] x86: restrict pid namespaces to 32 or 64 bit syscalls
+In-Reply-To: <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
+Subject: [kernel-hardening] Re: [RFC] x86, mm: start mmap allocation for libs from low
+ addresses
 To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 12, 2011 at 15:08 -0500, H. Peter Anvin wrote:
-> On 08/12/2011 10:03 AM, Vasiliy Kulikov wrote:
-> > This patch allows x86-64 systems with 32 bit syscalls support to lock a
-> > pid namespace to 32 or 64 bitness syscalls/tasks.  By denying rarely
-> > used compatibility syscalls it reduces an attack surface for 32 bit
-> > containers.
-> > 
-> > The new sysctl is introduced, abi.bitness_locked.  If set to 1, it locks
-> > all tasks inside of current pid namespace to the bitness of init task
-> > (pid_ns->child_reaper).  After that:
-> > 
-> > 1) a task trying to do a syscall of other bitness would get a signal as
-> > if the corresponding syscall is not enabled (IDT entry/MSR is not
-> > initialized).
-> > 
-> > 2) loading ELF binaries of another bitness is prohibited (as if the
-> > corresponding CONFIG_BINFMT_*=N).
-[...]
-> However, I have to question the value of this... if this is enabled in
-> the system as a whole (as opposed to compiled out) it seems kind of
-> pointless...
+On Fri, Aug 12, 2011 at 18:19 -0500, H. Peter Anvin wrote:
+> This also greatly reduces the address space available for randomization,
+> and may get in the way of the default brk.  Is this a net win or lose?
 
-No, it is not for the system as a whole, but for containers (however,
-it's possible to lock the whole system).  We use OpenVZ kernels with
-multiple containers, some of them are 32 bit, some are 64 bit.  64 bit
-syscalls are not needed for 32 bit containers and 32 bit syscalls are
-not needed for 64 bit containers.  As a needless interfaces they
-unreasonably increase the kernel attack surface.  Some compatibility 32
-bit syscalls are rarely used, sometimes they are not tested well.
+If the executable image is not randomized and is located out of
+ASCII-armor, then yes, such allocation doesn't help much.
 
-In IA-64 the IA-32 compatibility support was broken for 2 years:
+>  Also, this zero byte is going to be at the last address, which means it might not help.  How about addresses of the form 0xAA00B000 instead?  The last bits are always 000 for a page address, of course...
 
-http://www.spinics.net/lists/linux-ia64/msg07840.html
+It leaves only 64kb of library protected, which is useless for most of
+programs.
 
-In amd64 some specific rarely used syscalls might behave similar way.
-Removing this attack vector is the goal of the patch.
-
-> if there are bugs we need to deal with them anyway.
-
-Definitely.
-
-> > Qestions/thoughts:
-> > 
-> > The patch adds a check in syscalls code.  Is it a significant
-> > slowdown for fast syscalls?  If so, probably it worth moving the check
-> > into scheduler code and enabling/disabling corresponding interrupt/MSRs
-> > on each task switch?
-> > 
-> 
-> *YOU* are the person who needs to answer that question by providing
-> measurements.  Quite frankly I suspect checks in the syscall code *or*
-> task switching MSRs are going to be unacceptable from a performance
-> point of view.
-
-OK, I'll do it.
-
-Thank you,
+Thanks,
 
 -- 
 Vasiliy Kulikov
