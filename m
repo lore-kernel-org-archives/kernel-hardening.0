@@ -1,34 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 13 Aug 2011 10:26:14 +0400
+Date: Sat, 13 Aug 2011 19:12:20 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110813062614.GD3851@albatros>
-References: <20110812102954.GA3496@albatros>
- <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
+Message-ID: <20110813151220.GA8388@albatros>
+References: <20110810095200.GA2377@albatros>
+ <20110810130333.GA31122@openwall.com>
+ <20110810132715.GA8993@albatros>
+ <20110810142609.GA31434@openwall.com>
+ <20110810150257.GA12198@albatros>
+ <20110810154059.GA31860@openwall.com>
+ <20110810162101.GA2833@albatros>
+ <20110810164225.GA32177@openwall.com>
+ <20110812120747.GA14598@albatros>
+ <20110812122343.GA7859@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
-Subject: [kernel-hardening] Re: [RFC] x86, mm: start mmap allocation for libs from low
- addresses
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org
+In-Reply-To: <20110812122343.GA7859@openwall.com>
+Subject: Re: [kernel-hardening] 32/64 bitness restriction for pid namespace
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 12, 2011 at 18:19 -0500, H. Peter Anvin wrote:
-> This also greatly reduces the address space available for randomization,
-> and may get in the way of the default brk.  Is this a net win or lose?
+Solar,
 
-If the executable image is not randomized and is located out of
-ASCII-armor, then yes, such allocation doesn't help much.
+Re: slowdown - my assumptions are:
 
->  Also, this zero byte is going to be at the last address, which means it might not help.  How about addresses of the form 0xAA00B000 instead?  The last bits are always 000 for a page address, of course...
+1) we don't want any slowdown for legitimate tasks - 64 bit tasks for 64
+bit containers and 32 bit tasks for 32 bit containers.
 
-It leaves only 64kb of library protected, which is useless for most of
-programs.
+2) slowdown of malicious (or broken) tasks is not important.
+
+
+Looking into asm code:
+
+ENTRY(ia32_sysenter_target)
+    ...
+	GET_THREAD_INFO(%r10)
+    ...
+	testl  $_TIF_WORK_SYSCALL_ENTRY,TI_flags(%r10)
+	CFI_REMEMBER_STATE
+	jnz  sysenter_tracesys
+    ...
+
+sysenter_tracesys:
+#ifdef CONFIG_AUDITSYSCALL
+	testl	$(_TIF_WORK_SYSCALL_ENTRY & ~_TIF_SYSCALL_AUDIT),TI_flags(%r10)
+	jz	sysenter_auditsys
+#endif
+    ...
+	call	syscall_trace_enter
+    ...
+
+/* work to do in syscall_trace_enter() */
+#define _TIF_WORK_SYSCALL_ENTRY	\
+	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_EMU | _TIF_SYSCALL_AUDIT |	\
+	 _TIF_SECCOMP | _TIF_SINGLESTEP | _TIF_SYSCALL_TRACEPOINT)
+
+
+So, there is a mask, which is used to identify whether a syscall needs
+additional pre/post processing.  If divide syscall_trace_enter() into 3
+functions, we'll get what we want.  This will result in zero impact on
+the legitimate code (relavite to current behaviour).
+
+One drawback - *tracesys clobbers EAX/RAX, so I still have to patch asm.
 
 Thanks,
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
