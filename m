@@ -1,37 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 14 Aug 2011 13:20:28 +0400
+Date: Sun, 14 Aug 2011 13:50:10 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110814092028.GB14293@openwall.com>
-References: <20110812150304.GC16880@albatros> <4E45884B.8030303@zytor.com> <20110813062246.GC3851@albatros> <36fcaf94-2e99-47cb-a835-aefb79856429@email.android.com> <m2ei0olnua.fsf@firstfloor.org> <632d03b0-6725-431e-b100-13f5046b03e9@email.android.com>
+Message-ID: <20110814095010.GA14443@openwall.com>
+References: <20110810142609.GA31434@openwall.com> <20110810150257.GA12198@albatros> <20110810154059.GA31860@openwall.com> <20110810162101.GA2833@albatros> <20110810164225.GA32177@openwall.com> <20110812120747.GA14598@albatros> <20110812122343.GA7859@openwall.com> <20110813151220.GA8388@albatros> <20110813151947.GA12495@openwall.com> <20110813165502.GA9328@albatros>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <632d03b0-6725-431e-b100-13f5046b03e9@email.android.com>
-Subject: [kernel-hardening] Re: [RFC] x86: restrict pid namespaces to 32 or 64 bit syscalls
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Andi Kleen <andi@firstfloor.org>, Vasiliy Kulikov <segoon@openwall.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
+In-Reply-To: <20110813165502.GA9328@albatros>
+Subject: Re: [kernel-hardening] 32/64 bitness restriction for pid namespace
+To: kernel-hardening@lists.openwall.com
+Cc: Chris Evans <scarybeasts@gmail.com>, djm@mindrot.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 13, 2011 at 10:08:57PM -0700, H. Peter Anvin wrote:
-> Andi Kleen <andi@firstfloor.org> wrote:
-> 
-> >Sounds to me a better alternative would be more aggressive, pro-active
-> >fuzzing of the compat calls.
-[...]
-> Agreed.  Other than that, I can see a fine-grained permission filter, but the compat vs noncompat axis is just spurious.
+Vasiliy,
 
-In case anyone cares, I respectfully disagree.  I am with Vasiliy on
-this.  I think that proactive fuzzing is great, but it is not an
-alternative - we can also do both fuzzing and reduction of attack
-surface at once.  With Vasiliy reusing an existing check (in a future
-revision of the patch), there's not going to be any performance impact.
-Fine-grained restrictions would be great, but the 32- vs. 64-bit
-restriction makes sense to me as well.  I expect different systems to
-use these different kinds of restrictions in different cases.
+On Sat, Aug 13, 2011 at 08:55:02PM +0400, Vasiliy Kulikov wrote:
+> Some thoughts about prctl() approach.
 
-We will definitely want to support x32 as well.  We'd appreciate any
-suggestions on how to do it best.
+Here's a further thought:
 
-Thanks,
+The feature makes sense not only for pid namespaces, but also for some
+daemons, and especially for their privsep child processes - regardless
+of whether they make use of namespaces (vsftpd) or not (openssh).
+
+So maybe the restriction should apply to a process tree rather than to a
+namespace?  Sure, in some cases it could be bypassed via ptrace(), but
+the intended uses would be either in containers (separate pid namespace)
+or in daemons' privsep child processes, which are hopefully running as a
+pseudo-user dedicated to the daemon - so can't ptrace() anything else
+because of uid mismatch, and can't ptrace() other instances because of
+their dumpable flag having been reset on setuid().
+
+Specifically, the prctl() could set your two proposed flag bits
+affecting the following execve(), but it could also set a third bit,
+which, when set, would immediately lock the current process to its
+current bitness (or to current ABI in general) and would also lock
+execve()'d binaries in the same way (although in practice such
+processes will tend to be chrooted to /var/empty).
+
+So we have three bits:
+
+bit 0 - lock next execve() to 32-bit
+bit 1 - lock next execve() to 64-bit
+bit 2 - lock current process and execve() to current bitness/ABI
+
+Specific bit combinations are interpreted as follows:
+
+0 - no locking (current behavior)
+1 - lock next execve() to 32-bit, fail it if not 32-bit ELF
+2 - lock next execve() to 64-bit, fail it if not 64-bit ELF
+3 - lock the next execve()'d process to its actual bitness
+4 - lock current process and execve() to current bitness
+5 - lock current process to current bitness, but execve() to 32-bit ELF
+6 - lock current process to current bitness, but execve() to 64-bit ELF
+7 - lock current process to current bitness, but next execve() to its actual bitness
+
+5 to 7 are probably not very useful, but are defined for consistency.
+
+Maybe when bit 2 is set, it should also disable ptrace() for the current
+process (so that it can't ptrace() other processes even of matching uid).
+
+How does this sound to you?
+
+Concern/to-do: need to figure out how x32 and other ABIs fit into this.
 
 Alexander
