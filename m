@@ -1,27 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 13 Aug 2011 23:25:30 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110813192530.GB13051@openwall.com>
-References: <20110810150257.GA12198@albatros> <20110810154059.GA31860@openwall.com> <20110810162101.GA2833@albatros> <20110810164225.GA32177@openwall.com> <20110812120747.GA14598@albatros> <20110812122343.GA7859@openwall.com> <20110813151220.GA8388@albatros> <20110813151947.GA12495@openwall.com> <20110813165502.GA9328@albatros> <20110813173118.GA1639@albatros>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110813173118.GA1639@albatros>
-Subject: Re: [kernel-hardening] 32/64 bitness restriction for pid namespace
-To: kernel-hardening@lists.openwall.com
+References: <20110812150304.GC16880@albatros> <4E45884B.8030303@zytor.com> <20110813062246.GC3851@albatros> <36fcaf94-2e99-47cb-a835-aefb79856429@email.android.com> <m2ei0olnua.fsf@firstfloor.org>
+In-Reply-To: <m2ei0olnua.fsf@firstfloor.org>
+MIME-Version: 1.0
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 8bit
+From: "H. Peter Anvin" <hpa@zytor.com>
+Date: Sat, 13 Aug 2011 22:08:57 -0700
+Message-ID: <632d03b0-6725-431e-b100-13f5046b03e9@email.android.com>
+Subject: [kernel-hardening] Re: [RFC] x86: restrict pid namespaces to 32 or 64 bit syscalls
+To: Andi Kleen <andi@firstfloor.org>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 13, 2011 at 09:31:18PM +0400, Vasiliy Kulikov wrote:
-> Also, to keep the code clean and small, I think sysctl interface should
-> be dropped.  The only use case is locking a live container, which is
-> probably a very limited thing.  Also it will fail if any unprivileged task
-> already runs a binary of other bitness anyway.
-> 
-> Do you agree?
+Andi Kleen <andi@firstfloor.org> wrote:
 
-Yes.
+>"H. Peter Anvin" <hpa@zytor.com> writes:
+>>
+>> IA64 is totally different.  I'm extremely sceptical to this patch; it
+>feels like putting code in a super-hot path to paper over a problem
+>that has to be fixed anyway.
+>
+>Sounds to me a better alternative would be more aggressive, pro-active
+>fuzzing of the compat calls.
+>
+>-Andi
+>
+>-- 
+>ak@linux.intel.com -- Speaking for myself only
 
-BTW, another user of this feature may be vsftpd - but I guess it will
-simply be enhanced to use our prctl().
-
-Alexander
+Agreed.  Other than that, I can see a fine-grained permission filter, but the compat vs noncompat axis is just spurious.
+-- 
+Sent from my mobile phone. Please excuse my brevity and lack of formatting.
