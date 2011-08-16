@@ -1,62 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 16 Aug 2011 13:05:40 +0400
+Date: Tue, 16 Aug 2011 17:55:16 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110816090540.GA7857@albatros>
-References: <20110812102954.GA3496@albatros>
- <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
+Message-ID: <20110816135515.GA17658@albatros>
+References: <20110810161302.GA2548@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
-Subject: [kernel-hardening] Re: [RFC] x86, mm: start mmap allocation for libs from low
- addresses
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org
+In-Reply-To: <20110810161302.GA2548@albatros>
+Subject: [kernel-hardening] Re: [RFC] proc: introduce pid_allowed mount option
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: kernel-hardening@lists.openwall.com, "Eric W. Biederman" <ebiederm@xmission.com>, Alexey Dobriyan <adobriyan@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Arnd Bergmann <arnd@arndb.de>, "Serge E. Hallyn" <serge@hallyn.com>, Ingo Molnar <mingo@elte.hu>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 12, 2011 at 18:19 -0500, H. Peter Anvin wrote:
-> Vasiliy Kulikov <segoon@openwall.com> wrote:
+Hi,
+
+On Wed, Aug 10, 2011 at 20:13 +0400, Vasiliy Kulikov wrote:
+> This patch adds support of pid_allowed=XX and attr_allowed=YY mount
+> options for procfs.  When set, all /proc/PID/ files are restricted to
+> the owner, except filenames passed via pid_allowed= argument.  E.g. with
+> pid_allowed=sched sched file would be world readable and other files
+> would be restricted to the task owner.  The same for /proc/PID/attr/
+> files and attr_allowed=YY.
+[...]
+> Is the whole idea of high granularity, but static permissions worth it?
+> The previous patch with relaxed/fully-restricted modes was criticized
+> for being highly specific to one particular set of requirements:
 > 
-> >This patch changes mmap base address allocator logic to incline to
-> >allocate addresses from the first 16 Mbs of address space.  These
-> >addresses start from zero byte (0x00AABBCC).
-...
+> http://www.openwall.com/lists/kernel-hardening/2011/06/21/3
+> 
+> On/off mechanism was used in server environments in times of Linux
+> 2.0-2.4 as part of -ow patch and currently as part of -grsecurity patch.
+> There were no complains about too limited application.  It serves a well
+> defined needs (limiting processes' information to the owner, root, and a
+> privileged "monitoring" group).
 
-To make it clear:
+Any comments about the approach in general?
 
-The VM space is not significantly reduced - an additional gap, which
-is used for ASCII-protected region, is calculated the same way as the
-common mmap gap is calculated.  The maximum size of the gap is 1MB for
-the upstream kernel default ASLR entropy - a trifle IMO.
+Different procfs patches were maintained out of tree for ~10 years,
+all of them had/has the same goal - restrict processes/networking
+information from unprivileged users.  All of them were not high
+granularity, just on/off.
 
-If the new allocator fails to find appropriate vma in the protected
-zone, the old one tries to do the job.  So, no visible changes for
-userspace.
+As to chmod/chown'able approach with inheritable permission across
+fork() - I cannot imagine any case where it has any advantages over
+static approach (which is implemented in this patch), but I see
+disadvantages:
 
-
-As to the benefit:
-
-1) For small PIE programs, which don't use much libraries, all
-executable regions are moved to the protected zone.
-
-2) For non-PIE programs if image starts from 0x00AABBCC address and fits
-into the zone the same rule of small libs applies.
-
-3) For non-PIE programs with images above 0x01000000 and/or programs
-with much libraries some code sections are outsize of the protected region.
-
-The protection works for (1) and (2) programs.  It doesn't work for (3).
+ * What to do on exec'ing setuid binary?  We have to re'chmod files to
+   some sane defaults - first umask set.
+ * For usermode helpers? - second umask set.
+ * On privilege dropping (setuid(2))?  We can have umask
+   set for all users, but it might not be convenient.  We can have umask
+   set for each user.  Or we can use userspace for re-chmod'ing files
+   like PAM, but what to do for apps that don't use PAM?..
+ * Privilege restore? - a umask set again.
 
 
-(1) is not too seldom.  Programs, which need such protection (network
-daemons, programs parsing untrusted input, etc.), are usually small
-enough.  In our distro, Openwall GNU/*/Linux, almost all daemon programs
-fit into the region.
+What is the goal of procfs high granularity permission model?  What
+needs does it serve?  Every high granularity security model quickly
+becomes hard to maintain/configure properly.  Given there were no out of
+tree attempts to extend procfs in this direction (well, at least no
+widespread attempts), I'm afraid such complication worth it.
 
-As the changes are not intrusive, we'd want to see this feature in the
-upstream kernel.  If you know why the patch cannot be a part of the
-upstream kernel - please tell me, I'll try to address the issues.
+I think on/off approach addresses the issue, which I've tried to
+explain earlier, and it is "generic enough" for the existing needs.
+
 
 Thanks,
 
