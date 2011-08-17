@@ -1,74 +1,111 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 16 Aug 2011 17:55:16 +0400
+Date: Wed, 17 Aug 2011 23:15:51 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110816135515.GA17658@albatros>
-References: <20110810161302.GA2548@albatros>
+Message-ID: <20110817191550.GA18554@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110810161302.GA2548@albatros>
-Subject: [kernel-hardening] Re: [RFC] proc: introduce pid_allowed mount option
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com, "Eric W. Biederman" <ebiederm@xmission.com>, Alexey Dobriyan <adobriyan@gmail.com>, Greg Kroah-Hartman <gregkh@suse.de>, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, Arnd Bergmann <arnd@arndb.de>, "Serge E. Hallyn" <serge@hallyn.com>, Ingo Molnar <mingo@elte.hu>, linux-kernel@vger.kernel.org
+Subject: [kernel-hardening] kmalloc() nofail allocations
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Solar,
 
-On Wed, Aug 10, 2011 at 20:13 +0400, Vasiliy Kulikov wrote:
-> This patch adds support of pid_allowed=XX and attr_allowed=YY mount
-> options for procfs.  When set, all /proc/PID/ files are restricted to
-> the owner, except filenames passed via pid_allowed= argument.  E.g. with
-> pid_allowed=sched sched file would be world readable and other files
-> would be restricted to the task owner.  The same for /proc/PID/attr/
-> files and attr_allowed=YY.
-[...]
-> Is the whole idea of high granularity, but static permissions worth it?
-> The previous patch with relaxed/fully-restricted modes was criticized
-> for being highly specific to one particular set of requirements:
-> 
-> http://www.openwall.com/lists/kernel-hardening/2011/06/21/3
-> 
-> On/off mechanism was used in server environments in times of Linux
-> 2.0-2.4 as part of -ow patch and currently as part of -grsecurity patch.
-> There were no complains about too limited application.  It serves a well
-> defined needs (limiting processes' information to the owner, root, and a
-> privileged "monitoring" group).
+As a follow up of setuid() subject - I'm thinking about such scheme of
+making the kmalloc nofail allocation policy explicit.
 
-Any comments about the approach in general?
+Currently small allocations cannot fail:
 
-Different procfs patches were maintained out of tree for ~10 years,
-all of them had/has the same goal - restrict processes/networking
-information from unprivileged users.  All of them were not high
-granularity, just on/off.
+static inline int
+should_alloc_retry(gfp_t gfp_mask, unsigned int order,
+				unsigned long pages_reclaimed)
+{
+    ...
+	/*
+	 * In this implementation, order <= PAGE_ALLOC_COSTLY_ORDER
+	 * means __GFP_NOFAIL, but that may not be true in other
+	 * implementations.
+	 */
+	if (order <= PAGE_ALLOC_COSTLY_ORDER)
+		return 1;
+    ...
+}
 
-As to chmod/chown'able approach with inheritable permission across
-fork() - I cannot imagine any case where it has any advantages over
-static approach (which is implemented in this patch), but I see
-disadvantages:
+But this policy is not explicit and many core developers even don't know
+about it.  Last year I sent many patches fixing missing kmalloc()
+checks, which were actually redundant because of should_alloc_retry()
+logic.  But I got *no* complains that kmalloc() cannot fail.  So, either
+it doesn't really guaranteed or a few people know about it.
 
- * What to do on exec'ing setuid binary?  We have to re'chmod files to
-   some sane defaults - first umask set.
- * For usermode helpers? - second umask set.
- * On privilege dropping (setuid(2))?  We can have umask
-   set for all users, but it might not be convenient.  We can have umask
-   set for each user.  Or we can use userspace for re-chmod'ing files
-   like PAM, but what to do for apps that don't use PAM?..
- * Privilege restore? - a umask set again.
+If the former, we should do something with set_user() error path and
+similar places.
+
+If the latter (which is likely case), I suggest this scheme:
+
+For each structure, which is expected to be small, explicitly define
+the expectation and use specialized function for the allocations.
 
 
-What is the goal of procfs high granularity permission model?  What
-needs does it serve?  Every high granularity security model quickly
-becomes hard to maintain/configure properly.  Given there were no out of
-tree attempts to extend procfs in this direction (well, at least no
-widespread attempts), I'm afraid such complication worth it.
+In header.h:
 
-I think on/off approach addresses the issue, which I've tried to
-explain earlier, and it is "generic enough" for the existing needs.
+struct some_struct {
+    ...
+};
+MALLOC_CANNOT_FAIL(some_struct);
 
+In .c:
+
+struct some_struct *x = kmalloc_nofail(sizeof(some_struct *), GFP_KERNEL);
+x->a = 12; /* no check x==NULL */
+
+
+In generic .h:
+
+#define MALLOC_CANNOT_FAIL(x) \
+    BUILD_BUG_ON(sizeof(x) <= (1 << PAGE_ALLOC_COSTLY_ORDER))
+
+static inline
+void *kmalloc_nofail(size_t size, int flags)
+{
+    void *p;
+    BUILD_BUG_ON(!__buildin_const_p(size));
+    BUILD_BUG_ON(size > (1 << PAGE_ALLOC_COSTLY_ORDER));
+    p = kmalloc(size, flags);
+    BUG_ON(p == NULL);
+    return p;
+}
+
+
+So, this code does 3 things:
+
+1) explicitly exploits the property of nofail allocation for reducing
+error handling code.
+
+2) ensures that (1) works in runtime.
+
+3) ensures that "occasional" future changes of allocated structure type
+(or subfield types) don't cross NOFAIL size limits.
+
+
+I'm not sure about 2 things:
+
+1) whether BUG_ON(p == 0) is OK in sense of permormance.  As compared to
+the current behaviour, the check is simply moved into kmalloc_nofail()
+without any slowdown, but someone may say "hey, why then have _any_
+runtime check at all?".
+
+2) kmalloc_nofail() interface.  There was __NOFAIL flag for kmalloc(),
+which was removed for some reasons.  So, it needs some investigation.
+
+
+I expect to get positive feedback from LKML folks as it resolves some
+nasty hardly debuggable bugs, which are quite often.
+
+
+What do you think about it?
 
 Thanks,
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
