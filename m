@@ -1,37 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 22 Aug 2011 13:41:38 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110822094138.GA13710@openwall.com>
-References: <20110718194803.GA5337@albatros> <20110723153751.GB11156@openwall.com> <20110822093405.GA2450@albatros>
-Mime-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 22 Aug 2011 13:45:58 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110822094558.GA2620@albatros>
+References: <20110817191550.GA18554@albatros>
+ <20110820142723.GA5708@albatros>
+ <20110820163120.GA7256@openwall.com>
+ <20110822092429.GA29597@albatros>
+ <20110822093819.GA13665@openwall.com>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110822093405.GA2450@albatros>
-Subject: Re: [kernel-hardening] GNU_STACK policy problem
+In-Reply-To: <20110822093819.GA13665@openwall.com>
+Subject: Re: [kernel-hardening] kmalloc() nofail allocations
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy,
+Solar,
 
-On Mon, Aug 22, 2011 at 01:34:05PM +0400, Vasiliy Kulikov wrote:
-> Looking into ELF documentation:
+On Mon, Aug 22, 2011 at 13:38 +0400, Solar Designer wrote:
+> On Mon, Aug 22, 2011 at 01:24:29PM +0400, Vasiliy Kulikov wrote:
+> > Major problem with the idea in general:
+> ...
+> > Unlikely, but fully possible case - we want some memory and the OOM killer
+> > kills us for our wish.
 > 
-> In MIPS, SPARC no AT_FLAGS bits are used currently.  And "bits under the
-> 0xff000000 mask are reserved for system semantics."
-> 
-> In IA-32 and PPC no bits are used.  No "system" flags are mentioned.
-> 
-> 
-> I didn't find any definition of "system semantics", I guess it means any
-> non-standard usage on local system.  Probably we should use these bits.
+> How/why is this a major problem with the idea in general?  I am probably
+> missing something.
 
-Yes, using some of those reserved bits (even if reserved on other archs
-only) makes sense to me.
+Initially I wanted to "wrap" kmalloc calls, which cannot fail in any
+case.  This would not change any mm code, but the caller (its
+expectation).
 
-Your changes look good to me - at least good enough to bring a
-discussion up on LKML if you choose to do so despite of the NAK
-expectation.  As discussed off-list, I think it's OK to try.
+Now I see that it's impossible without any mm code changes.  It needs at
+least __GFP_NOFAIL flag addition, which is explicitly marked as "no new
+uses".  Such kmalloc_nofail() wouldn't differ much from kmalloc(size,
+flags | __GFP_NOFAIL).
+
 
 Thanks,
 
-Alexander
+-- 
+Vasiliy
