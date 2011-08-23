@@ -1,82 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 23 Aug 2011 10:41:01 +0400
+Date: Tue, 23 Aug 2011 16:36:46 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110823064101.GA3780@albatros>
-References: <20110812102954.GA3496@albatros>
- <ccea406f-62be-4344-8036-a1b092937fe9@email.android.com>
- <20110816090540.GA7857@albatros>
- <20110822101730.GA3346@albatros>
- <4E5290D6.5050406@zytor.com>
- <20110822201418.GA3176@albatros>
- <4E52B96B.8040404@zytor.com>
+Message-ID: <20110823123646.GA19910@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <4E52B96B.8040404@zytor.com>
-Subject: [kernel-hardening] Re: [RFC] x86, mm: start mmap allocation for libs from low
- addresses
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Andrew Morton <akpm@linux-foundation.org>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org
+Subject: [kernel-hardening] segoon's status report - #15 of 15
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 22, 2011 at 13:17 -0700, H. Peter Anvin wrote:
-> On 08/22/2011 01:14 PM, Vasiliy Kulikov wrote:
-> > 
-> >> Code-wise:
-> >>
-> >> The code is horrific; it is full of open-coded magic numbers;
-> > 
-> > Agreed, the magic needs macro definition and comments.
-> > 
-> >> it also
-> >> puts a function called arch_get_unmapped_exec_area() in a generic file,
-> >> which could best be described as "WTF" -- the arch_ prefix we use
-> >> specifically to denote a per-architecture hook function.
-> > 
-> > Agreed.  But I'd want to leave it in mm/mmap.c as it's likely be used by
-> > other archs - the changes are bitness specific, not arch specific.  Is
-> > it OK if I do this?
-> > 
-> > #ifndef HAVE_ARCH_UNMAPPED_EXEC_AREA
-> > void *arch_get_unmapped_exec_area(...)
-> > {
-> >     ...
-> > }
-> > #endif
-> > 
-> 
-> Only if this is really an architecture-specific function overridden in
-> specific architectures.  I'm not so sure that applies here.
+Hi,
 
-It is a more or less generic allocator.  Arch specific constants will be
-moved to arch headers, so it will be a 32-bit specific function, not
-arch specific (64 bit architectures don't need ASCII shield at all as
-mmap addresses already contain a zero byte).  It will not be overriden
-by x86 as it is "enough generic" for x86.
+As it is the last status report, I've included Monday's activity too.
 
-I've defined it as arch_* looking at other allocator implementations.
-All of them are arch_* and are located in mm/mmap.c with the ability to
-override them in architecture specific files.  Probably nobody will
-override it, but I tried to make it consistent with the existing code.
-If this HAVE_ARCH_*/arch_* logic is not suitable for exec_area, I'll
-remove arch_ prefix.
+Accomplishments:
 
-
-> Furthermore, I'm not even all that sure what this function *does*.
-
-This is a bottom-up allocator, which tries to reuse all holes in the
-ASCII-protected region.  It differs from arch_get_unmapped_area() in the
-priority of the first 16 Mb - arch_get_unmapped_area() tries to walk
-through all vmas in the whole VM space, arch_get_unmapped_exec_area()
-tries to reuse all memory from the first 16 Mb and only then allocating
-arbitrary addressed by fallbacking to the default allocator (top down in
-case of x86).
-
-I'll add the comment for the allocator.
-
-Thank you,
+ * Implemented 32/64 bit restriction via prctl().
+ * Implemented a prototype of nofail allocation routines, came at
+   the conclusion that it is too intrusive idea.
+ * Discussed ASCII-armor usefulness with upstream.
+ * Discussed GNU_STACK issues with Solar, posted a follow up to k-h.
 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
