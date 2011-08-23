@@ -1,26 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 23 Aug 2011 16:36:46 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110823123646.GA19910@albatros>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] segoon's status report - #15 of 15
-To: kernel-hardening@lists.openwall.com
+Date: Tue, 23 Aug 2011 14:44:30 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20110823144430.75315ce8.akpm@linux-foundation.org>
+In-Reply-To: <20110804162009.GA2469@albatros>
+References: <20110804162009.GA2469@albatros>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] proc: fix races of /proc/PID/{fd/,fdinfo/,fdinfo/*}
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, linux-kernel@vger.kernel.org, security@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Thu, 4 Aug 2011 20:20:09 +0400
+Vasiliy Kulikov <segoon@openwall.com> wrote:
 
-As it is the last status report, I've included Monday's activity too.
+> fd* files are restricted to the task's owner, but keeping opened procfs
+> file descriptors makes it possible to violate the permission model.
+> Keeping fdinfo/* may disclosure current position and flags, keeping
+> fdinfo/ and fd/ may disclosure number of opened files.
+> 
+> Used existing (un)lock_trace functions to deal with the race.
 
-Accomplishments:
+what race.
 
- * Implemented 32/64 bit restriction via prctl().
- * Implemented a prototype of nofail allocation routines, came at
-   the conclusion that it is too intrusive idea.
- * Discussed ASCII-armor usefulness with upstream.
- * Discussed GNU_STACK issues with Solar, posted a follow up to k-h.
+When fixing a bug, please completely, utterly and exhaustively describe
+the bug!
 
--- 
-Vasiliy
+> CC: Stable Tree <stable@kernel.org>
+
+And when cc'ing -stable, please make it very clear why you consider the
+bug sufficiently serious to warant mackporting the fix into earlier
+kernels.
