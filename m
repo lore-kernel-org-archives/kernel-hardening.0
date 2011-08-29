@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 29 Aug 2011 16:00:00 -0700
+Date: Mon, 29 Aug 2011 16:02:10 -0700
 From: Andrew Morton <akpm@linux-foundation.org>
-Message-Id: <20110829160000.9e14f8b8.akpm@linux-foundation.org>
+Message-Id: <20110829160210.f0f2ce99.akpm@linux-foundation.org>
 In-Reply-To: <20110829180011.GA8839@albatros>
 References: <20110804162009.GA2469@albatros>
 	<20110823144430.75315ce8.akpm@linux-foundation.org>
@@ -22,58 +22,10 @@ List-ID: <kernel-hardening.lists.openwall.com>
 On Mon, 29 Aug 2011 22:00:11 +0400
 Vasiliy Kulikov <segoon@openwall.com> wrote:
 
-> fd* files are restricted to the task's owner, and other users may not
-> get direct access to them.  But one may open any of these files and run
-> any setuid program, keeping opened file descriptors.  As there are
-> permission checks on open(), but not on readdir() and read(), operations
-> on the kept file descriptors will not be checked.  It makes it possible
-> to violate procfs permission model.
-> 
-> Reading fdinfo/* may disclosure current fds' position and flags, reading
-> directory contents of fdinfo/ and fd/ may disclosure the number of opened
-> files by the target task.  This information is not sensible per se, but
-> it can reveal some private information (like length of a password stored in
-> a file) under certain conditions.
-> 
 > Used existing (un)lock_trace functions to check for ptrace_may_access(),
 > but instead of using EPERM return code from it use EACCES to be
 > consistent with existing proc_pid_follow_link()/proc_pid_readlink()
 > return code.  If they differ, attacker can guess what fds exist by
-> analyzing stat() return code.  Patched handlers: stat() for fd/*, stat()
-> and read() for fdindo/*, readdir() and lookup() for fd/ and fdinfo/.
-> 
-> +	rc = -EACCES;
-> +	if (lock_trace(task))
-> +		goto out_task;
-> +
->
-> ...
->
-> +	rc = -EACCES;
-> +	if (lock_trace(task))
-> +		goto out_task;
-> +
->
-> ...
->
-> +	result = ERR_PTR(-EACCES);
-> +	if (lock_trace(task))
-> +		goto out;
-> +
->
-> ...
->
-> +
-> +	retval = -EACCES;
-> +	if (lock_trace(p))
-> +		goto out;
-> +
->
-> ...
->
+> analyzing stat() return code.
 
-lock_trace() can return -EPERM, and it can return whatever
-mutex_lock_killable() returned (-EINTR, perhaps other things?).
-
-The patch simply overwrites this return value with -EACCES.  Is this
-deliberate and correct?  If so, please explain?
+doh, I missed that bit.  Fair enough.
