@@ -1,64 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Fri, 2 Sep 2011 20:37:11 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110902163711.GA3124@albatros>
-References: <20110831075814.003575573@openvz.org>
- <20110831080229.100652529@openvz.org>
- <20110831090612.GA3253@albatros>
- <20110831112642.GI25465@sun>
- <20110831140416.GA17626@shutemov.name>
- <20110831142622.GB30615@sun>
- <20110831151023.5b7e12da.akpm@linux-foundation.org>
- <20110901080508.GF30615@sun>
+Date: Fri, 2 Sep 2011 20:48:41 +0400
+From: Vasiliy Kulikov <segooon@gmail.com>
+Message-ID: <20110902164841.GA3818@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110901080508.GF30615@sun>
-Subject: [kernel-hardening] Re: [patch 2/2] fs, proc: Introduce the /proc/<pid>/map_files/
- directory v6
-To: Cyrill Gorcunov <gorcunov@gmail.com>, Andrew Morton <akpm@linux-foundation.org>
-Cc: "Kirill A. Shutemov" <kirill@shutemov.name>, containers@lists.osdl.org, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Nathan Lynch <ntl@pobox.com>, kernel-hardening@lists.openwall.com, Oren Laadan <orenl@cs.columbia.edu>, Daniel Lezcano <dlezcano@fr.ibm.com>, Glauber Costa <glommer@parallels.com>, James Bottomley <jbottomley@parallels.com>, Tejun Heo <tj@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@ZenIV.linux.org.uk>, Pavel Emelyanov <xemul@parallels.com>
+Subject: [kernel-hardening] proc: fix task_struct leak in proc_pid_fd_link_getattr()
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: kernel-hardening@lists.openwall.com, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, David Rientjes <rientjes@google.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+In the patch "proc: fix races against execve() of /proc/PID/fd**"
+proc_pid_fd_link_getattr() leaked task_struct if ptrace check fails.
 
-On Thu, Sep 01, 2011 at 12:05 +0400, Cyrill Gorcunov wrote:
-> ...
-> > > +/*
-> > > + * NOTE: The getattr/setattr for both /proc/$pid/map_files and
-> > > + * /proc/$pid/fd seems to have share the code, so need to be
-> > > + * unified and code duplication eliminated!
-> > 
-> > Why not do this now?
-> 
-> There are a couple of reasons. Yesterday I was talking to
-> Vasiliy Kulikov about this snippet, so he seems about to send
-> you patches related to /proc/$pid/fd update, and after those
-> patches will be merged we are to drop code duplication.
-> Vasiliy, what the status of the update?
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+Reported-by: Cyrill Gorcunov <gorcunov@gmail.com>
+--
+ fs/proc/base.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
 
-It looks like protecting directories with sensible contents is a nasty
-thing.  The problem here is that if the dentry is present in the cache,
-->lookup() is not called at all and the permissions can be checked in
-fop/dop/iop specific handler (getattr(), readlink(), etc.).  However, it
-would be much simplier to hook ->lookup() only.  Otherwise, we have to
-define procfs handlers for all operations, which don't call
-->d_revalidate().
-
-Is it possible to disable caching dentry for specific files?  It is not
-performace critical thing in fd and map_files and it would much simplify
-the task.  Creating handlers for all these op handler bloats procfs.
-
-Also I'm not sure what other handlers might reveal dentry presence.
-Besides ->getattr() I could find only one thing - ->link() (Cyrill,
-AFAICS ->setattr() doesn't reveal files' presence).  Someone more
-familiar with vfs than me - please, help to identify all infoleak
-sources!
-
-
-Thank you,
-
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index b65bd88..d44c701 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -1681,9 +1681,9 @@ static int proc_pid_fd_link_getattr(struct vfsmount *mnt, struct dentry *dentry,
+ 
+ 	generic_fillattr(inode, stat);
+ 	unlock_trace(task);
+-	put_task_struct(task);
+ 	rc = 0;
+ out_task:
++	put_task_struct(task);
+ 	return rc;
+ }
+ 
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Vasiliy
