@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 2 Sep 2011 22:29:29 +0400
+Date: Sat, 3 Sep 2011 03:34:13 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110902182929.GA23848@openwall.com>
+Message-ID: <20110902233413.GB26494@openwall.com>
 References: <20110812102954.GA3496@albatros> <20110812105824.GA7141@openwall.com> <20110825171934.GA3044@albatros>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
@@ -13,221 +13,160 @@ List-ID: <kernel-hardening.lists.openwall.com>
 
 Vasiliy,
 
-Some nitpicking on the patch description:
+Here's another set of comments from me (I ran out of time when writing
+the previous message on this).
 
 On Thu, Aug 25, 2011 at 09:19:34PM +0400, Vasiliy Kulikov wrote:
-> This patch changes mmap base address allocator logic to incline to
-> allocate addresses for executable pages from the first 16 Mbs of address
-
-s/Mbs/MiB/ (or just MB, whereas Mb is sometimes used to denote megabits)
-
-> space.  These addresses start from zero byte (0x00AABBCC).  Using such
-> addresses breaks ret2libc exploits abusing string buffer overflows (or
-> does it much harder).
-
-s,does it much harder,makes such attacks harder and/or less reliable,
-
-> As x86 architecture is little-endian, this zero byte is the last byte of
-> the address.  So it's possible to e.g. overwrite a return address on the
-> stack with the mailformed address.  However, now it's impossible to
-
-s/mailformed/malformed/
-
-> additionally overwrite function arguments, which are located after the
-> function address on the stack.  The attacker's best bet may be to find
-> an entry point not at function boundary that sets registers and then
-> proceeds with or branches to the desired library code.  The easiest way
-> to set registers and branch would be a function epilogue -
-> pop/pop/.../ret - but then there's the difficulty in passing the address
-> to ret to (we have just one NUL and we've already used it to get to this
-> code).  Similarly, even via such pop's we can't pass an argument that
-> contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
-> contains a NUL most significant byte too) or a zero value for root's
-> uid.
-
-The above was partially flawed logic on my part - as written above
-(without further detail), the pop/pop/.../ret thing doesn't apply
-because those pop's would read stack right after the just-used return
-address - that is, the same stack locations that we presumably could not
-write to in order to pass the arguments in a more straightforward
-fashion.  So this trick would be of no help, and thus its other
-limitations would be of no relevance.
-
-However, in practice similar approaches involving function epilogues
-could be of relevance.  For example, a certain build of glibc has this
-instruction sequence:
-
-mov    0xfffffff0(%ebp),%eax
-lea    0xfffffff4(%ebp),%esp
-pop    %ebx
-pop    %esi
-pop    %edi
-pop    %ebp
-ret
-
-So the reads may actually be from different stack locations - perhaps on
-the calling function's stack frame (since our vulnerable function likely
-similarly restored %ebp prior to returning).
-
-In practice, an exploit could try to pass these values via inputs other
-than the string used to cause the overflow, if such user inputs are
-available in a given program and attack vector.  These other inputs may
-or may not make it difficult to pass NULs, and the number of NULs that
-may be passed will vary.
-
-Trying to explain it in detail is beyond scope of the patch description,
-and we might get it partially wrong again.
-
-I propose that we keep this portion almost as-is:
-
-> additionally overwrite function arguments, which are located after the
-> function address on the stack.  The attacker's best bet may be to find
-> an entry point not at function boundary that sets registers and then
-> proceeds with or branches to the desired library code.  The easiest way
-
-with only one change - s/overwrite/provide/
-
-However, we just end the sentence here:
-
-"to set registers and branch would be a function epilogue."
-
-Instead of this piece:
-
-> pop/pop/.../ret - but then there's the difficulty in passing the address
-> to ret to (we have just one NUL and we've already used it to get to this
-> code).  Similarly, even via such pop's we can't pass an argument that
-> contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
-> contains a NUL most significant byte too) or a zero value for root's
-> uid.
-
-We may write:
-
-"Then it may be similarly difficult to reliably pass register values and
-a further address to branch to, because the desired values for these
-will also tend to contain NULs - e.g., the address of "/bin/sh" in libc
-or a zero value for root's uid."
-
-> A possible bypass is via multiple overflows - if the overflow may
-> be triggered more than once before the vulnerable function returns, then
-> multiple NULs may be written, exactly one per overflow.  But this is
-> hopefully relatively rare.
-
-This is OK to keep.
-
-> To fully utilize the protection, the executable image should be
-> randomized (sysctl kernel.randomize_va_space > 0 and the executable is
-> compiled as PIE) and the sum of libraries sizes plus executable size
-> shouldn't exceed 16 Mb.
-
-Same comment re: "Mb".
-
-> In this case the only pages out of
-> ASCII-protected range are VDSO and vsyscall.  However, they don't
-> provide enough material for obtaining arbitrary code execution and are
-> not dangerous without using other executable pages.
-
-I did not research this.  Perhaps you're right.
-
-I think there are also cases when those pages are not present - e.g.,
-they don't appear to be present for 32-bit processes on Owl now, both
-with 32-bit and 64-bit kernels (Owl default builds).
-
-> The logic is applied to x86 32 bit tasks, both for 32 bit kernels and
-> for 32 bit tasks running on 64 bit kernels.  64 bit tasks already have
-> zero bytes in addresses of library functions.  Other architectures
-> (non-x86) may reuse the logic too.
-
-OK.
-
-> Without the patch:
-> 
-> $ ldd /bin/ls
-> 	linux-gate.so.1 =>  (0xf779c000)
->         librt.so.1 => /lib/librt.so.1 (0xb7fcf000)
->         libtermcap.so.2 => /lib/libtermcap.so.2 (0xb7fca000)
->         libc.so.6 => /lib/libc.so.6 (0xb7eae000)
->         libpthread.so.0 => /lib/libpthread.so.0 (0xb7e5b000)
->         /lib/ld-linux.so.2 (0xb7fe6000)
-> 
-> With the patch:
-> 
-> $ ldd /bin/ls
-> 	linux-gate.so.1 =>  (0xf772a000)
-> 	librt.so.1 => /lib/librt.so.1 (0x0004a000)
-> 	libtermcap.so.2 => /lib/libtermcap.so.2 (0x0005e000)
-> 	libc.so.6 => /lib/libc.so.6 (0x00062000)
-> 	libpthread.so.0 => /lib/libpthread.so.0 (0x00183000)
-> 	/lib/ld-linux.so.2 (0x00121000)
-
-Yes, we're getting output similar to the latter on Owl for i686 now
-(32-bit RHEL5'ish kernel), but without linux-gate.  Ditto for -ow
-patches for older kernels.
-
-> If CONFIG_VM86=y, the first megabyte is excluded from the potential
-> range for mmap allocations as it might be used by vm86 code.  If
-> CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
-> of CONFIG_VM86 the base address is randomized with the same entropy size
-> as mm->mmap_base.
-
-OK.  Shouldn't CONFIG_VM86 be a sysctl, though?
-
-Does the kernel have CONFIG_VM86 already?  I thought were merely
-discussed it, but you never submitted it to LKML?  If/when CONFIG_VM86
-or an equivalent sysctl is added, it should also control the vm86(2) and
-vm86old(2) syscalls.
-
-> If 16 Mbs are over, we fallback to the old allocation algorithm.
-> But, hopefully, programs which need such protection (network daemons,
-> programs working with untrusted data, etc.) are small enough to utilize
-> the protection.
-
-OK.  Same comment about "Mbs".
-
-> The same logic was used in -ow patch for 2.0-2.4 kernels and in
-> exec-shield for 2.6.x kernels.  Code parts were taken from exec-shield
-> from RHEL6.
-> 
-> v2 - Added comments, adjusted patch description.
->    - s/arch_get_unmapped_exec_area/get_unmapped_exec_area/
->    - Don't reserve first Mb if CONFIG_VM86=n.
-
-s/first Mb/first 1 MiB + 64 KiB/
-
-> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
-> --
->  arch/x86/mm/mmap.c       |   20 +++++++++++
->  include/linux/mm_types.h |    4 ++
->  include/linux/sched.h    |    3 ++
->  mm/mmap.c                |   82 +++++++++++++++++++++++++++++++++++++++++++---
->  4 files changed, 104 insertions(+), 5 deletions(-)
-> 
-> diff --git a/arch/x86/mm/mmap.c b/arch/x86/mm/mmap.c
-> index 1dab519..4e7a783 100644
-> --- a/arch/x86/mm/mmap.c
 > +++ b/arch/x86/mm/mmap.c
 > @@ -118,6 +118,22 @@ static unsigned long mmap_legacy_base(void)
->  		return TASK_UNMAPPED_BASE + mmap_rnd();
->  }
->  
-> +#ifdef CONFIG_VM86
+[...]
+> +static unsigned long mmap_lib_base(void)
+> +{
+> +	return ASCII_ARMOR_MIN_ADDR + mmap_rnd();
+> +}
+
+I was about to suggest that you declare this function inline, but then I
+noticed that all other tiny and single-use functions in
+arch/x86/mm/mmap.c are also non-inline.  Weird.  You might want to bring
+this up on LKML separately.
+
+> @@ -131,6 +147,10 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
+>  	} else {
+>  		mm->mmap_base = mmap_base();
+>  		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
+> +		if (mmap_is_ia32()) {
+> +			mm->get_unmapped_exec_area = get_unmapped_exec_area;
+> +			mm->lib_mmap_base = mmap_lib_base();
+> +		}
+>  		mm->unmap_area = arch_unmap_area_topdown;
+>  	}
+
+Are you sure it's safe to leave get_unmapped_exec_area and lib_mmap_base
+uninitialized when !mmap_is_ia32()?  Is there implicit initialization to
+NULL before this point maybe?  (I did not check.)
+
+> +/* Addresses before this value contain at least one zero byte. */
+> +#define ASCII_ARMOR_MAX_ADDR 0x01000000
+> +
 > +/*
-> + * Don't touch any memory that can be used by vm86 apps.
-> + * Reserve the first Mb + 64 kb of guard pages.
+> + * This function finds the first unmapped region inside of
+> + * [mm->lib_mmap_base; ASCII_ARMOR_MAX_ADDR) region.  Addresses from this
+> + * region contain at least one zero byte, which greatly complicates
+
+Maybe s/greatly // because this word is subjective, and the actual
+difficulty varies for different scenarios.
+
+> + * exploitation of C string buffer overflows (C strings cannot contain zero
+> + * byte inside) in return to libc class of attacks.
+> + *
+> + * This allocator is bottom up allocator like arch_get_unmapped_area(), but
+> + * it differs from the latter.  get_unmapped_exec_area() does its best to
+> + * allocate as low address as possible.
 > + */
-> +#define ASCII_ARMOR_MIN_ADDR (0x00100000 + 0x00010000)
+> +unsigned long
+> +get_unmapped_exec_area(struct file *filp, unsigned long addr0,
+> +		unsigned long len, unsigned long pgoff, unsigned long flags)
+> +{
+> +	unsigned long addr = addr0;
+> +	struct mm_struct *mm = current->mm;
+> +	struct vm_area_struct *vma;
+> +
+> +	if (len > TASK_SIZE)
+> +		return -ENOMEM;
+> +
+> +	if (flags & MAP_FIXED)
+> +		return addr;
 
-The extra 64 KiB are not "guard pages".  The rationale is that these
-are addresses available from VM86 mode, as well as from real mode with
-line A20 enabled on 286+ machines (dosemu may run DOS drivers and
-programs from that era).  This was a way to get slightly more of usable
-memory under DOS - IIRC, I had something like 900+ KB total DOS memory,
-736 KB free after full bootup on a 386 (with proper drivers and
-configuration tweaks).  Not everyone was happy with a mere 640 KB, of
-which only 550 KB or so would be free after DOS bootup.
+In the MAP_FIXED case, don't we need to make sure that addr is actually
+available - that is, do a "goto failed" here (fallback to old handling)?
 
-http://en.wikipedia.org/wiki/Real_mode#Addressing_capacity
+And if so, don't we need to make it the very first check - before the
+would-be-redundant len check?
 
-"So, the actual amount of memory addressable by the 80286 and later x86
-CPUs in real mode is 1 MiB + 64 KiB - 16 B = 1114096 B."
+> +	/* We ALWAYS start from the beginning as base addresses
+> +	 * with zero high bits is a valued resource */
+> +	addr = max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr);
+> +
+> +	for (vma = find_vma(mm, addr); ; vma = vma->vm_next) {
+> +		/* At this point:  (!vma || addr < vma->vm_end). */
+> +		if (TASK_SIZE - len < addr)
+> +			return -ENOMEM;
+
+Since this check is primarily of addr, I'd write it as:
+
+		if (addr > TASK_SIZE - len)
+			return -ENOMEM;
+
+Also, I hope the len == 0 && addr == TASK_SIZE case that this check
+happens to permit is irrelevant here.  I naively hope (well, maybe not)
+that addr has been checked for "< TASK_SIZE" at a higher level. ;-)
+You could want to review the current mm code for this.
+
+> +		/* We don't want to reduce brk area of not DYNAMIC elf binaries
+> +		 * with sysctl kernel.randomize_va_space < 2. */
+> +		if (mm->brk && addr > mm->brk)
+> +			goto failed;
+
+Does this check come from RHEL?  I don't fully understand it.  We also
+check for "vma->vm_end >= ASCII_ARMOR_MAX_ADDR" below.  Does this imply
+that we choose to handle the case of mm->brk being lower than
+ASCII_ARMOR_MAX_ADDR here?  Is it a practically relevant case?  Or was
+this check possibly less redundant on RHEL?
+
+(If these questions are time-consuming to find answers to, feel free to
+disregard them for now.)
+
+> +		if (!vma || addr + len <= vma->vm_start)
+> +			return addr;
+> +
+> +		addr = vma->vm_end;
+> +
+> +		/* If ACSII-armor area is over, the algo gives up */
+> +		if (addr >= ASCII_ARMOR_MAX_ADDR)
+> +			goto failed;
+> +	}
+> +
+> +failed:
+> +	return current->mm->get_unmapped_area(filp, addr0, len, pgoff, flags);
+> +}
+
+Now, the main question: what's wrong with doing something as simple as:
+
+unsigned long
+get_unmapped_exec_area(struct file *filp, unsigned long addr,
+		unsigned long len, unsigned long pgoff, unsigned long flags)
+{
+	return current->mm->get_unmapped_area(filp, ((flags & MAP_FIXED) || len >= 0x00ef0000UL) ? addr : max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr), len, pgoff, flags);
+}
+
+Of course, written in a cleaner and more generic fashion.
+
+This is similar to what I did in -ow patches, where I only needed to
+adjust TASK_UNMAPPED_BASE turning it from a constant to a trivial macro
+accepting the allocation size as input.
+
+Doesn't current->mm->get_unmapped_area() contain a similar loop to find
+the nearest hole to the supplied address?
+
+OK, I guess this is an attempt to avoid the risk of mmap'ing something
+right after the current end of the brk area, which would prevent its
+further expansion, if we have lots of small executable mappings.  With
+-ow patches, this risk is probably present (although I've never seen
+this happen in practice).  Is that the only reason?
+
+If so, would it possibly be cleaner (less invasive) to call
+current->mm->get_unmapped_area() first (adjusting the hint like -ow
+patches did), then see if the found address is suitable for use (below
+brk)?  In the unlikely case when the returned address is not suitable
+for use, drop the hint and call again.  OK, someone might not like the
+maybe 2x slowdown in the unlikely case that the address is unsuitable.
+But then, your code also involves walking a portion of the vma list
+twice in case you fallback to the old handling.  So it may be the same
+speed, but more functionality duplication.
+
+I am not exactly proposing this change.  Rather, I mention it as a
+possibility for your consideration.
+
+What do you think?
 
 Alexander
