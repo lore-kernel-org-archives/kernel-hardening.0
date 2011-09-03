@@ -1,108 +1,237 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 3 Sep 2011 15:18:49 +0400
+Date: Sat, 3 Sep 2011 16:12:06 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110903111849.GA2743@albatros>
+Message-ID: <20110903121205.GB2743@albatros>
 References: <20110812102954.GA3496@albatros>
  <20110812105824.GA7141@openwall.com>
  <20110825171934.GA3044@albatros>
- <20110902182929.GA23848@openwall.com>
+ <20110902233413.GB26494@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110902182929.GA23848@openwall.com>
+In-Reply-To: <20110902233413.GB26494@openwall.com>
 Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for
  libs from low addresses
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Sep 02, 2011 at 22:29 +0400, Solar Designer wrote:
-> On Thu, Aug 25, 2011 at 09:19:34PM +0400, Vasiliy Kulikov wrote:
-> > This patch changes mmap base address allocator logic to incline to
-> > allocate addresses for executable pages from the first 16 Mbs of address
+On Sat, Sep 03, 2011 at 03:34 +0400, Solar Designer wrote:
+> > +static unsigned long mmap_lib_base(void)
+> > +{
+> > +	return ASCII_ARMOR_MIN_ADDR + mmap_rnd();
+> > +}
 > 
-> s/Mbs/MiB/ (or just MB, whereas Mb is sometimes used to denote megabits)
+> I was about to suggest that you declare this function inline, but then I
+> noticed that all other tiny and single-use functions in
+> arch/x86/mm/mmap.c are also non-inline.  Weird.  You might want to bring
+> this up on LKML separately.
 
-OK.
+Why?  They are called once per process when mm_struct is initialized.
+Inlining would not boost the code.
 
-> > space.  These addresses start from zero byte (0x00AABBCC).  Using such
-> > addresses breaks ret2libc exploits abusing string buffer overflows (or
-> > does it much harder).
+
+> > @@ -131,6 +147,10 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
+> >  	} else {
+> >  		mm->mmap_base = mmap_base();
+> >  		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
+> > +		if (mmap_is_ia32()) {
+> > +			mm->get_unmapped_exec_area = get_unmapped_exec_area;
+> > +			mm->lib_mmap_base = mmap_lib_base();
+> > +		}
+> >  		mm->unmap_area = arch_unmap_area_topdown;
+> >  	}
 > 
-> s,does it much harder,makes such attacks harder and/or less reliable,
+> Are you sure it's safe to leave get_unmapped_exec_area and lib_mmap_base
+> uninitialized when !mmap_is_ia32()?  Is there implicit initialization to
+> NULL before this point maybe?  (I did not check.)
 
-OK.
+There is:
 
-> > As x86 architecture is little-endian, this zero byte is the last byte of
-> > the address.  So it's possible to e.g. overwrite a return address on the
-> > stack with the mailformed address.  However, now it's impossible to
-> 
-> s/mailformed/malformed/
+struct mm_struct * mm_alloc(void)
+{
+	struct mm_struct * mm;
 
-Oops.
-
-> > additionally overwrite function arguments, which are located after the
-> > function address on the stack.  The attacker's best bet may be to find
-> > an entry point not at function boundary that sets registers and then
-> > proceeds with or branches to the desired library code.  The easiest way
-> > to set registers and branch would be a function epilogue -
-> > pop/pop/.../ret - but then there's the difficulty in passing the address
-> > to ret to (we have just one NUL and we've already used it to get to this
-> > code).  Similarly, even via such pop's we can't pass an argument that
-> > contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
-> > contains a NUL most significant byte too) or a zero value for root's
-> > uid.
-> 
-> The above was partially flawed logic on my part - as written above
-> (without further detail), the pop/pop/.../ret thing doesn't apply
-> because those pop's would read stack right after the just-used return
-> address - that is, the same stack locations that we presumably could not
-> write to in order to pass the arguments in a more straightforward
-> fashion.  So this trick would be of no help, and thus its other
-> limitations would be of no relevance.
-
-Why not?  If function address contains NUL, the overflow stops at this
-address.  If it doesn't contain NUL, but argument contain NUL, it is the
-last argument an attacker can use (therefore, it would be the last
-used code chunk).  So, it has some value even if he can somehow write
-the ret address (e.g. it is out of 16 MBs).
+	mm = allocate_mm();
+	if (mm) {
+		memset(mm, 0, sizeof(*mm));
+...
 
 
-> > If CONFIG_VM86=y, the first megabyte is excluded from the potential
-> > range for mmap allocations as it might be used by vm86 code.  If
-> > CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
-> > of CONFIG_VM86 the base address is randomized with the same entropy size
-> > as mm->mmap_base.
-> 
-> OK.  Shouldn't CONFIG_VM86 be a sysctl, though?
-
-This is not a hardening setting that was present in -ow, but an existing
-config to disable vm86/vm86_old at the compile time.  It was added for
-EMBEDDED.
-
-
-> > +#ifdef CONFIG_VM86
+> > +/* Addresses before this value contain at least one zero byte. */
+> > +#define ASCII_ARMOR_MAX_ADDR 0x01000000
+> > +
 > > +/*
-> > + * Don't touch any memory that can be used by vm86 apps.
-> > + * Reserve the first Mb + 64 kb of guard pages.
-> > + */
-> > +#define ASCII_ARMOR_MIN_ADDR (0x00100000 + 0x00010000)
+> > + * This function finds the first unmapped region inside of
+> > + * [mm->lib_mmap_base; ASCII_ARMOR_MAX_ADDR) region.  Addresses from this
+> > + * region contain at least one zero byte, which greatly complicates
 > 
-> The extra 64 KiB are not "guard pages".  The rationale is that these
-> are addresses available from VM86 mode, as well as from real mode with
-> line A20 enabled on 286+ machines (dosemu may run DOS drivers and
-> programs from that era).  This was a way to get slightly more of usable
-> memory under DOS - IIRC, I had something like 900+ KB total DOS memory,
-> 736 KB free after full bootup on a 386 (with proper drivers and
-> configuration tweaks).  Not everyone was happy with a mere 640 KB, of
-> which only 550 KB or so would be free after DOS bootup.
-> 
-> http://en.wikipedia.org/wiki/Real_mode#Addressing_capacity
-> 
-> "So, the actual amount of memory addressable by the 80286 and later x86
-> CPUs in real mode is 1 MiB + 64 KiB - 16 B = 1114096 B."
+> Maybe s/greatly // because this word is subjective, and the actual
+> difficulty varies for different scenarios.
 
-Yes, my bad.
+OK.
+
+
+> > +unsigned long
+> > +get_unmapped_exec_area(struct file *filp, unsigned long addr0,
+> > +		unsigned long len, unsigned long pgoff, unsigned long flags)
+> > +{
+> > +	unsigned long addr = addr0;
+> > +	struct mm_struct *mm = current->mm;
+> > +	struct vm_area_struct *vma;
+> > +
+> > +	if (len > TASK_SIZE)
+> > +		return -ENOMEM;
+> > +
+> > +	if (flags & MAP_FIXED)
+> > +		return addr;
+> 
+> In the MAP_FIXED case, don't we need to make sure that addr is actually
+> available - that is, do a "goto failed" here (fallback to old handling)?
+
+No, what can old handling do?  If MAP_FIXED is passed, we may not change
+the behaviour.  If the region is already owned by someone, checks in the
+upper mm code would return error.  Also all other allocators just return
+addr in this case.
+
+
+> 
+> > +	/* We ALWAYS start from the beginning as base addresses
+> > +	 * with zero high bits is a valued resource */
+> > +	addr = max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr);
+> > +
+> > +	for (vma = find_vma(mm, addr); ; vma = vma->vm_next) {
+> > +		/* At this point:  (!vma || addr < vma->vm_end). */
+> > +		if (TASK_SIZE - len < addr)
+> > +			return -ENOMEM;
+> 
+> Since this check is primarily of addr, I'd write it as:
+> 
+> 		if (addr > TASK_SIZE - len)
+> 			return -ENOMEM;
+> 
+> Also, I hope the len == 0 && addr == TASK_SIZE case that this check
+> happens to permit is irrelevant here.  I naively hope (well, maybe not)
+> that addr has been checked for "< TASK_SIZE" at a higher level. ;-)
+> You could want to review the current mm code for this.
+
+len == 0 is checked in the callers - do_mmap_pgoff() and __do_brk().
+
+"< TASK_SIZE":
+
+	/* Careful about overflows.. */
+	if (len > TASK_SIZE)
+		return -ENOMEM;
+    ...
+	if (addr > TASK_SIZE - len)
+		return -ENOMEM;
+
+> > +		/* We don't want to reduce brk area of not DYNAMIC elf binaries
+> > +		 * with sysctl kernel.randomize_va_space < 2. */
+> > +		if (mm->brk && addr > mm->brk)
+> > +			goto failed;
+> 
+> Does this check come from RHEL?
+
+Partly, see below.
+
+
+>  I don't fully understand it.  We also
+> check for "vma->vm_end >= ASCII_ARMOR_MAX_ADDR" below.  Does this imply
+> that we choose to handle the case of mm->brk being lower than
+> ASCII_ARMOR_MAX_ADDR here?  Is it a practically relevant case?
+
+It's possible to have a weird case: PIE is disabled, exec image is lower
+than 0x01000000, kernel.randomize_va_space=0.  It means brk area starts
+in ASCII-armor zone.  If we try to jump over brk, then next brk growth
+would fail as we've loaded some library just after the last brk page.
+
+(Also it would touch brk guard pages, which I didn't investigate.)
+
+
+>  Or was
+> this check possibly less redundant on RHEL?
+
+
+At first, RHEL tries to allocate a region without brk check:
+
+		addr = !should_randomize() ? SHLIB_BASE :
+			randomize_range(SHLIB_BASE, 0x01000000, len);
+
+
+Then if it fails, exec-shield tries to find a region in a cycle, without
+the brk check.  Then if it overruns 0x01000000, it starts to do brk
+check:
+
+			if (addr >= 0x01000000 && should_randomize()) {
+				tmp = randomize_range(0x01000000,
+					PAGE_ALIGN(max(mm->start_brk,
+					(unsigned long)0x08000000)), len);
+
+So, they don't care about this rare case.
+
+I heard many times about legacy randomize_va_space=0 systems, which
+disable brk randomization because of some ancient proprietary software.
+Non-PIE binaries are very often nowadays.  I didn't see these 3 cases at
+once (non-PIE, low mmap exec base, no brk randomization), but I don't
+see why it's impossible.  If you know why it is, I'll remove the check.
+
+
+> (If these questions are time-consuming to find answers to, feel free to
+> disregard them for now.)
+> 
+> > +		if (!vma || addr + len <= vma->vm_start)
+> > +			return addr;
+> > +
+> > +		addr = vma->vm_end;
+> > +
+> > +		/* If ACSII-armor area is over, the algo gives up */
+> > +		if (addr >= ASCII_ARMOR_MAX_ADDR)
+> > +			goto failed;
+> > +	}
+> > +
+> > +failed:
+> > +	return current->mm->get_unmapped_area(filp, addr0, len, pgoff, flags);
+> > +}
+> 
+> Now, the main question: what's wrong with doing something as simple as:
+> 
+> unsigned long
+> get_unmapped_exec_area(struct file *filp, unsigned long addr,
+> 		unsigned long len, unsigned long pgoff, unsigned long flags)
+> {
+> 	return current->mm->get_unmapped_area(filp, ((flags & MAP_FIXED) || len >= 0x00ef0000UL) ? addr : max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr), len, pgoff, flags);
+> }
+> 
+> Of course, written in a cleaner and more generic fashion.
+
+1) get_unmapped_area may ignore the hint if the address is already owned.
+Then it would start from the cached hole address rather than ->lib_mmap_base.
+
+2) my code contains brk check in ASCII zone.
+
+
+> This is similar to what I did in -ow patches, where I only needed to
+> adjust TASK_UNMAPPED_BASE turning it from a constant to a trivial macro
+> accepting the allocation size as input.
+
+In times of -ow patch the allocator was simpler :)  Now it differs from
+arch to arch, it can be top down and bottom up.  More than that:
+currently bottom up allocator doesn't respect randomization.
+
+We could reuse/refactor bottom up allocator to use randomization, but
+it's likely to be taken as an invasive change.
+
+Changing top down allocator is likely to be rejected too as it might
+significantly slowdown the case when addr and the near zones are owned,
+but the cache hint is just OK.  Note that we don't want to change
+anything for non-32 bit systems.
+
+
+I'd want to reduce the added code size too, but it is rather tricky to
+do it with mm code.  AFAICS, the way RHEL did it (separate
+->get_unmapped_exec_area allocator) is the easiest one.
+
 
 Thanks,
 
