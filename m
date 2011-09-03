@@ -1,125 +1,100 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 4 Sep 2011 03:40:09 +0400
+Date: Sun, 4 Sep 2011 03:57:28 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20110903234009.GC29169@openwall.com>
-References: <20110812102954.GA3496@albatros> <20110812105824.GA7141@openwall.com> <20110825171934.GA3044@albatros> <20110902233413.GB26494@openwall.com> <20110903121205.GB2743@albatros>
+Message-ID: <20110903235728.GD29169@openwall.com>
+References: <20110812102954.GA3496@albatros> <20110812105824.GA7141@openwall.com> <20110825171934.GA3044@albatros> <20110902182929.GA23848@openwall.com> <20110903111849.GA2743@albatros>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110903121205.GB2743@albatros>
+In-Reply-To: <20110903111849.GA2743@albatros>
 Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for libs from low addresses
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Vasiliy,
 
-On Sat, Sep 03, 2011 at 04:12:06PM +0400, Vasiliy Kulikov wrote:
-> On Sat, Sep 03, 2011 at 03:34 +0400, Solar Designer wrote:
-> > > +static unsigned long mmap_lib_base(void)
-> > > +{
-> > > +	return ASCII_ARMOR_MIN_ADDR + mmap_rnd();
-> > > +}
+On Sat, Sep 03, 2011 at 03:18:49PM +0400, Vasiliy Kulikov wrote:
+> On Fri, Sep 02, 2011 at 22:29 +0400, Solar Designer wrote:
+> > On Thu, Aug 25, 2011 at 09:19:34PM +0400, Vasiliy Kulikov wrote:
+> > > additionally overwrite function arguments, which are located after the
+> > > function address on the stack.  The attacker's best bet may be to find
+> > > an entry point not at function boundary that sets registers and then
+> > > proceeds with or branches to the desired library code.  The easiest way
+> > > to set registers and branch would be a function epilogue -
+> > > pop/pop/.../ret - but then there's the difficulty in passing the address
+> > > to ret to (we have just one NUL and we've already used it to get to this
+> > > code).  Similarly, even via such pop's we can't pass an argument that
+> > > contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
+> > > contains a NUL most significant byte too) or a zero value for root's
+> > > uid.
 > > 
-> > I was about to suggest that you declare this function inline, but then I
-> > noticed that all other tiny and single-use functions in
-> > arch/x86/mm/mmap.c are also non-inline.  Weird.  You might want to bring
-> > this up on LKML separately.
+> > The above was partially flawed logic on my part - as written above
+> > (without further detail), the pop/pop/.../ret thing doesn't apply
+> > because those pop's would read stack right after the just-used return
+> > address - that is, the same stack locations that we presumably could not
+> > write to in order to pass the arguments in a more straightforward
+> > fashion.  So this trick would be of no help, and thus its other
+> > limitations would be of no relevance.
 > 
-> Why?  They are called once per process when mm_struct is initialized.
-> Inlining would not boost the code.
+> Why not?
 
-Besides the minor and maybe unimportant speed difference, inlining of
-functions invoked from just one place may reduce total code size.  Of
-course, it's a very minor issue.
+I am not sure what exactly your "why not" applies to.  What I said was
+that the trick of returning specifically to pop/pop/.../ret would be of
+no help to an exploit writer trying to bypass ASCII armor, and I
+explained why not in the paragraph you quoted.  So the exploit writer
+would use some other trick, possibly just slightly different - to give
+an example (just to you, not for LKML), I included an instruction
+sequence from a glibc build that would be a better target to return to
+(note how it is not limited to pop and ret instructions), and that would
+actually make the limitations being talked about relevant.
 
-> > > +unsigned long
-> > > +get_unmapped_exec_area(struct file *filp, unsigned long addr0,
-> > > +		unsigned long len, unsigned long pgoff, unsigned long flags)
-> > > +{
-> > > +	unsigned long addr = addr0;
-> > > +	struct mm_struct *mm = current->mm;
-> > > +	struct vm_area_struct *vma;
-> > > +
-> > > +	if (len > TASK_SIZE)
-> > > +		return -ENOMEM;
-> > > +
-> > > +	if (flags & MAP_FIXED)
-> > > +		return addr;
+> If function address contains NUL, the overflow stops at this
+> address.  If it doesn't contain NUL, but argument contain NUL, it is the
+> last argument an attacker can use
+
+Right.
+
+> (therefore, it would be the last used code chunk).
+
+I don't understand this bit.
+
+> So, it has some value even if he can somehow write
+> the ret address (e.g. it is out of 16 MBs).
+
+Right.  Once again, what I said is that this limitation becomes relevant
+in certain cases other than returning to a trivial pop/ret sequence.
+Namely, it is relevant when returning straight to a function entry, and
+it is relevant when returning to certain other instruction sequences.
+Just not when returning specifically to pop/ret, which is of no help in
+an attack trying to bypass ASCII armor anyway.
+
+To summarize: we happened to give a poor example in the patch
+description, and I'd like to correct that by reducing the level of
+detail.  (The alternative would have been to go deeper into detail.)
+
+> > > If CONFIG_VM86=y, the first megabyte is excluded from the potential
+> > > range for mmap allocations as it might be used by vm86 code.  If
+> > > CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
+> > > of CONFIG_VM86 the base address is randomized with the same entropy size
+> > > as mm->mmap_base.
 > > 
-> > In the MAP_FIXED case, don't we need to make sure that addr is actually
-> > available - that is, do a "goto failed" here (fallback to old handling)?
+> > OK.  Shouldn't CONFIG_VM86 be a sysctl, though?
 > 
-> No, what can old handling do?  If MAP_FIXED is passed, we may not change
-> the behaviour.  If the region is already owned by someone, checks in the
-> upper mm code would return error.  Also all other allocators just return
-> addr in this case.
+> This is not a hardening setting that was present in -ow, but an existing
+> config to disable vm86/vm86_old at the compile time.  It was added for
+> EMBEDDED.
 
-OK.  I'll trust you on this.
+Oh, I was not aware of that.
 
-> It's possible to have a weird case: PIE is disabled, exec image is lower
-> than 0x01000000, kernel.randomize_va_space=0.  It means brk area starts
-> in ASCII-armor zone.  If we try to jump over brk, then next brk growth
-> would fail as we've loaded some library just after the last brk page.
+solar@host:~/kernel/mainline/linux-3.0.4 $ fgrep -rl CONFIG_VM86 .
+./arch/x86/kernel/Makefile
+./arch/x86/kernel/entry_32.S
+./arch/x86/include/asm/vm86.h
+./arch/x86/include/asm/processor-flags.h
 
-OK.  Maybe you can make the comment as clear as the above paragraph?
-The way it's written currently, it is unclear what it talks about -
-e.g., why "not DYNAMIC elf binaries"?  In fact, it doesn't even look
-consistent with what you wrote above.
+Looks like there's no Kconfig option for this - perhaps add it with a
+separate patch?
 
-> At first, RHEL tries to allocate a region without brk check:
-> 
-> 		addr = !should_randomize() ? SHLIB_BASE :
-> 			randomize_range(SHLIB_BASE, 0x01000000, len);
-> 
-> 
-> Then if it fails, exec-shield tries to find a region in a cycle, without
-> the brk check.  Then if it overruns 0x01000000, it starts to do brk
-> check:
-> 
-> 			if (addr >= 0x01000000 && should_randomize()) {
-> 				tmp = randomize_range(0x01000000,
-> 					PAGE_ALIGN(max(mm->start_brk,
-> 					(unsigned long)0x08000000)), len);
-> 
-> So, they don't care about this rare case.
-> 
-> I heard many times about legacy randomize_va_space=0 systems, which
-> disable brk randomization because of some ancient proprietary software.
-> Non-PIE binaries are very often nowadays.  I didn't see these 3 cases at
-> once (non-PIE, low mmap exec base, no brk randomization), but I don't
-> see why it's impossible.  If you know why it is, I'll remove the check.
-
-I think non-PIE binaries with their fixed base address other than the
-standard 0x08048000 are very rare - possibly they only exist in kernel
-vulnerability exploits. ;-)  But I don't know for sure.  I don't mind
-the check, but please make the comment descriptive and correct.
-
-> > Now, the main question: what's wrong with doing something as simple as:
-> > 
-> > unsigned long
-> > get_unmapped_exec_area(struct file *filp, unsigned long addr,
-> > 		unsigned long len, unsigned long pgoff, unsigned long flags)
-> > {
-> > 	return current->mm->get_unmapped_area(filp, ((flags & MAP_FIXED) || len >= 0x00ef0000UL) ? addr : max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr), len, pgoff, flags);
-> > }
-> > 
-> > Of course, written in a cleaner and more generic fashion.
-> 
-> 1) get_unmapped_area may ignore the hint if the address is already owned.
-> Then it would start from the cached hole address rather than ->lib_mmap_base.
-
-OK.  This cached hole address might be a post-2.4 thing - at least, I
-haven't seen this behavior on 2.4 and prior.
-
-> 2) my code contains brk check in ASCII zone.
-
-OK.
-
-> I'd want to reduce the added code size too, but it is rather tricky to
-> do it with mm code.  AFAICS, the way RHEL did it (separate
-> ->get_unmapped_exec_area allocator) is the easiest one.
-
-I am fine with this approach.  One nice aspect of it is that there's no
-performance impact for non-exec mmap()'s.
+Thanks,
 
 Alexander
