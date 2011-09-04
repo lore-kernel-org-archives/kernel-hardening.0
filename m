@@ -1,100 +1,90 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 4 Sep 2011 03:57:28 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20110903235728.GD29169@openwall.com>
-References: <20110812102954.GA3496@albatros> <20110812105824.GA7141@openwall.com> <20110825171934.GA3044@albatros> <20110902182929.GA23848@openwall.com> <20110903111849.GA2743@albatros>
-Mime-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Sun, 4 Sep 2011 11:21:31 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110904072131.GA3307@albatros>
+References: <20110812102954.GA3496@albatros>
+ <20110812105824.GA7141@openwall.com>
+ <20110825171934.GA3044@albatros>
+ <20110902233413.GB26494@openwall.com>
+ <20110903121205.GB2743@albatros>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110903111849.GA2743@albatros>
-Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for libs from low addresses
+In-Reply-To: <20110903121205.GB2743@albatros>
+Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for
+ libs from low addresses
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Vasiliy,
-
-On Sat, Sep 03, 2011 at 03:18:49PM +0400, Vasiliy Kulikov wrote:
-> On Fri, Sep 02, 2011 at 22:29 +0400, Solar Designer wrote:
-> > On Thu, Aug 25, 2011 at 09:19:34PM +0400, Vasiliy Kulikov wrote:
-> > > additionally overwrite function arguments, which are located after the
-> > > function address on the stack.  The attacker's best bet may be to find
-> > > an entry point not at function boundary that sets registers and then
-> > > proceeds with or branches to the desired library code.  The easiest way
-> > > to set registers and branch would be a function epilogue -
-> > > pop/pop/.../ret - but then there's the difficulty in passing the address
-> > > to ret to (we have just one NUL and we've already used it to get to this
-> > > code).  Similarly, even via such pop's we can't pass an argument that
-> > > contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
-> > > contains a NUL most significant byte too) or a zero value for root's
-> > > uid.
+On Sat, Sep 03, 2011 at 16:12 +0400, Vasiliy Kulikov wrote:
+> > > +		/* We don't want to reduce brk area of not DYNAMIC elf binaries
+> > > +		 * with sysctl kernel.randomize_va_space < 2. */
+> > > +		if (mm->brk && addr > mm->brk)
+> > > +			goto failed;
 > > 
-> > The above was partially flawed logic on my part - as written above
-> > (without further detail), the pop/pop/.../ret thing doesn't apply
-> > because those pop's would read stack right after the just-used return
-> > address - that is, the same stack locations that we presumably could not
-> > write to in order to pass the arguments in a more straightforward
-> > fashion.  So this trick would be of no help, and thus its other
-> > limitations would be of no relevance.
+> > Does this check come from RHEL?
 > 
-> Why not?
-
-I am not sure what exactly your "why not" applies to.  What I said was
-that the trick of returning specifically to pop/pop/.../ret would be of
-no help to an exploit writer trying to bypass ASCII armor, and I
-explained why not in the paragraph you quoted.  So the exploit writer
-would use some other trick, possibly just slightly different - to give
-an example (just to you, not for LKML), I included an instruction
-sequence from a glibc build that would be a better target to return to
-(note how it is not limited to pop and ret instructions), and that would
-actually make the limitations being talked about relevant.
-
-> If function address contains NUL, the overflow stops at this
-> address.  If it doesn't contain NUL, but argument contain NUL, it is the
-> last argument an attacker can use
-
-Right.
-
-> (therefore, it would be the last used code chunk).
-
-I don't understand this bit.
-
-> So, it has some value even if he can somehow write
-> the ret address (e.g. it is out of 16 MBs).
-
-Right.  Once again, what I said is that this limitation becomes relevant
-in certain cases other than returning to a trivial pop/ret sequence.
-Namely, it is relevant when returning straight to a function entry, and
-it is relevant when returning to certain other instruction sequences.
-Just not when returning specifically to pop/ret, which is of no help in
-an attack trying to bypass ASCII armor anyway.
-
-To summarize: we happened to give a poor example in the patch
-description, and I'd like to correct that by reducing the level of
-detail.  (The alternative would have been to go deeper into detail.)
-
-> > > If CONFIG_VM86=y, the first megabyte is excluded from the potential
-> > > range for mmap allocations as it might be used by vm86 code.  If
-> > > CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
-> > > of CONFIG_VM86 the base address is randomized with the same entropy size
-> > > as mm->mmap_base.
-> > 
-> > OK.  Shouldn't CONFIG_VM86 be a sysctl, though?
+> Partly, see below.
 > 
-> This is not a hardening setting that was present in -ow, but an existing
-> config to disable vm86/vm86_old at the compile time.  It was added for
-> EMBEDDED.
+> 
+> >  I don't fully understand it.  We also
+> > check for "vma->vm_end >= ASCII_ARMOR_MAX_ADDR" below.  Does this imply
+> > that we choose to handle the case of mm->brk being lower than
+> > ASCII_ARMOR_MAX_ADDR here?  Is it a practically relevant case?
+> 
+> It's possible to have a weird case: PIE is disabled, exec image is lower
+> than 0x01000000, kernel.randomize_va_space=0.  It means brk area starts
+> in ASCII-armor zone.  If we try to jump over brk, then next brk growth
+> would fail as we've loaded some library just after the last brk page.
+> 
+> (Also it would touch brk guard pages, which I didn't investigate.)
+> 
+> 
+> >  Or was
+> > this check possibly less redundant on RHEL?
+> 
 
-Oh, I was not aware of that.
+Sorry, I was precluded and have mixed things.  This should be read as:
 
-solar@host:~/kernel/mainline/linux-3.0.4 $ fgrep -rl CONFIG_VM86 .
-./arch/x86/kernel/Makefile
-./arch/x86/kernel/entry_32.S
-./arch/x86/include/asm/vm86.h
-./arch/x86/include/asm/processor-flags.h
+> At first, RHEL tries to allocate a region without brk check:
+> 
+> 		addr = !should_randomize() ? SHLIB_BASE :
+> 			randomize_range(SHLIB_BASE, 0x01000000, len);
+> 
+> 
+> Then if it fails, exec-shield tries to find a region in a cycle, without
+> the brk check.
 
-Looks like there's no Kconfig option for this - perhaps add it with a
-separate patch?
+s/without/with/
 
-Thanks,
+			/*
+			 * Must not let a PROT_EXEC mapping get into the
+			 * brk area:
+			 */
+			if (addr + len > mm->brk)
+				goto failed;
 
-Alexander
+>  Then if it overruns 0x01000000, it starts to do brk
+> check:
+> 
+> 			if (addr >= 0x01000000 && should_randomize()) {
+> 				tmp = randomize_range(0x01000000,
+> 					PAGE_ALIGN(max(mm->start_brk,
+> 					(unsigned long)0x08000000)), len);
+> 
+> So, they don't care about this rare case.
+
+They care, but it is inconsistent - sometimes they check it, sometimes
+not.  If the first guess failed - they do, otherwise don't.
+
+
+> I heard many times about legacy randomize_va_space=0 systems, which
+> disable brk randomization because of some ancient proprietary software.
+> Non-PIE binaries are very often nowadays.  I didn't see these 3 cases at
+> once (non-PIE, low mmap exec base, no brk randomization), but I don't
+> see why it's impossible.  If you know why it is, I'll remove the check.
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
