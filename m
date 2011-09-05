@@ -1,91 +1,146 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 5 Sep 2011 16:46:47 +0400
+Date: Mon, 5 Sep 2011 22:53:58 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110905124647.GA10247@albatros>
-References: <20110812102954.GA3496@albatros>
- <20110812105824.GA7141@openwall.com>
- <20110825171934.GA3044@albatros>
- <20110902182929.GA23848@openwall.com>
- <20110903111849.GA2743@albatros>
- <20110903235728.GD29169@openwall.com>
+Message-ID: <20110905185358.GA2103@albatros>
+References: <20110831075814.003575573@openvz.org>
+ <20110831080229.100652529@openvz.org>
+ <20110831090612.GA3253@albatros>
+ <20110831112642.GI25465@sun>
+ <20110831140416.GA17626@shutemov.name>
+ <20110831142622.GB30615@sun>
+ <20110831151023.5b7e12da.akpm@linux-foundation.org>
+ <20110901080508.GF30615@sun>
+ <20110902163711.GA3124@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110903235728.GD29169@openwall.com>
-Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for
- libs from low addresses
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20110902163711.GA3124@albatros>
+Subject: [kernel-hardening] Re: [patch 2/2] fs, proc: Introduce the /proc/<pid>/map_files/
+ directory v6
+To: Cyrill Gorcunov <gorcunov@gmail.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: "Kirill A. Shutemov" <kirill@shutemov.name>, containers@lists.osdl.org, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Nathan Lynch <ntl@pobox.com>, kernel-hardening@lists.openwall.com, Oren Laadan <orenl@cs.columbia.edu>, Daniel Lezcano <dlezcano@fr.ibm.com>, Glauber Costa <glommer@parallels.com>, James Bottomley <jbottomley@parallels.com>, Tejun Heo <tj@kernel.org>, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@ZenIV.linux.org.uk>, Pavel Emelyanov <xemul@parallels.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
-
-On Sun, Sep 04, 2011 at 03:57 +0400, Solar Designer wrote:
-> On Sat, Sep 03, 2011 at 03:18:49PM +0400, Vasiliy Kulikov wrote:
-> > On Fri, Sep 02, 2011 at 22:29 +0400, Solar Designer wrote:
-> > > On Thu, Aug 25, 2011 at 09:19:34PM +0400, Vasiliy Kulikov wrote:
-> > > > additionally overwrite function arguments, which are located after the
-> > > > function address on the stack.  The attacker's best bet may be to find
-> > > > an entry point not at function boundary that sets registers and then
-> > > > proceeds with or branches to the desired library code.  The easiest way
-> > > > to set registers and branch would be a function epilogue -
-> > > > pop/pop/.../ret - but then there's the difficulty in passing the address
-> > > > to ret to (we have just one NUL and we've already used it to get to this
-> > > > code).  Similarly, even via such pop's we can't pass an argument that
-> > > > contains a NUL in it - e.g., the address of "/bin/sh" in libc (it
-> > > > contains a NUL most significant byte too) or a zero value for root's
-> > > > uid.
+On Fri, Sep 02, 2011 at 20:37 +0400, Vasiliy Kulikov wrote:
+> On Thu, Sep 01, 2011 at 12:05 +0400, Cyrill Gorcunov wrote:
+> > ...
+> > > > +/*
+> > > > + * NOTE: The getattr/setattr for both /proc/$pid/map_files and
+> > > > + * /proc/$pid/fd seems to have share the code, so need to be
+> > > > + * unified and code duplication eliminated!
 > > > 
-> > > The above was partially flawed logic on my part - as written above
-> > > (without further detail), the pop/pop/.../ret thing doesn't apply
-> > > because those pop's would read stack right after the just-used return
-> > > address - that is, the same stack locations that we presumably could not
-> > > write to in order to pass the arguments in a more straightforward
-> > > fashion.  So this trick would be of no help, and thus its other
-> > > limitations would be of no relevance.
+> > > Why not do this now?
 > > 
-> > Why not?
+> > There are a couple of reasons. Yesterday I was talking to
+> > Vasiliy Kulikov about this snippet, so he seems about to send
+> > you patches related to /proc/$pid/fd update, and after those
+> > patches will be merged we are to drop code duplication.
+> > Vasiliy, what the status of the update?
 > 
-> I am not sure what exactly your "why not" applies to.
-
-Hmm, yes, looks like I've lost the thread some time ago :(  A good
-description definitely needs much longer and scrupulous analysis.
-Probably there is a public paper with a review/analysis/benefits of
-ASCII-armor that we're able to refer in the patch description?  I cannot
-find any rigorous paper, unfortunately.
-
-
-> > > > If CONFIG_VM86=y, the first megabyte is excluded from the potential
-> > > > range for mmap allocations as it might be used by vm86 code.  If
-> > > > CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
-> > > > of CONFIG_VM86 the base address is randomized with the same entropy size
-> > > > as mm->mmap_base.
-> > > 
-> > > OK.  Shouldn't CONFIG_VM86 be a sysctl, though?
-> > 
-> > This is not a hardening setting that was present in -ow, but an existing
-> > config to disable vm86/vm86_old at the compile time.  It was added for
-> > EMBEDDED.
+> It looks like protecting directories with sensible contents is a nasty
+> thing.  The problem here is that if the dentry is present in the cache,
+> ->lookup() is not called at all and the permissions can be checked in
+> fop/dop/iop specific handler (getattr(), readlink(), etc.).  However, it
+> would be much simplier to hook ->lookup() only.  Otherwise, we have to
+> define procfs handlers for all operations, which don't call
+> ->d_revalidate().
 > 
-> Oh, I was not aware of that.
-> 
-> solar@host:~/kernel/mainline/linux-3.0.4 $ fgrep -rl CONFIG_VM86 .
-> ./arch/x86/kernel/Makefile
-> ./arch/x86/kernel/entry_32.S
-> ./arch/x86/include/asm/vm86.h
-> ./arch/x86/include/asm/processor-flags.h
-> 
-> Looks like there's no Kconfig option for this - perhaps add it with a
-> separate patch?
+> Is it possible to disable caching dentry for specific files?  It is not
+> performace critical thing in fd and map_files and it would much simplify
+> the task.  Creating handlers for all these op handler bloats procfs.
 
-Since 2.6.x CONFIG_ prefix is not used in Kconfig files:
+Looks like the following patch solves the problem.  Tested on stat() and
+link().
 
-$ grep -w VM86 arch/x86/Kconfig
-config VM86
-    bool "Enable VM86 support" if EXPERT
-
-
-Thanks,
-
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index d44c701..219588b 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -1665,46 +1665,12 @@ out:
+ 	return error;
+ }
+ 
+-static int proc_pid_fd_link_getattr(struct vfsmount *mnt, struct dentry *dentry,
+-		struct kstat *stat)
+-{
+-	struct inode *inode = dentry->d_inode;
+-	struct task_struct *task = get_proc_task(inode);
+-	int rc;
+-
+-	if (task == NULL)
+-		return -ESRCH;
+-
+-	rc = -EACCES;
+-	if (lock_trace(task))
+-		goto out_task;
+-
+-	generic_fillattr(inode, stat);
+-	unlock_trace(task);
+-	rc = 0;
+-out_task:
+-	put_task_struct(task);
+-	return rc;
+-}
+-
+ static const struct inode_operations proc_pid_link_inode_operations = {
+ 	.readlink	= proc_pid_readlink,
+ 	.follow_link	= proc_pid_follow_link,
+ 	.setattr	= proc_setattr,
+ };
+ 
+-static const struct inode_operations proc_fdinfo_link_inode_operations = {
+-	.setattr	= proc_setattr,
+-	.getattr	= proc_pid_fd_link_getattr,
+-};
+-
+-static const struct inode_operations proc_fd_link_inode_operations = {
+-	.readlink	= proc_pid_readlink,
+-	.follow_link	= proc_pid_follow_link,
+-	.setattr	= proc_setattr,
+-	.getattr	= proc_pid_fd_link_getattr,
+-};
+-
+ 
+ /* building an inode */
+ 
+@@ -2044,9 +2010,18 @@ static int tid_fd_revalidate(struct dentry *dentry, struct nameidata *nd)
+ 	return 0;
+ }
+ 
++static int pid_no_revalidate(struct dentry *dentry, struct nameidata *nd)
++{
++	if (nd && nd->flags & LOOKUP_RCU)
++		return -ECHILD;
++
++	d_drop(dentry);
++	return 0;
++}
++
+ static const struct dentry_operations tid_fd_dentry_operations =
+ {
+-	.d_revalidate	= tid_fd_revalidate,
++	.d_revalidate	= pid_no_revalidate,
+ 	.d_delete	= pid_delete_dentry,
+ };
+ 
+@@ -2085,7 +2060,7 @@ static struct dentry *proc_fd_instantiate(struct inode *dir,
+ 	spin_unlock(&files->file_lock);
+ 	put_files_struct(files);
+ 
+-	inode->i_op = &proc_fd_link_inode_operations;
++	inode->i_op = &proc_pid_link_inode_operations;
+ 	inode->i_size = 64;
+ 	ei->op.proc_get_link = proc_fd_link;
+ 	d_set_d_op(dentry, &tid_fd_dentry_operations);
+@@ -2267,7 +2242,6 @@ static struct dentry *proc_fdinfo_instantiate(struct inode *dir,
+ 	ei->fd = fd;
+ 	inode->i_mode = S_IFREG | S_IRUSR;
+ 	inode->i_fop = &proc_fdinfo_file_operations;
+-	inode->i_op = &proc_fdinfo_link_inode_operations;
+ 	d_set_d_op(dentry, &tid_fd_dentry_operations);
+ 	d_add(dentry, inode);
+ 	/* Close the race of the process dying before we return the dentry */
 -- 
-Vasiliy
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
