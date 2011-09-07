@@ -1,67 +1,146 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Wed, 7 Sep 2011 15:01:46 +0400
+Date: Wed, 7 Sep 2011 15:14:38 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110907110146.GA11259@albatros>
-References: <20110903111849.GA2743@albatros>
- <20110903235728.GD29169@openwall.com>
- <20110905124647.GA10247@albatros>
- <20110906050554.GA3889@openwall.com>
- <20110907090900.GA3910@albatros>
- <20110907093036.GA17693@openwall.com>
- <20110907093411.GA4752@albatros>
- <20110907094335.GA17834@openwall.com>
- <20110907095508.GA16114@albatros>
- <20110907101608.GA17974@openwall.com>
+Message-ID: <20110907111438.GA12044@albatros>
+References: <20110808143603.GA3695@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110907101608.GA17974@openwall.com>
-Subject: Re: [kernel-hardening] [RFC] x86, mm: start mmap allocation for
- libs from low addresses
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <20110808143603.GA3695@albatros>
+Subject: [kernel-hardening] Re: [PATCH] Remove a.out library support in ELF loader
+To: Alexander Viro <viro@zeniv.linux.org.uk>
+Cc: kernel-hardening@lists.openwall.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, Andi Kleen <andi@firstfloor.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Solar,
+Hi,
 
-On Wed, Sep 07, 2011 at 14:16 +0400, Solar Designer wrote:
-> On Wed, Sep 07, 2011 at 01:55:08PM +0400, Vasiliy Kulikov wrote:
-> > OK, fully agree.  But why 100 KB?  Probably 0x10000 (64 KB)?  It looks
-> > nicer and not so magic.
-> 
-> Well, on Owl we have mmap_min_addr at 96 KB, which is sufficient e.g. in
-> case we have a struct field offset not larger than 32 KB and the field
-> itself is an array indexed by a 16-bit value.  Or if the field offset is
-> not larger than 64 KB and the index is a signed 16-bit value.
-> 
-> 100 KB is a very cheap enhancement of the above, also allowing for two
-> levels of indirection (up to one 16-bit signed and one 16-bit unsigned)
-> relative to a fixed offset that fits in 4 KB.
-> 
-> Maybe we should move from 96 KB to 100 KB for Owl's mmap_min_addr
-> default.  Or maybe we should use 132 KB (4+64+64).
-> 
-> Oh, this assumes arrays of char, or our 16-bit variable being byte
-> offset rather than index.  132 KB would also support arrays of 16-bit
-> words, and even 16-bit signed indexes into arrays of 32-bit words.
-> 
-> OK, maybe I am imagining these possibilities, but to me these values
-> feel a little bit more reasonable than a mere 64 KB, which might be
-> just insufficient e.g. if we have a 16-bit unsigned byte offset variable
-> and the array itself is a struct field.  Even 68 KB would be a lot more
-> likely to help then.
+On Mon, Aug 08, 2011 at 18:36 +0400, Vasiliy Kulikov wrote:
+> Commit d20894a23708c2 has removed the part of a.out code related to the
+> executables, but kept a.out library code as-is.  Remove it.
 
-This calculation makes sense IMHO, but it assumes rather infrequent
-scenario and I definitely don't want to start this discussion on LKML
-(at least now).  0x20000 (128 KB) should be enough for our needs (the
-128KB's byte belongs to ELF header, which is not writable) and it
-doesn't look like a very magic number (any magic should be described in
-the comment, which we don't exhaustively do even with the patch in
-general ;) ).
+Alexander, can you please merge the patch?  No comments for one month,
+probably it means that it's good :)
 
-So, I'll proceed with 0x20000.
-
-Thanks,
+> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+> ---
+>  fs/binfmt_elf.c |   85 -------------------------------------------------------
+>  1 files changed, 0 insertions(+), 85 deletions(-)
+> 
+> diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+> index 303983f..3416674 100644
+> --- a/fs/binfmt_elf.c
+> +++ b/fs/binfmt_elf.c
+> @@ -37,7 +37,6 @@
+>  #include <asm/page.h>
+>  
+>  static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs);
+> -static int load_elf_library(struct file *);
+>  static unsigned long elf_map(struct file *, unsigned long, struct elf_phdr *,
+>  				int, int, unsigned long);
+>  
+> @@ -68,7 +67,6 @@ static int elf_core_dump(struct coredump_params *cprm);
+>  static struct linux_binfmt elf_format = {
+>  	.module		= THIS_MODULE,
+>  	.load_binary	= load_elf_binary,
+> -	.load_shlib	= load_elf_library,
+>  	.core_dump	= elf_core_dump,
+>  	.min_coredump	= ELF_EXEC_PAGESIZE,
+>  };
+> @@ -994,89 +992,6 @@ out_free_ph:
+>  	goto out;
+>  }
+>  
+> -/* This is really simpleminded and specialized - we are loading an
+> -   a.out library that is given an ELF header. */
+> -static int load_elf_library(struct file *file)
+> -{
+> -	struct elf_phdr *elf_phdata;
+> -	struct elf_phdr *eppnt;
+> -	unsigned long elf_bss, bss, len;
+> -	int retval, error, i, j;
+> -	struct elfhdr elf_ex;
+> -
+> -	error = -ENOEXEC;
+> -	retval = kernel_read(file, 0, (char *)&elf_ex, sizeof(elf_ex));
+> -	if (retval != sizeof(elf_ex))
+> -		goto out;
+> -
+> -	if (memcmp(elf_ex.e_ident, ELFMAG, SELFMAG) != 0)
+> -		goto out;
+> -
+> -	/* First of all, some simple consistency checks */
+> -	if (elf_ex.e_type != ET_EXEC || elf_ex.e_phnum > 2 ||
+> -	    !elf_check_arch(&elf_ex) || !file->f_op || !file->f_op->mmap)
+> -		goto out;
+> -
+> -	/* Now read in all of the header information */
+> -
+> -	j = sizeof(struct elf_phdr) * elf_ex.e_phnum;
+> -	/* j < ELF_MIN_ALIGN because elf_ex.e_phnum <= 2 */
+> -
+> -	error = -ENOMEM;
+> -	elf_phdata = kmalloc(j, GFP_KERNEL);
+> -	if (!elf_phdata)
+> -		goto out;
+> -
+> -	eppnt = elf_phdata;
+> -	error = -ENOEXEC;
+> -	retval = kernel_read(file, elf_ex.e_phoff, (char *)eppnt, j);
+> -	if (retval != j)
+> -		goto out_free_ph;
+> -
+> -	for (j = 0, i = 0; i<elf_ex.e_phnum; i++)
+> -		if ((eppnt + i)->p_type == PT_LOAD)
+> -			j++;
+> -	if (j != 1)
+> -		goto out_free_ph;
+> -
+> -	while (eppnt->p_type != PT_LOAD)
+> -		eppnt++;
+> -
+> -	/* Now use mmap to map the library into memory. */
+> -	down_write(&current->mm->mmap_sem);
+> -	error = do_mmap(file,
+> -			ELF_PAGESTART(eppnt->p_vaddr),
+> -			(eppnt->p_filesz +
+> -			 ELF_PAGEOFFSET(eppnt->p_vaddr)),
+> -			PROT_READ | PROT_WRITE | PROT_EXEC,
+> -			MAP_FIXED | MAP_PRIVATE | MAP_DENYWRITE,
+> -			(eppnt->p_offset -
+> -			 ELF_PAGEOFFSET(eppnt->p_vaddr)));
+> -	up_write(&current->mm->mmap_sem);
+> -	if (error != ELF_PAGESTART(eppnt->p_vaddr))
+> -		goto out_free_ph;
+> -
+> -	elf_bss = eppnt->p_vaddr + eppnt->p_filesz;
+> -	if (padzero(elf_bss)) {
+> -		error = -EFAULT;
+> -		goto out_free_ph;
+> -	}
+> -
+> -	len = ELF_PAGESTART(eppnt->p_filesz + eppnt->p_vaddr +
+> -			    ELF_MIN_ALIGN - 1);
+> -	bss = eppnt->p_memsz + eppnt->p_vaddr;
+> -	if (bss > len) {
+> -		down_write(&current->mm->mmap_sem);
+> -		do_brk(len, bss - len);
+> -		up_write(&current->mm->mmap_sem);
+> -	}
+> -	error = 0;
+> -
+> -out_free_ph:
+> -	kfree(elf_phdata);
+> -out:
+> -	return error;
+> -}
+>  
+>  #ifdef CONFIG_ELF_CORE
+>  /*
+> -- 
+> 1.7.0.4
+> 
 
 -- 
-Vasiliy
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
