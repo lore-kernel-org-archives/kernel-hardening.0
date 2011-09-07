@@ -1,37 +1,317 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 6 Sep 2011 22:15:25 +0400
-From: Cyrill Gorcunov <gorcunov@gmail.com>
-Message-ID: <20110906181525.GC19452@sun>
-References: <20110901080508.GF30615@sun>
- <20110902163711.GA3124@albatros>
- <20110905185358.GA2103@albatros>
- <20110905192009.GJ761@sun>
- <20110905194908.GA2690@albatros>
- <20110905203627.GL761@sun>
- <20110906101518.GA4799@albatros>
- <20110906165144.GJ18425@mtj.dyndns.org>
- <20110906172952.GA28055@albatros>
- <20110906173341.GM18425@mtj.dyndns.org>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Wed, 7 Sep 2011 13:09:00 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110907090900.GA3910@albatros>
+References: <20110812102954.GA3496@albatros>
+ <20110812105824.GA7141@openwall.com>
+ <20110825171934.GA3044@albatros>
+ <20110902182929.GA23848@openwall.com>
+ <20110903111849.GA2743@albatros>
+ <20110903235728.GD29169@openwall.com>
+ <20110905124647.GA10247@albatros>
+ <20110906050554.GA3889@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110906173341.GM18425@mtj.dyndns.org>
-Subject: [kernel-hardening] Re: [patch 2/2] fs, proc: Introduce the /proc/<pid>/map_files/
- directory v6
-To: Tejun Heo <tj@kernel.org>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill@shutemov.name>, containers@lists.osdl.org, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Nathan Lynch <ntl@pobox.com>, kernel-hardening@lists.openwall.com, Oren Laadan <orenl@cs.columbia.edu>, Daniel Lezcano <dlezcano@fr.ibm.com>, Glauber Costa <glommer@parallels.com>, James Bottomley <jbottomley@parallels.com>, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@ZenIV.linux.org.uk>, Pavel Emelyanov <xemul@parallels.com>
+In-Reply-To: <20110906050554.GA3889@openwall.com>
+Subject: [kernel-hardening] [RFC] x86, mm: start mmap allocation for libs from low addresses
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 07, 2011 at 02:33:41AM +0900, Tejun Heo wrote:
-...
-> 
-> Yeap, I know there are two sides of the discussion but if one takes
-> the position that hiding such global debug info is more harmful, it's
-> only crazier to hide such information from each individual users of
-> the said global facility.  So, let's just forget about information
-> leak via freeing or not freeing here.  It's the wrong battle field.
->
+Solar,
 
-Heh, I definitely didn't expect all this would turn out into slabinfo ;)
+I've updated patch description, code comments, and "if" condition.  If
+no other objection, I'll post it as RFCv2 on LKML.
+
+
+===================
+
+This patch changes mmap base address allocator logic to incline to
+allocate addresses for executable pages from the first 16 MBs of address
+space.  These addresses start from zero byte (0x00AABBCC).  Using such
+addresses breaks ret2libc exploits abusing string buffer overflows (or
+makes such attacks harder and/or less reliable).
+
+As x86 architecture is little-endian, this zero byte is the last byte of
+the address.  So it's possible to e.g. overwrite a return address on the
+stack with the malformed address.  However, now it's impossible to
+additionally provide function arguments, which are located after the
+function address on the stack.  The attacker's best bet may be to find
+an entry point not at function boundary that sets registers and then
+proceeds with or branches to the desired library code.  The easiest way
+to set registers and branch would be a function epilogue.  Then it may
+be similarly difficult to reliably pass register values and a further
+address to branch to, because the desired values for these will also
+tend to contain NULs - e.g., the address of "/bin/sh" in libc or a zero
+value for root's uid.  A possible bypass is via multiple overflows - if
+the overflow may be triggered more than once before the vulnerable
+function returns, then multiple NULs may be written, exactly one per
+overflow.  But this is hopefully relatively rare.
+
+To fully utilize the protection, the executable image should be
+randomized (sysctl kernel.randomize_va_space > 0 and the executable is
+compiled as PIE) and the sum of libraries sizes plus executable size
+shouldn't exceed 16 MBs.  In this case the only pages out of
+ASCII-protected range are VDSO and vsyscall pages.  However, they don't
+provide enough material for obtaining arbitrary code execution and are
+not dangerous without using other executable pages.
+
+The logic is applied to x86 32 bit tasks, both for 32 bit kernels and
+for 32 bit tasks running on 64 bit kernels.  64 bit tasks already have
+zero bytes in addresses of library functions.  Other architectures
+(non-x86) may reuse the logic too.
+
+Without the patch:
+
+$ ldd /bin/ls
+	linux-gate.so.1 =>  (0xf779c000)
+        librt.so.1 => /lib/librt.so.1 (0xb7fcf000)
+        libtermcap.so.2 => /lib/libtermcap.so.2 (0xb7fca000)
+        libc.so.6 => /lib/libc.so.6 (0xb7eae000)
+        libpthread.so.0 => /lib/libpthread.so.0 (0xb7e5b000)
+        /lib/ld-linux.so.2 (0xb7fe6000)
+
+With the patch:
+
+$ ldd /bin/ls
+	linux-gate.so.1 =>  (0xf772a000)
+	librt.so.1 => /lib/librt.so.1 (0x0004a000)
+	libtermcap.so.2 => /lib/libtermcap.so.2 (0x0005e000)
+	libc.so.6 => /lib/libc.so.6 (0x00062000)
+	libpthread.so.0 => /lib/libpthread.so.0 (0x00183000)
+	/lib/ld-linux.so.2 (0x00121000)
+
+
+If CONFIG_VM86=y, the first megabyte is excluded from the potential
+range for mmap allocations as it might be used by vm86 code.  If
+CONFIG_VM86=n, the allocation begins from the mmap_min_addr.  Regardless
+of CONFIG_VM86 the base address is randomized with the same entropy size
+as mm->mmap_base.
+
+If 16 MBs are over, we fallback to the old allocation algorithm.
+But, hopefully, programs which need such protection (network daemons,
+programs working with untrusted data, etc.) are small enough to utilize
+the protection.
+
+The same logic was used in -ow patch for 2.0-2.4 kernels and in
+exec-shield for 2.6.x kernels.  Code parts were taken from exec-shield
+from RHEL6.
+
+
+v2 - Added comments, adjusted patch description.
+   - s/arch_get_unmapped_exec_area/get_unmapped_exec_area/
+   - Don't reserve first 1 MiB + 64 kb if CONFIG_VM86=n.
+
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+---
+ arch/x86/mm/mmap.c       |   20 ++++++++++
+ include/linux/mm_types.h |    4 ++
+ include/linux/sched.h    |    3 ++
+ mm/mmap.c                |   87 +++++++++++++++++++++++++++++++++++++++++++---
+ 4 files changed, 109 insertions(+), 5 deletions(-)
+
+diff --git a/arch/x86/mm/mmap.c b/arch/x86/mm/mmap.c
+index 1dab519..20b2eae 100644
+--- a/arch/x86/mm/mmap.c
++++ b/arch/x86/mm/mmap.c
+@@ -118,6 +118,22 @@ static unsigned long mmap_legacy_base(void)
+ 		return TASK_UNMAPPED_BASE + mmap_rnd();
+ }
  
-	Cyrill
++#ifdef CONFIG_VM86
++/*
++ * Don't touch any memory that can be addressed by vm86 apps.
++ * Reserve the first 1 MiB + 64 kb.
++ */
++#define ASCII_ARMOR_MIN_ADDR 0x00110000
++#else
++/* No special users of low addresses.  Start just after mmap_min_addr. */
++#define ASCII_ARMOR_MIN_ADDR 0
++#endif
++
++static unsigned long mmap_lib_base(void)
++{
++	return ASCII_ARMOR_MIN_ADDR + mmap_rnd();
++}
++
+ /*
+  * This function, called very early during the creation of a new
+  * process VM image, sets up which VM layout function to use:
+@@ -131,6 +147,10 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
+ 	} else {
+ 		mm->mmap_base = mmap_base();
+ 		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
++		if (mmap_is_ia32()) {
++			mm->get_unmapped_exec_area = get_unmapped_exec_area;
++			mm->lib_mmap_base = mmap_lib_base();
++		}
+ 		mm->unmap_area = arch_unmap_area_topdown;
+ 	}
+ }
+diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
+index 027935c..68fc216 100644
+--- a/include/linux/mm_types.h
++++ b/include/linux/mm_types.h
+@@ -225,9 +225,13 @@ struct mm_struct {
+ 	unsigned long (*get_unmapped_area) (struct file *filp,
+ 				unsigned long addr, unsigned long len,
+ 				unsigned long pgoff, unsigned long flags);
++	unsigned long (*get_unmapped_exec_area) (struct file *filp,
++				unsigned long addr, unsigned long len,
++				unsigned long pgoff, unsigned long flags);
+ 	void (*unmap_area) (struct mm_struct *mm, unsigned long addr);
+ #endif
+ 	unsigned long mmap_base;		/* base of mmap area */
++	unsigned long lib_mmap_base;		/* base of mmap libraries area (for get_unmapped_exec_area()) */
+ 	unsigned long task_size;		/* size of task vm space */
+ 	unsigned long cached_hole_size; 	/* if non-zero, the largest hole below free_area_cache */
+ 	unsigned long free_area_cache;		/* first hole of size cached_hole_size or larger */
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index f024c63..ef9024f 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -394,6 +394,9 @@ arch_get_unmapped_area_topdown(struct file *filp, unsigned long addr,
+ 			  unsigned long flags);
+ extern void arch_unmap_area(struct mm_struct *, unsigned long);
+ extern void arch_unmap_area_topdown(struct mm_struct *, unsigned long);
++extern unsigned long
++get_unmapped_exec_area(struct file *, unsigned long,
++		unsigned long, unsigned long, unsigned long);
+ #else
+ static inline void arch_pick_mmap_layout(struct mm_struct *mm) {}
+ #endif
+diff --git a/mm/mmap.c b/mm/mmap.c
+index d49736f..593f557 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -50,6 +50,10 @@ static void unmap_region(struct mm_struct *mm,
+ 		struct vm_area_struct *vma, struct vm_area_struct *prev,
+ 		unsigned long start, unsigned long end);
+ 
++static unsigned long
++get_unmapped_area_prot(struct file *file, unsigned long addr, unsigned long len,
++		unsigned long pgoff, unsigned long flags, bool exec);
++
+ /*
+  * WARNING: the debugging will use recursive algorithms so never enable this
+  * unless you know what you are doing.
+@@ -989,7 +993,8 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
+ 	/* Obtain the address to map to. we verify (or select) it and ensure
+ 	 * that it represents a valid section of the address space.
+ 	 */
+-	addr = get_unmapped_area(file, addr, len, pgoff, flags);
++	addr = get_unmapped_area_prot(file, addr, len, pgoff, flags,
++			prot & PROT_EXEC);
+ 	if (addr & ~PAGE_MASK)
+ 		return addr;
+ 
+@@ -1528,6 +1533,67 @@ bottomup:
+ }
+ #endif
+ 
++/* Addresses before this value contain at least one zero byte. */
++#define ASCII_ARMOR_MAX_ADDR 0x01000000
++
++/*
++ * This function finds the first unmapped region inside of
++ * [mm->lib_mmap_base; ASCII_ARMOR_MAX_ADDR) region.  Addresses from this
++ * region contain at least one zero byte, which complicates
++ * exploitation of C string buffer overflows (C strings cannot contain zero
++ * byte inside) in return to libc class of attacks.
++ *
++ * This allocator is bottom up allocator like arch_get_unmapped_area(), but
++ * it differs from the latter.  get_unmapped_exec_area() does its best to
++ * allocate as low address as possible.
++ */
++unsigned long
++get_unmapped_exec_area(struct file *filp, unsigned long addr0,
++		unsigned long len, unsigned long pgoff, unsigned long flags)
++{
++	unsigned long addr = addr0;
++	struct mm_struct *mm = current->mm;
++	struct vm_area_struct *vma;
++
++	if (len > TASK_SIZE)
++		return -ENOMEM;
++
++	if (flags & MAP_FIXED)
++		return addr;
++
++	/* We ALWAYS start from the beginning as base addresses
++	 * with zero high bits is a valued resource */
++	addr = max_t(unsigned long, mm->lib_mmap_base, mmap_min_addr);
++
++	for (vma = find_vma(mm, addr); ; vma = vma->vm_next) {
++		/* At this point:  (!vma || addr < vma->vm_end). */
++		if (addr > TASK_SIZE - len)
++			return -ENOMEM;
++
++		/*
++		 * If kernel.randomize_va_space < 2, the executable is build as
++		 * non-PIE, and exec image base is lower than ASCII_ARMOR_MAX_ADDR,
++		 * it's possible to touch or overrun brk area in ASCII-armor
++		 * zone.  We don't want to reduce future brk growth, so we
++		 * fallback to the default allocator in this case.
++		 */
++		if (mm->brk && addr + len > mm->brk)
++			goto failed;
++
++		if (!vma || addr + len <= vma->vm_start)
++			return addr;
++
++		addr = vma->vm_end;
++
++		/* If ACSII-armor area is over, the algo gives up */
++		if (addr >= ASCII_ARMOR_MAX_ADDR)
++			goto failed;
++	}
++
++failed:
++	return current->mm->get_unmapped_area(filp, addr0, len, pgoff, flags);
++}
++
+ void arch_unmap_area_topdown(struct mm_struct *mm, unsigned long addr)
+ {
+ 	/*
+@@ -1541,9 +1607,9 @@ void arch_unmap_area_topdown(struct mm_struct *mm, unsigned long addr)
+ 		mm->free_area_cache = mm->mmap_base;
+ }
+ 
+-unsigned long
+-get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
+-		unsigned long pgoff, unsigned long flags)
++static unsigned long
++get_unmapped_area_prot(struct file *file, unsigned long addr, unsigned long len,
++		unsigned long pgoff, unsigned long flags, bool exec)
+ {
+ 	unsigned long (*get_area)(struct file *, unsigned long,
+ 				  unsigned long, unsigned long, unsigned long);
+@@ -1556,7 +1622,11 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
+ 	if (len > TASK_SIZE)
+ 		return -ENOMEM;
+ 
+-	get_area = current->mm->get_unmapped_area;
++	if (exec && current->mm->get_unmapped_exec_area)
++		get_area = current->mm->get_unmapped_exec_area;
++	else
++		get_area = current->mm->get_unmapped_area;
++
+ 	if (file && file->f_op && file->f_op->get_unmapped_area)
+ 		get_area = file->f_op->get_unmapped_area;
+ 	addr = get_area(file, addr, len, pgoff, flags);
+@@ -1571,6 +1641,13 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
+ 	return arch_rebalance_pgtables(addr, len);
+ }
+ 
++unsigned long
++get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
++		unsigned long pgoff, unsigned long flags)
++{
++	return get_unmapped_area_prot(file, addr, len, pgoff, flags, false);
++}
++
+ EXPORT_SYMBOL(get_unmapped_area);
+ 
+ /* Look up the first VMA which satisfies  addr < vm_end,  NULL if none. */
+---
