@@ -1,122 +1,106 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 10 Sep 2011 20:40:01 +0400
+Date: Sat, 10 Sep 2011 20:41:34 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110910164001.GA2342@albatros>
+Message-ID: <20110910164134.GA2442@albatros>
+References: <20110910164001.GA2342@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [RFC PATCH 1/2] proc: force dcache drop on unauthorized access
+In-Reply-To: <20110910164001.GA2342@albatros>
+Subject: [kernel-hardening] [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
 To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>
-Cc: Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org
+Cc: Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The patch "proc: fix races against execve() of /proc/PID/fd**" is still
-a partial fix for a setxid problem.  link(2) is a yet another way to
-identify whether a specific fd is opened by a privileged process.  By
-calling link(2) against /proc/PID/fd/* an attacker may identify whether
-the fd number is valid for PID by analysing link(2) return code.
+Historically /proc/slabinfo has 0444 permissions and is accessible to
+the world.  slabinfo contains rather private information related both to
+the kernel and userspace tasks.  Depending on the situation, it might
+reveal either private information per se or information useful to make
+another targeted attack.  Some examples of what can be learned by
+reading/watching for /proc/slabinfo entries:
 
-Both getattr() and link() can be used by the attacker iff the dentry is
-present in the dcache.  In this case ->lookup() is not called and the
-only way to check ptrace permissions is either operation handler or
-->revalidate().  The easiest solution to prevent any unauthorized access
-to /proc/PID/fd*/ files is to force the dentry drop on each unauthorized
-access attempt.
+1) dentry (and different *inode*) number might reveal other processes fs
+activity.  The number of dentry "active objects" doesn't strictly show
+file count opened/touched by a process, however, there is a good
+correlation between them.  The patch "proc: force dcache drop on
+unauthorized access" relies on the privacy of dentry count.
 
-If an attacker keeps opened fd of /proc/PID/fd/ and dcache contains
-a specific dentry for some /proc/PID/fd/XXX, any future attemp to use the
-dentry by the attacker would lead to the dentry drop as a result of a
-failed ptrace check in ->revalidate().  Then the attacker cannot spawn a
-dentry for the specific fd number because of ptrace check in ->lookup().
+2) different inode entries might reveal the same information as (1), but
+these are more fine granted counters.  If a filesystem is mounted in a
+private mount point (or even a private namespace) and fs type differs from
+other mounted fs types, fs activity in this mount point/namespace is
+revealed.  If there is a single ecryptfs mount point, the whole fs
+activity of a single user is revealed.  Number of files in ecryptfs
+mount point is a private information per se.
 
-The dentry drop can be still observed by an attacker by analysing
-information from /proc/slabinfo, which is addressed in the successive
-patch.
+3) fuse_* reveals number of files / fs activity of a user in a user
+private mount point.  It is approx. the same severity as ecryptfs
+infoleak in (2).
+
+4) sysfs_dir_cache similar to (2) reveals devices' addition/removal,
+which can be otherwise hidden by "chmod 0700 /sys/".  With 0444 slabinfo
+the precise number of sysfs files is known to the world.
+
+5) buffer_head might reveal some kernel activity.  With other
+information leaks an attacker might identify what specific kernel
+routines generate buffer_head activity.
+
+6) *kmalloc* infoleaks are very situational.  Attacker should watch for
+the specific kmalloc size entry and filter the noise related to the unrelated
+kernel activity.  If an attacker has relatively silent victim system, he
+might get rather precise counters.
+
+Additional information sources might significantly increase the slabinfo
+infoleak benefits.  E.g. if an attacker knows that the processes
+activity on the system is very low (only core daemons like syslog and
+cron), he may run setxid binaries / trigger local daemon activity /
+trigger network services activity / await sporadic cron jobs activity
+/ etc. and get rather precise counters for fs and network activity of
+these privileged tasks, which is unknown otherwise.
+
+
+Also hiding slabinfo is a one step to complicate exploitation of kernel
+heap overflows (and possibly, other bugs).  The related discussion:
+
+http://thread.gmane.org/gmane.linux.kernel/1108378
+
+
+World readable slabinfo simplifies kernel developers' job of debugging
+kernel bugs (e.g. memleaks), but I believe it does more harm than
+benefits.  For most users 0444 slabinfo is an unreasonable attack vector.
 
 Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
 ---
- fs/proc/base.c |   42 ++++++------------------------------------
- 1 files changed, 6 insertions(+), 36 deletions(-)
+ mm/slab.c |    3 ++-
+ mm/slub.c |    2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
 
 --
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index d44c701..8b72293 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -1665,46 +1665,12 @@ out:
- 	return error;
+diff --git a/mm/slab.c b/mm/slab.c
+index 6d90a09..560ffd0 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -4584,7 +4584,8 @@ static const struct file_operations proc_slabstats_operations = {
+ 
+ static int __init slab_proc_init(void)
+ {
+-	proc_create("slabinfo",S_IWUSR|S_IRUGO,NULL,&proc_slabinfo_operations);
++	proc_create("slabinfo", S_IWUSR | S_IRUSR, NULL,
++		    &proc_slabinfo_operations);
+ #ifdef CONFIG_DEBUG_SLAB_LEAK
+ 	proc_create("slab_allocators", 0, NULL, &proc_slabstats_operations);
+ #endif
+diff --git a/mm/slub.c b/mm/slub.c
+index 9f662d7..f440fc7 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -5257,7 +5257,7 @@ static const struct file_operations proc_slabinfo_operations = {
+ 
+ static int __init slab_proc_init(void)
+ {
+-	proc_create("slabinfo", S_IRUGO, NULL, &proc_slabinfo_operations);
++	proc_create("slabinfo", S_IRUSR, NULL, &proc_slabinfo_operations);
+ 	return 0;
  }
- 
--static int proc_pid_fd_link_getattr(struct vfsmount *mnt, struct dentry *dentry,
--		struct kstat *stat)
--{
--	struct inode *inode = dentry->d_inode;
--	struct task_struct *task = get_proc_task(inode);
--	int rc;
--
--	if (task == NULL)
--		return -ESRCH;
--
--	rc = -EACCES;
--	if (lock_trace(task))
--		goto out_task;
--
--	generic_fillattr(inode, stat);
--	unlock_trace(task);
--	rc = 0;
--out_task:
--	put_task_struct(task);
--	return rc;
--}
--
- static const struct inode_operations proc_pid_link_inode_operations = {
- 	.readlink	= proc_pid_readlink,
- 	.follow_link	= proc_pid_follow_link,
- 	.setattr	= proc_setattr,
- };
- 
--static const struct inode_operations proc_fdinfo_link_inode_operations = {
--	.setattr	= proc_setattr,
--	.getattr	= proc_pid_fd_link_getattr,
--};
--
--static const struct inode_operations proc_fd_link_inode_operations = {
--	.readlink	= proc_pid_readlink,
--	.follow_link	= proc_pid_follow_link,
--	.setattr	= proc_setattr,
--	.getattr	= proc_pid_fd_link_getattr,
--};
--
- 
- /* building an inode */
- 
-@@ -2013,6 +1979,11 @@ static int tid_fd_revalidate(struct dentry *dentry, struct nameidata *nd)
- 	task = get_proc_task(inode);
- 	fd = proc_fd(inode);
- 
-+	if (!ptrace_may_access(task, PTRACE_MODE_READ)) {
-+		put_task_struct(task);
-+		task = NULL;
-+	}
-+
- 	if (task) {
- 		files = get_files_struct(task);
- 		if (files) {
-@@ -2085,7 +2056,7 @@ static struct dentry *proc_fd_instantiate(struct inode *dir,
- 	spin_unlock(&files->file_lock);
- 	put_files_struct(files);
- 
--	inode->i_op = &proc_fd_link_inode_operations;
-+	inode->i_op = &proc_pid_link_inode_operations;
- 	inode->i_size = 64;
- 	ei->op.proc_get_link = proc_fd_link;
- 	d_set_d_op(dentry, &tid_fd_dentry_operations);
-@@ -2267,7 +2238,6 @@ static struct dentry *proc_fdinfo_instantiate(struct inode *dir,
- 	ei->fd = fd;
- 	inode->i_mode = S_IFREG | S_IRUSR;
- 	inode->i_fop = &proc_fdinfo_file_operations;
--	inode->i_op = &proc_fdinfo_link_inode_operations;
- 	d_set_d_op(dentry, &tid_fd_dentry_operations);
- 	d_add(dentry, inode);
- 	/* Close the race of the process dying before we return the dentry */
+ module_init(slab_proc_init);
