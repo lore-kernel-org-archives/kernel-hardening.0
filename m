@@ -1,106 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sat, 10 Sep 2011 20:41:34 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110910164134.GA2442@albatros>
+Date: Mon, 12 Sep 2011 19:06:30 +0400
+From: Cyrill Gorcunov <gorcunov@gmail.com>
+Message-ID: <20110912150630.GE25367@sun>
 References: <20110910164001.GA2342@albatros>
+ <20110910164134.GA2442@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110910164001.GA2342@albatros>
-Subject: [kernel-hardening] [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
-To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>
-Cc: Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org
+In-Reply-To: <20110910164134.GA2442@albatros>
+Subject: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Historically /proc/slabinfo has 0444 permissions and is accessible to
-the world.  slabinfo contains rather private information related both to
-the kernel and userspace tasks.  Depending on the situation, it might
-reveal either private information per se or information useful to make
-another targeted attack.  Some examples of what can be learned by
-reading/watching for /proc/slabinfo entries:
+On Sat, Sep 10, 2011 at 08:41:34PM +0400, Vasiliy Kulikov wrote:
+> Historically /proc/slabinfo has 0444 permissions and is accessible to
+> the world.  slabinfo contains rather private information related both to
+> the kernel and userspace tasks.  Depending on the situation, it might
+> reveal either private information per se or information useful to make
+> another targeted attack.  Some examples of what can be learned by
+> reading/watching for /proc/slabinfo entries:
+> 
+...
 
-1) dentry (and different *inode*) number might reveal other processes fs
-activity.  The number of dentry "active objects" doesn't strictly show
-file count opened/touched by a process, however, there is a good
-correlation between them.  The patch "proc: force dcache drop on
-unauthorized access" relies on the privacy of dentry count.
+Since this file is controversy point, probably its permissions might be
+configurable via setup option?
 
-2) different inode entries might reveal the same information as (1), but
-these are more fine granted counters.  If a filesystem is mounted in a
-private mount point (or even a private namespace) and fs type differs from
-other mounted fs types, fs activity in this mount point/namespace is
-revealed.  If there is a single ecryptfs mount point, the whole fs
-activity of a single user is revealed.  Number of files in ecryptfs
-mount point is a private information per se.
-
-3) fuse_* reveals number of files / fs activity of a user in a user
-private mount point.  It is approx. the same severity as ecryptfs
-infoleak in (2).
-
-4) sysfs_dir_cache similar to (2) reveals devices' addition/removal,
-which can be otherwise hidden by "chmod 0700 /sys/".  With 0444 slabinfo
-the precise number of sysfs files is known to the world.
-
-5) buffer_head might reveal some kernel activity.  With other
-information leaks an attacker might identify what specific kernel
-routines generate buffer_head activity.
-
-6) *kmalloc* infoleaks are very situational.  Attacker should watch for
-the specific kmalloc size entry and filter the noise related to the unrelated
-kernel activity.  If an attacker has relatively silent victim system, he
-might get rather precise counters.
-
-Additional information sources might significantly increase the slabinfo
-infoleak benefits.  E.g. if an attacker knows that the processes
-activity on the system is very low (only core daemons like syslog and
-cron), he may run setxid binaries / trigger local daemon activity /
-trigger network services activity / await sporadic cron jobs activity
-/ etc. and get rather precise counters for fs and network activity of
-these privileged tasks, which is unknown otherwise.
-
-
-Also hiding slabinfo is a one step to complicate exploitation of kernel
-heap overflows (and possibly, other bugs).  The related discussion:
-
-http://thread.gmane.org/gmane.linux.kernel/1108378
-
-
-World readable slabinfo simplifies kernel developers' job of debugging
-kernel bugs (e.g. memleaks), but I believe it does more harm than
-benefits.  For most users 0444 slabinfo is an unreasonable attack vector.
-
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
----
- mm/slab.c |    3 ++-
- mm/slub.c |    2 +-
- 2 files changed, 3 insertions(+), 2 deletions(-)
-
---
-diff --git a/mm/slab.c b/mm/slab.c
-index 6d90a09..560ffd0 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -4584,7 +4584,8 @@ static const struct file_operations proc_slabstats_operations = {
- 
- static int __init slab_proc_init(void)
- {
--	proc_create("slabinfo",S_IWUSR|S_IRUGO,NULL,&proc_slabinfo_operations);
-+	proc_create("slabinfo", S_IWUSR | S_IRUSR, NULL,
-+		    &proc_slabinfo_operations);
- #ifdef CONFIG_DEBUG_SLAB_LEAK
- 	proc_create("slab_allocators", 0, NULL, &proc_slabstats_operations);
- #endif
-diff --git a/mm/slub.c b/mm/slub.c
-index 9f662d7..f440fc7 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -5257,7 +5257,7 @@ static const struct file_operations proc_slabinfo_operations = {
- 
- static int __init slab_proc_init(void)
- {
--	proc_create("slabinfo", S_IRUGO, NULL, &proc_slabinfo_operations);
-+	proc_create("slabinfo", S_IRUSR, NULL, &proc_slabinfo_operations);
- 	return 0;
- }
- module_init(slab_proc_init);
+	Cyrill
