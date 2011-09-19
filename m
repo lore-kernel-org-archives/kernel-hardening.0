@@ -1,10 +1,8 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: penberg@gmail.com
-In-Reply-To: <CA+55aFwnxOvkS12i97kJcWFrH7n591vxq7vBXKzuROiirnYJ0g@mail.gmail.com>
-References: <20110918170512.GA2351@albatros>
-	<CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com>
-	<20110919144657.GA5928@albatros>
+In-Reply-To: <20110919185518.GA5563@albatros>
+References: <20110919144657.GA5928@albatros>
 	<CAOJsxLG8gW=BLOptpULsaAEwTravADKbNbXp5e9Wd7xVEfR9AQ@mail.gmail.com>
 	<20110919155718.GB16272@albatros>
 	<CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com>
@@ -14,68 +12,31 @@ References: <20110918170512.GA2351@albatros>
 	<CAOJsxLGc0bwCkDtk2PVe7c155a9wVoDAY0CmYDTLg8_bL4qxqg@mail.gmail.com>
 	<20110919175856.GA4282@albatros>
 	<CAOJsxLFdNVnW6Faap0UaqZQDQxbA_dEiR2HGdzZtGMJFsVR1WQ@mail.gmail.com>
-	<CA+55aFwnxOvkS12i97kJcWFrH7n591vxq7vBXKzuROiirnYJ0g@mail.gmail.com>
-Date: Mon, 19 Sep 2011 22:18:34 +0300
-Message-ID: <CAOJsxLE5TMXwAHPks-mvk0EPAHC18fDXf345uZ3umkzNkk7-cQ@mail.gmail.com>
+	<20110919185518.GA5563@albatros>
+Date: Mon, 19 Sep 2011 22:20:16 +0300
+Message-ID: <CAOJsxLHWu7gm94MvFOcbrjW33AqpD7i+kYL1+mEMt=4cS53GhA@mail.gmail.com>
 From: Pekka Enberg <penberg@cs.helsinki.fi>
 Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
 Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Linus,
-
-On Mon, Sep 19, 2011 at 9:55 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> Also, quite frankly, your argument that /proc/slabinfo is so important
-> for kernel debugging is bogus. Every time I've complained about the
-> fact that the thing is useless AND ACTIVELY MISLEADING because it
-> mixes up all the slabs (so big numbers for "vm_area_struct" might
-> actually be about some other slab entirely, and *has* been, to the
-> point of people wasting time), the answer has been "whatever".
+On Mon, Sep 19, 2011 at 9:55 PM, Vasiliy Kulikov <segoon@openwall.com> wrot=
+e:
+> Oh, we also have perf... =A0Given these are separate interfaces, I think
+> slab oriented restriction makes more sense.
 >
-> You can't have it both ways just to argue for the status quo.
-
-Well, sure. I was actually planning to rip out SLUB merging completely
-because it makes /proc/slabinfo so useless but never got around doing
-that. Mixing up allocations makes heap exploits harder but there's no
-agreement on how much more difficult (i.e. if it matters at all for brute
-force attacks).
-
-So dunno what's the right thing to do here. Every time I discuss the
-issues with 'security folks' I'm left with more questions than answers...
-Everybody seems to be more interested in closing down kernel ABIs
-rather than making kernel memory allocations more robust against
-attacks.
-
-But anyway, if you feel about this strongly feel free to pick up
-Vasiliy's patch. I think my suggestion of introducing a
-CONFIG_RESTRICT_PROCFS makes most sense because:
-
-  - When we've mucked around with /proc/slabinfo in the past, we have
-    broken setups. (That might be less relevant now.)
-
-  - /proc/slabinfo is not the only source where you can get information
-    on kernel memory allocations (we have one in sysfs and perf kmem).
-
-On Mon, Sep 19, 2011 at 9:55 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> Considering how useless /proc/slabinfo actually is today - exactly
-> because of the misleading mixing - I suspect the right thing to do is
-> to make it root-only.
+> So, now we have:
 >
-> Having some aggregate number in /proc/meminfo would probably be fine.
->
-> And yes, we probably should avoid giving page-level granularity in
-> /proc/meminfo too. Do it in megabytes instead. None of the information
-> there is really relevant at a page level, everybody just wants rough
-> aggregates.
+> /proc/slabinfo
+> /sys/kernel/slab
+> /proc/meminfo
+> 'perf kmem' - not sure what specific files should be guarded
 
-We have this in /proc/meminfo:
+I don't think you can close down 'perf kmem' per se. You need to make
+sure the attacker is not able to use perf tracing (of which 'perf kmem' is
+a subset).
 
-Slab:              20012 kB
-
-Or did you mean something even more specific?
-
-                        Pekka
+                       Pekka
