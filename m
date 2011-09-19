@@ -13,30 +13,24 @@ References: <20110919144657.GA5928@albatros>
 	<20110919175856.GA4282@albatros>
 	<CAOJsxLFdNVnW6Faap0UaqZQDQxbA_dEiR2HGdzZtGMJFsVR1WQ@mail.gmail.com>
 	<20110919185518.GA5563@albatros>
-Date: Mon, 19 Sep 2011 22:20:16 +0300
-Message-ID: <CAOJsxLHWu7gm94MvFOcbrjW33AqpD7i+kYL1+mEMt=4cS53GhA@mail.gmail.com>
+Date: Mon, 19 Sep 2011 22:33:14 +0300
+Message-ID: <CAOJsxLFsmoX777Qui_jBSsv7o0sn2wQ9tY2TeRPyv3ZFvNaRLg@mail.gmail.com>
 From: Pekka Enberg <penberg@cs.helsinki.fi>
 Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
 Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
 To: Vasiliy Kulikov <segoon@openwall.com>
 Cc: Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 19, 2011 at 9:55 PM, Vasiliy Kulikov <segoon@openwall.com> wrot=
-e:
-> Oh, we also have perf... =A0Given these are separate interfaces, I think
-> slab oriented restriction makes more sense.
->
-> So, now we have:
->
-> /proc/slabinfo
-> /sys/kernel/slab
-> /proc/meminfo
-> 'perf kmem' - not sure what specific files should be guarded
+On Mon, Sep 19, 2011 at 9:55 PM, Vasiliy Kulikov <segoon@openwall.com> wrote:
+> Is there another way to get directly or indirectly the information about
+> slabs?
 
-I don't think you can close down 'perf kmem' per se. You need to make
-sure the attacker is not able to use perf tracing (of which 'perf kmem' is
-a subset).
+I didn't check closely but there seems to be some filesystem specific
+stats under /proc at least. No idea how useful those are as attack
+vectors.
 
-                       Pekka
+I also suspect there are per-module knobs under /proc and /sys that
+can be used to get indirect information. Many subsystems have
+implemented their own slab wrappers in the past and they keep popping
+up every now and then.
