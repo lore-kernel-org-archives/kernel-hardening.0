@@ -1,107 +1,86 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Mon, 19 Sep 2011 20:18:37 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110919161837.GA2232@albatros>
-References: <20110910164001.GA2342@albatros>
- <20110910164134.GA2442@albatros>
- <20110914192744.GC4529@outflux.net>
- <20110918170512.GA2351@albatros>
- <CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com>
- <20110919144657.GA5928@albatros>
- <CAOJsxLG8gW=BLOptpULsaAEwTravADKbNbXp5e9Wd7xVEfR9AQ@mail.gmail.com>
- <20110919155718.GB16272@albatros>
- <CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to
- /proc/slabinfo
-To: Pekka Enberg <penberg@cs.helsinki.fi>
-Cc: Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>
+Sender: linus971@gmail.com
+In-Reply-To: <BANLkTimnP8L3kSoafdTtUhr9CXx9-WDVLQ@mail.gmail.com>
+References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
+ <BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com> <20110630075716.GB3377@albatros>
+ <BANLkTik0DF5jUhOsP=Pnm+vMbHzEx+3L-Q@mail.gmail.com> <BANLkTi=DiVRV9dkTtYgq+CY-kxVs5ecoWw@mail.gmail.com>
+ <BANLkTimnP8L3kSoafdTtUhr9CXx9-WDVLQ@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Mon, 19 Sep 2011 09:40:19 -0700
+Message-ID: <CA+55aFxXS9z=NwoYug+qGoYufqN-6dCo4fm5ggTsoDonsMi4Dw@mail.gmail.com>
+Content-Type: multipart/mixed; boundary=0016e65b62c4caa4d804ad4e00c4
+Subject: [kernel-hardening] Re: [Security] [PATCH 2/2] taskstats: restrict access to user
+To: Balbir Singh <bsingharora@gmail.com>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Shailabh Nagar <nagar@us.ibm.com>, linux-kernel@vger.kernel.org, security@kernel.org, Eric Paris <eparis@redhat.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Balbir Singh <balbir@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 19, 2011 at 19:11 +0300, Pekka Enberg wrote:
-> >> What's different about the patch now?
-> >
-> > The exploitation you're talking about is an exploitation of kernel heap
-> > bugs.  Dan's previous "make slabinfo 0400" patch tried to complicate
-> > attacker's life by hiding information about how many free object are
-> > left in the slab.  With this information an attacker may compute how he
-> > should spray the slab to position slab object to increase his chances of
-> > overwriting specific memory areas - pointers, etc.
-> >
-> > I don't speak about how much/whether closing slabinfo complicates this
-> > task, though.  My idea is orthogonal to the Dan's idea.  I claim that
-> > with 0444 slabinfo any user may get information about in-system activity
-> > that he shouldn't learn.  In short, one may learn precisely when other
-> > user reads directory contents, opens files, how much files there are in
-> > the specific _private_ directory, how much files _private_ ecryptfs or
-> > fuse mount point contains, etc.  This breaks user's assumption that
-> > the number of files in a private directory is a private information.
-> > There are a bit more thoughts in the patch description.
-> 
-> Yes, I read your patch description and I think it's convincing enough
-> to warrant a config option but not changing the default.
-> 
-> However, if the encryptfs and infoleaks really are serious enough to
-> hide /proc/slabinfo, I think you should consider switching over to
-> kmalloc() instead of kmem_cache_alloc() to make sure nobody can
-> gain access to the information.
+--0016e65b62c4caa4d804ad4e00c4
+Content-Type: text/plain; charset=ISO-8859-1
 
-kmalloc() is still visible in slabinfo as kmalloc-128 or so.
+On Thu, Jun 30, 2011 at 8:02 PM, Balbir Singh <bsingharora@gmail.com> wrote:
+>>
+>> So that's why I think it should be marked BROKEN. What applications
+>> actually depend on this? iotop and what else? Because if it's just
+>> iotop, I do suspect we might be better off telling people "ok,
+>> disabling this will break iotop, but quite frankly, you're better off
+>> without it".
+>
+> I beg to differ, due to the reasons above. I'd rather find time and
+> fix the pending issues (network namespace), you've fixed the pid
+> namespace issue. I'd also look for exiting listeners
 
+So nothing ever happened on this thread, afaik.
 
-> >> > One note: only to _kernel_ developers.  It means it is a strictly
-> >> > debugging feature, which shouldn't be enabled in the production systems.
-> >>
-> >> It's pretty much _the_ interface for debugging kernel memory leaks in
-> >> production systems and we ask users for it along with /proc/meminfo
-> >> when debugging many memory management related issues. When we
-> >> temporarily dropped /proc/slabinfo with the introduction of SLUB, people
-> >> complained pretty loudly.
-> >
-> > Could you point to the discussion, please?  I cannot find the patch for
-> > 0400 slabinfo even in the linux-history repository.
-> 
-> We dropped the whole file for SLUB:
-> 
-> http://lwn.net/Articles/263337/
+You can still read sensitive information at a byte granularity with taskstats.
 
-Ah, I've misunderstood you.
+Balbir never sent any of the fixes he was supposed to, and none of the
+namespace issues have gotten fixed.
 
+It's now almost three months later, and things are still equally broken.
 
-> [ I didn't find the original discussion that motivated the above
->   patch but it should be somewhere in LKML archives around
->   that time. ]
-> 
-> Making it root-only will have pretty much the same kind of
-> out-of-the-box behavior.
-> 
-> >> I'd be willing to consider this patch if it's a config option that's not enabled
-> >> by default; otherwise you need to find someone else to merge the patch.
-> >> You can add some nasty warnings to the Kconfig text to scare the users
-> >> into enabling it. ;-)
-> >
-> > How do you see this CONFIG_ option?  CONFIG_PROCFS_COMPAT_MODES (or _PERMS),
-> > defaults to Y?  If we find more procfs files with dangerous permissions,
-> > we may move it under "ifndef CONFIG_PROCFS_COMPAT_PERMS".
-> 
-> I guess CONFIG_RESTRICT_PROCFS type of thing makes most sense
-> since the problem is not only about SLAB. If you want to make it slab-only
-> config option, I'm fine with that too.
+I think we need to just disable TASKSTAT's. Nobody maintains it, it's
+been a known issue for months, people pointed out problems and even
+sent patches, and nothing happened.
 
-OK, then I'll prepare a patch with a configure option, if no other
-objections.
+Maybe we can minimize it with the appended patch, but dammit, we need
+to do *something*. If I don't get any reasonable replies, I'm really
+going to have to mark this as known-BROKEN, since nothing ever
+happens, and the "maintainer" clearly doesn't care about security
+issues.
 
-> Please note that you need to restrict sysfs files for SLUB as well.
+                         Linus
 
-Sure.
+--0016e65b62c4caa4d804ad4e00c4
+Content-Type: text/x-patch; charset=US-ASCII; name="patch.diff"
+Content-Disposition: attachment; filename="patch.diff"
+Content-Transfer-Encoding: base64
+X-Attachment-Id: f_gsroiqf40
 
-Thank you for the comments!
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+IGtlcm5lbC90YXNrc3RhdHMuYyB8ICAgIDIgKysKIGtlcm5lbC90c2FjY3QuYyAgICB8ICAgIDcg
+KysrKy0tLQogMiBmaWxlcyBjaGFuZ2VkLCA2IGluc2VydGlvbnMoKyksIDMgZGVsZXRpb25zKC0p
+CgpkaWZmIC0tZ2l0IGEva2VybmVsL3Rhc2tzdGF0cy5jIGIva2VybmVsL3Rhc2tzdGF0cy5jCmlu
+ZGV4IGUxOWNlMTQ1NGVlMS4uNTg3NGQ0ODY2YjNjIDEwMDY0NAotLS0gYS9rZXJuZWwvdGFza3N0
+YXRzLmMKKysrIGIva2VybmVsL3Rhc2tzdGF0cy5jCkBAIC00NTcsNiArNDU3LDggQEAgc3RhdGlj
+IGludCBjbWRfYXR0cl9yZWdpc3Rlcl9jcHVtYXNrKHN0cnVjdCBnZW5sX2luZm8gKmluZm8pCiAJ
+Y3B1bWFza192YXJfdCBtYXNrOwogCWludCByYzsKIAorCWlmICghY2FwYWJsZShDQVBfU1lTX0FE
+TUlOKSkKKwkJcmV0dXJuIC1FUEVSTTsKIAlpZiAoIWFsbG9jX2NwdW1hc2tfdmFyKCZtYXNrLCBH
+RlBfS0VSTkVMKSkKIAkJcmV0dXJuIC1FTk9NRU07CiAJcmMgPSBwYXJzZShpbmZvLT5hdHRyc1tU
+QVNLU1RBVFNfQ01EX0FUVFJfUkVHSVNURVJfQ1BVTUFTS10sIG1hc2spOwpkaWZmIC0tZ2l0IGEv
+a2VybmVsL3RzYWNjdC5jIGIva2VybmVsL3RzYWNjdC5jCmluZGV4IDI0ZGM2MGQ5ZmExZi4uMTEw
+Y2E1YTAzYmQ2IDEwMDY0NAotLS0gYS9rZXJuZWwvdHNhY2N0LmMKKysrIGIva2VybmVsL3RzYWNj
+dC5jCkBAIC03OCw2ICs3OCw3IEBAIHZvaWQgYmFjY3RfYWRkX3RzayhzdHJ1Y3QgdGFza3N0YXRz
+ICpzdGF0cywgc3RydWN0IHRhc2tfc3RydWN0ICp0c2spCiAKICNkZWZpbmUgS0IgMTAyNAogI2Rl
+ZmluZSBNQiAoMTAyNCpLQikKKyNkZWZpbmUgS0JfTUFTSyAofihLQi0xKSkKIC8qCiAgKiBmaWxs
+IGluIGV4dGVuZGVkIGFjY291bnRpbmcgZmllbGRzCiAgKi8KQEAgLTEwMCw5ICsxMDEsOSBAQCB2
+b2lkIHhhY2N0X2FkZF90c2soc3RydWN0IHRhc2tzdGF0cyAqc3RhdHMsIHN0cnVjdCB0YXNrX3N0
+cnVjdCAqcCkKIAlzdGF0cy0+cmVhZF9zeXNjYWxscwk9IHAtPmlvYWMuc3lzY3I7CiAJc3RhdHMt
+PndyaXRlX3N5c2NhbGxzCT0gcC0+aW9hYy5zeXNjdzsKICNpZmRlZiBDT05GSUdfVEFTS19JT19B
+Q0NPVU5USU5HCi0Jc3RhdHMtPnJlYWRfYnl0ZXMJPSBwLT5pb2FjLnJlYWRfYnl0ZXM7Ci0Jc3Rh
+dHMtPndyaXRlX2J5dGVzCT0gcC0+aW9hYy53cml0ZV9ieXRlczsKLQlzdGF0cy0+Y2FuY2VsbGVk
+X3dyaXRlX2J5dGVzID0gcC0+aW9hYy5jYW5jZWxsZWRfd3JpdGVfYnl0ZXM7CisJc3RhdHMtPnJl
+YWRfYnl0ZXMJPSBwLT5pb2FjLnJlYWRfYnl0ZXMgJiBLQl9NQVNLOworCXN0YXRzLT53cml0ZV9i
+eXRlcwk9IHAtPmlvYWMud3JpdGVfYnl0ZXMgJiBLQl9NQVNLOworCXN0YXRzLT5jYW5jZWxsZWRf
+d3JpdGVfYnl0ZXMgPSBwLT5pb2FjLmNhbmNlbGxlZF93cml0ZV9ieXRlcyAmIEtCX01BU0s7CiAj
+ZWxzZQogCXN0YXRzLT5yZWFkX2J5dGVzCT0gMDsKIAlzdGF0cy0+d3JpdGVfYnl0ZXMJPSAwOwo=
+--0016e65b62c4caa4d804ad4e00c4--
