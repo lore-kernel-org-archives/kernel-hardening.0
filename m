@@ -1,43 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Mon, 19 Sep 2011 12:51:10 -0500 (CDT)
+From: Christoph Lameter <cl@gentwo.org>
+In-Reply-To: <20110919173539.GA3751@albatros>
+Message-ID: <alpine.DEB.2.00.1109191249450.10968@router.home>
+References: <20110910164134.GA2442@albatros> <20110914192744.GC4529@outflux.net> <20110918170512.GA2351@albatros> <CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com> <20110919144657.GA5928@albatros> <CAOJsxLG8gW=BLOptpULsaAEwTravADKbNbXp5e9Wd7xVEfR9AQ@mail.gmail.com>
+ <20110919155718.GB16272@albatros> <CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com> <20110919161837.GA2232@albatros> <CAOJsxLE2od0f+6cbL2hA_31CbrqS7AUofx5DT2L9fO_7gxH+PQ@mail.gmail.com> <20110919173539.GA3751@albatros>
 MIME-Version: 1.0
-In-Reply-To: <20110919173905.GA3804@albatros>
-References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
-	<BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com>
-	<20110630075716.GB3377@albatros>
-	<BANLkTik0DF5jUhOsP=Pnm+vMbHzEx+3L-Q@mail.gmail.com>
-	<BANLkTi=DiVRV9dkTtYgq+CY-kxVs5ecoWw@mail.gmail.com>
-	<BANLkTimnP8L3kSoafdTtUhr9CXx9-WDVLQ@mail.gmail.com>
-	<CA+55aFxXS9z=NwoYug+qGoYufqN-6dCo4fm5ggTsoDonsMi4Dw@mail.gmail.com>
-	<20110919173905.GA3804@albatros>
-Date: Mon, 19 Sep 2011 23:17:16 +0530
-Message-ID: <CAKTCnznSPoYvjzH_GekABBZ4HkyoQPVjTjBsOjwpVMSxQRxBSA@mail.gmail.com>
-From: Balbir Singh <bsingharora@gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [Security] [PATCH 2/2] taskstats: restrict access to user
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to
+ /proc/slabinfo
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Shailabh Nagar <nagar@us.ibm.com>, linux-kernel@vger.kernel.org, security@kernel.org, Eric Paris <eparis@redhat.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Balbir Singh <balbir@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com
+Cc: Pekka Enberg <penberg@cs.helsinki.fi>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 19, 2011 at 11:09 PM, Vasiliy Kulikov <segoon@openwall.com> wro=
-te:
-> On Mon, Sep 19, 2011 at 09:40 -0700, Linus Torvalds wrote:
->> diff --git a/kernel/taskstats.c b/kernel/taskstats.c
->> index e19ce1454ee1..5874d4866b3c 100644
->> --- a/kernel/taskstats.c
->> +++ b/kernel/taskstats.c
->> @@ -457,6 +457,8 @@ static int cmd_attr_register_cpumask(struct genl_inf=
-o *info)
->> =A0 =A0 =A0 cpumask_var_t mask;
->> =A0 =A0 =A0 int rc;
->>
->> + =A0 =A0 if (!capable(CAP_SYS_ADMIN))
->> + =A0 =A0 =A0 =A0 =A0 =A0 return -EPERM;
->
-> Shouldn't it simply protect taskstats_user_cmd()? =A0You may still poll
-> the counters with TASKSTATS_CMD_ATTR_PID/TASKSTATS_CMD_ATTR_TGID.
->
+On Mon, 19 Sep 2011, Vasiliy Kulikov wrote:
 
-Yep, it should if we want to move it all to root access.
+> > > kmalloc() is still visible in slabinfo as kmalloc-128 or so.
+> >
+> > Yes, but there's no way for users to know where the allocations came from
+> > if you mix them up with other kmalloc-128 call-sites. That way the number
+> > of private files will stay private to the user, no? Doesn't that give you even
+> > better protection against the infoleak?
+>
+> No, what it gives us is an obscurity, not a protection.  I'm sure it
+> highly depends on the specific situation whether an attacker is able to
+> identify whether the call is from e.g. ecryptfs or from VFS.  Also the
+> correlation between the number in slabinfo and the real private actions
+> still exists.
 
-Balbir
+IMHO a restriction of access to slab statistics is reasonable in a
+hardened environment. Make it dependent on CONFIG_SECURITY or some such
+thing?
