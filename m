@@ -1,71 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFxXS9z=NwoYug+qGoYufqN-6dCo4fm5ggTsoDonsMi4Dw@mail.gmail.com>
-References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
-	<BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com>
-	<20110630075716.GB3377@albatros>
-	<BANLkTik0DF5jUhOsP=Pnm+vMbHzEx+3L-Q@mail.gmail.com>
-	<BANLkTi=DiVRV9dkTtYgq+CY-kxVs5ecoWw@mail.gmail.com>
-	<BANLkTimnP8L3kSoafdTtUhr9CXx9-WDVLQ@mail.gmail.com>
-	<CA+55aFxXS9z=NwoYug+qGoYufqN-6dCo4fm5ggTsoDonsMi4Dw@mail.gmail.com>
-Date: Mon, 19 Sep 2011 22:50:02 +0530
-Message-ID: <CAKTCnzkfNjDJpOwMnhzH0OVZOJWRWgOSyP-n=KyXXZM_M1uq4Q@mail.gmail.com>
-From: Balbir Singh <bsingharora@gmail.com>
+Sender: penberg@gmail.com
+In-Reply-To: <20110919161837.GA2232@albatros>
+References: <20110910164001.GA2342@albatros>
+	<20110910164134.GA2442@albatros>
+	<20110914192744.GC4529@outflux.net>
+	<20110918170512.GA2351@albatros>
+	<CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com>
+	<20110919144657.GA5928@albatros>
+	<CAOJsxLG8gW=BLOptpULsaAEwTravADKbNbXp5e9Wd7xVEfR9AQ@mail.gmail.com>
+	<20110919155718.GB16272@albatros>
+	<CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com>
+	<20110919161837.GA2232@albatros>
+Date: Mon, 19 Sep 2011 20:31:42 +0300
+Message-ID: <CAOJsxLE2od0f+6cbL2hA_31CbrqS7AUofx5DT2L9fO_7gxH+PQ@mail.gmail.com>
+From: Pekka Enberg <penberg@cs.helsinki.fi>
 Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [Security] [PATCH 2/2] taskstats: restrict access to user
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Shailabh Nagar <nagar@us.ibm.com>, linux-kernel@vger.kernel.org, security@kernel.org, Eric Paris <eparis@redhat.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Balbir Singh <balbir@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 19, 2011 at 10:10 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
+On Mon, Sep 19, 2011 at 7:18 PM, Vasiliy Kulikov <segoon@openwall.com> wrote:
+>> However, if the encryptfs and infoleaks really are serious enough to
+>> hide /proc/slabinfo, I think you should consider switching over to
+>> kmalloc() instead of kmem_cache_alloc() to make sure nobody can
+>> gain access to the information.
 >
-> On Thu, Jun 30, 2011 at 8:02 PM, Balbir Singh <bsingharora@gmail.com> wro=
-te:
-> >>
-> >> So that's why I think it should be marked BROKEN. What applications
-> >> actually depend on this? iotop and what else? Because if it's just
-> >> iotop, I do suspect we might be better off telling people "ok,
-> >> disabling this will break iotop, but quite frankly, you're better off
-> >> without it".
-> >
-> > I beg to differ, due to the reasons above. I'd rather find time and
-> > fix the pending issues (network namespace), you've fixed the pid
-> > namespace issue. I'd also look for exiting listeners
->
-> So nothing ever happened on this thread, afaik.
->
-> You can still read sensitive information at a byte granularity with tasks=
-tats.
->
-> Balbir never sent any of the fixes he was supposed to, and none of the
-> namespace issues have gotten fixed.
->
-> It's now almost three months later, and things are still equally broken.
->
-> I think we need to just disable TASKSTAT's. Nobody maintains it, it's
-> been a known issue for months, people pointed out problems and even
-> sent patches, and nothing happened.
->
-> Maybe we can minimize it with the appended patch, but dammit, we need
-> to do *something*. If I don't get any reasonable replies, I'm really
-> going to have to mark this as known-BROKEN, since nothing ever
-> happens, and the "maintainer" clearly doesn't care about security
-> issues.
->
+> kmalloc() is still visible in slabinfo as kmalloc-128 or so.
 
-Sorry, I've been bogged down with work issues and have not had time to
-look at it.=A0If someone else wants to take a look while I am busy, I'd
-be happy. The patch you've sent seems reasonable, but I'd suggest a
-changelog
+Yes, but there's no way for users to know where the allocations came from
+if you mix them up with other kmalloc-128 call-sites. That way the number
+of private files will stay private to the user, no? Doesn't that give you even
+better protection against the infoleak?
 
-"Change taskstats user interface, henceforth we need (for security
-purposes) CAP_SYS_ADMIN to receive taskstats
-data on a particular CPU, a subset or all CPUs on the system. The
-patch also rounds the data returned to the KiloByte
-boundary for IO parameters, read_bytes, write_bytes and cancelled_write_byt=
-es"
-
-Thanks for looking into this.
-Balbir
+                                Pekka
