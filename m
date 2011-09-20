@@ -1,33 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 19 Sep 2011 13:59:19 -0700 (PDT)
-From: David Rientjes <rientjes@google.com>
-In-Reply-To: <CAOJsxLE5TMXwAHPks-mvk0EPAHC18fDXf345uZ3umkzNkk7-cQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.00.1109191350030.16739@chino.kir.corp.google.com>
-References: <20110918170512.GA2351@albatros> <CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com> <20110919144657.GA5928@albatros> <CAOJsxLG8gW=BLOptpULsaAEwTravADKbNbXp5e9Wd7xVEfR9AQ@mail.gmail.com> <20110919155718.GB16272@albatros>
- <CAOJsxLGZm+npcR0YgXSE2wLC2iXCtzYyCdTDCt1LN=Z28Rm_UA@mail.gmail.com> <20110919161837.GA2232@albatros> <CAOJsxLE2od0f+6cbL2hA_31CbrqS7AUofx5DT2L9fO_7gxH+PQ@mail.gmail.com> <20110919173539.GA3751@albatros> <CAOJsxLGc0bwCkDtk2PVe7c155a9wVoDAY0CmYDTLg8_bL4qxqg@mail.gmail.com>
- <20110919175856.GA4282@albatros> <CAOJsxLFdNVnW6Faap0UaqZQDQxbA_dEiR2HGdzZtGMJFsVR1WQ@mail.gmail.com> <CA+55aFwnxOvkS12i97kJcWFrH7n591vxq7vBXKzuROiirnYJ0g@mail.gmail.com> <CAOJsxLE5TMXwAHPks-mvk0EPAHC18fDXf345uZ3umkzNkk7-cQ@mail.gmail.com>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1308917362-4795-1-git-send-email-segoon@openwall.com>
+	<BANLkTimm7KDEU7WD7jVV=5vAGt2GbjgwGg@mail.gmail.com>
+	<20110630075716.GB3377@albatros>
+	<BANLkTik0DF5jUhOsP=Pnm+vMbHzEx+3L-Q@mail.gmail.com>
+	<BANLkTi=DiVRV9dkTtYgq+CY-kxVs5ecoWw@mail.gmail.com>
+	<BANLkTimnP8L3kSoafdTtUhr9CXx9-WDVLQ@mail.gmail.com>
+	<CA+55aFxXS9z=NwoYug+qGoYufqN-6dCo4fm5ggTsoDonsMi4Dw@mail.gmail.com>
+	<20110919173905.GA3804@albatros>
+	<CA+55aFzedLJfK2h2hY_a73Tn9F8Qu=LyjPhq2gVi5S=CYsCnDA@mail.gmail.com>
+Date: Mon, 19 Sep 2011 20:35:10 -0700
+In-Reply-To: <CA+55aFzedLJfK2h2hY_a73Tn9F8Qu=LyjPhq2gVi5S=CYsCnDA@mail.gmail.com>
+	(Linus Torvalds's message of "Mon, 19 Sep 2011 10:45:20 -0700")
+Message-ID: <m1obyfopht.fsf@fess.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to
- /proc/slabinfo
-To: Pekka Enberg <penberg@cs.helsinki.fi>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Vasiliy Kulikov <segoon@openwall.com>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@linux.intel.com>, Jesper Juhl <jj@chaosbits.net>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [Security] [PATCH 2/2] taskstats: restrict access to user
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Balbir Singh <bsingharora@gmail.com>, Shailabh Nagar <nagar@us.ibm.com>, linux-kernel@vger.kernel.org, security@kernel.org, Eric Paris <eparis@redhat.com>, Stephen Wilson <wilsons@start.ca>, KOSAKI Motohiro <kosaki.motohiro@jp.fujitsu.com>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Balbir Singh <balbir@linux.vnet.ibm.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 19 Sep 2011, Pekka Enberg wrote:
+Linus Torvalds <torvalds@linux-foundation.org> writes:
 
-> Well, sure. I was actually planning to rip out SLUB merging completely
-> because it makes /proc/slabinfo so useless but never got around doing
-> that.
+> On Mon, Sep 19, 2011 at 10:39 AM, Vasiliy Kulikov <segoon@openwall.com> w=
+rote:
+>>
+>> Shouldn't it simply protect taskstats_user_cmd()? =C2=A0You may still po=
+ll
+>> the counters with TASKSTATS_CMD_ATTR_PID/TASKSTATS_CMD_ATTR_TGID.
+>
+> Yeah, I wondered where I'd really want to hook it in, that was the
+> other option.
+>
+> However, one thing that I'm currently independently asking some
+> networking people is whether that patch guarantees anything at all: is
+> the netlink command even guaranteed to be run in the same context as
+> the person sending it?
 
-Ripping out cache merging entirely for the benefit of an interface seems 
-like overkill, it actually allows the allocator to return cache-hot 
-objects that has a small but measurable impact on performance for some 
-networking loads.  It would probably be better to increase awareness of 
-slabinfo -a and the use of slub_nomerge on the command line when debugging 
-issues.  The most complete solution would be to move everything out of 
-struct kmem_cache except what is necessary for slabinfo and then point to 
-the actual cache data structure that could be shared by merged caches.  
-That's not hard to do, but would add an increment to both the alloc and 
-free fastpaths and require some surgery throughout all of the slub code to 
-understand the new data structures and that would be a pretty big patch.
+I don't know where that conversation is happening but since I have been
+involved rather heavily in netlink syncrhonously processing messages I
+will answer.
+
+> After all, it comes in as a packet of data.  How synchronous is the
+> genetlink thing guaranteed to be in the first place?
+
+Yes.  The netlink skb is guaranteed to be processed synchronously
+and in the senders process.  So accessing current is guaranteed
+to be valid.
+
+I just confirmed my memory by reading the cod in 3.1-rc1
+
+> IOW, are *any* of those "check current capabilities/euid" approaches
+> really guaranteed to be valid? Are they valid today, will they
+> necessarily be valid in a year?
+
+They are valid until such time as someone as someone rearchitects
+netlink message processing.
+
+Several years ago it was decided that processing netlink messages
+syncrhonously so we could access current made for much simpler easier to
+understand kernel code, and most if not all of the netlink permissions
+checks now depend upon the fact that we process netlink messages
+synchronously.
+
+Eric
