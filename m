@@ -1,52 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-In-Reply-To: Your message of "Wed, 21 Sep 2011 21:05:27 +0400."
-             <20110921170527.GA15869@albatros>
-From: Valdis.Kletnieks@vt.edu
-References: <20110910164001.GA2342@albatros> <20110910164134.GA2442@albatros> <20110914192744.GC4529@outflux.net> <20110918170512.GA2351@albatros> <CAOJsxLF8DBEC9o9pSwa6c6pMg8ByFBdsDnzg22P3ucQcP98uzA@mail.gmail.com> <20110919144657.GA5928@albatros> <14082.1316461507@turing-police.cc.vt.edu> <20110919205541.1c44f1a3@bob.linux.org.uk>
-            <20110921170527.GA15869@albatros>
-Mime-Version: 1.0
-Content-Type: multipart/signed; boundary="==_Exmh_1316658054_3192P";
-	 micalg=pgp-sha1; protocol="application/pgp-signature"
-Content-Transfer-Encoding: 7bit
-Date: Wed, 21 Sep 2011 22:20:54 -0400
-Message-ID: <26246.1316658054@turing-police.cc.vt.edu>
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/2] mm: restrict access to /proc/slabinfo
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Alan Cox <alan@linux.intel.com>, Pekka Enberg <penberg@cs.helsinki.fi>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, Kees Cook <kees@ubuntu.com>, Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Dan Rosenberg <drosenberg@vsecurity.com>, Theodore Tso <tytso@mit.edu>, Jesper Juhl <jj@chaosbits.net>, Linus Torvalds <torvalds@linux-foundation.org>, Greg KH <gregkh@suse.de>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Paul Mackerras <paulus@samba.org>, Ingo Molnar <mingo@elte.hu>, Arnaldo Carvalho de Melo <acme@ghostprotocols.net>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Thu, 22 Sep 2011 21:57:54 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20110922175754.GA6558@albatros>
+References: <20110910164001.GA2342@albatros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20110910164001.GA2342@albatros>
+Subject: [kernel-hardening] Re: [RFC PATCH 1/2] proc: force dcache drop on unauthorized access
+To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>
+Cc: Cyrill Gorcunov <gorcunov@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
---==_Exmh_1316658054_3192P
-Content-Type: text/plain; charset=us-ascii
+Hello Andrew,
 
-On Wed, 21 Sep 2011 21:05:27 +0400, Vasiliy Kulikov said:
-> Sorry, I've poorly worded my statement.  Of course I mean root-only
-> slabinfo, not totally disable it.
-
-Oh, that I can live with.. ;)
-
-> Linus, Alan, Kees, and Dave are about to simply restrict slabinfo (and
-> probably similar interfaces) to root.  Pekka is OK too.
+On Sat, Sep 10, 2011 at 20:40 +0400, Vasiliy Kulikov wrote:
+> The patch "proc: fix races against execve() of /proc/PID/fd**" is still
+> a partial fix for a setxid problem.  link(2) is a yet another way to
+> identify whether a specific fd is opened by a privileged process.  By
+> calling link(2) against /proc/PID/fd/* an attacker may identify whether
+> the fd number is valid for PID by analysing link(2) return code.
 > 
-> Christoph and Valdis are about to create new CONFIG_ option to be able
-> to restrict the access to slabinfo/etc., but with old relaxed
-> permissions.
+> Both getattr() and link() can be used by the attacker iff the dentry is
+> present in the dcache.  In this case ->lookup() is not called and the
+> only way to check ptrace permissions is either operation handler or
+> ->revalidate().  The easiest solution to prevent any unauthorized access
+> to /proc/PID/fd*/ files is to force the dentry drop on each unauthorized
+> access attempt.
+> 
+> If an attacker keeps opened fd of /proc/PID/fd/ and dcache contains
+> a specific dentry for some /proc/PID/fd/XXX, any future attemp to use the
+> dentry by the attacker would lead to the dentry drop as a result of a
+> failed ptrace check in ->revalidate().  Then the attacker cannot spawn a
+> dentry for the specific fd number because of ptrace check in ->lookup().
+> 
+> The dentry drop can be still observed by an attacker by analysing
+> information from /proc/slabinfo, which is addressed in the successive
+> patch.
 
-I'm OK with a decision to just make the files mode 400 and be done with it,
-since I can always stick a chmod in the startup scripts if it's *really* a problem.
+After (almost) everybody agreed that closing slabinfo and similar is
+a good thing, should I resend these 2 patches (/proc/PID/fd and
+slabinfo) with sysfs addition or you'll take these patches and I'll send
+sysfs patch after them?
 
-Just that *if* we add a CONFIG_ option, it shouldn't be slabinfo-specific, but
-should cover the *other* identified info-leakers in /proc and /sys as well.
+Thanks,
 
---==_Exmh_1316658054_3192P
-Content-Type: application/pgp-signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.11 (GNU/Linux)
-Comment: Exmh version 2.5 07/13/2001
-
-iD8DBQFOepuGcC3lWbTT17ARAsq9AJ9E8yOpWF0HzbRTxIDnYJIKMmiEjQCfd4G5
-yzAWYuWP4CsLqZ+6joEb/l8=
-=yxmF
------END PGP SIGNATURE-----
-
---==_Exmh_1316658054_3192P--
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
