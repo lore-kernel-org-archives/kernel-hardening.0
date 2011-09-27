@@ -1,106 +1,138 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 27 Sep 2011 19:56:59 +0400
+Date: Tue, 27 Sep 2011 21:54:53 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110927155659.GA22532@albatros>
-References: <1314993400-6910-1-git-send-email-serge@hallyn.com>
- <1314993400-6910-4-git-send-email-serge@hallyn.com>
- <20110926191737.GA4562@albatros>
- <20110927132157.GB3111@sergelap>
+Message-ID: <20110927175453.GA3393@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20110927132157.GB3111@sergelap>
-Subject: [kernel-hardening] Re: [PATCH 01/15] add Documentation/namespaces/user_namespace.txt
- (v3)
-To: "Serge E. Hallyn" <serge.hallyn@canonical.com>
-Cc: Serge Hallyn <serge@hallyn.com>, akpm@osdl.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, containers@lists.linux-foundation.org, dhowells@redhat.com, ebiederm@xmission.com, rdunlap@xenotime.net, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] [PATCH 1/2] mm: restrict access to slab files under procfs and
+ sysfs
+To: kernel-hardening@lists.openwall.com, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>
+Cc: linux-mm@kvack.org, Kees Cook <kees@ubuntu.com>, Dave Hansen <dave@linux.vnet.ibm.com>, Valdis.Kletnieks@vt.edu, Linus Torvalds <torvalds@linux-foundation.org>, David Rientjes <rientjes@google.com>, Alan Cox <alan@linux.intel.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 27, 2011 at 08:21 -0500, Serge E. Hallyn wrote:
-> > First, the patches by design expose much kernel code to unprivileged
-> > userspace processes.  This code doesn't expect malformed data (e.g. VFS,
-> > specific filesystems, block layer, char drivers, sysadmin part of LSMs,
-> > etc. etc.).  By relaxing permission rules you greatly increase attack
-> > surface of the kernel from unprivileged users.  Are you (or somebody
-> > else) planning to audit this code?
-> 
-> I had wanted to (but didn't) propose a discussion at ksummit about how
-> best to approach the filesystem code.  That's not even just for user
-> namespaces - patches have been floated in the past to make mount an
-> unprivileged operation depending on the FS and the user's permission
-> over the device and target.
+Historically /proc/slabinfo and files under /sys/kernel/slab/* have
+world read permissions and are accessible to the world.  slabinfo
+contains rather private information related both to the kernel and
+userspace tasks.  Depending on the situation, it might reveal either
+private information per se or information useful to make another
+targeted attack.  Some examples of what can be learned by
+reading/watching for /proc/slabinfo entries:
 
-This is a dangerous operation by itself.  AFAICS, this is the reason why
-e.g. FUSE doesn't pass user mount points to other users and even root.
-Beginning from violating some rules like existance of single "." and
-".." in each directory and ending with filename charsets with /, \000
-and things like `, ", ', \ inside.
+1) dentry (and different *inode*) number might reveal other processes fs
+activity.  The number of dentry "active objects" doesn't strictly show
+file count opened/touched by a process, however, there is a good
+correlation between them.  The patch "proc: force dcache drop on
+unauthorized access" relies on the privacy of dentry count.
 
+2) different inode entries might reveal the same information as (1), but
+these are more fine granted counters.  If a filesystem is mounted in a
+private mount point (or even a private namespace) and fs type differs from
+other mounted fs types, fs activity in this mount point/namespace is
+revealed.  If there is a single ecryptfs mount point, the whole fs
+activity of a single user is revealed.  Number of files in ecryptfs
+mount point is a private information per se.
 
->  So I don't know if a combination of auditing
-> and fuzzing is the way to go,
+3) fuse_* reveals number of files / fs activity of a user in a user
+private mount point.  It is approx. the same severity as ecryptfs
+infoleak in (2).
 
-Maybe the combination of both.  There are no generic recommendations,
-it's always limited to the subsystem, checked property, and the
-auditor.
+4) sysfs_dir_cache similar to (2) reveals devices' addition/removal,
+which can be otherwise hidden by "chmod 0700 /sys/".  With 0444 slabinfo
+the precise number of sysfs files is known to the world.
 
+5) buffer_head might reveal some kernel activity.  With other
+information leaks an attacker might identify what specific kernel
+routines generate buffer_head activity.
 
-> > Also, will it be possible to somehow restrict what specific kernel
-> > facilities are accessible from users (IOW, what root emulation
-> > limitations are in action)?  It is userful from both points of sysadmin,
-> > who might not want to allow users to do such things, and from the
-> > security POV in sense of attack surface reduction.
-> 
-> You're probably thinking along different lines, but this is why I've
-> been wanting seccomp2 to get pushed through.  So that we can deny a
-> container the syscalls we know it won't need, especially newer ones,
-> to reduce the attack surface available to it.
+6) *kmalloc* infoleaks are very situational.  Attacker should watch for
+the specific kmalloc size entry and filter the noise related to the unrelated
+kernel activity.  If an attacker has relatively silent victim system, he
+might get rather precise counters.
 
-This dependency greatly complicates the things.
-
-First, there is a big misunderstanding between Will and Ingo in what
-needs seccompv2 should serve.  Will wants to reduce kernel attack
-surface by limiting syscalls and syscall arguments available to a user
-(a single task, btw).  Ingo wants to see a full featured filtering
-engine, which needs code changes all over the kernel.  Given the needed
-changes amounts, it will unlikely reduce attack surface.
-
-You probably don't want Will's version as syscalls filtering is a very
-bad abstraction in your case.  user_namespaces likely need Ingo's
-version of seccomp as it will be possible to filter e.g. fs-specific
-events, but even if it is implemented, it will take a looong time for
-your needs IMHO.
+Additional information sources might significantly increase the slabinfo
+infoleak benefits.  E.g. if an attacker knows that the processes
+activity on the system is very low (only core daemons like syslog and
+cron), he may run setxid binaries / trigger local daemon activity /
+trigger network services activity / await sporadic cron jobs activity
+/ etc. and get rather precise counters for fs and network activity of
+these privileged tasks, which is unknown otherwise.
 
 
-Also, I'm afraid for _good_ user_namespace filtering the policy
-definition will be too complicated (like SELinux policy definition for
-non-trivial applications) if it is implemented in events filtering
-terms.
+Also hiding slabinfo and /sys/kernel/slab/* is a one step to complicate
+exploitation of kernel heap overflows (and possibly, other bugs).  The
+related discussion:
+
+http://thread.gmane.org/gmane.linux.kernel/1108378
 
 
-> The way we're approaching it right now is that by default everything
-> stays 'capable(X)', so that a non-init user namespace doesn't get the
-> privileges.
+To keep compatibility with old permission model where non-root
+monitoring daemon could watch for kernel memleaks though slabinfo one
+should do:
 
-Great.  I was not sure about it.
+    groupadd slabinfo
+    usermod -a -G slabinfo $MONITOR_USER
 
+And add the following commands to init scripts (to mountall.conf in
+Ubuntu's upstart case):
 
->  While some of my patchsets this summer didn't follow this,
-> Eric reminded me that we should first clamp down on the user namespaces
-> as much as possible, and relax permissions in child namespaces later.
+    chmod g+r /proc/slabinfo /sys/kernel/slab/*/*
+    chgrp slabinfo /proc/slabinfo /sys/kernel/slab/*/*
 
-I think it is the only sane way.
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+Reviewed-by: Kees Cook <kees@ubuntu.com>
+Reviewed-by: Dave Hansen <dave@linux.vnet.ibm.com>
+CC: Christoph Lameter <cl@gentwo.org>
+CC: Pekka Enberg <penberg@cs.helsinki.fi>
+CC: Valdis.Kletnieks@vt.edu
+CC: Linus Torvalds <torvalds@linux-foundation.org>
+CC: David Rientjes <rientjes@google.com>
+CC: Alan Cox <alan@linux.intel.com>
+---
+ mm/slab.c |    2 +-
+ mm/slub.c |    7 ++++---
+ 2 files changed, 5 insertions(+), 4 deletions(-)
 
-
-> So the small (1-2 patch sized) sets I've been sending the last few
-> weeks are just trying to fix existing inadequate userid or capability
-> checks.
-> 
-> -serge
-
-Thanks,
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+--
+diff --git a/mm/slab.c b/mm/slab.c
+index 6d90a09..10a0052 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -4584,7 +4584,7 @@ static const struct file_operations proc_slabstats_operations = {
+ 
+ static int __init slab_proc_init(void)
+ {
+-	proc_create("slabinfo",S_IWUSR|S_IRUGO,NULL,&proc_slabinfo_operations);
++	proc_create("slabinfo",S_IWUSR|S_IRUSR,NULL,&proc_slabinfo_operations);
+ #ifdef CONFIG_DEBUG_SLAB_LEAK
+ 	proc_create("slab_allocators", 0, NULL, &proc_slabstats_operations);
+ #endif
+diff --git a/mm/slub.c b/mm/slub.c
+index 9f662d7..527a66e 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -4412,11 +4412,12 @@ struct slab_attribute {
+ };
+ 
+ #define SLAB_ATTR_RO(_name) \
+-	static struct slab_attribute _name##_attr = __ATTR_RO(_name)
++	static struct slab_attribute _name##_attr = \
++	__ATTR(_name, 0400, _name##_show, NULL)
+ 
+ #define SLAB_ATTR(_name) \
+ 	static struct slab_attribute _name##_attr =  \
+-	__ATTR(_name, 0644, _name##_show, _name##_store)
++	__ATTR(_name, 0600, _name##_show, _name##_store)
+ 
+ static ssize_t slab_size_show(struct kmem_cache *s, char *buf)
+ {
+@@ -5257,7 +5258,7 @@ static const struct file_operations proc_slabinfo_operations = {
+ 
+ static int __init slab_proc_init(void)
+ {
+-	proc_create("slabinfo", S_IRUGO, NULL, &proc_slabinfo_operations);
++	proc_create("slabinfo", S_IRUSR, NULL, &proc_slabinfo_operations);
+ 	return 0;
+ }
+ module_init(slab_proc_init);
