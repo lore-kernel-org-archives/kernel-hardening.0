@@ -1,54 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 27 Sep 2011 21:56:42 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20110927175642.GA3432@albatros>
+Date: Tue, 27 Sep 2011 13:08:09 -0500 (CDT)
+From: Christoph Lameter <cl@gentwo.org>
+In-Reply-To: <20110927175453.GA3393@albatros>
+Message-ID: <alpine.DEB.2.00.1109271304470.11361@router.home>
 References: <20110927175453.GA3393@albatros>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20110927175453.GA3393@albatros>
-Subject: [kernel-hardening] [PATCH 2/2] mm: restrict access to /proc/meminfo
-To: kernel-hardening@lists.openwall.com, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-mm@kvack.org, Kees Cook <kees@ubuntu.com>, Dave Hansen <dave@linux.vnet.ibm.com>, Valdis.Kletnieks@vt.edu, Linus Torvalds <torvalds@linux-foundation.org>, David Rientjes <rientjes@google.com>, Alan Cox <alan@linux.intel.com>, linux-kernel@vger.kernel.org
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH 1/2] mm: restrict access to slab files under procfs and
+ sysfs
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-mm@kvack.org, Kees Cook <kees@ubuntu.com>, Dave Hansen <dave@linux.vnet.ibm.com>, Valdis.Kletnieks@vt.edu, Linus Torvalds <torvalds@linux-foundation.org>, David Rientjes <rientjes@google.com>, Alan Cox <alan@linux.intel.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-/proc/meminfo stores information related to memory pages usage, which
-may be used to monitor the number of objects in specific caches (and/or
-the changes of these numbers).  This might reveal private information
-similar to /proc/slabinfo infoleaks.  To remove the infoleak, just
-restrict meminfo to root.  If it is used by unprivileged daemons,
-meminfo permissions can be altered the same way as slabinfo:
+This also needs to other /proc files I believe,
 
-    groupadd meminfo
-    usermod -a -G meminfo $MONITOR_USER
-    chmod g+r /proc/meminfo
-    chgrp meminfo /proc/meminfo
 
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
-CC: Kees Cook <kees@ubuntu.com>
-CC: Dave Hansen <dave@linux.vnet.ibm.com>
-CC: Christoph Lameter <cl@gentwo.org>
-CC: Pekka Enberg <penberg@cs.helsinki.fi>
-CC: Valdis.Kletnieks@vt.edu
-CC: Linus Torvalds <torvalds@linux-foundation.org>
-CC: David Rientjes <rientjes@google.com>
-CC: Alan Cox <alan@linux.intel.com>
----
- fs/proc/meminfo.c |    2 +-
- 1 files changed, 1 insertions(+), 1 deletions(-)
+Acked-by: Christoph Lameter <cl@linux.com>
 
---
-diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
-index 5861741..949bdee 100644
---- a/fs/proc/meminfo.c
-+++ b/fs/proc/meminfo.c
-@@ -187,7 +187,7 @@ static const struct file_operations meminfo_proc_fops = {
- 
- static int __init proc_meminfo_init(void)
- {
--	proc_create("meminfo", 0, NULL, &meminfo_proc_fops);
-+	proc_create("meminfo", S_IFREG | S_IRUSR, NULL, &meminfo_proc_fops);
- 	return 0;
- }
- module_init(proc_meminfo_init);
+
+Possible candidates:
+
+christoph@oldy:~/n/linux-2.6$ grep proc_create mm/*
+mm/swapfile.c:	proc_create("swaps", 0, NULL, &proc_swaps_operations);
+mm/vmstat.c:	proc_create("buddyinfo", S_IRUGO, NULL, &fragmentation_file_operations);
+mm/vmstat.c:	proc_create("pagetypeinfo", S_IRUGO, NULL, &pagetypeinfo_file_ops);
+mm/vmstat.c:	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);
+mm/vmstat.c:	proc_create("zoneinfo", S_IRUGO, NULL, &proc_zoneinfo_file_operations);
+
+vmstat and zoneinfo in particular give similar information to what is
+revealed through the slab proc files.
