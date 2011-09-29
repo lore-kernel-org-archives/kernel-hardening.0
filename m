@@ -1,36 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 28 Sep 2011 14:46:14 -0700
-From: Andrew Morton <akpm00@gmail.com>
-Message-Id: <20110928144614.38591e97.akpm00@gmail.com>
-In-Reply-To: <20110927193810.GA5416@albatros>
-References: <20110927175453.GA3393@albatros>
-	<20110927175642.GA3432@albatros>
-	<20110927193810.GA5416@albatros>
+In-Reply-To: Your message of "Wed, 28 Sep 2011 13:31:45 PDT."
+             <1317241905.16137.516.camel@nimitz>
+From: Valdis.Kletnieks@vt.edu
+References: <20110927175453.GA3393@albatros> <20110927175642.GA3432@albatros> <20110927193810.GA5416@albatros> <alpine.DEB.2.00.1109271459180.13797@router.home> <alpine.DEB.2.00.1109271328151.24402@chino.kir.corp.google.com> <alpine.DEB.2.00.1109271546320.13797@router.home>
+            <1317241905.16137.516.camel@nimitz>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Content-Type: multipart/signed; boundary="==_Exmh_1317257024_2944P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
 Content-Transfer-Encoding: 7bit
+Date: Wed, 28 Sep 2011 20:43:44 -0400
+Message-ID: <30918.1317257024@turing-police.cc.vt.edu>
 Subject: [kernel-hardening] Re: [PATCH 2/2] mm: restrict access to /proc/meminfo
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, Christoph Lameter <cl@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, linux-mm@kvack.org, Kees Cook <kees@ubuntu.com>, Dave Hansen <dave@linux.vnet.ibm.com>, Valdis.Kletnieks@vt.edu, Linus Torvalds <torvalds@linux-foundation.org>, David Rientjes <rientjes@google.com>, Alan Cox <alan@linux.intel.com>, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>
+To: Dave Hansen <dave@linux.vnet.ibm.com>
+Cc: Christoph Lameter <cl@gentwo.org>, David Rientjes <rientjes@google.com>, Vasiliy Kulikov <segoon@openwall.com>, kernel-hardening@lists.openwall.com, Pekka Enberg <penberg@kernel.org>, Matt Mackall <mpm@selenic.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, Kees Cook <kees@ubuntu.com>, Linus Torvalds <torvalds@linux-foundation.org>, Alan Cox <alan@linux.intel.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 27 Sep 2011 23:38:10 +0400
-Vasiliy Kulikov <segoon@openwall.com> wrote:
+--==_Exmh_1317257024_2944P
+Content-Type: text/plain; charset=us-ascii
 
-> On Tue, Sep 27, 2011 at 21:56 +0400, Vasiliy Kulikov wrote:
-> > /proc/meminfo stores information related to memory pages usage, which
-> > may be used to monitor the number of objects in specific caches (and/or
-> > the changes of these numbers).  This might reveal private information
-> > similar to /proc/slabinfo infoleaks.  To remove the infoleak, just
-> > restrict meminfo to root.  If it is used by unprivileged daemons,
-> > meminfo permissions can be altered the same way as slabinfo:
-> > 
-> >     groupadd meminfo
-> >     usermod -a -G meminfo $MONITOR_USER
-> >     chmod g+r /proc/meminfo
-> >     chgrp meminfo /proc/meminfo
+On Wed, 28 Sep 2011 13:31:45 PDT, Dave Hansen said:
+
+> We could also just _effectively_ make it output in MB:
 > 
-> Just to make it clear: since this patch breaks "free", I don't propose
-> it anymore.
+> 	foo = foo & ~(1<<20)
+> 
+> or align-up.
 
-It will break top(1) too.  It isn't my favoritest-ever patch :)
+I think we want align-up here, there's a bunch of fields that code probably
+expects to be non-zero on a system that's finished booting...
+
+> We could also give the imprecise numbers to unprivileged
+> users and let privileged ones see the page-level ones.
+
+That also sounds like a good idea.
+
+--==_Exmh_1317257024_2944P
+Content-Type: application/pgp-signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.11 (GNU/Linux)
+Comment: Exmh version 2.5 07/13/2001
+
+iD8DBQFOg79AcC3lWbTT17ARAmqiAJ9V4cm5nViiDdSy1BfRSTUxIHFRvwCfScmt
+aoEo4KjbCZekOI0n/qkZOTc=
+=CRrZ
+-----END PGP SIGNATURE-----
+
+--==_Exmh_1317257024_2944P--
