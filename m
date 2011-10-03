@@ -1,54 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 2 Oct 2011 14:54:57 +0400
-From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20111002105457.GA5598@albatros>
-References: <CAA879TP_uNBd871yVFy1_dk_-5siOwtK8xM_D8MzYqJW2vFnUA@mail.gmail.com>
- <CA+55aFxBp0GjPujpt=JYWLC3mjBeSiCn8=jfpPxJHo4bTejhDA@mail.gmail.com>
- <CAA879TPzmVh4yR5n4Mfd8D6ERpvAFipeMXr1QBr3fwQMdvnRzw@mail.gmail.com>
- <CA+55aFyci1PB9Y_BSqWnQKSSfcCrbJud+q1Z8Cdquo7hXJZaMw@mail.gmail.com>
- <CAA879TMgMm4u6kDFahXqCHAFyvDc_hTt+Q93tdSdHKnAcUaMTw@mail.gmail.com>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1314993400-6910-1-git-send-email-serge@hallyn.com>
+	<1314993400-6910-4-git-send-email-serge@hallyn.com>
+	<20110926191737.GA4562@albatros> <20110927132157.GB3111@sergelap>
+	<20110927155659.GA22532@albatros> <20111001170047.GA2935@sergelap>
+Date: Sun, 02 Oct 2011 18:46:06 -0700
+In-Reply-To: <20111001170047.GA2935@sergelap> (Serge E. Hallyn's message of
+	"Sat, 1 Oct 2011 12:00:47 -0500")
+Message-ID: <m1aa9i4zkx.fsf@fess.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAA879TMgMm4u6kDFahXqCHAFyvDc_hTt+Q93tdSdHKnAcUaMTw@mail.gmail.com>
-Subject: [kernel-hardening] Re: taskstats root only breaking iotop
-To: Guillaume Chazarain <guichaz@gmail.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Balbir Singh <bsingharora@gmail.com>, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH 01/15] add Documentation/namespaces/user_namespace.txt (v3)
+To: "Serge E. Hallyn" <serge.hallyn@canonical.com>
+Cc: Vasiliy Kulikov <segoon@openwall.com>, Serge Hallyn <serge@hallyn.com>, akpm@osdl.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, containers@lists.linux-foundation.org, dhowells@redhat.com, rdunlap@xenotime.net, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(cc'ed kernel-hardening)
+"Serge E. Hallyn" <serge.hallyn@canonical.com> writes:
 
-On Sun, Oct 02, 2011 at 12:22 +0200, Guillaume Chazarain wrote:
-> On Sun, Oct 2, 2011 at 2:20 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
-> > So I don't see why you ask for it. What could possibly be a valid use-case?
-> 
-> Right, kbyte granularity is enough.
+> Quoting Vasiliy Kulikov (segoon@openwall.com):
+>> On Tue, Sep 27, 2011 at 08:21 -0500, Serge E. Hallyn wrote:
+>> > > First, the patches by design expose much kernel code to unprivileged
+>> > > userspace processes.  This code doesn't expect malformed data (e.g. VFS,
+>> > > specific filesystems, block layer, char drivers, sysadmin part of LSMs,
+>> > > etc. etc.).  By relaxing permission rules you greatly increase attack
+>> > > surface of the kernel from unprivileged users.  Are you (or somebody
+>> > > else) planning to audit this code?
 
-It is not enough.  In some border cases an attacker may still learn
-private information given the counters with _arbitrary_ granularity:
+Well in theory this codes does expose this code to unprivileged user
+space in a way that increases the attack surface.    However right now
+there are a lot of cases where because the kernel lacks a sufficient
+mechanism people are just given root provileges so that can get things
+done.  Network manager controlling the network stack as an unprivileged
+user.  Random filesystems on usb sticks being mounted and unmounted
+automatically when the usb sticks are inserted and removed.
 
-http://www.openwall.com/lists/oss-security/2011/06/29/9
+I completely agree that auditing and looking at the code is necessary I
+think most of what will happen is that we will start directly supporting
+how the kernel is actually used in the real world.  Which should
+actually reduce our level of vulnerability, because we give up the
+delusion that large classes of operations don't need careful
+attention because only root can perform them.   Operations which the
+user space authors turn around and write a suid binary for and
+unprivileged user space performs those operations all day long.
 
+>> > I had wanted to (but didn't) propose a discussion at ksummit about how
+>> > best to approach the filesystem code.  That's not even just for user
+>> > namespaces - patches have been floated in the past to make mount an
+>> > unprivileged operation depending on the FS and the user's permission
+>> > over the device and target.
+>> 
+>> This is a dangerous operation by itself.
+>
+> Of course it is :)  And it's been a while since it has been brought up,
+> but it *was* quite well thought through and throrougly discussed - see
+> i.e. https://lkml.org/lkml/2008/1/8/131
+>
+> Oh, that's right.  In the end the reason it didn't go in had to do with
+> the ability for an unprivileged user to prevent a privileged user from
+> unmounting trees by leaving a busy mount in a hidden namespace.
+>
+> Eric, in the past we didn't know what to do about that, but I wonder
+> if setns could be used in some clever way to solve it from userspace.
 
-> And that's consistent with
-> /proc/vmstat, which nobody is complaining about.
+Oh.  That is a good objection.  I had not realized that unprivileged
+mounts had that problem.
 
-<jumping with a raised hand>Me, me, it was me!</jumping with a raised hand>
+Still the solution is straight forward.  If the concern is that an
+unprivileged user can prevent a privileged user from unmounting trees,
+we need to require that a forced unmount of the filesystem triggers a
+revoke on all open files.  sysfs and proc already support revoke at the
+per file level so we can safely remove modules, we just need to extend
+that support to the forced unmount case.
 
-Seriously, most of procfs files were created with relaxed permissions in
-old days when nobody thought about such infoleaks.  Now it is much
-harder to close all of them without breaking existing users.
+This is problem that actually needs to be solved for ordinary file
+systems as well because of hot pluggable usb drives.  For filesystems
+like ext4 it is more difficult because we need a solution that does
+not sacrafice performance in the common case.  I was talking to 
+Ted Tso a bit about this at plumbers conf.  It happens that hot unplug
+of usb devices with mount filesystems are currently a non-ending source
+of subtle bugs in the extN code.
 
-http://www.openwall.com/lists/kernel-hardening/2011/07/28/1
-http://www.openwall.com/lists/kernel-hardening/2011/09/27/3
-http://www.openwall.com/lists/kernel-hardening/2011/09/19/24
-http://www.openwall.com/lists/kernel-hardening/2011/09/21/2
+The one implementation detail that sounds a bit trick is what to do
+about mount structures in mount namespaces when we forcibly unmount
+a filesystem.  That could get a bit complicated but if that is the only
+hang up I'm certain we can figure something out.
 
-
-Thanks,
-
--- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Eric
