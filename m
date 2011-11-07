@@ -1,73 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <4EB84F05.1000704@zytor.com>
-References: <20111107174522.GA2317@albatros> <9718.1320689192@turing-police.cc.vt.edu>
- <20111107190112.GA3732@albatros> <4EB82F08.8060209@zytor.com>
- <20111107192915.GA4690@albatros> <CACLa4puR6W+15KxpZtzAt6c2fXUhM8gkLY9Zn5RNE8qbNpO_xQ@mail.gmail.com>
- <4EB83674.3040207@zytor.com> <20111107201120.GA5775@albatros>
- <4EB843FF.5080201@zytor.com> <CA+55aFwYGivYFZTLprSB+oDm3E4MG0s3PEQabs166v6YRL5u-Q@mail.gmail.com>
- <4EB84F05.1000704@zytor.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Mon, 7 Nov 2011 15:07:42 -0800
-Message-ID: <CA+55aFxFNaRuTx-0vx+RhrkavrcNDiDh5jxcRyWPy8-QZHGD9A@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: Re: [kernel-hardening] Re: [PATCH] proc: restrict access to /proc/interrupts
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Eric Paris <eparis@parisplace.org>, kernel-hardening@lists.openwall.com, Valdis.Kletnieks@vt.edu, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-security-module@vger.kernel.org
+Date: Mon, 7 Nov 2011 23:21:32 +0000
+From: Alan Cox <alan@lxorguk.ukuu.org.uk>
+Message-ID: <20111107232132.2c6880a5@lxorguk.ukuu.org.uk>
+In-Reply-To: <CA+55aFxFNaRuTx-0vx+RhrkavrcNDiDh5jxcRyWPy8-QZHGD9A@mail.gmail.com>
+References: <20111107174522.GA2317@albatros>
+	<9718.1320689192@turing-police.cc.vt.edu>
+	<20111107190112.GA3732@albatros>
+	<4EB82F08.8060209@zytor.com>
+	<20111107192915.GA4690@albatros>
+	<CACLa4puR6W+15KxpZtzAt6c2fXUhM8gkLY9Zn5RNE8qbNpO_xQ@mail.gmail.com>
+	<4EB83674.3040207@zytor.com>
+	<20111107201120.GA5775@albatros>
+	<4EB843FF.5080201@zytor.com>
+	<CA+55aFwYGivYFZTLprSB+oDm3E4MG0s3PEQabs166v6YRL5u-Q@mail.gmail.com>
+	<4EB84F05.1000704@zytor.com>
+	<CA+55aFxFNaRuTx-0vx+RhrkavrcNDiDh5jxcRyWPy8-QZHGD9A@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH] proc: restrict access to
+ /proc/interrupts
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Vasiliy Kulikov <segoon@openwall.com>, Eric Paris <eparis@parisplace.org>, kernel-hardening@lists.openwall.com, Valdis.Kletnieks@vt.edu, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 7, 2011 at 1:35 PM, H. Peter Anvin <hpa@zytor.com> wrote:
->
-> I was going to say "let's just have the login manager add a group to the
-> desktop user's permission set" but then I realized that this would be
-> really bad because of setgid files.
->
-> Which exposes a real problem with chgrp and setgid files overall.
+> Why? Because the problem really isn't about opening the file. The
+> problem is about any access: once you've opened the file, you *still*
+> must not be able to read the data from it if you have logged out and
+> somebody else has logged in. Think opening the microphone (which you
+> *should* be able to do) and just keeping it open until the next user
+> logs in.
 
-No, the problem is more fundamental, and this is simply not something
-you should try to solve with traditional unix permissions.
+We need minimal revocation stuff. This hasn't changed in years. You can
+mostly work around it with SELinux but the underlying problem is that you
+need a small controlled subset of revokable devices and objects and a
+meaningful way to revoke them.
 
-Why? Because the problem really isn't about opening the file. The
-problem is about any access: once you've opened the file, you *still*
-must not be able to read the data from it if you have logged out and
-somebody else has logged in. Think opening the microphone (which you
-*should* be able to do) and just keeping it open until the next user
-logs in.
+The latter is hard to do with a simple noddy model because there are
+multi-user systems with multiple audio devices, multiple displays and the
+like where the mapping is not a simple 'this list of objects is console'
+but needs user space to do the work.
 
-Or do the same with /proc/interrupts.
+> Faking it with posix acl's is what the /dev/audio stuff tends to do.
 
-Your "oops, you can get your group permissions back with a setgrp
-binary" example case is just a trivial case of the much bigger
-picture: access has to be actively *revoked*.
+The audio stuff mostly uses daemons to manage it. A bigger problem is
+file system mounts. If you've got an old handle on /dev/cdrom you can
+pass it down a socket to a background irritant that just does an eject
+every five minutes. Students were doing this in SunOS 4 and I'm sure
+still find it funny today.
 
-Sure, you can still do it in user space, but it gets really hacky
-really quickly. You need to do some magic random permission logic,
-*and* you need to add revoke support for every single file that ends
-up being affected.
+> It's better than nothing, but it really isn't wonderful - because it's
+> really not just about audio. And revoke doesn't work universally.
 
-It's just a broken model.
+BSD invented revoke but never implemented it universally. It turns out
+that this isn't a big problem. Right now we basically only have revoke
+for tty devices but we don't need it for that much more. Revoke on disk
+files and the like has simply never happened because its not a matter of
+revoke being universal so much as universal revoke being universally
+pointless.
 
-So I really think it would be much better to just have a per-user flag
-that says "this user has access to the physical machine", and that
-flag gets tested not only on open but on reads etc of the appropriate
-/proc files. It really is a kind of "temporary admin privileges",
-where "admin" is much weaker than root, but does mean that you have
-access to whatever directly attached devices
-(sound/video/keyboard/whatever), and that you can examine machine
-state (ie a lot of the "sensitive" /proc stuff, like slabinfo and
-interrupts and /proc/status etc).
-
-Trying to fake it with groups is wrong. It's much *better* to fake it
-with POSIX ACL's (which don't have the setgrp issue you mention), but
-that still ends up being problematic wrt revoke etc.
-
-Faking it with posix acl's is what the /dev/audio stuff tends to do.
-It's better than nothing, but it really isn't wonderful - because it's
-really not just about audio. And revoke doesn't work universally.
-
-Practically speaking, I suspect we are going to be at the mercy of
-distros getting things like this right, with these kinds of user-level
-hacks. But I think it's sad.
-
-               Linus
+Alan
