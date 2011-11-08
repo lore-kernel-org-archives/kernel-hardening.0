@@ -1,8 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 7 Nov 2011 15:45:46 -0800
-From: Greg KH <greg@kroah.com>
-Message-ID: <20111107234546.GA5835@kroah.com>
-References: <CACLa4puR6W+15KxpZtzAt6c2fXUhM8gkLY9Zn5RNE8qbNpO_xQ@mail.gmail.com>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 8 Nov 2011 13:11:21 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20111108091121.GA10198@albatros>
+References: <20111107192915.GA4690@albatros>
+ <CACLa4puR6W+15KxpZtzAt6c2fXUhM8gkLY9Zn5RNE8qbNpO_xQ@mail.gmail.com>
  <4EB83674.3040207@zytor.com>
  <20111107201120.GA5775@albatros>
  <4EB843FF.5080201@zytor.com>
@@ -11,51 +13,46 @@ References: <CACLa4puR6W+15KxpZtzAt6c2fXUhM8gkLY9Zn5RNE8qbNpO_xQ@mail.gmail.com>
  <CA+55aFxFNaRuTx-0vx+RhrkavrcNDiDh5jxcRyWPy8-QZHGD9A@mail.gmail.com>
  <20111107232132.2c6880a5@lxorguk.ukuu.org.uk>
  <20111107232750.GA4854@kroah.com>
- <4BA97845-BA47-47F3-A923-9B24AB7306E9@mit.edu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <4BA97845-BA47-47F3-A923-9B24AB7306E9@mit.edu>
+In-Reply-To: <20111107232750.GA4854@kroah.com>
 Subject: Re: [kernel-hardening] Re: [PATCH] proc: restrict access to
  /proc/interrupts
-To: Theodore Tso <tytso@MIT.EDU>
-Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Vasiliy Kulikov <segoon@openwall.com>, Eric Paris <eparis@parisplace.org>, kernel-hardening@lists.openwall.com, Valdis.Kletnieks@vt.edu, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-security-module@vger.kernel.org
+To: Greg KH <greg@kroah.com>
+Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>, "H. Peter Anvin" <hpa@zytor.com>, Eric Paris <eparis@parisplace.org>, kernel-hardening@lists.openwall.com, Valdis.Kletnieks@vt.edu, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-security-module@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 07, 2011 at 06:40:13PM -0500, Theodore Tso wrote:
-> 
-> On Nov 7, 2011, at 6:27 PM, Greg KH wrote:
-> > 
-> > So, what do we really need revoke() for these days?
-> 
-> As I mentioned at the kernel summit, I'd like revoke along with a
-> formal notification from block devices that get ejected to the file
-> system layer, and the file system should be able to call a VFS library
-> function which revokes all open file descriptor on the ejected block
-> device.  It would result in much cleaner handling at the file system
-> level when a USB storage device gets pulled.
+On Mon, Nov 07, 2011 at 15:27 -0800, Greg KH wrote:
+> So, what do we really need revoke() for these days?
 
-So you want revoke() on a block device to do what?  The same thing as
-disconnecting it from the hardware level?
+revoke() of /proc/$PID/* descriptors would also solve the issue of
+keeping them across exec() of setuid/setgid binaries:
 
-> > But that's getting away from the original topic here, sorry…
-> 
-> Yup.   But if revoke has come up, I'd like to remind folks that there
-> are good uses of it besides just tty devices that receive hangup
-> events.   Having the modem connection disappear and the USB device
-> disappear isn't all that different from a conceptual point of view.
+https://lkml.org/lkml/2011/2/7/368
 
-Oh, I forgot that this came up while we were drinking at the LinuxCon
-Japan conference this year and we figured out that you could just use
-the 'unbind' and 'bind' files in sysfs to disconnect and reconnect the
-device from the driver from userspace which would simulate a revoke()
-call on pretty much any type of char device we have today.
+Currently there are explicit calls to lock_trace()/unlock_trace(), which
+(1) pollute the code and (2) significantly slow it down.
 
-Sure, it's crude, and yes, it's the result of a lot of whisky, but even
-now, it still seems like a nice hack if you really want and need this
-from userspace :)
 
-thanks,
+So, where are we now?  We tend to agree revoke() is needed, but what to
+do before it is implemented?  In the context of this thread I see the
+following problems:
 
-greg k-h
+/proc/{interrupts,stat} are 0444, which may be used by local attacker to
+learn statistical information about user's keystrokes, including the
+passwords.
+
+/dev/pts/* and /dev/tty* leak the same timing information in inode's
+atime and mtime.
+
+
+Do we want to restrict permissions of interrupts/stat and remove atime
+and mtime from ttys and relax these permissions when revoke() is introduced?
+
+
+Thanks,
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
