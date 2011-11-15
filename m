@@ -1,169 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 15 Nov 2011 15:21:51 +0400
+Date: Tue, 15 Nov 2011 15:22:08 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20111115112151.GA3002@albatros>
+Message-ID: <20111115112208.GC3002@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [RFC 1/3] procfs: parse mount options
-To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>
+Subject: [kernel-hardening] [RFC 3/3] procfs: add documentation for procfs mount options
+To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, Randy Dunlap <rdunlap@xenotime.net>
 Cc: "H. Peter Anvin" <hpa@zytor.com>, Greg KH <greg@kroah.com>, Theodore Tso <tytso@MIT.EDU>, Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch adds support of procfs mount options.
-Actual mount options are coming in the next patches.
-
-Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+Signed-off-by: Vasiliy Kulikov <seooon@openwall.com>
 --
- fs/proc/inode.c    |   10 +++++++++
- fs/proc/internal.h |    1 +
- fs/proc/root.c     |   56 ++++++++++++++++++++++++++++++++++++++++++++++++++-
- 3 files changed, 65 insertions(+), 2 deletions(-)
+ Documentation/filesystems/proc.txt |   39 ++++++++++++++++++++++++++++++++++++
+ 1 files changed, 39 insertions(+), 0 deletions(-)
 
-diff --git a/fs/proc/inode.c b/fs/proc/inode.c
-index 7737c54..9b9f92a 100644
---- a/fs/proc/inode.c
-+++ b/fs/proc/inode.c
-@@ -7,6 +7,7 @@
- #include <linux/time.h>
- #include <linux/proc_fs.h>
- #include <linux/kernel.h>
-+#include <linux/pid_namespace.h>
- #include <linux/mm.h>
- #include <linux/string.h>
- #include <linux/stat.h>
-@@ -17,7 +18,9 @@
- #include <linux/init.h>
- #include <linux/module.h>
- #include <linux/sysctl.h>
-+#include <linux/seq_file.h>
- #include <linux/slab.h>
-+#include <linux/mount.h>
+diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
+index 0ec91f0..518987e 100644
+--- a/Documentation/filesystems/proc.txt
++++ b/Documentation/filesystems/proc.txt
+@@ -41,6 +41,8 @@ Table of Contents
+   3.5	/proc/<pid>/mountinfo - Information about mounts
+   3.6	/proc/<pid>/comm  & /proc/<pid>/task/<tid>/comm
  
- #include <asm/system.h>
- #include <asm/uaccess.h>
-@@ -102,12 +105,19 @@ void __init proc_init_inodecache(void)
- 					     init_once);
- }
++  4	Configuring procfs
++  4.1	Mount options
  
-+static int proc_show_options(struct seq_file *seq, struct vfsmount *vfs)
-+{
-+	return 0;
-+}
+ ------------------------------------------------------------------------------
+ Preface
+@@ -1542,3 +1544,40 @@ a task to set its own or one of its thread siblings comm value. The comm value
+ is limited in size compared to the cmdline value, so writing anything longer
+ then the kernel's TASK_COMM_LEN (currently 16 chars) will result in a truncated
+ comm value.
 +
- static const struct super_operations proc_sops = {
- 	.alloc_inode	= proc_alloc_inode,
- 	.destroy_inode	= proc_destroy_inode,
- 	.drop_inode	= generic_delete_inode,
- 	.evict_inode	= proc_evict_inode,
- 	.statfs		= simple_statfs,
-+	.remount_fs	= proc_remount,
-+	.show_options	= proc_show_options,
- };
- 
- static void __pde_users_dec(struct proc_dir_entry *pde)
-diff --git a/fs/proc/internal.h b/fs/proc/internal.h
-index 7838e5c..2925775 100644
---- a/fs/proc/internal.h
-+++ b/fs/proc/internal.h
-@@ -117,6 +117,7 @@ void pde_put(struct proc_dir_entry *pde);
- 
- int proc_fill_super(struct super_block *);
- struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
-+int proc_remount(struct super_block *sb, int *flags, char *data);
- 
- /*
-  * These are generic /proc routines that use the internal
-diff --git a/fs/proc/root.c b/fs/proc/root.c
-index 9a8a2b7..1486bb0 100644
---- a/fs/proc/root.c
-+++ b/fs/proc/root.c
-@@ -18,6 +18,7 @@
- #include <linux/bitops.h>
- #include <linux/mount.h>
- #include <linux/pid_namespace.h>
-+#include <linux/parser.h>
- 
- #include "internal.h"
- 
-@@ -36,6 +37,49 @@ static int proc_set_super(struct super_block *sb, void *data)
- 	return err;
- }
- 
-+enum {
-+	Opt_err,
-+};
 +
-+static const match_table_t tokens = {
-+	{Opt_err, NULL},
-+};
++------------------------------------------------------------------------------
++Configuring procfs
++------------------------------------------------------------------------------
 +
-+static int proc_parse_options(char *options, struct pid_namespace *pid)
-+{
-+	char *p;
-+	substring_t args[MAX_OPT_ARGS];
-+	int option;
++4.1	Mount options
++---------------------
 +
-+	pr_debug("proc: options = %s\n", options);
++The following mount options are supported:
 +
-+	if (!options)
-+		return 1;
++	hidepid=	Set /proc/<pid>/ access mode.
++	gid=		Set the group authorized to learn processes information.
 +
-+	while ((p = strsep(&options, ",")) != NULL) {
-+		int token;
-+		if (!*p)
-+			continue;
++hidepid=0 means classic mode - everybody may access all /proc/<pid>/ directories
++(default).
 +
-+		args[0].to = args[0].from = 0;
-+		token = match_token(p, tokens, args);
-+		switch (token) {
-+		default:
-+			pr_err("proc: unrecognized mount option \"%s\" "
-+			       "or missing value", p);
-+			return 0;
-+		}
-+	}
++hidepid=1 means users may not access any /proc/<pid>/ directories, but their
++own.  Sensitive files like cmdline, sched*, status are now protected against
++other users.  This makes impossible to learn whether any user runs
++specific program (given the program doesn't reveal itself by its behaviour).
++As an additional bonus, as /proc/<pid>/cmdline is unaccessible for other users,
++poorly written programs passing sensitive information via program arguments are
++now protected against local eavesdroppers.
 +
-+	return 1;
-+}
++hidepid=2 means hidepid=1 plus all /proc/<pid>/ will be fully invisible to other
++users.  It doesn't mean that it hides a fact whether a process with a specific
++pid value exists (it can be learned by other means, e.g. by "kill -0 $PID"),
++but it hides process' uid and gid, which may be learned by stat()'ing
++/proc/<pid>/ otherwise.  It greatly complicates intruder's task of gathering info
++about running processes, whether some daemon runs with elevated privileges,
++whether other user runs some sensitive program, whether other users run any
++program at all, etc.
 +
-+int proc_remount(struct super_block *sb, int *flags, char *data)
-+{
-+	struct pid_namespace *pid = sb->s_fs_info;
-+	return !proc_parse_options(data, pid);
-+}
-+
- static struct dentry *proc_mount(struct file_system_type *fs_type,
- 	int flags, const char *dev_name, void *data)
- {
-@@ -43,11 +87,15 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
- 	struct super_block *sb;
- 	struct pid_namespace *ns;
- 	struct proc_inode *ei;
-+	char *options;
- 
--	if (flags & MS_KERNMOUNT)
-+	if (flags & MS_KERNMOUNT) {
- 		ns = (struct pid_namespace *)data;
--	else
-+		options = NULL;
-+	} else {
- 		ns = current->nsproxy->pid_ns;
-+		options = data;
-+	}
- 
- 	sb = sget(fs_type, proc_test_super, proc_set_super, ns);
- 	if (IS_ERR(sb))
-@@ -55,6 +103,10 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
- 
- 	if (!sb->s_root) {
- 		sb->s_flags = flags;
-+		if (!proc_parse_options(options, ns)) {
-+			deactivate_locked_super(sb);
-+			return ERR_PTR(-EINVAL);
-+		}
- 		err = proc_fill_super(sb);
- 		if (err) {
- 			deactivate_locked_super(sb);
++gid= defines a group authorized to learn processes information otherwise
++prohibited by hidepid=.  If you use some daemon like identd which have to learn
++information about processes information, just add identd to this group.
 --
