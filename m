@@ -1,43 +1,169 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 9 Nov 2011 22:49:54 +0000
-From: Alan Cox <alan@lxorguk.ukuu.org.uk>
-Message-ID: <20111109224954.3864c426@lxorguk.ukuu.org.uk>
-In-Reply-To: <20111109222708.GA28509@kroah.com>
-References: <20111108121412.GA14450@albatros>
-	<4EBA0A32.3000607@kernel.sg>
-	<20111109161123.GC2557@kroah.com>
-	<20111109170946.GA30780@albatros>
-	<20111109222708.GA28509@kroah.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: kernel: multiple flaws allowing to sniff keystrokes timings
-To: Greg KH <greg@kroah.com>
-Cc: Vasiliy Kulikov <segoon@openwall.com>, Eugene Teo <eugeneteo@kernel.sg>, security@kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 15 Nov 2011 15:21:51 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20111115112151.GA3002@albatros>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [RFC 1/3] procfs: parse mount options
+To: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, Greg KH <greg@kroah.com>, Theodore Tso <tytso@MIT.EDU>, Alan Cox <alan@lxorguk.ukuu.org.uk>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> > 1) show zero fields to unprivileged users (for /proc/interrupts and
-> > /proc/stat it is CAP_SYS_ADMIN, for /proc/$PID/{stat,sched,schedstat} it
-> > is ptrace_may_access(), for ttys it is uid check) and real values for
-> > privileged.  The same technique is used in /proc/$PID/sched for eip/esp
-> > values.
-> 
-> That makes sense to a point, users will wonder why they aren't seeing
-> interrupts anymore, which is a valuable debug tool.
+This patch adds support of procfs mount options.
+Actual mount options are coming in the next patches.
 
-For the interrupts case you don't want show misleading data. It really
-has only one use so it's better to change the permissions in the
-hardening case. Something distros can already do
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+--
+ fs/proc/inode.c    |   10 +++++++++
+ fs/proc/internal.h |    1 +
+ fs/proc/root.c     |   56 ++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 65 insertions(+), 2 deletions(-)
 
-> All that is leaking here is the number of keystrokes at most, right?
-
-If even that on USB.
-
-> If we provide a "good" library function for keyboard password usage, we
-> could get other applications to use it, but yes, it is a tough issue :(
-
-You can also create noise by rounding off the values a bit. I don't think
-it would need much rounding to keep useful data and fuzz, and the
-rounding factor can be stuck in sysfs and default to 0.
-
-Alan
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index 7737c54..9b9f92a 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -7,6 +7,7 @@
+ #include <linux/time.h>
+ #include <linux/proc_fs.h>
+ #include <linux/kernel.h>
++#include <linux/pid_namespace.h>
+ #include <linux/mm.h>
+ #include <linux/string.h>
+ #include <linux/stat.h>
+@@ -17,7 +18,9 @@
+ #include <linux/init.h>
+ #include <linux/module.h>
+ #include <linux/sysctl.h>
++#include <linux/seq_file.h>
+ #include <linux/slab.h>
++#include <linux/mount.h>
+ 
+ #include <asm/system.h>
+ #include <asm/uaccess.h>
+@@ -102,12 +105,19 @@ void __init proc_init_inodecache(void)
+ 					     init_once);
+ }
+ 
++static int proc_show_options(struct seq_file *seq, struct vfsmount *vfs)
++{
++	return 0;
++}
++
+ static const struct super_operations proc_sops = {
+ 	.alloc_inode	= proc_alloc_inode,
+ 	.destroy_inode	= proc_destroy_inode,
+ 	.drop_inode	= generic_delete_inode,
+ 	.evict_inode	= proc_evict_inode,
+ 	.statfs		= simple_statfs,
++	.remount_fs	= proc_remount,
++	.show_options	= proc_show_options,
+ };
+ 
+ static void __pde_users_dec(struct proc_dir_entry *pde)
+diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+index 7838e5c..2925775 100644
+--- a/fs/proc/internal.h
++++ b/fs/proc/internal.h
+@@ -117,6 +117,7 @@ void pde_put(struct proc_dir_entry *pde);
+ 
+ int proc_fill_super(struct super_block *);
+ struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
++int proc_remount(struct super_block *sb, int *flags, char *data);
+ 
+ /*
+  * These are generic /proc routines that use the internal
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index 9a8a2b7..1486bb0 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -18,6 +18,7 @@
+ #include <linux/bitops.h>
+ #include <linux/mount.h>
+ #include <linux/pid_namespace.h>
++#include <linux/parser.h>
+ 
+ #include "internal.h"
+ 
+@@ -36,6 +37,49 @@ static int proc_set_super(struct super_block *sb, void *data)
+ 	return err;
+ }
+ 
++enum {
++	Opt_err,
++};
++
++static const match_table_t tokens = {
++	{Opt_err, NULL},
++};
++
++static int proc_parse_options(char *options, struct pid_namespace *pid)
++{
++	char *p;
++	substring_t args[MAX_OPT_ARGS];
++	int option;
++
++	pr_debug("proc: options = %s\n", options);
++
++	if (!options)
++		return 1;
++
++	while ((p = strsep(&options, ",")) != NULL) {
++		int token;
++		if (!*p)
++			continue;
++
++		args[0].to = args[0].from = 0;
++		token = match_token(p, tokens, args);
++		switch (token) {
++		default:
++			pr_err("proc: unrecognized mount option \"%s\" "
++			       "or missing value", p);
++			return 0;
++		}
++	}
++
++	return 1;
++}
++
++int proc_remount(struct super_block *sb, int *flags, char *data)
++{
++	struct pid_namespace *pid = sb->s_fs_info;
++	return !proc_parse_options(data, pid);
++}
++
+ static struct dentry *proc_mount(struct file_system_type *fs_type,
+ 	int flags, const char *dev_name, void *data)
+ {
+@@ -43,11 +87,15 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
+ 	struct super_block *sb;
+ 	struct pid_namespace *ns;
+ 	struct proc_inode *ei;
++	char *options;
+ 
+-	if (flags & MS_KERNMOUNT)
++	if (flags & MS_KERNMOUNT) {
+ 		ns = (struct pid_namespace *)data;
+-	else
++		options = NULL;
++	} else {
+ 		ns = current->nsproxy->pid_ns;
++		options = data;
++	}
+ 
+ 	sb = sget(fs_type, proc_test_super, proc_set_super, ns);
+ 	if (IS_ERR(sb))
+@@ -55,6 +103,10 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
+ 
+ 	if (!sb->s_root) {
+ 		sb->s_flags = flags;
++		if (!proc_parse_options(options, ns)) {
++			deactivate_locked_super(sb);
++			return ERR_PTR(-EINVAL);
++		}
+ 		err = proc_fill_super(sb);
+ 		if (err) {
+ 			deactivate_locked_super(sb);
+--
