@@ -1,281 +1,101 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 18 Nov 2011 15:22:08 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20111118232208.GA19000@www.outflux.net>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Sat, 19 Nov 2011 11:57:33 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20111119075733.GB2675@albatros>
+References: <4EC4DA15.7090106@parallels.com>
+ <20111117124831.688adbeb.akpm@linux-foundation.org>
+ <4EC6246A.6020807@parallels.com>
+ <20111118110716.c854b4bd.akpm@linux-foundation.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC] fs: symlink restrictions on sticky directories
-To: linux-kernel@vger.kernel.org
-Cc: Al Viro <viro@zeniv.linux.org.uk>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20111118110716.c854b4bd.akpm@linux-foundation.org>
+Subject: [kernel-hardening] Re: [PATCH v2 0/4] Checkpoint/Restore: Show in proc IDs of objects
+ that can be shared between tasks
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Pavel Emelyanov <xemul@parallels.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Cyrill Gorcunov <gorcunov@openvz.org>, Glauber Costa <glommer@parallels.com>, Andi Kleen <andi@firstfloor.org>, Tejun Heo <tj@kernel.org>, Matt Helsley <matthltc@us.ibm.com>, Pekka Enberg <penberg@kernel.org>, Eric Dumazet <eric.dumazet@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(In case symlink restrictions aren't going to live in Yama, here's a
-version in core VFS based on some feed-back from Al Viro.)
+Hello,
 
-A long-standing class of security issues is the symlink-based
-time-of-check-time-of-use race, most commonly seen in world-writable
-directories like /tmp. The common method of exploitation of this flaw
-is to cross privilege boundaries when following a given symlink (i.e. a
-root process follows a symlink belonging to another user).  For a likely
-incomplete list of hundreds of examples across the years, please see:
-http://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=/tmp
+On Fri, Nov 18, 2011 at 11:07 -0800, Andrew Morton wrote:
+> On Fri, 18 Nov 2011 13:24:58 +0400
+> Pavel Emelyanov <xemul@parallels.com> wrote:
+> 
+> > >> One of the ways for checking whether two tasks share e.g. an mm_struct is to
+> > >> provide some mm_struct ID of a task to its proc file. The best from the
+> > >> performance point of view ID is the object address in the kernel, but showing
+> > >> them to the userspace is not good for security reasons.
+> > >>
+> > >> Thus the object address is XOR-ed with a "random" value of the same size and 
+> > >> then shown in proc. Providing this poison is not leaked into the userspace then
+> > >> ID seem to be safe. The objects for which the IDs are shown are:
+> > >>
+> > >> * all namespaces living in /proc/pid/ns/
+> > >> * open files (shown in /proc/pid/fdinfo/)
+> > >> * objects, that can be shared with CLONE_XXX flags (except for namespaces)
+> > >> 
+> > >> Signed-off-by: Pavel Emelyanov <xemul@parallels.com>
+> > > 
+> > > It doesn't *sound* terribly secure.  There might be clever ways in
+> > > which userspace can determine the secret mask, dunno.  We should ask
+> > > evil-minded security people to review this proposal.
+> > 
+> > Can you please propose some particular persons we should put in Cc for this thread?
+> 
+> Perhaps Vasily could review this proposal for us?
 
-The solution is to permit symlinks to only be followed when outside a sticky
-world-writable directory, or when the uid of the symlink and follower match,
-or when the directory owner matches the symlink's owner.
+Some thoughts:
 
-Some pointers to the history of earlier discussion that I could find:
+1) Objects created early in the boot process usually has predictable
+addresses.  If an attacker knows the address of one such object, he may
+learn the cookie.
 
- 1996 Aug, Zygo Blaxell
-  http://marc.info/?l=bugtraq&m=87602167419830&w=2
- 1996 Oct, Andrew Tridgell
-  http://lkml.indiana.edu/hypermail/linux/kernel/9610.2/0086.html
- 1997 Dec, Albert D Cahalan
-  http://lkml.org/lkml/1997/12/16/4
- 2005 Feb, Lorenzo Hernández García-Hierro
-  http://lkml.indiana.edu/hypermail/linux/kernel/0502.0/1896.html
+2) Lower bits of this cookie don't make sense as object addresses are
+aligned.
 
-Past objections and rebuttals could be summarized as:
+3) I'm afraid addresses of objects of different types which were
+kmalloc'ed still depend on each other.  I.e:
 
- - Violates POSIX.
-   - POSIX didn't consider this situation and it's not useful to follow
-     a broken specification at the cost of security.
- - Might break unknown applications that use this feature.
-   - Applications that break because of the change are easy to spot and
-     fix. Applications that are vulnerable to symlink ToCToU by not having
-     the change aren't.
- - Applications should just use mkstemp() or O_CREATE|O_EXCL.
-   - True, but applications are not perfect, and new software is written
-     all the time that makes these mistakes; blocking this flaw at the
-     kernel is a single solution to the entire class of vulnerability.
+    OBJ1 is type A
+    OBJ2 is type B
 
-This patch is based on the patch in Openwall and grsecurity.  I have
-added a sysctl to enable the protected behavior, documentation, and a
-ratelimited warning.
+    OBJ2 = OBJ1 + 0x20
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- Documentation/sysctl/fs.txt |   21 ++++++++++++
- fs/Kconfig                  |   15 ++++++++
- fs/namei.c                  |   76 +++++++++++++++++++++++++++++++++++++++---
- kernel/sysctl.c             |   10 ++++++
- 4 files changed, 116 insertions(+), 6 deletions(-)
+    (OBJ1^COOKIE1) ^ (OBJ2^COOKIE2) =
+    = (COOKIE1^COOKIE2) ^ (OBJ1^(OBJ1+0x20)) = (COOKIE1^COOKIE2)^(0x20+Carry_bits)
 
-diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
-index 88fd7f5..939621b 100644
---- a/Documentation/sysctl/fs.txt
-+++ b/Documentation/sysctl/fs.txt
-@@ -32,6 +32,7 @@ Currently, these files are in /proc/sys/fs:
- - nr_open
- - overflowuid
- - overflowgid
-+- protected_sticky_symlinks
- - suid_dumpable
- - super-max
- - super-nr
-@@ -157,6 +158,26 @@ The default is 65534.
- 
- ==============================================================
- 
-+protected_sticky_symlinks:
-+
-+A long-standing class of security issues is the symlink-based
-+time-of-check-time-of-use race, most commonly seen in world-writable
-+directories like /tmp. The common method of exploitation of this flaw
-+is to cross privilege boundaries when following a given symlink (i.e. a
-+root process follows a symlink belonging to another user).  For a likely
-+incomplete list of hundreds of examples across the years, please see:
-+http://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=/tmp
-+
-+When set to "0", symlink following behavior is unrestricted.
-+
-+When set to "1" symlinks are permitted to be followed only when outside
-+a sticky world-writable directory, or when the uid of the symlink and
-+follower match, or when the directory owner matches the symlink's owner.
-+
-+This protection is based on the restrictions in Openwall and grsecurity.
-+
-+==============================================================
-+
- suid_dumpable:
- 
- This value can be used to query and set the core dump mode for setuid
-diff --git a/fs/Kconfig b/fs/Kconfig
-index 5f4c45d..74b9e49 100644
---- a/fs/Kconfig
-+++ b/fs/Kconfig
-@@ -278,3 +278,18 @@ source "fs/nls/Kconfig"
- source "fs/dlm/Kconfig"
- 
- endmenu
-+
-+config PROTECTED_STICKY_SYMLINKS
-+	bool "Protect symlink following in sticky world-writable directories"
-+	help
-+	  A long-standing class of security issues is the symlink-based
-+	  time-of-check-time-of-use race, most commonly seen in
-+	  world-writable directories like /tmp. The common method of
-+	  exploitation of this flaw is to cross privilege boundaries
-+	  when following a given symlink (i.e. a root process follows
-+	  a malicious symlink belonging to another user).
-+
-+	  Enabling this solves the problem by permitting symlinks to only
-+	  be followed when outside a sticky world-writable directory,
-+	  or when the uid of the symlink and follower match, or when
-+	  the directory and symlink owners match.
-diff --git a/fs/namei.c b/fs/namei.c
-index 5008f01..fc206f4 100644
---- a/fs/namei.c
-+++ b/fs/namei.c
-@@ -33,6 +33,7 @@
- #include <linux/device_cgroup.h>
- #include <linux/fs_struct.h>
- #include <linux/posix_acl.h>
-+#include <linux/ratelimit.h>
- #include <asm/uaccess.h>
- 
- #include "internal.h"
-@@ -624,10 +625,68 @@ static inline void put_link(struct nameidata *nd, struct path *link, void *cooki
- 	path_put(link);
- }
- 
-+#ifdef CONFIG_PROTECTED_STICKY_SYMLINKS
-+int protected_sticky_symlinks = 1;
-+#else
-+int protected_sticky_symlinks;
-+#endif
-+
-+/**
-+ * may_follow_link - Check symlink following for unsafe situations
-+ * @dentry: The inode/dentry of the symlink
-+ * @nameidata: The path data of the symlink
-+ *
-+ * In the case of the protected_sticky_symlinks sysctl being enabled,
-+ * CAP_DAC_OVERRIDE needs to be specifically ignored if the symlink is
-+ * in a sticky world-writable directory. This is to protect privileged
-+ * processes from failing races against path names that may change out
-+ * from under them by way of other users creating malicious symlinks.
-+ * It will permit symlinks to only be followed when outside a sticky
-+ * world-writable directory, or when the uid of the symlink and follower
-+ * match, or when the directory owner matches the symlink's owner.
-+ *
-+ * Returns 0 if following the symlink is allowed, -ve on error.
-+ */
-+static inline int
-+may_follow_link(struct dentry *dentry, struct nameidata *nameidata)
-+{
-+	int error = 0;
-+	const struct inode *parent;
-+	const struct inode *inode;
-+	const struct cred *cred;
-+
-+	if (!protected_sticky_symlinks)
-+		return 0;
-+
-+	/* Allowed if owner and follower match. */
-+	cred = current_cred();
-+	inode = dentry->d_inode;
-+	if (cred->fsuid == inode->i_uid)
-+		return 0;
-+
-+	/* Check parent directory mode and owner. */
-+	spin_lock(&dentry->d_lock);
-+	parent = dentry->d_parent->d_inode;
-+	if ((parent->i_mode & (S_ISVTX|S_IWOTH)) == (S_ISVTX|S_IWOTH) &&
-+	    parent->i_uid != inode->i_uid) {
-+		error = -EACCES;
-+	}
-+	spin_unlock(&dentry->d_lock);
-+
-+	if (error) {
-+		char name[sizeof(current->comm)];
-+		printk_ratelimited(KERN_NOTICE "non-matching-uid symlink "
-+			"following attempted in sticky world-writable "
-+			"directory by %s (fsuid %d)\n",
-+			get_task_comm(name, current), cred->fsuid);
-+	}
-+	return error;
-+}
-+
- static __always_inline int
--follow_link(struct path *link, struct nameidata *nd, void **p)
-+follow_link(struct path *link, struct nameidata *nd, void **p, bool sensitive)
- {
--	int error;
-+	int error = 0;
- 	struct dentry *dentry = link->dentry;
- 
- 	BUG_ON(nd->flags & LOOKUP_RCU);
-@@ -646,7 +705,10 @@ follow_link(struct path *link, struct nameidata *nd, void **p)
- 	touch_atime(link->mnt, dentry);
- 	nd_set_link(nd, NULL);
- 
--	error = security_inode_follow_link(link->dentry, nd);
-+	if (sensitive)
-+		error = may_follow_link(link->dentry, nd);
-+	if (!error)
-+		error = security_inode_follow_link(link->dentry, nd);
- 	if (error) {
- 		*p = ERR_PTR(error); /* no ->put_link(), please */
- 		path_put(&nd->path);
-@@ -1339,7 +1401,7 @@ static inline int nested_symlink(struct path *path, struct nameidata *nd)
- 		struct path link = *path;
- 		void *cookie;
- 
--		res = follow_link(&link, nd, &cookie);
-+		res = follow_link(&link, nd, &cookie, 0);
- 		if (!res)
- 			res = walk_component(nd, path, &nd->last,
- 					     nd->last_type, LOOKUP_FOLLOW);
-@@ -1612,7 +1674,8 @@ static int path_lookupat(int dfd, const char *name,
- 			void *cookie;
- 			struct path link = path;
- 			nd->flags |= LOOKUP_PARENT;
--			err = follow_link(&link, nd, &cookie);
-+
-+			err = follow_link(&link, nd, &cookie, 1);
- 			if (!err)
- 				err = lookup_last(nd, &path);
- 			put_link(nd, &link, cookie);
-@@ -2324,7 +2387,8 @@ static struct file *path_openat(int dfd, const char *pathname,
- 		}
- 		nd->flags |= LOOKUP_PARENT;
- 		nd->flags &= ~(LOOKUP_OPEN|LOOKUP_CREATE|LOOKUP_EXCL);
--		error = follow_link(&link, nd, &cookie);
-+
-+		error = follow_link(&link, nd, &cookie, 1);
- 		if (unlikely(error))
- 			filp = ERR_PTR(error);
- 		else
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index ae27196..cc2c5f9 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -92,6 +92,7 @@ extern int sysctl_overcommit_memory;
- extern int sysctl_overcommit_ratio;
- extern int max_threads;
- extern int core_uses_pid;
-+extern int protected_sticky_symlinks;
- extern int suid_dumpable;
- extern char core_pattern[];
- extern unsigned int core_pipe_limit;
-@@ -1495,6 +1496,15 @@ static struct ctl_table fs_table[] = {
- #endif
- #endif
- 	{
-+		.procname	= "protected_sticky_symlinks",
-+		.data		= &protected_sticky_symlinks,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec_minmax,
-+		.extra1		= &zero,
-+		.extra2		= &one,
-+	},
-+	{
- 		.procname	= "suid_dumpable",
- 		.data		= &suid_dumpable,
- 		.maxlen		= sizeof(int),
+3) I'm afraid the weakest property of XOR can be used by an attacker:
+
+(OBJ1^COOKIE) ^ (OBJ2^COOKIE) = OBJ1^OBJ2
+
+
+As was said previously, one could create multiple objects which have
+linearly increasing addresses and learn cookie lower bits.
+
+
+Doing something like hash(cookie1 ++ obj ++ cookie) would leak only the
+equation of two objects, but it can be still dangerous - learn hashes of
+(a) objects created at boot time (their addresses are known) and (b)
+some objects, which allocation scheme is known (i.e. we know
+kmem_cache_alloc() gives us specific addresses with high probability),
+and then compare the hashes against other objects after (a) and (b)
+objects are kfree'd.
+
+
+What is the highest timeframe which must maintain the property of unique
+ids?  Is it the whole system lifetime or probably [dump start; dump
+end] and we can change the cookie many times?  Can we probably shorten
+the time even?  Can we ensure that during this timeframe no new kernel
+objects will be created (unrealistic, but would be great)?
+
+Also, I didn't understand from the quoted text who will use it - only
+the dumper or this interface is exposed to all userspace processes and
+anybody may learn hash(&kern_obj) for any kern_obj he may reference?
+
+Thanks,
+
 -- 
-1.7.0.4
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
