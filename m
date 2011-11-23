@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 23 Nov 2011 08:41:56 -0600
-From: Serge Hallyn <serge.hallyn@canonical.com>
-Message-ID: <20111123144156.GA1661@sergelap>
+Date: Wed, 23 Nov 2011 14:49:28 +0000
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20111123144928.GA3893@hallyn.com>
 References: <1319672956-17114-1-git-send-email-keescook@chromium.org>
  <20111121191811.GA24039@albatros>
  <20111122181310.GA4235@sergelap>
@@ -14,30 +14,10 @@ Content-Disposition: inline
 In-Reply-To: <20111123074510.GA2356@albatros>
 Subject: [kernel-hardening] Re: [RFC] Make Yama pid_ns aware
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Serge Hallyn <serge.hallyn@canonical.com>, Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Quoting Vasiliy Kulikov (segoon@openwall.com):
-> > But still, is turning this on and off per-container, and leaving it off
-> > on the host, something people will reasonably want to do?
-> 
-> Probably we need strict rules like ptrace is relaxed iff in both source
-> ns and dest ns ptrace is relaxed.
-
-But will people want that?
-
-> > I'm just
-> > wondering whether adding the extra data on the pidns is worth it.  It's
-> > fine if it is, but I'm having a hard time imagining someone using it
-> > like that.
-> 
-> We have already very big net_namespace with all kind of per-ns stuff.
-> Yama's variables don't significantly increase the size of container.
-
-Yes I'm not complaining about the extra host memory usage, just trying
-to make sure we don't pollute the pidns struct with something noone
-wants
-
 > Actually, what concerns me is not ptrace, but symlink/hardling
 > protection.  There is no interaction between namespaces in case of
 > containers via symlinks in the basic case.  In case of ptrace I don't
@@ -45,6 +25,11 @@ wants
 > processes of the parent namespace and everything it may ptrace is
 > already inside of this ns.
 
-User namespace being respected by VFS will help symlinking.
+Oh, yes.  If you're saying the symlink protection shouldn't be
+per-pidns, I agree it seems an odd fit.
+
+How about a version of this patch leaving symlink protection
+out of pidns (maybe in user ns), and just putting ptrace
+protection per-pidns?
 
 -serge
