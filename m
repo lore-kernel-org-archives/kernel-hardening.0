@@ -1,41 +1,23 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5j+=j7Gy+D0wzZ44NPAK1PYyp1gHU-GQQOBCLi4fRc9UmQ@mail.gmail.com>
-References: <1319672956-17114-1-git-send-email-keescook@chromium.org>
-	<20111128191658.GA6028@albatros>
-	<CAGXu5j+=j7Gy+D0wzZ44NPAK1PYyp1gHU-GQQOBCLi4fRc9UmQ@mail.gmail.com>
-Date: Mon, 28 Nov 2011 12:15:36 -0800
-Message-ID: <CAGXu5jKHFaA6YawiospVcZWk5aVjGE+5p9TosrtQHgRYLbXuLw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC -resend] Make Yama pid_ns aware
-To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, "Serge E. Hallyn" <serge@hallyn.com>
+Date: Wed, 30 Nov 2011 15:01:36 -0800
+Message-Id: <1322694098-21872-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v7 0/2] security: Yama LSM
+To: linux-kernel@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org, Roland McGrath <roland@hack.frob.com>, James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 28, 2011 at 11:35 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Mon, Nov 28, 2011 at 11:16 AM, Vasiliy Kulikov <segoon@openwall.com> w=
-rote:
->> As Yama's sysctls are about defining a security policy for the system,
->> it is reasonable to define it per container in case of LXC containers
->> (or out-of-tree alternatives like OpenVZ). =A0In my opinion they belong
->> to pid namespace. =A0With per-pid_ns sysctls it is possible to create
->> multiple containers with different ptrace, /tmp, etc. policies.
->> [...]
->> Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
->
-> Thanks! I'll include this in the next Yama patch set.
->
-> Acked-by: Kees Cook <keescook@chromium.org>
+As discussed at the Linux Security Summit, I'm resubmitting this
+code. As an LSM, it has coherent policy around expanding specific DAC
+behaviors. There is no need for it to be a full-blown MAC, since it is
+not intended to be one, but rather to be a simplified expansion to DAC,
+with system-wide knobs. See the specific patches for details...
 
-I should mention, this lives here now:
-http://git.kernel.org/?p=3Dlinux/kernel/git/kees/linux.git;a=3Dshortlog;h=
-=3Drefs/heads/yama
+This version only contains the ptrace restrictions, since a path has
+been cleared for that (thanks Roland). The link restriction discussion
+can continue separately. In the meantime, I will carry it as a patch here:
+http://git.kernel.org/?p=linux/kernel/git/kees/linux.git;a=shortlog;h=refs/heads/yama
+
+Thanks,
 
 -Kees
-
---=20
-Kees Cook
-ChromeOS Security
