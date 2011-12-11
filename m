@@ -1,19 +1,18 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 11 Dec 2011 20:59:39 +0000
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20111211205939.GH2203@ZenIV.linux.org.uk>
+Date: Sun, 11 Dec 2011 15:20:29 -0800 (PST)
+From: Hugh Dickins <hughd@google.com>
+In-Reply-To: <20111211182821.GA2853@albatros>
+Message-ID: <alpine.LSU.2.00.1112111511290.2297@eggly>
 References: <20111211182821.GA2853@albatros>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20111211182821.GA2853@albatros>
-Sender: Al Viro <viro@ftp.linux.org.uk>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
 Subject: [kernel-hardening] Re: [PATCH -next] proc: fix task_struct infoleak
 To: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Alexey Dobriyan <adobriyan@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Hugh Dickins <hughd@google.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Dec 11, 2011 at 10:28:21PM +0400, Vasiliy Kulikov wrote:
+On Sun, 11 Dec 2011, Vasiliy Kulikov wrote:
+
 > proc_pid_permission() doesn't put task_struct on every /proc/$pid/
 > access.  A demo from Hugh Dickins:
 > 
@@ -21,47 +20,43 @@ On Sun, Dec 11, 2011 at 10:28:21PM +0400, Vasiliy Kulikov wrote:
 > 
 > Reported-by: Hugh Dickins <hughd@google.com>
 > Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+
+Thank you, yes, that fixes it for me:
+Tested-by: Hugh Dickins <hughd@google.com>
+but hopefully akpm will just fold this into the original patch.
+
+Hmm, tiny niggle, but I notice that has_pid_permissions() is
+declared, reasonably, as bool; so wouldn't it be better for
+has_perms to be declared as bool instead of int?  Hardly
+worth bothering about, but if you've a mind to respin with
+a corrected Subject as Al rightly suggests.
+
 > ---
 >  This is a patch against a hidepid patchset from -mm.
-
-Choose saner commit summary, please.  It's not information leak, for pity sake
-- it's a plain and simple memory leak...
-
-Speaking of which, I've a couple of memory leaks in mainline procfs and
-mqueue; Alexey, are you OK with that sucker going directly to Linus or
-would you rather push it yourself?  See the patch below...
-
-diff --git a/fs/proc/root.c b/fs/proc/root.c
-index 9a8a2b7..03102d9 100644
---- a/fs/proc/root.c
-+++ b/fs/proc/root.c
-@@ -91,20 +91,18 @@ static struct file_system_type proc_fs_type = {
- 
- void __init proc_root_init(void)
- {
--	struct vfsmount *mnt;
- 	int err;
- 
- 	proc_init_inodecache();
- 	err = register_filesystem(&proc_fs_type);
- 	if (err)
- 		return;
--	mnt = kern_mount_data(&proc_fs_type, &init_pid_ns);
--	if (IS_ERR(mnt)) {
-+	err = pid_ns_prepare_proc(&init_pid_ns);
-+	if (err) {
- 		unregister_filesystem(&proc_fs_type);
- 		return;
- 	}
- 
--	init_pid_ns.proc_mnt = mnt;
- 	proc_symlink("mounts", NULL, "self/mounts");
- 
- 	proc_net_init();
-@@ -209,5 +207,5 @@ int pid_ns_prepare_proc(struct pid_namespace *ns)
- 
- void pid_ns_release_proc(struct pid_namespace *ns)
- {
--	mntput(ns->proc_mnt);
-+	kern_unmount(ns->proc_mnt);
- }
+> 
+>  fs/proc/base.c |    9 +++++++--
+>  1 files changed, 7 insertions(+), 2 deletions(-)
+> 
+> diff --git a/fs/proc/base.c b/fs/proc/base.c
+> index 8caf5cb..0e5c577 100644
+> --- a/fs/proc/base.c
+> +++ b/fs/proc/base.c
+> @@ -646,9 +646,14 @@ static bool has_pid_permissions(struct pid_namespace *pid,
+>  static int proc_pid_permission(struct inode *inode, int mask)
+>  {
+>  	struct pid_namespace *pid = inode->i_sb->s_fs_info;
+> -	struct task_struct *task = get_proc_task(inode);
+> +	struct task_struct *task;
+> +	int has_perms;
+> +
+> +	task = get_proc_task(inode);
+> +	has_perms = has_pid_permissions(pid, task, 1);
+> +	put_task_struct(task);
+>  
+> -	if (!has_pid_permissions(pid, task, 1)) {
+> +	if (!has_perms) {
+>  		if (pid->hide_pid == 2) {
+>  			/*
+>  			 * Let's make getdents(), stat(), and open()
+> -- 
+> 1.7.0.4
