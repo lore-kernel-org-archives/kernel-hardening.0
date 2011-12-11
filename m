@@ -1,38 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Thu, 8 Dec 2011 23:21:43 +0400
+Date: Sun, 11 Dec 2011 22:28:21 +0400
 From: Vasiliy Kulikov <segoon@openwall.com>
-Message-ID: <20111208192143.GB9794@albatros>
-References: <20111119110126.GA11468@albatros>
- <20111119110212.GB11468@albatros>
- <alpine.LSU.2.00.1112051451470.3938@sister.anvils>
+Message-ID: <20111211182821.GA2853@albatros>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <alpine.LSU.2.00.1112051451470.3938@sister.anvils>
-Subject: [kernel-hardening] Re: [RFC v2 2/3] procfs: add hidepid= and gid= mount options
-To: Hugh Dickins <hughd@google.com>
-Cc: kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, Alexey Dobriyan <adobriyan@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, "H. Peter Anvin" <hpa@zytor.com>, Greg KH <greg@kroah.com>, Theodore Tso <tytso@mit.edu>, Alan Cox <alan@lxorguk.ukuu.org.uk>, James Morris <jmorris@namei.org>, Oleg Nesterov <oleg@redhat.com>
+Subject: [kernel-hardening] [PATCH -next] proc: fix task_struct infoleak
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Hugh Dickins <hughd@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Hugh,
+proc_pid_permission() doesn't put task_struct on every /proc/$pid/
+access.  A demo from Hugh Dickins:
 
-On Mon, Dec 05, 2011 at 14:55 -0800, Hugh Dickins wrote:
-> On Sat, 19 Nov 2011, Vasiliy Kulikov wrote:
-> > This patch adds support of mount options to restrict access to
-> > /proc/PID/ directories.  The default backward-compatible "relaxed"
-> > behaviour is left untouched.
-> 
-> This patch, in 3.2.0-rc3-next-20111202, leaks tasks: watch
-> while :; do ps; grep KernelStack /proc/meminfo; sleep 1; done
+while :; do ps; grep KernelStack /proc/meminfo; sleep 1; done
 
-Thank you very much for the report!
+Reported-by: Hugh Dickins <hughd@google.com>
+Signed-off-by: Vasiliy Kulikov <segoon@openwall.com>
+---
+ This is a patch against a hidepid patchset from -mm.
 
-Unfortunately, I have no time to look at it now, will try to debug the
-issue these weekends.
+ fs/proc/base.c |    9 +++++++--
+ 1 files changed, 7 insertions(+), 2 deletions(-)
 
-Thanks,
-
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 8caf5cb..0e5c577 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -646,9 +646,14 @@ static bool has_pid_permissions(struct pid_namespace *pid,
+ static int proc_pid_permission(struct inode *inode, int mask)
+ {
+ 	struct pid_namespace *pid = inode->i_sb->s_fs_info;
+-	struct task_struct *task = get_proc_task(inode);
++	struct task_struct *task;
++	int has_perms;
++
++	task = get_proc_task(inode);
++	has_perms = has_pid_permissions(pid, task, 1);
++	put_task_struct(task);
+ 
+-	if (!has_pid_permissions(pid, task, 1)) {
++	if (!has_perms) {
+ 		if (pid->hide_pid == 2) {
+ 			/*
+ 			 * Let's make getdents(), stat(), and open()
 -- 
-Vasiliy Kulikov
-http://www.openwall.com - bringing security into open computing environments
+1.7.0.4
