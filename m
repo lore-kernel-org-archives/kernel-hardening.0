@@ -1,14 +1,15 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2011 16:43:11 -0800
+Date: Wed, 14 Dec 2011 17:14:28 -0800
 From: Kees Cook <keescook@chromium.org>
-Message-ID: <20111215004311.GA11049@www.outflux.net>
+Message-ID: <20111215011428.GA20573@www.outflux.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v2011.2] fs: symlink restrictions on sticky directories
+In-Reply-To: <20111215004311.GA11049@www.outflux.net>
+Subject: [kernel-hardening] [PATCH v2011.3] fs: symlink restrictions on sticky directories
 To: linux-kernel@vger.kernel.org
-Cc: Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Rik van Riel <riel@redhat.com>, Federica Teodori <federica.teodori@googlemail.com>, Lucian Adrian Grijincu <lucian.grijincu@gmail.com>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Eric Paris <eparis@redhat.com>, Dan Rosenberg <drosenberg@vsecurity.com>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Federica Teodori <federica.teodori@googlemail.com>, Lucian Adrian Grijincu <lucian.grijincu@gmail.com>, Ingo Molnar <mingo@elte.hu>, Andrew Morton <akpm@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Eric Paris <eparis@redhat.com>, Dan Rosenberg <drosenberg@vsecurity.com>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 A long-standing class of security issues is the symlink-based
@@ -57,11 +58,13 @@ Past objections and rebuttals could be summarized as:
 
 This patch is based on the patch in Openwall and grsecurity, along with
 suggestions from Al Viro. I have added a sysctl to enable the protected
-behavior, documentation, and a ratelimited warning.
+behavior, documentation, and an audit notification.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 Reviewed-by: Ingo Molnar <mingo@elte.hu>
 ---
+v2011.3:
+ - Oops, add pid/comm back to notification.
 v2011.2:
  - Updated documentation, thanks to Randy Dunlap.
  - Switched Kconfig default to "y", added __read_mostly to sysctl,
@@ -71,11 +74,11 @@ v2011.2:
 v2011.1:
  - back from hiatus
 ---
- Documentation/sysctl/fs.txt |   21 +++++++++++
+ Documentation/sysctl/fs.txt |   21 ++++++++++
  fs/Kconfig                  |   16 ++++++++
- fs/namei.c                  |   85 ++++++++++++++++++++++++++++++++++++++++---
+ fs/namei.c                  |   87 ++++++++++++++++++++++++++++++++++++++++---
  kernel/sysctl.c             |   10 +++++
- 4 files changed, 126 insertions(+), 6 deletions(-)
+ 4 files changed, 128 insertions(+), 6 deletions(-)
 
 diff --git a/Documentation/sysctl/fs.txt b/Documentation/sysctl/fs.txt
 index 88fd7f5..4b47cd5 100644
@@ -141,10 +144,10 @@ index 5f4c45d..26ede24 100644
 +	  or when the uid of the symlink and follower match, or when
 +	  the directory and symlink owners match.
 diff --git a/fs/namei.c b/fs/namei.c
-index 5008f01..ed2747a 100644
+index 5008f01..b44ed1e 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
-@@ -624,10 +624,78 @@ static inline void put_link(struct nameidata *nd, struct path *link, void *cooki
+@@ -624,10 +624,80 @@ static inline void put_link(struct nameidata *nd, struct path *link, void *cooki
  	path_put(link);
  }
  
@@ -204,6 +207,8 @@ index 5008f01..ed2747a 100644
 +		ab = audit_log_start(current->audit_context,
 +				     GFP_ATOMIC, AUDIT_AVC);
 +		audit_log_format(ab, "op=follow_link action=denied");
++		audit_log_format(ab, " pid=%d comm=", current->pid);
++		audit_log_untrustedstring(ab, current->comm);
 +		audit_log_d_path(ab, "path=", &nameidata->path);
 +		audit_log_format(ab, " name=");
 +		audit_log_untrustedstring(ab, dentry->d_name.name);
@@ -225,7 +230,7 @@ index 5008f01..ed2747a 100644
  	struct dentry *dentry = link->dentry;
  
  	BUG_ON(nd->flags & LOOKUP_RCU);
-@@ -646,7 +714,10 @@ follow_link(struct path *link, struct nameidata *nd, void **p)
+@@ -646,7 +716,10 @@ follow_link(struct path *link, struct nameidata *nd, void **p)
  	touch_atime(link->mnt, dentry);
  	nd_set_link(nd, NULL);
  
@@ -237,7 +242,7 @@ index 5008f01..ed2747a 100644
  	if (error) {
  		*p = ERR_PTR(error); /* no ->put_link(), please */
  		path_put(&nd->path);
-@@ -1339,7 +1410,7 @@ static inline int nested_symlink(struct path *path, struct nameidata *nd)
+@@ -1339,7 +1412,7 @@ static inline int nested_symlink(struct path *path, struct nameidata *nd)
  		struct path link = *path;
  		void *cookie;
  
@@ -246,7 +251,7 @@ index 5008f01..ed2747a 100644
  		if (!res)
  			res = walk_component(nd, path, &nd->last,
  					     nd->last_type, LOOKUP_FOLLOW);
-@@ -1612,7 +1683,8 @@ static int path_lookupat(int dfd, const char *name,
+@@ -1612,7 +1685,8 @@ static int path_lookupat(int dfd, const char *name,
  			void *cookie;
  			struct path link = path;
  			nd->flags |= LOOKUP_PARENT;
@@ -256,7 +261,7 @@ index 5008f01..ed2747a 100644
  			if (!err)
  				err = lookup_last(nd, &path);
  			put_link(nd, &link, cookie);
-@@ -2324,7 +2396,8 @@ static struct file *path_openat(int dfd, const char *pathname,
+@@ -2324,7 +2398,8 @@ static struct file *path_openat(int dfd, const char *pathname,
  		}
  		nd->flags |= LOOKUP_PARENT;
  		nd->flags &= ~(LOOKUP_OPEN|LOOKUP_CREATE|LOOKUP_EXCL);
