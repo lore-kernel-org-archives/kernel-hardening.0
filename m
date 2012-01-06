@@ -1,55 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 6 Jan 2012 08:34:56 +0100
+Date: Fri, 6 Jan 2012 08:36:35 +0100
 From: Ingo Molnar <mingo@elte.hu>
-Message-ID: <20120106073456.GB14188@elte.hu>
+Message-ID: <20120106073635.GC14188@elte.hu>
 References: <20120104201800.GA2587@www.outflux.net>
- <20120105143008.GA31728@elliptictech.com>
- <CAGXu5jLYhxOK8u-H8mhTvHBzvkRi8d-=zTeginjukDMEFri-0Q@mail.gmail.com>
- <20120105200810.GA3826@elliptictech.com>
- <CAGXu5jKe_qpQ9yG4f0J_94WNKYy_qdDNdVW4v74ZivwO4Xy0Rg@mail.gmail.com>
- <4F065704.4020306@redhat.com>
+ <20120105091704.GB3249@elte.hu>
+ <CAGXu5jJ=D1pKCZ8=1-WGkm0witNEH9Ux01+1BJyZKC_DAX00aA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
-In-Reply-To: <4F065704.4020306@redhat.com>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAGXu5jJ=D1pKCZ8=1-WGkm0witNEH9Ux01+1BJyZKC_DAX00aA@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v2012.1] fs: symlink restrictions on sticky directories
-To: Rik van Riel <riel@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Nick Bowler <nbowler@elliptictech.com>, linux-kernel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Federica Teodori <federica.teodori@googlemail.com>, Lucian Adrian Grijincu <lucian.grijincu@gmail.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Eric Paris <eparis@redhat.com>, Randy Dunlap <rdunlap@xenotime.net>, Dan Rosenberg <drosenberg@vsecurity.com>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Alexander Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Federica Teodori <federica.teodori@googlemail.com>, Lucian Adrian Grijincu <lucian.grijincu@gmail.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Eric Paris <eparis@redhat.com>, Randy Dunlap <rdunlap@xenotime.net>, Dan Rosenberg <drosenberg@vsecurity.com>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Rik van Riel <riel@redhat.com> wrote:
+* Kees Cook <keescook@chromium.org> wrote:
 
-> On 01/05/2012 03:55 PM, Kees Cook wrote:
-> >On Thu, Jan 5, 2012 at 12:08 PM, Nick Bowler<nbowler@elliptictech.com>  wrote:
-> 
-> >>But this is a brand new feature that changes longstanding behaviour of
-> >>various syscalls.  Making it default to enabled is rather mean to users
-> >>(since it will tend to get enabled by "oldconfig") and seems almost
-> >>guaranteed to cause regressions.
+> On Thu, Jan 5, 2012 at 1:17 AM, Ingo Molnar <mingo@elte.hu> wrote:
+> > * Kees Cook <keescook@chromium.org> wrote:
 > >
-> > I couldn't disagree more. There has been zero evidence of 
-> > this change causing anything but regressions in _attacks_. 
-> > :P If anything, I think there should be no CONFIG and no 
-> > sysctl, and it should be entirely non-optional. But since 
-> > this patch needs consensus, I have provided knobs to control 
-> > it.
+> >> @@ -1495,6 +1496,15 @@ static struct ctl_table fs_table[] = {
+> >>  #endif
+> >>  #endif
+> >>       {
+> >> +             .procname       = "protected_sticky_symlinks",
+> >> +             .data           = &protected_sticky_symlinks,
+> >> +             .maxlen         = sizeof(int),
+> >> +             .mode           = 0644,
+> >> +             .proc_handler   = proc_dointvec_minmax,
+> >> +             .extra1         = &zero,
+> >> +             .extra2         = &one,
+> >> +     },
+> >
+> > Small detail:
+> >
+> > Might make sense to change the .mode to 0600, to make it 
+> > harder for unprivileged attack code to guess whether this 
+> > protection (and the resulting audit warning to the 
+> > administrator) is enabled on a system or not.
 > 
-> I agree with you, Kees.
-> 
-> The behaviour introduced by this patch should produce so few 
-> issues, that the new behaviour should probably be on by 
-> default.
+> Sure, I have no problem with that. In addition to this change, 
+> what's the best next step for this patch?
 
-Up to the point people report regressions.
-
-And yes, I think Kees is perfectly right that the setting of the 
-default should be evidence based. (Assuming Al and Linus is fine 
-with the whole concept.)
-
-The only specific counter-argument I can see is the spinlock 
-performance impact I raised during review. I think we can (and 
-should) live with that, and it's probably fixable, BYMMV.
+Al and Linus's call I guess. Maybe ask Andrew whether he'd put 
+it into -mm?
 
 Thanks,
 
