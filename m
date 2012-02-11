@@ -1,46 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 11 Feb 2012 13:20:50 +0400
+Date: Sat, 11 Feb 2012 14:07:09 +0400
 From: Solar Designer <solar@openwall.com>
-Message-ID: <20120211092050.GA18669@openwall.com>
-References: <20120210020658.GA17709@dztty> <20120210143616.GA6100@albatros>
+Message-ID: <20120211100709.GA18767@openwall.com>
+References: <20120210020658.GA17709@dztty>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20120210143616.GA6100@albatros>
+In-Reply-To: <20120210020658.GA17709@dztty>
 Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
 To: kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2012 at 06:36:17PM +0400, Vasiliy Kulikov wrote:
-> On Fri, Feb 10, 2012 at 03:06 +0100, Djalal Harouni wrote:
-> > 2) DAC permissions and suid/guid/privileged programs (userspace):
-> >    This is a list of files that are supposed to be protected:
-> >    /proc/<pid>/maps
+On Fri, Feb 10, 2012 at 03:06:58AM +0100, Djalal Harouni wrote:
+> 1) Infoleaks via self-read by a suid/guid:
 ...
-> I cannot find any solution of (2) except actually add ptrace check at
-> open() time...  Looks like we have to check what specific action glibc 
-> does with /proc/$pid/maps and whitelist these idiotic actions.  I hope
-> it is not arbitrary reads :-)
+>    I believe to fix this we should just let 'mm_struct' point to the old
+>    one (as done by Linus' commit [2] for the /proc/self/mem)
 
-I did not look into this closely, but my current understanding is that
-apparently glibc reads the process' own proc files only, and restricting
-their perms to 0400 breaks this if the process changes euid/fsuid during
-its runtime.  Right?
+I dislike this approach because it introduces a resource limits bypass.
+When you hold an mm, you hold all data of the old process in VM, right?
 
-How about including a DAC bypass (perhaps limited to certain files only)
-if the calling process' PID matches the PID in the pathname?  This feels
-very dirty, but it might work.  I mention this possibility primarily
-such that maybe we can arrive at something cleaner based on this thought.
+> 2) DAC permissions and suid/guid/privileged programs (userspace):
+>    This is a list of files that are supposed to be protected:
+...
+> Now if we manage to:
+> - Find a setuid/privileged program that reads user specified files.
+> - setuid program drops privileges temporarily.
+> - setuid program opens user file: '/proc/1/maps' to _get_ the fd.
+>   open() will succeed
+> - setuid program restores privileges
+> - setuid program calls lseek,read... on the previous fd.
+> - Information leakage...
 
-Oh, here's a slightly cleaner alternative: instead of basing this on a
-PID match, base it on unique exec_id match.  I am referring to those
-from Spender's patch:
+Oh, my ideas from the previous message don't deal with this attack.
+There will be a PID match and an exec_id match here.
 
-> [1] http://grsecurity.net/~spender/dev_patches/distros_should_sponsor_me_for_doing_their_jobs.patch
+Looks like the program can't be trusted to read its own proc files,
+then. %-)  It could be trusted to obtain the same info via other means
+where the request is definitely hard-coded rather than user triggered
+(such as via a user-passed filename or fd).
 
-BTW, I like this approach.
+Hmm, how about allowing self-reads only if the passed filename is in
+.rodata?  Would this satisfy glibc's needs?  Sounds awfully hackish,
+though.  I am just brainstorming.
 
-So maybe we can use it not only as an extra requirement, but also as a
-way to bypass DAC... which still feels dirty, though. %-)
+Maybe what we really need in the long term is a prctl() option that
+will deliver whatever glibc needs to know.  Or we can have this info
+in the auxiliary vector passed on execve().  Then we'd be able to setup
+proper DAC perms on the proc files and not introduce any bypass.
+Of course, this will require a glibc patch and a transition period of
+some years.
+
+> A partial fix for this (2):
+> Procfs 'hidepid=' mount option which can be used to restrict access to
+> arbitrary /proc/<pid>/ files, Vasiliy commit [3], congrats.
+
+This works against fd passing to a privileged process (you need to be
+able to open() the proc file first, which will fail for someone else's
+process), but not for SUID self-reads.
+
+BTW, what about SGIDs and processes with fscaps?  The invoking user
+remains the owner of the /proc/<pid> directory, yet the process is
+somewhat privileged.  Maybe we need to harden that.
+
+> ... these days '%n' should be just banned.
+
+"%n" is a useful and safe feature in some rare cases.  I don't really
+mind it slowly going away, but while it's there and not planned for
+removal (as far as I'm aware), I also don't mind using it in my code.
+An URL detector:
+
+	start = domain = path = end = -1; slash = '.';
+	n = sscanf(data, " %n%*4[fhtp]://%n%*[.a-zA-Z0-9-]%n%c%*[a-zA-Z0-9._~%!$&'()*+,;=:@?#/-]%n", &start, &domain, &path, &slash, &end);
+	if (n >= 1 && start >= 0 && domain > start && path > domain &&
+	    slash != '.' &&
+	    (!strncmp(data + start, "ftp", 3) ||
+	    !strncmp(data + start, "http", 4))) {
+		if (slash != '/' || end < path)
+			end = path;
+
+Four uses of "%n" here. ;-)  This is unreleased code, though, and I've
+since replaced it with a much longer implementation that uses more
+explicit checks and does not depend on "%n".
 
 Alexander
