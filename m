@@ -1,28 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 11 Feb 2012 17:31:46 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20120211133146.GA19489@openwall.com>
-References: <20120210020658.GA17709@dztty> <20120210143616.GA6100@albatros> <20120211092050.GA18669@openwall.com> <20120211102105.GA18464@albatros>
-Mime-Version: 1.0
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Sun, 12 Feb 2012 00:33:09 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20120211203309.GA18093@albatros>
+References: <1328935151-6908-1-git-send-email-wad@chromium.org>
+ <1328935151-6908-5-git-send-email-wad@chromium.org>
+ <CAObL_7FJ=a-X0UuVuK1p338nAVCes4H8PTe2ji5dOLhrtSaKHQ@mail.gmail.com>
+ <CABqD9hYipmC1Dcx6+VrDM04ik5ysfw0GCypEzdFDBfh5B24jtA@mail.gmail.com>
+ <20120211200346.GA16870@albatros>
+ <1328991543.11026.8.camel@joe2Laptop>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20120211102105.GA18464@albatros>
-Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <1328991543.11026.8.camel@joe2Laptop>
+Subject: [kernel-hardening] Re: [PATCH v7 4/8] seccomp: Add SECCOMP_RET_TRAP
+To: Joe Perches <joe@perches.com>
+Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, linun-security-module@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Feb 11, 2012 at 02:21:06PM +0400, Vasiliy Kulikov wrote:
-> On Sat, Feb 11, 2012 at 13:20 +0400, Solar Designer wrote:
-> > I did not look into this closely, but my current understanding is that
-> > apparently glibc reads the process' own proc files only, and restricting
-> > their perms to 0400 breaks this if the process changes euid/fsuid during
-> > its runtime.  Right?
+On Sat, Feb 11, 2012 at 12:19 -0800, Joe Perches wrote:
+> On Sun, 2012-02-12 at 00:03 +0400, Vasiliy Kulikov wrote:
+> > On Sat, Feb 11, 2012 at 13:30 -0600, Will Drewry wrote:
+> > > (As a side note, I realize the CC list has ballooned.  In the next
+> > > rev, I'll pare it down to active participants and the appropriate
+> > > lists and not just the get_maintainers.pl output!)
+> > Add kernel-hardening to CC and remove me and Kees ;)
 > 
-> Yes, AFAICS, it looks whether a specific memory area is RW.  But looking
-> at "grep -r /proc/self/ glibc-sources/" output I can say /proc/self/maps
-> is not the only file usage which might be broken by open() restricting.
+> Should that list be added to MAINTAINERS or
+> Documentation/ somewhere?
 
-Yes, and not all pathnames are constant - there's also
-"/proc/self/task/%u/comm".
+Probably yes, but we haven't fully agreed on what are the formal
+criterias of k-h posting.  Currently these are either discussion of
+not-yet-merged security features or general security problems of Linux.
+I guess we should more clearly state the role of k-h to place k-h in
+MAINTAINERS.
 
-Alexander
+Thanks,
+
+-- 
+Vasiliy Kulikov
+http://www.openwall.com - bringing security into open computing environments
