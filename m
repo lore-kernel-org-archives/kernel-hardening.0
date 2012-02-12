@@ -1,113 +1,127 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 12 Feb 2012 01:19:52 +0100
+Date: Sun, 12 Feb 2012 16:36:12 +0100
 From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20120212001952.GA1574@dztty>
+Message-ID: <20120212153612.GA15621@dztty>
 References: <20120210020658.GA17709@dztty>
- <20120210143616.GA6100@albatros>
+ <20120211100709.GA18767@openwall.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20120210143616.GA6100@albatros>
+In-Reply-To: <20120211100709.GA18767@openwall.com>
 Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Solar Designer <solar@openwall.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2012 at 06:36:17PM +0400, Vasiliy Kulikov wrote:
-> Hi,
-> 
-> On Fri, Feb 10, 2012 at 03:06 +0100, Djalal Harouni wrote:
-> > At least there are two issues for the procfs:
-> > 
+On Sat, Feb 11, 2012 at 02:07:09PM +0400, Solar Designer wrote:
+> On Fri, Feb 10, 2012 at 03:06:58AM +0100, Djalal Harouni wrote:
 > > 1) Infoleaks via self-read by a suid/guid:
-> >    As noted in the thread [1], this probably affects most of the procfs
-> >    seq files.
-> >    - fd = open(/proc/self/maps...)
-> >    - exec a setuid program
-> >    - fd = /proc/pid_of_setuid/maps
-> >      (due to the 'task_struct' and 'mm_struct' lookup logic).
-> >    - read data from fd, this will pass ptrace_may_access() check.
-> >    - setuid program gives data.
+> ...
+> >    I believe to fix this we should just let 'mm_struct' point to the old
+> >    one (as done by Linus' commit [2] for the /proc/self/mem)
 > 
-> AFAICS, it affects not only seq files, but every file: you can open
-> /proc/self/* and pass it to a setuid binary.
-Yes, brobably.
+> I dislike this approach because it introduces a resource limits bypass.
+> When you hold an mm, you hold all data of the old process in VM, right?
+I guess, but that code can be considered semantically correct since we did
+not release it.
+
+Oleg's patch [1] makes sure that 'mm->mm_users' holds the right value, if
+the process drops the 'fd' the next read/write call will fail, so it will
+not be visible to userspace if the original process exits. It will fail
+at:
+if (!atomic_inc_not_zero(&mm->mm_users))
+  return NULL;
+
+It will be freed only by the release function.
+
+
+Can you elaborate more on the resource limits bypass please ?
+
+
+I guess we can try this:
+self_pid = getpid()
+open("/proc/self_pid/mem")
+execv("/proc/self_pid/comm",...)
+
+A quick slabtop shows that mm_struct objects keep increasing...
+But the 'fd' limit will kill the program, what about others ?
+
+
+BTW NOMMU code fs/proc/task_nommu.c seems also affected by these issues.
 
 > > 2) DAC permissions and suid/guid/privileged programs (userspace):
 > >    This is a list of files that are supposed to be protected:
-> >    /proc/<pid>/maps
-> >    /proc/<pid>/numa_maps
-> >    /proc/<pid>/smaps
-> >    /proc/<pid>/pagemap      Page table
-> >    /proc/<pid>/personality
-> >    /proc/<pid>/stack        Enbled by CONFIG_STACKTRACE
-> >    /proc/<pid>/syscall
-> >    more... ?
-> [...]
+> ...
+> > Now if we manage to:
+> > - Find a setuid/privileged program that reads user specified files.
+> > - setuid program drops privileges temporarily.
+> > - setuid program opens user file: '/proc/1/maps' to _get_ the fd.
+> >   open() will succeed
+> > - setuid program restores privileges
+> > - setuid program calls lseek,read... on the previous fd.
+> > - Information leakage...
+> 
+> Oh, my ideas from the previous message don't deal with this attack.
+> There will be a PID match and an exec_id match here.
+> 
+> Looks like the program can't be trusted to read its own proc files,
+> then. %-)  It could be trusted to obtain the same info via other means
+> where the request is definitely hard-coded rather than user triggered
+> (such as via a user-passed filename or fd).
+Yes.
+
+>
+> Hmm, how about allowing self-reads only if the passed filename is in
+> .rodata?  Would this satisfy glibc's needs?  Sounds awfully hackish,
+> though.  I am just brainstorming.
+> 
+> Maybe what we really need in the long term is a prctl() option that
+> will deliver whatever glibc needs to know.  Or we can have this info
+> in the auxiliary vector passed on execve().  Then we'd be able to setup
+> proper DAC perms on the proc files and not introduce any bypass.
+> Of course, this will require a glibc patch and a transition period of
+> some years.
+IMHO right now we should just avoid the idea of a glibc patch.
+
 > > A partial fix for this (2):
 > > Procfs 'hidepid=' mount option which can be used to restrict access to
 > > arbitrary /proc/<pid>/ files, Vasiliy commit [3], congrats.
-> > But if the procfs 'gid=' mount option is used then it can give permissions
-> > back to read these files if the user is part of the 'gid' group. IOW this
-> > will just restore the previous vulnerable situation.
 > 
-> It is even weaker - you could trick setuid $SPID to open /proc/$PID/maps,
-> do exec(setuid_app) as $PID and read setuid_app's maps as $SPID.
-Well, if I understand that patch correctly, when procfs is mounted with
-'hidepid' and without 'gid', the fix should be in the setuid application
-which opens arbitrary files, right ?
+> This works against fd passing to a privileged process (you need to be
+> able to open() the proc file first, which will fail for someone else's
+> process), but not for SUID self-reads.
+Right.
 
-My point is that open() is called by unprivileged code and it will
-succeed.
+> BTW, what about SGIDs and processes with fscaps?  The invoking user
+> remains the owner of the /proc/<pid> directory, yet the process is
+> somewhat privileged.  Maybe we need to harden that.
+To pass the ptrace check: uid and gid of current and target are checked,
+if it fails then there is the CAP_SYS_PTRACE check on current.
 
->> These files should just follow DAC and be 0400, I know about glibc
->> breakage. At least files that do not break glibc should be 0400 and
->> prevent self-read infoleak.
-
-> It doesn't work as I've showed above.
-I think that I'm missing something.
-
-> [...]
-> I cannot find any solution of (2) except actually add ptrace check at
-> open() time...  Looks like we have to check what specific action glibc 
-> does with /proc/$pid/maps and whitelist these idiotic actions.  I hope
-Seems fine with ptrace, perhaps we can also make some files 'S_IRUSR'.
-
-> it is not arbitrary reads :-)
-Currently it is:
-
-# chmod u+s /usr/bin/wall
-$ ./procfs_leak /usr/bin/wall /proc/1/maps
-...
-7fcf6930b000-7fcf69328000 r-xp 00000000 08:06 652945
-/sbin/
-init                                                                           
-7fcf69527000-7fcf69529000 r--p 0001c000 08:06 652945
-/sbin/
-init                                                                           
-7fcf69529000-7fcf6952a000 rw-p 0001e000 08:06 652945
-/sbin/
-init                                                                           
-7fcf6b226000-7fcf6b2c4000 rw-p 00000000 00:00 0
-[heap]
-7fff0e916000-7fff0e937000 rw-p 00000000 00:00 0
-[stack]
-...
-
-As I've said, one just need to find the appropriate program (not especially
-setuid root), I did not bother to search.
-
-> [1] http://grsecurity.net/~spender/dev_patches/distros_should_sponsor_me_for_doing_their_jobs.patch
-Yes this patch should protect current configs of distros from (1).
-Still some files, especially the writable ones.
-
-Thank you for your input.
-
-> Thanks,
+> > ... these days '%n' should be just banned.
 > 
-> --
-> Vasiliy Kulikov
-> http://www.openwall.com - bringing security into open computing environments
+> "%n" is a useful and safe feature in some rare cases.  I don't really
+> mind it slowly going away, but while it's there and not planned for
+> removal (as far as I'm aware), I also don't mind using it in my code.
+> An URL detector:
+> 
+> 	start = domain = path = end = -1; slash = '.';
+> 	n = sscanf(data, " %n%*4[fhtp]://%n%*[.a-zA-Z0-9-]%n%c%*[a-zA-Z0-9._~%!$&'()*+,;=:@?#/-]%n", &start, &domain, &path, &slash, &end);
+> 	if (n >= 1 && start >= 0 && domain > start && path > domain &&
+> 	    slash != '.' &&
+> 	    (!strncmp(data + start, "ftp", 3) ||
+> 	    !strncmp(data + start, "http", 4))) {
+> 		if (slash != '/' || end < path)
+> 			end = path;
+> 
+> Four uses of "%n" here. ;-)  This is unreleased code, though, and I've
+> since replaced it with a much longer implementation that uses more
+> explicit checks and does not depend on "%n".
+What I can say ? ... impressive ;)
+
+> Alexander
+
+[1] http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=6d08f2c7139790c268820a2e590795cb8333181a
 
 -- 
 tixxdz
