@@ -1,94 +1,116 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 16 Feb 2012 12:45:15 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20120216204515.GH20420@outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
-Subject: [kernel-hardening] Re: Add overflow protection to kref
-To: Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+From: Will Drewry <wad@chromium.org>
+Date: Thu, 16 Feb 2012 15:11:45 -0600
+Message-Id: <1329426706-26562-1-git-send-email-wad@chromium.org>
+In-Reply-To: <CABqD9hZSLqn+=jr6sWwp_eJ5WsuGpH2Khoc_7aRmYt+1ZaEGoA@mail.gmail.com>
+References: <CABqD9hZSLqn+=jr6sWwp_eJ5WsuGpH2Khoc_7aRmYt+1ZaEGoA@mail.gmail.com>
+Subject: [kernel-hardening] [PATCH v9 5/8] seccomp: Add SECCOMP_RET_TRAP
+To: linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Adds a new return value to seccomp filters that triggers a SIGILL to be
+delivered with the new ILL_SECCOMP si_code.
 
-[This should probably be discussed on LKML for an even wider audience, so
-I've added a CC for it there.]
+This allows in-process system call emulation, including just specifying
+an errno or cleanly dumping core, rather than just dying.  It also
+avoids interfering with normal debugger operation (injecting SIGTRAPs).
 
-On Thu, Feb 16, 2012 at 09:02:13AM -0500, David Windsor wrote:
-> Hi,
-> 
-> We are attempting to add various grsecurity/PAX features to upstream
-> Ubuntu kernels.
+v9: - changes to SIGILL (markus@chromium.org)
+v8: - clean up based on changes to dependent patches
+v7: - introduction
 
-This didn't parse quite right for me. I think you meant that the intent
-is to get these features into the upstream Linux kernel, with potential
-staging in Ubuntu kernels.
+Signed-off-by: Will Drewry <wad@chromium.org>
+---
+ arch/Kconfig                  |    8 ++++----
+ include/asm-generic/siginfo.h |    3 ++-
+ include/linux/seccomp.h       |    1 +
+ kernel/seccomp.c              |   20 ++++++++++++++++++++
+ 4 files changed, 27 insertions(+), 5 deletions(-)
 
-(Also s/PAX/PaX/g)
-
-> The PAX folks added refcount overflow protection by inserting
-> architecture-specific code in the increment paths of atomic_t.  For
-> instance:
-> 
-> static inline void atomic_inc(atomic_t *v)
->  {
-> 	asm volatile(LOCK_PREFIX "incl %0\n"
-> 
-> #ifdef CONFIG_PAX_REFCOUNT
-> 		     "jno 0f\n"
-> 		     LOCK_PREFIX "decl %0\n"
-> 		     "int $4\n0:\n"
-> 		     _ASM_EXTABLE(0b, 0b)
-> #endif
-> 
-> 		     : "+m" (v->counter));
-> }
-> 
-> There are two distinct classes of users we need to consider here:
-> those who use atomic_t for reference counters and those who use
-> atomic_t for keeping track of statistics, like performance counters,
-> etc.; it makes little sense to overflow a performance counter, so we
-> shouldn't subject those users to the same protections as imposed on
-> actual reference counters.  The solution implemented by PAX is to
-> create a family of *_unchecked() functions and to patch
-> statistics-based users of atomic_t to use this interface.
-> 
-> PAX refcount overflow protection was developed before kref was
-> created.  I'd like to move overflow protection out of atomic_t and
-> into kref and gradually migrate atomic_t users to kref, leaving
-> atomic_t for those users who don't need overflow protection (e.g.
-> statistics-based counters).
-
-For people new to this, can you give an overview of what attacks are foiled
-by adding overflow protection?
-
-> I realize that there are many users of atomic_t needing overflow
-> protection, but the move to kref seems like the right thing to do in
-> this case.
-> 
-> Leaving the semantics of overflow detection aside for the moment, what
-> are everyone's thoughts on adding overflow protection to kref rather
-> than to atomic_t?
-
-Why was kref introduced? Or rather, how is kref currently different from
-atomic_t?
-
-> Also, I cherrypicked the refcount protection feature directly from the
-> PAX patch, with the original atomic_t protections in place, before
-> considering kref.  If anyone is interested, I can post that patch.
-> 
-> Thanks,
-> David Windsor
-> 
-> -- 
-> PGP: 6141 5FFD 11AE 9844 153E  F268 7C98 7268 6B19 6CC9
-
-Thanks for bringing this up!
-
--Kees
-
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 3f3052b..a01c151 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -203,10 +203,10 @@ config HAVE_ARCH_SECCOMP_FILTER
+ 	bool
+ 	help
+ 	  This symbol should be selected by an architecure if it provides
+-	  asm/syscall.h, specifically syscall_get_arguments() and
+-	  syscall_set_return_value().  Additionally, its system call
+-	  entry path must respect a return value of -1 from
+-	  __secure_computing_int() and/or secure_computing().
++	  asm/syscall.h, specifically syscall_get_arguments(),
++	  syscall_set_return_value(), and syscall_rollback().
++	  Additionally, its system call entry path must respect a return
++	  value of -1 from __secure_computing_int() and/or secure_computing().
+ 
+ config SECCOMP_FILTER
+ 	def_bool y
+diff --git a/include/asm-generic/siginfo.h b/include/asm-generic/siginfo.h
+index 0dd4e87..e565662 100644
+--- a/include/asm-generic/siginfo.h
++++ b/include/asm-generic/siginfo.h
+@@ -166,7 +166,8 @@ typedef struct siginfo {
+ #define ILL_PRVREG	(__SI_FAULT|6)	/* privileged register */
+ #define ILL_COPROC	(__SI_FAULT|7)	/* coprocessor error */
+ #define ILL_BADSTK	(__SI_FAULT|8)	/* internal stack error */
+-#define NSIGILL		8
++#define ILL_SECCOMP	(__SI_FAULT|9)	/* illegal syscall via seccomp */
++#define NSIGILL		9
+ 
+ /*
+  * SIGFPE si_codes
+diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
+index 879ece2..1be562f 100644
+--- a/include/linux/seccomp.h
++++ b/include/linux/seccomp.h
+@@ -19,6 +19,7 @@
+  * selects the least permissive choice.
+  */
+ #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
++#define SECCOMP_RET_TRAP	0x00020000U /* disallow and send sigtrap */
+ #define SECCOMP_RET_ERRNO	0x00030000U /* returns an errno */
+ #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
+ 
+diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+index 55d000d..a7b6510 100644
+--- a/kernel/seccomp.c
++++ b/kernel/seccomp.c
+@@ -290,6 +290,21 @@ void copy_seccomp(struct seccomp *child,
+ 	child->mode = prev->mode;
+ 	child->filter = get_seccomp_filter(prev->filter);
+ }
++
++/**
++ * seccomp_send_sigill - signals the task to allow in-process syscall emulation
++ *
++ * Forces a SIGILL with si_code of ILL_SECCOMP.
++ */
++static void seccomp_send_sigill(void)
++{
++	struct siginfo info;
++	memset(&info, 0, sizeof(info));
++	info.si_signo = SIGILL;
++	info.si_code = ILL_SECCOMP;
++	info.si_addr = (void __user *)KSTK_EIP(current);
++	force_sig_info(SIGILL, &info, current);
++}
+ #endif	/* CONFIG_SECCOMP_FILTER */
+ 
+ /*
+@@ -343,6 +358,11 @@ int __secure_computing_int(int this_syscall)
+ 						 -(action & SECCOMP_RET_DATA),
+ 						 0);
+ 			return -1;
++		case SECCOMP_RET_TRAP:
++			/* Show the handler the original registers. */
++			syscall_rollback(current, task_pt_regs(current));
++			seccomp_send_sigill();
++			return -1;
+ 		case SECCOMP_RET_ALLOW:
+ 			return 0;
+ 		case SECCOMP_RET_KILL:
 -- 
-Kees Cook
-ChromeOS Security
+1.7.5.4
