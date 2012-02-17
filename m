@@ -1,41 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: pageexec@freemail.hu
-Date: Fri, 17 Feb 2012 15:23:23 +0200
+Date: Fri, 17 Feb 2012 09:53:22 -0800
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20120217175322.GB29902@kroah.com>
+References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
+ <20120216204515.GH20420@outflux.net>
+ <20120217002405.GB7746@kroah.com>
+ <20120217075945.GA2831@albatros>
 MIME-Version: 1.0
-Reply-to: pageexec@freemail.hu
-Message-ID: <4F3E62DB.6956.CF97716@pageexec.freemail.hu>
-In-reply-to: <20120217014008.GA18763@kroah.com>
-References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>, <20120217010624.GA6541@outflux.net>, <20120217014008.GA18763@kroah.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: Add overflow protection to kref
-To: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>
-Cc: Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, spender@grsecurity.net
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20120217075945.GA2831@albatros>
+Subject: Re: [kernel-hardening] Re: Add overflow protection to kref
+To: Vasiliy Kulikov <segoon@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, linux-kernel@vger.kernel.org, David Windsor <dwindsor@gmail.com>, pageexec@freemail.hu, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16 Feb 2012 at 17:40, Greg KH wrote:
-
-> > A quick search gives me:
-> > CVE-2005-3359: https://bugzilla.redhat.com/show_bug.cgi?id=175769
-> > CVE-2006-3741: http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=b8444d00762703e1b6146fce12ce2684885f8bf6
+On Fri, Feb 17, 2012 at 11:59:45AM +0400, Vasiliy Kulikov wrote:
+> Hi,
 > 
-> Neither of those are kref issues, just bugs with other types of
-> counting things.
+> > And in all that time, I've never seen an instance where you can overflow
+> > the reference count,
+> 
+> Do you mean that the overflow is theoretically impossible or that this
+> type of programmer error is rare?
+> 
+> If the former, it is only 2**32 incs - if you can find open() implementation
+> with a missing atomic_dec() in error path and you can call open() faster than
+> 10000 times per second, you can overflow the counter in ~4 days.
+> 
+> If the latter, it is just a question of finding missing put() in some triggerable
+> error path.  Kees has already posted a link to a bug with a missing fput().
+> 
+> 
+> BTW, moving from atomic_t to 64 bit refcounter would kill the possibility of
+> overflow.  Unfortunately, AFAIU, 64 bit operations are not atomic on some 64 bit
+> archs.
 
-kref is just one of the many users of the atomic type that use it for refcounting.
-and kref users are no more immune to programming mistakes that can result in overflow
-than direct atomic users.
+Can we switch it on those arches where it is an atomic operation?  That
+would be a nice simple solution.
 
-> Again, I don't know of any kref overflows that have ever happened, so
-> trying to "protect" this type of thing, seems odd to me.
+thanks,
 
-well, do you analyze all bugreports/patches/etc for this problem? even if you did
-it's easy to miss them because kref_put has so many wrappers around it whose uses
-would also have to be checked for. anyway, a very lightweight grep in the git log
-turned up these (i spent half a minute on it only, don't expect a flood ;):
-
-14660ccd599dc7bd6ecef17408bd76dc853f9b77
-ece84241b93c4693bfe0a8ec9a043a16d216d0cd
-b65d457913d1c0644394287d5d834373f42fb99a
-94735ec4044a6d318b83ad3c5794e931ed168d10
+greg k-h
