@@ -1,102 +1,108 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: amluto@gmail.com
-In-Reply-To: <CABqD9hZd41AWZub+wxGWwxJtGWfk+pVWQhn7DM_0q0tS9r_wDA@mail.gmail.com>
+Message-ID: <501858544d264abc6526f2b25a224f2b.squirrel@webmail.greenhost.nl>
+In-Reply-To: <4F3D7250.6040504@zytor.com>
 References: <1329422549-16407-1-git-send-email-wad@chromium.org>
- <1329422549-16407-3-git-send-email-wad@chromium.org> <4F3D61CB.2000301@zytor.com>
- <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com>
- <4F3D7250.6040504@zytor.com> <CAE6n16kweRehdozft0tKOB1P5LtGFJDCLQP=2EXfm8P0enyH=A@mail.gmail.com>
- <4F3D766E.7040205@zytor.com> <CABqD9haWxRLac1w3m9rSmyDvcg8jxYcxdmAAsgB7pEEBMHr=2g@mail.gmail.com>
- <4F3D7DD4.6070103@zytor.com> <CABqD9hZd41AWZub+wxGWwxJtGWfk+pVWQhn7DM_0q0tS9r_wDA@mail.gmail.com>
-From: Andrew Lutomirski <luto@mit.edu>
-Date: Thu, 16 Feb 2012 16:23:53 -0800
-Message-ID: <CAObL_7GJ2TdKpdvJRpiLh1c9KPGcTsELdhw7v4Vj39a0P0JxZg@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+    <1329422549-16407-3-git-send-email-wad@chromium.org>
+    <4F3D61CB.2000301@zytor.com>
+    <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com>
+    <4F3D7250.6040504@zytor.com>
+Date: Fri, 17 Feb 2012 01:48:08 +0100
+From: "Indan Zupancic" <indan@nul.nu>
+MIME-Version: 1.0
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Subject: [kernel-hardening] Re: [PATCH v8 3/8] seccomp: add system call filtering using BPF
-To: Will Drewry <wad@chromium.org>
-Cc: "H. Peter Anvin" <hpa@zytor.com>, Markus Gutschke <markus@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, keescook@chromium.org
+To: "H. Peter Anvin" <hpa@zytor.com>
+Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2012 at 3:00 PM, Will Drewry <wad@chromium.org> wrote:
-> On Thu, Feb 16, 2012 at 4:06 PM, H. Peter Anvin <hpa@zytor.com> wrote:
->> On 02/16/2012 01:51 PM, Will Drewry wrote:
->>>>
->>>> Put the bloody bit in there and let the pattern program make that deci=
-sion.
->>>
->>> Easy enough to add a bit for the mode: 32-bit or 64-bit. =A0It seemed
->>> like a waste of cycles for every 32-bit program or every 64-bit
->>> program to check to see that its calling convention hadn't changed,
->>> but it does take away a valid decision the pattern program should be
->>> making.
->>>
->>> I'll add a flag for 32bit/64bit while cleaning up seccomp_data. I
->>> think that will properly encapsulate the is_compat_task() behavior in
->>> a way that is stable for compat and non-compat tasks to use. =A0If
->>> there's a more obvious way, I'm all ears.
->>>
+On Thu, February 16, 2012 22:17, H. Peter Anvin wrote:
+> On 02/16/2012 12:25 PM, Will Drewry wrote:
 >>
->> is_compat_task() is not going to be the right thing for x86 going
->> forward, as we're introducing the x32 ABI (which uses the normal x86-64
->> entry point, but with different eax numbers, and bit 30 set.)
+>> I agree :)  BPF being a 32-bit creature introduced some edge cases.  I
+>> has started with a
+>>      union { u32 args32[6]; u64 args64[6]; }
 >>
->> The actual state is the TS_COMPAT flag in the thread_info structure,
->> which currently matches is_compat_task(), but perhaps we should add a
->> new helper function syscall_namespace() or something like that...
+>> This was somewhat derailed by CONFIG_COMPAT behavior where
+>> syscall_get_arguments always writes to argument of register width --
+>> not bad, just irritating (since a copy isn't strictly necessary nor
+>> actually done in the patch).  Also, Indan pointed out that while BPF
+>> programs expect constants in the machine-local endian layout, any
+>> consumers would need to change how they accessed the arguments across
+>> big/little endian machines since a load of the low-order bits would
+>> vary.
+>>
+>> In a second pass, I attempted to resolve this like aio_abi.h:
+>>     union {
+>>       struct {
+>>          u32 ENDIAN_SWAP(lo32, hi32);
+>>        };
+>>        u64 arg64;
+>>      } args[6];
+>> It wasn't clear that this actually made matters better (though it did
+>> mean syscall_get_arguments() could write directly to arg64).  Usings
+>> offsetof() in the user program would be fine, but any offsets set
+>> another way would be invalid.  At that point, I moved to Indan's
+>> proposal to stabilize low order and high order offsets -- what is in
+>> the patch series.  Now a BPF program can reliably index into the low
+>> bits of an argument and into the high bits without endianness changing
+>> the filter program structure.
+>>
+>> I don't feel strongly about any given data layout, and this one seems
+>> to balance the 32-bit-ness of BPF and the impact that has on
+>> endianness.  I'm happy to hear alternatives that might be more
+>> aesthetically pleasing :)
+>>
 >
-> Without the addition of x32, it is still the intersection of
-> is_compat_task()/TS_COMPAT and CONFIG_64BIT for all arches to
-> determine if the call is 32-bit or 64-bit, but this will add another
-> wrinkle. =A0Would it make sense to assume that system call namespaces
-> may be ever expanding and offer up an unsigned integer value?
->
-> struct seccomp_data {
-> =A0int nr;
-> =A0u32 namespace;
-> =A0u64 instruction_pointer;
-> =A0u64 args[6];
-> }
->
-> Then syscall_namespace(current, regs) returns
-> * 0 - SYSCALL_NS_32 (for existing 32 and config_compat)
-> * 1 - SYSCALL_NS_64 (for existing 64 bit)
-> * 2 - SYSCALL_NS_X32 (everything after 2 is arch specific)
-> * ..
->
-> This patch series is pegged to x86 right now, so it's not a big deal
-> to add a simple syscall_namespace to asm/syscall.h. =A0Of course, the
-> code is always the easy part. =A0Even easier would be to only assign 0
-> and 1 in the seccomp_data for 32-bit or 64-bit, then leave the rest of
-> the u32 untouched until x32 stabilizes and the TS_COMPAT interactions
-> are sorted.
->
-> The other option, of course, is to hide it from the users and peg to
-> is_compat_task and later to however x32 is exposed, but that might
-> just be me trying to avoid adding more dependencies to this patch
-> series :)
->
->> Either that or we can just use another bit in the syscall number field..=
-.
->
-> That would simplify the case here. The seccomp_data bit would say the
-> call is 64-bit and then the syscall number with the extra bit would
-> say that it is x32 and wouldn't collide with the existing 64-bit
-> numbering, and the filter program author wouldn't make a filter
-> program that allows a call that it shouldn't.
+> I would have to say I think native endian is probably the sane thing
+> still, out of several bad alternatives.  Certainly splitting the high
+> and low halves of arguments is insane.
 
-Presumably this works for x32 (since bit 30 might as well be part of
-the syscall number), but the namespace or whatever it's called would
-be nice to distinguish between the three 32-bit entry points.
+Yes it is. But it can't be avoided because BPF programs are always 32-bit.
+So they have to access the high and low halves separately, one way or the
+other, even on 64-bit machines. With that in mind splitting up the halves
+explicitly seems the best way.
 
-For 32-bit code, I can easily see two different entry points getting
-used in the same program -- some library could issue int80 directly,
-but other code (in the vdso, for example, if it ever starts being
-useful) could hit the other entry.  And if 64-bit code ever gets a new
-entry point, the same problem would happen.
+I would go for something like:
 
-Of course, if the args are magically fixed up in the 32-bit case, then
-maybe the multiple entries are a nonissue.  (Sorry, I haven't kept
-track of that part of this patch set.)
+struct seccomp_data {
+	int nr;
+	__u32 arg_low[6];
+	__u32 arg_high[6];
+	__u32 instruction_pointer_low;
+	__u32 instruction_pointer_high;
+	__u32 __reserved[3];
+};
 
---Andy
+(Not sure what use the IP is because that doesn't tell anything about how
+the system call instruction was reached.)
+
+The only way to avoid splitting args is to add 64-bit support to BPF.
+That is probably the best way forwards, but would require breaking the
+BPF ABI by either adding a 64-bit version directly or adding extra
+instructions.
+
+This mismatch between 32-bit BPF programs and 64-bit machines is the main
+reason why I'm not perfectly happy with BPF for syscall filtering. It gets
+the job done, but it's not great.
+
+> The other thing that you really need in addition to system call number
+> is ABI identifier, since a syscall number may mean different things for
+> different entry points.  For example, on x86-64 system call number 4 is
+> write() if called via int $0x80 but stat() if called via syscall64.
+> This is a local property of the system call, not a global per process.
+
+The problem of doing this is that you then force every filter to check for
+the path and do something path specific. The filters that don't do this
+check will be buggy. So the best way is really to install filters per mode
+and call the right filter. If filters are installed but not for the current
+path, the task should be killed.
+
+prctl() should take one more argument which says for which mode the filter
+will be installed for, with 0 for the current mode.
+
+But pushing that info into the filters themselves is not a good idea.
+
+Greetings,
+
+Indan
