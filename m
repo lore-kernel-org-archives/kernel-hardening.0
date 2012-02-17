@@ -1,51 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <efba7d7928509faf2233737d12e48a38.squirrel@webmail.greenhost.nl>
-In-Reply-To: <4F3DD30A.6030008@zytor.com>
-References: <1329422549-16407-1-git-send-email-wad@chromium.org>
-    <1329422549-16407-3-git-send-email-wad@chromium.org>
-    <4F3D61CB.2000301@zytor.com>
-    <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com>
-    <4F3D7250.6040504@zytor.com>
-    <501858544d264abc6526f2b25a224f2b.squirrel@webmail.greenhost.nl>
-    <4F3DAE5D.3080000@zytor.com>
-    <f2d1a14c965cea740d688c574c6006bb.squirrel@webmail.greenhost.nl>
-    <CAObL_7GUTbc=Ew9mQw7CoWfdAfRWSWUrY3w+UnrYrqWEiHxtcQ@mail.gmail.com>
-    <4F3DB9E8.7040406@zytor.com>
-    <b33f697878e9b601d1d9bddfbf7a61cb.squirrel@webmail.greenhost.nl>
-    <4F3DD30A.6030008@zytor.com>
-Date: Fri, 17 Feb 2012 05:51:25 +0100
-From: "Indan Zupancic" <indan@nul.nu>
+Date: Fri, 17 Feb 2012 09:33:19 +0300
+From: Alexey Dobriyan <adobriyan@gmail.com>
+Message-ID: <20120217063318.GA3330@p183.telecom.by>
+References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
+ <20120216204515.GH20420@outflux.net>
+ <20120217002405.GB7746@kroah.com>
+ <20120217010624.GA6541@outflux.net>
+ <20120217014008.GA18763@kroah.com>
+ <20120217021109.GC6541@outflux.net>
+ <CAEXv5_iRj6zHcKWtV0mgA4i_2u=TB1iQQMYFJAK4r6Ca=pimDA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain;charset=UTF-8
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v8 3/8] seccomp: add system call filtering using BPF
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Andrew Lutomirski <luto@mit.edu>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
+In-Reply-To: <CAEXv5_iRj6zHcKWtV0mgA4i_2u=TB1iQQMYFJAK4r6Ca=pimDA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [ubuntu-hardened] Add overflow protection to kref
+To: David Windsor <dwindsor@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, pageexec@freemail.hu, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, spender@grsecurity.net, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, February 17, 2012 05:09, H. Peter Anvin wrote:
-> On 02/16/2012 07:27 PM, Indan Zupancic wrote:
->>
->> A JIT won't be able to merge accesses because it also has to merge other
->> instructions and recognize when 64-bit operations are done with 32-bit
->> instructions. I think that will be too hard for a JIT.
->>
->
-> Please Google "peephole optimizer".
+On Thu, Feb 16, 2012 at 09:48:38PM -0500, David Windsor wrote:
+> <snip>
+> 
+> >>
+> >> I have yet to see a patch, so why are we arguing about this?  :)
+> >>
+> >> Again, I don't know of any kref overflows that have ever happened, so
+> >> trying to "protect" this type of thing, seems odd to me.
+> >
+> > Well, I think the issue was to protect counting things (which seems to
+> > be what PaX was after originally), and that kref seemed like the place
+> > to put it. I'll let David take it further.
+> >
+> 
+> Patches are forthcoming that will first introduce overflow protection
+> to kref.
 
-I have written one for uni. Like I said, I think it will be too hard
-for a BPF JIT because the pattern is too complex. Keep in mind that
-there is no 64-bit register where you can load the data to, everything
-is done on 32-bit values. So you have to recognize 32-bit code emulating
-64-bit ops. I don't think anyone will add all the different patterns of
-doing that to the JIT, there are too many.
+Patches have already been posted:
+http://marc.info/?l=linux-kernel&m=132337541830590&w=4
+They were dropped for various (uninteresting) reasons, though.
 
-The current JIT is networking-only and is very simplistic. It is a very
-long way to a sophisticated enough JIT that does such complex peephole
-optimisations. I'm not saying it's impossible in general, just that the
-kernel BPF JIT won't be able to do it. It's a lot easier to just add
-64-bit support to BPF instead.
+> Once that's in place, I'll move a few refcount users from
+> atomic_t to kref as a reference for other subsystems;
 
-Greetings,
-
-Indan
+This sucks because dtor argument is mandatory.
