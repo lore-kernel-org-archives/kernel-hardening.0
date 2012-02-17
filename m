@@ -1,99 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 16 Feb 2012 16:24:05 -0800
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-Message-ID: <20120217002405.GB7746@kroah.com>
-References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
- <20120216204515.GH20420@outflux.net>
+Message-ID: <4F3DA2BC.7010706@zytor.com>
+Date: Thu, 16 Feb 2012 16:43:40 -0800
+From: "H. Peter Anvin" <hpa@zytor.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120216204515.GH20420@outflux.net>
-Subject: [kernel-hardening] Re: Add overflow protection to kref
-To: Kees Cook <keescook@chromium.org>
-Cc: Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+References: <1329422549-16407-1-git-send-email-wad@chromium.org> <1329422549-16407-3-git-send-email-wad@chromium.org> <4F3D61CB.2000301@zytor.com> <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com> <4F3D7250.6040504@zytor.com> <CAE6n16kweRehdozft0tKOB1P5LtGFJDCLQP=2EXfm8P0enyH=A@mail.gmail.com> <4F3D766E.7040205@zytor.com> <CABqD9haWxRLac1w3m9rSmyDvcg8jxYcxdmAAsgB7pEEBMHr=2g@mail.gmail.com> <4F3D7DD4.6070103@zytor.com> <CABqD9hZd41AWZub+wxGWwxJtGWfk+pVWQhn7DM_0q0tS9r_wDA@mail.gmail.com>
+In-Reply-To: <CABqD9hZd41AWZub+wxGWwxJtGWfk+pVWQhn7DM_0q0tS9r_wDA@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v8 3/8] seccomp: add system call filtering using BPF
+To: Will Drewry <wad@chromium.org>
+Cc: Markus Gutschke <markus@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2012 at 12:45:15PM -0800, Kees Cook wrote:
-> Hi,
-> 
-> [This should probably be discussed on LKML for an even wider audience, so
-> I've added a CC for it there.]
-> 
-> On Thu, Feb 16, 2012 at 09:02:13AM -0500, David Windsor wrote:
-> > Hi,
-> > 
-> > We are attempting to add various grsecurity/PAX features to upstream
-> > Ubuntu kernels.
-> 
-> This didn't parse quite right for me. I think you meant that the intent
-> is to get these features into the upstream Linux kernel, with potential
-> staging in Ubuntu kernels.
-> 
-> (Also s/PAX/PaX/g)
-> 
-> > The PAX folks added refcount overflow protection by inserting
-> > architecture-specific code in the increment paths of atomic_t.  For
-> > instance:
-> > 
-> > static inline void atomic_inc(atomic_t *v)
-> >  {
-> > 	asm volatile(LOCK_PREFIX "incl %0\n"
-> > 
-> > #ifdef CONFIG_PAX_REFCOUNT
-> > 		     "jno 0f\n"
-> > 		     LOCK_PREFIX "decl %0\n"
-> > 		     "int $4\n0:\n"
-> > 		     _ASM_EXTABLE(0b, 0b)
-> > #endif
-> > 
-> > 		     : "+m" (v->counter));
-> > }
-> > 
-> > There are two distinct classes of users we need to consider here:
-> > those who use atomic_t for reference counters and those who use
-> > atomic_t for keeping track of statistics, like performance counters,
-> > etc.; it makes little sense to overflow a performance counter, so we
-> > shouldn't subject those users to the same protections as imposed on
-> > actual reference counters.  The solution implemented by PAX is to
-> > create a family of *_unchecked() functions and to patch
-> > statistics-based users of atomic_t to use this interface.
-> > 
-> > PAX refcount overflow protection was developed before kref was
-> > created.  I'd like to move overflow protection out of atomic_t and
-> > into kref and gradually migrate atomic_t users to kref, leaving
-> > atomic_t for those users who don't need overflow protection (e.g.
-> > statistics-based counters).
-> 
-> For people new to this, can you give an overview of what attacks are foiled
-> by adding overflow protection?
-> 
-> > I realize that there are many users of atomic_t needing overflow
-> > protection, but the move to kref seems like the right thing to do in
-> > this case.
-> > 
-> > Leaving the semantics of overflow detection aside for the moment, what
-> > are everyone's thoughts on adding overflow protection to kref rather
-> > than to atomic_t?
-> 
-> Why was kref introduced? Or rather, how is kref currently different from
-> atomic_t?
+On 02/16/2012 03:00 PM, Will Drewry wrote:
+>
+> Without the addition of x32, it is still the intersection of
+> is_compat_task()/TS_COMPAT and CONFIG_64BIT for all arches to
+> determine if the call is 32-bit or 64-bit, but this will add another
+> wrinkle.  Would it make sense to assume that system call namespaces
+> may be ever expanding and offer up an unsigned integer value?
+>
 
-a kref is to handle reference counting for an object, so you don't have
-to constantly "roll your own" all the time using an atomic_t or
-whatever.  It's the basis for the struct kobject and other object
-reference counting structures in the kernel for a very long time now.
+This is definitely the most general solution.
 
-And in all that time, I've never seen an instance where you can overflow
-the reference count, so I'm hard pressed to see how changing kref in
-this manner will help anything at all.
+By the way, although most processes only use one set of system calls, 
+there are legitimate reasons for cross-mode tasks, and those probably 
+have a high overlap with the ones that would benefit from this kind of 
+filtering facility, e.g. pin.
 
-So no, I don't recommend changing this logic at all in kref.
-
-Now if there are instances in the kernel where a "raw" atomic_t is being
-used for object reference counting, moving that to use 'struct kref'
-would be gladly appreciated, but that's kind of outside the scope of
-what you are attempting to do here.
-
-sorry,
-
-greg k-h
+	-hpa
