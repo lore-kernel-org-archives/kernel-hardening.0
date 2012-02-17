@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 17 Feb 2012 09:53:22 -0800
+Date: Fri, 17 Feb 2012 09:54:45 -0800
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20120217175322.GB29902@kroah.com>
+Message-ID: <20120217175445.GC29902@kroah.com>
 References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
  <20120216204515.GH20420@outflux.net>
  <20120217002405.GB7746@kroah.com>
@@ -30,14 +30,13 @@ On Fri, Feb 17, 2012 at 11:59:45AM +0400, Vasiliy Kulikov wrote:
 > 
 > If the latter, it is just a question of finding missing put() in some triggerable
 > error path.  Kees has already posted a link to a bug with a missing fput().
-> 
-> 
-> BTW, moving from atomic_t to 64 bit refcounter would kill the possibility of
-> overflow.  Unfortunately, AFAIU, 64 bit operations are not atomic on some 64 bit
-> archs.
 
-Can we switch it on those arches where it is an atomic operation?  That
-would be a nice simple solution.
+I'm referring to the fact that the use of kref in this type of error or
+problem is rare.
+
+Yes, we have these types of problems at times, but a kref doesn't seem
+to be involved in them that I know of, so changing the kref code
+wouldn't help here from what I can tell.
 
 thanks,
 
