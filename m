@@ -1,123 +1,113 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 16 Feb 2012 17:06:24 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20120217010624.GA6541@outflux.net>
+References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
+ <20120216204515.GH20420@outflux.net>
+ <20120217002405.GB7746@kroah.com>
 MIME-Version: 1.0
-Sender: amluto@gmail.com
-In-Reply-To: <501858544d264abc6526f2b25a224f2b.squirrel@webmail.greenhost.nl>
-References: <1329422549-16407-1-git-send-email-wad@chromium.org>
- <1329422549-16407-3-git-send-email-wad@chromium.org> <4F3D61CB.2000301@zytor.com>
- <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com>
- <4F3D7250.6040504@zytor.com> <501858544d264abc6526f2b25a224f2b.squirrel@webmail.greenhost.nl>
-From: Andrew Lutomirski <luto@mit.edu>
-Date: Thu, 16 Feb 2012 16:51:31 -0800
-Message-ID: <CAObL_7G7CvCVgjR-JYjNDi_Sy65UHXaqas4-sQCVej-4bX2PJA@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v8 3/8] seccomp: add system call filtering using BPF
-To: Indan Zupancic <indan@nul.nu>
-Cc: "H. Peter Anvin" <hpa@zytor.com>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20120217002405.GB7746@kroah.com>
+Subject: [kernel-hardening] Re: Add overflow protection to kref
+To: Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2012 at 4:48 PM, Indan Zupancic <indan@nul.nu> wrote:
-> On Thu, February 16, 2012 22:17, H. Peter Anvin wrote:
->> On 02/16/2012 12:25 PM, Will Drewry wrote:
->>>
->>> I agree :) =A0BPF being a 32-bit creature introduced some edge cases. =
-=A0I
->>> has started with a
->>> =A0 =A0 =A0union { u32 args32[6]; u64 args64[6]; }
->>>
->>> This was somewhat derailed by CONFIG_COMPAT behavior where
->>> syscall_get_arguments always writes to argument of register width --
->>> not bad, just irritating (since a copy isn't strictly necessary nor
->>> actually done in the patch). =A0Also, Indan pointed out that while BPF
->>> programs expect constants in the machine-local endian layout, any
->>> consumers would need to change how they accessed the arguments across
->>> big/little endian machines since a load of the low-order bits would
->>> vary.
->>>
->>> In a second pass, I attempted to resolve this like aio_abi.h:
->>> =A0 =A0 union {
->>> =A0 =A0 =A0 struct {
->>> =A0 =A0 =A0 =A0 =A0u32 ENDIAN_SWAP(lo32, hi32);
->>> =A0 =A0 =A0 =A0};
->>> =A0 =A0 =A0 =A0u64 arg64;
->>> =A0 =A0 =A0} args[6];
->>> It wasn't clear that this actually made matters better (though it did
->>> mean syscall_get_arguments() could write directly to arg64). =A0Usings
->>> offsetof() in the user program would be fine, but any offsets set
->>> another way would be invalid. =A0At that point, I moved to Indan's
->>> proposal to stabilize low order and high order offsets -- what is in
->>> the patch series. =A0Now a BPF program can reliably index into the low
->>> bits of an argument and into the high bits without endianness changing
->>> the filter program structure.
->>>
->>> I don't feel strongly about any given data layout, and this one seems
->>> to balance the 32-bit-ness of BPF and the impact that has on
->>> endianness. =A0I'm happy to hear alternatives that might be more
->>> aesthetically pleasing :)
->>>
->>
->> I would have to say I think native endian is probably the sane thing
->> still, out of several bad alternatives. =A0Certainly splitting the high
->> and low halves of arguments is insane.
->
-> Yes it is. But it can't be avoided because BPF programs are always 32-bit=
-.
-> So they have to access the high and low halves separately, one way or the
-> other, even on 64-bit machines. With that in mind splitting up the halves
-> explicitly seems the best way.
->
-> I would go for something like:
->
-> struct seccomp_data {
-> =A0 =A0 =A0 =A0int nr;
-> =A0 =A0 =A0 =A0__u32 arg_low[6];
-> =A0 =A0 =A0 =A0__u32 arg_high[6];
-> =A0 =A0 =A0 =A0__u32 instruction_pointer_low;
-> =A0 =A0 =A0 =A0__u32 instruction_pointer_high;
-> =A0 =A0 =A0 =A0__u32 __reserved[3];
-> };
->
-> (Not sure what use the IP is because that doesn't tell anything about how
-> the system call instruction was reached.)
->
-> The only way to avoid splitting args is to add 64-bit support to BPF.
-> That is probably the best way forwards, but would require breaking the
-> BPF ABI by either adding a 64-bit version directly or adding extra
-> instructions.
->
-> This mismatch between 32-bit BPF programs and 64-bit machines is the main
-> reason why I'm not perfectly happy with BPF for syscall filtering. It get=
-s
-> the job done, but it's not great.
->
->> The other thing that you really need in addition to system call number
->> is ABI identifier, since a syscall number may mean different things for
->> different entry points. =A0For example, on x86-64 system call number 4 i=
-s
->> write() if called via int $0x80 but stat() if called via syscall64.
->> This is a local property of the system call, not a global per process.
->
-> The problem of doing this is that you then force every filter to check fo=
-r
-> the path and do something path specific. The filters that don't do this
-> check will be buggy. So the best way is really to install filters per mod=
-e
-> and call the right filter. If filters are installed but not for the curre=
-nt
-> path, the task should be killed.
->
-> prctl() should take one more argument which says for which mode the filte=
-r
-> will be installed for, with 0 for the current mode.
->
-> But pushing that info into the filters themselves is not a good idea.
+On Thu, Feb 16, 2012 at 04:24:05PM -0800, Greg Kroah-Hartman wrote:
+> On Thu, Feb 16, 2012 at 12:45:15PM -0800, Kees Cook wrote:
+> > Hi,
+> > 
+> > [This should probably be discussed on LKML for an even wider audience, so
+> > I've added a CC for it there.]
+> > 
+> > On Thu, Feb 16, 2012 at 09:02:13AM -0500, David Windsor wrote:
+> > > Hi,
+> > > 
+> > > We are attempting to add various grsecurity/PAX features to upstream
+> > > Ubuntu kernels.
+> > 
+> > This didn't parse quite right for me. I think you meant that the intent
+> > is to get these features into the upstream Linux kernel, with potential
+> > staging in Ubuntu kernels.
+> > 
+> > (Also s/PAX/PaX/g)
+> > 
+> > > The PAX folks added refcount overflow protection by inserting
+> > > architecture-specific code in the increment paths of atomic_t.  For
+> > > instance:
+> > > 
+> > > static inline void atomic_inc(atomic_t *v)
+> > >  {
+> > > 	asm volatile(LOCK_PREFIX "incl %0\n"
+> > > 
+> > > #ifdef CONFIG_PAX_REFCOUNT
+> > > 		     "jno 0f\n"
+> > > 		     LOCK_PREFIX "decl %0\n"
+> > > 		     "int $4\n0:\n"
+> > > 		     _ASM_EXTABLE(0b, 0b)
+> > > #endif
+> > > 
+> > > 		     : "+m" (v->counter));
+> > > }
+> > > 
+> > > There are two distinct classes of users we need to consider here:
+> > > those who use atomic_t for reference counters and those who use
+> > > atomic_t for keeping track of statistics, like performance counters,
+> > > etc.; it makes little sense to overflow a performance counter, so we
+> > > shouldn't subject those users to the same protections as imposed on
+> > > actual reference counters.  The solution implemented by PAX is to
+> > > create a family of *_unchecked() functions and to patch
+> > > statistics-based users of atomic_t to use this interface.
+> > > 
+> > > PAX refcount overflow protection was developed before kref was
+> > > created.  I'd like to move overflow protection out of atomic_t and
+> > > into kref and gradually migrate atomic_t users to kref, leaving
+> > > atomic_t for those users who don't need overflow protection (e.g.
+> > > statistics-based counters).
+> > 
+> > For people new to this, can you give an overview of what attacks are foiled
+> > by adding overflow protection?
+> > 
+> > > I realize that there are many users of atomic_t needing overflow
+> > > protection, but the move to kref seems like the right thing to do in
+> > > this case.
+> > > 
+> > > Leaving the semantics of overflow detection aside for the moment, what
+> > > are everyone's thoughts on adding overflow protection to kref rather
+> > > than to atomic_t?
+> > 
+> > Why was kref introduced? Or rather, how is kref currently different from
+> > atomic_t?
+> 
+> a kref is to handle reference counting for an object, so you don't have
+> to constantly "roll your own" all the time using an atomic_t or
+> whatever.  It's the basis for the struct kobject and other object
+> reference counting structures in the kernel for a very long time now.
+> 
+> And in all that time, I've never seen an instance where you can overflow
+> the reference count, so I'm hard pressed to see how changing kref in
+> this manner will help anything at all.
 
-IMO the best solution is to have the One True Seccomp Filter Compiler
-(tm).  It would handle multiple namespaces, cross-arch differences,
-and such, and it would do it correctly.  It could live in the kernel
-tree.
+A quick search gives me:
+CVE-2005-3359: https://bugzilla.redhat.com/show_bug.cgi?id=175769
+CVE-2006-3741: http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=b8444d00762703e1b6146fce12ce2684885f8bf6
 
-Without something like that or an incredible amount of special care,
-actual portability is probably a pipe dream.
+And actually an earlier discussion you were actually involved in:
+https://lkml.org/lkml/2008/7/16/300
 
---Andy
+> So no, I don't recommend changing this logic at all in kref.
+
+If it's inexpensive and helps defend against problems, it seems sensible to
+add to me.
+
+> Now if there are instances in the kernel where a "raw" atomic_t is being
+> used for object reference counting, moving that to use 'struct kref'
+> would be gladly appreciated, but that's kind of outside the scope of
+> what you are attempting to do here.
+
+-Kees
+
+-- 
+Kees Cook
+ChromeOS Security
