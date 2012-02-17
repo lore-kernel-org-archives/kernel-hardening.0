@@ -1,52 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <b33f697878e9b601d1d9bddfbf7a61cb.squirrel@webmail.greenhost.nl>
+In-Reply-To: <4F3DB9E8.7040406@zytor.com>
+References: <1329422549-16407-1-git-send-email-wad@chromium.org>
+    <1329422549-16407-3-git-send-email-wad@chromium.org>
+    <4F3D61CB.2000301@zytor.com>
+    <CABqD9hb3WxKxLZ2GuUrbDM--koW+a3ser5TU8y6+e0sAhOT9dw@mail.gmail.com>
+    <4F3D7250.6040504@zytor.com>
+    <501858544d264abc6526f2b25a224f2b.squirrel@webmail.greenhost.nl>
+    <4F3DAE5D.3080000@zytor.com>
+    <f2d1a14c965cea740d688c574c6006bb.squirrel@webmail.greenhost.nl>
+    <CAObL_7GUTbc=Ew9mQw7CoWfdAfRWSWUrY3w+UnrYrqWEiHxtcQ@mail.gmail.com>
+    <4F3DB9E8.7040406@zytor.com>
+Date: Fri, 17 Feb 2012 04:27:45 +0100
+From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-In-Reply-To: <20120217021109.GC6541@outflux.net>
-References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
-	<20120216204515.GH20420@outflux.net>
-	<20120217002405.GB7746@kroah.com>
-	<20120217010624.GA6541@outflux.net>
-	<20120217014008.GA18763@kroah.com>
-	<20120217021109.GC6541@outflux.net>
-Date: Thu, 16 Feb 2012 21:48:38 -0500
-Message-ID: <CAEXv5_iRj6zHcKWtV0mgA4i_2u=TB1iQQMYFJAK4r6Ca=pimDA@mail.gmail.com>
-From: David Windsor <dwindsor@gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [ubuntu-hardened] Add overflow protection to kref
-To: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, pageexec@freemail.hu, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, spender@grsecurity.net, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v8 3/8] seccomp: add system call filtering using BPF
+To: "H. Peter Anvin" <hpa@zytor.com>
+Cc: Andrew Lutomirski <luto@mit.edu>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-<snip>
-
+On Fri, February 17, 2012 03:22, H. Peter Anvin wrote:
+> On 02/16/2012 06:16 PM, Andrew Lutomirski wrote:
 >>
->> I have yet to see a patch, so why are we arguing about this? =A0:)
+>> Is there really no syscall that cares about endianness?
+
+Perhaps when 64-bit syscall args are passed via two 32-bit registers.
+But that is no argument to make all argument accesses endianness aware.
+
+>> Even if it ends up working, forcing syscall arguments to have a
+>> particular endianness seems like a bad decision, especially if anyone
+>> ever wants to make a 64-bit BPF implementation.  (Or if any
+>> architecture adds 128-bit syscall arguments to a future syscall
+>> namespace or whatever it's called.  x86-64 has 128-bit xmm
+>> registers...)
 >>
->> Again, I don't know of any kref overflows that have ever happened, so
->> trying to "protect" this type of thing, seems odd to me.
 >
-> Well, I think the issue was to protect counting things (which seems to
-> be what PaX was after originally), and that kref seemed like the place
-> to put it. I'll let David take it further.
->
+> Not to mention that the reshuffling code will add totally unnecessary
+> cost to the normal operation.
 
-Patches are forthcoming that will first introduce overflow protection
-to kref.  Once that's in place, I'll move a few refcount users from
-atomic_t to kref as a reference for other subsystems; statistics-based
-users (and others not requiring overflow protection) can continue
-using atomic_t.
+There is no such extra cost.
 
-As Kees said, we just wanted to introduce the idea and get some
-general feedback before beginning.  Thanks.
+> Either way, Indan has it backwards ... it
+> *is* one field, the fact that two operations is needed to access it is a
+> function of the underlying byte code, and even if the byte code can't
+> support it, a JIT could merge adjacent operations if 64-bit operations
+> are possible -- or we could (and arguably should) add 64-bit opcodes in
+> the future for efficiency.
 
-> Thanks,
->
-> -Kees
->
-> --
-> Kees Cook
-> ChromeOS Security
+It is a virtual data structure with as sole purpose to provide syscall
+info to the byte code. The actual data structure as such never exists
+in memory. So giving something that is hard to digest is silly.
 
+A JIT won't be able to merge accesses because it also has to merge other
+instructions and recognize when 64-bit operations are done with 32-bit
+instructions. I think that will be too hard for a JIT.
 
+The only good reason to use 64 bit fields is if 64-bit support will be
+added to BPF in the future. If not, then it's just unnecessary pain for
+no good reason.
 
---=20
-PGP: 6141 5FFD 11AE 9844 153E =A0F268 7C98 7268 6B19 6CC9
+An alternative to struct seccomp_data would be to add special instructions
+that load the desired info to 'A'. E.g. BPF_S_ANC_SYSCALL_ARG with 'k'
+selecting which arg. But that's probably harder to fit into the current
+filter code.
+
+Greetings,
+
+Indan
