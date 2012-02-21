@@ -1,28 +1,21 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 21 Feb 2012 21:56:49 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20120221175649.GA23884@openwall.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] Gmane archive, RSS feeds
-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <CAB=4xhp6y7Pq7mTF228TdyA-_z2j5z1yEnFrNQrFr7M9BZQ1Fg@mail.gmail.com>
+References: <1329845435-2313-1-git-send-email-wad@chromium.org>
+	<1329845435-2313-3-git-send-email-wad@chromium.org>
+	<CAB=4xhp6y7Pq7mTF228TdyA-_z2j5z1yEnFrNQrFr7M9BZQ1Fg@mail.gmail.com>
+Date: Tue, 21 Feb 2012 12:57:01 -0600
+Message-ID: <CABqD9hZMbAugb7kAb8W5+-Y8tfbV8B_EN-fFe5QnTbgenr=Kbw@mail.gmail.com>
+From: Will Drewry <wad@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [PATCH v10 03/11] asm/syscall.h: add syscall_get_arch
+To: Roland McGrath <mcgrathr@google.com>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Tue, Feb 21, 2012 at 12:46 PM, Roland McGrath <mcgrathr@google.com> wrote:
+>> +void syscall_get_arch(struct task_struct *task, struct pt_regs *regs);
+>
+> Bad return type.
 
-Someone added the kernel-hardening list to Gmane a few days ago:
-
-http://dir.gmane.org/gmane.linux.kernel.hardened.devel
-
-This provides extra ways to access archived messages, and it also
-provides RSS feeds.
-
-I will probably provide an mbox with older messages to Gmane to be
-merged into their archive.
-
-All past messages may also be accessed in the official archive at:
-
-http://www.openwall.com/lists/kernel-hardening/
-
-Alexander
+Bah! Thanks!
