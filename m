@@ -1,48 +1,120 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1329920626.3258.174.camel@deadeye>
-From: Ben Hutchings <bhutchings@solarflare.com>
-Date: Wed, 22 Feb 2012 14:23:46 +0000
-In-Reply-To: <38d58caa17befe422065efe5dc451a34.squirrel@webmail.greenhost.nl>
-References: <1329845435-2313-1-git-send-email-wad@chromium.org>
-	 <1329845435-2313-5-git-send-email-wad@chromium.org>
-	 <38d58caa17befe422065efe5dc451a34.squirrel@webmail.greenhost.nl>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
+Date: Wed, 22 Feb 2012 10:55:03 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20120222185503.GA24256@www.outflux.net>
 MIME-Version: 1.0
-Subject: [kernel-hardening] Re: [PATCH v10 05/11] seccomp: add system call filtering using BPF
-To: Indan Zupancic <indan@nul.nu>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] fs: hardlink creation restriction cleanup
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Ingo Molnar <mingo@elte.hu>, Marcin Slusarz <marcin.slusarz@gmail.com>, linux-kernel@vger.kernel.org, Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2012-02-22 at 09:19 +0100, Indan Zupancic wrote:
-[...]
-> Alternative approach: Tell the arch at filter install time and only run the
-> filters with the same arch as the current system call. If no filters are run,
-> deny the systemcall.
->
-> Advantages:
-> 
-> - Filters don't have to check the arch every syscall entry.
-> 
-> - Secure by default. Filters don't have to do anything arch specific to
->   be secure, no surprises possible.
-> 
-> - If a new arch comes into existence, there is no chance of old filters
->   becoming buggy and insecure. This is especially true for archs that
->   had only one mode, but added another one later on: Old filters had no
->   need to check the mode at all.
-[...]
+Clean-up of hardlink restriction logic, as suggested by Andrew Morton.
 
-What about when there are multiple layers of restrictions?  So long as
-any one layer covers the new architecture, there is no default-deny even
-though the other layers might not cover it.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+v2:
+ - add eye-strain-reduction-whitespace for Ingo. ;)
 
-I would have thought the way to make sure the architecture is always
-checked is to pack it together with the syscall number.
+---
+ fs/namei.c |   62 ++++++++++++++++++++++++++++++++++++++++++-----------------
+ 1 files changed, 44 insertions(+), 18 deletions(-)
 
-Ben.
-
+diff --git a/fs/namei.c b/fs/namei.c
+index 8ed4e00..f86494c 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -693,46 +693,72 @@ static inline int may_follow_link(struct path *link)
+ }
+ 
+ /**
++ * safe_hardlink_source - Check for safe hardlink conditions
++ * @inode: the source inode to hardlink from
++ *
++ * Return false if at least one of the following conditions:
++ *    - inode is not a regular file
++ *    - inode is setuid
++ *    - inode is setgid and group-exec
++ *    - access failure for read and write
++ *
++ * Otherwise returns true.
++ */
++static bool safe_hardlink_source(struct inode *inode)
++{
++	mode_t mode = inode->i_mode;
++
++	/* Special files should not get pinned to the filesystem. */
++	if (!S_ISREG(mode))
++		return false;
++
++	/* Setuid files should not get pinned to the filesystem. */
++	if (mode & S_ISUID)
++		return false;
++
++	/* Executable setgid files should not get pinned to the filesystem. */
++	if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP))
++		return false;
++
++	/* Hardlinking to unreadable or unwritable sources is dangerous. */
++	if (inode_permission(inode, MAY_READ | MAY_WRITE))
++		return false;
++
++	return true;
++}
++
++/**
+  * may_linkat - Check permissions for creating a hardlink
+  * @link: the source to hardlink from
+  *
+  * Block hardlink when all of:
+  *  - sysctl_protected_hardlinks enabled
+  *  - fsuid does not match inode
+- *  - at least one of:
+- *    - inode is not a regular file
+- *    - inode is setuid
+- *    - inode is setgid and group-exec
+- *    - access failure for read and write
++ *  - hardlink source is unsafe (see safe_hardlink_source() above)
+  *  - not CAP_FOWNER
+  *
+  * Returns 0 if successful, -ve on error.
+  */
+ static int may_linkat(struct path *link)
+ {
+-	int error = 0;
+ 	const struct cred *cred;
+ 	struct inode *inode;
+-	int mode;
+ 
+ 	if (!sysctl_protected_hardlinks)
+ 		return 0;
+ 
+ 	cred = current_cred();
+ 	inode = link->dentry->d_inode;
+-	mode = inode->i_mode;
+-
+-	if (cred->fsuid != inode->i_uid &&
+-	    (!S_ISREG(mode) || (mode & S_ISUID) ||
+-	     ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP)) ||
+-	     (inode_permission(inode, MAY_READ | MAY_WRITE))) &&
+-	    !capable(CAP_FOWNER))
+-		error = -EPERM;
+ 
+-	if (error)
+-		audit_log_link_denied("linkat", link);
++	/* Source inode owner (or CAP_FOWNER) can hardlink all they like,
++	 * otherwise, it must be a safe source.
++	 */
++	if (cred->fsuid == inode->i_uid || safe_hardlink_source(inode) ||
++	    capable(CAP_FOWNER))
++		return 0;
+ 
+-	return error;
++	audit_log_link_denied("linkat", link);
++	return -EPERM;
+ }
+ #else
+ static inline int may_follow_link(struct path *link)
 -- 
-Ben Hutchings, Staff Engineer, Solarflare
-Not speaking for my employer; that's the marketing department's job.
-They asked us to note that Solarflare product names are trademarked.
+1.7.0.4
