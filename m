@@ -1,166 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <9edbabb2262e3d91a7b8c75dbec03d7f.squirrel@webmail.greenhost.nl>
-In-Reply-To: <1329845435-2313-7-git-send-email-wad@chromium.org>
-References: <1329845435-2313-1-git-send-email-wad@chromium.org>
-    <1329845435-2313-7-git-send-email-wad@chromium.org>
-Date: Wed, 22 Feb 2012 09:34:42 +0100
-From: "Indan Zupancic" <indan@nul.nu>
+Date: Wed, 22 Feb 2012 11:23:01 +0100
+From: Ingo Molnar <mingo@elte.hu>
+Message-ID: <20120222102301.GC30339@elte.hu>
+References: <20120222012103.GA13295@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain;charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v10 07/11] signal, x86: add SIGSYS info and make it
- synchronous.
-To: Will Drewry <wad@chromium.org>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, keescook@chromium.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20120222012103.GA13295@www.outflux.net>
+Subject: [kernel-hardening] Re: [PATCH] fs: hardlink creation restriction cleanup
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Marcin Slusarz <marcin.slusarz@gmail.com>, linux-kernel@vger.kernel.org, Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, February 21, 2012 18:30, Will Drewry wrote:
-> This change enables SIGSYS, defines _sigfields._sigsys, and adds
-> x86 (compat) arch support.  _sigsys defines fields which allow
-> a signal handler to receive the triggering system call number,
-> the relevant AUDIT_ARCH_* value for that number, and the address
-> of the callsite.
->
-> To ensure that SIGSYS delivery occurs on return from the triggering
-> system call, SIGSYS is added to the SYNCHRONOUS_MASK macro.  I'm
-> this is enough to ensure it will be synchronous or if it is explicitly
-> required to ensure an immediate delivery of the signal upon return from
-> the blocked system call.
->
-> The first consumer of SIGSYS would be seccomp filter.  In particular,
-> a filter program could specify a new return value, SECCOMP_RET_TRAP,
-> which would result in the system call being denied and the calling
-> thread signaled.  This also means that implementing arch-specific
-> support can be dependent upon HAVE_ARCH_SECCOMP_FILTER.
 
-I think others said this is useful, but I don't see how. Easier
-debugging compared to checking return values?
+* Kees Cook <keescook@chromium.org> wrote:
 
-I suppose SIGSYS can be blocked, so there is no guarantee the process
-will be killed.
-
-> v10: - first version based on suggestion
->
-> Suggested-by: H. Peter Anvin <hpa@zytor.com>
-> Signed-off-by: Will Drewry <wad@chromium.org>
+> Clean-up of hardlink restriction logic, as suggested by Andrew Morton.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 > ---
->  arch/x86/ia32/ia32_signal.c   |    4 ++++
->  arch/x86/include/asm/ia32.h   |    6 ++++++
->  include/asm-generic/siginfo.h |   18 ++++++++++++++++++
->  kernel/signal.c               |    2 +-
->  4 files changed, 29 insertions(+), 1 deletions(-)
->
-> diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal.c
-> index 6557769..c81d2c7 100644
-> --- a/arch/x86/ia32/ia32_signal.c
-> +++ b/arch/x86/ia32/ia32_signal.c
-> @@ -73,6 +73,10 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, siginfo_t
-> *from)
->  			switch (from->si_code >> 16) {
->  			case __SI_FAULT >> 16:
->  				break;
-> +			case __SI_SYS >> 16:
-> +				put_user_ex(from->si_syscall, &to->si_syscall);
-> +				put_user_ex(from->si_arch, &to->si_arch);
-> +				break;
->  			case __SI_CHLD >> 16:
->  				put_user_ex(from->si_utime, &to->si_utime);
->  				put_user_ex(from->si_stime, &to->si_stime);
-> diff --git a/arch/x86/include/asm/ia32.h b/arch/x86/include/asm/ia32.h
-> index 1f7e625..541485f 100644
-> --- a/arch/x86/include/asm/ia32.h
-> +++ b/arch/x86/include/asm/ia32.h
-> @@ -126,6 +126,12 @@ typedef struct compat_siginfo {
->  			int _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
->  			int _fd;
->  		} _sigpoll;
-> +
-> +		struct {
-> +			unsigned int _call_addr; /* calling insn */
-
-Why an int here, but a pointer below?
-
-> +			int _syscall;	/* triggering system call number */
-> +			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
-> +		} _sigsys;
->  	} _sifields;
->  } compat_siginfo_t;
->
-> diff --git a/include/asm-generic/siginfo.h b/include/asm-generic/siginfo.h
-> index 0dd4e87..a83b478 100644
-> --- a/include/asm-generic/siginfo.h
-> +++ b/include/asm-generic/siginfo.h
-> @@ -90,6 +90,13 @@ typedef struct siginfo {
->  			__ARCH_SI_BAND_T _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
->  			int _fd;
->  		} _sigpoll;
-> +
-> +		/* SIGSYS */
-> +		struct {
-> +			void __user *_call_addr; /* calling insn */
-
-Is this a user instruction pointer or a filter instruction?
-
-> +			int _syscall;	/* triggering system call number */
-> +			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
-> +		} _sigsys;
->  	} _sifields;
->  } siginfo_t;
->
-> @@ -116,6 +123,9 @@ typedef struct siginfo {
->  #define si_addr_lsb	_sifields._sigfault._addr_lsb
->  #define si_band		_sifields._sigpoll._band
->  #define si_fd		_sifields._sigpoll._fd
-> +#define si_call_addr	_sifields._sigsys._call_addr
-> +#define si_syscall	_sifields._sigsys._syscall
-> +#define si_arch		_sifields._sigsys._arch
->
->  #ifdef __KERNEL__
->  #define __SI_MASK	0xffff0000u
-> @@ -126,6 +136,7 @@ typedef struct siginfo {
->  #define __SI_CHLD	(4 << 16)
->  #define __SI_RT		(5 << 16)
->  #define __SI_MESGQ	(6 << 16)
-> +#define __SI_SYS	(7 << 16)
->  #define __SI_CODE(T,N)	((T) | ((N) & 0xffff))
->  #else
->  #define __SI_KILL	0
-> @@ -135,6 +146,7 @@ typedef struct siginfo {
->  #define __SI_CHLD	0
->  #define __SI_RT		0
->  #define __SI_MESGQ	0
-> +#define __SI_SYS	0
->  #define __SI_CODE(T,N)	(N)
->  #endif
->
-> @@ -232,6 +244,12 @@ typedef struct siginfo {
->  #define NSIGPOLL	6
->
->  /*
-> + * SIGSYS si_codes
+>  fs/namei.c |   59 +++++++++++++++++++++++++++++++++++++++++------------------
+>  1 files changed, 41 insertions(+), 18 deletions(-)
+> 
+> diff --git a/fs/namei.c b/fs/namei.c
+> index 8ed4e00..a4a21a5 100644
+> --- a/fs/namei.c
+> +++ b/fs/namei.c
+> @@ -693,46 +693,69 @@ static inline int may_follow_link(struct path *link)
+>  }
+>  
+>  /**
+> + * safe_hardlink_source - Check for safe hardlink conditions
+> + * @inode: the source inode to hardlink from
+> + *
+> + * Return false if at least one of the following conditions:
+> + *    - inode is not a regular file
+> + *    - inode is setuid
+> + *    - inode is setgid and group-exec
+> + *    - access failure for read and write
+> + *
+> + * Otherwise returns true.
 > + */
-> +#define SYS_SECCOMP		(__SI_SYS|1)	/* seccomp triggered */
-> +#define NSIGSYS	1
+> +static bool safe_hardlink_source(struct inode *inode)
+> +{
+> +	mode_t mode = inode->i_mode;
 > +
-> +/*
->   * sigevent definitions
->   *
->   * It seems likely that SIGEV_THREAD will have to be handled from
-> diff --git a/kernel/signal.c b/kernel/signal.c
-> index c73c428..7573819 100644
-> --- a/kernel/signal.c
-> +++ b/kernel/signal.c
-> @@ -160,7 +160,7 @@ void recalc_sigpending(void)
->
->  #define SYNCHRONOUS_MASK \
->  	(sigmask(SIGSEGV) | sigmask(SIGBUS) | sigmask(SIGILL) | \
-> -	 sigmask(SIGTRAP) | sigmask(SIGFPE))
-> +	 sigmask(SIGTRAP) | sigmask(SIGFPE) | sigmask(SIGSYS))
->
->  int next_signal(struct sigpending *pending, sigset_t *mask)
->  {
-> --
+> +	/* Special files should not get pinned to the filesystem. */
+> +	if (!S_ISREG(mode))
+> +		return false;
+> +	/* Setuid files should not get pinned to the filesystem. */
+> +	if (mode & S_ISUID)
+> +		return false;
+> +	/* Executable setgid files should not get pinned to the filesystem. */
+> +	if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP))
+> +		return false;
+> +	/* Hardlinking to unreadable or unwritable sources is dangerous. */
+> +	if (inode_permission(inode, MAY_READ | MAY_WRITE))
+> +		return false;
+> +
+> +	return true;
 
-Greetings,
+A really minor nitpick, could we use this form please:
 
-Indan
+static bool safe_hardlink_source(struct inode *inode)
+{
+	mode_t mode = inode->i_mode;
+
+	/* Special files should not get pinned to the filesystem. */
+	if (!S_ISREG(mode))
+		return false;
+
+	/* Setuid files should not get pinned to the filesystem. */
+	if (mode & S_ISUID)
+		return false;
+
+	/* Executable setgid files should not get pinned to the filesystem. */
+	if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP))
+		return false;
+
+	/* Hardlinking to unreadable or unwritable sources is dangerous. */
+	if (inode_permission(inode, MAY_READ | MAY_WRITE))
+		return false;
+
+	return true;
+}
+
+Those separate blocks of comments and conditions stand out much 
+nicer this way, making it way easier on the eyes - to my eyes at 
+least ;-)
+
+Thanks,
+
+	Ingo
