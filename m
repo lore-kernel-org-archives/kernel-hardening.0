@@ -1,120 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 22 Feb 2012 10:55:03 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20120222185503.GA24256@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH v2] fs: hardlink creation restriction cleanup
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Ingo Molnar <mingo@elte.hu>, Marcin Slusarz <marcin.slusarz@gmail.com>, linux-kernel@vger.kernel.org, Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20120222102301.GC30339@elte.hu>
+References: <20120222012103.GA13295@www.outflux.net>
+	<20120222102301.GC30339@elte.hu>
+Date: Wed, 22 Feb 2012 11:10:04 -0800
+Message-ID: <CAGXu5jLnDa9g5z76OQaF5BGbHssQVSgc3KCSwOVT9__mLww9Yg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH] fs: hardlink creation restriction cleanup
+To: Ingo Molnar <mingo@elte.hu>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Marcin Slusarz <marcin.slusarz@gmail.com>, linux-kernel@vger.kernel.org, Randy Dunlap <rdunlap@xenotime.net>, Alexander Viro <viro@zeniv.linux.org.uk>, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Clean-up of hardlink restriction logic, as suggested by Andrew Morton.
+On Wed, Feb 22, 2012 at 2:23 AM, Ingo Molnar <mingo@elte.hu> wrote:
+>
+> * Kees Cook <keescook@chromium.org> wrote:
+>
+>> Clean-up of hardlink restriction logic, as suggested by Andrew Morton.
+>>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>> =A0fs/namei.c | =A0 59 +++++++++++++++++++++++++++++++++++++++++--------=
+----------
+>> =A01 files changed, 41 insertions(+), 18 deletions(-)
+>>
+>> diff --git a/fs/namei.c b/fs/namei.c
+>> index 8ed4e00..a4a21a5 100644
+>> --- a/fs/namei.c
+>> +++ b/fs/namei.c
+>> @@ -693,46 +693,69 @@ static inline int may_follow_link(struct path *lin=
+k)
+>> =A0}
+>>
+>> =A0/**
+>> + * safe_hardlink_source - Check for safe hardlink conditions
+>> + * @inode: the source inode to hardlink from
+>> + *
+>> + * Return false if at least one of the following conditions:
+>> + * =A0 =A0- inode is not a regular file
+>> + * =A0 =A0- inode is setuid
+>> + * =A0 =A0- inode is setgid and group-exec
+>> + * =A0 =A0- access failure for read and write
+>> + *
+>> + * Otherwise returns true.
+>> + */
+>> +static bool safe_hardlink_source(struct inode *inode)
+>> +{
+>> + =A0 =A0 mode_t mode =3D inode->i_mode;
+>> +
+>> + =A0 =A0 /* Special files should not get pinned to the filesystem. */
+>> + =A0 =A0 if (!S_ISREG(mode))
+>> + =A0 =A0 =A0 =A0 =A0 =A0 return false;
+>> + =A0 =A0 /* Setuid files should not get pinned to the filesystem. */
+>> + =A0 =A0 if (mode & S_ISUID)
+>> + =A0 =A0 =A0 =A0 =A0 =A0 return false;
+>> + =A0 =A0 /* Executable setgid files should not get pinned to the filesy=
+stem. */
+>> + =A0 =A0 if ((mode & (S_ISGID | S_IXGRP)) =3D=3D (S_ISGID | S_IXGRP))
+>> + =A0 =A0 =A0 =A0 =A0 =A0 return false;
+>> + =A0 =A0 /* Hardlinking to unreadable or unwritable sources is dangerou=
+s. */
+>> + =A0 =A0 if (inode_permission(inode, MAY_READ | MAY_WRITE))
+>> + =A0 =A0 =A0 =A0 =A0 =A0 return false;
+>> +
+>> + =A0 =A0 return true;
+>
+> A really minor nitpick, could we use this form please:
+>
+> static bool safe_hardlink_source(struct inode *inode)
+> {
+> =A0 =A0 =A0 =A0mode_t mode =3D inode->i_mode;
+>
+> =A0 =A0 =A0 =A0/* Special files should not get pinned to the filesystem. =
+*/
+> =A0 =A0 =A0 =A0if (!S_ISREG(mode))
+> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return false;
+>
+> =A0 =A0 =A0 =A0/* Setuid files should not get pinned to the filesystem. *=
+/
+> =A0 =A0 =A0 =A0if (mode & S_ISUID)
+> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return false;
+>
+> =A0 =A0 =A0 =A0/* Executable setgid files should not get pinned to the fi=
+lesystem. */
+> =A0 =A0 =A0 =A0if ((mode & (S_ISGID | S_IXGRP)) =3D=3D (S_ISGID | S_IXGRP=
+))
+> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return false;
+>
+> =A0 =A0 =A0 =A0/* Hardlinking to unreadable or unwritable sources is dang=
+erous. */
+> =A0 =A0 =A0 =A0if (inode_permission(inode, MAY_READ | MAY_WRITE))
+> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return false;
+>
+> =A0 =A0 =A0 =A0return true;
+> }
+>
+> Those separate blocks of comments and conditions stand out much
+> nicer this way, making it way easier on the eyes - to my eyes at
+> least ;-)
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-v2:
- - add eye-strain-reduction-whitespace for Ingo. ;)
+Heh, sure. I've sent v2 now. :)
 
----
- fs/namei.c |   62 ++++++++++++++++++++++++++++++++++++++++++-----------------
- 1 files changed, 44 insertions(+), 18 deletions(-)
+-Kees
 
-diff --git a/fs/namei.c b/fs/namei.c
-index 8ed4e00..f86494c 100644
---- a/fs/namei.c
-+++ b/fs/namei.c
-@@ -693,46 +693,72 @@ static inline int may_follow_link(struct path *link)
- }
- 
- /**
-+ * safe_hardlink_source - Check for safe hardlink conditions
-+ * @inode: the source inode to hardlink from
-+ *
-+ * Return false if at least one of the following conditions:
-+ *    - inode is not a regular file
-+ *    - inode is setuid
-+ *    - inode is setgid and group-exec
-+ *    - access failure for read and write
-+ *
-+ * Otherwise returns true.
-+ */
-+static bool safe_hardlink_source(struct inode *inode)
-+{
-+	mode_t mode = inode->i_mode;
-+
-+	/* Special files should not get pinned to the filesystem. */
-+	if (!S_ISREG(mode))
-+		return false;
-+
-+	/* Setuid files should not get pinned to the filesystem. */
-+	if (mode & S_ISUID)
-+		return false;
-+
-+	/* Executable setgid files should not get pinned to the filesystem. */
-+	if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP))
-+		return false;
-+
-+	/* Hardlinking to unreadable or unwritable sources is dangerous. */
-+	if (inode_permission(inode, MAY_READ | MAY_WRITE))
-+		return false;
-+
-+	return true;
-+}
-+
-+/**
-  * may_linkat - Check permissions for creating a hardlink
-  * @link: the source to hardlink from
-  *
-  * Block hardlink when all of:
-  *  - sysctl_protected_hardlinks enabled
-  *  - fsuid does not match inode
-- *  - at least one of:
-- *    - inode is not a regular file
-- *    - inode is setuid
-- *    - inode is setgid and group-exec
-- *    - access failure for read and write
-+ *  - hardlink source is unsafe (see safe_hardlink_source() above)
-  *  - not CAP_FOWNER
-  *
-  * Returns 0 if successful, -ve on error.
-  */
- static int may_linkat(struct path *link)
- {
--	int error = 0;
- 	const struct cred *cred;
- 	struct inode *inode;
--	int mode;
- 
- 	if (!sysctl_protected_hardlinks)
- 		return 0;
- 
- 	cred = current_cred();
- 	inode = link->dentry->d_inode;
--	mode = inode->i_mode;
--
--	if (cred->fsuid != inode->i_uid &&
--	    (!S_ISREG(mode) || (mode & S_ISUID) ||
--	     ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP)) ||
--	     (inode_permission(inode, MAY_READ | MAY_WRITE))) &&
--	    !capable(CAP_FOWNER))
--		error = -EPERM;
- 
--	if (error)
--		audit_log_link_denied("linkat", link);
-+	/* Source inode owner (or CAP_FOWNER) can hardlink all they like,
-+	 * otherwise, it must be a safe source.
-+	 */
-+	if (cred->fsuid == inode->i_uid || safe_hardlink_source(inode) ||
-+	    capable(CAP_FOWNER))
-+		return 0;
- 
--	return error;
-+	audit_log_link_denied("linkat", link);
-+	return -EPERM;
- }
- #else
- static inline int may_follow_link(struct path *link)
--- 
-1.7.0.4
+--=20
+Kees Cook
+ChromeOS Security
