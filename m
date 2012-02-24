@@ -1,28 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "PaX Team" <pageexec@freemail.hu>
-Date: Fri, 24 Feb 2012 23:59:47 +0200
+Date: Sat, 25 Feb 2012 00:14:43 +0200
 MIME-Version: 1.0
 Reply-to: pageexec@freemail.hu
-Message-ID: <4F481663.5371.216F475B@pageexec.freemail.hu>
-In-reply-to: <20120224191300.GA12553@albatros>
-References: <20120217075945.GA2831@albatros>, <20120224190549.GA8034@elliptictech.com>, <20120224191300.GA12553@albatros>
+Message-ID: <4F4819E3.23795.217CF269@pageexec.freemail.hu>
+In-reply-to: <CAEXv5_jEW6EA6nOd6pMJbh6PTd=+piHqzNA8Fb+gt2VGroba0A@mail.gmail.com>
+References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>, <20120224183726.GB23284@kroah.com>, <CAEXv5_jEW6EA6nOd6pMJbh6PTd=+piHqzNA8Fb+gt2VGroba0A@mail.gmail.com>
 Content-type: text/plain; charset=US-ASCII
 Content-transfer-encoding: 7BIT
 Content-description: Mail message body
 Subject: Re: [kernel-hardening] Re: Add overflow protection to kref
-To: Nick Bowler <nbowler@elliptictech.com>, Vasiliy Kulikov <segoon@openwall.com>
-Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dwindsor@gmail.com>, Roland Dreier <roland@purestorage.com>, Djalal Harouni <tixxdz@opendz.org>, kernel-hardening@lists.openwall.com, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+To: Greg KH <gregkh@linuxfoundation.org>, David Windsor <dwindsor@gmail.com>
+Cc: Roland Dreier <roland@purestorage.com>, Djalal Harouni <tixxdz@opendz.org>, Vasiliy Kulikov <segoon@openwall.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 24 Feb 2012 at 23:13, Vasiliy Kulikov wrote:
+On 24 Feb 2012 at 14:04, David Windsor wrote:
 
-> > But in this case, the principle does not apply because we can recover.
-> > The reason we cannot recover from the stack protector case is because
-> > the stack protector is reacting after the fact, which is not the case
-> > here.  Simply peg the reference count at the maximum value, neither
-> > incrementing it nor decrementing it further.
-> 
-> ...and simply loose one reference, which leads to use-after-free.
+> Suggestions on recovering from an overflow here?
 
-saturating the refcount keeps the protected object allocated, so it is
-a memory leak, but it is not a use-after-free.
+do what PaX does? :)
+
+1. saturate the refcount
+2. report the event (pax_report_refcount_overflow)
+3. kill the triggering userland process (this may be optional but it's a good measure
+   if you have stuff like grsecurity's lockout feature)
+
+> 2. Detect the overflow before it happens, don't increment the counter,
+> issue a warning but no BUG.
+> This could also lead to some "undefined" behavior in subsystems.
+
+it's called a memory leak :).
