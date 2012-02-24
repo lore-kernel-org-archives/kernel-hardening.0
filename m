@@ -1,59 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAE6n16kusCN9LxwqB1D2Dsm50mtc-6zkRje69D=QDdxxzWFTKw@mail.gmail.com>
-References: <1329845435-2313-1-git-send-email-wad@chromium.org>
-	<1329845435-2313-7-git-send-email-wad@chromium.org>
-	<9edbabb2262e3d91a7b8c75dbec03d7f.squirrel@webmail.greenhost.nl>
-	<CABqD9hY1n9EOAKKT0r9Ev+azhBMnLMAM_FgDNe5we9upVePk_A@mail.gmail.com>
-	<CAObL_7Gc0U2JMBQr_kbcVUJwyJq7LRfgdFr+84LR=ec4kSCwEA@mail.gmail.com>
-	<CAGXu5jJQrnkCZtcLqK8NEihRgB25C12b0nKp+XWXV_=4QfcVoA@mail.gmail.com>
-	<CABqD9hbC8v-rUBW+4T_-EwDwe1+VDohQZweQ-cxOg2A-iDH5CQ@mail.gmail.com>
-	<CAGXu5j+fQqkrrKSm3kmCkCcZJKo-VZjL6kkrOD81LZYBY7tf2g@mail.gmail.com>
-	<4F45887A.5010809@zytor.com>
-	<CAB=4xhq1sm_ewZ_8Kerf2aN7nGx+DEENse7Lqg5N0wuvqtzUAw@mail.gmail.com>
-	<4F459109.1060205@zytor.com>
-	<CAB=4xhqndEw3tMPaUcdZh_jcjQcoK_=7GwOc5gVhnz5o_4eWzQ@mail.gmail.com>
-	<CABqD9hbsZTtkFzM_8rHqAWjZhiV0iWb6s1eMF9LriH-NybrorA@mail.gmail.com>
-	<fe2d4b97d84c1e8053c397a20eec7ac8.squirrel@webmail.greenhost.nl>
-	<CAE6n16kusCN9LxwqB1D2Dsm50mtc-6zkRje69D=QDdxxzWFTKw@mail.gmail.com>
-Date: Thu, 23 Feb 2012 16:36:21 -0600
-Message-ID: <CABqD9hbE_0mDADUAcU3JYeEroj-57Mz2etd2NaPV_Sb3JpJ21Q@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH v10 07/11] signal, x86: add SIGSYS info and make it synchronous.
-To: Markus Gutschke <markus@chromium.org>
-Cc: Indan Zupancic <indan@nul.nu>, Roland McGrath <mcgrathr@google.com>, "H. Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Andrew Lutomirski <luto@mit.edu>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com
+Date: Fri, 24 Feb 2012 04:56:13 +0400
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20120224005613.GA32733@openwall.com>
+References: <20120210020658.GA17709@dztty> <20120210143616.GA6100@albatros> <20120221145653.GA22597@openwall.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20120221145653.GA22597@openwall.com>
+Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
+To: kernel-hardening@lists.openwall.com
+Cc: Brad Spengler <spender@grsecurity.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 23, 2012 at 4:33 PM, Markus Gutschke <markus@chromium.org> wrote:
-> On Thu, Feb 23, 2012 at 14:15, Indan Zupancic <indan@nul.nu> wrote:
->> What about making SECCOMP_RET_TRAP dump core/send SIGSYS if there is
->> no tracer with PTRACE_O_SECCOMP set?
->
-> Please don't make things dependent on having a tracer. There are
-> applications that don't really need a tracer; in fact, these are
-> typically the exact same applications that can benefit from receiving
-> SIGSYS and then handling it internally.
->
-> If a tracer was required to set this up, it would make it difficult to
-> use gdb, strace, or any other common debugging tools.
->
->> Sending SIGSYS is useful, but it's quite a bit less useful if user
->> space can't handle it in a signal handler, so I don't think it's
->> worth it to make a unblockable version.
->
-> Maybe, I am not parsing your e-mail correctly. But don't we already
-> get the desired behavior, if SIGSYS is treated the same as any other
-> synchronous signal? If it is unblocked and has a handler, the
-> application can decide to handle it. If neither one of these
-> conditions is true, it terminates the program. Ulimits and
-> PR_SET_DUMPABLE determine whether a core file is generated.
+Brad, all -
 
-Yeah - the current patchset does that just fine. The tweak I was
-proposing was making ti possible to deliver an SIGSYS that always uses
-SIG_DFL so that you don't have to play with signal call enforcement in
-the filters.
+On Tue, Feb 21, 2012 at 06:56:53PM +0400, Solar Designer wrote:
+> On Fri, Feb 10, 2012 at 06:36:17PM +0400, Vasiliy Kulikov wrote:
+> > [1] http://grsecurity.net/~spender/dev_patches/distros_should_sponsor_me_for_doing_their_jobs.patch
+...
+> Are there any other known issues with this patch (or approach)?
+> 
+> A newer revision of it maybe (e.g. what's merged in grsecurity patch)?
+> I am just guessing.
 
-This is a pretty minor tweak either way.
-cheers!
-will
+I've just reviewed revisions of this patch as included in
+grsecurity-2.2.2-2.6.32.57-201202200919.patch and
+grsecurity-2.2.2-3.2.7-201202202005.patch.  Here are a few observations:
+
+1. The grsecurity patch for 2.6.32.x appears to need the counter
+increment introduced into fs/compat.c: compat_do_execve().  It is
+currently missing that, so I guess the protection is bypassable on
+64-bit kernels with 32-bit syscall wrappers present (only if the system
+also has a suitable 32-bit SUID/SGID/fscaps-enabled binary).
+
+2. /proc/<pid>/mem appears to be excluded from this protection - any
+special reason why?  I expected it to be one of the primary targets of
+this protection.
+
+3. These grsecurity patch revisions actually include a newer revision of
+distros_should_sponsor_me_for_doing_their_jobs.patch.  Notably, copying
+of exec_id has been added to kernel/fork.c: copy_process().  I wonder
+why such explicit copying was needed and whether it is possibly a no-op
+given that this same function does:
+
+	p = dup_task_struct(current);
+
+which appears to boil down to:
+
+int __attribute__((weak)) arch_dup_task_struct(struct task_struct *dst,
+                                               struct task_struct *src)
+{
+	*dst = *src;
+	return 0;
+}
+
+OK, that's a weak alias, so perhaps some archs override it and somehow
+don't copy that added field?  This doesn't appear to be the case in
+2.6.32.57 (the alias is only overridden for x86, and it does full
+copying like above), but maybe it might differ in other versions,
+although it'd sound weird if arch_dup_task_struct() didn't copy the
+entire struct.
+
+Is this just a better safe than sorry type of thing?  I'm OK with that
+if so.
+
+Another change is "long long" to "u64" for the exec_id fields.  I suppose
+it's not atomic64_t in order to avoid unnecessarily bringing in volatile.
+Looks OK to me.
+
+4. In grsecurity-2.2.2-3.2.7-201202202005.patch, it may be cleaner to
+declare global_exec_counter static.  (In the patch for 2.6.32.x, the
+counter will also need to be accessed from fs/compat.c, I think.)
+
+As I think is normal for code reviews, I fully expect some or all of the
+questions/suggestions above to be dumb. ;-)
+
+I'd appreciate any comments.
+
+Thanks,
+
+Alexander
