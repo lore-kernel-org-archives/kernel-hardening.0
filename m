@@ -1,82 +1,81 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 24 Feb 2012 04:56:13 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20120224005613.GA32733@openwall.com>
-References: <20120210020658.GA17709@dztty> <20120210143616.GA6100@albatros> <20120221145653.GA22597@openwall.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120221145653.GA22597@openwall.com>
-Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
-To: kernel-hardening@lists.openwall.com
-Cc: Brad Spengler <spender@grsecurity.net>
+MIME-Version: 1.0
+In-Reply-To: <20120218161849.GA4176@kroah.com>
+References: <CAEXv5_gkTsPHDFh+wQqD3P3D-Z+uCN-_1bVyHfHV=u7bS-tgeA@mail.gmail.com>
+	<20120216204515.GH20420@outflux.net>
+	<20120217002405.GB7746@kroah.com>
+	<20120217075945.GA2831@albatros>
+	<20120217175445.GC29902@kroah.com>
+	<20120217193719.GA4187@albatros>
+	<20120217233908.GA24047@dztty>
+	<CAL1RGDWM0C26YR+GGbguRQd0R3HoPJ5QVyEFkLGFfPqs6wb5Mg@mail.gmail.com>
+	<20120218161849.GA4176@kroah.com>
+Date: Fri, 24 Feb 2012 12:58:35 -0500
+Message-ID: <CAEXv5_jYj=cHsePJEf4f08KsBOfU+MVMnV0DucmVKQbg+KbxrQ@mail.gmail.com>
+From: David Windsor <dwindsor@gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Re: Add overflow protection to kref
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: Roland Dreier <roland@purestorage.com>, Djalal Harouni <tixxdz@opendz.org>, Vasiliy Kulikov <segoon@openwall.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Ubuntu security discussion <ubuntu-hardened@lists.ubuntu.com>, linux-kernel@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Brad, all -
+<snip>
 
-On Tue, Feb 21, 2012 at 06:56:53PM +0400, Solar Designer wrote:
-> On Fri, Feb 10, 2012 at 06:36:17PM +0400, Vasiliy Kulikov wrote:
-> > [1] http://grsecurity.net/~spender/dev_patches/distros_should_sponsor_me_for_doing_their_jobs.patch
-...
-> Are there any other known issues with this patch (or approach)?
-> 
-> A newer revision of it maybe (e.g. what's merged in grsecurity patch)?
-> I am just guessing.
+>> Greg, I'm not sure why you're opposed to adding this checking...
+>> it's pretty clear that buggy error paths that forget to do a put are
+>> pretty common and will continue to be common in new code, and
+>> making them harder to exploit seems pretty sane to me.
+>>
+>> What's the downside?
+>
+> The downside is that there has not even been a patch sent for any of
+> this. =A0Combine that with a lack of understanding about reference
+> counting and atomic_t usages in the kernel, and the whole thing is ripe
+> for misunderstanding and confusion.
+>
+> greg k-h
 
-I've just reviewed revisions of this patch as included in
-grsecurity-2.2.2-2.6.32.57-201202200919.patch and
-grsecurity-2.2.2-3.2.7-201202202005.patch.  Here are a few observations:
+This approach to adding overflow protection to kref uses
+atomic_add_unless to increment the refcounter only if it is not
+already at INT_MAX.  This
+leaks the internal representation of atomic_t, which is defined as an
+int in linux/types.h, into kref.
 
-1. The grsecurity patch for 2.6.32.x appears to need the counter
-increment introduced into fs/compat.c: compat_do_execve().  It is
-currently missing that, so I guess the protection is bypassable on
-64-bit kernels with 32-bit syscall wrappers present (only if the system
-also has a suitable 32-bit SUID/SGID/fscaps-enabled binary).
-
-2. /proc/<pid>/mem appears to be excluded from this protection - any
-special reason why?  I expected it to be one of the primary targets of
-this protection.
-
-3. These grsecurity patch revisions actually include a newer revision of
-distros_should_sponsor_me_for_doing_their_jobs.patch.  Notably, copying
-of exec_id has been added to kernel/fork.c: copy_process().  I wonder
-why such explicit copying was needed and whether it is possibly a no-op
-given that this same function does:
-
-	p = dup_task_struct(current);
-
-which appears to boil down to:
-
-int __attribute__((weak)) arch_dup_task_struct(struct task_struct *dst,
-                                               struct task_struct *src)
-{
-	*dst = *src;
-	return 0;
-}
-
-OK, that's a weak alias, so perhaps some archs override it and somehow
-don't copy that added field?  This doesn't appear to be the case in
-2.6.32.57 (the alias is only overridden for x86, and it does full
-copying like above), but maybe it might differ in other versions,
-although it'd sound weird if arch_dup_task_struct() didn't copy the
-entire struct.
-
-Is this just a better safe than sorry type of thing?  I'm OK with that
-if so.
-
-Another change is "long long" to "u64" for the exec_id fields.  I suppose
-it's not atomic64_t in order to avoid unnecessarily bringing in volatile.
-Looks OK to me.
-
-4. In grsecurity-2.2.2-3.2.7-201202202005.patch, it may be cleaner to
-declare global_exec_counter static.  (In the patch for 2.6.32.x, the
-counter will also need to be accessed from fs/compat.c, I think.)
-
-As I think is normal for code reviews, I fully expect some or all of the
-questions/suggestions above to be dumb. ;-)
-
-I'd appreciate any comments.
+If we can agree on an approach to adding overflow protection, if it is
+indeed desired, we can then discuss adding a Kconfig option and/or a
+sysctl for this protection.
 
 Thanks,
+David
 
-Alexander
+
+Signed-off-by: David Windsor <dwindsor@gmail.com>
+---
+ include/linux/kref.h |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/kref.h b/include/linux/kref.h
+index 9c07dce..fc0756a 100644
+--- a/include/linux/kref.h
++++ b/include/linux/kref.h
+@@ -38,8 +38,12 @@ static inline void kref_init(struct kref *kref)
+  */
+ static inline void kref_get(struct kref *kref)
+ {
++   int rc =3D 0;
+    WARN_ON(!atomic_read(&kref->refcount));
+-   atomic_inc(&kref->refcount);
++   smp_mb__before_atomic_inc();
++   rc =3D atomic_add_unless(&kref->refcount, 1, INT_MAX);
++   smp_mb__after_atomic_inc();
++   BUG_ON(!rc);
+ }
+
+ /**
+--=20
+1.7.5.4
+
+
+--=20
+PGP: 6141 5FFD 11AE 9844 153E =A0F268 7C98 7268 6B19 6CC9
