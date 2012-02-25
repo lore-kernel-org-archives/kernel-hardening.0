@@ -1,70 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 From: Will Drewry <wad@chromium.org>
-Date: Fri, 24 Feb 2012 21:21:44 -0600
-Message-Id: <1330140111-17201-5-git-send-email-wad@chromium.org>
+Date: Fri, 24 Feb 2012 21:21:50 -0600
+Message-Id: <1330140111-17201-11-git-send-email-wad@chromium.org>
 In-Reply-To: <1330140111-17201-1-git-send-email-wad@chromium.org>
 References: <1330140111-17201-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v11 05/12] arch/x86: add syscall_get_arch to syscall.h
+Subject: [kernel-hardening] [PATCH v11 11/12] x86: Enable HAVE_ARCH_SECCOMP_FILTER
 To: linux-kernel@vger.kernel.org
 Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add syscall_get_arch() to export the current AUDIT_ARCH_* based on system call
-entry path.
+Enable support for seccomp filter on x86:
+- asm/tracehook.h exists
+- syscall_get_arguments() works
+- syscall_rollback() works
+- ptrace_report_syscall() works
+- secure_computing() return value is honored (see below)
+
+This also adds support for honoring the return
+value from secure_computing().
+
+SECCOMP_RET_TRACE and SECCOMP_RET_TRAP may result in seccomp needing to
+skip a system call without killing the process.  This is done by
+returning a non-zero (-1) value from secure_computing.  This change
+makes x86 respect that return value.
+
+To ensure that minimal kernel code is exposed, a non-zero return value
+results in an immediate return to user space (with an invalid syscall
+number).
 
 Signed-off-by: Will Drewry <wad@chromium.org>
 ---
- arch/x86/include/asm/syscall.h |   23 +++++++++++++++++++++++
- 1 files changed, 23 insertions(+), 0 deletions(-)
+ arch/x86/Kconfig         |    1 +
+ arch/x86/kernel/ptrace.c |    7 ++++++-
+ 2 files changed, 7 insertions(+), 1 deletions(-)
 
-diff --git a/arch/x86/include/asm/syscall.h b/arch/x86/include/asm/syscall.h
-index d962e56..1d713e4 100644
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -13,6 +13,7 @@
- #ifndef _ASM_X86_SYSCALL_H
- #define _ASM_X86_SYSCALL_H
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 5bed94e..4c9012b 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -82,6 +82,7 @@ config X86
+ 	select CLKEVT_I8253
+ 	select ARCH_HAVE_NMI_SAFE_CMPXCHG
+ 	select GENERIC_IOMAP
++	select HAVE_ARCH_SECCOMP_FILTER
  
-+#include <linux/audit.h>
- #include <linux/sched.h>
- #include <linux/err.h>
- #include <asm/asm-offsets.h>	/* For NR_syscalls */
-@@ -87,6 +88,12 @@ static inline void syscall_set_arguments(struct task_struct *task,
- 	memcpy(&regs->bx + i, args, n * sizeof(args[0]));
+ config INSTRUCTION_DECODER
+ 	def_bool (KPROBES || PERF_EVENTS)
+diff --git a/arch/x86/kernel/ptrace.c b/arch/x86/kernel/ptrace.c
+index 5026738..90d465a 100644
+--- a/arch/x86/kernel/ptrace.c
++++ b/arch/x86/kernel/ptrace.c
+@@ -1380,7 +1380,11 @@ long syscall_trace_enter(struct pt_regs *regs)
+ 		regs->flags |= X86_EFLAGS_TF;
+ 
+ 	/* do the secure computing check first */
+-	secure_computing(regs->orig_ax);
++	if (secure_computing(regs->orig_ax)) {
++		/* seccomp failures shouldn't expose any additional code. */
++		ret = -1L;
++		goto out;
++	}
+ 
+ 	if (unlikely(test_thread_flag(TIF_SYSCALL_EMU)))
+ 		ret = -1L;
+@@ -1405,6 +1409,7 @@ long syscall_trace_enter(struct pt_regs *regs)
+ 				    regs->dx, regs->r10);
+ #endif
+ 
++out:
+ 	return ret ?: regs->orig_ax;
  }
  
-+static inline int syscall_get_arch(struct task_struct *task,
-+				   struct pt_regs *regs)
-+{
-+	return AUDIT_ARCH_I386;
-+}
-+
- #else	 /* CONFIG_X86_64 */
- 
- static inline void syscall_get_arguments(struct task_struct *task,
-@@ -211,6 +218,22 @@ static inline void syscall_set_arguments(struct task_struct *task,
- 		}
- }
- 
-+static inline int syscall_get_arch(struct task_struct *task,
-+				   struct pt_regs *regs)
-+{
-+#ifdef CONFIG_IA32_EMULATION
-+	/*
-+	 * TS_COMPAT is set for 32-bit syscall entries and then
-+	 * remains set until we return to user mode.
-+	 *
-+	 * TIF_IA32 tasks should always have TS_COMPAT set at
-+	 * system call time.
-+	 */
-+	if (task_thread_info(task)->status & TS_COMPAT)
-+		return AUDIT_ARCH_I386;
-+#endif
-+	return AUDIT_ARCH_X86_64;
-+}
- #endif	/* CONFIG_X86_32 */
- 
- #endif	/* _ASM_X86_SYSCALL_H */
 -- 
 1.7.5.4
