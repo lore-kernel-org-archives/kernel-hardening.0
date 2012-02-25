@@ -1,59 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 25 Feb 2012 07:56:53 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20120225035653.GA5294@openwall.com>
-References: <20120210020658.GA17709@dztty> <20120210143616.GA6100@albatros> <20120221145653.GA22597@openwall.com> <20120224005613.GA32733@openwall.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120224005613.GA32733@openwall.com>
-Subject: Re: [kernel-hardening] procfs: infoleaks and DAC permissions
-To: kernel-hardening@lists.openwall.com
-Cc: Brad Spengler <spender@grsecurity.net>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <1330140111-17201-7-git-send-email-wad@chromium.org>
+References: <1330140111-17201-1-git-send-email-wad@chromium.org>
+	<1330140111-17201-7-git-send-email-wad@chromium.org>
+Date: Sat, 25 Feb 2012 12:20:13 -0800
+Message-ID: <CAGXu5jLVwYev3EmLOKuEdyaqieGzWgVpFcgodnUbUkbMbiJVqQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v11 07/12] seccomp: add SECCOMP_RET_ERRNO
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 24, 2012 at 04:56:13AM +0400, Solar Designer wrote:
-> 1. The grsecurity patch for 2.6.32.x appears to need the counter
-> increment introduced into fs/compat.c: compat_do_execve().  It is
-> currently missing that, so I guess the protection is bypassable on
-> 64-bit kernels with 32-bit syscall wrappers present (only if the system
-> also has a suitable 32-bit SUID/SGID/fscaps-enabled binary).
+On Fri, Feb 24, 2012 at 7:21 PM, Will Drewry <wad@chromium.org> wrote:
+> This change adds the SECCOMP_RET_ERRNO as a valid return value from a
+> seccomp filter. =A0Additionally, it makes the first use of the lower
+> 16-bits for storing a filter-supplied errno. =A016-bits is more than
+> enough for the errno-base.h calls.
+>
+> Returning errors instead of immediately terminating processes that
+> violate seccomp policy allow for broader use of this functionality
+> for kernel attack surface reduction. =A0For example, a linux container
+> could maintain a whitelist of pre-existing system calls but drop
+> all new ones with errnos. =A0This would keep a logically static attack
+> surface while providing errnos that may allow for graceful failure
+> without the downside of do_exit() on a bad call.
+>
+> v11: - check for NULL filter (keescook@chromium.org)
+> v10: - change loaders to fn
+> =A0v9: - n/a
+> =A0v8: - update Kconfig to note new need for syscall_set_return_value.
+> =A0 =A0 - reordered such that TRAP behavior follows on later.
+> =A0 =A0 - made the for loop a little less indent-y
+> =A0v7: - introduced
+>
+> Signed-off-by: Will Drewry <wad@chromium.org>
 
-Fixed in grsecurity-2.9-2.6.32.57-201202242017.patch.
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-> 2. /proc/<pid>/mem appears to be excluded from this protection - any
-> special reason why?  I expected it to be one of the primary targets of
-> this protection.
+> + =A0 =A0 =A0 /* Ensure unexpected behavior doesn't result in failing ope=
+n. */
+> + =A0 =A0 =A0 if (unlikely(current->seccomp.filter =3D=3D NULL))
+> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 ret =3D SECCOMP_RET_KILL;
 
-OK, my guess is that this is because mem_read() uses struct file,
-whereas the exec_id field is currently only implemented for seq_file.
+Any reason to not just immediately return in this case?
 
-Instead, grsecurity's mem_read() currently has:
+-Kees
 
-+	// XXX: temporary workaround
-+	if (!task_dumpable(task) && task == current) {
-+		ret = -EACCES;
-+		goto out;
-+	}
-
-> 3. These grsecurity patch revisions actually include a newer revision of
-> distros_should_sponsor_me_for_doing_their_jobs.patch.  Notably, copying
-> of exec_id has been added to kernel/fork.c: copy_process().  I wonder
-> why such explicit copying was needed and whether it is possibly a no-op
-> given that this same function does:
-> 
-> 	p = dup_task_struct(current);
-
-The explicit copying of exec_id is dropped in
-grsecurity-2.9-2.6.32.57-201202242017.patch.
-
-> I'd appreciate any comments.
-
-Got no comments, but the code changes suffice. ;-)
-
-I am now getting some of this stuff into the RHEL5'ish kernels that we
-use on Owl.
-
-Thanks,
-
-Alexander
+--=20
+Kees Cook
+ChromeOS Security
