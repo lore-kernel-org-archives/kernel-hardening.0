@@ -1,190 +1,166 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 From: Will Drewry <wad@chromium.org>
-Date: Fri, 24 Feb 2012 21:21:46 -0600
-Message-Id: <1330140111-17201-7-git-send-email-wad@chromium.org>
+Date: Fri, 24 Feb 2012 21:21:47 -0600
+Message-Id: <1330140111-17201-8-git-send-email-wad@chromium.org>
 In-Reply-To: <1330140111-17201-1-git-send-email-wad@chromium.org>
 References: <1330140111-17201-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v11 07/12] seccomp: add SECCOMP_RET_ERRNO
+Subject: [kernel-hardening] [PATCH v11 08/12] signal, x86: add SIGSYS info and make it synchronous.
 To: linux-kernel@vger.kernel.org
 Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This change adds the SECCOMP_RET_ERRNO as a valid return value from a
-seccomp filter.  Additionally, it makes the first use of the lower
-16-bits for storing a filter-supplied errno.  16-bits is more than
-enough for the errno-base.h calls.
+This change enables SIGSYS, defines _sigfields._sigsys, and adds
+x86 (compat) arch support.  _sigsys defines fields which allow
+a signal handler to receive the triggering system call number,
+the relevant AUDIT_ARCH_* value for that number, and the address
+of the callsite.
 
-Returning errors instead of immediately terminating processes that
-violate seccomp policy allow for broader use of this functionality
-for kernel attack surface reduction.  For example, a linux container
-could maintain a whitelist of pre-existing system calls but drop
-all new ones with errnos.  This would keep a logically static attack
-surface while providing errnos that may allow for graceful failure
-without the downside of do_exit() on a bad call.
+To ensure that SIGSYS delivery occurs on return from the triggering
+system call, SIGSYS is added to the SYNCHRONOUS_MASK macro.
 
-v11: - check for NULL filter (keescook@chromium.org)
-v10: - change loaders to fn
- v9: - n/a
- v8: - update Kconfig to note new need for syscall_set_return_value.
-     - reordered such that TRAP behavior follows on later.
-     - made the for loop a little less indent-y
- v7: - introduced
+The first consumer of SIGSYS would be seccomp filter.  In particular,
+a filter program could specify a new return value, SECCOMP_RET_TRAP,
+which would result in the system call being denied and the calling
+thread signaled.  This also means that implementing arch-specific
+support can be dependent upon HAVE_ARCH_SECCOMP_FILTER.
 
+v11: - fix dropped words in the change description
+     - added fallback copy_siginfo support.
+     - added __ARCH_SIGSYS define to allow stepped arch support.
+v10: - first version based on suggestion
+
+Suggested-by: H. Peter Anvin <hpa@zytor.com>
 Signed-off-by: Will Drewry <wad@chromium.org>
 ---
- arch/Kconfig            |    6 ++++--
- include/linux/seccomp.h |   15 +++++++++++----
- kernel/seccomp.c        |   42 ++++++++++++++++++++++++++++++++----------
- 3 files changed, 47 insertions(+), 16 deletions(-)
+ arch/x86/ia32/ia32_signal.c   |    4 ++++
+ arch/x86/include/asm/ia32.h   |    6 ++++++
+ include/asm-generic/siginfo.h |   22 ++++++++++++++++++++++
+ kernel/signal.c               |    9 ++++++++-
+ 4 files changed, 40 insertions(+), 1 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 7c6bd48..dd4e067 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -203,8 +203,10 @@ config HAVE_ARCH_SECCOMP_FILTER
- 	bool
- 	help
- 	  This symbol should be selected by an architecure if it provides
--	  asm/syscall.h, specifically syscall_get_arguments() and
--	  syscall_get_arch().
-+	  asm/syscall.h, specifically syscall_get_arguments(),
-+	  syscall_get_arch(), and syscall_set_return_value().  Additionally,
-+	  its system call entry path must respect a return value of -1 from
-+	  __secure_computing_int() and/or secure_computing().
+diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal.c
+index 6557769..c81d2c7 100644
+--- a/arch/x86/ia32/ia32_signal.c
++++ b/arch/x86/ia32/ia32_signal.c
+@@ -73,6 +73,10 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, siginfo_t *from)
+ 			switch (from->si_code >> 16) {
+ 			case __SI_FAULT >> 16:
+ 				break;
++			case __SI_SYS >> 16:
++				put_user_ex(from->si_syscall, &to->si_syscall);
++				put_user_ex(from->si_arch, &to->si_arch);
++				break;
+ 			case __SI_CHLD >> 16:
+ 				put_user_ex(from->si_utime, &to->si_utime);
+ 				put_user_ex(from->si_stime, &to->si_stime);
+diff --git a/arch/x86/include/asm/ia32.h b/arch/x86/include/asm/ia32.h
+index 1f7e625..541485f 100644
+--- a/arch/x86/include/asm/ia32.h
++++ b/arch/x86/include/asm/ia32.h
+@@ -126,6 +126,12 @@ typedef struct compat_siginfo {
+ 			int _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
+ 			int _fd;
+ 		} _sigpoll;
++
++		struct {
++			unsigned int _call_addr; /* calling insn */
++			int _syscall;	/* triggering system call number */
++			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
++		} _sigsys;
+ 	} _sifields;
+ } compat_siginfo_t;
  
- config SECCOMP_FILTER
- 	def_bool y
-diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
-index 6e69274..93c2d98 100644
---- a/include/linux/seccomp.h
-+++ b/include/linux/seccomp.h
-@@ -12,13 +12,14 @@
+diff --git a/include/asm-generic/siginfo.h b/include/asm-generic/siginfo.h
+index 0dd4e87..31306f5 100644
+--- a/include/asm-generic/siginfo.h
++++ b/include/asm-generic/siginfo.h
+@@ -90,9 +90,18 @@ typedef struct siginfo {
+ 			__ARCH_SI_BAND_T _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
+ 			int _fd;
+ 		} _sigpoll;
++
++		/* SIGSYS */
++		struct {
++			void __user *_call_addr; /* calling insn */
++			int _syscall;	/* triggering system call number */
++			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
++		} _sigsys;
+ 	} _sifields;
+ } siginfo_t;
+ 
++/* If the arch shares siginfo, then it has SIGSYS. */
++#define __ARCH_SIGSYS
+ #endif
  
  /*
-  * All BPF programs must return a 32-bit value.
-- * The bottom 16-bits are reserved for future use.
-+ * The bottom 16-bits are for optional return data.
-  * The upper 16-bits are ordered from least permissive values to most.
-  *
-  * The ordering ensures that a min_t() over composed return values always
-  * selects the least permissive choice.
-  */
- #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
-+#define SECCOMP_RET_ERRNO	0x00030000U /* returns an errno */
- #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
+@@ -116,6 +125,11 @@ typedef struct siginfo {
+ #define si_addr_lsb	_sifields._sigfault._addr_lsb
+ #define si_band		_sifields._sigpoll._band
+ #define si_fd		_sifields._sigpoll._fd
++#ifdef __ARCH_SIGSYS
++#define si_call_addr	_sifields._sigsys._call_addr
++#define si_syscall	_sifields._sigsys._syscall
++#define si_arch		_sifields._sigsys._arch
++#endif
  
- /* Masks for the return value sections. */
-@@ -64,11 +65,17 @@ struct seccomp {
- 	struct seccomp_filter *filter;
- };
+ #ifdef __KERNEL__
+ #define __SI_MASK	0xffff0000u
+@@ -126,6 +140,7 @@ typedef struct siginfo {
+ #define __SI_CHLD	(4 << 16)
+ #define __SI_RT		(5 << 16)
+ #define __SI_MESGQ	(6 << 16)
++#define __SI_SYS	(7 << 16)
+ #define __SI_CODE(T,N)	((T) | ((N) & 0xffff))
+ #else
+ #define __SI_KILL	0
+@@ -135,6 +150,7 @@ typedef struct siginfo {
+ #define __SI_CHLD	0
+ #define __SI_RT		0
+ #define __SI_MESGQ	0
++#define __SI_SYS	0
+ #define __SI_CODE(T,N)	(N)
+ #endif
  
--extern void __secure_computing(int);
--static inline void secure_computing(int this_syscall)
-+/*
-+ * Direct callers to __secure_computing should be updated as
-+ * CONFIG_HAVE_ARCH_SECCOMP_FILTER propagates.
+@@ -232,6 +248,12 @@ typedef struct siginfo {
+ #define NSIGPOLL	6
+ 
+ /*
++ * SIGSYS si_codes
 + */
-+extern void __secure_computing(int) __deprecated;
-+extern int __secure_computing_int(int);
-+static inline int secure_computing(int this_syscall)
- {
- 	if (unlikely(test_thread_flag(TIF_SECCOMP)))
--		__secure_computing(this_syscall);
-+		return  __secure_computing_int(this_syscall);
-+	return 0;
- }
- 
- extern long prctl_get_seccomp(void);
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index 25e8296..3b3a16e 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -134,22 +134,23 @@ static void *bpf_load(const void *nr, int off, unsigned int size, void *buf)
- static u32 seccomp_run_filters(int syscall)
- {
- 	struct seccomp_filter *f;
--	u32 ret = SECCOMP_RET_KILL;
- 	static const struct bpf_load_fn fns = {
- 		bpf_load,
- 		sizeof(struct seccomp_data),
- 	};
-+	u32 ret = SECCOMP_RET_ALLOW;
- 	const void *sc_ptr = (const void *)(uintptr_t)syscall;
- 
-+	/* Ensure unexpected behavior doesn't result in failing open. */
-+	if (unlikely(current->seccomp.filter == NULL))
-+		ret = SECCOMP_RET_KILL;
++#define SYS_SECCOMP		(__SI_SYS|1)	/* seccomp triggered */
++#define NSIGSYS	1
 +
- 	/*
- 	 * All filters are evaluated in order of youngest to oldest. The lowest
- 	 * BPF return value always takes priority.
- 	 */
--	for (f = current->seccomp.filter; f; f = f->prev) {
--		ret = bpf_run_filter(sc_ptr, f->insns, &fns);
--		if (ret != SECCOMP_RET_ALLOW)
--			break;
--	}
-+	for (f = current->seccomp.filter; f; f = f->prev)
-+		ret = min_t(u32, ret, bpf_run_filter(sc_ptr, f->insns, &fns));
- 	return ret;
- }
++/*
+  * sigevent definitions
+  * 
+  * It seems likely that SIGEV_THREAD will have to be handled from 
+diff --git a/kernel/signal.c b/kernel/signal.c
+index c73c428..15a9e9b 100644
+--- a/kernel/signal.c
++++ b/kernel/signal.c
+@@ -160,7 +160,7 @@ void recalc_sigpending(void)
  
-@@ -292,6 +293,13 @@ static int mode1_syscalls_32[] = {
+ #define SYNCHRONOUS_MASK \
+ 	(sigmask(SIGSEGV) | sigmask(SIGBUS) | sigmask(SIGILL) | \
+-	 sigmask(SIGTRAP) | sigmask(SIGFPE))
++	 sigmask(SIGTRAP) | sigmask(SIGFPE) | sigmask(SIGSYS))
  
- void __secure_computing(int this_syscall)
+ int next_signal(struct sigpending *pending, sigset_t *mask)
  {
-+	/* Filter calls should never use this function. */
-+	BUG_ON(current->seccomp.mode == SECCOMP_MODE_FILTER);
-+	__secure_computing_int(this_syscall);
-+}
-+
-+int __secure_computing_int(int this_syscall)
-+{
- 	int mode = current->seccomp.mode;
- 	int exit_code = SIGKILL;
- 	int *syscall;
-@@ -305,16 +313,29 @@ void __secure_computing(int this_syscall)
- #endif
- 		do {
- 			if (*syscall == this_syscall)
--				return;
-+				return 0;
- 		} while (*++syscall);
+@@ -2686,6 +2686,13 @@ int copy_siginfo_to_user(siginfo_t __user *to, siginfo_t *from)
+ 		err |= __put_user(from->si_uid, &to->si_uid);
+ 		err |= __put_user(from->si_ptr, &to->si_ptr);
  		break;
- #ifdef CONFIG_SECCOMP_FILTER
--	case SECCOMP_MODE_FILTER:
--		if (seccomp_run_filters(this_syscall) == SECCOMP_RET_ALLOW)
--			return;
-+	case SECCOMP_MODE_FILTER: {
-+		u32 action = seccomp_run_filters(this_syscall);
-+		switch (action & SECCOMP_RET_ACTION) {
-+		case SECCOMP_RET_ERRNO:
-+			/* Set the low-order 16-bits as a errno. */
-+			syscall_set_return_value(current, task_pt_regs(current),
-+						 -(action & SECCOMP_RET_DATA),
-+						 0);
-+			return -1;
-+		case SECCOMP_RET_ALLOW:
-+			return 0;
-+		case SECCOMP_RET_KILL:
-+		default:
-+			break;
-+		}
- 		seccomp_filter_log_failure(this_syscall);
- 		exit_code = SIGSYS;
- 		break;
-+	}
- #endif
- 	default:
- 		BUG();
-@@ -325,6 +346,7 @@ void __secure_computing(int this_syscall)
- #endif
- 	audit_seccomp(this_syscall);
- 	do_exit(exit_code);
-+	return -1;	/* never reached */
- }
- 
- long prctl_get_seccomp(void)
++#ifdef __ARCH_SIGSYS
++	case __SI_SYS:
++		err |= __put_user(from->si_call_addr, &to->si_call_addr);
++		err |= __put_user(from->si_syscall, &to->si_syscall);
++		err |= __put_user(from->si_arch, &to->si_arch);
++		break;
++#endif
+ 	default: /* this is just in case for now ... */
+ 		err |= __put_user(from->si_pid, &to->si_pid);
+ 		err |= __put_user(from->si_uid, &to->si_uid);
 -- 
 1.7.5.4
