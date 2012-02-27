@@ -1,182 +1,86 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 26 Feb 2012 12:28:28 -0800
-From: Kees Cook <kees@ubuntu.com>
-Message-ID: <20120226202828.GE3990@outflux.net>
-References: <1330140111-17201-1-git-send-email-wad@chromium.org>
- <1330140111-17201-6-git-send-email-wad@chromium.org>
+Message-ID: <0333e182d9dad75b4c58315d54b4a16d.squirrel@webmail.greenhost.nl>
+In-Reply-To: 
+ <CAE6n16kusCN9LxwqB1D2Dsm50mtc-6zkRje69D=QDdxxzWFTKw@mail.gmail.com>
+References: <1329845435-2313-1-git-send-email-wad@chromium.org>
+    <1329845435-2313-7-git-send-email-wad@chromium.org>
+    <9edbabb2262e3d91a7b8c75dbec03d7f.squirrel@webmail.greenhost.nl>
+    <CABqD9hY1n9EOAKKT0r9Ev+azhBMnLMAM_FgDNe5we9upVePk_A@mail.gmail.com>
+    <CAObL_7Gc0U2JMBQr_kbcVUJwyJq7LRfgdFr+84LR=ec4kSCwEA@mail.gmail.com>
+    <CAGXu5jJQrnkCZtcLqK8NEihRgB25C12b0nKp+XWXV_=4QfcVoA@mail.gmail.com>
+    <CABqD9hbC8v-rUBW+4T_-EwDwe1+VDohQZweQ-cxOg2A-iDH5CQ@mail.gmail.com>
+    <CAGXu5j+fQqkrrKSm3kmCkCcZJKo-VZjL6kkrOD81LZYBY7tf2g@mail.gmail.com>
+    <4F45887A.5010809@zytor.com>
+    <CAB=4xhq1sm_ewZ_8Kerf2aN7nGx+DEENse7Lqg5N0wuvqtzUAw@mail.gmail.com>
+    <4F459109.1060205@zytor.com>
+    <CAB=4xhqndEw3tMPaUcdZh_jcjQcoK_=7GwOc5gVhnz5o_4eWzQ@mail.gmail.com>
+    <CABqD9hbsZTtkFzM_8rHqAWjZhiV0iWb6s1eMF9LriH-NybrorA@mail.gmail.com>
+    <fe2d4b97d84c1e8053c397a20eec7ac8.squirrel@webmail.greenhost.nl>
+    <CAE6n16kusCN9LxwqB1D2Dsm50mtc-6zkRje69D=QDdxxzWFTKw@mail.gmail.com>
+Date: Mon, 27 Feb 2012 13:32:01 +0100
+From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1330140111-17201-6-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v11 06/12] seccomp: add system call filtering using BPF
-To: Will Drewry <wad@chromium.org>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v10 07/11] signal, x86: add SIGSYS info and make it
+ synchronous.
+To: Markus Gutschke <markus@chromium.org>
+Cc: Will Drewry <wad@chromium.org>, Roland McGrath <mcgrathr@google.com>, "H. Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Andrew Lutomirski <luto@mit.edu>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 24, 2012 at 09:21:45PM -0600, Will Drewry wrote:
-> diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-> index e8d76c5..25e8296 100644
-> --- a/kernel/seccomp.c
-> +++ b/kernel/seccomp.c
-> [...]
-> +static void seccomp_filter_log_failure(int syscall)
-> +{
-> +	int compat = 0;
-> +#ifdef CONFIG_COMPAT
-> +	compat = is_compat_task();
-> +#endif
-> +	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
-> +		current->comm, task_pid_nr(current),
-> +		(compat ? "compat " : ""),
-> +		syscall, KSTK_EIP(current));
-> +}
-> [...]
-> +#ifdef CONFIG_SECCOMP_FILTER
-> +	case SECCOMP_MODE_FILTER:
-> +		if (seccomp_run_filters(this_syscall) == SECCOMP_RET_ALLOW)
-> +			return;
-> +		seccomp_filter_log_failure(this_syscall);
-> +		exit_code = SIGSYS;
-> +		break;
-> +#endif
->  	default:
->  		BUG();
->  	}
-> @@ -56,7 +324,7 @@ void __secure_computing(int this_syscall)
->  	dump_stack();
->  #endif
->  	audit_seccomp(this_syscall);
-> -	do_exit(SIGKILL);
-> +	do_exit(exit_code);
->  }
+On Thu, February 23, 2012 23:33, Markus Gutschke wrote:
+> On Thu, Feb 23, 2012 at 14:15, Indan Zupancic <indan@nul.nu> wrote:
+>> What about making SECCOMP_RET_TRAP dump core/send SIGSYS if there is
+>> no tracer with PTRACE_O_SECCOMP set?
+>
+> Please don't make things dependent on having a tracer. There are
+> applications that don't really need a tracer; in fact, these are
+> typically the exact same applications that can benefit from receiving
+> SIGSYS and then handling it internally.
 
-I think the seccomp_filter_log_failure() use is redundant with the
-audit_seccomp call.  Here's a possible reorganization of the logging...
+My proposal was to send the SIGSYS only when there is no seccomp aware
+tracer. If there is no such tracer, the process will receive a SIGSYS
+that it can handle internally. So having a tracer isn't required.
 
-From: Kees Cook <keescook@chromium.org>
-Date: Sun, 26 Feb 2012 11:56:12 -0800
-Subject: [PATCH] seccomp: improve audit logging details
+I'm curious how you would like to handle SIGSYSs internally, because I
+don't see how you could gracefully recover from such failed system call,
+so I don't really see the added value compared to fail the syscall with
+some ERRNO or to just kill the task. Is it just for notification purposes?
 
-This consolidates the seccomp filter error logging path and adds more
-details to the audit log.
+>
+> If a tracer was required to set this up, it would make it difficult to
+> use gdb, strace, or any other common debugging tools.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- include/linux/audit.h |    8 ++++----
- kernel/auditsc.c      |    9 +++++++--
- kernel/seccomp.c      |   15 +--------------
- 3 files changed, 12 insertions(+), 20 deletions(-)
+gdb and strace and such won't set the PTRACE_O_SECCOMP option, so it
+will behave the same whether it's being debugged or not.
 
-diff --git a/include/linux/audit.h b/include/linux/audit.h
-index 9ff7a2c..5aa6cfc 100644
---- a/include/linux/audit.h
-+++ b/include/linux/audit.h
-@@ -463,7 +463,7 @@ extern void audit_putname(const char *name);
- extern void __audit_inode(const char *name, const struct dentry *dentry);
- extern void __audit_inode_child(const struct dentry *dentry,
- 				const struct inode *parent);
--extern void __audit_seccomp(unsigned long syscall);
-+extern void __audit_seccomp(unsigned long syscall, long signr);
- extern void __audit_ptrace(struct task_struct *t);
- 
- static inline int audit_dummy_context(void)
-@@ -508,10 +508,10 @@ static inline void audit_inode_child(const struct dentry *dentry,
- }
- void audit_core_dumps(long signr);
- 
--static inline void audit_seccomp(unsigned long syscall)
-+static inline void audit_seccomp(unsigned long syscall, long signr)
- {
- 	if (unlikely(!audit_dummy_context()))
--		__audit_seccomp(syscall);
-+		__audit_seccomp(syscall, signr);
- }
- 
- static inline void audit_ptrace(struct task_struct *t)
-@@ -634,7 +634,7 @@ extern int audit_signals;
- #define audit_inode(n,d) do { (void)(d); } while (0)
- #define audit_inode_child(i,p) do { ; } while (0)
- #define audit_core_dumps(i) do { ; } while (0)
--#define audit_seccomp(i) do { ; } while (0)
-+#define audit_seccomp(i,s) do { ; } while (0)
- #define auditsc_get_stamp(c,t,s) (0)
- #define audit_get_loginuid(t) (-1)
- #define audit_get_sessionid(t) (-1)
-diff --git a/kernel/auditsc.c b/kernel/auditsc.c
-index af1de0f..74652fe 100644
---- a/kernel/auditsc.c
-+++ b/kernel/auditsc.c
-@@ -67,6 +67,7 @@
- #include <linux/syscalls.h>
- #include <linux/capability.h>
- #include <linux/fs_struct.h>
-+#include <linux/compat.h>
- 
- #include "audit.h"
- 
-@@ -2710,13 +2711,17 @@ void audit_core_dumps(long signr)
- 	audit_log_end(ab);
- }
- 
--void __audit_seccomp(unsigned long syscall)
-+void __audit_seccomp(unsigned long syscall, long signr)
- {
- 	struct audit_buffer *ab;
- 
- 	ab = audit_log_start(NULL, GFP_KERNEL, AUDIT_ANOM_ABEND);
--	audit_log_abend(ab, "seccomp", SIGKILL);
-+	audit_log_abend(ab, "seccomp", signr);
- 	audit_log_format(ab, " syscall=%ld", syscall);
-+#ifdef CONFIG_COMPAT
-+	audit_log_format(ab, " compat=%d", is_compat_task());
-+#endif
-+	audit_log_format(ab, " ip=0x%lx", KSTK_EIP(current));
- 	audit_log_end(ab);
- }
- 
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index 5aabc3c..40af83f 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -57,18 +57,6 @@ struct seccomp_filter {
- 	struct sock_filter insns[];
- };
- 
--static void seccomp_filter_log_failure(int syscall)
--{
--	int compat = 0;
--#ifdef CONFIG_COMPAT
--	compat = is_compat_task();
--#endif
--	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
--		current->comm, task_pid_nr(current),
--		(compat ? "compat " : ""),
--		syscall, KSTK_EIP(current));
--}
--
- /**
-  * get_u32 - returns a u32 offset into data
-  * @data: a unsigned 64 bit value
-@@ -378,7 +366,6 @@ int __secure_computing_int(int this_syscall)
- 		default:
- 			break;
- 		}
--		seccomp_filter_log_failure(this_syscall);
- 		exit_code = SIGSYS;
- 		break;
- 	}
-@@ -390,7 +377,7 @@ int __secure_computing_int(int this_syscall)
- #ifdef SECCOMP_DEBUG
- 	dump_stack();
- #endif
--	audit_seccomp(this_syscall);
-+	audit_seccomp(this_syscall, exit_code);
- 	do_exit(exit_code);
- 	return -1;	/* never reached */
- }
--- 
-1.7.0.4
+The main objective was to reduce the amount of policy in filters,
+I thought it could be done by having only one return value which
+delegates to user space. But that may be too confusing, and the
+interaction between a seccomp aware tracer and SIGSYS aware code
+is fuzzy, so I'm not sure if it's a good idea.
 
+>
+>> Sending SIGSYS is useful, but it's quite a bit less useful if user
+>> space can't handle it in a signal handler, so I don't think it's
+>> worth it to make a unblockable version.
+>
+> Maybe, I am not parsing your e-mail correctly. But don't we already
+> get the desired behavior, if SIGSYS is treated the same as any other
+> synchronous signal? If it is unblocked and has a handler, the
+> application can decide to handle it. If neither one of these
+> conditions is true, it terminates the program. Ulimits and
+> PR_SET_DUMPABLE determine whether a core file is generated.
 
--- 
-Kees Cook
+The proposal I was replying to wanted to make SIGSYS always kill the
+process (with a core dump), so you wouldn't be able to set a handler
+any more. I think that is a bad idea. Or did I misunderstood?
+
+Enforcing task termination when there is no handler doesn't make
+conceptual sense, because an empty signal handler is effectively
+the same as blocking a signal. Though I guess it's simpler to check
+for just sigaction in the BPF filters, so perhaps that was the idea.
+
+Greetings,
+
+Indan
