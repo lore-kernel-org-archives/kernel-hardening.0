@@ -1,40 +1,128 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: markus@google.com
-In-Reply-To: <CABqD9haZpe-i8kyHJDj4umCLyZ3E877aobabvW8_+aXeC+kTbg@mail.gmail.com>
+In-Reply-To: <CABqD9hY7=DpxWzf3+WNsK=LuLrabf=oHxyy+CQgu0JLxZ80zPQ@mail.gmail.com>
 References: <1330140111-17201-1-git-send-email-wad@chromium.org>
- <1330140111-17201-6-git-send-email-wad@chromium.org> <b983ece9dc6209269876869188303518.squirrel@webmail.greenhost.nl>
- <CABqD9haZpe-i8kyHJDj4umCLyZ3E877aobabvW8_+aXeC+kTbg@mail.gmail.com>
-From: Markus Gutschke <markus@chromium.org>
-Date: Tue, 28 Feb 2012 09:47:59 -0800
-Message-ID: <CAE6n16kLOOrAV6_7_t_-PnfYoNsJ5yJfHveWykO7qQiFYKb3nQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v11 06/12] seccomp: add system call filtering using BPF
-To: Will Drewry <wad@chromium.org>
-Cc: Indan Zupancic <indan@nul.nu>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+	<1330140111-17201-10-git-send-email-wad@chromium.org>
+	<20120227175407.GD10608@redhat.com>
+	<CABqD9hY1P7LfmBwQwSG7jDZmw6d_pZH4q2cZq_4ssjQUKRA32w@mail.gmail.com>
+	<20120228164335.GC3664@redhat.com>
+	<CABqD9hY7=DpxWzf3+WNsK=LuLrabf=oHxyy+CQgu0JLxZ80zPQ@mail.gmail.com>
+Date: Tue, 28 Feb 2012 12:34:43 -0600
+Message-ID: <CABqD9hZ3apFGi+BmX5UNgz=NJUbTigj6acDKG=wu9rrL0wN1Ww@mail.gmail.com>
+From: Will Drewry <wad@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v11 10/12] ptrace,seccomp: Add PTRACE_SECCOMP support
+To: Oleg Nesterov <oleg@redhat.com>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Denys Vlasenko <dvlasenk@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 28, 2012 at 09:17, Will Drewry <wad@chromium.org> wrote:
-> On Tue, Feb 28, 2012 at 12:51 AM, Indan Zupancic <indan@nul.nu> wrote:
->> Wouldn't it make more sense to always kill with SIGSYS, also for mode 1?
->> I suppose it's too late for that now.
+On Tue, Feb 28, 2012 at 11:04 AM, Will Drewry <wad@chromium.org> wrote:
+> On Tue, Feb 28, 2012 at 10:43 AM, Oleg Nesterov <oleg@redhat.com> wrote:
+>> On 02/27, Will Drewry wrote:
+>>> On Mon, Feb 27, 2012 at 11:54 AM, Oleg Nesterov <oleg@redhat.com> wrote=
+:
+>>> > On 02/24, Will Drewry wrote:
+>>> >>
+>>> >> =A0arch/Kconfig =A0 =A0 =A0 =A0 =A0 =A0 =A0| =A0 =A01 +
+>>> >> =A0include/linux/ptrace.h =A0 =A0| =A0 =A07 +++++--
+>>> >> =A0include/linux/seccomp.h =A0 | =A0 =A04 +++-
+>>> >> =A0include/linux/tracehook.h | =A0 =A06 ++++++
+>>> >> =A0kernel/ptrace.c =A0 =A0 =A0 =A0 =A0 | =A0 =A04 ++++
+>>> >> =A0kernel/seccomp.c =A0 =A0 =A0 =A0 =A0| =A0 18 ++++++++++++++++++
+>>> >
+>>> > FYI, this conflicts with the changes -mm tree.
+>>> >
+>>> > The changes in ptrace.* confict with Denys's
+>>> > "ptrace: simplify PTRACE_foo constants and PTRACE_SETOPTIONS code"
+>>> >
+>>> > The change in tracehook.h conflicts with
+>>> > "ptrace: the killed tracee should not enter the syscall"
+>>>
+>>> What's the best way to reconcile this in this day and age?
+>>
+>> Of course I'd prefer if you make this change on top of Denys's patch ;)
+>>
+>> Besides, if you agree with PTRACE_EVENT_SECCOMP/PTRACE_O_SECCOMP you
+>> need only one trivial change in ptrace.h.
 >
-> It would but I don't want to go and change existing ABI.
+> I think that works quite well :)
+>
+>>> I don't see
+>>> these in kernel-next yet and I can't tell if there is a public -mm
+>>> anywhere anymore.
+>>
+>> Strange... I didn't check, but every patch in
+>> http://marc.info/?l=3Dlinux-mm-commits has this note:
+>>
+>> =A0 =A0 =A0 =A0The -mm tree is included into linux-next and is updated
+>> =A0 =A0 =A0 =A0there every 3-4 working days
+>
+> It appears to have been pulled in ~8 hours ago. =A0I'm rebasing to next n=
+ow.
+>
+>>> >> --- a/kernel/seccomp.c
+>>> >> +++ b/kernel/seccomp.c
+>>> >> @@ -354,6 +354,24 @@ int __secure_computing_int(int this_syscall)
+>>> >> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 seccomp_send_sigsys(this=
+_syscall, reason_code);
+>>> >> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return -1;
+>>> >> =A0 =A0 =A0 =A0 =A0 =A0 =A0 }
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 case SECCOMP_RET_TRACE: {
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 int ret;
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 struct pt_regs *regs =3D t=
+ask_pt_regs(current);
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 if (!(test_tsk_thread_flag=
+(current, TIF_SYSCALL_TRACE)) ||
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 !(current->ptrace =
+& PT_TRACE_SECCOMP))
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return -1;
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 /*
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0* PT_TRACE_SECCOMP and =
+seccomp.trace indicate whether
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0* tracehook_report_sysc=
+all_entry needs to signal the
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0* tracer. =A0This avoid=
+s race conditions in hand off and
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0* the requirement for T=
+IF_SYSCALL_TRACE ensures that
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0* we are in the syscall=
+ slow path.
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0*/
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 current->seccomp.trace =3D=
+ 1;
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 ret =3D tracehook_report_s=
+yscall_entry(regs);
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 current->seccomp.trace =3D=
+ 0;
+>>> >> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return ret;
+>>> >
+>>> > To be honest, this interface looks a bit strange to me...
+>>> >
+>>> > Once again, sorry if this was already discussed. But perhaps it would
+>>> > be better to introduce PTRACE_EVENT_SECCOMP/PTRACE_O_SECCOMP instead?
+>>> >
+>>> > SECCOMP_RET_TRACE: could simply do ptrace_event(PTRACE_EVENT_SECCOMP)
+>>> > unconditionaly. The tracer can set the option and do PTRACE_CONT if i=
+t
+>>> > doesn't want the system call notifications.
+>>>
+>>> Works for me - this also gets rid of the extra int for brief state
+>>> tracking. I'll switch over to that in the next rev.
+>>
+>> Great. In this case this patch becomes really trivial. Just 2 defines
+>> in ptrace.h and the unconditional ptrace_event() under SECCOMP_RET_TRACE=
+.
 
-Just for the record, when this discussion came up about two years ago,
-it was established that other than Chrome, there are currently no
-users of Seccomp, as mode 1 is just too difficult to use for most
-potential applications.
+hrm the only snag is that I can't then rely on TIF_SYSCALL_TRACE to
+ensure seccomp is in the slow-path.  Right now, on x86, seccomp is
+slow-path, but it doesn't have to be to have the syscall and args.
+However, for ptrace to behavior properly, I believed it did need to be
+in the slow path.  If SECCOMP_RET_TRACE doesn't rely on
+PTRACE_SYSCALL, then it introduces a need for seccomp to always be in
+the slow path or to flag (somehow) when it needs slow path.
 
-Chrome doesn't rely on the exit status of a process that violated the
-seccomp restrictions, so it is highly unlikely you would break
-existing userspace, if you changed the ABI. On the other hand, as mode
-2 is so much more powerful than mode 1, it is unlikely that we will
-see future userspace applications make use of mode 1.
+Any suggestions there?
 
-In other words, changing the ABI is unlikely to cause harm, but also
-unlikely to do any good. I don't have any strong opinion either way;
-just providing an additional data point.
-
-
-Markus
+Thanks!
+will
