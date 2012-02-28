@@ -1,84 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 28 Feb 2012 16:13:33 +0100
+From: Oleg Nesterov <oleg@redhat.com>
+Message-ID: <20120228151333.GA3664@redhat.com>
+References: <1330140111-17201-1-git-send-email-wad@chromium.org> <1330140111-17201-6-git-send-email-wad@chromium.org> <20120227170922.GA10608@redhat.com> <CABqD9hbtFDU_vgBOajG2jJxQoHubcwYWJuHPLjgZkZyjGkQ2uQ@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <b983ece9dc6209269876869188303518.squirrel@webmail.greenhost.nl>
-References: <1330140111-17201-1-git-send-email-wad@chromium.org>
-	<1330140111-17201-6-git-send-email-wad@chromium.org>
-	<b983ece9dc6209269876869188303518.squirrel@webmail.greenhost.nl>
-Date: Mon, 27 Feb 2012 23:52:28 -0800
-Message-ID: <CAGXu5j+ZsP1q97=-DKxbyteNtX6zcw1LLWnKbTSKW90LN-_FHQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CABqD9hbtFDU_vgBOajG2jJxQoHubcwYWJuHPLjgZkZyjGkQ2uQ@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v11 06/12] seccomp: add system call filtering using BPF
-To: Indan Zupancic <indan@nul.nu>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 27, 2012 at 10:51 PM, Indan Zupancic <indan@nul.nu> wrote:
-> On Sat, February 25, 2012 04:21, Will Drewry wrote:
->> @@ -169,6 +170,7 @@ void free_task(struct task_struct *tsk)
->> =A0 =A0 =A0 free_thread_info(tsk->stack);
->> =A0 =A0 =A0 rt_mutex_debug_task_free(tsk);
->> =A0 =A0 =A0 ftrace_graph_exit_task(tsk);
->> + =A0 =A0 put_seccomp_filter(tsk->seccomp.filter);
->> =A0 =A0 =A0 free_task_struct(tsk);
->> }
->> EXPORT_SYMBOL(free_task);
->> @@ -1113,6 +1115,7 @@ static struct task_struct *copy_process(unsigned l=
-ong clone_flags,
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 goto fork_out;
->>
->> =A0 =A0 =A0 ftrace_graph_init_task(p);
->> + =A0 =A0 copy_seccomp(&p->seccomp, &current->seccomp);
+On 02/27, Will Drewry wrote:
 >
-> I agree it's more symmetrical when get_seccomp_filter() is used here
-> directly instead of copy_seccomp(). That should put Kees at ease.
-
-Yeah, that does feel more symmetrical.
-
->> +static void seccomp_filter_log_failure(int syscall)
->> +{
->> + =A0 =A0 int compat =3D 0;
->> +#ifdef CONFIG_COMPAT
->> + =A0 =A0 compat =3D is_compat_task();
->> +#endif
->> + =A0 =A0 pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
->> + =A0 =A0 =A0 =A0 =A0 =A0 current->comm, task_pid_nr(current),
->> + =A0 =A0 =A0 =A0 =A0 =A0 (compat ? "compat " : ""),
->> + =A0 =A0 =A0 =A0 =A0 =A0 syscall, KSTK_EIP(current));
->> +}
+> On Mon, Feb 27, 2012 at 11:09 AM, Oleg Nesterov <oleg@redhat.com> wrote:
 >
-> This should be at least rate limited, but could be dropped altogether,
-> as it's mostly useful for debugging filters. There is no kernel message
-> when a process is killed because it exceeds a ulimit either. The death
-> by SIGSYS is hopefully clear enough for users, and filter writers can
-> return different errno values when debugging where it goes wrong.
-
-I've already sent a patch to take care of this. It was redundant with
-the later call to audit_seccomp() on the exit path.
-https://lkml.org/lkml/2012/2/26/70
-https://lkml.org/lkml/2012/2/27/369
-
->> @@ -48,6 +308,14 @@ void __secure_computing(int this_syscall)
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return;
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 } while (*++syscall);
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 break;
->> +#ifdef CONFIG_SECCOMP_FILTER
->> + =A0 =A0 case SECCOMP_MODE_FILTER:
->> + =A0 =A0 =A0 =A0 =A0 =A0 if (seccomp_run_filters(this_syscall) =3D=3D S=
-ECCOMP_RET_ALLOW)
->> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return;
->> + =A0 =A0 =A0 =A0 =A0 =A0 seccomp_filter_log_failure(this_syscall);
->> + =A0 =A0 =A0 =A0 =A0 =A0 exit_code =3D SIGSYS;
+> >> +static long seccomp_attach_filter(struct sock_fprog *fprog)
+> >> +{
+> >> +     struct seccomp_filter *filter;
+> >> +     unsigned long fp_size = fprog->len * sizeof(struct sock_filter);
+> >> +     long ret;
+> >> +
+> >> +     if (fprog->len == 0 || fprog->len > BPF_MAXINSNS)
+> >> +             return -EINVAL;
+> >
+> > OK, this limits the memory PR_SET_SECCOMP can use.
+> >
+> > But,
+> >
+> >> +     /*
+> >> +      * If there is an existing filter, make it the prev and don't drop its
+> >> +      * task reference.
+> >> +      */
+> >> +     filter->prev = current->seccomp.filter;
+> >> +     current->seccomp.filter = filter;
+> >> +     return 0;
+> >
+> > this doesn't limit the number of filters, looks like a DoS.
+> >
+> > What if the application simply does prctl(PR_SET_SECCOMP, dummy_filter)
+> > in an endless loop?
 >
-> Wouldn't it make more sense to always kill with SIGSYS, also for mode 1?
-> I suppose it's too late for that now.
+> It consumes a massive amount of kernel memory and, maybe, the OOM
+> killer gives it a boot :)
 
-Right, this should (somewhat unfortunately) stay SIGKILL for mode 1.
+may be ;) but most probably oom-killer kills another innocent task,
+this memory is not accounted.
 
--Kees
+> I wasn't sure what the normal convention was for avoiding memory
+> consumption by user processes. Should I just add a sysctl
 
---=20
-Kees Cook
-ChromeOS Security
+Perhaps we can add a sysctl later, but personally I think that we
+can start with some "arbitrary" #define BPF_MAXFILTERS.
+
+> and a
+> per-task counter for the max number of filters?
+
+Do we really need the counter? attach_filter is not the fast path,
+perhaps seccomp_attach_filter() could simply iterate the chain and
+count the number?
+
+In any case, if this hurts perfomance-wise then seccomp_run_filters()
+has even more problems.
+
+> I'm fine doing whatever makes sense here.
+
+I am fine either way too.
+
+Oleg.
