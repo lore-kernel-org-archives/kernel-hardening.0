@@ -1,113 +1,145 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1330374879.2542.24.camel@localhost>
+Message-ID: <b983ece9dc6209269876869188303518.squirrel@webmail.greenhost.nl>
+In-Reply-To: <1330140111-17201-6-git-send-email-wad@chromium.org>
 References: <1330140111-17201-1-git-send-email-wad@chromium.org>
-	<1330140111-17201-6-git-send-email-wad@chromium.org>
-	<20120226202828.GE3990@outflux.net>
-	<CABqD9hbKU=EVagCfo25AZsNoq=hmzkeOxK6mE=q8m=Be-ZFb9w@mail.gmail.com>
-	<1330361396.2542.11.camel@localhost>
-	<CAGXu5jKJ7pYeULM=CvifpQ8jUoyH6Ska2Znx9tGjhz0tn5kZmQ@mail.gmail.com>
-	<1330370733.2542.18.camel@localhost>
-	<CAGXu5jKyLHLF+HuU=SLHJLg8AaOPJXoqq1=hOBy5oOvffA-xiQ@mail.gmail.com>
-	<1330374879.2542.24.camel@localhost>
-Date: Mon, 27 Feb 2012 12:49:10 -0800
-Message-ID: <CAGXu5jKvoxVLmLqV0DK9+hB38kPh0xTTHF=_sheRWvDoWusUyw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+    <1330140111-17201-6-git-send-email-wad@chromium.org>
+Date: Tue, 28 Feb 2012 07:51:57 +0100
+From: "Indan Zupancic" <indan@nul.nu>
+MIME-Version: 1.0
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Subject: [kernel-hardening] Re: [PATCH v11 06/12] seccomp: add system call filtering using BPF
-To: Eric Paris <eparis@redhat.com>
-Cc: Will Drewry <wad@chromium.org>, Kees Cook <kees@ubuntu.com>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 27, 2012 at 12:34 PM, Eric Paris <eparis@redhat.com> wrote:
-> On Mon, 2012-02-27 at 12:00 -0800, Kees Cook wrote:
->> On Mon, Feb 27, 2012 at 11:25 AM, Eric Paris <eparis@redhat.com> wrote:
->> > On Mon, 2012-02-27 at 10:55 -0800, Kees Cook wrote:
->> >> On Mon, Feb 27, 2012 at 8:49 AM, Eric Paris <eparis@redhat.com> wrote=
-:
->> >
->> >> You mean as used in audit_log_exit() ? It looks like that depends on =
-a
->> >> lot of state cached in __audit_syscall_entry() and finally triggered
->> >> in __audit_syscall_exit() (and ..._free()). I don't think this is
->> >> really want seccomp wants to be involved in.
->> >>
->> >> By CONFIG_AUDITSC, you mean CONFIG_AUDITSYSCALL? Without that set,
->> >> audit_seccomp is a no-op.
->> >>
->> >> The reason compat needs to be reported (or rather, arch) is because
->> >> just reporting syscall is ambiguous. It either needs arch or compat t=
-o
->> >> distinguish it.
->> >
->> > Yes, that is what I mean and you are right. =A0You shouldn't push the
->> > syscall in this record either. =A0If !audit_dummy_context() you are
->> > already going to get arch, syscall, and a0-a4 in the associated audit
->> > record. =A0Please do not duplicate that info.
->>
->> Ah, in that case, please ignore the patch I just sent. Heh.
->>
->> > It might make sense to have a separate audit_seccomp() path when
->> > audit_dummy_context() which includes arch, syscall, and a0-a4.
->>
->> Ah! I think I understand what you mean now. If audit_dummy_context(),
->> then the syscall, arch, and a0-a4 were not already collected. Gotcha.
->>
->> How do you envision it looking? I still see it as two distinct events
->> (the syscall itself, and the rejection). Would you want those details
->> added to the context structure to be reported at ..._exit() time? It
->> seems like context->type couldn't be used to see if those fields were
->> valid.
->>
->> Something like:
->>
->> void __audit_seccomp(unsigned long syscall, long signr)
->> {
->> =A0 =A0 =A0 =A0 struct audit_buffer *ab;
->>
->> =A0 =A0 =A0 =A0 if (!audit_dummy_context()) {
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 struct audit_context *context =3D curren=
-t->audit_context;
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 context->syscall_signr =3D signr;
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 context->syscall_ip =3D KSTK_EIP(current=
-);
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 return;
->> =A0 =A0 =A0 =A0 }
->>
->> =A0 =A0 =A0 =A0 ab =3D audit_log_start(NULL, GFP_KERNEL, AUDIT_ANOM_ABEN=
-D);
->> =A0 =A0 =A0 =A0 audit_log_abend(ab, "seccomp", signr);
->> =A0 =A0 =A0 =A0 audit_log_format(ab, " syscall=3D%ld", syscall);
->> =A0 =A0 =A0 =A0 audit_log_format(ab, " ip=3D0x%lx", KSTK_EIP(current));
->> =A0 =A0 =A0 =A0 audit_log_end(ab);
->> }
->>
->> And then report syscall_ip and syscall_signr if syscall_signr !=3D 0 in
->> the _exit()? I think everything else from audit_log_abend() will end
->> up in the _exit() report.
->>
->> > It is my fault (85e7bac3) that we have syscall at all, but I'm on a ne=
-w
->> > crusade to remove audit record duplication. =A0So I'd happily see a pa=
-tch
->> > in this series that removes that instead of adds to it.
->>
->> Well, I think the abend reporting is nice; I'd hate to see that
->> totally removed. The seccomp case is a bit different, I agree. I could
->> see it either way.
+Hello,
+
+On Sat, February 25, 2012 04:21, Will Drewry wrote:
+> @@ -169,6 +170,7 @@ void free_task(struct task_struct *tsk)
+> 	free_thread_info(tsk->stack);
+> 	rt_mutex_debug_task_free(tsk);
+> 	ftrace_graph_exit_task(tsk);
+> +	put_seccomp_filter(tsk->seccomp.filter);
+> 	free_task_struct(tsk);
+> }
+> EXPORT_SYMBOL(free_task);
+> @@ -1113,6 +1115,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
+> 		goto fork_out;
 >
-> Once again I send you down a bad path. =A0Your original patch was the
-> best. =A0We should consider including a0-aX in a future version. =A0I was
-> mistaken in foolishly believing that audit_syscall_entry() was done
-> before secure_computing(). =A0But if you look, that isn't the case.
-> Please pretend I never said anything as you had it right the first time.
+> 	ftrace_graph_init_task(p);
+> +	copy_seccomp(&p->seccomp, &current->seccomp);
 
-Heh, okay. But now I know more about audit, so that's good. :)
+I agree it's more symmetrical when get_seccomp_filter() is used here
+directly instead of copy_seccomp(). That should put Kees at ease.
 
--Kees
+> +static void seccomp_filter_log_failure(int syscall)
+> +{
+> +	int compat = 0;
+> +#ifdef CONFIG_COMPAT
+> +	compat = is_compat_task();
+> +#endif
+> +	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
+> +		current->comm, task_pid_nr(current),
+> +		(compat ? "compat " : ""),
+> +		syscall, KSTK_EIP(current));
+> +}
 
---=20
-Kees Cook
-ChromeOS Security
+This should be at least rate limited, but could be dropped altogether,
+as it's mostly useful for debugging filters. There is no kernel message
+when a process is killed because it exceeds a ulimit either. The death
+by SIGSYS is hopefully clear enough for users, and filter writers can
+return different errno values when debugging where it goes wrong.
+
+> +/**
+> + * bpf_load: checks and returns a pointer to the requested offset
+> + * @nr: int syscall passed as a void * to bpf_run_filter
+> + * @off: offset into struct seccomp_data to load from
+
+Must be aligned, that's worth mentioning.
+
+> + * @size: number of bytes to load (must be 4)
+> + * @buffer: temporary storage supplied by bpf_run_filter (4 bytes)
+
+'@buf'.
+
+> +/**
+> + * copy_seccomp: manages inheritance on fork
+> + * @child: forkee's seccomp
+> + * @parent: forker's seccomp
+> + *
+> + * Ensures that @child inherits filters if in use.
+> + */
+> +void copy_seccomp(struct seccomp *child, const struct seccomp *parent)
+> +{
+> +	/* Other fields are handled by dup_task_struct. */
+> +	child->filter = get_seccomp_filter(parent->filter);
+> +}
+> +#endif	/* CONFIG_SECCOMP_FILTER */
+
+Yeah, just get rid of this and use get_seccomp_filter directly, and make
+it return void instead of a pointer.
+
+>
+> /*
+>  * Secure computing mode 1 allows only read/write/exit/sigreturn.
+> @@ -34,10 +293,11 @@ static int mode1_syscalls_32[] = {
+> void __secure_computing(int this_syscall)
+> {
+> 	int mode = current->seccomp.mode;
+> -	int * syscall;
+> +	int exit_code = SIGKILL;
+> +	int *syscall;
+>
+> 	switch (mode) {
+> -	case 1:
+> +	case SECCOMP_MODE_STRICT:
+> 		syscall = mode1_syscalls;
+> #ifdef CONFIG_COMPAT
+> 		if (is_compat_task())
+> @@ -48,6 +308,14 @@ void __secure_computing(int this_syscall)
+> 				return;
+> 		} while (*++syscall);
+> 		break;
+> +#ifdef CONFIG_SECCOMP_FILTER
+> +	case SECCOMP_MODE_FILTER:
+> +		if (seccomp_run_filters(this_syscall) == SECCOMP_RET_ALLOW)
+> +			return;
+> +		seccomp_filter_log_failure(this_syscall);
+> +		exit_code = SIGSYS;
+
+Wouldn't it make more sense to always kill with SIGSYS, also for mode 1?
+I suppose it's too late for that now.
+
+> +/**
+> + * prctl_set_seccomp: configures current->seccomp.mode
+> + * @seccomp_mode: requested mode to use
+> + * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
+> + *
+> + * This function may be called repeatedly with a @seccomp_mode of
+> + * SECCOMP_MODE_FILTER to install additional filters.  Every filter
+> + * successfully installed will be evaluated (in reverse order) for each system
+> + * call the task makes.
+> + *
+> + * It is not possible to transition change the current->seccomp.mode after
+> + * one has been set on a task.
+
+That reads awkwardly, do you mean the mode can't be changed once it's set?
+
+---
+
+Reviewed-by: Indan Zupancic <indan@nul.nu>
+
+All in all I'm quite happy with how the code is now, at least this bit.
+I'm still unsure about the networking patch and the 32-bit BPF on 64-bit
+archs mismatch.
+
+As for the unlimited filter count, I'm not sure how to fix that.
+The problem is that filters are inherited and shared. Limiting the
+list length (tree depth) helps a bit, then the total memory usage
+is limited by max number of processes. It may make sense to limit
+the total instruction count instead of the number of filters.
+
+Greetings,
+
+Indan
