@@ -1,82 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20120228151333.GA3664@redhat.com>
+Sender: markus@google.com
+In-Reply-To: <CABqD9haZpe-i8kyHJDj4umCLyZ3E877aobabvW8_+aXeC+kTbg@mail.gmail.com>
 References: <1330140111-17201-1-git-send-email-wad@chromium.org>
-	<1330140111-17201-6-git-send-email-wad@chromium.org>
-	<20120227170922.GA10608@redhat.com>
-	<CABqD9hbtFDU_vgBOajG2jJxQoHubcwYWJuHPLjgZkZyjGkQ2uQ@mail.gmail.com>
-	<20120228151333.GA3664@redhat.com>
-Date: Tue, 28 Feb 2012 11:18:26 -0600
-Message-ID: <CABqD9hYt5WUjB+72F+2Pr7XuOtk0J=4E8Eoghmyw9hgFQj02gQ@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+ <1330140111-17201-6-git-send-email-wad@chromium.org> <b983ece9dc6209269876869188303518.squirrel@webmail.greenhost.nl>
+ <CABqD9haZpe-i8kyHJDj4umCLyZ3E877aobabvW8_+aXeC+kTbg@mail.gmail.com>
+From: Markus Gutschke <markus@chromium.org>
+Date: Tue, 28 Feb 2012 09:47:59 -0800
+Message-ID: <CAE6n16kLOOrAV6_7_t_-PnfYoNsJ5yJfHveWykO7qQiFYKb3nQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v11 06/12] seccomp: add system call filtering using BPF
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+To: Will Drewry <wad@chromium.org>
+Cc: Indan Zupancic <indan@nul.nu>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 28, 2012 at 9:13 AM, Oleg Nesterov <oleg@redhat.com> wrote:
-> On 02/27, Will Drewry wrote:
->>
->> On Mon, Feb 27, 2012 at 11:09 AM, Oleg Nesterov <oleg@redhat.com> wrote:
->>
->> >> +static long seccomp_attach_filter(struct sock_fprog *fprog)
->> >> +{
->> >> + =A0 =A0 struct seccomp_filter *filter;
->> >> + =A0 =A0 unsigned long fp_size =3D fprog->len * sizeof(struct sock_f=
-ilter);
->> >> + =A0 =A0 long ret;
->> >> +
->> >> + =A0 =A0 if (fprog->len =3D=3D 0 || fprog->len > BPF_MAXINSNS)
->> >> + =A0 =A0 =A0 =A0 =A0 =A0 return -EINVAL;
->> >
->> > OK, this limits the memory PR_SET_SECCOMP can use.
->> >
->> > But,
->> >
->> >> + =A0 =A0 /*
->> >> + =A0 =A0 =A0* If there is an existing filter, make it the prev and d=
-on't drop its
->> >> + =A0 =A0 =A0* task reference.
->> >> + =A0 =A0 =A0*/
->> >> + =A0 =A0 filter->prev =3D current->seccomp.filter;
->> >> + =A0 =A0 current->seccomp.filter =3D filter;
->> >> + =A0 =A0 return 0;
->> >
->> > this doesn't limit the number of filters, looks like a DoS.
->> >
->> > What if the application simply does prctl(PR_SET_SECCOMP, dummy_filter=
-)
->> > in an endless loop?
->>
->> It consumes a massive amount of kernel memory and, maybe, the OOM
->> killer gives it a boot :)
+On Tue, Feb 28, 2012 at 09:17, Will Drewry <wad@chromium.org> wrote:
+> On Tue, Feb 28, 2012 at 12:51 AM, Indan Zupancic <indan@nul.nu> wrote:
+>> Wouldn't it make more sense to always kill with SIGSYS, also for mode 1?
+>> I suppose it's too late for that now.
 >
-> may be ;) but most probably oom-killer kills another innocent task,
-> this memory is not accounted.
->
->> I wasn't sure what the normal convention was for avoiding memory
->> consumption by user processes. Should I just add a sysctl
->
-> Perhaps we can add a sysctl later, but personally I think that we
-> can start with some "arbitrary" #define BPF_MAXFILTERS.
+> It would but I don't want to go and change existing ABI.
 
-Sounds good - I'll wire something like this up in the next round.
+Just for the record, when this discussion came up about two years ago,
+it was established that other than Chrome, there are currently no
+users of Seccomp, as mode 1 is just too difficult to use for most
+potential applications.
 
->> and a
->> per-task counter for the max number of filters?
->
-> Do we really need the counter? attach_filter is not the fast path,
-> perhaps seccomp_attach_filter() could simply iterate the chain and
-> count the number?
->
-> In any case, if this hurts perfomance-wise then seccomp_run_filters()
-> has even more problems.
->
->> I'm fine doing whatever makes sense here.
->
-> I am fine either way too.
->
-> Oleg.
->
+Chrome doesn't rely on the exit status of a process that violated the
+seccomp restrictions, so it is highly unlikely you would break
+existing userspace, if you changed the ABI. On the other hand, as mode
+2 is so much more powerful than mode 1, it is unlikely that we will
+see future userspace applications make use of mode 1.
+
+In other words, changing the ABI is unlikely to cause harm, but also
+unlikely to do any good. I don't have any strong opinion either way;
+just providing an additional data point.
+
+
+Markus
