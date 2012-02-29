@@ -1,169 +1,134 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 From: Will Drewry <wad@chromium.org>
-Date: Wed, 29 Feb 2012 17:53:35 -0600
-Message-Id: <1330559620-23543-8-git-send-email-wad@chromium.org>
+Date: Wed, 29 Feb 2012 17:53:40 -0600
+Message-Id: <1330559620-23543-13-git-send-email-wad@chromium.org>
 In-Reply-To: <1330559620-23543-1-git-send-email-wad@chromium.org>
 References: <1330559620-23543-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v12 08/13] signal, x86: add SIGSYS info and make it synchronous.
+Subject: [kernel-hardening] [PATCH v12 13/13] seccomp: remove duplicated failure logging
 To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Will Drewry <wad@chromium.org>
+Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This change enables SIGSYS, defines _sigfields._sigsys, and adds
-x86 (compat) arch support.  _sigsys defines fields which allow
-a signal handler to receive the triggering system call number,
-the relevant AUDIT_ARCH_* value for that number, and the address
-of the callsite.
+From: Kees Cook <keescook@chromium.org>
 
-SIGSYS is added to the SYNCHRONOUS_MASK because it is desirable for it
-to have setup_frame() called for it. The goal is to ensure that
-ucontext_t reflects the machine state from the time-of-syscall and not
-from another signal handler.
+This consolidates the seccomp filter error logging path and adds more
+details to the audit log.
 
-The first consumer of SIGSYS would be seccomp filter.  In particular,
-a filter program could specify a new return value, SECCOMP_RET_TRAP,
-which would result in the system call being denied and the calling
-thread signaled.  This also means that implementing arch-specific
-support can be dependent upon HAVE_ARCH_SECCOMP_FILTER.
-
-v12: - reworded changelog (oleg@redhat.com)
-v11: - fix dropped words in the change description
-     - added fallback copy_siginfo support.
-     - added __ARCH_SIGSYS define to allow stepped arch support.
-v10: - first version based on suggestion
-
-Suggested-by: H. Peter Anvin <hpa@zytor.com>
-Signed-off-by: Will Drewry <wad@chromium.org>
+Acked-by: Will Drewry <wad@chromium.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/ia32/ia32_signal.c   |    4 ++++
- arch/x86/include/asm/ia32.h   |    6 ++++++
- include/asm-generic/siginfo.h |   22 ++++++++++++++++++++++
- kernel/signal.c               |    9 ++++++++-
- 4 files changed, 40 insertions(+), 1 deletions(-)
+ include/linux/audit.h |    8 ++++----
+ kernel/auditsc.c      |    9 +++++++--
+ kernel/seccomp.c      |   15 +--------------
+ 3 files changed, 12 insertions(+), 20 deletions(-)
 
-diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal.c
-index 942bfbe..7f71cb2 100644
---- a/arch/x86/ia32/ia32_signal.c
-+++ b/arch/x86/ia32/ia32_signal.c
-@@ -66,6 +66,10 @@ int copy_siginfo_to_user32(compat_siginfo_t __user *to, siginfo_t *from)
- 			switch (from->si_code >> 16) {
- 			case __SI_FAULT >> 16:
- 				break;
-+			case __SI_SYS >> 16:
-+				put_user_ex(from->si_syscall, &to->si_syscall);
-+				put_user_ex(from->si_arch, &to->si_arch);
-+				break;
- 			case __SI_CHLD >> 16:
- 				put_user_ex(from->si_utime, &to->si_utime);
- 				put_user_ex(from->si_stime, &to->si_stime);
-diff --git a/arch/x86/include/asm/ia32.h b/arch/x86/include/asm/ia32.h
-index c6435ab..bcc99e8 100644
---- a/arch/x86/include/asm/ia32.h
-+++ b/arch/x86/include/asm/ia32.h
-@@ -135,6 +135,12 @@ typedef struct compat_siginfo {
- 			int _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
- 			int _fd;
- 		} _sigpoll;
-+
-+		struct {
-+			unsigned int _call_addr; /* calling insn */
-+			int _syscall;	/* triggering system call number */
-+			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
-+		} _sigsys;
- 	} _sifields;
- } compat_siginfo_t;
+diff --git a/include/linux/audit.h b/include/linux/audit.h
+index 9ff7a2c..5aac29b 100644
+--- a/include/linux/audit.h
++++ b/include/linux/audit.h
+@@ -463,7 +463,7 @@ extern void audit_putname(const char *name);
+ extern void __audit_inode(const char *name, const struct dentry *dentry);
+ extern void __audit_inode_child(const struct dentry *dentry,
+ 				const struct inode *parent);
+-extern void __audit_seccomp(unsigned long syscall);
++extern void __audit_seccomp(unsigned long syscall, long signr);
+ extern void __audit_ptrace(struct task_struct *t);
  
-diff --git a/include/asm-generic/siginfo.h b/include/asm-generic/siginfo.h
-index 0dd4e87..31306f5 100644
---- a/include/asm-generic/siginfo.h
-+++ b/include/asm-generic/siginfo.h
-@@ -90,9 +90,18 @@ typedef struct siginfo {
- 			__ARCH_SI_BAND_T _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
- 			int _fd;
- 		} _sigpoll;
-+
-+		/* SIGSYS */
-+		struct {
-+			void __user *_call_addr; /* calling insn */
-+			int _syscall;	/* triggering system call number */
-+			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
-+		} _sigsys;
- 	} _sifields;
- } siginfo_t;
+ static inline int audit_dummy_context(void)
+@@ -508,10 +508,10 @@ static inline void audit_inode_child(const struct dentry *dentry,
+ }
+ void audit_core_dumps(long signr);
  
-+/* If the arch shares siginfo, then it has SIGSYS. */
-+#define __ARCH_SIGSYS
- #endif
- 
- /*
-@@ -116,6 +125,11 @@ typedef struct siginfo {
- #define si_addr_lsb	_sifields._sigfault._addr_lsb
- #define si_band		_sifields._sigpoll._band
- #define si_fd		_sifields._sigpoll._fd
-+#ifdef __ARCH_SIGSYS
-+#define si_call_addr	_sifields._sigsys._call_addr
-+#define si_syscall	_sifields._sigsys._syscall
-+#define si_arch		_sifields._sigsys._arch
-+#endif
- 
- #ifdef __KERNEL__
- #define __SI_MASK	0xffff0000u
-@@ -126,6 +140,7 @@ typedef struct siginfo {
- #define __SI_CHLD	(4 << 16)
- #define __SI_RT		(5 << 16)
- #define __SI_MESGQ	(6 << 16)
-+#define __SI_SYS	(7 << 16)
- #define __SI_CODE(T,N)	((T) | ((N) & 0xffff))
- #else
- #define __SI_KILL	0
-@@ -135,6 +150,7 @@ typedef struct siginfo {
- #define __SI_CHLD	0
- #define __SI_RT		0
- #define __SI_MESGQ	0
-+#define __SI_SYS	0
- #define __SI_CODE(T,N)	(N)
- #endif
- 
-@@ -232,6 +248,12 @@ typedef struct siginfo {
- #define NSIGPOLL	6
- 
- /*
-+ * SIGSYS si_codes
-+ */
-+#define SYS_SECCOMP		(__SI_SYS|1)	/* seccomp triggered */
-+#define NSIGSYS	1
-+
-+/*
-  * sigevent definitions
-  * 
-  * It seems likely that SIGEV_THREAD will have to be handled from 
-diff --git a/kernel/signal.c b/kernel/signal.c
-index 354b104..12b23ff 100644
---- a/kernel/signal.c
-+++ b/kernel/signal.c
-@@ -160,7 +160,7 @@ void recalc_sigpending(void)
- 
- #define SYNCHRONOUS_MASK \
- 	(sigmask(SIGSEGV) | sigmask(SIGBUS) | sigmask(SIGILL) | \
--	 sigmask(SIGTRAP) | sigmask(SIGFPE))
-+	 sigmask(SIGTRAP) | sigmask(SIGFPE) | sigmask(SIGSYS))
- 
- int next_signal(struct sigpending *pending, sigset_t *mask)
+-static inline void audit_seccomp(unsigned long syscall)
++static inline void audit_seccomp(unsigned long syscall, long signr)
  {
-@@ -2700,6 +2700,13 @@ int copy_siginfo_to_user(siginfo_t __user *to, siginfo_t *from)
- 		err |= __put_user(from->si_uid, &to->si_uid);
- 		err |= __put_user(from->si_ptr, &to->si_ptr);
- 		break;
-+#ifdef __ARCH_SIGSYS
-+	case __SI_SYS:
-+		err |= __put_user(from->si_call_addr, &to->si_call_addr);
-+		err |= __put_user(from->si_syscall, &to->si_syscall);
-+		err |= __put_user(from->si_arch, &to->si_arch);
-+		break;
+ 	if (unlikely(!audit_dummy_context()))
+-		__audit_seccomp(syscall);
++		__audit_seccomp(syscall, signr);
+ }
+ 
+ static inline void audit_ptrace(struct task_struct *t)
+@@ -634,7 +634,7 @@ extern int audit_signals;
+ #define audit_inode(n,d) do { (void)(d); } while (0)
+ #define audit_inode_child(i,p) do { ; } while (0)
+ #define audit_core_dumps(i) do { ; } while (0)
+-#define audit_seccomp(i) do { ; } while (0)
++#define audit_seccomp(i, s) do { ; } while (0)
+ #define auditsc_get_stamp(c,t,s) (0)
+ #define audit_get_loginuid(t) (-1)
+ #define audit_get_sessionid(t) (-1)
+diff --git a/kernel/auditsc.c b/kernel/auditsc.c
+index af1de0f..74652fe 100644
+--- a/kernel/auditsc.c
++++ b/kernel/auditsc.c
+@@ -67,6 +67,7 @@
+ #include <linux/syscalls.h>
+ #include <linux/capability.h>
+ #include <linux/fs_struct.h>
++#include <linux/compat.h>
+ 
+ #include "audit.h"
+ 
+@@ -2710,13 +2711,17 @@ void audit_core_dumps(long signr)
+ 	audit_log_end(ab);
+ }
+ 
+-void __audit_seccomp(unsigned long syscall)
++void __audit_seccomp(unsigned long syscall, long signr)
+ {
+ 	struct audit_buffer *ab;
+ 
+ 	ab = audit_log_start(NULL, GFP_KERNEL, AUDIT_ANOM_ABEND);
+-	audit_log_abend(ab, "seccomp", SIGKILL);
++	audit_log_abend(ab, "seccomp", signr);
+ 	audit_log_format(ab, " syscall=%ld", syscall);
++#ifdef CONFIG_COMPAT
++	audit_log_format(ab, " compat=%d", is_compat_task());
 +#endif
- 	default: /* this is just in case for now ... */
- 		err |= __put_user(from->si_pid, &to->si_pid);
- 		err |= __put_user(from->si_uid, &to->si_uid);
++	audit_log_format(ab, " ip=0x%lx", KSTK_EIP(current));
+ 	audit_log_end(ab);
+ }
+ 
+diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+index 1064327..78ecd6f 100644
+--- a/kernel/seccomp.c
++++ b/kernel/seccomp.c
+@@ -60,18 +60,6 @@ struct seccomp_filter {
+ /* Limit any path through the tree to 5 megabytes worth of instructions. */
+ #define MAX_INSNS_PER_PATH ((5 << 20) / sizeof(struct sock_filter))
+ 
+-static void seccomp_filter_log_failure(int syscall)
+-{
+-	int compat = 0;
+-#ifdef CONFIG_COMPAT
+-	compat = is_compat_task();
+-#endif
+-	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
+-		current->comm, task_pid_nr(current),
+-		(compat ? "compat " : ""),
+-		syscall, KSTK_EIP(current));
+-}
+-
+ /**
+  * get_u32 - returns a u32 offset into data
+  * @data: a unsigned 64 bit value
+@@ -370,7 +358,6 @@ int __secure_computing_int(int this_syscall)
+ 		default:
+ 			break;
+ 		}
+-		seccomp_filter_log_failure(this_syscall);
+ 		exit_code = SIGSYS;
+ 		break;
+ 	}
+@@ -382,7 +369,7 @@ int __secure_computing_int(int this_syscall)
+ #ifdef SECCOMP_DEBUG
+ 	dump_stack();
+ #endif
+-	audit_seccomp(this_syscall);
++	audit_seccomp(this_syscall, exit_code);
+ 	do_exit(exit_code);
+ 	return -1;	/* never reached */
+ }
 -- 
 1.7.5.4
