@@ -1,50 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <5e22306601c1718407f477e64d2e75b9.squirrel@webmail.greenhost.nl>
-In-Reply-To: <4F506EE2.1050705@zytor.com>
-References: <1330559620-23543-1-git-send-email-wad@chromium.org>
-    <1330559620-23543-6-git-send-email-wad@chromium.org>
-    <a6fdbe9d1daf6864589c9affc7048965.squirrel@webmail.greenhost.nl>
-    <4F50603B.7040505@zytor.com>
-    <bc1b4ec8fbad5a5931a928f108a6095f.squirrel@webmail.greenhost.nl>
-    <4F506EE2.1050705@zytor.com>
-Date: Fri, 2 Mar 2012 09:12:58 +0100
-From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-Content-Type: text/plain;charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v12 06/13] seccomp: add system call filtering using BPF
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+In-Reply-To: <20120301233712.GS3990@outflux.net>
+References: <1330559620-23543-1-git-send-email-wad@chromium.org>
+	<20120301233712.GS3990@outflux.net>
+Date: Thu, 1 Mar 2012 16:47:13 -0800
+Message-ID: <CAL4WiipsJz5Nc8aqUgRgM0r3tA5p7W-DgATJNs8uKo0twr=iag@mail.gmail.com>
+From: Eric Dumazet <eric.dumazet@gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v12 01/13] sk_run_filter: add support for custom load_pointer
+To: Kees Cook <keescook@chromium.org>
+Cc: akpm@linux-foundation.org, sfr@canb.auug.org.au, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, March 2, 2012 07:55, H. Peter Anvin wrote:
-> On 03/01/2012 10:43 PM, Indan Zupancic wrote:
-> Ok, fail on my part - I misread the above to refer to @arch, not
-> @instruction_pointer.
-
-Ah, that explains a lot.
-
->>> -- Pin is a great example.
->> Is that http://www.pintool.org/?
->>
->> Can you explain how knowing the IP is useful for Pin?
->>
->> All I am asking for is just one use case for providing the IP. Is that
->> asking for too much?
+Le 1 mars 2012 15:37, Kees Cook <keescook@chromium.org> a =E9crit :
+> Hi,
 >
-> However, it still applies.  For something like Pin, Pin may want to trap
-> on all or a subset from the instrumented program, while the
-> instrumentation code -- which lives in the same address space -- needs
-> to execute those same instructions.
+> So far, it looks like everyone who spoke up is satisfied with this patch
+> series. Or their MUAs got caught up on a leap-year bug and missed the
+> posting. ;)
 >
-> Yes, it's useless for *security* (unless perhaps if you keep very strict
-> tabs on the flow of control by using debug registers, dynamic
-> translation or whatnot), but it can be highly useful for
-> *instrumentation*, where you want to analyze the behavior of a
-> non-malicious program.
 
-That is a good use case indeed, I'm convinced.
+Sorry for the delay, I only had time to review patch 01/13
 
-Thanks,
-
-Indan
+Acked-by: Eric Dumazet <eric.dumazet@gmail.com>
