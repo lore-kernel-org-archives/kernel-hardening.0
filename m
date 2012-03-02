@@ -1,41 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: amluto@gmail.com
-In-Reply-To: <20120301233712.GS3990@outflux.net>
-References: <1330559620-23543-1-git-send-email-wad@chromium.org> <20120301233712.GS3990@outflux.net>
-From: Andrew Lutomirski <luto@mit.edu>
-Date: Thu, 1 Mar 2012 16:22:37 -0800
-Message-ID: <CAObL_7E098p_kauJEszzm9GZAyr5aSxZfNQovq2NhP5yTHMAGA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20120302114705.0a9542e138927897f16282ca@canb.auug.org.au>
+References: <1330559620-23543-1-git-send-email-wad@chromium.org>
+	<20120301233712.GS3990@outflux.net>
+	<20120302114705.0a9542e138927897f16282ca@canb.auug.org.au>
+Date: Thu, 1 Mar 2012 16:57:49 -0800
+Message-ID: <CAGXu5jL0OXR5MOePFe=GT4_X5rdH8RNjQPqYXdbqsqfijUsEqA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
 Subject: [kernel-hardening] Re: [PATCH v12 01/13] sk_run_filter: add support for custom load_pointer
-To: Kees Cook <keescook@chromium.org>
-Cc: akpm@linux-foundation.org, sfr@canb.auug.org.au, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
+To: Stephen Rothwell <sfr@canb.auug.org.au>
+Cc: akpm@linux-foundation.org, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 1, 2012 at 3:37 PM, Kees Cook <keescook@chromium.org> wrote:
-> Hi,
+Hi,
+
+On Thu, Mar 1, 2012 at 4:47 PM, Stephen Rothwell <sfr@canb.auug.org.au> wro=
+te:
+> Hi Kees,
 >
-> So far, it looks like everyone who spoke up is satisfied with this patch
-> series. Or their MUAs got caught up on a leap-year bug and missed the
-> posting. ;)
+> On Thu, 1 Mar 2012 15:37:12 -0800 Kees Cook <keescook@chromium.org> wrote=
+:
+>>
+>> Is it time to pull this into -next so more people can feel it? I brought
+>> Andy Lutomirski's patches forward (needed to bump the prctl values), and
+>> updated my git tree. If we're ready, here it is in all its request-pull
+>> format glory:
+>>
+>> The following changes since commit 2422c8368337196594265d52cad7316c9404b=
+fcf:
+>> =A0 Stephen Rothwell (1):
+>> =A0 =A0 =A0 =A0 Add linux-next specific files for 20120301
 >
-> Is it time to pull this into -next so more people can feel it? I brought
-> Andy Lutomirski's patches forward (needed to bump the prctl values), and
-> updated my git tree. If we're ready, here it is in all its request-pull
-> format glory:
+> OK, not commenting on anything else, but I cannot merge that into
+> linux-next because it is based on yesterday's linux-next release and
+> linux-next (effectively) rebases every day ...
 >
-> [...]
+> Does this work depend on anything in linux-next? =A0Or could it be just
+> based off Linus' tree. =A0If it depends on other tree(s) merged into
+> linux-next, then you should base your tree on those tree(s) as long as
+> they never get rebased ...
 
-Should we set up a site with associated example userspace tools?  For
-example, this:
+Unfortunately, yes, it does -- there were both ptrace changes and prctl cha=
+nges.
 
-http://web.mit.edu/luto/www/linux/nnp/
+And at least the ptrace changes are, IIRC, in -mm, which has no tree.
+:P Given that, what's the best thing for me to do for this to be easy
+for you to pull?
 
-(although newns.c isn't as useful without the rest of my patches, but
-that's a separate discussion.)
+-Kees
 
-At least pam_nnp.c is useful, and when this stuff hits mainline, I'll
-try to push it to linux-pam.  Presumably you and Will have similar
-little hacks to play with.
-
---Andy
+--=20
+Kees Cook
+ChromeOS Security
