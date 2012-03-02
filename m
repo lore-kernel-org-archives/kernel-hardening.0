@@ -1,68 +1,132 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 2 Mar 2012 16:03:05 +1100
-From: Stephen Rothwell <sfr@canb.auug.org.au>
-Message-Id: <20120302160305.c51a02c9fa5b11e191cd80e4@canb.auug.org.au>
-In-Reply-To: <eba2ab81bc32f208b8b94fd959fd7f2f.squirrel@webmail.greenhost.nl>
+Message-ID: <26411fc25ada53b95e90b6a5fa85ad44.squirrel@webmail.greenhost.nl>
+In-Reply-To: <1330559620-23543-1-git-send-email-wad@chromium.org>
 References: <1330559620-23543-1-git-send-email-wad@chromium.org>
-	<20120301233712.GS3990@outflux.net>
-	<20120302114705.0a9542e138927897f16282ca@canb.auug.org.au>
-	<CAGXu5jL0OXR5MOePFe=GT4_X5rdH8RNjQPqYXdbqsqfijUsEqA@mail.gmail.com>
-	<20120301171914.7c64f095.akpm@linux-foundation.org>
-	<eba2ab81bc32f208b8b94fd959fd7f2f.squirrel@webmail.greenhost.nl>
-Mime-Version: 1.0
-Content-Type: multipart/signed; protocol="application/pgp-signature";
- micalg="PGP-SHA256";
- boundary="Signature=_Fri__2_Mar_2012_16_03_05_+1100_CYpYzrlfOzNE7AjO"
+Date: Fri, 2 Mar 2012 11:40:14 +0100
+From: "Indan Zupancic" <indan@nul.nu>
+MIME-Version: 1.0
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Subject: [kernel-hardening] Re: [PATCH v12 01/13] sk_run_filter: add support for custom
  load_pointer
-To: Indan Zupancic <indan@nul.nu>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
---Signature=_Fri__2_Mar_2012_16_03_05_+1100_CYpYzrlfOzNE7AjO
-Content-Type: text/plain; charset=US-ASCII
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+Hello,
 
-Just a note.
+On Thu, March 1, 2012 00:53, Will Drewry wrote:
+>  include/linux/filter.h |   46 +++++++++++++++++++
+>  net/core/filter.c      |  117 +++++++++++++++++++++++++++++++++++++++++++++---
+>  2 files changed, 157 insertions(+), 6 deletions(-)
 
-On Fri, 2 Mar 2012 05:04:41 +0100 "Indan Zupancic" <indan@nul.nu> wrote:
->
-> On Fri, March 2, 2012 02:19, Andrew Morton wrote:
-> > That assumes that we're going to merge this stuff into 3.4 - if we
-> > don't, unwrecker gets rewrecked and grumpy.
-> >
-> > I don't know if we're going to merge it into 3.4?  I haven't been
-> > paying a lot of attention and haven't looked at the patches in a while.
->=20
-> I think it should be merged, but I think 3.5 is probably better.
+I propose a slightly different approach:
 
-If it is going into v3.5, I don't want to add it to linux-next until after
-v3.4-rc1 is out, thanks.
+Instead of more or less allowing generic load instructions, do the
+same as the ancillary data functions and only allow BPF_S_LD_W_ABS.
+In addition to that, rewrite and check the functions ourself after
+sk_chk_filter() has done its checks.
 
---=20
-Cheers,
-Stephen Rothwell                    sfr@canb.auug.org.au
+Diff for filter.c:
 
---Signature=_Fri__2_Mar_2012_16_03_05_+1100_CYpYzrlfOzNE7AjO
-Content-Type: application/pgp-signature
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 8eeb205..63b728c 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -228,6 +228,7 @@ enum {
+ 	BPF_S_ANC_HATYPE,
+ 	BPF_S_ANC_RXHASH,
+ 	BPF_S_ANC_CPU,
++	BPF_S_LD_W_SECCOMP,
+ };
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.11 (GNU/Linux)
+ #endif /* __KERNEL__ */
+diff --git a/net/core/filter.c b/net/core/filter.c
+index 5dea452..7e338d6 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -350,6 +350,9 @@ load_b:
+ 				A = 0;
+ 			continue;
+ 		}
++		case BPF_S_LD_W_SECCOMP:
++			A = seccomp_load(fentry->k);
++			continue;
+ 		default:
+ 			WARN_RATELIMIT(1, "Unknown code:%u jt:%u tf:%u k:%u\n",
+ 				       fentry->code, fentry->jt,
+---
 
-iQIcBAEBCAAGBQJPUFSJAAoJEECxmPOUX5FE9vcP/jYJr2Qtnk6hXT/4xWkgm9TA
-TI8RkimNlwTurTvOK4Bg4Kx7TnesHzj6IKdW0qjNkIlYTjKd08JDHrs02iLAHUjb
-cCECHc9ecZzFfCRECdMSIwJ+WvxTeJhqzBM6QUP/HQsVv+A1SJEJlN41vMclJQ3n
-W/etDwo+wehWSbyVdUPII7zyvB+WL3DEwXenroQdMpPTqiqN/nS5+uEg3KJ+kHnO
-wdFmwGLadEGfBCWLDCQR5/Z88AYaOZ6clXg1y7V+tOfM4cQ4PlS96WZcyk9yAEic
-fR9iLGZHMe+6j1TvyeqRgSai0LB3G+3oABUzsoJZ8Ruz7zSJbdK4/1Yq3P3dkdOa
-mYmk+n2QK+E7+5Nj2ywL1C0DLkLr0JTHx8RjJ2vpGS41w0VdjPza/VmYfW/8qtJG
-p1ZWWGHXCjhkIg/Im33kPWty4WHf05SgjeeucWEANTJj1LEKaizJBdTituIqX2kE
-KWf62QvRDD3QjpQrLmic9Uap3l+//Rhq2gVpZWtLG1/dQLgvGaTRreGaFyaIj2jz
-1xKtAHh5TxzK2oRAtotOhqH+8zMYG7RBh5M8y+wO6q3DP4fx48RfboBScFEPPtsy
-l8lS4JSgNOAG8XJnh8jqREpE5ASlAKB07co9nBs5g0HtfhSNlzx9pRHiHtJrhJgO
-WyIUzPaNPhKuRkE55pa6
-=OWc2
------END PGP SIGNATURE-----
+And in seccomp add something like:
 
---Signature=_Fri__2_Mar_2012_16_03_05_+1100_CYpYzrlfOzNE7AjO--
+/*
+ * Does SECCOMP specific checks.
+ * Should be called after sk_chk_filter(), as it assumes all instructions
+ * are rewritten to the kernel enum format.
+ * No SKB touching instructions are allowed. Only data LD instruction allowed
+ * is BPF_S_LD_W_ABS, which will be handled by seccomp_load().
+ */
+int seccomp_check_filter(const struct sock_filter *filter, unsigned int flen)
+{
+	int pc;
+
+	/* Make sure there are no SKB using instructions */
+	for (pc = 0; pc < flen; pc++) {
+		u16 code = filter->code;
+		unsigned int k = filter->k;
+
+		if (code <= BPF_S_ALU_NEG)
+			continue;
+		if (code >= BPF_S_LDX_IMM && code < BPF_S_ANC_PROTOCOL)
+			continue;
+		switch (code) {
+		case BPF_S_LD_W_ABS:
+			filter->code = BPF_S_LD_W_SECCOMP;
+			if (k >= sizeof(struct seccomp_data) || k & 3)
+				return -EINVAL;
+			continue;
+		case BPF_S_LD_W_LEN:
+			filter->code = BPF_S_LD_IMM;
+			filter->k = sizeof(struct seccomp_data);
+			continue;
+		case BPF_S_LD_IMM:
+			continue;
+		case BPF_S_LDX_W_LEN:
+			filter->code = BPF_S_LDX_IMM;
+			filter->k = sizeof(struct seccomp_data);
+			continue;
+		default:
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+u32 seccomp_load(int off)
+{
+	u32 A;
+	struct pt_regs *regs = task_pt_regs(current);
+
+	if (off >= BPF_DATA(args[0]) && off < BPF_DATA(args[6])) {
+		int arg = (off - BPF_DATA(args[0])) / sizeof(u64);
+		int index = (off % sizeof(u64)) ? 1 : 0;
+		syscall_get_arguments(current, regs, arg, 1, &value);
+		A = get_u32(value, index);
+	} else if (off == BPF_DATA(nr)) {
+		A = syscall_get_nr(current, regs);
+	} else if (off == BPF_DATA(arch)) {
+		A = syscall_get_arch(current, regs);
+	} else if (off == BPF_DATA(instruction_pointer)) {
+		A = get_u32(KSTK_EIP(current), 0);
+	} else if (off == BPF_DATA(instruction_pointer) + sizeof(u32)) {
+		A = get_u32(KSTK_EIP(current), 1);
+	}
+	return A;
+}
+
+This way you can even add SECCOMP specific functions in the future by using
+special offsets. (E.g. 64-bit compare between an arg and scratch memory.)
+
+Greetings,
+
+Indan
