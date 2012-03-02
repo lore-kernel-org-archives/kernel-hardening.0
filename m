@@ -1,71 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 2 Mar 2012 11:47:05 +1100
+Date: Fri, 2 Mar 2012 14:10:38 +1100
 From: Stephen Rothwell <sfr@canb.auug.org.au>
-Message-Id: <20120302114705.0a9542e138927897f16282ca@canb.auug.org.au>
-In-Reply-To: <20120301233712.GS3990@outflux.net>
+Message-Id: <20120302141038.aaafc42b59ac7cf95d3553ed@canb.auug.org.au>
+In-Reply-To: <CAGXu5jL0OXR5MOePFe=GT4_X5rdH8RNjQPqYXdbqsqfijUsEqA@mail.gmail.com>
 References: <1330559620-23543-1-git-send-email-wad@chromium.org>
 	<20120301233712.GS3990@outflux.net>
+	<20120302114705.0a9542e138927897f16282ca@canb.auug.org.au>
+	<CAGXu5jL0OXR5MOePFe=GT4_X5rdH8RNjQPqYXdbqsqfijUsEqA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: multipart/signed; protocol="application/pgp-signature";
  micalg="PGP-SHA256";
- boundary="Signature=_Fri__2_Mar_2012_11_47_05_+1100_h/abhqDuE1mACIqp"
+ boundary="Signature=_Fri__2_Mar_2012_14_10_38_+1100_iimP6pwrK=tATLVh"
 Subject: [kernel-hardening] Re: [PATCH v12 01/13] sk_run_filter: add support for custom
  load_pointer
 To: Kees Cook <keescook@chromium.org>
 Cc: akpm@linux-foundation.org, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---Signature=_Fri__2_Mar_2012_11_47_05_+1100_h/abhqDuE1mACIqp
+--Signature=_Fri__2_Mar_2012_14_10_38_+1100_iimP6pwrK=tATLVh
 Content-Type: text/plain; charset=US-ASCII
 Content-Disposition: inline
 Content-Transfer-Encoding: quoted-printable
 
 Hi Kees,
 
-On Thu, 1 Mar 2012 15:37:12 -0800 Kees Cook <keescook@chromium.org> wrote:
+On Thu, 1 Mar 2012 16:57:49 -0800 Kees Cook <keescook@chromium.org> wrote:
 >
-> Is it time to pull this into -next so more people can feel it? I brought
-> Andy Lutomirski's patches forward (needed to bump the prctl values), and
-> updated my git tree. If we're ready, here it is in all its request-pull
-> format glory:
->=20
-> The following changes since commit 2422c8368337196594265d52cad7316c9404bf=
-cf:
->   Stephen Rothwell (1):
->         Add linux-next specific files for 20120301
+> Unfortunately, yes, it does -- there were both ptrace changes and prctl c=
+hanges.
+>
+> And at least the ptrace changes are, IIRC, in -mm, which has no tree.
+> :P Given that, what's the best thing for me to do for this to be easy
+> for you to pull?
 
-OK, not commenting on anything else, but I cannot merge that into
-linux-next because it is based on yesterday's linux-next release and
-linux-next (effectively) rebases every day ...
-
-Does this work depend on anything in linux-next?  Or could it be just
-based off Linus' tree.  If it depends on other tree(s) merged into
-linux-next, then you should base your tree on those tree(s) as long as
-they never get rebased ...
+Does this set of patches *depend* on functionality provided by those, or
+just produce conflicts against the other changes?  If it is just
+conflicts, then base your tree on Linus and I and (he when it comes to
+it) can fix the conflicts as needed (with some hints if you think it is a
+good idea i.e. is the conflicts are particularly complex).
 
 --=20
 Cheers,
 Stephen Rothwell                    sfr@canb.auug.org.au
 
---Signature=_Fri__2_Mar_2012_11_47_05_+1100_h/abhqDuE1mACIqp
+--Signature=_Fri__2_Mar_2012_14_10_38_+1100_iimP6pwrK=tATLVh
 Content-Type: application/pgp-signature
 
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.11 (GNU/Linux)
 
-iQIcBAEBCAAGBQJPUBiJAAoJEECxmPOUX5FEQUEQAKRncHlwgk6v47bUivEe7B48
-1D7ret2vYLOkiGY6oVmeT3B9xhAd7Q/Ig3EUBBGhn7Ar8tGoJP3Ih/ALWaQRI2Po
-+bf//JgYAGagTs8yzyejWc02qFn+pD6nqYKpKsNr/RUz5CS/cdxHRcPIsd86Le6H
-2xmRpMlWexE0Og374u9d/GqTomnhB3c5LVKgQQjpvqDfnDtpiPHxsoNlelE7ptb1
-JHuVqrt7VylupGE5gOoUbnfV3x1oNHBEURvSn9lca3BwE8rFc323igdC06LDZ0/3
-UkpqcGe7xfoWLsAzHLUgXCPt/wKYi/H43Z55GqQQBynOOhSM/kB4ONwi2Qcy1P/m
-exCmuklvaA+RdNyZAejkHmXzQreNtJg8avu7cwSkLGXmczatgA57T8iI8OH1ystN
-JM3jqKKa3Ca1l+c7n05Kv6aSHHXpyYyZftJOw1vmKzjlUwNCSjRLcmiK8sKw8/jQ
-uoNAbz0RmUTTC8ae+DOzQ3QdLk+x2EtAeLLZV15V4XJfd4jVOIObxC+weyOQiHqE
-7htsKNuntKhtr6INNpCL20Yp2v4otUGLD6xidvo3RqK7IoPvK1N/W59XQtK3ph0j
-sYdn2p7sKVwxygoDr7iklFjPG08wTff7gIE0NAg2vfCMUoN3ByS8UlBs1py8LV9m
-E0jd4rl2nsVzPwISWo/+
-=VW2P
+iQIcBAEBCAAGBQJPUDouAAoJEECxmPOUX5FE+FgP/2ciSTssakN+2+OPgebOgSZE
+kheNauQ21xKq5ADFPJ7rOhG5IBwrQAxrkBjfa79jwQq4pwIQTbi86leCazu6p/8R
+jZxC+fH7qDbMyhfcP3TnA4y/DuFni/7IhbStaA6naj8qLHgHzn1O5/aSgBngFPV5
+gfK9G58ZalygySgw21amEW2WUk4+b8GcnUOnI3suqSTBwqgw7Etke8QXXrca+WOn
+al/40C5H1HH/gMmfA65ClmgKdZO5gruz+jtraaopFc43dVxgxUlrk497O8bkDyxw
+aO5/WpgmJl3lLxoBtat6Is91AvJga1FaLUH/b9dJGXeipVdbU+9g+CfG4PBC9KVW
+ltydGrJiuuaKO+pnMhcpe2WM3UEmX/vX6s+wn2XfUjIuwUEmVg7upo78suCKfLG/
+YToUv+uZlsgDrWK7eDPy2OvoidroRRs5j5U7lut7DsA0nJlo/EZfpaAs+KrmGZjJ
+u6vUm5Su4BisU9hihrT97ytlQfpyuWezX019M1btSHRhJiEsdwtuB1zPedNMw1/6
+GnSsEkvxDPMfASIj4X23KVeioext4ZsV9WCI7nxmj1f/9FdMnpYSFJv+wEB5bPs0
+0dsWzVMWAXTSKsAQcfvlzSm/LNFNIoE4Ne37/Spu1uNHJlsMr2C+fhpz5uXHNmhP
+uGdv7WPzJgOV2rnjYaEa
+=/L5q
 -----END PGP SIGNATURE-----
 
---Signature=_Fri__2_Mar_2012_11_47_05_+1100_h/abhqDuE1mACIqp--
+--Signature=_Fri__2_Mar_2012_14_10_38_+1100_iimP6pwrK=tATLVh--
