@@ -1,169 +1,229 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <26411fc25ada53b95e90b6a5fa85ad44.squirrel@webmail.greenhost.nl>
+Date: Fri, 2 Mar 2012 18:24:55 +0000
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20120302182455.GA11308@mail.hallyn.com>
 References: <1330559620-23543-1-git-send-email-wad@chromium.org>
-	<26411fc25ada53b95e90b6a5fa85ad44.squirrel@webmail.greenhost.nl>
-Date: Fri, 2 Mar 2012 12:47:51 -0600
-Message-ID: <CABqD9hYjdv5LOUKkD7ydddCA0MwLv69rq+GWAEaPaG7=dgYoiQ@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v12 01/13] sk_run_filter: add support for custom load_pointer
-To: Indan Zupancic <indan@nul.nu>, Eric Dumazet <eric.dumazet@gmail.com>, netdev@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+ <1330559620-23543-7-git-send-email-wad@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1330559620-23543-7-git-send-email-wad@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v12 07/13] seccomp: add SECCOMP_RET_ERRNO
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 2, 2012 at 4:40 AM, Indan Zupancic <indan@nul.nu> wrote:
-> Hello,
->
-> On Thu, March 1, 2012 00:53, Will Drewry wrote:
->> =A0include/linux/filter.h | =A0 46 +++++++++++++++++++
->> =A0net/core/filter.c =A0 =A0 =A0| =A0117 +++++++++++++++++++++++++++++++=
-++++++++++++++---
->> =A02 files changed, 157 insertions(+), 6 deletions(-)
->
-> I propose a slightly different approach:
->
-> Instead of more or less allowing generic load instructions, do the
-> same as the ancillary data functions and only allow BPF_S_LD_W_ABS.
-> In addition to that, rewrite and check the functions ourself after
-> sk_chk_filter() has done its checks.
->
-> Diff for filter.c:
->
-> diff --git a/include/linux/filter.h b/include/linux/filter.h
-> index 8eeb205..63b728c 100644
-> --- a/include/linux/filter.h
-> +++ b/include/linux/filter.h
-> @@ -228,6 +228,7 @@ enum {
-> =A0 =A0 =A0 =A0BPF_S_ANC_HATYPE,
-> =A0 =A0 =A0 =A0BPF_S_ANC_RXHASH,
-> =A0 =A0 =A0 =A0BPF_S_ANC_CPU,
-> + =A0 =A0 =A0 BPF_S_LD_W_SECCOMP,
-> =A0};
->
-> =A0#endif /* __KERNEL__ */
-> diff --git a/net/core/filter.c b/net/core/filter.c
-> index 5dea452..7e338d6 100644
-> --- a/net/core/filter.c
-> +++ b/net/core/filter.c
-> @@ -350,6 +350,9 @@ load_b:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D 0;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0}
-> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 case BPF_S_LD_W_SECCOMP:
-> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 A =3D seccomp_load(fentry->=
-k);
-> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 continue;
+Quoting Will Drewry (wad@chromium.org):
+> This change adds the SECCOMP_RET_ERRNO as a valid return value from a
+> seccomp filter.  Additionally, it makes the first use of the lower
+> 16-bits for storing a filter-supplied errno.  16-bits is more than
+> enough for the errno-base.h calls.
+> 
+> Returning errors instead of immediately terminating processes that
+> violate seccomp policy allow for broader use of this functionality
+> for kernel attack surface reduction.  For example, a linux container
+> could maintain a whitelist of pre-existing system calls but drop
+> all new ones with errnos.  This would keep a logically static attack
+> surface while providing errnos that may allow for graceful failure
+> without the downside of do_exit() on a bad call.
+> 
+> v12: - move to WARN_ON if filter is NULL
+>        (oleg@redhat.com, luto@mit.edu, keescook@chromium.org)
+>      - return immediately for filter==NULL (keescook@chromium.org)
+>      - change evaluation to only compare the ACTION so that layered
+>        errnos don't result in the lowest one being returned.
+>        (keeschook@chromium.org)
+> v11: - check for NULL filter (keescook@chromium.org)
+> v10: - change loaders to fn
+>  v9: - n/a
+>  v8: - update Kconfig to note new need for syscall_set_return_value.
+>      - reordered such that TRAP behavior follows on later.
+>      - made the for loop a little less indent-y
+>  v7: - introduced
+> 
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Will Drewry <wad@chromium.org>
 
-This is plenty nice as far as I'm concerned.  I wonder what the
-networking people think?
+Clever :)
 
-I proposed a generic bpf interface, but if simply scoping it down to a
-single additional seccomp instruction is okay, then we can address
-additional instruction support or other generalizations later when
-there is a motivating case.
+Thanks, Will.
 
+For patches 1-7,
 
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0default:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0WARN_RATELIMIT(1, "Unknown=
- code:%u jt:%u tf:%u k:%u\n",
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =
-=A0 fentry->code, fentry->jt,
+Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
+
+The -1 return value from __secure_computing_int() seems like it
+could stand  #define, like
+
+#define SECCOMP_DONTRUN -1
+#define SECCOMP_RUN 0
+
+or something Maybe not, but -1 always scares me and I had to look back
+and forth a few times to make sure it was doing what I would want.
+
+(I've only quickly looked at the following ones.   I had no
+objection, but didn't seriously review them.)
+
 > ---
->
-> And in seccomp add something like:
->
-> /*
-> =A0* Does SECCOMP specific checks.
-> =A0* Should be called after sk_chk_filter(), as it assumes all instructio=
-ns
-> =A0* are rewritten to the kernel enum format.
-> =A0* No SKB touching instructions are allowed. Only data LD instruction a=
-llowed
-> =A0* is BPF_S_LD_W_ABS, which will be handled by seccomp_load().
-> =A0*/
-> int seccomp_check_filter(const struct sock_filter *filter, unsigned int f=
-len)
-> {
-> =A0 =A0 =A0 =A0int pc;
->
-> =A0 =A0 =A0 =A0/* Make sure there are no SKB using instructions */
-> =A0 =A0 =A0 =A0for (pc =3D 0; pc < flen; pc++) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0u16 code =3D filter->code;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0unsigned int k =3D filter->k;
->
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0if (code <=3D BPF_S_ALU_NEG)
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0if (code >=3D BPF_S_LDX_IMM && code < BPF_=
-S_ANC_PROTOCOL)
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0switch (code) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0case BPF_S_LD_W_ABS:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0filter->code =3D BPF_S_LD_=
-W_SECCOMP;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0if (k >=3D sizeof(struct s=
-eccomp_data) || k & 3)
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return -EI=
-NVAL;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0case BPF_S_LD_W_LEN:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0filter->code =3D BPF_S_LD_=
-IMM;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0filter->k =3D sizeof(struc=
-t seccomp_data);
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0case BPF_S_LD_IMM:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0case BPF_S_LDX_W_LEN:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0filter->code =3D BPF_S_LDX=
-_IMM;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0filter->k =3D sizeof(struc=
-t seccomp_data);
-
-Mapping to LD[X]_IMM is really nice.
-
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0continue;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0default:
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return -EINVAL;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0}
-> =A0 =A0 =A0 =A0}
-> =A0 =A0 =A0 =A0return 0;
-> }
->
-> u32 seccomp_load(int off)
-> {
-> =A0 =A0 =A0 =A0u32 A;
-> =A0 =A0 =A0 =A0struct pt_regs *regs =3D task_pt_regs(current);
->
-> =A0 =A0 =A0 =A0if (off >=3D BPF_DATA(args[0]) && off < BPF_DATA(args[6]))=
- {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0int arg =3D (off - BPF_DATA(args[0])) / si=
-zeof(u64);
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0int index =3D (off % sizeof(u64)) ? 1 : 0;
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0syscall_get_arguments(current, regs, arg, =
-1, &value);
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D get_u32(value, index);
-> =A0 =A0 =A0 =A0} else if (off =3D=3D BPF_DATA(nr)) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D syscall_get_nr(current, regs);
-> =A0 =A0 =A0 =A0} else if (off =3D=3D BPF_DATA(arch)) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D syscall_get_arch(current, regs);
-> =A0 =A0 =A0 =A0} else if (off =3D=3D BPF_DATA(instruction_pointer)) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D get_u32(KSTK_EIP(current), 0);
-> =A0 =A0 =A0 =A0} else if (off =3D=3D BPF_DATA(instruction_pointer) + size=
-of(u32)) {
-> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0A =3D get_u32(KSTK_EIP(current), 1);
-> =A0 =A0 =A0 =A0}
-> =A0 =A0 =A0 =A0return A;
-> }
->
-> This way you can even add SECCOMP specific functions in the future by usi=
-ng
-> special offsets. (E.g. 64-bit compare between an arg and scratch memory.)
-
-Yeah this would be a nice option if a more specialized (yet less
-invasive) approach is appealing to the networking people.  Eric, Joe,
-netdev, ... any opinions?  Would a standalone version be more useful?
-
-Thanks!
-will
+>  arch/Kconfig            |    6 ++++--
+>  include/linux/seccomp.h |   15 +++++++++++----
+>  kernel/seccomp.c        |   43 ++++++++++++++++++++++++++++++++++---------
+>  3 files changed, 49 insertions(+), 15 deletions(-)
+> 
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 7a696a9..1350d07 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -237,8 +237,10 @@ config HAVE_ARCH_SECCOMP_FILTER
+>  	bool
+>  	help
+>  	  This symbol should be selected by an architecure if it provides
+> -	  asm/syscall.h, specifically syscall_get_arguments() and
+> -	  syscall_get_arch().
+> +	  asm/syscall.h, specifically syscall_get_arguments(),
+> +	  syscall_get_arch(), and syscall_set_return_value().  Additionally,
+> +	  its system call entry path must respect a return value of -1 from
+> +	  __secure_computing_int() and/or secure_computing().
+>  
+>  config SECCOMP_FILTER
+>  	def_bool y
+> diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
+> index 6ef133c..a81fccd 100644
+> --- a/include/linux/seccomp.h
+> +++ b/include/linux/seccomp.h
+> @@ -12,13 +12,14 @@
+>  
+>  /*
+>   * All BPF programs must return a 32-bit value.
+> - * The bottom 16-bits are reserved for future use.
+> + * The bottom 16-bits are for optional return data.
+>   * The upper 16-bits are ordered from least permissive values to most.
+>   *
+>   * The ordering ensures that a min_t() over composed return values always
+>   * selects the least permissive choice.
+>   */
+>  #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
+> +#define SECCOMP_RET_ERRNO	0x00030000U /* returns an errno */
+>  #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
+>  
+>  /* Masks for the return value sections. */
+> @@ -64,11 +65,17 @@ struct seccomp {
+>  	struct seccomp_filter *filter;
+>  };
+>  
+> -extern void __secure_computing(int);
+> -static inline void secure_computing(int this_syscall)
+> +/*
+> + * Direct callers to __secure_computing should be updated as
+> + * CONFIG_HAVE_ARCH_SECCOMP_FILTER propagates.
+> + */
+> +extern void __secure_computing(int) __deprecated;
+> +extern int __secure_computing_int(int);
+> +static inline int secure_computing(int this_syscall)
+>  {
+>  	if (unlikely(test_thread_flag(TIF_SECCOMP)))
+> -		__secure_computing(this_syscall);
+> +		return  __secure_computing_int(this_syscall);
+> +	return 0;
+>  }
+>  
+>  extern long prctl_get_seccomp(void);
+> diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+> index 71df324..88dd568 100644
+> --- a/kernel/seccomp.c
+> +++ b/kernel/seccomp.c
+> @@ -137,21 +137,25 @@ static void *bpf_load(const void *nr, int off, unsigned int size, void *buf)
+>  static u32 seccomp_run_filters(int syscall)
+>  {
+>  	struct seccomp_filter *f;
+> -	u32 ret = SECCOMP_RET_KILL;
+>  	static const struct bpf_load_fn fns = {
+>  		bpf_load,
+>  		sizeof(struct seccomp_data),
+>  	};
+> +	u32 ret = SECCOMP_RET_ALLOW;
+>  	const void *sc_ptr = (const void *)(uintptr_t)syscall;
+>  
+> +	/* Ensure unexpected behavior doesn't result in failing open. */
+> +	if (WARN_ON(current->seccomp.filter == NULL))
+> +		return SECCOMP_RET_KILL;
+> +
+>  	/*
+>  	 * All filters are evaluated in order of youngest to oldest. The lowest
+> -	 * BPF return value always takes priority.
+> +	 * BPF return value (ignoring the DATA) always takes priority.
+>  	 */
+>  	for (f = current->seccomp.filter; f; f = f->prev) {
+> -		ret = bpf_run_filter(sc_ptr, f->insns, &fns);
+> -		if (ret != SECCOMP_RET_ALLOW)
+> -			break;
+> +		u32 cur_ret = bpf_run_filter(sc_ptr, f->insns, &fns);
+> +		if ((cur_ret & SECCOMP_RET_ACTION) < (ret & SECCOMP_RET_ACTION))
+> +			ret = cur_ret;
+>  	}
+>  	return ret;
+>  }
+> @@ -289,6 +293,13 @@ static int mode1_syscalls_32[] = {
+>  
+>  void __secure_computing(int this_syscall)
+>  {
+> +	/* Filter calls should never use this function. */
+> +	BUG_ON(current->seccomp.mode == SECCOMP_MODE_FILTER);
+> +	__secure_computing_int(this_syscall);
+> +}
+> +
+> +int __secure_computing_int(int this_syscall)
+> +{
+>  	int mode = current->seccomp.mode;
+>  	int exit_code = SIGKILL;
+>  	int *syscall;
+> @@ -302,16 +313,29 @@ void __secure_computing(int this_syscall)
+>  #endif
+>  		do {
+>  			if (*syscall == this_syscall)
+> -				return;
+> +				return 0;
+>  		} while (*++syscall);
+>  		break;
+>  #ifdef CONFIG_SECCOMP_FILTER
+> -	case SECCOMP_MODE_FILTER:
+> -		if (seccomp_run_filters(this_syscall) == SECCOMP_RET_ALLOW)
+> -			return;
+> +	case SECCOMP_MODE_FILTER: {
+> +		u32 action = seccomp_run_filters(this_syscall);
+> +		switch (action & SECCOMP_RET_ACTION) {
+> +		case SECCOMP_RET_ERRNO:
+> +			/* Set the low-order 16-bits as a errno. */
+> +			syscall_set_return_value(current, task_pt_regs(current),
+> +						 -(action & SECCOMP_RET_DATA),
+> +						 0);
+> +			return -1;
+> +		case SECCOMP_RET_ALLOW:
+> +			return 0;
+> +		case SECCOMP_RET_KILL:
+> +		default:
+> +			break;
+> +		}
+>  		seccomp_filter_log_failure(this_syscall);
+>  		exit_code = SIGSYS;
+>  		break;
+> +	}
+>  #endif
+>  	default:
+>  		BUG();
+> @@ -322,6 +346,7 @@ void __secure_computing(int this_syscall)
+>  #endif
+>  	audit_seccomp(this_syscall);
+>  	do_exit(exit_code);
+> +	return -1;	/* never reached */
+>  }
+>  
+>  long prctl_get_seccomp(void)
+> -- 
+> 1.7.5.4
+> 
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-kernel" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+> Please read the FAQ at  http://www.tux.org/lkml/
