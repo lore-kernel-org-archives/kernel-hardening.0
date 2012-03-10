@@ -1,175 +1,278 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Djalal Harouni <tixxdz@opendz.org>
-Date: Sun, 11 Mar 2012 00:25:17 +0100
-Message-Id: <1331421919-15499-8-git-send-email-tixxdz@opendz.org>
+Date: Sun, 11 Mar 2012 00:25:18 +0100
+Message-Id: <1331421919-15499-9-git-send-email-tixxdz@opendz.org>
 In-Reply-To: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
 References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] [PATCH 7/9] proc: protect /proc/<pid>/{maps,smaps,numa_maps}
+Subject: [kernel-hardening] [PATCH 8/9] proc: protect /proc/<pid>/{environ,pagemap} across execve
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, Oleg Nesterov <oleg@redhat.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org
 Cc: Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Djalal Harouni <tixxdz@opendz.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Protect the /proc/<pid>/{maps,smaps,numa_maps} files from reader across
-execve by checking its exec_id.
+The /proc/<pid>/{environ,pagemap} are sensitive files which must be
+protected across execve to avoid information leaks.
 
-The best solution should be to bind these files to their task by using the
-target's exec_id and to perform permission checks at each syscall, but
-currently this is not possible, it will break glibc FORTIFY_SOURCE
-protection. For the moment the exec_id check is against the reader to be
-sure that the reader process is not playing tricks and did not perform an
-execve at read time.
+These files are protected by attaching them to their task at open time by
+saving the exec_id of the target task, this way in read we just compare
+the target task's exec_id and the previously saved exec_id of the
+proc_file_private struct, in other words we just bind these files to their
+appropriate process image at open time. We do this since we are able to do
+proper permission checks (ptrace) at each syscall, so we do not care about
+the reader.
 
-Use the new 'proc_file_private' struct to protect these sensitive files,
-this struct can store and handle all the
-/proc/<pid>/{maps,smaps,numa_maps} internal data.
+Another important rule is to set the exec_id of the target task before the
+permission checks at open, this way we do not race against target task
+execve, and it will be more effective if the exec_id check at read/write
+times are delayed as much as possible to be sure that the target task do
+not change during execve.
 
-The proc_exec_id_ok() check is performed inside the functions that are
-responsible of constructing and reporting results.
+This patch adds the open file_operation to the
+/proc/<pid>/{environ,pagemap} so we are able to set the exec_id of the
+target task and to do the appropriate permission checks. The exec_id check
+is done in the related read file_operation.
 
-Cc: Vasiliy Kulikov <segoon@openwall.com>
-Cc: Solar Designer <solar@openwall.com>
 Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
 ---
- fs/proc/task_mmu.c |   37 ++++++++++++++++++++++++++-----------
- 1 files changed, 26 insertions(+), 11 deletions(-)
+ fs/proc/base.c     |   85 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ fs/proc/task_mmu.c |   69 +++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 148 insertions(+), 6 deletions(-)
 
-diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
-index 7dcd2a2..96a0e4a 100644
---- a/fs/proc/task_mmu.c
-+++ b/fs/proc/task_mmu.c
-@@ -90,7 +90,7 @@ static void pad_len_spaces(struct seq_file *m, int len)
- 	seq_printf(m, "%*c", len, ' ');
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 0a5383e..536cd65 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -882,15 +882,66 @@ static const struct file_operations proc_mem_operations = {
+ 	.release	= mem_release,
+ };
+ 
++static int environ_open(struct inode *inode, struct file *filp)
++{
++	struct proc_file_private *priv;
++	struct mm_struct *mm;
++	struct task_struct *task;
++	int ret = -ENOMEM;
++
++	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return ret;
++
++	ret = -ESRCH;
++	task = get_proc_task(filp->f_path.dentry->d_inode);
++	if (!task)
++		goto out_free;
++
++	/*
++	 * Use target task's exec_id to bind the file to the task.
++	 * Setup exec_id first then check for permissions.
++	 */
++	priv->exec_id = get_task_exec_id(task);
++	mm = mm_for_maps(task);
++	put_task_struct(task);
++
++	if (!mm) {
++		ret = -ENOENT;
++		goto out_free;
++	}
++
++	if (IS_ERR(mm)) {
++		ret = PTR_ERR(mm);
++		goto out_free;
++	}
++
++	filp->private_data = priv;
++	/* do not pin mm */
++	mmput(mm);
++
++	return 0;
++
++out_free:
++	kfree(priv);
++	return ret;
++}
++
+ static ssize_t environ_read(struct file *file, char __user *buf,
+ 			size_t count, loff_t *ppos)
+ {
+-	struct task_struct *task = get_proc_task(file->f_dentry->d_inode);
++	struct proc_file_private *priv = file->private_data;
++	struct task_struct *task;
+ 	char *page;
+ 	unsigned long src = *ppos;
+-	int ret = -ESRCH;
++	int ret = 0;
+ 	struct mm_struct *mm;
+ 
++	if (!priv)
++		return ret;
++
++	ret = -ESRCH;
++	task = get_proc_task(file->f_dentry->d_inode);
+ 	if (!task)
+ 		goto out_no_task;
+ 
+@@ -901,9 +952,15 @@ static ssize_t environ_read(struct file *file, char __user *buf,
+ 
+ 
+ 	mm = mm_for_maps(task);
+-	ret = PTR_ERR(mm);
+-	if (!mm || IS_ERR(mm))
++	if (!mm) {
++		ret = -ENOENT;
++		goto out_free;
++	}
++
++	if (IS_ERR(mm)) {
++		ret = PTR_ERR(mm);
+ 		goto out_free;
++	}
+ 
+ 	ret = 0;
+ 	while (count > 0) {
+@@ -925,6 +982,16 @@ static ssize_t environ_read(struct file *file, char __user *buf,
+ 			break;
+ 		}
+ 
++		/*
++		 * Delay the check since access_process_vm() operates
++		 * on a task.
++		 */
++		if (!proc_exec_id_ok(task, priv)) {
++			/* There was an execv */
++			ret = 0;
++			break;
++		}
++
+ 		if (copy_to_user(buf, page, retval)) {
+ 			ret = -EFAULT;
+ 			break;
+@@ -946,9 +1013,19 @@ out_no_task:
+ 	return ret;
  }
  
--static void vma_stop(struct proc_maps_private *priv, struct vm_area_struct *vma)
-+static void vma_stop(struct proc_file_private *priv, struct vm_area_struct *vma)
- {
- 	if (vma && vma != priv->tail_vma) {
- 		struct mm_struct *mm = vma->vm_mm;
-@@ -101,7 +101,7 @@ static void vma_stop(struct proc_maps_private *priv, struct vm_area_struct *vma)
++static int environ_release(struct inode *inode, struct file *filp)
++{
++	struct proc_file_private *priv = filp->private_data;
++
++	kfree(priv);
++	return 0;
++}
++
+ static const struct file_operations proc_environ_operations = {
++	.open		= environ_open,
+ 	.read		= environ_read,
+ 	.llseek		= generic_file_llseek,
++	.release	= environ_release,
+ };
  
- static void *m_start(struct seq_file *m, loff_t *pos)
- {
--	struct proc_maps_private *priv = m->private;
-+	struct proc_file_private *priv = m->private;
- 	unsigned long last_addr = m->version;
- 	struct mm_struct *mm;
- 	struct vm_area_struct *vma, *tail_vma = NULL;
-@@ -168,7 +168,7 @@ out:
- 
- static void *m_next(struct seq_file *m, void *v, loff_t *pos)
- {
--	struct proc_maps_private *priv = m->private;
-+	struct proc_file_private *priv = m->private;
- 	struct vm_area_struct *vma = v;
- 	struct vm_area_struct *tail_vma = priv->tail_vma;
- 
-@@ -181,7 +181,7 @@ static void *m_next(struct seq_file *m, void *v, loff_t *pos)
- 
- static void m_stop(struct seq_file *m, void *v)
- {
--	struct proc_maps_private *priv = m->private;
-+	struct proc_file_private *priv = m->private;
- 	struct vm_area_struct *vma = v;
- 
- 	if (!IS_ERR(vma))
-@@ -193,15 +193,20 @@ static void m_stop(struct seq_file *m, void *v)
- static int do_maps_open(struct inode *inode, struct file *file,
- 			const struct seq_operations *ops)
- {
--	struct proc_maps_private *priv;
+ static ssize_t oom_adjust_read(struct file *file, char __user *buf,
+diff --git a/fs/proc/task_mmu.c b/fs/proc/task_mmu.c
+index 96a0e4a..5b00969 100644
+--- a/fs/proc/task_mmu.c
++++ b/fs/proc/task_mmu.c
+@@ -770,13 +770,59 @@ static int pagemap_hugetlb_range(pte_t *pte, unsigned long hmask,
+  */
+ #define PAGEMAP_WALK_SIZE	(PMD_SIZE)
+ #define PAGEMAP_WALK_MASK	(PMD_MASK)
++static int pagemap_open(struct inode *inode, struct file *filp)
++{
 +	struct proc_file_private *priv;
- 	int ret = -ENOMEM;
- 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
- 	if (priv) {
--		priv->pid = proc_pid(inode);
-+		/*
-+		 * Use current's exec_id since currently there are no
-+		 * permission checks at open.
-+		 */
-+		priv->exec_id = get_task_exec_id(current);
- 		ret = seq_open(file, ops);
- 		if (!ret) {
- 			struct seq_file *m = file->private_data;
- 			m->private = priv;
-+			priv->pid = proc_pid(inode);
- 		} else {
- 			kfree(priv);
- 		}
-@@ -278,9 +283,12 @@ static void show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
- static int show_map(struct seq_file *m, void *v)
- {
- 	struct vm_area_struct *vma = v;
--	struct proc_maps_private *priv = m->private;
-+	struct proc_file_private *priv = m->private;
- 	struct task_struct *task = priv->task;
- 
-+	if (!proc_exec_id_ok(current, priv))
-+		return 0;
++	struct mm_struct *mm;
++	struct task_struct *task;
++	int ret = -ENOMEM;
 +
- 	show_map_vma(m, vma);
- 
- 	if (m->count < m->size)  /* vma is copied successfully */
-@@ -424,7 +432,7 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
- 
- static int show_smap(struct seq_file *m, void *v)
- {
--	struct proc_maps_private *priv = m->private;
-+	struct proc_file_private *priv = m->private;
- 	struct task_struct *task = priv->task;
- 	struct vm_area_struct *vma = v;
- 	struct mem_size_stats mss;
-@@ -434,6 +442,9 @@ static int show_smap(struct seq_file *m, void *v)
- 		.private = &mss,
- 	};
- 
-+	if (!proc_exec_id_ok(current, priv))
-+		return 0;
++	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return ret;
 +
- 	memset(&mss, 0, sizeof mss);
- 	mss.vma = vma;
- 	/* mmap_sem is held in m_start */
-@@ -878,7 +889,7 @@ struct numa_maps {
++	ret = -ESRCH;
++	task = get_proc_task(filp->f_path.dentry->d_inode);
++	if (!task)
++		goto out_free;
++
++	/*
++	 * Use target task's exec_id to bind the file to the task.
++	 * Setup exec_id first then check for permissions.
++	 */
++	priv->exec_id = get_task_exec_id(task);
++	mm = mm_for_maps(task);
++	put_task_struct(task);
++
++	if (!mm) {
++		ret = -ENOENT;
++		goto out_free;
++	}
++
++	if (IS_ERR(mm)) {
++		ret = PTR_ERR(mm);
++		goto out_free;
++	}
++
++	filp->private_data = priv;
++	/* do not pin mm */
++	mmput(mm);
++
++	return 0;
++
++out_free:
++	kfree(priv);
++	return ret;
++}
++
+ static ssize_t pagemap_read(struct file *file, char __user *buf,
+ 			    size_t count, loff_t *ppos)
+ {
+-	struct task_struct *task = get_proc_task(file->f_path.dentry->d_inode);
++	struct proc_file_private *priv = file->private_data;
++	struct task_struct *task;
+ 	struct mm_struct *mm;
+ 	struct pagemapread pm;
+-	int ret = -ESRCH;
++	int ret = 0;
+ 	struct mm_walk pagemap_walk = {};
+ 	unsigned long src;
+ 	unsigned long svpfn;
+@@ -784,6 +830,11 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+ 	unsigned long end_vaddr;
+ 	int copied = 0;
+ 
++	if (!priv)
++		return ret;
++
++	ret = -ESRCH;
++	task = get_proc_task(file->f_path.dentry->d_inode);
+ 	if (!task)
+ 		goto out;
+ 
+@@ -831,6 +882,10 @@ static ssize_t pagemap_read(struct file *file, char __user *buf,
+ 	 * will stop when we hit the end of the buffer.
+ 	 */
+ 	ret = 0;
++	if (!proc_exec_id_ok(task, priv))
++		/* There was an execve */
++		goto out_mm;
++
+ 	while (count && (start_vaddr < end_vaddr)) {
+ 		int len;
+ 		unsigned long end;
+@@ -868,9 +923,19 @@ out:
+ 	return ret;
+ }
+ 
++static int pagemap_release(struct inode *inode, struct file *filp)
++{
++	struct proc_file_private *priv = filp->private_data;
++
++	kfree(priv);
++	return 0;
++}
++
+ const struct file_operations proc_pagemap_operations = {
++	.open		= pagemap_open,
+ 	.llseek		= mem_lseek, /* borrow this */
+ 	.read		= pagemap_read,
++	.release	= pagemap_release,
  };
+ #endif /* CONFIG_PROC_PAGE_MONITOR */
  
- struct numa_maps_private {
--	struct proc_maps_private proc_maps;
-+	struct proc_file_private proc_maps;
- 	struct numa_maps md;
- };
- 
-@@ -1005,7 +1016,7 @@ static int gather_hugetbl_stats(pte_t *pte, unsigned long hmask,
- static int show_numa_map(struct seq_file *m, void *v)
- {
- 	struct numa_maps_private *numa_priv = m->private;
--	struct proc_maps_private *proc_priv = &numa_priv->proc_maps;
-+	struct proc_file_private *proc_priv = &numa_priv->proc_maps;
- 	struct vm_area_struct *vma = v;
- 	struct numa_maps *md = &numa_priv->md;
- 	struct file *file = vma->vm_file;
-@@ -1018,6 +1029,9 @@ static int show_numa_map(struct seq_file *m, void *v)
- 	if (!mm)
- 		return 0;
- 
-+	if (!proc_exec_id_ok(current, proc_priv))
-+		return 0;
-+
- 	/* Ensure we start with an empty set of numa_maps statistics. */
- 	memset(md, 0, sizeof(*md));
- 
-@@ -1097,11 +1111,12 @@ static int numa_maps_open(struct inode *inode, struct file *file)
- 	int ret = -ENOMEM;
- 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
- 	if (priv) {
--		priv->proc_maps.pid = proc_pid(inode);
-+		priv->proc_maps.exec_id = get_task_exec_id(current);
- 		ret = seq_open(file, &proc_pid_numa_maps_op);
- 		if (!ret) {
- 			struct seq_file *m = file->private_data;
- 			m->private = priv;
-+			priv->proc_maps.pid = proc_pid(inode);
- 		} else {
- 			kfree(priv);
- 		}
 -- 
 1.7.1
