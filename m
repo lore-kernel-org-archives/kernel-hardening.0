@@ -1,38 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sun, 11 Mar 2012 18:25:12 +0100
+From: Oleg Nesterov <oleg@redhat.com>
+Message-ID: <20120311172512.GA2729@redhat.com>
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> <1331421919-15499-2-git-send-email-tixxdz@opendz.org>
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20120311174953.GB2729@redhat.com>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
- <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <20120311172512.GA2729@redhat.com>
- <20120311174953.GB2729@redhat.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Sun, 11 Mar 2012 11:02:35 -0700
-Message-ID: <CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: self_exec_id/parent_exec_id && CLONE_PARENT
-To: Oleg Nesterov <oleg@redhat.com>
-Cc: Djalal Harouni <tixxdz@opendz.org>, Alan Cox <alan@lxorguk.ukuu.org.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1331421919-15499-2-git-send-email-tixxdz@opendz.org>
+Subject: [kernel-hardening] Re: [PATCH 1/9] exec: add a global execve counter
+To: Djalal Harouni <tixxdz@opendz.org>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 11, 2012 at 10:49 AM, Oleg Nesterov <oleg@redhat.com> wrote:
+On 03/11, Djalal Harouni wrote:
 >
-> I am also asking because the change above looks like the fix to me.
-> The child must not control its ->exit_signal, it is the parent who
-> decides which signal the child should use for notification.
+> --- a/include/linux/sched.h
+> +++ b/include/linux/sched.h
+> @@ -1420,6 +1420,9 @@ struct task_struct {
+>  #endif
+>  	seccomp_t seccomp;
 >
-> And to me, clone(CLONE_PARENT | SIGXXX) looks like a violation of
-> rule above.
+> +/* Execve counter: will be used to check if objects belong to the appropriate
+> + * process image */
+> +	atomic64_t exec_id;
+>  /* Thread group tracking */
+>     	u32 parent_exec_id;
+>     	u32 self_exec_id;
 
-SIGXXX is for doing things like AIO with threads, but it would never
-be used together with CLONE_PARENT, that would be odd and wrong.
+Well, I don't think it is right to add this counter into task_struct.
 
-So I think we could disallow that - or at least try. See if anybody
-notices, and if it breaks anything.
+It should be per-process, signal_struct makes more sense. Or may be
+mm_struct.
 
-The rule about the Linux ABI is not that the ABI is set in stone. It's
-that we can't break any existing binaries. And *maybe* there are users
-of CLONE_PARENT and special signals, but it sounds unlikely and would
-probably confuse real programs. So feel free to just try it (early in
-the 3.4 merge window - not at this point, though).
+Btw this is also true for parent_exec_id/self_exec_id, but this is
+another story.
 
-                    Linus
+Oleg.
