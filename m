@@ -1,50 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 11 Mar 2012 01:27:25 +0100
-From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20120311002725.GA4310@dztty>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
- <CA+55aFwdOgt=C52APPyvnAitcWNbzu-uXRi43m4bLS85oDgtqA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFwdOgt=C52APPyvnAitcWNbzu-uXRi43m4bLS85oDgtqA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 0/9] proc: protect /proc/<pid>/* files across execve
-To: Linus Torvalds <torvalds@linux-foundation.org>
+Sender: linus971@gmail.com
+In-Reply-To: <CA+55aFzTXuvpqjDUtjN48cc3RWADryddVXxc2RQhj6sCK=V9ag@mail.gmail.com>
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
+ <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <CA+55aFzTXuvpqjDUtjN48cc3RWADryddVXxc2RQhj6sCK=V9ag@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sat, 10 Mar 2012 16:36:12 -0800
+Message-ID: <CA+55aFy-ktC3NG5Wc+vhWB+18aqj9a0VLUSKQg+KR=FsVqfoJQ@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [PATCH 1/9] exec: add a global execve counter
+To: Djalal Harouni <tixxdz@opendz.org>
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, Oleg Nesterov <oleg@redhat.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Mar 10, 2012 at 04:01:09PM -0800, Linus Torvalds wrote:
-> On Sat, Mar 10, 2012 at 3:25 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >
-> > 1) Use the target exec_id to bind files to their exec_id task:
-> >
-> > For the REG files /proc/<pid>/{environ,pagemap,mem} we set the exec_id
-> > of the proc_file_private to the target task, and we continue with
-> > permission checks at open time, later on each read/write call the
-> > permission checks are done + check the target exec_id if it equals the
-> > exec_id of the proc_file_private that was set at open time, in other words
-> > we bind the file to its task's exec_id, this way new exec programs can not
-> > operate on the passed fd.
-> 
-> So the exec_id approach was totally broken when it was used for
-> /proc/<pid>/mem, is there any reason to believe it's a good idea now?
-Yes the previously one was broken since it was not a global uniq exec_id,
-it was designed for threads tracking.
+On Sat, Mar 10, 2012 at 4:12 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+>
+> I wonder if we couldn't make something much cheaper, since we don't
+> actually care about it being globally incrementing, we just care about
+> it being globally unique.
 
-The current one is a global exec_id with uniq IDs, incremented on each
-do_execve_common() call.
+Actually, we don't even need it to be "globally unique" afaik. It
+really needs to be "relatively unique", since it's always compared
+within the confines of a particular task.
 
-> It's entirely predictable, and you can make the exec_id match by
-> simply forking elsewhere and then passing the fd around using unix
-> domain sockets, since the exec_id is just updated by incrementing a
-> counter.
-For the fork one yes exec_id will match but we have the permission
-checks (ptrace) at each syscall, so even if two processes share the same
-exec_id the ptrace check should fail.
+So the problem with using the existing "self_exec_id" is that it's
+trivially the same across tasks. But a  *tuple* of <struct
+task_struct, thread-specific exec_id> doesn't have that issue, so as
+far as I can tell we could easily make *that* the unique ID.
 
-Yes it's predictable, but I don't see how you could pass the fd to another
-extern privileged process without failing at the exec_id check.
+I wonder if the number part of exec_id would even have to be 64-bit. I
+think I can do about 10000 execves per second if I make the program a
+small static one - and that's on a fast CPU. And it's a per-thread
+counter, so you can't scale it with lots of CPU's. So it would take
+something like four days to wrap. Hmm..
 
--- 
-tixxdz
-http://opendz.org
+                  Linus
