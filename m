@@ -1,42 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 11 Mar 2012 19:20:07 +0100
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20120311182007.GA5601@redhat.com>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> <CA+55aFwdOgt=C52APPyvnAitcWNbzu-uXRi43m4bLS85oDgtqA@mail.gmail.com> <20120311103532.GA26980@openwall.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120311103532.GA26980@openwall.com>
-Subject: [kernel-hardening] Re: exec_id protection from bad child exit signals (was: Re:
-	[PATCH 0/9] proc: protect /proc/<pid>/* files across execve)
-To: Solar Designer <solar@openwall.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Djalal Harouni <tixxdz@opendz.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+In-Reply-To: <CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com>
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
+	<1331421919-15499-2-git-send-email-tixxdz@opendz.org>
+	<20120311172512.GA2729@redhat.com>
+	<20120311174953.GB2729@redhat.com>
+	<CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com>
+Date: Sun, 11 Mar 2012 19:37:28 +0100
+Message-ID: <CAFLxGvx2zc-qOYCzHEEzU6XY1JHqCqzU2+Kiq=e0YKfqqJWLnQ@mail.gmail.com>
+From: richard -rw- weinberger <richard.weinberger@gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: self_exec_id/parent_exec_id && CLONE_PARENT
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Oleg Nesterov <oleg@redhat.com>, Djalal Harouni <tixxdz@opendz.org>, Alan Cox <alan@lxorguk.ukuu.org.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/11, Solar Designer wrote:
+On Sun, Mar 11, 2012 at 7:02 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Sun, Mar 11, 2012 at 10:49 AM, Oleg Nesterov <oleg@redhat.com> wrote:
+>>
+>> I am also asking because the change above looks like the fix to me.
+>> The child must not control its ->exit_signal, it is the parent who
+>> decides which signal the child should use for notification.
+>>
+>> And to me, clone(CLONE_PARENT | SIGXXX) looks like a violation of
+>> rule above.
 >
-> Actually, the original/historical purpose of the exec_id stuff was to
-> protect privileged parent processes (those having done a SUID/SGID exec)
-> from non-standard child exit signals, which could be set with clone().
-> I think we may want to audit the current implementation and see if it
-> still fully achieves the goal or maybe not (and fix it if not).
+> SIGXXX is for doing things like AIO with threads, but it would never
+> be used together with CLONE_PARENT, that would be odd and wrong.
+>
+> So I think we could disallow that - or at least try. See if anybody
+> notices, and if it breaks anything.
+>
 
-Funny that, I noticed this message only after I sent the question about
-the current exec_id stuff.
+UserModeLinux is using CLONE_PARENT | CLONE_FILES | SIGCHLD.
+Is this a problem?
 
-> I include below pieces of the prototype implementation from
-> linux-2.2.12-ow6.tar.gz released in 1999.
-
-Perhaps I missed something, but ignoring the "cap_raised" issues, this
-all is very simple. de_thread() should simply do:
-
-	current->exit_signal = SIGCHLD;
-
-	read_lock(&tasklist_lock);
-	list_for_each_entry(p, &current->children, sibling)
-		p->exit_signal = SIGCHILD;
-	read_unlock(&tasklist_lock);
-
-The only problem is CLONE_PARENT.
-
-Oleg.
+-- 
+Thanks,
+//richard
