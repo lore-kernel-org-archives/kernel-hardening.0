@@ -1,75 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Will Drewry <wad@chromium.org>
-Date: Mon, 12 Mar 2012 16:28:33 -0500
-Message-Id: <1331587715-26069-11-git-send-email-wad@chromium.org>
-In-Reply-To: <1331587715-26069-1-git-send-email-wad@chromium.org>
-References: <1331587715-26069-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v14 11/13] x86: Enable HAVE_ARCH_SECCOMP_FILTER
-To: linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Will Drewry <wad@chromium.org>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
+	<m1pqchocok.fsf@fess.ebiederm.org> <20120312204416.GG10787@dztty>
+Date: Mon, 12 Mar 2012 14:47:43 -0700
+In-Reply-To: <20120312204416.GG10787@dztty> (Djalal Harouni's message of "Mon,
+	12 Mar 2012 21:44:16 +0100")
+Message-ID: <m11uoxij9c.fsf@fess.ebiederm.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Subject: [kernel-hardening] Re: [PATCH 0/9] proc: protect /proc/<pid>/* files across execve
+To: Djalal Harouni <tixxdz@opendz.org>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, Oleg Nesterov <oleg@redhat.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Enable support for seccomp filter on x86:
-- asm/tracehook.h exists
-- syscall_get_arguments() works
-- syscall_rollback() works
-- ptrace_report_syscall() works
-- secure_computing() return value is honored (see below)
+Djalal Harouni <tixxdz@opendz.org> writes:
 
-This also adds support for honoring the return
-value from secure_computing().
+> On Mon, Mar 12, 2012 at 12:13:15PM -0700, Eric W. Biederman wrote:
+>> Djalal Harouni <tixxdz@opendz.org> writes:
+>> 
+>> > Procfs files and other important objects may contain sensitive information
+>> > which must not be seen, inherited or processed across execve.
+>> 
+>> So I am dense.  /proc/<pid>/mem was special in that it uses a different
+>> set of checks than other files, and to do those access checks
+>> /proc/<pid>/mem needed to look at exec_id.
+> If you are referring to the old protection, yes it was against an ID, but
+> not uniq IDs, so you can execve a suid do some tricks to have a match on IDs
+> and bypass the protection, how: by opening your /proc/self/mem and pass
+> the fd to the exec suid who at read/write time will process its own
+> /proc/self/mem
 
-SECCOMP_RET_TRACE and SECCOMP_RET_TRAP may result in seccomp needing to
-skip a system call without killing the process.  This is done by
-returning a non-zero (-1) value from secure_computing.  This change
-makes x86 respect that return value.
+Yes that case is silly and I don't care.  I care that you seem to be
+stomping all over the non-silly cases using the excuse that there
+was one silly case.
 
-To ensure that minimal kernel code is exposed, a non-zero return value
-results in an immediate return to user space (with an invalid syscall
-number).
+>> For all of the access checks that are not written in that silly way.
+>> What is wrong with ptrace_may_access run at every read/write of a file?
+> As it was noted, these files change during runtime, so even if you do the
+> ptrace check at each syscall (which is of course a good thing), you must be
+> sure that you are doing the check on the right target and the processed
+> file belongs really to the appropriate process image of the target.
 
-Signed-off-by: Will Drewry <wad@chromium.org>
----
- arch/x86/Kconfig         |    1 +
- arch/x86/kernel/ptrace.c |    7 ++++++-
- 2 files changed, 7 insertions(+), 1 deletions(-)
+The right target is by definition the current value of the process in
+question.
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 5bed94e..4c9012b 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -82,6 +82,7 @@ config X86
- 	select CLKEVT_I8253
- 	select ARCH_HAVE_NMI_SAFE_CMPXCHG
- 	select GENERIC_IOMAP
-+	select HAVE_ARCH_SECCOMP_FILTER
- 
- config INSTRUCTION_DECODER
- 	def_bool (KPROBES || PERF_EVENTS)
-diff --git a/arch/x86/kernel/ptrace.c b/arch/x86/kernel/ptrace.c
-index 5026738..90d465a 100644
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -1380,7 +1380,11 @@ long syscall_trace_enter(struct pt_regs *regs)
- 		regs->flags |= X86_EFLAGS_TF;
- 
- 	/* do the secure computing check first */
--	secure_computing(regs->orig_ax);
-+	if (secure_computing(regs->orig_ax)) {
-+		/* seccomp failures shouldn't expose any additional code. */
-+		ret = -1L;
-+		goto out;
-+	}
- 
- 	if (unlikely(test_thread_flag(TIF_SYSCALL_EMU)))
- 		ret = -1L;
-@@ -1405,6 +1409,7 @@ long syscall_trace_enter(struct pt_regs *regs)
- 				    regs->dx, regs->r10);
- #endif
- 
-+out:
- 	return ret ?: regs->orig_ax;
- }
- 
--- 
-1.7.5.4
+/proc/<pid>/<attr> files are supposed to work after an exec.
+
+Adding an exec_id to additional files simply breaks existing
+applications for no good reason.
+
+What is needed is for safety is to guard against the race of exec
+happening during a read or a write, so that we don't get access
+to something we shouldn't have permissions to.
+
+In general that means reference counting or locks.  All exec_id can
+meaningfully be used for in the general case is a trigger to try again.
+
+> This is not news. Alan's historical links:
+> http://lkml.org/lkml/2012/1/29/35
+
+Alan's case refers to how to handle /proc/<pid>/maps the right way.
+
+> The previous discussion on kernel-hardening:
+> (includes some variants described by Vasiliy and other problems which I'll
+> try to discuss here)
+> http://www.openwall.com/lists/kernel-hardening/2012/02/10/1
+
+In your post on openwall I just see you arguing that the current
+and deliberate semantics of the permission checks on the proc files are
+wrong.  Because the permission checks happen at access time rather than
+at open time.
+
+Well I am sorry.  The permission checks have happened at access time for
+ages and that is deliberate.
+
+Furthermore one of your confused arguments seems to imply that there is
+a such a thing as a /proc/self file distinct from a /proc/<pid> file.
+There not.  /proc/self is just a symlink into /proc/<pid> and as such
+does not open new security holes.
+
+If you expect /proc/ not to let you find out things about yourself
+if you are a suid executable that just seems silly.
+
+So in short you seem to be arguing for changing the semantics of access
+of every file under /proc/<pid> because there is cognitive dissonance
+between your understanding of those files and what is implemented.  I
+see no acknowledgement that you are arguing for a semantic change or
+any arguments in favor of that change.  At best I see is an argument
+that says you the files don't work the way you expect which is most
+definitely not sufficient for a change.
+
+Eric
