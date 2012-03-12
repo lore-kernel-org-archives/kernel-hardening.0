@@ -1,39 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 12 Mar 2012 15:34:00 +0100
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20120312143400.GA23113@redhat.com>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <20120311172512.GA2729@redhat.com> <20120311233615.GD10787@dztty>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
+Date: Mon, 12 Mar 2012 12:13:15 -0700
+In-Reply-To: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> (Djalal
+	Harouni's message of "Sun, 11 Mar 2012 00:25:10 +0100")
+Message-ID: <m1pqchocok.fsf@fess.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120311233615.GD10787@dztty>
-Subject: [kernel-hardening] Re: [PATCH 1/9] exec: add a global execve counter
+Subject: [kernel-hardening] Re: [PATCH 0/9] proc: protect /proc/<pid>/* files across execve
 To: Djalal Harouni <tixxdz@opendz.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, Oleg Nesterov <oleg@redhat.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/12, Djalal Harouni wrote:
->
-> On Sun, Mar 11, 2012 at 06:25:12PM +0100, Oleg Nesterov wrote:
-> >
-> > Well, I don't think it is right to add this counter into task_struct.
-> >
-> > It should be per-process, signal_struct makes more sense. Or may be
-> > mm_struct.
-> Some /proc/<pid>/{syscall,stack,...} do not operate on mm_struct so why we
-> should add the: "acquire a reference to mm, get exec_id and mmput".
+Djalal Harouni <tixxdz@opendz.org> writes:
 
-This could be simpler, just read the counter under task_lock(). And
-unless I misread the next patches syscall/stack can use current->mm
-lockless.
+> Procfs files and other important objects may contain sensitive information
+> which must not be seen, inherited or processed across execve.
 
-OK, nevermind.
+So I am dense.  /proc/<pid>/mem was special in that it uses a different
+set of checks than other files, and to do those access checks
+/proc/<pid>/mem needed to look at exec_id.
 
-> For the signal_struct currently I don't know, from a comment it seems that
-> signal_struct can be shared!
+For all of the access checks that are not written in that silly way.
+What is wrong with ptrace_may_access run at every read/write of a file?
 
-Yes, it is shared, and that is why it makes sense for the per-process
-data. All threads in the thread group (process) have the same ->signal.
-And unlike ->mm, ->signal survives after exec.
+We redo all of the permission checks every time so that should avoid
+races.
 
-Oleg.
+I really think you are trying to solve something that is not broken.
+Certainly I could not see your argument for why anything but
+/proc/<pid>/mem needs attention.
+
+Eric
