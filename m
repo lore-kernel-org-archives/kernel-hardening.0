@@ -1,115 +1,207 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
-	<m1pqchocok.fsf@fess.ebiederm.org> <20120312204416.GG10787@dztty>
-	<m11uoxij9c.fsf@fess.ebiederm.org> <20120312224136.GH10787@dztty>
-Date: Mon, 12 Mar 2012 16:10:28 -0700
-In-Reply-To: <20120312224136.GH10787@dztty> (Djalal Harouni's message of "Mon,
-	12 Mar 2012 23:41:36 +0100")
-Message-ID: <m1boo1fmaj.fsf@fess.ebiederm.org>
+Message-ID: <a7d249196cbd1f85b94ed7246ab0beda.squirrel@webmail.greenhost.nl>
+In-Reply-To: <1331587715-26069-6-git-send-email-wad@chromium.org>
+References: <1331587715-26069-1-git-send-email-wad@chromium.org>
+    <1331587715-26069-6-git-send-email-wad@chromium.org>
+Date: Tue, 13 Mar 2012 04:33:25 +0100
+From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Subject: [kernel-hardening] Re: [PATCH 0/9] proc: protect /proc/<pid>/* files across execve
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, Oleg Nesterov <oleg@redhat.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Alan Cox <alan@lxorguk.ukuu.org.uk>, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v14 06/13] seccomp: add system call filtering using BPF
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Djalal Harouni <tixxdz@opendz.org> writes:
+Hello,
 
-> I'm not sure I follow you here, these proc files suffer from the same
-> problems, can you please point what are these non-silly case ?
+Could you send a 00/13 patch with a diffstat summary of all patches
+combined and also some code size diffs? That would be very nice.
 
-As I read 3.3-rc1 which I have handy I do not see problems.
+I assume the BPF performance for networking doesn't change with this
+version.
 
->> What is needed is for safety is to guard against the race of exec
->> happening during a read or a write, so that we don't get access
-> before and during. I say before since this is what we are tying to
-> emulate.
+> +/* Limit any path through the tree to 1 megabytes worth of instructions. */
+> +#define MAX_INSNS_PER_PATH ((1 << 20) / sizeof(struct sock_filter))
 
->> to something we shouldn't have permissions to.
->> 
->> In general that means reference counting or locks.  All exec_id can
-> Locks ? counting yes this perhaps can work as Alan suggested, but a simple
-> check will catch all the things without any node list nor count inc/dec.
+This still makes me feel uneasy. It's also easier to increase the limit
+in the future if necessary than to reduce it. So I would go for a lower
+initial limit, like 256kB or 512Kb. 1 megabyte are 32 max size filters,
+that seems like a lot. And in practise it's more likely that the more
+filters there are, the smaller they usually are.
 
-An exec_id check adds no value, to files like /proc/pid/environ.
-mm_for_maps nicely does the necessary permission checks and avoids the
-race.
+> +
+> +static void seccomp_filter_log_failure(int syscall)
+> +{
+> +	int compat = 0;
+> +#ifdef CONFIG_COMPAT
+> +	compat = is_compat_task();
+> +#endif
+> +	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
+> +		current->comm, task_pid_nr(current),
+> +		(compat ? "compat " : ""),
+> +		syscall, KSTK_EIP(current));
+> +}
 
->> > The previous discussion on kernel-hardening:
->> > (includes some variants described by Vasiliy and other problems which I'll
->> > try to discuss here)
->> > http://www.openwall.com/lists/kernel-hardening/2012/02/10/1
->> 
->> In your post on openwall I just see you arguing that the current
->> and deliberate semantics of the permission checks on the proc files are
->> wrong.  Because the permission checks happen at access time rather than
->> at open time.
-> Yes if you are speaking about {maps,smaps...} then it should also be at
-> open time and at each syscall (it depends on files) and for the
-> /proc/pid/{maps,smaps,numa_maps} yes it is not safe to give non-privileged
-> processes an fd to an objects attached to a privileged process.
+If you keep this, at least make it rate limited?
 
-Then the permission checks at access time are broken, and exec_id
-nonsense won't make them better.
+> +/**
+> + * bpf_load: checks and returns a pointer to the requested offset
+> + * @off: offset into struct seccomp_data to load from
+> + *
+> + * Returns the requested 32-bits of data.
+> + * seccomp_chk_filter() should assure that @off is 32-bit aligned
+> + * and not out of bounds.  Failure to do so is a BUG.
+> + */
+> +u32 seccomp_bpf_load(int off)
+> +{
+> +	struct pt_regs *regs = task_pt_regs(current);
+> +
+> +	if (off == BPF_DATA(nr))
+> +		return syscall_get_nr(current, regs);
+> +	if (off == BPF_DATA(arch))
+> +		return syscall_get_arch(current, regs);
+> +	if (off == BPF_DATA(instruction_pointer))
+> +		return get_u32(KSTK_EIP(current), 0);
+> +	if (off == BPF_DATA(instruction_pointer) + sizeof(u32))
+> +		return get_u32(KSTK_EIP(current), 1);
 
->> Well I am sorry.  The permission checks have happened at access time for
->> ages and that is deliberate.
-> Yes (perhaps even before I use Linux :) ), but IMHO they are not perfect,
-> if they were, then we'll not see all the /proc/<pid>/ problems.
+I'd put the IP checks at the end, as it's the least likely case.
+But maybe gcc is smart enough to detect a pattern.
 
-We see problems because we lots of people play in the code and are not
-careful.  It looks to me like you are trying to make the problem worse
-by making the code more complicated and even harder to understand.
+> +	if (off >= BPF_DATA(args[0]) && off < BPF_DATA(args[6])) {
+> +		unsigned long value;
+> +		int arg = (off - BPF_DATA(args[0])) / sizeof(u64);
+> +		int index = !!(off % sizeof(u64));
+> +		syscall_get_arguments(current, regs, arg, 1, &value);
+> +		return get_u32(value, index);
+> +	}
+> +	/* seccomp_chk_filter should make this impossible. */
+> +	BUG();
+> +}
+> +
+> +/**
+> + *	seccomp_chk_filter - verify seccomp filter code
+> + *	@filter: filter to verify
+> + *	@flen: length of filter
+> + *
+> + * Takes a previously checked filter (by sk_chk_filter) and
+> + * redirects all filter code that loads struct sk_buff data
+> + * and related data through seccomp_bpf_load.  It also
+> + * enforces length and alignment checking of those loads.
+> + *
+> + * Returns 0 if the rule set is legal or -EINVAL if not.
+> + */
+> +static int seccomp_chk_filter(struct sock_filter *filter, unsigned int flen)
+> +{
+> +	int pc;
+> +	for (pc = 0; pc < flen; pc++) {
+> +		struct sock_filter *ftest = &filter[pc];
+> +		u16 code = ftest->code;
+> +		u32 k = ftest->k;
+> +		if (code <= BPF_S_ALU_NEG)
+> +			continue;
+> +		/* Do not allow ancillary codes (incl. BPF_S_ANC_SECCOMP_*) */
+> +		if (code >= BPF_S_ANC_PROTOCOL)
+> +			return -EINVAL;
+> +		if (code >= BPF_S_LDX_IMM)
+> +			continue;
 
-> The current patches protect /proc/pid/{maps,smaps,numa_maps} without breaking
-> things, there are no checks at open which is not safe, but I did not add
-> it since I was not sure and I don't want to break things (glibc
-> FORITFY_SOURCE ...).
->
-> My patches add the ptrace checks at open only for
-> /proc/<pid>/{environ,pagemap,mem} which is safe, I did not include
-> /proc/pid/{auxv,maps,smaps,...} so please if you have _real_ cases of
-> problems just post them.
+I know I did the same in my code, but to avoid silly bugs when someone changes
+the enum in filter.h without being aware of SECCOMP, it's much safer to check
+all known good instructions explicitly in a big switch. And the compiler is
+hopefully smart enough to generate pretty much the same code as now. Then if
+new cases are added or existing ones swapped around, everything will still
+work and we don't end up with a silent security hole.
 
-You are thrashing the code and making it more complicated for no
-apparent reason.
+The reason I didn't do that was laziness and because it looks ugly. But it's
+more robust and I don't see a better way to get the same guarantees.
 
->> If you expect /proc/ not to let you find out things about yourself
->> if you are a suid executable that just seems silly.
-> Ah yes this one about suid/privileged, if you are still privileged then
-> there is no harm, but if you drop your privileges IMHO that means that you
-> do not want to do privileged operations, but that current == task in
-> ptrace which is before the creds check will just allow you to do so.
+> +		switch (code) {
+> +		case BPF_S_LD_W_ABS:
+> +			ftest->code = BPF_S_ANC_SECCOMP_LD_W;
+> +			/* 32-bit aligned and not out of bounds. */
+> +			if (k >= sizeof(struct seccomp_data) || k & 3)
+> +				return -EINVAL;
+> +			continue;
+> +		case BPF_S_LD_W_LEN:
+> +			ftest->code = BPF_S_LD_IMM;
+> +			ftest->k = sizeof(struct seccomp_data);
+> +			continue;
+> +		case BPF_S_LD_IMM:
+> +			continue;
+> +		case BPF_S_LDX_W_LEN:
+> +			ftest->code = BPF_S_LDX_IMM;
+> +			ftest->k = sizeof(struct seccomp_data);
+> +			continue;
+> +		case BPF_S_LD_W_IND:
+> +			/* XXX: would runtime seccomp_bpf_load checking k */
 
-Please show me how you can drop privileges to access yourself.
+Why? I checked your example code and haven't seen one case where you're
+not using absolute loads. That said, I can think of situations where it's
+nice to be able to store the syscall and argument numbers in MEM and use
+an indirect load instead of changing the instructions themselves. But I
+don't think it's worth the trouble supporting this, as it's only a minor
+improvement while it adds more messy code just for this.
 
-The current == task check is there because of extreme silliness in
-the security modules and the fact that glibc breaks in entertaining
-was if it can not access /proc/self/masp.  If you I read you right
-you want to reintroduce that breaking for suid exectuables.  Frankly
-that sounds like you a security bug in the making.
+> +/**
+> + * seccomp_attach_filter: Attaches a seccomp filter to current.
+> + * @fprog: BPF program to install
+> + *
+> + * Returns 0 on success or an errno on failure.
+> + */
+> +static long seccomp_attach_filter(struct sock_fprog *fprog)
+> +{
+> +	struct seccomp_filter *filter;
+> +	unsigned long fp_size = fprog->len * sizeof(struct sock_filter);
+> +	unsigned long total_insns = 0;
+> +	long ret;
+> +
+> +	if (fprog->len == 0 || fprog->len > BPF_MAXINSNS)
+> +		return -EINVAL;
+> +
+> +	for (filter = current->seccomp.filter; filter; filter = filter->prev)
+> +		total_insns += filter->len;
 
-> Well, this is another subject.
->
->> So in short you seem to be arguing for changing the semantics of access
->> of every file under /proc/<pid> because there is cognitive dissonance
->> between your understanding of those files and what is implemented.  I
->> see no acknowledgement that you are arguing for a semantic change or
->> any arguments in favor of that change.  At best I see is an argument
->> that says you the files don't work the way you expect which is most
->> definitely not sufficient for a change.
-> I really don't understant what you are trying to say/prove here, this is
-> the same issue of the last /proc/<pid>/mem one that got fixed by Linus and
-> Olge patches. These are dynamic files.
+More accurate and better in case of one instruction filters:
 
-The /proc/<pid>/mem permission checks were implemented in a very stupid
-way.  In that stupid way they used task->exec_id.  I don't see any
-evidence that anyone touching any of the other proc files made that same
-foolish set of choices.  So I see no evidence that the problem exists
-outside of anywhere except /proc/<pid>/mem.
+		total_insns += filter->len + 4;
 
-So very simply it looks to me like your entire patchset is very busily
-trying to fix problems that don't exist.
+This to penalize tiny filters, otherwise a filter with one instruction will
+use a lot more memory than just 8 bytes, so your effective max memory usage
+would be much higher. It also depends on kzalloc's minimum allocation size
+and rounding, so all in all 4 seems like a good number.
 
-Eric
+> +	if (total_insns > MAX_INSNS_PER_PATH - fprog->len)
+> +		return -ENOSPC;
+
+It seems more readable to me to initialize total_insns to fprog->len
+instead of zero, and then drop the substraction. Overflows aren't
+possible either way.
+
+"No space left on device" isn't suitable either, I think. What's wrong
+with just using ENOMEM?
+
+> +/**
+> + * seccomp_attach_user_filter - attaches a user-supplied sock_fprog
+> + * @user_filter: pointer to the user data containing a sock_fprog.
+> + *
+> + * Returns 0 on success and non-zero otherwise.
+> + */
+> +long seccomp_attach_user_filter(char __user *user_filter)
+> +{
+> +	struct sock_fprog fprog;
+> +	long ret = -EFAULT;
+> +
+> +	if (!user_filter)
+> +		goto out;
+
+This case should be handled by copy_from_user() already, so adding this
+check doesn't add anything at all. Zero is only one out of many invalid
+pointers, why check for 0 but not for e.g. 1, 2, 3, 4, 5, 6, 7, 8 or 9?
+
+Reviewed-by: Indan Zupancic <indan@nul.nu>
+
+Greetings,
+
+Indan
