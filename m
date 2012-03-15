@@ -1,55 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Mar 2012 19:55:38 +0100
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20120314185538.GB14172@redhat.com>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <20120311172512.GA2729@redhat.com> <20120311174953.GB2729@redhat.com> <CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com> <20120314185510.GA14172@redhat.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20120314185510.GA14172@redhat.com>
-Subject: [kernel-hardening] [PATCH 1/1] CLONE_PARENT shouldn't allow to set ->exit_signal
-To: Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Djalal Harouni <tixxdz@opendz.org>, Alan Cox <alan@lxorguk.ukuu.org.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Roland McGrath <roland@hack.frob.com>
+From: Will Drewry <wad@chromium.org>
+Date: Wed, 14 Mar 2012 22:11:52 -0500
+Message-Id: <1331781125-15658-1-git-send-email-wad@chromium.org>
+Subject: [kernel-hardening] [PATCH v15 00/13] seccomp_filter: syscall filtering using BPF
+To: linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The child must not control its ->exit_signal, it is the parent who
-decides which signal the child should use for notification.
+Please see prior revisions of this patch series for a high
+level blurb.
 
-This means that CLONE_PARENT should not use "clone_flags & CSIGNAL",
-the forking task is the sibling of the new process and their parent
-doesn't control exit_signal in this case.
+This revision makes a number of refinements and tweaks. The biggest
+change is a slight renumbering of the return codes which will break
+existing code using this patch series.
 
-This patch uses ->exit_signal of the forking process, but perhaps
-we should simply use SIGCHLD.
+I believe this patch is in good shape, and I don't see the need for
+any more API changes at this point.  I plan to start using this revision
+more extensively, and I'd certainly appreciate any testing.
 
-We read group_leader->exit_signal lockless, this can race with the
-ORIGINAL_SIGNAL -> SIGCHLD transition, but this is fine.
+Thanks!
+will
 
-Potentially this change allows to kill self_exec_id/parent_exec_id.
 
-Signed-off-by: Oleg Nesterov <oleg@redhat.com>
----
- kernel/fork.c |    8 +++++++-
- 1 files changed, 7 insertions(+), 1 deletions(-)
+Kees Cook (1):
+  seccomp: remove duplicated failure logging
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index b77fd55..34d7ed1 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -1310,7 +1310,13 @@ static struct task_struct *copy_process(unsigned long clone_flags,
- 	clear_all_latency_tracing(p);
- 
- 	/* ok, now we should be set up.. */
--	p->exit_signal = (clone_flags & CLONE_THREAD) ? -1 : (clone_flags & CSIGNAL);
-+	if (clone_flags & CLONE_THREAD)
-+		p->exit_signal = -1;
-+	else if (clone_flags & CLONE_PARENT)
-+		p->exit_signal = current->group_leader->exit_signal;
-+	else
-+		p->exit_signal = (clone_flags & CSIGNAL);
-+
- 	p->pdeath_signal = 0;
- 	p->exit_state = 0;
- 
+Will Drewry (12):
+  sk_run_filter: add BPF_S_ANC_SECCOMP_LD_W
+  net/compat.c,linux/filter.h: share compat_sock_fprog
+  seccomp: kill the seccomp_t typedef
+  arch/x86: add syscall_get_arch to syscall.h
+  asm/syscall.h: add syscall_get_arch
+  seccomp: add system call filtering using BPF
+  seccomp: add SECCOMP_RET_ERRNO
+  signal, x86: add SIGSYS info and make it synchronous.
+  seccomp: Add SECCOMP_RET_TRAP
+  ptrace,seccomp: Add PTRACE_SECCOMP support
+  x86: Enable HAVE_ARCH_SECCOMP_FILTER
+  Documentation: prctl/seccomp_filter
+
+ Documentation/prctl/seccomp_filter.txt |  156 +++++++++++
+ arch/Kconfig                           |   24 ++
+ arch/x86/Kconfig                       |    1 +
+ arch/x86/ia32/ia32_signal.c            |    4 +
+ arch/x86/include/asm/ia32.h            |    6 +
+ arch/x86/include/asm/syscall.h         |   23 ++
+ arch/x86/kernel/ptrace.c               |    7 +-
+ include/asm-generic/siginfo.h          |   22 ++
+ include/asm-generic/syscall.h          |   14 +
+ include/linux/Kbuild                   |    1 +
+ include/linux/audit.h                  |    8 +-
+ include/linux/filter.h                 |   12 +
+ include/linux/ptrace.h                 |    7 +-
+ include/linux/sched.h                  |    2 +-
+ include/linux/seccomp.h                |  105 +++++++-
+ kernel/auditsc.c                       |   10 +-
+ kernel/fork.c                          |    3 +
+ kernel/ptrace.c                        |    3 +
+ kernel/seccomp.c                       |  446 ++++++++++++++++++++++++++++++--
+ kernel/signal.c                        |    9 +-
+ kernel/sys.c                           |    2 +-
+ net/compat.c                           |    8 -
+ net/core/filter.c                      |    6 +
+ samples/Makefile                       |    2 +-
+ samples/seccomp/Makefile               |   38 +++
+ samples/seccomp/bpf-direct.c           |  176 +++++++++++++
+ samples/seccomp/bpf-fancy.c            |  102 ++++++++
+ samples/seccomp/bpf-helper.c           |   89 +++++++
+ samples/seccomp/bpf-helper.h           |  238 +++++++++++++++++
+ samples/seccomp/dropper.c              |   68 +++++
+ 30 files changed, 1538 insertions(+), 54 deletions(-)
+ create mode 100644 Documentation/prctl/seccomp_filter.txt
+ create mode 100644 samples/seccomp/Makefile
+ create mode 100644 samples/seccomp/bpf-direct.c
+ create mode 100644 samples/seccomp/bpf-fancy.c
+ create mode 100644 samples/seccomp/bpf-helper.c
+ create mode 100644 samples/seccomp/bpf-helper.h
+ create mode 100644 samples/seccomp/dropper.c
+
 -- 
-1.5.5.1
+1.7.5.4
