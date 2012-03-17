@@ -1,99 +1,81 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <7a1c4974e8fbc3b82ead0bfb18224d5b.squirrel@webmail.greenhost.nl>
+In-Reply-To: <1331712357.2456.58.camel@edumazet-laptop>
+References: <1331587715-26069-1-git-send-email-wad@chromium.org>
+    <0c55cb258e0b5bbd615923ee2a9f06b9.squirrel@webmail.greenhost.nl>
+    <1331658828.4449.16.camel@edumazet-glaptop>
+    <3e4fc1efb5d7dbe0dd966e3192e84645.squirrel@webmail.greenhost.nl>
+    <1331704535.2456.37.camel@edumazet-laptop>
+    <3f56b0860272f4ca8925c0a249a30539.squirrel@webmail.greenhost.nl>
+    <1331712357.2456.58.camel@edumazet-laptop>
+Date: Sat, 17 Mar 2012 21:14:55 +1100
+From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-In-Reply-To: <1331921799.19406.20.camel@edumazet-glaptop>
-References: <1331781125-15658-1-git-send-email-wad@chromium.org>
-	<1331781125-15658-3-git-send-email-wad@chromium.org>
-	<1331921799.19406.20.camel@edumazet-glaptop>
-Date: Fri, 16 Mar 2012 14:23:15 -0500
-Message-ID: <CABqD9haBppbqAvcEYP_nstB7aZc-PbVvHwj+P69AQ5+Z87FofA@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v15 02/13] net/compat.c,linux/filter.h: share compat_sock_fprog
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v14 01/13] sk_run_filter: add BPF_S_ANC_SECCOMP_LD_W
 To: Eric Dumazet <eric.dumazet@gmail.com>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 16, 2012 at 1:16 PM, Eric Dumazet <eric.dumazet@gmail.com> wrot=
-e:
-> On Wed, 2012-03-14 at 22:11 -0500, Will Drewry wrote:
->> Any other users of bpf_*_filter that take a struct sock_fprog from
->> userspace will need to be able to also accept a compat_sock_fprog
->> if the arch supports compat calls. =A0This change let's the existing
->> compat_sock_fprog be shared.
->>
->> Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
->> Signed-off-by: Will Drewry <wad@chromium.org>
->>
->> v14: rebase/nochanges
->> v13: rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
->> v12: rebase on to linux-next
->> v11: introduction
->> ---
->> =A0include/linux/filter.h | =A0 11 +++++++++++
->> =A0net/compat.c =A0 =A0 =A0 =A0 =A0 | =A0 =A08 --------
->> =A02 files changed, 11 insertions(+), 8 deletions(-)
->>
->> diff --git a/include/linux/filter.h b/include/linux/filter.h
->> index aaa2e80..f2e5315 100644
->> --- a/include/linux/filter.h
->> +++ b/include/linux/filter.h
->> @@ -10,6 +10,7 @@
->>
->> =A0#ifdef __KERNEL__
->> =A0#include <linux/atomic.h>
->> +#include <linux/compat.h>
->> =A0#endif
->>
->> =A0/*
->> @@ -132,6 +133,16 @@ struct sock_fprog { =A0 =A0 =A0/* Required for SO_A=
-TTACH_FILTER. */
->>
->> =A0#ifdef __KERNEL__
->>
->> +#ifdef CONFIG_COMPAT
->> +/*
->> + * A struct sock_filter is architecture independent.
->> + */
->> +struct compat_sock_fprog {
->> + =A0 =A0 u16 =A0 =A0 =A0 =A0 =A0 =A0 len;
->> + =A0 =A0 compat_uptr_t =A0 filter; =A0 =A0 =A0 =A0 /* struct sock_filte=
-r * */
->> +};
->> +#endif
->> +
->> =A0struct sk_buff;
->> =A0struct sock;
->>
->> diff --git a/net/compat.c b/net/compat.c
->> index 6def90e..c5c61c8 100644
->> --- a/net/compat.c
->> +++ b/net/compat.c
->> @@ -326,14 +326,6 @@ void scm_detach_fds_compat(struct msghdr *kmsg, str=
-uct scm_cookie *scm)
->> =A0 =A0 =A0 __scm_destroy(scm);
->> =A0}
->>
->> -/*
->> - * A struct sock_filter is architecture independent.
->> - */
->> -struct compat_sock_fprog {
->> - =A0 =A0 u16 =A0 =A0 =A0 =A0 =A0 =A0 len;
->> - =A0 =A0 compat_uptr_t =A0 filter; =A0 =A0 =A0 =A0 /* struct sock_filte=
-r * */
->> -};
->> -
->> =A0static int do_set_attach_filter(struct socket *sock, int level, int o=
-ptname,
->> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 char __user =
-*optval, unsigned int optlen)
->> =A0{
+On Wed, March 14, 2012 19:05, Eric Dumazet wrote:
+> Le mercredi 14 mars 2012 à 08:59 +0100, Indan Zupancic a écrit :
 >
-> Acked-by: Eric Dumazet <eric.dumazet@gmail.com>
+>> The only remaining question is, is it worth the extra code to release
+>> up to 32kB of unused memory? It seems a waste to not free it, but if
+>> people think it's not worth it then let's just leave it around.
+>
+> Quite frankly its not an issue, given JIT BPF is not yet default
+> enabled.
 
-Added your Acked-by's to the tree at
+And what if assuming JIT BPF would be default enabled?
 
-  https://github.com/redpig/linux/tree/seccomp
+> I am not sure all bugs were found and fixed. I would warn users before
+> considering using it in production.
+>
+> If you have time, I would appreciate if you could double check and find
+> last bugs in it.
 
-Thanks!
-will
+I'll do my best.
+
+The current JIT doesn't handle negative offsets: The stuff that's handled
+by __load_pointer(). Easiest solution would be to make it non-static and
+call it instead of doing bpf_error. I guess __load_pointer was added later
+and the JIT code didn't get updated.
+
+But gcc refuses to inline load_pointer, instead it inlines __load_pointer
+and does the important checks first. Considering the current assembly code
+does a call too, it could as well call load_pointer() directly. That would
+save a lot of assembly code, handle all negative cases too and be pretty
+much the same speed. The only question is if this slow down some other
+archs than x86. What do you think?
+
+The EMIT_COND_JMP(f_op, f_offset); should be in an else case, otherwise
+it's superfluous. It's a harmless bug though. I haven't spotted anything
+else yet.
+
+You can get rid of all the "if (is_imm8(offsetof(struct sk_buff, len)))"
+code by making sure everything is near: Somewhere at the start, just
+add 127 to %rdi and a BUILD_BUG_ON(sizeof(struct sk_buff) > 255).
+
+I'll write some more patches tomorrow.
+
+Greetings,
+
+Indan
+
+diff --git a/arch/x86/net/bpf_jit_comp.c b/arch/x86/net/bpf_jit_comp.c
+index 7c1b765..7e0f575 100644
+--- a/arch/x86/net/bpf_jit_comp.c
++++ b/arch/x86/net/bpf_jit_comp.c
+@@ -581,8 +581,9 @@ cond_branch:			f_offset = addrs[i + filter[i].jf] - addrs[i];
+ 					if (filter[i].jf)
+ 						EMIT_JMP(f_offset);
+ 					break;
++				} else {
++					EMIT_COND_JMP(f_op, f_offset);
+ 				}
+-				EMIT_COND_JMP(f_op, f_offset);
+ 				break;
+ 			default:
+ 				/* hmm, too complex filter, give up with jit compiler */
