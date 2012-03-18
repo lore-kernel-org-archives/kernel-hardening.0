@@ -1,59 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1332075121.3722.34.camel@edumazet-laptop>
-From: Eric Dumazet <eric.dumazet@gmail.com>
-Date: Sun, 18 Mar 2012 05:52:01 -0700
-In-Reply-To: <9a0230cb8db556cc9cf5d1f6b2439fb5.squirrel@webmail.greenhost.nl>
-References: <1331587715-26069-1-git-send-email-wad@chromium.org>
-	 <0c55cb258e0b5bbd615923ee2a9f06b9.squirrel@webmail.greenhost.nl>
-	 <1331658828.4449.16.camel@edumazet-glaptop>
-	 <3e4fc1efb5d7dbe0dd966e3192e84645.squirrel@webmail.greenhost.nl>
-	 <1331704535.2456.37.camel@edumazet-laptop>
-	 <3f56b0860272f4ca8925c0a249a30539.squirrel@webmail.greenhost.nl>
-	 <1331712357.2456.58.camel@edumazet-laptop>
-	 <7a1c4974e8fbc3b82ead0bfb18224d5b.squirrel@webmail.greenhost.nl>
-	 <1331992184.2466.45.camel@edumazet-laptop>
-	 <9a0230cb8db556cc9cf5d1f6b2439fb5.squirrel@webmail.greenhost.nl>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8bit
-Mime-Version: 1.0
-Subject: [kernel-hardening] Re: [PATCH v14 01/13] sk_run_filter: add BPF_S_ANC_SECCOMP_LD_W
-To: Indan Zupancic <indan@nul.nu>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+MIME-Version: 1.0
+Sender: linus971@gmail.com
+In-Reply-To: <20120314185538.GB14172@redhat.com>
+References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org>
+ <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <20120311172512.GA2729@redhat.com>
+ <20120311174953.GB2729@redhat.com> <CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com>
+ <20120314185510.GA14172@redhat.com> <20120314185538.GB14172@redhat.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sun, 18 Mar 2012 11:25:51 -0700
+Message-ID: <CA+55aFzKc578eWYaq4+OaOM6hFjW+ePYCeC++_1p8f09YWV_hA@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 1/1] CLONE_PARENT shouldn't allow to set ->exit_signal
+To: Oleg Nesterov <oleg@redhat.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Djalal Harouni <tixxdz@opendz.org>, Alan Cox <alan@lxorguk.ukuu.org.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Roland McGrath <roland@hack.frob.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Le dimanche 18 mars 2012 à 19:35 +1100, Indan Zupancic a écrit :
+On Wed, Mar 14, 2012 at 11:55 AM, Oleg Nesterov <oleg@redhat.com> wrote:
+> + =A0 =A0 =A0 if (clone_flags & CLONE_THREAD)
+> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 p->exit_signal =3D -1;
+> + =A0 =A0 =A0 else if (clone_flags & CLONE_PARENT)
+> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 p->exit_signal =3D current->group_leader->e=
+xit_signal;
+> + =A0 =A0 =A0 else
+> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 p->exit_signal =3D (clone_flags & CSIGNAL);
 
-> Yes. The main difference would be that the JIT could always generate imm8
-> offsets, saving 4 bytes per long offset while also simplifying the compiler
-> code. The %rdi + 127 is 4 bytes, and if the rest become slightly faster
-> because they're imm8 then it's worth the extra instruction.
-> 
+So why is it "current->group_leader->exit_signal" rather than the much
+more logical (imho) and simpler "current->exit_signal"?
 
-Do you understand you try to save 3 bytes in the function prolog, but
-your single EMIT4(0x48, 0x83, 0xc7, 127); /* addq $127,%rdi */
-defeats this ?
-
-Ancillary instructions are rarely used, libpcap for example doesnt have
-support for them.
-
-> I first thought the +127 could be done in two bytes, but 4 bytes are
-> needed, so maybe it's not worth it.
-...
-> The add 127 would be at the start, the first instruction using it would
-> be a couple of instructions later, so I don't think the dependency is a
-> problem.
-> 
-> You're right about skb_copy_bits(), I did a quick search for rdi usage
-> but missed it was the first parameter too. It would need one extra
-> sub 127 or add -127 in the slow path, after the push. But it's the slow
-> path already, one extra instruction won't make much difference.
-
-It will, because new NIC drivers tend to provide skbs with fragments.
-
-Using libpcap filter like "udp[100]" calls the skb_copy_bits() helper in
-this case.
-
-There is no difference in instruction timing using offset32 or offset8,
-so the code you add will slow the filter anyway.
-
-Please dont obfuscate this code, I'd like to keep it maintainable.
+                      Linus
