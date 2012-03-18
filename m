@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1332074448.3722.25.camel@edumazet-laptop>
+Message-ID: <1332075121.3722.34.camel@edumazet-laptop>
 From: Eric Dumazet <eric.dumazet@gmail.com>
-Date: Sun, 18 Mar 2012 05:40:48 -0700
+Date: Sun, 18 Mar 2012 05:52:01 -0700
 In-Reply-To: <9a0230cb8db556cc9cf5d1f6b2439fb5.squirrel@webmail.greenhost.nl>
 References: <1331587715-26069-1-git-send-email-wad@chromium.org>
 	 <0c55cb258e0b5bbd615923ee2a9f06b9.squirrel@webmail.greenhost.nl>
@@ -16,86 +16,44 @@ References: <1331587715-26069-1-git-send-email-wad@chromium.org>
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 8bit
 Mime-Version: 1.0
-Subject: [kernel-hardening] [PATCH] net: bpf_jit: fix BPF_S_LDX_B_MSH compilation
-To: Indan Zupancic <indan@nul.nu>, David Miller <davem@davemloft.net>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Matt Evans <matt@ozlabs.org>
+Subject: [kernel-hardening] Re: [PATCH v14 01/13] sk_run_filter: add BPF_S_ANC_SECCOMP_LD_W
+To: Indan Zupancic <indan@nul.nu>
+Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Le dimanche 18 mars 2012 à 19:35 +1100, Indan Zupancic a écrit :
 
-> And in the 00.00001% case that the filter uses a computed negative
-> offset the BPF JIT fails at runtime. So to not be buggy you need at
-> least a call to __load_pointer() for the negative case.
+> Yes. The main difference would be that the JIT could always generate imm8
+> offsets, saving 4 bytes per long offset while also simplifying the compiler
+> code. The %rdi + 127 is 4 bytes, and if the rest become slightly faster
+> because they're imm8 then it's worth the extra instruction.
+> 
 
-Please show me how and why a real (I mean useful one...) filter could
-generate a dynamic negative value, and I'll change the code.
+Do you understand you try to save 3 bytes in the function prolog, but
+your single EMIT4(0x48, 0x83, 0xc7, 127); /* addq $127,%rdi */
+defeats this ?
 
-Negative values are there to allow access to network/mac header
-components. I cant see how a BPF code could have a valid use of dynamic
-indexes in these headers.
+Ancillary instructions are rarely used, libpcap for example doesnt have
+support for them.
 
-Right now we consider such code is evil and filter does "return 0"
-saying so.
+> I first thought the +127 could be done in two bytes, but 4 bytes are
+> needed, so maybe it's not worth it.
+...
+> The add 127 would be at the start, the first instruction using it would
+> be a couple of instructions later, so I don't think the dependency is a
+> problem.
+> 
+> You're right about skb_copy_bits(), I did a quick search for rdi usage
+> but missed it was the first parameter too. It would need one extra
+> sub 127 or add -127 in the slow path, after the push. But it's the slow
+> path already, one extra instruction won't make much difference.
 
-If I remember well, a more practical issue was mentioned by Matt Evans
-and I forgot about it.
+It will, because new NIC drivers tend to provide skbs with fragments.
 
-Its even _documented_ in his code.
+Using libpcap filter like "udp[100]" calls the skb_copy_bits() helper in
+this case.
 
-Thanks
+There is no difference in instruction timing using offset32 or offset8,
+so the code you add will slow the filter anyway.
 
-[PATCH] net: bpf_jit: fix BPF_S_LDX_B_MSH compilation
-
-Matt Evans spotted that x86 bpf_jit was incorrectly handling negative
-constant offsets in BPF_S_LDX_B_MSH instruction.
-
-We need to abort JIT compilation like we do in common_load so that
-filter uses the interpreter code and can call __load_pointer()
-
-Reference: http://lists.openwall.net/netdev/2011/07/19/11
-
-Thanks to Indan Zupancic to bring back this issue.
-
-Reported-by: Matt Evans <matt@ozlabs.org>
-Reported-by: Indan Zupancic <indan@nul.nu>
-Signed-off-by: Eric Dumazet <eric.dumazet@gmail.com>
----
-David, libpcap doesnt generate such pattern, so feel to add this patch
-to net-next. Thanks !
-
- arch/x86/net/bpf_jit_comp.c |   14 +++++---------
- 1 file changed, 5 insertions(+), 9 deletions(-)
-
-diff --git a/arch/x86/net/bpf_jit_comp.c b/arch/x86/net/bpf_jit_comp.c
-index 7c1b765..5671752 100644
---- a/arch/x86/net/bpf_jit_comp.c
-+++ b/arch/x86/net/bpf_jit_comp.c
-@@ -475,8 +475,10 @@ void bpf_jit_compile(struct sk_filter *fp)
- 			case BPF_S_LD_W_ABS:
- 				func = sk_load_word;
- common_load:			seen |= SEEN_DATAREF;
--				if ((int)K < 0)
-+				if ((int)K < 0) {
-+					/* Abort the JIT because __load_pointer() is needed. */
- 					goto out;
-+				}
- 				t_offset = func - (image + addrs[i]);
- 				EMIT1_off32(0xbe, K); /* mov imm32,%esi */
- 				EMIT1_off32(0xe8, t_offset); /* call */
-@@ -489,14 +491,8 @@ common_load:			seen |= SEEN_DATAREF;
- 				goto common_load;
- 			case BPF_S_LDX_B_MSH:
- 				if ((int)K < 0) {
--					if (pc_ret0 > 0) {
--						/* addrs[pc_ret0 - 1] is the start address */
--						EMIT_JMP(addrs[pc_ret0 - 1] - addrs[i]);
--						break;
--					}
--					CLEAR_A();
--					EMIT_JMP(cleanup_addr - addrs[i]);
--					break;
-+					/* Abort the JIT because __load_pointer() is needed. */
-+					goto out;
- 				}
- 				seen |= SEEN_DATAREF | SEEN_XREG;
- 				t_offset = sk_load_byte_msh - (image + addrs[i]);
+Please dont obfuscate this code, I'd like to keep it maintainable.
