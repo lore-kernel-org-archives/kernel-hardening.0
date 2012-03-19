@@ -1,39 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 18 Mar 2012 21:53:42 +0100
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20120318205342.GA14383@redhat.com>
-References: <1331421919-15499-1-git-send-email-tixxdz@opendz.org> <1331421919-15499-2-git-send-email-tixxdz@opendz.org> <20120311172512.GA2729@redhat.com> <20120311174953.GB2729@redhat.com> <CA+55aFx43nZmhRg5Qv5x-4BdgcM-y80ECrgC8mCWc0RqU+_8rQ@mail.gmail.com> <20120314185510.GA14172@redhat.com> <20120314185538.GB14172@redhat.com> <CA+55aFzKc578eWYaq4+OaOM6hFjW+ePYCeC++_1p8f09YWV_hA@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CA+55aFzKc578eWYaq4+OaOM6hFjW+ePYCeC++_1p8f09YWV_hA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 1/1] CLONE_PARENT shouldn't allow to set ->exit_signal
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Djalal Harouni <tixxdz@opendz.org>, Alan Cox <alan@lxorguk.ukuu.org.uk>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Vasiliy Kulikov <segoon@openwall.com>, Kees Cook <keescook@chromium.org>, Solar Designer <solar@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, James Morris <james.l.morris@oracle.com>, linux-security-module@vger.kernel.org, linux-fsdevel@vger.kernel.org, Greg KH <gregkh@linuxfoundation.org>, Ingo Molnar <mingo@elte.hu>, Stephen Wilson <wilsons@start.ca>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Roland McGrath <roland@hack.frob.com>
+Date: Mon, 19 Mar 2012 17:42:41 -0400 (EDT)
+Message-Id: <20120319.174241.1785009482969692029.davem@davemloft.net>
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <1332074448.3722.25.camel@edumazet-laptop>
+References: <1331992184.2466.45.camel@edumazet-laptop>
+	<9a0230cb8db556cc9cf5d1f6b2439fb5.squirrel@webmail.greenhost.nl>
+	<1332074448.3722.25.camel@edumazet-laptop>
+Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] net: bpf_jit: fix BPF_S_LDX_B_MSH compilation
+To: eric.dumazet@gmail.com
+Cc: indan@nul.nu, wad@chromium.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, matt@ozlabs.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/18, Linus Torvalds wrote:
->
-> On Wed, Mar 14, 2012 at 11:55 AM, Oleg Nesterov <oleg@redhat.com> wrote:
-> > +       if (clone_flags & CLONE_THREAD)
-> > +               p->exit_signal = -1;
-> > +       else if (clone_flags & CLONE_PARENT)
-> > +               p->exit_signal = current->group_leader->exit_signal;
-> > +       else
-> > +               p->exit_signal = (clone_flags & CSIGNAL);
->
-> So why is it "current->group_leader->exit_signal" rather than the much
-> more logical (imho) and simpler "current->exit_signal"?
+From: Eric Dumazet <eric.dumazet@gmail.com>
+Date: Sun, 18 Mar 2012 05:40:48 -0700
 
-This would be wrong if current is not the main thread. In this
-case current->exit_signal = -1. Only group_leader has the "real"
-exit_signal used for notification.
+> [PATCH] net: bpf_jit: fix BPF_S_LDX_B_MSH compilation
+> 
+> Matt Evans spotted that x86 bpf_jit was incorrectly handling negative
+> constant offsets in BPF_S_LDX_B_MSH instruction.
+> 
+> We need to abort JIT compilation like we do in common_load so that
+> filter uses the interpreter code and can call __load_pointer()
+> 
+> Reference: http://lists.openwall.net/netdev/2011/07/19/11
+> 
+> Thanks to Indan Zupancic to bring back this issue.
+> 
+> Reported-by: Matt Evans <matt@ozlabs.org>
+> Reported-by: Indan Zupancic <indan@nul.nu>
+> Signed-off-by: Eric Dumazet <eric.dumazet@gmail.com>
 
-Historically "exit_signal = -1" meant different things, currently
-it only means "I am not the leader", see thread_group_leader().
-
-I'll write another email tomorrow. Yes, I do remember I promised
-the security fixes in this area, sorry for delay.
-
-Oleg.
+Applied and even though libpcap won't generate this I'll queue it up
+to -stable anyways.
