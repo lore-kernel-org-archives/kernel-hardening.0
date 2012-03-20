@@ -1,79 +1,174 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <cfb04c3fe59e421093f035c035c88b51.squirrel@webmail.greenhost.nl>
-In-Reply-To: <1332212386.22737.20.camel@edumazet-glaptop>
-References: <1331587715-26069-1-git-send-email-wad@chromium.org>
-    <0c55cb258e0b5bbd615923ee2a9f06b9.squirrel@webmail.greenhost.nl>
-    <1331658828.4449.16.camel@edumazet-glaptop>
-    <3e4fc1efb5d7dbe0dd966e3192e84645.squirrel@webmail.greenhost.nl>
-    <1331704535.2456.37.camel@edumazet-laptop>
-    <3f56b0860272f4ca8925c0a249a30539.squirrel@webmail.greenhost.nl>
-    <1331712357.2456.58.camel@edumazet-laptop>
-    <7a1c4974e8fbc3b82ead0bfb18224d5b.squirrel@webmail.greenhost.nl>
-    <1331992184.2466.45.camel@edumazet-laptop>
-    <9a0230cb8db556cc9cf5d1f6b2439fb5.squirrel@webmail.greenhost.nl>
-    <1332075121.3722.34.camel@edumazet-laptop>
-    <371a1925e68e68f873e30381e0fa60ea.squirrel@webmail.greenhost.nl>
-    <1332212386.22737.20.camel@edumazet-glaptop>
-Date: Tue, 20 Mar 2012 22:33:35 +1100
-From: "Indan Zupancic" <indan@nul.nu>
+Date: Tue, 20 Mar 2012 08:31:41 -0500
+From: Serge Hallyn <serge.hallyn@canonical.com>
+Message-ID: <20120320133141.GC2918@peqn>
+References: <20120319231253.GA20893@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain;charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH] net: bpf_jit: Simplify code by always using offset8 or
- offset32.
-To: Eric Dumazet <eric.dumazet@gmail.com>
-Cc: Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20120319231253.GA20893@www.outflux.net>
+Subject: [kernel-hardening] Re: [PATCH] futex: do not leak robust list to unprivileged process
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, Darren Hart <dvhart@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Andrew Morton <akpm@linux-foundation.org>, Jiri Kosina <jkosina@suse.cz>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net, mingo@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, March 20, 2012 13:59, Eric Dumazet wrote:
-> On Tue, 2012-03-20 at 13:24 +1100, Indan Zupancic wrote:
->
->> If it does then perhaps the fast path should be made faster by inlining
->> the code instead of calling a function which may not be cached.
->>
->
-> inlining 400 times a sequence of code is waste of icache, you probably
-> missed this.
+Quoting Kees Cook (keescook@chromium.org):
+> It was possible to extract the robust list head address from a setuid
+> process if it had used set_robust_list(), allowing an ASLR info leak. This
+> changes the permission checks to be the same as those used for similar
+> info that comes out of /proc.
+> 
+> Running a setuid program that uses robust futexes would have had:
+>   cred->euid != pcred->euid
+>   cred->euid == pcred->uid
+> so the old permissions check would allow it. I'm not aware of any setuid
+> programs that use robust futexes, so this is just a preventative measure.
+> 
+> (This patch is based on changes from grsecurity.)
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-Well, according to you most filters were small, inling 26 bytes a few
-times should be faster than calling an external function. Not all calls
-need to be inlined either.
+I like the change.  Much cleaner.  I'm not 100% sure though that
+there are no legitimate cases of robust futexes use which would now
+be forbidden.  (Explicitly cc:ing Ingo)
 
->
-> I spent a lot of time on working on this implementation, tried many
-> different strategies before choosing the one in place.
->
-> Listen, I am tired of this thread, it seems you want to push changes
-> that have almost no value but still need lot of review.
+Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
 
-The latest patch didn't change generated code except for a few ancillary
-instructions. The one before that just added documentation. The first
-patch was indeed bad.
-
->
-> Unless you make benchmarks and can make at least 5 % improvement of the
-> speed, or improve maintainability of this code, I am not interested.
-
-My next patch would have changed the compiler to always compile in two
-passes instead of looping till the result is stable. But never mind.
-
->
-> We certainly _can_ one day have sizeof(struct sk_buff) > 256, and actual
-> code is ready for this. You want to break this for absolutely no valid
-> reason.
-
-I've the feeling you didn't read the latest patch, it doesn't assume
-sizeof(struct sk_buff) < 256, nor that fields aren't reordered.
-
->
-> We _can_ change fields order anytime in struct sk_buff, even if you
-> state "its very unlikely that those fields are ever moved to the end
-> of sk_buff".
-
-And if the dev, len or data_len fields are really moved past the first
-127 bytes the JIT code can be changed too. The JIT code already depends
-on some of struct sk_buff's field properties anyway.
-
-Greetings,
-
-Indan
+> ---
+>  kernel/futex.c        |   36 +++++++++++++-----------------------
+>  kernel/futex_compat.c |   36 +++++++++++++-----------------------
+>  2 files changed, 26 insertions(+), 46 deletions(-)
+> 
+> diff --git a/kernel/futex.c b/kernel/futex.c
+> index 1614be2..439440d 100644
+> --- a/kernel/futex.c
+> +++ b/kernel/futex.c
+> @@ -59,6 +59,7 @@
+>  #include <linux/magic.h>
+>  #include <linux/pid.h>
+>  #include <linux/nsproxy.h>
+> +#include <linux/ptrace.h>
+>  
+>  #include <asm/futex.h>
+>  
+> @@ -2443,40 +2444,29 @@ SYSCALL_DEFINE3(get_robust_list, int, pid,
+>  {
+>  	struct robust_list_head __user *head;
+>  	unsigned long ret;
+> -	const struct cred *cred = current_cred(), *pcred;
+> +	struct task_struct *p;
+>  
+>  	if (!futex_cmpxchg_enabled)
+>  		return -ENOSYS;
+>  
+> +	rcu_read_lock();
+> +
+> +	ret = -ESRCH;
+>  	if (!pid)
+> -		head = current->robust_list;
+> +		p = current;
+>  	else {
+> -		struct task_struct *p;
+> -
+> -		ret = -ESRCH;
+> -		rcu_read_lock();
+>  		p = find_task_by_vpid(pid);
+>  		if (!p)
+>  			goto err_unlock;
+> -		ret = -EPERM;
+> -		pcred = __task_cred(p);
+> -		/* If victim is in different user_ns, then uids are not
+> -		   comparable, so we must have CAP_SYS_PTRACE */
+> -		if (cred->user->user_ns != pcred->user->user_ns) {
+> -			if (!ns_capable(pcred->user->user_ns, CAP_SYS_PTRACE))
+> -				goto err_unlock;
+> -			goto ok;
+> -		}
+> -		/* If victim is in same user_ns, then uids are comparable */
+> -		if (cred->euid != pcred->euid &&
+> -		    cred->euid != pcred->uid &&
+> -		    !ns_capable(pcred->user->user_ns, CAP_SYS_PTRACE))
+> -			goto err_unlock;
+> -ok:
+> -		head = p->robust_list;
+> -		rcu_read_unlock();
+>  	}
+>  
+> +	ret = -EPERM;
+> +	if (!ptrace_may_access(p, PTRACE_MODE_READ))
+> +		goto err_unlock;
+> +
+> +	head = p->robust_list;
+> +	rcu_read_unlock();
+> +
+>  	if (put_user(sizeof(*head), len_ptr))
+>  		return -EFAULT;
+>  	return put_user(head, head_ptr);
+> diff --git a/kernel/futex_compat.c b/kernel/futex_compat.c
+> index 5f9e689..a9642d5 100644
+> --- a/kernel/futex_compat.c
+> +++ b/kernel/futex_compat.c
+> @@ -10,6 +10,7 @@
+>  #include <linux/compat.h>
+>  #include <linux/nsproxy.h>
+>  #include <linux/futex.h>
+> +#include <linux/ptrace.h>
+>  
+>  #include <asm/uaccess.h>
+>  
+> @@ -136,40 +137,29 @@ compat_sys_get_robust_list(int pid, compat_uptr_t __user *head_ptr,
+>  {
+>  	struct compat_robust_list_head __user *head;
+>  	unsigned long ret;
+> -	const struct cred *cred = current_cred(), *pcred;
+> +	struct task_struct *p;
+>  
+>  	if (!futex_cmpxchg_enabled)
+>  		return -ENOSYS;
+>  
+> +	rcu_read_lock();
+> +
+> +	ret = -ESRCH;
+>  	if (!pid)
+> -		head = current->compat_robust_list;
+> +		p = current;
+>  	else {
+> -		struct task_struct *p;
+> -
+> -		ret = -ESRCH;
+> -		rcu_read_lock();
+>  		p = find_task_by_vpid(pid);
+>  		if (!p)
+>  			goto err_unlock;
+> -		ret = -EPERM;
+> -		pcred = __task_cred(p);
+> -		/* If victim is in different user_ns, then uids are not
+> -		   comparable, so we must have CAP_SYS_PTRACE */
+> -		if (cred->user->user_ns != pcred->user->user_ns) {
+> -			if (!ns_capable(pcred->user->user_ns, CAP_SYS_PTRACE))
+> -				goto err_unlock;
+> -			goto ok;
+> -		}
+> -		/* If victim is in same user_ns, then uids are comparable */
+> -		if (cred->euid != pcred->euid &&
+> -		    cred->euid != pcred->uid &&
+> -		    !ns_capable(pcred->user->user_ns, CAP_SYS_PTRACE))
+> -			goto err_unlock;
+> -ok:
+> -		head = p->compat_robust_list;
+> -		rcu_read_unlock();
+>  	}
+>  
+> +	ret = -EPERM;
+> +	if (!ptrace_may_access(p, PTRACE_MODE_READ))
+> +		goto err_unlock;
+> +
+> +	head = p->compat_robust_list;
+> +	rcu_read_unlock();
+> +
+>  	if (put_user(sizeof(*head), len_ptr))
+>  		return -EFAULT;
+>  	return put_user(ptr_to_compat(head), head_ptr);
+> -- 
+> 1.7.0.4
+> 
