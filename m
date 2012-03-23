@@ -1,42 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 23 Mar 2012 00:46:27 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <20120320172300.GA8888@gmail.com>
-Message-ID: <alpine.LFD.2.02.1203230043470.2542@ionos>
-References: <20120319231253.GA20893@www.outflux.net> <20120320133141.GC2918@peqn> <alpine.LFD.2.02.1203201758220.2542@ionos> <CAGXu5jKVx41+NSEWsw0YF74z5_heSQ6GOmkuDi1DXNPcO4sjTQ@mail.gmail.com> <20120320172300.GA8888@gmail.com>
+Date: Fri, 23 Mar 2012 10:58:55 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20120323175855.GA23668@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] futex: do not leak robust list to unprivileged process
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Serge Hallyn <serge.hallyn@canonical.com>, LKML <linux-kernel@vger.kernel.org>, Darren Hart <dvhart@linux.intel.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Andrew Morton <akpm@linux-foundation.org>, Jiri Kosina <jkosina@suse.cz>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.LFD.2.02.1203230043470.2542@ionos>
+Subject: [kernel-hardening] [PATCH] futex: mark get_robust_list as deprecated
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-kernel@vger.kernel.org, Darren Hart <dvhart@linux.intel.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Andrew Morton <akpm@linux-foundation.org>, Jiri Kosina <jkosina@suse.cz>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 20 Mar 2012, Ingo Molnar wrote:
-> * Kees Cook <keescook@chromium.org> wrote:
-> > On Tue, Mar 20, 2012 at 10:02 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
-> > > I really wonder why we have this syscall at all.
-> > 
-> > The documentation I found yesterday while looking at this was: 
-> > http://linux.die.net/man/2/get_robust_list
-> > 
-> > Which says "The system call is only available for debugging 
-> > purposes and is not needed for normal operations. Both system 
-> > calls are not available to application programs as functions; 
-> > they can be called using the syscall(3) function."
-> > 
-> > Dropping the syscall entirely would certainly make it secure. 
-> > ;)
-> 
-> The thinking was API completeness. In general it's possible for 
-> a sufficiently privileged task to figure out all the state of a 
-> task. We can query timers, fds - the robust list is such a 
-> resource as well. The information leakage was obviously not 
-> intended.
+Notify get_robust_list users that the syscall is going away.
 
-So I think it's safe to take Kees' patch as is. On top of that we
-should add a WARN_ONCE when the syscall is invoked and schedule the
-sucker for removal.
+Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ kernel/futex.c        |    2 ++
+ kernel/futex_compat.c |    2 ++
+ 2 files changed, 4 insertions(+), 0 deletions(-)
 
-Thoughts ?
+diff --git a/kernel/futex.c b/kernel/futex.c
+index 439440d..545d7a3 100644
+--- a/kernel/futex.c
++++ b/kernel/futex.c
+@@ -2449,6 +2449,8 @@ SYSCALL_DEFINE3(get_robust_list, int, pid,
+ 	if (!futex_cmpxchg_enabled)
+ 		return -ENOSYS;
+ 
++	WARN_ONCE(1, "deprecated: get_robust_list will be deleted in 2013.\n");
++
+ 	rcu_read_lock();
+ 
+ 	ret = -ESRCH;
+diff --git a/kernel/futex_compat.c b/kernel/futex_compat.c
+index a9642d5..83e368b 100644
+--- a/kernel/futex_compat.c
++++ b/kernel/futex_compat.c
+@@ -142,6 +142,8 @@ compat_sys_get_robust_list(int pid, compat_uptr_t __user *head_ptr,
+ 	if (!futex_cmpxchg_enabled)
+ 		return -ENOSYS;
+ 
++	WARN_ONCE(1, "deprecated: get_robust_list will be deleted in 2013.\n");
++
+ 	rcu_read_lock();
+ 
+ 	ret = -ESRCH;
+-- 
+1.7.0.4
 
-	 tglx
+-- 
+Kees Cook
+ChromeOS Security
