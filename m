@@ -1,40 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <4F6F7362.6030402@zytor.com>
-Date: Sun, 25 Mar 2012 12:34:58 -0700
+Message-ID: <4F6F73B9.2000207@zytor.com>
+Date: Sun, 25 Mar 2012 12:36:25 -0700
 From: "H. Peter Anvin" <hpa@zytor.com>
 MIME-Version: 1.0
-References: <1331781125-15658-1-git-send-email-wad@chromium.org> <1331781125-15658-5-git-send-email-wad@chromium.org>
-In-Reply-To: <1331781125-15658-5-git-send-email-wad@chromium.org>
+References: <1331781125-15658-1-git-send-email-wad@chromium.org>
+In-Reply-To: <1331781125-15658-1-git-send-email-wad@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v15 04/13] arch/x86: add syscall_get_arch to syscall.h
+Subject: [kernel-hardening] Re: [PATCH v15 00/13] seccomp_filter: syscall filtering using BPF
 To: Will Drewry <wad@chromium.org>
 Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 03/14/2012 08:11 PM, Will Drewry wrote:
->  
-> +static inline int syscall_get_arch(struct task_struct *task,
-> +				   struct pt_regs *regs)
-> +{
-> +#ifdef CONFIG_IA32_EMULATION
-> +	/*
-> +	 * TS_COMPAT is set for 32-bit syscall entries and then
-> +	 * remains set until we return to user mode.
-> +	 *
-> +	 * TIF_IA32 tasks should always have TS_COMPAT set at
-> +	 * system call time.
-> +	 */
-> +	if (task_thread_info(task)->status & TS_COMPAT)
-> +		return AUDIT_ARCH_I386;
-> +#endif
-> +	return AUDIT_ARCH_X86_64;
-> +}
->  #endif	/* CONFIG_X86_32 */
->  
->  #endif	/* _ASM_X86_SYSCALL_H */
+> Please see prior revisions of this patch series for a high
+> level blurb.
+> 
+> This revision makes a number of refinements and tweaks. The biggest
+> change is a slight renumbering of the return codes which will break
+> existing code using this patch series.
+> 
+> I believe this patch is in good shape, and I don't see the need for
+> any more API changes at this point.  I plan to start using this revision
+> more extensively, and I'd certainly appreciate any testing.
+> 
+> Thanks!
+> will
+> 
 
-Just one FYI on this: after the x32 changes are upstream this can be
-implemented in terms of is_ia32_task().
+x86 portions:
+
+Reviewed-by: H. Peter Anvin <hpa@zytor.com>
+
+What is the preferred way to push this upstream?  (Presumably for 3.5 at
+this point, but we should get it into -next as soon as possible after
+the merge window.)
 
 	-hpa
