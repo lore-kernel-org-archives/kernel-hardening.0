@@ -1,57 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <4F6F73B9.2000207@zytor.com>
-References: <1331781125-15658-1-git-send-email-wad@chromium.org>
-	<4F6F73B9.2000207@zytor.com>
-Date: Mon, 26 Mar 2012 11:53:06 -0500
-Message-ID: <CABqD9hZe9t9WeMRcuhvevSb9svp5UH9ZHH4TZg753zzcrX-tnQ@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
+In-Reply-To: <20120323190855.GA27213@www.outflux.net>
+References: <alpine.LFD.2.02.1203231926000.2542@ionos>
+	<20120323190855.GA27213@www.outflux.net>
+Date: Tue, 27 Mar 2012 14:05:24 -0400
+Message-ID: <CA+5PVA5FR_QoTtNVV04VXrjOujAMFHMXF4-GnyZHLPUGnvb3zA@mail.gmail.com>
+From: Josh Boyer <jwboyer@gmail.com>
 Content-Type: text/plain; charset=ISO-8859-1
 Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v15 00/13] seccomp_filter: syscall filtering using BPF
-To: "H. Peter Anvin" <hpa@zytor.com>, akpm@linux-foundation.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+Subject: [kernel-hardening] Re: [PATCH v2] futex: mark get_robust_list as deprecated
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, linux-kernel@vger.kernel.org, Randy Dunlap <rdunlap@xenotime.net>, Darren Hart <dvhart@linux.intel.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Andrew Morton <akpm@linux-foundation.org>, Jiri Kosina <jkosina@suse.cz>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Mar 25, 2012 at 2:36 PM, H. Peter Anvin <hpa@zytor.com> wrote:
-> On 03/14/2012 08:11 PM, Will Drewry wrote:
->> Please see prior revisions of this patch series for a high
->> level blurb.
->>
->> This revision makes a number of refinements and tweaks. The biggest
->> change is a slight renumbering of the return codes which will break
->> existing code using this patch series.
->>
->> I believe this patch is in good shape, and I don't see the need for
->> any more API changes at this point. =A0I plan to start using this revisi=
-on
->> more extensively, and I'd certainly appreciate any testing.
->>
->> Thanks!
->> will
->>
+On Fri, Mar 23, 2012 at 3:08 PM, Kees Cook <keescook@chromium.org> wrote:
+> Notify get_robust_list users that the syscall is going away.
 >
-> x86 portions:
+> Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+> v2:
+> =A0- add note to feature-removal-schedule.txt.
+> ---
+> =A0Documentation/feature-removal-schedule.txt | =A0 10 ++++++++++
+> =A0kernel/futex.c =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0=
+ | =A0 =A02 ++
+> =A0kernel/futex_compat.c =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0| =A0=
+ =A02 ++
+> =A03 files changed, 14 insertions(+), 0 deletions(-)
 >
-> Reviewed-by: H. Peter Anvin <hpa@zytor.com>
+> diff --git a/Documentation/feature-removal-schedule.txt b/Documentation/f=
+eature-removal-schedule.txt
+> index 4bfd982..e3bf119 100644
+> --- a/Documentation/feature-removal-schedule.txt
+> +++ b/Documentation/feature-removal-schedule.txt
+> @@ -543,3 +543,13 @@ When: =A0 =A0 =A03.5
+> =A0Why: =A0 The old kmap_atomic() with two arguments is deprecated, we on=
+ly
+> =A0 =A0 =A0 =A0keep it for backward compatibility for few cycles and then=
+ drop it.
+> =A0Who: =A0 Cong Wang <amwang@redhat.com>
+> +
+> +----------------------------
+> +
+> +What: =A0get_robust_list syscall
+> +When: =A02013
+> +Why: =A0 There appear to be no production users of the get_robust_list s=
+yscall,
+> + =A0 =A0 =A0 and it runs the risk of leaking address locations, allowing=
+ the bypass
+> + =A0 =A0 =A0 of ASLR. It was only ever intended for debugging, so it sho=
+uld be
+> + =A0 =A0 =A0 removed.
+> +Who: =A0 Kees Cook <keescook@chromium.org>
+> diff --git a/kernel/futex.c b/kernel/futex.c
+> index d701be5..e2b0fb9 100644
+> --- a/kernel/futex.c
+> +++ b/kernel/futex.c
+> @@ -2449,6 +2449,8 @@ SYSCALL_DEFINE3(get_robust_list, int, pid,
+> =A0 =A0 =A0 =A0if (!futex_cmpxchg_enabled)
+> =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0return -ENOSYS;
+>
+> + =A0 =A0 =A0 WARN_ONCE(1, "deprecated: get_robust_list will be deleted i=
+n 2013.\n");
+> +
 
-Thanks!
+Do you really need WARN_ONCE?  It's going to spew a backtrace if this
+is called, and that is going to cause various auto-bug reporters to file
+bugs as well.  There's nothing that can be done with those bugs other
+than to wait until this is removed.  Maybe it won't trigger because
+nobody is using it, but ugh.
 
-> What is the preferred way to push this upstream? =A0(Presumably for 3.5 a=
-t
-> this point, but we should get it into -next as soon as possible after
-> the merge window.)
+Is printk_once sufficient?
 
-A repost when rc1 has been cut is what's been suggested to me.
-
-Additionally, two tweaks have been pointed out off list (documentation
-cruft and lack if #ifdef for asm/syscall.h), which I have fixed in my
-local and github tree but haven't yet reposted here.  I was planning
-on just posting v17 when rc1 is cut (unless I've blithely missed it
-already) and then trying to pester everyone and anyone who can merge.
-:)
-
-Maybe someone more authoritative than me will answer though.
-
-thanks!
-will
+josh
