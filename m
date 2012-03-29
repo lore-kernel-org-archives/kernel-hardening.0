@@ -1,79 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Will Drewry <wad@chromium.org>
-Date: Thu, 29 Mar 2012 15:01:59 -0500
-Message-Id: <1333051320-30872-15-git-send-email-wad@chromium.org>
+Date: Fri, 30 Mar 2012 10:11:32 +1100 (EST)
+From: James Morris <jmorris@namei.org>
 In-Reply-To: <1333051320-30872-1-git-send-email-wad@chromium.org>
+Message-ID: <alpine.LRH.2.02.1203301010310.11201@tundra.namei.org>
 References: <1333051320-30872-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v17 14/15] x86: Enable HAVE_ARCH_SECCOMP_FILTER
-To: linux-kernel@vger.kernel.org
-Cc: linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Will Drewry <wad@chromium.org>
+MIME-Version: 1.0
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v17 00/15] seccomp_filter: BPF-based syscall filtering
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Enable support for seccomp filter on x86:
-- asm/tracehook.h exists
-- syscall_get_arguments() works
-- syscall_rollback() works
-- ptrace_report_syscall() works
-- secure_computing() return value is honored (see below)
+On Thu, 29 Mar 2012, Will Drewry wrote:
 
-This also adds support for honoring the return
-value from secure_computing().
+> Please see prior revisions for a detailed discussion of this patch
+> series.
+> 
+> This series is a rebase on to:
+>   b5174fa3a7f4f8f150bfa3b917c92608953dfa0f
+> with very minor changes due to rebasing and tweaks noticed by a few
+> initial users.  (I will rebase again for v3.4-rc1 when that time comes.)
 
-SECCOMP_RET_TRACE and SECCOMP_RET_TRAP may result in seccomp needing to
-skip a system call without killing the process.  This is done by
-returning a non-zero (-1) value from secure_computing.  This change
-makes x86 respect that return value.
+I've offered to take this via my tree -- if anyone else wants to merge it 
+via theirs instead, holler.
 
-To ensure that minimal kernel code is exposed, a non-zero return value
-results in an immediate return to user space (with an invalid syscall
-number).
-
-v17: added reviewed by and rebased
-v..: all rebases since original introduction.
-
-Reviewed-by: H. Peter Anvin <hpa@zytor.com>
-Signed-off-by: Will Drewry <wad@chromium.org>
----
- arch/x86/Kconfig         |    1 +
- arch/x86/kernel/ptrace.c |    7 ++++++-
- 2 files changed, 7 insertions(+), 1 deletions(-)
-
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 3ad653d..1f23136 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -83,6 +83,7 @@ config X86
- 	select ARCH_HAVE_NMI_SAFE_CMPXCHG
- 	select GENERIC_IOMAP
- 	select DCACHE_WORD_ACCESS if !DEBUG_PAGEALLOC
-+	select HAVE_ARCH_SECCOMP_FILTER
- 
- config INSTRUCTION_DECODER
- 	def_bool (KPROBES || PERF_EVENTS)
-diff --git a/arch/x86/kernel/ptrace.c b/arch/x86/kernel/ptrace.c
-index 8a634c8..a8d3cf9 100644
---- a/arch/x86/kernel/ptrace.c
-+++ b/arch/x86/kernel/ptrace.c
-@@ -1380,7 +1380,11 @@ long syscall_trace_enter(struct pt_regs *regs)
- 		regs->flags |= X86_EFLAGS_TF;
- 
- 	/* do the secure computing check first */
--	secure_computing(regs->orig_ax);
-+	if (secure_computing(regs->orig_ax)) {
-+		/* seccomp failures shouldn't expose any additional code. */
-+		ret = -1L;
-+		goto out;
-+	}
- 
- 	if (unlikely(test_thread_flag(TIF_SYSCALL_EMU)))
- 		ret = -1L;
-@@ -1405,6 +1409,7 @@ long syscall_trace_enter(struct pt_regs *regs)
- 				    regs->dx, regs->r10);
- #endif
- 
-+out:
- 	return ret ?: regs->orig_ax;
- }
- 
 -- 
-1.7.5.4
+James Morris
+<jmorris@namei.org>
