@@ -1,86 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 30 Mar 2012 18:51:48 -0400
-From: Gene Cooperman <gene@ccs.neu.edu>
-Message-ID: <20120330225148.GC26814@mspacman.ccs.neu.edu>
-References: <20120323190855.GA27213@www.outflux.net>
- <m1fwczvuph.fsf@fess.ebiederm.org>
- <20120330050544.GA32299@count0.beaverton.ibm.com>
+Date: Sat, 31 Mar 2012 08:40:33 +0400
+From: Vladimir Murzin <murzin.v@gmail.com>
+Message-ID: <20120331044030.GB3077@pinguin>
+References: <1333051320-30872-1-git-send-email-wad@chromium.org>
+ <1333051320-30872-9-git-send-email-wad@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=koi8-r
 Content-Disposition: inline
-In-Reply-To: <20120330050544.GA32299@count0.beaverton.ibm.com>
-Sender: Gene Cooperman <gene@ccs.neu.edu>
-Subject: [kernel-hardening] Re: [PATCH v2] futex: mark get_robust_list as deprecated
-To: Matt Helsley <matthltc@us.ibm.com>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, spender@grsecurity.net, Peter Zijlstra <a.p.zijlstra@chello.nl>, linux-doc@vger.kernel.org, Jiri Kosina <jkosina@suse.cz>, Darren Hart <dvhart@linux.intel.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, David Howells <dhowells@redhat.com>, Randy Dunlap <rdunlap@xenotime.net>, Linux Containers <containers@lists.linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Cyrill Gorcunov <gorcunov@openvz.org>, Pavel Emelyanov <xemul@parallels.com>, Gene Cooperman <gene@ccs.neu.edu>
+In-Reply-To: <1333051320-30872-9-git-send-email-wad@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v17 08/15] seccomp: add system call filtering using BPF
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thanks for including us in the cc, Matt.  
-We don't need the system call for DMTCP either.
+Hi Will,
 
-Also, in our DMTCP user base, we haven't had any requests to support
-checkpointing of user code with get_robust_list().  If a user had needed
-this or a similar system call, I suspect our new plugin architecture
-would make it easy to eupport.  But it's a non-issue now.
+On Thu, Mar 29, 2012 at 03:01:53PM -0500, Will Drewry wrote:
 
-Thanks,
-- Gene
+snipped
 
-On Thu, Mar 29, 2012 at 10:05:44PM -0700, Matt Helsley wrote:
-> On Fri, Mar 23, 2012 at 03:06:02PM -0700, Eric W. Biederman wrote:
-> > Kees Cook <keescook@chromium.org> writes:
-> > 
-> > > Notify get_robust_list users that the syscall is going away.
-> > 
-> > Has anyone asked the question if the folks working on checkpoint/restart
-> > are going to need this.
-> > 
-> > This seems like important information to know if you want to checkpoint
-> > a process.
-> 
-> I have no idea if the CRIU and DMTCP folks care about this. I've added
-> some folks related to those projects to the Cc list.
-> 
-> > 
-> > Eric
-> > 
-> > > Suggested-by: Thomas Gleixner <tglx@linutronix.de>
-> > > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > > ---
-> > > v2:
-> > >  - add note to feature-removal-schedule.txt.
-> > > ---
-> > >  Documentation/feature-removal-schedule.txt |   10 ++++++++++
-> > >  kernel/futex.c                             |    2 ++
-> > >  kernel/futex_compat.c                      |    2 ++
-> > >  3 files changed, 14 insertions(+), 0 deletions(-)
-> > >
-> > > diff --git a/Documentation/feature-removal-schedule.txt b/Documentation/feature-removal-schedule.txt
-> > > index 4bfd982..e3bf119 100644
-> > > --- a/Documentation/feature-removal-schedule.txt
-> > > +++ b/Documentation/feature-removal-schedule.txt
-> > > @@ -543,3 +543,13 @@ When:	3.5
-> > >  Why:	The old kmap_atomic() with two arguments is deprecated, we only
-> > >  	keep it for backward compatibility for few cycles and then drop it.
-> > >  Who:	Cong Wang <amwang@redhat.com>
-> > > +
-> > > +----------------------------
-> > > +
-> > > +What:	get_robust_list syscall
-> > > +When:	2013
-> > > +Why:	There appear to be no production users of the get_robust_list syscall,
-> > > +	and it runs the risk of leaking address locations, allowing the bypass
-> > > +	of ASLR. It was only ever intended for debugging, so it should be
-> > > +	removed.
-> 
-> So I've looked in glibc, gdb, and DMTCP. The description of the intended
-> use of get_robust_list() is accurate. However the benefit of ASLR is
-> less clear when it comes to the robust list. In glibc the robust list is
-> only used from NPTL. The robust list head is in struct pthread which can be
-> obtained from pthread_self() anyway. Thus I think ASLR doesn't really help
-> obfuscate the robust futex list unless the program is using robust futexes
-> without the aid of glibc.
-> 
-> Cheers,
-> 	-Matt Helsley
-> 
+> +
+> +/* Limit any path through the tree to 256KB worth of instructions. */
+> +#define MAX_INSNS_PER_PATH ((1 << 18) / sizeof(struct sock_filter))
+> +
+> +static void seccomp_filter_log_failure(int syscall)
+> +{
+> +	int compat = 0;
+> +#ifdef CONFIG_COMPAT
+> +	compat = is_compat_task();
+> +#endif
+> +	pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
+> +		current->comm, task_pid_nr(current),
+> +		(compat ? "compat " : ""),
+> +		syscall, KSTK_EIP(current));
+> +}
+
+snipped
+
+> +/**
+> + * seccomp_attach_user_filter - attaches a user-supplied sock_fprog
+> + * @user_filter: pointer to the user data containing a sock_fprog.
+> + *
+> + * Returns 0 on success and non-zero otherwise.
+> + */
+> +long seccomp_attach_user_filter(char __user *user_filter)
+> +{
+> +	struct sock_fprog fprog;
+> +	long ret = -EFAULT;
+> +
+> +#ifdef CONFIG_COMPAT
+> +	if (is_compat_task()) {
+> +		struct compat_sock_fprog fprog32;
+> +		if (copy_from_user(&fprog32, user_filter, sizeof(fprog32)))
+> +			goto out;
+> +		fprog.len = fprog32.len;
+> +		fprog.filter = compat_ptr(fprog32.filter);
+> +	} else /* falls through to the if below. */
+> +#endif
+> +	if (copy_from_user(&fprog, user_filter, sizeof(fprog)))
+> +		goto out;
+> +	ret = seccomp_attach_filter(&fprog);
+> +out:
+> +	return ret;
+> +}
+
+Do we really need to surround is_compat_task() with CNFIG_COMPAT?
+It seems that this case has already handled in compat.h [1]
+
+[1] http://lxr.linux.no/#linux+v3.3/include/linux/compat.h#L566
+
+Best wishes
+Vladimir Murzin
