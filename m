@@ -1,82 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20120331044030.GB3077@pinguin>
+Date: Fri, 6 Apr 2012 12:49:21 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20120406124921.5754e941.akpm@linux-foundation.org>
+In-Reply-To: <1333051320-30872-2-git-send-email-wad@chromium.org>
 References: <1333051320-30872-1-git-send-email-wad@chromium.org>
-	<1333051320-30872-9-git-send-email-wad@chromium.org>
-	<20120331044030.GB3077@pinguin>
-Date: Sat, 31 Mar 2012 13:14:25 -0500
-Message-ID: <CABqD9hZu+yVVPWqcrOTo0e2gKuPn-ZKP403WKUMCqVL9zHs4uA@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v17 08/15] seccomp: add system call filtering using BPF
-To: Vladimir Murzin <murzin.v@gmail.com>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
+	<1333051320-30872-2-git-send-email-wad@chromium.org>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v17 01/15] Add PR_{GET,SET}_NO_NEW_PRIVS to prevent
+ execve from granting privs
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Andy Lutomirski <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2012/3/30 Vladimir Murzin <murzin.v@gmail.com>:
-> Hi Will,
->
-> On Thu, Mar 29, 2012 at 03:01:53PM -0500, Will Drewry wrote:
->
-> snipped
->
->> +
->> +/* Limit any path through the tree to 256KB worth of instructions. */
->> +#define MAX_INSNS_PER_PATH ((1 << 18) / sizeof(struct sock_filter))
->> +
->> +static void seccomp_filter_log_failure(int syscall)
->> +{
->> + =A0 =A0 int compat =3D 0;
->> +#ifdef CONFIG_COMPAT
->> + =A0 =A0 compat =3D is_compat_task();
->> +#endif
->> + =A0 =A0 pr_info("%s[%d]: %ssystem call %d blocked at 0x%lx\n",
->> + =A0 =A0 =A0 =A0 =A0 =A0 current->comm, task_pid_nr(current),
->> + =A0 =A0 =A0 =A0 =A0 =A0 (compat ? "compat " : ""),
->> + =A0 =A0 =A0 =A0 =A0 =A0 syscall, KSTK_EIP(current));
->> +}
->
-> snipped
->
->> +/**
->> + * seccomp_attach_user_filter - attaches a user-supplied sock_fprog
->> + * @user_filter: pointer to the user data containing a sock_fprog.
->> + *
->> + * Returns 0 on success and non-zero otherwise.
->> + */
->> +long seccomp_attach_user_filter(char __user *user_filter)
->> +{
->> + =A0 =A0 struct sock_fprog fprog;
->> + =A0 =A0 long ret =3D -EFAULT;
->> +
->> +#ifdef CONFIG_COMPAT
->> + =A0 =A0 if (is_compat_task()) {
->> + =A0 =A0 =A0 =A0 =A0 =A0 struct compat_sock_fprog fprog32;
->> + =A0 =A0 =A0 =A0 =A0 =A0 if (copy_from_user(&fprog32, user_filter, size=
-of(fprog32)))
->> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 goto out;
->> + =A0 =A0 =A0 =A0 =A0 =A0 fprog.len =3D fprog32.len;
->> + =A0 =A0 =A0 =A0 =A0 =A0 fprog.filter =3D compat_ptr(fprog32.filter);
->> + =A0 =A0 } else /* falls through to the if below. */
->> +#endif
->> + =A0 =A0 if (copy_from_user(&fprog, user_filter, sizeof(fprog)))
->> + =A0 =A0 =A0 =A0 =A0 =A0 goto out;
->> + =A0 =A0 ret =3D seccomp_attach_filter(&fprog);
->> +out:
->> + =A0 =A0 return ret;
->> +}
->
-> Do we really need to surround is_compat_task() with CNFIG_COMPAT?
-> It seems that this case has already handled in compat.h [1]
->
-> [1] http://lxr.linux.no/#linux+v3.3/include/linux/compat.h#L566
+On Thu, 29 Mar 2012 15:01:46 -0500
+Will Drewry <wad@chromium.org> wrote:
 
-In log_failure, it's not needed at all, but that function disappears
-in a subsequent patch in the series that converts over to using the
-auditing framework.  For the next use of CONFIG_COMPAT, it is more
-important for guarding the compat_sock_fprog struct (which isn't
-doubly defined) rather than the is_compat_task.
+> From: Andy Lutomirski <luto@amacapital.net>
+> 
+> With this set, a lot of dangerous operations (chroot, unshare, etc)
+> become a lot less dangerous because there is no possibility of
+> subverting privileged binaries.
+> 
+> This patch completely breaks apparmor.  Someone who understands (and
+> uses) apparmor should fix it or at least give me a hint.
 
-Thanks!
-will
+So [patch 2/15] fixes all this up?
+
+I guess we should join the two patches into one, to avoid a silly
+breakage window.  That means that John loses a brownie point, but we
+can mention him in the changelog, include his signed-off-by:
+
+> Signed-off-by: Andy Lutomirski <luto@amacapital.net>
+
+Several of these patches are missing your signed-off-by:.  They should
+all have your SOB, because you sent them. 
+Documentation/SubmittingPatches explains this.
+
+I'm trying to find a way to merge all this code without reviewing it ;)
+Alas, this is against my rules.  Given the length of time for which
+this patchset has been floating around, I'm a little surprised by the
+lack of acked-by's and reviewed-by's.  Have you been gathering them all
+up?  Are the networking guys all happy about this patchset?
