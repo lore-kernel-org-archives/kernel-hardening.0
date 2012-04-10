@@ -1,42 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 10 Apr 2012 19:48:56 +1000 (EST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <CABqD9hYE0S4EL6yH-57SfNs+D8GFKJgWVN21VzXpQmRuh2ow=w@mail.gmail.com>
+Message-ID: <alpine.LRH.2.02.1204101948330.28663@tundra.namei.org>
+References: <1333051320-30872-1-git-send-email-wad@chromium.org> <1333051320-30872-9-git-send-email-wad@chromium.org> <20120406132330.457a05cf.akpm@linux-foundation.org> <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
+ <CABqD9hYE0S4EL6yH-57SfNs+D8GFKJgWVN21VzXpQmRuh2ow=w@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CBA89B80.3C770%ware@linux.intel.com>
-References: <CAE6n16kMv5Y+Cp9XZ=tmK0sgoJJZ6CJUq_ttuNEUMb4JFXJ33g@mail.gmail.com>
-	<CBA89B80.3C770%ware@linux.intel.com>
-Date: Mon, 9 Apr 2012 17:47:55 -0500
-Message-ID: <CABqD9hYQPDmNadkPw9O6fRXHpWDxh=MVPf7VB_3fz_X72dNz4w@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v17 15/15] Documentation: prctl/seccomp_filter
-To: Ryan Ware <ware@linux.intel.com>, Markus Gutschke <markus@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v17 08/15] seccomp: add system call filtering using BPF
+To: Will Drewry <wad@chromium.org>
+Cc: Indan Zupancic <indan@nul.nu>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 9, 2012 at 3:58 PM, Ryan Ware <ware@linux.intel.com> wrote:
->
-> On 4/9/12 1:47 PM, "Markus Gutschke" <markus@chromium.org> wrote:
->
->>No matter what you do, please leave the samples accessible somewhere.
->>They proved incredibly useful in figuring out how the API works. I am
->>sure, other developers are going to appreciate them as well.
->>
->>Alternatively, if you don't want to include the samples with the
->>kernel sources, figure out how you can include a sample in the
->>official manual page for prctl().
->>
->
-> I second this! =A0They are extremely useful.
->
-> Ryan
+On Mon, 9 Apr 2012, Will Drewry wrote:
 
-In that case, would it make sense to put up a separate tools/testing
-patch and leave samples where they lie? (I'd _love_ to keep this patch
-series from acquiring another 1000 lines, but either way works :)
+> > seccomp_chk_filter() mirrors sk_chk_filter(). So it refers to
+> > "chk", not "check".
+> 
+> I can change it to be written out or leave it matching the networking
+> code.  Any preferences?
 
-My current tester and harness lives here:
-  https://github.com/redpig/seccomp/blob/master/tests/
-and the licensing can be sorted out prior to a patch mail.
+check :-)
 
-thanks!
-will
+
+-- 
+James Morris
+<jmorris@namei.org>
