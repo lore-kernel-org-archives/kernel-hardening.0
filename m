@@ -1,28 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 10 Apr 2012 19:48:56 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CABqD9hYE0S4EL6yH-57SfNs+D8GFKJgWVN21VzXpQmRuh2ow=w@mail.gmail.com>
-Message-ID: <alpine.LRH.2.02.1204101948330.28663@tundra.namei.org>
-References: <1333051320-30872-1-git-send-email-wad@chromium.org> <1333051320-30872-9-git-send-email-wad@chromium.org> <20120406132330.457a05cf.akpm@linux-foundation.org> <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
- <CABqD9hYE0S4EL6yH-57SfNs+D8GFKJgWVN21VzXpQmRuh2ow=w@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+From: Eric Dumazet <eric.dumazet@gmail.com>
+In-Reply-To: <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
+References: <1333051320-30872-1-git-send-email-wad@chromium.org>
+	 <1333051320-30872-9-git-send-email-wad@chromium.org>
+	 <20120406132330.457a05cf.akpm@linux-foundation.org>
+	 <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
+Content-Type: text/plain; charset="UTF-8"
+Date: Tue, 10 Apr 2012 12:34:34 +0200
+Message-ID: <1334054074.3126.75.camel@edumazet-glaptop>
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH v17 08/15] seccomp: add system call filtering using BPF
-To: Will Drewry <wad@chromium.org>
-Cc: Indan Zupancic <indan@nul.nu>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+To: Indan Zupancic <indan@nul.nu>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 9 Apr 2012, Will Drewry wrote:
-
-> > seccomp_chk_filter() mirrors sk_chk_filter(). So it refers to
-> > "chk", not "check".
+On Mon, 2012-04-09 at 04:22 +1000, Indan Zupancic wrote:
+> On Sat, April 7, 2012 06:23, Andrew Morton wrote:
+> >
+> > I think this gives userspace an easy way of causing page allocation
+> > failure warnings, by permitting large kmalloc() attempts.  Add
+> > __GFP_NOWARN?
 > 
-> I can change it to be written out or leave it matching the networking
-> code.  Any preferences?
+> Max is 32kb. sk_attach_filter() in net/core/filter.c is worse,
+> it allocates up to 512kb before even checking the length.
+> 
 
-check :-)
+I dont think so.
 
+sk_attach_filter() uses sk_malloc() and it does a check.
 
--- 
-James Morris
-<jmorris@namei.org>
+# cat /proc/sys/net/core/optmem_max 
+20480
+
+Of course you can change the limit on your machine.
