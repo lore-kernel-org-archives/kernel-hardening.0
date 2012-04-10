@@ -1,36 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Eric Dumazet <eric.dumazet@gmail.com>
-In-Reply-To: <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
-References: <1333051320-30872-1-git-send-email-wad@chromium.org>
-	 <1333051320-30872-9-git-send-email-wad@chromium.org>
-	 <20120406132330.457a05cf.akpm@linux-foundation.org>
-	 <67e30a0c8655fc53a92e8138bba9de66.squirrel@webmail.greenhost.nl>
-Content-Type: text/plain; charset="UTF-8"
-Date: Tue, 10 Apr 2012 12:34:34 +0200
-Message-ID: <1334054074.3126.75.camel@edumazet-glaptop>
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v17 08/15] seccomp: add system call filtering using BPF
-To: Indan Zupancic <indan@nul.nu>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, pmoore@redhat.com, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
+Date: Tue, 10 Apr 2012 10:49:41 -0700
+From: Ryan Ware <ware@linux.intel.com>
+Message-ID: <CBA9C094.3CC91%ware@linux.intel.com>
+In-Reply-To: <CABqD9hYQPDmNadkPw9O6fRXHpWDxh=MVPf7VB_3fz_X72dNz4w@mail.gmail.com>
+Mime-version: 1.0
+Content-type: text/plain;
+	charset="US-ASCII"
+Content-transfer-encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v17 15/15] Documentation: prctl/seccomp_filter
+To: Will Drewry <wad@chromium.org>, Markus Gutschke <markus@chromium.org>, Andrew Morton <akpm@linux-foundation.org>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2012-04-09 at 04:22 +1000, Indan Zupancic wrote:
-> On Sat, April 7, 2012 06:23, Andrew Morton wrote:
-> >
-> > I think this gives userspace an easy way of causing page allocation
-> > failure warnings, by permitting large kmalloc() attempts.  Add
-> > __GFP_NOWARN?
-> 
-> Max is 32kb. sk_attach_filter() in net/core/filter.c is worse,
-> it allocates up to 512kb before even checking the length.
-> 
 
-I dont think so.
 
-sk_attach_filter() uses sk_malloc() and it does a check.
+On 4/9/12 3:47 PM, "Will Drewry" <wad@chromium.org> wrote:
 
-# cat /proc/sys/net/core/optmem_max 
-20480
+>On Mon, Apr 9, 2012 at 3:58 PM, Ryan Ware <ware@linux.intel.com> wrote:
+>>
+>> On 4/9/12 1:47 PM, "Markus Gutschke" <markus@chromium.org> wrote:
+>>
+>>>No matter what you do, please leave the samples accessible somewhere.
+>>>They proved incredibly useful in figuring out how the API works. I am
+>>>sure, other developers are going to appreciate them as well.
+>>>
+>>>Alternatively, if you don't want to include the samples with the
+>>>kernel sources, figure out how you can include a sample in the
+>>>official manual page for prctl().
+>>>
+>>
+>> I second this!  They are extremely useful.
+>>
+>> Ryan
+>
+>In that case, would it make sense to put up a separate tools/testing
+>patch and leave samples where they lie? (I'd _love_ to keep this patch
+>series from acquiring another 1000 lines, but either way works :)
+>
+>My current tester and harness lives here:
+>  https://github.com/redpig/seccomp/blob/master/tests/
+>and the licensing can be sorted out prior to a patch mail.
 
-Of course you can change the limit on your machine.
+I have absolutely no problems with that solution.  Availability is the
+important thing.
+
+Ryan
