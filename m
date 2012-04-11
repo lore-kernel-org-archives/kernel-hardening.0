@@ -1,79 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <4F84F895.4080101@zytor.com>
-References: <1331781125-15658-1-git-send-email-wad@chromium.org>
-	<1331781125-15658-5-git-send-email-wad@chromium.org>
-	<4F6F7362.6030402@zytor.com>
-	<CABqD9hZgnrKFY_Wei-ysU=Dy7Og2iEemnqPvcQ14M0+vL65gHQ@mail.gmail.com>
-	<4F84F895.4080101@zytor.com>
-Date: Wed, 11 Apr 2012 10:41:24 -0500
-Message-ID: <CABqD9haw2YutkSQHO0Qq19eveqwKCEi=L3fpCYupqvakW3jDMw@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
+Reply-To: mtk.manpages@gmail.com
+In-Reply-To: <20120406142824.61d8ca3b@lwn.net>
+References: <1333051320-30872-1-git-send-email-wad@chromium.org>
+ <1333051320-30872-2-git-send-email-wad@chromium.org> <20120406125517.77133b4e.akpm@linux-foundation.org>
+ <CAObL_7EYb62o=a0ekzcDx=0TuN55A7aTYhLJbMNu2r8F0V77EA@mail.gmail.com> <20120406142824.61d8ca3b@lwn.net>
+From: "Michael Kerrisk (man-pages)" <mtk.manpages@gmail.com>
+Date: Thu, 12 Apr 2012 07:31:16 +1200
+Message-ID: <CAKgNAkhhnC1+vdh7vTYKkngzxHccDwHH_aKF5wCNhga33BGhyQ@mail.gmail.com>
 Content-Type: text/plain; charset=ISO-8859-1
 Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v15 04/13] arch/x86: add syscall_get_arch to syscall.h
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
+Subject: [kernel-hardening] Re: [PATCH v17 01/15] Add PR_{GET,SET}_NO_NEW_PRIVS to prevent execve
+ from granting privs
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: Andrew Lutomirski <luto@mit.edu>, Andrew Morton <akpm@linux-foundation.org>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Andy Lutomirski <luto@amacapital.net>, linux-man@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 10, 2012 at 10:20 PM, H. Peter Anvin <hpa@zytor.com> wrote:
-> On 04/10/2012 08:13 PM, Will Drewry wrote:
->> On Sun, Mar 25, 2012 at 2:34 PM, H. Peter Anvin <hpa@zytor.com> wrote:
->>> On 03/14/2012 08:11 PM, Will Drewry wrote:
->>>>
->>>> +static inline int syscall_get_arch(struct task_struct *task,
->>>> + =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0 =A0struc=
-t pt_regs *regs)
->>>> +{
->>>> +#ifdef CONFIG_IA32_EMULATION
->>>> + =A0 =A0 /*
->>>> + =A0 =A0 =A0* TS_COMPAT is set for 32-bit syscall entries and then
->>>> + =A0 =A0 =A0* remains set until we return to user mode.
->>>> + =A0 =A0 =A0*
->>>> + =A0 =A0 =A0* TIF_IA32 tasks should always have TS_COMPAT set at
->>>> + =A0 =A0 =A0* system call time.
->>>> + =A0 =A0 =A0*/
->>>> + =A0 =A0 if (task_thread_info(task)->status & TS_COMPAT)
->>>> + =A0 =A0 =A0 =A0 =A0 =A0 return AUDIT_ARCH_I386;
->>>> +#endif
->>>> + =A0 =A0 return AUDIT_ARCH_X86_64;
->>>> +}
->>>> =A0#endif =A0 =A0 =A0 /* CONFIG_X86_32 */
->>>>
->>>> =A0#endif =A0 =A0 =A0 /* _ASM_X86_SYSCALL_H */
->>>
->>> Just one FYI on this: after the x32 changes are upstream this can be
->>> implemented in terms of is_ia32_task().
->>
->> Now that I've seen is_ia32_task(), it appears to be exactly the same as =
-above:
->> (1) =A0If we're x86_32, it's ia32
->> (2) =A0If we're x86_64, ia32 =3D=3D !!(status & TS_COMPAT)
->> (3) =A0Otherwise, it's x86_64, including x32
->>
->> Am I missing something? Should is_ia32_task(void) take a task_struct?
->> Right now, I don't see any reason to change the code, as posted, but
->> maybe I am mis-reading?
->>
+On Sat, Apr 7, 2012 at 8:28 AM, Jonathan Corbet <corbet@lwn.net> wrote:
+> On Fri, 6 Apr 2012 13:01:17 -0700
+> Andrew Lutomirski <luto@mit.edu> wrote:
 >
-> Sorry, answered the wrong question. =A0Yes, it is the same as above...
-> just wandered if we could centralize this test. =A0It might indeed make
-> sense to provide general predicates which take a task pointer.
+>> This has been bugging me for awhile. =A0Is there any interest in moving
+>> the manpages into the kernel source tree? =A0Then there could be a
+>> general requirement that new APIs get documented when they're written.
+>
+> Man page (or other documentation) requirements for patch acceptance are a
+> regular kernel summit feature. =A0People seem to think it's a good idea, =
+but
+> actual enforcement of such requirements always seems to be lacking. =A0Lo=
+ts
+> of people have kind of given up trying. =A0I don't really see that adding
+> the man pages to the tree would help, but I could be wrong...
 
-Makes sense to me. I'm leaving this specific patch alone at present.
+I largely consider this (moving man pages to kernel.org) a technical
+solution to what is fundamentally a social problem (developers
+reluctant to write documentation), and doubt that the technical
+solution would make much difference. I'd love to be proved wrong, but
+the experiment would require significant start-up effort. (My
+collected thoughts on this can be found here:
+http://www.kernel.org/doc/man-pages/todo.html#migrate_to_kernel_source.
+Note the alternative idea of patch tags mentioned at the end of that
+text.)
 
-That said, a quick grep shows only  a handful of ia32 references:
-./arch/x86/include/asm/compat.h:        return is_ia32_task() || is_x32_tas=
-k();
-./arch/x86/ia32/ia32_signal.c:  bool ia32 =3D is_ia32_task();
-./arch/x86/kernel/ptrace.c:     if (!is_ia32_task())
+Unless, or until there's a paid maintainer, I don't expect things to
+get significantly better than what they currently are. The quite
+significant improvements in man-pages since 2004, when I became
+maintainer were in small part due to the fact that I was for a short
+period paid to do the work, but in much larger part due to a huge
+private effort over those years which over the last couple of years is
+no longer unsustainable for me (man-pages is in competition with
+requirements for my attention from family, working life, and
+(seriously!) seismic events),
 
-Would it make sense to make a new predicate or just expand the one
-added in 3.4 to take a task_struct parameter? I'm not sure if there'd
-be much fallout in converting these from directly checking
-current_thread_info to task_thread_info.
+Cheers,
 
-It's a small patch either way.
+Michael
 
-cheers!
-will
+
+--=20
+Michael Kerrisk
+Linux man-pages maintainer; http://www.kernel.org/doc/man-pages/
+Author of "The Linux Programming Interface"; http://man7.org/tlpi/
