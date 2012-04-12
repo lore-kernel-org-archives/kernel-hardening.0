@@ -1,85 +1,139 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Will Drewry <wad@chromium.org>
-Date: Thu, 12 Apr 2012 16:47:56 -0500
-Message-Id: <1334267284-19166-7-git-send-email-wad@chromium.org>
+Date: Thu, 12 Apr 2012 16:48:01 -0500
+Message-Id: <1334267284-19166-12-git-send-email-wad@chromium.org>
 In-Reply-To: <1334267284-19166-1-git-send-email-wad@chromium.org>
 References: <1334267284-19166-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v18 07/15] arch/x86: add syscall_get_arch to syscall.h
+Subject: [kernel-hardening] [PATCH v18 12/15] seccomp: Add SECCOMP_RET_TRAP
 To: linux-kernel@vger.kernel.org
 Cc: linux-man@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add syscall_get_arch() to export the current AUDIT_ARCH_* based on system call
-entry path.
+Adds a new return value to seccomp filters that triggers a SIGSYS to be
+delivered with the new SYS_SECCOMP si_code.
 
+This allows in-process system call emulation, including just specifying
+an errno or cleanly dumping core, rather than just dying.
+
+Suggested-by: Markus Gutschke <markus@chromium.org>
+Suggested-by: Julien Tinnes <jln@chromium.org>
 Signed-off-by: Will Drewry <wad@chromium.org>
-Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
-Reviewed-by: H. Peter Anvin <hpa@zytor.com>
 Acked-by: Eric Paris <eparis@redhat.com>
 
-v18: - update comment about x32 tasks
-     - rebase to v3.4-rc2
-v17: rebase and reviewed-by
-v14: rebase/nochanges
-v13: rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
+v18: - acked-by, rebase
+     - don't mention secure_computing_int() anymore
+v15: - use audit_seccomp/skip
+     - pad out error spacing; clean up switch (indan@nul.nu)
+v14: - n/a
+v13: - rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
+v12: - rebase on to linux-next
+v11: - clarify the comment (indan@nul.nu)
+     - s/sigtrap/sigsys
+v10: - use SIGSYS, syscall_get_arch, updates arch/Kconfig
+       note suggested-by (though original suggestion had other behaviors)
+v9:  - changes to SIGILL
+v8:  - clean up based on changes to dependent patches
+v7:  - introduction
 ---
- arch/x86/include/asm/syscall.h |   27 +++++++++++++++++++++++++++
- 1 files changed, 27 insertions(+), 0 deletions(-)
+ arch/Kconfig                  |   14 +++++++++-----
+ include/asm-generic/siginfo.h |    2 +-
+ include/linux/seccomp.h       |    1 +
+ kernel/seccomp.c              |   26 ++++++++++++++++++++++++++
+ 4 files changed, 37 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/include/asm/syscall.h b/arch/x86/include/asm/syscall.h
-index 386b786..1ace47b 100644
---- a/arch/x86/include/asm/syscall.h
-+++ b/arch/x86/include/asm/syscall.h
-@@ -13,9 +13,11 @@
- #ifndef _ASM_X86_SYSCALL_H
- #define _ASM_X86_SYSCALL_H
+diff --git a/arch/Kconfig b/arch/Kconfig
+index beaab68..66aef13 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -219,11 +219,15 @@ config ARCH_WANT_OLD_COMPAT_IPC
+ config HAVE_ARCH_SECCOMP_FILTER
+ 	bool
+ 	help
+-	  This symbol should be selected by an architecure if it provides
+-	  asm/syscall.h, specifically syscall_get_arguments(),
+-	  syscall_get_arch(), and syscall_set_return_value().  Additionally,
+-	  its system call entry path must respect a return value of -1 from
+-	  __secure_computing() and/or secure_computing().
++	  This symbol should be selected by an architecure if it provides:
++	  asm/syscall.h:
++	  - syscall_get_arch()
++	  - syscall_get_arguments()
++	  - syscall_rollback()
++	  - syscall_set_return_value()
++	  SIGSYS siginfo_t support must be implemented.
++	  __secure_computing()/secure_computing()'s return value must be
++	  checked, with -1 resulting in the syscall being skipped.
  
-+#include <linux/audit.h>
- #include <linux/sched.h>
- #include <linux/err.h>
- #include <asm/asm-offsets.h>	/* For NR_syscalls */
-+#include <asm/thread_info.h>	/* for TS_COMPAT */
- #include <asm/unistd.h>
+ config SECCOMP_FILTER
+ 	def_bool y
+diff --git a/include/asm-generic/siginfo.h b/include/asm-generic/siginfo.h
+index 31306f5..af5d035 100644
+--- a/include/asm-generic/siginfo.h
++++ b/include/asm-generic/siginfo.h
+@@ -93,7 +93,7 @@ typedef struct siginfo {
  
- extern const unsigned long sys_call_table[];
-@@ -88,6 +90,12 @@ static inline void syscall_set_arguments(struct task_struct *task,
- 	memcpy(&regs->bx + i, args, n * sizeof(args[0]));
+ 		/* SIGSYS */
+ 		struct {
+-			void __user *_call_addr; /* calling insn */
++			void __user *_call_addr; /* calling user insn */
+ 			int _syscall;	/* triggering system call number */
+ 			unsigned int _arch;	/* AUDIT_ARCH_* of syscall */
+ 		} _sigsys;
+diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
+index b4ce2c8..317ccb7 100644
+--- a/include/linux/seccomp.h
++++ b/include/linux/seccomp.h
+@@ -19,6 +19,7 @@
+  * selects the least permissive choice.
+  */
+ #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
++#define SECCOMP_RET_TRAP	0x00030000U /* disallow and force a SIGSYS */
+ #define SECCOMP_RET_ERRNO	0x00050000U /* returns an errno */
+ #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
+ 
+diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+index 5f78fb6..9c38306 100644
+--- a/kernel/seccomp.c
++++ b/kernel/seccomp.c
+@@ -332,6 +332,26 @@ void put_seccomp_filter(struct task_struct *tsk)
+ 		kfree(freeme);
+ 	}
  }
- 
-+static inline int syscall_get_arch(struct task_struct *task,
-+				   struct pt_regs *regs)
-+{
-+	return AUDIT_ARCH_I386;
-+}
 +
- #else	 /* CONFIG_X86_64 */
- 
- static inline void syscall_get_arguments(struct task_struct *task,
-@@ -212,6 +220,25 @@ static inline void syscall_set_arguments(struct task_struct *task,
- 		}
- }
- 
-+static inline int syscall_get_arch(struct task_struct *task,
-+				   struct pt_regs *regs)
++/**
++ * seccomp_send_sigsys - signals the task to allow in-process syscall emulation
++ * @syscall: syscall number to send to userland
++ * @reason: filter-supplied reason code to send to userland (via si_errno)
++ *
++ * Forces a SIGSYS with a code of SYS_SECCOMP and related sigsys info.
++ */
++static void seccomp_send_sigsys(int syscall, int reason)
 +{
-+#ifdef CONFIG_IA32_EMULATION
-+	/*
-+	 * TS_COMPAT is set for 32-bit syscall entry and then
-+	 * remains set until we return to user mode.
-+	 *
-+	 * TIF_IA32 tasks should always have TS_COMPAT set at
-+	 * system call time.
-+	 *
-+	 * x32 tasks should be considered AUDIT_ARCH_X86_64.
-+	 */
-+	if (task_thread_info(task)->status & TS_COMPAT)
-+		return AUDIT_ARCH_I386;
-+#endif
-+	/* Both x32 and x86_64 are considered "64-bit". */
-+	return AUDIT_ARCH_X86_64;
++	struct siginfo info;
++	memset(&info, 0, sizeof(info));
++	info.si_signo = SIGSYS;
++	info.si_code = SYS_SECCOMP;
++	info.si_call_addr = (void __user *)KSTK_EIP(current);
++	info.si_errno = reason;
++	info.si_arch = syscall_get_arch(current, task_pt_regs(current));
++	info.si_syscall = syscall;
++	force_sig_info(SIGSYS, &info, current);
 +}
- #endif	/* CONFIG_X86_32 */
+ #endif	/* CONFIG_SECCOMP_FILTER */
  
- #endif	/* _ASM_X86_SYSCALL_H */
+ /*
+@@ -382,6 +402,12 @@ int __secure_computing(int this_syscall)
+ 			syscall_set_return_value(current, task_pt_regs(current),
+ 						 -data, 0);
+ 			goto skip;
++		case SECCOMP_RET_TRAP:
++			/* Show the handler the original registers. */
++			syscall_rollback(current, task_pt_regs(current));
++			/* Let the filter pass back 16 bits of data. */
++			seccomp_send_sigsys(this_syscall, data);
++			goto skip;
+ 		case SECCOMP_RET_ALLOW:
+ 			return 0;
+ 		case SECCOMP_RET_KILL:
 -- 
 1.7.5.4
