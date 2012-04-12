@@ -1,166 +1,80 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Will Drewry <wad@chromium.org>
-Date: Thu, 12 Apr 2012 16:48:02 -0500
-Message-Id: <1334267284-19166-13-git-send-email-wad@chromium.org>
+Date: Thu, 12 Apr 2012 16:48:03 -0500
+Message-Id: <1334267284-19166-14-git-send-email-wad@chromium.org>
 In-Reply-To: <1334267284-19166-1-git-send-email-wad@chromium.org>
 References: <1334267284-19166-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v18 13/15] ptrace,seccomp: Add PTRACE_SECCOMP support
+Subject: [kernel-hardening] [PATCH v18 14/15] x86: Enable HAVE_ARCH_SECCOMP_FILTER
 To: linux-kernel@vger.kernel.org
 Cc: linux-man@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This change adds support for a new ptrace option, PTRACE_O_TRACESECCOMP,
-and a new return value for seccomp BPF programs, SECCOMP_RET_TRACE.
+Enable support for seccomp filter on x86:
+- syscall_get_arch()
+- syscall_get_arguments()
+- syscall_rollback()
+- syscall_set_return_value()
+- SIGSYS siginfo_t support
+- secure_computing is called from a ptrace_event()-safe context
+- secure_computing return value is checked (see below).
 
-When a tracer specifies the PTRACE_O_TRACESECCOMP ptrace option, the
-tracer will be notified, via PTRACE_EVENT_SECCOMP, for any syscall that
-results in a BPF program returning SECCOMP_RET_TRACE.  The 16-bit
-SECCOMP_RET_DATA mask of the BPF program return value will be passed as
-the ptrace_message and may be retrieved using PTRACE_GETEVENTMSG.
+SECCOMP_RET_TRACE and SECCOMP_RET_TRAP may result in seccomp needing to
+skip a system call without killing the process.  This is done by
+returning a non-zero (-1) value from secure_computing.  This change
+makes x86 respect that return value.
 
-If the subordinate process is not using seccomp filter, then no
-system call notifications will occur even if the option is specified.
-
-If there is no tracer with PTRACE_O_TRACESECCOMP when SECCOMP_RET_TRACE
-is returned, the system call will not be executed and an -ENOSYS errno
-will be returned to userspace.
-
-This change adds a dependency on the system call slow path.  Any future
-efforts to use the system call fast path for seccomp filter will need to
-address this restriction.
+To ensure that minimal kernel code is exposed, a non-zero return value
+results in an immediate return to user space (with an invalid syscall
+number).
 
 Signed-off-by: Will Drewry <wad@chromium.org>
+Reviewed-by: H. Peter Anvin <hpa@zytor.com>
 Acked-by: Eric Paris <eparis@redhat.com>
 
-v18: - rebase
-     - comment fatal_signal check
-     - acked-by
-     - drop secure_computing_int comment
-v17: - ...
-v16: - update PT_TRACE_MASK to 0xbf4 so that STOP isn't clear on SETOPTIONS call (indan@nul.nu)
-       [note PT_TRACE_MASK disappears in linux-next]
-v15: - add audit support for non-zero return codes
-     - clean up style (indan@nul.nu)
-v14: - rebase/nochanges
-v13: - rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
-       (Brings back a change to ptrace.c and the masks.)
-v12: - rebase to linux-next
-     - use ptrace_event and update arch/Kconfig to mention slow-path dependency
-     - drop all tracehook changes and inclusion (oleg@redhat.com)
-v11: - invert the logic to just make it a PTRACE_SYSCALL accelerator
-       (indan@nul.nu)
-v10: - moved to PTRACE_O_SECCOMP / PT_TRACE_SECCOMP
-v9:  - n/a
-v8:  - guarded PTRACE_SECCOMP use with an ifdef
-v7:  - introduced
+v18: rebase and tweaked change description, acked-by
+v17: added reviewed by and rebased
+v..: all rebases since original introduction.
 ---
- arch/Kconfig            |   10 +++++-----
- include/linux/ptrace.h  |    5 ++++-
- include/linux/seccomp.h |    1 +
- kernel/seccomp.c        |   16 ++++++++++++++++
- 4 files changed, 26 insertions(+), 6 deletions(-)
+ arch/x86/Kconfig         |    1 +
+ arch/x86/kernel/ptrace.c |    7 ++++++-
+ 2 files changed, 7 insertions(+), 1 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 66aef13..c024b3e 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -219,15 +219,15 @@ config ARCH_WANT_OLD_COMPAT_IPC
- config HAVE_ARCH_SECCOMP_FILTER
- 	bool
- 	help
--	  This symbol should be selected by an architecure if it provides:
--	  asm/syscall.h:
-+	  An arch should select this symbol if it provides all of these things:
- 	  - syscall_get_arch()
- 	  - syscall_get_arguments()
- 	  - syscall_rollback()
- 	  - syscall_set_return_value()
--	  SIGSYS siginfo_t support must be implemented.
--	  __secure_computing()/secure_computing()'s return value must be
--	  checked, with -1 resulting in the syscall being skipped.
-+	  - SIGSYS siginfo_t support
-+	  - secure_computing is called from a ptrace_event()-safe context
-+	  - secure_computing return value is checked and a return value of -1
-+	    results in the system call being skipped immediately.
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 1d14cc6..3a41c44 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -82,6 +82,7 @@ config X86
+ 	select ARCH_HAVE_NMI_SAFE_CMPXCHG
+ 	select GENERIC_IOMAP
+ 	select DCACHE_WORD_ACCESS if !DEBUG_PAGEALLOC
++	select HAVE_ARCH_SECCOMP_FILTER
  
- config SECCOMP_FILTER
- 	def_bool y
-diff --git a/include/linux/ptrace.h b/include/linux/ptrace.h
-index 5c71962..597e4fd 100644
---- a/include/linux/ptrace.h
-+++ b/include/linux/ptrace.h
-@@ -58,6 +58,7 @@
- #define PTRACE_EVENT_EXEC	4
- #define PTRACE_EVENT_VFORK_DONE	5
- #define PTRACE_EVENT_EXIT	6
-+#define PTRACE_EVENT_SECCOMP	7
- /* Extended result codes which enabled by means other than options.  */
- #define PTRACE_EVENT_STOP	128
+ config INSTRUCTION_DECODER
+ 	def_bool (KPROBES || PERF_EVENTS)
+diff --git a/arch/x86/kernel/ptrace.c b/arch/x86/kernel/ptrace.c
+index 685845c..13b1990 100644
+--- a/arch/x86/kernel/ptrace.c
++++ b/arch/x86/kernel/ptrace.c
+@@ -1480,7 +1480,11 @@ long syscall_trace_enter(struct pt_regs *regs)
+ 		regs->flags |= X86_EFLAGS_TF;
  
-@@ -69,8 +70,9 @@
- #define PTRACE_O_TRACEEXEC	(1 << PTRACE_EVENT_EXEC)
- #define PTRACE_O_TRACEVFORKDONE	(1 << PTRACE_EVENT_VFORK_DONE)
- #define PTRACE_O_TRACEEXIT	(1 << PTRACE_EVENT_EXIT)
-+#define PTRACE_O_TRACESECCOMP	(1 << PTRACE_EVENT_SECCOMP)
+ 	/* do the secure computing check first */
+-	secure_computing(regs->orig_ax);
++	if (secure_computing(regs->orig_ax)) {
++		/* seccomp failures shouldn't expose any additional code. */
++		ret = -1L;
++		goto out;
++	}
  
--#define PTRACE_O_MASK		0x0000007f
-+#define PTRACE_O_MASK		0x000000ff
+ 	if (unlikely(test_thread_flag(TIF_SYSCALL_EMU)))
+ 		ret = -1L;
+@@ -1505,6 +1509,7 @@ long syscall_trace_enter(struct pt_regs *regs)
+ 				    regs->dx, regs->r10);
+ #endif
  
- #include <asm/ptrace.h>
++out:
+ 	return ret ?: regs->orig_ax;
+ }
  
-@@ -98,6 +100,7 @@
- #define PT_TRACE_EXEC		PT_EVENT_FLAG(PTRACE_EVENT_EXEC)
- #define PT_TRACE_VFORK_DONE	PT_EVENT_FLAG(PTRACE_EVENT_VFORK_DONE)
- #define PT_TRACE_EXIT		PT_EVENT_FLAG(PTRACE_EVENT_EXIT)
-+#define PT_TRACE_SECCOMP	PT_EVENT_FLAG(PTRACE_EVENT_SECCOMP)
- 
- /* single stepping state bits (used on ARM and PA-RISC) */
- #define PT_SINGLESTEP_BIT	31
-diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
-index 317ccb7..5818e86 100644
---- a/include/linux/seccomp.h
-+++ b/include/linux/seccomp.h
-@@ -21,6 +21,7 @@
- #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
- #define SECCOMP_RET_TRAP	0x00030000U /* disallow and force a SIGSYS */
- #define SECCOMP_RET_ERRNO	0x00050000U /* returns an errno */
-+#define SECCOMP_RET_TRACE	0x7ff00000U /* pass to a tracer or disallow */
- #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
- 
- /* Masks for the return value sections. */
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index 9c38306..d9db6ec 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -24,6 +24,7 @@
- #ifdef CONFIG_SECCOMP_FILTER
- #include <asm/syscall.h>
- #include <linux/filter.h>
-+#include <linux/ptrace.h>
- #include <linux/security.h>
- #include <linux/slab.h>
- #include <linux/tracehook.h>
-@@ -408,6 +409,21 @@ int __secure_computing(int this_syscall)
- 			/* Let the filter pass back 16 bits of data. */
- 			seccomp_send_sigsys(this_syscall, data);
- 			goto skip;
-+		case SECCOMP_RET_TRACE:
-+			/* Skip these calls if there is no tracer. */
-+			if (!ptrace_event_enabled(current, PTRACE_EVENT_SECCOMP))
-+				goto skip;
-+			/* Allow the BPF to provide the event message */
-+			ptrace_event(PTRACE_EVENT_SECCOMP, data);
-+			/*
-+			 * The delivery of a fatal signal during event
-+			 * notification may silently skip tracer notification.
-+			 * Terminating the task now avoids executing a system
-+			 * call that may not be intended.
-+			 */
-+			if (fatal_signal_pending(current))
-+				break;
-+			return 0;
- 		case SECCOMP_RET_ALLOW:
- 			return 0;
- 		case SECCOMP_RET_KILL:
 -- 
 1.7.5.4
