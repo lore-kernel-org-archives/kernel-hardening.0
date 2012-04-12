@@ -1,60 +1,203 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Will Drewry <wad@chromium.org>
-Date: Thu, 12 Apr 2012 16:47:55 -0500
-Message-Id: <1334267284-19166-6-git-send-email-wad@chromium.org>
+Date: Thu, 12 Apr 2012 16:47:59 -0500
+Message-Id: <1334267284-19166-10-git-send-email-wad@chromium.org>
 In-Reply-To: <1334267284-19166-1-git-send-email-wad@chromium.org>
 References: <1334267284-19166-1-git-send-email-wad@chromium.org>
-Subject: [kernel-hardening] [PATCH v18 06/15] asm/syscall.h: add syscall_get_arch
+Subject: [kernel-hardening] [PATCH v18 10/15] seccomp: add SECCOMP_RET_ERRNO
 To: linux-kernel@vger.kernel.org
 Cc: linux-man@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Adds a stub for a function that will return the AUDIT_ARCH_* value
-appropriate to the supplied task based on the system call convention.
+This change adds the SECCOMP_RET_ERRNO as a valid return value from a
+seccomp filter.  Additionally, it makes the first use of the lower
+16-bits for storing a filter-supplied errno.  16-bits is more than
+enough for the errno-base.h calls.
 
-For audit's use, the value can generally be hard-coded at the
-audit-site.  However, for other functionality not inlined into syscall
-entry/exit, this makes that information available.  seccomp_filter is
-the first planned consumer and, as such, the comment indicates a tie to
-CONFIG_HAVE_ARCH_SECCOMP_FILTER.
+Returning errors instead of immediately terminating processes that
+violate seccomp policy allow for broader use of this functionality
+for kernel attack surface reduction.  For example, a linux container
+could maintain a whitelist of pre-existing system calls but drop
+all new ones with errnos.  This would keep a logically static attack
+surface while providing errnos that may allow for graceful failure
+without the downside of do_exit() on a bad call.
 
-Suggested-by: Roland McGrath <mcgrathr@chromium.org>
+This change also changes the signature of __secure_computing.  It
+appears the only direct caller is the arm entry code and it clobbers
+any possible return value (register) immediately.
+
 Signed-off-by: Will Drewry <wad@chromium.org>
 Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
 Acked-by: Eric Paris <eparis@redhat.com>
 
-v18: comment and change reword and rebase.
-v14: rebase/nochanges
-v13: rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
-v12: rebase on to linux-next
-v11: fixed improper return type
-v10: introduced
+v18: - fix up comments and rebase
+     - fix bad var name which was fixed in later revs
+     - remove _int() and just change the __secure_computing signature
+v16-v17: ...
+v15: - use audit_seccomp and add a skip label. (eparis@redhat.com)
+     - clean up and pad out return codes (indan@nul.nu)
+v14: - no change/rebase
+v13: - rebase on to 88ebdda6159ffc15699f204c33feb3e431bf9bdc
+v12: - move to WARN_ON if filter is NULL
+       (oleg@redhat.com, luto@mit.edu, keescook@chromium.org)
+     - return immediately for filter==NULL (keescook@chromium.org)
+     - change evaluation to only compare the ACTION so that layered
+       errnos don't result in the lowest one being returned.
+       (keeschook@chromium.org)
+v11: - check for NULL filter (keescook@chromium.org)
+v10: - change loaders to fn
+ v9: - n/a
+ v8: - update Kconfig to note new need for syscall_set_return_value.
+     - reordered such that TRAP behavior follows on later.
+     - made the for loop a little less indent-y
+ v7: - introduced
 ---
- include/asm-generic/syscall.h |   14 ++++++++++++++
- 1 files changed, 14 insertions(+), 0 deletions(-)
+ arch/Kconfig            |    6 ++++--
+ include/linux/seccomp.h |   10 ++++++----
+ kernel/seccomp.c        |   42 ++++++++++++++++++++++++++++++++----------
+ 3 files changed, 42 insertions(+), 16 deletions(-)
 
-diff --git a/include/asm-generic/syscall.h b/include/asm-generic/syscall.h
-index 5c122ae..5b09392 100644
---- a/include/asm-generic/syscall.h
-+++ b/include/asm-generic/syscall.h
-@@ -142,4 +142,18 @@ void syscall_set_arguments(struct task_struct *task, struct pt_regs *regs,
- 			   unsigned int i, unsigned int n,
- 			   const unsigned long *args);
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 91c2c73..beaab68 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -220,8 +220,10 @@ config HAVE_ARCH_SECCOMP_FILTER
+ 	bool
+ 	help
+ 	  This symbol should be selected by an architecure if it provides
+-	  asm/syscall.h, specifically syscall_get_arguments() and
+-	  syscall_get_arch().
++	  asm/syscall.h, specifically syscall_get_arguments(),
++	  syscall_get_arch(), and syscall_set_return_value().  Additionally,
++	  its system call entry path must respect a return value of -1 from
++	  __secure_computing() and/or secure_computing().
  
-+/**
-+ * syscall_get_arch - return the AUDIT_ARCH for the current system call
-+ * @task:	task of interest, must be in system call entry tracing
-+ * @regs:	task_pt_regs() of @task
-+ *
-+ * Returns the AUDIT_ARCH_* based on the system call convention in use.
-+ *
-+ * It's only valid to call this when @task is stopped on entry to a system
-+ * call, due to %TIF_SYSCALL_TRACE, %TIF_SYSCALL_AUDIT, or %TIF_SECCOMP.
-+ *
-+ * Architectures which permit CONFIG_HAVE_ARCH_SECCOMP_FILTER must
-+ * provide an implementation of this.
-+ */
-+int syscall_get_arch(struct task_struct *task, struct pt_regs *regs);
- #endif	/* _ASM_SYSCALL_H */
+ config SECCOMP_FILTER
+ 	def_bool y
+diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
+index 86bb68f..b4ce2c8 100644
+--- a/include/linux/seccomp.h
++++ b/include/linux/seccomp.h
+@@ -12,13 +12,14 @@
+ 
+ /*
+  * All BPF programs must return a 32-bit value.
+- * The bottom 16-bits are reserved for future use.
++ * The bottom 16-bits are for optional return data.
+  * The upper 16-bits are ordered from least permissive values to most.
+  *
+  * The ordering ensures that a min_t() over composed return values always
+  * selects the least permissive choice.
+  */
+ #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
++#define SECCOMP_RET_ERRNO	0x00050000U /* returns an errno */
+ #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
+ 
+ /* Masks for the return value sections. */
+@@ -64,11 +65,12 @@ struct seccomp {
+ 	struct seccomp_filter *filter;
+ };
+ 
+-extern void __secure_computing(int);
+-static inline void secure_computing(int this_syscall)
++extern int __secure_computing(int);
++static inline int secure_computing(int this_syscall)
+ {
+ 	if (unlikely(test_thread_flag(TIF_SECCOMP)))
+-		__secure_computing(this_syscall);
++		return  __secure_computing(this_syscall);
++	return 0;
+ }
+ 
+ extern long prctl_get_seccomp(void);
+diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+index 0f7c709..5f78fb6 100644
+--- a/kernel/seccomp.c
++++ b/kernel/seccomp.c
+@@ -199,15 +199,20 @@ static int seccomp_check_filter(struct sock_filter *filter, unsigned int flen)
+ static u32 seccomp_run_filters(int syscall)
+ {
+ 	struct seccomp_filter *f;
+-	u32 ret = SECCOMP_RET_KILL;
++	u32 ret = SECCOMP_RET_ALLOW;
++
++	/* Ensure unexpected behavior doesn't result in failing open. */
++	if (WARN_ON(current->seccomp.filter == NULL))
++		return SECCOMP_RET_KILL;
++
+ 	/*
+ 	 * All filters in the list are evaluated and the lowest BPF return
+-	 * value always takes priority.
++	 * value always takes priority (ignoring the DATA).
+ 	 */
+ 	for (f = current->seccomp.filter; f; f = f->prev) {
+-		ret = sk_run_filter(NULL, f->insns);
+-		if (ret != SECCOMP_RET_ALLOW)
+-			break;
++		u32 cur_ret = sk_run_filter(NULL, f->insns);
++		if ((cur_ret & SECCOMP_RET_ACTION) < (ret & SECCOMP_RET_ACTION))
++			ret = cur_ret;
+ 	}
+ 	return ret;
+ }
+@@ -346,11 +351,13 @@ static int mode1_syscalls_32[] = {
+ };
+ #endif
+ 
+-void __secure_computing(int this_syscall)
++int __secure_computing(int this_syscall)
+ {
+ 	int mode = current->seccomp.mode;
+ 	int exit_sig = 0;
+ 	int *syscall;
++	u32 ret = SECCOMP_RET_KILL;
++	int data;
+ 
+ 	switch (mode) {
+ 	case SECCOMP_MODE_STRICT:
+@@ -361,14 +368,26 @@ void __secure_computing(int this_syscall)
+ #endif
+ 		do {
+ 			if (*syscall == this_syscall)
+-				return;
++				return 0;
+ 		} while (*++syscall);
+ 		exit_sig = SIGKILL;
+ 		break;
+ #ifdef CONFIG_SECCOMP_FILTER
+ 	case SECCOMP_MODE_FILTER:
+-		if (seccomp_run_filters(this_syscall) == SECCOMP_RET_ALLOW)
+-			return;
++		ret = seccomp_run_filters(this_syscall);
++		data = ret & SECCOMP_RET_DATA;
++		switch (ret & SECCOMP_RET_ACTION) {
++		case SECCOMP_RET_ERRNO:
++			/* Set the low-order 16-bits as a errno. */
++			syscall_set_return_value(current, task_pt_regs(current),
++						 -data, 0);
++			goto skip;
++		case SECCOMP_RET_ALLOW:
++			return 0;
++		case SECCOMP_RET_KILL:
++		default:
++			break;
++		}
+ 		exit_sig = SIGSYS;
+ 		break;
+ #endif
+@@ -379,8 +398,11 @@ void __secure_computing(int this_syscall)
+ #ifdef SECCOMP_DEBUG
+ 	dump_stack();
+ #endif
+-	audit_seccomp(this_syscall, exit_code, SECCOMP_RET_KILL);
++	audit_seccomp(this_syscall, exit_sig, ret);
+ 	do_exit(exit_sig);
++skip:
++	audit_seccomp(this_syscall, exit_sig, ret);
++	return -1;
+ }
+ 
+ long prctl_get_seccomp(void)
 -- 
 1.7.5.4
