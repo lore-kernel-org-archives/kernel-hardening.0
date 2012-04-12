@@ -1,66 +1,222 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: amluto@gmail.com
-In-Reply-To: <CAKgNAkhhnC1+vdh7vTYKkngzxHccDwHH_aKF5wCNhga33BGhyQ@mail.gmail.com>
-References: <1333051320-30872-1-git-send-email-wad@chromium.org>
- <1333051320-30872-2-git-send-email-wad@chromium.org> <20120406125517.77133b4e.akpm@linux-foundation.org>
- <CAObL_7EYb62o=a0ekzcDx=0TuN55A7aTYhLJbMNu2r8F0V77EA@mail.gmail.com>
- <20120406142824.61d8ca3b@lwn.net> <CAKgNAkhhnC1+vdh7vTYKkngzxHccDwHH_aKF5wCNhga33BGhyQ@mail.gmail.com>
-From: Andrew Lutomirski <luto@mit.edu>
-Date: Wed, 11 Apr 2012 17:50:04 -0700
-Message-ID: <CAObL_7HdaNwttY4Tqz_iysGnaB8rKrA07te-P5Mkq3kSayt0qg@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v17 01/15] Add PR_{GET,SET}_NO_NEW_PRIVS to prevent execve
- from granting privs
-To: mtk.manpages@gmail.com
-Cc: Jonathan Corbet <corbet@lwn.net>, Andrew Morton <akpm@linux-foundation.org>, Will Drewry <wad@chromium.org>, linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Andy Lutomirski <luto@amacapital.net>, linux-man@vger.kernel.org
+From: Will Drewry <wad@chromium.org>
+Date: Thu, 12 Apr 2012 16:47:50 -0500
+Message-Id: <1334267284-19166-1-git-send-email-wad@chromium.org>
+Subject: [kernel-hardening] [PATCH v18 01/15] Add PR_{GET,SET}_NO_NEW_PRIVS to prevent execve from granting privs
+To: linux-kernel@vger.kernel.org
+Cc: linux-man@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 11, 2012 at 12:31 PM, Michael Kerrisk (man-pages)
-<mtk.manpages@gmail.com> wrote:
-> On Sat, Apr 7, 2012 at 8:28 AM, Jonathan Corbet <corbet@lwn.net> wrote:
->> On Fri, 6 Apr 2012 13:01:17 -0700
->> Andrew Lutomirski <luto@mit.edu> wrote:
->>
->>> This has been bugging me for awhile. =A0Is there any interest in moving
->>> the manpages into the kernel source tree? =A0Then there could be a
->>> general requirement that new APIs get documented when they're written.
->>
->> Man page (or other documentation) requirements for patch acceptance are =
-a
->> regular kernel summit feature. =A0People seem to think it's a good idea,=
- but
->> actual enforcement of such requirements always seems to be lacking. =A0L=
-ots
->> of people have kind of given up trying. =A0I don't really see that addin=
-g
->> the man pages to the tree would help, but I could be wrong...
->
-> I largely consider this (moving man pages to kernel.org) a technical
-> solution to what is fundamentally a social problem (developers
-> reluctant to write documentation), and doubt that the technical
-> solution would make much difference. I'd love to be proved wrong, but
-> the experiment would require significant start-up effort. (My
-> collected thoughts on this can be found here:
-> http://www.kernel.org/doc/man-pages/todo.html#migrate_to_kernel_source.
-> Note the alternative idea of patch tags mentioned at the end of that
-> text.)
->
-> Unless, or until there's a paid maintainer, I don't expect things to
-> get significantly better than what they currently are. The quite
-> significant improvements in man-pages since 2004, when I became
-> maintainer were in small part due to the fact that I was for a short
-> period paid to do the work, but in much larger part due to a huge
-> private effort over those years which over the last couple of years is
-> no longer unsustainable for me (man-pages is in competition with
-> requirements for my attention from family, working life, and
-> (seriously!) seismic events),
+From: Andy Lutomirski <luto@amacapital.net>
 
-Hrm.  Maybe someone could convince Andrew and Linus not to pull new
-syscalls or major ABI features unless the patchset includes full docs.
+With this change, calling
+  prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
+disables privilege granting operations at execve-time.  For example, a
+process will not be able to execute a setuid binary to change their uid
+or gid if this bit is set.  The same is true for file capabilities.
 
-Anyway, I'll write up a detailed description of PR_SET_NO_NEW_PRIVS,
-stick it in the changelog, and cc linux-doc.
+Additionally, LSM_UNSAFE_NO_NEW_PRIVS is defined to ensure that
+LSMs respect the requested behavior.
 
---Andy
+To determine if the NO_NEW_PRIVS bit is set, a task may call
+  prctl(PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0);
+It returns 1 if set and 0 if it is not set. If any of the arguments are
+non-zero, it will return -1 and set errno to -EINVAL.
+(PR_SET_NO_NEW_PRIVS behaves similarly.)
+
+This functionality is desired for the proposed seccomp filter patch
+series.  By using PR_SET_NO_NEW_PRIVS, it allows a task to modify the
+system call behavior for itself and its child tasks without being
+able to impact the behavior of a more privileged task.
+
+Another potential use is making certain privileged operations
+unprivileged.  For example, chroot may be considered "safe" if it cannot
+affect privileged tasks.
+
+Note, this patch causes execve to fail when PR_SET_NO_NEW_PRIVS is
+set and AppArmor is in use.  It is fixed in a subsequent patch.
+
+Signed-off-by: Andy Lutomirski <luto@amacapital.net>
+Signed-off-by: Will Drewry <wad@chromium.org>
+Acked-by: Eric Paris <eparis@redhat.com>
+
+v18: updated change desc
+v17: using new define values as per 3.4
+---
+ fs/exec.c                  |   10 +++++++++-
+ include/linux/prctl.h      |   15 +++++++++++++++
+ include/linux/sched.h      |    2 ++
+ include/linux/security.h   |    1 +
+ kernel/sys.c               |   10 ++++++++++
+ security/apparmor/domain.c |    4 ++++
+ security/commoncap.c       |    7 +++++--
+ security/selinux/hooks.c   |   10 +++++++++-
+ 8 files changed, 55 insertions(+), 4 deletions(-)
+
+diff --git a/fs/exec.c b/fs/exec.c
+index b1fd202..d038968 100644
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1245,6 +1245,13 @@ static int check_unsafe_exec(struct linux_binprm *bprm)
+ 			bprm->unsafe |= LSM_UNSAFE_PTRACE;
+ 	}
+ 
++	/*
++	 * This isn't strictly necessary, but it makes it harder for LSMs to
++	 * mess up.
++	 */
++	if (current->no_new_privs)
++		bprm->unsafe |= LSM_UNSAFE_NO_NEW_PRIVS;
++
+ 	n_fs = 1;
+ 	spin_lock(&p->fs->lock);
+ 	rcu_read_lock();
+@@ -1288,7 +1295,8 @@ int prepare_binprm(struct linux_binprm *bprm)
+ 	bprm->cred->euid = current_euid();
+ 	bprm->cred->egid = current_egid();
+ 
+-	if (!(bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID)) {
++	if (!(bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID) &&
++	    !current->no_new_privs) {
+ 		/* Set-uid? */
+ 		if (mode & S_ISUID) {
+ 			bprm->per_clear |= PER_CLEAR_ON_SETID;
+diff --git a/include/linux/prctl.h b/include/linux/prctl.h
+index e0cfec2..78b76e2 100644
+--- a/include/linux/prctl.h
++++ b/include/linux/prctl.h
+@@ -124,4 +124,19 @@
+ #define PR_SET_CHILD_SUBREAPER 36
+ #define PR_GET_CHILD_SUBREAPER 37
+ 
++/*
++ * If no_new_privs is set, then operations that grant new privileges (i.e.
++ * execve) will either fail or not grant them.  This affects suid/sgid,
++ * file capabilities, and LSMs.
++ *
++ * Operations that merely manipulate or drop existing privileges (setresuid,
++ * capset, etc.) will still work.  Drop those privileges if you want them gone.
++ *
++ * Changing LSM security domain is considered a new privilege.  So, for example,
++ * asking selinux for a specific new context (e.g. with runcon) will result
++ * in execve returning -EPERM.
++ */
++#define PR_SET_NO_NEW_PRIVS 38
++#define PR_GET_NO_NEW_PRIVS 39
++
+ #endif /* _LINUX_PRCTL_H */
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 81a173c..ba60897 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1341,6 +1341,8 @@ struct task_struct {
+ 				 * execve */
+ 	unsigned in_iowait:1;
+ 
++	/* task may not gain privileges */
++	unsigned no_new_privs:1;
+ 
+ 	/* Revert to default priority/policy when forking */
+ 	unsigned sched_reset_on_fork:1;
+diff --git a/include/linux/security.h b/include/linux/security.h
+index 673afbb..6e1dea9 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -144,6 +144,7 @@ struct request_sock;
+ #define LSM_UNSAFE_SHARE	1
+ #define LSM_UNSAFE_PTRACE	2
+ #define LSM_UNSAFE_PTRACE_CAP	4
++#define LSM_UNSAFE_NO_NEW_PRIVS	8
+ 
+ #ifdef CONFIG_MMU
+ extern int mmap_min_addr_handler(struct ctl_table *table, int write,
+diff --git a/kernel/sys.c b/kernel/sys.c
+index e7006eb..b82568b 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -1979,6 +1979,16 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
+ 			error = put_user(me->signal->is_child_subreaper,
+ 					 (int __user *) arg2);
+ 			break;
++		case PR_SET_NO_NEW_PRIVS:
++			if (arg2 != 1 || arg3 || arg4 || arg5)
++				return -EINVAL;
++
++			current->no_new_privs = 1;
++			break;
++		case PR_GET_NO_NEW_PRIVS:
++			if (arg2 || arg3 || arg4 || arg5)
++				return -EINVAL;
++			return current->no_new_privs ? 1 : 0;
+ 		default:
+ 			error = -EINVAL;
+ 			break;
+diff --git a/security/apparmor/domain.c b/security/apparmor/domain.c
+index 6327685..18c88d0 100644
+--- a/security/apparmor/domain.c
++++ b/security/apparmor/domain.c
+@@ -360,6 +360,10 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
+ 	if (bprm->cred_prepared)
+ 		return 0;
+ 
++	/* XXX: no_new_privs is not usable with AppArmor yet */
++	if (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS)
++		return -EPERM;
++
+ 	cxt = bprm->cred->security;
+ 	BUG_ON(!cxt);
+ 
+diff --git a/security/commoncap.c b/security/commoncap.c
+index 0cf4b53..edd3918 100644
+--- a/security/commoncap.c
++++ b/security/commoncap.c
+@@ -506,14 +506,17 @@ int cap_bprm_set_creds(struct linux_binprm *bprm)
+ skip:
+ 
+ 	/* Don't let someone trace a set[ug]id/setpcap binary with the revised
+-	 * credentials unless they have the appropriate permit
++	 * credentials unless they have the appropriate permit.
++	 *
++	 * In addition, if NO_NEW_PRIVS, then ensure we get no new privs.
+ 	 */
+ 	if ((new->euid != old->uid ||
+ 	     new->egid != old->gid ||
+ 	     !cap_issubset(new->cap_permitted, old->cap_permitted)) &&
+ 	    bprm->unsafe & ~LSM_UNSAFE_PTRACE_CAP) {
+ 		/* downgrade; they get no more than they had, and maybe less */
+-		if (!capable(CAP_SETUID)) {
++		if (!capable(CAP_SETUID) ||
++		    (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS)) {
+ 			new->euid = new->uid;
+ 			new->egid = new->gid;
+ 		}
+diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
+index d85b793..0b06685 100644
+--- a/security/selinux/hooks.c
++++ b/security/selinux/hooks.c
+@@ -2016,6 +2016,13 @@ static int selinux_bprm_set_creds(struct linux_binprm *bprm)
+ 		new_tsec->sid = old_tsec->exec_sid;
+ 		/* Reset exec SID on execve. */
+ 		new_tsec->exec_sid = 0;
++
++		/*
++		 * Minimize confusion: if no_new_privs and a transition is
++		 * explicitly requested, then fail the exec.
++		 */
++		if (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS)
++			return -EPERM;
+ 	} else {
+ 		/* Check for a default transition on this program. */
+ 		rc = security_transition_sid(old_tsec->sid, isec->sid,
+@@ -2029,7 +2036,8 @@ static int selinux_bprm_set_creds(struct linux_binprm *bprm)
+ 	ad.selinux_audit_data = &sad;
+ 	ad.u.path = bprm->file->f_path;
+ 
+-	if (bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID)
++	if ((bprm->file->f_path.mnt->mnt_flags & MNT_NOSUID) ||
++	    (bprm->unsafe & LSM_UNSAFE_NO_NEW_PRIVS))
+ 		new_tsec->sid = old_tsec->sid;
+ 
+ 	if (new_tsec->sid == old_tsec->sid) {
+-- 
+1.7.5.4
