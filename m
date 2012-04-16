@@ -1,25 +1,159 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Mon, 16 Apr 2012 11:56:45 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20120416185645.GA13667@www.outflux.net>
 MIME-Version: 1.0
-In-Reply-To: <alpine.LRH.2.02.1204141143001.29389@tundra.namei.org>
-References: <1334267284-19166-1-git-send-email-wad@chromium.org>
-	<alpine.LRH.2.02.1204141143001.29389@tundra.namei.org>
-Date: Fri, 13 Apr 2012 22:06:31 -0500
-Message-ID: <CABqD9hahg_KJHTFnRCDpUFaa4TZjy_2EvVOqtd89NvTnr8UkSw@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH v18 01/15] Add PR_{GET,SET}_NO_NEW_PRIVS to prevent execve
- from granting privs
-To: James Morris <jmorris@namei.org>
-Cc: linux-kernel@vger.kernel.org, linux-man@vger.kernel.org, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, netdev@vger.kernel.org, x86@kernel.org, arnd@arndb.de, davem@davemloft.net, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, Andy Lutomirski <luto@amacapital.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] Yama: add additional ptrace scopes
+To: linux-kernel@vger.kernel.org
+Cc: James Morris <james.l.morris@oracle.com>, Randy Dunlap <rdunlap@xenotime.net>, John Johansen <john.johansen@canonical.com>, linux-doc@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 13, 2012 at 8:45 PM, James Morris <jmorris@namei.org> wrote:
-> I applied the patchset to:
-> git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git next
->
-> Please test, and make any further updates against that branch.
+This expands the available Yama ptrace restrictions to include two more
+modes. Mode 2 requires CAP_SYS_PTRACE for PTRACE_ATTACH, and mode 3
+completely disables PTRACE_ATTACH (and locks the sysctl).
 
-Great! I will most certainly do that.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/security/Yama.txt |   10 +++++-
+ security/yama/yama_lsm.c        |   62 ++++++++++++++++++++++++++++++++-------
+ 2 files changed, 60 insertions(+), 12 deletions(-)
 
-Thanks!
-will
+diff --git a/Documentation/security/Yama.txt b/Documentation/security/Yama.txt
+index a9511f1..e369de2 100644
+--- a/Documentation/security/Yama.txt
++++ b/Documentation/security/Yama.txt
+@@ -34,7 +34,7 @@ parent to a child process (i.e. direct "gdb EXE" and "strace EXE" still
+ work), or with CAP_SYS_PTRACE (i.e. "gdb --pid=PID", and "strace -p PID"
+ still work as root).
+ 
+-For software that has defined application-specific relationships
++In mode 1, software that has defined application-specific relationships
+ between a debugging process and its inferior (crash handlers, etc),
+ prctl(PR_SET_PTRACER, pid, ...) can be used. An inferior can declare which
+ other process (and its descendents) are allowed to call PTRACE_ATTACH
+@@ -46,6 +46,8 @@ restrictions, it can call prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY, ...)
+ so that any otherwise allowed process (even those in external pid namespaces)
+ may attach.
+ 
++These restrictions do not change how ptrace via PTRACE_TRACEME operates.
++
+ The sysctl settings are:
+ 
+ 0 - classic ptrace permissions: a process can PTRACE_ATTACH to any other
+@@ -60,6 +62,12 @@ The sysctl settings are:
+     inferior can call prctl(PR_SET_PTRACER, debugger, ...) to declare
+     an allowed debugger PID to call PTRACE_ATTACH on the inferior.
+ 
++2 - admin-only attach: only processes with CAP_SYS_PTRACE may use ptrace
++    with PTRACE_ATTACH.
++
++3 - no attach: no processes may use ptrace with PTRACE_ATTACH. Once set,
++    this sysctl cannot be changed to a lower value.
++
+ The original children-only logic was based on the restrictions in grsecurity.
+ 
+ ==============================================================
+diff --git a/security/yama/yama_lsm.c b/security/yama/yama_lsm.c
+index 5737238..afb04cb 100644
+--- a/security/yama/yama_lsm.c
++++ b/security/yama/yama_lsm.c
+@@ -18,7 +18,12 @@
+ #include <linux/prctl.h>
+ #include <linux/ratelimit.h>
+ 
+-static int ptrace_scope = 1;
++#define YAMA_SCOPE_DISABLED	0
++#define YAMA_SCOPE_RELATIONAL	1
++#define YAMA_SCOPE_CAPABILITY	2
++#define YAMA_SCOPE_NO_ATTACH	3
++
++static int ptrace_scope = YAMA_SCOPE_RELATIONAL;
+ 
+ /* describe a ptrace relationship for potential exception */
+ struct ptrace_relation {
+@@ -251,17 +256,32 @@ static int yama_ptrace_access_check(struct task_struct *child,
+ 		return rc;
+ 
+ 	/* require ptrace target be a child of ptracer on attach */
+-	if (mode == PTRACE_MODE_ATTACH &&
+-	    ptrace_scope &&
+-	    !task_is_descendant(current, child) &&
+-	    !ptracer_exception_found(current, child) &&
+-	    !capable(CAP_SYS_PTRACE))
+-		rc = -EPERM;
++	if (mode == PTRACE_MODE_ATTACH) {
++		switch (ptrace_scope) {
++		case YAMA_SCOPE_DISABLED:
++			/* No additional restrictions. */
++			break;
++		case YAMA_SCOPE_RELATIONAL:
++			if (!task_is_descendant(current, child) &&
++			    !ptracer_exception_found(current, child) &&
++			    !capable(CAP_SYS_PTRACE))
++				rc = -EPERM;
++			break;
++		case YAMA_SCOPE_CAPABILITY:
++			if (!capable(CAP_SYS_PTRACE))
++				rc = -EPERM;
++			break;
++		case YAMA_SCOPE_NO_ATTACH:
++		default:
++			rc = -EPERM;
++			break;
++		}
++	}
+ 
+ 	if (rc) {
+ 		char name[sizeof(current->comm)];
+-		printk_ratelimited(KERN_NOTICE "ptrace of non-child"
+-			" pid %d was attempted by: %s (pid %d)\n",
++		printk_ratelimited(KERN_NOTICE
++			"ptrace of pid %d was attempted by: %s (pid %d)\n",
+ 			child->pid,
+ 			get_task_comm(name, current),
+ 			current->pid);
+@@ -279,8 +299,28 @@ static struct security_operations yama_ops = {
+ };
+ 
+ #ifdef CONFIG_SYSCTL
++static int yama_dointvec_minmax(struct ctl_table *table, int write,
++				void __user *buffer, size_t *lenp, loff_t *ppos)
++{
++	int rc;
++
++	if (write && !capable(CAP_SYS_PTRACE))
++		return -EPERM;
++
++	rc = proc_dointvec_minmax(table, write, buffer, lenp, ppos);
++	if (rc)
++		return rc;
++
++	/* Lock the max value if it ever gets set. */
++	if (write && *(int *)table->data == *(int *)table->extra2)
++		table->extra1 = table->extra2;
++
++	return rc;
++}
++
+ static int zero;
+ static int one = 1;
++static int max_scope = YAMA_SCOPE_NO_ATTACH;
+ 
+ struct ctl_path yama_sysctl_path[] = {
+ 	{ .procname = "kernel", },
+@@ -294,9 +334,9 @@ static struct ctl_table yama_sysctl_table[] = {
+ 		.data           = &ptrace_scope,
+ 		.maxlen         = sizeof(int),
+ 		.mode           = 0644,
+-		.proc_handler   = proc_dointvec_minmax,
++		.proc_handler   = yama_dointvec_minmax,
+ 		.extra1         = &zero,
+-		.extra2         = &one,
++		.extra2         = &max_scope,
+ 	},
+ 	{ }
+ };
+-- 
+1.7.0.4
