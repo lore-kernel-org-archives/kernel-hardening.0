@@ -1,28 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 Apr 2012 13:40:25 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <20120416185645.GA13667@www.outflux.net>
-Message-ID: <alpine.LRH.2.02.1204191340020.563@tundra.namei.org>
-References: <20120416185645.GA13667@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: Re: [kernel-hardening] [PATCH] Yama: add additional ptrace scopes
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, James Morris <james.l.morris@oracle.com>, Randy Dunlap <rdunlap@xenotime.net>, John Johansen <john.johansen@canonical.com>, linux-doc@vger.kernel.org, linux-security-module@vger.kernel.org, spender@grsecurity.net
+Sender: eparis@parisplace.org
+Date: Mon, 21 May 2012 14:21:57 -0400
+Message-ID: <CACLa4puRJLUd6hAHO6zFYiqa5dFVum8eLmNMk_ef+=r8OGhjRg@mail.gmail.com>
+From: Eric Paris <netdev@parisplace.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] seccomp and ptrace. what is the correct order?
+To: Will Drewry <wad@chromium.org>
+Cc: linux-kernel@vger.kernel.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, hpa@zytor.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, mcgrathr@chromium.org, tglx@linutronix.de, luto@mit.edu, eparis@redhat.com, serge.hallyn@canonical.com, indan@nul.nu, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 16 Apr 2012, Kees Cook wrote:
+Viro ask me a question today and I didn't have a good answer.
 
-> This expands the available Yama ptrace restrictions to include two more
-> modes. Mode 2 requires CAP_SYS_PTRACE for PTRACE_ATTACH, and mode 3
-> completely disables PTRACE_ATTACH (and locks the sysctl).
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+Lets assume I set a seccomp filter that will allow read and will
+deny/kill ioctl.  If something else is tracing me I could call read.
+The read will pass the seccomp hook and move onto the ptrace hook.
+The tracer could then change the syscall number to ioctl and I would
+then actually perform an ioctl.
 
-Applied to
-git://git.kernel.org/pub/scm/linux/kernel/git/jmorris/linux-security.git next
+Is that what we want?  Do we want to do the permission check based on
+what a process ask at syscall enter or do we want to do the permission
+check based on what the kernel is actually going to do on behalf of
+the process?
 
+Does the question make sense?
 
--- 
-James Morris
-<jmorris@namei.org>
+-Eric
