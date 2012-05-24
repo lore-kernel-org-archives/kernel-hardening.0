@@ -1,47 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <4FBE5E3C.9070600@zytor.com>
-Date: Thu, 24 May 2012 09:13:48 -0700
-From: "H. Peter Anvin" <hpa@zytor.com>
+Message-ID: <acabbed13c4f02e653879844a9cbddef.squirrel@webmail.greenhost.nl>
+In-Reply-To: <1337875681-20717-2-git-send-email-wad@chromium.org>
+References: <20120522173942.GJ11775@ZenIV.linux.org.uk>
+    <1337875681-20717-1-git-send-email-wad@chromium.org>
+    <1337875681-20717-2-git-send-email-wad@chromium.org>
+Date: Thu, 24 May 2012 19:54:50 +0200
+From: "Indan Zupancic" <indan@nul.nu>
 MIME-Version: 1.0
-References: <20120522173942.GJ11775@ZenIV.linux.org.uk> <1337875681-20717-1-git-send-email-wad@chromium.org>
-In-Reply-To: <1337875681-20717-1-git-send-email-wad@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC PATCH 0/3] move the secure_computing call
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [RFC PATCH 1/3] seccomp: Don't allow tracers to abuse RET_TRACE
 To: Will Drewry <wad@chromium.org>
-Cc: linux-kernel@vger.kernel.org, mcgrathr@google.com, indan@nul.nu, netdev@parisplace.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, luto@mit.edu, serge.hallyn@canonical.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, viro@zeniv.linux.org.uk, jmorris@namei.org
+Cc: linux-kernel@vger.kernel.org, mcgrathr@google.com, hpa@zytor.com, netdev@parisplace.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, luto@mit.edu, serge.hallyn@canonical.com, pmoore@redhat.com, akpm@linux-foundation.org, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, viro@zeniv.linux.org.uk, jmorris@namei.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05/24/2012 09:07 AM, Will Drewry wrote:
-> This is an RFC based on the comments from Al Viro and Eric Paris
-> regarding ptrace()rs being able to change the system call the kernel
-> sees after the seccomp enforcement has occurred (for mode 1 or 2).
-> 
-> With this series applied, a (p)tracer of a process with seccomp enabled
-> will be unable to change the tracee's system call number after the
-> secure computing check has been performed.
-> 
-> The x86 change is tested, as is the seccomp.c change.  For other arches,
-> it is not (RFC :).  Given that there are other inconsistencies in this
-> code across architectures, I'm not sure if it makes sense to attempt to
-> fix them all at once or to roll through as I attempt to add seccomp
-> filter support.
-> 
-> As is, the biggest benefit of this change is just setting consistent
-> expectations in what the ptrace/seccomp interactions should be.  The
-> current ability for ptrace to "bypass" secure computing (by remapping
-> allowed system calls) is not necessarily a problem, but it is not
-> necessarily intuitive behavior.
-> 
-> Thoughts, comments, flames will be appreciated!
+On Thu, May 24, 2012 18:07, Will Drewry wrote:
+> Ensure that consumers of the PTRACE_EVENT_SECCOMP notification
+> cannot change the system call number for the traced task
+> without it resulting in the system call being skipped.
+>
+> Traditionally, tracers will set the system call number to
+> -1 to skip the system call. This behavior will work as expected
+> but the tracer will be unable to remap the system call to a valid
+> system call after the seccomp policy has been evaluated.
+>
+> Signed-off-by: Will Drewry <wad@chromium.org>
+> ---
+>  kernel/seccomp.c |    4 ++++
+>  1 file changed, 4 insertions(+)
+>
+> diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+> index ee376be..33f0ad6 100644
+> --- a/kernel/seccomp.c
+> +++ b/kernel/seccomp.c
+> @@ -425,6 +425,10 @@ int __secure_computing(int this_syscall)
+>  			 */
+>  			if (fatal_signal_pending(current))
+>  				break;
+> +			/* Skip the system call if the tracer changed it. */
+> +			if (this_syscall !=
+> +			    syscall_get_nr(current, task_pt_regs(current)))
+> +				goto skip;
+>  			return 0;
+>  		case SECCOMP_RET_ALLOW:
+>  			return 0;
+> --
 
-I think this really screws with using seccomp for self-interception.  I
-wouldn't inherently be opposed to the following flow:
+This patch doesn't make any sense whatsoever. You can't know why a system
+call was blocked by a seccomp filter, assuming it's always because of the
+system call number is wrong.
 
-	seccomp -> ptrace -> seccomp
+Also, you don't check if an allowed system call is changed into a denied
+one, so this doesn't protect against ptracers bypassing seccomp filters.
 
-... i.e. if ptrace is enabled and we enable something, run it through
-seccomp again, but there are bunch of use cases (mostly involving
-SIGSYS) where doing ptrace before seccomp is just bizarre.
+And one of the main points of PTRACE_EVENT_SECCOMP events was that it's
+useful for cases that can't be handled or decided by the seccomp filter.
+Then taking away the ability to change the syscall number makes it a lot
+less useful.
 
-	-hpa
+Either do the seccomp test before or after ptrace, or both, but please
+don't introduce ad hoc checks like this.
+
+Greetings,
+
+Indan
