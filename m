@@ -1,58 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <4FCE3C18.4080302@amacapital.net>
+Date: Tue, 05 Jun 2012 10:04:24 -0700
+From: Andy Lutomirski <luto@amacapital.net>
 MIME-Version: 1.0
-In-Reply-To: <20120524150057.86c14b35.akpm@linux-foundation.org>
-References: <20120522173942.GJ11775@ZenIV.linux.org.uk>
-	<1337875681-20717-1-git-send-email-wad@chromium.org>
-	<20120524150057.86c14b35.akpm@linux-foundation.org>
-Date: Thu, 24 May 2012 20:55:09 -0500
-Message-ID: <CABqD9hY5-vwsr4gWQJ=GgjdDrFxn8_MCvYXCDk5pyRgLuaPwTA@mail.gmail.com>
-From: Will Drewry <wad@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC PATCH 0/3] move the secure_computing call
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: linux-kernel@vger.kernel.org, mcgrathr@google.com, hpa@zytor.com, indan@nul.nu, netdev@parisplace.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com, mingo@redhat.com, oleg@redhat.com, peterz@infradead.org, rdunlap@xenotime.net, tglx@linutronix.de, luto@mit.edu, serge.hallyn@canonical.com, pmoore@redhat.com, corbet@lwn.net, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, viro@zeniv.linux.org.uk, jmorris@namei.org
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Docs for PR_SET_NO_NEW_PRIVS
+To: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Will Drewry <wad@chromium.org>, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, hpa@zytor.com, mingo@redhat.com, peterz@infradead.org, tglx@linutronix.de, eparis@redhat.com, serge.hallyn@canonical.com, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, corbet@lwn.net, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, keescook@chromium.org, jmorris@namei.org, linux-man@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 24, 2012 at 5:00 PM, Andrew Morton
-<akpm@linux-foundation.org> wrote:
-> On Thu, 24 May 2012 11:07:58 -0500
-> Will Drewry <wad@chromium.org> wrote:
->
->> This is an RFC based on the comments from Al Viro and Eric Paris
->> regarding ptrace()rs being able to change the system call the kernel
->> sees after the seccomp enforcement has occurred (for mode 1 or 2).
->
-> Perhaps you could repeat those comments in this changelog.
+Hi all-
 
-Oops :)  Here's the context -- https://lkml.org/lkml/2012/5/21/326
+As promised (although belatedly), I wrote up some proposed documentation
+for the no_new_privs feature.  What should I do with it?  I don't speak
+groff/troff/whatever man pages are written in.
 
-I doubt there's need for a repost though.
+I would be happy to license this text appropriately for whatever tree
+it might end up in.  In the mean time, it's GPLv2+.
 
->> With this series applied, a (p)tracer of a process with seccomp enabled
->> will be unable to change the tracee's system call number after the
->> secure computing check has been performed.
->>
->> The x86 change is tested, as is the seccomp.c change. =A0For other arche=
-s,
->> it is not (RFC :). =A0Given that there are other inconsistencies in this
->> code across architectures, I'm not sure if it makes sense to attempt to
->> fix them all at once or to roll through as I attempt to add seccomp
->> filter support.
->>
->> As is, the biggest benefit of this change is just setting consistent
->> expectations in what the ptrace/seccomp interactions should be. =A0The
->> current ability for ptrace to "bypass" secure computing (by remapping
->> allowed system calls) is not necessarily a problem, but it is not
->> necessarily intuitive behavior.
->>
->
-> Because my take on the above reasoning is "why did you bother writing
-> these patches"!
+--- cut here ---
 
-Just to be thorough -- I wanted to make sure the discussion was framed
-against actual code just in case I was missing something.  Otherwise,
-I'd be happy to see these patches disappear into the annals of the
-wayback machine.
+The execve system call can grant a newly-started program privileges
+that its parent did not have.  The most obvious examples are
+setuid/setgid programs and file capabilities.  To prevent the parent
+program from gaining these privileges as well, the kernel and user
+code must be careful to prevent the parent from doing anything that
+could subvert the child.  For example:
 
-thanks!
+ - The dynamic loader handles LD_* environment variables differently
+if a program is setuid.
+ - chroot is disallowed to unprivileged processes, since it would
+allow /etc/passwd to be replaced from the point of view of a process
+that inherited chroot.
+ - The exec code has special handling for ptrace.
+
+These are all ad-hoc fixes.  The no_new_privs bit (since Linux 3.5) is
+a new, generic mechanism to make it safe for a process to modify its
+execution environment in a manner that persists across execve.  Any
+task can set no_new_privs.  Once the bit is set, it is inherited
+across fork, clone, and execve and cannot be unset.  With no_new_privs
+set, execve promises not to grant the privilege to do anything that
+could not have been done without the execve call.  For example, the
+setuid and setgid bits will no longer change the uid or gid; file
+capabilities will not add to the permitted set, and LSMs will not
+relax constraints after execve.
+
+Note that no_new_privs does not prevent privilege changes that do not
+involve execve.  An appropriately privileged task can still call
+setuid(2) and receive SCM_RIGHTS datagrams.
+
+There are two main use cases for no_new_privs so far:
+
+ - Filters installed for the seccomp mode 2 sandbox persist across
+execve and can change the behavior of newly-executed programs.
+Unprivileged users are therefore only allowed to install such filters
+if no_new_privs is set.
+
+ - By itself, no_new_privs can be used to reduce the attack surface
+available to an unprivileged user.  If everything running with a given
+uid has no_new_privs set, then that uid will be unable to escalate its
+privileges by directly attacking setuid, setgid, and fcap-using
+binaries; it will need to compromise something without the
+no_new_privs bit set first.
+
+In the future, other potentially dangerous kernel features could
+become available to unprivileged tasks if no_new_privs is set.  In
+principle, several options to unshare(2) and clone(2) would be safe
+when no_new_privs is set, and no_new_privs + chroot is considerable
+less dangerous than chroot by itself.
+
+--- cut here ---
+
+--Andy
