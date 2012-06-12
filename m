@@ -1,27 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 7 Jun 2012 11:29:48 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CABqD9hYXKhX1=064DpbaBTAVd8-g43jKAPvtsbxEUTbgC1MPxg@mail.gmail.com>
-Message-ID: <alpine.LRH.2.02.1206071127340.12194@tundra.namei.org>
-References: <4FCE3C18.4080302@amacapital.net> <CAGXu5jLc6UW85TxA7ccA4e1u78hkTbSrWeBJE+oTXXQECPvtjg@mail.gmail.com> <CABqD9hYXKhX1=064DpbaBTAVd8-g43jKAPvtsbxEUTbgC1MPxg@mail.gmail.com>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Tue, 12 Jun 2012 13:38:12 +0400
+From: Vasily Kulikov <segoon@openwall.com>
+Message-ID: <20120612093812.GA24809@albatros>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: Docs for PR_SET_NO_NEW_PRIVS
-To: Will Drewry <wad@chromium.org>
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, linux-security-module@vger.kernel.org, linux-arch@vger.kernel.org, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com, hpa@zytor.com, mingo@redhat.com, peterz@infradead.org, tglx@linutronix.de, Eric Paris <eparis@redhat.com>, Serge Hallyn <serge.hallyn@canonical.com>, djm@mindrot.org, scarybeasts@gmail.com, indan@nul.nu, pmoore@redhat.com, Jonathan Corbet <corbet@lwn.net>, eric.dumazet@gmail.com, markus@chromium.org, coreyb@linux.vnet.ibm.com, linux-man@vger.kernel.org, Michael Kerrisk <mtk.manpages@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] RLIMIT_NPROC DoS fix
+To: owl-dev@lists.openwall.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 5 Jun 2012, Will Drewry wrote:
+Hi,
 
-> Or Documentation/prctl/no-new-privs.txt
-> 
-> Just a decision between what it does and how you get to it, but I'd
-> think either would make sense!
+There is a problem with RLIMIT_NPROC patch:
+http://www.openwall.com/lists/kernel-hardening/2011/06/12/9
+http://www.openwall.com/lists/kernel-hardening/2011/08/08/2
 
-This makes sense as it's where the seccomp documentation is.
+As planned, it moves RLIMIT check from set_user() (set*uid()) stage to
+fork()/execve() stage.  But the drawback is that now there is no RLIMIT
+check at set_user().  It means that there are two bad cases:
+
+1) a root process sometimes does setrlimit()+setuid(U)+execve()/fork().
+In this case U can do kill(pid, SIGSTOP) each time just after setuid(U).
+U may store unlimited number of processes this way.
+(Spender has learned this way.)
+
+2) there are nonroot users A and B.
+A makes a binary ./loop which does setuid(A)+for(;;) {}
+A does chmod u+s ./loop
+B does 'while :; do ./loop &; done'
 
 
-- James
+IOW, if there is a way one can produce unlimited number of processes at
+atfer-setuid before-execve stage, one may DoS the system.
+
+I don't see any fair way to fix that.  The way I see is using additional
+limit which is used to kill overmultiplied processes.  E.g.:
+
+set_user()
+{
+    ...
+	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
+			new_user != INIT_USER) {
+		if (atomic_read(&new_user->processes) >= 2*rlimit(RLIMIT_NPROC) + 10) {
+		    ...some ratelimited printk warning...
+		    force_sig(SIGKILL, current);
+		}
+		current->flags |= PF_NPROC_EXCEEDED;
+	} else {
+		current->flags &= ~PF_NPROC_EXCEEDED;
+    }
+        
+    ...
+}
+
+Yes, this is dirty.  Any thoughts about less dirty way?
+
 -- 
-James Morris
-<jmorris@namei.org>
+Vasily
