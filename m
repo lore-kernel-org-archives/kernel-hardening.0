@@ -1,60 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Tue, 12 Jun 2012 13:38:12 +0400
-From: Vasily Kulikov <segoon@openwall.com>
-Message-ID: <20120612093812.GA24809@albatros>
+Date: Wed, 13 Jun 2012 02:22:41 +0200 (CEST)
+From: Pavel Kankovsky <peak@argo.troja.mff.cuni.cz>
+In-Reply-To: <20120612093812.GA24809@albatros>
+Message-ID: <alpine.LRH.2.02.1206130119370.32070@argo.troja.mff.cuni.cz>
+References: <20120612093812.GA24809@albatros>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] RLIMIT_NPROC DoS fix
-To: owl-dev@lists.openwall.com, kernel-hardening@lists.openwall.com
+Content-Type: TEXT/PLAIN; charset=US-ASCII; format=flowed
+Subject: [kernel-hardening] Re: [owl-dev] RLIMIT_NPROC DoS fix
+To: owl-dev@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On Tue, 12 Jun 2012, Vasily Kulikov wrote:
 
-There is a problem with RLIMIT_NPROC patch:
-http://www.openwall.com/lists/kernel-hardening/2011/06/12/9
-http://www.openwall.com/lists/kernel-hardening/2011/08/08/2
+> There is a problem with RLIMIT_NPROC patch:
+> http://www.openwall.com/lists/kernel-hardening/2011/06/12/9
 
-As planned, it moves RLIMIT check from set_user() (set*uid()) stage to
-fork()/execve() stage.  But the drawback is that now there is no RLIMIT
-check at set_user().  It means that there are two bad cases:
+I'd like to point out there are at least two other ways setuid() et alii 
+can fail in recent kernels: LSM and memory allocation.
 
-1) a root process sometimes does setrlimit()+setuid(U)+execve()/fork().
-In this case U can do kill(pid, SIGSTOP) each time just after setuid(U).
-U may store unlimited number of processes this way.
-(Spender has learned this way.)
+> 1) a root process sometimes does setrlimit()+setuid(U)+execve()/fork().
+> In this case U can do kill(pid, SIGSTOP) each time just after setuid(U).
+> U may store unlimited number of processes this way.
+> (Spender has learned this way.)
 
-2) there are nonroot users A and B.
-A makes a binary ./loop which does setuid(A)+for(;;) {}
-A does chmod u+s ./loop
-B does 'while :; do ./loop &; done'
+You could probably refuse to handle SIGSTOP sent by a nonprivileged user 
+when PF_NPROC_EXCEEDED is set. I do not thing it would break anything.
+But it would make things even dirtier.
 
+> 2) there are nonroot users A and B.
+> A makes a binary ./loop which does setuid(A)+for(;;) {}
+> A does chmod u+s ./loop
+> B does 'while :; do ./loop &; done'
 
-IOW, if there is a way one can produce unlimited number of processes at
-atfer-setuid before-execve stage, one may DoS the system.
+I think processes should count towards RLIMIT_NPROC of the user who forked 
+them (B in this example) for the rest of their CPU cycles. Even after they 
+exec a setuid program.
 
-I don't see any fair way to fix that.  The way I see is using additional
-limit which is used to kill overmultiplied processes.  E.g.:
+> Yes, this is dirty.  Any thoughts about less dirty way?
 
-set_user()
-{
-    ...
-	if (atomic_read(&new_user->processes) >= rlimit(RLIMIT_NPROC) &&
-			new_user != INIT_USER) {
-		if (atomic_read(&new_user->processes) >= 2*rlimit(RLIMIT_NPROC) + 10) {
-		    ...some ratelimited printk warning...
-		    force_sig(SIGKILL, current);
-		}
-		current->flags |= PF_NPROC_EXCEEDED;
-	} else {
-		current->flags &= ~PF_NPROC_EXCEEDED;
-    }
-        
-    ...
-}
-
-Yes, this is dirty.  Any thoughts about less dirty way?
+Create a cgroup controller limiting the number of tasks (and perhaps the 
+number of other kernel objects) and pretend RLIMIT_NPROC has never 
+existed?
 
 -- 
-Vasily
+Pavel Kankovsky aka Peak                          / Jeremiah 9:21        \
+"For death is come up into our MS Windows(tm)..." \ 21st century edition /
