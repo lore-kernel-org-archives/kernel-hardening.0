@@ -1,88 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 30 Jun 2012 10:14:23 +0100
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20120630091422.GE14083@ZenIV.linux.org.uk>
-References: <1340658327-2932-1-git-send-email-keescook@chromium.org>
- <1340658327-2932-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1340658327-2932-2-git-send-email-keescook@chromium.org>
-Sender: Al Viro <viro@ftp.linux.org.uk>
+Sender: keescook@google.com
+In-Reply-To: <20120630091422.GE14083@ZenIV.linux.org.uk>
+References: <1340658327-2932-1-git-send-email-keescook@chromium.org>
+	<1340658327-2932-2-git-send-email-keescook@chromium.org>
+	<20120630091422.GE14083@ZenIV.linux.org.uk>
+Date: Sun, 1 Jul 2012 17:43:22 -0700
+Message-ID: <CAGXu5j+8KMdX92T6Ma8HBXko4BHGmZKcV1kuR+b38r00r6YZbw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
 Subject: [kernel-hardening] Re: [PATCH 1/2] fs: add link restrictions
-To: Kees Cook <keescook@chromium.org>
+To: Al Viro <viro@zeniv.linux.org.uk>
 Cc: linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, linux-fsdevel@vger.kernel.org, Eric Paris <eparis@redhat.com>, Matthew Wilcox <matthew@wil.cx>, Doug Ledford <dledford@redhat.com>, Joe Korty <joe.korty@ccur.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Ingo Molnar <mingo@elte.hu>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, linux-doc@vger.kernel.org, Dan Rosenberg <drosenberg@vsecurity.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 25, 2012 at 02:05:26PM -0700, Kees Cook wrote:
+On Sat, Jun 30, 2012 at 2:14 AM, Al Viro <viro@zeniv.linux.org.uk> wrote:
+> On Mon, Jun 25, 2012 at 02:05:26PM -0700, Kees Cook wrote:
+>
+>> +config PROTECTED_LINKS
+>> +     bool "Evaluate vulnerable link conditions"
+>> +     default y
+>
+> Remember Linus' rants about 'default y' in general?
 
-> +config PROTECTED_LINKS
-> +	bool "Evaluate vulnerable link conditions"
-> +	default y
+I added these configs due to other people's requests. I am happy to
+remove them all and have the sysctls start their life == 1. It would
+eliminate all the #ifdef logic too.
 
-Remember Linus' rants about 'default y' in general?
+>> +     /* Check parent directory mode and owner. */
+>
+> I suspect that we ought to simply pass that parent directory as argument - caller
+> *does* have a reference to it, so we don't need to mess with ->d_lock, etc.
 
-> +#ifdef CONFIG_PROTECTED_LINKS
-> +int sysctl_protected_symlinks __read_mostly =
-> +	CONFIG_PROTECTED_SYMLINKS_SYSCTL;
-> +int sysctl_protected_hardlinks __read_mostly =
-> +	CONFIG_PROTECTED_HARDLINKS_SYSCTL;
-> +
-> +/**
-> + * may_follow_link - Check symlink following for unsafe situations
-> + * @link: The path of the symlink
-> + *
-> + * In the case of the sysctl_protected_symlinks sysctl being enabled,
-> + * CAP_DAC_OVERRIDE needs to be specifically ignored if the symlink is
-> + * in a sticky world-writable directory. This is to protect privileged
-> + * processes from failing races against path names that may change out
-> + * from under them by way of other users creating malicious symlinks.
-> + * It will permit symlinks to be followed only when outside a sticky
-> + * world-writable directory, or when the uid of the symlink and follower
-> + * match, or when the directory owner matches the symlink's owner.
-> + *
-> + * Returns 0 if following the symlink is allowed, -ve on error.
-> + */
-> +static inline int may_follow_link(struct path *link)
-> +{
-> +	int error = 0;
-> +	const struct inode *parent;
-> +	const struct inode *inode;
-> +	const struct cred *cred;
-> +	struct dentry *dentry;
-> +
-> +	if (!sysctl_protected_symlinks)
-> +		return 0;
+I don't see where the parent is held in either path_openat nor
+path_lookupat. What should I be passing into may_follow_link() for the
+parent?
 
-Um.  What this says to me is "this function should be outside of ifdef, with
-#else of that ifdef defining sysctl_protected_symlinks to 0".
+>> +                     err = may_follow_link(&link);
+>> +                     if (unlikely(err))
+>> +                             break;
+>
+> No.  This is definitely wrong - you are leaking dentries and vfsmount here.
 
-> +	/* Check parent directory mode and owner. */
+What should I do to avoid the leak? I thought it was avoiding the need
+to call put_link because it aborts before calling follow_link.
 
-I suspect that we ought to simply pass that parent directory as argument - caller
-*does* have a reference to it, so we don't need to mess with ->d_lock, etc.
+>> +             error = may_follow_link(&link);
+>> +             if (unlikely(error))
+>> +                     break;
+>
+> Ditto.
 
-> +	mode_t mode = inode->i_mode;
+Same thing here -- it aborts before the follow_link. I must be
+misunderstanding something. What am I missing?
 
-umode_t, please.
+Thanks for the feedback! I'll clean up the other things you mentioned as well.
 
-> +static int may_linkat(struct path *link)
-> +{
-> +	const struct cred *cred;
-> +	struct inode *inode;
-> +
-> +	if (!sysctl_protected_hardlinks)
-> +		return 0;
+-Kees
 
-Ditto about taking it outside of ifdef.
-
-> +			err = may_follow_link(&link);
-> +			if (unlikely(err))
-> +				break;
-
-No.  This is definitely wrong - you are leaking dentries and vfsmount here.
-> +		error = may_follow_link(&link);
-> +		if (unlikely(error))
-> +			break;
-
-Ditto.
+-- 
+Kees Cook
+Chrome OS Security
