@@ -1,59 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Djalal Harouni <tixxdz@opendz.org>
-Date: Tue, 24 Jul 2012 16:29:00 +0100
-Message-Id: <1343143742-31229-1-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] [PATCH v2 0/2] proc: /proc/<pid>/environ offset fixes
+Date: Tue, 24 Jul 2012 16:29:01 +0100
+Message-Id: <1343143742-31229-2-git-send-email-tixxdz@opendz.org>
+In-Reply-To: <1343143742-31229-1-git-send-email-tixxdz@opendz.org>
+References: <1343143742-31229-1-git-send-email-tixxdz@opendz.org>
+Subject: [kernel-hardening] [PATCH v2 1/2] proc: environ_read() make sure offset points to environment address range
 To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Vasiliy Kulikov <segoon@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, Oleg Nesterov <oleg@redhat.com>, Solar Designer <solar@openwall.com>, Kees Cook <keescook@chromium.org>, David Rientjes <rientjes@google.com>, Brad Spengler <spender@grsecurity.net>
 Cc: Djalal Harouni <tixxdz@opendz.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Currently the following offset and environment address range check in
+environ_read() of /proc/<pid>/environ is buggy:
 
-This is the V2 to correctly check offsets on /proc/<pid>/environ before
-reading. This was previously discussed here:
-http://lkml.org/lkml/2012/7/22/79
+int this_len = mm->env_end - (mm->env_start + src);
+if (this_len <= 0)
+	break;
 
-Due to incorrect offset checks, currently one can read from aribtrary
-addresses on /proc/<pid>/environ, not only the environment address range
-as shown here (the same thread):
-http://lkml.org/lkml/2012/7/22/163
+Large or negative offsets on /proc/<pid>/environ converted to 'unsigned
+long' may pass this check since '(mm->env_start + src)' can overflow and
+'this_len' will be positive.
 
-The bug is in environ_read().
+This can turn /proc/<pid>/environ to act like /proc/<pid>/mem since
+(mm->env_start + src) will point and read from another VMA.
 
+There are two fixes here plus some code cleaning:
+1) Fix the overflow by checking if the offset that was converted to
+unsigned long will always point to the [mm->env_start, mm->env_end] address
+range.
 
-That first patch was not complete as noted by Oleg Nestrov, since even
-with positive offsets we can perhaps overflow the address from where to
-read the environment variables, or perhaps we can make multiple lseek()
-calls with a positive offset set to 0x7fffffff, this will pass the
-fs/read_write.c:lseek_execute() checks, and one can make the
-'mm->env_addr + offset' point to another VMA. This will make
-/proc/<pid>/environ to act like /proc/<pid>/mem.
+2) Remove the truncation that was made to the result of the check, storing
+the result in 'int this_len' will alter its value and we can not depend on
+it.
 
-The first version removed only negative offsets which when converted to
-unsigned long will overflow the 'mm->env_addr + offset' the address from
-where to start to read the environment variables, and will also pass all
-the fs/read_write.c:lseek_execute() and environ_read() checks.
+For kernels that have commit b409e578d9a4ec95913e06d8f which adds the
+appropriate ptrace check and saves the 'mm' at ->open() time, this is not
+a security issue.
 
-As suggested by Oleg Nesterov this version makes sure to fix the offset
-checks, then it removes negative offsets support on /proc/<pid>/environ
-since it does not need them.
+This patch is taken from the grsecurity patch since it was just made
+available.
 
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Brad Spengler <spender@grsecurity.net>
+Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+---
+ fs/proc/base.c |   13 +++++++------
+ 1 files changed, 7 insertions(+), 6 deletions(-)
 
-Thanks to patch 'proc: clean up /proc/<pid>/environ handling'
-commit b409e578d9a4ec95913e ,this is not a security issue since at
-->open() there is: the ptrace check + save the current 'mm' for next
-operations.
-
-
-Djalal Harouni (2):
-  proc: environ_read() make sure offset points to environment address range
-  proc: do not allow negative offsets on /proc/<pid>/environ
-
- fs/proc/base.c |   22 +++++++++++++---------
-  1 files changed, 13 insertions(+), 9 deletions(-)
-
-
-V2:
- * Added the [PATCH 1/2] to make sure that the offset points to the
-   environment address range as suggested by Oleg Nesterov.
- * Updated the [PATCH 2/2] changelog entry since we have added [PATCH 1/2]
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index 2772208..39ee093 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -827,15 +827,16 @@ static ssize_t environ_read(struct file *file, char __user *buf,
+ 	if (!atomic_inc_not_zero(&mm->mm_users))
+ 		goto free;
+ 	while (count > 0) {
+-		int this_len, retval, max_len;
++		size_t this_len, max_len;
++		int retval;
+ 
+-		this_len = mm->env_end - (mm->env_start + src);
+-
+-		if (this_len <= 0)
++		if (src >= (mm->env_end - mm->env_start))
+ 			break;
+ 
+-		max_len = (count > PAGE_SIZE) ? PAGE_SIZE : count;
+-		this_len = (this_len > max_len) ? max_len : this_len;
++		this_len = mm->env_end - (mm->env_start + src);
++
++		max_len = min_t(size_t, PAGE_SIZE, count);
++		this_len = min(max_len, this_len);
+ 
+ 		retval = access_remote_vm(mm, (mm->env_start + src),
+ 			page, this_len, 0);
+-- 
+1.7.1
