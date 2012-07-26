@@ -1,36 +1,19 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 25 Jul 2012 14:16:44 +0200
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20120725121644.GA6584@redhat.com>
-References: <1343143742-31229-1-git-send-email-tixxdz@opendz.org> <1343143742-31229-3-git-send-email-tixxdz@opendz.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1343143742-31229-3-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] Re: [PATCH v2 2/2] proc: do not allow negative offsets on
-	/proc/<pid>/environ
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Vasiliy Kulikov <segoon@openwall.com>, WANG Cong <xiyou.wangcong@gmail.com>, Solar Designer <solar@openwall.com>, Kees Cook <keescook@chromium.org>, David Rientjes <rientjes@google.com>, Brad Spengler <spender@grsecurity.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 25 Jul 2012 17:29:06 -0700
+Message-Id: <1343262548-21743-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [RESEND][PATCH v2012.5 0/2] fs: add link restrictions
+To: Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>
+Cc: linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Eric Paris <eparis@redhat.com>, Matthew Wilcox <matthew@wil.cx>, Doug Ledford <dledford@redhat.com>, Joe Korty <joe.korty@ccur.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Ingo Molnar <mingo@elte.hu>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, linux-doc@vger.kernel.org, Dan Rosenberg <drosenberg@vsecurity.com>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/24, Djalal Harouni wrote:
->
->  static int mem_open(struct inode *inode, struct file *file)
->  {
-> -	return __mem_open(inode, file, PTRACE_MODE_ATTACH);
-> +	int ret = __mem_open(inode, file, PTRACE_MODE_ATTACH);
-> +
-> +	/* OK to pass negative loff_t, we can catch out-of-range */
-> +	file->f_mode |= FMODE_UNSIGNED_OFFSET;
-> +
-> +	return ret;
->  }
+Resending; originally posted 2012-07-02: https://lkml.org/lkml/2012/7/2/394
 
-It could be even simpler, I meant
+This cleans up the various issues that Al Viro pointed out[1], and 
+rebases to Linus's current tree.
 
-	file->f_mode |= FMODE_UNSIGNED_OFFSET;
-	return __mem_open(inode, file, PTRACE_MODE_ATTACH);
+Thanks,
 
-Never mind, this is very minor and the patch is already in -mm.
+-Kees
 
-Oleg.
+[1] https://lkml.org/lkml/2012/6/30/42
