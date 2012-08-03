@@ -1,89 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Richard Weinberger <richard@nod.at>
-Date: Fri,  3 Aug 2012 16:40:04 +0200
-Message-Id: <1344004804-20344-1-git-send-email-richard@nod.at>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] =?UTF-8?q?=5BPATCH=5D=20Revert=20=22futex=3A=20Mark=20get=5Frobust=5Flist=20as=20deprecated=22?=
-To: linux-kernel@vger.kernel.org
-Cc: linux-doc@vger.kernel.org, dvhart@linux.intel.com, paul.gortmaker@windriver.com, jkosina@suse.cz, rob@landley.net, Richard Weinberger <richard@nod.at>, Randy Dunlap <rdunlap@xenotime.net>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net, keescook@chromium.org, tglx@linutronix.de, Cyrill Gorcunov <gorcunov@openvz.org>, xemul@parallels.com, stable@vger.kernel.org, #
+Sender: keescook@google.com
+In-Reply-To: <alpine.LRH.2.02.1208031425530.25196@tundra.namei.org>
+References: <1343262548-21743-1-git-send-email-keescook@chromium.org>
+	<1343262548-21743-2-git-send-email-keescook@chromium.org>
+	<alpine.LRH.2.02.1208031425530.25196@tundra.namei.org>
+Date: Fri, 3 Aug 2012 10:01:10 -0700
+Message-ID: <CAGXu5jKFm3uxwF3hhhzkUJcxJ0zOH89_bAgQGLCEf=g3CpXuHw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: Re: [kernel-hardening] [PATCH 1/2] fs: add link restrictions
+To: James Morris <jmorris@namei.org>
+Cc: kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Eric Paris <eparis@redhat.com>, Matthew Wilcox <matthew@wil.cx>, Doug Ledford <dledford@redhat.com>, Joe Korty <joe.korty@ccur.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Ingo Molnar <mingo@elte.hu>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, linux-doc@vger.kernel.org, Dan Rosenberg <drosenberg@vsecurity.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-get_robust_list has at least two valid use cases.
-1. checkpoint/restore in userspace
-2. post mortem analysis
+On Thu, Aug 2, 2012 at 9:26 PM, James Morris <jmorris@namei.org> wrote:
+> On Wed, 25 Jul 2012, Kees Cook wrote:
+>
+>> This adds symlink and hardlink restrictions to the Linux VFS.
+>
+> Is Al happy with this now?
 
-Cc: Randy Dunlap <rdunlap@xenotime.net>
-Cc: Darren Hart <dvhart@linux.intel.com>
-Cc: Peter Zijlstra <a.p.zijlstra@chello.nl>
-Cc: Jiri Kosina <jkosina@suse.cz>
-Cc: Eric W. Biederman <ebiederm@xmission.com>
-Cc: David Howells <dhowells@redhat.com>
-Cc: Serge E. Hallyn <serge.hallyn@canonical.com>
-Cc: kernel-hardening@lists.openwall.com
-Cc: spender@grsecurity.net
-Cc: keescook@chromium.org
-Cc: tglx@linutronix.de
-Cc: Cyrill Gorcunov <gorcunov@openvz.org>
-Cc: xemul@parallels.com
-Cc: <stable@vger.kernel.org> # 3.4.x
-Cc: <stable@vger.kernel.org> # 3.5.x
-Signed-off-by: Richard Weinberger <richard@nod.at>
-Acked-by: Cyrill Gorcunov <gorcunov@openvz.org>
-Acked-by: "Eric W. Biederman" <ebiederm@xmission.com>
----
- Documentation/feature-removal-schedule.txt |   10 ----------
- kernel/futex.c                             |    2 --
- kernel/futex_compat.c                      |    2 --
- 3 Dateien geändert, 14 Zeilen entfernt(-)
+Looks like it; thanks for checking. It's in mainline now:
+http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=800179c9b8a1e796e441674776d11cd4c05d61d7
 
-diff --git a/Documentation/feature-removal-schedule.txt b/Documentation/feature-removal-schedule.txt
-index afaff31..a25482e 100644
---- a/Documentation/feature-removal-schedule.txt
-+++ b/Documentation/feature-removal-schedule.txt
-@@ -506,16 +506,6 @@ Who:	Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
- 
- ----------------------------
- 
--What:	get_robust_list syscall
--When:	2013
--Why:	There appear to be no production users of the get_robust_list syscall,
--	and it runs the risk of leaking address locations, allowing the bypass
--	of ASLR. It was only ever intended for debugging, so it should be
--	removed.
--Who:	Kees Cook <keescook@chromium.org>
--
------------------------------
--
- What:	Removing the pn544 raw driver.
- When:	3.6
- Why:	With the introduction of the NFC HCI and SHDL kernel layers, pn544.c
-diff --git a/kernel/futex.c b/kernel/futex.c
-index e2b0fb9..d701be5 100644
---- a/kernel/futex.c
-+++ b/kernel/futex.c
-@@ -2449,8 +2449,6 @@ SYSCALL_DEFINE3(get_robust_list, int, pid,
- 	if (!futex_cmpxchg_enabled)
- 		return -ENOSYS;
- 
--	WARN_ONCE(1, "deprecated: get_robust_list will be deleted in 2013.\n");
--
- 	rcu_read_lock();
- 
- 	ret = -ESRCH;
-diff --git a/kernel/futex_compat.c b/kernel/futex_compat.c
-index 83e368b..a9642d5 100644
---- a/kernel/futex_compat.c
-+++ b/kernel/futex_compat.c
-@@ -142,8 +142,6 @@ compat_sys_get_robust_list(int pid, compat_uptr_t __user *head_ptr,
- 	if (!futex_cmpxchg_enabled)
- 		return -ENOSYS;
- 
--	WARN_ONCE(1, "deprecated: get_robust_list will be deleted in 2013.\n");
--
- 	rcu_read_lock();
- 
- 	ret = -ESRCH;
+-Kees
+
 -- 
-1.7.10.4
+Kees Cook
+Chrome OS Security
