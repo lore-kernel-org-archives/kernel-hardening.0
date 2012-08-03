@@ -1,34 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Cyrill Gorcunov <gorcunov@gmail.com>
+Date: Fri, 3 Aug 2012 17:34:38 +0400
+From: Cyrill Gorcunov <gorcunov@openvz.org>
+Message-ID: <20120803133438.GE11952@moon>
+References: <1344000593-18794-1-git-send-email-richard@nod.at>
 MIME-Version: 1.0
-In-Reply-To: <e80f32ef-d6cf-48cc-9ddb-75d95bc9581e@email.android.com>
-References: <alpine.LFD.2.02.1203231926000.2542@ionos>
-	<20120323190855.GA27213@www.outflux.net>
-	<CAFLxGvzPVPyXPwjay4a01q1vx4K4Ht56bHjzswYrr1wvB_1dYw@mail.gmail.com>
-	<87pq7935w2.fsf@xmission.com>
-	<CAFLxGvz0reQS=zfWeTz4a4xZVFeeu80VnP-efy7zCiPZVWzH-g@mail.gmail.com>
-	<20120803110247.GB11952@moon>
-	<501BC62A.4090308@parallels.com>
-	<e80f32ef-d6cf-48cc-9ddb-75d95bc9581e@email.android.com>
-Date: Fri, 3 Aug 2012 15:00:30 +0200
-Message-ID: <CAFLxGvwnEC7O3Lf6PcU5qQO1H4NFeSRCWiy-u3mxmHCcPq==1A@mail.gmail.com>
-From: richard -rw- weinberger <richard.weinberger@gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH v2] futex: mark get_robust_list as deprecated
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Pavel Emelyanov <xemul@parallels.com>, Cyrill Gorcunov <gorcunov@openvz.org>, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Randy Dunlap <rdunlap@xenotime.net>, Darren Hart <dvhart@linux.intel.com>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Andrew Morton <akpm@linux-foundation.org>, Jiri Kosina <jkosina@suse.cz>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "spender@grsecurity.net" <spender@grsecurity.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1344000593-18794-1-git-send-email-richard@nod.at>
+Subject: [kernel-hardening] Re: [PATCH] Revert "futex: Mark get_robust_list as deprecated"
+To: Richard Weinberger <richard@nod.at>
+Cc: linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, dvhart@linux.intel.com, paul.gortmaker@windriver.com, jkosina@suse.cz, rob@landley.net, Randy Dunlap <rdunlap@xenotime.net>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net, keescook@chromium.org, tglx@linutronix.de, xemul@parallels.com, stable@vger.kernel.org, #3.4.x@moon.localdomain
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 3, 2012 at 2:58 PM, Eric W. Biederman <ebiederm@xmission.com> wrote:
-> The permissions on the syscall were fixed them withR ptrace_may_access.
->
-> We have identified two legitimate use cases.
->
-> It looks like it is time for someone to generate the path to remove the depreciation.
->
-> Who is up for writing and testing that patch?
+On Fri, Aug 03, 2012 at 03:29:53PM +0200, Richard Weinberger wrote:
+> get_robust_list has at least two valid use cases.
+> 1. checkpoint/restore in userspace
+> 2. post mortem analysis
+> 
+> Cc: Randy Dunlap <rdunlap@xenotime.net>
+> Cc: Darren Hart <dvhart@linux.intel.com>
+> Cc: Peter Zijlstra <a.p.zijlstra@chello.nl>
+> Cc: Jiri Kosina <jkosina@suse.cz>
+> Cc: Eric W. Biederman <ebiederm@xmission.com>
+> Cc: David Howells <dhowells@redhat.com>
+> Cc: Serge E. Hallyn <serge.hallyn@canonical.com>
+> Cc: kernel-hardening@lists.openwall.com
+> Cc: spender@grsecurity.net
+> Cc: keescook@chromium.org
+> Cc: tglx@linutronix.de
+> Cc: Cyrill Gorcunov <gorcunov@openvz.org>
+> Cc: xemul@parallels.com
+> Cc: <stable@vger.kernel.org> # 3.4.x
+> Cc: <stable@vger.kernel.org> # 3.5.x
+> Link: http://lkml.kernel.org/r/CAFLxGvzPVPyXPwjay4a01q1vx4K4Ht56bHjzswYrr1wvB_1dYw%20%28%29%20mail%20!%20gmail%20!%20com
+> Signed-off-by: Richard Weinberger <richard@nod.at>
+> ---
 
-I'll send a patch.
+Acked-by: Cyrill Gorcunov <gorcunov@openvz.org>
 
--- 
-Thanks,
-//richard
+Thanks, Richard!
