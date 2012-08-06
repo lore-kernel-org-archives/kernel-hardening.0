@@ -1,56 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <501FDB45.4050104@nod.at>
-Date: Mon, 06 Aug 2012 16:57:09 +0200
-From: Richard Weinberger <richard@nod.at>
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1343262548-21743-1-git-send-email-keescook@chromium.org>
+	<1343262548-21743-2-git-send-email-keescook@chromium.org>
+	<alpine.LRH.2.02.1208031425530.25196@tundra.namei.org>
+	<CAGXu5jKFm3uxwF3hhhzkUJcxJ0zOH89_bAgQGLCEf=g3CpXuHw@mail.gmail.com>
+Date: Mon, 06 Aug 2012 16:55:31 -0700
+In-Reply-To: <CAGXu5jKFm3uxwF3hhhzkUJcxJ0zOH89_bAgQGLCEf=g3CpXuHw@mail.gmail.com>
+	(Kees Cook's message of "Fri, 3 Aug 2012 10:01:10 -0700")
+Message-ID: <87hasfinik.fsf@xmission.com>
 MIME-Version: 1.0
-References: <1344000593-18794-1-git-send-email-richard@nod.at> <1344264832.27828.65.camel@twins>
-In-Reply-To: <1344264832.27828.65.camel@twins>
-Content-Type: multipart/signed; micalg=pgp-sha1;
- protocol="application/pgp-signature";
- boundary="------------enig5E830B26402E23C357E6EBBF"
-Subject: [kernel-hardening] Re: [PATCH] Revert "futex: Mark get_robust_list as deprecated"
-To: Peter Zijlstra <a.p.zijlstra@chello.nl>
-Cc: linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, dvhart@linux.intel.com, paul.gortmaker@windriver.com, jkosina@suse.cz, rob@landley.net, Randy Dunlap <rdunlap@xenotime.net>, "Eric W. Biederman" <ebiederm@xmission.com>, David Howells <dhowells@redhat.com>, "Serge E. Hallyn" <serge.hallyn@canonical.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net, keescook@chromium.org, tglx@linutronix.de, Cyrill Gorcunov <gorcunov@openvz.org>, xemul@parallels.com, stable@vger.kernel.org, #@programming.kicks-ass.net, 3.4.x@programming.kicks-ass.net
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] [PATCH 1/2] fs: add link restrictions
+To: Kees Cook <keescook@chromium.org>
+Cc: James Morris <jmorris@namei.org>, kernel-hardening@lists.openwall.com, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Eric Paris <eparis@redhat.com>, Matthew Wilcox <matthew@wil.cx>, Doug Ledford <dledford@redhat.com>, Joe Korty <joe.korty@ccur.com>, Ingo Molnar <mingo@elte.hu>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, linux-doc@vger.kernel.org, Dan Rosenberg <drosenberg@vsecurity.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 2440 and 3156)
---------------enig5E830B26402E23C357E6EBBF
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: quoted-printable
+Kees Cook <keescook@chromium.org> writes:
 
-Am 06.08.2012 16:53, schrieb Peter Zijlstra:
-> On Fri, 2012-08-03 at 15:29 +0200, Richard Weinberger wrote:
->> get_robust_list has at least two valid use cases.
->> 1. checkpoint/restore in userspace
->> 2. post mortem analysis=20
->=20
-> Shouldn't this then also be added as a comment somewhere near the
-> implementation to avoid a repeat of this deprecate / undeprecate cycle?=
+> On Thu, Aug 2, 2012 at 9:26 PM, James Morris <jmorris@namei.org> wrote:
+>> On Wed, 25 Jul 2012, Kees Cook wrote:
+>>
+>>> This adds symlink and hardlink restrictions to the Linux VFS.
+>>
+>> Is Al happy with this now?
+>
+> Looks like it; thanks for checking. It's in mainline now:
+> http://git.kernel.org/?p=linux/kernel/git/torvalds/linux.git;a=commitdiff;h=800179c9b8a1e796e441674776d11cd4c05d61d7
 
+So there was one trivial little issue with your patch.  You were
+directly comparing kuids instead of using uid_eq.  This only practically
+matters when user namespaces are enabled which is currently impossible
+in 3.6-rc1 :(
 
-Or someone submits a patch to glibc and the man-pages project to make thi=
-s
-system call official...
+I have added the following fixup patch to my for-next branch of
+user-namespace.git
 
-Thanks,
-//richard
+From: "Eric W. Biederman" <ebiederm@xmission.com>
+Date: Fri, 3 Aug 2012 09:38:08 -0700
+Subject: [PATCH] userns:  Fix link restrictions to use uid_eq
 
+Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+---
+ fs/namei.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
 
---------------enig5E830B26402E23C357E6EBBF
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2.0.18 (GNU/Linux)
-
-iQEcBAEBAgAGBQJQH9tFAAoJEN9758yqZn9epXMH/Rl+SnzG1YqiV/amABAwFVgj
-k+296oeB89QqSBbPfTCA0LhykgssOTneq1EIRNilS7tZ/f2pM3Uz82E8+v7n4+Cu
-VZEs5T7eqBtlqVRTSZXLlR08RnfCciwmHD7Xe5uAQGKgXliDsNW3FXL315a3vIpe
-9HtxoF3d930TqbB1Qg1akX/J9qomtpZnjobS5eptWlp/FxNvm7DEXgxsxOAPPOMz
-VoH+vJF1/LF3ijqMmpzn2xpO1Ou3tyIhd+BWzyFqLoXEtpESdrv39FroOoEvgnOY
-QpQrCjrcBgVnNh0JGzc+T6E4sgpfZu+bPjPpl1m6E4eK3RTIPXvyxRpkBm7CX44=
-=rbzp
------END PGP SIGNATURE-----
-
---------------enig5E830B26402E23C357E6EBBF--
+diff --git a/fs/namei.c b/fs/namei.c
+index 1b46439..05480a6 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -678,7 +678,7 @@ static inline int may_follow_link(struct path *link, struct nameidata *nd)
+ 
+ 	/* Allowed if owner and follower match. */
+ 	inode = link->dentry->d_inode;
+-	if (current_cred()->fsuid == inode->i_uid)
++	if (uid_eq(current_cred()->fsuid, inode->i_uid))
+ 		return 0;
+ 
+ 	/* Allowed if parent directory not sticky and world-writable. */
+@@ -687,7 +687,7 @@ static inline int may_follow_link(struct path *link, struct nameidata *nd)
+ 		return 0;
+ 
+ 	/* Allowed if parent directory and link owner match. */
+-	if (parent->i_uid == inode->i_uid)
++	if (uid_eq(parent->i_uid, inode->i_uid))
+ 		return 0;
+ 
+ 	path_put_conditional(link, nd);
+@@ -757,7 +757,7 @@ static int may_linkat(struct path *link)
+ 	/* Source inode owner (or CAP_FOWNER) can hardlink all they like,
+ 	 * otherwise, it must be a safe source.
+ 	 */
+-	if (cred->fsuid == inode->i_uid || safe_hardlink_source(inode) ||
++	if (uid_eq(cred->fsuid, inode->i_uid) || safe_hardlink_source(inode) ||
+ 	    capable(CAP_FOWNER))
+ 		return 0;
+ 
+-- 
+1.7.5.4
