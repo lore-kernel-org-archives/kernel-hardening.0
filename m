@@ -1,75 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 12 Aug 2012 23:32:10 +0400
-From: Vasily Kulikov <segoon@openwall.com>
-Message-ID: <20120812193210.GA16669@albatros>
-References: <1343262548-21743-1-git-send-email-keescook@chromium.org>
- <1343262548-21743-2-git-send-email-keescook@chromium.org>
- <20120808121938.GA9995@albatros>
- <CAGXu5j+AUmNFLYmm-097JD-LgxKaYXxTmpnCdsdsqA+jLztXZQ@mail.gmail.com>
+Message-ID: <5060AB3F.5030400@linux.vnet.ibm.com>
+Date: Mon, 24 Sep 2012 14:49:35 -0400
+From: Corey Bryant <coreyb@linux.vnet.ibm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+AUmNFLYmm-097JD-LgxKaYXxTmpnCdsdsqA+jLztXZQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 1/2] fs: add link restrictions
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Linux security workgroup usage of kernel-hardening mailing list
 To: kernel-hardening@lists.openwall.com
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org, Eric Paris <eparis@redhat.com>, Matthew Wilcox <matthew@wil.cx>, Doug Ledford <dledford@redhat.com>, Joe Korty <joe.korty@ccur.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Ingo Molnar <mingo@elte.hu>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, linux-doc@vger.kernel.org, Dan Rosenberg <drosenberg@vsecurity.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Aug 11, 2012 at 23:34 -0700, Kees Cook wrote:
-> On Wed, Aug 8, 2012 at 5:19 AM, Vasily Kulikov <segoon@openwall.com> wrote:
-> > Hi Kees,
-> >
-> > On Wed, Jul 25, 2012 at 17:29 -0700, Kees Cook wrote:
-> >> +/**
-> >> + * safe_hardlink_source - Check for safe hardlink conditions
-> >> + * @inode: the source inode to hardlink from
-> >> + *
-> >> + * Return false if at least one of the following conditions:
-> >> + *    - inode is not a regular file
-> >> + *    - inode is setuid
-> >> + *    - inode is setgid and group-exec
-> >> + *    - access failure for read and write
-> >> + *
-> >> + * Otherwise returns true.
-> >> + */
-> >> +static bool safe_hardlink_source(struct inode *inode)
-> >> +{
-> >> +     umode_t mode = inode->i_mode;
-> >> +
-> >> +     /* Special files should not get pinned to the filesystem. */
-> >> +     if (!S_ISREG(mode))
-> >> +             return false;
-> >> +
-> >> +     /* Setuid files should not get pinned to the filesystem. */
-> >> +     if (mode & S_ISUID)
-> >> +             return false;
-> >
-> > We don't want to make hardlinks of SUID files, but we still allow to create
-> > hardlinks to SUID'ish cap'ed files.  Probably check whether the inode is
-> > setcap'ed?
-> 
-> Excellent idea. It doesn't look like there is anything "simple" to do
-> this already. It'd be close to get_file_caps() but without the bprm.
-> Maybe just get_vfs_caps_from_disk() and a walk of the caps? What would
-> you recommend?
+There was a discussion about forming a Linux security workgroup at the 
+2012 Linux Security Summit: 
+http://kernsec.org/wiki/index.php/Linux_Security_Summit_2012.
 
-Yes, I think get_vfs_caps_from_disk() plus identifying whether any permitted
-or inheritable capability is set or effective bit is set.  IOW, if there is
-_anything_ related to cababilities in the file, it is protected.
+The charter of the workgroup is to provide on-going security 
+verification of Linux kernel subsystems in order to assist in securing 
+the Linux Kernel and maintain trust and confidence in the security of 
+the Linux ecosystem.
 
-> > Probably we can enhance this further and allow LSMs to define whether this
-> > particular file is special in LSM's point of view (IOW, it can be able to move
-> > a process to another security domain which is served by LSM).
-> 
-> Yeah. Perhaps implementing the needed check above with a new security
-> check and have commoncaps do the vfs fetch with LSMs able to override?
+This may include, but is not limited to, topics such as tooling to 
+assist in securing the Linux Kernel, verification and testing of 
+critical subsystems for vulnerabilities, security improvements for build 
+tools, and providing guidance for maintaining subsystem security.
 
-Yep.  Then uid and gid checks from the above code should move to commoncaps
-function as default candidates for "privileged files" checks.
-
-Thanks,
+Would it be okay if we used the kernel-hardening mailing list for 
+communication?  If our traffic ever gets to be too much we could get our 
+own list.
 
 -- 
-Vasily Kulikov
-http://www.openwall.com - bringing security into open computing environments
+Regards,
+Corey Bryant
