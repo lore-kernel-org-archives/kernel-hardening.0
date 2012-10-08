@@ -1,27 +1,105 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 4 Oct 2012 15:29:30 +1000 (EST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <506CB547.9020102@linux.vnet.ibm.com>
-Message-ID: <alpine.LRH.2.02.1210041529060.1905@tundra.namei.org>
-References: <5064A862.20708@linux.vnet.ibm.com> <CAGXu5j+Ysx+i+crdNbJjiCekuRMZT-RPW3gOHzA9Gh8q7dpWeA@mail.gmail.com> <506B19D5.80803@linux.vnet.ibm.com> <CAGXu5jK-=EZ8tmkTZ8eESAFjt9OJoPOOcKTXfmREy4ZMuB13SQ@mail.gmail.com>
- <506CB547.9020102@linux.vnet.ibm.com>
+Message-ID: <507312C2.3070704@linux.vnet.ibm.com>
+Date: Mon, 08 Oct 2012 13:52:02 -0400
+From: Corey Bryant <coreyb@linux.vnet.ibm.com>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+References: <5064A862.20708@linux.vnet.ibm.com> <CAGXu5j+Ysx+i+crdNbJjiCekuRMZT-RPW3gOHzA9Gh8q7dpWeA@mail.gmail.com> <506B19D5.80803@linux.vnet.ibm.com> <CAGXu5jK-=EZ8tmkTZ8eESAFjt9OJoPOOcKTXfmREy4ZMuB13SQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jK-=EZ8tmkTZ8eESAFjt9OJoPOOcKTXfmREy4ZMuB13SQ@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] Re: Linux Security Workgroup
-To: Corey Bryant <coreyb@linux.vnet.ibm.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Julia Lawall <julia.lawall@lip6.fr>, Theodore Tso <tytso@google.com>, Paul Moore <pmoore@redhat.com>, Eric Paris <eparis@redhat.com>, Tyler Hicks <tyhicks@canonical.com>, zohar@us.ibm.com, john.johansen@canonical.com, Dan Carpenter <dan.carpenter@oracle.com>, Fengguang Wu <fengguang.wu@intel.com>
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Julia Lawall <julia.lawall@lip6.fr>, James Morris <jmorris@namei.org>, Theodore Tso <tytso@google.com>, Paul Moore <pmoore@redhat.com>, Eric Paris <eparis@redhat.com>, Tyler Hicks <tyhicks@canonical.com>, zohar@us.ibm.com, john.johansen@canonical.com, Dan Carpenter <dan.carpenter@oracle.com>, Fengguang Wu <fengguang.wu@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 3 Oct 2012, Corey Bryant wrote:
 
-> > http://kernsec.org/. Perhaps we can use that? James, would this be
-> > something you'd be okay with?
-> 
-> That sounds good to me if it's okay with James.
 
-Sounds good -- email me if you want an account there.
+On 10/02/2012 06:17 PM, Kees Cook wrote:
+> On Tue, Oct 2, 2012 at 9:44 AM, Corey Bryant <coreyb@linux.vnet.ibm.com> wrote:
+>>
+>>
+>> On 10/02/2012 12:23 PM, Kees Cook wrote:
+>>>
+>>> On Thu, Sep 27, 2012 at 12:26 PM, Corey Bryant
+>>> <coreyb@linux.vnet.ibm.com> wrote:
+>>>>
+>>>> At the Linux Security Summit we began discussing the Linux Security
+>>>> Workgroup and some of the efforts that we can focus on.
+>>>>
+>>>> The charter of the workgroup is to provide on-going security
+>>>> verification of Linux kernel subsystems in order to assist in securing
+>>>> the
+>>>> Linux Kernel and maintain trust and confidence in the security of the
+>>>> Linux
+>>>> ecosystem.
+>>>>
+>>>> This may include, but is not limited to, topics such as tooling to assist
+>>>> in
+>>>> securing the Linux Kernel, verification and testing of critical
+>>>> subsystems
+>>>> for vulnerabilities, security improvements for build tools, and providing
+>>>> guidance for maintaining subsystem security.
+>>>
+>>>
+>>> Thanks for getting this rolling!
+>>>
+>>> What are the next steps? Does it make sense to try to gather a list of
+>>> active projects to try and see where things currently stand? (i.e who
+>>> is actively running smatch, trinity, etc?) Or to call attention to a
+>>> specific subsystem that needs direct auditing (e.g. KVM)?
+>>>
+>>> -Kees
+>>>
+>>
+>> No problem, thanks for the input!
+>>
+>> I think having a list of active projects is a good place to start.
+>
+> I know Dan Carpenter is running smatch, as well as Fengguang Wu.
+> Getting details on which trees are being scanned would be good.
+>
+> I know Fengguang Wu is running trinity too.
+>
+> There is a collection of coccinelle scripts in the tree, but I'm not
+> sure if/when those are getting run by anyone. Julia, do you know if
+> those are being regularly run?
+>
+>> Perhaps we can also add desired projects to this list, and if anyone has
+>> cycles to cover a project they can put their name to the project.
+>
+> I was keeping a list of potential hardening work here:
+> https://wiki.ubuntu.com/SecurityTeam/Roadmap/KernelHardening#Upstream_Hardening
+> some of it is out of date.
+>
+>> I'm personally trying to get time allocated to work on KVM fuzzing and/or
+>> static analysis in 2013.
+>
+> Sounds good.
+>
+>> A wiki probably makes sense for the list.  Google sites has wikis.  I can
+>> start one there unless there are other ideas.
+>
+> Kernel.org hosts wikis as well, and James Morris already has
+> http://kernsec.org/. Perhaps we can use that? James, would this be
+> something you'd be okay with?
 
+Here's a start on the wiki.  There's not really a whole lot on it other 
+than what we've discussed on the list, but it's a start.  Comments and 
+updates are very much welcome.
+
+http://kernsec.org/wiki/index.php/Linux_Security_Workgroup
+
+A couple of questions:
+  * What should the work group's scope be?  The charter mentions " ... 
+on-going security verification of Linux kernel subsystems ... ".  I was 
+thinking it would focus more on items like: fuzzing, static analysis, 
+education for reviewing code, tooling/build security enhancements.  But 
+I have a feeling it will start to include Kernel development projects too.
+  * Where should we document inactive, but desired, projects?  I know 
+Kees has https://wiki.ubuntu.com/SecurityTeam/Roadmap/KernelHardening 
+but I'm wondering if it makes sense to keep track of work items on the 
+same wiki.
 
 -- 
-James Morris
-<jmorris@namei.org>
+Regards,
+Corey Bryant
