@@ -1,46 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 29 Dec 2012 05:13:44 +0000
-From: Al Viro <viro@ZenIV.linux.org.uk>
-Message-ID: <20121229051344.GC4939@ZenIV.linux.org.uk>
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Sat, 29 Dec 2012 09:22:34 +0400
+From: Vasily Kulikov <segoon@openwall.com>
+Message-ID: <20121229052234.GA4153@cachalot>
 References: <20121228175627.GA7683@cachalot>
  <87wqw15wqb.fsf@xmission.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <87wqw15wqb.fsf@xmission.com>
-Sender: Al Viro <viro@ftp.linux.org.uk>
 Subject: [kernel-hardening] Re: [PATCH/RFC] user_ns: fix missing limiting of user_ns counts
 To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Vasily Kulikov <segoon@openwall.com>, Containers <containers@lists.linux-foundation.org>, Serge Hallyn <serge.hallyn@canonical.com>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Containers <containers@lists.linux-foundation.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 28, 2012 at 08:05:32PM -0800, Eric W. Biederman wrote:
+On Fri, Dec 28, 2012 at 20:05 -0800, Eric W. Biederman wrote:
+> Vasily Kulikov <segoon@openwall.com> writes:
+> 
+> > Currently there is completely no limiting in number of user namespaces
+> > created by unprivileged users.  One can freely create thousands of
+> > user_ns'es and exhaust kernel memory without even bumping in
+> > RLIMIT_NPROC or similar.
+> 
+> First for a proper sense of scale it will take roughly 14,000 to consume
+> a megabyte.  So it will take hundreds of millions of user namespaces to
+> eat up all of kernel memory.
 
-> Yes.  Gcc can't turn a tail call into a jump in even the most basic
-> cases apparently.
+Yes, but you can freely create *any* number of nested userns by a loop:
 
-What.  The.  Fuck?
+    for() {
+        unshare()
+        write to /proc/self/{u,g}id_map
+    }
 
-You have introduced unlimited recursion on kernel stack.  OK, it's
-unpleasant, but it can happen to anybody.  But then you have the gall
-to complain about gcc optimizations not saving your broken code.  Are
-you serious?
+> > The code needs several checks.  First, noone should be able to create
+> > user_ns of arbitrary depth.  Besides kernel stack overflow one could
+> > create too big depth to DoS processes belonging to other users by
+> > forcing them to loop a long time in cap_capable called from some
+> > ns_capable() (e.g. in case one does smth like "ls -R /proc").
+> 
+> Where do you get a ns_capable call from "ls -R /proc" ?
 
-It's not a question of gcc being not smart enough, and while we are
-at it, it's *not* a basic case at all - we have recursion going through
-the callback and we have non-trivial return value on top of that; if
-the caller of kref_put() had checked said return value, you would've
-been unable to turn that into a loop at all.
+E.g. if procfs is mounted with hidepid=2 then ls does
+ptrace_may_access() check. 
 
-Are you seriously saying that you relied on compiler being smart enough
-to
-	* notice that return value of kref_put() is ignored
-	* notice that therefore the return value of kref_sub() is ignored
-	* notice that you have this call of put_user_ns() calling
-kref_put() calling kref_sub() inside the callback we'd passed through the
-last two levels of calls and that we are dealing with the tail recursion
-here
-... so that your code wouldn't have stepped into unlimited recursion?
-I sincerely hope that you are not that much of an idiot.  If nothing else,
-even if gcc did spot that one, the result would've been extremely brittle -
-minor change to kref.h several year down the road and we'd get the problem.
+Thanks,
+
+-- 
+Vasily Kulikov
+http://www.openwall.com - bringing security into open computing environments
