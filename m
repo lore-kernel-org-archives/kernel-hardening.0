@@ -1,47 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Vasiliy Kulikov <segooon@gmail.com>
-Date: Sun, 30 Dec 2012 15:00:40 +0400
-From: Vasily Kulikov <segoon@openwall.com>
-Message-ID: <20121230110040.GA4351@cachalot>
-References: <20121228175627.GA7683@cachalot>
- <87wqw15wqb.fsf@xmission.com>
+Date: Wed, 2 Jan 2013 23:06:34 +0400
+From: Vasiliy Kulikov <segoon@openwall.com>
+Message-ID: <20130102190634.GA18462@cachalot>
+References: <1357134877-27141-1-git-send-email-dreisner@archlinux.org>
+ <20130102183351.GA28554@kroah.com>
+ <CAGXu5jJ1oGh-ExwQ6f0CMNQjF2cAcLrgWRCz8ho0v4Ve+GjOuw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <87wqw15wqb.fsf@xmission.com>
-Subject: [kernel-hardening] Re: [PATCH/RFC] user_ns: fix missing limiting of user_ns counts
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Containers <containers@lists.linux-foundation.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAGXu5jJ1oGh-ExwQ6f0CMNQjF2cAcLrgWRCz8ho0v4Ve+GjOuw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] debugfs: convert gid= argument from decimal, not octal
+To: Kees Cook <keescook@chromium.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Dave Reisner <dreisner@archlinux.org>, LKML <linux-kernel@vgen.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 28, 2012 at 20:05 -0800, Eric W. Biederman wrote:
-> > A related issue which is NOT FIXED HERE is limits for all resources
-> > available for containerized pseudo roots.  E.g. I succeeded creating
-> > thousands of veth network devices without problems by a non-root user,
-> > there seems no limit in number of network devices.  I suspect it is
-> > possible to setup routing and net_ns'es the way it will be very
-> > time-consuming for kernel to handle IP packets inside of ksoftirq, which
-> > is not counted as this user scheduler time.   I suppose the issue is not
-> > veth-specific, almost all newly available for unprivileged users code
-> > pathes are vulnerable to DoS attacks.
+Hi,
+
+(CC'ed kernel-hardening ML)
+
+On Wed, Jan 02, 2013 at 10:42 -0800, Kees Cook wrote:
+> On Wed, Jan 2, 2013 at 10:33 AM, Greg Kroah-Hartman
+> <gregkh@linuxfoundation.org> wrote:
+> > On Wed, Jan 02, 2013 at 08:54:37AM -0500, Dave Reisner wrote:
+> >> This patch technically breaks userspace, but I suspect that anyone who
+> >> actually used this flag would have encountered this brokenness, declared
+> >> it lunacy, and already sent a patch.
+> >
+> > Kees is the one that originally did this change (I think, right?)
 > 
-> veth at least should process packets synchronously so I don't see how
-> you will get softirq action.
+> I recommended the default change, but I think it was Vasiliy that
+> added the gid option, IIRC.
 
-What do you mean -- synchronously?  From my limited understanding of
-veth job, it is handled like every network packet in system, via:
+Wow.  It was not me :-)  IIRC, I haven't proposed debugfs uid/gid stuff
+after Greg NACK'ed my sysfs uid/gid/umask mount options patch.  IIRC,
+there were talks that debugfs must not be mounted on production systems
+because it exists for debug reasons only, so no additional security
+settings are needed.
 
-    veth_xmit() -> dev_forward_skb() -> netif_rx() -> enqueue_to_backlog()
+My version of the patch (which was not posted on LKML):
 
-enqueue_to_backlog() adds the packet to softnet_data->input_pkt_queue. 
+http://www.openwall.com/lists/kernel-hardening/2011/06/05/4 (FWIW, it doesn't contain the bug in question.)
 
-Then inside of softirq process_backlog() moves ->input_pkt_queue to
-->process_queue and calls __netif_receive_skb(), which does all networking
-stack magic.
+> 
+> > Kees, any objection to this patch?  Will it break your existing systems?
+> 
+> Regardless, I have no objection -- this should be int, not octal.
 
-AFAICS, one could create user_ns, net_ns inside of it, and setup routing
-tables and netfilter to infinitely pass few network packets from and to
-veth, abusing ksoftirq.
+No objection.  GID should be decimal.
+
+> -Kees
+> 
+> >
+> > thanks,
+> >
+> > greg k-h
+> >
+> >>
+> >> Signed-off-by: Dave Reisner <dreisner@archlinux.org>
+
+Reviewed-by: Vasiliy Kulikov <segoon@openwall.com>
+
+> >> ---
+> >>  fs/debugfs/inode.c | 2 +-
+> >>  1 file changed, 1 insertion(+), 1 deletion(-)
+
+Thanks,
 
 -- 
 Vasily Kulikov
