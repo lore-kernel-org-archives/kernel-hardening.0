@@ -1,71 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 1 Feb 2013 18:17:06 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20130201141705.GA23051@openwall.com>
-References: <510A8F11.6050908@linux.vnet.ibm.com> <CAGXu5jLk6-OHdZP7wQapv1dzK39k8w6ioB_6QtJ5GvP0ZWHzcw@mail.gmail.com> <510ADDAB.3010500@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <510ADDAB.3010500@linux.vnet.ibm.com>
+Message-ID: <510BD22C.2010100@linux.vnet.ibm.com>
+Date: Fri, 01 Feb 2013 09:33:16 -0500
+From: Corey Bryant <coreyb@linux.vnet.ibm.com>
+MIME-Version: 1.0
+References: <510A8F11.6050908@linux.vnet.ibm.com> <CAGXu5jLk6-OHdZP7wQapv1dzK39k8w6ioB_6QtJ5GvP0ZWHzcw@mail.gmail.com> <874nhxb16r.fsf@codemonkey.ws>
+In-Reply-To: <874nhxb16r.fsf@codemonkey.ws>
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] Secure Open Source Project Guide
 To: kernel-hardening@lists.openwall.com
-Cc: Corey Bryant <coreyb@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Anthony Liguori <aliguori@us.ibm.com>, Frank Novak <fnovak@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>, Joel Schopp <jschopp@linux.vnet.ibm.com>, Kevin Wolf <kwolf@redhat.com>, Warren Grunbok II <wgrunbok@vnet.ibm.com>
+Cc: Anthony Liguori <aliguori@us.ibm.com>, Kees Cook <keescook@chromium.org>, Frank Novak <fnovak@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>, Joel Schopp <jschopp@linux.vnet.ibm.com>, Kevin Wolf <kwolf@redhat.com>, Warren Grunbok II <wgrunbok@vnet.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Corey, Kees, all -
 
-Why don't we bring this to the oss-security mailing list?  I think this
-topic is not in any way specific nor limited to the Linux kernel.  There
-are ~10x more people on oss-security than on kernel-hardening, and this
-topic is a better fit for oss-security than for kernel-hardening.  There
-is a wiki for the oss-security group, where such content is welcome.
-Anyone can register for an account and edit.
 
-Info on the oss-security mailing list:
+On 01/31/2013 02:30 PM, Anthony Liguori wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> On Thu, Jan 31, 2013 at 7:34 AM, Corey Bryant <coreyb@linux.vnet.ibm.com> wrote:
+>>> In light of events like this http://lwn.net/Articles/535149/ "China, GitHub
+>>> and the man-in-the-middle (Greatfire)", we are thinking that a guide for
+>>> securing open source projects is needed.  For example, recommending pull
+>>> requests or commits be PGP signed are a few things we've discussed that
+>>> could defend against a MITM attack inserting malicious code.
+>>>
+>>> Does anyone have any thoughts as to where we could publish such a guide?
+>>> Perhaps the Linux Foundation?
+>>>
+>>> I believe we have the resources on this mailing list to work through the
+>>> details and put together a succinct guide that we could take to a wider
+>>> audience.
+>>
+>> Yeah, sounds good. I think we could easily use the kernel-security
+>> wiki to work on it initially, and if it needs a different home in the
+>> end, we can move it then.
+>
+> If someone picks a home, I'll do a brain dump of some of my concerns and
+> what I think can be done about it.
+>
+> Regards,
+>
+> Anthony Liguori
+>
 
-http://oss-security.openwall.org/wiki/mailing-lists/oss-security
+That would be great.  Thanks Anthony.
 
-Subscribe here:
+-- 
+Regards,
+Corey Bryant
 
-http://oss-security.openwall.org/subscribe
-
-(Of course, Kees and many others in here are already on oss-security as
-well.  Not all, though.)
-
-On Thu, Jan 31, 2013 at 04:10:03PM -0500, Corey Bryant wrote:
-> We should probably start by gathering a list of ideas to include in the 
-> guide.  Some initial ideas that come to mind are:
-> 
-> * Secure programming practices (Secure "Programming for Linux
->   and Unix HOWTO" is a good reference for Linux though probably
->   out of date)
-
-CERT's Secure Coding resources are more current, but they're focused on
-programming languages and I think they don't cover operating system
-specific pitfalls (e.g., Linux netlink).
-
-> * Performing secure code reviews and detecting common
->   vulnerabilities
-> * Ensuring code is reviewed by trusted parties and proper patch
->   tagging is used
-> * Signing of releases, pull requests, patches, commits, etc by
->   trusted parties
-> * Removing vulnerabilities with automated tooling (Static/Dynamic
->   analysis, Fuzzing)
-
-We have some relevant links here:
-
-http://oss-security.openwall.org/wiki/
-
-and more specifically:
-
-http://oss-security.openwall.org/wiki/tools
-http://oss-security.openwall.org/wiki/links
-http://oss-security.openwall.org/wiki/code-reviews
-
-More content (and better organization of content) on the oss-security
-wiki is welcome - including on all topics you listed above.
-
-Thanks,
-
-Alexander
+>>
+>> -Kees
+>>
+>> --
+>> Kees Cook
+>> Chrome OS Security
+>
+>
+>
