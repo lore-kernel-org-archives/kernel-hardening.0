@@ -1,48 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <5111517F.3010108@linux.vnet.ibm.com>
-Date: Tue, 05 Feb 2013 13:37:51 -0500
+Message-ID: <511150AA.5@linux.vnet.ibm.com>
+Date: Tue, 05 Feb 2013 13:34:18 -0500
 From: Corey Bryant <coreyb@linux.vnet.ibm.com>
 MIME-Version: 1.0
-References: <510A8F11.6050908@linux.vnet.ibm.com> <CAGXu5jLk6-OHdZP7wQapv1dzK39k8w6ioB_6QtJ5GvP0ZWHzcw@mail.gmail.com> <510ADDAB.3010500@linux.vnet.ibm.com> <20130201141705.GA23051@openwall.com> <510BD433.2020803@linux.vnet.ibm.com> <20130201150809.GA11114@openwall.com>
-In-Reply-To: <20130201150809.GA11114@openwall.com>
+References: <510A8F11.6050908@linux.vnet.ibm.com> <CAGXu5jLk6-OHdZP7wQapv1dzK39k8w6ioB_6QtJ5GvP0ZWHzcw@mail.gmail.com> <874nhxb16r.fsf@codemonkey.ws>
+In-Reply-To: <874nhxb16r.fsf@codemonkey.ws>
 Content-Type: text/plain; charset=ISO-8859-1; format=flowed
 Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] Secure Open Source Project Guide
-To: Solar Designer <solar@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Anthony Liguori <aliguori@us.ibm.com>, Frank Novak <fnovak@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>, Joel Schopp <jschopp@linux.vnet.ibm.com>, Kevin Wolf <kwolf@redhat.com>, Warren Grunbok II <wgrunbok@vnet.ibm.com>
+To: Anthony Liguori <aliguori@us.ibm.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Frank Novak <fnovak@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>, Joel Schopp <jschopp@linux.vnet.ibm.com>, Kevin Wolf <kwolf@redhat.com>, Warren Grunbok II <wgrunbok@vnet.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
 
-On 02/01/2013 10:08 AM, Solar Designer wrote:
-> On Fri, Feb 01, 2013 at 09:41:55AM -0500, Corey Bryant wrote:
->> Thanks Alexander.  I agree, this really is targeting OSS in general so I
->> think it makes sense to move to the oss-security mailing list and wiki.
->>   Is anyone opposed to this or have a better idea?
+On 01/31/2013 02:30 PM, Anthony Liguori wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> On Thu, Jan 31, 2013 at 7:34 AM, Corey Bryant <coreyb@linux.vnet.ibm.com> wrote:
+>>> In light of events like this http://lwn.net/Articles/535149/ "China, GitHub
+>>> and the man-in-the-middle (Greatfire)", we are thinking that a guide for
+>>> securing open source projects is needed.  For example, recommending pull
+>>> requests or commits be PGP signed are a few things we've discussed that
+>>> could defend against a MITM attack inserting malicious code.
+>>>
+>>> Does anyone have any thoughts as to where we could publish such a guide?
+>>> Perhaps the Linux Foundation?
+>>>
+>>> I believe we have the resources on this mailing list to work through the
+>>> details and put together a succinct guide that we could take to a wider
+>>> audience.
 >>
->> And maybe we can find a good place to link to our Linux Security
->> Workgroup wiki on the OSS wiki:
->> http://kernsec.org/wiki/index.php/Linux_Security_Workgroup
+>> Yeah, sounds good. I think we could easily use the kernel-security
+>> wiki to work on it initially, and if it needs a different home in the
+>> end, we can move it then.
 >
-> For now, we can add it to:
+> If someone picks a home, I'll do a brain dump of some of my concerns and
+> what I think can be done about it.
 >
-> http://oss-security.openwall.org/wiki/links
+> Regards,
+>
+> Anthony Liguori
+>
 
-Thanks, I've added a link here.
+I haven't heard any objections to using the oss-security wiki to host 
+the guide, so I've created a page here.  A brain dump would be a much 
+appreciated start to get things moving.  Thanks!
 
->
-> Please feel free to do that.  And yes, maybe we can find/add a better
-> place for links to closely related projects maintained by people who are
-> also active in the oss-security group.  Maybe have a Related Projects
-> section right on the main oss-security wiki page?
-
-Yeah that might be a good way to organize related projects rather than 
-throwing them on a links page.
-
->
-> Alexander
->
+http://oss-security.openwall.org/wiki/secure-oss-dev-guide
 
 -- 
 Regards,
 Corey Bryant
+
+>>
+>> -Kees
+>>
+>> --
+>> Kees Cook
+>> Chrome OS Security
+>
+>
+>
