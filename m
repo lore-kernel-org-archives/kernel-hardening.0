@@ -1,52 +1,100 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Vasiliy Kulikov <segooon@gmail.com>
+Date: Mon, 4 Mar 2013 21:36:11 +0400
+From: Vasily Kulikov <segoon@openwall.com>
+Message-ID: <20130304173611.GA8500@cachalot>
+References: <CAGXu5jK7x+gFKgCN5=ZF+kSc4xSNbGtSERHCoOnCEgiJ1_wNGg@mail.gmail.com>
+ <20130303005700.GA32213@austin.hallyn.com>
+ <874ngtxgt5.fsf@xmission.com>
+ <CAGXu5j+bwUx6r++ttvYg4yJrUUHxoQ86tQ0JzEBoQQU6KAh9ww@mail.gmail.com>
+ <874ngsrvrh.fsf@xmission.com>
+ <CAGXu5jJiO=BmjVbpVJhxHbafn5T_SQbe5g-RLxRbmknNnQMyfQ@mail.gmail.com>
+ <87k3pnmwpk.fsf_-_@xmission.com>
+ <878v63mwm3.fsf_-_@xmission.com>
 MIME-Version: 1.0
-In-Reply-To: <20130201150809.GA11114@openwall.com>
-References: <510A8F11.6050908@linux.vnet.ibm.com>
-	<CAGXu5jLk6-OHdZP7wQapv1dzK39k8w6ioB_6QtJ5GvP0ZWHzcw@mail.gmail.com>
-	<510ADDAB.3010500@linux.vnet.ibm.com>
-	<20130201141705.GA23051@openwall.com>
-	<510BD433.2020803@linux.vnet.ibm.com>
-	<20130201150809.GA11114@openwall.com>
-Date: Wed, 6 Feb 2013 15:02:56 +0800
-Message-ID: <CABniQZOs-6rq=WDVTBmruSw+ZSKWjsmkhhXgXhJXj+jfV_m=uA@mail.gmail.com>
-From: Shawn <citypw@gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Secure Open Source Project Guide
-To: kernel-hardening@lists.openwall.com
-Cc: Corey Bryant <coreyb@linux.vnet.ibm.com>, Kees Cook <keescook@chromium.org>, Anthony Liguori <aliguori@us.ibm.com>, Frank Novak <fnovak@us.ibm.com>, George Wilson <gcwilson@us.ibm.com>, Joel Schopp <jschopp@linux.vnet.ibm.com>, Kevin Wolf <kwolf@redhat.com>, Warren Grunbok II <wgrunbok@vnet.ibm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <878v63mwm3.fsf_-_@xmission.com>
+Subject: [kernel-hardening] Re: [PATCH 2/2] fs: Limit sys_mount to only request filesystem
+ modules.
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Kees Cook <keescook@google.com>, Brad Spengler <spender@grsecurity.net>, Linux Containers <containers@lists.linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel@vger.kernel.org, Al Viro <viro@zeniv.linux.org.uk>, PaX Team <pageexec@freemail.hu>, Dave Jones <davej@redhat.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-hi security guys,
+(cc'ed kernel-hardening)
 
-On Fri, Feb 1, 2013 at 11:08 PM, Solar Designer <solar@openwall.com> wrote:
->
-> On Fri, Feb 01, 2013 at 09:41:55AM -0500, Corey Bryant wrote:
-> > Thanks Alexander.  I agree, this really is targeting OSS in general so I
-> > think it makes sense to move to the oss-security mailing list and wiki.
-> >  Is anyone opposed to this or have a better idea?
-> >
-> > And maybe we can find a good place to link to our Linux Security
-> > Workgroup wiki on the OSS wiki:
-> > http://kernsec.org/wiki/index.php/Linux_Security_Workgroup
->
-> For now, we can add it to:
->
-> http://oss-security.openwall.org/wiki/links
->
-> Please feel free to do that.  And yes, maybe we can find/add a better
-> place for links to closely related projects maintained by people who are
-> also active in the oss-security group.  Maybe have a Related Projects
-> section right on the main oss-security wiki page?
->
-I'm newbie in security field and I putted one article about open
-source security stuff in QA process on the wiki page. Hope it matched
-the correct topic! If it does bothers, please free feel to delete it.
+On Sun, Mar 03, 2013 at 23:51 -0800, Eric W. Biederman wrote:
+> Modify the request_module to prefix the file system type with "fs-"
+> and add aliases to all of the filesystems that can be built as modules
+> to match.
+> 
+> A common practice is to build all of the kernel code and leave code
+> that is not commonly needed as modules, with the result that many
+> users are exposed to any bug anywhere in the kernel.
+> 
+> Looking for filesystems with a fs- prefix limits the pool of possible
+> modules that can be loaded by mount to just filesystems trivially
+> making things safer with no real cost.
+> 
+> Using aliases means user space can control the policy of which
+> filesystem modules are auto-loaded by editing /etc/modprobe.d/*.conf
+> with blacklist and alias directives.  Allowing simple, safe,
+> well understood work-arounds to known problematic software.
+> 
+> This also addresses a rare but unfortunate problem where the filesystem
+> name is not the same as it's module name and module auto-loading
+> would not work.  While writing this patch I saw a handful of such
+> cases.  The most significant being autofs that lives in the module
+> autofs4.
+> 
+> This is relevant to user namespaces because we can reach the request
+> module in get_fs_type() without having any special permissions, and
+> people get uncomfortable when a user specified string (in this case
+> the filesystem type) goes all of the way to request_module.
+> 
+> After having looked at this issue I don't think there is any
+> particular reason to perform any filtering or permission checks beyond
+> making it clear in the module request that we want a filesystem
+> module.  The common pattern in the kernel is to call request_module()
+> without regards to the users permissions.  In general all a filesystem
+> module does once loaded is call register_filesystem() and go to sleep.
+> Which means there is not much attack surface exposed by loading a
+> filesytem module unless the filesystem is mounted.  In a user
+> namespace filesystems are not mounted unless .fs_flags = FS_USERNS_MOUNT,
+> which most filesystems do not set today.
+> 
+> Acked-by: Serge Hallyn <serge.hallyn@canonical.com>
+> Acked-by: Kees Cook <keescook@chromium.org>
+> Reported-by: Kees Cook <keescook@google.com>
+> Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+...
+> diff --git a/fs/filesystems.c b/fs/filesystems.c
+> index da165f6..92567d9 100644
+> --- a/fs/filesystems.c
+> +++ b/fs/filesystems.c
+> @@ -273,7 +273,7 @@ struct file_system_type *get_fs_type(const char *name)
+>  	int len = dot ? dot - name : strlen(name);
+>  
+>  	fs = __get_fs_type(name, len);
+> -	if (!fs && (request_module("%.*s", len, name) == 0))
+> +	if (!fs && (request_module("fs-%.*s", len, name) == 0))
+>  		fs = __get_fs_type(name, len);
+>  
+>  	if (dot && fs && !(fs->fs_flags & FS_HAS_SUBTYPE)) {
 
+Maybe we should divide request_module() into several functions regarding
+expected caller's privileges?
 
---
-GNU powered it...
-GPL protect it...
-God blessing it...
+- request_module() for CAP_SYS_MODULE in init_ns
+- request_module_relaxed() for everybody
 
-regards
-Shawn
+request_module_relaxed() is used in get_fs_type(), dev_load() and all
+places where the safety of module loading is manually checked.  All old
+not yet checked users of request_module() will not be triggerable from user_ns.
+That's the same scheme as with capable() and ns_capable().
+
+Thanks,
+
+-- 
+Vasily Kulikov
+http://www.openwall.com - bringing security into open computing environments
