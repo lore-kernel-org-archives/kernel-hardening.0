@@ -1,56 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <515361D4.4040806@linux.vnet.ibm.com>
-Date: Wed, 27 Mar 2013 17:17:08 -0400
-From: Corey Bryant <coreyb@linux.vnet.ibm.com>
+From: Russ Allbery <rra@stanford.edu>
+In-Reply-To: <51534E5C.8070303@linux.vnet.ibm.com> (Corey Bryant's message of
+	"Wed, 27 Mar 2013 15:54:04 -0400")
+References: <51534E5C.8070303@linux.vnet.ibm.com>
+Date: Wed, 27 Mar 2013 13:31:35 -0700
+Message-ID: <877gkswpnc.fsf@windlord.stanford.edu>
 MIME-Version: 1.0
-References: <51534E5C.8070303@linux.vnet.ibm.com> <20130327201251.GA6480@openwall.com>
-In-Reply-To: <20130327201251.GA6480@openwall.com>
-Content-Type: text/plain; charset=ISO-8859-1; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: Security vulnerability tools
-To: Solar Designer <solar@openwall.com>
-Cc: kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Subject: [kernel-hardening] Re: [oss-security] Security vulnerability tools
+To: oss-security@lists.openwall.com
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Corey Bryant <coreyb@linux.vnet.ibm.com> writes:
 
-On 03/27/2013 04:12 PM, Solar Designer wrote:
-> Hi,
->
-> Guys, can we continue this thread on oss-security only, please?  It is a
-> topic for oss-security, but less so for kernel-hardening.  Anyone on
-> kernel-hardening who is interested in this topic should join oss-security.
->
-> Just drop kernel-hardening from further replies.
->
+> Clang
+> -----
+> Static analysis tool for C/C++
 
-Sure, sorry about that.  I am interested in tools that are applicable to 
-the kernel too though, if that changes anything.
+Clang is, properly speaking, a compiler.  It happens to also have a static
+analyzer available as part of the same code base.
 
-> On Wed, Mar 27, 2013 at 03:54:04PM -0400, Corey Bryant wrote:
->> I'll plan on updating http://oss-security.openwall.org/wiki/tools with
->> anything it doesn't already have.
->
-> Yes, please!
->
->> Clang
->> -----
->> Static analysis tool for C/C++
->
-> Clang and very recent GCC also have dynamic "sanitizers":
->
-> http://clang.llvm.org/docs/AddressSanitizer.html
-> http://clang.llvm.org/docs/ThreadSanitizer.html
-> http://clang.llvm.org/docs/MemorySanitizer.html
+If you're going to mention Clang, it's probably also pointing out that
+good old GCC has very extensive warning flags that can, among other
+things, find possible security vulnerabilities by locating variables that
+are used before being set, dangerous printf formats, mismatches between
+printf formats and arguments, and so forth.  For example, I currently use:
 
-Great, thanks!
+WARNINGS = -g -O -D_FORTIFY_SOURCE=2 -Wall -Wextra -Wendif-labels           \
+        -Wformat=2 -Winit-self -Wswitch-enum -Wdeclaration-after-statement  \
+        -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-align           \
+        -Wwrite-strings -Wjump-misses-init -Wlogical-op                     \
+        -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls          \
+        -Wnested-externs -Werror
 
->
-> Thanks,
->
-> Alexander
->
->
+with GCC (4.6 or later) with all of my software.  Many of those are not
+security-related, of course, but -Wformat=2 certainly is, and some of the
+-Wall and -Wextra warnings are as well.
 
 -- 
-Regards,
-Corey Bryant
+Russ Allbery (rra@stanford.edu)             <http://www.eyrie.org/~eagle/>
