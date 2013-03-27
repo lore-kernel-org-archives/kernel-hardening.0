@@ -1,41 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 28 Mar 2013 00:12:51 +0400
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20130327201251.GA6480@openwall.com>
-References: <51534E5C.8070303@linux.vnet.ibm.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <51534E5C.8070303@linux.vnet.ibm.com>
-Subject: [kernel-hardening] Re: Security vulnerability tools
-To: oss-security@lists.openwall.com
-Cc: kernel-hardening@lists.openwall.com
+Message-ID: <515361D4.4040806@linux.vnet.ibm.com>
+Date: Wed, 27 Mar 2013 17:17:08 -0400
+From: Corey Bryant <coreyb@linux.vnet.ibm.com>
+MIME-Version: 1.0
+References: <51534E5C.8070303@linux.vnet.ibm.com> <20130327201251.GA6480@openwall.com>
+In-Reply-To: <20130327201251.GA6480@openwall.com>
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: Security vulnerability tools
+To: Solar Designer <solar@openwall.com>
+Cc: kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
 
-Guys, can we continue this thread on oss-security only, please?  It is a
-topic for oss-security, but less so for kernel-hardening.  Anyone on
-kernel-hardening who is interested in this topic should join oss-security.
+On 03/27/2013 04:12 PM, Solar Designer wrote:
+> Hi,
+>
+> Guys, can we continue this thread on oss-security only, please?  It is a
+> topic for oss-security, but less so for kernel-hardening.  Anyone on
+> kernel-hardening who is interested in this topic should join oss-security.
+>
+> Just drop kernel-hardening from further replies.
+>
 
-Just drop kernel-hardening from further replies.
+Sure, sorry about that.  I am interested in tools that are applicable to 
+the kernel too though, if that changes anything.
 
-On Wed, Mar 27, 2013 at 03:54:04PM -0400, Corey Bryant wrote:
-> I'll plan on updating http://oss-security.openwall.org/wiki/tools with
-> anything it doesn't already have.
+> On Wed, Mar 27, 2013 at 03:54:04PM -0400, Corey Bryant wrote:
+>> I'll plan on updating http://oss-security.openwall.org/wiki/tools with
+>> anything it doesn't already have.
+>
+> Yes, please!
+>
+>> Clang
+>> -----
+>> Static analysis tool for C/C++
+>
+> Clang and very recent GCC also have dynamic "sanitizers":
+>
+> http://clang.llvm.org/docs/AddressSanitizer.html
+> http://clang.llvm.org/docs/ThreadSanitizer.html
+> http://clang.llvm.org/docs/MemorySanitizer.html
 
-Yes, please!
+Great, thanks!
 
-> Clang
-> -----
-> Static analysis tool for C/C++
+>
+> Thanks,
+>
+> Alexander
+>
+>
 
-Clang and very recent GCC also have dynamic "sanitizers":
-
-http://clang.llvm.org/docs/AddressSanitizer.html
-http://clang.llvm.org/docs/ThreadSanitizer.html
-http://clang.llvm.org/docs/MemorySanitizer.html
-
-Thanks,
-
-Alexander
+-- 
+Regards,
+Corey Bryant
