@@ -1,566 +1,1079 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  4 Apr 2013 13:07:35 -0700
-Message-Id: <1365106055-22939-4-git-send-email-keescook@chromium.org>
+Date: Thu,  4 Apr 2013 13:07:34 -0700
+Message-Id: <1365106055-22939-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1365106055-22939-1-git-send-email-keescook@chromium.org>
 References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 3/3] x86: kernel base offset ASLR
+Subject: [kernel-hardening] [PATCH 2/3] x86: build reloc tool for both 64 and 32 bit
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This creates CONFIG_RANDOMIZE_BASE, so that the base offset of the kernel
-can be randomized at boot.
+Add logic for 64-bit kernel relocations. Since there is no need to
+handle 32 and 64 bit at the same time, refactor away most of the 32/64
+bit ELF differences and split the build into producing two separate
+binaries. Additionally switches to using realloc instead of a two-pass
+approach.
 
-This makes kernel vulnerabilities harder to reliably exploit, especially
-from remote attacks and local processes in seccomp containers. Keeping
-the location of kernel addresses secret becomes very important when using
-this feature, so enabling kptr_restrict and dmesg_restrict is recommended.
-Besides direct address leaks, several other attacks are possible to bypass
-this on local systems, including cache timing[1]. However, the benefits of
-this feature in certain environments exceed the perceived weaknesses[2].
-
-An added security benefit is making the IDT read-only.
-
-Current entropy is low, since the kernel has basically a minimum 2MB
-alignment and has been built with -2G memory addressing. As a result,
-available entropy will be 8 bits in the best case. The e820 entries on
-a given system may further limit the available memory.
-
-This feature is presently incompatible with hibernation.
-
-When built into the kernel, the "noaslr" kernel command line option will
-disable the feature.
-
-Heavily based on work by Dan Rosenberg[3] and Neill Clift.
-
-[1] http://www.internetsociety.org/sites/default/files/Practical%20Timing%20Side%20Channel%20Attacks%20Against%20Kernel%20Space%20ASLR.pdf
-[2] http://forums.grsecurity.net/viewtopic.php?f=7&t=3367
-[3] http://lkml.indiana.edu/hypermail/linux/kernel/1105.3/index.html#00520
+Heavily based on work by Neill Clift and Michael Davidson.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 Cc: Eric Northup <digitaleric@google.com>
 ---
- Documentation/kernel-parameters.txt  |    4 +
- arch/x86/Kconfig                     |   51 +++++++++++--
- arch/x86/Makefile                    |    3 +
- arch/x86/boot/compressed/head_32.S   |   21 +++++-
- arch/x86/boot/compressed/head_64.S   |  135 ++++++++++++++++++++++++++++++++--
- arch/x86/include/asm/fixmap.h        |    4 +
- arch/x86/include/asm/page_32_types.h |    2 +
- arch/x86/include/asm/page_64_types.h |    4 -
- arch/x86/include/asm/page_types.h    |    4 +
- arch/x86/kernel/asm-offsets.c        |   14 ++++
- arch/x86/kernel/setup.c              |   24 ++++++
- arch/x86/kernel/traps.c              |    6 ++
- 12 files changed, 251 insertions(+), 21 deletions(-)
+ arch/x86/boot/compressed/Makefile |    2 +-
+ arch/x86/realmode/rm/Makefile     |    2 +-
+ arch/x86/tools/.gitignore         |    3 +-
+ arch/x86/tools/Makefile           |   14 +-
+ arch/x86/tools/relocs.c           |  717 ++++++++++++++++++++++++++-----------
+ arch/x86/tools/relocs_32.c        |    1 +
+ arch/x86/tools/relocs_64.c        |    2 +
+ 7 files changed, 533 insertions(+), 208 deletions(-)
+ create mode 100644 arch/x86/tools/relocs_32.c
+ create mode 100644 arch/x86/tools/relocs_64.c
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index 4609e81..e1b8993 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -1839,6 +1839,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 	noapic		[SMP,APIC] Tells the kernel to not make use of any
- 			IOAPICs that may be present in the system.
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 376ef47..deaed7d 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -48,7 +48,7 @@ $(obj)/vmlinux.bin: vmlinux FORCE
  
-+	noaslr		[X86]
-+			Disable kernel base offset ASLR (Address Space
-+			Layout Randomization) if built into the kernel.
+ targets += vmlinux.bin.all vmlinux.relocs
+ 
+-CMD_RELOCS = arch/x86/tools/relocs
++CMD_RELOCS = arch/x86/tools/relocs_$(BITS)
+ quiet_cmd_relocs = RELOCS  $@
+       cmd_relocs = $(CMD_RELOCS) $< > $@;$(CMD_RELOCS) --abs-relocs $<
+ $(obj)/vmlinux.relocs: vmlinux FORCE
+diff --git a/arch/x86/realmode/rm/Makefile b/arch/x86/realmode/rm/Makefile
+index 8869287..2b1e429 100644
+--- a/arch/x86/realmode/rm/Makefile
++++ b/arch/x86/realmode/rm/Makefile
+@@ -56,7 +56,7 @@ $(obj)/realmode.bin: $(obj)/realmode.elf $(obj)/realmode.relocs
+ 	$(call if_changed,objcopy)
+ 
+ quiet_cmd_relocs = RELOCS  $@
+-      cmd_relocs = arch/x86/tools/relocs --realmode $< > $@
++      cmd_relocs = arch/x86/tools/relocs_32 --realmode $< > $@
+ 
+ targets += realmode.relocs
+ $(obj)/realmode.relocs: $(obj)/realmode.elf FORCE
+diff --git a/arch/x86/tools/.gitignore b/arch/x86/tools/.gitignore
+index be0ed06..51374a2 100644
+--- a/arch/x86/tools/.gitignore
++++ b/arch/x86/tools/.gitignore
+@@ -1 +1,2 @@
+-relocs
++relocs_32
++relocs_64
+diff --git a/arch/x86/tools/Makefile b/arch/x86/tools/Makefile
+index bae601f..8c3b17a 100644
+--- a/arch/x86/tools/Makefile
++++ b/arch/x86/tools/Makefile
+@@ -37,6 +37,16 @@ $(obj)/test_get_len.o: $(srctree)/arch/x86/lib/insn.c $(srctree)/arch/x86/lib/in
+ 
+ $(obj)/insn_sanity.o: $(srctree)/arch/x86/lib/insn.c $(srctree)/arch/x86/lib/inat.c $(srctree)/arch/x86/include/asm/inat_types.h $(srctree)/arch/x86/include/asm/inat.h $(srctree)/arch/x86/include/asm/insn.h $(objtree)/arch/x86/lib/inat-tables.c
+ 
++$(obj)/relocs_64.o: $(srctree)/arch/x86/tools/relocs.c $(srctree)/arch/x86/tools/relocs_64.c
++$(obj)/relocs_32.o: $(srctree)/arch/x86/tools/relocs.c $(srctree)/arch/x86/tools/relocs_32.c
 +
- 	noautogroup	Disable scheduler automatic task group creation.
+ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+-hostprogs-y	+= relocs
+-relocs: $(obj)/relocs
++hostprogs-y	+= relocs_$(BITS)
++relocs_binaries = relocs_$(BITS)
++ifeq ($(CONFIG_64BIT),y)
++  hostprogs-y	+= relocs_32
++  relocs_binaries += relocs_32
++endif
++relocs: $(relocs_binaries)
++relocs_64: $(obj)/relocs_64
++relocs_32: $(obj)/relocs_32
+diff --git a/arch/x86/tools/relocs.c b/arch/x86/tools/relocs.c
+index 79d67bd..63c5090 100644
+--- a/arch/x86/tools/relocs.c
++++ b/arch/x86/tools/relocs.c
+@@ -2,6 +2,7 @@
+ #include <stdarg.h>
+ #include <stdlib.h>
+ #include <stdint.h>
++#include <inttypes.h>
+ #include <string.h>
+ #include <errno.h>
+ #include <unistd.h>
+@@ -12,21 +13,78 @@
+ #include <regex.h>
+ #include <tools/le_byteshift.h>
  
- 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 70c0f3d..6fe1a3b 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -1649,8 +1649,8 @@ config PHYSICAL_START
- 	  If kernel is a not relocatable (CONFIG_RELOCATABLE=n) then
- 	  bzImage will decompress itself to above physical address and
- 	  run from there. Otherwise, bzImage will run from the address where
--	  it has been loaded by the boot loader and will ignore above physical
--	  address.
-+	  it has been loaded by the boot loader, using the above physical
-+	  address as a lower bound.
- 
- 	  In normal kdump cases one does not have to set/change this option
- 	  as now bzImage can be compiled as a completely relocatable image
-@@ -1696,15 +1696,49 @@ config RELOCATABLE
- 
- 	  Note: If CONFIG_RELOCATABLE=y, then the kernel runs from the address
- 	  it has been loaded at and the compile time physical address
--	  (CONFIG_PHYSICAL_START) is ignored.
--
--# Relocation on x86-32 needs some additional build support
-+	  (CONFIG_PHYSICAL_START) is solely used as a lower bound.
-+
-+config RANDOMIZE_BASE
-+	 bool "Randomize the address of the kernel image"
-+	 depends on RELOCATABLE
-+	 depends on !HIBERNATION
-+	 default n
-+	 ---help---
-+	   Randomizes the phyiscal and virtual address at which the
-+	   kernel image is decompressed, as a security feature that
-+	   deters exploit attempts relying on knowledge of the location
-+	   of kernel internals.
-+
-+	   This feature also uses a fixed mapping to move the IDT
-+	   (if not already done as a fix for the F00F bug), to avoid
-+	   exposing the location of kernel internals relative to the
-+	   original IDT. This has the additional security benefit of
-+	   marking the new virtual address of the IDT read-only.
-+
-+	   Entropy is generated using the RDRAND instruction if it
-+	   is supported.  If not, then RDTSC is used, if supported. If
-+	   neither RDRAND nor RDTSC are supported, then no randomness
-+	   is introduced. Support for the CPUID instruction is required
-+	   to check for the availability of these two instructions.
-+
-+config RANDOMIZE_BASE_MAX_OFFSET
-+	hex "Maximum ASLR offset allowed"
-+	depends on RANDOMIZE_BASE
-+	default "0x10000000"
-+	range 0x0 0x10000000
-+	---help---
-+	 Determines the maximal offset in bytes that will be applied to the
-+	 kernel when Address Space Layout Randomization (ASLR) is active.
-+	 Physical memory layout and kernel size may limit this further.
-+	 This must be a power of two.
-+
-+# Relocation on x86-32/64 needs some additional build support
- config X86_NEED_RELOCS
- 	def_bool y
--	depends on X86_32 && RELOCATABLE
-+	depends on RELOCATABLE
- 
- config PHYSICAL_ALIGN
--	hex "Alignment value to which kernel should be aligned" if X86_32
-+	hex "Alignment value to which kernel should be aligned"
- 	default "0x1000000"
- 	range 0x2000 0x1000000
- 	---help---
-@@ -1724,6 +1758,9 @@ config PHYSICAL_ALIGN
- 	  end result is that kernel runs from a physical address meeting
- 	  above alignment restrictions.
- 
-+	  Generally when using CONFIG_RANDOMIZE_BASE, this is safe to
-+	  lower to 0x200000.
-+
- 	  Don't change this unless you know what you are doing.
- 
- config HOTPLUG_CPU
-diff --git a/arch/x86/Makefile b/arch/x86/Makefile
-index 5c47726..4f280bd 100644
---- a/arch/x86/Makefile
-+++ b/arch/x86/Makefile
-@@ -60,6 +60,9 @@ else
- 	# Use -mpreferred-stack-boundary=3 if supported.
- 	KBUILD_CFLAGS += $(call cc-option,-mno-sse -mpreferred-stack-boundary=3)
- 
-+        ifdef CONFIG_RANDOMIZE_BASE
-+                LDFLAGS_vmlinux := --emit-relocs
-+        endif
-         # FIXME - should be integrated in Makefile.cpu (Makefile_32.cpu)
-         cflags-$(CONFIG_MK8) += $(call cc-option,-march=k8)
-         cflags-$(CONFIG_MPSC) += $(call cc-option,-march=nocona)
-diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
-index 1e3184f..8139c2f 100644
---- a/arch/x86/boot/compressed/head_32.S
-+++ b/arch/x86/boot/compressed/head_32.S
-@@ -29,6 +29,7 @@
- #include <asm/page_types.h>
- #include <asm/boot.h>
- #include <asm/asm-offsets.h>
-+#include <asm/cpufeature.h>
- 
- 	__HEAD
- ENTRY(startup_32)
-@@ -111,15 +112,29 @@ preferred_addr:
-  */
- 
- #ifdef CONFIG_RELOCATABLE
-+#ifdef CONFIG_RANDOMIZE_BASE
-+	/* Setup boot stack for calls */
-+	leal	boot_stack_end(%ebp), %esp
-+	call	select_aslr_address /* Select ASLR address */
-+	movl	%eax, %ebx
-+	/* LOAD_PHSYICAL_ADDR is the minimum safe address we can
-+	 * decompress at */
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jae	1f
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+1:
-+#else /* CONFIG_RANDOMIZE_BASE */
- 	movl	%ebp, %ebx
- 	movl	BP_kernel_alignment(%esi), %eax
- 	decl	%eax
- 	addl    %eax, %ebx
- 	notl	%eax
- 	andl    %eax, %ebx
--#else
-+#endif /* CONFIG_RANDOMIZE_BASE */
-+
-+#else /* CONFIG_RELOCATABLE */
- 	movl	$LOAD_PHYSICAL_ADDR, %ebx
--#endif
-+#endif /* CONFIG_RELOCATABLE */
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -235,3 +250,5 @@ boot_heap:
- boot_stack:
- 	.fill BOOT_STACK_SIZE, 1, 0
- boot_stack_end:
-+	.globl	boot_stack_end
-+
-diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
-index c1d383d..fc37910 100644
---- a/arch/x86/boot/compressed/head_64.S
-+++ b/arch/x86/boot/compressed/head_64.S
-@@ -59,7 +59,7 @@ ENTRY(startup_32)
- 1:
- 
- /*
-- * Calculate the delta between where we were compiled to run
-+ * Calculate the delta between where we were linked to load
-  * at and where we were actually loaded at.  This can only be done
-  * with a short local call on x86.  Nothing  else will tell us what
-  * address we are running at.  The reserved chunk of the real-mode
-@@ -78,10 +78,10 @@ ENTRY(startup_32)
- 
- 	call	verify_cpu
- 	testl	%eax, %eax
--	jnz	no_longmode
-+	jnz	hang
- 
- /*
-- * Compute the delta between where we were compiled to run at
-+ * Compute the delta between where we were linked to load at
-  * and where the code will actually run at.
-  *
-  * %ebp contains the address we are loaded at by the boot loader and %ebx
-@@ -90,15 +90,32 @@ ENTRY(startup_32)
-  */
- 
- #ifdef CONFIG_RELOCATABLE
-+#ifdef CONFIG_RANDOMIZE_BASE
-+	call	select_aslr_address /* Select ASLR offset */
-+	movl	%eax, %ebx
-+	/* LOAD_PHYSICAL_ADDR is the minimum safe address we can
-+	 * decompress at */
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jae	1f
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+#else /* CONFIG_RANDOMIZE_BASE */
- 	movl	%ebp, %ebx
- 	movl	BP_kernel_alignment(%esi), %eax
- 	decl	%eax
- 	addl	%eax, %ebx
- 	notl	%eax
- 	andl	%eax, %ebx
--#else
-+#endif /* CONFIG_RANDOMIZE_BASE */
-+
-+#ifdef CONFIG_RANDOMIZE_BASE
-+1:	movl	%ebx, %eax
-+	subl	$LOAD_PHYSICAL_ADDR, %eax
-+        movl	%eax, aslr_offset(%ebp)
-+	incl	aslr_in_32bit(%ebp) /* say 32 bit code ran */
-+#endif /* CONFIG_RANDOMIZE_BASE */
-+#else /* CONFIG_RELOCATABLE */
- 	movl	$LOAD_PHYSICAL_ADDR, %ebx
--#endif
-+#endif /* CONFIG_RELOCATABLE */
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -266,14 +283,30 @@ preferred_addr:
- 	/* Start with the delta to where the kernel will run at. */
- #ifdef CONFIG_RELOCATABLE
- 	leaq	startup_32(%rip) /* - $startup_32 */, %rbp
-+#ifdef CONFIG_RANDOMIZE_BASE
-+	leaq	boot_stack_end(%rip), %rsp
-+	testl	$1, aslr_in_32bit(%rip)
-+	jne	1f
-+	call	select_aslr_address
-+	movq	%rax, %rbp
-+	jmp	2f
-+1:	movl	aslr_offset(%rip), %eax
-+	addq	%rax, %rbp
-+	/* LOAD_PHYSICAL_ADDR is the minimum safe address we can
-+	 * decompress at. */
-+	cmpq	$LOAD_PHYSICAL_ADDR, %rbp
-+	jae	2f
-+	movq	$LOAD_PHYSICAL_ADDR, %rbp
-+2:
-+#endif	/* CONFIG_RANDOMIZE_BASE */
- 	movl	BP_kernel_alignment(%rsi), %eax
- 	decl	%eax
- 	addq	%rax, %rbp
- 	notq	%rax
- 	andq	%rax, %rbp
--#else
-+#else /* CONFIG_RELOCATABLE */
- 	movq	$LOAD_PHYSICAL_ADDR, %rbp
--#endif
-+#endif /* CONFIG_RELOCATABLE */
- 
- 	/* Target address to relocate to for decompression */
- 	leaq	z_extract_offset(%rbp), %rbx
-@@ -343,13 +376,85 @@ relocated:
- 	call	decompress_kernel
- 	popq	%rsi
- 
-+#ifdef CONFIG_RANDOMIZE_BASE
-+/*
-+ * Find the address of the relocations.
-+ */
-+	leaq	z_output_len(%rbp), %rdi
-+
-+/*
-+ * Calculate the delta between where vmlinux was linked to load
-+ * and where it was actually loaded.
-+ */
-+	movq	%rbp, %rbx
-+	subq	$LOAD_PHYSICAL_ADDR, %rbx
-+	je	3f	/* Nothing to be done if loaded at linked addr. */
-+/*
-+ * The kernel contains a table of relocation addresses. Those addresses
-+ * have the final load address of the kernel in virtual memory.
-+ * We are currently working in the self map. So we need to create an
-+ * adjustment for kernel memory addresses to the self map. This will
-+ * involve subtracting out the base address of the kernel.
-+ */
-+	movq	$-__START_KERNEL_map, %rdx /* Literal is too big for add etc */
-+	addq	%rbx, %rdx
-+/*
-+ * Process relocations. 32 bit relocations first then 64 bit after.
-+ * Two sets of binary relocations are added to the end of the
-+ * kernel before compression. Each relocation table entry is the kernel
-+ * address of the location which needs to be updated stored as a 32 bit
-+ * value which is sign extended to 64 bits.
-+ *
-+ * Format is:
-+ *
-+ * kernel bits...
-+ * 0 - zero terminator for 64 bit relocations
-+ * 64 bit relocation repeated
-+ * 0 - zero terminator for 32 bit relocations
-+ * 32 bit relocation repeated
-+ *
-+ * So we work backwards from the end of the decompressed image.
-+ */
-+1:	subq	$4, %rdi
-+	movslq	(%rdi), %rcx
-+	testq	%rcx, %rcx
-+	je	2f
-+	addq	%rdx, %rcx
-+/*
-+ * Relocation can't be before the image or
-+ * after the current position of the current relocation.
-+ * This is a cheap bounds check. It could be more exact
-+ * and limit to the end of the image prior to the relocations
-+ * but allowing relocations themselves to be fixed up will not
-+ * do any harm.
-+ */
-+	cmpq	%rbp, %rcx
-+	jb	hang
-+	cmpq	%rdi, %rcx
-+	jae	hang
-+	addl	%ebx, (%rcx)	/* 32 bit relocation */
-+	jmp	1b
-+2:	subq	$4, %rdi
-+	movslq	(%rdi), %rcx
-+	testq	%rcx, %rcx
-+	je	3f
-+	addq	%rdx, %rcx
-+	cmpq	%rbp, %rcx
-+	jb	hang
-+	cmpq	%rdi, %rcx
-+	jae	hang
-+	addq	%rbx, (%rcx)	/* 64 bit relocation */
-+	jmp	2b
-+3:
-+#endif /* CONFIG_RANDOMIZE_BASE */
-+
- /*
-  * Jump to the decompressed kernel.
-  */
- 	jmp	*%rbp
- 
- 	.code32
--no_longmode:
-+hang:
- 	/* This isn't an x86-64 CPU so hang */
- 1:
- 	hlt
-@@ -369,6 +474,19 @@ gdt:
- 	.quad   0x0000000000000000	/* TS continued */
- gdt_end:
- 
-+#ifdef CONFIG_RANDOMIZE_BASE
-+aslr_offset:
-+	.long	0			/* Offset selected for ASLR */
-+/*
-+ * Set if ASLR ran in 32 bit mode. For 64 bit loaders the 32 bit code
-+ * doesn't run and we need to do the offset calculation there for the
-+ * first time.
-+ */
-+aslr_in_32bit:
-+	.long	0
-+
-+#endif /* CONFIG_RANDOMIZE_BASE */
-+
- /*
-  * Stack and heap for uncompression
-  */
-@@ -379,6 +497,7 @@ boot_heap:
- boot_stack:
- 	.fill BOOT_STACK_SIZE, 1, 0
- boot_stack_end:
-+	.globl	boot_stack_end
- 
- /*
-  * Space for page tables (not in .bss so not zeroed)
-diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixmap.h
-index a09c285..8cb54c1 100644
---- a/arch/x86/include/asm/fixmap.h
-+++ b/arch/x86/include/asm/fixmap.h
-@@ -106,6 +106,10 @@ enum fixed_addresses {
- #endif
- #ifdef CONFIG_X86_F00F_BUG
- 	FIX_F00F_IDT,	/* Virtual mapping for IDT */
++#ifdef CONFIG_X86_64
++#define ELF_BITS		64
++#define ELF_MACHINE		EM_X86_64
++#define ELF_MACHINE_NAME	"x86_64"
++#define SHT_REL_TYPE		SHT_RELA
++#define Elf_Rel			Elf64_Rela
 +#else
-+#ifdef CONFIG_RANDOMIZE_BASE
-+	FIX_RANDOM_IDT, /* Virtual mapping for IDT */
++#define ELF_BITS		32
++#define ELF_MACHINE		EM_386
++#define ELF_MACHINE_NAME	"i386"
++#define SHT_REL_TYPE		SHT_REL
++#define Elf_Rel			Elf32_Rel
 +#endif
- #endif
- #ifdef CONFIG_X86_CYCLONE_TIMER
- 	FIX_CYCLONE_TIMER, /*cyclone timer register*/
-diff --git a/arch/x86/include/asm/page_32_types.h b/arch/x86/include/asm/page_32_types.h
-index ef17af0..996582c 100644
---- a/arch/x86/include/asm/page_32_types.h
-+++ b/arch/x86/include/asm/page_32_types.h
-@@ -15,6 +15,8 @@
-  */
- #define __PAGE_OFFSET		_AC(CONFIG_PAGE_OFFSET, UL)
- 
-+#define __START_KERNEL		(__PAGE_OFFSET + __PHYSICAL_START)
 +
- #define THREAD_SIZE_ORDER	1
- #define THREAD_SIZE		(PAGE_SIZE << THREAD_SIZE_ORDER)
- 
-diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
-index 8b491e6..c0dfe38 100644
---- a/arch/x86/include/asm/page_64_types.h
-+++ b/arch/x86/include/asm/page_64_types.h
-@@ -32,10 +32,6 @@
-  */
- #define __PAGE_OFFSET           _AC(0xffff880000000000, UL)
- 
--#define __PHYSICAL_START	((CONFIG_PHYSICAL_START +	 	\
--				  (CONFIG_PHYSICAL_ALIGN - 1)) &	\
--				 ~(CONFIG_PHYSICAL_ALIGN - 1))
--
- #define __START_KERNEL		(__START_KERNEL_map + __PHYSICAL_START)
- #define __START_KERNEL_map	_AC(0xffffffff80000000, UL)
- 
-diff --git a/arch/x86/include/asm/page_types.h b/arch/x86/include/asm/page_types.h
-index 54c9787..b6f9b49 100644
---- a/arch/x86/include/asm/page_types.h
-+++ b/arch/x86/include/asm/page_types.h
-@@ -33,6 +33,10 @@
- 	(((current->personality & READ_IMPLIES_EXEC) ? VM_EXEC : 0 ) | \
- 	 VM_READ | VM_WRITE | VM_MAYREAD | VM_MAYWRITE | VM_MAYEXEC)
- 
-+#define __PHYSICAL_START	((CONFIG_PHYSICAL_START +		\
-+				  (CONFIG_PHYSICAL_ALIGN - 1)) &	\
-+				 ~(CONFIG_PHYSICAL_ALIGN - 1))
++#if (ELF_BITS == 64)
++#define ELF_CLASS		ELFCLASS64
++#define ELF_R_SYM(val)		ELF64_R_SYM(val)
++#define ELF_R_TYPE(val)		ELF64_R_TYPE(val)
++#define ELF_ST_TYPE(o)		ELF64_ST_TYPE(o)
++#define ELF_ST_BIND(o)		ELF64_ST_BIND(o)
++#define ELF_ST_VISIBILITY(o)	ELF64_ST_VISIBILITY(o)
++#else
++#define ELF_CLASS		ELFCLASS32
++#define ELF_R_SYM(val)		ELF32_R_SYM(val)
++#define ELF_R_TYPE(val)		ELF32_R_TYPE(val)
++#define ELF_ST_TYPE(o)		ELF32_ST_TYPE(o)
++#define ELF_ST_BIND(o)		ELF32_ST_BIND(o)
++#define ELF_ST_VISIBILITY(o)	ELF32_ST_VISIBILITY(o)
++#endif
 +
- #ifdef CONFIG_X86_64
- #include <asm/page_64_types.h>
- #else
-diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
-index 2861082..7e014b7 100644
---- a/arch/x86/kernel/asm-offsets.c
-+++ b/arch/x86/kernel/asm-offsets.c
-@@ -70,6 +70,20 @@ void common(void) {
- 	OFFSET(BP_pref_address, boot_params, hdr.pref_address);
- 	OFFSET(BP_code32_start, boot_params, hdr.code32_start);
++#define ElfW(type)		_ElfW(ELF_BITS, type)
++#define _ElfW(bits, type)	__ElfW(bits, type)
++#define __ElfW(bits, type)	Elf##bits##_##type
++
+ static void die(char *fmt, ...);
  
-+	OFFSET(BP_scratch, boot_params, scratch);
-+	OFFSET(BP_loadflags, boot_params, hdr.loadflags);
-+	OFFSET(BP_hardware_subarch, boot_params, hdr.hardware_subarch);
-+	OFFSET(BP_version, boot_params, hdr.version);
-+	OFFSET(BP_kernel_alignment, boot_params, hdr.kernel_alignment);
-+	OFFSET(BP_e820_map, boot_params, e820_map);
-+	OFFSET(BP_e820_entries, boot_params, e820_entries);
-+	OFFSET(BP_cmd_line_ptr, boot_params, hdr.cmd_line_ptr);
+ #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+-static Elf32_Ehdr ehdr;
+-static unsigned long reloc_count, reloc_idx;
+-static unsigned long *relocs;
+-static unsigned long reloc16_count, reloc16_idx;
+-static unsigned long *relocs16;
++static ElfW(Ehdr) ehdr;
 +
-+	OFFSET(E820_addr, e820entry, addr);
-+	OFFSET(E820_size, e820entry, size);
-+	OFFSET(E820_type, e820entry, type);
-+	DEFINE(E820_entry_size, sizeof(struct e820entry));
-+
- 	BLANK();
- 	DEFINE(PTREGS_SIZE, sizeof(struct pt_regs));
- }
-diff --git a/arch/x86/kernel/setup.c b/arch/x86/kernel/setup.c
-index 90d8cc9..fd9e68f 100644
---- a/arch/x86/kernel/setup.c
-+++ b/arch/x86/kernel/setup.c
-@@ -801,6 +801,18 @@ static void __init trim_low_memory_range(void)
- }
- 	
- /*
-+ * Dump out kernel offset information on panic.
-+ */
-+static int
-+dump_kernel_offset(struct notifier_block *self, unsigned long v, void *p)
-+{
-+	pr_emerg("Kernel Offset: 0x%lx\n",
-+		 (unsigned long)&_text - __START_KERNEL);
-+
-+	return 0;
-+}
-+
-+/*
-  * Determine if we were loaded by an EFI loader.  If so, then we have also been
-  * passed the efi memmap, systab, etc., so we should use these data structures
-  * for initialization.  Note, the efi init code path is determined by the
-@@ -1220,3 +1232,15 @@ void __init i386_reserve_resources(void)
- }
- 
- #endif /* CONFIG_X86_32 */
-+
-+static struct notifier_block kernel_offset_notifier = {
-+	.notifier_call = dump_kernel_offset
++struct relocs {
++	uint32_t	*offset;
++	unsigned long	count;
++	unsigned long	size;
 +};
 +
-+static int __init register_kernel_offset_dumper(void)
++struct relocs relocs16;
++struct relocs relocs32;
++#ifdef CONFIG_X86_64
++struct relocs relocs64;
++#endif
++
++static void add_reloc(struct relocs *r, uint32_t offset)
 +{
-+	atomic_notifier_chain_register(&panic_notifier_list,
-+					&kernel_offset_notifier);
++	if (r->count == r->size) {
++		unsigned long newsize = r->size + 50000;
++		void *mem = realloc(r->offset, newsize * sizeof(r->offset[0]));
++
++		if (!mem)
++			die("realloc of %ld entries for relocs failed\n",
++				newsize);
++		r->offset = mem;
++		r->size = newsize;
++	}
++	r->offset[r->count++] = offset;
++}
+ 
+ struct section {
+-	Elf32_Shdr     shdr;
+-	struct section *link;
+-	Elf32_Sym      *symtab;
+-	Elf32_Rel      *reltab;
+-	char           *strtab;
++	ElfW(Shdr)	shdr;
++	struct section	*link;
++	ElfW(Sym)	*symtab;
++	Elf_Rel		*reltab;
++	char		*strtab;
+ };
+ static struct section *secs;
+ 
+@@ -49,6 +107,9 @@ static const char * const sym_regex_kernel[S_NSYMTYPES] = {
+ 	"^(xen_irq_disable_direct_reloc$|"
+ 	"xen_save_fl_direct_reloc$|"
+ 	"VDSO|"
++#ifdef CONFIG_X86_64
++	"__vvar_page|"
++#endif
+ 	"__crc_)",
+ 
+ /*
+@@ -72,6 +133,11 @@ static const char * const sym_regex_kernel[S_NSYMTYPES] = {
+ 	"__end_rodata|"
+ 	"__initramfs_start|"
+ 	"(jiffies|jiffies_64)|"
++#ifdef CONFIG_X86_64
++	"__per_cpu_load|"
++	"init_per_cpu__.*|"
++	"__end_rodata_hpage_align|"
++#endif
+ 	"_end)$"
+ };
+ 
+@@ -198,6 +264,24 @@ static const char *rel_type(unsigned type)
+ {
+ 	static const char *type_name[] = {
+ #define REL_TYPE(X) [X] = #X
++#ifdef CONFIG_X86_64
++		REL_TYPE(R_X86_64_NONE),
++		REL_TYPE(R_X86_64_64),
++		REL_TYPE(R_X86_64_PC32),
++		REL_TYPE(R_X86_64_GOT32),
++		REL_TYPE(R_X86_64_PLT32),
++		REL_TYPE(R_X86_64_COPY),
++		REL_TYPE(R_X86_64_GLOB_DAT),
++		REL_TYPE(R_X86_64_JUMP_SLOT),
++		REL_TYPE(R_X86_64_RELATIVE),
++		REL_TYPE(R_X86_64_GOTPCREL),
++		REL_TYPE(R_X86_64_32),
++		REL_TYPE(R_X86_64_32S),
++		REL_TYPE(R_X86_64_16),
++		REL_TYPE(R_X86_64_PC16),
++		REL_TYPE(R_X86_64_8),
++		REL_TYPE(R_X86_64_PC8),
++#else
+ 		REL_TYPE(R_386_NONE),
+ 		REL_TYPE(R_386_32),
+ 		REL_TYPE(R_386_PC32),
+@@ -213,6 +297,7 @@ static const char *rel_type(unsigned type)
+ 		REL_TYPE(R_386_PC8),
+ 		REL_TYPE(R_386_16),
+ 		REL_TYPE(R_386_PC16),
++#endif
+ #undef REL_TYPE
+ 	};
+ 	const char *name = "unknown type rel type name";
+@@ -240,7 +325,7 @@ static const char *sec_name(unsigned shndx)
+ 	return name;
+ }
+ 
+-static const char *sym_name(const char *sym_strtab, Elf32_Sym *sym)
++static const char *sym_name(const char *sym_strtab, ElfW(Sym) *sym)
+ {
+ 	const char *name;
+ 	name = "<noname>";
+@@ -253,15 +338,45 @@ static const char *sym_name(const char *sym_strtab, Elf32_Sym *sym)
+ 	return name;
+ }
+ 
++#ifdef CONFIG_X86_64
++static ElfW(Sym) *sym_lookup(const char *symname)
++{
++	int i;
++	for (i = 0; i < ehdr.e_shnum; i++) {
++		struct section *sec = &secs[i];
++		long nsyms;
++		char *strtab;
++		ElfW(Sym) *symtab;
++		ElfW(Sym) *sym;
++
++		if (sec->shdr.sh_type != SHT_SYMTAB)
++			continue;
++
++		nsyms = sec->shdr.sh_size/sizeof(ElfW(Sym));
++		symtab = sec->symtab;
++		strtab = sec->link->strtab;
++
++		for (sym = symtab; --nsyms >= 0; sym++) {
++			if (!sym->st_name)
++				continue;
++			if (strcmp(symname, strtab + sym->st_name) == 0)
++				return sym;
++		}
++	}
 +	return 0;
 +}
-+__initcall(register_kernel_offset_dumper);
-diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
-index 68bda7a..c00a482 100644
---- a/arch/x86/kernel/traps.c
-+++ b/arch/x86/kernel/traps.c
-@@ -752,6 +752,12 @@ void __init trap_init(void)
- 	set_bit(SYSCALL_VECTOR, used_vectors);
++#endif
+ 
+ 
+ #if BYTE_ORDER == LITTLE_ENDIAN
+ #define le16_to_cpu(val) (val)
+ #define le32_to_cpu(val) (val)
++#define le64_to_cpu(val) (val)
+ #endif
+ #if BYTE_ORDER == BIG_ENDIAN
+ #define le16_to_cpu(val) bswap_16(val)
+ #define le32_to_cpu(val) bswap_32(val)
++#define le64_to_cpu(val) bswap_64(val)
  #endif
  
-+#if defined(CONFIG_RANDOMIZE_BASE) && !defined(CONFIG_X86_F00F_BUG)
-+	__set_fixmap(FIX_RANDOM_IDT, __pa(&idt_table), PAGE_KERNEL_RO);
-+
-+	/* Update the IDT descriptor. It will be reloaded in cpu_init() */
-+	idt_descr.address = fix_to_virt(FIX_RANDOM_IDT);
+ static uint16_t elf16_to_cpu(uint16_t val)
+@@ -274,6 +389,25 @@ static uint32_t elf32_to_cpu(uint32_t val)
+ 	return le32_to_cpu(val);
+ }
+ 
++#if (ELF_BITS == 64)
++static uint64_t elf64_to_cpu(uint64_t val)
++{
++	return le64_to_cpu(val);
++}
 +#endif
- 	/*
- 	 * Should be a barrier for any external CPU state:
- 	 */
++
++#define	elf_half_to_cpu(x)	elf16_to_cpu(x)
++#define	elf_word_to_cpu(x)	elf32_to_cpu(x)
++#if (ELF_BITS == 64)
++#define	elf_addr_to_cpu(x)	elf64_to_cpu(x)
++#define	elf_off_to_cpu(x)	elf64_to_cpu(x)
++#define	elf_xword_to_cpu(x)	elf64_to_cpu(x)
++#else
++#define	elf_addr_to_cpu(x)	elf32_to_cpu(x)
++#define	elf_off_to_cpu(x)	elf32_to_cpu(x)
++#define	elf_xword_to_cpu(x)	elf32_to_cpu(x)
++#endif
++
+ static void read_ehdr(FILE *fp)
+ {
+ 	if (fread(&ehdr, sizeof(ehdr), 1, fp) != 1) {
+@@ -283,8 +417,8 @@ static void read_ehdr(FILE *fp)
+ 	if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0) {
+ 		die("No ELF magic\n");
+ 	}
+-	if (ehdr.e_ident[EI_CLASS] != ELFCLASS32) {
+-		die("Not a 32 bit executable\n");
++	if (ehdr.e_ident[EI_CLASS] != ELF_CLASS) {
++		die("Not a %d bit executable\n", ELF_BITS);
+ 	}
+ 	if (ehdr.e_ident[EI_DATA] != ELFDATA2LSB) {
+ 		die("Not a LSB ELF executable\n");
+@@ -293,36 +427,36 @@ static void read_ehdr(FILE *fp)
+ 		die("Unknown ELF version\n");
+ 	}
+ 	/* Convert the fields to native endian */
+-	ehdr.e_type      = elf16_to_cpu(ehdr.e_type);
+-	ehdr.e_machine   = elf16_to_cpu(ehdr.e_machine);
+-	ehdr.e_version   = elf32_to_cpu(ehdr.e_version);
+-	ehdr.e_entry     = elf32_to_cpu(ehdr.e_entry);
+-	ehdr.e_phoff     = elf32_to_cpu(ehdr.e_phoff);
+-	ehdr.e_shoff     = elf32_to_cpu(ehdr.e_shoff);
+-	ehdr.e_flags     = elf32_to_cpu(ehdr.e_flags);
+-	ehdr.e_ehsize    = elf16_to_cpu(ehdr.e_ehsize);
+-	ehdr.e_phentsize = elf16_to_cpu(ehdr.e_phentsize);
+-	ehdr.e_phnum     = elf16_to_cpu(ehdr.e_phnum);
+-	ehdr.e_shentsize = elf16_to_cpu(ehdr.e_shentsize);
+-	ehdr.e_shnum     = elf16_to_cpu(ehdr.e_shnum);
+-	ehdr.e_shstrndx  = elf16_to_cpu(ehdr.e_shstrndx);
++	ehdr.e_type      = elf_half_to_cpu(ehdr.e_type);
++	ehdr.e_machine   = elf_half_to_cpu(ehdr.e_machine);
++	ehdr.e_version   = elf_word_to_cpu(ehdr.e_version);
++	ehdr.e_entry     = elf_addr_to_cpu(ehdr.e_entry);
++	ehdr.e_phoff     = elf_off_to_cpu(ehdr.e_phoff);
++	ehdr.e_shoff     = elf_off_to_cpu(ehdr.e_shoff);
++	ehdr.e_flags     = elf_word_to_cpu(ehdr.e_flags);
++	ehdr.e_ehsize    = elf_half_to_cpu(ehdr.e_ehsize);
++	ehdr.e_phentsize = elf_half_to_cpu(ehdr.e_phentsize);
++	ehdr.e_phnum     = elf_half_to_cpu(ehdr.e_phnum);
++	ehdr.e_shentsize = elf_half_to_cpu(ehdr.e_shentsize);
++	ehdr.e_shnum     = elf_half_to_cpu(ehdr.e_shnum);
++	ehdr.e_shstrndx  = elf_half_to_cpu(ehdr.e_shstrndx);
+ 
+ 	if ((ehdr.e_type != ET_EXEC) && (ehdr.e_type != ET_DYN)) {
+ 		die("Unsupported ELF header type\n");
+ 	}
+-	if (ehdr.e_machine != EM_386) {
+-		die("Not for x86\n");
++	if (ehdr.e_machine != ELF_MACHINE) {
++		die("Not for %s\n", ELF_MACHINE_NAME);
+ 	}
+ 	if (ehdr.e_version != EV_CURRENT) {
+ 		die("Unknown ELF version\n");
+ 	}
+-	if (ehdr.e_ehsize != sizeof(Elf32_Ehdr)) {
++	if (ehdr.e_ehsize != sizeof(ElfW(Ehdr))) {
+ 		die("Bad Elf header size\n");
+ 	}
+-	if (ehdr.e_phentsize != sizeof(Elf32_Phdr)) {
++	if (ehdr.e_phentsize != sizeof(ElfW(Phdr))) {
+ 		die("Bad program header entry\n");
+ 	}
+-	if (ehdr.e_shentsize != sizeof(Elf32_Shdr)) {
++	if (ehdr.e_shentsize != sizeof(ElfW(Shdr))) {
+ 		die("Bad section header entry\n");
+ 	}
+ 	if (ehdr.e_shstrndx >= ehdr.e_shnum) {
+@@ -333,7 +467,7 @@ static void read_ehdr(FILE *fp)
+ static void read_shdrs(FILE *fp)
+ {
+ 	int i;
+-	Elf32_Shdr shdr;
++	ElfW(Shdr) shdr;
+ 
+ 	secs = calloc(ehdr.e_shnum, sizeof(struct section));
+ 	if (!secs) {
+@@ -349,16 +483,16 @@ static void read_shdrs(FILE *fp)
+ 		if (fread(&shdr, sizeof shdr, 1, fp) != 1)
+ 			die("Cannot read ELF section headers %d/%d: %s\n",
+ 			    i, ehdr.e_shnum, strerror(errno));
+-		sec->shdr.sh_name      = elf32_to_cpu(shdr.sh_name);
+-		sec->shdr.sh_type      = elf32_to_cpu(shdr.sh_type);
+-		sec->shdr.sh_flags     = elf32_to_cpu(shdr.sh_flags);
+-		sec->shdr.sh_addr      = elf32_to_cpu(shdr.sh_addr);
+-		sec->shdr.sh_offset    = elf32_to_cpu(shdr.sh_offset);
+-		sec->shdr.sh_size      = elf32_to_cpu(shdr.sh_size);
+-		sec->shdr.sh_link      = elf32_to_cpu(shdr.sh_link);
+-		sec->shdr.sh_info      = elf32_to_cpu(shdr.sh_info);
+-		sec->shdr.sh_addralign = elf32_to_cpu(shdr.sh_addralign);
+-		sec->shdr.sh_entsize   = elf32_to_cpu(shdr.sh_entsize);
++		sec->shdr.sh_name      = elf_word_to_cpu(shdr.sh_name);
++		sec->shdr.sh_type      = elf_word_to_cpu(shdr.sh_type);
++		sec->shdr.sh_flags     = elf_xword_to_cpu(shdr.sh_flags);
++		sec->shdr.sh_addr      = elf_addr_to_cpu(shdr.sh_addr);
++		sec->shdr.sh_offset    = elf_off_to_cpu(shdr.sh_offset);
++		sec->shdr.sh_size      = elf_xword_to_cpu(shdr.sh_size);
++		sec->shdr.sh_link      = elf_word_to_cpu(shdr.sh_link);
++		sec->shdr.sh_info      = elf_word_to_cpu(shdr.sh_info);
++		sec->shdr.sh_addralign = elf_xword_to_cpu(shdr.sh_addralign);
++		sec->shdr.sh_entsize   = elf_xword_to_cpu(shdr.sh_entsize);
+ 		if (sec->shdr.sh_link < ehdr.e_shnum)
+ 			sec->link = &secs[sec->shdr.sh_link];
+ 	}
+@@ -412,12 +546,12 @@ static void read_symtabs(FILE *fp)
+ 			die("Cannot read symbol table: %s\n",
+ 				strerror(errno));
+ 		}
+-		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf32_Sym); j++) {
+-			Elf32_Sym *sym = &sec->symtab[j];
+-			sym->st_name  = elf32_to_cpu(sym->st_name);
+-			sym->st_value = elf32_to_cpu(sym->st_value);
+-			sym->st_size  = elf32_to_cpu(sym->st_size);
+-			sym->st_shndx = elf16_to_cpu(sym->st_shndx);
++		for (j = 0; j < sec->shdr.sh_size/sizeof(ElfW(Sym)); j++) {
++			ElfW(Sym) *sym = &sec->symtab[j];
++			sym->st_name  = elf_word_to_cpu(sym->st_name);
++			sym->st_value = elf_addr_to_cpu(sym->st_value);
++			sym->st_size  = elf_xword_to_cpu(sym->st_size);
++			sym->st_shndx = elf_half_to_cpu(sym->st_shndx);
+ 		}
+ 	}
+ }
+@@ -428,7 +562,7 @@ static void read_relocs(FILE *fp)
+ 	int i,j;
+ 	for (i = 0; i < ehdr.e_shnum; i++) {
+ 		struct section *sec = &secs[i];
+-		if (sec->shdr.sh_type != SHT_REL) {
++		if (sec->shdr.sh_type != SHT_REL_TYPE) {
+ 			continue;
+ 		}
+ 		sec->reltab = malloc(sec->shdr.sh_size);
+@@ -445,10 +579,13 @@ static void read_relocs(FILE *fp)
+ 			die("Cannot read symbol table: %s\n",
+ 				strerror(errno));
+ 		}
+-		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf32_Rel); j++) {
+-			Elf32_Rel *rel = &sec->reltab[j];
+-			rel->r_offset = elf32_to_cpu(rel->r_offset);
+-			rel->r_info   = elf32_to_cpu(rel->r_info);
++		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf_Rel); j++) {
++			Elf_Rel *rel = &sec->reltab[j];
++			rel->r_offset = elf_addr_to_cpu(rel->r_offset);
++			rel->r_info   = elf_xword_to_cpu(rel->r_info);
++#if (SHT_REL_TYPE == SHT_RELA)
++			rel->r_addend = elf_xword_to_cpu(rel->r_addend);
++#endif
+ 		}
+ 	}
+ }
+@@ -468,19 +605,25 @@ static void print_absolute_symbols(void)
+ 			continue;
+ 		}
+ 		sym_strtab = sec->link->strtab;
+-		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf32_Sym); j++) {
+-			Elf32_Sym *sym;
++		for (j = 0; j < sec->shdr.sh_size/sizeof(ElfW(Sym)); j++) {
++			ElfW(Sym) *sym;
+ 			const char *name;
+ 			sym = &sec->symtab[j];
+ 			name = sym_name(sym_strtab, sym);
+ 			if (sym->st_shndx != SHN_ABS) {
+ 				continue;
+ 			}
+-			printf("%5d %08x %5d %10s %10s %12s %s\n",
++#if (ELF_BITS == 64)
++			printf("%5d %016"PRIx64" %5"PRId64
++				" %10s %10s %12s %s\n",
++#else
++			printf("%5d %08"PRIx32"  %5"PRId32
++				" %10s %10s %12s %s\n",
++#endif
+ 				j, sym->st_value, sym->st_size,
+-				sym_type(ELF32_ST_TYPE(sym->st_info)),
+-				sym_bind(ELF32_ST_BIND(sym->st_info)),
+-				sym_visibility(ELF32_ST_VISIBILITY(sym->st_other)),
++				sym_type(ELF_ST_TYPE(sym->st_info)),
++				sym_bind(ELF_ST_BIND(sym->st_info)),
++				sym_visibility(ELF_ST_VISIBILITY(sym->st_other)),
+ 				name);
+ 		}
+ 	}
+@@ -495,9 +638,9 @@ static void print_absolute_relocs(void)
+ 		struct section *sec = &secs[i];
+ 		struct section *sec_applies, *sec_symtab;
+ 		char *sym_strtab;
+-		Elf32_Sym *sh_symtab;
++		ElfW(Sym) *sh_symtab;
+ 		int j;
+-		if (sec->shdr.sh_type != SHT_REL) {
++		if (sec->shdr.sh_type != SHT_REL_TYPE) {
+ 			continue;
+ 		}
+ 		sec_symtab  = sec->link;
+@@ -507,12 +650,12 @@ static void print_absolute_relocs(void)
+ 		}
+ 		sh_symtab  = sec_symtab->symtab;
+ 		sym_strtab = sec_symtab->link->strtab;
+-		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf32_Rel); j++) {
+-			Elf32_Rel *rel;
+-			Elf32_Sym *sym;
++		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf_Rel); j++) {
++			Elf_Rel *rel;
++			ElfW(Sym) *sym;
+ 			const char *name;
+ 			rel = &sec->reltab[j];
+-			sym = &sh_symtab[ELF32_R_SYM(rel->r_info)];
++			sym = &sh_symtab[ELF_R_SYM(rel->r_info)];
+ 			name = sym_name(sym_strtab, sym);
+ 			if (sym->st_shndx != SHN_ABS) {
+ 				continue;
+@@ -542,10 +685,16 @@ static void print_absolute_relocs(void)
+ 				printed = 1;
+ 			}
+ 
+-			printf("%08x %08x %10s %08x  %s\n",
++#if (ELF_BITS == 64)
++			printf("%016"PRIx64" %016"PRIx64
++				" %10s %016"PRIx64"  %s\n",
++#else
++			printf("%08"PRIx32" %08"PRIx32
++				" %10s %08"PRIx32"  %s\n",
++#endif
+ 				rel->r_offset,
+ 				rel->r_info,
+-				rel_type(ELF32_R_TYPE(rel->r_info)),
++				rel_type(ELF_R_TYPE(rel->r_info)),
+ 				sym->st_value,
+ 				name);
+ 		}
+@@ -555,19 +704,20 @@ static void print_absolute_relocs(void)
+ 		printf("\n");
+ }
+ 
+-static void walk_relocs(void (*visit)(Elf32_Rel *rel, Elf32_Sym *sym),
+-			int use_real_mode)
++
++static void walk_relocs(int (*process)(struct section *sec, Elf_Rel *,
++			ElfW(Sym) *, const char *))
+ {
+ 	int i;
+ 	/* Walk through the relocations */
+ 	for (i = 0; i < ehdr.e_shnum; i++) {
+ 		char *sym_strtab;
+-		Elf32_Sym *sh_symtab;
++		ElfW(Sym) *sh_symtab;
+ 		struct section *sec_applies, *sec_symtab;
+ 		int j;
+ 		struct section *sec = &secs[i];
+ 
+-		if (sec->shdr.sh_type != SHT_REL) {
++		if (sec->shdr.sh_type != SHT_REL_TYPE) {
+ 			continue;
+ 		}
+ 		sec_symtab  = sec->link;
+@@ -577,101 +727,276 @@ static void walk_relocs(void (*visit)(Elf32_Rel *rel, Elf32_Sym *sym),
+ 		}
+ 		sh_symtab = sec_symtab->symtab;
+ 		sym_strtab = sec_symtab->link->strtab;
+-		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf32_Rel); j++) {
+-			Elf32_Rel *rel;
+-			Elf32_Sym *sym;
+-			unsigned r_type;
+-			const char *symname;
+-			int shn_abs;
+ 
+-			rel = &sec->reltab[j];
+-			sym = &sh_symtab[ELF32_R_SYM(rel->r_info)];
+-			r_type = ELF32_R_TYPE(rel->r_info);
+-
+-			shn_abs = sym->st_shndx == SHN_ABS;
+-
+-			switch (r_type) {
+-			case R_386_NONE:
+-			case R_386_PC32:
+-			case R_386_PC16:
+-			case R_386_PC8:
+-				/*
+-				 * NONE can be ignored and and PC relative
+-				 * relocations don't need to be adjusted.
+-				 */
+-				break;
++		for (j = 0; j < sec->shdr.sh_size/sizeof(Elf_Rel); j++) {
++			Elf_Rel *rel = &sec->reltab[j];
++			ElfW(Sym) *sym = &sh_symtab[ELF_R_SYM(rel->r_info)];
++			const char *symname = sym_name(sym_strtab, sym);
+ 
+-			case R_386_16:
+-				symname = sym_name(sym_strtab, sym);
+-				if (!use_real_mode)
+-					goto bad;
+-				if (shn_abs) {
+-					if (is_reloc(S_ABS, symname))
+-						break;
+-					else if (!is_reloc(S_SEG, symname))
+-						goto bad;
+-				} else {
+-					if (is_reloc(S_LIN, symname))
+-						goto bad;
+-					else
+-						break;
+-				}
+-				visit(rel, sym);
+-				break;
++			process(sec, rel, sym, symname);
++		}
++	}
++}
+ 
+-			case R_386_32:
+-				symname = sym_name(sym_strtab, sym);
+-				if (shn_abs) {
+-					if (is_reloc(S_ABS, symname))
+-						break;
+-					else if (!is_reloc(S_REL, symname))
+-						goto bad;
+-				} else {
+-					if (use_real_mode &&
+-					    !is_reloc(S_LIN, symname))
+-						break;
+-				}
+-				visit(rel, sym);
+-				break;
+-			default:
+-				die("Unsupported relocation type: %s (%d)\n",
+-				    rel_type(r_type), r_type);
++#ifdef CONFIG_X86_64
++
++#define	PER_CPU_SECTION		".data..percpu"
++static int per_cpu_shndx	= -1;
++ElfW(Addr) per_cpu_load_addr;
++
++/*
++ * The .data..percpu section is a special case for x86_64 SMP kernels.
++ * It is used to initialize the actual per_cpu areas and to provide
++ * definitions for the per_cpu variables that correspond to their offsets
++ * within the percpu area. Since the values of all of the symbols need
++ * to be offsets from the start of the per_cpu area the virtual address
++ * (sh_addr) of .data..percpu is 0 in SMP kernels.
++ *
++ * This means that:
++ *
++ *	Relocations that reference symbols in the per_cpu area do not
++ *	need further relocation (since the value is an offset relative
++ *	to the start of the per_cpu area that does not change).
++ *
++ *	Relocations that apply to the per_cpu area need to have their
++ *	offset adjusted by by the value of __per_cpu_load to make them
++ *	point to the correct place in the loaded image (because the
++ *	virtual address of .data..percpu is 0).
++ *
++ * For non SMP kernels .data..percpu is linked as part of the normal
++ * kernel data and does not require special treatment.
++ *
++ */
++static void percpu_init(void)
++{
++	int i;
++	for (i = 0; i < ehdr.e_shnum; i++) {
++		ElfW(Sym) *sym;
++		if (strcmp(sec_name(i), PER_CPU_SECTION))
++			continue;
++
++		if (secs[i].shdr.sh_addr != 0)	/* non SMP kernel */
++			return;
++
++		sym = sym_lookup("__per_cpu_load");
++		if (!sym)
++			die("can't find __per_cpu_load\n");
++
++		per_cpu_shndx = i;
++		per_cpu_load_addr = sym->st_value;
++		return;
++	}
++}
++
++/*
++ * Check to see if a symbol lies in the .data..percpu section.
++ * For some as yet not understood reason the "__init_begin"
++ * symbol which immediately preceeds the .data..percpu section
++ * also shows up as it it were part of it so we do an explict
++ * check for that symbol name and ignore it.
++ */
++static int is_percpu_sym(ElfW(Sym) *sym, const char *symname)
++{
++	return (sym->st_shndx == per_cpu_shndx) &&
++		strcmp(symname, "__init_begin");
++}
++
++
++static int do_reloc(struct section *sec, Elf64_Rela *rel, ElfW(Sym) *sym,
++			const char *symname)
++{
++	unsigned r_type = ELF64_R_TYPE(rel->r_info);
++	ElfW(Addr) offset = rel->r_offset;
++	int shn_abs = (sym->st_shndx == SHN_ABS) && !is_reloc(S_REL, symname);
++
++	if (sym->st_shndx == SHN_UNDEF)
++		return 0;
++
++	/*
++	 * adjust the offset if this reloc applies to the percpu section
++	 */
++	if (sec->shdr.sh_info == per_cpu_shndx)
++		offset += per_cpu_load_addr;
++
++	switch (r_type) {
++	case R_X86_64_NONE:
++	case R_X86_64_PC32:
++		/*
++		 * NONE can be ignored and PC relative
++		 * relocations don't need to be adjusted.
++		 */
++		break;
++
++	case R_X86_64_32:
++	case R_X86_64_32S:
++	case R_X86_64_64:
++		/*
++		 * References to the percpu area don't need to be adjusted.
++		 */
++		if (is_percpu_sym(sym, symname))
++			break;
++
++		if (shn_abs) {
++			/*
++			 * whitelisted absolute symbols
++			 * do not require relocation
++			 */
++			if (is_reloc(S_ABS, symname))
+ 				break;
+-			bad:
+-				symname = sym_name(sym_strtab, sym);
+-				die("Invalid %s %s relocation: %s\n",
+-				    shn_abs ? "absolute" : "relative",
+-				    rel_type(r_type), symname);
+-			}
++
++			die("Invalid absolute %s relocation: %s\n",
++				rel_type(r_type), symname);
++			break;
+ 		}
++
++		/*
++		 * Relocation offsets for 64 bit kernels are output
++		 * as 32 bits and sign extended back to 64 bits when
++		 * the relocations are processed.
++		 * Make sure that the offset will fit.
++		 */
++		if ((int32_t)offset != (int64_t)offset)
++			die("Relocation offset doesn't fit in 32 bits\n");
++
++		if (r_type == R_X86_64_64)
++			add_reloc(&relocs64, offset);
++		else
++			add_reloc(&relocs32, offset);
++		break;
++
++	default:
++		die("Unsupported relocation type: %s (%d)\n",
++		    rel_type(r_type), r_type);
++		break;
+ 	}
++
++	return 0;
+ }
+ 
+-static void count_reloc(Elf32_Rel *rel, Elf32_Sym *sym)
++#else
++
++static int do_reloc(struct section *sec, Elf32_Rel *rel, ElfW(Sym) *sym,
++			const char *symname)
+ {
+-	if (ELF32_R_TYPE(rel->r_info) == R_386_16)
+-		reloc16_count++;
+-	else
+-		reloc_count++;
++	unsigned r_type = ELF32_R_TYPE(rel->r_info);
++	int shn_abs = (sym->st_shndx == SHN_ABS) && !is_reloc(S_REL, symname);
++
++	switch (r_type) {
++	case R_386_NONE:
++	case R_386_PC32:
++	case R_386_PC16:
++	case R_386_PC8:
++		/*
++		 * NONE can be ignored and PC relative
++		 * relocations don't need to be adjusted.
++		 */
++		break;
++
++	case R_386_32:
++		if (shn_abs) {
++			/*
++			 * whitelisted absolute symbols
++			 * do not require relocation
++			 */
++			if (is_reloc(S_ABS, symname))
++				break;
++
++			die("Invalid absolute %s relocation: %s\n",
++				rel_type(r_type), symname);
++			break;
++		}
++
++		add_reloc(&relocs32, rel->r_offset);
++		break;
++
++	default:
++		die("Unsupported relocation type: %s (%d)\n",
++		    rel_type(r_type), r_type);
++		break;
++	}
++
++	return 0;
+ }
++#endif
+ 
+-static void collect_reloc(Elf32_Rel *rel, Elf32_Sym *sym)
++
++static int do_reloc_real(struct section *sec, Elf_Rel *rel, ElfW(Sym) *sym,
++			const char *symname)
+ {
+-	/* Remember the address that needs to be adjusted. */
+-	if (ELF32_R_TYPE(rel->r_info) == R_386_16)
+-		relocs16[reloc16_idx++] = rel->r_offset;
+-	else
+-		relocs[reloc_idx++] = rel->r_offset;
++	unsigned r_type = ELF32_R_TYPE(rel->r_info);
++	int shn_abs = (sym->st_shndx == SHN_ABS) && !is_reloc(S_REL, symname);
++
++	switch (r_type) {
++	case R_386_NONE:
++	case R_386_PC32:
++	case R_386_PC16:
++	case R_386_PC8:
++		/*
++		 * NONE can be ignored and PC relative
++		 * relocations don't need to be adjusted.
++		 */
++		break;
++
++	case R_386_16:
++		if (shn_abs) {
++			if (is_reloc(S_ABS, symname))
++				break;
++
++			if (is_reloc(S_SEG, symname)) {
++				add_reloc(&relocs16, rel->r_offset);
++				break;
++			}
++		} else {
++			if (!is_reloc(S_LIN, symname))
++				break;
++		}
++		die("Invalid %s %s relocation: %s\n",
++			shn_abs ? "absolute" : "relative",
++			rel_type(r_type), symname);
++		break;
++
++	case R_386_32:
++		if (shn_abs) {
++			if (is_reloc(S_ABS, symname))
++				break;
++
++			if (is_reloc(S_REL, symname)) {
++				add_reloc(&relocs32, rel->r_offset);
++				break;
++			}
++		} else {
++			if (is_reloc(S_LIN, symname))
++				add_reloc(&relocs32, rel->r_offset);
++			break;
++		}
++		die("Invalid %s %s relocation: %s\n",
++			shn_abs ? "absolute" : "relative",
++			rel_type(r_type), symname);
++		break;
++
++	default:
++		die("Unsupported relocation type: %s (%d)\n",
++			rel_type(r_type), r_type);
++		break;
++	}
++
++	return 0;
+ }
+ 
++
+ static int cmp_relocs(const void *va, const void *vb)
+ {
+-	const unsigned long *a, *b;
++	const uint32_t *a, *b;
+ 	a = va; b = vb;
+ 	return (*a == *b)? 0 : (*a > *b)? 1 : -1;
+ }
+ 
+-static int write32(unsigned int v, FILE *f)
++static void sort_relocs(struct relocs *r)
++{
++	qsort(r->offset, r->count, sizeof(r->offset[0]), cmp_relocs);
++}
++
++static int write32(uint32_t v, FILE *f)
+ {
+ 	unsigned char buf[4];
+ 
+@@ -679,79 +1004,62 @@ static int write32(unsigned int v, FILE *f)
+ 	return fwrite(buf, 1, 4, f) == 4 ? 0 : -1;
+ }
+ 
++static int write32_as_text(uint32_t v, FILE *f)
++{
++	return fprintf(f, "\t.long 0x%08"PRIx32"\n", v) > 0 ? 0 : -1;
++}
++
+ static void emit_relocs(int as_text, int use_real_mode)
+ {
+ 	int i;
+-	/* Count how many relocations I have and allocate space for them. */
+-	reloc_count = 0;
+-	walk_relocs(count_reloc, use_real_mode);
+-	relocs = malloc(reloc_count * sizeof(relocs[0]));
+-	if (!relocs) {
+-		die("malloc of %d entries for relocs failed\n",
+-			reloc_count);
+-	}
++	int (*write_reloc)(uint32_t, FILE *) = write32;
+ 
+-	relocs16 = malloc(reloc16_count * sizeof(relocs[0]));
+-	if (!relocs16) {
+-		die("malloc of %d entries for relocs16 failed\n",
+-			reloc16_count);
+-	}
+ 	/* Collect up the relocations */
+-	reloc_idx = 0;
+-	walk_relocs(collect_reloc, use_real_mode);
++	walk_relocs(use_real_mode ? do_reloc_real : do_reloc);
+ 
+-	if (reloc16_count && !use_real_mode)
++	if (relocs16.count && !use_real_mode)
+ 		die("Segment relocations found but --realmode not specified\n");
+ 
+ 	/* Order the relocations for more efficient processing */
+-	qsort(relocs, reloc_count, sizeof(relocs[0]), cmp_relocs);
+-	qsort(relocs16, reloc16_count, sizeof(relocs16[0]), cmp_relocs);
++	sort_relocs(&relocs16);
++	sort_relocs(&relocs32);
++#ifdef CONFIG_X86_64
++	sort_relocs(&relocs64);
++#endif
++
++	/* output the relocations */
+ 
+-	/* Print the relocations */
+ 	if (as_text) {
+-		/* Print the relocations in a form suitable that
+-		 * gas will like.
+-		 */
+ 		printf(".section \".data.reloc\",\"a\"\n");
+ 		printf(".balign 4\n");
+-		if (use_real_mode) {
+-			printf("\t.long %lu\n", reloc16_count);
+-			for (i = 0; i < reloc16_count; i++)
+-				printf("\t.long 0x%08lx\n", relocs16[i]);
+-			printf("\t.long %lu\n", reloc_count);
+-			for (i = 0; i < reloc_count; i++) {
+-				printf("\t.long 0x%08lx\n", relocs[i]);
+-			}
+-		} else {
+-			/* Print a stop */
+-			printf("\t.long 0x%08lx\n", (unsigned long)0);
+-			for (i = 0; i < reloc_count; i++) {
+-				printf("\t.long 0x%08lx\n", relocs[i]);
+-			}
+-		}
+-
+-		printf("\n");
++		write_reloc = write32_as_text;
+ 	}
+-	else {
+-		if (use_real_mode) {
+-			write32(reloc16_count, stdout);
+-			for (i = 0; i < reloc16_count; i++)
+-				write32(relocs16[i], stdout);
+-			write32(reloc_count, stdout);
+-
+-			/* Now print each relocation */
+-			for (i = 0; i < reloc_count; i++)
+-				write32(relocs[i], stdout);
+-		} else {
+-			/* Print a stop */
+-			write32(0, stdout);
+ 
+-			/* Now print each relocation */
+-			for (i = 0; i < reloc_count; i++) {
+-				write32(relocs[i], stdout);
+-			}
+-		}
++	if (use_real_mode) {
++		write_reloc(relocs16.count, stdout);
++		for (i = 0; i < relocs16.count; i++)
++			write_reloc(relocs16.offset[i], stdout);
++
++		write_reloc(relocs32.count, stdout);
++		for (i = 0; i < relocs32.count; i++)
++			write_reloc(relocs32.offset[i], stdout);
++	} else {
++#ifdef CONFIG_X86_64
++		/* Print a stop */
++		write_reloc(0, stdout);
++
++		/* Now print each relocation */
++		for (i = 0; i < relocs64.count; i++)
++			write_reloc(relocs64.offset[i], stdout);
++#endif
++		/* Print a stop */
++		write_reloc(0, stdout);
++
++		/* Now print each relocation */
++		for (i = 0; i < relocs32.count; i++)
++			write_reloc(relocs32.offset[i], stdout);
+ 	}
++
+ }
+ 
+ static void usage(void)
+@@ -812,6 +1120,9 @@ int main(int argc, char **argv)
+ 	read_strtabs(fp);
+ 	read_symtabs(fp);
+ 	read_relocs(fp);
++#ifdef CONFIG_X86_64
++	percpu_init();
++#endif
+ 	if (show_absolute_syms) {
+ 		print_absolute_symbols();
+ 		goto out;
+diff --git a/arch/x86/tools/relocs_32.c b/arch/x86/tools/relocs_32.c
+new file mode 100644
+index 0000000..8cf7e94
+--- /dev/null
++++ b/arch/x86/tools/relocs_32.c
+@@ -0,0 +1 @@
++#include "relocs.c"
+diff --git a/arch/x86/tools/relocs_64.c b/arch/x86/tools/relocs_64.c
+new file mode 100644
+index 0000000..419b05a
+--- /dev/null
++++ b/arch/x86/tools/relocs_64.c
+@@ -0,0 +1,2 @@
++#define CONFIG_X86_64 1
++#include "relocs.c"
 -- 
 1.7.9.5
