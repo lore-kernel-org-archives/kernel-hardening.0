@@ -1,48 +1,35 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 5 Apr 2013 10:04:18 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20130405080418.GG26889@gmail.com>
-References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
- <1365106055-22939-4-git-send-email-keescook@chromium.org>
- <515DE0C9.3030709@zytor.com>
+Date: Fri, 5 Apr 2013 14:12:20 +0200 (CEST)
+From: Jiri Kosina <jkosina@suse.cz>
+In-Reply-To: <1365106055-22939-4-git-send-email-keescook@chromium.org>
+Message-ID: <alpine.LRH.2.00.1304051408540.23195@twin.jikos.cz>
+References: <1365106055-22939-1-git-send-email-keescook@chromium.org> <1365106055-22939-4-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <515DE0C9.3030709@zytor.com>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
 Subject: [kernel-hardening] Re: [PATCH 3/3] x86: kernel base offset ASLR
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Thu, 4 Apr 2013, Kees Cook wrote:
 
-* H. Peter Anvin <hpa@zytor.com> wrote:
-
-> I have to admit to being somewhat skeptical toward KASLR with only 8 
-> bits of randomness.  There are at least two potential ways of 
-> dramatically increasing the available randomness:
+> This creates CONFIG_RANDOMIZE_BASE, so that the base offset of the kernel
+> can be randomized at boot.
 > 
-> 1. actually compose the kernel of multiple independently relocatable
->    pieces (maybe chunk it on 2M boundaries or something.)
-> 
-> 2. compile the kernel as one of the memory models which can be executed
->    anywhere in the 64-bit address space.  The cost of this would have
->    to be quantified, of course.
-> 
-> The latter is particularly something that should be considered for the 
-> LPF JIT, to defend against JIT spray attacks.
+> This makes kernel vulnerabilities harder to reliably exploit, especially
+> from remote attacks and local processes in seccomp containers. Keeping
+> the location of kernel addresses secret becomes very important when using
+> this feature, so enabling kptr_restrict and dmesg_restrict is recommended.
 
-The cost of 64-bit RIPs is probably measurable both in cache footprint and 
-in execution speed.
+If we are going to take the KASLR path at all, and assuming this is done 
+purely because of security, I'd suggest not only vaguely mentioning this 
+requirement in the changelog (and calling it recommendation), but make it 
+a hard prerequisity.
 
-Doing that might make sense - but unless it's surprisingly cheap to do it, 
-at least from a distro perspective, randomizing the kernel base using the 
-existing compact address space would probably be the preferred option - 
-even if a bigger build model was available.
+Without kernel addresses being invisible to userspace, this feature is 
+completely useless, but might provide very false sense of security if just 
+blindly enabled by random Joe Bofh.
 
-Random runtime shuffling of the kernel image - is that possible with 
-existing toolchains?
-
-Thanks,
-
-	Ingo
+-- 
+Jiri Kosina
+SUSE Labs
