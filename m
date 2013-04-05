@@ -1,68 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <515E2425.6080601@zytor.com>
+Date: Thu, 04 Apr 2013 18:08:53 -0700
+From: "H. Peter Anvin" <hpa@zytor.com>
 MIME-Version: 1.0
-In-Reply-To: <c3d1db06-5196-4828-b0a4-7f6517c7b68a@email.android.com>
-References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
-	<1365106055-22939-4-git-send-email-keescook@chromium.org>
-	<515DDEC0.9000109@zytor.com>
-	<CAGXu5j+FqZpXURougB_Sd4zmF3bsqsT=m-om5eEM5WCsRX014g@mail.gmail.com>
-	<c3d1db06-5196-4828-b0a4-7f6517c7b68a@email.android.com>
-Date: Thu, 4 Apr 2013 14:01:39 -0700
-Message-ID: <CAG7+5M0SDj0r+HfrZp99FvmDa+LJMJmyDv2Eju5LSfe2TsCXbg@mail.gmail.com>
-From: Eric Northup <digitaleric@google.com>
-Content-Type: text/plain; charset=ISO-8859-1
+References: <1365106055-22939-1-git-send-email-keescook@chromium.org> <1365106055-22939-4-git-send-email-keescook@chromium.org> <515DE0C9.3030709@zytor.com> <CAG7+5M2qKL4PhHhfw-mnw9cBnWnq-2PjVUrqJX03Ma8yR=xYRA@mail.gmail.com>
+In-Reply-To: <CAG7+5M2qKL4PhHhfw-mnw9cBnWnq-2PjVUrqJX03Ma8yR=xYRA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: [PATCH 3/3] x86: kernel base offset ASLR
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "x86@kernel.org" <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
+To: Eric Northup <digitaleric@google.com>
+Cc: Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 4, 2013 at 1:58 PM, H. Peter Anvin <hpa@zytor.com> wrote:
-> It seems to me that you are assuming that the attacker is targeting a specific system, but a bot might as well target 256 different systems and see what sticks...
+On 04/04/2013 01:47 PM, Eric Northup wrote:
+>>
+>> 1. actually compose the kernel of multiple independently relocatable
+>>    pieces (maybe chunk it on 2M boundaries or something.)
+> 
+> Without increasing the entropy bits, does this actually increase the #
+> of tries necessary for an attacker to guess correctly?  It
+> dramatically increases the number of possible configurations of kernel
+> address space, but for any given piece there are only 256 possible
+> locations.
+> 
 
-The alarm signal from the ones that don't stick is, in my opinion, the
-primary benefit from this work -- it makes certain classes of attack
-much less economical.  A crash dump from a panic'd machine may include
-enough information to diagnose the exploited vulnerability - and once
-diagnosed and fixed, knowledge about the vulnerability is much less
-valuable.
+The 2M chunk was a red herring; one would of course effectively pack
+blocks together, probably packed back to back, in random order.
 
->
-> Kees Cook <keescook@chromium.org> wrote:
->
->>On Thu, Apr 4, 2013 at 1:12 PM, H. Peter Anvin <hpa@zytor.com> wrote:
->>> On 04/04/2013 01:07 PM, Kees Cook wrote:
->>>> However, the benefits of
->>>> this feature in certain environments exceed the perceived
->>weaknesses[2].
->>>
->>> Could you clarify?
->>
->>I would summarize the discussion of KASLR weaknesses into to two
->>general observations:
->>1- it depends on address location secrecy and leaks are common/easy.
->>2- it has low entropy so attack success rates may be high.
->>
->>For "1", as Julien mentions, remote attacks and attacks from a
->>significantly contained process (via seccomp-bpf) minimizes the leak
->>exposure. For local attacks, cache timing attacks and other things
->>also exist, but the ASLR can be improved to defend against that too.
->>So, KASLR is useful on systems that are virtualization hosts,
->>providing remote services, or running locally confined processes.
->>
->>For "2", I think that the comparison to userspace ASLR entropy isn't
->>as direct. For userspace, most systems don't tend to have any kind of
->>watchdog on segfaulting processes, so a remote attacker could just
->>keep trying an attack until they got lucky, in which case low entropy
->>is a serious problem. In the case of KASLR, a single attack failure
->>means the system goes down, which makes mounting an attack much more
->>difficult. I think 8 bits is fine to start with, and I think start
->>with a base offset ASLR is a good first step. We can improve things in
->>the future.
->>
->>-Kees
->>
->>--
->>Kees Cook
->>Chrome OS Security
->
-> --
-> Sent from my mobile phone. Please excuse brevity and lack of formatting.
+>> 2. compile the kernel as one of the memory models which can be executed
+>>    anywhere in the 64-bit address space.  The cost of this would have
+>>    to be quantified, of course.
+> 
+> I attempted to do this, but was limited by my knowledge of the
+> toolchain.  I would welcome help or suggestions!
+
+Start by looking at the ABI document.  I suspect what we need is some
+variant of the small PIC model.
+
+	-hpa
+
+
+-- 
+H. Peter Anvin, Intel Open Source Technology Center
+I work for Intel.  I don't speak on their behalf.
