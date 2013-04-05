@@ -1,35 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 5 Apr 2013 14:12:20 +0200 (CEST)
-From: Jiri Kosina <jkosina@suse.cz>
-In-Reply-To: <1365106055-22939-4-git-send-email-keescook@chromium.org>
-Message-ID: <alpine.LRH.2.00.1304051408540.23195@twin.jikos.cz>
-References: <1365106055-22939-1-git-send-email-keescook@chromium.org> <1365106055-22939-4-git-send-email-keescook@chromium.org>
+Date: Fri, 5 Apr 2013 16:49:54 +0200
+From: Borislav Petkov <bp@alien8.de>
+Message-ID: <20130405144954.GC29290@pd.tnic>
+References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
+ <1365106055-22939-4-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1365106055-22939-4-git-send-email-keescook@chromium.org>
 Subject: [kernel-hardening] Re: [PATCH 3/3] x86: kernel base offset ASLR
 To: Kees Cook <keescook@chromium.org>
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 4 Apr 2013, Kees Cook wrote:
-
+On Thu, Apr 04, 2013 at 01:07:35PM -0700, Kees Cook wrote:
 > This creates CONFIG_RANDOMIZE_BASE, so that the base offset of the kernel
 > can be randomized at boot.
-> 
-> This makes kernel vulnerabilities harder to reliably exploit, especially
-> from remote attacks and local processes in seccomp containers. Keeping
-> the location of kernel addresses secret becomes very important when using
-> this feature, so enabling kptr_restrict and dmesg_restrict is recommended.
 
-If we are going to take the KASLR path at all, and assuming this is done 
-purely because of security, I'd suggest not only vaguely mentioning this 
-requirement in the changelog (and calling it recommendation), but make it 
-a hard prerequisity.
+Right,
 
-Without kernel addresses being invisible to userspace, this feature is 
-completely useless, but might provide very false sense of security if just 
-blindly enabled by random Joe Bofh.
+if I'm reading this whole deal correctly, I have an issue with this
+in the sense that if this thing is enabled by default and people are
+running stripped kernels, an oops which is being reported is worth sh*t
+since all the addresses there are random and one simply can't map them
+back to which functions the callstack frames are pointing to. Which will
+majorly hinder debuggability, IMHO...
+
+[ … ]
+
+> When built into the kernel, the "noaslr" kernel command line option
+> will disable the feature.
+
+... so the saner thing to do, IMHO, would be to flip the meaning of
+this option to "kaslr" or whatever and let people and distros enable
+randomization on kernels which are bug free and don't oops (good luck
+finding those :-)). Generally make the thing opt-in instead of opt-out.
+
+Thanks.
 
 -- 
-Jiri Kosina
-SUSE Labs
+Regards/Gruss,
+    Boris.
+
+Sent from a fat crate under my desk. Formatting is fine.
+--
