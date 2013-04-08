@@ -1,34 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 8 Apr 2013 14:13:36 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20130408121336.GE7513@gmail.com>
-References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
- <1365106055-22939-4-git-send-email-keescook@chromium.org>
- <20130405144954.GC29290@pd.tnic>
- <CAKyRK=iEXpq9KnG_VJMYW-tpBxU_2TGaO_hZRkNY=J+7SNoQkA@mail.gmail.com>
- <20130405204306.GA14092@pd.tnic>
+In-Reply-To: <20130408115823.GC7513@gmail.com>
+References: <1365106055-22939-1-git-send-email-keescook@chromium.org> <1365106055-22939-4-git-send-email-keescook@chromium.org> <515DE0C9.3030709@zytor.com> <20130405080418.GG26889@gmail.com> <515EEE25.1030402@zytor.com> <20130408115823.GC7513@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20130405204306.GA14092@pd.tnic>
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: 8bit
+From: "H. Peter Anvin" <hpa@zytor.com>
+Date: Mon, 08 Apr 2013 07:58:23 -0700
+Message-ID: <16dc4736-347a-4102-b21b-0e35e060108b@email.android.com>
 Subject: [kernel-hardening] Re: [PATCH 3/3] x86: kernel base offset ASLR
-To: Borislav Petkov <bp@alien8.de>, Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "x86@kernel.org" <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Will Drewry <wad@chromium.org>
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Not if we do it right, but there is a huge potential boot time penalty.
 
-* Borislav Petkov <bp@alien8.de> wrote:
+Ingo Molnar <mingo@kernel.org> wrote:
 
-> On Fri, Apr 05, 2013 at 01:19:39PM -0700, Julien Tinnes wrote:
-> > I think it'd be perfectly ok for OOPS to print out the kernel base.
-> 
-> Yeah, ok, this still would need some massaging of the oops output per
-> script, but it shouldn't be a big problem.
+>
+>* H. Peter Anvin <hpa@zytor.com> wrote:
+>
+>> On 04/05/2013 01:04 AM, Ingo Molnar wrote:
+>> > 
+>> > Random runtime shuffling of the kernel image - is that possible
+>with 
+>> > existing toolchains?
+>> > 
+>> 
+>> Yes... the question is how much work we'd be willing to go through to
+>make it 
+>> happen.
+>> 
+>> One approach: the kernel already contains a linker -- used for
+>modules -- and 
+>> the bulk of the kernel could actually be composed to a "pile of
+>modules" that 
+>> gets linked on boot.  This would provide very large amounts of
+>randomness.
+>
+>Is there no code generation / micro-performance disadvantage to that?
+>
+>Thanks,
+>
+>	Ingo
 
-Doesn't kallsyms decoding make it all useful in most cases?
-
-(I assume that this patch-set still keeps kallsyms working.)
-
-Thanks,
-
-	Ingo
+-- 
+Sent from my mobile phone. Please excuse brevity and lack of formatting.
