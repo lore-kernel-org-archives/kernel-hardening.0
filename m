@@ -1,115 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 8 Apr 2013 15:43:29 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20130408224328.GA17641@www.outflux.net>
+Message-ID: <516348F6.1080902@zytor.com>
+Date: Mon, 08 Apr 2013 15:47:18 -0700
+From: "H. Peter Anvin" <hpa@zytor.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] x86: make IDT read-only
-To: Ingo Molnar <mingo@redhat.com>
-Cc: linux-kernel@vger.kernel.org, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, Jeremy Fitzhardinge <jeremy@goop.org>, Kees Cook <keescook@chromium.org>, Marcelo Tosatti <mtosatti@redhat.com>, Alex Shi <alex.shi@intel.com>, Borislav Petkov <borislav.petkov@amd.com>, Alexander Duyck <alexander.h.duyck@intel.com>, Frederic Weisbecker <fweisbec@gmail.com>, Steven Rostedt <rostedt@goodmis.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, xen-devel@lists.xensource.com, virtualization@lists.linux-foundation.org, kernel-hardening@lists.openwall.com, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Eric Northup <digitaleric@google.com>
+References: <20130408224328.GA17641@www.outflux.net>
+In-Reply-To: <20130408224328.GA17641@www.outflux.net>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] x86: make IDT read-only
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@redhat.com>, linux-kernel@vger.kernel.org, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, Jeremy Fitzhardinge <jeremy@goop.org>, Marcelo Tosatti <mtosatti@redhat.com>, Alex Shi <alex.shi@intel.com>, Borislav Petkov <borislav.petkov@amd.com>, Alexander Duyck <alexander.h.duyck@intel.com>, Frederic Weisbecker <fweisbec@gmail.com>, Steven Rostedt <rostedt@goodmis.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, xen-devel@lists.xensource.com, virtualization@lists.linux-foundation.org, kernel-hardening@lists.openwall.com, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Eric Northup <digitaleric@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This makes the IDT unconditionally read-only. This primarily removes
-the IDT from being a target for arbitrary memory write attacks. It has
-an added benefit of also not leaking (via the "sidt" instruction) the
-kernel base offset, if it has been relocated.
+On 04/08/2013 03:43 PM, Kees Cook wrote:
+> This makes the IDT unconditionally read-only. This primarily removes
+> the IDT from being a target for arbitrary memory write attacks. It has
+> an added benefit of also not leaking (via the "sidt" instruction) the
+> kernel base offset, if it has been relocated.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> Cc: Eric Northup <digitaleric@google.com>
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Cc: Eric Northup <digitaleric@google.com>
----
- arch/x86/include/asm/fixmap.h |    4 +---
- arch/x86/kernel/cpu/intel.c   |   15 ---------------
- arch/x86/kernel/traps.c       |    8 ++++++++
- arch/x86/xen/mmu.c            |    4 +---
- 4 files changed, 10 insertions(+), 21 deletions(-)
+This isn't quite what this patch does, though, right?  There is still a
+writable IDT mapping at all times, which is different from a true
+readonly IDT, no?
 
-diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixmap.h
-index a09c285..51b9e32 100644
---- a/arch/x86/include/asm/fixmap.h
-+++ b/arch/x86/include/asm/fixmap.h
-@@ -104,9 +104,7 @@ enum fixed_addresses {
- 	FIX_LI_PCIA,	/* Lithium PCI Bridge A */
- 	FIX_LI_PCIB,	/* Lithium PCI Bridge B */
- #endif
--#ifdef CONFIG_X86_F00F_BUG
--	FIX_F00F_IDT,	/* Virtual mapping for IDT */
--#endif
-+	FIX_RO_IDT,	/* Virtual mapping for read-only IDT */
- #ifdef CONFIG_X86_CYCLONE_TIMER
- 	FIX_CYCLONE_TIMER, /*cyclone timer register*/
- #endif
-diff --git a/arch/x86/kernel/cpu/intel.c b/arch/x86/kernel/cpu/intel.c
-index 1905ce9..76148a3 100644
---- a/arch/x86/kernel/cpu/intel.c
-+++ b/arch/x86/kernel/cpu/intel.c
-@@ -164,20 +164,6 @@ int __cpuinit ppro_with_ram_bug(void)
- 	return 0;
- }
- 
--#ifdef CONFIG_X86_F00F_BUG
--static void __cpuinit trap_init_f00f_bug(void)
--{
--	__set_fixmap(FIX_F00F_IDT, __pa_symbol(idt_table), PAGE_KERNEL_RO);
--
--	/*
--	 * Update the IDT descriptor and reload the IDT so that
--	 * it uses the read-only mapped virtual address.
--	 */
--	idt_descr.address = fix_to_virt(FIX_F00F_IDT);
--	load_idt(&idt_descr);
--}
--#endif
--
- static void __cpuinit intel_smp_check(struct cpuinfo_x86 *c)
- {
- 	/* calling is from identify_secondary_cpu() ? */
-@@ -215,7 +201,6 @@ static void __cpuinit intel_workarounds(struct cpuinfo_x86 *c)
- 
- 		c->f00f_bug = 1;
- 		if (!f00f_workaround_enabled) {
--			trap_init_f00f_bug();
- 			printk(KERN_NOTICE "Intel Pentium with F0 0F bug - workaround enabled.\n");
- 			f00f_workaround_enabled = 1;
- 		}
-diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
-index 68bda7a..a2a9b78 100644
---- a/arch/x86/kernel/traps.c
-+++ b/arch/x86/kernel/traps.c
-@@ -753,6 +753,14 @@ void __init trap_init(void)
- #endif
- 
- 	/*
-+	 * Set the IDT descriptor to a fixed read-only location, so that the
-+	 * "sidt" instruction will not leak the location of the kernel, and
-+	 * to defend the IDT against arbitrary memory write vulnerabilities.
-+	 * It will be reloaded in cpu_init() */
-+	__set_fixmap(FIX_RO_IDT, __pa_symbol(idt_table), PAGE_KERNEL_RO);
-+	idt_descr.address = fix_to_virt(FIX_RO_IDT);
-+
-+	/*
- 	 * Should be a barrier for any external CPU state:
- 	 */
- 	cpu_init();
-diff --git a/arch/x86/xen/mmu.c b/arch/x86/xen/mmu.c
-index 6afbb2c..8bc4dec 100644
---- a/arch/x86/xen/mmu.c
-+++ b/arch/x86/xen/mmu.c
-@@ -2039,9 +2039,7 @@ static void xen_set_fixmap(unsigned idx, phys_addr_t phys, pgprot_t prot)
- 
- 	switch (idx) {
- 	case FIX_BTMAP_END ... FIX_BTMAP_BEGIN:
--#ifdef CONFIG_X86_F00F_BUG
--	case FIX_F00F_IDT:
--#endif
-+	case FIX_RO_IDT:
- #ifdef CONFIG_X86_32
- 	case FIX_WP_TEST:
- 	case FIX_VDSO:
--- 
-1.7.9.5
-
-
--- 
-Kees Cook
-Chrome OS Security
+	-hpa
