@@ -4,8 +4,8 @@ Sender: keescook@google.com
 In-Reply-To: <alpine.LFD.2.03.1304082350540.25182@linux-mips.org>
 References: <20130408224328.GA17641@www.outflux.net>
 	<alpine.LFD.2.03.1304082350540.25182@linux-mips.org>
-Date: Mon, 8 Apr 2013 16:00:04 -0700
-Message-ID: <CAGXu5jJCZh6JeFBOH5nn0uqWOic9BCBnJ5CEhAEkvesZ7BguqA@mail.gmail.com>
+Date: Mon, 8 Apr 2013 16:05:54 -0700
+Message-ID: <CAGXu5j+fWeinnBr3JLkLt-M4N8uSXzP9MiRF20h37_WABQ1Rrw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
 Subject: [kernel-hardening] Re: [PATCH] x86: make IDT read-only
@@ -40,8 +40,9 @@ On Mon, Apr 8, 2013 at 3:56 PM, Maciej W. Rozycki <macro@linux-mips.org> wrote:
 > instead and the name of the variable adjusted to make sense with the new
 > meaning -- up to you to decide).
 
-Ah, yes, I misread this and didn't see that the ifdef ended 2 lines
-further down. :) I'll just remove the entire section of code.
+Actually, I take it back. The other portion of the workaround is still
+active (in mm/fault.c), and this chunk announces it, so I'm going to
+leave it as-is.
 
 -Kees
 
