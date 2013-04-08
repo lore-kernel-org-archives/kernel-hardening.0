@@ -1,58 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 6 Apr 2013 12:10:37 +0200
-From: Borislav Petkov <bp@alien8.de>
-Message-ID: <20130406101037.GA3612@pd.tnic>
-References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
- <1365106055-22939-4-git-send-email-keescook@chromium.org>
- <20130405144954.GC29290@pd.tnic>
- <CAKyRK=iEXpq9KnG_VJMYW-tpBxU_2TGaO_hZRkNY=J+7SNoQkA@mail.gmail.com>
- <20130405204306.GA14092@pd.tnic>
- <CAGXu5jJtBgUXwMm6D=JnUvP3kv6YN2MwaF81-2GC-d+pJJFy6w@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJtBgUXwMm6D=JnUvP3kv6YN2MwaF81-2GC-d+pJJFy6w@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 3/3] x86: kernel base offset ASLR
-To: Kees Cook <keescook@chromium.org>
-Cc: Julien Tinnes <jln@google.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "x86@kernel.org" <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Will Drewry <wad@chromium.org>
+In-Reply-To: <1365106055-22939-1-git-send-email-keescook@chromium.org>
+References: <1365106055-22939-1-git-send-email-keescook@chromium.org>
+Date: Mon, 8 Apr 2013 08:34:42 +0300
+Message-ID: <CAH6MLeMwHahSubCGc3DWdk7TRREzKWd=ecs_zhE38Wz6WvfEiw@mail.gmail.com>
+From: Hasinoliva MIARIMANJATO <hasinoliva@gmail.com>
+Content-Type: multipart/alternative; boundary=089e013c63c230712404d9d2cb35
+Subject: Re: [kernel-hardening] [PATCH 0/3] kernel ASLR
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 05, 2013 at 04:18:49PM -0700, Kees Cook wrote:
-> There is already a hook in the patch that prints the offset:
-> 
-> +dump_kernel_offset(struct notifier_block *self, unsigned long v, void *p)
-> +{
-> +       pr_emerg("Kernel Offset: 0x%lx\n",
-> +                (unsigned long)&_text - __START_KERNEL);
-> ...
-> +       atomic_notifier_chain_register(&panic_notifier_list,
-> +                                       &kernel_offset_notifier);
-> 
-> But of course, this can get improved.
+--089e013c63c230712404d9d2cb35
+Content-Type: text/plain; charset=ISO-8859-1
 
-Yeah, this should probably be added to dump_trace(), i.e. something
-which walks stack frames and dumps addresses. Because, in the panic
-notifier, you're missing all those WARN* callsites, for example.
+Hi i want to get so more information about pohmelfs ; i want to get
+pohmelfs server and pohmelfs client that i don't find it in the internet ,
+please help me
 
-Also, I wonder whether it wouldn't be too hard to go even a step further
-and compute the original, linker vmlinux addresses from the offsets
-and dump a stack trace which looks exactly the same as if KASLR is
-off. It'll probably need something to say KASLR was on when the trace
-happened, though:
+thank you.
 
-[  790.253365] Call Trace (KASLR):
-[  790.254121]  [<ffffffff8110bc90>] ? __smpboot_create_thread+0x180/0x180
-[  790.255428]  [<ffffffff810ff1df>] kthread+0xef/0x100
-...
 
-so that people who stare at this, know.
+2013/4/4 Kees Cook <keescook@chromium.org>
 
-Because, in that case, you don't need both the panic notifier or the
-userspace script massaging stack trace output anymore.
+> Hello,
+>
+> This patch series implements per-boot kernel base offset ASLR. It is based
+> on work by Dan Rosenberg, Neill Clift, Michael Davidson, and myself. Since
+> Dan's original thread[1], this code has been improved to work on 64-bit,
+> among other things.
+>
+> This is presently in use at Google, and is being ported to Chrome
+> OS. It has several limitations currently, but I wanted to get the ball
+> rolling again on upstreaming this. More details are in the individual
+> patches. They are split into three pieces: the offset selection logic,
+> the 64-bit relocation logic, and finally putting the offset to use at
+> boot time.
+>
+> Thanks,
+>
+> -Kees
+>
+> [1] http://lkml.indiana.edu/hypermail/linux/kernel/1105.3/index.html#00520
+>
+>
 
--- 
-Regards/Gruss,
-    Boris.
+--089e013c63c230712404d9d2cb35
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
 
-Sent from a fat crate under my desk. Formatting is fine.
---
+<div dir=3D"ltr"><div>Hi i want to get so more information about pohmelfs ;=
+ i want to get
+ pohmelfs server and pohmelfs client that i don&#39;t find it in the=20
+internet , please help me <br>
+<br>
+</div>thank you.</div><div class=3D"gmail_extra"><br><br><div class=3D"gmai=
+l_quote">2013/4/4 Kees Cook <span dir=3D"ltr">&lt;<a href=3D"mailto:keescoo=
+k@chromium.org" target=3D"_blank">keescook@chromium.org</a>&gt;</span><br><=
+blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px=
+ #ccc solid;padding-left:1ex">
+Hello,<br>
+<br>
+This patch series implements per-boot kernel base offset ASLR. It is based<=
+br>
+on work by Dan Rosenberg, Neill Clift, Michael Davidson, and myself. Since<=
+br>
+Dan&#39;s original thread[1], this code has been improved to work on 64-bit=
+,<br>
+among other things.<br>
+<br>
+This is presently in use at Google, and is being ported to Chrome<br>
+OS. It has several limitations currently, but I wanted to get the ball<br>
+rolling again on upstreaming this. More details are in the individual<br>
+patches. They are split into three pieces: the offset selection logic,<br>
+the 64-bit relocation logic, and finally putting the offset to use at<br>
+boot time.<br>
+<br>
+Thanks,<br>
+<br>
+-Kees<br>
+<br>
+[1] <a href=3D"http://lkml.indiana.edu/hypermail/linux/kernel/1105.3/index.=
+html#00520" target=3D"_blank">http://lkml.indiana.edu/hypermail/linux/kerne=
+l/1105.3/index.html#00520</a><br>
+<br>
+</blockquote></div><br></div>
+
+--089e013c63c230712404d9d2cb35--
