@@ -1,47 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1365555234.25498.91.camel@gandalf.local.home>
-From: Steven Rostedt <rostedt@goodmis.org>
-Date: Tue, 09 Apr 2013 20:53:54 -0400
-In-Reply-To: <5164B5BD.5050702@zytor.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 10 Apr 2013 11:41:35 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20130410094135.GD24443@gmail.com>
 References: <20130408224328.GA17641@www.outflux.net>
-	 <51634935.9010905@zytor.com> <alpine.LFD.2.02.1304091122490.21884@ionos>
-	 <CAGXu5jKo=11RrsvctcZjP6dusAj659O_GsaA2J2qFq-6mOeRwQ@mail.gmail.com>
-	 <51645D6F.7070705@zytor.com>
-	 <CAGXu5jKkHKw8efdPOmt-Zi99m+uMKVGKpc_DC72_ztwxnRbRRQ@mail.gmail.com>
-	 <51646054.3090509@zytor.com>
-	 <CAGXu5jJNG4o+_-kk=A2AfSRwyQE0pgaQh7YpSjnD_fB-s7U+wA@mail.gmail.com>
-	 <CAG7+5M3==rndLLak9cZBKKdgQMmJMpSP_jpQd8HOVGp6LhUAgw@mail.gmail.com>
-	 <5164B5BD.5050702@zytor.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: Readonly GDT
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Eric Northup <digitaleric@google.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, Jeremy Fitzhardinge <jeremy@goop.org>, Marcelo Tosatti <mtosatti@redhat.com>, Alex Shi <alex.shi@intel.com>, Borislav Petkov <borislav.petkov@amd.com>, Alexander Duyck <alexander.h.duyck@intel.com>, Frederic Weisbecker <fweisbec@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, "xen-devel@lists.xensource.com" <xen-devel@lists.xensource.com>, "virtualization@lists.linux-foundation.org" <virtualization@lists.linux-foundation.org>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
+ <51634935.9010905@zytor.com>
+ <alpine.LFD.2.02.1304091122490.21884@ionos>
+ <CAGXu5jKo=11RrsvctcZjP6dusAj659O_GsaA2J2qFq-6mOeRwQ@mail.gmail.com>
+ <51645D6F.7070705@zytor.com>
+ <CAGXu5jKkHKw8efdPOmt-Zi99m+uMKVGKpc_DC72_ztwxnRbRRQ@mail.gmail.com>
+ <51646054.3090509@zytor.com>
+ <CAGXu5jJNG4o+_-kk=A2AfSRwyQE0pgaQh7YpSjnD_fB-s7U+wA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJNG4o+_-kk=A2AfSRwyQE0pgaQh7YpSjnD_fB-s7U+wA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH] x86: make IDT read-only
+To: Kees Cook <keescook@chromium.org>
+Cc: "H. Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>, Jeremy Fitzhardinge <jeremy@goop.org>, Marcelo Tosatti <mtosatti@redhat.com>, Alex Shi <alex.shi@intel.com>, Borislav Petkov <borislav.petkov@amd.com>, Alexander Duyck <alexander.h.duyck@intel.com>, Frederic Weisbecker <fweisbec@gmail.com>, Steven Rostedt <rostedt@goodmis.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, "xen-devel@lists.xensource.com" <xen-devel@lists.xensource.com>, "virtualization@lists.linux-foundation.org" <virtualization@lists.linux-foundation.org>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Eric Northup <digitaleric@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2013-04-09 at 17:43 -0700, H. Peter Anvin wrote:
-> OK, thinking about the GDT here.
+
+* Kees Cook <keescook@chromium.org> wrote:
+
+> > That's the area in which we just map 1:1 to memory.  Anything allocated with 
+> > e.g. kmalloc() ends up with those addresses.
 > 
-> The GDT is quite small -- 256 bytes on i386, 128 bytes on x86-64.  As
-> such, we probably don't want to allocate a full page to it for only
-> that.  This means that in order to create a readonly mapping we have to
-> pack GDTs from different CPUs together in the same pages, *or* we
-> tolerate that other things on the same page gets reflected in the same
-> mapping.
+> Ah-ha! Yes, I see now when comparing the debug/kernel_page_tables reports. It's 
+> just the High Kernel Mapping that we care about. Addresses outside that range 
+> are less of a leak. Excellent, then GDT may not be a problem. Whew.
 
-What about grouping via nodes?
+It's still an infoleak to worry about: any function pointers nearby matter, and 
+the x86 GDT is obviously full of useful and highly privilege-relevant function 
+pointers ...
 
-> 
-> However, the packing solution has the advantage of reducing address
-> space consumption which matters on 32 bits: even on i386 we can easily
-> burn a megabyte of address space for 4096 processors, but burning 16
-> megabytes starts to hurt.
+I have no objections against read-only mapping the GDT as well.
 
-Having 4096 32 bit processors, you deserve what you get. ;-)
+Thanks,
 
--- Steve
-
-> 
-> It would be important to measure the performance impact on task switch,
-> though.
+	Ingo
