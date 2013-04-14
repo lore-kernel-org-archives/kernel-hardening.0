@@ -1,235 +1,206 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: yhlu.kernel@gmail.com
-In-Reply-To: <1365797627-20874-6-git-send-email-keescook@chromium.org>
+In-Reply-To: <1365797627-20874-7-git-send-email-keescook@chromium.org>
 References: <1365797627-20874-1-git-send-email-keescook@chromium.org>
-	<1365797627-20874-6-git-send-email-keescook@chromium.org>
-Date: Sat, 13 Apr 2013 17:11:56 -0700
-Message-ID: <CAE9FiQWXH42Q4Ckhs3sx82MHGNNb_N3GpmWWp3UCgJCMbf7ZMg@mail.gmail.com>
+	<1365797627-20874-7-git-send-email-keescook@chromium.org>
+Date: Sat, 13 Apr 2013 17:37:20 -0700
+Message-ID: <CAE9FiQXGjJCDAo41jxpy9bZJ2svKy8YY-zX7O4YDZPhKo7M43g@mail.gmail.com>
 From: Yinghai Lu <yinghai@kernel.org>
 Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH 5/6] x86: kaslr: routines to choose random base offset
+Subject: [kernel-hardening] Re: [PATCH 6/6] x86: kaslr: relocate base offset at boot
 To: Kees Cook <keescook@chromium.org>
 Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Fri, Apr 12, 2013 at 1:13 PM, Kees Cook <keescook@chromium.org> wrote:
-> This provides routines for selecting a randomized kernel base offset,
-> bounded by the e820 entries. It tries to use RDRAND and falls back to
-> RDTSC. If "noaslr" is on the kernel command line, no offset will be used.
+[...]
+> diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
+> index c1d383d..fc37910 100644
+> --- a/arch/x86/boot/compressed/head_64.S
+> +++ b/arch/x86/boot/compressed/head_64.S
+> @@ -59,7 +59,7 @@ ENTRY(startup_32)
+>  1:
 >
-> Heavily based on work by Dan Rosenberg and Neill Clift.
+>  /*
+> - * Calculate the delta between where we were compiled to run
+> + * Calculate the delta between where we were linked to load
+>   * at and where we were actually loaded at.  This can only be done
+>   * with a short local call on x86.  Nothing  else will tell us what
+>   * address we are running at.  The reserved chunk of the real-mode
+> @@ -78,10 +78,10 @@ ENTRY(startup_32)
 >
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Cc: Eric Northup <digitaleric@google.com>
-> ---
->  arch/x86/boot/compressed/Makefile |    2 +-
->  arch/x86/boot/compressed/aslr.S   |  228 +++++++++++++++++++++++++++++++++++++
->  2 files changed, 229 insertions(+), 1 deletion(-)
->  create mode 100644 arch/x86/boot/compressed/aslr.S
+>         call    verify_cpu
+>         testl   %eax, %eax
+> -       jnz     no_longmode
+> +       jnz     hang
 >
-> diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-> index 0dac175..feaf203 100644
-> --- a/arch/x86/boot/compressed/Makefile
-> +++ b/arch/x86/boot/compressed/Makefile
-> @@ -26,7 +26,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+>  /*
+> - * Compute the delta between where we were compiled to run at
+> + * Compute the delta between where we were linked to load at
+>   * and where the code will actually run at.
+>   *
+>   * %ebp contains the address we are loaded at by the boot loader and %ebx
+> @@ -90,15 +90,32 @@ ENTRY(startup_32)
+>   */
 >
->  VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
->         $(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
-> -       $(obj)/piggy.o
-> +       $(obj)/piggy.o $(obj)/aslr.o
->
->  $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
->
-> diff --git a/arch/x86/boot/compressed/aslr.S b/arch/x86/boot/compressed/aslr.S
-> new file mode 100644
-> index 0000000..37cdef4
-> --- /dev/null
-> +++ b/arch/x86/boot/compressed/aslr.S
-> @@ -0,0 +1,228 @@
-> +/*
-> + *  arch/x86/boot/compressed/aslr.S
-> + *
-> + * Support routine for Kernel Address Space Layout Randomization used by both
-> + * the 32 and 64 bit boot code.
-> + *
-> + */
-> +       .text
-> +
-> +#include <asm/boot.h>
-> +#include <asm/asm-offsets.h>
-> +#include <asm/cpufeature.h>
-> +#include <asm/processor-flags.h>
-> +#include <asm/e820.h>
+>  #ifdef CONFIG_RELOCATABLE
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +       call    select_aslr_address /* Select ASLR offset */
+> +       movl    %eax, %ebx
+> +       /* LOAD_PHYSICAL_ADDR is the minimum safe address we can
+> +        * decompress at */
+> +       cmpl    $LOAD_PHYSICAL_ADDR, %ebx
+> +       jae     1f
+> +       movl    $LOAD_PHYSICAL_ADDR, %ebx
+> +#else /* CONFIG_RANDOMIZE_BASE */
+>         movl    %ebp, %ebx
+>         movl    BP_kernel_alignment(%esi), %eax
+>         decl    %eax
+>         addl    %eax, %ebx
+>         notl    %eax
+>         andl    %eax, %ebx
+> -#else
+> +#endif /* CONFIG_RANDOMIZE_BASE */
 > +
 > +#ifdef CONFIG_RANDOMIZE_BASE
-> +
-> +       .globl  select_aslr_address
-> +       .code32
-> +
-> +/*
-> + * Get the physical memory limit for the run from the physical load position of
-> + * the kernel. The kernel loads at LOAD_PHYSICAL_ADDR and we need to know how
-> + * much physical memory is available for use after that point to make sure the
-> + * relocated kernel will fit. Returns the limit in eax.
-> + */
-> +get_physical_run_end:
-> +       pushl   %edi
-> +       pushl   %esi
-> +       pushl   %ebx
-> +       pushl   %edx
-> +       pushl   %ecx
-> +       movzbl  BP_e820_entries(%esi), %edi
-> +       leal    BP_e820_map(%esi), %esi
-> +       testl   %edi, %edi
-> +       jz      5f
-> +1:     cmpl    $E820_RAM, E820_type(%esi)
-> +       jnz     4f
-> +       movl    E820_addr(%esi), %eax
-> +       movl    E820_addr+4(%esi), %edx
-> +       testl   %edx, %edx /* Start address is too big for 32 bit */
-> +       jnz     4f
-> +       cmpl    $LOAD_PHYSICAL_ADDR, %eax
-> +       ja      4f
-> +       movl    E820_size(%esi), %ecx
-> +       movl    E820_size+4(%esi), %ebx
-> +       addl    %eax, %ecx
-> +       adcl    %edx, %ebx
-> +       jz      2f /* end address not beyond 32bit*/
-> +/* For a large run set the limit as 2^32-1 */
-> +       xorl    %ecx, %ecx
-> +       decl    %ecx
-> +       jmp     3f
-> +2:     cmpl    $LOAD_PHYSICAL_ADDR, %ecx
-> +       jb      4f
-> +3:
-> +       movl    %ecx, %eax
-> +       jmp     6f
-> +
-> +4:     addl    $E820_entry_size, %esi
-> +       decl    %edi
-> +       jnz     1b
-> +5:     xorl    %eax, %eax /* Fail */
-> +6:     popl    %ecx
-> +       popl    %edx
-> +       popl    %ebx
-> +       popl    %esi
-> +       popl    %edi
-> +       ret
-> +
-> +/*
-> + * Get a random value to be used for the ASLR kernel offset.
-> + * Returns the value in eax.
-> + */
-> +get_aslr_offset:
-> +       pushl   %ebx
-> +       pushl   %edx
-> +       pushl   %ecx
-> +       call    find_cmdline_option
-> +       testl   %eax, %eax
-> +       jne     4f
-> +       /* Standard check for cpuid */
-> +       pushfl  /* Push original flags */
-> +       pushfl
-> +       popl    %eax
-> +       movl    %eax, %ebx
-> +       xorl    $X86_EFLAGS_ID, %eax
-> +       pushl   %eax
-> +       popfl
-> +       pushfl
-> +       popl    %eax
-> +       popfl   /* Pop original flags */
-> +       cmpl    %eax, %ebx
-> +       /* Say zero offset if we can't change the flag */
-> +       movl    $0, %eax
-> +       je      4f
-> +
-> +       /* Check for cpuid 1 */
-> +       cpuid
-> +       cmpl    $0x1, %eax
-> +       jb      4f
-> +
-> +       movl    $0x1, %eax
-> +       cpuid
-> +       xor     %eax, %eax
-> +
-> +       /* RDRAND is bit 30 */
-> +       btl     $(X86_FEATURE_RDRAND & 31), %ecx
-> +       jc      1f
-> +
-> +       /* RDTSC is bit 4 */
-> +       btl     $(X86_FEATURE_TSC & 31), %edx
-> +       jc      3f
-> +
-> +       /* Nothing is supported */
-> +       jmp     4f
-> +1:
-> +       /*
-> +        * RDRAND sets carry bit on success, otherwise we should try
-> +        * again up to 16 times.
-> +        */
-> +       movl    $0x10, %ecx
-> +2:
-> +       /* rdrand %eax */
-> +       .byte   0x0f, 0xc7, 0xf0
-> +       jc      4f
-> +       loop    2b
-> +
-> +       /* Fall through: if RDRAND is supported but fails, use RDTSC,
-> +        * which is guaranteed to be supported.
-> +        */
-> +3:
-> +       rdtsc
-> +       /*
-> +        * Since this is time related get some of the least significant bits
-> +        * past the alignment mask
-> +       */
-> +       shll    $0x0c, %eax
-> +       /* Fix the maximal offset allowed */
-> +4:     andl    $CONFIG_RANDOMIZE_BASE_MAX_OFFSET-1, %eax
-> +       popl    %ecx
-> +       popl    %edx
-> +       popl    %ebx
-> +       ret
-> +
-> +/*
-> + * Select the ASLR address to use. We can get called once either in 32
-> + * or 64 bit mode. The latter if we have a 64 bit loader.
-> + * Uses ebp as the input base and returns the result in eax.
-> + */
-> +select_aslr_address:
-> +       pushl   %edx
-> +       pushl   %ebx
-> +       pushl   %ecx
-> +       pushl   %edi
-> +       call    get_aslr_offset
-> +       pushl   %eax
-> +       call    get_physical_run_end
-> +       movl    %eax, %edx
-> +       popl    %eax
-> +1:     movl    %ebp, %ebx
-> +       addl    %eax, %ebx
-> +       movl    BP_kernel_alignment(%esi), %edi
-> +       decl    %edi
-> +       addl    %edi, %ebx
-> +       notl    %edi
-> +       andl    %edi, %ebx
-> +       /* Make sure we don't copy beyond run */
-> +       leal    boot_stack_end(%ebx), %ecx
-> +       leal    z_extract_offset(%ecx), %ecx
-> +       cmpl    %edx, %ecx
-> +       jb      2f
-> +       shrl    $1, %eax /* Shink offset */
-> +       jne     1b /* Move on if offset zero */
-> +       mov     %ebp, %ebx
-> +2:     movl    %ebx, %eax
-> +       popl    %edi
-> +       popl    %ecx
-> +       popl    %ebx
-> +       popl    %edx
-> +       ret
+> +1:     movl    %ebx, %eax
+> +       subl    $LOAD_PHYSICAL_ADDR, %eax
+> +        movl   %eax, aslr_offset(%ebp)
+> +       incl    aslr_in_32bit(%ebp) /* say 32 bit code ran */
+> +#endif /* CONFIG_RANDOMIZE_BASE */
+> +#else /* CONFIG_RELOCATABLE */
+>         movl    $LOAD_PHYSICAL_ADDR, %ebx
+> -#endif
+> +#endif /* CONFIG_RELOCATABLE */
+>
+>         /* Target address to relocate to for decompression */
+>         addl    $z_extract_offset, %ebx
+> @@ -266,14 +283,30 @@ preferred_addr:
+>         /* Start with the delta to where the kernel will run at. */
+>  #ifdef CONFIG_RELOCATABLE
+>         leaq    startup_32(%rip) /* - $startup_32 */, %rbp
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +       leaq    boot_stack_end(%rip), %rsp
+> +       testl   $1, aslr_in_32bit(%rip)
+> +       jne     1f
+> +       call    select_aslr_address
+> +       movq    %rax, %rbp
 
-So the code could run when it is 64bit and bzImage64 is loaded above 4G?
+select_aslr_address only play %ebp, so you assume bzImage is loaded under 4G?
+
+can you just run slect_aslr_address in 64bit only?
+
+> +       jmp     2f
+> +1:     movl    aslr_offset(%rip), %eax
+> +       addq    %rax, %rbp
+> +       /* LOAD_PHYSICAL_ADDR is the minimum safe address we can
+> +        * decompress at. */
+> +       cmpq    $LOAD_PHYSICAL_ADDR, %rbp
+> +       jae     2f
+> +       movq    $LOAD_PHYSICAL_ADDR, %rbp
+
+should use old value before select_alsr_addr?
+
+> +2:
+> +#endif /* CONFIG_RANDOMIZE_BASE */
+>         movl    BP_kernel_alignment(%rsi), %eax
+>         decl    %eax
+>         addq    %rax, %rbp
+>         notq    %rax
+>         andq    %rax, %rbp
+> -#else
+> +#else /* CONFIG_RELOCATABLE */
+>         movq    $LOAD_PHYSICAL_ADDR, %rbp
+> -#endif
+> +#endif /* CONFIG_RELOCATABLE */
+>
+>         /* Target address to relocate to for decompression */
+>         leaq    z_extract_offset(%rbp), %rbx
+> @@ -343,13 +376,85 @@ relocated:
+>         call    decompress_kernel
+>         popq    %rsi
+>
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +/*
+> + * Find the address of the relocations.
+> + */
+> +       leaq    z_output_len(%rbp), %rdi
+> +
+> +/*
+> + * Calculate the delta between where vmlinux was linked to load
+> + * and where it was actually loaded.
+> + */
+> +       movq    %rbp, %rbx
+> +       subq    $LOAD_PHYSICAL_ADDR, %rbx
+> +       je      3f      /* Nothing to be done if loaded at linked addr. */
+> +/*
+> + * The kernel contains a table of relocation addresses. Those addresses
+> + * have the final load address of the kernel in virtual memory.
+> + * We are currently working in the self map. So we need to create an
+> + * adjustment for kernel memory addresses to the self map. This will
+> + * involve subtracting out the base address of the kernel.
+> + */
+> +       movq    $-__START_KERNEL_map, %rdx /* Literal is too big for add etc */
+> +       addq    %rbx, %rdx
+> +/*
+> + * Process relocations. 32 bit relocations first then 64 bit after.
+> + * Two sets of binary relocations are added to the end of the
+> + * kernel before compression. Each relocation table entry is the kernel
+> + * address of the location which needs to be updated stored as a 32 bit
+> + * value which is sign extended to 64 bits.
+> + *
+> + * Format is:
+> + *
+> + * kernel bits...
+> + * 0 - zero terminator for 64 bit relocations
+> + * 64 bit relocation repeated
+> + * 0 - zero terminator for 32 bit relocations
+> + * 32 bit relocation repeated
+> + *
+> + * So we work backwards from the end of the decompressed image.
+> + */
+> +1:     subq    $4, %rdi
+> +       movslq  (%rdi), %rcx
+> +       testq   %rcx, %rcx
+> +       je      2f
+> +       addq    %rdx, %rcx
+> +/*
+> + * Relocation can't be before the image or
+> + * after the current position of the current relocation.
+> + * This is a cheap bounds check. It could be more exact
+> + * and limit to the end of the image prior to the relocations
+> + * but allowing relocations themselves to be fixed up will not
+> + * do any harm.
+> + */
+> +       cmpq    %rbp, %rcx
+> +       jb      hang
+> +       cmpq    %rdi, %rcx
+> +       jae     hang
+> +       addl    %ebx, (%rcx)    /* 32 bit relocation */
+> +       jmp     1b
+> +2:     subq    $4, %rdi
+> +       movslq  (%rdi), %rcx
+> +       testq   %rcx, %rcx
+> +       je      3f
+> +       addq    %rdx, %rcx
+> +       cmpq    %rbp, %rcx
+> +       jb      hang
+> +       cmpq    %rdi, %rcx
+> +       jae     hang
+> +       addq    %rbx, (%rcx)    /* 64 bit relocation */
+> +       jmp     2b
+> +3:
+> +#endif /* CONFIG_RANDOMIZE_BASE */
+
+so decompress code position is changed?
+
+You may push out bss and other data area of run-time kernel of limit
+that boot loader
+chose according to setup_header.init_size.
+aka that make those area overlap with ram hole or other area like
+boot command line or initrd....
+
 
 Thanks
 
