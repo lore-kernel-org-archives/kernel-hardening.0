@@ -1,45 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 22 Apr 2013 10:04:19 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20130422080419.GB7080@gmail.com>
-References: <20130419231638.GA20133@www.outflux.net>
- <20130421091342.GD31470@gmail.com>
- <CAGXu5jKFSmBTQ5Ay+MypkAStvDMrkWMNHCz4XGyy4bVjyVAnHg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKFSmBTQ5Ay+MypkAStvDMrkWMNHCz4XGyy4bVjyVAnHg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20130422080419.GB7080@gmail.com>
+References: <20130419231638.GA20133@www.outflux.net>
+	<20130421091342.GD31470@gmail.com>
+	<CAGXu5jKFSmBTQ5Ay+MypkAStvDMrkWMNHCz4XGyy4bVjyVAnHg@mail.gmail.com>
+	<20130422080419.GB7080@gmail.com>
+Date: Mon, 22 Apr 2013 10:59:19 -0700
+Message-ID: <CAGXu5jLJDWa5oLwFy7ZA1QdNKAQUCGEkCiVw+AD_1Bf9K8ULrQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
 Subject: [kernel-hardening] Re: [PATCH] x86: kaslr: move ELF relocation handling to C
-To: Kees Cook <keescook@chromium.org>
+To: Ingo Molnar <mingo@kernel.org>
 Cc: "H. Peter Anvin" <hpa@zytor.com>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, David Woodhouse <David.Woodhouse@intel.com>, Jiri Kosina <jkosina@suse.cz>, Olaf Hering <olaf@aepfle.de>, Yinghai Lu <yinghai@kernel.org>, Matt Fleming <matt.fleming@intel.com>, Gokul Caushik <caushik1@gmail.com>, Josh Triplett <josh@joshtriplett.org>, Joe Millenbach <jmillenbach@gmail.com>, Alexander Duyck <alexander.h.duyck@intel.com>, Jacob Shin <jacob.shin@amd.com>, Pekka Enberg <penberg@kernel.org>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Apr 22, 2013 at 1:04 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> * Kees Cook <keescook@chromium.org> wrote:
+>
+>> On Sun, Apr 21, 2013 at 2:13 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>> >
+>> > * Kees Cook <keescook@chromium.org> wrote:
+>> >
+>> >> Moves the relocation handling into C, after decompression. Only
+>> >> kernels that need relocation support will use the code. The new
+>> >> CONFIG_RANDOMIZE_BASE does not yet do anything except turn on this logic
+>> >> for 64-bit kernels.
+>> >
+>> > So why not keep the inactive CONFIG_RANDOMIZE_BASE hunks in a separate
+>> > patch, and just have this one clean, orthogonal patch that moves
+>> > relocation handling into C?
+>>
+>> I had wanted there to be a way to test building with 64-bit
+>> relocations. With this patch and CONFIG_RANDOMIZE_BASE=y, I could do
+>> that. Would you rather I remove those pieces?
+>
+> But AFAICS CONFIG_RANDOMIZE_BASE is not an interactive config option, so
+> how did you turn it on?
 
-* Kees Cook <keescook@chromium.org> wrote:
+I directly edited the .config file to enable it.
 
-> On Sun, Apr 21, 2013 at 2:13 AM, Ingo Molnar <mingo@kernel.org> wrote:
-> >
-> > * Kees Cook <keescook@chromium.org> wrote:
-> >
-> >> Moves the relocation handling into C, after decompression. Only
-> >> kernels that need relocation support will use the code. The new
-> >> CONFIG_RANDOMIZE_BASE does not yet do anything except turn on this logic
-> >> for 64-bit kernels.
-> >
-> > So why not keep the inactive CONFIG_RANDOMIZE_BASE hunks in a separate
-> > patch, and just have this one clean, orthogonal patch that moves
-> > relocation handling into C?
-> 
-> I had wanted there to be a way to test building with 64-bit
-> relocations. With this patch and CONFIG_RANDOMIZE_BASE=y, I could do
-> that. Would you rather I remove those pieces?
+> But no strong objections in any case.
 
-But AFAICS CONFIG_RANDOMIZE_BASE is not an interactive config option, so 
-how did you turn it on?
+HPA, any opinion? How would you like to see arranged for tip/kaslr?
 
-But no strong objections in any case.
+-Kees
 
-Thanks,
-
-	Ingo
+--
+Kees Cook
+Chrome OS Security
