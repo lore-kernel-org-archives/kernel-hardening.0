@@ -1,105 +1,199 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 26 Apr 2013 12:03:24 -0700
-Message-Id: <1367003005-5560-6-git-send-email-keescook@chromium.org>
+Date: Fri, 26 Apr 2013 12:03:22 -0700
+Message-Id: <1367003005-5560-4-git-send-email-keescook@chromium.org>
 In-Reply-To: <1367003005-5560-1-git-send-email-keescook@chromium.org>
 References: <1367003005-5560-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 5/6] x86: kaslr: select memory region from e820 maps
+Subject: [kernel-hardening] [PATCH 3/6] x86: kaslr: return location from decompress_kernel
 To: linux-kernel@vger.kernel.org
 Cc: kernel-hardening@lists.openwall.com, "H. Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, x86@kernel.org, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This chooses the largest contiguous RAM region for the KASLR offset
-to live in.
+This allows decompress_kernel to return a new location for the kernel to
+be relocated to. With CONFIG_RANDOMIZE_BASE, the choose_kernel_location
+routine will select a new location to decompress the kernel, and is
+presently a no-op. The logic for bypassing this routine with "noaslr"
+on the kernel command line is handled.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-v2:
- - make sure to exclude e820 regions outside the 32-bit memory range.
----
- arch/x86/boot/compressed/aslr.c |   47 ++++++++++++++++++++++++++++++++++-----
- 1 file changed, 41 insertions(+), 6 deletions(-)
+ Documentation/kernel-parameters.txt |    4 ++++
+ arch/x86/boot/compressed/Makefile   |    2 +-
+ arch/x86/boot/compressed/aslr.c     |   21 +++++++++++++++++++++
+ arch/x86/boot/compressed/cmdline.c  |    2 +-
+ arch/x86/boot/compressed/head_32.S  |    2 +-
+ arch/x86/boot/compressed/head_64.S  |    2 +-
+ arch/x86/boot/compressed/misc.c     |    7 +++++--
+ arch/x86/boot/compressed/misc.h     |   22 ++++++++++++++++------
+ 8 files changed, 50 insertions(+), 12 deletions(-)
+ create mode 100644 arch/x86/boot/compressed/aslr.c
 
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index 8ccbf27..eb1c62c 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -1862,6 +1862,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 	noapic		[SMP,APIC] Tells the kernel to not make use of any
+ 			IOAPICs that may be present in the system.
+ 
++	noaslr		[X86]
++			Disable kernel base offset ASLR (Address Space
++			Layout Randomization) if built into the kernel.
++
+ 	noautogroup	Disable scheduler automatic task group creation.
+ 
+ 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index d854390..fa2629b 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -26,7 +26,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+ 
+ VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
+ 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
+-	$(obj)/piggy.o $(obj)/cpuflags.o
++	$(obj)/piggy.o $(obj)/cpuflags.o $(obj)/aslr.o
+ 
+ $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
+ 
 diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index 4647e3f..3d3789e 100644
---- a/arch/x86/boot/compressed/aslr.c
+new file mode 100644
+index 0000000..d5331ee
+--- /dev/null
 +++ b/arch/x86/boot/compressed/aslr.c
-@@ -2,6 +2,7 @@
- 
- #ifdef CONFIG_RANDOMIZE_BASE
- #include <asm/msr.h>
-+#include <asm/e820.h>
- 
- #include <asm/archrandom.h>
- static inline int rdrand(unsigned long *v)
-@@ -48,28 +49,62 @@ static unsigned long get_random_long(void)
- 	return 0;
- }
- 
-+int largest_ram_region(unsigned long *start, unsigned long *size)
+@@ -0,0 +1,21 @@
++#include "misc.h"
++
++#ifdef CONFIG_RANDOMIZE_BASE
++
++unsigned char *choose_kernel_location(unsigned char *hint, unsigned long size)
 +{
-+	int i, rc = 0;
++	unsigned char *choice = hint;
++	unsigned long random;
 +
-+	*size = 0;
-+	for (i = 0; i < real_mode->e820_entries; i++) {
-+		struct e820entry *entry = &real_mode->e820_map[i];
-+
-+		if (entry->type != E820_RAM)
-+			continue;
-+
-+		/* XXX: Handle arbitrary physical location. */
-+		if (entry->addr > UINT_MAX)
-+			continue;
-+
-+		if (entry->size > *size) {
-+			*size = entry->size;
-+			*start = entry->addr;
-+			rc = 1;
-+		}
-+	}
-+	return rc;
-+}
-+
- unsigned char *choose_kernel_location(unsigned char *hint, unsigned long size)
- {
- 	unsigned char *choice = hint;
- 	unsigned long random, mask;
-+	unsigned long addr, length;
- 
- 	if (cmdline_find_option_bool("noaslr")) {
- 		debug_putstr("KASLR disabled...\n");
- 		goto out;
- 	}
- 
-+	/* Find an appropriate E820 entry. */
-+	if (!largest_ram_region(&addr, &length)) {
-+		debug_putstr("KASLR could not find suitable E820 region...\n");
++	if (cmdline_find_option_bool("noaslr")) {
++		debug_putstr("KASLR disabled...\n");
 +		goto out;
 +	}
 +
- 	random = get_random_long();
- 
--	/* Clip off top of the range. */
-+	/* XXX: Rework page tables to handle arbitrary physical location. */
- 	mask = CONFIG_RANDOMIZE_BASE_MAX_OFFSET - 1;
- 	random &= mask;
- 
--	/* XXX: Find an appropriate E820 hole, instead of adding hint. */
--	random += (unsigned long)hint;
-+	/* Clip to E820 entry size. */
-+	while (random > length)
-+		random >>= 1;
++	/* XXX: choose random location. */
 +
-+	/* Offset the target. */
-+	random += addr;
++out:
++	return choice;
++}
++
++#endif /* CONFIG_RANDOMIZE_BASE */
+diff --git a/arch/x86/boot/compressed/cmdline.c b/arch/x86/boot/compressed/cmdline.c
+index bffd73b..b68e303 100644
+--- a/arch/x86/boot/compressed/cmdline.c
++++ b/arch/x86/boot/compressed/cmdline.c
+@@ -1,6 +1,6 @@
+ #include "misc.h"
  
--	/* XXX: Clip to E820 hole, instead of just using hint. */
--	mask = (unsigned long)hint + CONFIG_RANDOMIZE_BASE_MAX_OFFSET;
--	while (random + size > mask)
-+	/* Clip end to E820 entry size. */
-+	while (random + size > addr + length)
- 		random >>= 1;
+-#ifdef CONFIG_EARLY_PRINTK
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
  
- 	/* Clip off bottom of range (via alignment). */
+ static unsigned long fs;
+ static inline void set_fs(unsigned long seg)
+diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
+index 5d6f689..a48631a 100644
+--- a/arch/x86/boot/compressed/head_32.S
++++ b/arch/x86/boot/compressed/head_32.S
+@@ -198,7 +198,7 @@ relocated:
+  * Jump to the decompressed kernel.
+  */
+ 	xorl	%ebx, %ebx
+-	jmp	*%ebp
++	jmp	*%eax
+ 
+ /*
+  * Stack and heap for uncompression
+diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
+index 81ca174..bfd9be8 100644
+--- a/arch/x86/boot/compressed/head_64.S
++++ b/arch/x86/boot/compressed/head_64.S
+@@ -347,7 +347,7 @@ relocated:
+ /*
+  * Jump to the decompressed kernel.
+  */
+-	jmp	*%rbp
++	jmp	*%rax
+ 
+ 	.code32
+ no_longmode:
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index b756a04..15a3ea8 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -391,7 +391,7 @@ static void parse_elf(void *output)
+ 	free(phdrs);
+ }
+ 
+-asmlinkage void decompress_kernel(void *rmode, memptr heap,
++asmlinkage void *decompress_kernel(void *rmode, memptr heap,
+ 				  unsigned char *input_data,
+ 				  unsigned long input_len,
+ 				  unsigned char *output,
+@@ -418,6 +418,9 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	free_mem_ptr     = heap;	/* Heap */
+ 	free_mem_end_ptr = heap + BOOT_HEAP_SIZE;
+ 
++	output = choose_kernel_location(output, output_len);
++
++	/* Validate memory location choices. */
+ 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
+ 		error("Destination address inappropriately aligned");
+ #ifdef CONFIG_X86_64
+@@ -437,5 +440,5 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	parse_elf(output);
+ 	handle_relocations(output, output_len);
+ 	debug_putstr("done.\nBooting the kernel.\n");
+-	return;
++	return output;
+ }
+diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
+index 674019d..2a5c7aa 100644
+--- a/arch/x86/boot/compressed/misc.h
++++ b/arch/x86/boot/compressed/misc.h
+@@ -39,23 +39,33 @@ static inline void debug_putstr(const char *s)
+ 
+ #endif
+ 
+-#ifdef CONFIG_EARLY_PRINTK
+-
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
+ /* cmdline.c */
+ int cmdline_find_option(const char *option, char *buffer, int bufsize);
+ int cmdline_find_option_bool(const char *option);
++#endif
++
++#if CONFIG_RANDOMIZE_BASE
++/* aslr.c */
++unsigned char *choose_kernel_location(unsigned char *hint, unsigned long size);
++/* cpuflags.c */
++bool has_cpuflag(int flag);
++#else
++static inline unsigned char *choose_kernel_location(unsigned char *hint,
++						    unsigned long size)
++{
++	return hint;
++}
++#endif
+ 
++#ifdef CONFIG_EARLY_PRINTK
+ /* early_serial_console.c */
+ extern int early_serial_base;
+ void console_init(void);
+-
+ #else
+-
+-/* early_serial_console.c */
+ static const int early_serial_base;
+ static inline void console_init(void)
+ { }
+-
+ #endif
+ 
+ #endif
 -- 
 1.7.9.5
