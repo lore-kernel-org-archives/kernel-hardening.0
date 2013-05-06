@@ -1,98 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Mon, 6 May 2013 19:18:29 +1000 (EST)
+From: James Morris <jmorris@namei.org>
+Message-ID: <alpine.LRH.2.02.1305061853410.31937@tundra.namei.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <517AF6A5.7070507@zytor.com>
-References: <1367003005-5560-1-git-send-email-keescook@chromium.org>
-	<1367003005-5560-5-git-send-email-keescook@chromium.org>
-	<517AF6A5.7070507@zytor.com>
-Date: Mon, 29 Apr 2013 12:15:53 -0700
-Message-ID: <CAGXu5jLS+71p20qB-8x_A1SJuqQN+q17-B50FqFtHc4T2YVHGA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH 4/6] x86: kaslr: select random base offset
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "x86@kernel.org" <x86@kernel.org>, Jarkko Sakkinen <jarkko.sakkinen@intel.com>, Matthew Garrett <mjg@redhat.com>, Matt Fleming <matt.fleming@intel.com>, Eric Northup <digitaleric@google.com>, Dan Rosenberg <drosenberg@vsecurity.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@chromium.org>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] [ANNOUNCE] Linux Security Summit 2013 - CFP
+To: linux-security-module@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, Linux Security Summit Program Committee <lss-pc@ext.namei.org>, lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, ubuntu-hardened@lists.ubuntu.com, tomoyo-users-en@lists.sourceforge.jp, netfilter-devel@vger.kernel.org, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, "C. Craig Ross" <ccr@linuxfoundation.org>, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 26, 2013 at 2:50 PM, H. Peter Anvin <hpa@zytor.com> wrote:
-> On 04/26/2013 12:03 PM, Kees Cook wrote:
->> +
->> +static unsigned long get_random_long(void)
->> +{
->> +     if (has_cpuflag(X86_FEATURE_RDRAND)) {
->> +             unsigned long random;
->> +
->> +             debug_putstr("KASLR using RDRAND...\n");
->> +             if (rdrand(&random))
->> +                     return random;
->> +     }
->> +
->> +     if (has_cpuflag(X86_FEATURE_TSC)) {
->> +             uint32_t raw;
->> +             unsigned long timer;
->> +
->> +             debug_putstr("KASLR using RDTSC...\n");
->> +             rdtscl(raw);
->> +
->> +             /* Repeat the low bits of rdtsc. */
->> +             timer = raw & 0xffff;
->> +             timer |= (timer << 16);
->> +#ifdef CONFIG_X86_64
->> +             timer |= (timer << 32) | (timer << 48);
->> +#endif
->> +
->
-> This seems like a very odd thing to do.  If you want to scramble bits,
-> it would make more sense to do a multiply -- or much better, a
-> *circular* multiply -- with a large constant.
+==========================================================================
+                 ANNOUNCEMENT AND CALL FOR PARTICIPATION
 
-Well, my thought here was that the entropy is only being used in a
-very narrow band (since it's truncated by alignment on the low end and
-physical memory on the high end), so I didn't want to "dilute" the
-already bad entropy any more. Instead, I just repeated it. If a
-circular multiply would serve the same purpose, I can do that. Do you
-have any examples of that?
+                       LINUX SECURITY SUMMIT 2013
+                            19-20 SEPTEMBER
+                            NEW ORLEANS, USA
+==========================================================================
 
->
->> +             return timer;
->> +     }
->> +
->> +     debug_putstr("KASLR found no entropy source...\n");
->> +     return 0;
->> +}
->>
->
-> It might be safe to assume that anything old enough to lack RDTSC
-> (basically a 486) will have an 8254, and reading back the 8254 counter
-> register.
 
-Ah, good idea. I've added this now, which seems to work if I force the
-TSC check to fail:
+DESCRIPTION
 
-#define I8254_PORT_CONTROL      0x43
-#define I8254_PORT_COUNTER0     0x40
-#define I8254_CMD_READBACK      0xC0
-#define I8254_SELECT_COUNTER0   0x02
-#define I8254_STATUS_NOTREADY   0x40
-static inline u16 i8254(void)
-{
-        u16 status, timer;
+  The Linux Security Summit (LSS) is a technical forum for collaboration
+  between Linux developers, researchers, and end users.  Its primary aim
+  is to foster community efforts in analyzing and solving Linux security
+  challenges.
 
-        do {
-                outb(I8254_PORT_CONTROL,
-                     I8254_CMD_READBACK | I8254_SELECT_COUNTER0);
-                status = inb(I8254_PORT_COUNTER0);
-                timer  = inb(I8254_PORT_COUNTER0);
-                timer |= inb(I8254_PORT_COUNTER0) << 8;
-        } while (status & I8254_STATUS_NOTREADY);
+  The format of the summit will be:
+  
+    * Refereed presentations
+    * Subsystem reports
+    * Breakout development sessions 
 
-        return timer;
-}
 
-Thanks,
+WEB SITE
 
--Kees
+  http://kernsec.org/wiki/index.php/Linux_Security_Summit_2013
 
---
-Kees Cook
-Chrome OS Security
+
+DATES / LOCATION
+
+  The Linux Security Summit for 2013 will be held across 19 and 20 September
+  in New Orleans, USA.  It will be co-located with LinuxCon, as well
+  as Linux Plumbers.
+ 
+  Note that Linux Security Summit attendees and speakers must be registered
+  to attend LinuxCon.  See the LinuxCon site for details on registration,
+  travel, and accommodation:
+  
+    https://events.linuxfoundation.org/events/linuxcon
+
+  The Linux Security Summit CFP is now open, and will close on 14th June.
+  
+  Accepted speakers will be notified by 21st of June.
+
+
+WHO SHOULD ATTEND
+
+  The event is open to all registered LinuxCon attendees.
+  
+  You do not have to be a "security person" to attend -- we're seeking a
+  diverse range of attendees, and welcome the participation of general
+  developers, researchers, operations, and end-users.
+
+
+CALL FOR PARTICIPATION
+
+  The program committee currently seeks proposals for:
+
+  * Refereed Presentations:
+      45 minutes in length, including at least 10 minutes of discussion.
+      Papers are encouraged.
+
+ 
+  Topic areas include, but are not limited to:
+  
+    * System hardening
+    * Access control
+    * Cryptography
+    * Integrity control
+    * Hardware security
+    * Networking
+    * Storage
+    * Virtualization
+    * Desktop
+    * Tools
+    * Management
+    * Case studies
+    * Emerging technologies, threats & techniques 
+    
+  Proposals should be submitted in plain text via email to the program
+  committee at:  lss-pc (_at_) ext.namei.org
+
+  Abstracts should be approximately 150 words in total.
+
+
+PROGRAM COMMITTEE
+
+  The Linux Security Summit for 2013 is organized by:
+
+    * James Morris, Oracle
+    * Serge Hallyn, Canonical
+    * Paul Moore, Red Hat
+    * Stephen Smalley, NSA
+    * Joshua Brindle, Quark Security
+    * Herbert Xu, Red Hat
+    * John Johansen, Canonical
+    * Kees Cook, Google
+    * Casey Schaufler, Intel
+    * Mimi Zohar, IBM
+
+  The program committee may be contacted as a group via email:
+
+     lss-pc (_at_) ext.namei.org
+   
