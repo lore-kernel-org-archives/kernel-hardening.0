@@ -1,53 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
+Date: Mon, 26 Aug 2013 18:20:55 +0100
+From: Al Viro <viro@ZenIV.linux.org.uk>
+Message-ID: <20130826172054.GE27005@ZenIV.linux.org.uk>
 References: <1377534240-13227-1-git-send-email-tixxdz@opendz.org>
-	<1377534240-13227-2-git-send-email-tixxdz@opendz.org>
-Date: Mon, 26 Aug 2013 09:50:42 -0700
-In-Reply-To: <1377534240-13227-2-git-send-email-tixxdz@opendz.org> (Djalal
-	Harouni's message of "Mon, 26 Aug 2013 17:24:00 +0100")
-Message-ID: <87wqn8pfa5.fsf@xmission.com>
+ <871u5gqtw3.fsf@xmission.com>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH 2/2] procfs: restore 0400 permissions on /proc/*/pagemap
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <871u5gqtw3.fsf@xmission.com>
+Sender: Al Viro <viro@ftp.linux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH 1/2] procfs: restore 0400 permissions on
+ /proc/*/{syscall,stack,personality}
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Djalal Harouni <tixxdz@opendz.org>, Andrew Morton <akpm@linux-foundation.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Djalal Harouni <tixxdz@opendz.org> writes:
+On Mon, Aug 26, 2013 at 09:49:48AM -0700, Eric W. Biederman wrote:
 
-> Do not give an fd on privileged /proc/*/pagemap files for free.
+> How does changing the permissions to S_IRUSR prevent someone from
+> opening the file before, and reading the file after a suid exec?
+> 
+> > This patch restores the old mode which was 0400
+> 
+> Which seems to add no security whatsoever and obscure the fact that
+> anyone who cares can read the file so what is the point?
 
-The same objections apply to this patch as it's predecessor so I won't
-repeat them.
-
-Eric
-
-> Restore the previous 0400 mode
->
-> Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
-> ---
->  fs/proc/base.c | 4 ++--
->  1 file changed, 2 insertions(+), 2 deletions(-)
->
-> diff --git a/fs/proc/base.c b/fs/proc/base.c
-> index 6b162cd..93a1c89 100644
-> --- a/fs/proc/base.c
-> +++ b/fs/proc/base.c
-> @@ -2605,7 +2605,7 @@ static const struct pid_entry tgid_base_stuff[] = {
->  #ifdef CONFIG_PROC_PAGE_MONITOR
->  	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
->  	REG("smaps",      S_IRUGO, proc_pid_smaps_operations),
-> -	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
-> +	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
->  #endif
->  #ifdef CONFIG_SECURITY
->  	DIR("attr",       S_IRUGO|S_IXUGO, proc_attr_dir_inode_operations, proc_attr_dir_operations),
-> @@ -2943,7 +2943,7 @@ static const struct pid_entry tid_base_stuff[] = {
->  #ifdef CONFIG_PROC_PAGE_MONITOR
->  	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
->  	REG("smaps",     S_IRUGO, proc_tid_smaps_operations),
-> -	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
-> +	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
->  #endif
->  #ifdef CONFIG_SECURITY
->  	DIR("attr",      S_IRUGO|S_IXUGO, proc_attr_dir_inode_operations, proc_attr_dir_operations),
+Two words: "security sclerosis".  Both patches NAKed, of course.
