@@ -1,71 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Djalal Harouni <tixxdz@opendz.org>
-Date: Wed, 25 Sep 2013 21:14:45 +0100
-Message-Id: <1380140085-29712-13-git-send-email-tixxdz@opendz.org>
-In-Reply-To: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
+MIME-Version: 1.0
+Sender: linus971@gmail.com
+In-Reply-To: <1380140085-29712-5-git-send-email-tixxdz@opendz.org>
 References: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] [PATCH 12/12] user_ns: seq_file: use the user_ns that is embedded in the f_cred struct
-To: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: tixxdz@gmail.com, Djalal Harouni <tixxdz@opendz.org>
+	<1380140085-29712-5-git-send-email-tixxdz@opendz.org>
+Date: Wed, 25 Sep 2013 17:22:51 -0700
+Message-ID: <CA+55aFwhb8rFbd8xT0==+r_QV-m8ANm+0sFEqUfk9Qg4rYpm-w@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 04/12] seq_file: Make seq_file able to access the file's
+ opener cred
+To: Djalal Harouni <tixxdz@opendz.org>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, tixxdz@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-seq_file struct now has a reference on the file->f_cred struct which
-includes a pointer on user_ns. So remove the user_ns field from seq_file
-struct and use the one provided by seq_file->f_cred.
+On Wed, Sep 25, 2013 at 1:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+>
+> Therefor add the f_cred field to the seq_file struct and a helper
+> seq_f_cred() to return it.
 
-Update seq_user_ns() to return the user_ns of seq_file->f_cred.
+I hate how you've split up this patch from the next one that actually
+_initializes_ the new field.
 
-Cc: Eric W. Biederman <ebiederm@xmission.com>
-Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
----
- fs/seq_file.c            | 3 ---
- include/linux/seq_file.h | 6 ++----
- 2 files changed, 2 insertions(+), 7 deletions(-)
+The two patches should have been one.
 
-diff --git a/fs/seq_file.c b/fs/seq_file.c
-index a5e5b98..ee1c36d 100644
---- a/fs/seq_file.c
-+++ b/fs/seq_file.c
-@@ -58,9 +58,6 @@ int seq_open(struct file *file, const struct seq_operations *op)
- 	mutex_init(&p->lock);
- 	p->op = op;
- 	p->f_cred = file->f_cred;
--#ifdef CONFIG_USER_NS
--	p->user_ns = file->f_cred->user_ns;
--#endif
- 
- 	/*
- 	 * Wrappers around seq_open(e.g. swaps_open) need to be
-diff --git a/include/linux/seq_file.h b/include/linux/seq_file.h
-index ec07709..5db1e39 100644
---- a/include/linux/seq_file.h
-+++ b/include/linux/seq_file.h
-@@ -7,6 +7,7 @@
- #include <linux/mutex.h>
- #include <linux/cpumask.h>
- #include <linux/nodemask.h>
-+#include <linux/cred.h>
- 
- struct seq_operations;
- struct file;
-@@ -28,9 +29,6 @@ struct seq_file {
- 	const struct seq_operations *op;
- 	int poll_event;
- 	const struct cred *f_cred;
--#ifdef CONFIG_USER_NS
--	struct user_namespace *user_ns;
--#endif
- 	void *private;
- };
- 
-@@ -143,7 +141,7 @@ static inline const struct cred *seq_f_cred(struct seq_file *seq)
- static inline struct user_namespace *seq_user_ns(struct seq_file *seq)
- {
- #ifdef CONFIG_USER_NS
--	return seq->user_ns;
-+	return seq_f_cred(seq)->user_ns;
- #else
- 	extern struct user_namespace init_user_ns;
- 	return &init_user_ns;
--- 
-1.7.11.7
+I think the patch should also remove the 'user_ns' member, since it's
+now available as f_cred->user_ns.
+
+I also suspect that it would be better to just make the the new
+seq_file member point to the 'struct file' instead. Sure, it's an
+extra level of indirection, but the lifetime of f_cred is not as clear
+otherwise. You don't increment the reference count, which is correct
+*only* because 'seq_file' has the same lifetime as 'struct file', and
+thus the reference count from struct file for the f_cred is
+sufficient.
+
+[ Time passes, I look over the other patches ]
+
+Oh, and I note that you remove user_ns in patch 12. Again, I think
+that's just splitting things up too much. It actually gets harder to
+see what happens when you do this.
+
+               Linus
