@@ -1,46 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1380140085-29712-7-git-send-email-tixxdz@opendz.org>
+Date: Fri, 27 Sep 2013 09:34:35 +0100
+From: Djalal Harouni <tixxdz@opendz.org>
+Message-ID: <20130927083435.GA2340@dztty>
 References: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
-	<1380140085-29712-7-git-send-email-tixxdz@opendz.org>
-Date: Thu, 26 Sep 2013 15:43:24 -0500
-Message-ID: <CAGXu5jJKH6WPSMnqALOEjqGb6ZoeyYzj5vemk=2z4KPZyg=ptw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH 06/12] procfs: make /proc/*/stack 0400
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, tixxdz@gmail.com
+ <1380140085-29712-5-git-send-email-tixxdz@opendz.org>
+ <CA+55aFwhb8rFbd8xT0==+r_QV-m8ANm+0sFEqUfk9Qg4rYpm-w@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+55aFwhb8rFbd8xT0==+r_QV-m8ANm+0sFEqUfk9Qg4rYpm-w@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 04/12] seq_file: Make seq_file able to access the file's
+ opener cred
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, tixxdz@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 25, 2013 at 3:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> The /proc/*/stack contains sensitive information and currently its mode
-> is 0444. Change this to 0400 so the VFS will be able to block
-> unprivileged processes to get file descriptors on arbitrary privileged
-> /proc/*/stack files.
->
-> The /proc/*/stack is a /procfs ONE file that shares the same ->open()
-> file operation with other ONE files. Doing a ptrace_may_access() check
-> during open() might break userspace from accessing other ONE files
-> like /proc/*/stat and /proc/*/statm.
->
-> Therfore make it 0400 for now, and improve its check during ->read()
-> in the next following patch.
->
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Eric W. Biederman <ebiederm@xmission.com>
-> Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+On Wed, Sep 25, 2013 at 05:22:51PM -0700, Linus Torvalds wrote:
+> On Wed, Sep 25, 2013 at 1:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> >
+> > Therefor add the f_cred field to the seq_file struct and a helper
+> > seq_f_cred() to return it.
+> 
+> I hate how you've split up this patch from the next one that actually
+> _initializes_ the new field.
+> 
+> The two patches should have been one.
+Ok, noted.
 
-While the rest of the series is being discussed, I think it would be
-nice to at least get this into the tree. Fixing this reduces which
-processes are exposed to ASLR leaks. The rest of the series closes the
-remaining holes.
+> I think the patch should also remove the 'user_ns' member, since it's
+> now available as f_cred->user_ns.
+> 
+> I also suspect that it would be better to just make the the new
+> seq_file member point to the 'struct file' instead. Sure, it's an
+> extra level of indirection, but the lifetime of f_cred is not as clear
+> otherwise. You don't increment the reference count, which is correct
+> *only* because 'seq_file' has the same lifetime as 'struct file', and
+> thus the reference count from struct file for the f_cred is
+> sufficient.
+Yes.
 
-I would if it would be valuable adding a test for the identified leak
-conditions to some test suite? LTP perhaps?
+For the seq_file struct, yes we can make it point to the 'struct file'.
 
--Kees
+Or, I've also found other ways, perhaps they will make Al happy, one of
+them is to use the 'struct file' as you point, but in an other way, or
+change the file_operations of these sensitive files.
+Please Linus see my next response to Al, thanks
+
+> [ Time passes, I look over the other patches ]
+> 
+> Oh, and I note that you remove user_ns in patch 12. Again, I think
+> that's just splitting things up too much. It actually gets harder to
+> see what happens when you do this.
+Ok, will improve it.
+
+Will also wait to see what others think, then resend as a V2
+
+Thanks.
+
+> 
+>                Linus
 
 -- 
-Kees Cook
-Chrome OS Security
+Djalal Harouni
+http://opendz.org
