@@ -1,186 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  1 Oct 2013 12:37:23 -0700
-Message-Id: <1380656245-29975-6-git-send-email-keescook@chromium.org>
+Date: Tue,  1 Oct 2013 12:37:25 -0700
+Message-Id: <1380656245-29975-8-git-send-email-keescook@chromium.org>
 In-Reply-To: <1380656245-29975-1-git-send-email-keescook@chromium.org>
 References: <1380656245-29975-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 5/7] x86, kaslr: select memory region from e820 maps
+Subject: [kernel-hardening] [PATCH 7/7] x86, kaslr: raise max positions to 1GiB on x86_64
 To: linux-kernel@vger.kernel.org
 Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Counts available alignment positions across all e820 maps, and chooses
-one randomly for the new kernel base address.
+On 64-bit, this raises the maximum location to 1GiB, the upper limit
+currently, since the kernel fixmap page mappings need to be moved to
+use the other 1GiB (which would be the theoretical limit when building
+with -mcmodel=kernel).
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/aslr.c |  140 ++++++++++++++++++++++++++++++++++++---
- 1 file changed, 130 insertions(+), 10 deletions(-)
+ arch/x86/Kconfig                        |   16 +++++++++++++---
+ arch/x86/include/asm/page_64_types.h    |   15 ++++++++++++---
+ arch/x86/include/asm/pgtable_64_types.h |    2 +-
+ arch/x86/mm/init_32.c                   |    3 +++
+ 4 files changed, 29 insertions(+), 7 deletions(-)
 
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index 2f63f9f..ab0f8a3 100644
---- a/arch/x86/boot/compressed/aslr.c
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -2,6 +2,7 @@
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 992701d..51f4399 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -1746,13 +1746,23 @@ config RANDOMIZE_BASE
+ config RANDOMIZE_BASE_MAX_OFFSET
+ 	hex "Maximum ASLR offset allowed"
+ 	depends on RANDOMIZE_BASE
+-	default "0x10000000"
+-	range 0x0 0x10000000
++	range 0x0 0x20000000 if X86_32
++	default "0x20000000" if X86_32
++	range 0x0 0x40000000 if X86_64
++	default "0x40000000" if X86_64
+ 	---help---
+ 	 Determines the maximal offset in bytes that will be applied to the
+ 	 kernel when Address Space Layout Randomization (ASLR) is active.
+ 	 Must be less than or equal to the actual physical memory on the
+-	 system. This must be a power of two.
++	 system. This must be a multiple of CONFIG_PHYSICAL_ALIGN.
++
++	 On 32-bit this is limited to 512MiB.
++
++	 On 64-bit this is limited by how the kernel fixmap page table is
++	 positioned, so this cannot be larger that 1GiB currently. Normally
++	 there is a 512MiB to 1.5GiB split between kernel and modules. When
++	 this is raised above the 512MiB default, the modules area will
++	 shrink to compensate, up to the current maximum 1GiB to 1GiB split.
  
- #ifdef CONFIG_RANDOMIZE_BASE
- #include <asm/msr.h>
-+#include <asm/e820.h>
+ # Relocation on x86 needs some additional build support
+ config X86_NEED_RELOCS
+diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
+index 43dcd80..8de6d9c 100644
+--- a/arch/x86/include/asm/page_64_types.h
++++ b/arch/x86/include/asm/page_64_types.h
+@@ -39,9 +39,18 @@
+ #define __VIRTUAL_MASK_SHIFT	47
  
- #include <asm/archrandom.h>
- static inline int rdrand(unsigned long *v)
-@@ -115,6 +116,130 @@ static unsigned long find_minimum_location(unsigned long input,
- 	return output;
- }
+ /*
+- * Kernel image size is limited to 512 MB (see level2_kernel_pgt in
+- * arch/x86/kernel/head_64.S), and it is mapped here:
++ * Kernel image size is limited to 1GiB due to the fixmap living in the
++ * next 1GiB (see level2_kernel_pgt in arch/x86/kernel/head_64.S). Use
++ * 512MiB by default, leaving 1.5GiB for modules once the page tables
++ * are fully set up. If kernel ASLR is configured, it can extend the
++ * kernel page table mapping, reducing the size of the modules area.
+  */
+-#define KERNEL_IMAGE_SIZE	(512 * 1024 * 1024)
++#define KERNEL_IMAGE_SIZE_DEFAULT      (512 * 1024 * 1024)
++#if defined(CONFIG_RANDOMIZE_BASE) && \
++	CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE_DEFAULT
++#define KERNEL_IMAGE_SIZE   CONFIG_RANDOMIZE_BASE_MAX_OFFSET
++#else
++#define KERNEL_IMAGE_SIZE      KERNEL_IMAGE_SIZE_DEFAULT
++#endif
  
-+/*
-+ * This routine is used to count how many aligned slots that can hold the
-+ * kernel exist across all e820 entries. It is called in two phases, once
-+ * to count valid memory regions available for the kernel image, and a
-+ * second time to select one from those seen.
-+ *
-+ * It is first called with "counting" set to true, where it expects to be
-+ * called once for each e820 entry. In this mode, it will update *count
-+ * with how many slots are available in the given e820 entry. Once the walk
-+ * across all e820 entries has finished, the caller will have a total count
-+ * of all valid memory regions available for the kernel image.
-+ *
-+ * Once the first pass of entry walking is finished, the caller selects one
-+ * of the possible slots (stored in *count), and performs a second walk,
-+ * with "counting" set to false. In this mode, *count is decremented until
-+ * the corresponding slot is found in a specific e820 region, at which
-+ * point, the function returns that address, and the walk terminates.
-+ */
-+static unsigned long process_e820_entry(struct e820entry *entry, bool counting,
-+					unsigned long minimum,
-+					unsigned long image_size,
-+					unsigned long *count)
-+{
-+	u64 addr, size;
-+	unsigned long alignments;
-+
-+	/* Skip non-RAM entries. */
-+	if (entry->type != E820_RAM)
-+		return 0;
-+
-+	/* Ignore entries entirely above our maximum. */
-+	if (entry->addr >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
-+		return 0;
-+
-+	/* Ignore entries entirely below our minimum. */
-+	if (entry->addr + entry->size < minimum)
-+		return 0;
-+
-+	size = entry->size;
-+	addr = entry->addr;
-+
-+	/* Potentially raise address to minimum location. */
-+	if (addr < minimum)
-+		addr = minimum;
-+
-+	/* Potentially raise address to meet alignment requirements. */
-+	addr = ALIGN(addr, CONFIG_PHYSICAL_ALIGN);
-+
-+	/* Did we raise the address above the bounds of this e820 region? */
-+	if (addr > entry->addr + entry->size)
-+		return 0;
-+
-+	/* Reduce size by any delta from the original address. */
-+	size -= addr - entry->addr;
-+
-+	/* Reduce maximum image starting location to maximum limit. */
-+	if (addr + size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
-+		size = CONFIG_RANDOMIZE_BASE_MAX_OFFSET - addr;
-+
-+	/* Ignore entries that cannot hold even a single kernel image. */
-+	if (size < image_size)
-+		return 0;
-+
-+	/*
-+	 * Reduce size by kernel image size so we can see how many aligned
-+	 * starting addresses will fit without running past the end of a
-+	 * region. XXX: adjacent e820 regions are not detected, so up to
-+	 * image_size / CONFIG_PHYSICAL_ALIGN slots may go unused across
-+	 * adjacent regions.
-+	 */
-+	size -= image_size;
-+
-+	/* Now we know how many aligned slots can contain the image. */
-+	alignments = (size / CONFIG_PHYSICAL_ALIGN) + 1;
-+
-+	/* In the first pass, just counting all the e820 entries? */
-+	if (counting) {
-+		*count += alignments;
-+		return 0;
-+	}
-+
-+	/* Otherwise we're counting down to find a specific aligned slot. */
-+	if (*count < alignments) {
-+		/* Desired region is in this entry. */
-+		return addr + (CONFIG_PHYSICAL_ALIGN * *count);
-+	} else {
-+		/* Desired region is beyond this entry. */
-+		*count -= alignments;
-+		return 0;
-+	}
-+}
-+
-+static unsigned long find_random_e820(unsigned long minimum,
-+				      unsigned long size)
-+{
-+	int i;
-+	unsigned long addr, count;
-+
-+	/* Make sure minimum is aligned. */
-+	minimum = ALIGN(minimum, CONFIG_PHYSICAL_ALIGN);
-+
-+	/* Verify potential e820 positions. */
-+	count = 0;
-+	for (i = 0; i < real_mode->e820_entries; i++) {
-+		process_e820_entry(&real_mode->e820_map[i], true, minimum,
-+				   size, &count);
-+	}
-+
-+	/* Handle crazy case of nothing fitting. */
-+	if (count == 0)
-+		return 0;
-+
-+	count = get_random_long() % count;
-+
-+	/* Select desired e820 position. */
-+	for (i = 0; i < real_mode->e820_entries; i++) {
-+		addr = process_e820_entry(&real_mode->e820_map[i], false,
-+					  minimum, size, &count);
-+		if (addr)
-+			return addr;
-+	}
-+	return 0;
-+}
-+
- unsigned char *choose_kernel_location(unsigned char *input,
- 				      unsigned long input_size,
- 				      unsigned char *output,
-@@ -131,16 +256,11 @@ unsigned char *choose_kernel_location(unsigned char *input,
- 	choice = find_minimum_location((unsigned long)input, input_size,
- 				       (unsigned long)output, output_size);
+ #endif /* _ASM_X86_PAGE_64_DEFS_H */
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index 2d88344..c883bf7 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -58,7 +58,7 @@ typedef struct { pteval_t pte; } pte_t;
+ #define VMALLOC_START    _AC(0xffffc90000000000, UL)
+ #define VMALLOC_END      _AC(0xffffe8ffffffffff, UL)
+ #define VMEMMAP_START	 _AC(0xffffea0000000000, UL)
+-#define MODULES_VADDR    _AC(0xffffffffa0000000, UL)
++#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+ #define MODULES_END      _AC(0xffffffffff000000, UL)
+ #define MODULES_LEN   (MODULES_END - MODULES_VADDR)
  
--	/* XXX: Find an appropriate E820 hole, instead of adding offset. */
--	random = get_random_long();
--
--	/* Clip off top of the range. */
--	random &= (CONFIG_RANDOMIZE_BASE_MAX_OFFSET - 1);
--	while (random + output_size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
--		random >>= 1;
--
--	/* Clip off bottom of range. */
--	random &= ~(choice - 1);
-+	random = find_random_e820(choice, output_size);
-+	if (!random) {
-+		debug_putstr("KASLR could not find suitable E820 region...\n");
-+		goto out;
-+	}
+diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
+index 4287f1f..5bdc543 100644
+--- a/arch/x86/mm/init_32.c
++++ b/arch/x86/mm/init_32.c
+@@ -806,6 +806,9 @@ void __init mem_init(void)
+ 	BUILD_BUG_ON(VMALLOC_START			>= VMALLOC_END);
+ #undef high_memory
+ #undef __FIXADDR_TOP
++#ifdef CONFIG_RANDOMIZE_BASE
++	BUILD_BUG_ON(CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE);
++#endif
  
- 	/* Always enforce the minimum. */
- 	if (random < choice)
+ #ifdef CONFIG_HIGHMEM
+ 	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
 -- 
 1.7.9.5
