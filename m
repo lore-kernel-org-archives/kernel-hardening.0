@@ -1,44 +1,323 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 29 Sep 2013 11:37:46 +0100
-From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20130929103746.GB3459@dztty>
-References: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
- <1380140085-29712-7-git-send-email-tixxdz@opendz.org>
- <CAGXu5jJKH6WPSMnqALOEjqGb6ZoeyYzj5vemk=2z4KPZyg=ptw@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJKH6WPSMnqALOEjqGb6ZoeyYzj5vemk=2z4KPZyg=ptw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 06/12] procfs: make /proc/*/stack 0400
-To: Kees Cook <keescook@chromium.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, tixxdz@gmail.com
+From: Kees Cook <keescook@chromium.org>
+Date: Tue,  1 Oct 2013 12:37:20 -0700
+Message-Id: <1380656245-29975-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1380656245-29975-1-git-send-email-keescook@chromium.org>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 2/7] x86, kaslr: return location from decompress_kernel
+To: linux-kernel@vger.kernel.org
+Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 26, 2013 at 03:43:24PM -0500, Kees Cook wrote:
-> On Wed, Sep 25, 2013 at 3:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> > The /proc/*/stack contains sensitive information and currently its mode
-> > is 0444. Change this to 0400 so the VFS will be able to block
-> > unprivileged processes to get file descriptors on arbitrary privileged
-> > /proc/*/stack files.
-> >
-> > The /proc/*/stack is a /procfs ONE file that shares the same ->open()
-> > file operation with other ONE files. Doing a ptrace_may_access() check
-> > during open() might break userspace from accessing other ONE files
-> > like /proc/*/stat and /proc/*/statm.
-> >
-> > Therfore make it 0400 for now, and improve its check during ->read()
-> > in the next following patch.
-> >
-> > Cc: Kees Cook <keescook@chromium.org>
-> > Cc: Eric W. Biederman <ebiederm@xmission.com>
-> > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
-> 
-> While the rest of the series is being discussed, I think it would be
-> nice to at least get this into the tree. Fixing this reduces which
-> processes are exposed to ASLR leaks. The rest of the series closes the
-> remaining holes.
-Kees I guess it's ok to add your Acked-by for this one, for v2
+This allows decompress_kernel to return a new location for the kernel to
+be relocated to. Additionally, enforces CONFIG_PHYSICAL_START as the
+minimum relocation position when building with CONFIG_RELOCATABLE.
 
+With CONFIG_RANDOMIZE_BASE set, the choose_kernel_location routine
+will select a new location to decompress the kernel, though here it is
+presently a no-op. The logic for bypassing this routine with "nokaslr"
+on the kernel command line is handled.
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/kernel-parameters.txt |    4 ++++
+ arch/x86/Kconfig                    |   38 +++++++++++++++++++++++++++++++----
+ arch/x86/boot/compressed/Makefile   |    2 +-
+ arch/x86/boot/compressed/aslr.c     |   23 +++++++++++++++++++++
+ arch/x86/boot/compressed/cmdline.c  |    2 +-
+ arch/x86/boot/compressed/head_32.S  |   10 +++++----
+ arch/x86/boot/compressed/head_64.S  |   16 +++++++++------
+ arch/x86/boot/compressed/misc.c     |    8 ++++++--
+ arch/x86/boot/compressed/misc.h     |   27 +++++++++++++++++++------
+ 9 files changed, 106 insertions(+), 24 deletions(-)
+ create mode 100644 arch/x86/boot/compressed/aslr.c
+
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index fcbb736..773fc4c 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -1975,6 +1975,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 	noapic		[SMP,APIC] Tells the kernel to not make use of any
+ 			IOAPICs that may be present in the system.
+ 
++	nokaslr		[X86]
++			Disable kernel base offset ASLR (Address Space
++			Layout Randomization) if built into the kernel.
++
+ 	noautogroup	Disable scheduler automatic task group creation.
+ 
+ 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index ee2fb9d..992701d 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -1722,16 +1722,46 @@ config RELOCATABLE
+ 
+ 	  Note: If CONFIG_RELOCATABLE=y, then the kernel runs from the address
+ 	  it has been loaded at and the compile time physical address
+-	  (CONFIG_PHYSICAL_START) is ignored.
++	  (CONFIG_PHYSICAL_START) is used as the minimum location.
+ 
+-# Relocation on x86-32 needs some additional build support
++config RANDOMIZE_BASE
++	bool "Randomize the address of the kernel image"
++	depends on RELOCATABLE
++	depends on !HIBERNATION
++	default n
++	---help---
++	   Randomizes the physical and virtual address at which the
++	   kernel image is decompressed, as a security feature that
++	   deters exploit attempts relying on knowledge of the location
++	   of kernel internals.
++
++	   Entropy is generated using the RDRAND instruction if it
++	   is supported.  If not, then RDTSC is used, if supported. If
++	   neither RDRAND nor RDTSC are supported, then no randomness
++	   is introduced.
++
++	   The kernel will be offset by up to RANDOMIZE_BASE_MAX_OFFSET,
++	   and aligned according to PHYSICAL_ALIGN.
++
++config RANDOMIZE_BASE_MAX_OFFSET
++	hex "Maximum ASLR offset allowed"
++	depends on RANDOMIZE_BASE
++	default "0x10000000"
++	range 0x0 0x10000000
++	---help---
++	 Determines the maximal offset in bytes that will be applied to the
++	 kernel when Address Space Layout Randomization (ASLR) is active.
++	 Must be less than or equal to the actual physical memory on the
++	 system. This must be a power of two.
++
++# Relocation on x86 needs some additional build support
+ config X86_NEED_RELOCS
+ 	def_bool y
+-	depends on X86_32 && RELOCATABLE
++	depends on RANDOMIZE_BASE || (X86_32 && RELOCATABLE)
+ 
+ config PHYSICAL_ALIGN
+ 	hex "Alignment value to which kernel should be aligned"
+-	default "0x1000000"
++	default "0x200000"
+ 	range 0x2000 0x1000000 if X86_32
+ 	range 0x200000 0x1000000 if X86_64
+ 	---help---
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 3312f1b..ae8b5db 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -27,7 +27,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+ 
+ VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
+ 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
+-	$(obj)/piggy.o $(obj)/cpuflags.o
++	$(obj)/piggy.o $(obj)/cpuflags.o $(obj)/aslr.o
+ 
+ $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
+ 
+diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
+new file mode 100644
+index 0000000..b73cc66
+--- /dev/null
++++ b/arch/x86/boot/compressed/aslr.c
+@@ -0,0 +1,23 @@
++#include "misc.h"
++
++#ifdef CONFIG_RANDOMIZE_BASE
++
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size)
++{
++	unsigned long choice = (unsigned long)output;
++
++	if (cmdline_find_option_bool("nokaslr")) {
++		debug_putstr("KASLR disabled...\n");
++		goto out;
++	}
++
++	/* XXX: choose random location. */
++
++out:
++	return (unsigned char *)choice;
++}
++
++#endif /* CONFIG_RANDOMIZE_BASE */
+diff --git a/arch/x86/boot/compressed/cmdline.c b/arch/x86/boot/compressed/cmdline.c
+index bffd73b..b68e303 100644
+--- a/arch/x86/boot/compressed/cmdline.c
++++ b/arch/x86/boot/compressed/cmdline.c
+@@ -1,6 +1,6 @@
+ #include "misc.h"
+ 
+-#ifdef CONFIG_EARLY_PRINTK
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
+ 
+ static unsigned long fs;
+ static inline void set_fs(unsigned long seg)
+diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
+index 5d6f689..9116aac 100644
+--- a/arch/x86/boot/compressed/head_32.S
++++ b/arch/x86/boot/compressed/head_32.S
+@@ -117,9 +117,11 @@ preferred_addr:
+ 	addl    %eax, %ebx
+ 	notl	%eax
+ 	andl    %eax, %ebx
+-#else
+-	movl	$LOAD_PHYSICAL_ADDR, %ebx
++	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
++	jge	1f
+ #endif
++	movl	$LOAD_PHYSICAL_ADDR, %ebx
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	addl	$z_extract_offset, %ebx
+@@ -191,14 +193,14 @@ relocated:
+ 	leal	boot_heap(%ebx), %eax
+ 	pushl	%eax		/* heap area */
+ 	pushl	%esi		/* real mode pointer */
+-	call	decompress_kernel
++	call	decompress_kernel /* returns kernel location in %eax */
+ 	addl	$24, %esp
+ 
+ /*
+  * Jump to the decompressed kernel.
+  */
+ 	xorl	%ebx, %ebx
+-	jmp	*%ebp
++	jmp	*%eax
+ 
+ /*
+  * Stack and heap for uncompression
+diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
+index c337422..c5c1ae0 100644
+--- a/arch/x86/boot/compressed/head_64.S
++++ b/arch/x86/boot/compressed/head_64.S
+@@ -94,9 +94,11 @@ ENTRY(startup_32)
+ 	addl	%eax, %ebx
+ 	notl	%eax
+ 	andl	%eax, %ebx
+-#else
+-	movl	$LOAD_PHYSICAL_ADDR, %ebx
++	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
++	jge	1f
+ #endif
++	movl	$LOAD_PHYSICAL_ADDR, %ebx
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	addl	$z_extract_offset, %ebx
+@@ -269,9 +271,11 @@ preferred_addr:
+ 	addq	%rax, %rbp
+ 	notq	%rax
+ 	andq	%rax, %rbp
+-#else
+-	movq	$LOAD_PHYSICAL_ADDR, %rbp
++	cmpq	$LOAD_PHYSICAL_ADDR, %rbp
++	jge	1f
+ #endif
++	movq	$LOAD_PHYSICAL_ADDR, %rbp
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	leaq	z_extract_offset(%rbp), %rbx
+@@ -339,13 +343,13 @@ relocated:
+ 	movl	$z_input_len, %ecx	/* input_len */
+ 	movq	%rbp, %r8		/* output target address */
+ 	movq	$z_output_len, %r9	/* decompressed length */
+-	call	decompress_kernel
++	call	decompress_kernel	/* returns kernel location in %rax */
+ 	popq	%rsi
+ 
+ /*
+  * Jump to the decompressed kernel.
+  */
+-	jmp	*%rbp
++	jmp	*%rax
+ 
+ 	.code32
+ no_longmode:
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 434f077..7138768 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -395,7 +395,7 @@ static void parse_elf(void *output)
+ 	free(phdrs);
+ }
+ 
+-asmlinkage void decompress_kernel(void *rmode, memptr heap,
++asmlinkage void *decompress_kernel(void *rmode, memptr heap,
+ 				  unsigned char *input_data,
+ 				  unsigned long input_len,
+ 				  unsigned char *output,
+@@ -422,6 +422,10 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	free_mem_ptr     = heap;	/* Heap */
+ 	free_mem_end_ptr = heap + BOOT_HEAP_SIZE;
+ 
++	output = choose_kernel_location(input_data, input_len,
++					output, output_len);
++
++	/* Validate memory location choices. */
+ 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
+ 		error("Destination address inappropriately aligned");
+ #ifdef CONFIG_X86_64
+@@ -441,5 +445,5 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	parse_elf(output);
+ 	handle_relocations(output, output_len);
+ 	debug_putstr("done.\nBooting the kernel.\n");
+-	return;
++	return output;
+ }
+diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
+index 674019d..9077af7 100644
+--- a/arch/x86/boot/compressed/misc.h
++++ b/arch/x86/boot/compressed/misc.h
+@@ -39,23 +39,38 @@ static inline void debug_putstr(const char *s)
+ 
+ #endif
+ 
+-#ifdef CONFIG_EARLY_PRINTK
+-
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
+ /* cmdline.c */
+ int cmdline_find_option(const char *option, char *buffer, int bufsize);
+ int cmdline_find_option_bool(const char *option);
++#endif
+ 
+-/* early_serial_console.c */
+-extern int early_serial_base;
+-void console_init(void);
+ 
++#if CONFIG_RANDOMIZE_BASE
++/* aslr.c */
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size);
+ #else
++static inline
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size)
++{
++	return output;
++}
++#endif
+ 
++#ifdef CONFIG_EARLY_PRINTK
+ /* early_serial_console.c */
++extern int early_serial_base;
++void console_init(void);
++#else
+ static const int early_serial_base;
+ static inline void console_init(void)
+ { }
+-
+ #endif
+ 
+ #endif
 -- 
-Djalal Harouni
-http://opendz.org
+1.7.9.5
