@@ -1,128 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Djalal Harouni <tixxdz@opendz.org>
-Date: Tue,  1 Oct 2013 21:26:17 +0100
-Message-Id: <1380659178-28605-9-git-send-email-tixxdz@opendz.org>
+Date: Tue,  1 Oct 2013 21:26:18 +0100
+Message-Id: <1380659178-28605-10-git-send-email-tixxdz@opendz.org>
 In-Reply-To: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
 References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] [PATCH v2 8/9] procfs: improve permission checks on /proc/*/stack
+Subject: [kernel-hardening] [PATCH v2 9/9] procfs: improve permission checks on /proc/*/syscall
 To: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: tixxdz@gmail.com, Djalal Harouni <tixxdz@opendz.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Permission checks need to happen during each system call. Therefore we
-need to convert the /proc/*/stack entry from a ONE node to a REG node.
-Doing this will make /proc/*/stack have its own file operations to
-implement appropriate checks and avoid breaking shared ONE file
+need to convert the /proc/*/syscall entry from an INF node to a REG
+node. Doing this will make /proc/*/syscall have its own file operations
+to implement appropriate checks and avoid breaking shared INF file
 operations.
 
-The patch makes sure that /proc/*/stack is still using seq files to
-provide its output.
-
-The patch adds stack_open() to check if the file's opener has enough
+Add the syscall_open() to check if the file's opener has enough
 permission to ptrace the task during ->open().
 
-However, even with this, /proc file descriptors can be passed to a more
-privileged process (e.g. a suid-exec) which will pass the classic
-ptrace_may_access() permission check during read().
+Add the syscall_read() to check permissions and to read task syscall
+information. If the classic ptrace_may_access() check is passed, then
+check if current's cred have changed between ->open() and ->read(), if
+so, call proc_allow_access() to check if the original file's opener had
+enough permissions to read the task syscall info. This will block
+passing the file descriptor to a more privileged process.
 
-To prevent this, use proc_same_open_cred() to detect if the cred of
-current have changed between ->open() and ->read(), if so, then call
-proc_allow_access() to check if the original file's opener had enough
-privileges to access the /proc's task entries during ->read(). This will
-block passing file descriptors to a more privileged process.
-
-If the cred did not change then continue with read().
-
-For readability, split code into another task_stack_show() function
-which is used to get the stack trace of a task.
+For readability split code into another task_syscall_read() function
+which is used to get the syscall entries of the task.
 
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Eric W. Biederman <ebiederm@xmission.com>
 Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
 ---
- fs/proc/base.c | 87 ++++++++++++++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 75 insertions(+), 12 deletions(-)
+ fs/proc/base.c | 93 ++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 84 insertions(+), 9 deletions(-)
 
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 77f5b84..b80588a 100644
+index b80588a..f98889d 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
-@@ -395,13 +395,14 @@ static void unlock_trace(struct task_struct *task)
+@@ -150,6 +150,9 @@ struct pid_entry {
+ 		NULL, &proc_single_file_operations,	\
+ 		{ .proc_show = show } )
  
- #define MAX_STACK_TRACE_DEPTH	64
++/* 4K page size but our output routines use some slack for overruns */
++#define PROC_BLOCK_SIZE        (3*1024)
++
+ /**
+  * proc_same_open_cred - Check if the file's opener cred matches the
+  * current cred.
+@@ -678,13 +681,32 @@ static int proc_pid_limits(struct task_struct *task, char *buffer)
+ }
  
--static int proc_pid_stack(struct seq_file *m, struct pid_namespace *ns,
--			  struct pid *pid, struct task_struct *task)
-+static int task_stack_show(struct seq_file *m, struct task_struct *task)
- {
--	struct stack_trace trace;
--	unsigned long *entries;
- 	int err;
- 	int i;
-+	int same_cred;
-+	struct stack_trace trace;
-+	unsigned long *entries;
-+	struct file *filp = m->private;
- 
- 	entries = kmalloc(MAX_STACK_TRACE_DEPTH * sizeof(*entries), GFP_KERNEL);
- 	if (!entries)
-@@ -412,20 +413,82 @@ static int proc_pid_stack(struct seq_file *m, struct pid_namespace *ns,
- 	trace.entries		= entries;
- 	trace.skip		= 0;
- 
-+	same_cred = proc_same_open_cred(filp->f_cred);
-+
- 	err = lock_trace(task);
--	if (!err) {
--		save_stack_trace_tsk(task, &trace);
-+	if (err)
-+		goto free;
- 
--		for (i = 0; i < trace.nr_entries; i++) {
--			seq_printf(m, "[<%pK>] %pS\n",
--				   (void *)entries[i], (void *)entries[i]);
--		}
-+	if (!same_cred &&
-+	    !proc_allow_access(filp->f_cred, task, PTRACE_MODE_ATTACH)) {
-+		err = -EPERM;
- 		unlock_trace(task);
-+		goto free;
-+	}
-+
-+	save_stack_trace_tsk(task, &trace);
-+	unlock_trace(task);
-+
-+	for (i = 0; i < trace.nr_entries; i++) {
-+		seq_printf(m, "[<%pK>] %pS\n",
-+			   (void *)entries[i], (void *)entries[i]);
- 	}
-+
-+free:
- 	kfree(entries);
-+	return err;
-+}
- 
-+static int stack_show(struct seq_file *m, void *v)
-+{
-+	int ret;
-+	struct pid *pid;
-+	struct task_struct *task;
-+	struct file *filp = m->private;
-+	struct inode *inode = file_inode(filp);
-+
-+	ret = -ESRCH;
-+	pid = proc_pid(inode);
-+	task = get_pid_task(pid, PIDTYPE_PID);
-+	if (!task)
-+		return ret;
-+
-+	ret = task_stack_show(m, task);
-+
-+	put_task_struct(task);
-+	return ret;
-+}
-+
-+static int stack_open(struct inode *inode, struct file *filp)
+ #ifdef CONFIG_HAVE_ARCH_TRACEHOOK
+-static int proc_pid_syscall(struct task_struct *task, char *buffer)
++static int syscall_open(struct inode *inode, struct file *filp)
 +{
 +	int err = -ESRCH;
 +	struct task_struct *task = get_proc_task(file_inode(filp));
@@ -134,44 +66,118 @@ index 77f5b84..b80588a 100644
 +	if (err)
 +		goto out;
 +
-+	err = -EPERM;
-+	if (ptrace_may_access(task, PTRACE_MODE_ATTACH))
-+		/* We need inode and filp->f_cred, so pass filp
-+		 * as third argument */
-+		err = single_open(filp, stack_show, filp);
++	if (!ptrace_may_access(task, PTRACE_MODE_ATTACH))
++		err = -EPERM;
 +
 +	mutex_unlock(&task->signal->cred_guard_mutex);
 +out:
 +	put_task_struct(task);
- 	return err;
++	return err;
++}
++
++static int task_syscall_read(struct task_struct *task, char *buffer)
+ {
++	int res;
+ 	long nr;
+ 	unsigned long args[6], sp, pc;
+-	int res = lock_trace(task);
+-	if (res)
+-		return res;
+ 
+ 	if (task_current_syscall(task, &nr, args, 6, &sp, &pc))
+ 		res = sprintf(buffer, "running\n");
+@@ -696,9 +718,64 @@ static int proc_pid_syscall(struct task_struct *task, char *buffer)
+ 		       nr,
+ 		       args[0], args[1], args[2], args[3], args[4], args[5],
+ 		       sp, pc);
+-	unlock_trace(task);
++
+ 	return res;
  }
 +
-+static const struct file_operations proc_pid_stack_operations = {
-+	.open           = stack_open,
-+	.read           = seq_read,
-+	.llseek         = seq_lseek,
-+	.release        = single_release,
++static ssize_t syscall_read(struct file *file, char __user *buf,
++			    size_t count, loff_t *ppos)
++{
++	int same_cred;
++	ssize_t length;
++	unsigned long page;
++	const struct cred *fcred = file->f_cred;
++	struct inode *inode = file_inode(file);
++	struct task_struct *task = get_proc_task(inode);
++
++	length = -ESRCH;
++	if (!task)
++		return length;
++
++	if (count > PROC_BLOCK_SIZE)
++		count = PROC_BLOCK_SIZE;
++
++	length = -ENOMEM;
++	page = __get_free_page(GFP_TEMPORARY);
++	if (!page)
++		goto out;
++
++	same_cred = proc_same_open_cred(fcred);
++
++	length = lock_trace(task);
++	if (length)
++		goto out_free;
++
++	if (!same_cred &&
++	    !proc_allow_access(fcred, task, PTRACE_MODE_ATTACH)) {
++		length = -EPERM;
++		unlock_trace(task);
++		goto out_free;
++	}
++
++	length = task_syscall_read(task, (char *)page);
++	unlock_trace(task);
++
++	if (length >= 0)
++		length = simple_read_from_buffer(buf, count, ppos,
++						 (char *)page, length);
++
++out_free:
++	free_page(page);
++out:
++	put_task_struct(task);
++	return length;
++}
++
++static const struct file_operations proc_pid_syscall_operations = {
++	.open           = syscall_open,
++	.read           = syscall_read,
++	.llseek         = generic_file_llseek,
 +};
- #endif
+ #endif /* CONFIG_HAVE_ARCH_TRACEHOOK */
  
- #ifdef CONFIG_SCHEDSTATS
-@@ -2725,7 +2788,7 @@ static const struct pid_entry tgid_base_stuff[] = {
- 	INF("wchan",      S_IRUGO, proc_pid_wchan),
+ /************************************************************************/
+@@ -789,8 +866,6 @@ static const struct inode_operations proc_def_inode_operations = {
+ 	.setattr	= proc_setattr,
+ };
+ 
+-#define PROC_BLOCK_SIZE	(3*1024)		/* 4K page size but our output routines use some slack for overruns */
+-
+ static ssize_t proc_info_read(struct file * file, char __user * buf,
+ 			  size_t count, loff_t *ppos)
+ {
+@@ -2760,7 +2835,7 @@ static const struct pid_entry tgid_base_stuff[] = {
  #endif
- #ifdef CONFIG_STACKTRACE
--	ONE("stack",      S_IRUSR, proc_pid_stack),
-+	REG("stack",      S_IRUSR, proc_pid_stack_operations),
+ 	REG("comm",      S_IRUGO|S_IWUSR, proc_pid_set_comm_operations),
+ #ifdef CONFIG_HAVE_ARCH_TRACEHOOK
+-	INF("syscall",    S_IRUSR, proc_pid_syscall),
++	REG("syscall",    S_IRUSR, proc_pid_syscall_operations),
  #endif
- #ifdef CONFIG_SCHEDSTATS
- 	INF("schedstat",  S_IRUGO, proc_pid_schedstat),
-@@ -3063,7 +3126,7 @@ static const struct pid_entry tid_base_stuff[] = {
- 	INF("wchan",     S_IRUGO, proc_pid_wchan),
+ 	INF("cmdline",    S_IRUGO, proc_pid_cmdline),
+ 	ONE("stat",       S_IRUGO, proc_tgid_stat),
+@@ -3096,7 +3171,7 @@ static const struct pid_entry tid_base_stuff[] = {
  #endif
- #ifdef CONFIG_STACKTRACE
--	ONE("stack",      S_IRUSR, proc_pid_stack),
-+	REG("stack",      S_IRUSR, proc_pid_stack_operations),
+ 	REG("comm",      S_IRUGO|S_IWUSR, proc_pid_set_comm_operations),
+ #ifdef CONFIG_HAVE_ARCH_TRACEHOOK
+-	INF("syscall",   S_IRUSR, proc_pid_syscall),
++	REG("syscall",   S_IRUSR, proc_pid_syscall_operations),
  #endif
- #ifdef CONFIG_SCHEDSTATS
- 	INF("schedstat", S_IRUGO, proc_pid_schedstat),
+ 	INF("cmdline",   S_IRUGO, proc_pid_cmdline),
+ 	ONE("stat",      S_IRUGO, proc_tid_stat),
 -- 
 1.7.11.7
