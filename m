@@ -1,347 +1,186 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  1 Oct 2013 12:37:19 -0700
-Message-Id: <1380656245-29975-2-git-send-email-keescook@chromium.org>
+Date: Tue,  1 Oct 2013 12:37:23 -0700
+Message-Id: <1380656245-29975-6-git-send-email-keescook@chromium.org>
 In-Reply-To: <1380656245-29975-1-git-send-email-keescook@chromium.org>
 References: <1380656245-29975-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 1/7] x86, kaslr: move CPU flags out of cpucheck
+Subject: [kernel-hardening] [PATCH 5/7] x86, kaslr: select memory region from e820 maps
 To: linux-kernel@vger.kernel.org
 Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Refactor the CPU flags handling out of the cpucheck routines so that
-they can be reused by the future ASLR routines (in order to detect CPU
-features like RDRAND and RDTSC).
-
-This reworks has_eflag() and has_fpu() to be used on both 32-bit and
-64-bit, and refactors the calls to cpuid to make them PIC-safe on 32-bit.
+Counts available alignment positions across all e820 maps, and chooses
+one randomly for the new kernel base address.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/Makefile              |    2 +-
- arch/x86/boot/boot.h                |   10 +---
- arch/x86/boot/compressed/Makefile   |    2 +-
- arch/x86/boot/compressed/cpuflags.c |   12 ++++
- arch/x86/boot/cpucheck.c            |   86 -----------------------------
- arch/x86/boot/cpuflags.c            |  104 +++++++++++++++++++++++++++++++++++
- arch/x86/boot/cpuflags.h            |   19 +++++++
- 7 files changed, 138 insertions(+), 97 deletions(-)
- create mode 100644 arch/x86/boot/compressed/cpuflags.c
- create mode 100644 arch/x86/boot/cpuflags.c
- create mode 100644 arch/x86/boot/cpuflags.h
+ arch/x86/boot/compressed/aslr.c |  140 ++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 130 insertions(+), 10 deletions(-)
 
-diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
-index 379814b..0da2e37 100644
---- a/arch/x86/boot/Makefile
-+++ b/arch/x86/boot/Makefile
-@@ -20,7 +20,7 @@ targets		:= vmlinux.bin setup.bin setup.elf bzImage
- targets		+= fdimage fdimage144 fdimage288 image.iso mtools.conf
- subdir-		:= compressed
+diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
+index 2f63f9f..ab0f8a3 100644
+--- a/arch/x86/boot/compressed/aslr.c
++++ b/arch/x86/boot/compressed/aslr.c
+@@ -2,6 +2,7 @@
  
--setup-y		+= a20.o bioscall.o cmdline.o copy.o cpu.o cpucheck.o
-+setup-y		+= a20.o bioscall.o cmdline.o copy.o cpu.o cpuflags.o cpucheck.o
- setup-y		+= early_serial_console.o edd.o header.o main.o mca.o memory.o
- setup-y		+= pm.o pmjump.o printf.o regs.o string.o tty.o video.o
- setup-y		+= video-mode.o version.o
-diff --git a/arch/x86/boot/boot.h b/arch/x86/boot/boot.h
-index ef72bae..50f8c5e 100644
---- a/arch/x86/boot/boot.h
-+++ b/arch/x86/boot/boot.h
-@@ -26,9 +26,8 @@
- #include <asm/boot.h>
- #include <asm/setup.h>
- #include "bitops.h"
--#include <asm/cpufeature.h>
--#include <asm/processor-flags.h>
- #include "ctype.h"
-+#include "cpuflags.h"
+ #ifdef CONFIG_RANDOMIZE_BASE
+ #include <asm/msr.h>
++#include <asm/e820.h>
  
- /* Useful macros */
- #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
-@@ -307,14 +306,7 @@ static inline int cmdline_find_option_bool(const char *option)
- 	return __cmdline_find_option_bool(cmd_line_ptr, option);
+ #include <asm/archrandom.h>
+ static inline int rdrand(unsigned long *v)
+@@ -115,6 +116,130 @@ static unsigned long find_minimum_location(unsigned long input,
+ 	return output;
  }
  
--
- /* cpu.c, cpucheck.c */
--struct cpu_features {
--	int level;		/* Family, or 64 for x86-64 */
--	int model;
--	u32 flags[NCAPINTS];
--};
--extern struct cpu_features cpu;
- int check_cpu(int *cpu_level_ptr, int *req_level_ptr, u32 **err_flags_ptr);
- int validate_cpu(void);
- 
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index dcd90df..3312f1b 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -27,7 +27,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
- 
- VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
- 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
--	$(obj)/piggy.o
-+	$(obj)/piggy.o $(obj)/cpuflags.o
- 
- $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
- 
-diff --git a/arch/x86/boot/compressed/cpuflags.c b/arch/x86/boot/compressed/cpuflags.c
-new file mode 100644
-index 0000000..931cba6
---- /dev/null
-+++ b/arch/x86/boot/compressed/cpuflags.c
-@@ -0,0 +1,12 @@
-+#ifdef CONFIG_RANDOMIZE_BASE
-+
-+#include "../cpuflags.c"
-+
-+bool has_cpuflag(int flag)
++/*
++ * This routine is used to count how many aligned slots that can hold the
++ * kernel exist across all e820 entries. It is called in two phases, once
++ * to count valid memory regions available for the kernel image, and a
++ * second time to select one from those seen.
++ *
++ * It is first called with "counting" set to true, where it expects to be
++ * called once for each e820 entry. In this mode, it will update *count
++ * with how many slots are available in the given e820 entry. Once the walk
++ * across all e820 entries has finished, the caller will have a total count
++ * of all valid memory regions available for the kernel image.
++ *
++ * Once the first pass of entry walking is finished, the caller selects one
++ * of the possible slots (stored in *count), and performs a second walk,
++ * with "counting" set to false. In this mode, *count is decremented until
++ * the corresponding slot is found in a specific e820 region, at which
++ * point, the function returns that address, and the walk terminates.
++ */
++static unsigned long process_e820_entry(struct e820entry *entry, bool counting,
++					unsigned long minimum,
++					unsigned long image_size,
++					unsigned long *count)
 +{
-+	get_flags();
++	u64 addr, size;
++	unsigned long alignments;
 +
-+	return test_bit(flag, cpu.flags);
-+}
++	/* Skip non-RAM entries. */
++	if (entry->type != E820_RAM)
++		return 0;
 +
-+#endif
-diff --git a/arch/x86/boot/cpucheck.c b/arch/x86/boot/cpucheck.c
-index 4d3ff03..e1f3c16 100644
---- a/arch/x86/boot/cpucheck.c
-+++ b/arch/x86/boot/cpucheck.c
-@@ -28,8 +28,6 @@
- #include <asm/required-features.h>
- #include <asm/msr-index.h>
- 
--struct cpu_features cpu;
--static u32 cpu_vendor[3];
- static u32 err_flags[NCAPINTS];
- 
- static const int req_level = CONFIG_X86_MINIMUM_CPU_FAMILY;
-@@ -69,90 +67,6 @@ static int is_transmeta(void)
- 	       cpu_vendor[2] == A32('M', 'x', '8', '6');
- }
- 
--static int has_fpu(void)
--{
--	u16 fcw = -1, fsw = -1;
--	u32 cr0;
--
--	asm("movl %%cr0,%0" : "=r" (cr0));
--	if (cr0 & (X86_CR0_EM|X86_CR0_TS)) {
--		cr0 &= ~(X86_CR0_EM|X86_CR0_TS);
--		asm volatile("movl %0,%%cr0" : : "r" (cr0));
--	}
--
--	asm volatile("fninit ; fnstsw %0 ; fnstcw %1"
--		     : "+m" (fsw), "+m" (fcw));
--
--	return fsw == 0 && (fcw & 0x103f) == 0x003f;
--}
--
--static int has_eflag(u32 mask)
--{
--	u32 f0, f1;
--
--	asm("pushfl ; "
--	    "pushfl ; "
--	    "popl %0 ; "
--	    "movl %0,%1 ; "
--	    "xorl %2,%1 ; "
--	    "pushl %1 ; "
--	    "popfl ; "
--	    "pushfl ; "
--	    "popl %1 ; "
--	    "popfl"
--	    : "=&r" (f0), "=&r" (f1)
--	    : "ri" (mask));
--
--	return !!((f0^f1) & mask);
--}
--
--static void get_flags(void)
--{
--	u32 max_intel_level, max_amd_level;
--	u32 tfms;
--
--	if (has_fpu())
--		set_bit(X86_FEATURE_FPU, cpu.flags);
--
--	if (has_eflag(X86_EFLAGS_ID)) {
--		asm("cpuid"
--		    : "=a" (max_intel_level),
--		      "=b" (cpu_vendor[0]),
--		      "=d" (cpu_vendor[1]),
--		      "=c" (cpu_vendor[2])
--		    : "a" (0));
--
--		if (max_intel_level >= 0x00000001 &&
--		    max_intel_level <= 0x0000ffff) {
--			asm("cpuid"
--			    : "=a" (tfms),
--			      "=c" (cpu.flags[4]),
--			      "=d" (cpu.flags[0])
--			    : "a" (0x00000001)
--			    : "ebx");
--			cpu.level = (tfms >> 8) & 15;
--			cpu.model = (tfms >> 4) & 15;
--			if (cpu.level >= 6)
--				cpu.model += ((tfms >> 16) & 0xf) << 4;
--		}
--
--		asm("cpuid"
--		    : "=a" (max_amd_level)
--		    : "a" (0x80000000)
--		    : "ebx", "ecx", "edx");
--
--		if (max_amd_level >= 0x80000001 &&
--		    max_amd_level <= 0x8000ffff) {
--			u32 eax = 0x80000001;
--			asm("cpuid"
--			    : "+a" (eax),
--			      "=c" (cpu.flags[6]),
--			      "=d" (cpu.flags[1])
--			    : : "ebx");
--		}
--	}
--}
--
- /* Returns a bitmask of which words we have error bits in */
- static int check_flags(void)
- {
-diff --git a/arch/x86/boot/cpuflags.c b/arch/x86/boot/cpuflags.c
-new file mode 100644
-index 0000000..b02544a
---- /dev/null
-+++ b/arch/x86/boot/cpuflags.c
-@@ -0,0 +1,104 @@
-+#include <linux/types.h>
-+#include "bitops.h"
++	/* Ignore entries entirely above our maximum. */
++	if (entry->addr >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
++		return 0;
 +
-+#include <asm/processor-flags.h>
-+#include <asm/required-features.h>
-+#include <asm/msr-index.h>
-+#include "cpuflags.h"
++	/* Ignore entries entirely below our minimum. */
++	if (entry->addr + entry->size < minimum)
++		return 0;
 +
-+struct cpu_features cpu;
-+u32 cpu_vendor[3];
++	size = entry->size;
++	addr = entry->addr;
 +
-+static bool loaded_flags;
++	/* Potentially raise address to minimum location. */
++	if (addr < minimum)
++		addr = minimum;
 +
-+static int has_fpu(void)
-+{
-+	u16 fcw = -1, fsw = -1;
-+	unsigned long cr0;
++	/* Potentially raise address to meet alignment requirements. */
++	addr = ALIGN(addr, CONFIG_PHYSICAL_ALIGN);
 +
-+	asm volatile("mov %%cr0,%0" : "=r" (cr0));
-+	if (cr0 & (X86_CR0_EM|X86_CR0_TS)) {
-+		cr0 &= ~(X86_CR0_EM|X86_CR0_TS);
-+		asm volatile("mov %0,%%cr0" : : "r" (cr0));
++	/* Did we raise the address above the bounds of this e820 region? */
++	if (addr > entry->addr + entry->size)
++		return 0;
++
++	/* Reduce size by any delta from the original address. */
++	size -= addr - entry->addr;
++
++	/* Reduce maximum image starting location to maximum limit. */
++	if (addr + size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
++		size = CONFIG_RANDOMIZE_BASE_MAX_OFFSET - addr;
++
++	/* Ignore entries that cannot hold even a single kernel image. */
++	if (size < image_size)
++		return 0;
++
++	/*
++	 * Reduce size by kernel image size so we can see how many aligned
++	 * starting addresses will fit without running past the end of a
++	 * region. XXX: adjacent e820 regions are not detected, so up to
++	 * image_size / CONFIG_PHYSICAL_ALIGN slots may go unused across
++	 * adjacent regions.
++	 */
++	size -= image_size;
++
++	/* Now we know how many aligned slots can contain the image. */
++	alignments = (size / CONFIG_PHYSICAL_ALIGN) + 1;
++
++	/* In the first pass, just counting all the e820 entries? */
++	if (counting) {
++		*count += alignments;
++		return 0;
 +	}
 +
-+	asm volatile("fninit ; fnstsw %0 ; fnstcw %1"
-+		     : "+m" (fsw), "+m" (fcw));
-+
-+	return fsw == 0 && (fcw & 0x103f) == 0x003f;
-+}
-+
-+int has_eflag(unsigned long mask)
-+{
-+	unsigned long f0, f1;
-+
-+	asm volatile("pushf	\n\t"
-+		     "pushf	\n\t"
-+		     "pop %0	\n\t"
-+		     "mov %0,%1	\n\t"
-+		     "xor %2,%1	\n\t"
-+		     "push %1	\n\t"
-+		     "popf	\n\t"
-+		     "pushf	\n\t"
-+		     "pop %1	\n\t"
-+		     "popf"
-+		     : "=&r" (f0), "=&r" (f1)
-+		     : "ri" (mask));
-+
-+	return !!((f0^f1) & mask);
-+}
-+
-+/* Handle x86_32 PIC using ebx. */
-+#if defined(__i386__) && defined(__PIC__)
-+# define EBX_REG "=r"
-+#else
-+# define EBX_REG "=b"
-+#endif
-+
-+static inline void cpuid(u32 id, u32 *a, u32 *b, u32 *c, u32 *d)
-+{
-+	asm volatile(".ifnc %%ebx,%3 ; movl  %%ebx,%3 ; .endif	\n\t"
-+		     "cpuid					\n\t"
-+		     ".ifnc %%ebx,%3 ; xchgl %%ebx,%3 ; .endif	\n\t"
-+		    : "=a" (*a), "=c" (*c), "=d" (*d), EBX_REG (*b)
-+		    : "a" (id)
-+	);
-+}
-+
-+void get_flags(void)
-+{
-+	u32 max_intel_level, max_amd_level;
-+	u32 tfms;
-+	u32 ignored;
-+
-+	if (loaded_flags)
-+		return;
-+	loaded_flags = true;
-+
-+	if (has_fpu())
-+		set_bit(X86_FEATURE_FPU, cpu.flags);
-+
-+	if (has_eflag(X86_EFLAGS_ID)) {
-+		cpuid(0x0, &max_intel_level, &cpu_vendor[0], &cpu_vendor[2],
-+		      &cpu_vendor[1]);
-+
-+		if (max_intel_level >= 0x00000001 &&
-+		    max_intel_level <= 0x0000ffff) {
-+			cpuid(0x1, &tfms, &ignored, &cpu.flags[4],
-+			      &cpu.flags[0]);
-+			cpu.level = (tfms >> 8) & 15;
-+			cpu.model = (tfms >> 4) & 15;
-+			if (cpu.level >= 6)
-+				cpu.model += ((tfms >> 16) & 0xf) << 4;
-+		}
-+
-+		cpuid(0x80000000, &max_amd_level, &ignored, &ignored,
-+		      &ignored);
-+
-+		if (max_amd_level >= 0x80000001 &&
-+		    max_amd_level <= 0x8000ffff) {
-+			cpuid(0x80000001, &ignored, &ignored, &cpu.flags[6],
-+			      &cpu.flags[1]);
-+		}
++	/* Otherwise we're counting down to find a specific aligned slot. */
++	if (*count < alignments) {
++		/* Desired region is in this entry. */
++		return addr + (CONFIG_PHYSICAL_ALIGN * *count);
++	} else {
++		/* Desired region is beyond this entry. */
++		*count -= alignments;
++		return 0;
 +	}
 +}
-diff --git a/arch/x86/boot/cpuflags.h b/arch/x86/boot/cpuflags.h
-new file mode 100644
-index 0000000..9bb4e25
---- /dev/null
-+++ b/arch/x86/boot/cpuflags.h
-@@ -0,0 +1,19 @@
-+#ifndef BOOT_CPUFLAGS_H
-+#define BOOT_CPUFLAGS_H
 +
-+#include <asm/cpufeature.h>
-+#include <asm/processor-flags.h>
++static unsigned long find_random_e820(unsigned long minimum,
++				      unsigned long size)
++{
++	int i;
++	unsigned long addr, count;
 +
-+struct cpu_features {
-+	int level;		/* Family, or 64 for x86-64 */
-+	int model;
-+	u32 flags[NCAPINTS];
-+};
++	/* Make sure minimum is aligned. */
++	minimum = ALIGN(minimum, CONFIG_PHYSICAL_ALIGN);
 +
-+extern struct cpu_features cpu;
-+extern u32 cpu_vendor[3];
++	/* Verify potential e820 positions. */
++	count = 0;
++	for (i = 0; i < real_mode->e820_entries; i++) {
++		process_e820_entry(&real_mode->e820_map[i], true, minimum,
++				   size, &count);
++	}
 +
-+int has_eflag(unsigned long mask);
-+void get_flags(void);
++	/* Handle crazy case of nothing fitting. */
++	if (count == 0)
++		return 0;
 +
-+#endif
++	count = get_random_long() % count;
++
++	/* Select desired e820 position. */
++	for (i = 0; i < real_mode->e820_entries; i++) {
++		addr = process_e820_entry(&real_mode->e820_map[i], false,
++					  minimum, size, &count);
++		if (addr)
++			return addr;
++	}
++	return 0;
++}
++
+ unsigned char *choose_kernel_location(unsigned char *input,
+ 				      unsigned long input_size,
+ 				      unsigned char *output,
+@@ -131,16 +256,11 @@ unsigned char *choose_kernel_location(unsigned char *input,
+ 	choice = find_minimum_location((unsigned long)input, input_size,
+ 				       (unsigned long)output, output_size);
+ 
+-	/* XXX: Find an appropriate E820 hole, instead of adding offset. */
+-	random = get_random_long();
+-
+-	/* Clip off top of the range. */
+-	random &= (CONFIG_RANDOMIZE_BASE_MAX_OFFSET - 1);
+-	while (random + output_size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
+-		random >>= 1;
+-
+-	/* Clip off bottom of range. */
+-	random &= ~(choice - 1);
++	random = find_random_e820(choice, output_size);
++	if (!random) {
++		debug_putstr("KASLR could not find suitable E820 region...\n");
++		goto out;
++	}
+ 
+ 	/* Always enforce the minimum. */
+ 	if (random < choice)
 -- 
 1.7.9.5
