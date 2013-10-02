@@ -1,70 +1,136 @@
 Reply-To: kernel-hardening@lists.openwall.com
-In-Reply-To: <20131002050714.GA27982@gmail.com>
-References: <1380656245-29975-1-git-send-email-keescook@chromium.org> <20131002050714.GA27982@gmail.com>
+Message-ID: <524B6AEE.90301@jp.fujitsu.com>
+Date: Wed, 02 Oct 2013 09:38:06 +0900
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
 MIME-Version: 1.0
-Content-Type: text/plain;
- charset=UTF-8
-Content-Transfer-Encoding: 8bit
-From: "H. Peter Anvin" <hpa@zytor.com>
-Date: Tue, 01 Oct 2013 22:11:37 -0700
-Message-ID: <fcdac020-6b9a-4d36-b424-290597669cb0@email.android.com>
-Subject: [kernel-hardening] Re: [PATCH v6 0/7] Kernel base address randomization
-To: Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Arnaldo Carvalho de Melo <acme@infradead.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Thomas Gleixner <tglx@linutronix.de>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org> <1380656245-29975-7-git-send-email-keescook@chromium.org>
+In-Reply-To: <1380656245-29975-7-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-2022-JP
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I think that the randomization offset would be necessary in order to identify pointers.
+(2013/10/02 4:37), Kees Cook wrote:
+> When the system panics, include the kernel offset in the report to assist
+> in debugging.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>   arch/x86/kernel/setup.c |   26 ++++++++++++++++++++++++++
+>   1 file changed, 26 insertions(+)
+> 
+> diff --git a/arch/x86/kernel/setup.c b/arch/x86/kernel/setup.c
+> index f0de629..1708862 100644
+> --- a/arch/x86/kernel/setup.c
+> +++ b/arch/x86/kernel/setup.c
+> @@ -824,6 +824,20 @@ static void __init trim_low_memory_range(void)
+>   }
+>   	
+>   /*
+> + * Dump out kernel offset information on panic.
+> + */
+> +static int
+> +dump_kernel_offset(struct notifier_block *self, unsigned long v, void *p)
+> +{
+> +	pr_emerg("Kernel Offset: 0x%lx from 0x%lx "
+> +		 "(relocation range: 0x%lx-0x%lx)\n",
+> +		 (unsigned long)&_text - __START_KERNEL, __START_KERNEL,
+> +		 __START_KERNEL_map, MODULES_VADDR-1);
 
-Ingo Molnar <mingo@kernel.org> wrote:
->
->* Kees Cook <keescook@chromium.org> wrote:
->
->> Here is the latest version of the kASLR series. It has much improved 
->> e820 walking code, and expands the window available on 64-bit.
->> 
->> This is rolled out on Chrome OS devices, and working well.
->
->There's one kernel debuggability detail that should be discussed I
->think: 
->should symbolic printouts (in oops messages but also in /proc/kallsyms)
->
->and instrumentation interfaces that expose kernel addresses attempt to 
->de-randomize the addresses, stack contents and register values that lie
->
->within the random range?
->
->- it would be easier to use those addresses and look them up in a
->vmlinux
->   or in a System.map as well.
->
-> - it would be somewhat safer to post an oops publicly if it did not
->   contain the random offset in an easily identifiable way.
->
->- oops patterns from distribution kernels that enable randomization
->would 
->   match up better.
->
-> - this would make it safer to expose /proc/kallsyms to user-space
->   profiling, while keeping the random offset a kernel-internal secret.
->
-> - RIP information in profiling streams would thus not contain the
->   kernel random offset either.
->
->The other approach would be what your series does, to keep all the raw,
->
->randomized output and to assume that users who are allowed to access to
->
->logs or profiling can learn the random offset.
->
->I tend to lean towards the 'raw' approach that you picked, but an
->argument 
->can be made for both approaches - and in any case I haven't seen this 
->discussed to conclusion with cons/pros listed and a consensus/decision 
->reached.
->
->Thanks,
->
->	Ingo
+Using phys_base seems better.
+
+> +
+> +	return 0;
+> +}
+> +
+> +/*
+>    * Determine if we were loaded by an EFI loader.  If so, then we have also been
+>    * passed the efi memmap, systab, etc., so we should use these data structures
+>    * for initialization.  Note, the efi init code path is determined by the
+> @@ -1242,3 +1256,15 @@ void __init i386_reserve_resources(void)
+>   }
+>   
+>   #endif /* CONFIG_X86_32 */
+> +
+> +static struct notifier_block kernel_offset_notifier = {
+> +	.notifier_call = dump_kernel_offset
+> +};
+> +
+> +static int __init register_kernel_offset_dumper(void)
+> +{
+> +	atomic_notifier_chain_register(&panic_notifier_list,
+> +					&kernel_offset_notifier);
+> +	return 0;
+> +}
+> +__initcall(register_kernel_offset_dumper);
+> 
+
+Panic notifier is not executed if kdump is enabled. Maybe, Chrome OS doesn't use
+kdump? Anyway, kdump related tools now calculate phys_base from memory map
+information passed as ELF PT_LOAD entries like below.
+
+$ LANG=C readelf -l vmcore-rhel6up4
+
+Elf file type is CORE (Core file)
+Entry point 0x0
+There are 5 program headers, starting at offset 64
+
+Program Headers:
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  NOTE           0x0000000000000158 0x0000000000000000 0x0000000000000000
+                 0x0000000000000b08 0x0000000000000b08         0
+  LOAD           0x0000000000000c60 0xffffffff81000000 0x0000000001000000
+                 0x000000000103b000 0x000000000103b000  RWE    0
+  LOAD           0x000000000103bc60 0xffff880000001000 0x0000000000001000
+                 0x000000000009cc00 0x000000000009cc00  RWE    0
+  LOAD           0x00000000010d8860 0xffff880000100000 0x0000000000100000
+                 0x0000000002f00000 0x0000000002f00000  RWE    0
+  LOAD           0x0000000003fd8860 0xffff880013000000 0x0000000013000000
+                 0x000000002cffd000 0x000000002cffd000  RWE    0
+
+Each PT_LOAD entry is assigned to virtual and physical address. In this case,
+1st PT_LOAD entry belongs to kernel text mapping region, from which we can
+calculate phys_base value.
+
+Therefore, we already have phys_base information even in case of kdump, and
+as long as using kdump-related tools such as crash utility, we don't need
+to see ELF PT_LOAD headers as I explain here because they calculate the process
+I explain here automatically.
+
+Another idea is to add phys_base value in VMCOREINFO information that is debugging
+information for user-land tools to filter crash dump. This is simple string information
+so you can see the values contained in some crash dump by using strings command to it.
+For example,
+
+$ LANG=C strings vmcore-rhel6up4
+CORE
+CORE
+CORE
+CORE
+VMCOREINFO
+OSRELEASE=2.6.32-345.el6.x86_64
+PAGESIZE=4096
+SYMBOL(init_uts_ns)=ffffffff81a8e940
+SYMBOL(node_online_map)=ffffffff81c09e20
+SYMBOL(swapper_pg_dir)=ffffffff81a85000
+...cut...
+NUMBER(PG_private)=11
+NUMBER(PG_swapcache)=16
+SYMBOL(phys_base)=ffffffff81a8d010
+SYMBOL(init_level4_pgt)=ffffffff81a85000
+SYMBOL(node_data)=ffffffff81c06280
+LENGTH(node_data)=512
+CRASHTIME=1355815389
+
+The problem is that currently phys_base information is somehow exported as virtual address
+assigned to phys_base symbol, not the value of it. User-land tools use this to determine
+if they need to calculate phys_base. But obviously, it's simpler to export phys_base information
+as its value, not the assigned address. Then, as a side-effect, we can check phys_base value
+using strings command to crash dump and this is a little handy.
 
 -- 
-Sent from my mobile phone.  Please pardon brevity and lack of formatting.
+Thanks.
+HATAYAMA, Daisuke
