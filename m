@@ -1,113 +1,109 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 2 Oct 2013 15:55:06 +0100
+Date: Wed, 2 Oct 2013 16:14:30 +0100
 From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20131002145506.GA2669@dztty>
+Message-ID: <20131002151430.GB2669@dztty>
 References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
- <1380659178-28605-3-git-send-email-tixxdz@opendz.org>
- <524B78A2.40007@amacapital.net>
+ <1380659178-28605-7-git-send-email-tixxdz@opendz.org>
+ <524B7934.9070606@amacapital.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <524B78A2.40007@amacapital.net>
-Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if
- file's opener may access task
+In-Reply-To: <524B7934.9070606@amacapital.net>
+Subject: [kernel-hardening] Re: [PATCH v2 6/9] procfs: add permission checks on the file's
+ opener of /proc/*/stat
 To: Andy Lutomirski <luto@amacapital.net>
 Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com, tixxdz@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 01, 2013 at 06:36:34PM -0700, Andy Lutomirski wrote:
+On Tue, Oct 01, 2013 at 06:39:00PM -0700, Andy Lutomirski wrote:
 > On 10/01/2013 01:26 PM, Djalal Harouni wrote:
-> > Since /proc entries varies at runtime, permission checks need to happen
-> > during each system call.
+> > Some fields of the /proc/*/stat are sensitive fields that need
+> > appropriate protection.
 > > 
-> > However even with that /proc file descriptors can be passed to a more
-> > privileged process (e.g. a suid-exec) which will pass the classic
-> > ptrace_may_access() permission check. The open() call will be issued in
-> > general by an unprivileged process while the disclosure of sensitive
-> > /proc information will happen using a more privileged process at
-> > read(),write()...
+> > However, /proc file descriptors can be passed to a more privileged
+> > process (e.g. a suid-exec) which will pass the classic
+> > ptrace_may_access() permission check during read().
 > > 
-> > Therfore we need a more sophisticated check to detect if the cred of the
-> > process have changed, and if the cred of the original opener that are
-> > stored in the file->f_cred have enough permission to access the task's
-> > /proc entries during read(), write()...
+> > To prevent it, use proc_same_open_cred() to detect if current's cred
+> > have changed between ->open() and ->read(), if so, call
+> > proc_allow_access() to check if the original file's opener had enough
+> > permissions to read these sensitive fields. This will prevent passing
+> > file descriptors to a more privileged process to leak data.
 > > 
-> > Add the proc_allow_access() function that will receive the file->f_cred
-> > as an argument, and tries to check if the opener had enough permission
-> > to access the task's /proc entries.
+> > The patch also adds a previously missing signal->cred_guard_mutex lock.
 > > 
-> > This function should be used with the ptrace_may_access() check.
+> > This patch does not break userspace since it only hides the fields that
+> > were supposed to be protected.
 > > 
 > > Cc: Kees Cook <keescook@chromium.org>
-> > Suggested-by: Eric W. Biederman <ebiederm@xmission.com>
+> > Cc: Eric W. Biederman <ebiederm@xmission.com>
 > > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
 > > ---
-> >  fs/proc/base.c     | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
-> >  fs/proc/internal.h |  2 ++
-> >  2 files changed, 58 insertions(+)
+> >  fs/proc/array.c | 16 ++++++++++++++--
+> >  1 file changed, 14 insertions(+), 2 deletions(-)
 > > 
-> > diff --git a/fs/proc/base.c b/fs/proc/base.c
-> > index e834946..c29eeae 100644
-> > --- a/fs/proc/base.c
-> > +++ b/fs/proc/base.c
-> > @@ -168,6 +168,62 @@ int proc_same_open_cred(const struct cred *fcred)
-> >  		cap_issubset(cred->cap_permitted, fcred->cap_permitted));
-> >  }
+> > diff --git a/fs/proc/array.c b/fs/proc/array.c
+> > index cbd0f1b..f034e05 100644
+> > --- a/fs/proc/array.c
+> > +++ b/fs/proc/array.c
+> > @@ -394,7 +394,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
+> >  	char state;
+> >  	pid_t ppid = 0, pgid = -1, sid = -1;
+> >  	int num_threads = 0;
+> > -	int permitted;
+> > +	int permitted = 0;
+> >  	struct mm_struct *mm;
+> >  	unsigned long long start_time;
+> >  	unsigned long cmin_flt = 0, cmaj_flt = 0;
+> > @@ -404,10 +404,22 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
+> >  	unsigned long rsslim = 0;
+> >  	char tcomm[sizeof(task->comm)];
+> >  	unsigned long flags;
+> > +	struct file *file = m->private;
+> > +	int same_cred = proc_same_open_cred(file->f_cred);
+> > +	unsigned int ptrace_mode = PTRACE_MODE_READ | PTRACE_MODE_NOAUDIT;
 > >  
-> > +/* Returns 0 on success, -errno on denial. */
-> > +static int __proc_allow_access(const struct cred *cred,
-> > +			       struct task_struct *task, unsigned int mode)
-> > +{
-> > +	int ret = 0;
-> > +	const struct cred *tcred;
-> > +	const struct cred *fcred = cred;
+> >  	state = *get_task_state(task);
+> >  	vsize = eip = esp = 0;
+> > -	permitted = ptrace_may_access(task, PTRACE_MODE_READ | PTRACE_MODE_NOAUDIT);
 > > +
-> > +	rcu_read_lock();
-> > +	tcred = __task_cred(task);
-> > +	if (uid_eq(fcred->uid, tcred->euid) &&
-> > +	    uid_eq(fcred->uid, tcred->suid) &&
-> > +	    uid_eq(fcred->uid, tcred->uid)  &&
-> > +	    gid_eq(fcred->gid, tcred->egid) &&
-> > +	    gid_eq(fcred->gid, tcred->sgid) &&
-> > +	    gid_eq(fcred->gid, tcred->gid))
-> > +		goto out;
+> > +	if (!mutex_lock_killable(&task->signal->cred_guard_mutex)) {
+> > +		permitted = ptrace_may_access(task, ptrace_mode);
+> > +		if (permitted && !same_cred)
+> > +			permitted = proc_allow_access(file->f_cred,
+> > +						      task, ptrace_mode);
+> > +
+> > +		mutex_unlock(&task->signal->cred_guard_mutex);
+> > +	}
 > > +
 > 
-> What's this for?  Is it supposed to be an optimization?  If so, it looks
-> potentially exploitable, although I don't really understand what you're
-> trying to do.
-This function should be used in addition to the ptrace_may_access() one.
+> else permitted = false?
+permitted is initialized to 0
 
-This will help to check if the original process that opened a
-/proc/pid/* file is able to read(),write() to it.
+First the original ptrace_may_access() check did not hold
+cred_guard_mutex, so add it. If we can't grab mutex then let permitted
+to be zero. Yes this a change in behaviour and I think it's correct, IOW
+we were not able to perform the ptrace_may_access() check, otherwise
+permitted will depend on checks result.
 
-As we have said, the file descriptor can be passed to a more privileged
-process to pass the ptrace_may_access(). If we detect that current's
-cred have changed between ->open() (unprivileged) and ->read()
-(privileged, exec a suid-exec), then we call this helper function to
-check the file's opener cred against the target task during this
-->read(),->write()...
-
-This should block vulnerabilities like the /proc/pid/mem
-http://lwn.net/Articles/476947/
-
-Since current will not have the same privileges of the process that
-opened the file (cred have changed).
+However, there is still a race here since we set the permitted value
+before gathering the appropriate info about task. At the read() data moment
+this target task may have been gone privileged... , acquiring an X lock
+on target task, will just break/slow things, as it has been shown before...
+Not to mention that the race window is small...
 
 
-So:
-This is not an optimization!
+> But surely this would be *much* more comprehensible if you had
+> proc_allow_access do the entire check.
+I don't understand what you mean by "do the entire check" ?
 
-Can you elaborate more on the potentially exploitable please ?
+the /proc/pid/stat file is used by "ps", "top" ... it's a vital file
+We don't want to break it, otherwise "ps" will hide processes. So just
+do the ptrace_may_access() check correctly with the help of
+proc_allow_access() and set the permitted variable only. The patch did
+not touch /proc/pid/stat fields.
 
-
-It has the same logic of ptrace_may_access(). Didn't want to modifiy
-ptrace_may_access() since it relies on current and its context and if we
-do, we'll have to touch the capability checks also. So just add this one
-here and call it only if current's cred change.
-
-
-> --Andy
+I've done tests on ps and top, and they work fine.
 
 -- 
 Djalal Harouni
