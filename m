@@ -1,13 +1,13 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20130929103746.GB3459@dztty>
+In-Reply-To: <20130928143523.GA2199@dztty>
 References: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
 	<1380140085-29712-7-git-send-email-tixxdz@opendz.org>
 	<CAGXu5jJKH6WPSMnqALOEjqGb6ZoeyYzj5vemk=2z4KPZyg=ptw@mail.gmail.com>
-	<20130929103746.GB3459@dztty>
-Date: Wed, 2 Oct 2013 12:49:38 -0700
-Message-ID: <CAGXu5jJuooUOJTfZVwVON8QOw+QHqwdBOKuBKs3t2M3a6o=1gg@mail.gmail.com>
+	<20130928143523.GA2199@dztty>
+Date: Wed, 2 Oct 2013 12:52:58 -0700
+Message-ID: <CAGXu5j+8uCt-SQU95GBoLfO95NV9Cu-V-hsJ4oj3K4Lgm3QS_Q@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
 Subject: [kernel-hardening] Re: [PATCH 06/12] procfs: make /proc/*/stack 0400
@@ -15,7 +15,7 @@ To: Djalal Harouni <tixxdz@opendz.org>
 Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Sep 29, 2013 at 3:37 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
+On Sat, Sep 28, 2013 at 7:35 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
 > On Thu, Sep 26, 2013 at 03:43:24PM -0500, Kees Cook wrote:
 >> On Wed, Sep 25, 2013 at 3:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
 >> > The /proc/*/stack contains sensitive information and currently its mode
@@ -39,11 +39,21 @@ On Sun, Sep 29, 2013 at 3:37 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
 >> nice to at least get this into the tree. Fixing this reduces which
 >> processes are exposed to ASLR leaks. The rest of the series closes the
 >> remaining holes.
-> Kees I guess it's ok to add your Acked-by for this one, for v2
+>>
+>> I would if it would be valuable adding a test for the identified leak
+>> conditions to some test suite? LTP perhaps?
+> I'm not familiar with LTP, but I guess a small program that perform I/O
+> redirection and execve a suid-exec will do it?
 
-Yes, please. :)
+It's actually a giant program. :)
 
-Acked-by: Kees Cook <keescook@chromium.org>
+http://ltp.sourceforge.net/
+
+> I'll try to add code comment in fs/proc/base.c
+
+Mostly I'm just thinking that this is a rather fragile area, and it
+would be nice to have a set of tests that verify we haven't broken any
+of the known test-cases.
 
 -Kees
 
