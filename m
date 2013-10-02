@@ -1,112 +1,117 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 2 Oct 2013 19:48:44 +0100
+Date: Wed, 2 Oct 2013 20:00:35 +0100
 From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20131002184844.GB3393@dztty>
+Message-ID: <20131002190035.GA3529@dztty>
 References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
- <524B7999.60806@amacapital.net>
- <20131002143759.GA2966@dztty>
- <CALCETrUcg4o5QeGMP1rRAzJSfjwS=qD3DsDWV3=fPJQOA3xkKw@mail.gmail.com>
- <CAGXu5j+APTTSKh_xvgpzV3wNYseQxafbKqQ3NyvUe50aGOOBGg@mail.gmail.com>
- <20131002182206.GB2485@dztty>
- <CAGXu5jL3iReSCfRRXGaKp4dikh5f3BR55NbVEXHrTscTSDgeZA@mail.gmail.com>
+ <1380659178-28605-7-git-send-email-tixxdz@opendz.org>
+ <524B7934.9070606@amacapital.net>
+ <20131002151430.GB2669@dztty>
+ <CALCETrWWUkqNk_rReGfg+zxmFctFkoydqKs85bgzNk6AuyzyCg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jL3iReSCfRRXGaKp4dikh5f3BR55NbVEXHrTscTSDgeZA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 0/9] procfs: protect /proc/<pid>/* files with
- file->f_cred
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+In-Reply-To: <CALCETrWWUkqNk_rReGfg+zxmFctFkoydqKs85bgzNk6AuyzyCg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 6/9] procfs: add permission checks on the file's
+ opener of /proc/*/stat
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 02, 2013 at 11:35:45AM -0700, Kees Cook wrote:
-> On Wed, Oct 2, 2013 at 11:22 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> > On Wed, Oct 02, 2013 at 10:48:55AM -0700, Kees Cook wrote:
-> >> On Wed, Oct 2, 2013 at 9:51 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> >> > On Wed, Oct 2, 2013 at 3:37 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> >> On Tue, Oct 01, 2013 at 06:40:41PM -0700, Andy Lutomirski wrote:
-> >> >>> On 10/01/2013 01:26 PM, Djalal Harouni wrote:
-> >> >>> > /proc/<pid>/* entries varies at runtime, appropriate permission checks
-> >> >>> > need to happen during each system call.
-> >> >>> >
-> >> >>> > Currently some of these sensitive entries are protected by performing
-> >> >>> > the ptrace_may_access() check. However even with that the /proc file
-> >> >>> > descriptors can be passed to a more privileged process
-> >> >>> > (e.g. a suid-exec) which will pass the classic ptrace_may_access()
-> >> >>> > check. In general the ->open() call will be issued by an unprivileged
-> >> >>> > process while the ->read(),->write() calls by a more privileged one.
-> >> >>> >
-> >> >>> > Example of these files are:
-> >> >>> > /proc/*/syscall, /proc/*/stack etc.
-> >> >>> >
-> >> >>> > And any open(/proc/self/*) then suid-exec to read()/write() /proc/self/*
-> >> >>> >
-> >> >>> >
-> >> >>> > These files are protected during read() by the ptrace_may_access(),
-> >> >>> > however the file descriptor can be passed to a suid-exec which can be
-> >> >>> > used to read data and bypass ASLR. Of course this was discussed several
-> >> >>> > times on LKML.
-> >> >>>
-> >> >>> Can you elaborate on what it is that you're fixing?  That is, can you
-> >> >>> give a concrete example of what process opens what file and passes the
-> >> >>> fd to what process?
-> >> >> Yes, the references were already given in this email:
-> >> >> https://lkml.org/lkml/2013/8/31/209
-> >> >>
-> >> >> This has been discussed several times on lkml:
-> >> >> https://lkml.org/lkml/2013/8/28/544
-> >> >>
-> >> >> https://lkml.org/lkml/2013/8/28/564 (check Kees's references)
-> >> >>
-> >> >>
-> >> >>> I'm having trouble following your description.
-> >> >> Process open a /proc file and pass the fd to a more privilaged process
-> >> >> that will pass the ptrace_may_access() check, while the original process
-> >> >> that opened that file should fail at the ptrace_may_access()
+On Wed, Oct 02, 2013 at 05:46:19PM +0100, Andy Lutomirski wrote:
+> On Wed, Oct 2, 2013 at 4:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> > On Tue, Oct 01, 2013 at 06:39:00PM -0700, Andy Lutomirski wrote:
+> >> On 10/01/2013 01:26 PM, Djalal Harouni wrote:
+> >> > Some fields of the /proc/*/stat are sensitive fields that need
+> >> > appropriate protection.
 > >> >
-> >> > So we're talking about two kinds of attacks, right?
+> >> > However, /proc file descriptors can be passed to a more privileged
+> >> > process (e.g. a suid-exec) which will pass the classic
+> >> > ptrace_may_access() permission check during read().
+> >> >
+> >> > To prevent it, use proc_same_open_cred() to detect if current's cred
+> >> > have changed between ->open() and ->read(), if so, call
+> >> > proc_allow_access() to check if the original file's opener had enough
+> >> > permissions to read these sensitive fields. This will prevent passing
+> >> > file descriptors to a more privileged process to leak data.
+> >> >
+> >> > The patch also adds a previously missing signal->cred_guard_mutex lock.
+> >> >
+> >> > This patch does not break userspace since it only hides the fields that
+> >> > were supposed to be protected.
+> >> >
+> >> > Cc: Kees Cook <keescook@chromium.org>
+> >> > Cc: Eric W. Biederman <ebiederm@xmission.com>
+> >> > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+> >> > ---
+> >> >  fs/proc/array.c | 16 ++++++++++++++--
+> >> >  1 file changed, 14 insertions(+), 2 deletions(-)
+> >> >
+> >> > diff --git a/fs/proc/array.c b/fs/proc/array.c
+> >> > index cbd0f1b..f034e05 100644
+> >> > --- a/fs/proc/array.c
+> >> > +++ b/fs/proc/array.c
+> >> > @@ -394,7 +394,7 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
+> >> >     char state;
+> >> >     pid_t ppid = 0, pgid = -1, sid = -1;
+> >> >     int num_threads = 0;
+> >> > -   int permitted;
+> >> > +   int permitted = 0;
+> >> >     struct mm_struct *mm;
+> >> >     unsigned long long start_time;
+> >> >     unsigned long cmin_flt = 0, cmaj_flt = 0;
+> >> > @@ -404,10 +404,22 @@ static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
+> >> >     unsigned long rsslim = 0;
+> >> >     char tcomm[sizeof(task->comm)];
+> >> >     unsigned long flags;
+> >> > +   struct file *file = m->private;
+> >> > +   int same_cred = proc_same_open_cred(file->f_cred);
+> >> > +   unsigned int ptrace_mode = PTRACE_MODE_READ | PTRACE_MODE_NOAUDIT;
+> >> >
+> >> >     state = *get_task_state(task);
+> >> >     vsize = eip = esp = 0;
+> >> > -   permitted = ptrace_may_access(task, PTRACE_MODE_READ | PTRACE_MODE_NOAUDIT);
+> >> > +
+> >> > +   if (!mutex_lock_killable(&task->signal->cred_guard_mutex)) {
+> >> > +           permitted = ptrace_may_access(task, ptrace_mode);
+> >> > +           if (permitted && !same_cred)
+> >> > +                   permitted = proc_allow_access(file->f_cred,
+> >> > +                                                 task, ptrace_mode);
+> >> > +
+> >> > +           mutex_unlock(&task->signal->cred_guard_mutex);
+> >> > +   }
+> >> > +
 > >>
-> >> Correct.
-> >>
-> >> > Type 1: Unprivileged process does something like open("/proc/1/maps",
-> >> > O_RDONLY) and then passes the resulting fd to something privileged.
-> >>
-> >> ... and then leaks contents back to unprivileged process.
-> >>
-> >> > Type 2: Unprivileged process does something like
-> >> > open("/proc/self/maps", O_RDONLY) and then forks.  The parent calls
-> >> > execve on something privileged.
-> >>
-> >> ... and then parent snoops on file contents for the privileged child.
-> >>
-> >> (Type 2 is solved currently, IIUC. Type 1 could be reduced in scope by
-> >> changing these file modes back to 0400.)
-> > Kees for 0400 on /proc/*/maps, it was reported that it could break glibc
+> >> else permitted = false?
+> > permitted is initialized to 0
 > 
-> I didn't mean maps should be 0400. The maps file is already handled
-> differently (pinning mm at open time). I didn't think it was one of
-> the problematic files.
-Kees currently all these files can be used to leak data, except for
-/proc/*/{mem,environ}
-
-These are the only one that pin the mm at open time. But I'm not sure
-that this solution will work for /proc/*/maps since they need vma info
-which will be perhaps freed if task execv,  Need to check it.
-
-> Regardless, glibc uses /proc/self/maps, which would be fine here, right?
-I did not touch /proc/self/maps and others, but I'm planning to fix them
-if this solution is accepted.
-
-I'll do the same thing as in /proc/*/stat for maps, let it be 0444, and
-try to delay the check to ->read(). So during ->read() perform
-ptrace_may_access() on currenct's cred and process_allow_access() on
-file's opener cred. This should work.
-
-> -Kees
+> Never mind, then -- I read that wrong...
 > 
-> -- 
-> Kees Cook
-> Chrome OS Security
+> >
+> > First the original ptrace_may_access() check did not hold
+> > cred_guard_mutex, so add it. If we can't grab mutex then let permitted
+> > to be zero. Yes this a change in behaviour and I think it's correct, IOW
+> > we were not able to perform the ptrace_may_access() check, otherwise
+> > permitted will depend on checks result.
+> >
+> > However, there is still a race here since we set the permitted value
+> > before gathering the appropriate info about task. At the read() data moment
+> > this target task may have been gone privileged... , acquiring an X lock
+> > on target task, will just break/slow things, as it has been shown before...
+> > Not to mention that the race window is small...
+> >
+> >
+> >> But surely this would be *much* more comprehensible if you had
+> >> proc_allow_access do the entire check.
+> > I don't understand what you mean by "do the entire check" ?
+> 
+> I mean to move the entire "check current->cred and f_cred" check into
+> its own function rather than duplicating it at each call site.
+We can perhaps do this, yes.
+
+In other places the check is done and protected by
+lock_trace()/unlock_trace(). Will need to see if we can do it.
+
+> --Andy
 
 -- 
 Djalal Harouni
