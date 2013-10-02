@@ -1,43 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <524B7999.60806@amacapital.net>
-Date: Tue, 01 Oct 2013 18:40:41 -0700
-From: Andy Lutomirski <luto@amacapital.net>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 2 Oct 2013 07:07:14 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20131002050714.GA27982@gmail.com>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
-In-Reply-To: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 0/9] procfs: protect /proc/<pid>/* files with file->f_cred
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, linux-fsdevel@vger.kernel.org, kernel-hardening@lists.openwall.com, tixxdz@gmail.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1380656245-29975-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v6 0/7] Kernel base address randomization
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, Arnaldo Carvalho de Melo <acme@infradead.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/01/2013 01:26 PM, Djalal Harouni wrote:
-> /proc/<pid>/* entries varies at runtime, appropriate permission checks
-> need to happen during each system call.
-> 
-> Currently some of these sensitive entries are protected by performing
-> the ptrace_may_access() check. However even with that the /proc file
-> descriptors can be passed to a more privileged process
-> (e.g. a suid-exec) which will pass the classic ptrace_may_access()
-> check. In general the ->open() call will be issued by an unprivileged
-> process while the ->read(),->write() calls by a more privileged one.
-> 
-> Example of these files are:
-> /proc/*/syscall, /proc/*/stack etc.
-> 
-> And any open(/proc/self/*) then suid-exec to read()/write() /proc/self/*
-> 
-> 
-> These files are protected during read() by the ptrace_may_access(),
-> however the file descriptor can be passed to a suid-exec which can be
-> used to read data and bypass ASLR. Of course this was discussed several
-> times on LKML.
 
-Can you elaborate on what it is that you're fixing?  That is, can you
-give a concrete example of what process opens what file and passes the
-fd to what process?
+* Kees Cook <keescook@chromium.org> wrote:
 
-I'm having trouble following your description.
+> Here is the latest version of the kASLR series. It has much improved 
+> e820 walking code, and expands the window available on 64-bit.
+> 
+> This is rolled out on Chrome OS devices, and working well.
 
---Andy
+There's one kernel debuggability detail that should be discussed I think: 
+should symbolic printouts (in oops messages but also in /proc/kallsyms) 
+and instrumentation interfaces that expose kernel addresses attempt to 
+de-randomize the addresses, stack contents and register values that lie 
+within the random range?
+
+ - it would be easier to use those addresses and look them up in a vmlinux
+   or in a System.map as well.
+
+ - it would be somewhat safer to post an oops publicly if it did not
+   contain the random offset in an easily identifiable way.
+
+ - oops patterns from distribution kernels that enable randomization would 
+   match up better.
+
+ - this would make it safer to expose /proc/kallsyms to user-space
+   profiling, while keeping the random offset a kernel-internal secret.
+
+ - RIP information in profiling streams would thus not contain the
+   kernel random offset either.
+
+The other approach would be what your series does, to keep all the raw, 
+randomized output and to assume that users who are allowed to access to 
+logs or profiling can learn the random offset.
+
+I tend to lean towards the 'raw' approach that you picked, but an argument 
+can be made for both approaches - and in any case I haven't seen this 
+discussed to conclusion with cons/pros listed and a consensus/decision 
+reached.
+
+Thanks,
+
+	Ingo
