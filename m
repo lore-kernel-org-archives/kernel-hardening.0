@@ -1,328 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  3 Oct 2013 13:53:20 -0700
-Message-Id: <1380833605-26313-3-git-send-email-keescook@chromium.org>
+Date: Thu,  3 Oct 2013 13:53:25 -0700
+Message-Id: <1380833605-26313-8-git-send-email-keescook@chromium.org>
 In-Reply-To: <1380833605-26313-1-git-send-email-keescook@chromium.org>
 References: <1380833605-26313-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 2/7] x86, kaslr: return location from decompress_kernel
+Subject: [kernel-hardening] [PATCH 7/7] x86, kaslr: raise max positions to 1GiB on x86_64
 To: linux-kernel@vger.kernel.org
 Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This allows decompress_kernel to return a new location for the kernel to
-be relocated to. Additionally, enforces CONFIG_PHYSICAL_START as the
-minimum relocation position when building with CONFIG_RELOCATABLE.
-
-With CONFIG_RANDOMIZE_BASE set, the choose_kernel_location routine
-will select a new location to decompress the kernel, though here it is
-presently a no-op. The kernel command line option "nokaslr" is introduced
-to bypass these routines.
+On 64-bit, this raises the maximum location to 1GiB, the upper limit
+currently, since the kernel fixmap page mappings need to be moved to
+use the other 1GiB (which would be the theoretical limit when building
+with -mcmodel=kernel).
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-v3:
- - treat LOAD_PHYSICAL_ADDR as minimum.
-v2:
- - renamed "noaslr" to "nokaslr"; HPA.
----
- Documentation/kernel-parameters.txt |    4 ++++
- arch/x86/Kconfig                    |   38 +++++++++++++++++++++++++++++++----
- arch/x86/boot/compressed/Makefile   |    2 +-
- arch/x86/boot/compressed/aslr.c     |   23 +++++++++++++++++++++
- arch/x86/boot/compressed/cmdline.c  |    2 +-
- arch/x86/boot/compressed/head_32.S  |   10 +++++----
- arch/x86/boot/compressed/head_64.S  |   16 +++++++++------
- arch/x86/boot/compressed/misc.c     |    8 ++++++--
- arch/x86/boot/compressed/misc.h     |   27 +++++++++++++++++++------
- 9 files changed, 106 insertions(+), 24 deletions(-)
- create mode 100644 arch/x86/boot/compressed/aslr.c
+ arch/x86/Kconfig                        |   16 +++++++++++++---
+ arch/x86/include/asm/page_64_types.h    |   15 ++++++++++++---
+ arch/x86/include/asm/pgtable_64_types.h |    2 +-
+ arch/x86/mm/init_32.c                   |    3 +++
+ 4 files changed, 29 insertions(+), 7 deletions(-)
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index fcbb736..773fc4c 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -1975,6 +1975,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 	noapic		[SMP,APIC] Tells the kernel to not make use of any
- 			IOAPICs that may be present in the system.
- 
-+	nokaslr		[X86]
-+			Disable kernel base offset ASLR (Address Space
-+			Layout Randomization) if built into the kernel.
-+
- 	noautogroup	Disable scheduler automatic task group creation.
- 
- 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index ee2fb9d..992701d 100644
+index 992701d..51f4399 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
-@@ -1722,16 +1722,46 @@ config RELOCATABLE
- 
- 	  Note: If CONFIG_RELOCATABLE=y, then the kernel runs from the address
- 	  it has been loaded at and the compile time physical address
--	  (CONFIG_PHYSICAL_START) is ignored.
-+	  (CONFIG_PHYSICAL_START) is used as the minimum location.
- 
--# Relocation on x86-32 needs some additional build support
-+config RANDOMIZE_BASE
-+	bool "Randomize the address of the kernel image"
-+	depends on RELOCATABLE
-+	depends on !HIBERNATION
-+	default n
-+	---help---
-+	   Randomizes the physical and virtual address at which the
-+	   kernel image is decompressed, as a security feature that
-+	   deters exploit attempts relying on knowledge of the location
-+	   of kernel internals.
-+
-+	   Entropy is generated using the RDRAND instruction if it
-+	   is supported.  If not, then RDTSC is used, if supported. If
-+	   neither RDRAND nor RDTSC are supported, then no randomness
-+	   is introduced.
-+
-+	   The kernel will be offset by up to RANDOMIZE_BASE_MAX_OFFSET,
-+	   and aligned according to PHYSICAL_ALIGN.
-+
-+config RANDOMIZE_BASE_MAX_OFFSET
-+	hex "Maximum ASLR offset allowed"
-+	depends on RANDOMIZE_BASE
-+	default "0x10000000"
-+	range 0x0 0x10000000
-+	---help---
-+	 Determines the maximal offset in bytes that will be applied to the
-+	 kernel when Address Space Layout Randomization (ASLR) is active.
-+	 Must be less than or equal to the actual physical memory on the
-+	 system. This must be a power of two.
-+
-+# Relocation on x86 needs some additional build support
- config X86_NEED_RELOCS
- 	def_bool y
--	depends on X86_32 && RELOCATABLE
-+	depends on RANDOMIZE_BASE || (X86_32 && RELOCATABLE)
- 
- config PHYSICAL_ALIGN
- 	hex "Alignment value to which kernel should be aligned"
--	default "0x1000000"
-+	default "0x200000"
- 	range 0x2000 0x1000000 if X86_32
- 	range 0x200000 0x1000000 if X86_64
+@@ -1746,13 +1746,23 @@ config RANDOMIZE_BASE
+ config RANDOMIZE_BASE_MAX_OFFSET
+ 	hex "Maximum ASLR offset allowed"
+ 	depends on RANDOMIZE_BASE
+-	default "0x10000000"
+-	range 0x0 0x10000000
++	range 0x0 0x20000000 if X86_32
++	default "0x20000000" if X86_32
++	range 0x0 0x40000000 if X86_64
++	default "0x40000000" if X86_64
  	---help---
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 3312f1b..ae8b5db 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -27,7 +27,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
- 
- VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
- 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
--	$(obj)/piggy.o $(obj)/cpuflags.o
-+	$(obj)/piggy.o $(obj)/cpuflags.o $(obj)/aslr.o
- 
- $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
- 
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-new file mode 100644
-index 0000000..b73cc66
---- /dev/null
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -0,0 +1,23 @@
-+#include "misc.h"
+ 	 Determines the maximal offset in bytes that will be applied to the
+ 	 kernel when Address Space Layout Randomization (ASLR) is active.
+ 	 Must be less than or equal to the actual physical memory on the
+-	 system. This must be a power of two.
++	 system. This must be a multiple of CONFIG_PHYSICAL_ALIGN.
 +
-+#ifdef CONFIG_RANDOMIZE_BASE
++	 On 32-bit this is limited to 512MiB.
 +
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size)
-+{
-+	unsigned long choice = (unsigned long)output;
-+
-+	if (cmdline_find_option_bool("nokaslr")) {
-+		debug_putstr("KASLR disabled...\n");
-+		goto out;
-+	}
-+
-+	/* XXX: choose random location. */
-+
-+out:
-+	return (unsigned char *)choice;
-+}
-+
-+#endif /* CONFIG_RANDOMIZE_BASE */
-diff --git a/arch/x86/boot/compressed/cmdline.c b/arch/x86/boot/compressed/cmdline.c
-index bffd73b..b68e303 100644
---- a/arch/x86/boot/compressed/cmdline.c
-+++ b/arch/x86/boot/compressed/cmdline.c
-@@ -1,6 +1,6 @@
- #include "misc.h"
++	 On 64-bit this is limited by how the kernel fixmap page table is
++	 positioned, so this cannot be larger that 1GiB currently. Normally
++	 there is a 512MiB to 1.5GiB split between kernel and modules. When
++	 this is raised above the 512MiB default, the modules area will
++	 shrink to compensate, up to the current maximum 1GiB to 1GiB split.
  
--#ifdef CONFIG_EARLY_PRINTK
-+#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
- 
- static unsigned long fs;
- static inline void set_fs(unsigned long seg)
-diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
-index 5d6f689..9116aac 100644
---- a/arch/x86/boot/compressed/head_32.S
-+++ b/arch/x86/boot/compressed/head_32.S
-@@ -117,9 +117,11 @@ preferred_addr:
- 	addl    %eax, %ebx
- 	notl	%eax
- 	andl    %eax, %ebx
--#else
--	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jge	1f
- #endif
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -191,14 +193,14 @@ relocated:
- 	leal	boot_heap(%ebx), %eax
- 	pushl	%eax		/* heap area */
- 	pushl	%esi		/* real mode pointer */
--	call	decompress_kernel
-+	call	decompress_kernel /* returns kernel location in %eax */
- 	addl	$24, %esp
+ # Relocation on x86 needs some additional build support
+ config X86_NEED_RELOCS
+diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
+index 43dcd80..8de6d9c 100644
+--- a/arch/x86/include/asm/page_64_types.h
++++ b/arch/x86/include/asm/page_64_types.h
+@@ -39,9 +39,18 @@
+ #define __VIRTUAL_MASK_SHIFT	47
  
  /*
-  * Jump to the decompressed kernel.
+- * Kernel image size is limited to 512 MB (see level2_kernel_pgt in
+- * arch/x86/kernel/head_64.S), and it is mapped here:
++ * Kernel image size is limited to 1GiB due to the fixmap living in the
++ * next 1GiB (see level2_kernel_pgt in arch/x86/kernel/head_64.S). Use
++ * 512MiB by default, leaving 1.5GiB for modules once the page tables
++ * are fully set up. If kernel ASLR is configured, it can extend the
++ * kernel page table mapping, reducing the size of the modules area.
   */
- 	xorl	%ebx, %ebx
--	jmp	*%ebp
-+	jmp	*%eax
- 
- /*
-  * Stack and heap for uncompression
-diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
-index c337422..c5c1ae0 100644
---- a/arch/x86/boot/compressed/head_64.S
-+++ b/arch/x86/boot/compressed/head_64.S
-@@ -94,9 +94,11 @@ ENTRY(startup_32)
- 	addl	%eax, %ebx
- 	notl	%eax
- 	andl	%eax, %ebx
--#else
--	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jge	1f
- #endif
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -269,9 +271,11 @@ preferred_addr:
- 	addq	%rax, %rbp
- 	notq	%rax
- 	andq	%rax, %rbp
--#else
--	movq	$LOAD_PHYSICAL_ADDR, %rbp
-+	cmpq	$LOAD_PHYSICAL_ADDR, %rbp
-+	jge	1f
- #endif
-+	movq	$LOAD_PHYSICAL_ADDR, %rbp
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	leaq	z_extract_offset(%rbp), %rbx
-@@ -339,13 +343,13 @@ relocated:
- 	movl	$z_input_len, %ecx	/* input_len */
- 	movq	%rbp, %r8		/* output target address */
- 	movq	$z_output_len, %r9	/* decompressed length */
--	call	decompress_kernel
-+	call	decompress_kernel	/* returns kernel location in %rax */
- 	popq	%rsi
- 
- /*
-  * Jump to the decompressed kernel.
-  */
--	jmp	*%rbp
-+	jmp	*%rax
- 
- 	.code32
- no_longmode:
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index 434f077..7138768 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -395,7 +395,7 @@ static void parse_elf(void *output)
- 	free(phdrs);
- }
- 
--asmlinkage void decompress_kernel(void *rmode, memptr heap,
-+asmlinkage void *decompress_kernel(void *rmode, memptr heap,
- 				  unsigned char *input_data,
- 				  unsigned long input_len,
- 				  unsigned char *output,
-@@ -422,6 +422,10 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
- 	free_mem_ptr     = heap;	/* Heap */
- 	free_mem_end_ptr = heap + BOOT_HEAP_SIZE;
- 
-+	output = choose_kernel_location(input_data, input_len,
-+					output, output_len);
-+
-+	/* Validate memory location choices. */
- 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
- 		error("Destination address inappropriately aligned");
- #ifdef CONFIG_X86_64
-@@ -441,5 +445,5 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
- 	parse_elf(output);
- 	handle_relocations(output, output_len);
- 	debug_putstr("done.\nBooting the kernel.\n");
--	return;
-+	return output;
- }
-diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
-index 674019d..9077af7 100644
---- a/arch/x86/boot/compressed/misc.h
-+++ b/arch/x86/boot/compressed/misc.h
-@@ -39,23 +39,38 @@ static inline void debug_putstr(const char *s)
- 
- #endif
- 
--#ifdef CONFIG_EARLY_PRINTK
--
-+#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
- /* cmdline.c */
- int cmdline_find_option(const char *option, char *buffer, int bufsize);
- int cmdline_find_option_bool(const char *option);
-+#endif
- 
--/* early_serial_console.c */
--extern int early_serial_base;
--void console_init(void);
- 
-+#if CONFIG_RANDOMIZE_BASE
-+/* aslr.c */
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size);
- #else
-+static inline
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size)
-+{
-+	return output;
-+}
-+#endif
- 
-+#ifdef CONFIG_EARLY_PRINTK
- /* early_serial_console.c */
-+extern int early_serial_base;
-+void console_init(void);
+-#define KERNEL_IMAGE_SIZE	(512 * 1024 * 1024)
++#define KERNEL_IMAGE_SIZE_DEFAULT      (512 * 1024 * 1024)
++#if defined(CONFIG_RANDOMIZE_BASE) && \
++	CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE_DEFAULT
++#define KERNEL_IMAGE_SIZE   CONFIG_RANDOMIZE_BASE_MAX_OFFSET
 +#else
- static const int early_serial_base;
- static inline void console_init(void)
- { }
--
- #endif
++#define KERNEL_IMAGE_SIZE      KERNEL_IMAGE_SIZE_DEFAULT
++#endif
  
- #endif
+ #endif /* _ASM_X86_PAGE_64_DEFS_H */
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index 2d88344..c883bf7 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -58,7 +58,7 @@ typedef struct { pteval_t pte; } pte_t;
+ #define VMALLOC_START    _AC(0xffffc90000000000, UL)
+ #define VMALLOC_END      _AC(0xffffe8ffffffffff, UL)
+ #define VMEMMAP_START	 _AC(0xffffea0000000000, UL)
+-#define MODULES_VADDR    _AC(0xffffffffa0000000, UL)
++#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+ #define MODULES_END      _AC(0xffffffffff000000, UL)
+ #define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+ 
+diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
+index 4287f1f..5bdc543 100644
+--- a/arch/x86/mm/init_32.c
++++ b/arch/x86/mm/init_32.c
+@@ -806,6 +806,9 @@ void __init mem_init(void)
+ 	BUILD_BUG_ON(VMALLOC_START			>= VMALLOC_END);
+ #undef high_memory
+ #undef __FIXADDR_TOP
++#ifdef CONFIG_RANDOMIZE_BASE
++	BUILD_BUG_ON(CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE);
++#endif
+ 
+ #ifdef CONFIG_HIGHMEM
+ 	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
 -- 
 1.7.9.5
