@@ -1,62 +1,114 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <524CBB70.2060809@jp.fujitsu.com>
+Date: Thu, 03 Oct 2013 09:33:52 +0900
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20130928143523.GA2199@dztty>
-References: <1380140085-29712-1-git-send-email-tixxdz@opendz.org>
-	<1380140085-29712-7-git-send-email-tixxdz@opendz.org>
-	<CAGXu5jJKH6WPSMnqALOEjqGb6ZoeyYzj5vemk=2z4KPZyg=ptw@mail.gmail.com>
-	<20130928143523.GA2199@dztty>
-Date: Wed, 2 Oct 2013 12:52:58 -0700
-Message-ID: <CAGXu5j+8uCt-SQU95GBoLfO95NV9Cu-V-hsJ4oj3K4Lgm3QS_Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH 06/12] procfs: make /proc/*/stack 0400
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, LKML <linux-kernel@vger.kernel.org>, "linux-fsdevel@vger.kernel.org" <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org>	<1380656245-29975-7-git-send-email-keescook@chromium.org>	<524B6AEE.90301@jp.fujitsu.com> <CAGXu5jLVt13p2X2e1C3ha1izg6U6wbmgSyYW1wa+X4cW8aCFug@mail.gmail.com> <524BE3C5.2070302@jp.fujitsu.com>
+In-Reply-To: <524BE3C5.2070302@jp.fujitsu.com>
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Aaron Durbin <adurbin@google.com>, Eric Northup <digitaleric@google.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@google.com>, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, Dave Anderson <anderson@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Sep 28, 2013 at 7:35 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> On Thu, Sep 26, 2013 at 03:43:24PM -0500, Kees Cook wrote:
->> On Wed, Sep 25, 2013 at 3:14 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
->> > The /proc/*/stack contains sensitive information and currently its mode
->> > is 0444. Change this to 0400 so the VFS will be able to block
->> > unprivileged processes to get file descriptors on arbitrary privileged
->> > /proc/*/stack files.
->> >
->> > The /proc/*/stack is a /procfs ONE file that shares the same ->open()
->> > file operation with other ONE files. Doing a ptrace_may_access() check
->> > during open() might break userspace from accessing other ONE files
->> > like /proc/*/stat and /proc/*/statm.
->> >
->> > Therfore make it 0400 for now, and improve its check during ->read()
->> > in the next following patch.
->> >
->> > Cc: Kees Cook <keescook@chromium.org>
->> > Cc: Eric W. Biederman <ebiederm@xmission.com>
->> > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+(2013/10/02 18:13), HATAYAMA Daisuke wrote:
+> (2013/10/02 16:48), Kees Cook wrote:
+<cut>
+>>>> +
+>>>> +     return 0;
+>>>> +}
+>>>> +
+>>>> +/*
+>>>>     * Determine if we were loaded by an EFI loader.  If so, then we have also been
+>>>>     * passed the efi memmap, systab, etc., so we should use these data structures
+>>>>     * for initialization.  Note, the efi init code path is determined by the
+>>>> @@ -1242,3 +1256,15 @@ void __init i386_reserve_resources(void)
+>>>>    }
+>>>>
+>>>>    #endif /* CONFIG_X86_32 */
+>>>> +
+>>>> +static struct notifier_block kernel_offset_notifier = {
+>>>> +     .notifier_call = dump_kernel_offset
+>>>> +};
+>>>> +
+>>>> +static int __init register_kernel_offset_dumper(void)
+>>>> +{
+>>>> +     atomic_notifier_chain_register(&panic_notifier_list,
+>>>> +                                     &kernel_offset_notifier);
+>>>> +     return 0;
+>>>> +}
+>>>> +__initcall(register_kernel_offset_dumper);
+>>>>
+>>>
+>>> Panic notifier is not executed if kdump is enabled. Maybe, Chrome OS doesn't use
+>>> kdump? Anyway, kdump related tools now calculate phys_base from memory map
+>>> information passed as ELF PT_LOAD entries like below.
 >>
->> While the rest of the series is being discussed, I think it would be
->> nice to at least get this into the tree. Fixing this reduces which
->> processes are exposed to ASLR leaks. The rest of the series closes the
->> remaining holes.
+>> Correct, we are not currently using kdump.
 >>
->> I would if it would be valuable adding a test for the identified leak
->> conditions to some test suite? LTP perhaps?
-> I'm not familiar with LTP, but I guess a small program that perform I/O
-> redirection and execve a suid-exec will do it?
+>>> $ LANG=C readelf -l vmcore-rhel6up4
+>>>
+>>> Elf file type is CORE (Core file)
+>>> Entry point 0x0
+>>> There are 5 program headers, starting at offset 64
+>>>
+>>> Program Headers:
+>>>    Type           Offset             VirtAddr           PhysAddr
+>>>                   FileSiz            MemSiz              Flags  Align
+>>>    NOTE           0x0000000000000158 0x0000000000000000 0x0000000000000000
+>>>                   0x0000000000000b08 0x0000000000000b08         0
+>>>    LOAD           0x0000000000000c60 0xffffffff81000000 0x0000000001000000
+>>>                   0x000000000103b000 0x000000000103b000  RWE    0
+>>>    LOAD           0x000000000103bc60 0xffff880000001000 0x0000000000001000
+>>>                   0x000000000009cc00 0x000000000009cc00  RWE    0
+>>>    LOAD           0x00000000010d8860 0xffff880000100000 0x0000000000100000
+>>>                   0x0000000002f00000 0x0000000002f00000  RWE    0
+>>>    LOAD           0x0000000003fd8860 0xffff880013000000 0x0000000013000000
+>>>                   0x000000002cffd000 0x000000002cffd000  RWE    0
+>>>
+>>> Each PT_LOAD entry is assigned to virtual and physical address. In this case,
+>>> 1st PT_LOAD entry belongs to kernel text mapping region, from which we can
+>>> calculate phys_base value.
+>>
+>> It seems like all the information you need would still be available?
+>> The virtual address is there, so it should be trivial to see the
+>> offset, IIUC.
+>>
+>
+> Partially yes. I think OK to analyze crash dump by crash utility, a gdb-based
+> symbolic debugger for kernel, since phys_base absorbs kernel offset caused by
+> relocation and phys_base is available in the way I explained above.
+>
+> However, the gained phys_base is not correct one, exactly
+> phys_base + offset_by_relocation.
+> When analyzing crash dump by crash utility, we use debug information generated
+> during kernel build, which we install as kernel-debuginfo on RHEL for example.
+> Symbols in debuginfo have statically assigned addresses at build so we see
+> the statically assigned addresses during debugging and we see
+> phys_base + offset_by_relocation as phys_base. This would be problematic
+> if failure on crash dump is relevant to the relocated addresses, though I don't
+> immediately come up with crash senario where relocated symbol is defitely
+> necessary.
+>
+> Still we can get relocated addresses if kallsyms is enabled on the kernel,
+> but kallsyms and relocatable kernels are authogonal. I don't think it natural
+> to rely on kallsyms. It seems natural to export relocation information newly
+> as debugging information.
+>
 
-It's actually a giant program. :)
+I was confused yesterday. As I said above, kdump related tools now don't support
+relocation on x86_64, phys_base only. kdump related tools think of present kernel
+offset as phys_base. Then, they reflect kernel offset caused by relocation in
+physical addresses only, not in virtual addresses. This obviously affects the tools.
 
-http://ltp.sourceforge.net/
+BTW, relocation looks more sophisticated than phys_base one. Is it possible to
+switch from phys_base one to relocation on x86_64? On x86, relocation is used so
+I guess x86_64 can work in the same way. Is there something missing?
+Is there what phys_base can but relocation cannot on x86_64?
 
-> I'll try to add code comment in fs/proc/base.c
-
-Mostly I'm just thinking that this is a rather fragile area, and it
-would be nice to have a set of tests that verify we haven't broken any
-of the known test-cases.
-
--Kees
+And, Dave, is there feature for crash utility to treat relocation now?
 
 -- 
-Kees Cook
-Chrome OS Security
+Thanks.
+HATAYAMA, Daisuke
