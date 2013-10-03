@@ -1,136 +1,191 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 3 Oct 2013 19:37:36 +0100
+Date: Thu, 3 Oct 2013 20:29:26 +0100
 From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20131003183736.GA2390@dztty>
-References: <CALCETrUcg4o5QeGMP1rRAzJSfjwS=qD3DsDWV3=fPJQOA3xkKw@mail.gmail.com>
- <CAGXu5j+APTTSKh_xvgpzV3wNYseQxafbKqQ3NyvUe50aGOOBGg@mail.gmail.com>
- <20131002182206.GB2485@dztty>
- <CAGXu5jL3iReSCfRRXGaKp4dikh5f3BR55NbVEXHrTscTSDgeZA@mail.gmail.com>
- <20131002184844.GB3393@dztty>
- <20131003061244.GC25345@gmail.com>
- <20131003122959.GA3619@dztty>
- <CALCETrV2tdHAkLs=FQexnEkdSeXjLD51bKe9B67amnMYnVj1sQ@mail.gmail.com>
- <20131003154058.GA1210@dztty>
- <CALCETrXwqrqs+OhwuM8GLvnRyFDo75W5-xdXoxAvUu1PiG=_ow@mail.gmail.com>
+Message-ID: <20131003192926.GB2390@dztty>
+References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
+ <1380659178-28605-3-git-send-email-tixxdz@opendz.org>
+ <524B78A2.40007@amacapital.net>
+ <20131002145506.GA2669@dztty>
+ <CALCETrW=6nnU0uQBqbFyJY8Fj+CHoGbOnGJ-aOB+3GwtV0f1bw@mail.gmail.com>
+ <20131003143653.GA32445@dztty>
+ <CALCETrU_D7X+jPWseiyp3FJJnw5CHhLbGz73FVDaeBpRDA+-og@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CALCETrXwqrqs+OhwuM8GLvnRyFDo75W5-xdXoxAvUu1PiG=_ow@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 0/9] procfs: protect /proc/<pid>/* files with
- file->f_cred
+In-Reply-To: <CALCETrU_D7X+jPWseiyp3FJJnw5CHhLbGz73FVDaeBpRDA+-og@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if
+ file's opener may access task
 To: Andy Lutomirski <luto@amacapital.net>
-Cc: Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(Andy sorry for the delay, real life...)
-
-On Thu, Oct 03, 2013 at 04:50:54PM +0100, Andy Lutomirski wrote:
-> On Thu, Oct 3, 2013 at 4:40 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> > On Thu, Oct 03, 2013 at 04:15:43PM +0100, Andy Lutomirski wrote:
-> >> On Thu, Oct 3, 2013 at 1:29 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> > On Thu, Oct 03, 2013 at 08:12:44AM +0200, Ingo Molnar wrote:
-> >> >> Now procfs might be special, as by its nature of a pseudofilesystem it's
-> >> >> far more atomic than other filesystems, but still IMHO it's a lot more
-> >> >
-> >> >
-> >> >> robust security design wise to revoke access to objects you should not
-> >> >> have a reference to when a security boundary is crossed, than letting
-> >> >> stuff leak through and sprinking all the potential cases that may leak
-> >> >> information with permission checks ...
-> >> > I agree, but those access should also be checked at the beginning, IOW
-> >> > during ->open(). revoke will not help if revoke is not involved at all,
-> >> > the task /proc entries may still be valide (no execve).
-> >> >
-> >> > Currently security boundary is crossed for example arbitrary /proc/*/stack
-> >> > (and others).
-> >> > 1) The target task does not do an execve (no revoke).
-> >> > 2) current task will open these files and *want* and *will* pass the fd to a
-> >> > more privileged process to pass the ptrace check which is done only during
-> >> > ->read().
+On Thu, Oct 03, 2013 at 04:12:37PM +0100, Andy Lutomirski wrote:
+> On Thu, Oct 3, 2013 at 3:36 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> > On Wed, Oct 02, 2013 at 05:44:17PM +0100, Andy Lutomirski wrote:
+> >> On Wed, Oct 2, 2013 at 3:55 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> >> > On Tue, Oct 01, 2013 at 06:36:34PM -0700, Andy Lutomirski wrote:
+> >> >> On 10/01/2013 01:26 PM, Djalal Harouni wrote:
+> >> >> > Since /proc entries varies at runtime, permission checks need to happen
+> >> >> > during each system call.
+> >> >> >
+> >> >> > However even with that /proc file descriptors can be passed to a more
+> >> >> > privileged process (e.g. a suid-exec) which will pass the classic
+> >> >> > ptrace_may_access() permission check. The open() call will be issued in
+> >> >> > general by an unprivileged process while the disclosure of sensitive
+> >> >> > /proc information will happen using a more privileged process at
+> >> >> > read(),write()...
+> >> >> >
+> >> >> > Therfore we need a more sophisticated check to detect if the cred of the
+> >> >> > process have changed, and if the cred of the original opener that are
+> >> >> > stored in the file->f_cred have enough permission to access the task's
+> >> >> > /proc entries during read(), write()...
+> >> >> >
+> >> >> > Add the proc_allow_access() function that will receive the file->f_cred
+> >> >> > as an argument, and tries to check if the opener had enough permission
+> >> >> > to access the task's /proc entries.
+> >> >> >
+> >> >> > This function should be used with the ptrace_may_access() check.
+> >> >> >
+> >> >> > Cc: Kees Cook <keescook@chromium.org>
+> >> >> > Suggested-by: Eric W. Biederman <ebiederm@xmission.com>
+> >> >> > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+> >> >> > ---
+> >> >> >  fs/proc/base.c     | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+> >> >> >  fs/proc/internal.h |  2 ++
+> >> >> >  2 files changed, 58 insertions(+)
+> >> >> >
+> >> >> > diff --git a/fs/proc/base.c b/fs/proc/base.c
+> >> >> > index e834946..c29eeae 100644
+> >> >> > --- a/fs/proc/base.c
+> >> >> > +++ b/fs/proc/base.c
+> >> >> > @@ -168,6 +168,62 @@ int proc_same_open_cred(const struct cred *fcred)
+> >> >> >             cap_issubset(cred->cap_permitted, fcred->cap_permitted));
+> >> >> >  }
+> >> >> >
+> >> >> > +/* Returns 0 on success, -errno on denial. */
+> >> >> > +static int __proc_allow_access(const struct cred *cred,
+> >> >> > +                          struct task_struct *task, unsigned int mode)
+> >> >> > +{
+> >> >> > +   int ret = 0;
+> >> >> > +   const struct cred *tcred;
+> >> >> > +   const struct cred *fcred = cred;
+> >> >> > +
+> >> >> > +   rcu_read_lock();
+> >> >> > +   tcred = __task_cred(task);
+> >> >> > +   if (uid_eq(fcred->uid, tcred->euid) &&
+> >> >> > +       uid_eq(fcred->uid, tcred->suid) &&
+> >> >> > +       uid_eq(fcred->uid, tcred->uid)  &&
+> >> >> > +       gid_eq(fcred->gid, tcred->egid) &&
+> >> >> > +       gid_eq(fcred->gid, tcred->sgid) &&
+> >> >> > +       gid_eq(fcred->gid, tcred->gid))
+> >> >> > +           goto out;
+> >> >> > +
+> >> >>
+> >> >> What's this for?  Is it supposed to be an optimization?  If so, it looks
+> >> >> potentially exploitable, although I don't really understand what you're
+> >> >> trying to do.
+> >> > This function should be used in addition to the ptrace_may_access() one.
 > >>
-> >> What does this?  Or are you saying that this is a bad thing?
-> > I'm not sure to understand you, revoke if implemented correctly is not a
-> > bad thing! In the other hand, here I try to explain what if the target task
-> > did not execve, revoke will never be involved, file descriptors are
-> > still valid!
+> >> Sorry, I was unclear.  I meant: what are the uid and gid checks for?
+> > The uid/gid are checks of the current (reader) on the target task, like
+> > the ptrace checks. fcred here is the cred of current at open time.
+> >
 > 
-> Ah. You're saying that both revoke and checking permissions at open
-> time (or using f_cred) is important.  I think I agree.  (Except that,
-> arguably, /proc/self/stat should always be fully functional even if
-> passed to a different process and yama is in use.  This seems minor.)
-Yes, ok
-
-And I do agree on the /proc/self/stat, it should always work, and it
-does with this series. Permissions on f_cred are checked only if
-current's cred change between ->open() and ->read(), and this check may
-succeed, it depends on f_cred! so /proc/self/stat will work.
+> This isn't a faithful copy of __ptrace_may_access -- the real function
+> gives LSMs a chance to veto ptracing.  That's critical even without
+> LSMs because cap_ptrace_access_check needs to get called.  (Think
+> about setcap'd programs instead of setuid programs.)
+Yes, I already did this, not only setuid, capabilities also are handled
+See the whole patch, please!
 
 
-> >
-> >
-> >> (And *please* don't write software that *depends* on different
-> >> processes having different read()/write() permissions on the *same*
-> >> struct file.  I've already found multiple privilege escalations based
-> >> on that, and I'm pretty sure I can find some more.)
-> > Sorry, can't follow you here! examples related to what we discuss here ?
-> 
-> There were various bugs (CVE-2013-1959) in /proc/pid/uid_map, etc,
-> that were exploitable to obtain uid 0.  They happened because write()
-> checked its caller's credentials.
-Ok, will recheck all of them soon. Thanks Andy.
+Yes, and speaking about LSMs I've mentioned in my patches and doc, that
+the proposed function proc_allow_access() should be used after
+ptrace_may_access(). proc_allow_access() is not a replacement for
+ptrace_may_access(), it should be used *after* it.
 
-Oh Andy, take a look at commit 935d8aabd4331f47 by Linus
-Add file_ns_capable() helper function for open-time capability checking
+So cap_ptrace_access_check() is called, and before the file->f_cred
+checks. The LSM veto is already there.
 
-Don't you see the same change as from my patches:
-file_ns_capable() it uses the file->f_cred ! and yes it uses
-security_capable() as with the patches I proposed... but in the code I
-touched there is a need for security_capable_noaudit() also, I think.
-
-Same logic! file->f_cred is already beeing/planned to be used.
-
-That also goes for commit 6708075f104c3c9b0 by Eric,
-userns: Don't let unprivileged users trick privileged users into setting the id_map
-
-So Andy, what do you think? file->f_cred is already used to fix urgent
-vulnerabilities, and now, everyone here knows that /proc/*/{stack,maps}
-cab be used to leak ASLR...
+Don't forget that proc_allow_access() is not for ptracing, it's targeted
+to the procfs entries! and who opened the file.
 
 
-[...]
-> >> > Of course, I did clean the patchset to prove that it will work, and I
-> >> > only implemented full protection for /proc/*/{stack,syscall,stat} other
-> >> > files will wait.
-> >> >
-> >> > But Ingo you can't ignore the fact that:
-> >> > /proc/*/{stack,syscall} are 0444 mode
-> >> > /proc/*/{stack,syscall} do not have ptrace_may_access() during open()
-> >> > /proc/*/{stack,syscall} have the ptrace_may_access() during read()
-> >>
-> >> I think everyone agrees that this is broken.  We don't agree on the
-> >> fix check.  (Also, as described in my other email, your approach may
-> >> be really hard to get right.)
-> > Well, yes we don't agree perhaps on the fix, but currently there are no
-> > other fixes, will be happy to see other propositions! these files have
-> > been vulnerable for years now...
-> >
-> > And for the record it's not my approache. Please just read the emails
-> > correctly. It was proposed and suggested by Eric and perhaps Linus.
-> >
-> > I did an experiment with it, and found it easy without any extra
-> > overhead: If cred have changed do extra checkes on the original opener.
-> > It will let you pass file descritors if cred did not change.
-> >
-> >
-> > Where is this other email that says this approach is hard?
-> > It's not hard, very minor change and it works. Perhaps there is a
-> > better solution yes, but currently it's not implemented!
-> 
-> I just sent it a couple minutes ago -- it may not have made it yet.
-> It's here, though:
-> 
-> http://www.openwall.com/lists/kernel-hardening/2013/10/03/9
-Sorry, will respond, thanks.
+
+Finally take a look at what you say about: cap_ptrace_access_check()
+
+
+it does:
+1)
+if (cred->user_ns == child_cred->user_ns &&
+    cap_issubset(child_cred->cap_permitted, cred->cap_permitted))
+	return 0
+
+2)
+if (ns_capable(child_cred->user_ns, CAP_SYS_PTRACE))
+	return 0
+
+    ns_capable() calls security_capable().
+
+
+
+And take a look at what I did, Andy please:
+[PATCH v2 1/9] procfs: add proc_same_open_cred() to check if the cred
+have changed
+
+proc_same_open_cred() returns 1 on success
+
+1) for proc_same_open_cred()
+   if (f_cred->user_ns != cred->user_ns)
+        return 0
+
+   return (uid_eq(fcred->uid, cred->uid) &&
+                  gid_eq(fcred->gid, cred->gid) &&
+                  cap_issubset(cred->cap_permitted, f_cred->cap_permitted));
+
+So it handles the (1) of cap_ptrace_access_check()
+
+
+If this previous proc_same_open_cred() returns 0 (cred have changed)
+
+goto (2) [PATCH v2 2/9] procfs: add proc_allow_access() to check if
+file's opener may access task
+
+proc_allow_access() returns 1 on success
+
+
+2) It does the uid/gid checks which is complete
+
+   Later it does security_capable() check which will do:
+   security_ops->capable(f_cred, ns, cap, SECURITY_CAP_AUDIT);
+
+   Take the old f_cred of file opener and do the capability check
+   during this moment, ->read(),->write()
+
+   So LSM support, and if LSM is disabled then we have the cap_capable()
+   which will go and check userns and capabilities.
+
+
+Andy if you see that I've missed something please let me know
+
+
+So Andy the solution is complete and I think ! can you please recheck
+
+(I'll also recheck it).
+
+> To fix this, I think you'll need to actually invoke
+> __ptrace_may_access.  That will be a mess because you don't have a
+> task_struct to pass in, so you'll have to refactor the code to
+> separately check for task==current and for cred-based permissions.
+> That, in turn, will mean that you need to get the LSMs to play along,
+> which includes Yama.  To fix that, you'll probably need to check
+> yama's task-based constraints at open time, which may be at least as
+> complicated as the revoke-based approach.
+As I've demonstrated above, no mess and it's not compilcated, very easy
+to support :-)
+
+Thanks Andy
+
 
 > --Andy
 
