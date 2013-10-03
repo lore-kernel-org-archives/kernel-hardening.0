@@ -1,132 +1,134 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Thu,  3 Oct 2013 13:53:21 -0700
-Message-Id: <1380833605-26313-4-git-send-email-keescook@chromium.org>
-In-Reply-To: <1380833605-26313-1-git-send-email-keescook@chromium.org>
-References: <1380833605-26313-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 3/7] x86, kaslr: find minimum safe relocation position
-To: linux-kernel@vger.kernel.org
-Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
+MIME-Version: 1.0
+In-Reply-To: <20131003201332.GA3500@dztty>
+References: <1380659178-28605-1-git-send-email-tixxdz@opendz.org>
+ <1380659178-28605-3-git-send-email-tixxdz@opendz.org> <524B78A2.40007@amacapital.net>
+ <20131002145506.GA2669@dztty> <CALCETrW=6nnU0uQBqbFyJY8Fj+CHoGbOnGJ-aOB+3GwtV0f1bw@mail.gmail.com>
+ <20131003143653.GA32445@dztty> <CALCETrU_D7X+jPWseiyp3FJJnw5CHhLbGz73FVDaeBpRDA+-og@mail.gmail.com>
+ <20131003192926.GB2390@dztty> <CALCETrVDqBAcdJDFihzTZ23SJBmP5jmHfqqXyTqre38t8xn7Tg@mail.gmail.com>
+ <20131003201332.GA3500@dztty>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 3 Oct 2013 14:09:55 -0700
+Message-ID: <CALCETrUOMF8MU9xpkQKYub-95fh9DAVBgPBXpAmMdmsb74HcTg@mail.gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if file's
+ opener may access task
+To: Djalal Harouni <tixxdz@opendz.org>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Examine all the known unsafe areas and avoid them by just raising the
-minimum relocation position to be past them.
+On Thu, Oct 3, 2013 at 1:13 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> On Thu, Oct 03, 2013 at 12:37:49PM -0700, Andy Lutomirski wrote:
+>> On Thu, Oct 3, 2013 at 12:29 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+>> > On Thu, Oct 03, 2013 at 04:12:37PM +0100, Andy Lutomirski wrote:
+>> >> On Thu, Oct 3, 2013 at 3:36 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+>> >> > On Wed, Oct 02, 2013 at 05:44:17PM +0100, Andy Lutomirski wrote:
+>> >> >> On Wed, Oct 2, 2013 at 3:55 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
+>> >> >> > On Tue, Oct 01, 2013 at 06:36:34PM -0700, Andy Lutomirski wrote:
+>> >> >> >> On 10/01/2013 01:26 PM, Djalal Harouni wrote:
+>> >> >> >> > Since /proc entries varies at runtime, permission checks need to happen
+>> >> >> >> > during each system call.
+>> >> >> >> >
+>> >> >> >> > However even with that /proc file descriptors can be passed to a more
+>> >> >> >> > privileged process (e.g. a suid-exec) which will pass the classic
+>> >> >> >> > ptrace_may_access() permission check. The open() call will be issued in
+>> >> >> >> > general by an unprivileged process while the disclosure of sensitive
+>> >> >> >> > /proc information will happen using a more privileged process at
+>> >> >> >> > read(),write()...
+>> >> >> >> >
+>> >> >> >> > Therfore we need a more sophisticated check to detect if the cred of the
+>> >> >> >> > process have changed, and if the cred of the original opener that are
+>> >> >> >> > stored in the file->f_cred have enough permission to access the task's
+>> >> >> >> > /proc entries during read(), write()...
+>> >> >> >> >
+>> >> >> >> > Add the proc_allow_access() function that will receive the file->f_cred
+>> >> >> >> > as an argument, and tries to check if the opener had enough permission
+>> >> >> >> > to access the task's /proc entries.
+>> >> >> >> >
+>> >> >> >> > This function should be used with the ptrace_may_access() check.
+>> >> >> >> >
+>> >> >> >> > Cc: Kees Cook <keescook@chromium.org>
+>> >> >> >> > Suggested-by: Eric W. Biederman <ebiederm@xmission.com>
+>> >> >> >> > Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
+>> >> >> >> > ---
+>> >> >> >> >  fs/proc/base.c     | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+>> >> >> >> >  fs/proc/internal.h |  2 ++
+>> >> >> >> >  2 files changed, 58 insertions(+)
+>> >> >> >> >
+>> >> >> >> > diff --git a/fs/proc/base.c b/fs/proc/base.c
+>> >> >> >> > index e834946..c29eeae 100644
+>> >> >> >> > --- a/fs/proc/base.c
+>> >> >> >> > +++ b/fs/proc/base.c
+>> >> >> >> > @@ -168,6 +168,62 @@ int proc_same_open_cred(const struct cred *fcred)
+>> >> >> >> >             cap_issubset(cred->cap_permitted, fcred->cap_permitted));
+>> >> >> >> >  }
+>> >> >> >> >
+>> >> >> >> > +/* Returns 0 on success, -errno on denial. */
+>> >> >> >> > +static int __proc_allow_access(const struct cred *cred,
+>> >> >> >> > +                          struct task_struct *task, unsigned int mode)
+>> >> >> >> > +{
+>> >> >> >> > +   int ret = 0;
+>> >> >> >> > +   const struct cred *tcred;
+>> >> >> >> > +   const struct cred *fcred = cred;
+>> >> >> >> > +
+>> >> >> >> > +   rcu_read_lock();
+>> >> >> >> > +   tcred = __task_cred(task);
+>> >> >> >> > +   if (uid_eq(fcred->uid, tcred->euid) &&
+>> >> >> >> > +       uid_eq(fcred->uid, tcred->suid) &&
+>> >> >> >> > +       uid_eq(fcred->uid, tcred->uid)  &&
+>> >> >> >> > +       gid_eq(fcred->gid, tcred->egid) &&
+>> >> >> >> > +       gid_eq(fcred->gid, tcred->sgid) &&
+>> >> >> >> > +       gid_eq(fcred->gid, tcred->gid))
+>> >> >> >> > +           goto out;
+>> >> >> >> > +
+>> >> >> >>
+>> >> >> >> What's this for?  Is it supposed to be an optimization?  If so, it looks
+>> >> >> >> potentially exploitable, although I don't really understand what you're
+>> >> >> >> trying to do.
+>> >> >> > This function should be used in addition to the ptrace_may_access() one.
+>> >> >>
+>> >> >> Sorry, I was unclear.  I meant: what are the uid and gid checks for?
+>> >> > The uid/gid are checks of the current (reader) on the target task, like
+>> >> > the ptrace checks. fcred here is the cred of current at open time.
+>> >> >
+>> >>
+>> >> This isn't a faithful copy of __ptrace_may_access -- the real function
+>> >> gives LSMs a chance to veto ptracing.  That's critical even without
+>> >> LSMs because cap_ptrace_access_check needs to get called.  (Think
+>> >> about setcap'd programs instead of setuid programs.)
+>> > Yes, I already did this, not only setuid, capabilities also are handled
+>> > See the whole patch, please!
+>> >
+>> >
+>> > Yes, and speaking about LSMs I've mentioned in my patches and doc, that
+>> > the proposed function proc_allow_access() should be used after
+>> > ptrace_may_access(). proc_allow_access() is not a replacement for
+>> > ptrace_may_access(), it should be used *after* it.
+>> >
+>> > So cap_ptrace_access_check() is called, and before the file->f_cred
+>> > checks. The LSM veto is already there.
+>>
+>> It's possible that I've misunderstood your patches, but I really don't
+>> see where you're calling into LSMs to give them a chance to veto
+>> access by *f_cred*.
+> Ahh ok, I see, but why you want absolutly to put *f_cred* in this ?
+>
+> That's not its job, LSM veto is handled during read() correctly before
+> proc_allow_access() and f_cred check. And if you want to do it correctly
+> then f_cred should be handled during its time, during ->open().
+> The correct way to handle it: ptrace_may_access() during ->open() and
+> each syscall for sensitive files.
+>
+> Why add and speak about all this complexity where the correct check is
+> just add ptrace_may_access() during ->open() ? using *f_cred* in this
+> context and bring it here is not a valid argument IMO.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/boot/compressed/aslr.c |   50 +++++++++++++++++++++++++++++++++++++++
- arch/x86/boot/compressed/misc.c |   10 ++------
- arch/x86/boot/compressed/misc.h |    8 +++++++
- 3 files changed, 60 insertions(+), 8 deletions(-)
+I don't want to put f_cred into this.  I'd rather the patches just
+check everything at open() time.  Doing that will require some form of
+revocation, I think.
 
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index b73cc66..ed7e9f0 100644
---- a/arch/x86/boot/compressed/aslr.c
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -2,6 +2,53 @@
- 
- #ifdef CONFIG_RANDOMIZE_BASE
- 
-+static unsigned long find_minimum_location(unsigned long input,
-+					   unsigned long input_size,
-+					   unsigned long output,
-+					   unsigned long output_size)
-+{
-+	u64 initrd_start, initrd_size;
-+	u64 cmd_line, cmd_line_size;
-+	unsigned long unsafe, unsafe_len;
-+	char *ptr;
-+
-+	/*
-+	 * Mark off the region that is unsafe to overlap during
-+	 * decompression (see calculations at top of misc.c).
-+	 */
-+	unsafe_len = (output_size >> 12) + 32768 + 18;
-+	unsafe = (unsigned long)input + input_size - unsafe_len;
-+
-+	/*
-+	 * Locate other regions that cannot be over-written during
-+	 * decompression: initrd, cmd_line.
-+	 */
-+	initrd_start  = (u64)real_mode->ext_ramdisk_image << 32;
-+	initrd_start |= real_mode->hdr.ramdisk_image;
-+	initrd_size  = (u64)real_mode->ext_ramdisk_size << 32;
-+	initrd_size |= real_mode->hdr.ramdisk_size;
-+	cmd_line  = (u64)real_mode->ext_cmd_line_ptr << 32;
-+	cmd_line |= real_mode->hdr.cmd_line_ptr;
-+	/* Calculate size of cmd_line. */
-+	ptr = (char *)(unsigned long)cmd_line;
-+	for (cmd_line_size = 0; ptr[cmd_line_size++]; )
-+		;
-+
-+	/* Minimum location must be above all these regions: */
-+	output = max(output, unsafe + unsafe_len);
-+	output = max(output, (unsigned long)free_mem_ptr + BOOT_HEAP_SIZE);
-+	output = max(output, (unsigned long)free_mem_end_ptr + BOOT_STACK_SIZE);
-+	output = max(output, (unsigned long)initrd_start
-+			     + (unsigned long)initrd_size);
-+	output = max(output, (unsigned long)cmd_line
-+			     + (unsigned long)cmd_line_size);
-+
-+	/* Make sure the location is still aligned. */
-+	output = ALIGN(output, CONFIG_PHYSICAL_ALIGN);
-+
-+	return output;
-+}
-+
- unsigned char *choose_kernel_location(unsigned char *input,
- 				      unsigned long input_size,
- 				      unsigned char *output,
-@@ -14,6 +61,9 @@ unsigned char *choose_kernel_location(unsigned char *input,
- 		goto out;
- 	}
- 
-+	choice = find_minimum_location((unsigned long)input, input_size,
-+				       (unsigned long)output, output_size);
-+
- 	/* XXX: choose random location. */
- 
- out:
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index 7138768..196eaf3 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -112,14 +112,8 @@ struct boot_params *real_mode;		/* Pointer to real-mode data */
- void *memset(void *s, int c, size_t n);
- void *memcpy(void *dest, const void *src, size_t n);
- 
--#ifdef CONFIG_X86_64
--#define memptr long
--#else
--#define memptr unsigned
--#endif
--
--static memptr free_mem_ptr;
--static memptr free_mem_end_ptr;
-+memptr free_mem_ptr;
-+memptr free_mem_end_ptr;
- 
- static char *vidmem;
- static int vidport;
-diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
-index 9077af7..42f71bb 100644
---- a/arch/x86/boot/compressed/misc.h
-+++ b/arch/x86/boot/compressed/misc.h
-@@ -23,7 +23,15 @@
- #define BOOT_BOOT_H
- #include "../ctype.h"
- 
-+#ifdef CONFIG_X86_64
-+#define memptr long
-+#else
-+#define memptr unsigned
-+#endif
-+
- /* misc.c */
-+extern memptr free_mem_ptr;
-+extern memptr free_mem_end_ptr;
- extern struct boot_params *real_mode;		/* Pointer to real-mode data */
- void __putstr(const char *s);
- #define error_putstr(__x)  __putstr(__x)
--- 
-1.7.9.5
+Your current patches use f_cred, and they seem to do it wrong.  So
+please either fix it, stop using f_cred, or explain why it it's okay
+despite not invoking LSM in the expected way.
+
+--Andy
