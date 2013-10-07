@@ -1,140 +1,163 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 5 Oct 2013 14:23:37 +0100
-From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20131005132337.GA4095@dztty>
-References: <20131004085911.GA2157@dztty>
- <CALCETrU5vBcqCbKAh=1wWPjt6js7A4R2xtnwc3Z1Z0FRMLP1SQ@mail.gmail.com>
- <20131004182353.GA2600@dztty>
- <CALCETrVs2Nd82dpURQxAVetK814bAm8TvnSyA4e=YeTWxTFsmA@mail.gmail.com>
- <20131004191113.GA3916@dztty>
- <CALCETrVMBh0nNgpOHOMrsOjHez7NnCNbY5nHxeQ3RToP4nKO+A@mail.gmail.com>
- <20131004192712.GA4334@dztty>
- <CALCETrUuMRMgJ1OV3-ZRQ5wwzSQsdf9tKY9iKesk1QJPtj6-qw@mail.gmail.com>
- <20131004194142.GA4524@dztty>
- <CALCETrXghsx-2rK8QqgtfMaJJhkwcYgRMnqGQfKw-T3O7jBTUA@mail.gmail.com>
+Message-ID: <52521566.20402@jp.fujitsu.com>
+Date: Mon, 07 Oct 2013 10:59:02 +0900
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrXghsx-2rK8QqgtfMaJJhkwcYgRMnqGQfKw-T3O7jBTUA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if
- file's opener may access task
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org> <1380656245-29975-7-git-send-email-keescook@chromium.org> <524B6AEE.90301@jp.fujitsu.com> <CAGXu5jLVt13p2X2e1C3ha1izg6U6wbmgSyYW1wa+X4cW8aCFug@mail.gmail.com> <524BE3C5.2070302@jp.fujitsu.com> <524CBB70.2060809@jp.fujitsu.com> <1408843968.872421.1380808038820.JavaMail.root@redhat.com>
+In-Reply-To: <1408843968.872421.1380808038820.JavaMail.root@redhat.com>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
+To: Dave Anderson <anderson@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, x86@kernel.org, kernel-hardening@lists.openwall.com, Aaron Durbin <adurbin@google.com>, Eric Northup <digitaleric@google.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@google.com>, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, "Discussion list for crash utility usage, maintenance and development" <crash-utility@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 04, 2013 at 03:17:08PM -0700, Andy Lutomirski wrote:
-> On Fri, Oct 4, 2013 at 12:41 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> > On Fri, Oct 04, 2013 at 12:32:09PM -0700, Andy Lutomirski wrote:
-> >> On Fri, Oct 4, 2013 at 12:27 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> > On Fri, Oct 04, 2013 at 12:16:26PM -0700, Andy Lutomirski wrote:
-> >> >> On Fri, Oct 4, 2013 at 12:11 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> >> > On Fri, Oct 04, 2013 at 07:34:08PM +0100, Andy Lutomirski wrote:
-> >> >> >> On Fri, Oct 4, 2013 at 7:23 PM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> >> >> > On Fri, Oct 04, 2013 at 04:40:01PM +0100, Andy Lutomirski wrote:
-> >> >> >> >> On Fri, Oct 4, 2013 at 9:59 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> >> >> >> >> > On Thu, Oct 03, 2013 at 02:09:55PM -0700, Andy Lutomirski wrote:
-> >> >> > [...]
-> >> >> >> Sorry, I described the obviously broken scenario incorrectly.  Your
-> >> >> >> patch breaks (in the absence of things like selinux) if a exec
-> >> >> >> something setuid root.
-> >> >> >>
-> >> >> >> [...]
-> >> >> >>
-> >> >> >> >
-> >> >> >> > I did the check in the proc_same_open_cred() function:
-> >> >> >> >  return (uid_eq(fcred->uid, cred->uid) &&
-> >> >> >> >          gid_eq(fcred->gid, cred->gid) &&
-> >> >> >> >          cap_issubset(cred->cap_permitted, fcred->cap_permitted));
-> >> >> >>
-> >> >> >> Which has nothing to do with anything.  If that check fails, you're
-> >> >> >> just going on to a different, WRONG check/.
-> >> >> >>
-> >> >> >> >
-> >> >> >> > Check if this is the same uid/gid and the capabilities superset!
-> >> >> >> >
-> >> >> >> > But in the proc_allow_access() the capabilities superset is missing.
-> >> >> >> >
-> >> >> >> >
-> >> >> >> > So to fix it:
-> >> >> >> > 1) if proc_same_open_cred() detects that cred have changed between
-> >> >> >> > ->open() and ->read() then abort, return zero, the ->read(),write()...
-> >> >> >>
-> >> >> >> IMO yuck.
-> >> >> >>
-> >> >> >> >
-> >> >> >> >
-> >> >> >> > 2) Improve the proc_allow_access() check by:
-> >> >> >> >    if this is the same user namespace then check uid/gid of f_cred on
-> >> >> >> >    target cred task, and the capabilities superset:
-> >> >> >> >    cap_issubset(tcred->cap_permitted, fcred->cap_permitted));
-> >> >> >> >
-> >> >> >> >    If it fails let security_capable() or file_ns_capable() do its magic.
-> >> >> >> >
-> >> >> >>
-> >> >> >> NAK.  You need to actually call the LSM.  What if the reason to fail
-> >> >> >> the request isn't that the writer gained capabilities -- what if the
-> >> >> >> writer's selinux label changed?
-> >> >> > Sorry I can't follow you here! Can you be more explicit please?
-> >> >> >
-> >> >> > For me we are already doing this during ptrace_may_access() on each
-> >> >> > syscall, which will call LSM to inspect the privileges on each ->open(),
-> >> >> > ->write()... So LSM hooks are already called. If you want to have more
-> >> >> > LSM hooks, then perhaps that's another problem?
-> >> >>
-> >> >> Can you show me where, in your code, LSMs are asked whether the
-> >> >> process calling read() is permitted to ptrace the process that the
-> >> >> proc file points at?
-> >> > Yes.
-> >> > [PATCH v2 9/9] procfs: improve permission checks on /proc/*/syscall
-> >> >
-> >> > ->read()
-> >> >   ->syscall_read()
-> >> >     ->lock_trace()
-> >> >       ->ptrace_may_access()
-> >> >         ->__ptrace_may_access()
-> >> >           ->security_ptrace_access_check()
-> >> >             ->yama_ptrace_access_check()
-> >> >             ->security_ops->ptrace_access_check()
-> >> >
-> >> >
-> >> > And also for patch:
-> >> > [PATCH v2 8/9] procfs: improve permission checks on /proc/*/stack
-> >> >
-> >> > And during ->open() and ->read()
-> >> >
-> >> >
-> >> > So sorry Andy, I don't follow what you are describing.
-> >>
-> >> And what parameters are you passing to security_ptrace_access_check?
-> >> It's supposed to be f_cred, right?  Because you want to make sure
-> >> that, if the opener had some low-privilege label, the target has
-> >> execed and gotten a more secure label, and the reader has a
-> >> high-privilege label, that the opener's label is checked against the
-> >> target's new label.
-> > The current's cred each time.
-> 
-> Exactly.  Hence the NAK.
-But Having two LSM Hooks there is really not practical!
+(2013/10/03 22:47), Dave Anderson wrote:
+>
+>
+> ----- Original Message -----
+>> (2013/10/02 18:13), HATAYAMA Daisuke wrote:
+>>> (2013/10/02 16:48), Kees Cook wrote:
+>> <cut>
+>>>>>> +
+>>>>>> +     return 0;
+>>>>>> +}
+>>>>>> +
+>>>>>> +/*
+>>>>>>      * Determine if we were loaded by an EFI loader.  If so, then we have also been
+>>>>>>      * passed the efi memmap, systab, etc., so we should use these data structures
+>>>>>>      * for initialization.  Note, the efi init code path is determined by the
+>>>>>> @@ -1242,3 +1256,15 @@ void __init i386_reserve_resources(void)
+>>>>>>     }
+>>>>>>
+>>>>>>     #endif /* CONFIG_X86_32 */
+>>>>>> +
+>>>>>> +static struct notifier_block kernel_offset_notifier = {
+>>>>>> +     .notifier_call = dump_kernel_offset
+>>>>>> +};
+>>>>>> +
+>>>>>> +static int __init register_kernel_offset_dumper(void)
+>>>>>> +{
+>>>>>> +     atomic_notifier_chain_register(&panic_notifier_list,
+>>>>>> +                                     &kernel_offset_notifier);
+>>>>>> +     return 0;
+>>>>>> +}
+>>>>>> +__initcall(register_kernel_offset_dumper);
+>>>>>>
+>>>>>
+>>>>> Panic notifier is not executed if kdump is enabled. Maybe, Chrome OS doesn't use
+>>>>> kdump? Anyway, kdump related tools now calculate phys_base from memory map
+>>>>> information passed as ELF PT_LOAD entries like below.
+>>>>
+>>>> Correct, we are not currently using kdump.
+>>>>
+>>>>> $ LANG=C readelf -l vmcore-rhel6up4
+>>>>>
+>>>>> Elf file type is CORE (Core file)
+>>>>> Entry point 0x0
+>>>>> There are 5 program headers, starting at offset 64
+>>>>>
+>>>>> Program Headers:
+>>>>>     Type           Offset             VirtAddr           PhysAddr
+>>>>>                    FileSiz            MemSiz              Flags  Align
+>>>>>     NOTE           0x0000000000000158 0x0000000000000000  0x0000000000000000
+>>>>>                    0x0000000000000b08 0x0000000000000b08         0
+>>>>>     LOAD           0x0000000000000c60 0xffffffff81000000  0x0000000001000000
+>>>>>                    0x000000000103b000 0x000000000103b000  RWE    0
+>>>>>     LOAD           0x000000000103bc60 0xffff880000001000  0x0000000000001000
+>>>>>                    0x000000000009cc00 0x000000000009cc00  RWE    0
+>>>>>     LOAD           0x00000000010d8860 0xffff880000100000  0x0000000000100000
+>>>>>                    0x0000000002f00000 0x0000000002f00000  RWE    0
+>>>>>     LOAD           0x0000000003fd8860 0xffff880013000000  0x0000000013000000
+>>>>>                    0x000000002cffd000 0x000000002cffd000  RWE    0
+>>>>>
+>>>>> Each PT_LOAD entry is assigned to virtual and physical address. In this case,
+>>>>> 1st PT_LOAD entry belongs to kernel text mapping region, from which we can
+>>>>> calculate phys_base value.
+>>>>
+>>>> It seems like all the information you need would still be available?
+>>>> The virtual address is there, so it should be trivial to see the
+>>>> offset, IIUC.
+>>>>
+>>>
+>>> Partially yes. I think OK to analyze crash dump by crash utility, a gdb-based
+>>> symbolic debugger for kernel, since phys_base absorbs kernel offset caused by
+>>> relocation and phys_base is available in the way I explained above.
+>>>
+>>> However, the gained phys_base is not correct one, exactly phys_base + offset_by_relocation.
+>>> When analyzing crash dump by crash utility, we use debug information generated
+>>> during kernel build, which we install as kernel-debuginfo on RHEL for example.
+>>> Symbols in debuginfo have statically assigned addresses at build so we see
+>>> the statically assigned addresses during debugging and we see
+>>> phys_base + offset_by_relocation as phys_base. This would be problematic
+>>> if failure on crash dump is relevant to the relocated addresses, though I don't
+>>> immediately come up with crash senario where relocated symbol is defitely necessary.
+>>>
+>>> Still we can get relocated addresses if kallsyms is enabled on the kernel,
+>>> but kallsyms and relocatable kernels are authogonal. I don't think it natural
+>>> to rely on kallsyms. It seems natural to export relocation information newly
+>>> as debugging information.
+>>>
+>>
+>> I was confused yesterday. As I said above, kdump related tools now don't support
+>> relocation on x86_64, phys_base only. kdump related tools think of present kernel
+>> offset as phys_base. Then, they reflect kernel offset caused by relocation in
+>> physical addresses only, not in virtual addresses. This obviously affects the
+>> tools.
+>>
+>> BTW, relocation looks more sophisticated than phys_base one. Is it possible to
+>> switch from phys_base one to relocation on x86_64? On x86, relocation is used so
+>> I guess x86_64 can work in the same way. Is there something missing?
+>> Is there what phys_base can but relocation cannot on x86_64?
+>>
+>> And, Dave, is there feature for crash utility to treat relocation now?
+>
+> Well sort of, there are couple guessing-game kludges that can be used.
+>
+> For 32-bit x86 systems configured with a CONFIG_PHYSICAL_START value
+> that is larger than its CONFIG_PHYSICAL_ALIGN value, such that the
+> vmlinux symbol values do not match their relocated virtual address
+> values, there are two options for analyzing dumpfiles:
+>
+> (1) there is a "--reloc size" command line option, presuming that
+>      you know what it is.
+> (2) take a snapshot of the /proc/kallsyms file from the crashing
+>      system into a file, and put it on the command line, similar
+>      to putting a System.map file on the command line in order to
+>      override the symbol values in the vmlinux file.
+>
+> In those cases, we have to alter all of the symbols seen in the
+> vmlinux file, and go into a backdoor into the embedded gdb module
+> to patch/modify the symbol values.
+>
+> On live x86 systems, the two options above are not necessary if
+> /proc/kallsyms exists, because its contents can be checked against
+> the vmlinux file symbol values, and the relocation calculated.
+>
+> For x86_64, the --reloc argument has never been needed.  But if
+> for whatever reason the "phys_base" value cannot be determined,
+> it can be forced with the "--machdep phys_base=addr" option,
+> again presuming you know what it is.
+>
 
-Note to mention some of these redundancy checks...
+Thanks for detailed explanation. So, there's already a feature in crash utility
+to address relocation!, though it's better for me to try them to check if it's
+really applicable to this feature. My concern is whether --reloc works well
+on x86_64 too, because relocation has never done on x86_64 ever, right?
 
-> >
-> > Is there some mechanism to check what you describe?
-> >
-> 
-> No.  You could try to add one, but getting it to be compatible with
-> YAMA might be really messy.
-LSM is limitted in this situation, and it can't work with YAMA, or
-perhaps YAMA will just return -EPERM
+Another concern is that in case of relocation, users need to additional information
+regarding runtime symbol information to crash utility. I want to avoid additional
+process, automation is preferable if possible.
 
-So this LSM protections are currently vulnerable too!
+I guess it's enough if there's runtime symbol addresses because we can get relocated
+offset value by comparing it with the compile-time symbol address contained in
+a given debuginfo file. Candidates for such symbols are the ones contained in
+VMCOREINFO note containing some symbol values for makedumpfile to refer to mm-related
+objects in kernel, which is always contained in vmcore generated by current kdump and
+also vmcores converted by makedumpfile from it. How about this idea?
 
-
-> Or you could see if destroying and recreating all the inodes on exec
-> or some other revoke-like approach would work.
-> 
-> --Andy
+# I added CC to crash utility mailing list
 
 -- 
-Djalal Harouni
-http://opendz.org
+Thanks.
+HATAYAMA, Daisuke
