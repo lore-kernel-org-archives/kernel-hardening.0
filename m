@@ -1,61 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <5253D5E4.7060004@jp.fujitsu.com>
+Date: Tue, 08 Oct 2013 18:52:36 +0900
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
 MIME-Version: 1.0
-In-Reply-To: <20131005132337.GA4095@dztty>
-References: <20131004085911.GA2157@dztty> <CALCETrU5vBcqCbKAh=1wWPjt6js7A4R2xtnwc3Z1Z0FRMLP1SQ@mail.gmail.com>
- <20131004182353.GA2600@dztty> <CALCETrVs2Nd82dpURQxAVetK814bAm8TvnSyA4e=YeTWxTFsmA@mail.gmail.com>
- <20131004191113.GA3916@dztty> <CALCETrVMBh0nNgpOHOMrsOjHez7NnCNbY5nHxeQ3RToP4nKO+A@mail.gmail.com>
- <20131004192712.GA4334@dztty> <CALCETrUuMRMgJ1OV3-ZRQ5wwzSQsdf9tKY9iKesk1QJPtj6-qw@mail.gmail.com>
- <20131004194142.GA4524@dztty> <CALCETrXghsx-2rK8QqgtfMaJJhkwcYgRMnqGQfKw-T3O7jBTUA@mail.gmail.com>
- <20131005132337.GA4095@dztty>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Mon, 7 Oct 2013 14:41:33 -0700
-Message-ID: <CALCETrV2YZUQsFiahmcQECF37=sX6EMiEEjwXX_mcuPf-X3-yw@mail.gmail.com>
-Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if file's
- opener may access task
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org> <1380656245-29975-7-git-send-email-keescook@chromium.org> <524B6AEE.90301@jp.fujitsu.com> <CAGXu5jLVt13p2X2e1C3ha1izg6U6wbmgSyYW1wa+X4cW8aCFug@mail.gmail.com> <524BE3C5.2070302@jp.fujitsu.com> <524CBB70.2060809@jp.fujitsu.com> <1408843968.872421.1380808038820.JavaMail.root@redhat.com> <52521566.20402@jp.fujitsu.com> <1678208981.2178058.1381152105871.JavaMail.root@redhat.com>
+In-Reply-To: <1678208981.2178058.1381152105871.JavaMail.root@redhat.com>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
+To: Dave Anderson <anderson@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, x86@kernel.org, kernel-hardening@lists.openwall.com, Aaron Durbin <adurbin@google.com>, Eric Northup <digitaleric@google.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@google.com>, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, "Discussion list for crash utility usage, maintenance and development" <crash-utility@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 5, 2013 at 6:23 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> On Fri, Oct 04, 2013 at 03:17:08PM -0700, Andy Lutomirski wrote:
+(2013/10/07 22:21), Dave Anderson wrote:
+
+> ----- Original Message -----
+>> (2013/10/03 22:47), Dave Anderson wrote:
+
+>>> ----- Original Message -----
+>>>> (2013/10/02 18:13), HATAYAMA Daisuke wrote:
+>>>>> (2013/10/02 16:48), Kees Cook wrote:
+
 >>
->> Exactly.  Hence the NAK.
-> But Having two LSM Hooks there is really not practical!
-
-It'd doable *if* it turns out that it's the right solution.
-
-But revoke seems much more likely to be simple, comprehensible, and
-obviously correct to me.
-
---Andy
-
+>> Thanks for detailed explanation. So, there's already a feature in crash utility
+>> to address relocation!, though it's better for me to try them to check if it's
+>> really applicable to this feature. My concern is whether --reloc works well
+>> on x86_64 too, because relocation has never done on x86_64 ever, right?
 >
-> Note to mention some of these redundancy checks...
+> Correct.
 >
->> >
->> > Is there some mechanism to check what you describe?
->> >
->>
->> No.  You could try to add one, but getting it to be compatible with
->> YAMA might be really messy.
-> LSM is limitted in this situation, and it can't work with YAMA, or
-> perhaps YAMA will just return -EPERM
+>> Another concern is that in case of relocation, users need to additional information
+>> regarding runtime symbol information to crash utility. I want to avoid additional
+>> process, automation is preferable if possible.
 >
-> So this LSM protections are currently vulnerable too!
+> Right.  As I mentioned in the case of 32-bit x86 dumpfiles, there is no automation
+> available when CONFIG_PHYSICAL_START is larger than CONFIG_PHYSICAL_ALIGN.  The user
+> either has to be aware of their values in order to calculate the --reloc argument,
+> or has to capture a copy of the /proc/kallsyms file on the crashed system.  Typically
+> users/distros using kdump changed their x86 configurations to avoid having to deal
+> with that.
 >
->
->> Or you could see if destroying and recreating all the inodes on exec
->> or some other revoke-like approach would work.
->>
->> --Andy
->
-> --
-> Djalal Harouni
-> http://opendz.org
 
+Sorry, I don't understand why relocation size cannot be calculated when
+CONFIG_PHYSICALSTART > CONFIG_PHYSICAL_ALIGN. Could you explain that?
 
+>> I guess it's enough if there's runtime symbol addresses because we can get relocated
+>> offset value by comparing it with the compile-time symbol address contained in
+>> a given debuginfo file. Candidates for such symbols are the ones contained in
+>> VMCOREINFO note containing some symbol values for makedumpfile to refer to mm-related
+>> objects in kernel, which is always contained in vmcore generated by current kdump and
+>> also vmcores converted by makedumpfile from it. How about this idea?
+>
+> But how would that differ from using an incorrect (non-matching) vmlinux file?
+>
+
+It seems to me almost similar to what crash currently does even if we do relocation check.
+The current check crash currently does is trial-and-error since there's no information
+indicating given vmcore and vmlinuxcertainly match well.
+
+For example, the process I imagine is:
+
+   1) try to match vmcore and vmlinux with no relocation. If fails, go to 2).
+   2) try to match vmcore and vmlinux with relocation.
+
+The two steps include symbol table initialization so it might actually be difficult to
+resume back from 2) to 1).
+
+Also, if gap due to phys_base and gap due to relocation can happen at the same time,
+calculating two values automatically might be futher complicated. So, it would be better
+to add relocation value in VMCOREINFO. Then, what crash utility sholud do becomes very simple.
+
+BTW, can it really happen that gaps due to phys_base and due to relocation happen at the
+same time? I feel relocation covers phys_base mechanism. If there's relocation, phys_base
+is not necessary.
 
 -- 
-Andy Lutomirski
-AMA Capital Management, LLC
+Thanks.
+HATAYAMA, Daisuke
