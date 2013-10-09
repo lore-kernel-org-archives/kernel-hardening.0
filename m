@@ -1,167 +1,135 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Message-ID: <5255D023.2030907@gmail.com>
+Date: Thu, 10 Oct 2013 08:52:35 +1100
+From: Ryan Mallon <rmallon@gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <52552A2A.8030505@jp.fujitsu.com>
-References: <1380656245-29975-1-git-send-email-keescook@chromium.org>
-	<CAGXu5jLVt13p2X2e1C3ha1izg6U6wbmgSyYW1wa+X4cW8aCFug@mail.gmail.com>
-	<524BE3C5.2070302@jp.fujitsu.com>
-	<524CBB70.2060809@jp.fujitsu.com>
-	<1408843968.872421.1380808038820.JavaMail.root@redhat.com>
-	<52521566.20402@jp.fujitsu.com>
-	<1678208981.2178058.1381152105871.JavaMail.root@redhat.com>
-	<5253D5E4.7060004@jp.fujitsu.com>
-	<391752872.2807845.1381239492989.JavaMail.root@redhat.com>
-	<52552A2A.8030505@jp.fujitsu.com>
-Date: Wed, 9 Oct 2013 11:06:00 -0700
-Message-ID: <CAGXu5j+LgHuVWJ5QUti=c4Lmc4ZDjmqo6R_O-4vc5yr8beEzww@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=ISO-8859-1
-Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
-To: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
-Cc: Dave Anderson <anderson@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Aaron Durbin <adurbin@google.com>, Eric Northup <digitaleric@google.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@google.com>, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, "Discussion list for crash utility usage, maintenance and development" <crash-utility@redhat.com>
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [PATCH v3] vsprintf: Check real user/group id for %pK
+To: Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, George Spelvin <linux@horizon.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 9, 2013 at 3:04 AM, HATAYAMA Daisuke
-<d.hatayama@jp.fujitsu.com> wrote:
-> (2013/10/08 22:38), Dave Anderson wrote:
->>
->>
->>
->> ----- Original Message -----
->>>
->>> (2013/10/07 22:21), Dave Anderson wrote:
->>>
->>>> ----- Original Message -----
->>>>>
->>>>> (2013/10/03 22:47), Dave Anderson wrote:
->>>
->>>
->>>>>> ----- Original Message -----
->>>>>>>
->>>>>>> (2013/10/02 18:13), HATAYAMA Daisuke wrote:
->>>>>>>>
->>>>>>>> (2013/10/02 16:48), Kees Cook wrote:
->>>
->>>
->>>>>
->>>>> Thanks for detailed explanation. So, there's already a feature in crash
->>>>> utility
->>>>> to address relocation!, though it's better for me to try them to check
->>>>> if
->>>>> it's
->>>>> really applicable to this feature. My concern is whether --reloc works
->>>>> well
->>>>> on x86_64 too, because relocation has never done on x86_64 ever, right?
->>>>
->>>>
->>>> Correct.
->>>>
->>>>> Another concern is that in case of relocation, users need to additional
->>>>> information
->>>>> regarding runtime symbol information to crash utility. I want to avoid
->>>>> additional
->>>>> process, automation is preferable if possible.
->>>>
->>>>
->>>> Right.  As I mentioned in the case of 32-bit x86 dumpfiles, there is no
->>>> automation
->>>> available when CONFIG_PHYSICAL_START is larger than
->>>> CONFIG_PHYSICAL_ALIGN.  The user
->>>> either has to be aware of their values in order to calculate the --reloc
->>>> argument,
->>>> or has to capture a copy of the /proc/kallsyms file on the crashed
->>>> system.  Typically
->>>> users/distros using kdump changed their x86 configurations to avoid
->>>> having to deal
->>>> with that.
->>>>
->>>
->>> Sorry, I don't understand why relocation size cannot be calculated when
->>> CONFIG_PHYSICALSTART > CONFIG_PHYSICAL_ALIGN. Could you explain that?
->>
->>
->> I just meant that when CONFIG_PHYSICAL_START > CONFIG_PHYSICAL_ALIGN, the
->> 32-bit x86 kernel
->> gets relocated (like the secondary kdump kernel), but that information is
->> not readily available
->> from the vmlinux/vmcore pair.
->>
->
-> My understanding on CONFIG_PHYSICAL_ALIGN was that starting address of
-> kernel text area
-> is always rounded up to CONFIG_PHYSICAL_ALIGN, only. Your explanation would
-> be part I don't
-> understand well. I'll reconsider it locally...
->
->
->>>
->>>>> I guess it's enough if there's runtime symbol addresses because we can
->>>>> get relocated
->>>>> offset value by comparing it with the compile-time symbol address
->>>>> contained in
->>>>> a given debuginfo file. Candidates for such symbols are the ones
->>>>> contained in
->>>>> VMCOREINFO note containing some symbol values for makedumpfile to refer
->>>>> to mm-related
->>>>> objects in kernel, which is always contained in vmcore generated by
->>>>> current kdump and
->>>>> also vmcores converted by makedumpfile from it. How about this idea?
->>>>
->>>>
->>>> But how would that differ from using an incorrect (non-matching) vmlinux
->>>> file?
->>>>
->>>
->>> It seems to me almost similar to what crash currently does even if we do
->>> relocation check.
->>> The current check crash currently does is trial-and-error since there's
->>> no information
->>> indicating given vmcore and vmlinuxcertainly match well.
->>>
->>> For example, the process I imagine is:
->>>
->>>     1) try to match vmcore and vmlinux with no relocation. If fails, go
->>> to 2).
->>>     2) try to match vmcore and vmlinux with relocation.
->>>
->>> The two steps include symbol table initialization so it might actually be
->>> difficult to
->>> resume back from 2) to 1).
->>>
->>> Also, if gap due to phys_base and gap due to relocation can happen at the
->>> same time,
->>> calculating two values automatically might be futher complicated. So, it
->>> would be better
->>> to add relocation value in VMCOREINFO. Then, what crash utility sholud do
->>> becomes very simple.
->>
->>
->> Yes please...
->>
->> And while you're at it, the kernel's
->>
->>    VMCOREINFO_SYMBOL(phys_base);
->>
->> is pretty much useless, at least w/respect to ELF vmcores, since we need
->> to know its
->> value in order to translate the address.  And I don't think that
->> makedumpfile uses
->> it when it calculates the phys_base that it stores in compressed kdump
->> headers.  Why
->> not put its value instead of its address?
->>
->
-> Yes, I've also noticed this fact. Anyway, I'll post a patch to improvement
-> this phys_base
-> and a patch to export relocation information in VMCOREINFO.
+Some setuid binaries will allow reading of files which have read
+permission by the real user id. This is problematic with files which
+use %pK because the file access permission is checked at open() time,
+but the kptr_restrict setting is checked at read() time. If a setuid
+binary opens a %pK file as an unprivileged user, and then elevates
+permissions before reading the file, then kernel pointer values may be
+leaked.
 
-Cool; can you keep me CCed on those patches? I'm interested in seeing
-and testing it too.
+This happens for example with the setuid pppd application on Ubuntu 12.04:
 
-Thanks!
+  $ head -1 /proc/kallsyms
+  00000000 T startup_32
 
--Kees
+  $ pppd file /proc/kallsyms
+  pppd: In file /proc/kallsyms: unrecognized option 'c1000000'
 
--- 
-Kees Cook
-Chrome OS Security
+This will only leak the pointer value from the first line, but other
+setuid binaries may leak more information.
+
+Fix this by adding a check that in addition to the current process
+having CAP_SYSLOG, that effective user and group ids are equal to the
+real ids. If a setuid binary reads the contents of a file which uses
+%pK then the pointer values will be printed as NULL if the real user
+is unprivileged.
+
+Update the sysctl documentation to reflect the changes, and also
+correct the documentation to state the kptr_restrict=0 is the default.
+
+Signed-off-by: Ryan Mallon <rmallon@gmail.com>
+---
+Changes since v2:
+  * Fixed typo in comment: 'proccess' -> 'process'
+  * Use a switch statement for the kptr_restrict values
+  * Updated the sysctl documentation
+
+Changes since v1:
+  * Fix the description to say 'vsprintf' instead of 'printk'.
+  * Clarify the open() vs read() time checks in the patch description
+and code comment.
+  * Remove comment about 'badly written' setuid binaries. This occurs
+with setuids binaries which correctly handle opening files.
+  * Added extra people to the Cc list.
+---
+
+diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+index 9d4c1d1..d57766e 100644
+--- a/Documentation/sysctl/kernel.txt
++++ b/Documentation/sysctl/kernel.txt
+@@ -290,13 +290,14 @@ Default value is "/sbin/hotplug".
+ kptr_restrict:
+ 
+ This toggle indicates whether restrictions are placed on
+-exposing kernel addresses via /proc and other interfaces.  When
+-kptr_restrict is set to (0), there are no restrictions.  When
+-kptr_restrict is set to (1), the default, kernel pointers
+-printed using the %pK format specifier will be replaced with 0's
+-unless the user has CAP_SYSLOG.  When kptr_restrict is set to
+-(2), kernel pointers printed using %pK will be replaced with 0's
+-regardless of privileges.
++exposing kernel addresses via /proc and other interfaces.
++
++When kptr_restrict is set to (0), the default, there are no restrictions.
++When kptr_restrict is set to (1), kernel pointers printed using the %pK
++format specifier will be replaced with 0's unless the user has CAP_SYSLOG
++and effective user and group ids are equal to the real ids.
++When kptr_restrict is set to (2), kernel pointers printed using
++%pK will be replaced with 0's regardless of privileges.
+ 
+ ==============================================================
+ 
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 26559bd..d76555c 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -27,6 +27,7 @@
+ #include <linux/uaccess.h>
+ #include <linux/ioport.h>
+ #include <linux/dcache.h>
++#include <linux/cred.h>
+ #include <net/addrconf.h>
+ 
+ #include <asm/page.h>		/* for PAGE_SIZE */
+@@ -1312,11 +1313,37 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+ 				spec.field_width = default_width;
+ 			return string(buf, end, "pK-error", spec);
+ 		}
+-		if (!((kptr_restrict == 0) ||
+-		      (kptr_restrict == 1 &&
+-		       has_capability_noaudit(current, CAP_SYSLOG))))
++
++		switch (kptr_restrict) {
++		case 0:
++			/* Always print %pK values */
++			break;
++		case 1: {
++			/*
++			 * Only print the real pointer value if the current
++			 * process has CAP_SYSLOG and is running with the
++			 * same credentials it started with. This is because
++			 * access to files is checked at open() time, but %pK
++			 * checks permission at read() time. We don't want to
++			 * leak pointer values if a binary opens a file using
++			 * %pK and then elevates privileges before reading it.
++			 */
++			const struct cred *cred = current_cred();
++
++			if (!has_capability_noaudit(current, CAP_SYSLOG) ||
++			    !uid_eq(cred->euid, cred->uid) ||
++			    !gid_eq(cred->egid, cred->gid))
++				ptr = NULL;
++			break;
++		}
++		case 2:
++		default:
++			/* Always print 0's for %pK */
+ 			ptr = NULL;
++			break;
++		}
+ 		break;
++
+ 	case 'N':
+ 		switch (fmt[1]) {
+ 		case 'F':
