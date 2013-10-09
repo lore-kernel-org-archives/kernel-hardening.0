@@ -1,73 +1,125 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 9 Oct 2013 11:54:02 +0100
-From: Djalal Harouni <tixxdz@opendz.org>
-Message-ID: <20131009105402.GA4810@dztty>
-References: <20131004182353.GA2600@dztty>
- <CALCETrVs2Nd82dpURQxAVetK814bAm8TvnSyA4e=YeTWxTFsmA@mail.gmail.com>
- <20131004191113.GA3916@dztty>
- <CALCETrVMBh0nNgpOHOMrsOjHez7NnCNbY5nHxeQ3RToP4nKO+A@mail.gmail.com>
- <20131004192712.GA4334@dztty>
- <CALCETrUuMRMgJ1OV3-ZRQ5wwzSQsdf9tKY9iKesk1QJPtj6-qw@mail.gmail.com>
- <20131004194142.GA4524@dztty>
- <CALCETrXghsx-2rK8QqgtfMaJJhkwcYgRMnqGQfKw-T3O7jBTUA@mail.gmail.com>
- <20131005132337.GA4095@dztty>
- <CALCETrV2YZUQsFiahmcQECF37=sX6EMiEEjwXX_mcuPf-X3-yw@mail.gmail.com>
+Message-ID: <52553A8D.4090906@gmail.com>
+Date: Wed, 09 Oct 2013 07:14:21 -0400
+From: Dan Rosenberg <dan.j.rosenberg@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrV2YZUQsFiahmcQECF37=sX6EMiEEjwXX_mcuPf-X3-yw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 2/9] procfs: add proc_allow_access() to check if
- file's opener may access task
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Cyrill Gorcunov <gorcunov@openvz.org>, David Rientjes <rientjes@google.com>, LKML <linux-kernel@vger.kernel.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Djalal Harouni <tixxdz@gmail.com>
+References: <5254A034.5020700@gmail.com>	 <1381279758.23937.42.camel@joe-AO722> <1381282200.23937.45.camel@joe-AO722>	 <5254B787.6080700@gmail.com> <1381284056.23937.49.camel@joe-AO722> <5254BDD0.7040001@gmail.com>
+In-Reply-To: <5254BDD0.7040001@gmail.com>
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v2] vsprintf: Check real user/group id for %pK
+To: Ryan Mallon <rmallon@gmail.com>, Joe Perches <joe@perches.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, George Spelvin <linux@horizon.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 07, 2013 at 02:41:33PM -0700, Andy Lutomirski wrote:
-> On Sat, Oct 5, 2013 at 6:23 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
-> > On Fri, Oct 04, 2013 at 03:17:08PM -0700, Andy Lutomirski wrote:
-> >>
-> >> Exactly.  Hence the NAK.
-> > But Having two LSM Hooks there is really not practical!
-> 
-> It'd doable *if* it turns out that it's the right solution.
-> 
-> But revoke seems much more likely to be simple, comprehensible, and
-> obviously correct to me.
-Yes Andy, I agree, revoke is much better!
+On 10/08/2013 10:22 PM, Ryan Mallon wrote:
+> Ah, I misread it. It does however check when kptr_restrict !=3D 0, not
+> just when kptr_restrict is 1. I've left the in_irq test as-is, but used=
 
-But it will not handle or fix all the situations, as I've said what if
-revoke is not invloved here? there is no an execve from the target task!
+> a switch as suggested. I don't really care either way, I think the
+> original check is quite readable. Anyway, updated patch below:
+>
+> ~Ryan
 
+This seems mostly fine to me, except the "proccess" -> "process" nit Joe
+already identified.
 
-Remember:
-/proc/*/{stat,maps} and perhaps others have 0444 and don't have ptrace
-checks during ->open() to not break some userspace... especially
-/proc/*/stat file
+I think I also prefer Joe's style of having an explicit "case 2" in the
+switch statement in addition to the default case for clarity.
 
+Also, isn't the default value of kptr_restrict 0 now, unless I'm missing
+something? If I recall it was 1 when originally written, and then
+changed to 0 at some point. Could the documentation be updated to
+reflect that?
 
-So you will have an fd on these privileged files!
+-Dan
 
-Current will execve a privileged process, and pass ptrace_may_access()
-checks during ->read()...
-
-Here revoke is not involved at all! so it will not fix these files and
-they will continue to be vulnerable.
-
-IMO to fix them, we must have the correct ptrace_may_access() check and
-this involves: current doing an execve + current's cred
-
-
-
-BTW, Andy we already return 0 (end of file) for /proc/*/mem
-  ->read()
-    ->mem_read()
-      ->mem_rw()
-        if (!atomic_inc_not_zero(&mm->mm_users))
-		return 0
-
-So can this be considered some sort of simple revoke?
-
-
--- 
-Djalal Harouni
-http://opendz.org
+> ---
+>
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/ker=
+nel.txt
+> index 9d4c1d1..eac53d5 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -290,13 +290,15 @@ Default value is "/sbin/hotplug".
+>  kptr_restrict:
+> =20
+>  This toggle indicates whether restrictions are placed on
+> -exposing kernel addresses via /proc and other interfaces.  When
+> -kptr_restrict is set to (0), there are no restrictions.  When
+> -kptr_restrict is set to (1), the default, kernel pointers
+> +exposing kernel addresses via /proc and other interfaces.
+> +
+> +When kptr_restrict is set to (0), there are no restrictions.
+> +When kptr_restrict is set to (1), the default, kernel pointers
+>  printed using the %pK format specifier will be replaced with 0's
+> -unless the user has CAP_SYSLOG.  When kptr_restrict is set to
+> -(2), kernel pointers printed using %pK will be replaced with 0's
+> -regardless of privileges.
+> +unless the user has CAP_SYSLOG and effective user and group ids
+> +are equal to the real ids.
+> +When kptr_restrict is set to (2), kernel pointers printed using
+> +%pK will be replaced with 0's regardless of privileges.
+> =20
+>  =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> =20
+> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+> index 26559bd..6dd8c5d 100644
+> --- a/lib/vsprintf.c
+> +++ b/lib/vsprintf.c
+> @@ -27,6 +27,7 @@
+>  #include <linux/uaccess.h>
+>  #include <linux/ioport.h>
+>  #include <linux/dcache.h>
+> +#include <linux/cred.h>
+>  #include <net/addrconf.h>
+> =20
+>  #include <asm/page.h>		/* for PAGE_SIZE */
+> @@ -1312,11 +1313,36 @@ char *pointer(const char *fmt, char *buf, char =
+*end, void *ptr,
+>  				spec.field_width =3D default_width;
+>  			return string(buf, end, "pK-error", spec);
+>  		}
+> -		if (!((kptr_restrict =3D=3D 0) ||
+> -		      (kptr_restrict =3D=3D 1 &&
+> -		       has_capability_noaudit(current, CAP_SYSLOG))))
+> +
+> +		switch (kptr_restrict) {
+> +		case 0:
+> +			/* Always print %pK values */
+> +			break;
+> +		case 1: {
+> +			/*
+> +			 * Only print the real pointer value if the current
+> +			 * proccess has CAP_SYSLOG and is running with the
+> +			 * same credentials it started with. This is because
+> +			 * access to files is checked at open() time, but %pK
+> +			 * checks permission at read() time. We don't want to
+> +			 * leak pointer values if a binary opens a file using
+> +			 * %pK and then elevates privileges before reading it.
+> +			 */
+> +			const struct cred *cred =3D current_cred();
+> +
+> +			if (!has_capability_noaudit(current, CAP_SYSLOG) ||
+> +			    !uid_eq(cred->euid, cred->uid) ||
+> +			    !gid_eq(cred->egid, cred->gid))
+> +				ptr =3D NULL;
+> +			break;
+> +		}
+> +		default:
+> +			/* Always print 0's for %pK */
+>  			ptr =3D NULL;
+> +			break;
+> +		}
+>  		break;
+> +
+>  	case 'N':
+>  		switch (fmt[1]) {
+>  		case 'F':
+>
+>
+>
+>
+>
