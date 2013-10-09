@@ -1,43 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1381285806.23937.51.camel@joe-AO722>
-From: Joe Perches <joe@perches.com>
-Date: Tue, 08 Oct 2013 19:30:06 -0700
-In-Reply-To: <5254BDD0.7040001@gmail.com>
-References: <5254A034.5020700@gmail.com>
-	 <1381279758.23937.42.camel@joe-AO722> <1381282200.23937.45.camel@joe-AO722>
-		 <5254B787.6080700@gmail.com> <1381284056.23937.49.camel@joe-AO722>
-	 <5254BDD0.7040001@gmail.com>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
+Message-ID: <52552A2A.8030505@jp.fujitsu.com>
+Date: Wed, 09 Oct 2013 19:04:26 +0900
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
+MIME-Version: 1.0
+References: <1380656245-29975-1-git-send-email-keescook@chromium.org> <CAGXu5jLVt13p2X2e1C3ha1izg6U6wbmgSyYW1wa+X4cW8aCFug@mail.gmail.com> <524BE3C5.2070302@jp.fujitsu.com> <524CBB70.2060809@jp.fujitsu.com> <1408843968.872421.1380808038820.JavaMail.root@redhat.com> <52521566.20402@jp.fujitsu.com> <1678208981.2178058.1381152105871.JavaMail.root@redhat.com> <5253D5E4.7060004@jp.fujitsu.com> <391752872.2807845.1381239492989.JavaMail.root@redhat.com>
+In-Reply-To: <391752872.2807845.1381239492989.JavaMail.root@redhat.com>
+Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2] vsprintf: Check real user/group id for %pK
-To: Ryan Mallon <rmallon@gmail.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, George Spelvin <linux@horizon.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 6/7] x86, kaslr: report kernel offset on panic
+To: Dave Anderson <anderson@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, LKML <linux-kernel@vger.kernel.org>, x86@kernel.org, kernel-hardening@lists.openwall.com, Aaron Durbin <adurbin@google.com>, Eric Northup <digitaleric@google.com>, Julien Tinnes <jln@google.com>, Will Drewry <wad@google.com>, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, "Discussion list for crash utility usage, maintenance and development" <crash-utility@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2013-10-09 at 13:22 +1100, Ryan Mallon wrote:
+(2013/10/08 22:38), Dave Anderson wrote:
+>
+>
+> ----- Original Message -----
+>> (2013/10/07 22:21), Dave Anderson wrote:
+>>
+>>> ----- Original Message -----
+>>>> (2013/10/03 22:47), Dave Anderson wrote:
+>>
+>>>>> ----- Original Message -----
+>>>>>> (2013/10/02 18:13), HATAYAMA Daisuke wrote:
+>>>>>>> (2013/10/02 16:48), Kees Cook wrote:
+>>
+>>>>
+>>>> Thanks for detailed explanation. So, there's already a feature in crash
+>>>> utility
+>>>> to address relocation!, though it's better for me to try them to check if
+>>>> it's
+>>>> really applicable to this feature. My concern is whether --reloc works
+>>>> well
+>>>> on x86_64 too, because relocation has never done on x86_64 ever, right?
+>>>
+>>> Correct.
+>>>
+>>>> Another concern is that in case of relocation, users need to additional information
+>>>> regarding runtime symbol information to crash utility. I want to avoid additional
+>>>> process, automation is preferable if possible.
+>>>
+>>> Right.  As I mentioned in the case of 32-bit x86 dumpfiles, there is no automation
+>>> available when CONFIG_PHYSICAL_START is larger than CONFIG_PHYSICAL_ALIGN.  The user
+>>> either has to be aware of their values in order to calculate the --reloc argument,
+>>> or has to capture a copy of the /proc/kallsyms file on the crashed system.  Typically
+>>> users/distros using kdump changed their x86 configurations to avoid having to deal
+>>> with that.
+>>>
+>>
+>> Sorry, I don't understand why relocation size cannot be calculated when
+>> CONFIG_PHYSICALSTART > CONFIG_PHYSICAL_ALIGN. Could you explain that?
+>
+> I just meant that when CONFIG_PHYSICAL_START > CONFIG_PHYSICAL_ALIGN, the 32-bit x86 kernel
+> gets relocated (like the secondary kdump kernel), but that information is not readily available
+> from the vmlinux/vmcore pair.
+>
 
-> Anyway, updated patch below:
+My understanding on CONFIG_PHYSICAL_ALIGN was that starting address of kernel text area
+is always rounded up to CONFIG_PHYSICAL_ALIGN, only. Your explanation would be part I don't
+understand well. I'll reconsider it locally...
 
-nit:
+>>
+>>>> I guess it's enough if there's runtime symbol addresses because we can get relocated
+>>>> offset value by comparing it with the compile-time symbol address contained in
+>>>> a given debuginfo file. Candidates for such symbols are the ones contained in
+>>>> VMCOREINFO note containing some symbol values for makedumpfile to refer to mm-related
+>>>> objects in kernel, which is always contained in vmcore generated by current kdump and
+>>>> also vmcores converted by makedumpfile from it. How about this idea?
+>>>
+>>> But how would that differ from using an incorrect (non-matching) vmlinux file?
+>>>
+>>
+>> It seems to me almost similar to what crash currently does even if we do relocation check.
+>> The current check crash currently does is trial-and-error since there's no information
+>> indicating given vmcore and vmlinuxcertainly match well.
+>>
+>> For example, the process I imagine is:
+>>
+>>     1) try to match vmcore and vmlinux with no relocation. If fails, go to 2).
+>>     2) try to match vmcore and vmlinux with relocation.
+>>
+>> The two steps include symbol table initialization so it might actually be difficult to
+>> resume back from 2) to 1).
+>>
+>> Also, if gap due to phys_base and gap due to relocation can happen at the same time,
+>> calculating two values automatically might be futher complicated. So, it would be better
+>> to add relocation value in VMCOREINFO. Then, what crash utility sholud do becomes very simple.
+>
+> Yes please...
+>
+> And while you're at it, the kernel's
+>
+>    VMCOREINFO_SYMBOL(phys_base);
+>
+> is pretty much useless, at least w/respect to ELF vmcores, since we need to know its
+> value in order to translate the address.  And I don't think that makedumpfile uses
+> it when it calculates the phys_base that it stores in compressed kdump headers.  Why
+> not put its value instead of its address?
+>
 
-> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-[]
-> @@ -1312,11 +1313,36 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
->  				spec.field_width = default_width;
->  			return string(buf, end, "pK-error", spec);
->  		}
-> -		if (!((kptr_restrict == 0) ||
-> -		      (kptr_restrict == 1 &&
-> -		       has_capability_noaudit(current, CAP_SYSLOG))))
-> +
-> +		switch (kptr_restrict) {
-> +		case 0:
-> +			/* Always print %pK values */
-> +			break;
-> +		case 1: {
-> +			/*
-> +			 * Only print the real pointer value if the current
-> +			 * proccess has CAP_SYSLOG and is running with the
+Yes, I've also noticed this fact. Anyway, I'll post a patch to improvement this phys_base
+and a patch to export relocation information in VMCOREINFO.
 
-s/proccess/process/ typo
+-- 
+Thanks.
+HATAYAMA, Daisuke
