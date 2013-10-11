@@ -1,328 +1,184 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 10 Oct 2013 17:18:14 -0700
-Message-Id: <1381450698-28710-3-git-send-email-keescook@chromium.org>
-In-Reply-To: <1381450698-28710-1-git-send-email-keescook@chromium.org>
-References: <1381450698-28710-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v8 2/6] x86, kaslr: return location from decompress_kernel
-To: linux-kernel@vger.kernel.org
-Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <5255D023.2030907@gmail.com> <1381356014.2050.28.camel@joe-AO722>
+	<5255D2FD.6050705@gmail.com> <1381356861.2050.33.camel@joe-AO722>
+	<5255D7D4.8050204@gmail.com> <1381358030.2050.36.camel@joe-AO722>
+	<5255DBD8.30005@gmail.com> <1381360187.2050.44.camel@joe-AO722>
+Date: Thu, 10 Oct 2013 19:20:00 -0700
+In-Reply-To: <1381360187.2050.44.camel@joe-AO722> (Joe Perches's message of
+	"Wed, 09 Oct 2013 16:09:47 -0700")
+Message-ID: <87pprck0q7.fsf@xmission.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH v3a] vsprintf: Check real user/group id for %pK
+To: Joe Perches <joe@perches.com>
+Cc: Ryan Mallon <rmallon@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, George Spelvin <linux@horizon.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This allows decompress_kernel to return a new location for the kernel to
-be relocated to. Additionally, enforces CONFIG_PHYSICAL_START as the
-minimum relocation position when building with CONFIG_RELOCATABLE.
+Joe Perches <joe@perches.com> writes:
 
-With CONFIG_RANDOMIZE_BASE set, the choose_kernel_location routine
-will select a new location to decompress the kernel, though here it is
-presently a no-op. The kernel command line option "nokaslr" is introduced
-to bypass these routines.
+> Some setuid binaries will allow reading of files which have read
+> permission by the real user id. This is problematic with files which
+> use %pK because the file access permission is checked at open() time,
+> but the kptr_restrict setting is checked at read() time. If a setuid
+> binary opens a %pK file as an unprivileged user, and then elevates
+> permissions before reading the file, then kernel pointer values may be
+> leaked.
+>
+> This happens for example with the setuid pppd application on Ubuntu
+> 12.04:
+>
+>   $ head -1 /proc/kallsyms
+>   00000000 T startup_32
+>
+>   $ pppd file /proc/kallsyms
+>   pppd: In file /proc/kallsyms: unrecognized option 'c1000000'
+>
+> This will only leak the pointer value from the first line, but other
+> setuid binaries may leak more information.
+>
+> Fix this by adding a check that in addition to the current process
+> having CAP_SYSLOG, that effective user and group ids are equal to the
+> real ids. If a setuid binary reads the contents of a file which uses
+> %pK then the pointer values will be printed as NULL if the real user
+> is unprivileged.
+>
+> Update the sysctl documentation to reflect the changes, and also
+> correct the documentation to state the kptr_restrict=0 is the default.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-v3:
- - treat LOAD_PHYSICAL_ADDR as minimum.
-v2:
- - renamed "noaslr" to "nokaslr"; HPA.
----
- Documentation/kernel-parameters.txt |    4 ++++
- arch/x86/Kconfig                    |   38 +++++++++++++++++++++++++++++++----
- arch/x86/boot/compressed/Makefile   |    2 +-
- arch/x86/boot/compressed/aslr.c     |   23 +++++++++++++++++++++
- arch/x86/boot/compressed/cmdline.c  |    2 +-
- arch/x86/boot/compressed/head_32.S  |   10 +++++----
- arch/x86/boot/compressed/head_64.S  |   16 +++++++++------
- arch/x86/boot/compressed/misc.c     |    8 ++++++--
- arch/x86/boot/compressed/misc.h     |   27 +++++++++++++++++++------
- 9 files changed, 106 insertions(+), 24 deletions(-)
- create mode 100644 arch/x86/boot/compressed/aslr.c
+Sigh.  This is all wrong.  The only correct thing to test is
+file->f_cred.  Aka the capabilities of the program that opened the
+file.
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index fcbb736..773fc4c 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -1975,6 +1975,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 	noapic		[SMP,APIC] Tells the kernel to not make use of any
- 			IOAPICs that may be present in the system.
- 
-+	nokaslr		[X86]
-+			Disable kernel base offset ASLR (Address Space
-+			Layout Randomization) if built into the kernel.
-+
- 	noautogroup	Disable scheduler automatic task group creation.
- 
- 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index ee2fb9d..992701d 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -1722,16 +1722,46 @@ config RELOCATABLE
- 
- 	  Note: If CONFIG_RELOCATABLE=y, then the kernel runs from the address
- 	  it has been loaded at and the compile time physical address
--	  (CONFIG_PHYSICAL_START) is ignored.
-+	  (CONFIG_PHYSICAL_START) is used as the minimum location.
- 
--# Relocation on x86-32 needs some additional build support
-+config RANDOMIZE_BASE
-+	bool "Randomize the address of the kernel image"
-+	depends on RELOCATABLE
-+	depends on !HIBERNATION
-+	default n
-+	---help---
-+	   Randomizes the physical and virtual address at which the
-+	   kernel image is decompressed, as a security feature that
-+	   deters exploit attempts relying on knowledge of the location
-+	   of kernel internals.
-+
-+	   Entropy is generated using the RDRAND instruction if it
-+	   is supported.  If not, then RDTSC is used, if supported. If
-+	   neither RDRAND nor RDTSC are supported, then no randomness
-+	   is introduced.
-+
-+	   The kernel will be offset by up to RANDOMIZE_BASE_MAX_OFFSET,
-+	   and aligned according to PHYSICAL_ALIGN.
-+
-+config RANDOMIZE_BASE_MAX_OFFSET
-+	hex "Maximum ASLR offset allowed"
-+	depends on RANDOMIZE_BASE
-+	default "0x10000000"
-+	range 0x0 0x10000000
-+	---help---
-+	 Determines the maximal offset in bytes that will be applied to the
-+	 kernel when Address Space Layout Randomization (ASLR) is active.
-+	 Must be less than or equal to the actual physical memory on the
-+	 system. This must be a power of two.
-+
-+# Relocation on x86 needs some additional build support
- config X86_NEED_RELOCS
- 	def_bool y
--	depends on X86_32 && RELOCATABLE
-+	depends on RANDOMIZE_BASE || (X86_32 && RELOCATABLE)
- 
- config PHYSICAL_ALIGN
- 	hex "Alignment value to which kernel should be aligned"
--	default "0x1000000"
-+	default "0x200000"
- 	range 0x2000 0x1000000 if X86_32
- 	range 0x200000 0x1000000 if X86_64
- 	---help---
-diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
-index 3312f1b..ae8b5db 100644
---- a/arch/x86/boot/compressed/Makefile
-+++ b/arch/x86/boot/compressed/Makefile
-@@ -27,7 +27,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
- 
- VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
- 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
--	$(obj)/piggy.o $(obj)/cpuflags.o
-+	$(obj)/piggy.o $(obj)/cpuflags.o $(obj)/aslr.o
- 
- $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
- 
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-new file mode 100644
-index 0000000..b73cc66
---- /dev/null
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -0,0 +1,23 @@
-+#include "misc.h"
-+
-+#ifdef CONFIG_RANDOMIZE_BASE
-+
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size)
-+{
-+	unsigned long choice = (unsigned long)output;
-+
-+	if (cmdline_find_option_bool("nokaslr")) {
-+		debug_putstr("KASLR disabled...\n");
-+		goto out;
-+	}
-+
-+	/* XXX: choose random location. */
-+
-+out:
-+	return (unsigned char *)choice;
-+}
-+
-+#endif /* CONFIG_RANDOMIZE_BASE */
-diff --git a/arch/x86/boot/compressed/cmdline.c b/arch/x86/boot/compressed/cmdline.c
-index bffd73b..b68e303 100644
---- a/arch/x86/boot/compressed/cmdline.c
-+++ b/arch/x86/boot/compressed/cmdline.c
-@@ -1,6 +1,6 @@
- #include "misc.h"
- 
--#ifdef CONFIG_EARLY_PRINTK
-+#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
- 
- static unsigned long fs;
- static inline void set_fs(unsigned long seg)
-diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
-index 5d6f689..9116aac 100644
---- a/arch/x86/boot/compressed/head_32.S
-+++ b/arch/x86/boot/compressed/head_32.S
-@@ -117,9 +117,11 @@ preferred_addr:
- 	addl    %eax, %ebx
- 	notl	%eax
- 	andl    %eax, %ebx
--#else
--	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jge	1f
- #endif
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -191,14 +193,14 @@ relocated:
- 	leal	boot_heap(%ebx), %eax
- 	pushl	%eax		/* heap area */
- 	pushl	%esi		/* real mode pointer */
--	call	decompress_kernel
-+	call	decompress_kernel /* returns kernel location in %eax */
- 	addl	$24, %esp
- 
- /*
-  * Jump to the decompressed kernel.
-  */
- 	xorl	%ebx, %ebx
--	jmp	*%ebp
-+	jmp	*%eax
- 
- /*
-  * Stack and heap for uncompression
-diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
-index c337422..c5c1ae0 100644
---- a/arch/x86/boot/compressed/head_64.S
-+++ b/arch/x86/boot/compressed/head_64.S
-@@ -94,9 +94,11 @@ ENTRY(startup_32)
- 	addl	%eax, %ebx
- 	notl	%eax
- 	andl	%eax, %ebx
--#else
--	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
-+	jge	1f
- #endif
-+	movl	$LOAD_PHYSICAL_ADDR, %ebx
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	addl	$z_extract_offset, %ebx
-@@ -269,9 +271,11 @@ preferred_addr:
- 	addq	%rax, %rbp
- 	notq	%rax
- 	andq	%rax, %rbp
--#else
--	movq	$LOAD_PHYSICAL_ADDR, %rbp
-+	cmpq	$LOAD_PHYSICAL_ADDR, %rbp
-+	jge	1f
- #endif
-+	movq	$LOAD_PHYSICAL_ADDR, %rbp
-+1:
- 
- 	/* Target address to relocate to for decompression */
- 	leaq	z_extract_offset(%rbp), %rbx
-@@ -339,13 +343,13 @@ relocated:
- 	movl	$z_input_len, %ecx	/* input_len */
- 	movq	%rbp, %r8		/* output target address */
- 	movq	$z_output_len, %r9	/* decompressed length */
--	call	decompress_kernel
-+	call	decompress_kernel	/* returns kernel location in %rax */
- 	popq	%rsi
- 
- /*
-  * Jump to the decompressed kernel.
-  */
--	jmp	*%rbp
-+	jmp	*%rax
- 
- 	.code32
- no_longmode:
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index 434f077..7138768 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -395,7 +395,7 @@ static void parse_elf(void *output)
- 	free(phdrs);
- }
- 
--asmlinkage void decompress_kernel(void *rmode, memptr heap,
-+asmlinkage void *decompress_kernel(void *rmode, memptr heap,
- 				  unsigned char *input_data,
- 				  unsigned long input_len,
- 				  unsigned char *output,
-@@ -422,6 +422,10 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
- 	free_mem_ptr     = heap;	/* Heap */
- 	free_mem_end_ptr = heap + BOOT_HEAP_SIZE;
- 
-+	output = choose_kernel_location(input_data, input_len,
-+					output, output_len);
-+
-+	/* Validate memory location choices. */
- 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
- 		error("Destination address inappropriately aligned");
- #ifdef CONFIG_X86_64
-@@ -441,5 +445,5 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
- 	parse_elf(output);
- 	handle_relocations(output, output_len);
- 	debug_putstr("done.\nBooting the kernel.\n");
--	return;
-+	return output;
- }
-diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
-index 674019d..9077af7 100644
---- a/arch/x86/boot/compressed/misc.h
-+++ b/arch/x86/boot/compressed/misc.h
-@@ -39,23 +39,38 @@ static inline void debug_putstr(const char *s)
- 
- #endif
- 
--#ifdef CONFIG_EARLY_PRINTK
--
-+#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
- /* cmdline.c */
- int cmdline_find_option(const char *option, char *buffer, int bufsize);
- int cmdline_find_option_bool(const char *option);
-+#endif
- 
--/* early_serial_console.c */
--extern int early_serial_base;
--void console_init(void);
- 
-+#if CONFIG_RANDOMIZE_BASE
-+/* aslr.c */
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size);
- #else
-+static inline
-+unsigned char *choose_kernel_location(unsigned char *input,
-+				      unsigned long input_size,
-+				      unsigned char *output,
-+				      unsigned long output_size)
-+{
-+	return output;
-+}
-+#endif
- 
-+#ifdef CONFIG_EARLY_PRINTK
- /* early_serial_console.c */
-+extern int early_serial_base;
-+void console_init(void);
-+#else
- static const int early_serial_base;
- static inline void console_init(void)
- { }
--
- #endif
- 
- #endif
--- 
-1.7.9.5
+Which means that the interface to %pK in the case of kptr_restrict is
+broken as it has no way to be passed the information it needs to make
+a sensible decision.
+
+So if you all are going to make a great big fuss and clutter up my inbox
+can you please figure out how to implement kptr_restrict in a non-buggy
+way?
+
+Thank you.
+
+Eric
+
+
+
+> Original-patch-by: Ryan Mallon <rmallon@gmail.com>
+> Signed-off-by: Joe Perches <joe@perches.com>
+> ---
+> On Thu, 2013-10-10 at 09:42 +1100, Ryan Mallon wrote:
+>> If it was noisy, it would indicate a bunch of broken kernel code which
+>> needs fixing :-).
+>
+> Or maybe a single kernel source line but
+> you'd still have a filled up log file.
+>
+> Changes in V3a:
+>
+> Do the in_irq tests only when kptr_restrict is 1.
+> Document the %pK mechanism in vsnprintf
+> Add missing documentation for %pV and %pNF too
+>
+>  Documentation/sysctl/kernel.txt | 17 ++++++++--------
+>  lib/vsprintf.c                  | 43 ++++++++++++++++++++++++++++-------------
+>  2 files changed, 39 insertions(+), 21 deletions(-)
+>
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+> index 9d4c1d1..c17d5ca 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -289,14 +289,15 @@ Default value is "/sbin/hotplug".
+>  
+>  kptr_restrict:
+>  
+> -This toggle indicates whether restrictions are placed on
+> -exposing kernel addresses via /proc and other interfaces.  When
+> -kptr_restrict is set to (0), there are no restrictions.  When
+> -kptr_restrict is set to (1), the default, kernel pointers
+> -printed using the %pK format specifier will be replaced with 0's
+> -unless the user has CAP_SYSLOG.  When kptr_restrict is set to
+> -(2), kernel pointers printed using %pK will be replaced with 0's
+> -regardless of privileges.
+> +This toggle indicates whether restrictions are placed on exposing kernel
+> +addresses via /proc and other interfaces.
+> +
+> +When kptr_restrict is set to (0), the default, there are no restrictions.
+> +When kptr_restrict is set to (1), kernel pointers printed using the %pK
+> +format specifier will be replaced with 0's unless the user has CAP_SYSLOG
+> +and effective user and group ids are equal to the real ids.
+> +When kptr_restrict is set to (2), kernel pointers printed using %pK will
+> +be replaced with 0's regardless of privileges.
+>  
+>  ==============================================================
+>  
+> diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+> index 26559bd..3efcf29 100644
+> --- a/lib/vsprintf.c
+> +++ b/lib/vsprintf.c
+> @@ -27,6 +27,7 @@
+>  #include <linux/uaccess.h>
+>  #include <linux/ioport.h>
+>  #include <linux/dcache.h>
+> +#include <linux/cred.h>
+>  #include <net/addrconf.h>
+>  
+>  #include <asm/page.h>		/* for PAGE_SIZE */
+> @@ -1301,21 +1302,34 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+>  			va_end(va);
+>  			return buf;
+>  		}
+> -	case 'K':
+> -		/*
+> -		 * %pK cannot be used in IRQ context because its test
+> -		 * for CAP_SYSLOG would be meaningless.
+> -		 */
+> -		if (kptr_restrict && (in_irq() || in_serving_softirq() ||
+> -				      in_nmi())) {
+> -			if (spec.field_width == -1)
+> -				spec.field_width = default_width;
+> -			return string(buf, end, "pK-error", spec);
+> +	case 'K':		/* see: Documentation/sysctl/kernel.txt */
+> +		switch (kptr_restrict) {
+> +		case 0:			/* None (default) */
+> +			break;
+> +		case 1: {		/* Restricted */
+> +			const struct cred *cred;
+> +
+> +			if (in_irq() || in_serving_softirq() || in_nmi()) {
+> +				/*
+> +				 * This cannot be used in IRQ context because
+> +				 * the test for CAP_SYSLOG would be meaningless
+> +				 */
+> +				if (spec.field_width == -1)
+> +					spec.field_width = default_width;
+> +				return string(buf, end, "pK-error", spec);
+> +			}
+> +			cred = current_cred();
+> +			if (!has_capability_noaudit(current, CAP_SYSLOG) ||
+> +			    !uid_eq(cred->euid, cred->uid) ||
+> +			    !gid_eq(cred->egid, cred->gid))
+> +				ptr = NULL;
+> +			break;
+>  		}
+> -		if (!((kptr_restrict == 0) ||
+> -		      (kptr_restrict == 1 &&
+> -		       has_capability_noaudit(current, CAP_SYSLOG))))
+> +		case 2:			/* Never - Always emit 0 */
+> +		default:
+>  			ptr = NULL;
+> +			break;
+> +		}
+>  		break;
+>  	case 'N':
+>  		switch (fmt[1]) {
+> @@ -1574,6 +1588,9 @@ qualifier:
+>   * %piS depending on sa_family of 'struct sockaddr *' print IPv4/IPv6 address
+>   * %pU[bBlL] print a UUID/GUID in big or little endian using lower or upper
+>   *   case.
+> + * %pV recurse and output a struct va_format (const char *fmt, va_list *)
+> + * %pK output a kernel address or 0 depending on sysctl kptr_restrict
+> + * %pNF output a netdev_features_t
+>   * %*ph[CDN] a variable-length hex string with a separator (supports up to 64
+>   *           bytes of the input)
+>   * %n is ignored
