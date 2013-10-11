@@ -1,294 +1,328 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 10 Oct 2013 17:18:16 -0700
-Message-Id: <1381450698-28710-5-git-send-email-keescook@chromium.org>
+Date: Thu, 10 Oct 2013 17:18:14 -0700
+Message-Id: <1381450698-28710-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1381450698-28710-1-git-send-email-keescook@chromium.org>
 References: <1381450698-28710-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v8 4/6] x86, kaslr: select random position from e820 maps
+Subject: [kernel-hardening] [PATCH v8 2/6] x86, kaslr: return location from decompress_kernel
 To: linux-kernel@vger.kernel.org
 Cc: x86@kernel.org, kernel-hardening@lists.openwall.com, adurbin@google.com, Eric Northup <digitaleric@google.com>, jln@google.com, wad@google.com, Mathias Krause <minipli@googlemail.com>, Zhang Yanfei <zhangyanfei@cn.fujitsu.com>, "H. Peter Anvin" <hpa@zytor.com>, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Counts available alignment positions across all e820 maps, and chooses
-one randomly for the new kernel base address, making sure not to collide
-with unsafe memory areas.
+This allows decompress_kernel to return a new location for the kernel to
+be relocated to. Additionally, enforces CONFIG_PHYSICAL_START as the
+minimum relocation position when building with CONFIG_RELOCATABLE.
+
+With CONFIG_RANDOMIZE_BASE set, the choose_kernel_location routine
+will select a new location to decompress the kernel, though here it is
+presently a no-op. The kernel command line option "nokaslr" is introduced
+to bypass these routines.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-v8:
- - explicitly avoid unsafe memory areas instead of raising minimum position.
+v3:
+ - treat LOAD_PHYSICAL_ADDR as minimum.
 v2:
- - make sure to exclude e820 regions outside the 32-bit memory range.
+ - renamed "noaslr" to "nokaslr"; HPA.
 ---
- arch/x86/boot/compressed/aslr.c |  193 ++++++++++++++++++++++++++++++++++++++-
- arch/x86/boot/compressed/misc.c |   10 +-
- arch/x86/boot/compressed/misc.h |    8 ++
- 3 files changed, 202 insertions(+), 9 deletions(-)
+ Documentation/kernel-parameters.txt |    4 ++++
+ arch/x86/Kconfig                    |   38 +++++++++++++++++++++++++++++++----
+ arch/x86/boot/compressed/Makefile   |    2 +-
+ arch/x86/boot/compressed/aslr.c     |   23 +++++++++++++++++++++
+ arch/x86/boot/compressed/cmdline.c  |    2 +-
+ arch/x86/boot/compressed/head_32.S  |   10 +++++----
+ arch/x86/boot/compressed/head_64.S  |   16 +++++++++------
+ arch/x86/boot/compressed/misc.c     |    8 ++++++--
+ arch/x86/boot/compressed/misc.h     |   27 +++++++++++++++++++------
+ 9 files changed, 106 insertions(+), 24 deletions(-)
+ create mode 100644 arch/x86/boot/compressed/aslr.c
 
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index fcbb736..773fc4c 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -1975,6 +1975,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 	noapic		[SMP,APIC] Tells the kernel to not make use of any
+ 			IOAPICs that may be present in the system.
+ 
++	nokaslr		[X86]
++			Disable kernel base offset ASLR (Address Space
++			Layout Randomization) if built into the kernel.
++
+ 	noautogroup	Disable scheduler automatic task group creation.
+ 
+ 	nobats		[PPC] Do not use BATs for mapping kernel lowmem
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index ee2fb9d..992701d 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -1722,16 +1722,46 @@ config RELOCATABLE
+ 
+ 	  Note: If CONFIG_RELOCATABLE=y, then the kernel runs from the address
+ 	  it has been loaded at and the compile time physical address
+-	  (CONFIG_PHYSICAL_START) is ignored.
++	  (CONFIG_PHYSICAL_START) is used as the minimum location.
+ 
+-# Relocation on x86-32 needs some additional build support
++config RANDOMIZE_BASE
++	bool "Randomize the address of the kernel image"
++	depends on RELOCATABLE
++	depends on !HIBERNATION
++	default n
++	---help---
++	   Randomizes the physical and virtual address at which the
++	   kernel image is decompressed, as a security feature that
++	   deters exploit attempts relying on knowledge of the location
++	   of kernel internals.
++
++	   Entropy is generated using the RDRAND instruction if it
++	   is supported.  If not, then RDTSC is used, if supported. If
++	   neither RDRAND nor RDTSC are supported, then no randomness
++	   is introduced.
++
++	   The kernel will be offset by up to RANDOMIZE_BASE_MAX_OFFSET,
++	   and aligned according to PHYSICAL_ALIGN.
++
++config RANDOMIZE_BASE_MAX_OFFSET
++	hex "Maximum ASLR offset allowed"
++	depends on RANDOMIZE_BASE
++	default "0x10000000"
++	range 0x0 0x10000000
++	---help---
++	 Determines the maximal offset in bytes that will be applied to the
++	 kernel when Address Space Layout Randomization (ASLR) is active.
++	 Must be less than or equal to the actual physical memory on the
++	 system. This must be a power of two.
++
++# Relocation on x86 needs some additional build support
+ config X86_NEED_RELOCS
+ 	def_bool y
+-	depends on X86_32 && RELOCATABLE
++	depends on RANDOMIZE_BASE || (X86_32 && RELOCATABLE)
+ 
+ config PHYSICAL_ALIGN
+ 	hex "Alignment value to which kernel should be aligned"
+-	default "0x1000000"
++	default "0x200000"
+ 	range 0x2000 0x1000000 if X86_32
+ 	range 0x200000 0x1000000 if X86_64
+ 	---help---
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 3312f1b..ae8b5db 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -27,7 +27,7 @@ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
+ 
+ VMLINUX_OBJS = $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o \
+ 	$(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o \
+-	$(obj)/piggy.o $(obj)/cpuflags.o
++	$(obj)/piggy.o $(obj)/cpuflags.o $(obj)/aslr.o
+ 
+ $(obj)/eboot.o: KBUILD_CFLAGS += -fshort-wchar -mno-red-zone
+ 
 diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index 14b24e0..0595798 100644
---- a/arch/x86/boot/compressed/aslr.c
+new file mode 100644
+index 0000000..b73cc66
+--- /dev/null
 +++ b/arch/x86/boot/compressed/aslr.c
-@@ -3,6 +3,7 @@
- #ifdef CONFIG_RANDOMIZE_BASE
- #include <asm/msr.h>
- #include <asm/archrandom.h>
-+#include <asm/e820.h>
- 
- #define I8254_PORT_CONTROL	0x43
- #define I8254_PORT_COUNTER0	0x40
-@@ -55,20 +56,210 @@ static unsigned long get_random_long(void)
- 	return random;
- }
- 
-+struct mem_vector {
-+	unsigned long start;
-+	unsigned long size;
-+};
+@@ -0,0 +1,23 @@
++#include "misc.h"
 +
-+#define MEM_AVOID_MAX 5
-+struct mem_vector mem_avoid[MEM_AVOID_MAX];
++#ifdef CONFIG_RANDOMIZE_BASE
 +
-+static bool mem_contains(struct mem_vector *region, struct mem_vector *item)
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size)
 +{
-+	/* Item at least partially before region. */
-+	if (item->start < region->start)
-+		return false;
-+	/* Item at least partially after region. */
-+	if (item->start + item->size > region->start + region->size)
-+		return false;
-+	return true;
-+}
++	unsigned long choice = (unsigned long)output;
 +
-+static bool mem_overlaps(struct mem_vector *one, struct mem_vector *two)
-+{
-+	/* Item one is entirely before item two. */
-+	if (one->start + one->size <= two->start)
-+		return false;
-+	/* Item one is entirely after item two. */
-+	if (one->start >= two->start + two->size)
-+		return false;
-+	return true;
-+}
-+
-+static void mem_avoid_init(unsigned long input, unsigned long input_size,
-+			   unsigned long output, unsigned long output_size)
-+{
-+	u64 initrd_start, initrd_size;
-+	u64 cmd_line, cmd_line_size;
-+	unsigned long unsafe, unsafe_len;
-+	char *ptr;
-+
-+	/*
-+	 * Avoid the region that is unsafe to overlap during
-+	 * decompression (see calculations at top of misc.c).
-+	 */
-+	unsafe_len = (output_size >> 12) + 32768 + 18;
-+	unsafe = (unsigned long)input + input_size - unsafe_len;
-+	mem_avoid[0].start = unsafe;
-+	mem_avoid[0].size = unsafe_len;
-+
-+	/* Avoid initrd. */
-+	initrd_start  = (u64)real_mode->ext_ramdisk_image << 32;
-+	initrd_start |= real_mode->hdr.ramdisk_image;
-+	initrd_size  = (u64)real_mode->ext_ramdisk_size << 32;
-+	initrd_size |= real_mode->hdr.ramdisk_size;
-+	mem_avoid[1].start = initrd_start;
-+	mem_avoid[1].size = initrd_size;
-+
-+	/* Avoid kernel command line. */
-+	cmd_line  = (u64)real_mode->ext_cmd_line_ptr << 32;
-+	cmd_line |= real_mode->hdr.cmd_line_ptr;
-+	/* Calculate size of cmd_line. */
-+	ptr = (char *)(unsigned long)cmd_line;
-+	for (cmd_line_size = 0; ptr[cmd_line_size++]; )
-+		;
-+	mem_avoid[2].start = cmd_line;
-+	mem_avoid[2].size = cmd_line_size;
-+
-+	/* Avoid heap memory. */
-+	mem_avoid[3].start = (unsigned long)free_mem_ptr;
-+	mem_avoid[3].size = BOOT_HEAP_SIZE;
-+
-+	/* Avoid stack memory. */
-+	mem_avoid[4].start = (unsigned long)free_mem_end_ptr;
-+	mem_avoid[4].size = BOOT_STACK_SIZE;
-+}
-+
-+/* Does this memory vector overlap a known avoided area? */
-+bool mem_avoid_overlap(struct mem_vector *img)
-+{
-+	int i;
-+
-+	for (i = 0; i < MEM_AVOID_MAX; i++) {
-+		if (mem_overlaps(img, &mem_avoid[i]))
-+			return true;
-+	}
-+
-+	return false;
-+}
-+
-+unsigned long slots[CONFIG_RANDOMIZE_BASE_MAX_OFFSET / CONFIG_PHYSICAL_ALIGN];
-+unsigned long slot_max = 0;
-+
-+static void slots_append(unsigned long addr)
-+{
-+	/* Overflowing the slots list should be impossible. */
-+	if (slot_max >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET /
-+			CONFIG_PHYSICAL_ALIGN)
-+		return;
-+
-+	slots[slot_max++] = addr;
-+}
-+
-+static unsigned long slots_fetch_random(void)
-+{
-+	/* Handle case of no slots stored. */
-+	if (slot_max == 0)
-+		return 0;
-+
-+	return slots[get_random_long() % slot_max];
-+}
-+
-+static void process_e820_entry(struct e820entry *entry,
-+			       unsigned long minimum,
-+			       unsigned long image_size)
-+{
-+	struct mem_vector region, img;
-+
-+	/* Skip non-RAM entries. */
-+	if (entry->type != E820_RAM)
-+		return;
-+
-+	/* Ignore entries entirely above our maximum. */
-+	if (entry->addr >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
-+		return;
-+
-+	/* Ignore entries entirely below our minimum. */
-+	if (entry->addr + entry->size < minimum)
-+		return;
-+
-+	region.start = entry->addr;
-+	region.size = entry->size;
-+
-+	/* Potentially raise address to minimum location. */
-+	if (region.start < minimum)
-+		region.start = minimum;
-+
-+	/* Potentially raise address to meet alignment requirements. */
-+	region.start = ALIGN(region.start, CONFIG_PHYSICAL_ALIGN);
-+
-+	/* Did we raise the address above the bounds of this e820 region? */
-+	if (region.start > entry->addr + entry->size)
-+		return;
-+
-+	/* Reduce size by any delta from the original address. */
-+	region.size -= region.start - entry->addr;
-+
-+	/* Reduce maximum size to fit end of image within maximum limit. */
-+	if (region.start + region.size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
-+		region.size = CONFIG_RANDOMIZE_BASE_MAX_OFFSET - region.start;
-+
-+	/* Walk each aligned slot and check for avoided areas. */
-+	for (img.start = region.start, img.size = image_size ;
-+	     mem_contains(&region, &img) ;
-+	     img.start += CONFIG_PHYSICAL_ALIGN) {
-+		if (mem_avoid_overlap(&img))
-+			continue;
-+		slots_append(img.start);
-+	}
-+}
-+
-+static unsigned long find_random_addr(unsigned long minimum,
-+				      unsigned long size)
-+{
-+	int i;
-+	unsigned long addr;
-+
-+	/* Make sure minimum is aligned. */
-+	minimum = ALIGN(minimum, CONFIG_PHYSICAL_ALIGN);
-+
-+	/* Verify potential e820 positions, appending to slots list. */
-+	for (i = 0; i < real_mode->e820_entries; i++) {
-+		process_e820_entry(&real_mode->e820_map[i], minimum, size);
-+	}
-+
-+	return slots_fetch_random();
-+}
-+
- unsigned char *choose_kernel_location(unsigned char *input,
- 				      unsigned long input_size,
- 				      unsigned char *output,
- 				      unsigned long output_size)
- {
- 	unsigned long choice = (unsigned long)output;
-+	unsigned long random;
- 
- 	if (cmdline_find_option_bool("nokaslr")) {
- 		debug_putstr("KASLR disabled...\n");
- 		goto out;
- 	}
- 
--	/* XXX: choose random location. */
-+	/* Record the various known unsafe memory ranges. */
-+	mem_avoid_init((unsigned long)input, input_size,
-+		       (unsigned long)output, output_size);
-+
-+	/* Walk e820 and find a random address. */
-+	random = find_random_addr(choice, output_size);
-+	if (!random) {
-+		debug_putstr("KASLR could not find suitable E820 region...\n");
++	if (cmdline_find_option_bool("nokaslr")) {
++		debug_putstr("KASLR disabled...\n");
 +		goto out;
 +	}
 +
-+	/* Always enforce the minimum. */
-+	if (random < choice)
-+		goto out;
++	/* XXX: choose random location. */
++
++out:
++	return (unsigned char *)choice;
++}
++
++#endif /* CONFIG_RANDOMIZE_BASE */
+diff --git a/arch/x86/boot/compressed/cmdline.c b/arch/x86/boot/compressed/cmdline.c
+index bffd73b..b68e303 100644
+--- a/arch/x86/boot/compressed/cmdline.c
++++ b/arch/x86/boot/compressed/cmdline.c
+@@ -1,6 +1,6 @@
+ #include "misc.h"
  
-+	choice = random;
- out:
- 	return (unsigned char *)choice;
- }
+-#ifdef CONFIG_EARLY_PRINTK
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
+ 
+ static unsigned long fs;
+ static inline void set_fs(unsigned long seg)
+diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
+index 5d6f689..9116aac 100644
+--- a/arch/x86/boot/compressed/head_32.S
++++ b/arch/x86/boot/compressed/head_32.S
+@@ -117,9 +117,11 @@ preferred_addr:
+ 	addl    %eax, %ebx
+ 	notl	%eax
+ 	andl    %eax, %ebx
+-#else
+-	movl	$LOAD_PHYSICAL_ADDR, %ebx
++	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
++	jge	1f
+ #endif
++	movl	$LOAD_PHYSICAL_ADDR, %ebx
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	addl	$z_extract_offset, %ebx
+@@ -191,14 +193,14 @@ relocated:
+ 	leal	boot_heap(%ebx), %eax
+ 	pushl	%eax		/* heap area */
+ 	pushl	%esi		/* real mode pointer */
+-	call	decompress_kernel
++	call	decompress_kernel /* returns kernel location in %eax */
+ 	addl	$24, %esp
+ 
+ /*
+  * Jump to the decompressed kernel.
+  */
+ 	xorl	%ebx, %ebx
+-	jmp	*%ebp
++	jmp	*%eax
+ 
+ /*
+  * Stack and heap for uncompression
+diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
+index c337422..c5c1ae0 100644
+--- a/arch/x86/boot/compressed/head_64.S
++++ b/arch/x86/boot/compressed/head_64.S
+@@ -94,9 +94,11 @@ ENTRY(startup_32)
+ 	addl	%eax, %ebx
+ 	notl	%eax
+ 	andl	%eax, %ebx
+-#else
+-	movl	$LOAD_PHYSICAL_ADDR, %ebx
++	cmpl	$LOAD_PHYSICAL_ADDR, %ebx
++	jge	1f
+ #endif
++	movl	$LOAD_PHYSICAL_ADDR, %ebx
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	addl	$z_extract_offset, %ebx
+@@ -269,9 +271,11 @@ preferred_addr:
+ 	addq	%rax, %rbp
+ 	notq	%rax
+ 	andq	%rax, %rbp
+-#else
+-	movq	$LOAD_PHYSICAL_ADDR, %rbp
++	cmpq	$LOAD_PHYSICAL_ADDR, %rbp
++	jge	1f
+ #endif
++	movq	$LOAD_PHYSICAL_ADDR, %rbp
++1:
+ 
+ 	/* Target address to relocate to for decompression */
+ 	leaq	z_extract_offset(%rbp), %rbx
+@@ -339,13 +343,13 @@ relocated:
+ 	movl	$z_input_len, %ecx	/* input_len */
+ 	movq	%rbp, %r8		/* output target address */
+ 	movq	$z_output_len, %r9	/* decompressed length */
+-	call	decompress_kernel
++	call	decompress_kernel	/* returns kernel location in %rax */
+ 	popq	%rsi
+ 
+ /*
+  * Jump to the decompressed kernel.
+  */
+-	jmp	*%rbp
++	jmp	*%rax
+ 
+ 	.code32
+ no_longmode:
 diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index 7138768..196eaf3 100644
+index 434f077..7138768 100644
 --- a/arch/x86/boot/compressed/misc.c
 +++ b/arch/x86/boot/compressed/misc.c
-@@ -112,14 +112,8 @@ struct boot_params *real_mode;		/* Pointer to real-mode data */
- void *memset(void *s, int c, size_t n);
- void *memcpy(void *dest, const void *src, size_t n);
+@@ -395,7 +395,7 @@ static void parse_elf(void *output)
+ 	free(phdrs);
+ }
  
--#ifdef CONFIG_X86_64
--#define memptr long
--#else
--#define memptr unsigned
--#endif
--
--static memptr free_mem_ptr;
--static memptr free_mem_end_ptr;
-+memptr free_mem_ptr;
-+memptr free_mem_end_ptr;
+-asmlinkage void decompress_kernel(void *rmode, memptr heap,
++asmlinkage void *decompress_kernel(void *rmode, memptr heap,
+ 				  unsigned char *input_data,
+ 				  unsigned long input_len,
+ 				  unsigned char *output,
+@@ -422,6 +422,10 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	free_mem_ptr     = heap;	/* Heap */
+ 	free_mem_end_ptr = heap + BOOT_HEAP_SIZE;
  
- static char *vidmem;
- static int vidport;
++	output = choose_kernel_location(input_data, input_len,
++					output, output_len);
++
++	/* Validate memory location choices. */
+ 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
+ 		error("Destination address inappropriately aligned");
+ #ifdef CONFIG_X86_64
+@@ -441,5 +445,5 @@ asmlinkage void decompress_kernel(void *rmode, memptr heap,
+ 	parse_elf(output);
+ 	handle_relocations(output, output_len);
+ 	debug_putstr("done.\nBooting the kernel.\n");
+-	return;
++	return output;
+ }
 diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
-index 0782eb0..24e3e56 100644
+index 674019d..9077af7 100644
 --- a/arch/x86/boot/compressed/misc.h
 +++ b/arch/x86/boot/compressed/misc.h
-@@ -23,7 +23,15 @@
- #define BOOT_BOOT_H
- #include "../ctype.h"
+@@ -39,23 +39,38 @@ static inline void debug_putstr(const char *s)
  
-+#ifdef CONFIG_X86_64
-+#define memptr long
-+#else
-+#define memptr unsigned
+ #endif
+ 
+-#ifdef CONFIG_EARLY_PRINTK
+-
++#if CONFIG_EARLY_PRINTK || CONFIG_RANDOMIZE_BASE
+ /* cmdline.c */
+ int cmdline_find_option(const char *option, char *buffer, int bufsize);
+ int cmdline_find_option_bool(const char *option);
 +#endif
-+
- /* misc.c */
-+extern memptr free_mem_ptr;
-+extern memptr free_mem_end_ptr;
- extern struct boot_params *real_mode;		/* Pointer to real-mode data */
- void __putstr(const char *s);
- #define error_putstr(__x)  __putstr(__x)
+ 
+-/* early_serial_console.c */
+-extern int early_serial_base;
+-void console_init(void);
+ 
++#if CONFIG_RANDOMIZE_BASE
++/* aslr.c */
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size);
+ #else
++static inline
++unsigned char *choose_kernel_location(unsigned char *input,
++				      unsigned long input_size,
++				      unsigned char *output,
++				      unsigned long output_size)
++{
++	return output;
++}
++#endif
+ 
++#ifdef CONFIG_EARLY_PRINTK
+ /* early_serial_console.c */
++extern int early_serial_base;
++void console_init(void);
++#else
+ static const int early_serial_base;
+ static inline void console_init(void)
+ { }
+-
+ #endif
+ 
+ #endif
 -- 
 1.7.9.5
