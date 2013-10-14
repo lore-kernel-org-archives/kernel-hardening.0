@@ -1,113 +1,169 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <525C56EF.8000807@gmail.com>
-Date: Tue, 15 Oct 2013 07:41:19 +1100
+Message-ID: <525C7278.3090200@gmail.com>
+Date: Tue, 15 Oct 2013 09:38:48 +1100
 From: Ryan Mallon <rmallon@gmail.com>
 MIME-Version: 1.0
-References: <5255D023.2030907@gmail.com> <1381356014.2050.28.camel@joe-AO722> <5255D2FD.6050705@gmail.com> <1381356861.2050.33.camel@joe-AO722> <5255D7D4.8050204@gmail.com> <1381358030.2050.36.camel@joe-AO722> <5255DBD8.30005@gmail.com> <1381360187.2050.44.camel@joe-AO722> <87pprck0q7.fsf@xmission.com> <52576E32.1050700@gmail.com> <20131014101706.GA5605@dztty>
-In-Reply-To: <20131014101706.GA5605@dztty>
 Content-Type: text/plain; charset=ISO-8859-1
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3a] vsprintf: Check real user/group id for %pK
-To: Djalal Harouni <tixxdz@opendz.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Joe Perches <joe@perches.com>, Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, George Spelvin <linux@horizon.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] [PATCH v4] vsprintf: Check real user/group id for %pK
+To: Linus Torvalds <torvalds@linux-foundation.org>, Andrew Morton <akpm@linux-foundation.org>, eldad@fogrefinery.com, Jiri Kosina <jkosina@suse.cz>, jgunthorpe@obsidianresearch.com, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, George Spelvin <linux@horizon.com>, Joe Perches <joe@perches.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Rob Landley <rob@landley.net>, Ingo Molnar <mingo@elte.hu>, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14/10/13 21:17, Djalal Harouni wrote:
+Some setuid binaries will allow reading of files which have read
+permission by the real user id. This is problematic with files which
+use %pK because the file access permission is checked at open() time,
+but the kptr_restrict setting is checked at read() time. If a setuid
+binary opens a %pK file as an unprivileged user, and then elevates
+permissions before reading the file, then kernel pointer values may be
+leaked.
 
-> On Fri, Oct 11, 2013 at 02:19:14PM +1100, Ryan Mallon wrote:
->> On 11/10/13 13:20, Eric W. Biederman wrote:
->>> Joe Perches <joe@perches.com> writes:
->>>
->>>> Some setuid binaries will allow reading of files which have read
->>>> permission by the real user id. This is problematic with files which
->>>> use %pK because the file access permission is checked at open() time,
->>>> but the kptr_restrict setting is checked at read() time. If a setuid
->>>> binary opens a %pK file as an unprivileged user, and then elevates
->>>> permissions before reading the file, then kernel pointer values may be
->>>> leaked.
->>>>
->>>> This happens for example with the setuid pppd application on Ubuntu
->>>> 12.04:
->>>>
->>>>   $ head -1 /proc/kallsyms
->>>>   00000000 T startup_32
->>>>
->>>>   $ pppd file /proc/kallsyms
->>>>   pppd: In file /proc/kallsyms: unrecognized option 'c1000000'
->>>>
->>>> This will only leak the pointer value from the first line, but other
->>>> setuid binaries may leak more information.
->>>>
->>>> Fix this by adding a check that in addition to the current process
->>>> having CAP_SYSLOG, that effective user and group ids are equal to the
->>>> real ids. If a setuid binary reads the contents of a file which uses
->>>> %pK then the pointer values will be printed as NULL if the real user
->>>> is unprivileged.
->>>>
->>>> Update the sysctl documentation to reflect the changes, and also
->>>> correct the documentation to state the kptr_restrict=0 is the default.
->>>
->>> Sigh.  This is all wrong.  The only correct thing to test is
->>> file->f_cred.  Aka the capabilities of the program that opened the
->>> file.
->>>
->>> Which means that the interface to %pK in the case of kptr_restrict is
->>> broken as it has no way to be passed the information it needs to make
->>> a sensible decision.
->>
->> Would it make sense to add a struct file * to struct seq_file and set
->> that in seq_open? Then the capability check can be done against seq->file.
-> For the "add a struct file * to struct seq_file" and set it during
-> seq_open(), It was proposed by Linus, but Al Viro didn't like it:
-> https://lkml.org/lkml/2013/9/25/765
-> 
-> I'm not sure if this will work for you: you can make seq_file->private
-> cache some data, by calling single_open()... at ->open(), later check it
-> during read()...
-> 
-> 
-> As noted by Eric, I'll also go for the capability check at ->open(), if it
-> does not break some userspace. BTW the CAP_SYSLOG check should do the job
+This happens for example with the setuid pppd application on Ubuntu 12.04:
 
-Yes, it has already been agreed on that open() time is the correct place to
-do the check, and that either the check value should be cached in the
-struct seq_file or the struct cred/file should be kept so that the check
-can be done later. I think caching the result is actually better since it
-removes the whole in_irq() problem also.
+  $ head -1 /proc/kallsyms
+  00000000 T startup_32
 
-The problem I have at the moment is handling the case for 
-/sys/module<modname>/sections/*, which are seq_files in Greg's
-driver-core tree, but do not actually pass the struct seq_file to the show
-function, which makes it impossible to check what the open() time
-permissions were.
+  $ pppd file /proc/kallsyms
+  pppd: In file /proc/kallsyms: unrecognized option 'c1000000'
 
-> Checks during read() are not sufficient, since the design allows passing
-> file descriptors and dup() stdin/stdout of suid-execve.
-> 
-> 
-> IMO: unprivileged code should not get that file descriptor, so ->open()
-> should fail.
-> If this will break userspace then allow open() and cache result for read()
-> 
-> 
-> Can you emulate the behaviour of kptr_restrict=1 ? If so:
-> 1) perform check during open() and cache data
-> 2) during read() check kptr_restrict==1
->    check the cached value and if opener had CAP_SYSLOG  if so:
->    print something like this: 00000000 T startup_32
-> 
-> All this without modifying vsprintf, I mean just do the checks outside
-> vsprintf() inside your ->read()
+This will only leak the pointer value from the first line, but other
+setuid binaries may leak more information.
 
+Fix this by adding a check that in addition to the current process
+having CAP_SYSLOG, that effective user and group ids are equal to the
+real ids. If a setuid binary reads the contents of a file which uses
+%pK then the pointer values will be printed as NULL if the real user
+is unprivileged.
 
-Again, this has already been agreed on. As suggested by George I have
-a function called seq_kernel_pointer(), which returns either the real
-pointer or NULL based on the cached check at seq_open(), so you do
-prints like:
+Update the sysctl documentation to reflect the changes, and also
+correct the documentation to state the kptr_restrict=0 is the default.
 
-  seq_printf(seq, "secret value = %p\n", seq_kernel_pointer(seq, ptr));
+This is a only temporary solution to the issue. The correct solution
+is to do the permission check at open() time on files, and to replace
+%pK with a function which checks the open() time permission. %pK uses
+in printk should be removed since no sane permission check can be
+done, and instead protected by using dmesg_restrict.
 
-Once I figure out how to resolve the module sections case, I will post
-a patch series.
+Signed-off-by: Ryan Mallon <rmallon@gmail.com>
+Cc: stable@vger.kernel.org
+---
 
-~Ryan
+This is a temporary solution only, but fixes a minor security hole when
+kptr_restrict=1. I am working to fix this properly, but there is still
+some discussion around how to achieve this, see here:
+
+  https://lkml.org/lkml/2013/10/10/805
+
+This solution at least resolves the problem, and can easily be cherry
+picked into stable/distro kernels as needed.
+
+Changes since v3:
+  * Update the sysctl documentation to detail the reasons for the check
+    and also explain the temporary nature of the solution.
+  * Added Cc stable, since this patch should probably be applied to
+    stable kernels, and possibly distro kernels.
+  * Cc'ed people for Documentation changes
+
+Changes since v2:
+  * Fixed typo in comment: 'proccess' -> 'process'
+  * Use a switch statement for the kptr_restrict values
+  * Updated the sysctl documentation
+
+Changes since v1:
+  * Fix the description to say 'vsprintf' instead of 'printk'.
+  * Clarify the open() vs read() time checks in the patch description
+and code comment.
+  * Remove comment about 'badly written' setuid binaries. This occurs
+with setuids binaries which correctly handle opening files.
+  * Added extra people to the Cc list.
+---
+
+diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+index 9d4c1d1..fb78e60 100644
+--- a/Documentation/sysctl/kernel.txt
++++ b/Documentation/sysctl/kernel.txt
+@@ -290,13 +290,24 @@ Default value is "/sbin/hotplug".
+ kptr_restrict:
+ 
+ This toggle indicates whether restrictions are placed on
+-exposing kernel addresses via /proc and other interfaces.  When
+-kptr_restrict is set to (0), there are no restrictions.  When
+-kptr_restrict is set to (1), the default, kernel pointers
+-printed using the %pK format specifier will be replaced with 0's
+-unless the user has CAP_SYSLOG.  When kptr_restrict is set to
+-(2), kernel pointers printed using %pK will be replaced with 0's
+-regardless of privileges.
++exposing kernel addresses via /proc and other interfaces.
++
++When kptr_restrict is set to (0), the default, there are no restrictions.
++
++When kptr_restrict is set to (1), kernel pointers printed using the %pK
++format specifier will be replaced with 0's unless the user has CAP_SYSLOG
++and effective user and group ids are equal to the real ids. This is
++because %pK checks are done at read() time rather than open() time, so
++if permissions are elevated between the open() and the read() (e.g via
++a setuid binary) then %pK will not leak kernel pointers to unprivileged
++users. Note, this is a temporary solution only. The correct long-term
++solution is to do the permission checks at open() time. Consider removing
++world read permissions from files that use %pK, and using dmesg_restrict
++to protect against uses of %pK in dmesg(8) if leaking kernel pointer
++values to unprivileged users is a concern.
++
++When kptr_restrict is set to (2), kernel pointers printed using
++%pK will be replaced with 0's regardless of privileges.
+ 
+ ==============================================================
+ 
+diff --git a/lib/vsprintf.c b/lib/vsprintf.c
+index 26559bd..d76555c 100644
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -27,6 +27,7 @@
+ #include <linux/uaccess.h>
+ #include <linux/ioport.h>
+ #include <linux/dcache.h>
++#include <linux/cred.h>
+ #include <net/addrconf.h>
+ 
+ #include <asm/page.h>		/* for PAGE_SIZE */
+@@ -1312,11 +1313,37 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+ 				spec.field_width = default_width;
+ 			return string(buf, end, "pK-error", spec);
+ 		}
+-		if (!((kptr_restrict == 0) ||
+-		      (kptr_restrict == 1 &&
+-		       has_capability_noaudit(current, CAP_SYSLOG))))
++
++		switch (kptr_restrict) {
++		case 0:
++			/* Always print %pK values */
++			break;
++		case 1: {
++			/*
++			 * Only print the real pointer value if the current
++			 * process has CAP_SYSLOG and is running with the
++			 * same credentials it started with. This is because
++			 * access to files is checked at open() time, but %pK
++			 * checks permission at read() time. We don't want to
++			 * leak pointer values if a binary opens a file using
++			 * %pK and then elevates privileges before reading it.
++			 */
++			const struct cred *cred = current_cred();
++
++			if (!has_capability_noaudit(current, CAP_SYSLOG) ||
++			    !uid_eq(cred->euid, cred->uid) ||
++			    !gid_eq(cred->egid, cred->gid))
++				ptr = NULL;
++			break;
++		}
++		case 2:
++		default:
++			/* Always print 0's for %pK */
+ 			ptr = NULL;
++			break;
++		}
+ 		break;
++
+ 	case 'N':
+ 		switch (fmt[1]) {
+ 		case 'F':
