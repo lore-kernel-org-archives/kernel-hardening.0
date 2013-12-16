@@ -1,47 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Djalal Harouni <tixxdz@opendz.org>
-Date: Sun, 15 Dec 2013 19:57:14 +0100
-Message-Id: <1387133834-31966-3-git-send-email-tixxdz@opendz.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
 In-Reply-To: <1387133834-31966-1-git-send-email-tixxdz@opendz.org>
 References: <1387133834-31966-1-git-send-email-tixxdz@opendz.org>
-Subject: [kernel-hardening] [PATCH 2/2] procfs: make /proc/*/pagemap 0400
-To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>
-Cc: Djalal Harouni <tixxdz@opendz.org>
+Date: Mon, 16 Dec 2013 09:36:27 -0800
+Message-ID: <CAGXu5jKqdHPDXDrh4sMUNd+ihuJHKwSbygVOHET6cDer7VnN=A@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=ISO-8859-1
+Subject: [kernel-hardening] Re: [Resend] [PATCH 0/2] procfs: make /proc/*/{stack,syscall,pagemap} 0400
+To: Djalal Harouni <tixxdz@opendz.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The /proc/*/pagemap contain sensitive information and currently its
-mode is 0444. Change this to 0400, so the VFS will prevent unprivileged
-processes from getting file descriptors on arbitrary privileged
-/proc/*/pagemap files.
+On Sun, Dec 15, 2013 at 10:57 AM, Djalal Harouni <tixxdz@opendz.org> wrote:
+> The following patches make /proc/*/{stack,syscall,personality,pagemap}
+> 0400.
 
-Cc: Eric W. Biederman <ebiederm@xmission.com>
-Cc: Kees Cook <keescook@chromium.org>
-Signed-off-by: Djalal Harouni <tixxdz@opendz.org>
----
- fs/proc/base.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+Yes, please! This greatly reduces the scope of the leak problem (with
+0400 the leak is possible only if an attacker can spawn the target
+setuid process, instead of being able to leak from an already running
+one).
 
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index e69df4b..081d055 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -2616,7 +2616,7 @@ static const struct pid_entry tgid_base_stuff[] = {
- #ifdef CONFIG_PROC_PAGE_MONITOR
- 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
- 	REG("smaps",      S_IRUGO, proc_pid_smaps_operations),
--	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
-+	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
- #endif
- #ifdef CONFIG_SECURITY
- 	DIR("attr",       S_IRUGO|S_IXUGO, proc_attr_dir_inode_operations, proc_attr_dir_operations),
-@@ -2954,7 +2954,7 @@ static const struct pid_entry tid_base_stuff[] = {
- #ifdef CONFIG_PROC_PAGE_MONITOR
- 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
- 	REG("smaps",     S_IRUGO, proc_tid_smaps_operations),
--	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
-+	REG("pagemap",    S_IRUSR, proc_pagemap_operations),
- #endif
- #ifdef CONFIG_SECURITY
- 	DIR("attr",      S_IRUGO|S_IXUGO, proc_attr_dir_inode_operations, proc_attr_dir_operations),
+-Kees
+
 -- 
-1.7.11.7
+Kees Cook
+Chrome OS Security
