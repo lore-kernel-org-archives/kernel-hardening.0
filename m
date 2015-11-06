@@ -1,56 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-Date: Thu, 5 Nov 2015 12:59:21 -0800
-Message-ID: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Kernel Self Protection Project
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1446816504.8412.35.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Fri, 06 Nov 2015 14:28:24 +0100
+In-Reply-To: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+References: 
+	<CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-v9XPqreB6XQK2pbNqrDi"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Kernel Self Protection Project
+To: kernel-hardening@lists.openwall.com
 Cc: Solar Designer <solar@openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Ben Hutchings <ben@decadent.org.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, James Morris <jmorris@namei.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I'm organizing a community of people to work on the various kernel
-self-protection technologies (most of which are found in PaX and
-Grsecurity). I'm building on the presentation I gave at Kernel Summit
-where I sought to convince the other upstream Linux kernel developers
-that security is more than fixing bugs, and that we need to bring in
-proactive defenses:
-http://lwn.net/Articles/662219/
 
-This is especially highlighted by the Washington Post article today:
-http://www.washingtonpost.com/sf/business/2015/11/05/net-of-insecurity-the-kernel-of-the-argument/
+--=-v9XPqreB6XQK2pbNqrDi
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-Between the companies that recognize the critical nature of this work,
-and with Linux Foundation's Core Infrastructure Initiative happy to
-start funding specific work in this area, I think we can really make a
-dent.
+On jeu., 2015-11-05 at 12:59 -0800, Kees Cook wrote:
+> For now, I'm going to focus on taking a look at the PAX_SIZE_OVERFLOW
+> gcc plugin, which will also get us the gcc plugin infrastructure.
+> Other people, please speak up on what you'd like to tackle.
 
-Let's start the work. I've built some wiki pages around my slides,
-where we can take notes, list examples, and coordinate:
-http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
+Hi Kees, and first many thanks for the initiative. That's definitely someth=
+ing
+of interest for me (both personally and professionally).
 
-For now, I'm going to focus on taking a look at the PAX_SIZE_OVERFLOW
-gcc plugin, which will also get us the gcc plugin infrastructure.
-Other people, please speak up on what you'd like to tackle.
+Something which might also be interesting in kernel self protection is the
+=E2=80=9Cactive response=E2=80=9D found in grsecurity (GRKERNSEC_SEC_KERN_L=
+OCKOUT) and the
+=E2=80=9Cdeter exploite bruteforcing=E2=80=9D (GRKERNSEC_BRUTE), which can =
+help prevent
+exploitation with repeated attempts.
 
-I recommend PAX_REFCOUNT, PAX_USERCOPY, and GRKERNSEC_KSTACKOVERFLOW
-for some non-plugin stuff to look at.
+Some features (especially SEC_KERN_LOCKOUT) are really more useful when UDE=
+REF
+and KERNEXEC are available (since those are the most severe violations one =
+can
+find), but it could still apply to other violations.
 
-Once we've got plugins, then we should look at PAX_MEMORY_STACKLEAK
-and PAX_CONSTIFY_PLUGIN.
+Regards,
+--=20
+Yves-Alexis
 
-If you're feeling like disrupting people who depend on debugging, do
-GRKERNSEC_HIDESYM.
 
-If you're feeling especially bold, start on PAX_KERNEXEC and follow it
-up with PAX_MEMORY_UDEREF.
+--=-v9XPqreB6XQK2pbNqrDi
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
 
-Of course, there's plenty of other things, and tons I haven't listed
-in the wiki -- please add them and bring them up for discussion here.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
--Kees
+iQEcBAABCAAGBQJWPKr4AAoJEG3bU/KmdcClpc4H/0TSH0lpT0MmtVB05xPF6Mto
+2o7Dw+rwE3RocQBquuaQ2PgwEw8XXKX7u0Gu84q0sNiLRgQDcEja4u8/qM5JwjXp
+I+j9Cdg7P16mIHyT258YUxPtm1aQzbisEjXjZ5+y5zCYz8vnOmibuDNujdDPPeHe
+H/9Lt4zWFfnXHKSOJMozObRESEWaOc6oqPbC7SgkM/NlaXVOQyy6LKGCtHA6oD21
+7noYOzjw3xTdgOGUBuInjWLHkjaBg4vLxdfSKTjRg2YBGObthtOfeSSZojF+E8qd
+NKXCDkMIpCxysbDUKMbSPAeR119GAa3Prn28EvSvAWxp7MKc2BCwnwoS6aDKrfQ=
+=2Tq6
+-----END PGP SIGNATURE-----
 
--- 
-Kees Cook
-Chrome OS Security
+--=-v9XPqreB6XQK2pbNqrDi--
