@@ -1,72 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 7 Nov 2015 22:34:37 +0100
+Date: Sat, 7 Nov 2015 22:42:35 +0100
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20151107223437.891207864301c26862ae15da@gmail.com>
-In-Reply-To: <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+Message-Id: <20151107224235.774f2e26aca4725bc24be02b@gmail.com>
+In-Reply-To: <20151107002508.GA2605@cloud>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
 	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+	<20151107002508.GA2605@cloud>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: Proposal for kernel self protection features
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
+To: Josh Triplett <josh@joshtriplett.org>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> >     * size_overflow_hash_aux: For out-of-tree modules.
+On Fri, 6 Nov 2015 16:25:08 -0800
+Josh Triplett <josh@joshtriplett.org> wrote:
+
+> On Fri, Nov 06, 2015 at 03:30:39PM -0800, Kees Cook wrote:
+> > On Fri, Nov 6, 2015 at 2:55 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> > >  * initify: This plugin isn't security related either.
+> > >     It moves string constants (__func__ and function string arguments
+> > >     marked by the nocapture attribute) only referenced in
+> > >     __init/__exit functions to __initconst/__exitconst sections.
+> > >     It reduces memory usage (many kB), I think it may be important for
+> > >     embedded systems.
+> > 
+> > I bet the Tinification project ( https://tiny.wiki.kernel.org/ ) would
+> > be interested in this! (CCing Josh for thoughts.)
 > 
-> By out-of-tree, you mean built-out-of-tree? I assume a future
-
-I mean out-of-tree modules e.g., zfs. But the gcc infrastructure
-in PaX also supports built-out-of-tree and cross compilation.
-
-> downstream kernel that used size_overflow would have their
-> non-upstream code covered during the size_overflow_hash regeneration?
-> (Though they'd be on the their own for handling the false positives.)
-
-Yes, everybody can regenerate the hash table (the plugin prints out a message
-about missing entries that I parse with a python script). I store functions
-from out-of-tree modules in a separate hash table because we don't regenerate it
-for every kernel version. 
-
-> >        * gcc intentional overflow: gcc computes some expressions by overflow
-> >           when it optimizes. Sadly it is doing this in the front end where
-> >           there is no plugin support. Most of these false positives I handle
-> >           from the plugin or sometimes I patch the kernel source code.
-> >           There are some unsolved issues.
+> I'd be quite interested.
 > 
-> Has there been any discussion with gcc folks about this problem?
+> Could the plugin operate in a mode where it emits warnings to add such
+> annotations explicitly in the code, rather than just automatically
+> moving the data?
 
-I never tried it. PaXTeam has some open tickets
-(e.g., https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61311) for a long time so
-because of it I haven't any courage.
-
-> >  * structleak: This plugin forcibly initializes certain local variables
-> >     based on the __user attribute that could otherwise leak kernel stack
-> >     to userland if they aren't properly initialized by later code.
-> >     It has small performance loss.
-> 
-> Does this operate only on kernel stack structures?
-
-Yes, it does but the coverage can be increased.
-
-> > I think the first plugin can be a simpler plugin e.g., constify or latent_entropy.
-> > Please let me know if you want one, more or all of them.
-> 
-> Well I would love to see all of them upstream. :) As for first steps,
-> you've convinced me about the complexity of the size_overflow plugin.
-> Perhaps the constify plugin would be a good first target? Can you
-
-Yes, I agree.
-
-> speak to any known bugs it stopped? Having some mention of the threat
-> it mitigates would be helpful. (Do I remember correctly that it
-> constified security_operations, which was a common target in
-> exploits?)
-
-I don't remember any bugs, but I think spender has some exploits that
-are stopped by constification :) The constify plugin stops exploits that
-want to modify ops structures to control indirect calls through them.
+I can do it, but as Ard said it also moves e.g., format strings and __func__
+that is not possible to do with source code changes.
 
 -- 
 Emese
