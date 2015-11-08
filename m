@@ -1,35 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 7 Nov 2015 23:07:02 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20151107230702.e10955217163dee58f989daf@gmail.com>
-In-Reply-To: <20151107054217.GA32075@x>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20151107223437.891207864301c26862ae15da@gmail.com>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
 	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
-	<20151107002508.GA2605@cloud>
-	<20151107024612.GC19551@kroah.com>
-	<CAGXu5jK70Rn3QqzkwDRMDmt-sW0Xhw0X8afp3KLgw4SYPiZHrQ@mail.gmail.com>
-	<20151107054217.GA32075@x>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+	<20151107223437.891207864301c26862ae15da@gmail.com>
+Date: Sat, 7 Nov 2015 22:40:39 -0800
+Message-ID: <CAGXu5j+9g3Dk__C79xGAMBHYcg7mFXB05DVx7Us4MzC794NYTg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: Proposal for kernel self protection features
-To: Josh Triplett <josh@joshtriplett.org>
-Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Theodore Tso <tytso@google.com>
+To: Emese Revfy <re.emese@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sat, Nov 7, 2015 at 1:34 PM, Emese Revfy <re.emese@gmail.com> wrote:
+>> speak to any known bugs it stopped? Having some mention of the threat
+>> it mitigates would be helpful. (Do I remember correctly that it
+>> constified security_operations, which was a common target in
+>> exploits?)
+>
+> I don't remember any bugs, but I think spender has some exploits that
+> are stopped by constification :) The constify plugin stops exploits that
+> want to modify ops structures to control indirect calls through them.
 
-> I agree in both cases: having the plugin usable in "make it so" mode for
-> the benefit of legacy or out-of-tree code, and having it usable in
-> "suggest changes to the source" (or outright *edit* the source and
-> produce a patch) mode to avoid actually mandating the plugin.  Not least
-> of which because I'd find it surprising if the plugin ever worked across
-> as broad a range of GCC versions as the kernel typically wants to
-> support.
+Yeah, just listing a few somewhere in the future patch or docs would
+be cool, or we can add that to the wiki, etc. Mostly I just want to be
+able to help people understand what a given mitigation could have
+stopped, etc. (And given the frequency of ops structure abuse in just
+the exploits I reviewed for the Kernel Summit slides, that's a lot...)
+Since many people don't understand the value of exploit-blocking, it's
+nice to point specifically to known exploits that would have been
+blocked.
 
-All gcc plugins in PaX support all plugin capable gcc versions (4.5-5). 
-This is PaXTeam's requirement if somebody writes a plugin for PaX.
-And of course the plugin infrastructure handles gcc versions that don't
-support plugins.
+-Kees
 
 -- 
-Emese
+Kees Cook
+Chrome OS Security
