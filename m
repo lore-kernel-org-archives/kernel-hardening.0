@@ -1,61 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu9x8LL+7hhdgux4EP1kXAWz_kodiZ208EBz7P=TvGpn8w@mail.gmail.com>
+Date: Sun, 8 Nov 2015 09:27:17 +0000
+From: Alyssa Milburn <amilburn@zall.org>
+Message-ID: <20151108092717.GH18245@li141-249.members.linode.com>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
-	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
-	<20151107002508.GA2605@cloud>
-	<CAKv+Gu9x8LL+7hhdgux4EP1kXAWz_kodiZ208EBz7P=TvGpn8w@mail.gmail.com>
-Date: Sun, 8 Nov 2015 11:09:34 +0100
-Message-ID: <CA+rthh_2bc86wL0ke5J7MAzsuC+Ly73MvW+cCXK0BmzTY_N+Rw@mail.gmail.com>
-From: Mathias Krause <minipli@googlemail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection features
+ <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+ <20151107002508.GA2605@cloud>
+ <20151107024612.GC19551@kroah.com>
+ <CAGXu5jK70Rn3QqzkwDRMDmt-sW0Xhw0X8afp3KLgw4SYPiZHrQ@mail.gmail.com>
+ <20151107054217.GA32075@x>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20151107054217.GA32075@x>
+Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
+ features
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
+Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Theodore Tso <tytso@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 7 November 2015 at 13:41, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
-> On 7 November 2015 at 01:25, Josh Triplett <josh@joshtriplett.org> wrote:
->> On Fri, Nov 06, 2015 at 03:30:39PM -0800, Kees Cook wrote:
->>> On Fri, Nov 6, 2015 at 2:55 PM, Emese Revfy <re.emese@gmail.com> wrote:
->>> >  * initify: This plugin isn't security related either.
->>> >     It moves string constants (__func__ and function string arguments
->>> >     marked by the nocapture attribute) only referenced in
->>> >     __init/__exit functions to __initconst/__exitconst sections.
->>> >     It reduces memory usage (many kB), I think it may be important for
->>> >     embedded systems.
->>>
->>> I bet the Tinification project ( https://tiny.wiki.kernel.org/ ) would
->>> be interested in this! (CCing Josh for thoughts.)
->>
->> I'd be quite interested.
->>
->> Could the plugin operate in a mode where it emits warnings to add such
->> annotations explicitly in the code, rather than just automatically
->> moving the data?
->>
->
-> Well, I suppose this operates primarily on string literals and
-> initializers, for which there really isn't a way to annotate them
-> other than doing something like
->
-> #define INITSTR(x) ({ static char const __initconst __str[] = #x; __str; })
->
-> which unfortunately breaks the concatenation of string literals (e.g.,
-> 'printk(KERN_ERR INITSTR(foo))' will not work)
+On Fri, Nov 06, 2015 at 09:42:17PM -0800, Josh Triplett wrote:
+> (For that matter, as the LLVM Linux project progresses, it might
+> actually prove easier to provide a clang-based plugin.)
 
-There were multiple attempts in the past to do this kind of annotation
-on a source code level. The last one being [1], attempting to provide
-pr_<LVL>() style of helpers for this. But it was shot down by Ingo
-[2].
+If anyone is interested in LLVM-based plugins (I've been assuming nobody
+is, especially since LLVMLinux seems to have been pretty quiet recently),
+I've been investigating security improvements via compiler plugins as part
+of my MSc project, and I'd love to write LLVM/clang passes/analyses if
+anyone has any particular wishes for them. (But trying to replicate this in
+gcc plugins is not something I can justify at present, especially since
+Emese already has many covered.)
 
-So I don't think a mode were the plugin generates patches is of much
-use as those won't be accepted anyway. It's nice to get a feeling for
-the coverage, but not so much for actual code changes.
+I already partially reimplemented a couple of the plugins from the
+grsecurity patchset, but right now they're a mess bound up in all of my
+other code (and I have no nice infrastructure, just hacks resting on top of
+the last version of LLVMLinux + patches + LTO + LTO-on-LLVM + ...). On the
+kernel side I just wanted to see how *this* vulnerability could have been
+mitigated with *that* technique for *this* performance penalty, so as long
+as I can compile+boot a kernel for benchmarking, I've been happy.
 
-
-Regards,
-Mathias
-
-[1] https://lkml.org/lkml/2014/8/21/255
-[2] https://lkml.org/lkml/2014/8/21/290
+- Alyssa
