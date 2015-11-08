@@ -1,41 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 8 Nov 2015 09:27:17 +0000
-From: Alyssa Milburn <amilburn@zall.org>
-Message-ID: <20151108092717.GH18245@li141-249.members.linode.com>
+Date: Sun, 8 Nov 2015 10:58:40 +0100
+From: David Sterba <dave@jikos.cz>
+Message-ID: <20151108095840.GN26112@twin.jikos.cz>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
  <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
  <20151107002508.GA2605@cloud>
  <20151107024612.GC19551@kroah.com>
- <CAGXu5jK70Rn3QqzkwDRMDmt-sW0Xhw0X8afp3KLgw4SYPiZHrQ@mail.gmail.com>
- <20151107054217.GA32075@x>
+ <20151107225810.b5f37120449d0957e3e29d72@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20151107054217.GA32075@x>
+In-Reply-To: <20151107225810.b5f37120449d0957e3e29d72@gmail.com>
 Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
  features
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Theodore Tso <tytso@google.com>
+Cc: Greg KH <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Theodore Tso <tytso@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 06, 2015 at 09:42:17PM -0800, Josh Triplett wrote:
-> (For that matter, as the LLVM Linux project progresses, it might
-> actually prove easier to provide a clang-based plugin.)
+On Sat, Nov 07, 2015 at 10:58:10PM +0100, Emese Revfy wrote:
+> > > Could the plugin operate in a mode where it emits warnings to add such
+> > > annotations explicitly in the code, rather than just automatically
+> > > moving the data?
+> > 
+> > That would be nice for the constanfy mode as well, especially as some
+> > people aren't using gcc to build the kernel anymore, so it would be good
+> > to mark these "for real" in the .c code wherever possible to allow other
+> > compilers to take advantage of the plugin indirectly.
+> 
+> Yes, I can do it of course. There can be two kernel config options:
+>  * warning (dry run) mode: the plugin just prints out the warnings 
+>  * constify: do the constification automatically
 
-If anyone is interested in LLVM-based plugins (I've been assuming nobody
-is, especially since LLVMLinux seems to have been pretty quiet recently),
-I've been investigating security improvements via compiler plugins as part
-of my MSc project, and I'd love to write LLVM/clang passes/analyses if
-anyone has any particular wishes for them. (But trying to replicate this in
-gcc plugins is not something I can justify at present, especially since
-Emese already has many covered.)
-
-I already partially reimplemented a couple of the plugins from the
-grsecurity patchset, but right now they're a mess bound up in all of my
-other code (and I have no nice infrastructure, just hacks resting on top of
-the last version of LLVMLinux + patches + LTO + LTO-on-LLVM + ...). On the
-kernel side I just wanted to see how *this* vulnerability could have been
-mitigated with *that* technique for *this* performance penalty, so as long
-as I can compile+boot a kernel for benchmarking, I've been happy.
-
-- Alyssa
+It would be great if all the plugins can run in a verbose mode and
+describe the changes or at least point to the file:line. It should help
+to understand and review the resulting assembly code where applicable.
