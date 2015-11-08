@@ -1,38 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 8 Nov 2015 11:45:17 +0100
-From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Message-ID: <20151108104517.GC8632@chrystal.uk.oracle.com>
-References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
- <n1iirh$q7o$1@ger.gmane.org>
- <CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
- <n1khkt$lc7$1@ger.gmane.org>
- <CAGXu5jLuEBUYFNmWOVNvMnTbwyy_+0R1_SywBVhcxkCcm83e-g@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jLuEBUYFNmWOVNvMnTbwyy_+0R1_SywBVhcxkCcm83e-g@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: Kernel Self Protection Project
-To: kernel-hardening@lists.openwall.com
+Date: Sun, 8 Nov 2015 12:28:07 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20151108122807.820bc2badc807548a2072691@gmail.com>
+In-Reply-To: <20151108082155.GA1900@x>
+References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
+	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+	<20151107002508.GA2605@cloud>
+	<20151107024612.GC19551@kroah.com>
+	<CAGXu5jK70Rn3QqzkwDRMDmt-sW0Xhw0X8afp3KLgw4SYPiZHrQ@mail.gmail.com>
+	<20151107054217.GA32075@x>
+	<20151107230702.e10955217163dee58f989daf@gmail.com>
+	<20151108082155.GA1900@x>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: Proposal for kernel self protection features
+To: Josh Triplett <josh@joshtriplett.org>
+Cc: Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Theodore Tso <tytso@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Nov 07, 2015 at 10:50:04PM -0800, Kees Cook wrote:
-> On Sat, Nov 7, 2015 at 1:52 AM, Quentin Casasnovas
-> <quentin.casasnovas@oracle.com> wrote:
-> >>
-> >> I actually think that just splitting out features might be a good
-> >> first step all around. Most folks aren't very familiar with the
-> >> PaX/Grsec patches, and they, in their monolithic nature, can be hard
-> >> to understand. Many depend on each other, but some are separable.
-> >>
-> >
-> > Agreed, that should be a required step before people can review.
-> 
-> Yeah. Does anyone want to also extract PAX_USERCOPY or
-> GRKERNSEC_KSTACKOVERFLOW ? No one has mentioned an interest in those
-> yet.
-> 
+On Sun, 8 Nov 2015 00:21:55 -0800
+Josh Triplett <josh@joshtriplett.org> wrote:
 
-I could have a look at splitting GRKERNSEC_KSTACKOVERFLOW on my free time
-if no-one beats me to it.
+> On Sat, Nov 07, 2015 at 11:07:02PM +0100, Emese Revfy wrote:
+> > 
+> > > I agree in both cases: having the plugin usable in "make it so" mode for
+> > > the benefit of legacy or out-of-tree code, and having it usable in
+> > > "suggest changes to the source" (or outright *edit* the source and
+> > > produce a patch) mode to avoid actually mandating the plugin.  Not least
+> > > of which because I'd find it surprising if the plugin ever worked across
+> > > as broad a range of GCC versions as the kernel typically wants to
+> > > support.
+> > 
+> > All gcc plugins in PaX support all plugin capable gcc versions (4.5-5). 
+> 
+> The kernel supports older GCC than that, though.
+> 
+> > And of course the plugin infrastructure handles gcc versions that don't
+> > support plugins.
+> 
+> ...huh?  How does *that* work?
 
-Quentin
+If a gcc plugin kernel option is enabled then the kernel Makefile prints
+this out if the gcc version can support plugins but there is a problem:
+"warning, your gcc installation does not support plugins, perhaps the necessary headers are missing?"
+or this if the version is too old:
+"warning, your gcc version does not support plugins, you should upgrade it to gcc 4.5 at least"
+The compilation goes on without plugins.
+
+-- 
+Emese
