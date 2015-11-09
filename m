@@ -1,75 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 9 Nov 2015 06:39:43 +0000 (GMT)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <20151109054253.GQ18797@mwanda>
-Message-ID: <alpine.DEB.2.10.1511090634180.2593@hadrien>
-References: <1447018493-20631-1-git-send-email-Julia.Lawall@lip6.fr> <20151108221624.GP18797@mwanda> <alpine.DEB.2.10.1511082220500.2583@hadrien> <20151109054253.GQ18797@mwanda>
-MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] video: constify geode ops structures
-To: Dan Carpenter <dan.carpenter@oracle.com>
-Cc: Joe Perches <joe@perches.com>, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Date: Mon, 09 Nov 2015 11:02:47 +0100
+Message-ID: <87h9kvze0o.fsf@rasmusvillemoes.dk>
+References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+	<n1iirh$q7o$1@ger.gmane.org>
+	<CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
+	<n1khkt$lc7$1@ger.gmane.org>
+Mime-Version: 1.0
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: Kernel Self Protection Project
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sat, Nov 07 2015, Quentin Casasnovas <quentin.casasnovas@oracle.com> wrote:
 
+> On 2015-11-06, Kees Cook <keescook@chromium.org> wrote:
+>> On Fri, Nov 6, 2015 at 8:00 AM, Quentin Casasnovas
+>><quentin.casasnovas@oracle.com> wrote:
+>>>>
+>>>> For now, I'm going to focus on taking a look at the PAX_SIZE_OVERFLOW
+>>>> gcc plugin, which will also get us the gcc plugin infrastructure.
+>>>> Other people, please speak up on what you'd like to tackle.
+>>>>
+>>>
+>>> Not that it's complex but I already have a branch with the gcc plugin
+>>> infrastructure split up if you're interested and you reckon that can save
+>>> you some time.
+>>
+>> Sure, what's the URL?
+>> 
+>
+> I've pushed the three of them onto:
+>
+>   https://github.com/casasnovas/linux/commits/quentin-spk-gcc-plugin
+>
+> It lacks Documentation for now, but you can have a look at the branch
+> quentin-fuzz-gccplugin which adds an instrumentation plugin (converted from
+> the gcc patch[1] Dmitry Vyukov wrote for syzkaller[2]).
+>
+> Adding a plugin should be simple, add its name to $(HOSTLIBS)-y, and use
+> the regular kbuild system way to specify from which source files it is
+> built, CFLAGS, etc.
+>
+>   $(HOSTLIBS)-y = foo.so
+>   foo-objs = foo.c bar.c
+>
+> And then to have some compilations units be compiled using foo.so, they
+> just need the following in their CFLAGS:
+>
+>  -fplugin=$(objtree)/path/to/foo.so
 
-On Mon, 9 Nov 2015, Dan Carpenter wrote:
+Nice, thanks. But wouldn't it be even more userfriendly to have these
+things driven by Kconfig? So let (use of) each plugin depend on a
+CONFIG_GCCPLUGIN_XYZ variable, which will automatically turn itself off
+(with a warning) if that plugin can't be used for whatever
+reason. That'll also give a natural place to say a little about the
+plugin (though I also think Documentation/gccplugins/* should be
+created). We could hide these behind CONFIG_USE_GCCPLUGINS to make it
+easy for people to turn off.
 
-> On Sun, Nov 08, 2015 at 10:24:49PM +0000, Julia Lawall wrote:
-> > On Mon, 9 Nov 2015, Dan Carpenter wrote:
-> >
-> > > Cool.  So, in grsec they use a GCC plugin to make these const
-> > > automatically since they only contain function pointers.  There about
-> > > 100 struct types marked as __no_const.  Kees would like to adopt the
-> > > grsec pluggin approach I expect.  Do you have an idea how many structs
-> > > only contain function pointers or how many consts we would have to add
-> > > to get the same effect without the plugin?
-> >
-> > My list has 373 type names.  In the list there are counts for good
-> > (already const) and bad (not const).  The sum of the bad values is 2467.
-> > The list is below.
-> >
-> > julia
->
-> Fantastic!  Thanks.  We could autogenerate the list of type names and
-> make checkpatch.pl complain if we declared those types as non const.
->
-> I ran this command to find which functions grsec marks as __no_const.
->
-> egrep '(^ struct |^@@|__no_const;)' grsecurity-3.1-4.2.5-201511021814.patch | grep __no_const -B1 | grep -v __no_const | grep -v '^--' | cut -d @ -f 5-  | cut -b 9- | cut -d ' ' -f 1
->
-> There are 60 structs declared as __no_const.  For some structs they
-> declare a no_const version and use it as needed.  Like this:
-> typedef struct net_device_ops __no_const net_device_ops_no_const;
->
-> grep __no_const grsecurity-3.1-4.2.5-201511021814.patch | grep typedef | cut -d ' ' -f 3
->
-> There are 32 of those.
->
-> Then I compared to see if their structs were on your list.  For some
-> reason there quite a few one their list which are not on yours.  Out
-> of the first 10 about half weren't on your list.  cpu_cache_fns,
-> outer_cache_fns, psci_operations, smp_operations, omap_hwmod_soc_ops,
-> smp_ops_t.  These are mostly different arches?
->
-> Also bit_table has in int has well as a function pointers but it is on
-> their list.  I'm not sure why.  Maybe they are marking structs const
-> that I don't know about.
->
-> The other trick that they do is they define structs as __do_const if
-> they want them to be const by default, which is pretty neat.  This feels
-> like it should be a standard GCC feature.  In the meantime we could
-> mark things as __do_const and print a sparse warning if it was declared
-> as not const.
->
-> I have attached the list of __no_const structs.
+I suppose some plugins are really all-or-nothing (e.g. when randomizing
+structs, the various TUs better agree on what shuffling has been done),
+so for them it doesn't make sense to apply to individual C files. Is
+something done to ensure that, and if not, can it be done with some
+linker magic? (Something like putting a hash of the used random seed in
+each object file and make the linker complain if there are distinct
+definitions of that magic symbol.)
 
-Thanks.  Architectures wouldn't matter for me, but an adjacent parsing
-problem or a strangely written type name could cause a problem.  I will
-check your list.
-
-I would think though that the real problem wuld be things like the
-platform_driver structure, which to my recollection has one non-constant
-field, so the structure can't be const.
-
-julia
+Rasmus
