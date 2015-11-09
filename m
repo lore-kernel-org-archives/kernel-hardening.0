@@ -1,77 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Tue, 10 Nov 2015 00:09:29 +0100
 MIME-Version: 1.0
-Message-ID: <564127A9.17122.2B0E8CF3@pageexec.freemail.hu>
-In-reply-to: <CAGXu5jJpBD0=KeTztesOO2Smp+wSEnTpjvUjYWtgU_nF+TAL-Q@mail.gmail.com>
-References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>, <563F4A78.21151.23C6852D@pageexec.freemail.hu>, <CAGXu5jJpBD0=KeTztesOO2Smp+wSEnTpjvUjYWtgU_nF+TAL-Q@mail.gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: Proposal for kernel self protection features
-To: Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
+Sender: keescook@google.com
+In-Reply-To: <29498.1447107624@turing-police.cc.vt.edu>
+References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+	<n1iirh$q7o$1@ger.gmane.org>
+	<CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
+	<n1khkt$lc7$1@ger.gmane.org>
+	<87h9kvze0o.fsf@rasmusvillemoes.dk>
+	<20151109103315.GB19735@chrystal.uk.oracle.com>
+	<87bnb3ou1c.fsf@rasmusvillemoes.dk>
+	<CAGXu5jLST1eoNU3YF-kLnTOHcq6iyD8YbS=oGr+3p2eFsz-X=A@mail.gmail.com>
+	<c3c5f9857a782b1d4405272f08ce5b3d@opensec.fr>
+	<29498.1447107624@turing-police.cc.vt.edu>
+Date: Mon, 9 Nov 2015 15:33:20 -0800
+Message-ID: <CAGXu5jKwuuQ3=CC+ZPqP0B0pLD6R99EDE5k_sNdiQp4gsMd7Kg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Binary blobs
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 Nov 2015 at 13:52, Kees Cook wrote:
+On Mon, Nov 9, 2015 at 2:20 PM,  <Valdis.Kletnieks@vt.edu> wrote:
+> On Mon, 09 Nov 2015 22:59:31 +0100, HacKurx said:
+>> The binary blobs are a potential for undetectable or irreparable
+>> security flaws (Andrews Jeremy "Interview: Theo de Raadt", KernelTrap).
+>>
+>> What is your point of view? Linux-libre kernel is the only reliable
+>> basis?
+>
+> Closed source is by definition not easily examined for security issues (though
+> once you get to monsters like LibreOffice or Firefox, even open source code
+> is difficult to audit).
+>
+> The problem is that at the current time, not all software is easily opened. For
+> example, the single biggest reason (among several) that NVidia has a binary
+> blob driver is that (simplifying *drastically* here) when SGI's graphics
+> division imploded, NVidia got all the engineers - but Microsoft snarfed up a
+> bunch of patents connected to OpenGL.  So NVidia had no realistic choice but to
+> license the intellectual property from Microsoft.
+>
+> So out in the real world, you have to look at your threat model, and decide
+> how paranoid you are.  (Personally, I'd be more worried about the open-sourced
+> Firefox code than I would the NVidia binary blob.  The former has got a *huge*
+> attack surface compared to the latter....)
 
-> On Sun, Nov 8, 2015 at 5:13 AM, PaX Team <pageexec@freemail.hu> wrote:
-> > as a general note, some gcc (and eventually clang/llvm) folks could
-> > perhaps be involved in kernel/plugin related discussions. this would
-> > not only help heal some of the rift that developed over the years
-> 
-> Do you have some people in mind from gcc? I'd love to get them on CC,
-> but it's not a community I know very well (yet).
+I think the first step is making sure you know _what_ blobs you're
+loading, and to have a known list of them. (There are efforts started
+with signed firmware[1] validation or the loadpin[2] LSM -- though
+neither yet deal with userspace loaded blobs like graphics drivers,
+SSD firmware, etc). This would block having blobs be manipulated
+maliciously before they're loaded. After that mechanism is in place,
+then it'd be useful to reverse engineer them to find security flaws.
 
-sorry, i have no idea which gcc developer would be interested in such
-a cross-field cooperation, probably it's worth a shot on their list ;).
+-Kees
 
-> >   - some static objects of the ops type are written to at runtime,
-> >     typically once during initialization. handling this case is
-> >     somewhat messy in the current plugin, it's either done via forcibly
-> >     overriding the constness of the object or by using the no_const
-> >     attribute and placing the object into a section that will be part
-> >     of read-only kernel data after init (in either case open/close
-> >     calls are needed). i have plans to move to the latter approach
-> >     exclusively but that requires rewriting the core of the plugin
-> >     to not rely on existing gcc infrastructure to detect const violations.
-> 
-> It sounds like we have 3 kinds of (non-heap) const targets:
-> 1) those actually never written to (trivial)
-> 2) those written to during init only (should be easy?)
-> 3) those written to after init (hard)
+[1] http://lists.linuxfoundation.org/pipermail/ksummit-discuss/2015-August/002238.html
+[2] http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=lsm/loadpin
 
-yes, that roughly describes the situation. we've been doing work on
-all three categories with the first one handled trivially from the
-compiler (equivalent to patching in 'const' at the source level).
-
-the other two require more finesse however so as to not 'cheat' too
-much (a.k.a. inducing undefined behaviour) as that could result in
-incorrect optimization decisions later. e.g., i once forcibly constified
-an ops object that was being copied to during init (instead of setting
-a ptr to the chosen object) and then the compiler would figure that
-all the indirect calls through that object could be optimized into
-direct calls since, well, the object was const. so tricking the compiler
-has to be done carefully (and the current PaX code for these cases
-may not always be the best example you want to follow ;).
-
-> IIUC, mark_data_ro() is called after init finishes, shouldn't it be
-> possible to mark those in some way (if they're not already?)
-
-i mentioned two ways to handle this above, the best is not forced
-constification but to simply place the object into a special section
-that will be linked together with .rodata (in PaX it's called
-".data..read_only"). this also works for the third case but then
-you'll lose the compiler's already existing mechanism to warn/error
-out on writes to const objects so this requires reimplementing that
-logic in the plugin (that's the rewrite i alluded to above).
-
-> For case 3, upstream would need KERNEXEC. 
-
-you only need a way to temporarily make it possible to modify otherwise
-read-only memory, much like how UDEREF (SMAP) needs temporary permissions
-to access userland. the naive approach is simple enough (similar to how
-the memory holding module code is made read-only on load then writable
-again on unload) but doing it securely (not subject to races) and fast
-enough (not having to flush TLB entries) is another matter, that will
-require some (arch dependent) infrastructure first.
+-- 
+Kees Cook
+Chrome OS Security
