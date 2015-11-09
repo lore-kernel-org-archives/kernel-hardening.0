@@ -1,63 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+	<n1iirh$q7o$1@ger.gmane.org>
+	<CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
+	<n1khkt$lc7$1@ger.gmane.org> <87h9kvze0o.fsf@rasmusvillemoes.dk>
+	<20151109103315.GB19735@chrystal.uk.oracle.com>
+Date: Mon, 09 Nov 2015 20:24:31 +0100
+In-Reply-To: <20151109103315.GB19735@chrystal.uk.oracle.com> (Quentin
+	Casasnovas's message of "Mon, 9 Nov 2015 11:33:15 +0100")
+Message-ID: <87bnb3ou1c.fsf@rasmusvillemoes.dk>
 MIME-Version: 1.0
-In-Reply-To: <20151109190224.GD20491@io.lakedaemon.net>
-References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
-	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
-	<563F4A78.21151.23C6852D@pageexec.freemail.hu>
-	<5640E0DD.6040107@labbott.name>
-	<20151109182832.GB20491@io.lakedaemon.net>
-	<13041.1447095477@turing-police.cc.vt.edu>
-	<20151109190224.GD20491@io.lakedaemon.net>
-Date: Mon, 9 Nov 2015 14:11:35 -0500
-Message-ID: <CAGagf4d4A8ZN2hVDDUFge78D_AZKFwkh6ZCV9faEZe=DO_fwKQ@mail.gmail.com>
-From: Theodore Tso <tytso@google.com>
-Content-Type: multipart/alternative; boundary=001a114295d0adf4e20524205c96
-Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection features
-To: Jason Cooper <kernel-hardening@lakedaemon.net>
-Cc: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: Kernel Self Protection Project
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a114295d0adf4e20524205c96
-Content-Type: text/plain; charset=UTF-8
+On Mon, Nov 09 2015, Quentin Casasnovas <quentin.casasnovas@oracle.com> wrote:
 
-On Mon, Nov 9, 2015 at 2:02 PM, Jason Cooper <
-kernel-hardening@lakedaemon.net> wrote:
-
-> /var/lib/misc/random-seed has served that role for years, I'm only
-> advocating loading it earlier in the boot process.  It's *much* harder
-> to guess the state of random-seed than the dtb or mac address(es)...
+>> >
+>> > Adding a plugin should be simple, add its name to $(HOSTLIBS)-y, and use
+>> > the regular kbuild system way to specify from which source files it is
+>> > built, CFLAGS, etc.
+>> >
+>> >   $(HOSTLIBS)-y = foo.so
+>> >   foo-objs = foo.c bar.c
+>> >
+>> > And then to have some compilations units be compiled using foo.so, they
+>> > just need the following in their CFLAGS:
+>> >
+>> >  -fplugin=$(objtree)/path/to/foo.so
+>> 
+>> Nice, thanks. But wouldn't it be even more userfriendly to have these
+>> things driven by Kconfig? So let (use of) each plugin depend on a
+>> CONFIG_GCCPLUGIN_XYZ variable, which will automatically turn itself off
+>> (with a warning) if that plugin can't be used for whatever
+>> reason. That'll also give a natural place to say a little about the
+>> plugin (though I also think Documentation/gccplugins/* should be
+>> created). We could hide these behind CONFIG_USE_GCCPLUGINS to make it
+>> easy for people to turn off.
+>> 
 >
+> Ah agreed, this was just so people could get started quickly.  The way to
+> do this is to include your plugin flags inside the Makefile variable
+> GCC_PLUGIN_CFLAGS, which is exported and stuffed to the KBUILD_CFLAGS.
+>
+> So if you have plugin foo.so that you want to be used for all of the
+> compilation units (and which depends on CONFIG_FOO), then it should be as
+> simple as doing this in the top-level Makefile:
+>
+> ifeq ($(CONFIG_FOO),y)
+>  GCC_PLUGIN_CFLAGS += -fplugin=$(objtree)/path/to/foo.so
+> endif
+>
+> The grsecurity/PaX patchset already deals with gcc version and
+> GCC_PLUGIN_CFLAGS will only be exported if your gcc version supports
+> plugins, otherwise it'll dump a warning and carry on compiling your kernel.
+>
+> Hope that clarifies things :)
 
-If the bootloader is willing to reach into the file system, which means (a)
-having a minimal file system layer, like Grub does, and (b) can find the
-block device where the file is found, that's a perfectly *fine*
-implementation.    I'm not sure mobile handset vendors will be all that
-psyched into either using or replicating all of Grub's functionality so it
-could do that, though....
+It does.
 
--- Ted
+It would be nice if the plugin infrastructure was as self-contained as
+possible, and to get whatever is decided acked by the kbuild maintainers
+and Linus well before 4.5.
 
---001a114295d0adf4e20524205c96
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+Is it possible to make a scheme where existing files are touched as
+little as possible? E.g. putting all the makefile magic in
+e.g. scripts/Makefile.plugins, the Kconfig symbols in
+lib/Kconfig.plugins, and the source of the plugins are in lib/plugins/
+(at first just in that single directory, which will also make sharing
+code between the plugins slightly easier).
 
-<div dir=3D"ltr"><div class=3D"gmail_extra"><br><div class=3D"gmail_quote">=
-On Mon, Nov 9, 2015 at 2:02 PM, Jason Cooper <span dir=3D"ltr">&lt;<a href=
-=3D"mailto:kernel-hardening@lakedaemon.net" target=3D"_blank" class=3D"crem=
-ed">kernel-hardening@lakedaemon.net</a>&gt;</span> wrote:<br><blockquote cl=
-ass=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;p=
-adding-left:1ex"><div id=3D":346" class=3D"a3s" style=3D"overflow:hidden">/=
-var/lib/misc/random-seed has served that role for years, I&#39;m only<br>
-advocating loading it earlier in the boot process.=C2=A0 It&#39;s *much* ha=
-rder<br>
-to guess the state of random-seed than the dtb or mac address(es)...<br></d=
-iv></blockquote></div><br>If the bootloader is willing to reach into the fi=
-le system, which means (a) having a minimal file system layer, like Grub do=
-es, and (b) can find the block device where the file is found, that&#39;s a=
- perfectly *fine* implementation. =C2=A0 =C2=A0I&#39;m not sure mobile hand=
-set vendors will be all that psyched into either using or replicating all o=
-f Grub&#39;s functionality so it could do that, though....</div><div class=
-=3D"gmail_extra"><br></div><div class=3D"gmail_extra">-- Ted</div><div clas=
-s=3D"gmail_extra"><br></div></div>
-
---001a114295d0adf4e20524205c96--
+Rasmus
