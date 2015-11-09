@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 9 Nov 2015 21:09:22 +0000
-From: Jason Cooper <kernel-hardening@lakedaemon.net>
-Message-ID: <20151109210922.GF20491@io.lakedaemon.net>
+Date: Mon, 9 Nov 2015 21:13:41 +0000
+From: Matthew Garrett <mjg59@srcf.ucam.org>
+Message-ID: <20151109211341.GA29829@srcf.ucam.org>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
  <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
  <563F4A78.21151.23C6852D@pageexec.freemail.hu>
@@ -10,36 +10,30 @@ References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
  <13041.1447095477@turing-police.cc.vt.edu>
  <20151109190224.GD20491@io.lakedaemon.net>
  <CAGagf4d4A8ZN2hVDDUFge78D_AZKFwkh6ZCV9faEZe=DO_fwKQ@mail.gmail.com>
+ <20151109210922.GF20491@io.lakedaemon.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGagf4d4A8ZN2hVDDUFge78D_AZKFwkh6ZCV9faEZe=DO_fwKQ@mail.gmail.com>
+In-Reply-To: <20151109210922.GF20491@io.lakedaemon.net>
 Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
  features
-To: Theodore Tso <tytso@google.com>
-Cc: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>
+To: kernel-hardening@lists.openwall.com
+Cc: Theodore Tso <tytso@google.com>, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 09, 2015 at 02:11:35PM -0500, Theodore Tso wrote:
-> On Mon, Nov 9, 2015 at 2:02 PM, Jason Cooper <
-> kernel-hardening@lakedaemon.net> wrote:
-> 
-> > /var/lib/misc/random-seed has served that role for years, I'm only
-> > advocating loading it earlier in the boot process.  It's *much* harder
-> > to guess the state of random-seed than the dtb or mac address(es)...
-> >
-> 
-> If the bootloader is willing to reach into the file system, which means (a)
-> having a minimal file system layer, like Grub does, and (b) can find the
-> block device where the file is found, that's a perfectly *fine*
-> implementation.    I'm not sure mobile handset vendors will be all that
-> psyched into either using or replicating all of Grub's functionality so it
-> could do that, though....
+On Mon, Nov 09, 2015 at 09:09:22PM +0000, Jason Cooper wrote:
 
-Well, That's why I referred to reading from /boot or from a flash
-partition.  Existing bootloaders in the field already have that
-capability.  That's how they load the kernel.
+> Well, That's why I referred to reading from /boot or from a flash
+> partition.  Existing bootloaders in the field already have that
+> capability.  That's how they load the kernel.
 
-thx,
+This doesn't really handle cases like network booting. Most SoCs have 
+some kind of RNG, recent x86 has hardware RNG, older x86 frequently has 
+an RNG in a TPM. Pulling an entropy seed from the filesystem is a 
+reasonable fallback, but we should definitely be thinking of it as a 
+fallback - someone with physical access to your system while it's turned 
+off may be able to infer the ASLR state for your next boot, for 
+instance.
 
-Jason.
+-- 
+Matthew Garrett | mjg59@srcf.ucam.org
