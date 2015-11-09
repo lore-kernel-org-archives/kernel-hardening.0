@@ -1,70 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 9 Nov 2015 18:28:32 +0000
+Date: Mon, 9 Nov 2015 18:33:12 +0000
 From: Jason Cooper <kernel-hardening@lakedaemon.net>
-Message-ID: <20151109182832.GB20491@io.lakedaemon.net>
+Message-ID: <20151109183312.GC20491@io.lakedaemon.net>
 References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
  <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
  <563F4A78.21151.23C6852D@pageexec.freemail.hu>
  <5640E0DD.6040107@labbott.name>
+ <20151109182832.GB20491@io.lakedaemon.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <5640E0DD.6040107@labbott.name>
+In-Reply-To: <20151109182832.GB20491@io.lakedaemon.net>
 Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
  features
 To: kernel-hardening@lists.openwall.com
 Cc: Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 09, 2015 at 10:07:25AM -0800, Laura Abbott wrote:
-> On 11/8/15 5:13 AM, PaX Team wrote:
-> >On 6 Nov 2015 at 15:30, Kees Cook wrote:
-> >>>  * latent_entropy: This plugin generates some entropy from program state
-> >>>     throughout the uptime of the kernel. It has small performance loss.
-> >>>     The plugin uses an attribute which can be
-> >>>     on a function (to extract entropy beyond init functions) or on a
-> >>>     variable (to initialize it with a random number generated at compile time)
-> >>
-> >>How large is the entropy extracted during early init? I bet a lot of
-> >>architectures would rejoice to have this available. (CCing Ted for
-> >>thoughts.)
-> >
-> >that's a good question nobody can answer unfortunately. thing is, this
-> >kind of instrumentation essentially builds a PRNG whose internal structure
-> >reflects the control flow of instrumented kernel functions, i.e., it's not
-> >something anyone can describe and analyze because of its size and dynamic
-> >nature (think loops with variable number of rounds, interrupts, etc).
-> >
-> >what one can do is measure the number of states the PRNG can end up in say
-> >right after boot and see how wide and uniform the distribution of states
-> >is. at the time i developed this plugin i ran a few tests on an allnoconfig
-> >amd64 kernel under qemu/kvm and even that environment produced a few bits
-> >of entropy (i.e., more than one state). however this kind of testing can
-> >scale only so far, e.g., to establish that say 30 bits of entropy can be
-> >generated this way by the time init is called, one would have to boot the
-> >kernel billions of times already...
-> >
-> 
-> I took a look at something closely related sometime ago[1] for
-> ARM DT based targets. The stack canary was always the same because
-> it was early enough no entropy was being added and there's no standard
-> RNG. This series proposed allowing entropy to be read out of the DT.
-> This still relied on reliable entropy being added to the DT somehow.
-> Ultimately, I never followed up and this still seems to be an issue.
+On Mon, Nov 09, 2015 at 06:28:32PM +0000, Jason Cooper wrote:
+> I had a proposal a while back (can't find atm, sorry) to have the
 
-I had a proposal a while back (can't find atm, sorry) to have the
-bootloader load the random-seed into RAM and hand the kernel an address
-and size.  The decompressor would then use some of it to init KASLR, and
-the rest would be fed into random.c as non-credit entropy during driver
-init.  -ETIME
+Found it:
 
-The benefit of this approach is that it would /not/ require a bootloader
-upgrade.  You set the seed address and size in the DT once, append it
-(legacy boards already in the field), and adjust the bootup scripts to
-read the extra file into RAM before jumping to the kernel.
-
-You may need to adjust userspace to write to a flash partition or
-/boot/random-seed, depending on how things are laid out.
+  https://marc.info/?l=linux-kernel&m=139223237824952&w=2
 
 thx,
 
