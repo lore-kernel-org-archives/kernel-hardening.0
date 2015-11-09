@@ -1,52 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 9 Nov 2015 17:48:31 +0000 (GMT)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <20151109180555.28c45c3ccaf2042dd7fefec4@gmail.com>
-Message-ID: <alpine.DEB.2.10.1511091747430.3745@hadrien>
-References: <1447018493-20631-1-git-send-email-Julia.Lawall@lip6.fr> <20151108221624.GP18797@mwanda> <alpine.DEB.2.10.1511082220500.2583@hadrien> <20151109054253.GQ18797@mwanda> <20151109134942.GB8264@mwanda> <alpine.DEB.2.10.1511091449560.3103@hadrien>
- <20151109180555.28c45c3ccaf2042dd7fefec4@gmail.com>
+References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
+ <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+ <563F4A78.21151.23C6852D@pageexec.freemail.hu>
+From: Laura Abbott <laura@labbott.name>
+Message-ID: <5640E0DD.6040107@labbott.name>
+Date: Mon, 9 Nov 2015 10:07:25 -0800
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [PATCH] video: constify geode ops
- structures
-To: Emese Revfy <re.emese@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, Julia Lawall <julia.lawall@lip6.fr>, Dan Carpenter <dan.carpenter@oracle.com>, Joe Perches <joe@perches.com>, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
+In-Reply-To: <563F4A78.21151.23C6852D@pageexec.freemail.hu>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
+ features
+To: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>
+Cc: Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 9 Nov 2015, Emese Revfy wrote:
+On 11/8/15 5:13 AM, PaX Team wrote:
+> On 6 Nov 2015 at 15:30, Kees Cook wrote:
+>>>   * latent_entropy: This plugin generates some entropy from program state
+>>>      throughout the uptime of the kernel. It has small performance loss.
+>>>      The plugin uses an attribute which can be
+>>>      on a function (to extract entropy beyond init functions) or on a
+>>>      variable (to initialize it with a random number generated at compile time)
+>>
+>> How large is the entropy extracted during early init? I bet a lot of
+>> architectures would rejoice to have this available. (CCing Ted for
+>> thoughts.)
+>
+> that's a good question nobody can answer unfortunately. thing is, this
+> kind of instrumentation essentially builds a PRNG whose internal structure
+> reflects the control flow of instrumented kernel functions, i.e., it's not
+> something anyone can describe and analyze because of its size and dynamic
+> nature (think loops with variable number of rounds, interrupts, etc).
+>
+> what one can do is measure the number of states the PRNG can end up in say
+> right after boot and see how wide and uniform the distribution of states
+> is. at the time i developed this plugin i ran a few tests on an allnoconfig
+> amd64 kernel under qemu/kvm and even that environment produced a few bits
+> of entropy (i.e., more than one state). however this kind of testing can
+> scale only so far, e.g., to establish that say 30 bits of entropy can be
+> generated this way by the time init is called, one would have to boot the
+> kernel billions of times already...
+>
 
-> On Mon, 9 Nov 2015 14:50:47 +0000 (GMT)
-> Julia Lawall <julia.lawall@lip6.fr> wrote:
-> > > Actually, it looks like Emese Revfy is going to merge the GCC plugin
-> > > constify stuff sooner rather than later so maybe adding all these consts
-> > > isn't going to be needed.
-> >
-> > Is there any advantage of const over the plugin?  The consts are easy to
-> > add.
->
-> Hi,
->
-> I think it's a very good advantage that the plugin constifies automatically
-> without regular maintenance (e.g., generate patches with coccinelle,
-> send patches to the maintainers every new kernel version). ;)
-> But if it doesn't convince you, I did constification by hand (with a coccinelle
-> script) some years ago.
-> There are too many types that can be const and it took too long to prepare and
-> get the maintainers to accept the patches.
-> And it never ends as there are always new types that can be const.
+I took a look at something closely related sometime ago[1] for
+ARM DT based targets. The stack canary was always the same because
+it was early enough no entropy was being added and there's no standard
+RNG. This series proposed allowing entropy to be read out of the DT.
+This still relied on reliable entropy being added to the DT somehow.
+Ultimately, I never followed up and this still seems to be an issue.
 
-What happens if some structures cannot be made const because there is a
-reassignment somewhere?  Is there any feedback about the problem?
+The out of tree solution which was never submitted was to make a call
+to the hwrng very early to seed the pool. This was very SoC specific
+though. At the time I wrote the patches, I didn't look to see what
+Pax/GrSec might have had to address the issue.
 
-julia
+Thanks,
+Laura
 
->
-> > Does the plugin help for structures that have non-function fields?
-> Yes, it does. See __do_const here:
-> http://www.openwall.com/lists/kernel-hardening/2015/11/06/11
-> or more about the constify plugin:
-> https://pax.grsecurity.net/docs/PaXTeam-H2HC13-PaX-gcc-plugins.pdf
->
-> --
-> Emese
->
+[1]http://thread.gmane.org/gmane.linux.kernel/1646202/focus=61628
