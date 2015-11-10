@@ -1,72 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1447154645.29239.8.camel@debian.org>
-From: Yves-Alexis Perez <corsac@debian.org>
-Date: Tue, 10 Nov 2015 12:24:05 +0100
-In-Reply-To: <20151110104747.GG25737@suse.de>
-References: 
-	<CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
-	 <563F4A78.21151.23C6852D@pageexec.freemail.hu>
-	 <5640E0DD.6040107@labbott.name> <20151109182832.GB20491@io.lakedaemon.net>
-	 <13041.1447095477@turing-police.cc.vt.edu>
-	 <20151109190224.GD20491@io.lakedaemon.net>
-	 <CAGagf4d4A8ZN2hVDDUFge78D_AZKFwkh6ZCV9faEZe=DO_fwKQ@mail.gmail.com>
-	 <20151109210922.GF20491@io.lakedaemon.net>
-	 <20151109211341.GA29829@srcf.ucam.org>
-	 <1447152151.29239.0.camel@debian.org> <20151110104747.GG25737@suse.de>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-DXsl/L+hrPxAWRxhLCvs"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
- features
-To: kernel-hardening@lists.openwall.com, Marcus Meissner <meissner@suse.de>
-Cc: Matthew Garrett <mjg59@srcf.ucam.org>, Theodore Tso <tytso@google.com>, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>
+Date: Tue, 10 Nov 2015 15:44:41 +0000 (GMT)
+From: Julia Lawall <julia.lawall@lip6.fr>
+In-Reply-To: <20151109054253.GQ18797@mwanda>
+Message-ID: <alpine.DEB.2.10.1511101543120.3146@hadrien>
+References: <1447018493-20631-1-git-send-email-Julia.Lawall@lip6.fr> <20151108221624.GP18797@mwanda> <alpine.DEB.2.10.1511082220500.2583@hadrien> <20151109054253.GQ18797@mwanda>
+MIME-Version: 1.0
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH] video: constify geode ops structures
+To: Dan Carpenter <dan.carpenter@oracle.com>
+Cc: Joe Perches <joe@perches.com>, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-DXsl/L+hrPxAWRxhLCvs
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
 
-On mar., 2015-11-10 at 11:47 +0100, Marcus Meissner wrote:
-> The kernel has infrastructure for this (feeding hardware random generator=
-s
-> into the random pool) these days.
->=20
-> e.g.
-> drivers/char/hw_random/tpm-rng.c
+On Mon, 9 Nov 2015, Dan Carpenter wrote:
 
-Thanks, I was missing those bits. Actually those are in (on v4.3, starting
-from drivers/char/hw_random/core.c#L483):
+> On Sun, Nov 08, 2015 at 10:24:49PM +0000, Julia Lawall wrote:
+> > On Mon, 9 Nov 2015, Dan Carpenter wrote:
+> >
+> > > Cool.  So, in grsec they use a GCC plugin to make these const
+> > > automatically since they only contain function pointers.  There about
+> > > 100 struct types marked as __no_const.  Kees would like to adopt the
+> > > grsec pluggin approach I expect.  Do you have an idea how many structs
+> > > only contain function pointers or how many consts we would have to add
+> > > to get the same effect without the plugin?
+> >
+> > My list has 373 type names.  In the list there are counts for good
+> > (already const) and bad (not const).  The sum of the bad values is 2467.
+> > The list is below.
+> >
+> > julia
+>
+> Fantastic!  Thanks.  We could autogenerate the list of type names and
+> make checkpatch.pl complain if we declared those types as non const.
+>
+> I ran this command to find which functions grsec marks as __no_const.
+>
+> egrep '(^ struct |^@@|__no_const;)' grsecurity-3.1-4.2.5-201511021814.patch | grep __no_const -B1 | grep -v __no_const | grep -v '^--' | cut -d @ -f 5-  | cut -b 9- | cut -d ' ' -f 1
+>
+> There are 60 structs declared as __no_const.  For some structs they
+> declare a no_const version and use it as needed.  Like this:
+> typedef struct net_device_ops __no_const net_device_ops_no_const;
+>
+> grep __no_const grsecurity-3.1-4.2.5-201511021814.patch | grep typedef | cut -d ' ' -f 3
+>
+> There are 32 of those.
+>
+> Then I compared to see if their structs were on your list.  For some
+> reason there quite a few one their list which are not on yours.  Out
+> of the first 10 about half weren't on your list.  cpu_cache_fns,
+> outer_cache_fns, psci_operations, smp_operations, omap_hwmod_soc_ops,
+> smp_ops_t.  These are mostly different arches?
 
-hwrng_register()
-	add_early_randomness()
-		rng_get_data()
-		add_device_randomness()
 
-but as far as I can tell it only gets called once when registering the hwrn=
-g
-driver, and only if the RNG driver doesn't define an init function (tpm-rng
-doesn't). But that's still better than no randomness at all.
+I looked at a few of these (outer_cache_fns, psci_operations,
+omap_hwmod_soc_ops), and they aren't const to my understanding of const.
+Theer is no initialization at the point of declaring the structure.
+Instead, the fields are initialized in the code,
 
-Regards,
---=20
-Yves-Alexis
+julia
 
-
---=-DXsl/L+hrPxAWRxhLCvs
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJWQdPWAAoJEG3bU/KmdcClHhcH/1S+lFa1MT8MxLkW/8dOPEbp
-Hf210OctyinD47y46aQdtLJdN4JblixA6eQi2Oaiqfh3eXDanWhAOaJXufvVR4NA
-wH8fBNwLYlaYGXegh9dGOW3ySdxjPkWbA63d23e7mq+6l9FZjn9JSKlNmL8mbPIV
-ipgZtdUNIxVIWW8FKos7thJaW+MWSZ2WN7s18mqpkOuSNyQX/qqBS4HVG1oZAkOE
-Tg05GWPaELtI5XoFALq5ZgUv6zNWYYzbKnTfnBRuXDrtjJ5HPNyuFKEF+tU30Imb
-79digt6PggoX3RT2ML9UrQ6nCVgnwSrolTfC+rKfPptXTce3Mz0MY+tGv0JAvV0=
-=Rx+s
------END PGP SIGNATURE-----
-
---=-DXsl/L+hrPxAWRxhLCvs--
+> Also bit_table has in int has well as a function pointers but it is on
+> their list.  I'm not sure why.  Maybe they are marking structs const
+> that I don't know about.
+>
+> The other trick that they do is they define structs as __do_const if
+> they want them to be const by default, which is pretty neat.  This feels
+> like it should be a standard GCC feature.  In the meantime we could
+> mark things as __do_const and print a sparse warning if it was declared
+> as not const.
+>
+> I have attached the list of __no_const structs.
+>
+> regards,
+> dan carpenter
+>
+>
+>
