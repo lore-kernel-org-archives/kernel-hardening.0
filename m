@@ -1,79 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 10 Nov 2015 15:44:41 +0000 (GMT)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <20151109054253.GQ18797@mwanda>
-Message-ID: <alpine.DEB.2.10.1511101543120.3146@hadrien>
-References: <1447018493-20631-1-git-send-email-Julia.Lawall@lip6.fr> <20151108221624.GP18797@mwanda> <alpine.DEB.2.10.1511082220500.2583@hadrien> <20151109054253.GQ18797@mwanda>
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Wed, 11 Nov 2015 04:41:28 +0100
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH] video: constify geode ops structures
-To: Dan Carpenter <dan.carpenter@oracle.com>
-Cc: Joe Perches <joe@perches.com>, kernel-janitors@vger.kernel.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Message-ID: <5642B8E8.684.312DEE18@pageexec.freemail.hu>
+In-reply-to: <5640E0DD.6040107@labbott.name>
+References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>, <563F4A78.21151.23C6852D@pageexec.freemail.hu>, <5640E0DD.6040107@labbott.name>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection features
+To: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <laura@labbott.name>
+Cc: Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 9 Nov 2015 at 10:07, Laura Abbott wrote:
 
+> I took a look at something closely related sometime ago[1] for
+> ARM DT based targets. The stack canary was always the same because
+> it was early enough no entropy was being added and there's no standard
+> RNG. This series proposed allowing entropy to be read out of the DT.
+> This still relied on reliable entropy being added to the DT somehow.
+> Ultimately, I never followed up and this still seems to be an issue.
+> 
+> The out of tree solution which was never submitted was to make a call
+> to the hwrng very early to seed the pool. This was very SoC specific
+> though. At the time I wrote the patches, I didn't look to see what
+> Pax/GrSec might have had to address the issue.
 
-On Mon, 9 Nov 2015, Dan Carpenter wrote:
+to extract entropy via the plugin by the time start_kernel is called
+you'd have to use the plugin for code that runs beforehand, i.e., the
+firmware, boot loader, etc and also find a way to pass this entropy
+to the kernel somehow. another feature of the plugin is to initialize
+global variables with compile-time generated random numbers, but if
+the kernel images are available to an attacker then it's of no use
+of course. last but not least PaX also feeds hashes of every page into
+the random pool as it gets taken over by the kernel allocator, this
+could be run earlier to extract whatever entropy is left in RAM.
 
-> On Sun, Nov 08, 2015 at 10:24:49PM +0000, Julia Lawall wrote:
-> > On Mon, 9 Nov 2015, Dan Carpenter wrote:
-> >
-> > > Cool.  So, in grsec they use a GCC plugin to make these const
-> > > automatically since they only contain function pointers.  There about
-> > > 100 struct types marked as __no_const.  Kees would like to adopt the
-> > > grsec pluggin approach I expect.  Do you have an idea how many structs
-> > > only contain function pointers or how many consts we would have to add
-> > > to get the same effect without the plugin?
-> >
-> > My list has 373 type names.  In the list there are counts for good
-> > (already const) and bad (not const).  The sum of the bad values is 2467.
-> > The list is below.
-> >
-> > julia
->
-> Fantastic!  Thanks.  We could autogenerate the list of type names and
-> make checkpatch.pl complain if we declared those types as non const.
->
-> I ran this command to find which functions grsec marks as __no_const.
->
-> egrep '(^ struct |^@@|__no_const;)' grsecurity-3.1-4.2.5-201511021814.patch | grep __no_const -B1 | grep -v __no_const | grep -v '^--' | cut -d @ -f 5-  | cut -b 9- | cut -d ' ' -f 1
->
-> There are 60 structs declared as __no_const.  For some structs they
-> declare a no_const version and use it as needed.  Like this:
-> typedef struct net_device_ops __no_const net_device_ops_no_const;
->
-> grep __no_const grsecurity-3.1-4.2.5-201511021814.patch | grep typedef | cut -d ' ' -f 3
->
-> There are 32 of those.
->
-> Then I compared to see if their structs were on your list.  For some
-> reason there quite a few one their list which are not on yours.  Out
-> of the first 10 about half weren't on your list.  cpu_cache_fns,
-> outer_cache_fns, psci_operations, smp_operations, omap_hwmod_soc_ops,
-> smp_ops_t.  These are mostly different arches?
-
-
-I looked at a few of these (outer_cache_fns, psci_operations,
-omap_hwmod_soc_ops), and they aren't const to my understanding of const.
-Theer is no initialization at the point of declaring the structure.
-Instead, the fields are initialized in the code,
-
-julia
-
-> Also bit_table has in int has well as a function pointers but it is on
-> their list.  I'm not sure why.  Maybe they are marking structs const
-> that I don't know about.
->
-> The other trick that they do is they define structs as __do_const if
-> they want them to be const by default, which is pretty neat.  This feels
-> like it should be a standard GCC feature.  In the meantime we could
-> mark things as __do_const and print a sparse warning if it was declared
-> as not const.
->
-> I have attached the list of __no_const structs.
->
-> regards,
-> dan carpenter
->
->
->
+cheers,
+ PaX Team
