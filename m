@@ -1,41 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Wed, 11 Nov 2015 04:41:28 +0100
+Sender: Paolo Bonzini <paolo.bonzini@gmail.com>
+References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
+ <CAGXu5jK2boq=rSwrdyqyq=B_kZJR2pUQe99+tPBwK+pKEx0X+w@mail.gmail.com>
+ <20151107223437.891207864301c26862ae15da@gmail.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Message-ID: <5643436F.3060909@redhat.com>
+Date: Wed, 11 Nov 2015 14:32:31 +0100
 MIME-Version: 1.0
-Message-ID: <5642B8E8.684.312DEE18@pageexec.freemail.hu>
-In-reply-to: <5640E0DD.6040107@labbott.name>
-References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>, <563F4A78.21151.23C6852D@pageexec.freemail.hu>, <5640E0DD.6040107@labbott.name>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection features
-To: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>, Laura Abbott <laura@labbott.name>
-Cc: Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
+In-Reply-To: <20151107223437.891207864301c26862ae15da@gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: Proposal for kernel self protection features
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 Nov 2015 at 10:07, Laura Abbott wrote:
 
-> I took a look at something closely related sometime ago[1] for
-> ARM DT based targets. The stack canary was always the same because
-> it was early enough no entropy was being added and there's no standard
-> RNG. This series proposed allowing entropy to be read out of the DT.
-> This still relied on reliable entropy being added to the DT somehow.
-> Ultimately, I never followed up and this still seems to be an issue.
+
+On 07/11/2015 22:34, Emese Revfy wrote:
+>>>        * gcc intentional overflow: gcc computes some expressions by overflow
+>>>           when it optimizes. Sadly it is doing this in the front end where
+>>>           there is no plugin support. Most of these false positives I handle
+>>>           from the plugin or sometimes I patch the kernel source code.
+>>>           There are some unsolved issues.
+>>
+>> Has there been any discussion with gcc folks about this problem?
 > 
-> The out of tree solution which was never submitted was to make a call
-> to the hwrng very early to seed the pool. This was very SoC specific
-> though. At the time I wrote the patches, I didn't look to see what
-> Pax/GrSec might have had to address the issue.
+> I never tried it. PaXTeam has some open tickets
+> (e.g., https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61311) for a long time so
+> because of it I haven't any courage.
 
-to extract entropy via the plugin by the time start_kernel is called
-you'd have to use the plugin for code that runs beforehand, i.e., the
-firmware, boot loader, etc and also find a way to pass this entropy
-to the kernel somehow. another feature of the plugin is to initialize
-global variables with compile-time generated random numbers, but if
-the kernel images are available to an attacker then it's of no use
-of course. last but not least PaX also feeds hashes of every page into
-the random pool as it gets taken over by the kernel allocator, this
-could be run earlier to extract whatever entropy is left in RAM.
+I'm not sure I still count as a gcc guy, having averaged at most 1 patch
+a year for some time now.  However, I surely would like to know more
+about it, and perhaps can look into fixing some of the easier issues.
+Do open tickets and CC me (I'm bonzini@gnu.org on the GCC tracker).
 
-cheers,
- PaX Team
+Paolo
