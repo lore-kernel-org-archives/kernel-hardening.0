@@ -1,30 +1,119 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 13 Nov 2015 03:08:53 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20151113030853.7b1e669591fc4e08e42c76cd@gmail.com>
-In-Reply-To: <564487E2.7090603@redhat.com>
-References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
-	<20151107223437.891207864301c26862ae15da@gmail.com>
-	<5643436F.3060909@redhat.com>
-	<56448481.5348.383139DB@pageexec.freemail.hu>
-	<564487E2.7090603@redhat.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: Proposal for kernel self protection
- features
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8;
+ format=flowed
+Content-Transfer-Encoding: 8bit
+Date: Fri, 13 Nov 2015 09:04:08 +0100
+From: HacKurx <hackurx@gmail.com>
+In-Reply-To: <29498.1447107624@turing-police.cc.vt.edu>
+References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
+ <n1iirh$q7o$1@ger.gmane.org>
+ <CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
+ <n1khkt$lc7$1@ger.gmane.org> <87h9kvze0o.fsf@rasmusvillemoes.dk>
+ <20151109103315.GB19735@chrystal.uk.oracle.com>
+ <87bnb3ou1c.fsf@rasmusvillemoes.dk>
+ <CAGXu5jLST1eoNU3YF-kLnTOHcq6iyD8YbS=oGr+3p2eFsz-X=A@mail.gmail.com>
+ <c3c5f9857a782b1d4405272f08ce5b3d@opensec.fr>
+ <29498.1447107624@turing-police.cc.vt.edu>
+Message-ID: <d5b6cf123db60902d480129396d0a8fb@opensec.fr>
+Subject: Re: [kernel-hardening] Binary blobs
 To: kernel-hardening@lists.openwall.com
-Cc: Paolo Bonzini <pbonzini@redhat.com>, pageexec@freemail.hu, Kees Cook <keescook@chromium.org>, Brad Spengler <spender@grsecurity.net>, Greg KH <gregkh@linuxfoundation.org>, Theodore Tso <tytso@google.com>, Josh Triplett <josh@joshtriplett.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
- 
-> Do you have any pointers on the overflows that can be introduced by the
-> front-end?  I guess I can also look for hints in the plugin source code.
+Le 2015-11-09 23:20, Valdis.Kletnieks@vt.edu a écrit :
+> On Mon, 09 Nov 2015 22:59:31 +0100, HacKurx said:
+>> The binary blobs are a potential for undetectable or irreparable
+>> security flaws (Andrews Jeremy "Interview: Theo de Raadt", 
+>> KernelTrap).
+>> 
+>> What is your point of view? Linux-libre kernel is the only reliable
+>> basis?
+> 
+> Closed source is by definition not easily examined for security issues 
+> (though
+> once you get to monsters like LibreOffice or Firefox, even open source 
+> code
+> is difficult to audit).
+> 
+> The problem is that at the current time, not all software is easily 
+> opened. For
+> example, the single biggest reason (among several) that NVidia has a 
+> binary
+> blob driver is that (simplifying *drastically* here) when SGI's 
+> graphics
+> division imploded, NVidia got all the engineers - but Microsoft snarfed 
+> up a
+> bunch of patents connected to OpenGL.  So NVidia had no realistic 
+> choice but to
+> license the intellectual property from Microsoft.
+> 
+> So out in the real world, you have to look at your threat model, and 
+> decide
+> how paranoid you are.  (Personally, I'd be more worried about the 
+> open-sourced
+> Firefox code than I would the NVidia binary blob.  The former has got a 
+> *huge*
+> attack surface compared to the latter....)
 
-Hi,
+Yes indeed. But for your information you can use Firefox with MPROTECT 
+and all hardened options for GCC.
+http://hardenedgentoo.blogspot.fr/2012/02/firefox-1001-mprotect-strikes-again.html
 
-You can find most of them in fold-const.c. Here is an example:
-https://gcc.gnu.org/ml/gcc-help/2011-10/msg00136.html
+Disable in firefox: methodjit, tracejit & ion. The performance remains 
+very good :)
+
+Le 2015-11-10 00:33, Kees Cook a écrit :
+> On Mon, Nov 9, 2015 at 2:20 PM,  <Valdis.Kletnieks@vt.edu> wrote:
+>> On Mon, 09 Nov 2015 22:59:31 +0100, HacKurx said:
+>>> The binary blobs are a potential for undetectable or irreparable
+>>> security flaws (Andrews Jeremy "Interview: Theo de Raadt", 
+>>> KernelTrap).
+>>> 
+>>> What is your point of view? Linux-libre kernel is the only reliable
+>>> basis?
+>> 
+>> Closed source is by definition not easily examined for security issues 
+>> (though
+>> once you get to monsters like LibreOffice or Firefox, even open source 
+>> code
+>> is difficult to audit).
+>> 
+>> The problem is that at the current time, not all software is easily 
+>> opened. For
+>> example, the single biggest reason (among several) that NVidia has a 
+>> binary
+>> blob driver is that (simplifying *drastically* here) when SGI's 
+>> graphics
+>> division imploded, NVidia got all the engineers - but Microsoft 
+>> snarfed up a
+>> bunch of patents connected to OpenGL.  So NVidia had no realistic 
+>> choice but to
+>> license the intellectual property from Microsoft.
+>> 
+>> So out in the real world, you have to look at your threat model, and 
+>> decide
+>> how paranoid you are.  (Personally, I'd be more worried about the 
+>> open-sourced
+>> Firefox code than I would the NVidia binary blob.  The former has got 
+>> a *huge*
+>> attack surface compared to the latter....)
+> 
+> I think the first step is making sure you know _what_ blobs you're
+> loading, and to have a known list of them. (There are efforts started
+> with signed firmware[1] validation or the loadpin[2] LSM -- though
+> neither yet deal with userspace loaded blobs like graphics drivers,
+> SSD firmware, etc). This would block having blobs be manipulated
+> maliciously before they're loaded. After that mechanism is in place,
+> then it'd be useful to reverse engineer them to find security flaws.
+> 
+> -Kees
+> 
+> [1]
+> http://lists.linuxfoundation.org/pipermail/ksummit-discuss/2015-August/002238.html
+> [2]
+> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=lsm/loadpin
+
+Okay, thanks for the clarifications
 
 -- 
-Emese
+Best regards,
