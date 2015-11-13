@@ -1,11 +1,4 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8;
- format=flowed
-Content-Transfer-Encoding: 8bit
-Date: Fri, 13 Nov 2015 09:04:08 +0100
-From: HacKurx <hackurx@gmail.com>
-In-Reply-To: <29498.1447107624@turing-police.cc.vt.edu>
 References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
  <n1iirh$q7o$1@ger.gmane.org>
  <CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
@@ -15,105 +8,53 @@ References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
  <CAGXu5jLST1eoNU3YF-kLnTOHcq6iyD8YbS=oGr+3p2eFsz-X=A@mail.gmail.com>
  <c3c5f9857a782b1d4405272f08ce5b3d@opensec.fr>
  <29498.1447107624@turing-police.cc.vt.edu>
-Message-ID: <d5b6cf123db60902d480129396d0a8fb@opensec.fr>
+ <d5b6cf123db60902d480129396d0a8fb@opensec.fr>
+From: Daniel Micay <danielmicay@gmail.com>
+Message-ID: <56459A43.3020400@gmail.com>
+Date: Fri, 13 Nov 2015 03:07:31 -0500
+MIME-Version: 1.0
+In-Reply-To: <d5b6cf123db60902d480129396d0a8fb@opensec.fr>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="GpBL3FNGXCO88sxowg2sIafvWCaiNXNVo"
 Subject: Re: [kernel-hardening] Binary blobs
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Le 2015-11-09 23:20, Valdis.Kletnieks@vt.edu a écrit :
-> On Mon, 09 Nov 2015 22:59:31 +0100, HacKurx said:
->> The binary blobs are a potential for undetectable or irreparable
->> security flaws (Andrews Jeremy "Interview: Theo de Raadt", 
->> KernelTrap).
->> 
->> What is your point of view? Linux-libre kernel is the only reliable
->> basis?
-> 
-> Closed source is by definition not easily examined for security issues 
-> (though
-> once you get to monsters like LibreOffice or Firefox, even open source 
-> code
-> is difficult to audit).
-> 
-> The problem is that at the current time, not all software is easily 
-> opened. For
-> example, the single biggest reason (among several) that NVidia has a 
-> binary
-> blob driver is that (simplifying *drastically* here) when SGI's 
-> graphics
-> division imploded, NVidia got all the engineers - but Microsoft snarfed 
-> up a
-> bunch of patents connected to OpenGL.  So NVidia had no realistic 
-> choice but to
-> license the intellectual property from Microsoft.
-> 
-> So out in the real world, you have to look at your threat model, and 
-> decide
-> how paranoid you are.  (Personally, I'd be more worried about the 
-> open-sourced
-> Firefox code than I would the NVidia binary blob.  The former has got a 
-> *huge*
-> attack surface compared to the latter....)
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--GpBL3FNGXCO88sxowg2sIafvWCaiNXNVo
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
-Yes indeed. But for your information you can use Firefox with MPROTECT 
-and all hardened options for GCC.
-http://hardenedgentoo.blogspot.fr/2012/02/firefox-1001-mprotect-strikes-again.html
+> all hardened options for GCC.
 
-Disable in firefox: methodjit, tracejit & ion. The performance remains 
-very good :)
+Well, you probably can't get away with -fsanitize=3Dundefined
+-fsanitize-undefined-trap-on-error yet (object-size and
+signed-integer-overflow checks specifically). I know what you mean
+though :).
 
-Le 2015-11-10 00:33, Kees Cook a écrit :
-> On Mon, Nov 9, 2015 at 2:20 PM,  <Valdis.Kletnieks@vt.edu> wrote:
->> On Mon, 09 Nov 2015 22:59:31 +0100, HacKurx said:
->>> The binary blobs are a potential for undetectable or irreparable
->>> security flaws (Andrews Jeremy "Interview: Theo de Raadt", 
->>> KernelTrap).
->>> 
->>> What is your point of view? Linux-libre kernel is the only reliable
->>> basis?
->> 
->> Closed source is by definition not easily examined for security issues 
->> (though
->> once you get to monsters like LibreOffice or Firefox, even open source 
->> code
->> is difficult to audit).
->> 
->> The problem is that at the current time, not all software is easily 
->> opened. For
->> example, the single biggest reason (among several) that NVidia has a 
->> binary
->> blob driver is that (simplifying *drastically* here) when SGI's 
->> graphics
->> division imploded, NVidia got all the engineers - but Microsoft 
->> snarfed up a
->> bunch of patents connected to OpenGL.  So NVidia had no realistic 
->> choice but to
->> license the intellectual property from Microsoft.
->> 
->> So out in the real world, you have to look at your threat model, and 
->> decide
->> how paranoid you are.  (Personally, I'd be more worried about the 
->> open-sourced
->> Firefox code than I would the NVidia binary blob.  The former has got 
->> a *huge*
->> attack surface compared to the latter....)
-> 
-> I think the first step is making sure you know _what_ blobs you're
-> loading, and to have a known list of them. (There are efforts started
-> with signed firmware[1] validation or the loadpin[2] LSM -- though
-> neither yet deal with userspace loaded blobs like graphics drivers,
-> SSD firmware, etc). This would block having blobs be manipulated
-> maliciously before they're loaded. After that mechanism is in place,
-> then it'd be useful to reverse engineer them to find security flaws.
-> 
-> -Kees
-> 
-> [1]
-> http://lists.linuxfoundation.org/pipermail/ksummit-discuss/2015-August/002238.html
-> [2]
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=lsm/loadpin
 
-Okay, thanks for the clarifications
+--GpBL3FNGXCO88sxowg2sIafvWCaiNXNVo
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
 
--- 
-Best regards,
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJWRZpDAAoJEPnnEuWa9fIq5EgQAIaVWcWz1BG467riGFGI4D3V
+57VzflOmQNfiSHgtIVFXK1FLyrvQ9c772FnBkK1BLoR82Yzy3DLwwghbfto/FldT
+Ac7E9I4yB/h06gN5HkIFqRJjUO5jHtoSd72rC8BFoEjNnfgcXboPOKq61kp0AZ0g
+iYuAAvSdo1fmYzYIQld1XCFx4UYx7em7RGbyqzTIhJaktkn7YLRax6bIU/NPvyBb
+tapzlWvI1J9mEY+YpmVwOREs85gMizWhB/sVId86onwSP1KfPA74ToNmnRi75y4V
+58ocE2kL8ygXwo8P2sVNr2W0ZsWlgsnzBKMQ/pKbJYhWPdzoGNa1n4ZACKjAAMh+
+ewCuMVzh924jZDZP1RZfbLKTP7gflaK+tpSnFzaAEpoIt1d9CZWJjxzJkJsH6Vfg
+VhIXI3wxffTuNfRIrmG2OYLKnKU5zY38QprBuOF4tM6f1Pe6/O+G5/52YG2pMZy0
+pvPv3qRGMg5uf1VW/+war74zcCL1pA5VXjDPJB3NSEZv01y+GDly9QQqRx+Jn22l
+3uCwI7fqd7YMBvHYRDyeEfDZX+RBxYdn/DrrOSyTSkZaIEKzV+gI9E3KaqgQ98L3
+g9Xw+kzMtehYBESLHjBH+aQzfOmbpCVHZOT0RFUUJQIdE7H5GWoschoXcJ//Wo+E
+KPzPNQqKuPBFAdFBdZVr
+=CP6b
+-----END PGP SIGNATURE-----
+
+--GpBL3FNGXCO88sxowg2sIafvWCaiNXNVo--
