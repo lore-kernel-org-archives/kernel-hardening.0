@@ -1,43 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8;
- format=flowed
-Content-Transfer-Encoding: 8bit
-Date: Fri, 13 Nov 2015 09:55:35 +0100
-From: HacKurx <hackurx@gmail.com>
-In-Reply-To: <56459A43.3020400@gmail.com>
-References: <CAGXu5jJ3FgxXK9WuOLRwnEq=y4dS+CTm+WQBxWe3sYZ7e9p6Gg@mail.gmail.com>
- <n1iirh$q7o$1@ger.gmane.org>
- <CAGXu5j+ponF+a3aoCnLqEVfBy545BsxT4w=8KGikNCb_24ZgyQ@mail.gmail.com>
- <n1khkt$lc7$1@ger.gmane.org> <87h9kvze0o.fsf@rasmusvillemoes.dk>
- <20151109103315.GB19735@chrystal.uk.oracle.com>
- <87bnb3ou1c.fsf@rasmusvillemoes.dk>
- <CAGXu5jLST1eoNU3YF-kLnTOHcq6iyD8YbS=oGr+3p2eFsz-X=A@mail.gmail.com>
- <c3c5f9857a782b1d4405272f08ce5b3d@opensec.fr>
- <29498.1447107624@turing-police.cc.vt.edu>
- <d5b6cf123db60902d480129396d0a8fb@opensec.fr> <56459A43.3020400@gmail.com>
-Message-ID: <4f67a4d7a81416aab522503b67ca3107@opensec.fr>
-Subject: Re: [kernel-hardening] Binary blobs
+Date: Fri, 13 Nov 2015 10:43:23 -0500
+Message-ID: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
+From: west suhanic <west.suhanic@gmail.com>
+Content-Type: multipart/alternative; boundary=001a113f1a3c6fa56705246deb90
+Subject: Re: [kernel-hardening]
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Le 2015-11-13 09:07, Daniel Micay a écrit :
->> all hardened options for GCC.
-> 
-> Well, you probably can't get away with -fsanitize=undefined
-> -fsanitize-undefined-trap-on-error yet (object-size and
-> signed-integer-overflow checks specifically). I know what you mean
-> though :).
+--001a113f1a3c6fa56705246deb90
+Content-Type: text/plain; charset=UTF-8
 
-Yes you are right, it is easy to have a warning but not a correction.
+Hello All:
 
-But with mprotect and:
-CFLAGS="-fstack-protector --param=ssp-buffer-size=4 -Wformat 
--Wformat-security -Werror=format-security"
-CPPFLAGS="-D_FORTIFY_SOURCE=2"
-LDFLAGS="-Wl,-z,relro"
+I am a hardened gentoo user. How can we get the grsecurity code into the
+kernel?
 
-It's already better than the official release :D
+regards,
 
--- 
-Best regards,
+West Suhanic
+
+--001a113f1a3c6fa56705246deb90
+Content-Type: text/html; charset=UTF-8
+
+<div dir="ltr">Hello All:<div><br></div><div>I am a hardened gentoo user. How can we get the grsecurity code into the kernel?</div><div><br></div><div>regards,</div><div><br></div><div>West Suhanic</div></div>
+
+--001a113f1a3c6fa56705246deb90--
