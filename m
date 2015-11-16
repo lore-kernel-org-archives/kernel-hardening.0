@@ -1,59 +1,78 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
- <CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
- <56496AB0.5070905@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Message-ID: <56496D65.8030903@gmail.com>
-Date: Mon, 16 Nov 2015 00:45:09 -0500
 MIME-Version: 1.0
-In-Reply-To: <56496AB0.5070905@gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="AHfr7MMSgnu7JrdjBQhu72RNKNat5P3Jn"
+In-Reply-To: <56496D65.8030903@gmail.com>
+References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
+	<CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
+	<56496AB0.5070905@gmail.com>
+	<56496D65.8030903@gmail.com>
+Date: Mon, 16 Nov 2015 01:38:55 -0500
+Message-ID: <CAEXv5_g-VJJweZKNuw5ozMfiVxMrfhw4biEkSu4A29-uuEmD6A@mail.gmail.com>
+From: David Windsor <dave@0x4141.net>
+Content-Type: multipart/alternative; boundary=001a1141c588ccb8450524a2a952
 Subject: Re: [kernel-hardening]
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---AHfr7MMSgnu7JrdjBQhu72RNKNat5P3Jn
-Content-Type: text/plain; charset=utf-8
+--001a1141c588ccb8450524a2a952
+Content-Type: text/plain; charset=UTF-8
+
+I'm currently in the process of preparing my earlier PAX_REFCOUNT patch set
+for resubmission, and I tend to agree with you - I'm not very hopeful of
+Linus, et al accepting them.  But, we will try again.
+
+With respect to the issue of having a refcount_t type, PAX_REFCOUNT adds
+overflow protection to the already existing atomic_t type, and creates a
+new type, atomic_unchecked_t, for non-reference-counter types (i.e.
+statistical counters).
+
+On Mon, Nov 16, 2015 at 12:45 AM, Daniel Micay <danielmicay@gmail.com>
+wrote:
+
+> > I really can't see Linus and others being okay with any GCC
+> > plugins with alterations to the semantics of C rather than just codegen
+> > like the KERNEXEC plugin.
+>
+> Oh and REFCOUNT is basically the same situation. I can't see any
+> possibility of that landing without switching to having a refcount_t
+> type and having separate functions for working with it, with a
+> configuration option like DEBUG_REFCOUNT to flip on overflow checks.
+> It's a whole bunch of busy-work and since it will touch so much code it
+> will run into the same problems that the previous attempts to upstream
+> constification did.
+>
+>
+
+--001a1141c588ccb8450524a2a952
+Content-Type: text/html; charset=UTF-8
 Content-Transfer-Encoding: quoted-printable
 
-> I really can't see Linus and others being okay with any GCC
-> plugins with alterations to the semantics of C rather than just codegen=
+<div dir=3D"ltr">I&#39;m currently in the process of preparing my earlier P=
+AX_REFCOUNT patch set for resubmission, and I tend to agree with you - I&#3=
+9;m not very hopeful of Linus, et al accepting them.=C2=A0 But, we will try=
+ again.<div><br></div><div>With respect to the issue of having a refcount_t=
+ type, PAX_REFCOUNT adds overflow protection to the already existing atomic=
+_t type, and creates a new type, atomic_unchecked_t, for non-reference-coun=
+ter types (i.e. statistical counters). =C2=A0</div></div><div class=3D"gmai=
+l_extra"><br><div class=3D"gmail_quote">On Mon, Nov 16, 2015 at 12:45 AM, D=
+aniel Micay <span dir=3D"ltr">&lt;<a href=3D"mailto:danielmicay@gmail.com" =
+target=3D"_blank">danielmicay@gmail.com</a>&gt;</span> wrote:<br><blockquot=
+e class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc sol=
+id;padding-left:1ex"><span class=3D"">&gt; I really can&#39;t see Linus and=
+ others being okay with any GCC<br>
+&gt; plugins with alterations to the semantics of C rather than just codege=
+n<br>
+&gt; like the KERNEXEC plugin.<br>
+<br>
+</span>Oh and REFCOUNT is basically the same situation. I can&#39;t see any=
+<br>
+possibility of that landing without switching to having a refcount_t<br>
+type and having separate functions for working with it, with a<br>
+configuration option like DEBUG_REFCOUNT to flip on overflow checks.<br>
+It&#39;s a whole bunch of busy-work and since it will touch so much code it=
+<br>
+will run into the same problems that the previous attempts to upstream<br>
+constification did.<br>
+<br>
+</blockquote></div><br></div>
 
-> like the KERNEXEC plugin.
-
-Oh and REFCOUNT is basically the same situation. I can't see any
-possibility of that landing without switching to having a refcount_t
-type and having separate functions for working with it, with a
-configuration option like DEBUG_REFCOUNT to flip on overflow checks.
-It's a whole bunch of busy-work and since it will touch so much code it
-will run into the same problems that the previous attempts to upstream
-constification did.
-
-
---AHfr7MMSgnu7JrdjBQhu72RNKNat5P3Jn
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCAAGBQJWSW1lAAoJEPnnEuWa9fIqZB4P/jS+w2zLLeMPLeDNDBo8FAV3
-NvbMRrjOm1gLVmj2PPUJj9l9N8O5kaSUCmvZ5HNNEhWl98CnhP9iedOCUukCB+x/
-93owCEc0n7NTpvETxq9jLzC+QOsKbMmpOX6HLsEeH7HZIh6X8R2tp3N3mu772NSr
-xXv1X5JdpSrCXiWny6J0DG+ShXbkmfAbwXXY2t3yu+Xr4PFyzN5i0nnu390L9wCi
-LnyiPwcUiM5HWwZ7E3iFmgCPwUUvv2wJJMyLlfsF85/m8knZhV43zX1VcrrLXAnZ
-/9k4Q4QwYWdMC/Yq4mGuIvyYssC4BaWWoeoSqfsGAeXWdKG0DfNw7I+8i+Umy0uH
-uun6tAQhGPpARhfCX//eMhG4lVHknOkFQerfjf/RxU8q+M7irhPKmJBfRJKkFpaS
-qBow4T32rSk4+/gWIz5sZ5Z5tDPk4WdGZtM77K8+B+y2gDRJdBglZO5COo6vpAJQ
-OzaHRMlcMZ986+l3fmAAaNF4RAECpEQf0teHPUl+MRQR048pK4I6YoFMlAsmowYj
-tdvJTi1Q4+UcUFTOTZ4D9mQxcJ7S0f9mUGepFFTTFxlNotezScXM+PxRT8qtMH9O
-WNCULuvsJ8A95XqQK6j03uPLQXLpycjbF8CgquvFXYuDnCpBnEGea+AAnYLo19Se
-HLKhkBy1wstv0NXhiI9E
-=3xF0
------END PGP SIGNATURE-----
-
---AHfr7MMSgnu7JrdjBQhu72RNKNat5P3Jn--
+--001a1141c588ccb8450524a2a952--
