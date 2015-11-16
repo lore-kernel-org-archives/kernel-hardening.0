@@ -1,78 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <56496D65.8030903@gmail.com>
+In-Reply-To: <56496AB0.5070905@gmail.com>
 References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
 	<CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
 	<56496AB0.5070905@gmail.com>
-	<56496D65.8030903@gmail.com>
-Date: Mon, 16 Nov 2015 01:38:55 -0500
-Message-ID: <CAEXv5_g-VJJweZKNuw5ozMfiVxMrfhw4biEkSu4A29-uuEmD6A@mail.gmail.com>
-From: David Windsor <dave@0x4141.net>
-Content-Type: multipart/alternative; boundary=001a1141c588ccb8450524a2a952
+Date: Mon, 16 Nov 2015 13:13:48 +0100
+Message-ID: <CAFLxGvyUdURf8TkVOmzG0wraoGRUtLJH1+KsZUi8TJ-a4D9n4A@mail.gmail.com>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening]
-To: kernel-hardening@lists.openwall.com
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a1141c588ccb8450524a2a952
-Content-Type: text/plain; charset=UTF-8
-
-I'm currently in the process of preparing my earlier PAX_REFCOUNT patch set
-for resubmission, and I tend to agree with you - I'm not very hopeful of
-Linus, et al accepting them.  But, we will try again.
-
-With respect to the issue of having a refcount_t type, PAX_REFCOUNT adds
-overflow protection to the already existing atomic_t type, and creates a
-new type, atomic_unchecked_t, for non-reference-counter types (i.e.
-statistical counters).
-
-On Mon, Nov 16, 2015 at 12:45 AM, Daniel Micay <danielmicay@gmail.com>
-wrote:
-
-> > I really can't see Linus and others being okay with any GCC
-> > plugins with alterations to the semantics of C rather than just codegen
-> > like the KERNEXEC plugin.
+On Mon, Nov 16, 2015 at 6:33 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> On 15/11/15 03:59 PM, Richard Weinberger wrote:
+>> On Fri, Nov 13, 2015 at 4:43 PM, west suhanic <west.suhanic@gmail.com> wrote:
+>>> Hello All:
+>>>
+>>> I am a hardened gentoo user. How can we get the grsecurity code into the
+>>> kernel?
+>>
+>> As soon all downsides and drawbacks are identified/resolved.
+>> Which basically means that we have to redo a lot (it not all).
 >
-> Oh and REFCOUNT is basically the same situation. I can't see any
-> possibility of that landing without switching to having a refcount_t
-> type and having separate functions for working with it, with a
-> configuration option like DEBUG_REFCOUNT to flip on overflow checks.
-> It's a whole bunch of busy-work and since it will touch so much code it
-> will run into the same problems that the previous attempts to upstream
-> constification did.
+> You might not be familiar with the grsecurity/PaX features and their
+> implementations but lots of people are. It's not unexplored territory
+> without known trade-offs. It has active developers who are happy to
+> answer questions about it (within reason).
+
+I'll kindly ignore this personal attack.
+
+> I think there's little that would need to be redone. There are many
+> things that would need to be renamed and refactored in order to present
+> them in a different light to deal with political issues. One good way to
+> upstream stuff would be presenting it from the angle that it's useful
+> for finding kernel bugs for *everyone* and just accepting that some of
+> it is going to be misrepresented (i.e. CONFIG_DEBUG_*).
 >
+> Approaching this as if it's a technical issue is only going to lead to
+> failure. I really can't see Linus and others being okay with any GCC
+> plugins with alterations to the semantics of C rather than just codegen
+> like the KERNEXEC plugin. Dropping time into extracting stuff like that
+> rather than realistic things seems wasteful. If someone puts in the
+> effort to do it, submits it and hits a wall then I wouldn't expect them
+> to be motivated to do more.
 >
+> I think there's plenty that could be landed but going directly upstream
+> may not be the way to go. I was considering spending time on doing most
+> of the small features and submitting them to AOSP. No politics to deal
+> with there, only technical issues. If something lands there, it becomes
+> a lot easier to upstream it because it becomes part of trying to get
+> Android to use a vanilla kernel. Android wants security features and
+> Linux isn't delivering, so it might as well start diverging more. For
+> example, they recently started improving their ASLR implementation
+> towards matching PaX (not there yet). I'm sure they'd take features like
+> USERCOPY as-is.
 
---001a1141c588ccb8450524a2a952
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+Sorry, I'm not that optimistic as I had already the pleasure to port various
+PaX/grsecurity features and also tried to mainline some bits.
 
-<div dir=3D"ltr">I&#39;m currently in the process of preparing my earlier P=
-AX_REFCOUNT patch set for resubmission, and I tend to agree with you - I&#3=
-9;m not very hopeful of Linus, et al accepting them.=C2=A0 But, we will try=
- again.<div><br></div><div>With respect to the issue of having a refcount_t=
- type, PAX_REFCOUNT adds overflow protection to the already existing atomic=
-_t type, and creates a new type, atomic_unchecked_t, for non-reference-coun=
-ter types (i.e. statistical counters). =C2=A0</div></div><div class=3D"gmai=
-l_extra"><br><div class=3D"gmail_quote">On Mon, Nov 16, 2015 at 12:45 AM, D=
-aniel Micay <span dir=3D"ltr">&lt;<a href=3D"mailto:danielmicay@gmail.com" =
-target=3D"_blank">danielmicay@gmail.com</a>&gt;</span> wrote:<br><blockquot=
-e class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc sol=
-id;padding-left:1ex"><span class=3D"">&gt; I really can&#39;t see Linus and=
- others being okay with any GCC<br>
-&gt; plugins with alterations to the semantics of C rather than just codege=
-n<br>
-&gt; like the KERNEXEC plugin.<br>
-<br>
-</span>Oh and REFCOUNT is basically the same situation. I can&#39;t see any=
-<br>
-possibility of that landing without switching to having a refcount_t<br>
-type and having separate functions for working with it, with a<br>
-configuration option like DEBUG_REFCOUNT to flip on overflow checks.<br>
-It&#39;s a whole bunch of busy-work and since it will touch so much code it=
-<br>
-will run into the same problems that the previous attempts to upstream<br>
-constification did.<br>
-<br>
-</blockquote></div><br></div>
+But I'm eager to read your patches and will happily contribute.
 
---001a1141c588ccb8450524a2a952--
+-- 
+Thanks,
+//richard
