@@ -1,35 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
+ <CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
+ <56496AB0.5070905@gmail.com>
+ <CAGXu5jJLcJBjyA+2xMA63tCr_xg7xxEoLk=RHKXRXM7L23AD7Q@mail.gmail.com>
 From: Daniel Micay <danielmicay@gmail.com>
-Message-ID: <564ADBDA.10901@gmail.com>
-Date: Tue, 17 Nov 2015 02:48:42 -0500
+Message-ID: <564AE0C9.9040706@gmail.com>
+Date: Tue, 17 Nov 2015 03:09:45 -0500
 MIME-Version: 1.0
+In-Reply-To: <CAGXu5jJLcJBjyA+2xMA63tCr_xg7xxEoLk=RHKXRXM7L23AD7Q@mail.gmail.com>
 Content-Type: multipart/signed; micalg=pgp-sha256;
  protocol="application/pgp-signature";
- boundary="cN15ibSSKdUfcIDeUkMnQsPWfIuuFhcNb"
-Subject: [kernel-hardening] What ever happened to the kernel UBSan work?
+ boundary="RChjsQdcl6ihqC39IqnqGePDJv18CAF2r"
+Subject: Re: [kernel-hardening]
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---cN15ibSSKdUfcIDeUkMnQsPWfIuuFhcNb
+--RChjsQdcl6ihqC39IqnqGePDJv18CAF2r
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
-I remember seeing the UBSan submission at one point but it appears that
-it never landed. It would be really nice to have it because among other
-things it will encourage fixing all kinds of things that conflict with
-features like SIZE_OVERFLOW and soon RAP. Maybe the kernel could even
-begin migrating away from relying on signed overflow (by marking the
-cases of intentional overflow with wrappers around the overflow
-intrinsics like addw(a, b)).
+> AOSP isn't enough, and even if people did submit them there, I would
+> be one of the AOSP reviewers asking that they be upstreamed instead.
+> ;)
 
-There are also some niches where a 20% performance hit for something
-like this makes sense (maybe only ~10% for just the parts that are
-relevant to security, especially if it's just set to trap instead of
-calling functions producing debug output).
+Sure, but it's a way to proving to upstream that the features are useful
+and work well. For example, lets say x86 Android adopted the
+segmentation-based KERNEXEC/UDEREF. Lets say it actually shipped in the
+next version of Android. I am pretty sure Linus would change his
+attitude towards it. You're not going to convince him by words rather
+than actions though. Not that improving Linux on a dying architecture
+should be the priority, but it's a good example.
 
 
---cN15ibSSKdUfcIDeUkMnQsPWfIuuFhcNb
+--RChjsQdcl6ihqC39IqnqGePDJv18CAF2r
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: OpenPGP digital signature
 Content-Disposition: attachment; filename="signature.asc"
@@ -37,19 +41,19 @@ Content-Disposition: attachment; filename="signature.asc"
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQIcBAEBCAAGBQJWStvaAAoJEPnnEuWa9fIqkDIP/1wX/5+ItifZbBx2Tk/HQauq
-tFr4ht1N7xPjDpZhnqsm7tuvplbggcTUiXAId2YUS5XrLKyXr42f9+0Tfxl6eIVN
-71oCREkiRGFqgN4pAYYLPQq16I0NhbS+vgWO1SYpdZy0cJQEiLYGQw0F/XYqBjbb
-qFmz9yTjGLKmwAjVafYc4Pu7z5XCVLsNe9FhbUHKZ3RV8eymdzdLvqCDHwCrTAT0
-WwIG1I2boTsyRvUjvG45DJdckc/TLOyi9+IXVSlu6a02dFkPUiQhdN0eWVlzfDW/
-m20likrDFUrz9U/r+M9VcNW9PJwKrctmN9SHiKUj43OQDopi322rBtvGsAe5NrPe
-1BXBg6bwc08n9XsEThjzqdRVyBLMV2atf/wEq3LRAXFzb5vGQaiTuqQedrmxBMx7
-MhoMi7DmCYpWxvgaTkP3Tsbf2J03sRo02raCmkWyu96Hfew1yGE3I133vrNNaCxm
-g2DVKkWsb2hjymQg3UotLupfiJCfPVZhByKfohOllKTTKwHt6FsXTJvfmstYtW9B
-LG5aWDTvTo8EQZlsYfI+5wl2TF5Zr/TisUGSwUdDCNoIMvB6Mf6PEhPr5HP+O0UL
-gzhzUKToLfbbVQzlzRlH5z6+aEPl3D+PPHHL5Eeg6pHPhQp55wX5vnLImUt1VAHY
-D3h/IFxO8Bi1ToF7JSgH
-=724r
+iQIcBAEBCAAGBQJWSuDJAAoJEPnnEuWa9fIqdB8QAJeIpqrvJX8xMGCsVlH75AIi
+BK6gQ1OEzGeJB8OpPk4jNtqO/EVdLLto0A+jDihvK+lGwUrCPVyKMLTxPtZN5PNv
+90tnWc14xcDeeYkt12ziP6BNIdNSYSC+XghbjPiq9rT/GIWkMuqsvk53WSlbBdpj
+KZ4+vNQ4w2uHqq0Jrv6k/k/NRU0W5i2D+i5dYLyUKSlJv+cY+FGh+23BN4D3SEVE
+ezIvbPz19l5Lped5geF+M+Ku6PnUcBe9bDWpw/tpO/4wX78RftXY6IVtUs2bc+Ac
+j1poOxq2YEOcbF+ouafehko3tBpVz9NdajwIMWsOxLR8VRNnXmgGQPrssoxjbEhh
++wG69mTqWIEUPPlOE72YYIAEsmYSqoipPVf3DuTZIgalYW1w+A18Zj3jiqWYRLTv
+iuvHesDgKYKQzT14mANlJ9q4bBRedvKbuQovmXYD1cvoRKiH7lCEQWuoYz3vRY/W
+pVYgod/bnRJI57z1O+u4QGurptv0BA50On+wZZxTHNzWcF88P++qGEhyj5NZJuLL
+tYy9cVxvDmy/AA6FXUojSMdeI+i1WDYVu73FJiW2g8lJ3RfSk3L7Y4QmYpGardHN
+pwDOsubkH5xsSe99TeF9JO+YrxDlGVwz+KsRN+JzlJnxn2AlQmzbsradlOvRqafP
+qDYu5M77P7RPC5vr0wwO
+=BsWW
 -----END PGP SIGNATURE-----
 
---cN15ibSSKdUfcIDeUkMnQsPWfIuuFhcNb--
+--RChjsQdcl6ihqC39IqnqGePDJv18CAF2r--
