@@ -1,59 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
- <CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
- <56496AB0.5070905@gmail.com>
- <CAGXu5jJLcJBjyA+2xMA63tCr_xg7xxEoLk=RHKXRXM7L23AD7Q@mail.gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Message-ID: <564AE0C9.9040706@gmail.com>
-Date: Tue, 17 Nov 2015 03:09:45 -0500
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJLcJBjyA+2xMA63tCr_xg7xxEoLk=RHKXRXM7L23AD7Q@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="RChjsQdcl6ihqC39IqnqGePDJv18CAF2r"
+In-Reply-To: <564ADA32.5040708@gmail.com>
+References: <CAHfkTQF33M8eqAPUr3wTDe-yB4k_MLSfMtAfPWW=AhA9aQdtmQ@mail.gmail.com>
+	<CAFLxGvxukmvg9jHWXO=-Bbn3eoNrqwFvWsS-v_R99McPU4n_sg@mail.gmail.com>
+	<56496AB0.5070905@gmail.com>
+	<CAFLxGvyUdURf8TkVOmzG0wraoGRUtLJH1+KsZUi8TJ-a4D9n4A@mail.gmail.com>
+	<564ADA32.5040708@gmail.com>
+Date: Tue, 17 Nov 2015 11:32:38 +0100
+Message-ID: <CAFLxGvzGNbAurVaN7uM9L4tqTcZYVswZHumwSD4OK4erAW1qNQ@mail.gmail.com>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening]
-To: kernel-hardening@lists.openwall.com
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---RChjsQdcl6ihqC39IqnqGePDJv18CAF2r
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+On Tue, Nov 17, 2015 at 8:41 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> On 16/11/15 07:13 AM, Richard Weinberger wrote:
+>> On Mon, Nov 16, 2015 at 6:33 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+>>> On 15/11/15 03:59 PM, Richard Weinberger wrote:
+>>>> On Fri, Nov 13, 2015 at 4:43 PM, west suhanic <west.suhanic@gmail.com> wrote:
+>>>>> Hello All:
+>>>>>
+>>>>> I am a hardened gentoo user. How can we get the grsecurity code into the
+>>>>> kernel?
+>>>>
+>>>> As soon all downsides and drawbacks are identified/resolved.
+>>>> Which basically means that we have to redo a lot (it not all).
+>>>
+>>> You might not be familiar with the grsecurity/PaX features and their
+>>> implementations but lots of people are. It's not unexplored territory
+>>> without known trade-offs. It has active developers who are happy to
+>>> answer questions about it (within reason).
+>>
+>> I'll kindly ignore this personal attack.
+>
+> I didn't mean this as a personal attack. I just found that statement to
+> be off i.e. it seems to imply that PaX/grsecurity are low quality and
+> that they need to be improved to upstream them, when IMO what really
+> needs to happen to just making the features more politically acceptable
+> even if it ends up making them harder to implement / less useful.
 
-> AOSP isn't enough, and even if people did submit them there, I would
-> be one of the AOSP reviewers asking that they be upstreamed instead.
-> ;)
+Well, it is of course not of low quality. Nobody said that.
+But some features have a technical burden and performance drawbacks.
+These need to be explained in detail and I'm sure there is also room for
+improvement.
 
-Sure, but it's a way to proving to upstream that the features are useful
-and work well. For example, lets say x86 Android adopted the
-segmentation-based KERNEXEC/UDEREF. Lets say it actually shipped in the
-next version of Android. I am pretty sure Linus would change his
-attitude towards it. You're not going to convince him by words rather
-than actions though. Not that improving Linux on a dying architecture
-should be the priority, but it's a good example.
+Anyway, enough hot air for now. Patches talk, bullshit walks. ;-)
 
-
---RChjsQdcl6ihqC39IqnqGePDJv18CAF2r
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCAAGBQJWSuDJAAoJEPnnEuWa9fIqdB8QAJeIpqrvJX8xMGCsVlH75AIi
-BK6gQ1OEzGeJB8OpPk4jNtqO/EVdLLto0A+jDihvK+lGwUrCPVyKMLTxPtZN5PNv
-90tnWc14xcDeeYkt12ziP6BNIdNSYSC+XghbjPiq9rT/GIWkMuqsvk53WSlbBdpj
-KZ4+vNQ4w2uHqq0Jrv6k/k/NRU0W5i2D+i5dYLyUKSlJv+cY+FGh+23BN4D3SEVE
-ezIvbPz19l5Lped5geF+M+Ku6PnUcBe9bDWpw/tpO/4wX78RftXY6IVtUs2bc+Ac
-j1poOxq2YEOcbF+ouafehko3tBpVz9NdajwIMWsOxLR8VRNnXmgGQPrssoxjbEhh
-+wG69mTqWIEUPPlOE72YYIAEsmYSqoipPVf3DuTZIgalYW1w+A18Zj3jiqWYRLTv
-iuvHesDgKYKQzT14mANlJ9q4bBRedvKbuQovmXYD1cvoRKiH7lCEQWuoYz3vRY/W
-pVYgod/bnRJI57z1O+u4QGurptv0BA50On+wZZxTHNzWcF88P++qGEhyj5NZJuLL
-tYy9cVxvDmy/AA6FXUojSMdeI+i1WDYVu73FJiW2g8lJ3RfSk3L7Y4QmYpGardHN
-pwDOsubkH5xsSe99TeF9JO+YrxDlGVwz+KsRN+JzlJnxn2AlQmzbsradlOvRqafP
-qDYu5M77P7RPC5vr0wwO
-=BsWW
------END PGP SIGNATURE-----
-
---RChjsQdcl6ihqC39IqnqGePDJv18CAF2r--
+-- 
+Thanks,
+//richard
