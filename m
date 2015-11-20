@@ -1,46 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <CAGXu5jLE7ADT90-o-6xRA+1NGXtF3fuPnEcY2Qh6MQxaiWrHWw@mail.gmail.com>
- <56463FE5.1050500@redhat.com>
- <CAGXu5jLi=YsZNO4osWjqrJ_jLE3AQMmEKDGBCAJD7svn69Afew@mail.gmail.com>
- <564D04CC.9090902@redhat.com>
- <CAGXu5jLWnfR_a_VR_bq+vpA5NXCLafuFP-9AEVGGjr7pBpZ4XA@mail.gmail.com>
-From: Jeff Law <law@redhat.com>
-Message-ID: <564F55E9.2030007@redhat.com>
-Date: Fri, 20 Nov 2015 10:18:33 -0700
+Date: Fri, 20 Nov 2015 14:16:33 -0500
+From: Rich Felker <dalias@libc.org>
+Message-ID: <20151120191632.GX3818@brightrain.aerifal.cx>
+References: <564EF64F.1060903@redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLWnfR_a_VR_bq+vpA5NXCLafuFP-9AEVGGjr7pBpZ4XA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: GCC upstream contacts for Linux kernel bugs
-To: Kees Cook <keescook@google.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Richard Henderson <rth@redhat.com>, PaX Team <pageexec@freemail.hu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <564EF64F.1060903@redhat.com>
+Sender: Rich Felker <dalias@aerifal.cx>
+Subject: Re: [kernel-hardening] System call interface changes
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/19/2015 11:12 AM, Kees Cook wrote:
-> I remember one more that breaks the kernel's ability to do
-> compile-time evaluation of target sizes, which is a useful
-> vulnerability mitigation. CONFIG_DEBUG_STRICT_USER_COPY_CHECKS isn't
-> useful any more since it was forced to be disabled in
-> https://git.kernel.org/linus/2fb0815c9ee6
->
-> original: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=48880
-> duped to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46639
-Yea, I'm already familiar with these.  46639 gets evaluated each release 
-cycle as its a regression.
+On Fri, Nov 20, 2015 at 11:30:39AM +0100, Florian Weimer wrote:
+> Not sure if this in scope for this list.  If not, please say so.
+> 
+> Currently, the system call interface to user space expects the system
+> call number in a register (on i386 and x86_64, and probably most other
+> architectures).  This means that once you have a system call instruction
+> in the process image, it can be theoretically used to run *any* system
+> call, including ones that are not actually referenced in the binary.  As
+> a result, you need seccomp or a Linux security module to interdict
+> certain system calls.
+> 
+> This would have to be an opt-in feature, obviously, and applications
+> would have to opt in explicitly via some ELF flag (similar to what we
+> did for non-executable stacks).
 
-Essentially function splitting is setting up a situation where things 
-necessary to determine a compile-time constant are in two different places.
+I don't think that's necessary. The application (or for typical
+dynamic linking, just the build of libc.so) would just need to refrain
+from using the parameterized syscall so that the old opcode would not
+appear in its executable mappings.
 
-The specific case in 46639 should be solved with the ability to run a 
-minimal jump threading pass early in the optimizer pipeline.   To do 
-that we need to detangle jump threading from vrp & the dominator optimizer.
+> Do you think it would be feasible to encode the system call number in
+> the instruction stream instead, next to the instruction?  I think this
 
-The main infrastructure for that work landed a couple weeks ago.  It's 
-not clear yet if the remainder of the work will slip in during the 
-bugfixing phase or have to wait for gcc7.  It will largely depend on how 
-much additional work needs to occur.   I don't think it's too bad, but 
-I've mostly been focused on getting the infrastructure bits in place, 
-rather than exploiting them at this phase.
+This was done on ARM in the old pre-EABI ABI, and it turned out to be
+a bad design, at least from standpoints other than security. Reading
+the syscall number out of the instruction stream was more expensive,
+incompatible with syscall() (which ended up requiring a special
+SYS_syscall that needed messy argument conventions), and incompatible
+with reasonable userspace coding of syscalls using inline functions
+rather than macros, where you would have to rely on constant
+propagation optimizations to be able to satisfy asm constraints. See
+how we're currently doing syscall asm for mips in musl:
 
+http://git.musl-libc.org/cgit/musl/tree/arch/mips/syscall_arch.h
 
-jeff
+The "ir" constraint allows the compiler to use an immediate if
+constant propagation succeeds, but also allows the syscall number in a
+register if it doesn't.
+
+I think your idea is also problematic for syscall restart when the
+kernel needs to arrange for a special restartblock to be used rather
+than the original syscall, since the kernel would have no way of
+storing that state (or if there were a way to store that, userspace
+could exploit it to make its own restartblocks for the sake of
+executing arbitrary syscalls).
+
+Rich
