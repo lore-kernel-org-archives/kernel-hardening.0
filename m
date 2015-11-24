@@ -1,84 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <5654CE83.3000503@redhat.com>
+References: <564EF64F.1060903@redhat.com>
+	<CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
+	<5654CE83.3000503@redhat.com>
+Date: Tue, 24 Nov 2015 13:43:58 -0800
+Message-ID: <CAGXu5j+zRXuiTipU=6VVoxacsYWcjhaax4gVbGRXteLihXVdOQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 24 Nov 2015 13:38:34 -0800
-Message-Id: <1448401114-24650-3-git-send-email-keescook@chromium.org>
-In-Reply-To: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 2/2] x86, vdso: mark vDSO read-only after init
-To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] System call interface changes
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The vDSO does not need to be writable after __init, so mark it as
-__read_only. The result kills the exploit method of writing to the vDSO
-from kernel space resulting in userspace executing the modified code,
-as shown here to bypass SMEP restrictions: http://itszn.com/blog/?p=21
+On Tue, Nov 24, 2015 at 12:54 PM, Florian Weimer <fweimer@redhat.com> wrote:
+> On 11/24/2015 09:10 PM, Kees Cook wrote:
+>
+>> Ah, are you looking at this as an anti-ROP idea? What's the bug class
+>> or exploitation method you're looking at addressing?
+>
+> The idea, as it has been presented to me, is to remove the ability to
+> invoke execve (and a few other system calls) completely, to push
+> attackers *towards* ROP as the only means for injecting code into a
+> process (not all processes, obviously, but a large class of processes as
+> feasible).
+>
+> As far as I know, this is intended as a post-exploitation mitigation
+> (before policy-based mechanisms or containers kick in).  I don't know
+> enough about real-world attack scenarios to tell if these changes would
+> make a difference.
+>
+>>> This would have to be an opt-in feature, obviously, and applications
+>>> would have to opt in explicitly via some ELF flag (similar to what we
+>>> did for non-executable stacks).
+>>
+>> There have been a growing number of things that seem like they'd be
+>> nice to control with ELF flags. Andy Lutomirski recently wanted to
+>> make the x86-64 vsyscall presence be selectable on a per-process
+>> basis. (I think it's easier to just turn it off entirely.)
+>
+> Yes, we have a backlog in this area.  For usability reasons, we also
+> need ways to mark separated debuginfo files, and PIE binaries (which
+> currently look like DSOs).
+>
+>> I always come back to "how can we measure this?" If you've got an
+>> exploit method you're trying to kill, etc, then it should be easy to
+>> evaluate its utility.
+>
+> The final paragraph in
+>
+>   <http://openwall.com/lists/oss-security/2015/11/18/12>
+>
+> has some more context.  I think you are definitely asking the right
+> questions, and I desire a more empirical approach to security
+> improvements.  But this is the position I'm in.
 
-The memory map (with added vDSO address reporting) shows the vDSO moving
-into read-only memory:
+Cool. Well, we can certainly look at existing public exploits and
+PoCs. That's what I've been trying to collect on the Kernel
+Self-Protection Project wiki pages. There are plenty of things we
+could add to that list from the ROP world. Maybe it'd be good to look
+through various exploit lists to find stuff that use techniques that
+are either missing from the wiki page or are better examples? Do you
+(or someone else) have time to go on a research/collection exercise?
+Even pulling from academic papers can be useful here.
 
-Before:
-[    0.143067] vDSO @ ffffffff82004000
-[    0.143551] vDSO @ ffffffff82006000
----[ High Kernel Mapping ]---
-0xffffffff80000000-0xffffffff81000000      16M                         pmd
-0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
-0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
-0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
-0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
-0xffffffff81e00000-0xffffffff81e05000      20K   ro             GLB NX pte
-0xffffffff81e05000-0xffffffff82000000    2028K   ro                 NX pte
-0xffffffff82000000-0xffffffff8214f000    1340K   RW             GLB NX pte
-0xffffffff8214f000-0xffffffff82281000    1224K   RW                 NX pte
-0xffffffff82281000-0xffffffff82400000    1532K   RW             GLB NX pte
-0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
-0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+I think having concrete examples really helps both demonstrate
+specifically what we're fixing and convince people that these are real
+issues worth solving.
 
-After:
-[    0.145062] vDSO @ ffffffff81da1000
-[    0.146057] vDSO @ ffffffff81da4000
----[ High Kernel Mapping ]---
-0xffffffff80000000-0xffffffff81000000      16M                         pmd
-0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
-0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
-0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
-0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
-0xffffffff81e00000-0xffffffff81e0b000      44K   ro             GLB NX pte
-0xffffffff81e0b000-0xffffffff82000000    2004K   ro                 NX pte
-0xffffffff82000000-0xffffffff8214c000    1328K   RW             GLB NX pte
-0xffffffff8214c000-0xffffffff8227e000    1224K   RW                 NX pte
-0xffffffff8227e000-0xffffffff82400000    1544K   RW             GLB NX pte
-0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
-0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+-Kees
 
-Based on work by Brad Spengler.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/entry/vdso/vdso2c.h | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/arch/x86/entry/vdso/vdso2c.h b/arch/x86/entry/vdso/vdso2c.h
-index 0224987556ce..677ce3ac4d34 100644
---- a/arch/x86/entry/vdso/vdso2c.h
-+++ b/arch/x86/entry/vdso/vdso2c.h
-@@ -140,7 +140,7 @@ static void BITSFUNC(go)(void *raw_addr, size_t raw_len,
- 	fprintf(outfile, "#include <asm/vdso.h>\n");
- 	fprintf(outfile, "\n");
- 	fprintf(outfile,
--		"static unsigned char raw_data[%lu] __page_aligned_data = {",
-+		"static unsigned char raw_data[%lu] __read_only __aligned(PAGE_SIZE) = {",
- 		mapping_size);
- 	for (j = 0; j < stripped_len; j++) {
- 		if (j % 10 == 0)
-@@ -150,7 +150,7 @@ static void BITSFUNC(go)(void *raw_addr, size_t raw_len,
- 	}
- 	fprintf(outfile, "\n};\n\n");
- 
--	fprintf(outfile, "static struct page *pages[%lu];\n\n",
-+	fprintf(outfile, "static struct page *pages[%lu] __read_only;\n\n",
- 		mapping_size / 4096);
- 
- 	fprintf(outfile, "const struct vdso_image %s = {\n", name);
 -- 
-1.9.1
+Kees Cook
+Chrome OS & Brillo Security
