@@ -1,83 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <564EF64F.1060903@redhat.com>
+ <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
+From: Florian Weimer <fweimer@redhat.com>
+Message-ID: <5654CE83.3000503@redhat.com>
+Date: Tue, 24 Nov 2015 21:54:27 +0100
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLqy1UchipmcgsUrXiWP0zfwjGAgfxcKUYkbQ9a_e2V_g@mail.gmail.com>
-References: <CAEXv5_jnutg89zQLyLCupKf0AOZ=ubdgbJy7AgeeN=7yQicW0A@mail.gmail.com>
-	<CAGXu5jLqy1UchipmcgsUrXiWP0zfwjGAgfxcKUYkbQ9a_e2V_g@mail.gmail.com>
-Date: Tue, 24 Nov 2015 15:51:30 -0500
-Message-ID: <CAEXv5_ga70LDyR3TmOenoY_-FD1A56GZ3KpgGW5BsegkSyufhA@mail.gmail.com>
-From: David Windsor <dave@0x4141.net>
-Content-Type: multipart/alternative; boundary=001a114d7290926e3a05254f8123
-Subject: Re: [kernel-hardening] status: PAX_REFCOUNT
+In-Reply-To: <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] System call interface changes
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a114d7290926e3a05254f8123
-Content-Type: text/plain; charset=UTF-8
+On 11/24/2015 09:10 PM, Kees Cook wrote:
 
-> That'll be a lot of patches. I wonder if we could break it up by
-> top-level maintainer? i.e. everything in drivers would go in one
-> patch, etc?
->
->
-I can certainly do that, but the size of the drivers patch is going to be
-tremendous.  I just figured that smaller patches would be less offensive to
-upstream's delicate sensibilities =)
+> Ah, are you looking at this as an anti-ROP idea? What's the bug class
+> or exploitation method you're looking at addressing?
 
-> I'm moving my way through the tree and will hopefully have an RFC
-> submission
-> > soon.
->
-> Great! Are you working on this full-time? (If not, would potential CII
-> funding help at all?)
->
->
-Just working on this in my spare time.  I've wanted to see PaX/grsecurity
-included upstream for a long while now.  Funding is unnecessary, as it
-wouldn't enable me to get this finished any more quickly than I would
-otherwise.  I'll publish my tree to github so others can help.
+The idea, as it has been presented to me, is to remove the ability to
+invoke execve (and a few other system calls) completely, to push
+attackers *towards* ROP as the only means for injecting code into a
+process (not all processes, obviously, but a large class of processes as
+feasible).
 
+As far as I know, this is intended as a post-exploitation mitigation
+(before policy-based mechanisms or containers kick in).  I don't know
+enough about real-world attack scenarios to tell if these changes would
+make a difference.
 
-> I'll send an lkdtm patch that'll twiddle the atomic type, so you have
-> something to validate it with.
->
->
-Thanks!
+>> This would have to be an opt-in feature, obviously, and applications
+>> would have to opt in explicitly via some ELF flag (similar to what we
+>> did for non-executable stacks).
+> 
+> There have been a growing number of things that seem like they'd be
+> nice to control with ELF flags. Andy Lutomirski recently wanted to
+> make the x86-64 vsyscall presence be selectable on a per-process
+> basis. (I think it's easier to just turn it off entirely.)
 
---001a114d7290926e3a05254f8123
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+Yes, we have a backlog in this area.  For usability reasons, we also
+need ways to mark separated debuginfo files, and PIE binaries (which
+currently look like DSOs).
 
-<div dir=3D"ltr"><br><div class=3D"gmail_extra"><div class=3D"gmail_quote">=
-<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
-x #ccc solid;padding-left:1ex"><span class=3D"">
-</span>That&#39;ll be a lot of patches. I wonder if we could break it up by=
-<br>
-top-level maintainer? i.e. everything in drivers would go in one<br>
-patch, etc?<br>
-<span class=3D""><br></span></blockquote><div><br></div><div>I can certainl=
-y do that, but the size of the drivers patch is going to be tremendous.=C2=
-=A0 I just figured that smaller patches would be less offensive to upstream=
-&#39;s delicate sensibilities =3D)<br><br></div><blockquote class=3D"gmail_=
-quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1=
-ex"><span class=3D"">
-&gt; I&#39;m moving my way through the tree and will hopefully have an RFC =
-submission<br>
-&gt; soon.<br>
-<br>
-</span>Great! Are you working on this full-time? (If not, would potential C=
-II<br>
-funding help at all?)<br>
-<br></blockquote><div><br></div><div>Just working on this in my spare time.=
-=C2=A0 I&#39;ve wanted to see PaX/grsecurity included upstream for a long w=
-hile now.=C2=A0 Funding is unnecessary, as it wouldn&#39;t enable me to get=
- this finished any more quickly than I would otherwise.=C2=A0 I&#39;ll publ=
-ish my tree to github so others can help.<br></div><div>=C2=A0</div><blockq=
-uote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc =
-solid;padding-left:1ex">
-I&#39;ll send an lkdtm patch that&#39;ll twiddle the atomic type, so you ha=
-ve<br>
-something to validate it with.<br>
-<span class=3D"HOEnZb"><font color=3D"#888888"><br></font></span></blockquo=
-te><div><br></div><div>Thanks!<br></div></div><br></div></div>
+> I always come back to "how can we measure this?" If you've got an
+> exploit method you're trying to kill, etc, then it should be easy to
+> evaluate its utility.
 
---001a114d7290926e3a05254f8123--
+The final paragraph in
+
+  <http://openwall.com/lists/oss-security/2015/11/18/12>
+
+has some more context.  I think you are definitely asking the right
+questions, and I desire a more empirical approach to security
+improvements.  But this is the position I'm in.
+
+Florian
