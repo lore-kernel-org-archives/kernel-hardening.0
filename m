@@ -1,46 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <564EF64F.1060903@redhat.com>
- <20151120191632.GX3818@brightrain.aerifal.cx>
-From: Florian Weimer <fweimer@redhat.com>
-Message-ID: <5654C074.3020908@redhat.com>
-Date: Tue, 24 Nov 2015 20:54:28 +0100
 MIME-Version: 1.0
-In-Reply-To: <20151120191632.GX3818@brightrain.aerifal.cx>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] System call interface changes
-To: kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <CAEXv5_jnutg89zQLyLCupKf0AOZ=ubdgbJy7AgeeN=7yQicW0A@mail.gmail.com>
+References: <CAEXv5_jnutg89zQLyLCupKf0AOZ=ubdgbJy7AgeeN=7yQicW0A@mail.gmail.com>
+Date: Tue, 24 Nov 2015 12:04:18 -0800
+Message-ID: <CAGXu5jLqy1UchipmcgsUrXiWP0zfwjGAgfxcKUYkbQ9a_e2V_g@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] status: PAX_REFCOUNT
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/20/2015 08:16 PM, Rich Felker wrote:
+On Tue, Nov 24, 2015 at 11:37 AM, David Windsor <dave@0x4141.net> wrote:
+> I'm currently in the process of splitting PAX_REFCOUNT.
+>
+> It looks to touch a massive number of files.  Many of the modifications
+> occur in drivers:
+>
+> dave@strontium:~/src/linux-grsec-4.2$ grep -ril "atomic.*unchecked" | wc -l
+> 402
+> dave@strontium:~/src/linux-grsec-4.2$ grep -ril "atomic.*unchecked" drivers/
+> | wc -l
+> 158
 
->> This would have to be an opt-in feature, obviously, and applications
->> would have to opt in explicitly via some ELF flag (similar to what we
->> did for non-executable stacks).
-> 
-> I don't think that's necessary. The application (or for typical
-> dynamic linking, just the build of libc.so) would just need to refrain
-> from using the parameterized syscall so that the old opcode would not
-> appear in its executable mappings.
+Interesting there are so many intentional overflows. I think the
+hardest part for getting this series upstream will be sticking to our
+principle of not needing a developer to "opt in" to the protection. I
+still think this is a compelling reason to keep it as-is, but it
+should be an interesting discussion. :)
 
-The SYSCALL instruction is fairly short (0x0f 0x05), so it ends up in
-process images by accident.  I think this calls for explicit blocking.
+> As it stands, I'm trying to come up with a good way to split the patches.
+> I'm currently going with a scheme of creating separate patches per kernel
+> subsystem, further separating by component type (filesystems, drivers,
+> etc.).  For instance, for patches touching fs/, I've created a patch for
+> filesystem-independent changes, then separate patches for each individual
+> filesystem's changes.  Extrapolated over the entire kernel, I estimate this
+> strategy will produce approximately between 50 and 75 patches.
 
->> Do you think it would be feasible to encode the system call number in
->> the instruction stream instead, next to the instruction?  I think this
-> 
-> This was done on ARM in the old pre-EABI ABI, and it turned out to be
-> a bad design, at least from standpoints other than security. Reading
-> the syscall number out of the instruction stream was more expensive,
-> incompatible with syscall() (which ended up requiring a special
-> SYS_syscall that needed messy argument conventions), and incompatible
-> with reasonable userspace coding of syscalls using inline functions
-> rather than macros, where you would have to rely on constant
-> propagation optimizations to be able to satisfy asm constraints.
+That'll be a lot of patches. I wonder if we could break it up by
+top-level maintainer? i.e. everything in drivers would go in one
+patch, etc?
 
-Wouldn't it be possible to embed the constant in the assembly text,
-using the C preprocessor?
+> I'm moving my way through the tree and will hopefully have an RFC submission
+> soon.
 
-But I appreciate your comments, they have been helpful.
+Great! Are you working on this full-time? (If not, would potential CII
+funding help at all?)
 
-Florian
+I'll send an lkdtm patch that'll twiddle the atomic type, so you have
+something to validate it with.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
