@@ -1,19 +1,18 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-Date: Tue, 24 Nov 2015 11:10:09 -0800
-Message-ID: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
+Date: Tue, 24 Nov 2015 11:11:12 -0800
+Message-ID: <CAGXu5jJtUDFmiWek-z0GDjfeh9QSrD13UgTc3F18-RZephMB8Q@mail.gmail.com>
+From: Kees Cook <keescook@google.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] status: GRKERNSEC_KSTACKOVERFLOW
-To: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Subject: [kernel-hardening] status: PAX_USERCOPY
+To: Valdis Kletnieks <Valdis.Kletnieks@vt.edu>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi,
 
-I just wanted to check in and see how progress was going on the stack
-overflow feature. Anything we can help with?
+I just wanted to check in and see how progress was going on the
+usercopy checking feature. Anything we can help with?
 
 -Kees
 
