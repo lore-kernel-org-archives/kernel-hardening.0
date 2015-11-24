@@ -1,18 +1,22 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Date: Tue, 24 Nov 2015 11:11:12 -0800
-Message-ID: <CAGXu5jJtUDFmiWek-z0GDjfeh9QSrD13UgTc3F18-RZephMB8Q@mail.gmail.com>
-From: Kees Cook <keescook@google.com>
+Sender: keescook@google.com
+Date: Tue, 24 Nov 2015 11:19:06 -0800
+Message-ID: <CAGXu5jJXpnaKsG_W_xzwr0SBkKSEtUqEC0LR3-ZByPx9NAj5Lw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] status: PAX_USERCOPY
-To: Valdis Kletnieks <Valdis.Kletnieks@vt.edu>
+Subject: [kernel-hardening] status: GRKERNSEC_BRUTE
+To: Richard Weinberger <richard@nod.at>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi,
 
-I just wanted to check in and see how progress was going on the
-usercopy checking feature. Anything we can help with?
+While not strictly a _kernel_ self-protection mechanism, it's still
+something that I'd love to see upstream, so I'll ping about its status
+here too. :) Any updates on the brute force detector? (Last week I had
+someone suggest making this a "respawn cgroup" or something, if it's
+not workable as-is.) Anything we can help with?
 
 -Kees
 
