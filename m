@@ -1,56 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <564EF64F.1060903@redhat.com>
- <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
-From: Florian Weimer <fweimer@redhat.com>
-Message-ID: <5654CE83.3000503@redhat.com>
-Date: Tue, 24 Nov 2015 21:54:27 +0100
+Date: Tue, 24 Nov 2015 13:20:24 -0800
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20151124212024.GB15374@kroah.com>
+References: <CAEXv5_jnutg89zQLyLCupKf0AOZ=ubdgbJy7AgeeN=7yQicW0A@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] System call interface changes
+In-Reply-To: <CAEXv5_jnutg89zQLyLCupKf0AOZ=ubdgbJy7AgeeN=7yQicW0A@mail.gmail.com>
+Subject: Re: [kernel-hardening] status: PAX_REFCOUNT
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/24/2015 09:10 PM, Kees Cook wrote:
-
-> Ah, are you looking at this as an anti-ROP idea? What's the bug class
-> or exploitation method you're looking at addressing?
-
-The idea, as it has been presented to me, is to remove the ability to
-invoke execve (and a few other system calls) completely, to push
-attackers *towards* ROP as the only means for injecting code into a
-process (not all processes, obviously, but a large class of processes as
-feasible).
-
-As far as I know, this is intended as a post-exploitation mitigation
-(before policy-based mechanisms or containers kick in).  I don't know
-enough about real-world attack scenarios to tell if these changes would
-make a difference.
-
->> This would have to be an opt-in feature, obviously, and applications
->> would have to opt in explicitly via some ELF flag (similar to what we
->> did for non-executable stacks).
+On Tue, Nov 24, 2015 at 02:37:41PM -0500, David Windsor wrote:
+> I'm currently in the process of splitting PAX_REFCOUNT. 
 > 
-> There have been a growing number of things that seem like they'd be
-> nice to control with ELF flags. Andy Lutomirski recently wanted to
-> make the x86-64 vsyscall presence be selectable on a per-process
-> basis. (I think it's easier to just turn it off entirely.)
+> It looks to touch a massive number of files.  Many of the modifications occur
+> in drivers:
+> 
+> dave@strontium:~/src/linux-grsec-4.2$ grep -ril "atomic.*unchecked" | wc -l
+> 402
+> dave@strontium:~/src/linux-grsec-4.2$ grep -ril "atomic.*unchecked" drivers/ |
+> wc -l
+> 158
 
-Yes, we have a backlog in this area.  For usability reasons, we also
-need ways to mark separated debuginfo files, and PIE binaries (which
-currently look like DSOs).
+Odds are, we can take lots of these existing atomic usages and either
+replace them with a kref, or remove them, as I can't imagine that we
+need that many different atomic variables for things that are not just
+debugging things.
 
-> I always come back to "how can we measure this?" If you've got an
-> exploit method you're trying to kill, etc, then it should be easy to
-> evaluate its utility.
+thanks,
 
-The final paragraph in
-
-  <http://openwall.com/lists/oss-security/2015/11/18/12>
-
-has some more context.  I think you are definitely asking the right
-questions, and I desire a more empirical approach to security
-improvements.  But this is the position I'm in.
-
-Florian
+greg k-h
