@@ -1,53 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Wed, 25 Nov 2015 12:05:25 +0100
 MIME-Version: 1.0
-In-Reply-To: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-Date: Wed, 25 Nov 2015 10:13:07 +0100
-Message-ID: <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
-From: Mathias Krause <minipli@googlemail.com>
-Content-Type: text/plain; charset=UTF-8
+Message-ID: <565595F5.32536.DB9FE75@pageexec.freemail.hu>
+In-reply-to: <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org>, <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
 Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only memory
-To: kernel-hardening@lists.openwall.com
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>
+To: kernel-hardening@lists.openwall.com, Mathias Krause <minipli@googlemail.com>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 24 November 2015 at 22:38, Kees Cook <keescook@chromium.org> wrote:
-> Many things are written to only during __init, and never changed
-> again. These cannot be made "const" since the compiler will do the wrong
-> thing (we do actually need to write to them). Instead, move these items
-> into a memory region that will be made read-only during mark_rodata_ro()
-> which happens after all kernel __init code has finished.
->
-> This introduces __read_only as a way to mark such memory, and uses it on
-> the x86 vDSO to kill an extant kernel exploitation method.
+On 25 Nov 2015 at 10:13, Mathias Krause wrote:
 
-...just some random notes on the experience with kernels implementing
-such a feature for quite a lot of locations, not just the vDSO.
+> I myself had some educating experience seeing my machine triple fault
+> when resuming from a S3 sleep. The root cause was a variable that was
+> annotated __read_only but that was (unnecessarily) modified during CPU
+> bring-up phase. Debugging that kind of problems is sort of a PITA, you
+> could imagine.
 
-While having that annotation makes perfect sense, not only from a
-security perspective but also from a micro-optimization point of view
-(much like the already existing __read_mostly annotation), it has its
-drawbacks. Violating the "r/o after init" rule by writing to such
-annotated variables from non-init code goes unnoticed as far as it
-concerns the toolchain. Neither the compiler nor the linker will flag
-that incorrect use. It'll just trap at runtime and that's bad.
+actually the kernel could silently recover from this given how the
+page fault handler could easily determine that the fault address fell
+into the data..read_only section and just silently undo the read-only
+property, log the event to dmesg and retry the faulting access.
 
-I myself had some educating experience seeing my machine triple fault
-when resuming from a S3 sleep. The root cause was a variable that was
-annotated __read_only but that was (unnecessarily) modified during CPU
-bring-up phase. Debugging that kind of problems is sort of a PITA, you
-could imagine.
+> So, prior extending the usage of the __read_only annotation some
+> toolchain support is needed. Maybe a gcc plugin that'll warn/error on
+> code that writes to such a variable but is not __init itself.
 
-So, prior extending the usage of the __read_only annotation some
-toolchain support is needed. Maybe a gcc plugin that'll warn/error on
-code that writes to such a variable but is not __init itself. The
-initify and checker plugins from the PaX patch might be worth to look
-at for that purpose, as they're doing similar things already. Adding
-such a check to sparse might be worth it, too.
-A modpost check probably won't work as it's unable to tell if it's a
-legitimate access (r/o) or a violation (/w access). So the gcc plugin
-is the way to go, IMHO.
+this is exactly what i suggested earlier in the constify thread ;).
+note that this will produce false positives because __init* annotations
+are not propagated everywhere they could be.
 
+> The initify and checker plugins from the PaX patch might be worth to
+> look at for that purpose, as they're doing similar things already.
 
-Regards,
-Mathias
+one of our plans for initify is to add the discovery and propagation
+of _init* annotations as well, it'd not only fix the false positives
+mentioned above but also help reduce the kernel size (code/data/rodata).
