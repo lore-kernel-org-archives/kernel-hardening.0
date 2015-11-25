@@ -1,44 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 24 Nov 2015 17:33:08 -0500
-From: Rich Felker <dalias@libc.org>
-Message-ID: <20151124223308.GM3818@brightrain.aerifal.cx>
-References: <564EF64F.1060903@redhat.com>
- <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
- <5654CE83.3000503@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <5654CE83.3000503@redhat.com>
-Sender: Rich Felker <dalias@aerifal.cx>
-Subject: Re: [kernel-hardening] System call interface changes
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <1448401114-24650-2-git-send-email-keescook@chromium.org>
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org> <1448401114-24650-2-git-send-email-keescook@chromium.org>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Tue, 24 Nov 2015 16:34:04 -0800
+Message-ID: <CALCETrXNe5Ow0cxLACzVpx3HdR_b_XCB3_VUtsAphVjCQpRZwA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 1/2] x86: introduce post-init read-only memory
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-arch <linux-arch@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 24, 2015 at 09:54:27PM +0100, Florian Weimer wrote:
-> On 11/24/2015 09:10 PM, Kees Cook wrote:
-> 
-> > Ah, are you looking at this as an anti-ROP idea? What's the bug class
-> > or exploitation method you're looking at addressing?
-> 
-> The idea, as it has been presented to me, is to remove the ability to
-> invoke execve (and a few other system calls) completely, to push
-> attackers *towards* ROP as the only means for injecting code into a
-> process (not all processes, obviously, but a large class of processes as
-> feasible).
-> 
-> As far as I know, this is intended as a post-exploitation mitigation
-> (before policy-based mechanisms or containers kick in).  I don't know
-> enough about real-world attack scenarios to tell if these changes would
-> make a difference.
+On Nov 24, 2015 1:38 PM, "Kees Cook" <keescook@chromium.org> wrote:
+>
+> One of the easiest ways to protect the kernel from attack is to reduce
+> the internal attack surface exposed when a "write" flaw is available. By
+> making as much of the kernel read-only as possible, we reduce the
+> attack surface.
+>
+> Many things are written to only during __init, and never changed
+> again. These cannot be made "const" since the compiler will do the wrong
+> thing (we do actually need to write to them). Instead, move these items
+> into a memory region that will be made read-only during mark_rodata_ro()
+> which happens after all kernel __init code has finished.
+>
+> This introduces __read_only as a way to mark such memory, and adds some
+> documentation about the existing __read_mostly marking.
 
-If the intent is only to block a single syscall, why would you break
-the existing user-kernel interface boundary and require a new
-alternate one rather than just doing something like
-seccomp/pledge/prctl to disable exec* syscalls and whatever else needs
-to be blocked?
+Obligatory bikeshed:  __ro_after_init, please.  It's barely longer,
+and it directly explains what's going on.  __read_only makes me think
+that it's really read-only and could, for example, actually be in ROM.
 
-I'm also a bit confused how you would take advantage of this without
-static linking since libc.so will contain all the syscalls and
-syscall().
-
-Rich
+--Andy
