@@ -1,65 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1448492749.22705.1.camel@ellerman.id.au>
-From: Michael Ellerman <mpe@ellerman.id.au>
-Date: Thu, 26 Nov 2015 10:05:49 +1100
-In-Reply-To: <CAGXu5jKAeKDxpWMgZpvB-aHNdAqDEVtHOiDz3joC+bZns6FBJQ@mail.gmail.com>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-	 <1448401114-24650-2-git-send-email-keescook@chromium.org>
-	 <CALCETrXNe5Ow0cxLACzVpx3HdR_b_XCB3_VUtsAphVjCQpRZwA@mail.gmail.com>
-	 <CAGXu5jKe5hZtrUJ7SJ2WTcJvKXftgkAkPjxmvoVjewbC3Kqg9Q@mail.gmail.com>
-	 <1448412883.3762.1.camel@ellerman.id.au>
-	 <CAGXu5jKAeKDxpWMgZpvB-aHNdAqDEVtHOiDz3joC+bZns6FBJQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH 1/2] x86: introduce post-init
- read-only memory
-To: kernel-hardening@lists.openwall.com
-Cc: Andy Lutomirski <luto@amacapital.net>, linux-arch <linux-arch@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, X86 ML <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 25 Nov 2015 15:31:23 -0800
+Message-Id: <1448494286-16029-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1448494286-16029-1-git-send-email-keescook@chromium.org>
+References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v2 1/4] init: create cmdline param to disable readonly
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2015-11-25 at 07:03 -0800, Kees Cook wrote:
-> On Tue, Nov 24, 2015 at 4:54 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
-> > On Tue, 2015-11-24 at 16:44 -0800, Kees Cook wrote:
-> > > On Tue, Nov 24, 2015 at 4:34 PM, Andy Lutomirski <luto@amacapital.net> wrote:
-> > > > On Nov 24, 2015 1:38 PM, "Kees Cook" <keescook@chromium.org> wrote:
-> > > > > 
-> > > > > One of the easiest ways to protect the kernel from attack is to reduce
-> > > > > the internal attack surface exposed when a "write" flaw is available. By
-> > > > > making as much of the kernel read-only as possible, we reduce the
-> > > > > attack surface.
-> > > > > 
-> > > > > Many things are written to only during __init, and never changed
-> > > > > again. These cannot be made "const" since the compiler will do the wrong
-> > > > > thing (we do actually need to write to them). Instead, move these items
-> > > > > into a memory region that will be made read-only during mark_rodata_ro()
-> > > > > which happens after all kernel __init code has finished.
-> > > > > 
-> > > > > This introduces __read_only as a way to mark such memory, and adds some
-> > > > > documentation about the existing __read_mostly marking.
-> > > > 
-> > > > Obligatory bikeshed:  __ro_after_init, please.  It's barely longer,
-> > > > and it directly explains what's going on.  __read_only makes me think
-> > > > that it's really read-only and could, for example, actually be in ROM.
-> > > 
-> > > I'm fine with that. Anyone else want to chime in before I send a v2?
-> > 
-> > I'm not clear on why this is x86 only?
-> 
-> I was initially looking at how __read_mostly got implemented, and it
-> seemed like section names were done on a per-arch basis. But it
-> doesn't seem like that needs to be true.
+It may be useful to debug writes to the readonly sections of memory,
+so provide a cmdline "rodata=off" to allow for this.
 
-Yeah I saw that too, but I couldn't see anything in the commit history that
-explained why it was per-arch.
+Suggested-by: H. Peter Anvin <hpa@zytor.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/kernel-parameters.txt |  4 ++++
+ init/main.c                         | 31 +++++++++++++++++++++++++++----
+ 2 files changed, 31 insertions(+), 4 deletions(-)
 
-> > It looks like it would work on any arch, or is there some toolchain
-> > requirement?
-> 
-> Given that the other sections are in the common linux.lds.h file, it
-> seems unlikely to me. I'll try it in an arch-agnostic way and see what
-> happens. :)
-
-That'd be great, I can test on powerpc, and build test other arches too.
-
-cheers
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index 742f69d18fc8..21cf76dbba90 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -3409,6 +3409,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 
+ 	ro		[KNL] Mount root device read-only on boot
+ 
++	rodata=		[KNL]
++		on	Mark read-only kernel memory as read-only (default).
++		off	Leave read-only kernel memory writable for debugging.
++
+ 	root=		[KNL] Root filesystem
+ 			See name_to_dev_t comment in init/do_mounts.c.
+ 
+diff --git a/init/main.c b/init/main.c
+index 9e64d7097f1a..06200d2fbf08 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -93,9 +93,6 @@ static int kernel_init(void *);
+ extern void init_IRQ(void);
+ extern void fork_init(void);
+ extern void radix_tree_init(void);
+-#ifndef CONFIG_DEBUG_RODATA
+-static inline void mark_rodata_ro(void) { }
+-#endif
+ 
+ /*
+  * Debug helper: via this flag we know that we are in 'early bootup code'
+@@ -929,6 +926,32 @@ static int try_to_run_init_process(const char *init_filename)
+ 
+ static noinline void __init kernel_init_freeable(void);
+ 
++#ifdef CONFIG_DEBUG_RODATA
++bool disable_mark_readonly;
++static int __init set_debug_rodata(char *str)
++{
++	if (!str)
++		return -EINVAL;
++	if (!strncmp(str, "on", 2))
++		disable_mark_readonly = false;
++	else if (!strncmp(str, "off", 3))
++		disable_mark_readonly = true;
++
++	return 0;
++}
++__setup("rodata=", set_debug_rodata);
++
++static void mark_readonly(void)
++{
++	if (disable_mark_readonly)
++		pr_info("Kernel read-only memory marking disabled.\n");
++	else
++		mark_rodata_ro();
++}
++#else
++static inline void mark_readonly(void) { };
++#endif
++
+ static int __ref kernel_init(void *unused)
+ {
+ 	int ret;
+@@ -937,7 +960,7 @@ static int __ref kernel_init(void *unused)
+ 	/* need to finish all async __init code before freeing the memory */
+ 	async_synchronize_full();
+ 	free_initmem();
+-	mark_rodata_ro();
++	mark_readonly();
+ 	system_state = SYSTEM_RUNNING;
+ 	numa_default_policy();
+ 
+-- 
+1.9.1
