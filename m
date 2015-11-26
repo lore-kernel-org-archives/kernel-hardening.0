@@ -1,28 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
- <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
-From: Clemens Ladisch <clemens@ladisch.de>
-Message-ID: <56558826.1060202@ladisch.de>
-Date: Wed, 25 Nov 2015 11:06:30 +0100
 MIME-Version: 1.0
-In-Reply-To: <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
-Content-Type: text/plain; charset=us-ascii
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
- memory
-To: Mathias Krause <minipli@googlemail.com>, kernel-hardening@lists.openwall.com
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>
+In-Reply-To: <CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
+References: <CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
+From: comex <comexk@gmail.com>
+Date: Thu, 26 Nov 2015 02:43:31 -0500
+Message-ID: <CAPM5UJ2G_hWRYs-J3qsRV1E=aBZqPOacntT2ZA5zcNfZeibHzQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] On techniques for preventing commit_creds()
+ user-space abuse
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Mathias Krause wrote:
-> [...]
-> So, prior extending the usage of the __read_only annotation some
-> toolchain support is needed. Maybe a gcc plugin that'll warn/error on
-> code that writes to such a variable but is not __init itself.
+On Wed, Nov 25, 2015 at 6:14 PM, Salva Peir=C3=B3 <speirofr@gmail.com> wrot=
+e:
+> - *Indirect jump*
+> An attacker can perform an indirect jump to a kernel location that does
+> the commit_creds() for him, but it complicates the task of the
+> attacker. To prevent indirect calls check the rest of the stack trace.
 
-Or mark them as "const".  This would require the initialization code to
-cast it away, probably with a helper macro.
+The added complication of indirection is minimal, and checking the
+frame pointer/return address chain on the stack would be far from
+sufficient to prevent it: even if you had full control flow integrity
+on returns (see e.g. RAP), if the attacker was already executing
+arbitrary code, they could overwrite the whole stack to simulate a
+call stack that would normally be allowed to call commit_creds and
+won't crash on return, e.g. setuid returning to userland.
 
+> - *Direct override*
+> Another route to bypass would be to figure out the location of the
+> process creds in memory, and perform the change directly in memory,
+> but AFAIK SMAP and its ARM equivalent would deter this route.
 
-Regards,
-Clemens
+SMEP (not SMAP) already makes it impossible to directly execute code
+from userspace mapped addresses.  SMAP prevents accessing those
+addresses, but has no effect on kernel mapped addresses such as the
+data structures containing credentials.
+
+In general there's not much point trying to defend against an attacker
+who is already running arbitrary code in kernel mode.  Even executing
+a ROP chain, once the attacker gets past any initial hurdles such as
+stack pivoting, is pretty much game over (the possibility of it being
+complicated to find gadgets with unusual instruction sequences, find a
+large number of gadgets, or use a long chain of them /might/ make some
+additional measures valuable, but not very - e.g. [1]); true code
+execution generally makes working around any 'harassment' measures
+trivial.
+
+[1] http://vulnfactory.org/blog/2011/09/21/defeating-windows-8-rop-mitigati=
+on/
