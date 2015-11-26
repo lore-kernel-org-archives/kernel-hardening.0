@@ -1,78 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 26 Nov 2015 08:51:30 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20151126075130.GB18742@gmail.com>
-References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
- <1448494286-16029-2-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1448494286-16029-2-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] init: create cmdline param to disable readonly
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
+Message-ID: <1448526423.9722.15.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Thu, 26 Nov 2015 09:27:03 +0100
+In-Reply-To: <CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
+References: 
+	<CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-+rY7+Yq9A7PGyJjZ4dYX"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] On techniques for preventing commit_creds()
+ user-space abuse
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Kees Cook <keescook@chromium.org> wrote:
+--=-+rY7+Yq9A7PGyJjZ4dYX
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> It may be useful to debug writes to the readonly sections of memory,
-> so provide a cmdline "rodata=off" to allow for this.
-> 
-> Suggested-by: H. Peter Anvin <hpa@zytor.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  Documentation/kernel-parameters.txt |  4 ++++
->  init/main.c                         | 31 +++++++++++++++++++++++++++----
->  2 files changed, 31 insertions(+), 4 deletions(-)
-> 
-> diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-> index 742f69d18fc8..21cf76dbba90 100644
-> --- a/Documentation/kernel-parameters.txt
-> +++ b/Documentation/kernel-parameters.txt
-> @@ -3409,6 +3409,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
->  
->  	ro		[KNL] Mount root device read-only on boot
->  
-> +	rodata=		[KNL]
-> +		on	Mark read-only kernel memory as read-only (default).
-> +		off	Leave read-only kernel memory writable for debugging.
-> +
->  	root=		[KNL] Root filesystem
->  			See name_to_dev_t comment in init/do_mounts.c.
->  
-> diff --git a/init/main.c b/init/main.c
-> index 9e64d7097f1a..06200d2fbf08 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -93,9 +93,6 @@ static int kernel_init(void *);
->  extern void init_IRQ(void);
->  extern void fork_init(void);
->  extern void radix_tree_init(void);
-> -#ifndef CONFIG_DEBUG_RODATA
-> -static inline void mark_rodata_ro(void) { }
-> -#endif
->  
->  /*
->   * Debug helper: via this flag we know that we are in 'early bootup code'
-> @@ -929,6 +926,32 @@ static int try_to_run_init_process(const char *init_filename)
->  
->  static noinline void __init kernel_init_freeable(void);
->  
-> +#ifdef CONFIG_DEBUG_RODATA
+On jeu., 2015-11-26 at 00:14 +0100, Salva Peir=C3=B3 wrote:
+> Given the typical path for kernel exploitation is the
+> `commit_creds(prepare_kernel_cred(0))` being called from user space as
+> detailed in [References].
+> Why is not a check placed in commit_creds() that checks the return addres=
+s
+> of the call to ensure the call is a legit one coming from kernel space?.
 
-Btw., could you please remove the Kconfig option altogether in an additional patch 
-and make read-only sections an always-on feature? It has been default-y for years 
-and all distros have it enabled.
+I have the feeling that commit_creds(prepare_creds(0)) is just a quick way =
+for
+white hats / good guys to demonstrate a vulnerability by showing an exploit
+leading to privilege escalation (or rooting Android devices).
 
-The 'debug rodata' naming is purely historic: this started out as a simple 
-debugging feature, but meanwhile it has spread and has become an essential kernel 
-robustness feature.
+As already said elsewere, we don't have much data on the exploitation
+techniques used by real bad guys, but I somehow assume that if you have rin=
+g 0
+access, the first things you do is disable existing protections and insert
+kernel code in order to have free hands on userspace.
 
-The boot option you added can be used if anyone needs to disable it. (Never heard 
-of such a case though.)
+Regards,
+--=20
+Yves-Alexis
 
-Thanks,
 
-	Ingo
+--=-+rY7+Yq9A7PGyJjZ4dYX
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJWVsJXAAoJEG3bU/KmdcCljHoH/RjFS13u2zawUvG6alLLJpnX
+FqCmV4qD4cEjpEdVni1WupAMT2O9HauZEyKJtAOpCXpLSvJI0tgUaBmAUY/XGKSd
+in8H2l+B+mfWoPb2b0Ququw9Xi9xhrRfz6fbSGKBBk1azddnJ5fQGW7BVRTS9eXB
+G6ZW+xAkIB/VaU/1nI1EEguOnyoMVEkDR4CtqO1qQ4IciJN2XlCVA5T6A2MxI9RK
+udwe/GCiiZkvmKPMB37meMnCQOA9wkJvv88f9JJ727SdrN9+w9MApnXKyfwu0hLX
+6Cpa6prM77pra1eu3agseQ/TWMBBxIEPK3L0n9ONQ65ddxpdPWV9I0hJkOsyLwo=
+=y2mK
+-----END PGP SIGNATURE-----
+
+--=-+rY7+Yq9A7PGyJjZ4dYX--
