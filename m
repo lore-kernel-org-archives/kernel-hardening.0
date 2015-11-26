@@ -1,132 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1448535824.19858.42.camel@opteya.com>
-From: Yann Droneaud <ydroneaud@opteya.com>
-Date: Thu, 26 Nov 2015 12:03:44 +0100
-In-Reply-To: <CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
-References: 
-	<CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] On techniques for preventing commit_creds()
- user-space abuse
-To: kernel-hardening@lists.openwall.com
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Thu, 26 Nov 2015 13:14:26 +0100
+MIME-Version: 1.0
+Message-ID: <5656F7A2.738.131F89C0@pageexec.freemail.hu>
+In-reply-to: <20151126104229.GA8530@gmail.com>
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org>, <5656D779.17137.12A1EA53@pageexec.freemail.hu>, <20151126104229.GA8530@gmail.com>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only memory
+To: Ingo Molnar <mingo@kernel.org>
+Cc: kernel-hardening@lists.openwall.com, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+On 26 Nov 2015 at 11:42, Ingo Molnar wrote:
 
-Le jeudi 26 novembre 2015 à 00:14 +0100, Salva Peiró a écrit :
-> A complete version of the technique can be found at
-> http://speirofr.appspot.com/category/techniques/
+> * PaX Team <pageexec@freemail.hu> wrote:
 > 
-> # Analysis
+> > On 26 Nov 2015 at 9:54, Ingo Molnar wrote:
+>
+> > e.g., imagine that the write was to a function pointer (even an entire ops 
+> > structure) or a boolean that controls some important feature for after-init 
+> > code. ignoring/dropping such writes could cause all kinds of logic bugs (if not 
+> > worse).
 > 
-> Given the typical path for kernel exploitation is the
-> `commit_creds(prepare_kernel_cred(0))` being called from user space
-> as detailed in [References].
-> Why is not a check placed in commit_creds() that checks the return
-> address of the call to ensure the call is a legit one coming from
-> kernel space?.
-> 
-> This blocks direct calls to commit_creds from user space,
-> however, it remains vulnerable to alternative exploit routes.
-> The alternatives to bypass this protection are:
-> 
-> - *Indirect jump*
-> An attacker can perform an indirect jump to a kernel location that
-> does the commit_creds() for him, but it complicates the task of the
-> attacker. To prevent indirect calls check the rest of the stack
-> trace.
-> 
-> - *Direct override*
-> Another route to bypass would be to figure out the location of the
-> process creds in memory, and perform the change directly in memory,
-> but AFAIK SMAP and its ARM equivalent would deter this route.
-> 
-> Therefore, I started implementing some exploits for testing it,
-> and implemented the `commit_cred` protection checks technique to
-> check if it is viable for preventing the commit_creds abuse.
-> 
-> The [Implementation] provides a patch that implements the discussed
-> approach.
-> The [Evaluation] provides the tests performed showing it effectively
-> blocks commit_creds abuse from user space.
-> 
-> # Threat Model
-> 
-> The steps involved in commit_creds() exploits:
-> 
-> - Prepare user code to get root:
->     user_addr = commit_creds(prepare_creds(0))
-> 
-> - Override kernel code with:
->     kernel_struct.fptr = user_addr  (1st vuln point SMAP)
-> 
-> - Trigger a syscall that calls kernel_struct.fptr
->     - Invoke syscall from user
->     - Results in kernel_struct.fptr() being called
->         Calls user-space code from kernel code 
->             (2nd vuln point this point we're already toasted SMEP)
->         Then call commit_creds (kernel_code) from user
->             At this point the can detect commit_creds called from
->             user
->            (3rd vuln: fix check return address)
-> 
-> # Implementation
-> 
-> The patch implementing the commit_creds() abuse prevention:
-> 
-> From: Salva Peiró <speirofr AT gmail.com>
-> Date: Wed, 25 Nov 2015 14:03:50 +0100
-> Subject: [PATCH] cred: Prevent commit_creds() user-space abuse
-> 
+> Well, the typical case is that it's a logic bug to _do_ the write: the structure 
+> was marked readonly for a reason but some init code re-runs during suspend or so.
 
+that's actually not the typical case in my experience, but rather these two:
 
-Please add some explanation in your commit message.
+1. initial mistake: someone didn't actually check whether the given object can
+   be __read_only
 
-> Signed-off-by: Salva Peiró <speirofr AT gmail.com>
+2. code evolution: an object that was once written by __init code only (and
+   thus proactively subjected to __read_only) gets modified by non-init code
+   due to later changes
+
+what you described above is a third case where there's a latent bug to begin
+(unintended write) with that __read_only merely exposes but doesn't create
+itself, unlike the two cases above (intended writes getting caught by wrong
+use of __read_only).
+
+> But yes, logic bugs might trigger - but that is true in the opposite case as well, 
+> if we do the write despite it being marked readonly:
+
+not really, the two cases above are not a priori bugs, they become bugs due
+to using __read_only without due care (which is why i suggested to detect
+them at compile time).
+
+> > misusing __read_only and ignoring write attempts would effectively produce the 
+> > same misbehaviour as above so i strongly advise against it.
 > 
-> ---
->  kernel/cred.c | 7 +++++++
->  1 file changed, 7 insertions(+)
-> 
-> diff --git a/kernel/cred.c b/kernel/cred.c
-> index 71179a0..7191db3 100644
-> --- a/kernel/cred.c
-> +++ b/kernel/cred.c
-> @@ -428,6 +428,13 @@ int commit_creds(struct cred *new)
->  	       atomic_read(&new->usage),
->  	       read_cred_subscribers(new));
-> 
-> +	/* block attempts to use commit_creds from user space */
-> +	if (__builtin_return_address(0) < PAGE_OFFSET) {
-> +		printk(KERN_ERR "CRED: BUG commit_creds called from
-> user space\n");
-> +		WARN_ON(1);
-> +		return -1;
-> +	}
-> +
-> 
+> No, the difference to the GCC related aliasing bug is that with my technique the 
+> kernel would immediately produce a very visible kernel warning, which is a very 
+> clear sign that is wrong - and with a very clear backtrace in the warning that 
+> points right to the problematic code - which signature shows us (and users) what 
+> is wrong.
 
-What about
+my proposal would produce the exact same reports, the difference is in letting
+the write attempt succeed vs. skipping it. this latter step is what is wrong
+since it introduces at least a logic bug the same way the constprop optimization
+created a logic bug.
 
-#define call_ok() !access_ok(__builtin_return_address(0), VERIFY_READ)
+> Plus the truly paranoid might panic/halt the system on such warnings, so for 
+> highly secure systems there's a way to not even allow the possibility of logic 
+> bugs. (at the cost of stopping the system when a bug triggers.)
 
-
-	if (WARN(!call_ok(),
-		 "%s called from user space\n", __function__))
-		return -1;
-
-If __builtin_return_address() is reliable enough, that trick can be
-easily added on many sensitive functions.
-
-If such kind of prologue can be injected by compiler in functions
-marked with a dedicated attribute, I think that could be a nice thing
-to have before PAX's UDEREF and KERNEXEC are made available, as the
-latter should better
-
-Regards.
-
--- 
-Yann Droneaud
-OPTEYA
+this would/should be the default behaviour, i.e., no attempt at being smart by
+either allowing or skipping the faulting insn, just report the event and trigger
+whatever fancy future exploit reaction mechanism will get into the kernel.
