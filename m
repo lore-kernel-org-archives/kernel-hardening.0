@@ -1,61 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1448526423.9722.15.camel@debian.org>
-From: Yves-Alexis Perez <corsac@debian.org>
-Date: Thu, 26 Nov 2015 09:27:03 +0100
-In-Reply-To: <CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
-References: 
-	<CAJpd-bFvTNQK=qGCPdnB1ec=yJ+jZuzaoR9pNbn01pgim=0aLg@mail.gmail.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-+rY7+Yq9A7PGyJjZ4dYX"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] On techniques for preventing commit_creds()
- user-space abuse
-To: kernel-hardening@lists.openwall.com
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 26 Nov 2015 09:54:25 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20151126085425.GA29848@gmail.com>
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
+ <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
+ <565595F5.32536.DB9FE75@pageexec.freemail.hu>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <565595F5.32536.DB9FE75@pageexec.freemail.hu>
+Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
+ memory
+To: PaX Team <pageexec@freemail.hu>
+Cc: kernel-hardening@lists.openwall.com, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-+rY7+Yq9A7PGyJjZ4dYX
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+* PaX Team <pageexec@freemail.hu> wrote:
 
-On jeu., 2015-11-26 at 00:14 +0100, Salva Peir=C3=B3 wrote:
-> Given the typical path for kernel exploitation is the
-> `commit_creds(prepare_kernel_cred(0))` being called from user space as
-> detailed in [References].
-> Why is not a check placed in commit_creds() that checks the return addres=
-s
-> of the call to ensure the call is a legit one coming from kernel space?.
+> On 25 Nov 2015 at 10:13, Mathias Krause wrote:
+> 
+> > I myself had some educating experience seeing my machine triple fault
+> > when resuming from a S3 sleep. The root cause was a variable that was
+> > annotated __read_only but that was (unnecessarily) modified during CPU
+> > bring-up phase. Debugging that kind of problems is sort of a PITA, you
+> > could imagine.
 
-I have the feeling that commit_creds(prepare_creds(0)) is just a quick way =
-for
-white hats / good guys to demonstrate a vulnerability by showing an exploit
-leading to privilege escalation (or rooting Android devices).
+( Sidenote: I don't think a ro-faults typically result in triple faults, but yeah, 
+  even having a regular oops (followed by a hang or reboot) during such an 
+  undebuggable state of the system is a major PITA. )
 
-As already said elsewere, we don't have much data on the exploitation
-techniques used by real bad guys, but I somehow assume that if you have rin=
-g 0
-access, the first things you do is disable existing protections and insert
-kernel code in order to have free hands on userspace.
+> actually the kernel could silently recover from this given how the page fault 
+> handler could easily determine that the fault address fell into the 
+> data..read_only section and just silently undo the read-only property, log the 
+> event to dmesg and retry the faulting access.
 
-Regards,
---=20
-Yves-Alexis
+So a safer method would be to decode the faulting instruction, to skip it by 
+fixing up the return RIP and to log the event. It would be mostly equivalent to 
+trying to write to ROM (which get ignored as well), so it's a recoverable (and 
+debuggable) event.
 
+We have all the necessary code in place in the kprobes code, see 
+arch/x86/lib/insn.c, it's a simplified x86 decoder that knows about instruction 
+length (but not about semantics).
 
---=-+rY7+Yq9A7PGyJjZ4dYX
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
+Simple skipping plus setting arithmetic flags to init value should be enough I 
+think: I don't think we use fancy instructions to write to ro variables, such as 
+PUSH/POP with other side effects. If such instructions exist we could minimally 
+extend the decoder to do those fixups as well - in addition to double checking 
+that we skip simple instructions only with no side effects.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
+Can you see any fragility in such a technique?
 
-iQEcBAABCAAGBQJWVsJXAAoJEG3bU/KmdcCljHoH/RjFS13u2zawUvG6alLLJpnX
-FqCmV4qD4cEjpEdVni1WupAMT2O9HauZEyKJtAOpCXpLSvJI0tgUaBmAUY/XGKSd
-in8H2l+B+mfWoPb2b0Ququw9Xi9xhrRfz6fbSGKBBk1azddnJ5fQGW7BVRTS9eXB
-G6ZW+xAkIB/VaU/1nI1EEguOnyoMVEkDR4CtqO1qQ4IciJN2XlCVA5T6A2MxI9RK
-udwe/GCiiZkvmKPMB37meMnCQOA9wkJvv88f9JJ727SdrN9+w9MApnXKyfwu0hLX
-6Cpa6prM77pra1eu3agseQ/TWMBBxIEPK3L0n9ONQ65ddxpdPWV9I0hJkOsyLwo=
-=y2mK
------END PGP SIGNATURE-----
+Thanks,
 
---=-+rY7+Yq9A7PGyJjZ4dYX--
+	Ingo
