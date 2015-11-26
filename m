@@ -1,71 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Thu, 26 Nov 2015 13:14:26 +0100
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
+ <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
+ <56558826.1060202@ladisch.de>
+From: Daniel Micay <danielmicay@gmail.com>
+Message-ID: <565723F6.30708@gmail.com>
+Date: Thu, 26 Nov 2015 10:23:34 -0500
 MIME-Version: 1.0
-Message-ID: <5656F7A2.738.131F89C0@pageexec.freemail.hu>
-In-reply-to: <20151126104229.GA8530@gmail.com>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>, <5656D779.17137.12A1EA53@pageexec.freemail.hu>, <20151126104229.GA8530@gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only memory
-To: Ingo Molnar <mingo@kernel.org>
-Cc: kernel-hardening@lists.openwall.com, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
+In-Reply-To: <56558826.1060202@ladisch.de>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="rCBtpNRBd2vj82WdAsPt6Ao38TKlgb37x"
+Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
+ memory
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 26 Nov 2015 at 11:42, Ingo Molnar wrote:
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--rCBtpNRBd2vj82WdAsPt6Ao38TKlgb37x
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
 
-> * PaX Team <pageexec@freemail.hu> wrote:
-> 
-> > On 26 Nov 2015 at 9:54, Ingo Molnar wrote:
->
-> > e.g., imagine that the write was to a function pointer (even an entire ops 
-> > structure) or a boolean that controls some important feature for after-init 
-> > code. ignoring/dropping such writes could cause all kinds of logic bugs (if not 
-> > worse).
-> 
-> Well, the typical case is that it's a logic bug to _do_ the write: the structure 
-> was marked readonly for a reason but some init code re-runs during suspend or so.
+On 25/11/15 05:06 AM, Clemens Ladisch wrote:
+> Mathias Krause wrote:
+>> [...]
+>> So, prior extending the usage of the __read_only annotation some
+>> toolchain support is needed. Maybe a gcc plugin that'll warn/error on
+>> code that writes to such a variable but is not __init itself.
+>=20
+> Or mark them as "const".  This would require the initialization code to=
 
-that's actually not the typical case in my experience, but rather these two:
+> cast it away, probably with a helper macro.
+>=20
+>=20
+> Regards,
+> Clemens
+>=20
 
-1. initial mistake: someone didn't actually check whether the given object can
-   be __read_only
+That would be undefined. It would only be safe if you exposed a const
+pointer as the only way of accessing a non-const variable. It would be
+silly to mangle the code simply to get a warning as it should be easy
+enough to add to GCC. The usefulness isn't just limited to the kernel
+either.
 
-2. code evolution: an object that was once written by __init code only (and
-   thus proactively subjected to __read_only) gets modified by non-init code
-   due to later changes
 
-what you described above is a third case where there's a latent bug to begin
-(unintended write) with that __read_only merely exposes but doesn't create
-itself, unlike the two cases above (intended writes getting caught by wrong
-use of __read_only).
+--rCBtpNRBd2vj82WdAsPt6Ao38TKlgb37x
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
 
-> But yes, logic bugs might trigger - but that is true in the opposite case as well, 
-> if we do the write despite it being marked readonly:
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-not really, the two cases above are not a priori bugs, they become bugs due
-to using __read_only without due care (which is why i suggested to detect
-them at compile time).
+iQIcBAEBCAAGBQJWVyP8AAoJEPnnEuWa9fIq+VUP/1+5jlskFs92BXQ557/jjLJ+
+cceZIF17TKuGkx3b1eSsaAo/vsbjU7pOLDsCGXvxGpNU/YSMI3EglwaAT9f0+91v
+EfHVbVOgQfKgndk9BcavhRhz5LYKUjuYqbbs+8wR0y2GPfPhwL5q6ESHJYtgtkW4
+QwDhJEyhR0/a8EnK3p4vUOj3cJ0BGrTNsHKBC5bbTLgJL47ssksI57LGrhrAxQOT
+LRdhtlewAMRVH9uz1BfrITJVDB0kfONA9wVGL5/BKAw5plhNpxwiiV0V530RUarN
+iRzddzUN4Jm38yH2AHhxIWtfi96in1edAsysZg8z0+Pv39Jhdk2vjZCB7EOKiBzx
+olKPip2wunrmDfzsI6JHEw7golWKFJBm7e1HHPqlfFyOzMNe8DKKXwyucZOWdMzj
+32+S2Q9V8ao+XHcjvaeGCbGPcxoz+G+IBJojwAU0Ddc9lC2cIHStmE+1EMIGZlzM
+vNjrbqvFO66iC21pcGf5Pl+1ar6Bj0dSNIhOObfNcAjACUPibc666uJyjTl5cih5
+9o1FBXBnD604bf0LH7F0qYFLBgCqBm1KfyBI8+HTsn3X6J4M2Qr+yfrpnWi3/vxR
+GmMQdW7YTdqycvyNlJPSC12XBT02iX7wiKyHxUmDG3BxTjGH/TyWlSP7ihcB4lFz
+gfjQ2mtmC3tvfOakbX+V
+=ORk2
+-----END PGP SIGNATURE-----
 
-> > misusing __read_only and ignoring write attempts would effectively produce the 
-> > same misbehaviour as above so i strongly advise against it.
-> 
-> No, the difference to the GCC related aliasing bug is that with my technique the 
-> kernel would immediately produce a very visible kernel warning, which is a very 
-> clear sign that is wrong - and with a very clear backtrace in the warning that 
-> points right to the problematic code - which signature shows us (and users) what 
-> is wrong.
-
-my proposal would produce the exact same reports, the difference is in letting
-the write attempt succeed vs. skipping it. this latter step is what is wrong
-since it introduces at least a logic bug the same way the constprop optimization
-created a logic bug.
-
-> Plus the truly paranoid might panic/halt the system on such warnings, so for 
-> highly secure systems there's a way to not even allow the possibility of logic 
-> bugs. (at the cost of stopping the system when a bug triggers.)
-
-this would/should be the default behaviour, i.e., no attempt at being smart by
-either allowing or skipping the faulting insn, just report the event and trigger
-whatever fancy future exploit reaction mechanism will get into the kernel.
+--rCBtpNRBd2vj82WdAsPt6Ao38TKlgb37x--
