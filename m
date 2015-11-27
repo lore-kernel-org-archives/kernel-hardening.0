@@ -1,63 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 27 Nov 2015 08:59:59 +0100
+Date: Fri, 27 Nov 2015 09:05:54 +0100
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20151127075959.GA24991@gmail.com>
+Message-ID: <20151127080554.GB24991@gmail.com>
 References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
- <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
- <565595F5.32536.DB9FE75@pageexec.freemail.hu>
- <20151126085425.GA29848@gmail.com>
- <CALCETrXrvAY+mXx+JULw7W+xokcSPFgWm5-McJf9EKhYehPhbA@mail.gmail.com>
+ <5656D779.17137.12A1EA53@pageexec.freemail.hu>
+ <20151126104229.GA8530@gmail.com>
+ <5656F7A2.738.131F89C0@pageexec.freemail.hu>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CALCETrXrvAY+mXx+JULw7W+xokcSPFgWm5-McJf9EKhYehPhbA@mail.gmail.com>
+In-Reply-To: <5656F7A2.738.131F89C0@pageexec.freemail.hu>
 Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
  memory
-To: Andy Lutomirski <luto@amacapital.net>, Linus Torvalds <torvalds@linux-foundation.org>
-Cc: PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch <linux-arch@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>
+To: PaX Team <pageexec@freemail.hu>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: kernel-hardening@lists.openwall.com, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Andy Lutomirski <luto@amacapital.net> wrote:
+* PaX Team <pageexec@freemail.hu> wrote:
 
-> > Can you see any fragility in such a technique?
+> On 26 Nov 2015 at 11:42, Ingo Molnar wrote:
 > 
-> After Linus shot down my rdmsr/rwmsr decoding patch, good luck...
+> > * PaX Team <pageexec@freemail.hu> wrote:
+> > 
+> > > On 26 Nov 2015 at 9:54, Ingo Molnar wrote:
+> >
+> > > e.g., imagine that the write was to a function pointer (even an entire ops 
+> > > structure) or a boolean that controls some important feature for after-init 
+> > > code. ignoring/dropping such writes could cause all kinds of logic bugs (if not 
+> > > worse).
+> > 
+> > Well, the typical case is that it's a logic bug to _do_ the write: the structure 
+> > was marked readonly for a reason but some init code re-runs during suspend or so.
+> 
+> that's actually not the typical case in my experience, but rather these two:
+> 
+> 1. initial mistake: someone didn't actually check whether the given object can
+>    be __read_only
+> 
+> 2. code evolution: an object that was once written by __init code only (and
+>    thus proactively subjected to __read_only) gets modified by non-init code
+>    due to later changes
+> 
+> what you described above is a third case where there's a latent bug to begin 
+> (unintended write) with that __read_only merely exposes but doesn't create 
+> itself, unlike the two cases above (intended writes getting caught by wrong use 
+> of __read_only).
 
-I think that case was entirely different, but I've Cc:-ed Linus to shoot my idea 
-down if it's crap.
+You are right, I concede this part of the argument - what you describe is probably 
+the most typical way to get ro-faults.
 
-> More seriously, though, I think this is mostly just like any other in-kernel 
-> fault.  We failed, me might be under attack, let's oops.  In the particular case 
-> of suspend/resume, we could consider a debug flag to allow writes to these 
-> variables during suspend/resume.  In fact, that might even be a reasonable 
-> default.  We might want to allow writes during module unload as well.
+I do maintain the (sub-)argument that oopsing or relying on tooling help years 
+down the line is vastly inferior to fixing up the problem and generating a 
+one-time stack dump so that kernel developers have a chance to fix the bug. The 
+sooner we detect and dump such information the more likely it is that such bugs 
+don't get into end user kernel versions.
 
-We are getting the _same_ information: we generate a reliable stack trace right 
-there. We don't ignore anything.
+> my proposal would produce the exact same reports, the difference is in letting 
+> the write attempt succeed vs. skipping it. this latter step is what is wrong 
+> since it introduces at least a logic bug the same way the constprop optimization 
+> created a logic bug.
 
-What my suggestion would do is to turn a 'sure system crasher' into a 
-'informational debug message'.
+Yes, you are right and I agree.
 
-On today's typical desktop systems I can tell you with 110% confidence that the 
-vast majority of 'system crasher' oopses never reaches a kernel developer's 
-attention, because the oops message is not propagated to the user, while the 'dump 
-stack trace and try to continue' approach will result in proper bugzillas.
-
-And that's really an important distinction IMHO. Getting debug info out of the 
-system is very important - and those who are paranoid can set a Kconfig value to 
-crash their systems on any hint of a problem.
-
-> For everything else, we should probably focus more on getting OOPSes to display 
-> reliably, which is supposed to work but, on my shiny new i915-based laptop, is 
-> clearly not ready yet (I oopsed it yesterday due to my own bug and all I had to 
-> show for it was a blinking capslock key, and yes, modesetting works).
-
-That's absolutely true as well but an independent issue: it does not invalidate my 
-argument that is based on the status quo, which is that the vast majority 
-panics/oopses, _especially_ during suspend/resume that was mentioned in this case, 
-does not reach any kernel developer.
+Does anyone want to submit such a patch for upstream? Looks like a good change.
 
 Thanks,
 
