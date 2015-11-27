@@ -1,86 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CA+55aFxH+Gy4U8WbGWXh+ybrvng8tw1=2CrjPnJSju3+c5XpbA@mail.gmail.com>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
-	<CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
-	<565595F5.32536.DB9FE75@pageexec.freemail.hu>
-	<20151126085425.GA29848@gmail.com>
-	<CALCETrXrvAY+mXx+JULw7W+xokcSPFgWm5-McJf9EKhYehPhbA@mail.gmail.com>
-	<20151127075959.GA24991@gmail.com>
-	<CA+55aFxH+Gy4U8WbGWXh+ybrvng8tw1=2CrjPnJSju3+c5XpbA@mail.gmail.com>
-Date: Fri, 27 Nov 2015 12:03:40 -0800
-Message-ID: <CAGXu5j+mvknX69Kk1S8u54LR4T+KED8zZdkqQWA9KMrOvtVQtQ@mail.gmail.com>
+In-Reply-To: <20151126163920.GA32190@chrystal.uk.oracle.com>
+References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
+	<20151125234542.GA10324@chrystal>
+	<20151126163920.GA32190@chrystal.uk.oracle.com>
+Date: Fri, 27 Nov 2015 12:09:31 -0800
+Message-ID: <CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only memory
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@amacapital.net>, PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch <linux-arch@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>
+Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
+To: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 27, 2015 at 10:00 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Thu, Nov 26, 2015 at 11:59 PM, Ingo Molnar <mingo@kernel.org> wrote:
+On Thu, Nov 26, 2015 at 8:39 AM, Quentin Casasnovas
+<quentin.casasnovas@oracle.com> wrote:
+> On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
+>> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
 >>
->> * Andy Lutomirski <luto@amacapital.net> wrote:
+>> [snip/]
 >>
->>> > Can you see any fragility in such a technique?
->>>
->>> After Linus shot down my rdmsr/rwmsr decoding patch, good luck...
+>> It should also be noted that I did not find that the struct thread_info
+>> (which is stuffed at the end of the stack) was protected in any way either.
+>> So even if a write/read _below_ the stack could still be trapped if nothing
+>> is currently mapped there, it looks like deep stack usage could still
+>> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
+>> this and it might just be that I'm missing something.
 >>
->> I think that case was entirely different, but I've Cc:-ed Linus to shoot my idea
->> down if it's crap.
+>> In the very unlikely event where I didn't miss anything and the struct
+>> thread_info can still be overflown and there isn't any guard page, maybe we
+>> can improve on the current KSTACK_OVERFLOW feature by putting the struct
+>> thread_info on a different page than the kernel stack, and not vmap() it
+>> like the rest of the stack pages, but instead map a PROT_NONE page there.
+>> That would mean the struct thread_info can still be accessed by using its
+>> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
+>> stack usage.  Maybe the cost of adding an extra page per kernel stack is
+>> too high though.
 >
-> Yeah, no, I hate it. I'm with the PaX team on this one - I think there
-> are three valid responses, and I think we might want to have a dynamic
-> config option (kernel command line or proc or whatever) to pick
-> between the two:
+> As expected I missed some other changes:
 >
->  - just oops and kill the machine, like for any other unhandled kernel
-> page fault. This is probably what you should have on a server
+> /* Load thread_info address into "reg" */
+> #define GET_THREAD_INFO(reg) \
+> -       _ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
+> -       _ASM_SUB $(THREAD_SIZE),reg ;
+> +       _ASM_MOV PER_CPU_VAR(current_tinfo),reg ;
+>
+> and
+>
+> +DECLARE_PER_CPU(struct thread_info *, current_tinfo);
+> +
+> static inline struct thread_info *current_thread_info(void)
+> {
+> -       return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
+> +       return this_cpu_read_stable(current_tinfo);
+> }
+>
+> So no more thread_info on the stack in the default configuration, which
+> isn't correlated with the KSTACKOVERFLOW config option.
 
-This is how the v2 series works now.
-
->  - print a warning and a backtrace, and just mark the page read-write
-> so that the machine survives, but we get notified and can fix whatever
-> broken code
-
-This seems very easy to add. Should I basically reverse the effects of
-mark_rodata_ro(), or should I only make the new ro-after-init section
-as RW? (I think the former would be easier.)
-
->  - have an option to disable the RO data logic.
-
-I added this as "rodata=off" in the v2 series.
-
-> I think that second option is good for debugging. In some places,
-> oopses that kill things are just too hard to debug (ie it might be the
-> modesetting or early boot or whatever).
->
-> In fact, I think we should _start_ with the second option - perhaps
-> just during the rc's - and then when we're pretty sure all the silly
-> bugs it finds (maybe none, who knows) are handled, we should go to the
-> first one.
->
-> The third option would be purely for "user that cannot fix things
-> directly and has reported the problem can now turn off the distracting
-> warning". We should never default to it.
->
-> Trying to actually *recover* any other way thanm by turning the area
-> read-write is just too damn fragile. You can't just skip over the
-> instruction that does the write - there are flags values etc that get
-> updated by read-modify-write instructions, but as PaX says, there nmay
-> also be subsequent logic that gets confused and actually introduces
-> even *more* problems downstream if the write is just discarded.
->
-> So maybe we could have some kind of "mark it read-only again later"
-> thing that tries to make sure it doesn't stay writable for a long
-> time, but quite frankly, I don't think it's worth it. Once the write
-> has been done, and the warning has been emitted, there's likely very
-> little upside to then trying to close the barn doors after that horse
-> has bolted.
->
->                  Linus
+Good find! This seems like it should be its own patch, distinct from
+KSTACKOVERFLOW?
 
 -Kees
 
