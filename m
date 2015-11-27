@@ -1,54 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+mvknX69Kk1S8u54LR4T+KED8zZdkqQWA9KMrOvtVQtQ@mail.gmail.com>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
- <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
- <565595F5.32536.DB9FE75@pageexec.freemail.hu> <20151126085425.GA29848@gmail.com>
- <CALCETrXrvAY+mXx+JULw7W+xokcSPFgWm5-McJf9EKhYehPhbA@mail.gmail.com>
- <20151127075959.GA24991@gmail.com> <CA+55aFxH+Gy4U8WbGWXh+ybrvng8tw1=2CrjPnJSju3+c5XpbA@mail.gmail.com>
- <CAGXu5j+mvknX69Kk1S8u54LR4T+KED8zZdkqQWA9KMrOvtVQtQ@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 27 Nov 2015 12:09:23 -0800
-Message-ID: <CALCETrVVYMUgxABoEVfJgLtE+nB44aijqG5saq8dTQSTVWxbMA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20151126171706.GB32190@chrystal.uk.oracle.com>
+References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
+	<20151125234542.GA10324@chrystal>
+	<20151126171706.GB32190@chrystal.uk.oracle.com>
+Date: Fri, 27 Nov 2015 12:18:55 -0800
+Message-ID: <CAGXu5j+ttTK5w-i7wituvrrkSXexta-3VWktBi1t5GC82iBQFw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only memory
-To: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch <linux-arch@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>
+Subject: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
+To: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 27, 2015 at 12:03 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Nov 27, 2015 at 10:00 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
->> On Thu, Nov 26, 2015 at 11:59 PM, Ingo Molnar <mingo@kernel.org> wrote:
->>>
->>> * Andy Lutomirski <luto@amacapital.net> wrote:
->>>
->>>> > Can you see any fragility in such a technique?
->>>>
->>>> After Linus shot down my rdmsr/rwmsr decoding patch, good luck...
->>>
->>> I think that case was entirely different, but I've Cc:-ed Linus to shoot my idea
->>> down if it's crap.
+On Thu, Nov 26, 2015 at 9:17 AM, Quentin Casasnovas
+<quentin.casasnovas@oracle.com> wrote:
+> On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
+>> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
+>> > Hi,
+>> >
 >>
->> Yeah, no, I hate it. I'm with the PaX team on this one - I think there
->> are three valid responses, and I think we might want to have a dynamic
->> config option (kernel command line or proc or whatever) to pick
->> between the two:
+>> Hi Kees,
 >>
->>  - just oops and kill the machine, like for any other unhandled kernel
->> page fault. This is probably what you should have on a server
+>> > I just wanted to check in and see how progress was going on the stack
+>> > overflow feature. Anything we can help with?
+>> >
+>>
+>> Sorry for not following up on this, I've been busy and haven't had the time
+>> to finish it properly.  I've pushed an initial WIP break up of the
+>> KSTACK_OVERFLOW feature on my github:
+>>
+>>   https://github.com/casasnovas/linux/tree/quentin-split-kstackoverflow
+>>
+>> This is far from being complete though, and hasn't been cleaned at all.  I
+>> didn't share it earlier because I don't think I fully understand it and
+>> haven't tested it yet.  In "short", there's mention of guard pages in the
+>> Kconfig help:
+>>
+>>   If you say Y here, the kernel's process stacks will be allocated with
+>>   vmalloc instead of the kernel's default allocator.  This introduces guard
+>>                                                                       ^^^^^
+>>   pages that in combination with the alloca checking of the STACKLEAK
+>>   ^^^^^
+>>   feature prevents all forms of kernel process stack overflow abuse.  Note
+>>   that this is different from kernel stack buffer overflows. """
+>>
+>> And I couldn't find anything about it in the code.  Maybe it's just coming
+>> from a mis-interpretation of the above text, but I was expecting this to
+>> mean there would be a PROT_NONE guard page after the end of the stack, so
+>> that read/writes below it could be trapped.  It could also be that I missed
+>> some parts in my initial break-up or simply am missing something.
+>>
 >
-> This is how the v2 series works now.
->
->>  - print a warning and a backtrace, and just mark the page read-write
->> so that the machine survives, but we get notified and can fix whatever
->> broken code
->
-> This seems very easy to add. Should I basically reverse the effects of
-> mark_rodata_ro(), or should I only make the new ro-after-init section
-> as RW? (I think the former would be easier.)
+> Alright, there's a guard page by default when using vmap() unless
+> VM_NO_GUARD is in the flags.  I had a feeling I was missing some bits.. ;)
 
-I'd suggest verifying that the page in question is
-.data..ro_after_init and, if so, marking that one page RW.
+Is this documented anywhere in Documentation? Reading the code
+quickly, I don't understand what actually makes this a guard page. It
+looks like the requested size is just grown. Is it actually set up in
+a way that'll trap if it that page gets touched?
 
---Andy
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
