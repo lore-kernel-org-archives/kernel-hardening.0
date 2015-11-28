@@ -1,53 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 28 Nov 2015 10:16:49 +0100
+Date: Sat, 28 Nov 2015 10:19:45 +0100
 From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Message-ID: <20151128091649.GF32190@chrystal.uk.oracle.com>
+Message-ID: <20151128091945.GG32190@chrystal.uk.oracle.com>
 References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
  <20151125234542.GA10324@chrystal>
- <20151126171706.GB32190@chrystal.uk.oracle.com>
- <CAGXu5j+ttTK5w-i7wituvrrkSXexta-3VWktBi1t5GC82iBQFw@mail.gmail.com>
+ <20151126163920.GA32190@chrystal.uk.oracle.com>
+ <CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+ttTK5w-i7wituvrrkSXexta-3VWktBi1t5GC82iBQFw@mail.gmail.com>
-Subject: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: Kees Cook <keescook@chromium.org>
-Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
+To: kernel-hardening@lists.openwall.com
+Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 27, 2015 at 12:18:55PM -0800, Kees Cook wrote:
-> On Thu, Nov 26, 2015 at 9:17 AM, Quentin Casasnovas
+On Fri, Nov 27, 2015 at 12:09:31PM -0800, Kees Cook wrote:
+> On Thu, Nov 26, 2015 at 8:39 AM, Quentin Casasnovas
 > <quentin.casasnovas@oracle.com> wrote:
+> > On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
+> >> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
+> >>
+> >> [snip/]
+> >>
+> >> It should also be noted that I did not find that the struct thread_info
+> >> (which is stuffed at the end of the stack) was protected in any way either.
+> >> So even if a write/read _below_ the stack could still be trapped if nothing
+> >> is currently mapped there, it looks like deep stack usage could still
+> >> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
+> >> this and it might just be that I'm missing something.
+> >>
+> >> In the very unlikely event where I didn't miss anything and the struct
+> >> thread_info can still be overflown and there isn't any guard page, maybe we
+> >> can improve on the current KSTACK_OVERFLOW feature by putting the struct
+> >> thread_info on a different page than the kernel stack, and not vmap() it
+> >> like the rest of the stack pages, but instead map a PROT_NONE page there.
+> >> That would mean the struct thread_info can still be accessed by using its
+> >> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
+> >> stack usage.  Maybe the cost of adding an extra page per kernel stack is
+> >> too high though.
 > >
-> > Alright, there's a guard page by default when using vmap() unless
-> > VM_NO_GUARD is in the flags.  I had a feeling I was missing some bits.. ;)
+> > As expected I missed some other changes:
+> >
+> > /* Load thread_info address into "reg" */
+> > #define GET_THREAD_INFO(reg) \
+> > -       _ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
+> > -       _ASM_SUB $(THREAD_SIZE),reg ;
+> > +       _ASM_MOV PER_CPU_VAR(current_tinfo),reg ;
+> >
+> > and
+> >
+> > +DECLARE_PER_CPU(struct thread_info *, current_tinfo);
+> > +
+> > static inline struct thread_info *current_thread_info(void)
+> > {
+> > -       return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
+> > +       return this_cpu_read_stable(current_tinfo);
+> > }
+> >
+> > So no more thread_info on the stack in the default configuration, which
+> > isn't correlated with the KSTACKOVERFLOW config option.
 > 
-> Is this documented anywhere in Documentation?
+> Good find! This seems like it should be its own patch, distinct from
+> KSTACKOVERFLOW?
 >
 
-I couldn't find anything in Documentation/ but the flag is documented in
-include/linux/vmalloc.h.  I found it by looking at the vmap() code
-directly.
-
-> 
-> Reading the code quickly, I don't understand what actually makes this a
-> guard page. It looks like the requested size is just grown. Is it
-> actually set up in a way that'll trap if it that page gets touched?
-> 
-
-AFAIU (which might not be very far!), the size is grown in
-get_vm_area_caller() but then only the *requested* size is mapped in
-map_vm_area().
-
-On x86-64, where we have the IST stack, that means as soon as we access
-below the currently mapped stack, we'll get a page fault, which will be
-handled by vmalloc_fault(), and since no PTE is present for that page, that
-should cause an Oops.
-
-On x86, I believe a page fault when accessing below the stack would cause a
-double fault, as there won't be any stack switching since we're coming from
-ring0 (and there isn't a stack switch on exception when there isn't a
-privilege change), so the first page fault would cause a second fault when
-the CPU tries to push the context on the same stack.
+We should probably make KSTACKOVERFLOW depend on moving the thread_info off
+the stack, since otherwise the thread_info could still be hijacked and that
+would counterfeit the KSTACKOVERFLOW purpose.
 
 Quentin
