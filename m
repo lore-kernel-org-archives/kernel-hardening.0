@@ -1,72 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 28 Nov 2015 10:19:45 +0100
+Date: Sat, 28 Nov 2015 10:25:17 +0100
 From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Message-ID: <20151128091945.GG32190@chrystal.uk.oracle.com>
+Message-ID: <20151128092517.GH32190@chrystal.uk.oracle.com>
 References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
  <20151125234542.GA10324@chrystal>
- <20151126163920.GA32190@chrystal.uk.oracle.com>
- <CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
+ <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: kernel-hardening@lists.openwall.com
-Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+In-Reply-To: <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
+Subject: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
+To: Kees Cook <keescook@chromium.org>
+Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 27, 2015 at 12:09:31PM -0800, Kees Cook wrote:
-> On Thu, Nov 26, 2015 at 8:39 AM, Quentin Casasnovas
+On Fri, Nov 27, 2015 at 12:23:58PM -0800, Kees Cook wrote:
+> On Wed, Nov 25, 2015 at 3:45 PM, Quentin Casasnovas
 > <quentin.casasnovas@oracle.com> wrote:
-> > On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
-> >> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
-> >>
-> >> [snip/]
-> >>
-> >> It should also be noted that I did not find that the struct thread_info
-> >> (which is stuffed at the end of the stack) was protected in any way either.
-> >> So even if a write/read _below_ the stack could still be trapped if nothing
-> >> is currently mapped there, it looks like deep stack usage could still
-> >> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
-> >> this and it might just be that I'm missing something.
-> >>
-> >> In the very unlikely event where I didn't miss anything and the struct
-> >> thread_info can still be overflown and there isn't any guard page, maybe we
-> >> can improve on the current KSTACK_OVERFLOW feature by putting the struct
-> >> thread_info on a different page than the kernel stack, and not vmap() it
-> >> like the rest of the stack pages, but instead map a PROT_NONE page there.
-> >> That would mean the struct thread_info can still be accessed by using its
-> >> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
-> >> stack usage.  Maybe the cost of adding an extra page per kernel stack is
-> >> too high though.
 > >
-> > As expected I missed some other changes:
-> >
-> > /* Load thread_info address into "reg" */
-> > #define GET_THREAD_INFO(reg) \
-> > -       _ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
-> > -       _ASM_SUB $(THREAD_SIZE),reg ;
-> > +       _ASM_MOV PER_CPU_VAR(current_tinfo),reg ;
-> >
-> > and
-> >
-> > +DECLARE_PER_CPU(struct thread_info *, current_tinfo);
-> > +
-> > static inline struct thread_info *current_thread_info(void)
-> > {
-> > -       return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
-> > +       return this_cpu_read_stable(current_tinfo);
-> > }
-> >
-> > So no more thread_info on the stack in the default configuration, which
-> > isn't correlated with the KSTACKOVERFLOW config option.
+> > Finally, I'd like to find a real life example where one could overflow the
+> > kernel stack, so it can be used to test the feature (once properly split)
+> > and show it can happen, for real, before sending real patches for review.
+> > I might have found such a case because of what appears to me like a gcc
+> > bug, more on this in another follow up :)
 > 
-> Good find! This seems like it should be its own patch, distinct from
-> KSTACKOVERFLOW?
->
+> I think at least some of the past flaws have been related to having
+> dynamic stack allocations, where an attacker could control the size of
+> the object. And "alloca" overflow style attack.
+> 
 
-We should probably make KSTACKOVERFLOW depend on moving the thread_info off
-the stack, since otherwise the thread_info could still be hijacked and that
-would counterfeit the KSTACKOVERFLOW purpose.
+It turns out there isn't any gcc problems and huge stack usage (sometimes
+even 5Kb, like for nl80211_send_wiphy(), or 2Kb in interrupt context for
+kbd_event()) in functions not supposed to require a lot of stack was caused
+by KASAN on my tests.  The THREAD_SIZE is properly augmented when using
+KASAN so that shouldn't cause any problems, sorry for the noise.
+
+> 
+> I will see about getting an lkdtm test written too. Though testing
+> this when there is no guard page seems like a bad idea. I'll have to
+> get creative on the overwrite. Hmm.
+> 
+
+:)
 
 Quentin
