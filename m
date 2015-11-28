@@ -1,102 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20151125234542.GA10324@chrystal>
+Date: Sat, 28 Nov 2015 10:16:49 +0100
+From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Message-ID: <20151128091649.GF32190@chrystal.uk.oracle.com>
 References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
-	<20151125234542.GA10324@chrystal>
-Date: Fri, 27 Nov 2015 12:23:58 -0800
-Message-ID: <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
+ <20151125234542.GA10324@chrystal>
+ <20151126171706.GB32190@chrystal.uk.oracle.com>
+ <CAGXu5j+ttTK5w-i7wituvrrkSXexta-3VWktBi1t5GC82iBQFw@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+ttTK5w-i7wituvrrkSXexta-3VWktBi1t5GC82iBQFw@mail.gmail.com>
 Subject: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 25, 2015 at 3:45 PM, Quentin Casasnovas
-<quentin.casasnovas@oracle.com> wrote:
-> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
->> Hi,
->>
+On Fri, Nov 27, 2015 at 12:18:55PM -0800, Kees Cook wrote:
+> On Thu, Nov 26, 2015 at 9:17 AM, Quentin Casasnovas
+> <quentin.casasnovas@oracle.com> wrote:
+> >
+> > Alright, there's a guard page by default when using vmap() unless
+> > VM_NO_GUARD is in the flags.  I had a feeling I was missing some bits.. ;)
+> 
+> Is this documented anywhere in Documentation?
 >
-> Hi Kees,
->
->> I just wanted to check in and see how progress was going on the stack
->> overflow feature. Anything we can help with?
->>
->
-> Sorry for not following up on this, I've been busy and haven't had the time
-> to finish it properly.  I've pushed an initial WIP break up of the
-> KSTACK_OVERFLOW feature on my github:
->
->   https://github.com/casasnovas/linux/tree/quentin-split-kstackoverflow
 
-Great! Thanks for the update!
+I couldn't find anything in Documentation/ but the flag is documented in
+include/linux/vmalloc.h.  I found it by looking at the vmap() code
+directly.
 
-> This is far from being complete though, and hasn't been cleaned at all.  I
-> didn't share it earlier because I don't think I fully understand it and
-> haven't tested it yet.  In "short", there's mention of guard pages in the
-> Kconfig help:
->
->   If you say Y here, the kernel's process stacks will be allocated with
->   vmalloc instead of the kernel's default allocator.  This introduces guard
->                                                                       ^^^^^
->   pages that in combination with the alloca checking of the STACKLEAK
->   ^^^^^
->   feature prevents all forms of kernel process stack overflow abuse.  Note
->   that this is different from kernel stack buffer overflows. """
->
-> And I couldn't find anything about it in the code.  Maybe it's just coming
-> from a mis-interpretation of the above text, but I was expecting this to
-> mean there would be a PROT_NONE guard page after the end of the stack, so
-> that read/writes below it could be trapped.  It could also be that I missed
-> some parts in my initial break-up or simply am missing something.
->
-> It should also be noted that I did not find that the struct thread_info
-> (which is stuffed at the end of the stack) was protected in any way either.
-> So even if a write/read _below_ the stack could still be trapped if nothing
-> is currently mapped there, it looks like deep stack usage could still
-> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
-> this and it might just be that I'm missing something.
->
-> In the very unlikely event where I didn't miss anything and the struct
-> thread_info can still be overflown and there isn't any guard page, maybe we
-> can improve on the current KSTACK_OVERFLOW feature by putting the struct
-> thread_info on a different page than the kernel stack, and not vmap() it
-> like the rest of the stack pages, but instead map a PROT_NONE page there.
-> That would mean the struct thread_info can still be accessed by using its
-> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
-> stack usage.  Maybe the cost of adding an extra page per kernel stack is
-> too high though.
->
-> Finally, I'd like to find a real life example where one could overflow the
-> kernel stack, so it can be used to test the feature (once properly split)
-> and show it can happen, for real, before sending real patches for review.
-> I might have found such a case because of what appears to me like a gcc
-> bug, more on this in another follow up :)
+> 
+> Reading the code quickly, I don't understand what actually makes this a
+> guard page. It looks like the requested size is just grown. Is it
+> actually set up in a way that'll trap if it that page gets touched?
+> 
 
-I think at least some of the past flaws have been related to having
-dynamic stack allocations, where an attacker could control the size of
-the object. And "alloca" overflow style attack.
+AFAIU (which might not be very far!), the size is grown in
+get_vm_area_caller() but then only the *requested* size is mapped in
+map_vm_area().
 
-I will see about getting an lkdtm test written too. Though testing
-this when there is no guard page seems like a bad idea. I'll have to
-get creative on the overwrite. Hmm.
+On x86-64, where we have the IST stack, that means as soon as we access
+below the currently mapped stack, we'll get a page fault, which will be
+handled by vmalloc_fault(), and since no PTE is present for that page, that
+should cause an Oops.
 
-> tldr; Initial break up done, not even compile-tested yet and am probably
-> missing some bits.  Might have found a code path to trigger a kernel stack
-> overflow due to a gcc weirdness, I need to investigate it.
+On x86, I believe a page fault when accessing below the stack would cause a
+double fault, as there won't be any stack switching since we're coming from
+ring0 (and there isn't a stack switch on exception when there isn't a
+privilege change), so the first page fault would cause a second fault when
+the CPU tries to push the context on the same stack.
 
-Yay bugs! :)
-
->
-> Any comments appreciated :)
->
-> Thanks,
-> Quentin
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Quentin
