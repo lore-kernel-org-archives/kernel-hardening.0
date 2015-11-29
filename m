@@ -1,31 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <CAGXu5jJXpnaKsG_W_xzwr0SBkKSEtUqEC0LR3-ZByPx9NAj5Lw@mail.gmail.com>
 From: Richard Weinberger <richard@nod.at>
-Message-ID: <565B7F7D.80208@nod.at>
-Date: Sun, 29 Nov 2015 23:43:09 +0100
+Message-ID: <565B822B.8000700@nod.at>
+Date: Sun, 29 Nov 2015 23:54:35 +0100
 MIME-Version: 1.0
+In-Reply-To: <CAGXu5jJXpnaKsG_W_xzwr0SBkKSEtUqEC0LR3-ZByPx9NAj5Lw@mail.gmail.com>
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] user controllable usermodehelper in br_stp_if.c
-To: "netdev@vger.kernel.org" <netdev@vger.kernel.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: status: GRKERNSEC_BRUTE
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi!
+Am 24.11.2015 um 20:19 schrieb Kees Cook:
+> Hi,
+> 
+> While not strictly a _kernel_ self-protection mechanism, it's still
+> something that I'd love to see upstream, so I'll ping about its status
+> here too. :) Any updates on the brute force detector? (Last week I had
+> someone suggest making this a "respawn cgroup" or something, if it's
+> not workable as-is.) Anything we can help with?
 
-By spawning new network and user namesapces an unprivileged user
-is able to execute /sbin/bridge-stp within the initial mount namespace
-with global root rights.
-While this cannot directly be used to break out of a container or gain
-global root rights it could be used by exploit writers as valuable building block.
-
-e.g.
-$ unshare -U -r -n /bin/sh
-$ brctl addbr br0
-$ brctl stp br0 on # this will execute /sbin/bridge-stp
-
-As this mechanism clearly cannot work with containers and seems to be legacy code
-I suggest not calling call_usermodehelper() at all if we're not in the initial user namespace.
-What do you think?
+I can revive my patch and resend. Maybe it helps to collect
+new ideas (or NAKs ;)).
 
 Thanks,
 //richard
