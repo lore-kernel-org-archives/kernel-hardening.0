@@ -1,46 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 28 Nov 2015 10:25:17 +0100
-From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Message-ID: <20151128092517.GH32190@chrystal.uk.oracle.com>
-References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
- <20151125234542.GA10324@chrystal>
- <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Sun, 29 Nov 2015 09:05:05 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20151129080505.GA23721@gmail.com>
+References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
+ <CA+rthh-euk2hGGWjsDqXogWSmzmJNV1aiUVfnTfrzyQhndgbOQ@mail.gmail.com>
+ <565595F5.32536.DB9FE75@pageexec.freemail.hu>
+ <20151126085425.GA29848@gmail.com>
+ <CALCETrXrvAY+mXx+JULw7W+xokcSPFgWm5-McJf9EKhYehPhbA@mail.gmail.com>
+ <20151127075959.GA24991@gmail.com>
+ <CA+55aFxH+Gy4U8WbGWXh+ybrvng8tw1=2CrjPnJSju3+c5XpbA@mail.gmail.com>
+ <CAGXu5j+mvknX69Kk1S8u54LR4T+KED8zZdkqQWA9KMrOvtVQtQ@mail.gmail.com>
+ <CALCETrVVYMUgxABoEVfJgLtE+nB44aijqG5saq8dTQSTVWxbMA@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
-Subject: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: Kees Cook <keescook@chromium.org>
-Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CALCETrVVYMUgxABoEVfJgLtE+nB44aijqG5saq8dTQSTVWxbMA@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
+ memory
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Kees Cook <keescook@chromium.org>, Linus Torvalds <torvalds@linux-foundation.org>, PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mathias Krause <minipli@googlemail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch <linux-arch@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 27, 2015 at 12:23:58PM -0800, Kees Cook wrote:
-> On Wed, Nov 25, 2015 at 3:45 PM, Quentin Casasnovas
-> <quentin.casasnovas@oracle.com> wrote:
+
+* Andy Lutomirski <luto@amacapital.net> wrote:
+
+> >>  - print a warning and a backtrace, and just mark the page read-write
+> >> so that the machine survives, but we get notified and can fix whatever
+> >> broken code
 > >
-> > Finally, I'd like to find a real life example where one could overflow the
-> > kernel stack, so it can be used to test the feature (once properly split)
-> > and show it can happen, for real, before sending real patches for review.
-> > I might have found such a case because of what appears to me like a gcc
-> > bug, more on this in another follow up :)
+> > This seems very easy to add. Should I basically reverse the effects of 
+> > mark_rodata_ro(), or should I only make the new ro-after-init section as RW? 
+> > (I think the former would be easier.)
 > 
-> I think at least some of the past flaws have been related to having
-> dynamic stack allocations, where an attacker could control the size of
-> the object. And "alloca" overflow style attack.
-> 
+> I'd suggest verifying that the page in question is .data..ro_after_init and, if 
+> so, marking that one page RW.
 
-It turns out there isn't any gcc problems and huge stack usage (sometimes
-even 5Kb, like for nl80211_send_wiphy(), or 2Kb in interrupt context for
-kbd_event()) in functions not supposed to require a lot of stack was caused
-by KASAN on my tests.  The THREAD_SIZE is properly augmented when using
-KASAN so that shouldn't cause any problems, sorry for the noise.
+Yes, this was PaX's suggestion as well, and I agree: doing that turns a quite 
+possibly unrecoverable boot/shutdown time or suspend/resume time (suspend is 
+really a special category of 'bootup') crasher oops into a more informative stack 
+dump.
 
-> 
-> I will see about getting an lkdtm test written too. Though testing
-> this when there is no guard page seems like a bad idea. I'll have to
-> get creative on the overwrite. Hmm.
-> 
+These ro related faults tend to trigger when init/deinit is running, and oopsing 
+in those sequences is typically a lot less survivable than say oopsing in a high 
+level system call while not holding locks.
 
-:)
+Thanks,
 
-Quentin
+	Ingo
