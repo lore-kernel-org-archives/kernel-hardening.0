@@ -1,36 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
- <1448494286-16029-3-git-send-email-keescook@chromium.org>
- <56564F0F.3158.108D0B78@pageexec.freemail.hu>
-From: "H. Peter Anvin" <hpa@zytor.com>
-Message-ID: <565CCCBB.1070500@zytor.com>
-Date: Mon, 30 Nov 2015 14:24:59 -0800
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <565B7F7D.80208@nod.at>
+	<CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
+	<87egf7183c.fsf_-_@x220.int.ebiederm.org>
+	<20151130141208.516b1046@xeon-e3>
+Date: Mon, 30 Nov 2015 16:16:52 -0600
+In-Reply-To: <20151130141208.516b1046@xeon-e3> (Stephen Hemminger's message of
+	"Mon, 30 Nov 2015 14:12:08 -0800")
+Message-ID: <87si3nxhd7.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-In-Reply-To: <56564F0F.3158.108D0B78@pageexec.freemail.hu>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 2/4] introduce post-init read-only memory
-To: pageexec@freemail.hu, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH net] bridge: Only call /sbin/bridge-stp for the initial network namespace
+To: Stephen Hemminger <stephen@networkplumber.org>
+Cc: David Miller <davem@davemloft.net>, Richard Weinberger <richard@nod.at>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/25/15 16:15, PaX Team wrote:
-> On 25 Nov 2015 at 15:31, Kees Cook wrote:
-> 
->> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
->> index c4bd0e2c173c..772c784ba763 100644
->> --- a/include/asm-generic/vmlinux.lds.h
->> +++ b/include/asm-generic/vmlinux.lds.h
->> @@ -256,6 +256,7 @@
->>   .rodata           : AT(ADDR(.rodata) - LOAD_OFFSET) {		\
->>    VMLINUX_SYMBOL(__start_rodata) = .;			\
->>    *(.rodata) *(.rodata.*)					\
->> +		*(.data..ro_after_init)	/* Read only after init */	\
->    ^^^^^^^^^^^
-> looks like it's tabs vs. spaces...
-> 
+Stephen Hemminger <stephen@networkplumber.org> writes:
 
-One more thing... double dots I think has special meanings to gcc, so it
-might be better to avoid.
+> On Mon, 30 Nov 2015 15:38:15 -0600
+> ebiederm@xmission.com (Eric W. Biederman) wrote:
+>
+>> 
+>> There is no defined mechanism to pass network namespace information
+>> into /sbin/bridge-stp therefore don't even try to invoke it except
+>> for bridge devices in the initial network namespace.
+>> 
+>> It is possible for unprivileged users to cause /sbin/bridge-stp to be
+>> invoked for any network device name which if /sbin/bridge-stp does not
+>> guard against unreasonable arguments or being invoked twice on the same
+>> network device could cause problems.
+>> 
+>> Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+>> ---
+>>  net/bridge/br_stp_if.c | 4 +++-
+>>  1 file changed, 3 insertions(+), 1 deletion(-)
+>> 
+>> diff --git a/net/bridge/br_stp_if.c b/net/bridge/br_stp_if.c
+>> index 5396ff08af32..742fa89528ab 100644
+>> --- a/net/bridge/br_stp_if.c
+>> +++ b/net/bridge/br_stp_if.c
+>> @@ -142,7 +142,9 @@ static void br_stp_start(struct net_bridge *br)
+>>  	char *envp[] = { NULL };
+>>  	struct net_bridge_port *p;
+>>  
+>> -	r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
+>> +	r = -ENOENT;
+>> +	if (dev_net(br->dev) == &init_net)
+>> +		r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
+>
+> I don't think this will cause loud screams.
+> But it might break people that use containers to run virtual networks
+> for testing.
 
-	-hpa
+I don't see how this interface can possibly be for more than the initial
+network namespace.  There is no network namespace information conveyed
+and /sbin/bridge-stp always runs in the initial network namespace.
+
+Which is the point of this patch.  Don't try when the code can not work.
+
+The only way this code could possibly work in the presence of multiple
+network namespaces is if somehow the network namespace was encoded in
+the device name, and then the usermode helper switched to the
+appropriate network namespace.
+
+I suspect that anyone knowledgable enough to know this interface exists
+would have sent a patch to fix the kernel to give network namespace
+information rather than use a horrible userspace hack like encoding the
+network namespace in the device name.
+
+> One coding nit:
+> Why are you afraid of using an else?
+
+Branch stalls.  Plus in this case an else is more lines and just plain
+uglier code.
+
+Eric
