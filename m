@@ -1,78 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20151128091945.GG32190@chrystal.uk.oracle.com>
-References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
-	<20151125234542.GA10324@chrystal>
-	<20151126163920.GA32190@chrystal.uk.oracle.com>
-	<CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
-	<20151128091945.GG32190@chrystal.uk.oracle.com>
-Date: Mon, 30 Nov 2015 12:12:27 -0800
-Message-ID: <CAGXu5j+_uxfPPk0ztFW5x9Sua8k=9MmeftiTp76FTnQgJ3Q14g@mail.gmail.com>
+In-Reply-To: <565B7F7D.80208@nod.at>
+References: <565B7F7D.80208@nod.at>
+Date: Mon, 30 Nov 2015 12:14:41 -0800
+Message-ID: <CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Subject: [kernel-hardening] Re: user controllable usermodehelper in br_stp_if.c
+To: Richard Weinberger <richard@nod.at>, "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Nov 28, 2015 at 1:19 AM, Quentin Casasnovas
-<quentin.casasnovas@oracle.com> wrote:
-> On Fri, Nov 27, 2015 at 12:09:31PM -0800, Kees Cook wrote:
->> On Thu, Nov 26, 2015 at 8:39 AM, Quentin Casasnovas
->> <quentin.casasnovas@oracle.com> wrote:
->> > On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
->> >> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
->> >>
->> >> [snip/]
->> >>
->> >> It should also be noted that I did not find that the struct thread_info
->> >> (which is stuffed at the end of the stack) was protected in any way either.
->> >> So even if a write/read _below_ the stack could still be trapped if nothing
->> >> is currently mapped there, it looks like deep stack usage could still
->> >> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
->> >> this and it might just be that I'm missing something.
->> >>
->> >> In the very unlikely event where I didn't miss anything and the struct
->> >> thread_info can still be overflown and there isn't any guard page, maybe we
->> >> can improve on the current KSTACK_OVERFLOW feature by putting the struct
->> >> thread_info on a different page than the kernel stack, and not vmap() it
->> >> like the rest of the stack pages, but instead map a PROT_NONE page there.
->> >> That would mean the struct thread_info can still be accessed by using its
->> >> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
->> >> stack usage.  Maybe the cost of adding an extra page per kernel stack is
->> >> too high though.
->> >
->> > As expected I missed some other changes:
->> >
->> > /* Load thread_info address into "reg" */
->> > #define GET_THREAD_INFO(reg) \
->> > -       _ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
->> > -       _ASM_SUB $(THREAD_SIZE),reg ;
->> > +       _ASM_MOV PER_CPU_VAR(current_tinfo),reg ;
->> >
->> > and
->> >
->> > +DECLARE_PER_CPU(struct thread_info *, current_tinfo);
->> > +
->> > static inline struct thread_info *current_thread_info(void)
->> > {
->> > -       return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
->> > +       return this_cpu_read_stable(current_tinfo);
->> > }
->> >
->> > So no more thread_info on the stack in the default configuration, which
->> > isn't correlated with the KSTACKOVERFLOW config option.
->>
->> Good find! This seems like it should be its own patch, distinct from
->> KSTACKOVERFLOW?
->>
+On Sun, Nov 29, 2015 at 2:43 PM, Richard Weinberger <richard@nod.at> wrote:
+> Hi!
 >
-> We should probably make KSTACKOVERFLOW depend on moving the thread_info off
-> the stack, since otherwise the thread_info could still be hijacked and that
-> would counterfeit the KSTACKOVERFLOW purpose.
+> By spawning new network and user namesapces an unprivileged user
+> is able to execute /sbin/bridge-stp within the initial mount namespace
+> with global root rights.
+> While this cannot directly be used to break out of a container or gain
+> global root rights it could be used by exploit writers as valuable building block.
+>
+> e.g.
+> $ unshare -U -r -n /bin/sh
+> $ brctl addbr br0
+> $ brctl stp br0 on # this will execute /sbin/bridge-stp
+>
+> As this mechanism clearly cannot work with containers and seems to be legacy code
+> I suggest not calling call_usermodehelper() at all if we're not in the initial user namespace.
+> What do you think?
 
-Right. Either a "select" or "depends" in the Kconfig seems appropriate.
+I'm not familiar with how bridge-stp is expected to operate with a
+network namespace, but if it's meaningless, then yeah, that seems like
+a reasonable change. Can you send a patch? (Also, if it's legacy code,
+maybe it could be turned off entirely, not just for containers?)
 
 -Kees
 
