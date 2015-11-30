@@ -1,84 +1,81 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Mon, 30 Nov 2015 09:01:03 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20151130080103.GA30586@gmail.com>
-References: <1448401114-24650-1-git-send-email-keescook@chromium.org>
- <565876F3.21515.18F8DF8F@pageexec.freemail.hu>
- <20151129080853.GB23721@gmail.com>
- <565ADE35.20892.225C67C2@pageexec.freemail.hu>
- <20151129153918.GA12215@gmail.com>
- <CA+rthh_vXtYqvgcLJm=Xq8BniKMbffQrJJ8Gt_BWoAKbow8_Ow@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+rthh_vXtYqvgcLJm=Xq8BniKMbffQrJJ8Gt_BWoAKbow8_Ow@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 0/2] introduce post-init read-only
- memory
-To: Mathias Krause <minipli@googlemail.com>
-Cc: PaX Team <pageexec@freemail.hu>, Linus Torvalds <torvalds@linux-foundation.org>, kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H. Peter Anvin" <hpa@zytor.com>, x86-ml <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Michael Ellerman <mpe@ellerman.id.au>, linux-arch@vger.kernel.org, Emese Revfy <re.emese@gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20151128091945.GG32190@chrystal.uk.oracle.com>
+References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
+	<20151125234542.GA10324@chrystal>
+	<20151126163920.GA32190@chrystal.uk.oracle.com>
+	<CAGXu5jL9-op32X2WFhbdahW8XHHLAdvT+pxULKU2nun5FN6ndg@mail.gmail.com>
+	<20151128091945.GG32190@chrystal.uk.oracle.com>
+Date: Mon, 30 Nov 2015 12:12:27 -0800
+Message-ID: <CAGXu5j+_uxfPPk0ztFW5x9Sua8k=9MmeftiTp76FTnQgJ3Q14g@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sat, Nov 28, 2015 at 1:19 AM, Quentin Casasnovas
+<quentin.casasnovas@oracle.com> wrote:
+> On Fri, Nov 27, 2015 at 12:09:31PM -0800, Kees Cook wrote:
+>> On Thu, Nov 26, 2015 at 8:39 AM, Quentin Casasnovas
+>> <quentin.casasnovas@oracle.com> wrote:
+>> > On Thu, Nov 26, 2015 at 12:45:42AM +0100, Quentin Casasnovas wrote:
+>> >> On Tue, Nov 24, 2015 at 11:10:09AM -0800, Kees Cook wrote:
+>> >>
+>> >> [snip/]
+>> >>
+>> >> It should also be noted that I did not find that the struct thread_info
+>> >> (which is stuffed at the end of the stack) was protected in any way either.
+>> >> So even if a write/read _below_ the stack could still be trapped if nothing
+>> >> is currently mapped there, it looks like deep stack usage could still
+>> >> overflow it and go unoticed.  Here again, I didn't spend a lot of time on
+>> >> this and it might just be that I'm missing something.
+>> >>
+>> >> In the very unlikely event where I didn't miss anything and the struct
+>> >> thread_info can still be overflown and there isn't any guard page, maybe we
+>> >> can improve on the current KSTACK_OVERFLOW feature by putting the struct
+>> >> thread_info on a different page than the kernel stack, and not vmap() it
+>> >> like the rest of the stack pages, but instead map a PROT_NONE page there.
+>> >> That would mean the struct thread_info can still be accessed by using its
+>> >> lowmem mapping (i.e. legit usage from the kernel) but not by deep kernel
+>> >> stack usage.  Maybe the cost of adding an extra page per kernel stack is
+>> >> too high though.
+>> >
+>> > As expected I missed some other changes:
+>> >
+>> > /* Load thread_info address into "reg" */
+>> > #define GET_THREAD_INFO(reg) \
+>> > -       _ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
+>> > -       _ASM_SUB $(THREAD_SIZE),reg ;
+>> > +       _ASM_MOV PER_CPU_VAR(current_tinfo),reg ;
+>> >
+>> > and
+>> >
+>> > +DECLARE_PER_CPU(struct thread_info *, current_tinfo);
+>> > +
+>> > static inline struct thread_info *current_thread_info(void)
+>> > {
+>> > -       return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
+>> > +       return this_cpu_read_stable(current_tinfo);
+>> > }
+>> >
+>> > So no more thread_info on the stack in the default configuration, which
+>> > isn't correlated with the KSTACKOVERFLOW config option.
+>>
+>> Good find! This seems like it should be its own patch, distinct from
+>> KSTACKOVERFLOW?
+>>
+>
+> We should probably make KSTACKOVERFLOW depend on moving the thread_info off
+> the stack, since otherwise the thread_info could still be hijacked and that
+> would counterfeit the KSTACKOVERFLOW purpose.
 
-* Mathias Krause <minipli@googlemail.com> wrote:
+Right. Either a "select" or "depends" in the Kconfig seems appropriate.
 
-> On 29 November 2015 at 16:39, Ingo Molnar <mingo@kernel.org> wrote:
-> >
-> > * PaX Team <pageexec@freemail.hu> wrote:
-> >
-> >> On 29 Nov 2015 at 9:08, Ingo Molnar wrote:
-> >>
-> >> >
-> >> > * PaX Team <pageexec@freemail.hu> wrote:
-> >> >
-> >> > > i don't see the compile time vs. runtime detection as 'competing' approaches,
-> >> > > both have their own role. [...]
-> >> >
-> >> > That's true - but only as long as 'this can be solved in tooling!' is not used as
-> >> > an excuse to oppose the runtime solution and we end up doing neither.
-> >>
-> >> actually, i already voiced my opinion elsewhere in the constify thread on the
-> >> kernel hardening list that adding/using __read_only is somewhat premature
-> >> without also adding the compile time verification part (as part of the constify
-> >> plugin for example). right now its use on the embedded vdso image is simple and
-> >> easy to verify but once people begin to add it to variables that the compiler
-> >> knows and cares about (say, the ops structures) then things can become fragile
-> >> without compile checking. so yes, i'd also advise to get such tooling in
-> >> *before* more __read_only usage is added.
-> >
-> > I think you are mistaken there: if we add the page fault fixup to make sure we
-> > don't crash if a read-only variable is accessed, then we'll have most of the
-> > benefits of read-only mappings and no fragility - without having to wait for
-> > tooling.
-> 
-> I guess the point PaX Team (and me earlier in this thread) wanted to
-> make is that having misuse detection *only* at run-time will make
-> those kind of bugs visible too late -- as late as on the wrong write
-> attempt actually happening. It would be much better to have the
-> compiler complain about invalid write statements already during
-> compilation, much like it does when one wants to assign some value to
-> a const object.
+-Kees
 
-Well, the runtime warning comes "later", that does not automatically transform 
-into "too late".
-
-These things are relatively rare. Whether the warning is in tooling or runtime (or 
-both) is relatively immaterial in that regard: having it in tooling would be nice, 
-but it's not fool-proof either: say if tooling leaves an easy backdoor like 
-allowing a type cast to supress warnings then it turns into a hard to debug 
-problem again.
-
-So I think we need both, starting with the runtime warning which is easy to 
-implement and can be merged right away.
-
-But reality is that upstream tooling changes, especially ones involving compiler 
-changes move at a glacier's pace in comparison. Based on past experience I am also 
-pretty pessimistic: I'm 90% certain that this 'tooling feature' won't be 
-implemented in the next 10 years, so I'd like to concentrate on what we can do 
-here and now: the runtime warning and recovery without crashing.
-
-If anyone sends patches for that I'll apply them.
-
-Thanks,
-
-	Ingo
+-- 
+Kees Cook
+Chrome OS & Brillo Security
