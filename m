@@ -1,56 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <565B7F7D.80208@nod.at>
+	<CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
+Date: Mon, 30 Nov 2015 15:38:15 -0600
+In-Reply-To: <CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
+	(Kees Cook's message of "Mon, 30 Nov 2015 12:14:41 -0800")
+Message-ID: <87egf7183c.fsf_-_@x220.int.ebiederm.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20151126075130.GB18742@gmail.com>
-References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
-	<1448494286-16029-2-git-send-email-keescook@chromium.org>
-	<20151126075130.GB18742@gmail.com>
-Date: Mon, 30 Nov 2015 13:52:10 -0800
-Message-ID: <CAGXu5j+Mom2oYbsSE65BMCAgio68J6ST4wODUf8-qHdxOe0jOQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] init: create cmdline param to disable readonly
-To: Ingo Molnar <mingo@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Michael Ellerman <mpe@ellerman.id.au>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Catalin Marinas <catalin.marinas@arm.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>
-Cc: LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-arch <linux-arch@vger.kernel.org>
+Content-Type: text/plain
+Subject: [kernel-hardening] [PATCH net] bridge: Only call /sbin/bridge-stp for the initial network namespace
+To: David Miller <davem@davemloft.net>
+Cc: Richard Weinberger <richard@nod.at>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 25, 2015 at 11:51 PM, Ingo Molnar <mingo@kernel.org> wrote:
-> * Kees Cook <keescook@chromium.org> wrote:
->> +#ifdef CONFIG_DEBUG_RODATA
->
-> Btw., could you please remove the Kconfig option altogether in an additional patch
-> and make read-only sections an always-on feature? It has been default-y for years
-> and all distros have it enabled.
 
-Yeah, this is something I've wanted to do for a while, but I would
-point out that only a few architectures have actually implemented it,
-and for arm and arm64 it was very recent:
+There is no defined mechanism to pass network namespace information
+into /sbin/bridge-stp therefore don't even try to invoke it except
+for bridge devices in the initial network namespace.
 
-$ git grep 'config DEBUG_RODATA'
-arch/arm/mm/Kconfig:config DEBUG_RODATA
-arch/arm64/Kconfig.debug:config DEBUG_RODATA
-arch/parisc/Kconfig.debug:config DEBUG_RODATA
-arch/x86/Kconfig.debug:config DEBUG_RODATA
+It is possible for unprivileged users to cause /sbin/bridge-stp to be
+invoked for any network device name which if /sbin/bridge-stp does not
+guard against unreasonable arguments or being invoked twice on the same
+network device could cause problems.
 
-I think s390 already has strict kernel memory permissions, but they
-set it up ahead of time. And now, I see in reading the parisc tree,
-they do too, and mark_rodata_ro() is effectively a no-op. How does
-powerpc handle permissions for kernel rodata?
+Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
+---
+ net/bridge/br_stp_if.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
-For parisc (and maybe powerpc and s390) we'll need additional changes
-to support __ro_after_init, since they may be making the ro section ro
-_before_ init runs. But, that's okay since this series only uses
-__ro_after_init on x86 for the moment. ;)
-
-> The 'debug rodata' naming is purely historic: this started out as a simple
-> debugging feature, but meanwhile it has spread and has become an essential kernel
-> robustness feature.
-
-I agree completely. I suspect I would turn this into
-ARCH_HAS_STRICT_KERNMEM or something.
-
--Kees
-
+diff --git a/net/bridge/br_stp_if.c b/net/bridge/br_stp_if.c
+index 5396ff08af32..742fa89528ab 100644
+--- a/net/bridge/br_stp_if.c
++++ b/net/bridge/br_stp_if.c
+@@ -142,7 +142,9 @@ static void br_stp_start(struct net_bridge *br)
+ 	char *envp[] = { NULL };
+ 	struct net_bridge_port *p;
+ 
+-	r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
++	r = -ENOENT;
++	if (dev_net(br->dev) == &init_net)
++		r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
+ 
+ 	spin_lock_bh(&br->lock);
+ 
 -- 
-Kees Cook
-Chrome OS & Brillo Security
+2.2.1
