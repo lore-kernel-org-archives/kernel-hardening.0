@@ -1,53 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 30 Nov 2015 14:12:08 -0800
-From: Stephen Hemminger <stephen@networkplumber.org>
-Message-ID: <20151130141208.516b1046@xeon-e3>
-In-Reply-To: <87egf7183c.fsf_-_@x220.int.ebiederm.org>
-References: <565B7F7D.80208@nod.at>
-	<CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
-	<87egf7183c.fsf_-_@x220.int.ebiederm.org>
+Date: Mon, 30 Nov 2015 22:24:37 +0000
+From: Russell King - ARM Linux <linux@arm.linux.org.uk>
+Message-ID: <20151130222437.GT8644@n2100.arm.linux.org.uk>
+References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
+ <1448494286-16029-2-git-send-email-keescook@chromium.org>
+ <20151126075130.GB18742@gmail.com>
+ <CAGXu5j+Mom2oYbsSE65BMCAgio68J6ST4wODUf8-qHdxOe0jOQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH net] bridge: Only call /sbin/bridge-stp for the initial
- network namespace
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: David Miller <davem@davemloft.net>, Richard Weinberger <richard@nod.at>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+Mom2oYbsSE65BMCAgio68J6ST4wODUf8-qHdxOe0jOQ@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@arm.linux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] init: create cmdline param to disable readonly
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Michael Ellerman <mpe@ellerman.id.au>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Catalin Marinas <catalin.marinas@arm.com>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 30 Nov 2015 15:38:15 -0600
-ebiederm@xmission.com (Eric W. Biederman) wrote:
+On Mon, Nov 30, 2015 at 01:52:10PM -0800, Kees Cook wrote:
+> On Wed, Nov 25, 2015 at 11:51 PM, Ingo Molnar <mingo@kernel.org> wrote:
+> > * Kees Cook <keescook@chromium.org> wrote:
+> >> +#ifdef CONFIG_DEBUG_RODATA
+> >
+> > Btw., could you please remove the Kconfig option altogether in an additional patch
+> > and make read-only sections an always-on feature? It has been default-y for years
+> > and all distros have it enabled.
+> 
+> Yeah, this is something I've wanted to do for a while, but I would
+> point out that only a few architectures have actually implemented it,
+> and for arm and arm64 it was very recent:
 
-> 
-> There is no defined mechanism to pass network namespace information
-> into /sbin/bridge-stp therefore don't even try to invoke it except
-> for bridge devices in the initial network namespace.
-> 
-> It is possible for unprivileged users to cause /sbin/bridge-stp to be
-> invoked for any network device name which if /sbin/bridge-stp does not
-> guard against unreasonable arguments or being invoked twice on the same
-> network device could cause problems.
-> 
-> Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
-> ---
->  net/bridge/br_stp_if.c | 4 +++-
->  1 file changed, 3 insertions(+), 1 deletion(-)
-> 
-> diff --git a/net/bridge/br_stp_if.c b/net/bridge/br_stp_if.c
-> index 5396ff08af32..742fa89528ab 100644
-> --- a/net/bridge/br_stp_if.c
-> +++ b/net/bridge/br_stp_if.c
-> @@ -142,7 +142,9 @@ static void br_stp_start(struct net_bridge *br)
->  	char *envp[] = { NULL };
->  	struct net_bridge_port *p;
->  
-> -	r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
-> +	r = -ENOENT;
-> +	if (dev_net(br->dev) == &init_net)
-> +		r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
+I don't think it can entirely be a kernel command line option.  On ARM,
+enabling DEBUG_RODATA has a substantial effect on the size of the kernel
+image - we have to pad various sections to 1MB boundaries so we can
+set the appropriate permissions.
 
-I don't think this will cause loud screams.
-But it might break people that use containers to run virtual networks for testing.
+Forcing this layout on everyone won't work.
 
-One coding nit:
-Why are you afraid of using an else?
+What we can do is the half-way house: we can have the kernel command
+line option which enables and disables the protections, but the layout
+of the kernel image would still need to be controlled by DEBUG_RODATA.
+I'm left wondering what the advantage of that would be: it'd end up
+offering a suboptimal layout, additional memory usage but without the
+benefits of memory protections.
+
+The alternative is keeping the kernel in unlinked object form, and
+laying out and linking the kernel at boot time, probably in PIC
+assembly code.  That's possible but I think is undesirable.
+
+So all in all, I'm in favour of keeping things as they are on ARM.
+
+-- 
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
