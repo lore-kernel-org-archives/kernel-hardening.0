@@ -1,51 +1,142 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-Id: <1448979224.3359384.454695137.2DC07EE8@webmail.messagingengine.com>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Type: text/plain
-Date: Tue, 01 Dec 2015 15:13:44 +0100
-In-Reply-To: <87egf7183c.fsf_-_@x220.int.ebiederm.org>
-References: <565B7F7D.80208@nod.at>
- <CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
- <87egf7183c.fsf_-_@x220.int.ebiederm.org>
-Subject: [kernel-hardening] Re: [PATCH net] bridge: Only call /sbin/bridge-stp for the initial
- network namespace
-To: "Eric W. Biederman" <ebiederm@xmission.com>, David Miller <davem@davemloft.net>
-Cc: Richard Weinberger <richard@nod.at>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>, Kees Cook <keescook@chromium.org>
+Sender: keescook@google.com
+In-Reply-To: <565CF5E3.7000109@redhat.com>
+References: <20151130233819.GA18873@www.outflux.net>
+	<565CF1E5.2070003@redhat.com>
+	<CAGXu5jJUv3EKkFA3J43nVO+v=-K5kgwSqwrVA9hxJGeZ79CkAg@mail.gmail.com>
+	<565CF5E3.7000109@redhat.com>
+Date: Tue, 1 Dec 2015 11:15:47 -0800
+Message-ID: <CAGXu5jKcg7wwrh_8vxVRnvwsXKofpvda=ZmoaUk8epPHkwMdWg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
+To: Laura Abbott <labbott@redhat.com>
+Cc: Russell King <linux@arm.linux.org.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Will Deacon <will.deacon@arm.com>, Nicolas Pitre <nico@linaro.org>, Arnd Bergmann <arnd@arndb.de>, Catalin Marinas <catalin.marinas@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 30, 2015, at 22:38, Eric W. Biederman wrote:
-> Signed-off-by: "Eric W. Biederman" <ebiederm@xmission.com>
-> ---
->  net/bridge/br_stp_if.c | 4 +++-
->  1 file changed, 3 insertions(+), 1 deletion(-)
-> 
-> diff --git a/net/bridge/br_stp_if.c b/net/bridge/br_stp_if.c
-> index 5396ff08af32..742fa89528ab 100644
-> --- a/net/bridge/br_stp_if.c
-> +++ b/net/bridge/br_stp_if.c
-> @@ -142,7 +142,9 @@ static void br_stp_start(struct net_bridge *br)
->  	char *envp[] = { NULL };
->  	struct net_bridge_port *p;
->  
-> -       r = call_usermodehelper(BR_STP_PROG, argv, envp, UMH_WAIT_PROC);
-> +       r = -ENOENT;
-> +       if (dev_net(br->dev) == &init_net)
+On Mon, Nov 30, 2015 at 5:20 PM, Laura Abbott <labbott@redhat.com> wrote:
+> On 11/30/2015 05:08 PM, Kees Cook wrote:
+>>
+>> On Mon, Nov 30, 2015 at 5:03 PM, Laura Abbott <labbott@redhat.com> wrote:
+>>>
+>>> On 11/30/2015 03:38 PM, Kees Cook wrote:
+>>>>
+>>>>
+>>>> Given the choice between making things NX or making things RO, we want
+>>>> RO first. As such, redefine CONFIG_DEBUG_RODATA to actually do the bulk
+>>>
+>>>
+>>>
+>>> Can you give a citation for why? The thread that inspired it might be
+>>> a good link.
+>>
+>>
+>> This was inspired by my examining the existing architecture's
+>> implementations of CONFIG_DEBUG_RODATA after Ingo suggested it be made
+>> a common feature not a build-time config (or at least renamed):
+>> http://www.openwall.com/lists/kernel-hardening/2015/11/30/13
+>>
+>
+> Thanks. I read the thread and I think it would be good to put a link
+> in the commit message to make it clearer why this is going in.
 
-net_eq ?
+Okay, I will add this (and a summary, as Nicolas suggested).
 
-> +               r = call_usermodehelper(BR_STP_PROG, argv, envp,
-> UMH_WAIT_PROC);
->  
->  	spin_lock_bh(&br->lock);
->  
+>>>> index 41218867a9a6..b617084e9520 100644
+>>>> --- a/arch/arm/mm/Kconfig
+>>>> +++ b/arch/arm/mm/Kconfig
+>>>> @@ -1039,24 +1039,26 @@ config ARCH_SUPPORTS_BIG_ENDIAN
+>>>>            This option specifies the architecture can support big endian
+>>>>            operation.
+>>>>
+>>>> -config ARM_KERNMEM_PERMS
+>>>> -       bool "Restrict kernel memory permissions"
+>>>> +config DEBUG_RODATA
+>>>> +       bool "Make kernel text and rodata read-only"
+>>>>          depends on MMU
+>>>> +       default y if CPU_V7
+>>>>          help
+>>>> -         If this is set, kernel memory other than kernel text (and
+>>>> rodata)
+>>>> -         will be made non-executable. The tradeoff is that each region
+>>>> is
+>>>> -         padded to section-size (1MiB) boundaries (because their
+>>>> permissions
+>>>> -         are different and splitting the 1M pages into 4K ones causes
+>>>> TLB
+>>>> -         performance problems), wasting memory.
+>>>> +         If this is set, kernel memory (text, rodata, etc) will be made
+>>>> +         read-only, and non-text kernel memory will be made
+>>>> non-executable.
+>>>> +         The tradeoff is that each region is padded to section-size
+>>>> (1MiB)
+>>>> +         boundaries (because their permissions are different and
+>>>> splitting
+>>>> +         the 1M pages into 4K ones causes TLB performance problems),
+>>>> which
+>>>> +         can waste memory.
+>>>>
+>>>> -config DEBUG_RODATA
+>>>> -       bool "Make kernel text and rodata read-only"
+>>>> -       depends on ARM_KERNMEM_PERMS
+>>>> +config DEBUG_ALIGN_RODATA
+>>>> +       bool "Make rodata strictly non-executable"
+>>>> +       depends on DEBUG_RODATA
+>>>>          default y
+>>>>          help
+>>>> -         If this is set, kernel text and rodata will be made read-only.
+>>>> This
+>>>> -         is to help catch accidental or malicious attempts to change
+>>>> the
+>>>> -         kernel's executable code. Additionally splits rodata from
+>>>> kernel
+>>>> -         text so it can be made explicitly non-executable. This creates
+>>>> -         another section-size padded region, so it can waste more
+>>>> memory
+>>>> -         space while gaining the read-only protections.
+>>>> +         If this is set, rodata will be made explicitly non-executable.
+>>>> This
+>>>> +         provides protection on the rare chance that attackers might
+>>>> find
+>>>> and
+>>>> +         use ROP gadgets that exist in the rodata section. This adds an
+>>>> +         additional section-aligned split of rodata from kernel text so
+>>>> it
+>>>> +         can be made explicitly non-executable. This padding may waste
+>>>> memory
+>>>> +         space to gain this additional protection.
+>>>
+>>>
+>>>
+>>> I get that you want to make this match arm64 but it's really not
+>>> intuitive that
+>>> something with ALIGN_RODATA in the name is actually for setting NX. The
+>>> purpose
+>>> of ALIGN_RODATA was also slightly different on arm64 since the RO/NX will
+>>> still
+>>> be there, the difference is if the sections are present versus broken
+>>> down into
+>>> pages.
+>>
+>>
+>> Well, it seems to have the same effect: without the alignment, a
+>> portion of rodata may remain executable on arm64. Unless I
+>> misunderstand?
+>>
+>
+> No, on arm64 everything should always be NX, the difference is part of the
+> NX
+> sections may be mapped as pages instead of sections so you take the TLB hit.
+> It's a trade off of memory vs TLB pressure instead of just security vs TLB.
 
-Otherwise, ack, so far.
+Ah! I understand now. I will clarify the commit and Kconfig text on
+ARM. I'd still prefer to keep the name, since it's still doing
+section-alignment of rodata, it's just that without ARM's
+ALIGN_RODATA, you get an executable rodata section.
 
-As our /sys interfaces directories are tagged by the net namespace it
-would actually make sense to run bridge-stp automatically in another
-name space.
+-Kees
 
-Bye,
-Hannes
+-- 
+Kees Cook
+Chrome OS & Brillo Security
