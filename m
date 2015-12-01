@@ -1,48 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <565B7F7D.80208@nod.at>
- <CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
-From: Richard Weinberger <richard@nod.at>
-Message-ID: <565CD5A4.4010106@nod.at>
-Date: Tue, 1 Dec 2015 00:03:00 +0100
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Tue, 1 Dec 2015 08:24:03 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20151201072403.GA28270@gmail.com>
+References: <1448494286-16029-1-git-send-email-keescook@chromium.org>
+ <1448494286-16029-2-git-send-email-keescook@chromium.org>
+ <20151126075130.GB18742@gmail.com>
+ <CAGXu5j+Mom2oYbsSE65BMCAgio68J6ST4wODUf8-qHdxOe0jOQ@mail.gmail.com>
+ <20151130222437.GT8644@n2100.arm.linux.org.uk>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: user controllable usermodehelper in br_stp_if.c
-To: Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>, shayan@liveve.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20151130222437.GT8644@n2100.arm.linux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] init: create cmdline param to disable readonly
+To: Russell King - ARM Linux <linux@arm.linux.org.uk>
+Cc: Kees Cook <keescook@chromium.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Michael Ellerman <mpe@ellerman.id.au>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Catalin Marinas <catalin.marinas@arm.com>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Mathias Krause <minipli@googlemail.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am 30.11.2015 um 21:14 schrieb Kees Cook:
-> On Sun, Nov 29, 2015 at 2:43 PM, Richard Weinberger <richard@nod.at> wrote:
->> Hi!
->>
->> By spawning new network and user namesapces an unprivileged user
->> is able to execute /sbin/bridge-stp within the initial mount namespace
->> with global root rights.
->> While this cannot directly be used to break out of a container or gain
->> global root rights it could be used by exploit writers as valuable building block.
->>
->> e.g.
->> $ unshare -U -r -n /bin/sh
->> $ brctl addbr br0
->> $ brctl stp br0 on # this will execute /sbin/bridge-stp
->>
->> As this mechanism clearly cannot work with containers and seems to be legacy code
->> I suggest not calling call_usermodehelper() at all if we're not in the initial user namespace.
->> What do you think?
+
+* Russell King - ARM Linux <linux@arm.linux.org.uk> wrote:
+
+> On Mon, Nov 30, 2015 at 01:52:10PM -0800, Kees Cook wrote:
+> > On Wed, Nov 25, 2015 at 11:51 PM, Ingo Molnar <mingo@kernel.org> wrote:
+> > > * Kees Cook <keescook@chromium.org> wrote:
+> > >> +#ifdef CONFIG_DEBUG_RODATA
+> > >
+> > > Btw., could you please remove the Kconfig option altogether in an additional patch
+> > > and make read-only sections an always-on feature? It has been default-y for years
+> > > and all distros have it enabled.
+> > 
+> > Yeah, this is something I've wanted to do for a while, but I would
+> > point out that only a few architectures have actually implemented it,
+> > and for arm and arm64 it was very recent:
 > 
-> I'm not familiar with how bridge-stp is expected to operate with a
-> network namespace, but if it's meaningless, then yeah, that seems like
-> a reasonable change. Can you send a patch? (Also, if it's legacy code,
-> maybe it could be turned off entirely, not just for containers?)
+> I don't think it can entirely be a kernel command line option.  On ARM,
+> enabling DEBUG_RODATA has a substantial effect on the size of the kernel
+> image - we have to pad various sections to 1MB boundaries so we can
+> set the appropriate permissions.
+> 
+> Forcing this layout on everyone won't work.
 
-Eric was faster than me. :-)
+Yeah, so I'd suggest to have it always-on on x86 (after adding the boot option), 
+to simplify the x86 code and to make it more obvious that we rely on this.
 
-BTW: kernel.core_pattern is also worth a look.
-If the pipe mode is used, "|/bin/core_tool", it will be executed in the
-initial namespace and any user/container can trigger it.
-Shayan reported that some weeks ago: https://lkml.org/lkml/2015/10/24/134
+There's a moderate amount of #ifdeffery around this:
+
+  triton:~/tip> git grep -w CONFIG_DEBUG_RODATA arch/x86/  | grep \# | wc -l
+  15
 
 Thanks,
-//richard
+
+	Ingo
