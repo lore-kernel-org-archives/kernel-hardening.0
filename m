@@ -1,42 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <564EF64F.1060903@redhat.com>
- <CAGXu5jLK61OFfSXtEzisMkdt9CnVaa5Eiw6sUB0=w2DjzPjJ5A@mail.gmail.com>
- <5654CE83.3000503@redhat.com>
- <CAGXu5j+zRXuiTipU=6VVoxacsYWcjhaax4gVbGRXteLihXVdOQ@mail.gmail.com>
- <5665A94C.6060102@redhat.com>
-From: lazytyped <lazytyped@gmail.com>
-Message-ID: <5665B344.6030706@gmail.com>
-Date: Mon, 7 Dec 2015 17:26:44 +0100
 MIME-Version: 1.0
-In-Reply-To: <5665A94C.6060102@redhat.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] System call interface changes
-To: kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20151202.235049.2068953758962834535.davem@davemloft.net>
+References: <565B7F7D.80208@nod.at>
+	<CAGXu5jJqQKAmFK0nL69E0QOpo8WSVDqStGZo7-m7gy3vnXBa=A@mail.gmail.com>
+	<87egf7183c.fsf_-_@x220.int.ebiederm.org>
+	<20151202.235049.2068953758962834535.davem@davemloft.net>
+Date: Tue, 8 Dec 2015 12:56:43 -0800
+Message-ID: <CAGXu5jJJ-cYuckKPbmLejEZ82FY5eWR5R5MVRgxgTD+7hHZ1gg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH net] bridge: Only call /sbin/bridge-stp for the initial
+ network namespace
+To: David Miller <davem@davemloft.net>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Richard Weinberger <richard@nod.at>, Network Development <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, bridge@lists.linux-foundation.org, Stephen Hemminger <stephen@networkplumber.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 12/7/15 4:44 PM, Florian Weimer wrote:
-> On 11/24/2015 10:43 PM, Kees Cook wrote:
+On Wed, Dec 2, 2015 at 8:50 PM, David Miller <davem@davemloft.net> wrote:
+> From: ebiederm@xmission.com (Eric W. Biederman)
+> Date: Mon, 30 Nov 2015 15:38:15 -0600
 >
->> Cool. Well, we can certainly look at existing public exploits and
->> PoCs. That's what I've been trying to collect on the Kernel
->> Self-Protection Project wiki pages. There are plenty of things we
->> could add to that list from the ROP world. Maybe it'd be good to look
->> through various exploit lists to find stuff that use techniques that
->> are either missing from the wiki page or are better examples? Do you
->> (or someone else) have time to go on a research/collection exercise?
-> The proposal I have (and which prompted the question about the system
-> call interface) is to block execve because many proof-of-concept exploit
-> use execve or system to spawn a shell or run arbitrary commands.
-So just drop that privilege? Pretty much any operating system implements
-a form of sandboxing/privilege/capability filtering. It's, of course,
-application specific.
+>> +     if (dev_net(br->dev) == &init_net)
+>
+> Please respin this using net_eq() as Hannes pointed out.
 
-Keep in mind that blocking execve leaves open chown(), chmod(), mount()
-and a large number of other system calls that can be leveraged to
-achieve a similar result.
+Sorry if I missed it: this this happen yet?
 
+-Kees
 
-     -  twiz
+-- 
+Kees Cook
+Chrome OS & Brillo Security
