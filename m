@@ -1,91 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Wed,  9 Dec 2015 13:43:22 -0800
-Message-Id: <1449697404-21076-7-git-send-email-keescook@chromium.org>
+Date: Wed,  9 Dec 2015 13:43:18 -0800
+Message-Id: <1449697404-21076-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1449697404-21076-1-git-send-email-keescook@chromium.org>
 References: <1449697404-21076-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v3 6/8] introduce post-init read-only memory
+Subject: [kernel-hardening] [PATCH v3 2/8] lib: add "on" and "off" to strtobool
 To: linux-kernel@vger.kernel.org
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Borkmann <daniel@iogearbox.net>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-One of the easiest ways to protect the kernel from attack is to reduce
-the internal attack surface exposed when a "write" flaw is available. By
-making as much of the kernel read-only as possible, we reduce the
-attack surface.
-
-Many things are written to only during __init, and never changed
-again. These cannot be made "const" since the compiler will do the wrong
-thing (we do actually need to write to them). Instead, move these items
-into a memory region that will be made read-only during mark_rodata_ro()
-which happens after all kernel __init code has finished.
-
-This introduces __ro_after_init as a way to mark such memory, and adds
-some documentation about the existing __read_mostly marking.
-
-Based on work by PaX Team and Brad Spengler.
+Several places in the kernel expect to use "on" and "off" for their
+boolean signifiers, so add them to strtobool.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
+Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
 ---
- arch/parisc/include/asm/cache.h   |  3 +++
- include/asm-generic/vmlinux.lds.h |  1 +
- include/linux/cache.h             | 14 ++++++++++++++
- 3 files changed, 18 insertions(+)
+ lib/string.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
 
-diff --git a/arch/parisc/include/asm/cache.h b/arch/parisc/include/asm/cache.h
-index 3d0e17bcc8e9..df0f52bd18b4 100644
---- a/arch/parisc/include/asm/cache.h
-+++ b/arch/parisc/include/asm/cache.h
-@@ -22,6 +22,9 @@
- 
- #define __read_mostly __attribute__((__section__(".data..read_mostly")))
- 
-+/* Read-only memory is marked before mark_rodata_ro() is called. */
-+#define __ro_after_init	__read_mostly
+diff --git a/lib/string.c b/lib/string.c
+index 0323c0d5629a..d7550432f91c 100644
+--- a/lib/string.c
++++ b/lib/string.c
+@@ -635,12 +635,16 @@ EXPORT_SYMBOL(sysfs_streq);
+  * @s: input string
+  * @res: result
+  *
+- * This routine returns 0 iff the first character is one of 'Yy1Nn0'.
++ * This routine returns 0 iff the first character is one of 'Yy1Nn0', or
++ * 'Oo' when the second character is one of 'fFnN' (for "on" and "off").
+  * Otherwise it will return -EINVAL.  Value pointed to by res is
+  * updated upon finding a match.
+  */
+ int strtobool(const char *s, bool *res)
+ {
++	if (!s)
++		return -EINVAL;
 +
- void parisc_cache_init(void);	/* initializes cache-flushing */
- void disable_sr_hashing_asm(int); /* low level support for above */
- void disable_sr_hashing(void);   /* turns off space register hashing */
-diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
-index c4bd0e2c173c..772c784ba763 100644
---- a/include/asm-generic/vmlinux.lds.h
-+++ b/include/asm-generic/vmlinux.lds.h
-@@ -256,6 +256,7 @@
- 	.rodata           : AT(ADDR(.rodata) - LOAD_OFFSET) {		\
- 		VMLINUX_SYMBOL(__start_rodata) = .;			\
- 		*(.rodata) *(.rodata.*)					\
-+		*(.data..ro_after_init)	/* Read only after init */	\
- 		*(__vermagic)		/* Kernel version magic */	\
- 		. = ALIGN(8);						\
- 		VMLINUX_SYMBOL(__start___tracepoints_ptrs) = .;		\
-diff --git a/include/linux/cache.h b/include/linux/cache.h
-index 17e7e82d2aa7..1be04f8c563a 100644
---- a/include/linux/cache.h
-+++ b/include/linux/cache.h
-@@ -12,10 +12,24 @@
- #define SMP_CACHE_BYTES L1_CACHE_BYTES
- #endif
- 
-+/*
-+ * __read_mostly is used to keep rarely changing variables out of frequently
-+ * updated cachelines. If an architecture doesn't support it, ignore the
-+ * hint.
-+ */
- #ifndef __read_mostly
- #define __read_mostly
- #endif
- 
-+/*
-+ * __ro_after_init is used to mark things that are read-only after init (i.e.
-+ * after mark_rodata_ro() has been called). These are effectively read-only,
-+ * but may get written to during init, so can't live in .rodata (via "const").
-+ */
-+#ifndef __ro_after_init
-+#define __ro_after_init __attribute__((__section__(".data..ro_after_init")))
-+#endif
-+
- #ifndef ____cacheline_aligned
- #define ____cacheline_aligned __attribute__((__aligned__(SMP_CACHE_BYTES)))
- #endif
+ 	switch (s[0]) {
+ 	case 'y':
+ 	case 'Y':
+@@ -652,6 +656,21 @@ int strtobool(const char *s, bool *res)
+ 	case '0':
+ 		*res = false;
+ 		break;
++	case 'o':
++	case 'O':
++		switch (s[1]) {
++		case 'n':
++		case 'N':
++			*res = true;
++			break;
++		case 'f':
++		case 'F':
++			*res = false;
++			break;
++		default:
++			return -EINVAL;
++		}
++		break;
+ 	default:
+ 		return -EINVAL;
+ 	}
 -- 
 1.9.1
