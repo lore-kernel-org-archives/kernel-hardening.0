@@ -1,342 +1,112 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Wed,  9 Dec 2015 13:43:21 -0800
-Message-Id: <1449697404-21076-6-git-send-email-keescook@chromium.org>
+Date: Wed,  9 Dec 2015 13:43:20 -0800
+Message-Id: <1449697404-21076-5-git-send-email-keescook@chromium.org>
 In-Reply-To: <1449697404-21076-1-git-send-email-keescook@chromium.org>
 References: <1449697404-21076-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v3 5/8] x86: make CONFIG_DEBUG_RODATA non-optional
+Subject: [kernel-hardening] [PATCH v3 4/8] init: create cmdline param to disable readonly
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This removes the CONFIG_DEBUG_RODATA option and makes it always enabled.
+It may be useful to debug writes to the readonly sections of memory,
+so provide a cmdline "rodata=off" to allow for this. This can be
+expanded in the future to support "log" and "write" modes, but that
+will need to be architecture-specific.
 
-Suggested-by: Ingo Molnar <mingo@kernel.org>
+Suggested-by: H. Peter Anvin <hpa@zytor.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/Kconfig                  |  3 +++
- arch/x86/Kconfig.debug            | 18 +++---------------
- arch/x86/include/asm/cacheflush.h |  5 -----
- arch/x86/include/asm/kvm_para.h   |  7 -------
- arch/x86/include/asm/sections.h   |  2 +-
- arch/x86/kernel/ftrace.c          |  6 +++---
- arch/x86/kernel/kgdb.c            |  8 ++------
- arch/x86/kernel/test_nx.c         |  2 --
- arch/x86/kernel/test_rodata.c     |  2 +-
- arch/x86/kernel/vmlinux.lds.S     | 25 +++++++++++--------------
- arch/x86/mm/init_32.c             |  3 ---
- arch/x86/mm/init_64.c             |  3 ---
- arch/x86/mm/pageattr.c            |  2 +-
- 13 files changed, 25 insertions(+), 61 deletions(-)
+ Documentation/kernel-parameters.txt |  4 ++++
+ init/main.c                         | 27 +++++++++++++++++++++++----
+ kernel/debug/kdb/kdb_bp.c           |  4 +---
+ 3 files changed, 28 insertions(+), 7 deletions(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index db3622f22b61..f7c69436accc 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -289,6 +289,9 @@ config ARCH_SUPPORTS_UPROBES
- config FIX_EARLYCON_MEM
- 	def_bool y
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index 742f69d18fc8..21cf76dbba90 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -3409,6 +3409,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
  
-+config DEBUG_RODATA
-+	def_bool y
+ 	ro		[KNL] Mount root device read-only on boot
+ 
++	rodata=		[KNL]
++		on	Mark read-only kernel memory as read-only (default).
++		off	Leave read-only kernel memory writable for debugging.
 +
- config PGTABLE_LEVELS
- 	int
- 	default 4 if X86_64
-diff --git a/arch/x86/Kconfig.debug b/arch/x86/Kconfig.debug
-index 137dfa96aa14..1f6c306a9a00 100644
---- a/arch/x86/Kconfig.debug
-+++ b/arch/x86/Kconfig.debug
-@@ -91,28 +91,16 @@ config EFI_PGT_DUMP
- 	  issues with the mapping of the EFI runtime regions into that
- 	  table.
+ 	root=		[KNL] Root filesystem
+ 			See name_to_dev_t comment in init/do_mounts.c.
  
--config DEBUG_RODATA
--	bool "Write protect kernel read-only data structures"
--	default y
--	depends on DEBUG_KERNEL
--	---help---
--	  Mark the kernel read-only data as write-protected in the pagetables,
--	  in order to catch accidental (and incorrect) writes to such const
--	  data. This is recommended so that we can catch kernel bugs sooner.
--	  If in doubt, say "Y".
--
- config DEBUG_RODATA_TEST
--	bool "Testcase for the DEBUG_RODATA feature"
--	depends on DEBUG_RODATA
-+	bool "Testcase for the marking rodata read-only"
- 	default y
- 	---help---
--	  This option enables a testcase for the DEBUG_RODATA
--	  feature as well as for the change_page_attr() infrastructure.
-+	  This option enables a testcase for the setting rodata read-only
-+	  as well as for the change_page_attr() infrastructure.
- 	  If in doubt, say "N"
- 
- config DEBUG_WX
- 	bool "Warn on W+X mappings at boot"
--	depends on DEBUG_RODATA
- 	select X86_PTDUMP_CORE
- 	---help---
- 	  Generate a warning if any W+X mappings are found at boot.
-diff --git a/arch/x86/include/asm/cacheflush.h b/arch/x86/include/asm/cacheflush.h
-index c8cff75c5b21..61518cf79437 100644
---- a/arch/x86/include/asm/cacheflush.h
-+++ b/arch/x86/include/asm/cacheflush.h
-@@ -91,15 +91,10 @@ void clflush_cache_range(void *addr, unsigned int size);
- 
- #define mmio_flush_range(addr, size) clflush_cache_range(addr, size)
- 
--#ifdef CONFIG_DEBUG_RODATA
- extern const int rodata_test_data;
- extern int kernel_set_to_readonly;
- void set_kernel_text_rw(void);
- void set_kernel_text_ro(void);
--#else
--static inline void set_kernel_text_rw(void) { }
--static inline void set_kernel_text_ro(void) { }
+diff --git a/init/main.c b/init/main.c
+index 9e64d7097f1a..fbafa271531c 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -93,9 +93,6 @@ static int kernel_init(void *);
+ extern void init_IRQ(void);
+ extern void fork_init(void);
+ extern void radix_tree_init(void);
+-#ifndef CONFIG_DEBUG_RODATA
+-static inline void mark_rodata_ro(void) { }
 -#endif
  
- #ifdef CONFIG_DEBUG_RODATA_TEST
- int rodata_test(void);
-diff --git a/arch/x86/include/asm/kvm_para.h b/arch/x86/include/asm/kvm_para.h
-index c1adf33fdd0d..bc62e7cbf1b1 100644
---- a/arch/x86/include/asm/kvm_para.h
-+++ b/arch/x86/include/asm/kvm_para.h
-@@ -17,15 +17,8 @@ static inline bool kvm_check_and_clear_guest_paused(void)
- }
- #endif /* CONFIG_KVM_GUEST */
- 
--#ifdef CONFIG_DEBUG_RODATA
- #define KVM_HYPERCALL \
-         ALTERNATIVE(".byte 0x0f,0x01,0xc1", ".byte 0x0f,0x01,0xd9", X86_FEATURE_VMMCALL)
--#else
--/* On AMD processors, vmcall will generate a trap that we will
-- * then rewrite to the appropriate instruction.
-- */
--#define KVM_HYPERCALL ".byte 0x0f,0x01,0xc1"
--#endif
- 
- /* For KVM hypercalls, a three-byte sequence of either the vmcall or the vmmcall
-  * instruction.  The hypervisor may replace it with something else but only the
-diff --git a/arch/x86/include/asm/sections.h b/arch/x86/include/asm/sections.h
-index 0a5242428659..13b6cdd0af57 100644
---- a/arch/x86/include/asm/sections.h
-+++ b/arch/x86/include/asm/sections.h
-@@ -7,7 +7,7 @@
- extern char __brk_base[], __brk_limit[];
- extern struct exception_table_entry __stop___ex_table[];
- 
--#if defined(CONFIG_X86_64) && defined(CONFIG_DEBUG_RODATA)
-+#if defined(CONFIG_X86_64)
- extern char __end_rodata_hpage_align[];
- #endif
- 
-diff --git a/arch/x86/kernel/ftrace.c b/arch/x86/kernel/ftrace.c
-index 311bcf338f07..eb6bd34582c6 100644
---- a/arch/x86/kernel/ftrace.c
-+++ b/arch/x86/kernel/ftrace.c
-@@ -81,9 +81,9 @@ within(unsigned long addr, unsigned long start, unsigned long end)
- static unsigned long text_ip_addr(unsigned long ip)
- {
- 	/*
--	 * On x86_64, kernel text mappings are mapped read-only with
--	 * CONFIG_DEBUG_RODATA. So we use the kernel identity mapping instead
--	 * of the kernel text mapping to modify the kernel text.
-+	 * On x86_64, kernel text mappings are mapped read-only, so we use
-+	 * the kernel identity mapping instead of the kernel text mapping
-+	 * to modify the kernel text.
- 	 *
- 	 * For 32bit kernels, these mappings are same and we can use
- 	 * kernel identity mapping to modify code.
-diff --git a/arch/x86/kernel/kgdb.c b/arch/x86/kernel/kgdb.c
-index 44256a62702b..ed15cd486d06 100644
---- a/arch/x86/kernel/kgdb.c
-+++ b/arch/x86/kernel/kgdb.c
-@@ -750,9 +750,7 @@ void kgdb_arch_set_pc(struct pt_regs *regs, unsigned long ip)
- int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
- {
- 	int err;
--#ifdef CONFIG_DEBUG_RODATA
- 	char opc[BREAK_INSTR_SIZE];
--#endif /* CONFIG_DEBUG_RODATA */
- 
- 	bpt->type = BP_BREAKPOINT;
- 	err = probe_kernel_read(bpt->saved_instr, (char *)bpt->bpt_addr,
-@@ -761,7 +759,6 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
- 		return err;
- 	err = probe_kernel_write((char *)bpt->bpt_addr,
- 				 arch_kgdb_ops.gdb_bpt_instr, BREAK_INSTR_SIZE);
--#ifdef CONFIG_DEBUG_RODATA
- 	if (!err)
- 		return err;
- 	/*
-@@ -778,13 +775,12 @@ int kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
- 	if (memcmp(opc, arch_kgdb_ops.gdb_bpt_instr, BREAK_INSTR_SIZE))
- 		return -EINVAL;
- 	bpt->type = BP_POKE_BREAKPOINT;
--#endif /* CONFIG_DEBUG_RODATA */
-+
- 	return err;
- }
- 
- int kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
- {
--#ifdef CONFIG_DEBUG_RODATA
- 	int err;
- 	char opc[BREAK_INSTR_SIZE];
- 
-@@ -801,8 +797,8 @@ int kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
- 	if (err || memcmp(opc, bpt->saved_instr, BREAK_INSTR_SIZE))
- 		goto knl_write;
- 	return err;
-+
- knl_write:
--#endif /* CONFIG_DEBUG_RODATA */
- 	return probe_kernel_write((char *)bpt->bpt_addr,
- 				  (char *)bpt->saved_instr, BREAK_INSTR_SIZE);
- }
-diff --git a/arch/x86/kernel/test_nx.c b/arch/x86/kernel/test_nx.c
-index 3f92ce07e525..27538f183c3b 100644
---- a/arch/x86/kernel/test_nx.c
-+++ b/arch/x86/kernel/test_nx.c
-@@ -142,7 +142,6 @@ static int test_NX(void)
- 	 * by the error message
- 	 */
- 
--#ifdef CONFIG_DEBUG_RODATA
- 	/* Test 3: Check if the .rodata section is executable */
- 	if (rodata_test_data != 0xC3) {
- 		printk(KERN_ERR "test_nx: .rodata marker has invalid value\n");
-@@ -151,7 +150,6 @@ static int test_NX(void)
- 		printk(KERN_ERR "test_nx: .rodata section is executable\n");
- 		ret = -ENODEV;
- 	}
--#endif
- 
- #if 0
- 	/* Test 4: Check if the .data section of a module is executable */
-diff --git a/arch/x86/kernel/test_rodata.c b/arch/x86/kernel/test_rodata.c
-index 5ecbfe5099da..cb4a01b41e27 100644
---- a/arch/x86/kernel/test_rodata.c
-+++ b/arch/x86/kernel/test_rodata.c
-@@ -76,5 +76,5 @@ int rodata_test(void)
- }
- 
- MODULE_LICENSE("GPL");
--MODULE_DESCRIPTION("Testcase for the DEBUG_RODATA infrastructure");
-+MODULE_DESCRIPTION("Testcase for marking rodata as read-only");
- MODULE_AUTHOR("Arjan van de Ven <arjan@linux.intel.com>");
-diff --git a/arch/x86/kernel/vmlinux.lds.S b/arch/x86/kernel/vmlinux.lds.S
-index 74e4bf11f562..fe133b710bef 100644
---- a/arch/x86/kernel/vmlinux.lds.S
-+++ b/arch/x86/kernel/vmlinux.lds.S
-@@ -41,29 +41,28 @@ ENTRY(phys_startup_64)
- jiffies_64 = jiffies;
- #endif
- 
--#if defined(CONFIG_X86_64) && defined(CONFIG_DEBUG_RODATA)
-+#if defined(CONFIG_X86_64)
  /*
-- * On 64-bit, align RODATA to 2MB so that even with CONFIG_DEBUG_RODATA
-- * we retain large page mappings for boundaries spanning kernel text, rodata
-- * and data sections.
-+ * On 64-bit, align RODATA to 2MB so we retain large page mappings for
-+ * boundaries spanning kernel text, rodata and data sections.
-  *
-  * However, kernel identity mappings will have different RWX permissions
-  * to the pages mapping to text and to the pages padding (which are freed) the
-  * text section. Hence kernel identity mappings will be broken to smaller
-  * pages. For 64-bit, kernel text and kernel identity mappings are different,
-- * so we can enable protection checks that come with CONFIG_DEBUG_RODATA,
-- * as well as retain 2MB large page mappings for kernel text.
-+ * so we can enable protection checks as well as retain 2MB large page
-+ * mappings for kernel text.
-  */
--#define X64_ALIGN_DEBUG_RODATA_BEGIN	. = ALIGN(HPAGE_SIZE);
-+#define X64_ALIGN_RODATA_BEGIN	. = ALIGN(HPAGE_SIZE);
+  * Debug helper: via this flag we know that we are in 'early bootup code'
+@@ -929,6 +926,28 @@ static int try_to_run_init_process(const char *init_filename)
  
--#define X64_ALIGN_DEBUG_RODATA_END				\
-+#define X64_ALIGN_RODATA_END					\
- 		. = ALIGN(HPAGE_SIZE);				\
- 		__end_rodata_hpage_align = .;
+ static noinline void __init kernel_init_freeable(void);
  
- #else
- 
--#define X64_ALIGN_DEBUG_RODATA_BEGIN
--#define X64_ALIGN_DEBUG_RODATA_END
-+#define X64_ALIGN_RODATA_BEGIN
-+#define X64_ALIGN_RODATA_END
- 
- #endif
- 
-@@ -112,13 +111,11 @@ SECTIONS
- 
- 	EXCEPTION_TABLE(16) :text = 0x9090
- 
--#if defined(CONFIG_DEBUG_RODATA)
- 	/* .text should occupy whole number of pages */
- 	. = ALIGN(PAGE_SIZE);
--#endif
--	X64_ALIGN_DEBUG_RODATA_BEGIN
-+	X64_ALIGN_RODATA_BEGIN
- 	RO_DATA(PAGE_SIZE)
--	X64_ALIGN_DEBUG_RODATA_END
-+	X64_ALIGN_RODATA_END
- 
- 	/* Data */
- 	.data : AT(ADDR(.data) - LOAD_OFFSET) {
-diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
-index cb4ef3de61f9..2ebfbaf61142 100644
---- a/arch/x86/mm/init_32.c
-+++ b/arch/x86/mm/init_32.c
-@@ -871,7 +871,6 @@ static noinline int do_test_wp_bit(void)
- 	return flag;
- }
- 
--#ifdef CONFIG_DEBUG_RODATA
- const int rodata_test_data = 0xC3;
- EXPORT_SYMBOL_GPL(rodata_test_data);
- 
-@@ -960,5 +959,3 @@ void mark_rodata_ro(void)
- 	if (__supported_pte_mask & _PAGE_NX)
- 		debug_checkwx();
- }
--#endif
--
-diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
-index ec081fe0ce2c..e08d141844ee 100644
---- a/arch/x86/mm/init_64.c
-+++ b/arch/x86/mm/init_64.c
-@@ -1062,7 +1062,6 @@ void __init mem_init(void)
- 	mem_init_print_info(NULL);
- }
- 
--#ifdef CONFIG_DEBUG_RODATA
- const int rodata_test_data = 0xC3;
- EXPORT_SYMBOL_GPL(rodata_test_data);
- 
-@@ -1154,8 +1153,6 @@ void mark_rodata_ro(void)
- 	debug_checkwx();
- }
- 
--#endif
--
- int kern_addr_valid(unsigned long addr)
++#ifdef CONFIG_DEBUG_RODATA
++static bool rodata_enabled = true;
++static int __init set_debug_rodata(char *str)
++{
++	return strtobool(str, &rodata_enabled);
++}
++__setup("rodata=", set_debug_rodata);
++
++static void mark_readonly(void)
++{
++	if (rodata_enabled)
++		mark_rodata_ro();
++	else
++		pr_info("Kernel memory protection disabled.\n");
++}
++#else
++static inline void mark_readonly(void)
++{
++	pr_warn("This architecture does not have kernel memory protection.\n");
++}
++#endif
++
+ static int __ref kernel_init(void *unused)
  {
- 	unsigned long above = ((long)addr) >> __VIRTUAL_MASK_SHIFT;
-diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-index a3137a4feed1..8d77c7f7a614 100644
---- a/arch/x86/mm/pageattr.c
-+++ b/arch/x86/mm/pageattr.c
-@@ -278,7 +278,7 @@ static inline pgprot_t static_protections(pgprot_t prot, unsigned long address,
- 		   __pa_symbol(__end_rodata) >> PAGE_SHIFT))
- 		pgprot_val(forbidden) |= _PAGE_RW;
+ 	int ret;
+@@ -937,7 +956,7 @@ static int __ref kernel_init(void *unused)
+ 	/* need to finish all async __init code before freeing the memory */
+ 	async_synchronize_full();
+ 	free_initmem();
+-	mark_rodata_ro();
++	mark_readonly();
+ 	system_state = SYSTEM_RUNNING;
+ 	numa_default_policy();
  
--#if defined(CONFIG_X86_64) && defined(CONFIG_DEBUG_RODATA)
-+#if defined(CONFIG_X86_64)
- 	/*
- 	 * Once the kernel maps the text as RO (kernel_set_to_readonly is set),
- 	 * kernel text mappings for the large page aligned text, rodata sections
+diff --git a/kernel/debug/kdb/kdb_bp.c b/kernel/debug/kdb/kdb_bp.c
+index e1dbf4a2c69e..90ff129c88a2 100644
+--- a/kernel/debug/kdb/kdb_bp.c
++++ b/kernel/debug/kdb/kdb_bp.c
+@@ -153,13 +153,11 @@ static int _kdb_bp_install(struct pt_regs *regs, kdb_bp_t *bp)
+ 	} else {
+ 		kdb_printf("%s: failed to set breakpoint at 0x%lx\n",
+ 			   __func__, bp->bp_addr);
+-#ifdef CONFIG_DEBUG_RODATA
+ 		if (!bp->bp_type) {
+ 			kdb_printf("Software breakpoints are unavailable.\n"
+-				   "  Change the kernel CONFIG_DEBUG_RODATA=n\n"
++				   "  Boot the kernel with rodata=off\n"
+ 				   "  OR use hw breaks: help bph\n");
+ 		}
+-#endif
+ 		return 1;
+ 	}
+ 	return 0;
 -- 
 1.9.1
