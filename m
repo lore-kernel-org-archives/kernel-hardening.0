@@ -1,38 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1449774477.8579.4.camel@gmail.com>
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Thu, 10 Dec 2015 19:38:38 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1DF8B1@ORSMSX107.amr.corp.intel.com>
 References: <20151209172101.GA70633@davidb.org>
 	<CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
 	<1449770155.8579.2.camel@gmail.com>
 	<CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com>
 	<1449774477.8579.4.camel@gmail.com>
-Date: Thu, 10 Dec 2015 11:23:34 -0800
-Message-ID: <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Self Introduction
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+ <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
+In-Reply-To: <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] Self Introduction
+To: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Cc: Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>, Michael Ellerman <mpe@ellerman.id.au>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ralf Baechle <ralf@linux-mips.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 10, 2015 at 11:07 AM, Daniel Micay <danielmicay@gmail.com> wrote:
->> Yeah. PCID was Sandybridge and later?
->
-> Yeah, that's right. And it defaults to the strong PCID implementation,
-> but there's also a weaker but significantly faster PCID-based one.
-
-Is there anyone from Intel on the list? I would love to see UDEREF
-ported to upstream on x86 (and the non PCID version too). No one has
-stepped up to work on it yet.
-
-As for non-ARM and non-x86, IIRC s/390 has always had PAN, and I'd
-love to update the matrix for powerpc and MIPS.
-
-http://kernsec.org/wiki/index.php/Exploit_Methods/Userspace_data_usage
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29t
+IFttYWlsdG86a2Vlc2Nvb2tAZ29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+IEtlZXMgQ29vaw0K
+PiBTZW50OiBUaHVyc2RheSwgRGVjZW1iZXIgMTAsIDIwMTUgMTE6MjQgQU0NCj4gVG86IGtlcm5l
+bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tDQo+IENjOiBDYXRhbGluIE1hcmluYXMgPGNh
+dGFsaW4ubWFyaW5hc0Bhcm0uY29tPjsgUGFYIFRlYW0NCj4gPHBhZ2VleGVjQGZyZWVtYWlsLmh1
+PjsgTWljaGFlbCBFbGxlcm1hbiA8bXBlQGVsbGVybWFuLmlkLmF1PjsgSGVpa28NCj4gQ2Fyc3Rl
+bnMgPGhlaWtvLmNhcnN0ZW5zQGRlLmlibS5jb20+OyBSYWxmIEJhZWNobGUgPHJhbGZAbGludXgt
+bWlwcy5vcmc+DQo+IFN1YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10gU2VsZiBJbnRyb2R1
+Y3Rpb24NCj4gDQo+IE9uIFRodSwgRGVjIDEwLCAyMDE1IGF0IDExOjA3IEFNLCBEYW5pZWwgTWlj
+YXkgPGRhbmllbG1pY2F5QGdtYWlsLmNvbT4NCj4gd3JvdGU6DQo+ID4+IFllYWguIFBDSUQgd2Fz
+IFNhbmR5YnJpZGdlIGFuZCBsYXRlcj8NCj4gPg0KPiA+IFllYWgsIHRoYXQncyByaWdodC4gQW5k
+IGl0IGRlZmF1bHRzIHRvIHRoZSBzdHJvbmcgUENJRCBpbXBsZW1lbnRhdGlvbiwNCj4gPiBidXQg
+dGhlcmUncyBhbHNvIGEgd2Vha2VyIGJ1dCBzaWduaWZpY2FudGx5IGZhc3RlciBQQ0lELWJhc2Vk
+IG9uZS4NCj4gDQo+IElzIHRoZXJlIGFueW9uZSBmcm9tIEludGVsIG9uIHRoZSBsaXN0PyBJIHdv
+dWxkIGxvdmUgdG8gc2VlIFVERVJFRg0KPiBwb3J0ZWQgdG8gdXBzdHJlYW0gb24geDg2IChhbmQg
+dGhlIG5vbiBQQ0lEIHZlcnNpb24gdG9vKS4gTm8gb25lIGhhcw0KPiBzdGVwcGVkIHVwIHRvIHdv
+cmsgb24gaXQgeWV0Lg0KDQpZZXMsIHdlJ3JlIGhlcmUuIFRoZXJlIGFyZSBhIGNvdXBsZSB0aGlu
+Z3Mgd2UgbmVlZCB0byBkbyBiZWZvcmUgbWFraW5nDQpjb21taXRtZW50cyBvbiB0aGluZ3MsIGlu
+Y2x1ZGluZyBkZWNpZGluZyB3aGljaCBhcmUgdGhlIG1vc3QgdXJnZW50DQpmcm9tIG91ciBwZXJz
+cGVjdGl2ZS4gV2Ugd2lsbCBiZSBsb29raW5nIGF0IHdoYXQgd2Ugd2FudCB0byBkbyB3aXRoDQpV
+REVSRUYuDQoNCj4gQXMgZm9yIG5vbi1BUk0gYW5kIG5vbi14ODYsIElJUkMgcy8zOTAgaGFzIGFs
+d2F5cyBoYWQgUEFOLCBhbmQgSSdkDQo+IGxvdmUgdG8gdXBkYXRlIHRoZSBtYXRyaXggZm9yIHBv
+d2VycGMgYW5kIE1JUFMuDQo+IA0KPiBodHRwOi8va2VybnNlYy5vcmcvd2lraS9pbmRleC5waHAv
+RXhwbG9pdF9NZXRob2RzL1VzZXJzcGFjZV9kYXRhX3VzYWdlDQo+IA0KPiAtS2Vlcw0KPiANCj4g
+LS0NCj4gS2VlcyBDb29rDQo+IENocm9tZSBPUyAmIEJyaWxsbyBTZWN1cml0eQ0K
