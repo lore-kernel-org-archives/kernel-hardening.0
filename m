@@ -1,70 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAB9W1A0veUktvSrdwMSaN=kqypGdE6_RLXFGkD79scfkPPevpw@mail.gmail.com>
+Message-ID: <1449770155.8579.2.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu, 10 Dec 2015 12:55:55 -0500
+In-Reply-To: <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
 References: <20151209172101.GA70633@davidb.org>
-	<CAGXu5jLPidHzHwmn5kzK0iSCAehABgtiEzMWgyBvw8iQ-pt=8g@mail.gmail.com>
-	<20151210000005.GA99337@davidb.org>
-	<CAGXu5jLLXK3N6pbZOie5uj276x=dtc_tuTz312rnhF8yrmxHYQ@mail.gmail.com>
-	<20151210002651.GC99337@davidb.org>
-	<CAGXu5jJYRCZ1-frx3+pUPabm3XRFFU8T4gsCQaSc73aA4Q--3g@mail.gmail.com>
-	<CAB9W1A0veUktvSrdwMSaN=kqypGdE6_RLXFGkD79scfkPPevpw@mail.gmail.com>
-Date: Thu, 10 Dec 2015 09:49:13 -0800
-Message-ID: <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
+	 <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-39DZ/bcQmU0R2rkEzKhR"
+Mime-Version: 1.0
 Subject: Re: [kernel-hardening] Self Introduction
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: kernel-hardening@lists.openwall.com
 Cc: Catalin Marinas <catalin.marinas@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 10, 2015 at 9:14 AM, Stephen Smalley
-<stephen.smalley@gmail.com> wrote:
-> On Wed, Dec 9, 2015 at 7:41 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Wed, Dec 9, 2015 at 4:26 PM, David Brown <david.brown@linaro.org> wrote:
->>> On Wed, Dec 09, 2015 at 04:14:20PM -0800, Kees Cook wrote:
->>>> I'd love to see CONFIG_CPU_SW_DOMAIN_PAN into the AOSP 3.18 android kernel
->>>> too.
->>>
->>> I'll put this on my list to investigate.  Sadly, it looks like there
->>> is a bit of a window of ARM CPUs where neither solution will work;
->>> Basically the pre V8.1 64-bit.
->>
->> The LPAE support for PAN emulation exists in grsecurity, if someone
->> wanted to look at how to extract it and add it to
->> CONFIG_CPU_SW_DOMAIN_PAN (or similar).
->
-> Are you looking for this:
-> http://marc.info/?l=linux-arm-kernel&m=144308911409429&w=2
->
-> Haven't seen any follow up on it though...
 
-Ah yes! Thank you!
+--=-39DZ/bcQmU0R2rkEzKhR
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-https://patchwork.kernel.org/patch/7250401/
-https://patchwork.kernel.org/patch/7250391/
-https://patchwork.kernel.org/patch/7250421/
-https://patchwork.kernel.org/patch/7250441/
+> ARMv8 64-bit: ??
 
-Catalin, where does this stand? Also, what options do ARMv8 (not
-ARMv8.1) devices have for PAN if they're running 64-bit?
+The worst case scenario would be doing something like the x86_64 UDEREF.
 
-The matrix for PAN seems to be:
+> x86 pre-late-Broadwell: nothing upstream (though UDEREF in PaX exists)
 
-ARMv7 32-bit non-LPAE: CONFIG_CPU_SW_DOMAIN_PAN
-ARMv7 32-bit LPAE: Catalin's series (CPU_TTBR0_PAN)
-ARMv8 32-bit: Catalin's series?
-ARMv8 64-bit: ??
-ARMv8.1: hardware PAN
-x86 pre-late-Broadwell: nothing upstream (though UDEREF in PaX exists)
-x86 Broadwell+: hardware PAN (SMAP)
-powerpc: ??
-MIPS: ??
+It's worth noting that there's the pre-PCID implementation (slow and
+vulnerable to races) and then two choices of better implementations when
+PCID is available. You probably know that already, but it's not obvious
+to everyone else.
+--=-39DZ/bcQmU0R2rkEzKhR
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-Corrections appreciated. :)
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
--Kees
+iQIcBAABCAAGBQJWabyrAAoJEPnnEuWa9fIq/h4P/R5+wl+zDLjEVpUQ9u/vi3K+
+S3a7Tnzxn7o7z27kOkW1suqfRz43PV5fOGjSZdtoLxJ1RrihtwI9vzwtGqox0cV5
+nQVwNH0XyVG70e11vGCZ3mZrwOqU/cEa+0SznLTxUpdvaAFdG/nnhAWGORARtiLz
+K7GC2Cr6twAxv559awLZ0Rb+q+3k2uoysqzbyu9rQF0hWS0LxKg/eCq1yvUKO/Xr
+Ohku5mFByxl3T8EFFO5PfhJxmZZjV3R0piu6Oe+HXPE+ayNhqf4DQKN1R4ng8Kmu
+dvRAeucM4sGpG5C0d6+WseOyNxB6gRbdFMSDfYVEyhzqIt/wLlgwn7HPS1m3uEEu
+PrVBql81olJaUO8TqoMuSf3yfYhM9oqDdxX6sH/sUsHSO45rgRPawIsA2YCKX5xW
+Fg/Wk02pK/+IaFXWxFb6aaiZhW/0REPC1G8yVMT6GezsvXzAV7/gb2Vbhbd061EQ
+6u2gBVNzG1BJouFvp+/HlQhwb8RqoCJwbcZuyQOPgkdguwTBweJWvx/QDkdmH6Yr
+pF3LoIv9j+oCUwcX6v37relX/d+yvTWOYNEnsSyyNiEJq8YJEFD4CxXXxgDH/ajZ
+w8LRx4B4df8904+ljvSmG6iRP3oCouPJZuEeVLSPC2ToebXTeEOpN6H1aXtBBiDu
+FIkFunzGdX373QxqLCF0
+=crTT
+-----END PGP SIGNATURE-----
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+--=-39DZ/bcQmU0R2rkEzKhR--
