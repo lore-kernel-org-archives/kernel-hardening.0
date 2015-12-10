@@ -1,90 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 10 Dec 2015 18:42:12 +0000
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20151210184211.GH26759@e104818-lin.cambridge.arm.com>
+Message-ID: <1449774477.8579.4.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu, 10 Dec 2015 14:07:57 -0500
+In-Reply-To: <CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com>
 References: <20151209172101.GA70633@davidb.org>
- <CAGXu5jLPidHzHwmn5kzK0iSCAehABgtiEzMWgyBvw8iQ-pt=8g@mail.gmail.com>
- <20151210000005.GA99337@davidb.org>
- <CAGXu5jLLXK3N6pbZOie5uj276x=dtc_tuTz312rnhF8yrmxHYQ@mail.gmail.com>
- <20151210002651.GC99337@davidb.org>
- <CAGXu5jJYRCZ1-frx3+pUPabm3XRFFU8T4gsCQaSc73aA4Q--3g@mail.gmail.com>
- <CAB9W1A0veUktvSrdwMSaN=kqypGdE6_RLXFGkD79scfkPPevpw@mail.gmail.com>
- <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
-Content-Type: text/plain; charset=WINDOWS-1252
-Content-Transfer-Encoding: quoted-printable
-Content-Disposition: inline
+	 <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
+	 <1449770155.8579.2.camel@gmail.com>
+	 <CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-M+FUZ4PFIh9GDI0Ex0NU"
+Mime-Version: 1.0
 Subject: Re: [kernel-hardening] Self Introduction
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: kernel-hardening@lists.openwall.com
+Cc: Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 10, 2015 at 09:49:13AM -0800, Kees Cook wrote:
-> On Thu, Dec 10, 2015 at 9:14 AM, Stephen Smalley
-> <stephen.smalley@gmail.com> wrote:
-> > On Wed, Dec 9, 2015 at 7:41 PM, Kees Cook <keescook@chromium.org> wrote=
-:
-> >> On Wed, Dec 9, 2015 at 4:26 PM, David Brown <david.brown@linaro.org> w=
-rote:
-> >>> On Wed, Dec 09, 2015 at 04:14:20PM -0800, Kees Cook wrote:
-> >>>> I'd love to see CONFIG_CPU_SW_DOMAIN_PAN into the AOSP 3.18 android =
-kernel
-> >>>> too.
-> >>>
-> >>> I'll put this on my list to investigate.  Sadly, it looks like there
-> >>> is a bit of a window of ARM CPUs where neither solution will work;
-> >>> Basically the pre V8.1 64-bit.
-> >>
-> >> The LPAE support for PAN emulation exists in grsecurity, if someone
-> >> wanted to look at how to extract it and add it to
-> >> CONFIG_CPU_SW_DOMAIN_PAN (or similar).
-> >
-> > Are you looking for this:
-> > http://marc.info/?l=3Dlinux-arm-kernel&m=3D144308911409429&w=3D2
-> >
-> > Haven't seen any follow up on it though...
->=20
-> Ah yes! Thank you!
->=20
-> https://patchwork.kernel.org/patch/7250401/
-> https://patchwork.kernel.org/patch/7250391/
-> https://patchwork.kernel.org/patch/7250421/
-> https://patchwork.kernel.org/patch/7250441/
->=20
-> Catalin, where does this stand?
 
-I haven't done any further improvements to them, nor have I received any
-feedback. I'll rebase them against latest kernel if anyone else is
-willing to test. I had a plan to run some benchmarks and see how
-performance is affected (including the CPU_SW_DOMAIN_PAN) before pushing
-again for upstreaming but I haven't had the time.
+--=-M+FUZ4PFIh9GDI0Ex0NU
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> Also, what options do ARMv8 (not ARMv8.1) devices have for PAN if
-> they're running 64-bit?
+> Yeah. PCID was Sandybridge and later?
 
-No PAN support for ARMv8.0. It could be done similarly to the 32-bit
-LPAE support.
+Yeah, that's right. And it defaults to the strong PCID implementation,
+but there's also a weaker but significantly faster PCID-based one.
+--=-M+FUZ4PFIh9GDI0Ex0NU
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-> The matrix for PAN seems to be:
->=20
-> ARMv7 32-bit non-LPAE: CONFIG_CPU_SW_DOMAIN_PAN
-> ARMv7 32-bit LPAE: Catalin's series (CPU_TTBR0_PAN)
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-Correct.
+iQIcBAABCAAGBQJWac2NAAoJEPnnEuWa9fIqWZwP/0Zag6v3RZiNvbtI9FD9jiE/
+ad/Jc/pZwNAjO9VGB21/xJ+4q926jBv0Ni1/k/YHVmXh07FZOx6TsaSrVd3WnFOr
+LqmHDuQ0az8II+8cgg4lG4kBkZ+dck6RUUpIhodE7/CBNmxvY8DNAE2EqYmpAo+p
+mc6M3jHN140Q1gZZ/GAOIdY3jkUxNvqHt3ev7pdWXt3BmZXHhTLgCkD8NNnxR+ra
+E3BcdSoGvzIGRUWFr7uLI2ho85yBU47Xys+1x88kZRLL3lxRQGrpyBTDLSXztddr
+ZZEyQTAPY6gDv4OQEypRMSgJu3/PpLBbd2kapVZTES2NkI4g1Qu/hLCaAH+hQVA6
+kZRi3A79qGhORo0bFnF2uJmK8BpXj28lJcIsSHQQHfqTvPxa4HwzxpLYCkvmYi2q
+IfN0ktUvxMFviitc0Blw/l+G3/NaYqSoPYuu5hZgpLrpBB1G4dov7OFRsK5VXyiK
+06d8aOUvZ0kCYvHfU7LXOdWRA/BR/sg7K7gORoLefO5jUpIzDVHTIUIBA7LQpT/V
+lNxSIiRWpogJXJtSFD2bbA5G+lF6IxeIABnc3SrCG9OjBkPXzK/Akkrs8vAX4KXl
+ggyzjLQSiADOGNp1Fgwi7c4M1m32rHGbMyLTASf3yOb5vn3OznzI1C4pGaIkVpgj
+rjXVpI0dDZzlarg8PYod
+=0IC5
+-----END PGP SIGNATURE-----
 
-> ARMv8 32-bit: Catalin's series?
-
-ARMv8 32-bit is backwards compatible with ARMv7, so the same arm32
-kernel.
-
-> ARMv8 64-bit: ??
-
-None.
-
-> ARMv8.1: hardware PAN
-
-Correct.
-
---=20
-Catalin
+--=-M+FUZ4PFIh9GDI0Ex0NU--
