@@ -1,44 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Thu, 10 Dec 2015 19:38:38 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1DF8B1@ORSMSX107.amr.corp.intel.com>
-References: <20151209172101.GA70633@davidb.org>
-	<CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
-	<1449770155.8579.2.camel@gmail.com>
-	<CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com>
-	<1449774477.8579.4.camel@gmail.com>
- <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
-In-Reply-To: <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Self Introduction
-To: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>, Michael Ellerman <mpe@ellerman.id.au>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ralf Baechle <ralf@linux-mips.org>
+Sender: keescook@google.com
+In-Reply-To: <1443018250-22893-1-git-send-email-catalin.marinas@arm.com>
+References: <1443018250-22893-1-git-send-email-catalin.marinas@arm.com>
+Date: Thu, 10 Dec 2015 11:40:44 -0800
+Message-ID: <CAGXu5jJYoCxATf8tWAhdosNH9jKovpcYQ=PqD85gHnT+oBF3CQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 0/4] arm: Privileged no-access for LPAE
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: Russell King - ARM Linux <linux@arm.linux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29t
-IFttYWlsdG86a2Vlc2Nvb2tAZ29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+IEtlZXMgQ29vaw0K
-PiBTZW50OiBUaHVyc2RheSwgRGVjZW1iZXIgMTAsIDIwMTUgMTE6MjQgQU0NCj4gVG86IGtlcm5l
-bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tDQo+IENjOiBDYXRhbGluIE1hcmluYXMgPGNh
-dGFsaW4ubWFyaW5hc0Bhcm0uY29tPjsgUGFYIFRlYW0NCj4gPHBhZ2VleGVjQGZyZWVtYWlsLmh1
-PjsgTWljaGFlbCBFbGxlcm1hbiA8bXBlQGVsbGVybWFuLmlkLmF1PjsgSGVpa28NCj4gQ2Fyc3Rl
-bnMgPGhlaWtvLmNhcnN0ZW5zQGRlLmlibS5jb20+OyBSYWxmIEJhZWNobGUgPHJhbGZAbGludXgt
-bWlwcy5vcmc+DQo+IFN1YmplY3Q6IFJlOiBba2VybmVsLWhhcmRlbmluZ10gU2VsZiBJbnRyb2R1
-Y3Rpb24NCj4gDQo+IE9uIFRodSwgRGVjIDEwLCAyMDE1IGF0IDExOjA3IEFNLCBEYW5pZWwgTWlj
-YXkgPGRhbmllbG1pY2F5QGdtYWlsLmNvbT4NCj4gd3JvdGU6DQo+ID4+IFllYWguIFBDSUQgd2Fz
-IFNhbmR5YnJpZGdlIGFuZCBsYXRlcj8NCj4gPg0KPiA+IFllYWgsIHRoYXQncyByaWdodC4gQW5k
-IGl0IGRlZmF1bHRzIHRvIHRoZSBzdHJvbmcgUENJRCBpbXBsZW1lbnRhdGlvbiwNCj4gPiBidXQg
-dGhlcmUncyBhbHNvIGEgd2Vha2VyIGJ1dCBzaWduaWZpY2FudGx5IGZhc3RlciBQQ0lELWJhc2Vk
-IG9uZS4NCj4gDQo+IElzIHRoZXJlIGFueW9uZSBmcm9tIEludGVsIG9uIHRoZSBsaXN0PyBJIHdv
-dWxkIGxvdmUgdG8gc2VlIFVERVJFRg0KPiBwb3J0ZWQgdG8gdXBzdHJlYW0gb24geDg2IChhbmQg
-dGhlIG5vbiBQQ0lEIHZlcnNpb24gdG9vKS4gTm8gb25lIGhhcw0KPiBzdGVwcGVkIHVwIHRvIHdv
-cmsgb24gaXQgeWV0Lg0KDQpZZXMsIHdlJ3JlIGhlcmUuIFRoZXJlIGFyZSBhIGNvdXBsZSB0aGlu
-Z3Mgd2UgbmVlZCB0byBkbyBiZWZvcmUgbWFraW5nDQpjb21taXRtZW50cyBvbiB0aGluZ3MsIGlu
-Y2x1ZGluZyBkZWNpZGluZyB3aGljaCBhcmUgdGhlIG1vc3QgdXJnZW50DQpmcm9tIG91ciBwZXJz
-cGVjdGl2ZS4gV2Ugd2lsbCBiZSBsb29raW5nIGF0IHdoYXQgd2Ugd2FudCB0byBkbyB3aXRoDQpV
-REVSRUYuDQoNCj4gQXMgZm9yIG5vbi1BUk0gYW5kIG5vbi14ODYsIElJUkMgcy8zOTAgaGFzIGFs
-d2F5cyBoYWQgUEFOLCBhbmQgSSdkDQo+IGxvdmUgdG8gdXBkYXRlIHRoZSBtYXRyaXggZm9yIHBv
-d2VycGMgYW5kIE1JUFMuDQo+IA0KPiBodHRwOi8va2VybnNlYy5vcmcvd2lraS9pbmRleC5waHAv
-RXhwbG9pdF9NZXRob2RzL1VzZXJzcGFjZV9kYXRhX3VzYWdlDQo+IA0KPiAtS2Vlcw0KPiANCj4g
-LS0NCj4gS2VlcyBDb29rDQo+IENocm9tZSBPUyAmIEJyaWxsbyBTZWN1cml0eQ0K
+[thread necromancy]
+
+This series looks good to me. I'd love to see it accepted. At the very
+least the cleanups look like no-brainers. :)
+
+Please consider the series:
+
+Reviewed-by: Kees Cook <keescook@chromium.org>
+
+Thanks for working on it!
+
+-Kees
+
+
+On Wed, Sep 23, 2015 at 7:24 AM, Catalin Marinas
+<catalin.marinas@arm.com> wrote:
+> Hi,
+>
+> This is the first attempt to add support for privileged no-access on
+> LPAE-enabled kernels by disabling TTBR0 page table walks. The first
+> three patches are pretty much refactoring/clean-up without any
+> functional change. The last patch implements the actual PAN using TTBR0
+> disabling. Its description also contains the details of how this works.
+>
+> The patches can be found here:
+>
+> git://git.kernel.org/pub/scm/linux/kernel/git/cmarinas/linux-aarch64 arm32-pan
+>
+> Tested in different configurations (with and without LPAE, all
+> VMSPLIT_*, loadable modules) but only under KVM on Juno (ARMv8).
+>
+> Thanks.
+>
+>
+> Catalin Marinas (4):
+>   arm: kvm: Move TTBCR_* definitions from kvm_arm.h into
+>     pgtable-3level-hwdef.h
+>   arm: Move asm statements accessing TTBCR into dedicated functions
+>   arm: Reduce the number of #ifdef CONFIG_CPU_SW_DOMAIN_PAN
+>   arm: Implement privileged no-access using TTBR0 page table walks
+>     disabling
+>
+>  arch/arm/Kconfig                            | 22 ++++++++--
+>  arch/arm/include/asm/assembler.h            | 68 +++++++++++++++++++++++++----
+>  arch/arm/include/asm/kvm_arm.h              | 17 +-------
+>  arch/arm/include/asm/pgtable-3level-hwdef.h | 26 +++++++++++
+>  arch/arm/include/asm/proc-fns.h             | 12 +++++
+>  arch/arm/include/asm/uaccess.h              | 53 +++++++++++++++++++---
+>  arch/arm/kvm/init.S                         |  2 +-
+>  arch/arm/lib/csumpartialcopyuser.S          | 20 ++++++++-
+>  arch/arm/mm/fault.c                         | 10 +++++
+>  arch/arm/mm/mmu.c                           |  7 ++-
+>  10 files changed, 199 insertions(+), 38 deletions(-)
+>
+>
+> _______________________________________________
+> linux-arm-kernel mailing list
+> linux-arm-kernel@lists.infradead.org
+> http://lists.infradead.org/mailman/listinfo/linux-arm-kernel
+
+
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
