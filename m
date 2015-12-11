@@ -1,94 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 11 Dec 2015 17:21:40 +0000
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20151211172140.GQ26759@e104818-lin.cambridge.arm.com>
+References: <1443018250-22893-1-git-send-email-catalin.marinas@arm.com>
+ <CAGXu5jJYoCxATf8tWAhdosNH9jKovpcYQ=PqD85gHnT+oBF3CQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1449697404-21076-3-git-send-email-keescook@chromium.org>
-References: <1449697404-21076-1-git-send-email-keescook@chromium.org>
-	<1449697404-21076-3-git-send-email-keescook@chromium.org>
-Date: Fri, 11 Dec 2015 19:00:32 +0200
-Message-ID: <CAHp75VeJovidU+dWL6Su9YkpP+zmMUw=yrtLh2PmGRZRun-D8g@mail.gmail.com>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v3 2/8] lib: add "on" and "off" to strtobool
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJYoCxATf8tWAhdosNH9jKovpcYQ=PqD85gHnT+oBF3CQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 0/4] arm: Privileged no-access for LPAE
 To: Kees Cook <keescook@chromium.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Borkmann <daniel@iogearbox.net>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-arch <linux-arch@vger.kernel.org>
+Cc: Russell King - ARM Linux <linux@arm.linux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 9, 2015 at 11:43 PM, Kees Cook <keescook@chromium.org> wrote:
-> Several places in the kernel expect to use "on" and "off" for their
-> boolean signifiers, so add them to strtobool.
->
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-> Cc: Daniel Borkmann <daniel@iogearbox.net>
-> ---
->  lib/string.c | 21 ++++++++++++++++++++-
->  1 file changed, 20 insertions(+), 1 deletion(-)
->
-> diff --git a/lib/string.c b/lib/string.c
-> index 0323c0d5629a..d7550432f91c 100644
-> --- a/lib/string.c
-> +++ b/lib/string.c
-> @@ -635,12 +635,16 @@ EXPORT_SYMBOL(sysfs_streq);
->   * @s: input string
->   * @res: result
->   *
-> - * This routine returns 0 iff the first character is one of 'Yy1Nn0'.
-> + * This routine returns 0 iff the first character is one of 'Yy1Nn0', or
-> + * 'Oo' when the second character is one of 'fFnN' (for "on" and "off").
+On Thu, Dec 10, 2015 at 11:40:44AM -0800, Kees Cook wrote:
+> [thread necromancy]
+> 
+> This series looks good to me. I'd love to see it accepted. At the very
+> least the cleanups look like no-brainers. :)
+> 
+> Please consider the series:
+> 
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> 
+> Thanks for working on it!
 
-Maybe
+Thanks for the review. After some more (internal) discussions around
+these patches, I need to get clarification on the architecture whether
+changing the TTBCR.A1 bit is enough to guarantee an ASID change (I do
+this trick to change to the reserved ASID and avoid TLB invalidation as
+normally required by changes to translation control registers). If
+that's not allowed by the architecture, I would have to change the
+patches to switch to a reserved TTBR0 rather than disabling TTBR0 walks
+at the TTBCR level.
 
-=E2=80=A6or [Oo][FfNn] for "off" and "on"=E2=80=A6
-
-
->   * Otherwise it will return -EINVAL.  Value pointed to by res is
->   * updated upon finding a match.
->   */
->  int strtobool(const char *s, bool *res)
->  {
-
-> +       if (!s)
-> +               return -EINVAL;
-> +
-
-This change I think is better to do separately. Do we have even need for it=
-?
-
->         switch (s[0]) {
->         case 'y':
->         case 'Y':
-> @@ -652,6 +656,21 @@ int strtobool(const char *s, bool *res)
->         case '0':
->                 *res =3D false;
->                 break;
-> +       case 'o':
-> +       case 'O':
-> +               switch (s[1]) {
-> +               case 'n':
-> +               case 'N':
-> +                       *res =3D true;
-> +                       break;
-> +               case 'f':
-> +               case 'F':
-> +                       *res =3D false;
-> +                       break;
-
-
-> +               default:
-> +                       return -EINVAL;
-> +               }
-> +               break;
->         default:
->                 return -EINVAL;
-
-Maybe in both cases
-default:
- break;
-}
-=E2=80=A6
-}
-return -EINVAL;
-
---=20
-With Best Regards,
-Andy Shevchenko
+-- 
+Catalin
