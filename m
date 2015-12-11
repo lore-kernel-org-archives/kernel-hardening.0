@@ -1,32 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Fri, 11 Dec 2015 21:09:41 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
-References: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
- <CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
-In-Reply-To: <CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Project convention on configuration options
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
+References: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
+	<CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
+	<99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
+Date: Fri, 11 Dec 2015 22:48:34 +0100
+Message-ID: <CAFwXZv-5b4=G85CiDZXG7JvhWAee9A_wUrJHmc4O5wrDHO9fmg@mail.gmail.com>
+From: HacKurx <hackurx@gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Project convention on configuration options
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBIYWNLdXJ4IFttYWlsdG86aGFj
-a3VyeEBnbWFpbC5jb21dDQo+IFNlbnQ6IEZyaWRheSwgRGVjZW1iZXIgMTEsIDIwMTUgMTI6MjUg
-UE0NCj4gVG86IGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tDQo+IFN1YmplY3Q6
-IFJlOiBba2VybmVsLWhhcmRlbmluZ10gUHJvamVjdCBjb252ZW50aW9uIG9uIGNvbmZpZ3VyYXRp
-b24gb3B0aW9ucw0KPiANCj4gRmlyc3QsIHJlc3BlY3QgdGhlIHdvcmsgb2Ygb3RoZXJzLi4uDQo+
-IGh0dHBzOi8vdHdpdHRlci5jb20vaW9lcnJvci9zdGF0dXMvNjM2Njc3OTE2MzY1OTk2MDMyDQo+
-IA0KPiBTbyBJIGhvcGUgeW91IGFyZSBub3QgaGVyZSBmb3Igbm90aGluZy4uLg0KPiBTb3JyeSBm
-b3Igc3VjaCBhIGNvbW1lbnQgaGVyZSBidXQgSSBkb24ndCBsaWtlIGF0dGl0dWRlIG9mIHlvdXIg
-ZW50ZXJwcmlzZS4NCg0KTm90ZWQuDQoNClNvLCBvbiB0aGUgdG9waWMgYXQgaGFuZCwgd2hhdCB3
-b3VsZCB5b3Ugc3VnZ2VzdD8gSSBzZWUgcmVhbA0KdmFsdWUgaW4gcmV0YWluaW5nIGFzIG11Y2gg
-b2Ygd2hhdCdzIGJlZW4gcHJvcG9zZWQgYmVmb3JlIGFzDQpwb3NzaWJsZS4NCg0KPiANCj4gMjAx
-NS0xMi0xMSAxODo1NyBHTVQrMDE6MDAgU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVy
-QGludGVsLmNvbT46DQo+ID4NCj4gPg0KPiA+IEnigJltIHN0YXJ0aW5nIHRvIGxvb2sgYXQgUEFY
-X1VTRVJDT1BZIGFuZCBpbW1lZGlhdGVseSBoaXQNCj4gPiB0aGUgcXVlc3Rpb24gb2Ygd2hhdCB0
-byBkbyBhYm91dCBjb25maWd1cmF0aW9uIG9wdGlvbiBuYW1lLg0KPiA+IEkgYXNzdW1lIHRoYXQg
-cmV0YWluaW5nIFBBWF9VU0VSQ09QWSBpcyBub3QgdGhlIHJpZ2h0IHRoaW5nDQo+ID4gdG8gZG8s
-IGJ1dCB3aGF0IHNob3VsZCBiZSB1c2VkIGluc3RlYWQ/IEhBUkRfVVNFUkNPUFk/DQo+ID4NCj4g
-PiBUaGFua3MuDQo+ID4NCj4gPg0KPiANCj4gLS0NCj4gQmVzdCByZWdhcmRzLA0K
+2015-12-11 22:09 GMT+01:00 Schaufler, Casey <casey.schaufler@intel.com>:
+> Noted.
+>
+> So, on the topic at hand, what would you suggest? I see real
+> value in retaining as much of what's been proposed before as
+> possible.
+
+I don't understand why Intel and the Core Infrastructure Initiative
+does not sponsor grsecurity.
+Grsecurity is just as important as OpenSSL.
+They need help to continue!
+
+
+-- 
+Best regards,
