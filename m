@@ -1,59 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Valdis.Kletnieks@vt.edu
-In-Reply-To: <CAGXu5jLU=tbyCm2Jjjj1RshygiFEYMKNtbwPs6p-seCkJ2Ajdw@mail.gmail.com>
-References: <20151209172101.GA70633@davidb.org> <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com> <1449770155.8579.2.camel@gmail.com> <CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com> <1449774477.8579.4.camel@gmail.com> <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com> <99FC4B6EFCEFD44486C35F4C281DC6731F1DF8B1@ORSMSX107.amr.corp.intel.com>
- <CAGXu5jLU=tbyCm2Jjjj1RshygiFEYMKNtbwPs6p-seCkJ2Ajdw@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: multipart/signed; boundary="==_Exmh_1449856475_2509P";
-	 micalg=pgp-sha1; protocol="application/pgp-signature"
-Content-Transfer-Encoding: 7bit
-Date: Fri, 11 Dec 2015 12:54:35 -0500
-Message-ID: <6439.1449856475@turing-police.cc.vt.edu>
-Subject: Re: [kernel-hardening] Self Introduction
-To: kernel-hardening@lists.openwall.com
-Cc: "Schaufler, Casey" <casey.schaufler@intel.com>, Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>, Michael Ellerman <mpe@ellerman.id.au>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ralf Baechle <ralf@linux-mips.org>
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Fri, 11 Dec 2015 17:57:14 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
+Content-Type: multipart/alternative;
+	boundary="_000_99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDAORSMSX107amrcor_"
+MIME-Version: 1.0
+Subject: [kernel-hardening] Project convention on configuration options
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---==_Exmh_1449856475_2509P
-Content-Type: text/plain; charset=us-ascii
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDAORSMSX107amrcor_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 
-On Thu, 10 Dec 2015 11:45:35 -0800, Kees Cook said:
-> On Thu, Dec 10, 2015 at 11:38 AM, Schaufler, Casey
 
-> That's great! Thanks for speaking up. Another area that hasn't seen
-> any traction yet is PAX_USERCOPY. Valdis seems to be MIA, so I'd love
-> to see someone else take on that chunk of work.
+I'm starting to look at PAX_USERCOPY and immediately hit
+the question of what to do about configuration option name.
+I assume that retaining PAX_USERCOPY is not the right thing
+to do, but what should be used instead? HARD_USERCOPY?
 
-Whoops. sorry.. I just didn't have anything in a state ready to share,
-and I got sidetracked by a week in the hospital (am all OK now, thankfully).
+Thanks.
 
-Biggest problem is just taking one big 7M patch and teasing out just the
-USERCOPY parts, and then re-arranging it into something that upstream will
-be willing to take.  Just lots and lots of grunt work.
 
-I don't suppose the grsecurity guys have a git repo where a lot of the
-heavy duty lifting is already done? :)
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDAORSMSX107amrcor_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 
---==_Exmh_1449856475_2509P
-Content-Type: application/pgp-signature
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	margin-bottom:.0001pt;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#0563C1;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:#954F72;
+	text-decoration:underline;}
+span.EmailStyle17
+	{mso-style-type:personal-compose;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-family:"Calibri",sans-serif;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-US" link=3D"#0563C1" vlink=3D"#954F72">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">I&#8217;m starting to look at PAX_USERCOPY and immed=
+iately hit<br>
+the question of what to do about configuration option name.<br>
+I assume that retaining PAX_USERCOPY is not the right thing<br>
+to do, but what should be used instead? HARD_USERCOPY?<br>
+<br>
+<o:p></o:p></p>
+<p class=3D"MsoNormal">Thanks.<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</body>
+</html>
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-Comment: Exmh version 2.5 07/13/2001
-
-iQIVAwUBVmsN2wdmEQWDXROgAQIsJA//dmyVOfn0saHjuPtBMahX2sSeGS7U/LqO
-ljYGQX9AUgGd3wjBf4753FTkb8CT3Qx+tbMJhzQbfIzbn/YJsZzN5xR2o7kgYm9/
-A5s47U3t0ABnTqQqbL0IhVn3LW4ctyVXytjd9Z97+8CxUf9qwsLda2AaTXvc0AEF
-y9gznA0Ho+54mQrJ5vJTDcmFu+qmJ+uqvXznyk8EdTx0hz/ViCKbF2s5MJ3+AplF
-VuJ7E86FQSOFuP6u4m1e8oMYVWyvouNnUL/Hn0p9TNLekEqPS3Q+9qD8L8+bwEIZ
-Q5jL7f324RLpJIy79+lkaSvCDWD4aU28U2rGrmZKqKcntcJIvjcIutGQZvKjeI+h
-nJMXDGIGRnauNhZaEdabCvX4/LggoMDS9nbEJWL4TBKL2rhEMF4BkWbPwC9+gY1c
-2+TxYvfXA5GBnkLYqtDBzyh3PwpaWonYQm/J3N/LD68cIRkFoaRqL44vvM5ipBvY
-b2htmLtcpvOPbWwopjAyT6VvhUnYjllipo7kOSjqwSQeBPm7L1nx+svfBYuneyqI
-LhORquR3gmV340CpDMsonqP4WGOJFsTJwbe9r03v0VoWURNWGLLl+1ypfrO+wvew
-+49fYThxs78vIASi9rXdEycrr0dqMBydyDFza6+IRXp2a4VNHaL9mzVc8iKTftl4
-I9G98VKbwew=
-=QtRB
------END PGP SIGNATURE-----
-
---==_Exmh_1449856475_2509P--
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDAORSMSX107amrcor_--
