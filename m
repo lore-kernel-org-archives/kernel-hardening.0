@@ -1,63 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jK8dTL5PVnF7G+xf=RvWX82G9NFy+jEqkNmV7V0zc-LxQ@mail.gmail.com>
-References: <1449697404-21076-1-git-send-email-keescook@chromium.org>
-	<1449697404-21076-3-git-send-email-keescook@chromium.org>
-	<CAHp75VeJovidU+dWL6Su9YkpP+zmMUw=yrtLh2PmGRZRun-D8g@mail.gmail.com>
-	<CAGXu5jK8dTL5PVnF7G+xf=RvWX82G9NFy+jEqkNmV7V0zc-LxQ@mail.gmail.com>
-Date: Fri, 11 Dec 2015 23:20:28 +0200
-Message-ID: <CAHp75Vf-Y+8PUMnU9k9pAjXbdWwiZoTnOhcohKeKS+aTt_fC3Q@mail.gmail.com>
-From: Andy Shevchenko <andy.shevchenko@gmail.com>
+In-Reply-To: <CAGXu5j+Yvtqf6sE6eZ3c+c30dQMVK8a56s_5b2PhqLtocGT=TQ@mail.gmail.com>
+References: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
+	<CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
+	<99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
+	<CAFwXZv-5b4=G85CiDZXG7JvhWAee9A_wUrJHmc4O5wrDHO9fmg@mail.gmail.com>
+	<CAGXu5j+Yvtqf6sE6eZ3c+c30dQMVK8a56s_5b2PhqLtocGT=TQ@mail.gmail.com>
+Date: Fri, 11 Dec 2015 23:46:05 +0100
+Message-ID: <CAFwXZv8WHOk48iA3cA4qLPNA9XJY+ZCWA6jPDSxVc=RrKBZ7pw@mail.gmail.com>
+From: HacKurx <hackurx@gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v3 2/8] lib: add "on" and "off" to strtobool
-To: Kees Cook <keescook@chromium.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Borkmann <daniel@iogearbox.net>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-arch <linux-arch@vger.kernel.org>
+Subject: Re: [kernel-hardening] Project convention on configuration options
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 11, 2015 at 8:50 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Dec 11, 2015 at 9:00 AM, Andy Shevchenko
-> <andy.shevchenko@gmail.com> wrote:
->> On Wed, Dec 9, 2015 at 11:43 PM, Kees Cook <keescook@chromium.org> wrote=
-:
->>> Several places in the kernel expect to use "on" and "off" for their
->>> boolean signifiers, so add them to strtobool.
+2015-12-11 22:57 GMT+01:00 Kees Cook <keescook@chromium.org>:
+> I can't speak for Intel or CII directly, but I'd point out that CII
+> *is* involved in a funding proposal from Emese, who is the author of
+> several of the PaX GCC plugins. If you'd like to help with some part
+> of bringing PaX and Grsecurity features to upstream, please discuss
+> what you'd like to do here and then bring another proposal to CII for
+> consideration.
 
->>> +       if (!s)
->>> +               return -EINVAL;
->>> +
->>
->> This change I think is better to do separately. Do we have even need for=
- it?
->
-> I'm happy to separate it, sure. I added it here because several of the
-> __setup and param callers do a check for !NULL input, and it made this
-> cleaner. Also it seems sensible to do this check anyway.
+That's a good point for Emese. Your work to bring PaX and Grsecurity
+features into mainline is also remarkable, thanks.
 
-OK.
+I stop to bother you and I really hope I haven't offended anyone.
 
->>> +               default:
->>> +                       return -EINVAL;
->>> +               }
->>> +               break;
->>>         default:
->>>                 return -EINVAL;
->>
->> Maybe in both cases
->> default:
->>  break;
->> }
->> =E2=80=A6
->> }
->> return -EINVAL;
->
-> I went back and forth on this. To switch to the fall-back being EINVAL
-> meant I had to change all the other "breaks" into "return 0", and it
-> just looked ugly to me. If that is preferred, though, I'm happy to do
-> it.
-
-I have no strong feelings about that, I prefer whatever looks neater.
-
---=20
-With Best Regards,
-Andy Shevchenko
+-- 
+Best regards,
