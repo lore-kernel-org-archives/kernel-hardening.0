@@ -1,36 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Fri, 11 Dec 2015 21:09:41 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
 References: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
-	<CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
-Date: Fri, 11 Dec 2015 13:06:37 -0800
-Message-ID: <CAGXu5jJN5S=fqDHY8Lx3cgJ3zBhYxohQkRFOux-Wxq6-9A_LbA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Project convention on configuration options
+ <CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
+In-Reply-To: <CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] Project convention on configuration options
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 11, 2015 at 12:24 PM, HacKurx <hackurx@gmail.com> wrote:
-> First, respect the work of others...
-> https://twitter.com/ioerror/status/636677916365996032
-
-What? You might want to read through the archives. We, of course, give
-credit. Just look at my attempts to port __read_only. PaX and
-Grsecurity are credited. Emese is actively involved in getting CII
-funding for upstream porting work, and PaX Team will comment now and
-then too. I see no lack of respect.
-
-> So I hope you are not here for nothing...
-> Sorry for such a comment here but I don't like attitude of your enterprise.
-
-I'm sorry you feel that way. What led you to thinking we had a bad
-attitude about our efforts to bring PaX and Grsecurity features into
-mainline?
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBIYWNLdXJ4IFttYWlsdG86aGFj
+a3VyeEBnbWFpbC5jb21dDQo+IFNlbnQ6IEZyaWRheSwgRGVjZW1iZXIgMTEsIDIwMTUgMTI6MjUg
+UE0NCj4gVG86IGtlcm5lbC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tDQo+IFN1YmplY3Q6
+IFJlOiBba2VybmVsLWhhcmRlbmluZ10gUHJvamVjdCBjb252ZW50aW9uIG9uIGNvbmZpZ3VyYXRp
+b24gb3B0aW9ucw0KPiANCj4gRmlyc3QsIHJlc3BlY3QgdGhlIHdvcmsgb2Ygb3RoZXJzLi4uDQo+
+IGh0dHBzOi8vdHdpdHRlci5jb20vaW9lcnJvci9zdGF0dXMvNjM2Njc3OTE2MzY1OTk2MDMyDQo+
+IA0KPiBTbyBJIGhvcGUgeW91IGFyZSBub3QgaGVyZSBmb3Igbm90aGluZy4uLg0KPiBTb3JyeSBm
+b3Igc3VjaCBhIGNvbW1lbnQgaGVyZSBidXQgSSBkb24ndCBsaWtlIGF0dGl0dWRlIG9mIHlvdXIg
+ZW50ZXJwcmlzZS4NCg0KTm90ZWQuDQoNClNvLCBvbiB0aGUgdG9waWMgYXQgaGFuZCwgd2hhdCB3
+b3VsZCB5b3Ugc3VnZ2VzdD8gSSBzZWUgcmVhbA0KdmFsdWUgaW4gcmV0YWluaW5nIGFzIG11Y2gg
+b2Ygd2hhdCdzIGJlZW4gcHJvcG9zZWQgYmVmb3JlIGFzDQpwb3NzaWJsZS4NCg0KPiANCj4gMjAx
+NS0xMi0xMSAxODo1NyBHTVQrMDE6MDAgU2NoYXVmbGVyLCBDYXNleSA8Y2FzZXkuc2NoYXVmbGVy
+QGludGVsLmNvbT46DQo+ID4NCj4gPg0KPiA+IEnigJltIHN0YXJ0aW5nIHRvIGxvb2sgYXQgUEFY
+X1VTRVJDT1BZIGFuZCBpbW1lZGlhdGVseSBoaXQNCj4gPiB0aGUgcXVlc3Rpb24gb2Ygd2hhdCB0
+byBkbyBhYm91dCBjb25maWd1cmF0aW9uIG9wdGlvbiBuYW1lLg0KPiA+IEkgYXNzdW1lIHRoYXQg
+cmV0YWluaW5nIFBBWF9VU0VSQ09QWSBpcyBub3QgdGhlIHJpZ2h0IHRoaW5nDQo+ID4gdG8gZG8s
+IGJ1dCB3aGF0IHNob3VsZCBiZSB1c2VkIGluc3RlYWQ/IEhBUkRfVVNFUkNPUFk/DQo+ID4NCj4g
+PiBUaGFua3MuDQo+ID4NCj4gPg0KPiANCj4gLS0NCj4gQmVzdCByZWdhcmRzLA0K
