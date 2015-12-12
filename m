@@ -1,31 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sat, 12 Dec 2015 12:40:20 +0100
+From: Heiko Carstens <heiko.carstens@de.ibm.com>
+Message-ID: <20151212114020.GB3848@osiris>
+References: <20151209172101.GA70633@davidb.org>
+ <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
+ <1449770155.8579.2.camel@gmail.com>
+ <CAGXu5jK7LcS9M4NBZr3q8RVQss6GKQ-ifxhOTCMTAGZv3hF02A@mail.gmail.com>
+ <1449774477.8579.4.camel@gmail.com>
+ <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <34754.1449874747@turing-police.cc.vt.edu>
-References: <99FC4B6EFCEFD44486C35F4C281DC6731F1DFFDA@ORSMSX107.amr.corp.intel.com>
-	<CAFwXZv8qbWA5V_v4M2ayZM5WA7rxyVn9SYLN6fGVuvMUDLfKwA@mail.gmail.com>
-	<99FC4B6EFCEFD44486C35F4C281DC6731F1E0062@ORSMSX107.amr.corp.intel.com>
-	<CAFwXZv-5b4=G85CiDZXG7JvhWAee9A_wUrJHmc4O5wrDHO9fmg@mail.gmail.com>
-	<34754.1449874747@turing-police.cc.vt.edu>
-Date: Sat, 12 Dec 2015 10:17:25 +0100
-Message-ID: <CAFwXZv9Yb5o6Ms+U5P5cGfHzCfZpfgfTtHuZ0++ZmmBL8zG-zA@mail.gmail.com>
-From: HacKurx <hackurx@gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Project convention on configuration options
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+OhUjRZSfCoFZeAY23-rzGDQ_6cU886BNSr3PCzQ60Hw@mail.gmail.com>
+Subject: Re: [kernel-hardening] Self Introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>, Michael Ellerman <mpe@ellerman.id.au>, Ralf Baechle <ralf@linux-mips.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2015-12-11 23:59 GMT+01:00  <Valdis.Kletnieks@vt.edu>:
-> But it's not clear that it's Intel's problem to support all of it by
-> itself, and the CII can only do sponsorship to the level that they themselves
-> have funding...
+On Thu, Dec 10, 2015 at 11:23:34AM -0800, Kees Cook wrote:
+> On Thu, Dec 10, 2015 at 11:07 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> >> Yeah. PCID was Sandybridge and later?
+> >
+> > Yeah, that's right. And it defaults to the strong PCID implementation,
+> > but there's also a weaker but significantly faster PCID-based one.
+> 
+> Is there anyone from Intel on the list? I would love to see UDEREF
+> ported to upstream on x86 (and the non PCID version too). No one has
+> stepped up to work on it yet.
+> 
+> As for non-ARM and non-x86, IIRC s/390 has always had PAN, and I'd
+> love to update the matrix for powerpc and MIPS.
+> 
+> http://kernsec.org/wiki/index.php/Exploit_Methods/Userspace_data_usage
 
-But so far they know sell (Intel IoT Gateway, Intel MPX, Wind River and more)
+The statement for s390 is correct: we always had PAN in use. It's a
+hardware feature simply called "Address Spaces".
 
-http://www.intel.com/content/dam/www/public/us/en/documents/white-papers/iot-security-profiles-white-paper.pdf
-http://www.intel.com/content/dam/www/public/us/en/documents/guides/wind-river-idp-xt2-programmers-guide.pdf
-https://communities.intel.com/community/itpeernetwork/blog/2015/03/16/intel-gateway-solution-is-at-the-center-of-internet-of-things-deployments
-https://software.intel.com/sites/default/files/IoT%20Gateway%20IDP%20XT%20GSG.pdf
-http://www.intel.com/content/dam/www/public/us/en/documents/research/2014-vol18-iss-4-intel-technology-journal.pdf
-
--- 
-Best regards,
+The way we use it in Linux on s390 makes is impossible to access user space
+contents from kernel space without special instructions.
