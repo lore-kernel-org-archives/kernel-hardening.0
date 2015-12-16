@@ -1,39 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Laura Abbott <laura@labbott.name>
-Message-ID: <5671B170.1090508@labbott.name>
-Date: Wed, 16 Dec 2015 10:46:08 -0800
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Looking at PAX_MEMORY_SANITIZE
+Message-ID: <1450296921.9491.1.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Wed, 16 Dec 2015 21:15:21 +0100
+In-Reply-To: <5671B170.1090508@labbott.name>
+References: <5671B170.1090508@labbott.name>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-9l6kIb+Leu2TAxU0f1v3"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Looking at PAX_MEMORY_SANITIZE
 To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
 
-I started looking at PAX_MEMORY_SANITIZE for bringing into the kernel. I thought
-I would give a short update on what I've found so far for feedback and the like.
+--=-9l6kIb+Leu2TAxU0f1v3
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-PAX_MEMORY_SANITIZE is used for clearing both the SL*B allocators and the
-buddy allocator on free. Arguably, similar behavior exists already as debug
-features (SLUB_DEBUG poison, DEBUG_PAGEALLOC for some arches). Given what we're
-already finding with features like DEBUG_RODATA though, the sanitization really
-needs to be a separate Kconfig not tied to debugging. I debated trying to make
-those Kconfigs non-debug but they were tied to other features besides poison/
-sanitization.
+On mer., 2015-12-16 at 10:46 -0800, Laura Abbott wrote:
+> I'm hoping to post actual patches before I go on vacation for the holiday=
+s next
+> week. Early feedback is appreciated as well if I missed anything.
 
-I've been focusing my efforts on the SL*B allocators. As it stands, the feature
-is fairly self-contained and mostly just needs some refactoring. I plan on
-expanding the command line option to give a bit more control on where the
-sanitization happens. The sanitization currently always happens on the fast path
-so my thought was to allow the option of sanitizing only on the slow path.
-The existing PaX code also disables cache merging. It's not clear if this is an
-additional security measure but the sanitization as written doesn't work with
-merging. For at least the first version, slab merging will be disabled when
-sanitization is enabled on a slab.
+Note that SANITIZE conflicted with hibernation last time I test, so that's
+something you might want to test.
 
-I'm hoping to post actual patches before I go on vacation for the holidays next
-week. Early feedback is appreciated as well if I missed anything.
+Regards,
+--=20
+Yves-Alexis
 
-Thanks,
-Laura
+
+--=-9l6kIb+Leu2TAxU0f1v3
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJWccZZAAoJEG3bU/KmdcClLpAH/jTmZMhUxLhskSMp2LdDl1hV
+qjDre4EJHVLYbQmyOCpE19bHekVatxfjTyfEuLyOG+dXRXZdmfD8Wpf2wG7UHY1k
+VBiGw+nzRkOayEB/nnLXV0BMwOHbomC6pwHhxhBKxkOGDkFG7lqHkj2igOirRG2t
+bJvYvBQZVFV9gOZ757f8eeszF4Zkbtzo2BgLDiC8UzcUQN6Ic8Og+wqdIqr0Xd/h
+FnJUlWR/+J8ItRqqurSzaCFxkwybk5PyYlPtJC22803lh4Wv01+gpCv2IigIspua
+8G1BlnsLnJQeTgqd+88MNawQ+JNRJfAcH+444wifz9fc5bkh0FervwO6kCl2RrU=
+=52Aq
+-----END PGP SIGNATURE-----
+
+--=-9l6kIb+Leu2TAxU0f1v3--
