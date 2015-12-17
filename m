@@ -1,92 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <5671B170.1090508@labbott.name>
- <CAGXu5jKKWAVn3Uzjk9n=+GKbPN8hN6Cys_QZQpRc8=AvZWV85Q@mail.gmail.com>
-From: Laura Abbott <laura@labbott.name>
-Message-ID: <567317E1.9050000@labbott.name>
-Date: Thu, 17 Dec 2015 12:15:29 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKKWAVn3Uzjk9n=+GKbPN8hN6Cys_QZQpRc8=AvZWV85Q@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Looking at PAX_MEMORY_SANITIZE
-To: kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41A361EA@IRSMSX102.ger.corp.intel.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41A361EA@IRSMSX102.ger.corp.intel.com>
+Date: Thu, 17 Dec 2015 12:25:40 -0800
+Message-ID: <CAGXu5j+pt1x9AntHM3Z4O8V=5-So0tWj=9aoJ-kP1q0p3-s=Vw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Introduction and task request
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 12/16/15 5:29 PM, Kees Cook wrote:
+On Wed, Dec 16, 2015 at 1:34 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+> Hi everyone,
 >
 >
-> On Wed, Dec 16, 2015 at 10:46 AM, Laura Abbott <laura@labbott.name <mailto:laura@labbott.name>> wrote:
->
->     Hi,
->
->     I started looking at PAX_MEMORY_SANITIZE for bringing into the kernel. I thought
->     I would give a short update on what I've found so far for feedback and the like.
->
->     PAX_MEMORY_SANITIZE is used for clearing both the SL*B allocators and the
->     buddy allocator on free. Arguably, similar behavior exists already as debug
->     features (SLUB_DEBUG poison, DEBUG_PAGEALLOC for some arches). Given what we're
->     already finding with features like DEBUG_RODATA though, the sanitization really
->     needs to be a separate Kconfig not tied to debugging. I debated trying to make
->     those Kconfigs non-debug but they were tied to other features besides poison/
->     sanitization.
->
->
-> Sounds great! As for CONFIGs, one thing that was request was that we ultimately put all
->the hardening configs under a common Kconfig heading so they can be found easily. I view
->this as a late-stage tweak, and mostly we just need to worry about functionality first.
->
+> I would like to introduce myself: I am part of Intel Open Source Technology
+> Security team and I got lucky enough to have part of my time now allocated
+> to this project now, so I am happy to start helping.
 
-Sure. I was going to put the Kconfig somewhere I think is reasonable and see if
-there are better suggestions.
+Hi! Welcome to the project! :)
 
-> For upstreaming, we'll need a comparison between PAX_MEMORY_SANITIZE and the existing
->upstream things that overlap with it.
+> What would be the reasonable task for me to do?
 
-What kind of comparison are you thinking of? Just a list of what differs featurewise
-or performance characteristics or something else?
+I always suggest people work on stuff that interests them. Do you have
+any specific areas you like working on, or exploits you'd like to see
+stopped?
 
->
->     I've been focusing my efforts on the SL*B allocators. As it stands, the feature
->     is fairly self-contained and mostly just needs some refactoring. I plan on
->     expanding the command line option to give a bit more control on where the
->     sanitization happens. The sanitization currently always happens on the fast path
->     so my thought was to allow the option of sanitizing only on the slow path.
->
->
-> Seems like it should happen on all paths to be a true always-on hardening feature, though?
+> I am quite a newbie in proper kernel development work (but not a newbie in
+> platform security), so please as initial task do not through to me the
+> biggest dead animal out there with the task to revive it.
 
-The existing PaX code has an option to skip caches marked with SLAB_NO_SANITIZE.
-I was thinking skipping on the fast path might be a similar expansion of that.
-There is still a boot commandline option for full sanitization.
+Heh, understood. We'll be happy to assist you through whatever parts
+you might want help with.
 
-I'm going to profile before I send anything out to get a better idea if this
-option would make a difference.
+> It is going to be a learning exercise for me at least at the beginning, but
+> I am hoping to learn fast and start bringing value to the project.
 
->
->     The existing PaX code also disables cache merging. It's not clear if this is an
->     additional security measure but the sanitization as written doesn't work with
->     merging. For at least the first version, slab merging will be disabled when
->     sanitization is enabled on a slab.
->
->
-> That seems fine to me. These trade-offs are to be expected.
->
-> Another thing we should call attention to are past bugs and exploits or exploit methods
-> that would have been hampered or eliminated with this feature. e.g. How does this
->play with classic use-after-free, etc?
+I had mentioned PAX_USERCOPY earlier. I'm not sure how much work
+that'll be, but extracting it would be the first step, and you can go
+from there. There's no one actively working on it at the moment, and
+it would be very nice to have.
 
-Good point. I'll find some examples.
+There's also the need to improve the kernel's module loader to segment
+memory into rx, ro, and rw, in support of the __ro_after_init work. I
+or Emese will likely get around to that, but it can probably be done
+in parallel.
 
->
->     I'm hoping to post actual patches before I go on vacation for the holidays next
->     week. Early feedback is appreciated as well if I missed anything.
->
->
-> Fantastic! I look forward to testing it. Which gets to a third piece: adding an lkdtm
-> test for the feature so it's easy to test the kernel's reaction to the state that is
->being protected.
+Or perhaps looking into the prior BPF_HARDEN work (currently this just
+disables eBPF, but it used to try to defend against trivial
+heap-sprays).
 
-I'll look into this as well.
+Thanks for joining! :)
 
-Thanks,
-Laura
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
