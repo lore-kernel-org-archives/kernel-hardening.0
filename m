@@ -1,141 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <567317E1.9050000@labbott.name>
-References: <5671B170.1090508@labbott.name>
-	<CAGXu5jKKWAVn3Uzjk9n=+GKbPN8hN6Cys_QZQpRc8=AvZWV85Q@mail.gmail.com>
-	<567317E1.9050000@labbott.name>
-Date: Thu, 17 Dec 2015 12:27:30 -0800
-Message-ID: <CAGXu5j+avLrj9sJLM5YGDsE-e0FZYdX_8PW9Xt_J4irK3pBYbg@mail.gmail.com>
+Date: Thu, 17 Dec 2015 12:34:35 -0800
+Message-ID: <CAGXu5jLr_kKagFb=prYcx83UPnh4MK7aLKUdSC6YjJmn7AW7_w@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Looking at PAX_MEMORY_SANITIZE
+Subject: Re: [kernel-hardening][RFC PATCH v2 12/12] lkdtm: add test for
+ atomic_t underflow/overflow
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 17, 2015 at 12:15 PM, Laura Abbott <laura@labbott.name> wrote:
-> On 12/16/15 5:29 PM, Kees Cook wrote:
->>
->>
->>
->> On Wed, Dec 16, 2015 at 10:46 AM, Laura Abbott <laura@labbott.name
->> <mailto:laura@labbott.name>> wrote:
->>
->>     Hi,
->>
->>     I started looking at PAX_MEMORY_SANITIZE for bringing into the kernel.
->> I thought
->>     I would give a short update on what I've found so far for feedback and
->> the like.
->>
->>     PAX_MEMORY_SANITIZE is used for clearing both the SL*B allocators and
->> the
->>     buddy allocator on free. Arguably, similar behavior exists already as
->> debug
->>     features (SLUB_DEBUG poison, DEBUG_PAGEALLOC for some arches). Given
->> what we're
->>     already finding with features like DEBUG_RODATA though, the
->> sanitization really
->>     needs to be a separate Kconfig not tied to debugging. I debated trying
->> to make
->>     those Kconfigs non-debug but they were tied to other features besides
->> poison/
->>     sanitization.
->>
->>
->> Sounds great! As for CONFIGs, one thing that was request was that we
->> ultimately put all
->> the hardening configs under a common Kconfig heading so they can be found
->> easily. I view
->> this as a late-stage tweak, and mostly we just need to worry about
->> functionality first.
->>
+On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org> wrote:
+> dmesg output of running this LKDTM test:
 >
-> Sure. I was going to put the Kconfig somewhere I think is reasonable and see
-> if
-> there are better suggestions.
+> [187095.475573] lkdtm: No crash points registered, enable through debugfs
+> [187118.020257] lkdtm: Performing direct entry WRAP_ATOMIC
+> [187118.030045] lkdtm: attempting atomic underflow
+> [187118.030929] PAX: refcount overflow detected in: bash:1790, uid/euid: 0/0
+> [187118.071667] PAX: refcount overflow occured at: lkdtm_do_action+0x19e/0x400 [lkdtm]
+> [187118.081423] CPU: 3 PID: 1790 Comm: bash Not tainted 4.2.6-pax-refcount-split+ #2
+> [187118.083403] Hardware name: innotek GmbH VirtualBox/VirtualBox, BIOS VirtualBox 12/01/2006
+> [187118.102596] task: ffff8800da8de040 ti: ffff8800da8e4000 task.ti: ffff8800da8e4000
+> [187118.111321] RIP: 0010:[<ffffffffc00fc2fe>]  [<ffffffffc00fc2fe>] lkdtm_do_action+0x19e/0x400 [lkdtm]
+> ...
+> [187118.128074] lkdtm: attempting atomic overflow
+> [187118.128080] PAX: refcount overflow detected in: bash:1790, uid/euid: 0/0
+> [187118.128082] PAX: refcount overflow occured at: lkdtm_do_action+0x1b6/0x400 [lkdtm]
+> [187118.128085] CPU: 3 PID: 1790 Comm: bash Not tainted 4.2.6-pax-refcount-split+ #2
+> [187118.128086] Hardware name: innotek GmbH VirtualBox/VirtualBox, BIOS VirtualBox 12/01/2006
+> [187118.128088] task: ffff8800da8de040 ti: ffff8800da8e4000 task.ti: ffff8800da8e4000
+> [187118.128092] RIP: 0010:[<ffffffffc00fc316>]  [<ffffffffc00fc316>] lkdtm_do_action+0x1b6/0x400 [lkdtm]
 >
->> For upstreaming, we'll need a comparison between PAX_MEMORY_SANITIZE and
->> the existing
->> upstream things that overlap with it.
->
->
-> What kind of comparison are you thinking of? Just a list of what differs
-> featurewise
-> or performance characteristics or something else?
+> Signed-off-by: David Windsor <dave@progbits.org>
 
-Yeah, I meant features, but I'm sure we'll need to produce performance
-details too.
+Yay tests! :)
 
->
->>
->>     I've been focusing my efforts on the SL*B allocators. As it stands,
->> the feature
->>     is fairly self-contained and mostly just needs some refactoring. I
->> plan on
->>     expanding the command line option to give a bit more control on where
->> the
->>     sanitization happens. The sanitization currently always happens on the
->> fast path
->>     so my thought was to allow the option of sanitizing only on the slow
->> path.
->>
->>
->> Seems like it should happen on all paths to be a true always-on hardening
->> feature, though?
->
->
-> The existing PaX code has an option to skip caches marked with
-> SLAB_NO_SANITIZE.
-> I was thinking skipping on the fast path might be a similar expansion of
-> that.
-> There is still a boot commandline option for full sanitization.
->
-> I'm going to profile before I send anything out to get a better idea if this
-> option would make a difference.
->
->>
->>     The existing PaX code also disables cache merging. It's not clear if
->> this is an
->>     additional security measure but the sanitization as written doesn't
->> work with
->>     merging. For at least the first version, slab merging will be disabled
->> when
->>     sanitization is enabled on a slab.
->>
->>
->> That seems fine to me. These trade-offs are to be expected.
->>
->> Another thing we should call attention to are past bugs and exploits or
->> exploit methods
->> that would have been hampered or eliminated with this feature. e.g. How
->> does this
->> play with classic use-after-free, etc?
->
->
-> Good point. I'll find some examples.
->
->>
->>     I'm hoping to post actual patches before I go on vacation for the
->> holidays next
->>     week. Early feedback is appreciated as well if I missed anything.
->>
->>
->> Fantastic! I look forward to testing it. Which gets to a third piece:
->> adding an lkdtm
->> test for the feature so it's easy to test the kernel's reaction to the
->> state that is
->> being protected.
->
->
-> I'll look into this as well.
->
-> Thanks,
-> Laura
-
-Thanks!
+Acked-by: Kees Cook <keescook@chromium.org>
 
 -Kees
+
+> ---
+>  drivers/misc/lkdtm.c | 13 +++++++++++++
+>  1 file changed, 13 insertions(+)
+>
+> diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+> index b5abe34..5002747 100644
+> --- a/drivers/misc/lkdtm.c
+> +++ b/drivers/misc/lkdtm.c
+> @@ -104,6 +104,7 @@ enum ctype {
+>         CT_ACCESS_USERSPACE,
+>         CT_WRITE_RO,
+>         CT_WRITE_KERN,
+> +    CT_WRAP_ATOMIC
+>  };
+>
+>  static char* cp_name[] = {
+> @@ -141,6 +142,7 @@ static char* cp_type[] = {
+>         "ACCESS_USERSPACE",
+>         "WRITE_RO",
+>         "WRITE_KERN",
+> +    "WRAP_ATOMIC"
+>  };
+>
+>  static struct jprobe lkdtm;
+> @@ -522,6 +524,17 @@ static void lkdtm_do_action(enum ctype which)
+>                 do_overwritten();
+>                 break;
+>         }
+> +    case CT_WRAP_ATOMIC: {
+> +        atomic_t under = ATOMIC_INIT(INT_MIN);
+> +        atomic_t over = ATOMIC_INIT(INT_MAX);
+> +
+> +        pr_info("attempting atomic underflow\n");
+> +        atomic_dec(&under);
+> +        pr_info("attempting atomic overflow\n");
+> +        atomic_inc(&over);
+> +
+> +        return;
+> +    }
+>         case CT_NONE:
+>         default:
+>                 break;
+> --
+> 2.5.0
+>
+>
+
+
 
 -- 
 Kees Cook
