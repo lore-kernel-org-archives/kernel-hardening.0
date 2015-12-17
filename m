@@ -1,1770 +1,2501 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: David Windsor <dave@progbits.org>
-Date: Thu, 17 Dec 2015 09:57:47 -0500
-Message-Id: <1450364270-12687-10-git-send-email-dave@progbits.org>
+Date: Thu, 17 Dec 2015 09:57:44 -0500
+Message-Id: <1450364270-12687-7-git-send-email-dave@progbits.org>
 In-Reply-To: <1450364270-12687-1-git-send-email-dave@progbits.org>
 References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-Subject: [kernel-hardening][RFC PATCH v2 09/12] drivers: opt out of PAX_REFCOUNT protection (2 of 2)
+Subject: [kernel-hardening][RFC PATCH v2 06/12] net: opt out of PAX_REFCOUNT protection
 To: kernel-hardening@lists.openwall.com
 Cc: David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Signed-off-by: David Windsor <dave@progbits.org>
 ---
- drivers/net/ipvlan/ipvlan_core.c          |  2 +-
- drivers/net/macvlan.c                     |  2 +-
- drivers/net/usb/sierra_net.c              |  4 +--
- drivers/net/wireless/rt2x00/rt2x00.h      |  2 +-
- drivers/net/wireless/rt2x00/rt2x00queue.c |  4 +--
- drivers/oprofile/buffer_sync.c            |  8 ++---
- drivers/oprofile/event_buffer.c           |  2 +-
- drivers/oprofile/oprof.c                  |  2 +-
- drivers/oprofile/oprofile_stats.c         | 10 +++----
- drivers/oprofile/oprofile_stats.h         | 10 +++----
- drivers/oprofile/oprofilefs.c             |  6 ++--
- drivers/regulator/core.c                  |  4 +--
- drivers/scsi/fcoe/fcoe_sysfs.c            | 12 ++++----
- drivers/scsi/hosts.c                      |  4 +--
- drivers/scsi/libfc/fc_exch.c              | 50 +++++++++++++++----------------
- drivers/scsi/lpfc/lpfc.h                  |  8 ++---
- drivers/scsi/lpfc/lpfc_debugfs.c          | 18 +++++------
- drivers/scsi/lpfc/lpfc_scsi.c             | 10 +++----
- drivers/scsi/pmcraid.c                    | 20 ++++++-------
- drivers/scsi/pmcraid.h                    |  8 ++---
- drivers/scsi/qla4xxx/ql4_def.h            |  2 +-
- drivers/scsi/qla4xxx/ql4_os.c             |  6 ++--
- drivers/scsi/scsi_lib.c                   |  8 ++---
- drivers/scsi/scsi_sysfs.c                 |  2 +-
- drivers/scsi/scsi_transport_fc.c          |  6 ++--
- drivers/scsi/scsi_transport_iscsi.c       |  6 ++--
- drivers/scsi/scsi_transport_srp.c         |  6 ++--
- drivers/scsi/sd.c                         |  2 +-
- drivers/staging/android/timed_output.c    |  6 ++--
- drivers/staging/octeon/ethernet-rx.c      | 12 ++++----
- drivers/staging/octeon/ethernet.c         |  8 ++---
- drivers/target/sbp/sbp_target.c           |  4 +--
- drivers/target/target_core_device.c       |  2 +-
- drivers/target/target_core_transport.c    |  2 +-
- drivers/tty/hvc/hvsi.c                    | 12 ++++----
- drivers/tty/hvc/hvsi_lib.c                |  4 +--
- drivers/tty/serial/ioc4_serial.c          |  6 ++--
- drivers/tty/serial/msm_serial.c           |  4 +--
- drivers/uio/uio.c                         | 12 ++++----
- drivers/usb/atm/usbatm.c                  | 24 +++++++--------
- drivers/usb/core/devices.c                |  6 ++--
- drivers/usb/core/hcd.c                    |  4 +--
- drivers/usb/core/sysfs.c                  |  2 +-
- drivers/usb/core/usb.c                    |  2 +-
- drivers/usb/host/ehci-hub.c               |  4 +--
- drivers/usb/misc/appledisplay.c           |  4 +--
- drivers/usb/usbip/vhci.h                  |  2 +-
- drivers/usb/usbip/vhci_hcd.c              |  6 ++--
- drivers/usb/usbip/vhci_rx.c               |  2 +-
- drivers/usb/wusbcore/wa-hc.h              |  4 +--
- drivers/usb/wusbcore/wa-xfer.c            |  2 +-
- drivers/video/fbdev/hyperv_fb.c           |  4 +--
- drivers/video/fbdev/udlfb.c               | 32 ++++++++++----------
- include/linux/uio_driver.h                |  2 +-
- include/linux/usb.h                       |  2 +-
- include/media/v4l2-device.h               |  2 +-
- include/scsi/scsi_device.h                |  6 ++--
- include/target/target_core_base.h         |  2 +-
- 58 files changed, 204 insertions(+), 204 deletions(-)
+ include/linux/atmdev.h                   |  2 +-
+ include/linux/netdevice.h                |  6 ++---
+ include/linux/sonet.h                    |  2 +-
+ include/linux/sunrpc/svc_rdma.h          | 18 +++++++--------
+ include/net/bonding.h                    |  2 +-
+ include/net/caif/cfctrl.h                |  4 ++--
+ include/net/flow.h                       |  2 +-
+ include/net/gro_cells.h                  |  2 +-
+ include/net/inetpeer.h                   |  2 +-
+ include/net/ip_fib.h                     |  2 +-
+ include/net/ip_vs.h                      |  4 ++--
+ include/net/iucv/af_iucv.h               |  2 +-
+ include/net/net_namespace.h              | 12 +++++-----
+ include/net/netns/ipv4.h                 |  4 ++--
+ include/net/netns/ipv6.h                 |  4 ++--
+ include/net/netns/xfrm.h                 |  2 +-
+ include/net/sock.h                       |  6 ++---
+ include/net/xfrm.h                       |  2 +-
+ net/atm/atm_misc.c                       |  8 +++----
+ net/atm/proc.c                           |  6 ++---
+ net/atm/resources.c                      |  4 ++--
+ net/batman-adv/bat_iv_ogm.c              |  8 +++----
+ net/batman-adv/fragmentation.c           |  2 +-
+ net/batman-adv/soft-interface.c          |  6 ++---
+ net/batman-adv/types.h                   |  6 ++---
+ net/caif/cfctrl.c                        | 10 ++++-----
+ net/ceph/messenger.c                     |  4 ++--
+ net/core/datagram.c                      |  2 +-
+ net/core/dev.c                           | 12 +++++-----
+ net/core/flow.c                          |  6 ++---
+ net/core/net-sysfs.c                     |  2 +-
+ net/core/netpoll.c                       |  4 ++--
+ net/core/rtnetlink.c                     |  2 +-
+ net/core/sock.c                          | 12 +++++-----
+ net/core/sock_diag.c                     |  6 ++---
+ net/ipv4/devinet.c                       |  4 ++--
+ net/ipv4/fib_frontend.c                  |  6 ++---
+ net/ipv4/fib_semantics.c                 |  2 +-
+ net/ipv4/inet_connection_sock.c          |  4 ++--
+ net/ipv4/inet_timewait_sock.c            |  2 +-
+ net/ipv4/inetpeer.c                      |  2 +-
+ net/ipv4/ip_fragment.c                   |  2 +-
+ net/ipv4/ping.c                          |  2 +-
+ net/ipv4/raw.c                           |  4 ++--
+ net/ipv4/route.c                         | 10 ++++-----
+ net/ipv4/tcp_input.c                     |  2 +-
+ net/ipv4/udp.c                           | 10 ++++-----
+ net/ipv6/addrconf.c                      |  6 ++---
+ net/ipv6/af_inet6.c                      |  2 +-
+ net/ipv6/datagram.c                      |  2 +-
+ net/ipv6/ip6_fib.c                       |  4 ++--
+ net/ipv6/raw.c                           |  6 ++---
+ net/ipv6/udp.c                           |  6 ++---
+ net/iucv/af_iucv.c                       |  4 ++--
+ net/key/af_key.c                         |  4 ++--
+ net/l2tp/l2tp_eth.c                      | 38 ++++++++++++++++----------------
+ net/netfilter/ipvs/ip_vs_conn.c          |  6 ++---
+ net/netfilter/ipvs/ip_vs_core.c          |  4 ++--
+ net/netfilter/ipvs/ip_vs_ctl.c           | 10 ++++-----
+ net/netfilter/ipvs/ip_vs_sync.c          |  6 ++---
+ net/netfilter/ipvs/ip_vs_xmit.c          |  4 ++--
+ net/netfilter/nfnetlink_log.c            |  4 ++--
+ net/netfilter/xt_statistic.c             |  8 +++----
+ net/netlink/af_netlink.c                 |  4 ++--
+ net/openvswitch/vport.c                  | 16 +++++++-------
+ net/openvswitch/vport.h                  |  8 +++----
+ net/packet/af_packet.c                   |  4 ++--
+ net/phonet/pep.c                         |  6 ++---
+ net/phonet/socket.c                      |  2 +-
+ net/rds/cong.c                           |  6 ++---
+ net/rds/ib.h                             |  2 +-
+ net/rds/ib_cm.c                          |  2 +-
+ net/rds/ib_recv.c                        |  4 ++--
+ net/rds/iw.h                             |  2 +-
+ net/rds/iw_cm.c                          |  2 +-
+ net/rds/iw_recv.c                        |  4 ++--
+ net/rxrpc/af_rxrpc.c                     |  2 +-
+ net/rxrpc/ar-ack.c                       | 14 ++++++------
+ net/rxrpc/ar-call.c                      |  2 +-
+ net/rxrpc/ar-connection.c                |  2 +-
+ net/rxrpc/ar-connevent.c                 |  2 +-
+ net/rxrpc/ar-input.c                     |  4 ++--
+ net/rxrpc/ar-internal.h                  |  8 +++----
+ net/rxrpc/ar-local.c                     |  2 +-
+ net/rxrpc/ar-output.c                    |  4 ++--
+ net/rxrpc/ar-peer.c                      |  2 +-
+ net/rxrpc/ar-proc.c                      |  4 ++--
+ net/rxrpc/ar-transport.c                 |  2 +-
+ net/rxrpc/rxkad.c                        |  4 ++--
+ net/sched/sch_generic.c                  |  4 ++--
+ net/sunrpc/auth_gss/svcauth_gss.c        |  4 ++--
+ net/sunrpc/sched.c                       |  4 ++--
+ net/sunrpc/xprtrdma/svc_rdma.c           | 36 +++++++++++++++---------------
+ net/sunrpc/xprtrdma/svc_rdma_recvfrom.c  |  8 +++----
+ net/sunrpc/xprtrdma/svc_rdma_sendto.c    |  2 +-
+ net/sunrpc/xprtrdma/svc_rdma_transport.c | 10 ++++-----
+ net/xfrm/xfrm_policy.c                   | 10 ++++-----
+ net/xfrm/xfrm_state.c                    |  4 ++--
+ 98 files changed, 269 insertions(+), 269 deletions(-)
 
-diff --git a/drivers/net/ipvlan/ipvlan_core.c b/drivers/net/ipvlan/ipvlan_core.c
-index 207f62e..af3f5e5 100644
---- a/drivers/net/ipvlan/ipvlan_core.c
-+++ b/drivers/net/ipvlan/ipvlan_core.c
-@@ -466,7 +466,7 @@ static void ipvlan_multicast_enqueue(struct ipvl_port *port,
- 		schedule_work(&port->wq);
+diff --git a/include/linux/atmdev.h b/include/linux/atmdev.h
+index c1da539..4db35ec 100644
+--- a/include/linux/atmdev.h
++++ b/include/linux/atmdev.h
+@@ -28,7 +28,7 @@ struct compat_atm_iobuf {
+ #endif
+ 
+ struct k_atm_aal_stats {
+-#define __HANDLE_ITEM(i) atomic_t i
++#define __HANDLE_ITEM(i) atomic_unchecked_t i
+ 	__AAL_STAT_ITEMS
+ #undef __HANDLE_ITEM
+ };
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index e20979d..d57cabd 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -1519,7 +1519,7 @@ struct net_device {
+ 	unsigned long		base_addr;
+ 	int			irq;
+ 
+-	atomic_t		carrier_changes;
++	atomic_unchecked_t	carrier_changes;
+ 
+ 	/*
+ 	 *	Some hardware also needs these fields (state,dev_list,
+@@ -1558,8 +1558,8 @@ struct net_device {
+ 
+ 	struct net_device_stats	stats;
+ 
+-	atomic_long_t		rx_dropped;
+-	atomic_long_t		tx_dropped;
++	atomic_long_unchecked_t	rx_dropped;
++	atomic_long_unchecked_t	tx_dropped;
+ 
+ #ifdef CONFIG_WIRELESS_EXT
+ 	const struct iw_handler_def *	wireless_handlers;
+diff --git a/include/linux/sonet.h b/include/linux/sonet.h
+index 680f9a3..f13aeb0 100644
+--- a/include/linux/sonet.h
++++ b/include/linux/sonet.h
+@@ -7,7 +7,7 @@
+ #include <uapi/linux/sonet.h>
+ 
+ struct k_sonet_stats {
+-#define __HANDLE_ITEM(i) atomic_t i
++#define __HANDLE_ITEM(i) atomic_unchecked_t i
+ 	__SONET_ITEMS
+ #undef __HANDLE_ITEM
+ };
+diff --git a/include/linux/sunrpc/svc_rdma.h b/include/linux/sunrpc/svc_rdma.h
+index 4929a8a..b8f29e9 100644
+--- a/include/linux/sunrpc/svc_rdma.h
++++ b/include/linux/sunrpc/svc_rdma.h
+@@ -53,15 +53,15 @@ extern unsigned int svcrdma_ord;
+ extern unsigned int svcrdma_max_requests;
+ extern unsigned int svcrdma_max_req_size;
+ 
+-extern atomic_t rdma_stat_recv;
+-extern atomic_t rdma_stat_read;
+-extern atomic_t rdma_stat_write;
+-extern atomic_t rdma_stat_sq_starve;
+-extern atomic_t rdma_stat_rq_starve;
+-extern atomic_t rdma_stat_rq_poll;
+-extern atomic_t rdma_stat_rq_prod;
+-extern atomic_t rdma_stat_sq_poll;
+-extern atomic_t rdma_stat_sq_prod;
++extern atomic_unchecked_t rdma_stat_recv;
++extern atomic_unchecked_t rdma_stat_read;
++extern atomic_unchecked_t rdma_stat_write;
++extern atomic_unchecked_t rdma_stat_sq_starve;
++extern atomic_unchecked_t rdma_stat_rq_starve;
++extern atomic_unchecked_t rdma_stat_rq_poll;
++extern atomic_unchecked_t rdma_stat_rq_prod;
++extern atomic_unchecked_t rdma_stat_sq_poll;
++extern atomic_unchecked_t rdma_stat_sq_prod;
+ 
+ /*
+  * Contexts are built when an RDMA request is created and are a
+diff --git a/include/net/bonding.h b/include/net/bonding.h
+index 20defc0..3072903 100644
+--- a/include/net/bonding.h
++++ b/include/net/bonding.h
+@@ -661,7 +661,7 @@ extern struct rtnl_link_ops bond_link_ops;
+ 
+ static inline void bond_tx_drop(struct net_device *dev, struct sk_buff *skb)
+ {
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_unchecked(&dev->tx_dropped);
+ 	dev_kfree_skb_any(skb);
+ }
+ 
+diff --git a/include/net/caif/cfctrl.h b/include/net/caif/cfctrl.h
+index f2ae33d..57fcd31 100644
+--- a/include/net/caif/cfctrl.h
++++ b/include/net/caif/cfctrl.h
+@@ -101,8 +101,8 @@ struct cfctrl_request_info {
+ struct cfctrl {
+ 	struct cfsrvl serv;
+ 	struct cfctrl_rsp res;
+-	atomic_t req_seq_no;
+-	atomic_t rsp_seq_no;
++	atomic_unchecked_t req_seq_no;
++	atomic_unchecked_t rsp_seq_no;
+ 	struct list_head list;
+ 	/* Protects from simultaneous access to first_req list */
+ 	spinlock_t info_list_lock;
+diff --git a/include/net/flow.h b/include/net/flow.h
+index 8109a15..504466d 100644
+--- a/include/net/flow.h
++++ b/include/net/flow.h
+@@ -231,6 +231,6 @@ void flow_cache_fini(struct net *net);
+ 
+ void flow_cache_flush(struct net *net);
+ void flow_cache_flush_deferred(struct net *net);
+-extern atomic_t flow_cache_genid;
++extern atomic_unchecked_t flow_cache_genid;
+ 
+ #endif
+diff --git a/include/net/gro_cells.h b/include/net/gro_cells.h
+index 0f712c0..cd762c4 100644
+--- a/include/net/gro_cells.h
++++ b/include/net/gro_cells.h
+@@ -27,7 +27,7 @@ static inline void gro_cells_receive(struct gro_cells *gcells, struct sk_buff *s
+ 	cell = this_cpu_ptr(gcells->cells);
+ 
+ 	if (skb_queue_len(&cell->napi_skbs) > netdev_max_backlog) {
+-		atomic_long_inc(&dev->rx_dropped);
++		atomic_long_inc_unchecked(&dev->rx_dropped);
+ 		kfree_skb(skb);
+ 		return;
+ 	}
+diff --git a/include/net/inetpeer.h b/include/net/inetpeer.h
+index d5332dd..10a5c3c 100644
+--- a/include/net/inetpeer.h
++++ b/include/net/inetpeer.h
+@@ -48,7 +48,7 @@ struct inet_peer {
+ 	 */
+ 	union {
+ 		struct {
+-			atomic_t			rid;		/* Frag reception counter */
++			atomic_unchecked_t		rid;		/* Frag reception counter */
+ 		};
+ 		struct rcu_head         rcu;
+ 		struct inet_peer	*gc_next;
+diff --git a/include/net/ip_fib.h b/include/net/ip_fib.h
+index 5fa643b..d871e20 100644
+--- a/include/net/ip_fib.h
++++ b/include/net/ip_fib.h
+@@ -170,7 +170,7 @@ __be32 fib_info_update_nh_saddr(struct net *net, struct fib_nh *nh);
+ 
+ #define FIB_RES_SADDR(net, res)				\
+ 	((FIB_RES_NH(res).nh_saddr_genid ==		\
+-	  atomic_read(&(net)->ipv4.dev_addr_genid)) ?	\
++	  atomic_read_unchecked(&(net)->ipv4.dev_addr_genid)) ?	\
+ 	 FIB_RES_NH(res).nh_saddr :			\
+ 	 fib_info_update_nh_saddr((net), &FIB_RES_NH(res)))
+ #define FIB_RES_GW(res)			(FIB_RES_NH(res).nh_gw)
+diff --git a/include/net/ip_vs.h b/include/net/ip_vs.h
+index 4e3731e..9a0a688 100644
+--- a/include/net/ip_vs.h
++++ b/include/net/ip_vs.h
+@@ -551,7 +551,7 @@ struct ip_vs_conn {
+ 	struct ip_vs_conn       *control;       /* Master control connection */
+ 	atomic_t                n_control;      /* Number of controlled ones */
+ 	struct ip_vs_dest       *dest;          /* real server */
+-	atomic_t                in_pkts;        /* incoming packet counter */
++	atomic_unchecked_t      in_pkts;        /* incoming packet counter */
+ 
+ 	/* Packet transmitter for different forwarding methods.  If it
+ 	 * mangles the packet, it must return NF_DROP or better NF_STOLEN,
+@@ -699,7 +699,7 @@ struct ip_vs_dest {
+ 	__be16			port;		/* port number of the server */
+ 	union nf_inet_addr	addr;		/* IP address of the server */
+ 	volatile unsigned int	flags;		/* dest status flags */
+-	atomic_t		conn_flags;	/* flags to copy to conn */
++	atomic_unchecked_t	conn_flags;	/* flags to copy to conn */
+ 	atomic_t		weight;		/* server weight */
+ 
+ 	atomic_t		refcnt;		/* reference counter */
+diff --git a/include/net/iucv/af_iucv.h b/include/net/iucv/af_iucv.h
+index 714cc9a..ea05f3e 100644
+--- a/include/net/iucv/af_iucv.h
++++ b/include/net/iucv/af_iucv.h
+@@ -149,7 +149,7 @@ struct iucv_skb_cb {
+ struct iucv_sock_list {
+ 	struct hlist_head head;
+ 	rwlock_t	  lock;
+-	atomic_t	  autobind_name;
++	atomic_unchecked_t autobind_name;
+ };
+ 
+ unsigned int iucv_sock_poll(struct file *file, struct socket *sock,
+diff --git a/include/net/net_namespace.h b/include/net/net_namespace.h
+index e951453..8a28d2c 100644
+--- a/include/net/net_namespace.h
++++ b/include/net/net_namespace.h
+@@ -53,7 +53,7 @@ struct net {
+ 						 */
+ 	spinlock_t		rules_mod_lock;
+ 
+-	atomic64_t		cookie_gen;
++	atomic64_unchecked_t	cookie_gen;
+ 
+ 	struct list_head	list;		/* list of network namespaces */
+ 	struct list_head	cleanup_list;	/* namespaces on death row */
+@@ -135,7 +135,7 @@ struct net {
+ 	struct netns_mpls	mpls;
+ #endif
+ 	struct sock		*diag_nlsk;
+-	atomic_t		fnhe_genid;
++	atomic_unchecked_t	fnhe_genid;
+ };
+ 
+ #include <linux/seq_file_net.h>
+@@ -334,12 +334,12 @@ static inline void unregister_net_sysctl_table(struct ctl_table_header *header)
+ 
+ static inline int rt_genid_ipv4(struct net *net)
+ {
+-	return atomic_read(&net->ipv4.rt_genid);
++	return atomic_read_unchecked(&net->ipv4.rt_genid);
+ }
+ 
+ static inline void rt_genid_bump_ipv4(struct net *net)
+ {
+-	atomic_inc(&net->ipv4.rt_genid);
++	atomic_inc_unchecked(&net->ipv4.rt_genid);
+ }
+ 
+ extern void (*__fib6_flush_trees)(struct net *net);
+@@ -366,12 +366,12 @@ static inline void rt_genid_bump_all(struct net *net)
+ 
+ static inline int fnhe_genid(struct net *net)
+ {
+-	return atomic_read(&net->fnhe_genid);
++	return atomic_read_unchecked(&net->fnhe_genid);
+ }
+ 
+ static inline void fnhe_genid_bump(struct net *net)
+ {
+-	atomic_inc(&net->fnhe_genid);
++	atomic_inc_unchecked(&net->fnhe_genid);
+ }
+ 
+ #endif /* __NET_NET_NAMESPACE_H */
+diff --git a/include/net/netns/ipv4.h b/include/net/netns/ipv4.h
+index c68926b..106c147 100644
+--- a/include/net/netns/ipv4.h
++++ b/include/net/netns/ipv4.h
+@@ -93,7 +93,7 @@ struct netns_ipv4 {
+ 
+ 	struct ping_group_range ping_group_range;
+ 
+-	atomic_t dev_addr_genid;
++	atomic_unchecked_t dev_addr_genid;
+ 
+ #ifdef CONFIG_SYSCTL
+ 	unsigned long *sysctl_local_reserved_ports;
+@@ -107,6 +107,6 @@ struct netns_ipv4 {
+ 	struct fib_rules_ops	*mr_rules_ops;
+ #endif
+ #endif
+-	atomic_t	rt_genid;
++	atomic_unchecked_t	rt_genid;
+ };
+ #endif
+diff --git a/include/net/netns/ipv6.h b/include/net/netns/ipv6.h
+index 8d93544..05c3e89 100644
+--- a/include/net/netns/ipv6.h
++++ b/include/net/netns/ipv6.h
+@@ -79,8 +79,8 @@ struct netns_ipv6 {
+ 	struct fib_rules_ops	*mr6_rules_ops;
+ #endif
+ #endif
+-	atomic_t		dev_addr_genid;
+-	atomic_t		fib6_sernum;
++	atomic_unchecked_t	dev_addr_genid;
++	atomic_unchecked_t	fib6_sernum;
+ };
+ 
+ #if IS_ENABLED(CONFIG_NF_DEFRAG_IPV6)
+diff --git a/include/net/netns/xfrm.h b/include/net/netns/xfrm.h
+index 730d82a..045f2c4 100644
+--- a/include/net/netns/xfrm.h
++++ b/include/net/netns/xfrm.h
+@@ -78,7 +78,7 @@ struct netns_xfrm {
+ 
+ 	/* flow cache part */
+ 	struct flow_cache	flow_cache_global;
+-	atomic_t		flow_cache_genid;
++	atomic_unchecked_t	flow_cache_genid;
+ 	struct list_head	flow_cache_gc_list;
+ 	spinlock_t		flow_cache_gc_lock;
+ 	struct work_struct	flow_cache_gc_work;
+diff --git a/include/net/sock.h b/include/net/sock.h
+index 4ca4c3f..010c67c 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -198,7 +198,7 @@ struct sock_common {
+ 	struct in6_addr		skc_v6_rcv_saddr;
+ #endif
+ 
+-	atomic64_t		skc_cookie;
++	atomic64_unchecked_t	skc_cookie;
+ 
+ 	/*
+ 	 * fields between dontcopy_begin/dontcopy_end
+@@ -364,7 +364,7 @@ struct sock {
+ 	unsigned int		sk_napi_id;
+ 	unsigned int		sk_ll_usec;
+ #endif
+-	atomic_t		sk_drops;
++	atomic_unchecked_t	sk_drops;
+ 	int			sk_rcvbuf;
+ 
+ 	struct sk_filter __rcu	*sk_filter;
+@@ -2107,7 +2107,7 @@ struct sock_skb_cb {
+ static inline void
+ sock_skb_set_dropcount(const struct sock *sk, struct sk_buff *skb)
+ {
+-	SOCK_SKB_CB(skb)->dropcount = atomic_read(&sk->sk_drops);
++	SOCK_SKB_CB(skb)->dropcount = atomic_read_unchecked(&sk->sk_drops);
+ }
+ 
+ void __sock_recv_timestamp(struct msghdr *msg, struct sock *sk,
+diff --git a/include/net/xfrm.h b/include/net/xfrm.h
+index f0ee97e..c82ef16 100644
+--- a/include/net/xfrm.h
++++ b/include/net/xfrm.h
+@@ -531,7 +531,7 @@ struct xfrm_policy {
+ 	struct timer_list	timer;
+ 
+ 	struct flow_cache_object flo;
+-	atomic_t		genid;
++	atomic_unchecked_t	genid;
+ 	u32			priority;
+ 	u32			index;
+ 	struct xfrm_mark	mark;
+diff --git a/net/atm/atm_misc.c b/net/atm/atm_misc.c
+index 876fbe8..8bbea9f 100644
+--- a/net/atm/atm_misc.c
++++ b/net/atm/atm_misc.c
+@@ -17,7 +17,7 @@ int atm_charge(struct atm_vcc *vcc, int truesize)
+ 	if (atomic_read(&sk_atm(vcc)->sk_rmem_alloc) <= sk_atm(vcc)->sk_rcvbuf)
+ 		return 1;
+ 	atm_return(vcc, truesize);
+-	atomic_inc(&vcc->stats->rx_drop);
++	atomic_inc_unchecked(&vcc->stats->rx_drop);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(atm_charge);
+@@ -39,7 +39,7 @@ struct sk_buff *atm_alloc_charge(struct atm_vcc *vcc, int pdu_size,
+ 		}
+ 	}
+ 	atm_return(vcc, guess);
+-	atomic_inc(&vcc->stats->rx_drop);
++	atomic_inc_unchecked(&vcc->stats->rx_drop);
+ 	return NULL;
+ }
+ EXPORT_SYMBOL(atm_alloc_charge);
+@@ -86,7 +86,7 @@ EXPORT_SYMBOL(atm_pcr_goal);
+ 
+ void sonet_copy_stats(struct k_sonet_stats *from, struct sonet_stats *to)
+ {
+-#define __HANDLE_ITEM(i) to->i = atomic_read(&from->i)
++#define __HANDLE_ITEM(i) to->i = atomic_read_unchecked(&from->i)
+ 	__SONET_ITEMS
+ #undef __HANDLE_ITEM
+ }
+@@ -94,7 +94,7 @@ EXPORT_SYMBOL(sonet_copy_stats);
+ 
+ void sonet_subtract_stats(struct k_sonet_stats *from, struct sonet_stats *to)
+ {
+-#define __HANDLE_ITEM(i) atomic_sub(to->i, &from->i)
++#define __HANDLE_ITEM(i) atomic_sub_unchecked(to->i,&from->i)
+ 	__SONET_ITEMS
+ #undef __HANDLE_ITEM
+ }
+diff --git a/net/atm/proc.c b/net/atm/proc.c
+index bbb6461..cf04016 100644
+--- a/net/atm/proc.c
++++ b/net/atm/proc.c
+@@ -45,9 +45,9 @@ static void add_stats(struct seq_file *seq, const char *aal,
+   const struct k_atm_aal_stats *stats)
+ {
+ 	seq_printf(seq, "%s ( %d %d %d %d %d )", aal,
+-		   atomic_read(&stats->tx), atomic_read(&stats->tx_err),
+-		   atomic_read(&stats->rx), atomic_read(&stats->rx_err),
+-		   atomic_read(&stats->rx_drop));
++		   atomic_read_unchecked(&stats->tx),atomic_read_unchecked(&stats->tx_err),
++		   atomic_read_unchecked(&stats->rx),atomic_read_unchecked(&stats->rx_err),
++		   atomic_read_unchecked(&stats->rx_drop));
+ }
+ 
+ static void atm_dev_info(struct seq_file *seq, const struct atm_dev *dev)
+diff --git a/net/atm/resources.c b/net/atm/resources.c
+index 0447d5d..3cf4728 100644
+--- a/net/atm/resources.c
++++ b/net/atm/resources.c
+@@ -160,7 +160,7 @@ EXPORT_SYMBOL(atm_dev_deregister);
+ static void copy_aal_stats(struct k_atm_aal_stats *from,
+     struct atm_aal_stats *to)
+ {
+-#define __HANDLE_ITEM(i) to->i = atomic_read(&from->i)
++#define __HANDLE_ITEM(i) to->i = atomic_read_unchecked(&from->i)
+ 	__AAL_STAT_ITEMS
+ #undef __HANDLE_ITEM
+ }
+@@ -168,7 +168,7 @@ static void copy_aal_stats(struct k_atm_aal_stats *from,
+ static void subtract_aal_stats(struct k_atm_aal_stats *from,
+     struct atm_aal_stats *to)
+ {
+-#define __HANDLE_ITEM(i) atomic_sub(to->i, &from->i)
++#define __HANDLE_ITEM(i) atomic_sub_unchecked(to->i, &from->i)
+ 	__AAL_STAT_ITEMS
+ #undef __HANDLE_ITEM
+ }
+diff --git a/net/batman-adv/bat_iv_ogm.c b/net/batman-adv/bat_iv_ogm.c
+index 753383c..32d12d9 100644
+--- a/net/batman-adv/bat_iv_ogm.c
++++ b/net/batman-adv/bat_iv_ogm.c
+@@ -343,7 +343,7 @@ static int batadv_iv_ogm_iface_enable(struct batadv_hard_iface *hard_iface)
+ 
+ 	/* randomize initial seqno to avoid collision */
+ 	get_random_bytes(&random_seqno, sizeof(random_seqno));
+-	atomic_set(&hard_iface->bat_iv.ogm_seqno, random_seqno);
++	atomic_set_unchecked(&hard_iface->bat_iv.ogm_seqno, random_seqno);
+ 
+ 	hard_iface->bat_iv.ogm_buff_len = BATADV_OGM_HLEN;
+ 	ogm_buff = kmalloc(hard_iface->bat_iv.ogm_buff_len, GFP_ATOMIC);
+@@ -947,9 +947,9 @@ static void batadv_iv_ogm_schedule(struct batadv_hard_iface *hard_iface)
+ 	batadv_ogm_packet->tvlv_len = htons(tvlv_len);
+ 
+ 	/* change sequence number to network order */
+-	seqno = (uint32_t)atomic_read(&hard_iface->bat_iv.ogm_seqno);
++	seqno = (uint32_t)atomic_read_unchecked(&hard_iface->bat_iv.ogm_seqno);
+ 	batadv_ogm_packet->seqno = htonl(seqno);
+-	atomic_inc(&hard_iface->bat_iv.ogm_seqno);
++	atomic_inc_unchecked(&hard_iface->bat_iv.ogm_seqno);
+ 
+ 	batadv_iv_ogm_slide_own_bcast_window(hard_iface);
+ 
+@@ -1626,7 +1626,7 @@ static void batadv_iv_ogm_process(const struct sk_buff *skb, int ogm_offset,
+ 		return;
+ 
+ 	/* could be changed by schedule_own_packet() */
+-	if_incoming_seqno = atomic_read(&if_incoming->bat_iv.ogm_seqno);
++	if_incoming_seqno = atomic_read_unchecked(&if_incoming->bat_iv.ogm_seqno);
+ 
+ 	if (ogm_packet->flags & BATADV_DIRECTLINK)
+ 		has_directlink_flag = true;
+diff --git a/net/batman-adv/fragmentation.c b/net/batman-adv/fragmentation.c
+index c0f0d01..725928a 100644
+--- a/net/batman-adv/fragmentation.c
++++ b/net/batman-adv/fragmentation.c
+@@ -465,7 +465,7 @@ bool batadv_frag_send_packet(struct sk_buff *skb,
+ 	frag_header.packet_type = BATADV_UNICAST_FRAG;
+ 	frag_header.version = BATADV_COMPAT_VERSION;
+ 	frag_header.ttl = BATADV_TTL;
+-	frag_header.seqno = htons(atomic_inc_return(&bat_priv->frag_seqno));
++	frag_header.seqno = htons(atomic_inc_return_unchecked(&bat_priv->frag_seqno));
+ 	frag_header.reserved = 0;
+ 	frag_header.no = 0;
+ 	frag_header.total_size = htons(skb->len);
+diff --git a/net/batman-adv/soft-interface.c b/net/batman-adv/soft-interface.c
+index 51cda3a..f5cbc7e 100644
+--- a/net/batman-adv/soft-interface.c
++++ b/net/batman-adv/soft-interface.c
+@@ -330,7 +330,7 @@ send:
+ 				primary_if->net_dev->dev_addr);
+ 
+ 		/* set broadcast sequence number */
+-		seqno = atomic_inc_return(&bat_priv->bcast_seqno);
++		seqno = atomic_inc_return_unchecked(&bat_priv->bcast_seqno);
+ 		bcast_packet->seqno = htonl(seqno);
+ 
+ 		batadv_add_bcast_packet_to_list(bat_priv, skb, brd_delay);
+@@ -798,7 +798,7 @@ static int batadv_softif_init_late(struct net_device *dev)
+ 	atomic_set(&bat_priv->batman_queue_left, BATADV_BATMAN_QUEUE_LEN);
+ 
+ 	atomic_set(&bat_priv->mesh_state, BATADV_MESH_INACTIVE);
+-	atomic_set(&bat_priv->bcast_seqno, 1);
++	atomic_set_unchecked(&bat_priv->bcast_seqno, 1);
+ 	atomic_set(&bat_priv->tt.vn, 0);
+ 	atomic_set(&bat_priv->tt.local_changes, 0);
+ 	atomic_set(&bat_priv->tt.ogm_append_cnt, 0);
+@@ -812,7 +812,7 @@ static int batadv_softif_init_late(struct net_device *dev)
+ 
+ 	/* randomize initial seqno to avoid collision */
+ 	get_random_bytes(&random_seqno, sizeof(random_seqno));
+-	atomic_set(&bat_priv->frag_seqno, random_seqno);
++	atomic_set_unchecked(&bat_priv->frag_seqno, random_seqno);
+ 
+ 	bat_priv->primary_if = NULL;
+ 	bat_priv->num_ifaces = 0;
+diff --git a/net/batman-adv/types.h b/net/batman-adv/types.h
+index 55610a8..aba2ae8 100644
+--- a/net/batman-adv/types.h
++++ b/net/batman-adv/types.h
+@@ -81,7 +81,7 @@ enum batadv_dhcp_recipient {
+ struct batadv_hard_iface_bat_iv {
+ 	unsigned char *ogm_buff;
+ 	int ogm_buff_len;
+-	atomic_t ogm_seqno;
++	atomic_unchecked_t ogm_seqno;
+ };
+ 
+ /**
+@@ -786,7 +786,7 @@ struct batadv_priv {
+ 	atomic_t bonding;
+ 	atomic_t fragmentation;
+ 	atomic_t packet_size_max;
+-	atomic_t frag_seqno;
++	atomic_unchecked_t frag_seqno;
+ #ifdef CONFIG_BATMAN_ADV_BLA
+ 	atomic_t bridge_loop_avoidance;
+ #endif
+@@ -805,7 +805,7 @@ struct batadv_priv {
+ #endif
+ 	uint32_t isolation_mark;
+ 	uint32_t isolation_mark_mask;
+-	atomic_t bcast_seqno;
++	atomic_unchecked_t bcast_seqno;
+ 	atomic_t bcast_queue_left;
+ 	atomic_t batman_queue_left;
+ 	char num_ifaces;
+diff --git a/net/caif/cfctrl.c b/net/caif/cfctrl.c
+index f5afda1..74e77ce 100644
+--- a/net/caif/cfctrl.c
++++ b/net/caif/cfctrl.c
+@@ -43,8 +43,8 @@ struct cflayer *cfctrl_create(void)
+ 	memset(&dev_info, 0, sizeof(dev_info));
+ 	dev_info.id = 0xff;
+ 	cfsrvl_init(&this->serv, 0, &dev_info, false);
+-	atomic_set(&this->req_seq_no, 1);
+-	atomic_set(&this->rsp_seq_no, 1);
++	atomic_set_unchecked(&this->req_seq_no, 1);
++	atomic_set_unchecked(&this->rsp_seq_no, 1);
+ 	this->serv.layer.receive = cfctrl_recv;
+ 	sprintf(this->serv.layer.name, "ctrl");
+ 	this->serv.layer.ctrlcmd = cfctrl_ctrlcmd;
+@@ -130,8 +130,8 @@ static void cfctrl_insert_req(struct cfctrl *ctrl,
+ 			      struct cfctrl_request_info *req)
+ {
+ 	spin_lock_bh(&ctrl->info_list_lock);
+-	atomic_inc(&ctrl->req_seq_no);
+-	req->sequence_no = atomic_read(&ctrl->req_seq_no);
++	atomic_inc_unchecked(&ctrl->req_seq_no);
++	req->sequence_no = atomic_read_unchecked(&ctrl->req_seq_no);
+ 	list_add_tail(&req->list, &ctrl->list);
+ 	spin_unlock_bh(&ctrl->info_list_lock);
+ }
+@@ -149,7 +149,7 @@ static struct cfctrl_request_info *cfctrl_remove_req(struct cfctrl *ctrl,
+ 			if (p != first)
+ 				pr_warn("Requests are not received in order\n");
+ 
+-			atomic_set(&ctrl->rsp_seq_no,
++			atomic_set_unchecked(&ctrl->rsp_seq_no,
+ 					 p->sequence_no);
+ 			list_del(&p->list);
+ 			goto out;
+diff --git a/net/ceph/messenger.c b/net/ceph/messenger.c
+index e3be1d2..254c555 100644
+--- a/net/ceph/messenger.c
++++ b/net/ceph/messenger.c
+@@ -189,7 +189,7 @@ static void con_fault(struct ceph_connection *con);
+ #define MAX_ADDR_STR_LEN	64	/* 54 is enough */
+ 
+ static char addr_str[ADDR_STR_COUNT][MAX_ADDR_STR_LEN];
+-static atomic_t addr_str_seq = ATOMIC_INIT(0);
++static atomic_unchecked_t addr_str_seq = ATOMIC_INIT(0);
+ 
+ static struct page *zero_page;		/* used in certain error cases */
+ 
+@@ -200,7 +200,7 @@ const char *ceph_pr_addr(const struct sockaddr_storage *ss)
+ 	struct sockaddr_in *in4 = (struct sockaddr_in *) ss;
+ 	struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ss;
+ 
+-	i = atomic_inc_return(&addr_str_seq) & ADDR_STR_COUNT_MASK;
++	i = atomic_inc_return_unchecked(&addr_str_seq) & ADDR_STR_COUNT_MASK;
+ 	s = addr_str[i];
+ 
+ 	switch (ss->ss_family) {
+diff --git a/net/core/datagram.c b/net/core/datagram.c
+index 617088a..0364f4f 100644
+--- a/net/core/datagram.c
++++ b/net/core/datagram.c
+@@ -338,7 +338,7 @@ int skb_kill_datagram(struct sock *sk, struct sk_buff *skb, unsigned int flags)
+ 	}
+ 
+ 	kfree_skb(skb);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_unchecked(&sk->sk_drops);
+ 	sk_mem_reclaim_partial(sk);
+ 
+ 	return err;
+diff --git a/net/core/dev.c b/net/core/dev.c
+index a8e4dd4..8419b44 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -1721,7 +1721,7 @@ int __dev_forward_skb(struct net_device *dev, struct sk_buff *skb)
+ {
+ 	if (skb_orphan_frags(skb, GFP_ATOMIC) ||
+ 	    unlikely(!is_skb_forwardable(dev, skb))) {
+-		atomic_long_inc(&dev->rx_dropped);
++		atomic_long_inc_unchecked(&dev->rx_dropped);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -3125,7 +3125,7 @@ recursion_alert:
+ drop:
+ 	rcu_read_unlock_bh();
+ 
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_unchecked(&dev->tx_dropped);
+ 	kfree_skb_list(skb);
+ 	return rc;
+ out:
+@@ -3477,7 +3477,7 @@ drop:
+ 
+ 	local_irq_restore(flags);
+ 
+-	atomic_long_inc(&skb->dev->rx_dropped);
++	atomic_long_inc_unchecked(&skb->dev->rx_dropped);
+ 	kfree_skb(skb);
+ 	return NET_RX_DROP;
+ }
+@@ -3892,7 +3892,7 @@ ncls:
+ 			ret = pt_prev->func(skb, skb->dev, pt_prev, orig_dev);
  	} else {
- 		spin_unlock(&port->backlog.lock);
+ drop:
 -		atomic_long_inc(&skb->dev->rx_dropped);
 +		atomic_long_inc_unchecked(&skb->dev->rx_dropped);
  		kfree_skb(skb);
- 	}
- }
-diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
-index 9f59f17..0f9ae3b2 100644
---- a/drivers/net/macvlan.c
-+++ b/drivers/net/macvlan.c
-@@ -335,7 +335,7 @@ static void macvlan_broadcast_enqueue(struct macvlan_port *port,
- free_nskb:
- 	kfree_skb(nskb);
- err:
--	atomic_long_inc(&skb->dev->rx_dropped);
-+	atomic_long_inc_unchecked(&skb->dev->rx_dropped);
- }
- 
- static void macvlan_flush_sources(struct macvlan_port *port,
-diff --git a/drivers/net/usb/sierra_net.c b/drivers/net/usb/sierra_net.c
-index a2515887..6d13233 100644
---- a/drivers/net/usb/sierra_net.c
-+++ b/drivers/net/usb/sierra_net.c
-@@ -51,7 +51,7 @@ static const char driver_name[] = "sierra_net";
- /* atomic counter partially included in MAC address to make sure 2 devices
-  * do not end up with the same MAC - concept breaks in case of > 255 ifaces
-  */
--static	atomic_t iface_counter = ATOMIC_INIT(0);
-+static	atomic_unchecked_t iface_counter = ATOMIC_INIT(0);
- 
- /*
-  * SYNC Timer Delay definition used to set the expiry time
-@@ -697,7 +697,7 @@ static int sierra_net_bind(struct usbnet *dev, struct usb_interface *intf)
- 	dev->net->netdev_ops = &sierra_net_device_ops;
- 
- 	/* change MAC addr to include, ifacenum, and to be unique */
--	dev->net->dev_addr[ETH_ALEN-2] = atomic_inc_return(&iface_counter);
-+	dev->net->dev_addr[ETH_ALEN-2] = atomic_inc_return_unchecked(&iface_counter);
- 	dev->net->dev_addr[ETH_ALEN-1] = ifacenum;
- 
- 	/* we will have to manufacture ethernet headers, prepare template */
-diff --git a/drivers/net/wireless/rt2x00/rt2x00.h b/drivers/net/wireless/rt2x00/rt2x00.h
-index 9bb398b..b0cc047 100644
---- a/drivers/net/wireless/rt2x00/rt2x00.h
-+++ b/drivers/net/wireless/rt2x00/rt2x00.h
-@@ -375,7 +375,7 @@ struct rt2x00_intf {
- 	 * for hardware which doesn't support hardware
- 	 * sequence counting.
- 	 */
--	atomic_t seqno;
-+	atomic_unchecked_t seqno;
- };
- 
- static inline struct rt2x00_intf* vif_to_intf(struct ieee80211_vif *vif)
-diff --git a/drivers/net/wireless/rt2x00/rt2x00queue.c b/drivers/net/wireless/rt2x00/rt2x00queue.c
-index 68b620b..92ecd9e 100644
---- a/drivers/net/wireless/rt2x00/rt2x00queue.c
-+++ b/drivers/net/wireless/rt2x00/rt2x00queue.c
-@@ -224,9 +224,9 @@ static void rt2x00queue_create_tx_descriptor_seq(struct rt2x00_dev *rt2x00dev,
- 	 * sequence counter given by mac80211.
- 	 */
- 	if (test_bit(ENTRY_TXD_FIRST_FRAGMENT, &txdesc->flags))
--		seqno = atomic_add_return(0x10, &intf->seqno);
-+		seqno = atomic_add_return_unchecked(0x10, &intf->seqno);
- 	else
--		seqno = atomic_read(&intf->seqno);
-+		seqno = atomic_read_unchecked(&intf->seqno);
- 
- 	hdr->seq_ctrl &= cpu_to_le16(IEEE80211_SCTL_FRAG);
- 	hdr->seq_ctrl |= cpu_to_le16(seqno);
-diff --git a/drivers/oprofile/buffer_sync.c b/drivers/oprofile/buffer_sync.c
-index 82f7000..d6d0447 100644
---- a/drivers/oprofile/buffer_sync.c
-+++ b/drivers/oprofile/buffer_sync.c
-@@ -345,7 +345,7 @@ static void add_data(struct op_entry *entry, struct mm_struct *mm)
- 		if (cookie == NO_COOKIE)
- 			offset = pc;
- 		if (cookie == INVALID_COOKIE) {
--			atomic_inc(&oprofile_stats.sample_lost_no_mapping);
-+			atomic_inc_unchecked(&oprofile_stats.sample_lost_no_mapping);
- 			offset = pc;
- 		}
- 		if (cookie != last_cookie) {
-@@ -389,14 +389,14 @@ add_sample(struct mm_struct *mm, struct op_sample *s, int in_kernel)
- 	/* add userspace sample */
- 
- 	if (!mm) {
--		atomic_inc(&oprofile_stats.sample_lost_no_mm);
-+		atomic_inc_unchecked(&oprofile_stats.sample_lost_no_mm);
- 		return 0;
- 	}
- 
- 	cookie = lookup_dcookie(mm, s->eip, &offset);
- 
- 	if (cookie == INVALID_COOKIE) {
--		atomic_inc(&oprofile_stats.sample_lost_no_mapping);
-+		atomic_inc_unchecked(&oprofile_stats.sample_lost_no_mapping);
- 		return 0;
- 	}
- 
-@@ -554,7 +554,7 @@ void sync_buffer(int cpu)
- 		/* ignore backtraces if failed to add a sample */
- 		if (state == sb_bt_start) {
- 			state = sb_bt_ignore;
--			atomic_inc(&oprofile_stats.bt_lost_no_mapping);
-+			atomic_inc_unchecked(&oprofile_stats.bt_lost_no_mapping);
- 		}
- 	}
- 	release_mm(mm);
-diff --git a/drivers/oprofile/event_buffer.c b/drivers/oprofile/event_buffer.c
-index c0cc4e7..44d4e54 100644
---- a/drivers/oprofile/event_buffer.c
-+++ b/drivers/oprofile/event_buffer.c
-@@ -53,7 +53,7 @@ void add_event_entry(unsigned long value)
- 	}
- 
- 	if (buffer_pos == buffer_size) {
--		atomic_inc(&oprofile_stats.event_lost_overflow);
-+		atomic_inc_unchecked(&oprofile_stats.event_lost_overflow);
- 		return;
- 	}
- 
-diff --git a/drivers/oprofile/oprof.c b/drivers/oprofile/oprof.c
-index ed2c3ec..deda85a 100644
---- a/drivers/oprofile/oprof.c
-+++ b/drivers/oprofile/oprof.c
-@@ -110,7 +110,7 @@ static void switch_worker(struct work_struct *work)
- 	if (oprofile_ops.switch_events())
- 		return;
- 
--	atomic_inc(&oprofile_stats.multiplex_counter);
-+	atomic_inc_unchecked(&oprofile_stats.multiplex_counter);
- 	start_switch_worker();
- }
- 
-diff --git a/drivers/oprofile/oprofile_stats.c b/drivers/oprofile/oprofile_stats.c
-index 59659ce..6c860a0 100644
---- a/drivers/oprofile/oprofile_stats.c
-+++ b/drivers/oprofile/oprofile_stats.c
-@@ -30,11 +30,11 @@ void oprofile_reset_stats(void)
- 		cpu_buf->sample_invalid_eip = 0;
- 	}
- 
--	atomic_set(&oprofile_stats.sample_lost_no_mm, 0);
--	atomic_set(&oprofile_stats.sample_lost_no_mapping, 0);
--	atomic_set(&oprofile_stats.event_lost_overflow, 0);
--	atomic_set(&oprofile_stats.bt_lost_no_mapping, 0);
--	atomic_set(&oprofile_stats.multiplex_counter, 0);
-+	atomic_set_unchecked(&oprofile_stats.sample_lost_no_mm, 0);
-+	atomic_set_unchecked(&oprofile_stats.sample_lost_no_mapping, 0);
-+	atomic_set_unchecked(&oprofile_stats.event_lost_overflow, 0);
-+	atomic_set_unchecked(&oprofile_stats.bt_lost_no_mapping, 0);
-+	atomic_set_unchecked(&oprofile_stats.multiplex_counter, 0);
- }
- 
- 
-diff --git a/drivers/oprofile/oprofile_stats.h b/drivers/oprofile/oprofile_stats.h
-index 1fc622b..8c48fc3 100644
---- a/drivers/oprofile/oprofile_stats.h
-+++ b/drivers/oprofile/oprofile_stats.h
-@@ -13,11 +13,11 @@
- #include <linux/atomic.h>
- 
- struct oprofile_stat_struct {
--	atomic_t sample_lost_no_mm;
--	atomic_t sample_lost_no_mapping;
--	atomic_t bt_lost_no_mapping;
--	atomic_t event_lost_overflow;
--	atomic_t multiplex_counter;
-+	atomic_unchecked_t sample_lost_no_mm;
-+	atomic_unchecked_t sample_lost_no_mapping;
-+	atomic_unchecked_t bt_lost_no_mapping;
-+	atomic_unchecked_t event_lost_overflow;
-+	atomic_unchecked_t multiplex_counter;
- };
- 
- extern struct oprofile_stat_struct oprofile_stats;
-diff --git a/drivers/oprofile/oprofilefs.c b/drivers/oprofile/oprofilefs.c
-index dd92c5e..dfc04b5 100644
---- a/drivers/oprofile/oprofilefs.c
-+++ b/drivers/oprofile/oprofilefs.c
-@@ -176,8 +176,8 @@ int oprofilefs_create_ro_ulong(struct dentry *root,
- 
- static ssize_t atomic_read_file(struct file *file, char __user *buf, size_t count, loff_t *offset)
- {
--	atomic_t *val = file->private_data;
--	return oprofilefs_ulong_to_user(atomic_read(val), buf, count, offset);
-+	atomic_unchecked_t *val = file->private_data;
-+	return oprofilefs_ulong_to_user(atomic_read_unchecked(val), buf, count, offset);
- }
- 
- 
-@@ -189,7 +189,7 @@ static const struct file_operations atomic_ro_fops = {
- 
- 
- int oprofilefs_create_ro_atomic(struct dentry *root,
--	char const *name, atomic_t *val)
-+	char const *name, atomic_unchecked_t *val)
- {
- 	return __oprofilefs_create_file(root, name,
- 					&atomic_ro_fops, 0444, val);
-diff --git a/drivers/regulator/core.c b/drivers/regulator/core.c
-index 5081533..794deb2 100644
---- a/drivers/regulator/core.c
-+++ b/drivers/regulator/core.c
-@@ -3650,7 +3650,7 @@ regulator_register(const struct regulator_desc *regulator_desc,
- 	const struct regulation_constraints *constraints = NULL;
- 	const struct regulator_init_data *init_data;
- 	struct regulator_config *config = NULL;
--	static atomic_t regulator_no = ATOMIC_INIT(-1);
-+	static atomic_unchecked_t regulator_no = ATOMIC_INIT(-1);
- 	struct regulator_dev *rdev;
- 	struct device *dev;
- 	int ret, i;
-@@ -3733,7 +3733,7 @@ regulator_register(const struct regulator_desc *regulator_desc,
- 	rdev->dev.class = &regulator_class;
- 	rdev->dev.parent = dev;
- 	dev_set_name(&rdev->dev, "regulator.%lu",
--		    (unsigned long) atomic_inc_return(&regulator_no));
-+		    (unsigned long) atomic_inc_return_unchecked(&regulator_no));
- 	ret = device_register(&rdev->dev);
- 	if (ret != 0) {
- 		put_device(&rdev->dev);
-diff --git a/drivers/scsi/fcoe/fcoe_sysfs.c b/drivers/scsi/fcoe/fcoe_sysfs.c
-index 045c4e1..13de803 100644
---- a/drivers/scsi/fcoe/fcoe_sysfs.c
-+++ b/drivers/scsi/fcoe/fcoe_sysfs.c
-@@ -33,8 +33,8 @@
-  */
- #include "libfcoe.h"
- 
--static atomic_t ctlr_num;
--static atomic_t fcf_num;
-+static atomic_unchecked_t ctlr_num;
-+static atomic_unchecked_t fcf_num;
- 
- /*
-  * fcoe_fcf_dev_loss_tmo: the default number of seconds that fcoe sysfs
-@@ -685,7 +685,7 @@ struct fcoe_ctlr_device *fcoe_ctlr_device_add(struct device *parent,
- 	if (!ctlr)
- 		goto out;
- 
--	ctlr->id = atomic_inc_return(&ctlr_num) - 1;
-+	ctlr->id = atomic_inc_return_unchecked(&ctlr_num) - 1;
- 	ctlr->f = f;
- 	ctlr->mode = FIP_CONN_TYPE_FABRIC;
- 	INIT_LIST_HEAD(&ctlr->fcfs);
-@@ -902,7 +902,7 @@ struct fcoe_fcf_device *fcoe_fcf_device_add(struct fcoe_ctlr_device *ctlr,
- 	fcf->dev.parent = &ctlr->dev;
- 	fcf->dev.bus = &fcoe_bus_type;
- 	fcf->dev.type = &fcoe_fcf_device_type;
--	fcf->id = atomic_inc_return(&fcf_num) - 1;
-+	fcf->id = atomic_inc_return_unchecked(&fcf_num) - 1;
- 	fcf->state = FCOE_FCF_STATE_UNKNOWN;
- 
- 	fcf->dev_loss_tmo = ctlr->fcf_dev_loss_tmo;
-@@ -938,8 +938,8 @@ int __init fcoe_sysfs_setup(void)
- {
- 	int error;
- 
--	atomic_set(&ctlr_num, 0);
--	atomic_set(&fcf_num, 0);
-+	atomic_set_unchecked(&ctlr_num, 0);
-+	atomic_set_unchecked(&fcf_num, 0);
- 
- 	error = bus_register(&fcoe_bus_type);
- 	if (error)
-diff --git a/drivers/scsi/hosts.c b/drivers/scsi/hosts.c
-index 8bb173e..20236b4 100644
---- a/drivers/scsi/hosts.c
-+++ b/drivers/scsi/hosts.c
-@@ -42,7 +42,7 @@
- #include "scsi_logging.h"
- 
- 
--static atomic_t scsi_host_next_hn = ATOMIC_INIT(0);	/* host_no for next new host */
-+static atomic_unchecked_t scsi_host_next_hn = ATOMIC_INIT(0);	/* host_no for next new host */
- 
- 
- static void scsi_host_cls_release(struct device *dev)
-@@ -392,7 +392,7 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
- 	 * subtract one because we increment first then return, but we need to
- 	 * know what the next host number was before increment
- 	 */
--	shost->host_no = atomic_inc_return(&scsi_host_next_hn) - 1;
-+	shost->host_no = atomic_inc_return_unchecked(&scsi_host_next_hn) - 1;
- 	shost->dma_channel = 0xff;
- 
- 	/* These three are default values which can be overridden */
-diff --git a/drivers/scsi/libfc/fc_exch.c b/drivers/scsi/libfc/fc_exch.c
-index 30f9ef0..a1e29ac 100644
---- a/drivers/scsi/libfc/fc_exch.c
-+++ b/drivers/scsi/libfc/fc_exch.c
-@@ -101,12 +101,12 @@ struct fc_exch_mgr {
- 	u16		pool_max_index;
- 
- 	struct {
--		atomic_t no_free_exch;
--		atomic_t no_free_exch_xid;
--		atomic_t xid_not_found;
--		atomic_t xid_busy;
--		atomic_t seq_not_found;
--		atomic_t non_bls_resp;
-+		atomic_unchecked_t no_free_exch;
-+		atomic_unchecked_t no_free_exch_xid;
-+		atomic_unchecked_t xid_not_found;
-+		atomic_unchecked_t xid_busy;
-+		atomic_unchecked_t seq_not_found;
-+		atomic_unchecked_t non_bls_resp;
- 	} stats;
- };
- 
-@@ -809,7 +809,7 @@ static struct fc_exch *fc_exch_em_alloc(struct fc_lport *lport,
- 	/* allocate memory for exchange */
- 	ep = mempool_alloc(mp->ep_pool, GFP_ATOMIC);
- 	if (!ep) {
--		atomic_inc(&mp->stats.no_free_exch);
-+		atomic_inc_unchecked(&mp->stats.no_free_exch);
- 		goto out;
- 	}
- 	memset(ep, 0, sizeof(*ep));
-@@ -872,7 +872,7 @@ out:
- 	return ep;
- err:
- 	spin_unlock_bh(&pool->lock);
--	atomic_inc(&mp->stats.no_free_exch_xid);
-+	atomic_inc_unchecked(&mp->stats.no_free_exch_xid);
- 	mempool_free(ep, mp->ep_pool);
- 	return NULL;
- }
-@@ -1021,7 +1021,7 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
- 		xid = ntohs(fh->fh_ox_id);	/* we originated exch */
- 		ep = fc_exch_find(mp, xid);
- 		if (!ep) {
--			atomic_inc(&mp->stats.xid_not_found);
-+			atomic_inc_unchecked(&mp->stats.xid_not_found);
- 			reject = FC_RJT_OX_ID;
- 			goto out;
- 		}
-@@ -1051,7 +1051,7 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
- 		ep = fc_exch_find(mp, xid);
- 		if ((f_ctl & FC_FC_FIRST_SEQ) && fc_sof_is_init(fr_sof(fp))) {
- 			if (ep) {
--				atomic_inc(&mp->stats.xid_busy);
-+				atomic_inc_unchecked(&mp->stats.xid_busy);
- 				reject = FC_RJT_RX_ID;
- 				goto rel;
- 			}
-@@ -1062,7 +1062,7 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
- 			}
- 			xid = ep->xid;	/* get our XID */
- 		} else if (!ep) {
--			atomic_inc(&mp->stats.xid_not_found);
-+			atomic_inc_unchecked(&mp->stats.xid_not_found);
- 			reject = FC_RJT_RX_ID;	/* XID not found */
- 			goto out;
- 		}
-@@ -1080,7 +1080,7 @@ static enum fc_pf_rjt_reason fc_seq_lookup_recip(struct fc_lport *lport,
+ 		/* Jamal, now you will not able to escape explaining
+ 		 * me how you were going to use this. :-)
+@@ -6843,8 +6843,8 @@ struct rtnl_link_stats64 *dev_get_stats(struct net_device *dev,
  	} else {
- 		sp = &ep->seq;
- 		if (sp->id != fh->fh_seq_id) {
--			atomic_inc(&mp->stats.seq_not_found);
-+			atomic_inc_unchecked(&mp->stats.seq_not_found);
- 			if (f_ctl & FC_FC_END_SEQ) {
- 				/*
- 				 * Update sequence_id based on incoming last
-@@ -1531,22 +1531,22 @@ static void fc_exch_recv_seq_resp(struct fc_exch_mgr *mp, struct fc_frame *fp)
+ 		netdev_stats_to_stats64(storage, &dev->stats);
+ 	}
+-	storage->rx_dropped += atomic_long_read(&dev->rx_dropped);
+-	storage->tx_dropped += atomic_long_read(&dev->tx_dropped);
++	storage->rx_dropped += atomic_long_read_unchecked(&dev->rx_dropped);
++	storage->tx_dropped += atomic_long_read_unchecked(&dev->tx_dropped);
+ 	return storage;
+ }
+ EXPORT_SYMBOL(dev_get_stats);
+diff --git a/net/core/flow.c b/net/core/flow.c
+index 1033725..340f65d 100644
+--- a/net/core/flow.c
++++ b/net/core/flow.c
+@@ -65,7 +65,7 @@ static void flow_cache_new_hashrnd(unsigned long arg)
+ static int flow_entry_valid(struct flow_cache_entry *fle,
+ 				struct netns_xfrm *xfrm)
+ {
+-	if (atomic_read(&xfrm->flow_cache_genid) != fle->genid)
++	if (atomic_read_unchecked(&xfrm->flow_cache_genid) != fle->genid)
+ 		return 0;
+ 	if (fle->object && !fle->object->ops->check(fle->object))
+ 		return 0;
+@@ -242,7 +242,7 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
+ 			hlist_add_head(&fle->u.hlist, &fcp->hash_table[hash]);
+ 			fcp->hash_count++;
+ 		}
+-	} else if (likely(fle->genid == atomic_read(&net->xfrm.flow_cache_genid))) {
++	} else if (likely(fle->genid == atomic_read_unchecked(&net->xfrm.flow_cache_genid))) {
+ 		flo = fle->object;
+ 		if (!flo)
+ 			goto ret_object;
+@@ -263,7 +263,7 @@ nocache:
+ 	}
+ 	flo = resolver(net, key, family, dir, flo, ctx);
+ 	if (fle) {
+-		fle->genid = atomic_read(&net->xfrm.flow_cache_genid);
++		fle->genid = atomic_read_unchecked(&net->xfrm.flow_cache_genid);
+ 		if (!IS_ERR(flo))
+ 			fle->object = flo;
+ 		else
+diff --git a/net/core/net-sysfs.c b/net/core/net-sysfs.c
+index 18b34d7..faecc1d 100644
+--- a/net/core/net-sysfs.c
++++ b/net/core/net-sysfs.c
+@@ -288,7 +288,7 @@ static ssize_t carrier_changes_show(struct device *dev,
+ {
+ 	struct net_device *netdev = to_net_dev(dev);
+ 	return sprintf(buf, fmt_dec,
+-		       atomic_read(&netdev->carrier_changes));
++		       atomic_read_unchecked(&netdev->carrier_changes));
+ }
+ static DEVICE_ATTR_RO(carrier_changes);
  
- 	ep = fc_exch_find(mp, ntohs(fh->fh_ox_id));
- 	if (!ep) {
--		atomic_inc(&mp->stats.xid_not_found);
-+		atomic_inc_unchecked(&mp->stats.xid_not_found);
+diff --git a/net/core/netpoll.c b/net/core/netpoll.c
+index c126a87..10ad89d 100644
+--- a/net/core/netpoll.c
++++ b/net/core/netpoll.c
+@@ -377,7 +377,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
+ 	struct udphdr *udph;
+ 	struct iphdr *iph;
+ 	struct ethhdr *eth;
+-	static atomic_t ip_ident;
++	static atomic_unchecked_t ip_ident;
+ 	struct ipv6hdr *ip6h;
+ 
+ 	udp_len = len + sizeof(*udph);
+@@ -448,7 +448,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
+ 		put_unaligned(0x45, (unsigned char *)iph);
+ 		iph->tos      = 0;
+ 		put_unaligned(htons(ip_len), &(iph->tot_len));
+-		iph->id       = htons(atomic_inc_return(&ip_ident));
++		iph->id       = htons(atomic_inc_return_unchecked(&ip_ident));
+ 		iph->frag_off = 0;
+ 		iph->ttl      = 64;
+ 		iph->protocol = IPPROTO_UDP;
+diff --git a/net/core/rtnetlink.c b/net/core/rtnetlink.c
+index 0861018..4a60a1e 100644
+--- a/net/core/rtnetlink.c
++++ b/net/core/rtnetlink.c
+@@ -1082,7 +1082,7 @@ static int rtnl_fill_ifinfo(struct sk_buff *skb, struct net_device *dev,
+ 	    (dev->ifalias &&
+ 	     nla_put_string(skb, IFLA_IFALIAS, dev->ifalias)) ||
+ 	    nla_put_u32(skb, IFLA_CARRIER_CHANGES,
+-			atomic_read(&dev->carrier_changes)))
++			atomic_read_unchecked(&dev->carrier_changes)))
+ 		goto nla_put_failure;
+ 
+ 	if (1) {
+diff --git a/net/core/sock.c b/net/core/sock.c
+index 193901d..a5b2488 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -441,7 +441,7 @@ int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 	struct sk_buff_head *list = &sk->sk_receive_queue;
+ 
+ 	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		trace_sock_rcvqueue_full(sk, skb);
+ 		return -ENOMEM;
+ 	}
+@@ -451,7 +451,7 @@ int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 		return err;
+ 
+ 	if (!sk_rmem_schedule(sk, skb, skb->truesize)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		return -ENOBUFS;
+ 	}
+ 
+@@ -484,7 +484,7 @@ int sk_receive_skb(struct sock *sk, struct sk_buff *skb, const int nested)
+ 	skb->dev = NULL;
+ 
+ 	if (sk_rcvqueues_full(sk, sk->sk_rcvbuf)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		goto discard_and_relse;
+ 	}
+ 	if (nested)
+@@ -502,7 +502,7 @@ int sk_receive_skb(struct sock *sk, struct sk_buff *skb, const int nested)
+ 		mutex_release(&sk->sk_lock.dep_map, 1, _RET_IP_);
+ 	} else if (sk_add_backlog(sk, skb, sk->sk_rcvbuf)) {
+ 		bh_unlock_sock(sk);
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		goto discard_and_relse;
+ 	}
+ 
+@@ -1550,7 +1550,7 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
+ 		newsk->sk_err	   = 0;
+ 		newsk->sk_priority = 0;
+ 		newsk->sk_incoming_cpu = raw_smp_processor_id();
+-		atomic64_set(&newsk->sk_cookie, 0);
++		atomic64_set_unchecked(&newsk->sk_cookie, 0);
+ 		/*
+ 		 * Before updating sk_refcnt, we must commit prior changes to memory
+ 		 * (Documentation/RCU/rculist_nulls.txt for details)
+@@ -2359,7 +2359,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
+ 	 */
+ 	smp_wmb();
+ 	atomic_set(&sk->sk_refcnt, 1);
+-	atomic_set(&sk->sk_drops, 0);
++	atomic_set_unchecked(&sk->sk_drops, 0);
+ }
+ EXPORT_SYMBOL(sock_init_data);
+ 
+diff --git a/net/core/sock_diag.c b/net/core/sock_diag.c
+index 817622f..8846e2b 100644
+--- a/net/core/sock_diag.c
++++ b/net/core/sock_diag.c
+@@ -20,12 +20,12 @@ static struct workqueue_struct *broadcast_wq;
+ static u64 sock_gen_cookie(struct sock *sk)
+ {
+ 	while (1) {
+-		u64 res = atomic64_read(&sk->sk_cookie);
++		u64 res = atomic64_read_unchecked(&sk->sk_cookie);
+ 
+ 		if (res)
+ 			return res;
+-		res = atomic64_inc_return(&sock_net(sk)->cookie_gen);
+-		atomic64_cmpxchg(&sk->sk_cookie, 0, res);
++		res = atomic64_inc_return_unchecked(&sock_net(sk)->cookie_gen);
++		atomic64_cmpxchg_unchecked(&sk->sk_cookie, 0, res);
+ 	}
+ }
+ 
+diff --git a/net/ipv4/devinet.c b/net/ipv4/devinet.c
+index 2d9cb17..fa6f6f8 100644
+--- a/net/ipv4/devinet.c
++++ b/net/ipv4/devinet.c
+@@ -1579,7 +1579,7 @@ static int inet_dump_ifaddr(struct sk_buff *skb, struct netlink_callback *cb)
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv4.dev_addr_genid) ^
++		cb->seq = atomic_read_unchecked(&net->ipv4.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+@@ -1905,7 +1905,7 @@ static int inet_netconf_dump_devconf(struct sk_buff *skb,
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv4.dev_addr_genid) ^
++		cb->seq = atomic_read_unchecked(&net->ipv4.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+diff --git a/net/ipv4/fib_frontend.c b/net/ipv4/fib_frontend.c
+index 6bbc549..28d7495 100644
+--- a/net/ipv4/fib_frontend.c
++++ b/net/ipv4/fib_frontend.c
+@@ -1083,12 +1083,12 @@ static int fib_inetaddr_event(struct notifier_block *this, unsigned long event,
+ #ifdef CONFIG_IP_ROUTE_MULTIPATH
+ 		fib_sync_up(dev, RTNH_F_DEAD);
+ #endif
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_unchecked(&net->ipv4.dev_addr_genid);
+ 		rt_cache_flush(dev_net(dev));
+ 		break;
+ 	case NETDEV_DOWN:
+ 		fib_del_ifaddr(ifa, NULL);
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_unchecked(&net->ipv4.dev_addr_genid);
+ 		if (!ifa->ifa_dev->ifa_list) {
+ 			/* Last address was deleted from this interface.
+ 			 * Disable IP.
+@@ -1127,7 +1127,7 @@ static int fib_netdev_event(struct notifier_block *this, unsigned long event, vo
+ #ifdef CONFIG_IP_ROUTE_MULTIPATH
+ 		fib_sync_up(dev, RTNH_F_DEAD);
+ #endif
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_unchecked(&net->ipv4.dev_addr_genid);
+ 		rt_cache_flush(net);
+ 		break;
+ 	case NETDEV_DOWN:
+diff --git a/net/ipv4/fib_semantics.c b/net/ipv4/fib_semantics.c
+index 3a06586..1020c5b 100644
+--- a/net/ipv4/fib_semantics.c
++++ b/net/ipv4/fib_semantics.c
+@@ -755,7 +755,7 @@ __be32 fib_info_update_nh_saddr(struct net *net, struct fib_nh *nh)
+ 	nh->nh_saddr = inet_select_addr(nh->nh_dev,
+ 					nh->nh_gw,
+ 					nh->nh_parent->fib_scope);
+-	nh->nh_saddr_genid = atomic_read(&net->ipv4.dev_addr_genid);
++	nh->nh_saddr_genid = atomic_read_unchecked(&net->ipv4.dev_addr_genid);
+ 
+ 	return nh->nh_saddr;
+ }
+diff --git a/net/ipv4/inet_connection_sock.c b/net/ipv4/inet_connection_sock.c
+index 61b45a1..2970363 100644
+--- a/net/ipv4/inet_connection_sock.c
++++ b/net/ipv4/inet_connection_sock.c
+@@ -729,8 +729,8 @@ struct sock *inet_csk_clone_lock(const struct sock *sk,
+ 		newsk->sk_write_space = sk_stream_write_space;
+ 
+ 		newsk->sk_mark = inet_rsk(req)->ir_mark;
+-		atomic64_set(&newsk->sk_cookie,
+-			     atomic64_read(&inet_rsk(req)->ir_cookie));
++		atomic64_set_unchecked(&newsk->sk_cookie,
++			     atomic64_read_unchecked(&inet_rsk(req)->ir_cookie));
+ 
+ 		newicsk->icsk_retransmits = 0;
+ 		newicsk->icsk_backoff	  = 0;
+diff --git a/net/ipv4/inet_timewait_sock.c b/net/ipv4/inet_timewait_sock.c
+index 2ffbd16..6e94995 100644
+--- a/net/ipv4/inet_timewait_sock.c
++++ b/net/ipv4/inet_timewait_sock.c
+@@ -214,7 +214,7 @@ struct inet_timewait_sock *inet_twsk_alloc(const struct sock *sk,
+ 		tw->tw_ipv6only	    = 0;
+ 		tw->tw_transparent  = inet->transparent;
+ 		tw->tw_prot	    = sk->sk_prot_creator;
+-		atomic64_set(&tw->tw_cookie, atomic64_read(&sk->sk_cookie));
++		atomic64_set_unchecked(&tw->tw_cookie, atomic64_read_unchecked(&sk->sk_cookie));
+ 		twsk_net_set(tw, sock_net(sk));
+ 		setup_timer(&tw->tw_timer, tw_timer_handler, (unsigned long)tw);
+ 		/*
+diff --git a/net/ipv4/inetpeer.c b/net/ipv4/inetpeer.c
+index 241afd7..31b95d5 100644
+--- a/net/ipv4/inetpeer.c
++++ b/net/ipv4/inetpeer.c
+@@ -461,7 +461,7 @@ relookup:
+ 	if (p) {
+ 		p->daddr = *daddr;
+ 		atomic_set(&p->refcnt, 1);
+-		atomic_set(&p->rid, 0);
++		atomic_set_unchecked(&p->rid, 0);
+ 		p->metrics[RTAX_LOCK-1] = INETPEER_METRICS_NEW;
+ 		p->rate_tokens = 0;
+ 		/* 60*HZ is arbitrary, but chosen enough high so that the first
+diff --git a/net/ipv4/ip_fragment.c b/net/ipv4/ip_fragment.c
+index 921138f..327173b 100644
+--- a/net/ipv4/ip_fragment.c
++++ b/net/ipv4/ip_fragment.c
+@@ -276,7 +276,7 @@ static int ip_frag_too_far(struct ipq *qp)
+ 		return 0;
+ 
+ 	start = qp->rid;
+-	end = atomic_inc_return(&peer->rid);
++	end = atomic_inc_return_unchecked(&peer->rid);
+ 	qp->rid = end;
+ 
+ 	rc = qp->q.fragments && (end - start) > max;
+diff --git a/net/ipv4/ping.c b/net/ipv4/ping.c
+index 05ff44b..8e685ea 100644
+--- a/net/ipv4/ping.c
++++ b/net/ipv4/ping.c
+@@ -1116,7 +1116,7 @@ static void ping_v4_format_sock(struct sock *sp, struct seq_file *f,
+ 		from_kuid_munged(seq_user_ns(f), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+ 		atomic_read(&sp->sk_refcnt), sp,
+-		atomic_read(&sp->sk_drops));
++		atomic_read_unchecked(&sp->sk_drops));
+ }
+ 
+ static int ping_v4_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv4/raw.c b/net/ipv4/raw.c
+index 561cd4b..7e7104d 100644
+--- a/net/ipv4/raw.c
++++ b/net/ipv4/raw.c
+@@ -323,7 +323,7 @@ static int raw_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ int raw_rcv(struct sock *sk, struct sk_buff *skb)
+ {
+ 	if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -1020,7 +1020,7 @@ static void raw_sock_seq_show(struct seq_file *seq, struct sock *sp, int i)
+ 		0, 0L, 0,
+ 		from_kuid_munged(seq_user_ns(seq), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+-		atomic_read(&sp->sk_refcnt), sp, atomic_read(&sp->sk_drops));
++		atomic_read(&sp->sk_refcnt), sp, atomic_read_unchecked(&sp->sk_drops));
+ }
+ 
+ static int raw_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index e681b85..ef2796f 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -458,7 +458,7 @@ static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst,
+ 
+ #define IP_IDENTS_SZ 2048u
+ 
+-static atomic_t *ip_idents __read_mostly;
++static atomic_unchecked_t *ip_idents __read_mostly;
+ static u32 *ip_tstamps __read_mostly;
+ 
+ /* In order to protect privacy, we add a perturbation to identifiers
+@@ -468,7 +468,7 @@ static u32 *ip_tstamps __read_mostly;
+ u32 ip_idents_reserve(u32 hash, int segs)
+ {
+ 	u32 *p_tstamp = ip_tstamps + hash % IP_IDENTS_SZ;
+-	atomic_t *p_id = ip_idents + hash % IP_IDENTS_SZ;
++	atomic_unchecked_t *p_id = ip_idents + hash % IP_IDENTS_SZ;
+ 	u32 old = ACCESS_ONCE(*p_tstamp);
+ 	u32 now = (u32)jiffies;
+ 	u32 delta = 0;
+@@ -476,7 +476,7 @@ u32 ip_idents_reserve(u32 hash, int segs)
+ 	if (old != now && cmpxchg(p_tstamp, old, now) == old)
+ 		delta = prandom_u32_max(now - old);
+ 
+-	return atomic_add_return(segs + delta, p_id) - segs;
++	return atomic_add_return_unchecked(segs + delta, p_id) - segs;
+ }
+ EXPORT_SYMBOL(ip_idents_reserve);
+ 
+@@ -2690,8 +2690,8 @@ static __net_initdata struct pernet_operations sysctl_route_ops = {
+ 
+ static __net_init int rt_genid_init(struct net *net)
+ {
+-	atomic_set(&net->ipv4.rt_genid, 0);
+-	atomic_set(&net->fnhe_genid, 0);
++	atomic_set_unchecked(&net->ipv4.rt_genid, 0);
++	atomic_set_unchecked(&net->fnhe_genid, 0);
+ 	get_random_bytes(&net->ipv4.dev_addr_genid,
+ 			 sizeof(net->ipv4.dev_addr_genid));
+ 	return 0;
+diff --git a/net/ipv4/tcp_input.c b/net/ipv4/tcp_input.c
+index 728f5b3..a95e744 100644
+--- a/net/ipv4/tcp_input.c
++++ b/net/ipv4/tcp_input.c
+@@ -6026,7 +6026,7 @@ struct request_sock *inet_reqsk_alloc(const struct request_sock_ops *ops,
+ 
+ 		kmemcheck_annotate_bitfield(ireq, flags);
+ 		ireq->opt = NULL;
+-		atomic64_set(&ireq->ir_cookie, 0);
++		atomic64_set_unchecked(&ireq->ir_cookie, 0);
+ 		ireq->ireq_state = TCP_NEW_SYN_RECV;
+ 		write_pnet(&ireq->ireq_net, sock_net(sk_listener));
+ 		ireq->ireq_family = sk_listener->sk_family;
+diff --git a/net/ipv4/udp.c b/net/ipv4/udp.c
+index 1b8c5ba..b7b9745 100644
+--- a/net/ipv4/udp.c
++++ b/net/ipv4/udp.c
+@@ -1193,7 +1193,7 @@ static unsigned int first_packet_length(struct sock *sk)
+ 				 IS_UDPLITE(sk));
+ 		UDP_INC_STATS_BH(sock_net(sk), UDP_MIB_INERRORS,
+ 				 IS_UDPLITE(sk));
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		__skb_unlink(skb, rcvq);
+ 		__skb_queue_tail(&list_kill, skb);
+ 	}
+@@ -1305,7 +1305,7 @@ try_again:
+ 	if (unlikely(err)) {
+ 		trace_kfree_skb(skb, udp_recvmsg);
+ 		if (!peeked) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			UDP_INC_STATS_USER(sock_net(sk),
+ 					   UDP_MIB_INERRORS, is_udplite);
+ 		}
+@@ -1599,7 +1599,7 @@ csum_error:
+ 	UDP_INC_STATS_BH(sock_net(sk), UDP_MIB_CSUMERRORS, is_udplite);
+ drop:
+ 	UDP_INC_STATS_BH(sock_net(sk), UDP_MIB_INERRORS, is_udplite);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_unchecked(&sk->sk_drops);
+ 	kfree_skb(skb);
+ 	return -1;
+ }
+@@ -1617,7 +1617,7 @@ static void flush_stack(struct sock **stack, unsigned int count,
+ 			skb1 = (i == final) ? skb : skb_clone(skb, GFP_ATOMIC);
+ 
+ 		if (!skb1) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			UDP_INC_STATS_BH(sock_net(sk), UDP_MIB_RCVBUFERRORS,
+ 					 IS_UDPLITE(sk));
+ 			UDP_INC_STATS_BH(sock_net(sk), UDP_MIB_INERRORS,
+@@ -2427,7 +2427,7 @@ static void udp4_format_sock(struct sock *sp, struct seq_file *f,
+ 		from_kuid_munged(seq_user_ns(f), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+ 		atomic_read(&sp->sk_refcnt), sp,
+-		atomic_read(&sp->sk_drops));
++		atomic_read_unchecked(&sp->sk_drops));
+ }
+ 
+ int udp4_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv6/addrconf.c b/net/ipv6/addrconf.c
+index 21c2c81..80267dd 100644
+--- a/net/ipv6/addrconf.c
++++ b/net/ipv6/addrconf.c
+@@ -620,7 +620,7 @@ static int inet6_netconf_dump_devconf(struct sk_buff *skb,
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv6.dev_addr_genid) ^
++		cb->seq = atomic_read_unchecked(&net->ipv6.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+@@ -4402,7 +4402,7 @@ static int inet6_dump_addr(struct sk_buff *skb, struct netlink_callback *cb,
+ 	s_ip_idx = ip_idx = cb->args[2];
+ 
+ 	rcu_read_lock();
+-	cb->seq = atomic_read(&net->ipv6.dev_addr_genid) ^ net->dev_base_seq;
++	cb->seq = atomic_read_unchecked(&net->ipv6.dev_addr_genid) ^ net->dev_base_seq;
+ 	for (h = s_h; h < NETDEV_HASHENTRIES; h++, s_idx = 0) {
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+@@ -5059,7 +5059,7 @@ static void __ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
+ 		rt_genid_bump_ipv6(net);
+ 		break;
+ 	}
+-	atomic_inc(&net->ipv6.dev_addr_genid);
++	atomic_inc_unchecked(&net->ipv6.dev_addr_genid);
+ }
+ 
+ static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
+diff --git a/net/ipv6/af_inet6.c b/net/ipv6/af_inet6.c
+index 7de52b6..ce7fb94 100644
+--- a/net/ipv6/af_inet6.c
++++ b/net/ipv6/af_inet6.c
+@@ -770,7 +770,7 @@ static int __net_init inet6_net_init(struct net *net)
+ 	net->ipv6.sysctl.idgen_retries = 3;
+ 	net->ipv6.sysctl.idgen_delay = 1 * HZ;
+ 	net->ipv6.sysctl.flowlabel_state_ranges = 1;
+-	atomic_set(&net->ipv6.fib6_sernum, 1);
++	atomic_set_unchecked(&net->ipv6.fib6_sernum, 1);
+ 
+ 	err = ipv6_init_mibs(net);
+ 	if (err)
+diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
+index b10a889..e881e1f 100644
+--- a/net/ipv6/datagram.c
++++ b/net/ipv6/datagram.c
+@@ -977,5 +977,5 @@ void ip6_dgram_sock_seq_show(struct seq_file *seq, struct sock *sp,
+ 		   0,
+ 		   sock_i_ino(sp),
+ 		   atomic_read(&sp->sk_refcnt), sp,
+-		   atomic_read(&sp->sk_drops));
++		   atomic_read_unchecked(&sp->sk_drops));
+ }
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index 548c623..bc8ec4f 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -99,9 +99,9 @@ static int fib6_new_sernum(struct net *net)
+ 	int new, old;
+ 
+ 	do {
+-		old = atomic_read(&net->ipv6.fib6_sernum);
++		old = atomic_read_unchecked(&net->ipv6.fib6_sernum);
+ 		new = old < INT_MAX ? old + 1 : 1;
+-	} while (atomic_cmpxchg(&net->ipv6.fib6_sernum,
++	} while (atomic_cmpxchg_unchecked(&net->ipv6.fib6_sernum,
+ 				old, new) != old);
+ 	return new;
+ }
+diff --git a/net/ipv6/raw.c b/net/ipv6/raw.c
+index ca4700c..f20fe21 100644
+--- a/net/ipv6/raw.c
++++ b/net/ipv6/raw.c
+@@ -388,7 +388,7 @@ static inline int rawv6_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ {
+ 	if ((raw6_sk(sk)->checksum || rcu_access_pointer(sk->sk_filter)) &&
+ 	    skb_checksum_complete(skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -416,7 +416,7 @@ int rawv6_rcv(struct sock *sk, struct sk_buff *skb)
+ 	struct raw6_sock *rp = raw6_sk(sk);
+ 
+ 	if (!xfrm6_policy_check(sk, XFRM_POLICY_IN, skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_unchecked(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -440,7 +440,7 @@ int rawv6_rcv(struct sock *sk, struct sk_buff *skb)
+ 
+ 	if (inet->hdrincl) {
+ 		if (skb_checksum_complete(skb)) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			kfree_skb(skb);
+ 			return NET_RX_DROP;
+ 		}
+diff --git a/net/ipv6/udp.c b/net/ipv6/udp.c
+index e51fc3e..5b274f6 100644
+--- a/net/ipv6/udp.c
++++ b/net/ipv6/udp.c
+@@ -445,7 +445,7 @@ try_again:
+ 	if (unlikely(err)) {
+ 		trace_kfree_skb(skb, udpv6_recvmsg);
+ 		if (!peeked) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			if (is_udp4)
+ 				UDP_INC_STATS_USER(sock_net(sk),
+ 						   UDP_MIB_INERRORS,
+@@ -709,7 +709,7 @@ csum_error:
+ 	UDP6_INC_STATS_BH(sock_net(sk), UDP_MIB_CSUMERRORS, is_udplite);
+ drop:
+ 	UDP6_INC_STATS_BH(sock_net(sk), UDP_MIB_INERRORS, is_udplite);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_unchecked(&sk->sk_drops);
+ 	kfree_skb(skb);
+ 	return -1;
+ }
+@@ -750,7 +750,7 @@ static void flush_stack(struct sock **stack, unsigned int count,
+ 		if (likely(!skb1))
+ 			skb1 = (i == final) ? skb : skb_clone(skb, GFP_ATOMIC);
+ 		if (!skb1) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			UDP6_INC_STATS_BH(sock_net(sk), UDP_MIB_RCVBUFERRORS,
+ 					  IS_UDPLITE(sk));
+ 			UDP6_INC_STATS_BH(sock_net(sk), UDP_MIB_INERRORS,
+diff --git a/net/iucv/af_iucv.c b/net/iucv/af_iucv.c
+index 918151c..5bbe95a 100644
+--- a/net/iucv/af_iucv.c
++++ b/net/iucv/af_iucv.c
+@@ -686,10 +686,10 @@ static void __iucv_auto_name(struct iucv_sock *iucv)
+ {
+ 	char name[12];
+ 
+-	sprintf(name, "%08x", atomic_inc_return(&iucv_sk_list.autobind_name));
++	sprintf(name, "%08x", atomic_inc_return_unchecked(&iucv_sk_list.autobind_name));
+ 	while (__iucv_get_sock_by_name(name)) {
+ 		sprintf(name, "%08x",
+-			atomic_inc_return(&iucv_sk_list.autobind_name));
++			atomic_inc_return_unchecked(&iucv_sk_list.autobind_name));
+ 	}
+ 	memcpy(iucv->src_name, name, 8);
+ }
+diff --git a/net/key/af_key.c b/net/key/af_key.c
+index 83a7068..facf2f0 100644
+--- a/net/key/af_key.c
++++ b/net/key/af_key.c
+@@ -3050,10 +3050,10 @@ static int pfkey_send_policy_notify(struct xfrm_policy *xp, int dir, const struc
+ static u32 get_acqseq(void)
+ {
+ 	u32 res;
+-	static atomic_t acqseq;
++	static atomic_unchecked_t acqseq;
+ 
+ 	do {
+-		res = atomic_inc_return(&acqseq);
++		res = atomic_inc_return_unchecked(&acqseq);
+ 	} while (!res);
+ 	return res;
+ }
+diff --git a/net/l2tp/l2tp_eth.c b/net/l2tp/l2tp_eth.c
+index 4b55287..bd247f7 100644
+--- a/net/l2tp/l2tp_eth.c
++++ b/net/l2tp/l2tp_eth.c
+@@ -42,12 +42,12 @@ struct l2tp_eth {
+ 	struct sock		*tunnel_sock;
+ 	struct l2tp_session	*session;
+ 	struct list_head	list;
+-	atomic_long_t		tx_bytes;
+-	atomic_long_t		tx_packets;
+-	atomic_long_t		tx_dropped;
+-	atomic_long_t		rx_bytes;
+-	atomic_long_t		rx_packets;
+-	atomic_long_t		rx_errors;
++	atomic_long_unchecked_t	tx_bytes;
++	atomic_long_unchecked_t	tx_packets;
++	atomic_long_unchecked_t	tx_dropped;
++	atomic_long_unchecked_t	rx_bytes;
++	atomic_long_unchecked_t	rx_packets;
++	atomic_long_unchecked_t	rx_errors;
+ };
+ 
+ /* via l2tp_session_priv() */
+@@ -98,10 +98,10 @@ static int l2tp_eth_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	int ret = l2tp_xmit_skb(session, skb, session->hdr_len);
+ 
+ 	if (likely(ret == NET_XMIT_SUCCESS)) {
+-		atomic_long_add(len, &priv->tx_bytes);
+-		atomic_long_inc(&priv->tx_packets);
++		atomic_long_add_unchecked(len, &priv->tx_bytes);
++		atomic_long_inc_unchecked(&priv->tx_packets);
+ 	} else {
+-		atomic_long_inc(&priv->tx_dropped);
++		atomic_long_inc_unchecked(&priv->tx_dropped);
+ 	}
+ 	return NETDEV_TX_OK;
+ }
+@@ -111,12 +111,12 @@ static struct rtnl_link_stats64 *l2tp_eth_get_stats64(struct net_device *dev,
+ {
+ 	struct l2tp_eth *priv = netdev_priv(dev);
+ 
+-	stats->tx_bytes   = atomic_long_read(&priv->tx_bytes);
+-	stats->tx_packets = atomic_long_read(&priv->tx_packets);
+-	stats->tx_dropped = atomic_long_read(&priv->tx_dropped);
+-	stats->rx_bytes   = atomic_long_read(&priv->rx_bytes);
+-	stats->rx_packets = atomic_long_read(&priv->rx_packets);
+-	stats->rx_errors  = atomic_long_read(&priv->rx_errors);
++	stats->tx_bytes   = atomic_long_read_unchecked(&priv->tx_bytes);
++	stats->tx_packets = atomic_long_read_unchecked(&priv->tx_packets);
++	stats->tx_dropped = atomic_long_read_unchecked(&priv->tx_dropped);
++	stats->rx_bytes   = atomic_long_read_unchecked(&priv->rx_bytes);
++	stats->rx_packets = atomic_long_read_unchecked(&priv->rx_packets);
++	stats->rx_errors  = atomic_long_read_unchecked(&priv->rx_errors);
+ 	return stats;
+ }
+ 
+@@ -167,15 +167,15 @@ static void l2tp_eth_dev_recv(struct l2tp_session *session, struct sk_buff *skb,
+ 	nf_reset(skb);
+ 
+ 	if (dev_forward_skb(dev, skb) == NET_RX_SUCCESS) {
+-		atomic_long_inc(&priv->rx_packets);
+-		atomic_long_add(data_len, &priv->rx_bytes);
++		atomic_long_inc_unchecked(&priv->rx_packets);
++		atomic_long_add_unchecked(data_len, &priv->rx_bytes);
+ 	} else {
+-		atomic_long_inc(&priv->rx_errors);
++		atomic_long_inc_unchecked(&priv->rx_errors);
+ 	}
+ 	return;
+ 
+ error:
+-	atomic_long_inc(&priv->rx_errors);
++	atomic_long_inc_unchecked(&priv->rx_errors);
+ 	kfree_skb(skb);
+ }
+ 
+diff --git a/net/netfilter/ipvs/ip_vs_conn.c b/net/netfilter/ipvs/ip_vs_conn.c
+index b0f7b62..0541842 100644
+--- a/net/netfilter/ipvs/ip_vs_conn.c
++++ b/net/netfilter/ipvs/ip_vs_conn.c
+@@ -572,7 +572,7 @@ ip_vs_bind_dest(struct ip_vs_conn *cp, struct ip_vs_dest *dest)
+ 	/* Increase the refcnt counter of the dest */
+ 	ip_vs_dest_hold(dest);
+ 
+-	conn_flags = atomic_read(&dest->conn_flags);
++	conn_flags = atomic_read_unchecked(&dest->conn_flags);
+ 	if (cp->protocol != IPPROTO_UDP)
+ 		conn_flags &= ~IP_VS_CONN_F_ONE_PACKET;
+ 	flags = cp->flags;
+@@ -922,7 +922,7 @@ ip_vs_conn_new(const struct ip_vs_conn_param *p, int dest_af,
+ 
+ 	cp->control = NULL;
+ 	atomic_set(&cp->n_control, 0);
+-	atomic_set(&cp->in_pkts, 0);
++	atomic_set_unchecked(&cp->in_pkts, 0);
+ 
+ 	cp->packet_xmit = NULL;
+ 	cp->app = NULL;
+@@ -1229,7 +1229,7 @@ static inline int todrop_entry(struct ip_vs_conn *cp)
+ 
+ 	/* Don't drop the entry if its number of incoming packets is not
+ 	   located in [0, 8] */
+-	i = atomic_read(&cp->in_pkts);
++	i = atomic_read_unchecked(&cp->in_pkts);
+ 	if (i > 8 || i < 0) return 0;
+ 
+ 	if (!todrop_rate[i]) return 0;
+diff --git a/net/netfilter/ipvs/ip_vs_core.c b/net/netfilter/ipvs/ip_vs_core.c
+index 38fbc19..4272cb4 100644
+--- a/net/netfilter/ipvs/ip_vs_core.c
++++ b/net/netfilter/ipvs/ip_vs_core.c
+@@ -586,7 +586,7 @@ int ip_vs_leave(struct ip_vs_service *svc, struct sk_buff *skb,
+ 		ret = cp->packet_xmit(skb, cp, pd->pp, iph);
+ 		/* do not touch skb anymore */
+ 
+-		atomic_inc(&cp->in_pkts);
++		atomic_inc_unchecked(&cp->in_pkts);
+ 		ip_vs_conn_put(cp);
+ 		return ret;
+ 	}
+@@ -1762,7 +1762,7 @@ ip_vs_in(unsigned int hooknum, struct sk_buff *skb, int af)
+ 	if (cp->flags & IP_VS_CONN_F_ONE_PACKET)
+ 		pkts = sysctl_sync_threshold(ipvs);
+ 	else
+-		pkts = atomic_add_return(1, &cp->in_pkts);
++		pkts = atomic_add_return_unchecked(1, &cp->in_pkts);
+ 
+ 	if (ipvs->sync_state & IP_VS_STATE_MASTER)
+ 		ip_vs_sync_conn(net, cp, pkts);
+diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
+index 24c5542..d4c95f9 100644
+--- a/net/netfilter/ipvs/ip_vs_ctl.c
++++ b/net/netfilter/ipvs/ip_vs_ctl.c
+@@ -814,7 +814,7 @@ __ip_vs_update_dest(struct ip_vs_service *svc, struct ip_vs_dest *dest,
+ 		 */
+ 		ip_vs_rs_hash(ipvs, dest);
+ 	}
+-	atomic_set(&dest->conn_flags, conn_flags);
++	atomic_set_unchecked(&dest->conn_flags, conn_flags);
+ 
+ 	/* bind the service */
+ 	old_svc = rcu_dereference_protected(dest->svc, 1);
+@@ -2036,7 +2036,7 @@ static int ip_vs_info_seq_show(struct seq_file *seq, void *v)
+ 					   "      %-7s %-6d %-10d %-10d\n",
+ 					   &dest->addr.in6,
+ 					   ntohs(dest->port),
+-					   ip_vs_fwd_name(atomic_read(&dest->conn_flags)),
++					   ip_vs_fwd_name(atomic_read_unchecked(&dest->conn_flags)),
+ 					   atomic_read(&dest->weight),
+ 					   atomic_read(&dest->activeconns),
+ 					   atomic_read(&dest->inactconns));
+@@ -2047,7 +2047,7 @@ static int ip_vs_info_seq_show(struct seq_file *seq, void *v)
+ 					   "%-7s %-6d %-10d %-10d\n",
+ 					   ntohl(dest->addr.ip),
+ 					   ntohs(dest->port),
+-					   ip_vs_fwd_name(atomic_read(&dest->conn_flags)),
++					   ip_vs_fwd_name(atomic_read_unchecked(&dest->conn_flags)),
+ 					   atomic_read(&dest->weight),
+ 					   atomic_read(&dest->activeconns),
+ 					   atomic_read(&dest->inactconns));
+@@ -2546,7 +2546,7 @@ __ip_vs_get_dest_entries(struct net *net, const struct ip_vs_get_dests *get,
+ 
+ 			entry.addr = dest->addr.ip;
+ 			entry.port = dest->port;
+-			entry.conn_flags = atomic_read(&dest->conn_flags);
++			entry.conn_flags = atomic_read_unchecked(&dest->conn_flags);
+ 			entry.weight = atomic_read(&dest->weight);
+ 			entry.u_threshold = dest->u_threshold;
+ 			entry.l_threshold = dest->l_threshold;
+@@ -3121,7 +3121,7 @@ static int ip_vs_genl_fill_dest(struct sk_buff *skb, struct ip_vs_dest *dest)
+ 	if (nla_put(skb, IPVS_DEST_ATTR_ADDR, sizeof(dest->addr), &dest->addr) ||
+ 	    nla_put_be16(skb, IPVS_DEST_ATTR_PORT, dest->port) ||
+ 	    nla_put_u32(skb, IPVS_DEST_ATTR_FWD_METHOD,
+-			(atomic_read(&dest->conn_flags) &
++			(atomic_read_unchecked(&dest->conn_flags) &
+ 			 IP_VS_CONN_F_FWD_MASK)) ||
+ 	    nla_put_u32(skb, IPVS_DEST_ATTR_WEIGHT,
+ 			atomic_read(&dest->weight)) ||
+diff --git a/net/netfilter/ipvs/ip_vs_sync.c b/net/netfilter/ipvs/ip_vs_sync.c
+index d99ad93..09bd6dc 100644
+--- a/net/netfilter/ipvs/ip_vs_sync.c
++++ b/net/netfilter/ipvs/ip_vs_sync.c
+@@ -609,7 +609,7 @@ static void ip_vs_sync_conn_v0(struct net *net, struct ip_vs_conn *cp,
+ 	cp = cp->control;
+ 	if (cp) {
+ 		if (cp->flags & IP_VS_CONN_F_TEMPLATE)
+-			pkts = atomic_add_return(1, &cp->in_pkts);
++			pkts = atomic_add_return_unchecked(1, &cp->in_pkts);
+ 		else
+ 			pkts = sysctl_sync_threshold(ipvs);
+ 		ip_vs_sync_conn(net, cp, pkts);
+@@ -771,7 +771,7 @@ control:
+ 	if (!cp)
+ 		return;
+ 	if (cp->flags & IP_VS_CONN_F_TEMPLATE)
+-		pkts = atomic_add_return(1, &cp->in_pkts);
++		pkts = atomic_add_return_unchecked(1, &cp->in_pkts);
+ 	else
+ 		pkts = sysctl_sync_threshold(ipvs);
+ 	goto sloop;
+@@ -919,7 +919,7 @@ static void ip_vs_proc_conn(struct net *net, struct ip_vs_conn_param *param,
+ 
+ 	if (opt)
+ 		memcpy(&cp->in_seq, opt, sizeof(*opt));
+-	atomic_set(&cp->in_pkts, sysctl_sync_threshold(ipvs));
++	atomic_set_unchecked(&cp->in_pkts, sysctl_sync_threshold(ipvs));
+ 	cp->state = state;
+ 	cp->old_state = cp->state;
+ 	/*
+diff --git a/net/netfilter/ipvs/ip_vs_xmit.c b/net/netfilter/ipvs/ip_vs_xmit.c
+index 258a0b0..2082f50 100644
+--- a/net/netfilter/ipvs/ip_vs_xmit.c
++++ b/net/netfilter/ipvs/ip_vs_xmit.c
+@@ -1259,7 +1259,7 @@ ip_vs_icmp_xmit(struct sk_buff *skb, struct ip_vs_conn *cp,
+ 		else
+ 			rc = NF_ACCEPT;
+ 		/* do not touch skb anymore */
+-		atomic_inc(&cp->in_pkts);
++		atomic_inc_unchecked(&cp->in_pkts);
  		goto out;
  	}
- 	if (ep->esb_stat & ESB_ST_COMPLETE) {
--		atomic_inc(&mp->stats.xid_not_found);
-+		atomic_inc_unchecked(&mp->stats.xid_not_found);
- 		goto rel;
- 	}
- 	if (ep->rxid == FC_XID_UNKNOWN)
- 		ep->rxid = ntohs(fh->fh_rx_id);
- 	if (ep->sid != 0 && ep->sid != ntoh24(fh->fh_d_id)) {
--		atomic_inc(&mp->stats.xid_not_found);
-+		atomic_inc_unchecked(&mp->stats.xid_not_found);
- 		goto rel;
- 	}
- 	if (ep->did != ntoh24(fh->fh_s_id) &&
- 	    ep->did != FC_FID_FLOGI) {
--		atomic_inc(&mp->stats.xid_not_found);
-+		atomic_inc_unchecked(&mp->stats.xid_not_found);
- 		goto rel;
- 	}
- 	sof = fr_sof(fp);
-@@ -1555,7 +1555,7 @@ static void fc_exch_recv_seq_resp(struct fc_exch_mgr *mp, struct fc_frame *fp)
- 		sp->ssb_stat |= SSB_ST_RESP;
- 		sp->id = fh->fh_seq_id;
- 	} else if (sp->id != fh->fh_seq_id) {
--		atomic_inc(&mp->stats.seq_not_found);
-+		atomic_inc_unchecked(&mp->stats.seq_not_found);
- 		goto rel;
+ 
+@@ -1352,7 +1352,7 @@ ip_vs_icmp_xmit_v6(struct sk_buff *skb, struct ip_vs_conn *cp,
+ 		else
+ 			rc = NF_ACCEPT;
+ 		/* do not touch skb anymore */
+-		atomic_inc(&cp->in_pkts);
++		atomic_inc_unchecked(&cp->in_pkts);
+ 		goto out;
  	}
  
-@@ -1618,9 +1618,9 @@ static void fc_exch_recv_resp(struct fc_exch_mgr *mp, struct fc_frame *fp)
- 	sp = fc_seq_lookup_orig(mp, fp);	/* doesn't hold sequence */
- 
- 	if (!sp)
--		atomic_inc(&mp->stats.xid_not_found);
-+		atomic_inc_unchecked(&mp->stats.xid_not_found);
- 	else
--		atomic_inc(&mp->stats.non_bls_resp);
-+		atomic_inc_unchecked(&mp->stats.non_bls_resp);
- 
- 	fc_frame_free(fp);
- }
-@@ -2261,13 +2261,13 @@ void fc_exch_update_stats(struct fc_lport *lport)
- 
- 	list_for_each_entry(ema, &lport->ema_list, ema_list) {
- 		mp = ema->mp;
--		st->fc_no_free_exch += atomic_read(&mp->stats.no_free_exch);
-+		st->fc_no_free_exch += atomic_read_unchecked(&mp->stats.no_free_exch);
- 		st->fc_no_free_exch_xid +=
--				atomic_read(&mp->stats.no_free_exch_xid);
--		st->fc_xid_not_found += atomic_read(&mp->stats.xid_not_found);
--		st->fc_xid_busy += atomic_read(&mp->stats.xid_busy);
--		st->fc_seq_not_found += atomic_read(&mp->stats.seq_not_found);
--		st->fc_non_bls_resp += atomic_read(&mp->stats.non_bls_resp);
-+				atomic_read_unchecked(&mp->stats.no_free_exch_xid);
-+		st->fc_xid_not_found += atomic_read_unchecked(&mp->stats.xid_not_found);
-+		st->fc_xid_busy += atomic_read_unchecked(&mp->stats.xid_busy);
-+		st->fc_seq_not_found += atomic_read_unchecked(&mp->stats.seq_not_found);
-+		st->fc_non_bls_resp += atomic_read_unchecked(&mp->stats.non_bls_resp);
- 	}
- }
- EXPORT_SYMBOL(fc_exch_update_stats);
-diff --git a/drivers/scsi/lpfc/lpfc.h b/drivers/scsi/lpfc/lpfc.h
-index a5a56fa..43499fd 100644
---- a/drivers/scsi/lpfc/lpfc.h
-+++ b/drivers/scsi/lpfc/lpfc.h
-@@ -435,7 +435,7 @@ struct lpfc_vport {
- 	struct dentry *debug_nodelist;
- 	struct dentry *vport_debugfs_root;
- 	struct lpfc_debugfs_trc *disc_trc;
--	atomic_t disc_trc_cnt;
-+	atomic_unchecked_t disc_trc_cnt;
- #endif
- 	uint8_t stat_data_enabled;
- 	uint8_t stat_data_blocked;
-@@ -885,8 +885,8 @@ struct lpfc_hba {
- 	struct timer_list fabric_block_timer;
- 	unsigned long bit_flags;
- #define	FABRIC_COMANDS_BLOCKED	0
--	atomic_t num_rsrc_err;
--	atomic_t num_cmd_success;
-+	atomic_unchecked_t num_rsrc_err;
-+	atomic_unchecked_t num_cmd_success;
- 	unsigned long last_rsrc_error_time;
- 	unsigned long last_ramp_down_time;
- #ifdef CONFIG_SCSI_LPFC_DEBUG_FS
-@@ -921,7 +921,7 @@ struct lpfc_hba {
- 
- 	struct dentry *debug_slow_ring_trc;
- 	struct lpfc_debugfs_trc *slow_ring_trc;
--	atomic_t slow_ring_trc_cnt;
-+	atomic_unchecked_t slow_ring_trc_cnt;
- 	/* iDiag debugfs sub-directory */
- 	struct dentry *idiag_root;
- 	struct dentry *idiag_pci_cfg;
-diff --git a/drivers/scsi/lpfc/lpfc_debugfs.c b/drivers/scsi/lpfc/lpfc_debugfs.c
-index 25aa9b9..d700a65 100644
---- a/drivers/scsi/lpfc/lpfc_debugfs.c
-+++ b/drivers/scsi/lpfc/lpfc_debugfs.c
-@@ -106,7 +106,7 @@ MODULE_PARM_DESC(lpfc_debugfs_mask_disc_trc,
- 
- #include <linux/debugfs.h>
- 
--static atomic_t lpfc_debugfs_seq_trc_cnt = ATOMIC_INIT(0);
-+static atomic_unchecked_t lpfc_debugfs_seq_trc_cnt = ATOMIC_INIT(0);
- static unsigned long lpfc_debugfs_start_time = 0L;
- 
- /* iDiag */
-@@ -147,7 +147,7 @@ lpfc_debugfs_disc_trc_data(struct lpfc_vport *vport, char *buf, int size)
- 	lpfc_debugfs_enable = 0;
- 
- 	len = 0;
--	index = (atomic_read(&vport->disc_trc_cnt) + 1) &
-+	index = (atomic_read_unchecked(&vport->disc_trc_cnt) + 1) &
- 		(lpfc_debugfs_max_disc_trc - 1);
- 	for (i = index; i < lpfc_debugfs_max_disc_trc; i++) {
- 		dtp = vport->disc_trc + i;
-@@ -213,7 +213,7 @@ lpfc_debugfs_slow_ring_trc_data(struct lpfc_hba *phba, char *buf, int size)
- 	lpfc_debugfs_enable = 0;
- 
- 	len = 0;
--	index = (atomic_read(&phba->slow_ring_trc_cnt) + 1) &
-+	index = (atomic_read_unchecked(&phba->slow_ring_trc_cnt) + 1) &
- 		(lpfc_debugfs_max_slow_ring_trc - 1);
- 	for (i = index; i < lpfc_debugfs_max_slow_ring_trc; i++) {
- 		dtp = phba->slow_ring_trc + i;
-@@ -646,14 +646,14 @@ lpfc_debugfs_disc_trc(struct lpfc_vport *vport, int mask, char *fmt,
- 		!vport || !vport->disc_trc)
- 		return;
- 
--	index = atomic_inc_return(&vport->disc_trc_cnt) &
-+	index = atomic_inc_return_unchecked(&vport->disc_trc_cnt) &
- 		(lpfc_debugfs_max_disc_trc - 1);
- 	dtp = vport->disc_trc + index;
- 	dtp->fmt = fmt;
- 	dtp->data1 = data1;
- 	dtp->data2 = data2;
- 	dtp->data3 = data3;
--	dtp->seq_cnt = atomic_inc_return(&lpfc_debugfs_seq_trc_cnt);
-+	dtp->seq_cnt = atomic_inc_return_unchecked(&lpfc_debugfs_seq_trc_cnt);
- 	dtp->jif = jiffies;
- #endif
- 	return;
-@@ -684,14 +684,14 @@ lpfc_debugfs_slow_ring_trc(struct lpfc_hba *phba, char *fmt,
- 		!phba || !phba->slow_ring_trc)
- 		return;
- 
--	index = atomic_inc_return(&phba->slow_ring_trc_cnt) &
-+	index = atomic_inc_return_unchecked(&phba->slow_ring_trc_cnt) &
- 		(lpfc_debugfs_max_slow_ring_trc - 1);
- 	dtp = phba->slow_ring_trc + index;
- 	dtp->fmt = fmt;
- 	dtp->data1 = data1;
- 	dtp->data2 = data2;
- 	dtp->data3 = data3;
--	dtp->seq_cnt = atomic_inc_return(&lpfc_debugfs_seq_trc_cnt);
-+	dtp->seq_cnt = atomic_inc_return_unchecked(&lpfc_debugfs_seq_trc_cnt);
- 	dtp->jif = jiffies;
- #endif
- 	return;
-@@ -4268,7 +4268,7 @@ lpfc_debugfs_initialize(struct lpfc_vport *vport)
- 						 "slow_ring buffer\n");
- 				goto debug_failed;
- 			}
--			atomic_set(&phba->slow_ring_trc_cnt, 0);
-+			atomic_set_unchecked(&phba->slow_ring_trc_cnt, 0);
- 			memset(phba->slow_ring_trc, 0,
- 				(sizeof(struct lpfc_debugfs_trc) *
- 				lpfc_debugfs_max_slow_ring_trc));
-@@ -4314,7 +4314,7 @@ lpfc_debugfs_initialize(struct lpfc_vport *vport)
- 				 "buffer\n");
- 		goto debug_failed;
- 	}
--	atomic_set(&vport->disc_trc_cnt, 0);
-+	atomic_set_unchecked(&vport->disc_trc_cnt, 0);
- 
- 	snprintf(name, sizeof(name), "discovery_trace");
- 	vport->debug_disc_trc =
-diff --git a/drivers/scsi/lpfc/lpfc_scsi.c b/drivers/scsi/lpfc/lpfc_scsi.c
-index e5eb40d..056dcd4 100644
---- a/drivers/scsi/lpfc/lpfc_scsi.c
-+++ b/drivers/scsi/lpfc/lpfc_scsi.c
-@@ -261,7 +261,7 @@ lpfc_rampdown_queue_depth(struct lpfc_hba *phba)
- 	unsigned long expires;
- 
- 	spin_lock_irqsave(&phba->hbalock, flags);
--	atomic_inc(&phba->num_rsrc_err);
-+	atomic_inc_unchecked(&phba->num_rsrc_err);
- 	phba->last_rsrc_error_time = jiffies;
- 
- 	expires = phba->last_ramp_down_time + QUEUE_RAMP_DOWN_INTERVAL;
-@@ -303,8 +303,8 @@ lpfc_ramp_down_queue_handler(struct lpfc_hba *phba)
- 	unsigned long num_rsrc_err, num_cmd_success;
- 	int i;
- 
--	num_rsrc_err = atomic_read(&phba->num_rsrc_err);
--	num_cmd_success = atomic_read(&phba->num_cmd_success);
-+	num_rsrc_err = atomic_read_unchecked(&phba->num_rsrc_err);
-+	num_cmd_success = atomic_read_unchecked(&phba->num_cmd_success);
- 
- 	/*
- 	 * The error and success command counters are global per
-@@ -331,8 +331,8 @@ lpfc_ramp_down_queue_handler(struct lpfc_hba *phba)
- 			}
- 		}
- 	lpfc_destroy_vport_work_array(phba, vports);
--	atomic_set(&phba->num_rsrc_err, 0);
--	atomic_set(&phba->num_cmd_success, 0);
-+	atomic_set_unchecked(&phba->num_rsrc_err, 0);
-+	atomic_set_unchecked(&phba->num_cmd_success, 0);
- }
- 
- /**
-diff --git a/drivers/scsi/pmcraid.c b/drivers/scsi/pmcraid.c
-index ed31d8c..ab856b3 100644
---- a/drivers/scsi/pmcraid.c
-+++ b/drivers/scsi/pmcraid.c
-@@ -200,8 +200,8 @@ static int pmcraid_slave_alloc(struct scsi_device *scsi_dev)
- 		res->scsi_dev = scsi_dev;
- 		scsi_dev->hostdata = res;
- 		res->change_detected = 0;
--		atomic_set(&res->read_failures, 0);
--		atomic_set(&res->write_failures, 0);
-+		atomic_set_unchecked(&res->read_failures, 0);
-+		atomic_set_unchecked(&res->write_failures, 0);
- 		rc = 0;
- 	}
- 	spin_unlock_irqrestore(&pinstance->resource_lock, lock_flags);
-@@ -2640,9 +2640,9 @@ static int pmcraid_error_handler(struct pmcraid_cmd *cmd)
- 
- 	/* If this was a SCSI read/write command keep count of errors */
- 	if (SCSI_CMD_TYPE(scsi_cmd->cmnd[0]) == SCSI_READ_CMD)
--		atomic_inc(&res->read_failures);
-+		atomic_inc_unchecked(&res->read_failures);
- 	else if (SCSI_CMD_TYPE(scsi_cmd->cmnd[0]) == SCSI_WRITE_CMD)
--		atomic_inc(&res->write_failures);
-+		atomic_inc_unchecked(&res->write_failures);
- 
- 	if (!RES_IS_GSCSI(res->cfg_entry) &&
- 		masked_ioasc != PMCRAID_IOASC_HW_DEVICE_BUS_STATUS_ERROR) {
-@@ -3468,7 +3468,7 @@ static int pmcraid_queuecommand_lck(
- 	 * block of scsi_cmd which is re-used (e.g. cancel/abort), which uses
- 	 * hrrq_id assigned here in queuecommand
- 	 */
--	ioarcb->hrrq_id = atomic_add_return(1, &(pinstance->last_message_id)) %
-+	ioarcb->hrrq_id = atomic_add_return_unchecked(1, &(pinstance->last_message_id)) %
- 			  pinstance->num_hrrq;
- 	cmd->cmd_done = pmcraid_io_done;
- 
-@@ -3782,7 +3782,7 @@ static long pmcraid_ioctl_passthrough(
- 	 * block of scsi_cmd which is re-used (e.g. cancel/abort), which uses
- 	 * hrrq_id assigned here in queuecommand
- 	 */
--	ioarcb->hrrq_id = atomic_add_return(1, &(pinstance->last_message_id)) %
-+	ioarcb->hrrq_id = atomic_add_return_unchecked(1, &(pinstance->last_message_id)) %
- 			  pinstance->num_hrrq;
- 
- 	if (request_size) {
-@@ -4420,7 +4420,7 @@ static void pmcraid_worker_function(struct work_struct *workp)
- 
- 	pinstance = container_of(workp, struct pmcraid_instance, worker_q);
- 	/* add resources only after host is added into system */
--	if (!atomic_read(&pinstance->expose_resources))
-+	if (!atomic_read_unchecked(&pinstance->expose_resources))
- 		return;
- 
- 	fw_version = be16_to_cpu(pinstance->inq_data->fw_version);
-@@ -5237,8 +5237,8 @@ static int pmcraid_init_instance(struct pci_dev *pdev, struct Scsi_Host *host,
- 	init_waitqueue_head(&pinstance->reset_wait_q);
- 
- 	atomic_set(&pinstance->outstanding_cmds, 0);
--	atomic_set(&pinstance->last_message_id, 0);
--	atomic_set(&pinstance->expose_resources, 0);
-+	atomic_set_unchecked(&pinstance->last_message_id, 0);
-+	atomic_set_unchecked(&pinstance->expose_resources, 0);
- 
- 	INIT_LIST_HEAD(&pinstance->free_res_q);
- 	INIT_LIST_HEAD(&pinstance->used_res_q);
-@@ -5951,7 +5951,7 @@ static int pmcraid_probe(struct pci_dev *pdev,
- 	/* Schedule worker thread to handle CCN and take care of adding and
- 	 * removing devices to OS
- 	 */
--	atomic_set(&pinstance->expose_resources, 1);
-+	atomic_set_unchecked(&pinstance->expose_resources, 1);
- 	schedule_work(&pinstance->worker_q);
- 	return rc;
- 
-diff --git a/drivers/scsi/pmcraid.h b/drivers/scsi/pmcraid.h
-index e1d150f..6c6df44 100644
---- a/drivers/scsi/pmcraid.h
-+++ b/drivers/scsi/pmcraid.h
-@@ -748,7 +748,7 @@ struct pmcraid_instance {
- 	struct pmcraid_isr_param hrrq_vector[PMCRAID_NUM_MSIX_VECTORS];
- 
- 	/* Message id as filled in last fired IOARCB, used to identify HRRQ */
--	atomic_t last_message_id;
-+	atomic_unchecked_t last_message_id;
- 
- 	/* configuration table */
- 	struct pmcraid_config_table *cfg_table;
-@@ -777,7 +777,7 @@ struct pmcraid_instance {
- 	atomic_t outstanding_cmds;
- 
- 	/* should add/delete resources to mid-layer now ?*/
--	atomic_t expose_resources;
-+	atomic_unchecked_t expose_resources;
- 
- 
- 
-@@ -813,8 +813,8 @@ struct pmcraid_resource_entry {
- 		struct pmcraid_config_table_entry_ext cfg_entry_ext;
- 	};
- 	struct scsi_device *scsi_dev;	/* Link scsi_device structure */
--	atomic_t read_failures;		/* count of failed READ commands */
--	atomic_t write_failures;	/* count of failed WRITE commands */
-+	atomic_unchecked_t read_failures;	/* count of failed READ commands */
-+	atomic_unchecked_t write_failures;	/* count of failed WRITE commands */
- 
- 	/* To indicate add/delete/modify during CCN */
- 	u8 change_detected;
-diff --git a/drivers/scsi/qla4xxx/ql4_def.h b/drivers/scsi/qla4xxx/ql4_def.h
-index a7cfc27..151f483 100644
---- a/drivers/scsi/qla4xxx/ql4_def.h
-+++ b/drivers/scsi/qla4xxx/ql4_def.h
-@@ -306,7 +306,7 @@ struct ddb_entry {
- 					   * (4000 only) */
- 	atomic_t relogin_timer;		  /* Max Time to wait for
- 					   * relogin to complete */
--	atomic_t relogin_retry_count;	  /* Num of times relogin has been
-+	atomic_unchecked_t relogin_retry_count;	  /* Num of times relogin has been
- 					   * retried */
- 	uint32_t default_time2wait;	  /* Default Min time between
- 					   * relogins (+aens) */
-diff --git a/drivers/scsi/qla4xxx/ql4_os.c b/drivers/scsi/qla4xxx/ql4_os.c
-index 6d25879..3031a9f 100644
---- a/drivers/scsi/qla4xxx/ql4_os.c
-+++ b/drivers/scsi/qla4xxx/ql4_os.c
-@@ -4491,12 +4491,12 @@ static void qla4xxx_check_relogin_flash_ddb(struct iscsi_cls_session *cls_sess)
- 		 */
- 		if (!iscsi_is_session_online(cls_sess)) {
- 			/* Reset retry relogin timer */
--			atomic_inc(&ddb_entry->relogin_retry_count);
-+			atomic_inc_unchecked(&ddb_entry->relogin_retry_count);
- 			DEBUG2(ql4_printk(KERN_INFO, ha,
- 				"%s: index[%d] relogin timed out-retrying"
- 				" relogin (%d), retry (%d)\n", __func__,
- 				ddb_entry->fw_ddb_index,
--				atomic_read(&ddb_entry->relogin_retry_count),
-+				atomic_read_unchecked(&ddb_entry->relogin_retry_count),
- 				ddb_entry->default_time2wait + 4));
- 			set_bit(DPC_RELOGIN_DEVICE, &ha->dpc_flags);
- 			atomic_set(&ddb_entry->retry_relogin_timer,
-@@ -6604,7 +6604,7 @@ static void qla4xxx_setup_flash_ddb_entry(struct scsi_qla_host *ha,
- 
- 	atomic_set(&ddb_entry->retry_relogin_timer, INVALID_ENTRY);
- 	atomic_set(&ddb_entry->relogin_timer, 0);
--	atomic_set(&ddb_entry->relogin_retry_count, 0);
-+	atomic_set_unchecked(&ddb_entry->relogin_retry_count, 0);
- 	def_timeout = le16_to_cpu(ddb_entry->fw_ddb_entry.def_timeout);
- 	ddb_entry->default_relogin_timeout =
- 		(def_timeout > LOGIN_TOV) && (def_timeout < LOGIN_TOV * 10) ?
-diff --git a/drivers/scsi/scsi_lib.c b/drivers/scsi/scsi_lib.c
-index 448ebda..9bd345f 100644
---- a/drivers/scsi/scsi_lib.c
-+++ b/drivers/scsi/scsi_lib.c
-@@ -1597,7 +1597,7 @@ static void scsi_kill_request(struct request *req, struct request_queue *q)
- 	shost = sdev->host;
- 	scsi_init_cmd_errh(cmd);
- 	cmd->result = DID_NO_CONNECT << 16;
--	atomic_inc(&cmd->device->iorequest_cnt);
-+	atomic_inc_unchecked(&cmd->device->iorequest_cnt);
- 
- 	/*
- 	 * SCSI request completion path will do scsi_device_unbusy(),
-@@ -1620,9 +1620,9 @@ static void scsi_softirq_done(struct request *rq)
- 
- 	INIT_LIST_HEAD(&cmd->eh_entry);
- 
--	atomic_inc(&cmd->device->iodone_cnt);
-+	atomic_inc_unchecked(&cmd->device->iodone_cnt);
- 	if (cmd->result)
--		atomic_inc(&cmd->device->ioerr_cnt);
-+		atomic_inc_unchecked(&cmd->device->ioerr_cnt);
- 
- 	disposition = scsi_decide_disposition(cmd);
- 	if (disposition != SUCCESS &&
-@@ -1663,7 +1663,7 @@ static int scsi_dispatch_cmd(struct scsi_cmnd *cmd)
- 	struct Scsi_Host *host = cmd->device->host;
- 	int rtn = 0;
- 
--	atomic_inc(&cmd->device->iorequest_cnt);
-+	atomic_inc_unchecked(&cmd->device->iorequest_cnt);
- 
- 	/* check if the device is still usable */
- 	if (unlikely(cmd->device->sdev_state == SDEV_DEL)) {
-diff --git a/drivers/scsi/scsi_sysfs.c b/drivers/scsi/scsi_sysfs.c
-index 9ad4116..4e736fc 100644
---- a/drivers/scsi/scsi_sysfs.c
-+++ b/drivers/scsi/scsi_sysfs.c
-@@ -788,7 +788,7 @@ show_iostat_##field(struct device *dev, struct device_attribute *attr,	\
- 		    char *buf)						\
- {									\
- 	struct scsi_device *sdev = to_scsi_device(dev);			\
--	unsigned long long count = atomic_read(&sdev->field);		\
-+	unsigned long long count = atomic_read_unchecked(&sdev->field);	\
- 	return snprintf(buf, 20, "0x%llx\n", count);			\
- }									\
- static DEVICE_ATTR(field, S_IRUGO, show_iostat_##field, NULL)
-diff --git a/drivers/scsi/scsi_transport_fc.c b/drivers/scsi/scsi_transport_fc.c
-index 24eaaf6..0e8cb69 100644
---- a/drivers/scsi/scsi_transport_fc.c
-+++ b/drivers/scsi/scsi_transport_fc.c
-@@ -502,7 +502,7 @@ static DECLARE_TRANSPORT_CLASS(fc_vport_class,
-  * Netlink Infrastructure
-  */
- 
--static atomic_t fc_event_seq;
-+static atomic_unchecked_t fc_event_seq;
- 
- /**
-  * fc_get_event_number - Obtain the next sequential FC event number
-@@ -515,7 +515,7 @@ static atomic_t fc_event_seq;
- u32
- fc_get_event_number(void)
- {
--	return atomic_add_return(1, &fc_event_seq);
-+	return atomic_add_return_unchecked(1, &fc_event_seq);
- }
- EXPORT_SYMBOL(fc_get_event_number);
- 
-@@ -659,7 +659,7 @@ static __init int fc_transport_init(void)
- {
- 	int error;
- 
--	atomic_set(&fc_event_seq, 0);
-+	atomic_set_unchecked(&fc_event_seq, 0);
- 
- 	error = transport_class_register(&fc_host_class);
- 	if (error)
-diff --git a/drivers/scsi/scsi_transport_iscsi.c b/drivers/scsi/scsi_transport_iscsi.c
-index 55647aa..b647d05 100644
---- a/drivers/scsi/scsi_transport_iscsi.c
-+++ b/drivers/scsi/scsi_transport_iscsi.c
-@@ -79,7 +79,7 @@ struct iscsi_internal {
- 	struct transport_container session_cont;
+diff --git a/net/netfilter/nfnetlink_log.c b/net/netfilter/nfnetlink_log.c
+index 4670821..a6c3c47d 100644
+--- a/net/netfilter/nfnetlink_log.c
++++ b/net/netfilter/nfnetlink_log.c
+@@ -84,7 +84,7 @@ static int nfnl_log_net_id __read_mostly;
+ struct nfnl_log_net {
+ 	spinlock_t instances_lock;
+ 	struct hlist_head instance_table[INSTANCE_BUCKETS];
+-	atomic_t global_seq;
++	atomic_unchecked_t global_seq;
  };
  
--static atomic_t iscsi_session_nr; /* sysfs session id for next new session */
-+static atomic_unchecked_t iscsi_session_nr; /* sysfs session id for next new session */
- static struct workqueue_struct *iscsi_eh_timer_workq;
+ static struct nfnl_log_net *nfnl_log_pernet(struct net *net)
+@@ -572,7 +572,7 @@ __build_packet_message(struct nfnl_log_net *log,
+ 	/* global sequence number */
+ 	if ((inst->flags & NFULNL_CFG_F_SEQ_GLOBAL) &&
+ 	    nla_put_be32(inst->skb, NFULA_SEQ_GLOBAL,
+-			 htonl(atomic_inc_return(&log->global_seq))))
++			 htonl(atomic_inc_return_unchecked(&log->global_seq))))
+ 		goto nla_put_failure;
  
- static DEFINE_IDA(iscsi_sess_ida);
-@@ -2073,7 +2073,7 @@ int iscsi_add_session(struct iscsi_cls_session *session, unsigned int target_id)
- 	int err;
+ 	if (data_len) {
+diff --git a/net/netfilter/xt_statistic.c b/net/netfilter/xt_statistic.c
+index 11de55e..f25e448 100644
+--- a/net/netfilter/xt_statistic.c
++++ b/net/netfilter/xt_statistic.c
+@@ -19,7 +19,7 @@
+ #include <linux/module.h>
  
- 	ihost = shost->shost_data;
--	session->sid = atomic_add_return(1, &iscsi_session_nr);
-+	session->sid = atomic_add_return_unchecked(1, &iscsi_session_nr);
- 
- 	if (target_id == ISCSI_MAX_TARGET) {
- 		id = ida_simple_get(&iscsi_sess_ida, 0, 0, GFP_KERNEL);
-@@ -4517,7 +4517,7 @@ static __init int iscsi_transport_init(void)
- 	printk(KERN_INFO "Loading iSCSI transport class v%s.\n",
- 		ISCSI_TRANSPORT_VERSION);
- 
--	atomic_set(&iscsi_session_nr, 0);
-+	atomic_set_unchecked(&iscsi_session_nr, 0);
- 
- 	err = class_register(&iscsi_transport_class);
- 	if (err)
-diff --git a/drivers/scsi/scsi_transport_srp.c b/drivers/scsi/scsi_transport_srp.c
-index e3cd3ec..00560ec 100644
---- a/drivers/scsi/scsi_transport_srp.c
-+++ b/drivers/scsi/scsi_transport_srp.c
-@@ -35,7 +35,7 @@
- #include "scsi_priv.h"
- 
- struct srp_host_attrs {
--	atomic_t next_port_id;
-+	atomic_unchecked_t next_port_id;
- };
- #define to_srp_host_attrs(host)	((struct srp_host_attrs *)(host)->shost_data)
- 
-@@ -105,7 +105,7 @@ static int srp_host_setup(struct transport_container *tc, struct device *dev,
- 	struct Scsi_Host *shost = dev_to_shost(dev);
- 	struct srp_host_attrs *srp_host = to_srp_host_attrs(shost);
- 
--	atomic_set(&srp_host->next_port_id, 0);
-+	atomic_set_unchecked(&srp_host->next_port_id, 0);
- 	return 0;
- }
- 
-@@ -752,7 +752,7 @@ struct srp_rport *srp_rport_add(struct Scsi_Host *shost,
- 			  rport_fast_io_fail_timedout);
- 	INIT_DELAYED_WORK(&rport->dev_loss_work, rport_dev_loss_timedout);
- 
--	id = atomic_inc_return(&to_srp_host_attrs(shost)->next_port_id);
-+	id = atomic_inc_return_unchecked(&to_srp_host_attrs(shost)->next_port_id);
- 	dev_set_name(&rport->dev, "port-%d:%d", shost->host_no, id);
- 
- 	transport_setup_device(&rport->dev);
-diff --git a/drivers/scsi/sd.c b/drivers/scsi/sd.c
-index a20da8c..d01312b 100644
---- a/drivers/scsi/sd.c
-+++ b/drivers/scsi/sd.c
-@@ -2973,7 +2973,7 @@ static int sd_probe(struct device *dev)
- 	sdkp->disk = gd;
- 	sdkp->index = index;
- 	atomic_set(&sdkp->openers, 0);
--	atomic_set(&sdkp->device->ioerr_cnt, 0);
-+	atomic_set_unchecked(&sdkp->device->ioerr_cnt, 0);
- 
- 	if (!sdp->request_queue->rq_timeout) {
- 		if (sdp->type != TYPE_MOD)
-diff --git a/drivers/staging/android/timed_output.c b/drivers/staging/android/timed_output.c
-index b41429f..2de5373 100644
---- a/drivers/staging/android/timed_output.c
-+++ b/drivers/staging/android/timed_output.c
-@@ -25,7 +25,7 @@
- #include "timed_output.h"
- 
- static struct class *timed_output_class;
--static atomic_t device_count;
-+static atomic_unchecked_t device_count;
- 
- static ssize_t enable_show(struct device *dev, struct device_attribute *attr,
- 			   char *buf)
-@@ -65,7 +65,7 @@ static int create_timed_output_class(void)
- 		timed_output_class = class_create(THIS_MODULE, "timed_output");
- 		if (IS_ERR(timed_output_class))
- 			return PTR_ERR(timed_output_class);
--		atomic_set(&device_count, 0);
-+		atomic_set_unchecked(&device_count, 0);
- 		timed_output_class->dev_groups = timed_output_groups;
- 	}
- 
-@@ -83,7 +83,7 @@ int timed_output_dev_register(struct timed_output_dev *tdev)
- 	if (ret < 0)
- 		return ret;
- 
--	tdev->index = atomic_inc_return(&device_count);
-+	tdev->index = atomic_inc_return_unchecked(&device_count);
- 	tdev->dev = device_create(timed_output_class, NULL,
- 		MKDEV(0, tdev->index), NULL, "%s", tdev->name);
- 	if (IS_ERR(tdev->dev))
-diff --git a/drivers/staging/octeon/ethernet-rx.c b/drivers/staging/octeon/ethernet-rx.c
-index 22853d3..cfa3c49 100644
---- a/drivers/staging/octeon/ethernet-rx.c
-+++ b/drivers/staging/octeon/ethernet-rx.c
-@@ -335,14 +335,14 @@ static int cvm_oct_napi_poll(struct napi_struct *napi, int budget)
- 				/* Increment RX stats for virtual ports */
- 				if (work->ipprt >= CVMX_PIP_NUM_INPUT_PORTS) {
- #ifdef CONFIG_64BIT
--					atomic64_add(1,
-+					atomic64_add_unchecked(1,
- 						     (atomic64_t *)&priv->stats.rx_packets);
--					atomic64_add(skb->len,
-+					atomic64_add_unchecked(skb->len,
- 						     (atomic64_t *)&priv->stats.rx_bytes);
- #else
--					atomic_add(1,
-+					atomic_add_unchecked(1,
- 						   (atomic_t *)&priv->stats.rx_packets);
--					atomic_add(skb->len,
-+					atomic_add_unchecked(skb->len,
- 						   (atomic_t *)&priv->stats.rx_bytes);
- #endif
- 				}
-@@ -354,10 +354,10 @@ static int cvm_oct_napi_poll(struct napi_struct *napi, int budget)
- 					   dev->name);
- 				*/
- #ifdef CONFIG_64BIT
--				atomic64_add(1,
-+				atomic64_add_unchecked(1,
- 					     (atomic64_t *)&priv->stats.rx_dropped);
- #else
--				atomic_add(1,
-+				atomic_add_unchecked(1,
- 					   (atomic_t *)&priv->stats.rx_dropped);
- #endif
- 				dev_kfree_skb_irq(skb);
-diff --git a/drivers/staging/octeon/ethernet.c b/drivers/staging/octeon/ethernet.c
-index f9dba23..7bc0ef3 100644
---- a/drivers/staging/octeon/ethernet.c
-+++ b/drivers/staging/octeon/ethernet.c
-@@ -231,11 +231,11 @@ static struct net_device_stats *cvm_oct_common_get_stats(struct net_device *dev)
- 		 * since the RX tasklet also increments it.
- 		 */
- #ifdef CONFIG_64BIT
--		atomic64_add(rx_status.dropped_packets,
--			     (atomic64_t *)&priv->stats.rx_dropped);
-+		atomic64_add_unchecked(rx_status.dropped_packets,
-+			     (atomic64_unchecked_t *)&priv->stats.rx_dropped);
- #else
--		atomic_add(rx_status.dropped_packets,
--			     (atomic_t *)&priv->stats.rx_dropped);
-+		atomic_add_unchecked(rx_status.dropped_packets,
-+			     (atomic_unchecked_t *)&priv->stats.rx_dropped);
- #endif
- 	}
- 
-diff --git a/drivers/target/sbp/sbp_target.c b/drivers/target/sbp/sbp_target.c
-index 0edf320..49afe95 100644
---- a/drivers/target/sbp/sbp_target.c
-+++ b/drivers/target/sbp/sbp_target.c
-@@ -60,7 +60,7 @@ static const u32 sbp_unit_directory_template[] = {
- 
- #define SESSION_MAINTENANCE_INTERVAL HZ
- 
--static atomic_t login_id = ATOMIC_INIT(0);
-+static atomic_unchecked_t login_id = ATOMIC_INIT(0);
- 
- static void session_maintenance_work(struct work_struct *);
- static int sbp_run_transaction(struct fw_card *, int, int, int, int,
-@@ -441,7 +441,7 @@ static void sbp_management_request_login(
- 	login->login_lun = unpacked_lun;
- 	login->status_fifo_addr = sbp2_pointer_to_addr(&req->orb.status_fifo);
- 	login->exclusive = LOGIN_ORB_EXCLUSIVE(be32_to_cpu(req->orb.misc));
--	login->login_id = atomic_inc_return(&login_id);
-+	login->login_id = atomic_inc_return_unchecked(&login_id);
- 
- 	login->tgt_agt = sbp_target_agent_register(login);
- 	if (IS_ERR(login->tgt_agt)) {
-diff --git a/drivers/target/target_core_device.c b/drivers/target/target_core_device.c
-index 8f1cd19..ba7a8f1 100644
---- a/drivers/target/target_core_device.c
-+++ b/drivers/target/target_core_device.c
-@@ -772,7 +772,7 @@ struct se_device *target_alloc_device(struct se_hba *hba, const char *name)
- 	spin_lock_init(&dev->se_tmr_lock);
- 	spin_lock_init(&dev->qf_cmd_lock);
- 	sema_init(&dev->caw_sem, 1);
--	atomic_set(&dev->dev_ordered_id, 0);
-+	atomic_set_unchecked(&dev->dev_ordered_id, 0);
- 	INIT_LIST_HEAD(&dev->t10_wwn.t10_vpd_list);
- 	spin_lock_init(&dev->t10_wwn.t10_vpd_lock);
- 	INIT_LIST_HEAD(&dev->t10_pr.registration_list);
-diff --git a/drivers/target/target_core_transport.c b/drivers/target/target_core_transport.c
-index ce8574b..98d6199 100644
---- a/drivers/target/target_core_transport.c
-+++ b/drivers/target/target_core_transport.c
-@@ -1181,7 +1181,7 @@ transport_check_alloc_task_attr(struct se_cmd *cmd)
- 	 * Used to determine when ORDERED commands should go from
- 	 * Dormant to Active status.
- 	 */
--	cmd->se_ordered_id = atomic_inc_return(&dev->dev_ordered_id);
-+	cmd->se_ordered_id = atomic_inc_return_unchecked(&dev->dev_ordered_id);
- 	pr_debug("Allocated se_ordered_id: %u for Task Attr: 0x%02x on %s\n",
- 			cmd->se_ordered_id, cmd->sam_task_attr,
- 			dev->transport->name);
-diff --git a/drivers/tty/hvc/hvsi.c b/drivers/tty/hvc/hvsi.c
-index 4190199..48f2920 100644
---- a/drivers/tty/hvc/hvsi.c
-+++ b/drivers/tty/hvc/hvsi.c
-@@ -85,7 +85,7 @@ struct hvsi_struct {
- 	int n_outbuf;
- 	uint32_t vtermno;
- 	uint32_t virq;
--	atomic_t seqno; /* HVSI packet sequence number */
-+	atomic_unchecked_t seqno; /* HVSI packet sequence number */
- 	uint16_t mctrl;
- 	uint8_t state;  /* HVSI protocol state */
- 	uint8_t flags;
-@@ -295,7 +295,7 @@ static int hvsi_version_respond(struct hvsi_struct *hp, uint16_t query_seqno)
- 
- 	packet.hdr.type = VS_QUERY_RESPONSE_PACKET_HEADER;
- 	packet.hdr.len = sizeof(struct hvsi_query_response);
--	packet.hdr.seqno = atomic_inc_return(&hp->seqno);
-+	packet.hdr.seqno = atomic_inc_return_unchecked(&hp->seqno);
- 	packet.verb = VSV_SEND_VERSION_NUMBER;
- 	packet.u.version = HVSI_VERSION;
- 	packet.query_seqno = query_seqno+1;
-@@ -555,7 +555,7 @@ static int hvsi_query(struct hvsi_struct *hp, uint16_t verb)
- 
- 	packet.hdr.type = VS_QUERY_PACKET_HEADER;
- 	packet.hdr.len = sizeof(struct hvsi_query);
--	packet.hdr.seqno = atomic_inc_return(&hp->seqno);
-+	packet.hdr.seqno = atomic_inc_return_unchecked(&hp->seqno);
- 	packet.verb = verb;
- 
- 	pr_debug("%s: sending %i bytes\n", __func__, packet.hdr.len);
-@@ -597,7 +597,7 @@ static int hvsi_set_mctrl(struct hvsi_struct *hp, uint16_t mctrl)
- 	int wrote;
- 
- 	packet.hdr.type = VS_CONTROL_PACKET_HEADER,
--	packet.hdr.seqno = atomic_inc_return(&hp->seqno);
-+	packet.hdr.seqno = atomic_inc_return_unchecked(&hp->seqno);
- 	packet.hdr.len = sizeof(struct hvsi_control);
- 	packet.verb = VSV_SET_MODEM_CTL;
- 	packet.mask = HVSI_TSDTR;
-@@ -680,7 +680,7 @@ static int hvsi_put_chars(struct hvsi_struct *hp, const char *buf, int count)
- 	BUG_ON(count > HVSI_MAX_OUTGOING_DATA);
- 
- 	packet.hdr.type = VS_DATA_PACKET_HEADER;
--	packet.hdr.seqno = atomic_inc_return(&hp->seqno);
-+	packet.hdr.seqno = atomic_inc_return_unchecked(&hp->seqno);
- 	packet.hdr.len = count + sizeof(struct hvsi_header);
- 	memcpy(&packet.data, buf, count);
- 
-@@ -697,7 +697,7 @@ static void hvsi_close_protocol(struct hvsi_struct *hp)
- 	struct hvsi_control packet __ALIGNED__;
- 
- 	packet.hdr.type = VS_CONTROL_PACKET_HEADER;
--	packet.hdr.seqno = atomic_inc_return(&hp->seqno);
-+	packet.hdr.seqno = atomic_inc_return_unchecked(&hp->seqno);
- 	packet.hdr.len = 6;
- 	packet.verb = VSV_CLOSE_PROTOCOL;
- 
-diff --git a/drivers/tty/hvc/hvsi_lib.c b/drivers/tty/hvc/hvsi_lib.c
-index a270f04..7c77b5d 100644
---- a/drivers/tty/hvc/hvsi_lib.c
-+++ b/drivers/tty/hvc/hvsi_lib.c
-@@ -8,7 +8,7 @@
- 
- static int hvsi_send_packet(struct hvsi_priv *pv, struct hvsi_header *packet)
- {
--	packet->seqno = cpu_to_be16(atomic_inc_return(&pv->seqno));
-+	packet->seqno = cpu_to_be16(atomic_inc_return_unchecked(&pv->seqno));
- 
- 	/* Assumes that always succeeds, works in practice */
- 	return pv->put_chars(pv->termno, (char *)packet, packet->len);
-@@ -20,7 +20,7 @@ static void hvsi_start_handshake(struct hvsi_priv *pv)
- 
- 	/* Reset state */
- 	pv->established = 0;
--	atomic_set(&pv->seqno, 0);
-+	atomic_set_unchecked(&pv->seqno, 0);
- 
- 	pr_devel("HVSI@%x: Handshaking started\n", pv->termno);
- 
-diff --git a/drivers/tty/serial/ioc4_serial.c b/drivers/tty/serial/ioc4_serial.c
-index e5c42fe..f091b02 100644
---- a/drivers/tty/serial/ioc4_serial.c
-+++ b/drivers/tty/serial/ioc4_serial.c
-@@ -437,7 +437,7 @@ struct ioc4_soft {
- 		} is_intr_info[MAX_IOC4_INTR_ENTS];
- 
- 		/* Number of entries active in the above array */
--		atomic_t is_num_intrs;
-+		atomic_unchecked_t is_num_intrs;
- 	} is_intr_type[IOC4_NUM_INTR_TYPES];
- 
- 	/* is_ir_lock must be held while
-@@ -974,7 +974,7 @@ intr_connect(struct ioc4_soft *soft, int type,
- 	BUG_ON(!((type == IOC4_SIO_INTR_TYPE)
- 	       || (type == IOC4_OTHER_INTR_TYPE)));
- 
--	i = atomic_inc_return(&soft-> is_intr_type[type].is_num_intrs) - 1;
-+	i = atomic_inc_return_unchecked(&soft-> is_intr_type[type].is_num_intrs) - 1;
- 	BUG_ON(!(i < MAX_IOC4_INTR_ENTS || (printk("i %d\n", i), 0)));
- 
- 	/* Save off the lower level interrupt handler */
-@@ -1001,7 +1001,7 @@ static irqreturn_t ioc4_intr(int irq, void *arg)
- 
- 	soft = arg;
- 	for (intr_type = 0; intr_type < IOC4_NUM_INTR_TYPES; intr_type++) {
--		num_intrs = (int)atomic_read(
-+		num_intrs = (int)atomic_read_unchecked(
- 				&soft->is_intr_type[intr_type].is_num_intrs);
- 
- 		this_mir = this_ir = pending_intrs(soft, intr_type);
-diff --git a/drivers/tty/serial/msm_serial.c b/drivers/tty/serial/msm_serial.c
-index b73889c..9f74f0a 100644
---- a/drivers/tty/serial/msm_serial.c
-+++ b/drivers/tty/serial/msm_serial.c
-@@ -1012,7 +1012,7 @@ static struct uart_driver msm_uart_driver = {
- 	.cons = MSM_CONSOLE,
- };
- 
--static atomic_t msm_uart_next_id = ATOMIC_INIT(0);
-+static atomic_unchecked_t msm_uart_next_id = ATOMIC_INIT(0);
- 
- static const struct of_device_id msm_uartdm_table[] = {
- 	{ .compatible = "qcom,msm-uartdm-v1.1", .data = (void *)UARTDM_1P1 },
-@@ -1036,7 +1036,7 @@ static int msm_serial_probe(struct platform_device *pdev)
- 		line = pdev->id;
- 
- 	if (line < 0)
--		line = atomic_inc_return(&msm_uart_next_id) - 1;
-+		line = atomic_inc_return_unchecked(&msm_uart_next_id) - 1;
- 
- 	if (unlikely(line < 0 || line >= UART_NR))
- 		return -ENXIO;
-diff --git a/drivers/uio/uio.c b/drivers/uio/uio.c
-index 3257d42..16f1d37 100644
---- a/drivers/uio/uio.c
-+++ b/drivers/uio/uio.c
-@@ -231,7 +231,7 @@ static ssize_t event_show(struct device *dev,
- 			  struct device_attribute *attr, char *buf)
- {
- 	struct uio_device *idev = dev_get_drvdata(dev);
--	return sprintf(buf, "%u\n", (unsigned int)atomic_read(&idev->event));
-+	return sprintf(buf, "%u\n", (unsigned int)atomic_read_unchecked(&idev->event));
- }
- static DEVICE_ATTR_RO(event);
- 
-@@ -393,7 +393,7 @@ void uio_event_notify(struct uio_info *info)
- {
- 	struct uio_device *idev = info->uio_dev;
- 
--	atomic_inc(&idev->event);
-+	atomic_inc_unchecked(&idev->event);
- 	wake_up_interruptible(&idev->wait);
- 	kill_fasync(&idev->async_queue, SIGIO, POLL_IN);
- }
-@@ -446,7 +446,7 @@ static int uio_open(struct inode *inode, struct file *filep)
- 	}
- 
- 	listener->dev = idev;
--	listener->event_count = atomic_read(&idev->event);
-+	listener->event_count = atomic_read_unchecked(&idev->event);
- 	filep->private_data = listener;
- 
- 	if (idev->info->open) {
-@@ -497,7 +497,7 @@ static unsigned int uio_poll(struct file *filep, poll_table *wait)
- 		return -EIO;
- 
- 	poll_wait(filep, &idev->wait, wait);
--	if (listener->event_count != atomic_read(&idev->event))
-+	if (listener->event_count != atomic_read_unchecked(&idev->event))
- 		return POLLIN | POLLRDNORM;
- 	return 0;
- }
-@@ -522,7 +522,7 @@ static ssize_t uio_read(struct file *filep, char __user *buf,
- 	do {
- 		set_current_state(TASK_INTERRUPTIBLE);
- 
--		event_count = atomic_read(&idev->event);
-+		event_count = atomic_read_unchecked(&idev->event);
- 		if (event_count != listener->event_count) {
- 			if (copy_to_user(buf, &event_count, count))
- 				retval = -EFAULT;
-@@ -813,7 +813,7 @@ int __uio_register_device(struct module *owner,
- 	idev->owner = owner;
- 	idev->info = info;
- 	init_waitqueue_head(&idev->wait);
--	atomic_set(&idev->event, 0);
-+	atomic_set_unchecked(&idev->event, 0);
- 
- 	ret = uio_get_minor(idev);
- 	if (ret)
-diff --git a/drivers/usb/atm/usbatm.c b/drivers/usb/atm/usbatm.c
-index db322d9..f0f4bc1 100644
---- a/drivers/usb/atm/usbatm.c
-+++ b/drivers/usb/atm/usbatm.c
-@@ -331,7 +331,7 @@ static void usbatm_extract_one_cell(struct usbatm_data *instance, unsigned char
- 		if (printk_ratelimit())
- 			atm_warn(instance, "%s: OAM not supported (vpi %d, vci %d)!\n",
- 				__func__, vpi, vci);
--		atomic_inc(&vcc->stats->rx_err);
-+		atomic_inc_unchecked(&vcc->stats->rx_err);
- 		return;
- 	}
- 
-@@ -358,7 +358,7 @@ static void usbatm_extract_one_cell(struct usbatm_data *instance, unsigned char
- 		if (length > ATM_MAX_AAL5_PDU) {
- 			atm_rldbg(instance, "%s: bogus length %u (vcc: 0x%p)!\n",
- 				  __func__, length, vcc);
--			atomic_inc(&vcc->stats->rx_err);
-+			atomic_inc_unchecked(&vcc->stats->rx_err);
- 			goto out;
- 		}
- 
-@@ -367,14 +367,14 @@ static void usbatm_extract_one_cell(struct usbatm_data *instance, unsigned char
- 		if (sarb->len < pdu_length) {
- 			atm_rldbg(instance, "%s: bogus pdu_length %u (sarb->len: %u, vcc: 0x%p)!\n",
- 				  __func__, pdu_length, sarb->len, vcc);
--			atomic_inc(&vcc->stats->rx_err);
-+			atomic_inc_unchecked(&vcc->stats->rx_err);
- 			goto out;
- 		}
- 
- 		if (crc32_be(~0, skb_tail_pointer(sarb) - pdu_length, pdu_length) != 0xc704dd7b) {
- 			atm_rldbg(instance, "%s: packet failed crc check (vcc: 0x%p)!\n",
- 				  __func__, vcc);
--			atomic_inc(&vcc->stats->rx_err);
-+			atomic_inc_unchecked(&vcc->stats->rx_err);
- 			goto out;
- 		}
- 
-@@ -387,7 +387,7 @@ static void usbatm_extract_one_cell(struct usbatm_data *instance, unsigned char
- 			if (printk_ratelimit())
- 				atm_err(instance, "%s: no memory for skb (length: %u)!\n",
- 					__func__, length);
--			atomic_inc(&vcc->stats->rx_drop);
-+			atomic_inc_unchecked(&vcc->stats->rx_drop);
- 			goto out;
- 		}
- 
-@@ -415,7 +415,7 @@ static void usbatm_extract_one_cell(struct usbatm_data *instance, unsigned char
- 
- 		vcc->push(vcc, skb);
- 
--		atomic_inc(&vcc->stats->rx);
-+		atomic_inc_unchecked(&vcc->stats->rx);
- 	out:
- 		skb_trim(sarb, 0);
- 	}
-@@ -613,7 +613,7 @@ static void usbatm_tx_process(unsigned long data)
- 			struct atm_vcc *vcc = UDSL_SKB(skb)->atm.vcc;
- 
- 			usbatm_pop(vcc, skb);
--			atomic_inc(&vcc->stats->tx);
-+			atomic_inc_unchecked(&vcc->stats->tx);
- 
- 			skb = skb_dequeue(&instance->sndqueue);
- 		}
-@@ -757,11 +757,11 @@ static int usbatm_atm_proc_read(struct atm_dev *atm_dev, loff_t *pos, char *page
- 	if (!left--)
- 		return sprintf(page,
- 			       "AAL5: tx %d ( %d err ), rx %d ( %d err, %d drop )\n",
--			       atomic_read(&atm_dev->stats.aal5.tx),
--			       atomic_read(&atm_dev->stats.aal5.tx_err),
--			       atomic_read(&atm_dev->stats.aal5.rx),
--			       atomic_read(&atm_dev->stats.aal5.rx_err),
--			       atomic_read(&atm_dev->stats.aal5.rx_drop));
-+			       atomic_read_unchecked(&atm_dev->stats.aal5.tx),
-+			       atomic_read_unchecked(&atm_dev->stats.aal5.tx_err),
-+			       atomic_read_unchecked(&atm_dev->stats.aal5.rx),
-+			       atomic_read_unchecked(&atm_dev->stats.aal5.rx_err),
-+			       atomic_read_unchecked(&atm_dev->stats.aal5.rx_drop));
- 
- 	if (!left--) {
- 		if (instance->disconnected)
-diff --git a/drivers/usb/core/devices.c b/drivers/usb/core/devices.c
-index 2a3bbdf..91d72cf 100644
---- a/drivers/usb/core/devices.c
-+++ b/drivers/usb/core/devices.c
-@@ -126,7 +126,7 @@ static const char format_endpt[] =
-  * time it gets called.
-  */
- static struct device_connect_event {
+ struct xt_statistic_priv {
 -	atomic_t count;
 +	atomic_unchecked_t count;
- 	wait_queue_head_t wait;
- } device_event = {
- 	.count = ATOMIC_INIT(1),
-@@ -164,7 +164,7 @@ static const struct class_info clas_info[] = {
+ } ____cacheline_aligned_in_smp;
  
- void usbfs_conn_disc_event(void)
- {
--	atomic_add(2, &device_event.count);
-+	atomic_add_unchecked(2, &device_event.count);
- 	wake_up(&device_event.wait);
+ MODULE_LICENSE("GPL");
+@@ -42,9 +42,9 @@ statistic_mt(const struct sk_buff *skb, struct xt_action_param *par)
+ 		break;
+ 	case XT_STATISTIC_MODE_NTH:
+ 		do {
+-			oval = atomic_read(&info->master->count);
++			oval = atomic_read_unchecked(&info->master->count);
+ 			nval = (oval == info->u.nth.every) ? 0 : oval + 1;
+-		} while (atomic_cmpxchg(&info->master->count, oval, nval) != oval);
++		} while (atomic_cmpxchg_unchecked(&info->master->count, oval, nval) != oval);
+ 		if (nval == 0)
+ 			ret = !ret;
+ 		break;
+@@ -64,7 +64,7 @@ static int statistic_mt_check(const struct xt_mtchk_param *par)
+ 	info->master = kzalloc(sizeof(*info->master), GFP_KERNEL);
+ 	if (info->master == NULL)
+ 		return -ENOMEM;
+-	atomic_set(&info->master->count, info->u.nth.count);
++	atomic_set_unchecked(&info->master->count, info->u.nth.count);
+ 
+ 	return 0;
+ }
+diff --git a/net/netlink/af_netlink.c b/net/netlink/af_netlink.c
+index a133d16..fafee70 100644
+--- a/net/netlink/af_netlink.c
++++ b/net/netlink/af_netlink.c
+@@ -286,7 +286,7 @@ static void netlink_overrun(struct sock *sk)
+ 			sk->sk_error_report(sk);
+ 		}
+ 	}
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_unchecked(&sk->sk_drops);
  }
  
-@@ -652,7 +652,7 @@ static unsigned int usb_device_poll(struct file *file,
+ static void netlink_rcv_wake(struct sock *sk)
+@@ -3145,7 +3145,7 @@ static int netlink_seq_show(struct seq_file *seq, void *v)
+ 			   sk_wmem_alloc_get(s),
+ 			   nlk->cb_running,
+ 			   atomic_read(&s->sk_refcnt),
+-			   atomic_read(&s->sk_drops),
++			   atomic_read_unchecked(&s->sk_drops),
+ 			   sock_i_ino(s)
+ 			);
  
- 	poll_wait(file, &device_event.wait, wait);
- 
--	event_count = atomic_read(&device_event.count);
-+	event_count = atomic_read_unchecked(&device_event.count);
- 	if (file->f_version != event_count) {
- 		file->f_version = event_count;
- 		return POLLIN | POLLRDNORM;
-diff --git a/drivers/usb/core/hcd.c b/drivers/usb/core/hcd.c
-index cbcd092..e783f87 100644
---- a/drivers/usb/core/hcd.c
-+++ b/drivers/usb/core/hcd.c
-@@ -1554,7 +1554,7 @@ int usb_hcd_submit_urb (struct urb *urb, gfp_t mem_flags)
+diff --git a/net/openvswitch/vport.c b/net/openvswitch/vport.c
+index 067a3ff..9ecc05c 100644
+--- a/net/openvswitch/vport.c
++++ b/net/openvswitch/vport.c
+@@ -303,10 +303,10 @@ void ovs_vport_get_stats(struct vport *vport, struct ovs_vport_stats *stats)
+ 	 * netdev-stats can be directly read over netlink-ioctl.
  	 */
- 	usb_get_urb(urb);
- 	atomic_inc(&urb->use_count);
--	atomic_inc(&urb->dev->urbnum);
-+	atomic_inc_unchecked(&urb->dev->urbnum);
- 	usbmon_urb_submit(&hcd->self, urb);
  
- 	/* NOTE requirements on root-hub callers (usbfs and the hub
-@@ -1581,7 +1581,7 @@ int usb_hcd_submit_urb (struct urb *urb, gfp_t mem_flags)
- 		urb->hcpriv = NULL;
- 		INIT_LIST_HEAD(&urb->urb_list);
- 		atomic_dec(&urb->use_count);
--		atomic_dec(&urb->dev->urbnum);
-+		atomic_dec_unchecked(&urb->dev->urbnum);
- 		if (atomic_read(&urb->reject))
- 			wake_up(&usb_kill_urb_queue);
- 		usb_put_urb(urb);
-diff --git a/drivers/usb/core/sysfs.c b/drivers/usb/core/sysfs.c
-index d269738..7340cd7 100644
---- a/drivers/usb/core/sysfs.c
-+++ b/drivers/usb/core/sysfs.c
-@@ -244,7 +244,7 @@ static ssize_t urbnum_show(struct device *dev, struct device_attribute *attr,
- 	struct usb_device *udev;
+-	stats->rx_errors  = atomic_long_read(&vport->err_stats.rx_errors);
+-	stats->tx_errors  = atomic_long_read(&vport->err_stats.tx_errors);
+-	stats->tx_dropped = atomic_long_read(&vport->err_stats.tx_dropped);
+-	stats->rx_dropped = atomic_long_read(&vport->err_stats.rx_dropped);
++	stats->rx_errors  = atomic_long_read_unchecked(&vport->err_stats.rx_errors);
++	stats->tx_errors  = atomic_long_read_unchecked(&vport->err_stats.tx_errors);
++	stats->tx_dropped = atomic_long_read_unchecked(&vport->err_stats.tx_dropped);
++	stats->rx_dropped = atomic_long_read_unchecked(&vport->err_stats.rx_dropped);
  
- 	udev = to_usb_device(dev);
--	return sprintf(buf, "%d\n", atomic_read(&udev->urbnum));
-+	return sprintf(buf, "%d\n", atomic_read_unchecked(&udev->urbnum));
- }
- static DEVICE_ATTR_RO(urbnum);
+ 	for_each_possible_cpu(i) {
+ 		const struct pcpu_sw_netstats *percpu_stats;
+@@ -538,19 +538,19 @@ static void ovs_vport_record_error(struct vport *vport,
+ {
+ 	switch (err_type) {
+ 	case VPORT_E_RX_DROPPED:
+-		atomic_long_inc(&vport->err_stats.rx_dropped);
++		atomic_long_inc_unchecked(&vport->err_stats.rx_dropped);
+ 		break;
  
-diff --git a/drivers/usb/core/usb.c b/drivers/usb/core/usb.c
-index 8d5b2f4..3896940 100644
---- a/drivers/usb/core/usb.c
-+++ b/drivers/usb/core/usb.c
-@@ -447,7 +447,7 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
- 	set_dev_node(&dev->dev, dev_to_node(bus->controller));
- 	dev->state = USB_STATE_ATTACHED;
- 	dev->lpm_disable_count = 1;
--	atomic_set(&dev->urbnum, 0);
-+	atomic_set_unchecked(&dev->urbnum, 0);
+ 	case VPORT_E_RX_ERROR:
+-		atomic_long_inc(&vport->err_stats.rx_errors);
++		atomic_long_inc_unchecked(&vport->err_stats.rx_errors);
+ 		break;
  
- 	INIT_LIST_HEAD(&dev->ep0.urb_list);
- 	dev->ep0.desc.bLength = USB_DT_ENDPOINT_SIZE;
-diff --git a/drivers/usb/host/ehci-hub.c b/drivers/usb/host/ehci-hub.c
-index 22abb68..50b7b84 100644
---- a/drivers/usb/host/ehci-hub.c
-+++ b/drivers/usb/host/ehci-hub.c
-@@ -773,7 +773,7 @@ static struct urb *request_single_step_set_feature_urb(
- 	urb->transfer_flags = URB_DIR_IN;
- 	usb_get_urb(urb);
- 	atomic_inc(&urb->use_count);
--	atomic_inc(&urb->dev->urbnum);
-+	atomic_inc_unchecked(&urb->dev->urbnum);
- 	urb->setup_dma = dma_map_single(
- 			hcd->self.controller,
- 			urb->setup_packet,
-@@ -840,7 +840,7 @@ static int ehset_single_step_set_feature(struct usb_hcd *hcd, int port)
- 	urb->status = -EINPROGRESS;
- 	usb_get_urb(urb);
- 	atomic_inc(&urb->use_count);
--	atomic_inc(&urb->dev->urbnum);
-+	atomic_inc_unchecked(&urb->dev->urbnum);
- 	retval = submit_single_step_set_feature(hcd, urb, 0);
- 	if (!retval && !wait_for_completion_timeout(&done,
- 						msecs_to_jiffies(2000))) {
-diff --git a/drivers/usb/misc/appledisplay.c b/drivers/usb/misc/appledisplay.c
-index a0a3827..d7ec10b 100644
---- a/drivers/usb/misc/appledisplay.c
-+++ b/drivers/usb/misc/appledisplay.c
-@@ -84,7 +84,7 @@ struct appledisplay {
- 	struct mutex sysfslock;		/* concurrent read and write */
+ 	case VPORT_E_TX_DROPPED:
+-		atomic_long_inc(&vport->err_stats.tx_dropped);
++		atomic_long_inc_unchecked(&vport->err_stats.tx_dropped);
+ 		break;
+ 
+ 	case VPORT_E_TX_ERROR:
+-		atomic_long_inc(&vport->err_stats.tx_errors);
++		atomic_long_inc_unchecked(&vport->err_stats.tx_errors);
+ 		break;
+ 	}
+ 
+diff --git a/net/openvswitch/vport.h b/net/openvswitch/vport.h
+index bc85331..0d3dce0 100644
+--- a/net/openvswitch/vport.h
++++ b/net/openvswitch/vport.h
+@@ -71,10 +71,10 @@ int ovs_vport_get_egress_tun_info(struct vport *vport, struct sk_buff *skb,
+ /* The following definitions are for implementers of vport devices: */
+ 
+ struct vport_err_stats {
+-	atomic_long_t rx_dropped;
+-	atomic_long_t rx_errors;
+-	atomic_long_t tx_dropped;
+-	atomic_long_t tx_errors;
++	atomic_long_unchecked_t rx_dropped;
++	atomic_long_unchecked_t rx_errors;
++	atomic_long_unchecked_t tx_dropped;
++	atomic_long_unchecked_t tx_errors;
  };
+ /**
+  * struct vport_portids - array of netlink portids of a vport.
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index 7851b12..67ecf51 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -277,7 +277,7 @@ static int packet_direct_xmit(struct sk_buff *skb)
  
--static atomic_t count_displays = ATOMIC_INIT(0);
-+static atomic_unchecked_t count_displays = ATOMIC_INIT(0);
- static struct workqueue_struct *wq;
+ 	return ret;
+ drop:
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_unchecked(&dev->tx_dropped);
+ 	kfree_skb(skb);
+ 	return NET_XMIT_DROP;
+ }
+@@ -1946,7 +1946,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
+ drop_n_acct:
+ 	spin_lock(&sk->sk_receive_queue.lock);
+ 	po->stats.stats1.tp_drops++;
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_unchecked(&sk->sk_drops);
+ 	spin_unlock(&sk->sk_receive_queue.lock);
  
- static void appledisplay_complete(struct urb *urb)
-@@ -288,7 +288,7 @@ static int appledisplay_probe(struct usb_interface *iface,
+ drop_n_restore:
+diff --git a/net/phonet/pep.c b/net/phonet/pep.c
+index 850a86c..8884a37 100644
+--- a/net/phonet/pep.c
++++ b/net/phonet/pep.c
+@@ -388,7 +388,7 @@ static int pipe_do_rcv(struct sock *sk, struct sk_buff *skb)
  
- 	/* Register backlight device */
- 	snprintf(bl_name, sizeof(bl_name), "appledisplay%d",
--		atomic_inc_return(&count_displays) - 1);
-+		atomic_inc_return_unchecked(&count_displays) - 1);
- 	memset(&props, 0, sizeof(struct backlight_properties));
- 	props.type = BACKLIGHT_RAW;
- 	props.max_brightness = 0xff;
-diff --git a/drivers/usb/usbip/vhci.h b/drivers/usb/usbip/vhci.h
-index a863a98..d272795 100644
---- a/drivers/usb/usbip/vhci.h
-+++ b/drivers/usb/usbip/vhci.h
-@@ -83,7 +83,7 @@ struct vhci_hcd {
- 	unsigned resuming:1;
- 	unsigned long re_timeout;
- 
--	atomic_t seqnum;
-+	atomic_unchecked_t seqnum;
- 
- 	/*
- 	 * NOTE:
-diff --git a/drivers/usb/usbip/vhci_hcd.c b/drivers/usb/usbip/vhci_hcd.c
-index e9ef1ec..c3a0b04 100644
---- a/drivers/usb/usbip/vhci_hcd.c
-+++ b/drivers/usb/usbip/vhci_hcd.c
-@@ -440,7 +440,7 @@ static void vhci_tx_urb(struct urb *urb)
- 
- 	spin_lock(&vdev->priv_lock);
- 
--	priv->seqnum = atomic_inc_return(&the_controller->seqnum);
-+	priv->seqnum = atomic_inc_return_unchecked(&the_controller->seqnum);
- 	if (priv->seqnum == 0xffff)
- 		dev_info(&urb->dev->dev, "seqnum max\n");
- 
-@@ -685,7 +685,7 @@ static int vhci_urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
- 			return -ENOMEM;
+ 	case PNS_PEP_CTRL_REQ:
+ 		if (skb_queue_len(&pn->ctrlreq_queue) >= PNPIPE_CTRLREQ_MAX) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			break;
+ 		}
+ 		__skb_pull(skb, 4);
+@@ -409,7 +409,7 @@ static int pipe_do_rcv(struct sock *sk, struct sk_buff *skb)
  		}
  
--		unlink->seqnum = atomic_inc_return(&the_controller->seqnum);
-+		unlink->seqnum = atomic_inc_return_unchecked(&the_controller->seqnum);
- 		if (unlink->seqnum == 0xffff)
- 			pr_info("seqnum max\n");
+ 		if (pn->rx_credits == 0) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			err = -ENOBUFS;
+ 			break;
+ 		}
+@@ -579,7 +579,7 @@ static int pipe_handler_do_rcv(struct sock *sk, struct sk_buff *skb)
+ 		}
  
-@@ -889,7 +889,7 @@ static int vhci_start(struct usb_hcd *hcd)
- 		vdev->rhport = rhport;
+ 		if (pn->rx_credits == 0) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_unchecked(&sk->sk_drops);
+ 			err = NET_RX_DROP;
+ 			break;
+ 		}
+diff --git a/net/phonet/socket.c b/net/phonet/socket.c
+index d575ef4..1dedc31 100644
+--- a/net/phonet/socket.c
++++ b/net/phonet/socket.c
+@@ -611,7 +611,7 @@ static int pn_sock_seq_show(struct seq_file *seq, void *v)
+ 			from_kuid_munged(seq_user_ns(seq), sock_i_uid(sk)),
+ 			sock_i_ino(sk),
+ 			atomic_read(&sk->sk_refcnt), sk,
+-			atomic_read(&sk->sk_drops));
++			atomic_read_unchecked(&sk->sk_drops));
  	}
- 
--	atomic_set(&vhci->seqnum, 0);
-+	atomic_set_unchecked(&vhci->seqnum, 0);
- 	spin_lock_init(&vhci->lock);
- 
- 	hcd->power_budget = 0; /* no limit */
-diff --git a/drivers/usb/usbip/vhci_rx.c b/drivers/usb/usbip/vhci_rx.c
-index 00e4a54..d676f85 100644
---- a/drivers/usb/usbip/vhci_rx.c
-+++ b/drivers/usb/usbip/vhci_rx.c
-@@ -80,7 +80,7 @@ static void vhci_recv_ret_submit(struct vhci_device *vdev,
- 	if (!urb) {
- 		pr_err("cannot find a urb of seqnum %u\n", pdu->base.seqnum);
- 		pr_info("max seqnum %d\n",
--			atomic_read(&the_controller->seqnum));
-+			atomic_read_unchecked(&the_controller->seqnum));
- 		usbip_event_add(ud, VDEV_EVENT_ERROR_TCP);
- 		return;
- 	}
-diff --git a/drivers/usb/wusbcore/wa-hc.h b/drivers/usb/wusbcore/wa-hc.h
-index edc7267..9f65ce2 100644
---- a/drivers/usb/wusbcore/wa-hc.h
-+++ b/drivers/usb/wusbcore/wa-hc.h
-@@ -240,7 +240,7 @@ struct wahc {
- 	spinlock_t xfer_list_lock;
- 	struct work_struct xfer_enqueue_work;
- 	struct work_struct xfer_error_work;
--	atomic_t xfer_id_count;
-+	atomic_unchecked_t xfer_id_count;
- 
- 	kernel_ulong_t	quirks;
- };
-@@ -305,7 +305,7 @@ static inline void wa_init(struct wahc *wa)
- 	INIT_WORK(&wa->xfer_enqueue_work, wa_urb_enqueue_run);
- 	INIT_WORK(&wa->xfer_error_work, wa_process_errored_transfers_run);
- 	wa->dto_in_use = 0;
--	atomic_set(&wa->xfer_id_count, 1);
-+	atomic_set_unchecked(&wa->xfer_id_count, 1);
- 	/* init the buf in URBs */
- 	for (index = 0; index < WA_MAX_BUF_IN_URBS; ++index)
- 		usb_init_urb(&(wa->buf_in_urbs[index]));
-diff --git a/drivers/usb/wusbcore/wa-xfer.c b/drivers/usb/wusbcore/wa-xfer.c
-index 69af4fd..da390d7 100644
---- a/drivers/usb/wusbcore/wa-xfer.c
-+++ b/drivers/usb/wusbcore/wa-xfer.c
-@@ -314,7 +314,7 @@ static void wa_xfer_completion(struct wa_xfer *xfer)
+ 	seq_pad(seq, '\n');
+ 	return 0;
+diff --git a/net/rds/cong.c b/net/rds/cong.c
+index e6144b8..4f9fda6 100644
+--- a/net/rds/cong.c
++++ b/net/rds/cong.c
+@@ -78,7 +78,7 @@
+  * finds that the saved generation number is smaller than the global generation
+  * number, it wakes up the process.
   */
- static void wa_xfer_id_init(struct wa_xfer *xfer)
+-static atomic_t		rds_cong_generation = ATOMIC_INIT(0);
++static atomic_unchecked_t		rds_cong_generation = ATOMIC_INIT(0);
+ 
+ /*
+  * Congestion monitoring
+@@ -247,7 +247,7 @@ void rds_cong_map_updated(struct rds_cong_map *map, uint64_t portmask)
+ 	rdsdebug("waking map %p for %pI4\n",
+ 	  map, &map->m_addr);
+ 	rds_stats_inc(s_cong_update_received);
+-	atomic_inc(&rds_cong_generation);
++	atomic_inc_unchecked(&rds_cong_generation);
+ 	if (waitqueue_active(&map->m_waitq))
+ 		wake_up(&map->m_waitq);
+ 	if (waitqueue_active(&rds_poll_waitq))
+@@ -273,7 +273,7 @@ EXPORT_SYMBOL_GPL(rds_cong_map_updated);
+ 
+ int rds_cong_updated_since(unsigned long *recent)
  {
--	xfer->id = atomic_add_return(1, &xfer->wa->xfer_id_count);
-+	xfer->id = atomic_add_return_unchecked(1, &xfer->wa->xfer_id_count);
- }
+-	unsigned long gen = atomic_read(&rds_cong_generation);
++	unsigned long gen = atomic_read_unchecked(&rds_cong_generation);
  
- /* Return the xfer's ID. */
-diff --git a/drivers/video/fbdev/hyperv_fb.c b/drivers/video/fbdev/hyperv_fb.c
-index 807ee22..7814cd6 100644
---- a/drivers/video/fbdev/hyperv_fb.c
-+++ b/drivers/video/fbdev/hyperv_fb.c
-@@ -240,7 +240,7 @@ static uint screen_fb_size;
- static inline int synthvid_send(struct hv_device *hdev,
- 				struct synthvid_msg *msg)
+ 	if (likely(*recent == gen))
+ 		return 0;
+diff --git a/net/rds/ib.h b/net/rds/ib.h
+index 86d88ec..b5461c2 100644
+--- a/net/rds/ib.h
++++ b/net/rds/ib.h
+@@ -128,7 +128,7 @@ struct rds_ib_connection {
+ 	/* sending acks */
+ 	unsigned long		i_ack_flags;
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_t		i_ack_next;	/* next ACK to send */
++	atomic64_unchecked_t	i_ack_next;	/* next ACK to send */
+ #else
+ 	spinlock_t		i_ack_lock;	/* protect i_ack_next */
+ 	u64			i_ack_next;	/* next ACK to send */
+diff --git a/net/rds/ib_cm.c b/net/rds/ib_cm.c
+index 0da2a45..388ae0b 100644
+--- a/net/rds/ib_cm.c
++++ b/net/rds/ib_cm.c
+@@ -699,7 +699,7 @@ void rds_ib_conn_shutdown(struct rds_connection *conn)
+ 	/* Clear the ACK state */
+ 	clear_bit(IB_ACK_IN_FLIGHT, &ic->i_ack_flags);
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_set(&ic->i_ack_next, 0);
++	atomic64_set_unchecked(&ic->i_ack_next, 0);
+ #else
+ 	ic->i_ack_next = 0;
+ #endif
+diff --git a/net/rds/ib_recv.c b/net/rds/ib_recv.c
+index cac5b45..9a6f263 100644
+--- a/net/rds/ib_recv.c
++++ b/net/rds/ib_recv.c
+@@ -581,7 +581,7 @@ static u64 rds_ib_get_ack(struct rds_ib_connection *ic)
+ static void rds_ib_set_ack(struct rds_ib_connection *ic, u64 seq,
+ 				int ack_required)
  {
--	static atomic64_t request_id = ATOMIC64_INIT(0);
-+	static atomic64_unchecked_t request_id = ATOMIC64_INIT(0);
- 	int ret;
+-	atomic64_set(&ic->i_ack_next, seq);
++	atomic64_set_unchecked(&ic->i_ack_next, seq);
+ 	if (ack_required) {
+ 		smp_mb__before_atomic();
+ 		set_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+@@ -593,7 +593,7 @@ static u64 rds_ib_get_ack(struct rds_ib_connection *ic)
+ 	clear_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+ 	smp_mb__after_atomic();
  
- 	msg->pipe_hdr.type = PIPE_MSG_DATA;
-@@ -248,7 +248,7 @@ static inline int synthvid_send(struct hv_device *hdev,
- 
- 	ret = vmbus_sendpacket(hdev->channel, msg,
- 			       msg->vid_hdr.size + sizeof(struct pipe_msg_hdr),
--			       atomic64_inc_return(&request_id),
-+			       atomic64_inc_return_unchecked(&request_id),
- 			       VM_PKT_DATA_INBAND, 0);
- 
- 	if (ret)
-diff --git a/drivers/video/fbdev/udlfb.c b/drivers/video/fbdev/udlfb.c
-index ff2b873..5ba574d 100644
---- a/drivers/video/fbdev/udlfb.c
-+++ b/drivers/video/fbdev/udlfb.c
-@@ -623,11 +623,11 @@ static int dlfb_handle_damage(struct dlfb_data *dev, int x, int y,
- 		dlfb_urb_completion(urb);
- 
- error:
--	atomic_add(bytes_sent, &dev->bytes_sent);
--	atomic_add(bytes_identical, &dev->bytes_identical);
--	atomic_add(width*height*2, &dev->bytes_rendered);
-+	atomic_add_unchecked(bytes_sent, &dev->bytes_sent);
-+	atomic_add_unchecked(bytes_identical, &dev->bytes_identical);
-+	atomic_add_unchecked(width*height*2, &dev->bytes_rendered);
- 	end_cycles = get_cycles();
--	atomic_add(((unsigned int) ((end_cycles - start_cycles)
-+	atomic_add_unchecked(((unsigned int) ((end_cycles - start_cycles)
- 		    >> 10)), /* Kcycles */
- 		   &dev->cpu_kcycles_used);
- 
-@@ -748,11 +748,11 @@ static void dlfb_dpy_deferred_io(struct fb_info *info,
- 		dlfb_urb_completion(urb);
- 
- error:
--	atomic_add(bytes_sent, &dev->bytes_sent);
--	atomic_add(bytes_identical, &dev->bytes_identical);
--	atomic_add(bytes_rendered, &dev->bytes_rendered);
-+	atomic_add_unchecked(bytes_sent, &dev->bytes_sent);
-+	atomic_add_unchecked(bytes_identical, &dev->bytes_identical);
-+	atomic_add_unchecked(bytes_rendered, &dev->bytes_rendered);
- 	end_cycles = get_cycles();
--	atomic_add(((unsigned int) ((end_cycles - start_cycles)
-+	atomic_add_unchecked(((unsigned int) ((end_cycles - start_cycles)
- 		    >> 10)), /* Kcycles */
- 		   &dev->cpu_kcycles_used);
+-	return atomic64_read(&ic->i_ack_next);
++	return atomic64_read_unchecked(&ic->i_ack_next);
  }
-@@ -1373,7 +1373,7 @@ static ssize_t metrics_bytes_rendered_show(struct device *fbdev,
- 	struct fb_info *fb_info = dev_get_drvdata(fbdev);
- 	struct dlfb_data *dev = fb_info->par;
- 	return snprintf(buf, PAGE_SIZE, "%u\n",
--			atomic_read(&dev->bytes_rendered));
-+			atomic_read_unchecked(&dev->bytes_rendered));
+ #endif
+ 
+diff --git a/net/rds/iw.h b/net/rds/iw.h
+index cbe6674..dc9eb89 100644
+--- a/net/rds/iw.h
++++ b/net/rds/iw.h
+@@ -134,7 +134,7 @@ struct rds_iw_connection {
+ 	/* sending acks */
+ 	unsigned long		i_ack_flags;
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_t		i_ack_next;	/* next ACK to send */
++	atomic64_unchecked_t	i_ack_next;	/* next ACK to send */
+ #else
+ 	spinlock_t		i_ack_lock;	/* protect i_ack_next */
+ 	u64			i_ack_next;	/* next ACK to send */
+diff --git a/net/rds/iw_cm.c b/net/rds/iw_cm.c
+index 8f486fa..7849d8c 100644
+--- a/net/rds/iw_cm.c
++++ b/net/rds/iw_cm.c
+@@ -666,7 +666,7 @@ void rds_iw_conn_shutdown(struct rds_connection *conn)
+ 	/* Clear the ACK state */
+ 	clear_bit(IB_ACK_IN_FLIGHT, &ic->i_ack_flags);
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_set(&ic->i_ack_next, 0);
++	atomic64_set_unchecked(&ic->i_ack_next, 0);
+ #else
+ 	ic->i_ack_next = 0;
+ #endif
+diff --git a/net/rds/iw_recv.c b/net/rds/iw_recv.c
+index a66d179..cf1e258 100644
+--- a/net/rds/iw_recv.c
++++ b/net/rds/iw_recv.c
+@@ -412,7 +412,7 @@ static u64 rds_iw_get_ack(struct rds_iw_connection *ic)
+ static void rds_iw_set_ack(struct rds_iw_connection *ic, u64 seq,
+ 				int ack_required)
+ {
+-	atomic64_set(&ic->i_ack_next, seq);
++	atomic64_set_unchecked(&ic->i_ack_next, seq);
+ 	if (ack_required) {
+ 		smp_mb__before_atomic();
+ 		set_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+@@ -424,7 +424,7 @@ static u64 rds_iw_get_ack(struct rds_iw_connection *ic)
+ 	clear_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+ 	smp_mb__after_atomic();
+ 
+-	return atomic64_read(&ic->i_ack_next);
++	return atomic64_read_unchecked(&ic->i_ack_next);
+ }
+ #endif
+ 
+diff --git a/net/rxrpc/af_rxrpc.c b/net/rxrpc/af_rxrpc.c
+index 25d60ed..ec9ae2c 100644
+--- a/net/rxrpc/af_rxrpc.c
++++ b/net/rxrpc/af_rxrpc.c
+@@ -40,7 +40,7 @@ static const struct proto_ops rxrpc_rpc_ops;
+ __be32 rxrpc_epoch;
+ 
+ /* current debugging ID */
+-atomic_t rxrpc_debug_id;
++atomic_unchecked_t rxrpc_debug_id;
+ 
+ /* count of skbs currently in use */
+ atomic_t rxrpc_n_skbs;
+diff --git a/net/rxrpc/ar-ack.c b/net/rxrpc/ar-ack.c
+index e0547f5..a171f7a 100644
+--- a/net/rxrpc/ar-ack.c
++++ b/net/rxrpc/ar-ack.c
+@@ -224,7 +224,7 @@ static void rxrpc_resend(struct rxrpc_call *call)
+ 
+ 	_enter("{%d,%d,%d,%d},",
+ 	       call->acks_hard, call->acks_unacked,
+-	       atomic_read(&call->sequence),
++	       atomic_read_unchecked(&call->sequence),
+ 	       CIRC_CNT(call->acks_head, call->acks_tail, call->acks_winsz));
+ 
+ 	stop = false;
+@@ -248,7 +248,7 @@ static void rxrpc_resend(struct rxrpc_call *call)
+ 
+ 			/* each Tx packet has a new serial number */
+ 			sp->hdr.serial =
+-				htonl(atomic_inc_return(&call->conn->serial));
++				htonl(atomic_inc_return_unchecked(&call->conn->serial));
+ 
+ 			hdr = (struct rxrpc_header *) txb->head;
+ 			hdr->serial = sp->hdr.serial;
+@@ -452,7 +452,7 @@ static void rxrpc_rotate_tx_window(struct rxrpc_call *call, u32 hard)
+  */
+ static void rxrpc_clear_tx_window(struct rxrpc_call *call)
+ {
+-	rxrpc_rotate_tx_window(call, atomic_read(&call->sequence));
++	rxrpc_rotate_tx_window(call, atomic_read_unchecked(&call->sequence));
  }
  
- static ssize_t metrics_bytes_identical_show(struct device *fbdev,
-@@ -1381,7 +1381,7 @@ static ssize_t metrics_bytes_identical_show(struct device *fbdev,
- 	struct fb_info *fb_info = dev_get_drvdata(fbdev);
- 	struct dlfb_data *dev = fb_info->par;
- 	return snprintf(buf, PAGE_SIZE, "%u\n",
--			atomic_read(&dev->bytes_identical));
-+			atomic_read_unchecked(&dev->bytes_identical));
+ /*
+@@ -678,7 +678,7 @@ process_further:
+ 
+ 		latest = ntohl(sp->hdr.serial);
+ 		hard = ntohl(ack.firstPacket);
+-		tx = atomic_read(&call->sequence);
++		tx = atomic_read_unchecked(&call->sequence);
+ 
+ 		_proto("Rx ACK %%%u { m=%hu f=#%u p=#%u s=%%%u r=%s n=%u }",
+ 		       latest,
+@@ -1210,7 +1210,7 @@ void rxrpc_process_call(struct work_struct *work)
+ 	goto maybe_reschedule;
+ 
+ send_ACK_with_skew:
+-	ack.maxSkew = htons(atomic_read(&call->conn->hi_serial) -
++	ack.maxSkew = htons(atomic_read_unchecked(&call->conn->hi_serial) -
+ 			    ntohl(ack.serial));
+ send_ACK:
+ 	mtu = call->conn->trans->peer->if_mtu;
+@@ -1222,7 +1222,7 @@ send_ACK:
+ 	ackinfo.rxMTU	= htonl(rxrpc_rx_mtu);
+ 	ackinfo.jumbo_max = htonl(rxrpc_rx_jumbo_max);
+ 
+-	hdr.serial = htonl(atomic_inc_return(&call->conn->serial));
++	hdr.serial = htonl(atomic_inc_return_unchecked(&call->conn->serial));
+ 	_proto("Tx ACK %%%u { m=%hu f=#%u p=#%u s=%%%u r=%s n=%u }",
+ 	       ntohl(hdr.serial),
+ 	       ntohs(ack.maxSkew),
+@@ -1240,7 +1240,7 @@ send_ACK:
+ send_message:
+ 	_debug("send message");
+ 
+-	hdr.serial = htonl(atomic_inc_return(&call->conn->serial));
++	hdr.serial = htonl(atomic_inc_return_unchecked(&call->conn->serial));
+ 	_proto("Tx %s %%%u", rxrpc_pkts[hdr.type], ntohl(hdr.serial));
+ send_message_2:
+ 
+diff --git a/net/rxrpc/ar-call.c b/net/rxrpc/ar-call.c
+index a9e05db..194e793 100644
+--- a/net/rxrpc/ar-call.c
++++ b/net/rxrpc/ar-call.c
+@@ -232,7 +232,7 @@ static struct rxrpc_call *rxrpc_alloc_call(gfp_t gfp)
+ 	spin_lock_init(&call->lock);
+ 	rwlock_init(&call->state_lock);
+ 	atomic_set(&call->usage, 1);
+-	call->debug_id = atomic_inc_return(&rxrpc_debug_id);
++	call->debug_id = atomic_inc_return_unchecked(&rxrpc_debug_id);
+ 	call->state = RXRPC_CALL_CLIENT_SEND_REQUEST;
+ 
+ 	memset(&call->sock_node, 0xed, sizeof(call->sock_node));
+diff --git a/net/rxrpc/ar-connection.c b/net/rxrpc/ar-connection.c
+index 6631f4f..bfdf056 100644
+--- a/net/rxrpc/ar-connection.c
++++ b/net/rxrpc/ar-connection.c
+@@ -210,7 +210,7 @@ static struct rxrpc_connection *rxrpc_alloc_connection(gfp_t gfp)
+ 		rwlock_init(&conn->lock);
+ 		spin_lock_init(&conn->state_lock);
+ 		atomic_set(&conn->usage, 1);
+-		conn->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		conn->debug_id = atomic_inc_return_unchecked(&rxrpc_debug_id);
+ 		conn->avail_calls = RXRPC_MAXCALLS;
+ 		conn->size_align = 4;
+ 		conn->header_size = sizeof(struct rxrpc_header);
+diff --git a/net/rxrpc/ar-connevent.c b/net/rxrpc/ar-connevent.c
+index e7ed43a..6afa140 100644
+--- a/net/rxrpc/ar-connevent.c
++++ b/net/rxrpc/ar-connevent.c
+@@ -109,7 +109,7 @@ static int rxrpc_abort_connection(struct rxrpc_connection *conn,
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len;
+ 
+-	hdr.serial = htonl(atomic_inc_return(&conn->serial));
++	hdr.serial = htonl(atomic_inc_return_unchecked(&conn->serial));
+ 	_proto("Tx CONN ABORT %%%u { %d }", ntohl(hdr.serial), abort_code);
+ 
+ 	ret = kernel_sendmsg(conn->trans->local->socket, &msg, iov, 2, len);
+diff --git a/net/rxrpc/ar-input.c b/net/rxrpc/ar-input.c
+index 4505a69..fe73096 100644
+--- a/net/rxrpc/ar-input.c
++++ b/net/rxrpc/ar-input.c
+@@ -331,9 +331,9 @@ void rxrpc_fast_process_packet(struct rxrpc_call *call, struct sk_buff *skb)
+ 	/* track the latest serial number on this connection for ACK packet
+ 	 * information */
+ 	serial = ntohl(sp->hdr.serial);
+-	hi_serial = atomic_read(&call->conn->hi_serial);
++	hi_serial = atomic_read_unchecked(&call->conn->hi_serial);
+ 	while (serial > hi_serial)
+-		hi_serial = atomic_cmpxchg(&call->conn->hi_serial, hi_serial,
++		hi_serial = atomic_cmpxchg_unchecked(&call->conn->hi_serial, hi_serial,
+ 					   serial);
+ 
+ 	/* request ACK generation for any ACK or DATA packet that requests
+diff --git a/net/rxrpc/ar-internal.h b/net/rxrpc/ar-internal.h
+index aef1bd2..97736c3 100644
+--- a/net/rxrpc/ar-internal.h
++++ b/net/rxrpc/ar-internal.h
+@@ -274,8 +274,8 @@ struct rxrpc_connection {
+ 	int			error;		/* error code for local abort */
+ 	int			debug_id;	/* debug ID for printks */
+ 	unsigned int		call_counter;	/* call ID counter */
+-	atomic_t		serial;		/* packet serial number counter */
+-	atomic_t		hi_serial;	/* highest serial number received */
++	atomic_unchecked_t	serial;		/* packet serial number counter */
++	atomic_unchecked_t	hi_serial;	/* highest serial number received */
+ 	u8			avail_calls;	/* number of calls available */
+ 	u8			size_align;	/* data size alignment (for security) */
+ 	u8			header_size;	/* rxrpc + security header size */
+@@ -348,7 +348,7 @@ struct rxrpc_call {
+ 	spinlock_t		lock;
+ 	rwlock_t		state_lock;	/* lock for state transition */
+ 	atomic_t		usage;
+-	atomic_t		sequence;	/* Tx data packet sequence counter */
++	atomic_unchecked_t	sequence;	/* Tx data packet sequence counter */
+ 	u32			abort_code;	/* local/remote abort code */
+ 	enum {					/* current state of call */
+ 		RXRPC_CALL_CLIENT_SEND_REQUEST,	/* - client sending request phase */
+@@ -433,7 +433,7 @@ static inline void rxrpc_abort_call(struct rxrpc_call *call, u32 abort_code)
+  */
+ extern atomic_t rxrpc_n_skbs;
+ extern __be32 rxrpc_epoch;
+-extern atomic_t rxrpc_debug_id;
++extern atomic_unchecked_t rxrpc_debug_id;
+ extern struct workqueue_struct *rxrpc_workqueue;
+ 
+ /*
+diff --git a/net/rxrpc/ar-local.c b/net/rxrpc/ar-local.c
+index 78483b4..b1c0e1e 100644
+--- a/net/rxrpc/ar-local.c
++++ b/net/rxrpc/ar-local.c
+@@ -53,7 +53,7 @@ struct rxrpc_local *rxrpc_alloc_local(struct sockaddr_rxrpc *srx)
+ 		spin_lock_init(&local->lock);
+ 		rwlock_init(&local->services_lock);
+ 		atomic_set(&local->usage, 1);
+-		local->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		local->debug_id = atomic_inc_return_unchecked(&rxrpc_debug_id);
+ 		memcpy(&local->srx, srx, sizeof(*srx));
+ 	}
+ 
+diff --git a/net/rxrpc/ar-output.c b/net/rxrpc/ar-output.c
+index c004280..ab1ed5a 100644
+--- a/net/rxrpc/ar-output.c
++++ b/net/rxrpc/ar-output.c
+@@ -648,14 +648,14 @@ static int rxrpc_send_data(struct rxrpc_sock *rx,
+ 					memset(skb_put(skb, pad), 0, pad);
+ 			}
+ 
+-			seq = atomic_inc_return(&call->sequence);
++			seq = atomic_inc_return_unchecked(&call->sequence);
+ 
+ 			sp->hdr.epoch = conn->epoch;
+ 			sp->hdr.cid = call->cid;
+ 			sp->hdr.callNumber = call->call_id;
+ 			sp->hdr.seq = htonl(seq);
+ 			sp->hdr.serial =
+-				htonl(atomic_inc_return(&conn->serial));
++				htonl(atomic_inc_return_unchecked(&conn->serial));
+ 			sp->hdr.type = RXRPC_PACKET_TYPE_DATA;
+ 			sp->hdr.userStatus = 0;
+ 			sp->hdr.securityIndex = conn->security_ix;
+diff --git a/net/rxrpc/ar-peer.c b/net/rxrpc/ar-peer.c
+index bebaa43..2644591 100644
+--- a/net/rxrpc/ar-peer.c
++++ b/net/rxrpc/ar-peer.c
+@@ -72,7 +72,7 @@ static struct rxrpc_peer *rxrpc_alloc_peer(struct sockaddr_rxrpc *srx,
+ 		INIT_LIST_HEAD(&peer->error_targets);
+ 		spin_lock_init(&peer->lock);
+ 		atomic_set(&peer->usage, 1);
+-		peer->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		peer->debug_id = atomic_inc_return_unchecked(&rxrpc_debug_id);
+ 		memcpy(&peer->srx, srx, sizeof(*srx));
+ 
+ 		rxrpc_assess_MTU_size(peer);
+diff --git a/net/rxrpc/ar-proc.c b/net/rxrpc/ar-proc.c
+index 38047f7..9f48511 100644
+--- a/net/rxrpc/ar-proc.c
++++ b/net/rxrpc/ar-proc.c
+@@ -164,8 +164,8 @@ static int rxrpc_connection_seq_show(struct seq_file *seq, void *v)
+ 		   atomic_read(&conn->usage),
+ 		   rxrpc_conn_states[conn->state],
+ 		   key_serial(conn->key),
+-		   atomic_read(&conn->serial),
+-		   atomic_read(&conn->hi_serial));
++		   atomic_read_unchecked(&conn->serial),
++		   atomic_read_unchecked(&conn->hi_serial));
+ 
+ 	return 0;
+ }
+diff --git a/net/rxrpc/ar-transport.c b/net/rxrpc/ar-transport.c
+index 1976dec..aa70be5 100644
+--- a/net/rxrpc/ar-transport.c
++++ b/net/rxrpc/ar-transport.c
+@@ -51,7 +51,7 @@ static struct rxrpc_transport *rxrpc_alloc_transport(struct rxrpc_local *local,
+ 		spin_lock_init(&trans->client_lock);
+ 		rwlock_init(&trans->conn_lock);
+ 		atomic_set(&trans->usage, 1);
+-		trans->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		trans->debug_id = atomic_inc_return_unchecked(&rxrpc_debug_id);
+ 
+ 		if (peer->srx.transport.family == AF_INET) {
+ 			switch (peer->srx.transport_type) {
+diff --git a/net/rxrpc/rxkad.c b/net/rxrpc/rxkad.c
+index f226709..0e735a8 100644
+--- a/net/rxrpc/rxkad.c
++++ b/net/rxrpc/rxkad.c
+@@ -610,7 +610,7 @@ static int rxkad_issue_challenge(struct rxrpc_connection *conn)
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len;
+ 
+-	hdr.serial = htonl(atomic_inc_return(&conn->serial));
++	hdr.serial = htonl(atomic_inc_return_unchecked(&conn->serial));
+ 	_proto("Tx CHALLENGE %%%u", ntohl(hdr.serial));
+ 
+ 	ret = kernel_sendmsg(conn->trans->local->socket, &msg, iov, 2, len);
+@@ -660,7 +660,7 @@ static int rxkad_send_response(struct rxrpc_connection *conn,
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len + iov[2].iov_len;
+ 
+-	hdr->serial = htonl(atomic_inc_return(&conn->serial));
++	hdr->serial = htonl(atomic_inc_return_unchecked(&conn->serial));
+ 	_proto("Tx RESPONSE %%%u", ntohl(hdr->serial));
+ 
+ 	ret = kernel_sendmsg(conn->trans->local->socket, &msg, iov, 3, len);
+diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
+index 6efca30..1259f82 100644
+--- a/net/sched/sch_generic.c
++++ b/net/sched/sch_generic.c
+@@ -349,7 +349,7 @@ void netif_carrier_on(struct net_device *dev)
+ 	if (test_and_clear_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
+ 		if (dev->reg_state == NETREG_UNINITIALIZED)
+ 			return;
+-		atomic_inc(&dev->carrier_changes);
++		atomic_inc_unchecked(&dev->carrier_changes);
+ 		linkwatch_fire_event(dev);
+ 		if (netif_running(dev))
+ 			__netdev_watchdog_up(dev);
+@@ -368,7 +368,7 @@ void netif_carrier_off(struct net_device *dev)
+ 	if (!test_and_set_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
+ 		if (dev->reg_state == NETREG_UNINITIALIZED)
+ 			return;
+-		atomic_inc(&dev->carrier_changes);
++		atomic_inc_unchecked(&dev->carrier_changes);
+ 		linkwatch_fire_event(dev);
+ 	}
+ }
+diff --git a/net/sunrpc/auth_gss/svcauth_gss.c b/net/sunrpc/auth_gss/svcauth_gss.c
+index 1095be9..815d777 100644
+--- a/net/sunrpc/auth_gss/svcauth_gss.c
++++ b/net/sunrpc/auth_gss/svcauth_gss.c
+@@ -1142,7 +1142,7 @@ static int gss_proxy_save_rsc(struct cache_detail *cd,
+ 				uint64_t *handle)
+ {
+ 	struct rsc rsci, *rscp = NULL;
+-	static atomic64_t ctxhctr;
++	static atomic64_unchecked_t ctxhctr = ATOMIC64_INIT(0);
+ 	long long ctxh;
+ 	struct gss_api_mech *gm = NULL;
+ 	time_t expiry;
+@@ -1153,7 +1153,7 @@ static int gss_proxy_save_rsc(struct cache_detail *cd,
+ 	status = -ENOMEM;
+ 	/* the handle needs to be just a unique id,
+ 	 * use a static counter */
+-	ctxh = atomic64_inc_return(&ctxhctr);
++	ctxh = atomic64_inc_return_unchecked(&ctxhctr);
+ 
+ 	/* make a copy for the caller */
+ 	*handle = ctxh;
+diff --git a/net/sunrpc/sched.c b/net/sunrpc/sched.c
+index 337ca85..42feae8 100644
+--- a/net/sunrpc/sched.c
++++ b/net/sunrpc/sched.c
+@@ -261,9 +261,9 @@ static int rpc_wait_bit_killable(struct wait_bit_key *key)
+ #if IS_ENABLED(CONFIG_SUNRPC_DEBUG) || IS_ENABLED(CONFIG_TRACEPOINTS)
+ static void rpc_task_set_debuginfo(struct rpc_task *task)
+ {
+-	static atomic_t rpc_pid;
++	static atomic_unchecked_t rpc_pid;
+ 
+-	task->tk_pid = atomic_inc_return(&rpc_pid);
++	task->tk_pid = atomic_inc_return_unchecked(&rpc_pid);
+ }
+ #else
+ static inline void rpc_task_set_debuginfo(struct rpc_task *task)
+diff --git a/net/sunrpc/xprtrdma/svc_rdma.c b/net/sunrpc/xprtrdma/svc_rdma.c
+index 2cd252f..f606982 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma.c
++++ b/net/sunrpc/xprtrdma/svc_rdma.c
+@@ -61,15 +61,15 @@ unsigned int svcrdma_max_req_size = RPCRDMA_MAX_REQ_SIZE;
+ static unsigned int min_max_inline = 4096;
+ static unsigned int max_max_inline = 65536;
+ 
+-atomic_t rdma_stat_recv;
+-atomic_t rdma_stat_read;
+-atomic_t rdma_stat_write;
+-atomic_t rdma_stat_sq_starve;
+-atomic_t rdma_stat_rq_starve;
+-atomic_t rdma_stat_rq_poll;
+-atomic_t rdma_stat_rq_prod;
+-atomic_t rdma_stat_sq_poll;
+-atomic_t rdma_stat_sq_prod;
++atomic_unchecked_t rdma_stat_recv;
++atomic_unchecked_t rdma_stat_read;
++atomic_unchecked_t rdma_stat_write;
++atomic_unchecked_t rdma_stat_sq_starve;
++atomic_unchecked_t rdma_stat_rq_starve;
++atomic_unchecked_t rdma_stat_rq_poll;
++atomic_unchecked_t rdma_stat_rq_prod;
++atomic_unchecked_t rdma_stat_sq_poll;
++atomic_unchecked_t rdma_stat_sq_prod;
+ 
+ /* Temporary NFS request map and context caches */
+ struct kmem_cache *svc_rdma_map_cachep;
+@@ -150,63 +150,63 @@ static struct ctl_table svcrdma_parm_table[] = {
+ 	{
+ 		.procname	= "rdma_stat_read",
+ 		.data		= &rdma_stat_read,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_recv",
+ 		.data		= &rdma_stat_recv,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_write",
+ 		.data		= &rdma_stat_write,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_starve",
+ 		.data		= &rdma_stat_sq_starve,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_starve",
+ 		.data		= &rdma_stat_rq_starve,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_poll",
+ 		.data		= &rdma_stat_rq_poll,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_prod",
+ 		.data		= &rdma_stat_rq_prod,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_poll",
+ 		.data		= &rdma_stat_sq_poll,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_prod",
+ 		.data		= &rdma_stat_sq_prod,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_unchecked_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c b/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
+index 96d886a..35a2137 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
+@@ -210,7 +210,7 @@ int rdma_read_chunk_lcl(struct svcxprt_rdma *xprt,
+ 	*page_no = pg_no;
+ 	*page_offset = pg_off;
+ 	ret = read;
+-	atomic_inc(&rdma_stat_read);
++	atomic_inc_unchecked(&rdma_stat_read);
+ 	return ret;
+  err:
+ 	svc_rdma_unmap_dma(ctxt);
+@@ -347,7 +347,7 @@ int rdma_read_chunk_frmr(struct svcxprt_rdma *xprt,
+ 	*page_no = pg_no;
+ 	*page_offset = pg_off;
+ 	ret = read;
+-	atomic_inc(&rdma_stat_read);
++	atomic_inc_unchecked(&rdma_stat_read);
+ 	return ret;
+  err:
+ 	svc_rdma_unmap_dma(ctxt);
+@@ -601,7 +601,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
+ 				  dto_q);
+ 		list_del_init(&ctxt->dto_q);
+ 	} else {
+-		atomic_inc(&rdma_stat_rq_starve);
++		atomic_inc_unchecked(&rdma_stat_rq_starve);
+ 		clear_bit(XPT_DATA, &xprt->xpt_flags);
+ 		ctxt = NULL;
+ 	}
+@@ -619,7 +619,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
+ 	}
+ 	dprintk("svcrdma: processing ctxt=%p on xprt=%p, rqstp=%p, status=%d\n",
+ 		ctxt, rdma_xprt, rqstp, ctxt->wc_status);
+-	atomic_inc(&rdma_stat_recv);
++	atomic_inc_unchecked(&rdma_stat_recv);
+ 
+ 	/* Build up the XDR from the receive buffers. */
+ 	rdma_build_arg_xdr(rqstp, ctxt, ctxt->byte_len);
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_sendto.c b/net/sunrpc/xprtrdma/svc_rdma_sendto.c
+index 95412ab..29e8f37 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_sendto.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_sendto.c
+@@ -218,7 +218,7 @@ static int send_write(struct svcxprt_rdma *xprt, struct svc_rqst *rqstp,
+ 	write_wr.wr.rdma.remote_addr = to;
+ 
+ 	/* Post It */
+-	atomic_inc(&rdma_stat_write);
++	atomic_inc_unchecked(&rdma_stat_write);
+ 	if (svc_rdma_send(xprt, &write_wr))
+ 		goto err;
+ 	return write_len - bc;
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_transport.c b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+index 48f6de9..e89176b 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_transport.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+@@ -288,7 +288,7 @@ static void rq_cq_reap(struct svcxprt_rdma *xprt)
+ 		return;
+ 
+ 	ib_req_notify_cq(xprt->sc_rq_cq, IB_CQ_NEXT_COMP);
+-	atomic_inc(&rdma_stat_rq_poll);
++	atomic_inc_unchecked(&rdma_stat_rq_poll);
+ 
+ 	while ((ret = ib_poll_cq(xprt->sc_rq_cq, 1, &wc)) > 0) {
+ 		ctxt = (struct svc_rdma_op_ctxt *)(unsigned long)wc.wr_id;
+@@ -310,7 +310,7 @@ static void rq_cq_reap(struct svcxprt_rdma *xprt)
+ 	}
+ 
+ 	if (ctxt)
+-		atomic_inc(&rdma_stat_rq_prod);
++		atomic_inc_unchecked(&rdma_stat_rq_prod);
+ 
+ 	set_bit(XPT_DATA, &xprt->sc_xprt.xpt_flags);
+ 	/*
+@@ -389,7 +389,7 @@ static void sq_cq_reap(struct svcxprt_rdma *xprt)
+ 		return;
+ 
+ 	ib_req_notify_cq(xprt->sc_sq_cq, IB_CQ_NEXT_COMP);
+-	atomic_inc(&rdma_stat_sq_poll);
++	atomic_inc_unchecked(&rdma_stat_sq_poll);
+ 	while ((ret = ib_poll_cq(cq, ARRAY_SIZE(wc_a), wc_a)) > 0) {
+ 		int i;
+ 
+@@ -418,7 +418,7 @@ static void sq_cq_reap(struct svcxprt_rdma *xprt)
+ 	}
+ 
+ 	if (ctxt)
+-		atomic_inc(&rdma_stat_sq_prod);
++		atomic_inc_unchecked(&rdma_stat_sq_prod);
  }
  
- static ssize_t metrics_bytes_sent_show(struct device *fbdev,
-@@ -1389,7 +1389,7 @@ static ssize_t metrics_bytes_sent_show(struct device *fbdev,
- 	struct fb_info *fb_info = dev_get_drvdata(fbdev);
- 	struct dlfb_data *dev = fb_info->par;
- 	return snprintf(buf, PAGE_SIZE, "%u\n",
--			atomic_read(&dev->bytes_sent));
-+			atomic_read_unchecked(&dev->bytes_sent));
+ static void sq_comp_handler(struct ib_cq *cq, void *cq_context)
+@@ -1254,7 +1254,7 @@ int svc_rdma_send(struct svcxprt_rdma *xprt, struct ib_send_wr *wr)
+ 		spin_lock_bh(&xprt->sc_lock);
+ 		if (xprt->sc_sq_depth < atomic_read(&xprt->sc_sq_count) + wr_count) {
+ 			spin_unlock_bh(&xprt->sc_lock);
+-			atomic_inc(&rdma_stat_sq_starve);
++			atomic_inc_unchecked(&rdma_stat_sq_starve);
+ 
+ 			/* See if we can opportunistically reap SQ WR to make room */
+ 			sq_cq_reap(xprt);
+diff --git a/net/xfrm/xfrm_policy.c b/net/xfrm/xfrm_policy.c
+index 18cead7..3ecb199 100644
+--- a/net/xfrm/xfrm_policy.c
++++ b/net/xfrm/xfrm_policy.c
+@@ -323,7 +323,7 @@ static void xfrm_policy_kill(struct xfrm_policy *policy)
+ {
+ 	policy->walk.dead = 1;
+ 
+-	atomic_inc(&policy->genid);
++	atomic_inc_unchecked(&policy->genid);
+ 
+ 	if (del_timer(&policy->polq.hold_timer))
+ 		xfrm_pol_put(policy);
+@@ -773,7 +773,7 @@ int xfrm_policy_insert(int dir, struct xfrm_policy *policy, int excl)
+ 	else
+ 		hlist_add_head(&policy->bydst, chain);
+ 	__xfrm_policy_link(policy, dir);
+-	atomic_inc(&net->xfrm.flow_cache_genid);
++	atomic_inc_unchecked(&net->xfrm.flow_cache_genid);
+ 
+ 	/* After previous checking, family can either be AF_INET or AF_INET6 */
+ 	if (policy->family == AF_INET)
+@@ -1874,7 +1874,7 @@ xfrm_resolve_and_create_bundle(struct xfrm_policy **pols, int num_pols,
+ 
+ 	xdst->num_pols = num_pols;
+ 	memcpy(xdst->pols, pols, sizeof(struct xfrm_policy *) * num_pols);
+-	xdst->policy_genid = atomic_read(&pols[0]->genid);
++	xdst->policy_genid = atomic_read_unchecked(&pols[0]->genid);
+ 
+ 	return xdst;
  }
+@@ -2740,7 +2740,7 @@ static int xfrm_bundle_ok(struct xfrm_dst *first)
+ 		if (xdst->xfrm_genid != dst->xfrm->genid)
+ 			return 0;
+ 		if (xdst->num_pols > 0 &&
+-		    xdst->policy_genid != atomic_read(&xdst->pols[0]->genid))
++		    xdst->policy_genid != atomic_read_unchecked(&xdst->pols[0]->genid))
+ 			return 0;
  
- static ssize_t metrics_cpu_kcycles_used_show(struct device *fbdev,
-@@ -1397,7 +1397,7 @@ static ssize_t metrics_cpu_kcycles_used_show(struct device *fbdev,
- 	struct fb_info *fb_info = dev_get_drvdata(fbdev);
- 	struct dlfb_data *dev = fb_info->par;
- 	return snprintf(buf, PAGE_SIZE, "%u\n",
--			atomic_read(&dev->cpu_kcycles_used));
-+			atomic_read_unchecked(&dev->cpu_kcycles_used));
- }
+ 		mtu = dst_mtu(dst->child);
+@@ -3281,7 +3281,7 @@ static int xfrm_policy_migrate(struct xfrm_policy *pol,
+ 			       sizeof(pol->xfrm_vec[i].saddr));
+ 			pol->xfrm_vec[i].encap_family = mp->new_family;
+ 			/* flush bundles */
+-			atomic_inc(&pol->genid);
++			atomic_inc_unchecked(&pol->genid);
+ 		}
+ 	}
  
- static ssize_t edid_show(
-@@ -1457,10 +1457,10 @@ static ssize_t metrics_reset_store(struct device *fbdev,
- 	struct fb_info *fb_info = dev_get_drvdata(fbdev);
- 	struct dlfb_data *dev = fb_info->par;
+diff --git a/net/xfrm/xfrm_state.c b/net/xfrm/xfrm_state.c
+index 9895a8c..2908c63 100644
+--- a/net/xfrm/xfrm_state.c
++++ b/net/xfrm/xfrm_state.c
+@@ -1505,10 +1505,10 @@ EXPORT_SYMBOL(xfrm_find_acq_byseq);
+ u32 xfrm_get_acqseq(void)
+ {
+ 	u32 res;
+-	static atomic_t acqseq;
++	static atomic_unchecked_t acqseq;
  
--	atomic_set(&dev->bytes_rendered, 0);
--	atomic_set(&dev->bytes_identical, 0);
--	atomic_set(&dev->bytes_sent, 0);
--	atomic_set(&dev->cpu_kcycles_used, 0);
-+	atomic_set_unchecked(&dev->bytes_rendered, 0);
-+	atomic_set_unchecked(&dev->bytes_identical, 0);
-+	atomic_set_unchecked(&dev->bytes_sent, 0);
-+	atomic_set_unchecked(&dev->cpu_kcycles_used, 0);
+ 	do {
+-		res = atomic_inc_return(&acqseq);
++		res = atomic_inc_return_unchecked(&acqseq);
+ 	} while (!res);
  
- 	return count;
- }
-diff --git a/include/linux/uio_driver.h b/include/linux/uio_driver.h
-index 32c0e83..671eb35 100644
---- a/include/linux/uio_driver.h
-+++ b/include/linux/uio_driver.h
-@@ -67,7 +67,7 @@ struct uio_device {
-         struct module           *owner;
-         struct device           *dev;
-         int                     minor;
--        atomic_t                event;
-+        atomic_unchecked_t      event;
-         struct fasync_struct    *async_queue;
-         wait_queue_head_t       wait;
-         struct uio_info         *info;
-diff --git a/include/linux/usb.h b/include/linux/usb.h
-index 447fe29..ff424fd 100644
---- a/include/linux/usb.h
-+++ b/include/linux/usb.h
-@@ -592,7 +592,7 @@ struct usb_device {
- 	int maxchild;
- 
- 	u32 quirks;
--	atomic_t urbnum;
-+	atomic_unchecked_t urbnum;
- 
- 	unsigned long active_duration;
- 
-diff --git a/include/media/v4l2-device.h b/include/media/v4l2-device.h
-index 9c58157..d86ebf5 100644
---- a/include/media/v4l2-device.h
-+++ b/include/media/v4l2-device.h
-@@ -93,7 +93,7 @@ int __must_check v4l2_device_register(struct device *dev, struct v4l2_device *v4
-    this function returns 0. If the name ends with a digit (e.g. cx18),
-    then the name will be set to cx18-0 since cx180 looks really odd. */
- int v4l2_device_set_name(struct v4l2_device *v4l2_dev, const char *basename,
--						atomic_t *instance);
-+						atomic_unchecked_t *instance);
- 
- /* Set v4l2_dev->dev to NULL. Call when the USB parent disconnects.
-    Since the parent disappears this ensures that v4l2_dev doesn't have an
-diff --git a/include/scsi/scsi_device.h b/include/scsi/scsi_device.h
-index ae84b22..7954097 100644
---- a/include/scsi/scsi_device.h
-+++ b/include/scsi/scsi_device.h
-@@ -185,9 +185,9 @@ struct scsi_device {
- 	unsigned int max_device_blocked; /* what device_blocked counts down from  */
- #define SCSI_DEFAULT_DEVICE_BLOCKED	3
- 
--	atomic_t iorequest_cnt;
--	atomic_t iodone_cnt;
--	atomic_t ioerr_cnt;
-+	atomic_unchecked_t iorequest_cnt;
-+	atomic_unchecked_t iodone_cnt;
-+	atomic_unchecked_t ioerr_cnt;
- 
- 	struct device		sdev_gendev,
- 				sdev_dev;
-diff --git a/include/target/target_core_base.h b/include/target/target_core_base.h
-index 17ae2d6..2c06382 100644
---- a/include/target/target_core_base.h
-+++ b/include/target/target_core_base.h
-@@ -751,7 +751,7 @@ struct se_device {
- 	atomic_long_t		write_bytes;
- 	/* Active commands on this virtual SE device */
- 	atomic_t		simple_cmds;
--	atomic_t		dev_ordered_id;
-+	atomic_unchecked_t	dev_ordered_id;
- 	atomic_t		dev_ordered_sync;
- 	atomic_t		dev_qf_count;
- 	u32			export_count;
+ 	return res;
 -- 
 2.5.0
