@@ -1,54 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 17 Dec 2015 13:55:32 -0800
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20151217215532.GA64407@davidb.org>
+References: <1450331796-10329-1-git-send-email-dave@progbits.org>
+ <1450331796-10329-6-git-send-email-dave@progbits.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1450364270-12687-3-git-send-email-dave@progbits.org>
-References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-	<1450364270-12687-3-git-send-email-dave@progbits.org>
-Date: Thu, 17 Dec 2015 12:56:54 -0800
-Message-ID: <CAGXu5jLYkvaFJ=m5j=r5UVajhKY5sbavJ9kJLnt-e=ObwzWshA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening][RFC PATCH v2 02/12] percpu_ref: decrease
- per-CPU refcount bias
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: David Windsor <dave@progbits.org>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <1450331796-10329-6-git-send-email-dave@progbits.org>
+Subject: Re: [kernel-hardening][RFC PATCH 5/5] lkdtm: add test for atomic_t
+ underflow/overflow
+To: kernel-hardening@lists.openwall.com
+Cc: David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org> wrote:
-> This change is necessary to prevent overflows from occuring in
-> percpu_switch_to_atomic_rcu during init on x86.
+On Thu, Dec 17, 2015 at 12:56:36AM -0500, David Windsor wrote:
 
-I'm curious to find out why this overflows under "normal" operation.
-Is there any downside to this change?
+>diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+>index b5abe34..5002747 100644
+>--- a/drivers/misc/lkdtm.c
+>+++ b/drivers/misc/lkdtm.c
+>@@ -104,6 +104,7 @@ enum ctype {
+> 	CT_ACCESS_USERSPACE,
+> 	CT_WRITE_RO,
+> 	CT_WRITE_KERN,
+>+    CT_WRAP_ATOMIC
+> };
+>
+> static char* cp_name[] = {
 
--Kees
+You seem to be indenting with spaces rather than tabs.  It'd probably
+be a good idea to run checkpatch on the patches.  It should catch
+this.
 
->
-> Signed-off-by: David Windsor <dave@progbits.org>
-> ---
->  lib/percpu-refcount.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/lib/percpu-refcount.c b/lib/percpu-refcount.c
-> index 6111bcb..02e816b 100644
-> --- a/lib/percpu-refcount.c
-> +++ b/lib/percpu-refcount.c
-> @@ -31,7 +31,7 @@
->   * atomic_long_t can't hit 0 before we've added up all the percpu refs.
->   */
->
-> -#define PERCPU_COUNT_BIAS      (1LU << (BITS_PER_LONG - 1))
-> +#define PERCPU_COUNT_BIAS      (1LU << (BITS_PER_LONG - 2))
->
->  static DECLARE_WAIT_QUEUE_HEAD(percpu_ref_switch_waitq);
->
-> --
-> 2.5.0
->
->
-
-
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+David
