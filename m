@@ -1,45 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Fri, 18 Dec 2015 16:54:33 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1E47BD@ORSMSX107.amr.corp.intel.com>
-References: <CAB-iPKVnu554hZ=nSmSgrLQE+c02oGKE8As5prWHy6n0O=erCw@mail.gmail.com>
-	 <CAGXu5j+mTVrtDXbGtF=-nyAxnTe2YDL4PyUnJw+vfXX_ZVzwxg@mail.gmail.com>
- <1450399738.3054.10.camel@gmail.com>
-In-Reply-To: <1450399738.3054.10.camel@gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Introduction
+Sender: keescook@google.com
+In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC6731F1E47BD@ORSMSX107.amr.corp.intel.com>
+References: <CAB-iPKVnu554hZ=nSmSgrLQE+c02oGKE8As5prWHy6n0O=erCw@mail.gmail.com>
+	<CAGXu5j+mTVrtDXbGtF=-nyAxnTe2YDL4PyUnJw+vfXX_ZVzwxg@mail.gmail.com>
+	<1450399738.3054.10.camel@gmail.com>
+	<99FC4B6EFCEFD44486C35F4C281DC6731F1E47BD@ORSMSX107.amr.corp.intel.com>
+Date: Fri, 18 Dec 2015 13:11:52 -0800
+Message-ID: <CAGXu5jL5CYezUCJkfkec8K=L_1qLy9gXmBLUz6YPvV9=+PAR9w@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Introduction
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBEYW5pZWwgTWljYXkgW21haWx0
-bzpkYW5pZWxtaWNheUBnbWFpbC5jb21dDQo+IFNlbnQ6IFRodXJzZGF5LCBEZWNlbWJlciAxNywg
-MjAxNSA0OjQ5IFBNDQo+IFRvOiBrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbQ0K
-PiBTdWJqZWN0OiBSZTogW2tlcm5lbC1oYXJkZW5pbmddIEludHJvZHVjdGlvbg0KPiANCj4gT24g
-VGh1LCAyMDE1LTEyLTE3IGF0IDE2OjM2IC0wODAwLCBLZWVzIENvb2sgd3JvdGU6DQo+ID4gT24g
-VGh1LCBEZWMgMTcsIDIwMTUgYXQgMzozNCBQTSwgTGVpYm93aXR6LCBNaWNoYWVsDQo+ID4gPG1p
-Y2hhZWwubGVpYm93aXR6QGludGVsLmNvbT4gd3JvdGU6DQo+ID4gPiBJIHdvcmsgaW4gSW50ZWwn
-cyBPcGVuIFNvdXJjZSBUZWNobm9sb2d5IGNlbnRlciwgYWxvbmcgd2l0aCBteQ0KPiA+ID4gY29s
-bGVhZ3VlLCBFbGVuYSBSZXNoZXRvdmEuwqDCoEknbSByZWFzb25hYmx5IG5ldyByZWFsLWxpZmUg
-a2VybmVsDQo+ID4gPiBkZXZlbG9wbWVudCwgaGF2aW5nIHByZXZpb3VzbHkganVzdCBtdWNrZWQg
-YWJvdXQuwqDCoE90aGVyd2lzZSwgSSdtIGENCj4gPiA+IGxvbmctdGltZSBvcGVuIHNvdXJjZS9z
-ZWN1cml0eSB0cm91YmxlIG1ha2VyLg0KPiA+DQo+ID4gSGkhIFdlbGNvbWUhIDopDQo+ID4NCj4g
-PiA+IEknbSBJbnRlcmVzdGVkIGluIHdvcmtpbmcgb24gc3RydWN0IHJhbmRvbWl6YXRpb24gYWxh
-IFJBTkRTVFJVQ1QuDQo+ID4gPiBEb2VzIHRoaXMgc2VlbSBsaWtlIGEgc3VpdGFibGUgdGFzaz8N
-Cj4gPg0KPiA+IEkgY2VydGFpbmx5IHdvdWxkbid0IHR1cm4gaXQgZG93biwgYnV0IEkgd291bGQg
-b2JzZXJ2ZSB0aGF0IGl0IGhhcw0KPiA+IHNvbWUgbGltaXRlZCB1dGlsaXR5IHRvIHVzZXJzIG9m
-IHRoZSBrZXJuZWwgdGhhdCBwcm9kdWNlIGJpbmFyeQ0KPiA+IGJ1aWxkcy4gZS5nLiBhbGwgdGhl
-IGdpdmVuIGJ1aWxkcyBvZiBVYnVudHUgd2l0aCBSQU5EU1RSVUNUIHdvdWxkIGJlDQo+ID4gdGhl
-IHNhbWUgKHRob3VnaCB0aGUgbmV4dCByZWxlYXNlZCB2ZXJzaW9uIHdvdWxkIHNlZSBhIGRpZmZl
-cmVudA0KPiA+IHJhbmRvbWl6YXRpb24sIGV0YykuIEl0IGFsc28gY29tcGxpY2F0ZXMgZXh0ZXJu
-YWxseSBidWlsdCBtb2R1bGVzLiBJDQo+ID4gc2VlIGl0IGRlcGVuZHMgb24gSElERVNZTSwgdGhv
-dWdoLCB3aGljaCBpbiB0dXJuIGRlcGVuZHMgb24NCj4gPiBQQVhfVVNFUkNPUFksIHNvIGl0IHdv
-dWxkIGJlIG11Y2ggd2Vha2VyIHdpdGhvdXQgdGhlc2UgdHdvIGZpbmlzaGVkDQo+ID4gZmlyc3Qu
-DQoNCkknbSB3b3JraW5nIG9uIHRlYXNpbmcgdGhlIFBBWF9VU0VSQ09QWSBpbXBsZW1lbnRhdGlv
-bg0Kb3V0IG9mIHRoZSBncmVhdGVyIGdyc2VjdXJpdHkgcGF0Y2guIEkgYW0gcmVtaW5kZWQgb2Yg
-YSB0aW1lDQp3aGVuIEkgaGFkIHRvIHB1bGwgYSBncm91cCBvZiBzbWFsbCBzcGxpbnRlcnMgZnJv
-bSBteSBoYW5kLg0KQm90aCBmb3IgdGhlIGRpZmZpY3VsdHkgaW4gZmluZGluZyBhbGwgb2YgdGhl
-bSwgYW5kIHRoZSBwYWluDQppbnZvbHZlZC4gSSBob3BlIHRvIGhhdmUgc29tZXRoaW5nIGxpbXBp
-bmcgYWxvbmcgYnkgdGhlIGVuZA0Kb2YgdGhlIG1vbnRoLCBob2xpZGF5IGNoZWVyIHBlcm1pdHRp
-bmcuDQoNCg==
+On Fri, Dec 18, 2015 at 8:54 AM, Schaufler, Casey
+<casey.schaufler@intel.com> wrote:
+>> -----Original Message-----
+>> From: Daniel Micay [mailto:danielmicay@gmail.com]
+>> Sent: Thursday, December 17, 2015 4:49 PM
+>> To: kernel-hardening@lists.openwall.com
+>> Subject: Re: [kernel-hardening] Introduction
+>>
+>> On Thu, 2015-12-17 at 16:36 -0800, Kees Cook wrote:
+>> > On Thu, Dec 17, 2015 at 3:34 PM, Leibowitz, Michael
+>> > <michael.leibowitz@intel.com> wrote:
+>> > > I work in Intel's Open Source Technology center, along with my
+>> > > colleague, Elena Reshetova.  I'm reasonably new real-life kernel
+>> > > development, having previously just mucked about.  Otherwise, I'm a
+>> > > long-time open source/security trouble maker.
+>> >
+>> > Hi! Welcome! :)
+>> >
+>> > > I'm Interested in working on struct randomization ala RANDSTRUCT.
+>> > > Does this seem like a suitable task?
+>> >
+>> > I certainly wouldn't turn it down, but I would observe that it has
+>> > some limited utility to users of the kernel that produce binary
+>> > builds. e.g. all the given builds of Ubuntu with RANDSTRUCT would be
+>> > the same (though the next released version would see a different
+>> > randomization, etc). It also complicates externally built modules. I
+>> > see it depends on HIDESYM, though, which in turn depends on
+>> > PAX_USERCOPY, so it would be much weaker without these two finished
+>> > first.
+>
+> I'm working on teasing the PAX_USERCOPY implementation
+> out of the greater grsecurity patch. I am reminded of a time
+> when I had to pull a group of small splinters from my hand.
+> Both for the difficulty in finding all of them, and the pain
+> involved. I hope to have something limping along by the end
+> of the month, holiday cheer permitting.
+
+Fantastic! Thanks for taking a look at it.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
