@@ -1,131 +1,89 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Laura Abbott <laura@labbott.name>
-Date: Mon, 21 Dec 2015 19:40:39 -0800
-Message-Id: <1450755641-7856-6-git-send-email-laura@labbott.name>
+Date: Mon, 21 Dec 2015 19:40:41 -0800
+Message-Id: <1450755641-7856-8-git-send-email-laura@labbott.name>
 In-Reply-To: <1450755641-7856-1-git-send-email-laura@labbott.name>
 References: <1450755641-7856-1-git-send-email-laura@labbott.name>
-Subject: [kernel-hardening] [RFC][PATCH 5/7] mm: Mark several cases as SLAB_NO_SANITIZE
+Subject: [kernel-hardening] [RFC][PATCH 7/7] lkdtm: Add READ_AFTER_FREE test
 To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
-Cc: Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-Sanitization is useful for security but comes at the cost of performance
-in clearing on free. Mark select caches as SLAB_NO_SANITIZE so
-sanitization will not happen under the default configuration. The
-kernel may be booted with the proper command line option to allow these
-caches to be sanitized.
+In a similar manner to WRITE_AFTER_FREE, add a READ_AFTER_FREE
+test to test free poisoning features. Sample output when
+no poison is present:
 
-All credit for the original work should be given to Brad Spengler and
-the PaX Team.
+[   20.222501] lkdtm: Performing direct entry READ_AFTER_FREE
+[   20.226163] lkdtm: Freed val: 12345678
 
+with poison:
+
+[   24.203748] lkdtm: Performing direct entry READ_AFTER_FREE
+[   24.207261] general protection fault: 0000 [#1] SMP
+[   24.208193] Modules linked in:
+[   24.208193] CPU: 0 PID: 866 Comm: sh Not tainted 4.4.0-rc5-work+ #108
+
+Cc: Arnd Bergmann <arnd@arndb.de>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 Signed-off-by: Laura Abbott <laura@labbott.name>
 ---
-This is the initial set of excludes that the grsecurity patches had.
-More may need to be added/removed as the series is tested.
----
- fs/buffer.c       |  2 +-
- fs/dcache.c       |  2 +-
- kernel/fork.c     |  2 +-
- mm/rmap.c         |  4 ++--
- mm/slab.h         |  2 +-
- net/core/skbuff.c | 16 ++++++++--------
- 6 files changed, 14 insertions(+), 14 deletions(-)
+ drivers/misc/lkdtm.c | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 4f4cd95..f19e4ab 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -3417,7 +3417,7 @@ void __init buffer_init(void)
- 	bh_cachep = kmem_cache_create("buffer_head",
- 			sizeof(struct buffer_head), 0,
- 				(SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|
--				SLAB_MEM_SPREAD),
-+				SLAB_MEM_SPREAD|SLAB_NO_SANITIZE),
- 				NULL);
- 
- 	/*
-diff --git a/fs/dcache.c b/fs/dcache.c
-index 5c33aeb..470f6be 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -3451,7 +3451,7 @@ void __init vfs_caches_init_early(void)
- void __init vfs_caches_init(void)
- {
- 	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
--			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
-+			SLAB_NO_SANITIZE|SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
- 
- 	dcache_init();
- 	inode_init();
-diff --git a/kernel/fork.c b/kernel/fork.c
-index fce002e..35db9c3 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -1868,7 +1868,7 @@ void __init proc_caches_init(void)
- 	mm_cachep = kmem_cache_create("mm_struct",
- 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
- 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK, NULL);
--	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC);
-+	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_NO_SANITIZE);
- 	mmap_init();
- 	nsproxy_cache_init();
- }
-diff --git a/mm/rmap.c b/mm/rmap.c
-index b577fbb..74296d9 100644
---- a/mm/rmap.c
-+++ b/mm/rmap.c
-@@ -428,8 +428,8 @@ static void anon_vma_ctor(void *data)
- void __init anon_vma_init(void)
- {
- 	anon_vma_cachep = kmem_cache_create("anon_vma", sizeof(struct anon_vma),
--			0, SLAB_DESTROY_BY_RCU|SLAB_PANIC, anon_vma_ctor);
--	anon_vma_chain_cachep = KMEM_CACHE(anon_vma_chain, SLAB_PANIC);
-+		0, SLAB_DESTROY_BY_RCU|SLAB_PANIC|SLAB_NO_SANITIZE, anon_vma_ctor);
-+	anon_vma_chain_cachep = KMEM_CACHE(anon_vma_chain, SLAB_PANIC|SLAB_NO_SANITIZE);
- }
- 
- /*
-diff --git a/mm/slab.h b/mm/slab.h
-index b54b636..6de99da 100644
---- a/mm/slab.h
-+++ b/mm/slab.h
-@@ -137,7 +137,7 @@ static inline unsigned long kmem_cache_flags(unsigned long object_size,
- 
- /* Legal flag mask for kmem_cache_create(), for various configurations */
- #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | SLAB_PANIC | \
--			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS )
-+			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS | SLAB_NO_SANITIZE)
- 
- #if defined(CONFIG_DEBUG_SLAB)
- #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
-diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index b2df375..1d499ea 100644
---- a/net/core/skbuff.c
-+++ b/net/core/skbuff.c
-@@ -3316,15 +3316,15 @@ done:
- void __init skb_init(void)
- {
- 	skbuff_head_cache = kmem_cache_create("skbuff_head_cache",
--					      sizeof(struct sk_buff),
--					      0,
--					      SLAB_HWCACHE_ALIGN|SLAB_PANIC,
--					      NULL);
-+				sizeof(struct sk_buff),
-+				0,
-+				SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NO_SANITIZE,
-+				NULL);
- 	skbuff_fclone_cache = kmem_cache_create("skbuff_fclone_cache",
--						sizeof(struct sk_buff_fclones),
--						0,
--						SLAB_HWCACHE_ALIGN|SLAB_PANIC,
--						NULL);
-+				sizeof(struct sk_buff_fclones),
-+				0,
-+				SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NO_SANITIZE,
-+				NULL);
- }
- 
- /**
+diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+index 11fdadc..c641fb7 100644
+--- a/drivers/misc/lkdtm.c
++++ b/drivers/misc/lkdtm.c
+@@ -92,6 +92,7 @@ enum ctype {
+ 	CT_UNALIGNED_LOAD_STORE_WRITE,
+ 	CT_OVERWRITE_ALLOCATION,
+ 	CT_WRITE_AFTER_FREE,
++	CT_READ_AFTER_FREE,
+ 	CT_SOFTLOCKUP,
+ 	CT_HARDLOCKUP,
+ 	CT_SPINLOCKUP,
+@@ -129,6 +130,7 @@ static char* cp_type[] = {
+ 	"UNALIGNED_LOAD_STORE_WRITE",
+ 	"OVERWRITE_ALLOCATION",
+ 	"WRITE_AFTER_FREE",
++	"READ_AFTER_FREE",
+ 	"SOFTLOCKUP",
+ 	"HARDLOCKUP",
+ 	"SPINLOCKUP",
+@@ -417,6 +419,33 @@ static void lkdtm_do_action(enum ctype which)
+ 		memset(data, 0x78, len);
+ 		break;
+ 	}
++	case CT_READ_AFTER_FREE: {
++		int **base;
++		int *val, *tmp;
++
++		base = kmalloc(1024, GFP_KERNEL);
++		if (!base)
++			return;
++
++		val = kmalloc(1024, GFP_KERNEL);
++		if (!val)
++			return;
++
++		*val = 0x12345678;
++
++		/*
++		 * Don't just use the first entry since that's where the
++		 * freelist goes for the slab allocator
++		 */
++		base[1] = val;
++		kfree(base);
++
++		tmp = base[1];
++		pr_info("Freed val: %x\n", *tmp);
++
++		kfree(val);
++		break;
++	}
+ 	case CT_SOFTLOCKUP:
+ 		preempt_disable();
+ 		for (;;)
 -- 
 2.5.0
