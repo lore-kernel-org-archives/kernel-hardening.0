@@ -1,56 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1450755641-7856-1-git-send-email-laura@labbott.name>
- <1450755641-7856-7-git-send-email-laura@labbott.name>
- <567964F3.2020402@intel.com>
- <alpine.DEB.2.20.1512221023550.2748@east.gentwo.org>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <567986E7.50107@intel.com>
-Date: Tue, 22 Dec 2015 09:22:47 -0800
-MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1512221023550.2748@east.gentwo.org>
-Content-Type: multipart/mixed;
- boundary="------------020001080303010705010207"
+Date: Tue, 22 Dec 2015 11:24:50 -0600 (CST)
+From: Christoph Lameter <cl@linux.com>
+In-Reply-To: <567986E7.50107@intel.com>
+Message-ID: <alpine.DEB.2.20.1512221124230.14335@east.gentwo.org>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name> <1450755641-7856-7-git-send-email-laura@labbott.name> <567964F3.2020402@intel.com> <alpine.DEB.2.20.1512221023550.2748@east.gentwo.org> <567986E7.50107@intel.com>
+Content-Type: multipart/mixed; BOUNDARY=------------020001080303010705010207
+Content-ID: <alpine.DEB.2.20.1512221124231.14335@east.gentwo.org>
 Subject: Re: [kernel-hardening] [RFC][PATCH 6/7] mm: Add Kconfig option for
  slab sanitization
-To: Christoph Lameter <cl@linux.com>
+To: Dave Hansen <dave.hansen@intel.com>
 Cc: kernel-hardening@lists.openwall.com, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a multi-part message in MIME format.
---------------020001080303010705010207
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-
-On 12/22/2015 08:25 AM, Christoph Lameter wrote:
-> On Tue, 22 Dec 2015, Dave Hansen wrote:
->> On 12/21/2015 07:40 PM, Laura Abbott wrote:
->>> +	  The tradeoff is performance impact. The noticible impact can vary
->>> +	  and you are advised to test this feature on your expected workload
->>> +	  before deploying it
->>
->> What if instead of writing SLAB_MEMORY_SANITIZE_VALUE, we wrote 0's?
->> That still destroys the information, but it has the positive effect of
->> allowing a kzalloc() call to avoid zeroing the slab object.  It might
->> mitigate some of the performance impact.
-> 
-> We already write zeros in many cases or the object is initialized in a
-> different. No one really wants an uninitialized object. The problem may be
-> that a freed object is having its old content until reused. Which is
-> something that poisoning deals with.
-
-Or are you just saying that we should use the poisoning *code* that we
-already have in slub?  Using the _code_ looks like a really good idea,
-whether we're using it to write POISON_FREE, or 0's.  Something like the
-attached patch?
-
-
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
 
 --------------020001080303010705010207
-Content-Type: text/x-patch;
- name="slub-poison-zeros.patch"
-Content-Transfer-Encoding: 7bit
-Content-Disposition: attachment;
- filename="slub-poison-zeros.patch"
+Content-Type: text/plain; CHARSET=US-ASCII
+Content-ID: <alpine.DEB.2.20.1512221124232.14335@east.gentwo.org>
+
+On Tue, 22 Dec 2015, Dave Hansen wrote:
+
+> Or are you just saying that we should use the poisoning *code* that we
+> already have in slub?  Using the _code_ looks like a really good idea,
+> whether we're using it to write POISON_FREE, or 0's.  Something like the
+> attached patch?
+
+Why would you use zeros? The point is just to clear the information right?
+The regular poisoning does that.
+
+--------------020001080303010705010207
+Content-Type: text/x-patch; NAME=slub-poison-zeros.patch
+Content-ID: <alpine.DEB.2.20.1512221124233.14335@east.gentwo.org>
+Content-Description: 
+Content-Disposition: ATTACHMENT; FILENAME=slub-poison-zeros.patch
 
 
 
