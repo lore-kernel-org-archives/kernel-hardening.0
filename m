@@ -1,74 +1,185 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Laura Abbott <laura@labbott.name>
-Date: Mon, 21 Dec 2015 19:40:34 -0800
-Message-Id: <1450755641-7856-1-git-send-email-laura@labbott.name>
-Subject: [kernel-hardening] [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
+Date: Mon, 21 Dec 2015 19:40:36 -0800
+Message-Id: <1450755641-7856-3-git-send-email-laura@labbott.name>
+In-Reply-To: <1450755641-7856-1-git-send-email-laura@labbott.name>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name>
+Subject: [kernel-hardening] [RFC][PATCH 2/7] slub: Add support for sanitization
 To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 Cc: Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
 
-This is a partial port of the PAX_MEMORY_SANITIZE feature. The concept is
-fairly simple: when memory is freed, existing data should be erased. This
-helps to reduce the impact of problems
-(e.g. 45a22f4 inotify: Fix reporting of cookies for inotify events
-e4514cb RDMA/cxgb3: Fix information leak in send_abort()
-your favorite use after free bug)
-
-The biggest change from PAX_MEMORY_SANTIIZE is that this feature sanitizes
-the SL[AOU]B allocators only. My plan is to work on the buddy allocator
-santization after this series gets picked up. A side effect of this is
-that allocations which go directly to the buddy allocator (i.e. large
-allocations) aren't sanitized. I'd like feedback about whether it's worth
-it to add sanitization on that path directly or just use the page
-allocator sanitization when that comes in.
-
-I also expanded the command line options, mostly for SLUB. Since SLUB
-has had so much tuning work done for performance, I added an option
-to only sanitize on the slow path. Freeing on only fast vs. slow path
-was most noticable in the bulk test cases. Overall, I saw impacts of
-3% to 20% on various benchmarks when this feature was enabled. The
-overall impact of sanitize_slab=off seemed to be pretty negligable.
-
-This feature is similar to the debug feature of SLAB_POISON. I did
-consider trying to make that feature not related to debug. Ultimately,
-I concluded there was too much extra debug overhead and other features
-to make it worth it.
-
-Bike shed whatever you like. The Kconfig will probably end up in
-a separate sanitization Kconfig.
+Clearing of objects on free only happens when SLUB_DEBUG and poisoning
+is enabled for caches. This is a potential source of security leaks;
+sensitive information may remain around well after its normal life
+time. Add support for sanitizing objects independent of debug features.
+Sanitization can be configured on only the slow path or all paths.
 
 All credit for the original work should be given to Brad Spengler and
-the PaX Team. 
+the PaX Team.
 
-Thanks,
-Laura
+Signed-off-by: Laura Abbott <laura@labbott.name>
+---
+ mm/slub.c | 90 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 89 insertions(+), 1 deletion(-)
 
-Laura Abbott (7):
-  mm/slab_common.c: Add common support for slab saniziation
-  slub: Add support for sanitization
-  slab: Add support for sanitization
-  slob: Add support for sanitization
-  mm: Mark several cases as SLAB_NO_SANITIZE
-  mm: Add Kconfig option for slab sanitization
-  lkdtm: Add READ_AFTER_FREE test
-
- drivers/misc/lkdtm.c     | 29 ++++++++++++++++
- fs/buffer.c              |  2 +-
- fs/dcache.c              |  2 +-
- include/linux/slab.h     |  7 ++++
- include/linux/slab_def.h |  4 +++
- init/Kconfig             | 48 ++++++++++++++++++++++++++
- kernel/fork.c            |  2 +-
- mm/rmap.c                |  4 +--
- mm/slab.c                | 35 +++++++++++++++++++
- mm/slab.h                | 24 ++++++++++++-
- mm/slab_common.c         | 53 ++++++++++++++++++++++++++++
- mm/slob.c                | 27 +++++++++++----
- mm/slub.c                | 90 +++++++++++++++++++++++++++++++++++++++++++++++-
- net/core/skbuff.c        |  4 +--
- 14 files changed, 316 insertions(+), 15 deletions(-)
-
+diff --git a/mm/slub.c b/mm/slub.c
+index 4699751..a02e1e7 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -220,6 +220,15 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
+ #endif
+ }
+ 
++static inline bool should_sanitize_slab(const struct kmem_cache *s)
++{
++#ifdef CONFIG_SLAB_MEMORY_SANITIZE
++		return !(s->flags & SLAB_NO_SANITIZE);
++#else
++		return false;
++#endif
++}
++
+ /********************************************************************
+  * 			Core slab cache functions
+  *******************************************************************/
+@@ -286,6 +295,9 @@ static inline int slab_index(void *p, struct kmem_cache *s, void *addr)
+ 
+ static inline size_t slab_ksize(const struct kmem_cache *s)
+ {
++	if (should_sanitize_slab(s))
++		return s->object_size;
++
+ #ifdef CONFIG_SLUB_DEBUG
+ 	/*
+ 	 * Debugging requires use of the padding between object
+@@ -1263,6 +1275,66 @@ static inline void dec_slabs_node(struct kmem_cache *s, int node,
+ 
+ #endif /* CONFIG_SLUB_DEBUG */
+ 
++#ifdef CONFIG_SLAB_MEMORY_SANITIZE
++static void __sanitize_object(struct kmem_cache *s, void *p)
++{
++	memset(p, SLAB_MEMORY_SANITIZE_VALUE, s->object_size);
++	if (s->ctor)
++		s->ctor(p);
++}
++
++static void sanitize_objects(struct kmem_cache *s, void *head, void *tail,
++				int cnt)
++{
++	int i = 1;
++	void *p = head;
++
++	do {
++		if (i > cnt)
++			BUG();
++
++		__sanitize_object(s, p);
++		i++;
++	} while (p != tail && (p = get_freepointer(s, p)));
++}
++
++
++static void sanitize_slow_path(struct kmem_cache *s, void *head, void *tail,
++				int cnt)
++{
++	if (sanitize_slab != SLAB_SANITIZE_PARTIAL_SLOWPATH)
++		return;
++
++	if (!should_sanitize_slab(s))
++		return;
++
++	sanitize_objects(s, head, tail, cnt);
++}
++
++static void sanitize_object(struct kmem_cache *s, void *p)
++{
++	if (sanitize_slab != SLAB_SANITIZE_FULL &&
++	    sanitize_slab != SLAB_SANITIZE_PARTIAL)
++		return;
++
++	if (!should_sanitize_slab(s))
++		return;
++
++	__sanitize_object(s, p);
++}
++#else
++static void sanitize_slow_path(struct kmem_cache *s, void *head, void *tail,
++				int cnt)
++{
++	return;
++}
++
++static void sanitize_object(struct kmem_cache *s, void *p)
++{
++	return;
++}
++#endif
++
+ /*
+  * Hooks for other subsystems that check memory allocations. In a typical
+  * production configuration these hooks all should produce no code at all.
+@@ -1311,6 +1383,7 @@ static inline void slab_post_alloc_hook(struct kmem_cache *s, gfp_t flags,
+ 
+ static inline void slab_free_hook(struct kmem_cache *s, void *x)
+ {
++	sanitize_object(s, x);
+ 	kmemleak_free_recursive(x, s->flags);
+ 
+ 	/*
+@@ -1345,7 +1418,8 @@ static inline void slab_free_freelist_hook(struct kmem_cache *s,
+ 	defined(CONFIG_LOCKDEP)	||		\
+ 	defined(CONFIG_DEBUG_KMEMLEAK) ||	\
+ 	defined(CONFIG_DEBUG_OBJECTS_FREE) ||	\
+-	defined(CONFIG_KASAN)
++	defined(CONFIG_KASAN) || \
++	defined(CONFIG_SLAB_MEMORY_SANITIZE)
+ 
+ 	void *object = head;
+ 	void *tail_obj = tail ? : head;
+@@ -2645,6 +2719,8 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
+ 
+ 	stat(s, FREE_SLOWPATH);
+ 
++	sanitize_slow_path(s, head, tail, cnt);
++
+ 	if (kmem_cache_debug(s) &&
+ 	    !(n = free_debug_processing(s, page, head, tail, cnt,
+ 					addr, &flags)))
+@@ -3262,6 +3338,7 @@ static int calculate_sizes(struct kmem_cache *s, int forced_order)
+ 	s->inuse = size;
+ 
+ 	if (((flags & (SLAB_DESTROY_BY_RCU | SLAB_POISON)) ||
++		should_sanitize_slab(s) ||
+ 		s->ctor)) {
+ 		/*
+ 		 * Relocate free pointer after the object if it is not
+@@ -4787,6 +4864,14 @@ static ssize_t cache_dma_show(struct kmem_cache *s, char *buf)
+ SLAB_ATTR_RO(cache_dma);
+ #endif
+ 
++#ifdef CONFIG_SLAB_MEMORY_SANITIZE
++static ssize_t sanitize_show(struct kmem_cache *s, char *buf)
++{
++	return sprintf(buf, "%d\n", should_sanitize_slab(s));
++}
++SLAB_ATTR_RO(sanitize);
++#endif
++
+ static ssize_t destroy_by_rcu_show(struct kmem_cache *s, char *buf)
+ {
+ 	return sprintf(buf, "%d\n", !!(s->flags & SLAB_DESTROY_BY_RCU));
+@@ -5129,6 +5214,9 @@ static struct attribute *slab_attrs[] = {
+ #ifdef CONFIG_ZONE_DMA
+ 	&cache_dma_attr.attr,
+ #endif
++#ifdef CONFIG_SLAB_MEMORY_SANITIZE
++	&sanitize_attr.attr,
++#endif
+ #ifdef CONFIG_NUMA
+ 	&remote_node_defrag_ratio_attr.attr,
+ #endif
 -- 
 2.5.0
