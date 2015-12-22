@@ -1,189 +1,102 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Laura Abbott <laura@labbott.name>
-Date: Mon, 21 Dec 2015 19:40:35 -0800
-Message-Id: <1450755641-7856-2-git-send-email-laura@labbott.name>
+Date: Mon, 21 Dec 2015 19:40:38 -0800
+Message-Id: <1450755641-7856-5-git-send-email-laura@labbott.name>
 In-Reply-To: <1450755641-7856-1-git-send-email-laura@labbott.name>
 References: <1450755641-7856-1-git-send-email-laura@labbott.name>
-Subject: [kernel-hardening] [RFC][PATCH 1/7] mm/slab_common.c: Add common support for slab saniziation
+Subject: [kernel-hardening] [RFC][PATCH 4/7] slob: Add support for sanitization
 To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 Cc: Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-Each of the different allocators (SLAB/SLUB/SLOB) handles
-clearing of objects differently depending on configuration.
-Add common infrastructure for selecting sanitization levels
-(off, slow path only, partial, full) and marking caches as
-appropriate.
+The SLOB allocator does not clear objects on free. This is a security
+risk since sensitive data may exist long past its expected life
+span. Add support for clearing objects on free.
 
 All credit for the original work should be given to Brad Spengler and
 the PaX Team.
 
 Signed-off-by: Laura Abbott <laura@labbott.name>
 ---
- include/linux/slab.h     |  7 +++++++
- include/linux/slab_def.h |  4 ++++
- mm/slab.h                | 22 ++++++++++++++++++++
- mm/slab_common.c         | 53 ++++++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 86 insertions(+)
+ mm/slob.c | 25 +++++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
 
-diff --git a/include/linux/slab.h b/include/linux/slab.h
-index 2037a86..35c1e2d 100644
---- a/include/linux/slab.h
-+++ b/include/linux/slab.h
-@@ -23,6 +23,13 @@
- #define SLAB_DEBUG_FREE		0x00000100UL	/* DEBUG: Perform (expensive) checks on free */
- #define SLAB_RED_ZONE		0x00000400UL	/* DEBUG: Red zone objs in a cache */
- #define SLAB_POISON		0x00000800UL	/* DEBUG: Poison objects */
-+
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+#define SLAB_NO_SANITIZE        0x00001000UL    /* Do not sanitize objs on free */
-+#else
-+#define SLAB_NO_SANITIZE        0x00000000UL
-+#endif
-+
- #define SLAB_HWCACHE_ALIGN	0x00002000UL	/* Align objs on cache lines */
- #define SLAB_CACHE_DMA		0x00004000UL	/* Use GFP_DMA memory */
- #define SLAB_STORE_USER		0x00010000UL	/* DEBUG: Store the last owner for bug hunting */
-diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
-index 33d0490..4c3fb93 100644
---- a/include/linux/slab_def.h
-+++ b/include/linux/slab_def.h
-@@ -69,6 +69,10 @@ struct kmem_cache {
- 	 */
- 	int obj_offset;
- #endif /* CONFIG_DEBUG_SLAB */
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+	atomic_t sanitized;
-+	atomic_t not_sanitized;
-+#endif
- #ifdef CONFIG_MEMCG_KMEM
- 	struct memcg_cache_params memcg_params;
- #endif
-diff --git a/mm/slab.h b/mm/slab.h
-index 7b60871..b54b636 100644
---- a/mm/slab.h
-+++ b/mm/slab.h
-@@ -66,6 +66,28 @@ extern struct list_head slab_caches;
- /* The slab cache that manages slab cache information */
- extern struct kmem_cache *kmem_cache;
- 
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+#ifdef CONFIG_X86_64
-+#define SLAB_MEMORY_SANITIZE_VALUE       '\xfe'
-+#else
-+#define SLAB_MEMORY_SANITIZE_VALUE       '\xff'
-+#endif
-+enum slab_sanitize_mode {
-+	/* No sanitization */
-+	SLAB_SANITIZE_OFF = 0,
-+
-+	/* Partial sanitization happens only on the slow path */
-+	SLAB_SANITIZE_PARTIAL_SLOWPATH = 1,
-+
-+	/* Partial sanitization happens everywhere */
-+	SLAB_SANITIZE_PARTIAL = 2,
-+
-+	/* Sanitization happens on all slabs, all paths */
-+	SLAB_SANITIZE_FULL = 3,
-+};
-+extern enum slab_sanitize_mode sanitize_slab;
-+#endif
-+
- unsigned long calculate_alignment(unsigned long flags,
- 		unsigned long align, unsigned long size);
- 
-diff --git a/mm/slab_common.c b/mm/slab_common.c
-index 3c6a86b..4b28f70 100644
---- a/mm/slab_common.c
-+++ b/mm/slab_common.c
-@@ -30,6 +30,42 @@ LIST_HEAD(slab_caches);
- DEFINE_MUTEX(slab_mutex);
- struct kmem_cache *kmem_cache;
- 
-+
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+enum slab_sanitize_mode sanitize_slab = SLAB_SANITIZE_PARTIAL;
-+static int __init sanitize_slab_setup(char *str)
-+{
-+	if (!str)
-+		return 0;
-+
-+	if (!strcmp(str, "0") || !strcmp(str, "off")) {
-+		pr_info("slab sanitization disabled");
-+		sanitize_slab = SLAB_SANITIZE_OFF;
-+	} else if (!strcmp(str, "1") || !strcmp(str, "slow")) {
-+		pr_info("slab sanitization partial slow path");
-+		sanitize_slab = SLAB_SANITIZE_PARTIAL_SLOWPATH;
-+	} else if (!strcmp(str, "2") || !strcmp(str, "partial")) {
-+		pr_info("slab sanitization partial");
-+		sanitize_slab = SLAB_SANITIZE_PARTIAL;
-+	} else if (!strcmp(str, "3") || !strcmp(str, "full")) {
-+		pr_info("slab sanitization full");
-+		sanitize_slab = SLAB_SANITIZE_FULL;
-+	} else
-+		pr_err("slab sanitization: unsupported option '%s'\n", str);
-+
-+	return 0;
-+}
-+early_param("sanitize_slab", sanitize_slab_setup);
-+
-+static inline bool sanitize_mergeable(unsigned long flags)
-+{
-+	return (sanitize_slab == SLAB_SANITIZE_OFF) || (flags & SLAB_NO_SANITIZE);
-+}
-+#else
-+static inline bool sanitize_mergeable(unsigned long flags) { return true; }
-+#endif
-+
-+
- /*
-  * Set of flags that will prevent slab merging
-  */
-@@ -227,6 +263,9 @@ static inline void destroy_memcg_params(struct kmem_cache *s)
-  */
- int slab_unmergeable(struct kmem_cache *s)
- {
-+	if (!sanitize_mergeable(s->flags))
-+		return 1;
-+
- 	if (slab_nomerge || (s->flags & SLAB_NEVER_MERGE))
- 		return 1;
- 
-@@ -250,6 +289,9 @@ struct kmem_cache *find_mergeable(size_t size, size_t align,
- {
- 	struct kmem_cache *s;
- 
-+	if (!sanitize_mergeable(flags))
-+		return NULL;
-+
- 	if (slab_nomerge || (flags & SLAB_NEVER_MERGE))
- 		return NULL;
- 
-@@ -407,6 +449,13 @@ kmem_cache_create(const char *name, size_t size, size_t align,
- 	 */
- 	flags &= CACHE_CREATE_MASK;
- 
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+	if (sanitize_slab == SLAB_SANITIZE_OFF || (flags & SLAB_DESTROY_BY_RCU))
-+		flags |= SLAB_NO_SANITIZE;
-+	else if (sanitize_slab == SLAB_SANITIZE_FULL)
-+		flags &= ~SLAB_NO_SANITIZE;
-+#endif
-+
- 	s = __kmem_cache_alias(name, size, align, flags, ctor);
- 	if (s)
- 		goto out_unlock;
-@@ -1050,6 +1099,10 @@ static void print_slabinfo_header(struct seq_file *m)
- 		 "<error> <maxfreeable> <nodeallocs> <remotefrees> <alienoverflow>");
- 	seq_puts(m, " : cpustat <allochit> <allocmiss> <freehit> <freemiss>");
- #endif
-+#ifdef CONFIG_SLAB_MEMORY_SANITIZE
-+	seq_puts(m, " : sanitization <sanitized> <not_sanitized>");
-+#endif
-+
- 	seq_putc(m, '\n');
+diff --git a/mm/slob.c b/mm/slob.c
+index 17e8f8c..37a4ecb 100644
+--- a/mm/slob.c
++++ b/mm/slob.c
+@@ -334,10 +334,21 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
+ 	return b;
  }
  
++static void slob_sanitize(struct kmem_cache *c, slob_t *b, int size)
++{
++#ifdef CONFIG_SLAB_MEMORY_SANITIZE
++	if (c && (c->flags & SLAB_NO_SANITIZE))
++		return;
++
++	if (sanitize_slab)
++		memset(b, SLAB_MEMORY_SANITIZE_VALUE, size);
++#endif
++}
++
+ /*
+  * slob_free: entry point into the slob allocator.
+  */
+-static void slob_free(void *block, int size)
++static void slob_free(struct kmem_cache *c, void *block, int size)
+ {
+ 	struct page *sp;
+ 	slob_t *prev, *next, *b = (slob_t *)block;
+@@ -365,6 +376,8 @@ static void slob_free(void *block, int size)
+ 		return;
+ 	}
+ 
++	slob_sanitize(c, block, size);
++
+ 	if (!slob_page_free(sp)) {
+ 		/* This slob page is about to become partially free. Easy! */
+ 		sp->units = units;
+@@ -495,7 +508,7 @@ void kfree(const void *block)
+ 	if (PageSlab(sp)) {
+ 		int align = max_t(size_t, ARCH_KMALLOC_MINALIGN, ARCH_SLAB_MINALIGN);
+ 		unsigned int *m = (unsigned int *)(block - align);
+-		slob_free(m, *m + align);
++		slob_free(NULL, m, *m + align);
+ 	} else
+ 		__free_pages(sp, compound_order(sp));
+ }
+@@ -579,10 +592,10 @@ void *kmem_cache_alloc_node(struct kmem_cache *cachep, gfp_t gfp, int node)
+ EXPORT_SYMBOL(kmem_cache_alloc_node);
+ #endif
+ 
+-static void __kmem_cache_free(void *b, int size)
++static void __kmem_cache_free(struct kmem_cache *c, void *b, int size)
+ {
+ 	if (size < PAGE_SIZE)
+-		slob_free(b, size);
++		slob_free(c, b, size);
+ 	else
+ 		slob_free_pages(b, get_order(size));
+ }
+@@ -592,7 +605,7 @@ static void kmem_rcu_free(struct rcu_head *head)
+ 	struct slob_rcu *slob_rcu = (struct slob_rcu *)head;
+ 	void *b = (void *)slob_rcu - (slob_rcu->size - sizeof(struct slob_rcu));
+ 
+-	__kmem_cache_free(b, slob_rcu->size);
++	__kmem_cache_free(NULL, b, slob_rcu->size);
+ }
+ 
+ void kmem_cache_free(struct kmem_cache *c, void *b)
+@@ -604,7 +617,7 @@ void kmem_cache_free(struct kmem_cache *c, void *b)
+ 		slob_rcu->size = c->size;
+ 		call_rcu(&slob_rcu->head, kmem_rcu_free);
+ 	} else {
+-		__kmem_cache_free(b, c->size);
++		__kmem_cache_free(NULL, b, c->size);
+ 	}
+ 
+ 	trace_kmem_cache_free(_RET_IP_, b);
 -- 
 2.5.0
