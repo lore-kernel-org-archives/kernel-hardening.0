@@ -1,29 +1,108 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 22 Dec 2015 10:25:00 -0600 (CST)
-From: Christoph Lameter <cl@linux.com>
-In-Reply-To: <567964F3.2020402@intel.com>
-Message-ID: <alpine.DEB.2.20.1512221023550.2748@east.gentwo.org>
-References: <1450755641-7856-1-git-send-email-laura@labbott.name> <1450755641-7856-7-git-send-email-laura@labbott.name> <567964F3.2020402@intel.com>
-Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] [RFC][PATCH 6/7] mm: Add Kconfig option for
- slab sanitization
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: kernel-hardening@lists.openwall.com, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Laura Abbott <laura@labbott.name>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
+Message-ID: <1450802317.15572.102.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Tue, 22 Dec 2015 11:38:37 -0500
+In-Reply-To: <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name>
+	 <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-R9P+6EvZ3pLH2YzinrHb"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs
+ based on grsecurity/PaX
+To: kernel-hardening@lists.openwall.com, Laura Abbott <laura@labbott.name>
+Cc: Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 22 Dec 2015, Dave Hansen wrote:
 
-> On 12/21/2015 07:40 PM, Laura Abbott wrote:
-> > +	  The tradeoff is performance impact. The noticible impact can vary
-> > +	  and you are advised to test this feature on your expected workload
-> > +	  before deploying it
->
-> What if instead of writing SLAB_MEMORY_SANITIZE_VALUE, we wrote 0's?
-> That still destroys the information, but it has the positive effect of
-> allowing a kzalloc() call to avoid zeroing the slab object.  It might
-> mitigate some of the performance impact.
+--=-R9P+6EvZ3pLH2YzinrHb
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-We already write zeros in many cases or the object is initialized in a
-different. No one really wants an uninitialized object. The problem may be
-that a freed object is having its old content until reused. Which is
-something that poisoning deals with.
+> I am not sure what the point of this patchset is. We have a similar
+> effect
+> to sanitization already in the allocators through two mechanisms:
+
+The rationale was covered earlier. Are you responding to that or did you
+not see it?
+
+> 1. Slab poisoning
+> 2. Allocation with GFP_ZERO
+>=20
+> I do not think we need a third one. You could accomplish your goals
+> much
+> easier without this code churn by either
+>=20
+> 1. Improve the existing poisoning mechanism. Ensure that there are no
+> =C2=A0=C2=A0=C2=A0gaps. Security sensitive kernel slab caches can then be=
+ created
+> with
+> =C2=A0=C2=A0=C2=A0the=C2=A0=C2=A0POISONING flag set. Maybe add a Kconfig =
+flag that enables
+> =C2=A0=C2=A0=C2=A0POISONING for each cache? What was the issue when you t=
+ried using
+> =C2=A0=C2=A0=C2=A0posining for sanitization?
+>=20
+> 2. Add a mechanism that ensures that GFP_ZERO is set for each
+> allocation.
+> =C2=A0=C2=A0=C2=A0That way every object you retrieve is zeroed and thus y=
+ou have
+> implied
+> =C2=A0=C2=A0=C2=A0sanitization. This also can be done in a rather simple =
+way by
+> changing
+> =C2=A0=C2=A0=C2=A0the=C2=A0=C2=A0GFP_KERNEL etc constants to include __GF=
+P_ZERO depending on a
+> =C2=A0=C2=A0=C2=A0Kconfig option. Or add some runtime setting of the gfp =
+flags
+> somewhere.
+>=20
+> Generally I would favor option #2 if you must have sanitization
+> because
+> that is the only option to really give you a deterministic content of
+> object on each allocation. Any half way measures would not work I
+> think.
+>=20
+> Note also that most allocations are already either allocations that
+> zero
+> the content or they are immediately initializing the content of the
+> allocated object. After all the object is not really usable if the
+> content is random. You may be able to avoid this whole endeavor by
+> auditing the kernel for locations where the object is not initialized
+> after allocation.
+>=20
+> Once one recognizes the above it seems that sanitization is pretty
+> useless. Its just another pass of writing zeroes before the allocator
+> or
+> uer of the allocated object sets up deterministic content of the
+> object or
+> -- in most cases -- zeroes it again.
+
+Sanitization isn't just to prevent leaks from usage of uninitialized
+data in later allocations. It's a mitigation for use-after-free (esp. if
+it's combined with some form of delayed freeing) and it reduces the
+lifetime of data.
+--=-R9P+6EvZ3pLH2YzinrHb
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAABCAAGBQJWeXyNAAoJEPnnEuWa9fIqjrYQAJaEzoGOlaw3y0rN4YRJU6+x
+Ua7hjSxAY7iMM7zKYWqbz5XCjkqagdOCCcBgDhoo0q2NX6u9FPkfF2tBzggacLhk
+GXrAXJf15dSv5zqfWlozyEmTGiuJSHDaYTibbGLrFoegXK5xSgSoCHiGpr1w2kXP
+xA+Poc2F+S4+wkoF1gLb9I2w/4yRDDsWDtHIkVVBV1Tl85IYAA8cTSBJ3jO/VEe7
+DoB1H7XzRvqqc/qeJnU/vMHleR4DcW4bp5oCYDL9UfzgGSvkf8c0NUViPSY9lAfZ
+mYp6Y8tThRIoyONAHFPgUV9Rhe4ShBnRaoFCD1KO/LKRuFhOEfTGUQ6TRAYg7jgt
+2dQJivBhBddKwKkGvw58IsOIDVkpAiqobWezrCbzIwvZCtyLi+MifBqmF6S75jCH
+KYVjua1Ks7iWxNGqsCNUUbu7dMQ3z4xkB4j9O0GRJnWcIbTouGL1ReKyrXHIBJeS
+zsTk+ElCaJntJGl2Gok0J8pgIvyXc13Kfblk+U5T3PcB11K6Gp/m1Sp4wWfz5mO6
++YP5WS1vZ/7g7FI5G/kUd8QPkcjkSDOlmRdV3QnYRSn7LYJThnF8P4buqi9iZ2e1
+htC7VNwQIsAn6obkYgGQZ/XY6v6XHqJ96tmrGiiJNYsB7Y80HGkYXAt9QYZEpsWG
+FNTuTLKN3YMErcOpwmsJ
+=pRVv
+-----END PGP SIGNATURE-----
+
+--=-R9P+6EvZ3pLH2YzinrHb--
