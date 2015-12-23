@@ -1,58 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 23 Dec 2015 12:18:44 -0800
+Date: Wed, 23 Dec 2015 13:29:12 -0800
 From: Tony Lindgren <tony@atomide.com>
-Message-ID: <20151223201843.GQ2793@atomide.com>
+Message-ID: <20151223212911.GR2793@atomide.com>
 References: <20151202202725.GA794@www.outflux.net>
  <20151223195129.GP2793@atomide.com>
- <20151223200132.GW8644@n2100.arm.linux.org.uk>
+ <567B04AB.6010906@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20151223200132.GW8644@n2100.arm.linux.org.uk>
+In-Reply-To: <567B04AB.6010906@redhat.com>
 Subject: [kernel-hardening] Re: [PATCH v2] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
-To: Russell King - ARM Linux <linux@arm.linux.org.uk>
-Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Nicolas Pitre <nico@linaro.org>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, Laura Abbott <labbott@fedoraproject.org>
+To: Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Russell King <linux@arm.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Nicolas Pitre <nico@linaro.org>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-* Russell King - ARM Linux <linux@arm.linux.org.uk> [151223 12:01]:
-> On Wed, Dec 23, 2015 at 11:51:29AM -0800, Tony Lindgren wrote:
-> > Also all omap3 boards are now oopsing in Linux next if PM is enabled:
+Hi,
+
+* Laura Abbott <labbott@redhat.com> [151223 12:31]:
 > 
-> I'm not sure that's entirely true.  My LDP3430 works fine with this
-> change in place, and that has CONFIG_PM=y.  See my nightly build/boot
-> results, which includes an attempt to enter hibernation.  Remember
-> that last night's results are from my tree plus arm-soc's for-next.
+> Looks like a case similar to Geert's
+> 
+>         adr     r7, kick_counter
+> wait_dll_lock_timed:
+>         ldr     r4, wait_dll_lock_counter
+>         add     r4, r4, #1
+>         str     r4, [r7, #wait_dll_lock_counter - kick_counter]
+>         ldr     r4, sdrc_dlla_status
+>         /* Wait 20uS for lock */
+>         mov     r6, #8
+> 
+> 
+> kick_counter and wait_dll_lock_counter are in the text section which is marked read only.
+> They need to be moved to the data section along with a few other variables from what I
+> can tell (maybe those are read only?).
 
-Right but you don't have any deeper idle states enabled for your
-old ldp, see the script below. It may not work properly on your ldp
-because of the old silicon revision of the SoC..
+Thanks for looking, yeah so it seem.
 
-> Maybe there's some other change in linux-next which, when combined
-> with this change, is provoking it?
+> I suspect this is going to be a common issue with suspend/resume code paths since those
+> are hand written assembly.
 
-Well it seems to be the new default Kconfig options selected by
-default as Geert is saying?
-
-And it seems to require off mode enabled for idle to hit it, retention
-idle does not seem to trigger it.
+Yes I suspect we have quite a few cases like this.
 
 Regards,
 
 Tony
-
-
-8< -------------------------
-#!/bin/bash
-
-uarts=$(find /sys/class/tty/tty[SO]*/device/power/ -type d)
-for uart in $uarts; do
-	echo 3000 > $uart/autosuspend_delay_ms 2>&1
-done
-
-uarts=$(find /sys/class/tty/tty[SO]*/power/ -type d 2>/dev/null)
-for uart in $uarts; do
-	echo enabled > $uart/wakeup 2>&1
-	echo auto > $uart/control 2>&1
-done
-
-echo 1 > /sys/kernel/debug/pm_debug/enable_off_mode
