@@ -1,180 +1,279 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 28 Dec 2015 12:20:44 +0100
-Message-Id: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [RFC PATCH 00/10] arm64: implement support for KASLR
+Date: Mon, 28 Dec 2015 12:20:50 +0100
+Message-Id: <1451301654-32019-7-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
+References: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [RFC PATCH 06/10] arm64: use relative references in exception tables
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, lkml@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This series implements KASLR for arm64, by building the kernel as a PIE
-executable that can relocate itself at runtime, and moving it to a random
-offset in the vmalloc area.
+Instead of using absolute addresses for both the exception location and
+the fixup, use offsets relative to the exception table entry values. This
+is a prerequisite for KASLR, since absolute exception table entries are
+subject to dynamic relocation, which is incompatible with the sorting of
+the exception table that occurs at build time.
 
-Notes:
-- These patches apply on top of Mark Rutland's pagetable rework series:
-  http://thread.gmane.org/gmane.linux.ports.arm.kernel/462438
-- The arm64 Image is uncompressed by default, and the Elf64_Rela format uses
-  24 bytes per relocation entry. This results in considerable bloat (i.e., a
-  couple of MBs worth of relocation data in an .init section). However, no
-  build time postprocessing is required, we rely fully on the toolchain to
-  produce the image (modulo some byte swapping in the Image header for BE
-  kernels)
-- We have to rely on the bootloader to supply some randomness in register x1
-  upon kernel entry. Since we have no decompressor, it is simply not feasible
-  to collect randomness in the head.S code path before mapping the kernel and
-  enabling the MMU.
-- The EFI_RNG_PROTOCOL that is invoked in patch #10 to supply randomness on
-  UEFI systems is not universally available. A QEMU/KVM firmware image that
-  implements a pseudo-random version is available here:
-  http://people.linaro.org/~ard.biesheuvel/QEMU_EFI.fd.aarch64-rng.bz2
-  (requires access to PMCCNTR_EL0 and support for AES instructions)
-  See below for instructions how to run the pseudo-random version on real
-  hardware.
-- Only mildly tested. Help appreciated.
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/Kconfig                   |   1 +
+ arch/arm64/include/asm/assembler.h   |   2 +-
+ arch/arm64/include/asm/futex.h       |   4 +-
+ arch/arm64/include/asm/uaccess.h     |  16 +--
+ arch/arm64/kernel/armv8_deprecated.c |   4 +-
+ arch/arm64/mm/extable.c              | 102 +++++++++++++++++++-
+ scripts/sortextable.c                |   2 +-
+ 7 files changed, 116 insertions(+), 15 deletions(-)
 
-Code can be found here:
-git://git.linaro.org/people/ard.biesheuvel/linux-arm.git arm64-kaslr
-https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/shortlog/refs/heads/arm64-kaslr
-
-Patch #1 introduces KIMAGE_VADDR as the base of the kernel virtual region.
-
-Patch #2 memblock_reserve()'s the .bss, swapper_pg_dir and idmap_pg_dir
-individually.
-
-Patch #3 rewrites early_fixmap_init() so it does not rely on the linear mapping
-(i.e., the use of phys_to_virt() is avoided)
-
-Patch #4 moves the kernel virtual mapping to the vmalloc area, along with the
-module region which is kept right below it, as before.
-
-Patch #5 adds support for PLTs in modules so that relative branches can be
-resolved via a PLT if the target is out of range.
-
-Patch #6 moves to the x86 version of the extable implementation so that it no
-longer contains absolute addresses that require fixing up at relocation time,
-but uses relative offsets instead.
-
-Patch #7 reverts some changes to the Image header population code so we no
-longer depend on the linker to populate the header fields. This is necessary
-since the R_AARCH64_ABS relocations that are emitted for these fields are not
-resolved at build time for PIE executables.
-
-Patch #8 updates the code in head.S that needs to execute before relocation to
-avoid the use of values that are subject to dynamic relocation. These values
-will not be populated in PIE executables.
-
-Patch #9 implements the core KASLR, by taking randomness supplied in register x1
-and using it to move the kernel inside the vmalloc area.
-
-Patch #10 adds an invocation of the EFI_RNG_PROTOCOL to supply randomness to the
-kernel proper.
-
-Ard Biesheuvel (10):
-  arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
-  arm64: use more granular reservations for static page table
-    allocations
-  arm64: decouple early fixmap init from linear mapping
-  arm64: move kernel image to base of vmalloc area
-  arm64: add support for module PLTs
-  arm64: use relative references in exception tables
-  arm64: use assembly time constants for Image header fields
-  arm64: avoid dynamic relocations in early boot code
-  arm64: add support for relocatable kernel
-  arm64: efi: invoke EFI_RNG_PROTOCOL to supply KASLR randomness
-
- Documentation/arm64/booting.txt         |   3 +-
- arch/arm64/Kconfig                      |  18 +++
- arch/arm64/Makefile                     |  10 +-
- arch/arm64/boot/Makefile                |   1 +
- arch/arm64/include/asm/assembler.h      |   2 +-
- arch/arm64/include/asm/compiler.h       |   2 +
- arch/arm64/include/asm/futex.h          |   4 +-
- arch/arm64/include/asm/kasan.h          |  17 +--
- arch/arm64/include/asm/memory.h         |  29 ++++-
- arch/arm64/include/asm/module.h         |  11 ++
- arch/arm64/include/asm/pgtable.h        |   7 -
- arch/arm64/include/asm/uaccess.h        |  16 +--
- arch/arm64/kernel/Makefile              |   1 +
- arch/arm64/kernel/arm64ksyms.c          |   5 +
- arch/arm64/kernel/armv8_deprecated.c    |   4 +-
- arch/arm64/kernel/efi-entry.S           |   9 +-
- arch/arm64/kernel/head.S                | 120 ++++++++++++++---
- arch/arm64/kernel/image.h               |  40 ------
- arch/arm64/kernel/module-plts.c         | 137 ++++++++++++++++++++
- arch/arm64/kernel/module.c              |   7 +
- arch/arm64/kernel/module.lds            |   4 +
- arch/arm64/kernel/setup.c               |  15 ++-
- arch/arm64/kernel/vmlinux.lds.S         |  27 ++--
- arch/arm64/mm/dump.c                    |  12 +-
- arch/arm64/mm/extable.c                 | 102 ++++++++++++++-
- arch/arm64/mm/init.c                    |  25 ++--
- arch/arm64/mm/mmu.c                     | 122 +++++------------
- drivers/firmware/efi/libstub/arm-stub.c |  31 +++++
- include/linux/efi.h                     |   5 +-
- scripts/arm64fixhdr.pl                  |  25 ++++
- scripts/sortextable.c                   |   6 +-
- 31 files changed, 605 insertions(+), 212 deletions(-)
- create mode 100644 arch/arm64/kernel/module-plts.c
- create mode 100644 arch/arm64/kernel/module.lds
- create mode 100755 scripts/arm64fixhdr.pl
-
-
-EFI_RNG_PROTOCOL on real hardware
-=================================
-
-To test whether your UEFI implements the EFI_RNG_PROTOCOL, download the
-following executable and run it from the UEFI Shell:
-http://people.linaro.org/~ard.biesheuvel/RngTest.efi
-
-FS0:\> rngtest
-UEFI RNG Protocol Testing :
-----------------------------
- -- Locate UEFI RNG Protocol : [Fail - Status = Not Found]
-
-If your UEFI does not implement the EFI_RNG_PROTOCOL, you can download and
-install the pseudo-random version that uses the generic timer and PMCCNTR_EL0
-values and permutes them using a couple of rounds of AES.
-http://people.linaro.org/~ard.biesheuvel/RngDxe.efi
-
-NOTE: not for production!! This is a quick and dirty hack to test the KASLR
-code, and is not suitable for anything else.
-
-FS0:\> rngdxe 
-FS0:\> rngtest
-UEFI RNG Protocol Testing :
-----------------------------
- -- Locate UEFI RNG Protocol : [Pass]
- -- Call RNG->GetInfo() interface : 
-     >> Supported RNG Algorithm (Count = 2) : 
-          0) 44F0DE6E-4D8C-4045-A8C7-4DD168856B9E
-          1) E43176D7-B6E8-4827-B784-7FFDC4B68561
- -- Call RNG->GetRNG() interface : 
-     >> RNG with default algorithm : [Pass]
-     >> RNG with SP800-90-HMAC-256 : [Fail - Status = Unsupported]
-     >> RNG with SP800-90-Hash-256 : [Fail - Status = Unsupported]
-     >> RNG with SP800-90-CTR-256 : [Pass]
-     >> RNG with X9.31-3DES : [Fail - Status = Unsupported]
-     >> RNG with X9.31-AES : [Fail - Status = Unsupported]
-     >> RNG with RAW Entropy : [Pass]
- -- Random Number Generation Test with default RNG Algorithm (20 Rounds): 
-          01) - 27
-          02) - 61E8
-          03) - 496FD8
-          04) - DDD793BF
-          05) - B6C37C8E23
-          06) - 4D183C604A96
-          07) - 9363311DB61298
-          08) - 5715A7294F4E436E
-          09) - F0D4D7BAA0DD52318E
-          10) - C88C6EBCF4C0474D87C3
-          11) - B5594602B482A643932172
-          12) - CA7573F704B2089B726B9CF1
-          13) - A93E9451CB533DCFBA87B97C33
-          14) - 45AA7B83DB6044F7BBAB031F0D24
-          15) - 3DD7A4D61F34ADCB400B5976730DCF
-          16) - 4DD168D21FAB8F59708330D6A9BEB021
-          17) - 4BBB225E61C465F174254159467E65939F
-          18) - 030A156C9616337A20070941E702827DA8E1
-          19) - AB0FC11C9A4E225011382A9D164D9D55CA2B64
-          20) - 72B9B4735DC445E5DA6AF88DE965B7E87CB9A23C
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 827e78f33944..54eeab140bca 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -7,6 +7,7 @@ config ARM64
+ 	select ARCH_HAS_ELF_RANDOMIZE
+ 	select ARCH_HAS_GCOV_PROFILE_ALL
+ 	select ARCH_HAS_SG_CHAIN
++	select ARCH_HAS_SORT_EXTABLE
+ 	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
+ 	select ARCH_USE_CMPXCHG_LOCKREF
+ 	select ARCH_SUPPORTS_ATOMIC_RMW
+diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+index 12eff928ef8b..8094d50f05bc 100644
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -98,7 +98,7 @@
+ 9999:	x;					\
+ 	.section __ex_table,"a";		\
+ 	.align	3;				\
+-	.quad	9999b,l;			\
++	.long	(9999b - .), (l - .);		\
+ 	.previous
+ 
+ /*
+diff --git a/arch/arm64/include/asm/futex.h b/arch/arm64/include/asm/futex.h
+index 007a69fc4f40..35e73e255ad3 100644
+--- a/arch/arm64/include/asm/futex.h
++++ b/arch/arm64/include/asm/futex.h
+@@ -44,7 +44,7 @@
+ "	.popsection\n"							\
+ "	.pushsection __ex_table,\"a\"\n"				\
+ "	.align	3\n"							\
+-"	.quad	1b, 4b, 2b, 4b\n"					\
++"	.long	(1b - .), (4b - .), (2b - .), (4b - .)\n"		\
+ "	.popsection\n"							\
+ 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,		\
+ 		    CONFIG_ARM64_PAN)					\
+@@ -135,7 +135,7 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
+ "	.popsection\n"
+ "	.pushsection __ex_table,\"a\"\n"
+ "	.align	3\n"
+-"	.quad	1b, 4b, 2b, 4b\n"
++"	.long	(1b - .), (4b - .), (2b - .), (4b - .)\n"
+ "	.popsection\n"
+ 	: "+r" (ret), "=&r" (val), "+Q" (*uaddr), "=&r" (tmp)
+ 	: "r" (oldval), "r" (newval), "Ir" (-EFAULT)
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index b2ede967fe7d..064efe4b0063 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -36,11 +36,11 @@
+ #define VERIFY_WRITE 1
+ 
+ /*
+- * The exception table consists of pairs of addresses: the first is the
+- * address of an instruction that is allowed to fault, and the second is
+- * the address at which the program should continue.  No registers are
+- * modified, so it is entirely up to the continuation code to figure out
+- * what to do.
++ * The exception table consists of pairs of relative offsets: the first
++ * is the relative offset to an instruction that is allowed to fault,
++ * and the second is the relative offset at which the program should
++ * continue. No registers are modified, so it is entirely up to the
++ * continuation code to figure out what to do.
+  *
+  * All the routines below use bits of fixup code that are out of line
+  * with the main instruction path.  This means when everything is well,
+@@ -50,7 +50,7 @@
+ 
+ struct exception_table_entry
+ {
+-	unsigned long insn, fixup;
++	int insn, fixup;
+ };
+ 
+ extern int fixup_exception(struct pt_regs *regs);
+@@ -125,7 +125,7 @@ static inline void set_fs(mm_segment_t fs)
+ 	"	.previous\n"						\
+ 	"	.section __ex_table,\"a\"\n"				\
+ 	"	.align	3\n"						\
+-	"	.quad	1b, 3b\n"					\
++	"	.long	(1b - .), (3b - .)\n"				\
+ 	"	.previous"						\
+ 	: "+r" (err), "=&r" (x)						\
+ 	: "r" (addr), "i" (-EFAULT))
+@@ -192,7 +192,7 @@ do {									\
+ 	"	.previous\n"						\
+ 	"	.section __ex_table,\"a\"\n"				\
+ 	"	.align	3\n"						\
+-	"	.quad	1b, 3b\n"					\
++	"	.long	(1b - .), (3b - .)\n"				\
+ 	"	.previous"						\
+ 	: "+r" (err)							\
+ 	: "r" (x), "r" (addr), "i" (-EFAULT))
+diff --git a/arch/arm64/kernel/armv8_deprecated.c b/arch/arm64/kernel/armv8_deprecated.c
+index 937f5e58a4d3..8f21b1363387 100644
+--- a/arch/arm64/kernel/armv8_deprecated.c
++++ b/arch/arm64/kernel/armv8_deprecated.c
+@@ -299,8 +299,8 @@ static void register_insn_emulation_sysctl(struct ctl_table *table)
+ 	"	.popsection"					\
+ 	"	.pushsection	 __ex_table,\"a\"\n"		\
+ 	"	.align		3\n"				\
+-	"	.quad		0b, 4b\n"			\
+-	"	.quad		1b, 4b\n"			\
++	"	.long		(0b - .), (4b - .)\n"		\
++	"	.long		(1b - .), (4b - .)\n"		\
+ 	"	.popsection\n"					\
+ 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,	\
+ 		CONFIG_ARM64_PAN)				\
+diff --git a/arch/arm64/mm/extable.c b/arch/arm64/mm/extable.c
+index 79444279ba8c..d803e3e5d3da 100644
+--- a/arch/arm64/mm/extable.c
++++ b/arch/arm64/mm/extable.c
+@@ -3,15 +3,115 @@
+  */
+ 
+ #include <linux/module.h>
++#include <linux/sort.h>
+ #include <linux/uaccess.h>
+ 
++static unsigned long ex_insn_addr(const struct exception_table_entry *x)
++{
++	return (unsigned long)&x->insn + x->insn;
++}
++
++static unsigned long ex_fixup_addr(const struct exception_table_entry *x)
++{
++	return (unsigned long)&x->fixup + x->fixup;
++}
++
+ int fixup_exception(struct pt_regs *regs)
+ {
+ 	const struct exception_table_entry *fixup;
+ 
+ 	fixup = search_exception_tables(instruction_pointer(regs));
+ 	if (fixup)
+-		regs->pc = fixup->fixup;
++		regs->pc = ex_fixup_addr(fixup);
+ 
+ 	return fixup != NULL;
+ }
++
++/*
++ * Search one exception table for an entry corresponding to the
++ * given instruction address, and return the address of the entry,
++ * or NULL if none is found.
++ * We use a binary search, and thus we assume that the table is
++ * already sorted.
++ */
++const struct exception_table_entry *
++search_extable(const struct exception_table_entry *first,
++	       const struct exception_table_entry *last,
++	       unsigned long value)
++{
++	while (first <= last) {
++		const struct exception_table_entry *mid;
++		unsigned long addr;
++
++		mid = ((last - first) >> 1) + first;
++		addr = ex_insn_addr(mid);
++		if (addr < value)
++			first = mid + 1;
++		else if (addr > value)
++			last = mid - 1;
++		else
++			return mid;
++        }
++        return NULL;
++}
++
++static int cmp_ex(const void *a, const void *b)
++{
++	const struct exception_table_entry *x = a, *y = b;
++
++	return x->insn - y->insn;
++}
++
++/*
++ * The exception table needs to be sorted so that the binary
++ * search that we use to find entries in it works properly.
++ * This is used both for the kernel exception table and for
++ * the exception tables of modules that get loaded.
++ *
++ */
++void sort_extable(struct exception_table_entry *start,
++		  struct exception_table_entry *finish)
++{
++	struct exception_table_entry *p;
++	int i;
++
++	/* Convert all entries to being relative to the start of the section */
++	i = 0;
++	for (p = start; p < finish; p++) {
++		p->insn += i;
++		i += 4;
++		p->fixup += i;
++		i += 4;
++	}
++
++	sort(start, finish - start, sizeof(struct exception_table_entry),
++	     cmp_ex, NULL);
++
++	/* Denormalize all entries */
++	i = 0;
++	for (p = start; p < finish; p++) {
++		p->insn -= i;
++		i += 4;
++		p->fixup -= i;
++		i += 4;
++	}
++}
++
++#ifdef CONFIG_MODULES
++/*
++ * If the exception table is sorted, any referring to the module init
++ * will be at the beginning or the end.
++ */
++void trim_init_extable(struct module *m)
++{
++	/* trim the beginning */
++	while (m->num_exentries && within_module_init(m->extable[0].insn, m)) {
++		m->extable++;
++		m->num_exentries--;
++	}
++	/* trim the end */
++	while (m->num_exentries &&
++		within_module_init(m->extable[m->num_exentries-1].insn, m))
++		m->num_exentries--;
++}
++#endif /* CONFIG_MODULES */
+diff --git a/scripts/sortextable.c b/scripts/sortextable.c
+index c2423d913b46..af247c70fb66 100644
+--- a/scripts/sortextable.c
++++ b/scripts/sortextable.c
+@@ -282,12 +282,12 @@ do_file(char const *const fname)
+ 	case EM_386:
+ 	case EM_X86_64:
+ 	case EM_S390:
++	case EM_AARCH64:
+ 		custom_sort = sort_relative_table;
+ 		break;
+ 	case EM_ARCOMPACT:
+ 	case EM_ARCV2:
+ 	case EM_ARM:
+-	case EM_AARCH64:
+ 	case EM_MICROBLAZE:
+ 	case EM_MIPS:
+ 	case EM_XTENSA:
+-- 
+2.5.0
