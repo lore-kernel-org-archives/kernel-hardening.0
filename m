@@ -1,344 +1,263 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 28 Dec 2015 12:20:53 +0100
-Message-Id: <1451301654-32019-10-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 28 Dec 2015 12:20:49 +0100
+Message-Id: <1451301654-32019-6-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [RFC PATCH 09/10] arm64: add support for relocatable kernel
+Subject: [kernel-hardening] [RFC PATCH 05/10] arm64: add support for module PLTs
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, lkml@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adds support for runtime relocation of the kernel Image, by
-building it as a PIE (ET_DYN) executable and applying the dynamic
-relocations in the early boot code.
+This adds support for emitting PLTs at module load time for relative
+branches that are out of range. This is a prerequisite for KASLR,
+which may place the kernel and the modules anywhere in the vmalloc
+area, making it likely that branch target offsets exceed the maximum
+range of +/- 128 MB.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- Documentation/arm64/booting.txt |  3 +-
- arch/arm64/Kconfig              | 13 ++++
- arch/arm64/Makefile             |  6 +-
- arch/arm64/include/asm/memory.h | 10 ++-
- arch/arm64/kernel/arm64ksyms.c  |  5 ++
- arch/arm64/kernel/head.S        | 76 +++++++++++++++++++-
- arch/arm64/kernel/setup.c       | 22 +++---
- arch/arm64/kernel/vmlinux.lds.S |  9 +++
- scripts/sortextable.c           |  4 +-
- 9 files changed, 130 insertions(+), 18 deletions(-)
+ arch/arm64/Kconfig              |   4 +
+ arch/arm64/Makefile             |   4 +
+ arch/arm64/include/asm/module.h |  11 ++
+ arch/arm64/kernel/Makefile      |   1 +
+ arch/arm64/kernel/module-plts.c | 137 ++++++++++++++++++++
+ arch/arm64/kernel/module.c      |   7 +
+ arch/arm64/kernel/module.lds    |   4 +
+ 7 files changed, 168 insertions(+)
 
-diff --git a/Documentation/arm64/booting.txt b/Documentation/arm64/booting.txt
-index 701d39d3171a..dcd8eee72984 100644
---- a/Documentation/arm64/booting.txt
-+++ b/Documentation/arm64/booting.txt
-@@ -109,7 +109,8 @@ Header notes:
- 			1 - 4K
- 			2 - 16K
- 			3 - 64K
--  Bits 3-63:	Reserved.
-+  Bit 3:	Relocatable kernel.
-+  Bits 4-63:	Reserved.
- 
- - When image_size is zero, a bootloader should attempt to keep as much
-   memory as possible free for use by the kernel immediately after the
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 54eeab140bca..f458fb9e0dce 100644
+index 871f21783866..827e78f33944 100644
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
-@@ -363,6 +363,7 @@ config ARM64_ERRATUM_843419
- 	bool "Cortex-A53: 843419: A load or store might access an incorrect address"
- 	depends on MODULES
- 	default y
-+	select ARM64_MODULE_CMODEL_LARGE
- 	help
- 	  This option builds kernel modules using the large memory model in
- 	  order to avoid the use of the ADRP instruction, which can cause
-@@ -709,6 +710,18 @@ config ARM64_MODULE_PLTS
- 	bool
- 	select HAVE_MOD_ARCH_SPECIFIC
+@@ -704,6 +704,10 @@ config ARM64_LSE_ATOMICS
  
-+config ARM64_MODULE_CMODEL_LARGE
+ endmenu
+ 
++config ARM64_MODULE_PLTS
 +	bool
-+
-+config ARM64_RELOCATABLE_KERNEL
-+	bool "Kernel address space layout randomization (KASLR)"
-+	select ARM64_MODULE_PLTS
-+	select ARM64_MODULE_CMODEL_LARGE
-+	help
-+	  This feature randomizes the virtual address of the kernel image, to
-+	  harden against exploits that rely on knowledge about the absolute
-+	  addresses of certain kernel data structures.
++	select HAVE_MOD_ARCH_SPECIFIC
 +
  endmenu
  
  menu "Boot options"
 diff --git a/arch/arm64/Makefile b/arch/arm64/Makefile
-index d4654830e536..75dc477d45f5 100644
+index cd822d8454c0..d4654830e536 100644
 --- a/arch/arm64/Makefile
 +++ b/arch/arm64/Makefile
-@@ -15,6 +15,10 @@ CPPFLAGS_vmlinux.lds = -DTEXT_OFFSET=$(TEXT_OFFSET)
- OBJCOPYFLAGS	:=-O binary -R .note -R .note.gnu.build-id -R .comment -S
- GZFLAGS		:=-9
- 
-+ifneq ($(CONFIG_ARM64_RELOCATABLE_KERNEL),)
-+LDFLAGS_vmlinux		+= -pie
-+endif
-+
- KBUILD_DEFCONFIG := defconfig
- 
- # Check for binutils support for specific extensions
-@@ -41,7 +45,7 @@ endif
- 
- CHECKFLAGS	+= -D__aarch64__
- 
--ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
-+ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
+@@ -45,6 +45,10 @@ ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
  KBUILD_CFLAGS_MODULE	+= -mcmodel=large
  endif
  
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 1dcbf142d36c..e435423f9731 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -88,10 +88,10 @@
- #define __virt_to_phys(x) ({						\
- 	phys_addr_t __x = (phys_addr_t)(x);				\
- 	__x >= PAGE_OFFSET ? (__x - PAGE_OFFSET + PHYS_OFFSET) :	\
--			     (__x - KIMAGE_VADDR + PHYS_OFFSET); })
-+			     (__x - kimage_vaddr + PHYS_OFFSET); })
++ifeq ($(CONFIG_ARM64_MODULE_PLTS),y)
++KBUILD_LDFLAGS_MODULE	+= -T $(srctree)/arch/arm64/kernel/module.lds
++endif
++
+ # Default value
+ head-y		:= arch/arm64/kernel/head.o
  
- #define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
--#define __phys_to_kimg(x)	((unsigned long)((x) - PHYS_OFFSET + KIMAGE_VADDR))
-+#define __phys_to_kimg(x)	((unsigned long)((x) - PHYS_OFFSET + kimage_vaddr))
+diff --git a/arch/arm64/include/asm/module.h b/arch/arm64/include/asm/module.h
+index e80e232b730e..7b8cd3dc9d8e 100644
+--- a/arch/arm64/include/asm/module.h
++++ b/arch/arm64/include/asm/module.h
+@@ -20,4 +20,15 @@
  
- /*
-  * Convert a page to/from a physical address
-@@ -121,6 +121,12 @@ extern phys_addr_t		memstart_addr;
- /* PHYS_OFFSET - the physical address of the start of memory. */
- #define PHYS_OFFSET		({ memstart_addr; })
+ #define MODULE_ARCH_VERMAGIC	"aarch64"
  
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+extern u64			kimage_vaddr;
-+#else
-+#define kimage_vaddr		KIMAGE_VADDR
++#ifdef CONFIG_ARM64_MODULE_PLTS
++struct mod_arch_specific {
++	struct elf64_shdr	*core_plt;
++	struct elf64_shdr	*init_plt;
++	int			core_plt_count;
++	int			init_plt_count;
++};
 +#endif
 +
- /*
-  * The maximum physical address that the linear direct mapping
-  * of system RAM can cover. (PAGE_OFFSET can be interpreted as
-diff --git a/arch/arm64/kernel/arm64ksyms.c b/arch/arm64/kernel/arm64ksyms.c
-index 3b6d8cc9dfe0..4f7b7f44e2b5 100644
---- a/arch/arm64/kernel/arm64ksyms.c
-+++ b/arch/arm64/kernel/arm64ksyms.c
-@@ -41,6 +41,11 @@ EXPORT_SYMBOL(__copy_in_user);
- 	/* physical memory */
- EXPORT_SYMBOL(memstart_addr);
- 
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+	/* runtime kernel virtual base address */
-+EXPORT_SYMBOL(kimage_vaddr);
-+#endif
++u64 get_module_plt(struct module *mod, void *loc, u64 val);
 +
- 	/* string / mem functions */
- EXPORT_SYMBOL(strchr);
- EXPORT_SYMBOL(strrchr);
-diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-index 4f086e247eea..5ec779412436 100644
---- a/arch/arm64/kernel/head.S
-+++ b/arch/arm64/kernel/head.S
-@@ -59,8 +59,15 @@
- 
- #define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
- 
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+#define __HEAD_FLAG_RELOC	1
-+#else
-+#define __HEAD_FLAG_RELOC	0
-+#endif
+ #endif /* __ASM_MODULE_H */
+diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
+index 474691f8b13a..f42b0fff607f 100644
+--- a/arch/arm64/kernel/Makefile
++++ b/arch/arm64/kernel/Makefile
+@@ -30,6 +30,7 @@ arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o 	\
+ 					   ../../arm/kernel/opcodes.o
+ arm64-obj-$(CONFIG_FUNCTION_TRACER)	+= ftrace.o entry-ftrace.o
+ arm64-obj-$(CONFIG_MODULES)		+= arm64ksyms.o module.o
++arm64-obj-$(CONFIG_ARM64_MODULE_PLTS)	+= module-plts.o
+ arm64-obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o perf_callchain.o
+ arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
+ arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
+diff --git a/arch/arm64/kernel/module-plts.c b/arch/arm64/kernel/module-plts.c
+new file mode 100644
+index 000000000000..b4199f2b4e69
+--- /dev/null
++++ b/arch/arm64/kernel/module-plts.c
+@@ -0,0 +1,137 @@
++/*
++ * Copyright (C) 2014-2015 Linaro Ltd. <ard.biesheuvel@linaro.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
 +
- #define __HEAD_FLAGS	((__HEAD_FLAG_BE << 0) |	\
--			 (__HEAD_FLAG_PAGE_SIZE << 1))
-+			 (__HEAD_FLAG_PAGE_SIZE << 1) |	\
-+			 (__HEAD_FLAG_RELOC << 3))
- 
- /*
-  * Kernel startup entry point.
-@@ -229,6 +236,9 @@ ENTRY(stext)
- 	 */
- 	ldr	x27, 0f				// address to jump to after
- 						// MMU has been enabled
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+	add	x27, x27, x23			// add KASLR displacement
-+#endif
- 	adr_l	lr, __enable_mmu		// return (PIC) address
- 	b	__cpu_setup			// initialise processor
- ENDPROC(stext)
-@@ -241,6 +251,16 @@ ENDPROC(stext)
- preserve_boot_args:
- 	mov	x21, x0				// x21=FDT
- 
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+	/*
-+	 * Mask off the bits of the random value supplied in x1 so it can serve
-+	 * as a KASLR displacement value which will move the kernel image to a
-+	 * random offset in the lower half of the VMALLOC area.
-+	 */
-+	mov	x23, #(1 << (VA_BITS - 2)) - 1
-+	and	x23, x23, x1, lsl #SWAPPER_BLOCK_SHIFT
-+#endif
++#include <linux/elf.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
 +
- 	adr_l	x0, boot_args			// record the contents of
- 	stp	x21, x1, [x0]			// x0 .. x3 at kernel entry
- 	stp	x2, x3, [x0, #16]
-@@ -400,6 +420,9 @@ __create_page_tables:
- 	 */
- 	mov	x0, x26				// swapper_pg_dir
- 	ldr	x5, =KIMAGE_VADDR
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+	add	x5, x5, x23			// add KASLR displacement
-+#endif
- 	create_pgd_entry x0, x5, x3, x6
- 	ldr	w6, kernel_img_size
- 	add	x6, x6, x5
-@@ -437,6 +460,51 @@ __mmap_switched:
- 	str	xzr, [x6], #8			// Clear BSS
- 	b	1b
- 2:
++struct plt_entry {
++	u32	mov0;	/* movn	x16, #0x...., lsl #32		*/
++	u32	mov1;	/* movk	x16, #0x...., lsl #16		*/
++	u32	mov2;	/* movk	x16, #0x....			*/
++	u32	br;	/* br	x16				*/
++};
 +
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
++static bool in_init(const struct module *mod, void *addr)
++{
++	return (u64)addr - (u64)mod->module_init < mod->init_size;
++}
 +
-+#define R_AARCH64_RELATIVE	0x403
-+#define R_AARCH64_ABS64		0x101
++u64 get_module_plt(struct module *mod, void *loc, u64 val)
++{
++	struct plt_entry entry, *plt;
++	int i, *count;
 +
-+	/*
-+	 * Iterate over each entry in the relocation table, and apply the
-+	 * relocations in place.
-+	 */
-+	adr_l	x8, __dynsym_start		// start of symbol table
-+	adr_l	x9, __reloc_start		// start of reloc table
-+	adr_l	x10, __reloc_end		// end of reloc table
++	entry.mov0 = 0x92c00010 | ((~val & 0xffff00000000) >> (32 - 5));
++	entry.mov1 = 0xf2a00010 | (( val & 0xffff0000) >> (16 - 5));
++	entry.mov2 = 0xf2800010 | (( val & 0xffff) << 5);
++	entry.br   = 0xd61f0200;
 +
-+0:	cmp	x9, x10
-+	b.hs	2f
-+	ldp	x11, x12, [x9], #24
-+	cmp	x12, #R_AARCH64_RELATIVE
-+	b.ne	1f
-+	ldr	x12, [x9, #-8]
-+	add	x12, x12, x23			// relocate
-+	str	x12, [x11, x23]
-+	b	0b
-+
-+1:	ubfx	x13, x12, #0, #32
-+	cmp	x13, #R_AARCH64_ABS64
-+	b.ne	0b
-+	lsr	x13, x12, #32			// symbol index
-+	ldr	x12, [x9, #-8]
-+	add	x13, x13, x13, lsl #1		// x 3
-+	add	x13, x8, x13, lsl #3		// x 8
-+	ldrsh	w14, [x13, #6]			// Elf64_Sym::st_shndx
-+	ldr	x15, [x13, #8]			// Elf64_Sym::st_value
-+	cmp	w14, #-0xf			// SHN_ABS (0xfff1) ?
-+	add	x14, x15, x23			// relocate
-+	csel	x15, x14, x15, ne
-+	add	x15, x12, x15
-+	str	x15, [x11, x23]
-+	b	0b
-+
-+2:	ldr	x8, =vectors			// reload VBAR_EL1 with
-+	msr	vbar_el1, x8			// relocated address
-+	isb
-+#endif
-+
- 	adr_l	sp, initial_sp, x4
- 	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
- 	str_l	x24, memstart_addr, x6		// Save PHYS_OFFSET
-@@ -452,6 +520,12 @@ ENDPROC(__mmap_switched)
-  * hotplug and needs to have the same protections as the text region
-  */
- 	.section ".text","ax"
-+
-+#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
-+ENTRY(kimage_vaddr)
-+	.quad		_text - TEXT_OFFSET
-+#endif
-+
- /*
-  * If we're fortunate enough to boot at EL2, ensure that the world is
-  * sane before dropping to EL1.
-diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
-index 96177a7c0f05..2faee6042e99 100644
---- a/arch/arm64/kernel/setup.c
-+++ b/arch/arm64/kernel/setup.c
-@@ -292,16 +292,15 @@ u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
- 
- void __init setup_arch(char **cmdline_p)
- {
--	static struct vm_struct vmlinux_vm __initdata = {
--		.addr		= (void *)KIMAGE_VADDR,
--		.size		= 0,
--		.flags		= VM_IOREMAP,
--		.caller		= setup_arch,
--	};
--
--	vmlinux_vm.size = round_up((unsigned long)_end - KIMAGE_VADDR,
--				   1 << SWAPPER_BLOCK_SHIFT);
--	vmlinux_vm.phys_addr = __pa(KIMAGE_VADDR);
-+	static struct vm_struct vmlinux_vm __initdata;
-+
-+	vmlinux_vm.addr = (void *)kimage_vaddr;
-+	vmlinux_vm.size = round_up((u64)_end - kimage_vaddr,
-+				   SWAPPER_BLOCK_SIZE);
-+	vmlinux_vm.phys_addr = __pa(kimage_vaddr);
-+	vmlinux_vm.flags = VM_IOREMAP;
-+	vmlinux_vm.caller = setup_arch;
-+
- 	vm_area_add_early(&vmlinux_vm);
- 
- 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
-@@ -367,7 +366,8 @@ void __init setup_arch(char **cmdline_p)
- 	conswitchp = &dummy_con;
- #endif
- #endif
--	if (boot_args[1] || boot_args[2] || boot_args[3]) {
-+	if ((!IS_ENABLED(CONFIG_ARM64_RELOCATABLE_KERNEL) && boot_args[1]) ||
-+	    boot_args[2] || boot_args[3]) {
- 		pr_err("WARNING: x1-x3 nonzero in violation of boot protocol:\n"
- 			"\tx1: %016llx\n\tx2: %016llx\n\tx3: %016llx\n"
- 			"This indicates a broken bootloader or old kernel\n",
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index 69dfa376e843..77faf85f6d46 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -148,6 +148,15 @@ SECTIONS
- 	.altinstr_replacement : {
- 		*(.altinstr_replacement)
- 	}
-+	.rela : ALIGN(8) {
-+		__reloc_start = .;
-+		*(.rela .rela*)
-+		__reloc_end = .;
++	if (in_init(mod, loc)) {
++		plt = (struct plt_entry *)mod->arch.init_plt->sh_addr;
++		count = &mod->arch.init_plt_count;
++	} else {
++		plt = (struct plt_entry *)mod->arch.core_plt->sh_addr;
++		count = &mod->arch.core_plt_count;
 +	}
-+	.dynsym : ALIGN(8) {
-+		__dynsym_start = .;
-+		*(.dynsym)
++
++	/* Look for an existing entry pointing to 'val' */
++	for (i = 0; i < *count; i++)
++		if (plt[i].mov2 == entry.mov2 &&
++		    plt[i].mov1 == entry.mov1 &&
++		    plt[i].mov0 == entry.mov0)
++			return (u64)&plt[i];
++
++	i = (*count)++;
++	plt[i] = entry;
++	return (u64)&plt[i];
++}
++
++static int duplicate_rel(Elf64_Addr base, const Elf64_Rela *rela, int num)
++{
++	int i;
++
++	for (i = 0; i < num; i++) {
++		if (rela[i].r_info == rela[num].r_info &&
++		    rela[i].r_addend == rela[num].r_addend)
++			return 1;
 +	}
++	return 0;
++}
++
++/* Count how many PLT entries we may need */
++static unsigned int count_plts(Elf64_Addr base, const Elf64_Rela *rela, int num)
++{
++	unsigned int ret = 0;
++	int i;
++
++	/*
++	 * Sure, this is order(n^2), but it's usually short, and not
++	 * time critical
++	 */
++	for (i = 0; i < num; i++)
++		switch (ELF64_R_TYPE(rela[i].r_info)) {
++		case R_AARCH64_JUMP26:
++		case R_AARCH64_CALL26:
++			if (!duplicate_rel(base, rela, i))
++				ret++;
++			break;
++		}
++	return ret;
++}
++
++int module_frob_arch_sections(Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
++			      char *secstrings, struct module *mod)
++{
++	unsigned long core_plts = 0, init_plts = 0;
++	Elf64_Shdr *s, *sechdrs_end = sechdrs + ehdr->e_shnum;
++
++	/*
++	 * To store the PLTs, we expand the .text section for core module code
++	 * and the .init.text section for initialization code.
++	 */
++	for (s = sechdrs; s < sechdrs_end; ++s)
++		if (strcmp(".core.plt", secstrings + s->sh_name) == 0)
++			mod->arch.core_plt = s;
++		else if (strcmp(".init.plt", secstrings + s->sh_name) == 0)
++			mod->arch.init_plt = s;
++
++	if (!mod->arch.core_plt || !mod->arch.init_plt) {
++		pr_err("%s: sections missing\n", mod->name);
++		return -ENOEXEC;
++	}
++
++	for (s = sechdrs + 1; s < sechdrs_end; ++s) {
++		const Elf64_Rela *rels = (void *)ehdr + s->sh_offset;
++		int numrels = s->sh_size / sizeof(Elf64_Rela);
++		Elf64_Shdr *dstsec = sechdrs + s->sh_info;
++
++		if (s->sh_type != SHT_RELA)
++			continue;
++
++		if (strstr(secstrings + s->sh_name, ".init"))
++			init_plts += count_plts(dstsec->sh_addr, rels, numrels);
++		else
++			core_plts += count_plts(dstsec->sh_addr, rels, numrels);
++	}
++
++	mod->arch.core_plt->sh_type = SHT_NOBITS;
++	mod->arch.core_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
++	mod->arch.core_plt->sh_addralign = L1_CACHE_BYTES;
++	mod->arch.core_plt->sh_size = core_plts * sizeof(struct plt_entry);
++	mod->arch.core_plt_count = 0;
++
++	mod->arch.init_plt->sh_type = SHT_NOBITS;
++	mod->arch.init_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
++	mod->arch.init_plt->sh_addralign = L1_CACHE_BYTES;
++	mod->arch.init_plt->sh_size = init_plts * sizeof(struct plt_entry);
++	mod->arch.init_plt_count = 0;
++	pr_debug("%s: core.plt=%lld, init.plt=%lld\n", __func__,
++		 mod->arch.core_plt->sh_size, mod->arch.init_plt->sh_size);
++	return 0;
++}
+diff --git a/arch/arm64/kernel/module.c b/arch/arm64/kernel/module.c
+index f4bc779e62e8..14880d77ec6f 100644
+--- a/arch/arm64/kernel/module.c
++++ b/arch/arm64/kernel/module.c
+@@ -388,6 +388,13 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
+ 		case R_AARCH64_CALL26:
+ 			ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2, 26,
+ 					     AARCH64_INSN_IMM_26);
++
++			if (IS_ENABLED(CONFIG_ARM64_MODULE_PLTS) &&
++			    ovf == -ERANGE) {
++				val = get_module_plt(me, loc, val);
++				ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2,
++						     26, AARCH64_INSN_IMM_26);
++			}
+ 			break;
  
- 	. = ALIGN(PAGE_SIZE);
- 	__init_end = .;
-diff --git a/scripts/sortextable.c b/scripts/sortextable.c
-index af247c70fb66..5ecbedefdb0f 100644
---- a/scripts/sortextable.c
-+++ b/scripts/sortextable.c
-@@ -266,9 +266,9 @@ do_file(char const *const fname)
- 		break;
- 	}  /* end switch */
- 	if (memcmp(ELFMAG, ehdr->e_ident, SELFMAG) != 0
--	||  r2(&ehdr->e_type) != ET_EXEC
-+	|| (r2(&ehdr->e_type) != ET_EXEC && r2(&ehdr->e_type) != ET_DYN)
- 	||  ehdr->e_ident[EI_VERSION] != EV_CURRENT) {
--		fprintf(stderr, "unrecognized ET_EXEC file %s\n", fname);
-+		fprintf(stderr, "unrecognized ET_EXEC/ET_DYN file %s\n", fname);
- 		fail_file();
- 	}
- 
+ 		default:
+diff --git a/arch/arm64/kernel/module.lds b/arch/arm64/kernel/module.lds
+new file mode 100644
+index 000000000000..3682fa107918
+--- /dev/null
++++ b/arch/arm64/kernel/module.lds
+@@ -0,0 +1,4 @@
++SECTIONS {
++        .core.plt : { BYTE(0) }
++        .init.plt : { BYTE(0) }
++}
 -- 
 2.5.0
