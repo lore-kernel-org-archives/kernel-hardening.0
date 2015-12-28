@@ -1,61 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 23 Dec 2015 16:11:22 -0800
-From: Tony Lindgren <tony@atomide.com>
-Message-ID: <20151224001121.GS2793@atomide.com>
-References: <20151202202725.GA794@www.outflux.net>
- <20151223195129.GP2793@atomide.com>
- <567B04AB.6010906@redhat.com>
- <20151223212911.GR2793@atomide.com>
- <alpine.LFD.2.20.1512231637110.3603@knanqh.ubzr>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.LFD.2.20.1512231637110.3603@knanqh.ubzr>
-Subject: [kernel-hardening] Re: [PATCH v2] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
-To: Nicolas Pitre <nicolas.pitre@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Russell King <linux@arm.linux.org.uk>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, Laura Abbott <labbott@fedoraproject.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Mon, 28 Dec 2015 12:20:45 +0100
+Message-Id: <1451301654-32019-2-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
+References: <1451301654-32019-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [RFC PATCH 01/10] arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
+To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, lkml@vger.kernel.org
+Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-* Nicolas Pitre <nicolas.pitre@linaro.org> [151223 13:45]:
-> On Wed, 23 Dec 2015, Tony Lindgren wrote:
-> 
-> > Hi,
-> > 
-> > * Laura Abbott <labbott@redhat.com> [151223 12:31]:
-> > > 
-> > > Looks like a case similar to Geert's
-> > > 
-> > >         adr     r7, kick_counter
-> > > wait_dll_lock_timed:
-> > >         ldr     r4, wait_dll_lock_counter
-> > >         add     r4, r4, #1
-> > >         str     r4, [r7, #wait_dll_lock_counter - kick_counter]
-> > >         ldr     r4, sdrc_dlla_status
-> > >         /* Wait 20uS for lock */
-> > >         mov     r6, #8
-> > > 
-> > > 
-> > > kick_counter and wait_dll_lock_counter are in the text section which is marked read only.
-> > > They need to be moved to the data section along with a few other variables from what I
-> > > can tell (maybe those are read only?).
-> > 
-> > Thanks for looking, yeah so it seem.
-> > 
-> > > I suspect this is going to be a common issue with suspend/resume code paths since those
-> > > are hand written assembly.
-> > 
-> > Yes I suspect we have quite a few cases like this.
-> 
-> We fixed a bunch of similar issues where code was located in the .data 
-> section for ease of use from assembly code.  See commit b4e61537 and 
-> d0776aff for example.
+This introduces the preprocessor symbol KIMAGE_VADDR which will serve as
+the symbolic virtual base of the kernel region, i.e., the kernel's virtual
+offset will be KIMAGE_VADDR + TEXT_OFFSET. For now, we define it as being
+equal to PAGE_OFFSET, but in the future, it will be moved below it once
+we move the kernel virtual mapping out of the linear mapping.
 
-Thanks hey some assembly fun for the holidays :) I also need to check what
-all gets relocated to SRAM here.
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/include/asm/memory.h | 10 ++++++++--
+ arch/arm64/kernel/head.S        |  2 +-
+ arch/arm64/kernel/vmlinux.lds.S |  4 ++--
+ 3 files changed, 11 insertions(+), 5 deletions(-)
 
-In any case, seems like the $subject patch is too intrusive for v4.5 at
-this point.
-
-Regards,
-
-Tony
+diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+index 853953cd1f08..bea9631b34a8 100644
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -51,7 +51,8 @@
+ #define VA_BITS			(CONFIG_ARM64_VA_BITS)
+ #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
+ #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
+-#define MODULES_END		(PAGE_OFFSET)
++#define KIMAGE_VADDR		(PAGE_OFFSET)
++#define MODULES_END		(KIMAGE_VADDR)
+ #define MODULES_VADDR		(MODULES_END - SZ_64M)
+ #define PCI_IO_END		(MODULES_VADDR - SZ_2M)
+ #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
+@@ -75,8 +76,13 @@
+  * private definitions which should NOT be used outside memory.h
+  * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
+  */
+-#define __virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
++#define __virt_to_phys(x) ({						\
++	phys_addr_t __x = (phys_addr_t)(x);				\
++	__x >= PAGE_OFFSET ? (__x - PAGE_OFFSET + PHYS_OFFSET) :	\
++			     (__x - KIMAGE_VADDR + PHYS_OFFSET); })
++
+ #define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
++#define __phys_to_kimg(x)	((unsigned long)((x) - PHYS_OFFSET + KIMAGE_VADDR))
+ 
+ /*
+  * Convert a page to/from a physical address
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index 23cfc08fc8ba..6434c844a0e4 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -389,7 +389,7 @@ __create_page_tables:
+ 	 * Map the kernel image (starting with PHYS_OFFSET).
+ 	 */
+ 	mov	x0, x26				// swapper_pg_dir
+-	mov	x5, #PAGE_OFFSET
++	ldr	x5, =KIMAGE_VADDR
+ 	create_pgd_entry x0, x5, x3, x6
+ 	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
+ 	mov	x3, x24				// phys offset
+diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
+index 7de6c39858a5..ced0dedcabcc 100644
+--- a/arch/arm64/kernel/vmlinux.lds.S
++++ b/arch/arm64/kernel/vmlinux.lds.S
+@@ -88,7 +88,7 @@ SECTIONS
+ 		*(.discard.*)
+ 	}
+ 
+-	. = PAGE_OFFSET + TEXT_OFFSET;
++	. = KIMAGE_VADDR + TEXT_OFFSET;
+ 
+ 	.head.text : {
+ 		_text = .;
+@@ -185,4 +185,4 @@ ASSERT(__idmap_text_end - (__idmap_text_start & ~(SZ_4K - 1)) <= SZ_4K,
+ /*
+  * If padding is applied before .head.text, virt<->phys conversions will fail.
+  */
+-ASSERT(_text == (PAGE_OFFSET + TEXT_OFFSET), "HEAD is misaligned")
++ASSERT(_text == (KIMAGE_VADDR + TEXT_OFFSET), "HEAD is misaligned")
+-- 
+2.5.0
