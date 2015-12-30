@@ -1,49 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 30 Dec 2015 16:26:00 +0100
-Message-Id: <1451489172-17420-2-git-send-email-ard.biesheuvel@linaro.org>
+Date: Wed, 30 Dec 2015 16:26:02 +0100
+Message-Id: <1451489172-17420-4-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 01/13] of/fdt: make memblock minimum physical address arch configurable
+Subject: [kernel-hardening] [PATCH v2 03/13] arm64: use more granular reservations for static page table allocations
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-By default, early_init_dt_add_memory_arch() ignores memory below
-the base of the kernel image since it won't be addressable via the
-linear mapping. However, this is not appropriate anymore once we
-decouple the kernel text mapping from the linear mapping, so archs
-may want to drop the low limit entirely. So allow the minimum to be
-overridden by setting MIN_MEMBLOCK_ADDR.
+Before introducing new statically allocated page tables and increasing
+their alignment in subsequent patches, update the reservation logic
+so that only pages that are in actual use end up as reserved with
+memblock.
 
-Acked-by: Mark Rutland <mark.rutland@arm.com>
-Acked-by: Rob Herring <robh@kernel.org>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- drivers/of/fdt.c | 5 ++++-
+ arch/arm64/mm/init.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/of/fdt.c b/drivers/of/fdt.c
-index d2430298a309..0455564f8cbc 100644
---- a/drivers/of/fdt.c
-+++ b/drivers/of/fdt.c
-@@ -971,13 +971,16 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
- }
+diff --git a/arch/arm64/mm/init.c b/arch/arm64/mm/init.c
+index 6bacba847923..8e678d05ad84 100644
+--- a/arch/arm64/mm/init.c
++++ b/arch/arm64/mm/init.c
+@@ -36,6 +36,7 @@
+ #include <linux/swiotlb.h>
  
- #ifdef CONFIG_HAVE_MEMBLOCK
-+#ifndef MIN_MEMBLOCK_ADDR
-+#define MIN_MEMBLOCK_ADDR	__pa(PAGE_OFFSET)
-+#endif
- #ifndef MAX_MEMBLOCK_ADDR
- #define MAX_MEMBLOCK_ADDR	((phys_addr_t)~0)
+ #include <asm/fixmap.h>
++#include <asm/kernel-pgtable.h>
+ #include <asm/memory.h>
+ #include <asm/sections.h>
+ #include <asm/setup.h>
+@@ -165,11 +166,13 @@ void __init arm64_memblock_init(void)
+ 	 * Register the kernel text, kernel data, initrd, and initial
+ 	 * pagetables with memblock.
+ 	 */
+-	memblock_reserve(__pa(_text), _end - _text);
++	memblock_reserve(__pa(_text), __bss_stop - _text);
+ #ifdef CONFIG_BLK_DEV_INITRD
+ 	if (initrd_start)
+ 		memblock_reserve(__virt_to_phys(initrd_start), initrd_end - initrd_start);
  #endif
++	memblock_reserve(__pa(idmap_pg_dir), IDMAP_DIR_SIZE);
++	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_DIR_SIZE);
  
- void __init __weak early_init_dt_add_memory_arch(u64 base, u64 size)
- {
--	const u64 phys_offset = __pa(PAGE_OFFSET);
-+	const u64 phys_offset = MIN_MEMBLOCK_ADDR;
+ 	early_init_fdt_scan_reserved_mem();
  
- 	if (!PAGE_ALIGNED(base)) {
- 		if (size < PAGE_SIZE - (base & ~PAGE_MASK)) {
 -- 
 2.5.0
