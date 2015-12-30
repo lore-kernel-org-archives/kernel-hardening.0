@@ -1,221 +1,320 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 30 Dec 2015 16:25:59 +0100
-Message-Id: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 00/13] arm64: implement support for KASLR
+Date: Wed, 30 Dec 2015 16:26:05 +0100
+Message-Id: <1451489172-17420-7-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
+References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v2 06/13] arm64: move kernel image to base of vmalloc area
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This series implements KASLR for arm64, by building the kernel as a PIE
-executable that can relocate itself at runtime, and moving it to a random
-offset in the vmalloc area. This v2 also implements physical randomization,
-i.e., it allows the kernel to deal with being loaded at any physical offset
-(modulo the required alignment), and invokes the EFI_RNG_PROTOCOL from the
-UEFI stub to obtain random bits and perform the actual randomization of the
-physical load address.
+This moves the module area to right before the vmalloc area, and
+moves the kernel image to the base of the vmalloc area. This is
+an intermediate step towards implementing kASLR, where the kernel
+image can be located anywhere in the vmalloc area.
 
-Changes since v1/RFC:
-- This series now implements fully independent virtual and physical address
-  randomization at load time. I have recycled some patches from this series:
-  http://thread.gmane.org/gmane.linux.ports.arm.kernel/455151, and updated the
-  final UEFI stub patch to randomize the physical address as well.
-- Added a patch to deal with the way KVM on arm64 makes assumptions about the
-  relation between kernel symbols and the linear mapping (on which the HYP
-  mapping is based), as these assumptions cease to be valid once we move the
-  kernel Image out of the linear mapping.
-- Updated the module PLT patch so it works on BE kernels as well.
-- Moved the constant Image header values to head.S, and updated the linker
-  script to provide the kernel size using R_AARCH64_ABS32 relocation rather
-  than a R_AARCH64_ABS64 relocation, since those are always resolved at build
-  time. This allows me to get rid of the post-build perl script to swab header
-  values on BE kernels.
-- Minor style tweaks.
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/include/asm/kasan.h          | 17 ++++-----
+ arch/arm64/include/asm/kernel-pgtable.h |  5 +--
+ arch/arm64/include/asm/memory.h         | 17 ++++++---
+ arch/arm64/include/asm/pgtable.h        |  7 ----
+ arch/arm64/kernel/setup.c               | 13 +++++++
+ arch/arm64/mm/dump.c                    | 12 +++----
+ arch/arm64/mm/init.c                    | 20 +++++------
+ arch/arm64/mm/mmu.c                     | 37 ++------------------
+ 8 files changed, 56 insertions(+), 72 deletions(-)
 
-Notes:
-- These patches apply on top of Mark Rutland's pagetable rework series:
-  http://thread.gmane.org/gmane.linux.ports.arm.kernel/462438
-- The arm64 Image is uncompressed by default, and the Elf64_Rela format uses
-  24 bytes per relocation entry. This results in considerable bloat (i.e., a
-  couple of MBs worth of relocation data in an .init section). However, no
-  build time postprocessing is required, we rely fully on the toolchain to
-  produce the image
-- We have to rely on the bootloader to supply some randomness in register x1
-  upon kernel entry. Since we have no decompressor, it is simply not feasible
-  to collect randomness in the head.S code path before mapping the kernel and
-  enabling the MMU.
-- The EFI_RNG_PROTOCOL that is invoked in patch #13 to supply randomness on
-  UEFI systems is not universally available. A QEMU/KVM firmware image that
-  implements a pseudo-random version is available here:
-  http://people.linaro.org/~ard.biesheuvel/QEMU_EFI.fd.aarch64-rng.bz2
-  (requires access to PMCCNTR_EL0 and support for AES instructions)
-  See below for instructions how to run the pseudo-random version on real
-  hardware.
-- Only mildly tested. Help appreciated.
-
-Code can be found here:
-git://git.linaro.org/people/ard.biesheuvel/linux-arm.git arm64-kaslr-v2
-https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/shortlog/refs/heads/arm64-kaslr-v2
-
-Patch #1 updates the OF code to allow the minimum memblock physical address to
-be overridden by the arch.
-
-Patch #2 introduces KIMAGE_VADDR as the base of the kernel virtual region.
-
-Patch #3 memblock_reserve()'s the .bss, swapper_pg_dir and idmap_pg_dir
-individually.
-
-Patch #4 rewrites early_fixmap_init() so it does not rely on the linear mapping
-(i.e., the use of phys_to_virt() is avoided)
-
-Patch #5 updates KVM on arm64 so it can deal with kernel symbols whose addresses
-are not covered by the linear mapping.
-
-Patch #6 moves the kernel virtual mapping to the vmalloc area, along with the
-module region which is kept right below it, as before.
-
-Patch #7 adds support for PLTs in modules so that relative branches can be
-resolved via a PLT if the target is out of range.
-
-Patch #8 moves to the x86 version of the extable implementation so that it no
-longer contains absolute addresses that require fixing up at relocation time,
-but uses relative offsets instead.
-
-Patch #9 reverts some changes to the Image header population code so we no
-longer depend on the linker to populate the header fields. This is necessary
-since the R_AARCH64_ABS relocations that are emitted for these fields are not
-resolved at build time for PIE executables.
-
-Patch #10 updates the code in head.S that needs to execute before relocation to
-avoid the use of values that are subject to dynamic relocation. These values
-will not be populated in PIE executables.
-
-Patch #11 allows the kernel Image to be loaded anywhere in physical memory, by
-decoupling PHYS_OFFSET from the base of the kernel image.
-
-Patch #12 implements the core KASLR, by taking randomness supplied in register x1
-and using it to move the kernel inside the vmalloc area.
-
-Patch #13 adds an invocation of the EFI_RNG_PROTOCOL to supply randomness to the
-kernel proper.
-
-Ard Biesheuvel (13):
-  of/fdt: make memblock minimum physical address arch configurable
-  arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
-  arm64: use more granular reservations for static page table
-    allocations
-  arm64: decouple early fixmap init from linear mapping
-  arm64: kvm: deal with kernel symbols outside of linear mapping
-  arm64: move kernel image to base of vmalloc area
-  arm64: add support for module PLTs
-  arm64: use relative references in exception tables
-  arm64: avoid R_AARCH64_ABS64 relocations for Image header fields
-  arm64: avoid dynamic relocations in early boot code
-  arm64: allow kernel Image to be loaded anywhere in physical memory
-  arm64: add support for relocatable kernel
-  arm64: efi: invoke EFI_RNG_PROTOCOL to supply KASLR randomness
-
- Documentation/arm64/booting.txt           |  15 ++-
- arch/arm/include/asm/kvm_asm.h            |   2 +
- arch/arm/include/asm/kvm_mmu.h            |   2 +
- arch/arm/kvm/arm.c                        |   9 +-
- arch/arm/kvm/mmu.c                        |  12 +-
- arch/arm64/Kconfig                        |  18 +++
- arch/arm64/Makefile                       |  10 +-
- arch/arm64/include/asm/assembler.h        |  17 ++-
- arch/arm64/include/asm/boot.h             |   5 +
- arch/arm64/include/asm/compiler.h         |   2 +
- arch/arm64/include/asm/futex.h            |   4 +-
- arch/arm64/include/asm/kasan.h            |  17 +--
- arch/arm64/include/asm/kernel-pgtable.h   |   5 +-
- arch/arm64/include/asm/kvm_asm.h          |  21 +--
- arch/arm64/include/asm/kvm_mmu.h          |   2 +
- arch/arm64/include/asm/memory.h           |  37 ++++--
- arch/arm64/include/asm/module.h           |  11 ++
- arch/arm64/include/asm/pgtable.h          |   7 -
- arch/arm64/include/asm/uaccess.h          |  16 +--
- arch/arm64/include/asm/virt.h             |   4 -
- arch/arm64/kernel/Makefile                |   1 +
- arch/arm64/kernel/armv8_deprecated.c      |   4 +-
- arch/arm64/kernel/efi-entry.S             |   9 +-
- arch/arm64/kernel/head.S                  | 133 ++++++++++++++++---
- arch/arm64/kernel/image.h                 |  37 ++----
- arch/arm64/kernel/module-plts.c           | 137 ++++++++++++++++++++
- arch/arm64/kernel/module.c                |   7 +
- arch/arm64/kernel/module.lds              |   4 +
- arch/arm64/kernel/setup.c                 |  15 ++-
- arch/arm64/kernel/vmlinux.lds.S           |  29 +++--
- arch/arm64/kvm/debug.c                    |   4 +-
- arch/arm64/mm/dump.c                      |  12 +-
- arch/arm64/mm/extable.c                   | 102 ++++++++++++++-
- arch/arm64/mm/init.c                      |  75 +++++++++--
- arch/arm64/mm/mmu.c                       | 132 +++++++------------
- drivers/firmware/efi/libstub/arm-stub.c   |   1 -
- drivers/firmware/efi/libstub/arm64-stub.c | 134 ++++++++++++++++---
- drivers/of/fdt.c                          |   5 +-
- include/linux/efi.h                       |   5 +-
- scripts/sortextable.c                     |   6 +-
- virt/kvm/arm/vgic-v3.c                    |   2 +-
- 41 files changed, 813 insertions(+), 257 deletions(-)
- create mode 100644 arch/arm64/kernel/module-plts.c
- create mode 100644 arch/arm64/kernel/module.lds
-
-
-EFI_RNG_PROTOCOL on real hardware
-=================================
-
-To test whether your UEFI implements the EFI_RNG_PROTOCOL, download the
-following executable and run it from the UEFI Shell:
-http://people.linaro.org/~ard.biesheuvel/RngTest.efi
-
-FS0:\> rngtest
-UEFI RNG Protocol Testing :
-----------------------------
- -- Locate UEFI RNG Protocol : [Fail - Status = Not Found]
-
-If your UEFI does not implement the EFI_RNG_PROTOCOL, you can download and
-install the pseudo-random version that uses the generic timer and PMCCNTR_EL0
-values and permutes them using a couple of rounds of AES.
-http://people.linaro.org/~ard.biesheuvel/RngDxe.efi
-
-NOTE: not for production!! This is a quick and dirty hack to test the KASLR
-code, and is not suitable for anything else.
-
-FS0:\> rngdxe 
-FS0:\> rngtest
-UEFI RNG Protocol Testing :
-----------------------------
- -- Locate UEFI RNG Protocol : [Pass]
- -- Call RNG->GetInfo() interface : 
-     >> Supported RNG Algorithm (Count = 2) : 
-          0) 44F0DE6E-4D8C-4045-A8C7-4DD168856B9E
-          1) E43176D7-B6E8-4827-B784-7FFDC4B68561
- -- Call RNG->GetRNG() interface : 
-     >> RNG with default algorithm : [Pass]
-     >> RNG with SP800-90-HMAC-256 : [Fail - Status = Unsupported]
-     >> RNG with SP800-90-Hash-256 : [Fail - Status = Unsupported]
-     >> RNG with SP800-90-CTR-256 : [Pass]
-     >> RNG with X9.31-3DES : [Fail - Status = Unsupported]
-     >> RNG with X9.31-AES : [Fail - Status = Unsupported]
-     >> RNG with RAW Entropy : [Pass]
- -- Random Number Generation Test with default RNG Algorithm (20 Rounds): 
-          01) - 27
-          02) - 61E8
-          03) - 496FD8
-          04) - DDD793BF
-          05) - B6C37C8E23
-          06) - 4D183C604A96
-          07) - 9363311DB61298
-          08) - 5715A7294F4E436E
-          09) - F0D4D7BAA0DD52318E
-          10) - C88C6EBCF4C0474D87C3
-          11) - B5594602B482A643932172
-          12) - CA7573F704B2089B726B9CF1
-          13) - A93E9451CB533DCFBA87B97C33
-          14) - 45AA7B83DB6044F7BBAB031F0D24
-          15) - 3DD7A4D61F34ADCB400B5976730DCF
-          16) - 4DD168D21FAB8F59708330D6A9BEB021
-          17) - 4BBB225E61C465F174254159467E65939F
-          18) - 030A156C9616337A20070941E702827DA8E1
-          19) - AB0FC11C9A4E225011382A9D164D9D55CA2B64
-          20) - 72B9B4735DC445E5DA6AF88DE965B7E87CB9A23C
+diff --git a/arch/arm64/include/asm/kasan.h b/arch/arm64/include/asm/kasan.h
+index 2774fa384c47..476d56e0f04c 100644
+--- a/arch/arm64/include/asm/kasan.h
++++ b/arch/arm64/include/asm/kasan.h
+@@ -1,19 +1,16 @@
+ #ifndef __ASM_KASAN_H
+ #define __ASM_KASAN_H
+ 
+-#ifndef __ASSEMBLY__
+-
+ #ifdef CONFIG_KASAN
+ 
+ #include <linux/linkage.h>
+-#include <asm/memory.h>
+ 
+ /*
+  * KASAN_SHADOW_START: beginning of the kernel virtual addresses.
+  * KASAN_SHADOW_END: KASAN_SHADOW_START + 1/8 of kernel virtual addresses.
+  */
+-#define KASAN_SHADOW_START      (VA_START)
+-#define KASAN_SHADOW_END        (KASAN_SHADOW_START + (1UL << (VA_BITS - 3)))
++#define KASAN_SHADOW_START	(VA_START)
++#define KASAN_SHADOW_END	(KASAN_SHADOW_START + (_AC(1, UL) << (VA_BITS - 3)))
+ 
+ /*
+  * This value is used to map an address to the corresponding shadow
+@@ -25,14 +22,18 @@
+  * should satisfy the following equation:
+  *      KASAN_SHADOW_OFFSET = KASAN_SHADOW_END - (1ULL << 61)
+  */
+-#define KASAN_SHADOW_OFFSET     (KASAN_SHADOW_END - (1ULL << (64 - 3)))
++#define KASAN_SHADOW_OFFSET	(KASAN_SHADOW_END - (_AC(1, ULL) << (64 - 3)))
+ 
++#ifndef __ASSEMBLY__
+ void kasan_init(void);
+ asmlinkage void kasan_early_init(void);
++#endif
+ 
+ #else
++
++#ifndef __ASSEMBLY__
+ static inline void kasan_init(void) { }
+ #endif
+ 
+-#endif
+-#endif
++#endif /* CONFIG_KASAN */
++#endif /* __ASM_KASAN_H */
+diff --git a/arch/arm64/include/asm/kernel-pgtable.h b/arch/arm64/include/asm/kernel-pgtable.h
+index a459714ee29e..daa8a7b9917a 100644
+--- a/arch/arm64/include/asm/kernel-pgtable.h
++++ b/arch/arm64/include/asm/kernel-pgtable.h
+@@ -70,8 +70,9 @@
+ /*
+  * Initial memory map attributes.
+  */
+-#define SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
+-#define SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
++#define SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED | PTE_UXN)
++#define SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S | \
++				 PMD_SECT_UXN)
+ 
+ #if ARM64_SWAPPER_USES_SECTION_MAPS
+ #define SWAPPER_MM_MMUFLAGS	(PMD_ATTRINDX(MT_NORMAL) | SWAPPER_PMD_FLAGS)
+diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+index bea9631b34a8..1dcbf142d36c 100644
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -51,14 +51,23 @@
+ #define VA_BITS			(CONFIG_ARM64_VA_BITS)
+ #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
+ #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
+-#define KIMAGE_VADDR		(PAGE_OFFSET)
+-#define MODULES_END		(KIMAGE_VADDR)
+-#define MODULES_VADDR		(MODULES_END - SZ_64M)
+-#define PCI_IO_END		(MODULES_VADDR - SZ_2M)
++#define PCI_IO_END		(PAGE_OFFSET - SZ_2M)
+ #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
+ #define FIXADDR_TOP		(PCI_IO_START - SZ_2M)
+ #define TASK_SIZE_64		(UL(1) << VA_BITS)
+ 
++#ifndef CONFIG_KASAN
++#define MODULES_VADDR		(VA_START)
++#else
++#include <asm/kasan.h>
++#define MODULES_VADDR		(KASAN_SHADOW_END)
++#endif
++
++#define MODULES_END		(MODULES_VADDR + SZ_64M)
++
++#define KIMAGE_VADDR		(MODULES_END)
++#define VMALLOC_START		(MODULES_END)
++
+ #ifdef CONFIG_COMPAT
+ #define TASK_SIZE_32		UL(0x100000000)
+ #define TASK_SIZE		(test_thread_flag(TIF_32BIT) ? \
+diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
+index 0664468466fb..93203a6b9574 100644
+--- a/arch/arm64/include/asm/pgtable.h
++++ b/arch/arm64/include/asm/pgtable.h
+@@ -42,13 +42,6 @@
+  */
+ #define VMEMMAP_SIZE		ALIGN((1UL << (VA_BITS - PAGE_SHIFT)) * sizeof(struct page), PUD_SIZE)
+ 
+-#ifndef CONFIG_KASAN
+-#define VMALLOC_START		(VA_START)
+-#else
+-#include <asm/kasan.h>
+-#define VMALLOC_START		(KASAN_SHADOW_END + SZ_64K)
+-#endif
+-
+ #define VMALLOC_END		(PAGE_OFFSET - PUD_SIZE - VMEMMAP_SIZE - SZ_64K)
+ 
+ #define vmemmap			((struct page *)(VMALLOC_END + SZ_64K))
+diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
+index cfed56f0ad26..96177a7c0f05 100644
+--- a/arch/arm64/kernel/setup.c
++++ b/arch/arm64/kernel/setup.c
+@@ -53,6 +53,7 @@
+ #include <asm/cpufeature.h>
+ #include <asm/cpu_ops.h>
+ #include <asm/kasan.h>
++#include <asm/kernel-pgtable.h>
+ #include <asm/sections.h>
+ #include <asm/setup.h>
+ #include <asm/smp_plat.h>
+@@ -291,6 +292,18 @@ u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
+ 
+ void __init setup_arch(char **cmdline_p)
+ {
++	static struct vm_struct vmlinux_vm __initdata = {
++		.addr		= (void *)KIMAGE_VADDR,
++		.size		= 0,
++		.flags		= VM_IOREMAP,
++		.caller		= setup_arch,
++	};
++
++	vmlinux_vm.size = round_up((unsigned long)_end - KIMAGE_VADDR,
++				   1 << SWAPPER_BLOCK_SHIFT);
++	vmlinux_vm.phys_addr = __pa(KIMAGE_VADDR);
++	vm_area_add_early(&vmlinux_vm);
++
+ 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
+ 
+ 	sprintf(init_utsname()->machine, ELF_PLATFORM);
+diff --git a/arch/arm64/mm/dump.c b/arch/arm64/mm/dump.c
+index 5a22a119a74c..e83ffb00560c 100644
+--- a/arch/arm64/mm/dump.c
++++ b/arch/arm64/mm/dump.c
+@@ -35,7 +35,9 @@ struct addr_marker {
+ };
+ 
+ enum address_markers_idx {
+-	VMALLOC_START_NR = 0,
++	MODULES_START_NR = 0,
++	MODULES_END_NR,
++	VMALLOC_START_NR,
+ 	VMALLOC_END_NR,
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ 	VMEMMAP_START_NR,
+@@ -45,12 +47,12 @@ enum address_markers_idx {
+ 	FIXADDR_END_NR,
+ 	PCI_START_NR,
+ 	PCI_END_NR,
+-	MODULES_START_NR,
+-	MODUELS_END_NR,
+ 	KERNEL_SPACE_NR,
+ };
+ 
+ static struct addr_marker address_markers[] = {
++	{ MODULES_VADDR,	"Modules start" },
++	{ MODULES_END,		"Modules end" },
+ 	{ VMALLOC_START,	"vmalloc() Area" },
+ 	{ VMALLOC_END,		"vmalloc() End" },
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+@@ -61,9 +63,7 @@ static struct addr_marker address_markers[] = {
+ 	{ FIXADDR_TOP,		"Fixmap end" },
+ 	{ PCI_IO_START,		"PCI I/O start" },
+ 	{ PCI_IO_END,		"PCI I/O end" },
+-	{ MODULES_VADDR,	"Modules start" },
+-	{ MODULES_END,		"Modules end" },
+-	{ PAGE_OFFSET,		"Kernel Mapping" },
++	{ PAGE_OFFSET,		"Linear Mapping" },
+ 	{ -1,			NULL },
+ };
+ 
+diff --git a/arch/arm64/mm/init.c b/arch/arm64/mm/init.c
+index 8e678d05ad84..2cfc9c54bf51 100644
+--- a/arch/arm64/mm/init.c
++++ b/arch/arm64/mm/init.c
+@@ -305,22 +305,26 @@ void __init mem_init(void)
+ #ifdef CONFIG_KASAN
+ 		  "    kasan   : 0x%16lx - 0x%16lx   (%6ld GB)\n"
+ #endif
++		  "    modules : 0x%16lx - 0x%16lx   (%6ld MB)\n"
+ 		  "    vmalloc : 0x%16lx - 0x%16lx   (%6ld GB)\n"
++		  "      .init : 0x%p" " - 0x%p" "   (%6ld KB)\n"
++		  "      .text : 0x%p" " - 0x%p" "   (%6ld KB)\n"
++		  "      .data : 0x%p" " - 0x%p" "   (%6ld KB)\n"
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ 		  "    vmemmap : 0x%16lx - 0x%16lx   (%6ld GB maximum)\n"
+ 		  "              0x%16lx - 0x%16lx   (%6ld MB actual)\n"
+ #endif
+ 		  "    fixed   : 0x%16lx - 0x%16lx   (%6ld KB)\n"
+ 		  "    PCI I/O : 0x%16lx - 0x%16lx   (%6ld MB)\n"
+-		  "    modules : 0x%16lx - 0x%16lx   (%6ld MB)\n"
+-		  "    memory  : 0x%16lx - 0x%16lx   (%6ld MB)\n"
+-		  "      .init : 0x%p" " - 0x%p" "   (%6ld KB)\n"
+-		  "      .text : 0x%p" " - 0x%p" "   (%6ld KB)\n"
+-		  "      .data : 0x%p" " - 0x%p" "   (%6ld KB)\n",
++		  "    memory  : 0x%16lx - 0x%16lx   (%6ld MB)\n",
+ #ifdef CONFIG_KASAN
+ 		  MLG(KASAN_SHADOW_START, KASAN_SHADOW_END),
+ #endif
++		  MLM(MODULES_VADDR, MODULES_END),
+ 		  MLG(VMALLOC_START, VMALLOC_END),
++		  MLK_ROUNDUP(__init_begin, __init_end),
++		  MLK_ROUNDUP(_text, _etext),
++		  MLK_ROUNDUP(_sdata, _edata),
+ #ifdef CONFIG_SPARSEMEM_VMEMMAP
+ 		  MLG((unsigned long)vmemmap,
+ 		      (unsigned long)vmemmap + VMEMMAP_SIZE),
+@@ -329,11 +333,7 @@ void __init mem_init(void)
+ #endif
+ 		  MLK(FIXADDR_START, FIXADDR_TOP),
+ 		  MLM(PCI_IO_START, PCI_IO_END),
+-		  MLM(MODULES_VADDR, MODULES_END),
+-		  MLM(PAGE_OFFSET, (unsigned long)high_memory),
+-		  MLK_ROUNDUP(__init_begin, __init_end),
+-		  MLK_ROUNDUP(_text, _etext),
+-		  MLK_ROUNDUP(_sdata, _edata));
++		  MLM(PAGE_OFFSET, (unsigned long)high_memory));
+ 
+ #undef MLK
+ #undef MLM
+diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+index a78fc5a882da..6275d183c005 100644
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -322,40 +322,6 @@ static void create_mapping_late(phys_addr_t phys, unsigned long virt,
+ 	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, late_alloc);
+ }
+ 
+-static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end)
+-{
+-
+-	unsigned long kernel_start = __pa(_stext);
+-	unsigned long kernel_end = __pa(_end);
+-
+-	/*
+-	 * The kernel itself is mapped at page granularity. Map all other
+-	 * memory, making sure we don't overwrite the existing kernel mappings.
+-	 */
+-
+-	/* No overlap with the kernel. */
+-	if (end < kernel_start || start >= kernel_end) {
+-		__create_pgd_mapping(pgd, start, __phys_to_virt(start),
+-				     end - start, PAGE_KERNEL, early_alloc);
+-		return;
+-	}
+-
+-	/*
+-	 * This block overlaps the kernel mapping. Map the portion(s) which
+-	 * don't overlap.
+-	 */
+-	if (start < kernel_start)
+-		__create_pgd_mapping(pgd, start,
+-				     __phys_to_virt(start),
+-				     kernel_start - start, PAGE_KERNEL,
+-				     early_alloc);
+-	if (kernel_end < end)
+-		__create_pgd_mapping(pgd, kernel_end,
+-				     __phys_to_virt(kernel_end),
+-				     end - kernel_end, PAGE_KERNEL,
+-				     early_alloc);
+-}
+-
+ static void __init map_mem(pgd_t *pgd)
+ {
+ 	struct memblock_region *reg;
+@@ -370,7 +336,8 @@ static void __init map_mem(pgd_t *pgd)
+ 		if (memblock_is_nomap(reg))
+ 			continue;
+ 
+-		__map_memblock(pgd, start, end);
++		__create_pgd_mapping(pgd, start, __phys_to_virt(start),
++				     end - start, PAGE_KERNEL, early_alloc);
+ 	}
+ }
+ 
+-- 
+2.5.0
