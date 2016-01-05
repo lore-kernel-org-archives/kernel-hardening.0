@@ -1,64 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 4 Jan 2016 22:07:43 +0000
-From: Russell King - ARM Linux <linux@arm.linux.org.uk>
-Message-ID: <20160104220743.GP19062@n2100.arm.linux.org.uk>
-References: <20151202202725.GA794@www.outflux.net>
- <20151223195129.GP2793@atomide.com>
- <567B04AB.6010906@redhat.com>
- <20151223212911.GR2793@atomide.com>
- <alpine.LFD.2.20.1512231637110.3603@knanqh.ubzr>
- <20151224001121.GS2793@atomide.com>
- <20151224003406.GA8644@n2100.arm.linux.org.uk>
- <CAGXu5j+MrX-OvnVTYH0hqF2XgZW10PQOviyN=e5heejLsXewVA@mail.gmail.com>
+Date: Tue, 5 Jan 2016 14:46:50 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160105144649.GD24664@leverpostej>
+References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1451489172-17420-3-git-send-email-ard.biesheuvel@linaro.org>
+ <20160105143634.GD28354@cbox>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+MrX-OvnVTYH0hqF2XgZW10PQOviyN=e5heejLsXewVA@mail.gmail.com>
-Sender: Russell King - ARM Linux <linux@arm.linux.org.uk>
-Subject: [kernel-hardening] Re: [PATCH v2] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
-To: Kees Cook <keescook@chromium.org>
-Cc: Tony Lindgren <tony@atomide.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
+In-Reply-To: <20160105143634.GD28354@cbox>
+Subject: [kernel-hardening] Re: [PATCH v2 02/13] arm64: introduce KIMAGE_VADDR as the virtual
+ base of the kernel region
+To: Christoffer Dall <christoffer.dall@linaro.org>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 04, 2016 at 12:34:28PM -0800, Kees Cook wrote:
-> On Wed, Dec 23, 2015 at 4:34 PM, Russell King - ARM Linux
-> <linux@arm.linux.org.uk> wrote:
-> > On Wed, Dec 23, 2015 at 04:11:22PM -0800, Tony Lindgren wrote:
-> >> * Nicolas Pitre <nicolas.pitre@linaro.org> [151223 13:45]:
-> >> > We fixed a bunch of similar issues where code was located in the .data
-> >> > section for ease of use from assembly code.  See commit b4e61537 and
-> >> > d0776aff for example.
-> >>
-> >> Thanks hey some assembly fun for the holidays :) I also need to check what
-> >> all gets relocated to SRAM here.
-> >>
-> >> In any case, seems like the $subject patch is too intrusive for v4.5 at
-> >> this point.
-> >
-> > Given Christmas and an unknown time between that and the merge window
-> > actually opening, I decided Tuesday would be the last day I take any
-> > patches into my tree - and today would be the day that I drop anything
-> > that causes problems.
-> >
-> > So, I've already dropped this, so tomorrow's linux-next should not have
-> > this change.
-> >
-> > You'll still see breakage if people enable RODATA though, but that's no
-> > different from previous kernels.
+On Tue, Jan 05, 2016 at 03:36:34PM +0100, Christoffer Dall wrote:
+> On Wed, Dec 30, 2015 at 04:26:01PM +0100, Ard Biesheuvel wrote:
+> > This introduces the preprocessor symbol KIMAGE_VADDR which will serve as
+> > the symbolic virtual base of the kernel region, i.e., the kernel's virtual
+> > offset will be KIMAGE_VADDR + TEXT_OFFSET. For now, we define it as being
+> > equal to PAGE_OFFSET, but in the future, it will be moved below it once
+> > we move the kernel virtual mapping out of the linear mapping.
+> > 
+> > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > ---
+> >  arch/arm64/include/asm/memory.h | 10 ++++++++--
+> >  arch/arm64/kernel/head.S        |  2 +-
+> >  arch/arm64/kernel/vmlinux.lds.S |  4 ++--
+> >  3 files changed, 11 insertions(+), 5 deletions(-)
+> > 
+> > diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+> > index 853953cd1f08..bea9631b34a8 100644
+> > --- a/arch/arm64/include/asm/memory.h
+> > +++ b/arch/arm64/include/asm/memory.h
+> > @@ -51,7 +51,8 @@
+> >  #define VA_BITS			(CONFIG_ARM64_VA_BITS)
+> >  #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
+> >  #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
+> > -#define MODULES_END		(PAGE_OFFSET)
+> > +#define KIMAGE_VADDR		(PAGE_OFFSET)
+> > +#define MODULES_END		(KIMAGE_VADDR)
+> >  #define MODULES_VADDR		(MODULES_END - SZ_64M)
+> >  #define PCI_IO_END		(MODULES_VADDR - SZ_2M)
+> >  #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
+> > @@ -75,8 +76,13 @@
+> >   * private definitions which should NOT be used outside memory.h
+> >   * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
+> >   */
+> > -#define __virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
+> > +#define __virt_to_phys(x) ({						\
+> > +	phys_addr_t __x = (phys_addr_t)(x);				\
+> > +	__x >= PAGE_OFFSET ? (__x - PAGE_OFFSET + PHYS_OFFSET) :	\
+> > +			     (__x - KIMAGE_VADDR + PHYS_OFFSET); })
 > 
-> Ugh, sorry for the breakage.
-> 
-> Should this patch stay as-is and people will fix their various RODATA
-> failures during the next devel window, or should I remove the "default
-> y if CPU_V7"?
+> so __virt_to_phys will now work with a subset of the non-linear namely
+> all except vmalloced and ioremapped ones?
 
-I think we'll keep it as-is, and have another go with it at -rc1 time,
-when people have ample chance to then queue up fixes.
+It will work for linear mapped memory and for the kernel image, which is
+what it used to do. It's just that the relationship between the image
+and the linear map is broken.
 
-They'll have had notice of it, so there's no excuse folk can't work on
-the problem in the mean time.  (But, of course, they won't...)
+The same rules apply to x86, where their virt_to_phys eventually boils down to:
 
--- 
-RMK's Patch system: http://www.arm.linux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
-according to speedtest.net.
+static inline unsigned long __phys_addr_nodebug(unsigned long x)
+{
+        unsigned long y = x - __START_KERNEL_map;
+
+        /* use the carry flag to determine if x was < __START_KERNEL_map */
+        x = y + ((x > y) ? phys_base : (__START_KERNEL_map - PAGE_OFFSET));
+
+        return x;
+}
+
+Thanks,
+Mark.
