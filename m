@@ -1,287 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKW-Kq7BapCs=fbPqMrkof-69bVV6-6DtQAmGk_odC=kQ@mail.gmail.com>
-References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
-	<CAGXu5jKW-Kq7BapCs=fbPqMrkof-69bVV6-6DtQAmGk_odC=kQ@mail.gmail.com>
-Date: Tue, 5 Jan 2016 22:24:14 +0100
-Message-ID: <CAKv+Gu-xyUDFto+Te+WLAqVpvzQWGZRcRrL570_ymcQ_r9s-bw@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Sender: keescook@google.com
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41A38ED3@IRSMSX102.ger.corp.intel.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41A361EA@IRSMSX102.ger.corp.intel.com>
+	<CAGXu5j+pt1x9AntHM3Z4O8V=5-So0tWj=9aoJ-kP1q0p3-s=Vw@mail.gmail.com>
+	<2236FBA76BA1254E88B949DDB74E612B41A38ED3@IRSMSX102.ger.corp.intel.com>
+Date: Tue, 5 Jan 2016 15:57:58 -0800
+Message-ID: <CAGXu5jLw=VcwPAmg3ttjkgb3+SxDDVNPthsu8ErTH88LZfTALg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 00/13] arm64: implement support for KASLR
-To: Kees Cook <keescook@chromium.org>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
+Subject: Re: [kernel-hardening] Introduction and task request
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5 January 2016 at 21:08, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Dec 30, 2015 at 7:25 AM, Ard Biesheuvel
-> <ard.biesheuvel@linaro.org> wrote:
->> This series implements KASLR for arm64, by building the kernel as a PIE
->> executable that can relocate itself at runtime, and moving it to a random
->> offset in the vmalloc area. This v2 also implements physical randomization,
->> i.e., it allows the kernel to deal with being loaded at any physical offset
->> (modulo the required alignment), and invokes the EFI_RNG_PROTOCOL from the
->> UEFI stub to obtain random bits and perform the actual randomization of the
->> physical load address.
+On Mon, Dec 21, 2015 at 3:16 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+>>> What would be the reasonable task for me to do?
 >
-> This is great! Thanks for working through all these details.
+>> I always suggest people work on stuff that interests them. Do you have any
+>> specific areas you like working on, or exploits you'd like to see stopped?
 >
->> Changes since v1/RFC:
->> - This series now implements fully independent virtual and physical address
->>   randomization at load time. I have recycled some patches from this series:
->>   http://thread.gmane.org/gmane.linux.ports.arm.kernel/455151, and updated the
->>   final UEFI stub patch to randomize the physical address as well.
+> I guess ideally people subscribed to this list want all exploits to be stopped
+> :) But seriously I don't have any preference at least for now. Since I will
+> have to learn a lot in this area I want to start from something which would be
+> a reasonable and useful for this project piece of work, that's why I was
+> asking for suggestions.
 >
-> I'd love to get virt/phy separated on x86. There was a series, but it
-> still needs more work. Any one on the kernel-hardening list want to
-> take a stab at this?
+>>> I am quite a newbie in proper kernel development work (but not a
+>>> newbie in platform security), so please as initial task do not through
+>>> to me the biggest dead animal out there with the task to revive it.
 >
->> - Added a patch to deal with the way KVM on arm64 makes assumptions about the
->>   relation between kernel symbols and the linear mapping (on which the HYP
->>   mapping is based), as these assumptions cease to be valid once we move the
->>   kernel Image out of the linear mapping.
->> - Updated the module PLT patch so it works on BE kernels as well.
->> - Moved the constant Image header values to head.S, and updated the linker
->>   script to provide the kernel size using R_AARCH64_ABS32 relocation rather
->>   than a R_AARCH64_ABS64 relocation, since those are always resolved at build
->>   time. This allows me to get rid of the post-build perl script to swab header
->>   values on BE kernels.
->> - Minor style tweaks.
->>
->> Notes:
->> - These patches apply on top of Mark Rutland's pagetable rework series:
->>   http://thread.gmane.org/gmane.linux.ports.arm.kernel/462438
->> - The arm64 Image is uncompressed by default, and the Elf64_Rela format uses
->>   24 bytes per relocation entry. This results in considerable bloat (i.e., a
->>   couple of MBs worth of relocation data in an .init section). However, no
->>   build time postprocessing is required, we rely fully on the toolchain to
->>   produce the image
->> - We have to rely on the bootloader to supply some randomness in register x1
->>   upon kernel entry. Since we have no decompressor, it is simply not feasible
->>   to collect randomness in the head.S code path before mapping the kernel and
->>   enabling the MMU.
->> - The EFI_RNG_PROTOCOL that is invoked in patch #13 to supply randomness on
->>   UEFI systems is not universally available. A QEMU/KVM firmware image that
->>   implements a pseudo-random version is available here:
->>   http://people.linaro.org/~ard.biesheuvel/QEMU_EFI.fd.aarch64-rng.bz2
->>   (requires access to PMCCNTR_EL0 and support for AES instructions)
->>   See below for instructions how to run the pseudo-random version on real
->>   hardware.
->> - Only mildly tested. Help appreciated.
->>
->> Code can be found here:
->> git://git.linaro.org/people/ard.biesheuvel/linux-arm.git arm64-kaslr-v2
->> https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/shortlog/refs/heads/arm64-kaslr-v2
->>
->> Patch #1 updates the OF code to allow the minimum memblock physical address to
->> be overridden by the arch.
->>
->> Patch #2 introduces KIMAGE_VADDR as the base of the kernel virtual region.
->>
->> Patch #3 memblock_reserve()'s the .bss, swapper_pg_dir and idmap_pg_dir
->> individually.
->>
->> Patch #4 rewrites early_fixmap_init() so it does not rely on the linear mapping
->> (i.e., the use of phys_to_virt() is avoided)
->>
->> Patch #5 updates KVM on arm64 so it can deal with kernel symbols whose addresses
->> are not covered by the linear mapping.
->>
->> Patch #6 moves the kernel virtual mapping to the vmalloc area, along with the
->> module region which is kept right below it, as before.
->>
->> Patch #7 adds support for PLTs in modules so that relative branches can be
->> resolved via a PLT if the target is out of range.
->>
->> Patch #8 moves to the x86 version of the extable implementation so that it no
->> longer contains absolute addresses that require fixing up at relocation time,
->> but uses relative offsets instead.
->>
->> Patch #9 reverts some changes to the Image header population code so we no
->> longer depend on the linker to populate the header fields. This is necessary
->> since the R_AARCH64_ABS relocations that are emitted for these fields are not
->> resolved at build time for PIE executables.
->>
->> Patch #10 updates the code in head.S that needs to execute before relocation to
->> avoid the use of values that are subject to dynamic relocation. These values
->> will not be populated in PIE executables.
->>
->> Patch #11 allows the kernel Image to be loaded anywhere in physical memory, by
->> decoupling PHYS_OFFSET from the base of the kernel image.
->>
->> Patch #12 implements the core KASLR, by taking randomness supplied in register x1
->> and using it to move the kernel inside the vmalloc area.
->>
->> Patch #13 adds an invocation of the EFI_RNG_PROTOCOL to supply randomness to the
->> kernel proper.
+>>Heh, understood. We'll be happy to assist you through whatever parts you
+>>might want help with.
 >
-> I see a few other things that we'll probably want to add:
+> Thank you!
 >
-> - kaslr/nokaslr command line (to either ignore boot loader hint or UEFI rng)
+>>> It is going to be a learning exercise for me at least at the
+>>> beginning, but I am hoping to learn fast and start bringing value to the
+>>> project.
 >
+>>I had mentioned PAX_USERCOPY earlier. I'm not sure how much work that'll be,
+>>but extracting it would be the first step, and you can go from there. There's
+>>no one actively working on it at the moment, and it would be very nice to
+>>have.
+>
+> Casey is taking care of that, so I will leave it to him.
+>
+>> Or perhaps looking into the prior BPF_HARDEN work (currently this just
+>> disables eBPF, but it used to try to defend against trivial heap-sprays).
+>
+>  This sounds smth that I can look into. I will be back when I have something
+> reasonable ready or researched enough for sensible questions/discussion
+> points. I will be away for long holidays until Jan 10, but hoping to return
+> with plenty of energy :)
 
-Yes, that makes sense. For the UEFI stub version of the randomization,
-that is trivially achievable, since we already parse the command line
-in that context. For the bare bootloader case, that is a bit more
-involved, since we'd need to parse the FDT before applying the
-relocations, or apply the relocations twice.
+The original name was JIT_HARDEN, prior to grsecurity's 3.16 patches
+(which just disable JIT entirely):
+https://github.com/slashbeast/grsecurity-scrape/blob/master/test/grsecurity-3.0-3.15.5-201407170639.patch
 
-> - randomization of module load address (see get_module_load_offset in
-> arch/x86/kernel/module.c)
->
-> - panic reporting of offset (see register_kernel_offset_dumper in
-> arch/x86/kernel/setup.c)
->
-> - vmcoreinfo reporting of offset (though I can't find vmcoreinfo on
-> arm64, so maybe not, as kexec appears unimplemented)
->
+I think it'd be nice to have the the JIT hardening feature, since it
+does block heap-sprayed immediate values and probably other stuff, but
+I haven't studied it.
 
-I will look into all of these. kexec support has been in flight for a
-while now, but I have no idea when it is expected to land.
-
->> Ard Biesheuvel (13):
->>   of/fdt: make memblock minimum physical address arch configurable
->>   arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
->>   arm64: use more granular reservations for static page table
->>     allocations
->>   arm64: decouple early fixmap init from linear mapping
->>   arm64: kvm: deal with kernel symbols outside of linear mapping
->>   arm64: move kernel image to base of vmalloc area
->>   arm64: add support for module PLTs
->>   arm64: use relative references in exception tables
->>   arm64: avoid R_AARCH64_ABS64 relocations for Image header fields
->>   arm64: avoid dynamic relocations in early boot code
->>   arm64: allow kernel Image to be loaded anywhere in physical memory
->>   arm64: add support for relocatable kernel
->>   arm64: efi: invoke EFI_RNG_PROTOCOL to supply KASLR randomness
->>
->>  Documentation/arm64/booting.txt           |  15 ++-
->>  arch/arm/include/asm/kvm_asm.h            |   2 +
->>  arch/arm/include/asm/kvm_mmu.h            |   2 +
->>  arch/arm/kvm/arm.c                        |   9 +-
->>  arch/arm/kvm/mmu.c                        |  12 +-
->>  arch/arm64/Kconfig                        |  18 +++
->>  arch/arm64/Makefile                       |  10 +-
->>  arch/arm64/include/asm/assembler.h        |  17 ++-
->>  arch/arm64/include/asm/boot.h             |   5 +
->>  arch/arm64/include/asm/compiler.h         |   2 +
->>  arch/arm64/include/asm/futex.h            |   4 +-
->>  arch/arm64/include/asm/kasan.h            |  17 +--
->>  arch/arm64/include/asm/kernel-pgtable.h   |   5 +-
->>  arch/arm64/include/asm/kvm_asm.h          |  21 +--
->>  arch/arm64/include/asm/kvm_mmu.h          |   2 +
->>  arch/arm64/include/asm/memory.h           |  37 ++++--
->>  arch/arm64/include/asm/module.h           |  11 ++
->>  arch/arm64/include/asm/pgtable.h          |   7 -
->>  arch/arm64/include/asm/uaccess.h          |  16 +--
->>  arch/arm64/include/asm/virt.h             |   4 -
->>  arch/arm64/kernel/Makefile                |   1 +
->>  arch/arm64/kernel/armv8_deprecated.c      |   4 +-
->>  arch/arm64/kernel/efi-entry.S             |   9 +-
->>  arch/arm64/kernel/head.S                  | 133 ++++++++++++++++---
->>  arch/arm64/kernel/image.h                 |  37 ++----
->>  arch/arm64/kernel/module-plts.c           | 137 ++++++++++++++++++++
->>  arch/arm64/kernel/module.c                |   7 +
->>  arch/arm64/kernel/module.lds              |   4 +
->>  arch/arm64/kernel/setup.c                 |  15 ++-
->>  arch/arm64/kernel/vmlinux.lds.S           |  29 +++--
->>  arch/arm64/kvm/debug.c                    |   4 +-
->>  arch/arm64/mm/dump.c                      |  12 +-
->>  arch/arm64/mm/extable.c                   | 102 ++++++++++++++-
->>  arch/arm64/mm/init.c                      |  75 +++++++++--
->>  arch/arm64/mm/mmu.c                       | 132 +++++++------------
->>  drivers/firmware/efi/libstub/arm-stub.c   |   1 -
->>  drivers/firmware/efi/libstub/arm64-stub.c | 134 ++++++++++++++++---
->>  drivers/of/fdt.c                          |   5 +-
->>  include/linux/efi.h                       |   5 +-
->>  scripts/sortextable.c                     |   6 +-
->>  virt/kvm/arm/vgic-v3.c                    |   2 +-
->>  41 files changed, 813 insertions(+), 257 deletions(-)
->>  create mode 100644 arch/arm64/kernel/module-plts.c
->>  create mode 100644 arch/arm64/kernel/module.lds
->>
->>
->> EFI_RNG_PROTOCOL on real hardware
->> =================================
->>
->> To test whether your UEFI implements the EFI_RNG_PROTOCOL, download the
->> following executable and run it from the UEFI Shell:
->> http://people.linaro.org/~ard.biesheuvel/RngTest.efi
->>
->> FS0:\> rngtest
->> UEFI RNG Protocol Testing :
->> ----------------------------
->>  -- Locate UEFI RNG Protocol : [Fail - Status = Not Found]
->>
->> If your UEFI does not implement the EFI_RNG_PROTOCOL, you can download and
->> install the pseudo-random version that uses the generic timer and PMCCNTR_EL0
->> values and permutes them using a couple of rounds of AES.
->> http://people.linaro.org/~ard.biesheuvel/RngDxe.efi
->>
->> NOTE: not for production!! This is a quick and dirty hack to test the KASLR
->> code, and is not suitable for anything else.
->>
->> FS0:\> rngdxe
->> FS0:\> rngtest
->> UEFI RNG Protocol Testing :
->> ----------------------------
->>  -- Locate UEFI RNG Protocol : [Pass]
->>  -- Call RNG->GetInfo() interface :
->>      >> Supported RNG Algorithm (Count = 2) :
->>           0) 44F0DE6E-4D8C-4045-A8C7-4DD168856B9E
->>           1) E43176D7-B6E8-4827-B784-7FFDC4B68561
->>  -- Call RNG->GetRNG() interface :
->>      >> RNG with default algorithm : [Pass]
->>      >> RNG with SP800-90-HMAC-256 : [Fail - Status = Unsupported]
->>      >> RNG with SP800-90-Hash-256 : [Fail - Status = Unsupported]
->>      >> RNG with SP800-90-CTR-256 : [Pass]
->>      >> RNG with X9.31-3DES : [Fail - Status = Unsupported]
->>      >> RNG with X9.31-AES : [Fail - Status = Unsupported]
->>      >> RNG with RAW Entropy : [Pass]
->>  -- Random Number Generation Test with default RNG Algorithm (20 Rounds):
->>           01) - 27
->>           02) - 61E8
->>           03) - 496FD8
->>           04) - DDD793BF
->>           05) - B6C37C8E23
->>           06) - 4D183C604A96
->>           07) - 9363311DB61298
->>           08) - 5715A7294F4E436E
->>           09) - F0D4D7BAA0DD52318E
->>           10) - C88C6EBCF4C0474D87C3
->>           11) - B5594602B482A643932172
->>           12) - CA7573F704B2089B726B9CF1
->>           13) - A93E9451CB533DCFBA87B97C33
->>           14) - 45AA7B83DB6044F7BBAB031F0D24
->>           15) - 3DD7A4D61F34ADCB400B5976730DCF
->>           16) - 4DD168D21FAB8F59708330D6A9BEB021
->>           17) - 4BBB225E61C465F174254159467E65939F
->>           18) - 030A156C9616337A20070941E702827DA8E1
->>           19) - AB0FC11C9A4E225011382A9D164D9D55CA2B64
->>           20) - 72B9B4735DC445E5DA6AF88DE965B7E87CB9A23C
->>
->
-> Have you done any repeated boot testing?
-
-Not automatically, no.
-
-> When I originally did x86
-> kASLR, I had a machine rebooting over and over spitting the _text line
-> from /proc/kallsyms to the console. This both caught page table corner
-> cases where the system was unbootable and let me run a statistical
-> analysis of the offsets, just to make sure there wasn't any glaring
-> error in either the RNG or the relocation.
->
-
-Well, I conveniently punted the RNG problem to the firmware, so as far
-as the quality of the randomness is concerned, it is easy to shift the
-blame. For the other stuff (including the quality of the translation
-between a random number and a KASRL offset), I highly appreciate your
-input.
-
-> Very cool!
->
-
-Thanks!
+-Kees
 
 -- 
-Ard.
+Kees Cook
+Chrome OS & Brillo Security
