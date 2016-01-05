@@ -1,288 +1,263 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1451489172-17420-14-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
-	<1451489172-17420-14-git-send-email-ard.biesheuvel@linaro.org>
-Date: Tue, 5 Jan 2016 11:53:41 -0800
-Message-ID: <CAGXu5jLhUdNUws2oNek1PPOJbP-zt=02RK9hQOsiqfU5Uy9zdg@mail.gmail.com>
+Date: Tue, 5 Jan 2016 12:08:22 -0800
+Message-ID: <CAGXu5jKW-Kq7BapCs=fbPqMrkof-69bVV6-6DtQAmGk_odC=kQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 13/13] arm64: efi: invoke EFI_RNG_PROTOCOL to supply
- KASLR randomness
+Subject: [kernel-hardening] Re: [PATCH v2 00/13] arm64: implement support for KASLR
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, LKML <linux-kernel@vger.kernel.org>, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 30, 2015 at 7:26 AM, Ard Biesheuvel
+On Wed, Dec 30, 2015 at 7:25 AM, Ard Biesheuvel
 <ard.biesheuvel@linaro.org> wrote:
-> Since arm64 does not use a decompressor that supplies an execution
-> environment where it is feasible to some extent to provide a source of
-> randomness, the arm64 KASLR kernel depends on the bootloader to supply
-> some random bits in register x1 upon kernel entry.
->
-> On UEFI systems, we can use the EFI_RNG_PROTOCOL, if supplied, to obtain
-> some random bits. At the same time, use it to randomize the offset of the
-> kernel Image in physical memory.
+> This series implements KASLR for arm64, by building the kernel as a PIE
+> executable that can relocate itself at runtime, and moving it to a random
+> offset in the vmalloc area. This v2 also implements physical randomization,
+> i.e., it allows the kernel to deal with being loaded at any physical offset
+> (modulo the required alignment), and invokes the EFI_RNG_PROTOCOL from the
+> UEFI stub to obtain random bits and perform the actual randomization of the
+> physical load address.
 
-This logic seems like it should be under the name
-CONFIG_RANDOMIZE_BASE and depend on UEFI? (Again, I'm just trying to
-keep naming conventions the same across architectures to avoid
-confusion.)
+This is great! Thanks for working through all these details.
+
+> Changes since v1/RFC:
+> - This series now implements fully independent virtual and physical address
+>   randomization at load time. I have recycled some patches from this series:
+>   http://thread.gmane.org/gmane.linux.ports.arm.kernel/455151, and updated the
+>   final UEFI stub patch to randomize the physical address as well.
+
+I'd love to get virt/phy separated on x86. There was a series, but it
+still needs more work. Any one on the kernel-hardening list want to
+take a stab at this?
+
+> - Added a patch to deal with the way KVM on arm64 makes assumptions about the
+>   relation between kernel symbols and the linear mapping (on which the HYP
+>   mapping is based), as these assumptions cease to be valid once we move the
+>   kernel Image out of the linear mapping.
+> - Updated the module PLT patch so it works on BE kernels as well.
+> - Moved the constant Image header values to head.S, and updated the linker
+>   script to provide the kernel size using R_AARCH64_ABS32 relocation rather
+>   than a R_AARCH64_ABS64 relocation, since those are always resolved at build
+>   time. This allows me to get rid of the post-build perl script to swab header
+>   values on BE kernels.
+> - Minor style tweaks.
+>
+> Notes:
+> - These patches apply on top of Mark Rutland's pagetable rework series:
+>   http://thread.gmane.org/gmane.linux.ports.arm.kernel/462438
+> - The arm64 Image is uncompressed by default, and the Elf64_Rela format uses
+>   24 bytes per relocation entry. This results in considerable bloat (i.e., a
+>   couple of MBs worth of relocation data in an .init section). However, no
+>   build time postprocessing is required, we rely fully on the toolchain to
+>   produce the image
+> - We have to rely on the bootloader to supply some randomness in register x1
+>   upon kernel entry. Since we have no decompressor, it is simply not feasible
+>   to collect randomness in the head.S code path before mapping the kernel and
+>   enabling the MMU.
+> - The EFI_RNG_PROTOCOL that is invoked in patch #13 to supply randomness on
+>   UEFI systems is not universally available. A QEMU/KVM firmware image that
+>   implements a pseudo-random version is available here:
+>   http://people.linaro.org/~ard.biesheuvel/QEMU_EFI.fd.aarch64-rng.bz2
+>   (requires access to PMCCNTR_EL0 and support for AES instructions)
+>   See below for instructions how to run the pseudo-random version on real
+>   hardware.
+> - Only mildly tested. Help appreciated.
+>
+> Code can be found here:
+> git://git.linaro.org/people/ard.biesheuvel/linux-arm.git arm64-kaslr-v2
+> https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/shortlog/refs/heads/arm64-kaslr-v2
+>
+> Patch #1 updates the OF code to allow the minimum memblock physical address to
+> be overridden by the arch.
+>
+> Patch #2 introduces KIMAGE_VADDR as the base of the kernel virtual region.
+>
+> Patch #3 memblock_reserve()'s the .bss, swapper_pg_dir and idmap_pg_dir
+> individually.
+>
+> Patch #4 rewrites early_fixmap_init() so it does not rely on the linear mapping
+> (i.e., the use of phys_to_virt() is avoided)
+>
+> Patch #5 updates KVM on arm64 so it can deal with kernel symbols whose addresses
+> are not covered by the linear mapping.
+>
+> Patch #6 moves the kernel virtual mapping to the vmalloc area, along with the
+> module region which is kept right below it, as before.
+>
+> Patch #7 adds support for PLTs in modules so that relative branches can be
+> resolved via a PLT if the target is out of range.
+>
+> Patch #8 moves to the x86 version of the extable implementation so that it no
+> longer contains absolute addresses that require fixing up at relocation time,
+> but uses relative offsets instead.
+>
+> Patch #9 reverts some changes to the Image header population code so we no
+> longer depend on the linker to populate the header fields. This is necessary
+> since the R_AARCH64_ABS relocations that are emitted for these fields are not
+> resolved at build time for PIE executables.
+>
+> Patch #10 updates the code in head.S that needs to execute before relocation to
+> avoid the use of values that are subject to dynamic relocation. These values
+> will not be populated in PIE executables.
+>
+> Patch #11 allows the kernel Image to be loaded anywhere in physical memory, by
+> decoupling PHYS_OFFSET from the base of the kernel image.
+>
+> Patch #12 implements the core KASLR, by taking randomness supplied in register x1
+> and using it to move the kernel inside the vmalloc area.
+>
+> Patch #13 adds an invocation of the EFI_RNG_PROTOCOL to supply randomness to the
+> kernel proper.
+
+I see a few other things that we'll probably want to add:
+
+- kaslr/nokaslr command line (to either ignore boot loader hint or UEFI rng)
+
+- randomization of module load address (see get_module_load_offset in
+arch/x86/kernel/module.c)
+
+- panic reporting of offset (see register_kernel_offset_dumper in
+arch/x86/kernel/setup.c)
+
+- vmcoreinfo reporting of offset (though I can't find vmcoreinfo on
+arm64, so maybe not, as kexec appears unimplemented)
+
+> Ard Biesheuvel (13):
+>   of/fdt: make memblock minimum physical address arch configurable
+>   arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
+>   arm64: use more granular reservations for static page table
+>     allocations
+>   arm64: decouple early fixmap init from linear mapping
+>   arm64: kvm: deal with kernel symbols outside of linear mapping
+>   arm64: move kernel image to base of vmalloc area
+>   arm64: add support for module PLTs
+>   arm64: use relative references in exception tables
+>   arm64: avoid R_AARCH64_ABS64 relocations for Image header fields
+>   arm64: avoid dynamic relocations in early boot code
+>   arm64: allow kernel Image to be loaded anywhere in physical memory
+>   arm64: add support for relocatable kernel
+>   arm64: efi: invoke EFI_RNG_PROTOCOL to supply KASLR randomness
+>
+>  Documentation/arm64/booting.txt           |  15 ++-
+>  arch/arm/include/asm/kvm_asm.h            |   2 +
+>  arch/arm/include/asm/kvm_mmu.h            |   2 +
+>  arch/arm/kvm/arm.c                        |   9 +-
+>  arch/arm/kvm/mmu.c                        |  12 +-
+>  arch/arm64/Kconfig                        |  18 +++
+>  arch/arm64/Makefile                       |  10 +-
+>  arch/arm64/include/asm/assembler.h        |  17 ++-
+>  arch/arm64/include/asm/boot.h             |   5 +
+>  arch/arm64/include/asm/compiler.h         |   2 +
+>  arch/arm64/include/asm/futex.h            |   4 +-
+>  arch/arm64/include/asm/kasan.h            |  17 +--
+>  arch/arm64/include/asm/kernel-pgtable.h   |   5 +-
+>  arch/arm64/include/asm/kvm_asm.h          |  21 +--
+>  arch/arm64/include/asm/kvm_mmu.h          |   2 +
+>  arch/arm64/include/asm/memory.h           |  37 ++++--
+>  arch/arm64/include/asm/module.h           |  11 ++
+>  arch/arm64/include/asm/pgtable.h          |   7 -
+>  arch/arm64/include/asm/uaccess.h          |  16 +--
+>  arch/arm64/include/asm/virt.h             |   4 -
+>  arch/arm64/kernel/Makefile                |   1 +
+>  arch/arm64/kernel/armv8_deprecated.c      |   4 +-
+>  arch/arm64/kernel/efi-entry.S             |   9 +-
+>  arch/arm64/kernel/head.S                  | 133 ++++++++++++++++---
+>  arch/arm64/kernel/image.h                 |  37 ++----
+>  arch/arm64/kernel/module-plts.c           | 137 ++++++++++++++++++++
+>  arch/arm64/kernel/module.c                |   7 +
+>  arch/arm64/kernel/module.lds              |   4 +
+>  arch/arm64/kernel/setup.c                 |  15 ++-
+>  arch/arm64/kernel/vmlinux.lds.S           |  29 +++--
+>  arch/arm64/kvm/debug.c                    |   4 +-
+>  arch/arm64/mm/dump.c                      |  12 +-
+>  arch/arm64/mm/extable.c                   | 102 ++++++++++++++-
+>  arch/arm64/mm/init.c                      |  75 +++++++++--
+>  arch/arm64/mm/mmu.c                       | 132 +++++++------------
+>  drivers/firmware/efi/libstub/arm-stub.c   |   1 -
+>  drivers/firmware/efi/libstub/arm64-stub.c | 134 ++++++++++++++++---
+>  drivers/of/fdt.c                          |   5 +-
+>  include/linux/efi.h                       |   5 +-
+>  scripts/sortextable.c                     |   6 +-
+>  virt/kvm/arm/vgic-v3.c                    |   2 +-
+>  41 files changed, 813 insertions(+), 257 deletions(-)
+>  create mode 100644 arch/arm64/kernel/module-plts.c
+>  create mode 100644 arch/arm64/kernel/module.lds
+>
+>
+> EFI_RNG_PROTOCOL on real hardware
+> =================================
+>
+> To test whether your UEFI implements the EFI_RNG_PROTOCOL, download the
+> following executable and run it from the UEFI Shell:
+> http://people.linaro.org/~ard.biesheuvel/RngTest.efi
+>
+> FS0:\> rngtest
+> UEFI RNG Protocol Testing :
+> ----------------------------
+>  -- Locate UEFI RNG Protocol : [Fail - Status = Not Found]
+>
+> If your UEFI does not implement the EFI_RNG_PROTOCOL, you can download and
+> install the pseudo-random version that uses the generic timer and PMCCNTR_EL0
+> values and permutes them using a couple of rounds of AES.
+> http://people.linaro.org/~ard.biesheuvel/RngDxe.efi
+>
+> NOTE: not for production!! This is a quick and dirty hack to test the KASLR
+> code, and is not suitable for anything else.
+>
+> FS0:\> rngdxe
+> FS0:\> rngtest
+> UEFI RNG Protocol Testing :
+> ----------------------------
+>  -- Locate UEFI RNG Protocol : [Pass]
+>  -- Call RNG->GetInfo() interface :
+>      >> Supported RNG Algorithm (Count = 2) :
+>           0) 44F0DE6E-4D8C-4045-A8C7-4DD168856B9E
+>           1) E43176D7-B6E8-4827-B784-7FFDC4B68561
+>  -- Call RNG->GetRNG() interface :
+>      >> RNG with default algorithm : [Pass]
+>      >> RNG with SP800-90-HMAC-256 : [Fail - Status = Unsupported]
+>      >> RNG with SP800-90-Hash-256 : [Fail - Status = Unsupported]
+>      >> RNG with SP800-90-CTR-256 : [Pass]
+>      >> RNG with X9.31-3DES : [Fail - Status = Unsupported]
+>      >> RNG with X9.31-AES : [Fail - Status = Unsupported]
+>      >> RNG with RAW Entropy : [Pass]
+>  -- Random Number Generation Test with default RNG Algorithm (20 Rounds):
+>           01) - 27
+>           02) - 61E8
+>           03) - 496FD8
+>           04) - DDD793BF
+>           05) - B6C37C8E23
+>           06) - 4D183C604A96
+>           07) - 9363311DB61298
+>           08) - 5715A7294F4E436E
+>           09) - F0D4D7BAA0DD52318E
+>           10) - C88C6EBCF4C0474D87C3
+>           11) - B5594602B482A643932172
+>           12) - CA7573F704B2089B726B9CF1
+>           13) - A93E9451CB533DCFBA87B97C33
+>           14) - 45AA7B83DB6044F7BBAB031F0D24
+>           15) - 3DD7A4D61F34ADCB400B5976730DCF
+>           16) - 4DD168D21FAB8F59708330D6A9BEB021
+>           17) - 4BBB225E61C465F174254159467E65939F
+>           18) - 030A156C9616337A20070941E702827DA8E1
+>           19) - AB0FC11C9A4E225011382A9D164D9D55CA2B64
+>           20) - 72B9B4735DC445E5DA6AF88DE965B7E87CB9A23C
+>
+
+Have you done any repeated boot testing? When I originally did x86
+kASLR, I had a machine rebooting over and over spitting the _text line
+from /proc/kallsyms to the console. This both caught page table corner
+cases where the system was unbootable and let me run a statistical
+analysis of the offsets, just to make sure there wasn't any glaring
+error in either the RNG or the relocation.
+
+Very cool!
 
 -Kees
-
->
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/kernel/efi-entry.S             |   7 +-
->  drivers/firmware/efi/libstub/arm-stub.c   |   1 -
->  drivers/firmware/efi/libstub/arm64-stub.c | 134 +++++++++++++++++---
->  include/linux/efi.h                       |   5 +-
->  4 files changed, 127 insertions(+), 20 deletions(-)
->
-> diff --git a/arch/arm64/kernel/efi-entry.S b/arch/arm64/kernel/efi-entry.S
-> index f82036e02485..f41073dde7e0 100644
-> --- a/arch/arm64/kernel/efi-entry.S
-> +++ b/arch/arm64/kernel/efi-entry.S
-> @@ -110,7 +110,7 @@ ENTRY(entry)
->  2:
->         /* Jump to kernel entry point */
->         mov     x0, x20
-> -       mov     x1, xzr
-> +       ldr     x1, efi_rnd
->         mov     x2, xzr
->         mov     x3, xzr
->         br      x21
-> @@ -119,6 +119,9 @@ efi_load_fail:
->         mov     x0, #EFI_LOAD_ERROR
->         ldp     x29, x30, [sp], #32
->         ret
-> +ENDPROC(entry)
-> +
-> +ENTRY(efi_rnd)
-> +       .quad   0, 0
->
->  entry_end:
-> -ENDPROC(entry)
-> diff --git a/drivers/firmware/efi/libstub/arm-stub.c b/drivers/firmware/efi/libstub/arm-stub.c
-> index 950c87f5d279..f580bcdfae4f 100644
-> --- a/drivers/firmware/efi/libstub/arm-stub.c
-> +++ b/drivers/firmware/efi/libstub/arm-stub.c
-> @@ -145,7 +145,6 @@ void efi_char16_printk(efi_system_table_t *sys_table_arg,
->         out->output_string(out, str);
->  }
->
-> -
->  /*
->   * This function handles the architcture specific differences between arm and
->   * arm64 regarding where the kernel image must be loaded and any memory that
-> diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
-> index 78dfbd34b6bf..4e5c306346b4 100644
-> --- a/drivers/firmware/efi/libstub/arm64-stub.c
-> +++ b/drivers/firmware/efi/libstub/arm64-stub.c
-> @@ -13,6 +13,68 @@
->  #include <asm/efi.h>
->  #include <asm/sections.h>
->
-> +struct efi_rng_protocol_t {
-> +       efi_status_t (*get_info)(struct efi_rng_protocol_t *,
-> +                                unsigned long *,
-> +                                efi_guid_t *);
-> +       efi_status_t (*get_rng)(struct efi_rng_protocol_t *,
-> +                               efi_guid_t *,
-> +                               unsigned long,
-> +                               u8 *out);
-> +};
-> +
-> +extern struct {
-> +       u64     virt_seed;
-> +       u64     phys_seed;
-> +} efi_rnd;
-> +
-> +static int efi_get_random_bytes(efi_system_table_t *sys_table)
-> +{
-> +       efi_guid_t rng_proto = EFI_RNG_PROTOCOL_GUID;
-> +       efi_status_t status;
-> +       struct efi_rng_protocol_t *rng;
-> +
-> +       status = sys_table->boottime->locate_protocol(&rng_proto, NULL,
-> +                                                     (void **)&rng);
-> +       if (status == EFI_NOT_FOUND) {
-> +               pr_efi(sys_table, "EFI_RNG_PROTOCOL unavailable, no randomness supplied\n");
-> +               return EFI_SUCCESS;
-> +       }
-> +
-> +       if (status != EFI_SUCCESS)
-> +               return status;
-> +
-> +       return rng->get_rng(rng, NULL, sizeof(efi_rnd), (u8 *)&efi_rnd);
-> +}
-> +
-> +static efi_status_t get_dram_top(efi_system_table_t *sys_table_arg, u64 *top)
-> +{
-> +       unsigned long map_size, desc_size;
-> +       efi_memory_desc_t *memory_map;
-> +       efi_status_t status;
-> +       int l;
-> +
-> +       status = efi_get_memory_map(sys_table_arg, &memory_map, &map_size,
-> +                                   &desc_size, NULL, NULL);
-> +       if (status != EFI_SUCCESS)
-> +               return status;
-> +
-> +       for (l = 0; l < map_size; l += desc_size) {
-> +               efi_memory_desc_t *md = (void *)memory_map + l;
-> +
-> +               if (md->attribute & EFI_MEMORY_WB) {
-> +                       u64 phys_end = md->phys_addr +
-> +                                      md->num_pages * EFI_PAGE_SIZE;
-> +                       if (phys_end > *top)
-> +                               *top = phys_end;
-> +               }
-> +       }
-> +
-> +       efi_call_early(free_pool, memory_map);
-> +
-> +       return EFI_SUCCESS;
-> +}
-> +
->  efi_status_t __init handle_kernel_image(efi_system_table_t *sys_table_arg,
->                                         unsigned long *image_addr,
->                                         unsigned long *image_size,
-> @@ -27,6 +89,14 @@ efi_status_t __init handle_kernel_image(efi_system_table_t *sys_table_arg,
->         void *old_image_addr = (void *)*image_addr;
->         unsigned long preferred_offset;
->
-> +       if (IS_ENABLED(CONFIG_ARM64_RELOCATABLE_KERNEL)) {
-> +               status = efi_get_random_bytes(sys_table_arg);
-> +               if (status != EFI_SUCCESS) {
-> +                       pr_efi_err(sys_table_arg, "efi_get_random_bytes() failed\n");
-> +                       return status;
-> +               }
-> +       }
-> +
->         /*
->          * The preferred offset of the kernel Image is TEXT_OFFSET bytes beyond
->          * a 2 MB aligned base, which itself may be lower than dram_base, as
-> @@ -36,13 +106,42 @@ efi_status_t __init handle_kernel_image(efi_system_table_t *sys_table_arg,
->         if (preferred_offset < dram_base)
->                 preferred_offset += SZ_2M;
->
-> -       /* Relocate the image, if required. */
->         kernel_size = _edata - _text;
-> -       if (*image_addr != preferred_offset) {
-> -               kernel_memsize = kernel_size + (_end - _edata);
-> +       kernel_memsize = kernel_size + (_end - _edata);
-> +
-> +       if (IS_ENABLED(CONFIG_ARM64_RELOCATABLE_KERNEL) && efi_rnd.phys_seed) {
-> +               /*
-> +                * If KASLR is enabled, and we have some randomness available,
-> +                * locate the kernel at a randomized offset in physical memory.
-> +                */
-> +               u64 dram_top = dram_base;
-> +
-> +               status = get_dram_top(sys_table_arg, &dram_top);
-> +               if (status != EFI_SUCCESS) {
-> +                       pr_efi_err(sys_table_arg, "get_dram_size() failed\n");
-> +                       return status;
-> +               }
-> +
-> +               kernel_memsize += SZ_2M;
-> +               nr_pages = round_up(kernel_memsize, EFI_ALLOC_ALIGN) /
-> +                                   EFI_PAGE_SIZE;
->
->                 /*
-> -                * First, try a straight allocation at the preferred offset.
-> +                * Use the random seed to scale the size and add it to the DRAM
-> +                * base. Note that this may give suboptimal results on systems
-> +                * with discontiguous DRAM regions with large holes between them.
-> +                */
-> +               *reserve_addr = dram_base +
-> +                       ((dram_top - dram_base) >> 16) * (u16)efi_rnd.phys_seed;
-> +
-> +               status = efi_call_early(allocate_pages, EFI_ALLOCATE_MAX_ADDRESS,
-> +                                       EFI_LOADER_DATA, nr_pages,
-> +                                       (efi_physical_addr_t *)reserve_addr);
-> +
-> +               *image_addr = round_up(*reserve_addr, SZ_2M) + TEXT_OFFSET;
-> +       } else {
-> +               /*
-> +                * Else, try a straight allocation at the preferred offset.
->                  * This will work around the issue where, if dram_base == 0x0,
->                  * efi_low_alloc() refuses to allocate at 0x0 (to prevent the
->                  * address of the allocation to be mistaken for a FAIL return
-> @@ -52,27 +151,30 @@ efi_status_t __init handle_kernel_image(efi_system_table_t *sys_table_arg,
->                  * Mustang), we can still place the kernel at the address
->                  * 'dram_base + TEXT_OFFSET'.
->                  */
-> +               if (*image_addr == preferred_offset)
-> +                       return EFI_SUCCESS;
-> +
->                 *image_addr = *reserve_addr = preferred_offset;
->                 nr_pages = round_up(kernel_memsize, EFI_ALLOC_ALIGN) /
->                            EFI_PAGE_SIZE;
->                 status = efi_call_early(allocate_pages, EFI_ALLOCATE_ADDRESS,
->                                         EFI_LOADER_DATA, nr_pages,
->                                         (efi_physical_addr_t *)reserve_addr);
-> +       }
-> +
-> +       if (status != EFI_SUCCESS) {
-> +               kernel_memsize += TEXT_OFFSET;
-> +               status = efi_low_alloc(sys_table_arg, kernel_memsize,
-> +                                      SZ_2M, reserve_addr);
-> +
->                 if (status != EFI_SUCCESS) {
-> -                       kernel_memsize += TEXT_OFFSET;
-> -                       status = efi_low_alloc(sys_table_arg, kernel_memsize,
-> -                                              SZ_2M, reserve_addr);
-> -
-> -                       if (status != EFI_SUCCESS) {
-> -                               pr_efi_err(sys_table_arg, "Failed to relocate kernel\n");
-> -                               return status;
-> -                       }
-> -                       *image_addr = *reserve_addr + TEXT_OFFSET;
-> +                       pr_efi_err(sys_table_arg, "Failed to relocate kernel\n");
-> +                       return status;
->                 }
-> -               memcpy((void *)*image_addr, old_image_addr, kernel_size);
-> -               *reserve_size = kernel_memsize;
-> +               *image_addr = *reserve_addr + TEXT_OFFSET;
->         }
-> -
-> +       memcpy((void *)*image_addr, old_image_addr, kernel_size);
-> +       *reserve_size = kernel_memsize;
->
->         return EFI_SUCCESS;
->  }
-> diff --git a/include/linux/efi.h b/include/linux/efi.h
-> index 569b5a866bb1..13783fdc9bdd 100644
-> --- a/include/linux/efi.h
-> +++ b/include/linux/efi.h
-> @@ -299,7 +299,7 @@ typedef struct {
->         void *open_protocol_information;
->         void *protocols_per_handle;
->         void *locate_handle_buffer;
-> -       void *locate_protocol;
-> +       efi_status_t (*locate_protocol)(efi_guid_t *, void *, void **);
->         void *install_multiple_protocol_interfaces;
->         void *uninstall_multiple_protocol_interfaces;
->         void *calculate_crc32;
-> @@ -599,6 +599,9 @@ void efi_native_runtime_setup(void);
->  #define EFI_PROPERTIES_TABLE_GUID \
->      EFI_GUID(  0x880aaca3, 0x4adc, 0x4a04, 0x90, 0x79, 0xb7, 0x47, 0x34, 0x08, 0x25, 0xe5 )
->
-> +#define EFI_RNG_PROTOCOL_GUID \
-> +    EFI_GUID(  0x3152bca5, 0xeade, 0x433d, 0x86, 0x2e, 0xc0, 0x1c, 0xdc, 0x29, 0x1f, 0x44 )
-> +
->  typedef struct {
->         efi_guid_t guid;
->         u64 table;
-> --
-> 2.5.0
->
-
-
 
 -- 
 Kees Cook
