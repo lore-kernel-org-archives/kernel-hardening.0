@@ -1,69 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <568C5BB8.1050705@iogearbox.net>
-Date: Wed, 06 Jan 2016 01:11:36 +0100
-From: Daniel Borkmann <daniel@iogearbox.net>
 MIME-Version: 1.0
-References: <2236FBA76BA1254E88B949DDB74E612B41A361EA@IRSMSX102.ger.corp.intel.com>	<CAGXu5j+pt1x9AntHM3Z4O8V=5-So0tWj=9aoJ-kP1q0p3-s=Vw@mail.gmail.com>	<2236FBA76BA1254E88B949DDB74E612B41A38ED3@IRSMSX102.ger.corp.intel.com> <CAGXu5jLw=VcwPAmg3ttjkgb3+SxDDVNPthsu8ErTH88LZfTALg@mail.gmail.com>
-In-Reply-To: <CAGXu5jLw=VcwPAmg3ttjkgb3+SxDDVNPthsu8ErTH88LZfTALg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Introduction and task request
-To: keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <1450755641-7856-8-git-send-email-laura@labbott.name>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name>
+	<1450755641-7856-8-git-send-email-laura@labbott.name>
+Date: Tue, 5 Jan 2016 16:15:35 -0800
+Message-ID: <CAGXu5jKZTg9jfg9CtXxjDOO_DDBW=c5iyLtkfJr7zAqzxWgQ4Q@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC][PATCH 7/7] lkdtm: Add READ_AFTER_FREE test
+To: Laura Abbott <laura@labbott.name>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/06/2016 12:57 AM, Kees Cook wrote:
-> On Mon, Dec 21, 2015 at 3:16 AM, Reshetova, Elena
-> <elena.reshetova@intel.com> wrote:
->>>> What would be the reasonable task for me to do?
->>
->>> I always suggest people work on stuff that interests them. Do you have any
->>> specific areas you like working on, or exploits you'd like to see stopped?
->>
->> I guess ideally people subscribed to this list want all exploits to be stopped
->> :) But seriously I don't have any preference at least for now. Since I will
->> have to learn a lot in this area I want to start from something which would be
->> a reasonable and useful for this project piece of work, that's why I was
->> asking for suggestions.
->>
->>>> I am quite a newbie in proper kernel development work (but not a
->>>> newbie in platform security), so please as initial task do not through
->>>> to me the biggest dead animal out there with the task to revive it.
->>
->>> Heh, understood. We'll be happy to assist you through whatever parts you
->>> might want help with.
->>
->> Thank you!
->>
->>>> It is going to be a learning exercise for me at least at the
->>>> beginning, but I am hoping to learn fast and start bringing value to the
->>>> project.
->>
->>> I had mentioned PAX_USERCOPY earlier. I'm not sure how much work that'll be,
->>> but extracting it would be the first step, and you can go from there. There's
->>> no one actively working on it at the moment, and it would be very nice to
->>> have.
->>
->> Casey is taking care of that, so I will leave it to him.
->>
->>> Or perhaps looking into the prior BPF_HARDEN work (currently this just
->>> disables eBPF, but it used to try to defend against trivial heap-sprays).
->>
->>   This sounds smth that I can look into. I will be back when I have something
->> reasonable ready or researched enough for sensible questions/discussion
->> points. I will be away for long holidays until Jan 10, but hoping to return
->> with plenty of energy :)
+On Mon, Dec 21, 2015 at 7:40 PM, Laura Abbott <laura@labbott.name> wrote:
 >
-> The original name was JIT_HARDEN, prior to grsecurity's 3.16 patches
-> (which just disable JIT entirely):
-> https://github.com/slashbeast/grsecurity-scrape/blob/master/test/grsecurity-3.0-3.15.5-201407170639.patch
+> In a similar manner to WRITE_AFTER_FREE, add a READ_AFTER_FREE
+> test to test free poisoning features. Sample output when
+> no poison is present:
 >
-> I think it'd be nice to have the the JIT hardening feature, since it
-> does block heap-sprayed immediate values and probably other stuff, but
-> I haven't studied it.
+> [   20.222501] lkdtm: Performing direct entry READ_AFTER_FREE
+> [   20.226163] lkdtm: Freed val: 12345678
+>
+> with poison:
+>
+> [   24.203748] lkdtm: Performing direct entry READ_AFTER_FREE
+> [   24.207261] general protection fault: 0000 [#1] SMP
+> [   24.208193] Modules linked in:
+> [   24.208193] CPU: 0 PID: 866 Comm: sh Not tainted 4.4.0-rc5-work+ #108
+>
+> Cc: Arnd Bergmann <arnd@arndb.de>
+> Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> Signed-off-by: Laura Abbott <laura@labbott.name>
+> ---
+>  drivers/misc/lkdtm.c | 29 +++++++++++++++++++++++++++++
+>  1 file changed, 29 insertions(+)
+>
+> diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+> index 11fdadc..c641fb7 100644
+> --- a/drivers/misc/lkdtm.c
+> +++ b/drivers/misc/lkdtm.c
+> @@ -92,6 +92,7 @@ enum ctype {
+>         CT_UNALIGNED_LOAD_STORE_WRITE,
+>         CT_OVERWRITE_ALLOCATION,
+>         CT_WRITE_AFTER_FREE,
+> +       CT_READ_AFTER_FREE,
+>         CT_SOFTLOCKUP,
+>         CT_HARDLOCKUP,
+>         CT_SPINLOCKUP,
+> @@ -129,6 +130,7 @@ static char* cp_type[] = {
+>         "UNALIGNED_LOAD_STORE_WRITE",
+>         "OVERWRITE_ALLOCATION",
+>         "WRITE_AFTER_FREE",
+> +       "READ_AFTER_FREE",
+>         "SOFTLOCKUP",
+>         "HARDLOCKUP",
+>         "SPINLOCKUP",
+> @@ -417,6 +419,33 @@ static void lkdtm_do_action(enum ctype which)
+>                 memset(data, 0x78, len);
+>                 break;
+>         }
+> +       case CT_READ_AFTER_FREE: {
+> +               int **base;
+> +               int *val, *tmp;
+> +
+> +               base = kmalloc(1024, GFP_KERNEL);
+> +               if (!base)
+> +                       return;
+> +
+> +               val = kmalloc(1024, GFP_KERNEL);
+> +               if (!val)
+> +                       return;
 
-Was on my todo list as well for some time, but if you have some cycles in
-spare, go for it. We recently discussed that it would be nice if it could
-be done on a more generic level, in the sense to do [e]BPF insns rewrite
-for blinding, so that each JIT would not need to add up even more complexity
-and/or duplicate efforts.
+For both of these test failure return, I think there should be a
+pr_warn too (see CT_EXEC_USERSPACE).
+
+> +
+> +               *val = 0x12345678;
+> +
+> +               /*
+> +                * Don't just use the first entry since that's where the
+> +                * freelist goes for the slab allocator
+> +                */
+> +               base[1] = val;
+
+Maybe just aim at the middle, in case allocator freelist tracking ever
+grows? base[1024/sizeof(int)/2] or something?
+
+> +               kfree(base);
+> +
+> +               tmp = base[1];
+> +               pr_info("Freed val: %x\n", *tmp);
+
+Instead of depending on the deref to fail, maybe just use a simple
+BUG_ON to test that the value did actually change? Or, change the
+pr_info to "Failed to Oops when reading freed value: ..." just to be
+slightly more verbose about what failed?
+
+> +
+> +               kfree(val);
+> +               break;
+> +       }
+>         case CT_SOFTLOCKUP:
+>                 preempt_disable();
+>                 for (;;)
+> --
+> 2.5.0
+>
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
