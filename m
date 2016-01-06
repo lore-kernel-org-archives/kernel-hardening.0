@@ -1,73 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <5679A0CB.3060707@labbott.name>
 References: <1450755641-7856-1-git-send-email-laura@labbott.name>
-	<1450755641-7856-7-git-send-email-laura@labbott.name>
-	<567964F3.2020402@intel.com>
-	<alpine.DEB.2.20.1512221023550.2748@east.gentwo.org>
-	<567986E7.50107@intel.com>
-	<alpine.DEB.2.20.1512221124230.14335@east.gentwo.org>
-	<56798851.60906@intel.com>
-	<alpine.DEB.2.20.1512221207230.14406@east.gentwo.org>
-	<5679943C.1050604@intel.com>
-	<5679A0CB.3060707@labbott.name>
-Date: Tue, 5 Jan 2016 16:29:21 -0800
-Message-ID: <CAGXu5jLe69KvVOGE2kHtJk+Ueik4OX9YyYAk_NhRufOEVkLUdQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC][PATCH 6/7] mm: Add Kconfig option for
- slab sanitization
-To: Laura Abbott <laura@labbott.name>
-Cc: Dave Hansen <dave.hansen@intel.com>, Christoph Lameter <cl@linux.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+ <1450755641-7856-2-git-send-email-laura@labbott.name>
+ <5679B701.9040802@suse.cz>
+ <CAGXu5jLvS0jzi07QegCHoBoCc3wFhbcMOjCpmbe3KC2oJO9jPQ@mail.gmail.com>
+From: Laura Abbott <laura@labbott.name>
+Message-ID: <568C76AB.1060804@labbott.name>
+Date: Tue, 5 Jan 2016 18:06:35 -0800
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jLvS0jzi07QegCHoBoCc3wFhbcMOjCpmbe3KC2oJO9jPQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 1/7] mm/slab_common.c: Add common support for slab
+ saniziation
+To: Kees Cook <keescook@chromium.org>, Vlastimil Babka <vbabka@suse.cz>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mathias Krause <minipli@googlemail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 22, 2015 at 11:13 AM, Laura Abbott <laura@labbott.name> wrote:
-> On 12/22/15 10:19 AM, Dave Hansen wrote:
->>
->> On 12/22/2015 10:08 AM, Christoph Lameter wrote:
+On 1/5/16 4:17 PM, Kees Cook wrote:
+> On Tue, Dec 22, 2015 at 12:48 PM, Vlastimil Babka <vbabka@suse.cz> wrote:
+>> On 22.12.2015 4:40, Laura Abbott wrote:
+>>> Each of the different allocators (SLAB/SLUB/SLOB) handles
+>>> clearing of objects differently depending on configuration.
+>>> Add common infrastructure for selecting sanitization levels
+>>> (off, slow path only, partial, full) and marking caches as
+>>> appropriate.
 >>>
->>> On Tue, 22 Dec 2015, Dave Hansen wrote:
->>>>>
->>>>> Why would you use zeros? The point is just to clear the information
->>>>> right?
->>>>> The regular poisoning does that.
->>>>
->>>>
->>>> It then allows you to avoid the zeroing at allocation time.
+>>> All credit for the original work should be given to Brad Spengler and
+>>> the PaX Team.
 >>>
+>>> Signed-off-by: Laura Abbott <laura@labbott.name>
 >>>
->>> Well much of the code is expecting a zeroed object from the allocator and
->>> its zeroed at that time. Zeroing makes the object cache hot which is an
->>> important performance aspect.
+>>> +#ifdef CONFIG_SLAB_MEMORY_SANITIZE
+>>> +#ifdef CONFIG_X86_64
+>>> +#define SLAB_MEMORY_SANITIZE_VALUE       '\xfe'
+>>> +#else
+>>> +#define SLAB_MEMORY_SANITIZE_VALUE       '\xff'
+>>> +#endif
+>>> +enum slab_sanitize_mode {
+>>> +     /* No sanitization */
+>>> +     SLAB_SANITIZE_OFF = 0,
+>>> +
+>>> +     /* Partial sanitization happens only on the slow path */
+>>> +     SLAB_SANITIZE_PARTIAL_SLOWPATH = 1,
 >>
+>> Can you explain more about this variant? I wonder who might find it useful
+>> except someone getting a false sense of security, but cheaper.
+>> It sounds like wanting the cake and eat it too :)
+>> I would be surprised if such IMHO half-solution existed in the original
+>> PAX_MEMORY_SANITIZE too?
 >>
->> Yes, modifying this behavior has a performance impact.  It absolutely
->> needs to be evaluated, and I wouldn't want to speculate too much on how
->> good or bad any of the choices are.
->>
->> Just to reiterate, I think we have 3 real choices here:
->>
->> 1. Zero at alloc, only when __GFP_ZERO
->>     (behavior today)
->> 2. Poison at free, also Zero at alloc (when __GFP_ZERO)
->>     (this patch's proposed behavior, also what current poisoning does,
->>      doubles writes)
->> 3. Zero at free, *don't* Zero at alloc (when __GFP_ZERO)
->>     (what I'm suggesting, possibly less perf impact vs. #2)
->>
->>
+>> Or is there something that guarantees that the objects freed on hotpath won't
+>> stay there for long so the danger of leak is low? (And what about
+>> use-after-free?) It depends on further slab activity, no? (I'm not that familiar
+>> with SLUB, but I would expect the hotpath there being similar to SLAB freeing
+>> the object on per-cpu array_cache. But, it seems the PARTIAL_SLOWPATH is not
+>> implemented for SLAB, so there might be some fundamental difference I'm missing.)
 >
-> poisoning with non-zero memory makes it easier to determine that the error
-> came from accessing the sanitized memory vs. some other case. I don't think
-> the feature would be as strong if the memory was only zeroed vs. some other
-> data value.
+> Perhaps the partial sanitize could be a separate patch so it's
+> features were more logically separated?
+>
 
-I would tend to agree. If there are significant perf improvements for
-"3" above, that should be easy to add on later as another choice.
+I've done some more thinking and testing and I'm just going to drop the
+slowpath idea. It helps some benchmarks but not enough. The concept is
+out there if it's worth picking up later.
 
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Thanks,
+Laura
