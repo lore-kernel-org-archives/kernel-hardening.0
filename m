@@ -1,80 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 7 Jan 2016 13:55:18 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160107135518.GB15917@leverpostej>
-References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
- <1451489172-17420-4-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1451489172-17420-4-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v2 03/13] arm64: use more granular reservations for
- static page table allocations
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+In-Reply-To: <20160107135518.GB15917@leverpostej>
+References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
+	<1451489172-17420-4-git-send-email-ard.biesheuvel@linaro.org>
+	<20160107135518.GB15917@leverpostej>
+Date: Thu, 7 Jan 2016 15:02:00 +0100
+Message-ID: <CAKv+Gu-qdTDwnLajLw_hT6odessdi4Ndbe80CSvY6o1N6HDOmA@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 03/13] arm64: use more granular reservations for static
+ page table allocations
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 30, 2015 at 04:26:02PM +0100, Ard Biesheuvel wrote:
-> Before introducing new statically allocated page tables and increasing
-> their alignment in subsequent patches, update the reservation logic
-> so that only pages that are in actual use end up as reserved with
-> memblock.
+On 7 January 2016 at 14:55, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Wed, Dec 30, 2015 at 04:26:02PM +0100, Ard Biesheuvel wrote:
+>> Before introducing new statically allocated page tables and increasing
+>> their alignment in subsequent patches, update the reservation logic
+>> so that only pages that are in actual use end up as reserved with
+>> memblock.
+>
+> Could you add something to the commit message about what this will gain
+> us (i.e. which pages we don't have to reserve)? It's not immediately
+> obvious why we'd have page tables we wouldn't want to reserve.
+>
 
-Could you add something to the commit message about what this will gain
-us (i.e. which pages we don't have to reserve)? It's not immediately
-obvious why we'd have page tables we wouldn't want to reserve.
+OK. In the original series, I also aligned the pgdir section to a log2
+upper bound of its size, but that is not necessary anymore with your
+changes. So the original goal was to avoid reserving the alignment
+padding as well as the pgdirs that end up unused
 
->From the looks of the next patch we won't have redundant levels of
-fixmap table for a given configuration, so I guess we're catering for
-the case the fixmap shares a pgd/pud/pmd entry with the image mapping?
+> From the looks of the next patch we won't have redundant levels of
+> fixmap table for a given configuration, so I guess we're catering for
+> the case the fixmap shares a pgd/pud/pmd entry with the image mapping?
+>
+> Does that happen? If so that would invalidate the assumption I make when
+> copying the fixmap over in [1] (see map_kernel).
+>
 
-Does that happen? If so that would invalidate the assumption I make when
-copying the fixmap over in [1] (see map_kernel).
+It is a lot less likely to happen now that I moved the kernel to the
+start of the vmalloc area rather than right below PAGE_OFFSET. But in
+general, it seems sensible to only populate entries after confirming
+that they are in fact vacant.
 
-To handle that either we need some special logic to copy over the
-relevant bits for the fixmap (as with kasan_copy_shadow), or we need to
-avoid sharing a pgd entry.
+> To handle that either we need some special logic to copy over the
+> relevant bits for the fixmap (as with kasan_copy_shadow), or we need to
+> avoid sharing a pgd entry.
+>
+> Thoughts?
+>
 
-Thoughts?
+Yes, I have added that to my v3 version of the vmalloc base move patch here
 
-Thanks,
-Mark.
+https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/commitdiff/0beef2c1a6bfc90cc116a6ba1b24f2ba35e7e5f6
 
-[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2016-January/397114.html
+but I think 16k/4 levels is the only config affected when the kernel
+is always in the lower half of the vmalloc area. That also implies
+that the fixmap pgd is either always shared, or never, depending on
+the build time config, so I could probably simplify that part
+somewhat.
 
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/mm/init.c | 5 ++++-
->  1 file changed, 4 insertions(+), 1 deletion(-)
-> 
-> diff --git a/arch/arm64/mm/init.c b/arch/arm64/mm/init.c
-> index 6bacba847923..8e678d05ad84 100644
-> --- a/arch/arm64/mm/init.c
-> +++ b/arch/arm64/mm/init.c
-> @@ -36,6 +36,7 @@
->  #include <linux/swiotlb.h>
->  
->  #include <asm/fixmap.h>
-> +#include <asm/kernel-pgtable.h>
->  #include <asm/memory.h>
->  #include <asm/sections.h>
->  #include <asm/setup.h>
-> @@ -165,11 +166,13 @@ void __init arm64_memblock_init(void)
->  	 * Register the kernel text, kernel data, initrd, and initial
->  	 * pagetables with memblock.
->  	 */
-> -	memblock_reserve(__pa(_text), _end - _text);
-> +	memblock_reserve(__pa(_text), __bss_stop - _text);
->  #ifdef CONFIG_BLK_DEV_INITRD
->  	if (initrd_start)
->  		memblock_reserve(__virt_to_phys(initrd_start), initrd_end - initrd_start);
->  #endif
-> +	memblock_reserve(__pa(idmap_pg_dir), IDMAP_DIR_SIZE);
-> +	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_DIR_SIZE);
->  
->  	early_init_fdt_scan_reserved_mem();
->  
-> -- 
-> 2.5.0
-> 
+-- 
+Ard.
