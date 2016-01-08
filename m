@@ -1,60 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1450755641-7856-1-git-send-email-laura@labbott.name>
- <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
- <5679ACE9.70701@labbott.name>
- <CAGXu5jJQKaA1qgLEV9vXEVH4QBC__Vg141BX22ZsZzW6p9yk4Q@mail.gmail.com>
- <568C8741.4040709@labbott.name>
- <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org>
-From: Laura Abbott <laura@labbott.name>
-Message-ID: <568F0F75.4090101@labbott.name>
-Date: Thu, 7 Jan 2016 17:23:01 -0800
+Message-ID: <568F8C9E.1010608@arm.com>
+Date: Fri, 08 Jan 2016 10:17:02 +0000
+From: James Morse <james.morse@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org>
-Content-Type: text/plain; charset=windows-1252; format=flowed
+References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org> <1451489172-17420-13-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1451489172-17420-13-git-send-email-ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
-To: Christoph Lameter <cl@linux.com>
-Cc: Kees Cook <keescook@chromium.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v2 12/13] arm64: add support for relocatable kernel
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1/7/16 8:26 AM, Christoph Lameter wrote:
-> On Tue, 5 Jan 2016, Laura Abbott wrote:
->
->> It's not the poisoning per se that's incompatible, it's how the poisoning is
->> set up. At least for slub, the current poisoning is part of SLUB_DEBUG which
->> enables other consistency checks on the allocator. Trying to pull out just
->> the poisoning for use when SLUB_DEBUG isn't on would result in roughly what
->> would be here anyway. I looked at trying to reuse some of the existing
->> poisoning
->> and came to the conclusion it was less intrusive to the allocator to keep it
->> separate.
->
-> SLUB_DEBUG does *not* enable any debugging features. It builds the logic
-> for debugging into the kernel but does not activate it. CONFIG_SLUB_DEBUG
-> is set for production kernels. The poisoning is build in by default into
-> any recent linux kernel out there. You can enable poisoning selectively
-> (and no other debug feature) by specifying slub_debug=P on the Linux
-> kernel command line right now.
->
-> There is a SLAB_POISON flag for each kmem_cache that can be set to
-> *only* enable poisoning and nothing else from code.
->
->
+Hi Ard!
 
-The slub_debug=P not only poisons it enables other consistency checks on the
-slab as well, assuming my understanding of what check_object does is correct.
-My hope was to have the poison part only and none of the consistency checks in
-an attempt to mitigate performance issues. I misunderstood when the checks
-actually run and how SLUB_DEBUG was used.
+On 30/12/15 15:26, Ard Biesheuvel wrote:
+> This adds support for runtime relocation of the kernel Image, by
+> building it as a PIE (ET_DYN) executable and applying the dynamic
+> relocations in the early boot code.
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
 
-Another option would be to have a flag like SLAB_NO_SANITY_CHECK.
-sanitization enablement would just be that and SLAB_POISON
-in the debug options. The disadvantage to this approach would be losing
-the sanitization for ->ctor caches (the grsecurity version works around this
-by re-initializing with ->ctor, I haven't heard any feedback if this actually
-acceptable) and not having some of the fast paths enabled
-(assuming I'm understanding the code path correctly.) which would also
-be a performance penalty
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index 01a33e42ed70..ab582ee58b58 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+> @@ -243,6 +253,16 @@ ENDPROC(stext)
+>  preserve_boot_args:
+>  	mov	x21, x0				// x21=FDT
+>  
+> +#ifdef CONFIG_ARM64_RELOCATABLE_KERNEL
+> +	/*
+> +	 * Mask off the bits of the random value supplied in x1 so it can serve
+> +	 * as a KASLR displacement value which will move the kernel image to a
+> +	 * random offset in the lower half of the VMALLOC area.
+> +	 */
+> +	mov	x23, #(1 << (VA_BITS - 2)) - 1
+> +	and	x23, x23, x1, lsl #SWAPPER_BLOCK_SHIFT
+> +#endif
 
-Thanks,
-Laura
+I've managed to make this fail to boot by providing a seed that caused
+the kernel to overlap a 1G boundary on a 4K system.
+
+(It looks like your v3 may have the same issue - but I haven't tested it.)
+
+
+> +
+>  	adr_l	x0, boot_args			// record the contents of
+>  	stp	x21, x1, [x0]			// x0 .. x3 at kernel entry
+>  	stp	x2, x3, [x0, #16]
+
+
+Thanks!
+
+James
