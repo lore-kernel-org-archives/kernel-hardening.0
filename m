@@ -1,67 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 8 Jan 2016 12:40:56 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160108124055.GD3097@leverpostej>
-References: <1451489172-17420-1-git-send-email-ard.biesheuvel@linaro.org>
- <1451489172-17420-13-git-send-email-ard.biesheuvel@linaro.org>
- <20160108123614.GC3097@leverpostej>
- <CAKv+Gu9rp945-1cfn1iz01WBi+H5sWxTQPLGPduvG__wxVdK3g@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu9rp945-1cfn1iz01WBi+H5sWxTQPLGPduvG__wxVdK3g@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 12/13] arm64: add support for relocatable kernel
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
+Date: Fri, 8 Jan 2016 08:07:44 -0600 (CST)
+From: Christoph Lameter <cl@linux.com>
+In-Reply-To: <568F0F75.4090101@labbott.name>
+Message-ID: <alpine.DEB.2.20.1601080806020.4128@east.gentwo.org>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name> <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org> <5679ACE9.70701@labbott.name> <CAGXu5jJQKaA1qgLEV9vXEVH4QBC__Vg141BX22ZsZzW6p9yk4Q@mail.gmail.com> <568C8741.4040709@labbott.name>
+ <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org> <568F0F75.4090101@labbott.name>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
+To: Laura Abbott <laura@labbott.name>
+Cc: Kees Cook <keescook@chromium.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 08, 2016 at 01:38:54PM +0100, Ard Biesheuvel wrote:
-> On 8 January 2016 at 13:36, Mark Rutland <mark.rutland@arm.com> wrote:
-> > On Wed, Dec 30, 2015 at 04:26:11PM +0100, Ard Biesheuvel wrote:
-> >> +
-> >> +     /*
-> >> +      * Iterate over each entry in the relocation table, and apply the
-> >> +      * relocations in place.
-> >> +      */
-> >> +     adr_l   x8, __dynsym_start              // start of symbol table
-> >> +     adr_l   x9, __reloc_start               // start of reloc table
-> >> +     adr_l   x10, __reloc_end                // end of reloc table
-> >> +
-> >> +0:   cmp     x9, x10
-> >> +     b.hs    2f
-> >> +     ldp     x11, x12, [x9], #24
-> >> +     ldr     x13, [x9, #-8]
-> >> +     cmp     w12, #R_AARCH64_RELATIVE
-> >> +     b.ne    1f
-> >> +     add     x13, x13, x23                   // relocate
-> >> +     str     x13, [x11, x23]
-> >> +     b       0b
-> >> +
-> >> +1:   cmp     w12, #R_AARCH64_ABS64
-> >> +     b.ne    0b
-> >> +     add     x12, x12, x12, lsl #1           // symtab offset: 24x top word
-> >> +     add     x12, x8, x12, lsr #(32 - 3)     // ... shifted into bottom word
-> >> +     ldrsh   w14, [x12, #6]                  // Elf64_Sym::st_shndx
-> >> +     ldr     x15, [x12, #8]                  // Elf64_Sym::st_value
-> >> +     cmp     w14, #-0xf                      // SHN_ABS (0xfff1) ?
-> >> +     add     x14, x15, x23                   // relocate
-> >> +     csel    x15, x14, x15, ne
-> >> +     add     x15, x13, x15
-> >> +     str     x15, [x11, x23]
-> >> +     b       0b
-> >
-> > We need to clean each of these relocated instructions to the PoU to be
-> > visible for I-cache fetches.
-> >
-> > As this is normal-cacheable we can post the maintenance with a DC CVAU
-> > immediately after the store (no barriers necessary), and rely on the DSB
-> > at 2f to complete all of those.
-> >
-> 
-> Dynamic relocations never apply to instructions, so i don't think that
-> is necessary here.
+On Thu, 7 Jan 2016, Laura Abbott wrote:
 
-Ah, yes. I was being thick. Sorry for the noise!
+> The slub_debug=P not only poisons it enables other consistency checks on the
+> slab as well, assuming my understanding of what check_object does is correct.
+> My hope was to have the poison part only and none of the consistency checks in
+> an attempt to mitigate performance issues. I misunderstood when the checks
+> actually run and how SLUB_DEBUG was used.
 
-Thanks,
-Mark.
+Ok I see that there pointer check is done without checking the
+corresponding debug flag. Patch attached thar fixes it.
+
+> Another option would be to have a flag like SLAB_NO_SANITY_CHECK.
+> sanitization enablement would just be that and SLAB_POISON
+> in the debug options. The disadvantage to this approach would be losing
+> the sanitization for ->ctor caches (the grsecurity version works around this
+> by re-initializing with ->ctor, I haven't heard any feedback if this actually
+> acceptable) and not having some of the fast paths enabled
+> (assuming I'm understanding the code path correctly.) which would also
+> be a performance penalty
+
+I think we simply need to fix the missing check there. There is already a
+flag SLAB_DEBUG_FREE for the pointer checks.
+
+
+
+Subject: slub: Only perform pointer checks in check_object when SLAB_DEBUG_FREE is set
+
+Seems that check_object() always checks for pointer issues currently.
+
+Signed-off-by: Christoph Lameter <cl@linux.com>
+
+Index: linux/mm/slub.c
+===================================================================
+--- linux.orig/mm/slub.c
++++ linux/mm/slub.c
+@@ -848,6 +848,9 @@ static int check_object(struct kmem_cach
+ 		 */
+ 		return 1;
+
++	if (!(s->flags & SLAB_DEBUG_FREE))
++		return 1;
++
+ 	/* Check free pointer validity */
+ 	if (!check_valid_pointer(s, page, get_freepointer(s, p))) {
+ 		object_err(s, page, p, "Freepointer corrupt");
