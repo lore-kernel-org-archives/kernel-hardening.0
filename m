@@ -1,292 +1,239 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 11 Jan 2016 14:19:01 +0100
-Message-Id: <1452518355-4606-9-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 14:19:03 +0100
+Message-Id: <1452518355-4606-11-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 08/21] arm64: add support for module PLTs
+Subject: [kernel-hardening] [PATCH v3 10/21] arm64: switch to relative exception tables
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This adds support for emitting PLTs at module load time for relative
-branches that are out of range. This is a prerequisite for KASLR, which
-may place the kernel and the modules anywhere in the vmalloc area,
-making it more likely that branch target offsets exceed the maximum
-range of +/- 128 MB.
+Instead of using absolute addresses for both the exception location
+and the fixup, use offsets relative to the exception table entry values.
+Not only does this cut the size of the exception table in half, it is
+also a prerequisite for KASLR, since absolute exception table entries
+are subject to dynamic relocation, which is incompatible with the sorting
+of the exception table that occurs at build time.
 
+This patch also introduces the _ASM_EXTABLE preprocessor macro (which
+exists on x86 as well) and its _asm_extable assembly counterpart, as
+shorthands to emit exception table entries.
+
+Acked-by: Will Deacon <will.deacon@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/Kconfig              |   9 ++
- arch/arm64/Makefile             |   6 +-
- arch/arm64/include/asm/module.h |  11 ++
- arch/arm64/kernel/Makefile      |   1 +
- arch/arm64/kernel/module-plts.c | 137 ++++++++++++++++++++
- arch/arm64/kernel/module.c      |  12 ++
- arch/arm64/kernel/module.lds    |   4 +
- 7 files changed, 179 insertions(+), 1 deletion(-)
+ arch/arm64/include/asm/assembler.h      | 15 +++++++---
+ arch/arm64/include/asm/futex.h          | 12 +++-----
+ arch/arm64/include/asm/uaccess.h        | 30 +++++++++++---------
+ arch/arm64/include/asm/word-at-a-time.h |  7 ++---
+ arch/arm64/kernel/armv8_deprecated.c    |  7 ++---
+ arch/arm64/mm/extable.c                 |  2 +-
+ scripts/sortextable.c                   |  2 +-
+ 7 files changed, 38 insertions(+), 37 deletions(-)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index ffa3c549a4ba..778df20bf623 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -363,6 +363,7 @@ config ARM64_ERRATUM_843419
- 	bool "Cortex-A53: 843419: A load or store might access an incorrect address"
- 	depends on MODULES
- 	default y
-+	select ARM64_MODULE_CMODEL_LARGE
- 	help
- 	  This option builds kernel modules using the large memory model in
- 	  order to avoid the use of the ADRP instruction, which can cause
-@@ -702,6 +703,14 @@ config ARM64_LSE_ATOMICS
+diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+index bb7b72734c24..d8bfcc1ce923 100644
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -94,12 +94,19 @@
+ 	dmb	\opt
+ 	.endm
  
- endmenu
- 
-+config ARM64_MODULE_CMODEL_LARGE
-+	bool
-+
-+config ARM64_MODULE_PLTS
-+	bool
-+	select ARM64_MODULE_CMODEL_LARGE
-+	select HAVE_MOD_ARCH_SPECIFIC
-+
- endmenu
- 
- menu "Boot options"
-diff --git a/arch/arm64/Makefile b/arch/arm64/Makefile
-index cd822d8454c0..db462980c6be 100644
---- a/arch/arm64/Makefile
-+++ b/arch/arm64/Makefile
-@@ -41,10 +41,14 @@ endif
- 
- CHECKFLAGS	+= -D__aarch64__
- 
--ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
-+ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
- KBUILD_CFLAGS_MODULE	+= -mcmodel=large
- endif
- 
-+ifeq ($(CONFIG_ARM64_MODULE_PLTS),y)
-+KBUILD_LDFLAGS_MODULE	+= -T $(srctree)/arch/arm64/kernel/module.lds
-+endif
-+
- # Default value
- head-y		:= arch/arm64/kernel/head.o
- 
-diff --git a/arch/arm64/include/asm/module.h b/arch/arm64/include/asm/module.h
-index e80e232b730e..7b8cd3dc9d8e 100644
---- a/arch/arm64/include/asm/module.h
-+++ b/arch/arm64/include/asm/module.h
-@@ -20,4 +20,15 @@
- 
- #define MODULE_ARCH_VERMAGIC	"aarch64"
- 
-+#ifdef CONFIG_ARM64_MODULE_PLTS
-+struct mod_arch_specific {
-+	struct elf64_shdr	*core_plt;
-+	struct elf64_shdr	*init_plt;
-+	int			core_plt_count;
-+	int			init_plt_count;
-+};
-+#endif
-+
-+u64 get_module_plt(struct module *mod, void *loc, u64 val);
-+
- #endif /* __ASM_MODULE_H */
-diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
-index 474691f8b13a..f42b0fff607f 100644
---- a/arch/arm64/kernel/Makefile
-+++ b/arch/arm64/kernel/Makefile
-@@ -30,6 +30,7 @@ arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o 	\
- 					   ../../arm/kernel/opcodes.o
- arm64-obj-$(CONFIG_FUNCTION_TRACER)	+= ftrace.o entry-ftrace.o
- arm64-obj-$(CONFIG_MODULES)		+= arm64ksyms.o module.o
-+arm64-obj-$(CONFIG_ARM64_MODULE_PLTS)	+= module-plts.o
- arm64-obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o perf_callchain.o
- arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
- arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
-diff --git a/arch/arm64/kernel/module-plts.c b/arch/arm64/kernel/module-plts.c
-new file mode 100644
-index 000000000000..4a8ef9ea01ee
---- /dev/null
-+++ b/arch/arm64/kernel/module-plts.c
-@@ -0,0 +1,137 @@
 +/*
-+ * Copyright (C) 2014-2015 Linaro Ltd. <ard.biesheuvel@linaro.org>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
++ * Emit an entry into the exception table
 + */
++	.macro		_asm_extable, from, to
++	.pushsection	__ex_table, "a"
++	.align		3
++	.long		(\from - .), (\to - .)
++	.popsection
++	.endm
 +
-+#include <linux/elf.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+
-+struct plt_entry {
-+	__le32	mov0;	/* movn	x16, #0x....			*/
-+	__le32	mov1;	/* movk	x16, #0x...., lsl #16		*/
-+	__le32	mov2;	/* movk	x16, #0x...., lsl #32		*/
-+	__le32	br;	/* br	x16				*/
-+} __aligned(8);
-+
-+static bool in_init(const struct module *mod, void *addr)
-+{
-+	return (u64)addr - (u64)mod->module_init < mod->init_size;
-+}
-+
-+u64 get_module_plt(struct module *mod, void *loc, u64 val)
-+{
-+	struct plt_entry entry = {
-+		cpu_to_le32(0x92800010 | (((~val      ) & 0xffff)) << 5),
-+		cpu_to_le32(0xf2a00010 | ((( val >> 16) & 0xffff)) << 5),
-+		cpu_to_le32(0xf2c00010 | ((( val >> 32) & 0xffff)) << 5),
-+		cpu_to_le32(0xd61f0200)
-+	}, *plt;
-+	int i, *count;
-+
-+	if (in_init(mod, loc)) {
-+		plt = (struct plt_entry *)mod->arch.init_plt->sh_addr;
-+		count = &mod->arch.init_plt_count;
-+	} else {
-+		plt = (struct plt_entry *)mod->arch.core_plt->sh_addr;
-+		count = &mod->arch.core_plt_count;
-+	}
-+
-+	/* Look for an existing entry pointing to 'val' */
-+	for (i = 0; i < *count; i++)
-+		if (plt[i].mov0 == entry.mov0 &&
-+		    plt[i].mov1 == entry.mov1 &&
-+		    plt[i].mov2 == entry.mov2)
-+			return (u64)&plt[i];
-+
-+	i = (*count)++;
-+	plt[i] = entry;
-+	return (u64)&plt[i];
-+}
-+
-+static int duplicate_rel(Elf64_Addr base, const Elf64_Rela *rela, int num)
-+{
-+	int i;
-+
-+	for (i = 0; i < num; i++) {
-+		if (rela[i].r_info == rela[num].r_info &&
-+		    rela[i].r_addend == rela[num].r_addend)
-+			return 1;
-+	}
-+	return 0;
-+}
-+
-+/* Count how many PLT entries we may need */
-+static unsigned int count_plts(Elf64_Addr base, const Elf64_Rela *rela, int num)
-+{
-+	unsigned int ret = 0;
-+	int i;
-+
-+	/*
-+	 * Sure, this is order(n^2), but it's usually short, and not
-+	 * time critical
-+	 */
-+	for (i = 0; i < num; i++)
-+		switch (ELF64_R_TYPE(rela[i].r_info)) {
-+		case R_AARCH64_JUMP26:
-+		case R_AARCH64_CALL26:
-+			if (!duplicate_rel(base, rela, i))
-+				ret++;
-+			break;
-+		}
-+	return ret;
-+}
-+
-+int module_frob_arch_sections(Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
-+			      char *secstrings, struct module *mod)
-+{
-+	unsigned long core_plts = 0, init_plts = 0;
-+	Elf64_Shdr *s, *sechdrs_end = sechdrs + ehdr->e_shnum;
-+
-+	/*
-+	 * To store the PLTs, we expand the .text section for core module code
-+	 * and the .init.text section for initialization code.
-+	 */
-+	for (s = sechdrs; s < sechdrs_end; ++s)
-+		if (strcmp(".core.plt", secstrings + s->sh_name) == 0)
-+			mod->arch.core_plt = s;
-+		else if (strcmp(".init.plt", secstrings + s->sh_name) == 0)
-+			mod->arch.init_plt = s;
-+
-+	if (!mod->arch.core_plt || !mod->arch.init_plt) {
-+		pr_err("%s: sections missing\n", mod->name);
-+		return -ENOEXEC;
-+	}
-+
-+	for (s = sechdrs + 1; s < sechdrs_end; ++s) {
-+		const Elf64_Rela *rels = (void *)ehdr + s->sh_offset;
-+		int numrels = s->sh_size / sizeof(Elf64_Rela);
-+		Elf64_Shdr *dstsec = sechdrs + s->sh_info;
-+
-+		if (s->sh_type != SHT_RELA)
-+			continue;
-+
-+		if (strstr(secstrings + s->sh_name, ".init"))
-+			init_plts += count_plts(dstsec->sh_addr, rels, numrels);
-+		else
-+			core_plts += count_plts(dstsec->sh_addr, rels, numrels);
-+	}
-+
-+	mod->arch.core_plt->sh_type = SHT_NOBITS;
-+	mod->arch.core_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
-+	mod->arch.core_plt->sh_addralign = L1_CACHE_BYTES;
-+	mod->arch.core_plt->sh_size = core_plts * sizeof(struct plt_entry);
-+	mod->arch.core_plt_count = 0;
-+
-+	mod->arch.init_plt->sh_type = SHT_NOBITS;
-+	mod->arch.init_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
-+	mod->arch.init_plt->sh_addralign = L1_CACHE_BYTES;
-+	mod->arch.init_plt->sh_size = init_plts * sizeof(struct plt_entry);
-+	mod->arch.init_plt_count = 0;
-+	pr_debug("%s: core.plt=%lld, init.plt=%lld\n", __func__,
-+		 mod->arch.core_plt->sh_size, mod->arch.init_plt->sh_size);
-+	return 0;
-+}
-diff --git a/arch/arm64/kernel/module.c b/arch/arm64/kernel/module.c
-index 93e970231ca9..3a298b0e21bb 100644
---- a/arch/arm64/kernel/module.c
-+++ b/arch/arm64/kernel/module.c
-@@ -38,6 +38,11 @@ void *module_alloc(unsigned long size)
- 				GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
- 				NUMA_NO_NODE, __builtin_return_address(0));
+ #define USER(l, x...)				\
+ 9999:	x;					\
+-	.section __ex_table,"a";		\
+-	.align	3;				\
+-	.quad	9999b,l;			\
+-	.previous
++	_asm_extable	9999b, l
  
-+	if (!p && IS_ENABLED(CONFIG_ARM64_MODULE_PLTS))
-+		p = __vmalloc_node_range(size, MODULE_ALIGN, VMALLOC_START,
-+				VMALLOC_END, GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
-+				NUMA_NO_NODE, __builtin_return_address(0));
-+
- 	if (p && (kasan_module_alloc(p, size) < 0)) {
- 		vfree(p);
- 		return NULL;
-@@ -361,6 +366,13 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
- 		case R_AARCH64_CALL26:
- 			ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2, 26,
- 					     AARCH64_INSN_IMM_26);
-+
-+			if (IS_ENABLED(CONFIG_ARM64_MODULE_PLTS) &&
-+			    ovf == -ERANGE) {
-+				val = get_module_plt(me, loc, val);
-+				ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2,
-+						     26, AARCH64_INSN_IMM_26);
-+			}
- 			break;
+ /*
+  * Register aliases.
+diff --git a/arch/arm64/include/asm/futex.h b/arch/arm64/include/asm/futex.h
+index 007a69fc4f40..1ab15a3b5a0e 100644
+--- a/arch/arm64/include/asm/futex.h
++++ b/arch/arm64/include/asm/futex.h
+@@ -42,10 +42,8 @@
+ "4:	mov	%w0, %w5\n"						\
+ "	b	3b\n"							\
+ "	.popsection\n"							\
+-"	.pushsection __ex_table,\"a\"\n"				\
+-"	.align	3\n"							\
+-"	.quad	1b, 4b, 2b, 4b\n"					\
+-"	.popsection\n"							\
++	_ASM_EXTABLE(1b, 4b)						\
++	_ASM_EXTABLE(2b, 4b)						\
+ 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,		\
+ 		    CONFIG_ARM64_PAN)					\
+ 	: "=&r" (ret), "=&r" (oldval), "+Q" (*uaddr), "=&r" (tmp)	\
+@@ -133,10 +131,8 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
+ "4:	mov	%w0, %w6\n"
+ "	b	3b\n"
+ "	.popsection\n"
+-"	.pushsection __ex_table,\"a\"\n"
+-"	.align	3\n"
+-"	.quad	1b, 4b, 2b, 4b\n"
+-"	.popsection\n"
++	_ASM_EXTABLE(1b, 4b)
++	_ASM_EXTABLE(2b, 4b)
+ 	: "+r" (ret), "=&r" (val), "+Q" (*uaddr), "=&r" (tmp)
+ 	: "r" (oldval), "r" (newval), "Ir" (-EFAULT)
+ 	: "memory");
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index b2ede967fe7d..dc11577fab7e 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -36,11 +36,11 @@
+ #define VERIFY_WRITE 1
  
- 		default:
-diff --git a/arch/arm64/kernel/module.lds b/arch/arm64/kernel/module.lds
-new file mode 100644
-index 000000000000..3682fa107918
---- /dev/null
-+++ b/arch/arm64/kernel/module.lds
-@@ -0,0 +1,4 @@
-+SECTIONS {
-+        .core.plt : { BYTE(0) }
-+        .init.plt : { BYTE(0) }
-+}
+ /*
+- * The exception table consists of pairs of addresses: the first is the
+- * address of an instruction that is allowed to fault, and the second is
+- * the address at which the program should continue.  No registers are
+- * modified, so it is entirely up to the continuation code to figure out
+- * what to do.
++ * The exception table consists of pairs of relative offsets: the first
++ * is the relative offset to an instruction that is allowed to fault,
++ * and the second is the relative offset at which the program should
++ * continue. No registers are modified, so it is entirely up to the
++ * continuation code to figure out what to do.
+  *
+  * All the routines below use bits of fixup code that are out of line
+  * with the main instruction path.  This means when everything is well,
+@@ -50,9 +50,11 @@
+ 
+ struct exception_table_entry
+ {
+-	unsigned long insn, fixup;
++	int insn, fixup;
+ };
+ 
++#define ARCH_HAS_RELATIVE_EXTABLE
++
+ extern int fixup_exception(struct pt_regs *regs);
+ 
+ #define KERNEL_DS	(-1UL)
+@@ -105,6 +107,12 @@ static inline void set_fs(mm_segment_t fs)
+ #define access_ok(type, addr, size)	__range_ok(addr, size)
+ #define user_addr_max			get_fs
+ 
++#define _ASM_EXTABLE(from, to)						\
++	"	.pushsection	__ex_table, \"a\"\n"			\
++	"	.align		3\n"					\
++	"	.long		(" #from " - .), (" #to " - .)\n"	\
++	"	.popsection\n"
++
+ /*
+  * The "__xxx" versions of the user access functions do not verify the address
+  * space - it must have been done previously with a separate "access_ok()"
+@@ -123,10 +131,7 @@ static inline void set_fs(mm_segment_t fs)
+ 	"	mov	%1, #0\n"					\
+ 	"	b	2b\n"						\
+ 	"	.previous\n"						\
+-	"	.section __ex_table,\"a\"\n"				\
+-	"	.align	3\n"						\
+-	"	.quad	1b, 3b\n"					\
+-	"	.previous"						\
++	_ASM_EXTABLE(1b, 3b)						\
+ 	: "+r" (err), "=&r" (x)						\
+ 	: "r" (addr), "i" (-EFAULT))
+ 
+@@ -190,10 +195,7 @@ do {									\
+ 	"3:	mov	%w0, %3\n"					\
+ 	"	b	2b\n"						\
+ 	"	.previous\n"						\
+-	"	.section __ex_table,\"a\"\n"				\
+-	"	.align	3\n"						\
+-	"	.quad	1b, 3b\n"					\
+-	"	.previous"						\
++	_ASM_EXTABLE(1b, 3b)						\
+ 	: "+r" (err)							\
+ 	: "r" (x), "r" (addr), "i" (-EFAULT))
+ 
+diff --git a/arch/arm64/include/asm/word-at-a-time.h b/arch/arm64/include/asm/word-at-a-time.h
+index aab5bf09e9d9..2b79b8a89457 100644
+--- a/arch/arm64/include/asm/word-at-a-time.h
++++ b/arch/arm64/include/asm/word-at-a-time.h
+@@ -16,6 +16,8 @@
+ #ifndef __ASM_WORD_AT_A_TIME_H
+ #define __ASM_WORD_AT_A_TIME_H
+ 
++#include <asm/uaccess.h>
++
+ #ifndef __AARCH64EB__
+ 
+ #include <linux/kernel.h>
+@@ -81,10 +83,7 @@ static inline unsigned long load_unaligned_zeropad(const void *addr)
+ #endif
+ 	"	b	2b\n"
+ 	"	.popsection\n"
+-	"	.pushsection __ex_table,\"a\"\n"
+-	"	.align	3\n"
+-	"	.quad	1b, 3b\n"
+-	"	.popsection"
++	_ASM_EXTABLE(1b, 3b)
+ 	: "=&r" (ret), "=&r" (offset)
+ 	: "r" (addr), "Q" (*(unsigned long *)addr));
+ 
+diff --git a/arch/arm64/kernel/armv8_deprecated.c b/arch/arm64/kernel/armv8_deprecated.c
+index 3e01207917b1..c37202c0c838 100644
+--- a/arch/arm64/kernel/armv8_deprecated.c
++++ b/arch/arm64/kernel/armv8_deprecated.c
+@@ -297,11 +297,8 @@ static void __init register_insn_emulation_sysctl(struct ctl_table *table)
+ 	"4:	mov		%w0, %w5\n"			\
+ 	"	b		3b\n"				\
+ 	"	.popsection"					\
+-	"	.pushsection	 __ex_table,\"a\"\n"		\
+-	"	.align		3\n"				\
+-	"	.quad		0b, 4b\n"			\
+-	"	.quad		1b, 4b\n"			\
+-	"	.popsection\n"					\
++	_ASM_EXTABLE(0b, 4b)					\
++	_ASM_EXTABLE(1b, 4b)					\
+ 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,	\
+ 		CONFIG_ARM64_PAN)				\
+ 	: "=&r" (res), "+r" (data), "=&r" (temp)		\
+diff --git a/arch/arm64/mm/extable.c b/arch/arm64/mm/extable.c
+index 79444279ba8c..81acd4706878 100644
+--- a/arch/arm64/mm/extable.c
++++ b/arch/arm64/mm/extable.c
+@@ -11,7 +11,7 @@ int fixup_exception(struct pt_regs *regs)
+ 
+ 	fixup = search_exception_tables(instruction_pointer(regs));
+ 	if (fixup)
+-		regs->pc = fixup->fixup;
++		regs->pc = (unsigned long)&fixup->fixup + fixup->fixup;
+ 
+ 	return fixup != NULL;
+ }
+diff --git a/scripts/sortextable.c b/scripts/sortextable.c
+index c2423d913b46..af247c70fb66 100644
+--- a/scripts/sortextable.c
++++ b/scripts/sortextable.c
+@@ -282,12 +282,12 @@ do_file(char const *const fname)
+ 	case EM_386:
+ 	case EM_X86_64:
+ 	case EM_S390:
++	case EM_AARCH64:
+ 		custom_sort = sort_relative_table;
+ 		break;
+ 	case EM_ARCOMPACT:
+ 	case EM_ARCV2:
+ 	case EM_ARM:
+-	case EM_AARCH64:
+ 	case EM_MICROBLAZE:
+ 	case EM_MIPS:
+ 	case EM_XTENSA:
 -- 
 2.5.0
