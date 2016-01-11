@@ -1,184 +1,113 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 11 Jan 2016 14:19:09 +0100
-Message-Id: <1452518355-4606-17-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 14:19:12 +0100
+Message-Id: <1452518355-4606-20-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 15/21] arm64: split elf relocs into a separate header.
+Subject: [kernel-hardening] [PATCH v3 18/21] efi: stub: implement efi_get_random_bytes() based on EFI_RNG_PROTOCOL
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Mark Rutland <mark.rutland@arm.com>
+This exposes the firmware's implementation of EFI_RNG_PROTOCOL via a new
+function efi_get_random_bytes().
 
-Currently, asm/elf.h contains a mixture of simple constants, C structure
-definitions, and some constants defined in terms of constants from other
-headers (which are themselves mixtures).
-
-To enable the use of AArch64 ELF reloc constants from assembly code (as
-we will need for relocatable kernel support), we need an include without
-C structure definitions or includes of other files with such definitions.
-
-This patch factors out the relocs into a new header specifically for ELF
-reloc types.
-
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/elf.h        | 54 +--------------
- arch/arm64/include/asm/elf_relocs.h | 73 ++++++++++++++++++++
- 2 files changed, 74 insertions(+), 53 deletions(-)
+ drivers/firmware/efi/libstub/Makefile  |  2 +-
+ drivers/firmware/efi/libstub/efistub.h |  3 ++
+ drivers/firmware/efi/libstub/random.c  | 35 ++++++++++++++++++++
+ include/linux/efi.h                    |  5 ++-
+ 4 files changed, 43 insertions(+), 2 deletions(-)
 
-diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-index faad6df49e5b..e4b3cdcaf597 100644
---- a/arch/arm64/include/asm/elf.h
-+++ b/arch/arm64/include/asm/elf.h
-@@ -16,6 +16,7 @@
- #ifndef __ASM_ELF_H
- #define __ASM_ELF_H
+diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+index c0ddd1b8dca3..9f0c813d739c 100644
+--- a/drivers/firmware/efi/libstub/Makefile
++++ b/drivers/firmware/efi/libstub/Makefile
+@@ -23,7 +23,7 @@ KBUILD_CFLAGS			:= $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+ GCOV_PROFILE			:= n
+ KASAN_SANITIZE			:= n
  
-+#include <asm/elf_relocs.h>
- #include <asm/hwcap.h>
+-lib-y				:= efi-stub-helper.o
++lib-y				:= efi-stub-helper.o random.o
  
- /*
-@@ -34,59 +35,6 @@ typedef elf_greg_t elf_gregset_t[ELF_NGREG];
- typedef struct user_fpsimd_state elf_fpregset_t;
+ # include the stub's generic dependencies from lib/ when building for ARM/arm64
+ arm-deps := fdt_rw.c fdt_ro.c fdt_wip.c fdt.c fdt_empty_tree.c fdt_sw.c sort.c
+diff --git a/drivers/firmware/efi/libstub/efistub.h b/drivers/firmware/efi/libstub/efistub.h
+index 6b6548fda089..206b7252b9d1 100644
+--- a/drivers/firmware/efi/libstub/efistub.h
++++ b/drivers/firmware/efi/libstub/efistub.h
+@@ -43,4 +43,7 @@ void efi_get_virtmap(efi_memory_desc_t *memory_map, unsigned long map_size,
+ 		     unsigned long desc_size, efi_memory_desc_t *runtime_map,
+ 		     int *count);
  
- /*
-- * AArch64 static relocation types.
-- */
--
--/* Miscellaneous. */
--#define R_ARM_NONE			0
--#define R_AARCH64_NONE			256
--
--/* Data. */
--#define R_AARCH64_ABS64			257
--#define R_AARCH64_ABS32			258
--#define R_AARCH64_ABS16			259
--#define R_AARCH64_PREL64		260
--#define R_AARCH64_PREL32		261
--#define R_AARCH64_PREL16		262
--
--/* Instructions. */
--#define R_AARCH64_MOVW_UABS_G0		263
--#define R_AARCH64_MOVW_UABS_G0_NC	264
--#define R_AARCH64_MOVW_UABS_G1		265
--#define R_AARCH64_MOVW_UABS_G1_NC	266
--#define R_AARCH64_MOVW_UABS_G2		267
--#define R_AARCH64_MOVW_UABS_G2_NC	268
--#define R_AARCH64_MOVW_UABS_G3		269
--
--#define R_AARCH64_MOVW_SABS_G0		270
--#define R_AARCH64_MOVW_SABS_G1		271
--#define R_AARCH64_MOVW_SABS_G2		272
--
--#define R_AARCH64_LD_PREL_LO19		273
--#define R_AARCH64_ADR_PREL_LO21		274
--#define R_AARCH64_ADR_PREL_PG_HI21	275
--#define R_AARCH64_ADR_PREL_PG_HI21_NC	276
--#define R_AARCH64_ADD_ABS_LO12_NC	277
--#define R_AARCH64_LDST8_ABS_LO12_NC	278
--
--#define R_AARCH64_TSTBR14		279
--#define R_AARCH64_CONDBR19		280
--#define R_AARCH64_JUMP26		282
--#define R_AARCH64_CALL26		283
--#define R_AARCH64_LDST16_ABS_LO12_NC	284
--#define R_AARCH64_LDST32_ABS_LO12_NC	285
--#define R_AARCH64_LDST64_ABS_LO12_NC	286
--#define R_AARCH64_LDST128_ABS_LO12_NC	299
--
--#define R_AARCH64_MOVW_PREL_G0		287
--#define R_AARCH64_MOVW_PREL_G0_NC	288
--#define R_AARCH64_MOVW_PREL_G1		289
--#define R_AARCH64_MOVW_PREL_G1_NC	290
--#define R_AARCH64_MOVW_PREL_G2		291
--#define R_AARCH64_MOVW_PREL_G2_NC	292
--#define R_AARCH64_MOVW_PREL_G3		293
--
--/*
-  * These are used to set parameters in the core dumps.
-  */
- #define ELF_CLASS	ELFCLASS64
-diff --git a/arch/arm64/include/asm/elf_relocs.h b/arch/arm64/include/asm/elf_relocs.h
++efi_status_t efi_get_random_bytes(efi_system_table_t *sys_table,
++				  unsigned long size, u8 *out);
++
+ #endif
+diff --git a/drivers/firmware/efi/libstub/random.c b/drivers/firmware/efi/libstub/random.c
 new file mode 100644
-index 000000000000..3f6b93099011
+index 000000000000..f539b1e31459
 --- /dev/null
-+++ b/arch/arm64/include/asm/elf_relocs.h
-@@ -0,0 +1,73 @@
++++ b/drivers/firmware/efi/libstub/random.c
+@@ -0,0 +1,35 @@
 +/*
-+ * Copyright (C) 2016 ARM Ltd.
++ * Copyright (C) 2016 Linaro Ltd;  <ard.biesheuvel@linaro.org>
 + *
 + * This program is free software; you can redistribute it and/or modify
 + * it under the terms of the GNU General Public License version 2 as
 + * published by the Free Software Foundation.
 + *
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU General Public License
-+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-+ */
-+#ifndef __ASM_ELF_RELOCS_H
-+#define __ASM_ELF_RELOCS_H
-+
-+/*
-+ * AArch64 static relocation types.
 + */
 +
-+/* Miscellaneous. */
-+#define R_ARM_NONE			0
-+#define R_AARCH64_NONE			256
++#include <linux/efi.h>
++#include <asm/efi.h>
 +
-+/* Data. */
-+#define R_AARCH64_ABS64			257
-+#define R_AARCH64_ABS32			258
-+#define R_AARCH64_ABS16			259
-+#define R_AARCH64_PREL64		260
-+#define R_AARCH64_PREL32		261
-+#define R_AARCH64_PREL16		262
++#include "efistub.h"
 +
-+/* Instructions. */
-+#define R_AARCH64_MOVW_UABS_G0		263
-+#define R_AARCH64_MOVW_UABS_G0_NC	264
-+#define R_AARCH64_MOVW_UABS_G1		265
-+#define R_AARCH64_MOVW_UABS_G1_NC	266
-+#define R_AARCH64_MOVW_UABS_G2		267
-+#define R_AARCH64_MOVW_UABS_G2_NC	268
-+#define R_AARCH64_MOVW_UABS_G3		269
++struct efi_rng_protocol_t {
++	efi_status_t (*get_info)(struct efi_rng_protocol_t *,
++				 unsigned long *, efi_guid_t *);
++	efi_status_t (*get_rng)(struct efi_rng_protocol_t *,
++				efi_guid_t *, unsigned long, u8 *out);
++};
 +
-+#define R_AARCH64_MOVW_SABS_G0		270
-+#define R_AARCH64_MOVW_SABS_G1		271
-+#define R_AARCH64_MOVW_SABS_G2		272
++efi_status_t efi_get_random_bytes(efi_system_table_t *sys_table,
++				  unsigned long size, u8 *out)
++{
++	efi_guid_t rng_proto = EFI_RNG_PROTOCOL_GUID;
++	efi_status_t status;
++	struct efi_rng_protocol_t *rng;
 +
-+#define R_AARCH64_LD_PREL_LO19		273
-+#define R_AARCH64_ADR_PREL_LO21		274
-+#define R_AARCH64_ADR_PREL_PG_HI21	275
-+#define R_AARCH64_ADR_PREL_PG_HI21_NC	276
-+#define R_AARCH64_ADD_ABS_LO12_NC	277
-+#define R_AARCH64_LDST8_ABS_LO12_NC	278
++	status = sys_table->boottime->locate_protocol(&rng_proto, NULL,
++						      (void **)&rng);
++	if (status != EFI_SUCCESS)
++		return status;
 +
-+#define R_AARCH64_TSTBR14		279
-+#define R_AARCH64_CONDBR19		280
-+#define R_AARCH64_JUMP26		282
-+#define R_AARCH64_CALL26		283
-+#define R_AARCH64_LDST16_ABS_LO12_NC	284
-+#define R_AARCH64_LDST32_ABS_LO12_NC	285
-+#define R_AARCH64_LDST64_ABS_LO12_NC	286
-+#define R_AARCH64_LDST128_ABS_LO12_NC	299
++	return rng->get_rng(rng, NULL, size, out);
++}
+diff --git a/include/linux/efi.h b/include/linux/efi.h
+index 569b5a866bb1..13783fdc9bdd 100644
+--- a/include/linux/efi.h
++++ b/include/linux/efi.h
+@@ -299,7 +299,7 @@ typedef struct {
+ 	void *open_protocol_information;
+ 	void *protocols_per_handle;
+ 	void *locate_handle_buffer;
+-	void *locate_protocol;
++	efi_status_t (*locate_protocol)(efi_guid_t *, void *, void **);
+ 	void *install_multiple_protocol_interfaces;
+ 	void *uninstall_multiple_protocol_interfaces;
+ 	void *calculate_crc32;
+@@ -599,6 +599,9 @@ void efi_native_runtime_setup(void);
+ #define EFI_PROPERTIES_TABLE_GUID \
+     EFI_GUID(  0x880aaca3, 0x4adc, 0x4a04, 0x90, 0x79, 0xb7, 0x47, 0x34, 0x08, 0x25, 0xe5 )
+ 
++#define EFI_RNG_PROTOCOL_GUID \
++    EFI_GUID(  0x3152bca5, 0xeade, 0x433d, 0x86, 0x2e, 0xc0, 0x1c, 0xdc, 0x29, 0x1f, 0x44 )
 +
-+#define R_AARCH64_MOVW_PREL_G0		287
-+#define R_AARCH64_MOVW_PREL_G0_NC	288
-+#define R_AARCH64_MOVW_PREL_G1		289
-+#define R_AARCH64_MOVW_PREL_G1_NC	290
-+#define R_AARCH64_MOVW_PREL_G2		291
-+#define R_AARCH64_MOVW_PREL_G2_NC	292
-+#define R_AARCH64_MOVW_PREL_G3		293
-+
-+#endif /* __ASM_ELF_RELOCS_H */
-+
+ typedef struct {
+ 	efi_guid_t guid;
+ 	u64 table;
 -- 
 2.5.0
