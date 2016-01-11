@@ -1,157 +1,113 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 11 Jan 2016 15:23:55 +0000
-From: Ben Hutchings <ben@decadent.org.uk>
-Message-ID: <20160111152355.GS28542@decadent.org.uk>
-References: <20160111151958.GQ28542@decadent.org.uk>
+Date: Mon, 11 Jan 2016 16:09:06 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160111160906.GO6499@leverpostej>
+References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1452518355-4606-5-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512;
-	protocol="application/pgp-signature"; boundary="I4nrT0RnkqKX/8P2"
-Content-Disposition: inline
-In-Reply-To: <20160111151958.GQ28542@decadent.org.uk>
-Subject: [kernel-hardening] [PATCH 2/2] security,perf: Allow further restriction of
- perf_event_open
-To: linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---I4nrT0RnkqKX/8P2
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1452518355-4606-5-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v3 04/21] arm64: decouple early fixmap init from linear
+ mapping
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+List-ID: <kernel-hardening.lists.openwall.com>
 
-When kernel.perf_event_open is set to 3 (or greater), disallow all
-access to performance events by users without CAP_SYS_ADMIN.
-Add a Kconfig symbol CONFIG_SECURITY_PERF_EVENTS_RESTRICT that
-makes this value the default.
+On Mon, Jan 11, 2016 at 02:18:57PM +0100, Ard Biesheuvel wrote:
+> Since the early fixmap page tables are populated using pages that are
+> part of the static footprint of the kernel, they are covered by the
+> initial kernel mapping, and we can refer to them without using __va/__pa
+> translations, which are tied to the linear mapping.
+> 
+> Since the fixmap page tables are disjoint from the kernel mapping up
+> to the top level pgd entry, we can refer to bm_pte[] directly, and there
+> is no need to walk the page tables and perform __pa()/__va() translations
+> at each step.
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  arch/arm64/mm/mmu.c | 32 ++++++--------------
+>  1 file changed, 9 insertions(+), 23 deletions(-)
+> 
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index 7711554a94f4..75b5f0dc3bdc 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -570,38 +570,24 @@ void vmemmap_free(unsigned long start, unsigned long end)
+>  #endif	/* CONFIG_SPARSEMEM_VMEMMAP */
+>  
+>  static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
+> -#if CONFIG_PGTABLE_LEVELS > 2
+>  static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
+> -#endif
+> -#if CONFIG_PGTABLE_LEVELS > 3
+>  static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
+> -#endif
+>  
+>  static inline pud_t * fixmap_pud(unsigned long addr)
+>  {
+> -	pgd_t *pgd = pgd_offset_k(addr);
+> -
+> -	BUG_ON(pgd_none(*pgd) || pgd_bad(*pgd));
+> -
+> -	return pud_offset(pgd, addr);
+> +	return (CONFIG_PGTABLE_LEVELS > 3) ? &bm_pud[pud_index(addr)]
+> +					   : (pud_t *)pgd_offset_k(addr);
 
-This is based on a similar feature in grsecurity
-(CONFIG_GRKERNSEC_PERF_HARDEN).  This version doesn't include making
-the variable read-only.  It also allows enabling further restriction
-at run-time regardless of whether the default is changed.
+If we move patch 6 earlier, we could use pud_offset_kimg here, and avoid
+the cast, at the cost of passing the pgd into fixmap_pud.
 
-Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
----
-I made a similar change to Debian's kernel packages in August,
-including the more restrictive default, and no-one has complained yet.
+Similarly for fixmap_pmd.
 
-Ben.
+>  }
+>  
+> -static inline pmd_t * fixmap_pmd(unsigned long addr)
+> +static inline pte_t * fixmap_pmd(unsigned long addr)
+>  {
+> -	pud_t *pud = fixmap_pud(addr);
+> -
+> -	BUG_ON(pud_none(*pud) || pud_bad(*pud));
+> -
+> -	return pmd_offset(pud, addr);
+> +	return (CONFIG_PGTABLE_LEVELS > 2) ? &bm_pmd[pmd_index(addr)]
+> +					   : (pmd_t *)pgd_offset_k(addr);
+>  }
 
- Documentation/sysctl/kernel.txt | 4 +++-
- include/linux/perf_event.h      | 5 +++++
- kernel/events/core.c            | 8 ++++++++
- security/Kconfig                | 9 +++++++++
- 4 files changed, 25 insertions(+), 1 deletion(-)
+I assume the return type change was unintentional?
 
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.=
-txt
-index 88a2c8e..76e2ca8 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -629,12 +629,14 @@ allowed to execute.
- perf_event_paranoid:
-=20
- Controls use of the performance events system by unprivileged
--users (without CAP_SYS_ADMIN).  The default value is 1.
-+users (without CAP_SYS_ADMIN).  The default value is 3 if
-+CONFIG_SECURITY_PERF_EVENTS_RESTRICT is set, or 1 otherwise.
-=20
-  -1: Allow use of (almost) all events by all users
- >=3D0: Disallow raw tracepoint access by users without CAP_IOC_LOCK
- >=3D1: Disallow CPU event access by users without CAP_SYS_ADMIN
- >=3D2: Disallow kernel profiling by users without CAP_SYS_ADMIN
-+>=3D3: Disallow all event access by users without CAP_SYS_ADMIN
-=20
- =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
-=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
-=20
-diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
-index f9828a4..aa72940 100644
---- a/include/linux/perf_event.h
-+++ b/include/linux/perf_event.h
-@@ -989,6 +989,11 @@ extern int perf_cpu_time_max_percent_handler(struct ct=
-l_table *table, int write,
- 		loff_t *ppos);
-=20
-=20
-+static inline bool perf_paranoid_any(void)
-+{
-+	return sysctl_perf_event_paranoid > 2;
-+}
-+
- static inline bool perf_paranoid_tracepoint_raw(void)
- {
- 	return sysctl_perf_event_paranoid > -1;
-diff --git a/kernel/events/core.c b/kernel/events/core.c
-index cfc227c..85bc810 100644
---- a/kernel/events/core.c
-+++ b/kernel/events/core.c
-@@ -175,8 +175,13 @@ static struct srcu_struct pmus_srcu;
-  *   0 - disallow raw tracepoint access for unpriv
-  *   1 - disallow cpu events for unpriv
-  *   2 - disallow kernel profiling for unpriv
-+ *   3 - disallow all unpriv perf event use
-  */
-+#ifdef CONFIG_SECURITY_PERF_EVENTS_RESTRICT
-+int sysctl_perf_event_paranoid __read_mostly =3D 3;
-+#else
- int sysctl_perf_event_paranoid __read_mostly =3D 1;
-+#endif
-=20
- /* Minimum for 512 kiB + 1 user control page */
- int sysctl_perf_event_mlock __read_mostly =3D 512 + (PAGE_SIZE / 1024); /*=
- 'free' kiB per user */
-@@ -8265,6 +8270,9 @@ SYSCALL_DEFINE5(perf_event_open,
- 	if (flags & ~PERF_FLAG_ALL)
- 		return -EINVAL;
-=20
-+	if (perf_paranoid_any() && !capable(CAP_SYS_ADMIN))
-+		return -EACCES;
-+
- 	err =3D perf_copy_attr(attr_uptr, &attr);
- 	if (err)
- 		return err;
-diff --git a/security/Kconfig b/security/Kconfig
-index e452378..30a2603 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -18,6 +18,15 @@ config SECURITY_DMESG_RESTRICT
-=20
- 	  If you are unsure how to answer this question, answer N.
-=20
-+config SECURITY_PERF_EVENTS_RESTRICT
-+	bool "Restrict unprivileged use of performance events"
-+	depends on PERF_EVENTS
-+	help
-+	  If you say Y here, the kernel.perf_event_paranoid sysctl
-+	  will be set to 3 by default, and no unprivileged use of the
-+	  perf_event_open syscall will be permitted unless it is
-+	  changed.
-+
- config SECURITY
- 	bool "Enable different security models"
- 	depends on SYSFS
+With STRICT_MM_TYPECHECKS:
 
---I4nrT0RnkqKX/8P2
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+arch/arm64/mm/mmu.c: In function 'fixmap_pmd':
+arch/arm64/mm/mmu.c:604:9: warning: return from incompatible pointer type [-Wincompatible-pointer-types]
+  return (CONFIG_PGTABLE_LEVELS > 2) ? &bm_pmd[pmd_index(addr)]
+         ^
+arch/arm64/mm/mmu.c: In function 'early_fixmap_init':
+arch/arm64/mm/mmu.c:635:6: warning: assignment from incompatible pointer type [-Wincompatible-pointer-types]
+  pmd = fixmap_pmd(addr);
+      ^
+arch/arm64/mm/mmu.c:645:11: warning: comparison of distinct pointer types lacks a cast
+  if ((pmd != fixmap_pmd(fix_to_virt(FIX_BTMAP_BEGIN)))
+           ^
+arch/arm64/mm/mmu.c:646:14: warning: comparison of distinct pointer types lacks a cast
+       || pmd != fixmap_pmd(fix_to_virt(FIX_BTMAP_END))) {
+              ^
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+Side note: is there any reason we can't/shouldn't make
+STRICT_MM_TYPECHECKS a common config option? Or simply have it on by
+default for arm64?
 
-iQIVAwUBVpPJC+e/yOyVhhEJAQryyw//Z7++QBA02Djwyd3nBdbKO/redJJNW3dZ
-wfaVne8M4auVP8ylsctOAcfK/V7kY/E1T3903jVWw5IjgfGa78sU3OAxZfEw1zGt
-jZfMJzapUpbx3x0zr1I7tmO+HQPnsDLQCR9d5mgSnbDJ0jrSC3uQH3YIVmIlrZQv
-qcAATIvgiY1V1nbQc2XRPosRjX21c0Ssfu8+ENBrcI0bHTkWToa1PR19kq0bNWOL
-q3XeQWd8eeBLSzZIasPvzYJFawoKzto2HaAJ7rCsf5dUFqDSQcPnPJ8g6Y0O0Tm4
-AuEdxTS4ytVIpfWlPn3f2L1bB74o//XBGMlaaPLYGTwJL5aX5UsqRMKEehzuP8lx
-bE0o28IaM96AkT8zYByByS6YXNshyyn9lcCsqQh3WWSJl0WN8+ytzaOcJgkhrlkm
-FIiwOgt0BBG8QturmCnBcVn/xx9k9RcEFdB2+0voZ4A88btEsKQaprDuWBK1anhL
-PFv0TXZcmEpiB5ELJjj6TKooWoijLT8rLq5PLljHdoEAopR/yV1JrbVpLDVs3BGe
-uINsPssb9rlB2S9hwtdq9dYSV7tVaQe54NtyShxckic8tTZbiHKMa+6B3L1YzuG7
-+xHF+5yP1Bx0zPjKQdlacBv/UjOZUE1kNWInWVaaez1UWhenIRxPhpmVJFusSenk
-mMcyqUMnI2o=
-=BlNn
------END PGP SIGNATURE-----
+Having built with and without typechecks I see that it doesn't bloat the
+kernel Image size, though the binary isn't quite identical:
 
---I4nrT0RnkqKX/8P2--
+[mark@leverpostej:~/src/linux]% ls -al *.*checks
+-rwxrwxr-x 1 mark mark   9288192 Jan 11 15:40 Image.checks
+-rwxrwxr-x 1 mark mark   9288192 Jan 11 15:36 Image.nochecks
+-rwxrwxr-x 1 mark mark 106782024 Jan 11 15:40 vmlinux.checks
+-rwxrwxr-x 1 mark mark 106688928 Jan 11 15:35 vmlinux.nochecks
+
+Things didn't quite line up between the two images, though I'm not sure
+what the underlying difference was.
+
+Thanks,
+Mark.
