@@ -1,87 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 11 Jan 2016 14:18:55 +0100
-Message-Id: <1452518355-4606-3-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 14:18:56 +0100
+Message-Id: <1452518355-4606-4-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 02/21] arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
+Subject: [kernel-hardening] [PATCH v3 03/21] arm64: pgtable: add dummy pud_index() and pmd_index() definitions
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces the preprocessor symbol KIMAGE_VADDR which will serve as
-the symbolic virtual base of the kernel region, i.e., the kernel's virtual
-offset will be KIMAGE_VADDR + TEXT_OFFSET. For now, we define it as being
-equal to PAGE_OFFSET, but in the future, it will be moved below it once
-we move the kernel virtual mapping out of the linear mapping.
+Add definitions of pud_index() and pmd_index() for configurations with
+fewer than 4 resp. 3 translation levels. This makes it easier to keep
+the users (e.g., the fixmap init code) generic.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/memory.h | 10 ++++++++--
- arch/arm64/kernel/head.S        |  2 +-
- arch/arm64/kernel/vmlinux.lds.S |  4 ++--
- 3 files changed, 11 insertions(+), 5 deletions(-)
+ arch/arm64/include/asm/pgtable.h | 2 ++
+ 1 file changed, 2 insertions(+)
 
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 853953cd1f08..bea9631b34a8 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -51,7 +51,8 @@
- #define VA_BITS			(CONFIG_ARM64_VA_BITS)
- #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
- #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
--#define MODULES_END		(PAGE_OFFSET)
-+#define KIMAGE_VADDR		(PAGE_OFFSET)
-+#define MODULES_END		(KIMAGE_VADDR)
- #define MODULES_VADDR		(MODULES_END - SZ_64M)
- #define PCI_IO_END		(MODULES_VADDR - SZ_2M)
- #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
-@@ -75,8 +76,13 @@
-  * private definitions which should NOT be used outside memory.h
-  * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
-  */
--#define __virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
-+#define __virt_to_phys(x) ({						\
-+	phys_addr_t __x = (phys_addr_t)(x);				\
-+	__x >= PAGE_OFFSET ? (__x - PAGE_OFFSET + PHYS_OFFSET) :	\
-+			     (__x - KIMAGE_VADDR + PHYS_OFFSET); })
-+
- #define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
-+#define __phys_to_kimg(x)	((unsigned long)((x) - PHYS_OFFSET + KIMAGE_VADDR))
+diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
+index fe9bf47db5d3..6129f6755081 100644
+--- a/arch/arm64/include/asm/pgtable.h
++++ b/arch/arm64/include/asm/pgtable.h
+@@ -495,6 +495,7 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
+ #else
  
- /*
-  * Convert a page to/from a physical address
-diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-index 63335fa68426..350515276541 100644
---- a/arch/arm64/kernel/head.S
-+++ b/arch/arm64/kernel/head.S
-@@ -389,7 +389,7 @@ __create_page_tables:
- 	 * Map the kernel image (starting with PHYS_OFFSET).
- 	 */
- 	mov	x0, x26				// swapper_pg_dir
--	mov	x5, #PAGE_OFFSET
-+	ldr	x5, =KIMAGE_VADDR
- 	create_pgd_entry x0, x5, x3, x6
- 	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
- 	mov	x3, x24				// phys offset
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index 7de6c39858a5..ced0dedcabcc 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -88,7 +88,7 @@ SECTIONS
- 		*(.discard.*)
- 	}
+ #define pud_page_paddr(pud)	({ BUILD_BUG(); 0; })
++#define pmd_index(addr)		({ BUILD_BUG(); 0; })
  
--	. = PAGE_OFFSET + TEXT_OFFSET;
-+	. = KIMAGE_VADDR + TEXT_OFFSET;
+ /* Match pmd_offset folding in <asm/generic/pgtable-nopmd.h> */
+ #define pmd_set_fixmap(addr)		NULL
+@@ -542,6 +543,7 @@ static inline phys_addr_t pgd_page_paddr(pgd_t pgd)
+ #else
  
- 	.head.text : {
- 		_text = .;
-@@ -185,4 +185,4 @@ ASSERT(__idmap_text_end - (__idmap_text_start & ~(SZ_4K - 1)) <= SZ_4K,
- /*
-  * If padding is applied before .head.text, virt<->phys conversions will fail.
-  */
--ASSERT(_text == (PAGE_OFFSET + TEXT_OFFSET), "HEAD is misaligned")
-+ASSERT(_text == (KIMAGE_VADDR + TEXT_OFFSET), "HEAD is misaligned")
+ #define pgd_page_paddr(pgd)	({ BUILD_BUG(); 0;})
++#define pud_index(addr)		({ BUILD_BUG(); 0;})
+ 
+ /* Match pud_offset folding in <asm/generic/pgtable-nopud.h> */
+ #define pud_set_fixmap(addr)		NULL
 -- 
 2.5.0
