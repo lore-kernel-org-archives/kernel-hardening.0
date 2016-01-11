@@ -1,53 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 11 Jan 2016 17:40:19 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160111174018.GC6105@leverpostej>
-References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
- <1452518355-4606-4-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 11:33:05 -0700
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160111183305.GA27217@davidb.org>
+References: <20151209172101.GA70633@davidb.org>
+ <CAGXu5jLPidHzHwmn5kzK0iSCAehABgtiEzMWgyBvw8iQ-pt=8g@mail.gmail.com>
+ <20151210000005.GA99337@davidb.org>
+ <CAGXu5jLLXK3N6pbZOie5uj276x=dtc_tuTz312rnhF8yrmxHYQ@mail.gmail.com>
+ <20151210002651.GC99337@davidb.org>
+ <CAGXu5jJYRCZ1-frx3+pUPabm3XRFFU8T4gsCQaSc73aA4Q--3g@mail.gmail.com>
+ <CAB9W1A0veUktvSrdwMSaN=kqypGdE6_RLXFGkD79scfkPPevpw@mail.gmail.com>
+ <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
+ <20151210184211.GH26759@e104818-lin.cambridge.arm.com>
+ <CAGXu5j+LHBaZ12+zsiK+tt3R83+uTHKO_og3AJRhWP+tHDxUOA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=us-ascii; format=flowed
 Content-Disposition: inline
-In-Reply-To: <1452518355-4606-4-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v3 03/21] arm64: pgtable: add dummy pud_index() and
- pmd_index() definitions
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+In-Reply-To: <CAGXu5j+LHBaZ12+zsiK+tt3R83+uTHKO_og3AJRhWP+tHDxUOA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Self Introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 11, 2016 at 02:18:56PM +0100, Ard Biesheuvel wrote:
-> Add definitions of pud_index() and pmd_index() for configurations with
-> fewer than 4 resp. 3 translation levels. This makes it easier to keep
-> the users (e.g., the fixmap init code) generic.
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/include/asm/pgtable.h | 2 ++
->  1 file changed, 2 insertions(+)
-> 
-> diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
-> index fe9bf47db5d3..6129f6755081 100644
-> --- a/arch/arm64/include/asm/pgtable.h
-> +++ b/arch/arm64/include/asm/pgtable.h
-> @@ -495,6 +495,7 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
->  #else
->  
->  #define pud_page_paddr(pud)	({ BUILD_BUG(); 0; })
-> +#define pmd_index(addr)		({ BUILD_BUG(); 0; })
->  
->  /* Match pmd_offset folding in <asm/generic/pgtable-nopmd.h> */
->  #define pmd_set_fixmap(addr)		NULL
-> @@ -542,6 +543,7 @@ static inline phys_addr_t pgd_page_paddr(pgd_t pgd)
->  #else
->  
->  #define pgd_page_paddr(pgd)	({ BUILD_BUG(); 0;})
-> +#define pud_index(addr)		({ BUILD_BUG(); 0;})
+On Thu, Dec 10, 2015 at 03:52:16PM -0800, Kees Cook wrote:
 
-I think we don't need these if we use p??_ofset_kimg for the fixmap
-initialisation.
+>> I haven't done any further improvements to them, nor have I received any
+>> feedback. I'll rebase them against latest kernel if anyone else is
+>> willing to test. I had a plan to run some benchmarks and see how
+>> performance is affected (including the CPU_SW_DOMAIN_PAN) before pushing
+>> again for upstreaming but I haven't had the time.
+>
+>David, getting back to something that might good to get your help
+>with: would you be able to test Catalin's LPAE TTBR0 PAN series on
+>real hardware? (Are you familiar with the LKDTM tests for this[1]?)
 
-Regardless, these look good conceptually, so if they're useful
-elsewhere:
+Sorry for the delay in getting back to you.  Been both moving and
+taking vacation.
 
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+I'd like to test this.  I'm just trying to see if I can track down
+some hardware that'll boot LPAE.
 
-Mark.
+Thanks,
+David
