@@ -1,456 +1,292 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 11 Jan 2016 14:19:00 +0100
-Message-Id: <1452518355-4606-8-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 14:19:01 +0100
+Message-Id: <1452518355-4606-9-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 07/21] arm64: move kernel image to base of vmalloc area
+Subject: [kernel-hardening] [PATCH v3 08/21] arm64: add support for module PLTs
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This moves the module area to right before the vmalloc area, and
-moves the kernel image to the base of the vmalloc area. This is
-an intermediate step towards implementing kASLR, where the kernel
-image can be located anywhere in the vmalloc area.
+This adds support for emitting PLTs at module load time for relative
+branches that are out of range. This is a prerequisite for KASLR, which
+may place the kernel and the modules anywhere in the vmalloc area,
+making it more likely that branch target offsets exceed the maximum
+range of +/- 128 MB.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/kasan.h          | 20 ++++---
- arch/arm64/include/asm/kernel-pgtable.h |  5 +-
- arch/arm64/include/asm/memory.h         | 18 ++++--
- arch/arm64/include/asm/pgtable.h        |  7 ---
- arch/arm64/kernel/setup.c               | 12 ++++
- arch/arm64/mm/dump.c                    | 12 ++--
- arch/arm64/mm/init.c                    | 20 +++----
- arch/arm64/mm/kasan_init.c              | 21 +++++--
- arch/arm64/mm/mmu.c                     | 62 ++++++++++++++------
- 9 files changed, 118 insertions(+), 59 deletions(-)
+ arch/arm64/Kconfig              |   9 ++
+ arch/arm64/Makefile             |   6 +-
+ arch/arm64/include/asm/module.h |  11 ++
+ arch/arm64/kernel/Makefile      |   1 +
+ arch/arm64/kernel/module-plts.c | 137 ++++++++++++++++++++
+ arch/arm64/kernel/module.c      |  12 ++
+ arch/arm64/kernel/module.lds    |   4 +
+ 7 files changed, 179 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/include/asm/kasan.h b/arch/arm64/include/asm/kasan.h
-index de0d21211c34..2c583dbf4746 100644
---- a/arch/arm64/include/asm/kasan.h
-+++ b/arch/arm64/include/asm/kasan.h
-@@ -1,20 +1,16 @@
- #ifndef __ASM_KASAN_H
- #define __ASM_KASAN_H
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index ffa3c549a4ba..778df20bf623 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -363,6 +363,7 @@ config ARM64_ERRATUM_843419
+ 	bool "Cortex-A53: 843419: A load or store might access an incorrect address"
+ 	depends on MODULES
+ 	default y
++	select ARM64_MODULE_CMODEL_LARGE
+ 	help
+ 	  This option builds kernel modules using the large memory model in
+ 	  order to avoid the use of the ADRP instruction, which can cause
+@@ -702,6 +703,14 @@ config ARM64_LSE_ATOMICS
  
--#ifndef __ASSEMBLY__
--
- #ifdef CONFIG_KASAN
+ endmenu
  
- #include <linux/linkage.h>
--#include <asm/memory.h>
--#include <asm/pgtable-types.h>
- 
- /*
-  * KASAN_SHADOW_START: beginning of the kernel virtual addresses.
-  * KASAN_SHADOW_END: KASAN_SHADOW_START + 1/8 of kernel virtual addresses.
-  */
--#define KASAN_SHADOW_START      (VA_START)
--#define KASAN_SHADOW_END        (KASAN_SHADOW_START + (1UL << (VA_BITS - 3)))
-+#define KASAN_SHADOW_START	(VA_START)
-+#define KASAN_SHADOW_END	(KASAN_SHADOW_START + (_AC(1, UL) << (VA_BITS - 3)))
- 
- /*
-  * This value is used to map an address to the corresponding shadow
-@@ -26,16 +22,22 @@
-  * should satisfy the following equation:
-  *      KASAN_SHADOW_OFFSET = KASAN_SHADOW_END - (1ULL << 61)
-  */
--#define KASAN_SHADOW_OFFSET     (KASAN_SHADOW_END - (1ULL << (64 - 3)))
-+#define KASAN_SHADOW_OFFSET	(KASAN_SHADOW_END - (_AC(1, ULL) << (64 - 3)))
++config ARM64_MODULE_CMODEL_LARGE
++	bool
 +
-+#ifndef __ASSEMBLY__
-+#include <asm/pgtable-types.h>
- 
- void kasan_init(void);
- void kasan_copy_shadow(pgd_t *pgdir);
- asmlinkage void kasan_early_init(void);
-+#endif
- 
- #else
++config ARM64_MODULE_PLTS
++	bool
++	select ARM64_MODULE_CMODEL_LARGE
++	select HAVE_MOD_ARCH_SPECIFIC
 +
-+#ifndef __ASSEMBLY__
- static inline void kasan_init(void) { }
- static inline void kasan_copy_shadow(pgd_t *pgdir) { }
- #endif
+ endmenu
  
--#endif
--#endif
-+#endif /* CONFIG_KASAN */
-+#endif /* __ASM_KASAN_H */
-diff --git a/arch/arm64/include/asm/kernel-pgtable.h b/arch/arm64/include/asm/kernel-pgtable.h
-index a459714ee29e..daa8a7b9917a 100644
---- a/arch/arm64/include/asm/kernel-pgtable.h
-+++ b/arch/arm64/include/asm/kernel-pgtable.h
-@@ -70,8 +70,9 @@
- /*
-  * Initial memory map attributes.
-  */
--#define SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
--#define SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
-+#define SWAPPER_PTE_FLAGS	(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED | PTE_UXN)
-+#define SWAPPER_PMD_FLAGS	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S | \
-+				 PMD_SECT_UXN)
+ menu "Boot options"
+diff --git a/arch/arm64/Makefile b/arch/arm64/Makefile
+index cd822d8454c0..db462980c6be 100644
+--- a/arch/arm64/Makefile
++++ b/arch/arm64/Makefile
+@@ -41,10 +41,14 @@ endif
  
- #if ARM64_SWAPPER_USES_SECTION_MAPS
- #define SWAPPER_MM_MMUFLAGS	(PMD_ATTRINDX(MT_NORMAL) | SWAPPER_PMD_FLAGS)
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index bea9631b34a8..e45d3141ad98 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -51,14 +51,24 @@
- #define VA_BITS			(CONFIG_ARM64_VA_BITS)
- #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
- #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
--#define KIMAGE_VADDR		(PAGE_OFFSET)
--#define MODULES_END		(KIMAGE_VADDR)
--#define MODULES_VADDR		(MODULES_END - SZ_64M)
--#define PCI_IO_END		(MODULES_VADDR - SZ_2M)
-+#define PCI_IO_END		(PAGE_OFFSET - SZ_2M)
- #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
- #define FIXADDR_TOP		(PCI_IO_START - SZ_2M)
- #define TASK_SIZE_64		(UL(1) << VA_BITS)
+ CHECKFLAGS	+= -D__aarch64__
  
-+#ifndef CONFIG_KASAN
-+#define MODULES_VADDR		(VA_START)
-+#else
-+#include <asm/kasan.h>
-+#define MODULES_VADDR		(KASAN_SHADOW_END)
+-ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
++ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
+ KBUILD_CFLAGS_MODULE	+= -mcmodel=large
+ endif
+ 
++ifeq ($(CONFIG_ARM64_MODULE_PLTS),y)
++KBUILD_LDFLAGS_MODULE	+= -T $(srctree)/arch/arm64/kernel/module.lds
++endif
++
+ # Default value
+ head-y		:= arch/arm64/kernel/head.o
+ 
+diff --git a/arch/arm64/include/asm/module.h b/arch/arm64/include/asm/module.h
+index e80e232b730e..7b8cd3dc9d8e 100644
+--- a/arch/arm64/include/asm/module.h
++++ b/arch/arm64/include/asm/module.h
+@@ -20,4 +20,15 @@
+ 
+ #define MODULE_ARCH_VERMAGIC	"aarch64"
+ 
++#ifdef CONFIG_ARM64_MODULE_PLTS
++struct mod_arch_specific {
++	struct elf64_shdr	*core_plt;
++	struct elf64_shdr	*init_plt;
++	int			core_plt_count;
++	int			init_plt_count;
++};
 +#endif
 +
-+#define MODULES_VSIZE		(SZ_64M)
-+#define MODULES_END		(MODULES_VADDR + MODULES_VSIZE)
++u64 get_module_plt(struct module *mod, void *loc, u64 val);
 +
-+#define KIMAGE_VADDR		(MODULES_END)
-+#define VMALLOC_START		(MODULES_END)
+ #endif /* __ASM_MODULE_H */
+diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
+index 474691f8b13a..f42b0fff607f 100644
+--- a/arch/arm64/kernel/Makefile
++++ b/arch/arm64/kernel/Makefile
+@@ -30,6 +30,7 @@ arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o 	\
+ 					   ../../arm/kernel/opcodes.o
+ arm64-obj-$(CONFIG_FUNCTION_TRACER)	+= ftrace.o entry-ftrace.o
+ arm64-obj-$(CONFIG_MODULES)		+= arm64ksyms.o module.o
++arm64-obj-$(CONFIG_ARM64_MODULE_PLTS)	+= module-plts.o
+ arm64-obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o perf_callchain.o
+ arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
+ arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
+diff --git a/arch/arm64/kernel/module-plts.c b/arch/arm64/kernel/module-plts.c
+new file mode 100644
+index 000000000000..4a8ef9ea01ee
+--- /dev/null
++++ b/arch/arm64/kernel/module-plts.c
+@@ -0,0 +1,137 @@
++/*
++ * Copyright (C) 2014-2015 Linaro Ltd. <ard.biesheuvel@linaro.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
 +
- #ifdef CONFIG_COMPAT
- #define TASK_SIZE_32		UL(0x100000000)
- #define TASK_SIZE		(test_thread_flag(TIF_32BIT) ? \
-diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
-index 7b4e16068c9f..a910a44d7ab3 100644
---- a/arch/arm64/include/asm/pgtable.h
-+++ b/arch/arm64/include/asm/pgtable.h
-@@ -42,13 +42,6 @@
-  */
- #define VMEMMAP_SIZE		ALIGN((1UL << (VA_BITS - PAGE_SHIFT)) * sizeof(struct page), PUD_SIZE)
- 
--#ifndef CONFIG_KASAN
--#define VMALLOC_START		(VA_START)
--#else
--#include <asm/kasan.h>
--#define VMALLOC_START		(KASAN_SHADOW_END + SZ_64K)
--#endif
--
- #define VMALLOC_END		(PAGE_OFFSET - PUD_SIZE - VMEMMAP_SIZE - SZ_64K)
- 
- #define vmemmap			((struct page *)(VMALLOC_END + SZ_64K))
-diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
-index cfed56f0ad26..c67ba4453ec6 100644
---- a/arch/arm64/kernel/setup.c
-+++ b/arch/arm64/kernel/setup.c
-@@ -53,6 +53,7 @@
- #include <asm/cpufeature.h>
- #include <asm/cpu_ops.h>
- #include <asm/kasan.h>
-+#include <asm/kernel-pgtable.h>
- #include <asm/sections.h>
- #include <asm/setup.h>
- #include <asm/smp_plat.h>
-@@ -291,6 +292,17 @@ u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
- 
- void __init setup_arch(char **cmdline_p)
- {
-+	static struct vm_struct vmlinux_vm;
++#include <linux/elf.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
 +
-+	vmlinux_vm.addr		= (void *)KIMAGE_VADDR;
-+	vmlinux_vm.size		= round_up((u64)_end - KIMAGE_VADDR,
-+					   SWAPPER_BLOCK_SIZE);
-+	vmlinux_vm.phys_addr	= __pa(KIMAGE_VADDR);
-+	vmlinux_vm.flags	= VM_MAP;
-+	vmlinux_vm.caller	= setup_arch;
++struct plt_entry {
++	__le32	mov0;	/* movn	x16, #0x....			*/
++	__le32	mov1;	/* movk	x16, #0x...., lsl #16		*/
++	__le32	mov2;	/* movk	x16, #0x...., lsl #32		*/
++	__le32	br;	/* br	x16				*/
++} __aligned(8);
 +
-+	vm_area_add_early(&vmlinux_vm);
++static bool in_init(const struct module *mod, void *addr)
++{
++	return (u64)addr - (u64)mod->module_init < mod->init_size;
++}
 +
- 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
- 
- 	sprintf(init_utsname()->machine, ELF_PLATFORM);
-diff --git a/arch/arm64/mm/dump.c b/arch/arm64/mm/dump.c
-index 5a22a119a74c..e83ffb00560c 100644
---- a/arch/arm64/mm/dump.c
-+++ b/arch/arm64/mm/dump.c
-@@ -35,7 +35,9 @@ struct addr_marker {
- };
- 
- enum address_markers_idx {
--	VMALLOC_START_NR = 0,
-+	MODULES_START_NR = 0,
-+	MODULES_END_NR,
-+	VMALLOC_START_NR,
- 	VMALLOC_END_NR,
- #ifdef CONFIG_SPARSEMEM_VMEMMAP
- 	VMEMMAP_START_NR,
-@@ -45,12 +47,12 @@ enum address_markers_idx {
- 	FIXADDR_END_NR,
- 	PCI_START_NR,
- 	PCI_END_NR,
--	MODULES_START_NR,
--	MODUELS_END_NR,
- 	KERNEL_SPACE_NR,
- };
- 
- static struct addr_marker address_markers[] = {
-+	{ MODULES_VADDR,	"Modules start" },
-+	{ MODULES_END,		"Modules end" },
- 	{ VMALLOC_START,	"vmalloc() Area" },
- 	{ VMALLOC_END,		"vmalloc() End" },
- #ifdef CONFIG_SPARSEMEM_VMEMMAP
-@@ -61,9 +63,7 @@ static struct addr_marker address_markers[] = {
- 	{ FIXADDR_TOP,		"Fixmap end" },
- 	{ PCI_IO_START,		"PCI I/O start" },
- 	{ PCI_IO_END,		"PCI I/O end" },
--	{ MODULES_VADDR,	"Modules start" },
--	{ MODULES_END,		"Modules end" },
--	{ PAGE_OFFSET,		"Kernel Mapping" },
-+	{ PAGE_OFFSET,		"Linear Mapping" },
- 	{ -1,			NULL },
- };
- 
-diff --git a/arch/arm64/mm/init.c b/arch/arm64/mm/init.c
-index f3b061e67bfe..baa923bda651 100644
---- a/arch/arm64/mm/init.c
-+++ b/arch/arm64/mm/init.c
-@@ -302,22 +302,26 @@ void __init mem_init(void)
- #ifdef CONFIG_KASAN
- 		  "    kasan   : 0x%16lx - 0x%16lx   (%6ld GB)\n"
- #endif
-+		  "    modules : 0x%16lx - 0x%16lx   (%6ld MB)\n"
- 		  "    vmalloc : 0x%16lx - 0x%16lx   (%6ld GB)\n"
-+		  "      .init : 0x%p" " - 0x%p" "   (%6ld KB)\n"
-+		  "      .text : 0x%p" " - 0x%p" "   (%6ld KB)\n"
-+		  "      .data : 0x%p" " - 0x%p" "   (%6ld KB)\n"
- #ifdef CONFIG_SPARSEMEM_VMEMMAP
- 		  "    vmemmap : 0x%16lx - 0x%16lx   (%6ld GB maximum)\n"
- 		  "              0x%16lx - 0x%16lx   (%6ld MB actual)\n"
- #endif
- 		  "    fixed   : 0x%16lx - 0x%16lx   (%6ld KB)\n"
- 		  "    PCI I/O : 0x%16lx - 0x%16lx   (%6ld MB)\n"
--		  "    modules : 0x%16lx - 0x%16lx   (%6ld MB)\n"
--		  "    memory  : 0x%16lx - 0x%16lx   (%6ld MB)\n"
--		  "      .init : 0x%p" " - 0x%p" "   (%6ld KB)\n"
--		  "      .text : 0x%p" " - 0x%p" "   (%6ld KB)\n"
--		  "      .data : 0x%p" " - 0x%p" "   (%6ld KB)\n",
-+		  "    memory  : 0x%16lx - 0x%16lx   (%6ld MB)\n",
- #ifdef CONFIG_KASAN
- 		  MLG(KASAN_SHADOW_START, KASAN_SHADOW_END),
- #endif
-+		  MLM(MODULES_VADDR, MODULES_END),
- 		  MLG(VMALLOC_START, VMALLOC_END),
-+		  MLK_ROUNDUP(__init_begin, __init_end),
-+		  MLK_ROUNDUP(_text, _etext),
-+		  MLK_ROUNDUP(_sdata, _edata),
- #ifdef CONFIG_SPARSEMEM_VMEMMAP
- 		  MLG((unsigned long)vmemmap,
- 		      (unsigned long)vmemmap + VMEMMAP_SIZE),
-@@ -326,11 +330,7 @@ void __init mem_init(void)
- #endif
- 		  MLK(FIXADDR_START, FIXADDR_TOP),
- 		  MLM(PCI_IO_START, PCI_IO_END),
--		  MLM(MODULES_VADDR, MODULES_END),
--		  MLM(PAGE_OFFSET, (unsigned long)high_memory),
--		  MLK_ROUNDUP(__init_begin, __init_end),
--		  MLK_ROUNDUP(_text, _etext),
--		  MLK_ROUNDUP(_sdata, _edata));
-+		  MLM(PAGE_OFFSET, (unsigned long)high_memory));
- 
- #undef MLK
- #undef MLM
-diff --git a/arch/arm64/mm/kasan_init.c b/arch/arm64/mm/kasan_init.c
-index 0ca411fc5ea3..acdd1ac166ec 100644
---- a/arch/arm64/mm/kasan_init.c
-+++ b/arch/arm64/mm/kasan_init.c
-@@ -17,9 +17,11 @@
- #include <linux/start_kernel.h>
- 
- #include <asm/mmu_context.h>
-+#include <asm/kernel-pgtable.h>
- #include <asm/page.h>
- #include <asm/pgalloc.h>
- #include <asm/pgtable.h>
-+#include <asm/sections.h>
- #include <asm/tlbflush.h>
- 
- static pgd_t tmp_pg_dir[PTRS_PER_PGD] __initdata __aligned(PGD_SIZE);
-@@ -33,7 +35,7 @@ static void __init kasan_early_pte_populate(pmd_t *pmd, unsigned long addr,
- 	if (pmd_none(*pmd))
- 		pmd_populate_kernel(&init_mm, pmd, kasan_zero_pte);
- 
--	pte = pte_offset_kernel(pmd, addr);
-+	pte = pte_offset_kimg(pmd, addr);
- 	do {
- 		next = addr + PAGE_SIZE;
- 		set_pte(pte, pfn_pte(virt_to_pfn(kasan_zero_page),
-@@ -51,7 +53,7 @@ static void __init kasan_early_pmd_populate(pud_t *pud,
- 	if (pud_none(*pud))
- 		pud_populate(&init_mm, pud, kasan_zero_pmd);
- 
--	pmd = pmd_offset(pud, addr);
-+	pmd = pmd_offset_kimg(pud, addr);
- 	do {
- 		next = pmd_addr_end(addr, end);
- 		kasan_early_pte_populate(pmd, addr, next);
-@@ -68,7 +70,7 @@ static void __init kasan_early_pud_populate(pgd_t *pgd,
- 	if (pgd_none(*pgd))
- 		pgd_populate(&init_mm, pgd, kasan_zero_pud);
- 
--	pud = pud_offset(pgd, addr);
-+	pud = pud_offset_kimg(pgd, addr);
- 	do {
- 		next = pud_addr_end(addr, end);
- 		kasan_early_pmd_populate(pud, addr, next);
-@@ -126,8 +128,14 @@ static void __init clear_pgds(unsigned long start,
- 
- void __init kasan_init(void)
- {
-+	u64 kimg_shadow_start, kimg_shadow_end;
- 	struct memblock_region *reg;
- 
-+	kimg_shadow_start = round_down((u64)kasan_mem_to_shadow(_text),
-+				       SWAPPER_BLOCK_SIZE);
-+	kimg_shadow_end = round_up((u64)kasan_mem_to_shadow(_end),
-+				   SWAPPER_BLOCK_SIZE);
++u64 get_module_plt(struct module *mod, void *loc, u64 val)
++{
++	struct plt_entry entry = {
++		cpu_to_le32(0x92800010 | (((~val      ) & 0xffff)) << 5),
++		cpu_to_le32(0xf2a00010 | ((( val >> 16) & 0xffff)) << 5),
++		cpu_to_le32(0xf2c00010 | ((( val >> 32) & 0xffff)) << 5),
++		cpu_to_le32(0xd61f0200)
++	}, *plt;
++	int i, *count;
 +
- 	/*
- 	 * We are going to perform proper setup of shadow memory.
- 	 * At first we should unmap early shadow (clear_pgds() call bellow).
-@@ -141,8 +149,13 @@ void __init kasan_init(void)
- 
- 	clear_pgds(KASAN_SHADOW_START, KASAN_SHADOW_END);
- 
-+	vmemmap_populate(kimg_shadow_start, kimg_shadow_end,
-+			 pfn_to_nid(virt_to_pfn(kimg_shadow_start)));
-+
- 	kasan_populate_zero_shadow((void *)KASAN_SHADOW_START,
--			kasan_mem_to_shadow((void *)MODULES_VADDR));
-+				   (void *)kimg_shadow_start);
-+	kasan_populate_zero_shadow((void *)kimg_shadow_end,
-+				   kasan_mem_to_shadow((void *)PAGE_OFFSET));
- 
- 	for_each_memblock(memory, reg) {
- 		void *start = (void *)__phys_to_virt(reg->base);
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 75b5f0dc3bdc..0b28f1469f9b 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -53,6 +53,10 @@ u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
- unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)] __page_aligned_bss;
- EXPORT_SYMBOL(empty_zero_page);
- 
-+static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
-+static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
-+static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
-+
- pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
- 			      unsigned long size, pgprot_t vma_prot)
- {
-@@ -349,14 +353,14 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
- {
- 
- 	unsigned long kernel_start = __pa(_stext);
--	unsigned long kernel_end = __pa(_end);
-+	unsigned long kernel_end = __pa(_etext);
- 
- 	/*
--	 * The kernel itself is mapped at page granularity. Map all other
--	 * memory, making sure we don't overwrite the existing kernel mappings.
-+	 * Take care not to create a writable alias for the
-+	 * read-only text and rodata sections of the kernel image.
- 	 */
- 
--	/* No overlap with the kernel. */
-+	/* No overlap with the kernel text */
- 	if (end < kernel_start || start >= kernel_end) {
- 		__create_pgd_mapping(pgd, start, __phys_to_virt(start),
- 				     end - start, PAGE_KERNEL,
-@@ -365,7 +369,7 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
- 	}
- 
- 	/*
--	 * This block overlaps the kernel mapping. Map the portion(s) which
-+	 * This block overlaps the kernel text mapping. Map the portion(s) which
- 	 * don't overlap.
- 	 */
- 	if (start < kernel_start)
-@@ -438,12 +442,29 @@ static void __init map_kernel(pgd_t *pgd)
- 	map_kernel_chunk(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC);
- 	map_kernel_chunk(pgd, _data, _end, PAGE_KERNEL);
- 
--	/*
--	 * The fixmap falls in a separate pgd to the kernel, and doesn't live
--	 * in the carveout for the swapper_pg_dir. We can simply re-use the
--	 * existing dir for the fixmap.
--	 */
--	set_pgd(pgd_offset_raw(pgd, FIXADDR_START), *pgd_offset_k(FIXADDR_START));
-+	if (pgd_index(FIXADDR_START) != pgd_index((u64)_end)) {
-+		/*
-+		 * The fixmap falls in a separate pgd to the kernel, and doesn't
-+		 * live in the carveout for the swapper_pg_dir. We can simply
-+		 * re-use the existing dir for the fixmap.
-+		 */
-+		set_pgd(pgd_offset_raw(pgd, FIXADDR_START),
-+			*pgd_offset_k(FIXADDR_START));
-+	} else if (CONFIG_PGTABLE_LEVELS > 3) {
-+		/*
-+		 * The fixmap shares its top level pgd entry with the kernel
-+		 * mapping. This can really only occur when we are running
-+		 * with 16k/4 levels, so we can simply reuse the pud level
-+		 * entry instead.
-+		 */
-+		BUG_ON(!IS_ENABLED(CONFIG_ARM64_16K_PAGES));
-+
-+		set_pud(pud_set_fixmap_offset(pgd, FIXADDR_START),
-+			__pud(__pa(bm_pmd) | PUD_TYPE_TABLE));
-+		pud_clear_fixmap();
++	if (in_init(mod, loc)) {
++		plt = (struct plt_entry *)mod->arch.init_plt->sh_addr;
++		count = &mod->arch.init_plt_count;
 +	} else {
-+		BUG();
++		plt = (struct plt_entry *)mod->arch.core_plt->sh_addr;
++		count = &mod->arch.core_plt_count;
 +	}
- 
- 	kasan_copy_shadow(pgd);
- }
-@@ -569,10 +590,6 @@ void vmemmap_free(unsigned long start, unsigned long end)
- }
- #endif	/* CONFIG_SPARSEMEM_VMEMMAP */
- 
--static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
--static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
--static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
--
- static inline pud_t * fixmap_pud(unsigned long addr)
- {
- 	return (CONFIG_PGTABLE_LEVELS > 3) ? &bm_pud[pud_index(addr)]
-@@ -598,8 +615,19 @@ void __init early_fixmap_init(void)
- 	unsigned long addr = FIXADDR_START;
- 
- 	pgd = pgd_offset_k(addr);
--	pgd_populate(&init_mm, pgd, bm_pud);
--	pud = fixmap_pud(addr);
-+	if (CONFIG_PGTABLE_LEVELS > 3 && !pgd_none(*pgd)) {
-+		/*
-+		 * We only end up here if the kernel mapping and the fixmap
-+		 * share the top level pgd entry, which should only happen on
-+		 * 16k/4 levels configurations.
-+		 */
-+		BUG_ON(!IS_ENABLED(CONFIG_ARM64_16K_PAGES));
-+		pud = pud_offset_kimg(pgd, addr);
-+		memblock_free(__pa(bm_pud), sizeof(bm_pud));
-+	} else {
-+		pgd_populate(&init_mm, pgd, bm_pud);
-+		pud = fixmap_pud(addr);
++
++	/* Look for an existing entry pointing to 'val' */
++	for (i = 0; i < *count; i++)
++		if (plt[i].mov0 == entry.mov0 &&
++		    plt[i].mov1 == entry.mov1 &&
++		    plt[i].mov2 == entry.mov2)
++			return (u64)&plt[i];
++
++	i = (*count)++;
++	plt[i] = entry;
++	return (u64)&plt[i];
++}
++
++static int duplicate_rel(Elf64_Addr base, const Elf64_Rela *rela, int num)
++{
++	int i;
++
++	for (i = 0; i < num; i++) {
++		if (rela[i].r_info == rela[num].r_info &&
++		    rela[i].r_addend == rela[num].r_addend)
++			return 1;
 +	}
- 	pud_populate(&init_mm, pud, bm_pmd);
- 	pmd = fixmap_pmd(addr);
- 	pmd_populate_kernel(&init_mm, pmd, bm_pte);
++	return 0;
++}
++
++/* Count how many PLT entries we may need */
++static unsigned int count_plts(Elf64_Addr base, const Elf64_Rela *rela, int num)
++{
++	unsigned int ret = 0;
++	int i;
++
++	/*
++	 * Sure, this is order(n^2), but it's usually short, and not
++	 * time critical
++	 */
++	for (i = 0; i < num; i++)
++		switch (ELF64_R_TYPE(rela[i].r_info)) {
++		case R_AARCH64_JUMP26:
++		case R_AARCH64_CALL26:
++			if (!duplicate_rel(base, rela, i))
++				ret++;
++			break;
++		}
++	return ret;
++}
++
++int module_frob_arch_sections(Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
++			      char *secstrings, struct module *mod)
++{
++	unsigned long core_plts = 0, init_plts = 0;
++	Elf64_Shdr *s, *sechdrs_end = sechdrs + ehdr->e_shnum;
++
++	/*
++	 * To store the PLTs, we expand the .text section for core module code
++	 * and the .init.text section for initialization code.
++	 */
++	for (s = sechdrs; s < sechdrs_end; ++s)
++		if (strcmp(".core.plt", secstrings + s->sh_name) == 0)
++			mod->arch.core_plt = s;
++		else if (strcmp(".init.plt", secstrings + s->sh_name) == 0)
++			mod->arch.init_plt = s;
++
++	if (!mod->arch.core_plt || !mod->arch.init_plt) {
++		pr_err("%s: sections missing\n", mod->name);
++		return -ENOEXEC;
++	}
++
++	for (s = sechdrs + 1; s < sechdrs_end; ++s) {
++		const Elf64_Rela *rels = (void *)ehdr + s->sh_offset;
++		int numrels = s->sh_size / sizeof(Elf64_Rela);
++		Elf64_Shdr *dstsec = sechdrs + s->sh_info;
++
++		if (s->sh_type != SHT_RELA)
++			continue;
++
++		if (strstr(secstrings + s->sh_name, ".init"))
++			init_plts += count_plts(dstsec->sh_addr, rels, numrels);
++		else
++			core_plts += count_plts(dstsec->sh_addr, rels, numrels);
++	}
++
++	mod->arch.core_plt->sh_type = SHT_NOBITS;
++	mod->arch.core_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
++	mod->arch.core_plt->sh_addralign = L1_CACHE_BYTES;
++	mod->arch.core_plt->sh_size = core_plts * sizeof(struct plt_entry);
++	mod->arch.core_plt_count = 0;
++
++	mod->arch.init_plt->sh_type = SHT_NOBITS;
++	mod->arch.init_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
++	mod->arch.init_plt->sh_addralign = L1_CACHE_BYTES;
++	mod->arch.init_plt->sh_size = init_plts * sizeof(struct plt_entry);
++	mod->arch.init_plt_count = 0;
++	pr_debug("%s: core.plt=%lld, init.plt=%lld\n", __func__,
++		 mod->arch.core_plt->sh_size, mod->arch.init_plt->sh_size);
++	return 0;
++}
+diff --git a/arch/arm64/kernel/module.c b/arch/arm64/kernel/module.c
+index 93e970231ca9..3a298b0e21bb 100644
+--- a/arch/arm64/kernel/module.c
++++ b/arch/arm64/kernel/module.c
+@@ -38,6 +38,11 @@ void *module_alloc(unsigned long size)
+ 				GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+ 				NUMA_NO_NODE, __builtin_return_address(0));
+ 
++	if (!p && IS_ENABLED(CONFIG_ARM64_MODULE_PLTS))
++		p = __vmalloc_node_range(size, MODULE_ALIGN, VMALLOC_START,
++				VMALLOC_END, GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
++				NUMA_NO_NODE, __builtin_return_address(0));
++
+ 	if (p && (kasan_module_alloc(p, size) < 0)) {
+ 		vfree(p);
+ 		return NULL;
+@@ -361,6 +366,13 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
+ 		case R_AARCH64_CALL26:
+ 			ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2, 26,
+ 					     AARCH64_INSN_IMM_26);
++
++			if (IS_ENABLED(CONFIG_ARM64_MODULE_PLTS) &&
++			    ovf == -ERANGE) {
++				val = get_module_plt(me, loc, val);
++				ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2,
++						     26, AARCH64_INSN_IMM_26);
++			}
+ 			break;
+ 
+ 		default:
+diff --git a/arch/arm64/kernel/module.lds b/arch/arm64/kernel/module.lds
+new file mode 100644
+index 000000000000..3682fa107918
+--- /dev/null
++++ b/arch/arm64/kernel/module.lds
+@@ -0,0 +1,4 @@
++SECTIONS {
++        .core.plt : { BYTE(0) }
++        .init.plt : { BYTE(0) }
++}
 -- 
 2.5.0
