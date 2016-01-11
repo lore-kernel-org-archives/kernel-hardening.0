@@ -1,42 +1,95 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 11 Jan 2016 14:18:56 +0100
-Message-Id: <1452518355-4606-4-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon, 11 Jan 2016 14:18:57 +0100
+Message-Id: <1452518355-4606-5-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 03/21] arm64: pgtable: add dummy pud_index() and pmd_index() definitions
+Subject: [kernel-hardening] [PATCH v3 04/21] arm64: decouple early fixmap init from linear mapping
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add definitions of pud_index() and pmd_index() for configurations with
-fewer than 4 resp. 3 translation levels. This makes it easier to keep
-the users (e.g., the fixmap init code) generic.
+Since the early fixmap page tables are populated using pages that are
+part of the static footprint of the kernel, they are covered by the
+initial kernel mapping, and we can refer to them without using __va/__pa
+translations, which are tied to the linear mapping.
+
+Since the fixmap page tables are disjoint from the kernel mapping up
+to the top level pgd entry, we can refer to bm_pte[] directly, and there
+is no need to walk the page tables and perform __pa()/__va() translations
+at each step.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/pgtable.h | 2 ++
- 1 file changed, 2 insertions(+)
+ arch/arm64/mm/mmu.c | 32 ++++++--------------
+ 1 file changed, 9 insertions(+), 23 deletions(-)
 
-diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
-index fe9bf47db5d3..6129f6755081 100644
---- a/arch/arm64/include/asm/pgtable.h
-+++ b/arch/arm64/include/asm/pgtable.h
-@@ -495,6 +495,7 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
- #else
+diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+index 7711554a94f4..75b5f0dc3bdc 100644
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -570,38 +570,24 @@ void vmemmap_free(unsigned long start, unsigned long end)
+ #endif	/* CONFIG_SPARSEMEM_VMEMMAP */
  
- #define pud_page_paddr(pud)	({ BUILD_BUG(); 0; })
-+#define pmd_index(addr)		({ BUILD_BUG(); 0; })
+ static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
+-#if CONFIG_PGTABLE_LEVELS > 2
+ static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
+-#endif
+-#if CONFIG_PGTABLE_LEVELS > 3
+ static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
+-#endif
  
- /* Match pmd_offset folding in <asm/generic/pgtable-nopmd.h> */
- #define pmd_set_fixmap(addr)		NULL
-@@ -542,6 +543,7 @@ static inline phys_addr_t pgd_page_paddr(pgd_t pgd)
- #else
+ static inline pud_t * fixmap_pud(unsigned long addr)
+ {
+-	pgd_t *pgd = pgd_offset_k(addr);
+-
+-	BUG_ON(pgd_none(*pgd) || pgd_bad(*pgd));
+-
+-	return pud_offset(pgd, addr);
++	return (CONFIG_PGTABLE_LEVELS > 3) ? &bm_pud[pud_index(addr)]
++					   : (pud_t *)pgd_offset_k(addr);
+ }
  
- #define pgd_page_paddr(pgd)	({ BUILD_BUG(); 0;})
-+#define pud_index(addr)		({ BUILD_BUG(); 0;})
+-static inline pmd_t * fixmap_pmd(unsigned long addr)
++static inline pte_t * fixmap_pmd(unsigned long addr)
+ {
+-	pud_t *pud = fixmap_pud(addr);
+-
+-	BUG_ON(pud_none(*pud) || pud_bad(*pud));
+-
+-	return pmd_offset(pud, addr);
++	return (CONFIG_PGTABLE_LEVELS > 2) ? &bm_pmd[pmd_index(addr)]
++					   : (pmd_t *)pgd_offset_k(addr);
+ }
  
- /* Match pud_offset folding in <asm/generic/pgtable-nopud.h> */
- #define pud_set_fixmap(addr)		NULL
+ static inline pte_t * fixmap_pte(unsigned long addr)
+ {
+-	pmd_t *pmd = fixmap_pmd(addr);
+-
+-	BUG_ON(pmd_none(*pmd) || pmd_bad(*pmd));
+-
+-	return pte_offset_kernel(pmd, addr);
++	return &bm_pte[pte_index(addr)];
+ }
+ 
+ void __init early_fixmap_init(void)
+@@ -613,14 +599,14 @@ void __init early_fixmap_init(void)
+ 
+ 	pgd = pgd_offset_k(addr);
+ 	pgd_populate(&init_mm, pgd, bm_pud);
+-	pud = pud_offset(pgd, addr);
++	pud = fixmap_pud(addr);
+ 	pud_populate(&init_mm, pud, bm_pmd);
+-	pmd = pmd_offset(pud, addr);
++	pmd = fixmap_pmd(addr);
+ 	pmd_populate_kernel(&init_mm, pmd, bm_pte);
+ 
+ 	/*
+ 	 * The boot-ioremap range spans multiple pmds, for which
+-	 * we are not preparted:
++	 * we are not prepared:
+ 	 */
+ 	BUILD_BUG_ON((__fix_to_virt(FIX_BTMAP_BEGIN) >> PMD_SHIFT)
+ 		     != (__fix_to_virt(FIX_BTMAP_END) >> PMD_SHIFT));
 -- 
 2.5.0
