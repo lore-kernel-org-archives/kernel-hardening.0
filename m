@@ -1,94 +1,90 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 13 Jan 2016 16:26:17 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160113162616.GK23370@leverpostej>
-References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
- <1452518355-4606-8-git-send-email-ard.biesheuvel@linaro.org>
- <20160112181336.GF4858@leverpostej>
- <CAKv+Gu-TS7w=AVBceGhsQkQzVCv+u7Gh6ojftwW1iaE+d0yrYw@mail.gmail.com>
- <20160113135109.GJ23370@leverpostej>
- <CAKv+Gu9ka7EOJq9BsAw9ON2qYiERJYKkzyYG7XYn0uw93fpTgg@mail.gmail.com>
+Date: Wed, 13 Jan 2016 19:08:19 +0100
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20160113180819.GA22567@pc.thejh.net>
+References: <1452626745-31708-1-git-send-email-jann@thejh.net>
+ <87mvsa5q40.fsf@gamma.ozlabs.ibm.com>
+ <20160113002043.GA17146@openwall.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="tThc/1wpZn/ma/RB"
 Content-Disposition: inline
-In-Reply-To: <CAKv+Gu9ka7EOJq9BsAw9ON2qYiERJYKkzyYG7XYn0uw93fpTgg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 07/21] arm64: move kernel image to base of vmalloc area
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
+In-Reply-To: <20160113002043.GA17146@openwall.com>
+Subject: [kernel-hardening] Re: [RFC] kernel/panic: place an upper limit on number of oopses
+To: Solar Designer <solar@openwall.com>
+Cc: Daniel Axtens <dja@axtens.net>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Baoquan He <bhe@redhat.com>, Masami Hiramatsu <masami.hiramatsu.pt@hitachi.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 13, 2016 at 04:50:24PM +0100, Ard Biesheuvel wrote:
-> On 13 January 2016 at 14:51, Mark Rutland <mark.rutland@arm.com> wrote:
-> > On Wed, Jan 13, 2016 at 09:39:41AM +0100, Ard Biesheuvel wrote:
-> >> But since KASAN always uses the first 1/8 of that VA space, I am going
-> >> to rework this so that the non-KASAN constants never depend on the
-> >> actual values but only on CONFIG_KASAN
-> >
-> > Personally I'd prefer that they were obviously defined in terms of each
-> > other if possible (as this means that the definitions are obviously
-> > consistent by construction).
-> >
-> > So if it's not too much of a pain to keep them that way it would be
-> > nice to do so.
-> >
-> > [...]
-> >
-> 
-> I am leaning towards adding this to asm/memory.h
-> 
-> #ifdef CONFIG_KASAN
-> #define KASAN_SHADOW_SIZE (UL(1) << (VA_BITS - 3))
-> #else
-> #define KASAN_SHADOW_SIZE (0)
-> #endif
-> 
-> and remove the #ifdef CONFIG_KASAN block from asm/pgtable.h. Then
-> asm/kasan.h, which already includes asm/memory.h, can use it as region
-> size, and none of the reshuffling I had to do before is necessary.
 
-FWIW, that looks good to me.
+--tThc/1wpZn/ma/RB
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-[...]
+On Wed, Jan 13, 2016 at 03:20:43AM +0300, Solar Designer wrote:
+> Jann Horn <jann@thejh.net> wrote:
+> > To prevent an attacker from turning a mostly harmless oops into an
+> > exploitable issue using a refcounter wraparound caused by repeated
+> > oopsing, limit the number of oopses.
+>=20
+> This may also reduce the likelihood of successful exploitation of some
+> other vulnerabilities involving memory corruption, where an unsuccessful
+> attempt may inadvertently trigger an Oops.  The attacker would then need
+> to succeed in fewer than the maximum allowed number of Oops'es.  Jann's
+> currently proposed default of 0x100000 is too high to make a difference
+> in that respect, but people may set it differently.
 
-> >> I do wonder what that means for memblocks that are not multiples of 16
-> >> MB, though (below)
-> >
-> > Indeed.
-> >
-> > On a related note, something I've been thinking about is PA layout
-> > fuzzing using VMs.
-> >
-> > It sounds like being able to test memory layouts would be useful for
-> > cases like the above, and I suspect there are plenty of other edge cases
-> > that we aren't yet aware of due to typical physical memory layouts being
-> > fairly simple.
-> >
-> > It doesn't seem to be possible to force a particular physical memory
-> > layout (and particular kernel, dtb, etc addresses) for QEMU or KVM
-> > tool. I started looking into adding support to KVM tool, but there's a
-> > fair amount of refactoring needed first.
-> >
-> > Another option might be a special EFI application that carves up memory
-> > in a deliberate fashion to ensure particular fragmentation cases (e.g. a
-> > bank that's SWAPPER_BLOCK_SIZE - PAGE_SIZE in length).
-> >
-> 
-> I use mem= for this, in fact, and boot most of my machines and VMs
-> with some value slightly below the actual available DRAM that is not a
-> multiple of 2M
+I chose such a high value to increase the likelyhood that this gets
+included in the kernel by default. Lower values would mitigate more
+attacks, but I'm not sure whether they'd be acceptable for everyone.
 
-Sure. I do some testing with mem= to find some bugs. The problem is that
-you can only vary the end address (prior to your patches), and don't get
-much variation on the portions in the middle.
 
-It's difficult to test for bugs with not-quite-adjacent regions, or
-where particular sizes, alignment, or addresses are important.
+> On Wed, Jan 13, 2016 at 10:34:39AM +1100, Daniel Axtens wrote:
+> > I'm torn between making the limit configurable and not adding to the
+> > massive proliferation of config options.
+>=20
+> What about reusing panic_on_oops for the configurable limit?  The
+> currently supported values of 0 and 1 would retain their meaning,
+> 2 would panic after 2nd Oops, and so on.
+>=20
+> There's overlap with grsecurity's banning of users on Oops, but I think
+> it makes sense to have both the trivial change proposed by Jann (perhaps
+> with the reuse of panic_on_oops for configuration) and grsecurity-style
+> banning (maybe with a low configurable limit, rather than always on
+> first Oops).
 
-For example, having memory that extends right to the end of the
-kernel-supported PA range (even with gaps in the middle) is an edge case
-we don't currently test. I have a suspicion that KASAN's shadow
-lookahead (and allocation to account for this) wouldn't be quite right,
-and I want to be able to properly test and verify that.
+One edgecase here is that, afaik, grsecurity-style banning isn't very
+effective in combination with the subuid mechanism (implemented in
+userland, using the newuidmap setuid helper and /etc/subuid) because
+it allows every user to control 2^16 kuids (not just inside namespaces,
+but also indirectly in the init namespace).
+This probably doesn't affect many people though: Debian and Ubuntu ship
+newuidmap in a separate package "uidmap" that isn't installed by
+default and is only installed by a few people (0.18% on Debian
+according to popcon, those probably need it for unprivileged LXC or
+so?). Arch ships with newuidmap installed, but without /etc/subuid.
+I don't know what other distros do.
 
-Thanks,
-Mark.
+--tThc/1wpZn/ma/RB
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJWlpKTAAoJED4KNFJOeCOoYccP/1wu8hxYPci1fQ9qzkvqXS4S
+7TmT6wOdG3+3KBiAY2cNxGFGM1gVeU1OjVAd/N2KnJdgeQXz4lM3C9QJw6CN9H2c
+zvOwdsIF7yeM5h0CTihICXX280nwfMjxzPka0LcGFYP9UNyr/NWR9BhiZF6Omk52
+KPs6Q1/N/fUhfFU3tJiNr5hOzmN+nG+JlqF1VdrU3CLaIOj0HrHfjnmmzaJ3K5f2
+GsTPNgZ5azK3b8SJ9A3EfsoMFy0fueD/tFDEfkuW+Adbymb36H01w8goJ+ww9fuJ
+ox3UD0k0V/twKuFKqVz8CKJ7uVrKEhE2TZYktPeV77cnv83IjRC8Jh+nkI5xoKCJ
+brdg1G9jPipzjNgJX4jbUfS0P5g+FXXoeVWCaAoi/AL+fHJloj4SHFUKsvO1Rqjd
+CVkHZbLZQKc6F+dBnYR8kbxoYfl8t58Uh543MfbFAX2df/YvE3wB68GcRWMIasIz
+kjYRg6+s8olOQBDVlLCqbMyLndHeWxNL1h9C1b0+6cv5pQ4yow7f9/lQuAzS4ACe
+InSfYMbtTkua1XvGNa9NVKi7yBSdcQ99dLUBsz4mWU5NCBGAK1/Fla2/TkTIQ3Oy
+oC3O8yAu8NaqBZDaGkdez9zYOf6COY1MTbcRMUrkTnGh8kDvrzRZtX7lUN5ozASx
+u8rgA6VGb0nkwWRH4mCL
+=Wd1G
+-----END PGP SIGNATURE-----
+
+--tThc/1wpZn/ma/RB--
