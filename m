@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 13 Jan 2016 11:29:38 +0000
+Date: Wed, 13 Jan 2016 11:31:03 +0000
 From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20160113112937.GA2071@e104818-lin.cambridge.arm.com>
+Message-ID: <20160113113102.GB2071@e104818-lin.cambridge.arm.com>
 References: <20151210000005.GA99337@davidb.org>
  <CAGXu5jLLXK3N6pbZOie5uj276x=dtc_tuTz312rnhF8yrmxHYQ@mail.gmail.com>
  <20151210002651.GC99337@davidb.org>
@@ -18,10 +18,10 @@ Content-Disposition: inline
 In-Reply-To: <CAGXu5jLaAUnJosaw4Wxi+=uZ1GSfu9KZHAmwG4ewpgHLOh1YPg@mail.gmail.com>
 Subject: Re: [kernel-hardening] Self Introduction
 To: Kees Cook <keescook@chromium.org>
-Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+ rmk
++ rmk (actually cc'ing him this time)
 
 On Tue, Jan 12, 2016 at 11:31:50AM -0800, Kees Cook wrote:
 > On Mon, Jan 11, 2016 at 10:33 AM, David Brown <david.brown@linaro.org> wrote:
