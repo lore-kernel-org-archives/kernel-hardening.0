@@ -1,90 +1,165 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 13 Jan 2016 19:08:19 +0100
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20160113180819.GA22567@pc.thejh.net>
-References: <1452626745-31708-1-git-send-email-jann@thejh.net>
- <87mvsa5q40.fsf@gamma.ozlabs.ibm.com>
- <20160113002043.GA17146@openwall.com>
+Date: Wed, 13 Jan 2016 18:12:12 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160113181211.GL23370@leverpostej>
+References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1452518355-4606-12-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="tThc/1wpZn/ma/RB"
-Content-Disposition: inline
-In-Reply-To: <20160113002043.GA17146@openwall.com>
-Subject: [kernel-hardening] Re: [RFC] kernel/panic: place an upper limit on number of oopses
-To: Solar Designer <solar@openwall.com>
-Cc: Daniel Axtens <dja@axtens.net>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Baoquan He <bhe@redhat.com>, Masami Hiramatsu <masami.hiramatsu.pt@hitachi.com>
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---tThc/1wpZn/ma/RB
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1452518355-4606-12-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v3 11/21] arm64: avoid R_AARCH64_ABS64 relocations for
+ Image header fields
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 13, 2016 at 03:20:43AM +0300, Solar Designer wrote:
-> Jann Horn <jann@thejh.net> wrote:
-> > To prevent an attacker from turning a mostly harmless oops into an
-> > exploitable issue using a refcounter wraparound caused by repeated
-> > oopsing, limit the number of oopses.
->=20
-> This may also reduce the likelihood of successful exploitation of some
-> other vulnerabilities involving memory corruption, where an unsuccessful
-> attempt may inadvertently trigger an Oops.  The attacker would then need
-> to succeed in fewer than the maximum allowed number of Oops'es.  Jann's
-> currently proposed default of 0x100000 is too high to make a difference
-> in that respect, but people may set it differently.
+On Mon, Jan 11, 2016 at 02:19:04PM +0100, Ard Biesheuvel wrote:
+> Unfortunately, the current way of using the linker to emit build time
+> constants into the Image header will no longer work once we switch to
+> the use of PIE executables. The reason is that such constants are emitted
+> into the binary using R_AARCH64_ABS64 relocations, which we will resolve
+> at runtime, not at build time, and the places targeted by those
+> relocations will contain zeroes before that.
+> 
+> So move back to assembly time constants or R_AARCH64_ABS32 relocations
+> (which, interestingly enough, do get resolved at build time)
 
-I chose such a high value to increase the likelyhood that this gets
-included in the kernel by default. Lower values would mitigate more
-attacks, but I'm not sure whether they'd be acceptable for everyone.
+To me it seems very odd that ABS64 and ABS32 are treated differently,
+and it makes me somewhat uncomfortable becuase it feels like a bug.
 
+Do we know whether the inconsistency between ABS64 and ABS32 was
+deliberate?
 
-> On Wed, Jan 13, 2016 at 10:34:39AM +1100, Daniel Axtens wrote:
-> > I'm torn between making the limit configurable and not adding to the
-> > massive proliferation of config options.
->=20
-> What about reusing panic_on_oops for the configurable limit?  The
-> currently supported values of 0 and 1 would retain their meaning,
-> 2 would panic after 2nd Oops, and so on.
->=20
-> There's overlap with grsecurity's banning of users on Oops, but I think
-> it makes sense to have both the trivial change proposed by Jann (perhaps
-> with the reuse of panic_on_oops for configuration) and grsecurity-style
-> banning (maybe with a low configurable limit, rather than always on
-> first Oops).
+I couldn't spot anything declaring a difference in the AArch64 ELF
+spec, and I'm not sure where else to look.
 
-One edgecase here is that, afaik, grsecurity-style banning isn't very
-effective in combination with the subuid mechanism (implemented in
-userland, using the newuidmap setuid helper and /etc/subuid) because
-it allows every user to control 2^16 kuids (not just inside namespaces,
-but also indirectly in the init namespace).
-This probably doesn't affect many people though: Debian and Ubuntu ship
-newuidmap in a separate package "uidmap" that isn't installed by
-default and is only installed by a few people (0.18% on Debian
-according to popcon, those probably need it for unprivileged LXC or
-so?). Arch ships with newuidmap installed, but without /etc/subuid.
-I don't know what other distros do.
+Thanks,
+Mark.
 
---tThc/1wpZn/ma/RB
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJWlpKTAAoJED4KNFJOeCOoYccP/1wu8hxYPci1fQ9qzkvqXS4S
-7TmT6wOdG3+3KBiAY2cNxGFGM1gVeU1OjVAd/N2KnJdgeQXz4lM3C9QJw6CN9H2c
-zvOwdsIF7yeM5h0CTihICXX280nwfMjxzPka0LcGFYP9UNyr/NWR9BhiZF6Omk52
-KPs6Q1/N/fUhfFU3tJiNr5hOzmN+nG+JlqF1VdrU3CLaIOj0HrHfjnmmzaJ3K5f2
-GsTPNgZ5azK3b8SJ9A3EfsoMFy0fueD/tFDEfkuW+Adbymb36H01w8goJ+ww9fuJ
-ox3UD0k0V/twKuFKqVz8CKJ7uVrKEhE2TZYktPeV77cnv83IjRC8Jh+nkI5xoKCJ
-brdg1G9jPipzjNgJX4jbUfS0P5g+FXXoeVWCaAoi/AL+fHJloj4SHFUKsvO1Rqjd
-CVkHZbLZQKc6F+dBnYR8kbxoYfl8t58Uh543MfbFAX2df/YvE3wB68GcRWMIasIz
-kjYRg6+s8olOQBDVlLCqbMyLndHeWxNL1h9C1b0+6cv5pQ4yow7f9/lQuAzS4ACe
-InSfYMbtTkua1XvGNa9NVKi7yBSdcQ99dLUBsz4mWU5NCBGAK1/Fla2/TkTIQ3Oy
-oC3O8yAu8NaqBZDaGkdez9zYOf6COY1MTbcRMUrkTnGh8kDvrzRZtX7lUN5ozASx
-u8rgA6VGb0nkwWRH4mCL
-=Wd1G
------END PGP SIGNATURE-----
-
---tThc/1wpZn/ma/RB--
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  arch/arm64/include/asm/assembler.h | 15 ++++++++
+>  arch/arm64/kernel/head.S           | 17 +++++++--
+>  arch/arm64/kernel/image.h          | 37 ++++++--------------
+>  3 files changed, 40 insertions(+), 29 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+> index d8bfcc1ce923..e211af783a3d 100644
+> --- a/arch/arm64/include/asm/assembler.h
+> +++ b/arch/arm64/include/asm/assembler.h
+> @@ -222,4 +222,19 @@ lr	.req	x30		// link register
+>  	.size	__pi_##x, . - x;	\
+>  	ENDPROC(x)
+>  
+> +	.macro	le16, val
+> +	.byte	\val & 0xff
+> +	.byte	(\val >> 8) & 0xff
+> +	.endm
+> +
+> +	.macro	le32, val
+> +	le16	\val
+> +	le16	(\val >> 16)
+> +	.endm
+> +
+> +	.macro	le64, val
+> +	le32	\val
+> +	le32	(\val >> 32)
+> +	.endm
+> +
+>  #endif	/* __ASM_ASSEMBLER_H */
+> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> index 350515276541..211f75e673f4 100644
+> --- a/arch/arm64/kernel/head.S
+> +++ b/arch/arm64/kernel/head.S
+> @@ -51,6 +51,17 @@
+>  #define KERNEL_START	_text
+>  #define KERNEL_END	_end
+>  
+> +#ifdef CONFIG_CPU_BIG_ENDIAN
+> +#define __HEAD_FLAG_BE	1
+> +#else
+> +#define __HEAD_FLAG_BE	0
+> +#endif
+> +
+> +#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+> +
+> +#define __HEAD_FLAGS	((__HEAD_FLAG_BE << 0) |	\
+> +			 (__HEAD_FLAG_PAGE_SIZE << 1))
+> +
+>  /*
+>   * Kernel startup entry point.
+>   * ---------------------------
+> @@ -83,9 +94,9 @@ efi_head:
+>  	b	stext				// branch to kernel start, magic
+>  	.long	0				// reserved
+>  #endif
+> -	.quad	_kernel_offset_le		// Image load offset from start of RAM, little-endian
+> -	.quad	_kernel_size_le			// Effective size of kernel image, little-endian
+> -	.quad	_kernel_flags_le		// Informative flags, little-endian
+> +	le64	TEXT_OFFSET			// Image load offset from start of RAM, little-endian
+> +	.long	_kernel_size_le, 0		// Effective size of kernel image, little-endian
+> +	le64	__HEAD_FLAGS			// Informative flags, little-endian
+>  	.quad	0				// reserved
+>  	.quad	0				// reserved
+>  	.quad	0				// reserved
+> diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
+> index bc2abb8b1599..bb6b0e69d0a4 100644
+> --- a/arch/arm64/kernel/image.h
+> +++ b/arch/arm64/kernel/image.h
+> @@ -26,41 +26,26 @@
+>   * There aren't any ELF relocations we can use to endian-swap values known only
+>   * at link time (e.g. the subtraction of two symbol addresses), so we must get
+>   * the linker to endian-swap certain values before emitting them.
+> + * Note that this will not work for 64-bit values: these are resolved using
+> + * R_AARCH64_ABS64 relocations, which are fixed up at runtime rather than at
+> + * build time when building the PIE executable (for KASLR).
+>   */
+>  #ifdef CONFIG_CPU_BIG_ENDIAN
+> -#define DATA_LE64(data)					\
+> -	((((data) & 0x00000000000000ff) << 56) |	\
+> -	 (((data) & 0x000000000000ff00) << 40) |	\
+> -	 (((data) & 0x0000000000ff0000) << 24) |	\
+> -	 (((data) & 0x00000000ff000000) << 8)  |	\
+> -	 (((data) & 0x000000ff00000000) >> 8)  |	\
+> -	 (((data) & 0x0000ff0000000000) >> 24) |	\
+> -	 (((data) & 0x00ff000000000000) >> 40) |	\
+> -	 (((data) & 0xff00000000000000) >> 56))
+> +#define DATA_LE32(data)				\
+> +	((((data) & 0x000000ff) << 24) |	\
+> +	 (((data) & 0x0000ff00) << 8)  |	\
+> +	 (((data) & 0x00ff0000) >> 8)  |	\
+> +	 (((data) & 0xff000000) >> 24))
+>  #else
+> -#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
+> +#define DATA_LE32(data) ((data) & 0xffffffff)
+>  #endif
+>  
+> -#ifdef CONFIG_CPU_BIG_ENDIAN
+> -#define __HEAD_FLAG_BE	1
+> -#else
+> -#define __HEAD_FLAG_BE	0
+> -#endif
+> -
+> -#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+> -
+> -#define __HEAD_FLAGS	((__HEAD_FLAG_BE << 0) |	\
+> -			 (__HEAD_FLAG_PAGE_SIZE << 1))
+> -
+>  /*
+>   * These will output as part of the Image header, which should be little-endian
+> - * regardless of the endianness of the kernel. While constant values could be
+> - * endian swapped in head.S, all are done here for consistency.
+> + * regardless of the endianness of the kernel.
+>   */
+>  #define HEAD_SYMBOLS						\
+> -	_kernel_size_le		= DATA_LE64(_end - _text);	\
+> -	_kernel_offset_le	= DATA_LE64(TEXT_OFFSET);	\
+> -	_kernel_flags_le	= DATA_LE64(__HEAD_FLAGS);
+> +	_kernel_size_le		= DATA_LE32(_end - _text);
+>  
+>  #ifdef CONFIG_EFI
+>  
+> -- 
+> 2.5.0
+> 
