@@ -1,65 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 13 Jan 2016 11:29:38 +0000
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20160113112937.GA2071@e104818-lin.cambridge.arm.com>
+References: <20151210000005.GA99337@davidb.org>
+ <CAGXu5jLLXK3N6pbZOie5uj276x=dtc_tuTz312rnhF8yrmxHYQ@mail.gmail.com>
+ <20151210002651.GC99337@davidb.org>
+ <CAGXu5jJYRCZ1-frx3+pUPabm3XRFFU8T4gsCQaSc73aA4Q--3g@mail.gmail.com>
+ <CAB9W1A0veUktvSrdwMSaN=kqypGdE6_RLXFGkD79scfkPPevpw@mail.gmail.com>
+ <CAGXu5j+0oBHdS7vTQp_0ubuwvUftosYZCx8RJPXh7v7eYQncEQ@mail.gmail.com>
+ <20151210184211.GH26759@e104818-lin.cambridge.arm.com>
+ <CAGXu5j+LHBaZ12+zsiK+tt3R83+uTHKO_og3AJRhWP+tHDxUOA@mail.gmail.com>
+ <20160111183305.GA27217@davidb.org>
+ <CAGXu5jLaAUnJosaw4Wxi+=uZ1GSfu9KZHAmwG4ewpgHLOh1YPg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20160113111152.GB23370@leverpostej>
-References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-	<1452518355-4606-8-git-send-email-ard.biesheuvel@linaro.org>
-	<20160112181336.GF4858@leverpostej>
-	<CAKv+Gu-TS7w=AVBceGhsQkQzVCv+u7Gh6ojftwW1iaE+d0yrYw@mail.gmail.com>
-	<CAKv+Gu86oVvGb75S2x-44ct4sdQt4zT-3HbPqMJo_X+Cm3EPVQ@mail.gmail.com>
-	<20160113111152.GB23370@leverpostej>
-Date: Wed, 13 Jan 2016 12:14:01 +0100
-Message-ID: <CAKv+Gu9X2rN8gTu5DE8c-mTUNZeEHSB5bxj5oC82HeiTzRoufQ@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 07/21] arm64: move kernel image to base of vmalloc area
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLaAUnJosaw4Wxi+=uZ1GSfu9KZHAmwG4ewpgHLOh1YPg@mail.gmail.com>
+Subject: Re: [kernel-hardening] Self Introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13 January 2016 at 12:11, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Wed, Jan 13, 2016 at 10:58:55AM +0100, Ard Biesheuvel wrote:
->> On 13 January 2016 at 09:39, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
->> > On 12 January 2016 at 19:14, Mark Rutland <mark.rutland@arm.com> wrote:
->> >> On Mon, Jan 11, 2016 at 02:19:00PM +0100, Ard Biesheuvel wrote:
->> >>> @@ -438,12 +442,29 @@ static void __init map_kernel(pgd_t *pgd)
->> >>>       map_kernel_chunk(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC);
->> >>>       map_kernel_chunk(pgd, _data, _end, PAGE_KERNEL);
->> >>>
->> >>> -     /*
->> >>> -      * The fixmap falls in a separate pgd to the kernel, and doesn't live
->> >>> -      * in the carveout for the swapper_pg_dir. We can simply re-use the
->> >>> -      * existing dir for the fixmap.
->> >>> -      */
->> >>> -     set_pgd(pgd_offset_raw(pgd, FIXADDR_START), *pgd_offset_k(FIXADDR_START));
->> >>> +     if (pgd_index(FIXADDR_START) != pgd_index((u64)_end)) {
->> >>
->> >> To match the style of early_fixmap_init, and given we already mapped the
->> >> kernel image, this could be:
->> >>
->> >>         if (pgd_none(pgd_offset_raw(pgd, FIXADDR_START))) {
->> >>
->> >> Which also serves as a run-time check that the pgd entry really was
->> >> clear.
->> >>
->> >
->> > Yes, that looks better. I will steal that :-)
->> >
->>
->> OK, that doesn't work. pgd_none() is hardcoded to 'false' when running
->> with fewer than 4 pgtable levels, and so we always hit the BUG() here.
->
-> Ah, sorry.
->
-> We could also check CONFIG_PGTABLE_LEVELS > 3 check, as with
-> fixmap_init, perhaps?
->
++ rmk
 
-I'm using this now:
+On Tue, Jan 12, 2016 at 11:31:50AM -0800, Kees Cook wrote:
+> On Mon, Jan 11, 2016 at 10:33 AM, David Brown <david.brown@linaro.org> wrote:
+> > On Thu, Dec 10, 2015 at 03:52:16PM -0800, Kees Cook wrote:
+> >
+> >>> I haven't done any further improvements to them, nor have I received any
+> >>> feedback. I'll rebase them against latest kernel if anyone else is
+> >>> willing to test. I had a plan to run some benchmarks and see how
+> >>> performance is affected (including the CPU_SW_DOMAIN_PAN) before pushing
+> >>> again for upstreaming but I haven't had the time.
+> >>
+> >>
+> >> David, getting back to something that might good to get your help
+> >> with: would you be able to test Catalin's LPAE TTBR0 PAN series on
+> >> real hardware? (Are you familiar with the LKDTM tests for this[1]?)
+> >
+> >
+> > Sorry for the delay in getting back to you.  Been both moving and
+> > taking vacation.
+> >
+> > I'd like to test this.  I'm just trying to see if I can track down
+> > some hardware that'll boot LPAE.
+> 
+> Awesome! Thanks for the update.
+> 
+> Catalin, did you end up figuring out if your TTBR0 stuff was correct?
+> You'd mentioned you needed to check something about the
+> implementation?
 
-if (!pgd_val(*pgd_offset_raw(pgd, FIXADDR_START))) {
+Unfortunately, I checked with the ARM architecture folk. While the trick
+is probably fine on existing hardware, the architecture allows caching
+of the TTBCR bits (or their effect) in the TLB. Therefore changing the
+TTBCR.EPD0 (or A1) to disable TTBR0 page table walks is not guaranteed
+to have an effect until the TLBs are invalidated. CPU implementations
+are allowed to rely on this, so we can't safely use it in Linux.
 
-which I think is appropriate, since we don't expect to share any top
-level entry, folded or not.
+The minor side effect is that the PAN may not always work. We could
+invalidate the TLBs at every PAN change and take a significant
+performance hit. However, the more serious side effect is that TLB
+conflicts may happen, leading to aborts (though unlikely on existing
+hardware but we can't guarantee it for the future). The latter can't be
+avoided (only reduce) by more TLB invalidation (the proper fix would be
+MMU disabling).
+
+In conclusion, I'm NAK'ing my own patch ;). The alternative is to make
+TTBR0 point to swapper_pg_dir where there are no user mappings. The
+difficulty is that such patch won't fit nicely onto the existing
+uaccess_* macros that rmk added. It also doesn't work well with
+switch_mm(), we would have to defer the TTBR0 setting until returning to
+user space (cpu_switch_mm() should no longer be called in
+check_and_switch_context() as it automatically enables privileged access
+to user).
+
+I haven't had time to look into re-writing the patch. Hopefully sometime
+in February, unless someone else volunteers to take over.
+
+Question for Russell: do we have any guarantees that lowmem doesn't
+cross a 32-bit boundary? This would simplify the code a bit by
+preserving the top 32-bit of TTBR0 when changing. But looking at the
+sanity_check_meminfo(), I couldn't see anything that would guarantee
+this. Even the virt_to_phys() macro does a carry add for the top 32-bit.
 
 -- 
-Ard.
+Catalin
