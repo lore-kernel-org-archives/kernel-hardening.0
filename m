@@ -1,192 +1,84 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 14 Jan 2016 17:09:52 +0000
+Date: Thu, 14 Jan 2016 18:57:05 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160114170951.GA23942@leverpostej>
+Message-ID: <20160114185701.GA28181@leverpostej>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
- <1452518355-4606-13-git-send-email-ard.biesheuvel@linaro.org>
+ <1452518355-4606-8-git-send-email-ard.biesheuvel@linaro.org>
+ <20160112181336.GF4858@leverpostej>
+ <CAKv+Gu-TS7w=AVBceGhsQkQzVCv+u7Gh6ojftwW1iaE+d0yrYw@mail.gmail.com>
+ <20160113135109.GJ23370@leverpostej>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1452518355-4606-13-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v3 12/21] arm64: avoid dynamic relocations in early boot
- code
+In-Reply-To: <20160113135109.GJ23370@leverpostej>
+Subject: [kernel-hardening] Re: [PATCH v3 07/21] arm64: move kernel image to base of vmalloc area
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Leif Lindholm <leif.lindholm@linaro.org>, Stuart Yoder <stuart.yoder@freescale.com>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 11, 2016 at 02:19:05PM +0100, Ard Biesheuvel wrote:
-> Before implementing KASLR for arm64 by building a self-relocating PIE
-> executable, we have to ensure that values we use before the relocation
-> routine is executed are not subject to dynamic relocation themselves.
-> This applies not only to virtual addresses, but also to values that are
-> supplied by the linker at build time and relocated using R_AARCH64_ABS64
-> relocations.
-> 
-> So instead, use assemble time constants, or force the use of static
-> relocations by folding the constants into the instructions.
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On Wed, Jan 13, 2016 at 01:51:10PM +0000, Mark Rutland wrote:
+> On Wed, Jan 13, 2016 at 09:39:41AM +0100, Ard Biesheuvel wrote:
+> > On 12 January 2016 at 19:14, Mark Rutland <mark.rutland@arm.com> wrote:
+> > > On Mon, Jan 11, 2016 at 02:19:00PM +0100, Ard Biesheuvel wrote:
+> > >>  void __init kasan_init(void)
+> > >>  {
+> > >> +     u64 kimg_shadow_start, kimg_shadow_end;
+> > >>       struct memblock_region *reg;
+> > >>
+> > >> +     kimg_shadow_start = round_down((u64)kasan_mem_to_shadow(_text),
+> > >> +                                    SWAPPER_BLOCK_SIZE);
+> > >> +     kimg_shadow_end = round_up((u64)kasan_mem_to_shadow(_end),
+> > >> +                                SWAPPER_BLOCK_SIZE);
+> > >
+> > > This rounding looks suspect to me, given it's applied to the shadow
+> > > addresses rather than the kimage addresses. That's roughly equivalent to
+> > > kasan_mem_to_shadow(round_up(_end, 8 * SWAPPER_BLOCK_SIZE).
+> > >
+> > > I don't think we need any rounding for the kimage addresses. The image
+> > > end is page-granular (and the fine-grained mapping will reflect that).
+> > > Any accesses between _end and roud_up(_end, SWAPPER_BLOCK_SIZE) would be
+> > > bugs (and would most likely fault) regardless of KASAN.
+> > >
+> > > Or am I just being thick here?
+> > >
+> > 
+> > Well, the problem here is that vmemmap_populate() is used as a
+> > surrogate vmalloc() since that is not available yet, and
+> > vmemmap_populate() allocates in SWAPPER_BLOCK_SIZE granularity.
 
-I think we lose a bit of legibility due to the hoops we jump through for
-the new literals. However, it is correct, and I've not managed to come
-up with anything nicer.
+>From a look at the git history, and a chat with Catalin, it sounds like
+the SWAPPER_BLOCK_SIZE granularity is a historical artifact. It happened
+to be easier to implement it that way at some point in the past, but
+there's no reason the 4K/16K/64K cases can't all be handled by the same
+code that would go down to PAGE_SIZE granularity, using sections if
+possible.
 
-FWIW:
+I'll drop that on the TODO list.
 
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+> > If I remove the rounding, I get false positive kasan errors which I
+> > have not quite diagnosed yet, but are probably due to the fact that
+> > the rounding performed by vmemmap_populate() goes in the wrong
+> > direction.
+
+As far as I can see, it implicitly rounds the base down and end up to
+SWAPPER_BLOCK_SIZE granularity.
+
+I can see that it might map too much memory, but I can't see why that
+should trigger KASAN failures. Regardless of what was mapped KASAN
+should stick to the region it cares about, and everything else should
+stay out of that.
+
+When do you see the failures, and are they in any way consistent?
+
+Do you have an example to hand?
+
+> I'll also take a peek.
+
+I haven't managed to trigger KASAN failures with the rounding removed.
+I'm using 4K pages, and running under KVM tool (no EFI, so the memory
+map is a contiguous block).
+
+What does your memory map look like?
 
 Thanks,
 Mark.
-
-> ---
->  arch/arm64/kernel/efi-entry.S |  2 +-
->  arch/arm64/kernel/head.S      | 39 +++++++++++++-------
->  2 files changed, 27 insertions(+), 14 deletions(-)
-> 
-> diff --git a/arch/arm64/kernel/efi-entry.S b/arch/arm64/kernel/efi-entry.S
-> index a773db92908b..f82036e02485 100644
-> --- a/arch/arm64/kernel/efi-entry.S
-> +++ b/arch/arm64/kernel/efi-entry.S
-> @@ -61,7 +61,7 @@ ENTRY(entry)
->  	 */
->  	mov	x20, x0		// DTB address
->  	ldr	x0, [sp, #16]	// relocated _text address
-> -	ldr	x21, =stext_offset
-> +	movz	x21, #:abs_g0:stext_offset
->  	add	x21, x0, x21
->  
->  	/*
-> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-> index 211f75e673f4..5dc8079cef77 100644
-> --- a/arch/arm64/kernel/head.S
-> +++ b/arch/arm64/kernel/head.S
-> @@ -78,12 +78,11 @@
->   * in the entry routines.
->   */
->  	__HEAD
-> -
-> +_head:
->  	/*
->  	 * DO NOT MODIFY. Image header expected by Linux boot-loaders.
->  	 */
->  #ifdef CONFIG_EFI
-> -efi_head:
->  	/*
->  	 * This add instruction has no meaningful effect except that
->  	 * its opcode forms the magic "MZ" signature required by UEFI.
-> @@ -105,14 +104,14 @@ efi_head:
->  	.byte	0x4d
->  	.byte	0x64
->  #ifdef CONFIG_EFI
-> -	.long	pe_header - efi_head		// Offset to the PE header.
-> +	.long	pe_header - _head		// Offset to the PE header.
->  #else
->  	.word	0				// reserved
->  #endif
->  
->  #ifdef CONFIG_EFI
->  	.globl	__efistub_stext_offset
-> -	.set	__efistub_stext_offset, stext - efi_head
-> +	.set	__efistub_stext_offset, stext - _head
->  	.align 3
->  pe_header:
->  	.ascii	"PE"
-> @@ -135,7 +134,7 @@ optional_header:
->  	.long	_end - stext			// SizeOfCode
->  	.long	0				// SizeOfInitializedData
->  	.long	0				// SizeOfUninitializedData
-> -	.long	__efistub_entry - efi_head	// AddressOfEntryPoint
-> +	.long	__efistub_entry - _head		// AddressOfEntryPoint
->  	.long	__efistub_stext_offset		// BaseOfCode
->  
->  extra_header_fields:
-> @@ -150,7 +149,7 @@ extra_header_fields:
->  	.short	0				// MinorSubsystemVersion
->  	.long	0				// Win32VersionValue
->  
-> -	.long	_end - efi_head			// SizeOfImage
-> +	.long	_end - _head			// SizeOfImage
->  
->  	// Everything before the kernel image is considered part of the header
->  	.long	__efistub_stext_offset		// SizeOfHeaders
-> @@ -230,11 +229,13 @@ ENTRY(stext)
->  	 * On return, the CPU will be ready for the MMU to be turned on and
->  	 * the TCR will have been set.
->  	 */
-> -	ldr	x27, =__mmap_switched		// address to jump to after
-> +	ldr	x27, 0f				// address to jump to after
->  						// MMU has been enabled
->  	adr_l	lr, __enable_mmu		// return (PIC) address
->  	b	__cpu_setup			// initialise processor
->  ENDPROC(stext)
-> +	.align	3
-> +0:	.quad	__mmap_switched - (_head - TEXT_OFFSET) + KIMAGE_VADDR
->  
->  /*
->   * Preserve the arguments passed by the bootloader in x0 .. x3
-> @@ -402,7 +403,8 @@ __create_page_tables:
->  	mov	x0, x26				// swapper_pg_dir
->  	ldr	x5, =KIMAGE_VADDR
->  	create_pgd_entry x0, x5, x3, x6
-> -	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
-> +	ldr	w6, kernel_img_size
-> +	add	x6, x6, x5
->  	mov	x3, x24				// phys offset
->  	create_block_map x0, x7, x3, x5, x6
->  
-> @@ -419,6 +421,9 @@ __create_page_tables:
->  	mov	lr, x27
->  	ret
->  ENDPROC(__create_page_tables)
-> +
-> +kernel_img_size:
-> +	.long	_end - (_head - TEXT_OFFSET)
->  	.ltorg
->  
->  /*
-> @@ -426,6 +431,10 @@ ENDPROC(__create_page_tables)
->   */
->  	.set	initial_sp, init_thread_union + THREAD_START_SP
->  __mmap_switched:
-> +	adr_l	x8, vectors			// load VBAR_EL1 with virtual
-> +	msr	vbar_el1, x8			// vector table address
-> +	isb
-> +
->  	// Clear BSS
->  	adr_l	x0, __bss_start
->  	mov	x1, xzr
-> @@ -612,13 +621,19 @@ ENTRY(secondary_startup)
->  	adrp	x26, swapper_pg_dir
->  	bl	__cpu_setup			// initialise processor
->  
-> -	ldr	x21, =secondary_data
-> -	ldr	x27, =__secondary_switched	// address to jump to after enabling the MMU
-> +	ldr	x8, =KIMAGE_VADDR
-> +	ldr	w9, 0f
-> +	sub	x27, x8, w9, sxtw		// address to jump to after enabling the MMU
->  	b	__enable_mmu
->  ENDPROC(secondary_startup)
-> +0:	.long	(_text - TEXT_OFFSET) - __secondary_switched
->  
->  ENTRY(__secondary_switched)
-> -	ldr	x0, [x21]			// get secondary_data.stack
-> +	adr_l	x5, vectors
-> +	msr	vbar_el1, x5
-> +	isb
-> +
-> +	ldr_l	x0, secondary_data		// get secondary_data.stack
->  	mov	sp, x0
->  	and	x0, x0, #~(THREAD_SIZE - 1)
->  	msr	sp_el0, x0			// save thread_info
-> @@ -643,8 +658,6 @@ __enable_mmu:
->  	ubfx	x2, x1, #ID_AA64MMFR0_TGRAN_SHIFT, 4
->  	cmp	x2, #ID_AA64MMFR0_TGRAN_SUPPORTED
->  	b.ne	__no_granule_support
-> -	ldr	x5, =vectors
-> -	msr	vbar_el1, x5
->  	msr	ttbr0_el1, x25			// load TTBR0
->  	msr	ttbr1_el1, x26			// load TTBR1
->  	isb
-> -- 
-> 2.5.0
-> 
