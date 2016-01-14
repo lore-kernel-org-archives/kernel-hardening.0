@@ -1,197 +1,233 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAKv+Gu8vdk-9N_VVG6XWYLp1SM9ynfcsbxwk2xx1mXYq7qN0Cg@mail.gmail.com>
+Date: Thu, 14 Jan 2016 10:46:56 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160114104656.GB25670@leverpostej>
 References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
-	<1452518355-4606-12-git-send-email-ard.biesheuvel@linaro.org>
-	<20160113181211.GL23370@leverpostej>
-	<CAKv+Gu9YWCgNwiJ2x+Ni-GQC-CjPJB-N633AsWP1YmAh0E39qA@mail.gmail.com>
-	<CAKv+Gu8vdk-9N_VVG6XWYLp1SM9ynfcsbxwk2xx1mXYq7qN0Cg@mail.gmail.com>
-Date: Thu, 14 Jan 2016 10:05:42 +0100
-Message-ID: <CAKv+Gu-O+6TzfnWkNUaVU+w-e4TtCs08atMhcWCcYOQwyZ2B=A@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=UTF-8
+ <1452518355-4606-12-git-send-email-ard.biesheuvel@linaro.org>
+ <20160113181211.GL23370@leverpostej>
+ <CAKv+Gu9YWCgNwiJ2x+Ni-GQC-CjPJB-N633AsWP1YmAh0E39qA@mail.gmail.com>
+ <CAKv+Gu8vdk-9N_VVG6XWYLp1SM9ynfcsbxwk2xx1mXYq7qN0Cg@mail.gmail.com>
+ <CAKv+Gu-O+6TzfnWkNUaVU+w-e4TtCs08atMhcWCcYOQwyZ2B=A@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu-O+6TzfnWkNUaVU+w-e4TtCs08atMhcWCcYOQwyZ2B=A@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v3 11/21] arm64: avoid R_AARCH64_ABS64 relocations for
  Image header fields
-To: Mark Rutland <mark.rutland@arm.com>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 14 January 2016 at 09:51, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
-> On 13 January 2016 at 19:48, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
->> On 13 January 2016 at 19:12, Mark Rutland <mark.rutland@arm.com> wrote:
->>> On Mon, Jan 11, 2016 at 02:19:04PM +0100, Ard Biesheuvel wrote:
->>>> Unfortunately, the current way of using the linker to emit build time
->>>> constants into the Image header will no longer work once we switch to
->>>> the use of PIE executables. The reason is that such constants are emitted
->>>> into the binary using R_AARCH64_ABS64 relocations, which we will resolve
->>>> at runtime, not at build time, and the places targeted by those
->>>> relocations will contain zeroes before that.
->>>>
->>>> So move back to assembly time constants or R_AARCH64_ABS32 relocations
->>>> (which, interestingly enough, do get resolved at build time)
->>>
->>> To me it seems very odd that ABS64 and ABS32 are treated differently,
->>> and it makes me somewhat uncomfortable becuase it feels like a bug.
->>>
->>> Do we know whether the inconsistency between ABS64 and ABS32 was
->>> deliberate?
->>>
->>> I couldn't spot anything declaring a difference in the AArch64 ELF
->>> spec, and I'm not sure where else to look.
->>>
->>
->> My assumption is that PIE only defers resolving R_AARCH64_ABS64
->> relocations since those are the only ones that can be used to refer to
->> memory addresses
->>
->
-> OK, digging into the binutils source code, it turns out that indeed,
-> ABSnn relocations where nn equals the ELFnn memory size are treated
-> differently, but only if they have default visibility. This is simply
-> a result of the fact the code path is shared between shared libraries
-> and PIE executables, since PIE executable are fully linked. It also
-> means that we can simply work around it by emitting the linker symbols
-> as hidden.
->
+On Thu, Jan 14, 2016 at 10:05:42AM +0100, Ard Biesheuvel wrote:
+> On 14 January 2016 at 09:51, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> > On 13 January 2016 at 19:48, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> >> On 13 January 2016 at 19:12, Mark Rutland <mark.rutland@arm.com> wrote:
+> >>> On Mon, Jan 11, 2016 at 02:19:04PM +0100, Ard Biesheuvel wrote:
+> >>>> Unfortunately, the current way of using the linker to emit build time
+> >>>> constants into the Image header will no longer work once we switch to
+> >>>> the use of PIE executables. The reason is that such constants are emitted
+> >>>> into the binary using R_AARCH64_ABS64 relocations, which we will resolve
+> >>>> at runtime, not at build time, and the places targeted by those
+> >>>> relocations will contain zeroes before that.
+> >>>>
+> >>>> So move back to assembly time constants or R_AARCH64_ABS32 relocations
+> >>>> (which, interestingly enough, do get resolved at build time)
+> >>>
+> >>> To me it seems very odd that ABS64 and ABS32 are treated differently,
+> >>> and it makes me somewhat uncomfortable becuase it feels like a bug.
+> >>>
+> >>> Do we know whether the inconsistency between ABS64 and ABS32 was
+> >>> deliberate?
+> >>>
+> >>> I couldn't spot anything declaring a difference in the AArch64 ELF
+> >>> spec, and I'm not sure where else to look.
+> >>>
+> >>
+> >> My assumption is that PIE only defers resolving R_AARCH64_ABS64
+> >> relocations since those are the only ones that can be used to refer to
+> >> memory addresses
+> >>
+> >
+> > OK, digging into the binutils source code, it turns out that indeed,
+> > ABSnn relocations where nn equals the ELFnn memory size are treated
+> > differently, but only if they have default visibility. This is simply
+> > a result of the fact the code path is shared between shared libraries
+> > and PIE executables, since PIE executable are fully linked. It also
+> > means that we can simply work around it by emitting the linker symbols
+> > as hidden.
+> >
+> 
+> ... and the bad news is that, while emitting the symbols as hidden
+> turns them from R_AARCH64_ABS64 into a R_AARCH64_RELATIVE relocations,
+> it does not actually force the value to be emitted at build time.
+> 
+> So I am going to stick with the patch, but elaborate in a comment
+> about why R_AARCH64_ABSnn are treated differently if nn equals the
+> pointer size. (look at elfNN_aarch64_final_link_relocate() in binutils
+> if you are keen to look at the code yourself)
 
-... and the bad news is that, while emitting the symbols as hidden
-turns them from R_AARCH64_ABS64 into a R_AARCH64_RELATIVE relocations,
-it does not actually force the value to be emitted at build time.
+Ok. Thanks for digging into that.
 
-So I am going to stick with the patch, but elaborate in a comment
-about why R_AARCH64_ABSnn are treated differently if nn equals the
-pointer size. (look at elfNN_aarch64_final_link_relocate() in binutils
-if you are keen to look at the code yourself)
+One thing though: I would prefer if we could still keep all the LE64
+image header values together, to have them dealt with consistently.
 
--- 
-Ard.
+Could we hide the ABS32 usage behind some macros to do so, e.g.
 
+in image.h:
 
+#define DEFINE_IMAGE_LE64(sym, data) 				\
+	sym##_lo32 = DATA_LE32(data & 0xffffffff);		\
+	sym##_hi32 = DATA_LE32(data >> 32);
 
->
->>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
->>>> ---
->>>>  arch/arm64/include/asm/assembler.h | 15 ++++++++
->>>>  arch/arm64/kernel/head.S           | 17 +++++++--
->>>>  arch/arm64/kernel/image.h          | 37 ++++++--------------
->>>>  3 files changed, 40 insertions(+), 29 deletions(-)
->>>>
->>>> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
->>>> index d8bfcc1ce923..e211af783a3d 100644
->>>> --- a/arch/arm64/include/asm/assembler.h
->>>> +++ b/arch/arm64/include/asm/assembler.h
->>>> @@ -222,4 +222,19 @@ lr       .req    x30             // link register
->>>>       .size   __pi_##x, . - x;        \
->>>>       ENDPROC(x)
->>>>
->>>> +     .macro  le16, val
->>>> +     .byte   \val & 0xff
->>>> +     .byte   (\val >> 8) & 0xff
->>>> +     .endm
->>>> +
->>>> +     .macro  le32, val
->>>> +     le16    \val
->>>> +     le16    (\val >> 16)
->>>> +     .endm
->>>> +
->>>> +     .macro  le64, val
->>>> +     le32    \val
->>>> +     le32    (\val >> 32)
->>>> +     .endm
->>>> +
->>>>  #endif       /* __ASM_ASSEMBLER_H */
->>>> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
->>>> index 350515276541..211f75e673f4 100644
->>>> --- a/arch/arm64/kernel/head.S
->>>> +++ b/arch/arm64/kernel/head.S
->>>> @@ -51,6 +51,17 @@
->>>>  #define KERNEL_START _text
->>>>  #define KERNEL_END   _end
->>>>
->>>> +#ifdef CONFIG_CPU_BIG_ENDIAN
->>>> +#define __HEAD_FLAG_BE       1
->>>> +#else
->>>> +#define __HEAD_FLAG_BE       0
->>>> +#endif
->>>> +
->>>> +#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
->>>> +
->>>> +#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
->>>> +                      (__HEAD_FLAG_PAGE_SIZE << 1))
->>>> +
->>>>  /*
->>>>   * Kernel startup entry point.
->>>>   * ---------------------------
->>>> @@ -83,9 +94,9 @@ efi_head:
->>>>       b       stext                           // branch to kernel start, magic
->>>>       .long   0                               // reserved
->>>>  #endif
->>>> -     .quad   _kernel_offset_le               // Image load offset from start of RAM, little-endian
->>>> -     .quad   _kernel_size_le                 // Effective size of kernel image, little-endian
->>>> -     .quad   _kernel_flags_le                // Informative flags, little-endian
->>>> +     le64    TEXT_OFFSET                     // Image load offset from start of RAM, little-endian
->>>> +     .long   _kernel_size_le, 0              // Effective size of kernel image, little-endian
->>>> +     le64    __HEAD_FLAGS                    // Informative flags, little-endian
->>>>       .quad   0                               // reserved
->>>>       .quad   0                               // reserved
->>>>       .quad   0                               // reserved
->>>> diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
->>>> index bc2abb8b1599..bb6b0e69d0a4 100644
->>>> --- a/arch/arm64/kernel/image.h
->>>> +++ b/arch/arm64/kernel/image.h
->>>> @@ -26,41 +26,26 @@
->>>>   * There aren't any ELF relocations we can use to endian-swap values known only
->>>>   * at link time (e.g. the subtraction of two symbol addresses), so we must get
->>>>   * the linker to endian-swap certain values before emitting them.
->>>> + * Note that this will not work for 64-bit values: these are resolved using
->>>> + * R_AARCH64_ABS64 relocations, which are fixed up at runtime rather than at
->>>> + * build time when building the PIE executable (for KASLR).
->>>>   */
->>>>  #ifdef CONFIG_CPU_BIG_ENDIAN
->>>> -#define DATA_LE64(data)                                      \
->>>> -     ((((data) & 0x00000000000000ff) << 56) |        \
->>>> -      (((data) & 0x000000000000ff00) << 40) |        \
->>>> -      (((data) & 0x0000000000ff0000) << 24) |        \
->>>> -      (((data) & 0x00000000ff000000) << 8)  |        \
->>>> -      (((data) & 0x000000ff00000000) >> 8)  |        \
->>>> -      (((data) & 0x0000ff0000000000) >> 24) |        \
->>>> -      (((data) & 0x00ff000000000000) >> 40) |        \
->>>> -      (((data) & 0xff00000000000000) >> 56))
->>>> +#define DATA_LE32(data)                              \
->>>> +     ((((data) & 0x000000ff) << 24) |        \
->>>> +      (((data) & 0x0000ff00) << 8)  |        \
->>>> +      (((data) & 0x00ff0000) >> 8)  |        \
->>>> +      (((data) & 0xff000000) >> 24))
->>>>  #else
->>>> -#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
->>>> +#define DATA_LE32(data) ((data) & 0xffffffff)
->>>>  #endif
->>>>
->>>> -#ifdef CONFIG_CPU_BIG_ENDIAN
->>>> -#define __HEAD_FLAG_BE       1
->>>> -#else
->>>> -#define __HEAD_FLAG_BE       0
->>>> -#endif
->>>> -
->>>> -#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
->>>> -
->>>> -#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
->>>> -                      (__HEAD_FLAG_PAGE_SIZE << 1))
->>>> -
->>>>  /*
->>>>   * These will output as part of the Image header, which should be little-endian
->>>> - * regardless of the endianness of the kernel. While constant values could be
->>>> - * endian swapped in head.S, all are done here for consistency.
->>>> + * regardless of the endianness of the kernel.
->>>>   */
->>>>  #define HEAD_SYMBOLS                                         \
->>>> -     _kernel_size_le         = DATA_LE64(_end - _text);      \
->>>> -     _kernel_offset_le       = DATA_LE64(TEXT_OFFSET);       \
->>>> -     _kernel_flags_le        = DATA_LE64(__HEAD_FLAGS);
->>>> +     _kernel_size_le         = DATA_LE32(_end - _text);
->>>>
->>>>  #ifdef CONFIG_EFI
->>>>
->>>> --
->>>> 2.5.0
->>>>
+#define HEAD_SYMBOLS						\
+	DEFINE_IMAGE_LE64(_kernel_size_le, _end - _text);	\
+	DEFINE_IMAGE_LE64(_kernel_offset_le, TEXT_OFFSET);	\
+	DEFINE_IMAGE_LE64(_kernel_flags_le, __HEAD_FLAGS);
+
+and in head.S:
+
+#define IMAGE_LE64(sym)	.long sym##_lo32, sym##_hi32
+
+	...
+	IMAGE_LE64(_kernel_size_le)	// Image load offset from start	of RAM, little-endian
+	IMAGE_LE64(_kernel_offset_le)	// Effective size of kernel image, little-endian
+	IMAGE_LE64(_kernel_flags_le)	// Informative flags, little-endian
+	...
+
+Thanks,
+Mark.
+
+> 
+> -- 
+> Ard.
+> 
+> 
+> 
+> >
+> >>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> >>>> ---
+> >>>>  arch/arm64/include/asm/assembler.h | 15 ++++++++
+> >>>>  arch/arm64/kernel/head.S           | 17 +++++++--
+> >>>>  arch/arm64/kernel/image.h          | 37 ++++++--------------
+> >>>>  3 files changed, 40 insertions(+), 29 deletions(-)
+> >>>>
+> >>>> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+> >>>> index d8bfcc1ce923..e211af783a3d 100644
+> >>>> --- a/arch/arm64/include/asm/assembler.h
+> >>>> +++ b/arch/arm64/include/asm/assembler.h
+> >>>> @@ -222,4 +222,19 @@ lr       .req    x30             // link register
+> >>>>       .size   __pi_##x, . - x;        \
+> >>>>       ENDPROC(x)
+> >>>>
+> >>>> +     .macro  le16, val
+> >>>> +     .byte   \val & 0xff
+> >>>> +     .byte   (\val >> 8) & 0xff
+> >>>> +     .endm
+> >>>> +
+> >>>> +     .macro  le32, val
+> >>>> +     le16    \val
+> >>>> +     le16    (\val >> 16)
+> >>>> +     .endm
+> >>>> +
+> >>>> +     .macro  le64, val
+> >>>> +     le32    \val
+> >>>> +     le32    (\val >> 32)
+> >>>> +     .endm
+> >>>> +
+> >>>>  #endif       /* __ASM_ASSEMBLER_H */
+> >>>> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+> >>>> index 350515276541..211f75e673f4 100644
+> >>>> --- a/arch/arm64/kernel/head.S
+> >>>> +++ b/arch/arm64/kernel/head.S
+> >>>> @@ -51,6 +51,17 @@
+> >>>>  #define KERNEL_START _text
+> >>>>  #define KERNEL_END   _end
+> >>>>
+> >>>> +#ifdef CONFIG_CPU_BIG_ENDIAN
+> >>>> +#define __HEAD_FLAG_BE       1
+> >>>> +#else
+> >>>> +#define __HEAD_FLAG_BE       0
+> >>>> +#endif
+> >>>> +
+> >>>> +#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+> >>>> +
+> >>>> +#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
+> >>>> +                      (__HEAD_FLAG_PAGE_SIZE << 1))
+> >>>> +
+> >>>>  /*
+> >>>>   * Kernel startup entry point.
+> >>>>   * ---------------------------
+> >>>> @@ -83,9 +94,9 @@ efi_head:
+> >>>>       b       stext                           // branch to kernel start, magic
+> >>>>       .long   0                               // reserved
+> >>>>  #endif
+> >>>> -     .quad   _kernel_offset_le               // Image load offset from start of RAM, little-endian
+> >>>> -     .quad   _kernel_size_le                 // Effective size of kernel image, little-endian
+> >>>> -     .quad   _kernel_flags_le                // Informative flags, little-endian
+> >>>> +     le64    TEXT_OFFSET                     // Image load offset from start of RAM, little-endian
+> >>>> +     .long   _kernel_size_le, 0              // Effective size of kernel image, little-endian
+> >>>> +     le64    __HEAD_FLAGS                    // Informative flags, little-endian
+> >>>>       .quad   0                               // reserved
+> >>>>       .quad   0                               // reserved
+> >>>>       .quad   0                               // reserved
+> >>>> diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
+> >>>> index bc2abb8b1599..bb6b0e69d0a4 100644
+> >>>> --- a/arch/arm64/kernel/image.h
+> >>>> +++ b/arch/arm64/kernel/image.h
+> >>>> @@ -26,41 +26,26 @@
+> >>>>   * There aren't any ELF relocations we can use to endian-swap values known only
+> >>>>   * at link time (e.g. the subtraction of two symbol addresses), so we must get
+> >>>>   * the linker to endian-swap certain values before emitting them.
+> >>>> + * Note that this will not work for 64-bit values: these are resolved using
+> >>>> + * R_AARCH64_ABS64 relocations, which are fixed up at runtime rather than at
+> >>>> + * build time when building the PIE executable (for KASLR).
+> >>>>   */
+> >>>>  #ifdef CONFIG_CPU_BIG_ENDIAN
+> >>>> -#define DATA_LE64(data)                                      \
+> >>>> -     ((((data) & 0x00000000000000ff) << 56) |        \
+> >>>> -      (((data) & 0x000000000000ff00) << 40) |        \
+> >>>> -      (((data) & 0x0000000000ff0000) << 24) |        \
+> >>>> -      (((data) & 0x00000000ff000000) << 8)  |        \
+> >>>> -      (((data) & 0x000000ff00000000) >> 8)  |        \
+> >>>> -      (((data) & 0x0000ff0000000000) >> 24) |        \
+> >>>> -      (((data) & 0x00ff000000000000) >> 40) |        \
+> >>>> -      (((data) & 0xff00000000000000) >> 56))
+> >>>> +#define DATA_LE32(data)                              \
+> >>>> +     ((((data) & 0x000000ff) << 24) |        \
+> >>>> +      (((data) & 0x0000ff00) << 8)  |        \
+> >>>> +      (((data) & 0x00ff0000) >> 8)  |        \
+> >>>> +      (((data) & 0xff000000) >> 24))
+> >>>>  #else
+> >>>> -#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
+> >>>> +#define DATA_LE32(data) ((data) & 0xffffffff)
+> >>>>  #endif
+> >>>>
+> >>>> -#ifdef CONFIG_CPU_BIG_ENDIAN
+> >>>> -#define __HEAD_FLAG_BE       1
+> >>>> -#else
+> >>>> -#define __HEAD_FLAG_BE       0
+> >>>> -#endif
+> >>>> -
+> >>>> -#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+> >>>> -
+> >>>> -#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
+> >>>> -                      (__HEAD_FLAG_PAGE_SIZE << 1))
+> >>>> -
+> >>>>  /*
+> >>>>   * These will output as part of the Image header, which should be little-endian
+> >>>> - * regardless of the endianness of the kernel. While constant values could be
+> >>>> - * endian swapped in head.S, all are done here for consistency.
+> >>>> + * regardless of the endianness of the kernel.
+> >>>>   */
+> >>>>  #define HEAD_SYMBOLS                                         \
+> >>>> -     _kernel_size_le         = DATA_LE64(_end - _text);      \
+> >>>> -     _kernel_offset_le       = DATA_LE64(TEXT_OFFSET);       \
+> >>>> -     _kernel_flags_le        = DATA_LE64(__HEAD_FLAGS);
+> >>>> +     _kernel_size_le         = DATA_LE32(_end - _text);
+> >>>>
+> >>>>  #ifdef CONFIG_EFI
+> >>>>
+> >>>> --
+> >>>> 2.5.0
+> >>>>
+> 
