@@ -1,77 +1,180 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1450755641-7856-1-git-send-email-laura@labbott.name>
- <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
- <5679ACE9.70701@labbott.name>
- <CAGXu5jJQKaA1qgLEV9vXEVH4QBC__Vg141BX22ZsZzW6p9yk4Q@mail.gmail.com>
- <568C8741.4040709@labbott.name>
- <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org>
- <568F0F75.4090101@labbott.name>
- <alpine.DEB.2.20.1601080806020.4128@east.gentwo.org>
-From: Laura Abbott <laura@labbott.name>
-Message-ID: <56971AE1.1020706@labbott.name>
-Date: Wed, 13 Jan 2016 19:49:53 -0800
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1601080806020.4128@east.gentwo.org>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
-To: Christoph Lameter <cl@linux.com>
-Cc: Kees Cook <keescook@chromium.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAKv+Gu9YWCgNwiJ2x+Ni-GQC-CjPJB-N633AsWP1YmAh0E39qA@mail.gmail.com>
+References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
+	<1452518355-4606-12-git-send-email-ard.biesheuvel@linaro.org>
+	<20160113181211.GL23370@leverpostej>
+	<CAKv+Gu9YWCgNwiJ2x+Ni-GQC-CjPJB-N633AsWP1YmAh0E39qA@mail.gmail.com>
+Date: Thu, 14 Jan 2016 09:51:51 +0100
+Message-ID: <CAKv+Gu8vdk-9N_VVG6XWYLp1SM9ynfcsbxwk2xx1mXYq7qN0Cg@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 11/21] arm64: avoid R_AARCH64_ABS64 relocations for
+ Image header fields
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Leif Lindholm <leif.lindholm@linaro.org>, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Stuart Yoder <stuart.yoder@freescale.com>, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Arnd Bergmann <arnd@arndb.de>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1/8/16 6:07 AM, Christoph Lameter wrote:
-> On Thu, 7 Jan 2016, Laura Abbott wrote:
+On 13 January 2016 at 19:48, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> On 13 January 2016 at 19:12, Mark Rutland <mark.rutland@arm.com> wrote:
+>> On Mon, Jan 11, 2016 at 02:19:04PM +0100, Ard Biesheuvel wrote:
+>>> Unfortunately, the current way of using the linker to emit build time
+>>> constants into the Image header will no longer work once we switch to
+>>> the use of PIE executables. The reason is that such constants are emitted
+>>> into the binary using R_AARCH64_ABS64 relocations, which we will resolve
+>>> at runtime, not at build time, and the places targeted by those
+>>> relocations will contain zeroes before that.
+>>>
+>>> So move back to assembly time constants or R_AARCH64_ABS32 relocations
+>>> (which, interestingly enough, do get resolved at build time)
+>>
+>> To me it seems very odd that ABS64 and ABS32 are treated differently,
+>> and it makes me somewhat uncomfortable becuase it feels like a bug.
+>>
+>> Do we know whether the inconsistency between ABS64 and ABS32 was
+>> deliberate?
+>>
+>> I couldn't spot anything declaring a difference in the AArch64 ELF
+>> spec, and I'm not sure where else to look.
+>>
 >
->> The slub_debug=P not only poisons it enables other consistency checks on the
->> slab as well, assuming my understanding of what check_object does is correct.
->> My hope was to have the poison part only and none of the consistency checks in
->> an attempt to mitigate performance issues. I misunderstood when the checks
->> actually run and how SLUB_DEBUG was used.
->
-> Ok I see that there pointer check is done without checking the
-> corresponding debug flag. Patch attached thar fixes it.
->
->> Another option would be to have a flag like SLAB_NO_SANITY_CHECK.
->> sanitization enablement would just be that and SLAB_POISON
->> in the debug options. The disadvantage to this approach would be losing
->> the sanitization for ->ctor caches (the grsecurity version works around this
->> by re-initializing with ->ctor, I haven't heard any feedback if this actually
->> acceptable) and not having some of the fast paths enabled
->> (assuming I'm understanding the code path correctly.) which would also
->> be a performance penalty
->
-> I think we simply need to fix the missing check there. There is already a
-> flag SLAB_DEBUG_FREE for the pointer checks.
->
+> My assumption is that PIE only defers resolving R_AARCH64_ABS64
+> relocations since those are the only ones that can be used to refer to
+> memory addresses
 >
 
-The patch improves performance but the overall performance of these full
-sanitization patches is still significantly better than slub_debug=P. I'll
-put some effort into seeing if I can figure out where the slow down is
-coming from.
+OK, digging into the binutils source code, it turns out that indeed,
+ABSnn relocations where nn equals the ELFnn memory size are treated
+differently, but only if they have default visibility. This is simply
+a result of the fact the code path is shared between shared libraries
+and PIE executables, since PIE executable are fully linked. It also
+means that we can simply work around it by emitting the linker symbols
+as hidden.
 
-Thanks,
-Laura
 
->
-> Subject: slub: Only perform pointer checks in check_object when SLAB_DEBUG_FREE is set
->
-> Seems that check_object() always checks for pointer issues currently.
->
-> Signed-off-by: Christoph Lameter <cl@linux.com>
->
-> Index: linux/mm/slub.c
-> ===================================================================
-> --- linux.orig/mm/slub.c
-> +++ linux/mm/slub.c
-> @@ -848,6 +848,9 @@ static int check_object(struct kmem_cach
->   		 */
->   		return 1;
->
-> +	if (!(s->flags & SLAB_DEBUG_FREE))
-> +		return 1;
-> +
->   	/* Check free pointer validity */
->   	if (!check_valid_pointer(s, page, get_freepointer(s, p))) {
->   		object_err(s, page, p, "Freepointer corrupt");
->
+>>> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+>>> ---
+>>>  arch/arm64/include/asm/assembler.h | 15 ++++++++
+>>>  arch/arm64/kernel/head.S           | 17 +++++++--
+>>>  arch/arm64/kernel/image.h          | 37 ++++++--------------
+>>>  3 files changed, 40 insertions(+), 29 deletions(-)
+>>>
+>>> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+>>> index d8bfcc1ce923..e211af783a3d 100644
+>>> --- a/arch/arm64/include/asm/assembler.h
+>>> +++ b/arch/arm64/include/asm/assembler.h
+>>> @@ -222,4 +222,19 @@ lr       .req    x30             // link register
+>>>       .size   __pi_##x, . - x;        \
+>>>       ENDPROC(x)
+>>>
+>>> +     .macro  le16, val
+>>> +     .byte   \val & 0xff
+>>> +     .byte   (\val >> 8) & 0xff
+>>> +     .endm
+>>> +
+>>> +     .macro  le32, val
+>>> +     le16    \val
+>>> +     le16    (\val >> 16)
+>>> +     .endm
+>>> +
+>>> +     .macro  le64, val
+>>> +     le32    \val
+>>> +     le32    (\val >> 32)
+>>> +     .endm
+>>> +
+>>>  #endif       /* __ASM_ASSEMBLER_H */
+>>> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+>>> index 350515276541..211f75e673f4 100644
+>>> --- a/arch/arm64/kernel/head.S
+>>> +++ b/arch/arm64/kernel/head.S
+>>> @@ -51,6 +51,17 @@
+>>>  #define KERNEL_START _text
+>>>  #define KERNEL_END   _end
+>>>
+>>> +#ifdef CONFIG_CPU_BIG_ENDIAN
+>>> +#define __HEAD_FLAG_BE       1
+>>> +#else
+>>> +#define __HEAD_FLAG_BE       0
+>>> +#endif
+>>> +
+>>> +#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+>>> +
+>>> +#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
+>>> +                      (__HEAD_FLAG_PAGE_SIZE << 1))
+>>> +
+>>>  /*
+>>>   * Kernel startup entry point.
+>>>   * ---------------------------
+>>> @@ -83,9 +94,9 @@ efi_head:
+>>>       b       stext                           // branch to kernel start, magic
+>>>       .long   0                               // reserved
+>>>  #endif
+>>> -     .quad   _kernel_offset_le               // Image load offset from start of RAM, little-endian
+>>> -     .quad   _kernel_size_le                 // Effective size of kernel image, little-endian
+>>> -     .quad   _kernel_flags_le                // Informative flags, little-endian
+>>> +     le64    TEXT_OFFSET                     // Image load offset from start of RAM, little-endian
+>>> +     .long   _kernel_size_le, 0              // Effective size of kernel image, little-endian
+>>> +     le64    __HEAD_FLAGS                    // Informative flags, little-endian
+>>>       .quad   0                               // reserved
+>>>       .quad   0                               // reserved
+>>>       .quad   0                               // reserved
+>>> diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
+>>> index bc2abb8b1599..bb6b0e69d0a4 100644
+>>> --- a/arch/arm64/kernel/image.h
+>>> +++ b/arch/arm64/kernel/image.h
+>>> @@ -26,41 +26,26 @@
+>>>   * There aren't any ELF relocations we can use to endian-swap values known only
+>>>   * at link time (e.g. the subtraction of two symbol addresses), so we must get
+>>>   * the linker to endian-swap certain values before emitting them.
+>>> + * Note that this will not work for 64-bit values: these are resolved using
+>>> + * R_AARCH64_ABS64 relocations, which are fixed up at runtime rather than at
+>>> + * build time when building the PIE executable (for KASLR).
+>>>   */
+>>>  #ifdef CONFIG_CPU_BIG_ENDIAN
+>>> -#define DATA_LE64(data)                                      \
+>>> -     ((((data) & 0x00000000000000ff) << 56) |        \
+>>> -      (((data) & 0x000000000000ff00) << 40) |        \
+>>> -      (((data) & 0x0000000000ff0000) << 24) |        \
+>>> -      (((data) & 0x00000000ff000000) << 8)  |        \
+>>> -      (((data) & 0x000000ff00000000) >> 8)  |        \
+>>> -      (((data) & 0x0000ff0000000000) >> 24) |        \
+>>> -      (((data) & 0x00ff000000000000) >> 40) |        \
+>>> -      (((data) & 0xff00000000000000) >> 56))
+>>> +#define DATA_LE32(data)                              \
+>>> +     ((((data) & 0x000000ff) << 24) |        \
+>>> +      (((data) & 0x0000ff00) << 8)  |        \
+>>> +      (((data) & 0x00ff0000) >> 8)  |        \
+>>> +      (((data) & 0xff000000) >> 24))
+>>>  #else
+>>> -#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
+>>> +#define DATA_LE32(data) ((data) & 0xffffffff)
+>>>  #endif
+>>>
+>>> -#ifdef CONFIG_CPU_BIG_ENDIAN
+>>> -#define __HEAD_FLAG_BE       1
+>>> -#else
+>>> -#define __HEAD_FLAG_BE       0
+>>> -#endif
+>>> -
+>>> -#define __HEAD_FLAG_PAGE_SIZE ((PAGE_SHIFT - 10) / 2)
+>>> -
+>>> -#define __HEAD_FLAGS ((__HEAD_FLAG_BE << 0) |        \
+>>> -                      (__HEAD_FLAG_PAGE_SIZE << 1))
+>>> -
+>>>  /*
+>>>   * These will output as part of the Image header, which should be little-endian
+>>> - * regardless of the endianness of the kernel. While constant values could be
+>>> - * endian swapped in head.S, all are done here for consistency.
+>>> + * regardless of the endianness of the kernel.
+>>>   */
+>>>  #define HEAD_SYMBOLS                                         \
+>>> -     _kernel_size_le         = DATA_LE64(_end - _text);      \
+>>> -     _kernel_offset_le       = DATA_LE64(TEXT_OFFSET);       \
+>>> -     _kernel_flags_le        = DATA_LE64(__HEAD_FLAGS);
+>>> +     _kernel_size_le         = DATA_LE32(_end - _text);
+>>>
+>>>  #ifdef CONFIG_EFI
+>>>
+>>> --
+>>> 2.5.0
+>>>
