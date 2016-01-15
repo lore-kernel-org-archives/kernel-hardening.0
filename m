@@ -1,92 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Fri, 15 Jan 2016 01:43:59 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13@ORSMSX107.amr.corp.intel.com>
-Content-Type: multipart/alternative;
-	boundary="_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_"
 MIME-Version: 1.0
-Subject: [kernel-hardening] Still working on PAX_USERCOPY
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Kees Cook <keescook@chromium.org>
+In-Reply-To: <20160114185701.GA28181@leverpostej>
+References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
+	<1452518355-4606-8-git-send-email-ard.biesheuvel@linaro.org>
+	<20160112181336.GF4858@leverpostej>
+	<CAKv+Gu-TS7w=AVBceGhsQkQzVCv+u7Gh6ojftwW1iaE+d0yrYw@mail.gmail.com>
+	<20160113135109.GJ23370@leverpostej>
+	<20160114185701.GA28181@leverpostej>
+Date: Fri, 15 Jan 2016 10:54:26 +0100
+Message-ID: <CAKv+Gu-mPcXBTpENRaM5qo0nV_z93ZKw=5o5xVLNMU7QfiRCHQ@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 07/21] arm64: move kernel image to base of vmalloc area
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, Sharma Bhupesh <bhupesh.sharma@freescale.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Leif Lindholm <leif.lindholm@linaro.org>, Stuart Yoder <stuart.yoder@freescale.com>, Marc Zyngier <marc.zyngier@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-
-
-Just a brief status update on my work on PAX_USERCOPY. I've ditched my firs=
-t two attempts at doing somewhat simple minded cut'n'patch and am going to =
-have to take a more engineering (e.g. understanding what's really going on)=
- approach. The good news is that I've made enough mistakes to think there a=
-ren't that many left for a project this size.
-
-
---_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_
-Content-Type: text/html; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-
-<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
-osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
-xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
-//www.w3.org/TR/REC-html40">
-<head>
-<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+On 14 January 2016 at 19:57, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Wed, Jan 13, 2016 at 01:51:10PM +0000, Mark Rutland wrote:
+>> On Wed, Jan 13, 2016 at 09:39:41AM +0100, Ard Biesheuvel wrote:
+>> > On 12 January 2016 at 19:14, Mark Rutland <mark.rutland@arm.com> wrote:
+>> > > On Mon, Jan 11, 2016 at 02:19:00PM +0100, Ard Biesheuvel wrote:
+>> > >>  void __init kasan_init(void)
+>> > >>  {
+>> > >> +     u64 kimg_shadow_start, kimg_shadow_end;
+>> > >>       struct memblock_region *reg;
+>> > >>
+>> > >> +     kimg_shadow_start = round_down((u64)kasan_mem_to_shadow(_text),
+>> > >> +                                    SWAPPER_BLOCK_SIZE);
+>> > >> +     kimg_shadow_end = round_up((u64)kasan_mem_to_shadow(_end),
+>> > >> +                                SWAPPER_BLOCK_SIZE);
+>> > >
+>> > > This rounding looks suspect to me, given it's applied to the shadow
+>> > > addresses rather than the kimage addresses. That's roughly equivalent to
+>> > > kasan_mem_to_shadow(round_up(_end, 8 * SWAPPER_BLOCK_SIZE).
+>> > >
+>> > > I don't think we need any rounding for the kimage addresses. The image
+>> > > end is page-granular (and the fine-grained mapping will reflect that).
+>> > > Any accesses between _end and roud_up(_end, SWAPPER_BLOCK_SIZE) would be
+>> > > bugs (and would most likely fault) regardless of KASAN.
+>> > >
+>> > > Or am I just being thick here?
+>> > >
+>> >
+>> > Well, the problem here is that vmemmap_populate() is used as a
+>> > surrogate vmalloc() since that is not available yet, and
+>> > vmemmap_populate() allocates in SWAPPER_BLOCK_SIZE granularity.
 >
-<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
-<style><!--
-/* Font Definitions */
-@font-face
-	{font-family:"Cambria Math";
-	panose-1:2 4 5 3 5 4 6 3 2 4;}
-@font-face
-	{font-family:Calibri;
-	panose-1:2 15 5 2 2 2 4 3 2 4;}
-/* Style Definitions */
-p.MsoNormal, li.MsoNormal, div.MsoNormal
-	{margin:0in;
-	margin-bottom:.0001pt;
-	font-size:11.0pt;
-	font-family:"Calibri",sans-serif;}
-a:link, span.MsoHyperlink
-	{mso-style-priority:99;
-	color:#0563C1;
-	text-decoration:underline;}
-a:visited, span.MsoHyperlinkFollowed
-	{mso-style-priority:99;
-	color:#954F72;
-	text-decoration:underline;}
-span.EmailStyle17
-	{mso-style-type:personal-compose;
-	font-family:"Calibri",sans-serif;
-	color:windowtext;}
-.MsoChpDefault
-	{mso-style-type:export-only;
-	font-family:"Calibri",sans-serif;}
-@page WordSection1
-	{size:8.5in 11.0in;
-	margin:1.0in 1.0in 1.0in 1.0in;}
-div.WordSection1
-	{page:WordSection1;}
---></style><!--[if gte mso 9]><xml>
-<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
-</xml><![endif]--><!--[if gte mso 9]><xml>
-<o:shapelayout v:ext=3D"edit">
-<o:idmap v:ext=3D"edit" data=3D"1" />
-</o:shapelayout></xml><![endif]-->
-</head>
-<body lang=3D"EN-US" link=3D"#0563C1" vlink=3D"#954F72">
-<div class=3D"WordSection1">
-<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
-<p class=3D"MsoNormal">Just a brief status update on my work on PAX_USERCOP=
-Y. I&#8217;ve ditched my first two attempts at doing somewhat simple minded=
- cut&#8217;n&#8217;patch and am going to have to take a more engineering (e=
-.g. understanding what&#8217;s really going on) approach.
- The good news is that I&#8217;ve made enough mistakes to think there aren&=
-#8217;t that many left for a project this size.<o:p></o:p></p>
-<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
-</div>
-</body>
-</html>
+> From a look at the git history, and a chat with Catalin, it sounds like
+> the SWAPPER_BLOCK_SIZE granularity is a historical artifact. It happened
+> to be easier to implement it that way at some point in the past, but
+> there's no reason the 4K/16K/64K cases can't all be handled by the same
+> code that would go down to PAGE_SIZE granularity, using sections if
+> possible.
+>
+> I'll drop that on the TODO list.
+>
 
---_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_--
+OK
+
+>> > If I remove the rounding, I get false positive kasan errors which I
+>> > have not quite diagnosed yet, but are probably due to the fact that
+>> > the rounding performed by vmemmap_populate() goes in the wrong
+>> > direction.
+>
+> As far as I can see, it implicitly rounds the base down and end up to
+> SWAPPER_BLOCK_SIZE granularity.
+>
+> I can see that it might map too much memory, but I can't see why that
+> should trigger KASAN failures. Regardless of what was mapped KASAN
+> should stick to the region it cares about, and everything else should
+> stay out of that.
+>
+> When do you see the failures, and are they in any way consistent?
+>
+> Do you have an example to hand?
+>
+
+For some reason, this issue has evaporated, i.e., I can no longer
+reproduce it on my WIP v4 branch.
+So I will remove the rounding.
+
+Thanks,
+Ard.
+
+
+>> I'll also take a peek.
+>
+> I haven't managed to trigger KASAN failures with the rounding removed.
+> I'm using 4K pages, and running under KVM tool (no EFI, so the memory
+> map is a contiguous block).
+>
+> What does your memory map look like?
+>
+> Thanks,
+> Mark.
