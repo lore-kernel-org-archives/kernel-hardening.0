@@ -1,66 +1,92 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 15 Jan 2016 01:36:55 +0100
-From: Hanno =?UTF-8?B?QsO2Y2s=?= <hanno@hboeck.de>
-Message-ID: <20160115013655.5f0ae253@pc1>
-In-Reply-To: <58374.1452813069@turing-police.cc.vt.edu>
-References: <58374.1452813069@turing-police.cc.vt.edu>
-Mime-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512; protocol="application/pgp-signature"; boundary="=_zucker.schokokeks.org-22812-1452818179-0001-2"
-Subject: Re: [kernel-hardening] For whoever's looking at memory santizing..
-To: kernel-hardening@lists.openwall.com
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Fri, 15 Jan 2016 01:43:59 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13@ORSMSX107.amr.corp.intel.com>
+Content-Type: multipart/alternative;
+	boundary="_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_"
+MIME-Version: 1.0
+Subject: [kernel-hardening] Still working on PAX_USERCOPY
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a MIME-formatted message.  If you see this text it means that your
-E-mail software does not support MIME-formatted messages.
-
---=_zucker.schokokeks.org-22812-1452818179-0001-2
-Content-Type: text/plain; charset=UTF-8
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: quoted-printable
 
-On Thu, 14 Jan 2016 18:11:09 -0500
-Valdis Kletnieks <Valdis.Kletnieks@vt.edu> wrote:
 
-> If you need a real-life example of why we should be doing it
-> consistently:
->=20
-> http://venturebeat.com/2016/01/13/nvidia-blames-apple-for-bug-that-expose=
-s-porn-browsing-in-chromes-incognito-mode/
+Just a brief status update on my work on PAX_USERCOPY. I've ditched my firs=
+t two attempts at doing somewhat simple minded cut'n'patch and am going to =
+have to take a more engineering (e.g. understanding what's really going on)=
+ approach. The good news is that I've made enough mistakes to think there a=
+ren't that many left for a project this size.
 
-This article seems to be only about OS X.
 
-I hope it's no secret that this is a problem on Linux as well:
-https://hsmr.cc/palinopsia/
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 
-And from all I'm aware it's unfixed.
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-micr=
+osoft-com:office:office" xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" xmlns=3D"http:=
+//www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	margin-bottom:.0001pt;
+	font-size:11.0pt;
+	font-family:"Calibri",sans-serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#0563C1;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:#954F72;
+	text-decoration:underline;}
+span.EmailStyle17
+	{mso-style-type:personal-compose;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-family:"Calibri",sans-serif;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]-->
+</head>
+<body lang=3D"EN-US" link=3D"#0563C1" vlink=3D"#954F72">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+<p class=3D"MsoNormal">Just a brief status update on my work on PAX_USERCOP=
+Y. I&#8217;ve ditched my first two attempts at doing somewhat simple minded=
+ cut&#8217;n&#8217;patch and am going to have to take a more engineering (e=
+.g. understanding what&#8217;s really going on) approach.
+ The good news is that I&#8217;ve made enough mistakes to think there aren&=
+#8217;t that many left for a project this size.<o:p></o:p></p>
+<p class=3D"MsoNormal"><o:p>&nbsp;</o:p></p>
+</div>
+</body>
+</html>
 
---=20
-Hanno B=C3=B6ck
-http://hboeck.de/
-
-mail/jabber: hanno@hboeck.de
-GPG: BBB51E42
-
---=_zucker.schokokeks.org-22812-1452818179-0001-2
-Content-Type: application/pgp-signature
-Content-Transfer-Encoding: 7bit
-Content-Description: OpenPGP digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCgAGBQJWmD8nAAoJEKWIAHK7tR5CgeIP/jKbYhMYfeXLgN+r68oPxYAh
-pDPUIQhVBOMqMaOk7ZCS2kQvCZ+3Vb91nb9Uw4JQ9IhVb80WUIPNX2LR5yOFOQJz
-f2S9oIzHrk/yb0uwp3gxxWugIDwpEsc5akCMoGVtTFuOlB92ocFxJwbEdHLculEJ
-blGZOyp4N0bN31illR8w5LAF6cY6HhkGNjXgPcv3w4QTnWL0fPYejYcafK6UgLHA
-F+SXdFJ6Nc+9psFXA1wmbmnoNwYSda5CNSclMMgeLNXBUIXJX3zQlwhPpIgjveEb
-wfjqOFH8qqH2HkeS68ICi2CXcgtQ5R8vkjRTPcOtvCRwlrXoDfey5Bqa1Bglr3hu
-H7kI4WLOO09NEAMVnvdyfLxJ4oK16HS2x/AT0bLlHvDVdM5PRTBPLi91uBVZWpFZ
-usScR9/jBize/10esgzrZYhjYse9ycvJTDGPHW5Z1JyQ+AF6+aPIfAIdmY/ZDm1B
-GRIpVU/wBBvizxgmqEKs72bnjvaljVhu+uh4CSlyN55FYLbKV6emGaEn/xTZo0D9
-GbXuwUJeKQH321r6Yxs6Vmelwdkk4pq1kZ+8nXonN2vRH3vaSbOmxJgG4f2FNh39
-bi3B/IhuRdsA6/9nJgciE6I1p4SDO2kyYtCu8N81YsFFiyMXnTN3EqrjgWSzhfif
-9t1Rlo0/bmB1ALZDXiah
-=eZ/8
------END PGP SIGNATURE-----
-
---=_zucker.schokokeks.org-22812-1452818179-0001-2--
+--_000_99FC4B6EFCEFD44486C35F4C281DC6731F1FBD13ORSMSX107amrcor_--
