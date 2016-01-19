@@ -1,112 +1,85 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 19 Jan 2016 10:08:38 -0800
-Message-Id: <1453226922-16831-5-git-send-email-keescook@chromium.org>
+Date: Tue, 19 Jan 2016 10:08:42 -0800
+Message-Id: <1453226922-16831-9-git-send-email-keescook@chromium.org>
 In-Reply-To: <1453226922-16831-1-git-send-email-keescook@chromium.org>
 References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v4 4/8] init: create cmdline param to disable readonly
+Subject: [kernel-hardening] [PATCH v4 8/8] x86, vdso: mark vDSO read-only after init
 To: Ingo Molnar <mingo@redhat.com>
 Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-It may be useful to debug writes to the readonly sections of memory,
-so provide a cmdline "rodata=off" to allow for this. This can be
-expanded in the future to support "log" and "write" modes, but that
-will need to be architecture-specific.
+The vDSO does not need to be writable after __init, so mark it as
+__ro_after_init. The result kills the exploit method of writing to the
+vDSO from kernel space resulting in userspace executing the modified code,
+as shown here to bypass SMEP restrictions: http://itszn.com/blog/?p=21
 
-Suggested-by: H. Peter Anvin <hpa@zytor.com>
+The memory map (with added vDSO address reporting) shows the vDSO moving
+into read-only memory:
+
+Before:
+[    0.143067] vDSO @ ffffffff82004000
+[    0.143551] vDSO @ ffffffff82006000
+---[ High Kernel Mapping ]---
+0xffffffff80000000-0xffffffff81000000      16M                         pmd
+0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
+0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
+0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
+0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
+0xffffffff81e00000-0xffffffff81e05000      20K   ro             GLB NX pte
+0xffffffff81e05000-0xffffffff82000000    2028K   ro                 NX pte
+0xffffffff82000000-0xffffffff8214f000    1340K   RW             GLB NX pte
+0xffffffff8214f000-0xffffffff82281000    1224K   RW                 NX pte
+0xffffffff82281000-0xffffffff82400000    1532K   RW             GLB NX pte
+0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
+0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+
+After:
+[    0.145062] vDSO @ ffffffff81da1000
+[    0.146057] vDSO @ ffffffff81da4000
+---[ High Kernel Mapping ]---
+0xffffffff80000000-0xffffffff81000000      16M                         pmd
+0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
+0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
+0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
+0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
+0xffffffff81e00000-0xffffffff81e0b000      44K   ro             GLB NX pte
+0xffffffff81e0b000-0xffffffff82000000    2004K   ro                 NX pte
+0xffffffff82000000-0xffffffff8214c000    1328K   RW             GLB NX pte
+0xffffffff8214c000-0xffffffff8227e000    1224K   RW                 NX pte
+0xffffffff8227e000-0xffffffff82400000    1544K   RW             GLB NX pte
+0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
+0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+
+Based on work by PaX Team and Brad Spengler.
+
 Signed-off-by: Kees Cook <keescook@chromium.org>
+Acked-by: Andy Lutomirski <luto@kernel.org>
 ---
- Documentation/kernel-parameters.txt |  4 ++++
- init/main.c                         | 27 +++++++++++++++++++++++----
- kernel/debug/kdb/kdb_bp.c           |  4 +---
- 3 files changed, 28 insertions(+), 7 deletions(-)
+ arch/x86/entry/vdso/vdso2c.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index 3ea869d7a31c..bf4820c53992 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -3450,6 +3450,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 
- 	ro		[KNL] Mount root device read-only on boot
- 
-+	rodata=		[KNL]
-+		on	Mark read-only kernel memory as read-only (default).
-+		off	Leave read-only kernel memory writable for debugging.
-+
- 	root=		[KNL] Root filesystem
- 			See name_to_dev_t comment in init/do_mounts.c.
- 
-diff --git a/init/main.c b/init/main.c
-index c6ebefafa496..93dfb300cdfd 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -93,9 +93,6 @@ static int kernel_init(void *);
- extern void init_IRQ(void);
- extern void fork_init(void);
- extern void radix_tree_init(void);
--#ifndef CONFIG_DEBUG_RODATA
--static inline void mark_rodata_ro(void) { }
--#endif
- 
- /*
-  * Debug helper: via this flag we know that we are in 'early bootup code'
-@@ -929,6 +926,28 @@ static int try_to_run_init_process(const char *init_filename)
- 
- static noinline void __init kernel_init_freeable(void);
- 
-+#ifdef CONFIG_DEBUG_RODATA
-+static bool rodata_enabled = true;
-+static int __init set_debug_rodata(char *str)
-+{
-+	return strtobool(str, &rodata_enabled);
-+}
-+__setup("rodata=", set_debug_rodata);
-+
-+static void mark_readonly(void)
-+{
-+	if (rodata_enabled)
-+		mark_rodata_ro();
-+	else
-+		pr_info("Kernel memory protection disabled.\n");
-+}
-+#else
-+static inline void mark_readonly(void)
-+{
-+	pr_warn("This architecture does not have kernel memory protection.\n");
-+}
-+#endif
-+
- static int __ref kernel_init(void *unused)
- {
- 	int ret;
-@@ -937,7 +956,7 @@ static int __ref kernel_init(void *unused)
- 	/* need to finish all async __init code before freeing the memory */
- 	async_synchronize_full();
- 	free_initmem();
--	mark_rodata_ro();
-+	mark_readonly();
- 	system_state = SYSTEM_RUNNING;
- 	numa_default_policy();
- 
-diff --git a/kernel/debug/kdb/kdb_bp.c b/kernel/debug/kdb/kdb_bp.c
-index e1dbf4a2c69e..90ff129c88a2 100644
---- a/kernel/debug/kdb/kdb_bp.c
-+++ b/kernel/debug/kdb/kdb_bp.c
-@@ -153,13 +153,11 @@ static int _kdb_bp_install(struct pt_regs *regs, kdb_bp_t *bp)
- 	} else {
- 		kdb_printf("%s: failed to set breakpoint at 0x%lx\n",
- 			   __func__, bp->bp_addr);
--#ifdef CONFIG_DEBUG_RODATA
- 		if (!bp->bp_type) {
- 			kdb_printf("Software breakpoints are unavailable.\n"
--				   "  Change the kernel CONFIG_DEBUG_RODATA=n\n"
-+				   "  Boot the kernel with rodata=off\n"
- 				   "  OR use hw breaks: help bph\n");
- 		}
--#endif
- 		return 1;
+diff --git a/arch/x86/entry/vdso/vdso2c.h b/arch/x86/entry/vdso/vdso2c.h
+index 0224987556ce..eb93a3137ed2 100644
+--- a/arch/x86/entry/vdso/vdso2c.h
++++ b/arch/x86/entry/vdso/vdso2c.h
+@@ -140,7 +140,7 @@ static void BITSFUNC(go)(void *raw_addr, size_t raw_len,
+ 	fprintf(outfile, "#include <asm/vdso.h>\n");
+ 	fprintf(outfile, "\n");
+ 	fprintf(outfile,
+-		"static unsigned char raw_data[%lu] __page_aligned_data = {",
++		"static unsigned char raw_data[%lu] __ro_after_init __aligned(PAGE_SIZE) = {",
+ 		mapping_size);
+ 	for (j = 0; j < stripped_len; j++) {
+ 		if (j % 10 == 0)
+@@ -150,7 +150,7 @@ static void BITSFUNC(go)(void *raw_addr, size_t raw_len,
  	}
- 	return 0;
+ 	fprintf(outfile, "\n};\n\n");
+ 
+-	fprintf(outfile, "static struct page *pages[%lu];\n\n",
++	fprintf(outfile, "static struct page *pages[%lu] __ro_after_init;\n\n",
+ 		mapping_size / 4096);
+ 
+ 	fprintf(outfile, "const struct vdso_image %s = {\n", name);
 -- 
 2.6.3
