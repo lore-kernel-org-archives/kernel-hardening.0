@@ -1,37 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 19 Jan 2016 14:56:09 +0000
-From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20160119145609.1238be62@lxorguk.ukuu.org.uk>
-In-Reply-To: <20160119112812.GA10818@mwanda>
-References: <20160119112812.GA10818@mwanda>
 MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160115013655.5f0ae253@pc1>
+References: <58374.1452813069@turing-police.cc.vt.edu>
+	<20160115013655.5f0ae253@pc1>
+Date: Tue, 19 Jan 2016 09:23:32 -0800
+Message-ID: <CAGXu5jLQQfuinhxu8RPFgCRNzGoby261RtQJE6zK5fvqbPX0jA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: 2015 kernel CVEs
-To: Dan Carpenter <dan.carpenter@oracle.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [kernel-hardening] For whoever's looking at memory santizing..
+To: Casey Schaufler <casey.schaufler@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 19 Jan 2016 14:28:12 +0300
-Dan Carpenter <dan.carpenter@oracle.com> wrote:
+On Thu, Jan 14, 2016 at 4:36 PM, Hanno B=C3=B6ck <hanno@hboeck.de> wrote:
+> On Thu, 14 Jan 2016 18:11:09 -0500
+> Valdis Kletnieks <Valdis.Kletnieks@vt.edu> wrote:
+>
+>> If you need a real-life example of why we should be doing it
+>> consistently:
+>>
+>> http://venturebeat.com/2016/01/13/nvidia-blames-apple-for-bug-that-expos=
+es-porn-browsing-in-chromes-incognito-mode/
+>
+> This article seems to be only about OS X.
+>
+> I hope it's no secret that this is a problem on Linux as well:
+> https://hsmr.cc/palinopsia/
+>
+> And from all I'm aware it's unfixed.
 
-> I like to look back over old CVEs to see how we could do better.  Here
-> is the list from 2015.  I got most of this information from the Ubuntu
-> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
-> might not be fixed yet.
+I'm curious if this is fixable from the DRM layer, or if it's strictly
+driver-specific. Casey, could you bounce this toward some of the Intel
+graphics folks? While Intel isn't called out, I'm curious if there is
+still something that could be done in the general case...
 
-That's the list of bugs originating in 2015. You need to go back further
-to see some of the fun ones still present (CVE-2013-7445 for example)
+-Kees
 
-> There was only a coupls CVEs that looks like they came from a filesystem
-> fuzzer where you create a corrupt filesystems and then try use them.
-> There was only one that might have come from a USB fuzzer.  We probably
-> should be testing those things better.
-
-There are a bunch of those ignored in Bugzilla for years. I think the
-ones for the mainstream file systems have all been tackled but things
-like reiserfs don't survive fuzzing too well, which is a problem if your
-distribution na=C3=AFvely builds in automounting support for people rooting
-your box via USB stick.
-
-Alan
+--=20
+Kees Cook
+Chrome OS & Brillo Security
