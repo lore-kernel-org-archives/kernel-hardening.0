@@ -1,34 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <20160119112812.GA10818@mwanda>
-Date: Tue, 19 Jan 2016 16:47:32 -0600
-In-Reply-To: <20160119112812.GA10818@mwanda> (Dan Carpenter's message of "Tue,
-	19 Jan 2016 14:28:12 +0300")
-Message-ID: <87ziw14263.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] 2015 kernel CVEs
-To: Dan Carpenter <dan.carpenter@oracle.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <20160119222052.4c093972b55873bd61a416ae@gmail.com>
+References: <20151106235545.97d0e86a5f1f80c98e0e9de6@gmail.com>
+	<CAGXu5jL5JV2WS2GVuL16N82DYGVqshveOfWs=iTzH+1XeuSiaA@mail.gmail.com>
+	<20160119222052.4c093972b55873bd61a416ae@gmail.com>
+Date: Tue, 19 Jan 2016 15:08:04 -0800
+Message-ID: <CAGXu5jKAxk+7iRvB1AxETjv6_QBCTHOCn0LyLXtKeB=qoRUbJQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: Proposal for kernel self protection features
+To: Emese Revfy <re.emese@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "pageexec@freemail.hu" <pageexec@freemail.hu>, "spender@grsecurity.net" <spender@grsecurity.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Dan Carpenter <dan.carpenter@oracle.com> writes:
-
-> I like to look back over old CVEs to see how we could do better.  Here
-> is the list from 2015.  I got most of this information from the Ubuntu
-> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
-> might not be fixed yet.
+On Tue, Jan 19, 2016 at 1:20 PM, Emese Revfy <re.emese@gmail.com> wrote:
 >
-> CVE-2015-8709 : ptrace: race in user namespaces let's users trace root processes
+>> Can you give a status update on the constify plugin work? I'm curious
+>> to hear what your plans are.
+>
+> Hi,
+>
+> I'll begin with the gcc plugin infrastructure from February on.
+> When I'm done with it I'll continue to work on the following plugins
+> (I'm not sure of the order maybe I can work in parallel on them):
+> 1. initify
+> 2. structleak
+> 3. latent_entropy
+> 4. constify
 
-As this isn't a kernel bug, and is not a race, and no one has even
-bothered to see if any userspace processes are this stupid I don't even
-think that qualifies as a CVE.
+Sounds great, thanks!
 
-There is room for improvement in this area but I don't see how this
-qualifies as a CVE.
+-Kees
 
-So for doing better I recommend a little more vetting and paying
-attention before assigning CVEs.
-
-Eric
+-- 
+Kees Cook
+Chrome OS & Brillo Security
