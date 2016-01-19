@@ -1,57 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
+Date: Tue, 19 Jan 2016 16:49:23 +0100
+From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
+Message-ID: <20160119154923.GA5130@chrystal.uk.oracle.com>
 References: <20160119112812.GA10818@mwanda>
-In-Reply-To: <20160119112812.GA10818@mwanda>
-From: Wade Mealing <wmealing@gmail.com>
-Date: Tue, 19 Jan 2016 13:13:12 +0000
-Message-ID: <CAO4UgPQi88pndor-BdUDgu-9arypwkA-1v0VMHZAqPoDf-MaYQ@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=001a1142f6263aff9d0529afa2c3
+ <20160119124917.6058019b@pc1>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20160119124917.6058019b@pc1>
 Subject: Re: [kernel-hardening] 2015 kernel CVEs
-To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: kernel-hardening@lists.openwall.com
+Cc: Vegard Nossum <vegard.nossum@oracle.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a1142f6263aff9d0529afa2c3
-Content-Type: text/plain; charset=UTF-8
+On Tue, Jan 19, 2016 at 12:49:17PM +0100, Hanno Böck wrote:
+> On Tue, 19 Jan 2016 14:28:12 +0300
+> Dan Carpenter <dan.carpenter@oracle.com> wrote:
+> 
+> > There was only a coupls CVEs that looks like they came from a
+> > filesystem fuzzer where you create a corrupt filesystems and then try
+> > use them.
+> 
+> I tried that, but it didn't lead to any results in the kernel [1].
+> What I did:
+> * Use filesystem checking tools (fsck) and fuzz them with afl
+> * Use the queue created by afl and try to mount these with a
+>   kasan-enabled kernel
+> 
+> My conclusion was that the filesystem code in the kernel is relatively
+> robust (at least robust enough for this trivial fuzzing).
+> But it led to a number of bugs discovered in filesystem fsck tools.
+> 
 
->
->
->
-> Quite a few bugs were found using the Trinity fuzzer.  Also the new
-> syzkaller fuzzer seems to have found a bunch of stuff.  Good work.  I
-> think people are using the fuzzers with kasan as well which is a
-> fantastic tool.
->
->
-One of the unsung heros that frequently assisted in discovery in some of
-these issues were ktsan.
+As an experimental toy project, we've managed to implement the glue to have
+AFL run on the kernel code, using either a patched afl-as wrapper or a
+slightly modified GCC extension written by Dmitry Vyukov for syzkaller
+(-fsanitize-coverage=trace-pc), and our conclusion is quite different.
 
-Thanks for the nice writeup,
+In the month Vegard Nossum has been using it, he reported at least a dozen
+problems at mount or readdir time:
 
-Wade Mealing
+btrfs:
+ https://www.mail-archive.com/linux-btrfs@vger.kernel.org/msg48448.html
+ https://www.mail-archive.com/linux-btrfs@vger.kernel.org/msg48976.html
+ https://www.mail-archive.com/linux-btrfs@vger.kernel.org/msg49011.html
 
--- 
+ext4:
+ http://marc.info/?l=linux-ext4&m=144898824424465&w=2
+ https://lkml.org/lkml/2015/12/13/187
+
+hfs:
+ http://marc.info/?l=linux-fsdevel&m=144900215929323&w=2
+
+isofs:
+ https://marc.info/?l=linux-kernel&m=144933509518680&w=2
+
+udf:
+ https://lkml.org/lkml/2015/12/10/438
+ https://lkml.org/lkml/2015/12/11/526
+
+vfat:
+ https://lkml.org/lkml/2015/11/13/782
+ https://lkml.org/lkml/2015/11/23/36
+
+xfs:
+ https://marc.info/?l=linux-xfs&m=144904267207656&w=2
+
+It should be noted that most of these problems were found relatively
+quickly and without changing much the filesystem code, checksums weren't
+disabled for example a part for superblock checksum in btrfs.  And that was
+mostly fuzzing the mount/readdir syscalls so a lot more can probably be
+found there.
+
 Thanks,
-
-Wade Mealing
-
---001a1142f6263aff9d0529afa2c3
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div class=3D"gmail_quote"><blockquote class=3D"gmail_quot=
-e" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">=
-<br>
-<br>
-Quite a few bugs were found using the Trinity fuzzer.=C2=A0 Also the new<br=
->
-syzkaller fuzzer seems to have found a bunch of stuff.=C2=A0 Good work.=C2=
-=A0 I<br>
-think people are using the fuzzers with kasan as well which is a<br>
-fantastic tool.<br><br></blockquote><div><br></div><div>One of the unsung h=
-eros that frequently assisted in discovery in some of these issues were kts=
-an.=C2=A0</div><div><br></div><div>Thanks for the nice writeup,</div><div><=
-br></div><div>Wade Mealing</div><div>=C2=A0</div></div></div><div dir=3D"lt=
-r">-- <br></div><div dir=3D"ltr">Thanks,<div><br></div><div>Wade Mealing</d=
-iv></div>
-
---001a1142f6263aff9d0529afa2c3--
+Quentin
