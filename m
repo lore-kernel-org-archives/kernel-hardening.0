@@ -1,43 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160119112812.GA10818@mwanda>
+From: Peter Hurley <peter@hurleysoftware.com>
+Message-ID: <569E6ADC.2090306@hurleysoftware.com>
+Date: Tue, 19 Jan 2016 08:57:00 -0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160115013655.5f0ae253@pc1>
-References: <58374.1452813069@turing-police.cc.vt.edu>
-	<20160115013655.5f0ae253@pc1>
-Date: Tue, 19 Jan 2016 09:23:32 -0800
-Message-ID: <CAGXu5jLQQfuinhxu8RPFgCRNzGoby261RtQJE6zK5fvqbPX0jA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] For whoever's looking at memory santizing..
-To: Casey Schaufler <casey.schaufler@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20160119112812.GA10818@mwanda>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: 2015 kernel CVEs
+To: Dan Carpenter <dan.carpenter@oracle.com>, linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 14, 2016 at 4:36 PM, Hanno B=C3=B6ck <hanno@hboeck.de> wrote:
-> On Thu, 14 Jan 2016 18:11:09 -0500
-> Valdis Kletnieks <Valdis.Kletnieks@vt.edu> wrote:
->
->> If you need a real-life example of why we should be doing it
->> consistently:
->>
->> http://venturebeat.com/2016/01/13/nvidia-blames-apple-for-bug-that-expos=
-es-porn-browsing-in-chromes-incognito-mode/
->
-> This article seems to be only about OS X.
->
-> I hope it's no secret that this is a problem on Linux as well:
-> https://hsmr.cc/palinopsia/
->
-> And from all I'm aware it's unfixed.
+On 01/19/2016 03:28 AM, Dan Carpenter wrote:
+> I like to look back over old CVEs to see how we could do better.  Here
+> is the list from 2015.  I got most of this information from the Ubuntu
+> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
+> might not be fixed yet.
 
-I'm curious if this is fixable from the DRM layer, or if it's strictly
-driver-specific. Casey, could you bounce this toward some of the Intel
-graphics folks? While Intel isn't called out, I'm curious if there is
-still something that could be done in the general case...
+[...]
 
--Kees
+> CVE-2015-4170 cf872776fc84: tty: hang in tty
 
---=20
-Kees Cook
-Chrome OS & Brillo Security
+Makes no sense that this was assigned a CVE.
+I fixed this _2 yrs before_ it was reported and the patch was CC'd stable.
+
+Regards,
+Peter Hurley
