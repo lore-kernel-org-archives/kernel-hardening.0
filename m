@@ -1,133 +1,122 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <569CF813.5070306@iogearbox.net>
-Date: Mon, 18 Jan 2016 15:34:59 +0100
-From: Daniel Borkmann <daniel@iogearbox.net>
+Date: Tue, 19 Jan 2016 14:28:12 +0300
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Message-ID: <20160119112812.GA10818@mwanda>
 MIME-Version: 1.0
-References: <2236FBA76BA1254E88B949DDB74E612B41A51095@IRSMSX102.ger.corp.intel.com>
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41A51095@IRSMSX102.ger.corp.intel.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Understanding the JIT Hardening feature
-To: elena.reshetova@intel.com
-Cc: kernel-hardening@lists.openwall.com, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] 2015 kernel CVEs
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Elena,
+I like to look back over old CVEs to see how we could do better.  Here
+is the list from 2015.  I got most of this information from the Ubuntu
+CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
+might not be fixed yet.
 
-On 01/18/2016 10:22 AM, Reshetova, Elena wrote:
-[...]
-> I got to spend some time reading the 3.15 grsecurity patch with regards to
-> JIT hardening feature and wanted to share my thoughts on what the patch was
-> attempting to do.
->
-> It seems that the bulk of changes was done in bpf_jit_compile() function
-> (corresponds to the do_jit() 4.4 function).
->
-> The way how it was done was to generate a random value (randkey =
-> prandom_u32();) and then use that value to dilute (by xor with this value)
-> the the four cases of operations:
->
-> case BPF_S_ALU_MUL_K: /* A *= K */
->
-> case BPF_S_ALU_MOD_K: /* A %= K; */
->
-> case BPF_S_ALU_DIV_K: /* A /= K */
->
-> case BPF_S_ALU_AND_X:
+CVE-2015-5707 451a2886b6bf fdc81f45e9f5: scsi/sg: integer overflow leading to buffer overflow (iovec)
+CVE-2015-5257 cbb4be652d37: usb/whiteheat: NULL deref with bad hardware.
+CVE-2015-6252 7932c0bd7740: vhost: resource leak. DoS
+CVE-2015-5366 beb39db59d14: udp: not yielding the CPU. DoS udp: duplicate of CVE-2015-5366?
+CVE-2015-4700 3f7352bf21f8: bpf: NULL deref on corner case.
+CVE-2015-7872 f05819df10d7: keys: uninitialized data
+CVE-2015-4178 820f9f147dcc: fs_pin: uninitialized data
+CVE-2015-4002 d114b9fe78c8 9a59029bc218: staging/ozwpan: buffer overflow
+CVE-2015-7799 0baa57d8dc32 4ab42d78e37a: ppp: bad bounds check leads to NULL deref. (root only normally).
+CVE-2015-3290 9b6e6a8334d5: nmi: nested NMI is problematic
+CVE-2015-2041 6b8d9117ccb4: net: llc: bounds error leads to info leak
+CVE-2015-4003 04bf464a5dfd: staging/ozwpan: divide by zero
+CVE-2015-3331 ccfe8c3f7e52: crypto/aesni: buffer overflow because of math error
+CVE-2015-4001 b1bb5b49373b: staging/ozwpan: array underflow write
+CVE-2015-6526 9a5cbce421a2: powerpc/perf: forever loop
+CVE-2015-0239 f3747379accb: KVM: x86: uninitialized data
+CVE-2015-4176 e0c9c0afd2fc: mnt: flaw in logic
+CVE-2015-2150 af6fc858a35b: xen-pciback: accidentally gave too much power
+CVE-2015-3339 : fs: race condition between chown and execve
+CVE-2015-2830 956421fbb74c: x86/asm/entry/64: faw in assembly logic
+CVE-2015-4692 ce40cd3fc7fa: kvm: x86: NULL deref
+CVE-2015-4170 cf872776fc84: tty: hang in tty
+CVE-2015-1350 : fs: some attributes are managed by chown some by the lsm
+CVE-2015-0275 0f2af21aae11: ext4: BUG() alignment issue when page size larger than block size
+CVE-2015-5706 f15133df088e: path_openat: double free
+CVE-2015-4177 cd4a40174b71: mnt: flaw in logic with namespaces (crash I guess).
+CVE-2015-6937 74e98eb08588: RDS: NULL deref
+CVE-2015-2925 cde93be45a8a 397d425dc26d: vfs: logic flaw handling path names
+CVE-2015-3636 a134f083e79f: ipv4: use after free leads to NULL deref
+CVE-2015-2877 : kvm: ASLR base address leak of co-located VMs.
+CVE-2013-2015 0e9a9a1ad619: ext4: hang during mount
+CVE-2015-5157 9b6e6a8334d5: x86/nmi/64: nested NMI problems
+CVE-2015-1420 161f873b8913: vfs: bounds checking error leads to serious info leak
+CVE-2015-1421 600ddd682554: net/sctp: double free
+CVE-2015-7613 b9a532277938: ipc/msg: uninitialized data
+CVE-2015-4004 a73e99cb67e7: staging/ozwpan: we just deleted the driver
+CVE-2015-3212 2d45a02d0166: net/sctp: race condition
+CVE-2015-3291 810bc075f78f: x86/nmi/64: more nested NMI issues
+CVE-2015-4167 23b133bdc452: fs/udf: trusting the disk (missing range checks)
+CVE-2015-1805 f0d1bec9d58d 637b58c2887e: fs/pipe: bad error handling leads to buffer overflow
+CVE-2015-1333 ca4da5dd1f99: keys: memory leak
+CVE-2015-2042 db27ebb111e9: net/rds: using wrong bounds leads to info leak
+CVE-2015-5283 8e2d61e0aed2: net/sctp: uninitialized data. life cycle issues.
+CVE-2015-5697 b6878d9e0304: md: not zeroing memory from kmalloc() leads to info leak
+CVE-2015-5364 beb39db59d14: udp: duplicate of CVE-2015-5366?
+CVE-2015-4036 59c816c1f24d: vhost/scsi: wrong bounds limit
+CVE-2015-5156 48900cb6af42: virtio-net: logic flaw leads to buffer overflow
+CVE-2015-2922 6fd99094de2b: ipv6: logic flaw leads to dropped packets
+CVE-2015-1593 4e7c22d447bb: ASLR: shift truncation leads to not enough ASLR
+CVE-2015-1573 a2f18db0c68f: netfilter/nf_tables: use after free
+CVE-2015-2686 4de930efc23b: net: missing access_ok() checks
+CVE-2015-2672 06c8173eb92b: x86/fpu/xsaves: logic flaw in assembly leads to DoS
+CVE-2015-1465 df4d92549f23: ipv4: logic flaw with RCU leading to DoS
+CVE-2015-2666 f84598bd7c85: x86/microcode/intel: missing bounds check verifying microcode
+CVE-2015-0274 8275cdd0e7ac: xfs: using wrong bounds
+CVE-2015-8215 77751427a1ff: ipv6: setting wrong mtu causes packet loss
+CVE-2015-7885 4b6184336ebb: staging/dgnc: info leak
+CVE-2015-7884 eda98796aff0: media/vivid: info leak
+CVE-2015-7509 c9b92530a723 0e9a9a1ad619: ext4: hang on mount
+CVE-2015-8575 : net/bluetooth: still private
+CVE-2015-7513 0185604c2d82: KVM: uninitialized data leads to mod by zero
+CVE-2015-8324 744692dc0598: ext4: NULL deref mounting file systems
+CVE-2015-5307 54a20552e1ea: KVM: forever loop
+CVE-2015-7550 b4a1b4f5047e: KEYS: Race condition
+CVE-2015-8569 09ccfd238e5a: pptp: underflow leads to serious information leak
+CVE-2015-8660 acff81ec2c79: ovl: logic flaw in checking permisions
+CVE-2015-8374 0305cd5f7fca: Btrfs: logic flaw in truncate leads to information leak
+CVE-2015-8539 096fe9eaea40: Keys: uninitialized data leads to bad dereference
+CVE-2015-8709 : ptrace: race in user namespaces let's users trace root processes
+CVE-2015-8746 18e3b739fdc8: NFS: NULL deref. missing function pointer.
+CVE-2015-8104 cbdb967af3d5: kvm: guest can make the host hang
+CVE-2015-8767 635682a14427: sctp: lockup
+CVE-2015-7990 8c7188b23474: RDS: race condition leads to NULL deref
+CVE-2015-5327 cc25b994acfb: X.509: off by one read leads to badness
+CVE-2015-8543 79462ad02e86: ipv4: bad range checking leads to NULL deref
 
-Hm, you mean BPF_S_ALU_AND_K I presume?
+There are several ways that CVEs are assigned.  The person who discovers
+the bug can get it from oss-security.  If bugs are reported to
+security@kernel.org they get forwarded to linux-distros who allocates a
+CVE.  Distributions look through the stable patches and file for CVEs.
+A few maintainers apply for CVEs, notably the KVM devs and I think David
+Howells.
 
-Yeah, that mitigation as implemented makes absolute sense to me. You blind at
-least the 32bit constants away by xor with randkey.
+There was only a coupls CVEs that looks like they came from a filesystem
+fuzzer where you create a corrupt filesystems and then try use them.
+There was only one that might have come from a USB fuzzer.  We probably
+should be testing those things better.
 
-[...]
-> Another part of the patch was making changes to the bpf_alloc_binary()
-> function. That part I don't really understand since it didn't seem to make
-> any security improvements, but merely setting the header length to be 128 ad
-> changing the bpf_binary_header pointer structure. If this change is to be
-> moved to the latest kernel, modifications to the
-> <http://lxr.free-electrons.com/ident?i=bpf_jit_binary_alloc>
-> bpf_jit_binary_alloc() function (kernel/bpf/core.c) are needed as well as
-> changes in  <http://lxr.free-electrons.com/ident?i=bpf_binary_header>
-> bpf_binary_header pointer structure (include/linux/filter.h). But again, I
-> do not understand what security improvements these changes make and why they
-> were done at the first place.
+There was one CVE from Smatch.  Smatch has improved, inspired by the
+ozwpan bugs and hopefully could catch most of those bounds errors now.
 
-I don't know the patch set deeply enough, but that part, I believe, is a PaX
-specific simplification. It doesn't need the struct bpf_binary_header and can
-thus remove this bit of code. The image is written with pax_open_kernel()/
-pax_close_kernel() pair, and f.e. set_memory_ro() can be removed as PaX already
-comes with native protections that handle such things.
+Quite a few bugs were found using the Trinity fuzzer.  Also the new
+syzkaller fuzzer seems to have found a bunch of stuff.  Good work.  I
+think people are using the fuzzers with kasan as well which is a
+fantastic tool.
 
-> The last change from the patch was done in EMIT_COND_JMP() function (which
-> in later kernels is included into emit_cond_jmp switch statement), which was
-> adding a conditional jz into the flow based on the randkey value. It was
-> affecting the following cases:
->
-> case BPF_S_ALU_DIV_X: /* A /= X; */
-> case BPF_S_ALU_MOD_X: /* A %= X; */
-> case BPF_S_ANC_IFINDEX:
+Many of the use-after-free and unintialized data bugs would be less
+harmful if we had some kernel hardenning patches.
 
-(... for the jumps in 'failure' cases.)
+A lot of the bugs are just really complicated things with funny corner
+cases, namespace issues or people just made mistake in the logic and
+it's hard to do anything about it.
 
-> as well as conditional branch.
-
-Yeah, I think to catch bugs or issues with long jumps, so we effectively BUG
-in case jump is off by few bytes. If you look at the kernel git history, there
-was such a case/bug longer time ago that got fixed.
-
-> The above doesn't seem to go very much in line with what Daniel suggested
-> earlier:
->
-> "We agreed that the way to go would be to try mitigating it on a BPF
-> bytecode level iff feasible. For example, by expanding/rewriting things like
-> loading constants into a i) load where the constant is xored with a (each
-> time newly generated) prandom_u32()/.. value followed by ii) xor on the same
-> reg with that prandom value itself."
->
-> It is also very likely that I didn't understand what you mean Daniel. So
-> some clarification questions:
->
-> -          would you agree with the places where the original grsecurity
-> patch attempts to add randomization or do you think places should be
-> different?
->
-> -          for the actual randomization, are you proposing to enhance it by
-> not only xor to a prandom_u32() but also xor with the same reg? Could you
-> explain what do you mean by this part?
-
-To answer both, hopefully ...
-
-I am simply saying that before we go and change every JIT there is in the
-kernel, we should give it a try and rewrite BPF instructions first (so BPF
-byte code, I mean). That way, JITs would /not/ need to be changed, and would
-effectively emit something similar to the image /transparently/. So changes
-need to be done in BPF core code instead of JITs. Underlying idea to blind
-them out is the same, of course (/how/ you blind them is implementation detail).
-If that path would not be feasible at all for some very good reasons, then we
-can still look into changing the JITs themselves. If you look into the git
-history of some of the JITs, there are some rather bad bugs that got fixed.
-So, we should try hard to solve this on a generic level first, and if it
-turns out to work well **, then we don't need to add further complexity to
-each JIT eventually (x86 is just one, but there are arm, arm64, ppc, mips,
-sparc, s390 as well).
-
-  **: Also in terms of performance, what I mean by that is: iff due to all the
-mitigation/complexity added, we turn out to become almost as slow as interpreter
-case, then a disabling CONFIG_BPF_JIT in your config might simply be the better
-mitigation option ;). I think we should still be faster, but it certainly
-needs to be checked, too.
-
-> I was also trying to find more info about how JIT code itself works, but
-> wasn't able to find anything reasonable, so have to make all my statements
-> from just reading the code, which turned out isn't the most easiest thing to
-> understand for smbd not familiar with topic.  So, any pointers to the
-> reading material, if exist, are very much appreciated.
-
-Here's some rudimentary documentation on the topic in general (yeah, could
-need some improvements):
-
-   Documentation/networking/filter.txt
-
-Cheers,
-Daniel
+regards,
+dan carpenter
