@@ -1,34 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: jwboyer@gmail.com
-In-Reply-To: <569E6ADC.2090306@hurleysoftware.com>
+Date: Tue, 19 Jan 2016 14:56:09 +0000
+From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20160119145609.1238be62@lxorguk.ukuu.org.uk>
+In-Reply-To: <20160119112812.GA10818@mwanda>
 References: <20160119112812.GA10818@mwanda>
-	<569E6ADC.2090306@hurleysoftware.com>
-Date: Tue, 19 Jan 2016 12:00:57 -0500
-Message-ID: <CA+5PVA7C=LDkVNR3v0qxKu8OasJ49fG51aRGwDwA2QOAFGNXhw@mail.gmail.com>
-From: Josh Boyer <jwboyer@fedoraproject.org>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 Subject: [kernel-hardening] Re: 2015 kernel CVEs
-To: Peter Hurley <peter@hurleysoftware.com>
-Cc: Dan Carpenter <dan.carpenter@oracle.com>, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Greg KH <gregkh@linuxfoundation.org>
+To: Dan Carpenter <dan.carpenter@oracle.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 19, 2016 at 11:57 AM, Peter Hurley <peter@hurleysoftware.com> wrote:
-> On 01/19/2016 03:28 AM, Dan Carpenter wrote:
->> I like to look back over old CVEs to see how we could do better.  Here
->> is the list from 2015.  I got most of this information from the Ubuntu
->> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
->> might not be fixed yet.
->
-> [...]
->
->> CVE-2015-4170 cf872776fc84: tty: hang in tty
->
-> Makes no sense that this was assigned a CVE.
-> I fixed this _2 yrs before_ it was reported and the patch was CC'd stable.
+On Tue, 19 Jan 2016 14:28:12 +0300
+Dan Carpenter <dan.carpenter@oracle.com> wrote:
 
-I'm guessing the CVE was assigned because there are distributions that
-ship based on kernels earlier than 3.13.  Those distributors need to
-verify if they have the fix, etc.
+> I like to look back over old CVEs to see how we could do better.  Here
+> is the list from 2015.  I got most of this information from the Ubuntu
+> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
+> might not be fixed yet.
 
-josh
+That's the list of bugs originating in 2015. You need to go back further
+to see some of the fun ones still present (CVE-2013-7445 for example)
+
+> There was only a coupls CVEs that looks like they came from a filesystem
+> fuzzer where you create a corrupt filesystems and then try use them.
+> There was only one that might have come from a USB fuzzer.  We probably
+> should be testing those things better.
+
+There are a bunch of those ignored in Bugzilla for years. I think the
+ones for the mainstream file systems have all been tackled but things
+like reiserfs don't survive fuzzing too well, which is a problem if your
+distribution na=C3=AFvely builds in automounting support for people rooting
+your box via USB stick.
+
+Alan
