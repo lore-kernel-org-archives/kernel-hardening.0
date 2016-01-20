@@ -1,68 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 20 Jan 2016 12:19:58 +0100
-From: Hanno =?UTF-8?B?QsO2Y2s=?= <hanno@hboeck.de>
-Message-ID: <20160120121958.4a392837@pc1>
-In-Reply-To: <20160119124917.6058019b@pc1>
-References: <20160119112812.GA10818@mwanda>
-	<20160119124917.6058019b@pc1>
-Mime-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha512; protocol="application/pgp-signature"; boundary="=_zucker.schokokeks.org-23244-1453288759-0001-2"
-Subject: Re: [kernel-hardening] 2015 kernel CVEs
-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+References: <1450364270-12687-1-git-send-email-dave@progbits.org>
+	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
+	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+Date: Wed, 20 Jan 2016 08:11:58 -0500
+Message-ID: <CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
+From: David Windsor <dave@progbits.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a MIME-formatted message.  If you see this text it means that your
-E-mail software does not support MIME-formatted messages.
+Hi Kees,
 
---=_zucker.schokokeks.org-23244-1453288759-0001-2
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+On Tue, Jan 19, 2016 at 2:07 PM, Kees Cook <keescook@chromium.org> wrote:
+> Hi David,
+>
+> On Thu, Dec 17, 2015 at 12:55 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org> wrote:
+>>> NOTE: This is a v2 submission because patch 3/5 in v1 was too large to sent
+>>> to kernel-hardening.  Taking that as a sign that the patch needed to be split,
+>>> I'm sending this version of the patchset, with the patches split more or less
+>>> on a per-maintainer basis (except for those in drivers/).
+>
+> How's the next spin coming? It looks like we have some new real-world
+> examples of exploits that would have been blocked by this protection:
+>
+> http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
+>
+> :)
+>
 
-On Tue, 19 Jan 2016 12:49:17 +0100
-Hanno B=C3=B6ck <hanno@hboeck.de> wrote:
+I'm currently working on v3 of this patchset: porting the patches to
+linux-next and incorporating suggested changes to v2.  I'm fairly well
+along, but need just a bit more time  I'm a bit busy at the moment, so
+I expect realistically to have time to finish this at the beginning of
+February.
 
-> > There was only one that might have come from a USB fuzzer.
-> > We probably should be testing those things better. =20
->=20
-> This is surprising to me. There was a talk at black hat amsterdam in
-> 2014 about a project trying to do exactly this. They sounded like they
-> have dozends of crashers that just need to be sorted and reported
-> upstream. Here's the code [2] and the talk [3].
+Thanks,
+David
 
-https://packetstormsecurity.com/files/133892/RedHat-Enterprise-Linux-7.1-De=
-nial-Of-Service.html
-
-It seems they have started reporting issues and got limited replies.
-
-
---=20
-Hanno B=C3=B6ck
-http://hboeck.de/
-
-mail/jabber: hanno@hboeck.de
-GPG: BBB51E42
-
---=_zucker.schokokeks.org-23244-1453288759-0001-2
-Content-Type: application/pgp-signature
-Content-Transfer-Encoding: 7bit
-Content-Description: OpenPGP digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCgAGBQJWn21eAAoJEKWIAHK7tR5Cv20QAJLiQSJAeYD/ovzatXHxFSNK
-a79LwJ41EyuwD5ctusTHytAJmxYeAru5wXC3TD3zD0Ua6BgRNa57ASwiL2EBiztU
-g49FHMCtDfhA66WKp5uWHNvY5vJ7nSma4TkxSBKJ09igq+hf16rk9ndOn+HYnmxc
-GDQnLrf+PFZokwxwl9zGOcyxLPmcAfuUav4NiMLaJZShqLZTymDjHBJNBKWnHWoD
-exjMh8XcPDIUzlhbkB2GDybsakZekBzb79k8kfAKebVwEAcSy6quZ/uQbzCnhyeb
-thn0QGGGcDQegN7xtpcFlZTk5mTpIo0QmRq7VdwbAX5lEq80LsrhQcWSn5Z0KYI7
-ysW+MpmStbAfguxX2bZGOTPIA94dRjymXgLRZJBhJi9TIX3VAtzJ/JnSgD1aqzSD
-WEbxNI696RUpaXgB/WUvCXjf4Q1NhWvj5E2MQ4JgvCZDVVsTf/e+s8YFsdww6IPm
-HhNRaTGN0ZAdbmBejNfnTCGyQ8AkKSN5C2pwALxQMUC53ZLebosbQ7/MK4/jMPK+
-exqZaqOqhtCaWepd3TfXP80a5X8+NnWP8js9HlyuH/rrLmsgEF47owS/F12zy7ID
-5vLQL+KJvPJ1kWo8H9ok1lnjc02hAoukhM6qnD4A/BEKvMJLGYJy2w63+FuWjWhM
-G4TPB3r7g4bVHQFfy1MA
-=pyNY
------END PGP SIGNATURE-----
-
---=_zucker.schokokeks.org-23244-1453288759-0001-2--
+> -Kees
+>
+> --
+> Kees Cook
+> Chrome OS & Brillo Security
