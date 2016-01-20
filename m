@@ -1,45 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 20 Jan 2016 08:12:08 +0100
-From: Marcus Meissner <meissner@suse.de>
-Message-ID: <20160120071208.GA14085@suse.de>
+Date: Wed, 20 Jan 2016 12:19:58 +0100
+From: Hanno =?UTF-8?B?QsO2Y2s=?= <hanno@hboeck.de>
+Message-ID: <20160120121958.4a392837@pc1>
+In-Reply-To: <20160119124917.6058019b@pc1>
 References: <20160119112812.GA10818@mwanda>
- <569E6ADC.2090306@hurleysoftware.com>
- <CA+5PVA7C=LDkVNR3v0qxKu8OasJ49fG51aRGwDwA2QOAFGNXhw@mail.gmail.com>
- <20160119175154.GA7485@kroah.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160119175154.GA7485@kroah.com>
-Subject: Re: [kernel-hardening] Re: 2015 kernel CVEs
+	<20160119124917.6058019b@pc1>
+Mime-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha512; protocol="application/pgp-signature"; boundary="=_zucker.schokokeks.org-23244-1453288759-0001-2"
+Subject: Re: [kernel-hardening] 2015 kernel CVEs
 To: kernel-hardening@lists.openwall.com
-Cc: Josh Boyer <jwboyer@fedoraproject.org>, Peter Hurley <peter@hurleysoftware.com>, Dan Carpenter <dan.carpenter@oracle.com>, "Linux-Kernel@Vger. Kernel. Org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 19, 2016 at 09:51:54AM -0800, Greg KH wrote:
-> On Tue, Jan 19, 2016 at 12:00:57PM -0500, Josh Boyer wrote:
-> > On Tue, Jan 19, 2016 at 11:57 AM, Peter Hurley <peter@hurleysoftware.com> wrote:
-> > > On 01/19/2016 03:28 AM, Dan Carpenter wrote:
-> > >> I like to look back over old CVEs to see how we could do better.  Here
-> > >> is the list from 2015.  I got most of this information from the Ubuntu
-> > >> CVE tracker.  Thanks Ubuntu!.  If it doesn't have a hash that means it
-> > >> might not be fixed yet.
-> > >
-> > > [...]
-> > >
-> > >> CVE-2015-4170 cf872776fc84: tty: hang in tty
-> > >
-> > > Makes no sense that this was assigned a CVE.
-> > > I fixed this _2 yrs before_ it was reported and the patch was CC'd stable.
-> > 
-> > I'm guessing the CVE was assigned because there are distributions that
-> > ship based on kernels earlier than 3.13.  Those distributors need to
-> > verify if they have the fix, etc.
-> 
-> Yes, that's what happened here, Red Hat asked for it from what I
-> remember.  I complained loudly on the oss-security list about it, but oh
-> well...
+This is a MIME-formatted message.  If you see this text it means that your
+E-mail software does not support MIME-formatted messages.
 
-The question for CVE assignment is more if this bug existed in shipped kernel releases, not
-when it was fixed in relation to assignment.
+--=_zucker.schokokeks.org-23244-1453288759-0001-2
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
-Ciao, Marcus
+On Tue, 19 Jan 2016 12:49:17 +0100
+Hanno B=C3=B6ck <hanno@hboeck.de> wrote:
+
+> > There was only one that might have come from a USB fuzzer.
+> > We probably should be testing those things better. =20
+>=20
+> This is surprising to me. There was a talk at black hat amsterdam in
+> 2014 about a project trying to do exactly this. They sounded like they
+> have dozends of crashers that just need to be sorted and reported
+> upstream. Here's the code [2] and the talk [3].
+
+https://packetstormsecurity.com/files/133892/RedHat-Enterprise-Linux-7.1-De=
+nial-Of-Service.html
+
+It seems they have started reporting issues and got limited replies.
+
+
+--=20
+Hanno B=C3=B6ck
+http://hboeck.de/
+
+mail/jabber: hanno@hboeck.de
+GPG: BBB51E42
+
+--=_zucker.schokokeks.org-23244-1453288759-0001-2
+Content-Type: application/pgp-signature
+Content-Transfer-Encoding: 7bit
+Content-Description: OpenPGP digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCgAGBQJWn21eAAoJEKWIAHK7tR5Cv20QAJLiQSJAeYD/ovzatXHxFSNK
+a79LwJ41EyuwD5ctusTHytAJmxYeAru5wXC3TD3zD0Ua6BgRNa57ASwiL2EBiztU
+g49FHMCtDfhA66WKp5uWHNvY5vJ7nSma4TkxSBKJ09igq+hf16rk9ndOn+HYnmxc
+GDQnLrf+PFZokwxwl9zGOcyxLPmcAfuUav4NiMLaJZShqLZTymDjHBJNBKWnHWoD
+exjMh8XcPDIUzlhbkB2GDybsakZekBzb79k8kfAKebVwEAcSy6quZ/uQbzCnhyeb
+thn0QGGGcDQegN7xtpcFlZTk5mTpIo0QmRq7VdwbAX5lEq80LsrhQcWSn5Z0KYI7
+ysW+MpmStbAfguxX2bZGOTPIA94dRjymXgLRZJBhJi9TIX3VAtzJ/JnSgD1aqzSD
+WEbxNI696RUpaXgB/WUvCXjf4Q1NhWvj5E2MQ4JgvCZDVVsTf/e+s8YFsdww6IPm
+HhNRaTGN0ZAdbmBejNfnTCGyQ8AkKSN5C2pwALxQMUC53ZLebosbQ7/MK4/jMPK+
+exqZaqOqhtCaWepd3TfXP80a5X8+NnWP8js9HlyuH/rrLmsgEF47owS/F12zy7ID
+5vLQL+KJvPJ1kWo8H9ok1lnjc02hAoukhM6qnD4A/BEKvMJLGYJy2w63+FuWjWhM
+G4TPB3r7g4bVHQFfy1MA
+=pyNY
+-----END PGP SIGNATURE-----
+
+--=_zucker.schokokeks.org-23244-1453288759-0001-2--
