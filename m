@@ -1,111 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1453338072.4942.16.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Wed, 20 Jan 2016 20:01:12 -0500
-In-Reply-To: <1453323437.6344.32.camel@debian.org>
-References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-	 <CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
-	 <CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
-	 <1453323437.6344.32.camel@debian.org>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-aXgcJ40kZu0LRolFzVzB"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT
- overflow protection
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
-Cc: David Windsor <dave@progbits.org>
+References: <1450755641-7856-1-git-send-email-laura@labbott.name>
+ <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
+ <5679ACE9.70701@labbott.name>
+ <CAGXu5jJQKaA1qgLEV9vXEVH4QBC__Vg141BX22ZsZzW6p9yk4Q@mail.gmail.com>
+ <568C8741.4040709@labbott.name>
+ <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org>
+ <568F0F75.4090101@labbott.name>
+ <alpine.DEB.2.20.1601080806020.4128@east.gentwo.org>
+ <56971AE1.1020706@labbott.name>
+From: Laura Abbott <laura@labbott.name>
+Message-ID: <56A051EA.8080003@labbott.name>
+Date: Wed, 20 Jan 2016 19:35:06 -0800
+MIME-Version: 1.0
+In-Reply-To: <56971AE1.1020706@labbott.name>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
+To: Christoph Lameter <cl@linux.com>
+Cc: Kees Cook <keescook@chromium.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 1/13/16 7:49 PM, Laura Abbott wrote:
+> On 1/8/16 6:07 AM, Christoph Lameter wrote:
+>> On Thu, 7 Jan 2016, Laura Abbott wrote:
+>>
+>>> The slub_debug=P not only poisons it enables other consistency checks on the
+>>> slab as well, assuming my understanding of what check_object does is correct.
+>>> My hope was to have the poison part only and none of the consistency checks in
+>>> an attempt to mitigate performance issues. I misunderstood when the checks
+>>> actually run and how SLUB_DEBUG was used.
+>>
+>> Ok I see that there pointer check is done without checking the
+>> corresponding debug flag. Patch attached thar fixes it.
+>>
+>>> Another option would be to have a flag like SLAB_NO_SANITY_CHECK.
+>>> sanitization enablement would just be that and SLAB_POISON
+>>> in the debug options. The disadvantage to this approach would be losing
+>>> the sanitization for ->ctor caches (the grsecurity version works around this
+>>> by re-initializing with ->ctor, I haven't heard any feedback if this actually
+>>> acceptable) and not having some of the fast paths enabled
+>>> (assuming I'm understanding the code path correctly.) which would also
+>>> be a performance penalty
+>>
+>> I think we simply need to fix the missing check there. There is already a
+>> flag SLAB_DEBUG_FREE for the pointer checks.
+>>
+>>
+>
+> The patch improves performance but the overall performance of these full
+> sanitization patches is still significantly better than slub_debug=P. I'll
+> put some effort into seeing if I can figure out where the slow down is
+> coming from.
+>
 
---=-aXgcJ40kZu0LRolFzVzB
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+There are quite a few other checks which need to be skipped over as well,
+but I don't think skipping those are going to be sufficient to give an
+acceptable performance; a quick 'hackbench -g 20 -l 1000' shows at least
+a 3.5 second difference between just skipping all the checks+slab_debug=P
+and this series.
 
-On Wed, 2016-01-20 at 21:57 +0100, Yves-Alexis Perez wrote:
-> On mar., 2016-01-19 at 11:07 -0800, Kees Cook wrote:
-> > Hi David,
-> >=20
-> > On Thu, Dec 17, 2015 at 12:55 PM, Kees Cook <keescook@chromium.org>
-> > wrote:
-> > > On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org>
-> > > wrote:
-> > > > NOTE: This is a v2 submission because patch 3/5 in v1 was too
-> > > > large to
-> > > > sent
-> > > > to kernel-hardening.=C2=A0=C2=A0Taking that as a sign that the patc=
-h
-> > > > needed to be
-> > > > split,
-> > > > I'm sending this version of the patchset, with the patches split
-> > > > more or
-> > > > less
-> > > > on a per-maintainer basis (except for those in drivers/).
-> >=20
-> > How's the next spin coming? It looks like we have some new real-
-> > world
-> > examples of exploits that would have been blocked by this
-> > protection:
-> >=20
-> > http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a
-> > -linux-k
-> > ernel-vulnerability-cve-2016-0728/
-> >=20
-> >=20
-> One thing which is surprising (I have to admit I'm not really an
-> expert on how
-> SLAB works) is how easy it apparently is to have multiple allocations
-> end up
-> at the same place. You don't even have to *know* the exact address.
->=20
-> Wouldn't it be possible to at least have some randomization here, so
-> new
-> object are not at the same place as the not-freed-ones, somehow
-> preventing the
-> use-after-free and forcing an attacker to do some heap massaging?
->=20
-> Regards,
+The SLAB_DEBUG flags force everything to skip the CPU caches which is
+causing the slow down. I experimented with allowing the debugging to
+happen with CPU caches but I'm not convinced it's possible to do the
+checking on the fast path in a consistent manner without adding
+locking. Is it worth refactoring the debugging to be able to be used
+on cpu caches or should I take the approach here of having the clear
+be separate from free_debug_processing?
 
-It could do some fine-grained randomization. It does have a measurable
-performance cost since it makes allocations colder and there isn't much
-room for adding entropy but it does add up over time. Depending on the
-locking design it could also hurt there too.
-
-Take a look at OpenBSD malloc if you're interested in it. It has a few
-forms of randomization and they do add up:
-
-* small array of quarantined pointers, free(ptr) randomly swaps with one
-and frees that (wastes some memory, makes allocations colder) - can also
-have a feature checking that junk filled for sanitization is still in
-place when moving out of the quarantine at a further performance cost
-(which I recently upstreamed for OpenBSD malloc)
-* picking a random slot within a slab (makes allocations colder and
-slows down the allocator a bit)
-* picking a random slab list to satisfy each allocation (significantly
-increases worst-case memory usage by spreading stuff out)
-* page cache randomization (i.e. randomization of the layer below slabs
-which in userspace means the allocator cache and fine-grained mmap rnd,
-but it still applies to the kernel's allocation of the slab pages)
---=-aXgcJ40kZu0LRolFzVzB
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAABCAAGBQJWoC3ZAAoJEPnnEuWa9fIqjNYP/1ikwvW8jTsyfbjGo49EYr+7
-dUASsPt+osS7SPY1Atzddv619YsZofCxH3OQM9umva4wpPmvmc1qCoOlI/gNCA3U
-euAMnUSIjxv8YOGD3hLTzAyWZGlk1VjR2HIvhWA75fVMdFwUcfRg+ITq77ju9bo/
-gGOgh0Jmya9MYV2xJcxwhbN17LWfPdPguSCe09PGvfom8WteF61YbcA7WZnhoy3c
-xwmnmNfE6oQEPVtpc57A6Cmaj5lDT20GG33nhB7RBgb4b0lblmg00WjXuD+a+g4/
-Rgj3zdVchKXx2lqBjIeMLyVSqUBuSNB2EZs/w6tehacwv8BUmHO2kMpnhUs1SGuZ
-xwdh0tkzSBcO9Bny7CZBy3J2JoK7u8i08UO0Kyku7tGbnuPTwPID8fvLMCtkIU8/
-OYSaR3tK3FQTqtjFOGJTPlpPo2c4EVko3uZVvTILjPQlvZPY8aprHZrvN/WoKoqi
-cSBUXOWNVpOGaCjnl7VT5SNvU43Y9v6AdCZa0eY2sYOr6djXDib3pgiENgZ49Yy6
-YBurL6PSbkIKNsXb4fQsK7VnryT6lOXvjJD/8qr6hYeMsFoRX4s8qbp9aTQX3L68
-WMjRlLSlX8rAD0H+wYP2c+CoPF/dJeCJtFydcc9PaEkt0WXsB3eu6ZSOt5zCBUo0
-MTYjFEH25TqLjKJEUTrU
-=yhz9
------END PGP SIGNATURE-----
-
---=-aXgcJ40kZu0LRolFzVzB--
+Thanks,
+Laura
