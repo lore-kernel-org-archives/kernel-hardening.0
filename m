@@ -1,71 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1450755641-7856-1-git-send-email-laura@labbott.name>
- <alpine.DEB.2.20.1512220952350.2114@east.gentwo.org>
- <5679ACE9.70701@labbott.name>
- <CAGXu5jJQKaA1qgLEV9vXEVH4QBC__Vg141BX22ZsZzW6p9yk4Q@mail.gmail.com>
- <568C8741.4040709@labbott.name>
- <alpine.DEB.2.20.1601071020570.28979@east.gentwo.org>
- <568F0F75.4090101@labbott.name>
- <alpine.DEB.2.20.1601080806020.4128@east.gentwo.org>
- <56971AE1.1020706@labbott.name>
-From: Laura Abbott <laura@labbott.name>
-Message-ID: <56A051EA.8080003@labbott.name>
-Date: Wed, 20 Jan 2016 19:35:06 -0800
-MIME-Version: 1.0
-In-Reply-To: <56971AE1.1020706@labbott.name>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/7] Sanitization of slabs based on grsecurity/PaX
-To: Christoph Lameter <cl@linux.com>
-Cc: Kees Cook <keescook@chromium.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1453380319.4133.8.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Thu, 21 Jan 2016 13:45:19 +0100
+In-Reply-To: <1453338072.4942.16.camel@gmail.com>
+References: <1450364270-12687-1-git-send-email-dave@progbits.org>
+	 <CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
+	 <CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+	 <1453323437.6344.32.camel@debian.org> <1453338072.4942.16.camel@gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-krRap2hT5k/eMHXpRxDi"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT
+ overflow protection
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1/13/16 7:49 PM, Laura Abbott wrote:
-> On 1/8/16 6:07 AM, Christoph Lameter wrote:
->> On Thu, 7 Jan 2016, Laura Abbott wrote:
->>
->>> The slub_debug=P not only poisons it enables other consistency checks on the
->>> slab as well, assuming my understanding of what check_object does is correct.
->>> My hope was to have the poison part only and none of the consistency checks in
->>> an attempt to mitigate performance issues. I misunderstood when the checks
->>> actually run and how SLUB_DEBUG was used.
->>
->> Ok I see that there pointer check is done without checking the
->> corresponding debug flag. Patch attached thar fixes it.
->>
->>> Another option would be to have a flag like SLAB_NO_SANITY_CHECK.
->>> sanitization enablement would just be that and SLAB_POISON
->>> in the debug options. The disadvantage to this approach would be losing
->>> the sanitization for ->ctor caches (the grsecurity version works around this
->>> by re-initializing with ->ctor, I haven't heard any feedback if this actually
->>> acceptable) and not having some of the fast paths enabled
->>> (assuming I'm understanding the code path correctly.) which would also
->>> be a performance penalty
->>
->> I think we simply need to fix the missing check there. There is already a
->> flag SLAB_DEBUG_FREE for the pointer checks.
->>
->>
->
-> The patch improves performance but the overall performance of these full
-> sanitization patches is still significantly better than slub_debug=P. I'll
-> put some effort into seeing if I can figure out where the slow down is
-> coming from.
->
 
-There are quite a few other checks which need to be skipped over as well,
-but I don't think skipping those are going to be sufficient to give an
-acceptable performance; a quick 'hackbench -g 20 -l 1000' shows at least
-a 3.5 second difference between just skipping all the checks+slab_debug=P
-and this series.
+--=-krRap2hT5k/eMHXpRxDi
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-The SLAB_DEBUG flags force everything to skip the CPU caches which is
-causing the slow down. I experimented with allowing the debugging to
-happen with CPU caches but I'm not convinced it's possible to do the
-checking on the fast path in a consistent manner without adding
-locking. Is it worth refactoring the debugging to be able to be used
-on cpu caches or should I take the approach here of having the clear
-be separate from free_debug_processing?
+On mer., 2016-01-20 at 20:01 -0500, Daniel Micay wrote:
+> It could do some fine-grained randomization. It does have a measurable
+> performance cost since it makes allocations colder and there isn't much
+> room for adding entropy but it does add up over time. Depending on the
+> locking design it could also hurt there too.
+>=20
+> Take a look at OpenBSD malloc if you're interested in it. It has a few
+> forms of randomization and they do add=20
 
-Thanks,
-Laura
+I also checked in the PaX patch to see if there was something done to harde=
+n
+slab, and while it's not randomisation, there's some hardening done as part=
+ of
+PAX_USERCOPY (heap hardening for copy_{from,to}_user stuff).
+
+The patch adds a GFP_USERCOPY/SLAB_USERCOPY flag for allocation, and then u=
+se
+it for =E2=80=9Ctagging=E2=80=9D allocations of pages which will end up in =
+a
+copy_{from,to}_user() call (as far as I can tell, it's a manual approach). =
+The
+tagged allocations are then using a separate slab cache from the kernel
+itself, so it shouldn't be possible to exploit an UAF: the memory originati=
+ng
+from userland would not be dereferenced as a kernel allocation.
+
+4.5 kernel will apparently include a SLAB_ACCOUNT flag which is use from
+accounting. I wonder if it'd be possible to also use it to tag and isolate
+memory allocated from different privilege levels.
+
+Regards,
+--=20
+Yves-Alexis
+
+
+--=-krRap2hT5k/eMHXpRxDi
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJWoNLfAAoJEG3bU/KmdcClHYoH/07xOUTYamdNWQ8w4FUxCBTr
+vJ3xthYkD9kolZEcxAStUuKOrciy9iGGLJ8IKeJ1jEd92oew7uvUHOTQIszjcn1H
+RDsN4OVuWWD6vPUXsheQ11Xcq5JIgAXMYkPBXhvT2dUIHwzR8P9xZyyKgaFchahx
+3b1qdACXGbbwZLxwXqzkYNVtWCrnv6ztIERfo+s6BUS7c+cfMGP8e/w1cjRj4Sp2
+t9UVRPIMpEZUHmUzK5aoW0ZQanDCCHxTqPRonFqUtUSyntVNIoAKvTyDZ/5Vo/1Q
+Xon1rc6Bi+jypPk8zH8f6U/DhylKiGJYzrtECKFecFPTGdU9vT3Uy1IleXxXLHE=
+=wi2T
+-----END PGP SIGNATURE-----
+
+--=-krRap2hT5k/eMHXpRxDi--
