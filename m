@@ -1,55 +1,148 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: geert.uytterhoeven@gmail.com
-In-Reply-To: <CAGXu5j+5EB5f335RHOP+CugFC1z29cAV0pWy6zB34dQBz7W6_Q@mail.gmail.com>
-References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
-	<20160122171954.GA3945@davidb.org>
-	<56A28029.2060608@labbott.name>
-	<CAGXu5j+5EB5f335RHOP+CugFC1z29cAV0pWy6zB34dQBz7W6_Q@mail.gmail.com>
-Date: Sat, 23 Jan 2016 10:49:15 +0100
-Message-ID: <CAMuHMdW46hT9usJ-UxAnSKqzTdHfV+VKzU-L9O2NkSegTfbn9Q@mail.gmail.com>
-From: Geert Uytterhoeven <geert@linux-m68k.org>
+In-Reply-To: <1453502345-30416-3-git-send-email-keescook@chromium.org>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+	<1453502345-30416-3-git-send-email-keescook@chromium.org>
+Date: Fri, 22 Jan 2016 23:47:45 +0100
+Message-ID: <CAP145piccauJvW6JrVzxm1xM3_5xtMk_Fa+uwFx-84+dKCS0WQ@mail.gmail.com>
+From: =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v4 0/8] introduce post-init read-only memory
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 2/2] sysctl: allow CLONE_NEWUSER to be disabled
 To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <laura@labbott.name>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, "Eric W. Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@amacapital.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, linux-doc@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+Seems that Debian and some older Ubuntu versions are already using
 
-On Fri, Jan 22, 2016 at 8:57 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Jan 22, 2016 at 11:16 AM, Laura Abbott <laura@labbott.name> wrote:
->> Kees had previously pushed a patch to do so but it exposed a couple of
->> underlying issues, mostly with low power paths
->> (c.f. http://article.gmane.org/gmane.linux.ports.arm.kernel/471199,
->> http://article.gmane.org/gmane.linux.kernel.mm/143489)
->> Those will need to be all fixed up before this could be made default.
+$ sysctl -a | grep usern
+kernel.unprivileged_userns_clone =3D 0
 
-I'm working on fixing that...
+Shall we be consistent wit it?
 
-BTW, making the sections read-only is done quite late in the kernel startup
-process, which means it doesn't trigger for the writes to the text segment in
-secondary CPU bringup, but only for suspend/resume.
-
-> Yeah, I've got a patch waiting to reorganize CONFIG_ARM_KERNMEM_PERMS
-> to look more like arm64 (and x86) and get the feature correctly under
-> CONFIG_DEBUG_RODATA. I made it default=y on v7+. rmk asked me to wait
-> until -rc1 before resubmitting it.
+2016-01-22 23:39 GMT+01:00 Kees Cook <keescook@chromium.org>:
+> There continues to be many CONFIG_USER_NS related security exposures.
+> For admins running distro kernels with CONFIG_USER_NS, there is no way
+> to disable CLONE_NEWUSER. As many systems do not need CLONE_NEWUSER,
+> this provides a way for sysadmins to disable the feature.
 >
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?h=kspp/arm-rodata&id=08bebfd2e7fb8a9f364ced74c356642d64e1f43e
+> This is inspired by a similar restriction in Grsecurity, but adds
+> a sysctl.
+>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  Documentation/sysctl/kernel.txt | 17 +++++++++++++++++
+>  kernel/sysctl.c                 | 14 ++++++++++++++
+>  kernel/user_namespace.c         |  7 +++++++
+>  3 files changed, 38 insertions(+)
+>
+> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kerne=
+l.txt
+> index bbfc5e339a3d..e9e8a4f949f5 100644
+> --- a/Documentation/sysctl/kernel.txt
+> +++ b/Documentation/sysctl/kernel.txt
+> @@ -85,6 +85,7 @@ show up in /proc/sys/kernel:
+>  - tainted
+>  - threads-max
+>  - unknown_nmi_panic
+> +- userns_restrict
+>  - watchdog
+>  - watchdog_thresh
+>  - version
+> @@ -933,6 +934,22 @@ example.  If a system hangs up, try pressing the NMI=
+ switch.
+>
+>  =3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+>
+> +userns_restrict:
+> +
+> +This toggle indicates whether CLONE_NEWUSER is available. As CLONE_NEWUS=
+ER
+> +has many unexpected side-effects and security exposures, this allows the
+> +sysadmin to disable the feature without needing to rebuild the kernel.
+> +
+> +When userns_restrict is set to (0), the default, there are no restrictio=
+ns.
+> +
+> +When userns_restrict is set to (1), CLONE_NEWUSER is only available to
+> +processes that have CAP_SYS_ADMIN, CAP_SETUID, and CAP_SETGID.
+> +
+> +When userns_restrict is set to (2), CLONE_NEWUSER is not available at al=
+l,
+> +and the value is locked to "2" for the duration of the boot.
+> +
+> +=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+> +
+>  watchdog:
+>
+>  This parameter can be used to disable or enable the soft lockup detector
+> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+> index fc8899dd636d..ceb8b107fe28 100644
+> --- a/kernel/sysctl.c
+> +++ b/kernel/sysctl.c
+> @@ -112,6 +112,9 @@ extern int sysctl_nr_open_min, sysctl_nr_open_max;
+>  #ifndef CONFIG_MMU
+>  extern int sysctl_nr_trim_pages;
+>  #endif
+> +#ifdef CONFIG_USER_NS
+> +extern int sysctl_userns_restrict;
+> +#endif
+>
+>  /* Constants used for minimum and  maximum */
+>  #ifdef CONFIG_LOCKUP_DETECTOR
+> @@ -812,6 +815,17 @@ static struct ctl_table kern_table[] =3D {
+>                 .extra2         =3D &two,
+>         },
+>  #endif
+> +#ifdef CONFIG_USER_NS
+> +       {
+> +               .procname       =3D "userns_restrict",
+> +               .data           =3D &sysctl_userns_restrict,
+> +               .maxlen         =3D sizeof(int),
+> +               .mode           =3D 0644,
+> +               .proc_handler   =3D proc_dointvec_minmax_cap_sysadmin,
+> +               .extra1         =3D &zero,
+> +               .extra2         =3D &two,
+> +       },
+> +#endif
+>         {
+>                 .procname       =3D "ngroups_max",
+>                 .data           =3D &ngroups_max,
+> diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
+> index 9bafc211930c..38395f9625ff 100644
+> --- a/kernel/user_namespace.c
+> +++ b/kernel/user_namespace.c
+> @@ -25,6 +25,7 @@
+>
+>  static struct kmem_cache *user_ns_cachep __read_mostly;
+>  static DEFINE_MUTEX(userns_state_mutex);
+> +int sysctl_userns_restrict __read_mostly;
+>
+>  static bool new_idmap_permitted(const struct file *file,
+>                                 struct user_namespace *ns, int cap_setid,
+> @@ -84,6 +85,12 @@ int create_user_ns(struct cred *new)
+>             !kgid_has_mapping(parent_ns, group))
+>                 return -EPERM;
+>
+> +       if (sysctl_userns_restrict =3D=3D 2 ||
+> +           (sysctl_userns_restrict =3D=3D 1 && (!capable(CAP_SYS_ADMIN) =
+||
+> +                                            !capable(CAP_SETUID) ||
+> +                                            !capable(CAP_SETGID))))
+> +               return -EPERM;
+> +
+>         ns =3D kmem_cache_zalloc(user_ns_cachep, GFP_KERNEL);
+>         if (!ns)
+>                 return -ENOMEM;
+> --
+> 2.6.3
+>
 
-One other concern is indeed memory usage ("ALIGN(1<<SECTION_SHIFT)"?).
-Enabling CONFIG_ARM_KERNMEM_PERMS and CONFIG_DEBUG_RODATA in my test kernel
-configs make the kernel too big to boot (overwritten DTB?) for 3 out of 4 arm
-shmobile targets...
 
-Gr{oetje,eeting}s,
 
-                        Geert
-
---
-Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
-
-In personal conversations with technical people, I call myself a hacker. But
-when I'm talking to journalists I just say "programmer" or something like that.
-                                -- Linus Torvalds
+--=20
+Robert =C5=9Awi=C4=99cki
