@@ -1,59 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 22 Jan 2016 10:19:54 -0700
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160122171954.GA3945@davidb.org>
+References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-In-Reply-To: <20160122104837.GA14440@pc.thejh.net>
-References: <1453444200-8604-1-git-send-email-daniel.sangorrin@toshiba.co.jp>
- <1453444200-8604-2-git-send-email-daniel.sangorrin@toshiba.co.jp> <20160122104837.GA14440@pc.thejh.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 22 Jan 2016 09:17:17 -0800
-Message-ID: <CALCETrUKXtWhSkqrK+TAy4u421yift8P49SM-RbAtB=tFKpkTQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC PATCH 1/1] seccomp: provide information
- about the previous syscall
-To: Jann Horn <jann@thejh.net>
-Cc: Daniel Sangorrin <daniel.sangorrin@toshiba.co.jp>, Kees Cook <keescook@chromium.org>, Will Drewry <wad@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <1453226922-16831-1-git-send-email-keescook@chromium.org>
+Subject: Re: [kernel-hardening] [PATCH v4 0/8] introduce post-init read-only
+ memory
+To: kernel-hardening@lists.openwall.com
+Cc: Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, Laura Abbott <lauraa@codeaurora.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 22, 2016 at 2:48 AM, Jann Horn <jann@thejh.net> wrote:
-> On Fri, Jan 22, 2016 at 03:30:00PM +0900, Daniel Sangorrin wrote:
->> This patch allows applications to restrict the order in which
->> its system calls may be requested. In order to do that, we
->> provide seccomp-BPF scripts with information about the
->> previous system call requested.
->>
->> An example use case consists of detecting (and stopping) return
->> oriented attacks that disturb the normal execution flow of
->> a user program.
->
->
-> The intent here is to mitigate attacks in which an attacker has
-> e.g. a function pointer overwrite without a high degree of stack
-> control or the ability to perform a stack pivot, correct? So that
-> e.g. a one-gadget system() call won't succeed?
->
-> Do you have data on how effective this protection is using just
-> the previous system call number?
->
-> I think that for example, the "magic ROP gadget" in glibc that
-> can be used given just a single pointer overwrite and stdin
-> control (https://gist.github.com/zachriggle/ca24daf4e8be953a3f96),
-> which (as far as I can tell) is in the middle of the system()
-> implementation, could be used as long as a transition to one of
-> the following syscalls is allowed:
->
->  - rt_sigaction
->  - rt_sigprocmask
->  - clone
->  - execve
->
-> I'm not sure how many interesting syscalls typically transition
-> to that, perhaps you can comment on that?
+On Tue, Jan 19, 2016 at 10:08:34AM -0800, Kees Cook wrote:
 
-rt_sigaction is going to be a problem.  It can legitimately follow
-*anything* because of async signals.
+>This introduces __ro_after_init as a way to mark such memory, and uses
+>it on the x86 vDSO to kill an extant kernel exploitation method. Also
+>adds a new kernel parameter to help debug future use and adds an lkdtm
+>test to check the results.
 
-In general, I think I don't like this idea.  It seems like a hack that
-we'll have to support forever that will allow semi-reliable IDS
-signatures to break due to async signals and occasionally detect
-intrusions that don't modify themselves slightly to evade detection.
+I've tested these patches on 32-bit ARM using the provoke-crashes
+test.  However, they do require CONFIG_ARM_KERNMEM_PERMS to be enabled
+as well, which does incur additional memory usage.
 
---Andy
+Do we want to consider making CONFIG_ARM_KERNMEM_PERMS default y for
+security reasons, and just document that memory-constrained systems
+may want to turn it off?
+
+I'll test the arm64 next.
+
+David
