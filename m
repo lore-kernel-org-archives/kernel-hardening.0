@@ -1,36 +1,17 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKbghS7e0sxRt1hEnancaNo-rXQAJrM_NKUwpivFs6sSw@mail.gmail.com>
-References: <1453444200-8604-1-git-send-email-daniel.sangorrin@toshiba.co.jp>
-	<1453444200-8604-2-git-send-email-daniel.sangorrin@toshiba.co.jp>
-	<20160122173050.GE9608@ast-mbp.thefacebook.com>
-	<CAGXu5jKbghS7e0sxRt1hEnancaNo-rXQAJrM_NKUwpivFs6sSw@mail.gmail.com>
-Date: Fri, 22 Jan 2016 17:10:53 -0500
-Message-ID: <CAHC9VhTM7rK2j3Ge1-XbQ5D74gm=P4CaB5mb06UbjCsAN4RnwA@mail.gmail.com>
-From: Paul Moore <paul@paul-moore.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/1] seccomp: provide
- information about the previous syscall
-To: kernel-hardening@lists.openwall.com
-Cc: Alexei Starovoitov <alexei.starovoitov@gmail.com>, Daniel Sangorrin <daniel.sangorrin@toshiba.co.jp>, Andy Lutomirski <luto@amacapital.net>, Will Drewry <wad@chromium.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 22 Jan 2016 14:39:03 -0800
+Message-Id: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled 
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, "Eric W. Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@amacapital.net>, =?UTF-8?q?Robert=20=C5=9Awi=C4=99cki?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 22, 2016 at 4:23 PM, Kees Cook <keescook@chromium.org> wrote:
-> Yeah, and if we break abi, we need to add further sanity checking to
-> the parser to determine which "version" of seccomp_data we need. I'm
-> not convinced that there is enough utility here to break ABI.
+There continues to be unexpected side-effects and security exposures
+via CLONE_NEWUSER. For many end-users running distro kernels with
+CONFIG_USER_NS enabled, there is no way to disable this feature when
+desired. As such, this creates a sysctl to restrict CLONE_NEWUSER so
+admins not running containers or Chrome can avoid the risks of this
+feature.
 
-PLEASE do not break the seccomp ABI for this alone ... I'm still
-trying to sort out the well intentioned, but extremely annoying
-direct-wired x86 socket syscalls in 4.4 for libseccomp, I don't want
-to have to deal with another big change for at least a month or two ;)
-
-> (Though if we do, I'd like to add tid to the seccomp_data, which has
-> been requested in the past to make some pid-based arg checks easier to
-> do.)
-
-Agreed, if we break anything, please add this.
-
--- 
-paul moore
-www.paul-moore.com
+-Kees
