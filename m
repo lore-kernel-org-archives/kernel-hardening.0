@@ -1,169 +1,354 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 22 Jan 2016 11:48:37 +0100
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20160122104837.GA14440@pc.thejh.net>
-References: <1453444200-8604-1-git-send-email-daniel.sangorrin@toshiba.co.jp>
- <1453444200-8604-2-git-send-email-daniel.sangorrin@toshiba.co.jp>
+Date: Fri, 22 Jan 2016 16:55:20 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160122165517.GD11645@leverpostej>
+References: <1452518355-4606-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1452518355-4606-9-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="3V7upXqbjpZ4EhLz"
-Content-Disposition: inline
-In-Reply-To: <1453444200-8604-2-git-send-email-daniel.sangorrin@toshiba.co.jp>
-Subject: Re: [kernel-hardening] [RFC PATCH 1/1] seccomp: provide information
- about the previous syscall
-To: Daniel Sangorrin <daniel.sangorrin@toshiba.co.jp>
-Cc: keescook@chromium.org, luto@amacapital.net, wad@chromium.org, linux-kernel@vger.kernel.org, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---3V7upXqbjpZ4EhLz
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1452518355-4606-9-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v3 08/21] arm64: add support for module PLTs
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 22, 2016 at 03:30:00PM +0900, Daniel Sangorrin wrote:
-> This patch allows applications to restrict the order in which
-> its system calls may be requested. In order to do that, we
-> provide seccomp-BPF scripts with information about the
-> previous system call requested.
->
-> An example use case consists of detecting (and stopping) return
-> oriented attacks that disturb the normal execution flow of
-> a user program.
+Hi Ard,
 
+This looks good.
 
-The intent here is to mitigate attacks in which an attacker has
-e.g. a function pointer overwrite without a high degree of stack
-control or the ability to perform a stack pivot, correct? So that
-e.g. a one-gadget system() call won't succeed?
+My comments below are mostly nits, and much of the rest probably betrays
+my lack of familiarity with ELF.
 
-Do you have data on how effective this protection is using just
-the previous system call number?
-
-I think that for example, the "magic ROP gadget" in glibc that
-can be used given just a single pointer overwrite and stdin
-control (https://gist.github.com/zachriggle/ca24daf4e8be953a3f96),
-which (as far as I can tell) is in the middle of the system()
-implementation, could be used as long as a transition to one of
-the following syscalls is allowed:
-
- - rt_sigaction
- - rt_sigprocmask
- - clone
- - execve
-
-I'm not sure how many interesting syscalls typically transition
-to that, perhaps you can comment on that?
-
-However, when exploiting network servers, this magic gadget
-won't help much - an attacker would probably have to either
-call into an interesting function in the application or use
-ROP. In the latter case, this protection won't help much -
-especially considering that most syscalls just return
--EFAULT / -EINVAL when you supply nonsense arguments, ROPping
-through a "pop rax;ret" gadget and a "syscall;ret" gadget
-should make it fairly easy to bypass the protection. There
-are a bunch of occurences of both gadgets in Debian's libc
-(and these are just the trivial ones):
-
-$ hexdump -C /lib/x86_64-linux-gnu/libc-2.19.so | grep '58 c3'
-000382e0  00 00 48 8b 00 5b 8b 40  58 c3 48 8d 05 4f 8a 36  |..H..[.@X.H..O=
-=2E6|
-000383b0  58 c3 48 8d 05 87 89 36  00 48 39 c3 74 0e 48 89  |X.H....6.H9.t.=
-H.|
-00038450  40 58 c3 48 8d 05 e6 88  36 00 48 39 c3 74 0e 48  |@X.H....6.H9.t=
-=2EH|
-000d9a00  48 89 44 24 18 e8 56 ff  ff ff 48 83 c4 58 c3 90  |H.D$..V...H..X=
-=2E.|
-000e51d0  c3 0f 1f 80 00 00 00 00  48 8b 40 58 c3 0f 1f 00  |........H.@X..=
-=2E.|
-000ea2f0  48 83 3d 58 c3 2b 00 00  48 8b 1d 69 8b 2b 00 64  |H.=3DX.+..H..i=
-=2E+.d|
-00160520  48 c3 fa ff 58 c3 fa ff  68 c3 fa ff 80 c3 fa ff  |H...X...h.....=
-=2E.|
-00171470  58 c3 f8 ff 84 60 02 00  74 c3 f8 ff 94 62 02 00  |X....`..t....b=
-=2E.|
-$ hexdump -C /lib/x86_64-linux-gnu/libc-2.19.so | grep '0f 05 c3'
-000b85b0  b8 6e 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.n............=
-=2E.|
-000b85c0  b8 66 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.f............=
-=2E.|
-000b85d0  b8 6b 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.k............=
-=2E.|
-000b85e0  b8 68 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.h............=
-=2E.|
-000b85f0  b8 6c 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.l............=
-=2E.|
-000b87f0  b8 6f 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |.o............=
-=2E.|
-000d9260  b8 5f 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |._............=
-=2E.|
-000e6400  b8 e4 00 00 00 0f 05 c3  0f 1f 84 00 00 00 00 00  |..............=
-=2E.|
-000fff60  48 63 3f b8 03 00 00 00  0f 05 c3 0f 1f 44 00 00  |Hc?..........D=
-=2E.|
-
-So an attacker would craft the stack like this:
-[pop rax;ret address]
-[first syscall for transition]
-[syscall;ret address]
-[pop rax;ret address]
-[second syscall for transition]
-[syscall;ret address]
-[...]
-[normal ROP for whatever the attacker wants to do]
-
-
-Maybe someone who knows a bit more about binary exploiting
-can comment on this, especially how likely it is that a
-manipulation of a network service's program flow is successful
-in the presence of full ASLR and so on without ROP.
-
-
-Also, there is a potential functional issue: What about signal handlers?
-Signal handlers will require transitions from all syscalls to any syscall
-that occurs at the start of a signal handler to be allowed as far as I
-can tell.
-
-
-> @@ -443,6 +448,11 @@ static long seccomp_attach_filter(unsigned int flags,
->  			return ret;
->  	}
-> =20
-> +	/* Initialize the prev_nr field only once */
-> +	if (current->seccomp.filter =3D=3D NULL)
-> +		current->seccomp.prev_nr =3D
-> +			syscall_get_nr(current, task_pt_regs(current));
+On Mon, Jan 11, 2016 at 02:19:01PM +0100, Ard Biesheuvel wrote:
+> This adds support for emitting PLTs at module load time for relative
+> branches that are out of range. This is a prerequisite for KASLR, which
+> may place the kernel and the modules anywhere in the vmalloc area,
+> making it more likely that branch target offsets exceed the maximum
+> range of +/- 128 MB.
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  arch/arm64/Kconfig              |   9 ++
+>  arch/arm64/Makefile             |   6 +-
+>  arch/arm64/include/asm/module.h |  11 ++
+>  arch/arm64/kernel/Makefile      |   1 +
+>  arch/arm64/kernel/module-plts.c | 137 ++++++++++++++++++++
+>  arch/arm64/kernel/module.c      |  12 ++
+>  arch/arm64/kernel/module.lds    |   4 +
+>  7 files changed, 179 insertions(+), 1 deletion(-)
+> 
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index ffa3c549a4ba..778df20bf623 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -363,6 +363,7 @@ config ARM64_ERRATUM_843419
+>  	bool "Cortex-A53: 843419: A load or store might access an incorrect address"
+>  	depends on MODULES
+>  	default y
+> +	select ARM64_MODULE_CMODEL_LARGE
+>  	help
+>  	  This option builds kernel modules using the large memory model in
+>  	  order to avoid the use of the ADRP instruction, which can cause
+> @@ -702,6 +703,14 @@ config ARM64_LSE_ATOMICS
+>  
+>  endmenu
+>  
+> +config ARM64_MODULE_CMODEL_LARGE
+> +	bool
 > +
->  	/*
->  	 * If there is an existing filter, make it the prev and don't drop its
->  	 * task reference.
+> +config ARM64_MODULE_PLTS
+> +	bool
+> +	select ARM64_MODULE_CMODEL_LARGE
+> +	select HAVE_MOD_ARCH_SPECIFIC
+> +
+>  endmenu
+>  
+>  menu "Boot options"
+> diff --git a/arch/arm64/Makefile b/arch/arm64/Makefile
+> index cd822d8454c0..db462980c6be 100644
+> --- a/arch/arm64/Makefile
+> +++ b/arch/arm64/Makefile
+> @@ -41,10 +41,14 @@ endif
+>  
+>  CHECKFLAGS	+= -D__aarch64__
+>  
+> -ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
+> +ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
+>  KBUILD_CFLAGS_MODULE	+= -mcmodel=large
+>  endif
+>  
+> +ifeq ($(CONFIG_ARM64_MODULE_PLTS),y)
+> +KBUILD_LDFLAGS_MODULE	+= -T $(srctree)/arch/arm64/kernel/module.lds
+> +endif
+> +
+>  # Default value
+>  head-y		:= arch/arm64/kernel/head.o
+>  
+> diff --git a/arch/arm64/include/asm/module.h b/arch/arm64/include/asm/module.h
+> index e80e232b730e..7b8cd3dc9d8e 100644
+> --- a/arch/arm64/include/asm/module.h
+> +++ b/arch/arm64/include/asm/module.h
+> @@ -20,4 +20,15 @@
+>  
+>  #define MODULE_ARCH_VERMAGIC	"aarch64"
+>  
+> +#ifdef CONFIG_ARM64_MODULE_PLTS
+> +struct mod_arch_specific {
+> +	struct elf64_shdr	*core_plt;
+> +	struct elf64_shdr	*init_plt;
+> +	int			core_plt_count;
+> +	int			init_plt_count;
+> +};
+> +#endif
+> +
+> +u64 get_module_plt(struct module *mod, void *loc, u64 val);
+> +
+>  #endif /* __ASM_MODULE_H */
+> diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
+> index 474691f8b13a..f42b0fff607f 100644
+> --- a/arch/arm64/kernel/Makefile
+> +++ b/arch/arm64/kernel/Makefile
+> @@ -30,6 +30,7 @@ arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o 	\
+>  					   ../../arm/kernel/opcodes.o
+>  arm64-obj-$(CONFIG_FUNCTION_TRACER)	+= ftrace.o entry-ftrace.o
+>  arm64-obj-$(CONFIG_MODULES)		+= arm64ksyms.o module.o
+> +arm64-obj-$(CONFIG_ARM64_MODULE_PLTS)	+= module-plts.o
+>  arm64-obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o perf_callchain.o
+>  arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
+>  arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
+> diff --git a/arch/arm64/kernel/module-plts.c b/arch/arm64/kernel/module-plts.c
+> new file mode 100644
+> index 000000000000..4a8ef9ea01ee
+> --- /dev/null
+> +++ b/arch/arm64/kernel/module-plts.c
+> @@ -0,0 +1,137 @@
+> +/*
+> + * Copyright (C) 2014-2015 Linaro Ltd. <ard.biesheuvel@linaro.org>
+> + *
+> + * This program is free software; you can redistribute it and/or modify
+> + * it under the terms of the GNU General Public License version 2 as
+> + * published by the Free Software Foundation.
+> + */
+> +
+> +#include <linux/elf.h>
+> +#include <linux/kernel.h>
+> +#include <linux/module.h>
+> +
+> +struct plt_entry {
+> +	__le32	mov0;	/* movn	x16, #0x....			*/
+> +	__le32	mov1;	/* movk	x16, #0x...., lsl #16		*/
+> +	__le32	mov2;	/* movk	x16, #0x...., lsl #32		*/
+> +	__le32	br;	/* br	x16				*/
+> +} __aligned(8);
 
-What about SECCOMP_FILTER_FLAG_TSYNC? When a thread is transitioned from
-SECCOMP_MODE_DISABLED to SECCOMP_MODE_FILTER by another thread, its initial
-prev_nr will be 0, which would e.g. appear to be the read() syscall on
-x86_64, right?
+We only need natural alignment for the instructions, so what's the
+alignment for? I can't see that anything else cares.
 
---3V7upXqbjpZ4EhLz
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+It might be worth a comment regarding why why use x16 (i.e. because the
+AAPCS says that as IP0 it is valid for veneers/PLTs to clobber).
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+> +static bool in_init(const struct module *mod, void *addr)
+> +{
+> +	return (u64)addr - (u64)mod->module_init < mod->init_size;
+> +}
+> +
+> +u64 get_module_plt(struct module *mod, void *loc, u64 val)
+> +{
+> +	struct plt_entry entry = {
+> +		cpu_to_le32(0x92800010 | (((~val      ) & 0xffff)) << 5),
+> +		cpu_to_le32(0xf2a00010 | ((( val >> 16) & 0xffff)) << 5),
+> +		cpu_to_le32(0xf2c00010 | ((( val >> 32) & 0xffff)) << 5),
+> +		cpu_to_le32(0xd61f0200)
+> +	}, *plt;
 
-iQIcBAEBAgAGBQJWogkFAAoJED4KNFJOeCOoTusQAMKEzmzPSBpuLpJH9r5WhtYy
-zdXAF5HuEkgkcKfJR9gVVqiddVuvxneWYR3UT7C/KTNEaP0XJ7H+r+TRX3JB0AD0
-pxq0IwyXKhZap6GvxwOImnm9+RKih1vRi/wLJAPIrcs7ALyCQE5H7/iQMD0UxE0Y
-LyRfaM2QaEADyZFrjz4u6Ey5iirszCfBklfgOX8tTk/FECVy6ua0zoG3Nj/vHM6A
-N4eMek+jPKtPEWsMoV3cnLHYV2xJhtqmRh2MjTImCgG2RsLFLzDdTvkETJGsyY4X
-dkvzKE7fglf9gA2yrZCv09zzWyCZUPF01QMYNdCPg2toR0aIWJm1OO7gjXFnYwfx
-h2bXEqfMajkbkmzzBsPHcLPKfXncHvB3tmAkS0qm8ZukyxkawABcnU7ZLHfr3e9k
-trP8RdIDI7YlJ5utbruH+Qbm4ybNUaf4DxKJTUhx4Tgqc3ApGEw1PhNYT471qhEs
-0wra7L8FAt7quo1kyKC1c5I10Czj1Xb0BlhC1/Ab8SRtFjHoteFhkPkd4ypCyDMD
-7Lrm00Xo1r5A/RHAAsakN+cEOGx0iogy8MavIfENqnI7TVnkfcpjgt1XRrr4bN0q
-yr0DSce/+9+5gHoikAz5a2+IcDVvGGQQbgv0W7GxxZDFP0UQd/IageW0q8Xuitda
-rSngd5ooXwtrgLUzdKTM
-=yeGf
------END PGP SIGNATURE-----
+It would be nice if we could un-magic this, though I see that reusing
+the existing insn or reloc_insn code is painful here.
 
---3V7upXqbjpZ4EhLz--
+> +	int i, *count;
+> +
+> +	if (in_init(mod, loc)) {
+> +		plt = (struct plt_entry *)mod->arch.init_plt->sh_addr;
+> +		count = &mod->arch.init_plt_count;
+> +	} else {
+> +		plt = (struct plt_entry *)mod->arch.core_plt->sh_addr;
+> +		count = &mod->arch.core_plt_count;
+> +	}
+> +
+> +	/* Look for an existing entry pointing to 'val' */
+> +	for (i = 0; i < *count; i++)
+> +		if (plt[i].mov0 == entry.mov0 &&
+> +		    plt[i].mov1 == entry.mov1 &&
+> +		    plt[i].mov2 == entry.mov2)
+> +			return (u64)&plt[i];
+
+I think that at the cost of redundantly comparing the br x16, you could
+simplify this by comparing the whole struct, e.g.
+
+	for (i = 0; i < *count; i++)
+		if (plt[i] == entry)
+			return (u64)&plt[i];
+
+Which would also work if we change the veneer for some reason.
+
+> +
+> +	i = (*count)++;
+
+given i == *count at the end of the loop, you could just increment
+*count here.
+
+> +	plt[i] = entry;
+> +	return (u64)&plt[i];
+> +}
+> +
+> +static int duplicate_rel(Elf64_Addr base, const Elf64_Rela *rela, int num)
+
+Perhaps: static bool is_duplicate_rel
+
+> +{
+> +	int i;
+> +
+> +	for (i = 0; i < num; i++) {
+> +		if (rela[i].r_info == rela[num].r_info &&
+> +		    rela[i].r_addend == rela[num].r_addend)
+> +			return 1;
+> +	}
+> +	return 0;
+> +}
+> +
+> +/* Count how many PLT entries we may need */
+> +static unsigned int count_plts(Elf64_Addr base, const Elf64_Rela *rela, int num)
+> +{
+> +	unsigned int ret = 0;
+> +	int i;
+> +
+> +	/*
+> +	 * Sure, this is order(n^2), but it's usually short, and not
+> +	 * time critical
+> +	 */
+> +	for (i = 0; i < num; i++)
+> +		switch (ELF64_R_TYPE(rela[i].r_info)) {
+> +		case R_AARCH64_JUMP26:
+> +		case R_AARCH64_CALL26:
+> +			if (!duplicate_rel(base, rela, i))
+> +				ret++;
+> +			break;
+> +		}
+
+While braces aren't strictly required on the for loop, i think it would
+look better with them given the contained logic is non-trivial.
+
+> +	return ret;
+> +}
+> +
+> +int module_frob_arch_sections(Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
+> +			      char *secstrings, struct module *mod)
+> +{
+> +	unsigned long core_plts = 0, init_plts = 0;
+> +	Elf64_Shdr *s, *sechdrs_end = sechdrs + ehdr->e_shnum;
+> +
+> +	/*
+> +	 * To store the PLTs, we expand the .text section for core module code
+> +	 * and the .init.text section for initialization code.
+> +	 */
+
+That comment is a bit misleading, given we don't touch .text and
+.init.text, but rather .core.plt and .init.plt, relying on
+layout_sections to group those with .text and .init.text.
+
+> +	for (s = sechdrs; s < sechdrs_end; ++s)
+> +		if (strcmp(".core.plt", secstrings + s->sh_name) == 0)
+> +			mod->arch.core_plt = s;
+> +		else if (strcmp(".init.plt", secstrings + s->sh_name) == 0)
+> +			mod->arch.init_plt = s;
+
+This would be nicer with braces.
+
+> +
+> +	if (!mod->arch.core_plt || !mod->arch.init_plt) {
+> +		pr_err("%s: sections missing\n", mod->name);
+> +		return -ENOEXEC;
+> +	}
+> +
+> +	for (s = sechdrs + 1; s < sechdrs_end; ++s) {
+
+Could we have a comment as to why we skip the first Shdr? I recall it's
+in some way special, but I can't recall why/how.
+
+> +		const Elf64_Rela *rels = (void *)ehdr + s->sh_offset;
+> +		int numrels = s->sh_size / sizeof(Elf64_Rela);
+> +		Elf64_Shdr *dstsec = sechdrs + s->sh_info;
+> +
+> +		if (s->sh_type != SHT_RELA)
+> +			continue;
+
+We only have RELA, and no REL?
+
+Thanks,
+Mark.
+
+> +
+> +		if (strstr(secstrings + s->sh_name, ".init"))
+> +			init_plts += count_plts(dstsec->sh_addr, rels, numrels);
+> +		else
+> +			core_plts += count_plts(dstsec->sh_addr, rels, numrels);
+> +	}
+> +
+> +	mod->arch.core_plt->sh_type = SHT_NOBITS;
+> +	mod->arch.core_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
+> +	mod->arch.core_plt->sh_addralign = L1_CACHE_BYTES;
+> +	mod->arch.core_plt->sh_size = core_plts * sizeof(struct plt_entry);
+> +	mod->arch.core_plt_count = 0;
+> +
+> +	mod->arch.init_plt->sh_type = SHT_NOBITS;
+> +	mod->arch.init_plt->sh_flags = SHF_EXECINSTR | SHF_ALLOC;
+> +	mod->arch.init_plt->sh_addralign = L1_CACHE_BYTES;
+> +	mod->arch.init_plt->sh_size = init_plts * sizeof(struct plt_entry);
+> +	mod->arch.init_plt_count = 0;
+> +	pr_debug("%s: core.plt=%lld, init.plt=%lld\n", __func__,
+> +		 mod->arch.core_plt->sh_size, mod->arch.init_plt->sh_size);
+> +	return 0;
+> +}
+> diff --git a/arch/arm64/kernel/module.c b/arch/arm64/kernel/module.c
+> index 93e970231ca9..3a298b0e21bb 100644
+> --- a/arch/arm64/kernel/module.c
+> +++ b/arch/arm64/kernel/module.c
+> @@ -38,6 +38,11 @@ void *module_alloc(unsigned long size)
+>  				GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+>  				NUMA_NO_NODE, __builtin_return_address(0));
+>  
+> +	if (!p && IS_ENABLED(CONFIG_ARM64_MODULE_PLTS))
+> +		p = __vmalloc_node_range(size, MODULE_ALIGN, VMALLOC_START,
+> +				VMALLOC_END, GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+> +				NUMA_NO_NODE, __builtin_return_address(0));
+> +
+>  	if (p && (kasan_module_alloc(p, size) < 0)) {
+>  		vfree(p);
+>  		return NULL;
+> @@ -361,6 +366,13 @@ int apply_relocate_add(Elf64_Shdr *sechdrs,
+>  		case R_AARCH64_CALL26:
+>  			ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2, 26,
+>  					     AARCH64_INSN_IMM_26);
+> +
+> +			if (IS_ENABLED(CONFIG_ARM64_MODULE_PLTS) &&
+> +			    ovf == -ERANGE) {
+> +				val = get_module_plt(me, loc, val);
+> +				ovf = reloc_insn_imm(RELOC_OP_PREL, loc, val, 2,
+> +						     26, AARCH64_INSN_IMM_26);
+> +			}
+>  			break;
+>  
+>  		default:
+> diff --git a/arch/arm64/kernel/module.lds b/arch/arm64/kernel/module.lds
+> new file mode 100644
+> index 000000000000..3682fa107918
+> --- /dev/null
+> +++ b/arch/arm64/kernel/module.lds
+> @@ -0,0 +1,4 @@
+> +SECTIONS {
+> +        .core.plt : { BYTE(0) }
+> +        .init.plt : { BYTE(0) }
+> +}
+> -- 
+> 2.5.0
+> 
