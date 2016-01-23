@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 23 Jan 2016 00:44:01 +0000
+Date: Sat, 23 Jan 2016 00:44:49 +0000
 From: Serge Hallyn <serge.hallyn@ubuntu.com>
-Message-ID: <20160123004400.GA23632@ubuntumail>
+Message-ID: <20160123004449.GB23632@ubuntumail>
 References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
  <1453502345-30416-3-git-send-email-keescook@chromium.org>
  <CAP145piccauJvW6JrVzxm1xM3_5xtMk_Fa+uwFx-84+dKCS0WQ@mail.gmail.com>
@@ -50,17 +50,5 @@ Quoting Kees Cook (keescook@chromium.org):
 > this sysctl has already started to enter the global consciousness. ;)
 > 
 > Serge, Ben, what do you think?
-> 
-> -Kees
 
-Hey,
-
-I had originally written this for Ubuntu when userns was still new
-and not upstream.  Then we dropped it when it got upstream.
-
-The reason we are re-adding it is because we're going to be pushing the
-envelop again wrt unprivileged userns usage.  Seth has been working on
-supporting mounts of fuse, for instance.  When everything is upstream,
-(or we drop it :) we'll drop the patch again.
-
--serge
+Oh, sorry - as for the name of it, what is the alternative you are proposing?
