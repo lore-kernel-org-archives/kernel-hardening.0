@@ -1,99 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sat, 23 Jan 2016 00:44:01 +0000
+From: Serge Hallyn <serge.hallyn@ubuntu.com>
+Message-ID: <20160123004400.GA23632@ubuntumail>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+ <1453502345-30416-3-git-send-email-keescook@chromium.org>
+ <CAP145piccauJvW6JrVzxm1xM3_5xtMk_Fa+uwFx-84+dKCS0WQ@mail.gmail.com>
+ <CAGXu5j+dS3nEc-9HhxBxQO0gWC-bakWxfJHzmfsVb7_AK_8+Jw@mail.gmail.com>
+ <CAP145pgdjQ4ALiq0wN9s-7PP5pxfMJs5xY7rdCjtYua6guUZqg@mail.gmail.com>
+ <CAGXu5jKbroEt0nO=yA4V6esKePseO75tcsK=YVy-=1NEuzwxzQ@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1453255778.25071.26.camel@perches.com>
-References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
-	<1453226922-16831-3-git-send-email-keescook@chromium.org>
-	<1453255778.25071.26.camel@perches.com>
-Date: Fri, 22 Jan 2016 15:29:45 -0800
-Message-ID: <CAGXu5jLXuz529eyE9o0u88+iBzUqbB_Mh3Jbp43EZNgJDnWu2Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 2/8] lib: add "on" and "off" to strtobool
-To: Joe Perches <joe@perches.com>
-Cc: Ingo Molnar <mingo@redhat.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Daniel Borkmann <daniel@iogearbox.net>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAGXu5jKbroEt0nO=yA4V6esKePseO75tcsK=YVy-=1NEuzwxzQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 2/2] sysctl: allow CLONE_NEWUSER to be disabled
+To: Kees Cook <keescook@chromium.org>
+Cc: Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Ben Hutchings <ben@decadent.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, "Eric W. Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@amacapital.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 19, 2016 at 6:09 PM, Joe Perches <joe@perches.com> wrote:
-> On Tue, 2016-01-19 at 10:08 -0800, Kees Cook wrote:
->> Several places in the kernel expect to use "on" and "off" for their
->> boolean signifiers, so add them to strtobool.
->
-> Several places in the kernel use a char address like
-> fs/cifs/cifs_debug.c
->
->
->         char c;
->         ...
->
->
->         if (strtobool(&c, ...))
->
-> Using s[1] might cause problems for those uses.
+Quoting Kees Cook (keescook@chromium.org):
+> On Fri, Jan 22, 2016 at 2:55 PM, Robert Święcki <robert@swiecki.net> wrote:
+> > 2016-01-22 23:50 GMT+01:00 Kees Cook <keescook@chromium.org>:
+> >
+> >>> Seems that Debian and some older Ubuntu versions are already using
+> >>>
+> >>> $ sysctl -a | grep usern
+> >>> kernel.unprivileged_userns_clone = 0
+> >>>
+> >>> Shall we be consistent wit it?
+> >>
+> >> Oh! I didn't see that on systems I checked. On which version did you find that?
+> >
+> > $ uname -a
+> > Linux bc1 4.3.0-0.bpo.1-amd64 #1 SMP Debian 4.3.3-5~bpo8+1
+> > (2016-01-07) x86_64 GNU/Linux
+> > $ cat /etc/debian_version
+> > 8.2
+> 
+> Ah-ha, Debian only, though it looks like this was just committed to
+> the Ubuntu kernel tree too:
+> 
+> 
+> > IIRC some older kernels delivered with Ubuntu Precise were also using
+> > it (but maybe I'm mistaken)
+> 
+> I don't see it there.
+> 
+> I think my patch is more complete, but I'm happy to change the name if
+> this sysctl has already started to enter the global consciousness. ;)
+> 
+> Serge, Ben, what do you think?
+> 
+> -Kees
 
-Oh ew. Thanks for noticing that.
+Hey,
 
->> diff --git a/lib/string.c b/lib/string.c
-> []
->> @@ -635,12 +635,15 @@ EXPORT_SYMBOL(sysfs_streq);
->>   * @s: input string
->>   * @res: result
->>   *
->> - * This routine returns 0 iff the first character is one of 'Yy1Nn0'.
->> - * Otherwise it will return -EINVAL.  Value pointed to by res is
->> - * updated upon finding a match.
->> + * This routine returns 0 iff the first character is one of 'Yy1Nn0', or
->> + * [oO][NnFf] for "on" and "off". Otherwise it will return -EINVAL.  Value
->> + * pointed to by res is updated upon finding a match.
->>   */
->>  int strtobool(const char *s, bool *res)
->>  {
->> +     if (!s)
->> +             return -EINVAL;
->> +
->>       switch (s[0]) {
->>       case 'y':
->>       case 'Y':
->> @@ -652,6 +655,21 @@ int strtobool(const char *s, bool *res)
->>       case '0':
->>               *res = false;
->>               break;
->> +     case 'o':
->> +     case 'O':
->> +             switch (s[1]) {
->> +             case 'n':
->> +             case 'N':
->> +                     *res = true;
->> +                     break;
->> +             case 'f':
->> +             case 'F':
->
-> Perhaps
->                 switch (tolower(s[1])) {
-> is more readable
+I had originally written this for Ubuntu when userns was still new
+and not upstream.  Then we dropped it when it got upstream.
 
-I opted to let the compiler deal with optimizing this, and I left the
-switch statement as close to original as possible.
+The reason we are re-adding it is because we're going to be pushing the
+envelop again wrt unprivileged userns usage.  Seth has been working on
+supporting mounts of fuse, for instance.  When everything is upstream,
+(or we drop it :) we'll drop the patch again.
 
--Kees
-
->
->> +                     *res = false;
->> +                     break;
->> +             default:
->> +                     return -EINVAL;
->> +             }
->> +             break;
->
-> or maybe /* fallthrough */
->
->>       default:
->>               return -EINVAL;
->>       }
->
-
-
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+-serge
