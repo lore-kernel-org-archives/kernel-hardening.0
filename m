@@ -1,65 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
-	<1453502345-30416-2-git-send-email-keescook@chromium.org>
-Date: Fri, 22 Jan 2016 21:10:07 -0600
-In-Reply-To: <1453502345-30416-2-git-send-email-keescook@chromium.org> (Kees
-	Cook's message of "Fri, 22 Jan 2016 14:39:04 -0800")
-Message-ID: <87oacdyos0.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH 1/2] sysctl: expand use of proc_dointvec_minmax_sysadmin
+Sender: geert.uytterhoeven@gmail.com
+In-Reply-To: <CAGXu5j+5EB5f335RHOP+CugFC1z29cAV0pWy6zB34dQBz7W6_Q@mail.gmail.com>
+References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
+	<20160122171954.GA3945@davidb.org>
+	<56A28029.2060608@labbott.name>
+	<CAGXu5j+5EB5f335RHOP+CugFC1z29cAV0pWy6zB34dQBz7W6_Q@mail.gmail.com>
+Date: Sat, 23 Jan 2016 10:49:15 +0100
+Message-ID: <CAMuHMdW46hT9usJ-UxAnSKqzTdHfV+VKzU-L9O2NkSegTfbn9Q@mail.gmail.com>
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [PATCH v4 0/8] introduce post-init read-only memory
 To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Andy Lutomirski <luto@amacapital.net>, Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Laura Abbott <laura@labbott.name>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
+Hi Kees,
 
-> Several sysctls expect a state where the highest value (in extra2) is
-> locked once set for that boot. Yama does this, and kptr_restrict should
-> be doing it. This extracts Yama's logic and adds it to the existing
-> proc_dointvec_minmax_sysadmin, taking care to avoid the simple boolean
-> states (which do not get locked). Since Yama wants to be checking a
-> different capability, we build wrappers for both cases (CAP_SYS_ADMIN
-> and CAP_SYS_PTRACE).
+On Fri, Jan 22, 2016 at 8:57 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Jan 22, 2016 at 11:16 AM, Laura Abbott <laura@labbott.name> wrote:
+>> Kees had previously pushed a patch to do so but it exposed a couple of
+>> underlying issues, mostly with low power paths
+>> (c.f. http://article.gmane.org/gmane.linux.ports.arm.kernel/471199,
+>> http://article.gmane.org/gmane.linux.kernel.mm/143489)
+>> Those will need to be all fixed up before this could be made default.
 
-Sigh this sysctl appears susceptible to known attacks.
+I'm working on fixing that...
 
-In my quick skim I believe this sysctl implementation that checks
-capabilities is susceptible to attacks where the already open file
-descriptor is set as stdout on a setuid root application.
+BTW, making the sections read-only is done quite late in the kernel startup
+process, which means it doesn't trigger for the writes to the text segment in
+secondary CPU bringup, but only for suspend/resume.
 
-Can we come up with an interface that isn't exploitable by an
-application that will act as a setuid cat?
+> Yeah, I've got a patch waiting to reorganize CONFIG_ARM_KERNMEM_PERMS
+> to look more like arm64 (and x86) and get the feature correctly under
+> CONFIG_DEBUG_RODATA. I made it default=y on v7+. rmk asked me to wait
+> until -rc1 before resubmitting it.
+>
+> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?h=kspp/arm-rodata&id=08bebfd2e7fb8a9f364ced74c356642d64e1f43e
 
-Eric
+One other concern is indeed memory usage ("ALIGN(1<<SECTION_SHIFT)"?).
+Enabling CONFIG_ARM_KERNMEM_PERMS and CONFIG_DEBUG_RODATA in my test kernel
+configs make the kernel too big to boot (overwritten DTB?) for 3 out of 4 arm
+shmobile targets...
 
-> -#ifdef CONFIG_PRINTK
-> -static int proc_dointvec_minmax_sysadmin(struct ctl_table *table, int write,
-> -				void __user *buffer, size_t *lenp, loff_t *ppos)
-> +int proc_dointvec_minmax_cap(int cap, struct ctl_table *table, int write,
-> +			     void __user *buffer, size_t *lenp, loff_t *ppos)
->  {
-> -	if (write && !capable(CAP_SYS_ADMIN))
-> +	struct ctl_table table_copy;
-> +	int value;
-> +
-> +	/* Require init capabilities to make changes. */
-> +	if (write && !capable(cap))
->  		return -EPERM;
->  
-> -	return proc_dointvec_minmax(table, write, buffer, lenp, ppos);
-> +	/*
-> +	 * To deal with const sysctl tables, we make a copy to perform
-> +	 * the locking. When data is >1 and ==extra2, lock extra1 to
-> +	 * extra2 to stop the value from being changed any further at
-> +	 * runtime.
-> +	 */
-> +	table_copy = *table;
-> +	value = *(int *)table_copy.data;
-> +	if (value > 1 && value == *(int *)table_copy.extra2)
-> +		table_copy.extra1 = table_copy.extra2;
-> +
-> +	return proc_dointvec_minmax(&table_copy, write, buffer, lenp, ppos);
->  }
-> -#endif
+Gr{oetje,eeting}s,
+
+                        Geert
+
+--
+Geert Uytterhoeven -- There's lots of Linux beyond ia32 -- geert@linux-m68k.org
+
+In personal conversations with technical people, I call myself a hacker. But
+when I'm talking to journalists I just say "programmer" or something like that.
+                                -- Linus Torvalds
