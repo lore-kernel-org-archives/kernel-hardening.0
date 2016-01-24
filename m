@@ -1,503 +1,137 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Scott Bauer <sbauer@eng.utah.edu>
-Date: Sun, 24 Jan 2016 00:59:14 -0700
-Message-Id: <1453622354-50686-3-git-send-email-sbauer@eng.utah.edu>
-In-Reply-To: <1453622354-50686-1-git-send-email-sbauer@eng.utah.edu>
-References: <1453622354-50686-1-git-send-email-sbauer@eng.utah.edu>
-Subject: [kernel-hardening] [RFC PATCH 2/2] x86: SROP mitigation: implement signal cookies
-To: kernel-hardening@lists.openwall.com
-Cc: abhiram@cs.utah.edu, Scott Bauer <sbauer@eng.utah.edu>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <8737tp0zhr.fsf@x220.int.ebiederm.org>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+	<8737tp0zhr.fsf@x220.int.ebiederm.org>
+Date: Sun, 24 Jan 2016 12:57:50 -0800
+Message-ID: <CAGXu5jLzjqzp0WFT=NNuSqOEFzu7u7z8p+x9nouwS9ptaca8qQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Andy Lutomirski <luto@amacapital.net>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch adds SROP mitigation logic to the x86 signal delivery
-and sigreturn code. The cookie is placed in the unused alignment
-space above the saved FP state, if it exists. If there is no FP
-state to save then the cookie is placed in the alignment space above
-the sigframe.
+On Fri, Jan 22, 2016 at 7:02 PM, Eric W. Biederman
+<ebiederm@xmission.com> wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> There continues to be unexpected side-effects and security exposures
+>> via CLONE_NEWUSER. For many end-users running distro kernels with
+>> CONFIG_USER_NS enabled, there is no way to disable this feature when
+>> desired. As such, this creates a sysctl to restrict CLONE_NEWUSER so
+>> admins not running containers or Chrome can avoid the risks of this
+>> feature.
+>
+> I don't actually think there do continue to be unexpected side-effects
+> and security exposures with CLONE_NEWUSER.  It takes a while for all of
+> the fixes to trickle out to distros.  At most what I have seen recently
+> are problems with other kernel interfaces being amplified with user
+> namespaces.  AKA the current mess with devpts, and the unexpected
+> issues with bind mounts in mount namespaces.
 
-Signed-off-by: Scott Bauer <sbauer@eng.utah.edu>
----
- arch/x86/ia32/ia32_signal.c        | 63 +++++++++++++++++++++++++---
- arch/x86/include/asm/fpu/signal.h  |  1 +
- arch/x86/include/asm/sighandling.h |  5 ++-
- arch/x86/kernel/fpu/signal.c       | 12 ++++++
- arch/x86/kernel/signal.c           | 86 +++++++++++++++++++++++++++++++++-----
- 5 files changed, 148 insertions(+), 19 deletions(-)
+Access to CLONE_NEWUSER has lead to a lot of security issues over the
+last 3 years. There has to be a way to avoid this for people that have
+no interest in containers.
 
-diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal.c
-index 0552884..2751f47 100644
---- a/arch/x86/ia32/ia32_signal.c
-+++ b/arch/x86/ia32/ia32_signal.c
-@@ -68,7 +68,8 @@
- }
- 
- static int ia32_restore_sigcontext(struct pt_regs *regs,
--				   struct sigcontext_32 __user *sc)
-+				   struct sigcontext_32 __user *sc,
-+				   void __user **user_cookie)
- {
- 	unsigned int tmpflags, err = 0;
- 	void __user *buf;
-@@ -105,6 +106,16 @@ static int ia32_restore_sigcontext(struct pt_regs *regs,
- 		buf = compat_ptr(tmp);
- 	} get_user_catch(err);
- 
-+	/*
-+	 * If there is fp state get cookie from the top of the fp state,
-+	 * else get it from the top of the sig frame.
-+	 */
-+
-+	if (tmp != 0)
-+		*user_cookie = compat_ptr(tmp + fpu__getsize(1));
-+	else
-+		*user_cookie = NULL;
-+
- 	err |= fpu__restore_sig(buf, 1);
- 
- 	force_iret();
-@@ -117,6 +128,7 @@ asmlinkage long sys32_sigreturn(void)
- 	struct pt_regs *regs = current_pt_regs();
- 	struct sigframe_ia32 __user *frame = (struct sigframe_ia32 __user *)(regs->sp-8);
- 	sigset_t set;
-+	void __user *user_cookie;
- 
- 	if (!access_ok(VERIFY_READ, frame, sizeof(*frame)))
- 		goto badframe;
-@@ -129,8 +141,15 @@ asmlinkage long sys32_sigreturn(void)
- 
- 	set_current_blocked(&set);
- 
--	if (ia32_restore_sigcontext(regs, &frame->sc))
-+	if (ia32_restore_sigcontext(regs, &frame->sc, &user_cookie))
-+		goto badframe;
-+
-+	if (user_cookie == NULL)
-+		user_cookie = compat_ptr((regs->sp - 8) + sizeof(*frame));
-+
-+	if (verify_clear_sigcookie(user_cookie))
- 		goto badframe;
-+
- 	return regs->ax;
- 
- badframe:
-@@ -142,6 +161,7 @@ asmlinkage long sys32_rt_sigreturn(void)
- {
- 	struct pt_regs *regs = current_pt_regs();
- 	struct rt_sigframe_ia32 __user *frame;
-+	void __user *user_cookie;
- 	sigset_t set;
- 
- 	frame = (struct rt_sigframe_ia32 __user *)(regs->sp - 4);
-@@ -153,7 +173,13 @@ asmlinkage long sys32_rt_sigreturn(void)
- 
- 	set_current_blocked(&set);
- 
--	if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext))
-+	if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext, &user_cookie))
-+		goto badframe;
-+
-+	if (user_cookie == NULL)
-+		user_cookie = (void __user *)((regs->sp - 4) + sizeof(*frame));
-+
-+	if (verify_clear_sigcookie(user_cookie))
- 		goto badframe;
- 
- 	if (compat_restore_altstack(&frame->uc.uc_stack))
-@@ -213,7 +239,8 @@ static int ia32_setup_sigcontext(struct sigcontext_32 __user *sc,
-  */
- static void __user *get_sigframe(struct ksignal *ksig, struct pt_regs *regs,
- 				 size_t frame_size,
--				 void __user **fpstate)
-+				 void __user **fpstate,
-+				 void __user **cookie)
- {
- 	struct fpu *fpu = &current->thread.fpu;
- 	unsigned long sp;
-@@ -230,11 +257,21 @@ static void __user *get_sigframe(struct ksignal *ksig, struct pt_regs *regs,
- 		 ksig->ka.sa.sa_restorer)
- 		sp = (unsigned long) ksig->ka.sa.sa_restorer;
- 
-+	/*
-+	 * Allocate space for cookie above FP/Frame. It will sit in
-+	 * the padding of the saved FP state, or if there is no FP
-+	 * state it will sit in the padding of the sig frame.
-+	 */
-+	sp -= sizeof(unsigned long);
-+
-+
- 	if (fpu->fpstate_active) {
- 		unsigned long fx_aligned, math_size;
- 
- 		sp = fpu__alloc_mathframe(sp, 1, &fx_aligned, &math_size);
- 		*fpstate = (struct _fpstate_32 __user *) sp;
-+		*cookie = (void __user *)sp + math_size;
-+
- 		if (copy_fpstate_to_sigframe(*fpstate, (void __user *)fx_aligned,
- 				    math_size) < 0)
- 			return (void __user *) -1L;
-@@ -244,6 +281,10 @@ static void __user *get_sigframe(struct ksignal *ksig, struct pt_regs *regs,
- 	/* Align the stack pointer according to the i386 ABI,
- 	 * i.e. so that on function entry ((sp + 4) & 15) == 0. */
- 	sp = ((sp + 4) & -16ul) - 4;
-+
-+	if (!fpu->fpstate_active)
-+		*cookie = (void __user *) (sp + frame_size);
-+
- 	return (void __user *) sp;
- }
- 
-@@ -254,6 +295,7 @@ int ia32_setup_frame(int sig, struct ksignal *ksig,
- 	void __user *restorer;
- 	int err = 0;
- 	void __user *fpstate = NULL;
-+	void __user *cookie_location;
- 
- 	/* copy_to_user optimizes that into a single 8 byte store */
- 	static const struct {
-@@ -266,7 +308,8 @@ int ia32_setup_frame(int sig, struct ksignal *ksig,
- 		0x80cd,		/* int $0x80 */
- 	};
- 
--	frame = get_sigframe(ksig, regs, sizeof(*frame), &fpstate);
-+	frame = get_sigframe(ksig, regs, sizeof(*frame),
-+			     &fpstate, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
-@@ -274,6 +317,9 @@ int ia32_setup_frame(int sig, struct ksignal *ksig,
- 	if (__put_user(sig, &frame->sig))
- 		return -EFAULT;
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	if (ia32_setup_sigcontext(&frame->sc, fpstate, regs, set->sig[0]))
- 		return -EFAULT;
- 
-@@ -332,6 +378,7 @@ int ia32_setup_rt_frame(int sig, struct ksignal *ksig,
- 	void __user *restorer;
- 	int err = 0;
- 	void __user *fpstate = NULL;
-+	void __user *cookie_location;
- 
- 	/* __copy_to_user optimizes that into a single 8 byte store */
- 	static const struct {
-@@ -346,11 +393,15 @@ int ia32_setup_rt_frame(int sig, struct ksignal *ksig,
- 		0,
- 	};
- 
--	frame = get_sigframe(ksig, regs, sizeof(*frame), &fpstate);
-+	frame = get_sigframe(ksig, regs, sizeof(*frame),
-+			     &fpstate, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	put_user_try {
- 		put_user_ex(sig, &frame->sig);
- 		put_user_ex(ptr_to_compat(&frame->info), &frame->pinfo);
-diff --git a/arch/x86/include/asm/fpu/signal.h b/arch/x86/include/asm/fpu/signal.h
-index 0e970d0..a720b95 100644
---- a/arch/x86/include/asm/fpu/signal.h
-+++ b/arch/x86/include/asm/fpu/signal.h
-@@ -27,6 +27,7 @@ extern void convert_to_fxsr(struct task_struct *tsk,
- unsigned long
- fpu__alloc_mathframe(unsigned long sp, int ia32_frame,
- 		     unsigned long *buf_fx, unsigned long *size);
-+unsigned long fpu__getsize(int ia32_frame);
- 
- extern void fpu__init_prepare_fx_sw_frame(void);
- 
-diff --git a/arch/x86/include/asm/sighandling.h b/arch/x86/include/asm/sighandling.h
-index 89db467..971c8b2 100644
---- a/arch/x86/include/asm/sighandling.h
-+++ b/arch/x86/include/asm/sighandling.h
-@@ -12,8 +12,9 @@
- 			 X86_EFLAGS_ZF | X86_EFLAGS_AF | X86_EFLAGS_PF | \
- 			 X86_EFLAGS_CF | X86_EFLAGS_RF)
- 
--void signal_fault(struct pt_regs *regs, void __user *frame, char *where);
--int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc);
-+void signal_fault(struct pt_regs *regs, void __user *frame, const char *where);
-+int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc,
-+		       void __user **user_cookie);
- int setup_sigcontext(struct sigcontext __user *sc, void __user *fpstate,
- 		     struct pt_regs *regs, unsigned long mask);
- 
-diff --git a/arch/x86/kernel/fpu/signal.c b/arch/x86/kernel/fpu/signal.c
-index 31c6a60..35b6b2d 100644
---- a/arch/x86/kernel/fpu/signal.c
-+++ b/arch/x86/kernel/fpu/signal.c
-@@ -344,6 +344,16 @@ static inline int xstate_sigframe_size(void)
- 	return use_xsave() ? xstate_size + FP_XSTATE_MAGIC2_SIZE : xstate_size;
- }
- 
-+unsigned long fpu__getsize(int ia32_frame)
-+{
-+	unsigned long frame_size = xstate_sigframe_size();
-+
-+	if (ia32_frame && use_fxsr())
-+		frame_size += sizeof(struct fregs_state);
-+
-+	return frame_size;
-+}
-+
- /*
-  * Restore FPU state from a sigframe:
-  */
-@@ -360,6 +370,8 @@ int fpu__restore_sig(void __user *buf, int ia32_frame)
- 	return __fpu__restore_sig(buf, buf_fx, size);
- }
- 
-+
-+
- unsigned long
- fpu__alloc_mathframe(unsigned long sp, int ia32_frame,
- 		     unsigned long *buf_fx, unsigned long *size)
-diff --git a/arch/x86/kernel/signal.c b/arch/x86/kernel/signal.c
-index cb6282c..14d3103 100644
---- a/arch/x86/kernel/signal.c
-+++ b/arch/x86/kernel/signal.c
-@@ -23,6 +23,7 @@
- #include <linux/user-return-notifier.h>
- #include <linux/uprobes.h>
- #include <linux/context_tracking.h>
-+#include <linux/hash.h>
- 
- #include <asm/processor.h>
- #include <asm/ucontext.h>
-@@ -61,7 +62,9 @@
- 	regs->seg = GET_SEG(seg) | 3;			\
- } while (0)
- 
--int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc)
-+
-+int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc,
-+	               void __user **user_cookie)
- {
- 	unsigned long buf_val;
- 	void __user *buf;
-@@ -112,8 +115,14 @@ int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc)
- 		buf = (void __user *)buf_val;
- 	} get_user_catch(err);
- 
--	err |= fpu__restore_sig(buf, config_enabled(CONFIG_X86_32));
- 
-+	if (buf_val != 0)
-+		*user_cookie = (void __user *)
-+			(buf_val + fpu__getsize(config_enabled(CONFIG_X86_32)));
-+	else
-+		*user_cookie = NULL;
-+
-+	err |= fpu__restore_sig(buf, config_enabled(CONFIG_X86_32));
- 	force_iret();
- 
- 	return err;
-@@ -200,7 +209,7 @@ static unsigned long align_sigframe(unsigned long sp)
- 
- static void __user *
- get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, size_t frame_size,
--	     void __user **fpstate)
-+	     void __user **fpstate, void __user **cookie)
- {
- 	/* Default to using normal stack */
- 	unsigned long math_size = 0;
-@@ -227,14 +236,27 @@ get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, size_t frame_size,
- 		}
- 	}
- 
-+
-+	/*
-+	 * Allocate space for cookie above FP/Frame. It will sit in
-+	 * the padding of the saved FP state, or if there is no FP
-+	 * state it will sit in the padding of the sig frame.
-+	 */
-+	sp -= sizeof(unsigned long);
-+
- 	if (fpu->fpstate_active) {
- 		sp = fpu__alloc_mathframe(sp, config_enabled(CONFIG_X86_32),
- 					  &buf_fx, &math_size);
- 		*fpstate = (void __user *)sp;
-+		*cookie = (void __user *)sp + math_size;
- 	}
- 
- 	sp = align_sigframe(sp - frame_size);
- 
-+	if (!fpu->fpstate_active)
-+		*cookie = (void __user *) (sp + frame_size);
-+
-+
- 	/*
- 	 * If we are on the alternate signal stack and would overflow it, don't.
- 	 * Return an always-bogus address instead so we will die with SIGSEGV.
-@@ -281,8 +303,10 @@ __setup_frame(int sig, struct ksignal *ksig, sigset_t *set,
- 	void __user *restorer;
- 	int err = 0;
- 	void __user *fpstate = NULL;
-+	void __user *cookie_location;
- 
--	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame), &fpstate);
-+	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame),
-+			     &fpstate, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
-@@ -290,6 +314,9 @@ __setup_frame(int sig, struct ksignal *ksig, sigset_t *set,
- 	if (__put_user(sig, &frame->sig))
- 		return -EFAULT;
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	if (setup_sigcontext(&frame->sc, fpstate, regs, set->sig[0]))
- 		return -EFAULT;
- 
-@@ -344,12 +371,17 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
- 	void __user *restorer;
- 	int err = 0;
- 	void __user *fpstate = NULL;
-+	void __user *cookie_location;
- 
--	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame), &fpstate);
-+	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame),
-+			&fpstate, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	put_user_try {
- 		put_user_ex(sig, &frame->sig);
- 		put_user_ex(&frame->info, &frame->pinfo);
-@@ -408,9 +440,11 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
- {
- 	struct rt_sigframe __user *frame;
- 	void __user *fp = NULL;
-+	void __user *cookie_location;
- 	int err = 0;
- 
--	frame = get_sigframe(&ksig->ka, regs, sizeof(struct rt_sigframe), &fp);
-+	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame),
-+			     &fp, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
-@@ -420,6 +454,9 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
- 			return -EFAULT;
- 	}
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	put_user_try {
- 		/* Create the ucontext.  */
- 		if (cpu_has_xsave)
-@@ -476,8 +513,10 @@ static int x32_setup_rt_frame(struct ksignal *ksig,
- 	void __user *restorer;
- 	int err = 0;
- 	void __user *fpstate = NULL;
-+	void __user *cookie_location;
- 
--	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame), &fpstate);
-+	frame = get_sigframe(&ksig->ka, regs, sizeof(*frame),
-+			     &fpstate, &cookie_location);
- 
- 	if (!access_ok(VERIFY_WRITE, frame, sizeof(*frame)))
- 		return -EFAULT;
-@@ -487,6 +526,9 @@ static int x32_setup_rt_frame(struct ksignal *ksig,
- 			return -EFAULT;
- 	}
- 
-+	if (set_sigcookie(cookie_location))
-+		return -EFAULT;
-+
- 	put_user_try {
- 		/* Create the ucontext.  */
- 		if (cpu_has_xsave)
-@@ -541,6 +583,7 @@ asmlinkage unsigned long sys_sigreturn(void)
- {
- 	struct pt_regs *regs = current_pt_regs();
- 	struct sigframe __user *frame;
-+	void __user *user_cookie;
- 	sigset_t set;
- 
- 	frame = (struct sigframe __user *)(regs->sp - 8);
-@@ -554,8 +597,15 @@ asmlinkage unsigned long sys_sigreturn(void)
- 
- 	set_current_blocked(&set);
- 
--	if (restore_sigcontext(regs, &frame->sc))
-+	if (restore_sigcontext(regs, &frame->sc, &user_cookie))
-+		goto badframe;
-+
-+	if (user_cookie == NULL)
-+		user_cookie = (void __user *) ((regs->sp - 8) + sizeof(*frame));
-+
-+	if (verify_clear_sigcookie(user_cookie))
- 		goto badframe;
-+
- 	return regs->ax;
- 
- badframe:
-@@ -569,6 +619,7 @@ asmlinkage long sys_rt_sigreturn(void)
- {
- 	struct pt_regs *regs = current_pt_regs();
- 	struct rt_sigframe __user *frame;
-+	void __user *user_cookie;
- 	sigset_t set;
- 
- 	frame = (struct rt_sigframe __user *)(regs->sp - sizeof(long));
-@@ -579,7 +630,13 @@ asmlinkage long sys_rt_sigreturn(void)
- 
- 	set_current_blocked(&set);
- 
--	if (restore_sigcontext(regs, &frame->uc.uc_mcontext))
-+	if (restore_sigcontext(regs, &frame->uc.uc_mcontext, &user_cookie))
-+		goto badframe;
-+
-+	if (user_cookie == NULL)
-+		user_cookie = (void __user *) ((regs->sp - 8) + sizeof(*frame));
-+
-+	if (verify_clear_sigcookie(user_cookie))
- 		goto badframe;
- 
- 	if (restore_altstack(&frame->uc.uc_stack))
-@@ -740,7 +797,7 @@ void do_signal(struct pt_regs *regs)
- 	restore_saved_sigmask();
- }
- 
--void signal_fault(struct pt_regs *regs, void __user *frame, char *where)
-+void signal_fault(struct pt_regs *regs, void __user *frame, const char *where)
- {
- 	struct task_struct *me = current;
- 
-@@ -762,6 +819,7 @@ asmlinkage long sys32_x32_rt_sigreturn(void)
- {
- 	struct pt_regs *regs = current_pt_regs();
- 	struct rt_sigframe_x32 __user *frame;
-+	void __user *user_cookie;
- 	sigset_t set;
- 
- 	frame = (struct rt_sigframe_x32 __user *)(regs->sp - 8);
-@@ -773,7 +831,13 @@ asmlinkage long sys32_x32_rt_sigreturn(void)
- 
- 	set_current_blocked(&set);
- 
--	if (restore_sigcontext(regs, &frame->uc.uc_mcontext))
-+	if (restore_sigcontext(regs, &frame->uc.uc_mcontext, &user_cookie))
-+		goto badframe;
-+
-+	if (user_cookie == NULL)
-+		user_cookie = (void __user *) ((regs->sp - 8) + sizeof(*frame));
-+
-+	if (verify_clear_sigcookie(user_cookie))
- 		goto badframe;
- 
- 	if (compat_restore_altstack(&frame->uc.uc_stack))
+For admins running servers where there are no containers (which is
+still a giant number of systems -- containers are popular but not
+ubiquitous), the sysctl makes perfect sense.
+
+> I have a couple of concerns with a sysctl.
+>
+> 1) As user namespaces settle out this sysctl has the potential to
+>    decrease the security of the system overall as sandboxing
+>    features of the kernel will not be available to unprivileged
+>    applications.
+>
+>    Web browsing with chrome will be less safe for example.
+
+I don't propose this for Desktops.
+
+> 2) I strongly suspect the granularity of a sysctl is wrong for access to
+>    user namespaces on a production system.
+>
+>    In general I suspect what we want is something like seccomp.  I
+>    believe all of the relevant bits are in registers.  I actually
+>    thought that was enough for seccomp.  Does seccomp not work for
+>    some reason?
+
+Setting a global seccomp filter on init is not possible with any inits
+yet, and for some architectures it would push all processes onto the
+slow path. It's an extraordinarily big hammer for wanting to turn off
+a single area of the kernel with a long history of problems.
+
+Also, seccomp is arguably a program author's policy tool, not a system
+policy tool. We could offer this sysctl as an LSM too, but that's even
+messier. This is a trivial change to user namespaces and provides a
+large protection to people that aren't interested in the risks of
+running containers.
+
+> 3) A sysctl breeds a false sense of security in thinking that if a
+>    security issue is discovered you can just flip a switch, disable
+>    all new user namespaces and you won't be vulnerable.
+>
+>    In fact most of the issues in the past have only required being in
+>    a user namespace to trigger.  Which means any containers or user
+>    namespaces that already exist could be used to exploit any new
+>    found issue.  Which means that a I don't think a sysctl will give
+>    the desired level of protection.
+>
+>    In my analysis of the issues to date I don't know of anything
+>    short of a reboot that would meaninfully remove the threat.
+
+Any admin that decides to just turn off CLONE_NEWUSER in the middle of
+still using it is insane. I don't think this breeds any false sense of
+security as most sysctls are set at boot time.
+
+> 4) With applications like docker coming on-line I don't think a
+>    restriction to processes with capabilities is actually meaninful
+>    for restricting access to user namespaces.
+
+Admins who are currently using containers are already exposed to so
+much attack surface. This is not for them, it's for people that don't
+use containers.
+
+> So I have concerns about both efficacy and usability with the proposed
+> sysctl.
+
+Two distros already have this sysctl because it was so strongly
+requested by their users. This needs to be upstream so we can manage
+the effects correctly.
+
+> So to keep this productive.  Please tell me about the threat model
+> you envision, and how you envision knobs in the kernel being used to
+> counter those threats.
+
+The threat model I envision is post-intrusion escalation of privileges
+on systems that run distro kernels and do not use containers. I
+envision the sysctl being used at boot time to kill the entire class
+of current and future vulnerabilities exposed by CLONE_NEWUSER. Just
+like the sysctls used to turn off modules at boot or turn off kexec at
+boot.
+
+As Linux developers I feel we have an obligation to provide our end
+users with run-time choices (not just compile-time choices), since
+most of our users are using kernels built by someone else. Given the
+repeated problems with module auto-loading, we provided a way to
+disable module loading. Given the physical-memory-rewriting exposure
+of kexec, we provides a way to disable kexec. Given the conflict
+between hibernation and kASLR, we provided a way to choose one at
+runtime. Here, we're looking back on three years of vulnerabilities
+around CLONE_NEWUSER with no end in sight, and we have an obligation
+to help the end users that don't want to be exposed to this any more.
+Note I'm not suggesting we stop trying to fix the problems we find
+with user namespaces, but we need to provide a way to disable them.
+
+Having this sysctl is vastly superior to telling people how to rewrite
+their kernel memory at boot time to disable syscalls:
+
+https://outflux.net/blog/archives/2013/12/10/live-patching-the-kernel/
+
+-Kees
+
 -- 
-1.9.1
+Kees Cook
+Chrome OS & Brillo Security
