@@ -1,73 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <56A682B5.8000603@intel.com>
-References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
-	<1453740953-18109-4-git-send-email-labbott@fedoraproject.org>
-	<56A682B5.8000603@intel.com>
-Date: Mon, 25 Jan 2016 14:05:59 -0800
-Message-ID: <CAGXu5jJCrNMuE9JgqsBeuL1UFyp-z+erWVPOK_FGT+vum7X5Wg@mail.gmail.com>
+In-Reply-To: <87bn89sbc2.fsf@x220.int.ebiederm.org>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+	<8737tp0zhr.fsf@x220.int.ebiederm.org>
+	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+	<CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
+	<CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
+	<CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
+	<87bn89sbc2.fsf@x220.int.ebiederm.org>
+Date: Mon, 25 Jan 2016 14:34:32 -0800
+Message-ID: <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC][PATCH 3/3] mm/page_poisoning.c: Allow
- for zero poisoning
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, Laura Abbott <labbott@fedoraproject.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 25, 2016 at 12:16 PM, Dave Hansen <dave.hansen@intel.com> wrote:
-> Thanks for doing this!  It all looks pretty straightforward.
->
-> On 01/25/2016 08:55 AM, Laura Abbott wrote:
->> By default, page poisoning uses a poison value (0xaa) on free. If this
->> is changed to 0, the page is not only sanitized but zeroing on alloc
->> with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
->> corruption from the poisoning is harder to detect. This feature also
->> cannot be used with hibernation since pages are not guaranteed to be
->> zeroed after hibernation.
->
-> Ugh, that's a good point about hibernation.  I'm not sure how widely it
-> gets used but it does look pretty widely enabled in distribution kernels.
->
-> Is this something that's fixable?  It seems like we could have the
-> hibernation code run through and zero all the free lists.  Or, we could
-> just disable the optimization at runtime when a hibernation is done.
-
-We can also make hibernation run-time disabled when poisoning is used
-(similar to how kASLR disables it).
-
-> Not that we _have_ to do any of this now, but if a runtime knob (like a
-> sysctl) could be fun too.  I would be nice for folks to turn it on and
-> off if they wanted the added security of "real" poisoning vs. the
-> potential performance boost from this optimization.
->
->> +static inline bool should_zero(void)
->> +{
->> +     return !IS_ENABLED(CONFIG_PAGE_POISONING_ZERO) ||
->> +             !page_poisoning_enabled();
->> +}
->
-> I wonder if calling this "free_pages_prezeroed()" would make things a
-> bit more clear when we use it in prep_new_page().
->
->>  static int prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags,
->>                                                               int alloc_flags)
->>  {
->> @@ -1401,7 +1407,7 @@ static int prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags,
->>       kernel_map_pages(page, 1 << order, 1);
->>       kasan_alloc_pages(page, order);
+On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
+<ebiederm@xmission.com> wrote:
+> Kees Cook <keescook@chromium.org> writes:
 >>
->> -     if (gfp_flags & __GFP_ZERO)
->> +     if (should_zero() && gfp_flags & __GFP_ZERO)
->>               for (i = 0; i < (1 << order); i++)
->>                       clear_highpage(page + i);
+>> Well, I don't know about less weird, but it would leave a unneeded
+>> hole in the permission checks.
 >
-> It's probably also worth pointing out that this can be a really nice
-> feature to have in virtual machines where memory is being deduplicated.
->  As it stands now, the free lists end up with gunk in them and tend not
-> to be easy to deduplicate.  This patch would fix that.
+> To be clear the current patch has my:
+>
+> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
+>
+> The code is buggy, and poorly thought through.  Your lack of interest in
+> fixing the bugs in your patch is distressing.
 
-Oh, good point!
+I'm not sure where you see me having a "lack of interest". The
+existing cap-checking sysctls have a corner-case bug, which is
+orthogonal to this change.
+
+> So broken code, not willing to fix.  No. We are not merging this sysctl.
+
+I think you're jumping to conclusions. :)
+
+This feature is already implemented by two distros, and likely wanted
+by others. We cannot ignore that. The sysctl default doesn't change
+the existing behavior, so this doesn't get in your way at all. Can you
+please respond to my earlier email where I rebutted each of your
+arguments against it? Just saying "no" and putting words in my mouth
+isn't very productive.
+
+Andy, given your interest in this feature, and my explanation of the
+CAP_SYSADMIN check, what are your thoughts?
 
 -Kees
 
