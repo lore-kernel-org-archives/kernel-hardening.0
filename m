@@ -1,57 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Mon, 25 Jan 2016 23:33:28 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F20C156@ORSMSX107.amr.corp.intel.com>
+References: <58374.1452813069@turing-police.cc.vt.edu>
+	<20160115013655.5f0ae253@pc1>
+ <CAGXu5jLQQfuinhxu8RPFgCRNzGoby261RtQJE6zK5fvqbPX0jA@mail.gmail.com>
+In-Reply-To: <CAGXu5jLQQfuinhxu8RPFgCRNzGoby261RtQJE6zK5fvqbPX0jA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <87bn89sbc2.fsf@x220.int.ebiederm.org>
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
-	<8737tp0zhr.fsf@x220.int.ebiederm.org>
-	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
-	<CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
-	<CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
-	<CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
-	<87bn89sbc2.fsf@x220.int.ebiederm.org>
-Date: Mon, 25 Jan 2016 14:34:32 -0800
-Message-ID: <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [kernel-hardening] For whoever's looking at memory santizing..
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
-<ebiederm@xmission.com> wrote:
-> Kees Cook <keescook@chromium.org> writes:
->>
->> Well, I don't know about less weird, but it would leave a unneeded
->> hole in the permission checks.
->
-> To be clear the current patch has my:
->
-> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
->
-> The code is buggy, and poorly thought through.  Your lack of interest in
-> fixing the bugs in your patch is distressing.
-
-I'm not sure where you see me having a "lack of interest". The
-existing cap-checking sysctls have a corner-case bug, which is
-orthogonal to this change.
-
-> So broken code, not willing to fix.  No. We are not merging this sysctl.
-
-I think you're jumping to conclusions. :)
-
-This feature is already implemented by two distros, and likely wanted
-by others. We cannot ignore that. The sysctl default doesn't change
-the existing behavior, so this doesn't get in your way at all. Can you
-please respond to my earlier email where I rebutted each of your
-arguments against it? Just saying "no" and putting words in my mouth
-isn't very productive.
-
-Andy, given your interest in this feature, and my explanation of the
-CAP_SYSADMIN check, what are your thoughts?
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29t
+IFttYWlsdG86a2Vlc2Nvb2tAZ29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+IEtlZXMgQ29vaw0K
+PiBTZW50OiBUdWVzZGF5LCBKYW51YXJ5IDE5LCAyMDE2IDk6MjQgQU0NCj4gVG86IFNjaGF1Zmxl
+ciwgQ2FzZXkgPGNhc2V5LnNjaGF1ZmxlckBpbnRlbC5jb20+DQo+IENjOiBrZXJuZWwtaGFyZGVu
+aW5nQGxpc3RzLm9wZW53YWxsLmNvbQ0KPiBTdWJqZWN0OiBSZTogW2tlcm5lbC1oYXJkZW5pbmdd
+IEZvciB3aG9ldmVyJ3MgbG9va2luZyBhdCBtZW1vcnkgc2FudGl6aW5nLi4NCj4gDQo+IE9uIFRo
+dSwgSmFuIDE0LCAyMDE2IGF0IDQ6MzYgUE0sIEhhbm5vIELDtmNrIDxoYW5ub0BoYm9lY2suZGU+
+IHdyb3RlOg0KPiA+IE9uIFRodSwgMTQgSmFuIDIwMTYgMTg6MTE6MDkgLTA1MDANCj4gPiBWYWxk
+aXMgS2xldG5pZWtzIDxWYWxkaXMuS2xldG5pZWtzQHZ0LmVkdT4gd3JvdGU6DQo+ID4NCj4gPj4g
+SWYgeW91IG5lZWQgYSByZWFsLWxpZmUgZXhhbXBsZSBvZiB3aHkgd2Ugc2hvdWxkIGJlIGRvaW5n
+IGl0DQo+ID4+IGNvbnNpc3RlbnRseToNCj4gPj4NCj4gPj4gaHR0cDovL3ZlbnR1cmViZWF0LmNv
+bS8yMDE2LzAxLzEzL252aWRpYS1ibGFtZXMtYXBwbGUtZm9yLWJ1Zy10aGF0LQ0KPiBleHBvc2Vz
+LXBvcm4tYnJvd3NpbmctaW4tY2hyb21lcy1pbmNvZ25pdG8tbW9kZS8NCj4gPg0KPiA+IFRoaXMg
+YXJ0aWNsZSBzZWVtcyB0byBiZSBvbmx5IGFib3V0IE9TIFguDQo+ID4NCj4gPiBJIGhvcGUgaXQn
+cyBubyBzZWNyZXQgdGhhdCB0aGlzIGlzIGEgcHJvYmxlbSBvbiBMaW51eCBhcyB3ZWxsOg0KPiA+
+IGh0dHBzOi8vaHNtci5jYy9wYWxpbm9wc2lhLw0KPiA+DQo+ID4gQW5kIGZyb20gYWxsIEknbSBh
+d2FyZSBpdCdzIHVuZml4ZWQuDQo+IA0KPiBJJ20gY3VyaW91cyBpZiB0aGlzIGlzIGZpeGFibGUg
+ZnJvbSB0aGUgRFJNIGxheWVyLCBvciBpZiBpdCdzIHN0cmljdGx5DQo+IGRyaXZlci1zcGVjaWZp
+Yy4gQ2FzZXksIGNvdWxkIHlvdSBib3VuY2UgdGhpcyB0b3dhcmQgc29tZSBvZiB0aGUgSW50ZWwN
+Cj4gZ3JhcGhpY3MgZm9sa3M/IFdoaWxlIEludGVsIGlzbid0IGNhbGxlZCBvdXQsIEknbSBjdXJp
+b3VzIGlmIHRoZXJlIGlzDQo+IHN0aWxsIHNvbWV0aGluZyB0aGF0IGNvdWxkIGJlIGRvbmUgaW4g
+dGhlIGdlbmVyYWwgY2FzZS4uLg0KDQpUaGUgSW50ZWwgZ3JhcGhpY3MgZHJpdmVycyAoc28gSSdt
+IHRvbGQpIHVzZSBtZW1vcnkgYWxsb2NhdGVkDQppbiB0aGUgc2htZW0gbGF5ZXIsIGFuZCBoZW5j
+ZSBjYW4gY291bnQgb24gaXQgYmVpbmcgY2xlYXJlZC4NCkkgZG9uJ3Qga25vdyBpZiB0aGF0IGFw
+cHJvYWNoIGNhbiBiZSBnZW5lcmFsaXplZCwgb3IgaWYgaXQgd291bGQNCmV2ZW4gYmUgcG9zc2li
+bGUgZm9yIG90aGVyIGRyaXZlcnMuDQoNCj4gLUtlZXMNCj4gDQo+IC0tDQo+IEtlZXMgQ29vaw0K
+PiBDaHJvbWUgT1MgJiBCcmlsbG8gU2VjdXJpdHkNCg==
