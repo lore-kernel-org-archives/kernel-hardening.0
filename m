@@ -1,91 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CALCETrWUH0qYTJyiu-FEeV59bTDn4zwyak4ZCrzuv4aLWrr-bg@mail.gmail.com>
+In-Reply-To: <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
 References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
-	<1453502345-30416-3-git-send-email-keescook@chromium.org>
-	<CAP145piccauJvW6JrVzxm1xM3_5xtMk_Fa+uwFx-84+dKCS0WQ@mail.gmail.com>
-	<CAGXu5j+dS3nEc-9HhxBxQO0gWC-bakWxfJHzmfsVb7_AK_8+Jw@mail.gmail.com>
-	<CAP145pgdjQ4ALiq0wN9s-7PP5pxfMJs5xY7rdCjtYua6guUZqg@mail.gmail.com>
-	<CAGXu5jKbroEt0nO=yA4V6esKePseO75tcsK=YVy-=1NEuzwxzQ@mail.gmail.com>
-	<1453510799.3734.153.camel@decadent.org.uk>
-	<CAGXu5j+3==XC2jtHt1_N1hMVbRaUE4cVBQ_DWZo+82rQoXcgMA@mail.gmail.com>
-	<CALCETrWUH0qYTJyiu-FEeV59bTDn4zwyak4ZCrzuv4aLWrr-bg@mail.gmail.com>
-Date: Mon, 25 Jan 2016 10:51:25 -0800
-Message-ID: <CAGXu5j+B3M8dwR6_1y4zL78JZGuoaTck+KG6vuYa37fjWLzefg@mail.gmail.com>
+	<8737tp0zhr.fsf@x220.int.ebiederm.org>
+	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+Date: Mon, 25 Jan 2016 10:51:49 -0800
+Message-ID: <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] Re: [PATCH 2/2] sysctl: allow CLONE_NEWUSER to
- be disabled
+Subject: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled
 To: Andy Lutomirski <luto@amacapital.net>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, "Eric W. Biederman" <ebiederm@xmission.com>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 24, 2016 at 2:20 PM, Andy Lutomirski <luto@amacapital.net> wrot=
-e:
-> On Sun, Jan 24, 2016 at 12:59 PM, Kees Cook <keescook@chromium.org> wrote=
-:
->> On Fri, Jan 22, 2016 at 4:59 PM, Ben Hutchings <ben@decadent.org.uk> wro=
-te:
->>> On Fri, 2016-01-22 at 15:00 -0800, Kees Cook wrote:
->>>> On Fri, Jan 22, 2016 at 2:55 PM, Robert =C5=9Awi=C4=99cki <robert@swie=
-cki.net> wrote:
->>>> > 2016-01-22 23:50 GMT+01:00 Kees Cook <keescook@chromium.org>:
->>>> >
->>>> > > > Seems that Debian and some older Ubuntu versions are already usi=
-ng
->>>> > > >
->>>> > > > $ sysctl -a | grep usern
->>>> > > > kernel.unprivileged_userns_clone =3D 0
->>>> > > >
->>>> > > > Shall we be consistent wit it?
->>>> > >
->>>> > > Oh! I didn't see that on systems I checked. On which version did y=
-ou find that?
->>>> >
->>>> > $ uname -a
->>>> > Linux bc1 4.3.0-0.bpo.1-amd64 #1 SMP Debian 4.3.3-5~bpo8+1
->>>> > (2016-01-07) x86_64 GNU/Linux
->>>> > $ cat /etc/debian_version
->>>> > 8.2
->>>>
->>>> Ah-ha, Debian only, though it looks like this was just committed to
->>>> the Ubuntu kernel tree too:
->>>>
->>>>
->>>> > IIRC some older kernels delivered with Ubuntu Precise were also usin=
-g
->>>> > it (but maybe I'm mistaken)
->>>>
->>>> I don't see it there.
->>>>
->>>> I think my patch is more complete, but I'm happy to change the name if
->>>> this sysctl has already started to enter the global consciousness. ;)
->>>>
->>>> Serge, Ben, what do you think?
->>>
->>> I agree that using the '_restrict' suffix for new restrictions makes
->>> sense.  I also don't think that a third possible value for
->>> kernel.unprivileged_userns_clone would would be understandable.
->>>
->>> I would probably make kernel.unprivileged_userns_clone a wrapper for
->>> kernel.userns_restrict in Debian, then deprecate and eventually remove
->>> it.
+On Sun, Jan 24, 2016 at 2:22 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Fri, Jan 22, 2016 at 7:02 PM, Eric W. Biederman
+> <ebiederm@xmission.com> wrote:
+>> Kees Cook <keescook@chromium.org> writes:
 >>
->> Okay, cool. We'll keep my patch as-is then. Thanks!
+>>> There continues to be unexpected side-effects and security exposures
+>>> via CLONE_NEWUSER. For many end-users running distro kernels with
+>>> CONFIG_USER_NS enabled, there is no way to disable this feature when
+>>> desired. As such, this creates a sysctl to restrict CLONE_NEWUSER so
+>>> admins not running containers or Chrome can avoid the risks of this
+>>> feature.
+>>
+>> I don't actually think there do continue to be unexpected side-effects
+>> and security exposures with CLONE_NEWUSER.  It takes a while for all of
+>> the fixes to trickle out to distros.  At most what I have seen recently
+>> are problems with other kernel interfaces being amplified with user
+>> namespaces.  AKA the current mess with devpts, and the unexpected
+>> issues with bind mounts in mount namespaces.
+>>
 >
-> We still need to deal with the capable check in the write handler though,=
- right?
+>>
+>> So to keep this productive.  Please tell me about the threat model
+>> you envision, and how you envision knobs in the kernel being used to
+>> counter those threats.
 >
-> But I must be missing something: why is mode 0644 insufficient?
+> I consider the ability to use CLONE_NEWUSER to acquire CAP_NET_ADMIN
+> over /any/ network namespace and to thus access the network
+> configuration API to be a huge risk.  For example, unprivileged users
+> can program iptables.  I'll eat my hat if there are no privilege
+> escalations in there.  (They can't request module loading, but still.)
 
-Yeah, separate issue. I think it's a corner case: a non-cap root user
-using a setuid tool to write to sysctls. It's worth solving, but I'd
-like to land the CLONE_NEWUSER sysctl first; it's much more urgent.
+Should I consider this an Ack for the patch? :)
 
 -Kees
 
---=20
+-- 
 Kees Cook
 Chrome OS & Brillo Security
