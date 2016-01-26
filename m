@@ -1,88 +1,103 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1453798109.17181.70.camel@tiscali.nl>
-From: Paul Bolle <pebolle@tiscali.nl>
-Date: Tue, 26 Jan 2016 09:48:29 +0100
-In-Reply-To: <1453770913-32287-3-git-send-email-labbott@fedoraproject.org>
-References: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org>
-	 <1453770913-32287-3-git-send-email-labbott@fedoraproject.org>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 2/3] slub: Don't limit debugging to slow paths
-To: Laura Abbott <labbott@fedoraproject.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <js1304@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+MIME-Version: 1.0
+Sender: jwboyer@gmail.com
+In-Reply-To: <87zivtj5tv.fsf@x220.int.ebiederm.org>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+	<8737tp0zhr.fsf@x220.int.ebiederm.org>
+	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+	<CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
+	<CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
+	<CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
+	<87bn89sbc2.fsf@x220.int.ebiederm.org>
+	<CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
+	<87zivtj5tv.fsf@x220.int.ebiederm.org>
+Date: Tue, 26 Jan 2016 09:38:31 -0500
+Message-ID: <CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
+From: Josh Boyer <jwboyer@fedoraproject.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to be disabled
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On ma, 2016-01-25 at 17:15 -0800, Laura Abbott wrote:
-> --- a/init/Kconfig
-> +++ b/init/Kconfig
- 
-> +config SLUB_DEBUG_FASTPATH
-> +	bool "Allow SLUB debugging to utilize the fastpath"
-> +	depends on SLUB_DEBUG
-> +	help
-> +	  SLUB_DEBUG forces all allocations to utilize the slow path which
-> +	  is a performance penalty. Turning on this option lets the debugging
-> +	  use the fast path. This helps the performance when debugging
-> +	  features are turned on. If you aren't planning on utilizing any
-> +	  of the SLUB_DEBUG features, you should say N here.
-> +
-> +	  If unsure, say N
+On Mon, Jan 25, 2016 at 11:57 PM, Eric W. Biederman
+<ebiederm@xmission.com> wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
+>> <ebiederm@xmission.com> wrote:
+>>> Kees Cook <keescook@chromium.org> writes:
+>>>>
+>>>> Well, I don't know about less weird, but it would leave a unneeded
+>>>> hole in the permission checks.
+>>>
+>>> To be clear the current patch has my:
+>>>
+>>> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
+>>>
+>>> The code is buggy, and poorly thought through.  Your lack of interest in
+>>> fixing the bugs in your patch is distressing.
+>>
+>> I'm not sure where you see me having a "lack of interest". The
+>> existing cap-checking sysctls have a corner-case bug, which is
+>> orthogonal to this change.
+>
+> That certainly doesn't sound like you have any plans to change anything
+> there.
+>
+>>> So broken code, not willing to fix.  No. We are not merging this sysctl.
+>>
+>> I think you're jumping to conclusions. :)
+>
+> I think I am the maintainer.
+>
+> What you are proposing is very much something that is only of interst to
+> people who are not using user namespaces.  It is fatally flawed as
+> a way to avoid new attack surfaces for people who don't care as the
+> sysctl leaves user namespaces enabled by default.  It is fatally flawed
+> as remediation to recommend to people to change if a new user namespace
+> related but is discovered.  Any running process that happens to be
+> created while user namespace creation was enabled will continue to
+> exist.  Effectively a reboot will be required as part of a mitigation.
+> Many sysadmins will get that wrong.
+>
+> I can't possibly see your sysctl as proposed achieving it's goals.  A
+> person has to be entirely too aware of subtlety and nuance to use it
+> effectively.
 
-> --- a/mm/slub.c
-> +++ b/mm/slub.c
+What you're saying is true for the "oh crap" case of a new userns
+related CVE being found.  However, there is the case where sysadmins
+know for a fact that a set of machines should not allow user
+namespaces to be enabled.  Currently they have 2 choices, 1) use their
+distro kernel as-is, which may not meet their goal of having userns
+disabled, or 2) rebuild their kernel to disable it, which may
+invalidate any support contracts they have.
 
-> +#ifdef SLUB_DEBUG_FASTPATH
+I tend to agree with you on the lack of value around runtime
+mitigation, but allowing an admin to toggle this as a blatant on/off
+switch on reboot does have value.
 
-I have no clue what your patch does, but I could spot this should
-probably be
-	#ifdef CONFIG_SLUB_DEBUG_FASTPATH
+>> This feature is already implemented by two distros, and likely wanted
+>> by others. We cannot ignore that. The sysctl default doesn't change
+>> the existing behavior, so this doesn't get in your way at all. Can you
+>> please respond to my earlier email where I rebutted each of your
+>> arguments against it? Just saying "no" and putting words in my mouth
+>> isn't very productive.
+>
+> Calling people who make mistakes insane is not a rebuttal.  In security
+> usability matters, and your sysctl has low usability.
+>
+> Further you seem to have missed something crucial in your understanding.
+> As was explained earlier the sysctl was added to ubuntu to allow early
+> adopters to experiment not as a long term way of managing user
+> namespaces.
+>
+>
+> What sounds like a generally useful feature that would cover your use
+> case and many others is a per user limit on the number of user
+> namespaces users may create.
 
-> +static noinline int alloc_debug_processing_fastpath(struct kmem_cache
-> *s,
-> +					struct kmem_cache_cpu *c,
-> +					struct page *page,
-> +					void *object, unsigned long
-> tid,
-> +					unsigned long addr)
-> +{
-> +	unsigned long flags;
-> +	int ret = 0;
-> +
-> +	preempt_disable();
-> +	local_irq_save(flags);
-> +
-> +	/*
-> +	 * We've now disabled preemption and IRQs but we still need
-> +	 * to check that this is the right CPU
-> +	 */
-> +	if (!this_cpu_cmpxchg_double(s->cpu_slab->freelist, s
-> ->cpu_slab->tid,
-> +				c->freelist, tid,
-> +				c->freelist, tid))
-> +		goto out;
-> +
-> +	ret = alloc_debug_processing(s, page, object, addr);
-> +
-> +out:
-> +	local_irq_restore(flags);
-> +	preempt_enable();
-> +	return ret;
-> +}
-> +#else
-> +static noinline int alloc_debug_processing_fastpath(struct kmem_cache
-> *s,
-> +					struct kmem_cache_cpu *c,
-> +					struct page *page,
-> +					void *object, unsigned long
-> tid,
-> +					unsigned long addr)
-> +{
-> +	return 1;
-> +}
-> +#endif
+Where that number may be zero?  I don't see how that is really any
+better than a sysctl.  Could you elaborate?
 
-Thanks,
-
-
-Paul Bolle
+josh
