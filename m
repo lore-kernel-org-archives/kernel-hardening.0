@@ -1,85 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jan 2016 17:15:23 +0000
-From: Serge Hallyn <serge.hallyn@ubuntu.com>
-Message-ID: <20160126171523.GA13715@ubuntumail>
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
- <8737tp0zhr.fsf@x220.int.ebiederm.org>
- <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
- <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
- <CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
- <CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
- <87bn89sbc2.fsf@x220.int.ebiederm.org>
- <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
- <87zivtj5tv.fsf@x220.int.ebiederm.org>
- <CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER
- to be disabled
-To: kernel-hardening@lists.openwall.com
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 26 Jan 2016 18:10:33 +0100
+Message-Id: <1453828249-14467-7-git-send-email-ard.biesheuvel@linaro.org>
+In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
+References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v4 06/22] arm64: add support for ioremap() block mappings
+To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
+Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Josh Boyer (jwboyer@fedoraproject.org):
-> On Mon, Jan 25, 2016 at 11:57 PM, Eric W. Biederman
-> <ebiederm@xmission.com> wrote:
-> > Kees Cook <keescook@chromium.org> writes:
-> >
-> >> On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
-> >> <ebiederm@xmission.com> wrote:
-> >>> Kees Cook <keescook@chromium.org> writes:
-> >>>>
-> >>>> Well, I don't know about less weird, but it would leave a unneeded
-> >>>> hole in the permission checks.
-> >>>
-> >>> To be clear the current patch has my:
-> >>>
-> >>> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
-> >>>
-> >>> The code is buggy, and poorly thought through.  Your lack of interest in
-> >>> fixing the bugs in your patch is distressing.
-> >>
-> >> I'm not sure where you see me having a "lack of interest". The
-> >> existing cap-checking sysctls have a corner-case bug, which is
-> >> orthogonal to this change.
-> >
-> > That certainly doesn't sound like you have any plans to change anything
-> > there.
-> >
-> >>> So broken code, not willing to fix.  No. We are not merging this sysctl.
-> >>
-> >> I think you're jumping to conclusions. :)
-> >
-> > I think I am the maintainer.
-> >
-> > What you are proposing is very much something that is only of interst to
-> > people who are not using user namespaces.  It is fatally flawed as
-> > a way to avoid new attack surfaces for people who don't care as the
-> > sysctl leaves user namespaces enabled by default.  It is fatally flawed
-> > as remediation to recommend to people to change if a new user namespace
-> > related but is discovered.  Any running process that happens to be
-> > created while user namespace creation was enabled will continue to
-> > exist.  Effectively a reboot will be required as part of a mitigation.
-> > Many sysadmins will get that wrong.
-> >
-> > I can't possibly see your sysctl as proposed achieving it's goals.  A
-> > person has to be entirely too aware of subtlety and nuance to use it
-> > effectively.
-> 
-> What you're saying is true for the "oh crap" case of a new userns
-> related CVE being found.  However, there is the case where sysadmins
-> know for a fact that a set of machines should not allow user
-> namespaces to be enabled.  Currently they have 2 choices, 1) use their
+This wires up the existing generic huge-vmap feature, which allows
+ioremap() to use PMD or PUD sized block mappings.
 
-Hi - can you give a specific example of this?  (Where users really should
-not be able to use them - not where they might not need them)  I think
-it'll help the discussion tremendously.  Because so far the only good
-arguments I've seen have been about actual bugs in the user namespaces,
-which would not warrant a designed-in permanent disable switch.  If
-there are good use cases where such a disable switch will always be
-needed (and compiling out can't satisfy) that'd be helpful.
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ Documentation/features/vm/huge-vmap/arch-support.txt |  2 +-
+ arch/arm64/Kconfig                                   |  1 +
+ arch/arm64/include/asm/memory.h                      |  6 +++
+ arch/arm64/mm/mmu.c                                  | 41 ++++++++++++++++++++
+ 4 files changed, 49 insertions(+), 1 deletion(-)
 
-thanks,
--serge
+diff --git a/Documentation/features/vm/huge-vmap/arch-support.txt b/Documentation/features/vm/huge-vmap/arch-support.txt
+index af6816bccb43..df1d1f3c9af2 100644
+--- a/Documentation/features/vm/huge-vmap/arch-support.txt
++++ b/Documentation/features/vm/huge-vmap/arch-support.txt
+@@ -9,7 +9,7 @@
+     |       alpha: | TODO |
+     |         arc: | TODO |
+     |         arm: | TODO |
+-    |       arm64: | TODO |
++    |       arm64: |  ok  |
+     |       avr32: | TODO |
+     |    blackfin: | TODO |
+     |         c6x: | TODO |
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 8cc62289a63e..cd767fa3037a 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -49,6 +49,7 @@ config ARM64
+ 	select HAVE_ALIGNED_STRUCT_PAGE if SLUB
+ 	select HAVE_ARCH_AUDITSYSCALL
+ 	select HAVE_ARCH_BITREVERSE
++	select HAVE_ARCH_HUGE_VMAP
+ 	select HAVE_ARCH_JUMP_LABEL
+ 	select HAVE_ARCH_KASAN if SPARSEMEM_VMEMMAP && !(ARM64_16K_PAGES && ARM64_VA_BITS_48)
+ 	select HAVE_ARCH_KGDB
+diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+index bea9631b34a8..aebc739f5a11 100644
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -106,6 +106,12 @@
+ #define MT_S2_NORMAL		0xf
+ #define MT_S2_DEVICE_nGnRE	0x1
+ 
++#ifdef CONFIG_ARM64_4K_PAGES
++#define IOREMAP_MAX_ORDER	(PUD_SHIFT)
++#else
++#define IOREMAP_MAX_ORDER	(PMD_SHIFT)
++#endif
++
+ #ifndef __ASSEMBLY__
+ 
+ extern phys_addr_t		memstart_addr;
+diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+index cb3a7bdb4e23..b84915723ea0 100644
+--- a/arch/arm64/mm/mmu.c
++++ b/arch/arm64/mm/mmu.c
+@@ -710,3 +710,44 @@ void *__init fixmap_remap_fdt(phys_addr_t dt_phys)
+ 
+ 	return dt_virt;
+ }
++
++int __init arch_ioremap_pud_supported(void)
++{
++	/* only 4k granule supports level 1 block mappings */
++	return IS_ENABLED(CONFIG_ARM64_4K_PAGES);
++}
++
++int __init arch_ioremap_pmd_supported(void)
++{
++	return 1;
++}
++
++int pud_set_huge(pud_t *pud, phys_addr_t phys, pgprot_t prot)
++{
++	BUG_ON(phys & ~PUD_MASK);
++	set_pud(pud, __pud(phys | PUD_TYPE_SECT | pgprot_val(mk_sect_prot(prot))));
++	return 1;
++}
++
++int pmd_set_huge(pmd_t *pmd, phys_addr_t phys, pgprot_t prot)
++{
++	BUG_ON(phys & ~PMD_MASK);
++	set_pmd(pmd, __pmd(phys | PMD_TYPE_SECT | pgprot_val(mk_sect_prot(prot))));
++	return 1;
++}
++
++int pud_clear_huge(pud_t *pud)
++{
++	if (!pud_sect(*pud))
++		return 0;
++	pud_clear(pud);
++	return 1;
++}
++
++int pmd_clear_huge(pmd_t *pmd)
++{
++	if (!pmd_sect(*pmd))
++		return 0;
++	pmd_clear(pmd);
++	return 1;
++}
+-- 
+2.5.0
