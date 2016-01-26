@@ -1,67 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 26 Jan 2016 18:10:41 +0100
-Message-Id: <1453828249-14467-15-git-send-email-ard.biesheuvel@linaro.org>
+Date: Tue, 26 Jan 2016 18:10:42 +0100
+Message-Id: <1453828249-14467-16-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v4 14/22] arm64: make asm/elf.h available to asm files
+Subject: [kernel-hardening] [PATCH v4 15/22] scripts/sortextable: add support for ET_DYN binaries
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This reshuffles some code in asm/elf.h and puts a #ifndef __ASSEMBLY__
-around its C definitions so that the CPP defines can be used in asm
-source files as well.
+Add support to scripts/sortextable for handling relocatable (PIE)
+executables, whose ELF type is ET_DYN, not ET_EXEC. Other than adding
+support for the new type, no changes are needed.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/elf.h | 22 ++++++++++++--------
- 1 file changed, 13 insertions(+), 9 deletions(-)
+ scripts/sortextable.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-index faad6df49e5b..435f55952e1f 100644
---- a/arch/arm64/include/asm/elf.h
-+++ b/arch/arm64/include/asm/elf.h
-@@ -24,15 +24,6 @@
- #include <asm/ptrace.h>
- #include <asm/user.h>
+diff --git a/scripts/sortextable.c b/scripts/sortextable.c
+index af247c70fb66..19d83647846c 100644
+--- a/scripts/sortextable.c
++++ b/scripts/sortextable.c
+@@ -266,9 +266,9 @@ do_file(char const *const fname)
+ 		break;
+ 	}  /* end switch */
+ 	if (memcmp(ELFMAG, ehdr->e_ident, SELFMAG) != 0
+-	||  r2(&ehdr->e_type) != ET_EXEC
++	||  (r2(&ehdr->e_type) != ET_EXEC && r2(&ehdr->e_type) != ET_DYN)
+ 	||  ehdr->e_ident[EI_VERSION] != EV_CURRENT) {
+-		fprintf(stderr, "unrecognized ET_EXEC file %s\n", fname);
++		fprintf(stderr, "unrecognized ET_EXEC/ET_DYN file %s\n", fname);
+ 		fail_file();
+ 	}
  
--typedef unsigned long elf_greg_t;
--
--#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
--#define ELF_CORE_COPY_REGS(dest, regs)	\
--	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
--
--typedef elf_greg_t elf_gregset_t[ELF_NGREG];
--typedef struct user_fpsimd_state elf_fpregset_t;
--
- /*
-  * AArch64 static relocation types.
-  */
-@@ -127,6 +118,17 @@ typedef struct user_fpsimd_state elf_fpregset_t;
-  */
- #define ELF_ET_DYN_BASE	(2 * TASK_SIZE_64 / 3)
- 
-+#ifndef __ASSEMBLY__
-+
-+typedef unsigned long elf_greg_t;
-+
-+#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
-+#define ELF_CORE_COPY_REGS(dest, regs)	\
-+	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
-+
-+typedef elf_greg_t elf_gregset_t[ELF_NGREG];
-+typedef struct user_fpsimd_state elf_fpregset_t;
-+
- /*
-  * When the program starts, a1 contains a pointer to a function to be
-  * registered with atexit, as per the SVR4 ABI.  A value of 0 means we have no
-@@ -186,4 +188,6 @@ extern int aarch32_setup_vectors_page(struct linux_binprm *bprm,
- 
- #endif /* CONFIG_COMPAT */
- 
-+#endif /* !__ASSEMBLY__ */
-+
- #endif
+@@ -304,7 +304,7 @@ do_file(char const *const fname)
+ 		if (r2(&ehdr->e_ehsize) != sizeof(Elf32_Ehdr)
+ 		||  r2(&ehdr->e_shentsize) != sizeof(Elf32_Shdr)) {
+ 			fprintf(stderr,
+-				"unrecognized ET_EXEC file: %s\n", fname);
++				"unrecognized ET_EXEC/ET_DYN file: %s\n", fname);
+ 			fail_file();
+ 		}
+ 		do32(ehdr, fname, custom_sort);
+@@ -314,7 +314,7 @@ do_file(char const *const fname)
+ 		if (r2(&ghdr->e_ehsize) != sizeof(Elf64_Ehdr)
+ 		||  r2(&ghdr->e_shentsize) != sizeof(Elf64_Shdr)) {
+ 			fprintf(stderr,
+-				"unrecognized ET_EXEC file: %s\n", fname);
++				"unrecognized ET_EXEC/ET_DYN file: %s\n", fname);
+ 			fail_file();
+ 		}
+ 		do64(ghdr, fname, custom_sort);
 -- 
 2.5.0
