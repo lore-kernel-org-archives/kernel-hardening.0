@@ -1,78 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jan 2016 17:42:18 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160126174217.GH29086@leverpostej>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
- <1453828249-14467-15-git-send-email-ard.biesheuvel@linaro.org>
+ <1453828249-14467-6-git-send-email-ard.biesheuvel@linaro.org>
+From: Marc Zyngier <marc.zyngier@arm.com>
+Message-ID: <56A7B0A0.3020003@arm.com>
+Date: Tue, 26 Jan 2016 17:45:04 +0000
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1453828249-14467-15-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v4 14/22] arm64: make asm/elf.h available to asm files
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk
+In-Reply-To: <1453828249-14467-6-git-send-email-ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v4 05/22] arm64: kvm: deal with kernel symbols outside of
+ linear mapping
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
+Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 26, 2016 at 06:10:41PM +0100, Ard Biesheuvel wrote:
-> This reshuffles some code in asm/elf.h and puts a #ifndef __ASSEMBLY__
-> around its C definitions so that the CPP defines can be used in asm
-> source files as well.
+On 26/01/16 17:10, Ard Biesheuvel wrote:
+> KVM on arm64 uses a fixed offset between the linear mapping at EL1 and
+> the HYP mapping at EL2. Before we can move the kernel virtual mapping
+> out of the linear mapping, we have to make sure that references to kernel
+> symbols that are accessed via the HYP mapping are translated to their
+> linear equivalent.
 > 
+> Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Acked-by: Mark Rutland <mark.rutland@arm.com>
+Acked-by: Marc Zyngier <marc.zyngier@arm.com>
 
-Mark.
-
-> ---
->  arch/arm64/include/asm/elf.h | 22 ++++++++++++--------
->  1 file changed, 13 insertions(+), 9 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
-> index faad6df49e5b..435f55952e1f 100644
-> --- a/arch/arm64/include/asm/elf.h
-> +++ b/arch/arm64/include/asm/elf.h
-> @@ -24,15 +24,6 @@
->  #include <asm/ptrace.h>
->  #include <asm/user.h>
->  
-> -typedef unsigned long elf_greg_t;
-> -
-> -#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
-> -#define ELF_CORE_COPY_REGS(dest, regs)	\
-> -	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
-> -
-> -typedef elf_greg_t elf_gregset_t[ELF_NGREG];
-> -typedef struct user_fpsimd_state elf_fpregset_t;
-> -
->  /*
->   * AArch64 static relocation types.
->   */
-> @@ -127,6 +118,17 @@ typedef struct user_fpsimd_state elf_fpregset_t;
->   */
->  #define ELF_ET_DYN_BASE	(2 * TASK_SIZE_64 / 3)
->  
-> +#ifndef __ASSEMBLY__
-> +
-> +typedef unsigned long elf_greg_t;
-> +
-> +#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
-> +#define ELF_CORE_COPY_REGS(dest, regs)	\
-> +	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
-> +
-> +typedef elf_greg_t elf_gregset_t[ELF_NGREG];
-> +typedef struct user_fpsimd_state elf_fpregset_t;
-> +
->  /*
->   * When the program starts, a1 contains a pointer to a function to be
->   * registered with atexit, as per the SVR4 ABI.  A value of 0 means we have no
-> @@ -186,4 +188,6 @@ extern int aarch32_setup_vectors_page(struct linux_binprm *bprm,
->  
->  #endif /* CONFIG_COMPAT */
->  
-> +#endif /* !__ASSEMBLY__ */
-> +
->  #endif
-> -- 
-> 2.5.0
-> 
+	M.
+-- 
+Jazz is not dead. It just smells funny...
