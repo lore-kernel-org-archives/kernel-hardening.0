@@ -1,122 +1,174 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 26 Jan 2016 18:10:38 +0100
-Message-Id: <1453828249-14467-12-git-send-email-ard.biesheuvel@linaro.org>
+Date: Tue, 26 Jan 2016 18:10:39 +0100
+Message-Id: <1453828249-14467-13-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v4 11/22] arm64: avoid R_AARCH64_ABS64 relocations for Image header fields
+Subject: [kernel-hardening] [PATCH v4 12/22] arm64: avoid dynamic relocations in early boot code
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Unfortunately, the current way of using the linker to emit build time
-constants into the Image header will no longer work once we switch to
-the use of PIE executables. The reason is that such constants are emitted
-into the binary using R_AARCH64_ABS64 relocations, which are resolved at
-runtime, not at build time, and the places targeted by those relocations
-will contain zeroes before that.
+Before implementing KASLR for arm64 by building a self-relocating PIE
+executable, we have to ensure that values we use before the relocation
+routine is executed are not subject to dynamic relocation themselves.
+This applies not only to virtual addresses, but also to values that are
+supplied by the linker at build time and relocated using R_AARCH64_ABS64
+relocations.
 
-So refactor the endian swapping linker script constant generation code so
-that it emits the upper and lower 32-bit words separately.
+So instead, use assemble time constants, or force the use of static
+relocations by folding the constants into the instructions.
 
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/assembler.h | 11 +++++++
- arch/arm64/kernel/head.S           |  6 ++--
- arch/arm64/kernel/image.h          | 32 ++++++++++++--------
- 3 files changed, 33 insertions(+), 16 deletions(-)
+ arch/arm64/kernel/efi-entry.S |  2 +-
+ arch/arm64/kernel/head.S      | 39 +++++++++++++-------
+ 2 files changed, 27 insertions(+), 14 deletions(-)
 
-diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
-index d8bfcc1ce923..70f7b9e04598 100644
---- a/arch/arm64/include/asm/assembler.h
-+++ b/arch/arm64/include/asm/assembler.h
-@@ -222,4 +222,15 @@ lr	.req	x30		// link register
- 	.size	__pi_##x, . - x;	\
- 	ENDPROC(x)
+diff --git a/arch/arm64/kernel/efi-entry.S b/arch/arm64/kernel/efi-entry.S
+index a773db92908b..f82036e02485 100644
+--- a/arch/arm64/kernel/efi-entry.S
++++ b/arch/arm64/kernel/efi-entry.S
+@@ -61,7 +61,7 @@ ENTRY(entry)
+ 	 */
+ 	mov	x20, x0		// DTB address
+ 	ldr	x0, [sp, #16]	// relocated _text address
+-	ldr	x21, =stext_offset
++	movz	x21, #:abs_g0:stext_offset
+ 	add	x21, x0, x21
  
-+	/*
-+	 * Emit a 64-bit absolute little endian symbol reference in a way that
-+	 * ensures that it will be resolved at build time, even when building a
-+	 * PIE binary. This requires cooperation from the linker script, which
-+	 * must emit the lo32/hi32 halves individually.
-+	 */
-+	.macro	le64sym, sym
-+	.long	\sym\()_lo32
-+	.long	\sym\()_hi32
-+	.endm
-+
- #endif	/* __ASM_ASSEMBLER_H */
+ 	/*
 diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-index 85181cb60f46..2a39d4ab02bf 100644
+index 2a39d4ab02bf..ab4c8e93e31c 100644
 --- a/arch/arm64/kernel/head.S
 +++ b/arch/arm64/kernel/head.S
-@@ -83,9 +83,9 @@ efi_head:
- 	b	stext				// branch to kernel start, magic
- 	.long	0				// reserved
- #endif
--	.quad	_kernel_offset_le		// Image load offset from start of RAM, little-endian
--	.quad	_kernel_size_le			// Effective size of kernel image, little-endian
--	.quad	_kernel_flags_le		// Informative flags, little-endian
-+	le64sym	_kernel_offset_le		// Image load offset from start of RAM, little-endian
-+	le64sym	_kernel_size_le			// Effective size of kernel image, little-endian
-+	le64sym	_kernel_flags_le		// Informative flags, little-endian
- 	.quad	0				// reserved
- 	.quad	0				// reserved
- 	.quad	0				// reserved
-diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
-index bc2abb8b1599..b64c9b0a4492 100644
---- a/arch/arm64/kernel/image.h
-+++ b/arch/arm64/kernel/image.h
-@@ -26,21 +26,27 @@
-  * There aren't any ELF relocations we can use to endian-swap values known only
-  * at link time (e.g. the subtraction of two symbol addresses), so we must get
-  * the linker to endian-swap certain values before emitting them.
-+ *
-+ * Note that, in order for this to work when building the ELF64 PIE executable
-+ * (for KASLR), these values should not be referenced via R_AARCH64_ABS64
-+ * relocations, since these are fixed up at runtime rather than at build time
-+ * when PIE is in effect. So we need to split them up in 32-bit high and low
-+ * words.
+@@ -67,12 +67,11 @@
+  * in the entry routines.
   */
- #ifdef CONFIG_CPU_BIG_ENDIAN
--#define DATA_LE64(data)					\
--	((((data) & 0x00000000000000ff) << 56) |	\
--	 (((data) & 0x000000000000ff00) << 40) |	\
--	 (((data) & 0x0000000000ff0000) << 24) |	\
--	 (((data) & 0x00000000ff000000) << 8)  |	\
--	 (((data) & 0x000000ff00000000) >> 8)  |	\
--	 (((data) & 0x0000ff0000000000) >> 24) |	\
--	 (((data) & 0x00ff000000000000) >> 40) |	\
--	 (((data) & 0xff00000000000000) >> 56))
-+#define DATA_LE32(data)				\
-+	((((data) & 0x000000ff) << 24) |	\
-+	 (((data) & 0x0000ff00) << 8)  |	\
-+	 (((data) & 0x00ff0000) >> 8)  |	\
-+	 (((data) & 0xff000000) >> 24))
+ 	__HEAD
+-
++_head:
+ 	/*
+ 	 * DO NOT MODIFY. Image header expected by Linux boot-loaders.
+ 	 */
+ #ifdef CONFIG_EFI
+-efi_head:
+ 	/*
+ 	 * This add instruction has no meaningful effect except that
+ 	 * its opcode forms the magic "MZ" signature required by UEFI.
+@@ -94,14 +93,14 @@ efi_head:
+ 	.byte	0x4d
+ 	.byte	0x64
+ #ifdef CONFIG_EFI
+-	.long	pe_header - efi_head		// Offset to the PE header.
++	.long	pe_header - _head		// Offset to the PE header.
  #else
--#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
-+#define DATA_LE32(data) ((data) & 0xffffffff)
+ 	.word	0				// reserved
  #endif
- 
-+#define DEFINE_IMAGE_LE64(sym, data)				\
-+	sym##_lo32 = DATA_LE32((data) & 0xffffffff);		\
-+	sym##_hi32 = DATA_LE32((data) >> 32)
-+
- #ifdef CONFIG_CPU_BIG_ENDIAN
- #define __HEAD_FLAG_BE	1
- #else
-@@ -58,9 +64,9 @@
-  * endian swapped in head.S, all are done here for consistency.
-  */
- #define HEAD_SYMBOLS						\
--	_kernel_size_le		= DATA_LE64(_end - _text);	\
--	_kernel_offset_le	= DATA_LE64(TEXT_OFFSET);	\
--	_kernel_flags_le	= DATA_LE64(__HEAD_FLAGS);
-+	DEFINE_IMAGE_LE64(_kernel_size_le, _end - _text);	\
-+	DEFINE_IMAGE_LE64(_kernel_offset_le, TEXT_OFFSET);	\
-+	DEFINE_IMAGE_LE64(_kernel_flags_le, __HEAD_FLAGS);
  
  #ifdef CONFIG_EFI
+ 	.globl	__efistub_stext_offset
+-	.set	__efistub_stext_offset, stext - efi_head
++	.set	__efistub_stext_offset, stext - _head
+ 	.align 3
+ pe_header:
+ 	.ascii	"PE"
+@@ -124,7 +123,7 @@ optional_header:
+ 	.long	_end - stext			// SizeOfCode
+ 	.long	0				// SizeOfInitializedData
+ 	.long	0				// SizeOfUninitializedData
+-	.long	__efistub_entry - efi_head	// AddressOfEntryPoint
++	.long	__efistub_entry - _head		// AddressOfEntryPoint
+ 	.long	__efistub_stext_offset		// BaseOfCode
  
+ extra_header_fields:
+@@ -139,7 +138,7 @@ extra_header_fields:
+ 	.short	0				// MinorSubsystemVersion
+ 	.long	0				// Win32VersionValue
+ 
+-	.long	_end - efi_head			// SizeOfImage
++	.long	_end - _head			// SizeOfImage
+ 
+ 	// Everything before the kernel image is considered part of the header
+ 	.long	__efistub_stext_offset		// SizeOfHeaders
+@@ -219,11 +218,13 @@ ENTRY(stext)
+ 	 * On return, the CPU will be ready for the MMU to be turned on and
+ 	 * the TCR will have been set.
+ 	 */
+-	ldr	x27, =__mmap_switched		// address to jump to after
++	ldr	x27, 0f				// address to jump to after
+ 						// MMU has been enabled
+ 	adr_l	lr, __enable_mmu		// return (PIC) address
+ 	b	__cpu_setup			// initialise processor
+ ENDPROC(stext)
++	.align	3
++0:	.quad	__mmap_switched - (_head - TEXT_OFFSET) + KIMAGE_VADDR
+ 
+ /*
+  * Preserve the arguments passed by the bootloader in x0 .. x3
+@@ -391,7 +392,8 @@ __create_page_tables:
+ 	mov	x0, x26				// swapper_pg_dir
+ 	ldr	x5, =KIMAGE_VADDR
+ 	create_pgd_entry x0, x5, x3, x6
+-	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
++	ldr	w6, kernel_img_size
++	add	x6, x6, x5
+ 	mov	x3, x24				// phys offset
+ 	create_block_map x0, x7, x3, x5, x6
+ 
+@@ -408,6 +410,9 @@ __create_page_tables:
+ 	mov	lr, x27
+ 	ret
+ ENDPROC(__create_page_tables)
++
++kernel_img_size:
++	.long	_end - (_head - TEXT_OFFSET)
+ 	.ltorg
+ 
+ /*
+@@ -415,6 +420,10 @@ ENDPROC(__create_page_tables)
+  */
+ 	.set	initial_sp, init_thread_union + THREAD_START_SP
+ __mmap_switched:
++	adr_l	x8, vectors			// load VBAR_EL1 with virtual
++	msr	vbar_el1, x8			// vector table address
++	isb
++
+ 	// Clear BSS
+ 	adr_l	x0, __bss_start
+ 	mov	x1, xzr
+@@ -601,13 +610,19 @@ ENTRY(secondary_startup)
+ 	adrp	x26, swapper_pg_dir
+ 	bl	__cpu_setup			// initialise processor
+ 
+-	ldr	x21, =secondary_data
+-	ldr	x27, =__secondary_switched	// address to jump to after enabling the MMU
++	ldr	x8, =KIMAGE_VADDR
++	ldr	w9, 0f
++	sub	x27, x8, w9, sxtw		// address to jump to after enabling the MMU
+ 	b	__enable_mmu
+ ENDPROC(secondary_startup)
++0:	.long	(_text - TEXT_OFFSET) - __secondary_switched
+ 
+ ENTRY(__secondary_switched)
+-	ldr	x0, [x21]			// get secondary_data.stack
++	adr_l	x5, vectors
++	msr	vbar_el1, x5
++	isb
++
++	ldr_l	x0, secondary_data		// get secondary_data.stack
+ 	mov	sp, x0
+ 	and	x0, x0, #~(THREAD_SIZE - 1)
+ 	msr	sp_el0, x0			// save thread_info
+@@ -632,8 +647,6 @@ __enable_mmu:
+ 	ubfx	x2, x1, #ID_AA64MMFR0_TGRAN_SHIFT, 4
+ 	cmp	x2, #ID_AA64MMFR0_TGRAN_SUPPORTED
+ 	b.ne	__no_granule_support
+-	ldr	x5, =vectors
+-	msr	vbar_el1, x5
+ 	msr	ttbr0_el1, x25			// load TTBR0
+ 	msr	ttbr1_el1, x26			// load TTBR1
+ 	isb
 -- 
 2.5.0
