@@ -1,41 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jan 2016 16:03:20 +0900
-From: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Message-ID: <20160126070320.GB28254@js1304-P5Q-DELUXE>
-References: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org>
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Speed up SLUB poisoning + disable checks
-To: Laura Abbott <labbott@fedoraproject.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+In-Reply-To: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
+References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
+Date: Tue, 26 Jan 2016 10:08:06 +0100
+Message-ID: <CA+rthh9diW4PddNjDm56o3peB+38oEh9Q5rPtbeQXKTnoEQc2w@mail.gmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC][PATCH 0/3] Sanitization of buddy pages
+To: kernel-hardening@lists.openwall.com
+Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, Laura Abbott <labbott@fedoraproject.org>, linux-mm@kvack.org, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 25, 2016 at 05:15:10PM -0800, Laura Abbott wrote:
+On 25 January 2016 at 17:55, Laura Abbott <labbott@fedoraproject.org> wrote:
 > Hi,
-> 
-> Based on the discussion from the series to add slab sanitization
-> (lkml.kernel.org/g/<1450755641-7856-1-git-send-email-laura@labbott.name>)
-> the existing SLAB_POISON mechanism already covers similar behavior.
-> The performance of SLAB_POISON isn't very good. With hackbench -g 20 -l 1000
-> on QEMU with one cpu:
+>
+> This is an implementation of page poisoning/sanitization for all arches. It
+> takes advantage of the existing implementation for
+> !ARCH_SUPPORTS_DEBUG_PAGEALLOC arches. This is a different approach than what
+> the Grsecurity patches were taking but should provide equivalent functionality.
+>
+> For those who aren't familiar with this, the goal of sanitization is to reduce
+> the severity of use after free and uninitialized data bugs. Memory is cleared
+> on free so any sensitive data is no longer available. Discussion of
+> sanitization was brough up in a thread about CVEs
+> (lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
+>
+> I eventually expect Kconfig names will want to be changed and or moved if this
+> is going to be used for security but that can happen later.
+>
+> Credit to Mathias Krause for the version in grsecurity
 
-I doesn't follow up that discussion, but, I think that reusing
-SLAB_POISON for slab sanitization needs more changes. I assume that
-completeness and performance is matter for slab sanitization.
+Thanks for the credits but I don't deserve them. I've contributed the
+slab based sanitization only. The page based one shipped in PaX and
+grsecurity is from the PaX Team.
 
-1) SLAB_POISON isn't applied to specific kmem_cache which has
-constructor or SLAB_DESTROY_BY_RCU flag. For debug, it's not necessary
-to be applied, but, for slab sanitization, it is better to apply it to
-all caches.
+>
+> Laura Abbott (3):
+>   mm/debug-pagealloc.c: Split out page poisoning from debug page_alloc
+>   mm/page_poison.c: Enable PAGE_POISONING as a separate option
+>   mm/page_poisoning.c: Allow for zero poisoning
+>
+>  Documentation/kernel-parameters.txt |   5 ++
+>  include/linux/mm.h                  |  13 +++
+>  include/linux/poison.h              |   4 +
+>  mm/Kconfig.debug                    |  35 +++++++-
+>  mm/Makefile                         |   5 +-
+>  mm/debug-pagealloc.c                | 127 +----------------------------
+>  mm/page_alloc.c                     |  10 ++-
+>  mm/page_poison.c                    | 158 ++++++++++++++++++++++++++++++++++++
+>  8 files changed, 228 insertions(+), 129 deletions(-)
+>  create mode 100644 mm/page_poison.c
+>
+> --
+> 2.5.0
+>
 
-2) SLAB_POISON makes object size bigger so natural alignment will be
-broken. For example, kmalloc(256) cache's size is 256 in normal
-case but it would be 264 when SLAB_POISON is enabled. This causes
-memory waste.
-
-In fact, I'd prefer not reusing SLAB_POISON. It would make thing
-simpler. But, it's up to Christoph.
-
-Thanks.
+Regards,
+Mathias
