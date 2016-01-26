@@ -1,33 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jan 2016 07:38:52 +0000
-From: Serge Hallyn <serge.hallyn@ubuntu.com>
-Message-ID: <20160126073852.GC6652@ubuntumail>
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
- <8737tp0zhr.fsf@x220.int.ebiederm.org>
- <CAGXu5jLzjqzp0WFT=NNuSqOEFzu7u7z8p+x9nouwS9ptaca8qQ@mail.gmail.com>
+References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
+From: Sasha Levin <sasha.levin@oracle.com>
+Message-ID: <56A70C9D.8060102@oracle.com>
+Date: Tue, 26 Jan 2016 01:05:17 -0500
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jLzjqzp0WFT=NNuSqOEFzu7u7z8p+x9nouwS9ptaca8qQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER
- to be disabled
-To: kernel-hardening@lists.openwall.com
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Andy Lutomirski <luto@amacapital.net>, Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Sanitization of buddy pages
+To: Laura Abbott <labbott@fedoraproject.org>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <ryabinin.a.a@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Kees Cook (keescook@chromium.org):
-> On Fri, Jan 22, 2016 at 7:02 PM, Eric W. Biederman
-> > So I have concerns about both efficacy and usability with the proposed
-> > sysctl.
+On 01/25/2016 11:55 AM, Laura Abbott wrote:
+> Hi,
 > 
-> Two distros already have this sysctl because it was so strongly
-> requested by their users. This needs to be upstream so we can manage
-> the effects correctly.
+> This is an implementation of page poisoning/sanitization for all arches. It
+> takes advantage of the existing implementation for
+> !ARCH_SUPPORTS_DEBUG_PAGEALLOC arches. This is a different approach than what
+> the Grsecurity patches were taking but should provide equivalent functionality.
+> 
+> For those who aren't familiar with this, the goal of sanitization is to reduce
+> the severity of use after free and uninitialized data bugs. Memory is cleared
+> on free so any sensitive data is no longer available. Discussion of
+> sanitization was brough up in a thread about CVEs
+> (lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
+> 
+> I eventually expect Kconfig names will want to be changed and or moved if this
+> is going to be used for security but that can happen later.
+> 
+> Credit to Mathias Krause for the version in grsecurity
+> 
+> Laura Abbott (3):
+>   mm/debug-pagealloc.c: Split out page poisoning from debug page_alloc
+>   mm/page_poison.c: Enable PAGE_POISONING as a separate option
+>   mm/page_poisoning.c: Allow for zero poisoning
+> 
+>  Documentation/kernel-parameters.txt |   5 ++
+>  include/linux/mm.h                  |  13 +++
+>  include/linux/poison.h              |   4 +
+>  mm/Kconfig.debug                    |  35 +++++++-
+>  mm/Makefile                         |   5 +-
+>  mm/debug-pagealloc.c                | 127 +----------------------------
+>  mm/page_alloc.c                     |  10 ++-
+>  mm/page_poison.c                    | 158 ++++++++++++++++++++++++++++++++++++
+>  8 files changed, 228 insertions(+), 129 deletions(-)
+>  create mode 100644 mm/page_poison.c
+> 
 
-Which two distros?  Was it in fact requested by their users?
+Should poisoning of this kind be using kasan rather than "old fashioned"
+poisoning?
 
-My opinion remains that long-term this is a bad thing.  If we're going to
-have this upstream, it should be clearly marked so as to be easily
-removable at some point down the road.  Userspace that cannot count on a
-feature (in the best case) won't use it or (much worse) will fall back
-to broken behavior in one case or the other.
+
+Thanks,
+Sasha
