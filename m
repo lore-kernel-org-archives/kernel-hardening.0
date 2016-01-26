@@ -1,59 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
-References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
-Date: Tue, 26 Jan 2016 10:08:06 +0100
-Message-ID: <CA+rthh9diW4PddNjDm56o3peB+38oEh9Q5rPtbeQXKTnoEQc2w@mail.gmail.com>
-From: Mathias Krause <minipli@googlemail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC][PATCH 0/3] Sanitization of buddy pages
-To: kernel-hardening@lists.openwall.com
-Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, Laura Abbott <labbott@fedoraproject.org>, linux-mm@kvack.org, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, PaX Team <pageexec@freemail.hu>
+Message-ID: <1453798109.17181.70.camel@tiscali.nl>
+From: Paul Bolle <pebolle@tiscali.nl>
+Date: Tue, 26 Jan 2016 09:48:29 +0100
+In-Reply-To: <1453770913-32287-3-git-send-email-labbott@fedoraproject.org>
+References: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org>
+	 <1453770913-32287-3-git-send-email-labbott@fedoraproject.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 2/3] slub: Don't limit debugging to slow paths
+To: Laura Abbott <labbott@fedoraproject.org>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <js1304@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 25 January 2016 at 17:55, Laura Abbott <labbott@fedoraproject.org> wrote:
-> Hi,
->
-> This is an implementation of page poisoning/sanitization for all arches. It
-> takes advantage of the existing implementation for
-> !ARCH_SUPPORTS_DEBUG_PAGEALLOC arches. This is a different approach than what
-> the Grsecurity patches were taking but should provide equivalent functionality.
->
-> For those who aren't familiar with this, the goal of sanitization is to reduce
-> the severity of use after free and uninitialized data bugs. Memory is cleared
-> on free so any sensitive data is no longer available. Discussion of
-> sanitization was brough up in a thread about CVEs
-> (lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
->
-> I eventually expect Kconfig names will want to be changed and or moved if this
-> is going to be used for security but that can happen later.
->
-> Credit to Mathias Krause for the version in grsecurity
+On ma, 2016-01-25 at 17:15 -0800, Laura Abbott wrote:
+> --- a/init/Kconfig
+> +++ b/init/Kconfig
+ 
+> +config SLUB_DEBUG_FASTPATH
+> +	bool "Allow SLUB debugging to utilize the fastpath"
+> +	depends on SLUB_DEBUG
+> +	help
+> +	  SLUB_DEBUG forces all allocations to utilize the slow path which
+> +	  is a performance penalty. Turning on this option lets the debugging
+> +	  use the fast path. This helps the performance when debugging
+> +	  features are turned on. If you aren't planning on utilizing any
+> +	  of the SLUB_DEBUG features, you should say N here.
+> +
+> +	  If unsure, say N
 
-Thanks for the credits but I don't deserve them. I've contributed the
-slab based sanitization only. The page based one shipped in PaX and
-grsecurity is from the PaX Team.
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
 
->
-> Laura Abbott (3):
->   mm/debug-pagealloc.c: Split out page poisoning from debug page_alloc
->   mm/page_poison.c: Enable PAGE_POISONING as a separate option
->   mm/page_poisoning.c: Allow for zero poisoning
->
->  Documentation/kernel-parameters.txt |   5 ++
->  include/linux/mm.h                  |  13 +++
->  include/linux/poison.h              |   4 +
->  mm/Kconfig.debug                    |  35 +++++++-
->  mm/Makefile                         |   5 +-
->  mm/debug-pagealloc.c                | 127 +----------------------------
->  mm/page_alloc.c                     |  10 ++-
->  mm/page_poison.c                    | 158 ++++++++++++++++++++++++++++++++++++
->  8 files changed, 228 insertions(+), 129 deletions(-)
->  create mode 100644 mm/page_poison.c
->
-> --
-> 2.5.0
->
+> +#ifdef SLUB_DEBUG_FASTPATH
 
-Regards,
-Mathias
+I have no clue what your patch does, but I could spot this should
+probably be
+	#ifdef CONFIG_SLUB_DEBUG_FASTPATH
+
+> +static noinline int alloc_debug_processing_fastpath(struct kmem_cache
+> *s,
+> +					struct kmem_cache_cpu *c,
+> +					struct page *page,
+> +					void *object, unsigned long
+> tid,
+> +					unsigned long addr)
+> +{
+> +	unsigned long flags;
+> +	int ret = 0;
+> +
+> +	preempt_disable();
+> +	local_irq_save(flags);
+> +
+> +	/*
+> +	 * We've now disabled preemption and IRQs but we still need
+> +	 * to check that this is the right CPU
+> +	 */
+> +	if (!this_cpu_cmpxchg_double(s->cpu_slab->freelist, s
+> ->cpu_slab->tid,
+> +				c->freelist, tid,
+> +				c->freelist, tid))
+> +		goto out;
+> +
+> +	ret = alloc_debug_processing(s, page, object, addr);
+> +
+> +out:
+> +	local_irq_restore(flags);
+> +	preempt_enable();
+> +	return ret;
+> +}
+> +#else
+> +static noinline int alloc_debug_processing_fastpath(struct kmem_cache
+> *s,
+> +					struct kmem_cache_cpu *c,
+> +					struct page *page,
+> +					void *object, unsigned long
+> tid,
+> +					unsigned long addr)
+> +{
+> +	return 1;
+> +}
+> +#endif
+
+Thanks,
+
+
+Paul Bolle
