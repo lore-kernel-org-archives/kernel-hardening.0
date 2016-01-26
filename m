@@ -1,75 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
 References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
- <1453740953-18109-3-git-send-email-labbott@fedoraproject.org>
- <CAHz2CGXc6=r_D1L6nUTj7A_bbX7GeUFb5+0TZWh55UUA6hiQ7w@mail.gmail.com>
+ <56A70C9D.8060102@oracle.com>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <56A7D6B7.20301@redhat.com>
-Date: Tue, 26 Jan 2016 12:27:35 -0800
+Message-ID: <56A7D84D.7020101@redhat.com>
+Date: Tue, 26 Jan 2016 12:34:21 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAHz2CGXc6=r_D1L6nUTj7A_bbX7GeUFb5+0TZWh55UUA6hiQ7w@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <56A70C9D.8060102@oracle.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 2/3] mm/page_poison.c: Enable PAGE_POISONING as a
- separate option
-To: Jianyu Zhan <nasa4836@gmail.com>, Laura Abbott <labbott@fedoraproject.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Sanitization of buddy pages
+To: Sasha Levin <sasha.levin@oracle.com>, Laura Abbott <labbott@fedoraproject.org>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <ryabinin.a.a@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/25/2016 10:39 PM, Jianyu Zhan wrote:
-> On Tue, Jan 26, 2016 at 12:55 AM, Laura Abbott
-> <labbott@fedoraproject.org> wrote:
->> --- a/mm/debug-pagealloc.c
->> +++ b/mm/debug-pagealloc.c
->> @@ -8,11 +8,5 @@
+On 01/25/2016 10:05 PM, Sasha Levin wrote:
+> On 01/25/2016 11:55 AM, Laura Abbott wrote:
+>> Hi,
 >>
->>   void __kernel_map_pages(struct page *page, int numpages, int enable)
->>   {
->> -       if (!page_poisoning_enabled())
->> -               return;
->> -
->> -       if (enable)
->> -               unpoison_pages(page, numpages);
->> -       else
->> -               poison_pages(page, numpages);
->> +       kernel_poison_pages(page, numpages, enable);
->>   }
->> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
->> index 63358d9..c733421 100644
->> --- a/mm/page_alloc.c
->> +++ b/mm/page_alloc.c
->> @@ -1002,6 +1002,7 @@ static bool free_pages_prepare(struct page *page, unsigned int order)
->>                                             PAGE_SIZE << order);
->>          }
->>          arch_free_page(page, order);
->> +       kernel_poison_pages(page, 1 << order, 0);
->>          kernel_map_pages(page, 1 << order, 0);
+>> This is an implementation of page poisoning/sanitization for all arches. It
+>> takes advantage of the existing implementation for
+>> !ARCH_SUPPORTS_DEBUG_PAGEALLOC arches. This is a different approach than what
+>> the Grsecurity patches were taking but should provide equivalent functionality.
 >>
->>          return true;
->> @@ -1396,6 +1397,7 @@ static int prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags,
->>          set_page_refcounted(page);
+>> For those who aren't familiar with this, the goal of sanitization is to reduce
+>> the severity of use after free and uninitialized data bugs. Memory is cleared
+>> on free so any sensitive data is no longer available. Discussion of
+>> sanitization was brough up in a thread about CVEs
+>> (lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
 >>
->>          arch_alloc_page(page, order);
->> +       kernel_poison_pages(page, 1 << order, 1);
->>          kernel_map_pages(page, 1 << order, 1);
->>          kasan_alloc_pages(page, order);
+>> I eventually expect Kconfig names will want to be changed and or moved if this
+>> is going to be used for security but that can happen later.
+>>
+>> Credit to Mathias Krause for the version in grsecurity
+>>
+>> Laura Abbott (3):
+>>    mm/debug-pagealloc.c: Split out page poisoning from debug page_alloc
+>>    mm/page_poison.c: Enable PAGE_POISONING as a separate option
+>>    mm/page_poisoning.c: Allow for zero poisoning
+>>
+>>   Documentation/kernel-parameters.txt |   5 ++
+>>   include/linux/mm.h                  |  13 +++
+>>   include/linux/poison.h              |   4 +
+>>   mm/Kconfig.debug                    |  35 +++++++-
+>>   mm/Makefile                         |   5 +-
+>>   mm/debug-pagealloc.c                | 127 +----------------------------
+>>   mm/page_alloc.c                     |  10 ++-
+>>   mm/page_poison.c                    | 158 ++++++++++++++++++++++++++++++++++++
+>>   8 files changed, 228 insertions(+), 129 deletions(-)
+>>   create mode 100644 mm/page_poison.c
 >>
 >
-> kernel_map_pages() will fall back to page poisoning scheme for
-> !ARCH_SUPPORTS_DEBUG_PAGEALLOC.
->
-> IIUC,  calling kernel_poison_pages() before kernel_map_pages() will be
-> equivalent to call kernel_poison_pages()
-> twice?!
+> Should poisoning of this kind be using kasan rather than "old fashioned"
+> poisoning?
 >
 >
 
-Yes, you are absolutely right. In the !ARCH_SUPPORTS_DEBUG_PAGEALLOC
-case we shouldn't need to do anything in kernel_map_pages.
-
->
->
+The two aren't mutually exclusive. kasan is serving a different purpose even
+though it has sanitize in the name. kasan is designed to detect errors, the
+purpose of this series is to make sure the memory is really cleared out.
+This series also doesn't have the memory overhead of kasan.
+  
 > Thanks,
-> Jianyu Zhan
+> Sasha
 >
 
 Thanks,
