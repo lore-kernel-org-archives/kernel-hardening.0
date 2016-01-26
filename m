@@ -1,239 +1,122 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 26 Jan 2016 18:10:37 +0100
-Message-Id: <1453828249-14467-11-git-send-email-ard.biesheuvel@linaro.org>
+Date: Tue, 26 Jan 2016 18:10:38 +0100
+Message-Id: <1453828249-14467-12-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v4 10/22] arm64: switch to relative exception tables
+Subject: [kernel-hardening] [PATCH v4 11/22] arm64: avoid R_AARCH64_ABS64 relocations for Image header fields
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Instead of using absolute addresses for both the exception location
-and the fixup, use offsets relative to the exception table entry values.
-Not only does this cut the size of the exception table in half, it is
-also a prerequisite for KASLR, since absolute exception table entries
-are subject to dynamic relocation, which is incompatible with the sorting
-of the exception table that occurs at build time.
+Unfortunately, the current way of using the linker to emit build time
+constants into the Image header will no longer work once we switch to
+the use of PIE executables. The reason is that such constants are emitted
+into the binary using R_AARCH64_ABS64 relocations, which are resolved at
+runtime, not at build time, and the places targeted by those relocations
+will contain zeroes before that.
 
-This patch also introduces the _ASM_EXTABLE preprocessor macro (which
-exists on x86 as well) and its _asm_extable assembly counterpart, as
-shorthands to emit exception table entries.
+So refactor the endian swapping linker script constant generation code so
+that it emits the upper and lower 32-bit words separately.
 
-Acked-by: Will Deacon <will.deacon@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/assembler.h      | 15 +++++++---
- arch/arm64/include/asm/futex.h          | 12 +++-----
- arch/arm64/include/asm/uaccess.h        | 30 +++++++++++---------
- arch/arm64/include/asm/word-at-a-time.h |  7 ++---
- arch/arm64/kernel/armv8_deprecated.c    |  7 ++---
- arch/arm64/mm/extable.c                 |  2 +-
- scripts/sortextable.c                   |  2 +-
- 7 files changed, 38 insertions(+), 37 deletions(-)
+ arch/arm64/include/asm/assembler.h | 11 +++++++
+ arch/arm64/kernel/head.S           |  6 ++--
+ arch/arm64/kernel/image.h          | 32 ++++++++++++--------
+ 3 files changed, 33 insertions(+), 16 deletions(-)
 
 diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
-index bb7b72734c24..d8bfcc1ce923 100644
+index d8bfcc1ce923..70f7b9e04598 100644
 --- a/arch/arm64/include/asm/assembler.h
 +++ b/arch/arm64/include/asm/assembler.h
-@@ -94,12 +94,19 @@
- 	dmb	\opt
- 	.endm
+@@ -222,4 +222,15 @@ lr	.req	x30		// link register
+ 	.size	__pi_##x, . - x;	\
+ 	ENDPROC(x)
  
-+/*
-+ * Emit an entry into the exception table
-+ */
-+	.macro		_asm_extable, from, to
-+	.pushsection	__ex_table, "a"
-+	.align		3
-+	.long		(\from - .), (\to - .)
-+	.popsection
++	/*
++	 * Emit a 64-bit absolute little endian symbol reference in a way that
++	 * ensures that it will be resolved at build time, even when building a
++	 * PIE binary. This requires cooperation from the linker script, which
++	 * must emit the lo32/hi32 halves individually.
++	 */
++	.macro	le64sym, sym
++	.long	\sym\()_lo32
++	.long	\sym\()_hi32
 +	.endm
 +
- #define USER(l, x...)				\
- 9999:	x;					\
--	.section __ex_table,"a";		\
--	.align	3;				\
--	.quad	9999b,l;			\
--	.previous
-+	_asm_extable	9999b, l
- 
- /*
-  * Register aliases.
-diff --git a/arch/arm64/include/asm/futex.h b/arch/arm64/include/asm/futex.h
-index 007a69fc4f40..1ab15a3b5a0e 100644
---- a/arch/arm64/include/asm/futex.h
-+++ b/arch/arm64/include/asm/futex.h
-@@ -42,10 +42,8 @@
- "4:	mov	%w0, %w5\n"						\
- "	b	3b\n"							\
- "	.popsection\n"							\
--"	.pushsection __ex_table,\"a\"\n"				\
--"	.align	3\n"							\
--"	.quad	1b, 4b, 2b, 4b\n"					\
--"	.popsection\n"							\
-+	_ASM_EXTABLE(1b, 4b)						\
-+	_ASM_EXTABLE(2b, 4b)						\
- 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,		\
- 		    CONFIG_ARM64_PAN)					\
- 	: "=&r" (ret), "=&r" (oldval), "+Q" (*uaddr), "=&r" (tmp)	\
-@@ -133,10 +131,8 @@ futex_atomic_cmpxchg_inatomic(u32 *uval, u32 __user *uaddr,
- "4:	mov	%w0, %w6\n"
- "	b	3b\n"
- "	.popsection\n"
--"	.pushsection __ex_table,\"a\"\n"
--"	.align	3\n"
--"	.quad	1b, 4b, 2b, 4b\n"
--"	.popsection\n"
-+	_ASM_EXTABLE(1b, 4b)
-+	_ASM_EXTABLE(2b, 4b)
- 	: "+r" (ret), "=&r" (val), "+Q" (*uaddr), "=&r" (tmp)
- 	: "r" (oldval), "r" (newval), "Ir" (-EFAULT)
- 	: "memory");
-diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
-index b2ede967fe7d..dc11577fab7e 100644
---- a/arch/arm64/include/asm/uaccess.h
-+++ b/arch/arm64/include/asm/uaccess.h
-@@ -36,11 +36,11 @@
- #define VERIFY_WRITE 1
- 
- /*
-- * The exception table consists of pairs of addresses: the first is the
-- * address of an instruction that is allowed to fault, and the second is
-- * the address at which the program should continue.  No registers are
-- * modified, so it is entirely up to the continuation code to figure out
-- * what to do.
-+ * The exception table consists of pairs of relative offsets: the first
-+ * is the relative offset to an instruction that is allowed to fault,
-+ * and the second is the relative offset at which the program should
-+ * continue. No registers are modified, so it is entirely up to the
-+ * continuation code to figure out what to do.
-  *
-  * All the routines below use bits of fixup code that are out of line
-  * with the main instruction path.  This means when everything is well,
-@@ -50,9 +50,11 @@
- 
- struct exception_table_entry
- {
--	unsigned long insn, fixup;
-+	int insn, fixup;
- };
- 
-+#define ARCH_HAS_RELATIVE_EXTABLE
-+
- extern int fixup_exception(struct pt_regs *regs);
- 
- #define KERNEL_DS	(-1UL)
-@@ -105,6 +107,12 @@ static inline void set_fs(mm_segment_t fs)
- #define access_ok(type, addr, size)	__range_ok(addr, size)
- #define user_addr_max			get_fs
- 
-+#define _ASM_EXTABLE(from, to)						\
-+	"	.pushsection	__ex_table, \"a\"\n"			\
-+	"	.align		3\n"					\
-+	"	.long		(" #from " - .), (" #to " - .)\n"	\
-+	"	.popsection\n"
-+
- /*
-  * The "__xxx" versions of the user access functions do not verify the address
-  * space - it must have been done previously with a separate "access_ok()"
-@@ -123,10 +131,7 @@ static inline void set_fs(mm_segment_t fs)
- 	"	mov	%1, #0\n"					\
- 	"	b	2b\n"						\
- 	"	.previous\n"						\
--	"	.section __ex_table,\"a\"\n"				\
--	"	.align	3\n"						\
--	"	.quad	1b, 3b\n"					\
--	"	.previous"						\
-+	_ASM_EXTABLE(1b, 3b)						\
- 	: "+r" (err), "=&r" (x)						\
- 	: "r" (addr), "i" (-EFAULT))
- 
-@@ -190,10 +195,7 @@ do {									\
- 	"3:	mov	%w0, %3\n"					\
- 	"	b	2b\n"						\
- 	"	.previous\n"						\
--	"	.section __ex_table,\"a\"\n"				\
--	"	.align	3\n"						\
--	"	.quad	1b, 3b\n"					\
--	"	.previous"						\
-+	_ASM_EXTABLE(1b, 3b)						\
- 	: "+r" (err)							\
- 	: "r" (x), "r" (addr), "i" (-EFAULT))
- 
-diff --git a/arch/arm64/include/asm/word-at-a-time.h b/arch/arm64/include/asm/word-at-a-time.h
-index aab5bf09e9d9..2b79b8a89457 100644
---- a/arch/arm64/include/asm/word-at-a-time.h
-+++ b/arch/arm64/include/asm/word-at-a-time.h
-@@ -16,6 +16,8 @@
- #ifndef __ASM_WORD_AT_A_TIME_H
- #define __ASM_WORD_AT_A_TIME_H
- 
-+#include <asm/uaccess.h>
-+
- #ifndef __AARCH64EB__
- 
- #include <linux/kernel.h>
-@@ -81,10 +83,7 @@ static inline unsigned long load_unaligned_zeropad(const void *addr)
+ #endif	/* __ASM_ASSEMBLER_H */
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index 85181cb60f46..2a39d4ab02bf 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -83,9 +83,9 @@ efi_head:
+ 	b	stext				// branch to kernel start, magic
+ 	.long	0				// reserved
  #endif
- 	"	b	2b\n"
- 	"	.popsection\n"
--	"	.pushsection __ex_table,\"a\"\n"
--	"	.align	3\n"
--	"	.quad	1b, 3b\n"
--	"	.popsection"
-+	_ASM_EXTABLE(1b, 3b)
- 	: "=&r" (ret), "=&r" (offset)
- 	: "r" (addr), "Q" (*(unsigned long *)addr));
+-	.quad	_kernel_offset_le		// Image load offset from start of RAM, little-endian
+-	.quad	_kernel_size_le			// Effective size of kernel image, little-endian
+-	.quad	_kernel_flags_le		// Informative flags, little-endian
++	le64sym	_kernel_offset_le		// Image load offset from start of RAM, little-endian
++	le64sym	_kernel_size_le			// Effective size of kernel image, little-endian
++	le64sym	_kernel_flags_le		// Informative flags, little-endian
+ 	.quad	0				// reserved
+ 	.quad	0				// reserved
+ 	.quad	0				// reserved
+diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
+index bc2abb8b1599..b64c9b0a4492 100644
+--- a/arch/arm64/kernel/image.h
++++ b/arch/arm64/kernel/image.h
+@@ -26,21 +26,27 @@
+  * There aren't any ELF relocations we can use to endian-swap values known only
+  * at link time (e.g. the subtraction of two symbol addresses), so we must get
+  * the linker to endian-swap certain values before emitting them.
++ *
++ * Note that, in order for this to work when building the ELF64 PIE executable
++ * (for KASLR), these values should not be referenced via R_AARCH64_ABS64
++ * relocations, since these are fixed up at runtime rather than at build time
++ * when PIE is in effect. So we need to split them up in 32-bit high and low
++ * words.
+  */
+ #ifdef CONFIG_CPU_BIG_ENDIAN
+-#define DATA_LE64(data)					\
+-	((((data) & 0x00000000000000ff) << 56) |	\
+-	 (((data) & 0x000000000000ff00) << 40) |	\
+-	 (((data) & 0x0000000000ff0000) << 24) |	\
+-	 (((data) & 0x00000000ff000000) << 8)  |	\
+-	 (((data) & 0x000000ff00000000) >> 8)  |	\
+-	 (((data) & 0x0000ff0000000000) >> 24) |	\
+-	 (((data) & 0x00ff000000000000) >> 40) |	\
+-	 (((data) & 0xff00000000000000) >> 56))
++#define DATA_LE32(data)				\
++	((((data) & 0x000000ff) << 24) |	\
++	 (((data) & 0x0000ff00) << 8)  |	\
++	 (((data) & 0x00ff0000) >> 8)  |	\
++	 (((data) & 0xff000000) >> 24))
+ #else
+-#define DATA_LE64(data) ((data) & 0xffffffffffffffff)
++#define DATA_LE32(data) ((data) & 0xffffffff)
+ #endif
  
-diff --git a/arch/arm64/kernel/armv8_deprecated.c b/arch/arm64/kernel/armv8_deprecated.c
-index 3e01207917b1..c37202c0c838 100644
---- a/arch/arm64/kernel/armv8_deprecated.c
-+++ b/arch/arm64/kernel/armv8_deprecated.c
-@@ -297,11 +297,8 @@ static void __init register_insn_emulation_sysctl(struct ctl_table *table)
- 	"4:	mov		%w0, %w5\n"			\
- 	"	b		3b\n"				\
- 	"	.popsection"					\
--	"	.pushsection	 __ex_table,\"a\"\n"		\
--	"	.align		3\n"				\
--	"	.quad		0b, 4b\n"			\
--	"	.quad		1b, 4b\n"			\
--	"	.popsection\n"					\
-+	_ASM_EXTABLE(0b, 4b)					\
-+	_ASM_EXTABLE(1b, 4b)					\
- 	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,	\
- 		CONFIG_ARM64_PAN)				\
- 	: "=&r" (res), "+r" (data), "=&r" (temp)		\
-diff --git a/arch/arm64/mm/extable.c b/arch/arm64/mm/extable.c
-index 79444279ba8c..81acd4706878 100644
---- a/arch/arm64/mm/extable.c
-+++ b/arch/arm64/mm/extable.c
-@@ -11,7 +11,7 @@ int fixup_exception(struct pt_regs *regs)
++#define DEFINE_IMAGE_LE64(sym, data)				\
++	sym##_lo32 = DATA_LE32((data) & 0xffffffff);		\
++	sym##_hi32 = DATA_LE32((data) >> 32)
++
+ #ifdef CONFIG_CPU_BIG_ENDIAN
+ #define __HEAD_FLAG_BE	1
+ #else
+@@ -58,9 +64,9 @@
+  * endian swapped in head.S, all are done here for consistency.
+  */
+ #define HEAD_SYMBOLS						\
+-	_kernel_size_le		= DATA_LE64(_end - _text);	\
+-	_kernel_offset_le	= DATA_LE64(TEXT_OFFSET);	\
+-	_kernel_flags_le	= DATA_LE64(__HEAD_FLAGS);
++	DEFINE_IMAGE_LE64(_kernel_size_le, _end - _text);	\
++	DEFINE_IMAGE_LE64(_kernel_offset_le, TEXT_OFFSET);	\
++	DEFINE_IMAGE_LE64(_kernel_flags_le, __HEAD_FLAGS);
  
- 	fixup = search_exception_tables(instruction_pointer(regs));
- 	if (fixup)
--		regs->pc = fixup->fixup;
-+		regs->pc = (unsigned long)&fixup->fixup + fixup->fixup;
+ #ifdef CONFIG_EFI
  
- 	return fixup != NULL;
- }
-diff --git a/scripts/sortextable.c b/scripts/sortextable.c
-index c2423d913b46..af247c70fb66 100644
---- a/scripts/sortextable.c
-+++ b/scripts/sortextable.c
-@@ -282,12 +282,12 @@ do_file(char const *const fname)
- 	case EM_386:
- 	case EM_X86_64:
- 	case EM_S390:
-+	case EM_AARCH64:
- 		custom_sort = sort_relative_table;
- 		break;
- 	case EM_ARCOMPACT:
- 	case EM_ARCV2:
- 	case EM_ARM:
--	case EM_AARCH64:
- 	case EM_MICROBLAZE:
- 	case EM_MIPS:
- 	case EM_XTENSA:
 -- 
 2.5.0
