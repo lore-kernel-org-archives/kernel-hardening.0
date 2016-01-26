@@ -1,31 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
- <1453828249-14467-6-git-send-email-ard.biesheuvel@linaro.org>
-From: Marc Zyngier <marc.zyngier@arm.com>
-Message-ID: <56A7B0A0.3020003@arm.com>
-Date: Tue, 26 Jan 2016 17:45:04 +0000
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+ <8737tp0zhr.fsf@x220.int.ebiederm.org>
+ <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+ <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
+ <CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
+ <CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
+ <87bn89sbc2.fsf@x220.int.ebiederm.org>
+ <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
+ <87zivtj5tv.fsf@x220.int.ebiederm.org>
+ <CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
+ <20160126171523.GA13715@ubuntumail>
+From: "Austin S. Hemmelgarn" <ahferroin7@gmail.com>
+Message-ID: <56A7B664.6070509@gmail.com>
+Date: Tue, 26 Jan 2016 13:09:40 -0500
 MIME-Version: 1.0
-In-Reply-To: <1453828249-14467-6-git-send-email-ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=windows-1252
+In-Reply-To: <20160126171523.GA13715@ubuntumail>
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 05/22] arm64: kvm: deal with kernel symbols outside of
- linear mapping
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
-Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk
+Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to
+ be disabled
+To: Serge Hallyn <serge.hallyn@ubuntu.com>, kernel-hardening@lists.openwall.com
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?Q?Robert_=c5=9awi=c4=99cki?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 26/01/16 17:10, Ard Biesheuvel wrote:
-> KVM on arm64 uses a fixed offset between the linear mapping at EL1 and
-> the HYP mapping at EL2. Before we can move the kernel virtual mapping
-> out of the linear mapping, we have to make sure that references to kernel
-> symbols that are accessed via the HYP mapping are translated to their
-> linear equivalent.
-> 
-> Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On 2016-01-26 12:15, Serge Hallyn wrote:
+> Quoting Josh Boyer (jwboyer@fedoraproject.org):
+>> On Mon, Jan 25, 2016 at 11:57 PM, Eric W. Biederman
+>> <ebiederm@xmission.com> wrote:
+>>> Kees Cook <keescook@chromium.org> writes:
+>>>
+>>>> On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
+>>>> <ebiederm@xmission.com> wrote:
+>>>>> Kees Cook <keescook@chromium.org> writes:
+>>>>>>
+>>>>>> Well, I don't know about less weird, but it would leave a unneeded
+>>>>>> hole in the permission checks.
+>>>>>
+>>>>> To be clear the current patch has my:
+>>>>>
+>>>>> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
+>>>>>
+>>>>> The code is buggy, and poorly thought through.  Your lack of interest in
+>>>>> fixing the bugs in your patch is distressing.
+>>>>
+>>>> I'm not sure where you see me having a "lack of interest". The
+>>>> existing cap-checking sysctls have a corner-case bug, which is
+>>>> orthogonal to this change.
+>>>
+>>> That certainly doesn't sound like you have any plans to change anything
+>>> there.
+>>>
+>>>>> So broken code, not willing to fix.  No. We are not merging this sysctl.
+>>>>
+>>>> I think you're jumping to conclusions. :)
+>>>
+>>> I think I am the maintainer.
+>>>
+>>> What you are proposing is very much something that is only of interst to
+>>> people who are not using user namespaces.  It is fatally flawed as
+>>> a way to avoid new attack surfaces for people who don't care as the
+>>> sysctl leaves user namespaces enabled by default.  It is fatally flawed
+>>> as remediation to recommend to people to change if a new user namespace
+>>> related but is discovered.  Any running process that happens to be
+>>> created while user namespace creation was enabled will continue to
+>>> exist.  Effectively a reboot will be required as part of a mitigation.
+>>> Many sysadmins will get that wrong.
+>>>
+>>> I can't possibly see your sysctl as proposed achieving it's goals.  A
+>>> person has to be entirely too aware of subtlety and nuance to use it
+>>> effectively.
+>>
+>> What you're saying is true for the "oh crap" case of a new userns
+>> related CVE being found.  However, there is the case where sysadmins
+>> know for a fact that a set of machines should not allow user
+>> namespaces to be enabled.  Currently they have 2 choices, 1) use their
+>
+> Hi - can you give a specific example of this?  (Where users really should
+> not be able to use them - not where they might not need them)  I think
+> it'll help the discussion tremendously.  Because so far the only good
+> arguments I've seen have been about actual bugs in the user namespaces,
+> which would not warrant a designed-in permanent disable switch.  If
+> there are good use cases where such a disable switch will always be
+> needed (and compiling out can't satisfy) that'd be helpful.
+In general, if a particular daemon provides a network service and does 
+not use user namespaces for sand-boxing, it should not be allowed to use 
+user namespaces, because those then become something else to potentially 
+land an exploit through.  ntpd, postfix, and most other regularly used 
+network servers fall into this category.
 
-Acked-by: Marc Zyngier <marc.zyngier@arm.com>
+If you're hosting a shared system providing terminal server like usage 
+where the users actually have shell access, then they probably should 
+not be able to use user namespaces on the server.
 
-	M.
--- 
-Jazz is not dead. It just smells funny...
+In essence, if there are cases where you know for certain that users do 
+not need user namespaces, they should not be allowed to use them.
