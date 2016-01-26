@@ -1,88 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 26 Jan 2016 18:10:29 +0100
-Message-Id: <1453828249-14467-3-git-send-email-ard.biesheuvel@linaro.org>
+Date: Tue, 26 Jan 2016 18:10:30 +0100
+Message-Id: <1453828249-14467-4-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v4 02/22] arm64: introduce KIMAGE_VADDR as the virtual base of the kernel region
+Subject: [kernel-hardening] [PATCH v4 03/22] arm64: pgtable: implement static [pte|pmd|pud]_offset variants
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org
 Cc: stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces the preprocessor symbol KIMAGE_VADDR which will serve as
-the symbolic virtual base of the kernel region, i.e., the kernel's virtual
-offset will be KIMAGE_VADDR + TEXT_OFFSET. For now, we define it as being
-equal to PAGE_OFFSET, but in the future, it will be moved below it once
-we move the kernel virtual mapping out of the linear mapping.
+The page table accessors pte_offset(), pud_offset() and pmd_offset()
+rely on __va translations, so they can only be used after the linear
+mapping has been installed. For the early fixmap and kasan init routines,
+whose page tables are allocated statically in the kernel image, these
+functions will return bogus values. So implement pte_offset_kimg(),
+pmd_offset_kimg() and pud_offset_kimg(), which can be used instead
+before any page tables have been allocated dynamically.
 
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/memory.h | 10 ++++++++--
- arch/arm64/kernel/head.S        |  2 +-
- arch/arm64/kernel/vmlinux.lds.S |  4 ++--
- 3 files changed, 11 insertions(+), 5 deletions(-)
+ arch/arm64/include/asm/pgtable.h | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
-diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
-index 853953cd1f08..bea9631b34a8 100644
---- a/arch/arm64/include/asm/memory.h
-+++ b/arch/arm64/include/asm/memory.h
-@@ -51,7 +51,8 @@
- #define VA_BITS			(CONFIG_ARM64_VA_BITS)
- #define VA_START		(UL(0xffffffffffffffff) << VA_BITS)
- #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
--#define MODULES_END		(PAGE_OFFSET)
-+#define KIMAGE_VADDR		(PAGE_OFFSET)
-+#define MODULES_END		(KIMAGE_VADDR)
- #define MODULES_VADDR		(MODULES_END - SZ_64M)
- #define PCI_IO_END		(MODULES_VADDR - SZ_2M)
- #define PCI_IO_START		(PCI_IO_END - PCI_IO_SIZE)
-@@ -75,8 +76,13 @@
-  * private definitions which should NOT be used outside memory.h
-  * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
-  */
--#define __virt_to_phys(x)	(((phys_addr_t)(x) - PAGE_OFFSET + PHYS_OFFSET))
-+#define __virt_to_phys(x) ({						\
-+	phys_addr_t __x = (phys_addr_t)(x);				\
-+	__x >= PAGE_OFFSET ? (__x - PAGE_OFFSET + PHYS_OFFSET) :	\
-+			     (__x - KIMAGE_VADDR + PHYS_OFFSET); })
+diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
+index 2fb94ef881f5..e9eaf6e9262d 100644
+--- a/arch/arm64/include/asm/pgtable.h
++++ b/arch/arm64/include/asm/pgtable.h
+@@ -446,6 +446,9 @@ static inline phys_addr_t pmd_page_paddr(pmd_t pmd)
+ 
+ #define pmd_page(pmd)		pfn_to_page(__phys_to_pfn(pmd_val(pmd) & PHYS_MASK))
+ 
++/* use ONLY for statically allocated translation tables */
++#define pte_offset_kimg(dir,addr)	((pte_t *)__phys_to_kimg(pte_offset_phys((dir), (addr))))
 +
- #define __phys_to_virt(x)	((unsigned long)((x) - PHYS_OFFSET + PAGE_OFFSET))
-+#define __phys_to_kimg(x)	((unsigned long)((x) - PHYS_OFFSET + KIMAGE_VADDR))
- 
  /*
-  * Convert a page to/from a physical address
-diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-index 51370f8808bc..85181cb60f46 100644
---- a/arch/arm64/kernel/head.S
-+++ b/arch/arm64/kernel/head.S
-@@ -389,7 +389,7 @@ __create_page_tables:
- 	 * Map the kernel image (starting with PHYS_OFFSET).
- 	 */
- 	mov	x0, x26				// swapper_pg_dir
--	mov	x5, #PAGE_OFFSET
-+	ldr	x5, =KIMAGE_VADDR
- 	create_pgd_entry x0, x5, x3, x6
- 	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
- 	mov	x3, x24				// phys offset
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index b78a3c772294..282e3e64a17e 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -89,7 +89,7 @@ SECTIONS
- 		*(.discard.*)
- 	}
+  * Conversion functions: convert a page and protection to a page entry,
+  * and a page entry and page directory to the page they refer to.
+@@ -489,6 +492,9 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
  
--	. = PAGE_OFFSET + TEXT_OFFSET;
-+	. = KIMAGE_VADDR + TEXT_OFFSET;
+ #define pud_page(pud)		pfn_to_page(__phys_to_pfn(pud_val(pud) & PHYS_MASK))
  
- 	.head.text : {
- 		_text = .;
-@@ -186,4 +186,4 @@ ASSERT(__idmap_text_end - (__idmap_text_start & ~(SZ_4K - 1)) <= SZ_4K,
- /*
-  * If padding is applied before .head.text, virt<->phys conversions will fail.
-  */
--ASSERT(_text == (PAGE_OFFSET + TEXT_OFFSET), "HEAD is misaligned")
-+ASSERT(_text == (KIMAGE_VADDR + TEXT_OFFSET), "HEAD is misaligned")
++/* use ONLY for statically allocated translation tables */
++#define pmd_offset_kimg(dir,addr)	((pmd_t *)__phys_to_kimg(pmd_offset_phys((dir), (addr))))
++
+ #else
+ 
+ #define pud_page_paddr(pud)	({ BUILD_BUG(); 0; })
+@@ -498,6 +504,8 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
+ #define pmd_set_fixmap_offset(pudp, addr)	((pmd_t *)pudp)
+ #define pmd_clear_fixmap()
+ 
++#define pmd_offset_kimg(dir,addr)	((pmd_t *)dir)
++
+ #endif	/* CONFIG_PGTABLE_LEVELS > 2 */
+ 
+ #if CONFIG_PGTABLE_LEVELS > 3
+@@ -536,6 +544,9 @@ static inline phys_addr_t pgd_page_paddr(pgd_t pgd)
+ 
+ #define pgd_page(pgd)		pfn_to_page(__phys_to_pfn(pgd_val(pgd) & PHYS_MASK))
+ 
++/* use ONLY for statically allocated translation tables */
++#define pud_offset_kimg(dir,addr)	((pud_t *)__phys_to_kimg(pud_offset_phys((dir), (addr))))
++
+ #else
+ 
+ #define pgd_page_paddr(pgd)	({ BUILD_BUG(); 0;})
+@@ -545,6 +556,8 @@ static inline phys_addr_t pgd_page_paddr(pgd_t pgd)
+ #define pud_set_fixmap_offset(pgdp, addr)	((pud_t *)pgdp)
+ #define pud_clear_fixmap()
+ 
++#define pud_offset_kimg(dir,addr)	((pud_t *)dir)
++
+ #endif  /* CONFIG_PGTABLE_LEVELS > 3 */
+ 
+ #define pgd_ERROR(pgd)		__pgd_error(__FILE__, __LINE__, pgd_val(pgd))
 -- 
 2.5.0
