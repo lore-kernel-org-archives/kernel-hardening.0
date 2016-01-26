@@ -1,158 +1,78 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jan 2016 17:20:14 +0000
-From: Serge Hallyn <serge.hallyn@ubuntu.com>
-Message-ID: <20160126172014.GB13715@ubuntumail>
-References: <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
- <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
- <CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
- <CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
- <87bn89sbc2.fsf@x220.int.ebiederm.org>
- <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
- <87zivtj5tv.fsf@x220.int.ebiederm.org>
- <CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
- <56A786DA.90204@gmail.com>
- <CA+5PVA5pUu_jr70ntvBhzSdXo52ypUueofdnoRdRh+ehCR9j4g@mail.gmail.com>
+Date: Tue, 26 Jan 2016 17:42:18 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160126174217.GH29086@leverpostej>
+References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1453828249-14467-15-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CA+5PVA5pUu_jr70ntvBhzSdXo52ypUueofdnoRdRh+ehCR9j4g@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER
- to be disabled
-To: kernel-hardening@lists.openwall.com
-Cc: "Austin S. Hemmelgarn" <ahferroin7@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+In-Reply-To: <1453828249-14467-15-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v4 14/22] arm64: make asm/elf.h available to asm files
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Josh Boyer (jwboyer@fedoraproject.org):
-> On Tue, Jan 26, 2016 at 9:46 AM, Austin S. Hemmelgarn
-> <ahferroin7@gmail.com> wrote:
-> > On 2016-01-26 09:38, Josh Boyer wrote:
-> >>
-> >> On Mon, Jan 25, 2016 at 11:57 PM, Eric W. Biederman
-> >> <ebiederm@xmission.com> wrote:
-> >>>
-> >>> Kees Cook <keescook@chromium.org> writes:
-> >>>
-> >>>> On Mon, Jan 25, 2016 at 11:33 AM, Eric W. Biederman
-> >>>> <ebiederm@xmission.com> wrote:
-> >>>>>
-> >>>>> Kees Cook <keescook@chromium.org> writes:
-> >>>>>>
-> >>>>>>
-> >>>>>> Well, I don't know about less weird, but it would leave a unneeded
-> >>>>>> hole in the permission checks.
-> >>>>>
-> >>>>>
-> >>>>> To be clear the current patch has my:
-> >>>>>
-> >>>>> Nacked-by: "Eric W. Biederman" <ebiederm@xmission.com>
-> >>>>>
-> >>>>> The code is buggy, and poorly thought through.  Your lack of interest
-> >>>>> in
-> >>>>> fixing the bugs in your patch is distressing.
-> >>>>
-> >>>>
-> >>>> I'm not sure where you see me having a "lack of interest". The
-> >>>> existing cap-checking sysctls have a corner-case bug, which is
-> >>>> orthogonal to this change.
-> >>>
-> >>>
-> >>> That certainly doesn't sound like you have any plans to change anything
-> >>> there.
-> >>>
-> >>>>> So broken code, not willing to fix.  No. We are not merging this
-> >>>>> sysctl.
-> >>>>
-> >>>>
-> >>>> I think you're jumping to conclusions. :)
-> >>>
-> >>>
-> >>> I think I am the maintainer.
-> >>>
-> >>> What you are proposing is very much something that is only of interst to
-> >>> people who are not using user namespaces.  It is fatally flawed as
-> >>> a way to avoid new attack surfaces for people who don't care as the
-> >>> sysctl leaves user namespaces enabled by default.  It is fatally flawed
-> >>> as remediation to recommend to people to change if a new user namespace
-> >>> related but is discovered.  Any running process that happens to be
-> >>> created while user namespace creation was enabled will continue to
-> >>> exist.  Effectively a reboot will be required as part of a mitigation.
-> >>> Many sysadmins will get that wrong.
-> >>>
-> >>> I can't possibly see your sysctl as proposed achieving it's goals.  A
-> >>> person has to be entirely too aware of subtlety and nuance to use it
-> >>> effectively.
-> >>
-> >>
-> >> What you're saying is true for the "oh crap" case of a new userns
-> >> related CVE being found.  However, there is the case where sysadmins
-> >> know for a fact that a set of machines should not allow user
-> >> namespaces to be enabled.  Currently they have 2 choices, 1) use their
-> >> distro kernel as-is, which may not meet their goal of having userns
-> >> disabled, or 2) rebuild their kernel to disable it, which may
-> >> invalidate any support contracts they have.
-> >>
-> >> I tend to agree with you on the lack of value around runtime
-> >> mitigation, but allowing an admin to toggle this as a blatant on/off
-> >> switch on reboot does have value.
-> >>
-> >>>> This feature is already implemented by two distros, and likely wanted
-> >>>> by others. We cannot ignore that. The sysctl default doesn't change
-> >>>> the existing behavior, so this doesn't get in your way at all. Can you
-> >>>> please respond to my earlier email where I rebutted each of your
-> >>>> arguments against it? Just saying "no" and putting words in my mouth
-> >>>> isn't very productive.
-> >>>
-> >>>
-> >>> Calling people who make mistakes insane is not a rebuttal.  In security
-> >>> usability matters, and your sysctl has low usability.
-> >>>
-> >>> Further you seem to have missed something crucial in your understanding.
-> >>> As was explained earlier the sysctl was added to ubuntu to allow early
-> >>> adopters to experiment not as a long term way of managing user
-> >>> namespaces.
-> >>>
-> >>>
-> >>> What sounds like a generally useful feature that would cover your use
-> >>> case and many others is a per user limit on the number of user
-> >>> namespaces users may create.
-> >>
-> >>
-> >> Where that number may be zero?  I don't see how that is really any
-> >> better than a sysctl.  Could you elaborate?
-> >
-> > It's a better option because it would allow better configurability. Take for
-> > example a single user desktop system with some network daemons.  On such a
-> > system, the actual login used for the graphical environment by the user
-> > should be allowed at least a few user namespaces, because some software
-> > depends on them for security (Chrome for example, as well as some distro's
-> > build systems), but system users should be limited to at most one if they
-> > need it, and ideally zero, so that remote exploits couldn't give access to a
-> > user namespace.
-> >
-> > Conversely, on a server system, it's not unreasonable to completely disable
-> > user namespaces for almost everything, except for giving one to services
-> > that use them properly for sand-boxing.
+On Tue, Jan 26, 2016 at 06:10:41PM +0100, Ard Biesheuvel wrote:
+> This reshuffles some code in asm/elf.h and puts a #ifndef __ASSEMBLY__
+> around its C definitions so that the CPP defines can be used in asm
+> source files as well.
 > 
-> OK, so better granularity.  Fine.
-> 
-> > I will state though that I only feel this is a better solution given that
-> > two criteria are met:
-> > 1. You can set 0 as the limit.
-> > 2. You can configure this without needing some special software (this in
-> > particular means that seccomp is not an option).
-> 
-> I'd have to add 3. You can set a global default for all users that can
-> be overridden on a per user basis.
-> 
-> Otherwise you play whack-a-mole with every new user or daemon that
-> adds its own uid.
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Given that you want per-user, does a per-uid rlimit, which could be -1
-(unlimited) by default, inherited for all uids mapped into a namespace
-owned by the uid, and which can be set (only reduced) by pam on login,
-make sense?
+Acked-by: Mark Rutland <mark.rutland@arm.com>
 
-I'm still not actually seeing the value of this apart from another knob
-to prevent kernel memory abuse.  But at least it does kill two birds
-with one stone (also satisfying people who want it turned off altogether).
-Is there a third use case for limiting number of user namespaces per uid?
+Mark.
+
+> ---
+>  arch/arm64/include/asm/elf.h | 22 ++++++++++++--------
+>  1 file changed, 13 insertions(+), 9 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/elf.h b/arch/arm64/include/asm/elf.h
+> index faad6df49e5b..435f55952e1f 100644
+> --- a/arch/arm64/include/asm/elf.h
+> +++ b/arch/arm64/include/asm/elf.h
+> @@ -24,15 +24,6 @@
+>  #include <asm/ptrace.h>
+>  #include <asm/user.h>
+>  
+> -typedef unsigned long elf_greg_t;
+> -
+> -#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
+> -#define ELF_CORE_COPY_REGS(dest, regs)	\
+> -	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
+> -
+> -typedef elf_greg_t elf_gregset_t[ELF_NGREG];
+> -typedef struct user_fpsimd_state elf_fpregset_t;
+> -
+>  /*
+>   * AArch64 static relocation types.
+>   */
+> @@ -127,6 +118,17 @@ typedef struct user_fpsimd_state elf_fpregset_t;
+>   */
+>  #define ELF_ET_DYN_BASE	(2 * TASK_SIZE_64 / 3)
+>  
+> +#ifndef __ASSEMBLY__
+> +
+> +typedef unsigned long elf_greg_t;
+> +
+> +#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
+> +#define ELF_CORE_COPY_REGS(dest, regs)	\
+> +	*(struct user_pt_regs *)&(dest) = (regs)->user_regs;
+> +
+> +typedef elf_greg_t elf_gregset_t[ELF_NGREG];
+> +typedef struct user_fpsimd_state elf_fpregset_t;
+> +
+>  /*
+>   * When the program starts, a1 contains a pointer to a function to be
+>   * registered with atexit, as per the SVR4 ABI.  A value of 0 means we have no
+> @@ -186,4 +188,6 @@ extern int aarch32_setup_vectors_page(struct linux_binprm *bprm,
+>  
+>  #endif /* CONFIG_COMPAT */
+>  
+> +#endif /* !__ASSEMBLY__ */
+> +
+>  #endif
+> -- 
+> 2.5.0
+> 
