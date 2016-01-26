@@ -1,68 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1453740953-18109-1-git-send-email-labbott@fedoraproject.org>
- <56A70C9D.8060102@oracle.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <56A7D84D.7020101@redhat.com>
-Date: Tue, 26 Jan 2016 12:34:21 -0800
 MIME-Version: 1.0
-In-Reply-To: <56A70C9D.8060102@oracle.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Sanitization of buddy pages
-To: Sasha Levin <sasha.levin@oracle.com>, Laura Abbott <labbott@fedoraproject.org>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Andrey Ryabinin <ryabinin.a.a@gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20160126171523.GA13715@ubuntumail>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+	<8737tp0zhr.fsf@x220.int.ebiederm.org>
+	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+	<CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
+	<CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
+	<CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
+	<87bn89sbc2.fsf@x220.int.ebiederm.org>
+	<CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
+	<87zivtj5tv.fsf@x220.int.ebiederm.org>
+	<CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
+	<20160126171523.GA13715@ubuntumail>
+Date: Tue, 26 Jan 2016 15:13:29 -0800
+Message-ID: <CAGXu5j+kkzmnrvfOhcDfsK81bxwrgnywKQKCof+Pqjv-oVB+Kw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to
+ be disabled
+To: Serge Hallyn <serge.hallyn@ubuntu.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/25/2016 10:05 PM, Sasha Levin wrote:
-> On 01/25/2016 11:55 AM, Laura Abbott wrote:
->> Hi,
->>
->> This is an implementation of page poisoning/sanitization for all arches. It
->> takes advantage of the existing implementation for
->> !ARCH_SUPPORTS_DEBUG_PAGEALLOC arches. This is a different approach than what
->> the Grsecurity patches were taking but should provide equivalent functionality.
->>
->> For those who aren't familiar with this, the goal of sanitization is to reduce
->> the severity of use after free and uninitialized data bugs. Memory is cleared
->> on free so any sensitive data is no longer available. Discussion of
->> sanitization was brough up in a thread about CVEs
->> (lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
->>
->> I eventually expect Kconfig names will want to be changed and or moved if this
->> is going to be used for security but that can happen later.
->>
->> Credit to Mathias Krause for the version in grsecurity
->>
->> Laura Abbott (3):
->>    mm/debug-pagealloc.c: Split out page poisoning from debug page_alloc
->>    mm/page_poison.c: Enable PAGE_POISONING as a separate option
->>    mm/page_poisoning.c: Allow for zero poisoning
->>
->>   Documentation/kernel-parameters.txt |   5 ++
->>   include/linux/mm.h                  |  13 +++
->>   include/linux/poison.h              |   4 +
->>   mm/Kconfig.debug                    |  35 +++++++-
->>   mm/Makefile                         |   5 +-
->>   mm/debug-pagealloc.c                | 127 +----------------------------
->>   mm/page_alloc.c                     |  10 ++-
->>   mm/page_poison.c                    | 158 ++++++++++++++++++++++++++++++++++++
->>   8 files changed, 228 insertions(+), 129 deletions(-)
->>   create mode 100644 mm/page_poison.c
->>
+On Tue, Jan 26, 2016 at 9:15 AM, Serge Hallyn <serge.hallyn@ubuntu.com> wrote:
+> Quoting Josh Boyer (jwboyer@fedoraproject.org):
+>> What you're saying is true for the "oh crap" case of a new userns
+>> related CVE being found.  However, there is the case where sysadmins
+>> know for a fact that a set of machines should not allow user
+>> namespaces to be enabled.  Currently they have 2 choices, 1) use their
 >
-> Should poisoning of this kind be using kasan rather than "old fashioned"
-> poisoning?
->
->
+> Hi - can you give a specific example of this?  (Where users really should
+> not be able to use them - not where they might not need them)  I think
+> it'll help the discussion tremendously.  Because so far the only good
+> arguments I've seen have been about actual bugs in the user namespaces,
+> which would not warrant a designed-in permanent disable switch.  If
+> there are good use cases where such a disable switch will always be
+> needed (and compiling out can't satisfy) that'd be helpful.
 
-The two aren't mutually exclusive. kasan is serving a different purpose even
-though it has sanitize in the name. kasan is designed to detect errors, the
-purpose of this series is to make sure the memory is really cleared out.
-This series also doesn't have the memory overhead of kasan.
-  
-> Thanks,
-> Sasha
->
+My example is a machine in a colo rack serving web pages. A site gets
+attacked, and www-data uses user namespaces to continue their attack
+to gain root privileges.
 
-Thanks,
-Laura
+The admin of such a machine could have disabled userns months earlier
+and limited the scope of the attack.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
