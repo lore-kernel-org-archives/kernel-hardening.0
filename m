@@ -1,57 +1,35 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
- <8737tp0zhr.fsf@x220.int.ebiederm.org>
- <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
- <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
- <CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
- <CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
- <87bn89sbc2.fsf@x220.int.ebiederm.org>
- <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
- <87zivtj5tv.fsf@x220.int.ebiederm.org>
- <20160128085655.GA9955@mail.hallyn.com>
-From: "Austin S. Hemmelgarn" <ahferroin7@gmail.com>
-Message-ID: <56AA0F62.7090905@gmail.com>
-Date: Thu, 28 Jan 2016 07:53:54 -0500
 MIME-Version: 1.0
-In-Reply-To: <20160128085655.GA9955@mail.hallyn.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to
- be disabled
-To: "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?Q?Robert_=c5=9awi=c4=99cki?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <20160128110622.GF17123@leverpostej>
+References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
+	<1453226922-16831-4-git-send-email-keescook@chromium.org>
+	<20160127211105.GA41450@davidb.org>
+	<CAGXu5j+DLRoVE88a9++jVfEkN90HDiAaDAMnT2TrKqtMZ_yOww@mail.gmail.com>
+	<20160128000906.GA42530@davidb.org>
+	<20160128110622.GF17123@leverpostej>
+Date: Thu, 28 Jan 2016 06:06:53 -0800
+Message-ID: <CAGXu5jLy3cpLzU1MSQhS6q=5rMu2Mdp9pXncoFapPqUyQ1fO0A@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] arm64: make CONFIG_DEBUG_RODATA non-optional
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Marc Zyngier <marc.zyngier@arm.com>, yalin wang <yalin.wang2010@gmail.com>, Zi Shen Lim <zlim.lnx@gmail.com>, Yang Shi <yang.shi@linaro.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <lauraa@codeaurora.org>, "Suzuki K. Poulose" <suzuki.poulose@arm.com>, Steve Capper <steve.capper@linaro.org>, Jeremy Linton <jeremy.linton@arm.com>, Mark Salter <msalter@redhat.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2016-01-28 03:56, Serge E. Hallyn wrote:
-> On Mon, Jan 25, 2016 at 10:57:32PM -0600, Eric W. Biederman wrote:
->> What sounds like a generally useful feature that would cover your use
->> case and many others is a per user limit on the number of user
->> namespaces users may create.
->
-> Ok, I'm sorry, but after thinking about this quite awhile, I think this
-> is a bad idea.  If I'm allowed to create exactly one, then (a) I won't
-> be able to run two instances of chrome (does chrome use one userns per
-> tab or per application?), yet (b) i can easily just not use chrome and
-> use my allocation to run a vulnerability.
-Ignore regular users WRT the ability to limit to one or two namespace 
-instances, the advantage of being able to limit to one or two user 
-namespaces for a given user is that it prevents daemons that use it for 
-sand-boxing from being exploited to create more.  If we go with Eric's 
-suggestion, there is absolutely no reason on a regular desktop system 
-that the users used for a graphical login would have to be limited.
->
-> IMO, having a (hopefully temporary, so cleanly separated out) sysctl,
-> which perhaps goes so far as to kill all non-init user namespaces when
-> set to -1, makes the most sense.  I still think the harm due to having
-> userspace not being able to rely on user namespaces will, long term, be
-> worse than the security implications of having user namespaces always
-> enabled.
-Userspace can't rely on them as it is right now.  The default kernel 
-config has them disabled, and a number of distros are refusing to ship 
-kernels with them enabled at least in the short term, wheras a number 
-are only shipping kernels with them enabled (I'd be willing to bet that 
-part of what prompted this originally was Chrome).  Just by virtue of 
-this, you can't rely on them being there and need to gracefully handle 
-the situation if they aren't.  Adding a sysctl allowing them to be 
-disabled completely on a kernel that has support built in would not make 
-them all that much more unreliable than they already are.
+On Thu, Jan 28, 2016 at 3:06 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> One thing I would like to do is to avoid the need for fixup_executable
+> entirely, by mapping the kernel text RO from the outset. However, that
+> requires rework of the alternatives patching (to use a temporary RW
+> alias), and I haven't had the time to look into that yet.
+
+This makes perfect sense for the rodata section, but the (future)
+postinit_rodata section we'll still want to mark RO after init
+finishes. x86 and ARM cheat by marking both RO after init, and they
+don't have to pad sections. parisc will need to solve this too.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
