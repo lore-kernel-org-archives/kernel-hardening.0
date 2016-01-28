@@ -1,195 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 28 Jan 2016 11:06:22 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160128110622.GF17123@leverpostej>
-References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
- <1453226922-16831-4-git-send-email-keescook@chromium.org>
- <20160127211105.GA41450@davidb.org>
- <CAGXu5j+DLRoVE88a9++jVfEkN90HDiAaDAMnT2TrKqtMZ_yOww@mail.gmail.com>
- <20160128000906.GA42530@davidb.org>
+References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
+ <8737tp0zhr.fsf@x220.int.ebiederm.org>
+ <CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
+ <CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
+ <CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
+ <CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
+ <87bn89sbc2.fsf@x220.int.ebiederm.org>
+ <CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
+ <87zivtj5tv.fsf@x220.int.ebiederm.org>
+ <20160128085655.GA9955@mail.hallyn.com>
+From: "Austin S. Hemmelgarn" <ahferroin7@gmail.com>
+Message-ID: <56AA0F62.7090905@gmail.com>
+Date: Thu, 28 Jan 2016 07:53:54 -0500
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160128000906.GA42530@davidb.org>
-Subject: [kernel-hardening] Re: [PATCH] arm64: make CONFIG_DEBUG_RODATA non-optional
-To: David Brown <david.brown@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Marc Zyngier <marc.zyngier@arm.com>, yalin wang <yalin.wang2010@gmail.com>, Zi Shen Lim <zlim.lnx@gmail.com>, Yang Shi <yang.shi@linaro.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <lauraa@codeaurora.org>, "Suzuki K. Poulose" <suzuki.poulose@arm.com>, Steve Capper <steve.capper@linaro.org>, Jeremy Linton <jeremy.linton@arm.com>, Mark Salter <msalter@redhat.com>, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <20160128085655.GA9955@mail.hallyn.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to
+ be disabled
+To: "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, =?UTF-8?Q?Robert_=c5=9awi=c4=99cki?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Miklos Szeredi <mszeredi@suse.cz>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
-
-On Wed, Jan 27, 2016 at 05:09:06PM -0700, David Brown wrote:
-> From 2efef8aa0f8f7f6277ffebe4ea6744fc93d54644 Mon Sep 17 00:00:00 2001
-> From: David Brown <david.brown@linaro.org>
-> Date: Wed, 27 Jan 2016 13:58:44 -0800
-> 
-> This removes the CONFIG_DEBUG_RODATA option and makes it always
+On 2016-01-28 03:56, Serge E. Hallyn wrote:
+> On Mon, Jan 25, 2016 at 10:57:32PM -0600, Eric W. Biederman wrote:
+>> What sounds like a generally useful feature that would cover your use
+>> case and many others is a per user limit on the number of user
+>> namespaces users may create.
+>
+> Ok, I'm sorry, but after thinking about this quite awhile, I think this
+> is a bad idea.  If I'm allowed to create exactly one, then (a) I won't
+> be able to run two instances of chrome (does chrome use one userns per
+> tab or per application?), yet (b) i can easily just not use chrome and
+> use my allocation to run a vulnerability.
+Ignore regular users WRT the ability to limit to one or two namespace 
+instances, the advantage of being able to limit to one or two user 
+namespaces for a given user is that it prevents daemons that use it for 
+sand-boxing from being exploited to create more.  If we go with Eric's 
+suggestion, there is absolutely no reason on a regular desktop system 
+that the users used for a graphical login would have to be limited.
+>
+> IMO, having a (hopefully temporary, so cleanly separated out) sysctl,
+> which perhaps goes so far as to kill all non-init user namespaces when
+> set to -1, makes the most sense.  I still think the harm due to having
+> userspace not being able to rely on user namespaces will, long term, be
+> worse than the security implications of having user namespaces always
 > enabled.
-> 
-> Signed-off-by: David Brown <david.brown@linaro.org>
-
-As Ard notes, my pagetable rework series [1] changes this code quite
-significantly, and this will need to be rebased atop of that (and
-possibly Ard's kASLR changes [2]).
-
-I certainly want to always have the kernel text RO. I was waiting for
-those two series to settle first.
-
-> ---
-> v1: This is in the same spirit as the x86 patch, removing allowing
-> this option to be config selected.  The associated patch series adds a
-> runtime option for the same thing.  However, it does affect the way
-> some things are mapped, and could possibly result in either increased
-> memory usage, or a performance hit (due to TLB misses from 4K pages).
-
-With my series [1] the text/rodata "chunk" of the kernel is always
-mapped with page-granular boundaries (using sections internally).
-Previously we always carved out the init area, so the kernel mapping was
-always split.
-
-Atop of my series this change should not increase memory usage or TLB
-pressure given that it should only change the permissions.
-
-One thing I would like to do is to avoid the need for fixup_executable
-entirely, by mapping the kernel text RO from the outset. However, that
-requires rework of the alternatives patching (to use a temporary RW
-alias), and I haven't had the time to look into that yet.
-
-Thanks,
-Mark.
-
-[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2016-January/397095.html
-[2] http://lists.infradead.org/pipermail/linux-arm-kernel/2016-January/402066.html
-
-> I've tested this on a Hikey 96board (hi6220-hikey.dtb), both with and
-> without 'rodata=off' on the command line.
-> 
-> arch/arm64/Kconfig              |  3 +++
-> arch/arm64/Kconfig.debug        | 10 ----------
-> arch/arm64/kernel/insn.c        |  2 +-
-> arch/arm64/kernel/vmlinux.lds.S |  5 +----
-> arch/arm64/mm/mmu.c             | 12 ------------
-> 5 files changed, 5 insertions(+), 27 deletions(-)
-> 
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index 8cc6228..ffa617a 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -201,6 +201,9 @@ config KERNEL_MODE_NEON
-> config FIX_EARLYCON_MEM
-> 	def_bool y
-> 
-> +config DEBUG_RODATA
-> +	def_bool y
-> +
-> config PGTABLE_LEVELS
-> 	int
-> 	default 2 if ARM64_16K_PAGES && ARM64_VA_BITS_36
-> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
-> index e13c4bf..db994ec 100644
-> --- a/arch/arm64/Kconfig.debug
-> +++ b/arch/arm64/Kconfig.debug
-> @@ -48,16 +48,6 @@ config DEBUG_SET_MODULE_RONX
->           against certain classes of kernel exploits.
->           If in doubt, say "N".
-> 
-> -config DEBUG_RODATA
-> -	bool "Make kernel text and rodata read-only"
-> -	help
-> -	  If this is set, kernel text and rodata will be made read-only. This
-> -	  is to help catch accidental or malicious attempts to change the
-> -	  kernel's executable code. Additionally splits rodata from kernel
-> -	  text so it can be made explicitly non-executable.
-> -
-> -          If in doubt, say Y
-> -
-> config DEBUG_ALIGN_RODATA
-> 	depends on DEBUG_RODATA && ARM64_4K_PAGES
-> 	bool "Align linker sections up to SECTION_SIZE"
-> diff --git a/arch/arm64/kernel/insn.c b/arch/arm64/kernel/insn.c
-> index 7371455..a04bdef 100644
-> --- a/arch/arm64/kernel/insn.c
-> +++ b/arch/arm64/kernel/insn.c
-> @@ -95,7 +95,7 @@ static void __kprobes *patch_map(void *addr, int fixmap)
-> 
-> 	if (module && IS_ENABLED(CONFIG_DEBUG_SET_MODULE_RONX))
-> 		page = vmalloc_to_page(addr);
-> -	else if (!module && IS_ENABLED(CONFIG_DEBUG_RODATA))
-> +	else if (!module)
-> 		page = virt_to_page(addr);
-> 	else
-> 		return addr;
-> diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-> index e3928f5..f80903c 100644
-> --- a/arch/arm64/kernel/vmlinux.lds.S
-> +++ b/arch/arm64/kernel/vmlinux.lds.S
-> @@ -65,12 +65,9 @@ PECOFF_FILE_ALIGNMENT = 0x200;
-> #if defined(CONFIG_DEBUG_ALIGN_RODATA)
-> #define ALIGN_DEBUG_RO			. = ALIGN(1<<SECTION_SHIFT);
-> #define ALIGN_DEBUG_RO_MIN(min)		ALIGN_DEBUG_RO
-> -#elif defined(CONFIG_DEBUG_RODATA)
-> +#else
-> #define ALIGN_DEBUG_RO			. = ALIGN(1<<PAGE_SHIFT);
-> #define ALIGN_DEBUG_RO_MIN(min)		ALIGN_DEBUG_RO
-> -#else
-> -#define ALIGN_DEBUG_RO
-> -#define ALIGN_DEBUG_RO_MIN(min)		. = ALIGN(min);
-> #endif
-> 
-> SECTIONS
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index 58faeaa..3b411b7 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -313,7 +313,6 @@ static void create_mapping_late(phys_addr_t phys, unsigned long virt,
-> 				phys, virt, size, prot, late_alloc);
-> }
-> 
-> -#ifdef CONFIG_DEBUG_RODATA
-> static void __init __map_memblock(phys_addr_t start, phys_addr_t end)
-> {
-> 	/*
-> @@ -347,13 +346,6 @@ static void __init __map_memblock(phys_addr_t start, phys_addr_t end)
-> 	}
-> 
-> }
-> -#else
-> -static void __init __map_memblock(phys_addr_t start, phys_addr_t end)
-> -{
-> -	create_mapping(start, __phys_to_virt(start), end - start,
-> -			PAGE_KERNEL_EXEC);
-> -}
-> -#endif
-> 
-> static void __init map_mem(void)
-> {
-> @@ -410,7 +402,6 @@ static void __init map_mem(void)
-> 
-> static void __init fixup_executable(void)
-> {
-> -#ifdef CONFIG_DEBUG_RODATA
-> 	/* now that we are actually fully mapped, make the start/end more fine grained */
-> 	if (!IS_ALIGNED((unsigned long)_stext, SWAPPER_BLOCK_SIZE)) {
-> 		unsigned long aligned_start = round_down(__pa(_stext),
-> @@ -428,10 +419,8 @@ static void __init fixup_executable(void)
-> 				aligned_end - __pa(__init_end),
-> 				PAGE_KERNEL);
-> 	}
-> -#endif
-> }
-> 
-> -#ifdef CONFIG_DEBUG_RODATA
-> void mark_rodata_ro(void)
-> {
-> 	create_mapping_late(__pa(_stext), (unsigned long)_stext,
-> @@ -439,7 +428,6 @@ void mark_rodata_ro(void)
-> 				PAGE_KERNEL_ROX);
-> 
-> }
-> -#endif
-> 
-> void fixup_init(void)
-> {
-> -- 
-> 2.7.0
-> 
+Userspace can't rely on them as it is right now.  The default kernel 
+config has them disabled, and a number of distros are refusing to ship 
+kernels with them enabled at least in the short term, wheras a number 
+are only shipping kernels with them enabled (I'd be willing to bet that 
+part of what prompted this originally was Chrome).  Just by virtue of 
+this, you can't rely on them being there and need to gracefully handle 
+the situation if they aren't.  Adding a sysctl allowing them to be 
+disabled completely on a kernel that has support built in would not make 
+them all that much more unreliable than they already are.
