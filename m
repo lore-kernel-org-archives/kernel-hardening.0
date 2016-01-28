@@ -1,66 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAP145pigHJ0CsuvWy=9s1g+Pb2xfLPbqFcYfEP_Dww=6c-G2Yg@mail.gmail.com>
-References: <20160128143825.GA17383@www.outflux.net>
-	<87io2degsu.fsf@x220.int.ebiederm.org>
-	<CAP145pigHJ0CsuvWy=9s1g+Pb2xfLPbqFcYfEP_Dww=6c-G2Yg@mail.gmail.com>
-Date: Thu, 28 Jan 2016 12:17:22 -0800
-Message-ID: <CAGXu5jJeOnvt3+PguEshdrbyKkXPodBH49RDsAf8rGX5=7C_zA@mail.gmail.com>
+In-Reply-To: <56A48779.3000005@eng.utah.edu>
+References: <56A48779.3000005@eng.utah.edu>
+Date: Thu, 28 Jan 2016 15:10:36 -0800
+Message-ID: <CAGXu5jJGGaXysBKbF_-uSwbMys+oYi176q8mFr_NCC6rEBvvSw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v2] sysctl: allow CLONE_NEWUSER to be disabled
-To: =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Andy Lutomirski <luto@kernel.org>, "Austin S. Hemmelgarn" <ahferroin7@gmail.com>, Richard Weinberger <richard@nod.at>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] [RFC PATCH 0/2] SROP Mitigation
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, Andi Kleen <ak@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 28, 2016 at 11:11 AM, Robert =C5=9Awi=C4=99cki <robert@swiecki.=
-net> wrote:
-> 2016-01-28 18:48 GMT+01:00 Eric W. Biederman <ebiederm@xmission.com>:
->> Kees Cook <keescook@chromium.org> writes:
->>
->>> +     if (sysctl_userns_restrict && !(capable(CAP_SYS_ADMIN) &&
->>> +                                     capable(CAP_SETUID) &&
->>> +                                     capable(CAP_SETGID)))
->>> +             return -EPERM;
->>> +
->>
->> I will also note that the way I have seen containers used this check
->> adds no security and is not mentioned or justified in any way in your
->> patch description.
->>
->> Furthermore this looks like blame shifting.  And quite frankly shifting
->> the responsibility to users if they get hacked is not an acceptable
->> attitude.
+On Sun, Jan 24, 2016 at 12:12 AM, Scotty Bauer <sbauer@eng.utah.edu> wrote:
+> Erik Bosman previously attempted to upstream some patches which mitigate SROP
+> exploits in userland. Unfortunately he never pursued it further and they never
+> got upstreamed.
 >
-> I think I might start understanding your point. Which, if I'm not
-> mistaken, is that it's not user namespaces which are buggy, but rather
-> some pieces of the kernel which would otherwise not be reachable from
-> the typical low-priv level of regular users (e.g. bugs in SOCK_RAW
-> sockets or iptables or mounts)?
+> The previous patches can be seen here:
+> https://lkml.org/lkml/2014/5/15/660
+> https://lkml.org/lkml/2014/5/15/661
+> https://lkml.org/lkml/2014/5/15/657
+> https://lkml.org/lkml/2014/5/15/858
 >
-> If so, I can agree with such wording, but the proposed sysctl might
-> still be needed in such case. I guess those bits of the kernel which
-> were not reachable previously from non-priv users historically got
-> much less attention in terms of time spent on security reviews and
-> security fuzzing. And as much as users of the kernel would like to see
-> those pieces of the kernel to be tested to a level that the attack
-> surface reachable from unprivileged users level were tested, it will
-> not happen tomorrow. And our best option now might be to have some
-> switchable setting to disable this attack surface for those users who
-> feel they need it. In the meantime, we can concentrate on sec
-> reviewing those newly reachable kernel APIs, so some day we could
-> remove this sysctl.
+> In the discussion for those patches Andy Lutomirski and Andi Kleen had a few
+> suggestions which are implemented in my patch series.
+>
+> Andy Lutomirski suggested that the per-process secret be xord and with the location
+> on the stack where the cookie will reside, then hashed. I've taken this approach but
+> have concerns about the safety and collision properties of the hash function I've used.
+>
+> Second, Andi Kleen was concerned that the previous patches broke the ABI. He suggested
+> placing the cookie above the FP state. The code I'm submitting does that by placing the
+> cookie in the padding above the FP state, or if no FP state is available above the
+> padding for the sigframe.
+>
+>
+> Below is an explanation of SROP stolen and slightly modified by me from Erik's patches.
+>
+> These patches are meant to make Sigreturn Oriented Programming (SROP) a much
+> less attractive exploitation path.  In Sigreturn Oriented Programming, an
+> attacker causes a user-space program to call the sigreturn system call in order
+> to get complete control control over the entire userspace context in one go.
+>
+> Previously attackers would have to search for ROP gadgets to get values into registers
+> then call mprotect or mmap. If the ROP gadgets didnt exist well then they'd be in trouble.
+> With SROP however one wouldn't have to search for ROP gadgets to get values into regs.
+> The attacker would simply lay out the ucontext on the stack as they choose then
+> SROP into the mprotect or mmap call.
+>
+> ( see: http://www.cs.vu.nl/~herbertb/papers/srop_sp14.pdf )
+>
+> While mitigating SROP will probably not stop determined attackers from
+> exploiting a program, as there's always the much more well-known Return
+> Oriented Programming, we still think SROP's relative ease warrants mitigation,
+> especially since the mitigation is so cheap.
 
-Yes, exactly. I want to find a way to offer admins a way to reduce
-attack surface. I have no interest in blame; this is a matter of
-practicality. It exposes a less well tested set of APIs to
-non-privileged users, so let's offer a way to remove that when
-desired.
+Cool! Thanks for bringing this series back! I quickly skimmed the
+paper, so I apologize if I missed it, but have there been any public
+exploits that used SROP, or is it considered to be "just" an
+identified weakness in need of fixing?
+
+It seems performance overhead would be lost in the noise of catching
+and processing signals, but have you done any benchmarks?
 
 -Kees
 
---=20
+-- 
 Kees Cook
 Chrome OS & Brillo Security
