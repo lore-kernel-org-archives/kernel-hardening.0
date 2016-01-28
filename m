@@ -1,31 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
-References: <20160128143825.GA17383@www.outflux.net>
-Date: Thu, 28 Jan 2016 11:48:33 -0600
-In-Reply-To: <20160128143825.GA17383@www.outflux.net> (Kees Cook's message of
-	"Thu, 28 Jan 2016 06:38:25 -0800")
-Message-ID: <87io2degsu.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-Content-Type: text/plain
+In-Reply-To: <87io2degsu.fsf@x220.int.ebiederm.org>
+References: <20160128143825.GA17383@www.outflux.net>
+	<87io2degsu.fsf@x220.int.ebiederm.org>
+Date: Thu, 28 Jan 2016 20:11:23 +0100
+Message-ID: <CAP145pigHJ0CsuvWy=9s1g+Pb2xfLPbqFcYfEP_Dww=6c-G2Yg@mail.gmail.com>
+From: =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v2] sysctl: allow CLONE_NEWUSER to be disabled
-To: Kees Cook <keescook@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Andy Lutomirski <luto@kernel.org>, "Austin S. Hemmelgarn" <ahferroin7@gmail.com>, Richard Weinberger <richard@nod.at>, Robert =?utf-8?B?xZp3acSZY2tp?= <robert@swiecki.net>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, "Serge E. Hallyn" <serge.hallyn@ubuntu.com>, Andy Lutomirski <luto@kernel.org>, "Austin S. Hemmelgarn" <ahferroin7@gmail.com>, Richard Weinberger <richard@nod.at>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, linux-doc@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
+2016-01-28 18:48 GMT+01:00 Eric W. Biederman <ebiederm@xmission.com>:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> +     if (sysctl_userns_restrict && !(capable(CAP_SYS_ADMIN) &&
+>> +                                     capable(CAP_SETUID) &&
+>> +                                     capable(CAP_SETGID)))
+>> +             return -EPERM;
+>> +
+>
+> I will also note that the way I have seen containers used this check
+> adds no security and is not mentioned or justified in any way in your
+> patch description.
+>
+> Furthermore this looks like blame shifting.  And quite frankly shifting
+> the responsibility to users if they get hacked is not an acceptable
+> attitude.
 
-> +	if (sysctl_userns_restrict && !(capable(CAP_SYS_ADMIN) &&
-> +					capable(CAP_SETUID) &&
-> +					capable(CAP_SETGID)))
-> +		return -EPERM;
-> +
+I think I might start understanding your point. Which, if I'm not
+mistaken, is that it's not user namespaces which are buggy, but rather
+some pieces of the kernel which would otherwise not be reachable from
+the typical low-priv level of regular users (e.g. bugs in SOCK_RAW
+sockets or iptables or mounts)?
 
-I will also note that the way I have seen containers used this check
-adds no security and is not mentioned or justified in any way in your
-patch description.
-
-Furthermore this looks like blame shifting.  And quite frankly shifting
-the responsibility to users if they get hacked is not an acceptable
-attitude.
-
-Eric
+If so, I can agree with such wording, but the proposed sysctl might
+still be needed in such case. I guess those bits of the kernel which
+were not reachable previously from non-priv users historically got
+much less attention in terms of time spent on security reviews and
+security fuzzing. And as much as users of the kernel would like to see
+those pieces of the kernel to be tested to a level that the attack
+surface reachable from unprivileged users level were tested, it will
+not happen tomorrow. And our best option now might be to have some
+switchable setting to disable this attack surface for those users who
+feel they need it. In the meantime, we can concentrate on sec
+reviewing those newly reachable kernel APIs, so some day we could
+remove this sysctl.
