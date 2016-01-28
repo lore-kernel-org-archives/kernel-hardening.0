@@ -1,57 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 28 Jan 2016 14:59:01 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160128145900.GN17123@leverpostej>
+References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
+ <1453226922-16831-4-git-send-email-keescook@chromium.org>
+ <20160127211105.GA41450@davidb.org>
+ <CAGXu5j+DLRoVE88a9++jVfEkN90HDiAaDAMnT2TrKqtMZ_yOww@mail.gmail.com>
+ <20160128000906.GA42530@davidb.org>
+ <20160128110622.GF17123@leverpostej>
+ <CAGXu5jLy3cpLzU1MSQhS6q=5rMu2Mdp9pXncoFapPqUyQ1fO0A@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <874mdzgvw8.fsf@x220.int.ebiederm.org>
-References: <1453502345-30416-1-git-send-email-keescook@chromium.org>
-	<8737tp0zhr.fsf@x220.int.ebiederm.org>
-	<CALCETrWYRvqhyCwx5RX6L3TEYCfW0j6ThFUc+ASL7BpxgO5dEQ@mail.gmail.com>
-	<CAGXu5j+mx+6BOKb42yfyKnL7VTCUBNC0Nk9aCOd0D5tSD6DbCg@mail.gmail.com>
-	<CALCETrXNZhJdjbxYH8x3wr3EyQVJzp2fhNyXwzgmuiKzoKO24A@mail.gmail.com>
-	<CAGXu5jJ6fQ5E17jKoC3kFZ0RgbcNLuzW6zdunaXV+jiQPSo+Lg@mail.gmail.com>
-	<87bn89sbc2.fsf@x220.int.ebiederm.org>
-	<CAGXu5jLwwCw9wZA8QYNVrZ2+kHJn7G3sXQZchvqFMYj3bN=DpQ@mail.gmail.com>
-	<87zivtj5tv.fsf@x220.int.ebiederm.org>
-	<CA+5PVA5Q0_sv5MsETa9u79MLOcYbsf-vdeEe3gdxgJ8f1KAbdQ@mail.gmail.com>
-	<20160126171523.GA13715@ubuntumail>
-	<CAGXu5j+kkzmnrvfOhcDfsK81bxwrgnywKQKCof+Pqjv-oVB+Kw@mail.gmail.com>
-	<874mdzgvw8.fsf@x220.int.ebiederm.org>
-Date: Thu, 28 Jan 2016 15:41:19 +0100
-Message-ID: <CAP145pitMMCPnbyQcwrap=PgPUjcknd1Qr_Mq7XPWzkvK0dCKw@mail.gmail.com>
-From: =?UTF-8?B?Um9iZXJ0IMWad2nEmWNraQ==?= <robert@swiecki.net>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH 0/2] sysctl: allow CLONE_NEWUSER to
- be disabled
-To: "Eric W. Biederman" <ebiederm@xmission.com>
-Cc: Kees Cook <keescook@chromium.org>, Serge Hallyn <serge.hallyn@ubuntu.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Al Viro <viro@zeniv.linux.org.uk>, Richard Weinberger <richard@nod.at>, Dmitry Vyukov <dvyukov@google.com>, David Howells <dhowells@redhat.com>, Kostya Serebryany <kcc@google.com>, Alexander Potapenko <glider@google.com>, Eric Dumazet <edumazet@google.com>, Sasha Levin <sasha.levin@oracle.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLy3cpLzU1MSQhS6q=5rMu2Mdp9pXncoFapPqUyQ1fO0A@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] arm64: make CONFIG_DEBUG_RODATA non-optional
+To: Kees Cook <keescook@chromium.org>
+Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Marc Zyngier <marc.zyngier@arm.com>, yalin wang <yalin.wang2010@gmail.com>, Zi Shen Lim <zlim.lnx@gmail.com>, Yang Shi <yang.shi@linaro.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <lauraa@codeaurora.org>, "Suzuki K. Poulose" <suzuki.poulose@arm.com>, Steve Capper <steve.capper@linaro.org>, Jeremy Linton <jeremy.linton@arm.com>, Mark Salter <msalter@redhat.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
->> The admin of such a machine could have disabled userns months earlier
->> and limited the scope of the attack.
->
-> Of course for the paranoid there is already a mechanism to do this.
-> /sbin/chroot.
->
-> No new user namespaces are allowed to be created inside of a chroot.
+On Thu, Jan 28, 2016 at 06:06:53AM -0800, Kees Cook wrote:
+> On Thu, Jan 28, 2016 at 3:06 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> > One thing I would like to do is to avoid the need for fixup_executable
+> > entirely, by mapping the kernel text RO from the outset. However, that
+> > requires rework of the alternatives patching (to use a temporary RW
+> > alias), and I haven't had the time to look into that yet.
+> 
+> This makes perfect sense for the rodata section, but the (future)
+> postinit_rodata section we'll still want to mark RO after init
+> finishes. x86 and ARM cheat by marking both RO after init, and they
+> don't have to pad sections. parisc will need to solve this too.
 
-Another alternative is to create a custom kernel module which will
-disable the user namespace (by limiting to privileged users only, or
-disabling it altogether).
+Depending on how many postinit_rodata variables there are, we might be
+able to drop those in .rodata, have them RO always, and initialise them
+via a temporary RW alias (e.g. something in the vmalloc area).
 
-IMO people tend to use distro kernels for convenience, and a
-suggestion of creating a chroot dir for every service exposed to
-users, or building a custom kernel module is an advice that not many
-sysadmins using distro kernels would take, even if they have concerns
-about the the increased attack surface enabled by CLONE_NEWUSER.
+The only requirement for that is that we use a helper to initialise any
+__postinit_ro variables via a temporary RW alias, e.g.
 
-Also, I don't think the willingness to disable the feature or limit it
-to the already privileged users will be something that only truly
-paranoid sysadmins/users would have. We've seen a fair amount of
-privilege escalation / DoS bugs that this kernel feature enabled in
-the recent 18 months or so, and they still seem to be found on a
-somewhat regular basis. Therefore this discussion and its outcome
-might be of interest to less paranoid folk as well.
+#define SET_POST_INIT_RO(ptr, v) ({ 		\\
+	typeof(ptr) __ptr_rw = (ptr)		\\
+	BUG_ON(initcalls_done);			\\
+	__ptr_rw = create_rw_alias(__ptr);	\\
+	__ptr_rw = v;				\\
+	destroy_rw_alias(__ptr_rw);		\\
+})
 
-I agree with Kees that the "knob" will be mostly used by admins of
-web-servers (and similar services) as a protection against privilege
-escalation after getting low-priv code execution on the system.
-Therefore a sysctl enabled from /etc/sysctl.conf should work well
-here, even if it's set to the permissive mode by default at boot.
+...
+
+__postinit_ro void *thing;
+
+void __init some_init_func(void) {
+	void *__thing = some_ranodomized_allocator();
+	SET_POSTINIT_RO(thing, thing);
+}
+
+
+Mark.
