@@ -1,60 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 29 Jan 2016 15:57:01 +0000
-From: Matt Fleming <matt@codeblueprint.co.uk>
-Message-ID: <20160129155701.GC2611@codeblueprint.co.uk>
+Date: Fri, 29 Jan 2016 18:26:57 +0000
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20160129182657.GI20099@e104818-lin.cambridge.arm.com>
 References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
- <1453828249-14467-23-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1453828249-14467-23-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v4 22/22] arm64: efi: invoke EFI_RNG_PROTOCOL to supply
- KASLR randomness
+In-Reply-To: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v4 00/22] arm64: implement support for KASLR
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, matt@codeblueprint.co.uk, arnd@arndb.de, bhupesh.sharma@freescale.com, stuart.yoder@freescale.com, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 26 Jan, at 06:10:49PM, Ard Biesheuvel wrote:
-> Since arm64 does not use a decompressor that supplies an execution
-> environment where it is feasible to some extent to provide a source of
-> randomness, the arm64 KASLR kernel depends on the bootloader to supply
-> some random bits in the /chosen/kaslr-seed DT property upon kernel entry.
-> 
-> On UEFI systems, we can use the EFI_RNG_PROTOCOL, if supplied, to obtain
-> some random bits. At the same time, use it to randomize the offset of the
-> kernel Image in physical memory.
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/Kconfig                        |  5 ++
->  drivers/firmware/efi/libstub/arm-stub.c   | 40 ++++++----
->  drivers/firmware/efi/libstub/arm64-stub.c | 78 ++++++++++++++------
->  drivers/firmware/efi/libstub/fdt.c        |  9 +++
->  4 files changed, 97 insertions(+), 35 deletions(-)
- 
-[...]
+Hi Ard,
 
-> diff --git a/drivers/firmware/efi/libstub/fdt.c b/drivers/firmware/efi/libstub/fdt.c
-> index cf7b7d46302a..04c9302b0ef1 100644
-> --- a/drivers/firmware/efi/libstub/fdt.c
-> +++ b/drivers/firmware/efi/libstub/fdt.c
-> @@ -147,6 +147,15 @@ efi_status_t update_fdt(efi_system_table_t *sys_table, void *orig_fdt,
->  	if (status)
->  		goto fdt_set_fail;
->  
-> +	if (IS_ENABLED(CONFIG_RANDOMIZE_BASE)) {
-> +		status = efi_get_random_bytes(sys_table, sizeof(fdt_val64),
-> +					      (u8 *)&fdt_val64);
-> +		if (status == EFI_SUCCESS)
-> +			status = fdt_setprop(fdt, node, "kaslr-seed",
-> +					     &fdt_val64, sizeof(fdt_val64));
-> +		else if (status != EFI_NOT_FOUND)
-> +			goto fdt_set_fail;
-> +	}
->  	return EFI_SUCCESS;
->  
->  fdt_set_fail:
+On Tue, Jan 26, 2016 at 06:10:27PM +0100, Ard Biesheuvel wrote:
+> Code can be found here:
+> git://git.linaro.org/people/ard.biesheuvel/linux-arm.git arm64-kaslr-v4a
+> https://git.linaro.org/people/ard.biesheuvel/linux-arm.git/shortlog/refs/heads/arm64-kaslr-v4a
 
-I think you want to handle the case where fdt_setprop() fails. With
-this new code you'll silently return EFI_SUCCESS even if you fail to
-set "kaslr-seed".
+The overall series looks fine but I'd like more time to review the KASLR
+part together with the module PLT stuff.
+
+So could you please split this series in 2-3 parts for easy merging
+(possibly without the KASLR part, it depends on how the review goes)? It
+looks like a mix of features in random order like huge-vmap, relative
+extable, kernel memory layout changes, kernel load address, PIE and
+KASLR. So something like:
+
+1. relative extable
+2. huge-vmap
+3. kernel memory layout changes (moving kernel to the base of vmalloc
+range)
+4. allow kernel loading at different phys offsets
+5. module PLTs, relocations, PIE, relative kallsyms, KASLR
+6. efi_get_random_bytes
+
+1-4 can be in the same branch but I currently find it hard to
+cherry-pick the non-PIE/non-KASLR patches without conflicts.
+
+Thanks.
+
+-- 
+Catalin
