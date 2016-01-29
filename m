@@ -1,30 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 29 Jan 2016 11:45:43 +0100
-From: Pavel Machek <pavel@denx.de>
-Message-ID: <20160129104543.GA21224@amd>
-References: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
- <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
+Date: Fri, 29 Jan 2016 15:39:35 +0000
+From: Matt Fleming <matt@codeblueprint.co.uk>
+Message-ID: <20160129153935.GB2611@codeblueprint.co.uk>
+References: <1453828249-14467-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1453828249-14467-21-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] mm/page_poisoning.c: Allow for zero poisoning
-To: Laura Abbott <labbott@fedoraproject.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-pm@vger.kernel.org
+In-Reply-To: <1453828249-14467-21-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v4 20/22] efi: stub: add implementation of
+ efi_random_alloc()
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com, leif.lindholm@linaro.org, keescook@chromium.org, linux-kernel@vger.kernel.org, stuart.yoder@freescale.com, bhupesh.sharma@freescale.com, arnd@arndb.de, marc.zyngier@arm.com, christoffer.dall@linaro.org, labbott@fedoraproject.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi!
+On Tue, 26 Jan, at 06:10:47PM, Ard Biesheuvel wrote:
+> +
+> +/*
+> + * The UEFI memory descriptors have a virtual address field that is only used
+> + * when installing the virtual mapping using SetVirtualAddressMap(). Since it
+> + * is unused here, we can reuse it to keep track of each descriptor's slot
+> + * count.
+> + */
+> +#define MD_NUM_SLOTS(md)	((md)->virt_addr)
+> +
+> +efi_status_t efi_random_alloc(efi_system_table_t *sys_table_arg,
+> +			      unsigned long size,
+> +			      unsigned long align,
+> +			      unsigned long *addr,
+> +			      unsigned long random_seed)
+> +{
+> +	unsigned long map_size, desc_size, total_slots = 0, target_slot;
+> +	efi_status_t status = EFI_NOT_FOUND;
+> +	efi_memory_desc_t *memory_map;
+> +	int map_offset;
 
-> By default, page poisoning uses a poison value (0xaa) on free. If this
-> is changed to 0, the page is not only sanitized but zeroing on alloc
-> with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
-> corruption from the poisoning is harder to detect. This feature also
-> cannot be used with hibernation since pages are not guaranteed to be
-> zeroed after hibernation.
+The assignment of 'status' is not needed since it gets assigned a new
+value immediately.
 
-So... this makes kernel harder to debug for performance advantage...?
-If so.. how big is the performance advantage?
-									Pavel
--- 
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
+Otherwise looks good.
+
+Reviewed-by: Matt Fleming <matt@codeblueprint.co.uk>
