@@ -1,23 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 29 Jan 2016 11:45:43 +0100
+From: Pavel Machek <pavel@denx.de>
+Message-ID: <20160129104543.GA21224@amd>
+References: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
+ <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVpa1zxVXOJoYKZ0zLCdH07dBKbw0Yo-BSJRH0eP_RBvQ@mail.gmail.com>
-References: <20160129010651.GA13228@www.outflux.net>
-	<CALCETrVpa1zxVXOJoYKZ0zLCdH07dBKbw0Yo-BSJRH0eP_RBvQ@mail.gmail.com>
-Date: Thu, 28 Jan 2016 19:03:57 -0800
-Message-ID: <CABXk95CvE7O8ZL864AoVtKA7XqA_XaxA66Zz5ncpDWFSO7C19Q@mail.gmail.com>
-From: Jeffrey Vander Stoep <jeffv@google.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC][PATCH] seccomp: add SECCOMP_RET_ACK for non-fatal SIGSYS
-To: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, Will Drewry <wad@chromium.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] mm/page_poisoning.c: Allow for zero poisoning
+To: Laura Abbott <labbott@fedoraproject.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-pm@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thanks! This is just what I need.
+Hi!
 
-What are the drawbacks to returning the sigsys before executing the
-system call? Otherwise this loses the benefit of properly reporting
-registers for argument inspection.
+> By default, page poisoning uses a poison value (0xaa) on free. If this
+> is changed to 0, the page is not only sanitized but zeroing on alloc
+> with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
+> corruption from the poisoning is harder to detect. This feature also
+> cannot be used with hibernation since pages are not guaranteed to be
+> zeroed after hibernation.
 
-How about SECCOMP_RET_PERMISSIVE? Describes the application rather
-than the implementation. Otherwise preference is for
-SECCOMP_RET_ALLOW_SIGSYS.
+So... this makes kernel harder to debug for performance advantage...?
+If so.. how big is the performance advantage?
+									Pavel
+-- 
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
