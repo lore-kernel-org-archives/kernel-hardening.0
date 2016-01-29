@@ -1,39 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160129010651.GA13228@www.outflux.net>
-References: <20160129010651.GA13228@www.outflux.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 28 Jan 2016 18:33:01 -0800
-Message-ID: <CALCETrVpa1zxVXOJoYKZ0zLCdH07dBKbw0Yo-BSJRH0eP_RBvQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC][PATCH] seccomp: add SECCOMP_RET_ACK for non-fatal SIGSYS
-To: Kees Cook <keescook@chromium.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, jeffv@google.com, Oleg Nesterov <oleg@redhat.com>, Will Drewry <wad@chromium.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Laura Abbott <labbott@fedoraproject.org>
+Date: Thu, 28 Jan 2016 18:38:17 -0800
+Message-Id: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
+Subject: [kernel-hardening] [PATCHv2 0/2] Sanitization of buddy pages
+To: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>
+Cc: Laura Abbott <labbott@fedoraproject.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 28, 2016 at 5:06 PM, Kees Cook <keescook@chromium.org> wrote:
-> Tracing processes for syscall usage can be done one step at a time with
-> SECCOMP_RET_TRAP, but this will block the syscall. Alternatively, using
-> a ptrace manager to handle SECCOMP_RET_TRACE returns can be used but is
-> heavy weight and depends on the ptrace infrastructure. A light-weight
-> method to learn syscalls is needed, which can reuse the existing delivery
-> of SIGSYS but without skipping the syscall. This is implemented as
-> SECCOMP_RET_ACK which is as permissive as SECCOMP_RET_ALLOW but delivers
-> SIGSYS after syscall completion, as long as the SECCOMP_RET_DATA is
-> non-zero. A signal handler can install a new rule for each syscall as
-> they are signaled with SECCOMP_RET_DATA set to 0 to disable reporting
-> for that syscall in the future (which is required for restarting syscalls
-> that are signal-sensitive like nanosleep).
->
-> Registers from the signal will reflect registers after the syscall returns
-> rather than before. Signal-sensitive syscalls will trigger EINTR, so they
-> must be whitelisted before they are resumed. Not allowing the sigreturn
-> syscall (and likely prctl to whitelist) will make using SECCOMP_RET_ACK
-> useless.
->
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+Hi,
 
-Could this use task_work to queue the signal on return to user mode
-instead?  Would that solve the EINTR issues?
+This is v2 of the series to add sanitization to the buddy allocator.
+The standard sanitization blurb:
 
---Andy
+For those who aren't familiar with this, the goal of sanitization is to reduce
+the severity of use after free and uninitialized data bugs. Memory is cleared
+on free so any sensitive data is no longer available. Discussion of
+sanitization was brough up in a thread about CVEs
+(lkml.kernel.org/g/<20160119112812.GA10818@mwanda>)
+
+Changes since v1:
+- Squashed the refactor and adding the poisoning together. Having them separate
+  didn't seem to give much extra benefit and lead to some churn as well.
+- Corrected the order of poison vs. kernel_map in the alloc path
+- zeroing can now be enabled with hibernation (enabling zero poisoning turns
+  off hibernation)
+- Added additional checks for skipping __GFP_ZERO. On SPARSEMEM systems the
+  extended page flags are not initialized until after memory is freed to the
+  buddy list which prevents the pages from being zeroed on first free via
+  poisoning. This does also mean that any residual data that may be left in
+  the pages from boot up will not be cleared which is a risk. I'm open to
+  suggestions for fixing or it can be future work.
+- A few spelling/checkpatch fixes.
+- Addressed comments from Dave Hansen and Jianyu Zhan
+- This series now depends on the change to allow debug_pagealloc_enabled
+  to be used without !CONFIG_DEBUG_PAGEALLOC
+  (http://article.gmane.org/gmane.linux.kernel.mm/145208)
+
+Thanks,
+Laura
+
+Laura Abbott (2):
+  mm/page_poison.c: Enable PAGE_POISONING as a separate option
+  mm/page_poisoning.c: Allow for zero poisoning
+
+ Documentation/kernel-parameters.txt |   5 +
+ include/linux/mm.h                  |  15 +++
+ include/linux/poison.h              |   4 +
+ kernel/power/hibernate.c            |  17 ++++
+ mm/Kconfig.debug                    |  36 ++++++-
+ mm/Makefile                         |   2 +-
+ mm/debug-pagealloc.c                | 137 ---------------------------
+ mm/page_alloc.c                     |  13 ++-
+ mm/page_ext.c                       |  10 +-
+ mm/page_poison.c                    | 184 ++++++++++++++++++++++++++++++++++++
+ 10 files changed, 281 insertions(+), 142 deletions(-)
+ delete mode 100644 mm/debug-pagealloc.c
+ create mode 100644 mm/page_poison.c
+
+-- 
+2.5.0
