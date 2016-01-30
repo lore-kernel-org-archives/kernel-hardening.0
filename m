@@ -1,55 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 30 Jan 2016 15:34:56 +0100
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20160130143455.GA27221@pc.thejh.net>
-References: <1453622354-50686-1-git-send-email-sbauer@eng.utah.edu>
- <1453622354-50686-3-git-send-email-sbauer@eng.utah.edu>
+Date: Sat, 30 Jan 2016 16:30:54 +0100
+From: Pavel Machek <pavel@denx.de>
+Message-ID: <20160130153053.GA4859@amd>
+References: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
+ <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
+ <20160129104543.GA21224@amd>
+ <56ABDB4A.2040709@redhat.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="GvXjxJ+pjyke8COw"
-Content-Disposition: inline
-In-Reply-To: <1453622354-50686-3-git-send-email-sbauer@eng.utah.edu>
-Subject: Re: [kernel-hardening] [RFC PATCH 2/2] x86: SROP mitigation:
- implement signal cookies
-To: kernel-hardening@lists.openwall.com
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---GvXjxJ+pjyke8COw
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
+In-Reply-To: <56ABDB4A.2040709@redhat.com>
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] mm/page_poisoning.c: Allow for zero poisoning
+To: Laura Abbott <labbott@redhat.com>
+Cc: Laura Abbott <labbott@fedoraproject.org>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-pm@vger.kernel.org
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jan 24, 2016 at 12:59:14AM -0700, Scott Bauer wrote:
-> This patch adds SROP mitigation logic to the x86 signal delivery
-> and sigreturn code. The cookie is placed in the unused alignment
-> space above the saved FP state, if it exists. If there is no FP
-> state to save then the cookie is placed in the alignment space above
-> the sigframe.
+Hi!
 
-A nice side effect of this patch is that it will mitigate the ability of
-a process in strict seccomp to effectively call sigprocmask() using
-sigreturn.
+> >>By default, page poisoning uses a poison value (0xaa) on free. If this
+> >>is changed to 0, the page is not only sanitized but zeroing on alloc
+> >>with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
+> >>corruption from the poisoning is harder to detect. This feature also
+> >>cannot be used with hibernation since pages are not guaranteed to be
+> >>zeroed after hibernation.
+> >
+> >So... this makes kernel harder to debug for performance advantage...?
+> >If so.. how big is the performance advantage?
 
---GvXjxJ+pjyke8COw
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+> 
+> The performance advantage really depends on the benchmark you are
+> running.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+You are trying to improve performance, so you should publish at least
+one benchmark where it helps.
 
-iQIcBAEBAgAGBQJWrMoPAAoJED4KNFJOeCOoBloQAI8HgR6ZbPq2tncgJhidZuO1
-GENVnZtPceM6SQOzTPBnW1se+qlSv39dx7tEZV4J8I7lKY4ehq/PBIoo+ENupzqW
-ebX59uhpUYblVRN7DXS6W+Tfl08CyyoYY61KrSuyF5YJJ1uxTUAQVJPEfvsyWNLn
-FroD4acvZWDvnUxVptc8aDl40Nj1nCAhljNIiAk5SdKh95KPPEAKNCkXj872gAIs
-o+ayCOO65zrncMf+V6MZscI03WIOnh+X8YWhv7a/2NmKlq3lAVtWRbpkoM07ZB/m
-ooZVpcVchK92Ax2VYOXo2dhnB0uRqMot6KlIGDsDZ5LHa2oSwTzXKvU1zqT+dAVg
-El8HLFStFkUutWj6qpMk01OJ8setHLO0Hke4Mqxr9PMBZj9yMAq6pg7R65L9Ackt
-mhCh6QBUcHdN6pyGf+NhnZ05jQEqNo9neQAbTg3XuLdj+1yt0U2lwcUqpIRcWKjl
-seyu3CyySLaxsdRKNfD3dCLVIwUMUroChk2F4T5CBi3UPXLd9rCRAl2ZWN/VBz0f
-rWZhbtgTtpwl1iWtgWAe4qet/z3D/W+W/mHUFJ0PeGAOInUwb6JFPhbOCI/CDpZ4
-0Bl0TNkAY5vmpTaJguw+b7xt3Q5/eiSobL76kTYKB8uf91cEt0rvVJzWFkY0V62l
-znP/4XwiI/UHN+I6RIS/
-=MjFN
------END PGP SIGNATURE-----
+Alternatively, quote kernel build times with and without the
+patch.
 
---GvXjxJ+pjyke8COw--
+If it speeds kernel compile twice, I guess I may even help with
+hibernation support. If it makes kernel compile faster by .00000034%
+(or slows it down), we should probably simply ignore this patch.
+
+									Pavel
+-- 
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
