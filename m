@@ -1,43 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
- <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
- <20160129104543.GA21224@amd>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <56ABDB4A.2040709@redhat.com>
-Date: Fri, 29 Jan 2016 13:36:10 -0800
+Date: Sat, 30 Jan 2016 15:34:56 +0100
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20160130143455.GA27221@pc.thejh.net>
+References: <1453622354-50686-1-git-send-email-sbauer@eng.utah.edu>
+ <1453622354-50686-3-git-send-email-sbauer@eng.utah.edu>
 MIME-Version: 1.0
-In-Reply-To: <20160129104543.GA21224@amd>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] mm/page_poisoning.c: Allow for zero poisoning
-To: Pavel Machek <pavel@denx.de>, Laura Abbott <labbott@fedoraproject.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-pm@vger.kernel.org
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="GvXjxJ+pjyke8COw"
+Content-Disposition: inline
+In-Reply-To: <1453622354-50686-3-git-send-email-sbauer@eng.utah.edu>
+Subject: Re: [kernel-hardening] [RFC PATCH 2/2] x86: SROP mitigation:
+ implement signal cookies
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/29/2016 02:45 AM, Pavel Machek wrote:
-> Hi!
->
->> By default, page poisoning uses a poison value (0xaa) on free. If this
->> is changed to 0, the page is not only sanitized but zeroing on alloc
->> with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
->> corruption from the poisoning is harder to detect. This feature also
->> cannot be used with hibernation since pages are not guaranteed to be
->> zeroed after hibernation.
->
-> So... this makes kernel harder to debug for performance advantage...?
-> If so.. how big is the performance advantage?
-> 									Pavel
->
 
-The performance advantage really depends on the benchmark you are running.
-It was pointed out this may help some unknown amount with merging pages
-in VMs since the pages are now identical and can be merged. The debugging
-is also only slightly more difficult. With the non-zero poisoning value
-it's easier to see that a crash was caused by triggering the poison vs.
-just some random NULL pointer.
+--GvXjxJ+pjyke8COw
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-As as been pointed out, this help text could use some updating so I'll
-clarify this more.
+On Sun, Jan 24, 2016 at 12:59:14AM -0700, Scott Bauer wrote:
+> This patch adds SROP mitigation logic to the x86 signal delivery
+> and sigreturn code. The cookie is placed in the unused alignment
+> space above the saved FP state, if it exists. If there is no FP
+> state to save then the cookie is placed in the alignment space above
+> the sigframe.
 
-Thanks,
-Laura
+A nice side effect of this patch is that it will mitigate the ability of
+a process in strict seccomp to effectively call sigprocmask() using
+sigreturn.
+
+--GvXjxJ+pjyke8COw
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJWrMoPAAoJED4KNFJOeCOoBloQAI8HgR6ZbPq2tncgJhidZuO1
+GENVnZtPceM6SQOzTPBnW1se+qlSv39dx7tEZV4J8I7lKY4ehq/PBIoo+ENupzqW
+ebX59uhpUYblVRN7DXS6W+Tfl08CyyoYY61KrSuyF5YJJ1uxTUAQVJPEfvsyWNLn
+FroD4acvZWDvnUxVptc8aDl40Nj1nCAhljNIiAk5SdKh95KPPEAKNCkXj872gAIs
+o+ayCOO65zrncMf+V6MZscI03WIOnh+X8YWhv7a/2NmKlq3lAVtWRbpkoM07ZB/m
+ooZVpcVchK92Ax2VYOXo2dhnB0uRqMot6KlIGDsDZ5LHa2oSwTzXKvU1zqT+dAVg
+El8HLFStFkUutWj6qpMk01OJ8setHLO0Hke4Mqxr9PMBZj9yMAq6pg7R65L9Ackt
+mhCh6QBUcHdN6pyGf+NhnZ05jQEqNo9neQAbTg3XuLdj+1yt0U2lwcUqpIRcWKjl
+seyu3CyySLaxsdRKNfD3dCLVIwUMUroChk2F4T5CBi3UPXLd9rCRAl2ZWN/VBz0f
+rWZhbtgTtpwl1iWtgWAe4qet/z3D/W+W/mHUFJ0PeGAOInUwb6JFPhbOCI/CDpZ4
+0Bl0TNkAY5vmpTaJguw+b7xt3Q5/eiSobL76kTYKB8uf91cEt0rvVJzWFkY0V62l
+znP/4XwiI/UHN+I6RIS/
+=MjFN
+-----END PGP SIGNATURE-----
+
+--GvXjxJ+pjyke8COw--
