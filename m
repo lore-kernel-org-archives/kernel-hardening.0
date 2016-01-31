@@ -1,47 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 30 Jan 2016 16:30:54 +0100
-From: Pavel Machek <pavel@denx.de>
-Message-ID: <20160130153053.GA4859@amd>
-References: <1454035099-31583-1-git-send-email-labbott@fedoraproject.org>
- <1454035099-31583-3-git-send-email-labbott@fedoraproject.org>
- <20160129104543.GA21224@amd>
- <56ABDB4A.2040709@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <56ABDB4A.2040709@redhat.com>
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] mm/page_poisoning.c: Allow for zero poisoning
-To: Laura Abbott <labbott@redhat.com>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, linux-pm@vger.kernel.org
+In-Reply-To: <CALCETrVpa1zxVXOJoYKZ0zLCdH07dBKbw0Yo-BSJRH0eP_RBvQ@mail.gmail.com>
+References: <20160129010651.GA13228@www.outflux.net> <CALCETrVpa1zxVXOJoYKZ0zLCdH07dBKbw0Yo-BSJRH0eP_RBvQ@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Sun, 31 Jan 2016 12:19:01 -0800
+Message-ID: <CALCETrXBqM2SL4h69CV9y1cd9ybsb8ACaMVrGXryeVfYt_twjw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC][PATCH] seccomp: add SECCOMP_RET_ACK for non-fatal SIGSYS
+To: Kees Cook <keescook@chromium.org>
+Cc: LSM List <linux-security-module@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Oleg Nesterov <oleg@redhat.com>, Linux API <linux-api@vger.kernel.org>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Jeffrey Vander Stoep <jeffv@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi!
-
-> >>By default, page poisoning uses a poison value (0xaa) on free. If this
-> >>is changed to 0, the page is not only sanitized but zeroing on alloc
-> >>with __GFP_ZERO can be skipped as well. The tradeoff is that detecting
-> >>corruption from the poisoning is harder to detect. This feature also
-> >>cannot be used with hibernation since pages are not guaranteed to be
-> >>zeroed after hibernation.
+On Jan 28, 2016 6:33 PM, "Andy Lutomirski" <luto@amacapital.net> wrote:
+>
+> On Thu, Jan 28, 2016 at 5:06 PM, Kees Cook <keescook@chromium.org> wrote:
+> > Tracing processes for syscall usage can be done one step at a time with
+> > SECCOMP_RET_TRAP, but this will block the syscall. Alternatively, using
+> > a ptrace manager to handle SECCOMP_RET_TRACE returns can be used but is
+> > heavy weight and depends on the ptrace infrastructure. A light-weight
+> > method to learn syscalls is needed, which can reuse the existing delivery
+> > of SIGSYS but without skipping the syscall. This is implemented as
+> > SECCOMP_RET_ACK which is as permissive as SECCOMP_RET_ALLOW but delivers
+> > SIGSYS after syscall completion, as long as the SECCOMP_RET_DATA is
+> > non-zero. A signal handler can install a new rule for each syscall as
+> > they are signaled with SECCOMP_RET_DATA set to 0 to disable reporting
+> > for that syscall in the future (which is required for restarting syscalls
+> > that are signal-sensitive like nanosleep).
 > >
-> >So... this makes kernel harder to debug for performance advantage...?
-> >If so.. how big is the performance advantage?
+> > Registers from the signal will reflect registers after the syscall returns
+> > rather than before. Signal-sensitive syscalls will trigger EINTR, so they
+> > must be whitelisted before they are resumed. Not allowing the sigreturn
+> > syscall (and likely prctl to whitelist) will make using SECCOMP_RET_ACK
+> > useless.
+> >
+> > Signed-off-by: Kees Cook <keescook@chromium.org>
+>
+> Could this use task_work to queue the signal on return to user mode
+> instead?  Would that solve the EINTR issues?
+>
 
-> 
-> The performance advantage really depends on the benchmark you are
-> running.
+As another option, use the existing TRAP option but add a way for a
+process to set a flag such that it can delete and re-add a filter.
+Then you get SIGSYS, delete the old filter, add a new one that allows
+the current syscall, and resume.  No funny business with EINTR or
+clobbered regs.
 
-You are trying to improve performance, so you should publish at least
-one benchmark where it helps.
-
-Alternatively, quote kernel build times with and without the
-patch.
-
-If it speeds kernel compile twice, I guess I may even help with
-hibernation support. If it makes kernel compile faster by .00000034%
-(or slows it down), we should probably simply ignore this patch.
-
-									Pavel
--- 
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
+--Andy
