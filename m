@@ -1,76 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1454404559.31183.10.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Tue, 02 Feb 2016 04:15:59 -0500
-In-Reply-To: <56AFE7EE.30100@eng.utah.edu>
-References: <1453622354-50686-1-git-send-email-sbauer@eng.utah.edu>
-	 <1453622354-50686-2-git-send-email-sbauer@eng.utah.edu>
-	 <87twlsaw92.fsf@rasmusvillemoes.dk> <56AFE7EE.30100@eng.utah.edu>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-+tCQPv9XuujXC7C9Ifs2"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/2] SROP Mitigation:
- Architecture independent code for signal cookies
-To: kernel-hardening@lists.openwall.com, Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: abhiram@cs.utah.edu
+MIME-Version: 1.0
+In-Reply-To: <CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
+References: <1450364270-12687-1-git-send-email-dave@progbits.org>
+	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
+	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
+Date: Tue, 2 Feb 2016 06:33:27 -0500
+Message-ID: <CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
+From: David Windsor <dave@progbits.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
+To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+FYI, I now have time to work on this again.
 
---=-+tCQPv9XuujXC7C9Ifs2
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
+the following changes suggested during the on-list review of v2:
 
-> Maybe secret is a bad term. It's supposed to be something userland
-> can't guess=C2=A0
-> without doing a bunch of tricks. It's essentially supposed to work
-> like a stack
-> canary to protect against stack based buffer overflows. If someone
-> can leak the
-> stack canary in a stack based overflow, then do the overflow they can
-> overcome=C2=A0
-> stack canaries as a mitigation. The same is true here. If someone can
-> generate a
-> signal, leak the signal cookie, then leak the address of the signal
-> cookie, then
-> undo the hash, then they can beat this mitigation. But we're arguing
-> if someone
-> can do everything we've said above they have already have nearly full
-> control of
-> a userland process and they won't really need SROP.
->=20
-> Essentially the signal cookie is just a way for the kernel to know if
-> the=C2=A0
-> sigreturn it's handling is in response to a legitimate signal that
-> the kernel=C2=A0
-> previously delivered without having to save a ton of state in
-> current, or=C2=A0
-> elsewhere.=C2=A0
+* s/PAX_REFCOUNT/STRICT_REFCOUNT
+* Reordering the patchset in a more sane manner (per Greg KH)
+* Creation of the "Kernel Hardening" menu in Kconfig
+* Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
+* Whitespace fixes
 
-Stack canary checking has a tiny performance budget though. It would be
-interesting to know how SipHash fared in a case like this. It could be
-specialized for fixed-size keys and potentially used elsewhere. Seems
-like it would be more than fast enough.
---=-+tCQPv9XuujXC7C9Ifs2
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+v3 is forthcoming and will be posted here as soon as I have the
+patchset rebased to linux-next.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
+Thanks,
+David
 
-iQIcBAABCAAGBQJWsHPPAAoJEPnnEuWa9fIq3PIP/iC2/aEvmIZt62vrShUBDBbF
-W0Dd5oeCYrw34GmDiUoQglvFpMMc8BYkVPkuR/YGDcIh4u+xlP2N8Uyzqv9iW0dV
-OCC6PF39+s4ewHtRv3dz5G/T80vDaLHp++YeCYOamtZPdKjXF5MGm+iTpzp/SRxS
-bYk0hxd7QIswkcy4F62iszMhAe0c31t35blSi4tiZdNzdDsJV/qU9ne/PKNObkja
-UgDY8hz3lcNS8qqh9uHCTCtyx3opONd62weYW/TCRZq5ekLoYPQs1DX2Z9Vh6q5B
-6jSmK5RZuyVzX2y9m3RUbCnaRIl5qeCzxIViJGddHlwrl+EstI4MCZXm8ekKm8ls
-fCQI9DRgI0A6bATS1uPxTjvnv5iH/RZQy2MC2+WbV7wo41g0LPCOtpusqe8vlVgX
-SsWff7fItVSJw+jjLeUqS6NLB72mNhnE8r6BM2ln36lvW3LX1an23z8ah8g2S79r
-bf1oTwqD0lye2SH6GVSkOU0Y60aKN0SuF5y4aOkmudDBaV64jmiuW/EvnqUBgvC4
-u4dy+b5uxSRiyRlTQ8r31ik0NgrquWmYjMuR2TB7cviyUzmsk5c75QhLfH+GjlEy
-YQAKMarn0w5FfOU1CirDHkMGyEeZbUsTaCBpbcSbzsO3zSXSOIlkjhwjyGCCuQla
-TURephQGi5vd0FBW455o
-=jVPu
------END PGP SIGNATURE-----
-
---=-+tCQPv9XuujXC7C9Ifs2--
+On Wed, Jan 20, 2016 at 8:11 AM, David Windsor <dave@progbits.org> wrote:
+> Hi Kees,
+>
+> On Tue, Jan 19, 2016 at 2:07 PM, Kees Cook <keescook@chromium.org> wrote:
+>> Hi David,
+>>
+>> On Thu, Dec 17, 2015 at 12:55 PM, Kees Cook <keescook@chromium.org> wrote:
+>>> On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org> wrote:
+>>>> NOTE: This is a v2 submission because patch 3/5 in v1 was too large to sent
+>>>> to kernel-hardening.  Taking that as a sign that the patch needed to be split,
+>>>> I'm sending this version of the patchset, with the patches split more or less
+>>>> on a per-maintainer basis (except for those in drivers/).
+>>
+>> How's the next spin coming? It looks like we have some new real-world
+>> examples of exploits that would have been blocked by this protection:
+>>
+>> http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
+>>
+>> :)
+>>
+>
+> I'm currently working on v3 of this patchset: porting the patches to
+> linux-next and incorporating suggested changes to v2.  I'm fairly well
+> along, but need just a bit more time  I'm a bit busy at the moment, so
+> I expect realistically to have time to finish this at the beginning of
+> February.
+>
+> Thanks,
+> David
+>
+>> -Kees
+>>
+>> --
+>> Kees Cook
+>> Chrome OS & Brillo Security
