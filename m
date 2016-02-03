@@ -1,67 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org>
+ <20160126070320.GB28254@js1304-P5Q-DELUXE>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <56B24B01.30306@redhat.com>
+Date: Wed, 3 Feb 2016 10:46:25 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
-References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
-	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
-	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
-Date: Tue, 2 Feb 2016 06:33:27 -0500
-Message-ID: <CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
-From: David Windsor <dave@progbits.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
-To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20160126070320.GB28254@js1304-P5Q-DELUXE>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Speed up SLUB poisoning + disable checks
+To: Joonsoo Kim <iamjoonsoo.kim@lge.com>, Laura Abbott <labbott@fedoraproject.org>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-FYI, I now have time to work on this again.
+On 01/25/2016 11:03 PM, Joonsoo Kim wrote:
+> On Mon, Jan 25, 2016 at 05:15:10PM -0800, Laura Abbott wrote:
+>> Hi,
+>>
+>> Based on the discussion from the series to add slab sanitization
+>> (lkml.kernel.org/g/<1450755641-7856-1-git-send-email-laura@labbott.name>)
+>> the existing SLAB_POISON mechanism already covers similar behavior.
+>> The performance of SLAB_POISON isn't very good. With hackbench -g 20 -l 1000
+>> on QEMU with one cpu:
+>
+> I doesn't follow up that discussion, but, I think that reusing
+> SLAB_POISON for slab sanitization needs more changes. I assume that
+> completeness and performance is matter for slab sanitization.
+>
+> 1) SLAB_POISON isn't applied to specific kmem_cache which has
+> constructor or SLAB_DESTROY_BY_RCU flag. For debug, it's not necessary
+> to be applied, but, for slab sanitization, it is better to apply it to
+> all caches.
 
-Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
-the following changes suggested during the on-list review of v2:
+The grsecurity patches get around this by calling the constructor again
+after poisoning. It could be worth investigating doing that as well
+although my focus was on the cases without the constructor.
+>
+> 2) SLAB_POISON makes object size bigger so natural alignment will be
+> broken. For example, kmalloc(256) cache's size is 256 in normal
+> case but it would be 264 when SLAB_POISON is enabled. This causes
+> memory waste.
 
-* s/PAX_REFCOUNT/STRICT_REFCOUNT
-* Reordering the patchset in a more sane manner (per Greg KH)
-* Creation of the "Kernel Hardening" menu in Kconfig
-* Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
-* Whitespace fixes
+The grsecurity patches also bump the size up to put the free pointer
+outside the object. For sanitization purposes it is cleaner to have
+no pointers in the object after free
 
-v3 is forthcoming and will be posted here as soon as I have the
-patchset rebased to linux-next.
+>
+> In fact, I'd prefer not reusing SLAB_POISON. It would make thing
+> simpler. But, it's up to Christoph.
+>
+> Thanks.
+>
+
+It basically looks like trying to poison on the fast path at all
+will have a negative impact even with the feature is turned off.
+Christoph has indicated this is not acceptable so we are forced
+to limit it to the slow path only if we want runtime enablement.
+If we're limited to the slow path only, we might as well work
+with SLAB_POISON to make it faster. We can reevaluate if it turns
+out the poisoning isn't fast enough to be useful.
 
 Thanks,
-David
-
-On Wed, Jan 20, 2016 at 8:11 AM, David Windsor <dave@progbits.org> wrote:
-> Hi Kees,
->
-> On Tue, Jan 19, 2016 at 2:07 PM, Kees Cook <keescook@chromium.org> wrote:
->> Hi David,
->>
->> On Thu, Dec 17, 2015 at 12:55 PM, Kees Cook <keescook@chromium.org> wrote:
->>> On Thu, Dec 17, 2015 at 6:57 AM, David Windsor <dave@progbits.org> wrote:
->>>> NOTE: This is a v2 submission because patch 3/5 in v1 was too large to sent
->>>> to kernel-hardening.  Taking that as a sign that the patch needed to be split,
->>>> I'm sending this version of the patchset, with the patches split more or less
->>>> on a per-maintainer basis (except for those in drivers/).
->>
->> How's the next spin coming? It looks like we have some new real-world
->> examples of exploits that would have been blocked by this protection:
->>
->> http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
->>
->> :)
->>
->
-> I'm currently working on v3 of this patchset: porting the patches to
-> linux-next and incorporating suggested changes to v2.  I'm fairly well
-> along, but need just a bit more time  I'm a bit busy at the moment, so
-> I expect realistically to have time to finish this at the beginning of
-> February.
->
-> Thanks,
-> David
->
->> -Kees
->>
->> --
->> Kees Cook
->> Chrome OS & Brillo Security
+Laura
