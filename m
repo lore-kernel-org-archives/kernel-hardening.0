@@ -1,24 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 3 Feb 2016 21:23:11 -0600 (CST)
-From: Christoph Lameter <cl@linux.com>
-In-Reply-To: <56B29F77.1010607@redhat.com>
-Message-ID: <alpine.DEB.2.20.1602032120060.22468@east.gentwo.org>
-References: <1453770913-32287-1-git-send-email-labbott@fedoraproject.org> <20160126070320.GB28254@js1304-P5Q-DELUXE> <56B24B01.30306@redhat.com> <CAGXu5jJK1UhNX7h2YmxxTrCABr8oS=Y2OBLMr4KTxk7LctRaiQ@mail.gmail.com> <56B272B8.2050808@redhat.com>
- <alpine.DEB.2.20.1602031658060.6707@east.gentwo.org> <56B29F77.1010607@redhat.com>
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/3] Speed up SLUB poisoning + disable checks
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Laura Abbott <labbott@fedoraproject.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
+References: <1450364270-12687-1-git-send-email-dave@progbits.org>
+	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
+	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
+	<CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
+Date: Thu, 4 Feb 2016 10:19:55 -0800
+Message-ID: <CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
+To: David Windsor <dave@progbits.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 3 Feb 2016, Laura Abbott wrote:
+On Tue, Feb 2, 2016 at 3:33 AM, David Windsor <dave@progbits.org> wrote:
+> FYI, I now have time to work on this again.
+>
+> Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
+> the following changes suggested during the on-list review of v2:
+>
+> * s/PAX_REFCOUNT/STRICT_REFCOUNT
+> * Reordering the patchset in a more sane manner (per Greg KH)
+> * Creation of the "Kernel Hardening" menu in Kconfig
+> * Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
+> * Whitespace fixes
+>
+> v3 is forthcoming and will be posted here as soon as I have the
+> patchset rebased to linux-next.
 
-> I also notice that __CMPXCHG_DOUBLE is turned off when the debug
-> options are turned on. I don't see any details about why. What's
-> the reason for turning it off when the debug options are enabled?
+Thanks for the update!
 
-Because operations on the object need to be locked out while the debug
-code is running. Otherwise concurrent operations from other processors
-could lead to weird object states. The object needs to be stable for
-debug checks. Poisoning and the related checks need that otherwise you
-will get sporadic false positives.
+It may be helpful to mention in the changelog the two recent refcount
+overflow bugs that would have been stopped by this mitigiation:
+
+CVE-2014-2851 https://cyseclabs.com/page?n=02012016
+CVE-2016-0728 http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
