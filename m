@@ -1,43 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
-References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
-	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
-	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
-	<CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
-Date: Thu, 4 Feb 2016 10:19:55 -0800
-Message-ID: <CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
+In-Reply-To: <20160104220743.GP19062@n2100.arm.linux.org.uk>
+References: <20151202202725.GA794@www.outflux.net>
+	<20151223195129.GP2793@atomide.com>
+	<567B04AB.6010906@redhat.com>
+	<20151223212911.GR2793@atomide.com>
+	<alpine.LFD.2.20.1512231637110.3603@knanqh.ubzr>
+	<20151224001121.GS2793@atomide.com>
+	<20151224003406.GA8644@n2100.arm.linux.org.uk>
+	<CAGXu5j+MrX-OvnVTYH0hqF2XgZW10PQOviyN=e5heejLsXewVA@mail.gmail.com>
+	<20160104220743.GP19062@n2100.arm.linux.org.uk>
+Date: Fri, 5 Feb 2016 13:48:38 -0800
+Message-ID: <CAGXu5jJTOZL5yQfj5KuRjVO00mnNL3yd=7ONacYK96yLAOtgKg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
-To: David Windsor <dave@progbits.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v2] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
+To: Russell King - ARM Linux <linux@arm.linux.org.uk>
+Cc: Tony Lindgren <tony@atomide.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 2, 2016 at 3:33 AM, David Windsor <dave@progbits.org> wrote:
-> FYI, I now have time to work on this again.
+On Mon, Jan 4, 2016 at 2:07 PM, Russell King - ARM Linux
+<linux@arm.linux.org.uk> wrote:
+> On Mon, Jan 04, 2016 at 12:34:28PM -0800, Kees Cook wrote:
+>> On Wed, Dec 23, 2015 at 4:34 PM, Russell King - ARM Linux
+>> <linux@arm.linux.org.uk> wrote:
+>> > On Wed, Dec 23, 2015 at 04:11:22PM -0800, Tony Lindgren wrote:
+>> >> * Nicolas Pitre <nicolas.pitre@linaro.org> [151223 13:45]:
+>> >> > We fixed a bunch of similar issues where code was located in the .data
+>> >> > section for ease of use from assembly code.  See commit b4e61537 and
+>> >> > d0776aff for example.
+>> >>
+>> >> Thanks hey some assembly fun for the holidays :) I also need to check what
+>> >> all gets relocated to SRAM here.
+>> >>
+>> >> In any case, seems like the $subject patch is too intrusive for v4.5 at
+>> >> this point.
+>> >
+>> > Given Christmas and an unknown time between that and the merge window
+>> > actually opening, I decided Tuesday would be the last day I take any
+>> > patches into my tree - and today would be the day that I drop anything
+>> > that causes problems.
+>> >
+>> > So, I've already dropped this, so tomorrow's linux-next should not have
+>> > this change.
+>> >
+>> > You'll still see breakage if people enable RODATA though, but that's no
+>> > different from previous kernels.
+>>
+>> Ugh, sorry for the breakage.
+>>
+>> Should this patch stay as-is and people will fix their various RODATA
+>> failures during the next devel window, or should I remove the "default
+>> y if CPU_V7"?
 >
-> Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
-> the following changes suggested during the on-list review of v2:
+> I think we'll keep it as-is, and have another go with it at -rc1 time,
+> when people have ample chance to then queue up fixes.
 >
-> * s/PAX_REFCOUNT/STRICT_REFCOUNT
-> * Reordering the patchset in a more sane manner (per Greg KH)
-> * Creation of the "Kernel Hardening" menu in Kconfig
-> * Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
-> * Whitespace fixes
->
-> v3 is forthcoming and will be posted here as soon as I have the
-> patchset rebased to linux-next.
+> They'll have had notice of it, so there's no excuse folk can't work on
+> the problem in the mean time.  (But, of course, they won't...)
 
-Thanks for the update!
+Hi,
 
-It may be helpful to mention in the changelog the two recent refcount
-overflow bugs that would have been stopped by this mitigiation:
+Just checking on this -- I resent it to the patch tracker at -rc1
+time. Is this waiting for the other fixes to land first, or is there
+something I should be doing?
 
-CVE-2014-2851 https://cyseclabs.com/page?n=02012016
-CVE-2016-0728 http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
+Thanks!
 
 -Kees
 
