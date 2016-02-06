@@ -1,75 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160104220743.GP19062@n2100.arm.linux.org.uk>
-References: <20151202202725.GA794@www.outflux.net>
-	<20151223195129.GP2793@atomide.com>
-	<567B04AB.6010906@redhat.com>
-	<20151223212911.GR2793@atomide.com>
-	<alpine.LFD.2.20.1512231637110.3603@knanqh.ubzr>
-	<20151224001121.GS2793@atomide.com>
-	<20151224003406.GA8644@n2100.arm.linux.org.uk>
-	<CAGXu5j+MrX-OvnVTYH0hqF2XgZW10PQOviyN=e5heejLsXewVA@mail.gmail.com>
-	<20160104220743.GP19062@n2100.arm.linux.org.uk>
-Date: Fri, 5 Feb 2016 13:48:38 -0800
-Message-ID: <CAGXu5jJTOZL5yQfj5KuRjVO00mnNL3yd=7ONacYK96yLAOtgKg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2] ARM: mm: flip priority of CONFIG_DEBUG_RODATA
-To: Russell King - ARM Linux <linux@arm.linux.org.uk>
-Cc: Tony Lindgren <tony@atomide.com>, Nicolas Pitre <nicolas.pitre@linaro.org>, Laura Abbott <labbott@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Laura Abbott <labbott@fedoraproject.org>
+From: Scott Bauer <sbauer@eng.utah.edu>
+Date: Sat,  6 Feb 2016 16:39:22 -0700
+Message-Id: <1454801964-50385-1-git-send-email-sbauer@eng.utah.edu>
+Subject: [kernel-hardening] [PATCHv2  0/2] SROP Mitigation: Signal cookies
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, x86@kernel.org, ak@linux.intel.com, luto@amacapital.net, mingo@redhat.com, tglx@linutronix.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 4, 2016 at 2:07 PM, Russell King - ARM Linux
-<linux@arm.linux.org.uk> wrote:
-> On Mon, Jan 04, 2016 at 12:34:28PM -0800, Kees Cook wrote:
->> On Wed, Dec 23, 2015 at 4:34 PM, Russell King - ARM Linux
->> <linux@arm.linux.org.uk> wrote:
->> > On Wed, Dec 23, 2015 at 04:11:22PM -0800, Tony Lindgren wrote:
->> >> * Nicolas Pitre <nicolas.pitre@linaro.org> [151223 13:45]:
->> >> > We fixed a bunch of similar issues where code was located in the .data
->> >> > section for ease of use from assembly code.  See commit b4e61537 and
->> >> > d0776aff for example.
->> >>
->> >> Thanks hey some assembly fun for the holidays :) I also need to check what
->> >> all gets relocated to SRAM here.
->> >>
->> >> In any case, seems like the $subject patch is too intrusive for v4.5 at
->> >> this point.
->> >
->> > Given Christmas and an unknown time between that and the merge window
->> > actually opening, I decided Tuesday would be the last day I take any
->> > patches into my tree - and today would be the day that I drop anything
->> > that causes problems.
->> >
->> > So, I've already dropped this, so tomorrow's linux-next should not have
->> > this change.
->> >
->> > You'll still see breakage if people enable RODATA though, but that's no
->> > different from previous kernels.
->>
->> Ugh, sorry for the breakage.
->>
->> Should this patch stay as-is and people will fix their various RODATA
->> failures during the next devel window, or should I remove the "default
->> y if CPU_V7"?
->
-> I think we'll keep it as-is, and have another go with it at -rc1 time,
-> when people have ample chance to then queue up fixes.
->
-> They'll have had notice of it, so there's no excuse folk can't work on
-> the problem in the mean time.  (But, of course, they won't...)
+Erik Bosman previously attempted to upstream some patches which mitigate SROP
+exploits in userland. Unfortunately he never pursued it further and they never
+got merged in.
 
-Hi,
+The previous patches can be seen here:
+https://lkml.org/lkml/2014/5/15/660
+https://lkml.org/lkml/2014/5/15/661
+https://lkml.org/lkml/2014/5/15/657
+https://lkml.org/lkml/2014/5/15/858
 
-Just checking on this -- I resent it to the patch tracker at -rc1
-time. Is this waiting for the other fixes to land first, or is there
-something I should be doing?
+In the discussion for those patches Andy Lutomirski and Andi Kleen had a few
+suggestions which are implemented in my patch series.
 
-Thanks!
+Andy Lutomirski suggested that the per-process secret be xord and with the location
+on the stack where the cookie will reside, then hashed. I've taken this approach but
+have not found a suitable secure hashing algorithm that is in-kernel and will work.
+There is SipHash, which is perfect for this scenario, but there is no upstreamed
+implementation. Once it has been upstreamed I will submit patches to use it.
 
--Kees
+Second, Andi Kleen was concerned that the previous patches broke the ABI. He suggested
+placing the cookie above the FP state. The code I'm submitting does that by placing the
+cookie in the padding above the FP state, or if no FP state is available above the
+padding for the sigframe.
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Below is an explanation of SROP stolen and slightly modified by me from Erik's patches.
+
+These patches are meant to make Sigreturn Oriented Programming (SROP) a much
+less attractive exploitation path.  In Sigreturn Oriented Programming, an
+attacker causes a user-space program to call the sigreturn system call in order
+to get complete control control over the entire userspace context in one go.
+
+Previously attackers would have to search for ROP gadgets to get values into registers
+then call mprotect or mmap. If the ROP gadgets didnt exist well then they'd be in trouble.
+With SROP however one wouldn't have to search for ROP gadgets to get values into regs.
+The attacker would simply lay out the ucontext on the stack as they choose then
+SROP into the mprotect or mmap call.
+
+( see: http://www.cs.vu.nl/~herbertb/papers/srop_sp14.pdf )
+
+While mitigating SROP will probably not stop determined attackers from
+exploiting a program, as there's always the much more well-known Return
+Oriented Programming, we still think SROP's relative ease warrants mitigation,
+especially since the mitigation is so cheap.
