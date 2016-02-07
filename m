@@ -1,215 +1,133 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 7 Feb 2016 22:32:57 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160207223257.28ca7020daa09c082e6b9c62@gmail.com>
-In-Reply-To: <20160207222721.e0087a07fa604b5dac79a109@gmail.com>
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
 References: <20160207222721.e0087a07fa604b5dac79a109@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH 3/3] Documentation for the GCC plugin infrastructure
-To: linux-kbuild@vger.kernel.org
-Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org
+	<20160207223140.830691e83ab579f46f991410@gmail.com>
+Date: Mon, 08 Feb 2016 00:05:15 +0100
+In-Reply-To: <20160207223140.830691e83ab579f46f991410@gmail.com> (Emese
+	Revfy's message of "Sun, 7 Feb 2016 22:31:40 +0100")
+Message-ID: <87mvrcdsus.fsf@rasmusvillemoes.dk>
+MIME-Version: 1.0
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH 2/3] Add Cyclomatic complexity GCC plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the GCC infrastructure documentation about its operation, how to add
-and use a new plugin with an example.
+On Sun, Feb 07 2016, Emese Revfy <re.emese@gmail.com> wrote:
 
----
- Documentation/example_gcc_plugin.c | 103 +++++++++++++++++++++++++++++++++++++
- Documentation/gcc-plugins.txt      |  76 +++++++++++++++++++++++++++
- 2 files changed, 179 insertions(+)
- create mode 100644 Documentation/example_gcc_plugin.c
- create mode 100644 Documentation/gcc-plugins.txt
+> Add a very simple plugin to demonstrate the GCC plugin infrastructure.
+> This GCC plugin computes the cyclomatic complexity of each function.
+>
+> The complexity M of a function's control flow graph is defined as:
+>  M = E - N + 2P
+> where
+>  E = the number of edges
+>  N = the number of nodes
+>  P = the number of connected components (exit nodes).
+>
+> ---
+>  Makefile                          |   6 +-
+>  arch/Kconfig                      |  16 +++++
+>  tools/gcc/Makefile                |   4 ++
+>  tools/gcc/cyc_complexity_plugin.c | 120 ++++++++++++++++++++++++++++++++++++++
+>  4 files changed, 145 insertions(+), 1 deletion(-)
+>  create mode 100644 tools/gcc/cyc_complexity_plugin.c
+>
+> diff --git a/Makefile b/Makefile
+> index 96ce015..9f76c26 100644
+> --- a/Makefile
+> +++ b/Makefile
+> @@ -628,7 +628,11 @@ else
+>  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCC)" "$(HOSTCXX)" "$(CC)")
+>  endif
+>  ifneq ($(PLUGINCC),)
+> -export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS
+> +ifdef CONFIG_GCC_PLUGIN_CYC_COMPLEXITY
+> +GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS := -fplugin=$(objtree)/tools/gcc/cyc_complexity_plugin.so -DGCC_PLUGIN_CYC_COMPLEXITY
+> +endif
+> +GCC_PLUGINS_CFLAGS := $(GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS)
+> +export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS GCC_PLUGIN_CYC_COMPLEXITY
 
-diff --git a/Documentation/example_gcc_plugin.c b/Documentation/example_gcc_plugin.c
-new file mode 100644
-index 0000000..950ff78
---- /dev/null
-+++ b/Documentation/example_gcc_plugin.c
-@@ -0,0 +1,103 @@
-+/*
-+ * Copyright 2011-2016 by Emese Revfy <re.emese@gmail.com>
-+ * Licensed under the GPL v2, or (at your option) v3
-+ */
-+
-+#include "gcc-common.h"
-+
-+int plugin_is_GPL_compatible;
-+
-+static struct plugin_info example_plugin_info = {
-+	.version	= "0",
-+	.help		= "example plugin\n",
-+};
-+
-+static unsigned int handle_function(void)
-+{
-+	gimple_stmt_iterator gsi;
-+	basic_block bb;
-+
-+	FOR_ALL_BB_FN(bb, cfun) {
-+		for (gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi))
-+			debug_gimple_stmt(gsi_stmt(gsi));
-+	}
-+	return 0;
-+}
-+
-+#if BUILDING_GCC_VERSION >= 4009
-+namespace {
-+static const struct pass_data example_plugin_pass_data = {
-+#else
-+static struct gimple_opt_pass example_plugin_pass = {
-+	.pass = {
-+#endif
-+		.type			= GIMPLE_PASS,
-+		.name			= "example_plugin",
-+#if BUILDING_GCC_VERSION >= 4008
-+		.optinfo_flags		= OPTGROUP_NONE,
-+#endif
-+#if BUILDING_GCC_VERSION >= 5000
-+#elif BUILDING_GCC_VERSION >= 4009
-+		.has_gate		= false,
-+		.has_execute		= true,
-+#else
-+		.gate			= NULL,
-+		.execute		= handle_function,
-+		.sub			= NULL,
-+		.next			= NULL,
-+		.static_pass_number	= 0,
-+#endif
-+		.tv_id			= TV_NONE,
-+		.properties_required	= 0,
-+		.properties_provided	= 0,
-+		.properties_destroyed	= 0,
-+		.todo_flags_start	= 0,
-+		.todo_flags_finish	= TODO_dump_func
-+#if BUILDING_GCC_VERSION < 4009
-+	}
-+#endif
-+};
-+
-+#if BUILDING_GCC_VERSION >= 4009
-+class example_plugin_pass : public gimple_opt_pass {
-+public:
-+	example_plugin_pass() : gimple_opt_pass(example_plugin_pass_data, g) {}
-+#if BUILDING_GCC_VERSION >= 5000
-+	virtual unsigned int execute(function *) { return handle_function(); }
-+#else
-+	unsigned int execute() { return handle_function(); }
-+#endif
-+};
-+}
-+
-+static opt_pass *make_example_plugin_pass(void)
-+{
-+	return new example_plugin_pass();
-+}
-+#else
-+static struct opt_pass *make_example_plugin_pass(void)
-+{
-+	return &example_plugin_pass.pass;
-+}
-+#endif
-+
-+int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
-+{
-+	const char * const plugin_name = plugin_info->base_name;
-+	struct register_pass_info example_plugin_pass_info;
-+
-+	example_plugin_pass_info.pass				= make_example_plugin_pass();
-+	example_plugin_pass_info.reference_pass_name		= "ssa";
-+	example_plugin_pass_info.ref_pass_instance_number	= 1;
-+	example_plugin_pass_info.pos_op				= PASS_POS_INSERT_AFTER;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	register_callback(plugin_name, PLUGIN_INFO, NULL, &example_plugin_info);
-+	register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &example_plugin_pass_info);
-+
-+	return 0;
-+}
-diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
-new file mode 100644
-index 0000000..e669d83
---- /dev/null
-+++ b/Documentation/gcc-plugins.txt
-@@ -0,0 +1,76 @@
-+GCC plugin infrastructure
-+=========================
-+
-+
-+1. Introduction
-+===============
-+
-+GCC plugins are loadable modules that provide extra features to the
-+compiler [1]. They are useful for runtime instrumentation and static analysis.
-+We can analyse, change and add further code during compilation via
-+callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
-+
-+The GCC plugin infrastructure of the kernel supports all gcc versions from
-+4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
-+separate directory.
-+
-+Currently the GCC plugin infrastructure supports only the x86 architecture.
-+
-+This infrastructure was ported from grsecurity [6] and PaX [7].
-+
-+--
-+[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
-+[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
-+[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
-+[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
-+[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
-+[6] https://grsecurity.net/
-+[7] https://pax.grsecurity.net/
-+
-+
-+2. Files
-+========
-+
-+$(src)/tools/gcc
-+	This is the directory of the GCC plugins.
-+
-+$(src)/tools/gcc/gcc-common.h
-+	This is a compatibility header for GCC plugins.
-+	It should be always included instead of individual gcc headers.
-+
-+$(src)/scripts/gcc-plugin.sh
-+	This script checks the availability of the included headers in
-+	gcc-common.h and chooses the proper host compiler to build the plugins
-+	(gcc-4.7 can be built by either gcc or g++).
-+
-+
-+3. Usage
-+========
-+
-+Enable a GCC plugin based feature in the kernel config:
-+
-+	CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
-+
-+To compile only the plugin(s):
-+
-+	make gcc-plugins
-+
-+or just run the kernel make and compile the whole kernel with
-+the cyclomatic complexity GCC plugin.
-+
-+
-+4. How to add a new GCC plugin
-+==============================
-+
-+The GCC plugins are in $(src)/tools/gcc/. You can use a file or a directory
-+here. It must be added to $(src)/tools/gcc/Makefile, $(src)/Makefile and
-+$(src)/arch/Kconfig.
-+See the cyc_complexity_plugin.c (CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) GCC plugin.
-+
-+
-+5. Example GCC plugin
-+=====================
-+
-+You can find an example plugin under $(src)/Documentation/example_gcc_plugin.c .
-+This plugin has a GIMPLE pass that is inserted after the ssa GCC pass.
-+It prints out all the GIMPLE statements in a translation unit.
+Hm, when the number of plugins grow, I think it'll be somewhat ugly
+having all this in the main makefile. Can't all the plugin-related stuff
+live in a separate makefile? The same goes for the Kconfig part.
+
+Also, I think the compile command lines are already complicated enough
+(I sometimes use V=1 to see what's going on), so I think it's better
+that the plugins that need to make themselves known do so "from within"
+gcc; something like
+
+static void define_feature_macro(void __unused *event_data, void __unused *data)
+{
+	cpp_define(parse_in, "HAVE_ATTRIBUTE_FOOBAR");	
+}
+
+...
+
+	register_callback(plugin_name, PLUGIN_START_UNIT, &define_feature_macro, NULL);
+
+
+> +
+> +#include "gcc-common.h"
+> +
+> +int plugin_is_GPL_compatible;
+> +
+> +static struct plugin_info cyc_complexity_plugin_info = {
+> +	.version	= "20150523",
+> +	.help		= "Cyclomatic Complexity\n",
+> +};
+> +
+> +static unsigned int handle_function(void)
+> +{
+> +	int complexity;
+> +	expanded_location xloc;
+> +
+> +	// M = E - N + 2P
+> +	complexity = n_edges_for_fn(cfun) - n_basic_blocks_for_fn(cfun) + 2;
+> +
+> +	xloc = expand_location(DECL_SOURCE_LOCATION(current_function_decl));
+> +	fprintf(stderr, "Cyclomatic Complexity %d %s:%s\n", complexity, xloc.file, DECL_NAME_POINTER(current_function_decl));
+> +
+> +	return 0;
+> +}
+> +
+> +#if BUILDING_GCC_VERSION >= 4009
+> +namespace {
+> +static const struct pass_data cyc_complexity_pass_data = {
+> +#else
+> +static struct gimple_opt_pass cyc_complexity_pass = {
+> +	.pass = {
+> +#endif
+> +		.type			= GIMPLE_PASS,
+> +		.name			= "cyc_complexity",
+> +#if BUILDING_GCC_VERSION >= 4008
+> +		.optinfo_flags		= OPTGROUP_NONE,
+> +#endif
+> +#if BUILDING_GCC_VERSION >= 5000
+> +#elif BUILDING_GCC_VERSION >= 4009
+> +		.has_gate		= false,
+> +		.has_execute		= true,
+> +#else
+> +		.gate			= NULL,
+> +		.execute		= handle_function,
+> +		.sub			= NULL,
+> +		.next			= NULL,
+> +		.static_pass_number	= 0,
+> +#endif
+> +		.tv_id			= TV_NONE,
+> +		.properties_required	= 0,
+> +		.properties_provided	= 0,
+> +		.properties_destroyed	= 0,
+> +		.todo_flags_start	= 0,
+> +		.todo_flags_finish	= TODO_dump_func
+> +#if BUILDING_GCC_VERSION < 4009
+> +	}
+> +#endif
+> +};
+> +
+
+This is really yucky. Is there any way a mere mortal could figure out
+how to write this? Or could the compatibility layer provide some utility
+macros that would take care of the boilerplate?
+
+Rasmus
