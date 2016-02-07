@@ -1,112 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1454801964-50385-1-git-send-email-sbauer@eng.utah.edu>
- <1454801964-50385-3-git-send-email-sbauer@eng.utah.edu>
-From: =?UTF-8?Q?Mika_Penttil=c3=a4?= <mika.penttila@nextfour.com>
-Message-ID: <56B6E5C6.4090209@nextfour.com>
-Date: Sun, 7 Feb 2016 08:35:50 +0200
-MIME-Version: 1.0
-In-Reply-To: <1454801964-50385-3-git-send-email-sbauer@eng.utah.edu>
-Content-Type: text/plain; charset="windows-1252"
+Date: Sun, 7 Feb 2016 22:27:21 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160207222721.e0087a07fa604b5dac79a109@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] x86: SROP mitigation: implement signal cookies
-To: Scott Bauer <sbauer@eng.utah.edu>, linux-kernel@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, x86@kernel.org, ak@linux.intel.com, luto@amacapital.net, mingo@redhat.com, tglx@linutronix.de, Abhiram Balasubramanian <abhiram@cs.utah.edu>
+Subject: [kernel-hardening] [PATCH 0/3] Introduce GCC plugin infrastructure
+To: linux-kbuild@vger.kernel.org
+Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+This patch set introduce the GCC plugin infrastructure with examples for testing
+and documentation.
 
+GCC plugins are loadable modules that provide extra features to the compiler.
+They are useful for runtime instrumentation and static analysis.
 
-On 07.02.2016 01:39, Scott Bauer wrote:
-> This patch adds SROP mitigation logic to the x86 signal delivery
-> and sigreturn code. The cookie is placed in the unused alignment
-> space above the saved FP state, if it exists. If there is no FP
-> state to save then the cookie is placed in the alignment space above
-> the sigframe.
->
-> Cc: Abhiram Balasubramanian <abhiram@cs.utah.edu>
-> Signed-off-by: Scott Bauer <sbauer@eng.utah.edu>
-> ---
->  arch/x86/ia32/ia32_signal.c        | 63 +++++++++++++++++++++++++---
->  arch/x86/include/asm/fpu/signal.h  |  1 +
->  arch/x86/include/asm/sighandling.h |  5 ++-
->  arch/x86/kernel/fpu/signal.c       | 10 +++++
->  arch/x86/kernel/signal.c           | 86 +++++++++++++++++++++++++++++++++-----
->  5 files changed, 146 insertions(+), 19 deletions(-)
->
-> diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal.c
-> index 0552884..2751f47 100644
-> --- a/arch/x86/ia32/ia32_signal.c
-> +++ b/arch/x86/ia32/ia32_signal.c
-> @@ -68,7 +68,8 @@
->  }
->  
->  static int ia32_restore_sigcontext(struct pt_regs *regs,
-> -				   struct sigcontext_32 __user *sc)
-> +				   struct sigcontext_32 __user *sc,
-> +				   void __user **user_cookie)
->  {
->  	unsigned int tmpflags, err = 0;
->  	void __user *buf;
-> @@ -105,6 +106,16 @@ static int ia32_restore_sigcontext(struct pt_regs *regs,
->  		buf = compat_ptr(tmp);
->  	} get_user_catch(err);
->  
-> +	/*
-> +	 * If there is fp state get cookie from the top of the fp state,
-> +	 * else get it from the top of the sig frame.
-> +	 */
-> +
-> +	if (tmp != 0)
-> +		*user_cookie = compat_ptr(tmp + fpu__getsize(1));
-> +	else
-> +		*user_cookie = NULL;
-> +
->  	err |= fpu__restore_sig(buf, 1);
->  
->  	force_iret();
-> @@ -117,6 +128,7 @@ asmlinkage long sys32_sigreturn(void)
->  	struct pt_regs *regs = current_pt_regs();
->  	struct sigframe_ia32 __user *frame = (struct sigframe_ia32 __user *)(regs->sp-8);
->  	sigset_t set;
-> +	void __user *user_cookie;
->  
->  	if (!access_ok(VERIFY_READ, frame, sizeof(*frame)))
->  		goto badframe;
-> @@ -129,8 +141,15 @@ asmlinkage long sys32_sigreturn(void)
->  
->  	set_current_blocked(&set);
->  
-> -	if (ia32_restore_sigcontext(regs, &frame->sc))
-> +	if (ia32_restore_sigcontext(regs, &frame->sc, &user_cookie))
-> +		goto badframe;
-> +
-> +	if (user_cookie == NULL)
-> +		user_cookie = compat_ptr((regs->sp - 8) + sizeof(*frame));
-> +
-> +	if (verify_clear_sigcookie(user_cookie))
->  		goto badframe;
-> +
->  	return regs->ax;
->  
->  badframe:
-> @@ -142,6 +161,7 @@ asmlinkage long sys32_rt_sigreturn(void)
->  {
->  	struct pt_regs *regs = current_pt_regs();
->  	struct rt_sigframe_ia32 __user *frame;
-> +	void __user *user_cookie;
->  	sigset_t set;
->  
->  	frame = (struct rt_sigframe_ia32 __user *)(regs->sp - 4);
-> @@ -153,7 +173,13 @@ asmlinkage long sys32_rt_sigreturn(void)
->  
->  	set_current_blocked(&set);
->  
-> -	if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext))
-> +	if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext, &user_cookie))
-> +		goto badframe;
-> +
-> +	if (user_cookie == NULL)
-> +		user_cookie = (void __user *)((regs->sp - 4) + sizeof(*frame));
-regs->sp is already restored so you should use frame instead.
+The infrastructure supports all gcc versions from 4.5 to 6.0, building
+out-of-tree modules and building in a separate directory. Cross-compilation
+is supported too but currently only the x86 architecture enables plugins.
 
---Mika
+This infrastructure was ported from grsecurity/PaX. It is a CII project
+supported by the Linux Foundation.
+
+Emese Revfy (3):
+ GCC plugin infrastructure
+ Add Cyclomatic complexity plugin
+ Documentations of the GCC plugin infrastructre
+
+---
+ Documentation/dontdiff             |   1 +
+ Documentation/example_gcc_plugin.c | 103 +++++
+ Documentation/gcc-plugins.txt      |  76 ++++
+ Makefile                           |  70 +++-
+ arch/Kconfig                       |  26 ++
+ arch/x86/Kconfig                   |   1 +
+ init/Makefile                      |   3 +
+ scripts/Makefile.build             |   2 +-
+ scripts/Makefile.clean             |   3 +-
+ scripts/Makefile.host              |  69 +++-
+ scripts/gcc-plugin.sh              |  51 +++
+ scripts/link-vmlinux.sh            |   2 +-
+ scripts/package/builddeb           |   1 +
+ tools/gcc/Makefile                 |  19 +
+ tools/gcc/cyc_complexity_plugin.c  | 120 ++++++
+ tools/gcc/gcc-common.h             | 794 +++++++++++++++++++++++++++++++++++++
+ 16 files changed, 1326 insertions(+), 15 deletions(-)
