@@ -1,315 +1,170 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1232989951.18951930.1454759421059.JavaMail.zimbra@redhat.com>
-References: <1436300428-21163-1-git-send-email-yinghai@kernel.org>
-	<CAGXu5jKtBDziww4p_cJi-u=EHYdz9mqy87ca5xrCHY_MGN3+yw@mail.gmail.com>
-	<CAGXu5jKLyYEgoz5yS+y5Gu-2xS3H9wWKu2YZWWt0Nof1ZTm3QQ@mail.gmail.com>
-	<1232989951.18951930.1454759421059.JavaMail.zimbra@redhat.com>
-Date: Mon, 8 Feb 2016 20:31:16 -0800
-Message-ID: <CAGXu5jJy+N9=xF7=WmGVXxpM3f7vbb7nhN=RYQXt-NiUhqz=7w@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
+In-Reply-To: <56B921FE.9030603@eng.utah.edu>
+References: <1454801964-50385-1-git-send-email-sbauer@eng.utah.edu>
+ <1454801964-50385-3-git-send-email-sbauer@eng.utah.edu> <56B6E5C6.4090209@nextfour.com>
+ <56B6FBE0.9060202@eng.utah.edu> <CALCETrW_ingsNEwBKKYbkugt5OsG8K6HUs22ZF+Lxc24iy8tTg@mail.gmail.com>
+ <56B921FE.9030603@eng.utah.edu>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Mon, 8 Feb 2016 21:51:23 -0800
+Message-ID: <CALCETrW6sETu3U7RQDWN78TBGUGTYwWcoWkgxY3A=JS3_8HE5g@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc
- for v4.3
-To: Baoquan He <bhe@redhat.com>
-Cc: Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, Vivek Goyal <vgoyal@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCHv2 2/2] x86: SROP mitigation: implement signal cookies
+To: Scotty Bauer <sbauer@eng.utah.edu>
+Cc: =?UTF-8?Q?Mika_Penttil=C3=A4?= <mika.penttila@nextfour.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, X86 ML <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Andi Kleen <ak@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Feb 6, 2016 at 3:50 AM, Baoquan He <bhe@redhat.com> wrote:
-> Hi,
+On Feb 8, 2016 3:17 PM, "Scotty Bauer" <sbauer@eng.utah.edu> wrote:
 >
-> Recently people using big box servers are also very interested in kaslr and want
-> to have it to enhance security. So allowing kaslr be able to randomize above 4G
-> makes much sense for different kinds of system. I would like to repost patches
-> realted to kaslr in this patchset, and leave the rest to Yinghai. Or I can try
-> to understand and adjust the rest with yh and reviewers' help, then post. But
-> firstly I will focus on kaslr and try to make it merge into Linus's tree.
 >
-> Since this patchset includes too many issues and people usually like reviewing
-> post which takes care of one main issue in one thread, I will start from below
-> thread. It mainly includes kaslr above 4G support and bug fixes and several clean
-> up patch.
 >
-> x86, boot: kaslr cleanup and 64bit kaslr support
-> https://lwn.net/Articles/637115/
+> On 02/08/2016 02:50 PM, Andy Lutomirski wrote:
+> > On Sun, Feb 7, 2016 at 12:10 AM, Scotty Bauer <sbauer@eng.utah.edu> wro=
+te:
+> >>
+> >>
+> >> On 02/06/2016 11:35 PM, Mika Penttil=C3=A4 wrote:
+> >>> Hi,
+> >>>
+> >>>
+> >>> On 07.02.2016 01:39, Scott Bauer wrote:
+> >>>> This patch adds SROP mitigation logic to the x86 signal delivery
+> >>>> and sigreturn code. The cookie is placed in the unused alignment
+> >>>> space above the saved FP state, if it exists. If there is no FP
+> >>>> state to save then the cookie is placed in the alignment space above
+> >>>> the sigframe.
+> >>>>
+> >>>> Cc: Abhiram Balasubramanian <abhiram@cs.utah.edu>
+> >>>> Signed-off-by: Scott Bauer <sbauer@eng.utah.edu>
+> >>>> ---
+> >>>>  arch/x86/ia32/ia32_signal.c        | 63 +++++++++++++++++++++++++--=
+-
+> >>>>  arch/x86/include/asm/fpu/signal.h  |  1 +
+> >>>>  arch/x86/include/asm/sighandling.h |  5 ++-
+> >>>>  arch/x86/kernel/fpu/signal.c       | 10 +++++
+> >>>>  arch/x86/kernel/signal.c           | 86 +++++++++++++++++++++++++++=
+++++++-----
+> >>>>  5 files changed, 146 insertions(+), 19 deletions(-)
+> >>>>
+> >>>> diff --git a/arch/x86/ia32/ia32_signal.c b/arch/x86/ia32/ia32_signal=
+.c
+> >>>> index 0552884..2751f47 100644
+> >>>> --- a/arch/x86/ia32/ia32_signal.c
+> >>>> +++ b/arch/x86/ia32/ia32_signal.c
+> >>>> @@ -68,7 +68,8 @@
+> >>>>  }
+> >>>>
+> >>>>  static int ia32_restore_sigcontext(struct pt_regs *regs,
+> >>>> -                               struct sigcontext_32 __user *sc)
+> >>>> +                               struct sigcontext_32 __user *sc,
+> >>>> +                               void __user **user_cookie)
+> >>>>  {
+> >>>>      unsigned int tmpflags, err =3D 0;
+> >>>>      void __user *buf;
+> >>>> @@ -105,6 +106,16 @@ static int ia32_restore_sigcontext(struct pt_re=
+gs *regs,
+> >>>>              buf =3D compat_ptr(tmp);
+> >>>>      } get_user_catch(err);
+> >>>>
+> >>>> +    /*
+> >>>> +     * If there is fp state get cookie from the top of the fp state=
+,
+> >>>> +     * else get it from the top of the sig frame.
+> >>>> +     */
+> >>>> +
+> >>>> +    if (tmp !=3D 0)
+> >>>> +            *user_cookie =3D compat_ptr(tmp + fpu__getsize(1));
+> >>>> +    else
+> >>>> +            *user_cookie =3D NULL;
+> >>>> +
+> >>>>      err |=3D fpu__restore_sig(buf, 1);
+> >>>>
+> >>>>      force_iret();
+> >>>> @@ -117,6 +128,7 @@ asmlinkage long sys32_sigreturn(void)
+> >>>>      struct pt_regs *regs =3D current_pt_regs();
+> >>>>      struct sigframe_ia32 __user *frame =3D (struct sigframe_ia32 __=
+user *)(regs->sp-8);
+> >>>>      sigset_t set;
+> >>>> +    void __user *user_cookie;
+> >>>>
+> >>>>      if (!access_ok(VERIFY_READ, frame, sizeof(*frame)))
+> >>>>              goto badframe;
+> >>>> @@ -129,8 +141,15 @@ asmlinkage long sys32_sigreturn(void)
+> >>>>
+> >>>>      set_current_blocked(&set);
+> >>>>
+> >>>> -    if (ia32_restore_sigcontext(regs, &frame->sc))
+> >>>> +    if (ia32_restore_sigcontext(regs, &frame->sc, &user_cookie))
+> >>>> +            goto badframe;
+> >>>> +
+> >>>> +    if (user_cookie =3D=3D NULL)
+> >>>> +            user_cookie =3D compat_ptr((regs->sp - 8) + sizeof(*fra=
+me));
+> >>>> +
+> >>>> +    if (verify_clear_sigcookie(user_cookie))
+> >>>>              goto badframe;
+> >>>> +
+> >>>>      return regs->ax;
+> >>>>
+> >>>>  badframe:
+> >>>> @@ -142,6 +161,7 @@ asmlinkage long sys32_rt_sigreturn(void)
+> >>>>  {
+> >>>>      struct pt_regs *regs =3D current_pt_regs();
+> >>>>      struct rt_sigframe_ia32 __user *frame;
+> >>>> +    void __user *user_cookie;
+> >>>>      sigset_t set;
+> >>>>
+> >>>>      frame =3D (struct rt_sigframe_ia32 __user *)(regs->sp - 4);
+> >>>> @@ -153,7 +173,13 @@ asmlinkage long sys32_rt_sigreturn(void)
+> >>>>
+> >>>>      set_current_blocked(&set);
+> >>>>
+> >>>> -    if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext))
+> >>>> +    if (ia32_restore_sigcontext(regs, &frame->uc.uc_mcontext, &user=
+_cookie))
+> >>>> +            goto badframe;
+> >>>> +
+> >>>> +    if (user_cookie =3D=3D NULL)
+> >>>> +            user_cookie =3D (void __user *)((regs->sp - 4) + sizeof=
+(*frame));
+> >>> regs->sp is already restored so you should use frame instead.
+> >>>
+> >>> --Mika
+> >>>
+> >>
+> >> Nice catch, thank you. I'm surprised I haven't hit this issue yet.
+> >> I've been running these patches for 3 weeks on 2 different machines an=
+d
+> >> haven't had an issue. I'll submit v3 with this fix a bit later, I want
+> >> to see if anyone else has stuff to fix.
+> >
+> > Is this compatible with existing userspace?  CRIU and DOSEMU seem like
+> > things that are likely to blow up to me.
+> >
 >
-> The following patch lists is taken from yh's cover letter of above patch thread.
+> Ugh just looking at CRIU I can already see how this wouldn't work. I'll
+> install and run tonight and see what happens. If there are other "swap"
+> type userspace apps that save state etc this will probably break them
+> without adding patches to save the kernel's cookie/task struct to disk as
+> well.
 >
-> ************************
-> Baoquan He (7):
->   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
->   x86, kaslr: Introduce struct slot_area to manage randomization slot info
->   x86, kaslr: Add two functions which will be used later
->   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
->   x86, kaslr: Randomize physical and virtual address of kernel separately
->   x86, kaslr: Add support of kernel physical address randomization above 4G
->   x86, kaslr: Remove useless codes
+> > We may need to make this type of mitigation be opt-in.  I'm already
+> > vaguely planning an opt-in mitigation framework for vsyscall runtime
+> > disablement, and this could use the same opt-in mechanism.
 >
-> Jiri Kosina (1):
->   x86, kaslr: Propagate base load address calculation v2
-> *** this one has been merged. Jiri posted firslty, later Boris reverted it and
-> handled in a better way in commit (78cac48 x86/mm/KASLR: Propagate KASLR status to kernel proper)
+> I'm not against having them hidden behind CONFIG's if thats
+> what you were thinking. My only concern is it will make the current
+> patches super ugly as some of the function declarations have been modifie=
+d.
 >
-> Yinghai Lu (11):
->   x86, boot: Make data from decompress_kernel stage live longer
->   x86, boot: Simplify run_size calculation
->   x86, kaslr: Kill not used run_size related code.
->   x86, kaslr: Use output_run_size
->   x86, kaslr: Consolidate mem_avoid array filling
->   x86, boot: Move z_extract_offset calculation to header.S
->   x86, kaslr: Get correct max_addr for relocs pointer
->   x86, boot: Split kernel_ident_mapping_init to another file
->   x86, 64bit: Set ident_mapping for kaslr
->   x86, boot: Add checking for memcpy
->   x86, kaslr: Allow random address could be below loaded address
->
-> **************************
-> My plan is split them into
-> 1) kaslr above 4G support
->   x86, boot: Split kernel_ident_mapping_init to another file
->   x86, 64bit: Set ident_mapping for kaslr
->   x86, boot: Add checking for memcpy
->   x86, boot: Move z_extract_offset calculation to header.S
->   x86, boot: Simplify run_size calculation
->   x86, kaslr: Kill not used run_size related code.
->   x86, kaslr: Use output_run_size
->   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
->   x86, kaslr: Introduce struct slot_area to manage randomization slot info
->   x86, kaslr: Add two functions which will be used later
->   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
->   x86, kaslr: Randomize physical and virtual address of kernel separately
->   x86, kaslr: Add support of kernel physical address randomization above 4G
->   x86, kaslr: Remove useless codes
-> 2) allow kaslr to choose slots below loaded address
->   x86, kaslr: Consolidate mem_avoid array filling
->   x86, kaslr: Allow random address could be below loaded address
-> 3) Make data from decompress_kernel stage live longer (bug fix)
->   x86, boot: Make data from decompress_kernel stage live longer
-> 4) Get correct max_addr for relocs pointer (improvement)
->   x86, kaslr: Get correct max_addr for relocs pointer
->
-> The 2) could be added into 1) post. I take it out because the mem_avoid issue is very
-> complicated, can be discussed in a separate thread. And 1) post only focus the kaslr
-> above 4G support.
->
-> That's all I plan to do. Suggestion or comments are welcome.
+> Whats the general approach for having CONFIG'd code, just surrounding the=
+ code
+> with #ifdef CONFIG_?
 
-That sounds great, thanks! Please check the rest of the thread where I
-asked a number of questions that remain unanswered. If we can get some
-clarification on those points, I think it would help move this along
-more quickly.
+I don't mean config.  I'm thinking of having an ELF note to flip it on
+per process.  Newer programs (or maybe newer ELF interpreters) would
+have a note set with bits indicating which new incompatible features
+they're okay with.  A prctl could override it.
 
-Thanks for continuing this work!
-
--Kees
-
->
-> Thanks
-> Baoquan
->
-> ----- Original Message -----
-> From: "Kees Cook" <keescook@chromium.org>
-> To: "Yinghai Lu" <yinghai@kernel.org>
-> Cc: "H. Peter Anvin" <hpa@zytor.com>, "Baoquan He" <bhe@redhat.com>, "LKML" <linux-kernel@vger.kernel.org>
-> Sent: Saturday, October 3, 2015 4:16:40 AM
-> Subject: Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc for v4.3
->
-> Hi,
->
-> Has there been any more work on these series of patches? I asked many
-> questions in my earlier review, but nothing was answered.
->
-> Thanks,
->
-> -Kees
->
-> On Tue, Jul 7, 2015 at 4:21 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Tue, Jul 7, 2015 at 1:19 PM, Yinghai Lu <yinghai@kernel.org> wrote:
->>> Those patches are rebased on v4.2-rc1 that I sent before but were rejected
->>> by Ingo on changelog.
->>>
->>> Kees Cook said that he would like to give a try to make improvement on changelog
->>> to get things moving.
->>
->> Thanks for working on this! I think it might be best to split this
->> long series into shorter ones. It seems like there are several areas:
->>
->> - fixing kASLR
->> - extended kASLR above 4G
->> - setup_data cleanup
->> - various other cleanups
->>
->> It might make sense to keep them separate for easier review?
->>
->> -Kees
->>
->>>
->>> First part are kaslr related:
->>> 1. First put compressed kernel ZO near end of the buffer before decompressing
->>> so we can find the ZO position easily for kaslr buffer searchin
->>> 2. kill run_size calculation shell scripts.
->>> 3. create new ident mapping for kasl 64bit, so we can cover
->>>    above 4G random kernel base
->>> 4. 7 patches from He that support random random, as I already used his patches
->>>    to test the ident mapping code.
->>> 5. some debug patches for boot/kaslr.
->>>
->>> Second part are setup_data related:
->>> Now setup_data is reserved via memblock and e820 and different
->>> handlers have different ways, and it is confusing.
->>> 1. SETUP_E820_EXT: is consumed early and will not copy or access again.
->>>         have memory wasted.
->>> 2. SETUP_EFI: is accessed via ioremap every time at early stage.
->>>         have memory wasted.
->>> 3. SETUP_DTB: is copied locally.
->>>         have memory wasted.
->>> 4. SETUP_PCI: is accessed via ioremap for every pci devices, even run-time.
->>> Also setup_data is exported to debugfs for debug purpose.
->>> Here will convert to let every handler to decide how to handle it.
->>> and will not reserve the setup_data generally, so will not
->>> waste memory and also make memblock/e820 keep page aligned.
->>> 1. not touch E820 anymore.
->>> 2. copy SETUP_EFI to __initdata variable and access it without ioremap.
->>> 3. SETUP_DTB: reserver and copy to local and free.
->>> 4. SETUP_PCI: reverve localy and convert to list, to avoid keeping ioremap.
->>> 5. export SETUP_PCI via sysfs.
->>>
->>> Third part are some small cleanup patches.
->>>
->>> put those patches at
->>> git://git.kernel.org/pub/scm/linux/kernel/git/yinghai/linux-yinghai.git for-x86-v4.3-next
->>>
->>> Thanks
->>>
->>> Yinghai
->>>
->>>
->>> Baoquan He (7):
->>>   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
->>>   x86, kaslr: Introduce struct slot_area to manage randomization slot info
->>>   x86, kaslr: Add two functions which will be used later
->>>   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
->>>   x86, kaslr: Randomize physical and virtual address of kernel separately
->>>   x86, kaslr: Add support of kernel physical address randomization above 4G
->>>   x86, kaslr: Remove useless codes
->>>
->>> Yinghai Lu (35):
->>>   x86, kasl: Remove not needed parameter for choose_kernel_location
->>>   x86, boot: Move compressed kernel to end of buffer before decompressing
->>>   x86, boot: Fix run_size calculation
->>>   x86, kaslr: Kill not needed and wrong run_size calculation code.
->>>   x86, kaslr: rename output_size to output_run_size
->>>   x86, kaslr: Consolidate mem_avoid array filling
->>>   x86, boot: Move z_extract_offset calculation to header.S
->>>   x86, kaslr: Get correct max_addr for relocs pointer
->>>   x86, boot: Split kernel_ident_mapping_init to another file
->>>   x86, 64bit: Set ident_mapping for kaslr
->>>   x86, boot: Add checking for memcpy
->>>   x86, kaslr: Allow random address could be below loaded address
->>>   x86, boot: Add printf support for early console in compressed/misc.c
->>>   x86, boot: Add more debug printout in compressed/misc.c
->>>   x86, setup: Check early serial console per string instead of one char
->>>   x86, setup: Use puts() instead of printf() in edd code
->>>   x86: Setup early console as early as possible in x86_start_kernel()
->>>   x86, boot: print compression suffix in decompress stage
->>>   x86: remove not needed clear_page calling
->>>   x86: restore end_of_ram to E820_RAM
->>>   x86, boot: Allow 64bit EFI kernel to be loaded above 4G
->>>   x86: Find correct 64 bit ramdisk address for microcode early update
->>>   x86: Kill E820_RESERVED_KERN
->>>   x86, efi: Copy SETUP_EFI data and access directly
->>>   x86, of: Let add_dtb reserve setup_data locally
->>>   x86, boot: Add add_pci handler for SETUP_PCI
->>>   x86: Kill not used setup_data handling code
->>>   x86, boot, PCI: Convert SETUP_PCI data to list
->>>   x86, boot, PCI: Copy SETUP_PCI rom to kernel space
->>>   x86, boot, PCI: Export SETUP_PCI data via sysfs
->>>   x86: Fix typo in mark_rodata_ro
->>>   x86, 64bit: add pfn_range_is_highmapped()
->>>   x86, 64bit: remove highmap for not needed ranges
->>>   x86, 64bit: Add __pa_high/__va_high
->>>   x86: fix msr print again
->>>
->>>  Documentation/x86/boot.txt                  |  19 ++
->>>  arch/x86/boot/Makefile                      |  13 +-
->>>  arch/x86/boot/compressed/Makefile           |  21 +-
->>>  arch/x86/boot/compressed/aslr.c             | 258 ++++++++++++++++-------
->>>  arch/x86/boot/compressed/eboot.c            |  15 +-
->>>  arch/x86/boot/compressed/head_32.S          |  14 +-
->>>  arch/x86/boot/compressed/head_64.S          |  22 +-
->>>  arch/x86/boot/compressed/misc.c             | 129 +++++++++---
->>>  arch/x86/boot/compressed/misc.h             |  41 +++-
->>>  arch/x86/boot/compressed/misc_pgt.c         |  91 ++++++++
->>>  arch/x86/boot/compressed/mkpiggy.c          |  28 +--
->>>  arch/x86/boot/compressed/printf.c           |   5 +
->>>  arch/x86/boot/compressed/string.c           |  28 ++-
->>>  arch/x86/boot/compressed/vmlinux.lds.S      |   1 +
->>>  arch/x86/boot/edd.c                         |   4 +-
->>>  arch/x86/boot/header.S                      |  34 ++-
->>>  arch/x86/boot/tty.c                         |  14 +-
->>>  arch/x86/include/asm/boot.h                 |  19 ++
->>>  arch/x86/include/asm/efi.h                  |   2 +-
->>>  arch/x86/include/asm/page.h                 |   5 +
->>>  arch/x86/include/asm/pci.h                  |   4 +
->>>  arch/x86/include/asm/pgtable_64.h           |   2 +
->>>  arch/x86/include/asm/processor.h            |   1 -
->>>  arch/x86/include/asm/prom.h                 |   9 +-
->>>  arch/x86/include/asm/setup.h                |   5 +
->>>  arch/x86/include/uapi/asm/bootparam.h       |   1 +
->>>  arch/x86/include/uapi/asm/e820.h            |   8 -
->>>  arch/x86/kernel/asm-offsets.c               |   2 +
->>>  arch/x86/kernel/cpu/common.c                |  61 +++---
->>>  arch/x86/kernel/cpu/microcode/amd_early.c   |  10 +-
->>>  arch/x86/kernel/cpu/microcode/intel_early.c |   8 +-
->>>  arch/x86/kernel/devicetree.c                |  39 ++--
->>>  arch/x86/kernel/e820.c                      |  18 +-
->>>  arch/x86/kernel/head.c                      |  26 +++
->>>  arch/x86/kernel/head32.c                    |   1 +
->>>  arch/x86/kernel/head64.c                    |  21 +-
->>>  arch/x86/kernel/kdebugfs.c                  | 142 -------------
->>>  arch/x86/kernel/setup.c                     |  79 ++-----
->>>  arch/x86/kernel/tboot.c                     |   3 +-
->>>  arch/x86/kernel/vmlinux.lds.S               |   1 +
->>>  arch/x86/mm/ident_map.c                     |  74 +++++++
->>>  arch/x86/mm/init_64.c                       | 173 +++++++--------
->>>  arch/x86/mm/pageattr.c                      |  16 +-
->>>  arch/x86/pci/common.c                       | 313 ++++++++++++++++++++++++++--
->>>  arch/x86/platform/efi/efi.c                 |  13 +-
->>>  arch/x86/platform/efi/efi_64.c              |  10 +-
->>>  arch/x86/platform/efi/quirks.c              |  23 +-
->>>  arch/x86/tools/calc_run_size.sh             |  42 ----
->>>  drivers/tty/serial/8250/8250_early.c        |  17 ++
->>>  kernel/printk/printk.c                      |  11 +-
->>>  50 files changed, 1235 insertions(+), 661 deletions(-)
->>>  create mode 100644 arch/x86/boot/compressed/misc_pgt.c
->>>  create mode 100644 arch/x86/boot/compressed/printf.c
->>>  create mode 100644 arch/x86/mm/ident_map.c
->>>  delete mode 100644 arch/x86/tools/calc_run_size.sh
->>>
->>> --
->>> 1.8.4.5
->>>
->>
->>
->>
->> --
->> Kees Cook
->> Chrome OS Security
->
->
->
-> --
-> Kees Cook
-> Chrome OS Security
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-kernel" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
-> Please read the FAQ at  http://www.tux.org/lkml/
-
-
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+--Andy
