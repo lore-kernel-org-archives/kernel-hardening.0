@@ -1,34 +1,80 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 9 Feb 2016 12:45:54 -0800
-From: Andi Kleen <ak@linux.intel.com>
-Message-ID: <20160209204554.GD4875@tassilo.jf.intel.com>
-References: <1454801964-50385-1-git-send-email-sbauer@eng.utah.edu>
- <1454801964-50385-3-git-send-email-sbauer@eng.utah.edu>
- <56B6E5C6.4090209@nextfour.com>
- <56B6FBE0.9060202@eng.utah.edu>
- <CALCETrW_ingsNEwBKKYbkugt5OsG8K6HUs22ZF+Lxc24iy8tTg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrW_ingsNEwBKKYbkugt5OsG8K6HUs22ZF+Lxc24iy8tTg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] x86: SROP mitigation: implement signal cookies
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Scotty Bauer <sbauer@eng.utah.edu>, Mika =?iso-8859-1?Q?Penttil=E4?= <mika.penttila@nextfour.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Abhiram Balasubramanian <abhiram@cs.utah.edu>
+From: David Brown <david.brown@linaro.org>
+Date: Wed, 10 Feb 2016 13:52:22 -0800
+Message-Id: <1455141142-6838-1-git-send-email-david.brown@linaro.org>
+Subject: [kernel-hardening] [PATCH] arm64: vdso: Mark vDSO code as read-only
+To: Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>
+Cc: David Brown <david.brown@linaro.org>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> Is this compatible with existing userspace?  CRIU and DOSEMU seem like
-> things that are likely to blow up to me.
+Although the arm64 vDSO is cleanly separated by code/data with the
+code being read-only in userspace mappings, the code page is still
+writable from the kernel.  There have been exploits (such as
+http://itszn.com/blog/?p=21) that take advantage of this on x86 to go
+from a bad kernel write to full root.
 
-It should at least make it a sysctl.
+Prevent this specific exploit on arm64 by putting the vDSO code page
+in read-only memory as well.
 
-> 
-> We may need to make this type of mitigation be opt-in.  I'm already
-> vaguely planning an opt-in mitigation framework for vsyscall runtime
-> disablement, and this could use the same opt-in mechanism.
+Before the change:
+[    3.138366] vdso: 2 pages (1 code @ ffffffc000a71000, 1 data @ ffffffc000a70000)
+---[ Kernel Mapping ]---
+0xffffffc000000000-0xffffffc000082000         520K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc000082000-0xffffffc000200000        1528K     ro x  SHD AF            UXN MEM/NORMAL
+0xffffffc000200000-0xffffffc000800000           6M     ro x  SHD AF        BLK UXN MEM/NORMAL
+0xffffffc000800000-0xffffffc0009b6000        1752K     ro x  SHD AF            UXN MEM/NORMAL
+0xffffffc0009b6000-0xffffffc000c00000        2344K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc000c00000-0xffffffc008000000         116M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc00c000000-0xffffffc07f000000        1840M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc800000000-0xffffffc840000000           1G     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc840000000-0xffffffc87ae00000         942M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc87ae00000-0xffffffc87ae70000         448K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87af80000-0xffffffc87af8a000          40K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87af8b000-0xffffffc87b000000         468K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87b000000-0xffffffc87fe00000          78M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc87fe00000-0xffffffc87ff50000        1344K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87ff90000-0xffffffc87ffa0000          64K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87fff0000-0xffffffc880000000          64K     RW NX SHD AF            UXN MEM/NORMAL
 
-Generally asking people to rely on frame works that don't exist
-is not good review feedback.
+After:
+[    3.138368] vdso: 2 pages (1 code @ ffffffc0006de000, 1 data @ ffffffc000a74000)
+---[ Kernel Mapping ]---
+0xffffffc000000000-0xffffffc000082000         520K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc000082000-0xffffffc000200000        1528K     ro x  SHD AF            UXN MEM/NORMAL
+0xffffffc000200000-0xffffffc000800000           6M     ro x  SHD AF        BLK UXN MEM/NORMAL
+0xffffffc000800000-0xffffffc0009b8000        1760K     ro x  SHD AF            UXN MEM/NORMAL
+0xffffffc0009b8000-0xffffffc000c00000        2336K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc000c00000-0xffffffc008000000         116M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc00c000000-0xffffffc07f000000        1840M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc800000000-0xffffffc840000000           1G     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc840000000-0xffffffc87ae00000         942M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc87ae00000-0xffffffc87ae70000         448K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87af80000-0xffffffc87af8a000          40K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87af8b000-0xffffffc87b000000         468K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87b000000-0xffffffc87fe00000          78M     RW NX SHD AF        BLK UXN MEM/NORMAL
+0xffffffc87fe00000-0xffffffc87ff50000        1344K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87ff90000-0xffffffc87ffa0000          64K     RW NX SHD AF            UXN MEM/NORMAL
+0xffffffc87fff0000-0xffffffc880000000          64K     RW NX SHD AF            UXN MEM/NORMAL
 
--Andi
+Inspired by https://lkml.org/lkml/2016/1/19/494 based on work by the
+PaX Team, Brad Spengler, and Kees Cook.
+
+Signed-off-by: David Brown <david.brown@linaro.org>
+---
+ arch/arm64/kernel/vdso/vdso.S | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/kernel/vdso/vdso.S b/arch/arm64/kernel/vdso/vdso.S
+index 60c1db5..db7c0f2 100644
+--- a/arch/arm64/kernel/vdso/vdso.S
++++ b/arch/arm64/kernel/vdso/vdso.S
+@@ -24,6 +24,7 @@
+ 	__PAGE_ALIGNED_DATA
+ 
+ 	.globl vdso_start, vdso_end
++	.section .rodata
+ 	.balign PAGE_SIZE
+ vdso_start:
+ 	.incbin "arch/arm64/kernel/vdso/vdso.so"
 -- 
-ak@linux.intel.com -- Speaking for myself only
+2.7.1
