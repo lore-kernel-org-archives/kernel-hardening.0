@@ -1,37 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sun, 14 Feb 2016 18:33:24 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20160214233324.GA28274@thunk.org>
 MIME-Version: 1.0
-In-Reply-To: <20160213003147.GA12074@davidb.org>
-References: <1455141142-6838-1-git-send-email-david.brown@linaro.org>
-	<CAKv+Gu8ArOYqxDGKb=Tv3NsiB2qWWCdD_zMx55m6+hEwLJR4CA@mail.gmail.com>
-	<20160213003147.GA12074@davidb.org>
-Date: Sat, 13 Feb 2016 10:00:56 +0100
-Message-ID: <CAKv+Gu-5OdN7C_SvDytsoSn2QFkVZmonv2ffjpiuEXJA8tc0GA@mail.gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH] arm64: vdso: Mark vDSO code as read-only
-To: David Brown <david.brown@linaro.org>
-Cc: kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Two interesting papers I've been reading (or, ASLR is not enough)
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13 February 2016 at 01:31, David Brown <david.brown@linaro.org> wrote:
-> On Thu, Feb 11, 2016 at 03:19:20PM +0100, Ard Biesheuvel wrote:
->
->>> diff --git a/arch/arm64/kernel/vdso/vdso.S
->>> b/arch/arm64/kernel/vdso/vdso.S
->>> index 60c1db5..db7c0f2 100644
->>> --- a/arch/arm64/kernel/vdso/vdso.S
->>> +++ b/arch/arm64/kernel/vdso/vdso.S
->>> @@ -24,6 +24,7 @@
->>>         __PAGE_ALIGNED_DATA
->>
->>
->> ^^ You can get rid of this now as well
->
->
-> Can we?  The page is getting mapped to userspace, and if we didn't
-> page align it, we could leak kernel read-only data to every userspace
-> process.
->
+Perhaps these techniques are well known in the security world (after
+all, these papers are 2-3 years old), but I'm just a kernel progammer,
+and I don't have time to necessarily keep up with the latest papers
+coming out of academia regarding security (it's hard enough keeping up
+with all of the papers out from the file system and storage
+community!).  As a result, they were eye-opening to me in terms of
+what the exploit writers have been working on:
 
-That's what the .balign is for. __PAGE_ALIGNED_DATA only sets the
-section, and you're overriding that right after.
+Kevin Snow, Fabian Monrose, Lucas Davi, and Alexandra Dmitrienko.
+"Just-In-Time Code Reuse: On the Effectiveness of Fine-Grained Address
+Space Layout Randomization".  2013 IEEE Symptosium on Security and
+Privacy.
+http://www.ieee-security.org/TC/SP2013/papers/4977a574.pdf
+
+Michael Backes, Thorsten Holz, Benjamin Kollenda, Philipp Koppe,
+Stefan Nürnberger, and Jannik Pewny.  "You Can Run but You Can’t Read:
+Preventing Disclosure Exploits in Executable Code".  CCS 2014.
+https://www.infsec.cs.uni-saarland.de/wp-content/uploads/sites/2/2014/10/nuernberger2014ccs_disclosure.pdf
+
+Anyway, maybe this is old news for everyone on the list, but if you
+haven't read these papers, IMO they are definitely worth a read.  Does
+anyone have a list of interesting security papers that might be of
+interest to kernel programmers who want to know what the security
+researchers have been up to?
+
+Cheers,
+
+					- Ted
