@@ -1,299 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 15 Feb 2016 15:29:35 +0800
-From: Baoquan He <bhe@redhat.com>
-Message-ID: <20160215072935.GB2816@x1.redhat.com>
-References: <1436300428-21163-1-git-send-email-yinghai@kernel.org>
- <CAGXu5jKtBDziww4p_cJi-u=EHYdz9mqy87ca5xrCHY_MGN3+yw@mail.gmail.com>
- <CAGXu5jKLyYEgoz5yS+y5Gu-2xS3H9wWKu2YZWWt0Nof1ZTm3QQ@mail.gmail.com>
- <1232989951.18951930.1454759421059.JavaMail.zimbra@redhat.com>
- <CAGXu5jJy+N9=xF7=WmGVXxpM3f7vbb7nhN=RYQXt-NiUhqz=7w@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJy+N9=xF7=WmGVXxpM3f7vbb7nhN=RYQXt-NiUhqz=7w@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc
- for v4.3
-To: Kees Cook <keescook@chromium.org>
-Cc: Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, Vivek Goyal <vgoyal@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Laura Abbott <labbott@fedoraproject.org>
+Date: Mon, 15 Feb 2016 10:44:20 -0800
+Message-Id: <1455561864-4217-1-git-send-email-labbott@fedoraproject.org>
+Subject: [kernel-hardening] [PATCHv2 0/4] Improve performance for SLAB_POISON
+To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <js1304@gmail.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: Laura Abbott <labbott@fedoraproject.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/08/16 at 08:31pm, Kees Cook wrote:
-> On Sat, Feb 6, 2016 at 3:50 AM, Baoquan He <bhe@redhat.com> wrote:
-> > Hi,
-> >
-> > Recently people using big box servers are also very interested in kaslr and want
-> > to have it to enhance security. So allowing kaslr be able to randomize above 4G
-> > makes much sense for different kinds of system. I would like to repost patches
-> > realted to kaslr in this patchset, and leave the rest to Yinghai. Or I can try
-> > to understand and adjust the rest with yh and reviewers' help, then post. But
-> > firstly I will focus on kaslr and try to make it merge into Linus's tree.
-> >
-> > Since this patchset includes too many issues and people usually like reviewing
-> > post which takes care of one main issue in one thread, I will start from below
-> > thread. It mainly includes kaslr above 4G support and bug fixes and several clean
-> > up patch.
-> >
-> > x86, boot: kaslr cleanup and 64bit kaslr support
-> > https://lwn.net/Articles/637115/
-> >
-> > The following patch lists is taken from yh's cover letter of above patch thread.
-> >
-> > **************************
-> > My plan is split them into
-> > 1) kaslr above 4G support
-> >   x86, boot: Split kernel_ident_mapping_init to another file
-> >   x86, 64bit: Set ident_mapping for kaslr
-> >   x86, boot: Add checking for memcpy
-> >   x86, boot: Move z_extract_offset calculation to header.S
-> >   x86, boot: Simplify run_size calculation
-> >   x86, kaslr: Kill not used run_size related code.
-> >   x86, kaslr: Use output_run_size
-> >   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
-> >   x86, kaslr: Introduce struct slot_area to manage randomization slot info
-> >   x86, kaslr: Add two functions which will be used later
-> >   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
-> >   x86, kaslr: Randomize physical and virtual address of kernel separately
-> >   x86, kaslr: Add support of kernel physical address randomization above 4G
-> >   x86, kaslr: Remove useless codes
-> > 2) allow kaslr to choose slots below loaded address
-> >   x86, kaslr: Consolidate mem_avoid array filling
-> >   x86, kaslr: Allow random address could be below loaded address
-> > 3) Make data from decompress_kernel stage live longer (bug fix)
-> >   x86, boot: Make data from decompress_kernel stage live longer
-> > 4) Get correct max_addr for relocs pointer (improvement)
-> >   x86, kaslr: Get correct max_addr for relocs pointer
-> >
-> > The 2) could be added into 1) post. I take it out because the mem_avoid issue is very
-> > complicated, can be discussed in a separate thread. And 1) post only focus the kaslr
-> > above 4G support.
-> >
-> > That's all I plan to do. Suggestion or comments are welcome.
-> 
-> That sounds great, thanks! Please check the rest of the thread where I
-> asked a number of questions that remain unanswered. If we can get some
-> clarification on those points, I think it would help move this along
-> more quickly.
+Hi,
 
-Hi Kees,
+This is a follow up to my previous series
+(http://lkml.kernel.org/g/<1453770913-32287-1-git-send-email-labbott@fedoraproject.org>)
+This series takes the suggestion of Christoph Lameter and only focuses on
+optimizing the slow path where the debug processing runs. The two main
+optimizations in this series are letting the consistency checks be skipped and
+relaxing the cmpxchg restrictions when we are not doing consistency checks.
+With hackbench -g 20 -l 1000 averaged over 100 runs:
 
-Thanks for your suggestion. I am trying to understand all patches and
-make some adjustment, meanwhile adjust patch log with my understanding.
-And your questions help me understand it deeper. I will post after
-updating. Hope you, Yinghai and other experts can help review and give
-precious comments and suggestions.
+Before slub_debug=P
+mean 15.607
+variance .086
+stdev .294
 
-Thanks
-Baoquan
+After slub_debug=P
+mean 10.836
+variance .155
+stdev .394
 
-> 
-> -Kees
-> 
-> >
-> > Thanks
-> > Baoquan
-> >
-> > ----- Original Message -----
-> > From: "Kees Cook" <keescook@chromium.org>
-> > To: "Yinghai Lu" <yinghai@kernel.org>
-> > Cc: "H. Peter Anvin" <hpa@zytor.com>, "Baoquan He" <bhe@redhat.com>, "LKML" <linux-kernel@vger.kernel.org>
-> > Sent: Saturday, October 3, 2015 4:16:40 AM
-> > Subject: Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc for v4.3
-> >
-> > Hi,
-> >
-> > Has there been any more work on these series of patches? I asked many
-> > questions in my earlier review, but nothing was answered.
-> >
-> > Thanks,
-> >
-> > -Kees
-> >
-> > On Tue, Jul 7, 2015 at 4:21 PM, Kees Cook <keescook@chromium.org> wrote:
-> >> On Tue, Jul 7, 2015 at 1:19 PM, Yinghai Lu <yinghai@kernel.org> wrote:
-> >>> Those patches are rebased on v4.2-rc1 that I sent before but were rejected
-> >>> by Ingo on changelog.
-> >>>
-> >>> Kees Cook said that he would like to give a try to make improvement on changelog
-> >>> to get things moving.
-> >>
-> >> Thanks for working on this! I think it might be best to split this
-> >> long series into shorter ones. It seems like there are several areas:
-> >>
-> >> - fixing kASLR
-> >> - extended kASLR above 4G
-> >> - setup_data cleanup
-> >> - various other cleanups
-> >>
-> >> It might make sense to keep them separate for easier review?
-> >>
-> >> -Kees
-> >>
-> >>>
-> >>> First part are kaslr related:
-> >>> 1. First put compressed kernel ZO near end of the buffer before decompressing
-> >>> so we can find the ZO position easily for kaslr buffer searchin
-> >>> 2. kill run_size calculation shell scripts.
-> >>> 3. create new ident mapping for kasl 64bit, so we can cover
-> >>>    above 4G random kernel base
-> >>> 4. 7 patches from He that support random random, as I already used his patches
-> >>>    to test the ident mapping code.
-> >>> 5. some debug patches for boot/kaslr.
-> >>>
-> >>> Second part are setup_data related:
-> >>> Now setup_data is reserved via memblock and e820 and different
-> >>> handlers have different ways, and it is confusing.
-> >>> 1. SETUP_E820_EXT: is consumed early and will not copy or access again.
-> >>>         have memory wasted.
-> >>> 2. SETUP_EFI: is accessed via ioremap every time at early stage.
-> >>>         have memory wasted.
-> >>> 3. SETUP_DTB: is copied locally.
-> >>>         have memory wasted.
-> >>> 4. SETUP_PCI: is accessed via ioremap for every pci devices, even run-time.
-> >>> Also setup_data is exported to debugfs for debug purpose.
-> >>> Here will convert to let every handler to decide how to handle it.
-> >>> and will not reserve the setup_data generally, so will not
-> >>> waste memory and also make memblock/e820 keep page aligned.
-> >>> 1. not touch E820 anymore.
-> >>> 2. copy SETUP_EFI to __initdata variable and access it without ioremap.
-> >>> 3. SETUP_DTB: reserver and copy to local and free.
-> >>> 4. SETUP_PCI: reverve localy and convert to list, to avoid keeping ioremap.
-> >>> 5. export SETUP_PCI via sysfs.
-> >>>
-> >>> Third part are some small cleanup patches.
-> >>>
-> >>> put those patches at
-> >>> git://git.kernel.org/pub/scm/linux/kernel/git/yinghai/linux-yinghai.git for-x86-v4.3-next
-> >>>
-> >>> Thanks
-> >>>
-> >>> Yinghai
-> >>>
-> >>>
-> >>> Baoquan He (7):
-> >>>   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
-> >>>   x86, kaslr: Introduce struct slot_area to manage randomization slot info
-> >>>   x86, kaslr: Add two functions which will be used later
-> >>>   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
-> >>>   x86, kaslr: Randomize physical and virtual address of kernel separately
-> >>>   x86, kaslr: Add support of kernel physical address randomization above 4G
-> >>>   x86, kaslr: Remove useless codes
-> >>>
-> >>> Yinghai Lu (35):
-> >>>   x86, kasl: Remove not needed parameter for choose_kernel_location
-> >>>   x86, boot: Move compressed kernel to end of buffer before decompressing
-> >>>   x86, boot: Fix run_size calculation
-> >>>   x86, kaslr: Kill not needed and wrong run_size calculation code.
-> >>>   x86, kaslr: rename output_size to output_run_size
-> >>>   x86, kaslr: Consolidate mem_avoid array filling
-> >>>   x86, boot: Move z_extract_offset calculation to header.S
-> >>>   x86, kaslr: Get correct max_addr for relocs pointer
-> >>>   x86, boot: Split kernel_ident_mapping_init to another file
-> >>>   x86, 64bit: Set ident_mapping for kaslr
-> >>>   x86, boot: Add checking for memcpy
-> >>>   x86, kaslr: Allow random address could be below loaded address
-> >>>   x86, boot: Add printf support for early console in compressed/misc.c
-> >>>   x86, boot: Add more debug printout in compressed/misc.c
-> >>>   x86, setup: Check early serial console per string instead of one char
-> >>>   x86, setup: Use puts() instead of printf() in edd code
-> >>>   x86: Setup early console as early as possible in x86_start_kernel()
-> >>>   x86, boot: print compression suffix in decompress stage
-> >>>   x86: remove not needed clear_page calling
-> >>>   x86: restore end_of_ram to E820_RAM
-> >>>   x86, boot: Allow 64bit EFI kernel to be loaded above 4G
-> >>>   x86: Find correct 64 bit ramdisk address for microcode early update
-> >>>   x86: Kill E820_RESERVED_KERN
-> >>>   x86, efi: Copy SETUP_EFI data and access directly
-> >>>   x86, of: Let add_dtb reserve setup_data locally
-> >>>   x86, boot: Add add_pci handler for SETUP_PCI
-> >>>   x86: Kill not used setup_data handling code
-> >>>   x86, boot, PCI: Convert SETUP_PCI data to list
-> >>>   x86, boot, PCI: Copy SETUP_PCI rom to kernel space
-> >>>   x86, boot, PCI: Export SETUP_PCI data via sysfs
-> >>>   x86: Fix typo in mark_rodata_ro
-> >>>   x86, 64bit: add pfn_range_is_highmapped()
-> >>>   x86, 64bit: remove highmap for not needed ranges
-> >>>   x86, 64bit: Add __pa_high/__va_high
-> >>>   x86: fix msr print again
-> >>>
-> >>>  Documentation/x86/boot.txt                  |  19 ++
-> >>>  arch/x86/boot/Makefile                      |  13 +-
-> >>>  arch/x86/boot/compressed/Makefile           |  21 +-
-> >>>  arch/x86/boot/compressed/aslr.c             | 258 ++++++++++++++++-------
-> >>>  arch/x86/boot/compressed/eboot.c            |  15 +-
-> >>>  arch/x86/boot/compressed/head_32.S          |  14 +-
-> >>>  arch/x86/boot/compressed/head_64.S          |  22 +-
-> >>>  arch/x86/boot/compressed/misc.c             | 129 +++++++++---
-> >>>  arch/x86/boot/compressed/misc.h             |  41 +++-
-> >>>  arch/x86/boot/compressed/misc_pgt.c         |  91 ++++++++
-> >>>  arch/x86/boot/compressed/mkpiggy.c          |  28 +--
-> >>>  arch/x86/boot/compressed/printf.c           |   5 +
-> >>>  arch/x86/boot/compressed/string.c           |  28 ++-
-> >>>  arch/x86/boot/compressed/vmlinux.lds.S      |   1 +
-> >>>  arch/x86/boot/edd.c                         |   4 +-
-> >>>  arch/x86/boot/header.S                      |  34 ++-
-> >>>  arch/x86/boot/tty.c                         |  14 +-
-> >>>  arch/x86/include/asm/boot.h                 |  19 ++
-> >>>  arch/x86/include/asm/efi.h                  |   2 +-
-> >>>  arch/x86/include/asm/page.h                 |   5 +
-> >>>  arch/x86/include/asm/pci.h                  |   4 +
-> >>>  arch/x86/include/asm/pgtable_64.h           |   2 +
-> >>>  arch/x86/include/asm/processor.h            |   1 -
-> >>>  arch/x86/include/asm/prom.h                 |   9 +-
-> >>>  arch/x86/include/asm/setup.h                |   5 +
-> >>>  arch/x86/include/uapi/asm/bootparam.h       |   1 +
-> >>>  arch/x86/include/uapi/asm/e820.h            |   8 -
-> >>>  arch/x86/kernel/asm-offsets.c               |   2 +
-> >>>  arch/x86/kernel/cpu/common.c                |  61 +++---
-> >>>  arch/x86/kernel/cpu/microcode/amd_early.c   |  10 +-
-> >>>  arch/x86/kernel/cpu/microcode/intel_early.c |   8 +-
-> >>>  arch/x86/kernel/devicetree.c                |  39 ++--
-> >>>  arch/x86/kernel/e820.c                      |  18 +-
-> >>>  arch/x86/kernel/head.c                      |  26 +++
-> >>>  arch/x86/kernel/head32.c                    |   1 +
-> >>>  arch/x86/kernel/head64.c                    |  21 +-
-> >>>  arch/x86/kernel/kdebugfs.c                  | 142 -------------
-> >>>  arch/x86/kernel/setup.c                     |  79 ++-----
-> >>>  arch/x86/kernel/tboot.c                     |   3 +-
-> >>>  arch/x86/kernel/vmlinux.lds.S               |   1 +
-> >>>  arch/x86/mm/ident_map.c                     |  74 +++++++
-> >>>  arch/x86/mm/init_64.c                       | 173 +++++++--------
-> >>>  arch/x86/mm/pageattr.c                      |  16 +-
-> >>>  arch/x86/pci/common.c                       | 313 ++++++++++++++++++++++++++--
-> >>>  arch/x86/platform/efi/efi.c                 |  13 +-
-> >>>  arch/x86/platform/efi/efi_64.c              |  10 +-
-> >>>  arch/x86/platform/efi/quirks.c              |  23 +-
-> >>>  arch/x86/tools/calc_run_size.sh             |  42 ----
-> >>>  drivers/tty/serial/8250/8250_early.c        |  17 ++
-> >>>  kernel/printk/printk.c                      |  11 +-
-> >>>  50 files changed, 1235 insertions(+), 661 deletions(-)
-> >>>  create mode 100644 arch/x86/boot/compressed/misc_pgt.c
-> >>>  create mode 100644 arch/x86/boot/compressed/printf.c
-> >>>  create mode 100644 arch/x86/mm/ident_map.c
-> >>>  delete mode 100644 arch/x86/tools/calc_run_size.sh
-> >>>
-> >>> --
-> >>> 1.8.4.5
-> >>>
-> >>
-> >>
-> >>
-> >> --
-> >> Kees Cook
-> >> Chrome OS Security
-> >
-> >
-> >
-> > --
-> > Kees Cook
-> > Chrome OS Security
-> > --
-> > To unsubscribe from this list: send the line "unsubscribe linux-kernel" in
-> > the body of a message to majordomo@vger.kernel.org
-> > More majordomo info at  http://vger.kernel.org/majordomo-info.html
-> > Please read the FAQ at  http://www.tux.org/lkml/
-> 
-> 
-> 
-> -- 
-> Kees Cook
-> Chrome OS & Brillo Security
+This still isn't as fast as what is in grsecurity unfortunately so there's still
+work to be done. Profiling ___slab_alloc shows that 25-50% of time is spent in
+deactivate_slab. I haven't looked too closely to see if this is something that
+can be optimized. My plan for now is to focus on getting all of this merged
+(if appropriate) before digging in to another task.
+
+As always feedback is appreciated.
+
+Laura Abbott (4):
+  slub: Drop lock at the end of free_debug_processing
+  slub: Fix/clean free_debug_processing return paths
+  sl[aob]: Convert SLAB_DEBUG_FREE to SLAB_CONSISTENCY_CHECKS
+  slub: Relax CMPXCHG consistency restrictions
+
+ Documentation/vm/slub.txt |   4 +-
+ include/linux/slab.h      |   2 +-
+ mm/slab.h                 |   5 +-
+ mm/slub.c                 | 126 ++++++++++++++++++++++++++++------------------
+ tools/vm/slabinfo.c       |   2 +-
+ 5 files changed, 83 insertions(+), 56 deletions(-)
+
+-- 
+2.5.0
