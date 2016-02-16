@@ -1,86 +1,92 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160216213659.GA47194@davidb.org>
-References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
-	<20160216213659.GA47194@davidb.org>
-Date: Tue, 16 Feb 2016 13:52:33 -0800
-Message-ID: <CAGXu5j+H63jhcDpHpXK5aWvgUBz=5vB0FK_zRoc+wZEk32B2fg@mail.gmail.com>
+In-Reply-To: <20160215072935.GB2816@x1.redhat.com>
+References: <1436300428-21163-1-git-send-email-yinghai@kernel.org>
+	<CAGXu5jKtBDziww4p_cJi-u=EHYdz9mqy87ca5xrCHY_MGN3+yw@mail.gmail.com>
+	<CAGXu5jKLyYEgoz5yS+y5Gu-2xS3H9wWKu2YZWWt0Nof1ZTm3QQ@mail.gmail.com>
+	<1232989951.18951930.1454759421059.JavaMail.zimbra@redhat.com>
+	<CAGXu5jJy+N9=xF7=WmGVXxpM3f7vbb7nhN=RYQXt-NiUhqz=7w@mail.gmail.com>
+	<20160215072935.GB2816@x1.redhat.com>
+Date: Tue, 16 Feb 2016 15:50:40 -0800
+Message-ID: <CAGXu5jJ_KTp08gTms34GGa23fuYE5Mty=9e28inu8w3BWSjMjA@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] ARM: vdso: Mark vDSO code as read-only
-To: David Brown <david.brown@linaro.org>
-Cc: Russell King <linux@arm.linux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, "x86@kernel.org" <x86@kernel.org>, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc
+ for v4.3
+To: Baoquan He <bhe@redhat.com>
+Cc: Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, Vivek Goyal <vgoyal@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 16, 2016 at 1:36 PM, David Brown <david.brown@linaro.org> wrote:
-> Although the arm vDSO is cleanly separated by code/data with the code
-> being read-only in userspace mappings, the code page is still writable
-> from the kernel.  There have been exploits (such as
-> http://itszn.com/blog/?p=21) that take advantage of this on x86 to go
-> from a bad kernel write to full root.
+On Sun, Feb 14, 2016 at 11:29 PM, Baoquan He <bhe@redhat.com> wrote:
+> On 02/08/16 at 08:31pm, Kees Cook wrote:
+>> On Sat, Feb 6, 2016 at 3:50 AM, Baoquan He <bhe@redhat.com> wrote:
+>> > Hi,
+>> >
+>> > Recently people using big box servers are also very interested in kaslr and want
+>> > to have it to enhance security. So allowing kaslr be able to randomize above 4G
+>> > makes much sense for different kinds of system. I would like to repost patches
+>> > realted to kaslr in this patchset, and leave the rest to Yinghai. Or I can try
+>> > to understand and adjust the rest with yh and reviewers' help, then post. But
+>> > firstly I will focus on kaslr and try to make it merge into Linus's tree.
+>> >
+>> > Since this patchset includes too many issues and people usually like reviewing
+>> > post which takes care of one main issue in one thread, I will start from below
+>> > thread. It mainly includes kaslr above 4G support and bug fixes and several clean
+>> > up patch.
+>> >
+>> > x86, boot: kaslr cleanup and 64bit kaslr support
+>> > https://lwn.net/Articles/637115/
+>> >
+>> > The following patch lists is taken from yh's cover letter of above patch thread.
+>> >
+>> > **************************
+>> > My plan is split them into
+>> > 1) kaslr above 4G support
+>> >   x86, boot: Split kernel_ident_mapping_init to another file
+>> >   x86, 64bit: Set ident_mapping for kaslr
+>> >   x86, boot: Add checking for memcpy
+>> >   x86, boot: Move z_extract_offset calculation to header.S
+>> >   x86, boot: Simplify run_size calculation
+>> >   x86, kaslr: Kill not used run_size related code.
+>> >   x86, kaslr: Use output_run_size
+>> >   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
+>> >   x86, kaslr: Introduce struct slot_area to manage randomization slot info
+>> >   x86, kaslr: Add two functions which will be used later
+>> >   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
+>> >   x86, kaslr: Randomize physical and virtual address of kernel separately
+>> >   x86, kaslr: Add support of kernel physical address randomization above 4G
+>> >   x86, kaslr: Remove useless codes
+>> > 2) allow kaslr to choose slots below loaded address
+>> >   x86, kaslr: Consolidate mem_avoid array filling
+>> >   x86, kaslr: Allow random address could be below loaded address
+>> > 3) Make data from decompress_kernel stage live longer (bug fix)
+>> >   x86, boot: Make data from decompress_kernel stage live longer
+>> > 4) Get correct max_addr for relocs pointer (improvement)
+>> >   x86, kaslr: Get correct max_addr for relocs pointer
+>> >
+>> > The 2) could be added into 1) post. I take it out because the mem_avoid issue is very
+>> > complicated, can be discussed in a separate thread. And 1) post only focus the kaslr
+>> > above 4G support.
+>> >
+>> > That's all I plan to do. Suggestion or comments are welcome.
+>>
+>> That sounds great, thanks! Please check the rest of the thread where I
+>> asked a number of questions that remain unanswered. If we can get some
+>> clarification on those points, I think it would help move this along
+>> more quickly.
 >
-> Prevent this specific exploit on arm by putting the vDSO code page in
-> post-init read-only memory as well.
+> Hi Kees,
+>
+> Thanks for your suggestion. I am trying to understand all patches and
+> make some adjustment, meanwhile adjust patch log with my understanding.
+> And your questions help me understand it deeper. I will post after
+> updating. Hope you, Yinghai and other experts can help review and give
+> precious comments and suggestions.
 
-Is the vdso dynamically built at init time like on x86, or can this
-just use .rodata directly?
+Sounds great! I look forward to them. :)
 
 -Kees
-
->
-> Before:
-> vdso: 1 text pages at base 80927000
-> root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
-> ---[ Modules ]---
-> ---[ Kernel Mapping ]---
-> 0x80000000-0x80100000           1M     RW NX SHD
-> 0x80100000-0x80600000           5M     ro x  SHD
-> 0x80600000-0x80800000           2M     ro NX SHD
-> 0x80800000-0xbe000000         984M     RW NX SHD
->
-> After:
-> vdso: 1 text pages at base 8072b000
-> root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
-> ---[ Modules ]---
-> ---[ Kernel Mapping ]---
-> 0x80000000-0x80100000           1M     RW NX SHD
-> 0x80100000-0x80600000           5M     ro x  SHD
-> 0x80600000-0x80800000           2M     ro NX SHD
-> 0x80800000-0xbe000000         984M     RW NX SHD
->
-> Inspired by https://lkml.org/lkml/2016/1/19/494 based on work by the
-> PaX Team, Brad Spengler, and Kees Cook.
->
-> Signed-off-by: David Brown <david.brown@linaro.org>
-> ---
-> This patch depends on Kees Cook's series
-> https://lkml.org/lkml/2016/1/19/497 which adds the ro_after_init
-> section.
->
-> arch/arm/vdso/vdso.S | 3 +--
-> 1 file changed, 1 insertion(+), 2 deletions(-)
->
-> diff --git a/arch/arm/vdso/vdso.S b/arch/arm/vdso/vdso.S
-> index b2b97e3..a62a7b6 100644
-> --- a/arch/arm/vdso/vdso.S
-> +++ b/arch/arm/vdso/vdso.S
-> @@ -23,9 +23,8 @@
-> #include <linux/const.h>
-> #include <asm/page.h>
->
-> -       __PAGE_ALIGNED_DATA
-> -
->         .globl vdso_start, vdso_end
-> +       .section .data..ro_after_init
->         .balign PAGE_SIZE
-> vdso_start:
->         .incbin "arch/arm/vdso/vdso.so"
-> --
-> 2.7.1
->
-
-
 
 -- 
 Kees Cook
