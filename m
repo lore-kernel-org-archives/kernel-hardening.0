@@ -1,72 +1,114 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 16 Feb 2016 14:36:59 -0700
-From: David Brown <david.brown@linaro.org>
-Message-ID: <20160216213659.GA47194@davidb.org>
-References: <1453226922-16831-1-git-send-email-keescook@chromium.org>
+Date: Tue, 16 Feb 2016 13:49:04 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160216214904.GA23723@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1453226922-16831-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH] ARM: vdso: Mark vDSO code as read-only
-To: Russell King <linux@arm.linux.org.uk>
-Cc: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, Ingo Molnar <mingo@redhat.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>
+Subject: [kernel-hardening] [PATCH] lkdtm: add test for executing .rodata
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Laura Abbott <laura@labbott.name>, Mark Rutland <mark.rutland@arm.com>, Jeremy Linton <jeremy.linton@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Although the arm vDSO is cleanly separated by code/data with the code
-being read-only in userspace mappings, the code page is still writable
-from the kernel.  There have been exploits (such as
-http://itszn.com/blog/?p=21) that take advantage of this on x86 to go
-from a bad kernel write to full root.
+Make sure that the read-only data section isn't executable.
 
-Prevent this specific exploit on arm by putting the vDSO code page in
-post-init read-only memory as well.
-
-Before:
-vdso: 1 text pages at base 80927000
-root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
----[ Modules ]---
----[ Kernel Mapping ]---
-0x80000000-0x80100000           1M     RW NX SHD
-0x80100000-0x80600000           5M     ro x  SHD
-0x80600000-0x80800000           2M     ro NX SHD
-0x80800000-0xbe000000         984M     RW NX SHD
-
-After:
-vdso: 1 text pages at base 8072b000
-root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
----[ Modules ]---
----[ Kernel Mapping ]---
-0x80000000-0x80100000           1M     RW NX SHD
-0x80100000-0x80600000           5M     ro x  SHD
-0x80600000-0x80800000           2M     ro NX SHD
-0x80800000-0xbe000000         984M     RW NX SHD
-
-Inspired by https://lkml.org/lkml/2016/1/19/494 based on work by the
-PaX Team, Brad Spengler, and Kees Cook.
-
-Signed-off-by: David Brown <david.brown@linaro.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-This patch depends on Kees Cook's series
-https://lkml.org/lkml/2016/1/19/497 which adds the ro_after_init
-section.
+ drivers/misc/lkdtm.c | 28 +++++++++++++++++++++-------
+ 1 file changed, 21 insertions(+), 7 deletions(-)
 
- arch/arm/vdso/vdso.S | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
-
-diff --git a/arch/arm/vdso/vdso.S b/arch/arm/vdso/vdso.S
-index b2b97e3..a62a7b6 100644
---- a/arch/arm/vdso/vdso.S
-+++ b/arch/arm/vdso/vdso.S
-@@ -23,9 +23,8 @@
- #include <linux/const.h>
- #include <asm/page.h>
+diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+index 11fdadc68e53..9835fcc0506e 100644
+--- a/drivers/misc/lkdtm.c
++++ b/drivers/misc/lkdtm.c
+@@ -100,6 +100,7 @@ enum ctype {
+ 	CT_EXEC_STACK,
+ 	CT_EXEC_KMALLOC,
+ 	CT_EXEC_VMALLOC,
++	CT_EXEC_RODATA,
+ 	CT_EXEC_USERSPACE,
+ 	CT_ACCESS_USERSPACE,
+ 	CT_WRITE_RO,
+@@ -137,6 +138,7 @@ static char* cp_type[] = {
+ 	"EXEC_STACK",
+ 	"EXEC_KMALLOC",
+ 	"EXEC_VMALLOC",
++	"EXEC_RODATA",
+ 	"EXEC_USERSPACE",
+ 	"ACCESS_USERSPACE",
+ 	"WRITE_RO",
+@@ -315,6 +317,12 @@ static int recursive_loop(int remaining)
+ 		return recursive_loop(remaining - 1);
+ }
  
--	__PAGE_ALIGNED_DATA
--
- 	.globl vdso_start, vdso_end
-+	.section .data..ro_after_init
- 	.balign PAGE_SIZE
- vdso_start:
- 	.incbin "arch/arm/vdso/vdso.so"
++static void __attribute__((__section__(".rodata,\"a\",@progbits#")))
++do_nothing_rodata(void)
++{
++	return;
++}
++
+ static void do_nothing(void)
+ {
+ 	return;
+@@ -335,15 +343,18 @@ static noinline void corrupt_stack(void)
+ 	memset((void *)data, 0, 64);
+ }
+ 
+-static void execute_location(void *dst)
++static void execute_location(void *dst, bool write)
+ {
+ 	void (*func)(void) = dst;
+ 
+ 	pr_info("attempting ok execution at %p\n", do_nothing);
+ 	do_nothing();
+ 
+-	memcpy(dst, do_nothing, EXEC_SIZE);
+-	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
++	if (write) {
++		memcpy(dst, do_nothing, EXEC_SIZE);
++		flush_icache_range((unsigned long)dst,
++				   (unsigned long)dst + EXEC_SIZE);
++	}
+ 	pr_info("attempting bad execution at %p\n", func);
+ 	func();
+ }
+@@ -438,25 +449,28 @@ static void lkdtm_do_action(enum ctype which)
+ 		schedule();
+ 		break;
+ 	case CT_EXEC_DATA:
+-		execute_location(data_area);
++		execute_location(data_area, true);
+ 		break;
+ 	case CT_EXEC_STACK: {
+ 		u8 stack_area[EXEC_SIZE];
+-		execute_location(stack_area);
++		execute_location(stack_area, true);
+ 		break;
+ 	}
+ 	case CT_EXEC_KMALLOC: {
+ 		u32 *kmalloc_area = kmalloc(EXEC_SIZE, GFP_KERNEL);
+-		execute_location(kmalloc_area);
++		execute_location(kmalloc_area, true);
+ 		kfree(kmalloc_area);
+ 		break;
+ 	}
+ 	case CT_EXEC_VMALLOC: {
+ 		u32 *vmalloc_area = vmalloc(EXEC_SIZE);
+-		execute_location(vmalloc_area);
++		execute_location(vmalloc_area, true);
+ 		vfree(vmalloc_area);
+ 		break;
+ 	}
++	case CT_EXEC_RODATA:
++		execute_location(do_nothing_rodata, false);
++		break;
+ 	case CT_EXEC_USERSPACE: {
+ 		unsigned long user_addr;
+ 
 -- 
-2.7.1
+2.6.3
+
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
