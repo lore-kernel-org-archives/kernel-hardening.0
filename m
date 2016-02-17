@@ -1,93 +1,134 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160216214904.GA23723@www.outflux.net>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <56C3C796.7050206@redhat.com>
+Date: Tue, 16 Feb 2016 17:06:30 -0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160215072935.GB2816@x1.redhat.com>
-References: <1436300428-21163-1-git-send-email-yinghai@kernel.org>
-	<CAGXu5jKtBDziww4p_cJi-u=EHYdz9mqy87ca5xrCHY_MGN3+yw@mail.gmail.com>
-	<CAGXu5jKLyYEgoz5yS+y5Gu-2xS3H9wWKu2YZWWt0Nof1ZTm3QQ@mail.gmail.com>
-	<1232989951.18951930.1454759421059.JavaMail.zimbra@redhat.com>
-	<CAGXu5jJy+N9=xF7=WmGVXxpM3f7vbb7nhN=RYQXt-NiUhqz=7w@mail.gmail.com>
-	<20160215072935.GB2816@x1.redhat.com>
-Date: Tue, 16 Feb 2016 15:50:40 -0800
-Message-ID: <CAGXu5jJ_KTp08gTms34GGa23fuYE5Mty=9e28inu8w3BWSjMjA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 00/42] x86: updated patches for kaslr and setup_data etc
- for v4.3
-To: Baoquan He <bhe@redhat.com>
-Cc: Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, LKML <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, Vivek Goyal <vgoyal@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20160216214904.GA23723@www.outflux.net>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] lkdtm: add test for executing .rodata
+To: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Jeremy Linton <jeremy.linton@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 14, 2016 at 11:29 PM, Baoquan He <bhe@redhat.com> wrote:
-> On 02/08/16 at 08:31pm, Kees Cook wrote:
->> On Sat, Feb 6, 2016 at 3:50 AM, Baoquan He <bhe@redhat.com> wrote:
->> > Hi,
->> >
->> > Recently people using big box servers are also very interested in kaslr and want
->> > to have it to enhance security. So allowing kaslr be able to randomize above 4G
->> > makes much sense for different kinds of system. I would like to repost patches
->> > realted to kaslr in this patchset, and leave the rest to Yinghai. Or I can try
->> > to understand and adjust the rest with yh and reviewers' help, then post. But
->> > firstly I will focus on kaslr and try to make it merge into Linus's tree.
->> >
->> > Since this patchset includes too many issues and people usually like reviewing
->> > post which takes care of one main issue in one thread, I will start from below
->> > thread. It mainly includes kaslr above 4G support and bug fixes and several clean
->> > up patch.
->> >
->> > x86, boot: kaslr cleanup and 64bit kaslr support
->> > https://lwn.net/Articles/637115/
->> >
->> > The following patch lists is taken from yh's cover letter of above patch thread.
->> >
->> > **************************
->> > My plan is split them into
->> > 1) kaslr above 4G support
->> >   x86, boot: Split kernel_ident_mapping_init to another file
->> >   x86, 64bit: Set ident_mapping for kaslr
->> >   x86, boot: Add checking for memcpy
->> >   x86, boot: Move z_extract_offset calculation to header.S
->> >   x86, boot: Simplify run_size calculation
->> >   x86, kaslr: Kill not used run_size related code.
->> >   x86, kaslr: Use output_run_size
->> >   x86, kaslr: Fix a bug that relocation can not be handled when kernel is loaded above 2G
->> >   x86, kaslr: Introduce struct slot_area to manage randomization slot info
->> >   x86, kaslr: Add two functions which will be used later
->> >   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel text mapping address
->> >   x86, kaslr: Randomize physical and virtual address of kernel separately
->> >   x86, kaslr: Add support of kernel physical address randomization above 4G
->> >   x86, kaslr: Remove useless codes
->> > 2) allow kaslr to choose slots below loaded address
->> >   x86, kaslr: Consolidate mem_avoid array filling
->> >   x86, kaslr: Allow random address could be below loaded address
->> > 3) Make data from decompress_kernel stage live longer (bug fix)
->> >   x86, boot: Make data from decompress_kernel stage live longer
->> > 4) Get correct max_addr for relocs pointer (improvement)
->> >   x86, kaslr: Get correct max_addr for relocs pointer
->> >
->> > The 2) could be added into 1) post. I take it out because the mem_avoid issue is very
->> > complicated, can be discussed in a separate thread. And 1) post only focus the kaslr
->> > above 4G support.
->> >
->> > That's all I plan to do. Suggestion or comments are welcome.
->>
->> That sounds great, thanks! Please check the rest of the thread where I
->> asked a number of questions that remain unanswered. If we can get some
->> clarification on those points, I think it would help move this along
->> more quickly.
+
+
+On 02/16/2016 01:49 PM, Kees Cook wrote:
+> Make sure that the read-only data section isn't executable.
 >
-> Hi Kees,
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>   drivers/misc/lkdtm.c | 28 +++++++++++++++++++++-------
+>   1 file changed, 21 insertions(+), 7 deletions(-)
 >
-> Thanks for your suggestion. I am trying to understand all patches and
-> make some adjustment, meanwhile adjust patch log with my understanding.
-> And your questions help me understand it deeper. I will post after
-> updating. Hope you, Yinghai and other experts can help review and give
-> precious comments and suggestions.
+> diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+> index 11fdadc68e53..9835fcc0506e 100644
+> --- a/drivers/misc/lkdtm.c
+> +++ b/drivers/misc/lkdtm.c
+> @@ -100,6 +100,7 @@ enum ctype {
+>   	CT_EXEC_STACK,
+>   	CT_EXEC_KMALLOC,
+>   	CT_EXEC_VMALLOC,
+> +	CT_EXEC_RODATA,
+>   	CT_EXEC_USERSPACE,
+>   	CT_ACCESS_USERSPACE,
+>   	CT_WRITE_RO,
+> @@ -137,6 +138,7 @@ static char* cp_type[] = {
+>   	"EXEC_STACK",
+>   	"EXEC_KMALLOC",
+>   	"EXEC_VMALLOC",
+> +	"EXEC_RODATA",
+>   	"EXEC_USERSPACE",
+>   	"ACCESS_USERSPACE",
+>   	"WRITE_RO",
+> @@ -315,6 +317,12 @@ static int recursive_loop(int remaining)
+>   		return recursive_loop(remaining - 1);
+>   }
+>
+> +static void __attribute__((__section__(".rodata,\"a\",@progbits#")))
+> +do_nothing_rodata(void)
+> +{
+> +	return;
+> +}
+> +
 
-Sounds great! I look forward to them. :)
+>
 
--Kees
+This doesn't cross compile for me on arm64 with two different toolchains
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+CC drivers/misc/lkdtm.o
+/tmp/ccHzIWIx.s: Assembler messages:
+/tmp/ccHzIWIx.s:21: Error: junk at end of line, first unrecognized character is `#'
+/tmp/ccHzIWIx.s: Error: unaligned opcodes detected in executable segment
+scripts/Makefile.build:258: recipe for target 'drivers/misc/lkdtm.o' failed
+make[2]: *** [drivers/misc/lkdtm.o] Error 1
+scripts/Makefile.build:407: recipe for target 'drivers/misc' failed
+make[1]: *** [drivers/misc] Error 2
+Makefile:950: recipe for target 'drivers' failed
+make: *** [drivers] Error 2
+
+I don't know the assembler well enough to give any insight.
+
+Thanks,
+Laura
+
+>   static void do_nothing(void)
+>   {
+>   	return;
+> @@ -335,15 +343,18 @@ static noinline void corrupt_stack(void)
+>   	memset((void *)data, 0, 64);
+>   }
+>
+> -static void execute_location(void *dst)
+> +static void execute_location(void *dst, bool write)
+>   {
+>   	void (*func)(void) = dst;
+>
+>   	pr_info("attempting ok execution at %p\n", do_nothing);
+>   	do_nothing();
+>
+> -	memcpy(dst, do_nothing, EXEC_SIZE);
+> -	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
+> +	if (write) {
+> +		memcpy(dst, do_nothing, EXEC_SIZE);
+> +		flush_icache_range((unsigned long)dst,
+> +				   (unsigned long)dst + EXEC_SIZE);
+> +	}
+>   	pr_info("attempting bad execution at %p\n", func);
+>   	func();
+>   }
+> @@ -438,25 +449,28 @@ static void lkdtm_do_action(enum ctype which)
+>   		schedule();
+>   		break;
+>   	case CT_EXEC_DATA:
+> -		execute_location(data_area);
+> +		execute_location(data_area, true);
+>   		break;
+>   	case CT_EXEC_STACK: {
+>   		u8 stack_area[EXEC_SIZE];
+> -		execute_location(stack_area);
+> +		execute_location(stack_area, true);
+>   		break;
+>   	}
+>   	case CT_EXEC_KMALLOC: {
+>   		u32 *kmalloc_area = kmalloc(EXEC_SIZE, GFP_KERNEL);
+> -		execute_location(kmalloc_area);
+> +		execute_location(kmalloc_area, true);
+>   		kfree(kmalloc_area);
+>   		break;
+>   	}
+>   	case CT_EXEC_VMALLOC: {
+>   		u32 *vmalloc_area = vmalloc(EXEC_SIZE);
+> -		execute_location(vmalloc_area);
+> +		execute_location(vmalloc_area, true);
+>   		vfree(vmalloc_area);
+>   		break;
+>   	}
+> +	case CT_EXEC_RODATA:
+> +		execute_location(do_nothing_rodata, false);
+> +		break;
+>   	case CT_EXEC_USERSPACE: {
+>   		unsigned long user_addr;
+>
+>
