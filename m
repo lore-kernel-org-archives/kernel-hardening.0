@@ -1,77 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 17 Feb 2016 14:41:17 -0800
-Message-Id: <1455748879-21872-7-git-send-email-keescook@chromium.org>
+Date: Wed, 17 Feb 2016 14:41:18 -0800
+Message-Id: <1455748879-21872-8-git-send-email-keescook@chromium.org>
 In-Reply-To: <1455748879-21872-1-git-send-email-keescook@chromium.org>
 References: <1455748879-21872-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 6/7] x86, vdso: mark vDSO read-only after init
+Subject: [kernel-hardening] [PATCH v5 7/7] ARM: vdso: Mark vDSO code as read-only
 To: Ingo Molnar <mingo@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, David Brown <david.brown@linaro.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The vDSO does not need to be writable after __init, so mark it as
-__ro_after_init. The result kills the exploit method of writing to the
-vDSO from kernel space resulting in userspace executing the modified code,
-as shown here to bypass SMEP restrictions: http://itszn.com/blog/?p=21
+From: David Brown <david.brown@linaro.org>
 
-The memory map (with added vDSO address reporting) shows the vDSO moving
-into read-only memory:
+Although the arm vDSO is cleanly separated by code/data with the code
+being read-only in userspace mappings, the code page is still writable
+from the kernel.  There have been exploits (such as
+http://itszn.com/blog/?p=21) that take advantage of this on x86 to go
+from a bad kernel write to full root.
+
+Prevent this specific exploit on arm by putting the vDSO code page in
+post-init read-only memory as well.
 
 Before:
-[    0.143067] vDSO @ ffffffff82004000
-[    0.143551] vDSO @ ffffffff82006000
----[ High Kernel Mapping ]---
-0xffffffff80000000-0xffffffff81000000      16M                         pmd
-0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
-0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
-0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
-0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
-0xffffffff81e00000-0xffffffff81e05000      20K   ro             GLB NX pte
-0xffffffff81e05000-0xffffffff82000000    2028K   ro                 NX pte
-0xffffffff82000000-0xffffffff8214f000    1340K   RW             GLB NX pte
-0xffffffff8214f000-0xffffffff82281000    1224K   RW                 NX pte
-0xffffffff82281000-0xffffffff82400000    1532K   RW             GLB NX pte
-0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
-0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+vdso: 1 text pages at base 80927000
+root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
+---[ Modules ]---
+---[ Kernel Mapping ]---
+0x80000000-0x80100000           1M     RW NX SHD
+0x80100000-0x80600000           5M     ro x  SHD
+0x80600000-0x80800000           2M     ro NX SHD
+0x80800000-0xbe000000         984M     RW NX SHD
 
 After:
-[    0.145062] vDSO @ ffffffff81da1000
-[    0.146057] vDSO @ ffffffff81da4000
----[ High Kernel Mapping ]---
-0xffffffff80000000-0xffffffff81000000      16M                         pmd
-0xffffffff81000000-0xffffffff81800000       8M   ro     PSE     GLB x  pmd
-0xffffffff81800000-0xffffffff819f3000    1996K   ro             GLB x  pte
-0xffffffff819f3000-0xffffffff81a00000      52K   ro                 NX pte
-0xffffffff81a00000-0xffffffff81e00000       4M   ro     PSE     GLB NX pmd
-0xffffffff81e00000-0xffffffff81e0b000      44K   ro             GLB NX pte
-0xffffffff81e0b000-0xffffffff82000000    2004K   ro                 NX pte
-0xffffffff82000000-0xffffffff8214c000    1328K   RW             GLB NX pte
-0xffffffff8214c000-0xffffffff8227e000    1224K   RW                 NX pte
-0xffffffff8227e000-0xffffffff82400000    1544K   RW             GLB NX pte
-0xffffffff82400000-0xffffffff83200000      14M   RW     PSE     GLB NX pmd
-0xffffffff83200000-0xffffffffc0000000     974M                         pmd
+vdso: 1 text pages at base 8072b000
+root@Vexpress:/ cat /sys/kernel/debug/kernel_page_tables
+---[ Modules ]---
+---[ Kernel Mapping ]---
+0x80000000-0x80100000           1M     RW NX SHD
+0x80100000-0x80600000           5M     ro x  SHD
+0x80600000-0x80800000           2M     ro NX SHD
+0x80800000-0xbe000000         984M     RW NX SHD
 
-Based on work by PaX Team and Brad Spengler.
+Inspired by https://lkml.org/lkml/2016/1/19/494 based on work by the
+PaX Team, Brad Spengler, and Kees Cook.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
-Acked-by: Andy Lutomirski <luto@kernel.org>
-Acked-by: H. Peter Anvin <hpa@linux.intel.com>
+Signed-off-by: David Brown <david.brown@linaro.org>
+Acked-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/entry/vdso/vdso2c.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ arch/arm/vdso/vdso.S | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/arch/x86/entry/vdso/vdso2c.h b/arch/x86/entry/vdso/vdso2c.h
-index abe961c7c71c..63a03bb91497 100644
---- a/arch/x86/entry/vdso/vdso2c.h
-+++ b/arch/x86/entry/vdso/vdso2c.h
-@@ -140,7 +140,7 @@ static void BITSFUNC(go)(void *raw_addr, size_t raw_len,
- 	fprintf(outfile, "#include <asm/vdso.h>\n");
- 	fprintf(outfile, "\n");
- 	fprintf(outfile,
--		"static unsigned char raw_data[%lu] __page_aligned_data = {",
-+		"static unsigned char raw_data[%lu] __ro_after_init __aligned(PAGE_SIZE) = {",
- 		mapping_size);
- 	for (j = 0; j < stripped_len; j++) {
- 		if (j % 10 == 0)
+diff --git a/arch/arm/vdso/vdso.S b/arch/arm/vdso/vdso.S
+index b2b97e3e7bab..a62a7b64f49c 100644
+--- a/arch/arm/vdso/vdso.S
++++ b/arch/arm/vdso/vdso.S
+@@ -23,9 +23,8 @@
+ #include <linux/const.h>
+ #include <asm/page.h>
+ 
+-	__PAGE_ALIGNED_DATA
+-
+ 	.globl vdso_start, vdso_end
++	.section .data..ro_after_init
+ 	.balign PAGE_SIZE
+ vdso_start:
+ 	.incbin "arch/arm/vdso/vdso.so"
 -- 
 2.6.3
