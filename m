@@ -1,46 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Thu, 18 Feb 2016 11:32:37 +0100
 MIME-Version: 1.0
-In-Reply-To: <1455561864-4217-1-git-send-email-labbott@fedoraproject.org>
-References: <1455561864-4217-1-git-send-email-labbott@fedoraproject.org>
-Date: Thu, 18 Feb 2016 17:39:10 +0900
-Message-ID: <CAAmzW4MQYtWtCwhPF9VSQdK=rcy0t1-hThNNu9fBduS395J6iA@mail.gmail.com>
-From: Joonsoo Kim <js1304@gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCHv2 0/4] Improve performance for SLAB_POISON
-To: Laura Abbott <labbott@fedoraproject.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Linux Memory Management List <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Message-ID: <56C59DC5.19217.28FA99@pageexec.freemail.hu>
+In-reply-to: <CAGXu5j+P=8HnkJA895wuKrEb6n+hK4RqFJhFSQqUhRWbxhpoag@mail.gmail.com>
+References: <20160216214904.GA23723@www.outflux.net>, <56C3C796.7050206@redhat.com>, <CAGXu5j+P=8HnkJA895wuKrEb6n+hK4RqFJhFSQqUhRWbxhpoag@mail.gmail.com>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: [kernel-hardening] Re: [PATCH] lkdtm: add test for executing .rodata
+To: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Mark Rutland <mark.rutland@arm.com>, Jeremy Linton <jeremy.linton@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2016-02-16 3:44 GMT+09:00 Laura Abbott <labbott@fedoraproject.org>:
-> Hi,
->
-> This is a follow up to my previous series
-> (http://lkml.kernel.org/g/<1453770913-32287-1-git-send-email-labbott@fedoraproject.org>)
-> This series takes the suggestion of Christoph Lameter and only focuses on
-> optimizing the slow path where the debug processing runs. The two main
-> optimizations in this series are letting the consistency checks be skipped and
-> relaxing the cmpxchg restrictions when we are not doing consistency checks.
-> With hackbench -g 20 -l 1000 averaged over 100 runs:
->
-> Before slub_debug=P
-> mean 15.607
-> variance .086
-> stdev .294
->
-> After slub_debug=P
-> mean 10.836
-> variance .155
-> stdev .394
->
-> This still isn't as fast as what is in grsecurity unfortunately so there's still
-> work to be done. Profiling ___slab_alloc shows that 25-50% of time is spent in
-> deactivate_slab. I haven't looked too closely to see if this is something that
-> can be optimized.
+On 17 Feb 2016 at 12:29, Kees Cook wrote:
 
-There is something to be optimized. deactivate_slab() deactivate objects of
-freelist one by one and it's useless. And, it deactivates freelist
-with two phases.
-Deactivating objects except last one and then deactivating last object with
-node lock. It would be also optimized although I didn't think deeply.
+> >> +static void __attribute__((__section__(".rodata,\"a\",@progbits#")))
+> >> +do_nothing_rodata(void)
+> >> +{
+> >> +       return;
+> >> +}
+> >> +
+> >
+> >
+> >>
+> >
+> > This doesn't cross compile for me on arm64 with two different toolchains
+> >
+> > CC drivers/misc/lkdtm.o
+> > /tmp/ccHzIWIx.s: Assembler messages:
+> > /tmp/ccHzIWIx.s:21: Error: junk at end of line, first unrecognized character
+> > is `#'
+> > /tmp/ccHzIWIx.s: Error: unaligned opcodes detected in executable segment
+> > scripts/Makefile.build:258: recipe for target 'drivers/misc/lkdtm.o' failed
+> > make[2]: *** [drivers/misc/lkdtm.o] Error 1
+> > scripts/Makefile.build:407: recipe for target 'drivers/misc' failed
+> > make[1]: *** [drivers/misc] Error 2
+> > Makefile:950: recipe for target 'drivers' failed
+> > make: *** [drivers] Error 2
+> >
+> > I don't know the assembler well enough to give any insight.
+> 
+> Hm, bummer. I was trying to get fancy with the function forced into
+> .rodata by trying to force the bits. Looks like "#" is not seen as a
+> comment character by the toolchain you're using.
+> 
+> Anyone else successfully done tricks like this?
 
-Thanks.
+wouldn't it be a better and more generic/reusable approach to
+
+#define __ro_text __attribute__((__section__(".rodata.text")))
+
+and move this function there by the linker script similar to how it's done
+for other code that goes into special sections?
