@@ -1,27 +1,35 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Thu, 18 Feb 2016 22:27:35 +0100
-MIME-Version: 1.0
-Message-ID: <56C63747.819.280B3F5@pageexec.freemail.hu>
-In-reply-to: <CAKv+Gu_ABQa4L7ZzHMD+-BPLtJf_UO9TfLy0jKFLfCsyQE6dLQ@mail.gmail.com>
-References: <20160216214904.GA23723@www.outflux.net>, <56C59DC5.19217.28FA99@pageexec.freemail.hu>, <CAKv+Gu_ABQa4L7ZzHMD+-BPLtJf_UO9TfLy0jKFLfCsyQE6dLQ@mail.gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH] lkdtm: add test for executing .rodata
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Mark Rutland <mark.rutland@arm.com>, Jeremy Linton <jeremy.linton@arm.com>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Date: Thu, 18 Feb 2016 22:32:17 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160218223217.301d8c7eda4f087083d97a34@gmail.com>
+In-Reply-To: <CAGXu5jJyn4sxL2Rb467UyP1X1vF1ZkdBoL8GmResrNiLybztCg@mail.gmail.com>
+References: <20160211233646.97c2af3675dc5b0f525f0489@gmail.com>
+	<20160211234135.4478fabfc780825379936963@gmail.com>
+	<CAGXu5jJyn4sxL2Rb467UyP1X1vF1ZkdBoL8GmResrNiLybztCg@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 2/3] Add Cyclomatic complexity GCC plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 18 Feb 2016 at 12:34, Ard Biesheuvel wrote:
+On Wed, 17 Feb 2016 16:27:22 -0800
+Kees Cook <keescook@chromium.org> wrote:
 
-> However, that does not fix the issue Kees is trying to solve, where a
-> .rodata section is emitted with the "x" bit set, which causes the
-> linker to complain:
-> 
-> /tmp/cc50ffWw.s: Assembler messages:
-> /tmp/cc50ffWw.s:2: Warning: setting incorrect section attributes for
-> .rodata.text
+> It's a shame there's been so much churn with gcc's plugin API. I
+> wonder if it might make sense to choose 5.0 as the supported compiler
+> version for this feature, just to cut down on all the ifdef noise. For
+> now, let's keep it as-is, though.
 
-in that case why not use a top-level asm statement to set the section
-and its attributes (and compile the file with fno-toplevel-reorder)?
+I think it is important to support all gcc versions as there are a lot of distros that
+use older gcc versions than 5.
+
+I made a pass structure generator, you can see it on my github:
+https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commits/plugins
+
+I didn't resend the patches yet because I usually wait until there are no more comments
+for the previous series.
+
+--
+Emese
