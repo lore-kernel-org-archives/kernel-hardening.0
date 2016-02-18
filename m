@@ -1,133 +1,135 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160211234301.84a5ff8e513f5d5f78478283@gmail.com>
-References: <20160211233646.97c2af3675dc5b0f525f0489@gmail.com>
-	<20160211234301.84a5ff8e513f5d5f78478283@gmail.com>
-Date: Wed, 17 Feb 2016 16:35:15 -0800
-Message-ID: <CAGXu5j+1OQ81cxU57s_h_T60Z0ng54+X_jDtSdUePPQ7_Ak0Jg@mail.gmail.com>
+In-Reply-To: <20160217212202.GA25268@www.outflux.net>
+References: <20160217212202.GA25268@www.outflux.net>
+Date: Wed, 17 Feb 2016 16:46:12 -0800
+Message-ID: <CAGXu5jLKPKogHiVQJJF402g6dSs1RczzLtKJFoB=vLtg0LWQPg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 3/3] Documentation for the GCC plugin infrastructure
-To: Emese Revfy <re.emese@gmail.com>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Subject: [kernel-hardening] Re: [PATCH v2] lkdtm: add test for executing .rodata
+To: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: Laura Abbott <labbott@redhat.com>, Jeremy Linton <jeremy.linton@arm.com>, Arnd Bergmann <arnd@arndb.de>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 11, 2016 at 2:43 PM, Emese Revfy <re.emese@gmail.com> wrote:
-> This is the GCC infrastructure documentation about its operation, how to add
-> and use a new plugin with an example.
+On Wed, Feb 17, 2016 at 1:22 PM, Kees Cook <keescook@chromium.org> wrote:
+> Make sure that the read-only data section isn't executable. To avoid
+> making per-architecture assembly functions, just mark the new function
+> as living in the .rodata section and force the flags (which requires
+> adding a comment to hide the generated flags from the assembler).
+>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 > ---
->  Documentation/gcc-plugins.txt | 68 +++++++++++++++++++++++++++++++++++++++++++
->  arch/Kconfig                  |  2 ++
->  2 files changed, 70 insertions(+)
->  create mode 100644 Documentation/gcc-plugins.txt
+> v2:
+> - fix the section bits hack to be more friendly
+> ---
+>  drivers/misc/lkdtm.c | 28 +++++++++++++++++++++-------
+>  1 file changed, 21 insertions(+), 7 deletions(-)
 >
-> diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
-> new file mode 100644
-> index 0000000..e1171c2
-> --- /dev/null
-> +++ b/Documentation/gcc-plugins.txt
-> @@ -0,0 +1,68 @@
-> +GCC plugin infrastructure
-> +=========================
-> +
-> +
-> +1. Introduction
-> +===============
-> +
-> +GCC plugins are loadable modules that provide extra features to the
-> +compiler [1]. They are useful for runtime instrumentation and static analysis.
-> +We can analyse, change and add further code during compilation via
-> +callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
-> +
-> +The GCC plugin infrastructure of the kernel supports all gcc versions from
-> +4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
-> +separate directory.
-> +
-> +Currently the GCC plugin infrastructure supports only the x86 architecture.
-
-What's needed to support other architectures?
-
-> +
-> +This infrastructure was ported from grsecurity [6] and PaX [7].
-> +
-> +--
-> +[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
-> +[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
-> +[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
-> +[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
-> +[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
-> +[6] https://grsecurity.net/
-> +[7] https://pax.grsecurity.net/
-> +
-> +
-> +2. Files
-> +========
-> +
-> +$(src)/tools/gcc
-> +       This is the directory of the GCC plugins.
-> +
-> +$(src)/tools/gcc/gcc-common.h
-> +       This is a compatibility header for GCC plugins.
-> +       It should be always included instead of individual gcc headers.
-> +
-> +$(src)/scripts/gcc-plugin.sh
-> +       This script checks the availability of the included headers in
-> +       gcc-common.h and chooses the proper host compiler to build the plugins
-> +       (gcc-4.7 can be built by either gcc or g++).
-
-The part about the proper host compiler isn't clear to me. It looks
-like each of three compilers are examined:
-$CC for the header location
-$HOSTCC for actually doing the build, or
-$HOSTCXX for doing the plugin build?
-
-Shouldn't the headers be coming from the compiler that is actually
-going to be used to build the .so file?
-
-> +
-> +
-> +3. Usage
-> +========
-> +
-> +Enable a GCC plugin based feature in the kernel config:
-> +
-> +       CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
-> +
-> +To compile only the plugin(s):
-> +
-> +       make gcc-plugins
-> +
-> +or just run the kernel make and compile the whole kernel with
-> +the cyclomatic complexity GCC plugin.
-> +
-> +
-> +4. How to add a new GCC plugin
-> +==============================
-> +
-> +The GCC plugins are in $(src)/tools/gcc/. You can use a file or a directory
-> +here. It must be added to $(src)/tools/gcc/Makefile,
-> +$(src)/scripts/Makefile.gcc-plugins and $(src)/arch/Kconfig.
-> +See the cyc_complexity_plugin.c (CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) GCC plugin.
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index a558ecb..38964dd 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -377,6 +377,8 @@ config GCC_PLUGIN_CYC_COMPLEXITY
->           N = the number of nodes
->           P = the number of connected components (exit nodes).
+> diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+> index 11fdadc68e53..b15d08ff71a9 100644
+> --- a/drivers/misc/lkdtm.c
+> +++ b/drivers/misc/lkdtm.c
+> @@ -100,6 +100,7 @@ enum ctype {
+>         CT_EXEC_STACK,
+>         CT_EXEC_KMALLOC,
+>         CT_EXEC_VMALLOC,
+> +       CT_EXEC_RODATA,
+>         CT_EXEC_USERSPACE,
+>         CT_ACCESS_USERSPACE,
+>         CT_WRITE_RO,
+> @@ -137,6 +138,7 @@ static char* cp_type[] = {
+>         "EXEC_STACK",
+>         "EXEC_KMALLOC",
+>         "EXEC_VMALLOC",
+> +       "EXEC_RODATA",
+>         "EXEC_USERSPACE",
+>         "ACCESS_USERSPACE",
+>         "WRITE_RO",
+> @@ -315,6 +317,12 @@ static int recursive_loop(int remaining)
+>                 return recursive_loop(remaining - 1);
+>  }
 >
-> +         See Documentation/gcc-plugins.txt for details.
-> +
->  endmenu # "GCC plugins"
->
->  config HAVE_CC_STACKPROTECTOR
-> --
-> 2.4.1
+> +static void __attribute__((__section__(".rodata,\"a\",\%progbits;//")))
 
-Thanks! I'm looking forward to more plugins. :)
+Aaaand, nope. This fails on sparc, which doesn't know what "/" is.
+Wheee. I might need to add a set of tests to compiler.h and include
+the arch-specific comment character with a #define.
 
 -Kees
+
+> +do_nothing_rodata(void)
+> +{
+> +       return;
+> +}
+> +
+>  static void do_nothing(void)
+>  {
+>         return;
+> @@ -335,15 +343,18 @@ static noinline void corrupt_stack(void)
+>         memset((void *)data, 0, 64);
+>  }
+>
+> -static void execute_location(void *dst)
+> +static void execute_location(void *dst, bool write)
+>  {
+>         void (*func)(void) = dst;
+>
+>         pr_info("attempting ok execution at %p\n", do_nothing);
+>         do_nothing();
+>
+> -       memcpy(dst, do_nothing, EXEC_SIZE);
+> -       flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
+> +       if (write) {
+> +               memcpy(dst, do_nothing, EXEC_SIZE);
+> +               flush_icache_range((unsigned long)dst,
+> +                                  (unsigned long)dst + EXEC_SIZE);
+> +       }
+>         pr_info("attempting bad execution at %p\n", func);
+>         func();
+>  }
+> @@ -438,25 +449,28 @@ static void lkdtm_do_action(enum ctype which)
+>                 schedule();
+>                 break;
+>         case CT_EXEC_DATA:
+> -               execute_location(data_area);
+> +               execute_location(data_area, true);
+>                 break;
+>         case CT_EXEC_STACK: {
+>                 u8 stack_area[EXEC_SIZE];
+> -               execute_location(stack_area);
+> +               execute_location(stack_area, true);
+>                 break;
+>         }
+>         case CT_EXEC_KMALLOC: {
+>                 u32 *kmalloc_area = kmalloc(EXEC_SIZE, GFP_KERNEL);
+> -               execute_location(kmalloc_area);
+> +               execute_location(kmalloc_area, true);
+>                 kfree(kmalloc_area);
+>                 break;
+>         }
+>         case CT_EXEC_VMALLOC: {
+>                 u32 *vmalloc_area = vmalloc(EXEC_SIZE);
+> -               execute_location(vmalloc_area);
+> +               execute_location(vmalloc_area, true);
+>                 vfree(vmalloc_area);
+>                 break;
+>         }
+> +       case CT_EXEC_RODATA:
+> +               execute_location(do_nothing_rodata, false);
+> +               break;
+>         case CT_EXEC_USERSPACE: {
+>                 unsigned long user_addr;
+>
+> --
+> 2.6.3
+>
+>
+> --
+> Kees Cook
+> Chrome OS & Brillo Security
+
+
 
 -- 
 Kees Cook
