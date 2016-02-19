@@ -1,36 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 19 Feb 2016 14:38:36 +0000
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20160219143836.GK27062@arm.com>
-References: <1455748879-21872-1-git-send-email-keescook@chromium.org>
- <1455748879-21872-2-git-send-email-keescook@chromium.org>
+Date: Fri, 19 Feb 2016 11:25:38 -0700
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160219182538.GA71114@davidb.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=us-ascii; format=flowed
 Content-Disposition: inline
-In-Reply-To: <1455748879-21872-2-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v5 1/7] asm-generic: consolidate mark_rodata_ro()
-To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Russell King <linux@arm.linux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, David Brown <david.brown@linaro.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>
+Subject: [kernel-hardening] Meta: Adding 'List-id' header to kernel-hardening posts
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 17, 2016 at 02:41:12PM -0800, Kees Cook wrote:
-> Instead of defining mark_rodata_ro() in each architecture, consolidate it.
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> Cc: Russell King <linux@arm.linux.org.uk>
-> Cc: Catalin Marinas <catalin.marinas@arm.com>
-> Cc: Will Deacon <will.deacon@arm.com>
-> Cc: "James E.J. Bottomley" <jejb@parisc-linux.org>
-> ---
->  arch/arm/include/asm/cacheflush.h    | 1 -
->  arch/arm64/include/asm/cacheflush.h  | 4 ----
->  arch/parisc/include/asm/cacheflush.h | 4 ----
->  arch/x86/include/asm/cacheflush.h    | 1 -
->  include/linux/init.h                 | 4 ++++
->  5 files changed, 4 insertions(+), 10 deletions(-)
+I have been unable to locate a contact address for someone who
+maintains this mailing list, so I'm resorting to sending to the full
+list.  Apologies in advance for the noise this causes.
 
-If you need it:
+I have noticed that this mailing list software inserts a non-standard
+header to identify the list "Mailing-list:" instead of the RFC2919
+(https://www.ietf.org/rfc/rfc2919.txt) "List-id" header.  Depending on
+the particular mail hosting and software, this can make filting on
+this particular list either difficult or impossible.
 
-Acked-by: Will Deacon <will.deacon@arm.com>
+As I understand, it is not difficult to configure ezmlm to add a
+List-id header, and I was wondering if there is someone getting this
+message that might be able to make this happen (or forward this
+message to someone that can).
 
-Will
+Thanks,
+David Brown
