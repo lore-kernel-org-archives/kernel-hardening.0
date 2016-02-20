@@ -1,82 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1455844533-24787-1-git-send-email-labbott@fedoraproject.org>
- <CAGXu5jLREPiCHSwk1LGKJm0pPGpD8O4S+4xu5=Aw_x+COLBXWg@mail.gmail.com>
- <56C79301.5040003@redhat.com>
- <CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <56C7A02F.7070902@redhat.com>
-Date: Fri, 19 Feb 2016 15:07:27 -0800
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2] lkdtm: Add READ_AFTER_FREE test
-To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Date: Sat, 20 Feb 2016 06:33:53 +0300
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20160220033353.GA2139@openwall.com>
+References: <20160219182538.GA71114@davidb.org>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20160219182538.GA71114@davidb.org>
+Subject: Re: [kernel-hardening] Meta: Adding 'List-id' header to kernel-hardening posts
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/19/2016 02:19 PM, Kees Cook wrote:
-> On Fri, Feb 19, 2016 at 2:11 PM, Laura Abbott <labbott@redhat.com> wrote:
->> On 02/19/2016 11:12 AM, Kees Cook wrote:
->>>
->>> On Thu, Feb 18, 2016 at 5:15 PM, Laura Abbott <labbott@fedoraproject.org>
->>> wrote:
->>>>
->>>>
->>>> In a similar manner to WRITE_AFTER_FREE, add a READ_AFTER_FREE
->>>> test to test free poisoning features. Sample output when
->>>> no sanitization is present:
->>>>
->>>> [   22.414170] lkdtm: Performing direct entry READ_AFTER_FREE
->>>> [   22.415124] lkdtm: Value in memory before free: 12345678
->>>> [   22.415900] lkdtm: Attempting to read from freed memory
->>>> [   22.416394] lkdtm: Successfully read value: 12345678
->>>>
->>>> with sanitization:
->>>>
->>>> [   25.874585] lkdtm: Performing direct entry READ_AFTER_FREE
->>>> [   25.875527] lkdtm: Value in memory before free: 12345678
->>>> [   25.876382] lkdtm: Attempting to read from freed memory
->>>> [   25.876900] general protection fault: 0000 [#1] SMP
->>>>
->>>> Signed-off-by: Laura Abbott <labbott@fedoraproject.org>
->>>
->>>
->>> Excellent! Could you mention in the changelog which CONFIG (or runtime
->>> values) will change the lkdtm test? (I thought there was a poisoning
->>> style that would result in a zero-read instead of a GP?)
->>>
->>
->> There was a zeroing patch in the first draft but given the direction
->> things are going, I don't see it going in. I'll mention the debug
->> options which will show this though.
->
-> Ah! Okay, I was having trouble following what was happening. What's
-> the current state of the use-after-free protections you've been
-> working on?
+David,
 
-Based on discussion, the SL*B maintainers want to use the existing
-slab poisoning features instead adding in new hooks. They also don't
-want the fast path to be affected at all. This means most of the
-actual work there is improving the performance of slub_debug=P. I
-sent out patches for some low hanging fruit in SLUB which improved
-the performance by a good bit. Those have been Acked and are sitting
-in Andrew's tree. The next performance work involves more in depth
-tinkering with the SLUB allocator. Apart from just performance, the
-other work would be poisoning for caches with ctors in SLUB and
-poisoning in SLOB. I could use some help with benchmarking some
-actual use cases to see how usable slub_debug=P would be on some
-use cases.
+On Fri, Feb 19, 2016 at 11:25:38AM -0700, David Brown wrote:
+> I have been unable to locate a contact address for someone who
+> maintains this mailing list,
 
-I did sent out patches for the buddy allocator as well. The last
-version I sent out didn't get much in the way of feedback except
-for some requests for benchmarks on the zeroing. I was planning
-on following up on that next week to see if there was any more feedback
-and beg for Acks.
+That would mostly be me.
 
-Thanks,
-Laura
+> so I'm resorting to sending to the full
+> list.  Apologies in advance for the noise this causes.
 
->
-> -Kees
->
+There is:
+
+kernel-hardening-admin at lists.openwall.com
+
+This address is given in some of ezmlm's help texts.
+
+> I have noticed that this mailing list software inserts a non-standard
+> header to identify the list "Mailing-list:" instead of the RFC2919
+> (https://www.ietf.org/rfc/rfc2919.txt) "List-id" header.  Depending on
+> the particular mail hosting and software, this can make filting on
+> this particular list either difficult or impossible.
+
+As Jason correctly pointed out, we do already have a List-ID header.
+Do you require it to be spelled List-id?  I doubt that trying to match
+a specific case-sensitive spelling is a good idea, since if some client
+software is broken to only look for List-id, some other might only look
+for List-ID.
+
+Alexander
