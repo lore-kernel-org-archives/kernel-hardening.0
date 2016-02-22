@@ -1,125 +1,98 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 22 Feb 2016 20:17:06 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160222201706.be4f5f89a277e5d116f97698@gmail.com>
-In-Reply-To: <20160222201335.449323716ca4d929f92424d5@gmail.com>
-References: <20160222201335.449323716ca4d929f92424d5@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 3/3] Documentation for the GCC plugin infrastructure
-To: linux-kbuild@vger.kernel.org
-Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <56C7A02F.7070902@redhat.com>
+References: <1455844533-24787-1-git-send-email-labbott@fedoraproject.org>
+	<CAGXu5jLREPiCHSwk1LGKJm0pPGpD8O4S+4xu5=Aw_x+COLBXWg@mail.gmail.com>
+	<56C79301.5040003@redhat.com>
+	<CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
+	<56C7A02F.7070902@redhat.com>
+Date: Mon, 22 Feb 2016 11:27:42 -0800
+Message-ID: <CAGXu5jLdQNx7ineLf0zv67O30ituQ3a8WHKLBN5FzGVjMz27Bg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCHv2] lkdtm: Add READ_AFTER_FREE test
+To: Laura Abbott <labbott@redhat.com>
+Cc: Laura Abbott <labbott@fedoraproject.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the GCC infrastructure documentation about its operation, how to add
-and use a new plugin with an example.
----
- Documentation/gcc-plugins.txt | 82 +++++++++++++++++++++++++++++++++++++++++++
- arch/Kconfig                  |  2 ++
- 2 files changed, 84 insertions(+)
- create mode 100644 Documentation/gcc-plugins.txt
+On Fri, Feb 19, 2016 at 3:07 PM, Laura Abbott <labbott@redhat.com> wrote:
+> On 02/19/2016 02:19 PM, Kees Cook wrote:
+>>
+>> On Fri, Feb 19, 2016 at 2:11 PM, Laura Abbott <labbott@redhat.com> wrote:
+>>>
+>>> On 02/19/2016 11:12 AM, Kees Cook wrote:
+>>>>
+>>>>
+>>>> On Thu, Feb 18, 2016 at 5:15 PM, Laura Abbott
+>>>> <labbott@fedoraproject.org>
+>>>> wrote:
+>>>>>
+>>>>>
+>>>>>
+>>>>> In a similar manner to WRITE_AFTER_FREE, add a READ_AFTER_FREE
+>>>>> test to test free poisoning features. Sample output when
+>>>>> no sanitization is present:
+>>>>>
+>>>>> [   22.414170] lkdtm: Performing direct entry READ_AFTER_FREE
+>>>>> [   22.415124] lkdtm: Value in memory before free: 12345678
+>>>>> [   22.415900] lkdtm: Attempting to read from freed memory
+>>>>> [   22.416394] lkdtm: Successfully read value: 12345678
+>>>>>
+>>>>> with sanitization:
+>>>>>
+>>>>> [   25.874585] lkdtm: Performing direct entry READ_AFTER_FREE
+>>>>> [   25.875527] lkdtm: Value in memory before free: 12345678
+>>>>> [   25.876382] lkdtm: Attempting to read from freed memory
+>>>>> [   25.876900] general protection fault: 0000 [#1] SMP
+>>>>>
+>>>>> Signed-off-by: Laura Abbott <labbott@fedoraproject.org>
+>>>>
+>>>>
+>>>>
+>>>> Excellent! Could you mention in the changelog which CONFIG (or runtime
+>>>> values) will change the lkdtm test? (I thought there was a poisoning
+>>>> style that would result in a zero-read instead of a GP?)
+>>>>
+>>>
+>>> There was a zeroing patch in the first draft but given the direction
+>>> things are going, I don't see it going in. I'll mention the debug
+>>> options which will show this though.
+>>
+>>
+>> Ah! Okay, I was having trouble following what was happening. What's
+>> the current state of the use-after-free protections you've been
+>> working on?
+>
+>
+> Based on discussion, the SL*B maintainers want to use the existing
+> slab poisoning features instead adding in new hooks. They also don't
+> want the fast path to be affected at all. This means most of the
+> actual work there is improving the performance of slub_debug=P. I
+> sent out patches for some low hanging fruit in SLUB which improved
+> the performance by a good bit. Those have been Acked and are sitting
+> in Andrew's tree. The next performance work involves more in depth
+> tinkering with the SLUB allocator. Apart from just performance, the
+> other work would be poisoning for caches with ctors in SLUB and
+> poisoning in SLOB. I could use some help with benchmarking some
+> actual use cases to see how usable slub_debug=P would be on some
+> use cases.
+>
+> I did sent out patches for the buddy allocator as well. The last
 
-diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
-new file mode 100644
-index 0000000..ffb56a3
---- /dev/null
-+++ b/Documentation/gcc-plugins.txt
-@@ -0,0 +1,82 @@
-+GCC plugin infrastructure
-+=========================
-+
-+
-+1. Introduction
-+===============
-+
-+GCC plugins are loadable modules that provide extra features to the
-+compiler [1]. They are useful for runtime instrumentation and static analysis.
-+We can analyse, change and add further code during compilation via
-+callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
-+
-+The GCC plugin infrastructure of the kernel supports all gcc versions from
-+4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
-+separate directory.
-+
-+Currently the GCC plugin infrastructure supports only the x86 architecture.
-+
-+This infrastructure was ported from grsecurity [6] and PaX [7].
-+
-+--
-+[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
-+[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
-+[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
-+[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
-+[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
-+[6] https://grsecurity.net/
-+[7] https://pax.grsecurity.net/
-+
-+
-+2. Files
-+========
-+
-+$(src)/tools/gcc
-+	This is the directory of the GCC plugins.
-+
-+$(src)/tools/gcc/gcc-common.h
-+	This is a compatibility header for GCC plugins.
-+	It should be always included instead of individual gcc headers.
-+
-+$(src)/scripts/gcc-plugin.sh
-+	This script checks the availability of the included headers in
-+	gcc-common.h and chooses the proper host compiler to build the plugins
-+	(gcc-4.7 can be built by either gcc or g++).
-+
-+$(src)/tools/gcc/gcc-generate-gimple-pass.h
-+$(src)/tools/gcc/gcc-generate-ipa-pass.h
-+$(src)/tools/gcc/gcc-generate-simple_ipa-pass.h
-+$(src)/tools/gcc/gcc-generate-rtl-pass.h
-+	These headers automatically generate the registration structures for
-+	GIMPLE, SIMPLE_IPA, IPA and RTL passes. They support all gcc versions
-+	from 4.5 to 6.0.
-+	They should be preferred to creating the structures by hand.
-+
-+
-+3. Usage
-+========
-+
-+You must install the gcc plugin headers for your gcc version,
-+e.g., on Ubuntu for gcc-4.9:
-+
-+	apt-get install gcc-4.9-plugin-dev
-+
-+Enable a GCC plugin based feature in the kernel config:
-+
-+	CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
-+
-+To compile only the plugin(s):
-+
-+	make gcc-plugins
-+
-+or just run the kernel make and compile the whole kernel with
-+the cyclomatic complexity GCC plugin.
-+
-+
-+4. How to add a new GCC plugin
-+==============================
-+
-+The GCC plugins are in $(src)/tools/gcc/. You can use a file or a directory
-+here. It must be added to $(src)/tools/gcc/Makefile,
-+$(src)/scripts/Makefile.gcc-plugins and $(src)/arch/Kconfig.
-+See the cyc_complexity_plugin.c (CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) GCC plugin.
-diff --git a/arch/Kconfig b/arch/Kconfig
-index b8b1afc..a490f17 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -377,6 +377,8 @@ config GCC_PLUGIN_CYC_COMPLEXITY
- 	  N = the number of nodes
- 	  P = the number of connected components (exit nodes).
- 
-+	  See Documentation/gcc-plugins.txt for details.
-+
- endmenu # "GCC plugins"
- 
- config HAVE_CC_STACKPROTECTOR
+This must be where my confusion stems. :) IIUC, the buddy allocator is
+used within the SL*B logic when splitting/joining regions? Can we add
+an lkdtm test for this too?
+
+> version I sent out didn't get much in the way of feedback except
+> for some requests for benchmarks on the zeroing. I was planning
+> on following up on that next week to see if there was any more feedback
+> and beg for Acks.
+
+If you can point me at the current tree, I'd be happy to run some benchmarks.
+
+-Kees
+
 -- 
-2.4.1
+Kees Cook
+Chrome OS & Brillo Security
