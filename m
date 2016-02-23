@@ -1,87 +1,126 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160222201335.449323716ca4d929f92424d5@gmail.com>
-References: <20160222201335.449323716ca4d929f92424d5@gmail.com>
-Date: Mon, 22 Feb 2016 16:20:40 -0800
-Message-ID: <CAGXu5jL0-Kq=paYLsq5KC+cKL1-1U=b_CBLuKQr_KtwG2fqdLg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 0/3] Introduce GCC plugin infrastructure
-To: Emese Revfy <re.emese@gmail.com>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+From: Laura Abbott <labbott@fedoraproject.org>
+Date: Mon, 22 Feb 2016 17:27:52 -0800
+Message-Id: <1456190872-30828-3-git-send-email-labbott@fedoraproject.org>
+In-Reply-To: <1456190872-30828-1-git-send-email-labbott@fedoraproject.org>
+References: <1456190872-30828-1-git-send-email-labbott@fedoraproject.org>
+Subject: [kernel-hardening] [PATCH 2/2] lkdtm: Add read/write after free tests for buddy memory
+To: Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@fedoraproject.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 22, 2016 at 11:13 AM, Emese Revfy <re.emese@gmail.com> wrote:
-> This patch set introduce the GCC plugin infrastructure with examples for testing
-> and documentation.
->
-> GCC plugins are loadable modules that provide extra features to the compiler.
-> They are useful for runtime instrumentation and static analysis.
->
-> The infrastructure supports all gcc versions from 4.5 to 6.0, building
-> out-of-tree modules and building in a separate directory. Cross-compilation
-> is supported too but currently only the x86 architecture enables plugins.
->
-> This infrastructure was ported from grsecurity/PaX. It is a CII project
-> supported by the Linux Foundation.
->
-> Emese Revfy (3):
->  GCC plugin infrastructure
->  Add Cyclomatic complexity plugin
->  Documentations of the GCC plugin infrastructre
->
-> Changes from v2:
->  * Fixed incorrectly encoded characters
->  * Generate the GIMPLE, IPA, SIMPLE_IPA and RTL pass structures
->    (Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>)
->  * Write plugin related warning messages to stderr instead of stdout
->    (Suggested-by: Kees Cook <keescook@chromium.org>)
->  * Mention the installation of the gcc plugin headers (Documentation)
->
-> Changes from v1:
->  * Move the gcc-plugins make target into a separate Makefile because there may
->    be a lot of plugins (Suggested-by: Rasmus Villemoes)
->  * Simplify the dependencies of the plugin related config option
->    (Suggested-by: Kees Cook <keescook@chromium.org>)
->  * Removed the unnecessary example plugin
 
-Oh, I totally missed a detail from v2 that still applies to v3:
+The current tests for read/write after free work on slab
+allocated memory. Memory straight from the buddy allocator
+may behave slightly differently and have a different set
+of parameters to test. Add tests for those cases as well.
 
-You're missing your Signed-off-by lines in the patches.
+On a basic x86 boot:
 
-Running each patch through scripts/checkpatch.pl produces a number of
-other warnings (I ignored all the C++isms), mostly around lines >80
-characters, function definitions (missing void), and the suggestion to
-create yourself a MAINTAINTERS line for this directory.
+ # echo WRITE_BUDDY_AFTER_FREE > /sys/kernel/debug/provoke-crash/DIRECT
+[   20.358964] lkdtm: Performing direct entry WRITE_BUDDY_AFTER_FREE
+[   20.359979] lkdtm: Writing to the buddy page before free
+[   20.360943] lkdtm: Writing to the buddy page after free
+[   20.361838] lkdtm: Wrote to free page successfully
 
--Kees
+ # echo READ_BUDDY_AFTER_FREE > /sys/kernel/debug/provoke-crash/DIRECT
+[   32.590826] lkdtm: Performing direct entry READ_BUDDY_AFTER_FREE
+[   32.591692] lkdtm: Value in memory before free: 12345678
+[   32.592459] lkdtm: Attempting to read from freed memory
+[   32.593213] lkdtm: Successfully read value: 12345678
 
-> ---
->  Documentation/dontdiff                   |   1 +
->  Documentation/gcc-plugins.txt            |  80 ++++
->  Makefile                                 |  41 +-
->  arch/Kconfig                             |  24 +
->  arch/x86/Kconfig                         |   1 +
->  init/Makefile                            |   3 +
->  scripts/Makefile.build                   |   2 +-
->  scripts/Makefile.clean                   |   3 +-
->  scripts/Makefile.gcc-plugins             |  30 ++
->  scripts/Makefile.host                    |  69 ++-
->  scripts/gcc-plugin.sh                    |  51 ++
->  scripts/link-vmlinux.sh                  |   2 +-
->  scripts/package/builddeb                 |   1 +
->  tools/gcc/Makefile                       |  19 +
->  tools/gcc/cyc_complexity_plugin.c        |  70 +++
->  tools/gcc/gcc-common.h                   | 794 +++++++++++++++++++++++++++++++
->  tools/gcc/gcc-generate-gimple-pass.h     | 172 +++++++
->  tools/gcc/gcc-generate-ipa-pass.h        | 286 +++++++++++
->  tools/gcc/gcc-generate-rtl-pass.h        | 172 +++++++
->  tools/gcc/gcc-generate-simple_ipa-pass.h | 172 +++++++
->  20 files changed, 1978 insertions(+), 15 deletions(-)
+On x86 with CONFIG_DEBUG_PAGEALLOC and debug_pagealloc=on:
 
+ # echo WRITE_BUDDY_AFTER_FREE > /sys/kernel/debug/provoke-crash/DIRECT
+[   49.761358] lkdtm: Performing direct entry WRITE_BUDDY_AFTER_FREE
+[   49.762177] lkdtm: Writing to the buddy page before free
+[   49.762890] lkdtm: Writing to the buddy page after free
+[   49.763606] BUG: unable to handle kernel paging request at
+ffff880000034000
 
+ # echo READ_BUDDY_AFTER_FREE > /sys/kernel/debug/provoke-crash/DIRECT
+[   20.454176] lkdtm: Performing direct entry READ_BUDDY_AFTER_FREE
+[   20.455198] lkdtm: Value in memory before free: 12345678
+[   20.456107] BUG: unable to handle kernel paging request at
+ffff880000039000
 
+Note that arches without ARCH_SUPPORTS_DEBUG_PAGEALLOC may not
+produce the same crash.
+
+Signed-off-by: Laura Abbott <labbott@fedoraproject.org>
+---
+The examples I gave were for ARCH_SUPPORTS_DEBUG_PAGEALLOC because
+that's going to look different that the slab allocators. With
+page poisoning, the behavior is going to look similar to the slab
+allocators (write will succeed quietly, read should abort).
+---
+ drivers/misc/lkdtm.c | 40 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+
+diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
+index f95a582..2ef99e9 100644
+--- a/drivers/misc/lkdtm.c
++++ b/drivers/misc/lkdtm.c
+@@ -93,6 +93,8 @@ enum ctype {
+ 	CT_OVERWRITE_ALLOCATION,
+ 	CT_WRITE_AFTER_FREE,
+ 	CT_READ_AFTER_FREE,
++	CT_WRITE_BUDDY_AFTER_FREE,
++	CT_READ_BUDDY_AFTER_FREE,
+ 	CT_SOFTLOCKUP,
+ 	CT_HARDLOCKUP,
+ 	CT_SPINLOCKUP,
+@@ -131,6 +133,8 @@ static char* cp_type[] = {
+ 	"OVERWRITE_ALLOCATION",
+ 	"WRITE_AFTER_FREE",
+ 	"READ_AFTER_FREE",
++	"WRITE_BUDDY_AFTER_FREE",
++	"READ_BUDDY_AFTER_FREE",
+ 	"SOFTLOCKUP",
+ 	"HARDLOCKUP",
+ 	"SPINLOCKUP",
+@@ -451,6 +455,42 @@ static void lkdtm_do_action(enum ctype which)
+ 		kfree(val);
+ 		break;
+ 	}
++	case CT_WRITE_BUDDY_AFTER_FREE: {
++		unsigned long p = __get_free_page(GFP_KERNEL);
++		if (!p)
++			break;
++		pr_info("Writing to the buddy page before free\n");
++		memset((void *)p, 0x3, PAGE_SIZE);
++		free_page(p);
++		schedule();
++		pr_info("Writing to the buddy page after free\n");
++		memset((void *)p, 0x78, PAGE_SIZE);
++		pr_info("Wrote to free page successfully\n");
++		break;
++	}
++	case CT_READ_BUDDY_AFTER_FREE: {
++		unsigned long p = __get_free_page(GFP_KERNEL);
++		int *tmp, *val = kmalloc(1024, GFP_KERNEL);
++		int **base;
++
++		if (!p)
++			break;
++
++		if (!val)
++			break;
++
++		base = (int **)p;
++
++		*val = 0x12345678;
++		pr_info("Value in memory before free: %x\n", *val);
++		base[0] = val;
++		free_page(p);
++		tmp = base[0];
++		pr_info("Attempting to read from freed memory\n");
++		pr_info("Successfully read value: %x\n", *tmp);
++		kfree(val);
++		break;
++	}
+ 	case CT_SOFTLOCKUP:
+ 		preempt_disable();
+ 		for (;;)
 -- 
-Kees Cook
-Chrome OS & Brillo Security
+2.5.0
