@@ -1,98 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Laura Abbott <labbott@fedoraproject.org>
-Date: Mon, 22 Feb 2016 17:27:51 -0800
-Message-Id: <1456190872-30828-2-git-send-email-labbott@fedoraproject.org>
-In-Reply-To: <1456190872-30828-1-git-send-email-labbott@fedoraproject.org>
-References: <1456190872-30828-1-git-send-email-labbott@fedoraproject.org>
-Subject: [kernel-hardening] [PATCHv3 1/2] lkdtm: Add READ_AFTER_FREE test
-To: Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@fedoraproject.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Tue, 23 Feb 2016 13:31:31 -0700
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160223203131.GA1797@davidb.org>
+References: <20160216214904.GA23723@www.outflux.net>
+ <56C59DC5.19217.28FA99@pageexec.freemail.hu>
+ <CAKv+Gu_ABQa4L7ZzHMD+-BPLtJf_UO9TfLy0jKFLfCsyQE6dLQ@mail.gmail.com>
+ <56C63747.819.280B3F5@pageexec.freemail.hu>
+ <CAGXu5jKM5RZeTgTonscuLRg-+62S8UWcPbJABWqT4=7HOwb2bA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKM5RZeTgTonscuLRg-+62S8UWcPbJABWqT4=7HOwb2bA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH] lkdtm: add test for executing
+ .rodata
+To: kernel-hardening@lists.openwall.com
+Cc: PaX Team <pageexec@freemail.hu>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Laura Abbott <labbott@redhat.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Mark Rutland <mark.rutland@arm.com>, Jeremy Linton <jeremy.linton@arm.com>, Arnd Bergmann <arnd@arndb.de>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Feb 22, 2016 at 12:46:28PM -0800, Kees Cook wrote:
+>On Thu, Feb 18, 2016 at 1:27 PM, PaX Team <pageexec@freemail.hu> wrote:
+>> On 18 Feb 2016 at 12:34, Ard Biesheuvel wrote:
+>>
+>>> However, that does not fix the issue Kees is trying to solve, where a
+>>> .rodata section is emitted with the "x" bit set, which causes the
+>>> linker to complain:
+>>>
+>>> /tmp/cc50ffWw.s: Assembler messages:
+>>> /tmp/cc50ffWw.s:2: Warning: setting incorrect section attributes for
+>>> .rodata.text
+>>
+>> in that case why not use a top-level asm statement to set the section
+>> and its attributes (and compile the file with fno-toplevel-reorder)?
+>
+>GCC really wants to declare the section. :(
 
-In a similar manner to WRITE_AFTER_FREE, add a READ_AFTER_FREE
-test to test free poisoning features. Sample output when
-no sanitization is present:
+Why not then just use its mechanism to set the section on the code?
 
-[   22.414170] lkdtm: Performing direct entry READ_AFTER_FREE
-[   22.415124] lkdtm: Value in memory before free: 12345678
-[   22.415900] lkdtm: Attempting to read from freed memory
-[   22.416394] lkdtm: Successfully read value: 12345678
+static void do_nothing_rodata(void)
+	__attribute__((section(".rodata")))
+{
+	return;
+}
 
-with slub_debug=P:
-
-[   25.874585] lkdtm: Performing direct entry READ_AFTER_FREE
-[   25.875527] lkdtm: Value in memory before free: 12345678
-[   25.876382] lkdtm: Attempting to read from freed memory
-[   25.876900] general protection fault: 0000 [#1] SMP
-
-Signed-off-by: Laura Abbott <labbott@fedoraproject.org>
----
-v3: Add mention of slub debug option to give example crash.
-Change 'return' to 'break' to better match with the other
-functions.
----
- drivers/misc/lkdtm.c | 34 ++++++++++++++++++++++++++++++++++
- 1 file changed, 34 insertions(+)
-
-diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
-index 11fdadc..f95a582 100644
---- a/drivers/misc/lkdtm.c
-+++ b/drivers/misc/lkdtm.c
-@@ -92,6 +92,7 @@ enum ctype {
- 	CT_UNALIGNED_LOAD_STORE_WRITE,
- 	CT_OVERWRITE_ALLOCATION,
- 	CT_WRITE_AFTER_FREE,
-+	CT_READ_AFTER_FREE,
- 	CT_SOFTLOCKUP,
- 	CT_HARDLOCKUP,
- 	CT_SPINLOCKUP,
-@@ -129,6 +130,7 @@ static char* cp_type[] = {
- 	"UNALIGNED_LOAD_STORE_WRITE",
- 	"OVERWRITE_ALLOCATION",
- 	"WRITE_AFTER_FREE",
-+	"READ_AFTER_FREE",
- 	"SOFTLOCKUP",
- 	"HARDLOCKUP",
- 	"SPINLOCKUP",
-@@ -417,6 +419,38 @@ static void lkdtm_do_action(enum ctype which)
- 		memset(data, 0x78, len);
- 		break;
- 	}
-+	case CT_READ_AFTER_FREE: {
-+		int **base;
-+		int *val, *tmp;
-+		size_t len = 1024;
-+		/*
-+		 * The slub allocator uses the first word to store the free
-+		 * pointer in some configurations. Use the middle of the
-+		 * allocation to avoid running into the freelist
-+		 */
-+		size_t offset = (len/sizeof(int *))/2;
-+
-+		base = kmalloc(len, GFP_KERNEL);
-+		if (!base)
-+			break;
-+
-+		val = kmalloc(len, GFP_KERNEL);
-+		if (!val)
-+			break;
-+
-+		*val = 0x12345678;
-+		pr_info("Value in memory before free: %x\n", *val);
-+
-+		base[offset] = val;
-+		kfree(base);
-+
-+		tmp = base[offset];
-+		pr_info("Attempting to read from freed memory\n");
-+		pr_info("Successfully read value: %x\n", *tmp);
-+
-+		kfree(val);
-+		break;
-+	}
- 	case CT_SOFTLOCKUP:
- 		preempt_disable();
- 		for (;;)
--- 
-2.5.0
+David
