@@ -1,46 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Paolo Bonzini <paolo.bonzini@gmail.com>
+References: <1455561864-4217-1-git-send-email-labbott@fedoraproject.org>
+ <1455561864-4217-2-git-send-email-labbott@fedoraproject.org>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Message-ID: <56CDBCAB.9040001@redhat.com>
+Date: Wed, 24 Feb 2016 15:22:35 +0100
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jLXDmyGqXWqFp4dzmKmmfmZ+dW53200OByS2+0_63CT+Q@mail.gmail.com>
-References: <1455844533-24787-1-git-send-email-labbott@fedoraproject.org>
-	<CAGXu5jLREPiCHSwk1LGKJm0pPGpD8O4S+4xu5=Aw_x+COLBXWg@mail.gmail.com>
-	<56C79301.5040003@redhat.com>
-	<CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
-	<56C7A02F.7070902@redhat.com>
-	<CAGXu5jLdQNx7ineLf0zv67O30ituQ3a8WHKLBN5FzGVjMz27Bg@mail.gmail.com>
-	<56CB866A.8070306@redhat.com>
-	<CAGXu5jLXDmyGqXWqFp4dzmKmmfmZ+dW53200OByS2+0_63CT+Q@mail.gmail.com>
-Date: Tue, 23 Feb 2016 14:37:58 -0800
-Message-ID: <CAGXu5jL8xBHUkZP8_MZk84Zr5efEUGL8z-o0u5_4ybX4CrAmPQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCHv2] lkdtm: Add READ_AFTER_FREE test
-To: Laura Abbott <labbott@redhat.com>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <1455561864-4217-2-git-send-email-labbott@fedoraproject.org>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCHv2 1/4] slub: Drop lock at the end of free_debug_processing
+To: Laura Abbott <labbott@fedoraproject.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <js1304@gmail.com>, Andrew Morton <akpm@linux-foundation.org>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 23, 2016 at 1:25 PM, Kees Cook <keescook@chromium.org> wrote:
 
-> zero poison only:
-> DEBUG_PAGEALLOC=n
-> PAGE_POISONING=y
-> PAGE_POISONING_NO_SANITY=y
-> PAGE_POISONING_ZERO=y
-> page_poison=on
 
-This combo (in next-20160223) results in an unusable system. :(
+On 15/02/2016 19:44, Laura Abbott wrote:
+> -static inline struct kmem_cache_node *free_debug_processing(
+> +static inline int free_debug_processing(
+>  	struct kmem_cache *s, struct page *page,
+>  	void *head, void *tail, int bulk_cnt,
+>  	unsigned long addr, unsigned long *flags) { return NULL; }
 
-[    1.754183] random: init urandom read with 11 bits of entropy available
-[    1.768449] hostname (1171) used greatest stack depth: 11808 bytes left
-[    1.787954] BUG: Bad page map in process init  pte:3d656c6f736e6f63
-pmd:00020067
-[    1.789177] addr:00007f9f68200000 vm_flags:00000070 anon_vma:
-   (null) mapping:ffff88007c314058 index:141
-[    1.790564] file:libdl-2.19.so fault:ext4_filemap_fault
-mmap:ext4_file_mmap readpage:ext4_readpage
+I think this has a leftover flags argument.
 
--Kees
+Paolo
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+> @@ -2648,8 +2646,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
+>  	stat(s, FREE_SLOWPATH);
+>  
+>  	if (kmem_cache_debug(s) &&
+> -	    !(n = free_debug_processing(s, page, head, tail, cnt,
+> -					addr, &flags)))
+> +	    !free_debug_processing(s, page, head, tail, cnt, addr))
