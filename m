@@ -1,64 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Message-Id: <20160226225706.GA11672@kroah.com>
+References: <1456447004-21392-1-git-send-email-labbott@fedoraproject.org> <CAGXu5jKgOwPivXh=eWpX4zuEVd6MfEtJNbh7nwRjitnfNP7_Sw@mail.gmail.com>
+In-Reply-To: <CAGXu5jKgOwPivXh=eWpX4zuEVd6MfEtJNbh7nwRjitnfNP7_Sw@mail.gmail.com>
+Date: Fri, 26 Feb 2016 22:57:07 +0000
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <56D0CF64.10003@redhat.com>
-References: <1455844533-24787-1-git-send-email-labbott@fedoraproject.org>
-	<CAGXu5jLREPiCHSwk1LGKJm0pPGpD8O4S+4xu5=Aw_x+COLBXWg@mail.gmail.com>
-	<56C79301.5040003@redhat.com>
-	<CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
-	<56C7A02F.7070902@redhat.com>
-	<CAGXu5jLdQNx7ineLf0zv67O30ituQ3a8WHKLBN5FzGVjMz27Bg@mail.gmail.com>
-	<56CB866A.8070306@redhat.com>
-	<CAGXu5jLXDmyGqXWqFp4dzmKmmfmZ+dW53200OByS2+0_63CT+Q@mail.gmail.com>
-	<CAGXu5jJz-dWvHFV9jeQhT-r-bTFGxYypBniTjwnw9qp_LhLJ-w@mail.gmail.com>
-	<56CE072F.7060804@redhat.com>
-	<CAGXu5jKq-A+ysyP0TZSK1qT5Scu_9ekHU_GgYaQQJm9ftNjEqw@mail.gmail.com>
-	<CAGXu5jLVwbaGpeHuMuZOc2H3gc=_pQ=Mao6jD71r3ZJ+6eDu_A@mail.gmail.com>
-	<56CE58BA.3080900@redhat.com>
-	<CAGXu5jLWqyhspaeoMs+UBu34340OfmKB8EpWRab5=c1uHwKRqw@mail.gmail.com>
-	<56CF8B0D.40402@redhat.com>
-	<CAGXu5jKZkywRiVNHtwNs7viFjx0WEjoBjCh28fxyK8-d2ORJkw@mail.gmail.com>
-	<56D0CF64.10003@redhat.com>
-Date: Fri, 26 Feb 2016 14:33:17 -0800
-Message-ID: <CAGXu5jKn1pCiHxapHa=b-Xxyem9L_+qn7JvTqUdXj31EycfCJQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCHv2] lkdtm: Add READ_AFTER_FREE test
-To: Laura Abbott <labbott@redhat.com>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCHv2 0/3] LKDTM use after free test updates
+To: Kees Cook <keescook@chromium.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, Laura Abbott <labbott@fedoraproject.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 26, 2016 at 2:19 PM, Laura Abbott <labbott@redhat.com> wrote:
-> I did a quick hack of zero poisoning for the slab allocator and I
-> didn't see any improvement in hackbench performance which is fairly
-> sensitive to slab performance. This doesn't surprise me when I
-> actually think about it.
->
-> Before I sent out my last set of performance optimizations for
-> SLUB debug path, I did a profile with ftrace to see if there was
-> anything else quick I could do. My profiling showed that the
-> poisoning itself was not where most of the allocation time was
-> spent. 25-50% of the time was being spent in removing the CPU slab.
-> Considering poisoning means that the CPU slab is never really used,
-> this can probably be improved. It's worth noting that the
-> PAX_MEMORY_SANITIZE implementation still uses the fast path so it
-> isn't affected here. (The trade off is a minor penalty on the
-> fast path even when poisoning is disabled which isn't acceptable
-> to the maintainers currently.)
+On Fri, Feb 26, 2016 at 01:39:14PM -0800, Kees Cook wrote:
+> On Thu, Feb 25, 2016 at 4:36 PM, Laura Abbott <labbott@fedoraproject.org> wrote:
+> > Hi,
+> >
+> > This is v2 of the LKDTM test update. This is mostly taking the updates
+> > Kees gave for the previous series and bringing it in.
+> >
+> > Laura Abbott (3):
+> >   lkdtm: Add READ_AFTER_FREE test
+> >   lkdtm: Update WRITE_AFTER_FREE test
+> >   lkdtm: Add read/write after free tests for buddy memory
+> >
+> >  drivers/misc/lkdtm.c | 98 ++++++++++++++++++++++++++++++++++++++++++++++++++--
+> >  1 file changed, 95 insertions(+), 3 deletions(-)
+> 
+> Thanks!
+> 
+> Please consider the series:
+> 
+> Acked-by: Kees Cook <keescook@chromium.org>
+> 
+> And, say, while we're at it... Greg, would you mind if I became the
+> lkdtm maintainer?
 
-Oh right, all of this is still the slow path...
+Not at all, I was treating you as one anyway, waiting till I got acks
+from you before committing anything :)
 
-> Basically, until we've optimized other things I don't think the
-> zero poisoning will have a significant effect on performance.
-> The next set of optimizations will involve changing some of the
-> guts of the SLUB allocator. I have some ideas how to approach this
-> but we'll see if they pan out.
+Feel free to send a patch to MAINTAINERS for me to add for this.
 
-And we can't just have a CONFIG for the fast-path sanitization? Then
-it's not in anyone's way, etc?
+thanks,
 
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+greg k-h
