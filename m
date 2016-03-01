@@ -1,75 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5j+x04TOhN42rv+pmR9B=Z63mBrYVH2rA=3GXq-XaD=B+g@mail.gmail.com>
-References: <1455837862-24189-1-git-send-email-linux@rasmusvillemoes.dk>
-	<CAGXu5j+x04TOhN42rv+pmR9B=Z63mBrYVH2rA=3GXq-XaD=B+g@mail.gmail.com>
-Date: Tue, 1 Mar 2016 13:54:50 -0800
-Message-ID: <CAGXu5j+_mPypESS8EXFzHnZxcFX2OkGbxrHT2KN-FM_8TpAr9g@mail.gmail.com>
+Date: Tue, 1 Mar 2016 14:31:17 -0800
 From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC 0/2] format_template attribute
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <20160301223117.GA11371@www.outflux.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PULL] lkdtm update (next)
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: linux-kernel@vger.kernel.org, David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 22, 2016 at 11:31 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Feb 18, 2016 at 3:24 PM, Rasmus Villemoes
-> <linux@rasmusvillemoes.dk> wrote:
->> I've been sitting on this for a while and would like to get some
->> comments; apologies if this is inappropriate for this list. It's also
->> a lot of code for not finding any bugs in the current kernel, but I
->> guess that's good thing. It's on top of Emese's v2 infrastructure. It
->> probably won't build with all gccs; it works for me with gcc 4.9.
->
-> Awesome! The existing checks in gcc are far from sufficient. :)
+Hi,
 
-FWIW, it's possible to test these in my gcc-plugins tree now. If I add
-a bogus format string, I get failures, as expected:
+Please pull these lkdtm changes for next.
 
-kernel/watchdog.c:692:1: error: specifier 1 in 'watchdog/%d' ('%d')
-incompatible with format template 'foobar/%u'
- };
-
-It'd be nice if gcc's "error" included the gcc plugin. Maybe we should
-add something like this to gcc-common.h:
-
-#define plug_error(fmt, args...) error("%s plugin: " fmt, __FILE__, args)
+Thanks!
 
 -Kees
 
->
->>
->> Rasmus Villemoes (2):
->>   plugins: implement format_template attribute
->>   compiler.h: add __format_template
->>
->>  arch/Kconfig                        |  18 ++
->>  drivers/hwmon/applesmc.c            |   2 +-
->>  drivers/staging/speakup/spk_types.h |   2 +-
->>  include/linux/compiler.h            |   7 +
->>  include/linux/smpboot.h             |   2 +-
->>  include/linux/usb.h                 |   2 +-
->>  scripts/Makefile.gcc-plugins        |   4 +
->>  tools/gcc/Makefile                  |   2 +
->>  tools/gcc/format_template.c         | 331 ++++++++++++++++++++++++++++++++++++
->>  9 files changed, 366 insertions(+), 4 deletions(-)
->>  create mode 100644 tools/gcc/format_template.c
->>
->> --
->> 2.1.4
->>
->
-> I wonder if we need something in Documention to explain this, along
-> with our existing __printf markings?
->
-> -Kees
->
-> --
-> Kees Cook
-> Chrome OS & Brillo Security
+The following changes since commit 7d46af2084eabe73ce4dbf06072fded34b58b0c7:
 
+  Merge git://git.kernel.org/pub/scm/linux/kernel/git/davem/sparc (2016-03-01 08:57:34 -0800)
 
+are available in the git repository at:
+
+  git://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git tags/lkdtm-next
+
+for you to fetch changes up to 7c0ae5be821c1b6a700c5506de9b62e95f60df3c:
+
+  lkdtm: improve use-after-free tests (2016-03-01 14:29:16 -0800)
+
+----------------------------------------------------------------
+Become maintainer, add hardening tests for use-after-free and atomic wrapping.
+
+----------------------------------------------------------------
+David Windsor (1):
+      lkdtm: add test for atomic_t underflow/overflow
+
+Kees Cook (2):
+      MAINTAINERS: add myself as lkdtm maintainer
+      lkdtm: improve use-after-free tests
+
+Laura Abbott (3):
+      lkdtm: Add READ_AFTER_FREE test
+      lkdtm: Update WRITE_AFTER_FREE test
+      lkdtm: Add read/write after free tests for buddy memory
+
+ MAINTAINERS          |   5 +++
+ drivers/misc/lkdtm.c | 122 +++++++++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 124 insertions(+), 3 deletions(-)
 
 -- 
 Kees Cook
