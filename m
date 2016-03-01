@@ -1,74 +1,102 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1455844533-24787-1-git-send-email-labbott@fedoraproject.org>
- <CAGXu5jLREPiCHSwk1LGKJm0pPGpD8O4S+4xu5=Aw_x+COLBXWg@mail.gmail.com>
- <56C79301.5040003@redhat.com>
- <CAGXu5jJ9py=VTyPDzAzD87XXUuMAOE-f+x+5eLUns_yxtkDWiA@mail.gmail.com>
- <56C7A02F.7070902@redhat.com>
- <CAGXu5jLdQNx7ineLf0zv67O30ituQ3a8WHKLBN5FzGVjMz27Bg@mail.gmail.com>
- <56CB866A.8070306@redhat.com>
- <CAGXu5jLXDmyGqXWqFp4dzmKmmfmZ+dW53200OByS2+0_63CT+Q@mail.gmail.com>
- <CAGXu5jJz-dWvHFV9jeQhT-r-bTFGxYypBniTjwnw9qp_LhLJ-w@mail.gmail.com>
- <56CE072F.7060804@redhat.com>
- <CAGXu5jKq-A+ysyP0TZSK1qT5Scu_9ekHU_GgYaQQJm9ftNjEqw@mail.gmail.com>
- <CAGXu5jLVwbaGpeHuMuZOc2H3gc=_pQ=Mao6jD71r3ZJ+6eDu_A@mail.gmail.com>
- <56CE58BA.3080900@redhat.com>
- <CAGXu5jLWqyhspaeoMs+UBu34340OfmKB8EpWRab5=c1uHwKRqw@mail.gmail.com>
- <56CF8B0D.40402@redhat.com>
- <CAGXu5jKZkywRiVNHtwNs7viFjx0WEjoBjCh28fxyK8-d2ORJkw@mail.gmail.com>
- <56D0CF64.10003@redhat.com>
- <CAGXu5jKn1pCiHxapHa=b-Xxyem9L_+qn7JvTqUdXj31EycfCJQ@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <56D4F242.8070508@redhat.com>
-Date: Mon, 29 Feb 2016 17:37:06 -0800
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKn1pCiHxapHa=b-Xxyem9L_+qn7JvTqUdXj31EycfCJQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+Date: Tue, 1 Mar 2016 18:14:00 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160301181400.9c623ee9230381da90b89b2a@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2] lkdtm: Add READ_AFTER_FREE test
-To: Kees Cook <keescook@chromium.org>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] [PATCH v4 0/3] Introduce GCC plugin infrastructure
+To: linux-kbuild@vger.kernel.org
+Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/26/2016 02:33 PM, Kees Cook wrote:
-> On Fri, Feb 26, 2016 at 2:19 PM, Laura Abbott <labbott@redhat.com> wrote:
->> I did a quick hack of zero poisoning for the slab allocator and I
->> didn't see any improvement in hackbench performance which is fairly
->> sensitive to slab performance. This doesn't surprise me when I
->> actually think about it.
->>
->> Before I sent out my last set of performance optimizations for
->> SLUB debug path, I did a profile with ftrace to see if there was
->> anything else quick I could do. My profiling showed that the
->> poisoning itself was not where most of the allocation time was
->> spent. 25-50% of the time was being spent in removing the CPU slab.
->> Considering poisoning means that the CPU slab is never really used,
->> this can probably be improved. It's worth noting that the
->> PAX_MEMORY_SANITIZE implementation still uses the fast path so it
->> isn't affected here. (The trade off is a minor penalty on the
->> fast path even when poisoning is disabled which isn't acceptable
->> to the maintainers currently.)
->
-> Oh right, all of this is still the slow path...
->
->> Basically, until we've optimized other things I don't think the
->> zero poisoning will have a significant effect on performance.
->> The next set of optimizations will involve changing some of the
->> guts of the SLUB allocator. I have some ideas how to approach this
->> but we'll see if they pan out.
->
-> And we can't just have a CONFIG for the fast-path sanitization? Then
-> it's not in anyone's way, etc?
->
+This patch set introduce the GCC plugin infrastructure with examples for testing
+and documentation.
 
-I proposed that but it was shot down :(
+GCC plugins are loadable modules that provide extra features to the compiler.
+They are useful for runtime instrumentation and static analysis.
 
-The request was to try and make the slow path work so I'm going to
-do my due diligence there. If it turns out that it still isn't fast
-enough I'll bring it up again but unless we can say that slow path
-is still x% slower even after optimization I don't think it will fly.
+The infrastructure supports all gcc versions from 4.5 to 6.0, building
+out-of-tree modules and building in a separate directory. Cross-compilation
+is supported too but currently only the x86 architecture enables plugins.
 
-> -Kees
->
+This infrastructure was ported from grsecurity/PaX. It is a CII project
+supported by the Linux Foundation.
 
-Thanks,
-Laura
+Emese Revfy (3):
+ GCC plugin infrastructure
+ Add Cyclomatic complexity plugin
+ Documentations of the GCC plugin infrastructre
+
+
+Changes from v3:
+ * Fix some indentation related warnings
+   (Suggested by checkpatch.pl)
+ * Add maintainer entries
+ * Don't run gcc_plugin.sh when the GCC_PLUGINS option is disabled or unsupported
+   (Reported-by: Fengguang Wu <fengguang.wu@intel.com>)
+
+   I found a kbuild bug (or feature?) related to this patch. When a config option is disabled
+   then the symbol gets undefined only when you run make clean.
+   The easiest way to reproduce it is with e.g., CC_STACKPROTECTOR_STRONG:
+
+     * patch in warning here:
+
+diff --git a/Makefile b/Makefile
+index a1a7708..9e6961f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -664,6 +664,7 @@ ifdef CONFIG_CC_STACKPROTECTOR_REGULAR
+ else
+ ifdef CONFIG_CC_STACKPROTECTOR_STRONG
+   stackp-flag := -fstack-protector-strong
++  $(warning AAAAAAAA)
+   ifeq ($(call cc-option, $(stackp-flag)),)
+     $(warning Cannot use CONFIG_CC_STACKPROTECTOR_STRONG: \
+ 	      -fstack-protector-strong not supported by compiler)
+
+     * enable CC_STACKPROTECTOR_STRONG in menuconfig
+     * run make and it prints out the "AAAAAAAA"
+     * enable CC_STACKPROTECTOR_NONE in menuconfig
+     * run make and it prints out the "AAAAAAAA"
+     * run make clean, run make again and it doesn't print out the "AAAAAAAA"
+
+
+Changes from v2:
+ * Fixed incorrectly encoded characters
+ * Generate the GIMPLE, IPA, SIMPLE_IPA and RTL pass structures
+   (Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>)
+ * Write plugin related warning messages to stderr instead of stdout
+   (Suggested-by: Kees Cook <keescook@chromium.org>)
+ * Mention the installation of the gcc plugin headers (Documentation)
+
+
+Changes from v1:
+ * Move the gcc-plugins make target into a separate Makefile because there may
+   be a lot of plugins (Suggested-by: Rasmus Villemoes)
+ * Simplify the dependencies of the plugin related config option
+   (Suggested-by: Kees Cook <keescook@chromium.org>)
+ * Removed the unnecessary example plugin
+---
+ Documentation/dontdiff                   |   1 +
+ Documentation/gcc-plugins.txt            |  82 ++++
+ MAINTAINERS                              |   8 +
+ Makefile                                 |  41 +-
+ arch/Kconfig                             |  24 +
+ arch/x86/Kconfig                         |   1 +
+ init/Makefile                            |   3 +
+ scripts/Makefile.build                   |   2 +-
+ scripts/Makefile.clean                   |   3 +-
+ scripts/Makefile.gcc-plugins             |  32 ++
+ scripts/Makefile.host                    |  69 ++-
+ scripts/gcc-plugin.sh                    |  51 ++
+ scripts/link-vmlinux.sh                  |   2 +-
+ scripts/package/builddeb                 |   1 +
+ tools/gcc/Makefile                       |  19 +
+ tools/gcc/cyc_complexity_plugin.c        |  73 +++
+ tools/gcc/gcc-common.h                   | 803 +++++++++++++++++++++++++++++++
+ tools/gcc/gcc-generate-gimple-pass.h     | 173 +++++++
+ tools/gcc/gcc-generate-ipa-pass.h        | 287 +++++++++++
+ tools/gcc/gcc-generate-rtl-pass.h        | 173 +++++++
+ tools/gcc/gcc-generate-simple_ipa-pass.h | 173 +++++++
+ 21 files changed, 2006 insertions(+), 15 deletions(-)
