@@ -1,35 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Wed, 02 Mar 2016 22:33:20 +0100
-MIME-Version: 1.0
-Message-ID: <56D75C20.3969.4578E077@pageexec.freemail.hu>
-In-reply-to: <CAGXu5j+_3g-DAucJz+CYLZPEUauqfy52FmFDquh4xPOGB3Ek1g@mail.gmail.com>
-References: <20160301181400.9c623ee9230381da90b89b2a@gmail.com>, <20160301181514.dc3dadeb7e18b77a09dddb7f@gmail.com>, <CAGXu5j+_3g-DAucJz+CYLZPEUauqfy52FmFDquh4xPOGB3Ek1g@mail.gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH v4 1/3] GCC plugin infrastructure
-To: Emese Revfy <re.emese@gmail.com>, Kees Cook <keescook@chromium.org>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>
+From: Laura Abbott <labbott@fedoraproject.org>
+Date: Fri,  4 Mar 2016 15:50:46 -0800
+Message-Id: <1457135448-15541-1-git-send-email-labbott@fedoraproject.org>
+Subject: [kernel-hardening] [PATCHv4 0/2] Sanitization of buddy pages
+To: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@fedoraproject.org>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1 Mar 2016 at 14:50, Kees Cook wrote:
+Hi,
 
-> > @@ -124,5 +159,37 @@ quiet_cmd_host-cxxobjs     = HOSTCXX $@
-> >  $(host-cxxobjs): $(obj)/%.o: $(src)/%.cc FORCE
-> >         $(call if_changed_dep,host-cxxobjs)
-> >
-> > +# Compile .c file, create position independent .o file
-> > +# host-cshobjs -> .o
-> > +quiet_cmd_host-cshobjs = HOSTCC  -fPIC $@
-> 
-> Is there a reason to include the -fPIC and -shared (below) in the
-> "quiet" output?
+This is v4 of the santization of buddy pages. This is mostly just a rebase
+and some phrasing tweaks from v2. Kees submitted a rebase of v3 so this is v4.
 
-this is how it used to be before the entire .so building infrastructure
-was nuked from the upstream kernel some time last year IIRC, i only kept
-it alive as it was in PaX. i guess the quiet command was more verbose to
-make it easier to spot shared objects during make which at the time were
-built as dependencies only, not as primary targets (as is the case now
-with the gcc plugins). in any case, this is just a visual clue and i don't
-particularly care about the color of this bikeshed :).
+Kees, I'm hoping you will give your Tested-by and provide some stats from the
+tests you were running before.
+
+Thanks,
+Laura
+
+Laura Abbott (2):
+  mm/page_poison.c: Enable PAGE_POISONING as a separate option
+  mm/page_poisoning.c: Allow for zero poisoning
+
+ Documentation/kernel-parameters.txt |   5 +
+ include/linux/mm.h                  |  11 +++
+ include/linux/poison.h              |   4 +
+ kernel/power/hibernate.c            |  17 ++++
+ mm/Kconfig.debug                    |  39 +++++++-
+ mm/Makefile                         |   2 +-
+ mm/debug-pagealloc.c                | 137 ----------------------------
+ mm/page_alloc.c                     |  13 ++-
+ mm/page_ext.c                       |  10 +-
+ mm/page_poison.c                    | 176 ++++++++++++++++++++++++++++++++++++
+ 10 files changed, 272 insertions(+), 142 deletions(-)
+ delete mode 100644 mm/debug-pagealloc.c
+ create mode 100644 mm/page_poison.c
+
+-- 
+2.5.0
