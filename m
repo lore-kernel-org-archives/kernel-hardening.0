@@ -1,224 +1,142 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 7 Mar 2016 00:07:30 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160307000730.5f5b379d0e88b97fc0112c8e@gmail.com>
-In-Reply-To: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+References: <1455748879-21872-1-git-send-email-keescook@chromium.org>
+ <1455748879-21872-5-git-send-email-keescook@chromium.org>
+From: Christian Borntraeger <borntraeger@de.ibm.com>
+Message-ID: <56DD7B66.7010807@de.ibm.com>
+Date: Mon, 7 Mar 2016 14:00:22 +0100
+MIME-Version: 1.0
+In-Reply-To: <1455748879-21872-5-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v5 5/5] Add sancov plugin
-To: linux-kbuild@vger.kernel.org
-Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org
+Subject: [kernel-hardening] Re: [PATCH v5 4/7] introduce post-init read-only memory
+To: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>
+Cc: David Brown <david.brown@linaro.org>, Andy Lutomirski <luto@amacapital.net>, "H. Peter Anvin" <hpa@zytor.com>, Michael Ellerman <mpe@ellerman.id.au>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, x86@kernel.org, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-arch <linux-arch@vger.kernel.org>, linux-s390 <linux-s390@vger.kernel.org>, Heiko Carstens <heiko.carstens@de.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The sancov gcc plugin inserts a __sanitizer_cov_trace_pc() call
-at the start of basic blocks.
+On 02/17/2016 11:41 PM, Kees Cook wrote:
+> One of the easiest ways to protect the kernel from attack is to reduce
+> the internal attack surface exposed when a "write" flaw is available. By
+> making as much of the kernel read-only as possible, we reduce the
+> attack surface.
+> 
+> Many things are written to only during __init, and never changed
+> again. These cannot be made "const" since the compiler will do the wrong
+> thing (we do actually need to write to them). Instead, move these items
+> into a memory region that will be made read-only during mark_rodata_ro()
+> which happens after all kernel __init code has finished.
+> 
+> This introduces __ro_after_init as a way to mark such memory, and adds
+> some documentation about the existing __read_mostly marking.
+> 
+> Based on work by PaX Team and Brad Spengler.
 
-This plugin is a helper plugin for the kcov feature. It supports
-all gcc versions with plugin support (from gcc-4.5 on).
-It is based on the gcc commit "Add fuzzing coverage support" by Dmitry Vyukov
-(https://gcc.gnu.org/viewcvs/gcc?limit_changes=0&view=revision&revision=231296).
+This seems to crash in the lkdtm module on s390, if the module
+is compiled in.
 
-Signed-off-by: Emese Revfy <re.emese@gmail.com>
----
- arch/Kconfig                 |   9 +++
- scripts/Makefile.gcc-plugins |   7 ++-
- tools/gcc/Makefile           |   2 +
- tools/gcc/sancov_plugin.c    | 133 +++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 149 insertions(+), 2 deletions(-)
- create mode 100644 tools/gcc/sancov_plugin.c
+[    0.360571] Unable to handle kernel pointer dereference in virtual kernel address space
+[    0.360574] Failing address: 0000000000996000 TEID: 0000000000996407
+[    0.360575] Fault in home space mode while using kernel ASCE.
+[    0.360577] AS:0000000000cac007 R3:000000003ffd1007 S:0000000000901600 
+[    0.360665] Oops: 0004 ilc:3 [#1] SMP 
+[    0.360668] Modules linked in:
+[    0.360674] CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.5.0-rc6-next-20160304+ #165
+[    0.360676] task: 000000003de40000 ti: 000000003de48000 task.ti: 000000003de48000
+[    0.360678] Krnl PSW : 0704d00180000000 0000000000c480e8 (lkdtm_module_init+0x28/0x278)
+[    0.360680]            R:0 T:1 IO:1 EX:1 Key:0 M:1 W:0 P:0 AS:3 CC:1 PM:0 RI:0 EA:3
+Krnl GPRS: ffffffffffffffee 0000000055aa55aa 00000000016503a0 00000000000004ef
+[    0.360682]            00000000001001ca 00000000000004f0 0000000000c93370 0000000000000000
+[    0.360683]            0000000000c57008 000000000000006a 0000000000000002 0000000000000000
+[    0.360685]            0000000000c480c0 0000000001650380 000000003de4bd88 000000003de4bd28
+[    0.360698] Krnl Code: 0000000000c480d8: a51b00aa		oill	%r1,170
+           0000000000c480dc: e3f0ffa0ff71	lay	%r15,-96(%r15)
+          #0000000000c480e2: e3e0f0980024	stg	%r14,152(%r15)
+          >0000000000c480e8: c41bffea76c8	stgrl	%r1,996e78
+           0000000000c480ee: c020ffe95e5c	larl	%r2,973da6
+           0000000000c480f4: a7390000		lghi	%r3,0
+           0000000000c480f8: c0d0ffdee974	larl	%r13,8253e0
+           0000000000c480fe: a7c90009		lghi	%r12,9
+[    0.360710] Call Trace:
+[    0.360713] ([<000000003de4be28>] 0x3de4be28)
+[    0.360718] ([<00000000001001da>] do_one_initcall+0xa2/0x1b0)
+[    0.360724] ([<0000000000c0dcf4>] kernel_init_freeable+0x1e4/0x298)
+[    0.360729] ([<00000000007b3cda>] kernel_init+0x2a/0x128)
+[    0.360731] ([<00000000007bcc8e>] kernel_thread_starter+0x6/0xc)
+[    0.360733] ([<00000000007bcc88>] kernel_thread_starter+0x0/0xc)
+[    0.360733] Last Breaking-Event-Address:
+[    0.360735]  [<00000000001001d8>] do_one_initcall+0xa0/0x1b0
+[    0.360735]  
+[    0.360738] Kernel panic - not syncing: Fatal exception: panic_on_oops
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 32583b7..30632fa 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -384,6 +384,15 @@ config GCC_PLUGIN_CYC_COMPLEXITY
- 	  N = the number of nodes
- 	  P = the number of connected components (exit nodes).
- 
-+config GCC_PLUGIN_SANCOV
-+	bool "Helper plugin for the kcov feature"
-+	depends on GCC_PLUGINS
-+	help
-+	  This plugin inserts a __sanitizer_cov_trace_pc() call at the start of
-+	  basic blocks. It supports all gcc versions with plugin support (from
-+	  gcc-4.5 on). It is based on the commit "Add fuzzing coverage support"
-+	  by Dmitry Vyukov <dvyukov@google.com>.
-+
- config HAVE_CC_STACKPROTECTOR
- 	bool
- 	help
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index dd7b56d..dc11503 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -8,8 +8,11 @@ ifneq ($(PLUGINCC),)
- ifdef CONFIG_GCC_PLUGIN_CYC_COMPLEXITY
- GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS := -fplugin=$(objtree)/tools/gcc/cyc_complexity_plugin.so
- endif
--GCC_PLUGINS_CFLAGS := $(GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS)
--export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS GCC_PLUGIN_CYC_COMPLEXITY
-+ifdef CONFIG_GCC_PLUGIN_SANCOV
-+GCC_PLUGIN_SANCOV_CFLAGS := -fplugin=$(objtree)/tools/gcc/sancov_plugin.so
-+endif
-+GCC_PLUGINS_CFLAGS := $(GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS) $(GCC_PLUGIN_SANCOV_CFLAGS)
-+export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS GCC_PLUGIN_CYC_COMPLEXITY GCC_PLUGIN_SANCOV
- ifeq ($(KBUILD_EXTMOD),)
- gcc-plugins:
- 	$(Q)$(MAKE) $(build)=tools/gcc
-diff --git a/tools/gcc/Makefile b/tools/gcc/Makefile
-index 31c72bf..97a923f 100644
---- a/tools/gcc/Makefile
-+++ b/tools/gcc/Makefile
-@@ -13,7 +13,9 @@ endif
- export GCCPLUGINS_DIR HOSTLIBS
- 
- $(HOSTLIBS)-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) := cyc_complexity_plugin.so
-+$(HOSTLIBS)-$(CONFIG_GCC_PLUGIN_SANCOV) += sancov_plugin.so
- 
- always := $($(HOSTLIBS)-y)
- 
- cyc_complexity_plugin-objs := cyc_complexity_plugin.o
-+sancov_plugin-objs := sancov_plugin.o
-diff --git a/tools/gcc/sancov_plugin.c b/tools/gcc/sancov_plugin.c
-new file mode 100644
-index 0000000..5a9179b
---- /dev/null
-+++ b/tools/gcc/sancov_plugin.c
-@@ -0,0 +1,133 @@
-+/*
-+ * Copyright 2011-2016 by Emese Revfy <re.emese@gmail.com>
-+ * Licensed under the GPL v2, or (at your option) v3
-+ *
-+ * Homepage:
-+ * https://github.com/ephox-gcc-plugins/sancov
-+ *
-+ * This plugin inserts a __sanitizer_cov_trace_pc() call at the start of basic blocks.
-+ * It supports all gcc versions with plugin support (from gcc-4.5 on).
-+ * It is based on the commit "Add fuzzing coverage support" by Dmitry Vyukov <dvyukov@google.com>.
-+ *
-+ * You can read about it more here:
-+ *  https://gcc.gnu.org/viewcvs/gcc?limit_changes=0&view=revision&revision=231296
-+ *  http://lwn.net/Articles/674854/
-+ *  https://github.com/google/syzkaller
-+ *  https://lwn.net/Articles/677764/
-+ *
-+ * Usage:
-+ * make run
-+ */
-+
-+#include "gcc-common.h"
-+
-+int plugin_is_GPL_compatible;
-+
-+tree sancov_fndecl;
-+
-+static struct plugin_info sancov_plugin_info = {
-+	.version	= "20160305",
-+	.help		= "sancov plugin\n",
-+};
-+
-+static unsigned int sancov_execute(void)
-+{
-+	basic_block bb;
-+
-+	/* Remove this line when this plugin and kcov will be in the kernel. */
-+	if (!strcmp(DECL_NAME_POINTER(current_function_decl), DECL_NAME_POINTER(sancov_fndecl)))
-+		return 0;
-+
-+	FOR_EACH_BB_FN(bb, cfun) {
-+		const_gimple stmt;
-+		gcall *gcall;
-+		gimple_stmt_iterator gsi = gsi_after_labels(bb);
-+
-+		if (gsi_end_p(gsi))
-+			continue;
-+
-+		stmt = gsi_stmt(gsi);
-+		gcall = as_a_gcall(gimple_build_call(sancov_fndecl, 0));
-+		gimple_set_location(gcall, gimple_location(stmt));
-+		gsi_insert_before(&gsi, gcall, GSI_SAME_STMT);
-+	}
-+	return 0;
-+}
-+
-+#define PASS_NAME sancov
-+
-+#define NO_GATE
-+#define TODO_FLAGS_FINISH TODO_dump_func | TODO_verify_stmts | TODO_update_ssa_no_phi | TODO_verify_flow
-+
-+#include "gcc-generate-gimple-pass.h"
-+
-+static void sancov_start_unit(void __unused *gcc_data, void __unused *user_data)
-+{
-+	tree leaf_attr, nothrow_attr;
-+	tree BT_FN_VOID = build_function_type_list(void_type_node, NULL_TREE);
-+
-+	sancov_fndecl = build_fn_decl("__sanitizer_cov_trace_pc", BT_FN_VOID);
-+
-+	nothrow_attr = tree_cons(get_identifier("nothrow"), NULL, NULL);
-+	decl_attributes(&sancov_fndecl, nothrow_attr, 0);
-+	gcc_assert(TREE_NOTHROW(sancov_fndecl));
-+	leaf_attr = tree_cons(get_identifier("leaf"), NULL, NULL);
-+	decl_attributes(&sancov_fndecl, leaf_attr, 0);
-+}
-+
-+int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
-+{
-+	int i;
-+	struct register_pass_info sancov_plugin_pass_info;
-+	const char * const plugin_name = plugin_info->base_name;
-+	const int argc = plugin_info->argc;
-+	const struct plugin_argument * const argv = plugin_info->argv;
-+	bool enable = true;
-+
-+	static const struct ggc_root_tab gt_ggc_r_gt_sancov[] = {
-+		{
-+			.base = &sancov_fndecl,
-+			.nelt = 1,
-+			.stride = sizeof(sancov_fndecl),
-+			.cb = &gt_ggc_mx_tree_node,
-+			.pchw = &gt_pch_nx_tree_node
-+		},
-+		LAST_GGC_ROOT_TAB
-+	};
-+
-+	/* BBs can be split afterwards?? */
-+	sancov_plugin_pass_info.pass				= make_sancov_pass();
-+#if BUILDING_GCC_VERSION >= 4009
-+	sancov_plugin_pass_info.reference_pass_name		= "asan";
-+#else
-+	sancov_plugin_pass_info.reference_pass_name		= "nrv";
-+#endif
-+	sancov_plugin_pass_info.ref_pass_instance_number	= 0;
-+	sancov_plugin_pass_info.pos_op				= PASS_POS_INSERT_BEFORE;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	for (i = 0; i < argc; ++i) {
-+		if (!strcmp(argv[i].key, "no-sancov")) {
-+			enable = false;
-+			continue;
-+		}
-+		error(G_("unkown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
-+	}
-+
-+	register_callback(plugin_name, PLUGIN_INFO, NULL, &sancov_plugin_info);
-+
-+	if (!enable)
-+		return 0;
-+
-+#if BUILDING_GCC_VERSION < 6000
-+	register_callback(plugin_name, PLUGIN_START_UNIT, &sancov_start_unit, NULL);
-+	register_callback(plugin_name, PLUGIN_REGISTER_GGC_ROOTS, NULL, (void *)&gt_ggc_r_gt_sancov);
-+	register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &sancov_plugin_pass_info);
-+#endif
-+
-+	return 0;
-+}
--- 
-2.4.1
+
+The code in question is
+        /* Make sure we can write to __ro_after_init values during __init */
+        ro_after_init |= 0xAA;
+
+
+The problem is that s390 does not call mark_rodata_ro, instead sections are
+marked read-only earlier. Maybe we should change that. Heiko, Martin?
+
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/parisc/include/asm/cache.h   |  3 +++
+>  include/asm-generic/vmlinux.lds.h |  1 +
+>  include/linux/cache.h             | 14 ++++++++++++++
+>  3 files changed, 18 insertions(+)
+> 
+> diff --git a/arch/parisc/include/asm/cache.h b/arch/parisc/include/asm/cache.h
+> index 3d0e17bcc8e9..df0f52bd18b4 100644
+> --- a/arch/parisc/include/asm/cache.h
+> +++ b/arch/parisc/include/asm/cache.h
+> @@ -22,6 +22,9 @@
+> 
+>  #define __read_mostly __attribute__((__section__(".data..read_mostly")))
+> 
+> +/* Read-only memory is marked before mark_rodata_ro() is called. */
+> +#define __ro_after_init	__read_mostly
+> +
+>  void parisc_cache_init(void);	/* initializes cache-flushing */
+>  void disable_sr_hashing_asm(int); /* low level support for above */
+>  void disable_sr_hashing(void);   /* turns off space register hashing */
+> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+> index e9a81a6a109f..8f5a12ab2f2b 100644
+> --- a/include/asm-generic/vmlinux.lds.h
+> +++ b/include/asm-generic/vmlinux.lds.h
+> @@ -255,6 +255,7 @@
+>  	.rodata           : AT(ADDR(.rodata) - LOAD_OFFSET) {		\
+>  		VMLINUX_SYMBOL(__start_rodata) = .;			\
+>  		*(.rodata) *(.rodata.*)					\
+> +		*(.data..ro_after_init)	/* Read only after init */	\
+>  		*(__vermagic)		/* Kernel version magic */	\
+>  		. = ALIGN(8);						\
+>  		VMLINUX_SYMBOL(__start___tracepoints_ptrs) = .;		\
+> diff --git a/include/linux/cache.h b/include/linux/cache.h
+> index 17e7e82d2aa7..1be04f8c563a 100644
+> --- a/include/linux/cache.h
+> +++ b/include/linux/cache.h
+> @@ -12,10 +12,24 @@
+>  #define SMP_CACHE_BYTES L1_CACHE_BYTES
+>  #endif
+> 
+> +/*
+> + * __read_mostly is used to keep rarely changing variables out of frequently
+> + * updated cachelines. If an architecture doesn't support it, ignore the
+> + * hint.
+> + */
+>  #ifndef __read_mostly
+>  #define __read_mostly
+>  #endif
+> 
+> +/*
+> + * __ro_after_init is used to mark things that are read-only after init (i.e.
+> + * after mark_rodata_ro() has been called). These are effectively read-only,
+> + * but may get written to during init, so can't live in .rodata (via "const").
+> + */
+> +#ifndef __ro_after_init
+> +#define __ro_after_init __attribute__((__section__(".data..ro_after_init")))
+> +#endif
+> +
+>  #ifndef ____cacheline_aligned
+>  #define ____cacheline_aligned __attribute__((__aligned__(SMP_CACHE_BYTES)))
+>  #endif
+> 
