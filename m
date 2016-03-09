@@ -1,72 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 9 Mar 2016 09:32:05 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160309083204.GA30365@gmail.com>
 References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
- <CALCETrVLyg3CJHoFORnmJ+_0WirKck=unBQ8Zu2JUd+WhF6C5g@mail.gmail.com>
- <56DF48EF.2080305@eng.utah.edu>
- <CALCETrVf1uSKJh7zENOgHW6et0wed5goU6AfaTB5RSiBhbCfeA@mail.gmail.com>
-From: Scotty Bauer <sbauer@eng.utah.edu>
-Message-ID: <56DF4CCE.5060103@eng.utah.edu>
-Date: Tue, 8 Mar 2016 15:06:06 -0700
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVf1uSKJh7zENOgHW6et0wed5goU6AfaTB5RSiBhbCfeA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code for
- signal cookies
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, wmealing@redhat.com, Andi Kleen <ak@linux.intel.com>, Abhiram Balasubramanian <abhiram@cs.utah.edu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
+Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code
+ for signal cookies
+To: Scott Bauer <sbauer@eng.utah.edu>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, wmealing@redhat.com, ak@linux.intel.com, luto@amacapital.net, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
+* Scott Bauer <sbauer@eng.utah.edu> wrote:
 
-On 03/08/2016 02:57 PM, Andy Lutomirski wrote:
-> On Tue, Mar 8, 2016 at 1:49 PM, Scotty Bauer <sbauer@eng.utah.edu> wrote:
->>
->>
->> On 03/08/2016 01:58 PM, Andy Lutomirski wrote:
->>> On Tue, Mar 8, 2016 at 12:47 PM, Scott Bauer <sbauer@eng.utah.edu> wrote:
->>>> This patch adds a per-process secret to the task struct which
->>>> will be used during signal delivery and during a sigreturn.
->>>> Also, logic is added in signal.c to generate, place, extract,
->>>> clear and verify the signal cookie.
->>>>
->>>
->>> Potentially silly question: it's been a while since I read the SROP
->>> paper, but would the technique be effectively mitigated if sigreturn
->>> were to zero out the whole signal frame before returning to user mode?
->>>
->>
->> I don't know if I fully understand your question, but I'll respond anyway.
->>
->> SROP is possible because the kernel doesn't know whether or not the
->> incoming sigreturn syscall is in response from a legitimate signal that
->> the kernel had previously delivered and the program handled. So essentially
->> these patches are an attempt to give the kernel a way to verify whether or
->> not the the incoming sigreturn is a valid response or a exploit trying to
->> hijack control of the user program.
->>
-> 
-> I got that part, but I thought that the interesting SROP bit was using
-> sigreturn to return back to a frame where you could just repeat the
-> sigreturn a bunch of times to compute things and do other evil.  I'm
-> wondering whether zeroing the whole frame would make SROP much less
-> interesting to an attacker.
-> 
-> --Andy
-> 
+> This patch adds a per-process secret to the task struct which
+> will be used during signal delivery and during a sigreturn.
+> Also, logic is added in signal.c to generate, place, extract,
+> clear and verify the signal cookie.
 
-Ah, I see now. I believe that would work for subsequent sigreturns but not
-the first.
+>  	/*
+> +	 * Canary value for signal frames placed on user stack.
+> +	 * This helps mitigate "Signal Return oriented program"
+> +	 * exploits in userland.
+> +	 */
+> +	unsigned long sig_cookie;
 
-The paper did talk about actually ROP'ing using sigreturns but I never really
-liked that idea. I think they missed the obvious reason an attacker would use
-SROP. The reason an attacker would use is it gives you an extremely easy
-way to get values into registers.. you just set them to what you want them to be
-then sigret. Previously an attacker would have to find gadgets and ROP around until
-the registers are in a good enough state to do what ever they want. 
+Could you please add a high level description in Documentation
+that explains the attack and the way how this mitigation code
+prevents that kind of attack?
 
-I mostly designed the patches with that in mind instead of actually ROPing with sigret.
+Also, the first changelogs should contain more high level
+description as well. For example, what does the 'verification'
+of the signal cookie mean, and how does it prevent an SROP
+attempt?
 
-I can certainly add zeroing the stack frame, but not sure if there would be a performance
-regression in doing so or if it's really relevant if we keep the cookie.
+All of these patches seem to assume that people reading this code
+know what SROP is and how we defend against it - that is not so.
 
- 
+Thanks,
+
+	Ingo
