@@ -1,31 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 9 Mar 2016 23:07:38 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160309230738.4002920ab1da278a2e0e44a3@gmail.com>
-In-Reply-To: <CAGXu5jLecg2HJqmEHoQr20ZNtgqvcD6b9s9_OsJ42a=7C0+egg@mail.gmail.com>
-References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
-	<20160309090115.GA6964@davidb.org>
-	<CAGXu5jLecg2HJqmEHoQr20ZNtgqvcD6b9s9_OsJ42a=7C0+egg@mail.gmail.com>
-Mime-Version: 1.0
+Date: Wed, 9 Mar 2016 15:22:12 -0700
+From: Jonathan Corbet <corbet@lwn.net>
+Message-ID: <20160309152212.07a9b83b@lwn.net>
+In-Reply-To: <56E09E8B.1010909@eng.utah.edu>
+References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
+	<20160309083204.GA30365@gmail.com>
+	<56E09E8B.1010909@eng.utah.edu>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v5 2/5] GCC plugin infrastructure
-To: Kees Cook <keescook@chromium.org>
-Cc: David Brown <david.brown@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code
+ for signal cookies
+To: Scotty Bauer <sbauer@eng.utah.edu>
+Cc: Ingo Molnar <mingo@kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, wmealing@redhat.com, ak@linux.intel.com, luto@amacapital.net, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 9 Mar 2016 12:50:26 -0800
-Kees Cook <keescook@chromium.org> wrote:
+On Wed, 9 Mar 2016 15:07:07 -0700
+Scotty Bauer <sbauer@eng.utah.edu> wrote:
 
-> > Feel free to fold these into your patch, or, if you prefer, I can send
-> > out separate patches for them.
+> On 03/09/2016 01:32 AM, Ingo Molnar wrote:
+> > 
+> > Could you please add a high level description in Documentation
+> > that explains the attack and the way how this mitigation code
+> > prevents that kind of attack?
+> > 
+> > Also, the first changelogs should contain more high level
+> > description as well. For example, what does the 'verification'
+> > of the signal cookie mean, and how does it prevent an SROP
+> > attempt?
+> > 
+> > All of these patches seem to assume that people reading this code
+> > know what SROP is and how we defend against it - that is not so.
 > 
-> Ah-ha, great! Thanks for testing!
+> I'm going to submit v4 to fix some nits where I'll include the explanation
+> and a change log, I apologize for not doing that here. In the meantime if
+> you don't mind visiting a link I included a brief explanation on previous
+> versions of the patch set.
 > 
-> Emese, if you're not interested in carrying this, I can add it to my tree.
+> https://lkml.org/lkml/2016/2/6/166
 
-I think it is easier if it is in my patch set.
+The curious might also find background information in my article about this
+patch set:
 
--- 
-Emese
+      https://lwn.net/Articles/676803/
+
+(The information still belongs with the patch posting, of course...)
+
+jon
