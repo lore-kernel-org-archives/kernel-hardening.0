@@ -1,68 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
- <CALCETrVLyg3CJHoFORnmJ+_0WirKck=unBQ8Zu2JUd+WhF6C5g@mail.gmail.com>
- <56DF48EF.2080305@eng.utah.edu>
- <CALCETrVf1uSKJh7zENOgHW6et0wed5goU6AfaTB5RSiBhbCfeA@mail.gmail.com>
-From: Scotty Bauer <sbauer@eng.utah.edu>
-Message-ID: <56E09D5C.5090908@eng.utah.edu>
-Date: Wed, 9 Mar 2016 15:02:04 -0700
-MIME-Version: 1.0
-In-Reply-To: <CALCETrVf1uSKJh7zENOgHW6et0wed5goU6AfaTB5RSiBhbCfeA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
+Date: Wed, 9 Mar 2016 23:03:10 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160309230310.057e299e7fb7010541bbf80a@gmail.com>
+In-Reply-To: <20160309090115.GA6964@davidb.org>
+References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
+	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
+	<20160309090115.GA6964@davidb.org>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code for
- signal cookies
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, wmealing@redhat.com, Andi Kleen <ak@linux.intel.com>, Abhiram Balasubramanian <abhiram@cs.utah.edu>
+Subject: Re: [kernel-hardening] [PATCH v5 2/5] GCC plugin infrastructure
+To: David Brown <david.brown@linaro.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, 9 Mar 2016 02:01:15 -0700
+David Brown <david.brown@linaro.org> wrote:
 
+> Feel free to fold these into your patch, or, if you prefer, I can send
+> out separate patches for them.
 
-On 03/08/2016 02:57 PM, Andy Lutomirski wrote:
-> On Tue, Mar 8, 2016 at 1:49 PM, Scotty Bauer <sbauer@eng.utah.edu> wrote:
->>
->>
->> On 03/08/2016 01:58 PM, Andy Lutomirski wrote:
->>> On Tue, Mar 8, 2016 at 12:47 PM, Scott Bauer <sbauer@eng.utah.edu> wrote:
->>>> This patch adds a per-process secret to the task struct which
->>>> will be used during signal delivery and during a sigreturn.
->>>> Also, logic is added in signal.c to generate, place, extract,
->>>> clear and verify the signal cookie.
->>>>
->>>
->>> Potentially silly question: it's been a while since I read the SROP
->>> paper, but would the technique be effectively mitigated if sigreturn
->>> were to zero out the whole signal frame before returning to user mode?
->>>
->>
->> I don't know if I fully understand your question, but I'll respond anyway.
->>
->> SROP is possible because the kernel doesn't know whether or not the
->> incoming sigreturn syscall is in response from a legitimate signal that
->> the kernel had previously delivered and the program handled. So essentially
->> these patches are an attempt to give the kernel a way to verify whether or
->> not the the incoming sigreturn is a valid response or a exploit trying to
->> hijack control of the user program.
->>
-> 
-> I got that part, but I thought that the interesting SROP bit was using
-> sigreturn to return back to a frame where you could just repeat the
-> sigreturn a bunch of times to compute things and do other evil.  I'm
-> wondering whether zeroing the whole frame would make SROP much less
-> interesting to an attacker.
-> 
-> --Andy
-> 
+Thanks, I'll take it.
 
-I've been thinking about this a little bit more. I don't think zeroing the frame
-is a proper mitigation. If an attacker has the ability to write a lot of data to
-the stack they could simply create a new fake signal frame above the current frame.
-In this scenario the kernel would zero the current frame then return somewhere attacker
-controlled, where the attackers payload would then use the next signal frame above
-the zero'd frame.
-
-So while this zeroing would solve a stricter case where an attacker has to keep reusing
-the same frame over and over, perhaps to avoid overwriting a stack cookie, It doesn't solve
-every case. 
-
-Thanks for the good ideas.
+-- 
+Emese
