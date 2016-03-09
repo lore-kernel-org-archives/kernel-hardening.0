@@ -1,75 +1,123 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160309090115.GA6964@davidb.org>
-References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
-	<20160309090115.GA6964@davidb.org>
-Date: Wed, 9 Mar 2016 12:50:26 -0800
-Message-ID: <CAGXu5jLecg2HJqmEHoQr20ZNtgqvcD6b9s9_OsJ42a=7C0+egg@mail.gmail.com>
+In-Reply-To: <1457135448-15541-1-git-send-email-labbott@fedoraproject.org>
+References: <1457135448-15541-1-git-send-email-labbott@fedoraproject.org>
+Date: Wed, 9 Mar 2016 13:00:48 -0800
+Message-ID: <CAGXu5jKa6KyaLjxwyek0Cnx2Po3oD61a5tQEnp_9+kN4+gwKoQ@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v5 2/5] GCC plugin infrastructure
-To: David Brown <david.brown@linaro.org>
-Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCHv4 0/2] Sanitization of buddy pages
+To: Laura Abbott <labbott@fedoraproject.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Vlastimil Babka <vbabka@suse.cz>, Michal Hocko <mhocko@suse.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 9, 2016 at 1:01 AM, David Brown <david.brown@linaro.org> wrote:
-> On Mon, Mar 07, 2016 at 12:04:27AM +0100, Emese Revfy wrote:
+On Fri, Mar 4, 2016 at 3:50 PM, Laura Abbott <labbott@fedoraproject.org> wrote:
+> Hi,
 >
->> This patch allows to build the whole kernel with GCC plugins. It was
->> ported from
->> grsecurity/PaX. The infrastructure supports building out-of-tree modules
->> and
->> building in a separate directory. Cross-compilation is supported too but
->> currently only the x86 architecture enables plugins.
+> This is v4 of the santization of buddy pages. This is mostly just a rebase
+> and some phrasing tweaks from v2. Kees submitted a rebase of v3 so this is v4.
 >
->
-> I've tested this with both ARM and ARM64.  There are some missing
-> headers in the arm64 gcc, reported here:
-> https://bugs.linaro.org/show_bug.cgi?id=2123 (also upstream), but this
-> should work once that is fixed.
->
-> Feel free to fold these into your patch, or, if you prefer, I can send
-> out separate patches for them.
+> Kees, I'm hoping you will give your Tested-by and provide some stats from the
+> tests you were running before.
 
-Ah-ha, great! Thanks for testing!
+Yeah, please consider these:
 
-Emese, if you're not interested in carrying this, I can add it to my tree.
+Tested-by: Kees Cook <keescook@chromium.org>
+
+The benchmarking should be the same as the v3 I reported on, repeated
+here for good measure:
+
+The sanity checks appear to add about 3% additional overhead, but
+poisoning seems to add about 9%.
+
+DEBUG_PAGEALLOC=n
+PAGE_POISONING=y
+PAGE_POISONING_NO_SANITY=y
+PAGE_POISONING_ZERO=y
+
+Run times: 389.23 384.88 386.33
+Mean: 386.81
+Std Dev: 1.81
+
+LKDTM detects nothing, as expected.
+
+
+DEBUG_PAGEALLOC=n
+PAGE_POISONING=y
+PAGE_POISONING_NO_SANITY=y
+PAGE_POISONING_ZERO=n
+slub_debug=P page_poison=on
+
+Run times: 435.63 419.20 422.82
+Mean: 425.89
+Std Dev: 7.05
+
+Overhead: 9.2% vs all disabled
+
+Poisoning confirmed: READ_AFTER_FREE, READ_BUDDY_AFTER_FREE
+Writes not detected, as expected.
+
+
+DEBUG_PAGEALLOC=n
+PAGE_POISONING=y
+PAGE_POISONING_NO_SANITY=y
+PAGE_POISONING_ZERO=y
+slub_debug=P page_poison=on
+
+Run times: 423.44 422.32 424.95
+Mean: 423.57
+Std Dev: 1.08
+
+Overhead 8.7% overhead vs disabled, 0.5% improvement over non-zero
+poison (though only the buddy allocator is using the zero poison).
+
+Poisoning confirmed: READ_AFTER_FREE, READ_BUDDY_AFTER_FREE
+Writes not detected, as expected.
+
+
+DEBUG_PAGEALLOC=n
+PAGE_POISONING=y
+PAGE_POISONING_NO_SANITY=n
+PAGE_POISONING_ZERO=y
+slub_debug=FP page_poison=on
+
+Run times: 454.26 429.46 430.48
+Mean: 438.07
+Std Dev: 11.46
+
+Overhead: 11.7% vs nothing, 3% more overhead than no sanitizing.
+
+All four tests detect correctly.
+
+
+>
+> Thanks,
+> Laura
+>
+> Laura Abbott (2):
+>   mm/page_poison.c: Enable PAGE_POISONING as a separate option
+>   mm/page_poisoning.c: Allow for zero poisoning
+>
+>  Documentation/kernel-parameters.txt |   5 +
+>  include/linux/mm.h                  |  11 +++
+>  include/linux/poison.h              |   4 +
+>  kernel/power/hibernate.c            |  17 ++++
+>  mm/Kconfig.debug                    |  39 +++++++-
+>  mm/Makefile                         |   2 +-
+>  mm/debug-pagealloc.c                | 137 ----------------------------
+>  mm/page_alloc.c                     |  13 ++-
+>  mm/page_ext.c                       |  10 +-
+>  mm/page_poison.c                    | 176 ++++++++++++++++++++++++++++++++++++
+>  10 files changed, 272 insertions(+), 142 deletions(-)
+>  delete mode 100644 mm/debug-pagealloc.c
+>  create mode 100644 mm/page_poison.c
+>
+> --
+> 2.5.0
+>
 
 -Kees
-
->
-> Signed-off-by: David Brown <david.brown@linaro.org>
->
-> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> index 4f799e5..67ee8e3 100644
-> --- a/arch/arm/Kconfig
-> +++ b/arch/arm/Kconfig
-> @@ -54,6 +54,7 @@ config ARM
->         select HAVE_FUNCTION_GRAPH_TRACER if (!THUMB2_KERNEL)
->         select HAVE_FUNCTION_TRACER if (!XIP_KERNEL)
->         select HAVE_GENERIC_DMA_COHERENT
-> +       select HAVE_GCC_PLUGINS
->         select HAVE_HW_BREAKPOINT if (PERF_EVENTS && (CPU_V6 || CPU_V6K ||
-> CPU_V7))
->         select HAVE_IDE if PCI || ISA || PCMCIA
->         select HAVE_IRQ_TIME_ACCOUNTING
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index 8cc6228..6d6e4f8 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -70,6 +70,7 @@ config ARM64
->         select HAVE_FTRACE_MCOUNT_RECORD
->         select HAVE_FUNCTION_TRACER
->         select HAVE_FUNCTION_GRAPH_TRACER
-> +       select HAVE_GCC_PLUGINS
->         select HAVE_GENERIC_DMA_COHERENT
->         select HAVE_HW_BREAKPOINT if PERF_EVENTS
->         select HAVE_IRQ_TIME_ACCOUNTING
-> --
-
-
 
 -- 
 Kees Cook
