@@ -1,49 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 9 Mar 2016 15:22:12 -0700
-From: Jonathan Corbet <corbet@lwn.net>
-Message-ID: <20160309152212.07a9b83b@lwn.net>
-In-Reply-To: <56E09E8B.1010909@eng.utah.edu>
-References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
-	<20160309083204.GA30365@gmail.com>
-	<56E09E8B.1010909@eng.utah.edu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code
- for signal cookies
-To: Scotty Bauer <sbauer@eng.utah.edu>
-Cc: Ingo Molnar <mingo@kernel.org>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, wmealing@redhat.com, ak@linux.intel.com, luto@amacapital.net, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Linus Torvalds <torvalds@linux-foundation.org>
+Sender: keescook@google.com
+In-Reply-To: <20160308210013.15ee166d@lxorguk.ukuu.org.uk>
+References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
+	<1457470075-4586-3-git-send-email-sbauer@eng.utah.edu>
+	<20160308210013.15ee166d@lxorguk.ukuu.org.uk>
+Date: Wed, 9 Mar 2016 22:36:21 -0800
+Message-ID: <CAGXu5j+QSn1bWB41xN8OM+dg+oGeJM9bKb92x9WdsX7tk1kANw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH v3 3/3] SROP mitigation: Add sysctl
+ to disable SROP protection.
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Scott Bauer <sbauer@eng.utah.edu>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, wmealing@redhat.com, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Abhiram Balasubramanian <abhiram@cs.utah.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 9 Mar 2016 15:07:07 -0700
-Scotty Bauer <sbauer@eng.utah.edu> wrote:
+On Tue, Mar 8, 2016 at 1:00 PM, One Thousand Gnomes
+<gnomes@lxorguk.ukuu.org.uk> wrote:
+> On Tue,  8 Mar 2016 13:47:55 -0700
+> Scott Bauer <sbauer@eng.utah.edu> wrote:
+>
+>> This patch adds a sysctl argument to disable SROP protection.
+>
+> Shouldn't it be a sysctl to enable it irrevocably, otherwise if I have DAC
+> capability I can turn off SROP and attack something to get to higher
+> capability levels ?
+>
+> (The way almost all distros are set up its kind of academic but for a
+> properly secured system it might matter).
 
-> On 03/09/2016 01:32 AM, Ingo Molnar wrote:
-> > 
-> > Could you please add a high level description in Documentation
-> > that explains the attack and the way how this mitigation code
-> > prevents that kind of attack?
-> > 
-> > Also, the first changelogs should contain more high level
-> > description as well. For example, what does the 'verification'
-> > of the signal cookie mean, and how does it prevent an SROP
-> > attempt?
-> > 
-> > All of these patches seem to assume that people reading this code
-> > know what SROP is and how we defend against it - that is not so.
-> 
-> I'm going to submit v4 to fix some nits where I'll include the explanation
-> and a change log, I apologize for not doing that here. In the meantime if
-> you don't mind visiting a link I included a brief explanation on previous
-> versions of the patch set.
-> 
-> https://lkml.org/lkml/2016/2/6/166
+Perhaps use proc_dointvec_minmax_sysadmin instead to tie changes
+strictly to CAP_SYS_ADMIN?
 
-The curious might also find background information in my article about this
-patch set:
+-Kees
 
-      https://lwn.net/Articles/676803/
+>
+> Alan
 
-(The information still belongs with the patch posting, of course...)
 
-jon
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
