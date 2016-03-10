@@ -1,57 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 10 Mar 2016 10:43:39 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160310094339.GA5105@gmail.com>
-References: <1457470075-4586-1-git-send-email-sbauer@eng.utah.edu>
- <20160309083204.GA30365@gmail.com>
- <56E09E8B.1010909@eng.utah.edu>
- <20160309152212.07a9b83b@lwn.net>
+Date: Thu, 10 Mar 2016 09:31:44 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160310173144.GA25532@www.outflux.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20160309152212.07a9b83b@lwn.net>
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] SROP Mitigation: Architecture independent code
- for signal cookies
-To: Jonathan Corbet <corbet@lwn.net>
-Cc: Scotty Bauer <sbauer@eng.utah.edu>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, wmealing@redhat.com, ak@linux.intel.com, luto@amacapital.net, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Linus Torvalds <torvalds@linux-foundation.org>
+Subject: [kernel-hardening] [PATCH] s390: disable postinit-readonly for now
+To: Heiko Carstens <heiko.carstens@de.ibm.com>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, linux-kernel@vger.kernel.org, linux-s390@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+This is a temporary fix to let lkdtm run again on s390, though it'll
+still fail the ro_after_init tests. Until rodata and ro_after_init
+sections can be split on s390, disable special handling of ro_after_init.
 
-* Jonathan Corbet <corbet@lwn.net> wrote:
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+for -next ...
+---
+ arch/s390/include/asm/cache.h | 3 +++
+ 1 file changed, 3 insertions(+)
 
-> On Wed, 9 Mar 2016 15:07:07 -0700
-> Scotty Bauer <sbauer@eng.utah.edu> wrote:
-> 
-> > On 03/09/2016 01:32 AM, Ingo Molnar wrote:
-> > > 
-> > > Could you please add a high level description in Documentation
-> > > that explains the attack and the way how this mitigation code
-> > > prevents that kind of attack?
-> > > 
-> > > Also, the first changelogs should contain more high level
-> > > description as well. For example, what does the 'verification'
-> > > of the signal cookie mean, and how does it prevent an SROP
-> > > attempt?
-> > > 
-> > > All of these patches seem to assume that people reading this code
-> > > know what SROP is and how we defend against it - that is not so.
-> > 
-> > I'm going to submit v4 to fix some nits where I'll include the explanation
-> > and a change log, I apologize for not doing that here. In the meantime if
-> > you don't mind visiting a link I included a brief explanation on previous
-> > versions of the patch set.
-> > 
-> > https://lkml.org/lkml/2016/2/6/166
-> 
-> The curious might also find background information in my article about this
-> patch set:
-> 
->       https://lwn.net/Articles/676803/
+diff --git a/arch/s390/include/asm/cache.h b/arch/s390/include/asm/cache.h
+index 4d7ccac5fd1d..22da3b34c655 100644
+--- a/arch/s390/include/asm/cache.h
++++ b/arch/s390/include/asm/cache.h
+@@ -15,4 +15,7 @@
+ 
+ #define __read_mostly __attribute__((__section__(".data..read_mostly")))
+ 
++/* Read-only memory is marked before mark_rodata_ro() is called. */
++#define __ro_after_init __read_mostly
++
+ #endif
+-- 
+2.6.3
 
-Scott, mind including a prominent link to the (excellent!) LWN.net article in the 
-changelog/documentation as well?
 
-Thanks,
-
-	Ingo
+-- 
+Kees Cook
+Chrome OS & Brillo Security
