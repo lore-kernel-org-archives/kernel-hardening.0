@@ -1,170 +1,210 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20160307000329.a51b2b8f4fdb0e60344f0b20@gmail.com>
+In-Reply-To: <20160307000427.c82f18670568e1e656fc9532@gmail.com>
 References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-	<20160307000329.a51b2b8f4fdb0e60344f0b20@gmail.com>
-Date: Fri, 11 Mar 2016 15:19:33 +0900
-Message-ID: <CAK7LNAQ+t3z8R+VB7UvGQQqHZcDq+B_F3W0=zTLzmFs_fSybOw@mail.gmail.com>
+	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
+Date: Fri, 11 Mar 2016 15:25:19 +0900
+Message-ID: <CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
 From: Masahiro Yamada <yamada.masahiro@socionext.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 1/5] Shared library support
+Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
 To: Emese Revfy <re.emese@gmail.com>
 Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Hi Emese,
 
-2016-03-07 8:03 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
-> Infrastructure for building independent shared library targets.
-> This effectively also reverts commit 62e2210798ed38928ab24841e8b4878a
-> (Masahiro Yamada, kbuild: drop shared library support from Makefile.host).
+I am not familiar with GCC plugins.
+
+Comments from the view of Kbuild.
+
+
+2016-03-07 8:04 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
+> This patch allows to build the whole kernel with GCC plugins. It was ported from
+> grsecurity/PaX. The infrastructure supports building out-of-tree modules and
+> building in a separate directory. Cross-compilation is supported too but
+> currently only the x86 architecture enables plugins.
 >
-> Signed-off-by: Emese Revfy <re.emese@gmail.com>
-> ---
->  scripts/Makefile.build |  2 +-
->  scripts/Makefile.clean |  3 ++-
->  scripts/Makefile.host  | 69 +++++++++++++++++++++++++++++++++++++++++++++++++-
->  3 files changed, 71 insertions(+), 3 deletions(-)
+> The directory of the gcc plugins is tools/gcc. You can use a file or a directory
+
+
+Maybe scripts/gcc-plugins/ is better than tools/gcc ?
+
+In the directory "scripts/", we have several tools used during
+building the kernel image.
+We have some optional programs in the directory "tools/", which are not used
+for building the kernel image itself.
+
+Please correct me if I am wrong.
+
+
+
+You sprinkle "gcc-plugins" target in the top Makefile, which I do not like.
+
+Can you descend into scripts/gcc-plugins from scripts/Makefile?
+
+
+ subdir-$(CONFIG_MODVERSIONS) += genksyms
+ subdir-y                     += mod
+ subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+ subdir-$(CONFIG_DTC)         += dtc
+ subdir-$(CONFIG_GDB_SCRIPTS) += gdb
++subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
+
+
+This is how other host tools do, I think.
+
+
+
+
+
 >
-> diff --git a/scripts/Makefile.build b/scripts/Makefile.build
-> index 130a452..bd2a31e 100644
-> --- a/scripts/Makefile.build
-> +++ b/scripts/Makefile.build
-> @@ -60,7 +60,7 @@ endif
->  endif
->
->  # Do not include host rules unless needed
-> -ifneq ($(hostprogs-y)$(hostprogs-m),)
-> +ifneq ($(hostprogs-y)$(hostprogs-m)$(hostlibs-y)$(hostlibs-m)$(hostcxxlibs-y)$(hostcxxlibs-m),)
->  include scripts/Makefile.host
->  endif
->
-> diff --git a/scripts/Makefile.clean b/scripts/Makefile.clean
-> index 55c96cb..e4e88ab 100644
-> --- a/scripts/Makefile.clean
-> +++ b/scripts/Makefile.clean
-> @@ -38,7 +38,8 @@ subdir-ymn    := $(addprefix $(obj)/,$(subdir-ymn))
->  __clean-files  := $(extra-y) $(extra-m) $(extra-)       \
->                    $(always) $(targets) $(clean-files)   \
->                    $(host-progs)                         \
-> -                  $(hostprogs-y) $(hostprogs-m) $(hostprogs-)
-> +                  $(hostprogs-y) $(hostprogs-m) $(hostprogs-) \
-> +                  $(hostlibs-y) $(hostlibs-m) $(hostlibs-)
->
->  __clean-files   := $(filter-out $(no-clean-files), $(__clean-files))
->
-> diff --git a/scripts/Makefile.host b/scripts/Makefile.host
-> index 133edfa..4d180d9 100644
-> --- a/scripts/Makefile.host
-> +++ b/scripts/Makefile.host
-> @@ -20,7 +20,25 @@
->  # Will compile qconf as a C++ program, and menu as a C program.
->  # They are linked as C++ code to the executable qconf
->
-> +# hostprogs-y := conf
-> +# conf-objs  := conf.o libkconfig.so
-> +# libkconfig-objs := expr.o type.o
-> +# Will create a shared library named libkconfig.so that consists of
-> +# expr.o and type.o (they are both compiled as C code and the object files
-> +# are made as position independent code).
-> +# conf.c is compiled as a C program, and conf.o is linked together with
-> +# libkconfig.so as the executable conf.
-> +# Note: Shared libraries consisting of C++ files are not supported
-
-I do not see any use-case for the above.
-
-This series adds cases for "foo.so" as a final target.
-
-
-As an alternative, you can add needed build rules
-into tools/gcc/Makefile, not scripts/Makefile.host
-
-I guess these rule won't be used in other places.
-
-
-
-> +# hostcc-option
-> +# Usage: cflags-y += $(call hostcc-option,-march=winchip-c6,-march=i586)
+> +ccflags-y := $(GCC_PLUGINS_CFLAGS)
+> +asflags-y := $(GCC_PLUGINS_AFLAGS)
 > +
-> +hostcc-option = $(call try-run,\
-> +       $(HOSTCC) $(HOSTCFLAGS) $(HOST_EXTRACFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
+>  obj-y                          := main.o version.o mounts.o
+>  ifneq ($(CONFIG_BLK_DEV_INITRD),y)
+>  obj-y                          += noinitramfs.o
+> diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+> new file mode 100644
+> index 0000000..7c85bf2
+> --- /dev/null
+> +++ b/scripts/Makefile.gcc-plugins
+> @@ -0,0 +1,28 @@
+> +ifdef CONFIG_GCC_PLUGINS
+> +ifeq ($(call cc-ifversion, -ge, 0408, y), y)
+> +PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCXX)" "$(HOSTCXX)" "$(CC)")
+> +else
+> +PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCC)" "$(HOSTCXX)" "$(CC)")
+> +endif
+
+The difference is only the first argument.
+
+Can you make it as follows?
+
+__HOSTCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
+
+PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh
+"$(__HOSTCC)" "$(HOSTCXX)" "$(CC)")
+
+
+I did not come up with a good name for __HOSTCC.
+Feel free to replace it with a better one.
+
+
+
+
+
+> +ifneq ($(PLUGINCC),)
+> +export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS
+> +ifeq ($(KBUILD_EXTMOD),)
+> +gcc-plugins:
+> +       $(Q)$(MAKE) $(build)=tools/gcc
+> +else
+> +gcc-plugins: ;
+> +endif
+> +else
+> +gcc-plugins:
+> +ifeq ($(call cc-ifversion, -ge, 0405, y), y)
+> +       $(warning warning, your gcc installation does not support plugins, perhaps the necessary headers are missing?)
+> +ifeq ($(call cc-ifversion, -ge, 0408, y), y)
+> +       $(CONFIG_SHELL) -x $(srctree)/scripts/gcc-plugin.sh "$(HOSTCXX)" "$(HOSTCXX)" "$(CC)"
+> +else
+> +       $(CONFIG_SHELL) -x $(srctree)/scripts/gcc-plugin.sh "$(HOSTCC)" "$(HOSTCXX)" "$(CC)"
+> +endif
+> +else
+> +       $(warning warning, your gcc version does not support plugins, you should upgrade it to gcc 4.5 at least)
+> +endif
+> +endif
+> +endif
+
+
+These ifdef's are really unreadable.
+I wondered if it could be a bit simpler.
+At least, the deepest one can be resolved with the "__HOSTCC" set above.
+
+
+
+
+> diff --git a/scripts/gcc-plugin.sh b/scripts/gcc-plugin.sh
+> new file mode 100644
+> index 0000000..eaa4fce
+> --- /dev/null
+> +++ b/scripts/gcc-plugin.sh
+> @@ -0,0 +1,51 @@
+> +#!/bin/sh
+> +srctree=$(dirname "$0")
+> +gccplugins_dir=$($3 -print-file-name=plugin)
+> +plugincc=$($1 -E -x c++ - -o /dev/null -I"${srctree}"/../tools/gcc -I"${gccplugins_dir}"/include 2>&1 <<EOF
+> +#include "gcc-common.h"
+
+
+Maybe <gcc-common.h> because it is not located at the same directory?
+
+
+
+> diff --git a/tools/gcc/gcc-common.h b/tools/gcc/gcc-common.h
+> new file mode 100644
+> index 0000000..172850b
+> --- /dev/null
+> +++ b/tools/gcc/gcc-common.h
+> @@ -0,0 +1,830 @@
+> +#ifndef GCC_COMMON_H_INCLUDED
+> +#define GCC_COMMON_H_INCLUDED
 > +
->  __hostprogs := $(sort $(hostprogs-y) $(hostprogs-m))
-> +__hostlibs := $(sort $(hostlibs-y) $(hostlibs-m))
-> +__hostcxxlibs := $(sort $(hostcxxlibs-y) $(hostcxxlibs-m))
->
->  # C code
->  # Executables compiled from a single .c file
-> @@ -42,6 +60,19 @@ host-cxxmulti        := $(foreach m,$(__hostprogs),$(if $($(m)-cxxobjs),$(m)))
->  # C++ Object (.o) files compiled from .cc files
->  host-cxxobjs   := $(sort $(foreach m,$(host-cxxmulti),$($(m)-cxxobjs)))
->
-> +# Shared libaries (only .c supported)
-> +# Shared libraries (.so) - all .so files referenced in "xxx-objs"
-> +host-cshlib    := $(sort $(filter %.so, $(host-cobjs)))
-
-useless.
-
-> +host-cshlib    += $(sort $(filter %.so, $(__hostlibs)))
-> +host-cxxshlib  := $(sort $(filter %.so, $(__hostcxxlibs)))
-> +# Remove .so files from "xxx-objs"
-> +host-cobjs     := $(filter-out %.so,$(host-cobjs))
-> +host-cxxobjs   := $(filter-out %.so,$(host-cxxobjs))
+> +#include "bversion.h"
+> +#if BUILDING_GCC_VERSION >= 6000
+> +#include "gcc-plugin.h"
+> +#else
+> +#include "plugin.h"
+> +#endif
+> +#include "plugin-version.h"
+> +#include "config.h"
+> +#include "system.h"
+> +#include "coretypes.h"
+> +#include "tm.h"
+> +#include "line-map.h"
+> +#include "input.h"
+> +#include "tree.h"
 > +
-> +# Object (.o) files used by the shared libaries
-> +host-cshobjs   := $(sort $(foreach m,$(host-cshlib),$($(m:.so=-objs))))
-> +host-cxxshobjs := $(sort $(foreach m,$(host-cxxshlib),$($(m:.so=-objs))))
+> +#include "tree-inline.h"
+> +#include "version.h"
+> +#include "rtl.h"
+> +#include "tm_p.h"
+> +#include "flags.h"
+> +#include "hard-reg-set.h"
+> +#include "output.h"
+> +#include "except.h"
+> +#include "function.h"
+> +#include "toplev.h"
+> +#include "basic-block.h"
+> +#include "intl.h"
+> +#include "ggc.h"
+> +#include "timevar.h"
 > +
->  # output directory for programs/.o files
->  # hostprogs-y := tools/build may have been specified.
->  # Retrieve also directory of .o files from prog-objs or prog-cxxobjs notation
-> @@ -56,6 +87,10 @@ host-cmulti  := $(addprefix $(obj)/,$(host-cmulti))
->  host-cobjs     := $(addprefix $(obj)/,$(host-cobjs))
->  host-cxxmulti  := $(addprefix $(obj)/,$(host-cxxmulti))
->  host-cxxobjs   := $(addprefix $(obj)/,$(host-cxxobjs))
-> +host-cshlib    := $(addprefix $(obj)/,$(host-cshlib))
-> +host-cxxshlib  := $(addprefix $(obj)/,$(host-cxxshlib))
-> +host-cshobjs   := $(addprefix $(obj)/,$(host-cshobjs))
-> +host-cxxshobjs := $(addprefix $(obj)/,$(host-cxxshobjs))
->  host-objdirs    := $(addprefix $(obj)/,$(host-objdirs))
->
->  obj-dirs += $(host-objdirs)
-> @@ -124,5 +159,37 @@ quiet_cmd_host-cxxobjs     = HOSTCXX $@
->  $(host-cxxobjs): $(obj)/%.o: $(src)/%.cc FORCE
->         $(call if_changed_dep,host-cxxobjs)
->
-> +# Compile .c file, create position independent .o file
-> +# host-cshobjs -> .o
-> +quiet_cmd_host-cshobjs = HOSTCC  -fPIC $@
-> +      cmd_host-cshobjs = $(HOSTCC) $(hostc_flags) -fPIC -c -o $@ $<
-> +$(host-cshobjs): $(obj)/%.o: $(src)/%.c FORCE
-> +       $(call if_changed_dep,host-cshobjs)
+> +#include "params.h"
 > +
-> +# Compile .c file, create position independent .o file
-> +# host-cxxshobjs -> .o
-> +quiet_cmd_host-cxxshobjs       = HOSTCXX -fPIC $@
-> +      cmd_host-cxxshobjs       = $(HOSTCXX) $(hostcxx_flags) -fPIC -c -o $@ $<
-> +$(host-cxxshobjs): $(obj)/%.o: $(src)/%.c FORCE
-> +       $(call if_changed_dep,host-cxxshobjs)
+> +#if BUILDING_GCC_VERSION <= 4009
+> +#include "pointer-set.h"
+> +#else
+> +#include "hash-map.h"
+> +#endif
 > +
-> +# Link a shared library, based on position independent .o files
-> +# *.o -> .so shared library (host-cshlib)
-> +quiet_cmd_host-cshlib  = HOSTLLD -shared $@
-> +      cmd_host-cshlib  = $(HOSTCC) $(HOSTLDFLAGS) -shared -o $@ \
-> +                         $(addprefix $(obj)/,$($(@F:.so=-objs))) \
-> +                         $(HOST_LOADLIBES) $(HOSTLOADLIBES_$(@F))
-> +$(host-cshlib): $(obj)/%: $(host-cshobjs) FORCE
-> +       $(call if_changed,host-cshlib)
+> +#include "emit-rtl.h"
+> +#include "debug.h"
+> +#include "target.h"
+> +#include "langhooks.h"
+> +#include "cfgloop.h"
+> +#include "cgraph.h"
+> +#include "opts.h"
+
+All of these are included by "...", not <...>.
 
 
-Could you use $(call multi-depend, ...)
-if you need to handle multi-object please?
+As mentioned above, I want you to use "..." style
+when you need to use relative path from the source.
 
-Please refer to commit c8589d1e9e01 and commit 97e3226e6e984c8.
-
-But, I still do not see any gcc-plugin that is large enough
-to be linked from multiple objects.
-
+I do not see most of them in tools/gcc/.
 
 
 
