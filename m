@@ -1,71 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 14 Mar 2016 21:52:17 +0100
+Date: Mon, 14 Mar 2016 22:02:47 +0100
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160314215217.7fa20e0c85bfda75dc11b70c@gmail.com>
-In-Reply-To: <CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
+Message-Id: <20160314220247.5d4ea9efe0024820599435d4@gmail.com>
+In-Reply-To: <CAK7LNARmTT2ixjwXWBZJOF+E79NAsRP3fTcfM3Fk9hf1zvFNVA@mail.gmail.com>
 References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
-	<CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
+	<20160307000531.d43ae7df74bfa5e9e9e29087@gmail.com>
+	<CAK7LNARmTT2ixjwXWBZJOF+E79NAsRP3fTcfM3Fk9hf1zvFNVA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
+Subject: [kernel-hardening] Re: [PATCH v5 3/5] Add Cyclomatic complexity GCC plugin
 To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, fengguang.wu@intel.com, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 11 Mar 2016 15:25:19 +0900
+On Fri, 11 Mar 2016 15:26:39 +0900
 Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
 
-> Maybe scripts/gcc-plugins/ is better than tools/gcc ?
-> 
-> In the directory "scripts/", we have several tools used during
-> building the kernel image.
-> We have some optional programs in the directory "tools/", which are not used
-> for building the kernel image itself.
-> 
-> Please correct me if I am wrong.
-
-I think scripts isn't the right place because there are tools there which don't get used
-during the building of vmlinux (e.g., coccinelle, checkpatch). 
-The scripts name also doesn't describe gcc plugins well. Plugins take part in the image building process
-in a different way than these tools and scripts do.
-Since there doesn't seen to be a good place for compiler plugins, maybe we should create a new toplevel directory
-called "build". Compiler plugins and other existing build tools could live there. What do you think?
-
-> > +ccflags-y := $(GCC_PLUGINS_CFLAGS)
-> > +asflags-y := $(GCC_PLUGINS_AFLAGS)
-> > +
-> >  obj-y                          := main.o version.o mounts.o
-> >  ifneq ($(CONFIG_BLK_DEV_INITRD),y)
-> >  obj-y                          += noinitramfs.o
 > > diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-> > new file mode 100644
-> > index 0000000..7c85bf2
-> > --- /dev/null
+> > index 7c85bf2..dd7b56d 100644
+> > --- a/scripts/Makefile.gcc-plugins
 > > +++ b/scripts/Makefile.gcc-plugins
-> > @@ -0,0 +1,28 @@
-> > +ifdef CONFIG_GCC_PLUGINS
-> > +ifeq ($(call cc-ifversion, -ge, 0408, y), y)
-> > +PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCXX)" "$(HOSTCXX)" "$(CC)")
-> > +else
-> > +PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCC)" "$(HOSTCXX)" "$(CC)")
+> > @@ -5,7 +5,11 @@ else
+> >  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(HOSTCC)" "$(HOSTCXX)" "$(CC)")
+> >  endif
+> >  ifneq ($(PLUGINCC),)
+> > -export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS
+> > +ifdef CONFIG_GCC_PLUGIN_CYC_COMPLEXITY
+> > +GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS := -fplugin=$(objtree)/tools/gcc/cyc_complexity_plugin.so
 > > +endif
-> 
-> The difference is only the first argument.
-> 
-> Can you make it as follows?
-> 
-> __HOSTCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
-> 
-> PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh
-> "$(__HOSTCC)" "$(HOSTCXX)" "$(CC)")
+> > +GCC_PLUGINS_CFLAGS := $(GCC_PLUGIN_CYC_COMPLEXITY_CFLAGS)
+> > +export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGINS_AFLAGS GCC_PLUGIN_CYC_COMPLEXITY
 > 
 > 
-> I did not come up with a good name for __HOSTCC.
-> Feel free to replace it with a better one.
+> Do you need to export "GCC_PLUGIN_CYC_COMPLEXITY"?
+> I do not see any reference to it.
 
-Sure, I will do it.
+This is a demo plugin. I just want to demonstrate how to use this infrastructure but I can remove it.
+In my project there would be other plugins which use the export.
+
+> If we expect more and more plugins in the future,
+> is it better to do like this?
+> 
+> gcc-plugin-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY)  += cyc_complexity_plugin.so
+> gcc-plugin-$(CONFIG_GCC_PLUGIN_SANCOV)          += sancov_plugin.so
+> gcc-plugin-$(CONFIG_GCC_PLUGIN_FOO)             += foo_plugin.so
+> 
+> 
+> GCC_PLUGINS_CFLAGS := $(addprefix -fplugin=$(objtree)/tools/gcc/,
+> $(gcc-plugin-y))
+
+Yes, it is better, I will do it.
 
 -- 
 Emese
