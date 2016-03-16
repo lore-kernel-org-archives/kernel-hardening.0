@@ -1,104 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <56E72C58.28997.25D483C7@pageexec.freemail.hu>
+In-Reply-To: <20160314215217.7fa20e0c85bfda75dc11b70c@gmail.com>
 References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
 	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
 	<CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
-	<56E72C58.28997.25D483C7@pageexec.freemail.hu>
-Date: Wed, 16 Mar 2016 16:34:02 +0900
-Message-ID: <CAK7LNAQjjTdkO454bL9h=ad_LzCnW_s4qO9gJmOUvVCH_1b+GQ@mail.gmail.com>
+	<20160314215217.7fa20e0c85bfda75dc11b70c@gmail.com>
+Date: Wed, 16 Mar 2016 16:41:36 +0900
+Message-ID: <CAK7LNARDyW3Si45rUaUpHhhmqO4hmN-mTdVK4zxqg23cuByAtQ@mail.gmail.com>
 From: Masahiro Yamada <yamada.masahiro@socionext.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
-To: pageexec@freemail.hu
-Cc: Emese Revfy <re.emese@gmail.com>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, fengguang.wu@intel.com, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+To: Emese Revfy <re.emese@gmail.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, fengguang.wu@intel.com, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi PaX,
+Hi Emese,
 
-
-2016-03-15 6:25 GMT+09:00 PaX Team <pageexec@freemail.hu>:
-> On 11 Mar 2016 at 15:25, Masahiro Yamada wrote:
+2016-03-15 5:52 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
+> On Fri, 11 Mar 2016 15:25:19 +0900
+> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
 >
->> > diff --git a/scripts/gcc-plugin.sh b/scripts/gcc-plugin.sh
->> > new file mode 100644
->> > index 0000000..eaa4fce
->> > --- /dev/null
->> > +++ b/scripts/gcc-plugin.sh
->> > @@ -0,0 +1,51 @@
->> > +#!/bin/sh
->> > +srctree=$(dirname "$0")
->> > +gccplugins_dir=$($3 -print-file-name=plugin)
->> > +plugincc=$($1 -E -x c++ - -o /dev/null -I"${srctree}"/../tools/gcc -I"${gccplugins_dir}"/include 2>&1 <<EOF
->> > +#include "gcc-common.h"
+>> Maybe scripts/gcc-plugins/ is better than tools/gcc ?
 >>
+>> In the directory "scripts/", we have several tools used during
+>> building the kernel image.
+>> We have some optional programs in the directory "tools/", which are not used
+>> for building the kernel image itself.
 >>
->> Maybe <gcc-common.h> because it is not located at the same directory?
+>> Please correct me if I am wrong.
 >
-> [snip]
->> > +#include "emit-rtl.h"
->> > +#include "debug.h"
->> > +#include "target.h"
->> > +#include "langhooks.h"
->> > +#include "cfgloop.h"
->> > +#include "cgraph.h"
->> > +#include "opts.h"
->>
->> All of these are included by "...", not <...>.
->>
->>
->> As mentioned above, I want you to use "..." style
->> when you need to use relative path from the source.
->>
->> I do not see most of them in tools/gcc/.
->
-> no, that'd be incorrect for several reasons. first, the rule to use <...> vs. "..."
-> include directives is not about the header being in the same directory but whether
-> the header is a system header or one provided by the given program. roughly speaking,
-> system headers are those that are available through the compiler's default include
-> paths (gcc's own headers, those of glibc and other libraries under /usr/include, etc).
-> gcc plugin headers are *not* available by default, one has to query the compiler about
-> their path (see -print-file-name=plugin above) and explicitly add it to the compiler's
-> include search path.
+> I think scripts isn't the right place because there are tools there which don't get used
+> during the building of vmlinux (e.g., coccinelle, checkpatch).
 
-Are you sure?
+No, this is not what I meant.
 
-I'd recommend you to read the following:
-https://gcc.gnu.org/onlinedocs/cpp/Search-Path.html
+What I want to say is:
+All the host tools used for building vmlinux should be located in the
+directory "scripts/",
+but the directory may also other host tools that are not used for
+building vmlinux (such as checkpatch).
 
 
-scripts/gcc-plugin.sh adds
-  - ${srctree}"/../tools/gcc
-  - ${gccplugins_dir}/include
+> The scripts name also doesn't describe gcc plugins well.
 
-to the header search path with "-I" option.
-
-
-GCC looks for headers requested with #include <file>
-in directories specified with "-I" as well as in the default ones.
+With my suggestion "scripts/gcc-plugins/",
+the sub-directory name describes it very well.
 
 
+> Plugins take part in the image building process
+> in a different way than these tools and scripts do.
+> Since there doesn't seen to be a good place for compiler plugins, maybe we should create a new toplevel directory
+> called "build". Compiler plugins and other existing build tools could live there. What do you think?
 
-> second, regardless of whether plugin headers are available by default or not, we
-> still couldn't use them during cross-compilation as the plugin headers we want are
-> those of the target compiler (that will load the plugin eventually), not that of
-> the host compiler (which merely compiles the plugin and in theory doesn't even have
-> to be gcc or a plugin capable gcc).
+In my understanding, they are plug-in'ed into the cross-compiler that
+compiles vmlinux.
 
-So, how could this be the reason why we should avoid #include <file>?
-
-
-
-> for these reasons the correct include directive is "..." and not <...>. if it helps
-> to understand the situation better, consider that gcc plugins are to gcc as kernel
-> modules are to vmlinux and all kernel headers are included via "..." as well, regardless
-> of whether they're in the same directory or not.
-
-Of course, you could use #include "..." as well to include kernel headers,
-but you should not do that.
-
-You should do so only when you need to include headers that are local
-to your directory.
+If so, GCC plugins should be happy in "scripts/"
+because Kbuild descends into "scripts/" before building any objects for vmlinux.
 
 
 -- 
