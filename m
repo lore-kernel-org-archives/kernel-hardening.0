@@ -1,71 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160317084911.GA3995@osiris>
-References: <20160310173144.GA25532@www.outflux.net>
-	<56E9B860.2060802@de.ibm.com>
-	<20160317084911.GA3995@osiris>
-Date: Mon, 21 Mar 2016 12:33:39 -0700
-Message-ID: <CAGXu5j+HYN5JvBfrU-gfbuVyh_Zd=MpoqqPrG69z2MTh14tqAA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] s390: disable postinit-readonly for now
-To: Heiko Carstens <heiko.carstens@de.ibm.com>
-Cc: Christian Borntraeger <borntraeger@de.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, LKML <linux-kernel@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>
+Message-ID: <1458736327.5889.19.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Wed, 23 Mar 2016 13:32:07 +0100
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-I/YDEVA7cCu60UEtO7HF"
+Mime-Version: 1.0
+Subject: [kernel-hardening] [CSW16] Getting Physical: Extreme Abuse of Intel Based Paging
+ Systems
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 17, 2016 at 1:49 AM, Heiko Carstens
-<heiko.carstens@de.ibm.com> wrote:
-> On Wed, Mar 16, 2016 at 08:47:44PM +0100, Christian Borntraeger wrote:
->> On 03/10/2016 06:31 PM, Kees Cook wrote:
->> > This is a temporary fix to let lkdtm run again on s390, though it'll
->> > still fail the ro_after_init tests. Until rodata and ro_after_init
->> > sections can be split on s390, disable special handling of ro_after_init.
->> >
->> > Signed-off-by: Kees Cook <keescook@chromium.org>
->> > ---
->> > for -next ...
->>
->> Given that the other patches are already merged in linus master via Ingo,
->> do you want this to go via Ingo as well?
->
-> Let's route this via the s390 tree. I will add another patch to get rid of
-> the bogus "This architecture does not have kernel memory protection."
-> message printed to the console, just like parisc.
 
-Yeah, we need to identify the 4 cases we have:
+--=-I/YDEVA7cCu60UEtO7HF
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-1- no memory protection
-2- .rodata is ro after init (implements mark_rodata_ro(), can do
-__ro_after_init)
-3- .rodata is ro before init only and has no __ro_after_init
-4- .rodata is ro before init and implements mark_rodata_ro() for __ro_after_init
+[wasn't sure whether I should cross-post to oss-sec or not]
 
-What I have it reporting is misleading; I wrote it with ARM in mind
-("1" without correct CONFIGs), rather than s390 and parisc ("3").
+In case some people would be interested, Nicolas Economou and Enrique Nissi=
+m
+gave a presentation last week at CanSecWest about what you can do with a
+kernel arbitrary write with current paging situation on Intel hardware, in
+Linux and Windows. The slides (and code for Linux) are available at:
 
--Kees
+https://github.com/n3k/CansecWest2016_Getting_Physical_Extreme_Abuse_of_Int=
+el_
+Based_Paging_Systems/
 
->
->> > ---
->> >  arch/s390/include/asm/cache.h | 3 +++
->> >  1 file changed, 3 insertions(+)
->> >
->> > diff --git a/arch/s390/include/asm/cache.h b/arch/s390/include/asm/cache.h
->> > index 4d7ccac5fd1d..22da3b34c655 100644
->> > --- a/arch/s390/include/asm/cache.h
->> > +++ b/arch/s390/include/asm/cache.h
->> > @@ -15,4 +15,7 @@
->> >
->> >  #define __read_mostly __attribute__((__section__(".data..read_mostly")))
->> >
->> > +/* Read-only memory is marked before mark_rodata_ro() is called. */
->> > +#define __ro_after_init __read_mostly
->> > +
->
+There might be (a lot of) other way to exploit a running kernel with an
+arbitrary write, but it's still quite interesting.
+
+The authors give some advice at the end (slide 84 =E2=80=9CLinux conclusion=
+=E2=80=9D):
+
+- Paging tables shouldn=E2=80=99t be in *fixed addresses*
+=C2=A0 - It can be abused by LOCAL and REMOTE kernel exploits
+- All fixed paging structures should be *read-only*
+- Some advice, compile the kernel with Grsec ;-)
+
+Regards,
+--=20
+Yves-Alexis
 
 
+--=-I/YDEVA7cCu60UEtO7HF
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJW8ozHAAoJEG3bU/KmdcClPPcH/A93WurWFG4hOgonyYwUVQiB
+7vqCv7jmRzVED5CuGZRiQTOHsv5YkynN7ND6qxP6Y5d0zZy/ZLjBmXGQBl/234+q
+rwboXInI4kSh4lk1qs9B+lw5d6ETU3cNOgpGUIvhAdsq2s3/Mz4p+uuG8ZLHr9JK
+qt/9SxGGtl80OwJ0SA6rxeDJTNHF35W2gavr2Sw0ezanrglrDvyYpQwCqJUVfayy
+43QwutP0CMsATeMV/OD2W3wylRtBCw7fpxzLhRb+3M0+4Lt1bOdIe7fPQdz8BbNY
+ZJpgIMiednblXDPG0/UKKVtTWvLtLH3/iVJOO0rH3hYeVU9BTRQNc05n1eKjS1o=
+=LQEu
+-----END PGP SIGNATURE-----
+
+--=-I/YDEVA7cCu60UEtO7HF--
