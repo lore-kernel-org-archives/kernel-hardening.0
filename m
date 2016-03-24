@@ -1,154 +1,228 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Thu, 24 Mar 2016 03:53:56 +0100
-Message-Id: <1458788042-26173-3-git-send-email-mic@digikod.net>
+Date: Thu, 24 Mar 2016 03:53:57 +0100
+Message-Id: <1458788042-26173-4-git-send-email-mic@digikod.net>
 In-Reply-To: <1458788042-26173-1-git-send-email-mic@digikod.net>
 References: <1458784008-16277-1-git-send-email-mic@digikod.net>
  <1458788042-26173-1-git-send-email-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v1 11/17] selftest/seccomp: Add argeval_open_whitelist test
+Subject: [kernel-hardening] [RFC v1 12/17] audit,seccomp: Extend audit with seccomp state
 To: linux-security-module@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Test a basic sandbox adding a checker group and using it for path
-filtering.
+Extend the audit framework to known if we are in a seccomp filter
+evaluation or not.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Eric Paris <eparis@redhat.com>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Paul Moore <pmoore@redhat.com>
 Cc: Will Drewry <wad@chromium.org>
 ---
- tools/testing/selftests/seccomp/seccomp_bpf.c | 114 ++++++++++++++++++++++++++
- 1 file changed, 114 insertions(+)
+ include/linux/audit.h | 25 +++++++++++++++++++++++++
+ kernel/audit.h        |  3 +++
+ kernel/auditsc.c      | 36 ++++++++++++++++++++++++++++++++++--
+ kernel/seccomp.c      | 21 ++++++++++++++++++---
+ 4 files changed, 80 insertions(+), 5 deletions(-)
 
-diff --git a/tools/testing/selftests/seccomp/seccomp_bpf.c b/tools/testing/selftests/seccomp/seccomp_bpf.c
-index 8b1a6bfc64a1..49c5d39c30a4 100644
---- a/tools/testing/selftests/seccomp/seccomp_bpf.c
-+++ b/tools/testing/selftests/seccomp/seccomp_bpf.c
-@@ -2237,6 +2237,120 @@ TEST(field_is_valid_syscall)
- 	EXPECT_EQ(-1, syscall(__NR_getpid));
- 	EXPECT_EQ(EINVAL, errno);
+diff --git a/include/linux/audit.h b/include/linux/audit.h
+index b40ed5df5542..480df19473d9 100644
+--- a/include/linux/audit.h
++++ b/include/linux/audit.h
+@@ -230,6 +230,8 @@ extern void __audit_free(struct task_struct *task);
+ extern void __audit_syscall_entry(int major, unsigned long a0, unsigned long a1,
+ 				  unsigned long a2, unsigned long a3);
+ extern void __audit_syscall_exit(int ret_success, long ret_value);
++extern void __audit_seccomp_entry(void);
++extern void __audit_seccomp_exit(int do_free);
+ extern struct filename *__audit_reusename(const __user char *uptr);
+ extern void __audit_getname(struct filename *name);
+ 
+@@ -270,17 +272,40 @@ static inline void audit_syscall_exit(void *pt_regs)
+ 		__audit_syscall_exit(success, return_code);
+ 	}
  }
 +
-+#define PATH_DEV_NULL "/dev/null"
-+#define PATH_DEV_ZERO "/dev/zero"
-+
-+/* The sandbox0 allow opening only @allowed_path */
-+void apply_sandbox0(struct __test_metadata *_metadata, const char *allowed_path)
++static inline void audit_seccomp_entry(void)
 +{
-+	struct sock_filter filter0[] = {
-+		/* Only care about open(2) */
-+		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
-+				offsetof(struct seccomp_data, nr)),
-+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_open, 0, 1),
-+		/* Check the objects of group 5 matching the first argument */
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ARGEVAL | 1 << 8 | 5),
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
-+	};
-+	struct sock_fprog prog0 = {
-+		.len = (unsigned short)ARRAY_SIZE(filter0),
-+		.filter = filter0,
-+	};
-+	struct sock_filter filter1[] = {
-+		/* Does not need to check for arch nor syscall number because
-+		 * of the @checker_group check
-+		 */
-+		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
-+				offsetof(struct seccomp_data, checker_group)),
-+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, 5, 1, 0),
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
-+		/* Kill if not a valid syscall (unknown open‽) */
-+		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
-+				offsetof(struct seccomp_data, is_valid_syscall)),
-+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, 1, 1, 0),
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_KILL),
-+		/* Denied access if the first argument was not validated by the
-+		 * checker.
-+		 */
-+		BPF_STMT(BPF_LD|BPF_W|BPF_ABS, match_arg(0)),
-+		/* Match the first two checkers, if any */
-+		BPF_JUMP(BPF_JMP|BPF_JSET|BPF_K, 3, 0, 1),
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
-+		/* Use an impossible errno value to ensure it comes from our
-+		 * filter (should be EACCES most of the time).
-+		 */
-+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ERRNO | E2BIG),
-+	};
-+	struct sock_fprog prog1 = {
-+		.len = (unsigned short)ARRAY_SIZE(filter1),
-+		.filter = filter1,
-+	};
-+	struct seccomp_object_path path0 = SECCOMP_MAKE_PATH_DENTRY(allowed_path);
-+	struct seccomp_checker checker0[] = {
-+		SECCOMP_MAKE_OBJ_PATH(FS_LITERAL, &path0),
-+	};
-+	/* Group 5 */
-+	struct seccomp_checker_group checker_group0 = {
-+		.version = 1,
-+		.id = 5,
-+		.len = ARRAY_SIZE(checker0),
-+		.checkers = &checker0,
-+	};
-+
-+	/* Set up the test sandbox */
-+	ASSERT_EQ(0, prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-+		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
-+	}
-+	/* Load the path checkers */
-+	EXPECT_EQ(0, seccomp(SECCOMP_ADD_CHECKER_GROUP, 0, &checker_group0)) {
-+		TH_LOG("Failed to add checker group!");
-+	}
-+	/* Load filters in reverse order */
-+	EXPECT_EQ(0, seccomp(SECCOMP_SET_MODE_FILTER, 0, &prog1)) {
-+		TH_LOG("Failed to install filter!");
-+	}
-+	EXPECT_EQ(0, seccomp(SECCOMP_SET_MODE_FILTER,
-+				SECCOMP_FILTER_FLAG_TSYNC, &prog0)) {
-+		TH_LOG("Failed to install filter!");
-+	}
++	if (unlikely(current->audit_context))
++		__audit_seccomp_entry();
 +}
 +
-+TEST(argeval_open_whitelist)
++static inline void audit_seccomp_exit(int do_free)
 +{
-+	int fd;
-+
-+	/* Validate the first test file */
-+	fd = open(PATH_DEV_ZERO, O_RDONLY);
-+	EXPECT_NE(-1, fd) {
-+		TH_LOG("Failed to open " PATH_DEV_ZERO);
-+	}
-+	close(fd);
-+
-+	/* Validate the second test file */
-+	fd = open(PATH_DEV_NULL, O_RDONLY);
-+	EXPECT_NE(-1, fd) {
-+		TH_LOG("Failed to open " PATH_DEV_NULL);
-+	}
-+	close(fd);
-+
-+	apply_sandbox0(_metadata, PATH_DEV_ZERO);
-+
-+	/* Allowed file */
-+	fd = open(PATH_DEV_ZERO, O_RDONLY);
-+	EXPECT_NE(-1, fd) {
-+		TH_LOG("Failed to open " PATH_DEV_ZERO);
-+	}
-+	close(fd);
-+
-+	/* Denied file (by the filter) */
-+	fd = open(PATH_DEV_NULL, O_RDONLY);
-+	EXPECT_EQ(-1, fd) {
-+		TH_LOG("Could open " PATH_DEV_NULL);
-+	}
-+	EXPECT_EQ(E2BIG, errno);
-+	close(fd);
++	if (unlikely(current->audit_context))
++		__audit_seccomp_exit(do_free);
 +}
- #endif /* SECCOMP_DATA_ARGEVAL_PRESENT */
++
+ static inline struct filename *audit_reusename(const __user char *name)
+ {
+ 	if (unlikely(!audit_dummy_context()))
+ 		return __audit_reusename(name);
++#ifdef CONFIG_SECURITY_SECCOMP
++	if (current->audit_context)
++		return __audit_reusename(name);
++#endif /* CONFIG_SECURITY_SECCOMP */
+ 	return NULL;
+ }
++
+ static inline void audit_getname(struct filename *name)
+ {
+ 	if (unlikely(!audit_dummy_context()))
+ 		__audit_getname(name);
++#ifdef CONFIG_SECURITY_SECCOMP
++	else if (current->audit_context)
++		__audit_getname(name);
++#endif /* CONFIG_SECURITY_SECCOMP */
+ }
++
+ static inline void audit_inode(struct filename *name,
+ 				const struct dentry *dentry,
+ 				unsigned int parent) {
+diff --git a/kernel/audit.h b/kernel/audit.h
+index cbbe6bb6496e..c63ce77b44ae 100644
+--- a/kernel/audit.h
++++ b/kernel/audit.h
+@@ -108,6 +108,9 @@ struct audit_proctitle {
+ struct audit_context {
+ 	int		    dummy;	/* must be the first element */
+ 	int		    in_syscall;	/* 1 if task is in a syscall */
++#ifdef CONFIG_SECURITY_SECCOMP
++	int		    in_seccomp;	/* 1 if task is in seccomp */
++#endif
+ 	enum audit_state    state, current_state;
+ 	unsigned int	    serial;     /* serial number for record */
+ 	int		    major;      /* syscall number */
+diff --git a/kernel/auditsc.c b/kernel/auditsc.c
+index 195ffaee50b9..dd1d9f4b1c61 100644
+--- a/kernel/auditsc.c
++++ b/kernel/auditsc.c
+@@ -1501,7 +1501,10 @@ void __audit_syscall_entry(int major, unsigned long a1, unsigned long a2,
+ 	if (!context)
+ 		return;
  
- /*
+-	BUG_ON(context->in_syscall || context->name_count);
++	BUG_ON(context->in_syscall);
++#ifndef CONFIG_SECURITY_SECCOMP
++	BUG_ON(context->name_count);
++#endif /* CONFIG_SECURITY_SECCOMP */
+ 
+ 	if (!audit_enabled)
+ 		return;
+@@ -1580,6 +1583,35 @@ void __audit_syscall_exit(int success, long return_code)
+ 	tsk->audit_context = context;
+ }
+ 
++void __audit_seccomp_entry(void)
++{
++	struct audit_context *context = current->audit_context;
++
++	if (!context)
++		return;
++	BUG_ON(context->in_seccomp || context->name_count);
++	if (!audit_enabled)
++		return;
++
++	context->in_seccomp = 1;
++}
++
++void __audit_seccomp_exit(int do_free)
++{
++	struct audit_context *context = current->audit_context;
++
++	if (!context)
++		return;
++	BUG_ON(!context->in_seccomp);
++	if (!audit_enabled)
++		return;
++
++	BUG_ON(!context->in_seccomp);
++	context->in_seccomp = 0;
++	if (do_free)
++		audit_free_names(context);
++}
++
+ static inline void handle_one(const struct inode *inode)
+ {
+ #ifdef CONFIG_AUDIT_TREE
+@@ -1728,7 +1760,7 @@ void __audit_getname(struct filename *name)
+ 	struct audit_context *context = current->audit_context;
+ 	struct audit_names *n;
+ 
+-	if (!context->in_syscall)
++	if (!context->in_syscall && !context->in_seccomp)
+ 		return;
+ 
+ 	n = audit_alloc_name(context, AUDIT_TYPE_UNKNOWN);
+diff --git a/kernel/seccomp.c b/kernel/seccomp.c
+index 60e11863857e..a8a6ba31ecc4 100644
+--- a/kernel/seccomp.c
++++ b/kernel/seccomp.c
+@@ -881,7 +881,7 @@ int __secure_computing(void)
+ static u32 __seccomp_phase1_filter(int this_syscall, struct seccomp_data *sd)
+ {
+ 	u32 filter_ret, action;
+-	int data;
++	int data, ret;
+ 
+ 	/*
+ 	 * Make sure that any changes to mode from another thread have
+@@ -889,6 +889,9 @@ static u32 __seccomp_phase1_filter(int this_syscall, struct seccomp_data *sd)
+ 	 */
+ 	rmb();
+ 
++	/* Enable caching */
++	audit_seccomp_entry();
++
+ 	filter_ret = seccomp_run_filters(sd);
+ 	data = filter_ret & SECCOMP_RET_DATA;
+ 	action = filter_ret & SECCOMP_RET_ACTION;
+@@ -910,13 +913,15 @@ static u32 __seccomp_phase1_filter(int this_syscall, struct seccomp_data *sd)
+ 		goto skip;
+ 
+ 	case SECCOMP_RET_TRACE:
+-		return filter_ret;  /* Save the rest for phase 2. */
++		ret = filter_ret;  /* Save the rest for phase 2. */
++		goto audit_exit;
+ 
+ 	case SECCOMP_RET_ARGEVAL:
+ 		/* Handled in seccomp_run_filters() */
+ 		BUG();
+ 	case SECCOMP_RET_ALLOW:
+-		return SECCOMP_PHASE1_OK;
++		ret = SECCOMP_PHASE1_OK;
++		goto audit_exit;
+ 
+ 	case SECCOMP_RET_KILL:
+ 	default:
+@@ -926,7 +931,12 @@ static u32 __seccomp_phase1_filter(int this_syscall, struct seccomp_data *sd)
+ 
+ 	unreachable();
+ 
++audit_exit:
++	audit_seccomp_exit(0);
++	return ret;
++
+ skip:
++	audit_seccomp_exit(1);
+ 	audit_seccomp(this_syscall, 0, action);
+ 	return SECCOMP_PHASE1_SKIP;
+ }
+@@ -1139,6 +1149,11 @@ static long seccomp_add_checker_group(unsigned int flags, const char __user *gro
+ 	unsigned long group_size, kcheckers_size, full_group_size;
+ 	long result;
+ 
++	/* FIXME: Deny unsecure path evaluation (i.e. without audit_names) for
++	 * the entire task life.
++	 */
++	if (!current->audit_context)
++		return -EPERM;
+ 	if (!task_no_new_privs(current) &&
+ 	    security_capable_noaudit(current_cred(),
+ 				     current_user_ns(), CAP_SYS_ADMIN) != 0)
 -- 
 2.8.0.rc3
