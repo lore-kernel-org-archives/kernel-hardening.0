@@ -1,20 +1,21 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Thu, 24 Mar 2016 03:53:59 +0100
-Message-Id: <1458788042-26173-6-git-send-email-mic@digikod.net>
+Date: Thu, 24 Mar 2016 03:54:00 +0100
+Message-Id: <1458788042-26173-7-git-send-email-mic@digikod.net>
 In-Reply-To: <1458788042-26173-1-git-send-email-mic@digikod.net>
 References: <1458784008-16277-1-git-send-email-mic@digikod.net>
  <1458788042-26173-1-git-send-email-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v1 14/17] selftest/seccomp: Make tracer_poke() more generic
+Subject: [kernel-hardening] [RFC v1 15/17] selftest/seccomp: Add argeval_toctou_argument test
 To: linux-security-module@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Use a different flag test (0x2001) than the RET_TRACE value (0x1001) to
-not be ambiguous.
+Test if a time-of-check-time-of-use (TOCTOU) race condition attack is
+effective to change a syscall argument after the seccomp filter
+evaluation but before the effective syscall.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Andy Lutomirski <luto@kernel.org>
@@ -22,77 +23,176 @@ Cc: Kees Cook <keescook@chromium.org>
 Cc: Paul Moore <pmoore@redhat.com>
 Cc: Will Drewry <wad@chromium.org>
 ---
- tools/testing/selftests/seccomp/seccomp_bpf.c | 24 ++++++++++++++++++------
- 1 file changed, 18 insertions(+), 6 deletions(-)
+ tools/testing/selftests/seccomp/seccomp_bpf.c | 157 ++++++++++++++++++++++++++
+ 1 file changed, 157 insertions(+)
 
 diff --git a/tools/testing/selftests/seccomp/seccomp_bpf.c b/tools/testing/selftests/seccomp/seccomp_bpf.c
-index 7c48d4cf476a..f3a6ef4fce62 100644
+index f3a6ef4fce62..64b4d758b007 100644
 --- a/tools/testing/selftests/seccomp/seccomp_bpf.c
 +++ b/tools/testing/selftests/seccomp/seccomp_bpf.c
-@@ -1113,14 +1113,16 @@ void teardown_trace_fixture(struct __test_metadata *_metadata,
- 
- /* "poke" tracer arguments and function. */
- struct tracer_args_poke_t {
--	unsigned long poke_addr;
-+	unsigned long *poke_addr;
-+	unsigned long *poke_data;
-+	unsigned long poke_len;
- };
- 
- void tracer_poke(struct __test_metadata *_metadata, pid_t tracee, int status,
- 		 void *args)
- {
- 	int ret;
--	unsigned long msg;
-+	unsigned long msg, i;
- 	struct tracer_args_poke_t *info = (struct tracer_args_poke_t *)args;
- 
- 	ret = ptrace(PTRACE_GETEVENTMSG, tracee, NULL, &msg);
-@@ -1134,8 +1136,14 @@ void tracer_poke(struct __test_metadata *_metadata, pid_t tracee, int status,
- 	 * Registers are not touched to try to keep this relatively arch
- 	 * agnostic.
- 	 */
--	ret = ptrace(PTRACE_POKEDATA, tracee, info->poke_addr, 0x1001);
--	EXPECT_EQ(0, ret);
-+	for (i = 0; i < info->poke_len; i++) {
-+		unsigned long addr = (unsigned long)info->poke_addr +
-+			i * sizeof(long);
+@@ -2363,6 +2363,163 @@ TEST(argeval_open_whitelist)
+ 	EXPECT_EQ(E2BIG, errno);
+ 	close(fd);
+ }
 +
-+		ret = ptrace(PTRACE_POKEDATA, tracee,
-+				addr, *(info->poke_data + i));
-+		EXPECT_EQ(0, ret);
++FIXTURE_DATA(TRACE_poke_arg_path) {
++	struct sock_fprog prog;
++	pid_t tracer;
++	struct tracer_args_poke_t tracer_args;
++	char *path_orig;
++	char *path_hijack;
++};
++
++FIXTURE_SETUP(TRACE_poke_arg_path)
++{
++	unsigned long orig_delta, orig_size, hijack_delta, hijack_size;
++	struct sock_filter filter[] = {
++		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
++			offsetof(struct seccomp_data, nr)),
++		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_open, 0, 1),
++		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_TRACE | 0x1001),
++		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
++	};
++
++	memset(&self->prog, 0, sizeof(self->prog));
++	self->prog.filter = malloc(sizeof(filter));
++	ASSERT_NE(NULL, self->prog.filter);
++	memcpy(self->prog.filter, filter, sizeof(filter));
++	self->prog.len = (unsigned short)ARRAY_SIZE(filter);
++
++	/* @path_orig must be writable */
++	orig_delta = sizeof(PATH_DEV_ZERO) % sizeof(long);
++	orig_size = sizeof(PATH_DEV_ZERO) - orig_delta +
++		(orig_delta ? sizeof(long) : 0);
++	self->path_orig = malloc(orig_size);
++	ASSERT_NE(NULL, self->path_orig);
++	memset(self->path_orig, 0, orig_size);
++	memcpy(self->path_orig, PATH_DEV_ZERO, sizeof(PATH_DEV_ZERO));
++	self->tracer_args.poke_addr = (unsigned long *)self->path_orig;
++
++	hijack_delta = sizeof(PATH_DEV_NULL) % sizeof(long);
++	hijack_size = sizeof(PATH_DEV_NULL) - hijack_delta +
++		(hijack_delta ? sizeof(long) : 0);
++	/* @path_hijack must be able to override @path_orig */
++	ASSERT_GE(orig_size, hijack_size);
++	self->path_hijack = malloc(hijack_size);
++	ASSERT_NE(NULL, self->path_hijack);
++	memset(self->path_hijack, 0, hijack_size);
++	memcpy(self->path_hijack, PATH_DEV_NULL, sizeof(PATH_DEV_NULL));
++	self->tracer_args.poke_data = (unsigned long *)self->path_hijack;
++	self->tracer_args.poke_len = hijack_size;
++
++	/* Launch tracer */
++	self->tracer = setup_trace_fixture(_metadata, tracer_poke,
++					   &self->tracer_args);
++}
++
++FIXTURE_TEARDOWN(TRACE_poke_arg_path)
++{
++	teardown_trace_fixture(_metadata, self->tracer);
++	if (self->prog.filter)
++		free(self->prog.filter);
++	if (self->path_orig)
++		free(self->path_orig);
++}
++
++/* Any tracer process can bypass a seccomp filter, so we can't protect against
++ * this threat and should deny any ptrace call from a seccomped process to be
++ * able to properly sandbox it.
++ *
++ * However, a seccomped process can fork and ask its child to change a shared
++ * memory used to hold the syscall arguments. This can be used to trigger
++ * TOCTOU race conditions between the filter evaluation and the effective
++ * syscall operations. For test purpose, it is simpler to ask a dedicated
++ * tracer process to do the same action after the filter evaluation to acheive
++ * the same result. The kernel must detect and block this race condition.
++ */
++TEST_F(TRACE_poke_arg_path, argeval_toctou_argument)
++{
++	int fd;
++	char buf;
++	ssize_t len;
++
++	/* Validate the first test file */
++	fd = open(self->path_orig, O_RDONLY);
++	EXPECT_NE(-1, fd) {
++		TH_LOG("Failed to open %s", self->path_orig);
 +	}
- }
++	len = read(fd, &buf, sizeof(buf));
++	EXPECT_EQ(1, len) {
++		TH_LOG("Failed to read from %s", self->path_orig);
++	}
++	EXPECT_EQ(0, buf) {
++		TH_LOG("Got unexpected value from %s", self->path_orig);
++	}
++	close(fd);
++
++	/* Validate the second test file */
++	fd = open(self->path_hijack, O_RDONLY);
++	EXPECT_NE(-1, fd) {
++		TH_LOG("Failed to open %s", self->path_hijack);
++	}
++	len = read(fd, &buf, sizeof(buf));
++	EXPECT_EQ(0, len) {
++		TH_LOG("Able to read from %s", self->path_orig);
++	}
++	close(fd);
++
++	apply_sandbox0(_metadata, PATH_DEV_ZERO);
++
++	/* Allowed file: /dev/zero */
++	fd = open(self->path_orig, O_RDONLY);
++	EXPECT_NE(-1, fd) {
++		TH_LOG("Failed to open %s", self->path_orig);
++	}
++	len = read(fd, &buf, sizeof(buf));
++	EXPECT_EQ(1, len) {
++		TH_LOG("Failed to read from %s", self->path_orig);
++	}
++	EXPECT_EQ(0, buf) {
++		TH_LOG("Got unexpected value from %s", self->path_orig);
++	}
++	close(fd);
++
++	/* Denied file: /dev/null */
++	fd = open(self->path_hijack, O_RDONLY);
++	EXPECT_EQ(-1, fd) {
++		TH_LOG("Could open %s", self->path_hijack);
++	}
++	close(fd);
++
++	/* Setup the hijack for every open: replace /dev/zero with /dev/null */
++	EXPECT_EQ(0, seccomp(SECCOMP_SET_MODE_FILTER,
++				SECCOMP_FILTER_FLAG_TSYNC, &self->prog)) {
++		TH_LOG("Failed to install filter!");
++	}
++
++	/* Should read /dev/zero even if it is hijacked with /dev/null after
++	 * the filter
++	 */
++	fd = open(self->path_orig, O_RDONLY);
++	EXPECT_NE(-1, fd) {
++		TH_LOG("Failed to open %s", self->path_orig);
++	}
++	len = read(fd, &buf, sizeof(buf));
++	EXPECT_EQ(1, len) {
++		TH_LOG("Failed to read from %s", self->path_orig);
++	}
++	EXPECT_EQ(0, buf) {
++		TH_LOG("Got unexpected value from %s", self->path_orig);
++	}
++	close(fd);
++
++	/* Now path_orig is definitely hijacked, so it must be denied */
++	fd = open(self->path_orig, O_RDONLY);
++	EXPECT_EQ(-1, fd) {
++		TH_LOG("Could open %s", self->path_orig);
++	}
++	EXPECT_EQ(E2BIG, errno);
++	close(fd);
++}
+ #endif /* SECCOMP_DATA_ARGEVAL_PRESENT */
  
- FIXTURE_DATA(TRACE_poke_sys_read) {
-@@ -1143,6 +1151,7 @@ FIXTURE_DATA(TRACE_poke_sys_read) {
- 	pid_t tracer;
- 	long poked;
- 	struct tracer_args_poke_t tracer_args;
-+	unsigned long flag;
- };
- 
- FIXTURE_SETUP(TRACE_poke_sys_read)
-@@ -1163,7 +1172,10 @@ FIXTURE_SETUP(TRACE_poke_sys_read)
- 	self->prog.len = (unsigned short)ARRAY_SIZE(filter);
- 
- 	/* Set up tracer args. */
--	self->tracer_args.poke_addr = (unsigned long)&self->poked;
-+	self->tracer_args.poke_addr = &self->poked;
-+	self->flag = 0x2001;
-+	self->tracer_args.poke_data = &self->flag;
-+	self->tracer_args.poke_len = 1;
- 
- 	/* Launch tracer. */
- 	self->tracer = setup_trace_fixture(_metadata, tracer_poke,
-@@ -1190,7 +1202,7 @@ TEST_F(TRACE_poke_sys_read, read_has_side_effects)
- 	EXPECT_EQ(0, self->poked);
- 	ret = read(-1, NULL, 0);
- 	EXPECT_EQ(-1, ret);
--	EXPECT_EQ(0x1001, self->poked);
-+	EXPECT_EQ(0x2001, self->poked);
- }
- 
- TEST_F(TRACE_poke_sys_read, getpid_runs_normally)
+ /*
 -- 
 2.8.0.rc3
