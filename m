@@ -1,62 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1458736327.5889.19.camel@debian.org>
-From: Yves-Alexis Perez <corsac@debian.org>
-Date: Wed, 23 Mar 2016 13:32:07 +0100
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-I/YDEVA7cCu60UEtO7HF"
+Date: Thu, 24 Mar 2016 01:07:49 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160324010749.f7e547e1df12b4944c5fa490@gmail.com>
+In-Reply-To: <CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
+References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
+	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
+	<CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
 Mime-Version: 1.0
-Subject: [kernel-hardening] [CSW16] Getting Physical: Extreme Abuse of Intel Based Paging
- Systems
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, 11 Mar 2016 15:25:19 +0900
+Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
 
---=-I/YDEVA7cCu60UEtO7HF
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+> You sprinkle "gcc-plugins" target in the top Makefile, which I do not like.
+> 
+> Can you descend into scripts/gcc-plugins from scripts/Makefile?
+> 
+> 
+>  subdir-$(CONFIG_MODVERSIONS) += genksyms
+>  subdir-y                     += mod
+>  subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+>  subdir-$(CONFIG_DTC)         += dtc
+>  subdir-$(CONFIG_GDB_SCRIPTS) += gdb
+> +subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
+> 
+> 
+> This is how other host tools do, I think.
 
-[wasn't sure whether I should cross-post to oss-sec or not]
+Hi,
 
-In case some people would be interested, Nicolas Economou and Enrique Nissi=
-m
-gave a presentation last week at CanSecWest about what you can do with a
-kernel arbitrary write with current paging situation on Intel hardware, in
-Linux and Windows. The slides (and code for Linux) are available at:
+I tried to remove the gcc-plugins target but sadly in this case the plugins aren't complied.
+I don't know if I understand how it should work. I pushed a commit:
+https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/0b005b886bde6c4b9134d01f830d88d464911a65
+Could you please help me with what I did wrong?
 
-https://github.com/n3k/CansecWest2016_Getting_Physical_Extreme_Abuse_of_Int=
-el_
-Based_Paging_Systems/
-
-There might be (a lot of) other way to exploit a running kernel with an
-arbitrary write, but it's still quite interesting.
-
-The authors give some advice at the end (slide 84 =E2=80=9CLinux conclusion=
-=E2=80=9D):
-
-- Paging tables shouldn=E2=80=99t be in *fixed addresses*
-=C2=A0 - It can be abused by LOCAL and REMOTE kernel exploits
-- All fixed paging structures should be *read-only*
-- Some advice, compile the kernel with Grsec ;-)
-
-Regards,
---=20
-Yves-Alexis
-
-
---=-I/YDEVA7cCu60UEtO7HF
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJW8ozHAAoJEG3bU/KmdcClPPcH/A93WurWFG4hOgonyYwUVQiB
-7vqCv7jmRzVED5CuGZRiQTOHsv5YkynN7ND6qxP6Y5d0zZy/ZLjBmXGQBl/234+q
-rwboXInI4kSh4lk1qs9B+lw5d6ETU3cNOgpGUIvhAdsq2s3/Mz4p+uuG8ZLHr9JK
-qt/9SxGGtl80OwJ0SA6rxeDJTNHF35W2gavr2Sw0ezanrglrDvyYpQwCqJUVfayy
-43QwutP0CMsATeMV/OD2W3wylRtBCw7fpxzLhRb+3M0+4Lt1bOdIe7fPQdz8BbNY
-ZJpgIMiednblXDPG0/UKKVtTWvLtLH3/iVJOO0rH3hYeVU9BTRQNc05n1eKjS1o=
-=LQEu
------END PGP SIGNATURE-----
-
---=-I/YDEVA7cCu60UEtO7HF--
+Thanks
+-- 
+Emese
