@@ -1,132 +1,95 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 25 Mar 2016 09:55:41 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-Message-ID: <alpine.LRH.2.20.1603250947150.31257@namei.org>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-1935272454-1458860143=:31257"
-Subject: [kernel-hardening] [ANNOUNCE] Linux Security Summit 2016 - CFP
-To: linux-security-module@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org, lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, ubuntu-hardened@lists.ubuntu.com, Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, netfilter-devel@vger.kernel.org, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com
+In-Reply-To: <20160324010749.f7e547e1df12b4944c5fa490@gmail.com>
+References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
+	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
+	<CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
+	<20160324010749.f7e547e1df12b4944c5fa490@gmail.com>
+Date: Sat, 26 Mar 2016 11:39:32 +0900
+Message-ID: <CAK7LNATK-r09tJ5K8u8vRdRR0dXywAJ=LbbhaigZkfMm3UUPmA@mail.gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, fengguang.wu@intel.com, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
-
---1665246916-1935272454-1458860143=:31257
-Content-Type: text/plain; charset=ISO-8859-7
-Content-Transfer-Encoding: 8BIT
-
-==========================================================================
-                 ANNOUNCEMENT AND CALL FOR PARTICIPATION
-
-                       LINUX SECURITY SUMMIT 2016
-                              25-26 AUGUST
-                            TORONTO, CANADA
-                           
-==========================================================================
+Hi Emese,
 
 
-DESCRIPTION
 
-  The Linux Security Summit (LSS) is a technical forum for collaboration
-  between Linux developers, researchers, and end users.  Its primary aim
-  is to foster community efforts in analyzing and solving Linux security
-  challenges.
-
-  The format of the summit will be:
-  
-    * Refereed presentations
-    * Discussion topics
-    * Subsystem reports
-    * Breakout development sessions 
-
-
-WEB SITE
-
-  http://events.linuxfoundation.org/events/linux-security-summit
-
-
-TWITTER
-
-  For event updates and announcements, follow:
-
-  https://twitter.com/LinuxSecSummit
-
-
-DATES / LOCATION
-
-  The Linux Security Summit for 2016 will be held  August 25th and 26th
-  in Toronto, Canada.  It will be co-located with LinuxCon.
-
-  The Linux Security Summit CFP is now open, and will close on June 10th.
-  
-  Accepted speakers will be notified by June 17th.
+2016-03-24 9:07 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
+> On Fri, 11 Mar 2016 15:25:19 +0900
+> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
+>
+>> You sprinkle "gcc-plugins" target in the top Makefile, which I do not like.
+>>
+>> Can you descend into scripts/gcc-plugins from scripts/Makefile?
+>>
+>>
+>>  subdir-$(CONFIG_MODVERSIONS) += genksyms
+>>  subdir-y                     += mod
+>>  subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+>>  subdir-$(CONFIG_DTC)         += dtc
+>>  subdir-$(CONFIG_GDB_SCRIPTS) += gdb
+>> +subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
+>>
+>>
+>> This is how other host tools do, I think.
+>
+> Hi,
+>
+> I tried to remove the gcc-plugins target but sadly in this case the plugins aren't complied.
+> I don't know if I understand how it should work. I pushed a commit:
+> https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/0b005b886bde6c4b9134d01f830d88d464911a65
+> Could you please help me with what I did wrong?
+>
 
 
-WHO SHOULD ATTEND
+Sorry, I missed this problem.
 
-  We're seeking a diverse range of attendees, and welcome participation
-  by people involved in Linux security development, operations, and research.
-
-  The LSS is a unique global event which provides the opportunity to present
-  and discuss your work or research with key Linux security community
-  members and maintainers.  It¢s also useful for those who wish to keep up
-  with the latest in Linux security development, and to provide input to
-  the development process.
+GCC-plugins must be compiled before descending into ./Kbuild.
 
 
-CALL FOR PARTICIPATION
-
-  The program committee currently seeks proposals for:
-
-  * Refereed Presentations:
-      45 minutes in length, including at least 10 minutes of discussion.
-      One-page abstracts are encouraged.
-
-  * Discussion Topics:
-      30 minutes in length.
- 
-  Topic areas include, but are not limited to:
-  
-    * Kernel self-protection
-    * Access control
-    * Cryptography and key management
-    * Integrity control
-    * Hardware security
-    * Trust systems
-    * Storage and file systems
-    * Virtualization and containers
-    * Case studies
-    * Identity management
-    * Code analysis
-    * Security analytics
-    * Secure development and operational practices
-    * Emerging technologies, threats & techniques 
-    
-  Proposals should be submitted via the event web site:
-
-    http://events.linuxfoundation.org/events/linux-security-summit/program/cfp
+Please apply the following on top of commit 0b005b88
+and check if it works.
 
 
-PROGRAM COMMITTEE
 
-  The Linux Security Summit for 2016 is organized by:
 
-    * James Morris, Oracle
-    * Serge Hallyn, Canonical
-    * Paul Moore, Red Hat
-    * Stephen Smalley, NSA
-    * Elena Reshetova, Intel
-    * Herbert Xu, Red Hat
-    * John Johansen, Canonical
-    * Kees Cook, Google
-    * Casey Schaufler, Intel
-    * Mimi Zohar, IBM
+diff --git a/Makefile b/Makefile
+index 1c7a379..bd643d3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1009,6 +1009,9 @@ archprepare: archheaders archscripts prepare1
+scripts_basic
+ prepare0: KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+ prepare0: KBUILD_AFLAGS += $(GCC_PLUGINS_AFLAGS)
+ prepare0: archprepare FORCE
++ifdef CONFIG_GCC_PLUGINS
++       $(Q)$(MAKE) $(build)=scripts/gcc-plugins
++endif
+        $(Q)$(MAKE) $(build)=.
 
-  The program committee may be contacted as a group via email:
+ # All the preparing..
+diff --git a/scripts/Makefile b/scripts/Makefile
+index 0ba652c..1d80897 100644
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -45,7 +45,6 @@ subdir-y                     += mod
+ subdir-$(CONFIG_SECURITY_SELINUX) += selinux
+ subdir-$(CONFIG_DTC)         += dtc
+ subdir-$(CONFIG_GDB_SCRIPTS) += gdb
+-subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
 
-    lss-pc@lists.linuxfoundation.org
+ # Let clean descend into subdirs
+-subdir-        += basic kconfig package
++subdir-        += basic kconfig package gcc-plugins
 
-   
 
---1665246916-1935272454-1458860143=:31257--
+
+
+
+-- 
+Best Regards
+Masahiro Yamada
