@@ -1,95 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20160324010749.f7e547e1df12b4944c5fa490@gmail.com>
-References: <20160307000208.1bec3e7dc874489d1b4fcbb4@gmail.com>
-	<20160307000427.c82f18670568e1e656fc9532@gmail.com>
-	<CAK7LNASCOaEi46+b7Obt0D6GtiBmCfwBEkdbYSnpBDzzQOXpvA@mail.gmail.com>
-	<20160324010749.f7e547e1df12b4944c5fa490@gmail.com>
-Date: Sat, 26 Mar 2016 11:39:32 +0900
-Message-ID: <CAK7LNATK-r09tJ5K8u8vRdRR0dXywAJ=LbbhaigZkfMm3UUPmA@mail.gmail.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
+In-Reply-To: <CAGXu5jLModth62F8PsFfNVCL=7PrAd+kT_NEsMP5WwOJvLS8EQ@mail.gmail.com>
+References: <1458784008-16277-1-git-send-email-mic@digikod.net>
+	<CAGXu5jLModth62F8PsFfNVCL=7PrAd+kT_NEsMP5WwOJvLS8EQ@mail.gmail.com>
+Date: Sun, 27 Mar 2016 05:03:10 +0000
+Message-ID: <CAOp4FwTc6C=E2fynp85tVWrZpthMvFpJFmV=HG+czHH_D41OXA@mail.gmail.com>
+From: Loganaden Velvindron <loganaden@gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 2/5] GCC plugin infrastructure
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, fengguang.wu@intel.com, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Re: [RFC v1 00/17] seccomp-object: From attack
+ surface reduction to sandboxing
+To: kernel-hardening@lists.openwall.com
+Cc: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, linux-security-module <linux-security-module@vger.kernel.org>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Will Drewry <wad@chromium.org>, Linux API <linux-api@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Emese,
-
-
-
-2016-03-24 9:07 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
-> On Fri, 11 Mar 2016 15:25:19 +0900
-> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
+On Thu, Mar 24, 2016 at 4:24 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Mar 23, 2016 at 6:46 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.ne=
+t> wrote:
+>> Hi,
+>>
+>> This series is a proof of concept (not ready for production) to extend s=
+eccomp
+>> with the ability to check argument pointers of syscalls as kernel object=
+ (e.g.
+>> file path). This add a needed feature to create a full sandbox managed b=
+y
+>> userland like the Seatbelt/XNU Sandbox or the OpenBSD Pledge. It was ini=
+tially
+>> inspired from a partial seccomp-LSM prototype [1] but has evolved a lot =
+since :)
 >
->> You sprinkle "gcc-plugins" target in the top Makefile, which I do not like.
->>
->> Can you descend into scripts/gcc-plugins from scripts/Makefile?
->>
->>
->>  subdir-$(CONFIG_MODVERSIONS) += genksyms
->>  subdir-y                     += mod
->>  subdir-$(CONFIG_SECURITY_SELINUX) += selinux
->>  subdir-$(CONFIG_DTC)         += dtc
->>  subdir-$(CONFIG_GDB_SCRIPTS) += gdb
->> +subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
->>
->>
->> This is how other host tools do, I think.
->
-> Hi,
->
-> I tried to remove the gcc-plugins target but sadly in this case the plugins aren't complied.
-> I don't know if I understand how it should work. I pushed a commit:
-> https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/0b005b886bde6c4b9134d01f830d88d464911a65
-> Could you please help me with what I did wrong?
+> This is interesting! I'd really like to get argument inspection
+> working. I'm going to spend some time examining this series more
+> closely, but my initial reaction is that I'm suspicious of the ToCToU
+> checking -- I'd rather there be no race at all. As for the bug-fixes,
+> I'll get those pulled in now. Thanks!
 >
 
+Personally, I love the OpenBSD pledge() mechanism. It makes it so easy
+to apply attack surface reduction. If seccomp moves closer to pledge,
+that would be great.
 
-Sorry, I missed this problem.
-
-GCC-plugins must be compiled before descending into ./Kbuild.
-
-
-Please apply the following on top of commit 0b005b88
-and check if it works.
-
-
-
-
-diff --git a/Makefile b/Makefile
-index 1c7a379..bd643d3 100644
---- a/Makefile
-+++ b/Makefile
-@@ -1009,6 +1009,9 @@ archprepare: archheaders archscripts prepare1
-scripts_basic
- prepare0: KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
- prepare0: KBUILD_AFLAGS += $(GCC_PLUGINS_AFLAGS)
- prepare0: archprepare FORCE
-+ifdef CONFIG_GCC_PLUGINS
-+       $(Q)$(MAKE) $(build)=scripts/gcc-plugins
-+endif
-        $(Q)$(MAKE) $(build)=.
-
- # All the preparing..
-diff --git a/scripts/Makefile b/scripts/Makefile
-index 0ba652c..1d80897 100644
---- a/scripts/Makefile
-+++ b/scripts/Makefile
-@@ -45,7 +45,6 @@ subdir-y                     += mod
- subdir-$(CONFIG_SECURITY_SELINUX) += selinux
- subdir-$(CONFIG_DTC)         += dtc
- subdir-$(CONFIG_GDB_SCRIPTS) += gdb
--subdir-$(CONFIG_GCC_PLUGINS) += gcc-plugins
-
- # Let clean descend into subdirs
--subdir-        += basic kconfig package
-+subdir-        += basic kconfig package gcc-plugins
-
-
-
-
-
--- 
-Best Regards
-Masahiro Yamada
+See here:
+https://github.com/dimkr/libwaive
