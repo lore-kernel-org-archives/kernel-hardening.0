@@ -1,67 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: linus971@gmail.com
-In-Reply-To: <CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
+In-Reply-To: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
 References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
-	<CALCETrUxfPBawXNvKZgOnxhkaesw-b4PqCFUZbkRdaaqpjqnPQ@mail.gmail.com>
-	<56FAF571.3040802@eng.utah.edu>
-	<CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
-Date: Tue, 29 Mar 2016 17:34:35 -0500
-Message-ID: <CA+55aFzY0p5OyTfnajTz2SL9qni=0FyUT7SeqS0CuXnwRPHS5w@mail.gmail.com>
+Date: Tue, 29 Mar 2016 17:54:24 -0500
+Message-ID: <CA+55aFy2bac+-j6wWZ4D2UeA=h6rrdFL+B2Kns+ws6wGkVJzmg@mail.gmail.com>
 From: Linus Torvalds <torvalds@linux-foundation.org>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Scotty Bauer <sbauer@eng.utah.edu>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com
+To: Scott Bauer <sbauer@eng.utah.edu>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, the arch/x86 maintainers <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 29, 2016 at 4:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+On Tue, Mar 29, 2016 at 2:53 PM, Scott Bauer <sbauer@eng.utah.edu> wrote:
 >
-> Then there's an unanswered question: is this patch acceptable given
-> that it's an ABI break?  Security fixes are sometimes an exception to
-> the "no ABI breaks" rule, but it's by no means an automatic exception.
+> These patches implement the necessary changes to generate a cookie
+> which will be placed above signal frame upon signal delivery to userland.
+> The cookie is generated using a per-process random value xor'd with
+> the address where the cookie will be stored on the stack.
 
-So there isn't any "no ABI break" rule - there is only a "does it
-break real applications" rule.
+Side note: wouldn't it be better to make the cookie something that
+doesn't make it trivial to figure out the random value in case you
+already have access to a signal stack?
 
-(This can also be re-stated as: "Talk is cheap", aka "reality trumps
-documentation".
+Maybe there could be a stronger variation of this that makes the
+cookie be something like a single md5 round (not a full md5).
+Something fast, and not necessarily secure, but something that needs
+more than one single CPU instruction to figure out.
 
-Documentation is meaningless if it doesn't match reality, and what we
-actually *do* is what matters.
+So you could do 4 32
 
-So the ABI isn't about some theoretical interface documentation, the
-ABI is about what people use and have tested.
+ - the random value
+ - the low 32 bits of the address of the cookie
+ - the low 32 bits of the return point stack and instruction pointer
 
-On the one hand, that means that that our ABI is _stricter_ than any
-documentatiuon, and that "but we can make this change that breaks app
-XYZ, because XYZ is depending on undocumented behavior" is not an
-acceptable excuse.
+Yes, yes, md5 is not cryptographically secure, and making it a single
+iteration rather than the full four makes it even less so, but if the
+attacker can generate long arbitrary code, then the whole SROP is
+pointless to begin with, no?
 
-But on the other hand it *also* means that since the ABI is about real
-programs, not theoretical issues, we can also change things as long as
-we don't actually break anything that people can notice and depend
-on).
+In contrast, with the plain xor, the SROP would be a trivial operation
+if you can just force it to happen within the context of a signal, so
+that you can just re-use the signal return stack as-is. But mixing in
+the returning IP and SP would make it *much* harder to use the
+sigreturn as an attack vector.
 
-And while *acute* security holes will be fixed regardless of ABI
-issues, something like this that is only hardening rather than fixing
-a particular security hole, really needs to not break any
-applications.
+I realize that this would likely need to be a separate and non-default
+extra hardening mode, because there are *definitely* applications that
+take signals and then update the return address (maybe single-stepping
+over instructions etc). But for a *lot* of applications, signal return
+implies changing no signal state at all, and mixing in the returning
+IP and SP would seem to be a fundamentally stronger cookie.
 
-Because if it does break anything, it needs to be turned off by
-default. That's a hard rule. And since that would be largely defeating
-the whole point o fthe series, I think we really need to have made
-sure nothing breaks before a patch series like this can be accepted.
+No?
 
-That said, if this is done right, I don't think it will break
-anything. CRIU may indeed be a special case, but CRIU isn't really a
-normal application, and the CRIU people may need to turn this off
-explicitly, if it does break.
-
-But yes, dosemu needs to be tested, and needs to just continue
-working. But does dosemu actually create a signal stack, as opposed to
-just playing with one that has been created for it? I thought it was
-just the latter case, which should be ok even with a magic cookie in
-there.
-
-                   Linus
+                 Linus
