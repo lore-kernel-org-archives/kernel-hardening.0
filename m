@@ -1,92 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
- <CALCETrUxfPBawXNvKZgOnxhkaesw-b4PqCFUZbkRdaaqpjqnPQ@mail.gmail.com>
- <56FAF571.3040802@eng.utah.edu>
- <CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
- <CA+55aFzY0p5OyTfnajTz2SL9qni=0FyUT7SeqS0CuXnwRPHS5w@mail.gmail.com>
-From: Scotty Bauer <sbauer@eng.utah.edu>
-Message-ID: <56FB0C65.4020602@eng.utah.edu>
-Date: Tue, 29 Mar 2016 17:14:45 -0600
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFzY0p5OyTfnajTz2SL9qni=0FyUT7SeqS0CuXnwRPHS5w@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
+Sender: linus971@gmail.com
+In-Reply-To: <56FB0B88.2020306@eng.utah.edu>
+References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
+	<CA+55aFy2bac+-j6wWZ4D2UeA=h6rrdFL+B2Kns+ws6wGkVJzmg@mail.gmail.com>
+	<56FB0B88.2020306@eng.utah.edu>
+Date: Tue, 29 Mar 2016 18:25:26 -0500
+Message-ID: <CA+55aFx2trnk2xqdL7u-RG7vi6GXp+bZ1y3bqTSDNY101rfAZA@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
-To: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com
+To: Scotty Bauer <sbauer@eng.utah.edu>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, the arch/x86 maintainers <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Mar 29, 2016 at 6:11 PM, Scotty Bauer <sbauer@eng.utah.edu> wrote:
+>
+> Yeah I had toyed with using hashes, I used hash_64 not md5 which is like 14
+> extra instructions or something.
 
+That sounds fine. Anything that requires enough code to undo that it
+kind of defeats the purpose of a SROP should be enough. It's not about
+encryption, I'd just think that if you can force the buffer overflow
+while already in a signal handler, you'd want something that is at
+least *slightly* harder to defeat than a single "xor" instruction.
 
-On 03/29/2016 04:34 PM, Linus Torvalds wrote:
-> On Tue, Mar 29, 2016 at 4:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->>
->> Then there's an unanswered question: is this patch acceptable given
->> that it's an ABI break?  Security fixes are sometimes an exception to
->> the "no ABI breaks" rule, but it's by no means an automatic exception.
-> 
-> So there isn't any "no ABI break" rule - there is only a "does it
-> break real applications" rule.
-> 
-> (This can also be re-stated as: "Talk is cheap", aka "reality trumps
-> documentation".
-> 
-> Documentation is meaningless if it doesn't match reality, and what we
-> actually *do* is what matters.
-> 
-> So the ABI isn't about some theoretical interface documentation, the
-> ABI is about what people use and have tested.
-> 
-> On the one hand, that means that that our ABI is _stricter_ than any
-> documentatiuon, and that "but we can make this change that breaks app
-> XYZ, because XYZ is depending on undocumented behavior" is not an
-> acceptable excuse.
-> 
-> But on the other hand it *also* means that since the ABI is about real
-> programs, not theoretical issues, we can also change things as long as
-> we don't actually break anything that people can notice and depend
-> on).
-> 
-> And while *acute* security holes will be fixed regardless of ABI
-> issues, something like this that is only hardening rather than fixing
-> a particular security hole, really needs to not break any
-> applications.
-> 
-> Because if it does break anything, it needs to be turned off by
-> default. That's a hard rule. And since that would be largely defeating
-> the whole point o fthe series, I think we really need to have made
-> sure nothing breaks before a patch series like this can be accepted.
-> 
-> That said, if this is done right, I don't think it will break
-> anything. CRIU may indeed be a special case, but CRIU isn't really a
-> normal application, and the CRIU people may need to turn this off
-> explicitly, if it does break.
-> 
-> But yes, dosemu needs to be tested, and needs to just continue
-> working. But does dosemu actually create a signal stack, as opposed to
-> just playing with one that has been created for it? I thought it was
-> just the latter case, which should be ok even with a magic cookie in
-> there.
-> 
->                    Linus
-> 
+> It's not hard to implement So I can try it. When you say an extra hardening
+> mode do you mean hide it behind a sysctl or some sort of compile time CONFIG?
 
+Since there already is a sysctl, I'd just assume that.
 
-For what it's worth this series is breaking CRIU, I just tested:
+The important part is that the *default* value for that sysctl can't
+break real applications. I don't really count CRIU as a real app, if
+only because once you start doing checkpoint-restore you are going to
+do some amount of system maintenance anyway, so somebody doing CRIU is
+kind of expected to have a certain amount of system expertise, I would
+say.
 
-root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
-root@node0:/mnt/criu# tail -3 /var/log/syslog
-Mar 29 17:12:08 localhost kernel: [ 3554.625535] Possible exploit attempt or buggy program!
-Mar 29 17:12:08 localhost kernel: [ 3554.625535] If you believe this is an error you can disable SROP  Protection by #echo 1 > /proc/sys/kernel/disable-srop-protection
-Mar 29 17:12:08 localhost kernel: [ 3554.625545] test_[25305] bad frame in rt_sigreturn frame:000000000001e540 ip:7f561542cf20 sp:7ffe004ecfd8 orax:ffffffffffffffff in libc-2.19.so[7f561536c000+1bb0]
-root@node0:/mnt/criu# echo 1 > /proc/sys/kernel/disable-srop-protection 
-root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
-slept for one second
-slept for one second
-slept for one second
-slept for one second
-root@node0:/mnt/criu# 
+But dosemu - or Wine - is very much something that "normal people" run
+- people who we do *not* expect to have to know about new sysctl's
+etc. They already have one (mmap at zero), but that is very directly
+related to what vm86 mode and Wine does, and people have had time to
+learn about it. Let's not add another.
 
+So testing dosemu and wine would be good. I wonder what else has shown
+issues with signal stack layout changes. Debuggers and some JIT
+engines, I suspect.
 
-I'm working on getting dosemu up and running-- are there any other applications
-off the top of your head that I should be testing with?
+              Linus
