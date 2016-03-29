@@ -1,57 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
+Message-ID: <1459292110.913.48.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Tue, 29 Mar 2016 18:55:10 -0400
+In-Reply-To: <CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
 References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
-Date: Tue, 29 Mar 2016 17:54:24 -0500
-Message-ID: <CA+55aFy2bac+-j6wWZ4D2UeA=h6rrdFL+B2Kns+ws6wGkVJzmg@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
-To: Scott Bauer <sbauer@eng.utah.edu>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, the arch/x86 maintainers <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com
+	 <CALCETrUxfPBawXNvKZgOnxhkaesw-b4PqCFUZbkRdaaqpjqnPQ@mail.gmail.com>
+	 <56FAF571.3040802@eng.utah.edu>
+	 <CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-Q8Om2CoBofz+O+SE1AWK"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation:
+ Sigreturn Cookies
+To: kernel-hardening@lists.openwall.com, Scotty Bauer <sbauer@eng.utah.edu>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 29, 2016 at 2:53 PM, Scott Bauer <sbauer@eng.utah.edu> wrote:
->
-> These patches implement the necessary changes to generate a cookie
-> which will be placed above signal frame upon signal delivery to userland.
-> The cookie is generated using a per-process random value xor'd with
-> the address where the cookie will be stored on the stack.
 
-Side note: wouldn't it be better to make the cookie something that
-doesn't make it trivial to figure out the random value in case you
-already have access to a signal stack?
+--=-Q8Om2CoBofz+O+SE1AWK
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-Maybe there could be a stronger variation of this that makes the
-cookie be something like a single md5 round (not a full md5).
-Something fast, and not necessarily secure, but something that needs
-more than one single CPU instruction to figure out.
+> Then there's an unanswered question: is this patch acceptable given
+> that it's an ABI break?=C2=A0=C2=A0Security fixes are sometimes an except=
+ion to
+> the "no ABI breaks" rule, but it's by no means an automatic exception.
+>=20
+> --Andy
 
-So you could do 4 32
+It seems this could be worked around in general. Processes can have a
+bit tracking whether this is enabled, and CRIU can save/restore it. It
+would just leave it off for resuming old saved processes.
 
- - the random value
- - the low 32 bits of the address of the cookie
- - the low 32 bits of the return point stack and instruction pointer
+Should CRIU really be covered by the kernel's ABI guarantee though? It
+seems like this was meant to be extensible, so it's adding an extra ABI
+guarantee that wasn't there before. It makes sense to freeze this ABI
+for CRIU, but a version field should be added first in one final ABI
+break if it's not too late.
+--=-Q8Om2CoBofz+O+SE1AWK
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-Yes, yes, md5 is not cryptographically secure, and making it a single
-iteration rather than the full four makes it even less so, but if the
-attacker can generate long arbitrary code, then the whole SROP is
-pointless to begin with, no?
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-In contrast, with the plain xor, the SROP would be a trivial operation
-if you can just force it to happen within the context of a signal, so
-that you can just re-use the signal return stack as-is. But mixing in
-the returning IP and SP would make it *much* harder to use the
-sigreturn as an attack vector.
+iQIcBAABCAAGBQJW+wfOAAoJEPnnEuWa9fIqPgEP/24ek/ARd7mjMYBsYMh/QidG
+aOc75ecryh63nLrExdi4IYMf8oV/7zWWniinmJP70cMq4VgsebMM9ATyT4GiSZ0Z
+oHqD0ZXiSWFliaOEQhRIfCa4Jlxx0p5e2R45e3irZeNZWNDeytGMckfy4edJIJNp
+0EZDs+v7yIUnJxAaYae8SADHbct1NlFNs7+c0uAiqP+xgFnTa3t+xbFEAmS6tD9b
+ft6Jf+pJ9V2PtnrMCWRfLvPvtasivn472tYnWv9fzuEc9chrnJv8bVs++LdeyKXx
+nbbEhsNnLK6s/rDSYax/4KOuopscRRtF0pvm+aVYMctvscPd3MvL+cM0LCUX3iQy
+HGMC7lPudiJ5rO/3oy8lgyhdIhpBrZQgIrLL1e/rueKe2IY3p60zk5icui2WFjTY
+eA5JK8BcfwB9Qn9FzoEY1Boapjmwur1cz3C5xYsks+mmx1S5/agMl1EC6shK1mAP
+cfGrsFqIftWeUZiYkyo/tCed0u2g1sK0Yg5nxumYoA2KouxWT8qCkawmpUlhj1L9
+sSmiZu7PHsEy+iN7A9frFOxGAHuWPk2iJRAe8WrqCZTMrbOmtUj7wUsMVIA1IdSp
+IxTcFZd+808+horXLppQo3p+q2oKKxLxrmF3VpMTuu7WOU76Qsv8pq65mD91/sDz
+XYwQMyubv1OGf3c9d9az
+=vRDp
+-----END PGP SIGNATURE-----
 
-I realize that this would likely need to be a separate and non-default
-extra hardening mode, because there are *definitely* applications that
-take signals and then update the return address (maybe single-stepping
-over instructions etc). But for a *lot* of applications, signal return
-implies changing no signal state at all, and mixing in the returning
-IP and SP would seem to be a fundamentally stronger cookie.
-
-No?
-
-                 Linus
+--=-Q8Om2CoBofz+O+SE1AWK--
