@@ -1,26 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <56FAA18C.4040406@osg.samsung.com>
- <1459277509-10666-1-git-send-email-mic@digikod.net>
-From: Shuah Khan <shuahkh@osg.samsung.com>
-Message-ID: <56FAD260.5060903@osg.samsung.com>
-Date: Tue, 29 Mar 2016 13:07:12 -0600
-MIME-Version: 1.0
-In-Reply-To: <1459277509-10666-1-git-send-email-mic@digikod.net>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH 2/2] selftest/seccomp: Fix the seccomp(2) signature
-To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, linux-security-module@vger.kernel.org
-Cc: Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com, Shuah Khan <shuahkh@osg.samsung.com>
+From: Scott Bauer <sbauer@eng.utah.edu>
+Date: Tue, 29 Mar 2016 13:53:23 -0600
+Message-Id: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
+Subject: [kernel-hardening] [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
+To: linux-kernel@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, x86@kernel.org, ak@linux.intel.com, luto@amacapital.net, mingo@redhat.com, tglx@linutronix.de, wmealing@redhat.com, torvalds@linux-foundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 03/29/2016 12:51 PM, Mickaël Salaün wrote:
-> Signed-off-by: Mickaël Salaün <mic@digikod.net>
-> Cc: Andy Lutomirski <luto@amacapital.net>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Shuah Khan <shuahkh@osg.samsung.com>
-> Cc: Will Drewry <wad@chromium.org>
-> ---
+Sigreturn-oriented programming is a new attack vector in userland
+where an attacker crafts a fake signal frame on the stack and calls
+sigreturn. The kernel will extract the fake signal frame, which
+contains attacker controlled "saved" registers. The kernel will then
+transfer control to the attacker controlled userland instruction pointer.
 
-Thanks. Applied to linux-kselftest fixes for 4.6-rc2
+To prevent SROP attacks the kernel needs to know or be able to dervive
+whether a sigreturn it is processing is in response to a legitimate
+signal the kernel previously delivered. 
 
--- Shuah
+Further information and test code can be found in Documentation/security
+and this excellent article:
+http://lwn.net/Articles/676803/
+
+These patches implement the necessary changes to generate a cookie
+which will be placed above signal frame upon signal delivery to userland.
+The cookie is generated using a per-process random value xor'd with
+the address where the cookie will be stored on the stack.
+
+Upon a sigreturn the kernel will extract the cookie from userland,
+recalculate what the original cookie should be and verify that the two
+do not differ. If the two differ the kernel will terminate the process
+with a SIGSEGV.
+
+This prevents SROP by adding a value that the attacker cannot guess,
+but the kernel can verify. Therefore an attacker cannot use sigreturn as
+a method to control the flow of a process.
+
+
+Version	changes:
+
+v3->v4
+	Removed	ambiguous __user annotation, added Documentation
+	and test code.
+
+v2->v3
+	Changed	cookie calculation from	using restored regs->sp	to
+	using frame pointer from before	restoration.
+
+v1->v2
+	Miscellaneous nits and code cleanup.
+
+Scott Bauer (4):
+      SROP Mitigation: Architecture independent code for signal cookies
+      x86: SROP Mitigation: Implement Signal Cookies
+      Sysctl: SROP Mitigation: Add Sysctl argument to disable SROP.
+      Documentation: SROP Mitigation: Add documentation for SROP cookies
+
+
+ Documentation/security/srop-cookies.txt | 203 ++++++++++++++++++++++++++++++++
+ arch/x86/ia32/ia32_signal.c             |  65 +++++++++-
+ arch/x86/include/asm/fpu/signal.h       |   2 +
+ arch/x86/kernel/fpu/signal.c            |  10 ++
+ arch/x86/kernel/signal.c                |  83 +++++++++++--
+ fs/exec.c                               |   3 +
+ include/linux/sched.h                   |   7 ++
+ include/linux/signal.h                  |   3 +
+ kernel/signal.c                         |  49 ++++++++
+ kernel/sysctl.c                         |   8 ++
+ 10 files changed, 418 insertions(+), 15 deletions(-)
