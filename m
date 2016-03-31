@@ -1,55 +1,118 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1459415142-3412-1-git-send-email-matt.redfearn@imgtec.com>
- <1459415142-3412-12-git-send-email-matt.redfearn@imgtec.com>
-From: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
-Message-ID: <56FD1A32.10204@cogentembedded.com>
-Date: Thu, 31 Mar 2016 15:38:10 +0300
+From: ebiederm@xmission.com (Eric W. Biederman)
+References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
+	<CALCETrUxfPBawXNvKZgOnxhkaesw-b4PqCFUZbkRdaaqpjqnPQ@mail.gmail.com>
+	<56FAF571.3040802@eng.utah.edu>
+	<CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
+	<CA+55aFzY0p5OyTfnajTz2SL9qni=0FyUT7SeqS0CuXnwRPHS5w@mail.gmail.com>
+	<56FB0C65.4020602@eng.utah.edu>
+Date: Thu, 31 Mar 2016 15:22:38 -0500
+In-Reply-To: <56FB0C65.4020602@eng.utah.edu> (Scotty Bauer's message of "Tue,
+	29 Mar 2016 17:14:45 -0600")
+Message-ID: <87d1qafldd.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
-In-Reply-To: <1459415142-3412-12-git-send-email-matt.redfearn@imgtec.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 11/11] MIPS: KASLR: Print relocation Information on
- boot
-To: Matt Redfearn <matt.redfearn@imgtec.com>, Ralf Baechle <ralf@linux-mips.org>
-Cc: linux-mips@linux-mips.org, kernel-hardening@lists.openwall.com, Aaro Koskinen <aaro.koskinen@nokia.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexander Sverdlin <alexander.sverdlin@gmail.com>, linux-kernel@vger.kernel.org, Jaedon Shin <jaedon.shin@gmail.com>, Jonas Gorski <jogo@openwrt.org>, Paul Burton <paul.burton@imgtec.com>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
+To: Scotty Bauer <sbauer@eng.utah.edu>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com, criu@openvz.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello.
 
-On 3/31/2016 12:05 PM, Matt Redfearn wrote:
+Cc' the Criu list to attempt to give them a heads up.
 
-> When debugging a relocated kernel, the addresses of the relocated
-> symbols and the offset applied is essential information. If the kernel
-> is compiled with debugging information, then print this information
-> during bootup using the same function as the panic notifer.
+Scotty Bauer <sbauer@eng.utah.edu> writes:
 
-    Notifier.
-
-> Signed-off-by: Matt Redfearn <matt.redfearn@imgtec.com>
-> ---
+> On 03/29/2016 04:34 PM, Linus Torvalds wrote:
+>> On Tue, Mar 29, 2016 at 4:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>>>
+>>> Then there's an unanswered question: is this patch acceptable given
+>>> that it's an ABI break?  Security fixes are sometimes an exception to
+>>> the "no ABI breaks" rule, but it's by no means an automatic exception.
+>> 
+>> So there isn't any "no ABI break" rule - there is only a "does it
+>> break real applications" rule.
+>> 
+>> (This can also be re-stated as: "Talk is cheap", aka "reality trumps
+>> documentation".
+>> 
+>> Documentation is meaningless if it doesn't match reality, and what we
+>> actually *do* is what matters.
+>> 
+>> So the ABI isn't about some theoretical interface documentation, the
+>> ABI is about what people use and have tested.
+>> 
+>> On the one hand, that means that that our ABI is _stricter_ than any
+>> documentatiuon, and that "but we can make this change that breaks app
+>> XYZ, because XYZ is depending on undocumented behavior" is not an
+>> acceptable excuse.
+>> 
+>> But on the other hand it *also* means that since the ABI is about real
+>> programs, not theoretical issues, we can also change things as long as
+>> we don't actually break anything that people can notice and depend
+>> on).
+>> 
+>> And while *acute* security holes will be fixed regardless of ABI
+>> issues, something like this that is only hardening rather than fixing
+>> a particular security hole, really needs to not break any
+>> applications.
+>> 
+>> Because if it does break anything, it needs to be turned off by
+>> default. That's a hard rule. And since that would be largely defeating
+>> the whole point o fthe series, I think we really need to have made
+>> sure nothing breaks before a patch series like this can be accepted.
+>> 
+>> That said, if this is done right, I don't think it will break
+>> anything. CRIU may indeed be a special case, but CRIU isn't really a
+>> normal application, and the CRIU people may need to turn this off
+>> explicitly, if it does break.
+>> 
+>> But yes, dosemu needs to be tested, and needs to just continue
+>> working. But does dosemu actually create a signal stack, as opposed to
+>> just playing with one that has been created for it? I thought it was
+>> just the latter case, which should be ok even with a magic cookie in
+>> there.
+>> 
+>>                    Linus
+>> 
 >
-> Changes in v2: None
 >
->   arch/mips/kernel/setup.c | 9 +++++++++
->   1 file changed, 9 insertions(+)
+> For what it's worth this series is breaking CRIU, I just tested:
 >
-> diff --git a/arch/mips/kernel/setup.c b/arch/mips/kernel/setup.c
-> index d8376d7b3345..ae71f8d9b555 100644
-> --- a/arch/mips/kernel/setup.c
-> +++ b/arch/mips/kernel/setup.c
-> @@ -477,9 +477,18 @@ static void __init bootmem_init(void)
->   	 */
->   	if (__pa_symbol(_text) > __pa_symbol(VMLINUX_LOAD_ADDRESS)) {
->   		unsigned long offset;
-> +		extern void show_kernel_relocation(const char *level);
->
->   		offset = __pa_symbol(_text) - __pa_symbol(VMLINUX_LOAD_ADDRESS);
->   		free_bootmem(__pa_symbol(VMLINUX_LOAD_ADDRESS), offset);
-> +
-> +#if (defined CONFIG_DEBUG_KERNEL) && (defined CONFIG_DEBUG_INFO)
+> root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
+> root@node0:/mnt/criu# tail -3 /var/log/syslog
+> Mar 29 17:12:08 localhost kernel: [ 3554.625535] Possible exploit attempt or buggy program!
+> Mar 29 17:12:08 localhost kernel: [ 3554.625535] If you believe this is an error you can disable SROP  Protection by #echo 1 > /proc/sys/kernel/disable-srop-protection
+> Mar 29 17:12:08 localhost kernel: [ 3554.625545] test_[25305] bad frame in rt_sigreturn frame:000000000001e540 ip:7f561542cf20 sp:7ffe004ecfd8 orax:ffffffffffffffff in libc-2.19.so[7f561536c000+1bb0]
+> root@node0:/mnt/criu# echo 1 > /proc/sys/kernel/disable-srop-protection 
+> root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
+> slept for one second
+> slept for one second
+> slept for one second
+> slept for one second
+> root@node0:/mnt/criu#
 
-    Not #if defined(CONFIG_DEBUG_KERNEL) && defined(CONFIG_DEBUG_INFO)?
+Which means that if checkpoint/restart is going to continue to be
+something that is possible in Linux it should be possible to
+save/restore the per process sig_cookie.  Perhaps with a prctl?
 
-[...]
+This should be addressed as part of this patchset as making that
+information too easily accessible/changable will defeat the security
+guarantees.  Making it too difficult to do destroys the ability to
+migrate a process from one kernel to another.  As the existence of CRIU
+attests it is desirable to have a checkpoint/restart capability in the
+kernel.
 
-MBR, Sergei
+> I'm working on getting dosemu up and running-- are there any other applications
+> off the top of your head that I should be testing with?
+
+There are a set of POSIX functions setcontext, getcontext, makecontext
+and swapcontext that to the best of my knowledge deal in signal stacks.
+Although I don't know that they use sigreturn.  Anything that makes use
+of those is potentially affected.
+
+Perhaps you can find binaries that care by looking for libraries and
+executables that import those elf symbols.  glibc certainly provides
+them.
+
+
+Eric
