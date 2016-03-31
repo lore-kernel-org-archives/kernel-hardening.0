@@ -1,118 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: ebiederm@xmission.com (Eric W. Biederman)
 References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
-	<CALCETrUxfPBawXNvKZgOnxhkaesw-b4PqCFUZbkRdaaqpjqnPQ@mail.gmail.com>
-	<56FAF571.3040802@eng.utah.edu>
-	<CALCETrWeLp1FX3Fz2z-kJezhPXKjvZHEhBH3guijeCgXdUunng@mail.gmail.com>
-	<CA+55aFzY0p5OyTfnajTz2SL9qni=0FyUT7SeqS0CuXnwRPHS5w@mail.gmail.com>
-	<56FB0C65.4020602@eng.utah.edu>
-Date: Thu, 31 Mar 2016 15:22:38 -0500
-In-Reply-To: <56FB0C65.4020602@eng.utah.edu> (Scotty Bauer's message of "Tue,
-	29 Mar 2016 17:14:45 -0600")
-Message-ID: <87d1qafldd.fsf@x220.int.ebiederm.org>
+	<1459281207-24377-2-git-send-email-sbauer@eng.utah.edu>
+Date: Thu, 31 Mar 2016 15:25:16 -0500
+In-Reply-To: <1459281207-24377-2-git-send-email-sbauer@eng.utah.edu> (Scott
+	Bauer's message of "Tue, 29 Mar 2016 13:53:24 -0600")
+Message-ID: <87wpoie6oj.fsf@x220.int.ebiederm.org>
 MIME-Version: 1.0
 Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH v4 0/4] SROP Mitigation: Sigreturn Cookies
-To: Scotty Bauer <sbauer@eng.utah.edu>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com, criu@openvz.org
+Subject: [kernel-hardening] Re: [PATCH v4 1/4] SROP Mitigation: Architecture independent code for signal cookies
+To: Scott Bauer <sbauer@eng.utah.edu>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, ak@linux.intel.com, luto@amacapital.net, mingo@redhat.com, tglx@linutronix.de, wmealing@redhat.com, torvalds@linux-foundation.org, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Scott Bauer <sbauer@plzdonthack.me>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Scott Bauer <sbauer@eng.utah.edu> writes:
 
-Cc' the Criu list to attempt to give them a heads up.
-
-Scotty Bauer <sbauer@eng.utah.edu> writes:
-
-> On 03/29/2016 04:34 PM, Linus Torvalds wrote:
->> On Tue, Mar 29, 2016 at 4:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->>>
->>> Then there's an unanswered question: is this patch acceptable given
->>> that it's an ABI break?  Security fixes are sometimes an exception to
->>> the "no ABI breaks" rule, but it's by no means an automatic exception.
->> 
->> So there isn't any "no ABI break" rule - there is only a "does it
->> break real applications" rule.
->> 
->> (This can also be re-stated as: "Talk is cheap", aka "reality trumps
->> documentation".
->> 
->> Documentation is meaningless if it doesn't match reality, and what we
->> actually *do* is what matters.
->> 
->> So the ABI isn't about some theoretical interface documentation, the
->> ABI is about what people use and have tested.
->> 
->> On the one hand, that means that that our ABI is _stricter_ than any
->> documentatiuon, and that "but we can make this change that breaks app
->> XYZ, because XYZ is depending on undocumented behavior" is not an
->> acceptable excuse.
->> 
->> But on the other hand it *also* means that since the ABI is about real
->> programs, not theoretical issues, we can also change things as long as
->> we don't actually break anything that people can notice and depend
->> on).
->> 
->> And while *acute* security holes will be fixed regardless of ABI
->> issues, something like this that is only hardening rather than fixing
->> a particular security hole, really needs to not break any
->> applications.
->> 
->> Because if it does break anything, it needs to be turned off by
->> default. That's a hard rule. And since that would be largely defeating
->> the whole point o fthe series, I think we really need to have made
->> sure nothing breaks before a patch series like this can be accepted.
->> 
->> That said, if this is done right, I don't think it will break
->> anything. CRIU may indeed be a special case, but CRIU isn't really a
->> normal application, and the CRIU people may need to turn this off
->> explicitly, if it does break.
->> 
->> But yes, dosemu needs to be tested, and needs to just continue
->> working. But does dosemu actually create a signal stack, as opposed to
->> just playing with one that has been created for it? I thought it was
->> just the latter case, which should be ok even with a magic cookie in
->> there.
->> 
->>                    Linus
->> 
+> This patch adds a per-process secret to the task struct which
+> will be used during signal delivery and during a sigreturn.
+> Also, logic is added in signal.c to generate, place, extract,
+> clear and verify the signal cookie.
 >
->
-> For what it's worth this series is breaking CRIU, I just tested:
->
-> root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
-> root@node0:/mnt/criu# tail -3 /var/log/syslog
-> Mar 29 17:12:08 localhost kernel: [ 3554.625535] Possible exploit attempt or buggy program!
-> Mar 29 17:12:08 localhost kernel: [ 3554.625535] If you believe this is an error you can disable SROP  Protection by #echo 1 > /proc/sys/kernel/disable-srop-protection
-> Mar 29 17:12:08 localhost kernel: [ 3554.625545] test_[25305] bad frame in rt_sigreturn frame:000000000001e540 ip:7f561542cf20 sp:7ffe004ecfd8 orax:ffffffffffffffff in libc-2.19.so[7f561536c000+1bb0]
-> root@node0:/mnt/criu# echo 1 > /proc/sys/kernel/disable-srop-protection 
-> root@node0:/mnt/criu# criu restore -vvvv -o restore.log --shell-job
-> slept for one second
-> slept for one second
-> slept for one second
-> slept for one second
-> root@node0:/mnt/criu#
+> Cc: Abhiram Balasubramanian <abhiram@cs.utah.edu>
+> Signed-off-by: Scott Bauer <sbauer@plzdonthack.me>
+> Signed-off-by: Scott Bauer <sbauer@eng.utah.edu>
 
-Which means that if checkpoint/restart is going to continue to be
-something that is possible in Linux it should be possible to
-save/restore the per process sig_cookie.  Perhaps with a prctl?
+> diff --git a/include/linux/sched.h b/include/linux/sched.h
+> index 60bba7e..1828fb8 100644
+> --- a/include/linux/sched.h
+> +++ b/include/linux/sched.h
+> @@ -1502,6 +1502,13 @@ struct task_struct {
+>  	unsigned long stack_canary;
+>  #endif
+>  	/*
+> +	 * Canary value for signal frames placed on user stack.
+> +	 * This helps mitigate "Signal Return oriented program"
+> +	 * exploits in userland.
+> +	 */
+> +	unsigned long sig_cookie;
 
-This should be addressed as part of this patchset as making that
-information too easily accessible/changable will defeat the security
-guarantees.  Making it too difficult to do destroys the ability to
-migrate a process from one kernel to another.  As the existence of CRIU
-attests it is desirable to have a checkpoint/restart capability in the
-kernel.
 
-> I'm working on getting dosemu up and running-- are there any other applications
-> off the top of your head that I should be testing with?
+I suspect we want this to be a per-mm attribute rather than a per-thread
+attribute.
 
-There are a set of POSIX functions setcontext, getcontext, makecontext
-and swapcontext that to the best of my knowledge deal in signal stacks.
-Although I don't know that they use sigreturn.  Anything that makes use
-of those is potentially affected.
+Otherwise you are breaking anything that uses a N-M threading model.
+Which I suspect means that this implementation choice breaks all go
+programs on linux.
 
-Perhaps you can find binaries that care by looking for libraries and
-executables that import those elf symbols.  glibc certainly provides
-them.
-
+> +	/*
+>  	 * pointers to (original) parent process, youngest child, younger sibling,
+>  	 * older sibling, respectively.  (p->father can be replaced with
+>  	 * p->real_parent->pid)
 
 Eric
