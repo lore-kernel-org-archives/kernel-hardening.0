@@ -1,54 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: ebiederm@xmission.com (Eric W. Biederman)
+MIME-Version: 1.0
+Sender: linus971@gmail.com
+In-Reply-To: <87wpoie6oj.fsf@x220.int.ebiederm.org>
 References: <1459281207-24377-1-git-send-email-sbauer@eng.utah.edu>
 	<1459281207-24377-2-git-send-email-sbauer@eng.utah.edu>
-Date: Thu, 31 Mar 2016 15:25:16 -0500
-In-Reply-To: <1459281207-24377-2-git-send-email-sbauer@eng.utah.edu> (Scott
-	Bauer's message of "Tue, 29 Mar 2016 13:53:24 -0600")
-Message-ID: <87wpoie6oj.fsf@x220.int.ebiederm.org>
-MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH v4 1/4] SROP Mitigation: Architecture independent code for signal cookies
-To: Scott Bauer <sbauer@eng.utah.edu>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, x86@kernel.org, ak@linux.intel.com, luto@amacapital.net, mingo@redhat.com, tglx@linutronix.de, wmealing@redhat.com, torvalds@linux-foundation.org, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Scott Bauer <sbauer@plzdonthack.me>
+	<87wpoie6oj.fsf@x220.int.ebiederm.org>
+Date: Thu, 31 Mar 2016 17:00:24 -0500
+Message-ID: <CA+55aFy1nzw0amBKYD6SfS6-4tiCDfX7viUBHFEq-9Kzv_-Mtg@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 1/4] SROP Mitigation: Architecture independent code for
+ signal cookies
+To: "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Scott Bauer <sbauer@eng.utah.edu>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, the arch/x86 maintainers <x86@kernel.org>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, wmealing@redhat.com, Abhiram Balasubramanian <abhiram@cs.utah.edu>, Scott Bauer <sbauer@plzdonthack.me>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Scott Bauer <sbauer@eng.utah.edu> writes:
-
-> This patch adds a per-process secret to the task struct which
-> will be used during signal delivery and during a sigreturn.
-> Also, logic is added in signal.c to generate, place, extract,
-> clear and verify the signal cookie.
+On Thu, Mar 31, 2016 at 3:25 PM, Eric W. Biederman
+<ebiederm@xmission.com> wrote:
 >
-> Cc: Abhiram Balasubramanian <abhiram@cs.utah.edu>
-> Signed-off-by: Scott Bauer <sbauer@plzdonthack.me>
-> Signed-off-by: Scott Bauer <sbauer@eng.utah.edu>
+> I suspect we want this to be a per-mm attribute rather than a per-thread
+> attribute.
+>
+> Otherwise you are breaking anything that uses a N-M threading model.
+> Which I suspect means that this implementation choice breaks all go
+> programs on linux.
 
-> diff --git a/include/linux/sched.h b/include/linux/sched.h
-> index 60bba7e..1828fb8 100644
-> --- a/include/linux/sched.h
-> +++ b/include/linux/sched.h
-> @@ -1502,6 +1502,13 @@ struct task_struct {
->  	unsigned long stack_canary;
->  #endif
->  	/*
-> +	 * Canary value for signal frames placed on user stack.
-> +	 * This helps mitigate "Signal Return oriented program"
-> +	 * exploits in userland.
-> +	 */
-> +	unsigned long sig_cookie;
+That sounds like a good point, but wouldn't it make more conceptual
+sense to make it part of "struct sighand_struct" instead?
 
+That is also shared for threads.
 
-I suspect we want this to be a per-mm attribute rather than a per-thread
-attribute.
-
-Otherwise you are breaking anything that uses a N-M threading model.
-Which I suspect means that this implementation choice breaks all go
-programs on linux.
-
-> +	/*
->  	 * pointers to (original) parent process, youngest child, younger sibling,
->  	 * older sibling, respectively.  (p->father can be replaced with
->  	 * p->real_parent->pid)
-
-Eric
+                Linus
