@@ -1,190 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 5 Apr 2016 22:00:29 +0100
+From: James Hogan <james.hogan@imgtec.com>
+Message-ID: <20160405210029.GG31316@jhogan-linux.le.imgtec.org>
+References: <1459415142-3412-1-git-send-email-matt.redfearn@imgtec.com>
+ <CAGXu5jKMLcRmMkowF=fUEQdtccTJLR9FEWT4g_zeyZMW4BWQOg@mail.gmail.com>
+ <20160404233721.GB26295@linux-mips.org>
+ <CAGXu5jJ7P95T0ZyAVZagQ0LZhSg28wxkQxR-tRFkhZsHekrN_Q@mail.gmail.com>
+ <20160405090923.GF31316@jhogan-linux.le.imgtec.org>
+ <CAGXu5jJ5B+MEg7SVgbmWju+y8XYnbunvfdR0ZD_tfz-u=iB03w@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160405015613.GA4654@x1.redhat.com>
-References: <1458631937-14593-1-git-send-email-bhe@redhat.com>
-	<20160405015613.GA4654@x1.redhat.com>
-Date: Tue, 5 Apr 2016 13:00:41 -0700
-Message-ID: <CAGXu5jKtXndmfLNt1PZvL1oE5BXHDHsAcGBy=0V-nHg=6CA8HA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 00/20] x86, boot: kaslr cleanup and 64bit kaslr support
-To: Ingo Molnar <mingo@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+	protocol="application/pgp-signature"; boundary="7lMq7vMTJT4tNk0a"
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJ5B+MEg7SVgbmWju+y8XYnbunvfdR0ZD_tfz-u=iB03w@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH v2 00/11] MIPS relocatable kernel &
+ KASLR
+To: Kees Cook <keescook@chromium.org>
+Cc: Ralf Baechle <ralf@linux-mips.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux MIPS Mailing List <linux-mips@linux-mips.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Aaro
+ Koskinen <aaro.koskinen@nokia.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexander Sverdlin <alexander.sverdlin@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Thomas
+ Gleixner <tglx@linutronix.de>, David Daney <ddaney@caviumnetworks.com>, Jaedon Shin <jaedon.shin@gmail.com>, Jonas Gorski <jogo@openwrt.org>, Paul
+ Burton <paul.burton@imgtec.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 4, 2016 at 6:56 PM, Baoquan He <bhe@redhat.com> wrote:
-> On 03/22/16 at 03:31pm, Baoquan He wrote:
->> ***Background:
->> Previously a bug is reported that kdump didn't work when kaslr is enabled. During
->> discussing that bug fix, we found current kaslr has a limilation that it can
->> only randomize in 1GB region.
->>
->> This is because in curent kaslr implementaion only physical address of kernel
->> loading is randomized. Then calculate the delta of physical address where
->> vmlinux was linked to load and where it is finally loaded. If delta is not
->> equal to 0, namely there's a new physical address where kernel is actually
->> decompressed, relocation handling need be done. Then delta is added to offset
->> of kernel symbol relocation, this makes the address of kernel text mapping move
->> delta long. Though in principle kernel can be randomized to any physical address,
->> kernel text mapping address space is limited and only 1G, namely as follows on
->> x86_64:
->>       [0xffffffff80000000, 0xffffffffc0000000)
->>
->> In one word, kernel text physical address and virtual address randomization is
->> coupled. This causes the limitation.
->>
->> Then hpa and Vivek suggested we should change this. To decouple the physical
->> address and virtual address randomization of kernel text and let them work
->> separately. Then kernel text physical address can be randomized in region
->> [16M, 64T), and kernel text virtual address can be randomized in region
->> [0xffffffff80000000, 0xffffffffc0000000).
->>
->> ***Problems we need solved:
->>   - For kernel boot from startup_32 case, only 0~4G identity mapping is built.
->>     If kernel will be randomly put anywhere from 16M to 64T at most, the price
->>     to build all region of identity mapping is too high. We need build the
->>     identity mapping on demand, not covering all physical address space.
->>
->>   - Decouple the physical address and virtual address randomization of kernel
->>     text and let them work separately.
->>
->> ***Parts:
->>    - The 1st part is Yinghai's identity mapping building on demand patches.
->>      This is used to solve the first problem mentioned above.
->>      (Patch 09-10/19)
->>    - The 2nd part is decoupling the physical address and virtual address
->>      randomization of kernel text and letting them work separately patches
->>      based on Yinghai's ident mapping patches.
->>      (Patch 12-19/19)
->>    - The 3rd part is some clean up patches which Yinghai found when he reviewed
->>      my patches and the related code around.
->>      (Patch 01-08/19)
->>
->> ***Patch status:
->> This patchset went through several rounds of review.
->>
->>     v1:
->>     - The first round can be found here:
->>       https://lwn.net/Articles/637115/
->>
->>     v1->v2:
->>     - In 2nd round Yinghai made a big patchset including this kaslr fix and another
->>       setup_data related fix. The link is here:
->>        http://lists-archives.com/linux-kernel/28346903-x86-updated-patches-for-kaslr-and-setup_data-etc-for-v4-3.html
->>       You can get the code from Yinghai's git branch:
->>       git://git.kernel.org/pub/scm/linux/kernel/git/yinghai/linux-yinghai.git for-x86-v4.3-next
->>
->>     v2->v3:
->>     - It only takes care of the kaslr related patches.
->>       For reviewers it's better to discuss only one issue in one thread.
->>         * I take off one patch as follows from Yinghai's because I think it's unnecessay.
->>            - Patch 05/19 x86, kaslr: rename output_size to output_run_size
->>              output_size is enough to represen the value:
->>               output_len > run_size ? output_len : run_size
->>
->>         * I add Patch 04/19, it's a comment update patch. For other patches, I just
->>           adjust patch log and do several places of change comparing with 2nd round.
->>           Please check the change log under patch log of each patch for details.
->>
->>         * Adjust sequence of several patches to make review easier. It doesn't
->>           affect codes.
->>
->>     v3->v4:
->>     - Made changes according to Kees's comments.
->>       Add one patch 20/20 as Kees suggested to use KERNEL_IMAGE_SIZE as offset
->>       max of virtual random, meanwhile clean up useless CONFIG_RANDOM_OFFSET_MAX
->>
->>         x86, kaslr: Use KERNEL_IMAGE_SIZE as the offset max for kernel virtual randomization
->>
->> You can also get this patchset from my github:
->>    https://github.com/baoquan-he/linux.git kaslr-above-4G
->>
->> Any comments about code changes, code comments, patch logs are welcome and
->> appreciated.
->>
->> Baoquan He (9):
->>   x86, kaslr: Fix a bug that relocation can not be handled when kernel
->>     is loaded above 2G
->>   x86, kaskr: Update the description for decompressor worst case
->>   x86, kaslr: Introduce struct slot_area to manage randomization slot
->>     info
->>   x86, kaslr: Add two functions which will be used later
->>   x86, kaslr: Introduce fetch_random_virt_offset to randomize the kernel
->>     text mapping address
->>   x86, kaslr: Randomize physical and virtual address of kernel
->>     separately
->>   x86, kaslr: Add support of kernel physical address randomization above
->>     4G
->>   x86, kaslr: Remove useless codes
->>   x86, kaslr: Use KERNEL_IMAGE_SIZE as the offset max for kernel virtual
->>     randomization
->>
->> Yinghai Lu (11):
->>   x86, kaslr: Remove not needed parameter for choose_kernel_location
->>   x86, boot: Move compressed kernel to end of buffer before
->>     decompressing
->>   x86, boot: Move z_extract_offset calculation to header.S
->>   x86, boot: Fix run_size calculation
->>   x86, kaslr: Clean up useless code related to run_size.
->>   x86, kaslr: Get correct max_addr for relocs pointer
->>   x86, kaslr: Consolidate mem_avoid array filling
->>   x86, boot: Split kernel_ident_mapping_init to another file
->>   x86, 64bit: Set ident_mapping for kaslr
->>   x86, boot: Add checking for memcpy
->>   x86, kaslr: Allow random address to be below loaded address
->>
->>  arch/x86/Kconfig                       |  57 +++----
->>  arch/x86/boot/Makefile                 |  13 +-
->>  arch/x86/boot/compressed/Makefile      |  19 ++-
->>  arch/x86/boot/compressed/aslr.c        | 300 +++++++++++++++++++++++++--------
->>  arch/x86/boot/compressed/head_32.S     |  14 +-
->>  arch/x86/boot/compressed/head_64.S     |  15 +-
->>  arch/x86/boot/compressed/misc.c        |  89 +++++-----
->>  arch/x86/boot/compressed/misc.h        |  34 ++--
->>  arch/x86/boot/compressed/misc_pgt.c    |  93 ++++++++++
->>  arch/x86/boot/compressed/mkpiggy.c     |  28 +--
->>  arch/x86/boot/compressed/string.c      |  29 +++-
->>  arch/x86/boot/compressed/vmlinux.lds.S |   1 +
->>  arch/x86/boot/header.S                 |  22 ++-
->>  arch/x86/include/asm/boot.h            |  19 +++
->>  arch/x86/include/asm/page.h            |   5 +
->>  arch/x86/include/asm/page_64_types.h   |   5 +-
->>  arch/x86/kernel/asm-offsets.c          |   1 +
->>  arch/x86/kernel/vmlinux.lds.S          |   1 +
->>  arch/x86/mm/ident_map.c                |  74 ++++++++
->>  arch/x86/mm/init_32.c                  |   3 -
->>  arch/x86/mm/init_64.c                  |  74 +-------
->>  arch/x86/tools/calc_run_size.sh        |  42 -----
->>  22 files changed, 605 insertions(+), 333 deletions(-)
->>  create mode 100644 arch/x86/boot/compressed/misc_pgt.c
->>  create mode 100644 arch/x86/mm/ident_map.c
->>  delete mode 100644 arch/x86/tools/calc_run_size.sh
->>
-> Hi Ingo,
->
-> Ping.
->
-> Do you have any suggestions or comments for this patchset? As you
-> suggested for Yinghai's earlier post, I re-check the whole patchset and
-> try to understand them all, and try to re-write patch logs with my own
-> understanding. I hope this patch logs can help people who are interested
-> in this issue can understand what the patch is doing. Meanwhile Kees
-> is very kind to help review the code change and patch log, help adjust
-> or re-write some of them.
->
-> If still there's something you don't like, your suggestions, ideas and
-> comments are welcome and appreciated. I will continue making changes
-> until it's satisfactory.
+--7lMq7vMTJT4tNk0a
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-FWIW, I've also had this tree up in my git branches, and the 0day
-tester hasn't complained at all about it in the last two weeks. I'd
-really like to see this in -next to fix the >4G (mainly kexec) issues
-and get us to feature parity with the arm64 kASLR work (randomized
-virtual address).
+On Tue, Apr 05, 2016 at 11:10:40AM -0700, Kees Cook wrote:
+> On Tue, Apr 5, 2016 at 2:09 AM, James Hogan <james.hogan@imgtec.com> wrot=
+e:
+> > EVA (enhanced virtual addressing) is a feature present on recent MIPS
+> > 32-bit i-class and p-class cores (and p6600 too which is 64-bit),
+> > intended to make better use of 32-bit virtual address space. It can
+> > actually overlap kernel and virtual address space, requiring special
+> > instructions for accessing userland mappings, however each segment can't
+> > have distinct TLB mappings for kernel and user mode (if kernel and user
+> > view of segment differs, kernel would need to see it unmapped, i.e. a
+> > window into physical memory). As such its generally better to keep the
+> > lowest segment visible to both kernel and user, so that kernel NULL
+> > dereferences can still be caught, which would negate the point of using
+> > it for security. It is possible to make it work with watchpoints to
+> > catch NULL dereferences in lowest 4KB, so kernel can't access any user
+> > address space directly, but thats a bit of a hack really. Also since EVA
+> > is aimed at making better use of 32-bit address space, it doesn't
+> > address 64-bit.
+>=20
+> Ah, so it couldn't cover a 64-bit userspace range?
 
--Kees
+Correct.
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+<long version>
+OTOH the segments that can be configured by EVA on MIPS64 (specifically
+P6600 core) are:
+
+0xffffffffe0000000..0xffffffffffffffff 512MB (normally kernel mapped)
+0xffffffffc0000000..0xffffffffdfffffff 512MB (normally kernel mapped)
+0xffffffffa0000000..0xffffffffbfffffff 512MB (normally kernel uncached)
+0xffffffff80000000..0xffffffff9fffffff 512MB (normally kernel)
+=2E..
+0x8000000000000000..0xbfffffffffffffff 8 64-bit unmapped segments (kern)
+=2E.. <- MIPS64 extends user address space here
+0x0000000040000000..0x000000007fffffff 1GB (normally user)
+0x0000000000000000..0x000000003fffffff 1GB (normally user)
+
+In the middle there, MIPS64 extends userspace from 0x0000000080000000
+towards 0x4000000000000000 (depending on number of virtual address bits
+implemented), over which there is no segmentation control.
+</long version>
+
+Cheers
+James
+
+--7lMq7vMTJT4tNk0a
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJXBCdtAAoJEGwLaZPeOHZ6xEYP/1QCAip793JX3QvQlc34TXLt
+sORXtYXDhQdSUc0JcWuarMMdqaXaJXismSp8Hf8uGDlFQDnPubCoeSNi1Cuz5gLR
+aN5IjBYdlbUAKcxDzNnmuNmdrXwTiv90QIiqGzvE9TRY+j/06N4tVfAr6kRNew9l
+gZMHbozKa/abz3dr2+QeoivDAo21tCIaDgCxDnNiaBkvQ4UfPZ7X9nyRO72FCakx
+cyHIaEp+MkVe4r9hyFGUHEOkYTmQ4J2Dou80vjRNc9BpKgkE2sUMruR0+7iBtxXQ
+zl5l6HWbNSKI2ZtsQLej8ud7+8KFlDPQmIIArnf0eeFunrY8RRUVS2lsgHLMYqeK
+3iwU4sOK3y59yaWC7p7RGspGpW28uu29OOdbEFMH/Ra2Xq5ChF/tahVGKvYCbJpg
+o6F5O/kNfA6ELKaQGkKURy9ukOWr3Jl8QkmeTbd1VMjsN54jiqSvZ5pTYXMb1m61
+mKCy3IrNpHEZ+H74NWTAkoOyqN6npwCZO3i+I+wzDpcN4ug3ieCM40axm0BGV5WC
+nX59qkmtySxAgRw0yKmgABNd4Gqt4a9dHVGxcjWgSTSjw1Q/5NLZDvnXVXQEIDpl
+RyBZEFRMGxzR7HAvn6NFas6iETZIDMcvcqCjT7296hWwxpe7gAxMcQqMhgpzyjaF
+mdB1GgOr+yuNWfqDmu+B
+=d+Hw
+-----END PGP SIGNATURE-----
+
+--7lMq7vMTJT4tNk0a--
