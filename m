@@ -1,97 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 5 Apr 2016 22:00:29 +0100
-From: James Hogan <james.hogan@imgtec.com>
-Message-ID: <20160405210029.GG31316@jhogan-linux.le.imgtec.org>
-References: <1459415142-3412-1-git-send-email-matt.redfearn@imgtec.com>
- <CAGXu5jKMLcRmMkowF=fUEQdtccTJLR9FEWT4g_zeyZMW4BWQOg@mail.gmail.com>
- <20160404233721.GB26295@linux-mips.org>
- <CAGXu5jJ7P95T0ZyAVZagQ0LZhSg28wxkQxR-tRFkhZsHekrN_Q@mail.gmail.com>
- <20160405090923.GF31316@jhogan-linux.le.imgtec.org>
- <CAGXu5jJ5B+MEg7SVgbmWju+y8XYnbunvfdR0ZD_tfz-u=iB03w@mail.gmail.com>
+Date: Tue, 5 Apr 2016 13:14:53 +0100
+From: "Maciej W. Rozycki" <macro@imgtec.com>
+In-Reply-To: <20160404233721.GB26295@linux-mips.org>
+Message-ID: <alpine.DEB.2.00.1604051255150.21846@tp.orcam.me.uk>
+References: <1459415142-3412-1-git-send-email-matt.redfearn@imgtec.com> <CAGXu5jKMLcRmMkowF=fUEQdtccTJLR9FEWT4g_zeyZMW4BWQOg@mail.gmail.com> <20160404233721.GB26295@linux-mips.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha256;
-	protocol="application/pgp-signature"; boundary="7lMq7vMTJT4tNk0a"
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ5B+MEg7SVgbmWju+y8XYnbunvfdR0ZD_tfz-u=iB03w@mail.gmail.com>
+Content-Type: text/plain; charset="US-ASCII"
 Subject: Re: [kernel-hardening] [PATCH v2 00/11] MIPS relocatable kernel &
  KASLR
-To: Kees Cook <keescook@chromium.org>
-Cc: Ralf Baechle <ralf@linux-mips.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux MIPS Mailing List <linux-mips@linux-mips.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Aaro
- Koskinen <aaro.koskinen@nokia.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexander Sverdlin <alexander.sverdlin@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Thomas
- Gleixner <tglx@linutronix.de>, David Daney <ddaney@caviumnetworks.com>, Jaedon Shin <jaedon.shin@gmail.com>, Jonas Gorski <jogo@openwrt.org>, Paul
- Burton <paul.burton@imgtec.com>
+To: Ralf Baechle <ralf@linux-mips.org>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux MIPS Mailing List <linux-mips@linux-mips.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Aaro Koskinen <aaro.koskinen@nokia.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Alexander Sverdlin <alexander.sverdlin@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, David Daney <ddaney@caviumnetworks.com>, Jaedon Shin <jaedon.shin@gmail.com>, James Hogan <james.hogan@imgtec.com>, Jonas Gorski <jogo@openwrt.org>, Paul Burton <paul.burton@imgtec.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---7lMq7vMTJT4tNk0a
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+On Tue, 5 Apr 2016, Ralf Baechle wrote:
 
-On Tue, Apr 05, 2016 at 11:10:40AM -0700, Kees Cook wrote:
-> On Tue, Apr 5, 2016 at 2:09 AM, James Hogan <james.hogan@imgtec.com> wrot=
-e:
-> > EVA (enhanced virtual addressing) is a feature present on recent MIPS
-> > 32-bit i-class and p-class cores (and p6600 too which is 64-bit),
-> > intended to make better use of 32-bit virtual address space. It can
-> > actually overlap kernel and virtual address space, requiring special
-> > instructions for accessing userland mappings, however each segment can't
-> > have distinct TLB mappings for kernel and user mode (if kernel and user
-> > view of segment differs, kernel would need to see it unmapped, i.e. a
-> > window into physical memory). As such its generally better to keep the
-> > lowest segment visible to both kernel and user, so that kernel NULL
-> > dereferences can still be caught, which would negate the point of using
-> > it for security. It is possible to make it work with watchpoints to
-> > catch NULL dereferences in lowest 4KB, so kernel can't access any user
-> > address space directly, but thats a bit of a hack really. Also since EVA
-> > is aimed at making better use of 32-bit address space, it doesn't
-> > address 64-bit.
->=20
-> Ah, so it couldn't cover a 64-bit userspace range?
+> > > * Relocation is supported only by multiples of 64k bytes. This
+> > >   eliminates the need to handle R_MIPS_LO16 relocations as the bottom
+> > >   16bits will remain the same at the relocated address.
+> > 
+> > IIUC, that's actually better than x86, which needs to be 2MB aligned.
+> 
+> On MIPS a key concern was maintaining a reasonable size for the final
+> kernel image.  The R_MIPS_LO16 relocatio records make a significant
+> portion of the relocations in a relocatable .o file, so we wanted to
+> get rid of them.  This results in a relocation granularity of 64kB.
+> If we were truely, truely stingy we could come up with a relocation format
+> to save a few more bits but I doubt that'd make any sense.
 
-Correct.
+ Additionally, for historical reasons, with 32-bit (o32) ELF images the 
+REL relocation format is used making borrow propagation from R_MIPS_LO16 
+to its corresponding R_MIPS_HI16 relocation a pain to handle.  It is 
+solvable as the static linker does handle it, in particular doing the 
+reasonable thing for orphan relocations, but I think it's a complication 
+worth avoiding if the cost is so little.
 
-<long version>
-OTOH the segments that can be configured by EVA on MIPS64 (specifically
-P6600 core) are:
+> > > * In 64 bit kernels, relocation is supported only within the same 4Gb
+> > >   memory segment as the kernel link address (CONFIG_PHYSICAL_START).
+> > >   This eliminates the need to handle R_MIPS_HIGHEST and R_MIPS_HIGHER
+> > >   relocations as the top 32bits will remain the same at the relocated
+> > >   address.
+> > 
+> > Interesting. Could the relocation code be updated in the future to
+> > bump the high addresses too?
+> 
+> It could but yet again, the idea was to keep the size of the final
+> generated file under control.  The R_MIPS_HIGHER and R_MIPS_HIGHEST
+> relocations can be discarded if we constrain the addresses to be in
+> a single 4GB segment.  Removing this constraint would make a kernel
+> image much bigger so I suggested to add this restriction at least for
+> this initial version.
 
-0xffffffffe0000000..0xffffffffffffffff 512MB (normally kernel mapped)
-0xffffffffc0000000..0xffffffffdfffffff 512MB (normally kernel mapped)
-0xffffffffa0000000..0xffffffffbfffffff 512MB (normally kernel uncached)
-0xffffffff80000000..0xffffffff9fffffff 512MB (normally kernel)
-=2E..
-0x8000000000000000..0xbfffffffffffffff 8 64-bit unmapped segments (kern)
-=2E.. <- MIPS64 extends user address space here
-0x0000000040000000..0x000000007fffffff 1GB (normally user)
-0x0000000000000000..0x000000003fffffff 1GB (normally user)
+ For the record, with 64-bit ELF images the RELA relocation format is 
+used, so there's no such concern about borrows as with 32-bit ones, 
+because the whole addend is always readily available and does not have to 
+be calculated from parts coming from different relocations.  Consequently 
+the handling of R_MIPS_HIGHER and R_MIPS_HIGHEST (and also R_MIPS_HI16 and 
+R_MIPS_LO16) relocations in 64-bit ELF images is straightforward if we 
+decided to include them.
 
-In the middle there, MIPS64 extends userspace from 0x0000000080000000
-towards 0x4000000000000000 (depending on number of virtual address bits
-implemented), over which there is no segmentation control.
-</long version>
+ I suspect extending the handling to R_MIPS_HIGHER only will suffice all 
+use cases for the foreseeable future as I don't expect MIPS systems with 
+more than 256TiB of RAM to appear anytime soon.
 
-Cheers
-James
+ FWIW,
 
---7lMq7vMTJT4tNk0a
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCAAGBQJXBCdtAAoJEGwLaZPeOHZ6xEYP/1QCAip793JX3QvQlc34TXLt
-sORXtYXDhQdSUc0JcWuarMMdqaXaJXismSp8Hf8uGDlFQDnPubCoeSNi1Cuz5gLR
-aN5IjBYdlbUAKcxDzNnmuNmdrXwTiv90QIiqGzvE9TRY+j/06N4tVfAr6kRNew9l
-gZMHbozKa/abz3dr2+QeoivDAo21tCIaDgCxDnNiaBkvQ4UfPZ7X9nyRO72FCakx
-cyHIaEp+MkVe4r9hyFGUHEOkYTmQ4J2Dou80vjRNc9BpKgkE2sUMruR0+7iBtxXQ
-zl5l6HWbNSKI2ZtsQLej8ud7+8KFlDPQmIIArnf0eeFunrY8RRUVS2lsgHLMYqeK
-3iwU4sOK3y59yaWC7p7RGspGpW28uu29OOdbEFMH/Ra2Xq5ChF/tahVGKvYCbJpg
-o6F5O/kNfA6ELKaQGkKURy9ukOWr3Jl8QkmeTbd1VMjsN54jiqSvZ5pTYXMb1m61
-mKCy3IrNpHEZ+H74NWTAkoOyqN6npwCZO3i+I+wzDpcN4ug3ieCM40axm0BGV5WC
-nX59qkmtySxAgRw0yKmgABNd4Gqt4a9dHVGxcjWgSTSjw1Q/5NLZDvnXVXQEIDpl
-RyBZEFRMGxzR7HAvn6NFas6iETZIDMcvcqCjT7296hWwxpe7gAxMcQqMhgpzyjaF
-mdB1GgOr+yuNWfqDmu+B
-=d+Hw
------END PGP SIGNATURE-----
-
---7lMq7vMTJT4tNk0a--
+  Maciej
