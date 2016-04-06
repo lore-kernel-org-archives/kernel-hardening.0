@@ -1,39 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFxSCFCoWcMapn10GyXvKpy5aMjGG+pa1P4Hu7sHqSTDKQ@mail.gmail.com>
+Sender: linus971@gmail.com
+In-Reply-To: <CAGXu5j+TAncQVkW6ArfL6CfT_LCHVE-HUtW+0kq3+FK+1rK_Qg@mail.gmail.com>
 References: <1459947782-5071-1-git-send-email-ed@abdsec.com>
 	<CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
 	<CA+55aFykp_ifLG=GkdGEM2keZs1Kb=eYcjjLz1LQh78LVSZong@mail.gmail.com>
 	<CA+55aFxSCFCoWcMapn10GyXvKpy5aMjGG+pa1P4Hu7sHqSTDKQ@mail.gmail.com>
-Date: Wed, 6 Apr 2016 14:27:38 -0700
-Message-ID: <CAGXu5j+TAncQVkW6ArfL6CfT_LCHVE-HUtW+0kq3+FK+1rK_Qg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
+	<CAGXu5j+TAncQVkW6ArfL6CfT_LCHVE-HUtW+0kq3+FK+1rK_Qg@mail.gmail.com>
+Date: Wed, 6 Apr 2016 14:32:30 -0700
+Message-ID: <CA+55aFxNyH_i0=02S-ZLw2wLFEAY8Dkb0zm1HT9avp+KYNtVeg@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH] KERNEL: resource: Fix bug on leakage in /proc/iomem file
-To: Linus Torvalds <torvalds@linux-foundation.org>
+To: Kees Cook <keescook@chromium.org>
 Cc: Emrah Demir <ed@abdsec.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Dave Jones <davej@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 6, 2016 at 2:19 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Wed, Apr 6, 2016 at 10:54 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
->>
->> So I'd find a patch like the attached to be perfectly acceptable (in
->> fact, we should have done this long ago).
+On Wed, Apr 6, 2016 at 2:27 PM, Kees Cook <keescook@chromium.org> wrote:
 >
-> I just committed it, let's see if some odd program uses the iomem
-> data. I doubt it, and I always enjoy improvements that remove more
-> lines of code than they add.
+> Hrm, okay. I still think just changing the perms would be less
+> troublesome.
 
-Hrm, okay. I still think just changing the perms would be less
-troublesome. Knowing where the kernel is in physical memory when
-debugging physical memory issues seems important to me. But, I have
-never actually used it since I prefer looking in kallsyms. :)
+No, that would be much *more* trouble-some, because we have things
+like bug-reporting documentation that tells people to send /proc/iomem
+etc information on crashes. There may well be scripts like that out
+there.
 
--Kees
+So it's much more likely that just removing the "Kernel code" etc
+lines is not going to break anything.
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+            Linus
