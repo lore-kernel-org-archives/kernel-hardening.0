@@ -1,233 +1,123 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed,  6 Apr 2016 12:35:48 -0700
-Message-Id: <1459971348-81477-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC v1] mm: SLAB freelist randomization
-To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
-Cc: gthelen@google.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@fedoraproject.org, Thomas Garnier <thgarnie@google.com>
+Date: Wed, 6 Apr 2016 12:44:04 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160406194404.GA11150@www.outflux.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] Prefer kASLR over Hibernation
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Yves-Alexis Perez <corsac@debian.org>, Emrah Demir <ed@abdsec.com>, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, linux-doc@vger.kernel.org, linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
-SLAB freelist. This security feature reduces the predictability of
-the kernel slab allocator against heap overflows.
+When building with both CONFIG_HIBERNATION and CONFIG_RANDOMIZE_BASE,
+one or the other must be chosen at boot-time. Until now, hibernation
+was selected when no choice was made on the command line.
 
-Randomized lists are pre-computed using a Fisher-Yates shuffle and
-re-used on slab creation for performance.
----
-Based on next-20160405
----
- init/Kconfig |   9 ++++
- mm/slab.c    | 155 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 164 insertions(+)
+To make the security benefits of kASLR more widely available to end
+users (since the use of hibernation is becoming more rare and kASLR,
+already available on x86, will be available on arm64 and MIPS soon),
+this changes the default to preferring kASLR over hibernation. Users
+wanting hibernation can turn off kASLR by adding "nokaslr" to the kernel
+command line.
 
-diff --git a/init/Kconfig b/init/Kconfig
-index 0dfd09d..ee35418 100644
---- a/init/Kconfig
-+++ b/init/Kconfig
-@@ -1742,6 +1742,15 @@ config SLOB
+Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/kernel-parameters.txt |  7 +++++--
+ arch/x86/boot/compressed/aslr.c     |  7 -------
+ kernel/power/hibernate.c            | 13 +++++++++++++
+ 3 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index ecc74fa4bfde..71393ec89295 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -1774,8 +1774,8 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 			Enable/disable kernel and module base offset ASLR
+ 			(Address Space Layout Randomization) if built into
+ 			the kernel. When CONFIG_HIBERNATION is selected,
+-			kASLR is disabled by default. When kASLR is enabled,
+-			hibernation will be disabled.
++			kASLR must be disabled for hibernation to be
++			available.
  
- endchoice
+ 	keepinitrd	[HW,ARM]
  
-+config FREELIST_RANDOM
-+	default n
-+	depends on SLAB
-+	bool "SLAB freelist randomization"
-+	help
-+	  Randomizes the freelist order used on creating new SLABs. This
-+	  security feature reduces the predictability of the kernel slab
-+	  allocator against heap overflows.
-+
- config SLUB_CPU_PARTIAL
- 	default y
- 	depends on SLUB && SMP
-diff --git a/mm/slab.c b/mm/slab.c
-index b70aabf..6f0d7be 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -1229,6 +1229,59 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
+@@ -3513,6 +3513,9 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 			(e.g. USB and MMC devices).
+ 
+ 	hibernate=	[HIBERNATION]
++			When CONFIG_RANDOMIZE_BASE is defined, hibernation
++			is disabled by default. Hibernation can be enabled
++			by passing "nokaslr" on the kernel command line.
+ 		noresume	Don't check if there's a hibernation image
+ 				present during boot.
+ 		nocompress	Don't compress/decompress hibernation images.
+diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
+index 6a9b96b4624d..81e2835c0dfb 100644
+--- a/arch/x86/boot/compressed/aslr.c
++++ b/arch/x86/boot/compressed/aslr.c
+@@ -304,17 +304,10 @@ unsigned char *choose_kernel_location(struct boot_params *boot_params,
+ 	unsigned long choice = (unsigned long)output;
+ 	unsigned long random;
+ 
+-#ifdef CONFIG_HIBERNATION
+-	if (!cmdline_find_option_bool("kaslr")) {
+-		debug_putstr("KASLR disabled by default...\n");
+-		goto out;
+-	}
+-#else
+ 	if (cmdline_find_option_bool("nokaslr")) {
+ 		debug_putstr("KASLR disabled by cmdline...\n");
+ 		goto out;
  	}
+-#endif
+ 
+ 	boot_params->hdr.loadflags |= KASLR_FLAG;
+ 
+diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
+index fca9254280ee..be5041354b1e 100644
+--- a/kernel/power/hibernate.c
++++ b/kernel/power/hibernate.c
+@@ -35,8 +35,13 @@
+ 
+ 
+ static int nocompress;
++#ifdef CONFIG_RANDOMIZE_BASE
++static int noresume = 1;
++static int nohibernate = 1;
++#else
+ static int noresume;
+ static int nohibernate;
++#endif
+ static int resume_wait;
+ static unsigned int resume_delay;
+ static char resume_file[256] = CONFIG_PM_STD_PARTITION;
+@@ -1159,6 +1164,13 @@ static int __init kaslr_nohibernate_setup(char *str)
+ 	return nohibernate_setup(str);
  }
  
-+#ifdef CONFIG_FREELIST_RANDOM
-+/*
-+ * Master lists are pre-computed random lists
-+ * Lists of different sizes are used to optimize performance on different
-+ * SLAB object sizes per pages.
-+ */
-+static freelist_idx_t master_list_2[2];
-+static freelist_idx_t master_list_4[4];
-+static freelist_idx_t master_list_8[8];
-+static freelist_idx_t master_list_16[16];
-+static freelist_idx_t master_list_32[32];
-+static freelist_idx_t master_list_64[64];
-+static freelist_idx_t master_list_128[128];
-+static freelist_idx_t master_list_256[256];
-+static struct m_list {
-+	size_t count;
-+	freelist_idx_t *list;
-+} master_lists[] = {
-+	{ ARRAY_SIZE(master_list_2), master_list_2 },
-+	{ ARRAY_SIZE(master_list_4), master_list_4 },
-+	{ ARRAY_SIZE(master_list_8), master_list_8 },
-+	{ ARRAY_SIZE(master_list_16), master_list_16 },
-+	{ ARRAY_SIZE(master_list_32), master_list_32 },
-+	{ ARRAY_SIZE(master_list_64), master_list_64 },
-+	{ ARRAY_SIZE(master_list_128), master_list_128 },
-+	{ ARRAY_SIZE(master_list_256), master_list_256 },
-+};
-+
-+void __init freelist_random_init(void)
++static int __init nokaslr_hibernate_setup(char *str)
 +{
-+	unsigned int seed;
-+	size_t z, i, rand;
-+	struct rnd_state slab_rand;
-+
-+	get_random_bytes_arch(&seed, sizeof(seed));
-+	prandom_seed_state(&slab_rand, seed);
-+
-+	for (z = 0; z < ARRAY_SIZE(master_lists); z++) {
-+		for (i = 0; i < master_lists[z].count; i++)
-+			master_lists[z].list[i] = i;
-+
-+		/* Fisher-Yates shuffle */
-+		for (i = master_lists[z].count - 1; i > 0; i--) {
-+			rand = prandom_u32_state(&slab_rand);
-+			rand %= (i + 1);
-+			swap(master_lists[z].list[i],
-+				master_lists[z].list[rand]);
-+		}
-+	}
-+}
-+#endif /* CONFIG_FREELIST_RANDOM */
-+
-+
- /*
-  * Initialisation.  Called after the page allocator have been initialised and
-  * before smp_init().
-@@ -1255,6 +1308,10 @@ void __init kmem_cache_init(void)
- 	if (!slab_max_order_set && totalram_pages > (32 << 20) >> PAGE_SHIFT)
- 		slab_max_order = SLAB_MAX_ORDER_HI;
- 
-+#ifdef CONFIG_FREELIST_RANDOM
-+	freelist_random_init();
-+#endif /* CONFIG_FREELIST_RANDOM */
-+
- 	/* Bootstrap is tricky, because several objects are allocated
- 	 * from caches that do not exist yet:
- 	 * 1) initialize the kmem_cache cache: it contains the struct
-@@ -2442,6 +2499,98 @@ static void cache_init_objs_debug(struct kmem_cache *cachep, struct page *page)
- #endif
- }
- 
-+#ifdef CONFIG_FREELIST_RANDOM
-+enum master_type {
-+	match,
-+	less,
-+	more
-+};
-+
-+struct random_mng {
-+	unsigned int padding;
-+	unsigned int pos;
-+	unsigned int count;
-+	struct m_list master_list;
-+	unsigned int master_count;
-+	enum master_type type;
-+};
-+
-+static void random_mng_initialize(struct random_mng *mng, unsigned int count)
-+{
-+	unsigned int idx;
-+	const unsigned int last_idx = ARRAY_SIZE(master_lists) - 1;
-+
-+	memset(mng, 0, sizeof(*mng));
-+	mng->count = count;
-+	mng->pos = 0;
-+	/* count is >= 2 */
-+	idx = ilog2(count) - 1;
-+	if (idx >= last_idx)
-+		idx = last_idx;
-+	else if (roundup_pow_of_two(idx + 1) != count)
-+		idx++;
-+	mng->master_list = master_lists[idx];
-+	if (mng->master_list.count == mng->count)
-+		mng->type = match;
-+	else if (mng->master_list.count > mng->count)
-+		mng->type = more;
-+	else
-+		mng->type = less;
++	noresume = 0;
++	nohibernate = 0;
++	return 1;
 +}
 +
-+static freelist_idx_t get_next_entry(struct random_mng *mng)
-+{
-+	if (mng->type == less && mng->pos == mng->master_list.count) {
-+		mng->padding += mng->pos;
-+		mng->pos = 0;
-+	}
-+	BUG_ON(mng->pos >= mng->master_list.count);
-+	return mng->master_list.list[mng->pos++];
-+}
-+
-+static freelist_idx_t next_random_slot(struct random_mng *mng)
-+{
-+	freelist_idx_t cur, entry;
-+
-+	entry = get_next_entry(mng);
-+
-+	if (mng->type != match) {
-+		while ((entry + mng->padding) >= mng->count)
-+			entry = get_next_entry(mng);
-+		cur = entry + mng->padding;
-+		BUG_ON(cur >= mng->count);
-+	} else {
-+		cur = entry;
-+	}
-+
-+	return cur;
-+}
-+
-+static void shuffle_freelist(struct kmem_cache *cachep, struct page *page,
-+			     unsigned int count)
-+{
-+	unsigned int i;
-+	struct random_mng mng;
-+
-+	if (count < 2) {
-+		for (i = 0; i < count; i++)
-+			set_free_obj(page, i, i);
-+		return;
-+	}
-+
-+	/* Last chunk is used already in this case */
-+	if (OBJFREELIST_SLAB(cachep))
-+		count--;
-+
-+	random_mng_initialize(&mng, count);
-+	for (i = 0; i < count; i++)
-+		set_free_obj(page, i, next_random_slot(&mng));
-+
-+	if (OBJFREELIST_SLAB(cachep))
-+		set_free_obj(page, i, i);
-+}
-+#endif /* CONFIG_FREELIST_RANDOM */
-+
- static void cache_init_objs(struct kmem_cache *cachep,
- 			    struct page *page)
+ static int __init page_poison_nohibernate_setup(char *str)
  {
-@@ -2464,8 +2613,14 @@ static void cache_init_objs(struct kmem_cache *cachep,
- 			kasan_poison_object_data(cachep, objp);
- 		}
- 
-+#ifndef CONFIG_FREELIST_RANDOM
- 		set_free_obj(page, i, i);
-+#endif /* CONFIG_FREELIST_RANDOM */
- 	}
-+
-+#ifdef CONFIG_FREELIST_RANDOM
-+	shuffle_freelist(cachep, page, cachep->num);
-+#endif /* CONFIG_FREELIST_RANDOM */
- }
- 
- static void kmem_flagcheck(struct kmem_cache *cachep, gfp_t flags)
+ #ifdef CONFIG_PAGE_POISONING_ZERO
+@@ -1183,4 +1195,5 @@ __setup("resumewait", resumewait_setup);
+ __setup("resumedelay=", resumedelay_setup);
+ __setup("nohibernate", nohibernate_setup);
+ __setup("kaslr", kaslr_nohibernate_setup);
++__setup("nokaslr", nokaslr_hibernate_setup);
+ __setup("page_poison=", page_poison_nohibernate_setup);
 -- 
-2.8.0.rc3.226.g39d4020
+2.6.3
+
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
