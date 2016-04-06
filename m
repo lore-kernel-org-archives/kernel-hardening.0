@@ -1,76 +1,113 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1459947782-5071-1-git-send-email-ed@abdsec.com>
 References: <1459947782-5071-1-git-send-email-ed@abdsec.com>
-	<CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
-Date: Wed, 6 Apr 2016 10:54:03 -0700
-Message-ID: <CA+55aFykp_ifLG=GkdGEM2keZs1Kb=eYcjjLz1LQh78LVSZong@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Content-Type: multipart/mixed; boundary=001a113ff0ccbe1940052fd4a57d
+Date: Wed, 6 Apr 2016 11:03:17 -0700
+Message-ID: <CAGXu5jLD44hpxYLCfAkg8SkS9v2euoVY1o-qp9XLVkz95hfGWg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH] KERNEL: resource: Fix bug on leakage in /proc/iomem file
 To: Emrah Demir <ed@abdsec.com>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Dave Jones <davej@redhat.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Dave Jones <davej@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a113ff0ccbe1940052fd4a57d
-Content-Type: text/plain; charset=UTF-8
+On Wed, Apr 6, 2016 at 6:03 AM, Emrah Demir <ed@abdsec.com> wrote:
+> From: Emrah Demir <ed@abdsec.com>
 
-On Wed, Apr 6, 2016 at 8:20 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
+Hi!
+
+Thanks for sending this patch; I'm always glad to see new faces
+helping. :) I have a few comments inline and a larger suggestion at
+the end.
+
+> Even though KASLR is aiming to mitigate remote attacks, with a simple LFI vulnerability through a web application, local leaks become as important as remote ones.
+
+Be sure to 80-char wrap your commit logs (and code), as it makes
+reading it easier. Running your patch through scripts/checkpatch.pl
+would remind you:
+
+WARNING: Possible unwrapped commit description (prefer a maximum 75
+chars per line)
+#5:
+Even though KASLR is aiming to mitigate remote attacks, with a simple
+LFI vulnerability through a web application, local leaks become as
+important as remote ones.
+
+> On the KASLR enabled systems in order to achieve expected protection, some files are needed to edited/modified to prevent leaks.
 >
-> I'd much rather just not insert the resources in the first place then.
+> /proc/iomem file leaks offset of text section. By adding 0x80000000, Attackers can get _text base address. KASLR will be bypassed.
 
-So I'd find a patch like the attached to be perfectly acceptable (in
-fact, we should have done this long ago).
+Luckily, this will become less of a problem once the x86 virtual
+memory randomization code lands, but I think there's enough in this
+file that it should be protected.
 
-That said, for a kernel hardening thing, I think it would be much more
-important to just make sure that KASLR is enabled much more. Right now
-I think it's disabled in practice if you enable hibernation support,
-and I think most distros do that.
+>
+> $ cat /proc/iomem | grep 'Kernel code'
+> 38600000-38b7fe92 : Kernel code
+> $ python -c 'print hex(0x38600000 + 0x80000000)'
+> 0xb8600000
+> # cat /proc/kallsyms | grep 'T _text'
+> ffffffffb8600000 T _text
+>
+> By this patch after insertion resources, start and end address are zeroed. /proc/iomem and /proc/ioports sources, which use request_resource and insert_resource now shown as 0 value.
+>
+> Signed-off-by: Emrah Demir <ed@abdsec.com>
+> ---
+>  kernel/resource.c | 4 ++++
+>  1 file changed, 4 insertions(+)
+>
+> diff --git a/kernel/resource.c b/kernel/resource.c
+> index 2e78ead..5b9937e 100644
+> --- a/kernel/resource.c
+> +++ b/kernel/resource.c
+> @@ -321,6 +321,8 @@ int request_resource(struct resource *root, struct resource *new)
+>         struct resource *conflict;
+>
+>         conflict = request_resource_conflict(root, new);
+> +       new->start = 0;
+> +       new->end = 0;
+>         return conflict ? -EBUSY : 0;
+>  }
+>
+> @@ -864,6 +866,8 @@ int insert_resource(struct resource *parent, struct resource *new)
+>         struct resource *conflict;
+>
+>         conflict = insert_resource_conflict(parent, new);
+> +       new->start = 0;
+> +       new->end = 0;
+>         return conflict ? -EBUSY : 0;
+>  }
+>  EXPORT_SYMBOL_GPL(insert_resource);
 
-So I think that in *practice*, kaslr is much more likely to be
-defeated by much more mundane reasons.
+This entirely eliminates the reporting, which I don't think is a good
+idea as developers and debuggers would like to be able to see this
+information. I would prefer that either /proc/iomem be unreadable to
+non-root users or that the values be reported using %pK to let the
+kptr_restrict control the output.
 
-             Linus
+diff --git a/kernel/resource.c b/kernel/resource.c
+index 2e78ead30934..8d5dd1dc9489 100644
+--- a/kernel/resource.c
++++ b/kernel/resource.c
+@@ -162,8 +162,8 @@ static const struct file_operations
+proc_iomem_operations = {
 
---001a113ff0ccbe1940052fd4a57d
-Content-Type: text/plain; charset=US-ASCII; name="patch.diff"
-Content-Disposition: attachment; filename="patch.diff"
-Content-Transfer-Encoding: base64
-X-Attachment-Id: f_imp5lkol0
+ static int __init ioresources_init(void)
+ {
+-       proc_create("ioports", 0, NULL, &proc_ioports_operations);
+-       proc_create("iomem", 0, NULL, &proc_iomem_operations);
++       proc_create("ioports", S_IRUSR, NULL, &proc_ioports_operations);
++       proc_create("iomem", S_IRUSR, NULL, &proc_iomem_operations);
+        return 0;
+ }
+ __initcall(ioresources_init);
 
-IGFyY2gveDg2L2tlcm5lbC9zZXR1cC5jIHwgMzcgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
-LS0tLS0tLS0tLQogMSBmaWxlIGNoYW5nZWQsIDM3IGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBh
-L2FyY2gveDg2L2tlcm5lbC9zZXR1cC5jIGIvYXJjaC94ODYva2VybmVsL3NldHVwLmMKaW5kZXgg
-MjM2N2FlMDdlYjc2Li4zMTliMDhhNWI2ZWQgMTAwNjQ0Ci0tLSBhL2FyY2gveDg2L2tlcm5lbC9z
-ZXR1cC5jCisrKyBiL2FyY2gveDg2L2tlcm5lbC9zZXR1cC5jCkBAIC0xNDYsMzEgKzE0Niw2IEBA
-IGludCBkZWZhdWx0X2NoZWNrX3BoeXNfYXBpY2lkX3ByZXNlbnQoaW50IHBoeXNfYXBpY2lkKQog
-CiBzdHJ1Y3QgYm9vdF9wYXJhbXMgYm9vdF9wYXJhbXM7CiAKLS8qCi0gKiBNYWNoaW5lIHNldHVw
-Li4KLSAqLwotc3RhdGljIHN0cnVjdCByZXNvdXJjZSBkYXRhX3Jlc291cmNlID0gewotCS5uYW1l
-CT0gIktlcm5lbCBkYXRhIiwKLQkuc3RhcnQJPSAwLAotCS5lbmQJPSAwLAotCS5mbGFncwk9IElP
-UkVTT1VSQ0VfQlVTWSB8IElPUkVTT1VSQ0VfU1lTVEVNX1JBTQotfTsKLQotc3RhdGljIHN0cnVj
-dCByZXNvdXJjZSBjb2RlX3Jlc291cmNlID0gewotCS5uYW1lCT0gIktlcm5lbCBjb2RlIiwKLQku
-c3RhcnQJPSAwLAotCS5lbmQJPSAwLAotCS5mbGFncwk9IElPUkVTT1VSQ0VfQlVTWSB8IElPUkVT
-T1VSQ0VfU1lTVEVNX1JBTQotfTsKLQotc3RhdGljIHN0cnVjdCByZXNvdXJjZSBic3NfcmVzb3Vy
-Y2UgPSB7Ci0JLm5hbWUJPSAiS2VybmVsIGJzcyIsCi0JLnN0YXJ0CT0gMCwKLQkuZW5kCT0gMCwK
-LQkuZmxhZ3MJPSBJT1JFU09VUkNFX0JVU1kgfCBJT1JFU09VUkNFX1NZU1RFTV9SQU0KLX07Ci0K
-LQogI2lmZGVmIENPTkZJR19YODZfMzIKIC8qIGNwdSBkYXRhIGFzIGRldGVjdGVkIGJ5IHRoZSBh
-c3NlbWJseSBjb2RlIGluIGhlYWQuUyAqLwogc3RydWN0IGNwdWluZm9feDg2IG5ld19jcHVfZGF0
-YSA9IHsKQEAgLTk0OSwxMyArOTI0LDYgQEAgdm9pZCBfX2luaXQgc2V0dXBfYXJjaChjaGFyICoq
-Y21kbGluZV9wKQogCiAJbXB4X21tX2luaXQoJmluaXRfbW0pOwogCi0JY29kZV9yZXNvdXJjZS5z
-dGFydCA9IF9fcGFfc3ltYm9sKF90ZXh0KTsKLQljb2RlX3Jlc291cmNlLmVuZCA9IF9fcGFfc3lt
-Ym9sKF9ldGV4dCktMTsKLQlkYXRhX3Jlc291cmNlLnN0YXJ0ID0gX19wYV9zeW1ib2woX2V0ZXh0
-KTsKLQlkYXRhX3Jlc291cmNlLmVuZCA9IF9fcGFfc3ltYm9sKF9lZGF0YSktMTsKLQlic3NfcmVz
-b3VyY2Uuc3RhcnQgPSBfX3BhX3N5bWJvbChfX2Jzc19zdGFydCk7Ci0JYnNzX3Jlc291cmNlLmVu
-ZCA9IF9fcGFfc3ltYm9sKF9fYnNzX3N0b3ApLTE7Ci0KICNpZmRlZiBDT05GSUdfQ01ETElORV9C
-T09MCiAjaWZkZWYgQ09ORklHX0NNRExJTkVfT1ZFUlJJREUKIAlzdHJsY3B5KGJvb3RfY29tbWFu
-ZF9saW5lLCBidWlsdGluX2NtZGxpbmUsIENPTU1BTkRfTElORV9TSVpFKTsKQEAgLTEwMTksMTEg
-Kzk4Nyw2IEBAIHZvaWQgX19pbml0IHNldHVwX2FyY2goY2hhciAqKmNtZGxpbmVfcCkKIAogCXg4
-Nl9pbml0LnJlc291cmNlcy5wcm9iZV9yb21zKCk7CiAKLQkvKiBhZnRlciBwYXJzZV9lYXJseV9w
-YXJhbSwgc28gY291bGQgZGVidWcgaXQgKi8KLQlpbnNlcnRfcmVzb3VyY2UoJmlvbWVtX3Jlc291
-cmNlLCAmY29kZV9yZXNvdXJjZSk7Ci0JaW5zZXJ0X3Jlc291cmNlKCZpb21lbV9yZXNvdXJjZSwg
-JmRhdGFfcmVzb3VyY2UpOwotCWluc2VydF9yZXNvdXJjZSgmaW9tZW1fcmVzb3VyY2UsICZic3Nf
-cmVzb3VyY2UpOwotCiAJZTgyMF9hZGRfa2VybmVsX3JhbmdlKCk7CiAJdHJpbV9iaW9zX3Jhbmdl
-KCk7CiAjaWZkZWYgQ09ORklHX1g4Nl8zMgo=
---001a113ff0ccbe1940052fd4a57d--
+And if this breaks things, make the S_IRUSR conditional on the
+CONFIG_RANDOMIZE_BASE?
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
