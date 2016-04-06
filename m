@@ -1,42 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: =?utf-8?Q?Bj=C3=B8rn_Mork?= <bjorn@mork.no>
-References: <1459947782-5071-1-git-send-email-ed@abdsec.com>
-	<CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
-	<CA+55aFykp_ifLG=GkdGEM2keZs1Kb=eYcjjLz1LQh78LVSZong@mail.gmail.com>
-	<5e5e7c7ced7bede343530ed1447d7453@abdsec.com>
-	<CA+55aFxTzWKCqYaTTLSWccriebzXSeMCkgfvf6=rckB+_jvoiw@mail.gmail.com>
-	<CAGXu5j+gQT6pseNasW2qKSQ=wagcx06sfNqsmv5NSh8=MS4zAA@mail.gmail.com>
-	<CA+55aFx5Naq0rt99KZRWMf2GtyDaW1N2dapvdks_LMwaCYR13g@mail.gmail.com>
-Date: Wed, 06 Apr 2016 21:23:00 +0200
-In-Reply-To: <CA+55aFx5Naq0rt99KZRWMf2GtyDaW1N2dapvdks_LMwaCYR13g@mail.gmail.com>
-	(Linus Torvalds's message of "Wed, 6 Apr 2016 11:43:11 -0700")
-Message-ID: <87inzuv8x7.fsf@nemi.mork.no>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH] KERNEL: resource: Fix bug on leakage in /proc/iomem file
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Emrah Demir <ed@abdsec.com>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, Dave Jones <davej@redhat.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>
+Sender: rjwysocki@gmail.com
+In-Reply-To: <20160406194404.GA11150@www.outflux.net>
+References: <20160406194404.GA11150@www.outflux.net>
+Date: Wed, 6 Apr 2016 23:49:36 +0200
+Message-ID: <CAJZ5v0ieAd3WSiytzcdtD=eueLPk_SM1KgrqZXHBa6+bwK=KnQ@mail.gmail.com>
+From: "Rafael J. Wysocki" <rafael@kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] Prefer kASLR over Hibernation
+To: Kees Cook <keescook@chromium.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Yves-Alexis Perez <corsac@debian.org>, Emrah Demir <ed@abdsec.com>, Jonathan Corbet <corbet@lwn.net>, x86@kernel.org, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Linus Torvalds <torvalds@linux-foundation.org> writes:
-
-> I suspect there really aren't all that many hibernation users out
-> there at all, and that yes, that would be the right default.
+On Wed, Apr 6, 2016 at 9:44 PM, Kees Cook <keescook@chromium.org> wrote:
+> When building with both CONFIG_HIBERNATION and CONFIG_RANDOMIZE_BASE,
+> one or the other must be chosen at boot-time. Until now, hibernation
+> was selected when no choice was made on the command line.
 >
-> Hibernation is really quite nasty when you have to have a fairly big
-> special partition for it, and shrink your memory down. Writing things
-> to disk was a whole lot more reasonable back in the days when laptops
-> had 16MB of memory.
+> To make the security benefits of kASLR more widely available to end
+> users (since the use of hibernation is becoming more rare and kASLR,
+> already available on x86, will be available on arm64 and MIPS soon),
+> this changes the default to preferring kASLR over hibernation. Users
+> wanting hibernation can turn off kASLR by adding "nokaslr" to the kernel
+> command line.
 >
-> I really wonder how many people use it with a modern laptop and
-> distro. I doubt it's much faster than just rebooting the whole system
-> anyway, and there are lots of downsides.
+> Suggested-by: Linus Torvalds <torvalds@linux-foundation.org>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-Huh? Do modern laptops now have infinite battery capacity?  I regularily
-use hibernation as emergency shutdown when the battery runs out.  You
-mean that never happens to other people?  Or you just take the hit and
-stops everything you were currently doing, saving every open file etc?
+Acked-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
 
-
-Bj=C3=B8rn
+Or do you want me to apply it?
