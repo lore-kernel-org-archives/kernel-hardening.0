@@ -1,163 +1,128 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 7 Apr 2016 23:16:23 +0200
+Date: Thu, 7 Apr 2016 23:17:54 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160407231623.2158cac63a2ac2d7bbe8204f@gmail.com>
+Message-Id: <20160407231754.ad858760ab1f4e7b31c2223a@gmail.com>
 In-Reply-To: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
 References: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v6 4/6] Add Cyclomatic complexity GCC plugin
+Subject: [kernel-hardening] [PATCH v6 5/6] Documentation for the GCC plugin infrastructure
 To: linux-kbuild@vger.kernel.org
 Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a very simple plugin to demonstrate the GCC plugin infrastructure. This GCC
-plugin computes the cyclomatic complexity of each function.
-
-The complexity M of a function's control flow graph is defined as:
- M = E - N + 2P
-where
- E = the number of edges
- N = the number of nodes
- P = the number of connected components (exit nodes).
+This is the GCC infrastructure documentation about its operation, how to add
+and use a new plugin with an example.
 
 Signed-off-by: Emese Revfy <re.emese@gmail.com>
 ---
- arch/Kconfig                                | 12 +++++
- scripts/Makefile.gcc-plugins                |  2 +
- scripts/gcc-plugins/Makefile                |  4 ++
- scripts/gcc-plugins/cyc_complexity_plugin.c | 73 +++++++++++++++++++++++++++++
- 4 files changed, 91 insertions(+)
- create mode 100644 scripts/gcc-plugins/cyc_complexity_plugin.c
+ Documentation/gcc-plugins.txt | 83 +++++++++++++++++++++++++++++++++++++++++++
+ arch/Kconfig                  |  2 ++
+ 2 files changed, 85 insertions(+)
+ create mode 100644 Documentation/gcc-plugins.txt
 
+diff --git a/Documentation/gcc-plugins.txt b/Documentation/gcc-plugins.txt
+new file mode 100644
+index 0000000..9fa9bd2
+--- /dev/null
++++ b/Documentation/gcc-plugins.txt
+@@ -0,0 +1,83 @@
++GCC plugin infrastructure
++=========================
++
++
++1. Introduction
++===============
++
++GCC plugins are loadable modules that provide extra features to the
++compiler [1]. They are useful for runtime instrumentation and static analysis.
++We can analyse, change and add further code during compilation via
++callbacks [2], GIMPLE [3], IPA [4] and RTL passes [5].
++
++The GCC plugin infrastructure of the kernel supports all gcc versions from
++4.5 to 6.0, building out-of-tree modules, cross-compilation and building in a
++separate directory.
++
++Currently the GCC plugin infrastructure supports only the x86, arm and arm64
++architectures.
++
++This infrastructure was ported from grsecurity [6] and PaX [7].
++
++--
++[1] https://gcc.gnu.org/onlinedocs/gccint/Plugins.html
++[2] https://gcc.gnu.org/onlinedocs/gccint/Plugin-API.html#Plugin-API
++[3] https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html
++[4] https://gcc.gnu.org/onlinedocs/gccint/IPA.html
++[5] https://gcc.gnu.org/onlinedocs/gccint/RTL.html
++[6] https://grsecurity.net/
++[7] https://pax.grsecurity.net/
++
++
++2. Files
++========
++
++$(src)/scripts/gcc-plugins
++	This is the directory of the GCC plugins.
++
++$(src)/scripts/gcc-plugins/gcc-common.h
++	This is a compatibility header for GCC plugins.
++	It should be always included instead of individual gcc headers.
++
++$(src)/scripts/gcc-plugin.sh
++	This script checks the availability of the included headers in
++	gcc-common.h and chooses the proper host compiler to build the plugins
++	(gcc-4.7 can be built by either gcc or g++).
++
++$(src)/scripts/gcc-plugins/gcc-generate-gimple-pass.h
++$(src)/scripts/gcc-plugins/gcc-generate-ipa-pass.h
++$(src)/scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h
++$(src)/scripts/gcc-plugins/gcc-generate-rtl-pass.h
++	These headers automatically generate the registration structures for
++	GIMPLE, SIMPLE_IPA, IPA and RTL passes. They support all gcc versions
++	from 4.5 to 6.0.
++	They should be preferred to creating the structures by hand.
++
++
++3. Usage
++========
++
++You must install the gcc plugin headers for your gcc version,
++e.g., on Ubuntu for gcc-4.9:
++
++	apt-get install gcc-4.9-plugin-dev
++
++Enable a GCC plugin based feature in the kernel config:
++
++	CONFIG_GCC_PLUGIN_CYC_COMPLEXITY = y
++
++To compile only the plugin(s):
++
++	make gcc-plugins
++
++or just run the kernel make and compile the whole kernel with
++the cyclomatic complexity GCC plugin.
++
++
++4. How to add a new GCC plugin
++==============================
++
++The GCC plugins are in $(src)/scripts/gcc-plugins/. You can use a file or a directory
++here. It must be added to $(src)/scripts/gcc-plugins/Makefile,
++$(src)/scripts/Makefile.gcc-plugins and $(src)/arch/Kconfig.
++See the cyc_complexity_plugin.c (CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) GCC plugin.
 diff --git a/arch/Kconfig b/arch/Kconfig
-index 7c12571..ddf29b4 100644
+index ddf29b4..e783429 100644
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
-@@ -366,6 +366,18 @@ menuconfig GCC_PLUGINS
+@@ -366,6 +366,8 @@ menuconfig GCC_PLUGINS
  	  GCC plugins are loadable modules that provide extra features to the
  	  compiler. They are useful for runtime instrumentation and static analysis.
  
-+config GCC_PLUGIN_CYC_COMPLEXITY
-+	bool "Compute the cyclomatic complexity of a function"
-+	depends on GCC_PLUGINS
-+	help
-+	  The complexity M of a function's control flow graph is defined as:
-+	   M = E - N + 2P
-+	  where
++	  See Documentation/gcc-plugins.txt for details.
 +
-+	  E = the number of edges
-+	  N = the number of nodes
-+	  P = the number of connected components (exit nodes).
-+
- config HAVE_CC_STACKPROTECTOR
- 	bool
- 	help
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index b981b65..34ad58b 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -2,6 +2,8 @@ ifdef CONFIG_GCC_PLUGINS
-   __PLUGINCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
-   PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
- 
-+  gcc-plugin-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY)	+= cyc_complexity_plugin.so
-+
-   GCC_PLUGINS_CFLAGS := $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y))
- 
-   ifeq ($(PLUGINCC),)
-diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
-index b2d64af..31c72bf 100644
---- a/scripts/gcc-plugins/Makefile
-+++ b/scripts/gcc-plugins/Makefile
-@@ -12,4 +12,8 @@ endif
- 
- export GCCPLUGINS_DIR HOSTLIBS
- 
-+$(HOSTLIBS)-$(CONFIG_GCC_PLUGIN_CYC_COMPLEXITY) := cyc_complexity_plugin.so
-+
- always := $($(HOSTLIBS)-y)
-+
-+cyc_complexity_plugin-objs := cyc_complexity_plugin.o
-diff --git a/scripts/gcc-plugins/cyc_complexity_plugin.c b/scripts/gcc-plugins/cyc_complexity_plugin.c
-new file mode 100644
-index 0000000..34df974
---- /dev/null
-+++ b/scripts/gcc-plugins/cyc_complexity_plugin.c
-@@ -0,0 +1,73 @@
-+/*
-+ * Copyright 2011-2016 by Emese Revfy <re.emese@gmail.com>
-+ * Licensed under the GPL v2, or (at your option) v3
-+ *
-+ * Homepage:
-+ * https://github.com/ephox-gcc-plugins/cyclomatic_complexity
-+ *
-+ * http://en.wikipedia.org/wiki/Cyclomatic_complexity
-+ * The complexity M is then defined as:
-+ * M = E - N + 2P
-+ * where
-+ *
-+ *  E = the number of edges of the graph
-+ *  N = the number of nodes of the graph
-+ *  P = the number of connected components (exit nodes).
-+ *
-+ * Usage (4.5 - 5):
-+ * $ make clean; make run
-+ */
-+
-+#include "gcc-common.h"
-+
-+int plugin_is_GPL_compatible;
-+
-+static struct plugin_info cyc_complexity_plugin_info = {
-+	.version	= "20160225",
-+	.help		= "Cyclomatic Complexity\n",
-+};
-+
-+static unsigned int cyc_complexity_execute(void)
-+{
-+	int complexity;
-+	expanded_location xloc;
-+
-+	/* M = E - N + 2P */
-+	complexity = n_edges_for_fn(cfun) - n_basic_blocks_for_fn(cfun) + 2;
-+
-+	xloc = expand_location(DECL_SOURCE_LOCATION(current_function_decl));
-+	fprintf(stderr, "Cyclomatic Complexity %d %s:%s\n", complexity,
-+		xloc.file, DECL_NAME_POINTER(current_function_decl));
-+
-+	return 0;
-+}
-+
-+#define PASS_NAME cyc_complexity
-+
-+#define NO_GATE
-+#define TODO_FLAGS_FINISH TODO_dump_func
-+
-+#include "gcc-generate-gimple-pass.h"
-+
-+int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
-+{
-+	const char * const plugin_name = plugin_info->base_name;
-+	struct register_pass_info cyc_complexity_pass_info;
-+
-+	cyc_complexity_pass_info.pass				= make_cyc_complexity_pass();
-+	cyc_complexity_pass_info.reference_pass_name		= "ssa";
-+	cyc_complexity_pass_info.ref_pass_instance_number	= 1;
-+	cyc_complexity_pass_info.pos_op				= PASS_POS_INSERT_AFTER;
-+
-+	if (!plugin_default_version_check(version, &gcc_version)) {
-+		error(G_("incompatible gcc/plugin versions"));
-+		return 1;
-+	}
-+
-+	register_callback(plugin_name, PLUGIN_INFO, NULL,
-+				&cyc_complexity_plugin_info);
-+	register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL,
-+				&cyc_complexity_pass_info);
-+
-+	return 0;
-+}
+ config GCC_PLUGIN_CYC_COMPLEXITY
+ 	bool "Compute the cyclomatic complexity of a function"
+ 	depends on GCC_PLUGINS
 -- 
 2.4.1
