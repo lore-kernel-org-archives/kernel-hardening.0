@@ -1,59 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <570D358A.2080109@arm.com>
-Date: Tue, 12 Apr 2016 18:51:06 +0100
-From: James Morse <james.morse@arm.com>
 MIME-Version: 1.0
-References: <20160406194404.GA11150@www.outflux.net>	<570B59A5.3090904@arm.com> <CAGXu5jKU=+ZokCcMHwGT0GxHZ5G4RaLhdFrADxw2BxEHyfNF7g@mail.gmail.com>
-In-Reply-To: <CAGXu5jKU=+ZokCcMHwGT0GxHZ5G4RaLhdFrADxw2BxEHyfNF7g@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] Prefer kASLR over Hibernation
-To: Kees Cook <keescook@chromium.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Yves-Alexis Perez <corsac@debian.org>, Emrah Demir <ed@abdsec.com>, Jonathan Corbet <corbet@lwn.net>, "x86@kernel.org" <x86@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, linux-pm@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <20160412174607.GA92143@davidb.org>
+References: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
+	<20160412174607.GA92143@davidb.org>
+Date: Tue, 12 Apr 2016 11:27:52 -0700
+Message-ID: <CAGXu5jKPqkG52ckYAJPscySfyg+YHEVsMvPq-05YM4A3Ypx4Kg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v6 0/6] Introduce GCC plugin infrastructure
+To: David Brown <david.brown@linaro.org>, Emese Revfy <re.emese@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <mmarek@suse.com>
+Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 11/04/16 19:03, Kees Cook wrote:
-> On Mon, Apr 11, 2016 at 1:00 AM, James Morse <james.morse@arm.com> wrote:
->> On 06/04/16 20:44, Kees Cook wrote:
->>> When building with both CONFIG_HIBERNATION and CONFIG_RANDOMIZE_BASE,
->>> one or the other must be chosen at boot-time. Until now, hibernation
->>> was selected when no choice was made on the command line.
->>>
->>> To make the security benefits of kASLR more widely available to end
->>> users (since the use of hibernation is becoming more rare and kASLR,
->>> already available on x86, will be available on arm64 and MIPS soon),
->>> this changes the default to preferring kASLR over hibernation. Users
->>> wanting hibernation can turn off kASLR by adding "nokaslr" to the kernel
->>> command line.
+On Tue, Apr 12, 2016 at 10:46 AM, David Brown <david.brown@linaro.org> wrote:
+> On Thu, Apr 07, 2016 at 11:10:23PM +0200, Emese Revfy wrote:
 >>
->> While hibernate isn't yet merged for arm64, it does work with kASLR in v4.6-rc*,
->> it would be a shame to have to choose at boot time, (but that's my problem to
->> fix if/when its merged).
-> 
-> Ah, interesting, so they work together on arm64? (i.e. you've actually
-> tested a boot loader that provides the seed for kASLR to operate?)
+>> This patch set introduce the GCC plugin infrastructure with examples for
+>> testing
+>> and documentation.
+>>
+>> GCC plugins are loadable modules that provide extra features to the
+>> compiler.
+>> They are useful for runtime instrumentation and static analysis.
+>>
+>> The infrastructure supports all gcc versions from 4.5 to 6.0, building
+>> out-of-tree modules and building in a separate directory.
+>> Cross-compilation
+>> is supported too but currently only the x86, arm and arm64 architectures
+>> enables plugins.
+>>
+>> This infrastructure was ported from grsecurity/PaX. It is a CII project
+>> supported by the Linux Foundation.
+>>
+>> Emese Revfy (6):
+>> Shared library support
+>> GCC plugin infrastructure
+>> The GCC plugin infrastructure supports the arm and arm64 architectures too
+>> Add Cyclomatic complexity plugin
+>> Documentations of the GCC plugin infrastructre
+>> Add sancov plugin
+>
+>
+> I've tested the v6 patches on arm, and partially on arm64.  The arm64
+> gcc has a bug in make install that doesn't install all necessary
+> headers to build plugins.  I believe the patch will work once that
+> version gets out.  It does, however, print a helpful message now
+> explaining the likely cause of the failure.
+>
+> Tested-by: David Brown <david.brown@linaro.org>
 
-Almost: due to a lack of firmware support I hacked the efi stub to read a 'seed'
-from a system counter.
+Awesome! Thanks for testing this. I still need to finish getting my
+arm64 environment built...
 
-To check it works I printed the address of 'panic' out during boot:
-> [    0.353712] DEBUG: &panic == ffffff960819a4e8
+Do you happen to know if there's already a gcc bug open for the make
+install problem?
 
-Then hibernated, and powered the board back on, the resume kernel gives:
-> [    0.353528] DEBUG: &panic == ffffff840819a4e8
+Masahiro and Michal, does this series look good to you? I'd really
+like to get this into -next for wider testing.
 
-But after it has restored the hibernate image, I can dig in /proc/kallsyms to
-see the original value:
-> root@localhost:~# cat /proc/kallsyms  | grep "T panic"
-> ffffff960819a4e8 T panic
+Emese, were you thinking of doing the initify plugin next after this
+infrastructure lands?
 
+-Kees
 
-> Maybe RANDOMIZE_BASE_DEFAULT (default to y) and if x86 && hibernation,
-> select =n. and use that for selecting it?
-
-Looks good to me.
-
-
-Thanks,
-
-James
+-- 
+Kees Cook
+Chrome OS & Brillo Security
