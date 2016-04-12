@@ -1,69 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160412174607.GA92143@davidb.org>
+Date: Tue, 12 Apr 2016 12:41:47 -0600
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160412184147.GA92432@davidb.org>
 References: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
-	<20160412174607.GA92143@davidb.org>
-Date: Tue, 12 Apr 2016 11:27:52 -0700
-Message-ID: <CAGXu5jKPqkG52ckYAJPscySfyg+YHEVsMvPq-05YM4A3Ypx4Kg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
+ <20160412174607.GA92143@davidb.org>
+ <CAGXu5jKPqkG52ckYAJPscySfyg+YHEVsMvPq-05YM4A3Ypx4Kg@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKPqkG52ckYAJPscySfyg+YHEVsMvPq-05YM4A3Ypx4Kg@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH v6 0/6] Introduce GCC plugin infrastructure
-To: David Brown <david.brown@linaro.org>, Emese Revfy <re.emese@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <mmarek@suse.com>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: Emese Revfy <re.emese@gmail.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Michal Marek <mmarek@suse.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 12, 2016 at 10:46 AM, David Brown <david.brown@linaro.org> wrote:
-> On Thu, Apr 07, 2016 at 11:10:23PM +0200, Emese Revfy wrote:
->>
->> This patch set introduce the GCC plugin infrastructure with examples for
->> testing
->> and documentation.
->>
->> GCC plugins are loadable modules that provide extra features to the
->> compiler.
->> They are useful for runtime instrumentation and static analysis.
->>
->> The infrastructure supports all gcc versions from 4.5 to 6.0, building
->> out-of-tree modules and building in a separate directory.
->> Cross-compilation
->> is supported too but currently only the x86, arm and arm64 architectures
->> enables plugins.
->>
->> This infrastructure was ported from grsecurity/PaX. It is a CII project
->> supported by the Linux Foundation.
->>
->> Emese Revfy (6):
->> Shared library support
->> GCC plugin infrastructure
->> The GCC plugin infrastructure supports the arm and arm64 architectures too
->> Add Cyclomatic complexity plugin
->> Documentations of the GCC plugin infrastructre
->> Add sancov plugin
->
->
-> I've tested the v6 patches on arm, and partially on arm64.  The arm64
-> gcc has a bug in make install that doesn't install all necessary
-> headers to build plugins.  I believe the patch will work once that
-> version gets out.  It does, however, print a helpful message now
-> explaining the likely cause of the failure.
->
-> Tested-by: David Brown <david.brown@linaro.org>
+On Tue, Apr 12, 2016 at 11:27:52AM -0700, Kees Cook wrote:
 
-Awesome! Thanks for testing this. I still need to finish getting my
-arm64 environment built...
+>Awesome! Thanks for testing this. I still need to finish getting my
+>arm64 environment built...
 
-Do you happen to know if there's already a gcc bug open for the make
-install problem?
+I've been using:
+  http://releases.linaro.org/components/toolchain/binaries/
 
-Masahiro and Michal, does this series look good to you? I'd really
-like to get this into -next for wider testing.
+for most stuff.
 
-Emese, were you thinking of doing the initify plugin next after this
-infrastructure lands?
+>Do you happen to know if there's already a gcc bug open for the make
+>install problem?
 
--Kees
+Linaro toolchain bug:
+  https://bugs.linaro.org/show_bug.cgi?id=2123
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Patch to fix it
+  https://gcc.gnu.org/ml/gcc-patches/2016-03/msg00522.html
+
+It is supposed to be included in the linaro 5.3-2016.03 snapshot.
+I've pinged Christophe to see if I can get any insight into when that
+will be available.
+
+It is kind of nice to see that when it fails, it prints a helpful
+message, though:
+
+  scripts/Makefile.gcc-plugins:22: *** error, your gcc installation does not support plugins, perhaps the necessary headers are missing?.  Stop.
+
+I think it is OK to include this, even with the patches still bubbling
+through gcc releases.  It prints a helpful message when it doesn't
+work, and is only going to be selected if specifically requested.
+
+David
