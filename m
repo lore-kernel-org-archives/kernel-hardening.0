@@ -1,48 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 12 Apr 2016 11:46:07 -0600
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160412174607.GA92143@davidb.org>
+References: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <57090CDE.6080509@gmail.com>
-References: <1460138602-85386-1-git-send-email-thgarnie@google.com>
-	<57090CDE.6080509@gmail.com>
-Date: Mon, 11 Apr 2016 12:08:57 -0700
-Message-ID: <CAGXu5j+8JtzFQnYGJKi-eqbNfjUM3hmo+vAXjoP-rpkHuH_02g@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2] mm: SLAB freelist randomization
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: lazytyped <lazytyped@gmail.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <20160407231023.5f1307ffc79f0cdd880eedb7@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v6 0/6] Introduce GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>
+Cc: linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Apr 9, 2016 at 7:08 AM, lazytyped <lazytyped@gmail.com> wrote:
+On Thu, Apr 07, 2016 at 11:10:23PM +0200, Emese Revfy wrote:
+>This patch set introduce the GCC plugin infrastructure with examples for testing
+>and documentation.
 >
+>GCC plugins are loadable modules that provide extra features to the compiler.
+>They are useful for runtime instrumentation and static analysis.
 >
-> On 4/8/16 11:03 AM, Thomas Garnier wrote:
->> For example this attack against SLUB (also applicable against SLAB)
->> would be affected:
->> https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
+>The infrastructure supports all gcc versions from 4.5 to 6.0, building
+>out-of-tree modules and building in a separate directory. Cross-compilation
+>is supported too but currently only the x86, arm and arm64 architectures enables plugins.
 >
-> would it?
+>This infrastructure was ported from grsecurity/PaX. It is a CII project
+>supported by the Linux Foundation.
 >
-> - allocate a ton of shmid_kernel until you get a fresh page
-> - free one of such objects (here is where your randomization comes into
-> play)
-> - allocate the "vulnerable" object
-> - trigger the overflow
-> - start "freeing" the others - one will work
->
-> This doesn't work only in the case in which you are the last object in
-> the SLUB. So what you are achieving is a 1/(pagesize/sizeof_objects)
-> chance of making the attack less reliable. But I can free yet another
-> object and retry, if the previous overflow didn't kill me (simplest way
-> to guarantee that is to not completely fill the newly allocated SLUB page).
+>Emese Revfy (6):
+> Shared library support
+> GCC plugin infrastructure
+> The GCC plugin infrastructure supports the arm and arm64 architectures too
+> Add Cyclomatic complexity plugin
+> Documentations of the GCC plugin infrastructre
+> Add sancov plugin
 
-All the randomization stuff is just a statistical defense, though it
-would seem to raise the bar of exploitation. I'd love to get a solid
-example for an exploit that this mitigation would interfere with,
-though. Do you know of any that would fit better here?
+I've tested the v6 patches on arm, and partially on arm64.  The arm64
+gcc has a bug in make install that doesn't install all necessary
+headers to build plugins.  I believe the patch will work once that
+version gets out.  It does, however, print a helpful message now
+explaining the likely cause of the failure.
 
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Tested-by: David Brown <david.brown@linaro.org>
