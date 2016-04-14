@@ -1,185 +1,204 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 14 Apr 2016 15:28:56 -0700
-Message-Id: <1460672954-32567-4-git-send-email-keescook@chromium.org>
+Date: Thu, 14 Apr 2016 15:28:57 -0700
+Message-Id: <1460672954-32567-5-git-send-email-keescook@chromium.org>
 In-Reply-To: <1460672954-32567-1-git-send-email-keescook@chromium.org>
 References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 03/21] x86, KASLR: Drop CONFIG_RANDOMIZE_BASE_MAX_OFFSET
+Subject: [kernel-hardening] [PATCH v5 04/21] x86, boot: Move compressed kernel to end of decompression buffer
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Baoquan He <bhe@redhat.com>
+From: Yinghai Lu <yinghai@kernel.org>
 
-Currently CONFIG_RANDOMIZE_BASE_MAX_OFFSET is used to limit the maximum
-offset for kernel randomization. This limit doesn't need to be a CONFIG
-since it is tied completely to KERNEL_IMAGE_SIZE, and will make no sense
-once physical and virtual offsets are randomized separately. This patch
-removes CONFIG_RANDOMIZE_BASE_MAX_OFFSET and consolidates the Kconfig
-help text.
+This change makes later calculations about where the kernel is located
+easier to reason about. To better understand this change, we must first
+clarify what VO and ZO are. They were introduced in commits by hpa:
 
-Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, dropped KERNEL_IMAGE_SIZE_DEFAULT, moved earlier]
+77d1a49 x86, boot: make symbols from the main vmlinux available
+37ba7ab x86, boot: make kernel_alignment adjustable; new bzImage fields
+
+Specifically:
+
+VO:
+- uncompressed kernel image
+- size: VO__end - VO__text ("VO_INIT_SIZE" define)
+
+ZO:
+- bootable compressed kernel image (boot/compressed/vmlinux)
+- head text + compressed kernel (VO and relocs table) + decompressor code
+- size: ZO__end - ZO_startup_32 ("ZO_INIT_SIZE" define, though see below)
+
+The INIT_SIZE definition is used to find the larger of the two image sizes:
+
+ #define ZO_INIT_SIZE    (ZO__end - ZO_startup_32 + ZO_z_extract_offset)
+ #define VO_INIT_SIZE    (VO__end - VO__text)
+ #if ZO_INIT_SIZE > VO_INIT_SIZE
+ #define INIT_SIZE ZO_INIT_SIZE
+ #else
+ #define INIT_SIZE VO_INIT_SIZE
+ #endif
+
+The current code uses extract_offset to decide where to position the
+copied ZO (i.e. ZO starts at extract_offset). (This is why ZO_INIT_SIZE
+currently includes the extract_offset.)
+
+When INIT_SIZE is bigger than VO_INIT_SIZE (uncommon but possible),
+the copied ZO occupies the memory from extract_offset to the end of
+decompression buffer. It overlaps with the soon-to-be-uncompressed kernel
+like this:
+
+                            |-----compressed kernel image------|
+                            V                                  V
+0                       extract_offset                      +INIT_SIZE
+|-----------|---------------|-------------------------|--------|
+            |               |                         |        |
+          VO__text      startup_32 of ZO          VO__end    ZO__end
+            ^                                         ^
+            |-------uncompressed kernel image---------|
+
+When INIT_SIZE is equal to VO_INIT_SIZE (likely) there's still space
+left from end of ZO to the end of decompressing buffer, like below.
+
+                            |-compressed kernel image-|
+                            V                         V
+0                       extract_offset                      +INIT_SIZE
+|-----------|---------------|-------------------------|--------|
+            |               |                         |        |
+          VO__text      startup_32 of ZO          ZO__end    VO__end
+            ^                                                  ^
+            |------------uncompressed kernel image-------------|
+
+To simplify calculations and avoid special cases, it is cleaner to
+always place the compressed kernel image in memory so that ZO__end
+is at the end of the decompression buffer, instead of placing that
+start extract_offset as is currently done.
+
+This patch adds BP_init_size (which is the INIT_SIZE as passed in from
+the boot_params) into asm-offsets.c to make it visible to the assembly
+code. Then when moving the ZO, it calculates the starting position of
+the copied ZO (via BP_init_size and the ZO run size) so that the VO__end
+will be at the end of the decompression buffer. To make the position
+calculation safe, the end of ZO is page aligned (and a comment is added
+to the existing VO alignment for good measure).
+
+Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+[kees: rewrote changelog]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/Kconfig                     | 57 +++++++++++++-----------------------
- arch/x86/boot/compressed/aslr.c      | 12 ++++----
- arch/x86/include/asm/page_64_types.h |  8 ++---
- arch/x86/mm/init_32.c                |  3 --
- 4 files changed, 29 insertions(+), 51 deletions(-)
+ arch/x86/boot/compressed/head_32.S     | 11 +++++++++--
+ arch/x86/boot/compressed/head_64.S     |  8 ++++++--
+ arch/x86/boot/compressed/mkpiggy.c     |  3 ---
+ arch/x86/boot/compressed/vmlinux.lds.S |  1 +
+ arch/x86/kernel/asm-offsets.c          |  1 +
+ arch/x86/kernel/vmlinux.lds.S          |  2 +-
+ 6 files changed, 18 insertions(+), 8 deletions(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 2dc18605831f..fd9ac711ada8 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -1936,51 +1936,36 @@ config RANDOMIZE_BASE
- 	depends on RELOCATABLE
- 	default n
- 	---help---
--	   Randomizes the physical and virtual address at which the
--	   kernel image is decompressed, as a security feature that
--	   deters exploit attempts relying on knowledge of the location
--	   of kernel internals.
-+	   Randomizes the physical address at which the kernel image
-+	   is decompressed and the virtual address where the kernel
-+	   image is mapped, as a secrurity feature that deters exploit
-+	   attempts relying on knowledge of the location of kernel
-+	   internals.
+diff --git a/arch/x86/boot/compressed/head_32.S b/arch/x86/boot/compressed/head_32.S
+index 8ef964ddc18e..0c140f99c602 100644
+--- a/arch/x86/boot/compressed/head_32.S
++++ b/arch/x86/boot/compressed/head_32.S
+@@ -148,7 +148,9 @@ preferred_addr:
+ 1:
+ 
+ 	/* Target address to relocate to for decompression */
+-	addl	$z_extract_offset, %ebx
++	movl    BP_init_size(%esi), %eax
++	subl    $_end, %eax
++	addl    %eax, %ebx
+ 
+ 	/* Set up the stack */
+ 	leal	boot_stack_end(%ebx), %esp
+@@ -210,8 +212,13 @@ relocated:
+ 				/* push arguments for decompress_kernel: */
+ 	pushl	$z_run_size	/* size of kernel with .bss and .brk */
+ 	pushl	$z_output_len	/* decompressed length, end of relocs */
+-	leal	z_extract_offset_negative(%ebx), %ebp
 +
-+	   The kernel physical address can be randomized from 16M to
-+	   64T at most. The kernel virtual address will be offset
-+	   by up to KERNEL_IMAGE_SIZE. On 32-bit KERNEL_IMAGE_SIZE is
-+	   512MiB. while on 64-bit this is limited by how the kernel
-+	   fixmap page table is positioned, so this cannot be larger
-+	   than 1GiB currently. Without RANDOMIZE_BASE there is a 512MiB
-+	   to 1.5GiB split between kernel and modules. When RANDOMIZE_BASE
-+	   is enabled, the modules area will shrink to compensate, up
-+	   to a 1GiB to 1GiB split, KERNEL_IMAGE_SIZE changes from 512MiB
-+	   to 1GiB.
++	movl    BP_init_size(%esi), %eax
++	subl    $_end, %eax
++	movl    %ebx, %ebp
++	subl    %eax, %ebp
+ 	pushl	%ebp		/* output address */
++
+ 	pushl	$z_input_len	/* input_len */
+ 	leal	input_data(%ebx), %eax
+ 	pushl	%eax		/* input_data */
+diff --git a/arch/x86/boot/compressed/head_64.S b/arch/x86/boot/compressed/head_64.S
+index b0c0d16ef58d..67dd8d300c61 100644
+--- a/arch/x86/boot/compressed/head_64.S
++++ b/arch/x86/boot/compressed/head_64.S
+@@ -102,7 +102,9 @@ ENTRY(startup_32)
+ 1:
  
- 	   Entropy is generated using the RDRAND instruction if it is
- 	   supported. If RDTSC is supported, it is used as well. If
- 	   neither RDRAND nor RDTSC are supported, then randomness is
- 	   read from the i8254 timer.
+ 	/* Target address to relocate to for decompression */
+-	addl	$z_extract_offset, %ebx
++	movl	BP_init_size(%esi), %eax
++	subl	$_end, %eax
++	addl	%eax, %ebx
  
--	   The kernel will be offset by up to RANDOMIZE_BASE_MAX_OFFSET,
--	   and aligned according to PHYSICAL_ALIGN. Since the kernel is
--	   built using 2GiB addressing, and PHYSICAL_ALGIN must be at a
--	   minimum of 2MiB, only 10 bits of entropy is theoretically
--	   possible. At best, due to page table layouts, 64-bit can use
--	   9 bits of entropy and 32-bit uses 8 bits.
-+	   Since the kernel is built using 2GiB addressing, and
-+	   PHYSICAL_ALGIN must be at a minimum of 2MiB, only 10 bits of
-+	   entropy is theoretically possible. At best, due to page table
-+	   layouts, 64-bit can use 9 bits of entropy and 32-bit uses 8
-+	   bits.
+ /*
+  * Prepare for entering 64 bit mode
+@@ -330,7 +332,9 @@ preferred_addr:
+ 1:
  
- 	   If unsure, say N.
+ 	/* Target address to relocate to for decompression */
+-	leaq	z_extract_offset(%rbp), %rbx
++	movl	BP_init_size(%rsi), %ebx
++	subl	$_end, %ebx
++	addq	%rbp, %rbx
  
--config RANDOMIZE_BASE_MAX_OFFSET
--	hex "Maximum kASLR offset allowed" if EXPERT
--	depends on RANDOMIZE_BASE
--	range 0x0 0x20000000 if X86_32
--	default "0x20000000" if X86_32
--	range 0x0 0x40000000 if X86_64
--	default "0x40000000" if X86_64
--	---help---
--	  The lesser of RANDOMIZE_BASE_MAX_OFFSET and available physical
--	  memory is used to determine the maximal offset in bytes that will
--	  be applied to the kernel when kernel Address Space Layout
--	  Randomization (kASLR) is active. This must be a multiple of
--	  PHYSICAL_ALIGN.
--
--	  On 32-bit this is limited to 512MiB by page table layouts. The
--	  default is 512MiB.
--
--	  On 64-bit this is limited by how the kernel fixmap page table is
--	  positioned, so this cannot be larger than 1GiB currently. Without
--	  RANDOMIZE_BASE, there is a 512MiB to 1.5GiB split between kernel
--	  and modules. When RANDOMIZE_BASE_MAX_OFFSET is above 512MiB, the
--	  modules area will shrink to compensate, up to the current maximum
--	  1GiB to 1GiB split. The default is 1GiB.
--
--	  If unsure, leave at the default value.
--
- # Relocation on x86 needs some additional build support
- config X86_NEED_RELOCS
- 	def_bool y
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index 622aa881c6ab..462654097d63 100644
---- a/arch/x86/boot/compressed/aslr.c
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -206,15 +206,13 @@ static bool mem_avoid_overlap(struct mem_vector *img)
- 	return false;
- }
+ 	/* Set up the stack */
+ 	leaq	boot_stack_end(%rbx), %rsp
+diff --git a/arch/x86/boot/compressed/mkpiggy.c b/arch/x86/boot/compressed/mkpiggy.c
+index d8222f213182..b980046c3329 100644
+--- a/arch/x86/boot/compressed/mkpiggy.c
++++ b/arch/x86/boot/compressed/mkpiggy.c
+@@ -85,9 +85,6 @@ int main(int argc, char *argv[])
+ 	printf("z_output_len = %lu\n", (unsigned long)olen);
+ 	printf(".globl z_extract_offset\n");
+ 	printf("z_extract_offset = 0x%lx\n", offs);
+-	/* z_extract_offset_negative allows simplification of head_32.S */
+-	printf(".globl z_extract_offset_negative\n");
+-	printf("z_extract_offset_negative = -0x%lx\n", offs);
+ 	printf(".globl z_run_size\n");
+ 	printf("z_run_size = %lu\n", run_size);
  
--static unsigned long slots[CONFIG_RANDOMIZE_BASE_MAX_OFFSET /
--			   CONFIG_PHYSICAL_ALIGN];
-+static unsigned long slots[KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN];
- static unsigned long slot_max;
- 
- static void slots_append(unsigned long addr)
- {
- 	/* Overflowing the slots list should be impossible. */
--	if (slot_max >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET /
--			CONFIG_PHYSICAL_ALIGN)
-+	if (slot_max >= KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN)
- 		return;
- 
- 	slots[slot_max++] = addr;
-@@ -240,7 +238,7 @@ static void process_e820_entry(struct e820entry *entry,
- 		return;
- 
- 	/* Ignore entries entirely above our maximum. */
--	if (entry->addr >= CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
-+	if (entry->addr >= KERNEL_IMAGE_SIZE)
- 		return;
- 
- 	/* Ignore entries entirely below our minimum. */
-@@ -265,8 +263,8 @@ static void process_e820_entry(struct e820entry *entry,
- 	region.size -= region.start - entry->addr;
- 
- 	/* Reduce maximum size to fit end of image within maximum limit. */
--	if (region.start + region.size > CONFIG_RANDOMIZE_BASE_MAX_OFFSET)
--		region.size = CONFIG_RANDOMIZE_BASE_MAX_OFFSET - region.start;
-+	if (region.start + region.size > KERNEL_IMAGE_SIZE)
-+		region.size = KERNEL_IMAGE_SIZE - region.start;
- 
- 	/* Walk each aligned slot and check for avoided areas. */
- 	for (img.start = region.start, img.size = image_size ;
-diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
-index 4928cf0d5af0..d5c2f8b40faa 100644
---- a/arch/x86/include/asm/page_64_types.h
-+++ b/arch/x86/include/asm/page_64_types.h
-@@ -47,12 +47,10 @@
-  * are fully set up. If kernel ASLR is configured, it can extend the
-  * kernel page table mapping, reducing the size of the modules area.
-  */
--#define KERNEL_IMAGE_SIZE_DEFAULT      (512 * 1024 * 1024)
--#if defined(CONFIG_RANDOMIZE_BASE) && \
--	CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE_DEFAULT
--#define KERNEL_IMAGE_SIZE   CONFIG_RANDOMIZE_BASE_MAX_OFFSET
-+#if defined(CONFIG_RANDOMIZE_BASE)
-+#define KERNEL_IMAGE_SIZE	(1024 * 1024 * 1024)
- #else
--#define KERNEL_IMAGE_SIZE      KERNEL_IMAGE_SIZE_DEFAULT
-+#define KERNEL_IMAGE_SIZE	(512 * 1024 * 1024)
+diff --git a/arch/x86/boot/compressed/vmlinux.lds.S b/arch/x86/boot/compressed/vmlinux.lds.S
+index 34d047c98284..e24e0a0c90c9 100644
+--- a/arch/x86/boot/compressed/vmlinux.lds.S
++++ b/arch/x86/boot/compressed/vmlinux.lds.S
+@@ -70,5 +70,6 @@ SECTIONS
+ 		_epgtable = . ;
+ 	}
  #endif
++	. = ALIGN(PAGE_SIZE);	/* keep ZO size page aligned */
+ 	_end = .;
+ }
+diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+index 5c042466f274..674134e9f5e5 100644
+--- a/arch/x86/kernel/asm-offsets.c
++++ b/arch/x86/kernel/asm-offsets.c
+@@ -80,6 +80,7 @@ void common(void) {
+ 	OFFSET(BP_hardware_subarch, boot_params, hdr.hardware_subarch);
+ 	OFFSET(BP_version, boot_params, hdr.version);
+ 	OFFSET(BP_kernel_alignment, boot_params, hdr.kernel_alignment);
++	OFFSET(BP_init_size, boot_params, hdr.init_size);
+ 	OFFSET(BP_pref_address, boot_params, hdr.pref_address);
+ 	OFFSET(BP_code32_start, boot_params, hdr.code32_start);
  
- #endif /* _ASM_X86_PAGE_64_DEFS_H */
-diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
-index bd7a9b9e2e14..f2ee42d61894 100644
---- a/arch/x86/mm/init_32.c
-+++ b/arch/x86/mm/init_32.c
-@@ -804,9 +804,6 @@ void __init mem_init(void)
- 	BUILD_BUG_ON(VMALLOC_START			>= VMALLOC_END);
- #undef high_memory
- #undef __FIXADDR_TOP
--#ifdef CONFIG_RANDOMIZE_BASE
--	BUILD_BUG_ON(CONFIG_RANDOMIZE_BASE_MAX_OFFSET > KERNEL_IMAGE_SIZE);
--#endif
+diff --git a/arch/x86/kernel/vmlinux.lds.S b/arch/x86/kernel/vmlinux.lds.S
+index 4c941f88d405..9297a002d8e5 100644
+--- a/arch/x86/kernel/vmlinux.lds.S
++++ b/arch/x86/kernel/vmlinux.lds.S
+@@ -334,7 +334,7 @@ SECTIONS
+ 		__brk_limit = .;
+ 	}
  
- #ifdef CONFIG_HIGHMEM
- 	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
+-	. = ALIGN(PAGE_SIZE);
++	. = ALIGN(PAGE_SIZE);		/* keep VO_INIT_SIZE page aligned */
+ 	_end = .;
+ 
+         STABS_DEBUG
 -- 
 2.6.3
