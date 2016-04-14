@@ -1,37 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CA+55aFxSCFCoWcMapn10GyXvKpy5aMjGG+pa1P4Hu7sHqSTDKQ@mail.gmail.com>
-References: <1459947782-5071-1-git-send-email-ed@abdsec.com>
-	<CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
-	<CA+55aFykp_ifLG=GkdGEM2keZs1Kb=eYcjjLz1LQh78LVSZong@mail.gmail.com>
-	<CA+55aFxSCFCoWcMapn10GyXvKpy5aMjGG+pa1P4Hu7sHqSTDKQ@mail.gmail.com>
-Date: Wed, 13 Apr 2016 21:27:17 -0700
-Message-ID: <CAGXu5jLVDJcQKpY7w1MCPW5hvjY=s+KF54aHvb8WOJycJFhF4A@mail.gmail.com>
+In-Reply-To: <CAGXu5jL21Jk7tKYnVULDskOKeq-QgQM6E0z6EuzmDMp5Sa2iBA@mail.gmail.com>
+References: <1458631937-14593-1-git-send-email-bhe@redhat.com>
+	<20160405015613.GA4654@x1.redhat.com>
+	<CAGXu5jKtXndmfLNt1PZvL1oE5BXHDHsAcGBy=0V-nHg=6CA8HA@mail.gmail.com>
+	<20160413101950.GC9482@gmail.com>
+	<CAGXu5jL21Jk7tKYnVULDskOKeq-QgQM6E0z6EuzmDMp5Sa2iBA@mail.gmail.com>
+Date: Wed, 13 Apr 2016 23:02:38 -0700
+Message-ID: <CAGXu5jJFcT9CgKvJSJ9rDOz4D8fJRhDbxBGwOpQhUA2OyYPAzg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] KERNEL: resource: Fix bug on leakage in /proc/iomem file
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Emrah Demir <ed@abdsec.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Dave Jones <davej@redhat.com>
+Subject: [kernel-hardening] Re: [PATCH v4 00/20] x86, boot: kaslr cleanup and 64bit kaslr support
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 6, 2016 at 2:19 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Wed, Apr 6, 2016 at 10:54 AM, Linus Torvalds
-> <torvalds@linux-foundation.org> wrote:
+On Wed, Apr 13, 2016 at 7:11 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Apr 13, 2016 at 3:19 AM, Ingo Molnar <mingo@kernel.org> wrote:
 >>
->> So I'd find a patch like the attached to be perfectly acceptable (in
->> fact, we should have done this long ago).
->
-> I just committed it, let's see if some odd program uses the iomem
-> data. I doubt it, and I always enjoy improvements that remove more
-> lines of code than they add.
+>> * Kees Cook <keescook@chromium.org> wrote:
+>>
+>>> FWIW, I've also had this tree up in my git branches, and the 0day
+>>> tester hasn't complained at all about it in the last two weeks. I'd
+>>> really like to see this in -next to fix the >4G (mainly kexec) issues
+>>> and get us to feature parity with the arm64 kASLR work (randomized
+>>> virtual address).
 
-Hrm, it looks like at least Ubuntu's kernel security test suite
-expects to find these entries (when it verifies that STRICT_DEVMEM
-hasn't regressed). Also, the commit only removed the entries on x86.
-Most (all?) of the other architectures still have them. Could you
-revert this for now, and I'll cook up a %pK-based solution for -next?
+So, I've done this and suddenly realized I hadn't boot-tested i386. It
+doesn't work, unfortunately. (Which I find strange: I'd expect 0day to
+have noticed...)
+
+Baoquan, have you tested this on 32-bit systems? I get a variety of
+failures. Either it boots okay, it reboots, or I get tons of pte
+errors like this:
+
+[    0.000000] clearing pte for ram above max_low_pfn: pfn: 37dcc pmd:
+f9144f7c pmd phys: 39144f7c pte: f9a1b730 pte phys: 39a1b730
+
+Can you confirm? I suspect relocation problems, but ran out of time
+today to debug it.
+
+I have the entire series with cleaned up changelogs and various other
+refactorings up here now:
+
+http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kaslr/highmem
+
+Thanks!
 
 -Kees
 
