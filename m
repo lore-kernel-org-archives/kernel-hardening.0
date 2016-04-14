@@ -1,163 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 14 Apr 2016 15:28:58 -0700
-Message-Id: <1460672954-32567-6-git-send-email-keescook@chromium.org>
+Date: Thu, 14 Apr 2016 15:28:59 -0700
+Message-Id: <1460672954-32567-7-git-send-email-keescook@chromium.org>
 In-Reply-To: <1460672954-32567-1-git-send-email-keescook@chromium.org>
 References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 05/21] x86, boot: Calculate decompression size during boot not build
+Subject: [kernel-hardening] [PATCH v5 06/21] x86, KASLR: Update description for decompressor worst case size
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Yinghai Lu <yinghai@kernel.org>
+From: Baoquan He <bhe@redhat.com>
 
-Currently z_extract_offset is calculated in boot/compressed/mkpiggy.c.
-This doesn't work well because mkpiggy.c doesn't know the details of the
-decompressor in use. As a result, it can only make an estimation, which
-has risks:
+The comment that describes the analysis for the size of the decompressor
+code only took gzip into account (there are 6 other decompressors that
+could be used). The actual z_extract_offset calculation in code was
+already handling the correct maximum size, but this documentation hadn't
+been updated. This updates the documentation and fixes several typos.
 
- - output + output_len (VO) could be much bigger than input + input_len
-   (ZO). In this case, the decompressed kernel plus relocs could overwrite
-   the decompression code while it is running.
-
- - The head code of ZO could be bigger than z_extract_offset. In this case
-   an overwrite could happen when the head code is running to move ZO to
-   the end of buffer. Though currently the size of the head code is very
-   small it's still a potential risk. Since there is no rule to limit the
-   size of the head code of ZO, it runs the risk of suddenly becoming a
-   (hard to find) bug.
-
-Instead, this moves the z_extract_offset calculation into header.S, and
-makes adjustments to be sure that the above two cases can never happen.
-
-Since we have (previously) made ZO always be located against the end of
-decompression buffer, z_extract_offset is only used here to calculate an
-appropriate buffer size (INIT_SIZE), and is not longer used elsewhere. As
-such, it can be removed from voffset.h.
-
-Signed-off-by: Yinghai Lu <yinghai@kernel.org>
 Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog]
+[kees: rewrote changelog, cleaned up comment style]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/Makefile             |  2 +-
- arch/x86/boot/compressed/misc.c    |  5 +----
- arch/x86/boot/compressed/mkpiggy.c | 15 +--------------
- arch/x86/boot/header.S             | 23 ++++++++++++++++++++++-
- 4 files changed, 25 insertions(+), 20 deletions(-)
+ arch/x86/boot/compressed/misc.c | 26 +++++++++++++++++---------
+ 1 file changed, 17 insertions(+), 9 deletions(-)
 
-diff --git a/arch/x86/boot/Makefile b/arch/x86/boot/Makefile
-index b1ef9e489084..942f7dabfb1e 100644
---- a/arch/x86/boot/Makefile
-+++ b/arch/x86/boot/Makefile
-@@ -95,7 +95,7 @@ targets += voffset.h
- $(obj)/voffset.h: vmlinux FORCE
- 	$(call if_changed,voffset)
- 
--sed-zoffset := -e 's/^\([0-9a-fA-F]*\) [ABCDGRSTVW] \(startup_32\|startup_64\|efi32_stub_entry\|efi64_stub_entry\|efi_pe_entry\|input_data\|_end\|z_.*\)$$/\#define ZO_\2 0x\1/p'
-+sed-zoffset := -e 's/^\([0-9a-fA-F]*\) [ABCDGRSTVW] \(startup_32\|startup_64\|efi32_stub_entry\|efi64_stub_entry\|efi_pe_entry\|input_data\|_end\|_ehead\|_text\|z_.*\)$$/\#define ZO_\2 0x\1/p'
- 
- quiet_cmd_zoffset = ZOFFSET $@
-       cmd_zoffset = $(NM) $< | sed -n $(sed-zoffset) > $@
 diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index c4477d5f3fff..e2a998f8c304 100644
+index e2a998f8c304..31e2d6155643 100644
 --- a/arch/x86/boot/compressed/misc.c
 +++ b/arch/x86/boot/compressed/misc.c
-@@ -83,13 +83,10 @@
-  * To avoid problems with the compressed data's meta information an extra 18
-  * bytes are needed.  Leading to the formula:
-  *
-- * extra_bytes = (uncompressed_size >> 12) + 32768 + 18 + decompressor_size.
-+ * extra_bytes = (uncompressed_size >> 12) + 32768 + 18.
-  *
-  * Adding 8 bytes per 32K is a bit excessive but much easier to calculate.
-  * Adding 32768 instead of 32767 just makes for round numbers.
-- * Adding the decompressor_size is necessary as it musht live after all
-- * of the data as well.  Last I measured the decompressor is about 14K.
-- * 10K of actual data and 4K of bss.
-  *
+@@ -19,11 +19,13 @@
   */
- 
-diff --git a/arch/x86/boot/compressed/mkpiggy.c b/arch/x86/boot/compressed/mkpiggy.c
-index b980046c3329..a613c84d9b88 100644
---- a/arch/x86/boot/compressed/mkpiggy.c
-+++ b/arch/x86/boot/compressed/mkpiggy.c
-@@ -21,8 +21,7 @@
-  * ----------------------------------------------------------------------- */
  
  /*
-- * Compute the desired load offset from a compressed program; outputs
-- * a small assembly wrapper with the appropriate symbols defined.
-+ * outputs a small assembly wrapper with the appropriate symbols defined.
+- * Getting to provable safe in place decompression is hard.
+- * Worst case behaviours need to be analyzed.
+- * Background information:
++ * Getting to provable safe in place decompression is hard. Worst case
++ * behaviours need be analyzed. Here let's take decompressing gzip-compressed
++ * kernel as example to illustrate it.
++ *
++ * The file layout of gzip compressed kernel is as follows. For more
++ * information, please refer to RFC 1951 and RFC 1952.
+  *
+- * The file layout is:
+  *    magic[2]
+  *    method[1]
+  *    flags[1]
+@@ -70,13 +72,13 @@
+  * of 5 bytes per 32767 bytes.
+  *
+  * The worst case internal to a compressed block is very hard to figure.
+- * The worst case can at least be boundined by having one bit that represents
++ * The worst case can at least be bounded by having one bit that represents
+  * 32764 bytes and then all of the rest of the bytes representing the very
+  * very last byte.
+  *
+  * All of which is enough to compute an amount of extra data that is required
+  * to be safe.  To avoid problems at the block level allocating 5 extra bytes
+- * per 32767 bytes of data is sufficient.  To avoind problems internal to a
++ * per 32767 bytes of data is sufficient.  To avoid problems internal to a
+  * block adding an extra 32767 bytes (the worst case uncompressed block size)
+  * is sufficient, to ensure that in the worst case the decompressed data for
+  * block will stop the byte before the compressed data for a block begins.
+@@ -88,11 +90,17 @@
+  * Adding 8 bytes per 32K is a bit excessive but much easier to calculate.
+  * Adding 32768 instead of 32767 just makes for round numbers.
+  *
++ * Above analysis is for decompressing gzip compressed kernel only. Up to
++ * now 6 different decompressor are supported all together. And among them
++ * xz stores data in chunks and has maximum chunk of 64K. Hence safety
++ * margin should be updated to cover all decompressors so that we don't
++ * need to deal with each of them separately. Please check
++ * the description in lib/decompressor_xxx.c for specific information.
++ *
++ * extra_bytes = (uncompressed_size >> 12) + 65536 + 128.
++ *
   */
  
- #include <stdlib.h>
-@@ -35,7 +34,6 @@ int main(int argc, char *argv[])
- {
- 	uint32_t olen;
- 	long ilen;
--	unsigned long offs;
- 	unsigned long run_size;
- 	FILE *f = NULL;
- 	int retval = 1;
-@@ -67,15 +65,6 @@ int main(int argc, char *argv[])
- 	ilen = ftell(f);
- 	olen = get_unaligned_le32(&olen);
+-/*
+- * gzip declarations
+- */
+ #define STATIC		static
  
--	/*
--	 * Now we have the input (compressed) and output (uncompressed)
--	 * sizes, compute the necessary decompression offset...
--	 */
--
--	offs = (olen > ilen) ? olen - ilen : 0;
--	offs += olen >> 12;	/* Add 8 bytes for each 32K block */
--	offs += 64*1024 + 128;	/* Add 64K + 128 bytes slack */
--	offs = (offs+4095) & ~4095; /* Round to a 4K boundary */
- 	run_size = atoi(argv[2]);
- 
- 	printf(".section \".rodata..compressed\",\"a\",@progbits\n");
-@@ -83,8 +72,6 @@ int main(int argc, char *argv[])
- 	printf("z_input_len = %lu\n", ilen);
- 	printf(".globl z_output_len\n");
- 	printf("z_output_len = %lu\n", (unsigned long)olen);
--	printf(".globl z_extract_offset\n");
--	printf("z_extract_offset = 0x%lx\n", offs);
- 	printf(".globl z_run_size\n");
- 	printf("z_run_size = %lu\n", run_size);
- 
-diff --git a/arch/x86/boot/header.S b/arch/x86/boot/header.S
-index 6236b9ec4b76..6565dcb2b899 100644
---- a/arch/x86/boot/header.S
-+++ b/arch/x86/boot/header.S
-@@ -440,7 +440,28 @@ setup_data:		.quad 0			# 64-bit physical pointer to
- 
- pref_address:		.quad LOAD_PHYSICAL_ADDR	# preferred load addr
- 
--#define ZO_INIT_SIZE	(ZO__end - ZO_startup_32 + ZO_z_extract_offset)
-+/* Check arch/x86/boot/compressed/misc.c for the formula of extra_bytes*/
-+#define ZO_z_extra_bytes	((ZO_z_output_len >> 12) + 65536 + 128)
-+#if ZO_z_output_len > ZO_z_input_len
-+#define ZO_z_extract_offset	(ZO_z_output_len + ZO_z_extra_bytes - \
-+				 ZO_z_input_len)
-+#else
-+#define ZO_z_extract_offset	ZO_z_extra_bytes
-+#endif
-+
-+/*
-+ * extract_offset has to be bigger than ZO head section. Otherwise
-+ * during head code running to move ZO to end of buffer, it will
-+ * overwrite head code itself.
-+ */
-+#if (ZO__ehead - ZO_startup_32) > ZO_z_extract_offset
-+#define ZO_z_min_extract_offset ((ZO__ehead - ZO_startup_32 + 4095) & ~4095)
-+#else
-+#define ZO_z_min_extract_offset ((ZO_z_extract_offset + 4095) & ~4095)
-+#endif
-+
-+#define ZO_INIT_SIZE	(ZO__end - ZO_startup_32 + ZO_z_min_extract_offset)
-+
- #define VO_INIT_SIZE	(VO__end - VO__text)
- #if ZO_INIT_SIZE > VO_INIT_SIZE
- #define INIT_SIZE ZO_INIT_SIZE
+ #undef memcpy
 -- 
 2.6.3
