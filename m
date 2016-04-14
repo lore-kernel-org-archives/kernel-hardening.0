@@ -1,62 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 14 Apr 2016 14:24:27 +0800
-From: Baoquan He <bhe@redhat.com>
-Message-ID: <20160414062427.GA2510@x1.redhat.com>
-References: <1458631937-14593-1-git-send-email-bhe@redhat.com>
- <20160405015613.GA4654@x1.redhat.com>
- <CAGXu5jKtXndmfLNt1PZvL1oE5BXHDHsAcGBy=0V-nHg=6CA8HA@mail.gmail.com>
- <20160413101950.GC9482@gmail.com>
- <CAGXu5jL21Jk7tKYnVULDskOKeq-QgQM6E0z6EuzmDMp5Sa2iBA@mail.gmail.com>
- <CAGXu5jJFcT9CgKvJSJ9rDOz4D8fJRhDbxBGwOpQhUA2OyYPAzg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJFcT9CgKvJSJ9rDOz4D8fJRhDbxBGwOpQhUA2OyYPAzg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v4 00/20] x86, boot: kaslr cleanup and 64bit kaslr support
+Content-Type: text/plain; charset=US-ASCII;
+ format=flowed
+Content-Transfer-Encoding: 7bit
+Date: Thu, 14 Apr 2016 03:39:05 -0400
+From: Emrah Demir <ed@abdsec.com>
+In-Reply-To: <CAGXu5jLVDJcQKpY7w1MCPW5hvjY=s+KF54aHvb8WOJycJFhF4A@mail.gmail.com>
+References: <1459947782-5071-1-git-send-email-ed@abdsec.com>
+ <CA+55aFzf+yuvRu8p2EWuJLz=vombadFRHbYaRDTu96TcjO3anA@mail.gmail.com>
+ <CA+55aFykp_ifLG=GkdGEM2keZs1Kb=eYcjjLz1LQh78LVSZong@mail.gmail.com>
+ <CA+55aFxSCFCoWcMapn10GyXvKpy5aMjGG+pa1P4Hu7sHqSTDKQ@mail.gmail.com>
+ <CAGXu5jLVDJcQKpY7w1MCPW5hvjY=s+KF54aHvb8WOJycJFhF4A@mail.gmail.com>
+Message-ID: <f8e523a05927eef49a9a3566d176aa62@abdsec.com>
+Subject: [kernel-hardening] Re: [PATCH] KERNEL: resource: Fix bug on leakage in /proc/iomem file
 To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Dan Rosenberg <dan.j.rosenberg@gmail.com>, kernel-hardening@lists.openwall.com, Dave Jones <davej@redhat.com>, keescook@google.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/13/16 at 11:02pm, Kees Cook wrote:
-> On Wed, Apr 13, 2016 at 7:11 AM, Kees Cook <keescook@chromium.org> wrote:
-> > On Wed, Apr 13, 2016 at 3:19 AM, Ingo Molnar <mingo@kernel.org> wrote:
-> >>
-> >> * Kees Cook <keescook@chromium.org> wrote:
-> >>
-> >>> FWIW, I've also had this tree up in my git branches, and the 0day
-> >>> tester hasn't complained at all about it in the last two weeks. I'd
-> >>> really like to see this in -next to fix the >4G (mainly kexec) issues
-> >>> and get us to feature parity with the arm64 kASLR work (randomized
-> >>> virtual address).
+On 2016-04-14 00:27, Kees Cook wrote:
+> On Wed, Apr 6, 2016 at 2:19 PM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+>> On Wed, Apr 6, 2016 at 10:54 AM, Linus Torvalds
+>> <torvalds@linux-foundation.org> wrote:
+>>> 
+>>> So I'd find a patch like the attached to be perfectly acceptable (in
+>>> fact, we should have done this long ago).
+>> 
+>> I just committed it, let's see if some odd program uses the iomem
+>> data. I doubt it, and I always enjoy improvements that remove more
+>> lines of code than they add.
 > 
-> So, I've done this and suddenly realized I hadn't boot-tested i386. It
-> doesn't work, unfortunately. (Which I find strange: I'd expect 0day to
-> have noticed...)
+> Hrm, it looks like at least Ubuntu's kernel security test suite
+> expects to find these entries (when it verifies that STRICT_DEVMEM
+> hasn't regressed). Also, the commit only removed the entries on x86.
+> Most (all?) of the other architectures still have them. Could you
+> revert this for now, and I'll cook up a %pK-based solution for -next?
 > 
-> Baoquan, have you tested this on 32-bit systems? I get a variety of
-> failures. Either it boots okay, it reboots, or I get tons of pte
-> errors like this:
-> 
-> [    0.000000] clearing pte for ram above max_low_pfn: pfn: 37dcc pmd:
-> f9144f7c pmd phys: 39144f7c pte: f9a1b730 pte phys: 39a1b730
-> 
-> Can you confirm? I suspect relocation problems, but ran out of time
-> today to debug it.
 
-Sorry, I didn't test i386 either before. I will get a i386 machine and
-check it now. I know it's very late in your side, you need rest. Will
-report update if there's any progress.
+Actually, I have realized that this patch (Linus's patch) was for x86. I 
+was planning to code the same for other architectures.
+It seems your method is better. %pK will zero other values in 
+/proc/iomem.
 
-> 
-> I have the entire series with cleaned up changelogs and various other
-> refactorings up here now:
-> 
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kaslr/highmem
-> 
-> Thanks!
-> 
-> -Kees
-> 
-> -- 
-> Kees Cook
-> Chrome OS & Brillo Security
+Perhaps Ubuntu patch might be a good option.
