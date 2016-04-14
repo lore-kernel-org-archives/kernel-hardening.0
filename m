@@ -1,164 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160414203444.GC3856@amd>
+References: <20160412221659.GA18102@www.outflux.net>
+	<20160414200102.GB3856@amd>
+	<CAGXu5jKNKV2RaPCw+m3R-e7irmmP0eRBBq9RKY0mcH5A1Nsx6g@mail.gmail.com>
+	<20160414203444.GC3856@amd>
+Date: Thu, 14 Apr 2016 15:42:48 -0700
+Message-ID: <CAGXu5j+cTYF_OGG=u4BKU5X3f6TF0FdAcES9e_8S0ajMyjhn6Q@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 14 Apr 2016 15:29:12 -0700
-Message-Id: <1460672954-32567-20-git-send-email-keescook@chromium.org>
-In-Reply-To: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 19/21] x86, KASLR: Add physical address randomization >4G
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2] kaslr: allow kASLR to be default over Hibernation
+To: Pavel Machek <pavel@denx.de>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Rafael J. Wysocki" <rafael@kernel.org>, Ingo Molnar <mingo@kernel.org>, James Morse <james.morse@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Yves-Alexis Perez <corsac@debian.org>, Emrah Demir <ed@abdsec.com>, Jonathan Corbet <corbet@lwn.net>, "x86@kernel.org" <x86@kernel.org>, Len Brown <len.brown@intel.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Baoquan He <bhe@redhat.com>
+On Thu, Apr 14, 2016 at 1:34 PM, Pavel Machek <pavel@denx.de> wrote:
+> On Thu 2016-04-14 13:14:07, Kees Cook wrote:
+>> On Thu, Apr 14, 2016 at 1:01 PM, Pavel Machek <pavel@denx.de> wrote:
+>> > Hi!
+>> >
+>> >> Since kASLR and Hibernation can not currently coexist at runtime
+>> >> on x86, the default behavior was to disable kASLR by default when
+>> >> CONFIG_HIBERNATION was present (to retain original behavior).
+>> >>
+>> >> The behavior of kASLR on arm64 (and soon MIPS) is to be enabled by
+>> >> default when selected at build time. Since arm64 Hibernation does not
+>> >> conflict with kASLR, this fixes the hibernation argument parsing to be
+>> >> x86-specific. Additionally, since end users want to be able to select
+>> >> kASLR on x86 by default at build time, create CONFIG_RANDOMIZE_BASE_ON
+>> >> that is present only on x86.
+>> >>
+>> >> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> >
+>> > I believe this is bad idea. arm64 shows that kaslr and hibernation can
+>> > coexist, and hibernation is still useful when your battery runs out.
+>>
+>> What? I'm confused -- this patch leaves the x86 behavior as-is by
+>> default but allows hibernation to work with arm64. (For example, right
+>> now, if you boot arm64 with "kaslr" kernel argument, hibernation will
+>> get needlessly disabled.)
+>
+> So it is very different from the PATCH v1, still it shares the
+> subject?
 
-This patch exchanges the prior slots[] array for the new slot_areas[]
-array, and lifts the limitation of KERNEL_IMAGE_SIZE on the physical
-address offset for 64-bit. As before, process_e820_entry walks memory and
-populates slot_areas[], splitting on any detected mem_avoid collisions.
+It was similar, but not the same:
 
-Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, refactored goto into while, limit 32-bit to 1G]
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/boot/compressed/aslr.c | 92 ++++++++++++++++++++++++++++++-----------
- 1 file changed, 68 insertions(+), 24 deletions(-)
+v1: Prefer kASLR over Hibernation
+v2: kaslr: allow kASLR to be default over Hibernation
 
-diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
-index 53ceaa0a08b9..0587eac3e05d 100644
---- a/arch/x86/boot/compressed/aslr.c
-+++ b/arch/x86/boot/compressed/aslr.c
-@@ -335,25 +335,42 @@ static void slots_append(unsigned long addr)
- 
- static unsigned long slots_fetch_random(void)
- {
-+	unsigned long random;
-+	int i;
-+
- 	/* Handle case of no slots stored. */
- 	if (slot_max == 0)
- 		return 0;
- 
--	return slots[get_random_long("Physical") % slot_max];
-+	random = get_random_long("Physical") % slot_max;
-+
-+	for (i = 0; i < slot_area_index; i++) {
-+		if (random >= slot_areas[i].num) {
-+			random -= slot_areas[i].num;
-+			continue;
-+		}
-+		return slot_areas[i].addr + random * CONFIG_PHYSICAL_ALIGN;
-+	}
-+
-+	if (i == slot_area_index)
-+		debug_putstr("slots_fetch_random() failed!?\n");
-+	return 0;
- }
- 
- static void process_e820_entry(struct e820entry *entry,
- 			       unsigned long minimum,
- 			       unsigned long image_size)
- {
--	struct mem_vector region, img;
-+	struct mem_vector region, out;
-+	struct slot_area slot_area;
-+	unsigned long min, start_orig;
- 
- 	/* Skip non-RAM entries. */
- 	if (entry->type != E820_RAM)
- 		return;
- 
--	/* Ignore entries entirely above our maximum. */
--	if (entry->addr >= KERNEL_IMAGE_SIZE)
-+	/* On 32-bit, ignore entries entirely above our maximum. */
-+	if (IS_ENABLED(CONFIG_X86_32) && entry->addr >= KERNEL_IMAGE_SIZE)
- 		return;
- 
- 	/* Ignore entries entirely below our minimum. */
-@@ -363,31 +380,54 @@ static void process_e820_entry(struct e820entry *entry,
- 	region.start = entry->addr;
- 	region.size = entry->size;
- 
--	/* Potentially raise address to minimum location. */
--	if (region.start < minimum)
--		region.start = minimum;
-+	/* Give up if slot area array is full. */
-+	while (slot_area_index < MAX_SLOT_AREA) {
-+		start_orig = region.start;
- 
--	/* Potentially raise address to meet alignment requirements. */
--	region.start = ALIGN(region.start, CONFIG_PHYSICAL_ALIGN);
-+		/* Potentially raise address to minimum location. */
-+		if (region.start < minimum)
-+			region.start = minimum;
- 
--	/* Did we raise the address above the bounds of this e820 region? */
--	if (region.start > entry->addr + entry->size)
--		return;
-+		/* Potentially raise address to meet alignment needs. */
-+		region.start = ALIGN(region.start, CONFIG_PHYSICAL_ALIGN);
- 
--	/* Reduce size by any delta from the original address. */
--	region.size -= region.start - entry->addr;
-+		/* Did we raise the address above this e820 region? */
-+		if (region.start > entry->addr + entry->size)
-+			return;
- 
--	/* Reduce maximum size to fit end of image within maximum limit. */
--	if (region.start + region.size > KERNEL_IMAGE_SIZE)
--		region.size = KERNEL_IMAGE_SIZE - region.start;
-+		/* Reduce size by any delta from the original address. */
-+		region.size -= region.start - start_orig;
- 
--	/* Walk each aligned slot and check for avoided areas. */
--	for (img.start = region.start, img.size = image_size ;
--	     mem_contains(&region, &img) ;
--	     img.start += CONFIG_PHYSICAL_ALIGN) {
--		if (mem_avoid_overlap(&img))
--			continue;
--		slots_append(img.start);
-+		/* On 32-bit, reduce region size to fit within max size. */
-+		if (IS_ENABLED(CONFIG_X86_32) &&
-+		    region.start + region.size > KERNEL_IMAGE_SIZE)
-+			region.size = KERNEL_IMAGE_SIZE - region.start;
-+
-+		/* Return if region can't contain decompressed kernel */
-+		if (region.size < image_size)
-+			return;
-+
-+		/* If nothing overlaps, store the region and return. */
-+		if (!mem_avoid_overlap(&region)) {
-+			store_slot_info(&region, image_size);
-+			return;
-+		}
-+
-+		/* Other wise, find the lowest overlap. */
-+		min = mem_min_overlap(&region, &out);
-+
-+		/* Store the region if it can hold at least image_size. */
-+		if (min > region.start + image_size) {
-+			struct mem_vector tmp;
-+
-+			tmp.start = region.start;
-+			tmp.size = min - region.start;
-+			store_slot_info(&tmp, image_size);
-+		}
-+
-+		/* Clip off the overlapping region and start over. */
-+		region.size -= out.start - region.start + out.size;
-+		region.start = out.start + out.size;
- 	}
- }
- 
-@@ -403,6 +443,10 @@ static unsigned long find_random_phy_addr(unsigned long minimum,
- 	/* Verify potential e820 positions, appending to slots list. */
- 	for (i = 0; i < real_mode->e820_entries; i++) {
- 		process_e820_entry(&real_mode->e820_map[i], minimum, size);
-+		if (slot_area_index == MAX_SLOT_AREA) {
-+			debug_putstr("Aborted e820 scan (slot_areas full)!\n");
-+			break;
-+		}
- 	}
- 
- 	return slots_fetch_random();
+I'm happy to call it whatever you like, though! :)
+
+> This is the part I don't like:
+>
+>> >> Since kASLR and Hibernation can not currently coexist at runtime
+>> >> on x86, the default behavior was to disable kASLR by default when
+>> >> CONFIG_HIBERNATION was present (to retain original behavior).
+>
+> Now I notice that it is quite unclear if it actually changes
+> anything...
+
+Okay, right. So, there are a few problems that this patch is solving,
+and maybe it needs to be broken up into separate patches, but it
+didn't seem like it to me at the time. Specifically:
+
+1) The x86 hibernation and KASLR code don't play well together currently.
+
+"1" was worked around so that both could be built in, but only one
+would be active at a time. This lead to:
+
+2) The general hibernation code contains kernel arguments that should
+only affect x86.
+
+And we have the desire by folks to have KASLR enabled by default on
+x86, giving us:
+
+3) There is no build-time way on x86 to switch the preference of KASLR
+vs hibernation.
+
+I think "2" should be solved for this release, since arm64 KASLR is
+landing, and mistakenly booting an arm64 system with "kaslr" on the
+command line will needlessly disable hibernation.
+
+3 and 2 are a result of 1, and IIUC, you're saying you want to solve 1
+to make everything else go away? My only concern with that idea is
+that I don't (yet) have the knowledge of x86 hibernation internals to
+fix this, and it'll take a while to get to having KASLR on by default
+if we have to wait on me to fix hibernation. (I'm not saying I
+won't/can't, it's just that it'll take me time to come up to speed on
+it.)
+
+That do you think?
+
+-Kees
+
 -- 
-2.6.3
+Kees Cook
+Chrome OS & Brillo Security
