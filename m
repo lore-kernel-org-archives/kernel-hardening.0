@@ -1,222 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 14 Apr 2016 15:29:04 -0700
-Message-Id: <1460672954-32567-12-git-send-email-keescook@chromium.org>
+Date: Thu, 14 Apr 2016 15:29:02 -0700
+Message-Id: <1460672954-32567-10-git-send-email-keescook@chromium.org>
 In-Reply-To: <1460672954-32567-1-git-send-email-keescook@chromium.org>
 References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 11/21] x86, boot: Split out kernel_ident_mapping_init
+Subject: [kernel-hardening] [PATCH v5 09/21] x86, KASLR: Correctly bounds-check relocations
 To: Ingo Molnar <mingo@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Yinghai Lu <yinghai@kernel.org>
 
-In order to support on-demand page table creation when moving the
-kernel for KASLR, we need to use kernel_ident_mapping_init in the
-decompression code. This splits it out into its own file for use outside
-of init_64.c. Additionally, checking for __pa/__va defines is added
-since they need to be overridden in the decompression code.
+Relocation handling performs bounds checking on the resulting calculated
+addresses. The existing code uses output_len (VO size plus relocs size) as
+the max address. This is not right since the max_addr check should stop at
+the end of VO and exclude bss, brk, etc, which follows.  The valid range
+should be VO [_text, __bss_start] in the loaded physical address space.
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+This patch adds an export for __bss_start in voffset.h and uses it to
+get the correct max_addr.
+
 Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+Cc: Baoquan He <bhe@redhat.com>
 [kees: rewrote changelog]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/include/asm/page.h |  5 +++
- arch/x86/mm/ident_map.c     | 74 +++++++++++++++++++++++++++++++++++++++++++++
- arch/x86/mm/init_64.c       | 74 +--------------------------------------------
- 3 files changed, 80 insertions(+), 73 deletions(-)
- create mode 100644 arch/x86/mm/ident_map.c
+ arch/x86/boot/compressed/Makefile | 2 +-
+ arch/x86/boot/compressed/misc.c   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/include/asm/page.h b/arch/x86/include/asm/page.h
-index 802dde30c928..cf8f619b305f 100644
---- a/arch/x86/include/asm/page.h
-+++ b/arch/x86/include/asm/page.h
-@@ -37,7 +37,10 @@ static inline void copy_user_page(void *to, void *from, unsigned long vaddr,
- 	alloc_page_vma(GFP_HIGHUSER | __GFP_ZERO | movableflags, vma, vaddr)
- #define __HAVE_ARCH_ALLOC_ZEROED_USER_HIGHPAGE
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 81a8d0fd34eb..aa421126556d 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -45,7 +45,7 @@ LDFLAGS_vmlinux := -T
+ hostprogs-y	:= mkpiggy
+ HOST_EXTRACFLAGS += -I$(srctree)/tools/include
  
-+#ifndef __pa
- #define __pa(x)		__phys_addr((unsigned long)(x))
-+#endif
-+
- #define __pa_nodebug(x)	__phys_addr_nodebug((unsigned long)(x))
- /* __pa_symbol should be used for C visible symbols.
-    This seems to be the official gcc blessed way to do such arithmetic. */
-@@ -51,7 +54,9 @@ static inline void copy_user_page(void *to, void *from, unsigned long vaddr,
- #define __pa_symbol(x) \
- 	__phys_addr_symbol(__phys_reloc_hide((unsigned long)(x)))
+-sed-voffset := -e 's/^\([0-9a-fA-F]*\) [ABCDGRSTVW] \(_text\|_end\)$$/\#define VO_\2 _AC(0x\1,UL)/p'
++sed-voffset := -e 's/^\([0-9a-fA-F]*\) [ABCDGRSTVW] \(_text\|__bss_start\|_end\)$$/\#define VO_\2 _AC(0x\1,UL)/p'
  
-+#ifndef __va
- #define __va(x)			((void *)((unsigned long)(x)+PAGE_OFFSET))
-+#endif
+ quiet_cmd_voffset = VOFFSET $@
+       cmd_voffset = $(NM) $< | sed -n $(sed-voffset) > $@
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 6adb5b827aca..562d647289ac 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -259,7 +259,7 @@ static void handle_relocations(void *output, unsigned long output_len)
+ 	int *reloc;
+ 	unsigned long delta, map, ptr;
+ 	unsigned long min_addr = (unsigned long)output;
+-	unsigned long max_addr = min_addr + output_len;
++	unsigned long max_addr = min_addr + (VO___bss_start - VO__text);
  
- #define __boot_va(x)		__va(x)
- #define __boot_pa(x)		__pa(x)
-diff --git a/arch/x86/mm/ident_map.c b/arch/x86/mm/ident_map.c
-new file mode 100644
-index 000000000000..751ca920773a
---- /dev/null
-+++ b/arch/x86/mm/ident_map.c
-@@ -0,0 +1,74 @@
-+
-+static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
-+			   unsigned long addr, unsigned long end)
-+{
-+	addr &= PMD_MASK;
-+	for (; addr < end; addr += PMD_SIZE) {
-+		pmd_t *pmd = pmd_page + pmd_index(addr);
-+
-+		if (!pmd_present(*pmd))
-+			set_pmd(pmd, __pmd(addr | pmd_flag));
-+	}
-+}
-+static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
-+			  unsigned long addr, unsigned long end)
-+{
-+	unsigned long next;
-+
-+	for (; addr < end; addr = next) {
-+		pud_t *pud = pud_page + pud_index(addr);
-+		pmd_t *pmd;
-+
-+		next = (addr & PUD_MASK) + PUD_SIZE;
-+		if (next > end)
-+			next = end;
-+
-+		if (pud_present(*pud)) {
-+			pmd = pmd_offset(pud, 0);
-+			ident_pmd_init(info->pmd_flag, pmd, addr, next);
-+			continue;
-+		}
-+		pmd = (pmd_t *)info->alloc_pgt_page(info->context);
-+		if (!pmd)
-+			return -ENOMEM;
-+		ident_pmd_init(info->pmd_flag, pmd, addr, next);
-+		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
-+	}
-+
-+	return 0;
-+}
-+
-+int kernel_ident_mapping_init(struct x86_mapping_info *info, pgd_t *pgd_page,
-+			      unsigned long addr, unsigned long end)
-+{
-+	unsigned long next;
-+	int result;
-+	int off = info->kernel_mapping ? pgd_index(__PAGE_OFFSET) : 0;
-+
-+	for (; addr < end; addr = next) {
-+		pgd_t *pgd = pgd_page + pgd_index(addr) + off;
-+		pud_t *pud;
-+
-+		next = (addr & PGDIR_MASK) + PGDIR_SIZE;
-+		if (next > end)
-+			next = end;
-+
-+		if (pgd_present(*pgd)) {
-+			pud = pud_offset(pgd, 0);
-+			result = ident_pud_init(info, pud, addr, next);
-+			if (result)
-+				return result;
-+			continue;
-+		}
-+
-+		pud = (pud_t *)info->alloc_pgt_page(info->context);
-+		if (!pud)
-+			return -ENOMEM;
-+		result = ident_pud_init(info, pud, addr, next);
-+		if (result)
-+			return result;
-+		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
-+	}
-+
-+	return 0;
-+}
-diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
-index 214afda97911..65cfbeefbec4 100644
---- a/arch/x86/mm/init_64.c
-+++ b/arch/x86/mm/init_64.c
-@@ -58,79 +58,7 @@
- 
- #include "mm_internal.h"
- 
--static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
--			   unsigned long addr, unsigned long end)
--{
--	addr &= PMD_MASK;
--	for (; addr < end; addr += PMD_SIZE) {
--		pmd_t *pmd = pmd_page + pmd_index(addr);
--
--		if (!pmd_present(*pmd))
--			set_pmd(pmd, __pmd(addr | pmd_flag));
--	}
--}
--static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
--			  unsigned long addr, unsigned long end)
--{
--	unsigned long next;
--
--	for (; addr < end; addr = next) {
--		pud_t *pud = pud_page + pud_index(addr);
--		pmd_t *pmd;
--
--		next = (addr & PUD_MASK) + PUD_SIZE;
--		if (next > end)
--			next = end;
--
--		if (pud_present(*pud)) {
--			pmd = pmd_offset(pud, 0);
--			ident_pmd_init(info->pmd_flag, pmd, addr, next);
--			continue;
--		}
--		pmd = (pmd_t *)info->alloc_pgt_page(info->context);
--		if (!pmd)
--			return -ENOMEM;
--		ident_pmd_init(info->pmd_flag, pmd, addr, next);
--		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
--	}
--
--	return 0;
--}
--
--int kernel_ident_mapping_init(struct x86_mapping_info *info, pgd_t *pgd_page,
--			      unsigned long addr, unsigned long end)
--{
--	unsigned long next;
--	int result;
--	int off = info->kernel_mapping ? pgd_index(__PAGE_OFFSET) : 0;
--
--	for (; addr < end; addr = next) {
--		pgd_t *pgd = pgd_page + pgd_index(addr) + off;
--		pud_t *pud;
--
--		next = (addr & PGDIR_MASK) + PGDIR_SIZE;
--		if (next > end)
--			next = end;
--
--		if (pgd_present(*pgd)) {
--			pud = pud_offset(pgd, 0);
--			result = ident_pud_init(info, pud, addr, next);
--			if (result)
--				return result;
--			continue;
--		}
--
--		pud = (pud_t *)info->alloc_pgt_page(info->context);
--		if (!pud)
--			return -ENOMEM;
--		result = ident_pud_init(info, pud, addr, next);
--		if (result)
--			return result;
--		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
--	}
--
--	return 0;
--}
-+#include "ident_map.c"
- 
- /*
-  * NOTE: pagetable_init alloc all the fixmap pagetables contiguous on the
+ 	/*
+ 	 * Calculate the delta between where vmlinux was linked to load
 -- 
 2.6.3
