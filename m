@@ -1,99 +1,135 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 15 Apr 2016 12:08:30 +0800
+From: Baoquan He <bhe@redhat.com>
+Message-ID: <20160415040830.GB2631@x1.redhat.com>
+References: <1458631937-14593-1-git-send-email-bhe@redhat.com>
+ <20160405015613.GA4654@x1.redhat.com>
+ <CAGXu5jKtXndmfLNt1PZvL1oE5BXHDHsAcGBy=0V-nHg=6CA8HA@mail.gmail.com>
+ <20160413101950.GC9482@gmail.com>
+ <CAGXu5jL21Jk7tKYnVULDskOKeq-QgQM6E0z6EuzmDMp5Sa2iBA@mail.gmail.com>
+ <CAGXu5jJFcT9CgKvJSJ9rDOz4D8fJRhDbxBGwOpQhUA2OyYPAzg@mail.gmail.com>
+ <20160414150641.GA2599@x1.redhat.com>
+ <CAGXu5jLEDekACCizQaDinLZ63oc=40VpXfwBP5thagA3pCOOOA@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160414203444.GC3856@amd>
-References: <20160412221659.GA18102@www.outflux.net>
-	<20160414200102.GB3856@amd>
-	<CAGXu5jKNKV2RaPCw+m3R-e7irmmP0eRBBq9RKY0mcH5A1Nsx6g@mail.gmail.com>
-	<20160414203444.GC3856@amd>
-Date: Thu, 14 Apr 2016 15:42:48 -0700
-Message-ID: <CAGXu5j+cTYF_OGG=u4BKU5X3f6TF0FdAcES9e_8S0ajMyjhn6Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2] kaslr: allow kASLR to be default over Hibernation
-To: Pavel Machek <pavel@denx.de>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "Rafael J. Wysocki" <rafael@kernel.org>, Ingo Molnar <mingo@kernel.org>, James Morse <james.morse@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, Yves-Alexis Perez <corsac@debian.org>, Emrah Demir <ed@abdsec.com>, Jonathan Corbet <corbet@lwn.net>, "x86@kernel.org" <x86@kernel.org>, Len Brown <len.brown@intel.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLEDekACCizQaDinLZ63oc=40VpXfwBP5thagA3pCOOOA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4 00/20] x86, boot: kaslr cleanup and 64bit kaslr support
+To: Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 14, 2016 at 1:34 PM, Pavel Machek <pavel@denx.de> wrote:
-> On Thu 2016-04-14 13:14:07, Kees Cook wrote:
->> On Thu, Apr 14, 2016 at 1:01 PM, Pavel Machek <pavel@denx.de> wrote:
->> > Hi!
->> >
->> >> Since kASLR and Hibernation can not currently coexist at runtime
->> >> on x86, the default behavior was to disable kASLR by default when
->> >> CONFIG_HIBERNATION was present (to retain original behavior).
->> >>
->> >> The behavior of kASLR on arm64 (and soon MIPS) is to be enabled by
->> >> default when selected at build time. Since arm64 Hibernation does not
->> >> conflict with kASLR, this fixes the hibernation argument parsing to be
->> >> x86-specific. Additionally, since end users want to be able to select
->> >> kASLR on x86 by default at build time, create CONFIG_RANDOMIZE_BASE_ON
->> >> that is present only on x86.
->> >>
->> >> Signed-off-by: Kees Cook <keescook@chromium.org>
->> >
->> > I believe this is bad idea. arm64 shows that kaslr and hibernation can
->> > coexist, and hibernation is still useful when your battery runs out.
->>
->> What? I'm confused -- this patch leaves the x86 behavior as-is by
->> default but allows hibernation to work with arm64. (For example, right
->> now, if you boot arm64 with "kaslr" kernel argument, hibernation will
->> get needlessly disabled.)
->
-> So it is very different from the PATCH v1, still it shares the
-> subject?
+On 04/14/16 at 10:56am, Kees Cook wrote:
+> On Thu, Apr 14, 2016 at 8:06 AM, Baoquan He <bhe@redhat.com> wrote:
+> > On 04/13/16 at 11:02pm, Kees Cook wrote:
+> >> On Wed, Apr 13, 2016 at 7:11 AM, Kees Cook <keescook@chromium.org> wrote:
+> >> > On Wed, Apr 13, 2016 at 3:19 AM, Ingo Molnar <mingo@kernel.org> wrote:
+> >> >>
+> >> >> * Kees Cook <keescook@chromium.org> wrote:
+> >> >>
+> >> >>> FWIW, I've also had this tree up in my git branches, and the 0day
+> >> >>> tester hasn't complained at all about it in the last two weeks. I'd
+> >> >>> really like to see this in -next to fix the >4G (mainly kexec) issues
+> >> >>> and get us to feature parity with the arm64 kASLR work (randomized
+> >> >>> virtual address).
+> >>
+> >> So, I've done this and suddenly realized I hadn't boot-tested i386. It
+> >> doesn't work, unfortunately. (Which I find strange: I'd expect 0day to
+> >> have noticed...)
+> >>
+> >> Baoquan, have you tested this on 32-bit systems? I get a variety of
+> >> failures. Either it boots okay, it reboots, or I get tons of pte
+> >> errors like this:
+> >
+> > Hi Kees,
+> >
+> > I am sorry I didn't notice the change impacts i386. I got a i386 machine
+> > and had tests. Found i386 can't take separate randomzation since there's
+> > difference between i386 and x86_64.
+> >
+> > x86_64 has phys_base and can translate virt addr and phys addr according
+> > to below formula:
+> >
+> > paddr = vaddr - __START_KERNEL_map + phys_base;
+> >
+> > However i386 can only do like this:
+> >
+> > paddr = vaddr - PAGE_OFFSET;
+> >
+> > Besides i386 has to reserve 128M for VMALLOC at the end of kernel
+> > virtual address. So for i386 area 768M is the upper limit for
+> > randomization. But I am fine with the KERNEL_IMAGE_SIZE, the old default
+> > value. What do you say about this?
+> >
+> > So the plan should be keeping the old style of randomization for i386
+> > system:
+> >
+> > 1) Disable virtual address randomization in i386 case because it's
+> > useless. This should be done in patch:
+> >  x86, KASLR: Randomize virtual address separately
+> >
+> > 2) Add an upper limit for physical randomization if it's i386 system.
+> >  x86, KASLR: Add physical address randomization >4G
+> >
+> > I just got a test machine in office, and haven't had time to change
+> > code. You can change it directly, or I will do it tomorrow.
+> 
+> I was thinking about the physical vs virtual on i386 as I woke up
+> today. :) Thanks for confirming! These changes appear to make the
+> series boot reliably on i386 (pardon any gmail-induced whitespace
+> damage...):
+> 
+> diff --git a/arch/x86/boot/compressed/aslr.c b/arch/x86/boot/compressed/aslr.c
+> index 5bae54b50d4c..3a58fe8acb8e 100644
+> --- a/arch/x86/boot/compressed/aslr.c
+> +++ b/arch/x86/boot/compressed/aslr.c
+> @@ -347,6 +347,10 @@ static void process_e820_entry(struct e820entry *entry,
+>         if (entry->type != E820_RAM)
+>                 return;
+> 
+> +       /* On 32-bit, ignore entries entirely above our maximum. */
+> +       if (IS_ENABLED(CONFIG_X86_32) && entry->addr >= KERNEL_IMAGE_SIZE)
+> +               return;
+> +
+>         /* Ignore entries entirely below our minimum. */
+>         if (entry->addr + entry->size < minimum)
+>                 return;
+> @@ -372,6 +376,11 @@ static void process_e820_entry(struct e820entry *entry,
+>                 /* Reduce size by any delta from the original address. */
+>                 region.size -= region.start - start_orig;
+> 
+> +               /* On 32-bit, reduce region size to fit within max size. */
+> +               if (IS_ENABLED(CONFIG_X86_32) &&
+> +                   region.start + region.size > KERNEL_IMAGE_SIZE)
+> +                       region.size = KERNEL_IMAGE_SIZE - region.start;
+> +
+>                 /* Return if region can't contain decompressed kernel */
+>                 if (region.size < image_size)
+>                         return;
+> @@ -488,6 +497,8 @@ void choose_kernel_location(unsigned char *input,
+>         }
+> 
+>         /* Pick random virtual address starting from LOAD_PHYSICAL_ADDR. */
+> -       random = find_random_virt_offset(LOAD_PHYSICAL_ADDR, output_size);
+> +       if (IS_ENABLED(CONFIG_X86_64))
+> +               random = find_random_virt_offset(LOAD_PHYSICAL_ADDR,
+> +                                                output_size);
+>         *virt_offset = (unsigned char *)random;
+>  }
+> 
+> 
+> I will split these chunks up into the correct patches and resend the
+> series. If you get a chance, can you double-check this?
 
-It was similar, but not the same:
+Yes, these changes sounds great. I checked the series you posted, and
+have to say you make them look much better. The change logs are perfect
+and great code refactoring. Just one little bit thing, here:
 
-v1: Prefer kASLR over Hibernation
-v2: kaslr: allow kASLR to be default over Hibernation
+[kees: rewrote changelog, refactored goto into while, limit 32-bit to 1G]
+in patch [PATCH v5 19/21] x86, KASLR: Add physical address randomization >4G
 
-I'm happy to call it whatever you like, though! :)
-
-> This is the part I don't like:
->
->> >> Since kASLR and Hibernation can not currently coexist at runtime
->> >> on x86, the default behavior was to disable kASLR by default when
->> >> CONFIG_HIBERNATION was present (to retain original behavior).
->
-> Now I notice that it is quite unclear if it actually changes
-> anything...
-
-Okay, right. So, there are a few problems that this patch is solving,
-and maybe it needs to be broken up into separate patches, but it
-didn't seem like it to me at the time. Specifically:
-
-1) The x86 hibernation and KASLR code don't play well together currently.
-
-"1" was worked around so that both could be built in, but only one
-would be active at a time. This lead to:
-
-2) The general hibernation code contains kernel arguments that should
-only affect x86.
-
-And we have the desire by folks to have KASLR enabled by default on
-x86, giving us:
-
-3) There is no build-time way on x86 to switch the preference of KASLR
-vs hibernation.
-
-I think "2" should be solved for this release, since arm64 KASLR is
-landing, and mistakenly booting an arm64 system with "kaslr" on the
-command line will needlessly disable hibernation.
-
-3 and 2 are a result of 1, and IIUC, you're saying you want to solve 1
-to make everything else go away? My only concern with that idea is
-that I don't (yet) have the knowledge of x86 hibernation internals to
-fix this, and it'll take a while to get to having KASLR on by default
-if we have to wait on me to fix hibernation. (I'm not saying I
-won't/can't, it's just that it'll take me time to come up to speed on
-it.)
-
-That do you think?
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+In i386 KERNEL_IMAGE_SIZE is kept to be 0x20000000, namely 512M, w/o kaslr
+enabled. So here I guess it's a typo, should be "limit 32-bit to 1G". And
+what I said is wrong about upper limit yesterday, in fact i386 can put kernel
+in [16M, 896M), not 768M. But KERNEL_IMAGE_SIZE is good enough for i386 for
+now.
