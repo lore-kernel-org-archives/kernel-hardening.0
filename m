@@ -1,36 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 15 Apr 2016 09:58:55 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20160415085854.GJ15182@e104818-lin.cambridge.arm.com>
-References: <CAGXu5jJ+++wTLk3zV8M6D-aPDnbejw9qOXcznqLRUySsYDiiaQ@mail.gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Fri, 15 Apr 2016 11:05:15 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160415090514.GA9314@gmail.com>
+References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
+ <1460672954-32567-5-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ+++wTLk3zV8M6D-aPDnbejw9qOXcznqLRUySsYDiiaQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: ARMv8.0 PAN emulation
-To: Kees Cook <keescook@google.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1460672954-32567-5-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v5 04/21] x86, boot: Move compressed kernel to end of
+ decompression buffer
+To: Kees Cook <keescook@chromium.org>
+Cc: Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
 
-On Wed, Apr 13, 2016 at 08:34:31AM -0700, Kees Cook wrote:
-> I was curious about where PAN emulation for ARMv8.0 stood?
+* Kees Cook <keescook@chromium.org> wrote:
 
-I guess the question is with regards to the arm64 kernel port.
+> When INIT_SIZE is bigger than VO_INIT_SIZE (uncommon but possible),
+> the copied ZO occupies the memory from extract_offset to the end of
+> decompression buffer. It overlaps with the soon-to-be-uncompressed kernel
+> like this:
+> 
+>                             |-----compressed kernel image------|
+>                             V                                  V
+> 0                       extract_offset                      +INIT_SIZE
+> |-----------|---------------|-------------------------|--------|
+>             |               |                         |        |
+>           VO__text      startup_32 of ZO          VO__end    ZO__end
+>             ^                                         ^
+>             |-------uncompressed kernel image---------|
+> 
+> When INIT_SIZE is equal to VO_INIT_SIZE (likely) there's still space
+> left from end of ZO to the end of decompressing buffer, like below.
+> 
+>                             |-compressed kernel image-|
+>                             V                         V
+> 0                       extract_offset                      +INIT_SIZE
+> |-----------|---------------|-------------------------|--------|
+>             |               |                         |        |
+>           VO__text      startup_32 of ZO          ZO__end    VO__end
+>             ^                                                  ^
+>             |------------uncompressed kernel image-------------|
+> 
+> To simplify calculations and avoid special cases, it is cleaner to
+> always place the compressed kernel image in memory so that ZO__end
+> is at the end of the decompression buffer, instead of placing that
+> start extract_offset as is currently done.
 
-> You'd mentioned[1] that it might be possible to rework the TTBR0 patch
-> to do what's needed. Is there anyone that has cycles to work on it?
+Btw., it would be nice to also put such a visualization (of the current layout of 
+these values) into the code itself.
 
-Unfortunately, not. I can put it on our to-do list but the backlog is
-pretty large already, so I can't realistically state an ETA.
+Thanks,
 
-> Also, did you ever get an answer about the lowmem boundary?
-
-No but I looked through the arm32 kernel and couldn't find any
-guarantees. IIRC, we used to have such assumption in the past until we
-got the TI Keystone platform with RAM being relocated above 4GB (after
-the initial boot code).
-
--- 
-Catalin
+	Ingo
