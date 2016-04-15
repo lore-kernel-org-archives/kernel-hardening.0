@@ -1,58 +1,330 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 15 Apr 2016 19:17:03 +0300
-From: Lasse Collin <lasse.collin@tukaani.org>
-Message-ID: <20160415191703.7a3212de@tukaani.org>
-In-Reply-To: <1460672954-32567-7-git-send-email-keescook@chromium.org>
-References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-	<1460672954-32567-7-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v5 06/21] x86, KASLR: Update description for
- decompressor worst case size
-To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 15 Apr 2016 10:25:59 -0700
+Message-Id: <1460741159-51752-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH] mm: SLAB freelist randomization
+To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+Cc: gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Thomas Garnier <thgarnie@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2016-04-14 Kees Cook wrote:
-> + * Above analysis is for decompressing gzip compressed kernel only. Up to
-> + * now 6 different decompressor are supported all together.
+Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
+SLAB freelist. The list is randomized during initialization of a new set
+of pages. The order on different freelist sizes is pre-computed at boot
+for performance. This security feature reduces the predictability of the
+kernel SLAB allocator against heap overflows rendering attacks much less
+stable.
 
-There are six decompressors in Linux now, but the number can change and
-the comment become outdated, so I suggest omitting the exact number here.
+For example this attack against SLUB (also applicable against SLAB)
+would be affected:
+https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
 
-> And among them
-> + * xz stores data in chunks and has maximum chunk of 64K. Hence safety
-> + * margin should be updated to cover all decompressors so that we don't
-> + * need to deal with each of them separately. Please check
-> + * the description in lib/decompressor_xxx.c for specific information.
-> + *
-> + * extra_bytes = (uncompressed_size >> 12) + 65536 + 128.
+Also, since v4.6 the freelist was moved at the end of the SLAB. It means
+a controllable heap is opened to new attacks not yet publicly discussed.
+A kernel heap overflow can be transformed to multiple use-after-free.
+This feature makes this type of attack harder too.
 
-lib/decompress_xxx.c, not lib/decompressor_xxx.c.
+The config option name is not specific to the SLAB as this approach will
+be extended to other allocators like SLUB.
 
-Referring to those files is problematic because only decompress_unxz.c
-talks about the safety margin. The explanation of the safety margin for
-gzip is still in misc.c instead of decompress_inflate.c.
+Performance results highlighted no major changes:
 
-I suspect that safety margin calculations haven't been made for other
-compressors in Linux, so there is nothing that people could read for
-more information. At least such information isn't present in the
-comments or commit messages.
+Netperf average on 10 runs:
 
-For example (and a bit off-topic), there is a possible sign of too small
-safety margin in decompress_unlzo.c, where a memcpy call can get
-overlapping dest and src buffers:
+threads,base,change
+16,576943.10,585905.90 (101.55%)
+32,564082.00,569741.20 (101.00%)
+48,558334.30,561851.20 (100.63%)
+64,552025.20,556448.30 (100.80%)
+80,552294.40,551743.10 (99.90%)
+96,552435.30,547529.20 (99.11%)
+112,551320.60,550183.20 (99.79%)
+128,549138.30,550542.70 (100.26%)
+144,549344.50,544529.10 (99.12%)
+160,550360.80,539929.30 (98.10%)
 
-    /* When the input data is not compressed at all,
-     * lzo1x_decompress_safe will fail, so call memcpy()
-     * instead */
-    if (unlikely(dst_len == src_len))
-            memcpy(out_buf, in_buf, src_len);
+slab_test 1 run on boot. After is faster except for odd result on size
+2048.
 
-The overlap can only happen if there's enough incompressible data near
-the end of the kernel image. It still works in practice as long as
-memcpy works with overlapping buffers for dest < src.
+Before:
 
+Single thread testing
+=====================
+1. Kmalloc: Repeatedly allocate then free test
+10000 times kmalloc(8) -> 137 cycles kfree -> 126 cycles
+10000 times kmalloc(16) -> 118 cycles kfree -> 119 cycles
+10000 times kmalloc(32) -> 112 cycles kfree -> 119 cycles
+10000 times kmalloc(64) -> 126 cycles kfree -> 123 cycles
+10000 times kmalloc(128) -> 135 cycles kfree -> 131 cycles
+10000 times kmalloc(256) -> 165 cycles kfree -> 104 cycles
+10000 times kmalloc(512) -> 174 cycles kfree -> 126 cycles
+10000 times kmalloc(1024) -> 242 cycles kfree -> 160 cycles
+10000 times kmalloc(2048) -> 478 cycles kfree -> 239 cycles
+10000 times kmalloc(4096) -> 747 cycles kfree -> 364 cycles
+10000 times kmalloc(8192) -> 774 cycles kfree -> 404 cycles
+10000 times kmalloc(16384) -> 849 cycles kfree -> 430 cycles
+2. Kmalloc: alloc/free test
+10000 times kmalloc(8)/kfree -> 118 cycles
+10000 times kmalloc(16)/kfree -> 118 cycles
+10000 times kmalloc(32)/kfree -> 118 cycles
+10000 times kmalloc(64)/kfree -> 121 cycles
+10000 times kmalloc(128)/kfree -> 118 cycles
+10000 times kmalloc(256)/kfree -> 115 cycles
+10000 times kmalloc(512)/kfree -> 115 cycles
+10000 times kmalloc(1024)/kfree -> 115 cycles
+10000 times kmalloc(2048)/kfree -> 115 cycles
+10000 times kmalloc(4096)/kfree -> 115 cycles
+10000 times kmalloc(8192)/kfree -> 115 cycles
+10000 times kmalloc(16384)/kfree -> 115 cycles
+
+After:
+
+Single thread testing
+=====================
+1. Kmalloc: Repeatedly allocate then free test
+10000 times kmalloc(8) -> 99 cycles kfree -> 84 cycles
+10000 times kmalloc(16) -> 88 cycles kfree -> 83 cycles
+10000 times kmalloc(32) -> 90 cycles kfree -> 81 cycles
+10000 times kmalloc(64) -> 107 cycles kfree -> 97 cycles
+10000 times kmalloc(128) -> 134 cycles kfree -> 89 cycles
+10000 times kmalloc(256) -> 145 cycles kfree -> 97 cycles
+10000 times kmalloc(512) -> 177 cycles kfree -> 116 cycles
+10000 times kmalloc(1024) -> 223 cycles kfree -> 151 cycles
+10000 times kmalloc(2048) -> 1429 cycles kfree -> 221 cycles
+10000 times kmalloc(4096) -> 720 cycles kfree -> 348 cycles
+10000 times kmalloc(8192) -> 788 cycles kfree -> 393 cycles
+10000 times kmalloc(16384) -> 867 cycles kfree -> 433 cycles
+2. Kmalloc: alloc/free test
+10000 times kmalloc(8)/kfree -> 115 cycles
+10000 times kmalloc(16)/kfree -> 115 cycles
+10000 times kmalloc(32)/kfree -> 115 cycles
+10000 times kmalloc(64)/kfree -> 120 cycles
+10000 times kmalloc(128)/kfree -> 127 cycles
+10000 times kmalloc(256)/kfree -> 119 cycles
+10000 times kmalloc(512)/kfree -> 112 cycles
+10000 times kmalloc(1024)/kfree -> 112 cycles
+10000 times kmalloc(2048)/kfree -> 112 cycles
+10000 times kmalloc(4096)/kfree -> 112 cycles
+10000 times kmalloc(8192)/kfree -> 112 cycles
+10000 times kmalloc(16384)/kfree -> 112 cycles
+
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20160414
+---
+ init/Kconfig |   9 ++++
+ mm/slab.c    | 158 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 166 insertions(+), 1 deletion(-)
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 0dfd09d..ee35418 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1742,6 +1742,15 @@ config SLOB
+ 
+ endchoice
+ 
++config FREELIST_RANDOM
++	default n
++	depends on SLAB
++	bool "SLAB freelist randomization"
++	help
++	  Randomizes the freelist order used on creating new SLABs. This
++	  security feature reduces the predictability of the kernel slab
++	  allocator against heap overflows.
++
+ config SLUB_CPU_PARTIAL
+ 	default y
+ 	depends on SLUB && SMP
+diff --git a/mm/slab.c b/mm/slab.c
+index b70aabf..5d8bde2 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -1229,6 +1229,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
+ 	}
+ }
+ 
++#ifdef CONFIG_FREELIST_RANDOM
++/*
++ * Master lists are pre-computed random lists
++ * Lists of different sizes are used to optimize performance on different
++ * SLAB object sizes per pages.
++ */
++static freelist_idx_t master_list_2[2];
++static freelist_idx_t master_list_4[4];
++static freelist_idx_t master_list_8[8];
++static freelist_idx_t master_list_16[16];
++static freelist_idx_t master_list_32[32];
++static freelist_idx_t master_list_64[64];
++static freelist_idx_t master_list_128[128];
++static freelist_idx_t master_list_256[256];
++static struct m_list {
++	size_t count;
++	freelist_idx_t *list;
++} master_lists[] = {
++	{ ARRAY_SIZE(master_list_2), master_list_2 },
++	{ ARRAY_SIZE(master_list_4), master_list_4 },
++	{ ARRAY_SIZE(master_list_8), master_list_8 },
++	{ ARRAY_SIZE(master_list_16), master_list_16 },
++	{ ARRAY_SIZE(master_list_32), master_list_32 },
++	{ ARRAY_SIZE(master_list_64), master_list_64 },
++	{ ARRAY_SIZE(master_list_128), master_list_128 },
++	{ ARRAY_SIZE(master_list_256), master_list_256 },
++};
++
++static void __init freelist_random_init(void)
++{
++	unsigned int seed;
++	size_t z, i, rand;
++	struct rnd_state slab_rand;
++
++	get_random_bytes_arch(&seed, sizeof(seed));
++	prandom_seed_state(&slab_rand, seed);
++
++	for (z = 0; z < ARRAY_SIZE(master_lists); z++) {
++		for (i = 0; i < master_lists[z].count; i++)
++			master_lists[z].list[i] = i;
++
++		/* Fisher-Yates shuffle */
++		for (i = master_lists[z].count - 1; i > 0; i--) {
++			rand = prandom_u32_state(&slab_rand);
++			rand %= (i + 1);
++			swap(master_lists[z].list[i],
++				master_lists[z].list[rand]);
++		}
++	}
++}
++#else
++static inline void __init freelist_random_init(void) { }
++#endif /* CONFIG_FREELIST_RANDOM */
++
++
+ /*
+  * Initialisation.  Called after the page allocator have been initialised and
+  * before smp_init().
+@@ -1255,6 +1310,8 @@ void __init kmem_cache_init(void)
+ 	if (!slab_max_order_set && totalram_pages > (32 << 20) >> PAGE_SHIFT)
+ 		slab_max_order = SLAB_MAX_ORDER_HI;
+ 
++	freelist_random_init();
++
+ 	/* Bootstrap is tricky, because several objects are allocated
+ 	 * from caches that do not exist yet:
+ 	 * 1) initialize the kmem_cache cache: it contains the struct
+@@ -2442,6 +2499,101 @@ static void cache_init_objs_debug(struct kmem_cache *cachep, struct page *page)
+ #endif
+ }
+ 
++#ifdef CONFIG_FREELIST_RANDOM
++enum master_type {
++	match,
++	less,
++	more
++};
++
++struct random_mng {
++	unsigned int padding;
++	unsigned int pos;
++	unsigned int count;
++	struct m_list master_list;
++	unsigned int master_count;
++	enum master_type type;
++};
++
++static void random_mng_initialize(struct random_mng *mng, unsigned int count)
++{
++	unsigned int idx;
++	const unsigned int last_idx = ARRAY_SIZE(master_lists) - 1;
++
++	memset(mng, 0, sizeof(*mng));
++	mng->count = count;
++	mng->pos = 0;
++	/* count is >= 2 */
++	idx = ilog2(count) - 1;
++	if (idx >= last_idx)
++		idx = last_idx;
++	else if (roundup_pow_of_two(idx + 1) != count)
++		idx++;
++	mng->master_list = master_lists[idx];
++	if (mng->master_list.count == mng->count)
++		mng->type = match;
++	else if (mng->master_list.count > mng->count)
++		mng->type = more;
++	else
++		mng->type = less;
++}
++
++static freelist_idx_t get_next_entry(struct random_mng *mng)
++{
++	if (mng->type == less && mng->pos == mng->master_list.count) {
++		mng->padding += mng->pos;
++		mng->pos = 0;
++	}
++	BUG_ON(mng->pos >= mng->master_list.count);
++	return mng->master_list.list[mng->pos++];
++}
++
++static freelist_idx_t next_random_slot(struct random_mng *mng)
++{
++	freelist_idx_t cur, entry;
++
++	entry = get_next_entry(mng);
++
++	if (mng->type != match) {
++		while ((entry + mng->padding) >= mng->count)
++			entry = get_next_entry(mng);
++		cur = entry + mng->padding;
++		BUG_ON(cur >= mng->count);
++	} else {
++		cur = entry;
++	}
++
++	return cur;
++}
++
++static void shuffle_freelist(struct kmem_cache *cachep, struct page *page,
++			     unsigned int count)
++{
++	unsigned int i;
++	struct random_mng mng;
++
++	if (count < 2) {
++		for (i = 0; i < count; i++)
++			set_free_obj(page, i, i);
++		return;
++	}
++
++	/* Last chunk is used already in this case */
++	if (OBJFREELIST_SLAB(cachep))
++		count--;
++
++	random_mng_initialize(&mng, count);
++	for (i = 0; i < count; i++)
++		set_free_obj(page, i, next_random_slot(&mng));
++
++	if (OBJFREELIST_SLAB(cachep))
++		set_free_obj(page, i, i);
++}
++#else
++static inline void shuffle_freelist(struct kmem_cache *cachep,
++				    struct page *page, unsigned int count) { }
++#endif /* CONFIG_FREELIST_RANDOM */
++
+ static void cache_init_objs(struct kmem_cache *cachep,
+ 			    struct page *page)
+ {
+@@ -2464,8 +2616,12 @@ static void cache_init_objs(struct kmem_cache *cachep,
+ 			kasan_poison_object_data(cachep, objp);
+ 		}
+ 
+-		set_free_obj(page, i, i);
++		/* If enabled, initialization is done in shuffle_freelist */
++		if (!config_enabled(CONFIG_FREELIST_RANDOM))
++			set_free_obj(page, i, i);
+ 	}
++
++	shuffle_freelist(cachep, page, cachep->num);
+ }
+ 
+ static void kmem_flagcheck(struct kmem_cache *cachep, gfp_t flags)
 -- 
-Lasse Collin  |  IRC: Larhzu @ IRCnet & Freenode
+2.8.0.rc3.226.g39d4020
