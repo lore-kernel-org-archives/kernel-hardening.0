@@ -1,112 +1,178 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160415072940.GB30715@gmail.com>
+In-Reply-To: <20160415074726.GC30715@gmail.com>
 References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
-	<1460672954-32567-2-git-send-email-keescook@chromium.org>
-	<20160415072940.GB30715@gmail.com>
-Date: Fri, 15 Apr 2016 11:55:00 -0700
-Message-ID: <CAGXu5jKqV051qcLJDfyi4rfbw1KzMKHU_cMiw7RUd3GCdk3PSg@mail.gmail.com>
+	<1460672954-32567-3-git-send-email-keescook@chromium.org>
+	<20160415074726.GC30715@gmail.com>
+Date: Fri, 15 Apr 2016 12:01:03 -0700
+Message-ID: <CAGXu5jK1DYPcbPZT_mAFBAL9OQosOTncwHGO7JPO3YKEnP7DPA@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 01/21] x86, KASLR: Remove unneeded boot_params argument
+Subject: [kernel-hardening] Re: [PATCH v5 02/21] x86, KASLR: Handle kernel relocation above 2G
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, "x86@kernel.org" <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>
+Cc: Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, "x86@kernel.org" <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 15, 2016 at 12:29 AM, Ingo Molnar <mingo@kernel.org> wrote:
+On Fri, Apr 15, 2016 at 12:47 AM, Ingo Molnar <mingo@kernel.org> wrote:
 >
 > * Kees Cook <keescook@chromium.org> wrote:
 >
->> From: Yinghai Lu <yinghai@kernel.org>
+>> From: Baoquan He <bhe@redhat.com>
 >>
->> Since the boot_params can be found using the real_mode global variable, there is
->> no need to pass around a pointer to it. This slightly simplifies the
->> choose_kernel_location function and its callers.
+>> When processing the relocation table, the offset used to calculate the
+>> relocation is an int. This is sufficient for calculating the physical
+>> address of the relocs entry on 32-bit systems and on 64-bit systems when
+>> the relocation is under 2G. To handle relocations above 2G (seen in
+>> situations like kexec, netboot, etc), this offset needs to be calculated
+>> using a long to avoid wrapping and miscalculating the relocation.
+>>
+>> Signed-off-by: Baoquan He <bhe@redhat.com>
+>> [kees: rewrote changelog]
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  arch/x86/boot/compressed/misc.c | 2 +-
+>>  1 file changed, 1 insertion(+), 1 deletion(-)
+>>
+>> diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+>> index f35ad9eb1bf1..c4477d5f3fff 100644
+>> --- a/arch/x86/boot/compressed/misc.c
+>> +++ b/arch/x86/boot/compressed/misc.c
+>> @@ -295,7 +295,7 @@ static void handle_relocations(void *output, unsigned long output_len)
+>>        * So we work backwards from the end of the decompressed image.
+>>        */
+>>       for (reloc = output + output_len - sizeof(*reloc); *reloc; reloc--) {
+>> -             int extended = *reloc;
+>> +             long extended = *reloc;
+>>               extended += map;
+>>
+>>               ptr = (unsigned long)extended;
 >
-> Yeah, so I really wanted to apply this series because the changelogs are now very
-> nice, but got held up by the very first patch again ...
+> This patch and the code it patches is just plain sloppy. See this cast? This is an
+> object lesson of why type casts in C are actively dangerous, they have hidden the
+> 32-bit truncation bug you've fixed with this patch.
+>
+> But the primary bug, the cast, should be fixed! Together with all the other casts
+> of 'extended'.
 
-Thanks for reading through everything! I'll be going through it all
-and fixing up what you mentioned (along with anything else that jumps
-out at me).
+In my defense, there's a ton of mixing of pointers vs unsigned longs
+all through-out the boot code. And relocations are special since
+they're explicitly designed to be sign-extended, etc. I'll clean
+things up as best as I can.
 
-> Guys, 'real_mode' totally sucks as a variable name!
+>
+> Also, the boot code should be reviewed for unnecessary casts, it seems to be a
+> disease:
+>
+>  triton:~/tip> git grep -cE '\(unsigned.*;$' arch/x86/boot/compressed/
+>  arch/x86/boot/compressed/aslr.c:14
+>  arch/x86/boot/compressed/eboot.c:41
+>  arch/x86/boot/compressed/misc.c:5
+>  arch/x86/boot/compressed/misc.h:2
+>  arch/x86/boot/compressed/mkpiggy.c:1
+>  arch/x86/boot/compressed/string.c:4
+>
+> For example the type dance and overloaded usage that choose_kernel_location() does
+> with the 'random' local variable in aslr.c is disgusting:
+>
+> void choose_kernel_location(unsigned char *input,
+>                                 unsigned long input_size,
+>                                 unsigned char **output,
+>                                 unsigned long output_size,
+>                                 unsigned char **virt_offset)
+> {
+>         unsigned long random, min_addr;
+>
+>         *virt_offset = (unsigned char *)LOAD_PHYSICAL_ADDR;
+>
+> #ifdef CONFIG_HIBERNATION
+>         if (!cmdline_find_option_bool("kaslr")) {
+>                 debug_putstr("KASLR disabled by default...\n");
+>                 return;
+>         }
+> #else
+>         if (cmdline_find_option_bool("nokaslr")) {
+>                 debug_putstr("KASLR disabled by cmdline...\n");
+>                 return;
+>         }
+> #endif
+>
+>         real_mode->hdr.loadflags |= KASLR_FLAG;
+>
+>         /* Record the various known unsafe memory ranges. */
+>         mem_avoid_init((unsigned long)input, input_size,
+>                        (unsigned long)*output);
+>
+>         /* Low end should be the smaller of 512M or initial location. */
+>         min_addr = min((unsigned long)*output, 512UL << 20);
+>
+>         /* Walk e820 and find a random address. */
+>         random = find_random_phy_addr(min_addr, output_size);
+>         if (!random)
+>                 debug_putstr("KASLR could not find suitable E820 region...\n");
+>         else {
+>                 if ((unsigned long)*output != random) {
+>                         fill_pagetable(random, output_size);
+>                         switch_pagetable();
+>                         *output = (unsigned char *)random;
+>                 }
+>         }
+>
+>         /* Pick random virtual address starting from LOAD_PHYSICAL_ADDR. */
+>         if (IS_ENABLED(CONFIG_X86_64))
+>                 random = find_random_virt_offset(LOAD_PHYSICAL_ADDR,
+>                                                  output_size);
+>         *virt_offset = (unsigned char *)random;
+> }
+>
+> Firstly, 'random' is a libc function name. We generally don't overload those.
+>
+> Secondly, it's a random what? Variable names should make it plenty obvious. So it
+> should probably be named 'random_addr'.
+>
+> Third:
+>
+>         /* Walk e820 and find a random address. */
+>         random = find_random_phy_addr(min_addr, output_size);
+>
+> yeah, so what that comment tells us we knew already, due to the function name!
+> What the comment should _really_ talk about is the high level purpose. Something
+> like: 'Walk the e820 map and find a random free RAM address to which we can still
+> decompress the whole kernel' would work so much better ...
+>
+> Fourth, this function has seven (!!) type casts. We can sure do better.
 
-In our defense, that variable name predates git history. ;)
-Regardless, I'll get it renamed.
+Between the e820 values, the asm linkages, the relocations, etc,
+there's a lot of mixing of types. As mentioned, I'll clean it up.
 
-> By removing a seemingly unnecessary parameter, you made the code actively worse to
-> read...
+> Fifth:
 >
-> So please make a second patch on top of this one that renames 'real_mode' to
-> something that both displays what it is about (it sure isn't mainly about real
-> mode only!!), and also expresses that it's a global variable, not some local
-> function parameter.
+>         /* Pick random virtual address starting from LOAD_PHYSICAL_ADDR. */
+>         if (IS_ENABLED(CONFIG_X86_64))
+>                 random = find_random_virt_offset(LOAD_PHYSICAL_ADDR,
+>                                                  output_size);
+>         *virt_offset = (unsigned char *)random;
 >
-> In arch/x86/ we usually achieve that via prefixing it with x86_ or so. So
-> something like 'x86_boot_params' would work for me. I realize that this is
-> somewhat special, because this is pre-relocation code so we really have to be
-> careful about pointers - so maybe name it x86_boot_params_rm or so.
+> So the purpose of this whole function is to pick _two_ random addresses: the
+> random physical address to place the kernel at, and on x86_64, to also randomize
+> the kernel virtual address, right? So exactly which comment tells us that it's
+> about this? Names like 'choose_kernel_location' are singular and are actively
+> misleading about this ...
 >
-> Also, I had a look at the whole file you are patching,
-> arch/x86/boot/compressed/misc.c, and for heaven's sake, please first improve the
-> comments on top of that file before further complicating that code with KASLR
-> details! Right now it consists of various low level ramblings choke full of typos.
-> No mention of where KASLR fits into the picture at all!
->
-> Right now it says:
->
->  * misc.c
->  *
->  * This is a collection of several routines from gzip-1.0.3
->  * adapted for Linux.
->
-> Which was perhaps true 15 years ago, but sure it's not true today! We do
-> relocation and KASLR processing in this path as well, which is just as important
-> as running the decompressor. Also, gzip is not the only decompressor we support.
->
-> The high level purpose of the code in this file should be explained first, and the
-> file should probably be renamed to something like extract.c - to signal that this
-> file is about extracting a kernel image and preparing it for execution (i.e.
-> relinking it, etc.). It's (much!) more than just pure decompression.
->
-> Likewise, decompress_kernel() should be renamed to extract_kernel().
+> ... and then I haven't even mentioned small details like the imbalanced curly
+> braces.
 
-I'll get these all cleaned up. Yay comment-bit-rot. :)
+I'll bite: which braces jumped out at you? I ran all this through
+checkpatch.pl in the hopes of finding style mistakes... Is it the
+mixing of single-line code with multi-line code in the if statements?
 
-> The low level explanations in extract.c should be moved to the function that is
-> affected by those details. The top of the file should only contain general
-> explanations, a high level description of in what state the kernel is when we call
-> this code, and the sort of stuff we do in that code.
 >
-> The credits should be collected into a single, coherent block. Unnecessary fluff
-> should be cut.
+> This code sucks, and I'm not surprised at all that it was broken. It should be
+> improved before we can feature-extend it.
 >
-> Furthermore, I see similar problems with arch/x86/boot/compressed/aslr.c: for
-> example it has no high level description at the top of the file _at all_. WTF is
-> this with writing security-sensitive code that has no high level design
-> description whatsoever?? Also, why is it named aslr.c, why not kaslr.c? We do have
-> both KASLR and ASLR code in the kernel, confusing naming on the source code level
-> sure does not help.
+> Thanks,
 >
-> Also, what's this thing about choose_kernel_location()? That name is actively
-> hiding the fact that the main purpose of that function is to randomize things ...
->
-> It should be named x86_randomize_kernel_address() or so.
-
-When naming this I wanted to make it clear that the only thing it was
-doing was picking a location. The move is done by the decompressor.
-I'll try to clarify the name of the function.
-
-> We need to stop making a mess of the x86 boot code! This is a highly critical
-> piece of kernel code that every single x86 Linux user will execute, we should
-> improve its visual presentation and general readability to the level of being
-> proud of it ...
-
-I totally agree. :) There is a bit of a culture of "don't change it
-just to rename things" which I try to avoid colliding with. In this
-case, though, they would all seriously improve readability.
+>         Ingo
 
 -Kees
 
