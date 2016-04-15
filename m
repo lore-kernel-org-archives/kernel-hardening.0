@@ -1,87 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Fri, 15 Apr 2016 15:03:13 -0700
-Message-Id: <1460757793-59020-5-git-send-email-thgarnie@google.com>
-In-Reply-To: <1460757793-59020-1-git-send-email-thgarnie@google.com>
-References: <1460757793-59020-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [RFC v1 4/4] x86, boot: Memory hotplug support for KASLR memory randomization
-To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Seth Jennings <sjennings@variantweb.net>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
+Message-ID: <1460759160.19090.50.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Fri, 15 Apr 2016 15:26:00 -0700
+In-Reply-To: <20160415150026.65abbdd5b2ef741cd070c769@linux-foundation.org>
+References: <1460741159-51752-1-git-send-email-thgarnie@google.com>
+	 <20160415150026.65abbdd5b2ef741cd070c769@linux-foundation.org>
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] mm: SLAB freelist randomization
+To: Andrew Morton <akpm@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
-the padding used for the physical memory mapping section when KASLR
-memory is enabled. It ensures there is enough virtual address space when
-CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
-CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
-entropy available.
+On Fri, 2016-04-15 at 15:00 -0700, Andrew Morton wrote:
+> On Fri, 15 Apr 2016 10:25:59 -0700 Thomas Garnier <thgarnie@google.com> wrote:
+> > Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
+> > SLAB freelist. The list is randomized during initialization of a new set
+> > of pages. The order on different freelist sizes is pre-computed at boot
+> > for performance. This security feature reduces the predictability of the
+> > kernel SLAB allocator against heap overflows rendering attacks much less
+> > stable.
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
-Based on next-20160413
----
- arch/x86/Kconfig    | 15 +++++++++++++++
- arch/x86/mm/kaslr.c | 14 ++++++++++++--
- 2 files changed, 27 insertions(+), 2 deletions(-)
+trivia:
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 7c786d4..cc01b69 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2018,6 +2018,21 @@ config RANDOMIZE_MEMORY
- 
- 	   If unsure, say N.
- 
-+config RANDOMIZE_MEMORY_PHYSICAL_PADDING
-+	hex "Physical memory mapping padding" if EXPERT
-+	depends on RANDOMIZE_MEMORY
-+	default "0xa" if MEMORY_HOTPLUG
-+	default "0x0"
-+	range 0x1 0x40 if MEMORY_HOTPLUG
-+	range 0x0 0x40
-+	---help---
-+	   Define the padding in terabyte added to the existing physical memory
-+	   size during kernel memory randomization. It is useful for memory
-+	   hotplug support but reduces the entropy available for address
-+	   randomization.
-+
-+	   If unsure, leave at the default value.
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-index 9de807d..f7dc477 100644
---- a/arch/x86/mm/kaslr.c
-+++ b/arch/x86/mm/kaslr.c
-@@ -63,7 +63,7 @@ void __init kernel_randomize_memory(void)
- {
- 	size_t i;
- 	unsigned long addr = memory_rand_start;
--	unsigned long padding, rand, mem_tb;
-+	unsigned long padding, rand, mem_tb, page_offset_padding;
- 	struct rnd_state rnd_st;
- 	unsigned long remain_padding = memory_rand_end - memory_rand_start;
- 
-@@ -74,8 +74,18 @@ void __init kernel_randomize_memory(void)
- 	if (!xen_domain())
- 		page_offset_base -= __XEN_SPACE;
- 
-+	/*
-+	 * Update Physical memory mapping to available and
-+	 * add padding if needed (especially for memory hotplug support).
-+	 */
-+	page_offset_padding = CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
-+
-+#ifdef CONFIG_MEMORY_HOTPLUG
-+	page_offset_padding = max(1UL, page_offset_padding);
-+#endif
-+
- 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
--	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
-+	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) + page_offset_padding;
- 
- 	if (mem_tb < kaslr_regions[0].size_tb)
- 		kaslr_regions[0].size_tb = mem_tb;
--- 
-2.8.0.rc3.226.g39d4020
+> > @@ -1229,6 +1229,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
+[]
+> > + */
+> > +static freelist_idx_t master_list_2[2];
+> > +static freelist_idx_t master_list_4[4];
+> > +static freelist_idx_t master_list_8[8];
+> > +static freelist_idx_t master_list_16[16];
+> > +static freelist_idx_t master_list_32[32];
+> > +static freelist_idx_t master_list_64[64];
+> > +static freelist_idx_t master_list_128[128];
+> > +static freelist_idx_t master_list_256[256];
+> > +static struct m_list {
+> > +	size_t count;
+> > +	freelist_idx_t *list;
+> > +} master_lists[] = {
+> > +	{ ARRAY_SIZE(master_list_2), master_list_2 },
+> > +	{ ARRAY_SIZE(master_list_4), master_list_4 },
+> > +	{ ARRAY_SIZE(master_list_8), master_list_8 },
+> > +	{ ARRAY_SIZE(master_list_16), master_list_16 },
+> > +	{ ARRAY_SIZE(master_list_32), master_list_32 },
+> > +	{ ARRAY_SIZE(master_list_64), master_list_64 },
+> > +	{ ARRAY_SIZE(master_list_128), master_list_128 },
+> > +	{ ARRAY_SIZE(master_list_256), master_list_256 },
+> > +};
+
+static const struct m_list?
