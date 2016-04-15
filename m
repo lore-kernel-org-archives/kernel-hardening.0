@@ -1,52 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 15 Apr 2016 08:55:59 +0200
+Date: Fri, 15 Apr 2016 09:29:40 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160415065559.GA30715@gmail.com>
-References: <1458631937-14593-1-git-send-email-bhe@redhat.com>
- <20160405015613.GA4654@x1.redhat.com>
- <CAGXu5jKtXndmfLNt1PZvL1oE5BXHDHsAcGBy=0V-nHg=6CA8HA@mail.gmail.com>
- <20160413101950.GC9482@gmail.com>
- <CAGXu5jL21Jk7tKYnVULDskOKeq-QgQM6E0z6EuzmDMp5Sa2iBA@mail.gmail.com>
- <CAGXu5jJFcT9CgKvJSJ9rDOz4D8fJRhDbxBGwOpQhUA2OyYPAzg@mail.gmail.com>
- <20160414150641.GA2599@x1.redhat.com>
- <CAGXu5jLEDekACCizQaDinLZ63oc=40VpXfwBP5thagA3pCOOOA@mail.gmail.com>
- <20160415040830.GB2631@x1.redhat.com>
- <CAGXu5j+mQ9eSObwD6rVAE7TYoj_n05nH761zpTiXMGQkH1uoTA@mail.gmail.com>
+Message-ID: <20160415072940.GB30715@gmail.com>
+References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
+ <1460672954-32567-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+mQ9eSObwD6rVAE7TYoj_n05nH761zpTiXMGQkH1uoTA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v4 00/20] x86, boot: kaslr cleanup and 64bit kaslr support
+In-Reply-To: <1460672954-32567-2-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v5 01/21] x86, KASLR: Remove unneeded boot_params argument
 To: Kees Cook <keescook@chromium.org>
-Cc: Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, x86@kernel.org, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
 * Kees Cook <keescook@chromium.org> wrote:
 
-> On Thu, Apr 14, 2016 at 9:08 PM, Baoquan He <bhe@redhat.com> wrote:
-
-> >> I will split these chunks up into the correct patches and resend the series. 
-> >> If you get a chance, can you double-check this?
-> >
-> > Yes, these changes sounds great. I checked the series you posted, and have to 
-> > say you make them look much better. The change logs are perfect and great code 
-> > refactoring. Just one little bit thing, here:
-> >
-> > [kees: rewrote changelog, refactored goto into while, limit 32-bit to 1G] in 
-> > patch [PATCH v5 19/21] x86, KASLR: Add physical address randomization >4G
-> >
-> > In i386 KERNEL_IMAGE_SIZE is kept to be 0x20000000, namely 512M, w/o kaslr 
-> > enabled. So here I guess it's a typo, should be "limit 32-bit to 1G". And what 
-> > I said is wrong about upper limit yesterday, in fact i386 can put kernel in 
-> > [16M, 896M), not 768M. But KERNEL_IMAGE_SIZE is good enough for i386 for now.
+> From: Yinghai Lu <yinghai@kernel.org>
 > 
-> Ah yeah, thanks. If we do a v6, I'll update the typo. I was going to say "limit 
-> 32-bit to KERNEL_IMAGE_SIZE" but it was going to line-wrap.
-> :P
+> Since the boot_params can be found using the real_mode global variable, there is 
+> no need to pass around a pointer to it. This slightly simplifies the 
+> choose_kernel_location function and its callers.
 
-No need to resend, I've fixed the changelog.
+Yeah, so I really wanted to apply this series because the changelogs are now very 
+nice, but got held up by the very first patch again ...
+
+Guys, 'real_mode' totally sucks as a variable name!
+
+By removing a seemingly unnecessary parameter, you made the code actively worse to 
+read...
+
+So please make a second patch on top of this one that renames 'real_mode' to 
+something that both displays what it is about (it sure isn't mainly about real 
+mode only!!), and also expresses that it's a global variable, not some local 
+function parameter.
+
+In arch/x86/ we usually achieve that via prefixing it with x86_ or so. So 
+something like 'x86_boot_params' would work for me. I realize that this is 
+somewhat special, because this is pre-relocation code so we really have to be 
+careful about pointers - so maybe name it x86_boot_params_rm or so.
+
+Also, I had a look at the whole file you are patching, 
+arch/x86/boot/compressed/misc.c, and for heaven's sake, please first improve the 
+comments on top of that file before further complicating that code with KASLR 
+details! Right now it consists of various low level ramblings choke full of typos. 
+No mention of where KASLR fits into the picture at all!
+
+Right now it says:
+
+ * misc.c
+ *
+ * This is a collection of several routines from gzip-1.0.3
+ * adapted for Linux.
+
+Which was perhaps true 15 years ago, but sure it's not true today! We do 
+relocation and KASLR processing in this path as well, which is just as important 
+as running the decompressor. Also, gzip is not the only decompressor we support.
+
+The high level purpose of the code in this file should be explained first, and the 
+file should probably be renamed to something like extract.c - to signal that this 
+file is about extracting a kernel image and preparing it for execution (i.e. 
+relinking it, etc.). It's (much!) more than just pure decompression.
+
+Likewise, decompress_kernel() should be renamed to extract_kernel().
+
+The low level explanations in extract.c should be moved to the function that is 
+affected by those details. The top of the file should only contain general 
+explanations, a high level description of in what state the kernel is when we call 
+this code, and the sort of stuff we do in that code.
+
+The credits should be collected into a single, coherent block. Unnecessary fluff 
+should be cut.
+
+Furthermore, I see similar problems with arch/x86/boot/compressed/aslr.c: for 
+example it has no high level description at the top of the file _at all_. WTF is 
+this with writing security-sensitive code that has no high level design 
+description whatsoever?? Also, why is it named aslr.c, why not kaslr.c? We do have 
+both KASLR and ASLR code in the kernel, confusing naming on the source code level 
+sure does not help.
+
+Also, what's this thing about choose_kernel_location()? That name is actively 
+hiding the fact that the main purpose of that function is to randomize things ... 
+
+It should be named x86_randomize_kernel_address() or so.
+
+We need to stop making a mess of the x86 boot code! This is a highly critical 
+piece of kernel code that every single x86 Linux user will execute, we should 
+improve its visual presentation and general readability to the level of being 
+proud of it ...
 
 Thanks,
 
