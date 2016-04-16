@@ -1,60 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Sat, 16 Apr 2016 10:42:28 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160416084228.GA30071@gmail.com>
+References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
+ <1460672954-32567-4-git-send-email-keescook@chromium.org>
+ <20160415080715.GD30715@gmail.com>
+ <CAGXu5jKXP0i28gbZ9Yu=fgrJ8G6kcs5oWem_1av2bezj72KK2Q@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1460759160.19090.50.camel@perches.com>
-References: <1460741159-51752-1-git-send-email-thgarnie@google.com>
-	<20160415150026.65abbdd5b2ef741cd070c769@linux-foundation.org>
-	<1460759160.19090.50.camel@perches.com>
-Date: Fri, 15 Apr 2016 15:47:13 -0700
-Message-ID: <CAJcbSZFoVjdcfKjoajL8mmSfz=BPRALx7=0gw3faE2o-hu1RqQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] mm: SLAB freelist randomization
-To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, Greg Thelen <gthelen@google.com>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKXP0i28gbZ9Yu=fgrJ8G6kcs5oWem_1av2bezj72KK2Q@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 03/21] x86, KASLR: Drop
+ CONFIG_RANDOMIZE_BASE_MAX_OFFSET
+To: Kees Cook <keescook@chromium.org>
+Cc: Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, "x86@kernel.org" <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thanks for the comments. I will address them in a v2 early next week.
 
-If anyone has other comments, please let me know.
+* Kees Cook <keescook@chromium.org> wrote:
 
-Thomas
+> > Also note the assertive tone: if this Kconfig feature is eanbled, we say that 
+> > the kernel address _will_ be randomized, and we should make sure it is. (If 
+> > for some weird reason randomization fails we should warn prominently during 
+> > bootup.)
+> 
+> This will need some thought... is it better to fail to boot or to boot without 
+> entropy? As-is, it's possible to randomly position the kernel base address at 
+> exactly the location it was going to boot without KASLR too, yet this is still 
+> considered random...
 
-On Fri, Apr 15, 2016 at 3:26 PM, Joe Perches <joe@perches.com> wrote:
-> On Fri, 2016-04-15 at 15:00 -0700, Andrew Morton wrote:
->> On Fri, 15 Apr 2016 10:25:59 -0700 Thomas Garnier <thgarnie@google.com> wrote:
->> > Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
->> > SLAB freelist. The list is randomized during initialization of a new set
->> > of pages. The order on different freelist sizes is pre-computed at boot
->> > for performance. This security feature reduces the predictability of the
->> > kernel SLAB allocator against heap overflows rendering attacks much less
->> > stable.
->
-> trivia:
->
->> > @@ -1229,6 +1229,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
-> []
->> > + */
->> > +static freelist_idx_t master_list_2[2];
->> > +static freelist_idx_t master_list_4[4];
->> > +static freelist_idx_t master_list_8[8];
->> > +static freelist_idx_t master_list_16[16];
->> > +static freelist_idx_t master_list_32[32];
->> > +static freelist_idx_t master_list_64[64];
->> > +static freelist_idx_t master_list_128[128];
->> > +static freelist_idx_t master_list_256[256];
->> > +static struct m_list {
->> > +   size_t count;
->> > +   freelist_idx_t *list;
->> > +} master_lists[] = {
->> > +   { ARRAY_SIZE(master_list_2), master_list_2 },
->> > +   { ARRAY_SIZE(master_list_4), master_list_4 },
->> > +   { ARRAY_SIZE(master_list_8), master_list_8 },
->> > +   { ARRAY_SIZE(master_list_16), master_list_16 },
->> > +   { ARRAY_SIZE(master_list_32), master_list_32 },
->> > +   { ARRAY_SIZE(master_list_64), master_list_64 },
->> > +   { ARRAY_SIZE(master_list_128), master_list_128 },
->> > +   { ARRAY_SIZE(master_list_256), master_list_256 },
->> > +};
->
-> static const struct m_list?
->
+I think we should boot but print a prominent warning. On real systems it's not 
+supposed to happen, right? So we want to know if it happens, but don't want to 
+hassle the user with breaking the system by not booting.
+
+> > Also, could we always mix the i8254 timer into this as well, not just when 
+> > RDTSC is unavailable?
+> 
+> IIRC, hpa explicitly did not want to do this when he was making
+> suggestions on this area. I would need to dig out the thread -- I
+> can't find it now. I'd prefer to leave this as-is, since changing it
+> would add yet another variable to the behavioral changes of this
+> series.
+
+Sure, can stay as-is for now.
+
+Thanks,
+
+	Ingo
