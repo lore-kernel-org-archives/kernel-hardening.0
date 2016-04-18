@@ -1,67 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAJcbSZFoVjdcfKjoajL8mmSfz=BPRALx7=0gw3faE2o-hu1RqQ@mail.gmail.com>
-References: <1460741159-51752-1-git-send-email-thgarnie@google.com>
-	<20160415150026.65abbdd5b2ef741cd070c769@linux-foundation.org>
-	<1460759160.19090.50.camel@perches.com>
-	<CAJcbSZFoVjdcfKjoajL8mmSfz=BPRALx7=0gw3faE2o-hu1RqQ@mail.gmail.com>
-Date: Mon, 18 Apr 2016 08:59:57 -0700
-Message-ID: <CAJcbSZGLABr5xEFeopKTj34bL2P-ss=rChs+AYAP_49r1r0NfA@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
+Sender: keescook@google.com
+In-Reply-To: <20160415080956.GE30715@gmail.com>
+References: <1460672954-32567-1-git-send-email-keescook@chromium.org>
+	<1460672954-32567-5-git-send-email-keescook@chromium.org>
+	<20160415080956.GE30715@gmail.com>
+Date: Mon, 18 Apr 2016 09:50:23 -0700
+Message-ID: <CAGXu5jLY+yn4dxVRt_KAMSTUWsXek1JPCEW=M-f_aqzvTi4N8w@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] mm: SLAB freelist randomization
-To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, Greg Thelen <gthelen@google.com>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>
+Subject: [kernel-hardening] Re: [PATCH v5 04/21] x86, boot: Move compressed kernel to end of
+ decompression buffer
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Matt Redfearn <matt.redfearn@imgtec.com>, "x86@kernel.org" <x86@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, Lasse Collin <lasse.collin@tukaani.org>, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I will send the next version today. Note that I get_random_bytes_arch
-is used because at that stage we have 0 bits of entropy. It seemed
-like a better idea to use the arch version that will fallback on
-get_random_bytes sub API in the worse case.
+On Fri, Apr 15, 2016 at 1:09 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> * Kees Cook <keescook@chromium.org> wrote:
+>
+>> From: Yinghai Lu <yinghai@kernel.org>
+>>
+>> This change makes later calculations about where the kernel is located
+>> easier to reason about. To better understand this change, we must first
+>> clarify what VO and ZO are. They were introduced in commits by hpa:
+>>
+>> 77d1a49 x86, boot: make symbols from the main vmlinux available
+>> 37ba7ab x86, boot: make kernel_alignment adjustable; new bzImage fields
+>>
+>> Specifically:
+>>
+>> VO:
+>> - uncompressed kernel image
+>> - size: VO__end - VO__text ("VO_INIT_SIZE" define)
+>>
+>> ZO:
+>> - bootable compressed kernel image (boot/compressed/vmlinux)
+>> - head text + compressed kernel (VO and relocs table) + decompressor code
+>> - size: ZO__end - ZO_startup_32 ("ZO_INIT_SIZE" define, though see below)
+>>
+>> The INIT_SIZE definition is used to find the larger of the two image sizes:
+>>
+>>  #define ZO_INIT_SIZE    (ZO__end - ZO_startup_32 + ZO_z_extract_offset)
+>>  #define VO_INIT_SIZE    (VO__end - VO__text)
+>>  #if ZO_INIT_SIZE > VO_INIT_SIZE
+>>  #define INIT_SIZE ZO_INIT_SIZE
+>>  #else
+>>  #define INIT_SIZE VO_INIT_SIZE
+>>  #endif
+>
+> Please also harmonize all the prefixes, i.e. use VO__/ZO__ everywhere (rename
+> things where necessary), instead of this mixed up VO_/ZO_/VO__/ZO__ mess.
 
-On Fri, Apr 15, 2016 at 3:47 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> Thanks for the comments. I will address them in a v2 early next week.
->
-> If anyone has other comments, please let me know.
->
-> Thomas
->
-> On Fri, Apr 15, 2016 at 3:26 PM, Joe Perches <joe@perches.com> wrote:
->> On Fri, 2016-04-15 at 15:00 -0700, Andrew Morton wrote:
->>> On Fri, 15 Apr 2016 10:25:59 -0700 Thomas Garnier <thgarnie@google.com> wrote:
->>> > Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
->>> > SLAB freelist. The list is randomized during initialization of a new set
->>> > of pages. The order on different freelist sizes is pre-computed at boot
->>> > for performance. This security feature reduces the predictability of the
->>> > kernel SLAB allocator against heap overflows rendering attacks much less
->>> > stable.
->>
->> trivia:
->>
->>> > @@ -1229,6 +1229,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
->> []
->>> > + */
->>> > +static freelist_idx_t master_list_2[2];
->>> > +static freelist_idx_t master_list_4[4];
->>> > +static freelist_idx_t master_list_8[8];
->>> > +static freelist_idx_t master_list_16[16];
->>> > +static freelist_idx_t master_list_32[32];
->>> > +static freelist_idx_t master_list_64[64];
->>> > +static freelist_idx_t master_list_128[128];
->>> > +static freelist_idx_t master_list_256[256];
->>> > +static struct m_list {
->>> > +   size_t count;
->>> > +   freelist_idx_t *list;
->>> > +} master_lists[] = {
->>> > +   { ARRAY_SIZE(master_list_2), master_list_2 },
->>> > +   { ARRAY_SIZE(master_list_4), master_list_4 },
->>> > +   { ARRAY_SIZE(master_list_8), master_list_8 },
->>> > +   { ARRAY_SIZE(master_list_16), master_list_16 },
->>> > +   { ARRAY_SIZE(master_list_32), master_list_32 },
->>> > +   { ARRAY_SIZE(master_list_64), master_list_64 },
->>> > +   { ARRAY_SIZE(master_list_128), master_list_128 },
->>> > +   { ARRAY_SIZE(master_list_256), master_list_256 },
->>> > +};
->>
->> static const struct m_list?
->>
+I'm going to leave these as they are: they're auto-generated based on
+various functions of interest:
+
+boot/Makefile:sed-zoffset := -e 's/^\([0-9a-fA-F]*\) [ABCDGRSTVW]
+\(startup_32\|startup_64\|efi32_stub_entry\|efi64_stub_entry\|efi_pe_entry\|input_data\|_end\|z_.*\)$$/\#define
+ZO_\2 0x\1/p'
+
+i.e. ZO__end is _end's location. ZO_input_data is input_data's
+position. I think it would further complicate things if we tried to
+consolidate consecutive "_"s, or if we eliminated the leading "_"
+(ZOinput_data and ZO_end).
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
