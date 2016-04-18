@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Thomas Garnier <thgarnie@google.com>
-Date: Mon, 18 Apr 2016 10:00:22 -0700
-Message-Id: <1460998822-20743-1-git-send-email-thgarnie@google.com>
+Date: Mon, 18 Apr 2016 10:14:39 -0700
+Message-Id: <1460999679-30805-1-git-send-email-thgarnie@google.com>
 Subject: [kernel-hardening] [PATCH v2] mm: SLAB freelist randomization
 To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
 Cc: gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, Thomas Garnier <thgarnie@google.com>
