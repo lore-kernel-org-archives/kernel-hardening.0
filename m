@@ -1,35 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-In-Reply-To: <20160418144605.GF3886@suse.de>
-References: <1460757793-59020-1-git-send-email-thgarnie@google.com> <1460757793-59020-4-git-send-email-thgarnie@google.com> <20160418144605.GF3886@suse.de>
+References: <1460741159-51752-1-git-send-email-thgarnie@google.com>
+ <20160415150026.65abbdd5b2ef741cd070c769@linux-foundation.org>
+ <1460759160.19090.50.camel@perches.com>
+ <CAJcbSZFoVjdcfKjoajL8mmSfz=BPRALx7=0gw3faE2o-hu1RqQ@mail.gmail.com>
+ <CAJcbSZGLABr5xEFeopKTj34bL2P-ss=rChs+AYAP_49r1r0NfA@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <57153751.7080800@redhat.com>
+Date: Mon, 18 Apr 2016 12:36:49 -0700
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Content-Type: text/plain;
- charset=UTF-8
-From: "H. Peter Anvin" <hpa@zytor.com>
-Date: Mon, 18 Apr 2016 12:01:34 -0700
-Message-ID: <2BD5E6B7-3F6B-4C64-8073-59D511BD921E@zytor.com>
-Subject: [kernel-hardening] Re: [RFC v1 3/4] x86, boot: Implement ASLR for kernel memory sections (x86_64)
-To: Joerg Roedel <jroedel@suse.de>, Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Seth Jennings <sjennings@variantweb.net>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAJcbSZGLABr5xEFeopKTj34bL2P-ss=rChs+AYAP_49r1r0NfA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] mm: SLAB freelist randomization
+To: Thomas Garnier <thgarnie@google.com>, Joe Perches <joe@perches.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, Greg Thelen <gthelen@google.com>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On April 18, 2016 7:46:05 AM PDT, Joerg Roedel <jroedel@suse.de> wrote:
->On Fri, Apr 15, 2016 at 03:03:12PM -0700, Thomas Garnier wrote:
->> +#if defined(CONFIG_KASAN)
->> +static const unsigned long memory_rand_end = KASAN_SHADOW_START;
->> +#elfif defined(CONFIG_X86_ESPFIX64)
->> +static const unsigned long memory_rand_end = ESPFIX_BASE_ADDR;
->> +#elfif defined(CONFIG_EFI)
->> +static const unsigned long memory_rand_end = EFI_VA_START;
->> +#else
->> +static const unsigned long memory_rand_end = __START_KERNEL_map;
->> +#endif
+On 04/18/2016 08:59 AM, Thomas Garnier wrote:
+> I will send the next version today. Note that I get_random_bytes_arch
+> is used because at that stage we have 0 bits of entropy. It seemed
+> like a better idea to use the arch version that will fallback on
+> get_random_bytes sub API in the worse case.
 >
->That #elfif is a typo, right?
->
->
->	Joerg
 
-It should be #efif right ;)
--- 
-Sent from my Android device with K-9 Mail. Please excuse brevity and formatting.
+This is unfortunate for ARM/ARM64. Those platforms don't have a standard
+method for getting random numbers so until additional entropy is added
+get_random_bytes will always return the same seed and indeed I always
+see the same shuffle on a quick test of arm64. For KASLR, the workaround
+was to require the bootloader to pass in entropy. It might be good to
+either document this or require this only be used with CONFIG_ARCH_RANDOM.
+
+
+> On Fri, Apr 15, 2016 at 3:47 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> Thanks for the comments. I will address them in a v2 early next week.
+>>
+>> If anyone has other comments, please let me know.
+>>
+>> Thomas
+>>
+>> On Fri, Apr 15, 2016 at 3:26 PM, Joe Perches <joe@perches.com> wrote:
+>>> On Fri, 2016-04-15 at 15:00 -0700, Andrew Morton wrote:
+>>>> On Fri, 15 Apr 2016 10:25:59 -0700 Thomas Garnier <thgarnie@google.com> wrote:
+>>>>> Provide an optional config (CONFIG_FREELIST_RANDOM) to randomize the
+>>>>> SLAB freelist. The list is randomized during initialization of a new set
+>>>>> of pages. The order on different freelist sizes is pre-computed at boot
+>>>>> for performance. This security feature reduces the predictability of the
+>>>>> kernel SLAB allocator against heap overflows rendering attacks much less
+>>>>> stable.
+>>>
+>>> trivia:
+>>>
+>>>>> @@ -1229,6 +1229,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
+>>> []
+>>>>> + */
+>>>>> +static freelist_idx_t master_list_2[2];
+>>>>> +static freelist_idx_t master_list_4[4];
+>>>>> +static freelist_idx_t master_list_8[8];
+>>>>> +static freelist_idx_t master_list_16[16];
+>>>>> +static freelist_idx_t master_list_32[32];
+>>>>> +static freelist_idx_t master_list_64[64];
+>>>>> +static freelist_idx_t master_list_128[128];
+>>>>> +static freelist_idx_t master_list_256[256];
+>>>>> +static struct m_list {
+>>>>> +   size_t count;
+>>>>> +   freelist_idx_t *list;
+>>>>> +} master_lists[] = {
+>>>>> +   { ARRAY_SIZE(master_list_2), master_list_2 },
+>>>>> +   { ARRAY_SIZE(master_list_4), master_list_4 },
+>>>>> +   { ARRAY_SIZE(master_list_8), master_list_8 },
+>>>>> +   { ARRAY_SIZE(master_list_16), master_list_16 },
+>>>>> +   { ARRAY_SIZE(master_list_32), master_list_32 },
+>>>>> +   { ARRAY_SIZE(master_list_64), master_list_64 },
+>>>>> +   { ARRAY_SIZE(master_list_128), master_list_128 },
+>>>>> +   { ARRAY_SIZE(master_list_256), master_list_256 },
+>>>>> +};
+>>>
+>>> static const struct m_list?
+>>>
