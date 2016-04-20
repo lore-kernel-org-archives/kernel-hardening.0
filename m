@@ -1,472 +1,352 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <1458784008-16277-1-git-send-email-mic@digikod.net>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <5717C897.1050508@digikod.net>
+Date: Wed, 20 Apr 2016 20:21:11 +0200
 MIME-Version: 1.0
-In-Reply-To: <20160420080821.GB7071@js1304-P5Q-DELUXE>
-References: <1460999679-30805-1-git-send-email-thgarnie@google.com>
-	<20160419071528.GA1624@js1304-P5Q-DELUXE>
-	<CAJcbSZEBc9p+HzxtsNpjV=N=vNxAdKWpKLxRxX+KQaboyM+hkw@mail.gmail.com>
-	<20160420080821.GB7071@js1304-P5Q-DELUXE>
-Date: Wed, 20 Apr 2016 07:47:44 -0700
-Message-ID: <CAJcbSZH6Nnw-R4Y34Z16zn=LB1sz=c_PJ2uQoDPJ_TtjTFEyTA@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2] mm: SLAB freelist randomization
-To: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Greg Thelen <gthelen@google.com>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>
+In-Reply-To: <1458784008-16277-1-git-send-email-mic@digikod.net>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="cjdmfTBaSuixTUX1hHqGmmHxDRFEq4bEw"
+Subject: [kernel-hardening] Re: [RFC v1 00/17] seccomp-object: From attack surface reduction to
+ sandboxing
+To: linux-security-module@vger.kernel.org
+Cc: Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 20, 2016 at 1:08 AM, Joonsoo Kim <iamjoonsoo.kim@lge.com> wrote:
-> On Tue, Apr 19, 2016 at 09:44:54AM -0700, Thomas Garnier wrote:
->> On Tue, Apr 19, 2016 at 12:15 AM, Joonsoo Kim <iamjoonsoo.kim@lge.com> wrote:
->> > On Mon, Apr 18, 2016 at 10:14:39AM -0700, Thomas Garnier wrote:
->> >> Provides an optional config (CONFIG_FREELIST_RANDOM) to randomize the
->> >> SLAB freelist. The list is randomized during initialization of a new set
->> >> of pages. The order on different freelist sizes is pre-computed at boot
->> >> for performance. This security feature reduces the predictability of the
->> >> kernel SLAB allocator against heap overflows rendering attacks much less
->> >> stable.
->> >
->> > I'm not familiar on security but it doesn't look much secure than
->> > before. Is there any other way to generate different sequence of freelist
->> > for each new set of pages? Current approach using pre-computed array will
->> > generate same sequence of freelist for all new set of pages having same size
->> > class. Is it sufficient?
->> >
->>
->> I think it is sufficient. There is a tradeoff for performance. We could randomly
->> pick an object from the freelist every time (on slab_get_obj) but I
->> think it will
->> have significant impact (at least 3%).
->>
->> >> For example this attack against SLUB (also applicable against SLAB)
->> >> would be affected:
->> >> https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
->> >>
->> >> Also, since v4.6 the freelist was moved at the end of the SLAB. It means
->> >> a controllable heap is opened to new attacks not yet publicly discussed.
->> >> A kernel heap overflow can be transformed to multiple use-after-free.
->> >> This feature makes this type of attack harder too.
->> >>
->> >> To generate entropy, we use get_random_bytes_arch because 0 bits of
->> >> entropy is available at that boot stage. In the worse case this function
->> >> will fallback to the get_random_bytes sub API.
->> >>
->> >> The config option name is not specific to the SLAB as this approach will
->> >> be extended to other allocators like SLUB.
->> >
->> > If this feature will be applied to the SLUB, it's better to put common
->> > code to mm/slab_common.c.
->> >
->>
->> I think it might be moved there once we implement the SLUB counterpart
->> but it is too early to define which part will be common.
->>
->> >>
->> >> Performance results highlighted no major changes:
->> >>
->> >> Netperf average on 10 runs:
->> >>
->> >> threads,base,change
->> >> 16,576943.10,585905.90 (101.55%)
->> >> 32,564082.00,569741.20 (101.00%)
->> >> 48,558334.30,561851.20 (100.63%)
->> >> 64,552025.20,556448.30 (100.80%)
->> >> 80,552294.40,551743.10 (99.90%)
->> >> 96,552435.30,547529.20 (99.11%)
->> >> 112,551320.60,550183.20 (99.79%)
->> >> 128,549138.30,550542.70 (100.26%)
->> >> 144,549344.50,544529.10 (99.12%)
->> >> 160,550360.80,539929.30 (98.10%)
->> >>
->> >> slab_test 1 run on boot. After is faster except for odd result on size
->> >> 2048.
->> >
->> > Hmm... It's odd result. It adds more logic and it should
->> > decrease performance. I guess it would be experimental error but
->> > do you have any analysis about this result?
->> >
->>
->> I don't. I am glad to redo the test. I found that slab_test has very different
->> result based on the heap state at the time of the test. If I run the
->> test multiple
->> times, I have really various results on with or without the mitigation (on
->> dedicated hardware).
->>
->> >>
->> >> Before:
->> >>
->> >> Single thread testing
->> >> =====================
->> >> 1. Kmalloc: Repeatedly allocate then free test
->> >> 10000 times kmalloc(8) -> 137 cycles kfree -> 126 cycles
->> >> 10000 times kmalloc(16) -> 118 cycles kfree -> 119 cycles
->> >> 10000 times kmalloc(32) -> 112 cycles kfree -> 119 cycles
->> >> 10000 times kmalloc(64) -> 126 cycles kfree -> 123 cycles
->> >> 10000 times kmalloc(128) -> 135 cycles kfree -> 131 cycles
->> >> 10000 times kmalloc(256) -> 165 cycles kfree -> 104 cycles
->> >> 10000 times kmalloc(512) -> 174 cycles kfree -> 126 cycles
->> >> 10000 times kmalloc(1024) -> 242 cycles kfree -> 160 cycles
->> >> 10000 times kmalloc(2048) -> 478 cycles kfree -> 239 cycles
->> >> 10000 times kmalloc(4096) -> 747 cycles kfree -> 364 cycles
->> >> 10000 times kmalloc(8192) -> 774 cycles kfree -> 404 cycles
->> >> 10000 times kmalloc(16384) -> 849 cycles kfree -> 430 cycles
->> >> 2. Kmalloc: alloc/free test
->> >> 10000 times kmalloc(8)/kfree -> 118 cycles
->> >> 10000 times kmalloc(16)/kfree -> 118 cycles
->> >> 10000 times kmalloc(32)/kfree -> 118 cycles
->> >> 10000 times kmalloc(64)/kfree -> 121 cycles
->> >> 10000 times kmalloc(128)/kfree -> 118 cycles
->> >> 10000 times kmalloc(256)/kfree -> 115 cycles
->> >> 10000 times kmalloc(512)/kfree -> 115 cycles
->> >> 10000 times kmalloc(1024)/kfree -> 115 cycles
->> >> 10000 times kmalloc(2048)/kfree -> 115 cycles
->> >> 10000 times kmalloc(4096)/kfree -> 115 cycles
->> >> 10000 times kmalloc(8192)/kfree -> 115 cycles
->> >> 10000 times kmalloc(16384)/kfree -> 115 cycles
->> >>
->> >> After:
->> >>
->> >> Single thread testing
->> >> =====================
->> >> 1. Kmalloc: Repeatedly allocate then free test
->> >> 10000 times kmalloc(8) -> 99 cycles kfree -> 84 cycles
->> >> 10000 times kmalloc(16) -> 88 cycles kfree -> 83 cycles
->> >> 10000 times kmalloc(32) -> 90 cycles kfree -> 81 cycles
->> >> 10000 times kmalloc(64) -> 107 cycles kfree -> 97 cycles
->> >> 10000 times kmalloc(128) -> 134 cycles kfree -> 89 cycles
->> >> 10000 times kmalloc(256) -> 145 cycles kfree -> 97 cycles
->> >> 10000 times kmalloc(512) -> 177 cycles kfree -> 116 cycles
->> >> 10000 times kmalloc(1024) -> 223 cycles kfree -> 151 cycles
->> >> 10000 times kmalloc(2048) -> 1429 cycles kfree -> 221 cycles
->> >> 10000 times kmalloc(4096) -> 720 cycles kfree -> 348 cycles
->> >> 10000 times kmalloc(8192) -> 788 cycles kfree -> 393 cycles
->> >> 10000 times kmalloc(16384) -> 867 cycles kfree -> 433 cycles
->> >> 2. Kmalloc: alloc/free test
->> >> 10000 times kmalloc(8)/kfree -> 115 cycles
->> >> 10000 times kmalloc(16)/kfree -> 115 cycles
->> >> 10000 times kmalloc(32)/kfree -> 115 cycles
->> >> 10000 times kmalloc(64)/kfree -> 120 cycles
->> >> 10000 times kmalloc(128)/kfree -> 127 cycles
->> >> 10000 times kmalloc(256)/kfree -> 119 cycles
->> >> 10000 times kmalloc(512)/kfree -> 112 cycles
->> >> 10000 times kmalloc(1024)/kfree -> 112 cycles
->> >> 10000 times kmalloc(2048)/kfree -> 112 cycles
->> >> 10000 times kmalloc(4096)/kfree -> 112 cycles
->> >> 10000 times kmalloc(8192)/kfree -> 112 cycles
->> >> 10000 times kmalloc(16384)/kfree -> 112 cycles
->> >>
->> >> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> >> ---
->> >> Based on next-20160418
->> >> ---
->> >>  init/Kconfig |   9 ++++
->> >>  mm/slab.c    | 166 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
->> >>  2 files changed, 174 insertions(+), 1 deletion(-)
->> >>
->> >> diff --git a/init/Kconfig b/init/Kconfig
->> >> index 0dfd09d..ee35418 100644
->> >> --- a/init/Kconfig
->> >> +++ b/init/Kconfig
->> >> @@ -1742,6 +1742,15 @@ config SLOB
->> >>
->> >>  endchoice
->> >>
->> >> +config FREELIST_RANDOM
->> >> +     default n
->> >> +     depends on SLAB
->> >> +     bool "SLAB freelist randomization"
->> >> +     help
->> >> +       Randomizes the freelist order used on creating new SLABs. This
->> >> +       security feature reduces the predictability of the kernel slab
->> >> +       allocator against heap overflows.
->> >> +
->> >>  config SLUB_CPU_PARTIAL
->> >>       default y
->> >>       depends on SLUB && SMP
->> >> diff --git a/mm/slab.c b/mm/slab.c
->> >> index b70aabf..8371d80 100644
->> >> --- a/mm/slab.c
->> >> +++ b/mm/slab.c
->> >> @@ -116,6 +116,7 @@
->> >>  #include     <linux/kmemcheck.h>
->> >>  #include     <linux/memory.h>
->> >>  #include     <linux/prefetch.h>
->> >> +#include     <linux/log2.h>
->> >>
->> >>  #include     <net/sock.h>
->> >>
->> >> @@ -1229,6 +1230,62 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
->> >>       }
->> >>  }
->> >>
->> >> +#ifdef CONFIG_FREELIST_RANDOM
->> >> +/*
->> >> + * Master lists are pre-computed random lists
->> >> + * Lists of different sizes are used to optimize performance on SLABS with
->> >> + * different object counts.
->> >> + */
->> >
->> > If it is for optimization, it would be one option to have separate
->> > random list for each kmem_cache. It would consume more memory but it
->> > would be marginal. And, it provides more un-predictability and it can
->> > give better performance because we don't need state->type (more, less)
->> > and special handling related for it.
->> >
->>
->> I am not sur because major caches are created early at boot time. We still have
->> the same entropy problem and we are wasting a bit more memory. It will be faster
->
-> I think that entropy problem is another issue. It should be considered
-> separately. If it is solved, making per-computed array for each
-> kmem_cache will provide more un-predictability. If someone who succeed to
-> exploit some kmem_cache with 128 object per slab want to exploit
-> another kmem_cache with 128 object per slab, this separate pre-computed array
-> will be helpful.
->
->> on usage though but not sure it will be significant.
->
-> I also think it's not significant. But, besides performance effect,
-> code doesn't look very attractive and extendable. In case of SLUB,
-> there is setup_slub_max_order option and object per slab could be larger
-> than 256. To deal with it, we need to add many more static definition
-> and it looks not good to me. Please use dynamic allocated memory
-> instead of static array definition.
->
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--cjdmfTBaSuixTUX1hHqGmmHxDRFEq4bEw
+Content-Type: multipart/mixed; boundary="wFqwdnB7W48aCPvjMu5PXRJ7kiQHkAm11"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: linux-security-module@vger.kernel.org
+Cc: Andreas Gruenbacher <agruenba@redhat.com>,
+ Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>,
+ Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
+ <drysdale@google.com>, Eric Paris <eparis@redhat.com>,
+ James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>,
+ Julien Tinnes <jln@google.com>, Kees Cook <keescook@chromium.org>,
+ Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore <pmoore@redhat.com>,
+ Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>,
+ Stephen Smalley <sds@tycho.nsa.gov>,
+ Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>,
+ Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org,
+ kernel-hardening@lists.openwall.com
+Message-ID: <5717C897.1050508@digikod.net>
+Subject: Re: [RFC v1 00/17] seccomp-object: From attack surface reduction to
+ sandboxing
+References: <1458784008-16277-1-git-send-email-mic@digikod.net>
+In-Reply-To: <1458784008-16277-1-git-send-email-mic@digikod.net>
 
-You don't need to. We wrap the list used (if you look at get_next_entry
-we reset at pos 0 when we arrive to the list size).
+--wFqwdnB7W48aCPvjMu5PXRJ7kiQHkAm11
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
-I do think that the design will be better with a dedicated list per cache. Given
-you seem fine with the memory differences, performance can only get better...
+Hi,
 
-I will refactor for that on the next iteration.
+Does anyone had time to review some patches?
 
->>
->> >> +static freelist_idx_t master_list_2[2];
->> >> +static freelist_idx_t master_list_4[4];
->> >> +static freelist_idx_t master_list_8[8];
->> >> +static freelist_idx_t master_list_16[16];
->> >> +static freelist_idx_t master_list_32[32];
->> >> +static freelist_idx_t master_list_64[64];
->> >> +static freelist_idx_t master_list_128[128];
->> >> +static freelist_idx_t master_list_256[256];
->> >> +const static struct m_list {
->> >> +     size_t count;
->> >> +     freelist_idx_t *list;
->> >> +} master_lists[] = {
->> >> +     { ARRAY_SIZE(master_list_2), master_list_2 },
->> >> +     { ARRAY_SIZE(master_list_4), master_list_4 },
->> >> +     { ARRAY_SIZE(master_list_8), master_list_8 },
->> >> +     { ARRAY_SIZE(master_list_16), master_list_16 },
->> >> +     { ARRAY_SIZE(master_list_32), master_list_32 },
->> >> +     { ARRAY_SIZE(master_list_64), master_list_64 },
->> >> +     { ARRAY_SIZE(master_list_128), master_list_128 },
->> >> +     { ARRAY_SIZE(master_list_256), master_list_256 },
->> >> +};
->> >> +
->> >> +/* Pre-compute the Freelist master lists at boot */
->> >> +static void __init freelist_random_init(void)
->> >> +{
->> >> +     unsigned int seed;
->> >> +     size_t z, i, rand;
->> >> +     struct rnd_state slab_rand;
->> >> +
->> >> +     get_random_bytes_arch(&seed, sizeof(seed));
->> >> +     prandom_seed_state(&slab_rand, seed);
->> >> +
->> >> +     for (z = 0; z < ARRAY_SIZE(master_lists); z++) {
->> >> +             for (i = 0; i < master_lists[z].count; i++)
->> >> +                     master_lists[z].list[i] = i;
->> >> +
->> >> +             /* Fisher-Yates shuffle */
->> >> +             for (i = master_lists[z].count - 1; i > 0; i--) {
->> >> +                     rand = prandom_u32_state(&slab_rand);
->> >> +                     rand %= (i + 1);
->> >> +                     swap(master_lists[z].list[i],
->> >> +                             master_lists[z].list[rand]);
->> >> +             }
->> >> +     }
->> >> +}
->> >> +#else
->> >> +static inline void __init freelist_random_init(void) { }
->> >> +#endif /* CONFIG_FREELIST_RANDOM */
->> >> +
->> >> +
->> >>  /*
->> >>   * Initialisation.  Called after the page allocator have been initialised and
->> >>   * before smp_init().
->> >> @@ -1255,6 +1312,8 @@ void __init kmem_cache_init(void)
->> >>       if (!slab_max_order_set && totalram_pages > (32 << 20) >> PAGE_SHIFT)
->> >>               slab_max_order = SLAB_MAX_ORDER_HI;
->> >>
->> >> +     freelist_random_init();
->> >> +
->> >>       /* Bootstrap is tricky, because several objects are allocated
->> >>        * from caches that do not exist yet:
->> >>        * 1) initialize the kmem_cache cache: it contains the struct
->> >> @@ -2442,6 +2501,107 @@ static void cache_init_objs_debug(struct kmem_cache *cachep, struct page *page)
->> >>  #endif
->> >>  }
->> >>
->> >> +#ifdef CONFIG_FREELIST_RANDOM
->> >> +/* Identify if the target freelist matches the pre-computed list */
->> >> +enum master_type {
->> >> +     match,
->> >> +     less,
->> >> +     more
->> >> +};
->> >> +
->> >> +/* Hold information during a freelist initialization */
->> >> +struct freelist_init_state {
->> >> +     unsigned int padding;
->> >> +     unsigned int pos;
->> >> +     unsigned int count;
->> >> +     struct m_list master_list;
->> >> +     unsigned int master_count;
->> >> +     enum master_type type;
->> >> +};
->> >> +
->> >> +/* Select the right pre-computed master list and initialize state */
->> >> +static void freelist_state_initialize(struct freelist_init_state *state,
->> >> +                                   unsigned int count)
->> >> +{
->> >> +     unsigned int idx;
->> >> +     const unsigned int last_idx = ARRAY_SIZE(master_lists) - 1;
->> >> +
->> >> +     memset(state, 0, sizeof(*state));
->> >> +     state->count = count;
->> >> +     state->pos = 0;
->> >
->> > Using pos = 0 here looks not good in terms of security. In this case,
->> > every new page having same size class have same sequence of freelist since boot.
->> >
->> > How about using random value to set pos? It provides some more randomness
->> > with minimal overhead.
->> >
->>
->> I think it is a good idea. I will add that for the next iteration.
->>
->> >> +     /* count is always >= 2 */
->> >> +     idx = ilog2(count) - 1;
->> >> +     if (idx >= last_idx)
->> >> +             idx = last_idx;
->> >> +     else if (roundup_pow_of_two(idx + 1) != count)
->> >> +             idx++;
->> >> +     state->master_list = master_lists[idx];
->> >> +     if (state->master_list.count == state->count)
->> >> +             state->type = match;
->> >> +     else if (state->master_list.count > state->count)
->> >> +             state->type = more;
->> >> +     else
->> >> +             state->type = less;
->> >> +}
->> >> +
->> >> +/* Get the next entry on the master list depending on the target list size */
->> >> +static freelist_idx_t get_next_entry(struct freelist_init_state *state)
->> >> +{
->> >> +     if (state->type == less && state->pos == state->master_list.count) {
->> >> +             state->padding += state->pos;
->> >> +             state->pos = 0;
->> >> +     }
->> >> +     BUG_ON(state->pos >= state->master_list.count);
->> >> +     return state->master_list.list[state->pos++];
->> >> +}
->> >> +
->> >> +static freelist_idx_t next_random_slot(struct freelist_init_state *state)
->> >> +{
->> >> +     freelist_idx_t cur, entry;
->> >> +
->> >> +     entry = get_next_entry(state);
->> >> +
->> >> +     if (state->type != match) {
->> >> +             while ((entry + state->padding) >= state->count)
->> >> +                     entry = get_next_entry(state);
->> >> +             cur = entry + state->padding;
->> >> +             BUG_ON(cur >= state->count);
->> >> +     } else {
->> >> +             cur = entry;
->> >> +     }
->> >> +
->> >> +     return cur;
->> >> +}
->> >> +
->> >> +/* Shuffle the freelist initialization state based on pre-computed lists */
->> >> +static void shuffle_freelist(struct kmem_cache *cachep, struct page *page,
->> >> +                          unsigned int count)
->> >> +{
->> >> +     unsigned int i;
->> >> +     struct freelist_init_state state;
->> >> +
->> >> +     if (count < 2) {
->> >> +             for (i = 0; i < count; i++)
->> >> +                     set_free_obj(page, i, i);
->> >> +             return;
->> >> +     }
->> >> +
->> >> +     /* Last chunk is used already in this case */
->> >> +     if (OBJFREELIST_SLAB(cachep))
->> >> +             count--;
->> >> +
->> >> +     freelist_state_initialize(&state, count);
->> >> +     for (i = 0; i < count; i++)
->> >> +             set_free_obj(page, i, next_random_slot(&state));
->> >> +
->> >> +     if (OBJFREELIST_SLAB(cachep))
->> >> +             set_free_obj(page, i, i);
->> >
->> > Please consider last object of OBJFREELIST_SLAB cache, too.
->> >
->> > freelist_state_init()
->> > last_obj = next_randome_slot()
->> > page->freelist = XXX
->> > for (i = 0; i < count - 1; i++)
->> >         set_free_obj()
->> > set_free_obj(last_obj);
->> >
->> > Thanks.
->> >
->>
->> The current implementation take the last chunk by default before the
->> freelist is initialized. Do you want it to be randomized as well?
->
-> Yes.
->
-> Thanks.
->
->>
->> >> +}
->> >> +#else
->> >> +static inline void shuffle_freelist(struct kmem_cache *cachep,
->> >> +                                 struct page *page, unsigned int count) { }
->> >> +#endif /* CONFIG_FREELIST_RANDOM */
->> >> +
->> >>  static void cache_init_objs(struct kmem_cache *cachep,
->> >>                           struct page *page)
->> >>  {
->> >> @@ -2464,8 +2624,12 @@ static void cache_init_objs(struct kmem_cache *cachep,
->> >>                       kasan_poison_object_data(cachep, objp);
->> >>               }
->> >>
->> >> -             set_free_obj(page, i, i);
->> >> +             /* If enabled, initialization is done in shuffle_freelist */
->> >> +             if (!config_enabled(CONFIG_FREELIST_RANDOM))
->> >> +                     set_free_obj(page, i, i);
->> >>       }
->> >> +
->> >> +     shuffle_freelist(cachep, page, cachep->num);
->> >>  }
->> >>
->> >>  static void kmem_flagcheck(struct kmem_cache *cachep, gfp_t flags)
->> >> --
->> >> 2.8.0.rc3.226.g39d4020
->> >>
->> >> --
->> >> To unsubscribe, send a message with 'unsubscribe linux-mm' in
->> >> the body to majordomo@kvack.org.  For more info on Linux MM,
->> >> see: http://www.linux-mm.org/ .
->> >> Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
->>
->> --
->> To unsubscribe, send a message with 'unsubscribe linux-mm' in
->> the body to majordomo@kvack.org.  For more info on Linux MM,
->> see: http://www.linux-mm.org/ .
->> Don't email: <a href=mailto:"dont@kvack.org"> email@kvack.org </a>
+What do you think about the ToCToU workarounds?
+What about the userland API?
+
+The series can be found here: https://github.com/l0kod/linux/commits/secc=
+omp-object-v1
+
+ Micka=C3=ABl
+
+
+On 24/03/2016 02:46, Micka=C3=ABl Sala=C3=BCn wrote:
+> Hi,
+>=20
+> This series is a proof of concept (not ready for production) to extend =
+seccomp
+> with the ability to check argument pointers of syscalls as kernel objec=
+t (e.g.
+> file path). This add a needed feature to create a full sandbox managed =
+by
+> userland like the Seatbelt/XNU Sandbox or the OpenBSD Pledge. It was in=
+itially
+> inspired from a partial seccomp-LSM prototype [1] but has evolved a lot=
+ since :)
+>=20
+> The audience for this RFC is limited to security-related actors to disc=
+uss
+> about this new feature before enlarging the scope to a wider audience. =
+This
+> aims to focus on the security goal, usability and architecture before e=
+ntering
+> into the gory details of each subsystem. I also wish to get constructiv=
+e
+> criticisms about the userland API and intrusiveness of the code (and wh=
+at could
+> be the other ways to do it better) before going further (and addressing=
+ the
+> TODO and FIXME in the code).
+>=20
+> The approach taken is to add the minimum amount of code while still all=
+owing
+> the userland to create access rules via seccomp. The current limitation=
+ of
+> seccomp is to get raw syscall arguments value but there is no way to
+> dereference a pointer to check its content (e.g. the first argument of =
+the open
+> syscall). This seccomp evolution brings a generic way to check against =
+argument
+> pointer regardless from the syscall unlike current LSMs.
+>=20
+> Here is the use case scenario:
+> * First, a process must load some groups of seccomp checkers. This chec=
+kers are
+>   dedicated structs describing a pointed data (e.g. path). They are
+>   semantically grouped to be efficiently managed and checked in batch. =
+Each
+>   group have a static ID. This IDs are unique and they reference groups=
+ only
+>   accessible from the filters created by the same process.
+> * The loaded checkers are inherited and accessible by the newly created=
+
+>   filters. This groups can be referenced by filters with a new return v=
+alue
+>   SECCOMP_RET_ARGEVAL. Value in  SECCOMP_RET_DATA contains a group ID a=
+nd an
+>   argument bitmask. This return value is only meaningful between stacke=
+d
+>   filters to ask a check and get the result in the extended struct
+>   seccomp_data. The new fields are "is_valid_syscall", "arg_group" cont=
+aining a
+>   group ID and "matches[6]" consisting of one 64-bits mask per argument=
+=2E This
+>   bitmasks are useful to get the check result of each checker from a gr=
+oup on a
+>   syscall argument which is handy to create a custom access control eng=
+ine from
+>   userland.
+> * SECCOMP_RET_ARGEVAL is equivalent to SECCOMP_RET_ACCESS except that t=
+he
+>   following filters can take a decision regarding a match (e.g. return =
+EACCESS
+>   or emulate the syscall).
+>=20
+> Each checker is autonomous and new ones can easily be added in the futu=
+re.
+> There is currently two checkers for path objects:
+> * SECCOMP_CHECK_FS_LITERAL checks if a string match a defined path;
+> * SECCOMP_CHECK_FS_BENEATH checks if the path representation of a strin=
+g is
+>   equal or equivalent to a file belonging to a defined path.
+>=20
+> This design does not seems too intrusive but is flexible enough to allo=
+w a
+> powerful sandbox mechanism accessible by any process on Linux. The use =
+of
+> seccomp, including this new feature, is more suitable with the help of =
+a
+> userland library (e.g. libseccomp) that could help to specify a high-le=
+vel
+> language to express a security policy instead of raw syscall rules.
+>=20
+> The main concern should be about time-of-check-time-of-use (TOCTOU) rac=
+e
+> conditions attacks. Because of the nature of seccomp (executed before t=
+he
+> effective syscall and before a potential ptrace), it is not possible to=
+ block
+> all races but to detect them.
+>=20
+> There is still some questions I couldn't answer for sure (grep for FIXM=
+E or
+> XXX). Comments appreciated.
+>=20
+> Tested on the x86 and UM architectures in 32 and 64 bits (with audit en=
+abled).
+>=20
+> [1] https://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=3D=
+seccomp/lsm
+>=20
+>=20
+> # Need for LSM
+>=20
+> Because the arguments can be checked before the syscall actually evalua=
+te them,
+> there is two race condition classes:
+> * The data pointed by the user address is in control of the userland (e=
+=2Eg. a
+>   tracing process) and is so subject to TOCTOU race conditions between =
+the
+>   seccomp filter evaluation and the effective resource grabbing (part o=
+f each
+>   syscall code).
+> * The semantic of the pointed data is also subject to race condition be=
+cause
+>   there is no lock on the resource (e.g. file) between the evaluation o=
+f the
+>   argument by the seccomp filter and the use of the pointed resource by=
+ each
+>   part of the syscall code.
+>=20
+> The solution to fix these race conditions is to copy the userspace data=
+ and to
+> lock the pointed resource. Whereas it is easy to copy the userspace dat=
+a, it is
+> not realistic to lock any pointed resources because of obvious locking =
+issues.
+> However, it is possible to detect a TOCTOU race condition with the help=
+ of LSM
+> hooks. This way, we can keep a flexible access control (e.g. by control=
+ling
+> syscall return values) while blocking unattended malicious or bogus use=
+rland
+> behavior (e.g. exploit a race-condition).
+>=20
+> To be able to deny access to a malicious userland behavior we must repl=
+ay the
+> seccomp filters and verify the intermediate return values to find out i=
+f the
+> filters policy is still respected. Thanks to a cache we can detect if a=
+ check
+> replay is necessary. Otherwise, the LSM hooks are really quick for
+> non-malicious userland.
+>=20
+> # Cache handling
+>=20
+> Each time a checker is called, for each argument to check, it get them =
+from
+> it's seccomp_argeval_checked cache if any, or create a new cache entry =
+and put
+> it otherwise. This cache entries will be used to evaluate arguments.
+>=20
+> When rechecking in the LSM hooks, first it find out which argument is m=
+apped to
+> the hook check and find if it differ from the corresponding cache entry=
+=2E If it
+> match, then return OK without replaying the checks, or if nothing match=
+, replay
+> all the checks from this check type.
+>=20
+> # How to use it
+>=20
+> The SECCOMP_ARGFLAG_* help to narrow the rules constraints:
+> * SECCOMP_ARGFLAG_FS_DENTRY: Check and rely on the path name.
+> * SECCOMP_ARGFLAG_FS_INODE: Check the data "container" whatever it's pa=
+th name.
+> * SECCOMP_ARGFLAG_FS_DEVICE: Check the device (i.e. file system) on whi=
+ch the
+>   file is, e.g. it can be use to allow access to USB mass-storage or dm=
+-verity
+>   content only
+> * SECCOMP_ARGFLAG_FS_MOUNT: Check the file mount point, e.g. can enforc=
+e a
+>   read-only bind mount (but is less flexible than the other checks)
+> * SECCOMP_ARGFLAG_FS_NOFOLLOW: Check the file without following it if i=
+t is a
+>   symlink. Useful for rename(2) or open(2) with O_NOFOLLOW to have cons=
+istent
+>   check. However, LSM hooks will deny all unattended accesses set by th=
+e rules
+>   ignoring this flag (i.e. it act as a fail-safe).
+>=20
+> # Limitations
+>=20
+> ## Ptrace
+> If a process can ptrace another one, the tracer can execute whatever sy=
+scall it
+> wants without being constrained by any seccomp filter from the tracee. =
+This
+> apply for this seccomp extension as well. Any seccomp filter should the=
+n deny
+> the use of ptrace.
+>=20
+> The LSM hooks must ensure that the filters results are the same (with t=
+he same
+> arguments) but must not deny any ptraced modifications (e.g. syscall ar=
+gument
+> change).
+>=20
+> ## Stateless access
+> Unlike current LSMs, the policies are stateless. It's not possible to m=
+ark and
+> track a kernel object (e.g. file descriptor). Capsicum seems more appro=
+priate
+> for this kind of feature.
+>=20
+> ## Resource usage
+> We must limit the resources taken by a filter list, and so the number o=
+f rules,
+> to not allow any process to exhaust the system.
+>=20
+>=20
+> Regards,
+>=20
+> Micka=C3=ABl Sala=C3=BCn (17):
+>   um: Export the sys_call_table
+>   seccomp: Fix typo
+>   selftest/seccomp: Fix the flag name SECCOMP_FILTER_FLAG_TSYNC
+>   selftest/seccomp: Fix the seccomp(2) signature
+>   security/seccomp: Add LSM and create arrays of syscall metadata
+>   seccomp: Add the SECCOMP_ADD_CHECKER_GROUP command
+>   seccomp: Add seccomp object checker evaluation
+>   selftest/seccomp: Remove unknown_ret_is_kill_above_allow test
+>   selftest/seccomp: Extend seccomp_data until matches[6]
+>   selftest/seccomp: Add field_is_valid_syscall test
+>   selftest/seccomp: Add argeval_open_whitelist test
+>   audit,seccomp: Extend audit with seccomp state
+>   selftest/seccomp: Rename TRACE_poke to TRACE_poke_sys_read
+>   selftest/seccomp: Make tracer_poke() more generic
+>   selftest/seccomp: Add argeval_toctou_argument test
+>   security/seccomp: Protect against filesystem TOCTOU
+>   selftest/seccomp: Add argeval_toctou_filesystem test
+>=20
+>  arch/x86/um/asm/syscall.h                     |   2 +
+>  include/asm-generic/vmlinux.lds.h             |  22 +
+>  include/linux/audit.h                         |  25 ++
+>  include/linux/compat.h                        |  10 +
+>  include/linux/lsm_hooks.h                     |   5 +
+>  include/linux/seccomp.h                       | 136 +++++-
+>  include/linux/syscalls.h                      |  68 +++
+>  include/uapi/linux/seccomp.h                  | 105 +++++
+>  kernel/audit.h                                |   3 +
+>  kernel/auditsc.c                              |  36 +-
+>  kernel/fork.c                                 |  13 +-
+>  kernel/seccomp.c                              | 594 ++++++++++++++++++=
++++++++-
+>  security/Kconfig                              |   1 +
+>  security/Makefile                             |   2 +
+>  security/seccomp/Kconfig                      |  14 +
+>  security/seccomp/Makefile                     |   3 +
+>  security/seccomp/checker_fs.c                 | 524 ++++++++++++++++++=
++++++
+>  security/seccomp/checker_fs.h                 |  18 +
+>  security/seccomp/lsm.c                        | 135 ++++++
+>  security/seccomp/lsm.h                        |  19 +
+>  security/security.c                           |   1 +
+>  tools/testing/selftests/seccomp/seccomp_bpf.c | 572 ++++++++++++++++++=
++++++--
+>  22 files changed, 2248 insertions(+), 60 deletions(-)
+>  create mode 100644 security/seccomp/Kconfig
+>  create mode 100644 security/seccomp/Makefile
+>  create mode 100644 security/seccomp/checker_fs.c
+>  create mode 100644 security/seccomp/checker_fs.h
+>  create mode 100644 security/seccomp/lsm.c
+>  create mode 100644 security/seccomp/lsm.h
+>=20
+
+
+--wFqwdnB7W48aCPvjMu5PXRJ7kiQHkAm11--
+
+--cjdmfTBaSuixTUX1hHqGmmHxDRFEq4bEw
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEcBAEBCgAGBQJXF8igAAoJECLe/t9zvWqVp4YH/1YcatDkhZtQB4bfsCue3vYW
+tvKSId2sNEVcRq9CyTy62BEEsJTNW6GA1GRc/sgOnBq6n5AwFwM8RALP8oGe1tYT
+lt8npc/by/9LMMa4yt0G8Wgg5RgH+AY4d85VvmQ3lOfqSD0fw98ezCPdOoc4nbCd
+1fG5KkyrCzeWC3Hqw5C49newbZWrw975HLlZIf5flxzl659tcB8aIzxu3swPm0Yr
+UBpZDCzSb95Bkfnyj3rFEjoguewI36lKzh1kpK5Xww0MNgmJq0EXSw+5yWO/d2gC
+FLA7/3n++PEpUVhxlIPa4ntMMI2uytHIZzwiiau9J/tiBKFLVxsxigf5N1hcEyQ=
+=ub6J
+-----END PGP SIGNATURE-----
+
+--cjdmfTBaSuixTUX1hHqGmmHxDRFEq4bEw--
