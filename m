@@ -1,42 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAGXu5jLKBD=CUPR7mHspzS6Oy99C+gXq+sLnHSbCJT6hXQGOXg@mail.gmail.com>
-References: <CAGXu5jJXpnaKsG_W_xzwr0SBkKSEtUqEC0LR3-ZByPx9NAj5Lw@mail.gmail.com>
-	<565B822B.8000700@nod.at>
-	<CAGXu5jLKBD=CUPR7mHspzS6Oy99C+gXq+sLnHSbCJT6hXQGOXg@mail.gmail.com>
-Date: Thu, 21 Apr 2016 13:33:15 -0700
-Message-ID: <CAGXu5jJXqyN2ABvRxLsjhn3k_qbubw7SDxxk50Wqz=kOsLjSig@mail.gmail.com>
+In-Reply-To: <CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
+References: <1450364270-12687-1-git-send-email-dave@progbits.org>
+	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
+	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
+	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
+	<CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
+	<CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
+Date: Thu, 21 Apr 2016 13:37:03 -0700
+Message-ID: <CAGXu5jKy91CVe7KeeVedEHteZRv8h7o_gF7GEVCz7D=RCj+9qg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: status: GRKERNSEC_BRUTE
-To: Richard Weinberger <richard@nod.at>
+Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
+To: David Windsor <dave@progbits.org>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Nov 30, 2015 at 12:15 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Sun, Nov 29, 2015 at 2:54 PM, Richard Weinberger <richard@nod.at> wrote:
->> Am 24.11.2015 um 20:19 schrieb Kees Cook:
->>> Hi,
->>>
->>> While not strictly a _kernel_ self-protection mechanism, it's still
->>> something that I'd love to see upstream, so I'll ping about its status
->>> here too. :) Any updates on the brute force detector? (Last week I had
->>> someone suggest making this a "respawn cgroup" or something, if it's
->>> not workable as-is.) Anything we can help with?
+Hi David,
+
+On Thu, Feb 4, 2016 at 10:19 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Tue, Feb 2, 2016 at 3:33 AM, David Windsor <dave@progbits.org> wrote:
+>> FYI, I now have time to work on this again.
 >>
->> I can revive my patch and resend. Maybe it helps to collect
->> new ideas (or NAKs ;)).
+>> Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
+>> the following changes suggested during the on-list review of v2:
+>>
+>> * s/PAX_REFCOUNT/STRICT_REFCOUNT
+>> * Reordering the patchset in a more sane manner (per Greg KH)
+>> * Creation of the "Kernel Hardening" menu in Kconfig
+>> * Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
+>> * Whitespace fixes
+>>
+>> v3 is forthcoming and will be posted here as soon as I have the
+>> patchset rebased to linux-next.
 >
-> That would be great. Start by sending the series to kernel-hardening.
-> We can comment on it before you send a version to lkml. (i.e. try to
-> avoid NAKs...) :)
+> Thanks for the update!
+>
+> It may be helpful to mention in the changelog the two recent refcount
+> overflow bugs that would have been stopped by this mitigiation:
+>
+> CVE-2014-2851 https://cyseclabs.com/page?n=02012016
+> CVE-2016-0728 http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
 
-Hi!
+Any news on a v3 series? I'd love to see what you've got so far.
 
-Any updates on this? I think with the latest userspace ASLR
-improvements from Android, this is becoming a more urgently needed
-features. :)
+Thanks!
 
 -Kees
 
