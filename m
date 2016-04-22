@@ -1,54 +1,131 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
-References: <1450364270-12687-1-git-send-email-dave@progbits.org>
-	<CAGXu5jJJ13z206L6R99MYmiUA7hVYUJC5UVS8h5Mg0sUDr60GQ@mail.gmail.com>
-	<CAGXu5jLsxwhrgyRfvYV79WJrrFr9tkXMe=7-qWBz6VWEsEA_5g@mail.gmail.com>
-	<CAEXv5_iutxAv4HoWS5fbE+M7Di-6rhuAYTAD=Z-nJ2JAtxeS4A@mail.gmail.com>
-	<CAEXv5_juGN8QxJ6jB7-1WGB7BN1-G0bUxKyD-zeCjsK4d29uzw@mail.gmail.com>
-	<CAGXu5jKfe8=wmL6VFqFB8jR2pzS9EWp7Mwrt4XAEYbWcjLdjnQ@mail.gmail.com>
-Date: Thu, 21 Apr 2016 13:37:03 -0700
-Message-ID: <CAGXu5jKy91CVe7KeeVedEHteZRv8h7o_gF7GEVCz7D=RCj+9qg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening][RFC PATCH v2 00/12] Add PAX_REFCOUNT overflow protection
-To: David Windsor <dave@progbits.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Fri, 22 Apr 2016 20:19:57 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [PATCH v7 0/6] Introduce GCC plugin infrastructure
+To: linux-kbuild@vger.kernel.org
+Cc: pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi David,
+This patch set introduce the GCC plugin infrastructure with examples for testing
+and documentation.
 
-On Thu, Feb 4, 2016 at 10:19 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, Feb 2, 2016 at 3:33 AM, David Windsor <dave@progbits.org> wrote:
->> FYI, I now have time to work on this again.
->>
->> Currently, I'm rebasing v2 atop linux-next.  I've already incorporated
->> the following changes suggested during the on-list review of v2:
->>
->> * s/PAX_REFCOUNT/STRICT_REFCOUNT
->> * Reordering the patchset in a more sane manner (per Greg KH)
->> * Creation of the "Kernel Hardening" menu in Kconfig
->> * Creation of per-architecture Kconfig option for opting in to STRICT_REFCOUNT
->> * Whitespace fixes
->>
->> v3 is forthcoming and will be posted here as soon as I have the
->> patchset rebased to linux-next.
->
-> Thanks for the update!
->
-> It may be helpful to mention in the changelog the two recent refcount
-> overflow bugs that would have been stopped by this mitigiation:
->
-> CVE-2014-2851 https://cyseclabs.com/page?n=02012016
-> CVE-2016-0728 http://perception-point.io/2016/01/14/analysis-and-exploitation-of-a-linux-kernel-vulnerability-cve-2016-0728/
+GCC plugins are loadable modules that provide extra features to the compiler.
+They are useful for runtime instrumentation and static analysis.
 
-Any news on a v3 series? I'd love to see what you've got so far.
+The infrastructure supports all gcc versions from 4.5 to 6.0, building
+out-of-tree modules and building in a separate directory. Cross-compilation
+is supported too but currently only the x86, arm and arm64 architectures enables plugins.
 
-Thanks!
+This infrastructure was ported from grsecurity/PaX. It is a CII project
+supported by the Linux Foundation.
 
--Kees
+Emese Revfy (6):
+ Shared library support
+ GCC plugin infrastructure
+ The GCC plugin infrastructure supports the arm and arm64 architectures too
+ Add Cyclomatic complexity plugin
+ Documentations of the GCC plugin infrastructre
+ Add sancov plugin
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+
+Changes from v6:
+ * Disable the sancov plugin whenever KCOV_INSTRUMENT is disabled
+    (Reported-by: Huang Ying <ying.huang@linux.intel.com>)
+ * Disable KCOV/sancov plugin because this is not a regular kernel code
+    (Reported-by: Huang Ying <ying.huang@linux.intel.com>)
+ * Removed unnecessary gcc plugin cflags
+    (Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Removed unnecessary gcc plugin aflags
+
+Changes from v5:
+ * Set important properties on the external fndecl (Add sancov plugin)
+ * Revert documentation change too (Shared library support)
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+ * The GCC plugin infrastructure now supports the arm and arm64 architectures too
+    (Signed-off-by: David Brown <david.brown@linaro.org>)
+ * Simplify the computation of PLUGINCC (GCC plugin infrastructure)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Simplify the invocation of gcc-plugin.sh (GCC plugin infrastructure)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Make use of multi-depend (Shared library support)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Remove unnecessary exports (GCC plugin infrastructure)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Simplify Makefile by using addprefix (GCC plugin infrastructure)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Moved the gcc plugins from tools/ to scripts/ (GCC plugin infrastructure)
+    (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * Removed plugins from KBUILD_CFLAGS_32 (GCC plugin infrastructure)
+ * Remove gcc-plugin target everywhere
+    (Suggested-by and partly Written-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
+ * There is no leaf gcc attribute in gcc-4.5 (Add sancov plugin)
+ * Added support to the sancov plugin with kcov (Add sancov plugin)
+
+Changes from v4:
+ * Moved shared library support from the GCC plugin infrastructure patch into
+   a different patch
+ * Update gcc-*.h from PaX
+   * Fixed gcc-common.h for gcc 6
+   * Added pass cloning support to the gcc pass generators
+ * Disable all plugins in vdso because it is userland code
+ * Add sancov gcc plugin: another use case for gcc plugin support in the kernel
+   is when there is a feature in the latest gcc version and we would like to use
+   it with older gcc versions as well (e.g., distros).
+
+Changes from v3:
+ * Fix some indentation related warnings
+   (Suggested by checkpatch.pl)
+ * Add maintainer entries
+ * Don't run gcc_plugin.sh when the GCC_PLUGINS option is disabled or unsupported
+   (Reported-by: Fengguang Wu <fengguang.wu@intel.com>)
+
+Changes from v2:
+ * Fixed incorrectly encoded characters
+ * Generate the GIMPLE, IPA, SIMPLE_IPA and RTL pass structures
+   (Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>)
+ * Write plugin related warning messages to stderr instead of stdout
+   (Suggested-by: Kees Cook <keescook@chromium.org>)
+ * Mention the installation of the gcc plugin headers (Documentation)
+
+Changes from v1:
+ * Move the gcc-plugins make target into a separate Makefile because there may
+   be a lot of plugins (Suggested-by: Rasmus Villemoes)
+ * Simplify the dependencies of the plugin related config option
+   (Suggested-by: Kees Cook <keescook@chromium.org>)
+ * Removed the unnecessary example plugin
+
+---
+ Documentation/dontdiff                             |   1 +
+ Documentation/gcc-plugins.txt                      |  83 +++
+ Documentation/kbuild/makefiles.txt                 |  39 +-
+ Documentation/kernel-parameters.txt                |   5 +
+ MAINTAINERS                                        |   8 +
+ Makefile                                           |  25 +-
+ arch/Kconfig                                       |  36 +
+ arch/arm/Kconfig                                   |   1 +
+ arch/arm64/Kconfig                                 |   1 +
+ arch/x86/Kconfig                                   |   1 +
+ arch/x86/entry/vdso/Makefile                       |   3 +-
+ arch/x86/purgatory/Makefile                        |   2 +
+ lib/Kconfig.debug                                  |   2 +
+ scripts/Makefile                                   |   2 +-
+ scripts/Makefile.build                             |   2 +-
+ scripts/Makefile.clean                             |   3 +-
+ scripts/Makefile.gcc-plugins                       |  40 +
+ scripts/Makefile.host                              |  70 +-
+ scripts/gcc-plugin.sh                              |  51 ++
+ scripts/gcc-plugins/Makefile                       |  24 +
+ scripts/gcc-plugins/cyc_complexity_plugin.c        |  73 ++
+ scripts/gcc-plugins/gcc-common.h                   | 830 +++++++++++++++++++++
+ scripts/gcc-plugins/gcc-generate-gimple-pass.h     | 175 +++++
+ scripts/gcc-plugins/gcc-generate-ipa-pass.h        | 289 +++++++
+ scripts/gcc-plugins/gcc-generate-rtl-pass.h        | 175 +++++
+ scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h | 175 +++++
+ scripts/gcc-plugins/sancov_plugin.c                | 144 ++++
+ scripts/link-vmlinux.sh                            |   2 +-
+ scripts/package/builddeb                           |   1 +
+ 29 files changed, 2239 insertions(+), 25 deletions(-)
