@@ -1,314 +1,174 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <5717C897.1050508@digikod.net>
-References: <1458784008-16277-1-git-send-email-mic@digikod.net>
-	<5717C897.1050508@digikod.net>
-Date: Tue, 26 Apr 2016 15:46:00 -0700
-Message-ID: <CAGXu5jJEQ0gm=bZ+c3ttxsz3WFU6xWPcpcpdUH0ttQTwwCfnqA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC v1 00/17] seccomp-object: From attack surface reduction to sandboxing
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: linux-security-module <linux-security-module@vger.kernel.org>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Will Drewry <wad@chromium.org>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Tue, 26 Apr 2016 16:17:43 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20160426161743.f831225a4efb3eb04debe402@linux-foundation.org>
+In-Reply-To: <1461687670-47585-1-git-send-email-thgarnie@google.com>
+References: <1461687670-47585-1-git-send-email-thgarnie@google.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v4] mm: SLAB freelist randomization
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 20, 2016 at 11:21 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net=
-> wrote:
-> Hi,
->
-> Does anyone had time to review some patches?
+On Tue, 26 Apr 2016 09:21:10 -0700 Thomas Garnier <thgarnie@google.com> wrote:
 
-Hi! Sorry for the delay on this. I keep getting distracted by other
-stuff. I've got some time on a plane tomorrow, so I'll bring your
-series along and spend some time reading through it more carefully.
+> Provides an optional config (CONFIG_FREELIST_RANDOM) to randomize the
+> SLAB freelist. The list is randomized during initialization of a new set
+> of pages. The order on different freelist sizes is pre-computed at boot
+> for performance. Each kmem_cache has its own randomized freelist. Before
+> pre-computed lists are available freelists are generated
+> dynamically. This security feature reduces the predictability of the
+> kernel SLAB allocator against heap overflows rendering attacks much less
+> stable.
+> 
+> For example this attack against SLUB (also applicable against SLAB)
+> would be affected:
+> https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
+> 
+> Also, since v4.6 the freelist was moved at the end of the SLAB. It means
+> a controllable heap is opened to new attacks not yet publicly discussed.
+> A kernel heap overflow can be transformed to multiple use-after-free.
+> This feature makes this type of attack harder too.
+> 
+> To generate entropy, we use get_random_bytes_arch because 0 bits of
+> entropy is available in the boot stage. In the worse case this function
+> will fallback to the get_random_bytes sub API. We also generate a shift
+> random number to shift pre-computed freelist for each new set of pages.
+> 
+> The config option name is not specific to the SLAB as this approach will
+> be extended to other allocators like SLUB.
+> 
+> Performance results highlighted no major changes:
+> 
+> Hackbench (running 90 10 times):
+> 
+> Before average: 0.0698
+> After average: 0.0663 (-5.01%)
+> 
+> slab_test 1 run on boot. Difference only seen on the 2048 size test
+> being the worse case scenario covered by freelist randomization. New
+> slab pages are constantly being created on the 10000 allocations.
+> Variance should be mainly due to getting new pages every few
+> allocations.
+> 
+> ...
+>
+> --- a/include/linux/slab_def.h
+> +++ b/include/linux/slab_def.h
+> @@ -80,6 +80,10 @@ struct kmem_cache {
+>  	struct kasan_cache kasan_info;
+>  #endif
+>  
+> +#ifdef CONFIG_FREELIST_RANDOM
+> +	void *random_seq;
+> +#endif
+> +
+>  	struct kmem_cache_node *node[MAX_NUMNODES];
+>  };
+>  
+> diff --git a/init/Kconfig b/init/Kconfig
+> index 0c66640..73453d0 100644
+> --- a/init/Kconfig
+> +++ b/init/Kconfig
+> @@ -1742,6 +1742,15 @@ config SLOB
+>  
+>  endchoice
+>  
+> +config FREELIST_RANDOM
+> +	default n
+> +	depends on SLAB
+> +	bool "SLAB freelist randomization"
+> +	help
+> +	  Randomizes the freelist order used on creating new SLABs. This
+> +	  security feature reduces the predictability of the kernel slab
+> +	  allocator against heap overflows.
 
--Kees
+Against the v2 patch I didst observe:
 
->
-> What do you think about the ToCToU workarounds?
-> What about the userland API?
->
-> The series can be found here: https://github.com/l0kod/linux/commits/secc=
-omp-object-v1
->
->  Micka=C3=ABl
->
->
-> On 24/03/2016 02:46, Micka=C3=ABl Sala=C3=BCn wrote:
->> Hi,
->>
->> This series is a proof of concept (not ready for production) to extend s=
-eccomp
->> with the ability to check argument pointers of syscalls as kernel object=
- (e.g.
->> file path). This add a needed feature to create a full sandbox managed b=
-y
->> userland like the Seatbelt/XNU Sandbox or the OpenBSD Pledge. It was ini=
-tially
->> inspired from a partial seccomp-LSM prototype [1] but has evolved a lot =
-since :)
->>
->> The audience for this RFC is limited to security-related actors to discu=
-ss
->> about this new feature before enlarging the scope to a wider audience. T=
-his
->> aims to focus on the security goal, usability and architecture before en=
-tering
->> into the gory details of each subsystem. I also wish to get constructive
->> criticisms about the userland API and intrusiveness of the code (and wha=
-t could
->> be the other ways to do it better) before going further (and addressing =
-the
->> TODO and FIXME in the code).
->>
->> The approach taken is to add the minimum amount of code while still allo=
-wing
->> the userland to create access rules via seccomp. The current limitation =
-of
->> seccomp is to get raw syscall arguments value but there is no way to
->> dereference a pointer to check its content (e.g. the first argument of t=
-he open
->> syscall). This seccomp evolution brings a generic way to check against a=
-rgument
->> pointer regardless from the syscall unlike current LSMs.
->>
->> Here is the use case scenario:
->> * First, a process must load some groups of seccomp checkers. This check=
-ers are
->>   dedicated structs describing a pointed data (e.g. path). They are
->>   semantically grouped to be efficiently managed and checked in batch. E=
-ach
->>   group have a static ID. This IDs are unique and they reference groups =
-only
->>   accessible from the filters created by the same process.
->> * The loaded checkers are inherited and accessible by the newly created
->>   filters. This groups can be referenced by filters with a new return va=
-lue
->>   SECCOMP_RET_ARGEVAL. Value in  SECCOMP_RET_DATA contains a group ID an=
-d an
->>   argument bitmask. This return value is only meaningful between stacked
->>   filters to ask a check and get the result in the extended struct
->>   seccomp_data. The new fields are "is_valid_syscall", "arg_group" conta=
-ining a
->>   group ID and "matches[6]" consisting of one 64-bits mask per argument.=
- This
->>   bitmasks are useful to get the check result of each checker from a gro=
-up on a
->>   syscall argument which is handy to create a custom access control engi=
-ne from
->>   userland.
->> * SECCOMP_RET_ARGEVAL is equivalent to SECCOMP_RET_ACCESS except that th=
-e
->>   following filters can take a decision regarding a match (e.g. return E=
-ACCESS
->>   or emulate the syscall).
->>
->> Each checker is autonomous and new ones can easily be added in the futur=
-e.
->> There is currently two checkers for path objects:
->> * SECCOMP_CHECK_FS_LITERAL checks if a string match a defined path;
->> * SECCOMP_CHECK_FS_BENEATH checks if the path representation of a string=
- is
->>   equal or equivalent to a file belonging to a defined path.
->>
->> This design does not seems too intrusive but is flexible enough to allow=
- a
->> powerful sandbox mechanism accessible by any process on Linux. The use o=
-f
->> seccomp, including this new feature, is more suitable with the help of a
->> userland library (e.g. libseccomp) that could help to specify a high-lev=
-el
->> language to express a security policy instead of raw syscall rules.
->>
->> The main concern should be about time-of-check-time-of-use (TOCTOU) race
->> conditions attacks. Because of the nature of seccomp (executed before th=
-e
->> effective syscall and before a potential ptrace), it is not possible to =
-block
->> all races but to detect them.
->>
->> There is still some questions I couldn't answer for sure (grep for FIXME=
- or
->> XXX). Comments appreciated.
->>
->> Tested on the x86 and UM architectures in 32 and 64 bits (with audit ena=
-bled).
->>
->> [1] https://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=
-=3Dseccomp/lsm
->>
->>
->> # Need for LSM
->>
->> Because the arguments can be checked before the syscall actually evaluat=
-e them,
->> there is two race condition classes:
->> * The data pointed by the user address is in control of the userland (e.=
-g. a
->>   tracing process) and is so subject to TOCTOU race conditions between t=
-he
->>   seccomp filter evaluation and the effective resource grabbing (part of=
- each
->>   syscall code).
->> * The semantic of the pointed data is also subject to race condition bec=
-ause
->>   there is no lock on the resource (e.g. file) between the evaluation of=
- the
->>   argument by the seccomp filter and the use of the pointed resource by =
-each
->>   part of the syscall code.
->>
->> The solution to fix these race conditions is to copy the userspace data =
-and to
->> lock the pointed resource. Whereas it is easy to copy the userspace data=
-, it is
->> not realistic to lock any pointed resources because of obvious locking i=
-ssues.
->> However, it is possible to detect a TOCTOU race condition with the help =
-of LSM
->> hooks. This way, we can keep a flexible access control (e.g. by controll=
-ing
->> syscall return values) while blocking unattended malicious or bogus user=
-land
->> behavior (e.g. exploit a race-condition).
->>
->> To be able to deny access to a malicious userland behavior we must repla=
-y the
->> seccomp filters and verify the intermediate return values to find out if=
- the
->> filters policy is still respected. Thanks to a cache we can detect if a =
-check
->> replay is necessary. Otherwise, the LSM hooks are really quick for
->> non-malicious userland.
->>
->> # Cache handling
->>
->> Each time a checker is called, for each argument to check, it get them f=
-rom
->> it's seccomp_argeval_checked cache if any, or create a new cache entry a=
-nd put
->> it otherwise. This cache entries will be used to evaluate arguments.
->>
->> When rechecking in the LSM hooks, first it find out which argument is ma=
-pped to
->> the hook check and find if it differ from the corresponding cache entry.=
- If it
->> match, then return OK without replaying the checks, or if nothing match,=
- replay
->> all the checks from this check type.
->>
->> # How to use it
->>
->> The SECCOMP_ARGFLAG_* help to narrow the rules constraints:
->> * SECCOMP_ARGFLAG_FS_DENTRY: Check and rely on the path name.
->> * SECCOMP_ARGFLAG_FS_INODE: Check the data "container" whatever it's pat=
-h name.
->> * SECCOMP_ARGFLAG_FS_DEVICE: Check the device (i.e. file system) on whic=
-h the
->>   file is, e.g. it can be use to allow access to USB mass-storage or dm-=
-verity
->>   content only
->> * SECCOMP_ARGFLAG_FS_MOUNT: Check the file mount point, e.g. can enforce=
- a
->>   read-only bind mount (but is less flexible than the other checks)
->> * SECCOMP_ARGFLAG_FS_NOFOLLOW: Check the file without following it if it=
- is a
->>   symlink. Useful for rename(2) or open(2) with O_NOFOLLOW to have consi=
-stent
->>   check. However, LSM hooks will deny all unattended accesses set by the=
- rules
->>   ignoring this flag (i.e. it act as a fail-safe).
->>
->> # Limitations
->>
->> ## Ptrace
->> If a process can ptrace another one, the tracer can execute whatever sys=
-call it
->> wants without being constrained by any seccomp filter from the tracee. T=
-his
->> apply for this seccomp extension as well. Any seccomp filter should then=
- deny
->> the use of ptrace.
->>
->> The LSM hooks must ensure that the filters results are the same (with th=
-e same
->> arguments) but must not deny any ptraced modifications (e.g. syscall arg=
-ument
->> change).
->>
->> ## Stateless access
->> Unlike current LSMs, the policies are stateless. It's not possible to ma=
-rk and
->> track a kernel object (e.g. file descriptor). Capsicum seems more approp=
-riate
->> for this kind of feature.
->>
->> ## Resource usage
->> We must limit the resources taken by a filter list, and so the number of=
- rules,
->> to not allow any process to exhaust the system.
->>
->>
->> Regards,
->>
->> Micka=C3=ABl Sala=C3=BCn (17):
->>   um: Export the sys_call_table
->>   seccomp: Fix typo
->>   selftest/seccomp: Fix the flag name SECCOMP_FILTER_FLAG_TSYNC
->>   selftest/seccomp: Fix the seccomp(2) signature
->>   security/seccomp: Add LSM and create arrays of syscall metadata
->>   seccomp: Add the SECCOMP_ADD_CHECKER_GROUP command
->>   seccomp: Add seccomp object checker evaluation
->>   selftest/seccomp: Remove unknown_ret_is_kill_above_allow test
->>   selftest/seccomp: Extend seccomp_data until matches[6]
->>   selftest/seccomp: Add field_is_valid_syscall test
->>   selftest/seccomp: Add argeval_open_whitelist test
->>   audit,seccomp: Extend audit with seccomp state
->>   selftest/seccomp: Rename TRACE_poke to TRACE_poke_sys_read
->>   selftest/seccomp: Make tracer_poke() more generic
->>   selftest/seccomp: Add argeval_toctou_argument test
->>   security/seccomp: Protect against filesystem TOCTOU
->>   selftest/seccomp: Add argeval_toctou_filesystem test
->>
->>  arch/x86/um/asm/syscall.h                     |   2 +
->>  include/asm-generic/vmlinux.lds.h             |  22 +
->>  include/linux/audit.h                         |  25 ++
->>  include/linux/compat.h                        |  10 +
->>  include/linux/lsm_hooks.h                     |   5 +
->>  include/linux/seccomp.h                       | 136 +++++-
->>  include/linux/syscalls.h                      |  68 +++
->>  include/uapi/linux/seccomp.h                  | 105 +++++
->>  kernel/audit.h                                |   3 +
->>  kernel/auditsc.c                              |  36 +-
->>  kernel/fork.c                                 |  13 +-
->>  kernel/seccomp.c                              | 594 +++++++++++++++++++=
-++++++-
->>  security/Kconfig                              |   1 +
->>  security/Makefile                             |   2 +
->>  security/seccomp/Kconfig                      |  14 +
->>  security/seccomp/Makefile                     |   3 +
->>  security/seccomp/checker_fs.c                 | 524 +++++++++++++++++++=
-++++
->>  security/seccomp/checker_fs.h                 |  18 +
->>  security/seccomp/lsm.c                        | 135 ++++++
->>  security/seccomp/lsm.h                        |  19 +
->>  security/security.c                           |   1 +
->>  tools/testing/selftests/seccomp/seccomp_bpf.c | 572 +++++++++++++++++++=
-++++--
->>  22 files changed, 2248 insertions(+), 60 deletions(-)
->>  create mode 100644 security/seccomp/Kconfig
->>  create mode 100644 security/seccomp/Makefile
->>  create mode 100644 security/seccomp/checker_fs.c
->>  create mode 100644 security/seccomp/checker_fs.h
->>  create mode 100644 security/seccomp/lsm.c
->>  create mode 100644 security/seccomp/lsm.h
->>
->
+: CONFIG_FREELIST_RANDOM bugs me a bit - "freelist" is so vague.
+: CONFIG_SLAB_FREELIST_RANDOM would be better.  I mean, what Kconfig
+: identifier could be used for implementing randomisation in
+: slub/slob/etc once CONFIG_FREELIST_RANDOM is used up?
 
+but this pearl appeared to pass unnoticed.
 
+>  config SLUB_CPU_PARTIAL
+>  	default y
+>  	depends on SLUB && SMP
+> diff --git a/mm/slab.c b/mm/slab.c
+> index b82ee6b..0ed728a 100644
+> --- a/mm/slab.c
+> +++ b/mm/slab.c
+> @@ -1230,6 +1230,61 @@ static void __init set_up_node(struct kmem_cache *cachep, int index)
+>  	}
+>  }
+>  
+> +#ifdef CONFIG_FREELIST_RANDOM
+> +static void freelist_randomize(struct rnd_state *state, freelist_idx_t *list,
+> +			size_t count)
+> +{
+> +	size_t i;
+> +	unsigned int rand;
+> +
+> +	for (i = 0; i < count; i++)
+> +		list[i] = i;
+> +
+> +	/* Fisher-Yates shuffle */
+> +	for (i = count - 1; i > 0; i--) {
+> +		rand = prandom_u32_state(state);
+> +		rand %= (i + 1);
+> +		swap(list[i], list[rand]);
+> +	}
+> +}
+> +
+> +/* Create a random sequence per cache */
+> +static int cache_random_seq_create(struct kmem_cache *cachep)
+> +{
+> +	unsigned int seed, count = cachep->num;
+> +	struct rnd_state state;
+> +
+> +	if (count < 2)
+> +		return 0;
+> +
+> +	/* If it fails, we will just use the global lists */
+> +	cachep->random_seq = kcalloc(count, sizeof(freelist_idx_t), GFP_KERNEL);
+> +	if (!cachep->random_seq)
+> +		return -ENOMEM;
 
---=20
-Kees Cook
-Chrome OS & Brillo Security
+OK, no BUG.  If this happens, kmem_cache_init_late() will go BUG
+instead ;)
+
+Questions for slab maintainers:
+
+What's going on with the gfp_flags in there?  kmem_cache_init_late()
+passes GFP_NOWAIT into enable_cpucache().
+
+a) why the heck does it do that?  It's __init code!
+
+b) if there's a legit reason then your new cache_random_seq_create()
+should be getting its gfp_t from its caller, rather than blindly
+assuming GFP_KERNEL.
+
+c) kmem_cache_init_late() goes BUG on ENOMEM.  Generally that's OK in
+__init code: we assume infinite memory during bootup.  But it's really
+quite weird to use GFP_NOWAIT and then to go BUG if GFP_NOWAIT had its
+predictable outcome (ie: failure).
+
+Finally, all callers of enable_cpucache() (and hence of
+cache_random_seq_create()) are __init, so we're unnecessarily bloating
+up vmlinux.  Could someone please take a look at this as a separate
+thing?
+
+> +	/* Get best entropy at this stage */
+> +	get_random_bytes_arch(&seed, sizeof(seed));
+> +	prandom_seed_state(&state, seed);
+> +
+> +	freelist_randomize(&state, cachep->random_seq, count);
+> +	return 0;
+> +}
+> +
+>
+> ...
+>
