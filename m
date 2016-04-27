@@ -1,68 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 27 Apr 2016 10:30:59 +0200
-From: Quentin Casasnovas <quentin.casasnovas@oracle.com>
-Message-ID: <20160427083059.GB9223@chrystal.uk.oracle.com>
-References: <CAGXu5j+Su3SC4gRmyXz2J1O7rY5eUe9-5KVGhCafy5iRZ4JnCA@mail.gmail.com>
- <20151125234542.GA10324@chrystal>
- <CAGXu5jL8CzBum9Od1BhiwhVqOdJ0aZbCz126aCnu6zp1Zj6-0w@mail.gmail.com>
- <CAGXu5jLP4mfyeSoiMzTyGiRnx26Xp+US2djvY9MP0cDoBa2TBQ@mail.gmail.com>
- <20160122220435.GD5130@chrystal.uk.oracle.com>
- <CAGXu5j+ouWPyRStwzr2OKpcXaNXHFs3hKG9nyh5oxvJgF3EQqg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+ouWPyRStwzr2OKpcXaNXHFs3hKG9nyh5oxvJgF3EQqg@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: status: GRKERNSEC_KSTACKOVERFLOW
-To: kernel-hardening@lists.openwall.com
-Cc: Quentin Casasnovas <quentin.casasnovas@oracle.com>, Michael Leibowitz <michael.leibowitz@intel.com>
+Date: Wed, 27 Apr 2016 10:39:29 -0500 (CDT)
+From: Christoph Lameter <cl@linux.com>
+In-Reply-To: <20160426161743.f831225a4efb3eb04debe402@linux-foundation.org>
+Message-ID: <alpine.DEB.2.20.1604271027540.20042@east.gentwo.org>
+References: <1461687670-47585-1-git-send-email-thgarnie@google.com> <20160426161743.f831225a4efb3eb04debe402@linux-foundation.org>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v4] mm: SLAB freelist randomization
+To: Andrew Morton <akpm@linux-foundation.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Kees Cook <keescook@chromium.org>, gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+On Tue, 26 Apr 2016, Andrew Morton wrote:
 
-Wow, time just flew by.. !!  How are things?
-
-On Thu, Apr 21, 2016 at 01:31:33PM -0700, Kees Cook wrote:
-> On Fri, Jan 22, 2016 at 2:04 PM, Quentin Casasnovas
-> >
-> > Sorry I've been very bad at finding free time recenlty, being a new dad
-> > takes more time than expected :)
-> 
-> Congratulations! Yeah, seems to be a very time-consuming endeavor. But
-> you get a person out of it, so that's good. :)
+> : CONFIG_FREELIST_RANDOM bugs me a bit - "freelist" is so vague.
+> : CONFIG_SLAB_FREELIST_RANDOM would be better.  I mean, what Kconfig
+> : identifier could be used for implementing randomisation in
+> : slub/slob/etc once CONFIG_FREELIST_RANDOM is used up?
 >
+> but this pearl appeared to pass unnoticed.
 
-Thanks! Oh yes. Right, it's the greatest feeling :)
+Ok. lets add SLAB here and then use this option for the other allocators
+as well.
 
-> > I've got next week off so hopefully I can spend some time on this, starting
-> 
-> I hope you used your week off for non-work things. :)
+> > +	/* If it fails, we will just use the global lists */
+> > +	cachep->random_seq = kcalloc(count, sizeof(freelist_idx_t), GFP_KERNEL);
+> > +	if (!cachep->random_seq)
+> > +		return -ENOMEM;
 >
-
-I did, whoops.
-
-> > with moving the thread_info off the stack and then splitting properly the
-> > rest of the KSTACK_OVERFLOW.
-> 
-> It seems like moving thread_info off the stack (and the gcc plugin
-> infrastructure) is a prerequisite for KRANDSTRUCT too, which Michael
-> has been looking at. If either of you have patches for this, I'd love
-> to get them on the list.
-
-Gah I'm really sorry, I have no progress to communicate so far.  I didn't
-really find the time in the past few months but I do intend to work on this
-if nobody beats me to it!
-
-To bo honest I was a bit put off by Brad's comments on his twitter account,
-making fun of the few things I initially missed.  I realise now, given his
-own reaction to mistakes, that I should not have.
-
-> 
-> If you want to rebase off this, I've been tracking Emese's plugin work here:
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kspp/gcc-plugins
+> OK, no BUG.  If this happens, kmem_cache_init_late() will go BUG
+> instead ;)
 >
+> Questions for slab maintainers:
+>
+> What's going on with the gfp_flags in there?  kmem_cache_init_late()
+> passes GFP_NOWAIT into enable_cpucache().
+>
+> a) why the heck does it do that?  It's __init code!
 
-Great thanks!  Pretty cool Dmitry's gcc patch was ported to its own plugin,
-as I've mentioned in the past we've been using that here to run AFL on the
-kernel, so it's great if it makes it to mainline!
+enable_cpucache() was called when a slab cache was reconfigured by writing to /proc/slabinfo.
+That was changed awhile back when the memcg changes were made ot slab. So
+now its ok to be made init code.
 
-Quentin
+> Finally, all callers of enable_cpucache() (and hence of
+> cache_random_seq_create()) are __init, so we're unnecessarily bloating
+> up vmlinux.  Could someone please take a look at this as a separate
+> thing?
+
+Hmmm. Well if that is the case then lots of stuff could be straightened
+out. Joonsoo?
