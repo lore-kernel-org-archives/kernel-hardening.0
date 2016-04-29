@@ -1,61 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 29 Apr 2016 16:18:10 +0900
-From: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Message-ID: <20160429071810.GD19896@js1304-P5Q-DELUXE>
-References: <1461687670-47585-1-git-send-email-thgarnie@google.com>
- <20160426161743.f831225a4efb3eb04debe402@linux-foundation.org>
- <alpine.DEB.2.20.1604271027540.20042@east.gentwo.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.20.1604271027540.20042@east.gentwo.org>
-Subject: [kernel-hardening] Re: [PATCH v4] mm: SLAB freelist randomization
-To: Christoph Lameter <cl@linux.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Thomas Garnier <thgarnie@google.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Kees Cook <keescook@chromium.org>, gthelen@google.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org
+In-Reply-To: <1461602385-69944-1-git-send-email-thgarnie@google.com>
+References: <1461602385-69944-1-git-send-email-thgarnie@google.com>
+Date: Fri, 29 Apr 2016 09:42:53 -0700
+Message-ID: <CAJcbSZGEMX_k0yzUfgXPmRsua4Dsp2XybxnaKxJ6Xwm1KxpaaQ@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 0/4] x86, boot: KASLR memory randomization
+To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Cc: x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, linux-doc@vger.kernel.org, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 27, 2016 at 10:39:29AM -0500, Christoph Lameter wrote:
-> On Tue, 26 Apr 2016, Andrew Morton wrote:
-> 
-> > : CONFIG_FREELIST_RANDOM bugs me a bit - "freelist" is so vague.
-> > : CONFIG_SLAB_FREELIST_RANDOM would be better.  I mean, what Kconfig
-> > : identifier could be used for implementing randomisation in
-> > : slub/slob/etc once CONFIG_FREELIST_RANDOM is used up?
-> >
-> > but this pearl appeared to pass unnoticed.
-> 
-> Ok. lets add SLAB here and then use this option for the other allocators
-> as well.
-> 
-> > > +	/* If it fails, we will just use the global lists */
-> > > +	cachep->random_seq = kcalloc(count, sizeof(freelist_idx_t), GFP_KERNEL);
-> > > +	if (!cachep->random_seq)
-> > > +		return -ENOMEM;
-> >
-> > OK, no BUG.  If this happens, kmem_cache_init_late() will go BUG
-> > instead ;)
-> >
-> > Questions for slab maintainers:
-> >
-> > What's going on with the gfp_flags in there?  kmem_cache_init_late()
-> > passes GFP_NOWAIT into enable_cpucache().
-> >
-> > a) why the heck does it do that?  It's __init code!
-> 
-> enable_cpucache() was called when a slab cache was reconfigured by writing to /proc/slabinfo.
-> That was changed awhile back when the memcg changes were made ot slab. So
-> now its ok to be made init code.
-> 
-> > Finally, all callers of enable_cpucache() (and hence of
-> > cache_random_seq_create()) are __init, so we're unnecessarily bloating
-> > up vmlinux.  Could someone please take a look at this as a separate
-> > thing?
-> 
-> Hmmm. Well if that is the case then lots of stuff could be straightened
-> out. Joonsoo?
-> 
+Any feedback on this patch proposal?
 
-As I mentioned in other thread, enable_cpucache() can be called
-whenever kmem_cache is created. It should not be __init.
+Thanks,
+Thomas
 
-Thanks.
+On Mon, Apr 25, 2016 at 9:39 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> This is PATCH v1 for KASLR memory implementation on x86_64. Minor changes
+> were done based on RFC v1 comments.
+>
+> ***Background:
+> The current implementation of KASLR randomizes only the base address of
+> the kernel and its modules. Research was published showing that static
+> memory can be overwitten to elevate privileges bypassing KASLR.
+>
+> In more details:
+>
+>     The physical memory mapping holds most allocations from boot and heap
+>     allocators. Knowning the base address and physical memory size, an
+>     attacker can deduce the PDE virtual address for the vDSO memory page.
+>     This attack was demonstrated at CanSecWest 2016, in the "Getting
+>     Physical Extreme Abuse of Intel Based Paged Systems"
+>     https://goo.gl/ANpWdV (see second part of the presentation). Similar
+>     research was done at Google leading to this patch proposal. Variants
+>     exists to overwrite /proc or /sys objects ACLs leading to elevation of
+>     privileges. These variants were tested against 4.6+.
+>
+> This set of patches randomizes base address and padding of three
+> major memory sections (physical memory mapping, vmalloc & vmemmap).
+> It mitigates exploits relying on predictable kernel addresses. This
+> feature can be enabled with the CONFIG_RANDOMIZE_MEMORY option.
+>
+> Padding for the memory hotplug support is managed by
+> CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING. The default value is 10
+> terabytes.
+>
+> The patches were tested on qemu & physical machines. Xen compatibility was
+> also verified. Multiple reboots were used to verify entropy for each
+> memory section.
+>
+> ***Problems that needed solving:
+>  - The three target memory sections are never at the same place between
+>    boots.
+>  - The physical memory mapping can use a virtual address not aligned on
+>    the PGD page table.
+>  - Have good entropy early at boot before get_random_bytes is available.
+>  - Add optional padding for memory hotplug compatibility.
+>
+> ***Parts:
+>  - The first part prepares for the KASLR memory randomization by
+>    refactoring entropy functions used by the current implementation and
+>    support PUD level virtual addresses for physical mapping.
+>    (Patches 01-02)
+>  - The second part implements the KASLR memory randomization for all
+>    sections mentioned.
+>    (Patch 03)
+>  - The third part adds support for memory hotplug by adding an option to
+>    define the padding used between the physical memory mapping section
+>    and the others.
+>    (Patch 04)
+>
+> Thanks!
+>
