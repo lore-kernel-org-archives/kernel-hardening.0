@@ -1,34 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 2 May 2016 20:07:08 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160502200708.4decd43c5d067230e5c0918d@gmail.com>
-In-Reply-To: <CAK7LNAS_tNoWB8xAg0a_xgrOyoV5KM8T6ya2B48BaZZmYtLc3Q@mail.gmail.com>
-References: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
-	<20160422202603.5daf3b4c09a20a6c515ac70e@gmail.com>
-	<CAK7LNAS_tNoWB8xAg0a_xgrOyoV5KM8T6ya2B48BaZZmYtLc3Q@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v7 5/6] Documentation for the GCC plugin infrastructure
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Mon,  2 May 2016 14:41:12 -0700
+Message-Id: <1462225276-106993-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v2 0/4] x86, boot: KASLR memory implementation
+To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2 May 2016 14:10:21 +0900
-Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
+This is PATCH v2 for KASLR memory implementation for x86_64. Edit commit
+based on recents testing against the KASLR bypass exploits & rebase on
+next-20160502.
 
-Hi,
+***Background:
+The current implementation of KASLR randomizes only the base address of
+the kernel and its modules. Research was published showing that static
+memory can be overwitten to elevate privileges bypassing KASLR.
 
-> 2016-04-23 3:26 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
-> > This is the GCC infrastructure documentation about its operation, how to add
-> > and use a new plugin with an example.
-> >
-> > Signed-off-by: Emese Revfy <re.emese@gmail.com>
-> 
-> 
-> Perhaps, this documentation should be included in 2/6 ?
+In more details:
 
-Ok, I will move it there.
+    The physical memory mapping holds most allocations from boot and heap
+    allocators. Knowning the base address and physical memory size, an
+    attacker can deduce the PDE virtual address for the vDSO memory page.
+    This attack was demonstrated at CanSecWest 2016, in the "Getting
+    Physical Extreme Abuse of Intel Based Paged Systems"
+    https://goo.gl/ANpWdV (see second part of the presentation). Similar
+    research was done at Google leading to this patch proposal. Variants
+    exists to overwrite /proc or /sys objects ACLs leading to elevation of
+    privileges. These variants were tested against 4.6+.
 
--- 
-Emese
+This set of patches randomizes base address and padding of three
+major memory sections (physical memory mapping, vmalloc & vmemmap).
+It mitigates exploits relying on predictable kernel addresses. This
+feature can be enabled with the CONFIG_RANDOMIZE_MEMORY option.
+
+Padding for the memory hotplug support is managed by
+CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING. The default value is 10
+terabytes.
+
+The patches were tested on qemu & physical machines. Xen compatibility was
+also verified. Multiple reboots were used to verify entropy for each
+memory section.
+
+***Problems that needed solving:
+ - The three target memory sections are never at the same place between
+   boots.
+ - The physical memory mapping can use a virtual address not aligned on
+   the PGD page table.
+ - Have good entropy early at boot before get_random_bytes is available.
+ - Add optional padding for memory hotplug compatibility.
+
+***Parts:
+ - The first part prepares for the KASLR memory randomization by
+   refactoring entropy functions used by the current implementation and
+   support PUD level virtual addresses for physical mapping.
+   (Patches 01-02)
+ - The second part implements the KASLR memory randomization for all
+   sections mentioned.
+   (Patch 03)
+ - The third part adds support for memory hotplug by adding an option to
+   define the padding used between the physical memory mapping section
+   and the others.
+   (Patch 04)
+
+Thanks!
