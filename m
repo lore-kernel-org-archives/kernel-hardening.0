@@ -1,48 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 2 May 2016 19:56:17 +0200
+Date: Mon, 2 May 2016 19:59:03 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160502195617.9b2b7e07ced214a8f2136364@gmail.com>
-In-Reply-To: <CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
+Message-Id: <20160502195903.8a07c51ebf1cce1c0a1ccd6f@gmail.com>
+In-Reply-To: <CAK7LNATV=DfFwqSvwMHk0RnammN=-Nx8UjAqJV5F+8BmRTtW0g@mail.gmail.com>
 References: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
-	<20160422202138.d50937e812b30aaba4f38a92@gmail.com>
-	<CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
+	<20160422202248.f3a31c6956a9135e9bdc0205@gmail.com>
+	<CAK7LNATV=DfFwqSvwMHk0RnammN=-Nx8UjAqJV5F+8BmRTtW0g@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v7 1/6] Shared library support
-To: Masahiro Yamada <yamada.masahiro@socionext.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v7 2/6] GCC plugin infrastructure
+To: kernel-hardening@lists.openwall.com
+Cc: Masahiro Yamada <yamada.masahiro@socionext.com>, Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2 May 2016 14:03:00 +0900
+On Mon, 2 May 2016 14:07:35 +0900
 Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
 
-> In the first place,
-> I am wondering if we need to revive this documentation.
-> What this commit is only interested in *.so generation,
-> not host program support.
+Hi,
 
-I agree that we don't need this documentation. I'll remove it.
-  
-> > @@ -124,5 +158,39 @@ quiet_cmd_host-cxxobjs     = HOSTCXX $@
-> >  $(host-cxxobjs): $(obj)/%.o: $(src)/%.cc FORCE
-> >         $(call if_changed_dep,host-cxxobjs)
+> > diff --git a/arch/x86/entry/vdso/Makefile b/arch/x86/entry/vdso/Makefile
+> > index 253b72e..f912316 100644
+> > --- a/arch/x86/entry/vdso/Makefile
+> > +++ b/arch/x86/entry/vdso/Makefile
+> > @@ -75,7 +75,7 @@ CFL := $(PROFILING) -mcmodel=small -fPIC -O2 -fasynchronous-unwind-tables -m64 \
+> >         -fno-omit-frame-pointer -foptimize-sibling-calls \
+> >         -DDISABLE_BRANCH_PROFILING -DBUILD_VDSO
 > >
-> > +# Compile .c file, create position independent .o file
-> > +# host-cshobjs -> .o
-> > +quiet_cmd_host-cshobjs = HOSTCC  -fPIC $@
-> > +      cmd_host-cshobjs = $(HOSTCC) $(hostc_flags) -fPIC -c -o $@ $<
-> > +$(host-cshobjs): $(obj)/%.o: $(src)/%.c FORCE
-> > +       $(call if_changed_dep,host-cshobjs)
-> > +
-> > +# Compile .c file, create position independent .o file
+> > -$(vobjs): KBUILD_CFLAGS += $(CFL)
+> > +$(vobjs): KBUILD_CFLAGS := $(filter-out $(GCC_PLUGINS_CFLAGS),$(KBUILD_CFLAGS)) $(CFL)
+> >
+> >  #
+> >  # vDSO code runs in userspace and -pg doesn't help with profiling anyway.
+> > @@ -145,6 +145,7 @@ KBUILD_CFLAGS_32 := $(filter-out -m64,$(KBUILD_CFLAGS))
+> >  KBUILD_CFLAGS_32 := $(filter-out -mcmodel=kernel,$(KBUILD_CFLAGS_32))
+> >  KBUILD_CFLAGS_32 := $(filter-out -fno-pic,$(KBUILD_CFLAGS_32))
+> >  KBUILD_CFLAGS_32 := $(filter-out -mfentry,$(KBUILD_CFLAGS_32))
+> > +KBUILD_CFLAGS_32 := $(filter-out $(GCC_PLUGINS_CFLAGS),$(KBUILD_CFLAGS_32))
+> >  KBUILD_CFLAGS_32 += -m32 -msoft-float -mregparm=0 -fpic
+> >  KBUILD_CFLAGS_32 += $(call cc-option, -fno-stack-protector)
+> >  KBUILD_CFLAGS_32 += $(call cc-option, -foptimize-sibling-calls)
 > 
 > 
-> Please explain why c++ compiler should be used to compile .c files.
-> 
-> This is not clear, so worth commenting.
+> Looks like gcc-plugins should be omitted only for this directory.
+> Please tell me why.
+> I am not familiar with x86 architecture, so this is not clear to me.
 
-Where do you think that the C++ compiler is used above? I think HOSTCC can only be C compiler.
+The vdso is userland code so in general kernel instrumentation/analysis doesn't apply to it.
 
 -- 
 Emese
