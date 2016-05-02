@@ -1,86 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Mon,  2 May 2016 14:41:16 -0700
-Message-Id: <1462225276-106993-5-git-send-email-thgarnie@google.com>
-In-Reply-To: <1462225276-106993-1-git-send-email-thgarnie@google.com>
-References: <1462225276-106993-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v2 4/4] x86, boot: Memory hotplug support for KASLR memory randomization
-To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
+Date: Tue, 3 May 2016 08:19:34 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <CAGXu5jK1U12vMk11HD_x_gNz3Rk4ZgEfdThY7DHvm4e4sPRh4g@mail.gmail.com>
+Message-ID: <alpine.LRH.2.20.1605030816180.21933@namei.org>
+References: <1458784008-16277-1-git-send-email-mic@digikod.net> <CAGXu5jK1U12vMk11HD_x_gNz3Rk4ZgEfdThY7DHvm4e4sPRh4g@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [RFC v1 00/17] seccomp-object: From attack surface reduction to
+ sandboxing
+To: Kees Cook <keescook@chromium.org>
+Cc: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-security-module <linux-security-module@vger.kernel.org>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Will Drewry <wad@chromium.org>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
-the padding used for the physical memory mapping section when KASLR
-memory is enabled. It ensures there is enough virtual address space when
-CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
-CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
-entropy available.
+On Wed, 27 Apr 2016, Kees Cook wrote:
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
-Based on next-20160502
----
- arch/x86/Kconfig    | 15 +++++++++++++++
- arch/x86/mm/kaslr.c | 14 ++++++++++++--
- 2 files changed, 27 insertions(+), 2 deletions(-)
+> Doing "b" means writing a policy engine. I would expect it to look a
+> lot like either AppArmor or TOMOYO. TOMOYO has network structure
+> processing, so probably it would look more like TOMOYO if you wanted
+> more than just file paths. Maybe a seccomp LSM could share logic from
+> one of the existing path-based LSMs.
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 60f33c7..5124d9c 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2003,6 +2003,21 @@ config RANDOMIZE_MEMORY
- 
- 	   If unsure, say N.
- 
-+config RANDOMIZE_MEMORY_PHYSICAL_PADDING
-+	hex "Physical memory mapping padding" if EXPERT
-+	depends on RANDOMIZE_MEMORY
-+	default "0xa" if MEMORY_HOTPLUG
-+	default "0x0"
-+	range 0x1 0x40 if MEMORY_HOTPLUG
-+	range 0x0 0x40
-+	---help---
-+	   Define the padding in terabyte added to the existing physical memory
-+	   size during kernel memory randomization. It is useful for memory
-+	   hotplug support but reduces the entropy available for address
-+	   randomization.
-+
-+	   If unsure, leave at the default value.
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-index 3b330a9..ef3dc19 100644
---- a/arch/x86/mm/kaslr.c
-+++ b/arch/x86/mm/kaslr.c
-@@ -68,15 +68,25 @@ void __init kernel_randomize_memory(void)
- {
- 	size_t i;
- 	unsigned long addr = memory_rand_start;
--	unsigned long padding, rand, mem_tb;
-+	unsigned long padding, rand, mem_tb, page_offset_padding;
- 	struct rnd_state rnd_st;
- 	unsigned long remain_padding = memory_rand_end - memory_rand_start;
- 
- 	if (!kaslr_enabled())
- 		return;
- 
-+	/*
-+	 * Update Physical memory mapping to available and
-+	 * add padding if needed (especially for memory hotplug support).
-+	 */
-+	page_offset_padding = CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
-+
-+#ifdef CONFIG_MEMORY_HOTPLUG
-+	page_offset_padding = max(1UL, page_offset_padding);
-+#endif
-+
- 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
--	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
-+	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) + page_offset_padding;
- 
- 	if (mem_tb < kaslr_regions[0].size_tb)
- 		kaslr_regions[0].size_tb = mem_tb;
+Right, and that LSM should probably be AppArmor, which is actually being 
+used and maintained.
+
+
 -- 
-2.8.0.rc3.226.g39d4020
+James Morris
+<jmorris@namei.org>
