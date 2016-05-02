@@ -1,29 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 3 May 2016 08:19:34 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CAGXu5jK1U12vMk11HD_x_gNz3Rk4ZgEfdThY7DHvm4e4sPRh4g@mail.gmail.com>
-Message-ID: <alpine.LRH.2.20.1605030816180.21933@namei.org>
-References: <1458784008-16277-1-git-send-email-mic@digikod.net> <CAGXu5jK1U12vMk11HD_x_gNz3Rk4ZgEfdThY7DHvm4e4sPRh4g@mail.gmail.com>
+References: <1462225276-106993-1-git-send-email-thgarnie@google.com>
+ <1462225276-106993-3-git-send-email-thgarnie@google.com>
+From: Dave Hansen <dave.hansen@linux.intel.com>
+Message-ID: <5727CD69.7040901@linux.intel.com>
+Date: Mon, 2 May 2016 14:58:01 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [RFC v1 00/17] seccomp-object: From attack surface reduction to
- sandboxing
-To: Kees Cook <keescook@chromium.org>
-Cc: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-security-module <linux-security-module@vger.kernel.org>, Andreas Gruenbacher <agruenba@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, Eric Paris <eparis@redhat.com>, James Morris <james.l.morris@oracle.com>, Jeff Dike <jdike@addtoit.com>, Julien Tinnes <jln@google.com>, Michael Kerrisk <mtk@man7.org>, Paul Moore <pmoore@redhat.com>, Richard Weinberger <richard@nod.at>, "Serge E . Hallyn" <serge@hallyn.com>, Stephen Smalley <sds@tycho.nsa.gov>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Will Drewry <wad@chromium.org>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1462225276-106993-3-git-send-email-thgarnie@google.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 2/4] x86, boot: PUD VA support for physical mapping
+ (x86_64)
+To: Thomas Garnier <thgarnie@google.com>, "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 27 Apr 2016, Kees Cook wrote:
+On 05/02/2016 02:41 PM, Thomas Garnier wrote:
+> Minor change that allows early boot physical mapping of PUD level virtual
+> addresses. This change prepares usage of different virtual addresses for
+> KASLR memory randomization. It has no impact on default usage.
+...
+> diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+> index 89d9747..6adfbce 100644
+> --- a/arch/x86/mm/init_64.c
+> +++ b/arch/x86/mm/init_64.c
+> @@ -526,10 +526,10 @@ phys_pud_init(pud_t *pud_page, unsigned long addr, unsigned long end,
+>  {
+>  	unsigned long pages = 0, next;
+>  	unsigned long last_map_addr = end;
+> -	int i = pud_index(addr);
+> +	int i = pud_index((unsigned long)__va(addr));
+>  
+>  	for (; i < PTRS_PER_PUD; i++, addr = next) {
+> -		pud_t *pud = pud_page + pud_index(addr);
+> +		pud_t *pud = pud_page + pud_index((unsigned long)__va(addr));
+>  		pmd_t *pmd;
+>  		pgprot_t prot = PAGE_KERNEL;
 
-> Doing "b" means writing a policy engine. I would expect it to look a
-> lot like either AppArmor or TOMOYO. TOMOYO has network structure
-> processing, so probably it would look more like TOMOYO if you wanted
-> more than just file paths. Maybe a seccomp LSM could share logic from
-> one of the existing path-based LSMs.
+pud_index() is supposed to take a virtual address.  We were passing a
+physical address in here, and it all just worked because PAGE_OFFSET is
+PUD-aligned.  Now that you are moving PAGE_OFFSET around a bit and not
+PUD-aligning it, this breaks.  Right?
 
-Right, and that LSM should probably be AppArmor, which is actually being 
-used and maintained.
-
-
--- 
-James Morris
-<jmorris@namei.org>
+Could you spell this out a bit more the changelog?
