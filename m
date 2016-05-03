@@ -1,28 +1,80 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1462225276-106993-1-git-send-email-thgarnie@google.com>
- <1462225276-106993-4-git-send-email-thgarnie@google.com>
-From: Dave Hansen <dave.hansen@linux.intel.com>
-Message-ID: <5727CE13.6090308@linux.intel.com>
-Date: Mon, 2 May 2016 15:00:51 -0700
 MIME-Version: 1.0
-In-Reply-To: <1462225276-106993-4-git-send-email-thgarnie@google.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 3/4] x86, boot: Implement ASLR for kernel memory
- sections (x86_64)
-To: Thomas Garnier <thgarnie@google.com>, "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
+In-Reply-To: <20160502195617.9b2b7e07ced214a8f2136364@gmail.com>
+References: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
+	<20160422202138.d50937e812b30aaba4f38a92@gmail.com>
+	<CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
+	<20160502195617.9b2b7e07ced214a8f2136364@gmail.com>
+Date: Tue, 3 May 2016 11:00:56 +0900
+Message-ID: <CAK7LNATQY7AWjmEEjDFgpLPkO_oQgkNKutgGb17v7=R8RPb5zA@mail.gmail.com>
+From: Masahiro Yamada <yamada.masahiro@socionext.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v7 1/6] Shared library support
+To: Emese Revfy <re.emese@gmail.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 05/02/2016 02:41 PM, Thomas Garnier wrote:
-> -#define __PAGE_OFFSET           _AC(0xffff880000000000, UL)
-> +#define __PAGE_OFFSET_BASE      _AC(0xffff880000000000, UL)
-> +#ifdef CONFIG_RANDOMIZE_MEMORY
-> +#define __PAGE_OFFSET           page_offset_base
-> +#else
-> +#define __PAGE_OFFSET           __PAGE_OFFSET_BASE
-> +#endif /* CONFIG_RANDOMIZE_MEMORY */
+Hi Emese,
 
-Do you have any data about the performance impact of this change?  It's
-not necessary to have it to merge something like this, I'm just curious
-how bad it is.
+
+2016-05-03 2:56 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
+> On Mon, 2 May 2016 14:03:00 +0900
+> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
+>
+>> In the first place,
+>> I am wondering if we need to revive this documentation.
+>> What this commit is only interested in *.so generation,
+>> not host program support.
+>
+> I agree that we don't need this documentation. I'll remove it.
+>
+>> > @@ -124,5 +158,39 @@ quiet_cmd_host-cxxobjs     = HOSTCXX $@
+>> >  $(host-cxxobjs): $(obj)/%.o: $(src)/%.cc FORCE
+>> >         $(call if_changed_dep,host-cxxobjs)
+>> >
+>> > +# Compile .c file, create position independent .o file
+>> > +# host-cshobjs -> .o
+>> > +quiet_cmd_host-cshobjs = HOSTCC  -fPIC $@
+>> > +      cmd_host-cshobjs = $(HOSTCC) $(hostc_flags) -fPIC -c -o $@ $<
+>> > +$(host-cshobjs): $(obj)/%.o: $(src)/%.c FORCE
+>> > +       $(call if_changed_dep,host-cshobjs)
+>> > +
+>> > +# Compile .c file, create position independent .o file
+>>
+>>
+>> Please explain why c++ compiler should be used to compile .c files.
+>>
+>> This is not clear, so worth commenting.
+>
+> Where do you think that the C++ compiler is used above? I think HOSTCC can only be C compiler.
+>
+
+Not above, but *below*.
+
+This comment "Compile .c file, create position independent .o file"
+is for the following code block.
+
+
+# Compile .c file, create position independent .o file
+# host-cxxshobjs -> .o
+quiet_cmd_host-cxxshobjs = HOSTCXX -fPIC $@
+      cmd_host-cxxshobjs = $(HOSTCXX) $(hostcxx_flags) -fPIC -c -o $@ $<
+                           $(host-cxxshobjs): $(obj)/%.o: $(src)/%.c FORCE
+                           $(call if_changed_dep,host-cxxshobjs)
+
+
+
+
+We generally use HOSTCC to compile *.c files,
+and HOSTCXX to compile *.cc files.
+
+
+But, here, you mention to use HOSTCXX to compile .c files
+such as cyc_complexity_plugin.c, sancov_plugin.c, etc.
+
+This is not straight-forward.  It is worthwhile to comment the reason.
+
+
+-- 
+Best Regards
+Masahiro Yamada
