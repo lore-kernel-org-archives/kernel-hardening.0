@@ -1,89 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41AF69D8@IRSMSX102.ger.corp.intel.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41AF69D8@IRSMSX102.ger.corp.intel.com>
-Date: Tue, 3 May 2016 10:01:47 -0700
-Message-ID: <CAGXu5jK7O=h7zO4xw7YaVMxNK0sHgPOoncimKXM0pWiS=j4qVQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
+In-Reply-To: <5727CE13.6090308@linux.intel.com>
+References: <1462225276-106993-1-git-send-email-thgarnie@google.com>
+	<1462225276-106993-4-git-send-email-thgarnie@google.com>
+	<5727CE13.6090308@linux.intel.com>
+Date: Tue, 3 May 2016 12:16:39 -0700
+Message-ID: <CAJcbSZFcTuBq4TAzt12Qd1crhZhjQdbhd5_BOi3BijxZ0jo6Pg@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: BPF JIT spray attack - proof of concept code for modern kernel
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Borkmann <daniel@iogearbox.net>
+Subject: [kernel-hardening] Re: [PATCH v2 3/4] x86, boot: Implement ASLR for kernel memory
+ sections (x86_64)
+To: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, linux-doc@vger.kernel.org, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 2, 2016 at 11:38 PM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
-> Following Kees=E2=80=99s suggestion, I am posting here a link to the poc =
-code that I
-> did to show the need of further BPF JIT hardening:
-> https://github.com/01org/jit-spray-poc-for-ksp
->
-> This poc is based on the 2012 poc done by McAllister:
-> https://github.com/kmcallister/alameda I have kept his commits untouched =
-and
-> only added mine on top that you can easily see what was modified.
->
-> Some description of what it does and why it does work:
->
-> The original 2012 poc stopped working after the address offset randomizat=
-ion
-> for loading the BPF was added:
-> http://lingrok.org/xref/linux-net-next/kernel/bpf/core.c#143
->
-> This was due to the fact that McAllister code relied on random page guess=
-ing
-> and was assuming filter to start at the page start. This approach clearly
-> doesn=E2=80=99t work with new random address allocation since one would n=
-eed to
-> guess both page and offset and incorrect guess most commonly results in a
-> full restart need for normal machine (after which filter address has chan=
-ged
-> and you don=E2=80=99t gain any knowledge).
->
->
->
-> The main changes I did was to extend the filter size to spawn longer than=
- 1
-> full page (to make sure it would overrun into the next page) and then rep=
-eat
-> the =E2=80=9Cget root payload=E2=80=9D there in circles with enough of =
-=E2=80=9Cnope=E2=80=9D instructions
-> to render it for most success. Also, when jumping to a new random page, I
-> would try to execute the payload a number of times on the same page chang=
-ing
-> just an offset that is less than 10
-> (https://github.com/01org/jit-spray-poc-for-ksp/blob/master/alameda.c#L32=
-5 )
-> to make sure to walk through the =E2=80=9Cnopes=E2=80=9D and invoke the p=
-ayload if the page
-> guess was correct.
->
->
->
-> I have tried the poc on virtual machine with Ubuntu with 4.4 upstream ker=
-nel
-> and it works quite well. It can still in some cases completely stall the
-> machine that reboot is required, but it does reach its root goal in most =
-of
-> the cases.
->
-> Also, please note that similarly as 2012 poc code, this is not a real exp=
-loit
-> because it requires an =E2=80=9Cinsecure ko=E2=80=9D kernel module to act=
-ually make a jump,
-> but it illustrates the need for further JIT hardening that Daniel is
-> currently working now on.
+I don't see much difference. I will update the commits on next
+iteration with the following:
 
-This is great! Thanks for updating this research. It strongly helps
-illustrate why instruction blinding is an important defense. I'm
-looking forward to Daniel's work landing.
+Kernbench shows almost no difference (-+ less than 1%):
 
-Thanks!
+Before:
 
--Kees
+Average Optimal load -j 12 Run (std deviation):
+Elapsed Time 102.63 (1.2695)
+User Time 1034.89 (1.18115)
+System Time 87.056 (0.456416)
+Percent CPU 1092.9 (13.892)
+Context Switches 199805 (3455.33)
+Sleeps 97907.8 (900.636)
 
---=20
-Kees Cook
-Chrome OS & Brillo Security
+After:
+
+Average Optimal load -j 12 Run (std deviation):
+Elapsed Time 102.489 (1.10636)
+User Time 1034.86 (1.36053)
+System Time 87.764 (0.49345)
+Percent CPU 1095 (12.7715)
+Context Switches 199036 (4298.1)
+Sleeps 97681.6 (1031.11)
+
+Hackbench shows 0% difference on average (hackbench 90 repeated 10 times)
+
+attemp,before,after
+1,0.076,0.069
+2,0.072,0.069
+3,0.066,0.066
+4,0.066,0.068
+5,0.066,0.067
+6,0.066,0.069
+7,0.067,0.066
+8,0.063,0.067
+9,0.067,0.065
+10,0.068,0.071
+average,0.0677,0.0677
+
+Thanks,
+Thomas
+
+On Mon, May 2, 2016 at 3:00 PM, Dave Hansen <dave.hansen@linux.intel.com> wrote:
+> On 05/02/2016 02:41 PM, Thomas Garnier wrote:
+>> -#define __PAGE_OFFSET           _AC(0xffff880000000000, UL)
+>> +#define __PAGE_OFFSET_BASE      _AC(0xffff880000000000, UL)
+>> +#ifdef CONFIG_RANDOMIZE_MEMORY
+>> +#define __PAGE_OFFSET           page_offset_base
+>> +#else
+>> +#define __PAGE_OFFSET           __PAGE_OFFSET_BASE
+>> +#endif /* CONFIG_RANDOMIZE_MEMORY */
+>
+> Do you have any data about the performance impact of this change?  It's
+> not necessary to have it to merge something like this, I'm just curious
+> how bad it is.
