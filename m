@@ -1,86 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue,  3 May 2016 12:31:52 -0700
-Message-Id: <1462303912-91447-5-git-send-email-thgarnie@google.com>
-In-Reply-To: <1462303912-91447-1-git-send-email-thgarnie@google.com>
-References: <1462303912-91447-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v3 4/4] x86, boot: Memory hotplug support for KASLR memory randomization
-To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
+Date: Tue, 3 May 2016 23:25:27 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160503232527.6e02867a5d4b8f28f6c0f854@gmail.com>
+In-Reply-To: <CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
+References: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
+	<20160422202138.d50937e812b30aaba4f38a92@gmail.com>
+	<CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v7 1/6] Shared library support
+To: Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
-the padding used for the physical memory mapping section when KASLR
-memory is enabled. It ensures there is enough virtual address space when
-CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
-CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
-entropy available.
+On Mon, 2 May 2016 14:03:00 +0900
+Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
-Based on next-20160502
----
- arch/x86/Kconfig    | 15 +++++++++++++++
- arch/x86/mm/kaslr.c | 14 ++++++++++++--
- 2 files changed, 27 insertions(+), 2 deletions(-)
+Hi,
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 60f33c7..5124d9c 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2003,6 +2003,21 @@ config RANDOMIZE_MEMORY
- 
- 	   If unsure, say N.
- 
-+config RANDOMIZE_MEMORY_PHYSICAL_PADDING
-+	hex "Physical memory mapping padding" if EXPERT
-+	depends on RANDOMIZE_MEMORY
-+	default "0xa" if MEMORY_HOTPLUG
-+	default "0x0"
-+	range 0x1 0x40 if MEMORY_HOTPLUG
-+	range 0x0 0x40
-+	---help---
-+	   Define the padding in terabyte added to the existing physical memory
-+	   size during kernel memory randomization. It is useful for memory
-+	   hotplug support but reduces the entropy available for address
-+	   randomization.
-+
-+	   If unsure, leave at the default value.
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-index 3b330a9..ef3dc19 100644
---- a/arch/x86/mm/kaslr.c
-+++ b/arch/x86/mm/kaslr.c
-@@ -68,15 +68,25 @@ void __init kernel_randomize_memory(void)
- {
- 	size_t i;
- 	unsigned long addr = memory_rand_start;
--	unsigned long padding, rand, mem_tb;
-+	unsigned long padding, rand, mem_tb, page_offset_padding;
- 	struct rnd_state rnd_st;
- 	unsigned long remain_padding = memory_rand_end - memory_rand_start;
- 
- 	if (!kaslr_enabled())
- 		return;
- 
-+	/*
-+	 * Update Physical memory mapping to available and
-+	 * add padding if needed (especially for memory hotplug support).
-+	 */
-+	page_offset_padding = CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
-+
-+#ifdef CONFIG_MEMORY_HOTPLUG
-+	page_offset_padding = max(1UL, page_offset_padding);
-+#endif
-+
- 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
--	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
-+	mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) + page_offset_padding;
- 
- 	if (mem_tb < kaslr_regions[0].size_tb)
- 		kaslr_regions[0].size_tb = mem_tb;
+> > diff --git a/scripts/Makefile.clean b/scripts/Makefile.clean
+> > index 55c96cb..e4e88ab 100644
+> > --- a/scripts/Makefile.clean
+> > +++ b/scripts/Makefile.clean
+> > @@ -38,7 +38,8 @@ subdir-ymn    := $(addprefix $(obj)/,$(subdir-ymn))
+> >  __clean-files  := $(extra-y) $(extra-m) $(extra-)       \
+> >                    $(always) $(targets) $(clean-files)   \
+> >                    $(host-progs)                         \
+> > -                  $(hostprogs-y) $(hostprogs-m) $(hostprogs-)
+> > +                  $(hostprogs-y) $(hostprogs-m) $(hostprogs-) \
+> > +                  $(hostlibs-y) $(hostlibs-m) $(hostlibs-)
+> 
+> $(hostcxxlibs-y)$(hostcxxlibs-m) is missing here.
+> 
+> 
+> BTW, are you planning to support hostlibs without .so extention in the future?
+> 
+> 
+> You are changing the top Makefile to clean with "*.so" pattern rule.
+> 
+> Do you need to change both the top Makefile and Makefile.clean
+> for belt-and-braces cleaning?
+
+It doesn't delete the *.so files without the hunk from the top Makefile. 
+The mrproper and distclean targets remove them with this patch:
+https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/f23b7eb247ccc9f1007e53313af343980dd52591
+But I think this isn't the best solution much like doing it from the top Makefile.
+
 -- 
-2.8.0.rc3.226.g39d4020
+Emese
