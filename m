@@ -1,150 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:47 -0700
-Message-Id: <1462486436-3707-3-git-send-email-keescook@chromium.org>
+Date: Thu,  5 May 2016 15:13:50 -0700
+Message-Id: <1462486436-3707-6-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 02/11] x86/KASLR: Consolidate mem_avoid entries
+Subject: [kernel-hardening] [PATCH v6 05/11] x86/KASLR: Add slot_area to manage random_addr slots
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Yinghai Lu <yinghai@kernel.org>
+From: Baoquan He <bhe@redhat.com>
 
-The mem_avoid array is used to track positions that should be avoided (like
-the compressed kernel, decompression code, etc) when selecting a memory
-position for the randomly relocated kernel. Since ZO is now at the end of
-the decompression buffer and the decompression code (and its heap and
-stack) are at the front, we can safely consolidate the decompression entry,
-the heap entry, and the stack entry. The boot_params memory, however, could
-be elsewhere, so it should be explicitly included.
+In order to support KASLR moving the kernel anywhere in physical memory
+(which could be up to 64TB), we need to handle counting the potential
+randomization locations in a more efficient manner.
 
-Cc: Kees Cook <keescook@chromium.org>
-Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+In the worst case with 64TB, there could be roughly 32 * 1024 * 1024
+randomization slots if CONFIG_PHYSICAL_ALIGN is 0x1000000. Currently
+the starting address of candidate positions is stored into the slots[]
+array, one at a time. This method would cost too much memory and it's
+also very inefficient to get and save the slot information into the slot
+array one by one.
+
+This patch introduces struct slot_area to manage each contiguous region
+of randomization slots. Each slot_area will contain the starting address
+and how many available slots are in this area. As with the original code,
+the slot_areas will avoid the mem_avoid regions.
+
+Since setup_data is a linked list, it could contain an unknown number
+of memory regions to be avoided, which could cause us to fragment
+the contiguous memory that the slot_area array is tracking. In normal
+operation this level of fragmentation will be extremely rare, but we
+choose a suitably large value (100) for the array. If setup_data forces
+the slot_area array to become highly fragmented and there are more
+slots available beyond the first 100 found, the rest will be ignored
+for KASLR selection.
+
+The function store_slot_info() is used to calculate the number of slots
+available in the passed-in memory region and stores it into slot_areas[]
+after adjusting for alignment and size requirements.
+
 Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, cleaned up code comment]
+[kees: rewrote changelog, squash with new functions]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/kaslr.c | 77 +++++++++++++++++++++++++++++++---------
- 1 file changed, 61 insertions(+), 16 deletions(-)
+ arch/x86/boot/compressed/kaslr.c | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
 
 diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index 2072d82c1911..6392f0041b8a 100644
+index 36356fb6d4cf..dc9ffceb556b 100644
 --- a/arch/x86/boot/compressed/kaslr.c
 +++ b/arch/x86/boot/compressed/kaslr.c
-@@ -121,7 +121,7 @@ struct mem_vector {
- 	unsigned long size;
- };
- 
--#define MEM_AVOID_MAX 5
-+#define MEM_AVOID_MAX 4
- static struct mem_vector mem_avoid[MEM_AVOID_MAX];
- 
- static bool mem_contains(struct mem_vector *region, struct mem_vector *item)
-@@ -146,22 +146,71 @@ static bool mem_overlaps(struct mem_vector *one, struct mem_vector *two)
- 	return true;
+@@ -275,8 +275,37 @@ static bool mem_avoid_overlap(struct mem_vector *img)
  }
  
-+/*
-+ * In theroy, KASLR can put the kernel anywhere in area of [16M, 64T). The
-+ * mem_avoid array is used to store the ranges that need to be avoided when
-+ * KASLR searches for a an appropriate random address. We must avoid any
-+ * regions that are unsafe to overlap with during decompression, and other
-+ * things like the initrd, cmdline and boot_params.
-+ *
-+ * How to calculate the unsafe areas is detailed here, and is informed by
-+ * the decompression calculations in header.S, and the diagram in misc.c.
-+ *
-+ * The compressed vmlinux (ZO) plus relocs and the run space of ZO can't be
-+ * overwritten by decompression output.
-+ *
-+ * ZO sits against the end of the decompression buffer, so we can calculate
-+ * where text, data, bss, etc of ZO are positioned.
-+ *
-+ * The follow are already enforced by the code:
-+ *  - init_size >= kernel_total_size
-+ *  - input + input_len >= output + output_len
-+ *  - kernel_total_size could be >= or < output_len
-+ *
-+ * From this, we can make several observations, illustrated by a diagram:
-+ *  - init_size >= kernel_total_size
-+ *  - input + input_len > output + output_len
-+ *  - kernel_total_size >= output_len
-+ *
-+ * 0   output            input            input+input_len    output+init_size
-+ * |     |                 |                       |                       |
-+ * |     |                 |                       |                       |
-+ * |-----|--------|--------|------------------|----|------------|----------|
-+ *                |                           |                 |
-+ *                |                           |                 |
-+ * output+init_size-ZO_INIT_SIZE   output+output_len  output+kernel_total_size
-+ *
-+ * [output, output+init_size) is for the buffer for decompressing the
-+ * compressed kernel (ZO).
-+ *
-+ * [output, output+kernel_total_size) is for the uncompressed kernel (VO)
-+ * and its bss, brk, etc.
-+ * [output, output+output_len) is VO plus relocs
-+ *
-+ * [output+init_size-ZO_INIT_SIZE, output+init_size) is the copied ZO.
-+ * [input, input+input_len) is the copied compressed (VO (vmlinux after
-+ * objcopy) plus relocs), not the ZO.
-+ *
-+ * [input+input_len, output+init_size) is [_text, _end) for ZO. That was the
-+ * first range in mem_avoid, which included ZO's heap and stack. Also
-+ * [input, input+input_size) need be put in mem_avoid array, but since it
-+ * is adjacent to the first entry, they can be merged. This is how we get
-+ * the first entry in mem_avoid[].
-+ */
- static void mem_avoid_init(unsigned long input, unsigned long input_size,
--			   unsigned long output, unsigned long output_size)
-+			   unsigned long output)
+ static unsigned long slots[KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN];
++
++struct slot_area {
++	unsigned long addr;
++	int num;
++};
++
++#define MAX_SLOT_AREA 100
++
++static struct slot_area slot_areas[MAX_SLOT_AREA];
++
+ static unsigned long slot_max;
+ 
++static unsigned long slot_area_index;
++
++static void store_slot_info(struct mem_vector *region, unsigned long image_size)
++{
++	struct slot_area slot_area;
++
++	if (slot_area_index == MAX_SLOT_AREA)
++		return;
++
++	slot_area.addr = region->start;
++	slot_area.num = (region->size - image_size) /
++			CONFIG_PHYSICAL_ALIGN + 1;
++
++	if (slot_area.num > 0) {
++		slot_areas[slot_area_index++] = slot_area;
++		slot_max += slot_area.num;
++	}
++}
++
+ static void slots_append(unsigned long addr)
  {
-+	unsigned long init_size = boot_params->hdr.init_size;
- 	u64 initrd_start, initrd_size;
- 	u64 cmd_line, cmd_line_size;
--	unsigned long unsafe, unsafe_len;
- 	char *ptr;
- 
- 	/*
- 	 * Avoid the region that is unsafe to overlap during
--	 * decompression (see calculations in ../header.S).
-+	 * decompression.
- 	 */
--	unsafe_len = (output_size >> 12) + 32768 + 18;
--	unsafe = (unsigned long)input + input_size - unsafe_len;
--	mem_avoid[0].start = unsafe;
--	mem_avoid[0].size = unsafe_len;
-+	mem_avoid[0].start = input;
-+	mem_avoid[0].size = (output + init_size) - input;
- 
- 	/* Avoid initrd. */
- 	initrd_start  = (u64)boot_params->ext_ramdisk_image << 32;
-@@ -181,13 +230,9 @@ static void mem_avoid_init(unsigned long input, unsigned long input_size,
- 	mem_avoid[2].start = cmd_line;
- 	mem_avoid[2].size = cmd_line_size;
- 
--	/* Avoid heap memory. */
--	mem_avoid[3].start = (unsigned long)free_mem_ptr;
--	mem_avoid[3].size = BOOT_HEAP_SIZE;
--
--	/* Avoid stack memory. */
--	mem_avoid[4].start = (unsigned long)free_mem_end_ptr;
--	mem_avoid[4].size = BOOT_STACK_SIZE;
-+	/* Avoid params */
-+	mem_avoid[3].start = (unsigned long)boot_params;
-+	mem_avoid[3].size = sizeof(*boot_params);
- }
- 
- /* Does this memory vector overlap a known avoided area? */
-@@ -337,7 +382,7 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
- 	boot_params->hdr.loadflags |= KASLR_FLAG;
- 
- 	/* Record the various known unsafe memory ranges. */
--	mem_avoid_init(input, input_size, output, output_size);
-+	mem_avoid_init(input, input_size, output);
- 
- 	/* Walk e820 and find a random address. */
- 	random_addr = find_random_addr(output, output_size);
+ 	/* Overflowing the slots list should be impossible. */
 -- 
 2.6.3
