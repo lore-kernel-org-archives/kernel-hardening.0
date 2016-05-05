@@ -1,77 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160503232932.706dd3bb081df5d04a390de9@gmail.com>
-References: <20160422201957.97ce16f0e67377d0ce613d19@gmail.com>
-	<20160422202138.d50937e812b30aaba4f38a92@gmail.com>
-	<CAK7LNAR-+4+Xdhbs6hoPUTYppLqFwY8dxqdSuw_5j6Pge4uYVg@mail.gmail.com>
-	<20160502195617.9b2b7e07ced214a8f2136364@gmail.com>
-	<CAK7LNATQY7AWjmEEjDFgpLPkO_oQgkNKutgGb17v7=R8RPb5zA@mail.gmail.com>
-	<20160503232932.706dd3bb081df5d04a390de9@gmail.com>
-Date: Wed, 4 May 2016 13:09:05 +0900
-Message-ID: <CAK7LNAT7eOHQ94qscQgTDXTBi+NZsE4SQzw=h3xcK9PCRigFag@mail.gmail.com>
-From: Masahiro Yamada <yamada.masahiro@socionext.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v7 1/6] Shared library support
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Linux Kbuild mailing list <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, kernel-hardening@lists.openwall.com, Michal Marek <mmarek@suse.com>, Kees Cook <keescook@chromium.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>
+From: Michael Leibowitz <michael.leibowitz@intel.com>
+Date: Thu,  5 May 2016 10:21:06 -0700
+Message-Id: <1462468869-6210-1-git-send-email-michael.leibowitz@intel.com>
+Subject: [kernel-hardening] [RFC 0/3] Add struct randomization plugin
+To: spender@grsecurity.net, kernel-hardening@lists.openwall.com, keescook@chromium.org, re.emese@gmail.com, pageexec@freemail.hu
+Cc: michael.leibowitz@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Emese,
+This patch set ports over grsecurity's structure randomization
+feature.  The plugin is largely unchanged from grsecurity, with some
+porting to go over Emese Revfy's v7 patch set for gcc plugin
+infrastructure.  This is an RFC.
 
+Although this set of changes does not directly make exploitation
+harder, when a number of structures are randomized, it will make it
+difficult to splat many relevant structures without knowing the exact
+build of the kernel the target is using.  While for one structure,
+there are limited number of guesses required, in aggregate, this can
+be a large obstacle for exploitation.
 
-2016-05-04 6:29 GMT+09:00 Emese Revfy <re.emese@gmail.com>:
-> On Tue, 3 May 2016 11:00:56 +0900
-> Masahiro Yamada <yamada.masahiro@socionext.com> wrote:
->
-> Hi,
->
->> # Compile .c file, create position independent .o file
->> # host-cxxshobjs -> .o
->> quiet_cmd_host-cxxshobjs = HOSTCXX -fPIC $@
->>       cmd_host-cxxshobjs = $(HOSTCXX) $(hostcxx_flags) -fPIC -c -o $@ $<
->>                            $(host-cxxshobjs): $(obj)/%.o: $(src)/%.c FORCE
->>                            $(call if_changed_dep,host-cxxshobjs)
->>
->>
->>
->>
->> We generally use HOSTCC to compile *.c files,
->> and HOSTCXX to compile *.cc files.
->>
->>
->> But, here, you mention to use HOSTCXX to compile .c files
->> such as cyc_complexity_plugin.c, sancov_plugin.c, etc.
->>
->> This is not straight-forward.  It is worthwhile to comment the reason.
->
-> I wrote a comment about it here:
-> https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/74f6343a7f13c071e00c417332051e25f15009ea
->
+Patch 3 is a grab bag that probably needs to be broken up, although
+I'm not sure of the best way to do so.  Breaking by subsystem would
+seem to make an unwieldy patch set.
 
+Known TODO that is not addressed as part of this patch set:
+  * tag security relevant structures for randomization
+  * add checkpatch checking for non-C99 initialization
+  * automated testing of randomization
+  * better description and examples of exploits effectively mitigated
+    by this feature
 
+Tagging of structures to be randomized will come in subsequent series
+of patches.
 
-+# Note that plugin capable gcc versions can be either C or C++ based
-+# therefore plugin source files have to be compilable in both C and C++ mode.
-+# This is why a C++ compiler is invoked on a .c file.
+--
 
-Thanks.
-
-Please let me confirm if I understood correctly.
-
-
-We generally have to do something with the name-space conflict
-(with 'extern "C"') in the mixture of C/C++.
-
-Depending on the GCC version,
-GCC-plugin-related libraries could be built for C or C++.
-
-So, we need to check the GCC version and choose correct one
-from C or C++.
-
-
-Am I right?
-
-
--- 
-Best Regards
-Masahiro Yamada
+ arch/Kconfig                                    |  35 +
+ arch/x86/include/asm/floppy.h                   |  20 +-
+ arch/x86/include/asm/paravirt_types.h           |  18 +-
+ drivers/acpi/acpica/hwxfsleep.c                 |  11 +-
+ drivers/block/cciss.h                           |  30 +-
+ drivers/gpu/drm/nouveau/nouveau_ttm.c           |  28 +-
+ drivers/gpu/drm/ttm/ttm_bo_manager.c            |  10 +-
+ drivers/gpu/drm/virtio/virtgpu_ttm.c            |  10 +-
+ drivers/gpu/drm/vmwgfx/vmwgfx_gmrid_manager.c   |  10 +-
+ drivers/infiniband/hw/nes/nes_cm.c              |  22 +-
+ drivers/isdn/gigaset/bas-gigaset.c              |  32 +-
+ drivers/isdn/gigaset/ser-gigaset.c              |  32 +-
+ drivers/isdn/gigaset/usb-gigaset.c              |  32 +-
+ drivers/isdn/i4l/isdn_concap.c                  |   6 +-
+ drivers/isdn/i4l/isdn_x25iface.c                |  16 +-
+ drivers/media/pci/solo6x10/solo6x10-g723.c      |   2 +-
+ drivers/net/ethernet/brocade/bna/bna_enet.c     |   8 +-
+ drivers/net/wan/lmc/lmc_media.c                 |  97 +--
+ drivers/scsi/bfa/bfa_fcs.c                      |  19 +-
+ drivers/scsi/bfa/bfa_fcs_lport.c                |  29 +-
+ drivers/scsi/bfa/bfa_modules.h                  |  12 +-
+ drivers/scsi/hpsa.h                             |  40 +-
+ drivers/staging/lustre/lustre/ldlm/ldlm_flock.c |   2 +-
+ drivers/staging/lustre/lustre/libcfs/module.c   |  10 +-
+ drivers/video/fbdev/matrox/matroxfb_DAC1064.c   |  10 +-
+ drivers/video/fbdev/matrox/matroxfb_Ti3026.c    |   5 +-
+ fs/reiserfs/item_ops.c                          |  24 +-
+ include/linux/compiler-gcc.h                    |   5 +
+ include/linux/compiler.h                        |   9 +
+ include/linux/rbtree_augmented.h                |   4 +-
+ include/linux/vermagic.h                        |   9 +-
+ kernel/module.c                                 |  27 +
+ lib/rbtree.c                                    |   4 +-
+ mm/page_alloc.c                                 |   2 +-
+ net/atm/lec.c                                   |   6 +-
+ net/atm/mpoa_caches.c                           |  41 +-
+ net/vmw_vsock/vmci_transport_notify.c           |  30 +-
+ net/vmw_vsock/vmci_transport_notify_qstate.c    |  30 +-
+ scripts/Makefile.gcc-plugins                    |  11 +-
+ scripts/gcc-plugins/.gitignore                  |   1 +
+ scripts/gcc-plugins/Makefile                    |  12 +
+ scripts/gcc-plugins/gen-random-seed.sh          |   8 +
+ scripts/gcc-plugins/randomize_layout_plugin.c   | 935 ++++++++++++++++++++++++
+ sound/synth/emux/emux_seq.c                     |  14 +-
+ 44 files changed, 1402 insertions(+), 316 deletions(-)
