@@ -1,254 +1,266 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:55 -0700
-Message-Id: <1462486436-3707-11-git-send-email-keescook@chromium.org>
+Date: Thu,  5 May 2016 15:13:54 -0700
+Message-Id: <1462486436-3707-10-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 10/11] x86/KASLR: Add physical address randomization >4G
+Subject: [kernel-hardening] [PATCH v6 09/11] x86/KASLR: Randomize virtual address separately
 To: Ingo Molnar <mingo@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Baoquan He <bhe@redhat.com>
 
-This patch exchanges the prior slots[] array for the new slot_areas[]
-array, and lifts the limitation of KERNEL_IMAGE_SIZE on the physical
-address offset for 64-bit. As before, process_e820_entry() walks
-memory and populates slot_areas[], splitting on any detected mem_avoid
-collisions.
+The current KASLR implementation randomizes the physical and virtual
+addresses of the kernel together (both are offset by the same amount). It
+calculates the delta of the physical address where vmlinux was linked
+to load and where it is finally loaded. If the delta is not equal to 0
+(i.e. the kernel was relocated), relocation handling needs be done.
 
-Finally, since the slots[] array and its associated functions are not
-needed any more, so they are removed.
+On 64-bit, this patch randomizes both the physical address where kernel
+is decompressed and the virtual address where kernel text is mapped and
+will execute from. We now have two values being chosen, so the function
+arguments are reorganized to pass by pointer so they can be directly
+updated. Since relocation handling only depends on the virtual address,
+we must check the virtual delta, not the physical delta for processing
+kernel relocations. This also populates the page table for the new
+virtual address range. 32-bit does not support a separate virtual address,
+so it continues to use the physical offset for its virtual offset.
+
+Additionally updates the sanity checks done on the resulting kernel
+addresses since they are potentially separate now.
 
 Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, refactored goto into while]
-[kees: limit 32-bit to KERNEL_IMAGE_SIZE]
-[kees: squash dead-code removal into this patch]
-[kees: refactored to use new mem_overlap code, renamed variables]
-[kees: updated Kconfig to reflect updated implementation]
+[kees: rewrote changelog, limited virtual split to 64-bit only, update checks]
+[kees: fix CONFIG_RANDOMIZE_BASE=n boot failure]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/Kconfig                 |  27 +++++----
- arch/x86/boot/compressed/kaslr.c | 115 +++++++++++++++++++++++----------------
- 2 files changed, 85 insertions(+), 57 deletions(-)
+ arch/x86/boot/compressed/kaslr.c | 42 +++++++++++++++++++----------------
+ arch/x86/boot/compressed/misc.c  | 47 +++++++++++++++++++++++++---------------
+ arch/x86/boot/compressed/misc.h  | 22 ++++++++++---------
+ 3 files changed, 64 insertions(+), 47 deletions(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 5892d549596d..39be0f7b49ef 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -1943,21 +1943,26 @@ config RANDOMIZE_BASE
- 	  attempts relying on knowledge of the location of kernel
- 	  code internals.
- 
--	  The kernel physical and virtual address can be randomized
--	  from 16MB up to 1GB on 64-bit and 512MB on 32-bit. (Note that
--	  using RANDOMIZE_BASE reduces the memory space available to
--	  kernel modules from 1.5GB to 1GB.)
-+	  On 64-bit, the kernel physical and virtual addresses are
-+	  randomized separately. The physical address will be anywhere
-+	  between 16MB and the top of physical memory (up to 64TB). The
-+	  virtual address will be randomized from 16MB up to 1GB (9 bits
-+	  of entropy). Note that this also reduces the memory space
-+	  available to kernel modules from 1.5GB to 1GB.
-+
-+	  On 32-bit, the kernel physical and virtual addresses are
-+	  randomized together. They will be randomized from 16MB up to
-+	  512MB (8 bits of entropy).
- 
- 	  Entropy is generated using the RDRAND instruction if it is
- 	  supported. If RDTSC is supported, its value is mixed into
- 	  the entropy pool as well. If neither RDRAND nor RDTSC are
--	  supported, then entropy is read from the i8254 timer.
--
--	  Since the kernel is built using 2GB addressing, and
--	  PHYSICAL_ALIGN must be at a minimum of 2MB, only 10 bits of
--	  entropy is theoretically possible. Currently, with the
--	  default value for PHYSICAL_ALIGN and due to page table
--	  layouts, 64-bit uses 9 bits of entropy and 32-bit uses 8 bits.
-+	  supported, then entropy is read from the i8254 timer. The
-+	  usable entropy is limited by the kernel being built using
-+	  2GB addressing, and that PHYSICAL_ALIGN must be at a
-+	  minimum of 2MB. As a result, only 10 bits of entropy is
-+	  theoretically possible, but the implementations are further
-+	  limited due to memory layouts.
- 
- 	  If CONFIG_HIBERNATE is also enabled, KASLR is disabled at boot
- 	  time. To enable it, boot with "kaslr" on the kernel command
 diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index 58d0871be037..8cf705826bdc 100644
+index 3672c7388e5a..58d0871be037 100644
 --- a/arch/x86/boot/compressed/kaslr.c
 +++ b/arch/x86/boot/compressed/kaslr.c
-@@ -125,17 +125,6 @@ struct mem_vector {
- #define MEM_AVOID_MAX 4
- static struct mem_vector mem_avoid[MEM_AVOID_MAX];
- 
--static bool mem_contains(struct mem_vector *region, struct mem_vector *item)
--{
--	/* Item at least partially before region. */
--	if (item->start < region->start)
--		return false;
--	/* Item at least partially after region. */
--	if (item->start + item->size > region->start + region->size)
--		return false;
--	return true;
--}
--
- static bool mem_overlaps(struct mem_vector *one, struct mem_vector *two)
- {
- 	/* Item one is entirely before item two. */
-@@ -286,8 +275,6 @@ static bool mem_avoid_overlap(struct mem_vector *img,
- 	return is_overlapping;
+@@ -426,10 +426,11 @@ static unsigned long find_random_virt_addr(unsigned long minimum,
+ 	return random_addr * CONFIG_PHYSICAL_ALIGN + minimum;
  }
  
--static unsigned long slots[KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN];
--
- struct slot_area {
- 	unsigned long addr;
- 	int num;
-@@ -318,36 +305,44 @@ static void store_slot_info(struct mem_vector *region, unsigned long image_size)
+-unsigned char *choose_random_location(unsigned char *input_ptr,
+-				      unsigned long input_size,
+-				      unsigned char *output_ptr,
+-				      unsigned long output_size)
++void choose_random_location(unsigned char *input_ptr,
++				unsigned long input_size,
++				unsigned char **output_ptr,
++				unsigned long output_size,
++				unsigned char **virt_addr)
+ {
+ 	/*
+ 	 * The caller of choose_random_location() uses unsigned char * for
+@@ -439,19 +440,21 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
+ 	 * more casts into extract_kernel, do them here and at return.
+ 	 */
+ 	unsigned long input = (unsigned long)input_ptr;
+-	unsigned long output = (unsigned long)output_ptr;
+-	unsigned long choice = output;
++	unsigned long output = (unsigned long)*output_ptr;
+ 	unsigned long random_addr;
+ 
++	/* By default, keep output position unchanged. */
++	*virt_addr = *output_ptr;
++
+ #ifdef CONFIG_HIBERNATION
+ 	if (!cmdline_find_option_bool("kaslr")) {
+ 		warn("KASLR disabled: 'kaslr' not on cmdline (hibernation selected).");
+-		goto out;
++		return;
  	}
+ #else
+ 	if (cmdline_find_option_bool("nokaslr")) {
+ 		warn("KASLR disabled: 'nokaslr' on cmdline.");
+-		goto out;
++		return;
+ 	}
+ #endif
+ 
+@@ -464,17 +467,18 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
+ 	random_addr = find_random_phys_addr(output, output_size);
+ 	if (!random_addr) {
+ 		warn("KASLR disabled: could not find suitable E820 region!");
+-		goto out;
++	} else {
++		/* Update the new physical address location. */
++		if (output != random_addr) {
++			fill_pagetable(random_addr, output_size);
++			switch_pagetable();
++			*output_ptr = (unsigned char *)random_addr;
++		}
+ 	}
+ 
+-	/* Always enforce the minimum. */
+-	if (random_addr < choice)
+-		goto out;
+-
+-	choice = random_addr;
+-
+-	fill_pagetable(choice, output_size);
+-	switch_pagetable();
+-out:
+-	return (unsigned char *)choice;
++	/* Pick random virtual address starting from LOAD_PHYSICAL_ADDR. */
++	if (IS_ENABLED(CONFIG_X86_64))
++		random_addr = find_random_virt_addr(LOAD_PHYSICAL_ADDR,
++						 output_size);
++	*virt_addr = (unsigned char *)random_addr;
+ }
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index 9536d778149e..e2b2fbf08ed9 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -170,7 +170,8 @@ void __puthex(unsigned long value)
  }
  
--static void slots_append(unsigned long addr)
--{
--	/* Overflowing the slots list should be impossible. */
--	if (slot_max >= KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN)
--		return;
--
--	slots[slot_max++] = addr;
--}
--
- static unsigned long slots_fetch_random(void)
+ #if CONFIG_X86_NEED_RELOCS
+-static void handle_relocations(void *output, unsigned long output_len)
++static void handle_relocations(void *output, unsigned long output_len,
++			       void *virt_addr)
  {
-+	unsigned long slot;
-+	int i;
-+
- 	/* Handle case of no slots stored. */
- 	if (slot_max == 0)
- 		return 0;
+ 	int *reloc;
+ 	unsigned long delta, map, ptr;
+@@ -182,11 +183,6 @@ static void handle_relocations(void *output, unsigned long output_len)
+ 	 * and where it was actually loaded.
+ 	 */
+ 	delta = min_addr - LOAD_PHYSICAL_ADDR;
+-	if (!delta) {
+-		debug_putstr("No relocation needed... ");
+-		return;
+-	}
+-	debug_putstr("Performing relocations... ");
  
--	return slots[get_random_long("Physical") % slot_max];
-+	slot = get_random_long("Physical") % slot_max;
+ 	/*
+ 	 * The kernel contains a table of relocation addresses. Those
+@@ -198,6 +194,20 @@ static void handle_relocations(void *output, unsigned long output_len)
+ 	map = delta - __START_KERNEL_map;
+ 
+ 	/*
++	 * 32-bit always performs relocations. 64-bit relocations are only
++	 * needed if KASLR has chosen a different starting address offset
++	 * from __START_KERNEL_map.
++	 */
++	if (IS_ENABLED(CONFIG_X86_64))
++		delta = (unsigned long)virt_addr - LOAD_PHYSICAL_ADDR;
 +
-+	for (i = 0; i < slot_area_index; i++) {
-+		if (slot >= slot_areas[i].num) {
-+			slot -= slot_areas[i].num;
-+			continue;
-+		}
-+		return slot_areas[i].addr + slot * CONFIG_PHYSICAL_ALIGN;
++	if (!delta) {
++		debug_putstr("No relocation needed... ");
++		return;
 +	}
++	debug_putstr("Performing relocations... ");
 +
-+	if (i == slot_area_index)
-+		debug_putstr("slots_fetch_random() failed!?\n");
-+	return 0;
++	/*
+ 	 * Process relocations: 32 bit relocations first then 64 bit after.
+ 	 * Three sets of binary relocations are added to the end of the kernel
+ 	 * before compression. Each relocation table entry is the kernel
+@@ -250,7 +260,8 @@ static void handle_relocations(void *output, unsigned long output_len)
+ #endif
  }
+ #else
+-static inline void handle_relocations(void *output, unsigned long output_len)
++static inline void handle_relocations(void *output, unsigned long output_len,
++				      void *virt_addr)
+ { }
+ #endif
  
- static void process_e820_entry(struct e820entry *entry,
- 			       unsigned long minimum,
- 			       unsigned long image_size)
+@@ -327,7 +338,7 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+ 				  unsigned long output_len)
  {
--	struct mem_vector region, img, overlap;
-+	struct mem_vector region, overlap;
-+	struct slot_area slot_area;
-+	unsigned long start_orig;
+ 	const unsigned long kernel_total_size = VO__end - VO__text;
+-	unsigned char *output_orig = output;
++	unsigned char *virt_addr = output;
  
- 	/* Skip non-RAM entries. */
- 	if (entry->type != E820_RAM)
- 		return;
+ 	/* Retain x86 boot parameters pointer passed from startup_32/64. */
+ 	boot_params = rmode;
+@@ -366,12 +377,15 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+ 	 * the entire decompressed kernel plus relocation table, or the
+ 	 * entire decompressed kernel plus .bss and .brk sections.
+ 	 */
+-	output = choose_random_location(input_data, input_len, output,
+-					max(output_len, kernel_total_size));
++	choose_random_location(input_data, input_len, &output,
++				max(output_len, kernel_total_size),
++				&virt_addr);
  
--	/* Ignore entries entirely above our maximum. */
--	if (entry->addr >= KERNEL_IMAGE_SIZE)
-+	/* On 32-bit, ignore entries entirely above our maximum. */
-+	if (IS_ENABLED(CONFIG_X86_32) && entry->addr >= KERNEL_IMAGE_SIZE)
- 		return;
+ 	/* Validate memory location choices. */
+ 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
+-		error("Destination address inappropriately aligned");
++		error("Destination physical address inappropriately aligned");
++	if ((unsigned long)virt_addr & (MIN_KERNEL_ALIGN - 1))
++		error("Destination virtual address inappropriately aligned");
+ #ifdef CONFIG_X86_64
+ 	if (heap > 0x3fffffffffffUL)
+ 		error("Destination address too large");
+@@ -381,19 +395,16 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+ #endif
+ #ifndef CONFIG_RELOCATABLE
+ 	if ((unsigned long)output != LOAD_PHYSICAL_ADDR)
+-		error("Wrong destination address");
++		error("Destination address does not match LOAD_PHYSICAL_ADDR");
++	if (output != virt_addr)
++		error("Destination virtual address changed when not relocatable");
+ #endif
  
- 	/* Ignore entries entirely below our minimum. */
-@@ -357,31 +352,55 @@ static void process_e820_entry(struct e820entry *entry,
- 	region.start = entry->addr;
- 	region.size = entry->size;
- 
--	/* Potentially raise address to minimum location. */
--	if (region.start < minimum)
--		region.start = minimum;
-+	/* Give up if slot area array is full. */
-+	while (slot_area_index < MAX_SLOT_AREA) {
-+		start_orig = region.start;
- 
--	/* Potentially raise address to meet alignment requirements. */
--	region.start = ALIGN(region.start, CONFIG_PHYSICAL_ALIGN);
-+		/* Potentially raise address to minimum location. */
-+		if (region.start < minimum)
-+			region.start = minimum;
- 
--	/* Did we raise the address above the bounds of this e820 region? */
--	if (region.start > entry->addr + entry->size)
--		return;
-+		/* Potentially raise address to meet alignment needs. */
-+		region.start = ALIGN(region.start, CONFIG_PHYSICAL_ALIGN);
- 
--	/* Reduce size by any delta from the original address. */
--	region.size -= region.start - entry->addr;
-+		/* Did we raise the address above this e820 region? */
-+		if (region.start > entry->addr + entry->size)
-+			return;
- 
--	/* Reduce maximum size to fit end of image within maximum limit. */
--	if (region.start + region.size > KERNEL_IMAGE_SIZE)
--		region.size = KERNEL_IMAGE_SIZE - region.start;
-+		/* Reduce size by any delta from the original address. */
-+		region.size -= region.start - start_orig;
- 
--	/* Walk each aligned slot and check for avoided areas. */
--	for (img.start = region.start, img.size = image_size ;
--	     mem_contains(&region, &img) ;
--	     img.start += CONFIG_PHYSICAL_ALIGN) {
--		if (mem_avoid_overlap(&img, &overlap))
--			continue;
--		slots_append(img.start);
-+		/* On 32-bit, reduce region size to fit within max size. */
-+		if (IS_ENABLED(CONFIG_X86_32) &&
-+		    region.start + region.size > KERNEL_IMAGE_SIZE)
-+			region.size = KERNEL_IMAGE_SIZE - region.start;
-+
-+		/* Return if region can't contain decompressed kernel */
-+		if (region.size < image_size)
-+			return;
-+
-+		/* If nothing overlaps, store the region and return. */
-+		if (!mem_avoid_overlap(&region, &overlap)) {
-+			store_slot_info(&region, image_size);
-+			return;
-+		}
-+
-+		/* Store beginning of region if holds at least image_size. */
-+		if (overlap.start > region.start + image_size) {
-+			struct mem_vector beginning;
-+
-+			beginning.start = region.start;
-+			beginning.size = overlap.start - region.start;
-+			store_slot_info(&beginning, image_size);
-+		}
-+
-+		/* Return if overlap extends to or past end of region. */
-+		if (overlap.start + overlap.size >= region.start + region.size)
-+			return;
-+
-+		/* Clip off the overlapping region and start over. */
-+		region.size -= overlap.start - region.start + overlap.size;
-+		region.start = overlap.start + overlap.size;
- 	}
+ 	debug_putstr("\nDecompressing Linux... ");
+ 	__decompress(input_data, input_len, NULL, NULL, output, output_len,
+ 			NULL, error);
+ 	parse_elf(output);
+-	/*
+-	 * 32-bit always performs relocations. 64-bit relocations are only
+-	 * needed if kASLR has chosen a different load address.
+-	 */
+-	if (!IS_ENABLED(CONFIG_X86_64) || output != output_orig)
+-		handle_relocations(output, output_len);
++	handle_relocations(output, output_len, virt_addr);
+ 	debug_putstr("done.\nBooting the kernel.\n");
+ 	return output;
  }
+diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
+index ffacded0e66a..1a58fce66458 100644
+--- a/arch/x86/boot/compressed/misc.h
++++ b/arch/x86/boot/compressed/misc.h
+@@ -67,20 +67,22 @@ int cmdline_find_option_bool(const char *option);
  
-@@ -398,6 +417,10 @@ static unsigned long find_random_phys_addr(unsigned long minimum,
- 	for (i = 0; i < boot_params->e820_entries; i++) {
- 		process_e820_entry(&boot_params->e820_map[i], minimum,
- 				   image_size);
-+		if (slot_area_index == MAX_SLOT_AREA) {
-+			debug_putstr("Aborted e820 scan (slot_areas full)!\n");
-+			break;
-+		}
- 	}
+ #if CONFIG_RANDOMIZE_BASE
+ /* kaslr.c */
+-unsigned char *choose_random_location(unsigned char *input_ptr,
+-				      unsigned long input_size,
+-				      unsigned char *output_ptr,
+-				      unsigned long output_size);
++void choose_random_location(unsigned char *input_ptr,
++			    unsigned long input_size,
++			    unsigned char **output_ptr,
++			    unsigned long output_size,
++			    unsigned char **virt_addr);
+ /* cpuflags.c */
+ bool has_cpuflag(int flag);
+ #else
+-static inline
+-unsigned char *choose_random_location(unsigned char *input_ptr,
+-				      unsigned long input_size,
+-				      unsigned char *output_ptr,
+-				      unsigned long output_size)
++static inline void choose_random_location(unsigned char *input_ptr,
++					  unsigned long input_size,
++					  unsigned char **output_ptr,
++					  unsigned long output_size,
++					  unsigned char **virt_addr)
+ {
+-	return output_ptr;
++	/* No change from existing output location. */
++	*virt_addr = *output_ptr;
+ }
+ #endif
  
- 	return slots_fetch_random();
 -- 
 2.6.3
