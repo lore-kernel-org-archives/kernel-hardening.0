@@ -1,93 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:50 -0700
-Message-Id: <1462486436-3707-6-git-send-email-keescook@chromium.org>
+Date: Thu,  5 May 2016 15:13:53 -0700
+Message-Id: <1462486436-3707-9-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 05/11] x86/KASLR: Add slot_area to manage random_addr slots
+Subject: [kernel-hardening] [PATCH v6 08/11] x86/KASLR: Clarify purpose of each get_random_long
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Baoquan He <bhe@redhat.com>
+KASLR will be calling get_random_long() twice, but the debug output
+won't distinguishing between them. This patch adds a report on when it
+is fetching the physical vs virtual address. With this, once the virtual
+offset is separate, the report changes from:
 
-In order to support KASLR moving the kernel anywhere in physical memory
-(which could be up to 64TB), we need to handle counting the potential
-randomization locations in a more efficient manner.
+KASLR using RDTSC...
+KASLR using RDTSC...
 
-In the worst case with 64TB, there could be roughly 32 * 1024 * 1024
-randomization slots if CONFIG_PHYSICAL_ALIGN is 0x1000000. Currently
-the starting address of candidate positions is stored into the slots[]
-array, one at a time. This method would cost too much memory and it's
-also very inefficient to get and save the slot information into the slot
-array one by one.
+into:
 
-This patch introduces struct slot_area to manage each contiguous region
-of randomization slots. Each slot_area will contain the starting address
-and how many available slots are in this area. As with the original code,
-the slot_areas will avoid the mem_avoid regions.
+Physical KASLR using RDTSC...
+Virtual KASLR using RDTSC...
 
-Since setup_data is a linked list, it could contain an unknown number
-of memory regions to be avoided, which could cause us to fragment
-the contiguous memory that the slot_area array is tracking. In normal
-operation this level of fragmentation will be extremely rare, but we
-choose a suitably large value (100) for the array. If setup_data forces
-the slot_area array to become highly fragmented and there are more
-slots available beyond the first 100 found, the rest will be ignored
-for KASLR selection.
-
-The function store_slot_info() is used to calculate the number of slots
-available in the passed-in memory region and stores it into slot_areas[]
-after adjusting for alignment and size requirements.
-
-Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, squash with new functions]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/kaslr.c | 29 +++++++++++++++++++++++++++++
- 1 file changed, 29 insertions(+)
+ arch/x86/boot/compressed/kaslr.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index 36356fb6d4cf..dc9ffceb556b 100644
+index 05f564b6c70e..3672c7388e5a 100644
 --- a/arch/x86/boot/compressed/kaslr.c
 +++ b/arch/x86/boot/compressed/kaslr.c
-@@ -275,8 +275,37 @@ static bool mem_avoid_overlap(struct mem_vector *img)
+@@ -72,7 +72,7 @@ static unsigned long get_random_boot(void)
+ 	return hash;
  }
  
- static unsigned long slots[KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN];
-+
-+struct slot_area {
-+	unsigned long addr;
-+	int num;
-+};
-+
-+#define MAX_SLOT_AREA 100
-+
-+static struct slot_area slot_areas[MAX_SLOT_AREA];
-+
- static unsigned long slot_max;
- 
-+static unsigned long slot_area_index;
-+
-+static void store_slot_info(struct mem_vector *region, unsigned long image_size)
-+{
-+	struct slot_area slot_area;
-+
-+	if (slot_area_index == MAX_SLOT_AREA)
-+		return;
-+
-+	slot_area.addr = region->start;
-+	slot_area.num = (region->size - image_size) /
-+			CONFIG_PHYSICAL_ALIGN + 1;
-+
-+	if (slot_area.num > 0) {
-+		slot_areas[slot_area_index++] = slot_area;
-+		slot_max += slot_area.num;
-+	}
-+}
-+
- static void slots_append(unsigned long addr)
+-static unsigned long get_random_long(void)
++static unsigned long get_random_long(const char *purpose)
  {
- 	/* Overflowing the slots list should be impossible. */
+ #ifdef CONFIG_X86_64
+ 	const unsigned long mix_const = 0x5d6008cbf3848dd3UL;
+@@ -82,7 +82,8 @@ static unsigned long get_random_long(void)
+ 	unsigned long raw, random = get_random_boot();
+ 	bool use_i8254 = true;
+ 
+-	debug_putstr("KASLR using");
++	debug_putstr(purpose);
++	debug_putstr(" KASLR using");
+ 
+ 	if (has_cpuflag(X86_FEATURE_RDRAND)) {
+ 		debug_putstr(" RDRAND");
+@@ -332,7 +333,7 @@ static unsigned long slots_fetch_random(void)
+ 	if (slot_max == 0)
+ 		return 0;
+ 
+-	return slots[get_random_long() % slot_max];
++	return slots[get_random_long("Physical") % slot_max];
+ }
+ 
+ static void process_e820_entry(struct e820entry *entry,
+@@ -420,7 +421,7 @@ static unsigned long find_random_virt_addr(unsigned long minimum,
+ 	slots = (KERNEL_IMAGE_SIZE - minimum - image_size) /
+ 		 CONFIG_PHYSICAL_ALIGN + 1;
+ 
+-	random_addr = get_random_long() % slots;
++	random_addr = get_random_long("Virtual") % slots;
+ 
+ 	return random_addr * CONFIG_PHYSICAL_ALIGN + minimum;
+ }
 -- 
 2.6.3
