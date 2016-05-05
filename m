@@ -1,129 +1,150 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:45 -0700
-Message-Id: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 0/11] x86/KASLR: Randomize virtual address separately
+Date: Thu,  5 May 2016 15:13:47 -0700
+Message-Id: <1462486436-3707-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
+References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v6 02/11] x86/KASLR: Consolidate mem_avoid entries
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is v6 of the x86 KASLR improvement series from Yinghai, Baoquan,
-and myself. The current branch lives here:
-http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kaslr/highmem
+From: Yinghai Lu <yinghai@kernel.org>
 
-***Background:
-Bugs have been reported around kdump, kexec, and some netboot situations
-that didn't work when KASLR was enabled. While discussing the bugs, it
-was found that the current KASLR implementation had various limitations,
-but most importantly that it can only randomize in a 1GB region of
-physical memory.
+The mem_avoid array is used to track positions that should be avoided (like
+the compressed kernel, decompression code, etc) when selecting a memory
+position for the randomly relocated kernel. Since ZO is now at the end of
+the decompression buffer and the decompression code (and its heap and
+stack) are at the front, we can safely consolidate the decompression entry,
+the heap entry, and the stack entry. The boot_params memory, however, could
+be elsewhere, so it should be explicitly included.
 
-The current KASLR implementaion only randomizes the base physical
-address of the kernel. If the delta from build-time load address and
-KASLR run-time load address (i.e. the physical address of where the
-kernel actually decompressed) is not equal to 0, relocation handling is
-performed using the delta. Though in principle kernel can be randomized
-to any physical address, the physical kernel text mapping address space
-is limited to 1G and the virtual address is just offset by the same
-amount. On x86_64 the result is the following range:
-[0xffffffff80000000, 0xffffffffc0000000)
+Cc: Kees Cook <keescook@chromium.org>
+Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+Signed-off-by: Baoquan He <bhe@redhat.com>
+[kees: rewrote changelog, cleaned up code comment]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/boot/compressed/kaslr.c | 77 +++++++++++++++++++++++++++++++---------
+ 1 file changed, 61 insertions(+), 16 deletions(-)
 
-hpa and Vivek suggested we should change this by decoupling the physical
-address and virtual address randomization of kernel text and let them work
-separately. Then kernel text physical address can be randomized in region
-[16M, 64T), and kernel text virtual address can be randomized in region
-[0xffffffff80000000, 0xffffffffc0000000).
-
-***Problems that needed solving:
-  - When booting from the startup_32 case, only a 0~4G identity mapping is
-    built. If kernel will be randomly put anywhere from 16M to 64T at
-    most, the price to build all the identity mappings is too high. We
-    need to build the identity mapping on demand, not covering all of the
-    physical address space.
-
-  - Decouple the physical address and virtual address randomization of kernel
-    text and let them work separately.
-
-  - Kernels loaded high will not randomize into a lower memory region.
-
-***Parts:
-   - The 1st part prepares the code for more invasive changes.
-     (Patches 01-02)
-   - The 2nd part is Yinghai's building of identity mappings on demand,
-     fixing problem #1 above.
-     (Patches 03-04)
-   - The 3rd part is Baoquan's new randomization slot management code for
-     handling the much larger possible memory space.
-     (Patches 05-06)
-   - The 4th part is Baoquan's decoupling the physical address and virtual
-     address randomization of kernel text and letting them work separately,
-     based on Yinghai's ident mapping patches, fixing problem #2 above.
-     (Patches 07-09)
-   - The 5th part lifts the upper and lower limits on physical addresses,
-     fixing problem #3 above.
-     (Patches 10-11)
-
-I've boot tested this a bunch on 32-bit and 64-bit, and things appear to
-be working as expected. I've cleaned up the changelogs, improved some
-comments, refactored a few things, split out things and merged others,
-etc. Changes are noted in the individual changelogs.
-
-Thanks!
-
--Kees
-
-v5->v6:
-- sent other clean-ups as separate patches
-- squashed code removal into the patches that made them removable
-- refactoring slot calculation to avoid the confusing "if" statement
-- protected slot_area_index in store_slot_info to be paranoid
-- adjusted Kconfig language to be more complete but with hopefully less jargon
-- fixed up as much of the unsigned long casts as possible
-- fixed some coding styel on brace usage
-- made find_random_phys_addr look like find_random_virt_addr
-- clarified various variable names
-
-v4->v5:
-- rewrote all the changelogs, and several comments.
-- refactored e820 parser to use a while loop instead of goto.
-- rearranged removal of CONFIG_RANDOMIZE_BASE_MAX_OFFSET to earlier.
-- additionally dropped KERNEL_IMAGE_SIZE_DEFAULT
-- refactored minimum address calculation
-- refactored slot offset calculation for readability
-- fixed 32-bit boot failures
-- fixed CONFIG_RANDOMIZE_BASE=n boot failure
-- improved debug reporting
-
-[Baoquan's histroy]
-v3->v4:
-- Made changes according to Kees's comments.
-  Add one patch 20/20 as Kees suggested to use KERNEL_IMAGE_SIZE as offset
-  max of virtual random, meanwhile clean up useless CONFIG_RANDOM_OFFSET_MAX
-
-    x86, kaslr: Use KERNEL_IMAGE_SIZE as the offset max for kernel virtual randomization
-
-v2->v3:
-- It only takes care of the kaslr related patches.
-  For reviewers it's better to discuss only one issue in one thread.
-    * I take off one patch as follows from Yinghai's because I think it's unnecessay.
-       - Patch 05/19 x86, kaslr: rename output_size to output_run_size
-         output_size is enough to represen the value:
-            output_len > run_size ? output_len : run_size
-
-    * I add Patch 04/19, it's a comment update patch. For other patches, I just
-      adjust patch log and do several places of change comparing with 2nd round.
-      Please check the change log under patch log of each patch for details.
-
-    * Adjust sequence of several patches to make review easier. It doesn't
-      affect codes.
-
-v1->v2:
-- In 2nd round Yinghai made a big patchset including this kaslr fix and another
-  setup_data related fix. The link is here:
-   http://lists-archives.com/linux-kernel/28346903-x86-updated-patches-for-kaslr-and-setup_data-etc-for-v4-3.html
-  You can get the code from Yinghai's git branch:
-  git://git.kernel.org/pub/scm/linux/kernel/git/yinghai/linux-yinghai.git for-x86-v4.3-next
-
-v1:
-- The first round can be found here:
-    https://lwn.net/Articles/637115/
+diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
+index 2072d82c1911..6392f0041b8a 100644
+--- a/arch/x86/boot/compressed/kaslr.c
++++ b/arch/x86/boot/compressed/kaslr.c
+@@ -121,7 +121,7 @@ struct mem_vector {
+ 	unsigned long size;
+ };
+ 
+-#define MEM_AVOID_MAX 5
++#define MEM_AVOID_MAX 4
+ static struct mem_vector mem_avoid[MEM_AVOID_MAX];
+ 
+ static bool mem_contains(struct mem_vector *region, struct mem_vector *item)
+@@ -146,22 +146,71 @@ static bool mem_overlaps(struct mem_vector *one, struct mem_vector *two)
+ 	return true;
+ }
+ 
++/*
++ * In theroy, KASLR can put the kernel anywhere in area of [16M, 64T). The
++ * mem_avoid array is used to store the ranges that need to be avoided when
++ * KASLR searches for a an appropriate random address. We must avoid any
++ * regions that are unsafe to overlap with during decompression, and other
++ * things like the initrd, cmdline and boot_params.
++ *
++ * How to calculate the unsafe areas is detailed here, and is informed by
++ * the decompression calculations in header.S, and the diagram in misc.c.
++ *
++ * The compressed vmlinux (ZO) plus relocs and the run space of ZO can't be
++ * overwritten by decompression output.
++ *
++ * ZO sits against the end of the decompression buffer, so we can calculate
++ * where text, data, bss, etc of ZO are positioned.
++ *
++ * The follow are already enforced by the code:
++ *  - init_size >= kernel_total_size
++ *  - input + input_len >= output + output_len
++ *  - kernel_total_size could be >= or < output_len
++ *
++ * From this, we can make several observations, illustrated by a diagram:
++ *  - init_size >= kernel_total_size
++ *  - input + input_len > output + output_len
++ *  - kernel_total_size >= output_len
++ *
++ * 0   output            input            input+input_len    output+init_size
++ * |     |                 |                       |                       |
++ * |     |                 |                       |                       |
++ * |-----|--------|--------|------------------|----|------------|----------|
++ *                |                           |                 |
++ *                |                           |                 |
++ * output+init_size-ZO_INIT_SIZE   output+output_len  output+kernel_total_size
++ *
++ * [output, output+init_size) is for the buffer for decompressing the
++ * compressed kernel (ZO).
++ *
++ * [output, output+kernel_total_size) is for the uncompressed kernel (VO)
++ * and its bss, brk, etc.
++ * [output, output+output_len) is VO plus relocs
++ *
++ * [output+init_size-ZO_INIT_SIZE, output+init_size) is the copied ZO.
++ * [input, input+input_len) is the copied compressed (VO (vmlinux after
++ * objcopy) plus relocs), not the ZO.
++ *
++ * [input+input_len, output+init_size) is [_text, _end) for ZO. That was the
++ * first range in mem_avoid, which included ZO's heap and stack. Also
++ * [input, input+input_size) need be put in mem_avoid array, but since it
++ * is adjacent to the first entry, they can be merged. This is how we get
++ * the first entry in mem_avoid[].
++ */
+ static void mem_avoid_init(unsigned long input, unsigned long input_size,
+-			   unsigned long output, unsigned long output_size)
++			   unsigned long output)
+ {
++	unsigned long init_size = boot_params->hdr.init_size;
+ 	u64 initrd_start, initrd_size;
+ 	u64 cmd_line, cmd_line_size;
+-	unsigned long unsafe, unsafe_len;
+ 	char *ptr;
+ 
+ 	/*
+ 	 * Avoid the region that is unsafe to overlap during
+-	 * decompression (see calculations in ../header.S).
++	 * decompression.
+ 	 */
+-	unsafe_len = (output_size >> 12) + 32768 + 18;
+-	unsafe = (unsigned long)input + input_size - unsafe_len;
+-	mem_avoid[0].start = unsafe;
+-	mem_avoid[0].size = unsafe_len;
++	mem_avoid[0].start = input;
++	mem_avoid[0].size = (output + init_size) - input;
+ 
+ 	/* Avoid initrd. */
+ 	initrd_start  = (u64)boot_params->ext_ramdisk_image << 32;
+@@ -181,13 +230,9 @@ static void mem_avoid_init(unsigned long input, unsigned long input_size,
+ 	mem_avoid[2].start = cmd_line;
+ 	mem_avoid[2].size = cmd_line_size;
+ 
+-	/* Avoid heap memory. */
+-	mem_avoid[3].start = (unsigned long)free_mem_ptr;
+-	mem_avoid[3].size = BOOT_HEAP_SIZE;
+-
+-	/* Avoid stack memory. */
+-	mem_avoid[4].start = (unsigned long)free_mem_end_ptr;
+-	mem_avoid[4].size = BOOT_STACK_SIZE;
++	/* Avoid params */
++	mem_avoid[3].start = (unsigned long)boot_params;
++	mem_avoid[3].size = sizeof(*boot_params);
+ }
+ 
+ /* Does this memory vector overlap a known avoided area? */
+@@ -337,7 +382,7 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
+ 	boot_params->hdr.loadflags |= KASLR_FLAG;
+ 
+ 	/* Record the various known unsafe memory ranges. */
+-	mem_avoid_init(input, input_size, output, output_size);
++	mem_avoid_init(input, input_size, output);
+ 
+ 	/* Walk e820 and find a random address. */
+ 	random_addr = find_random_addr(output, output_size);
+-- 
+2.6.3
