@@ -1,95 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:51 -0700
-Message-Id: <1462486436-3707-7-git-send-email-keescook@chromium.org>
+Date: Thu,  5 May 2016 15:13:52 -0700
+Message-Id: <1462486436-3707-8-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 06/11] x86/KASLR: Return earliest overlap when avoiding regions
+Subject: [kernel-hardening] [PATCH v6 07/11] x86/KASLR: Add virtual address choosing function
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation for being able to detect where to split up contiguous
-memory regions that overlap with memory regions to avoid, we need to
-pass back what the earliest overlapping region was. This modifies the
-overlap checker to return that information.
+From: Baoquan He <bhe@redhat.com>
 
-Based on a separate mem_min_overlap() implementation by Baoquan He.
+To support randomizing the kernel virtual address separately from the
+physical address, this patch adds find_random_virt_addr() to choose
+a slot anywhere between LOAD_PHYSICAL_ADDR and KERNEL_IMAGE_SIZE.
+Since this address is virtual, not physical, we can place the kernel
+anywhere in this region, as long as it is aligned and (in the case of
+kernel being larger than the slot size) placed with enough room to load
+the entire kernel image.
 
+For clarity and readability, find_random_addr() is renamed to
+find_random_phys_addr() and has "size" renamed to "image_size" for
+clarity and to match find_random_virt_addr().
+
+Signed-off-by: Baoquan He <bhe@redhat.com>
+[kees: rewrote changelog, refactor slot calculation for readability]
+[kees: renamed find_random_phys_addr() and size argument]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/kaslr.c | 29 ++++++++++++++++++++---------
- 1 file changed, 20 insertions(+), 9 deletions(-)
+ arch/x86/boot/compressed/kaslr.c | 32 ++++++++++++++++++++++++++++----
+ 1 file changed, 28 insertions(+), 4 deletions(-)
 
 diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index dc9ffceb556b..391960e2cb08 100644
+index 391960e2cb08..05f564b6c70e 100644
 --- a/arch/x86/boot/compressed/kaslr.c
 +++ b/arch/x86/boot/compressed/kaslr.c
-@@ -246,15 +246,24 @@ static void mem_avoid_init(unsigned long input, unsigned long input_size,
- #endif
+@@ -384,8 +384,8 @@ static void process_e820_entry(struct e820entry *entry,
+ 	}
  }
  
--/* Does this memory vector overlap a known avoided area? */
--static bool mem_avoid_overlap(struct mem_vector *img)
-+/*
-+ * Does this memory vector overlap a known avoided area? If so, record the
-+ * overlap region with the lowest address.
-+ */
-+static bool mem_avoid_overlap(struct mem_vector *img,
-+			      struct mem_vector *overlap)
+-static unsigned long find_random_addr(unsigned long minimum,
+-				      unsigned long size)
++static unsigned long find_random_phys_addr(unsigned long minimum,
++					   unsigned long image_size)
  {
  	int i;
- 	struct setup_data *ptr;
-+	unsigned long earliest = img->start + img->size;
-+	bool is_overlapping = false;
+ 	unsigned long addr;
+@@ -395,12 +395,36 @@ static unsigned long find_random_addr(unsigned long minimum,
  
- 	for (i = 0; i < MEM_AVOID_MAX; i++) {
--		if (mem_overlaps(img, &mem_avoid[i]))
--			return true;
-+		if (mem_overlaps(img, &mem_avoid[i]) &&
-+		    mem_avoid[i].start < earliest) {
-+			*overlap = mem_avoid[i];
-+			is_overlapping = true;
-+		}
+ 	/* Verify potential e820 positions, appending to slots list. */
+ 	for (i = 0; i < boot_params->e820_entries; i++) {
+-		process_e820_entry(&boot_params->e820_map[i], minimum, size);
++		process_e820_entry(&boot_params->e820_map[i], minimum,
++				   image_size);
  	}
  
- 	/* Avoid all entries in the setup_data linked list. */
-@@ -265,13 +274,15 @@ static bool mem_avoid_overlap(struct mem_vector *img)
- 		avoid.start = (unsigned long)ptr;
- 		avoid.size = sizeof(*ptr) + ptr->len;
- 
--		if (mem_overlaps(img, &avoid))
--			return true;
-+		if (mem_overlaps(img, &avoid) && (avoid.start < earliest)) {
-+			*overlap = avoid;
-+			is_overlapping = true;
-+		}
- 
- 		ptr = (struct setup_data *)(unsigned long)ptr->next;
- 	}
- 
--	return false;
-+	return is_overlapping;
+ 	return slots_fetch_random();
  }
  
- static unsigned long slots[KERNEL_IMAGE_SIZE / CONFIG_PHYSICAL_ALIGN];
-@@ -328,7 +339,7 @@ static void process_e820_entry(struct e820entry *entry,
- 			       unsigned long minimum,
- 			       unsigned long image_size)
- {
--	struct mem_vector region, img;
-+	struct mem_vector region, img, overlap;
++static unsigned long find_random_virt_addr(unsigned long minimum,
++					   unsigned long image_size)
++{
++	unsigned long slots, random_addr;
++
++	/* Make sure minimum is aligned. */
++	minimum = ALIGN(minimum, CONFIG_PHYSICAL_ALIGN);
++	/* Align image_size for easy slot calculations. */
++	image_size = ALIGN(image_size, CONFIG_PHYSICAL_ALIGN);
++
++	/*
++	 * There are how many CONFIG_PHYSICAL_ALIGN-sized slots
++	 * that can hold image_size within the range of minimum to
++	 * KERNEL_IMAGE_SIZE?
++	 */
++	slots = (KERNEL_IMAGE_SIZE - minimum - image_size) /
++		 CONFIG_PHYSICAL_ALIGN + 1;
++
++	random_addr = get_random_long() % slots;
++
++	return random_addr * CONFIG_PHYSICAL_ALIGN + minimum;
++}
++
+ unsigned char *choose_random_location(unsigned char *input_ptr,
+ 				      unsigned long input_size,
+ 				      unsigned char *output_ptr,
+@@ -436,7 +460,7 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
+ 	mem_avoid_init(input, input_size, output);
  
- 	/* Skip non-RAM entries. */
- 	if (entry->type != E820_RAM)
-@@ -367,7 +378,7 @@ static void process_e820_entry(struct e820entry *entry,
- 	for (img.start = region.start, img.size = image_size ;
- 	     mem_contains(&region, &img) ;
- 	     img.start += CONFIG_PHYSICAL_ALIGN) {
--		if (mem_avoid_overlap(&img))
-+		if (mem_avoid_overlap(&img, &overlap))
- 			continue;
- 		slots_append(img.start);
- 	}
+ 	/* Walk e820 and find a random address. */
+-	random_addr = find_random_addr(output, output_size);
++	random_addr = find_random_phys_addr(output, output_size);
+ 	if (!random_addr) {
+ 		warn("KASLR disabled: could not find suitable E820 region!");
+ 		goto out;
 -- 
 2.6.3
