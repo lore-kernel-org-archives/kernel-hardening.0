@@ -1,72 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:53 -0700
-Message-Id: <1462486436-3707-9-git-send-email-keescook@chromium.org>
+Date: Thu,  5 May 2016 15:13:56 -0700
+Message-Id: <1462486436-3707-12-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 08/11] x86/KASLR: Clarify purpose of each get_random_long
+Subject: [kernel-hardening] [PATCH v6 11/11] x86/KASLR: Allow randomization below load address
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@redhat.com>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Ingo Molnar <mingo@redhat.com>, Baoquan He <bhe@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-KASLR will be calling get_random_long() twice, but the debug output
-won't distinguishing between them. This patch adds a report on when it
-is fetching the physical vs virtual address. With this, once the virtual
-offset is separate, the report changes from:
+From: Yinghai Lu <yinghai@kernel.org>
 
-KASLR using RDTSC...
-KASLR using RDTSC...
+Currently the physical randomization's lower boundary is the load
+address. For bootloaders that load kernels into very high memory
+(e.g. kexec), this means randomization takes place in a very small window
+at the top of memory, ignoring the large region of physical memory below
+the load address.
 
-into:
+Since mem_avoid is already correctly tracking the regions that must be
+avoided, this patch changes the minimum address to which ever is less:
+512M (to conservatively avoid unknown things in lower memory) or the
+load address. Now, for example, if the kernel is loaded at 8G, [512M,
+8G) will be added into possible physical memory positions.
 
-Physical KASLR using RDTSC...
-Virtual KASLR using RDTSC...
-
+Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+[kees: rewrote changelog, refactor to use min()]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/boot/compressed/kaslr.c | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ arch/x86/boot/compressed/kaslr.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index 05f564b6c70e..3672c7388e5a 100644
+index 8cf705826bdc..ace41822d16f 100644
 --- a/arch/x86/boot/compressed/kaslr.c
 +++ b/arch/x86/boot/compressed/kaslr.c
-@@ -72,7 +72,7 @@ static unsigned long get_random_boot(void)
- 	return hash;
- }
+@@ -464,7 +464,7 @@ void choose_random_location(unsigned char *input_ptr,
+ 	 */
+ 	unsigned long input = (unsigned long)input_ptr;
+ 	unsigned long output = (unsigned long)*output_ptr;
+-	unsigned long random_addr;
++	unsigned long random_addr, min_addr;
  
--static unsigned long get_random_long(void)
-+static unsigned long get_random_long(const char *purpose)
- {
- #ifdef CONFIG_X86_64
- 	const unsigned long mix_const = 0x5d6008cbf3848dd3UL;
-@@ -82,7 +82,8 @@ static unsigned long get_random_long(void)
- 	unsigned long raw, random = get_random_boot();
- 	bool use_i8254 = true;
+ 	/* By default, keep output position unchanged. */
+ 	*virt_addr = *output_ptr;
+@@ -486,8 +486,11 @@ void choose_random_location(unsigned char *input_ptr,
+ 	/* Record the various known unsafe memory ranges. */
+ 	mem_avoid_init(input, input_size, output);
  
--	debug_putstr("KASLR using");
-+	debug_putstr(purpose);
-+	debug_putstr(" KASLR using");
- 
- 	if (has_cpuflag(X86_FEATURE_RDRAND)) {
- 		debug_putstr(" RDRAND");
-@@ -332,7 +333,7 @@ static unsigned long slots_fetch_random(void)
- 	if (slot_max == 0)
- 		return 0;
- 
--	return slots[get_random_long() % slot_max];
-+	return slots[get_random_long("Physical") % slot_max];
- }
- 
- static void process_e820_entry(struct e820entry *entry,
-@@ -420,7 +421,7 @@ static unsigned long find_random_virt_addr(unsigned long minimum,
- 	slots = (KERNEL_IMAGE_SIZE - minimum - image_size) /
- 		 CONFIG_PHYSICAL_ALIGN + 1;
- 
--	random_addr = get_random_long() % slots;
-+	random_addr = get_random_long("Virtual") % slots;
- 
- 	return random_addr * CONFIG_PHYSICAL_ALIGN + minimum;
- }
++	/* Low end should be the smaller of 512M or initial location. */
++	min_addr = min(output, 512UL << 20);
++
+ 	/* Walk e820 and find a random address. */
+-	random_addr = find_random_phys_addr(output, output_size);
++	random_addr = find_random_phys_addr(min_addr, output_size);
+ 	if (!random_addr) {
+ 		warn("KASLR disabled: could not find suitable E820 region!");
+ 	} else {
 -- 
 2.6.3
