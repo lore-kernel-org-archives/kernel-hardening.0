@@ -1,266 +1,262 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Thu,  5 May 2016 15:13:54 -0700
-Message-Id: <1462486436-3707-10-git-send-email-keescook@chromium.org>
-In-Reply-To: <1462486436-3707-1-git-send-email-keescook@chromium.org>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Fri, 6 May 2016 09:00:34 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160506070034.GB11792@gmail.com>
 References: <1462486436-3707-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v6 09/11] x86/KASLR: Randomize virtual address separately
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, Yinghai Lu <yinghai@kernel.org>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+ <1462486436-3707-5-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1462486436-3707-5-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v6 04/11] x86/KASLR: Build identity mappings on demand
+To: Kees Cook <keescook@chromium.org>
+Cc: Yinghai Lu <yinghai@kernel.org>, Jiri Kosina <jkosina@suse.cz>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Baoquan He <bhe@redhat.com>
 
-The current KASLR implementation randomizes the physical and virtual
-addresses of the kernel together (both are offset by the same amount). It
-calculates the delta of the physical address where vmlinux was linked
-to load and where it is finally loaded. If the delta is not equal to 0
-(i.e. the kernel was relocated), relocation handling needs be done.
+* Kees Cook <keescook@chromium.org> wrote:
 
-On 64-bit, this patch randomizes both the physical address where kernel
-is decompressed and the virtual address where kernel text is mapped and
-will execute from. We now have two values being chosen, so the function
-arguments are reorganized to pass by pointer so they can be directly
-updated. Since relocation handling only depends on the virtual address,
-we must check the virtual delta, not the physical delta for processing
-kernel relocations. This also populates the page table for the new
-virtual address range. 32-bit does not support a separate virtual address,
-so it continues to use the physical offset for its virtual offset.
+> From: Yinghai Lu <yinghai@kernel.org>
+> 
+> Currently KASLR only supports relocation in a small physical range (from
+> 16M to 1G), due to using the initial kernel page table identity mapping.
+> To support ranges above this, we need to have an identity mapping for the
+> desired memory range before we can decompress (and later run) the kernel.
+> 
+> 32-bit kernels already have the needed identity mapping. This patch adds
+> identity mappings for the needed memory ranges on 64-bit kernels. This
+> happens in two possible boot paths:
+> 
+> If loaded via startup_32, we need to set up the identity mapping we need.
+> 
+> If loaded from a 64-bit bootloader, the bootloader will have
+> already set up an identity mapping, and we'll start via ZO's
+> (arch/x86/boot/compressed/vmlinux) startup_64. In this case, the
+> bootloader's page tables need to be avoided when we select the new VO
+> (vmlinux) location. If not, the decompressor could overwrite them during
+> decompression.
+> 
+> To accomplish avoiding the bootloader's page tables, we could walk the
+> pagetable and find every page that is used, and add them to mem_avoid,
+> but this needs extra code and will require increasing the size of the
+> mem_avoid array.
+> 
+> Instead, we can create a new ident mapping instead, and pages for the
+> pagetable will come from the _pagetable section of ZO, which means they
+> are already in mem_avoid array. To do this, we reuse the code for the
+> kernel's identity mapping.
+> 
+> The _pgtable will be shared by 32-bit and 64-bit path to reduce init_size,
+> as now ZO _rodata to _end will contribute init_size.
+> 
+> To handle the possible mappings, we need to increase the pgt buffer size:
+> 
+> When booting via startup_64, as we need to cover the old VO, params,
+> cmdline and new VO. In an extreme case we could have them all beyond the
+> 512G boundary, which needs (2+2)*4 pages with 2M mappings. And we'll
+> need 2 for first 2M for VGA RAM. One more is needed for level4. This
+> gets us to 19 pages total.
+> 
+> When booting via startup_32, KASLR could move the new VO above 4G, so we
+> need to set extra identity mappings for the VO, which should only need
+> (2+2) pages at most when it is beyond the 512G boundary. So 19 pages is
+> sufficient for this case as well.
 
-Additionally updates the sanity checks done on the resulting kernel
-addresses since they are potentially separate now.
+In changelogs and comments please refer to C functions and symbols that point to 
+executable code via '()', i.e. startup_64(), etc.
 
-Signed-off-by: Baoquan He <bhe@redhat.com>
-[kees: rewrote changelog, limited virtual split to 64-bit only, update checks]
-[kees: fix CONFIG_RANDOMIZE_BASE=n boot failure]
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/boot/compressed/kaslr.c | 42 +++++++++++++++++++----------------
- arch/x86/boot/compressed/misc.c  | 47 +++++++++++++++++++++++++---------------
- arch/x86/boot/compressed/misc.h  | 22 ++++++++++---------
- 3 files changed, 64 insertions(+), 47 deletions(-)
+> +#ifdef CONFIG_X86_VERBOSE_BOOTUP
+> +	/* for video ram */
 
-diff --git a/arch/x86/boot/compressed/kaslr.c b/arch/x86/boot/compressed/kaslr.c
-index 3672c7388e5a..58d0871be037 100644
---- a/arch/x86/boot/compressed/kaslr.c
-+++ b/arch/x86/boot/compressed/kaslr.c
-@@ -426,10 +426,11 @@ static unsigned long find_random_virt_addr(unsigned long minimum,
- 	return random_addr * CONFIG_PHYSICAL_ALIGN + minimum;
- }
- 
--unsigned char *choose_random_location(unsigned char *input_ptr,
--				      unsigned long input_size,
--				      unsigned char *output_ptr,
--				      unsigned long output_size)
-+void choose_random_location(unsigned char *input_ptr,
-+				unsigned long input_size,
-+				unsigned char **output_ptr,
-+				unsigned long output_size,
-+				unsigned char **virt_addr)
- {
- 	/*
- 	 * The caller of choose_random_location() uses unsigned char * for
-@@ -439,19 +440,21 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
- 	 * more casts into extract_kernel, do them here and at return.
- 	 */
- 	unsigned long input = (unsigned long)input_ptr;
--	unsigned long output = (unsigned long)output_ptr;
--	unsigned long choice = output;
-+	unsigned long output = (unsigned long)*output_ptr;
- 	unsigned long random_addr;
- 
-+	/* By default, keep output position unchanged. */
-+	*virt_addr = *output_ptr;
-+
- #ifdef CONFIG_HIBERNATION
- 	if (!cmdline_find_option_bool("kaslr")) {
- 		warn("KASLR disabled: 'kaslr' not on cmdline (hibernation selected).");
--		goto out;
-+		return;
- 	}
- #else
- 	if (cmdline_find_option_bool("nokaslr")) {
- 		warn("KASLR disabled: 'nokaslr' on cmdline.");
--		goto out;
-+		return;
- 	}
- #endif
- 
-@@ -464,17 +467,18 @@ unsigned char *choose_random_location(unsigned char *input_ptr,
- 	random_addr = find_random_phys_addr(output, output_size);
- 	if (!random_addr) {
- 		warn("KASLR disabled: could not find suitable E820 region!");
--		goto out;
-+	} else {
-+		/* Update the new physical address location. */
-+		if (output != random_addr) {
-+			fill_pagetable(random_addr, output_size);
-+			switch_pagetable();
-+			*output_ptr = (unsigned char *)random_addr;
-+		}
- 	}
- 
--	/* Always enforce the minimum. */
--	if (random_addr < choice)
--		goto out;
--
--	choice = random_addr;
--
--	fill_pagetable(choice, output_size);
--	switch_pagetable();
--out:
--	return (unsigned char *)choice;
-+	/* Pick random virtual address starting from LOAD_PHYSICAL_ADDR. */
-+	if (IS_ENABLED(CONFIG_X86_64))
-+		random_addr = find_random_virt_addr(LOAD_PHYSICAL_ADDR,
-+						 output_size);
-+	*virt_addr = (unsigned char *)random_addr;
- }
-diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
-index 9536d778149e..e2b2fbf08ed9 100644
---- a/arch/x86/boot/compressed/misc.c
-+++ b/arch/x86/boot/compressed/misc.c
-@@ -170,7 +170,8 @@ void __puthex(unsigned long value)
- }
- 
- #if CONFIG_X86_NEED_RELOCS
--static void handle_relocations(void *output, unsigned long output_len)
-+static void handle_relocations(void *output, unsigned long output_len,
-+			       void *virt_addr)
- {
- 	int *reloc;
- 	unsigned long delta, map, ptr;
-@@ -182,11 +183,6 @@ static void handle_relocations(void *output, unsigned long output_len)
- 	 * and where it was actually loaded.
- 	 */
- 	delta = min_addr - LOAD_PHYSICAL_ADDR;
--	if (!delta) {
--		debug_putstr("No relocation needed... ");
--		return;
--	}
--	debug_putstr("Performing relocations... ");
- 
- 	/*
- 	 * The kernel contains a table of relocation addresses. Those
-@@ -198,6 +194,20 @@ static void handle_relocations(void *output, unsigned long output_len)
- 	map = delta - __START_KERNEL_map;
- 
- 	/*
-+	 * 32-bit always performs relocations. 64-bit relocations are only
-+	 * needed if KASLR has chosen a different starting address offset
-+	 * from __START_KERNEL_map.
-+	 */
-+	if (IS_ENABLED(CONFIG_X86_64))
-+		delta = (unsigned long)virt_addr - LOAD_PHYSICAL_ADDR;
-+
-+	if (!delta) {
-+		debug_putstr("No relocation needed... ");
-+		return;
-+	}
-+	debug_putstr("Performing relocations... ");
-+
-+	/*
- 	 * Process relocations: 32 bit relocations first then 64 bit after.
- 	 * Three sets of binary relocations are added to the end of the kernel
- 	 * before compression. Each relocation table entry is the kernel
-@@ -250,7 +260,8 @@ static void handle_relocations(void *output, unsigned long output_len)
- #endif
- }
- #else
--static inline void handle_relocations(void *output, unsigned long output_len)
-+static inline void handle_relocations(void *output, unsigned long output_len,
-+				      void *virt_addr)
- { }
- #endif
- 
-@@ -327,7 +338,7 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
- 				  unsigned long output_len)
- {
- 	const unsigned long kernel_total_size = VO__end - VO__text;
--	unsigned char *output_orig = output;
-+	unsigned char *virt_addr = output;
- 
- 	/* Retain x86 boot parameters pointer passed from startup_32/64. */
- 	boot_params = rmode;
-@@ -366,12 +377,15 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
- 	 * the entire decompressed kernel plus relocation table, or the
- 	 * entire decompressed kernel plus .bss and .brk sections.
- 	 */
--	output = choose_random_location(input_data, input_len, output,
--					max(output_len, kernel_total_size));
-+	choose_random_location(input_data, input_len, &output,
-+				max(output_len, kernel_total_size),
-+				&virt_addr);
- 
- 	/* Validate memory location choices. */
- 	if ((unsigned long)output & (MIN_KERNEL_ALIGN - 1))
--		error("Destination address inappropriately aligned");
-+		error("Destination physical address inappropriately aligned");
-+	if ((unsigned long)virt_addr & (MIN_KERNEL_ALIGN - 1))
-+		error("Destination virtual address inappropriately aligned");
- #ifdef CONFIG_X86_64
- 	if (heap > 0x3fffffffffffUL)
- 		error("Destination address too large");
-@@ -381,19 +395,16 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
- #endif
- #ifndef CONFIG_RELOCATABLE
- 	if ((unsigned long)output != LOAD_PHYSICAL_ADDR)
--		error("Wrong destination address");
-+		error("Destination address does not match LOAD_PHYSICAL_ADDR");
-+	if (output != virt_addr)
-+		error("Destination virtual address changed when not relocatable");
- #endif
- 
- 	debug_putstr("\nDecompressing Linux... ");
- 	__decompress(input_data, input_len, NULL, NULL, output, output_len,
- 			NULL, error);
- 	parse_elf(output);
--	/*
--	 * 32-bit always performs relocations. 64-bit relocations are only
--	 * needed if kASLR has chosen a different load address.
--	 */
--	if (!IS_ENABLED(CONFIG_X86_64) || output != output_orig)
--		handle_relocations(output, output_len);
-+	handle_relocations(output, output_len, virt_addr);
- 	debug_putstr("done.\nBooting the kernel.\n");
- 	return output;
- }
-diff --git a/arch/x86/boot/compressed/misc.h b/arch/x86/boot/compressed/misc.h
-index ffacded0e66a..1a58fce66458 100644
---- a/arch/x86/boot/compressed/misc.h
-+++ b/arch/x86/boot/compressed/misc.h
-@@ -67,20 +67,22 @@ int cmdline_find_option_bool(const char *option);
- 
- #if CONFIG_RANDOMIZE_BASE
- /* kaslr.c */
--unsigned char *choose_random_location(unsigned char *input_ptr,
--				      unsigned long input_size,
--				      unsigned char *output_ptr,
--				      unsigned long output_size);
-+void choose_random_location(unsigned char *input_ptr,
-+			    unsigned long input_size,
-+			    unsigned char **output_ptr,
-+			    unsigned long output_size,
-+			    unsigned char **virt_addr);
- /* cpuflags.c */
- bool has_cpuflag(int flag);
- #else
--static inline
--unsigned char *choose_random_location(unsigned char *input_ptr,
--				      unsigned long input_size,
--				      unsigned char *output_ptr,
--				      unsigned long output_size)
-+static inline void choose_random_location(unsigned char *input_ptr,
-+					  unsigned long input_size,
-+					  unsigned char **output_ptr,
-+					  unsigned long output_size,
-+					  unsigned char **virt_addr)
- {
--	return output_ptr;
-+	/* No change from existing output location. */
-+	*virt_addr = *output_ptr;
- }
- #endif
- 
--- 
-2.6.3
+Please capitalize RAM and generally free flowing comment sentences, i.e.:
+
+> +	/* For video RAM: */
+
+> +#ifdef CONFIG_X86_64
+> +void fill_pagetable(unsigned long start, unsigned long size);
+> +void switch_pagetable(void);
+
+These are very ambiguous function names. Which pagetables are these? Kernel or 
+user? Is it boot time or final page tables? etc.
+
+Also what does the switching do?
+
+> --- /dev/null
+> +++ b/arch/x86/boot/compressed/misc_pgt.c
+> @@ -0,0 +1,93 @@
+> +#define __pa(x)  ((unsigned long)(x))
+> +#define __va(x)  ((void *)((unsigned long)(x)))
+> +
+> +#include "misc.h"
+> +
+> +#include <asm/init.h>
+> +#include <asm/pgtable.h>
+> +
+> +#include "../../mm/ident_map.c"
+> +#include "../string.h"
+
+Again a new .c file with no comments whatsoever :-(
+
+Also, we just decided that 'misc.c' was a bad name. Is there really no better name 
+than misc_pgt.c?
+
+> +struct alloc_pgt_data {
+> +	unsigned char *pgt_buf;
+> +	unsigned long pgt_buf_size;
+> +	unsigned long pgt_buf_offset;
+> +};
+> +
+> +static void *alloc_pgt_page(void *context)
+
+Non-obvious functions with no comments describing them.
+
+> +unsigned long __force_order;
+> +static struct alloc_pgt_data pgt_data;
+> +static struct x86_mapping_info mapping_info;
+> +static pgd_t *level4p;
+
+What's this __force_order flag? Why does it have double underscores?
+
+> +{
+> +	unsigned long end = start + size;
+> +
+> +	if (!level4p) {
+> +		pgt_data.pgt_buf_offset = 0;
+> +		mapping_info.alloc_pgt_page = alloc_pgt_page;
+> +		mapping_info.context = &pgt_data;
+> +		mapping_info.pmd_flag = __PAGE_KERNEL_LARGE_EXEC;
+> +
+> +		/*
+> +		 * come from startup_32 ?
+> +		 * then cr3 is _pgtable, we can reuse it.
+
+come what? What does this comment mean??
+
+> +		 */
+> +		level4p = (pgd_t *)read_cr3();
+
+Argh, another type cast. A quick check shows:
+
++static pgd_t *level4p;
++       if (!level4p) {
++               level4p = (pgd_t *)read_cr3();
++               if ((unsigned long)level4p == (unsigned long)_pgtable) {
++                       level4p = (pgd_t *)alloc_pgt_page(&pgt_data);
++       kernel_ident_mapping_init(&mapping_info, level4p, start, end);
++       write_cr3((unsigned long)level4p);
+
+... that the natural type for level4p would be unsigned long, not pgt_t ...
+
+
+> +		if ((unsigned long)level4p == (unsigned long)_pgtable) {
+> +			pgt_data.pgt_buf = (unsigned char *)_pgtable +
+> +						 BOOT_INIT_PGT_SIZE;
+> +			pgt_data.pgt_buf_size = BOOT_PGT_SIZE -
+> +						 BOOT_INIT_PGT_SIZE;
+> +			memset((unsigned char *)pgt_data.pgt_buf, 0,
+> +				pgt_data.pgt_buf_size);
+
+Is that (unsigned char *) type cast really necessary??
+
+Type casts are the absolute exception, we avoid them whenever possible - and this 
+code is using them like candy :-(
+
+Also, for heaven's sake, either ignore checkpatch.pl whining, or avoid the 
+excessive indentation by using helper functions (or some other technique).
+
+> +			debug_putstr("boot via startup_32\n");
+> +		} else {
+> +			pgt_data.pgt_buf = (unsigned char *)_pgtable;
+> +			pgt_data.pgt_buf_size = BOOT_PGT_SIZE;
+> +			memset((unsigned char *)pgt_data.pgt_buf, 0,
+> +				pgt_data.pgt_buf_size);
+> +			debug_putstr("boot via startup_64\n");
+> +			level4p = (pgd_t *)alloc_pgt_page(&pgt_data);
+> +		}
+> +	}
+> +
+> +	/* align boundary to 2M */
+> +	start = round_down(start, PMD_SIZE);
+> +	end = round_up(end, PMD_SIZE);
+> +	if (start >= end)
+> +		return;
+> +
+> +	kernel_ident_mapping_init(&mapping_info, level4p, start, end);
+> +}
+> +
+> +void switch_pagetable(void)
+> +{
+> +	write_cr3((unsigned long)level4p);
+> +}
+> diff --git a/arch/x86/include/asm/boot.h b/arch/x86/include/asm/boot.h
+> index 6b8d6e8cd449..52a9cbc1419f 100644
+> --- a/arch/x86/include/asm/boot.h
+> +++ b/arch/x86/include/asm/boot.h
+> @@ -32,7 +32,26 @@
+>  #endif /* !CONFIG_KERNEL_BZIP2 */
+>  
+>  #ifdef CONFIG_X86_64
+> +
+>  #define BOOT_STACK_SIZE	0x4000
+> +
+> +#define BOOT_INIT_PGT_SIZE (6*4096)
+> +#ifdef CONFIG_RANDOMIZE_BASE
+> +/*
+> + * 1 page for level4, 2 pages for first 2M.
+> + * (2+2)*4 pages for kernel, param, cmd_line, random kernel
+> + * if all cross 512G boundary.
+> + * So total will be 19 pages.
+> + */
+> +#ifdef CONFIG_X86_VERBOSE_BOOTUP
+> +#define BOOT_PGT_SIZE (19*4096)
+> +#else
+> +#define BOOT_PGT_SIZE (17*4096)
+> +#endif
+> +#else
+> +#define BOOT_PGT_SIZE BOOT_INIT_PGT_SIZE
+> +#endif
+
+Please use proper nesting of defines to make it more readable, i.e. something 
+like:
+
+#define BOOT_INIT_PGT_SIZE (6*4096)
+
+#ifdef CONFIG_RANDOMIZE_BASE
+/*
+ * 1 page for level4, 2 pages for first 2M.
+ * (2+2)*4 pages for kernel, param, cmd_line, random kernel
+ * if all cross 512G boundary.
+ * So total will be 19 pages.
+ */
+# ifdef CONFIG_X86_VERBOSE_BOOTUP
+#  define BOOT_PGT_SIZE (19*4096)
+# else
+#  define BOOT_PGT_SIZE (17*4096)
+# endif
+#else
+# define BOOT_PGT_SIZE BOOT_INIT_PGT_SIZE
+#endif
+
+but more importantly, BOOT_PGT_SIZE is really a bad name for this. Since it's used 
+by an allocator it's clear that this is a _maximum_. Why not put that fact into 
+the name??
+
+Basically you took a butt-ugly patch from Yinghai that shat all over the kernel 
+and rewrote its changelog - but that's not enough to make it acceptable! As a 
+general rule, most Yinghai patches I've seen in the past couple of years were 
+butt-ugly. If you take a patch from Yinghai you have to completely rewrite it in 
+most cases.
+
+So I'm really annoyed, I see myself repeating the same kind of review feedback I 
+gave to Yinghai again and again, and now to you?
+
+If it's less work for you then please rewrite Yinghai's patches from scratch - and 
+possibly split them up as well wherever possible, as they are risky as hell.
+
+I've applied the first two patches because they look OK, but _please_ do a proper 
+job with the rest of the series as well!
+
+Thanks,
+
+	Ingo
