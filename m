@@ -1,43 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160505210022.GA8404@grsecurity.net>
-References: <1462468869-6210-1-git-send-email-michael.leibowitz@intel.com>
-	<1462468869-6210-2-git-send-email-michael.leibowitz@intel.com>
-	<20160505210022.GA8404@grsecurity.net>
-Date: Fri, 6 May 2016 14:58:57 -0700
-Message-ID: <CAB-iPKXCPY0-M2EL9GaD670+2UnvTEhk1Tdxasn=Ac6t0JBBAA@mail.gmail.com>
-From: "Leibowitz, Michael" <michael.leibowitz@intel.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC 1/3] Add struct randomizing plugin
-To: Brad Spengler <spender@grsecurity.net>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, re.emese@gmail.com, pageexec@freemail.hu
+From: Kees Cook <keescook@chromium.org>
+Date: Fri,  6 May 2016 15:01:33 -0700
+Message-Id: <1462572095-11754-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1462572095-11754-1-git-send-email-keescook@chromium.org>
+References: <1462572095-11754-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 1/3] x86/boot: Clean up indenting for asm/boot.h
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 5, 2016 at 2:00 PM, Brad Spengler <spender@grsecurity.net> wrote:
-> Hi Michael,
->
->> + * Copyright (c) 2016, Intel Corporation.
->
-> Can you please describe exactly what changes of yours to my work justify claiming
-> Intel's copyright over even a sliver of the file?  What new expression of creativity
-> has Intel provided here?
->
-> Was it the whitespace changes?  The conversion of // to /* */ ?  The single typo fix?
-> Removing the single line that breaks the plugin when used with the constify plugin?
->
-> -Brad
+Before adding more defines to asm/boot.h, this cleans up the existing
+indenting for readability.
 
-The Intel copyright was applied as it is standard operating procedure.
-After some internal discussions, we basically agree.  The changes
-created here are trivial from the original and the result nearly 100%
-your work.  The next RFC and any subsequent submissions will not have
-the Intel copyright for trivial changes rotely applied.
+Suggested-by: Ingo Molnar <mingo@kernel.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/include/asm/boot.h | 20 +++++++++-----------
+ 1 file changed, 9 insertions(+), 11 deletions(-)
 
-Regarding the constify plugin breakage, as we don't presently have a
-constify plugin, I removed it.
-
-Cheers
-
-
+diff --git a/arch/x86/include/asm/boot.h b/arch/x86/include/asm/boot.h
+index 6b8d6e8cd449..52e6ca670ed0 100644
+--- a/arch/x86/include/asm/boot.h
++++ b/arch/x86/include/asm/boot.h
+@@ -12,29 +12,27 @@
+ 
+ /* Minimum kernel alignment, as a power of two */
+ #ifdef CONFIG_X86_64
+-#define MIN_KERNEL_ALIGN_LG2	PMD_SHIFT
++# define MIN_KERNEL_ALIGN_LG2	PMD_SHIFT
+ #else
+-#define MIN_KERNEL_ALIGN_LG2	(PAGE_SHIFT + THREAD_SIZE_ORDER)
++# define MIN_KERNEL_ALIGN_LG2	(PAGE_SHIFT + THREAD_SIZE_ORDER)
+ #endif
+ #define MIN_KERNEL_ALIGN	(_AC(1, UL) << MIN_KERNEL_ALIGN_LG2)
+ 
+ #if (CONFIG_PHYSICAL_ALIGN & (CONFIG_PHYSICAL_ALIGN-1)) || \
+ 	(CONFIG_PHYSICAL_ALIGN < MIN_KERNEL_ALIGN)
+-#error "Invalid value for CONFIG_PHYSICAL_ALIGN"
++# error "Invalid value for CONFIG_PHYSICAL_ALIGN"
+ #endif
+ 
+ #ifdef CONFIG_KERNEL_BZIP2
+-#define BOOT_HEAP_SIZE             0x400000
++# define BOOT_HEAP_SIZE		0x400000
+ #else /* !CONFIG_KERNEL_BZIP2 */
+-
+-#define BOOT_HEAP_SIZE	0x10000
+-
+-#endif /* !CONFIG_KERNEL_BZIP2 */
++# define BOOT_HEAP_SIZE		 0x10000
++#endif
+ 
+ #ifdef CONFIG_X86_64
+-#define BOOT_STACK_SIZE	0x4000
+-#else
+-#define BOOT_STACK_SIZE	0x1000
++# define BOOT_STACK_SIZE	0x4000
++#else /* !CONFIG_X86_64 */
++# define BOOT_STACK_SIZE	0x1000
+ #endif
+ 
+ #endif /* _ASM_X86_BOOT_H */
 -- 
-Michael Leibowitz
+2.6.3
