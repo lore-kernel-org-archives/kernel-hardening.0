@@ -1,65 +1,221 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Fri,  6 May 2016 15:01:33 -0700
-Message-Id: <1462572095-11754-2-git-send-email-keescook@chromium.org>
+Date: Fri,  6 May 2016 15:01:34 -0700
+Message-Id: <1462572095-11754-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1462572095-11754-1-git-send-email-keescook@chromium.org>
 References: <1462572095-11754-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 1/3] x86/boot: Clean up indenting for asm/boot.h
+Subject: [kernel-hardening] [PATCH 2/3] x86/boot: Split out kernel_ident_mapping_init
 To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@alien8.de>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Before adding more defines to asm/boot.h, this cleans up the existing
-indenting for readability.
+From: Yinghai Lu <yinghai@kernel.org>
 
-Suggested-by: Ingo Molnar <mingo@kernel.org>
+In order to support on-demand page table creation when moving the
+kernel for KASLR, we need to use kernel_ident_mapping_init() in the
+decompression code. This splits it out into its own file for use outside
+of init_64.c. Additionally, checking for __pa/__va defines is added
+since they need to be overridden in the decompression code.
+
+Signed-off-by: Yinghai Lu <yinghai@kernel.org>
+[kees: rewrote changelog]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/include/asm/boot.h | 20 +++++++++-----------
- 1 file changed, 9 insertions(+), 11 deletions(-)
+ arch/x86/include/asm/page.h |  5 +++
+ arch/x86/mm/ident_map.c     | 74 +++++++++++++++++++++++++++++++++++++++++++++
+ arch/x86/mm/init_64.c       | 74 +--------------------------------------------
+ 3 files changed, 80 insertions(+), 73 deletions(-)
+ create mode 100644 arch/x86/mm/ident_map.c
 
-diff --git a/arch/x86/include/asm/boot.h b/arch/x86/include/asm/boot.h
-index 6b8d6e8cd449..52e6ca670ed0 100644
---- a/arch/x86/include/asm/boot.h
-+++ b/arch/x86/include/asm/boot.h
-@@ -12,29 +12,27 @@
+diff --git a/arch/x86/include/asm/page.h b/arch/x86/include/asm/page.h
+index 802dde30c928..cf8f619b305f 100644
+--- a/arch/x86/include/asm/page.h
++++ b/arch/x86/include/asm/page.h
+@@ -37,7 +37,10 @@ static inline void copy_user_page(void *to, void *from, unsigned long vaddr,
+ 	alloc_page_vma(GFP_HIGHUSER | __GFP_ZERO | movableflags, vma, vaddr)
+ #define __HAVE_ARCH_ALLOC_ZEROED_USER_HIGHPAGE
  
- /* Minimum kernel alignment, as a power of two */
- #ifdef CONFIG_X86_64
--#define MIN_KERNEL_ALIGN_LG2	PMD_SHIFT
-+# define MIN_KERNEL_ALIGN_LG2	PMD_SHIFT
- #else
--#define MIN_KERNEL_ALIGN_LG2	(PAGE_SHIFT + THREAD_SIZE_ORDER)
-+# define MIN_KERNEL_ALIGN_LG2	(PAGE_SHIFT + THREAD_SIZE_ORDER)
- #endif
- #define MIN_KERNEL_ALIGN	(_AC(1, UL) << MIN_KERNEL_ALIGN_LG2)
++#ifndef __pa
+ #define __pa(x)		__phys_addr((unsigned long)(x))
++#endif
++
+ #define __pa_nodebug(x)	__phys_addr_nodebug((unsigned long)(x))
+ /* __pa_symbol should be used for C visible symbols.
+    This seems to be the official gcc blessed way to do such arithmetic. */
+@@ -51,7 +54,9 @@ static inline void copy_user_page(void *to, void *from, unsigned long vaddr,
+ #define __pa_symbol(x) \
+ 	__phys_addr_symbol(__phys_reloc_hide((unsigned long)(x)))
  
- #if (CONFIG_PHYSICAL_ALIGN & (CONFIG_PHYSICAL_ALIGN-1)) || \
- 	(CONFIG_PHYSICAL_ALIGN < MIN_KERNEL_ALIGN)
--#error "Invalid value for CONFIG_PHYSICAL_ALIGN"
-+# error "Invalid value for CONFIG_PHYSICAL_ALIGN"
- #endif
- 
- #ifdef CONFIG_KERNEL_BZIP2
--#define BOOT_HEAP_SIZE             0x400000
-+# define BOOT_HEAP_SIZE		0x400000
- #else /* !CONFIG_KERNEL_BZIP2 */
--
--#define BOOT_HEAP_SIZE	0x10000
--
--#endif /* !CONFIG_KERNEL_BZIP2 */
-+# define BOOT_HEAP_SIZE		 0x10000
++#ifndef __va
+ #define __va(x)			((void *)((unsigned long)(x)+PAGE_OFFSET))
 +#endif
  
- #ifdef CONFIG_X86_64
--#define BOOT_STACK_SIZE	0x4000
--#else
--#define BOOT_STACK_SIZE	0x1000
-+# define BOOT_STACK_SIZE	0x4000
-+#else /* !CONFIG_X86_64 */
-+# define BOOT_STACK_SIZE	0x1000
- #endif
+ #define __boot_va(x)		__va(x)
+ #define __boot_pa(x)		__pa(x)
+diff --git a/arch/x86/mm/ident_map.c b/arch/x86/mm/ident_map.c
+new file mode 100644
+index 000000000000..751ca920773a
+--- /dev/null
++++ b/arch/x86/mm/ident_map.c
+@@ -0,0 +1,74 @@
++
++static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
++			   unsigned long addr, unsigned long end)
++{
++	addr &= PMD_MASK;
++	for (; addr < end; addr += PMD_SIZE) {
++		pmd_t *pmd = pmd_page + pmd_index(addr);
++
++		if (!pmd_present(*pmd))
++			set_pmd(pmd, __pmd(addr | pmd_flag));
++	}
++}
++static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
++			  unsigned long addr, unsigned long end)
++{
++	unsigned long next;
++
++	for (; addr < end; addr = next) {
++		pud_t *pud = pud_page + pud_index(addr);
++		pmd_t *pmd;
++
++		next = (addr & PUD_MASK) + PUD_SIZE;
++		if (next > end)
++			next = end;
++
++		if (pud_present(*pud)) {
++			pmd = pmd_offset(pud, 0);
++			ident_pmd_init(info->pmd_flag, pmd, addr, next);
++			continue;
++		}
++		pmd = (pmd_t *)info->alloc_pgt_page(info->context);
++		if (!pmd)
++			return -ENOMEM;
++		ident_pmd_init(info->pmd_flag, pmd, addr, next);
++		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
++	}
++
++	return 0;
++}
++
++int kernel_ident_mapping_init(struct x86_mapping_info *info, pgd_t *pgd_page,
++			      unsigned long addr, unsigned long end)
++{
++	unsigned long next;
++	int result;
++	int off = info->kernel_mapping ? pgd_index(__PAGE_OFFSET) : 0;
++
++	for (; addr < end; addr = next) {
++		pgd_t *pgd = pgd_page + pgd_index(addr) + off;
++		pud_t *pud;
++
++		next = (addr & PGDIR_MASK) + PGDIR_SIZE;
++		if (next > end)
++			next = end;
++
++		if (pgd_present(*pgd)) {
++			pud = pud_offset(pgd, 0);
++			result = ident_pud_init(info, pud, addr, next);
++			if (result)
++				return result;
++			continue;
++		}
++
++		pud = (pud_t *)info->alloc_pgt_page(info->context);
++		if (!pud)
++			return -ENOMEM;
++		result = ident_pud_init(info, pud, addr, next);
++		if (result)
++			return result;
++		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
++	}
++
++	return 0;
++}
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index 214afda97911..65cfbeefbec4 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -58,79 +58,7 @@
  
- #endif /* _ASM_X86_BOOT_H */
+ #include "mm_internal.h"
+ 
+-static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
+-			   unsigned long addr, unsigned long end)
+-{
+-	addr &= PMD_MASK;
+-	for (; addr < end; addr += PMD_SIZE) {
+-		pmd_t *pmd = pmd_page + pmd_index(addr);
+-
+-		if (!pmd_present(*pmd))
+-			set_pmd(pmd, __pmd(addr | pmd_flag));
+-	}
+-}
+-static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
+-			  unsigned long addr, unsigned long end)
+-{
+-	unsigned long next;
+-
+-	for (; addr < end; addr = next) {
+-		pud_t *pud = pud_page + pud_index(addr);
+-		pmd_t *pmd;
+-
+-		next = (addr & PUD_MASK) + PUD_SIZE;
+-		if (next > end)
+-			next = end;
+-
+-		if (pud_present(*pud)) {
+-			pmd = pmd_offset(pud, 0);
+-			ident_pmd_init(info->pmd_flag, pmd, addr, next);
+-			continue;
+-		}
+-		pmd = (pmd_t *)info->alloc_pgt_page(info->context);
+-		if (!pmd)
+-			return -ENOMEM;
+-		ident_pmd_init(info->pmd_flag, pmd, addr, next);
+-		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+-	}
+-
+-	return 0;
+-}
+-
+-int kernel_ident_mapping_init(struct x86_mapping_info *info, pgd_t *pgd_page,
+-			      unsigned long addr, unsigned long end)
+-{
+-	unsigned long next;
+-	int result;
+-	int off = info->kernel_mapping ? pgd_index(__PAGE_OFFSET) : 0;
+-
+-	for (; addr < end; addr = next) {
+-		pgd_t *pgd = pgd_page + pgd_index(addr) + off;
+-		pud_t *pud;
+-
+-		next = (addr & PGDIR_MASK) + PGDIR_SIZE;
+-		if (next > end)
+-			next = end;
+-
+-		if (pgd_present(*pgd)) {
+-			pud = pud_offset(pgd, 0);
+-			result = ident_pud_init(info, pud, addr, next);
+-			if (result)
+-				return result;
+-			continue;
+-		}
+-
+-		pud = (pud_t *)info->alloc_pgt_page(info->context);
+-		if (!pud)
+-			return -ENOMEM;
+-		result = ident_pud_init(info, pud, addr, next);
+-		if (result)
+-			return result;
+-		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
+-	}
+-
+-	return 0;
+-}
++#include "ident_map.c"
+ 
+ /*
+  * NOTE: pagetable_init alloc all the fixmap pagetables contiguous on the
 -- 
 2.6.3
