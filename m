@@ -1,45 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 10 May 2016 19:44:07 +0200
-From: Borislav Petkov <bp@suse.de>
-Message-ID: <20160510174407.GG28520@pd.tnic>
-References: <1462900755-20005-1-git-send-email-keescook@chromium.org>
- <1462900755-20005-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1462900755-20005-2-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v8 1/4] x86/KASLR: Clarify identity map interface
-To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@kernel.org>, Yinghai Lu <yinghai@kernel.org>, Baoquan He <bhe@redhat.com>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Vivek Goyal <vgoyal@redhat.com>, Andy Lutomirski <luto@kernel.org>, lasse.collin@tukaani.org, Andrew Morton <akpm@linux-foundation.org>, Dave Young <dyoung@redhat.com>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
+Sender: keescook@google.com
+In-Reply-To: <1462303912-91447-5-git-send-email-thgarnie@google.com>
+References: <1462303912-91447-1-git-send-email-thgarnie@google.com>
+	<1462303912-91447-5-git-send-email-thgarnie@google.com>
+Date: Tue, 10 May 2016 11:24:04 -0700
+Message-ID: <CAGXu5jKd1zjeHcKopZhGxfHnkvYn2m6EZuL=N2qp+i-y4E1fRA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 4/4] x86, boot: Memory hotplug support for KASLR memory randomization
+To: Thomas Garnier <thgarnie@google.com>
+Cc: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Greg Thelen <gthelen@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 10, 2016 at 10:19:12AM -0700, Kees Cook wrote:
-> This extracts the call to prepare_level4() into a top-level function
-> that the user of the pagetable.c interface must call to initialize
-> the new page tables. For clarity and to match the "finalize" function,
-> it has been renamed to initialize_identity_maps(). This function also
-> gains the initialization of mapping_info so we don't have to do it each
-> time in add_identity_map().
-> 
-> Additionally add copyright notice to the top, to make it clear that the
-> bulk of the pagetable.c code was written by Yinghai, and that I just
-> added bugs later. :)
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+On Tue, May 3, 2016 at 12:31 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
+> the padding used for the physical memory mapping section when KASLR
+> memory is enabled. It ensures there is enough virtual address space when
+> CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
+> CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
+> entropy available.
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 > ---
->  arch/x86/boot/compressed/kaslr.c     |  3 +++
->  arch/x86/boot/compressed/misc.h      |  3 +++
->  arch/x86/boot/compressed/pagetable.c | 26 ++++++++++++++++----------
->  3 files changed, 22 insertions(+), 10 deletions(-)
+> Based on next-20160502
+> ---
+>  arch/x86/Kconfig    | 15 +++++++++++++++
+>  arch/x86/mm/kaslr.c | 14 ++++++++++++--
+>  2 files changed, 27 insertions(+), 2 deletions(-)
+>
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 60f33c7..5124d9c 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -2003,6 +2003,21 @@ config RANDOMIZE_MEMORY
+>
+>            If unsure, say N.
+>
+> +config RANDOMIZE_MEMORY_PHYSICAL_PADDING
+> +       hex "Physical memory mapping padding" if EXPERT
+> +       depends on RANDOMIZE_MEMORY
+> +       default "0xa" if MEMORY_HOTPLUG
+> +       default "0x0"
+> +       range 0x1 0x40 if MEMORY_HOTPLUG
+> +       range 0x0 0x40
+> +       ---help---
+> +          Define the padding in terabyte added to the existing physical memory
+> +          size during kernel memory randomization. It is useful for memory
+> +          hotplug support but reduces the entropy available for address
+> +          randomization.
+> +
+> +          If unsure, leave at the default value.
+> +
+>  config HOTPLUG_CPU
+>         bool "Support for hot-pluggable CPUs"
+>         depends on SMP
+> diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
+> index 3b330a9..ef3dc19 100644
+> --- a/arch/x86/mm/kaslr.c
+> +++ b/arch/x86/mm/kaslr.c
+> @@ -68,15 +68,25 @@ void __init kernel_randomize_memory(void)
+>  {
+>         size_t i;
+>         unsigned long addr = memory_rand_start;
+> -       unsigned long padding, rand, mem_tb;
+> +       unsigned long padding, rand, mem_tb, page_offset_padding;
+>         struct rnd_state rnd_st;
+>         unsigned long remain_padding = memory_rand_end - memory_rand_start;
+>
+>         if (!kaslr_enabled())
+>                 return;
+>
+> +       /*
+> +        * Update Physical memory mapping to available and
+> +        * add padding if needed (especially for memory hotplug support).
+> +        */
+> +       page_offset_padding = CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
+> +
+> +#ifdef CONFIG_MEMORY_HOTPLUG
+> +       page_offset_padding = max(1UL, page_offset_padding);
+> +#endif
 
-Exactly!
+Can't the ifdef and max lines be dropped? The Kconfig already enforces
+the range to have a minimum of 1 when CONFIG_MEMORY_HOTPLUG is used,
+IIUC.
 
-Acked-by: Borislav Petkov <bp@suse.de>
+> +
+>         BUG_ON(kaslr_regions[0].base != &page_offset_base);
+> -       mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
+> +       mem_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) + page_offset_padding;
+
+In fact, can't this variable be entirely dropped and the mem_tb
+calculation could just refer to RANDOMIZE_MEMORY_PHYSICAL_PADDING
+directly?
+
+-Kees
+
+>
+>         if (mem_tb < kaslr_regions[0].size_tb)
+>                 kaslr_regions[0].size_tb = mem_tb;
+> --
+> 2.8.0.rc3.226.g39d4020
+>
+
+
 
 -- 
-Regards/Gruss,
-    Boris.
-
-SUSE Linux GmbH, GF: Felix Imendörffer, Jane Smithard, Graham Norton, HRB 21284 (AG Nürnberg)
--- 
+Kees Cook
+Chrome OS & Brillo Security
