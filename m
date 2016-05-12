@@ -1,8 +1,8 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 12 May 2016 10:30:40 +0200
+Date: Thu, 12 May 2016 10:31:42 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160512083040.GA26457@gmail.com>
+Message-ID: <20160512083142.GB26457@gmail.com>
 References: <1462900755-20005-1-git-send-email-keescook@chromium.org>
  <1462900755-20005-2-git-send-email-keescook@chromium.org>
  <20160511062442.GA24803@gmail.com>
@@ -48,14 +48,10 @@ List-ID: <kernel-hardening.lists.openwall.com>
 >  * This code is compiled with -fPIC and it is relocated dynamically at
 >  * run time, but no relocation processing is performed. This means that
 >  * it is not safe to place pointers in static structures.
+>  */
 
-So I think this is still a bit confusing: what's the difference between 'relocated 
-dynamically at run time' and 'relocation processing'?
-
-So 'to relocate code' usually means the whole deal: 'copy code and fix up'.
-
-The problem here is that we copy the code to an address not known at build time, 
-but don't fix it up (because this is the fixup code), right?
+Btw., is there any way to detect such invalid pointers during build-time somehow? 
+This is not the first such bug and I suspect it won't be the last one either.
 
 Thanks,
 
