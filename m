@@ -1,139 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
+ <20160513015725.30223ee16a2a3860b4392b90@gmail.com>
+From: Michal Marek <mmarek@suse.com>
+Message-ID: <573B2A75.9030603@suse.com>
+Date: Tue, 17 May 2016 16:28:05 +0200
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAJcbSZGFweiOPu8UxU0Fyx5X1d26OTO9kQ1JVxG5WZT8XbTCAQ@mail.gmail.com>
-References: <1463081300-11127-1-git-send-email-thgarnie@google.com>
-	<CAJcbSZGFweiOPu8UxU0Fyx5X1d26OTO9kQ1JVxG5WZT8XbTCAQ@mail.gmail.com>
-Date: Tue, 17 May 2016 01:15:18 -0700
-Message-ID: <CAGXu5jL7is9TXo=7-2bW-1f65e7a7YrUQed1Pmd1fEgpsM+9aQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/4] x86, boot: KASLR memory randomization
-To: Thomas Garnier <thgarnie@google.com>
-Cc: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Greg Thelen <gthelen@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20160513015725.30223ee16a2a3860b4392b90@gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v8 2/4] GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>
+Cc: linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I'm travelling this week, but I'll try to spend some time on it.
+Dne 13.5.2016 v 01:57 Emese Revfy napsal(a):
+> --- /dev/null
+> +++ b/scripts/Makefile.gcc-plugins
+> @@ -0,0 +1,21 @@
+> +ifdef CONFIG_GCC_PLUGINS
+> +  __PLUGINCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
+> +  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
+> +
+> +  GCC_PLUGINS_CFLAGS := $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y))
+> +
+> +  ifeq ($(PLUGINCC),)
+> +    ifneq ($(GCC_PLUGINS_CFLAGS),)
+> +      ifeq ($(call cc-ifversion, -ge, 0405, y), y)
+> +        PLUGINCC := $(shell $(CO, NFIG_SHELL) -x $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
+> +        $(error error, your gcc installation does not support plugins, perhaps the necessary headers are missing?)
+> +      else
+> +        $(error error, your gcc version does not support plugins, you should upgrade it to gcc 4.5 at least)
+> +      endif
+> +    endif
+> +  endif
+> +
+> +  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+> +  GCC_PLUGIN := $(gcc-plugin-y)
+> +
+> +endif
 
--Kees
+Hi Emese,
 
-On Mon, May 16, 2016 at 11:25 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> Any feedback on the patch? Ingo? Kees?
->
-> Kees mentioned he will take care of the build warning on the KASLR
-> refactor (the function is not used right now).
->
-> Thanks,
-> Thomas
->
-> On Thu, May 12, 2016 at 12:28 PM, Thomas Garnier <thgarnie@google.com> wrote:
->> This is PATCH v5 for KASLR memory implementation for x86_64.
->>
->> Recent changes:
->>     Add performance information on commit.
->>     Add details on PUD alignment.
->>     Add information on testing against the KASLR bypass exploit.
->>     Rebase on next-20160511 and merge recent KASLR changes.
->>     Integrate feedback from Kees.
->>
->> ***Background:
->> The current implementation of KASLR randomizes only the base address of
->> the kernel and its modules. Research was published showing that static
->> memory can be overwitten to elevate privileges bypassing KASLR.
->>
->> In more details:
->>
->>    The physical memory mapping holds most allocations from boot and heap
->>    allocators. Knowning the base address and physical memory size, an
->>    attacker can deduce the PDE virtual address for the vDSO memory page.
->>    This attack was demonstrated at CanSecWest 2016, in the "Getting
->>    Physical Extreme Abuse of Intel Based Paged Systems"
->>    https://goo.gl/ANpWdV (see second part of the presentation). The
->>    exploits used against Linux worked successfuly against 4.6+ but fail
->>    with KASLR memory enabled (https://goo.gl/iTtXMJ). Similar research
->>    was done at Google leading to this patch proposal. Variants exists to
->>    overwrite /proc or /sys objects ACLs leading to elevation of privileges.
->>    These variants were tested against 4.6+.
->>
->> This set of patches randomizes base address and padding of three
->> major memory sections (physical memory mapping, vmalloc & vmemmap).
->> It mitigates exploits relying on predictable kernel addresses. This
->> feature can be enabled with the CONFIG_RANDOMIZE_MEMORY option.
->>
->> Padding for the memory hotplug support is managed by
->> CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING. The default value is 10
->> terabytes.
->>
->> The patches were tested on qemu & physical machines. Xen compatibility was
->> also verified. Multiple reboots were used to verify entropy for each
->> memory section.
->>
->> ***Problems that needed solving:
->>  - The three target memory sections are never at the same place between
->>    boots.
->>  - The physical memory mapping can use a virtual address not aligned on
->>    the PGD page table.
->>  - Have good entropy early at boot before get_random_bytes is available.
->>  - Add optional padding for memory hotplug compatibility.
->>
->> ***Parts:
->>  - The first part prepares for the KASLR memory randomization by
->>    refactoring entropy functions used by the current implementation and
->>    support PUD level virtual addresses for physical mapping.
->>    (Patches 01-02)
->>  - The second part implements the KASLR memory randomization for all
->>    sections mentioned.
->>    (Patch 03)
->>  - The third part adds support for memory hotplug by adding an option to
->>    define the padding used between the physical memory mapping section
->>    and the others.
->>    (Patch 04)
->>
->> Performance data:
->>
->> Kernbench shows almost no difference (-+ less than 1%):
->>
->> Before:
->>
->> Average Optimal load -j 12 Run (std deviation):
->> Elapsed Time 102.63 (1.2695)
->> User Time 1034.89 (1.18115)
->> System Time 87.056 (0.456416)
->> Percent CPU 1092.9 (13.892)
->> Context Switches 199805 (3455.33)
->> Sleeps 97907.8 (900.636)
->>
->> After:
->>
->> Average Optimal load -j 12 Run (std deviation):
->> Elapsed Time 102.489 (1.10636)
->> User Time 1034.86 (1.36053)
->> System Time 87.764 (0.49345)
->> Percent CPU 1095 (12.7715)
->> Context Switches 199036 (4298.1)
->> Sleeps 97681.6 (1031.11)
->>
->> Hackbench shows 0% difference on average (hackbench 90
->> repeated 10 times):
->>
->> attemp,before,after
->> 1,0.076,0.069
->> 2,0.072,0.069
->> 3,0.066,0.066
->> 4,0.066,0.068
->> 5,0.066,0.067
->> 6,0.066,0.069
->> 7,0.067,0.066
->> 8,0.063,0.067
->> 9,0.067,0.065
->> 10,0.068,0.071
->> average,0.0677,0.0677
->>
->> Thanks!
->>
+sorry for the late feedback. A problem I ran into now is that if you
+have a compiler that is either too old or built with plugin support
+disabled, scripts/Makefile.gcc-plugins errors out immediately. This is
+going to be an issue with allmodconfig/allyesconfig test builds. A
+solution would either be to make the respective options depend on
+!COMPILE_TEST, or turn the errors into warnings and do nothing if the
+compiler lacks plugin support. We are handling CONFIG_CC_STACKPROTECTOR
+on x86 this way already.
 
-
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Michal
