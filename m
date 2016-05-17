@@ -1,126 +1,297 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Mon, 16 May 2016 19:27:28 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160517022728.GA2821@www.outflux.net>
 MIME-Version: 1.0
-In-Reply-To: <1463081300-11127-1-git-send-email-thgarnie@google.com>
-References: <1463081300-11127-1-git-send-email-thgarnie@google.com>
-Date: Mon, 16 May 2016 11:25:12 -0700
-Message-ID: <CAJcbSZGFweiOPu8UxU0Fyx5X1d26OTO9kQ1JVxG5WZT8XbTCAQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/4] x86, boot: KASLR memory randomization
-To: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@kernel.org>, Thomas Garnier <thgarnie@google.com>, Dmitry Vyukov <dvyukov@google.com>, Paolo Bonzini <pbonzini@redhat.com>, Dan Williams <dan.j.williams@intel.com>, Kees Cook <keescook@chromium.org>, Stephen Smalley <sds@tycho.nsa.gov>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jonathan Corbet <corbet@lwn.net>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, linux-doc@vger.kernel.org, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] doc: self-protection: provide initial details
+To: Jonathan Corbet <corbet@lwn.net>
+Cc: linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Any feedback on the patch? Ingo? Kees?
+This document attempts to codify the intent around kernel self-protection
+along with discussion of both existing and desired technologies, with
+attention given to the rationale behind them, and the expectations of
+their usage.
 
-Kees mentioned he will take care of the build warning on the KASLR
-refactor (the function is not used right now).
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ Documentation/security/self-protection.txt | 261 +++++++++++++++++++++++++++++
+ 1 file changed, 261 insertions(+)
+ create mode 100644 Documentation/security/self-protection.txt
 
-Thanks,
-Thomas
+diff --git a/Documentation/security/self-protection.txt b/Documentation/security/self-protection.txt
+new file mode 100644
+index 000000000000..33ad7183a074
+--- /dev/null
++++ b/Documentation/security/self-protection.txt
+@@ -0,0 +1,261 @@
++# Kernel Self-Protection
++
++Kernel self-protection is the design and implementation of systems and
++structures within the Linux kernel to protect against security flaws in
++the kernel itself. This covers a wide range of issues, including removing
++entire classes of bugs, blocking security flaw exploitation methods,
++and actively detecting attack attempts. Not all topics are explored in
++this document, but it should serve as a reasonable starting point and
++answer any frequently asked questions. (Patches welcome, of course!)
++
++In the worst-case scenario, we assume an unprivileged local attacker
++has arbitrary read and write access to the kernel's memory. In many
++cases, bugs being exploited will not provide this level of access,
++but with systems in place that defend against the worst case we'll
++cover the more limited cases as well. A higher bar, and one that should
++still be kept in mind, is protecting the kernel against a _privileged_
++local attacker, since the root user has access to a vastly increased
++attack surface. (Especially when they have the ability to load arbitrary
++kernel modules.)
++
++The goals for successful self-protection systems would be to that they
++are effective, on by default, require no opt-in by developers, have no
++performance impact, do not impede kernel debugging, and have tests. It
++is uncommon that all these goals can be met, but it is worth explicitly
++mentioning them, since these aspects need to be explored, dealt with,
++and/or accepted.
++
++
++## Attack Surface Reduction
++
++The most fundamental defense against security exploits is to reduce the
++areas of the kernel that can be used to redirect execution. This ranges
++from limiting the exposed APIs available to userspace, making in-kernel
++APIs hard to use incorrectly, minimizing the areas of writable kernel
++memory, etc.
++
++### Strict kernel memory permissions
++
++When all of kernel memory is writable, it becomes trivial for attacks
++to redirect execution flow. To reduce the availability of these targets
++the kernel needs to protect its memory with a tight set of permissions.
++
++#### Executable code and read-only data must not be writable
++
++Any areas of the kernel with executable memory must not be writable.
++While this obviously includes the kernel text itself, we must consider
++all additional places too: kernel modules, JIT memory, etc. (There are
++temporary exceptions to this rule to support things like instruction
++alternatives, breakpoints, kprobes, etc. If these must exist in a
++kernel, they are implemented in a way where the memory is temporarily
++made writable during the update, and then returned to the original
++permissions.)
++
++In support of this are (the poorly named) CONFIG_DEBUG_RODATA and
++CONFIG_DEBUG_SET_MODULE_RONX, which seek to make sure that code is not
++writable, data is not executable, and read-only data is neither writable
++nor executable.
++
++#### Function pointers and sensitive variables must not be writable
++
++Vast areas of kernel memory contain function pointers that are looked
++up by the kernel and used to continue execution (e.g. descriptor/vector
++tables, file/network/etc operation structures, etc). The number of these
++variables must be reduced to an absolute minimum.
++
++Many such variables can be made read-only by setting them "const"
++so that they live in the .rodata section instead of the .data section
++of the kernel, gaining the protection of the kernel's strict memory
++permissions as described above.
++
++For variables that are initialized once at __init time, these can
++be marked with the (new and under development) __ro_after_init
++attribute.
++
++What remains are variables that are updated rarely (e.g. GDT). These
++will need another infrastructure (similar to the temporary exceptions
++made to kernel code mentioned above) that allow them to spend the rest
++of their lifetime read-only. (For example, when being updated, only the
++CPU thread performing the update would be given uninterruptable write
++access to the memory.)
++
++#### Segregation of kernel memory from userspace memory
++
++The kernel must never execute userspace memory. The kernel must also never
++access userspace memory without explicit expectation to do so. These
++rules can be enforced either by support of hardware-based restrictions
++(x86's SMEP/SMAP, ARM's PXN/PAN) or via emulation (ARM's Memory Domains).
++By blocking userspace memory in this way, execution and data parsing
++cannot be passed to trivially-controlled userspace memory, forcing
++attacks to operate entirely in kernel memory.
++
++### Reduced access to syscalls
++
++One trivial way to eliminate many syscalls for 64-bit systems is building
++without CONFIG_COMPAT. However, this is rarely a feasible scenario.
++
++The "seccomp" system provides an opt-in feature made available to
++userspace, which provides a way to reduce the number of kernel entry
++points available to a running process. This limits the breadth of kernel
++code that can be reached, possibly reducing the availability of a given
++bug to an attack.
++
++An area of improvement would be creating viable ways to keep access to
++things like compat, user namespaces, BPF creation, and perf limited only
++to trusted processes. This would keep the scope of kernel entry points
++restricted to the more regular set of normally available to unprivileged
++userspace.
++
++### Restricting access to kernel modules
++
++The kernel should never allow an unprivileged user the ability to
++load specific kernel modules, since that would provide a facility to
++unexpectedly extend the available attack surface. (The on-demand loading
++of modules via their predefined subsystems, e.g. MODULE_ALIAS_*, is
++considered "expected" here, though additional consideration should be
++given even to these.) For example, loading a filesystem module via an
++unprivileged socket API is nonsense: only the root or physically local
++user should trigger filesystem module loading. (And even this can be up
++for debate in some scenarios.)
++
++To protect against even privileged users, systems may need to either
++disable module loading entirely (e.g. monolithic kernel builds or
++modules_disabled sysctl), or provide signed modules (e.g.
++CONFIG_MODULE_SIG_FORCE, or dm-crypt with LoadPin), to keep from having
++oot load arbitrary kernel code via the module loader interface.
++
++
++## Memory integrity
++
++There are many memory structures in the kernel that are regularly abused
++to gain execution control during an attack, By far the most commonly
++understood is that of the stack buffer overflow in which the return
++address stored on the stack is overwritten. Many other examples of this
++kind of attack exist, and protections exist to defend against them.
++
++### Stack buffer overflow
++
++The classic stack buffer overflow involves writing past the expected end
++of a variable stored on the stack, ultimately writing a controlled value
++to the stack frame's stored return address. The most widely used defense
++is the presence of a stack canary between the stack variables and the
++return address (CONFIG_CC_STACKPROTECTOR), which is verified just before
++the function returns. Other defenses include things like shadow stacks.
++
++### Stack depth overflow
++
++A less well understood attack is using a bug that triggers the
++kernel to consume stack memory with deep function calls or large stack
++allocations. With this attack it is possible to write beyond the end of
++the kernel's preallocated stack space and into sensitive structures. Two
++important changes need to be made for better protections: moving the
++sensitive thread_info structure elsewhere, and adding a faulting memory
++hole at the bottom of the stack to catch these overflows.
++
++### Heap memory integrity
++
++The structures used to track heap free lists can be sanity-checked during
++allocation and freeing to make sure they aren't being used to manipulate
++other memory areas.
++
++### Counter integrity
++
++Many places in the kernel use atomic counters to track object references
++or perform similar lifetime management. When these counters can be made
++to wrap (over or under) this traditionally exposes a use-after-free
++flaw. By trapping atomic wrapping, this class of bug vanishes.
++
++### Size calculation overflow detection
++
++Similar to counter overflow, integer overflows (usually size calculations)
++need to be detected at runtime to kill this class of bug, which
++traditionally leads to being able to write past the end of kernel buffers.
++
++
++## Statistical defenses
++
++While many protections can be considered deterministic (e.g. read-only
++memory cannot be written to), some protections provide only statistical
++defense, in that an attack must gather enough information about a
++running system to overcome the defense. While not perfect, these do
++provide meaningful defenses.
++
++### Canaries, blinding, and other secrets
++
++It should be noted that things like the stack canary discussed earlier
++are technically statistical defenses, since they rely on a (leakable)
++secret value.
++
++Blinding literal values for things like JITs, where the executable
++contents may be partially under the control of userspace, need a similar
++secret value.
++
++It is critical that the secret values used must be separate (e.g.
++different canary per stack) and high entropy (e.g. is the RNG actually
++working?) in order to maximize their success.
++
++### Kernel Address Space Layout Randomization (KASLR)
++
++Since the location of kernel memory is almost always instrumental in
++mounting a successful attack, making the location non-deterministic
++raises the difficulty of an exploit. (Note that this in turn makes
++the value of leaks higher, since they may be used to discover desired
++memory locations.)
++
++#### Text and module base
++
++By relocating the physical and virtual base address of the kernel at
++boot-time (CONFIG_RANDOMIZE_BASE), attacks needing kernel code will be
++frustrated. Additionally, offsetting the module loading base address
++means that even systems that load the same set of modules in the same
++order every boot will not share a common base address with the rest of
++the kernel text.
++
++#### Stack base
++
++If the base address of the kernel stack is not the same between processes,
++or even not the same between syscalls, targets on or beyond the stack
++become more difficult to locate.
++
++#### Dynamic memory base
++
++Much of the kernel's dynamic memory (e.g. kmalloc, vmalloc, etc) ends up
++being relatively deterministic in layout due to the order of early-boot
++initializations. If the base address of these areas is not the same
++between boots, targeting them is frustrated, requiring a leak specific
++to the region.
++
++
++## Preventing Leaks
++
++Since the location of sensitive structures are the primary target for
++attacks, it is important to defend against leaks of both kernel memory
++addresses and kernel memory contents (since they may contain kernel
++addresses or other sensitive things like canary values).
++
++### Unique identifiers
++
++Kernel memory addresses must never be used as identifiers exposed to
++userspace. Instead, use an atomic counter, an idr, or similar unique
++identifier.
++
++### Memory initialization
++
++Memory copied to userspace must always be fully initialized. If not
++explicitly memset(), this will require changes to the compiler to make
++sure structure holes are cleared.
++
++### Memory poisoning
++
++When releasing memory, it is best to poison the contents (clear stack on
++syscall return, wipe heap memory on a free), to avoid reuse attacks that
++rely on the old contents of memory. This frustrates many uninitialized
++variable attacks, stack info leaks, heap info leaks, and use-after-free
++attacks.
++
++### Destination tracking
++
++To help kill classes of bugs that result in kernel addresses being
++written to userspace, the destination of writes needs to be tracked. If
++the buffer is destined for userspace (e.g. seq_file backed /proc files),
++it should automatically censor sensitive values.
+-- 
+2.6.3
 
-On Thu, May 12, 2016 at 12:28 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> This is PATCH v5 for KASLR memory implementation for x86_64.
->
-> Recent changes:
->     Add performance information on commit.
->     Add details on PUD alignment.
->     Add information on testing against the KASLR bypass exploit.
->     Rebase on next-20160511 and merge recent KASLR changes.
->     Integrate feedback from Kees.
->
-> ***Background:
-> The current implementation of KASLR randomizes only the base address of
-> the kernel and its modules. Research was published showing that static
-> memory can be overwitten to elevate privileges bypassing KASLR.
->
-> In more details:
->
->    The physical memory mapping holds most allocations from boot and heap
->    allocators. Knowning the base address and physical memory size, an
->    attacker can deduce the PDE virtual address for the vDSO memory page.
->    This attack was demonstrated at CanSecWest 2016, in the "Getting
->    Physical Extreme Abuse of Intel Based Paged Systems"
->    https://goo.gl/ANpWdV (see second part of the presentation). The
->    exploits used against Linux worked successfuly against 4.6+ but fail
->    with KASLR memory enabled (https://goo.gl/iTtXMJ). Similar research
->    was done at Google leading to this patch proposal. Variants exists to
->    overwrite /proc or /sys objects ACLs leading to elevation of privileges.
->    These variants were tested against 4.6+.
->
-> This set of patches randomizes base address and padding of three
-> major memory sections (physical memory mapping, vmalloc & vmemmap).
-> It mitigates exploits relying on predictable kernel addresses. This
-> feature can be enabled with the CONFIG_RANDOMIZE_MEMORY option.
->
-> Padding for the memory hotplug support is managed by
-> CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING. The default value is 10
-> terabytes.
->
-> The patches were tested on qemu & physical machines. Xen compatibility was
-> also verified. Multiple reboots were used to verify entropy for each
-> memory section.
->
-> ***Problems that needed solving:
->  - The three target memory sections are never at the same place between
->    boots.
->  - The physical memory mapping can use a virtual address not aligned on
->    the PGD page table.
->  - Have good entropy early at boot before get_random_bytes is available.
->  - Add optional padding for memory hotplug compatibility.
->
-> ***Parts:
->  - The first part prepares for the KASLR memory randomization by
->    refactoring entropy functions used by the current implementation and
->    support PUD level virtual addresses for physical mapping.
->    (Patches 01-02)
->  - The second part implements the KASLR memory randomization for all
->    sections mentioned.
->    (Patch 03)
->  - The third part adds support for memory hotplug by adding an option to
->    define the padding used between the physical memory mapping section
->    and the others.
->    (Patch 04)
->
-> Performance data:
->
-> Kernbench shows almost no difference (-+ less than 1%):
->
-> Before:
->
-> Average Optimal load -j 12 Run (std deviation):
-> Elapsed Time 102.63 (1.2695)
-> User Time 1034.89 (1.18115)
-> System Time 87.056 (0.456416)
-> Percent CPU 1092.9 (13.892)
-> Context Switches 199805 (3455.33)
-> Sleeps 97907.8 (900.636)
->
-> After:
->
-> Average Optimal load -j 12 Run (std deviation):
-> Elapsed Time 102.489 (1.10636)
-> User Time 1034.86 (1.36053)
-> System Time 87.764 (0.49345)
-> Percent CPU 1095 (12.7715)
-> Context Switches 199036 (4298.1)
-> Sleeps 97681.6 (1031.11)
->
-> Hackbench shows 0% difference on average (hackbench 90
-> repeated 10 times):
->
-> attemp,before,after
-> 1,0.076,0.069
-> 2,0.072,0.069
-> 3,0.066,0.066
-> 4,0.066,0.068
-> 5,0.066,0.067
-> 6,0.066,0.069
-> 7,0.067,0.066
-> 8,0.063,0.067
-> 9,0.067,0.065
-> 10,0.068,0.071
-> average,0.0677,0.0677
->
-> Thanks!
->
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
