@@ -1,48 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 18 May 2016 12:53:11 +0200
+Date: Wed, 18 May 2016 12:56:59 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160518125311.311f970310f5e0080d690d17@gmail.com>
-In-Reply-To: <573C26DC.6020607@au1.ibm.com>
+Message-Id: <20160518125659.a608972488e2c33f9ec3ed7b@gmail.com>
+In-Reply-To: <573B2A75.9030603@suse.com>
 References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
-	<20160513015833.cfb5334d075525b27269649c@gmail.com>
-	<573C26DC.6020607@au1.ibm.com>
+	<20160513015725.30223ee16a2a3860b4392b90@gmail.com>
+	<573B2A75.9030603@suse.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v8 3/4] Add Cyclomatic complexity GCC
- plugin
-To: kernel-hardening@lists.openwall.com
-Cc: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com
+Subject: [kernel-hardening] Re: [PATCH v8 2/4] GCC plugin infrastructure
+To: Michal Marek <mmarek@suse.com>
+Cc: linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, kernel-hardening@lists.openwall.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 18 May 2016 18:25:00 +1000
-Andrew Donnellan <andrew.donnellan@au1.ibm.com> wrote:
+On Tue, 17 May 2016 16:28:05 +0200
+Michal Marek <mmarek@suse.com> wrote:
 
-> On 13/05/16 09:58, Emese Revfy wrote:
-> > Add a very simple plugin to demonstrate the GCC plugin infrastructure. This GCC
-> > plugin computes the cyclomatic complexity of each function.
-> 
-> ...
-> 
-> > +config GCC_PLUGIN_CYC_COMPLEXITY
-> > +	bool "Compute the cyclomatic complexity of a function"
-> > +	depends on GCC_PLUGINS
-> > +	help
-> > +	  The complexity M of a function's control flow graph is defined as:
-> > +	   M = E - N + 2P
-> > +	  where
+> Dne 13.5.2016 v 01:57 Emese Revfy napsal(a):
+> > --- /dev/null
+> > +++ b/scripts/Makefile.gcc-plugins
+> > @@ -0,0 +1,21 @@
+> > +ifdef CONFIG_GCC_PLUGINS
+> > +  __PLUGINCC := $(call cc-ifversion, -ge, 0408, $(HOSTCXX), $(HOSTCC))
+> > +  PLUGINCC := $(shell $(CONFIG_SHELL) $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
 > > +
-> > +	  E = the number of edges
-> > +	  N = the number of nodes
-> > +	  P = the number of connected components (exit nodes).
+> > +  GCC_PLUGINS_CFLAGS := $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y))
 > > +
+> > +  ifeq ($(PLUGINCC),)
+> > +    ifneq ($(GCC_PLUGINS_CFLAGS),)
+> > +      ifeq ($(call cc-ifversion, -ge, 0405, y), y)
+> > +        PLUGINCC := $(shell $(CO, NFIG_SHELL) -x $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
+> > +        $(error error, your gcc installation does not support plugins, perhaps the necessary headers are missing?)
+> > +      else
+> > +        $(error error, your gcc version does not support plugins, you should upgrade it to gcc 4.5 at least)
+> > +      endif
+> > +    endif
+> > +  endif
+> > +
+> > +  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
+> > +  GCC_PLUGIN := $(gcc-plugin-y)
+> > +
+> > +endif
 > 
-> If this plugin is intended primarily as a demonstration it's probably 
-> worth mentioning this in the Kconfig description.
+> Hi Emese,
+> 
+> sorry for the late feedback. A problem I ran into now is that if you
+> have a compiler that is either too old or built with plugin support
+> disabled, scripts/Makefile.gcc-plugins errors out immediately. This is
+> going to be an issue with allmodconfig/allyesconfig test builds. A
+> solution would either be to make the respective options depend on
+> !COMPILE_TEST, or turn the errors into warnings and do nothing if the
+> compiler lacks plugin support. We are handling CONFIG_CC_STACKPROTECTOR
+> on x86 this way already.
 
 Hi,
 
-Before sancov this plugin demonstrated the gcc plugin infrastructure but otherwise this is a fully working plugin not a test plugin. Also it doesn't demonstrate all aspects of writing gcc plugins.
+I'll change the errors to warnings in the next patch set.
 
 -- 
 Emese
