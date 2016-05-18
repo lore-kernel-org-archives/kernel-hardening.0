@@ -1,28 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
+ <20160513015725.30223ee16a2a3860b4392b90@gmail.com>
+ <573C2CFE.8060305@au1.ibm.com>
+ <20160518123327.9018f73af78a47b4456b2027@gmail.com>
+From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+Message-ID: <573CDB52.30701@au1.ibm.com>
+Date: Thu, 19 May 2016 07:14:58 +1000
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1605181401560.29313@east.gentwo.org>
-References: <1463594175-111929-1-git-send-email-thgarnie@google.com>
- <1463594175-111929-3-git-send-email-thgarnie@google.com> <alpine.DEB.2.20.1605181323260.14349@east.gentwo.org>
- <CAJcbSZFhsZheqdZ5FD8auhiu8ozCyq-0xY1wjYu3j+Wc2R8nGg@mail.gmail.com> <alpine.DEB.2.20.1605181401560.29313@east.gentwo.org>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 18 May 2016 12:12:13 -0700
-Message-ID: <CAJcbSZHwZxH=NN+xk7N+O-47QQHmRchgqMS5==_HzH1no5ho9g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v1 2/2] mm: SLUB Freelist randomization
-To: Christoph Lameter <cl@linux.com>
-Cc: Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20160518123327.9018f73af78a47b4456b2027@gmail.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v8 2/4] GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
+Cc: linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, Michael Ellerman <mpe@ellerman.id.au>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I thought the mix of slab_test & kernbench would show a diverse
-picture on perf data. Is there another test that you think would be
-useful?
+On 18/05/16 20:33, Emese Revfy wrote:
+> Did you test the plugins with all gcc versions (4.5-6)?
 
-Thanks,
-Thomas
+No, I tested with 4.8 and 5.2 as those are the toolchains I have on hand 
+- I'll try to test with the rest of 4.5 - 6.1.
 
-On Wed, May 18, 2016 at 12:02 PM, Christoph Lameter <cl@linux.com> wrote:
-> On Wed, 18 May 2016, Thomas Garnier wrote:
->
->> Yes, I agree that it is not related to the changes.
->
-> Could you please provide meaningful test data?
+-- 
+Andrew Donnellan              OzLabs, ADL Canberra
+andrew.donnellan@au1.ibm.com  IBM Australia Limited
