@@ -1,73 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 May 2016 11:07:22 +0900
-From: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Message-ID: <20160519020722.GC10245@js1304-P5Q-DELUXE>
-References: <1463594175-111929-1-git-send-email-thgarnie@google.com>
- <1463594175-111929-3-git-send-email-thgarnie@google.com>
- <alpine.DEB.2.20.1605181323260.14349@east.gentwo.org>
- <CAJcbSZFhsZheqdZ5FD8auhiu8ozCyq-0xY1wjYu3j+Wc2R8nGg@mail.gmail.com>
- <alpine.DEB.2.20.1605181401560.29313@east.gentwo.org>
- <CAJcbSZHwZxH=NN+xk7N+O-47QQHmRchgqMS5==_HzH1no5ho9g@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAJcbSZHwZxH=NN+xk7N+O-47QQHmRchgqMS5==_HzH1no5ho9g@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC v1 2/2] mm: SLUB Freelist randomization
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
+Message-ID: <1463638931.10451.10.camel@ellerman.id.au>
+From: Michael Ellerman <mpe@ellerman.id.au>
+Date: Thu, 19 May 2016 16:22:11 +1000
+In-Reply-To: <20160518123327.9018f73af78a47b4456b2027@gmail.com>
+References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
+	 <20160513015725.30223ee16a2a3860b4392b90@gmail.com>
+	 <573C2CFE.8060305@au1.ibm.com>
+	 <20160518123327.9018f73af78a47b4456b2027@gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v8 2/4] GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
+Cc: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 18, 2016 at 12:12:13PM -0700, Thomas Garnier wrote:
-> I thought the mix of slab_test & kernbench would show a diverse
-> picture on perf data. Is there another test that you think would be
-> useful?
+On Wed, 2016-05-18 at 12:33 +0200, Emese Revfy wrote:
 
-Single thread testing on slab_test would be meaningful because it also
-touch the slowpath. Problem is just unstable result of slab_test.
+> > I've done some basic sanity testing on powerpc with the cyclomatic 
+> > complexity plugin (with LE native + cross-compilers) and it seems to 
+> > work with the patch below.
+> > 
+> > Signed-off-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+> > 
+> > diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+> > index a18a0dc..0cfed5b 100644
+> > --- a/arch/powerpc/Kconfig
+> > +++ b/arch/powerpc/Kconfig
+> > @@ -97,6 +97,7 @@ config PPC
+> >          select HAVE_DYNAMIC_FTRACE_WITH_REGS if MPROFILE_KERNEL
+> >          select HAVE_FUNCTION_TRACER
+> >          select HAVE_FUNCTION_GRAPH_TRACER
+> > +       select HAVE_GCC_PLUGINS
+> >          select SYSCTL_EXCEPTION_TRACE
+> >          select ARCH_WANT_OPTIONAL_GPIOLIB
+> >          select VIRT_TO_BUS if !PPC64
+> 
+> Hi,
+> 
+> Did you test the plugins with all gcc versions (4.5-6)?
 
-You can get more stable result of slab_test if you repeat same test
-sometimes and get average result.
+What's the concern about gcc versions? Just not breaking the build on old
+compilers?
 
-Please use following slab_test. It will do each operations 100000
-times and repeat it 50 times.
+I'm pretty sure powerpc big endian still builds with gcc 4.4.
 
-https://github.com/JoonsooKim/linux/blob/slab_test_robust-next-20160509/mm/slab_test.c
+However if Andrew's only tested on little endian, then that select should be
+guarded with an "if CPU_LITTLE_ENDIAN". And to build LE you need gcc >= 4.9.
 
-I did a quick test for this patchset and get following result.
-
-- Before (With patch and randomization is disabled by config)
-
-Single thread testing
-=====================
-1. Kmalloc: Repeatedly allocate then free test
-100000 times kmalloc(8) -> 42 cycles kfree -> 67 cycles
-100000 times kmalloc(16) -> 43 cycles kfree -> 68 cycles
-100000 times kmalloc(32) -> 47 cycles kfree -> 72 cycles
-100000 times kmalloc(64) -> 54 cycles kfree -> 78 cycles
-100000 times kmalloc(128) -> 75 cycles kfree -> 87 cycles
-100000 times kmalloc(256) -> 84 cycles kfree -> 111 cycles
-100000 times kmalloc(512) -> 82 cycles kfree -> 112 cycles
-100000 times kmalloc(1024) -> 86 cycles kfree -> 113 cycles
-100000 times kmalloc(2048) -> 113 cycles kfree -> 127 cycles
-100000 times kmalloc(4096) -> 151 cycles kfree -> 154 cycles
-
-- After (With patch and randomization is enabled by config)
-
-Single thread testing
-=====================
-1. Kmalloc: Repeatedly allocate then free test
-100000 times kmalloc(8) -> 51 cycles kfree -> 68 cycles
-100000 times kmalloc(16) -> 57 cycles kfree -> 70 cycles
-100000 times kmalloc(32) -> 70 cycles kfree -> 75 cycles
-100000 times kmalloc(64) -> 95 cycles kfree -> 84 cycles
-100000 times kmalloc(128) -> 142 cycles kfree -> 97 cycles
-100000 times kmalloc(256) -> 150 cycles kfree -> 107 cycles
-100000 times kmalloc(512) -> 151 cycles kfree -> 107 cycles
-100000 times kmalloc(1024) -> 154 cycles kfree -> 110 cycles
-100000 times kmalloc(2048) -> 230 cycles kfree -> 124 cycles
-100000 times kmalloc(4096) -> 423 cycles kfree -> 165 cycles
-
-It seems that performance decreases a lot but I don't care about it
-because it is a security feature and I don't have a better idea.
-
-Thanks.
+cheers
