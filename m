@@ -1,54 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1463739032.23394.8.camel@ellerman.id.au>
-From: Michael Ellerman <mpe@ellerman.id.au>
-Date: Fri, 20 May 2016 20:10:32 +1000
-In-Reply-To: <573D782D.10392.75A275C@pageexec.freemail.hu>
-References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
-	, <20160518123327.9018f73af78a47b4456b2027@gmail.com>
-	, <1463638931.10451.10.camel@ellerman.id.au>
-	 <573D782D.10392.75A275C@pageexec.freemail.hu>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v8 2/4] GCC plugin infrastructure
-To: pageexec@freemail.hu, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
-Cc: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, linux-kbuild@vger.kernel.org, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, Daniel Axtens <dja@axtens.net>
+MIME-Version: 1.0
+In-Reply-To: <CAAmzW4PN4wcPWbjf=Hws2qN_eZC1HCmn-gQC9_DB5ek5+bNksQ@mail.gmail.com>
+References: <1463594175-111929-1-git-send-email-thgarnie@google.com>
+ <1463594175-111929-3-git-send-email-thgarnie@google.com> <alpine.DEB.2.20.1605181323260.14349@east.gentwo.org>
+ <CAJcbSZFhsZheqdZ5FD8auhiu8ozCyq-0xY1wjYu3j+Wc2R8nGg@mail.gmail.com>
+ <alpine.DEB.2.20.1605181401560.29313@east.gentwo.org> <CAJcbSZHwZxH=NN+xk7N+O-47QQHmRchgqMS5==_HzH1no5ho9g@mail.gmail.com>
+ <20160519020722.GC10245@js1304-P5Q-DELUXE> <CAJcbSZGUTJdzRDno=+V+F4Yu_gaU_k0UJq5xhF5PPwgKGi3O7A@mail.gmail.com>
+ <CAAmzW4PN4wcPWbjf=Hws2qN_eZC1HCmn-gQC9_DB5ek5+bNksQ@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 20 May 2016 09:24:35 -0700
+Message-ID: <CAJcbSZGTxWHJpvcp8s=KQTX9my4rw9Gmg8KDs=ajj5BiqkJQcw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC v1 2/2] mm: SLUB Freelist randomization
+To: Joonsoo Kim <js1304@gmail.com>
+Cc: Joonsoo Kim <iamjoonsoo.kim@lge.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2016-05-19 at 10:24 +0200, PaX Team wrote:
-> On 19 May 2016 at 16:22, Michael Ellerman wrote:
-> > On Wed, 2016-05-18 at 12:33 +0200, Emese Revfy wrote:
-> > > Did you test the plugins with all gcc versions (4.5-6)?
-> > 
-> > What's the concern about gcc versions? Just not breaking the build on old
-> > compilers?
-> 
-> the earlier plugin capable gcc versions used to install gcc headers in a somewhat
-> ad-hoc manner resulting in compile time breakage for plugins and since some of
-> those potentially missing headers are target specific, each target arch should
-> be verified before enabling plugin support on them. things have much improved with
-> gcc 5 (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61176) though there's still
-> an occasional missing header but with wider use of plugins they will hopefully be
-> discovered earlier now. 
+On Thu, May 19, 2016 at 7:15 PM, Joonsoo Kim <js1304@gmail.com> wrote:
+> 2016-05-20 5:20 GMT+09:00 Thomas Garnier <thgarnie@google.com>:
+>> I ran the test given by Joonsoo and it gave me these minimum cycles
+>> per size across 20 usage:
+>
+> I can't understand what you did here. Maybe, it's due to my poor Engling.
+> Please explain more. You did single thread test? Why minimum cycles
+> rather than average?
+>
 
-OK thanks.
+I used your version of slab_test and ran it 20 times for each
+versions. I compared
+the minimum number of cycles as an optimal case for comparison. As you said
+slab_test results can be unreliable. Comparing the average across multiple runs
+always gave odd results.
 
-> perhaps linux-arch should be cc'ed on the plugin infrastructure
-> so that arch maintainers are aware of this?
+>> size,before,after
+>> 8,63.00,64.50 (102.38%)
+>> 16,64.50,65.00 (100.78%)
+>> 32,65.00,65.00 (100.00%)
+>> 64,66.00,65.00 (98.48%)
+>> 128,66.00,65.00 (98.48%)
+>> 256,64.00,64.00 (100.00%)
+>> 512,65.00,66.00 (101.54%)
+>> 1024,68.00,64.00 (94.12%)
+>> 2048,66.00,65.00 (98.48%)
+>> 4096,66.00,66.00 (100.00%)
+>
+> It looks like performance of all size classes are the same?
+>
+>> I assume the difference is bigger if you don't have RDRAND support.
+>
+> What does RDRAND means? Kconfig? How can I check if I have RDRAND?
+>
 
-linux-arch is still fairly high traffic, so it's no guarantee arch maintainers
-will see it, but it's probably worth a try.
+Sorry, I was referring to the usage of get_random_bytes_arch which
+will be faster
+if the test machine support specific instructions (like RDRAND).
 
-> > I'm pretty sure powerpc big endian still builds with gcc 4.4.
-> > 
-> > However if Andrew's only tested on little endian, then that select should be
-> > guarded with an "if CPU_LITTLE_ENDIAN". And to build LE you need gcc >= 4.9.
-> 
-> i guess that's part of the target tuple so in general arch maintainers should test
-> the target tuples used on their arch with all the supported gcc versions (speaking
-> of CC, not HOSTCC/HOSTCXX).
+>> Christoph, Joonsoo: Do you think it would be valuable to add a CONFIG
+>> to disable additional randomization per new page? It will remove
+>> additional entropy but increase performance for machines without arch
+>> specific randomization instructions.
+>
+> I don't think that it deserve another CONFIG. If performance is a matter,
+> I think that removing additional entropy is better until it is proved that
+> entropy is a problem.
+>
 
-Yeah. I think we'll probably enable it gradually as folks get time to test it.
-ie. ppc64le first, then ppc64 (BE), and then 32-bit if someone is interested.
+I will do more testing before the next RFC to decide the best approach.
 
-cheers
+> Thanks.
+
+Thanks for the comments,
+Thomas
