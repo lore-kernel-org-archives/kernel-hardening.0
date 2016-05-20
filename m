@@ -1,56 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160513015456.01415979f20a68eb7d2d9290@gmail.com>
+ <20160518123327.9018f73af78a47b4456b2027@gmail.com>
+ <1463638931.10451.10.camel@ellerman.id.au>
+ <573D782D.10392.75A275C@pageexec.freemail.hu>
+From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+Message-ID: <573EAD0B.7090005@au1.ibm.com>
+Date: Fri, 20 May 2016 16:22:03 +1000
 MIME-Version: 1.0
-In-Reply-To: <CAJcbSZGUTJdzRDno=+V+F4Yu_gaU_k0UJq5xhF5PPwgKGi3O7A@mail.gmail.com>
-References: <1463594175-111929-1-git-send-email-thgarnie@google.com>
-	<1463594175-111929-3-git-send-email-thgarnie@google.com>
-	<alpine.DEB.2.20.1605181323260.14349@east.gentwo.org>
-	<CAJcbSZFhsZheqdZ5FD8auhiu8ozCyq-0xY1wjYu3j+Wc2R8nGg@mail.gmail.com>
-	<alpine.DEB.2.20.1605181401560.29313@east.gentwo.org>
-	<CAJcbSZHwZxH=NN+xk7N+O-47QQHmRchgqMS5==_HzH1no5ho9g@mail.gmail.com>
-	<20160519020722.GC10245@js1304-P5Q-DELUXE>
-	<CAJcbSZGUTJdzRDno=+V+F4Yu_gaU_k0UJq5xhF5PPwgKGi3O7A@mail.gmail.com>
-Date: Fri, 20 May 2016 11:15:58 +0900
-Message-ID: <CAAmzW4PN4wcPWbjf=Hws2qN_eZC1HCmn-gQC9_DB5ek5+bNksQ@mail.gmail.com>
-From: Joonsoo Kim <js1304@gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v1 2/2] mm: SLUB Freelist randomization
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Joonsoo Kim <iamjoonsoo.kim@lge.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
+In-Reply-To: <573D782D.10392.75A275C@pageexec.freemail.hu>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [PATCH v8 2/4] GCC plugin infrastructure
+To: pageexec@freemail.hu, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, Michael Ellerman <mpe@ellerman.id.au>
+Cc: linux-kbuild@vger.kernel.org, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux@rasmusvillemoes.dk, fengguang.wu@intel.com, dvyukov@google.com, linux-kernel@vger.kernel.org, david.brown@linaro.org, yamada.masahiro@socionext.com, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, Daniel Axtens <dja@axtens.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2016-05-20 5:20 GMT+09:00 Thomas Garnier <thgarnie@google.com>:
-> I ran the test given by Joonsoo and it gave me these minimum cycles
-> per size across 20 usage:
+On 19/05/16 18:24, PaX Team wrote:
+> the earlier plugin capable gcc versions used to install gcc headers in a somewhat
+> ad-hoc manner resulting in compile time breakage for plugins and since some of
+> those potentially missing headers are target specific, each target arch should
+> be verified before enabling plugin support on them. things have much improved with
+> gcc 5 (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61176) though there's still
+> an occasional missing header but with wider use of plugins they will hopefully be
+> discovered earlier now. perhaps linux-arch should be cc'ed on the plugin infrastructure
+> so that arch maintainers are aware of this?
 
-I can't understand what you did here. Maybe, it's due to my poor Engling.
-Please explain more. You did single thread test? Why minimum cycles
-rather than average?
+Upon further testing it does seem we've got header issues as well as 
+hitting a segfault on 4.7.0. Looking into it further...
 
-> size,before,after
-> 8,63.00,64.50 (102.38%)
-> 16,64.50,65.00 (100.78%)
-> 32,65.00,65.00 (100.00%)
-> 64,66.00,65.00 (98.48%)
-> 128,66.00,65.00 (98.48%)
-> 256,64.00,64.00 (100.00%)
-> 512,65.00,66.00 (101.54%)
-> 1024,68.00,64.00 (94.12%)
-> 2048,66.00,65.00 (98.48%)
-> 4096,66.00,66.00 (100.00%)
-
-It looks like performance of all size classes are the same?
-
-> I assume the difference is bigger if you don't have RDRAND support.
-
-What does RDRAND means? Kconfig? How can I check if I have RDRAND?
-
-> Christoph, Joonsoo: Do you think it would be valuable to add a CONFIG
-> to disable additional randomization per new page? It will remove
-> additional entropy but increase performance for machines without arch
-> specific randomization instructions.
-
-I don't think that it deserve another CONFIG. If performance is a matter,
-I think that removing additional entropy is better until it is proved that
-entropy is a problem.
-
-Thanks.
+-- 
+Andrew Donnellan              OzLabs, ADL Canberra
+andrew.donnellan@au1.ibm.com  IBM Australia Limited
