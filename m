@@ -1,168 +1,128 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160524000719.b456ed0cd2aafacb4e53f177@gmail.com>
-References: <20160524000719.b456ed0cd2aafacb4e53f177@gmail.com>
+In-Reply-To: <20160524001736.135ae3cdc101ecec3232a493@gmail.com>
+References: <20160524001405.3e6abd1d5a63a871cc366cff@gmail.com> <20160524001736.135ae3cdc101ecec3232a493@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 24 May 2016 10:04:49 -0700
-Message-ID: <CAGXu5jKC=HuCe3FPuuzjAZ+SX6C5AnhMp5BWwLhi8xVXhTGjEg@mail.gmail.com>
+Date: Tue, 24 May 2016 10:09:16 -0700
+Message-ID: <CAGXu5jJgFujkiqBrb6k-VX8WHz8P3A__McKNOtRgGd-USuEyeQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v9 0/4] Introduce GCC plugin infrastructure
+Subject: [kernel-hardening] Re: [PATCH v1 3/3] Add the extra_latent_entropy kernel parameter
 To: Emese Revfy <re.emese@gmail.com>
-Cc: linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, Jens Axboe <axboe@kernel.dk>, Al Viro <viro@zeniv.linux.org.uk>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, bart.vanassche@sandisk.com, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 23, 2016 at 3:07 PM, Emese Revfy <re.emese@gmail.com> wrote:
-> This patch set introduce the GCC plugin infrastructure with examples for testing
-> and documentation.
+On Mon, May 23, 2016 at 3:17 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> When extra_latent_entropy is passed on the kernel command line,
+> entropy will be extracted from up to the first 4GB of RAM while the
+> runtime memory allocator is being initialized.
 >
-> GCC plugins are loadable modules that provide extra features to the compiler.
-> They are useful for runtime instrumentation and static analysis.
+> Based on work created by the PaX Team.
 >
-> The infrastructure supports all gcc versions from 4.5 to 6.0, building
-> out-of-tree modules and building in a separate directory. Cross-compilation
-> is supported too but currently only the x86, arm, arm64 and uml architectures enable plugins.
+> Signed-off-by: Emese Revfy <re.emese@gmail.com>
+> ---
+>  Documentation/kernel-parameters.txt |  5 +++++
+>  arch/Kconfig                        |  5 +++++
+>  mm/page_alloc.c                     | 23 +++++++++++++++++++++++
+>  3 files changed, 33 insertions(+)
 >
-> This infrastructure was ported from grsecurity/PaX. Based on work created by the PaX Team.
-> It is a CII project supported by the Linux Foundation.
+> diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+> index 5349363..6c2496e 100644
+> --- a/Documentation/kernel-parameters.txt
+> +++ b/Documentation/kernel-parameters.txt
+> @@ -2862,6 +2862,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+>                         the specified number of seconds.  This is to be used if
+>                         your oopses keep scrolling off the screen.
 >
-> Emese Revfy (4):
->  Shared library support
->  GCC plugin infrastructure
->  Add Cyclomatic complexity plugin
->  Add sancov plugin
+> +       extra_latent_entropy
+> +                       Enable a very simple form of latent entropy extraction
+> +                       from the first 4GB of memory as the bootmem allocator
+> +                       passes the memory pages to the buddy allocator.
+> +
+>         pcbit=          [HW,ISDN]
+>
+>         pcd.            [PARIDE]
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 74489df..327d1e4 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -403,6 +403,11 @@ config GCC_PLUGIN_LATENT_ENTROPY
+>           there is little 'natural' source of entropy normally.  The cost
+>           is some slowdown of the boot process and fork and irq processing.
+>
+> +         When extra_latent_entropy is passed on the kernel command line,
+> +         entropy will be extracted from up to the first 4GB of RAM while the
+> +         runtime memory allocator is being initialized.  This costs even more
+> +         slowdown of the boot process.
+> +
+>           Note that entropy extracted this way is not known to be cryptographically
+>           secure!
+>
+> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+> index ffc4f4a..c79407b 100644
+> --- a/mm/page_alloc.c
+> +++ b/mm/page_alloc.c
+> @@ -63,6 +63,7 @@
+>  #include <linux/sched/rt.h>
+>  #include <linux/page_owner.h>
+>  #include <linux/kthread.h>
+> +#include <linux/random.h>
+>
+>  #include <asm/sections.h>
+>  #include <asm/tlbflush.h>
+> @@ -1235,6 +1236,15 @@ static void __free_pages_ok(struct page *page, unsigned int order)
+>  }
+>
+>  #ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
+> +bool __meminitdata extra_latent_entropy;
+> +
+> +static int __init setup_extra_latent_entropy(char *str)
+> +{
+> +       extra_latent_entropy = true;
+> +       return 0;
+> +}
+> +early_param("extra_latent_entropy", setup_extra_latent_entropy);
+> +
+>  volatile u64 latent_entropy __latent_entropy;
+>  EXPORT_SYMBOL(latent_entropy);
+>  #endif
+> @@ -1254,6 +1264,19 @@ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
+>         __ClearPageReserved(p);
+>         set_page_count(p, 0);
+>
+> +#ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
+> +       if (extra_latent_entropy && !PageHighMem(page) && page_to_pfn(page) < 0x100000) {
+> +               u64 hash = 0;
+> +               size_t index, end = PAGE_SIZE * nr_pages / sizeof hash;
+> +               const u64 *data = lowmem_page_address(page);
+> +
+> +               for (index = 0; index < end; index++)
+> +                       hash ^= hash + data[index];
+> +               latent_entropy ^= hash;
+> +               add_device_randomness((const void *)&latent_entropy, sizeof(latent_entropy));
+> +       }
+> +#endif
+> +
 
-Michal, once -rc1 is out, can you carry this for -next? I'm happy to
-use my tree for it, if you want me to do it.
+We try to minimize #ifdefs in the .c code, so in this case, I think I
+would define "extra_latent_entropy" during an #else above so this "if"
+can be culled by the compiler automatically:
+
+#else
+# define extra_latent_entropy false
+#endif
+
+Others may have better suggestions to avoid the second #ifdef, but
+this seems the cleanest way to me to tie this to the earlier #ifdef.
 
 -Kees
 
+>         page_zone(page)->managed_pages += nr_pages;
+>         set_page_refcounted(page);
+>         __free_pages(page, order);
+> --
+> 2.8.1
 >
->
-> Changes from v8:
->  * Use warnings instead of errors because of allmodconfig/allyesconfig builds
->    with old gcc versions
->     (Suggested-by: Michal Marek <mmarek@suse.com>)
->  * Order HAVE_GCC_PLUGINS alphabetically
->  * Moved exported variables from the top level Makefile to scripts/Makefile.gcc-plugins
->
-> Changes from v7:
->  * Moved the "The GCC plugin infrastructure supports the arm and arm64 architectures too"
->    and the "Documentations of the GCC plugin infrastructre" patches
->    into the "GCC plugin infrastructure" patch
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Add gcc-plugin.sh to MAINTAINERS
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Makefile.host: Remove *shobjs from multi-depend
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Have distclean and mrproper targets clean the *.so files
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Simplied gcc-plugin-y to add plugins to HOSTLIBS
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Simplified Makefile.host
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Clean *.c.[012]*.*
->     (Suggested-by: Michal Marek <mmarek@suse.com>)
->  * Documentation: gcc plugins have to compilable as C and C++
->  * Enable GCC plugins for UML
->
-> Changes from v6:
->  * Disable the sancov plugin whenever KCOV_INSTRUMENT is disabled
->     (Reported-by: Huang Ying <ying.huang@linux.intel.com>)
->  * Disable KCOV/sancov plugin because this is not a regular kernel code
->     (Reported-by: Huang Ying <ying.huang@linux.intel.com>)
->  * Removed unnecessary gcc plugin cflags
->     (Signed-off-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Removed unnecessary gcc plugin aflags
->
-> Changes from v5:
->  * Set important properties on the external fndecl (Add sancov plugin)
->  * Revert documentation change too (Shared library support)
->     (Suggested-by: Kees Cook <keescook@chromium.org>)
->  * The GCC plugin infrastructure now supports the arm and arm64 architectures too
->     (Signed-off-by: David Brown <david.brown@linaro.org>)
->  * Simplify the computation of PLUGINCC (GCC plugin infrastructure)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Simplify the invocation of gcc-plugin.sh (GCC plugin infrastructure)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Make use of multi-depend (Shared library support)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Remove unnecessary exports (GCC plugin infrastructure)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Simplify Makefile by using addprefix (GCC plugin infrastructure)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Moved the gcc plugins from tools/ to scripts/ (GCC plugin infrastructure)
->     (Suggested-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * Removed plugins from KBUILD_CFLAGS_32 (GCC plugin infrastructure)
->  * Remove gcc-plugin target everywhere
->     (Suggested-by and partly Written-by: Masahiro Yamada <yamada.masahiro@socionext.com>)
->  * There is no leaf gcc attribute in gcc-4.5 (Add sancov plugin)
->  * Added support to the sancov plugin with kcov (Add sancov plugin)
->
-> Changes from v4:
->  * Moved shared library support from the GCC plugin infrastructure patch into
->    a different patch
->  * Update gcc-*.h from PaX
->    * Fixed gcc-common.h for gcc 6
->    * Added pass cloning support to the gcc pass generators
->  * Disable all plugins in vdso because it is userland code
->  * Add sancov gcc plugin: another use case for gcc plugin support in the kernel
->    is when there is a feature in the latest gcc version and we would like to use
->    it with older gcc versions as well (e.g., distros).
->
-> Changes from v3:
->  * Fix some indentation related warnings
->    (Suggested by checkpatch.pl)
->  * Add maintainer entries
->  * Don't run gcc_plugin.sh when the GCC_PLUGINS option is disabled or unsupported
->    (Reported-by: Fengguang Wu <fengguang.wu@intel.com>)
->
-> Changes from v2:
->  * Fixed incorrectly encoded characters
->  * Generate the GIMPLE, IPA, SIMPLE_IPA and RTL pass structures
->    (Suggested-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>)
->  * Write plugin related warning messages to stderr instead of stdout
->    (Suggested-by: Kees Cook <keescook@chromium.org>)
->  * Mention the installation of the gcc plugin headers (Documentation)
->
-> Changes from v1:
->  * Move the gcc-plugins make target into a separate Makefile because there may
->    be a lot of plugins (Suggested-by: Rasmus Villemoes)
->  * Simplify the dependencies of the plugin related config option
->    (Suggested-by: Kees Cook <keescook@chromium.org>)
->  * Removed the unnecessary example plugin
->
-> ---
->  .gitignore                                         |   1 +
->  Documentation/dontdiff                             |   1 +
->  Documentation/gcc-plugins.txt                      |  87 +++
->  MAINTAINERS                                        |   9 +
->  Makefile                                           |  24 +-
->  arch/Kconfig                                       |  36 +
->  arch/arm/Kconfig                                   |   1 +
->  arch/arm64/Kconfig                                 |   1 +
->  arch/um/Kconfig.common                             |   1 +
->  arch/x86/Kconfig                                   |   1 +
->  arch/x86/entry/vdso/Makefile                       |   3 +-
->  arch/x86/purgatory/Makefile                        |   2 +
->  lib/Kconfig.debug                                  |   2 +
->  scripts/Makefile                                   |   2 +-
->  scripts/Makefile.build                             |   2 +-
->  scripts/Makefile.clean                             |   4 +-
->  scripts/Makefile.gcc-plugins                       |  43 ++
->  scripts/Makefile.host                              |  55 +-
->  scripts/gcc-plugin.sh                              |  51 ++
->  scripts/gcc-plugins/Makefile                       |  27 +
->  scripts/gcc-plugins/cyc_complexity_plugin.c        |  73 ++
->  scripts/gcc-plugins/gcc-common.h                   | 830 +++++++++++++++++++++
->  scripts/gcc-plugins/gcc-generate-gimple-pass.h     | 175 +++++
->  scripts/gcc-plugins/gcc-generate-ipa-pass.h        | 289 +++++++
->  scripts/gcc-plugins/gcc-generate-rtl-pass.h        | 175 +++++
->  scripts/gcc-plugins/gcc-generate-simple_ipa-pass.h | 175 +++++
->  scripts/gcc-plugins/sancov_plugin.c                | 144 ++++
->  scripts/link-vmlinux.sh                            |   2 +-
->  scripts/package/builddeb                           |   1 +
->  29 files changed, 2200 insertions(+), 17 deletions(-)
 
 
 
