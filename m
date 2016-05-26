@@ -1,76 +1,127 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160526010951.GC9302@js1304-P5Q-DELUXE>
-References: <1464124523-43051-1-git-send-email-thgarnie@google.com>
- <1464124523-43051-2-git-send-email-thgarnie@google.com> <20160526010951.GC9302@js1304-P5Q-DELUXE>
 From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 26 May 2016 11:50:31 -0700
-Message-ID: <CAJcbSZHgEr-vJ=yN+hwEzdc1ZpsLG2ZLfOo53yB8sB8e5wy+NA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v2 1/2] mm: Reorganize SLAB freelist randomization
-To: Joonsoo Kim <iamjoonsoo.kim@lge.com>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
+Date: Thu, 26 May 2016 13:37:09 -0700
+Message-Id: <1464295031-26375-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v1 0/2] mm: SLUB Freelist randomization
+To: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Thomas Garnier <thgarnie@google.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, gthelen@google.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 25, 2016 at 6:09 PM, Joonsoo Kim <iamjoonsoo.kim@lge.com> wrote:
-> On Tue, May 24, 2016 at 02:15:22PM -0700, Thomas Garnier wrote:
->> This commit reorganizes the previous SLAB freelist randomization to
->> prepare for the SLUB implementation. It moves functions that will be
->> shared to slab_common. It also move the definition of freelist_idx_t in
->> the slab_def header so a similar type can be used for all common
->> functions. The entropy functions are changed to align with the SLUB
->> implementation, now using get_random_* functions.
->
-> Could you explain more what's the difference between get_random_*
-> and get_random_bytes_arch() and why this change is needed?
->
-> And, I think that it should be another patch.
->
+This is PATCH v1 for the SLUB Freelist randomization. The patch is now based
+on the Linux master branch (as the based SLAB patch was merged).
 
-Sure. From my test (limited scenario), get_random_bytes_arch was much
-slower than get_random_int when the random instructions were not
-available. It also seems from looking at both implementation that
-get_random_int may provide a bit more entropy at this early stage.
+Changes since RFC v2:
+ - Redone slab_test testing to decide best entropy approach on new page
+   creation.
+ - Moved to use get_random_int as best approach to still use hardware
+   randomization when available but lower cost when not available.
+ - Update SLAB implementation to use get_random_long and get_random_int
+   on refactoring.
+ - Updated testing that highlight 3-4% impact on slab_test for direct
+   testing on non-smp, 100000 iterations.
+ - Updated commit messages based on feedback.
+ - Use unsigned int* for random_seq for both SLUB & SLAB.
 
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->> Based on 0e01df100b6bf22a1de61b66657502a6454153c5
->> ---
->>  include/linux/slab_def.h | 11 +++++++-
->>  mm/slab.c                | 68 ++----------------------------------------------
->>  mm/slab.h                | 16 ++++++++++++
->>  mm/slab_common.c         | 48 ++++++++++++++++++++++++++++++++++
->>  4 files changed, 76 insertions(+), 67 deletions(-)
->>
->> diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
->> index 8694f7a..e05a871 100644
->> --- a/include/linux/slab_def.h
->> +++ b/include/linux/slab_def.h
->> @@ -3,6 +3,15 @@
->>
->>  #include <linux/reciprocal_div.h>
->>
->> +#define FREELIST_BYTE_INDEX (((PAGE_SIZE >> BITS_PER_BYTE) \
->> +                             <= SLAB_OBJ_MIN_SIZE) ? 1 : 0)
->> +
->> +#if FREELIST_BYTE_INDEX
->> +typedef unsigned char freelist_idx_t;
->> +#else
->> +typedef unsigned short freelist_idx_t;
->> +#endif
->> +
->
-> This is a SLAB specific index size definition and I don't want to export
-> it to SLUB. Please use 'void *random_seq' and allocate sizeof(void *)
-> memory for each entry. And, then do type casting when suffling in
-> SLAB. There is some memory waste but not that much so we can tolerate
-> it.
->
-> Others look fine to me.
->
+***Background:
+This proposal follows the previous SLAB Freelist patch submitted to next.
+It resuses parts of previous implementation and keep a similar approach.
 
-Ok, will do. Thanks.
+The kernel heap allocators are using a sequential freelist making their
+allocation predictable. This predictability makes kernel heap overflow
+easier to exploit. An attacker can careful prepare the kernel heap to
+control the following chunk overflowed.
 
-> Thanks.
->
+For example these attacks exploit the predictability of the heap:
+ - Linux Kernel CAN SLUB overflow (https://goo.gl/oMNWkU)
+ - Exploiting Linux Kernel Heap corruptions (http://goo.gl/EXLn95)
+
+***Problems that needed solving:
+ - Randomize the Freelist (singled linked) used in the SLUB allocator.
+ - Ensure good performance to encourage usage.
+ - Get best entropy in early boot stage.
+
+***Parts:
+ - 01/02 Reorganize the SLAB Freelist randomization to share elements
+   with the SLUB implementation.
+ - 02/02 The SLUB Freelist randomization implementation. Similar approach
+   than the SLAB but tailored to the singled freelist used in SLUB.
+
+***Performance data:
+
+slab_test impact is between 3% to 4% on average for 100000 attemps
+wihout smp. It is a very focused testing, kernbench show the overall
+impact on the system is way lower.
+
+Before:
+
+Single thread testing
+=====================
+1. Kmalloc: Repeatedly allocate then free test
+100000 times kmalloc(8) -> 49 cycles kfree -> 77 cycles
+100000 times kmalloc(16) -> 51 cycles kfree -> 79 cycles
+100000 times kmalloc(32) -> 53 cycles kfree -> 83 cycles
+100000 times kmalloc(64) -> 62 cycles kfree -> 90 cycles
+100000 times kmalloc(128) -> 81 cycles kfree -> 97 cycles
+100000 times kmalloc(256) -> 98 cycles kfree -> 121 cycles
+100000 times kmalloc(512) -> 95 cycles kfree -> 122 cycles
+100000 times kmalloc(1024) -> 96 cycles kfree -> 126 cycles
+100000 times kmalloc(2048) -> 115 cycles kfree -> 140 cycles
+100000 times kmalloc(4096) -> 149 cycles kfree -> 171 cycles
+2. Kmalloc: alloc/free test
+100000 times kmalloc(8)/kfree -> 70 cycles
+100000 times kmalloc(16)/kfree -> 70 cycles
+100000 times kmalloc(32)/kfree -> 70 cycles
+100000 times kmalloc(64)/kfree -> 70 cycles
+100000 times kmalloc(128)/kfree -> 70 cycles
+100000 times kmalloc(256)/kfree -> 69 cycles
+100000 times kmalloc(512)/kfree -> 70 cycles
+100000 times kmalloc(1024)/kfree -> 73 cycles
+100000 times kmalloc(2048)/kfree -> 72 cycles
+100000 times kmalloc(4096)/kfree -> 71 cycles
+
+After:
+
+Single thread testing
+=====================
+1. Kmalloc: Repeatedly allocate then free test
+100000 times kmalloc(8) -> 57 cycles kfree -> 78 cycles
+100000 times kmalloc(16) -> 61 cycles kfree -> 81 cycles
+100000 times kmalloc(32) -> 76 cycles kfree -> 93 cycles
+100000 times kmalloc(64) -> 83 cycles kfree -> 94 cycles
+100000 times kmalloc(128) -> 106 cycles kfree -> 107 cycles
+100000 times kmalloc(256) -> 118 cycles kfree -> 117 cycles
+100000 times kmalloc(512) -> 114 cycles kfree -> 116 cycles
+100000 times kmalloc(1024) -> 115 cycles kfree -> 118 cycles
+100000 times kmalloc(2048) -> 147 cycles kfree -> 131 cycles
+100000 times kmalloc(4096) -> 214 cycles kfree -> 161 cycles
+2. Kmalloc: alloc/free test
+100000 times kmalloc(8)/kfree -> 66 cycles
+100000 times kmalloc(16)/kfree -> 66 cycles
+100000 times kmalloc(32)/kfree -> 66 cycles
+100000 times kmalloc(64)/kfree -> 66 cycles
+100000 times kmalloc(128)/kfree -> 65 cycles
+100000 times kmalloc(256)/kfree -> 67 cycles
+100000 times kmalloc(512)/kfree -> 67 cycles
+100000 times kmalloc(1024)/kfree -> 64 cycles
+100000 times kmalloc(2048)/kfree -> 67 cycles
+100000 times kmalloc(4096)/kfree -> 67 cycles
+
+Kernbench, before:
+
+Average Optimal load -j 12 Run (std deviation):
+Elapsed Time 101.873 (1.16069)
+User Time 1045.22 (1.60447)
+System Time 88.969 (0.559195)
+Percent CPU 1112.9 (13.8279)
+Context Switches 189140 (2282.15)
+Sleeps 99008.6 (768.091)
+
+After:
+
+Average Optimal load -j 12 Run (std deviation):
+Elapsed Time 102.47 (0.562732)
+User Time 1045.3 (1.34263)
+System Time 88.311 (0.342554)
+Percent CPU 1105.8 (6.49444)
+Context Switches 189081 (2355.78)
+Sleeps 99231.5 (800.358)
