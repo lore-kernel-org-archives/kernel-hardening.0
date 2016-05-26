@@ -1,19 +1,19 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+t88a-nU7k86H28H=cam4kfioB=Oz-GYpx=mOQrgWNhg@mail.gmail.com>
+In-Reply-To: <CAAmzW4PMxA-o55KnKqAW=EvPCuEprqZGwK0F2O6V9ejN-QqLsQ@mail.gmail.com>
 References: <1464124523-43051-1-git-send-email-thgarnie@google.com>
- <1464124523-43051-3-git-send-email-thgarnie@google.com> <CAGXu5j+t88a-nU7k86H28H=cam4kfioB=Oz-GYpx=mOQrgWNhg@mail.gmail.com>
+ <1464124523-43051-3-git-send-email-thgarnie@google.com> <CAAmzW4PMxA-o55KnKqAW=EvPCuEprqZGwK0F2O6V9ejN-QqLsQ@mail.gmail.com>
 From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 26 May 2016 11:39:01 -0700
-Message-ID: <CAJcbSZFHp_7HDAVQ51W7bmdpiKjK+NOpzONMJhJyAmheADcz0Q@mail.gmail.com>
+Date: Thu, 26 May 2016 11:40:56 -0700
+Message-ID: <CAJcbSZF513mzpgoiHbApr8+Rj+V+B4hwLTYCoz4GMbfuZE4msA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [RFC v2 2/2] mm: SLUB Freelist randomization
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Joonsoo Kim <js1304@gmail.com>
+Cc: Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Pranith Kumar <bobby.prani@gmail.com>, David Howells <dhowells@redhat.com>, Tejun Heo <tj@kernel.org>, Johannes Weiner <hannes@cmpxchg.org>, David Woodhouse <David.Woodhouse@intel.com>, Petr Mladek <pmladek@suse.com>, Kees Cook <keescook@chromium.org>, Linux Memory Management List <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, Greg Thelen <gthelen@google.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 25, 2016 at 3:25 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, May 24, 2016 at 2:15 PM, Thomas Garnier <thgarnie@google.com> wrote:
+On Wed, May 25, 2016 at 6:49 PM, Joonsoo Kim <js1304@gmail.com> wrote:
+> 2016-05-25 6:15 GMT+09:00 Thomas Garnier <thgarnie@google.com>:
 >> Implements Freelist randomization for the SLUB allocator. It was
 >> previous implemented for the SLAB allocator. Both use the same
 >> configuration option (CONFIG_SLAB_FREELIST_RANDOM).
@@ -31,23 +31,6 @@ On Wed, May 25, 2016 at 3:25 PM, Kees Cook <keescook@chromium.org> wrote:
 >> Performance results:
 >>
 >> slab_test impact is between 3% to 4% on average:
->
-> Seems like slab_test is pretty intensive (so the impact appears
-> higher). On a more "regular" load like kernbench, the impact seems to
-> be almost 0. Is that accurate?
->
-
-Yes, because the slab_test done is more intensive on a single thread.
-It will show higher perf impact than just a global testing. The
-overall impact on the system is of course much smaller. I will detail
-that on the performance details.
-
-> Regardless, please consider both patches:
->
-> Reviewed-by: Kees Cook <keescook@chromium.org>
->
-> -Kees
->
 >>
 >> Before:
 >>
@@ -352,16 +335,21 @@ that on the performance details.
 >>
 >> +       /* Setup random freelists for each cache */
 >> +       init_freelist_randomization();
->> +
->>  #ifdef CONFIG_SMP
->>         register_cpu_notifier(&slab_notifier);
->>  #endif
->> --
->> 2.8.0.rc3.226.g39d4020
->>
 >
+> dma kmalloc caches are initialized with slab_state = UP.
+> That means that it's random_seq is initialized twice and
+> some memory would leak.
 >
+> Maybe, you need to check if random_seq is already initialized
+> or not in init_cache_randome_seq().
+
+Thanks, I will look into that.
+
 >
-> --
-> Kees Cook
-> Chrome OS & Brillo Security
+> Others look fine to me.
+>
+
+Thanks, I will move to PATCH on next iteration (based on linux-next
+related to the other thread).
+
+> Thanks.
