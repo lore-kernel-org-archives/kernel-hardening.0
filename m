@@ -1,33 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 31 May 2016 00:39:55 +0200
+Date: Tue, 31 May 2016 01:30:29 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160531003955.032d11cad95c4439328b0128@gmail.com>
-In-Reply-To: <CAGXu5jJ4iOHw+9khys3HVKAJH6q4Vu+8aSabycYWUCdK9GonKw@mail.gmail.com>
-References: <20160524001405.3e6abd1d5a63a871cc366cff@gmail.com>
-	<20160524001529.0e69232eff0b1b5bc566a763@gmail.com>
-	<CAGXu5jJHenHARDZt=51m1XbSStTxpG90Dv=Fpkn79A6pZYtGOw@mail.gmail.com>
-	<5744E665.28844.9DDA03D@pageexec.freemail.hu>
-	<CAGXu5jJ4iOHw+9khys3HVKAJH6q4Vu+8aSabycYWUCdK9GonKw@mail.gmail.com>
+Message-Id: <20160531013029.4c5db8b570d86527b0b53fe4@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v1 1/3] Add the latent_entropy gcc plugin
-To: Kees Cook <keescook@chromium.org>
-Cc: PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, Jens Axboe <axboe@kernel.dk>, Al Viro <viro@zeniv.linux.org.uk>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, bart.vanassche@sandisk.com, "David S. Miller" <davem@davemloft.net>
+Subject: [kernel-hardening] [PATCH v2 0/3] Introduce the latent_entropy gcc plugin
+To: kernel-hardening@lists.openwall.com
+Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, tytso@mit.edu, akpm@linux-foundation.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 24 May 2016 19:55:17 -0700
-Kees Cook <keescook@chromium.org> wrote:
- 
-> Yeah, answering "how random is this?" is not easy, but that's not what
-> I meant. I'm more curious about specific build configs or hardware
-> where calling get_random_int() early enough would always produce the
-> same value (or the same value across all threads, etc), and in these
-> cases, the new entropy should be visible when using the latent entropy
-> plugin.
+I would like to introduce the latent_entropy gcc plugin. This plugin mitigates
+the problem of the kernel having too little entropy during and after boot
+for generating crypto keys.
 
-I booted minimal configs (not allnoconfig because it can't boot in qemu)
-many times. I couldn't produce same values.
+This plugin mixes random values into the latent_entropy global variable
+in functions marked by the __latent_entropy attribute.
+The value of this global variable is added to the kernel entropy pool
+to increase the entropy.
 
--- 
-Emese
+It is a CII project supported by the Linux Foundation.
+
+The latent_entropy plugin was ported from grsecurity/PaX originally written by
+the PaX Team. You can find more about the plugin here:
+https://grsecurity.net/pipermail/grsecurity/2012-July/001093.html
+
+The plugin supports all gcc version from 4.5 to 6.0.
+
+I do some changes above the PaX version. The important one is mixing
+the stack pointer into the global variable too.
+You can find more about the changes here:
+https://github.com/ephox-gcc-plugins/latent_entropy
+
+This patch set is based on the "Introduce GCC plugin infrastructure" patch set (v9 next-20160520).
+
+Emese Revfy (3):
+ Add the latent_entropy gcc plugin
+ Mark functions with the latent_entropy attribute
+ Add the extra_latent_entropy kernel parameter
+
+
+Changes from v1:
+  * Remove unnecessary ifdefs
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+  * Separate the two definitions of add_latent_entropy()
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+  * Removed unnecessary global variable (latent_entropy_plugin.c)
+  * About the latent_entropy gcc attribute (latent_entropy_plugin.c)
+  * Measure the boot time performance impact of the latent_entropy plugin (arch/Kconfig)
+
+---
+ Documentation/kernel-parameters.txt         |   5 +
+ arch/Kconfig                                |  23 ++
+ arch/powerpc/kernel/Makefile                |   8 +-
+ block/blk-softirq.c                         |   2 +-
+ drivers/char/random.c                       |   6 +-
+ fs/namespace.c                              |   2 +-
+ include/linux/compiler-gcc.h                |   5 +
+ include/linux/compiler.h                    |   4 +
+ include/linux/fdtable.h                     |   2 +-
+ include/linux/genhd.h                       |   2 +-
+ include/linux/init.h                        |   4 +-
+ include/linux/random.h                      |  14 +-
+ init/main.c                                 |   1 +
+ kernel/fork.c                               |   5 +-
+ kernel/rcu/tiny.c                           |   2 +-
+ kernel/rcu/tree.c                           |   2 +-
+ kernel/sched/fair.c                         |   2 +-
+ kernel/softirq.c                            |   4 +-
+ kernel/time/timer.c                         |   2 +-
+ lib/irq_poll.c                              |   2 +-
+ lib/random32.c                              |   2 +-
+ mm/page_alloc.c                             |  30 ++
+ net/core/dev.c                              |   4 +-
+ scripts/Makefile.gcc-plugins                |  10 +-
+ scripts/gcc-plugins/Makefile                |   1 +
+ scripts/gcc-plugins/latent_entropy_plugin.c | 454 ++++++++++++++++++++++++++++
+ 26 files changed, 569 insertions(+), 29 deletions(-)
