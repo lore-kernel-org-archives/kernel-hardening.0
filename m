@@ -1,40 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 3 Jun 2016 19:42:52 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160603194252.91064b8e682ad988283fc569@gmail.com>
-In-Reply-To: <20160601124227.e922af8299168c09308d5e1b@linux-foundation.org>
-References: <20160531013029.4c5db8b570d86527b0b53fe4@gmail.com>
-	<20160531013145.612696c12f2ef744af739803@gmail.com>
-	<20160601124227.e922af8299168c09308d5e1b@linux-foundation.org>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/3] Add the latent_entropy gcc plugin
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, tytso@mit.edu, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
+From: Kees Cook <keescook@chromium.org>
+Date: Fri,  3 Jun 2016 11:40:22 -0700
+Message-Id: <1464979224-2085-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 0/2] expand use of __ro_after_init
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, linux-arch@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, x86@kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Mathias Krause <minipli@googlemail.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 1 Jun 2016 12:42:27 -0700
-Andrew Morton <akpm@linux-foundation.org> wrote:
+After v4.6 released, a number of people complained that Linux's use of
+__ro_after_init was extremely limited, but they did not send patches. In
+the interest of showing how to make progress in this area, this is a
+set of two patches for x86 and arm, extracted from the grsecurity/PaX
+patchset in about an hour. I invite others to continue this work, as it
+is relatively easy to accomplish.
 
-> On Tue, 31 May 2016 01:31:45 +0200 Emese Revfy <re.emese@gmail.com> wrote:
-> 
-> > This plugin mitigates the problem of the kernel having too little entropy during
-> > and after boot for generating crypto keys.
-> > 
-> > It creates a local variable in every marked function. The value of this variable is
-> > modified by randomly chosen operations (add, xor and rol) and
-> > random values (gcc generates them at compile time and the stack pointer at runtime).
-> > It depends on the control flow (e.g., loops, conditions).
-> > 
-> > Before the function returns the plugin writes this local variable
-> > into the latent_entropy global variable. The value of this global variable is
-> > added to the kernel entropy pool in do_one_initcall() and _do_fork().
-> 
-> I don't think I'm really understanding.  Won't this produce the same
-> value on each and every boot?
+Since __ro_after_init doesn't yet support modules (assistence here is
+welcome too), markings can only be used on variables that are built
+in. And since PaX mixes variables that are read-only after init with
+those that are protected with pax_open_kernel() and pax_close_kernel(),
+it does take a bit of analysis to make sure the variables aren't used
+in those cases.
 
-No, because of interrupts and intentional data races.
+Thanks,
 
--- 
-Emese
+-Kees
