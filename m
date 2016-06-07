@@ -1,74 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160607235935.60ef8505b54f052a464bc4de@gmail.com>
+References: <20160524000719.b456ed0cd2aafacb4e53f177@gmail.com>
+ <CAGXu5jKC=HuCe3FPuuzjAZ+SX6C5AnhMp5BWwLhi8xVXhTGjEg@mail.gmail.com>
+ <57458279.6080009@suse.com> <CAGXu5jKw_oQNCVUH+o_k-W+5Z7LDXgJ3UpP24a+y4S0Ny+gvvw@mail.gmail.com>
+ <57573559.1010607@suse.com> <CAGXu5j+y-fb7qj+C2xNXzqT1-ob-CJq7D6cLHGNTcpCWMPGA4Q@mail.gmail.com>
+ <20160607235935.60ef8505b54f052a464bc4de@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue,  7 Jun 2016 14:57:08 -0700
-Message-Id: <1465336628-18219-6-git-send-email-keescook@chromium.org>
-In-Reply-To: <1465336628-18219-1-git-send-email-keescook@chromium.org>
-References: <1465336628-18219-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 5/5] lkdtm: split atomic test into over and underflow
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, linux-kernel@vger.kernel.org
+Date: Tue, 7 Jun 2016 14:58:27 -0700
+Message-ID: <CAGXu5jLGCCoM83wXXasVz=1neBKbfZmrcrT39ZXqXTh7FUgEaA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v9 0/4] Introduce GCC plugin infrastructure
+To: Emese Revfy <re.emese@gmail.com>
+Cc: Michal Marek <mmarek@suse.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Each direction of the atomic wrapping should be individually testable.
+On Tue, Jun 7, 2016 at 2:59 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> On Tue, 7 Jun 2016 13:59:53 -0700
+> Kees Cook <keescook@chromium.org> wrote:
+>
+>> >
+>> > I applied the series to kbuild.git#kbuild now, sorry for the delay.
+>>
+>> Awesome! Thank you very much. I'll prepare the latent entropy plugin
+>> for -next now too.
+>
+> I'll send a new patch series this week because I'm developing a small feature and
+> I'm fixing the handling of tail calls.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- drivers/misc/lkdtm_core.c | 26 ++++++++++++++++++++------
- 1 file changed, 20 insertions(+), 6 deletions(-)
+Depending on timing, it may be best to send a delta patch from
+kbuild.git#kbuild. I assume that would be easier for Michal to carry.
 
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index f212f865f9c6..b5a544f2b645 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -111,7 +111,8 @@ enum ctype {
- 	CT_WRITE_RO,
- 	CT_WRITE_RO_AFTER_INIT,
- 	CT_WRITE_KERN,
--	CT_WRAP_ATOMIC,
-+	CT_ATOMIC_UNDERFLOW,
-+	CT_ATOMIC_OVERFLOW,
- 	CT_USERCOPY_HEAP_SIZE_TO,
- 	CT_USERCOPY_HEAP_SIZE_FROM,
- 	CT_USERCOPY_HEAP_FLAG_TO,
-@@ -160,7 +161,8 @@ static char* cp_type[] = {
- 	"WRITE_RO",
- 	"WRITE_RO_AFTER_INIT",
- 	"WRITE_KERN",
--	"WRAP_ATOMIC",
-+	"ATOMIC_UNDERFLOW",
-+	"ATOMIC_OVERFLOW",
- 	"USERCOPY_HEAP_SIZE_TO",
- 	"USERCOPY_HEAP_SIZE_FROM",
- 	"USERCOPY_HEAP_FLAG_TO",
-@@ -894,13 +896,25 @@ static void lkdtm_do_action(enum ctype which)
- 		do_overwritten();
- 		break;
- 	}
--	case CT_WRAP_ATOMIC: {
-+	case CT_ATOMIC_UNDERFLOW: {
- 		atomic_t under = ATOMIC_INIT(INT_MIN);
--		atomic_t over = ATOMIC_INIT(INT_MAX);
- 
--		pr_info("attempting atomic underflow\n");
-+		pr_info("attempting good atomic increment\n");
-+		atomic_inc(&under);
-+		atomic_dec(&under);
-+
-+		pr_info("attempting bad atomic underflow\n");
- 		atomic_dec(&under);
--		pr_info("attempting atomic overflow\n");
-+		break;
-+	}
-+	case CT_ATOMIC_OVERFLOW: {
-+		atomic_t over = ATOMIC_INIT(INT_MAX);
-+
-+		pr_info("attempting good atomic decrement\n");
-+		atomic_dec(&over);
-+		atomic_inc(&over);
-+
-+		pr_info("attempting bad atomic overflow\n");
- 		atomic_inc(&over);
- 
- 		return;
+-Kees
+
 -- 
-2.7.4
+Kees Cook
+Chrome OS & Brillo Security
