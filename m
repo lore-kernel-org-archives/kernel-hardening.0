@@ -1,2096 +1,381 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Tue,  7 Jun 2016 14:57:04 -0700
-Message-Id: <1465336628-18219-2-git-send-email-keescook@chromium.org>
-In-Reply-To: <1465336628-18219-1-git-send-email-keescook@chromium.org>
-References: <1465336628-18219-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 1/5] lkdtm: split build into multiple source files
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, linux-kernel@vger.kernel.org
+Date: Wed, 8 Jun 2016 07:36:31 +0800
+From: kbuild test robot <lkp@intel.com>
+Message-ID: <201606080727.qdZlSJTL%fengguang.wu@intel.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="3MwIy2ne0vdjdPXF"
+Content-Disposition: inline
+In-Reply-To: <1465336628-18219-5-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH 4/5] lkdtm: add usercopy tests
+To: Kees Cook <keescook@chromium.org>
+Cc: kbuild-all@01.org, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kbuild lacks a way to do in-place objcopy or other modifications of
-built targets, so in order to move functions into non-text sections
-without renaming the kernel module, the build of lkdtm must be split
-into separate source files. This renames lkdtm.c to lkdtm_core.c in
-preparation for adding the source file for the .rodata section.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
+--3MwIy2ne0vdjdPXF
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Hi,
+
+[auto build test WARNING on char-misc/char-misc-testing]
+[also build test WARNING on v4.7-rc2 next-20160607]
+[if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+
+url:    https://github.com/0day-ci/linux/commits/Kees-Cook/lkdtm-add-usercopy-and-rodata-fix-atomic/20160608-060444
+config: s390-default_defconfig (attached as .config)
+compiler: s390x-linux-gnu-gcc (Debian 5.3.1-8) 5.3.1 20160205
+reproduce:
+        wget https://git.kernel.org/cgit/linux/kernel/git/wfg/lkp-tests.git/plain/sbin/make.cross -O ~/bin/make.cross
+        chmod +x ~/bin/make.cross
+        # save the attached .config to linux build tree
+        make.cross ARCH=s390 
+
+All warnings (new ones prefixed by >>):
+
+   drivers/misc/lkdtm_core.c: In function 'do_usercopy_stack_callee.isra.0':
+>> drivers/misc/lkdtm_core.c:420:9: warning: function returns address of local variable [-Wreturn-local-addr]
+     return ptr;
+            ^
+   drivers/misc/lkdtm_core.c:405:16: note: declared here
+     unsigned char buf[32];
+                   ^
+
+vim +420 drivers/misc/lkdtm_core.c
+
+   404	{
+   405		unsigned char buf[32];
+   406		unsigned char *ptr = NULL;
+   407		int i;
+   408	
+   409		/* Exercise stack to avoid everything living in registers. */
+   410		for (i = 0; i < sizeof(buf); i++) {
+   411			/*
+   412			 * Hack to trick gcc into letting us return a reference
+   413			 * to a local stack frame.
+   414			 */
+   415			if (i == 0)
+   416				ptr = buf;
+   417			buf[i] = value & 0xff;
+   418		}
+   419	
+ > 420		return ptr;
+   421	}
+   422	
+   423	static noinline void do_usercopy_stack(bool to_user)
+   424	{
+   425		unsigned long user_addr;
+   426		unsigned char good_stack[32];
+   427		unsigned char *bad_stack;
+   428		int i;
+
 ---
- drivers/misc/Makefile     |    2 +
- drivers/misc/lkdtm.c      | 1023 ---------------------------------------------
- drivers/misc/lkdtm_core.c | 1023 +++++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 1025 insertions(+), 1023 deletions(-)
- delete mode 100644 drivers/misc/lkdtm.c
- create mode 100644 drivers/misc/lkdtm_core.c
+0-DAY kernel test infrastructure                Open Source Technology Center
+https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
 
-diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index b2fb6dbffcef..c3cb6ad8cc37 100644
---- a/drivers/misc/Makefile
-+++ b/drivers/misc/Makefile
-@@ -57,3 +57,5 @@ obj-$(CONFIG_ECHO)		+= echo/
- obj-$(CONFIG_VEXPRESS_SYSCFG)	+= vexpress-syscfg.o
- obj-$(CONFIG_CXL_BASE)		+= cxl/
- obj-$(CONFIG_PANEL)             += panel.o
-+
-+lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
-diff --git a/drivers/misc/lkdtm.c b/drivers/misc/lkdtm.c
-deleted file mode 100644
-index 0a5cbbe12452..000000000000
---- a/drivers/misc/lkdtm.c
-+++ /dev/null
-@@ -1,1023 +0,0 @@
--/*
-- * Kprobe module for testing crash dumps
-- *
-- * This program is free software; you can redistribute it and/or modify
-- * it under the terms of the GNU General Public License as published by
-- * the Free Software Foundation; either version 2 of the License, or
-- * (at your option) any later version.
-- *
-- * This program is distributed in the hope that it will be useful,
-- * but WITHOUT ANY WARRANTY; without even the implied warranty of
-- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-- * GNU General Public License for more details.
-- *
-- * You should have received a copy of the GNU General Public License
-- * along with this program; if not, write to the Free Software
-- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-- *
-- * Copyright (C) IBM Corporation, 2006
-- *
-- * Author: Ankita Garg <ankita@in.ibm.com>
-- *
-- * This module induces system failures at predefined crashpoints to
-- * evaluate the reliability of crash dumps obtained using different dumping
-- * solutions.
-- *
-- * It is adapted from the Linux Kernel Dump Test Tool by
-- * Fernando Luis Vazquez Cao <http://lkdtt.sourceforge.net>
-- *
-- * Debugfs support added by Simon Kagstrom <simon.kagstrom@netinsight.net>
-- *
-- * See Documentation/fault-injection/provoke-crashes.txt for instructions
-- */
--#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
--
--#include <linux/kernel.h>
--#include <linux/fs.h>
--#include <linux/module.h>
--#include <linux/buffer_head.h>
--#include <linux/kprobes.h>
--#include <linux/list.h>
--#include <linux/init.h>
--#include <linux/interrupt.h>
--#include <linux/hrtimer.h>
--#include <linux/slab.h>
--#include <scsi/scsi_cmnd.h>
--#include <linux/debugfs.h>
--#include <linux/vmalloc.h>
--#include <linux/mman.h>
--#include <asm/cacheflush.h>
--
--#ifdef CONFIG_IDE
--#include <linux/ide.h>
--#endif
--
--/*
-- * Make sure our attempts to over run the kernel stack doesn't trigger
-- * a compiler warning when CONFIG_FRAME_WARN is set. Then make sure we
-- * recurse past the end of THREAD_SIZE by default.
-- */
--#if defined(CONFIG_FRAME_WARN) && (CONFIG_FRAME_WARN > 0)
--#define REC_STACK_SIZE (CONFIG_FRAME_WARN / 2)
--#else
--#define REC_STACK_SIZE (THREAD_SIZE / 8)
--#endif
--#define REC_NUM_DEFAULT ((THREAD_SIZE / REC_STACK_SIZE) * 2)
--
--#define DEFAULT_COUNT 10
--#define EXEC_SIZE 64
--
--enum cname {
--	CN_INVALID,
--	CN_INT_HARDWARE_ENTRY,
--	CN_INT_HW_IRQ_EN,
--	CN_INT_TASKLET_ENTRY,
--	CN_FS_DEVRW,
--	CN_MEM_SWAPOUT,
--	CN_TIMERADD,
--	CN_SCSI_DISPATCH_CMD,
--	CN_IDE_CORE_CP,
--	CN_DIRECT,
--};
--
--enum ctype {
--	CT_NONE,
--	CT_PANIC,
--	CT_BUG,
--	CT_WARNING,
--	CT_EXCEPTION,
--	CT_LOOP,
--	CT_OVERFLOW,
--	CT_CORRUPT_STACK,
--	CT_UNALIGNED_LOAD_STORE_WRITE,
--	CT_OVERWRITE_ALLOCATION,
--	CT_WRITE_AFTER_FREE,
--	CT_READ_AFTER_FREE,
--	CT_WRITE_BUDDY_AFTER_FREE,
--	CT_READ_BUDDY_AFTER_FREE,
--	CT_SOFTLOCKUP,
--	CT_HARDLOCKUP,
--	CT_SPINLOCKUP,
--	CT_HUNG_TASK,
--	CT_EXEC_DATA,
--	CT_EXEC_STACK,
--	CT_EXEC_KMALLOC,
--	CT_EXEC_VMALLOC,
--	CT_EXEC_USERSPACE,
--	CT_ACCESS_USERSPACE,
--	CT_WRITE_RO,
--	CT_WRITE_RO_AFTER_INIT,
--	CT_WRITE_KERN,
--	CT_WRAP_ATOMIC
--};
--
--static char* cp_name[] = {
--	"INT_HARDWARE_ENTRY",
--	"INT_HW_IRQ_EN",
--	"INT_TASKLET_ENTRY",
--	"FS_DEVRW",
--	"MEM_SWAPOUT",
--	"TIMERADD",
--	"SCSI_DISPATCH_CMD",
--	"IDE_CORE_CP",
--	"DIRECT",
--};
--
--static char* cp_type[] = {
--	"PANIC",
--	"BUG",
--	"WARNING",
--	"EXCEPTION",
--	"LOOP",
--	"OVERFLOW",
--	"CORRUPT_STACK",
--	"UNALIGNED_LOAD_STORE_WRITE",
--	"OVERWRITE_ALLOCATION",
--	"WRITE_AFTER_FREE",
--	"READ_AFTER_FREE",
--	"WRITE_BUDDY_AFTER_FREE",
--	"READ_BUDDY_AFTER_FREE",
--	"SOFTLOCKUP",
--	"HARDLOCKUP",
--	"SPINLOCKUP",
--	"HUNG_TASK",
--	"EXEC_DATA",
--	"EXEC_STACK",
--	"EXEC_KMALLOC",
--	"EXEC_VMALLOC",
--	"EXEC_USERSPACE",
--	"ACCESS_USERSPACE",
--	"WRITE_RO",
--	"WRITE_RO_AFTER_INIT",
--	"WRITE_KERN",
--	"WRAP_ATOMIC"
--};
--
--static struct jprobe lkdtm;
--
--static int lkdtm_parse_commandline(void);
--static void lkdtm_handler(void);
--
--static char* cpoint_name;
--static char* cpoint_type;
--static int cpoint_count = DEFAULT_COUNT;
--static int recur_count = REC_NUM_DEFAULT;
--
--static enum cname cpoint = CN_INVALID;
--static enum ctype cptype = CT_NONE;
--static int count = DEFAULT_COUNT;
--static DEFINE_SPINLOCK(count_lock);
--static DEFINE_SPINLOCK(lock_me_up);
--
--static u8 data_area[EXEC_SIZE];
--
--static const unsigned long rodata = 0xAA55AA55;
--static unsigned long ro_after_init __ro_after_init = 0x55AA5500;
--
--module_param(recur_count, int, 0644);
--MODULE_PARM_DESC(recur_count, " Recursion level for the stack overflow test");
--module_param(cpoint_name, charp, 0444);
--MODULE_PARM_DESC(cpoint_name, " Crash Point, where kernel is to be crashed");
--module_param(cpoint_type, charp, 0444);
--MODULE_PARM_DESC(cpoint_type, " Crash Point Type, action to be taken on "\
--				"hitting the crash point");
--module_param(cpoint_count, int, 0644);
--MODULE_PARM_DESC(cpoint_count, " Crash Point Count, number of times the "\
--				"crash point is to be hit to trigger action");
--
--static unsigned int jp_do_irq(unsigned int irq)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--
--static irqreturn_t jp_handle_irq_event(unsigned int irq,
--				       struct irqaction *action)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--
--static void jp_tasklet_action(struct softirq_action *a)
--{
--	lkdtm_handler();
--	jprobe_return();
--}
--
--static void jp_ll_rw_block(int rw, int nr, struct buffer_head *bhs[])
--{
--	lkdtm_handler();
--	jprobe_return();
--}
--
--struct scan_control;
--
--static unsigned long jp_shrink_inactive_list(unsigned long max_scan,
--					     struct zone *zone,
--					     struct scan_control *sc)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--
--static int jp_hrtimer_start(struct hrtimer *timer, ktime_t tim,
--			    const enum hrtimer_mode mode)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--
--static int jp_scsi_dispatch_cmd(struct scsi_cmnd *cmd)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--
--#ifdef CONFIG_IDE
--static int jp_generic_ide_ioctl(ide_drive_t *drive, struct file *file,
--			struct block_device *bdev, unsigned int cmd,
--			unsigned long arg)
--{
--	lkdtm_handler();
--	jprobe_return();
--	return 0;
--}
--#endif
--
--/* Return the crashpoint number or NONE if the name is invalid */
--static enum ctype parse_cp_type(const char *what, size_t count)
--{
--	int i;
--
--	for (i = 0; i < ARRAY_SIZE(cp_type); i++) {
--		if (!strcmp(what, cp_type[i]))
--			return i + 1;
--	}
--
--	return CT_NONE;
--}
--
--static const char *cp_type_to_str(enum ctype type)
--{
--	if (type == CT_NONE || type < 0 || type > ARRAY_SIZE(cp_type))
--		return "None";
--
--	return cp_type[type - 1];
--}
--
--static const char *cp_name_to_str(enum cname name)
--{
--	if (name == CN_INVALID || name < 0 || name > ARRAY_SIZE(cp_name))
--		return "INVALID";
--
--	return cp_name[name - 1];
--}
--
--
--static int lkdtm_parse_commandline(void)
--{
--	int i;
--	unsigned long flags;
--
--	if (cpoint_count < 1 || recur_count < 1)
--		return -EINVAL;
--
--	spin_lock_irqsave(&count_lock, flags);
--	count = cpoint_count;
--	spin_unlock_irqrestore(&count_lock, flags);
--
--	/* No special parameters */
--	if (!cpoint_type && !cpoint_name)
--		return 0;
--
--	/* Neither or both of these need to be set */
--	if (!cpoint_type || !cpoint_name)
--		return -EINVAL;
--
--	cptype = parse_cp_type(cpoint_type, strlen(cpoint_type));
--	if (cptype == CT_NONE)
--		return -EINVAL;
--
--	for (i = 0; i < ARRAY_SIZE(cp_name); i++) {
--		if (!strcmp(cpoint_name, cp_name[i])) {
--			cpoint = i + 1;
--			return 0;
--		}
--	}
--
--	/* Could not find a valid crash point */
--	return -EINVAL;
--}
--
--static int recursive_loop(int remaining)
--{
--	char buf[REC_STACK_SIZE];
--
--	/* Make sure compiler does not optimize this away. */
--	memset(buf, (remaining & 0xff) | 0x1, REC_STACK_SIZE);
--	if (!remaining)
--		return 0;
--	else
--		return recursive_loop(remaining - 1);
--}
--
--static void do_nothing(void)
--{
--	return;
--}
--
--/* Must immediately follow do_nothing for size calculuations to work out. */
--static void do_overwritten(void)
--{
--	pr_info("do_overwritten wasn't overwritten!\n");
--	return;
--}
--
--static noinline void corrupt_stack(void)
--{
--	/* Use default char array length that triggers stack protection. */
--	char data[8];
--
--	memset((void *)data, 0, 64);
--}
--
--static void noinline execute_location(void *dst)
--{
--	void (*func)(void) = dst;
--
--	pr_info("attempting ok execution at %p\n", do_nothing);
--	do_nothing();
--
--	memcpy(dst, do_nothing, EXEC_SIZE);
--	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
--	pr_info("attempting bad execution at %p\n", func);
--	func();
--}
--
--static void execute_user_location(void *dst)
--{
--	/* Intentionally crossing kernel/user memory boundary. */
--	void (*func)(void) = dst;
--
--	pr_info("attempting ok execution at %p\n", do_nothing);
--	do_nothing();
--
--	if (copy_to_user((void __user *)dst, do_nothing, EXEC_SIZE))
--		return;
--	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
--	pr_info("attempting bad execution at %p\n", func);
--	func();
--}
--
--static void lkdtm_do_action(enum ctype which)
--{
--	switch (which) {
--	case CT_PANIC:
--		panic("dumptest");
--		break;
--	case CT_BUG:
--		BUG();
--		break;
--	case CT_WARNING:
--		WARN_ON(1);
--		break;
--	case CT_EXCEPTION:
--		*((int *) 0) = 0;
--		break;
--	case CT_LOOP:
--		for (;;)
--			;
--		break;
--	case CT_OVERFLOW:
--		(void) recursive_loop(recur_count);
--		break;
--	case CT_CORRUPT_STACK:
--		corrupt_stack();
--		break;
--	case CT_UNALIGNED_LOAD_STORE_WRITE: {
--		static u8 data[5] __attribute__((aligned(4))) = {1, 2,
--				3, 4, 5};
--		u32 *p;
--		u32 val = 0x12345678;
--
--		p = (u32 *)(data + 1);
--		if (*p == 0)
--			val = 0x87654321;
--		*p = val;
--		 break;
--	}
--	case CT_OVERWRITE_ALLOCATION: {
--		size_t len = 1020;
--		u32 *data = kmalloc(len, GFP_KERNEL);
--
--		data[1024 / sizeof(u32)] = 0x12345678;
--		kfree(data);
--		break;
--	}
--	case CT_WRITE_AFTER_FREE: {
--		int *base, *again;
--		size_t len = 1024;
--		/*
--		 * The slub allocator uses the first word to store the free
--		 * pointer in some configurations. Use the middle of the
--		 * allocation to avoid running into the freelist
--		 */
--		size_t offset = (len / sizeof(*base)) / 2;
--
--		base = kmalloc(len, GFP_KERNEL);
--		pr_info("Allocated memory %p-%p\n", base, &base[offset * 2]);
--		pr_info("Attempting bad write to freed memory at %p\n",
--			&base[offset]);
--		kfree(base);
--		base[offset] = 0x0abcdef0;
--		/* Attempt to notice the overwrite. */
--		again = kmalloc(len, GFP_KERNEL);
--		kfree(again);
--		if (again != base)
--			pr_info("Hmm, didn't get the same memory range.\n");
--
--		break;
--	}
--	case CT_READ_AFTER_FREE: {
--		int *base, *val, saw;
--		size_t len = 1024;
--		/*
--		 * The slub allocator uses the first word to store the free
--		 * pointer in some configurations. Use the middle of the
--		 * allocation to avoid running into the freelist
--		 */
--		size_t offset = (len / sizeof(*base)) / 2;
--
--		base = kmalloc(len, GFP_KERNEL);
--		if (!base)
--			break;
--
--		val = kmalloc(len, GFP_KERNEL);
--		if (!val) {
--			kfree(base);
--			break;
--		}
--
--		*val = 0x12345678;
--		base[offset] = *val;
--		pr_info("Value in memory before free: %x\n", base[offset]);
--
--		kfree(base);
--
--		pr_info("Attempting bad read from freed memory\n");
--		saw = base[offset];
--		if (saw != *val) {
--			/* Good! Poisoning happened, so declare a win. */
--			pr_info("Memory correctly poisoned (%x)\n", saw);
--			BUG();
--		}
--		pr_info("Memory was not poisoned\n");
--
--		kfree(val);
--		break;
--	}
--	case CT_WRITE_BUDDY_AFTER_FREE: {
--		unsigned long p = __get_free_page(GFP_KERNEL);
--		if (!p)
--			break;
--		pr_info("Writing to the buddy page before free\n");
--		memset((void *)p, 0x3, PAGE_SIZE);
--		free_page(p);
--		schedule();
--		pr_info("Attempting bad write to the buddy page after free\n");
--		memset((void *)p, 0x78, PAGE_SIZE);
--		/* Attempt to notice the overwrite. */
--		p = __get_free_page(GFP_KERNEL);
--		free_page(p);
--		schedule();
--
--		break;
--	}
--	case CT_READ_BUDDY_AFTER_FREE: {
--		unsigned long p = __get_free_page(GFP_KERNEL);
--		int saw, *val;
--		int *base;
--
--		if (!p)
--			break;
--
--		val = kmalloc(1024, GFP_KERNEL);
--		if (!val) {
--			free_page(p);
--			break;
--		}
--
--		base = (int *)p;
--
--		*val = 0x12345678;
--		base[0] = *val;
--		pr_info("Value in memory before free: %x\n", base[0]);
--		free_page(p);
--		pr_info("Attempting to read from freed memory\n");
--		saw = base[0];
--		if (saw != *val) {
--			/* Good! Poisoning happened, so declare a win. */
--			pr_info("Memory correctly poisoned (%x)\n", saw);
--			BUG();
--		}
--		pr_info("Buddy page was not poisoned\n");
--
--		kfree(val);
--		break;
--	}
--	case CT_SOFTLOCKUP:
--		preempt_disable();
--		for (;;)
--			cpu_relax();
--		break;
--	case CT_HARDLOCKUP:
--		local_irq_disable();
--		for (;;)
--			cpu_relax();
--		break;
--	case CT_SPINLOCKUP:
--		/* Must be called twice to trigger. */
--		spin_lock(&lock_me_up);
--		/* Let sparse know we intended to exit holding the lock. */
--		__release(&lock_me_up);
--		break;
--	case CT_HUNG_TASK:
--		set_current_state(TASK_UNINTERRUPTIBLE);
--		schedule();
--		break;
--	case CT_EXEC_DATA:
--		execute_location(data_area);
--		break;
--	case CT_EXEC_STACK: {
--		u8 stack_area[EXEC_SIZE];
--		execute_location(stack_area);
--		break;
--	}
--	case CT_EXEC_KMALLOC: {
--		u32 *kmalloc_area = kmalloc(EXEC_SIZE, GFP_KERNEL);
--		execute_location(kmalloc_area);
--		kfree(kmalloc_area);
--		break;
--	}
--	case CT_EXEC_VMALLOC: {
--		u32 *vmalloc_area = vmalloc(EXEC_SIZE);
--		execute_location(vmalloc_area);
--		vfree(vmalloc_area);
--		break;
--	}
--	case CT_EXEC_USERSPACE: {
--		unsigned long user_addr;
--
--		user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
--				    PROT_READ | PROT_WRITE | PROT_EXEC,
--				    MAP_ANONYMOUS | MAP_PRIVATE, 0);
--		if (user_addr >= TASK_SIZE) {
--			pr_warn("Failed to allocate user memory\n");
--			return;
--		}
--		execute_user_location((void *)user_addr);
--		vm_munmap(user_addr, PAGE_SIZE);
--		break;
--	}
--	case CT_ACCESS_USERSPACE: {
--		unsigned long user_addr, tmp = 0;
--		unsigned long *ptr;
--
--		user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
--				    PROT_READ | PROT_WRITE | PROT_EXEC,
--				    MAP_ANONYMOUS | MAP_PRIVATE, 0);
--		if (user_addr >= TASK_SIZE) {
--			pr_warn("Failed to allocate user memory\n");
--			return;
--		}
--
--		if (copy_to_user((void __user *)user_addr, &tmp, sizeof(tmp))) {
--			pr_warn("copy_to_user failed\n");
--			vm_munmap(user_addr, PAGE_SIZE);
--			return;
--		}
--
--		ptr = (unsigned long *)user_addr;
--
--		pr_info("attempting bad read at %p\n", ptr);
--		tmp = *ptr;
--		tmp += 0xc0dec0de;
--
--		pr_info("attempting bad write at %p\n", ptr);
--		*ptr = tmp;
--
--		vm_munmap(user_addr, PAGE_SIZE);
--
--		break;
--	}
--	case CT_WRITE_RO: {
--		/* Explicitly cast away "const" for the test. */
--		unsigned long *ptr = (unsigned long *)&rodata;
--
--		pr_info("attempting bad rodata write at %p\n", ptr);
--		*ptr ^= 0xabcd1234;
--
--		break;
--	}
--	case CT_WRITE_RO_AFTER_INIT: {
--		unsigned long *ptr = &ro_after_init;
--
--		/*
--		 * Verify we were written to during init. Since an Oops
--		 * is considered a "success", a failure is to just skip the
--		 * real test.
--		 */
--		if ((*ptr & 0xAA) != 0xAA) {
--			pr_info("%p was NOT written during init!?\n", ptr);
--			break;
--		}
--
--		pr_info("attempting bad ro_after_init write at %p\n", ptr);
--		*ptr ^= 0xabcd1234;
--
--		break;
--	}
--	case CT_WRITE_KERN: {
--		size_t size;
--		unsigned char *ptr;
--
--		size = (unsigned long)do_overwritten -
--		       (unsigned long)do_nothing;
--		ptr = (unsigned char *)do_overwritten;
--
--		pr_info("attempting bad %zu byte write at %p\n", size, ptr);
--		memcpy(ptr, (unsigned char *)do_nothing, size);
--		flush_icache_range((unsigned long)ptr,
--				   (unsigned long)(ptr + size));
--
--		do_overwritten();
--		break;
--	}
--	case CT_WRAP_ATOMIC: {
--		atomic_t under = ATOMIC_INIT(INT_MIN);
--		atomic_t over = ATOMIC_INIT(INT_MAX);
--
--		pr_info("attempting atomic underflow\n");
--		atomic_dec(&under);
--		pr_info("attempting atomic overflow\n");
--		atomic_inc(&over);
--
--		return;
--	}
--	case CT_NONE:
--	default:
--		break;
--	}
--
--}
--
--static void lkdtm_handler(void)
--{
--	unsigned long flags;
--	bool do_it = false;
--
--	spin_lock_irqsave(&count_lock, flags);
--	count--;
--	pr_info("Crash point %s of type %s hit, trigger in %d rounds\n",
--		cp_name_to_str(cpoint), cp_type_to_str(cptype), count);
--
--	if (count == 0) {
--		do_it = true;
--		count = cpoint_count;
--	}
--	spin_unlock_irqrestore(&count_lock, flags);
--
--	if (do_it)
--		lkdtm_do_action(cptype);
--}
--
--static int lkdtm_register_cpoint(enum cname which)
--{
--	int ret;
--
--	cpoint = CN_INVALID;
--	if (lkdtm.entry != NULL)
--		unregister_jprobe(&lkdtm);
--
--	switch (which) {
--	case CN_DIRECT:
--		lkdtm_do_action(cptype);
--		return 0;
--	case CN_INT_HARDWARE_ENTRY:
--		lkdtm.kp.symbol_name = "do_IRQ";
--		lkdtm.entry = (kprobe_opcode_t*) jp_do_irq;
--		break;
--	case CN_INT_HW_IRQ_EN:
--		lkdtm.kp.symbol_name = "handle_IRQ_event";
--		lkdtm.entry = (kprobe_opcode_t*) jp_handle_irq_event;
--		break;
--	case CN_INT_TASKLET_ENTRY:
--		lkdtm.kp.symbol_name = "tasklet_action";
--		lkdtm.entry = (kprobe_opcode_t*) jp_tasklet_action;
--		break;
--	case CN_FS_DEVRW:
--		lkdtm.kp.symbol_name = "ll_rw_block";
--		lkdtm.entry = (kprobe_opcode_t*) jp_ll_rw_block;
--		break;
--	case CN_MEM_SWAPOUT:
--		lkdtm.kp.symbol_name = "shrink_inactive_list";
--		lkdtm.entry = (kprobe_opcode_t*) jp_shrink_inactive_list;
--		break;
--	case CN_TIMERADD:
--		lkdtm.kp.symbol_name = "hrtimer_start";
--		lkdtm.entry = (kprobe_opcode_t*) jp_hrtimer_start;
--		break;
--	case CN_SCSI_DISPATCH_CMD:
--		lkdtm.kp.symbol_name = "scsi_dispatch_cmd";
--		lkdtm.entry = (kprobe_opcode_t*) jp_scsi_dispatch_cmd;
--		break;
--	case CN_IDE_CORE_CP:
--#ifdef CONFIG_IDE
--		lkdtm.kp.symbol_name = "generic_ide_ioctl";
--		lkdtm.entry = (kprobe_opcode_t*) jp_generic_ide_ioctl;
--#else
--		pr_info("Crash point not available\n");
--		return -EINVAL;
--#endif
--		break;
--	default:
--		pr_info("Invalid Crash Point\n");
--		return -EINVAL;
--	}
--
--	cpoint = which;
--	if ((ret = register_jprobe(&lkdtm)) < 0) {
--		pr_info("Couldn't register jprobe\n");
--		cpoint = CN_INVALID;
--	}
--
--	return ret;
--}
--
--static ssize_t do_register_entry(enum cname which, struct file *f,
--		const char __user *user_buf, size_t count, loff_t *off)
--{
--	char *buf;
--	int err;
--
--	if (count >= PAGE_SIZE)
--		return -EINVAL;
--
--	buf = (char *)__get_free_page(GFP_KERNEL);
--	if (!buf)
--		return -ENOMEM;
--	if (copy_from_user(buf, user_buf, count)) {
--		free_page((unsigned long) buf);
--		return -EFAULT;
--	}
--	/* NULL-terminate and remove enter */
--	buf[count] = '\0';
--	strim(buf);
--
--	cptype = parse_cp_type(buf, count);
--	free_page((unsigned long) buf);
--
--	if (cptype == CT_NONE)
--		return -EINVAL;
--
--	err = lkdtm_register_cpoint(which);
--	if (err < 0)
--		return err;
--
--	*off += count;
--
--	return count;
--}
--
--/* Generic read callback that just prints out the available crash types */
--static ssize_t lkdtm_debugfs_read(struct file *f, char __user *user_buf,
--		size_t count, loff_t *off)
--{
--	char *buf;
--	int i, n, out;
--
--	buf = (char *)__get_free_page(GFP_KERNEL);
--	if (buf == NULL)
--		return -ENOMEM;
--
--	n = snprintf(buf, PAGE_SIZE, "Available crash types:\n");
--	for (i = 0; i < ARRAY_SIZE(cp_type); i++)
--		n += snprintf(buf + n, PAGE_SIZE - n, "%s\n", cp_type[i]);
--	buf[n] = '\0';
--
--	out = simple_read_from_buffer(user_buf, count, off,
--				      buf, n);
--	free_page((unsigned long) buf);
--
--	return out;
--}
--
--static int lkdtm_debugfs_open(struct inode *inode, struct file *file)
--{
--	return 0;
--}
--
--
--static ssize_t int_hardware_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_INT_HARDWARE_ENTRY, f, buf, count, off);
--}
--
--static ssize_t int_hw_irq_en(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_INT_HW_IRQ_EN, f, buf, count, off);
--}
--
--static ssize_t int_tasklet_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_INT_TASKLET_ENTRY, f, buf, count, off);
--}
--
--static ssize_t fs_devrw_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_FS_DEVRW, f, buf, count, off);
--}
--
--static ssize_t mem_swapout_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_MEM_SWAPOUT, f, buf, count, off);
--}
--
--static ssize_t timeradd_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_TIMERADD, f, buf, count, off);
--}
--
--static ssize_t scsi_dispatch_cmd_entry(struct file *f,
--		const char __user *buf, size_t count, loff_t *off)
--{
--	return do_register_entry(CN_SCSI_DISPATCH_CMD, f, buf, count, off);
--}
--
--static ssize_t ide_core_cp_entry(struct file *f, const char __user *buf,
--		size_t count, loff_t *off)
--{
--	return do_register_entry(CN_IDE_CORE_CP, f, buf, count, off);
--}
--
--/* Special entry to just crash directly. Available without KPROBEs */
--static ssize_t direct_entry(struct file *f, const char __user *user_buf,
--		size_t count, loff_t *off)
--{
--	enum ctype type;
--	char *buf;
--
--	if (count >= PAGE_SIZE)
--		return -EINVAL;
--	if (count < 1)
--		return -EINVAL;
--
--	buf = (char *)__get_free_page(GFP_KERNEL);
--	if (!buf)
--		return -ENOMEM;
--	if (copy_from_user(buf, user_buf, count)) {
--		free_page((unsigned long) buf);
--		return -EFAULT;
--	}
--	/* NULL-terminate and remove enter */
--	buf[count] = '\0';
--	strim(buf);
--
--	type = parse_cp_type(buf, count);
--	free_page((unsigned long) buf);
--	if (type == CT_NONE)
--		return -EINVAL;
--
--	pr_info("Performing direct entry %s\n", cp_type_to_str(type));
--	lkdtm_do_action(type);
--	*off += count;
--
--	return count;
--}
--
--struct crash_entry {
--	const char *name;
--	const struct file_operations fops;
--};
--
--static const struct crash_entry crash_entries[] = {
--	{"DIRECT", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = direct_entry} },
--	{"INT_HARDWARE_ENTRY", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = int_hardware_entry} },
--	{"INT_HW_IRQ_EN", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = int_hw_irq_en} },
--	{"INT_TASKLET_ENTRY", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = int_tasklet_entry} },
--	{"FS_DEVRW", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = fs_devrw_entry} },
--	{"MEM_SWAPOUT", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = mem_swapout_entry} },
--	{"TIMERADD", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = timeradd_entry} },
--	{"SCSI_DISPATCH_CMD", {.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = scsi_dispatch_cmd_entry} },
--	{"IDE_CORE_CP",	{.read = lkdtm_debugfs_read,
--			.llseek = generic_file_llseek,
--			.open = lkdtm_debugfs_open,
--			.write = ide_core_cp_entry} },
--};
--
--static struct dentry *lkdtm_debugfs_root;
--
--static int __init lkdtm_module_init(void)
--{
--	int ret = -EINVAL;
--	int n_debugfs_entries = 1; /* Assume only the direct entry */
--	int i;
--
--	/* Make sure we can write to __ro_after_init values during __init */
--	ro_after_init |= 0xAA;
--
--	/* Register debugfs interface */
--	lkdtm_debugfs_root = debugfs_create_dir("provoke-crash", NULL);
--	if (!lkdtm_debugfs_root) {
--		pr_err("creating root dir failed\n");
--		return -ENODEV;
--	}
--
--#ifdef CONFIG_KPROBES
--	n_debugfs_entries = ARRAY_SIZE(crash_entries);
--#endif
--
--	for (i = 0; i < n_debugfs_entries; i++) {
--		const struct crash_entry *cur = &crash_entries[i];
--		struct dentry *de;
--
--		de = debugfs_create_file(cur->name, 0644, lkdtm_debugfs_root,
--				NULL, &cur->fops);
--		if (de == NULL) {
--			pr_err("could not create %s\n", cur->name);
--			goto out_err;
--		}
--	}
--
--	if (lkdtm_parse_commandline() == -EINVAL) {
--		pr_info("Invalid command\n");
--		goto out_err;
--	}
--
--	if (cpoint != CN_INVALID && cptype != CT_NONE) {
--		ret = lkdtm_register_cpoint(cpoint);
--		if (ret < 0) {
--			pr_info("Invalid crash point %d\n", cpoint);
--			goto out_err;
--		}
--		pr_info("Crash point %s of type %s registered\n",
--			cpoint_name, cpoint_type);
--	} else {
--		pr_info("No crash points registered, enable through debugfs\n");
--	}
--
--	return 0;
--
--out_err:
--	debugfs_remove_recursive(lkdtm_debugfs_root);
--	return ret;
--}
--
--static void __exit lkdtm_module_exit(void)
--{
--	debugfs_remove_recursive(lkdtm_debugfs_root);
--
--	unregister_jprobe(&lkdtm);
--	pr_info("Crash point unregistered\n");
--}
--
--module_init(lkdtm_module_init);
--module_exit(lkdtm_module_exit);
--
--MODULE_LICENSE("GPL");
--MODULE_DESCRIPTION("Kprobe module for testing crash dumps");
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-new file mode 100644
-index 000000000000..0a5cbbe12452
---- /dev/null
-+++ b/drivers/misc/lkdtm_core.c
-@@ -0,0 +1,1023 @@
-+/*
-+ * Kprobe module for testing crash dumps
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
-+ *
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU General Public License
-+ * along with this program; if not, write to the Free Software
-+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-+ *
-+ * Copyright (C) IBM Corporation, 2006
-+ *
-+ * Author: Ankita Garg <ankita@in.ibm.com>
-+ *
-+ * This module induces system failures at predefined crashpoints to
-+ * evaluate the reliability of crash dumps obtained using different dumping
-+ * solutions.
-+ *
-+ * It is adapted from the Linux Kernel Dump Test Tool by
-+ * Fernando Luis Vazquez Cao <http://lkdtt.sourceforge.net>
-+ *
-+ * Debugfs support added by Simon Kagstrom <simon.kagstrom@netinsight.net>
-+ *
-+ * See Documentation/fault-injection/provoke-crashes.txt for instructions
-+ */
-+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-+
-+#include <linux/kernel.h>
-+#include <linux/fs.h>
-+#include <linux/module.h>
-+#include <linux/buffer_head.h>
-+#include <linux/kprobes.h>
-+#include <linux/list.h>
-+#include <linux/init.h>
-+#include <linux/interrupt.h>
-+#include <linux/hrtimer.h>
-+#include <linux/slab.h>
-+#include <scsi/scsi_cmnd.h>
-+#include <linux/debugfs.h>
-+#include <linux/vmalloc.h>
-+#include <linux/mman.h>
-+#include <asm/cacheflush.h>
-+
-+#ifdef CONFIG_IDE
-+#include <linux/ide.h>
-+#endif
-+
-+/*
-+ * Make sure our attempts to over run the kernel stack doesn't trigger
-+ * a compiler warning when CONFIG_FRAME_WARN is set. Then make sure we
-+ * recurse past the end of THREAD_SIZE by default.
-+ */
-+#if defined(CONFIG_FRAME_WARN) && (CONFIG_FRAME_WARN > 0)
-+#define REC_STACK_SIZE (CONFIG_FRAME_WARN / 2)
-+#else
-+#define REC_STACK_SIZE (THREAD_SIZE / 8)
-+#endif
-+#define REC_NUM_DEFAULT ((THREAD_SIZE / REC_STACK_SIZE) * 2)
-+
-+#define DEFAULT_COUNT 10
-+#define EXEC_SIZE 64
-+
-+enum cname {
-+	CN_INVALID,
-+	CN_INT_HARDWARE_ENTRY,
-+	CN_INT_HW_IRQ_EN,
-+	CN_INT_TASKLET_ENTRY,
-+	CN_FS_DEVRW,
-+	CN_MEM_SWAPOUT,
-+	CN_TIMERADD,
-+	CN_SCSI_DISPATCH_CMD,
-+	CN_IDE_CORE_CP,
-+	CN_DIRECT,
-+};
-+
-+enum ctype {
-+	CT_NONE,
-+	CT_PANIC,
-+	CT_BUG,
-+	CT_WARNING,
-+	CT_EXCEPTION,
-+	CT_LOOP,
-+	CT_OVERFLOW,
-+	CT_CORRUPT_STACK,
-+	CT_UNALIGNED_LOAD_STORE_WRITE,
-+	CT_OVERWRITE_ALLOCATION,
-+	CT_WRITE_AFTER_FREE,
-+	CT_READ_AFTER_FREE,
-+	CT_WRITE_BUDDY_AFTER_FREE,
-+	CT_READ_BUDDY_AFTER_FREE,
-+	CT_SOFTLOCKUP,
-+	CT_HARDLOCKUP,
-+	CT_SPINLOCKUP,
-+	CT_HUNG_TASK,
-+	CT_EXEC_DATA,
-+	CT_EXEC_STACK,
-+	CT_EXEC_KMALLOC,
-+	CT_EXEC_VMALLOC,
-+	CT_EXEC_USERSPACE,
-+	CT_ACCESS_USERSPACE,
-+	CT_WRITE_RO,
-+	CT_WRITE_RO_AFTER_INIT,
-+	CT_WRITE_KERN,
-+	CT_WRAP_ATOMIC
-+};
-+
-+static char* cp_name[] = {
-+	"INT_HARDWARE_ENTRY",
-+	"INT_HW_IRQ_EN",
-+	"INT_TASKLET_ENTRY",
-+	"FS_DEVRW",
-+	"MEM_SWAPOUT",
-+	"TIMERADD",
-+	"SCSI_DISPATCH_CMD",
-+	"IDE_CORE_CP",
-+	"DIRECT",
-+};
-+
-+static char* cp_type[] = {
-+	"PANIC",
-+	"BUG",
-+	"WARNING",
-+	"EXCEPTION",
-+	"LOOP",
-+	"OVERFLOW",
-+	"CORRUPT_STACK",
-+	"UNALIGNED_LOAD_STORE_WRITE",
-+	"OVERWRITE_ALLOCATION",
-+	"WRITE_AFTER_FREE",
-+	"READ_AFTER_FREE",
-+	"WRITE_BUDDY_AFTER_FREE",
-+	"READ_BUDDY_AFTER_FREE",
-+	"SOFTLOCKUP",
-+	"HARDLOCKUP",
-+	"SPINLOCKUP",
-+	"HUNG_TASK",
-+	"EXEC_DATA",
-+	"EXEC_STACK",
-+	"EXEC_KMALLOC",
-+	"EXEC_VMALLOC",
-+	"EXEC_USERSPACE",
-+	"ACCESS_USERSPACE",
-+	"WRITE_RO",
-+	"WRITE_RO_AFTER_INIT",
-+	"WRITE_KERN",
-+	"WRAP_ATOMIC"
-+};
-+
-+static struct jprobe lkdtm;
-+
-+static int lkdtm_parse_commandline(void);
-+static void lkdtm_handler(void);
-+
-+static char* cpoint_name;
-+static char* cpoint_type;
-+static int cpoint_count = DEFAULT_COUNT;
-+static int recur_count = REC_NUM_DEFAULT;
-+
-+static enum cname cpoint = CN_INVALID;
-+static enum ctype cptype = CT_NONE;
-+static int count = DEFAULT_COUNT;
-+static DEFINE_SPINLOCK(count_lock);
-+static DEFINE_SPINLOCK(lock_me_up);
-+
-+static u8 data_area[EXEC_SIZE];
-+
-+static const unsigned long rodata = 0xAA55AA55;
-+static unsigned long ro_after_init __ro_after_init = 0x55AA5500;
-+
-+module_param(recur_count, int, 0644);
-+MODULE_PARM_DESC(recur_count, " Recursion level for the stack overflow test");
-+module_param(cpoint_name, charp, 0444);
-+MODULE_PARM_DESC(cpoint_name, " Crash Point, where kernel is to be crashed");
-+module_param(cpoint_type, charp, 0444);
-+MODULE_PARM_DESC(cpoint_type, " Crash Point Type, action to be taken on "\
-+				"hitting the crash point");
-+module_param(cpoint_count, int, 0644);
-+MODULE_PARM_DESC(cpoint_count, " Crash Point Count, number of times the "\
-+				"crash point is to be hit to trigger action");
-+
-+static unsigned int jp_do_irq(unsigned int irq)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+
-+static irqreturn_t jp_handle_irq_event(unsigned int irq,
-+				       struct irqaction *action)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+
-+static void jp_tasklet_action(struct softirq_action *a)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+}
-+
-+static void jp_ll_rw_block(int rw, int nr, struct buffer_head *bhs[])
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+}
-+
-+struct scan_control;
-+
-+static unsigned long jp_shrink_inactive_list(unsigned long max_scan,
-+					     struct zone *zone,
-+					     struct scan_control *sc)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+
-+static int jp_hrtimer_start(struct hrtimer *timer, ktime_t tim,
-+			    const enum hrtimer_mode mode)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+
-+static int jp_scsi_dispatch_cmd(struct scsi_cmnd *cmd)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+
-+#ifdef CONFIG_IDE
-+static int jp_generic_ide_ioctl(ide_drive_t *drive, struct file *file,
-+			struct block_device *bdev, unsigned int cmd,
-+			unsigned long arg)
-+{
-+	lkdtm_handler();
-+	jprobe_return();
-+	return 0;
-+}
-+#endif
-+
-+/* Return the crashpoint number or NONE if the name is invalid */
-+static enum ctype parse_cp_type(const char *what, size_t count)
-+{
-+	int i;
-+
-+	for (i = 0; i < ARRAY_SIZE(cp_type); i++) {
-+		if (!strcmp(what, cp_type[i]))
-+			return i + 1;
-+	}
-+
-+	return CT_NONE;
-+}
-+
-+static const char *cp_type_to_str(enum ctype type)
-+{
-+	if (type == CT_NONE || type < 0 || type > ARRAY_SIZE(cp_type))
-+		return "None";
-+
-+	return cp_type[type - 1];
-+}
-+
-+static const char *cp_name_to_str(enum cname name)
-+{
-+	if (name == CN_INVALID || name < 0 || name > ARRAY_SIZE(cp_name))
-+		return "INVALID";
-+
-+	return cp_name[name - 1];
-+}
-+
-+
-+static int lkdtm_parse_commandline(void)
-+{
-+	int i;
-+	unsigned long flags;
-+
-+	if (cpoint_count < 1 || recur_count < 1)
-+		return -EINVAL;
-+
-+	spin_lock_irqsave(&count_lock, flags);
-+	count = cpoint_count;
-+	spin_unlock_irqrestore(&count_lock, flags);
-+
-+	/* No special parameters */
-+	if (!cpoint_type && !cpoint_name)
-+		return 0;
-+
-+	/* Neither or both of these need to be set */
-+	if (!cpoint_type || !cpoint_name)
-+		return -EINVAL;
-+
-+	cptype = parse_cp_type(cpoint_type, strlen(cpoint_type));
-+	if (cptype == CT_NONE)
-+		return -EINVAL;
-+
-+	for (i = 0; i < ARRAY_SIZE(cp_name); i++) {
-+		if (!strcmp(cpoint_name, cp_name[i])) {
-+			cpoint = i + 1;
-+			return 0;
-+		}
-+	}
-+
-+	/* Could not find a valid crash point */
-+	return -EINVAL;
-+}
-+
-+static int recursive_loop(int remaining)
-+{
-+	char buf[REC_STACK_SIZE];
-+
-+	/* Make sure compiler does not optimize this away. */
-+	memset(buf, (remaining & 0xff) | 0x1, REC_STACK_SIZE);
-+	if (!remaining)
-+		return 0;
-+	else
-+		return recursive_loop(remaining - 1);
-+}
-+
-+static void do_nothing(void)
-+{
-+	return;
-+}
-+
-+/* Must immediately follow do_nothing for size calculuations to work out. */
-+static void do_overwritten(void)
-+{
-+	pr_info("do_overwritten wasn't overwritten!\n");
-+	return;
-+}
-+
-+static noinline void corrupt_stack(void)
-+{
-+	/* Use default char array length that triggers stack protection. */
-+	char data[8];
-+
-+	memset((void *)data, 0, 64);
-+}
-+
-+static void noinline execute_location(void *dst)
-+{
-+	void (*func)(void) = dst;
-+
-+	pr_info("attempting ok execution at %p\n", do_nothing);
-+	do_nothing();
-+
-+	memcpy(dst, do_nothing, EXEC_SIZE);
-+	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
-+	pr_info("attempting bad execution at %p\n", func);
-+	func();
-+}
-+
-+static void execute_user_location(void *dst)
-+{
-+	/* Intentionally crossing kernel/user memory boundary. */
-+	void (*func)(void) = dst;
-+
-+	pr_info("attempting ok execution at %p\n", do_nothing);
-+	do_nothing();
-+
-+	if (copy_to_user((void __user *)dst, do_nothing, EXEC_SIZE))
-+		return;
-+	flush_icache_range((unsigned long)dst, (unsigned long)dst + EXEC_SIZE);
-+	pr_info("attempting bad execution at %p\n", func);
-+	func();
-+}
-+
-+static void lkdtm_do_action(enum ctype which)
-+{
-+	switch (which) {
-+	case CT_PANIC:
-+		panic("dumptest");
-+		break;
-+	case CT_BUG:
-+		BUG();
-+		break;
-+	case CT_WARNING:
-+		WARN_ON(1);
-+		break;
-+	case CT_EXCEPTION:
-+		*((int *) 0) = 0;
-+		break;
-+	case CT_LOOP:
-+		for (;;)
-+			;
-+		break;
-+	case CT_OVERFLOW:
-+		(void) recursive_loop(recur_count);
-+		break;
-+	case CT_CORRUPT_STACK:
-+		corrupt_stack();
-+		break;
-+	case CT_UNALIGNED_LOAD_STORE_WRITE: {
-+		static u8 data[5] __attribute__((aligned(4))) = {1, 2,
-+				3, 4, 5};
-+		u32 *p;
-+		u32 val = 0x12345678;
-+
-+		p = (u32 *)(data + 1);
-+		if (*p == 0)
-+			val = 0x87654321;
-+		*p = val;
-+		 break;
-+	}
-+	case CT_OVERWRITE_ALLOCATION: {
-+		size_t len = 1020;
-+		u32 *data = kmalloc(len, GFP_KERNEL);
-+
-+		data[1024 / sizeof(u32)] = 0x12345678;
-+		kfree(data);
-+		break;
-+	}
-+	case CT_WRITE_AFTER_FREE: {
-+		int *base, *again;
-+		size_t len = 1024;
-+		/*
-+		 * The slub allocator uses the first word to store the free
-+		 * pointer in some configurations. Use the middle of the
-+		 * allocation to avoid running into the freelist
-+		 */
-+		size_t offset = (len / sizeof(*base)) / 2;
-+
-+		base = kmalloc(len, GFP_KERNEL);
-+		pr_info("Allocated memory %p-%p\n", base, &base[offset * 2]);
-+		pr_info("Attempting bad write to freed memory at %p\n",
-+			&base[offset]);
-+		kfree(base);
-+		base[offset] = 0x0abcdef0;
-+		/* Attempt to notice the overwrite. */
-+		again = kmalloc(len, GFP_KERNEL);
-+		kfree(again);
-+		if (again != base)
-+			pr_info("Hmm, didn't get the same memory range.\n");
-+
-+		break;
-+	}
-+	case CT_READ_AFTER_FREE: {
-+		int *base, *val, saw;
-+		size_t len = 1024;
-+		/*
-+		 * The slub allocator uses the first word to store the free
-+		 * pointer in some configurations. Use the middle of the
-+		 * allocation to avoid running into the freelist
-+		 */
-+		size_t offset = (len / sizeof(*base)) / 2;
-+
-+		base = kmalloc(len, GFP_KERNEL);
-+		if (!base)
-+			break;
-+
-+		val = kmalloc(len, GFP_KERNEL);
-+		if (!val) {
-+			kfree(base);
-+			break;
-+		}
-+
-+		*val = 0x12345678;
-+		base[offset] = *val;
-+		pr_info("Value in memory before free: %x\n", base[offset]);
-+
-+		kfree(base);
-+
-+		pr_info("Attempting bad read from freed memory\n");
-+		saw = base[offset];
-+		if (saw != *val) {
-+			/* Good! Poisoning happened, so declare a win. */
-+			pr_info("Memory correctly poisoned (%x)\n", saw);
-+			BUG();
-+		}
-+		pr_info("Memory was not poisoned\n");
-+
-+		kfree(val);
-+		break;
-+	}
-+	case CT_WRITE_BUDDY_AFTER_FREE: {
-+		unsigned long p = __get_free_page(GFP_KERNEL);
-+		if (!p)
-+			break;
-+		pr_info("Writing to the buddy page before free\n");
-+		memset((void *)p, 0x3, PAGE_SIZE);
-+		free_page(p);
-+		schedule();
-+		pr_info("Attempting bad write to the buddy page after free\n");
-+		memset((void *)p, 0x78, PAGE_SIZE);
-+		/* Attempt to notice the overwrite. */
-+		p = __get_free_page(GFP_KERNEL);
-+		free_page(p);
-+		schedule();
-+
-+		break;
-+	}
-+	case CT_READ_BUDDY_AFTER_FREE: {
-+		unsigned long p = __get_free_page(GFP_KERNEL);
-+		int saw, *val;
-+		int *base;
-+
-+		if (!p)
-+			break;
-+
-+		val = kmalloc(1024, GFP_KERNEL);
-+		if (!val) {
-+			free_page(p);
-+			break;
-+		}
-+
-+		base = (int *)p;
-+
-+		*val = 0x12345678;
-+		base[0] = *val;
-+		pr_info("Value in memory before free: %x\n", base[0]);
-+		free_page(p);
-+		pr_info("Attempting to read from freed memory\n");
-+		saw = base[0];
-+		if (saw != *val) {
-+			/* Good! Poisoning happened, so declare a win. */
-+			pr_info("Memory correctly poisoned (%x)\n", saw);
-+			BUG();
-+		}
-+		pr_info("Buddy page was not poisoned\n");
-+
-+		kfree(val);
-+		break;
-+	}
-+	case CT_SOFTLOCKUP:
-+		preempt_disable();
-+		for (;;)
-+			cpu_relax();
-+		break;
-+	case CT_HARDLOCKUP:
-+		local_irq_disable();
-+		for (;;)
-+			cpu_relax();
-+		break;
-+	case CT_SPINLOCKUP:
-+		/* Must be called twice to trigger. */
-+		spin_lock(&lock_me_up);
-+		/* Let sparse know we intended to exit holding the lock. */
-+		__release(&lock_me_up);
-+		break;
-+	case CT_HUNG_TASK:
-+		set_current_state(TASK_UNINTERRUPTIBLE);
-+		schedule();
-+		break;
-+	case CT_EXEC_DATA:
-+		execute_location(data_area);
-+		break;
-+	case CT_EXEC_STACK: {
-+		u8 stack_area[EXEC_SIZE];
-+		execute_location(stack_area);
-+		break;
-+	}
-+	case CT_EXEC_KMALLOC: {
-+		u32 *kmalloc_area = kmalloc(EXEC_SIZE, GFP_KERNEL);
-+		execute_location(kmalloc_area);
-+		kfree(kmalloc_area);
-+		break;
-+	}
-+	case CT_EXEC_VMALLOC: {
-+		u32 *vmalloc_area = vmalloc(EXEC_SIZE);
-+		execute_location(vmalloc_area);
-+		vfree(vmalloc_area);
-+		break;
-+	}
-+	case CT_EXEC_USERSPACE: {
-+		unsigned long user_addr;
-+
-+		user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
-+				    PROT_READ | PROT_WRITE | PROT_EXEC,
-+				    MAP_ANONYMOUS | MAP_PRIVATE, 0);
-+		if (user_addr >= TASK_SIZE) {
-+			pr_warn("Failed to allocate user memory\n");
-+			return;
-+		}
-+		execute_user_location((void *)user_addr);
-+		vm_munmap(user_addr, PAGE_SIZE);
-+		break;
-+	}
-+	case CT_ACCESS_USERSPACE: {
-+		unsigned long user_addr, tmp = 0;
-+		unsigned long *ptr;
-+
-+		user_addr = vm_mmap(NULL, 0, PAGE_SIZE,
-+				    PROT_READ | PROT_WRITE | PROT_EXEC,
-+				    MAP_ANONYMOUS | MAP_PRIVATE, 0);
-+		if (user_addr >= TASK_SIZE) {
-+			pr_warn("Failed to allocate user memory\n");
-+			return;
-+		}
-+
-+		if (copy_to_user((void __user *)user_addr, &tmp, sizeof(tmp))) {
-+			pr_warn("copy_to_user failed\n");
-+			vm_munmap(user_addr, PAGE_SIZE);
-+			return;
-+		}
-+
-+		ptr = (unsigned long *)user_addr;
-+
-+		pr_info("attempting bad read at %p\n", ptr);
-+		tmp = *ptr;
-+		tmp += 0xc0dec0de;
-+
-+		pr_info("attempting bad write at %p\n", ptr);
-+		*ptr = tmp;
-+
-+		vm_munmap(user_addr, PAGE_SIZE);
-+
-+		break;
-+	}
-+	case CT_WRITE_RO: {
-+		/* Explicitly cast away "const" for the test. */
-+		unsigned long *ptr = (unsigned long *)&rodata;
-+
-+		pr_info("attempting bad rodata write at %p\n", ptr);
-+		*ptr ^= 0xabcd1234;
-+
-+		break;
-+	}
-+	case CT_WRITE_RO_AFTER_INIT: {
-+		unsigned long *ptr = &ro_after_init;
-+
-+		/*
-+		 * Verify we were written to during init. Since an Oops
-+		 * is considered a "success", a failure is to just skip the
-+		 * real test.
-+		 */
-+		if ((*ptr & 0xAA) != 0xAA) {
-+			pr_info("%p was NOT written during init!?\n", ptr);
-+			break;
-+		}
-+
-+		pr_info("attempting bad ro_after_init write at %p\n", ptr);
-+		*ptr ^= 0xabcd1234;
-+
-+		break;
-+	}
-+	case CT_WRITE_KERN: {
-+		size_t size;
-+		unsigned char *ptr;
-+
-+		size = (unsigned long)do_overwritten -
-+		       (unsigned long)do_nothing;
-+		ptr = (unsigned char *)do_overwritten;
-+
-+		pr_info("attempting bad %zu byte write at %p\n", size, ptr);
-+		memcpy(ptr, (unsigned char *)do_nothing, size);
-+		flush_icache_range((unsigned long)ptr,
-+				   (unsigned long)(ptr + size));
-+
-+		do_overwritten();
-+		break;
-+	}
-+	case CT_WRAP_ATOMIC: {
-+		atomic_t under = ATOMIC_INIT(INT_MIN);
-+		atomic_t over = ATOMIC_INIT(INT_MAX);
-+
-+		pr_info("attempting atomic underflow\n");
-+		atomic_dec(&under);
-+		pr_info("attempting atomic overflow\n");
-+		atomic_inc(&over);
-+
-+		return;
-+	}
-+	case CT_NONE:
-+	default:
-+		break;
-+	}
-+
-+}
-+
-+static void lkdtm_handler(void)
-+{
-+	unsigned long flags;
-+	bool do_it = false;
-+
-+	spin_lock_irqsave(&count_lock, flags);
-+	count--;
-+	pr_info("Crash point %s of type %s hit, trigger in %d rounds\n",
-+		cp_name_to_str(cpoint), cp_type_to_str(cptype), count);
-+
-+	if (count == 0) {
-+		do_it = true;
-+		count = cpoint_count;
-+	}
-+	spin_unlock_irqrestore(&count_lock, flags);
-+
-+	if (do_it)
-+		lkdtm_do_action(cptype);
-+}
-+
-+static int lkdtm_register_cpoint(enum cname which)
-+{
-+	int ret;
-+
-+	cpoint = CN_INVALID;
-+	if (lkdtm.entry != NULL)
-+		unregister_jprobe(&lkdtm);
-+
-+	switch (which) {
-+	case CN_DIRECT:
-+		lkdtm_do_action(cptype);
-+		return 0;
-+	case CN_INT_HARDWARE_ENTRY:
-+		lkdtm.kp.symbol_name = "do_IRQ";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_do_irq;
-+		break;
-+	case CN_INT_HW_IRQ_EN:
-+		lkdtm.kp.symbol_name = "handle_IRQ_event";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_handle_irq_event;
-+		break;
-+	case CN_INT_TASKLET_ENTRY:
-+		lkdtm.kp.symbol_name = "tasklet_action";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_tasklet_action;
-+		break;
-+	case CN_FS_DEVRW:
-+		lkdtm.kp.symbol_name = "ll_rw_block";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_ll_rw_block;
-+		break;
-+	case CN_MEM_SWAPOUT:
-+		lkdtm.kp.symbol_name = "shrink_inactive_list";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_shrink_inactive_list;
-+		break;
-+	case CN_TIMERADD:
-+		lkdtm.kp.symbol_name = "hrtimer_start";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_hrtimer_start;
-+		break;
-+	case CN_SCSI_DISPATCH_CMD:
-+		lkdtm.kp.symbol_name = "scsi_dispatch_cmd";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_scsi_dispatch_cmd;
-+		break;
-+	case CN_IDE_CORE_CP:
-+#ifdef CONFIG_IDE
-+		lkdtm.kp.symbol_name = "generic_ide_ioctl";
-+		lkdtm.entry = (kprobe_opcode_t*) jp_generic_ide_ioctl;
-+#else
-+		pr_info("Crash point not available\n");
-+		return -EINVAL;
-+#endif
-+		break;
-+	default:
-+		pr_info("Invalid Crash Point\n");
-+		return -EINVAL;
-+	}
-+
-+	cpoint = which;
-+	if ((ret = register_jprobe(&lkdtm)) < 0) {
-+		pr_info("Couldn't register jprobe\n");
-+		cpoint = CN_INVALID;
-+	}
-+
-+	return ret;
-+}
-+
-+static ssize_t do_register_entry(enum cname which, struct file *f,
-+		const char __user *user_buf, size_t count, loff_t *off)
-+{
-+	char *buf;
-+	int err;
-+
-+	if (count >= PAGE_SIZE)
-+		return -EINVAL;
-+
-+	buf = (char *)__get_free_page(GFP_KERNEL);
-+	if (!buf)
-+		return -ENOMEM;
-+	if (copy_from_user(buf, user_buf, count)) {
-+		free_page((unsigned long) buf);
-+		return -EFAULT;
-+	}
-+	/* NULL-terminate and remove enter */
-+	buf[count] = '\0';
-+	strim(buf);
-+
-+	cptype = parse_cp_type(buf, count);
-+	free_page((unsigned long) buf);
-+
-+	if (cptype == CT_NONE)
-+		return -EINVAL;
-+
-+	err = lkdtm_register_cpoint(which);
-+	if (err < 0)
-+		return err;
-+
-+	*off += count;
-+
-+	return count;
-+}
-+
-+/* Generic read callback that just prints out the available crash types */
-+static ssize_t lkdtm_debugfs_read(struct file *f, char __user *user_buf,
-+		size_t count, loff_t *off)
-+{
-+	char *buf;
-+	int i, n, out;
-+
-+	buf = (char *)__get_free_page(GFP_KERNEL);
-+	if (buf == NULL)
-+		return -ENOMEM;
-+
-+	n = snprintf(buf, PAGE_SIZE, "Available crash types:\n");
-+	for (i = 0; i < ARRAY_SIZE(cp_type); i++)
-+		n += snprintf(buf + n, PAGE_SIZE - n, "%s\n", cp_type[i]);
-+	buf[n] = '\0';
-+
-+	out = simple_read_from_buffer(user_buf, count, off,
-+				      buf, n);
-+	free_page((unsigned long) buf);
-+
-+	return out;
-+}
-+
-+static int lkdtm_debugfs_open(struct inode *inode, struct file *file)
-+{
-+	return 0;
-+}
-+
-+
-+static ssize_t int_hardware_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_INT_HARDWARE_ENTRY, f, buf, count, off);
-+}
-+
-+static ssize_t int_hw_irq_en(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_INT_HW_IRQ_EN, f, buf, count, off);
-+}
-+
-+static ssize_t int_tasklet_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_INT_TASKLET_ENTRY, f, buf, count, off);
-+}
-+
-+static ssize_t fs_devrw_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_FS_DEVRW, f, buf, count, off);
-+}
-+
-+static ssize_t mem_swapout_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_MEM_SWAPOUT, f, buf, count, off);
-+}
-+
-+static ssize_t timeradd_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_TIMERADD, f, buf, count, off);
-+}
-+
-+static ssize_t scsi_dispatch_cmd_entry(struct file *f,
-+		const char __user *buf, size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_SCSI_DISPATCH_CMD, f, buf, count, off);
-+}
-+
-+static ssize_t ide_core_cp_entry(struct file *f, const char __user *buf,
-+		size_t count, loff_t *off)
-+{
-+	return do_register_entry(CN_IDE_CORE_CP, f, buf, count, off);
-+}
-+
-+/* Special entry to just crash directly. Available without KPROBEs */
-+static ssize_t direct_entry(struct file *f, const char __user *user_buf,
-+		size_t count, loff_t *off)
-+{
-+	enum ctype type;
-+	char *buf;
-+
-+	if (count >= PAGE_SIZE)
-+		return -EINVAL;
-+	if (count < 1)
-+		return -EINVAL;
-+
-+	buf = (char *)__get_free_page(GFP_KERNEL);
-+	if (!buf)
-+		return -ENOMEM;
-+	if (copy_from_user(buf, user_buf, count)) {
-+		free_page((unsigned long) buf);
-+		return -EFAULT;
-+	}
-+	/* NULL-terminate and remove enter */
-+	buf[count] = '\0';
-+	strim(buf);
-+
-+	type = parse_cp_type(buf, count);
-+	free_page((unsigned long) buf);
-+	if (type == CT_NONE)
-+		return -EINVAL;
-+
-+	pr_info("Performing direct entry %s\n", cp_type_to_str(type));
-+	lkdtm_do_action(type);
-+	*off += count;
-+
-+	return count;
-+}
-+
-+struct crash_entry {
-+	const char *name;
-+	const struct file_operations fops;
-+};
-+
-+static const struct crash_entry crash_entries[] = {
-+	{"DIRECT", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = direct_entry} },
-+	{"INT_HARDWARE_ENTRY", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = int_hardware_entry} },
-+	{"INT_HW_IRQ_EN", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = int_hw_irq_en} },
-+	{"INT_TASKLET_ENTRY", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = int_tasklet_entry} },
-+	{"FS_DEVRW", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = fs_devrw_entry} },
-+	{"MEM_SWAPOUT", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = mem_swapout_entry} },
-+	{"TIMERADD", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = timeradd_entry} },
-+	{"SCSI_DISPATCH_CMD", {.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = scsi_dispatch_cmd_entry} },
-+	{"IDE_CORE_CP",	{.read = lkdtm_debugfs_read,
-+			.llseek = generic_file_llseek,
-+			.open = lkdtm_debugfs_open,
-+			.write = ide_core_cp_entry} },
-+};
-+
-+static struct dentry *lkdtm_debugfs_root;
-+
-+static int __init lkdtm_module_init(void)
-+{
-+	int ret = -EINVAL;
-+	int n_debugfs_entries = 1; /* Assume only the direct entry */
-+	int i;
-+
-+	/* Make sure we can write to __ro_after_init values during __init */
-+	ro_after_init |= 0xAA;
-+
-+	/* Register debugfs interface */
-+	lkdtm_debugfs_root = debugfs_create_dir("provoke-crash", NULL);
-+	if (!lkdtm_debugfs_root) {
-+		pr_err("creating root dir failed\n");
-+		return -ENODEV;
-+	}
-+
-+#ifdef CONFIG_KPROBES
-+	n_debugfs_entries = ARRAY_SIZE(crash_entries);
-+#endif
-+
-+	for (i = 0; i < n_debugfs_entries; i++) {
-+		const struct crash_entry *cur = &crash_entries[i];
-+		struct dentry *de;
-+
-+		de = debugfs_create_file(cur->name, 0644, lkdtm_debugfs_root,
-+				NULL, &cur->fops);
-+		if (de == NULL) {
-+			pr_err("could not create %s\n", cur->name);
-+			goto out_err;
-+		}
-+	}
-+
-+	if (lkdtm_parse_commandline() == -EINVAL) {
-+		pr_info("Invalid command\n");
-+		goto out_err;
-+	}
-+
-+	if (cpoint != CN_INVALID && cptype != CT_NONE) {
-+		ret = lkdtm_register_cpoint(cpoint);
-+		if (ret < 0) {
-+			pr_info("Invalid crash point %d\n", cpoint);
-+			goto out_err;
-+		}
-+		pr_info("Crash point %s of type %s registered\n",
-+			cpoint_name, cpoint_type);
-+	} else {
-+		pr_info("No crash points registered, enable through debugfs\n");
-+	}
-+
-+	return 0;
-+
-+out_err:
-+	debugfs_remove_recursive(lkdtm_debugfs_root);
-+	return ret;
-+}
-+
-+static void __exit lkdtm_module_exit(void)
-+{
-+	debugfs_remove_recursive(lkdtm_debugfs_root);
-+
-+	unregister_jprobe(&lkdtm);
-+	pr_info("Crash point unregistered\n");
-+}
-+
-+module_init(lkdtm_module_init);
-+module_exit(lkdtm_module_exit);
-+
-+MODULE_LICENSE("GPL");
-+MODULE_DESCRIPTION("Kprobe module for testing crash dumps");
--- 
-2.7.4
+--3MwIy2ne0vdjdPXF
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename=".config.gz"
+Content-Transfer-Encoding: base64
+
+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
+
+--3MwIy2ne0vdjdPXF--
