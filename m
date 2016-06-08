@@ -1,309 +1,303 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Wed,  8 Jun 2016 14:11:42 -0700
-Message-Id: <1465420302-23754-5-git-send-email-keescook@chromium.org>
+Date: Wed,  8 Jun 2016 14:11:41 -0700
+Message-Id: <1465420302-23754-4-git-send-email-keescook@chromium.org>
 In-Reply-To: <1465420302-23754-1-git-send-email-keescook@chromium.org>
 References: <1465420302-23754-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 4/4] usercopy: provide split of user-controlled slabs
+Subject: [kernel-hardening] [PATCH v2 3/4] usercopy: whitelist user-copyable caches
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey.schaufler@intel.com>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Several userspace APIs (ipc, seq_file) provide precise control over
-the size of kernel kmallocs, which provides a trivial way to perform
-heap overflow attacks where the attacker must control neighboring
-allocations. Instead, move these APIs into their own cache so they
-cannot interfere with the standard kmallocs, and disable slab merging.
-This is enabled with CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC.
+Most stuff in the kernel should not be copied to/from userspace, so we
+instead mark those that were arguably designed to be with SLAB_USERCOPY.
+Some, like the general kmalloc caches, must be marked this way since they
+are one of the most frequently used allocation methods, after the stack,
+used to hold data copied to/from userspace.
 
-Based on PAX_USERCOPY_SLABS by Brad Spengler and PaX Team.
+Since this is likely going to be temporarily disruptive for other
+architectures or workflows, this can be disabled by turning off
+CONFIG_HARDENED_USERCOPY_WHITELIST.
+
+Note: "dcache" cache isn't whitelisted in grsecurity/PaX, but I have
+not figured out how to make readdir operate sanely yet.
+
+Based on PAX_USERCOPY by Brad Spengler and PaX Team.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- fs/seq_file.c        |  2 +-
- include/linux/slab.h |  4 ++++
- ipc/msgutil.c        |  4 ++--
- mm/slab_common.c     | 35 ++++++++++++++++++++++++++++
- mm/slob.c            | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++++
- mm/slub.c            | 11 +++++++++
- security/Kconfig     | 13 +++++++++++
- 7 files changed, 131 insertions(+), 3 deletions(-)
+ fs/cifs/cifsfs.c       |  7 ++++---
+ fs/dcache.c            |  6 ++++--
+ fs/jfs/super.c         |  2 +-
+ include/linux/gfp.h    |  5 ++++-
+ include/linux/slab.h   |  1 +
+ kernel/fork.c          |  2 +-
+ mm/slab.c              |  8 +++++++-
+ mm/slab.h              |  3 ++-
+ mm/slab_common.c       |  6 +++---
+ mm/slub.c              |  4 ++++
+ net/decnet/af_decnet.c |  1 +
+ security/Kconfig       | 10 ++++++++++
+ virt/kvm/kvm_main.c    |  2 +-
+ 13 files changed, 43 insertions(+), 14 deletions(-)
 
-diff --git a/fs/seq_file.c b/fs/seq_file.c
-index 19f532e7d35e..1686d05d7914 100644
---- a/fs/seq_file.c
-+++ b/fs/seq_file.c
-@@ -26,7 +26,7 @@ static void seq_set_overflow(struct seq_file *m)
- static void *seq_buf_alloc(unsigned long size)
- {
- 	void *buf;
--	gfp_t gfp = GFP_KERNEL;
-+	gfp_t gfp = GFP_KERNEL | GFP_USERCOPY;
+diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
+index 5d8b7edf8a8f..18444cc5e7dc 100644
+--- a/fs/cifs/cifsfs.c
++++ b/fs/cifs/cifsfs.c
+@@ -1142,7 +1142,8 @@ cifs_init_request_bufs(void)
+ */
+ 	cifs_req_cachep = kmem_cache_create("cifs_request",
+ 					    CIFSMaxBufSize + max_hdr_size, 0,
+-					    SLAB_HWCACHE_ALIGN, NULL);
++					    SLAB_HWCACHE_ALIGN|SLAB_USERCOPY,
++					    NULL);
+ 	if (cifs_req_cachep == NULL)
+ 		return -ENOMEM;
  
- 	/*
- 	 * For high order allocations, use __GFP_NORETRY to avoid oom-killing -
+@@ -1169,8 +1170,8 @@ cifs_init_request_bufs(void)
+ 	efficient to alloc 1 per page off the slab compared to 17K (5page)
+ 	alloc of large cifs buffers even when page debugging is on */
+ 	cifs_sm_req_cachep = kmem_cache_create("cifs_small_rq",
+-			MAX_CIFS_SMALL_BUFFER_SIZE, 0, SLAB_HWCACHE_ALIGN,
+-			NULL);
++			MAX_CIFS_SMALL_BUFFER_SIZE, 0,
++			SLAB_USERCOPY | SLAB_HWCACHE_ALIGN, NULL);
+ 	if (cifs_sm_req_cachep == NULL) {
+ 		mempool_destroy(cifs_req_poolp);
+ 		kmem_cache_destroy(cifs_req_cachep);
+diff --git a/fs/dcache.c b/fs/dcache.c
+index ad4a542e9bab..976896d39283 100644
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -3616,8 +3616,10 @@ static void __init dcache_init(void)
+ 	 * but it is probably not worth it because of the cache nature
+ 	 * of the dcache. 
+ 	 */
++	/* FIXME: this shouldn't need SLAB_USERCOPY. */
+ 	dentry_cache = KMEM_CACHE(dentry,
+-		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD|SLAB_ACCOUNT);
++		SLAB_USERCOPY | SLAB_RECLAIM_ACCOUNT | SLAB_PANIC |
++		SLAB_MEM_SPREAD | SLAB_ACCOUNT);
+ 
+ 	/* Hash may have been set up in dcache_init_early */
+ 	if (!hashdist)
+@@ -3653,7 +3655,7 @@ void __init vfs_caches_init_early(void)
+ void __init vfs_caches_init(void)
+ {
+ 	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
+-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
++			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_USERCOPY, NULL);
+ 
+ 	dcache_init();
+ 	inode_init();
+diff --git a/fs/jfs/super.c b/fs/jfs/super.c
+index cec8814a3b8b..9f1b2a24e779 100644
+--- a/fs/jfs/super.c
++++ b/fs/jfs/super.c
+@@ -898,7 +898,7 @@ static int __init init_jfs_fs(void)
+ 
+ 	jfs_inode_cachep =
+ 	    kmem_cache_create("jfs_ip", sizeof(struct jfs_inode_info), 0,
+-			    SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
++			    SLAB_USERCOPY|SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD|SLAB_ACCOUNT,
+ 			    init_once);
+ 	if (jfs_inode_cachep == NULL)
+ 		return -ENOMEM;
+diff --git a/include/linux/gfp.h b/include/linux/gfp.h
+index 570383a41853..2c9f70a69561 100644
+--- a/include/linux/gfp.h
++++ b/include/linux/gfp.h
+@@ -41,6 +41,7 @@ struct vm_area_struct;
+ #define ___GFP_OTHER_NODE	0x800000u
+ #define ___GFP_WRITE		0x1000000u
+ #define ___GFP_KSWAPD_RECLAIM	0x2000000u
++#define ___GFP_USERCOPY		0x4000000u
+ /* If the above are modified, __GFP_BITS_SHIFT may need updating */
+ 
+ /*
+@@ -86,6 +87,7 @@ struct vm_area_struct;
+ #define __GFP_HARDWALL   ((__force gfp_t)___GFP_HARDWALL)
+ #define __GFP_THISNODE	((__force gfp_t)___GFP_THISNODE)
+ #define __GFP_ACCOUNT	((__force gfp_t)___GFP_ACCOUNT)
++#define __GFP_USERCOPY	((__force gfp_t)___GFP_USERCOPY)
+ 
+ /*
+  * Watermark modifiers -- controls access to emergency reserves
+@@ -188,7 +190,7 @@ struct vm_area_struct;
+ #define __GFP_OTHER_NODE ((__force gfp_t)___GFP_OTHER_NODE)
+ 
+ /* Room for N __GFP_FOO bits */
+-#define __GFP_BITS_SHIFT 26
++#define __GFP_BITS_SHIFT 27
+ #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
+ 
+ /*
+@@ -258,6 +260,7 @@ struct vm_area_struct;
+ #define GFP_TRANSHUGE	((GFP_HIGHUSER_MOVABLE | __GFP_COMP | \
+ 			 __GFP_NOMEMALLOC | __GFP_NORETRY | __GFP_NOWARN) & \
+ 			 ~__GFP_RECLAIM)
++#define GFP_USERCOPY	__GFP_USERCOPY
+ 
+ /* Convert GFP flags to their corresponding migrate type */
+ #define GFP_MOVABLE_MASK (__GFP_RECLAIMABLE|__GFP_MOVABLE)
 diff --git a/include/linux/slab.h b/include/linux/slab.h
-index 59cc29ef4cd1..196972482333 100644
+index 5c0cd75b2d07..59cc29ef4cd1 100644
 --- a/include/linux/slab.h
 +++ b/include/linux/slab.h
-@@ -270,6 +270,10 @@ extern struct kmem_cache *kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
- extern struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
- #endif
+@@ -21,6 +21,7 @@
+  * The ones marked DEBUG are only valid if CONFIG_DEBUG_SLAB is set.
+  */
+ #define SLAB_CONSISTENCY_CHECKS	0x00000100UL	/* DEBUG: Perform (expensive) checks on alloc/free */
++#define SLAB_USERCOPY		0x00000200UL	/* USERCOPY: Allow copying objs to/from userspace */
+ #define SLAB_RED_ZONE		0x00000400UL	/* DEBUG: Red zone objs in a cache */
+ #define SLAB_POISON		0x00000800UL	/* DEBUG: Poison objects */
+ #define SLAB_HWCACHE_ALIGN	0x00002000UL	/* Align objs on cache lines */
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 5c2c355aa97f..2b09fc076dea 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -197,7 +197,7 @@ static void free_thread_info(struct thread_info *ti)
+ void thread_info_cache_init(void)
+ {
+ 	thread_info_cache = kmem_cache_create("thread_info", THREAD_SIZE,
+-					      THREAD_SIZE, 0, NULL);
++					      THREAD_SIZE, SLAB_USERCOPY, NULL);
+ 	BUG_ON(thread_info_cache == NULL);
+ }
+ # endif
+diff --git a/mm/slab.c b/mm/slab.c
+index 4cb2e5408625..b3fbdd6ac027 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -1354,7 +1354,8 @@ void __init kmem_cache_init(void)
+ 	 * structures first.  Without this, further allocations will bug.
+ 	 */
+ 	kmalloc_caches[INDEX_NODE] = create_kmalloc_cache("kmalloc-node",
+-				kmalloc_size(INDEX_NODE), ARCH_KMALLOC_FLAGS);
++				kmalloc_size(INDEX_NODE),
++				SLAB_USERCOPY | ARCH_KMALLOC_FLAGS);
+ 	slab_state = PARTIAL_NODE;
+ 	setup_kmalloc_cache_index_table();
  
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+extern struct kmem_cache *kmalloc_usercopy_caches[KMALLOC_SHIFT_HIGH + 1];
+@@ -4482,6 +4483,7 @@ module_init(slab_proc_init);
+  * Rejects objects that are:
+  * - NULL or zero-allocated
+  * - incorrectly sized
++ * - not marked with SLAB_USERCOPY
+  *
+  * Returns NULL if check passes, otherwise const char * to name of cache
+  * to indicate an error.
+@@ -4494,6 +4496,10 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+ 	unsigned long offset;
+ 
+ 	cachep = page->slab_cache;
++#ifdef CONFIG_HARDENED_USERCOPY_WHITELIST
++	if (!(cachep->flags & SLAB_USERCOPY))
++		return cachep->name;
 +#endif
-+
- /*
-  * Figure out which kmalloc slab an allocation of a certain size
-  * belongs to.
-diff --git a/ipc/msgutil.c b/ipc/msgutil.c
-index ed81aafd2392..6bd28c3aec8c 100644
---- a/ipc/msgutil.c
-+++ b/ipc/msgutil.c
-@@ -55,7 +55,7 @@ static struct msg_msg *alloc_msg(size_t len)
- 	size_t alen;
  
- 	alen = min(len, DATALEN_MSG);
--	msg = kmalloc(sizeof(*msg) + alen, GFP_KERNEL);
-+	msg = kmalloc(sizeof(*msg) + alen, GFP_KERNEL | GFP_USERCOPY);
- 	if (msg == NULL)
- 		return NULL;
+ 	objnr = obj_to_index(cachep, page, (void *)ptr);
+ 	BUG_ON(objnr >= cachep->num);
+diff --git a/mm/slab.h b/mm/slab.h
+index dedb1a920fb8..db29e111902b 100644
+--- a/mm/slab.h
++++ b/mm/slab.h
+@@ -119,7 +119,8 @@ static inline unsigned long kmem_cache_flags(unsigned long object_size,
  
-@@ -67,7 +67,7 @@ static struct msg_msg *alloc_msg(size_t len)
- 	while (len > 0) {
- 		struct msg_msgseg *seg;
- 		alen = min(len, DATALEN_SEG);
--		seg = kmalloc(sizeof(*seg) + alen, GFP_KERNEL);
-+		seg = kmalloc(sizeof(*seg) + alen, GFP_KERNEL | GFP_USERCOPY);
- 		if (seg == NULL)
- 			goto out_err;
- 		*pseg = seg;
+ /* Legal flag mask for kmem_cache_create(), for various configurations */
+ #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | SLAB_PANIC | \
+-			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS )
++			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS | \
++			 SLAB_USERCOPY)
+ 
+ #if defined(CONFIG_DEBUG_SLAB)
+ #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
 diff --git a/mm/slab_common.c b/mm/slab_common.c
-index f3f6ae3f56fc..fd567a61f8aa 100644
+index a65dad7fdcd1..f3f6ae3f56fc 100644
 --- a/mm/slab_common.c
 +++ b/mm/slab_common.c
-@@ -44,7 +44,16 @@ struct kmem_cache *kmem_cache;
-  * Merge control. If this is set then no merging of slab caches will occur.
-  * (Could be removed. This was introduced to pacify the merge skeptics.)
-  */
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+/*
-+ * If the kmalloc slabs are split between user-controlled sizing and
-+ * regular kmalloc, we want to make sure we don't help attackers by
-+ * merging slabs.
-+ */
-+static int slab_nomerge = 1;
-+#else
- static int slab_nomerge;
-+#endif
+@@ -967,7 +967,7 @@ void __init create_kmalloc_caches(unsigned long flags)
  
- static int __init setup_slab_nomerge(char *str)
- {
-@@ -811,6 +820,11 @@ struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
- EXPORT_SYMBOL(kmalloc_dma_caches);
- #endif
+ 	for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
+ 		if (!kmalloc_caches[i])
+-			new_kmalloc_cache(i, flags);
++			new_kmalloc_cache(i, SLAB_USERCOPY | flags);
  
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+struct kmem_cache *kmalloc_usercopy_caches[KMALLOC_SHIFT_HIGH + 1];
-+EXPORT_SYMBOL(kmalloc_usercopy_caches);
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- /*
-  * Conversion table for small slabs sizes / 8 to the index in the
-  * kmalloc array. This is necessary for slabs < 192 since we have non power
-@@ -875,6 +889,11 @@ struct kmem_cache *kmalloc_slab(size_t size, gfp_t flags)
- 		return kmalloc_dma_caches[index];
- 
- #endif
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	if (unlikely((flags & GFP_USERCOPY)))
-+		return kmalloc_usercopy_caches[index];
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- 	return kmalloc_caches[index];
- }
- 
-@@ -998,6 +1017,22 @@ void __init create_kmalloc_caches(unsigned long flags)
- 		}
- 	}
- #endif
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	for (i = 0; i <= KMALLOC_SHIFT_HIGH; i++) {
-+		struct kmem_cache *s = kmalloc_caches[i];
-+
-+		if (s) {
-+			int size = kmalloc_size(i);
-+			char *n = kasprintf(GFP_NOWAIT,
-+				 "usercopy-kmalloc-%d", size);
-+
-+			BUG_ON(!n);
-+			kmalloc_usercopy_caches[i] = create_kmalloc_cache(n,
-+				size, SLAB_USERCOPY | flags);
-+		}
-+	}
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- }
- #endif /* !CONFIG_SLOB */
- 
-diff --git a/mm/slob.c b/mm/slob.c
-index 2d54fcd262fa..a01379794670 100644
---- a/mm/slob.c
-+++ b/mm/slob.c
-@@ -583,6 +583,53 @@ int __kmem_cache_create(struct kmem_cache *c, unsigned long flags)
- 	return 0;
- }
- 
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+static __always_inline void *
-+__do_kmalloc_node_align(size_t size, gfp_t gfp, int node, unsigned long caller, int align)
-+{
-+	slob_t *m;
-+	void *ret = NULL;
-+
-+	gfp &= gfp_allowed_mask;
-+
-+	lockdep_trace_alloc(gfp);
-+
-+	if (size < PAGE_SIZE - align) {
-+		if (!size)
-+			return ZERO_SIZE_PTR;
-+
-+		m = slob_alloc(size + align, gfp, align, node);
-+
-+		if (!m)
-+			return NULL;
-+		BUILD_BUG_ON(ARCH_KMALLOC_MINALIGN < 2 * SLOB_UNIT);
-+		BUILD_BUG_ON(ARCH_SLAB_MINALIGN < 2 * SLOB_UNIT);
-+		m[0].units = size;
-+		m[1].units = align;
-+		ret = (void *)m + align;
-+
-+		trace_kmalloc_node(caller, ret,
-+				   size, size + align, gfp, node);
-+	} else {
-+		unsigned int order = get_order(size);
-+		struct page *page;
-+
-+		if (likely(order))
-+			gfp |= __GFP_COMP;
-+		page = slob_new_pages(gfp, order, node);
-+		if (page) {
-+			ret = page_address(page);
-+			page->private = size;
-+		}
-+
-+		trace_kmalloc_node(caller, ret,
-+				   size, PAGE_SIZE << order, gfp, node);
-+	}
-+
-+	return ret;
-+}
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
- {
- 	void *b;
-@@ -591,6 +638,10 @@ static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
- 
- 	lockdep_trace_alloc(flags);
- 
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	b = __do_kmalloc_node_align(c->size, flags, node, _RET_IP_, c->align);
-+#else /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- 	if (c->size < PAGE_SIZE) {
- 		b = slob_alloc(c->size, flags, c->align, node);
- 		trace_kmem_cache_alloc_node(_RET_IP_, b, c->object_size,
-@@ -602,6 +653,7 @@ static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
- 					    PAGE_SIZE << get_order(c->size),
- 					    flags, node);
- 	}
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
- 
- 	if (b && c->ctor)
- 		c->ctor(b);
-@@ -648,6 +700,15 @@ static void kmem_rcu_free(struct rcu_head *head)
- 
- void kmem_cache_free(struct kmem_cache *c, void *b)
- {
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	int size = c->size;
-+
-+	if (size + c->align < PAGE_SIZE) {
-+		size += c->align;
-+		b -= c->align;
-+	}
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- 	kmemleak_free_recursive(b, c->flags);
- 	if (unlikely(c->flags & SLAB_DESTROY_BY_RCU)) {
- 		struct slob_rcu *slob_rcu;
-@@ -658,7 +719,11 @@ void kmem_cache_free(struct kmem_cache *c, void *b)
- 		__kmem_cache_free(b, c->size);
+ 		/*
+ 		 * Caches that are not of the two-to-the-power-of size.
+@@ -975,9 +975,9 @@ void __init create_kmalloc_caches(unsigned long flags)
+ 		 * earlier power of two caches
+ 		 */
+ 		if (KMALLOC_MIN_SIZE <= 32 && !kmalloc_caches[1] && i == 6)
+-			new_kmalloc_cache(1, flags);
++			new_kmalloc_cache(1, SLAB_USERCOPY | flags);
+ 		if (KMALLOC_MIN_SIZE <= 64 && !kmalloc_caches[2] && i == 7)
+-			new_kmalloc_cache(2, flags);
++			new_kmalloc_cache(2, SLAB_USERCOPY | flags);
  	}
  
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	trace_kfree(_RET_IP_, b);
-+#else /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
- 	trace_kmem_cache_free(_RET_IP_, b);
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
- }
- EXPORT_SYMBOL(kmem_cache_free);
- 
+ 	/* Kmalloc array is now usable */
 diff --git a/mm/slub.c b/mm/slub.c
-index 589f0ffe712b..bab85cf94f3f 100644
+index 83d3cbc7adf8..589f0ffe712b 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
-@@ -4838,6 +4838,14 @@ static ssize_t cache_dma_show(struct kmem_cache *s, char *buf)
- SLAB_ATTR_RO(cache_dma);
- #endif
+@@ -3622,6 +3622,10 @@ const char *__check_heap_object(const void *ptr, unsigned long n,
+ 	unsigned long offset;
  
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+static ssize_t usercopy_show(struct kmem_cache *s, char *buf)
-+{
-+	return sprintf(buf, "%d\n", !!(s->flags & SLAB_USERCOPY));
-+}
-+SLAB_ATTR_RO(usercopy);
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
-+
- static ssize_t destroy_by_rcu_show(struct kmem_cache *s, char *buf)
- {
- 	return sprintf(buf, "%d\n", !!(s->flags & SLAB_DESTROY_BY_RCU));
-@@ -5178,6 +5186,9 @@ static struct attribute *slab_attrs[] = {
- #ifdef CONFIG_ZONE_DMA
- 	&cache_dma_attr.attr,
- #endif
-+#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-+	&usercopy_attr.attr,
-+#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
- #ifdef CONFIG_NUMA
- 	&remote_node_defrag_ratio_attr.attr,
- #endif
+ 	s = page->slab_cache;
++#ifdef CONFIG_HARDENED_USERCOPY_WHITELIST
++	if (!(s->flags & SLAB_USERCOPY))
++		return s->name;
++#endif
+ 
+ 	offset = (ptr - page_address(page)) % s->size;
+ 	if (offset <= s->object_size && n <= s->object_size - offset)
+diff --git a/net/decnet/af_decnet.c b/net/decnet/af_decnet.c
+index 13d6b1a6e0fc..0ac2a9bd18f3 100644
+--- a/net/decnet/af_decnet.c
++++ b/net/decnet/af_decnet.c
+@@ -466,6 +466,7 @@ static struct proto dn_proto = {
+ 	.sysctl_rmem		= sysctl_decnet_rmem,
+ 	.max_header		= DN_MAX_NSP_DATA_HEADER + 64,
+ 	.obj_size		= sizeof(struct dn_sock),
++	.slab_flags		= SLAB_USERCOPY,
+ };
+ 
+ static struct sock *dn_alloc_sock(struct net *net, struct socket *sock, gfp_t gfp, int kern)
 diff --git a/security/Kconfig b/security/Kconfig
-index 0ec17a252e49..f5d367213d8c 100644
+index 081607a5e078..0ec17a252e49 100644
 --- a/security/Kconfig
 +++ b/security/Kconfig
-@@ -139,6 +139,19 @@ config HARDENED_USERCOPY_WHITELIST
- 	  memory that an attack has access to through bugs in interfaces
- 	  that use copy_to_user() and copy_from_user().
+@@ -129,6 +129,16 @@ config HARDENED_USERCOPY
+ 	  This kills entire classes of heap overflows and similar
+ 	  kernel memory exposures.
  
-+config HARDENED_USERCOPY_SPLIT_KMALLOC
-+	bool "Split kmalloc caches from user-controlled allocations"
-+	depends on HARDENED_USERCOPY
++config HARDENED_USERCOPY_WHITELIST
++	bool "Whiltelist heap memory that is allow to be user-copied"
 +	default HARDENED_USERCOPY
 +	help
-+	  This option creates a separate set of kmalloc caches used for
-+	  userspace APIs that provide fine-grained control over kernel
-+	  allocation sizes. Without this, it is much easier for attackers
-+	  to precisely size and attack heap overflows. If their allocations
-+	  are separated into a different cache, attackers must find other
-+	  ways to prepare heap attacks that will be near their desired
-+	  targets.
++	  This option adds checking for kernel memory being whitelisted
++	  as "expected to be copied to/from userspace", via the
++	  SLAB_USERCOPY flag. This greatly reduces the areas of kernel
++	  memory that an attack has access to through bugs in interfaces
++	  that use copy_to_user() and copy_from_user().
 +
  source security/selinux/Kconfig
  source security/smack/Kconfig
  source security/tomoyo/Kconfig
+diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+index 02e98f3131bd..2178fd2b87b9 100644
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -3752,7 +3752,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
+ 	if (!vcpu_align)
+ 		vcpu_align = __alignof__(struct kvm_vcpu);
+ 	kvm_vcpu_cache = kmem_cache_create("kvm_vcpu", vcpu_size, vcpu_align,
+-					   0, NULL);
++					   SLAB_USERCOPY, NULL);
+ 	if (!kvm_vcpu_cache) {
+ 		r = -ENOMEM;
+ 		goto out_free_3;
 -- 
 2.7.4
