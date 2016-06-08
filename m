@@ -1,709 +1,306 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Wed,  8 Jun 2016 14:11:39 -0700
-Message-Id: <1465420302-23754-2-git-send-email-keescook@chromium.org>
+Date: Wed,  8 Jun 2016 14:11:42 -0700
+Message-Id: <1465420302-23754-5-git-send-email-keescook@chromium.org>
 In-Reply-To: <1465420302-23754-1-git-send-email-keescook@chromium.org>
 References: <1465420302-23754-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v2 1/4] mm: Hardened usercopy
+Subject: [kernel-hardening] [PATCH v2 4/4] usercopy: provide split of user-controlled slabs
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey.schaufler@intel.com>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an attempt at porting PAX_USERCOPY into the mainline kernel,
-calling it CONFIG_HARDENED_USERCOPY. The work is based on code by Brad
-Spengler and PaX Team, and an earlier port from Casey Schaufler.
+Several userspace APIs (ipc, seq_file) provide precise control over
+the size of kernel kmallocs, which provides a trivial way to perform
+heap overflow attacks where the attacker must control neighboring
+allocations. Instead, move these APIs into their own cache so they
+cannot interfere with the standard kmallocs, and disable slab merging.
+This is enabled with CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC.
 
-This patch contains the logic for validating several conditions when
-performing copy_to_user() and copy_from_user() on the kernel object
-being copied to/from:
-- if on the heap:
-  - the size of copy must be less than or equal to the size of the object
-- if on the stack (and we have architecture/build support for frames):
-  - object must be contained by the current stack frame
-- object must not be contained in the kernel text
-
-Additional restrictions are in following patches.
-
-This implements the checks on many architectures, but I have only tested
-x86_64 so far. I would love to see an arm64 port added as well.
+Based on PAX_USERCOPY_SLABS by Brad Spengler and PaX Team.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/arm/include/asm/uaccess.h      |   5 +
- arch/ia64/include/asm/uaccess.h     |  18 +++-
- arch/powerpc/include/asm/uaccess.h  |  21 ++++-
- arch/sparc/include/asm/uaccess_32.h |  14 ++-
- arch/sparc/include/asm/uaccess_64.h |  11 ++-
- arch/x86/include/asm/uaccess.h      |  10 +-
- arch/x86/include/asm/uaccess_32.h   |   2 +
- arch/x86/include/asm/uaccess_64.h   |   2 +
- include/linux/slab.h                |   5 +
- include/linux/thread_info.h         |  15 +++
- mm/Makefile                         |   1 +
- mm/slab.c                           |  29 ++++++
- mm/slob.c                           |  51 +++++++++++
- mm/slub.c                           |  17 ++++
- mm/usercopy.c                       | 177 ++++++++++++++++++++++++++++++++++++
- security/Kconfig                    |  11 +++
- 16 files changed, 374 insertions(+), 15 deletions(-)
- create mode 100644 mm/usercopy.c
+ fs/seq_file.c        |  2 +-
+ include/linux/slab.h |  4 ++++
+ ipc/msgutil.c        |  4 ++--
+ mm/slab_common.c     | 35 ++++++++++++++++++++++++++++
+ mm/slob.c            | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ mm/slub.c            | 11 +++++++++
+ security/Kconfig     | 13 +++++++++++
+ 7 files changed, 131 insertions(+), 3 deletions(-)
 
-diff --git a/arch/arm/include/asm/uaccess.h b/arch/arm/include/asm/uaccess.h
-index 35c9db857ebe..7bcdb56ce6fb 100644
---- a/arch/arm/include/asm/uaccess.h
-+++ b/arch/arm/include/asm/uaccess.h
-@@ -497,6 +497,8 @@ static inline unsigned long __must_check
- __copy_from_user(void *to, const void __user *from, unsigned long n)
+diff --git a/fs/seq_file.c b/fs/seq_file.c
+index 19f532e7d35e..1686d05d7914 100644
+--- a/fs/seq_file.c
++++ b/fs/seq_file.c
+@@ -26,7 +26,7 @@ static void seq_set_overflow(struct seq_file *m)
+ static void *seq_buf_alloc(unsigned long size)
  {
- 	unsigned int __ua_flags = uaccess_save_and_enable();
-+
-+	check_object_size(to, n, false);
- 	n = arm_copy_from_user(to, from, n);
- 	uaccess_restore(__ua_flags);
- 	return n;
-@@ -512,10 +514,13 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
- {
- #ifndef CONFIG_UACCESS_WITH_MEMCPY
- 	unsigned int __ua_flags = uaccess_save_and_enable();
-+
-+	check_object_size(to, n, false);
- 	n = arm_copy_to_user(to, from, n);
- 	uaccess_restore(__ua_flags);
- 	return n;
- #else
-+	check_object_size(to, n, false);
- 	return arm_copy_to_user(to, from, n);
- #endif
- }
-diff --git a/arch/ia64/include/asm/uaccess.h b/arch/ia64/include/asm/uaccess.h
-index 2189d5ddc1ee..465c70982f40 100644
---- a/arch/ia64/include/asm/uaccess.h
-+++ b/arch/ia64/include/asm/uaccess.h
-@@ -241,12 +241,18 @@ extern unsigned long __must_check __copy_user (void __user *to, const void __use
- static inline unsigned long
- __copy_to_user (void __user *to, const void *from, unsigned long count)
- {
-+	if (!__builtin_constant_p(count))
-+		check_object_size(from, count, true);
-+
- 	return __copy_user(to, (__force void __user *) from, count);
- }
+ 	void *buf;
+-	gfp_t gfp = GFP_KERNEL;
++	gfp_t gfp = GFP_KERNEL | GFP_USERCOPY;
  
- static inline unsigned long
- __copy_from_user (void *to, const void __user *from, unsigned long count)
- {
-+	if (!__builtin_constant_p(count))
-+		check_object_size(to, count, false);
-+
- 	return __copy_user((__force void __user *) to, from, count);
- }
- 
-@@ -258,8 +264,11 @@ __copy_from_user (void *to, const void __user *from, unsigned long count)
- 	const void *__cu_from = (from);							\
- 	long __cu_len = (n);								\
- 											\
--	if (__access_ok(__cu_to, __cu_len, get_fs()))					\
--		__cu_len = __copy_user(__cu_to, (__force void __user *) __cu_from, __cu_len);	\
-+	if (__access_ok(__cu_to, __cu_len, get_fs())) {					\
-+		if (!__builtin_constant_p(n))						\
-+			check_object_size(__cu_from, __cu_len, true);			\
-+		__cu_len = __copy_user(__cu_to, (__force void __user *)  __cu_from, __cu_len);	\
-+	}										\
- 	__cu_len;									\
- })
- 
-@@ -270,8 +279,11 @@ __copy_from_user (void *to, const void __user *from, unsigned long count)
- 	long __cu_len = (n);								\
- 											\
- 	__chk_user_ptr(__cu_from);							\
--	if (__access_ok(__cu_from, __cu_len, get_fs()))					\
-+	if (__access_ok(__cu_from, __cu_len, get_fs())) {				\
-+		if (!__builtin_constant_p(n))						\
-+			check_object_size(__cu_to, __cu_len, false);			\
- 		__cu_len = __copy_user((__force void __user *) __cu_to, __cu_from, __cu_len);	\
-+	}										\
- 	__cu_len;									\
- })
- 
-diff --git a/arch/powerpc/include/asm/uaccess.h b/arch/powerpc/include/asm/uaccess.h
-index b7c20f0b8fbe..c1dc6c14deb8 100644
---- a/arch/powerpc/include/asm/uaccess.h
-+++ b/arch/powerpc/include/asm/uaccess.h
-@@ -310,10 +310,15 @@ static inline unsigned long copy_from_user(void *to,
- {
- 	unsigned long over;
- 
--	if (access_ok(VERIFY_READ, from, n))
-+	if (access_ok(VERIFY_READ, from, n)) {
-+		if (!__builtin_constant_p(n))
-+			check_object_size(to, n, false);
- 		return __copy_tofrom_user((__force void __user *)to, from, n);
-+	}
- 	if ((unsigned long)from < TASK_SIZE) {
- 		over = (unsigned long)from + n - TASK_SIZE;
-+		if (!__builtin_constant_p(n - over))
-+			check_object_size(to, n - over, false);
- 		return __copy_tofrom_user((__force void __user *)to, from,
- 				n - over) + over;
- 	}
-@@ -325,10 +330,15 @@ static inline unsigned long copy_to_user(void __user *to,
- {
- 	unsigned long over;
- 
--	if (access_ok(VERIFY_WRITE, to, n))
-+	if (access_ok(VERIFY_WRITE, to, n)) {
-+		if (!__builtin_constant_p(n))
-+			check_object_size(from, n, true);
- 		return __copy_tofrom_user(to, (__force void __user *)from, n);
-+	}
- 	if ((unsigned long)to < TASK_SIZE) {
- 		over = (unsigned long)to + n - TASK_SIZE;
-+		if (!__builtin_constant_p(n))
-+			check_object_size(from, n - over, true);
- 		return __copy_tofrom_user(to, (__force void __user *)from,
- 				n - over) + over;
- 	}
-@@ -372,6 +382,10 @@ static inline unsigned long __copy_from_user_inatomic(void *to,
- 		if (ret == 0)
- 			return 0;
- 	}
-+
-+	if (!__builtin_constant_p(n))
-+		check_object_size(to, n, false);
-+
- 	return __copy_tofrom_user((__force void __user *)to, from, n);
- }
- 
-@@ -398,6 +412,9 @@ static inline unsigned long __copy_to_user_inatomic(void __user *to,
- 		if (ret == 0)
- 			return 0;
- 	}
-+	if (!__builtin_constant_p(n))
-+		check_object_size(from, n, true);
-+
- 	return __copy_tofrom_user(to, (__force const void __user *)from, n);
- }
- 
-diff --git a/arch/sparc/include/asm/uaccess_32.h b/arch/sparc/include/asm/uaccess_32.h
-index 57aca2792d29..341a5a133f48 100644
---- a/arch/sparc/include/asm/uaccess_32.h
-+++ b/arch/sparc/include/asm/uaccess_32.h
-@@ -248,22 +248,28 @@ unsigned long __copy_user(void __user *to, const void __user *from, unsigned lon
- 
- static inline unsigned long copy_to_user(void __user *to, const void *from, unsigned long n)
- {
--	if (n && __access_ok((unsigned long) to, n))
-+	if (n && __access_ok((unsigned long) to, n)) {
-+		if (!__builtin_constant_p(n))
-+			check_object_size(from, n, true);
- 		return __copy_user(to, (__force void __user *) from, n);
--	else
-+	} else
- 		return n;
- }
- 
- static inline unsigned long __copy_to_user(void __user *to, const void *from, unsigned long n)
- {
-+	if (!__builtin_constant_p(n))
-+		check_object_size(from, n, true);
- 	return __copy_user(to, (__force void __user *) from, n);
- }
- 
- static inline unsigned long copy_from_user(void *to, const void __user *from, unsigned long n)
- {
--	if (n && __access_ok((unsigned long) from, n))
-+	if (n && __access_ok((unsigned long) from, n)) {
-+		if (!__builtin_constant_p(n))
-+			check_object_size(to, n, false);
- 		return __copy_user((__force void __user *) to, from, n);
--	else
-+	} else
- 		return n;
- }
- 
-diff --git a/arch/sparc/include/asm/uaccess_64.h b/arch/sparc/include/asm/uaccess_64.h
-index e9a51d64974d..8bda94fab8e8 100644
---- a/arch/sparc/include/asm/uaccess_64.h
-+++ b/arch/sparc/include/asm/uaccess_64.h
-@@ -210,8 +210,12 @@ unsigned long copy_from_user_fixup(void *to, const void __user *from,
- static inline unsigned long __must_check
- copy_from_user(void *to, const void __user *from, unsigned long size)
- {
--	unsigned long ret = ___copy_from_user(to, from, size);
-+	unsigned long ret;
- 
-+	if (!__builtin_constant_p(size))
-+		check_object_size(to, size, false);
-+
-+	ret = ___copy_from_user(to, from, size);
- 	if (unlikely(ret))
- 		ret = copy_from_user_fixup(to, from, size);
- 
-@@ -227,8 +231,11 @@ unsigned long copy_to_user_fixup(void __user *to, const void *from,
- static inline unsigned long __must_check
- copy_to_user(void __user *to, const void *from, unsigned long size)
- {
--	unsigned long ret = ___copy_to_user(to, from, size);
-+	unsigned long ret;
- 
-+	if (!__builtin_constant_p(size))
-+		check_object_size(from, size, true);
-+	ret = ___copy_to_user(to, from, size);
- 	if (unlikely(ret))
- 		ret = copy_to_user_fixup(to, from, size);
- 	return ret;
-diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-index 2982387ba817..aa9cc58409c6 100644
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -742,9 +742,10 @@ copy_from_user(void *to, const void __user *from, unsigned long n)
- 	 * case, and do only runtime checking for non-constant sizes.
- 	 */
- 
--	if (likely(sz < 0 || sz >= n))
-+	if (likely(sz < 0 || sz >= n)) {
-+		check_object_size(to, n, false);
- 		n = _copy_from_user(to, from, n);
--	else if(__builtin_constant_p(n))
-+	} else if(__builtin_constant_p(n))
- 		copy_from_user_overflow();
- 	else
- 		__copy_from_user_overflow(sz, n);
-@@ -762,9 +763,10 @@ copy_to_user(void __user *to, const void *from, unsigned long n)
- 	might_fault();
- 
- 	/* See the comment in copy_from_user() above. */
--	if (likely(sz < 0 || sz >= n))
-+	if (likely(sz < 0 || sz >= n)) {
-+		check_object_size(from, n, true);
- 		n = _copy_to_user(to, from, n);
--	else if(__builtin_constant_p(n))
-+	} else if(__builtin_constant_p(n))
- 		copy_to_user_overflow();
- 	else
- 		__copy_to_user_overflow(sz, n);
-diff --git a/arch/x86/include/asm/uaccess_32.h b/arch/x86/include/asm/uaccess_32.h
-index 4b32da24faaf..7d3bdd1ed697 100644
---- a/arch/x86/include/asm/uaccess_32.h
-+++ b/arch/x86/include/asm/uaccess_32.h
-@@ -37,6 +37,7 @@ unsigned long __must_check __copy_from_user_ll_nocache_nozero
- static __always_inline unsigned long __must_check
- __copy_to_user_inatomic(void __user *to, const void *from, unsigned long n)
- {
-+	check_object_size(from, n, true);
- 	return __copy_to_user_ll(to, from, n);
- }
- 
-@@ -95,6 +96,7 @@ static __always_inline unsigned long
- __copy_from_user(void *to, const void __user *from, unsigned long n)
- {
- 	might_fault();
-+	check_object_size(to, n, false);
- 	if (__builtin_constant_p(n)) {
- 		unsigned long ret;
- 
-diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
-index 2eac2aa3e37f..673059a109fe 100644
---- a/arch/x86/include/asm/uaccess_64.h
-+++ b/arch/x86/include/asm/uaccess_64.h
-@@ -54,6 +54,7 @@ int __copy_from_user_nocheck(void *dst, const void __user *src, unsigned size)
- {
- 	int ret = 0;
- 
-+	check_object_size(dst, size, false);
- 	if (!__builtin_constant_p(size))
- 		return copy_user_generic(dst, (__force void *)src, size);
- 	switch (size) {
-@@ -119,6 +120,7 @@ int __copy_to_user_nocheck(void __user *dst, const void *src, unsigned size)
- {
- 	int ret = 0;
- 
-+	check_object_size(src, size, true);
- 	if (!__builtin_constant_p(size))
- 		return copy_user_generic((__force void *)dst, src, size);
- 	switch (size) {
+ 	/*
+ 	 * For high order allocations, use __GFP_NORETRY to avoid oom-killing -
 diff --git a/include/linux/slab.h b/include/linux/slab.h
-index aeb3e6d00a66..5c0cd75b2d07 100644
+index 59cc29ef4cd1..196972482333 100644
 --- a/include/linux/slab.h
 +++ b/include/linux/slab.h
-@@ -155,6 +155,11 @@ void kfree(const void *);
- void kzfree(const void *);
- size_t ksize(const void *);
+@@ -270,6 +270,10 @@ extern struct kmem_cache *kmalloc_caches[KMALLOC_SHIFT_HIGH + 1];
+ extern struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
+ #endif
  
-+#ifdef CONFIG_HARDENED_USERCOPY
-+const char *__check_heap_object(const void *ptr, unsigned long n,
-+				struct page *page);
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++extern struct kmem_cache *kmalloc_usercopy_caches[KMALLOC_SHIFT_HIGH + 1];
 +#endif
 +
  /*
-  * Some archs want to perform DMA into kmalloc caches and need a guaranteed
-  * alignment larger than the alignment of a 64-bit integer.
-diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-index b4c2a485b28a..a02200db9c33 100644
---- a/include/linux/thread_info.h
-+++ b/include/linux/thread_info.h
-@@ -146,6 +146,21 @@ static inline bool test_and_clear_restore_sigmask(void)
- #error "no set_restore_sigmask() provided and default one won't work"
- #endif
+  * Figure out which kmalloc slab an allocation of a certain size
+  * belongs to.
+diff --git a/ipc/msgutil.c b/ipc/msgutil.c
+index ed81aafd2392..6bd28c3aec8c 100644
+--- a/ipc/msgutil.c
++++ b/ipc/msgutil.c
+@@ -55,7 +55,7 @@ static struct msg_msg *alloc_msg(size_t len)
+ 	size_t alen;
  
-+#ifdef CONFIG_HARDENED_USERCOPY
-+extern void __check_object_size(const void *ptr, unsigned long n,
-+					bool to_user);
-+
-+static inline void check_object_size(const void *ptr, unsigned long n,
-+				     bool to_user)
-+{
-+	__check_object_size(ptr, n, to_user);
-+}
-+#else
-+static inline void check_object_size(const void *ptr, unsigned long n,
-+				     bool to_user)
-+{ }
-+#endif /* CONFIG_HARDENED_USERCOPY */
-+
- #endif	/* __KERNEL__ */
+ 	alen = min(len, DATALEN_MSG);
+-	msg = kmalloc(sizeof(*msg) + alen, GFP_KERNEL);
++	msg = kmalloc(sizeof(*msg) + alen, GFP_KERNEL | GFP_USERCOPY);
+ 	if (msg == NULL)
+ 		return NULL;
  
- #endif /* _LINUX_THREAD_INFO_H */
-diff --git a/mm/Makefile b/mm/Makefile
-index 78c6f7dedb83..a359cd9aa759 100644
---- a/mm/Makefile
-+++ b/mm/Makefile
-@@ -99,3 +99,4 @@ obj-$(CONFIG_USERFAULTFD) += userfaultfd.o
- obj-$(CONFIG_IDLE_PAGE_TRACKING) += page_idle.o
- obj-$(CONFIG_FRAME_VECTOR) += frame_vector.o
- obj-$(CONFIG_DEBUG_PAGE_REF) += debug_page_ref.o
-+obj-$(CONFIG_HARDENED_USERCOPY) += usercopy.o
-diff --git a/mm/slab.c b/mm/slab.c
-index cc8bbc1e6bc9..4cb2e5408625 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -4477,6 +4477,35 @@ static int __init slab_proc_init(void)
- module_init(slab_proc_init);
- #endif
- 
-+#ifdef CONFIG_HARDENED_USERCOPY
+@@ -67,7 +67,7 @@ static struct msg_msg *alloc_msg(size_t len)
+ 	while (len > 0) {
+ 		struct msg_msgseg *seg;
+ 		alen = min(len, DATALEN_SEG);
+-		seg = kmalloc(sizeof(*seg) + alen, GFP_KERNEL);
++		seg = kmalloc(sizeof(*seg) + alen, GFP_KERNEL | GFP_USERCOPY);
+ 		if (seg == NULL)
+ 			goto out_err;
+ 		*pseg = seg;
+diff --git a/mm/slab_common.c b/mm/slab_common.c
+index f3f6ae3f56fc..fd567a61f8aa 100644
+--- a/mm/slab_common.c
++++ b/mm/slab_common.c
+@@ -44,7 +44,16 @@ struct kmem_cache *kmem_cache;
+  * Merge control. If this is set then no merging of slab caches will occur.
+  * (Could be removed. This was introduced to pacify the merge skeptics.)
+  */
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
 +/*
-+ * Rejects objects that are:
-+ * - NULL or zero-allocated
-+ * - incorrectly sized
-+ *
-+ * Returns NULL if check passes, otherwise const char * to name of cache
-+ * to indicate an error.
++ * If the kmalloc slabs are split between user-controlled sizing and
++ * regular kmalloc, we want to make sure we don't help attackers by
++ * merging slabs.
 + */
-+const char *__check_heap_object(const void *ptr, unsigned long n,
-+				struct page *page)
-+{
-+	struct kmem_cache *cachep;
-+	unsigned int objnr;
-+	unsigned long offset;
++static int slab_nomerge = 1;
++#else
+ static int slab_nomerge;
++#endif
+ 
+ static int __init setup_slab_nomerge(char *str)
+ {
+@@ -811,6 +820,11 @@ struct kmem_cache *kmalloc_dma_caches[KMALLOC_SHIFT_HIGH + 1];
+ EXPORT_SYMBOL(kmalloc_dma_caches);
+ #endif
+ 
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++struct kmem_cache *kmalloc_usercopy_caches[KMALLOC_SHIFT_HIGH + 1];
++EXPORT_SYMBOL(kmalloc_usercopy_caches);
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
 +
-+	cachep = page->slab_cache;
+ /*
+  * Conversion table for small slabs sizes / 8 to the index in the
+  * kmalloc array. This is necessary for slabs < 192 since we have non power
+@@ -875,6 +889,11 @@ struct kmem_cache *kmalloc_slab(size_t size, gfp_t flags)
+ 		return kmalloc_dma_caches[index];
+ 
+ #endif
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	if (unlikely((flags & GFP_USERCOPY)))
++		return kmalloc_usercopy_caches[index];
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
 +
-+	objnr = obj_to_index(cachep, page, (void *)ptr);
-+	BUG_ON(objnr >= cachep->num);
-+	offset = ptr - index_to_obj(cachep, page, objnr) - obj_offset(cachep);
+ 	return kmalloc_caches[index];
+ }
+ 
+@@ -998,6 +1017,22 @@ void __init create_kmalloc_caches(unsigned long flags)
+ 		}
+ 	}
+ #endif
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	for (i = 0; i <= KMALLOC_SHIFT_HIGH; i++) {
++		struct kmem_cache *s = kmalloc_caches[i];
 +
-+	if (offset <= cachep->object_size && n <= cachep->object_size - offset)
-+		return NULL;
++		if (s) {
++			int size = kmalloc_size(i);
++			char *n = kasprintf(GFP_NOWAIT,
++				 "usercopy-kmalloc-%d", size);
 +
-+	return cachep->name;
-+}
-+#endif /* CONFIG_HARDENED_USERCOPY */
++			BUG_ON(!n);
++			kmalloc_usercopy_caches[i] = create_kmalloc_cache(n,
++				size, SLAB_USERCOPY | flags);
++		}
++	}
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
 +
- /**
-  * ksize - get the actual amount of memory allocated for a given object
-  * @objp: Pointer to the object
+ }
+ #endif /* !CONFIG_SLOB */
+ 
 diff --git a/mm/slob.c b/mm/slob.c
-index 5ec158054ffe..2d54fcd262fa 100644
+index 2d54fcd262fa..a01379794670 100644
 --- a/mm/slob.c
 +++ b/mm/slob.c
-@@ -501,6 +501,57 @@ void kfree(const void *block)
+@@ -583,6 +583,53 @@ int __kmem_cache_create(struct kmem_cache *c, unsigned long flags)
+ 	return 0;
  }
- EXPORT_SYMBOL(kfree);
  
-+#ifdef CONFIG_HARDENED_USERCOPY
-+const char *__check_heap_object(const void *ptr, unsigned long n,
-+				struct page *page)
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++static __always_inline void *
++__do_kmalloc_node_align(size_t size, gfp_t gfp, int node, unsigned long caller, int align)
 +{
-+	const slob_t *free;
-+	const void *base;
-+	unsigned long flags;
++	slob_t *m;
++	void *ret = NULL;
 +
-+	if (page->private) {
-+		base = page;
-+		if (base <= ptr && n <= page->private - (ptr - base))
++	gfp &= gfp_allowed_mask;
++
++	lockdep_trace_alloc(gfp);
++
++	if (size < PAGE_SIZE - align) {
++		if (!size)
++			return ZERO_SIZE_PTR;
++
++		m = slob_alloc(size + align, gfp, align, node);
++
++		if (!m)
 +			return NULL;
-+		return "<slob>";
-+	}
++		BUILD_BUG_ON(ARCH_KMALLOC_MINALIGN < 2 * SLOB_UNIT);
++		BUILD_BUG_ON(ARCH_SLAB_MINALIGN < 2 * SLOB_UNIT);
++		m[0].units = size;
++		m[1].units = align;
++		ret = (void *)m + align;
 +
-+	/* some tricky double walking to find the chunk */
-+	spin_lock_irqsave(&slob_lock, flags);
-+	base = (void *)((unsigned long)ptr & PAGE_MASK);
-+	free = page->freelist;
++		trace_kmalloc_node(caller, ret,
++				   size, size + align, gfp, node);
++	} else {
++		unsigned int order = get_order(size);
++		struct page *page;
 +
-+	while (!slob_last(free) && (void *)free <= ptr) {
-+		base = free + slob_units(free);
-+		free = slob_next(free);
-+	}
-+
-+	while (base < (void *)free) {
-+		slobidx_t m = ((slob_t *)base)[0].units, align = ((slob_t *)base)[1].units;
-+		int size = SLOB_UNIT * SLOB_UNITS(m + align);
-+		int offset;
-+
-+		if (ptr < base + align)
-+			break;
-+
-+		offset = ptr - base - align;
-+		if (offset >= m) {
-+			base += size;
-+			continue;
++		if (likely(order))
++			gfp |= __GFP_COMP;
++		page = slob_new_pages(gfp, order, node);
++		if (page) {
++			ret = page_address(page);
++			page->private = size;
 +		}
 +
-+		if (n > m - offset)
-+			break;
-+
-+		spin_unlock_irqrestore(&slob_lock, flags);
-+		return NULL;
++		trace_kmalloc_node(caller, ret,
++				   size, PAGE_SIZE << order, gfp, node);
 +	}
 +
-+	spin_unlock_irqrestore(&slob_lock, flags);
-+	return "<slob>";
++	return ret;
 +}
-+#endif /* CONFIG_HARDENED_USERCOPY */
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
 +
- /* can't use ksize for kmem_cache_alloc memory, only kmalloc */
- size_t ksize(const void *block)
+ static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
  {
+ 	void *b;
+@@ -591,6 +638,10 @@ static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
+ 
+ 	lockdep_trace_alloc(flags);
+ 
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	b = __do_kmalloc_node_align(c->size, flags, node, _RET_IP_, c->align);
++#else /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
++
+ 	if (c->size < PAGE_SIZE) {
+ 		b = slob_alloc(c->size, flags, c->align, node);
+ 		trace_kmem_cache_alloc_node(_RET_IP_, b, c->object_size,
+@@ -602,6 +653,7 @@ static void *slob_alloc_node(struct kmem_cache *c, gfp_t flags, int node)
+ 					    PAGE_SIZE << get_order(c->size),
+ 					    flags, node);
+ 	}
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
+ 
+ 	if (b && c->ctor)
+ 		c->ctor(b);
+@@ -648,6 +700,15 @@ static void kmem_rcu_free(struct rcu_head *head)
+ 
+ void kmem_cache_free(struct kmem_cache *c, void *b)
+ {
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	int size = c->size;
++
++	if (size + c->align < PAGE_SIZE) {
++		size += c->align;
++		b -= c->align;
++	}
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
++
+ 	kmemleak_free_recursive(b, c->flags);
+ 	if (unlikely(c->flags & SLAB_DESTROY_BY_RCU)) {
+ 		struct slob_rcu *slob_rcu;
+@@ -658,7 +719,11 @@ void kmem_cache_free(struct kmem_cache *c, void *b)
+ 		__kmem_cache_free(b, c->size);
+ 	}
+ 
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	trace_kfree(_RET_IP_, b);
++#else /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
+ 	trace_kmem_cache_free(_RET_IP_, b);
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
+ }
+ EXPORT_SYMBOL(kmem_cache_free);
+ 
 diff --git a/mm/slub.c b/mm/slub.c
-index 825ff4505336..83d3cbc7adf8 100644
+index 589f0ffe712b..bab85cf94f3f 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
-@@ -3614,6 +3614,23 @@ void *__kmalloc_node(size_t size, gfp_t flags, int node)
- EXPORT_SYMBOL(__kmalloc_node);
+@@ -4838,6 +4838,14 @@ static ssize_t cache_dma_show(struct kmem_cache *s, char *buf)
+ SLAB_ATTR_RO(cache_dma);
  #endif
  
-+#ifdef CONFIG_HARDENED_USERCOPY
-+const char *__check_heap_object(const void *ptr, unsigned long n,
-+				struct page *page)
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++static ssize_t usercopy_show(struct kmem_cache *s, char *buf)
 +{
-+	struct kmem_cache *s;
-+	unsigned long offset;
-+
-+	s = page->slab_cache;
-+
-+	offset = (ptr - page_address(page)) % s->size;
-+	if (offset <= s->object_size && n <= s->object_size - offset)
-+		return NULL;
-+
-+	return s->name;
++	return sprintf(buf, "%d\n", !!(s->flags & SLAB_USERCOPY));
 +}
-+#endif /* CONFIG_HARDENED_USERCOPY */
++SLAB_ATTR_RO(usercopy);
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
 +
- static size_t __ksize(const void *object)
+ static ssize_t destroy_by_rcu_show(struct kmem_cache *s, char *buf)
  {
- 	struct page *page;
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-new file mode 100644
-index 000000000000..e09c33070759
---- /dev/null
-+++ b/mm/usercopy.c
-@@ -0,0 +1,177 @@
-+/*
-+ * This implements the various checks for CONFIG_HARDENED_USERCOPY*,
-+ * which are designed to protect kernel memory from needless exposure
-+ * and overwrite under many conditions.
-+ */
-+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-+
-+#include <linux/mm.h>
-+#include <linux/slab.h>
-+#include <asm/sections.h>
-+
-+/*
-+ * Checks if a given pointer and length is contained by the current
-+ * stack frame (if possible).
-+ *
-+ *	0: not at all on the stack
-+ *	1: fully on the stack (when can't do frame-checking)
-+ *	2: fully inside the current stack frame
-+ *	-1: error condition (invalid stack position or bad stack frame)
-+ */
-+static noinline int check_stack_object(const void *obj, unsigned long len)
-+{
-+	const void * const stack = task_stack_page(current);
-+	const void * const stackend = stack + THREAD_SIZE;
-+
-+#if defined(CONFIG_FRAME_POINTER) && defined(CONFIG_X86)
-+	const void *frame = NULL;
-+	const void *oldframe;
-+#endif
-+
-+	/* Reject: object wraps past end of memory. */
-+	if (obj + len < obj)
-+		return -1;
-+
-+	/* Object is not on the stack at all. */
-+	if (obj + len <= stack || stackend <= obj)
-+		return 0;
-+
-+	/*
-+	 * Reject: object partially overlaps the stack (passing the
-+	 * the check above means at least one end is within the stack,
-+	 * so if this check fails, the other end is outside the stack).
-+	 */
-+	if (obj < stack || stackend < obj + len)
-+		return -1;
-+
-+#if defined(CONFIG_FRAME_POINTER) && defined(CONFIG_X86)
-+	oldframe = __builtin_frame_address(1);
-+	if (oldframe)
-+		frame = __builtin_frame_address(2);
-+	/*
-+	 * low ----------------------------------------------> high
-+	 * [saved bp][saved ip][args][local vars][saved bp][saved ip]
-+	 *		     ^----------------^
-+	 *             allow copies only within here
-+	 */
-+	while (stack <= frame && frame < stackend) {
-+		/*
-+		 * If obj + len extends past the last frame, this
-+		 * check won't pass and the next frame will be 0,
-+		 * causing us to bail out and correctly report
-+		 * the copy as invalid.
-+		 */
-+		if (obj + len <= frame)
-+			return obj >= oldframe + 2 * sizeof(void *) ? 2 : -1;
-+		oldframe = frame;
-+		frame = *(const void * const *)frame;
-+	}
-+	return -1;
-+#else
-+	return 1;
-+#endif
-+}
-+
-+static void report_usercopy(const void *ptr, unsigned long len,
-+			    bool to_user, const char *type)
-+{
-+	pr_emerg("kernel memory %s attempt detected %s %p (%s) (%lu bytes)\n",
-+		to_user ? "exposure" : "overwrite",
-+		to_user ? "from" : "to", ptr, type ? : "unknown", len);
-+	dump_stack();
-+	do_group_exit(SIGKILL);
-+}
-+
-+/* Is this address range (low, high) in the kernel text area? */
-+static inline bool check_kernel_text_object(const void *ptr, unsigned long n)
-+{
-+	unsigned long low = (unsigned long)ptr;
-+	unsigned long high = low + n;
-+	unsigned long textlow = (unsigned long)_stext;
-+	unsigned long texthigh = (unsigned long)_etext;
-+
-+#ifdef CONFIG_X86_64
-+	/* Check against linear mapping as well. */
-+	if (high > (unsigned long)__va(__pa(textlow)) &&
-+	    low < (unsigned long)__va(__pa(texthigh)))
-+		return true;
-+#endif
-+
-+	/*
-+	 * Unless we're entirely below or entirely above the kernel text,
-+	 * we've overlapped.
-+	 */
-+	if (high <= textlow || low >= texthigh)
-+		return false;
-+	else
-+		return true;
-+}
-+
-+static inline const char *check_heap_object(const void *ptr, unsigned long n)
-+{
-+	struct page *page;
-+
-+	if (ZERO_OR_NULL_PTR(ptr))
-+		return "<null>";
-+
-+	if (!virt_addr_valid(ptr))
-+		return NULL;
-+
-+	page = virt_to_head_page(ptr);
-+	if (!PageSlab(page))
-+		return NULL;
-+
-+	/* Check allocator for flags and size. */
-+	return __check_heap_object(ptr, n, page);
-+}
-+
-+/*
-+ * Validates that the given object is one of:
-+ * - known safe heap object
-+ * - known safe stack object
-+ * - not in kernel text
-+ */
-+void __check_object_size(const void *ptr, unsigned long n, bool to_user)
-+{
-+	const char *err;
-+
-+#if !defined(CONFIG_STACK_GROWSUP) && !defined(CONFIG_X86_64)
-+	unsigned long stackstart = (unsigned long)task_stack_page(current);
-+	unsigned long currentsp = (unsigned long)&stackstart;
-+	if (unlikely((currentsp < stackstart + 512 ||
-+		     currentsp >= stackstart + THREAD_SIZE) && !in_interrupt()))
-+		BUG();
-+#endif
-+	if (!n)
-+		return;
-+
-+	/* Check for bad heap object. */
-+	err = check_heap_object(ptr, n);
-+	if (!err) {
-+		/* Check for bad stack object. */
-+		int ret = check_stack_object(ptr, n);
-+		if (ret == 1 || ret == 2) {
-+			/*
-+			 * Object is either in the correct frame (when it
-+			 * is possible to check) or just generally on the
-+			 * on the process stack (when frame checking not
-+			 * available).
-+			 */
-+			return;
-+		}
-+		if (ret == 0) {
-+			/*
-+			 * Object is not on the heap and not on the stack.
-+			 * Double-check that it's not in the kernel text.
-+			 */
-+			if (check_kernel_text_object(ptr, n))
-+				err = "<kernel text>";
-+			else
-+				return;
-+		} else
-+			err = "<process stack>";
-+	}
-+
-+	report_usercopy(ptr, n, to_user, err);
-+}
-+EXPORT_SYMBOL(__check_object_size);
+ 	return sprintf(buf, "%d\n", !!(s->flags & SLAB_DESTROY_BY_RCU));
+@@ -5178,6 +5186,9 @@ static struct attribute *slab_attrs[] = {
+ #ifdef CONFIG_ZONE_DMA
+ 	&cache_dma_attr.attr,
+ #endif
++#ifdef CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
++	&usercopy_attr.attr,
++#endif /* CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC */
+ #ifdef CONFIG_NUMA
+ 	&remote_node_defrag_ratio_attr.attr,
+ #endif
 diff --git a/security/Kconfig b/security/Kconfig
-index 176758cdfa57..081607a5e078 100644
+index 0ec17a252e49..f5d367213d8c 100644
 --- a/security/Kconfig
 +++ b/security/Kconfig
-@@ -118,6 +118,17 @@ config LSM_MMAP_MIN_ADDR
- 	  this low address space will need the permission specific to the
- 	  systems running LSM.
+@@ -139,6 +139,19 @@ config HARDENED_USERCOPY_WHITELIST
+ 	  memory that an attack has access to through bugs in interfaces
+ 	  that use copy_to_user() and copy_from_user().
  
-+config HARDENED_USERCOPY
-+	bool "Harden memory copies between kernel and userspace"
-+	default n
++config HARDENED_USERCOPY_SPLIT_KMALLOC
++	bool "Split kmalloc caches from user-controlled allocations"
++	depends on HARDENED_USERCOPY
++	default HARDENED_USERCOPY
 +	help
-+	  This option checks for obviously wrong memory regions when
-+	  calling copy_to_user() and copy_from_user() by rejecting
-+	  copies that are larger than the specified heap object, are
-+	  not on the process stack, or are part of the kernel text.
-+	  This kills entire classes of heap overflows and similar
-+	  kernel memory exposures.
++	  This option creates a separate set of kmalloc caches used for
++	  userspace APIs that provide fine-grained control over kernel
++	  allocation sizes. Without this, it is much easier for attackers
++	  to precisely size and attack heap overflows. If their allocations
++	  are separated into a different cache, attackers must find other
++	  ways to prepare heap attacks that will be near their desired
++	  targets.
 +
  source security/selinux/Kconfig
  source security/smack/Kconfig
