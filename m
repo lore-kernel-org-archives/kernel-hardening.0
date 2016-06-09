@@ -1,233 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Thu, 9 Jun 2016 15:35:22 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F279B79@ORSMSX107.amr.corp.intel.com>
-References: <1465420302-23754-1-git-send-email-keescook@chromium.org>
-In-Reply-To: <1465420302-23754-1-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Thu, 09 Jun 2016 19:22:29 +0200
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [RFC][PATCH v2 0/4] mm: Hardened usercopy
-To: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka
- Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo
- Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
+Message-ID: <5759A5D5.7023.18C58969@pageexec.freemail.hu>
+In-reply-to: <20160607135857.GF7057@thunk.org>
+References: <20160531013029.4c5db8b570d86527b0b53fe4@gmail.com>, <5756BBC2.3735.D63200E@pageexec.freemail.hu>, <20160607135857.GF7057@thunk.org>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: Re: [kernel-hardening] Re: [PATCH v2 1/3] Add the latent_entropy gcc plugin
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: kernel-hardening@lists.openwall.com, David Brown <david.brown@linaro.org>, emese Revfy <re.emese@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> -----Original Message-----
-> From: Kees Cook [mailto:keescook@chromium.org]
-> Sent: Wednesday, June 08, 2016 2:12 PM
-> To: kernel-hardening@lists.openwall.com
-> Cc: Kees Cook <keescook@chromium.org>; Brad Spengler
-> <spender@grsecurity.net>; PaX Team <pageexec@freemail.hu>; Schaufler,
-> Casey <casey.schaufler@intel.com>; Rik van Riel <riel@redhat.com>; Christ=
-oph
-> Lameter <cl@linux.com>; Pekka Enberg <penberg@kernel.org>; David Rientjes
-> <rientjes@google.com>; Joonsoo Kim <iamjoonsoo.kim@lge.com>; Andrew
-> Morton <akpm@linux-foundation.org>
-> Subject: [RFC][PATCH v2 0/4] mm: Hardened usercopy
->=20
-> Hi,
->=20
-> This is v2 of the RFC patches for a mainline port of PAX_USERCOPY. After
-> I started writing tests for Casey's earlier port[1], I kept fixing things
-> further and further until I ended up with a whole new patch series. To
-> that end, I also took Rik's feedback and made a number of other changes
-> and clean-ups, which are noted in the "v2" history at the end.
+On 7 Jun 2016 at 9:58, Theodore Ts'o wrote:
 
-I love it when a plan comes together.
+> On Tue, Jun 07, 2016 at 02:19:14PM +0200, PaX Team wrote:
+> > (i believe that) latent entropy is found in more than just interrupt timing, there're
+> > also data dependent computations that can have entropy, either on a single system or
+> > across a population of them.
+> 
+> It's not clear how much data dependent computations you would have in
+> kernel space that's not introduced by interrupts, but there would
+> some, I'm sure.
 
-Thank you for v2. Hopefully v1 was useful as a base.
+there's plenty of such computations both during boot and later as well. starting
+with kernel command line options through parsing firmware provided data to hardware
+configurations to processing various queues, lists, trees, file systems, network
+packets, etc. as for interrupts specifically, latent entropy can be extracted from
+polled devices as well (e.g., i think even modern NICs can be turned into polling
+mode under sufficient load as processing packets that way is more efficient).
 
-> Based on my understanding (please correct anything I haven't understood
-> correctly), PAX_USERCOPY was designed to catch a few classes of flaws
-> around the use of copy_to_user/copy_from_user. These changes don't touch
-> get_user and put_user, since those operate on constant sized lengths,
-> and tend to be much less vulnerable. The goal is protecting against
-> flawed lengths, and then also against manipulated addresses.
->=20
-> There are effectively three distinct protections in this series, each of
-> which I've given a separate CONFIG. (Generally speaking, PAX_USERCOPY
-> covers both CONFIG_HARDENED_USERCOPY and
-> CONFIG_HARDENED_USERCOPY_WHITELIST,
-> and PAX_USERCOPY_SLABS covers
-> CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC.) The
-> new CONFIGs are:
->=20
->=20
-> CONFIG_HARDENED_USERCOPY checks that objects being copied to/from
-> userspace
-> meet certain criteria:
-> - if address is a heap object, the size must not exceed the object's
->   allocated size. (This will catch all kinds of heap overflow flaws.)
-> - if address range is in the current process stack, it must be within the
->   current stack frame (if such checking is possible) or at least entirely
->   within the current process's stack. (This could catch large lengths tha=
-t
->   would have extended beyond the current process stack.)
-> - if address is within the kernel text, it is rejected.
-> - everything else is accepted (which includes vmalloc, other process
->   stacks, etc). This isn't a perfect checker, but it entirely closes
->   several classes of usercopy flaws.
->=20
->=20
-> CONFIG_HARDENED_USERCOPY_WHITELIST adds the SLUB_USERCOPY flag to
-> kernel
-> memory caches. This is used to vastly reduce the number of heap objects
-> that can be copied to userspace by whitelisting only those that are deeme=
-d
-> a "tolerable risk" to be copied. Due to kmalloc's extensive use in the
-> kernel, all of the kmalloc caches are marked with SLUB_USERCOPY. Beyond
-> those, the other caches marked for SLUB_USERCOPY are: cifs_request,
-> cifs_small_rq, names_cache, jfs_ip, thread_info, and kvm_vcpu. (In my
-> test VM, there are about 160 non-kmalloc caches in /proc/slabinfo, so
-> this whitelisting provides significant coverage.) With these markings
-> in places, the CONFIG_HARDENED_USERCOPY heap object check above gains
-> an
-> additional rule:
-> - if address is a heap object, it must be flagged with SLUB_USERCOPY
->=20
-> One thing I was unable to easily solve was that "filldir" wants to read
-> from the "dcache" cache, which is not whitelisted in grsecurity, yet seem=
-s
-> to work there. I haven't figured out why, and I hope someone can help
-> point me in the right direction. In the meantime, I have whitelisted it.
->=20
-> After this minimal whitelist, this leaves a number of places in the
-> kernel where information needs to be moved in and out of userspace,
-> but without exposing an entire kernel cache that is not sensible to
-> whitelist. In these places, we need to adjust how the kernel handles the
-> copying. In my local testing, I uncovered several of them, and went to
-> the grsecurity/PaX patches[2] to see how they were fixed. They were:
->=20
-> - Changed exec to use copy of auxv instead of copying from "mm_struct"
->   cache.
-> - Changed signal handling to use an on-stack copy of signal frames instea=
-d
->   of direct copying from "task_struct" cache.
-> - Changed name_to_handle to use put_user (which operates on fixed sizes)
->   instead of copy_to_user from "mnt_cache" cache.
-> - Changed readlink to use stack for in-struct names to avoid copying from
->   filesystem cache (e.g. "ext4_inode_cache")
-> - Changed sg ioctl to bounce commands through stack instead of directly
->   copying to/from "blkdev_requests" cache.
->=20
-> Since there are probably plenty more, it seemed prudent to split the
-> whitelisting into a separate CONFIG so that people could turn it on
-> or off depending on their desire to help find and fix these.
->=20
->=20
-> CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC is a less obvious protection,
-> and
-> is only partially related to the prior two protections. Several userspace
-> APIs (e.g. ipc, seq_file) allow precise control over the size of kernel
-> kmallocs, which provides a trivial way to perform heap overflow attacks
-> where the attacker must control neighboring allocations of a particular s=
-ize.
-> Instead, move these APIs into their own caches so they cannot interfere
-> with the standard kmallocs. This makes heap attacks more difficult since
-> easily controlled heap allocations are now isolated.
->=20
->=20
-> The patches in the series are:
-> - [PATCH 1/4] mm: Hardened usercopy
->   This contains all of CONFIG_HARDENED_USERCOPY.
-> - [PATCH 2/4] usercopy: avoid direct copying to userspace
->   This contains various kernel memory copying cleanups in support of
->   CONFIG_HARDENED_USERCOPY_WHITELIST
-> - [PATCH 3/4] usercopy: whitelist user-copyable caches
->   This contains all of CONFIG_HARDENED_USERCOPY_WHITELIST
-> - [PATCH 4/4] usercopy: provide split of user-controlled slabs
->   This contains all of CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
->=20
->=20
-> Some notes:
->=20
-> - I couldn't detect a measurable performance change with these features
->   enabled. Kernel build times were unchanged, hackbench was unchanged,
->   etc.
->=20
-> - SLOB seems entirely broken. I have no idea what's going on there; I
->   spent my time testing SLAB and SLUB mostly.
->=20
-> - Ultimately, I think CONFIG_HARDENED_USERCOPY should be a no-brainer
->   to enable by default. CONFIG_HARDENED_USERCOPY_WHITELIST will take
->   a little time to shake out all the needed tweaks, but after that,
->   it too should be enabled by default. I'm not sure how to reason
->   about ..._SPLIT_KMALLOC since it needs slab merging disabled to
->   be fully effective. I would need to understand the benefits of
->   slab merging better to give a reasonable suggestion here.
->=20
->=20
-> Open questions, which hopefully spender or pageexec can help answer:
->=20
-> - What rationale has been used to select caches to whitelist with
->   SLAB_USERCOPY? I'd like to codify something that people can use to
->   guide them in their decisions.
->=20
-> - Why does CONFIG_PAX_USERCOPY_SLABS wrap the slub
-> SLAB_ATTR_RO(usercopy)?
->   It seems like the SLUB_USERCOPY flag would be generally interesting,
->   and should be visible under CONFIG_PAX_USERCOPY instead.
->=20
-> - Why, in most architectures, when adding check_object_size() to the
->   copy_*_user implementations, is an explicit "if (!__builtin_constant_p(=
-n))"
->   used? Is this just an optimization that assumes only non-constant
->   sizes need protecting? It seems to me that it shouldn't be there since
->   the address may have been manipulated too, not just the size.
->=20
-> - What is happening in the SLOB allocator? It seems to lack the
->   SLAB_USERCOPY flag check entirely, and has a boatload of changes
->   only under CONFIG_PAX_USERCOPY_SLABS. What's going on here?
->=20
-> - What allows filldir to work happily on grsecurity when "dcache" isn't
->   whitelisted with SLAB_USERCOPY?
->=20
->=20
-> Things to do:
->=20
-> - "dcache" cache shouldn't be whitelisted.
->=20
-> - SLOB support needs to be fixed or removed.
->=20
-> - Any other fixups for non-whitelisted cache copying need to be
->   rediscovered and extracted from grsecurity. (Seriously, if you hit one,
->   read the stack dump, download grsecurity[2], and see if you find change=
-s
->   in the function that handles the copying differently.)
->=20
-> - Determine how to reason about the need for slab merging to be fully
->   disabled vs partially disabled. Can someone explain to me what
->   slab merging is actually doing? Is it merging across different
->   caches? If so, it needs to stay fully disabled under ..._SPLIT_KMALLOC
->   otherwise the benefit of forcing separated caches disappears.
->=20
-> - Needs porting to arm64.
->=20
-> - Needs per-architecture support for stack frame checking (only x86 now).
->=20
-> - Need to extract the drivers/char/mem.c changes for ..._SPLIT_KMALLOC.
->=20
-> - Testing testing
->=20
->=20
-> Thanks!
->=20
-> -Kees
->=20
-> v2:
-> - moved common checking logic from fs/exec.c to mm/usercopy.c
-> - fixed missing x86_64 copy_*_user checks.
-> - fixed typos in sparc and ia64 checks.
-> - changed report text from "leak" to "exposure".
-> - dropped #ifdefs in favor of empty static inline functions.
-> - consolidated common heap checks into a parent function.
-> - added many more comments.
-> - dropped curr_ip (IPv4 address) since it's unused by mainline.
->=20
-> v1:
-> - Casey's initial extraction[1].
->=20
-> [1] http://www.openwall.com/lists/kernel-hardening/2016/05/19/5
-> [2] https://grsecurity.net/download.php "grsecurity - test kernel patch"
+> > i agree that sampling the kernel register state can have entropy (the plugin
+> > already extracts the current stack pointer) but i'm much less sure about
+> > userland (at least i see no dependence on !user_mode(...)) since an attacker
+> > could feed no entropy into the pool but still get it credited.
+> 
+> Well, the attacker can't control when the interrupts happen, but it
+> could try to burn power by simply having a thread spin in an infinite
+> loop ("0: jmp 0"), sure.
+
+yes, that's one obvious way to accomplish it but even normal applications can
+behave in a similar way, think about spinning event loops, media decoding, etc
+whose sampled insn ptrs may provide less entropy than they get credited for.
+
+> All of this goes into the question of how much entropy we can assume
+> can be gathered per interrupt (or in the case of basic block
+> instrumentation, per basic block).  IIRC, in the latent_entropy
+> patches, the assumption is that zero entropy should be credited,
+> correct?
+
+yes, no entropy is credited since i don't know how much there is and i tend to err
+on the side of safety which means crediting 0 entropy for latent entropy. of course
+the expectation is that it's not actually 0 but to prove any specific value or limit
+is beyond my skills at least.
+
+> In the case Linux's current get_interrupt_randomness(), there's a
+> reason I'm using a very conservative 1/64th of a bit per interrupt.
+
+i think it's not just per 64 interrupts but also after each elapsed second (i.e.,
+whichever condition occurs first), so on an idle system (which i believe is more
+likely to occur on exactly those small systems that the referenced paper was concerned
+about) the credited entropy could be overestimated.
+
+> In practice, on most modern CPU where we have a cycle counter,
+
+a quick check for get_cycles shows that at least these archs seem to return 0:
+arc, avr32, cris, frv, m32r, m68k, xtensa. now you may not think of them as modern,
+but they're still used in real life devices. i think that latent entropy is still
+an option on them.
+
+cheers,
+ PaX Team
