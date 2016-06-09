@@ -1,57 +1,83 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 9 Jun 2016 15:55:33 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Message-ID: <20160609195533.GE5421@thunk.org>
+References: <20160531013029.4c5db8b570d86527b0b53fe4@gmail.com>
+ <5756BBC2.3735.D63200E@pageexec.freemail.hu>
+ <20160607135857.GF7057@thunk.org>
+ <5759A5D5.7023.18C58969@pageexec.freemail.hu>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC6731F279B79@ORSMSX107.amr.corp.intel.com>
-References: <1465420302-23754-1-git-send-email-keescook@chromium.org> <99FC4B6EFCEFD44486C35F4C281DC6731F279B79@ORSMSX107.amr.corp.intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 9 Jun 2016 10:48:57 -0700
-Message-ID: <CAGXu5jKGzUTi886nBDSmnxAwvR99EnOpVdcEb8ma+TOcHZ2LKg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC][PATCH v2 0/4] mm: Hardened usercopy
-To: "Schaufler, Casey" <casey.schaufler@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <5759A5D5.7023.18C58969@pageexec.freemail.hu>
+Subject: Re: [kernel-hardening] Re: [PATCH v2 1/3] Add the latent_entropy gcc
+ plugin
+To: PaX Team <pageexec@freemail.hu>
+Cc: kernel-hardening@lists.openwall.com, David Brown <david.brown@linaro.org>, emese Revfy <re.emese@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 9, 2016 at 8:35 AM, Schaufler, Casey
-<casey.schaufler@intel.com> wrote:
->> -----Original Message-----
->> From: Kees Cook [mailto:keescook@chromium.org]
->> Sent: Wednesday, June 08, 2016 2:12 PM
->> To: kernel-hardening@lists.openwall.com
->> Cc: Kees Cook <keescook@chromium.org>; Brad Spengler
->> <spender@grsecurity.net>; PaX Team <pageexec@freemail.hu>; Schaufler,
->> Casey <casey.schaufler@intel.com>; Rik van Riel <riel@redhat.com>; Christoph
->> Lameter <cl@linux.com>; Pekka Enberg <penberg@kernel.org>; David Rientjes
->> <rientjes@google.com>; Joonsoo Kim <iamjoonsoo.kim@lge.com>; Andrew
->> Morton <akpm@linux-foundation.org>
->> Subject: [RFC][PATCH v2 0/4] mm: Hardened usercopy
->>
->> Hi,
->>
->> This is v2 of the RFC patches for a mainline port of PAX_USERCOPY. After
->> I started writing tests for Casey's earlier port[1], I kept fixing things
->> further and further until I ended up with a whole new patch series. To
->> that end, I also took Rik's feedback and made a number of other changes
->> and clean-ups, which are noted in the "v2" history at the end.
->
-> I love it when a plan comes together.
->
-> Thank you for v2. Hopefully v1 was useful as a base.
+On Thu, Jun 09, 2016 at 07:22:29PM +0200, PaX Team wrote:
+> > Well, the attacker can't control when the interrupts happen, but it
+> > could try to burn power by simply having a thread spin in an infinite
+> > loop ("0: jmp 0"), sure.
+> 
+> yes, that's one obvious way to accomplish it but even normal applications can
+> behave in a similar way, think about spinning event loops, media decoding, etc
+> whose sampled insn ptrs may provide less entropy than they get credited for.
 
-Yeah, absolutely! It let me focus on a much smaller set of changes,
-and the v2 really just ended up falling out of writing the lkdtm
-tests. I spent a bunch of time scratching my head over the fact that
-on x86 copy_*_user doesn't call down to __copy_*_user (!!), and
-instead uses _copy_*_user (one underscore). After figuring that out,
-then I was able to trip over all kinds of things with the whitelisting
-pieces, so I separated that out, and it just continued from there.
+Sure, as long as we're assuming less than one bit of entropy per
+interrupt, even for a loop which which is:
 
-I'd still really love to get a lot more testing, since I suspect my
-bare-bones VM is not sufficiently exercising all the code that needs
-whitelist tweaks, etc.
+1:   cmpl    $1, -8(%rsp)
+     jz	     1b
 
--Kees
+there would still be *some* uncertainty.  And with an event loop there
+would be more instructions to sample.  Granted, the number of cycles
+spent in each will be different, so there will be some biasing, but
+that's one of the reason why we've been using 1/64 bit per interrupt.
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+> yes, no entropy is credited since i don't know how much there is and i tend to err
+> on the side of safety which means crediting 0 entropy for latent entropy. of course
+> the expectation is that it's not actually 0 but to prove any specific value or limit
+> is beyond my skills at least.
+
+Sure, that's fair.
+
+> i think it's not just per 64 interrupts but also after each elapsed second (i.e.,
+> whichever condition occurs first), so on an idle system (which i believe is more
+> likely to occur on exactly those small systems that the referenced paper was concerned
+> about) the credited entropy could be overestimated.
+
+That's a fair concern.  It might be that we should enforce some
+minimum (at least 8 interrupts in all cases), but this is where it's
+all about hueristics, especially on those systems that don't have random_get_entropy().
+
+> > In practice, on most modern CPU where we have a cycle counter,
+> 
+> a quick check for get_cycles shows that at least these archs seem to return 0:
+> arc, avr32, cris, frv, m32r, m68k, xtensa. now you may not think of them as modern,
+> but they're still used in real life devices. i think that latent entropy is still
+> an option on them.
+
+It's possible for a system not to have a cycle counter, but to have
+something that can be used instead for random_get_entropy.  That's
+only being used for the m68k/amiga and mips/R6000[A] cases, but I keep
+hoping that the archiecture maintainers for osme of these other
+oddball platform (is that better than "non-modern"? :-) will come up
+with something, but yes, it is those platforms where I've always been
+the most worried.  On the one hand, if the hardware is crap, there's
+very little you can do.  Unfortnuately, very often these crap
+architectures have a very low BOM cost, so they are most likely to be
+used in IOT devices.   :-(
+
+One could try to claim that these IOT devics won't have upgradeable
+firmware and, so they'll probably be security disasters even without a
+good random number generators, but oddly, that doesn't give me much
+solace...
+
+And in the end, that may be the strongest argment for the
+latent_entropy plugin.  Even if it doesn't provide a lot of extra
+entropy, on those platforms we're going to be so starved of real
+entropy that almost anything will be better than what we have today.
+
+	     	    	     	     	    	 - Ted
