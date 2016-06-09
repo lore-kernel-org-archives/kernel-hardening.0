@@ -1,116 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 8 Jun 2016 20:47:58 -0400
+From: Brad Spengler <spender@grsecurity.net>
+Message-ID: <20160609004758.GA8658@grsecurity.net>
+References: <1465420302-23754-1-git-send-email-keescook@chromium.org>
+ <1465420302-23754-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jKRW1T6uR1ax7Oah_-nHCayALJ-DWj=MMoXwvdZvAfV-w@mail.gmail.com>
-References: <1465336628-18219-1-git-send-email-keescook@chromium.org>
- <1465336628-18219-4-git-send-email-keescook@chromium.org> <941dc7f5-03a2-8a98-8888-7e92985699e3@redhat.com>
- <CAGXu5jKRW1T6uR1ax7Oah_-nHCayALJ-DWj=MMoXwvdZvAfV-w@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 8 Jun 2016 14:26:56 -0700
-Message-ID: <CAGXu5jJTx3gzzXSNK5x+ui0x7kGhvrV8vhKVoc33T2W3h4T5XQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 3/5] lkdtm: add function for testing .rodata section
-To: Laura Abbott <labbott@redhat.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, LKML <linux-kernel@vger.kernel.org>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+	protocol="application/pgp-signature"; boundary="d6Gm4EdcadzBjdND"
+Content-Disposition: inline
+In-Reply-To: <1465420302-23754-2-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] mm: Hardened usercopy
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey.schaufler@intel.com>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 8, 2016 at 8:46 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, Jun 7, 2016 at 6:02 PM, Laura Abbott <labbott@redhat.com> wrote:
->> On 06/07/2016 02:57 PM, Kees Cook wrote:
->>>
->>> This adds a function that lives in the .rodata section. The section
->>> flags are corrected using objcopy since there is no way with gcc to
->>> declare section flags in an architecture-agnostic way.
->>>
->>
->> Permit me to be the bearer of bad architecture news once again. With
->> arm64 cross compiler (both Fedora 6.1.1 and Linaro 5.1)
->>
->>   CC      drivers/misc/lkdtm_rodata.o
->>   OBJCOPY drivers/misc/lkdtm_rodata_objcopy.o
->>   LD      drivers/misc/lkdtm.o
->> drivers/misc/lkdtm_rodata_objcopy.o: file not recognized: File format not
->> recognized
->> scripts/Makefile.build:423: recipe for target 'drivers/misc/lkdtm.o' failed
->> make[2]: *** [drivers/misc/lkdtm.o] Error 1
->> scripts/Makefile.build:440: recipe for target 'drivers/misc' failed
->> make[1]: *** [drivers/misc] Error 2
->> Makefile:985: recipe for target 'drivers' failed
->> make: *** [drivers] Error 2
->>
->>
->> As far as I can tell this is because arm64 defines OBJCOPYFLAGS and they get
->> propagated to objcopy
->>
->> aarch64-linux-gnu-objcopy -O binary -R .note -R .note.gnu.build-id -R
->> .comment
->>         -S --set-section-flags .text=alloc,readonly
->>         --rename-section .text=.rodata drivers/misc/lkdtm_rodata.o
->> drivers/misc/lkdtm_rodata_objcopy.o
->>
->> vs x86
->>
->> objcopy  --set-section-flags .text=alloc,readonly --rename-section
->> .text=.rodata
->>         drivers/misc/lkdtm_rodata.o drivers/misc/lkdtm_rodata_objcopy.o
->>
->>
->> specifically it's the -O binary that seems to break things, the same failure
->> happens on x86 as well with the the same commands. It works if I clear out
->> the OBJCOPYFLAGS variable first but I don't think that's the correct way to
->> fix this.
->>
->> Thanks,
->> Laura
->>
->>
->>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>> ---
->>>  drivers/misc/Makefile       |  7 +++++++
->>>  drivers/misc/lkdtm.h        |  6 ++++++
->>>  drivers/misc/lkdtm_core.c   | 24 +++++++++++++++++-------
->>>  drivers/misc/lkdtm_rodata.c | 10 ++++++++++
->>>  4 files changed, 40 insertions(+), 7 deletions(-)
->>>  create mode 100644 drivers/misc/lkdtm.h
->>>  create mode 100644 drivers/misc/lkdtm_rodata.c
->>>
->>> diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
->>> index c3cb6ad8cc37..b2d3d68dfa22 100644
->>> --- a/drivers/misc/Makefile
->>> +++ b/drivers/misc/Makefile
->>> @@ -59,3 +59,10 @@ obj-$(CONFIG_CXL_BASE)               += cxl/
->>>  obj-$(CONFIG_PANEL)             += panel.o
->>>
->>>  lkdtm-$(CONFIG_LKDTM)          += lkdtm_core.o
->>> +lkdtm-$(CONFIG_LKDTM)          += lkdtm_rodata_objcopy.o
->>> +
 
-If I add:
+--d6Gm4EdcadzBjdND
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 
-OBJCOPYFLAGS :=
+> diff --git a/mm/usercopy.c b/mm/usercopy.c
+> new file mode 100644
+> index 000000000000..e09c33070759
+> --- /dev/null
+> +++ b/mm/usercopy.c
+> @@ -0,0 +1,177 @@
+> +/*
+> + * This implements the various checks for CONFIG_HARDENED_USERCOPY*,
+> + * which are designed to protect kernel memory from needless exposure
+> + * and overwrite under many conditions.
+> + */
 
-here, it seems to fix things...
+As this is a new file being introduced which is (modulo some bikeshedding
+and addition of a few comments) a direct copy+paste of our code and comments
+in fs/exec.c, I would appreciate both a GPL notice (the same as exists for
+KASAN, etc) and both the PaX Team and myself being listed as the copyright
+owners.
 
->>> +OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \
->>> +                       --set-section-flags .text=alloc,readonly \
->>> +                       --rename-section .text=.rodata
->>> +$(obj)/lkdtm_rodata_objcopy.o: $(obj)/lkdtm_rodata.o
->>> +       $(call if_changed,objcopy)
->
-> Uhhhh... How is arm64 injecting those extra flags? OBJCOPYFLAGS is
-> being set with := here?
->
-> In related news I need to figure out how to get my cross-compiler
-> builds more well scripted...
->
-> -Kees
->
-> --
-> Kees Cook
-> Chrome OS & Brillo Security
+-Brad
 
+--d6Gm4EdcadzBjdND
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
 
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.12 (GNU/Linux)
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+iQIcBAEBCgAGBQJXWLy3AAoJEETRwPglJf5JOacP/jF5D/k8Og17BJCu+aqtNcdf
+8MyXDDfmxby/z7ISwQpDBQH4SqY3VaI47UCIv+/2e23R8Fjo/yp7ExcExE+44NMZ
+S2I0kj+nE0O2DzcaNlPHT4AMTdJZXy8pYLmvugCljXq5OPs+odhgfsZwHDmHa2qE
+4C3qExOlMJZCiw1X/e1+o/qkUT0r/E1EGv9OJnQzlraV9Xpn5E2dTKHfV78LsSxt
+0rzpMUereXGr2NkyRnlqk3AVmnGAQaSDjDfj8NMAjPSul40uKr+oKZlrqECOrbhd
+jzjgH0XGmCJ3dH7o8a8sIGmCs7rsX6iSPngLnNpLfgX6IdwpY0GRhoFDNiHovtmV
+Qg1Qeo1cz5sCp3/YO36ttu3aaea1m2e280WicFZ14VnQswQ/ZpwfCo+nEyx0xrhh
+nPGYVv0OYDhXt+EfHmHkIrlYa67x5DAWL2dRlzvAB+poe8sUBpj/bRWiBHYr5sl/
+m5yConsY0haTrlGrZ2OeRKT437OVpAwg7VGb9jOwcggeglF3G3up7uVKzB00Vihi
+awZA2qPeXOCB75LJGoNUEvP6Z3BAZyDrGvByDe8Xm5dlvizGs9LkTe7rV2s7pMqE
+h6fEPob55lJUbxcpaxkgmJA17Hcf2DLAw/BC38JfFP+9NhG/a94TzhVQusPT27Qx
++E1S/FnqjEQVeqwcZGj2
+=DeUt
+-----END PGP SIGNATURE-----
+
+--d6Gm4EdcadzBjdND--
