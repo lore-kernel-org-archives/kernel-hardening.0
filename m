@@ -1,47 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160615225331.abb990e0302757ea9a6a3500@gmail.com>
-References: <20160524000719.b456ed0cd2aafacb4e53f177@gmail.com>
- <20160524001035.081cbf822a62b274ad945dc1@gmail.com> <041e2196-2213-725d-64aa-8526b23bc618@redhat.com>
- <20160615225331.abb990e0302757ea9a6a3500@gmail.com>
+In-Reply-To: <20160615223952.f3a4ece452b15c62babf4629@gmail.com>
+References: <20160615001754.f9e986cf961d1466f5e086dc@gmail.com>
+ <CAGXu5jK-QVhbuOnNENq9PesPTdPCnbgODzb0qn=q4ZMS0-ndBA@mail.gmail.com> <20160615223952.f3a4ece452b15c62babf4629@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 15 Jun 2016 15:41:28 -0700
-Message-ID: <CAGXu5jL4sq1zibXqg1KsoRQfdfyB5K_-6+GGL=kKOSWUXNxoUg@mail.gmail.com>
+Date: Wed, 15 Jun 2016 16:01:49 -0700
+Message-ID: <CAGXu5jJH2FNenOpAE3Rqh8q=s01sbHmf=QobT98u4h=anjRubw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v9 3/4] Add Cyclomatic complexity GCC plugin
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Laura Abbott <labbott@redhat.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michal Marek <mmarek@suse.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Fengguang Wu <fengguang.wu@intel.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, David Brown <david.brown@linaro.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, minipli@ld-linux.so
+Subject: [kernel-hardening] Re: [PATCH v3 0/4] Introduce the latent_entropy gcc plugin
+To: Emese Revfy <re.emese@gmail.com>, Greg KH <gregkh@linuxfoundation.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, Jens Axboe <axboe@kernel.dk>, Al Viro <viro@zeniv.linux.org.uk>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, bart.vanassche@sandisk.com, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 15, 2016 at 1:53 PM, Emese Revfy <re.emese@gmail.com> wrote:
-> On Tue, 14 Jun 2016 12:29:59 -0700
-> Laura Abbott <labbott@redhat.com> wrote:
+On Wed, Jun 15, 2016 at 1:39 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> On Wed, 15 Jun 2016 11:55:44 -0700
+> Kees Cook <keescook@chromium.org> wrote:
 >
->> On 05/23/2016 03:10 PM, Emese Revfy wrote:
->> 1) make mrproper
->> 2) make defconfig
->> 3) enable GCC_PLUGINS, GCC_PLUGIN_CYC_COMPLEXITY
->> 4) enable FUNCTION_TRACER (it will select other options as well)
->> 5) make && make modules
->>
->> ERROR: "__fentry__" [net/ipv4/netfilter/ipt_MASQUERADE.ko] undefined!
->> ERROR: "__fentry__" [fs/efivarfs/efivarfs.ko] undefined!
->> ERROR: "__fentry__" [drivers/thermal/x86_pkg_temp_thermal.ko] undefined!
->> scripts/Makefile.modpost:91: recipe for target '__modpost' failed
->> make[1]: *** [__modpost] Error 1
+>>  The limit on the length of lines is 80 columns and this is a strongly
+>>  preferred limit.
 >
-> The patch below fixes this bug, but I think it is ugly.
-> https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/73e2d117daa7f3c6aee8935ecbb318354ff9cd82
->
-> If anyone has a better idea to fix this, please let me know.
+> I think the code looks worse when it is truncated to 80 columns but
+> I'll do it and resend the patches.
 
-I think the logic looks fine, but I think I would name it more
-generically. For example, call it something plugin-agnostic like
-KBUILD_CFLAGS_MINIMUM.
+Yup, I understand your concerns, but since we're optimizing for
+readability by a larger audience that has agreed to the guidelines in
+CodingStyle, this is what we get. :)
 
-I actually wonder if I can use this same logic to fix the stack
-protector detection code...
+One area I'm unclear on with kernel coding style, though, is if
+splitting all the stuff prior to function name onto a separate line is
+"acceptable", since that solves most of the long lines where
+__latent_entropy has been added. For example, I don't know which is
+better:
+
+All on one line (gmail may split this, but my intention is all one line):
+
+static __latent_entropy void rcu_process_callbacks(struct
+softirq_action *unused)
+
+Types and attributes on a separate line:
+
+static __latent_entropy void
+rcu_process_callbacks(struct softirq_action *unused)
+
+All arguments on the next line:
+
+static __latent_entropy void rcu_process_callbacks(
+                                                          struct
+softirq_action *unused)
+
+
+Greg, do you have a better sense of how to split (or not split) these
+kinds of long lines?
 
 -Kees
 
