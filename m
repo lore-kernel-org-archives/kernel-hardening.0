@@ -1,79 +1,18 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1466082695.15275.6.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Thu, 16 Jun 2016 09:11:35 -0400
-In-Reply-To: <CALCETrVPMD5KYwqL-1j8hyezJ+GvskeFizfOEh4cUXw0dT3CHg@mail.gmail.com>
-References: <cover.1466036668.git.luto@kernel.org>
-	 <3f0299bde58d0161c1dad75e0b7f93f074a6cd12.1466036668.git.luto@kernel.org>
-	 <57622865.2070701@nextfour.com>
-	 <CALCETrVPMD5KYwqL-1j8hyezJ+GvskeFizfOEh4cUXw0dT3CHg@mail.gmail.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-wWYiGosYmoz+mrB43CvX"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH 12/13] x86/mm/64: Enable vmapped
- stacks
-To: kernel-hardening@lists.openwall.com, Mika =?ISO-8859-1?Q?Penttil=E4?= <mika.penttila@nextfour.com>
-Cc: Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
+MIME-Version: 1.0
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Thu, 16 Jun 2016 13:06:46 -0400
+Message-ID: <CACXcFm=VuN+vETYsCo7hJ6j2A=xLEimt8MC_RWQw2czTChnigw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Initialising random(4)
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+The gresecurity patches include code to initiailse the driver's pools
+with random data. I have different code to accomplish the same task &
+think anyone planning to integrate that part of the gre stuff into the
+kernel should also have a look at mine:
+https://github.com/sandy-harris/random.gcm/blob/random_gcm/scripts/gen_random.c
 
---=-wWYiGosYmoz+mrB43CvX
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: base64
-
-T24gV2VkLCAyMDE2LTA2LTE1IGF0IDIyOjMzIC0wNzAwLCBBbmR5IEx1dG9taXJza2kgd3JvdGU6
-Cj7CoAo+ID4gPiArKysgYi9hcmNoL3g4Ni9tbS90bGIuYwo+ID4gPiBAQCAtNzcsMTAgKzc3LDI1
-IEBAIHZvaWQgc3dpdGNoX21tX2lycXNfb2ZmKHN0cnVjdCBtbV9zdHJ1Y3QKPiA+ID4gKnByZXYs
-IHN0cnVjdCBtbV9zdHJ1Y3QgKm5leHQsCj4gPiA+IMKgwqDCoMKgwqDCoHVuc2lnbmVkIGNwdSA9
-IHNtcF9wcm9jZXNzb3JfaWQoKTsKPiA+ID4gCj4gPiA+IMKgwqDCoMKgwqDCoGlmIChsaWtlbHko
-cHJldiAhPSBuZXh0KSkgewo+ID4gPiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqBpZiAoSVNf
-RU5BQkxFRChDT05GSUdfVk1BUF9TVEFDSykpIHsKPiA+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKg
-wqDCoMKgwqDCoMKgwqDCoMKgwqDCoC8qCj4gPiA+ICvCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
-oMKgwqDCoMKgwqDCoMKgwqDCoCogSWYgb3VyIGN1cnJlbnQgc3RhY2sgaXMgaW4gdm1hbGxvYyBz
-cGFjZQo+ID4gPiBhbmQgaXNuJ3QKPiA+ID4gK8KgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
-oMKgwqDCoMKgwqDCoMKgKiBtYXBwZWQgaW4gdGhlIG5ldyBwZ2QsIHdlJ2xsIGRvdWJsZS0KPiA+
-ID4gZmF1bHQuwqDCoEZvcmNpYmx5Cj4gPiA+ICvCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
-wqDCoMKgwqDCoMKgwqDCoCogbWFwIGl0Lgo+ID4gPiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKg
-wqDCoMKgwqDCoMKgwqDCoMKgwqAqLwo+ID4gPiArwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDC
-oMKgwqDCoMKgwqDCoMKgdW5zaWduZWQgaW50IHN0YWNrX3BnZF9pbmRleCA9Cj4gPiA+ICvCoMKg
-wqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgwqDCoMKgcGdk
-X2luZGV4KGN1cnJlbnRfc3RhY2tfcG9pbnRlcigpKTsKPiA+IAo+ID4gc3RhY2sgcG9pbnRlciBp
-cyBzdGlsbCB0aGUgcHJldmlvdXMgdGFzaydzLCBjdXJyZW50X3N0YWNrX3BvaW50ZXIoKQo+ID4g
-cmV0dXJucyB0aGF0LCBub3QKPiA+IG5leHQgdGFzaydzIHdoaWNoIHdhcyBpbnRlbnRpb24gSSBn
-dWVzcy4gVGhpbmdzIG1heSBoYXBwZW4gdG8gd29yawo+ID4gaWYgb24gc2FtZSBwZ2QsIGJ1dCBh
-dCBsZWFzdCB0aGUKPiA+IGJvb3QgY3B1IGluaXRfdGFza19zdHJ1Y3QgaXMgc3BlY2lhbC4KPiBU
-aGlzIGlzIGludGVudGlvbmFsLsKgwqBXaGVuIHN3aXRjaGluZyBwcm9jZXNzZXMsIHdlIGZpcnN0
-IHN3aXRjaCB0aGUKPiBtbQo+IGFuZCB0aGVuIHN3aXRjaCB0aGUgdGFzay7CoMKgV2UgbmVlZCB0
-byBtYWtlIHN1cmUgdGhhdCB0aGUgcHJldiBzdGFjawo+IGlzCj4gbWFwcGVkIGluIHRoZSBuZXcg
-bW0gb3Igd2UnbGwgZG91YmxlLWZhdWx0IGFuZCBkaWUgYWZ0ZXIgc3dpdGNoaW5nCj4gdGhlCj4g
-bW0gd2hpY2ggc3RpbGwgdHJ5aW5nIHRvIGV4ZWN1dGUgb24gdGhlIG9sZCBzdGFjay4KPiAKPiBU
-aGUgY2hhbmdlIHRvIHN3aXRjaF90byBtYWtlcyBzdXJlIHRoYXQgdGhlIG5ldyBzdGFjayBpcyBt
-YXBwZWQuCj4gCgpPbiBhIEhBUkRFTkVEX1VTRVJDT1BZIHRhbmdlbnRpYWwgbm90ZTogYnkgbm90
-IGFsbG93aW5nCmNvcHlfdG8vZnJvbV91c2VyIGFjY2VzcyB0byB2bWFsbG9jIG1lbW9yeSBieSBk
-ZWZhdWx0LAp3aXRoIGV4Y2VwdGlvbiBvZiB0aGUgc3RhY2ssIGEgdGFzayB3aWxsIG9ubHkgYmUg
-YWJsZQp0byBjb3B5X3RvL2Zyb21fdXNlciBmcm9tIGl0cyBvd24gc3RhY2ssIG5vdCBhbm90aGVy
-IHRhc2sncwpzdGFjaywgYXQgbGVhc3QgdXNpbmcgdGhlIGtlcm5lbCB2aXJ0dWFsIGFkZHJlc3Mg
-dGhlCmtlcm5lbCB1c2VzIHRvIGFjY2VzcyB0aGF0IHN0YWNrLgoKVGhpcyBjYW4gYmUgYWNjb21w
-bGlzaGVkIGJ5IHNpbXBseSBub3QgYWRkaW5nIGFueSB2bWFsbG9jCmNoZWNraW5nIGNvZGUgdG8g
-dGhlIGN1cnJlbnQgSEFSREVORURfVVNFUkNPUFkgcGF0Y2ggc2V0IDopCgotLSAKQWxsIHJpZ2h0
-cyByZXZlcnNlZAo=
-
-
---=-wWYiGosYmoz+mrB43CvX
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJXYqWHAAoJEM553pKExN6DKTkH/jt3yhhEx5bvwNc/FbuUKlZK
-eZzC0o/RGzQFs00cxs+bkLSrkl8xXs/G1d4N8N2308wG6uDX/hi8FBVj5Ah3FgAz
-lBuGMwkCN4QXQJ0DdVfBiXFTBFX/2K+BOHzIN/PGfJtJlz8S1N8fncbKEZBfMbUZ
-ejl3ERs1YEiuLkBA2gwIKA6rOuLt//6TaNGQUvNF/Re+lN0vMMBMVrGgD5prh79l
-1nd3of80CzUCUo5QXZyMbQ8P/GIDROuF15O4xFAM2NjjKuxGHTOOn5xx+/HAIbCy
-8jlWe8ak8AuLyPgO7Dn1HTDmiYJfGnA2Sa9ZixgjlFXFwf9uTY8bylVix2PUP6Q=
-=ZNFX
------END PGP SIGNATURE-----
-
---=-wWYiGosYmoz+mrB43CvX--
+I submitted an earlier version as a kernel patch, part of a large &
+complex series of proposed patches.
