@@ -1,74 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <cover.1466036668.git.luto@kernel.org>
-References: <cover.1466036668.git.luto@kernel.org>
+In-Reply-To: <fdee1749f758de33fed9ab8227b6afaa56388b63.1466036668.git.luto@kernel.org>
+References: <cover.1466036668.git.luto@kernel.org> <fdee1749f758de33fed9ab8227b6afaa56388b63.1466036668.git.luto@kernel.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 16 Jun 2016 10:24:24 -0700
-Message-ID: <CAGXu5jLpxG7eQ0x5JHng57a4BgWswfZV+9ygRf=tQQfC0qtcow@mail.gmail.com>
+Date: Thu, 16 Jun 2016 10:25:54 -0700
+Message-ID: <CAGXu5jJoKZWm_KW6hyMLgaqkTr2oAiuFx2Sm5aCOhnC_GWmLzQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 00/13] Virtually mapped stacks with guard pages (x86, core)
+Subject: [kernel-hardening] Re: [PATCH 06/13] fork: Add generic vmalloced stack support
 To: Andy Lutomirski <luto@kernel.org>
 Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Wed, Jun 15, 2016 at 5:28 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> Since the dawn of time, a kernel stack overflow has been a real PITA
-> to debug, has caused nondeterministic crashes some time after the
-> actual overflow, and has generally been easy to exploit for root.
+> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
+> vmalloc_node.
 >
-> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
-> that enable it (just x86 for now) get virtually mapped stacks with
-> guard pages.  This causes reliable faults when the stack overflows.
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+>  arch/Kconfig  | 12 ++++++++++++
+>  kernel/fork.c | 45 +++++++++++++++++++++++++++++++++++++--------
+>  2 files changed, 49 insertions(+), 8 deletions(-)
 >
-> If the arch implements it well, we get a nice OOPS on stack overflow
-> (as opposed to panicing directly or otherwise exploding badly).  On
-> x86, the OOPS is nice, has a usable call trace, and the overflowing
-> task is killed cleanly.
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index d794384a0404..1acd262036b0 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -658,4 +658,16 @@ config ARCH_NO_COHERENT_DMA_MMAP
+>  config CPU_NO_EFFICIENT_FFS
+>         def_bool n
 >
-> This does not address interrupt stacks.
->
-> Andy Lutomirski (12):
->   x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
->   x86/cpa: Warn if kernel_unmap_pages_in_pgd is used inappropriately
->   mm: Track NR_KERNEL_STACK in pages instead of number of stacks
->   mm: Move memcg stack accounting to account_kernel_stack
->   fork: Add generic vmalloced stack support
->   x86/die: Don't try to recover from an OOPS on a non-default stack
->   x86/dumpstack: When OOPSing, rewind the stack before do_exit
->   x86/dumpstack: When dumping stack bytes due to OOPS, start with
->     regs->sp
->   x86/dumpstack: Try harder to get a call trace on stack overflow
->   x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
->     OOPS
->   x86/mm/64: Enable vmapped stacks
->   x86/mm: Improve stack-overflow #PF handling
->
-> Ingo Molnar (1):
->   x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
->
->  arch/Kconfig                     | 12 ++++++++++
->  arch/x86/Kconfig                 |  1 +
->  arch/x86/entry/entry_32.S        | 11 +++++++++
->  arch/x86/entry/entry_64.S        | 11 +++++++++
->  arch/x86/include/asm/switch_to.h | 28 +++++++++++++++++++++-
->  arch/x86/include/asm/traps.h     |  6 +++++
->  arch/x86/kernel/dumpstack.c      | 17 +++++++++++++-
->  arch/x86/kernel/dumpstack_32.c   |  4 +++-
->  arch/x86/kernel/dumpstack_64.c   | 16 ++++++++++---
->  arch/x86/kernel/traps.c          | 32 +++++++++++++++++++++++++
->  arch/x86/mm/fault.c              | 39 ++++++++++++++++++++++++++++++
->  arch/x86/mm/init_64.c            | 27 ---------------------
->  arch/x86/mm/pageattr.c           |  7 +++++-
->  arch/x86/mm/tlb.c                | 15 ++++++++++++
->  fs/proc/meminfo.c                |  2 +-
->  kernel/fork.c                    | 51 ++++++++++++++++++++++++++++++----------
->  mm/page_alloc.c                  |  3 +--
->  17 files changed, 233 insertions(+), 49 deletions(-)
+> +config HAVE_ARCH_VMAP_STACK
+> +       def_bool n
 
-This is great, thanks! This helps the up-coming usercopy
-self-protection code, and makes stack overflows a much less
-interesting target for attackers.
+In the style of HAVE_ARCH_SECCOMP_FILTER, can you detail all the
+things an architecture needs to do to correctly support a vmap stack?
+This will help with arch porting.
 
 -Kees
 
