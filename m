@@ -1,33 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 16 Jun 2016 10:33:39 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20160616153339.xvlsnhksqmkeusn4@treble>
+References: <cover.1466036668.git.luto@kernel.org>
+ <24279d4009c821de64109055665429fad2a7bff7.1466036668.git.luto@kernel.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CACXcFm=VuN+vETYsCo7hJ6j2A=xLEimt8MC_RWQw2czTChnigw@mail.gmail.com>
-References: <CACXcFm=VuN+vETYsCo7hJ6j2A=xLEimt8MC_RWQw2czTChnigw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 16 Jun 2016 10:10:52 -0700
-Message-ID: <CAGXu5jKJQRojLR858ai+C85nqiusfDzOqfyBBfgGOseyMiHaOg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Initialising random(4)
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <24279d4009c821de64109055665429fad2a7bff7.1466036668.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH 04/13] mm: Track NR_KERNEL_STACK in pages instead of
+ number of stacks
+To: Andy Lutomirski <luto@kernel.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, x86@kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 16, 2016 at 10:06 AM, Sandy Harris <sandyinchina@gmail.com> wrote:
-> The gresecurity patches include code to initiailse the driver's pools
-> with random data. I have different code to accomplish the same task &
-> think anyone planning to integrate that part of the gre stuff into the
-> kernel should also have a look at mine:
-> https://github.com/sandy-harris/random.gcm/blob/random_gcm/scripts/gen_random.c
->
-> I submitted an earlier version as a kernel patch, part of a large &
-> complex series of proposed patches.
+On Wed, Jun 15, 2016 at 05:28:26PM -0700, Andy Lutomirski wrote:
+> Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
+> zone.  This only makes sense if each kernel stack exists entirely in
+> one zone, and allowing vmapped stacks could break this assumption.
+> 
+> It turns out that the code for tracking kernel stack allocations in
+> units of pages is slightly simpler, so just switch to counting
+> pages.
+> 
+> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+> Cc: Johannes Weiner <hannes@cmpxchg.org>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: linux-mm@kvack.org
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+>  fs/proc/meminfo.c | 2 +-
+>  kernel/fork.c     | 3 ++-
+>  mm/page_alloc.c   | 3 +--
+>  3 files changed, 4 insertions(+), 4 deletions(-)
 
-Do you have a URL to the kernel patch you sent? Right now, the
-latent_entropy plugin does some static initialization with build-time
-randomness, and then augments the pool with additional entropy during
-boot. How does yours differ?
+You missed another usage of NR_KERNEL_STACK in drivers/base/node.c.
 
--Kees
 
 -- 
-Kees Cook
-Chrome OS & Brillo Security
+Josh
