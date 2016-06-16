@@ -1,98 +1,170 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVsOwy=dB16OgQ5OYkkn3ShyQyUxzjyJzsaeLO4m0ohEQ@mail.gmail.com>
-References: <cover.1466036668.git.luto@kernel.org> <20160616060538.GA3923@osiris>
- <CALCETrUTwG+fNgJQP8wYsAbxzjzARUwJ05jaRs0XfFPDHTB+ZQ@mail.gmail.com> <CALCETrVsOwy=dB16OgQ5OYkkn3ShyQyUxzjyJzsaeLO4m0ohEQ@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 16 Jun 2016 14:27:15 -0700
-Message-ID: <CALCETrVOF7VR2jd_ox32nieysLwuyQ9iuLa0XiNFn4uBd9oLrw@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CABXk95BE3wpgq-Y08G+Z3ZJbxJwgiuVvtQGaV4n-tD6GKNiFKg@mail.gmail.com>
+References: <20160111151958.GQ28542@decadent.org.uk> <20160111152355.GS28542@decadent.org.uk>
+ <CAGXu5jLT+GR8DEOYLaY4KgZJP=9HEX+w+=mz5fomAMTBr_2Zow@mail.gmail.com> <CABXk95BE3wpgq-Y08G+Z3ZJbxJwgiuVvtQGaV4n-tD6GKNiFKg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 16 Jun 2016 15:27:55 -0700
+Message-ID: <CAGXu5j+D00zz7dVPX4LpW41Gk=m7G_h25vZgOyYdVbW+wyvj6Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Heiko Carstens <heiko.carstens@de.ibm.com>, Paul McKenney <paulmck@linux.vnet.ibm.com>
-Cc: Andy Lutomirski <luto@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>
+Subject: Re: [kernel-hardening] [PATCH 2/2] security,perf: Allow further
+ restriction of perf_event_open
+To: Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>
+Cc: "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 16, 2016 at 11:14 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> Adding Paul, because RCU blew up.
+Hi guys,
+
+This patch wasn't originally CCed to you (I'm fixing that now). Would
+you consider taking this into the perf tree? It's been in active use
+in both Debian and Android for a while now.
+
+(If need be, I can resend it.)
+
+Thanks!
+
+-Kees
+
+On Sat, Jun 4, 2016 at 1:49 PM, Jeffrey Vander Stoep <jeffv@google.com> wrote:
+> Acked-by: Jeff Vander Stoep <jeffv@google.com>
 >
-> On Thu, Jun 16, 2016 at 10:50 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Wed, Jun 15, 2016 at 11:05 PM, Heiko Carstens
->> <heiko.carstens@de.ibm.com> wrote:
->>> On Wed, Jun 15, 2016 at 05:28:22PM -0700, Andy Lutomirski wrote:
->>>> Since the dawn of time, a kernel stack overflow has been a real PITA
->>>> to debug, has caused nondeterministic crashes some time after the
->>>> actual overflow, and has generally been easy to exploit for root.
->>>>
->>>> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
->>>> that enable it (just x86 for now) get virtually mapped stacks with
->>>> guard pages.  This causes reliable faults when the stack overflows.
->>>>
->>>> If the arch implements it well, we get a nice OOPS on stack overflow
->>>> (as opposed to panicing directly or otherwise exploding badly).  On
->>>> x86, the OOPS is nice, has a usable call trace, and the overflowing
->>>> task is killed cleanly.
+> In addition to Debian, this patch has been merged into AOSP and is a
+> requirement for Android:
+> https://android-review.googlesource.com/#/q/topic:CONFIG_SECURITY_PERF_EVENTS_RESTRICT
+>
+>
+> On Wed, Apr 13, 2016 at 9:12 AM, Kees Cook <keescook@chromium.org> wrote:
+>> On Mon, Jan 11, 2016 at 7:23 AM, Ben Hutchings <ben@decadent.org.uk>
+>> wrote:
+>>> When kernel.perf_event_open is set to 3 (or greater), disallow all
+>>> access to performance events by users without CAP_SYS_ADMIN.
+>>> Add a Kconfig symbol CONFIG_SECURITY_PERF_EVENTS_RESTRICT that
+>>> makes this value the default.
 >>>
->>> Do you have numbers which reflect the performance impact of this change?
+>>> This is based on a similar feature in grsecurity
+>>> (CONFIG_GRKERNSEC_PERF_HARDEN).  This version doesn't include making
+>>> the variable read-only.  It also allows enabling further restriction
+>>> at run-time regardless of whether the default is changed.
 >>>
+>>> Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 >>
->> Hmm.  My attempt to benchmark it caused some of the vmalloc core code
->> to hang.  I'll dig around.
+>> Whoops, I entirely missed this email! Just found it now.
+>>
+>> Ben, can you resend this with Perf maintainers in CC? This seems
+>> sensible enough to me.
+>>
+>> -Kees
+>>
+>>> ---
+>>> I made a similar change to Debian's kernel packages in August,
+>>> including the more restrictive default, and no-one has complained yet.
+>>>
+>>> Ben.
+>>>
+>>>  Documentation/sysctl/kernel.txt | 4 +++-
+>>>  include/linux/perf_event.h      | 5 +++++
+>>>  kernel/events/core.c            | 8 ++++++++
+>>>  security/Kconfig                | 9 +++++++++
+>>>  4 files changed, 25 insertions(+), 1 deletion(-)
+>>>
+>>> diff --git a/Documentation/sysctl/kernel.txt
+>>> b/Documentation/sysctl/kernel.txt
+>>> index 88a2c8e..76e2ca8 100644
+>>> --- a/Documentation/sysctl/kernel.txt
+>>> +++ b/Documentation/sysctl/kernel.txt
+>>> @@ -629,12 +629,14 @@ allowed to execute.
+>>>  perf_event_paranoid:
+>>>
+>>>  Controls use of the performance events system by unprivileged
+>>> -users (without CAP_SYS_ADMIN).  The default value is 1.
+>>> +users (without CAP_SYS_ADMIN).  The default value is 3 if
+>>> +CONFIG_SECURITY_PERF_EVENTS_RESTRICT is set, or 1 otherwise.
+>>>
+>>>   -1: Allow use of (almost) all events by all users
+>>>  >=0: Disallow raw tracepoint access by users without CAP_IOC_LOCK
+>>>  >=1: Disallow CPU event access by users without CAP_SYS_ADMIN
+>>>  >=2: Disallow kernel profiling by users without CAP_SYS_ADMIN
+>>> +>=3: Disallow all event access by users without CAP_SYS_ADMIN
+>>>
+>>>  ==============================================================
+>>>
+>>> diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
+>>> index f9828a4..aa72940 100644
+>>> --- a/include/linux/perf_event.h
+>>> +++ b/include/linux/perf_event.h
+>>> @@ -989,6 +989,11 @@ extern int perf_cpu_time_max_percent_handler(struct
+>>> ctl_table *table, int write,
+>>>                 loff_t *ppos);
+>>>
+>>>
+>>> +static inline bool perf_paranoid_any(void)
+>>> +{
+>>> +       return sysctl_perf_event_paranoid > 2;
+>>> +}
+>>> +
+>>>  static inline bool perf_paranoid_tracepoint_raw(void)
+>>>  {
+>>>         return sysctl_perf_event_paranoid > -1;
+>>> diff --git a/kernel/events/core.c b/kernel/events/core.c
+>>> index cfc227c..85bc810 100644
+>>> --- a/kernel/events/core.c
+>>> +++ b/kernel/events/core.c
+>>> @@ -175,8 +175,13 @@ static struct srcu_struct pmus_srcu;
+>>>   *   0 - disallow raw tracepoint access for unpriv
+>>>   *   1 - disallow cpu events for unpriv
+>>>   *   2 - disallow kernel profiling for unpriv
+>>> + *   3 - disallow all unpriv perf event use
+>>>   */
+>>> +#ifdef CONFIG_SECURITY_PERF_EVENTS_RESTRICT
+>>> +int sysctl_perf_event_paranoid __read_mostly = 3;
+>>> +#else
+>>>  int sysctl_perf_event_paranoid __read_mostly = 1;
+>>> +#endif
+>>>
+>>>  /* Minimum for 512 kiB + 1 user control page */
+>>>  int sysctl_perf_event_mlock __read_mostly = 512 + (PAGE_SIZE / 1024); /*
+>>> 'free' kiB per user */
+>>> @@ -8265,6 +8270,9 @@ SYSCALL_DEFINE5(perf_event_open,
+>>>         if (flags & ~PERF_FLAG_ALL)
+>>>                 return -EINVAL;
+>>>
+>>> +       if (perf_paranoid_any() && !capable(CAP_SYS_ADMIN))
+>>> +               return -EACCES;
+>>> +
+>>>         err = perf_copy_attr(attr_uptr, &attr);
+>>>         if (err)
+>>>                 return err;
+>>> diff --git a/security/Kconfig b/security/Kconfig
+>>> index e452378..30a2603 100644
+>>> --- a/security/Kconfig
+>>> +++ b/security/Kconfig
+>>> @@ -18,6 +18,15 @@ config SECURITY_DMESG_RESTRICT
+>>>
+>>>           If you are unsure how to answer this question, answer N.
+>>>
+>>> +config SECURITY_PERF_EVENTS_RESTRICT
+>>> +       bool "Restrict unprivileged use of performance events"
+>>> +       depends on PERF_EVENTS
+>>> +       help
+>>> +         If you say Y here, the kernel.perf_event_paranoid sysctl
+>>> +         will be set to 3 by default, and no unprivileged use of the
+>>> +         perf_event_open syscall will be permitted unless it is
+>>> +         changed.
+>>> +
+>>>  config SECURITY
+>>>         bool "Enable different security models"
+>>>         depends on SYSFS
+>>
+>>
+>>
+>> --
+>> Kees Cook
+>> Chrome OS & Brillo Security
 >
-> [  488.482010] Call Trace:
-> [  488.482389]  <IRQ>  [<ffffffff810da5f6>] sched_show_task+0xb6/0x110
-> [  488.483341]  [<ffffffff81108c7a>] rcu_check_callbacks+0x83a/0x840
-> [  488.484226]  [<ffffffff810dd48a>] ? account_system_time+0x7a/0x110
-> [  488.485157]  [<ffffffff8111c0f0>] ? tick_sched_do_timer+0x30/0x30
-> [  488.486133]  [<ffffffff8110d314>] update_process_times+0x34/0x60
-> [  488.487050]  [<ffffffff8111bb51>] tick_sched_handle.isra.13+0x31/0x40
-> [  488.488018]  [<ffffffff8111c128>] tick_sched_timer+0x38/0x70
-> [  488.488853]  [<ffffffff8110db2a>] __hrtimer_run_queues+0xda/0x250
-> [  488.489739]  [<ffffffff8110e263>] hrtimer_interrupt+0xa3/0x190
-> [  488.490630]  [<ffffffff810952f3>] local_apic_timer_interrupt+0x33/0x50
-> [  488.491660]  [<ffffffff81095d58>] smp_apic_timer_interrupt+0x38/0x50
-> [  488.492644]  [<ffffffff8194d022>] apic_timer_interrupt+0x82/0x90
-> [  488.493502]  [<ffffffff810ee1c0>] ? queued_spin_lock_slowpath+0x20/0x190
-> [  488.494550]  [<ffffffff8194c21b>] _raw_spin_lock+0x1b/0x20
-> [  488.495321]  [<ffffffff811b7a54>] find_vmap_area+0x14/0x60
-> [  488.496197]  [<ffffffff811b8f69>] find_vm_area+0x9/0x20
-> [  488.496922]  [<ffffffff810afb19>] account_kernel_stack+0x89/0x100
-> [  488.497885]  [<ffffffff810aff76>] free_task+0x16/0x50
-> [  488.498599]  [<ffffffff810b0042>] __put_task_struct+0x92/0x120
-> [  488.499525]  [<ffffffff810b4a66>] delayed_put_task_struct+0x76/0x80
-> [  488.500348]  [<ffffffff81107969>] rcu_process_callbacks+0x1f9/0x5e0
-> [  488.501208]  [<ffffffff810b7ca1>] __do_softirq+0xf1/0x280
-> [  488.501932]  [<ffffffff810b7f7e>] irq_exit+0x9e/0xa0
-> [  488.502955]  [<ffffffff81095d5d>] smp_apic_timer_interrupt+0x3d/0x50
-> [  488.503943]  [<ffffffff8194d022>] apic_timer_interrupt+0x82/0x90
-> [  488.504886]  <EOI>  [<ffffffff8194c20b>] ? _raw_spin_lock+0xb/0x20
-> [  488.505877]  [<ffffffff811b7c33>] ? __get_vm_area_node+0xc3/0x160
-> [  488.506812]  [<ffffffff810e013e>] ? task_move_group_fair+0x7e/0x90
-> [  488.507730]  [<ffffffff811b9360>] __vmalloc_node_range+0x70/0x280
-> [  488.508689]  [<ffffffff810b1ce5>] ? _do_fork+0xc5/0x370
-> [  488.509512]  [<ffffffff811ceb9b>] ? kmem_cache_alloc_node+0x7b/0x170
-> [  488.510502]  [<ffffffff81327418>] ? current_has_perm+0x38/0x40
-> [  488.511430]  [<ffffffff810b0501>] copy_process.part.46+0x141/0x1760
-> [  488.512449]  [<ffffffff810b1ce5>] ? _do_fork+0xc5/0x370
-> [  488.513285]  [<ffffffff8111faf3>] ? do_futex+0x293/0xad0
-> [  488.514093]  [<ffffffff810df14a>] ? check_preempt_wakeup+0x10a/0x240
-> [  488.515108]  [<ffffffff810d92c2>] ? wake_up_new_task+0xf2/0x180
-> [  488.516043]  [<ffffffff810b1ce5>] _do_fork+0xc5/0x370
-> [  488.516786]  [<ffffffff8112039d>] ? SyS_futex+0x6d/0x150
-> [  488.517615]  [<ffffffff810b2014>] SyS_clone+0x14/0x20
-> [  488.518385]  [<ffffffff81002b72>] do_syscall_64+0x52/0xb0
-> [  488.519239]  [<ffffffff8194c4e1>] entry_SYSCALL64_slow_path+0x25/0x25
->
-> The bug seems straightforward: vmap_area_lock is held, the RCU softirq
-> fires, and vmap_area_lock recurses and deadlocks.  Lockdep agrees with
-> my assessment and catches the bug immediately on boot.
->
-> What's the right fix?  Change all spin_lock calls on vmap_area_lock to
-> spin_lock_bh?  Somehow ask RCU not to call delayed_put_task_struct
-> from bh context?  I would naively have expected RCU to only call its
-> callbacks from thread context, but I was clearly wrong.
 
-I fixed (worked around?) it by caching the vm_struct * so I can skip
-calling find_vm_area.  vfree works in IRQ context.  IMO this is still
-a wee bit ugly.
 
---Andy
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
