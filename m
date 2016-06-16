@@ -1,56 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 16 Jun 2016 08:05:38 +0200
+From: Heiko Carstens <heiko.carstens@de.ibm.com>
+References: <cover.1466036668.git.luto@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <57622865.2070701@nextfour.com>
-References: <cover.1466036668.git.luto@kernel.org> <3f0299bde58d0161c1dad75e0b7f93f074a6cd12.1466036668.git.luto@kernel.org>
- <57622865.2070701@nextfour.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 15 Jun 2016 22:33:52 -0700
-Message-ID: <CALCETrVPMD5KYwqL-1j8hyezJ+GvskeFizfOEh4cUXw0dT3CHg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH 12/13] x86/mm/64: Enable vmapped stacks
-To: =?UTF-8?Q?Mika_Penttil=C3=A4?= <mika.penttila@nextfour.com>
-Cc: Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brian Gerst <brgerst@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <cover.1466036668.git.luto@kernel.org>
+Message-Id: <20160616060538.GA3923@osiris>
+Subject: [kernel-hardening] Re: [PATCH 00/13] Virtually mapped stacks with guard pages (x86,
+ core)
+To: Andy Lutomirski <luto@kernel.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, x86@kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Jun 15, 2016 9:32 PM, "Mika Penttil=C3=A4" <mika.penttila@nextfour.com> =
-wrote:
->
-> Hi,
->
+On Wed, Jun 15, 2016 at 05:28:22PM -0700, Andy Lutomirski wrote:
+> Since the dawn of time, a kernel stack overflow has been a real PITA
+> to debug, has caused nondeterministic crashes some time after the
+> actual overflow, and has generally been easy to exploit for root.
+> 
+> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+> that enable it (just x86 for now) get virtually mapped stacks with
+> guard pages.  This causes reliable faults when the stack overflows.
+> 
+> If the arch implements it well, we get a nice OOPS on stack overflow
+> (as opposed to panicing directly or otherwise exploding badly).  On
+> x86, the OOPS is nice, has a usable call trace, and the overflowing
+> task is killed cleanly.
 
-> > diff --git a/arch/x86/mm/tlb.c b/arch/x86/mm/tlb.c
-> > index 5643fd0b1a7d..fbf036ae72ac 100644
-> > --- a/arch/x86/mm/tlb.c
-> > +++ b/arch/x86/mm/tlb.c
-> > @@ -77,10 +77,25 @@ void switch_mm_irqs_off(struct mm_struct *prev, str=
-uct mm_struct *next,
-> >       unsigned cpu =3D smp_processor_id();
-> >
-> >       if (likely(prev !=3D next)) {
-> > +             if (IS_ENABLED(CONFIG_VMAP_STACK)) {
-> > +                     /*
-> > +                      * If our current stack is in vmalloc space and i=
-sn't
-> > +                      * mapped in the new pgd, we'll double-fault.  Fo=
-rcibly
-> > +                      * map it.
-> > +                      */
-> > +                     unsigned int stack_pgd_index =3D
-> > +                             pgd_index(current_stack_pointer());
->
->
-> stack pointer is still the previous task's, current_stack_pointer() retur=
-ns that, not
-> next task's which was intention I guess. Things may happen to work if on =
-same pgd, but at least the
-> boot cpu init_task_struct is special.
-
-This is intentional.  When switching processes, we first switch the mm
-and then switch the task.  We need to make sure that the prev stack is
-mapped in the new mm or we'll double-fault and die after switching the
-mm which still trying to execute on the old stack.
-
-The change to switch_to makes sure that the new stack is mapped.
-
---Andy
+Do you have numbers which reflect the performance impact of this change?
