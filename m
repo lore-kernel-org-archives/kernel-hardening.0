@@ -1,8 +1,8 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 17 Jun 2016 11:35:23 +0200
+Date: Fri, 17 Jun 2016 11:40:13 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160617093523.GA15501@gmail.com>
+Message-ID: <20160617094013.GA16650@gmail.com>
 References: <1460757793-59020-1-git-send-email-thgarnie@google.com>
  <1460757793-59020-4-git-send-email-thgarnie@google.com>
  <20160617090730.GD4791@gmail.com>
@@ -27,7 +27,13 @@ List-ID: <kernel-hardening.lists.openwall.com>
 > Hm, what tree is this patch against? asm/kaslr.h does not exist upstream or in the 
 > x86 tree.
 
-Ah, never mind, introduced by the first patch.
+So the problem is that this file gets introduced by:
+
+  [PATCH v5 1/4] x86, boot: Refactor KASLR entropy functions
+
+... but that patch did not get carried over into this series:
+
+  [PATCH v6 0/3] x86/mm: memory area address KASLR
 
 Thanks,
 
