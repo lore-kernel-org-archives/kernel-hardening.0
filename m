@@ -1,49 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 17 Jun 2016 22:30:45 +0200
-From: Borislav Petkov <bp@alien8.de>
-Message-ID: <20160617203045.GB3842@pd.tnic>
+Date: Fri, 17 Jun 2016 15:55:26 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20160617205526.5cjfm56prpstvowc@treble>
 References: <cover.1466192946.git.luto@kernel.org>
- <3336bb02792d56c49d18e2f7a435fd194a4a22e4.1466192946.git.luto@kernel.org>
+ <8a17889a9d47b7b4deb41f2fcccada8bf54d4b6f.1466192946.git.luto@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <3336bb02792d56c49d18e2f7a435fd194a4a22e4.1466192946.git.luto@kernel.org>
-Subject: [kernel-hardening] Re: [PATCH v2 03/13] x86/cpa: Warn if kernel_unmap_pages_in_pgd is
- used inappropriately
+In-Reply-To: <8a17889a9d47b7b4deb41f2fcccada8bf54d4b6f.1466192946.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v2 05/13] mm: Move memcg stack accounting to
+ account_kernel_stack
 To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 17, 2016 at 01:00:39PM -0700, Andy Lutomirski wrote:
-> It's currently only used in the EFI code, which is safe AFAICT.
-
-"It is basically useful for a pagetable hierarchy which is not init_mm."
-
-> Warn if anyone tries to use it on the normal kernel pgd.
+On Fri, Jun 17, 2016 at 01:00:41PM -0700, Andy Lutomirski wrote:
+> We should account for stacks regardless of stack size.  Move it into
+> account_kernel_stack.
 > 
+> Fixes: 12580e4b54ba8 ("mm: memcontrol: report kernel stack usage in cgroup2 memory.stat")
+> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+> Cc: Johannes Weiner <hannes@cmpxchg.org>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: linux-mm@kvack.org
 > Signed-off-by: Andy Lutomirski <luto@kernel.org>
 > ---
->  arch/x86/mm/pageattr.c | 3 +++
->  1 file changed, 3 insertions(+)
+>  kernel/fork.c | 15 ++++++---------
+>  1 file changed, 6 insertions(+), 9 deletions(-)
 > 
-> diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-> index 6a8026918bf6..e9b9c5cedbb8 100644
-> --- a/arch/x86/mm/pageattr.c
-> +++ b/arch/x86/mm/pageattr.c
-> @@ -1996,6 +1996,9 @@ out:
->  void kernel_unmap_pages_in_pgd(pgd_t *root, unsigned long address,
->  			       unsigned numpages)
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index be7f006af727..cd2abe6e4e41 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -165,20 +165,12 @@ static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
+>  	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
+>  						  THREAD_SIZE_ORDER);
+>  
+> -	if (page)
+> -		memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+> -					    1 << THREAD_SIZE_ORDER);
+> -
+>  	return page ? page_address(page) : NULL;
+>  }
+>  
+>  static inline void free_thread_info(struct thread_info *ti)
 >  {
-> +	/* Unmapping kernel entries from init_mm's pgd is not allowed. */
-> +	WARN_ON(root == init_mm.pgd);
+> -	struct page *page = virt_to_page(ti);
+> -
+> -	memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+> -				    -(1 << THREAD_SIZE_ORDER));
+> -	__free_kmem_pages(page, THREAD_SIZE_ORDER);
+> +	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
+>  }
+>  # else
+>  static struct kmem_cache *thread_info_cache;
+> @@ -227,6 +219,11 @@ static void account_kernel_stack(struct thread_info *ti, int account)
+>  
+>  	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
+>  			    THREAD_SIZE / 1024 * account);
+> +
+> +	/* All stack pages belong to the same memcg. */
+> +	memcg_kmem_update_page_stat(
+> +		virt_to_page(ti), MEMCG_KERNEL_STACK,
+> +		account * (THREAD_SIZE / PAGE_SIZE));
+>  }
 
-We can also return and not do the unmapping:
-
-	if (WARN_ON(root == init_mm.pgd))
-		return;
+Won't this be broken in the case where THREAD_SIZE < PAGE_SIZE?
 
 -- 
-Regards/Gruss,
-    Boris.
-
-ECO tip #101: Trim your mails when you reply.
+Josh
