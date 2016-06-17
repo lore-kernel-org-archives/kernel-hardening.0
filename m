@@ -1,104 +1,104 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 17 Jun 2016 13:00:40 -0700
-Message-Id: <e2d828d9ee32ff50c7caa21700fb2179200307e9.1466192946.git.luto@kernel.org>
+Date: Fri, 17 Jun 2016 13:00:44 -0700
+Message-Id: <b22badbe9ebcb6ad283b243f851c1b7d33d5bb2a.1466192946.git.luto@kernel.org>
 In-Reply-To: <cover.1466192946.git.luto@kernel.org>
 References: <cover.1466192946.git.luto@kernel.org>
 In-Reply-To: <cover.1466192946.git.luto@kernel.org>
 References: <cover.1466192946.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v2 04/13] mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
+Subject: [kernel-hardening] [PATCH v2 08/13] x86/dumpstack: When OOPSing, rewind the stack before do_exit
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
-zone.  This only makes sense if each kernel stack exists entirely in
-one zone, and allowing vmapped stacks could break this assumption.
+If we call do_exit with a clean stack, we greatly reduce the risk of
+recursive oopses due to stack overflow in do_exit, and we allow
+do_exit to work even if we OOPS from an IST stack.  The latter gives
+us a much better chance of surviving long enough after we detect a
+stack overflow to write out our logs.
 
-Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
-allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
-all architectures.  Keep it simple and use KiB.
+I intentionally separated this from the preceding patch that
+disables do_exit-on-OOPS on IST stacks.  This way, if we need to
+revert this patch, we still end up in an acceptable state wrt stack
+overflow handling.
 
-Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
-Cc: Johannes Weiner <hannes@cmpxchg.org>
-Cc: Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- drivers/base/node.c    | 3 +--
- fs/proc/meminfo.c      | 2 +-
- include/linux/mmzone.h | 2 +-
- kernel/fork.c          | 3 ++-
- mm/page_alloc.c        | 3 +--
- 5 files changed, 6 insertions(+), 7 deletions(-)
+ arch/x86/entry/entry_32.S   | 11 +++++++++++
+ arch/x86/entry/entry_64.S   | 11 +++++++++++
+ arch/x86/kernel/dumpstack.c | 13 +++++++++----
+ 3 files changed, 31 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/base/node.c b/drivers/base/node.c
-index 560751bad294..27dc68a0ed2d 100644
---- a/drivers/base/node.c
-+++ b/drivers/base/node.c
-@@ -121,8 +121,7 @@ static ssize_t node_read_meminfo(struct device *dev,
- 		       nid, K(node_page_state(nid, NR_FILE_MAPPED)),
- 		       nid, K(node_page_state(nid, NR_ANON_PAGES)),
- 		       nid, K(i.sharedram),
--		       nid, node_page_state(nid, NR_KERNEL_STACK) *
--				THREAD_SIZE / 1024,
-+		       nid, node_page_state(nid, NR_KERNEL_STACK_KB),
- 		       nid, K(node_page_state(nid, NR_PAGETABLE)),
- 		       nid, K(node_page_state(nid, NR_UNSTABLE_NFS)),
- 		       nid, K(node_page_state(nid, NR_BOUNCE)),
-diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
-index 83720460c5bc..239b5a06cee0 100644
---- a/fs/proc/meminfo.c
-+++ b/fs/proc/meminfo.c
-@@ -145,7 +145,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
- 				global_page_state(NR_SLAB_UNRECLAIMABLE)),
- 		K(global_page_state(NR_SLAB_RECLAIMABLE)),
- 		K(global_page_state(NR_SLAB_UNRECLAIMABLE)),
--		global_page_state(NR_KERNEL_STACK) * THREAD_SIZE / 1024,
-+		global_page_state(NR_KERNEL_STACK_KB),
- 		K(global_page_state(NR_PAGETABLE)),
- #ifdef CONFIG_QUICKLIST
- 		K(quicklist_total_size()),
-diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
-index 02069c23486d..63f05a7efb54 100644
---- a/include/linux/mmzone.h
-+++ b/include/linux/mmzone.h
-@@ -127,7 +127,7 @@ enum zone_stat_item {
- 	NR_SLAB_RECLAIMABLE,
- 	NR_SLAB_UNRECLAIMABLE,
- 	NR_PAGETABLE,		/* used for pagetables */
--	NR_KERNEL_STACK,
-+	NR_KERNEL_STACK_KB,	/* measured in KiB */
- 	/* Second 128 byte cacheline */
- 	NR_UNSTABLE_NFS,	/* NFS unstable pages */
- 	NR_BOUNCE,
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 5c2c355aa97f..be7f006af727 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -225,7 +225,8 @@ static void account_kernel_stack(struct thread_info *ti, int account)
+diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
+index 983e5d3a0d27..0b56666e6039 100644
+--- a/arch/x86/entry/entry_32.S
++++ b/arch/x86/entry/entry_32.S
+@@ -1153,3 +1153,14 @@ ENTRY(async_page_fault)
+ 	jmp	error_code
+ END(async_page_fault)
+ #endif
++
++ENTRY(rewind_stack_do_exit)
++	/* Prevent any naive code from trying to unwind to our caller. */
++	xorl	%ebp, %ebp
++
++	movl	PER_CPU_VAR(cpu_current_top_of_stack), %esi
++	leal	-TOP_OF_KERNEL_STACK_PADDING-PTREGS_SIZE(%esi), %esp
++
++	call	do_exit
++1:	jmp 1b
++END(rewind_stack_do_exit)
+diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
+index 9ee0da1807ed..b846875aeea6 100644
+--- a/arch/x86/entry/entry_64.S
++++ b/arch/x86/entry/entry_64.S
+@@ -1423,3 +1423,14 @@ ENTRY(ignore_sysret)
+ 	mov	$-ENOSYS, %eax
+ 	sysret
+ END(ignore_sysret)
++
++ENTRY(rewind_stack_do_exit)
++	/* Prevent any naive code from trying to unwind to our caller. */
++	xorl	%ebp, %ebp
++
++	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rax
++	leaq	-TOP_OF_KERNEL_STACK_PADDING-PTREGS_SIZE(%rax), %rsp
++
++	call	do_exit
++1:	jmp 1b
++END(rewind_stack_do_exit)
+diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
+index 36effb39c9c9..d4d085e27d04 100644
+--- a/arch/x86/kernel/dumpstack.c
++++ b/arch/x86/kernel/dumpstack.c
+@@ -228,6 +228,8 @@ unsigned long oops_begin(void)
+ EXPORT_SYMBOL_GPL(oops_begin);
+ NOKPROBE_SYMBOL(oops_begin);
+ 
++extern void __noreturn rewind_stack_do_exit(int signr);
++
+ void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
  {
- 	struct zone *zone = page_zone(virt_to_page(ti));
- 
--	mod_zone_page_state(zone, NR_KERNEL_STACK, account);
-+	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
-+			    THREAD_SIZE / 1024 * account);
+ 	if (regs && kexec_should_crash(current))
+@@ -247,12 +249,15 @@ void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
+ 		return;
+ 	if (in_interrupt())
+ 		panic("Fatal exception in interrupt");
+-	if (((current_stack_pointer() ^ (current_top_of_stack() - 1))
+-	     & ~(THREAD_SIZE - 1)) != 0)
+-		panic("Fatal exception on special stack");
+ 	if (panic_on_oops)
+ 		panic("Fatal exception");
+-	do_exit(signr);
++
++	/*
++	 * We're not going to return, but we might be on an IST stack or
++	 * have very little stack space left.  Rewind the stack and kill
++	 * the task.
++	 */
++	rewind_stack_do_exit(signr);
  }
+ NOKPROBE_SYMBOL(oops_end);
  
- void free_task(struct task_struct *tsk)
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 6903b695ebae..a277dea926c9 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -4457,8 +4457,7 @@ void show_free_areas(unsigned int filter)
- 			K(zone_page_state(zone, NR_SHMEM)),
- 			K(zone_page_state(zone, NR_SLAB_RECLAIMABLE)),
- 			K(zone_page_state(zone, NR_SLAB_UNRECLAIMABLE)),
--			zone_page_state(zone, NR_KERNEL_STACK) *
--				THREAD_SIZE / 1024,
-+			zone_page_state(zone, NR_KERNEL_STACK_KB),
- 			K(zone_page_state(zone, NR_PAGETABLE)),
- 			K(zone_page_state(zone, NR_UNSTABLE_NFS)),
- 			K(zone_page_state(zone, NR_BOUNCE)),
 -- 
 2.5.5
