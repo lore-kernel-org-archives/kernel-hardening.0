@@ -1,95 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1466180207.849.50.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 17 Jun 2016 12:16:47 -0400
-In-Reply-To: <20160617065427.GL30154@twins.programming.kicks-ass.net>
-References: <20160111151958.GQ28542@decadent.org.uk>	
- <20160111152355.GS28542@decadent.org.uk>	
- <CAGXu5jLT+GR8DEOYLaY4KgZJP=9HEX+w+=mz5fomAMTBr_2Zow@mail.gmail.com>	
- <CABXk95BE3wpgq-Y08G+Z3ZJbxJwgiuVvtQGaV4n-tD6GKNiFKg@mail.gmail.com>	
- <CAGXu5j+D00zz7dVPX4LpW41Gk=m7G_h25vZgOyYdVbW+wyvj6Q@mail.gmail.com>
-	 <20160617065427.GL30154@twins.programming.kicks-ass.net>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-eSXDaRwhwiDGyKDltTwA"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] [PATCH 2/2] security,perf: Allow further
- restriction of perf_event_open
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+MIME-Version: 1.0
+In-Reply-To: <20160617072737.GA3960@osiris>
+References: <cover.1466036668.git.luto@kernel.org> <20160616060538.GA3923@osiris>
+ <CALCETrVD6aLzvgHxTji0mm5Fzkqq_h-bxWqF1bv+7z33UrgYgA@mail.gmail.com> <20160617072737.GA3960@osiris>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Fri, 17 Jun 2016 10:38:24 -0700
+Message-ID: <CALCETrVh+w1Bj2K5QGvJwsbrGrrD_=zz1vWPC2zXUai6YB9dBA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Heiko Carstens <heiko.carstens@de.ibm.com>
+Cc: Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, X86 ML <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brian Gerst <brgerst@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Jun 17, 2016 12:27 AM, "Heiko Carstens" <heiko.carstens@de.ibm.com> wrot=
+e:
+>
+> On Thu, Jun 16, 2016 at 08:58:07PM -0700, Andy Lutomirski wrote:
+> > On Wed, Jun 15, 2016 at 11:05 PM, Heiko Carstens
+> > <heiko.carstens@de.ibm.com> wrote:
+> > > On Wed, Jun 15, 2016 at 05:28:22PM -0700, Andy Lutomirski wrote:
+> > >> Since the dawn of time, a kernel stack overflow has been a real PITA
+> > >> to debug, has caused nondeterministic crashes some time after the
+> > >> actual overflow, and has generally been easy to exploit for root.
+> > >>
+> > >> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+> > >> that enable it (just x86 for now) get virtually mapped stacks with
+> > >> guard pages.  This causes reliable faults when the stack overflows.
+> > >>
+> > >> If the arch implements it well, we get a nice OOPS on stack overflow
+> > >> (as opposed to panicing directly or otherwise exploding badly).  On
+> > >> x86, the OOPS is nice, has a usable call trace, and the overflowing
+> > >> task is killed cleanly.
+> > >
+> > > Do you have numbers which reflect the performance impact of this chan=
+ge?
+> > >
+> >
+> > It seems to add ~1.5=E7=9B=9C per thread creation/join pair, which is a=
+round
+> > 15% overhead.  I *think* the major cost is that vmalloc calls
+> > alloc_kmem_pages_node once per page rather than using a higher-order
+> > block if available.
+> >
+> > Anyway, if anyone wants this to become faster, I think the way to do
+> > it would be to ask some friendly mm folks to see if they can speed up
+> > vmalloc.  I don't really want to dig in to the guts of the page
+> > allocator.  My instinct would be to add a new interface
+> > (GFP_SMALLER_OK?) to ask the page allocator for a high-order
+> > allocation such that, if a high-order block is not immediately
+> > available (on the freelist) then it should fall back to a smaller
+> > allocation rather than working hard to get a high-order allocation.
+> > Then vmalloc could use this, and vfree could free pages in blocks
+> > corresponding to whatever orders it got the pages in, thus avoiding
+> > the need to merge all the pages back together.
+> >
+> > There's another speedup available: actually reuse allocations.  We
+> > could keep a very small freelist of vmap_areas with their associated
+> > pages so we could reuse them.  (We can't efficiently reuse a vmap_area
+> > without its backing pages because we need to flush the TLB in the
+> > middle if we do that.)
+>
+> That's rather expensive. Just for the records: on s390 we use gcc's
+> architecture specific compile options (kernel: CONFIG_STACK_GUARD)
+>
+>  -mstack-guard=3Dstack-guard
+>  -mstack-size=3Dstack-size
+>
+> These generate two additional instructions at the beginning of each
+> function prologue and verify that the stack size left won't be below a
+> specified number of bytes. If so it would execute an illegal instruction.
+>
+> A disassembly looks like this (r15 is the stackpointer):
+>
+> 0000000000000670 <setup_arch>:
+>      670:       eb 6f f0 48 00 24       stmg    %r6,%r15,72(%r15)
+>      676:       c0 d0 00 00 00 00       larl    %r13,676 <setup_arch+0x6>
+>      67c:       a7 f1 3f 80             tmll    %r15,16256  <--- test if =
+enough space left
+>      680:       b9 04 00 ef             lgr     %r14,%r15
+>      684:       a7 84 00 01             je      686 <setup_arch+0x16> <--=
+- branch to illegal op
+>      688:       e3 f0 ff 90 ff 71       lay     %r15,-112(%r15)
+>
+> The branch jumps actually into the branch instruction itself since the 00=
+01
+> part of the "je" instruction is an illegal instruction.
+>
+> This catches at least wild stack overflows because of two many functions
+> being called.
+>
+> Of course it doesn't catch wild accesses outside the stack because e.g. t=
+he
+> index into an array on the stack is wrong.
+>
+> The runtime overhead is within noise ratio, therefore we have this always
+> enabled.
+>
 
---=-eSXDaRwhwiDGyKDltTwA
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Neat!  What exactly does tmll do?  I assume this works by checking the
+low bits of the stack pointer.
 
-On Fri, 2016-06-17 at 08:54 +0200, Peter Zijlstra wrote:
-> On Thu, Jun 16, 2016 at 03:27:55PM -0700, Kees Cook wrote:
-> > Hi guys,
-> >=20
-> > This patch wasn't originally CCed to you (I'm fixing that now).
-> > Would
-> > you consider taking this into the perf tree?=C2=A0
->=20
-> No.
->=20
-> > It's been in active use
-> > in both Debian and Android for a while now.
->=20
-> Very nice of you all to finally inform us I suppose :/
+x86_64 would have to do:
 
-It was in Debian a lot longer than Android, although the Android feature
-came from a downstream variant where it was done much earlier:
+movl %esp, %r11d
+shll %r11d, $18
+cmpl %r11d, <threshold>
+jg error
 
-https://android-review.googlesource.com/#/c/233736/
+Or similar.  I think the cmpl could be eliminated if the threshold
+were a power of two by simply testing the low bits of the stack
+pointer.
 
-> > > > >=20
-> > > > > access to performance events by users without CAP_SYS_ADMIN.
-> > > > > Add a Kconfig symbol CONFIG_SECURITY_PERF_EVENTS_RESTRICT that
-> > > > > makes this value the default.
-> > > > >=20
-> > > > > This is based on a similar feature in grsecurity
-> > > > > (CONFIG_GRKERNSEC_PERF_HARDEN).=C2=A0=C2=A0This version doesn't i=
-nclude
-> > > > > making
-> > > > > the variable read-only.=C2=A0=C2=A0It also allows enabling furthe=
-r
-> > > > > restriction
-> > > > > at run-time regardless of whether the default is changed.
->=20
-> This Changelog is completely devoid of information. _WHY_ are you
-> doing
-> this?
-
-Attack surface reduction. It's possible to use seccomp-bpf for some
-limited cases, but it's not flexible enough. There are lots of
-information leaks and local privilege escalation vulnerabilities via
-perf events, yet on most Linux installs it's not ever being used. So
-turning it off by default on those installs is an easy win. The holes
-are reduced to root -> kernel (and that's not a meaningful boundary in
-mainline right now - although as is the case here, Debian has a bunch of
-securelevel patches for that).
---=-eSXDaRwhwiDGyKDltTwA
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAABCAAGBQJXZCJvAAoJEPnnEuWa9fIqw7sP/Rwcr0GvyzDShUJOj7VwA63w
-5iqBE1CEXTNvh8W8tgui3ThpbIgRc/M+IdfUjSN225l3AvSmOxKp366eoUwLAjO0
-DmPOFDbrApo5szN1mzb0xVkqhULAcNzdpscj4UOU7YyjMfQPAq91ntG29D0vo7sq
-WL6g6DMcsvySXgLDGNHS9GUjIkN7auaN0rOech7K880bhTm9FMRuxWvh8VtNgRF3
-vDIFayO/j9miEY9NIgw5StdlGFJELra5L8p0B0yHfh40AcX3lb4xrAMn4/D0AdZv
-Gt1EZeg0wLe0DlNdBEvJAcxIIhNNN0z0dQM88Y+tGlYBwJJEj62N75tGyrf2oCsr
-2Krf7xDoq5PzsUr5UFSvLBcQmq4MtxJ5A1Fp64M8IXniegWpPq5rrSZHSN4dExKz
-QF7woaeQg4aIgSGwJ2LCXJjm4fuF52VwkO+Q6tfku6Fc3nCQbR2St0t/mbUrySTG
-68bkrLX9QEEC1+ctlGTu3dNMAHdgaIfhrIJFlxyJ4aDBQJ9IagQab9s5XIMVFF9b
-GbzmmVQH+hXjgVKOWDu/a7Db4UBFb795qkwBq849FXyNAHZBKaUFX4AdMCBvapRk
-KhkzwClZOBCpGdpov0QaRchfEt5wQVD5g+BhK0AYIMtL5VgzNLhqTiBG79fXTtWh
-zFp+a98a3ifoOdC2fShQ
-=w64C
------END PGP SIGNATURE-----
-
---=-eSXDaRwhwiDGyKDltTwA--
+--Andy
