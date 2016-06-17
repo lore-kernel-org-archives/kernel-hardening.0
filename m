@@ -1,66 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 17 Jun 2016 13:00:41 -0700
-Message-Id: <8a17889a9d47b7b4deb41f2fcccada8bf54d4b6f.1466192946.git.luto@kernel.org>
+Date: Fri, 17 Jun 2016 13:00:43 -0700
+Message-Id: <30244111e69a30752befcfe37bd95b6d108ff309.1466192946.git.luto@kernel.org>
 In-Reply-To: <cover.1466192946.git.luto@kernel.org>
 References: <cover.1466192946.git.luto@kernel.org>
 In-Reply-To: <cover.1466192946.git.luto@kernel.org>
 References: <cover.1466192946.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v2 05/13] mm: Move memcg stack accounting to account_kernel_stack
+Subject: [kernel-hardening] [PATCH v2 07/13] x86/die: Don't try to recover from an OOPS on a non-default stack
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-We should account for stacks regardless of stack size.  Move it into
-account_kernel_stack.
+It's not going to work, because the scheduler will explode if we try
+to schedule when running on an IST stack or similar.
 
-Fixes: 12580e4b54ba8 ("mm: memcontrol: report kernel stack usage in cgroup2 memory.stat")
-Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
-Cc: Johannes Weiner <hannes@cmpxchg.org>
-Cc: Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org
+This will matter when we let kernel stack overflows (which are #DF)
+call die().
+
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- kernel/fork.c | 15 ++++++---------
- 1 file changed, 6 insertions(+), 9 deletions(-)
+ arch/x86/kernel/dumpstack.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index be7f006af727..cd2abe6e4e41 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -165,20 +165,12 @@ static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
- 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
- 						  THREAD_SIZE_ORDER);
- 
--	if (page)
--		memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
--					    1 << THREAD_SIZE_ORDER);
--
- 	return page ? page_address(page) : NULL;
- }
- 
- static inline void free_thread_info(struct thread_info *ti)
- {
--	struct page *page = virt_to_page(ti);
--
--	memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
--				    -(1 << THREAD_SIZE_ORDER));
--	__free_kmem_pages(page, THREAD_SIZE_ORDER);
-+	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
- }
- # else
- static struct kmem_cache *thread_info_cache;
-@@ -227,6 +219,11 @@ static void account_kernel_stack(struct thread_info *ti, int account)
- 
- 	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
- 			    THREAD_SIZE / 1024 * account);
-+
-+	/* All stack pages belong to the same memcg. */
-+	memcg_kmem_update_page_stat(
-+		virt_to_page(ti), MEMCG_KERNEL_STACK,
-+		account * (THREAD_SIZE / PAGE_SIZE));
- }
- 
- void free_task(struct task_struct *tsk)
+diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
+index 2bb25c3fe2e8..36effb39c9c9 100644
+--- a/arch/x86/kernel/dumpstack.c
++++ b/arch/x86/kernel/dumpstack.c
+@@ -247,6 +247,9 @@ void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
+ 		return;
+ 	if (in_interrupt())
+ 		panic("Fatal exception in interrupt");
++	if (((current_stack_pointer() ^ (current_top_of_stack() - 1))
++	     & ~(THREAD_SIZE - 1)) != 0)
++		panic("Fatal exception on special stack");
+ 	if (panic_on_oops)
+ 		panic("Fatal exception");
+ 	do_exit(signr);
 -- 
 2.5.5
