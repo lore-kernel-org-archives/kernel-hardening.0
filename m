@@ -1,38 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1466177070.849.24.camel@gmail.com>
+Message-ID: <1466180207.849.50.camel@gmail.com>
 From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 17 Jun 2016 11:24:30 -0400
-In-Reply-To: <871t3wuzmp.fsf@ashishki-desk.ger.corp.intel.com>
-References: <20160111151958.GQ28542@decadent.org.uk>
-	 <20160111152355.GS28542@decadent.org.uk>
-	 <871t3wuzmp.fsf@ashishki-desk.ger.corp.intel.com>
+Date: Fri, 17 Jun 2016 12:16:47 -0400
+In-Reply-To: <20160617065427.GL30154@twins.programming.kicks-ass.net>
+References: <20160111151958.GQ28542@decadent.org.uk>	
+ <20160111152355.GS28542@decadent.org.uk>	
+ <CAGXu5jLT+GR8DEOYLaY4KgZJP=9HEX+w+=mz5fomAMTBr_2Zow@mail.gmail.com>	
+ <CABXk95BE3wpgq-Y08G+Z3ZJbxJwgiuVvtQGaV4n-tD6GKNiFKg@mail.gmail.com>	
+ <CAGXu5j+D00zz7dVPX4LpW41Gk=m7G_h25vZgOyYdVbW+wyvj6Q@mail.gmail.com>
+	 <20160617065427.GL30154@twins.programming.kicks-ass.net>
 Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-/Orb6oQdqJ+h9YjlZ8/l"
+	protocol="application/pgp-signature"; boundary="=-eSXDaRwhwiDGyKDltTwA"
 Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH 2/2] security,perf: Allow further
+Subject: Re: [kernel-hardening] [PATCH 2/2] security,perf: Allow further
  restriction of perf_event_open
-To: kernel-hardening@lists.openwall.com, Ben Hutchings <ben@decadent.org.uk>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-/Orb6oQdqJ+h9YjlZ8/l
+--=-eSXDaRwhwiDGyKDltTwA
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-> As a debian user, is this a good place to complain? Because it does
-> get
-> it the way.
+On Fri, 2016-06-17 at 08:54 +0200, Peter Zijlstra wrote:
+> On Thu, Jun 16, 2016 at 03:27:55PM -0700, Kees Cook wrote:
+> > Hi guys,
+> >=20
+> > This patch wasn't originally CCed to you (I'm fixing that now).
+> > Would
+> > you consider taking this into the perf tree?=C2=A0
+>=20
+> No.
+>=20
+> > It's been in active use
+> > in both Debian and Android for a while now.
+>=20
+> Very nice of you all to finally inform us I suppose :/
 
-It would be relevant to whether or not it should be set to 3 by default
-in the kernel without explicit configuration, but there's no proposal to
-do that. Debian has to pick a trade-off beyond security and a tiny
-roadblock for developers. It's not always the case though.
+It was in Debian a lot longer than Android, although the Android feature
+came from a downstream variant where it was done much earlier:
 
-In Android, there's userspace integration allowing it to be toggled by
-the Android Debugging Bridge shell user so profiling tools are being
-taught to automatically toggle it. Enabling ADB and then using it for
-profiling is an implicit opt-in.
---=-/Orb6oQdqJ+h9YjlZ8/l
+https://android-review.googlesource.com/#/c/233736/
+
+> > > > >=20
+> > > > > access to performance events by users without CAP_SYS_ADMIN.
+> > > > > Add a Kconfig symbol CONFIG_SECURITY_PERF_EVENTS_RESTRICT that
+> > > > > makes this value the default.
+> > > > >=20
+> > > > > This is based on a similar feature in grsecurity
+> > > > > (CONFIG_GRKERNSEC_PERF_HARDEN).=C2=A0=C2=A0This version doesn't i=
+nclude
+> > > > > making
+> > > > > the variable read-only.=C2=A0=C2=A0It also allows enabling furthe=
+r
+> > > > > restriction
+> > > > > at run-time regardless of whether the default is changed.
+>=20
+> This Changelog is completely devoid of information. _WHY_ are you
+> doing
+> this?
+
+Attack surface reduction. It's possible to use seccomp-bpf for some
+limited cases, but it's not flexible enough. There are lots of
+information leaks and local privilege escalation vulnerabilities via
+perf events, yet on most Linux installs it's not ever being used. So
+turning it off by default on those installs is an easy win. The holes
+are reduced to root -> kernel (and that's not a meaningful boundary in
+mainline right now - although as is the case here, Debian has a bunch of
+securelevel patches for that).
+--=-eSXDaRwhwiDGyKDltTwA
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: This is a digitally signed message part
 Content-Transfer-Encoding: 7bit
@@ -40,19 +77,19 @@ Content-Transfer-Encoding: 7bit
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQIcBAABCAAGBQJXZBYuAAoJEPnnEuWa9fIqYyoQAJbeRecnZ9P/atJCDQIjvoSG
-/ZIRggK6MNygodYHlvAmsL4v+viXspB0dKYLZSkJDSEndPyLn+Z3gvl3pw0QHhMF
-ZlyO37RiuKeNVm8FbtmuUTV4Tf3TAAi1E5grocYotgs6FaRpvfrEumVfINBHVode
-wp7Hn8ODIEtKehlb81qE0sIeYL04zk+mt0U0wEQrJT7xaPmsSI7HB+8nvSlMeFK5
-OHyAVigd+Nlzd57xWjXa0ggWlKkMvJ5YfdsGr3m+pJOIoSga+4bRbSSgu5MZsiMd
-eK26/yhv8EVJdgjsMmfZDVJto2IeECU2AABP83G1aEfHZYBzuqn4VLNiS7IzwVLS
-feqCA7LdnVTSmOw7nCt7MDqn0sIWJhl2lU0U7GujElad1sxTArtdFIBeRJIyzoU0
-bmfFsClAmV4sx4Hto8JbHFj0JrTKfE0Pp7rCQpHzAVLruiIWLmpA5y6OFy7BT9/4
-GutiWhYMm8Kp6AgDYdQTEAPMm2gZStDpFUZIk3ETbHniScpmMInJzK25YiYbPVzv
-zWDVDAxOnkxAVdSHNa0VR3nN2GrrnxMQKp+uz4tPN7q9GB7N8Ng6tPEZ/hRqUJMq
-/VLo+d5ovH3PQQscgm14rquMQvYmHlegvrN7WuXW/uCNWyxkYXaO1P9EteA0uvKc
-YMVsa5lP4k9J43kG4pQg
-=Xn1G
+iQIcBAABCAAGBQJXZCJvAAoJEPnnEuWa9fIqw7sP/Rwcr0GvyzDShUJOj7VwA63w
+5iqBE1CEXTNvh8W8tgui3ThpbIgRc/M+IdfUjSN225l3AvSmOxKp366eoUwLAjO0
+DmPOFDbrApo5szN1mzb0xVkqhULAcNzdpscj4UOU7YyjMfQPAq91ntG29D0vo7sq
+WL6g6DMcsvySXgLDGNHS9GUjIkN7auaN0rOech7K880bhTm9FMRuxWvh8VtNgRF3
+vDIFayO/j9miEY9NIgw5StdlGFJELra5L8p0B0yHfh40AcX3lb4xrAMn4/D0AdZv
+Gt1EZeg0wLe0DlNdBEvJAcxIIhNNN0z0dQM88Y+tGlYBwJJEj62N75tGyrf2oCsr
+2Krf7xDoq5PzsUr5UFSvLBcQmq4MtxJ5A1Fp64M8IXniegWpPq5rrSZHSN4dExKz
+QF7woaeQg4aIgSGwJ2LCXJjm4fuF52VwkO+Q6tfku6Fc3nCQbR2St0t/mbUrySTG
+68bkrLX9QEEC1+ctlGTu3dNMAHdgaIfhrIJFlxyJ4aDBQJ9IagQab9s5XIMVFF9b
+GbzmmVQH+hXjgVKOWDu/a7Db4UBFb795qkwBq849FXyNAHZBKaUFX4AdMCBvapRk
+KhkzwClZOBCpGdpov0QaRchfEt5wQVD5g+BhK0AYIMtL5VgzNLhqTiBG79fXTtWh
+zFp+a98a3ifoOdC2fShQ
+=w64C
 -----END PGP SIGNATURE-----
 
---=-/Orb6oQdqJ+h9YjlZ8/l--
+--=-eSXDaRwhwiDGyKDltTwA--
