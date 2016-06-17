@@ -1,46 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 17 Jun 2016 08:54:27 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20160617065427.GL30154@twins.programming.kicks-ass.net>
+Message-ID: <1466177070.849.24.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Fri, 17 Jun 2016 11:24:30 -0400
+In-Reply-To: <871t3wuzmp.fsf@ashishki-desk.ger.corp.intel.com>
 References: <20160111151958.GQ28542@decadent.org.uk>
- <20160111152355.GS28542@decadent.org.uk>
- <CAGXu5jLT+GR8DEOYLaY4KgZJP=9HEX+w+=mz5fomAMTBr_2Zow@mail.gmail.com>
- <CABXk95BE3wpgq-Y08G+Z3ZJbxJwgiuVvtQGaV4n-tD6GKNiFKg@mail.gmail.com>
- <CAGXu5j+D00zz7dVPX4LpW41Gk=m7G_h25vZgOyYdVbW+wyvj6Q@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+D00zz7dVPX4LpW41Gk=m7G_h25vZgOyYdVbW+wyvj6Q@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH 2/2] security,perf: Allow further
+	 <20160111152355.GS28542@decadent.org.uk>
+	 <871t3wuzmp.fsf@ashishki-desk.ger.corp.intel.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-/Orb6oQdqJ+h9YjlZ8/l"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [PATCH 2/2] security,perf: Allow further
  restriction of perf_event_open
-To: Kees Cook <keescook@chromium.org>
-Cc: Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+To: kernel-hardening@lists.openwall.com, Ben Hutchings <ben@decadent.org.uk>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 16, 2016 at 03:27:55PM -0700, Kees Cook wrote:
-> Hi guys,
-> 
-> This patch wasn't originally CCed to you (I'm fixing that now). Would
-> you consider taking this into the perf tree? 
 
-No.
+--=-/Orb6oQdqJ+h9YjlZ8/l
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> It's been in active use
-> in both Debian and Android for a while now.
+> As a debian user, is this a good place to complain? Because it does
+> get
+> it the way.
 
-Very nice of you all to finally inform us I suppose :/
+It would be relevant to whether or not it should be set to 3 by default
+in the kernel without explicit configuration, but there's no proposal to
+do that. Debian has to pick a trade-off beyond security and a tiny
+roadblock for developers. It's not always the case though.
 
-> >>> When kernel.perf_event_open is set to 3 (or greater), disallow all
-> >>> access to performance events by users without CAP_SYS_ADMIN.
-> >>> Add a Kconfig symbol CONFIG_SECURITY_PERF_EVENTS_RESTRICT that
-> >>> makes this value the default.
-> >>>
-> >>> This is based on a similar feature in grsecurity
-> >>> (CONFIG_GRKERNSEC_PERF_HARDEN).  This version doesn't include making
-> >>> the variable read-only.  It also allows enabling further restriction
-> >>> at run-time regardless of whether the default is changed.
+In Android, there's userspace integration allowing it to be toggled by
+the Android Debugging Bridge shell user so profiling tools are being
+taught to automatically toggle it. Enabling ADB and then using it for
+profiling is an implicit opt-in.
+--=-/Orb6oQdqJ+h9YjlZ8/l
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-This Changelog is completely devoid of information. _WHY_ are you doing
-this?
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-Also, hate the CONFIG.
+iQIcBAABCAAGBQJXZBYuAAoJEPnnEuWa9fIqYyoQAJbeRecnZ9P/atJCDQIjvoSG
+/ZIRggK6MNygodYHlvAmsL4v+viXspB0dKYLZSkJDSEndPyLn+Z3gvl3pw0QHhMF
+ZlyO37RiuKeNVm8FbtmuUTV4Tf3TAAi1E5grocYotgs6FaRpvfrEumVfINBHVode
+wp7Hn8ODIEtKehlb81qE0sIeYL04zk+mt0U0wEQrJT7xaPmsSI7HB+8nvSlMeFK5
+OHyAVigd+Nlzd57xWjXa0ggWlKkMvJ5YfdsGr3m+pJOIoSga+4bRbSSgu5MZsiMd
+eK26/yhv8EVJdgjsMmfZDVJto2IeECU2AABP83G1aEfHZYBzuqn4VLNiS7IzwVLS
+feqCA7LdnVTSmOw7nCt7MDqn0sIWJhl2lU0U7GujElad1sxTArtdFIBeRJIyzoU0
+bmfFsClAmV4sx4Hto8JbHFj0JrTKfE0Pp7rCQpHzAVLruiIWLmpA5y6OFy7BT9/4
+GutiWhYMm8Kp6AgDYdQTEAPMm2gZStDpFUZIk3ETbHniScpmMInJzK25YiYbPVzv
+zWDVDAxOnkxAVdSHNa0VR3nN2GrrnxMQKp+uz4tPN7q9GB7N8Ng6tPEZ/hRqUJMq
+/VLo+d5ovH3PQQscgm14rquMQvYmHlegvrN7WuXW/uCNWyxkYXaO1P9EteA0uvKc
+YMVsa5lP4k9J43kG4pQg
+=Xn1G
+-----END PGP SIGNATURE-----
+
+--=-/Orb6oQdqJ+h9YjlZ8/l--
