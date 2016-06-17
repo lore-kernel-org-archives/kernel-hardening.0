@@ -1,14 +1,15 @@
 Reply-To: kernel-hardening@lists.openwall.com
 Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 17 Jun 2016 11:07:30 +0200
+Date: Fri, 17 Jun 2016 11:35:23 +0200
 From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160617090730.GD4791@gmail.com>
+Message-ID: <20160617093523.GA15501@gmail.com>
 References: <1460757793-59020-1-git-send-email-thgarnie@google.com>
  <1460757793-59020-4-git-send-email-thgarnie@google.com>
+ <20160617090730.GD4791@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1460757793-59020-4-git-send-email-thgarnie@google.com>
+In-Reply-To: <20160617090730.GD4791@gmail.com>
 Subject: [kernel-hardening] Re: [RFC v1 3/4] x86, boot: Implement ASLR for kernel memory
  sections (x86_64)
 To: Thomas Garnier <thgarnie@google.com>
@@ -16,12 +17,17 @@ Cc: "H . Peter Anvin" <hpa@zytor.com>, Thomas Gleixner <tglx@linutronix.de>, Ing
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-* Thomas Garnier <thgarnie@google.com> wrote:
+* Ingo Molnar <mingo@kernel.org> wrote:
 
->  arch/x86/include/asm/kaslr.h            |  12 +++
+> 
+> * Thomas Garnier <thgarnie@google.com> wrote:
+> 
+> >  arch/x86/include/asm/kaslr.h            |  12 +++
+> 
+> Hm, what tree is this patch against? asm/kaslr.h does not exist upstream or in the 
+> x86 tree.
 
-Hm, what tree is this patch against? asm/kaslr.h does not exist upstream or in the 
-x86 tree.
+Ah, never mind, introduced by the first patch.
 
 Thanks,
 
