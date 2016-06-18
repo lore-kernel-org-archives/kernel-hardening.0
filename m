@@ -1,34 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 18 Jun 2016 12:37:08 +0200
-From: Borislav Petkov <bp@alien8.de>
-Message-ID: <20160618103708.GB3841@pd.tnic>
-References: <cover.1466192946.git.luto@kernel.org>
- <3336bb02792d56c49d18e2f7a435fd194a4a22e4.1466192946.git.luto@kernel.org>
- <20160617203045.GB3842@pd.tnic>
- <CALCETrW-i8p=w5PTW817kAmfybHUntYkcAjc6sUsFJGcDGdnMA@mail.gmail.com>
+Date: Sat, 18 Jun 2016 11:01:18 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160618180118.GA32456@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CALCETrW-i8p=w5PTW817kAmfybHUntYkcAjc6sUsFJGcDGdnMA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 03/13] x86/cpa: Warn if kernel_unmap_pages_in_pgd is
- used inappropriately
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Matt Fleming <matt@codeblueprint.co.uk>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>
+Subject: [kernel-hardening] [PATCH] kbuild: no gcc-plugins during cc-option tests
+To: linux-kernel@vger.kernel.org
+Cc: Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Emese Revfy <re.emese@gmail.com>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 18, 2016 at 03:29:01AM -0700, Andy Lutomirski wrote:
-> I'll do one better: the only function that calls this function is
-> unused.  I'll just delete it.
+From: Emese Revfy <re.emese@gmail.com>
 
-Fair enough - Matt is on CC.
+The gcc-plugins arguments should not be included when performing
+cc-option tests.
 
-Btw, normally I'm almost never talking to you at that time of the day,
-what's up? Can't sleep?
+Steps to reproduce:
+1) make mrproper
+2) make defconfig
+3) enable GCC_PLUGINS, GCC_PLUGIN_CYC_COMPLEXITY
+4) enable FUNCTION_TRACER (it will select other options as well)
+5) make && make modules
 
-:-))
+Build errors:
+MODPOST 18 modules
+ERROR: "__fentry__" [net/netfilter/xt_nat.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/xt_mark.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/xt_addrtype.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/xt_LOG.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/nf_nat_sip.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/nf_nat_irc.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/nf_nat_ftp.ko] undefined!
+ERROR: "__fentry__" [net/netfilter/nf_nat.ko] undefined!
+
+Reported-by: Laura Abbott <labbott@redhat.com>
+Signed-off-by: Emese Revfy <re.emese@gmail.com>
+[kees: renamed variable, clarified commit message]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+I can carry this in my kspp tree for -next
+---
+ scripts/Kbuild.include | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 0f82314621f2..f585766989c2 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -108,16 +108,19 @@ as-option = $(call try-run,\
+ as-instr = $(call try-run,\
+ 	printf "%b\n" "$(1)" | $(CC) $(KBUILD_AFLAGS) -c -x assembler -o "$$TMP" -,$(2),$(3))
+ 
++# Do not attempt to build with gcc plugins during cc-option tests.
++CC_OPTION_CFLAGS = $(filter-out $(GCC_PLUGINS_CFLAGS),$(KBUILD_CFLAGS))
++
+ # cc-option
+ # Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
+ 
+ cc-option = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
++	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
+ 
+ # cc-option-yn
+ # Usage: flag := $(call cc-option-yn,-march=winchip-c6)
+ cc-option-yn = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
++	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
+ 
+ # cc-option-align
+ # Prefix align with either -falign or -malign
+@@ -127,7 +130,7 @@ cc-option-align = $(subst -functions=0,,\
+ # cc-disable-warning
+ # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
+ cc-disable-warning = $(call try-run,\
+-	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
++	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
+ 
+ # cc-name
+ # Expands to either gcc or clang
+-- 
+2.7.4
+
 
 -- 
-Regards/Gruss,
-    Boris.
-
-ECO tip #101: Trim your mails when you reply.
+Kees Cook
+Chrome OS & Brillo Security
