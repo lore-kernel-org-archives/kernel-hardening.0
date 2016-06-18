@@ -1,83 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 18 Jun 2016 11:01:18 -0700
+Date: Sat, 18 Jun 2016 11:03:20 -0700
 From: Kees Cook <keescook@chromium.org>
-Message-ID: <20160618180118.GA32456@www.outflux.net>
+Message-ID: <20160618180320.GA862@www.outflux.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] kbuild: no gcc-plugins during cc-option tests
-To: linux-kernel@vger.kernel.org
-Cc: Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Emese Revfy <re.emese@gmail.com>, Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] [PATCH] latent_entropy: provide userspace visibility
+To: kernel-hardening@lists.openwall.com
+Cc: Emese Revfy <re.emese@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Emese Revfy <re.emese@gmail.com>
+This is just a toy to look at the latent_entropy value as it changes
+from userspace. Not intended for actual use...
 
-The gcc-plugins arguments should not be included when performing
-cc-option tests.
-
-Steps to reproduce:
-1) make mrproper
-2) make defconfig
-3) enable GCC_PLUGINS, GCC_PLUGIN_CYC_COMPLEXITY
-4) enable FUNCTION_TRACER (it will select other options as well)
-5) make && make modules
-
-Build errors:
-MODPOST 18 modules
-ERROR: "__fentry__" [net/netfilter/xt_nat.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/xt_mark.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/xt_addrtype.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/xt_LOG.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/nf_nat_sip.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/nf_nat_irc.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/nf_nat_ftp.ko] undefined!
-ERROR: "__fentry__" [net/netfilter/nf_nat.ko] undefined!
-
-Reported-by: Laura Abbott <labbott@redhat.com>
-Signed-off-by: Emese Revfy <re.emese@gmail.com>
-[kees: renamed variable, clarified commit message]
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
-I can carry this in my kspp tree for -next
----
- scripts/Kbuild.include | 9 ++++++---
- 1 file changed, 6 insertions(+), 3 deletions(-)
+ kernel/ksysfs.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
-diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
-index 0f82314621f2..f585766989c2 100644
---- a/scripts/Kbuild.include
-+++ b/scripts/Kbuild.include
-@@ -108,16 +108,19 @@ as-option = $(call try-run,\
- as-instr = $(call try-run,\
- 	printf "%b\n" "$(1)" | $(CC) $(KBUILD_AFLAGS) -c -x assembler -o "$$TMP" -,$(2),$(3))
+diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
+index 152da4a48867..64aed735098a 100644
+--- a/kernel/ksysfs.c
++++ b/kernel/ksysfs.c
+@@ -180,6 +180,15 @@ static ssize_t rcu_normal_store(struct kobject *kobj,
+ KERNEL_ATTR_RW(rcu_normal);
+ #endif /* #ifndef CONFIG_TINY_RCU */
  
-+# Do not attempt to build with gcc plugins during cc-option tests.
-+CC_OPTION_CFLAGS = $(filter-out $(GCC_PLUGINS_CFLAGS),$(KBUILD_CFLAGS))
++#ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
++static ssize_t latent_entropy_show(struct kobject *kobj,
++				   struct kobj_attribute *attr, char *buf)
++{
++	return sprintf(buf, "0x%08llx\n", latent_entropy);
++}
++KERNEL_ATTR_RO(latent_entropy);
++#endif
 +
- # cc-option
- # Usage: cflags-y += $(call cc-option,-march=winchip-c6,-march=i586)
+ /*
+  * Make /sys/kernel/notes give the raw contents of our kernel .notes section.
+  */
+@@ -225,6 +234,9 @@ static struct attribute * kernel_attrs[] = {
+ 	&rcu_expedited_attr.attr,
+ 	&rcu_normal_attr.attr,
+ #endif
++#ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
++	&latent_entropy_attr.attr,
++#endif
+ 	NULL
+ };
  
- cc-option = $(call try-run,\
--	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
-+	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",$(1),$(2))
- 
- # cc-option-yn
- # Usage: flag := $(call cc-option-yn,-march=winchip-c6)
- cc-option-yn = $(call try-run,\
--	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
-+	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) $(1) -c -x c /dev/null -o "$$TMP",y,n)
- 
- # cc-option-align
- # Prefix align with either -falign or -malign
-@@ -127,7 +130,7 @@ cc-option-align = $(subst -functions=0,,\
- # cc-disable-warning
- # Usage: cflags-y += $(call cc-disable-warning,unused-but-set-variable)
- cc-disable-warning = $(call try-run,\
--	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
-+	$(CC) $(KBUILD_CPPFLAGS) $(CC_OPTION_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
- 
- # cc-name
- # Expands to either gcc or clang
 -- 
 2.7.4
 
