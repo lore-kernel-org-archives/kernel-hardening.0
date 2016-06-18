@@ -1,138 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 18 Jun 2016 11:14:37 -0700
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20160618181437.GA2633@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [RFC][PATCH] gcc-plugins: abort builds cleanly when not supported
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Michal Marek <mmarek@suse.com>, linux-kbuild@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: keescook@google.com
+In-Reply-To: <3694.1466127526@turing-police.cc.vt.edu>
+References: <1465420302-23754-1-git-send-email-keescook@chromium.org>
+ <9020.1466040627@turing-police.cc.vt.edu> <CAGXu5jKcLHy3t0C7RyX8xXYowhYuh0rO+WPxWQFKuSn9LN6sjA@mail.gmail.com>
+ <16741.1466120212@turing-police.cc.vt.edu> <3694.1466127526@turing-police.cc.vt.edu>
+From: Kees Cook <keescook@chromium.org>
+Date: Sat, 18 Jun 2016 12:30:31 -0700
+Message-ID: <CAGXu5jLX5aAm=m0Smyec4xxTJxsJN-nzDk0GQ22jiXmYDK4rkw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC][PATCH v2 0/4] mm: Hardened usercopy
+To: Valdis Kletnieks <Valdis.Kletnieks@vt.edu>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, PaX Team <pageexec@freemail.hu>, Casey Schaufler <casey.schaufler@intel.com>, Rik van Riel <riel@redhat.com>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When the compiler doesn't support gcc plugins (either due to missing
-headers or too old a version), report the problem and abort the build
-instead of emitting a warning and letting the build founder with arcane
-compiler errors.
+On Thu, Jun 16, 2016 at 6:38 PM,  <Valdis.Kletnieks@vt.edu> wrote:
+> On Thu, 16 Jun 2016 19:36:52 -0400, Valdis.Kletnieks@vt.edu said:
+>
+>> stuff is working.  I may whomp on it with trinity for a while, see if
+>> anything falls out...
+>
+> Woo hoo! Bagged one! :)  (Haven't figured out yet if actual bug, or missing
+> annotation)
+>
+> [ 4033.178386] NET: Registered protocol family 21
+> [ 4033.226806] NET: Registered protocol family 38
+> [ 4033.256276] Guest personality initialized and is inactive
+> [ 4033.256797] VMCI host device registered (name=vmci, major=10, minor=53)
+> [ 4033.256801] Initialized host personality
+> [ 4033.266376] NET: Registered protocol family 40
+> [ 4033.365982] NET: Registered protocol family 24
+> [ 4033.413031] irda_setsockopt: not allowed to set MAXSDUSIZE for this socket type!
+> [ 4033.531569] sock: process `trinity-main' is using obsolete setsockopt SO_BSDCOMPAT
+> [ 4033.834839] irda_setsockopt: not allowed to set MAXSDUSIZE for this socket type!
+> [ 4034.444515] irda_setsockopt: not allowed to set MAXSDUSIZE for this socket type!
+> [ 4034.569913] sctp: [Deprecated]: trinity-main (pid 19154) Use of int in max_burst socket option deprecated.
+> [ 4034.569913] Use struct sctp_assoc_value instead
+> [ 4034.728723] usercopy: kernel memory overwrite attempt detected to ffff8801ecef4700 (SCTP) (4 bytes)
+> [ 4034.728730] CPU: 3 PID: 19154 Comm: trinity-main Tainted: G           OE   4.7.0-rc3-next-20160614-dirty #302
+> [ 4034.728732] Hardware name: Dell Inc. Latitude E6530/07Y85M, BIOS A17 08/19/2015
+> [ 4034.728734]  0000000000000000 0000000063913a95 ffff8801f8b33da8 ffffffffb269f61a
+> [ 4034.728740]  ffff8801ecef4700 0000000063913a95 0000000000000004 0000000000000000
+> [ 4034.728744]  ffff8801f8b33df8 ffffffffb2367b30 0000000000000004 ffffea0006bd4580
+> [ 4034.728748] Call Trace:
+> [ 4034.728754]  [<ffffffffb269f61a>] dump_stack+0x7b/0xd1
+> [ 4034.728758]  [<ffffffffb2367b30>] __check_object_size+0x70/0x3d4
+> [ 4034.728761]  [<ffffffffb2eae5e4>] sctp_setsockopt.part.9+0x684/0x1e70
+> [ 4034.728764]  [<ffffffffb236f002>] ? __vfs_write+0x22/0x2e0
+> [ 4034.728767]  [<ffffffffb2eafe3e>] sctp_setsockopt+0x6e/0xe0
+> [ 4034.728770]  [<ffffffffb2bd1d0a>] sock_common_setsockopt+0x3a/0xc0
+> [ 4034.728772]  [<ffffffffb2bcfb99>] SyS_setsockopt+0x89/0x120
+> [ 4034.728775]  [<ffffffffb30896e5>] entry_SYSCALL_64_fastpath+0x18/0xa8
+> [ 4034.728779]  [<ffffffffb2143e3f>] ? trace_hardirqs_off_caller+0x1f/0xf0
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-I think this greatly improves the failure case when trying to use the
-gcc plugin infrastructure. Emese, what do you think of this?
----
- Makefile                     |  7 -------
- scripts/Makefile.gcc-plugins | 34 +++++++++++++++++++++++++---------
- scripts/gcc-plugin.sh        | 14 ++++++++++++++
- 3 files changed, 39 insertions(+), 16 deletions(-)
+Cool, interesting. I don't see anything obvious in grsecurity's
+patches that covers this, so either I'm missing something else, or
+this bug exists there too. (Though not a lot of people use SCTP,
+though.)
 
-diff --git a/Makefile b/Makefile
-index ab124a0e5e0d..5c61a7155d50 100644
---- a/Makefile
-+++ b/Makefile
-@@ -633,13 +633,6 @@ endif
- # Tell gcc to never replace conditional load with a non-conditional one
- KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
- 
--PHONY += gcc-plugins
--gcc-plugins: scripts_basic
--ifdef CONFIG_GCC_PLUGINS
--	$(Q)$(MAKE) $(build)=scripts/gcc-plugins
--endif
--	@:
--
- include scripts/Makefile.gcc-plugins
- 
- ifdef CONFIG_READABLE_ASM
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index cd7902ccd119..61fc4bbe0c21 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -29,21 +29,37 @@ ifdef CONFIG_GCC_PLUGINS
- 
-   export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
- 
-+  ifneq ($(PLUGINCC),)
-+    # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
-+    GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
-+  endif
-+
-+  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
-+  GCC_PLUGIN := $(gcc-plugin-y)
-+endif
-+
-+# If plugins aren't supported, abort the build before hard-to-read compiler
-+# errors start getting spewed by the main build.
-+PHONY += gcc-plugins-check
-+gcc-plugins-check: FORCE
-+ifdef CONFIG_GCC_PLUGINS
-   ifeq ($(PLUGINCC),)
-     ifneq ($(GCC_PLUGINS_CFLAGS),)
-       ifeq ($(call cc-ifversion, -ge, 0405, y), y)
--        PLUGINCC := $(shell $(CONFIG_SHELL) -x $(srctree)/scripts/gcc-plugin.sh "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)")
--        $(warning warning: your gcc installation does not support plugins, perhaps the necessary headers are missing?)
-+	$(Q)$(srctree)/scripts/gcc-plugin.sh --show-error "$(__PLUGINCC)" "$(HOSTCXX)" "$(CC)" || true
-+	@echo "Cannot use CONFIG_GCC_PLUGINS: your gcc installation does not support plugins, perhaps the necessary headers are missing?" >&2 && exit 1
-       else
--        $(warning warning: your gcc version does not support plugins, you should upgrade it to gcc 4.5 at least)
-+	@echo "Cannot use CONFIG_GCC_PLUGINS: your gcc version does not support plugins, you should upgrade it to at least gcc 4.5" >&2 && exit 1
-       endif
-     endif
--  else
--    # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
--    GCC_PLUGINS_CFLAGS := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGINS_CFLAGS))
-   endif
-+endif
-+	@:
- 
--  KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
--  GCC_PLUGIN := $(gcc-plugin-y)
--
-+# Actually do the build, if requested.
-+PHONY += gcc-plugins
-+gcc-plugins: scripts_basic gcc-plugins-check
-+ifdef CONFIG_GCC_PLUGINS
-+	$(Q)$(MAKE) $(build)=scripts/gcc-plugins
- endif
-+	@:
-diff --git a/scripts/gcc-plugin.sh b/scripts/gcc-plugin.sh
-index fb9207565471..b65224bfb847 100755
---- a/scripts/gcc-plugin.sh
-+++ b/scripts/gcc-plugin.sh
-@@ -1,5 +1,12 @@
- #!/bin/sh
- srctree=$(dirname "$0")
-+
-+SHOW_ERROR=
-+if [ "$1" = "--show-error" ] ; then
-+	SHOW_ERROR=1
-+	shift || true
-+fi
-+
- gccplugins_dir=$($3 -print-file-name=plugin)
- plugincc=$($1 -E -x c++ - -o /dev/null -I"${srctree}"/gcc-plugins -I"${gccplugins_dir}"/include 2>&1 <<EOF
- #include "gcc-common.h"
-@@ -13,6 +20,9 @@ EOF
- 
- if [ $? -ne 0 ]
- then
-+	if [ -n "$SHOW_ERROR" ] ; then
-+		echo "${plugincc}" >&2
-+	fi
- 	exit 1
- fi
- 
-@@ -48,4 +58,8 @@ then
- 	echo "$2"
- 	exit 0
- fi
-+
-+if [ -n "$SHOW_ERROR" ] ; then
-+	echo "${plugincc}" >&2
-+fi
- exit 1
--- 
-2.7.4
+> Do we have a good place to collect these, or should I just post them here
+> as I find stuff?
 
+For now, let's just collect them on the list, and any patches that
+might solve them. I'm hoping to add the copy_*_user_n() API to help
+with these.
+
+-Kees
 
 -- 
 Kees Cook
