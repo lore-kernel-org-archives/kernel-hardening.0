@@ -1,41 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160620133614.GE9892@dhcp22.suse.cz>
-References: <cover.1466192946.git.luto@kernel.org> <44f658aacbabd9d1689b3e0aae60ee8746881eff.1466192946.git.luto@kernel.org>
- <20160620133614.GE9892@dhcp22.suse.cz>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Mon, 20 Jun 2016 09:13:55 -0700
-Message-ID: <CALCETrV3M0a4Xyro21Rz8gpkq1b8PnFUZm_NPnBr0BBO8HS6ug@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v2 06/13] fork: Add generic vmalloced stack support
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Date: Mon, 20 Jun 2016 20:39:10 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [PATCH v4 0/4] Introduce the latent_entropy gcc plugin
+To: kernel-hardening@lists.openwall.com
+Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, tytso@mit.edu, akpm@linux-foundation.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 20, 2016 at 6:36 AM, Michal Hocko <mhocko@kernel.org> wrote:
-> On Fri 17-06-16 13:00:42, Andy Lutomirski wrote:
->> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
->> vmalloc_node.
->
-> I like this! It also reduces demand for higher order (order-2) pages
-> considerably which is a great plus on its own. I would be little bit
-> worried about the performance because vmalloc wasn't the fastest one
-> AFAIR. Have you tried to measure that?
+I would like to introduce the latent_entropy gcc plugin. This plugin
+mitigates the problem of the kernel having too little entropy during and
+after boot for generating crypto keys.
 
-It seems to add about 1.5=C2=B5s to pthread_create+join on my laptop.  (On
-an unmodified, stripped-down kernel, it took about 7=C2=B5s before.  On a
-Fedora system, the baseline is much worse.)  I think that most of the
-overhead is because vmalloc allocates one page at a time, which means
-that it won't use a higher order page even if one is sitting on a
-freelist.
+This plugin mixes random values into the latent_entropy global variable
+in functions marked by the __latent_entropy attribute.
+The value of this global variable is added to the kernel entropy pool
+to increase the entropy.
 
-I can imagine better integration with the page allocator in which
-higher order pages are used if readily available.  Similarly, vfree
-could free pages that happen to be aligned and consecutive as a unit
-to avoid the overhead of merging them back together one at a time.
+It is a CII project supported by the Linux Foundation.
 
-But I'm not planning on doing any of this myself any time soon.  I
-just want to get the code working and merged.
+The latent_entropy plugin was ported from grsecurity/PaX originally written
+by the PaX Team. You can find more about the plugin here:
+https://grsecurity.net/pipermail/grsecurity/2012-July/001093.html
 
---Andy
+The plugin supports all gcc version from 4.5 to 6.0.
+
+I do some changes above the PaX version. The important one is mixing
+the stack pointer into the global variable too.
+You can find more about the changes here:
+https://github.com/ephox-gcc-plugins/latent_entropy
+
+This patch set is based on the "Introduce GCC plugin infrastructure"
+patch set (git/mmarek/kbuild.git#kbuild HEAD: 543c37cb165049c3be).
+
+Emese Revfy (4):
+ Add support for passing gcc plugin arguments
+ Add the latent_entropy gcc plugin
+ Mark functions with the latent_entropy attribute
+ Add the extra_latent_entropy kernel parameter
+
+
+Changes from v3:
+  * Fix disabling latent_entropy on some powerpc files
+    (Reported-by: Kees Cook <keescook@chromium.org>)
+  * Truncate the lines into <= 80 columns to follow the kernel coding style
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+
+Changes from v2:
+  * Moved the passing of gcc plugin arguments into a separate patch
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+  * Mix the global entropy variable with the stack pointer
+    (latent_entropy_plugin.c)
+  * Handle tail calls (latent_entropy_plugin.c)
+  * Fix some indentation related warnings suggested by checkpatch.pl
+    (latent_entropy_plugin.c)
+  * Commented some latent_entropy plugin code
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+
+Changes from v1:
+  * Remove unnecessary ifdefs
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+  * Separate the two definitions of add_latent_entropy()
+    (Suggested-by: Kees Cook <keescook@chromium.org>)
+  * Removed unnecessary global variable (latent_entropy_plugin.c)
+  * About the latent_entropy gcc attribute (latent_entropy_plugin.c)
+  * Measure the boot time performance impact of the latent_entropy plugin
+    (arch/Kconfig)
+
+---
+ Documentation/kernel-parameters.txt         |   5 +
+ arch/Kconfig                                |  23 +
+ arch/powerpc/kernel/Makefile                |   4 +
+ block/blk-softirq.c                         |   2 +-
+ drivers/char/random.c                       |   6 +-
+ fs/namespace.c                              |   1 +
+ include/linux/compiler-gcc.h                |   7 +
+ include/linux/compiler.h                    |   4 +
+ include/linux/fdtable.h                     |   2 +-
+ include/linux/genhd.h                       |   2 +-
+ include/linux/init.h                        |   5 +-
+ include/linux/random.h                      |  14 +-
+ init/main.c                                 |   1 +
+ kernel/fork.c                               |   7 +-
+ kernel/rcu/tiny.c                           |   2 +-
+ kernel/rcu/tree.c                           |   2 +-
+ kernel/sched/fair.c                         |   2 +-
+ kernel/softirq.c                            |   4 +-
+ kernel/time/timer.c                         |   2 +-
+ lib/irq_poll.c                              |   2 +-
+ lib/random32.c                              |   2 +-
+ mm/page_alloc.c                             |  31 ++
+ net/core/dev.c                              |   4 +-
+ scripts/Makefile.gcc-plugins                |  10 +-
+ scripts/gcc-plugins/Makefile                |   1 +
+ scripts/gcc-plugins/latent_entropy_plugin.c | 639 ++++++++++++++++++++++++++++
+ 26 files changed, 760 insertions(+), 24 deletions(-)
