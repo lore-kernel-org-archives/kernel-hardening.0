@@ -1,156 +1,104 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 20 Jun 2016 16:43:33 -0700
-Message-Id: <0b78b5c100c1c046c498f1085f40e9422e9d23f5.1466466093.git.luto@kernel.org>
+Date: Mon, 20 Jun 2016 16:43:34 -0700
+Message-Id: <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
 In-Reply-To: <cover.1466466093.git.luto@kernel.org>
 References: <cover.1466466093.git.luto@kernel.org>
 In-Reply-To: <cover.1466466093.git.luto@kernel.org>
 References: <cover.1466466093.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v3 03/13] x86/mm: Remove kernel_unmap_pages_in_pgd() and efi_cleanup_page_tables()
+Subject: [kernel-hardening] [PATCH v3 04/13] mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, linux-efi@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-kernel_unmap_pages_in_pgd() is dangerous: if a pgd entry in
-init_mm.pgd were to be cleared, callers would need to ensure that
-the pgd entry hadn't been propagated to any other pgd.
+Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
+zone.  This only makes sense if each kernel stack exists entirely in
+one zone, and allowing vmapped stacks could break this assumption.
 
-Its only caller was efi_cleanup_page_tables(), and that, in turn,
-was unused, so just delete both functions.  This leaves a couple of
-other helpers unused, so delete them, too.
+Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
+allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
+all architectures.  Keep it simple and use KiB.
 
-Cc: Matt Fleming <matt@codeblueprint.co.uk>
-Cc: linux-efi@vger.kernel.org
+Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+Cc: Johannes Weiner <hannes@cmpxchg.org>
+Cc: Michal Hocko <mhocko@kernel.org>
+Cc: linux-mm@kvack.org
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/x86/include/asm/efi.h           |  1 -
- arch/x86/include/asm/pgtable_types.h |  2 --
- arch/x86/mm/pageattr.c               | 28 ----------------------------
- arch/x86/platform/efi/efi.c          |  2 --
- arch/x86/platform/efi/efi_32.c       |  3 ---
- arch/x86/platform/efi/efi_64.c       |  5 -----
- 6 files changed, 41 deletions(-)
+ drivers/base/node.c    | 3 +--
+ fs/proc/meminfo.c      | 2 +-
+ include/linux/mmzone.h | 2 +-
+ kernel/fork.c          | 3 ++-
+ mm/page_alloc.c        | 3 +--
+ 5 files changed, 6 insertions(+), 7 deletions(-)
 
-diff --git a/arch/x86/include/asm/efi.h b/arch/x86/include/asm/efi.h
-index 78d1e7467eae..45ea38df86d4 100644
---- a/arch/x86/include/asm/efi.h
-+++ b/arch/x86/include/asm/efi.h
-@@ -125,7 +125,6 @@ extern void __init efi_map_region_fixed(efi_memory_desc_t *md);
- extern void efi_sync_low_kernel_mappings(void);
- extern int __init efi_alloc_page_tables(void);
- extern int __init efi_setup_page_tables(unsigned long pa_memmap, unsigned num_pages);
--extern void __init efi_cleanup_page_tables(unsigned long pa_memmap, unsigned num_pages);
- extern void __init old_map_region(efi_memory_desc_t *md);
- extern void __init runtime_code_page_mkexec(void);
- extern void __init efi_runtime_update_mappings(void);
-diff --git a/arch/x86/include/asm/pgtable_types.h b/arch/x86/include/asm/pgtable_types.h
-index 7b5efe264eff..0b9f58ad10c8 100644
---- a/arch/x86/include/asm/pgtable_types.h
-+++ b/arch/x86/include/asm/pgtable_types.h
-@@ -475,8 +475,6 @@ extern pmd_t *lookup_pmd_address(unsigned long address);
- extern phys_addr_t slow_virt_to_phys(void *__address);
- extern int kernel_map_pages_in_pgd(pgd_t *pgd, u64 pfn, unsigned long address,
- 				   unsigned numpages, unsigned long page_flags);
--void kernel_unmap_pages_in_pgd(pgd_t *root, unsigned long address,
--			       unsigned numpages);
- #endif	/* !__ASSEMBLY__ */
+diff --git a/drivers/base/node.c b/drivers/base/node.c
+index 560751bad294..27dc68a0ed2d 100644
+--- a/drivers/base/node.c
++++ b/drivers/base/node.c
+@@ -121,8 +121,7 @@ static ssize_t node_read_meminfo(struct device *dev,
+ 		       nid, K(node_page_state(nid, NR_FILE_MAPPED)),
+ 		       nid, K(node_page_state(nid, NR_ANON_PAGES)),
+ 		       nid, K(i.sharedram),
+-		       nid, node_page_state(nid, NR_KERNEL_STACK) *
+-				THREAD_SIZE / 1024,
++		       nid, node_page_state(nid, NR_KERNEL_STACK_KB),
+ 		       nid, K(node_page_state(nid, NR_PAGETABLE)),
+ 		       nid, K(node_page_state(nid, NR_UNSTABLE_NFS)),
+ 		       nid, K(node_page_state(nid, NR_BOUNCE)),
+diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
+index 83720460c5bc..239b5a06cee0 100644
+--- a/fs/proc/meminfo.c
++++ b/fs/proc/meminfo.c
+@@ -145,7 +145,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
+ 				global_page_state(NR_SLAB_UNRECLAIMABLE)),
+ 		K(global_page_state(NR_SLAB_RECLAIMABLE)),
+ 		K(global_page_state(NR_SLAB_UNRECLAIMABLE)),
+-		global_page_state(NR_KERNEL_STACK) * THREAD_SIZE / 1024,
++		global_page_state(NR_KERNEL_STACK_KB),
+ 		K(global_page_state(NR_PAGETABLE)),
+ #ifdef CONFIG_QUICKLIST
+ 		K(quicklist_total_size()),
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index 02069c23486d..63f05a7efb54 100644
+--- a/include/linux/mmzone.h
++++ b/include/linux/mmzone.h
+@@ -127,7 +127,7 @@ enum zone_stat_item {
+ 	NR_SLAB_RECLAIMABLE,
+ 	NR_SLAB_UNRECLAIMABLE,
+ 	NR_PAGETABLE,		/* used for pagetables */
+-	NR_KERNEL_STACK,
++	NR_KERNEL_STACK_KB,	/* measured in KiB */
+ 	/* Second 128 byte cacheline */
+ 	NR_UNSTABLE_NFS,	/* NFS unstable pages */
+ 	NR_BOUNCE,
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 5c2c355aa97f..be7f006af727 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -225,7 +225,8 @@ static void account_kernel_stack(struct thread_info *ti, int account)
+ {
+ 	struct zone *zone = page_zone(virt_to_page(ti));
  
- #endif /* _ASM_X86_PGTABLE_DEFS_H */
-diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-index 6a8026918bf6..762162af3662 100644
---- a/arch/x86/mm/pageattr.c
-+++ b/arch/x86/mm/pageattr.c
-@@ -746,18 +746,6 @@ static bool try_to_free_pmd_page(pmd_t *pmd)
- 	return true;
+-	mod_zone_page_state(zone, NR_KERNEL_STACK, account);
++	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
++			    THREAD_SIZE / 1024 * account);
  }
  
--static bool try_to_free_pud_page(pud_t *pud)
--{
--	int i;
--
--	for (i = 0; i < PTRS_PER_PUD; i++)
--		if (!pud_none(pud[i]))
--			return false;
--
--	free_page((unsigned long)pud);
--	return true;
--}
--
- static bool unmap_pte_range(pmd_t *pmd, unsigned long start, unsigned long end)
- {
- 	pte_t *pte = pte_offset_kernel(pmd, start);
-@@ -871,16 +859,6 @@ static void unmap_pud_range(pgd_t *pgd, unsigned long start, unsigned long end)
- 	 */
- }
- 
--static void unmap_pgd_range(pgd_t *root, unsigned long addr, unsigned long end)
--{
--	pgd_t *pgd_entry = root + pgd_index(addr);
--
--	unmap_pud_range(pgd_entry, addr, end);
--
--	if (try_to_free_pud_page((pud_t *)pgd_page_vaddr(*pgd_entry)))
--		pgd_clear(pgd_entry);
--}
--
- static int alloc_pte_page(pmd_t *pmd)
- {
- 	pte_t *pte = (pte_t *)get_zeroed_page(GFP_KERNEL | __GFP_NOTRACK);
-@@ -1993,12 +1971,6 @@ out:
- 	return retval;
- }
- 
--void kernel_unmap_pages_in_pgd(pgd_t *root, unsigned long address,
--			       unsigned numpages)
--{
--	unmap_pgd_range(root, address, address + (numpages << PAGE_SHIFT));
--}
--
- /*
-  * The testcases use internal knowledge of the implementation that shouldn't
-  * be exposed to the rest of the kernel. Include these directly here.
-diff --git a/arch/x86/platform/efi/efi.c b/arch/x86/platform/efi/efi.c
-index f93545e7dc54..62986e5fbdba 100644
---- a/arch/x86/platform/efi/efi.c
-+++ b/arch/x86/platform/efi/efi.c
-@@ -978,8 +978,6 @@ static void __init __efi_enter_virtual_mode(void)
- 	 * EFI mixed mode we need all of memory to be accessible when
- 	 * we pass parameters to the EFI runtime services in the
- 	 * thunking code.
--	 *
--	 * efi_cleanup_page_tables(__pa(new_memmap), 1 << pg_shift);
- 	 */
- 	free_pages((unsigned long)new_memmap, pg_shift);
- 
-diff --git a/arch/x86/platform/efi/efi_32.c b/arch/x86/platform/efi/efi_32.c
-index 338402b91d2e..cef39b097649 100644
---- a/arch/x86/platform/efi/efi_32.c
-+++ b/arch/x86/platform/efi/efi_32.c
-@@ -49,9 +49,6 @@ int __init efi_setup_page_tables(unsigned long pa_memmap, unsigned num_pages)
- {
- 	return 0;
- }
--void __init efi_cleanup_page_tables(unsigned long pa_memmap, unsigned num_pages)
--{
--}
- 
- void __init efi_map_region(efi_memory_desc_t *md)
- {
-diff --git a/arch/x86/platform/efi/efi_64.c b/arch/x86/platform/efi/efi_64.c
-index 6e7242be1c87..5ab219c2ba43 100644
---- a/arch/x86/platform/efi/efi_64.c
-+++ b/arch/x86/platform/efi/efi_64.c
-@@ -285,11 +285,6 @@ int __init efi_setup_page_tables(unsigned long pa_memmap, unsigned num_pages)
- 	return 0;
- }
- 
--void __init efi_cleanup_page_tables(unsigned long pa_memmap, unsigned num_pages)
--{
--	kernel_unmap_pages_in_pgd(efi_pgd, pa_memmap, num_pages);
--}
--
- static void __init __map_region(efi_memory_desc_t *md, u64 va)
- {
- 	unsigned long flags = _PAGE_RW;
+ void free_task(struct task_struct *tsk)
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 6903b695ebae..a277dea926c9 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -4457,8 +4457,7 @@ void show_free_areas(unsigned int filter)
+ 			K(zone_page_state(zone, NR_SHMEM)),
+ 			K(zone_page_state(zone, NR_SLAB_RECLAIMABLE)),
+ 			K(zone_page_state(zone, NR_SLAB_UNRECLAIMABLE)),
+-			zone_page_state(zone, NR_KERNEL_STACK) *
+-				THREAD_SIZE / 1024,
++			zone_page_state(zone, NR_KERNEL_STACK_KB),
+ 			K(zone_page_state(zone, NR_PAGETABLE)),
+ 			K(zone_page_state(zone, NR_UNSTABLE_NFS)),
+ 			K(zone_page_state(zone, NR_BOUNCE)),
 -- 
 2.5.5
