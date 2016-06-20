@@ -1,110 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 20 Jun 2016 16:43:30 -0700
-Message-Id: <cover.1466466093.git.luto@kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+Date: Mon, 20 Jun 2016 16:43:31 -0700
+Message-Id: <21d054b03ef8f7bade85f1937be719c711c6d379.1466466093.git.luto@kernel.org>
+In-Reply-To: <cover.1466466093.git.luto@kernel.org>
+References: <cover.1466466093.git.luto@kernel.org>
+In-Reply-To: <cover.1466466093.git.luto@kernel.org>
+References: <cover.1466466093.git.luto@kernel.org>
+Subject: [kernel-hardening] [PATCH v3 01/13] x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Denys Vlasenko <dvlasenk@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Rik van Riel <riel@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Waiman Long <Waiman.Long@hp.com>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Since the dawn of time, a kernel stack overflow has been a real PITA
-to debug, has caused nondeterministic crashes some time after the
-actual overflow, and has generally been easy to exploit for root.
+From: Ingo Molnar <mingo@kernel.org>
 
-With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
-that enable it (just x86 for now) get virtually mapped stacks with
-guard pages.  This causes reliable faults when the stack overflows.
+So when memory hotplug removes a piece of physical memory from pagetable
+mappings, it also frees the underlying PGD entry.
 
-If the arch implements it well, we get a nice OOPS on stack overflow
-(as opposed to panicing directly or otherwise exploding badly).  On
-x86, the OOPS is nice, has a usable call trace, and the overflowing
-task is killed cleanly.
+This complicates PGD management, so don't do this. We can keep the
+PGD mapped and the PUD table all clear - it's only a single 4K page
+per 512 GB of memory hotplugged.
 
-On my laptop, this adds about 1.5µs of overhead to task creation,
-which seems to be mainly caused by vmalloc inefficiently allocating
-individual pages even when a higher-order page is available on the
-freelist.
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Brian Gerst <brgerst@gmail.com>
+Cc: Denys Vlasenko <dvlasenk@redhat.com>
+Cc: H. Peter Anvin <hpa@zytor.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Rik van Riel <riel@redhat.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Waiman Long <Waiman.Long@hp.com>
+Cc: linux-mm@kvack.org
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+Message-Id: <1442903021-3893-4-git-send-email-mingo@kernel.org>
+---
+ arch/x86/mm/init_64.c | 27 ---------------------------
+ 1 file changed, 27 deletions(-)
 
-This does not address interrupt stacks.  It also does not address
-the possibility of privilege escalation by a controlled stack
-overflow that overwrites thread_info without hitting the guard page.
-I'll send patches to address the latter issue once this series
-lands.
-
-It's worth noting that s390 has an arch-specific gcc feature that
-detects stack overflows by adjusting function prologues.  Arches
-with features like that may wish to avoid using vmapped stacks to
-minimize the performance hit.
-
-Ingo, would it make sense to throw it into a seaparate branch in
--tip?  I wouldn't mind seeing some -next testing to give people a
-chance to shake out problems.  I'm particularly interested in
-whether there are any drivers that expect virt_to_phys to work on
-stack addresses.  (I know that virtio-net used to, but I fixed that
-a while back.)
-
-Changes from v2:
- - Delete kerne_unmap_pages_in_pgd rather than hardening it (Borislav)
- - Fix sub-page stack accounting better (Josh)
-
-Changes from v1:
- - Fix rewind_stack_and_do_exit (Josh)
- - Fix deadlock under load
- - Clean up generic stack vmalloc code
- - Many other minor fixes
-
-Andy Lutomirski (12):
-  x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
-  x86/mm: Remove kernel_unmap_pages_in_pgd() and
-    efi_cleanup_page_tables()
-  mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
-  mm: Fix memcg stack accounting for sub-page stacks
-  fork: Add generic vmalloced stack support
-  x86/die: Don't try to recover from an OOPS on a non-default stack
-  x86/dumpstack: When OOPSing, rewind the stack before do_exit
-  x86/dumpstack: When dumping stack bytes due to OOPS, start with
-    regs->sp
-  x86/dumpstack: Try harder to get a call trace on stack overflow
-  x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
-    OOPS
-  x86/mm/64: Enable vmapped stacks
-  x86/mm: Improve stack-overflow #PF handling
-
-Ingo Molnar (1):
-  x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
-
- arch/Kconfig                         | 29 ++++++++++++
- arch/ia64/include/asm/thread_info.h  |  2 +-
- arch/x86/Kconfig                     |  1 +
- arch/x86/entry/entry_32.S            | 11 +++++
- arch/x86/entry/entry_64.S            | 11 +++++
- arch/x86/include/asm/efi.h           |  1 -
- arch/x86/include/asm/pgtable_types.h |  2 -
- arch/x86/include/asm/switch_to.h     | 28 +++++++++++-
- arch/x86/include/asm/traps.h         |  6 +++
- arch/x86/kernel/dumpstack.c          | 19 +++++++-
- arch/x86/kernel/dumpstack_32.c       |  4 +-
- arch/x86/kernel/dumpstack_64.c       | 16 +++++--
- arch/x86/kernel/traps.c              | 32 ++++++++++++++
- arch/x86/mm/fault.c                  | 39 ++++++++++++++++
- arch/x86/mm/init_64.c                | 27 -----------
- arch/x86/mm/pageattr.c               | 32 ++------------
- arch/x86/mm/tlb.c                    | 15 +++++++
- arch/x86/platform/efi/efi.c          |  2 -
- arch/x86/platform/efi/efi_32.c       |  3 --
- arch/x86/platform/efi/efi_64.c       |  5 ---
- drivers/base/node.c                  |  3 +-
- fs/proc/meminfo.c                    |  2 +-
- include/linux/memcontrol.h           |  2 +-
- include/linux/mmzone.h               |  2 +-
- include/linux/sched.h                | 15 +++++++
- kernel/fork.c                        | 86 +++++++++++++++++++++++++++---------
- mm/memcontrol.c                      |  2 +-
- mm/page_alloc.c                      |  3 +-
- 28 files changed, 295 insertions(+), 105 deletions(-)
-
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index bce2e5d9edd4..c7465453d64e 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -702,27 +702,6 @@ static void __meminit free_pmd_table(pmd_t *pmd_start, pud_t *pud)
+ 	spin_unlock(&init_mm.page_table_lock);
+ }
+ 
+-/* Return true if pgd is changed, otherwise return false. */
+-static bool __meminit free_pud_table(pud_t *pud_start, pgd_t *pgd)
+-{
+-	pud_t *pud;
+-	int i;
+-
+-	for (i = 0; i < PTRS_PER_PUD; i++) {
+-		pud = pud_start + i;
+-		if (pud_val(*pud))
+-			return false;
+-	}
+-
+-	/* free a pud table */
+-	free_pagetable(pgd_page(*pgd), 0);
+-	spin_lock(&init_mm.page_table_lock);
+-	pgd_clear(pgd);
+-	spin_unlock(&init_mm.page_table_lock);
+-
+-	return true;
+-}
+-
+ static void __meminit
+ remove_pte_table(pte_t *pte_start, unsigned long addr, unsigned long end,
+ 		 bool direct)
+@@ -913,7 +892,6 @@ remove_pagetable(unsigned long start, unsigned long end, bool direct)
+ 	unsigned long addr;
+ 	pgd_t *pgd;
+ 	pud_t *pud;
+-	bool pgd_changed = false;
+ 
+ 	for (addr = start; addr < end; addr = next) {
+ 		next = pgd_addr_end(addr, end);
+@@ -924,13 +902,8 @@ remove_pagetable(unsigned long start, unsigned long end, bool direct)
+ 
+ 		pud = (pud_t *)pgd_page_vaddr(*pgd);
+ 		remove_pud_table(pud, addr, next, direct);
+-		if (free_pud_table(pud, pgd))
+-			pgd_changed = true;
+ 	}
+ 
+-	if (pgd_changed)
+-		sync_global_pgds(start, end - 1, 1);
+-
+ 	flush_tlb_all();
+ }
+ 
 -- 
 2.5.5
