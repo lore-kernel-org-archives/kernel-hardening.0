@@ -1,32 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 19 Jun 2016 20:44:20 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160619204420.95bf779ca0273dbda7415c27@gmail.com>
-In-Reply-To: <20160618181437.GA2633@www.outflux.net>
-References: <20160618181437.GA2633@www.outflux.net>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC][PATCH] gcc-plugins: abort builds cleanly when not
- supported
-To: Kees Cook <keescook@chromium.org>
-Cc: Michal Marek <mmarek@suse.com>, linux-kbuild@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Mon, 20 Jun 2016 07:58:36 +0200
+From: Heiko Carstens <heiko.carstens@de.ibm.com>
+References: <cover.1466036668.git.luto@kernel.org>
+ <20160616060538.GA3923@osiris>
+ <CALCETrVD6aLzvgHxTji0mm5Fzkqq_h-bxWqF1bv+7z33UrgYgA@mail.gmail.com>
+ <20160617072737.GA3960@osiris>
+ <CALCETrVh+w1Bj2K5QGvJwsbrGrrD_=zz1vWPC2zXUai6YB9dBA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CALCETrVh+w1Bj2K5QGvJwsbrGrrD_=zz1vWPC2zXUai6YB9dBA@mail.gmail.com>
+Message-Id: <20160620055836.GA3266@osiris>
+Subject: [kernel-hardening] Re: [PATCH 00/13] Virtually mapped stacks with guard pages (x86,
+ core)
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, X86 ML <x86@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brian Gerst <brgerst@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, 18 Jun 2016 11:14:37 -0700
-Kees Cook <keescook@chromium.org> wrote:
-
-> When the compiler doesn't support gcc plugins (either due to missing
-> headers or too old a version), report the problem and abort the build
-> instead of emitting a warning and letting the build founder with arcane
-> compiler errors.
+On Fri, Jun 17, 2016 at 10:38:24AM -0700, Andy Lutomirski wrote:
+> > A disassembly looks like this (r15 is the stackpointer):
+> >
+> > 0000000000000670 <setup_arch>:
+> >      670:       eb 6f f0 48 00 24       stmg    %r6,%r15,72(%r15)
+> >      676:       c0 d0 00 00 00 00       larl    %r13,676 <setup_arch+0x6>
+> >      67c:       a7 f1 3f 80             tmll    %r15,16256  <--- test if enough space left
+> >      680:       b9 04 00 ef             lgr     %r14,%r15
+> >      684:       a7 84 00 01             je      686 <setup_arch+0x16> <--- branch to illegal op
+> >      688:       e3 f0 ff 90 ff 71       lay     %r15,-112(%r15)
+> >
+> > The branch jumps actually into the branch instruction itself since the 0001
+> > part of the "je" instruction is an illegal instruction.
+> >
+> > This catches at least wild stack overflows because of two many functions
+> > being called.
+> >
+> > Of course it doesn't catch wild accesses outside the stack because e.g. the
+> > index into an array on the stack is wrong.
+> >
+> > The runtime overhead is within noise ratio, therefore we have this always
+> > enabled.
+> >
 > 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
-> I think this greatly improves the failure case when trying to use the
-> gcc plugin infrastructure. Emese, what do you think of this?
+> Neat!  What exactly does tmll do?  I assume this works by checking the
+> low bits of the stack pointer.
+> 
+> x86_64 would have to do:
+> 
+> movl %esp, %r11d
+> shll %r11d, $18
+> cmpl %r11d, <threshold>
+> jg error
+> 
+> Or similar.  I think the cmpl could be eliminated if the threshold
+> were a power of two by simply testing the low bits of the stack
+> pointer.
 
-I like it, it has much better error handling. :)
+The tmll instruction tests if any of the higher bits within the 16k
+stackframe address are set. In this specific case that would be bits 7-15
+(mask 0x3f80). If no bit would be set we know that only up to 128 bytes
+would be left on the stack, and thus trigger an exception.
 
--- 
-Emese
+This check does of course only work if a 16k stack is also 16k aligned,
+which is always the case.
