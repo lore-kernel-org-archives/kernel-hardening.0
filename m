@@ -1,112 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 20 Jun 2016 20:43:36 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160620204336.9f5ca671b32acf298ab4bc17@gmail.com>
-In-Reply-To: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
-References: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v4 4/4] Add the extra_latent_entropy kernel parameter
-To: kernel-hardening@lists.openwall.com
-Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, tytso@mit.edu, akpm@linux-foundation.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
+From: Andy Lutomirski <luto@kernel.org>
+Date: Mon, 20 Jun 2016 16:43:30 -0700
+Message-Id: <cover.1466466093.git.luto@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When extra_latent_entropy is passed on the kernel command line,
-entropy will be extracted from up to the first 4GB of RAM while the
-runtime memory allocator is being initialized.
+Since the dawn of time, a kernel stack overflow has been a real PITA
+to debug, has caused nondeterministic crashes some time after the
+actual overflow, and has generally been easy to exploit for root.
 
-Based on work created by the PaX Team.
+With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+that enable it (just x86 for now) get virtually mapped stacks with
+guard pages.  This causes reliable faults when the stack overflows.
 
-Signed-off-by: Emese Revfy <re.emese@gmail.com>
----
- Documentation/kernel-parameters.txt |  5 +++++
- arch/Kconfig                        |  5 +++++
- mm/page_alloc.c                     | 26 ++++++++++++++++++++++++++
- 3 files changed, 36 insertions(+)
+If the arch implements it well, we get a nice OOPS on stack overflow
+(as opposed to panicing directly or otherwise exploding badly).  On
+x86, the OOPS is nice, has a usable call trace, and the overflowing
+task is killed cleanly.
 
-diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-index 82b42c9..d870702 100644
---- a/Documentation/kernel-parameters.txt
-+++ b/Documentation/kernel-parameters.txt
-@@ -2862,6 +2862,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
- 			the specified number of seconds.  This is to be used if
- 			your oopses keep scrolling off the screen.
- 
-+	extra_latent_entropy
-+			Enable a very simple form of latent entropy extraction
-+			from the first 4GB of memory as the bootmem allocator
-+			passes the memory pages to the buddy allocator.
-+
- 	pcbit=		[HW,ISDN]
- 
- 	pcd.		[PARIDE]
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 4b7cc2f..3374d50 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -404,6 +404,11 @@ config GCC_PLUGIN_LATENT_ENTROPY
- 	  is some slowdown of the boot process (about 0.5%) and fork and
- 	  irq processing.
- 
-+	  When extra_latent_entropy is passed on the kernel command line,
-+	  entropy will be extracted from up to the first 4GB of RAM while the
-+	  runtime memory allocator is being initialized. This costs even more
-+	  slowdown of the boot process.
-+
- 	  Note that entropy extracted this way is not cryptographically
- 	  secure!
- 
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index ffc4f4a..0a40c12 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -63,6 +63,7 @@
- #include <linux/sched/rt.h>
- #include <linux/page_owner.h>
- #include <linux/kthread.h>
-+#include <linux/random.h>
- 
- #include <asm/sections.h>
- #include <asm/tlbflush.h>
-@@ -1234,6 +1235,15 @@ static void __free_pages_ok(struct page *page, unsigned int order)
- 	local_irq_restore(flags);
- }
- 
-+bool __meminitdata extra_latent_entropy;
-+
-+static int __init setup_extra_latent_entropy(char *str)
-+{
-+	extra_latent_entropy = true;
-+	return 0;
-+}
-+early_param("extra_latent_entropy", setup_extra_latent_entropy);
-+
- #ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
- volatile u64 latent_entropy __latent_entropy;
- EXPORT_SYMBOL(latent_entropy);
-@@ -1254,6 +1264,22 @@ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
- 	__ClearPageReserved(p);
- 	set_page_count(p, 0);
- 
-+	if (extra_latent_entropy && !PageHighMem(page) &&
-+		page_to_pfn(page) < 0x100000) {
-+		u64 hash = 0;
-+		size_t index, end = PAGE_SIZE * nr_pages / sizeof(hash);
-+		const u64 *data = lowmem_page_address(page);
-+
-+		for (index = 0; index < end; index++)
-+			hash ^= hash + data[index];
-+#ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
-+		latent_entropy ^= hash;
-+		add_device_randomness((const void *)&latent_entropy, sizeof(latent_entropy));
-+#else
-+		add_device_randomness((const void *)&hash, sizeof(hash));
-+#endif
-+	}
-+
- 	page_zone(page)->managed_pages += nr_pages;
- 	set_page_refcounted(page);
- 	__free_pages(page, order);
+On my laptop, this adds about 1.5µs of overhead to task creation,
+which seems to be mainly caused by vmalloc inefficiently allocating
+individual pages even when a higher-order page is available on the
+freelist.
+
+This does not address interrupt stacks.  It also does not address
+the possibility of privilege escalation by a controlled stack
+overflow that overwrites thread_info without hitting the guard page.
+I'll send patches to address the latter issue once this series
+lands.
+
+It's worth noting that s390 has an arch-specific gcc feature that
+detects stack overflows by adjusting function prologues.  Arches
+with features like that may wish to avoid using vmapped stacks to
+minimize the performance hit.
+
+Ingo, would it make sense to throw it into a seaparate branch in
+-tip?  I wouldn't mind seeing some -next testing to give people a
+chance to shake out problems.  I'm particularly interested in
+whether there are any drivers that expect virt_to_phys to work on
+stack addresses.  (I know that virtio-net used to, but I fixed that
+a while back.)
+
+Changes from v2:
+ - Delete kerne_unmap_pages_in_pgd rather than hardening it (Borislav)
+ - Fix sub-page stack accounting better (Josh)
+
+Changes from v1:
+ - Fix rewind_stack_and_do_exit (Josh)
+ - Fix deadlock under load
+ - Clean up generic stack vmalloc code
+ - Many other minor fixes
+
+Andy Lutomirski (12):
+  x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
+  x86/mm: Remove kernel_unmap_pages_in_pgd() and
+    efi_cleanup_page_tables()
+  mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
+  mm: Fix memcg stack accounting for sub-page stacks
+  fork: Add generic vmalloced stack support
+  x86/die: Don't try to recover from an OOPS on a non-default stack
+  x86/dumpstack: When OOPSing, rewind the stack before do_exit
+  x86/dumpstack: When dumping stack bytes due to OOPS, start with
+    regs->sp
+  x86/dumpstack: Try harder to get a call trace on stack overflow
+  x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
+    OOPS
+  x86/mm/64: Enable vmapped stacks
+  x86/mm: Improve stack-overflow #PF handling
+
+Ingo Molnar (1):
+  x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
+
+ arch/Kconfig                         | 29 ++++++++++++
+ arch/ia64/include/asm/thread_info.h  |  2 +-
+ arch/x86/Kconfig                     |  1 +
+ arch/x86/entry/entry_32.S            | 11 +++++
+ arch/x86/entry/entry_64.S            | 11 +++++
+ arch/x86/include/asm/efi.h           |  1 -
+ arch/x86/include/asm/pgtable_types.h |  2 -
+ arch/x86/include/asm/switch_to.h     | 28 +++++++++++-
+ arch/x86/include/asm/traps.h         |  6 +++
+ arch/x86/kernel/dumpstack.c          | 19 +++++++-
+ arch/x86/kernel/dumpstack_32.c       |  4 +-
+ arch/x86/kernel/dumpstack_64.c       | 16 +++++--
+ arch/x86/kernel/traps.c              | 32 ++++++++++++++
+ arch/x86/mm/fault.c                  | 39 ++++++++++++++++
+ arch/x86/mm/init_64.c                | 27 -----------
+ arch/x86/mm/pageattr.c               | 32 ++------------
+ arch/x86/mm/tlb.c                    | 15 +++++++
+ arch/x86/platform/efi/efi.c          |  2 -
+ arch/x86/platform/efi/efi_32.c       |  3 --
+ arch/x86/platform/efi/efi_64.c       |  5 ---
+ drivers/base/node.c                  |  3 +-
+ fs/proc/meminfo.c                    |  2 +-
+ include/linux/memcontrol.h           |  2 +-
+ include/linux/mmzone.h               |  2 +-
+ include/linux/sched.h                | 15 +++++++
+ kernel/fork.c                        | 86 +++++++++++++++++++++++++++---------
+ mm/memcontrol.c                      |  2 +-
+ mm/page_alloc.c                      |  3 +-
+ 28 files changed, 295 insertions(+), 105 deletions(-)
+
 -- 
-2.8.1
+2.5.5
