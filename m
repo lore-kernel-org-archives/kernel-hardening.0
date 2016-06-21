@@ -1,32 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Arnd Bergmann <arnd@arndb.de>
-Date: Tue, 21 Jun 2016 11:24:18 +0200
-Message-ID: <13212319.WrhLzgRA6Z@wuerfel>
-In-Reply-To: <cover.1466466093.git.luto@kernel.org>
+Date: Tue, 21 Jun 2016 12:46:25 +0300
+From: Vladimir Davydov <vdavydov@virtuozzo.com>
+Message-ID: <20160621094625.GA15970@esperanza>
 References: <cover.1466466093.git.luto@kernel.org>
+ <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="iso-8859-1"
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+Content-Type: text/plain; charset="us-ascii"
+Content-Disposition: inline
+In-Reply-To: <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 04/13] mm: Track NR_KERNEL_STACK in KiB instead of
+ number of stacks
 To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Monday, June 20, 2016 4:43:30 PM CEST Andy Lutomirski wrote:
->=20
-> On my laptop, this adds about 1.5=B5s of overhead to task creation,
-> which seems to be mainly caused by vmalloc inefficiently allocating
-> individual pages even when a higher-order page is available on the
-> freelist.
+On Mon, Jun 20, 2016 at 04:43:34PM -0700, Andy Lutomirski wrote:
+> Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
+> zone.  This only makes sense if each kernel stack exists entirely in
+> one zone, and allowing vmapped stacks could break this assumption.
+> 
+> Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
+> allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
+> all architectures.  Keep it simple and use KiB.
+> 
+> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+> Cc: Johannes Weiner <hannes@cmpxchg.org>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: linux-mm@kvack.org
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
 
-Would it help to have a fixed virtual address for the stack instead
-and map the current stack to that during a task switch, similar to
-how we handle fixmap pages?
-
-That would of course trade the allocation overhead for a task switch
-overhead, which may be better or worse. It would also give "current"
-a constant address, which may give a small performance advantage
-but may also introduce a new attack vector unless we randomize it
-again.
-
-	Arnd
+Reviewed-by: Vladimir Davydov <vdavydov@virtuozzo.com>
