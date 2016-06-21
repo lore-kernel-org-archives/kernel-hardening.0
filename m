@@ -1,65 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
-References: <cover.1466466093.git.luto@kernel.org> <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
- <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com>
- <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com> <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Tue, 21 Jun 2016 10:28:05 -0700
-Message-ID: <CALCETrWLAS4sSmN4ejVhK3vDsqNEQEh3RU5ps1iXtAoighaYsw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic vmalloced stack support
-To: Kees Cook <keescook@chromium.org>
-Cc: Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Message-ID: <1466532133.2756.50.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Tue, 21 Jun 2016 14:02:13 -0400
+In-Reply-To: <CAGXu5jJaWxcOKLtXG3r1XWE8NpL=GFSZwmV_UYjjv6q0135ETQ@mail.gmail.com>
+References: <cover.1466466093.git.luto@kernel.org>
+	 <13212319.WrhLzgRA6Z@wuerfel>
+	 <CAGXu5jJaWxcOKLtXG3r1XWE8NpL=GFSZwmV_UYjjv6q0135ETQ@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-CorTQSSXHM2WOtKrQ0Sl"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks
+ with guard pages (x86, core)
+To: kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>
+Cc: Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 21, 2016 at 10:13 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, Jun 21, 2016 at 9:59 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Tue, Jun 21, 2016 at 12:30 AM, Jann Horn <jannh@google.com> wrote:
->>> On Tue, Jun 21, 2016 at 1:43 AM, Andy Lutomirski <luto@kernel.org> wrote:
->>>> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
->>>> vmalloc_node.
->>> [...]
->>>>  static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
->>>>                                                   int node)
->>>>  {
->>>> +#ifdef CONFIG_VMAP_STACK
->>>> +       struct thread_info *ti = __vmalloc_node_range(
->>>> +               THREAD_SIZE, THREAD_SIZE, VMALLOC_START, VMALLOC_END,
->>>> +               THREADINFO_GFP | __GFP_HIGHMEM, PAGE_KERNEL,
->>>> +               0, node, __builtin_return_address(0));
->>>> +
->>>
->>> After spender gave some hints on IRC about the guard pages not working
->>> reliably, I decided to have a closer look at this. As far as I can
->>> tell, the idea is that __vmalloc_node_range() automatically adds guard
->>> pages unless the VM_NO_GUARD flag is specified. However, those guard
->>> pages are *behind* allocations, not in front of them, while a stack
->>> guard primarily needs to be in front of the allocation. This wouldn't
->>> matter if all allocations in the vmalloc area had guard pages behind
->>> them, but if someone first does some data allocation with VM_NO_GUARD
->>> and then a stack allocation directly behind that, there won't be a
->>> guard between the data allocation and the stack allocation.
->>
->> I'm tempted to explicitly disallow VM_NO_GUARD in the vmalloc range.
->> It has no in-tree users for non-fixed addresses right now.
->
-> What about the lack of pre-range guard page? That seems like a
-> critical feature for this. :)
->
 
-Agreed.  There's a big va hole there on x86_64, but I don't know about
-other arches.  It might pay to add something to the vmalloc core code.
-Any volunteers?
+--=-CorTQSSXHM2WOtKrQ0Sl
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> -Kees
->
-> --
-> Kees Cook
-> Chrome OS & Brillo Security
+On Tue, 2016-06-21 at 10:16 -0700, Kees Cook wrote:
+> On Tue, Jun 21, 2016 at 2:24 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+> >=20
+> > On Monday, June 20, 2016 4:43:30 PM CEST Andy Lutomirski wrote:
+> > >=20
+> > >=20
+> > > On my laptop, this adds about 1.5=C2=B5s of overhead to task creation=
+,
+> > > which seems to be mainly caused by vmalloc inefficiently
+> > > allocating
+> > > individual pages even when a higher-order page is available on
+> > > the
+> > > freelist.
+> > Would it help to have a fixed virtual address for the stack instead
+> > and map the current stack to that during a task switch, similar to
+> > how we handle fixmap pages?
+> >=20
+> > That would of course trade the allocation overhead for a task
+> > switch
+> > overhead, which may be better or worse. It would also give
+> > "current"
+> > a constant address, which may give a small performance advantage
+> > but may also introduce a new attack vector unless we randomize it
+> > again.
+> Right: we don't want a fixed address. That makes attacks WAY easier.
+
+Does that imply we might want the per-cpu cache of
+these stacks to be larger than one, in order to
+introduce some more randomness after an attacker
+crashed an ASLRed program looking for ROP gadgets,
+and the next one is spawned? :)
+
+--=20
+All Rights Reversed.
 
 
+--=-CorTQSSXHM2WOtKrQ0Sl
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
--- 
-Andy Lutomirski
-AMA Capital Management, LLC
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJXaYElAAoJEM553pKExN6Dd1IH/26D9y8/CCeKr35zps5ADJPk
+xdGDss78w8Dks+PT0yUsqCXZBlvKdmJAxveAx+nME2RQ/hvcanGAFvoJf4EunSJv
+UWtkErANVA9mm6gtVqguW276BnkNdv0mjPfF5oGuiptmHfmjE0Oc+0HyuX4xcj4G
+rN1Nw+fZtJIgCZn/8HCkHF2q5jladxfZneJpI9wsEwbUBBzzciqQbxAJr11JHdxm
+1CmHq36G3PX3BssWgx7bb79sKnyaOpccfuBFuUK4d5mMQ0kyd2q2YauTiqxECcm7
+GCj2Zx9lDnA3rs1vxcmcr5+0q0osYKh+NU/H9rqDkoMc7B5qHSW9kSyiDE34jDE=
+=6XiW
+-----END PGP SIGNATURE-----
+
+--=-CorTQSSXHM2WOtKrQ0Sl--
