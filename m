@@ -1,40 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 21 Jun 2016 05:58:07 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20160621125807.GA19065@infradead.org>
+References: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
+ <20160620204119.6299c961570a7a9ad6cbdd51@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
-References: <cover.1466466093.git.luto@kernel.org> <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 21 Jun 2016 09:30:31 +0200
-Message-ID: <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic vmalloced stack support
-To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20160620204119.6299c961570a7a9ad6cbdd51@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4 2/4] Add the latent_entropy gcc plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, tytso@mit.edu, akpm@linux-foundation.org, linux-mm@kvack.org, axboe@kernel.dk, viro@zeniv.linux.org.uk, paulmck@linux.vnet.ibm.com, mingo@redhat.com, tglx@linutronix.de, bart.vanassche@sandisk.com, davem@davemloft.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 21, 2016 at 1:43 AM, Andy Lutomirski <luto@kernel.org> wrote:
-> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
-> vmalloc_node.
-[...]
->  static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
->                                                   int node)
->  {
-> +#ifdef CONFIG_VMAP_STACK
-> +       struct thread_info *ti = __vmalloc_node_range(
-> +               THREAD_SIZE, THREAD_SIZE, VMALLOC_START, VMALLOC_END,
-> +               THREADINFO_GFP | __GFP_HIGHMEM, PAGE_KERNEL,
-> +               0, node, __builtin_return_address(0));
-> +
+On Mon, Jun 20, 2016 at 08:41:19PM +0200, Emese Revfy wrote:
+> --- /dev/null
+> +++ b/scripts/gcc-plugins/latent_entropy_plugin.c
+> @@ -0,0 +1,639 @@
+> +/*
+> + * Copyright 2012-2016 by the PaX Team <pageexec@freemail.hu>
+> + * Copyright 2016 by Emese Revfy <re.emese@gmail.com>
+> + * Licensed under the GPL v2
+> + *
+> + * Note: the choice of the license means that the compilation process is
+> + *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
+> + *       but for the kernel it doesn't matter since it doesn't link against
+> + *       any of the gcc libraries
 
-After spender gave some hints on IRC about the guard pages not working
-reliably, I decided to have a closer look at this. As far as I can
-tell, the idea is that __vmalloc_node_range() automatically adds guard
-pages unless the VM_NO_GUARD flag is specified. However, those guard
-pages are *behind* allocations, not in front of them, while a stack
-guard primarily needs to be in front of the allocation. This wouldn't
-matter if all allocations in the vmalloc area had guard pages behind
-them, but if someone first does some data allocation with VM_NO_GUARD
-and then a stack allocation directly behind that, there won't be a
-guard between the data allocation and the stack allocation.
-
-(I might be wrong though; this is only from looking at the code, not
-from testing it.)
+I remember we used to have architectures that actually linked against
+libgcc.  Isn't that the case anymore?
