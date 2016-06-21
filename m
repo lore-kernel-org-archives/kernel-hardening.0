@@ -1,53 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com>
-References: <cover.1466466093.git.luto@kernel.org> <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
- <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com> <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com>
+In-Reply-To: <13212319.WrhLzgRA6Z@wuerfel>
+References: <cover.1466466093.git.luto@kernel.org> <13212319.WrhLzgRA6Z@wuerfel>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Jun 2016 10:13:14 -0700
-Message-ID: <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
+Date: Tue, 21 Jun 2016 10:16:21 -0700
+Message-ID: <CAGXu5jJaWxcOKLtXG3r1XWE8NpL=GFSZwmV_UYjjv6q0135ETQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic vmalloced stack support
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 21, 2016 at 9:59 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Tue, Jun 21, 2016 at 12:30 AM, Jann Horn <jannh@google.com> wrote:
->> On Tue, Jun 21, 2016 at 1:43 AM, Andy Lutomirski <luto@kernel.org> wrote:
->>> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
->>> vmalloc_node.
->> [...]
->>>  static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
->>>                                                   int node)
->>>  {
->>> +#ifdef CONFIG_VMAP_STACK
->>> +       struct thread_info *ti = __vmalloc_node_range(
->>> +               THREAD_SIZE, THREAD_SIZE, VMALLOC_START, VMALLOC_END,
->>> +               THREADINFO_GFP | __GFP_HIGHMEM, PAGE_KERNEL,
->>> +               0, node, __builtin_return_address(0));
->>> +
+On Tue, Jun 21, 2016 at 2:24 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+> On Monday, June 20, 2016 4:43:30 PM CEST Andy Lutomirski wrote:
 >>
->> After spender gave some hints on IRC about the guard pages not working
->> reliably, I decided to have a closer look at this. As far as I can
->> tell, the idea is that __vmalloc_node_range() automatically adds guard
->> pages unless the VM_NO_GUARD flag is specified. However, those guard
->> pages are *behind* allocations, not in front of them, while a stack
->> guard primarily needs to be in front of the allocation. This wouldn't
->> matter if all allocations in the vmalloc area had guard pages behind
->> them, but if someone first does some data allocation with VM_NO_GUARD
->> and then a stack allocation directly behind that, there won't be a
->> guard between the data allocation and the stack allocation.
+>> On my laptop, this adds about 1.5=C2=B5s of overhead to task creation,
+>> which seems to be mainly caused by vmalloc inefficiently allocating
+>> individual pages even when a higher-order page is available on the
+>> freelist.
 >
-> I'm tempted to explicitly disallow VM_NO_GUARD in the vmalloc range.
-> It has no in-tree users for non-fixed addresses right now.
+> Would it help to have a fixed virtual address for the stack instead
+> and map the current stack to that during a task switch, similar to
+> how we handle fixmap pages?
+>
+> That would of course trade the allocation overhead for a task switch
+> overhead, which may be better or worse. It would also give "current"
+> a constant address, which may give a small performance advantage
+> but may also introduce a new attack vector unless we randomize it
+> again.
 
-What about the lack of pre-range guard page? That seems like a
-critical feature for this. :)
+Right: we don't want a fixed address. That makes attacks WAY easier.
 
 -Kees
 
--- 
+--=20
 Kees Cook
 Chrome OS & Brillo Security
