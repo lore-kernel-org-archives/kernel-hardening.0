@@ -1,32 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 21 Jun 2016 12:46:25 +0300
-From: Vladimir Davydov <vdavydov@virtuozzo.com>
-Message-ID: <20160621094625.GA15970@esperanza>
+Date: Tue, 21 Jun 2016 10:53:42 +0100
+From: Matt Fleming <matt@codeblueprint.co.uk>
+Message-ID: <20160621095342.GR2658@codeblueprint.co.uk>
 References: <cover.1466466093.git.luto@kernel.org>
- <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
+ <0b78b5c100c1c046c498f1085f40e9422e9d23f5.1466466093.git.luto@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
-Subject: [kernel-hardening] Re: [PATCH v3 04/13] mm: Track NR_KERNEL_STACK in KiB instead of
- number of stacks
+In-Reply-To: <0b78b5c100c1c046c498f1085f40e9422e9d23f5.1466466093.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 03/13] x86/mm: Remove kernel_unmap_pages_in_pgd() and
+ efi_cleanup_page_tables()
 To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, linux-efi@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 20, 2016 at 04:43:34PM -0700, Andy Lutomirski wrote:
-> Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
-> zone.  This only makes sense if each kernel stack exists entirely in
-> one zone, and allowing vmapped stacks could break this assumption.
+On Mon, 20 Jun, at 04:43:33PM, Andy Lutomirski wrote:
+> kernel_unmap_pages_in_pgd() is dangerous: if a pgd entry in
+> init_mm.pgd were to be cleared, callers would need to ensure that
+> the pgd entry hadn't been propagated to any other pgd.
 > 
-> Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
-> allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
-> all architectures.  Keep it simple and use KiB.
+> Its only caller was efi_cleanup_page_tables(), and that, in turn,
+> was unused, so just delete both functions.  This leaves a couple of
+> other helpers unused, so delete them, too.
 > 
-> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
-> Cc: Johannes Weiner <hannes@cmpxchg.org>
-> Cc: Michal Hocko <mhocko@kernel.org>
-> Cc: linux-mm@kvack.org
+> Cc: Matt Fleming <matt@codeblueprint.co.uk>
+> Cc: linux-efi@vger.kernel.org
 > Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+>  arch/x86/include/asm/efi.h           |  1 -
+>  arch/x86/include/asm/pgtable_types.h |  2 --
+>  arch/x86/mm/pageattr.c               | 28 ----------------------------
+>  arch/x86/platform/efi/efi.c          |  2 --
+>  arch/x86/platform/efi/efi_32.c       |  3 ---
+>  arch/x86/platform/efi/efi_64.c       |  5 -----
+>  6 files changed, 41 deletions(-)
 
-Reviewed-by: Vladimir Davydov <vdavydov@virtuozzo.com>
+Looks fine.
+
+Reviewed-by: Matt Fleming <matt@codeblueprint.co.uk>
