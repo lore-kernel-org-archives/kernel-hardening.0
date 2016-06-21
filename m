@@ -1,40 +1,105 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 21 Jun 2016 10:53:42 +0100
-From: Matt Fleming <matt@codeblueprint.co.uk>
-Message-ID: <20160621095342.GR2658@codeblueprint.co.uk>
+Date: Tue, 21 Jun 2016 12:54:33 +0300
+From: Vladimir Davydov <vdavydov@virtuozzo.com>
+Message-ID: <20160621095433.GB15970@esperanza>
 References: <cover.1466466093.git.luto@kernel.org>
- <0b78b5c100c1c046c498f1085f40e9422e9d23f5.1466466093.git.luto@kernel.org>
+ <6bacdd1005517bef4c6f6a4154bd7d1d4f4371f3.1466466093.git.luto@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset="us-ascii"
 Content-Disposition: inline
-In-Reply-To: <0b78b5c100c1c046c498f1085f40e9422e9d23f5.1466466093.git.luto@kernel.org>
-Subject: [kernel-hardening] Re: [PATCH v3 03/13] x86/mm: Remove kernel_unmap_pages_in_pgd() and
- efi_cleanup_page_tables()
+In-Reply-To: <6bacdd1005517bef4c6f6a4154bd7d1d4f4371f3.1466466093.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 05/13] mm: Fix memcg stack accounting for sub-page
+ stacks
 To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, linux-efi@vger.kernel.org
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 20 Jun, at 04:43:33PM, Andy Lutomirski wrote:
-> kernel_unmap_pages_in_pgd() is dangerous: if a pgd entry in
-> init_mm.pgd were to be cleared, callers would need to ensure that
-> the pgd entry hadn't been propagated to any other pgd.
+On Mon, Jun 20, 2016 at 04:43:35PM -0700, Andy Lutomirski wrote:
+> We should account for stacks regardless of stack size, and we need
+> to account in sub-page units if THREAD_SIZE < PAGE_SIZE.  Change the
+> units to kilobytes and Move it into account_kernel_stack().
 > 
-> Its only caller was efi_cleanup_page_tables(), and that, in turn,
-> was unused, so just delete both functions.  This leaves a couple of
-> other helpers unused, so delete them, too.
-> 
-> Cc: Matt Fleming <matt@codeblueprint.co.uk>
-> Cc: linux-efi@vger.kernel.org
+> Fixes: 12580e4b54ba8 ("mm: memcontrol: report kernel stack usage in cgroup2 memory.stat")
+> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+> Cc: Johannes Weiner <hannes@cmpxchg.org>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: linux-mm@kvack.org
 > Signed-off-by: Andy Lutomirski <luto@kernel.org>
+
+Reviewed-by: Vladimir Davydov <vdavydov@virtuozzo.com>
+
+This patch is going to have a minor conflict with recent changes in
+mmotm, where {alloc,free}_kmem_pages were dropped, The conflict should
+be trivial to resolve - we only need to replace {alloc,free}_kmem_pages
+with {alloc,free}_pages in this patch.
+
 > ---
->  arch/x86/include/asm/efi.h           |  1 -
->  arch/x86/include/asm/pgtable_types.h |  2 --
->  arch/x86/mm/pageattr.c               | 28 ----------------------------
->  arch/x86/platform/efi/efi.c          |  2 --
->  arch/x86/platform/efi/efi_32.c       |  3 ---
->  arch/x86/platform/efi/efi_64.c       |  5 -----
->  6 files changed, 41 deletions(-)
-
-Looks fine.
-
-Reviewed-by: Matt Fleming <matt@codeblueprint.co.uk>
+>  include/linux/memcontrol.h |  2 +-
+>  kernel/fork.c              | 15 ++++++---------
+>  mm/memcontrol.c            |  2 +-
+>  3 files changed, 8 insertions(+), 11 deletions(-)
+> 
+> diff --git a/include/linux/memcontrol.h b/include/linux/memcontrol.h
+> index a805474df4ab..3b653b86bb8f 100644
+> --- a/include/linux/memcontrol.h
+> +++ b/include/linux/memcontrol.h
+> @@ -52,7 +52,7 @@ enum mem_cgroup_stat_index {
+>  	MEM_CGROUP_STAT_SWAP,		/* # of pages, swapped out */
+>  	MEM_CGROUP_STAT_NSTATS,
+>  	/* default hierarchy stats */
+> -	MEMCG_KERNEL_STACK = MEM_CGROUP_STAT_NSTATS,
+> +	MEMCG_KERNEL_STACK_KB = MEM_CGROUP_STAT_NSTATS,
+>  	MEMCG_SLAB_RECLAIMABLE,
+>  	MEMCG_SLAB_UNRECLAIMABLE,
+>  	MEMCG_SOCK,
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index be7f006af727..ff3c41c2ba96 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -165,20 +165,12 @@ static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
+>  	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
+>  						  THREAD_SIZE_ORDER);
+>  
+> -	if (page)
+> -		memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+> -					    1 << THREAD_SIZE_ORDER);
+> -
+>  	return page ? page_address(page) : NULL;
+>  }
+>  
+>  static inline void free_thread_info(struct thread_info *ti)
+>  {
+> -	struct page *page = virt_to_page(ti);
+> -
+> -	memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
+> -				    -(1 << THREAD_SIZE_ORDER));
+> -	__free_kmem_pages(page, THREAD_SIZE_ORDER);
+> +	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
+>  }
+>  # else
+>  static struct kmem_cache *thread_info_cache;
+> @@ -227,6 +219,11 @@ static void account_kernel_stack(struct thread_info *ti, int account)
+>  
+>  	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
+>  			    THREAD_SIZE / 1024 * account);
+> +
+> +	/* All stack pages belong to the same memcg. */
+> +	memcg_kmem_update_page_stat(
+> +		virt_to_page(ti), MEMCG_KERNEL_STACK_KB,
+> +		account * (THREAD_SIZE / 1024));
+>  }
+>  
+>  void free_task(struct task_struct *tsk)
+> diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+> index 75e74408cc8f..8e13a2419dad 100644
+> --- a/mm/memcontrol.c
+> +++ b/mm/memcontrol.c
+> @@ -5133,7 +5133,7 @@ static int memory_stat_show(struct seq_file *m, void *v)
+>  	seq_printf(m, "file %llu\n",
+>  		   (u64)stat[MEM_CGROUP_STAT_CACHE] * PAGE_SIZE);
+>  	seq_printf(m, "kernel_stack %llu\n",
+> -		   (u64)stat[MEMCG_KERNEL_STACK] * PAGE_SIZE);
+> +		   (u64)stat[MEMCG_KERNEL_STACK_KB] * 1024);
+>  	seq_printf(m, "slab %llu\n",
+>  		   (u64)(stat[MEMCG_SLAB_RECLAIMABLE] +
+>  			 stat[MEMCG_SLAB_UNRECLAIMABLE]) * PAGE_SIZE);
