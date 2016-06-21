@@ -1,70 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1466533948.2756.56.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Tue, 21 Jun 2016 14:32:28 -0400
-In-Reply-To: <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
-References: <cover.1466466093.git.luto@kernel.org>
-	 <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
-	 <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com>
-	 <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com>
-	 <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-JIDeOF8ZZyE1csowjY8T"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic
- vmalloced stack support
-To: kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>
-Cc: Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
+References: <20160620203910.a8b6b5b10d18f24661916e7b@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 21 Jun 2016 11:40:16 -0700
+Message-ID: <CAGXu5jJ4G0u8JPG49ehmgPPk4tQG=nrXm0qPRCbT6PcbwD8hSw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the latent_entropy gcc plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, Theodore Ts'o <tytso@mit.edu>, Andrew Morton <akpm@linux-foundation.org>, Linux-MM <linux-mm@kvack.org>, Jens Axboe <axboe@kernel.dk>, Al Viro <viro@zeniv.linux.org.uk>, Paul McKenney <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, bart.vanassche@sandisk.com, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Jun 20, 2016 at 11:39 AM, Emese Revfy <re.emese@gmail.com> wrote:
+> I would like to introduce the latent_entropy gcc plugin. This plugin
+> mitigates the problem of the kernel having too little entropy during and
+> after boot for generating crypto keys.
+>
+> This plugin mixes random values into the latent_entropy global variable
+> in functions marked by the __latent_entropy attribute.
+> The value of this global variable is added to the kernel entropy pool
+> to increase the entropy.
+>
+> It is a CII project supported by the Linux Foundation.
+>
+> The latent_entropy plugin was ported from grsecurity/PaX originally written
+> by the PaX Team. You can find more about the plugin here:
+> https://grsecurity.net/pipermail/grsecurity/2012-July/001093.html
+>
+> The plugin supports all gcc version from 4.5 to 6.0.
+>
+> I do some changes above the PaX version. The important one is mixing
+> the stack pointer into the global variable too.
+> You can find more about the changes here:
+> https://github.com/ephox-gcc-plugins/latent_entropy
+>
+> This patch set is based on the "Introduce GCC plugin infrastructure"
+> patch set (git/mmarek/kbuild.git#kbuild HEAD: 543c37cb165049c3be).
+>
+> Emese Revfy (4):
+>  Add support for passing gcc plugin arguments
+>  Add the latent_entropy gcc plugin
+>  Mark functions with the latent_entropy attribute
+>  Add the extra_latent_entropy kernel parameter
 
---=-JIDeOF8ZZyE1csowjY8T
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Thanks! This looks good to me. I've adjusted some of the commit
+message language for clarity and fixed a few other >80 lines that
+stood out to me.
 
-On Tue, 2016-06-21 at 10:13 -0700, Kees Cook wrote:
-> On Tue, Jun 21, 2016 at 9:59 AM, Andy Lutomirski <luto@amacapital.net
-> > wrote:
-> >=C2=A0
-> > I'm tempted to explicitly disallow VM_NO_GUARD in the vmalloc
-> > range.
-> > It has no in-tree users for non-fixed addresses right now.
-> What about the lack of pre-range guard page? That seems like a
-> critical feature for this. :)
+I've applied this to for-next/kspp and after I finish local build
+testing, it should appear in linux-next.
 
-If VM_NO_GUARD is disallowed, and every vmalloc area has
-a guard area behind it, then every subsequent vmalloc area
-will have a guard page ahead of it.
+Yay! :)
 
-I think disallowing VM_NO_GUARD will be all that is required.
+-Kees
 
-The only thing we may want to verify on the architectures that
-we care about is that there is nothing mapped immediately before
-the start of the vmalloc range, otherwise the first vmalloced
-area will not have a guard page below it.
-
-I suspect all the 64 bit architectures are fine in that regard,
-with enormous gaps between kernel memory ranges.
-
---=20
-All Rights Reversed.
-
-
---=-JIDeOF8ZZyE1csowjY8T
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJXaYg9AAoJEM553pKExN6DMgQH/AkJiDO6nYz4HDPcXzy6mKtQ
-P5YfvXRL6roj7l3lG5FQuwcPryPj+vy4HHyysPEvo9Sk8DABLDsvDO3a8QdbWrkm
-D2zFcrN3OaAN8IRXHPyhHgDrotBZ5AUkFiUzf4EP18kxML+AWZioifpM8XL5FvH6
-YbZRKyNaDz5QZpB+5DIIjT/3ngU+2Cn71ZkreKJ9fSqVfnP4Ea+U+89CzHi9hxUr
-tC+eTPrgiJ281SBFQUCbs42WSpd7vfQtSk8Q2IxRCChKAyBhY8AVKH37+hYvOtgw
-H5jiIzbdOyDo5ofr01P0emLx/kEGyH4zURu8QCeJMxHB9XB86QVwHh4bc/RzkP4=
-=hL+a
------END PGP SIGNATURE-----
-
---=-JIDeOF8ZZyE1csowjY8T--
+-- 
+Kees Cook
+Chrome OS & Brillo Security
