@@ -1,50 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1466533189.2756.52.camel@redhat.com>
+Message-ID: <1466533948.2756.56.camel@redhat.com>
 From: Rik van Riel <riel@redhat.com>
-Date: Tue, 21 Jun 2016 14:19:49 -0400
-In-Reply-To: <CAGXu5jLQk8zha3cx158GU6AGN+XDManurTmuC08XjYcJBJhvfg@mail.gmail.com>
+Date: Tue, 21 Jun 2016 14:32:28 -0400
+In-Reply-To: <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
 References: <cover.1466466093.git.luto@kernel.org>
-	 <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
-	 <CALCETrX0VXZVgy0_6-Jq_sT4yPKYogGjTZvn8VqvMzPtw4-3wg@mail.gmail.com>
-	 <CA+55aFzBAdM2UGpmVQjhnEtsvfPmJE1aqeoo4e65PrQvsvsFnQ@mail.gmail.com>
-	 <CALCETrWEokFnfjx_LjG_S4TizjVo=YcJNpeoSwxHn0-d2+Aw+A@mail.gmail.com>
-	 <CAGXu5jLQk8zha3cx158GU6AGN+XDManurTmuC08XjYcJBJhvfg@mail.gmail.com>
+	 <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
+	 <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com>
+	 <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com>
+	 <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com>
 Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-iRBwSazlTytAWjIbeDno"
+	protocol="application/pgp-signature"; boundary="=-JIDeOF8ZZyE1csowjY8T"
 Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks
- with guard pages (x86, core)
-To: kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic
+ vmalloced stack support
+To: kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>
+Cc: Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-iRBwSazlTytAWjIbeDno
+--=-JIDeOF8ZZyE1csowjY8T
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Tue, 2016-06-21 at 11:12 -0700, Kees Cook wrote:
-> On Tue, Jun 21, 2016 at 10:27 AM, Andy Lutomirski
-> <luto@amacapital.net> wrote:
-> > FWIW, it may be a while before this can be enabled in distro
-> > kernels.
-> > There are some code paths (*cough* crypto users *cough*) that think
-> > that calling sg_init_one with a stack address is a reasonable thing
-> > to
-> > do, and it doesn't work with a vmalloced stack.=C2=A0=C2=A0grsecurity w=
-orks
-> ... O_o ...
->=20
-> Why does it not work on a vmalloced stack??
+On Tue, 2016-06-21 at 10:13 -0700, Kees Cook wrote:
+> On Tue, Jun 21, 2016 at 9:59 AM, Andy Lutomirski <luto@amacapital.net
+> > wrote:
+> >=C2=A0
+> > I'm tempted to explicitly disallow VM_NO_GUARD in the vmalloc
+> > range.
+> > It has no in-tree users for non-fixed addresses right now.
+> What about the lack of pre-range guard page? That seems like a
+> critical feature for this. :)
 
-Because virt_to_page() does not work on vmalloced
-memory.
+If VM_NO_GUARD is disallowed, and every vmalloc area has
+a guard area behind it, then every subsequent vmalloc area
+will have a guard page ahead of it.
+
+I think disallowing VM_NO_GUARD will be all that is required.
+
+The only thing we may want to verify on the architectures that
+we care about is that there is nothing mapped immediately before
+the start of the vmalloc range, otherwise the first vmalloced
+area will not have a guard page below it.
+
+I suspect all the 64 bit architectures are fine in that regard,
+with enormous gaps between kernel memory ranges.
 
 --=20
 All Rights Reversed.
 
 
---=-iRBwSazlTytAWjIbeDno
+--=-JIDeOF8ZZyE1csowjY8T
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: This is a digitally signed message part
 Content-Transfer-Encoding: 7bit
@@ -52,13 +58,13 @@ Content-Transfer-Encoding: 7bit
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQEcBAABCAAGBQJXaYVFAAoJEM553pKExN6DW9wIAJGaNx+6WeMQkYnYyi+B9CVI
-2Oc9YIw237LfSNkFqzsa1awGA5Z2C6m1qwaT3MoDJlKem4/em4xjdbWKdkTbM3lP
-nSINT0cqztExGZDLVNFtiLpjypp1mJsLYsywlZP8n4gGDR5T0qIqXY2JQSlhJcAd
-dH8A1x9GgMke0l/WkALesvEuRqIFNWAMBUFI7LJ4J4Zs0Tt4lvJAioT4XlLqDFKG
-a0AUxkKaoeRmpUYrRgSMHBgY1WzUkd6YI6Hjbr0U8rk3Mis/pQ+9Bgnr8bj29bRv
-BqwQOtO4EC9ZQ+yZCg6RMfxEZ3ARqtGAyKTekvP/RQUxjmopjwuhLkdSPGMIPMI=
-=1NxW
+iQEcBAABCAAGBQJXaYg9AAoJEM553pKExN6DMgQH/AkJiDO6nYz4HDPcXzy6mKtQ
+P5YfvXRL6roj7l3lG5FQuwcPryPj+vy4HHyysPEvo9Sk8DABLDsvDO3a8QdbWrkm
+D2zFcrN3OaAN8IRXHPyhHgDrotBZ5AUkFiUzf4EP18kxML+AWZioifpM8XL5FvH6
+YbZRKyNaDz5QZpB+5DIIjT/3ngU+2Cn71ZkreKJ9fSqVfnP4Ea+U+89CzHi9hxUr
+tC+eTPrgiJ281SBFQUCbs42WSpd7vfQtSk8Q2IxRCChKAyBhY8AVKH37+hYvOtgw
+H5jiIzbdOyDo5ofr01P0emLx/kEGyH4zURu8QCeJMxHB9XB86QVwHh4bc/RzkP4=
+=hL+a
 -----END PGP SIGNATURE-----
 
---=-iRBwSazlTytAWjIbeDno--
+--=-JIDeOF8ZZyE1csowjY8T--
