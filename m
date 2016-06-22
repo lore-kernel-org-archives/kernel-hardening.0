@@ -1,67 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CALCETrXG4tA=YexrdoMcy0xQeN9Oq0eDeUXKjFHCs-1HUMigDg@mail.gmail.com>
-References: <cover.1466466093.git.luto@kernel.org> <13212319.WrhLzgRA6Z@wuerfel>
- <CAGXu5jJaWxcOKLtXG3r1XWE8NpL=GFSZwmV_UYjjv6q0135ETQ@mail.gmail.com>
- <6248429.A4IJrfgOW3@wuerfel> <CALCETrXG4tA=YexrdoMcy0xQeN9Oq0eDeUXKjFHCs-1HUMigDg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Jun 2016 13:18:38 -0700
-Message-ID: <CAGXu5jJKnEdUw3yNjYLif8EXeavOJROd3YdEoS-JtmrQEF5Z-w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Arnd Bergmann <arnd@arndb.de>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Date: Tue, 21 Jun 2016 17:47:00 -0700
+Message-Id: <1466556426-32664-4-git-send-email-keescook@chromium.org>
+In-Reply-To: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v7 3/9] x86/mm: PUD VA support for physical mapping (x86_64)
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Andy Lutomirski <luto@kernel.org>, x86@kernel.org, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 21, 2016 at 12:47 PM, Andy Lutomirski <luto@amacapital.net> wro=
-te:
-> On Tue, Jun 21, 2016 at 12:47 PM, Arnd Bergmann <arnd@arndb.de> wrote:
->> On Tuesday, June 21, 2016 10:16:21 AM CEST Kees Cook wrote:
->>> On Tue, Jun 21, 2016 at 2:24 AM, Arnd Bergmann <arnd@arndb.de> wrote:
->>> > On Monday, June 20, 2016 4:43:30 PM CEST Andy Lutomirski wrote:
->>> >>
->>> >> On my laptop, this adds about 1.5=C2=B5s of overhead to task creatio=
-n,
->>> >> which seems to be mainly caused by vmalloc inefficiently allocating
->>> >> individual pages even when a higher-order page is available on the
->>> >> freelist.
->>> >
->>> > Would it help to have a fixed virtual address for the stack instead
->>> > and map the current stack to that during a task switch, similar to
->>> > how we handle fixmap pages?
->>> >
->>> > That would of course trade the allocation overhead for a task switch
->>> > overhead, which may be better or worse. It would also give "current"
->>> > a constant address, which may give a small performance advantage
->>> > but may also introduce a new attack vector unless we randomize it
->>> > again.
->>>
->>> Right: we don't want a fixed address. That makes attacks WAY easier.
->>
->> Do we care about making the address more random then? When I look
->> at /proc/vmallocinfo, I see that allocations are all using
->> consecutive addresses, so if you can figure out the virtual
->> address of the stack for one process that would give you a good
->> chance of guessing the address for the next pid.
->
-> Quite possibly.  We should seriously consider at least randomizing the
-> *start* of the vmalloc area, at least on 64-bit architectures.
+From: Thomas Garnier <thgarnie@google.com>
 
-Yup, this is already under way for x86. Thomas Garnier has a series
-that he's been working on:
+Minor change that allows early boot physical mapping of PUD level virtual
+addresses. The current implementation expects the virtual address to be
+PUD aligned. For KASLR memory randomization, we need to be able to
+randomize the offset used on the PUD table.
 
-http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=3Dkaslr/m=
-emory
+It has no impact on current usage.
 
-I'd love to see similar for other architectures too.
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/mm/init_64.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
 
-Thomas just sent me an updated series I'll be putting up for review later t=
-oday.
-
--Kees
-
---=20
-Kees Cook
-Chrome OS & Brillo Security
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index 6714712bd5da..7bf1ddb54537 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -465,7 +465,8 @@ phys_pmd_init(pmd_t *pmd_page, unsigned long paddr, unsigned long paddr_end,
+ 
+ /*
+  * Create PUD level page table mapping for physical addresses. The virtual
+- * and physical address have to be aligned at this level.
++ * and physical address do not have to be aligned at this level. KASLR can
++ * randomize virtual addresses up to this level.
+  * It returns the last physical address mapped.
+  */
+ static unsigned long __meminit
+@@ -474,14 +475,18 @@ phys_pud_init(pud_t *pud_page, unsigned long paddr, unsigned long paddr_end,
+ {
+ 	unsigned long pages = 0, paddr_next;
+ 	unsigned long paddr_last = paddr_end;
+-	int i = pud_index(paddr);
++	unsigned long vaddr = (unsigned long)__va(paddr);
++	int i = pud_index(vaddr);
+ 
+ 	for (; i < PTRS_PER_PUD; i++, paddr = paddr_next) {
+-		pud_t *pud = pud_page + pud_index(paddr);
++		pud_t *pud;
+ 		pmd_t *pmd;
+ 		pgprot_t prot = PAGE_KERNEL;
+ 
++		vaddr = (unsigned long)__va(paddr);
++		pud = pud_page + pud_index(vaddr);
+ 		paddr_next = (paddr & PUD_MASK) + PUD_SIZE;
++
+ 		if (paddr >= paddr_end) {
+ 			if (!after_bootmem &&
+ 			    !e820_any_mapped(paddr & PUD_MASK, paddr_next,
+@@ -551,7 +556,7 @@ phys_pud_init(pud_t *pud_page, unsigned long paddr, unsigned long paddr_end,
+ 
+ /*
+  * Create page table mapping for the physical memory for specific physical
+- * addresses. The virtual and physical addresses have to be aligned on PUD level
++ * addresses. The virtual and physical addresses have to be aligned on PMD level
+  * down. It returns the last physical address mapped.
+  */
+ unsigned long __meminit
+-- 
+2.7.4
