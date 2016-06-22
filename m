@@ -1,74 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Jun 2016 17:47:06 -0700
-Message-Id: <1466556426-32664-10-git-send-email-keescook@chromium.org>
-In-Reply-To: <1466556426-32664-1-git-send-email-keescook@chromium.org>
-References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v7 9/9] x86/mm: Memory hotplug support for KASLR memory randomization (x86_64)
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Andy Lutomirski <luto@kernel.org>, x86@kernel.org, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Wed, 22 Jun 2016 09:35:54 +0200
+From: Michal Hocko <mhocko@kernel.org>
+Message-ID: <20160622073554.GA9208@dhcp22.suse.cz>
+References: <cover.1466466093.git.luto@kernel.org>
+ <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <053517e55aaf7ab1bbb7424abd89a1ac5535aa64.1466466093.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 04/13] mm: Track NR_KERNEL_STACK in KiB instead of
+ number of stacks
+To: Andy Lutomirski <luto@kernel.org>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Thomas Garnier <thgarnie@google.com>
+On Mon 20-06-16 16:43:34, Andy Lutomirski wrote:
+> Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
+> zone.  This only makes sense if each kernel stack exists entirely in
+> one zone, and allowing vmapped stacks could break this assumption.
+> 
+> Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
+> allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
+> all architectures.  Keep it simple and use KiB.
+> 
+> Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+> Cc: Johannes Weiner <hannes@cmpxchg.org>
+> Cc: Michal Hocko <mhocko@kernel.org>
+> Cc: linux-mm@kvack.org
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
 
-Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
-the padding used for the physical memory mapping section when KASLR
-memory is enabled. It ensures there is enough virtual address space when
-CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
-CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
-entropy available.
+Acked-by: Michal Hocko <mhocko@suse.com>
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- arch/x86/Kconfig    | 15 +++++++++++++++
- arch/x86/mm/kaslr.c |  7 ++++++-
- 2 files changed, 21 insertions(+), 1 deletion(-)
+> ---
+>  drivers/base/node.c    | 3 +--
+>  fs/proc/meminfo.c      | 2 +-
+>  include/linux/mmzone.h | 2 +-
+>  kernel/fork.c          | 3 ++-
+>  mm/page_alloc.c        | 3 +--
+>  5 files changed, 6 insertions(+), 7 deletions(-)
+> 
+> diff --git a/drivers/base/node.c b/drivers/base/node.c
+> index 560751bad294..27dc68a0ed2d 100644
+> --- a/drivers/base/node.c
+> +++ b/drivers/base/node.c
+> @@ -121,8 +121,7 @@ static ssize_t node_read_meminfo(struct device *dev,
+>  		       nid, K(node_page_state(nid, NR_FILE_MAPPED)),
+>  		       nid, K(node_page_state(nid, NR_ANON_PAGES)),
+>  		       nid, K(i.sharedram),
+> -		       nid, node_page_state(nid, NR_KERNEL_STACK) *
+> -				THREAD_SIZE / 1024,
+> +		       nid, node_page_state(nid, NR_KERNEL_STACK_KB),
+>  		       nid, K(node_page_state(nid, NR_PAGETABLE)),
+>  		       nid, K(node_page_state(nid, NR_UNSTABLE_NFS)),
+>  		       nid, K(node_page_state(nid, NR_BOUNCE)),
+> diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
+> index 83720460c5bc..239b5a06cee0 100644
+> --- a/fs/proc/meminfo.c
+> +++ b/fs/proc/meminfo.c
+> @@ -145,7 +145,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
+>  				global_page_state(NR_SLAB_UNRECLAIMABLE)),
+>  		K(global_page_state(NR_SLAB_RECLAIMABLE)),
+>  		K(global_page_state(NR_SLAB_UNRECLAIMABLE)),
+> -		global_page_state(NR_KERNEL_STACK) * THREAD_SIZE / 1024,
+> +		global_page_state(NR_KERNEL_STACK_KB),
+>  		K(global_page_state(NR_PAGETABLE)),
+>  #ifdef CONFIG_QUICKLIST
+>  		K(quicklist_total_size()),
+> diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+> index 02069c23486d..63f05a7efb54 100644
+> --- a/include/linux/mmzone.h
+> +++ b/include/linux/mmzone.h
+> @@ -127,7 +127,7 @@ enum zone_stat_item {
+>  	NR_SLAB_RECLAIMABLE,
+>  	NR_SLAB_UNRECLAIMABLE,
+>  	NR_PAGETABLE,		/* used for pagetables */
+> -	NR_KERNEL_STACK,
+> +	NR_KERNEL_STACK_KB,	/* measured in KiB */
+>  	/* Second 128 byte cacheline */
+>  	NR_UNSTABLE_NFS,	/* NFS unstable pages */
+>  	NR_BOUNCE,
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index 5c2c355aa97f..be7f006af727 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -225,7 +225,8 @@ static void account_kernel_stack(struct thread_info *ti, int account)
+>  {
+>  	struct zone *zone = page_zone(virt_to_page(ti));
+>  
+> -	mod_zone_page_state(zone, NR_KERNEL_STACK, account);
+> +	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
+> +			    THREAD_SIZE / 1024 * account);
+>  }
+>  
+>  void free_task(struct task_struct *tsk)
+> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+> index 6903b695ebae..a277dea926c9 100644
+> --- a/mm/page_alloc.c
+> +++ b/mm/page_alloc.c
+> @@ -4457,8 +4457,7 @@ void show_free_areas(unsigned int filter)
+>  			K(zone_page_state(zone, NR_SHMEM)),
+>  			K(zone_page_state(zone, NR_SLAB_RECLAIMABLE)),
+>  			K(zone_page_state(zone, NR_SLAB_UNRECLAIMABLE)),
+> -			zone_page_state(zone, NR_KERNEL_STACK) *
+> -				THREAD_SIZE / 1024,
+> +			zone_page_state(zone, NR_KERNEL_STACK_KB),
+>  			K(zone_page_state(zone, NR_PAGETABLE)),
+>  			K(zone_page_state(zone, NR_UNSTABLE_NFS)),
+>  			K(zone_page_state(zone, NR_BOUNCE)),
+> -- 
+> 2.5.5
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index adab3fef3bb4..214b3fadbc11 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2010,6 +2010,21 @@ config RANDOMIZE_MEMORY
- 
- 	   If unsure, say N.
- 
-+config RANDOMIZE_MEMORY_PHYSICAL_PADDING
-+	hex "Physical memory mapping padding" if EXPERT
-+	depends on RANDOMIZE_MEMORY
-+	default "0xa" if MEMORY_HOTPLUG
-+	default "0x0"
-+	range 0x1 0x40 if MEMORY_HOTPLUG
-+	range 0x0 0x40
-+	---help---
-+	   Define the padding in terabytes added to the existing physical
-+	   memory size during kernel memory randomization. It is useful
-+	   for memory hotplug support but reduces the entropy available for
-+	   address randomization.
-+
-+	   If unsure, leave at the default value.
-+
- config HOTPLUG_CPU
- 	bool "Support for hot-pluggable CPUs"
- 	depends on SMP
-diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-index 4f91dc273062..3e9875f7fdda 100644
---- a/arch/x86/mm/kaslr.c
-+++ b/arch/x86/mm/kaslr.c
-@@ -114,8 +114,13 @@ void __init kernel_randomize_memory(void)
- 	if (!kaslr_memory_enabled())
- 		return;
- 
-+	/*
-+	 * Update Physical memory mapping to available and
-+	 * add padding if needed (especially for memory hotplug support).
-+	 */
- 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
--	memory_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
-+	memory_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) +
-+		CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
- 
- 	/* Adapt phyiscal memory region size based on available memory */
- 	if (memory_tb < kaslr_regions[0].size_tb)
 -- 
-2.7.4
+Michal Hocko
+SUSE Labs
