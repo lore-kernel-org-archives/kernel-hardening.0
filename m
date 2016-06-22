@@ -1,396 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Jun 2016 17:47:02 -0700
-Message-Id: <1466556426-32664-6-git-send-email-keescook@chromium.org>
+Date: Tue, 21 Jun 2016 17:47:06 -0700
+Message-Id: <1466556426-32664-10-git-send-email-keescook@chromium.org>
 In-Reply-To: <1466556426-32664-1-git-send-email-keescook@chromium.org>
 References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v7 5/9] x86/mm: Implement ASLR for kernel memory regions (x86_64)
+Subject: [kernel-hardening] [PATCH v7 9/9] x86/mm: Memory hotplug support for KASLR memory randomization (x86_64)
 To: Ingo Molnar <mingo@kernel.org>
 Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Andy Lutomirski <luto@kernel.org>, x86@kernel.org, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, linux-kernel@vger.kernel.org, Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Thomas Garnier <thgarnie@google.com>
 
-Randomizes the virtual address space of kernel memory regions for
-x86_64. This first patch adds the infrastructure and does not randomize
-any region. The following patches will randomize the physical memory
-mapping, vmalloc and vmemmap regions.
-
-This security feature mitigates exploits relying on predictable kernel
-addresses. These addresses can be used to disclose the kernel modules
-base addresses or corrupt specific structures to elevate privileges
-bypassing the current implementation of KASLR. This feature can be
-enabled with the CONFIG_RANDOMIZE_MEMORY option.
-
-The order of each memory region is not changed. The feature looks at the
-available space for the regions based on different configuration options
-and randomizes the base and space between each. The size of the physical
-memory mapping is the available physical memory. No performance impact
-was detected while testing the feature.
-
-Entropy is generated using the KASLR early boot functions now shared in
-the lib directory (originally written by Kees Cook). Randomization is
-done on PGD & PUD page table levels to increase possible addresses. The
-physical memory mapping code was adapted to support PUD level virtual
-addresses. This implementation on the best configuration provides 30,000
-possible virtual addresses in average for each memory region.  An
-additional low memory page is used to ensure each CPU can start with a
-PGD aligned virtual address (for realmode).
-
-x86/dump_pagetable was updated to correctly display each region.
-
-Updated documentation on x86_64 memory layout accordingly.
-
-Performance data, after all patches in the series:
-
-Kernbench shows almost no difference (-+ less than 1%):
-
-Before:
-
-Average Optimal load -j 12 Run (std deviation): Elapsed Time 102.63 (1.2695)
-User Time 1034.89 (1.18115) System Time 87.056 (0.456416) Percent CPU 1092.9
-(13.892) Context Switches 199805 (3455.33) Sleeps 97907.8 (900.636)
-
-After:
-
-Average Optimal load -j 12 Run (std deviation): Elapsed Time 102.489 (1.10636)
-User Time 1034.86 (1.36053) System Time 87.764 (0.49345) Percent CPU 1095
-(12.7715) Context Switches 199036 (4298.1) Sleeps 97681.6 (1031.11)
-
-Hackbench shows 0% difference on average (hackbench 90 repeated 10 times):
-
-attemp,before,after 1,0.076,0.069 2,0.072,0.069 3,0.066,0.066 4,0.066,0.068
-5,0.066,0.067 6,0.066,0.069 7,0.067,0.066 8,0.063,0.067 9,0.067,0.065
-10,0.068,0.071 average,0.0677,0.0677
+Add a new option (CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING) to define
+the padding used for the physical memory mapping section when KASLR
+memory is enabled. It ensures there is enough virtual address space when
+CONFIG_MEMORY_HOTPLUG is used. The default value is 10 terabytes. If
+CONFIG_MEMORY_HOTPLUG is not used, no space is reserved increasing the
+entropy available.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- Documentation/x86/x86_64/mm.txt |   4 ++
- arch/x86/Kconfig                |  17 +++++
- arch/x86/include/asm/kaslr.h    |   6 ++
- arch/x86/include/asm/pgtable.h  |   7 +-
- arch/x86/kernel/setup.c         |   3 +
- arch/x86/mm/Makefile            |   1 +
- arch/x86/mm/dump_pagetables.c   |  16 +++--
- arch/x86/mm/init.c              |   1 +
- arch/x86/mm/kaslr.c             | 152 ++++++++++++++++++++++++++++++++++++++++
- 9 files changed, 202 insertions(+), 5 deletions(-)
- create mode 100644 arch/x86/mm/kaslr.c
+ arch/x86/Kconfig    | 15 +++++++++++++++
+ arch/x86/mm/kaslr.c |  7 ++++++-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
 
-diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
-index 5aa738346062..8c7dd5957ae1 100644
---- a/Documentation/x86/x86_64/mm.txt
-+++ b/Documentation/x86/x86_64/mm.txt
-@@ -39,4 +39,8 @@ memory window (this size is arbitrary, it can be raised later if needed).
- The mappings are not part of any other kernel PGD and are only available
- during EFI runtime calls.
- 
-+Note that if CONFIG_RANDOMIZE_MEMORY is enabled, the direct mapping of all
-+physical memory, vmalloc/ioremap space and virtual memory map are randomized.
-+Their order is preserved but their base will be offset early at boot time.
-+
- -Andi Kleen, Jul 2004
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 770ae5259dff..adab3fef3bb4 100644
+index adab3fef3bb4..214b3fadbc11 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
-@@ -1993,6 +1993,23 @@ config PHYSICAL_ALIGN
+@@ -2010,6 +2010,21 @@ config RANDOMIZE_MEMORY
  
- 	  Don't change this unless you know what you are doing.
+ 	   If unsure, say N.
  
-+config RANDOMIZE_MEMORY
-+	bool "Randomize the kernel memory sections"
-+	depends on X86_64
-+	depends on RANDOMIZE_BASE
-+	default RANDOMIZE_BASE
++config RANDOMIZE_MEMORY_PHYSICAL_PADDING
++	hex "Physical memory mapping padding" if EXPERT
++	depends on RANDOMIZE_MEMORY
++	default "0xa" if MEMORY_HOTPLUG
++	default "0x0"
++	range 0x1 0x40 if MEMORY_HOTPLUG
++	range 0x0 0x40
 +	---help---
-+	   Randomizes the base virtual address of kernel memory sections
-+	   (physical memory mapping, vmalloc & vmemmap). This security feature
-+	   makes exploits relying on predictable memory locations less reliable.
++	   Define the padding in terabytes added to the existing physical
++	   memory size during kernel memory randomization. It is useful
++	   for memory hotplug support but reduces the entropy available for
++	   address randomization.
 +
-+	   The order of allocations remains unchanged. Entropy is generated in
-+	   the same way as RANDOMIZE_BASE. Current implementation in the optimal
-+	   configuration have in average 30,000 different possible virtual
-+	   addresses for each memory section.
-+
-+	   If unsure, say N.
++	   If unsure, leave at the default value.
 +
  config HOTPLUG_CPU
  	bool "Support for hot-pluggable CPUs"
  	depends on SMP
-diff --git a/arch/x86/include/asm/kaslr.h b/arch/x86/include/asm/kaslr.h
-index 5547438db5ea..683c9d736314 100644
---- a/arch/x86/include/asm/kaslr.h
-+++ b/arch/x86/include/asm/kaslr.h
-@@ -3,4 +3,10 @@
- 
- unsigned long kaslr_get_random_long(const char *purpose);
- 
-+#ifdef CONFIG_RANDOMIZE_MEMORY
-+void kernel_randomize_memory(void);
-+#else
-+static inline void kernel_randomize_memory(void) { }
-+#endif /* CONFIG_RANDOMIZE_MEMORY */
-+
- #endif
-diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
-index d455bef39e9c..5472682a307f 100644
---- a/arch/x86/include/asm/pgtable.h
-+++ b/arch/x86/include/asm/pgtable.h
-@@ -732,11 +732,16 @@ void early_alloc_pgt_buf(void);
- #ifdef CONFIG_X86_64
- /* Realmode trampoline initialization. */
- extern pgd_t trampoline_pgd_entry;
--static inline void __meminit init_trampoline(void)
-+static inline void __meminit init_trampoline_default(void)
- {
- 	/* Default trampoline pgd value */
- 	trampoline_pgd_entry = init_level4_pgt[pgd_index(__PAGE_OFFSET)];
- }
-+# ifdef CONFIG_RANDOMIZE_MEMORY
-+void __meminit init_trampoline(void);
-+# else
-+#  define init_trampoline init_trampoline_default
-+# endif
- #else
- static inline void init_trampoline(void) { }
- #endif
-diff --git a/arch/x86/kernel/setup.c b/arch/x86/kernel/setup.c
-index c4e7b3991b60..a2616584b6e9 100644
---- a/arch/x86/kernel/setup.c
-+++ b/arch/x86/kernel/setup.c
-@@ -113,6 +113,7 @@
- #include <asm/prom.h>
- #include <asm/microcode.h>
- #include <asm/mmu_context.h>
-+#include <asm/kaslr.h>
- 
- /*
-  * max_low_pfn_mapped: highest direct mapped pfn under 4GB
-@@ -942,6 +943,8 @@ void __init setup_arch(char **cmdline_p)
- 
- 	x86_init.oem.arch_setup();
- 
-+	kernel_randomize_memory();
-+
- 	iomem_resource.end = (1ULL << boot_cpu_data.x86_phys_bits) - 1;
- 	setup_memory_map();
- 	parse_setup_data();
-diff --git a/arch/x86/mm/Makefile b/arch/x86/mm/Makefile
-index 62c0043a5fd5..96d2b847e09e 100644
---- a/arch/x86/mm/Makefile
-+++ b/arch/x86/mm/Makefile
-@@ -37,4 +37,5 @@ obj-$(CONFIG_NUMA_EMU)		+= numa_emulation.o
- 
- obj-$(CONFIG_X86_INTEL_MPX)	+= mpx.o
- obj-$(CONFIG_X86_INTEL_MEMORY_PROTECTION_KEYS) += pkeys.o
-+obj-$(CONFIG_RANDOMIZE_MEMORY) += kaslr.o
- 
-diff --git a/arch/x86/mm/dump_pagetables.c b/arch/x86/mm/dump_pagetables.c
-index 99bfb192803f..9a17250bcbe0 100644
---- a/arch/x86/mm/dump_pagetables.c
-+++ b/arch/x86/mm/dump_pagetables.c
-@@ -72,9 +72,9 @@ static struct addr_marker address_markers[] = {
- 	{ 0, "User Space" },
- #ifdef CONFIG_X86_64
- 	{ 0x8000000000000000UL, "Kernel Space" },
--	{ PAGE_OFFSET,		"Low Kernel Mapping" },
--	{ VMALLOC_START,        "vmalloc() Area" },
--	{ VMEMMAP_START,        "Vmemmap" },
-+	{ 0/* PAGE_OFFSET */,   "Low Kernel Mapping" },
-+	{ 0/* VMALLOC_START */, "vmalloc() Area" },
-+	{ 0/* VMEMMAP_START */, "Vmemmap" },
- # ifdef CONFIG_X86_ESPFIX64
- 	{ ESPFIX_BASE_ADDR,	"ESPfix Area", 16 },
- # endif
-@@ -434,8 +434,16 @@ void ptdump_walk_pgd_level_checkwx(void)
- 
- static int __init pt_dump_init(void)
- {
-+	/*
-+	 * Various markers are not compile-time constants, so assign them
-+	 * here.
-+	 */
-+#ifdef CONFIG_X86_64
-+	address_markers[LOW_KERNEL_NR].start_address = PAGE_OFFSET;
-+	address_markers[VMALLOC_START_NR].start_address = VMALLOC_START;
-+	address_markers[VMEMMAP_START_NR].start_address = VMEMMAP_START;
-+#endif
- #ifdef CONFIG_X86_32
--	/* Not a compile-time constant on x86-32 */
- 	address_markers[VMALLOC_START_NR].start_address = VMALLOC_START;
- 	address_markers[VMALLOC_END_NR].start_address = VMALLOC_END;
- # ifdef CONFIG_HIGHMEM
-diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
-index 4252acdfcbbd..cc82830bc8c4 100644
---- a/arch/x86/mm/init.c
-+++ b/arch/x86/mm/init.c
-@@ -17,6 +17,7 @@
- #include <asm/proto.h>
- #include <asm/dma.h>		/* for MAX_DMA_PFN */
- #include <asm/microcode.h>
-+#include <asm/kaslr.h>
- 
- /*
-  * We need to define the tracepoints somewhere, and tlb.c
 diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-new file mode 100644
-index 000000000000..d5380a48e8fb
---- /dev/null
+index 4f91dc273062..3e9875f7fdda 100644
+--- a/arch/x86/mm/kaslr.c
 +++ b/arch/x86/mm/kaslr.c
-@@ -0,0 +1,152 @@
-+/*
-+ * This file implements KASLR memory randomization for x86_64. It randomizes
-+ * the virtual address space of kernel memory regions (physical memory
-+ * mapping, vmalloc & vmemmap) for x86_64. This security feature mitigates
-+ * exploits relying on predictable kernel addresses.
-+ *
-+ * Entropy is generated using the KASLR early boot functions now shared in
-+ * the lib directory (originally written by Kees Cook). Randomization is
-+ * done on PGD & PUD page table levels to increase possible addresses. The
-+ * physical memory mapping code was adapted to support PUD level virtual
-+ * addresses. This implementation on the best configuration provides 30,000
-+ * possible virtual addresses in average for each memory region. An additional
-+ * low memory page is used to ensure each CPU can start with a PGD aligned
-+ * virtual address (for realmode).
-+ *
-+ * The order of each memory region is not changed. The feature looks at
-+ * the available space for the regions based on different configuration
-+ * options and randomizes the base and space between each. The size of the
-+ * physical memory mapping is the available physical memory.
-+ */
-+
-+#include <linux/kernel.h>
-+#include <linux/init.h>
-+#include <linux/random.h>
-+
-+#include <asm/pgalloc.h>
-+#include <asm/pgtable.h>
-+#include <asm/setup.h>
-+#include <asm/kaslr.h>
-+
-+#include "mm_internal.h"
-+
-+#define TB_SHIFT 40
-+
-+/*
-+ * Virtual address start and end range for randomization. The end changes base
-+ * on configuration to have the highest amount of space for randomization.
-+ * It increases the possible random position for each randomized region.
-+ *
-+ * You need to add an if/def entry if you introduce a new memory region
-+ * compatible with KASLR. Your entry must be in logical order with memory
-+ * layout. For example, ESPFIX is before EFI because its virtual address is
-+ * before. You also need to add a BUILD_BUG_ON in kernel_randomize_memory to
-+ * ensure that this order is correct and won't be changed.
-+ */
-+static const unsigned long vaddr_start;
-+static const unsigned long vaddr_end;
-+
-+/*
-+ * Memory regions randomized by KASLR (except modules that use a separate logic
-+ * earlier during boot). The list is ordered based on virtual addresses. This
-+ * order is kept after randomization.
-+ */
-+static __initdata struct kaslr_memory_region {
-+	unsigned long *base;
-+	unsigned long size_tb;
-+} kaslr_regions[] = {
-+};
-+
-+/* Get size in bytes used by the memory region */
-+static inline unsigned long get_padding(struct kaslr_memory_region *region)
-+{
-+	return (region->size_tb << TB_SHIFT);
-+}
-+
-+/*
-+ * Apply no randomization if KASLR was disabled at boot or if KASAN
-+ * is enabled. KASAN shadow mappings rely on regions being PGD aligned.
-+ */
-+static inline bool kaslr_memory_enabled(void)
-+{
-+	return kaslr_enabled() && !config_enabled(CONFIG_KASAN);
-+}
-+
-+/* Initialize base and padding for each memory region randomized with KASLR */
-+void __init kernel_randomize_memory(void)
-+{
-+	size_t i;
-+	unsigned long vaddr = vaddr_start;
-+	unsigned long rand;
-+	struct rnd_state rand_state;
-+	unsigned long remain_entropy;
-+
-+	if (!kaslr_memory_enabled())
-+		return;
-+
-+	/* Calculate entropy available between regions */
-+	remain_entropy = vaddr_end - vaddr_start;
-+	for (i = 0; i < ARRAY_SIZE(kaslr_regions); i++)
-+		remain_entropy -= get_padding(&kaslr_regions[i]);
-+
-+	prandom_seed_state(&rand_state, kaslr_get_random_long("Memory"));
-+
-+	for (i = 0; i < ARRAY_SIZE(kaslr_regions); i++) {
-+		unsigned long entropy;
-+
-+		/*
-+		 * Select a random virtual address using the extra entropy
-+		 * available.
-+		 */
-+		entropy = remain_entropy / (ARRAY_SIZE(kaslr_regions) - i);
-+		prandom_bytes_state(&rand_state, &rand, sizeof(rand));
-+		entropy = (rand % (entropy + 1)) & PUD_MASK;
-+		vaddr += entropy;
-+		*kaslr_regions[i].base = vaddr;
-+
-+		/*
-+		 * Jump the region and add a minimum padding based on
-+		 * randomization alignment.
-+		 */
-+		vaddr += get_padding(&kaslr_regions[i]);
-+		vaddr = round_up(vaddr + 1, PUD_SIZE);
-+		remain_entropy -= entropy;
-+	}
-+}
-+
-+/*
-+ * Create PGD aligned trampoline table to allow real mode initialization
-+ * of additional CPUs. Consume only 1 low memory page.
-+ */
-+void __meminit init_trampoline(void)
-+{
-+	unsigned long paddr, paddr_next;
-+	pgd_t *pgd;
-+	pud_t *pud_page, *pud_page_tramp;
-+	int i;
-+
-+	if (!kaslr_memory_enabled()) {
-+		init_trampoline_default();
-+		return;
-+	}
-+
-+	pud_page_tramp = alloc_low_page();
-+
-+	paddr = 0;
-+	pgd = pgd_offset_k((unsigned long)__va(paddr));
-+	pud_page = (pud_t *) pgd_page_vaddr(*pgd);
-+
-+	for (i = pud_index(paddr); i < PTRS_PER_PUD; i++, paddr = paddr_next) {
-+		pud_t *pud, *pud_tramp;
-+		unsigned long vaddr = (unsigned long)__va(paddr);
-+
-+		pud_tramp = pud_page_tramp + pud_index(paddr);
-+		pud = pud_page + pud_index(vaddr);
-+		paddr_next = (paddr & PUD_MASK) + PUD_SIZE;
-+
-+		*pud_tramp = *pud;
-+	}
-+
-+	set_pgd(&trampoline_pgd_entry,
-+		__pgd(_KERNPG_TABLE | __pa(pud_page_tramp)));
-+}
+@@ -114,8 +114,13 @@ void __init kernel_randomize_memory(void)
+ 	if (!kaslr_memory_enabled())
+ 		return;
+ 
++	/*
++	 * Update Physical memory mapping to available and
++	 * add padding if needed (especially for memory hotplug support).
++	 */
+ 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
+-	memory_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT);
++	memory_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) +
++		CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
+ 
+ 	/* Adapt phyiscal memory region size based on available memory */
+ 	if (memory_tb < kaslr_regions[0].size_tb)
 -- 
 2.7.4
