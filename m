@@ -1,51 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 23 Jun 2016 16:31:26 +0200
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20160623143126.GA16664@redhat.com>
-References: <cover.1466466093.git.luto@kernel.org>
- <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
- <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
- <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86,
- core)
-To: Linus Torvalds <torvalds@linux-foundation.org>
+Sender: linus971@gmail.com
+In-Reply-To: <20160623143126.GA16664@redhat.com>
+References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
+ <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
+ <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com> <20160623143126.GA16664@redhat.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 23 Jun 2016 09:30:52 -0700
+Message-ID: <CA+55aFwBL5ArLXZ0+YggTbp6Qon+OM+Foihe0yrQOmRRvu96VQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Oleg Nesterov <oleg@redhat.com>
 Cc: Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/22, Linus Torvalds wrote:
+On Thu, Jun 23, 2016 at 7:31 AM, Oleg Nesterov <oleg@redhat.com> wrote:
 >
-> Oleg, what do you think? Would it be reasonable to free the stack and
-> thread_info synchronously at exit time, clear the pointer (to catch
-> any odd use), and only RCU-delay the task_struct itself?
+> I didn't see the patches yet, quite possibly I misunderstood... But no,
+> I don't this we can do this (if we are not going to move ti->flags to
+> task_struct at least).
 
-I didn't see the patches yet, quite possibly I misunderstood... But no,
-I don't this we can do this (if we are not going to move ti->flags to
-task_struct at least).
+Argh. Yes, ti->flags is used by others. Everything else should be
+thread-synchronous, but there's ti->flags.
 
-> (Obviously, we can't release it in do_exit() itself like we do some of
-> the other state - it would need to be released after we've scheduled
-> away to another process' stack, but we already have that TASK_DEAD
-> handling in finish_task_switch for this exact reason).
+(And if we get scheduled, the thread-synchronous things will matter, of course):
 
-Yes, but the problem is that a zombie thread can do its last schedule
-before it is reaped.
+> Yes, but the problem is that a zombie thread can do its last schedule
+> before it is reaped.
 
-Just for example, syscall_regfunc() does
+Worse, the wait sequence will definitely look at it.
 
-		read_lock(&tasklist_lock);
-		for_each_process_thread(p, t) {
-			set_tsk_thread_flag(t, TIF_SYSCALL_TRACEPOINT);
-		}
-		read_unlock(&tasklist_lock);
+But that does bring up another possibility: do it at wait() time, when
+we do release_thread(). That's when we *used* to synchronously free
+it, before we did the lockless RCU walks.
 
-and this can easily hit a TASK_DEAD thread with ->stack == NULL.
+At that point, it has been removed from all the thread lists. So the
+only way to find it is through the RCU walks. Do any of *those* touch
+ti->flags? I'm not seeing it, and it sounds fixable if any do.
 
-And we can't free/nullify it when the parent/debuger reaps a zombie,
-say, mark_oom_victim() expects that get_task_struct() protects
-thread_info as well.
+If we could release the thread stack in release_thread(), that would be good.
 
-Oleg.
+Andy - I bet you can at least test it.
+
+            Linus
