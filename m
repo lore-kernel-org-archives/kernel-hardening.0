@@ -1,121 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFwHUw+6xEc-M+mZvwOxCsBD6zZDwyAQ-a_xupaH8py7cA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
 References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
  <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
  <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
  <20160623143126.GA16664@redhat.com> <CA+55aFwBL5ArLXZ0+YggTbp6Qon+OM+Foihe0yrQOmRRvu96VQ@mail.gmail.com>
  <20160623170352.GA17372@redhat.com> <CA+55aFwHUw+6xEc-M+mZvwOxCsBD6zZDwyAQ-a_xupaH8py7cA@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Thu, 23 Jun 2016 10:52:58 -0700
-Message-ID: <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
-Content-Type: multipart/mixed; boundary=94eb2c091f4484287d0535f5b92d
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
-List-ID: <kernel-hardening.lists.openwall.com>
-
---94eb2c091f4484287d0535f5b92d
+ <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 23 Jun 2016 11:00:08 -0700
+Message-ID: <CAGXu5jLd=cUa-8Fdp+6hypvn=cVVVkv-MWcZBnEy956fA96aMg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 23, 2016 at 10:44 AM, Linus Torvalds
+On Thu, Jun 23, 2016 at 10:52 AM, Linus Torvalds
 <torvalds@linux-foundation.org> wrote:
+> On Thu, Jun 23, 2016 at 10:44 AM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
+>>
+>> The thread_info->tsk pointer, that was one of the most critical issues
+>> and the main raison d'=C3=AAtre of the thread_info, has been replaced on
+>> x86 by just using the per-cpu "current_task". Yes,.there are probably
+>> more than a few "ti->task" users left for legacy reasons, harking back
+>> to when the thread-info was cheaper to access, but it shouldn't be a
+>> big deal.
 >
-> The thread_info->tsk pointer, that was one of the most critical issues
-> and the main raison d'=C3=AAtre of the thread_info, has been replaced on
-> x86 by just using the per-cpu "current_task". Yes,.there are probably
-> more than a few "ti->task" users left for legacy reasons, harking back
-> to when the thread-info was cheaper to access, but it shouldn't be a
-> big deal.
+> Ugh. Looking around at this, it turns out that a great example of this
+> kind of legacy issue is the debug_mutex stuff.
+>
+> It uses "struct thread_info *" as the owner pointer, and there is _no_
+> existing reason for it. In fact, in every single place it actually
+> wants the task_struct, and it does task_thread_info(task) just to
+> convert it to the thread-info, and then converts it back with
+> "ti->task".
 
-Ugh. Looking around at this, it turns out that a great example of this
-kind of legacy issue is the debug_mutex stuff.
+Heh, yeah, that looks like a nice clean-up.
 
-It uses "struct thread_info *" as the owner pointer, and there is _no_
-existing reason for it. In fact, in every single place it actually
-wants the task_struct, and it does task_thread_info(task) just to
-convert it to the thread-info, and then converts it back with
-"ti->task".
+> So the attached patch seems to be the right thing to do regardless of
+> this whole discussion.
 
-So the attached patch seems to be the right thing to do regardless of
-this whole discussion.
+Why does __mutex_lock_common() have "task" as a stack variable? It's
+only assigned at the start, and is always "current". (I only noticed
+from the patch changing "current_thread_info()" and
+"task_thread_info(task)" both to "task".)
 
-                   Linus
+-Kees
 
---94eb2c091f4484287d0535f5b92d
-Content-Type: text/plain; charset=US-ASCII; name="patch.diff"
-Content-Disposition: attachment; filename="patch.diff"
-Content-Transfer-Encoding: base64
-X-Attachment-Id: f_ipslwqqv0
-
-IGtlcm5lbC9sb2NraW5nL211dGV4LWRlYnVnLmMgfCAxMiArKysrKystLS0tLS0KIGtlcm5lbC9s
-b2NraW5nL211dGV4LWRlYnVnLmggfCAgNCArKy0tCiBrZXJuZWwvbG9ja2luZy9tdXRleC5jICAg
-ICAgIHwgIDYgKysrLS0tCiBrZXJuZWwvbG9ja2luZy9tdXRleC5oICAgICAgIHwgIDIgKy0KIDQg
-ZmlsZXMgY2hhbmdlZCwgMTIgaW5zZXJ0aW9ucygrKSwgMTIgZGVsZXRpb25zKC0pCgpkaWZmIC0t
-Z2l0IGEva2VybmVsL2xvY2tpbmcvbXV0ZXgtZGVidWcuYyBiL2tlcm5lbC9sb2NraW5nL211dGV4
-LWRlYnVnLmMKaW5kZXggM2VmMzczNjAwMmQ4Li45Yzk1MWZhZGU0MTUgMTAwNjQ0Ci0tLSBhL2tl
-cm5lbC9sb2NraW5nL211dGV4LWRlYnVnLmMKKysrIGIva2VybmVsL2xvY2tpbmcvbXV0ZXgtZGVi
-dWcuYwpAQCAtNDksMjEgKzQ5LDIxIEBAIHZvaWQgZGVidWdfbXV0ZXhfZnJlZV93YWl0ZXIoc3Ry
-dWN0IG11dGV4X3dhaXRlciAqd2FpdGVyKQogfQogCiB2b2lkIGRlYnVnX211dGV4X2FkZF93YWl0
-ZXIoc3RydWN0IG11dGV4ICpsb2NrLCBzdHJ1Y3QgbXV0ZXhfd2FpdGVyICp3YWl0ZXIsCi0JCQkg
-ICAgc3RydWN0IHRocmVhZF9pbmZvICp0aSkKKwkJCSAgICBzdHJ1Y3QgdGFza19zdHJ1Y3QgKnRh
-c2spCiB7CiAJU01QX0RFQlVHX0xPQ0tTX1dBUk5fT04oIXNwaW5faXNfbG9ja2VkKCZsb2NrLT53
-YWl0X2xvY2spKTsKIAogCS8qIE1hcmsgdGhlIGN1cnJlbnQgdGhyZWFkIGFzIGJsb2NrZWQgb24g
-dGhlIGxvY2s6ICovCi0JdGktPnRhc2stPmJsb2NrZWRfb24gPSB3YWl0ZXI7CisJdGFzay0+Ymxv
-Y2tlZF9vbiA9IHdhaXRlcjsKIH0KIAogdm9pZCBtdXRleF9yZW1vdmVfd2FpdGVyKHN0cnVjdCBt
-dXRleCAqbG9jaywgc3RydWN0IG11dGV4X3dhaXRlciAqd2FpdGVyLAotCQkJIHN0cnVjdCB0aHJl
-YWRfaW5mbyAqdGkpCisJCQkgc3RydWN0IHRhc2tfc3RydWN0ICp0YXNrKQogewogCURFQlVHX0xP
-Q0tTX1dBUk5fT04obGlzdF9lbXB0eSgmd2FpdGVyLT5saXN0KSk7Ci0JREVCVUdfTE9DS1NfV0FS
-Tl9PTih3YWl0ZXItPnRhc2sgIT0gdGktPnRhc2spOwotCURFQlVHX0xPQ0tTX1dBUk5fT04odGkt
-PnRhc2stPmJsb2NrZWRfb24gIT0gd2FpdGVyKTsKLQl0aS0+dGFzay0+YmxvY2tlZF9vbiA9IE5V
-TEw7CisJREVCVUdfTE9DS1NfV0FSTl9PTih3YWl0ZXItPnRhc2sgIT0gdGFzayk7CisJREVCVUdf
-TE9DS1NfV0FSTl9PTih0YXNrLT5ibG9ja2VkX29uICE9IHdhaXRlcik7CisJdGFzay0+YmxvY2tl
-ZF9vbiA9IE5VTEw7CiAKIAlsaXN0X2RlbF9pbml0KCZ3YWl0ZXItPmxpc3QpOwogCXdhaXRlci0+
-dGFzayA9IE5VTEw7CmRpZmYgLS1naXQgYS9rZXJuZWwvbG9ja2luZy9tdXRleC1kZWJ1Zy5oIGIv
-a2VybmVsL2xvY2tpbmcvbXV0ZXgtZGVidWcuaAppbmRleCAwNzk5ZmQzZTRjZmEuLmQwNmFlM2Ji
-NDZjNSAxMDA2NDQKLS0tIGEva2VybmVsL2xvY2tpbmcvbXV0ZXgtZGVidWcuaAorKysgYi9rZXJu
-ZWwvbG9ja2luZy9tdXRleC1kZWJ1Zy5oCkBAIC0yMCw5ICsyMCw5IEBAIGV4dGVybiB2b2lkIGRl
-YnVnX211dGV4X3dha2Vfd2FpdGVyKHN0cnVjdCBtdXRleCAqbG9jaywKIGV4dGVybiB2b2lkIGRl
-YnVnX211dGV4X2ZyZWVfd2FpdGVyKHN0cnVjdCBtdXRleF93YWl0ZXIgKndhaXRlcik7CiBleHRl
-cm4gdm9pZCBkZWJ1Z19tdXRleF9hZGRfd2FpdGVyKHN0cnVjdCBtdXRleCAqbG9jaywKIAkJCQkg
-ICBzdHJ1Y3QgbXV0ZXhfd2FpdGVyICp3YWl0ZXIsCi0JCQkJICAgc3RydWN0IHRocmVhZF9pbmZv
-ICp0aSk7CisJCQkJICAgc3RydWN0IHRhc2tfc3RydWN0ICp0YXNrKTsKIGV4dGVybiB2b2lkIG11
-dGV4X3JlbW92ZV93YWl0ZXIoc3RydWN0IG11dGV4ICpsb2NrLCBzdHJ1Y3QgbXV0ZXhfd2FpdGVy
-ICp3YWl0ZXIsCi0JCQkJc3RydWN0IHRocmVhZF9pbmZvICp0aSk7CisJCQkJc3RydWN0IHRhc2tf
-c3RydWN0ICp0YXNrKTsKIGV4dGVybiB2b2lkIGRlYnVnX211dGV4X3VubG9jayhzdHJ1Y3QgbXV0
-ZXggKmxvY2spOwogZXh0ZXJuIHZvaWQgZGVidWdfbXV0ZXhfaW5pdChzdHJ1Y3QgbXV0ZXggKmxv
-Y2ssIGNvbnN0IGNoYXIgKm5hbWUsCiAJCQkgICAgIHN0cnVjdCBsb2NrX2NsYXNzX2tleSAqa2V5
-KTsKZGlmZiAtLWdpdCBhL2tlcm5lbC9sb2NraW5nL211dGV4LmMgYi9rZXJuZWwvbG9ja2luZy9t
-dXRleC5jCmluZGV4IDc5ZDJkNzY1YTc1Zi4uYTcwYjkwZGIzOTA5IDEwMDY0NAotLS0gYS9rZXJu
-ZWwvbG9ja2luZy9tdXRleC5jCisrKyBiL2tlcm5lbC9sb2NraW5nL211dGV4LmMKQEAgLTUzNyw3
-ICs1MzcsNyBAQCBfX211dGV4X2xvY2tfY29tbW9uKHN0cnVjdCBtdXRleCAqbG9jaywgbG9uZyBz
-dGF0ZSwgdW5zaWduZWQgaW50IHN1YmNsYXNzLAogCQlnb3RvIHNraXBfd2FpdDsKIAogCWRlYnVn
-X211dGV4X2xvY2tfY29tbW9uKGxvY2ssICZ3YWl0ZXIpOwotCWRlYnVnX211dGV4X2FkZF93YWl0
-ZXIobG9jaywgJndhaXRlciwgdGFza190aHJlYWRfaW5mbyh0YXNrKSk7CisJZGVidWdfbXV0ZXhf
-YWRkX3dhaXRlcihsb2NrLCAmd2FpdGVyLCB0YXNrKTsKIAogCS8qIGFkZCB3YWl0aW5nIHRhc2tz
-IHRvIHRoZSBlbmQgb2YgdGhlIHdhaXRxdWV1ZSAoRklGTyk6ICovCiAJbGlzdF9hZGRfdGFpbCgm
-d2FpdGVyLmxpc3QsICZsb2NrLT53YWl0X2xpc3QpOwpAQCAtNTg0LDcgKzU4NCw3IEBAIF9fbXV0
-ZXhfbG9ja19jb21tb24oc3RydWN0IG11dGV4ICpsb2NrLCBsb25nIHN0YXRlLCB1bnNpZ25lZCBp
-bnQgc3ViY2xhc3MsCiAJfQogCV9fc2V0X3Rhc2tfc3RhdGUodGFzaywgVEFTS19SVU5OSU5HKTsK
-IAotCW11dGV4X3JlbW92ZV93YWl0ZXIobG9jaywgJndhaXRlciwgY3VycmVudF90aHJlYWRfaW5m
-bygpKTsKKwltdXRleF9yZW1vdmVfd2FpdGVyKGxvY2ssICZ3YWl0ZXIsIHRhc2spOwogCS8qIHNl
-dCBpdCB0byAwIGlmIHRoZXJlIGFyZSBubyB3YWl0ZXJzIGxlZnQ6ICovCiAJaWYgKGxpa2VseShs
-aXN0X2VtcHR5KCZsb2NrLT53YWl0X2xpc3QpKSkKIAkJYXRvbWljX3NldCgmbG9jay0+Y291bnQs
-IDApOwpAQCAtNjA1LDcgKzYwNSw3IEBAIHNraXBfd2FpdDoKIAlyZXR1cm4gMDsKIAogZXJyOgot
-CW11dGV4X3JlbW92ZV93YWl0ZXIobG9jaywgJndhaXRlciwgdGFza190aHJlYWRfaW5mbyh0YXNr
-KSk7CisJbXV0ZXhfcmVtb3ZlX3dhaXRlcihsb2NrLCAmd2FpdGVyLCB0YXNrKTsKIAlzcGluX3Vu
-bG9ja19tdXRleCgmbG9jay0+d2FpdF9sb2NrLCBmbGFncyk7CiAJZGVidWdfbXV0ZXhfZnJlZV93
-YWl0ZXIoJndhaXRlcik7CiAJbXV0ZXhfcmVsZWFzZSgmbG9jay0+ZGVwX21hcCwgMSwgaXApOwpk
-aWZmIC0tZ2l0IGEva2VybmVsL2xvY2tpbmcvbXV0ZXguaCBiL2tlcm5lbC9sb2NraW5nL211dGV4
-LmgKaW5kZXggNWNkYTM5NzYwN2YyLi5hNjhiYWU1ZTg1MmEgMTAwNjQ0Ci0tLSBhL2tlcm5lbC9s
-b2NraW5nL211dGV4LmgKKysrIGIva2VybmVsL2xvY2tpbmcvbXV0ZXguaApAQCAtMTMsNyArMTMs
-NyBAQAogCQlkbyB7IHNwaW5fbG9jayhsb2NrKTsgKHZvaWQpKGZsYWdzKTsgfSB3aGlsZSAoMCkK
-ICNkZWZpbmUgc3Bpbl91bmxvY2tfbXV0ZXgobG9jaywgZmxhZ3MpIFwKIAkJZG8geyBzcGluX3Vu
-bG9jayhsb2NrKTsgKHZvaWQpKGZsYWdzKTsgfSB3aGlsZSAoMCkKLSNkZWZpbmUgbXV0ZXhfcmVt
-b3ZlX3dhaXRlcihsb2NrLCB3YWl0ZXIsIHRpKSBcCisjZGVmaW5lIG11dGV4X3JlbW92ZV93YWl0
-ZXIobG9jaywgd2FpdGVyLCB0YXNrKSBcCiAJCV9fbGlzdF9kZWwoKHdhaXRlciktPmxpc3QucHJl
-diwgKHdhaXRlciktPmxpc3QubmV4dCkKIAogI2lmZGVmIENPTkZJR19NVVRFWF9TUElOX09OX09X
-TkVSCg==
---94eb2c091f4484287d0535f5b92d--
+--=20
+Kees Cook
+Chrome OS & Brillo Security
