@@ -1,51 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
-References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
- <20160622124707.GC9922@io.lakedaemon.net> <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 22 Jun 2016 10:05:51 -0700
-Message-ID: <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com>
+In-Reply-To: <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
+References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Wed, 22 Jun 2016 18:22:17 -0700
+Message-ID: <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v7 0/9] x86/mm: memory area address KASLR
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Jason Cooper <jason@lakedaemon.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jun 22, 2016 at 8:59 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> On Wed, Jun 22, 2016 at 5:47 AM, Jason Cooper <jason@lakedaemon.net> wrote:
->> Hey Kees,
+On Mon, Jun 20, 2016 at 9:01 PM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Mon, Jun 20, 2016 at 4:43 PM, Andy Lutomirski <luto@kernel.org> wrote:
 >>
->> On Tue, Jun 21, 2016 at 05:46:57PM -0700, Kees Cook wrote:
->>> Notable problems that needed solving:
->> ...
->>>  - Reasonable entropy is needed early at boot before get_random_bytes()
->>>    is available.
->>
->> This series is targetting x86, which typically has RDRAND/RDSEED
->> instructions.  Are you referring to other arches?  Older x86?  Also,
->> isn't this the same requirement for base address KASLR?
->>
->> Don't get me wrong, I want more diverse entropy sources available
->> earlier in the boot process as well. :-)  I'm just wondering what's
->> different about this series vs base address KASLR wrt early entropy
->> sources.
->>
+>> On my laptop, this adds about 1.5=C2=B5s of overhead to task creation,
+>> which seems to be mainly caused by vmalloc inefficiently allocating
+>> individual pages even when a higher-order page is available on the
+>> freelist.
 >
-> I think Kees was referring to the refactor I did to get the similar
-> entropy generation than KASLR module randomization. Our approach was
-> to provide best entropy possible even if you have an older processor
-> or under virtualization without support for these instructions.
-> Unfortunately common on companies with a large number of older
-> machines.
+> I really think that problem needs to be fixed before this should be merge=
+d.
+>
+> The easy fix may be to just have a very limited re-use of these stacks
+> in generic code, rather than try to do anything fancy with multi-page
+> allocations. Just a few of these allocations held in reserve (perhaps
+> make the allocations percpu to avoid new locks).
 
-Right, the memory offset KASLR uses the same routines as the kernel
-base KASLR. The issue is with older x86 systems, which continue to be
-very common.
+I implemented a percpu cache, and it's useless.
 
--Kees
+When a task goes away, one reference is held until the next RCU grace
+period so that task_struct can be used under RCU (look for
+delayed_put_task_struct).  This means that free_task gets called in
+giant batches under heavy clone() load, which is the only time that
+any of this matters, which means that only get to refill the cache
+once per RCU batch, which means that there's very little benefit.
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+Once thread_info stops living in the stack, we could, in principle,
+exempt the stack itself from RCU protection, thus saving a bit of
+memory under load and making the cache work.  I've started working on
+(optionally, per-arch) getting rid of on-stack thread_info, but that's
+not ready yet.
+
+FWIW, the same issue quite possibly hurts non-vmap-stack performance
+as well, as it makes it much less likely that a cache-hot stack gets
+immediately reused under heavy fork load.
+
+So may I skip this for now?  I think that the performance hit is
+unlikely to matter on most workloads, and I also expect the speedup
+from not using higher-order allocations to be a decent win on some
+workloads.
+
+--Andy
