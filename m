@@ -1,56 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
+Sender: linus971@gmail.com
+In-Reply-To: <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
 References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 22 Jun 2016 18:22:17 -0700
-Message-ID: <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
+ <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Wed, 22 Jun 2016 23:02:21 -0700
+Message-ID: <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
 Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Linus Torvalds <torvalds@linux-foundation.org>
+To: Andy Lutomirski <luto@amacapital.net>, Oleg Nesterov <oleg@redhat.com>
 Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jun 20, 2016 at 9:01 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Mon, Jun 20, 2016 at 4:43 PM, Andy Lutomirski <luto@kernel.org> wrote:
->>
->> On my laptop, this adds about 1.5=C2=B5s of overhead to task creation,
->> which seems to be mainly caused by vmalloc inefficiently allocating
->> individual pages even when a higher-order page is available on the
->> freelist.
+On Wed, Jun 22, 2016 at 6:22 PM, Andy Lutomirski <luto@amacapital.net> wrote:
 >
-> I really think that problem needs to be fixed before this should be merge=
-d.
+> I implemented a percpu cache, and it's useless.
 >
-> The easy fix may be to just have a very limited re-use of these stacks
-> in generic code, rather than try to do anything fancy with multi-page
-> allocations. Just a few of these allocations held in reserve (perhaps
-> make the allocations percpu to avoid new locks).
+> When a task goes away, one reference is held until the next RCU grace
+> period so that task_struct can be used under RCU (look for
+> delayed_put_task_struct).
 
-I implemented a percpu cache, and it's useless.
+Yeah, that RCU batching will screw the cache idea.
 
-When a task goes away, one reference is held until the next RCU grace
-period so that task_struct can be used under RCU (look for
-delayed_put_task_struct).  This means that free_task gets called in
-giant batches under heavy clone() load, which is the only time that
-any of this matters, which means that only get to refill the cache
-once per RCU batch, which means that there's very little benefit.
+But isn't it only the "task_struct" that needs that? That's a separate
+allocation from the stack, which contains the "thread_info".
 
-Once thread_info stops living in the stack, we could, in principle,
-exempt the stack itself from RCU protection, thus saving a bit of
-memory under load and making the cache work.  I've started working on
-(optionally, per-arch) getting rid of on-stack thread_info, but that's
-not ready yet.
+I think that what we *could* do is re-use the tread-info within the
+RCU grace period, as long as we delay freeing the task_struct.
 
-FWIW, the same issue quite possibly hurts non-vmap-stack performance
-as well, as it makes it much less likely that a cache-hot stack gets
-immediately reused under heavy fork load.
+Yes, yes, we currently tie the task_struct and thread_info lifetimes
+together very tightly, but that's a historical thing rather than a
+requirement. We do the
 
-So may I skip this for now?  I think that the performance hit is
-unlikely to matter on most workloads, and I also expect the speedup
-from not using higher-order allocations to be a decent win on some
-workloads.
+        account_kernel_stack(tsk->stack, -1);
+        arch_release_thread_info(tsk->stack);
+        free_thread_info(tsk->stack);
 
---Andy
+in free_task(), but I could imagine doing it earlier, and
+independently of the RCU-delayed free.
+
+In fact, I think we just do that at exit() time synchronously. The
+reference counting of the task_struct() is because a lot of other
+threads can have references to the exiting thread (and we have the
+tasklist and thread lists that are RCU-traversed), but none of those
+other references should ever look at the stack. Or even the
+thread-info.
+
+Hmm. I bet it would show some problems, but not be technically
+impossible. Especially if we make the thread-info rules be like the
+SLAB_DESTROY_BY_RCU semantics - the allocation may be re-used during
+the RCU grace period, but it is going to still exists and be of the
+same type.
+
+This sounds very much like something for Oleg Nesterov.
+
+Oleg, what do you think? Would it be reasonable to free the stack and
+thread_info synchronously at exit time, clear the pointer (to catch
+any odd use), and only RCU-delay the task_struct itself?
+
+That is, after all, what we already do with the VM, semaphores, files,
+fs info etc. There's no real reason I see to keep the stack around.
+
+(Obviously, we can't release it in do_exit() itself like we do some of
+the other state - it would need to be released after we've scheduled
+away to another process' stack, but we already have that TASK_DEAD
+handling in finish_task_switch for this exact reason).
+
+                 Linus
