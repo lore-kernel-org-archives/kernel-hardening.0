@@ -1,48 +1,27 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <20160623191123.GE30935@twins.programming.kicks-ass.net>
-References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
- <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
- <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
- <20160623143126.GA16664@redhat.com> <20160623191123.GE30935@twins.programming.kicks-ass.net>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Thu, 23 Jun 2016 12:34:24 -0700
-Message-ID: <CA+55aFzuNg5pfv_S_55u1tGhfUEux16wwiUSeCStKfha2MrxBQ@mail.gmail.com>
+In-Reply-To: <20160623193358.GL9922@io.lakedaemon.net>
+References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+ <20160622124707.GC9922@io.lakedaemon.net> <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
+ <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com> <20160623193358.GL9922@io.lakedaemon.net>
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Thu, 23 Jun 2016 15:45:54 -0400
+Message-ID: <CACXcFmnu5M_pQw5oTU+P6j7udj2vJSjctHDT0NY5Xc3uuf-Ovg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Subject: Re: [kernel-hardening] [PATCH v7 0/9] x86/mm: memory area address KASLR
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jun 23, 2016 at 12:11 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+Jason Cooper <jason@lakedaemon.net> wrote:
+
+> Modern systems that receive a seed from the bootloader via the
+> random-seed property (typically from the hw-rng) can mix both sources
+> for increased resilience.
 >
-> Didn't we talk about using SLAB_DESTROY_BY_RCU for task_struct before?
-> If that is possible, a reuse in per-cpu cache is equally possible.
->
-> All we really want to guarantee is that the memory remains a
-> task_struct, it need not remain the same task, right?
+> Unfortunately, I'm not very familiar with the internals of x86
+> bootstrapping.  Could GRUB be scripted to do a similar task?  How would
+> the address and size of the seed be passed to the kernel?  command line?
 
-No, we can't do SLAB_DESTROY_BY_RCU for the task_struct itself,
-because the RCU list traversal does expect that the thread and task
-lists are stable even if it walks into a "stale" struct task_struct.
-
-If we re-use the task-struct before the RCU grace period is over, then
-the list walker might end up walking into the wrong thread group
-(bad!) or seeing tasks twice on the task list (also bad, although
-perhaps not _as_ bad).
-
-The _other_ fields might be ok, but updaing the very list fields that
-we walk with RCU is a no-no.
-
-Basically, SLAB_DESTROY_BY_RCU is fine only for things where the RCU
-field use is idempotent. So for things where the RCU walker only looks
-at entries that don't matter semantically, or where it does things
-like "lock/unlock" on a lock that is still valid.
-
-It's actually fairly rare that we can use SLAB_DESTROY_BY_RCU. We have
-that sighand thing, and there's a couple of networking uses for the
-request_sock and socket slabs. And I sincerely hope the socket slab
-RCU lists are safe, because it's dangerous.
-
-               Linus
+One suggestion is at:
+http://www.av8n.com/computer/htm/secure-random.htm#sec-boot-image
