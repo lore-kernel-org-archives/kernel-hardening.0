@@ -1,103 +1,127 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 24 Jun 2016 01:11:15 +0000
-From: Jason Cooper <jason@lakedaemon.net>
-Message-ID: <20160624011115.GU9922@io.lakedaemon.net>
-References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
- <20160622124707.GC9922@io.lakedaemon.net>
- <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
- <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com>
- <20160623193358.GL9922@io.lakedaemon.net>
- <CAGXu5jJpFPuOrKSWT_H1oeTDObQKcgqL9ZwAHUV7y9=how_n9w@mail.gmail.com>
- <CAKv+Gu8SGsLCbVqDQVtZU4nNf=zzhONSFoSNF_Q29VmD=TZMWw@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Thu, 23 Jun 2016 21:22:55 -0700
+Message-Id: <cover.1466741835.git.luto@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu8SGsLCbVqDQVtZU4nNf=zzhONSFoSNF_Q29VmD=TZMWw@mail.gmail.com>
-Subject: Re: [kernel-hardening] [PATCH v7 0/9] x86/mm: memory area address
- KASLR
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH v4 00/16] Virtually mapped stacks with guard pages (x86, core)
+To: x86@kernel.org, linux-kernel@vger.kernel.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ard,
+Since the dawn of time, a kernel stack overflow has been a real PITA
+to debug, has caused nondeterministic crashes some time after the
+actual overflow, and has generally been easy to exploit for root.
 
-On Thu, Jun 23, 2016 at 10:05:53PM +0200, Ard Biesheuvel wrote:
-> On 23 June 2016 at 21:58, Kees Cook <keescook@chromium.org> wrote:
-> > On Thu, Jun 23, 2016 at 12:33 PM, Jason Cooper <jason@lakedaemon.net> wrote:
-> >> On Wed, Jun 22, 2016 at 10:05:51AM -0700, Kees Cook wrote:
-> >>> On Wed, Jun 22, 2016 at 8:59 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> >>> > On Wed, Jun 22, 2016 at 5:47 AM, Jason Cooper <jason@lakedaemon.net> wrote:
-> >>> >> Hey Kees,
-> >>> >>
-> >>> >> On Tue, Jun 21, 2016 at 05:46:57PM -0700, Kees Cook wrote:
-> >>> >>> Notable problems that needed solving:
-> >>> >> ...
-> >>> >>>  - Reasonable entropy is needed early at boot before get_random_bytes()
-> >>> >>>    is available.
-> >>> >>
-> >>> >> This series is targetting x86, which typically has RDRAND/RDSEED
-> >>> >> instructions.  Are you referring to other arches?  Older x86?  Also,
-> >>> >> isn't this the same requirement for base address KASLR?
-> >>> >>
-> >>> >> Don't get me wrong, I want more diverse entropy sources available
-> >>> >> earlier in the boot process as well. :-)  I'm just wondering what's
-> >>> >> different about this series vs base address KASLR wrt early entropy
-> >>> >> sources.
-> >>> >>
-> >>> >
-> >>> > I think Kees was referring to the refactor I did to get the similar
-> >>> > entropy generation than KASLR module randomization. Our approach was
-> >>> > to provide best entropy possible even if you have an older processor
-> >>> > or under virtualization without support for these instructions.
-> >>> > Unfortunately common on companies with a large number of older
-> >>> > machines.
-> >>>
-> >>> Right, the memory offset KASLR uses the same routines as the kernel
-> >>> base KASLR. The issue is with older x86 systems, which continue to be
-> >>> very common.
-> >>
-> >> We have the same issue in embedded. :-(  Compounded by the fact that
-> >> there is no rand instruction (at least not on ARM).  So, even if there's
-> >> a HW-RNG, you can't access it until the driver is loaded.
-> >>
-> >> This is compounded by the fact that most systems deployed today have
-> >> bootloaders a) without hw-rng drivers, b) without dtb editing, and c)
-> >> without dtb support at all.
-> >>
-> >> My current thinking is to add a devicetree property
-> >> "userspace,random-seed" <address, len>.  This way, existing, deployed
-> >> boards can append a dtb to a modern kernel with the property set.
-> >> The factory bootloader then only needs to amend its boot scripts to read
-> >> random-seed from the fs to the given address.
-> >
-> > The arm64 KASLR implementation has defined a way for boot loaders to
-> > pass in an seed similar to this. It might be nice to have a fall-back
-> > to a DT entry, though, then the bootloaders don't need to changed.
-> >
-> > Ard might have some thoughts on why DT wasn't used for KASLR (I assume
-> > the early parsing overhead, but I don't remember the discussion any
-> > more).
-> >
-> 
-> On arm64, only DT is used for KASLR (even when booting via ACPI). My
-> first draft used register x1, but this turned out to be too much of a
-> hassle, since parsing the DT is also necessary to discover whether
-> there is a 'nokaslr' argument on the kernel command line. So the
-> current implementation only supports a single method, which is the
-> /chosen/kaslr-seed uint64 property.
+With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+that enable it (just x86 for now) get virtually mapped stacks with
+guard pages.  This causes reliable faults when the stack overflows.
 
-Ok, just to clarify (after a short offline chat), my goal is to set a
-userspace,random-seed <addr, len> property in the device tree once.
-The bootloader scripts would also only need to be altered once.
+If the arch implements it well, we get a nice OOPS on stack overflow
+(as opposed to panicing directly or otherwise exploding badly).  On
+x86, the OOPS is nice, has a usable call trace, and the overflowing
+task is killed cleanly.
 
-Then, at each boot, the bootloader reads the entirety of
-/var/lib/misc/random-seed (512 bytes) into the configured address.
-random-seed could be in /boot, or on a flash partition.
+On my laptop, this adds about 1.5µs of overhead to task creation,
+which seems to be mainly caused by vmalloc inefficiently allocating
+individual pages even when a higher-order page is available on the
+freelist.
 
-The decompressor would consume a small portion of that seed for kaslr
-and such.  After that, the rest would be consumed by random.c to
-initialize the entropy pools.
+This does not address interrupt stacks.  It also does not address
+the possibility of privilege escalation by a controlled stack
+overflow that overwrites thread_info without hitting the guard page.
+I'll send patches to address the latter issue once this series
+lands.
 
-thx,
+It's worth noting that s390 has an arch-specific gcc feature that
+detects stack overflows by adjusting function prologues.  Arches
+with features like that may wish to avoid using vmapped stacks to
+minimize the performance hit.
 
-Jason.
+Ingo, would it make sense to throw it into a seaparate branch in
+-tip?  I wouldn't mind seeing some -next testing to give people a
+chance to shake out problems.  I'm particularly interested in
+whether there are any drivers that expect virt_to_phys to work on
+stack addresses.  (I know that virtio-net used to, but I fixed that
+a while back.)
+
+Once this lands in -tip, I'm planning on attacking thread_info.
+Once thread_info is under control, we can start caching a couple of
+stacks per cpu, and that should get us most of the performance back.
+
+Changes from v3:
+ - Fix rxrpc and bluetooth, which used scatterlists pointed at the stack
+ - Add some acks and cc's
+
+Changes from v2:
+ - Delete kernel_unmap_pages_in_pgd rather than hardening it (Borislav)
+ - Fix sub-page stack accounting better (Josh)
+
+Changes from v1:
+ - Fix rewind_stack_and_do_exit (Josh)
+ - Fix deadlock under load
+ - Clean up generic stack vmalloc code
+ - Many other minor fixes
+ 
+Andy Lutomirski (14):
+  bluetooth: Switch SMP to crypto_cipher_encrypt_one()
+  x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
+  x86/mm: Remove kernel_unmap_pages_in_pgd() and
+    efi_cleanup_page_tables()
+  mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
+  mm: Fix memcg stack accounting for sub-page stacks
+  dma-api: Teach the "DMA-from-stack" check about vmapped stacks
+  fork: Add generic vmalloced stack support
+  x86/die: Don't try to recover from an OOPS on a non-default stack
+  x86/dumpstack: When OOPSing, rewind the stack before do_exit
+  x86/dumpstack: When dumping stack bytes due to OOPS, start with
+    regs->sp
+  x86/dumpstack: Try harder to get a call trace on stack overflow
+  x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
+    OOPS
+  x86/mm/64: Enable vmapped stacks
+  x86/mm: Improve stack-overflow #PF handling
+
+Herbert Xu (1):
+  rxrpc: Avoid using stack memory in SG lists in rxkad
+
+Ingo Molnar (1):
+  x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
+
+ arch/Kconfig                         |  29 ++++++++++
+ arch/ia64/include/asm/thread_info.h  |   2 +-
+ arch/x86/Kconfig                     |   1 +
+ arch/x86/entry/entry_32.S            |  11 ++++
+ arch/x86/entry/entry_64.S            |  11 ++++
+ arch/x86/include/asm/efi.h           |   1 -
+ arch/x86/include/asm/pgtable_types.h |   2 -
+ arch/x86/include/asm/switch_to.h     |  28 +++++++++-
+ arch/x86/include/asm/traps.h         |   6 ++
+ arch/x86/kernel/dumpstack.c          |  19 ++++++-
+ arch/x86/kernel/dumpstack_32.c       |   4 +-
+ arch/x86/kernel/dumpstack_64.c       |  16 +++++-
+ arch/x86/kernel/traps.c              |  32 +++++++++++
+ arch/x86/mm/fault.c                  |  39 +++++++++++++
+ arch/x86/mm/init_64.c                |  27 ---------
+ arch/x86/mm/pageattr.c               |  32 +----------
+ arch/x86/mm/tlb.c                    |  15 +++++
+ arch/x86/platform/efi/efi.c          |   2 -
+ arch/x86/platform/efi/efi_32.c       |   3 -
+ arch/x86/platform/efi/efi_64.c       |   5 --
+ drivers/base/node.c                  |   3 +-
+ fs/proc/meminfo.c                    |   2 +-
+ include/linux/memcontrol.h           |   2 +-
+ include/linux/mmzone.h               |   2 +-
+ include/linux/sched.h                |  15 +++++
+ kernel/fork.c                        |  86 ++++++++++++++++++++++-------
+ lib/dma-debug.c                      |  39 +++++++++++--
+ mm/memcontrol.c                      |   2 +-
+ mm/page_alloc.c                      |   3 +-
+ net/bluetooth/smp.c                  |  67 ++++++++++-------------
+ net/rxrpc/ar-internal.h              |   1 +
+ net/rxrpc/rxkad.c                    | 103 +++++++++++++++--------------------
+ 32 files changed, 400 insertions(+), 210 deletions(-)
+
+-- 
+2.5.5
