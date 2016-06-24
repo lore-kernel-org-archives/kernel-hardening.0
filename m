@@ -1,298 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Thu, 23 Jun 2016 21:22:57 -0700
-Message-Id: <0873fb65c434dd95da859c2967ebb0e3bbfb0248.1466741835.git.luto@kernel.org>
+Date: Thu, 23 Jun 2016 21:22:58 -0700
+Message-Id: <69c48d00a26ed5914552c11323800e536a3bd53a.1466741835.git.luto@kernel.org>
 In-Reply-To: <cover.1466741835.git.luto@kernel.org>
 References: <cover.1466741835.git.luto@kernel.org>
 In-Reply-To: <cover.1466741835.git.luto@kernel.org>
 References: <cover.1466741835.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 02/16] rxrpc: Avoid using stack memory in SG lists in rxkad
+Subject: [kernel-hardening] [PATCH v4 03/16] x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Herbert Xu <herbert@gondor.apana.org.au>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Denys Vlasenko <dvlasenk@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Rik van Riel <riel@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Waiman Long <Waiman.Long@hp.com>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Herbert Xu <herbert@gondor.apana.org.au>
+From: Ingo Molnar <mingo@kernel.org>
 
-rxkad uses stack memory in SG lists which would not work if stacks
-were allocated from vmalloc memory.  In fact, in most cases this
-isn't even necessary as the stack memory ends up getting copied
-over to kmalloc memory.
+So when memory hotplug removes a piece of physical memory from pagetable
+mappings, it also frees the underlying PGD entry.
 
-This patch eliminates all the unnecessary stack memory uses by
-supplying the final destination directly to the crypto API.  In
-two instances where a temporary buffer is actually needed we also
-switch use the skb->cb area instead of the stack.
+This complicates PGD management, so don't do this. We can keep the
+PGD mapped and the PUD table all clear - it's only a single 4K page
+per 512 GB of memory hotplugged.
 
-Finally there is no need to split a split-page buffer into two SG
-entries so code dealing with that has been removed.
-
-Message-Id: <20160623064137.GA8958@gondor.apana.org.au>
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
-Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Brian Gerst <brgerst@gmail.com>
+Cc: Denys Vlasenko <dvlasenk@redhat.com>
+Cc: H. Peter Anvin <hpa@zytor.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Oleg Nesterov <oleg@redhat.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Rik van Riel <riel@redhat.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Waiman Long <Waiman.Long@hp.com>
+Cc: linux-mm@kvack.org
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+Message-Id: <1442903021-3893-4-git-send-email-mingo@kernel.org>
 ---
- net/rxrpc/ar-internal.h |   1 +
- net/rxrpc/rxkad.c       | 103 ++++++++++++++++++++----------------------------
- 2 files changed, 44 insertions(+), 60 deletions(-)
+ arch/x86/mm/init_64.c | 27 ---------------------------
+ 1 file changed, 27 deletions(-)
 
-diff --git a/net/rxrpc/ar-internal.h b/net/rxrpc/ar-internal.h
-index f0b807a163fa..8ee5933982f3 100644
---- a/net/rxrpc/ar-internal.h
-+++ b/net/rxrpc/ar-internal.h
-@@ -277,6 +277,7 @@ struct rxrpc_connection {
- 	struct key		*key;		/* security for this connection (client) */
- 	struct key		*server_key;	/* security for this service */
- 	struct crypto_skcipher	*cipher;	/* encryption handle */
-+	struct rxrpc_crypt	csum_iv_head;	/* leading block for csum_iv */
- 	struct rxrpc_crypt	csum_iv;	/* packet checksum base */
- 	unsigned long		events;
- #define RXRPC_CONN_CHALLENGE	0		/* send challenge packet */
-diff --git a/net/rxrpc/rxkad.c b/net/rxrpc/rxkad.c
-index bab56ed649ba..a28a3c6fdf1d 100644
---- a/net/rxrpc/rxkad.c
-+++ b/net/rxrpc/rxkad.c
-@@ -105,11 +105,9 @@ static void rxkad_prime_packet_security(struct rxrpc_connection *conn)
- {
- 	struct rxrpc_key_token *token;
- 	SKCIPHER_REQUEST_ON_STACK(req, conn->cipher);
--	struct scatterlist sg[2];
-+	struct rxrpc_crypt *csum_iv;
-+	struct scatterlist sg;
- 	struct rxrpc_crypt iv;
--	struct {
--		__be32 x[4];
--	} tmpbuf __attribute__((aligned(16))); /* must all be in same page */
- 
- 	_enter("");
- 
-@@ -119,24 +117,21 @@ static void rxkad_prime_packet_security(struct rxrpc_connection *conn)
- 	token = conn->key->payload.data[0];
- 	memcpy(&iv, token->kad->session_key, sizeof(iv));
- 
--	tmpbuf.x[0] = htonl(conn->epoch);
--	tmpbuf.x[1] = htonl(conn->cid);
--	tmpbuf.x[2] = 0;
--	tmpbuf.x[3] = htonl(conn->security_ix);
-+	csum_iv = &conn->csum_iv_head;
-+	csum_iv[0].x[0] = htonl(conn->epoch);
-+	csum_iv[0].x[1] = htonl(conn->cid);
-+	csum_iv[1].x[0] = 0;
-+	csum_iv[1].x[1] = htonl(conn->security_ix);
- 
--	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
--	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
-+	sg_init_one(&sg, csum_iv, 16);
- 
- 	skcipher_request_set_tfm(req, conn->cipher);
- 	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
-+	skcipher_request_set_crypt(req, &sg, &sg, 16, iv.x);
- 
- 	crypto_skcipher_encrypt(req);
- 	skcipher_request_zero(req);
- 
--	memcpy(&conn->csum_iv, &tmpbuf.x[2], sizeof(conn->csum_iv));
--	ASSERTCMP((u32 __force)conn->csum_iv.n[0], ==, (u32 __force)tmpbuf.x[2]);
--
- 	_leave("");
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index bce2e5d9edd4..c7465453d64e 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -702,27 +702,6 @@ static void __meminit free_pmd_table(pmd_t *pmd_start, pud_t *pud)
+ 	spin_unlock(&init_mm.page_table_lock);
  }
  
-@@ -150,12 +145,9 @@ static int rxkad_secure_packet_auth(const struct rxrpc_call *call,
- {
- 	struct rxrpc_skb_priv *sp;
- 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
-+	struct rxkad_level1_hdr hdr;
- 	struct rxrpc_crypt iv;
--	struct scatterlist sg[2];
--	struct {
--		struct rxkad_level1_hdr hdr;
--		__be32	first;	/* first four bytes of data and padding */
--	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
-+	struct scatterlist sg;
- 	u16 check;
- 
- 	sp = rxrpc_skb(skb);
-@@ -165,24 +157,21 @@ static int rxkad_secure_packet_auth(const struct rxrpc_call *call,
- 	check = sp->hdr.seq ^ sp->hdr.callNumber;
- 	data_size |= (u32)check << 16;
- 
--	tmpbuf.hdr.data_size = htonl(data_size);
--	memcpy(&tmpbuf.first, sechdr + 4, sizeof(tmpbuf.first));
-+	hdr.data_size = htonl(data_size);
-+	memcpy(sechdr, &hdr, sizeof(hdr));
- 
- 	/* start the encryption afresh */
- 	memset(&iv, 0, sizeof(iv));
- 
--	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
--	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
-+	sg_init_one(&sg, sechdr, 8);
- 
- 	skcipher_request_set_tfm(req, call->conn->cipher);
- 	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
-+	skcipher_request_set_crypt(req, &sg, &sg, 8, iv.x);
- 
- 	crypto_skcipher_encrypt(req);
- 	skcipher_request_zero(req);
- 
--	memcpy(sechdr, &tmpbuf, sizeof(tmpbuf));
+-/* Return true if pgd is changed, otherwise return false. */
+-static bool __meminit free_pud_table(pud_t *pud_start, pgd_t *pgd)
+-{
+-	pud_t *pud;
+-	int i;
 -
- 	_leave(" = 0");
- 	return 0;
- }
-@@ -196,8 +185,7 @@ static int rxkad_secure_packet_encrypt(const struct rxrpc_call *call,
- 				       void *sechdr)
- {
- 	const struct rxrpc_key_token *token;
--	struct rxkad_level2_hdr rxkhdr
--		__attribute__((aligned(8))); /* must be all on one page */
-+	struct rxkad_level2_hdr rxkhdr;
- 	struct rxrpc_skb_priv *sp;
- 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
- 	struct rxrpc_crypt iv;
-@@ -216,17 +204,17 @@ static int rxkad_secure_packet_encrypt(const struct rxrpc_call *call,
- 
- 	rxkhdr.data_size = htonl(data_size | (u32)check << 16);
- 	rxkhdr.checksum = 0;
-+	memcpy(sechdr, &rxkhdr, sizeof(rxkhdr));
- 
- 	/* encrypt from the session key */
- 	token = call->conn->key->payload.data[0];
- 	memcpy(&iv, token->kad->session_key, sizeof(iv));
- 
- 	sg_init_one(&sg[0], sechdr, sizeof(rxkhdr));
--	sg_init_one(&sg[1], &rxkhdr, sizeof(rxkhdr));
- 
- 	skcipher_request_set_tfm(req, call->conn->cipher);
- 	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(rxkhdr), iv.x);
-+	skcipher_request_set_crypt(req, &sg[0], &sg[0], sizeof(rxkhdr), iv.x);
- 
- 	crypto_skcipher_encrypt(req);
- 
-@@ -265,10 +253,11 @@ static int rxkad_secure_packet(const struct rxrpc_call *call,
- 	struct rxrpc_skb_priv *sp;
- 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
- 	struct rxrpc_crypt iv;
--	struct scatterlist sg[2];
--	struct {
-+	struct scatterlist sg;
-+	union {
- 		__be32 x[2];
--	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
-+		__be64 xl;
-+	} tmpbuf;
- 	u32 x, y;
- 	int ret;
- 
-@@ -294,16 +283,19 @@ static int rxkad_secure_packet(const struct rxrpc_call *call,
- 	tmpbuf.x[0] = htonl(sp->hdr.callNumber);
- 	tmpbuf.x[1] = htonl(x);
- 
--	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
--	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
-+	swap(tmpbuf.xl, *(__be64 *)sp);
-+
-+	sg_init_one(&sg, sp, sizeof(tmpbuf));
- 
- 	skcipher_request_set_tfm(req, call->conn->cipher);
- 	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
-+	skcipher_request_set_crypt(req, &sg, &sg, sizeof(tmpbuf), iv.x);
- 
- 	crypto_skcipher_encrypt(req);
- 	skcipher_request_zero(req);
- 
-+	swap(tmpbuf.xl, *(__be64 *)sp);
-+
- 	y = ntohl(tmpbuf.x[1]);
- 	y = (y >> 16) & 0xffff;
- 	if (y == 0)
-@@ -503,10 +495,11 @@ static int rxkad_verify_packet(const struct rxrpc_call *call,
- 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
- 	struct rxrpc_skb_priv *sp;
- 	struct rxrpc_crypt iv;
--	struct scatterlist sg[2];
--	struct {
-+	struct scatterlist sg;
-+	union {
- 		__be32 x[2];
--	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
-+		__be64 xl;
-+	} tmpbuf;
- 	u16 cksum;
- 	u32 x, y;
- 	int ret;
-@@ -534,16 +527,19 @@ static int rxkad_verify_packet(const struct rxrpc_call *call,
- 	tmpbuf.x[0] = htonl(call->call_id);
- 	tmpbuf.x[1] = htonl(x);
- 
--	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
--	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
-+	swap(tmpbuf.xl, *(__be64 *)sp);
-+
-+	sg_init_one(&sg, sp, sizeof(tmpbuf));
- 
- 	skcipher_request_set_tfm(req, call->conn->cipher);
- 	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
-+	skcipher_request_set_crypt(req, &sg, &sg, sizeof(tmpbuf), iv.x);
- 
- 	crypto_skcipher_encrypt(req);
- 	skcipher_request_zero(req);
- 
-+	swap(tmpbuf.xl, *(__be64 *)sp);
-+
- 	y = ntohl(tmpbuf.x[1]);
- 	cksum = (y >> 16) & 0xffff;
- 	if (cksum == 0)
-@@ -708,26 +704,13 @@ static void rxkad_calc_response_checksum(struct rxkad_response *response)
- }
- 
- /*
-- * load a scatterlist with a potentially split-page buffer
-+ * load a scatterlist
-  */
--static void rxkad_sg_set_buf2(struct scatterlist sg[2],
-+static void rxkad_sg_set_buf2(struct scatterlist sg[1],
- 			      void *buf, size_t buflen)
- {
--	int nsg = 1;
--
--	sg_init_table(sg, 2);
--
-+	sg_init_table(sg, 1);
- 	sg_set_buf(&sg[0], buf, buflen);
--	if (sg[0].offset + buflen > PAGE_SIZE) {
--		/* the buffer was split over two pages */
--		sg[0].length = PAGE_SIZE - sg[0].offset;
--		sg_set_buf(&sg[1], buf + sg[0].length, buflen - sg[0].length);
--		nsg++;
+-	for (i = 0; i < PTRS_PER_PUD; i++) {
+-		pud = pud_start + i;
+-		if (pud_val(*pud))
+-			return false;
 -	}
 -
--	sg_mark_end(&sg[nsg - 1]);
+-	/* free a pud table */
+-	free_pagetable(pgd_page(*pgd), 0);
+-	spin_lock(&init_mm.page_table_lock);
+-	pgd_clear(pgd);
+-	spin_unlock(&init_mm.page_table_lock);
 -
--	ASSERTCMP(sg[0].length + sg[1].length, ==, buflen);
+-	return true;
+-}
+-
+ static void __meminit
+ remove_pte_table(pte_t *pte_start, unsigned long addr, unsigned long end,
+ 		 bool direct)
+@@ -913,7 +892,6 @@ remove_pagetable(unsigned long start, unsigned long end, bool direct)
+ 	unsigned long addr;
+ 	pgd_t *pgd;
+ 	pud_t *pud;
+-	bool pgd_changed = false;
+ 
+ 	for (addr = start; addr < end; addr = next) {
+ 		next = pgd_addr_end(addr, end);
+@@ -924,13 +902,8 @@ remove_pagetable(unsigned long start, unsigned long end, bool direct)
+ 
+ 		pud = (pud_t *)pgd_page_vaddr(*pgd);
+ 		remove_pud_table(pud, addr, next, direct);
+-		if (free_pud_table(pud, pgd))
+-			pgd_changed = true;
+ 	}
+ 
+-	if (pgd_changed)
+-		sync_global_pgds(start, end - 1, 1);
+-
+ 	flush_tlb_all();
  }
  
- /*
-@@ -739,7 +722,7 @@ static void rxkad_encrypt_response(struct rxrpc_connection *conn,
- {
- 	SKCIPHER_REQUEST_ON_STACK(req, conn->cipher);
- 	struct rxrpc_crypt iv;
--	struct scatterlist sg[2];
-+	struct scatterlist sg[1];
- 
- 	/* continue encrypting from where we left off */
- 	memcpy(&iv, s2->session_key, sizeof(iv));
-@@ -999,7 +982,7 @@ static void rxkad_decrypt_response(struct rxrpc_connection *conn,
- 				   const struct rxrpc_crypt *session_key)
- {
- 	SKCIPHER_REQUEST_ON_STACK(req, rxkad_ci);
--	struct scatterlist sg[2];
-+	struct scatterlist sg[1];
- 	struct rxrpc_crypt iv;
- 
- 	_enter(",,%08x%08x",
 -- 
 2.5.5
