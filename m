@@ -1,188 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160624160238.GV9922@io.lakedaemon.net>
-References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
- <20160622124707.GC9922@io.lakedaemon.net> <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
- <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com>
- <20160623193358.GL9922@io.lakedaemon.net> <CAGXu5jJpFPuOrKSWT_H1oeTDObQKcgqL9ZwAHUV7y9=how_n9w@mail.gmail.com>
- <CAKv+Gu8SGsLCbVqDQVtZU4nNf=zzhONSFoSNF_Q29VmD=TZMWw@mail.gmail.com>
- <20160624011115.GU9922@io.lakedaemon.net> <CAKv+Gu_p5WLXBO0k=VWuX_ps1SMSte4_BhZFQY9pjveiTbSxAA@mail.gmail.com>
- <20160624160238.GV9922@io.lakedaemon.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 24 Jun 2016 12:04:32 -0700
-Message-ID: <CAGXu5j+hsPcrCAEcY-s9EDDUVqWOhpdx5iGNTBRqCqkExOJh5w@mail.gmail.com>
+In-Reply-To: <CA+55aFxo8tU42+hMjRgs1dUrqn1=rzDnvikRHHWV9HwDVeYkuQ@mail.gmail.com>
+References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
+ <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
+ <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
+ <20160623143126.GA16664@redhat.com> <CA+55aFwBL5ArLXZ0+YggTbp6Qon+OM+Foihe0yrQOmRRvu96VQ@mail.gmail.com>
+ <20160623170352.GA17372@redhat.com> <CA+55aFwHUw+6xEc-M+mZvwOxCsBD6zZDwyAQ-a_xupaH8py7cA@mail.gmail.com>
+ <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
+ <20160623185340.GO30154@twins.programming.kicks-ass.net> <CA+55aFzhUo=2M-y39NOpWAVm1h0ADfjR3dxszJmefvoEYLa2og@mail.gmail.com>
+ <CA+55aFxo8tU42+hMjRgs1dUrqn1=rzDnvikRHHWV9HwDVeYkuQ@mail.gmail.com>
+From: Brian Gerst <brgerst@gmail.com>
+Date: Fri, 24 Jun 2016 08:25:20 -0400
+Message-ID: <CAMzpN2i7ve0Rq9BCxjp2FUw5naPLrGDd7Mf3evrrRjUZN75oJQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: devicetree random-seed properties, was: "Re: [PATCH v7 0/9]
- x86/mm: memory area address KASLR"
-To: Jason Cooper <jason@lakedaemon.net>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Garnier <thgarnie@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 24, 2016 at 9:02 AM, Jason Cooper <jason@lakedaemon.net> wrote:
-> Thomas,
->
-> Sorry for wandering off the topic of your series.  The big take away for
-> me is that you and Kees are concerned about x86 systems pre-RDRAND.
-> Just as I'm concerned about deployed embedded systems without bootloader
-> support for hw-rngs and so forth.
->
-> Whatever final form the approach takes for ARM/dt, I'll make sure we can
-> extend it to legacy x86 systems.
-
-Yeah, this seems like a productive conversation to me. :)
-
-> Ard,
->
-> On Fri, Jun 24, 2016 at 12:54:01PM +0200, Ard Biesheuvel wrote:
->> On 24 June 2016 at 03:11, Jason Cooper <jason@lakedaemon.net> wrote:
->> > On Thu, Jun 23, 2016 at 10:05:53PM +0200, Ard Biesheuvel wrote:
-> ...
->> >> On arm64, only DT is used for KASLR (even when booting via ACPI). My
->> >> first draft used register x1, but this turned out to be too much of a
->> >> hassle, since parsing the DT is also necessary to discover whether
->> >> there is a 'nokaslr' argument on the kernel command line. So the
->> >> current implementation only supports a single method, which is the
->> >> /chosen/kaslr-seed uint64 property.
->> >
->> > Ok, just to clarify (after a short offline chat), my goal is to set a
->> > userspace,random-seed <addr, len> property in the device tree once.
->> > The bootloader scripts would also only need to be altered once.
->> >
->> > Then, at each boot, the bootloader reads the entirety of
->> > /var/lib/misc/random-seed (512 bytes) into the configured address.
->> > random-seed could be in /boot, or on a flash partition.
->> >
->> > The decompressor would consume a small portion of that seed for kaslr
->> > and such.  After that, the rest would be consumed by random.c to
->> > initialize the entropy pools.
->> >
+On Fri, Jun 24, 2016 at 2:17 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> On Thu, Jun 23, 2016 at 12:17 PM, Linus Torvalds
+> <torvalds@linux-foundation.org> wrote:
 >>
->> I see. This indeed has little to do with the arm64 KASLR case, other
->> than that they both use a DT property.
->>
->> In the arm64 KASLR case, I deliberately chose to leave it up to the
->> bootloader/firmware to roll the dice, for the same reason you pointed
->> out, i.e., that there is no architected way on ARM to obtain random
->> bits. So in that sense, what you are doing is complimentary to my
->> work, and a KASLR  aware arm64 bootloader would copy some of its
->> random bits taken from /var/lib/misc/random-seed into the
->> /chosen/kaslr-seed DT property.
+>> With the goal being that I'm hoping that we can then actually get rid
+>> of this (at least on x86-64, even if we leave it in some other
+>> architectures) in 4.8.
 >
-> Here I disagree.  We have two distinct entropy sources; the hw-rng
-> currently feeding kaslr via the /chosen/kaslr-seed property, and the
-> seasoned userspace seed I propose handed in via an extra property.
+> The context here was that we could almost get rid of thread-info
+> entirely, at least for x86-64, by moving it into struct task_struct.
 >
-> Having the bootloader conflate those two sources as if they are equal
-> seems to muddy the waters.  I prefer to have bootloaders tell me where
-> they got the data rather than to hope the bootloader sourced and mixed
-> it well.
+> It turns out that we're not *that* far off after the obvious cleanups
+> I already committed, but I couldn't get things quite to work.
 >
->> Note that, at the moment, this DT property is only an internal
->> contract between the kernel's UEFI stub and the kernel proper, so we
->> could still easily change that if necessary.
+> I'm attaching a patch that I wrote today that doesn't boot, but "looks
+> right". The reason I'm attaching it is because I'm hoping somebody
+> wants to take a look and maybe see what else I missed, but mostly
+> because I think the patch is interesting in a couple of cases where we
+> just do incredibly ugly things.
 >
-> Ideally, I'd prefer to be deliberate with the DT properties, e.g.
+> First off, some code that Andy wrote when he re-organized the entry path.
 >
-> random-seed,hwrng     <--- bootloader reads from hw-rng
-> random-seed,userspace <--- bootloader reads file from us to addr
+> Oh Gods, Andy. That pt_regs_to_thread_info() thing made me want to do
+> unspeakable acts on a poor innocent wax figure that looked _exactly_
+> like you.
 >
-> The kernel decompressor can init kaslr with only one of the two
-> properties populated.  If both properties are present, then the
-> decompressor can extract a u64 from userspace-seed and mix it with
-> hwrng-seed before use.
+> I just got rid of pt_regs_to_thread_info() entirely, and just replaced
+> it with current_thread_info().  I'm not at all convinced that trying
+> to be that clever was really a good idea.
 >
-> The small devicetree portion of my brain feels like 'kaslr-seed' is
-> telling the OS what to do with the value.  Whereas devicetree is
-> supposed to be describing the hardware.  Or, in this case, describing
-> the source of the data.
+> Secondly, the x86-64 ret_from_fork calling convention was documented
+> wrongly. It says %rdi contains the previous task pointer. Yes it does,
+> but it doesn't mention that %r8 is supposed to contain the new
+> thread_info. That was fun to find.
 >
-> Given that more entropy from more sources is useful for random.c a bit
-> later in the boot process, it might be worth making hwrng-seed larger
-> than u64 as well.  This way we can potentially seed random.c from two
-> sources *before* init even starts.  Without having to depend on the
-> kernel's hw-rng driver being probed.  After all, it might not have been
-> built, or it could be a module that's loaded later.
+> And thirdly, the stack size games that asm/kprobes.h plays are just
+> disgusting. I stared at that code for much too long. I may in fact be
+> going blind as a result.
 >
-> I've attached a draft patch to chosen.txt.
+> The rest was fairly straightforward, although since the end result
+> doesn't actually work, that "straightforward" may be broken too. But
+> the basic approach _looks_ sane.
 >
-> thx,
+> Comments? Anybody want to play with this and see where I went wrong?
 >
-> Jason.
+> (Note - this patch was written on top of the two thread-info removal
+> patches I committed in
 >
+>    da01e18a37a5 x86: avoid avoid passing around 'thread_info' in stack
+> dumping code
+>    6720a305df74 locking: avoid passing around 'thread_info' in mutex
+> debugging code
 >
-> --------------->8---------------------------------
-> diff --git a/Documentation/devicetree/bindings/chosen.txt b/Documentation/devicetree/bindings/chosen.txt
-> index 6ae9d82d4c37..61f15f04bc0a 100644
-> --- a/Documentation/devicetree/bindings/chosen.txt
-> +++ b/Documentation/devicetree/bindings/chosen.txt
-> @@ -45,6 +45,52 @@ on PowerPC "stdout" if "stdout-path" is not found.  However, the
->  "linux,stdout-path" and "stdout" properties are deprecated. New platforms
->  should only use the "stdout-path" property.
+> and depends on them, since "ti->task" no longer exists with
+> CONFIG_THREAD_INFO_IN_TASK. "ti" and "task" will have the same value).
 >
-> +random-seed properties
-> +----------------------
-> +
-> +The goal of these properties are to provide an entropy seed early in the boot
-> +process.  Typically, this is needed by the kernel decompressor for
-> +initializing KASLR.  At that point, the kernel entropy pools haven't been
-> +initialized yet, and any hardware rng drivers haven't been loaded yet, if they
-> +exist.
-> +
-> +The bootloader can attain these seeds and pass them to the kernel via the
-> +respective properties.  The bootloader is not expected to mix or condition
-> +this data in any way, simply read and pass.  Either one or both properties can
-> +be set if the data is available.
-> +
-> +random-seed,hwrng property
-> +--------------------------
-> +
-> +For bootloaders with support for reading from the system's hardware random
-> +number generator.  The bootloader can read a chunk of data from the hw-rng
-> +and set it as the value for this binary blob property.
+>                  Linus
 
-As in the boot loader would change the value per-boot?
+  * A newly forked process directly context switches into this address.
+  *
+  * rdi: prev task we switched from
++ * rsi: task we're switching to
+  */
+ ENTRY(ret_from_fork)
+-    LOCK ; btr $TIF_FORK, TI_flags(%r8)
++    LOCK ; btr $TIF_FORK, TI_flags(%rsi)    /* rsi: this newly forked task */
 
-Does this proposal include replacing /chosen/kaslr-seed with
-random-seed,hwrng? (Should the "chosen" path be used for hwrng too?)
+     call    schedule_tail            /* rdi: 'prev' task parameter */
 
-> +
-> +/ {
-> +       chosen {
-> +               random-seed,hwrng = <0x1f 0x07 0x4d 0x91 ...>;
-> +       };
-> +};
-> +
-> +random-seed,userspace property
-> +------------------------------
-> +
-> +The goal of this property is to also provide backwards compatibility with
-> +existing systems.  The bootloaders on these deployed systems typically lack
-> +the ability to edit a devicetree or read from an hwrng.  The only requirement
-> +for a bootloader is that it be able to read a seed file generated by the
-> +previous boot into a pre-determined physical address and size.  This is
-> +typically done via boot scripting.
+I think you forgot GET_THREAD_INFO() here.  RSI is the task, not the
+thread_info.  FYI, this goes away with my switch_to() rewrite, which
+removes TIF_FORK.
 
-What happens on a cold boot?
-
-> +
-> +This property can then be set in the devicetree statically and parsed by a
-> +modern kernel without requiring a bootloader update.
-> +
-> +/ {
-> +       chosen {
-> +               random-seed,userspace = <0x40000 0x200>;
-> +       };
-> +};
-> +
->  linux,booted-from-kexec
->  -----------------------
->
-
-I'm a DT newbie still, so please ignore me if I'm not making useful comments. :)
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+--
+Brian Gerst
