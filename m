@@ -1,268 +1,197 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Thu, 23 Jun 2016 21:23:04 -0700
-Message-Id: <0d679f04539b36ed21a87ca05a1f7bff7e90ca68.1466741835.git.luto@kernel.org>
+Date: Thu, 23 Jun 2016 21:23:10 -0700
+Message-Id: <092202d0f794e8519450a39e0420f61a5aaaa018.1466741835.git.luto@kernel.org>
 In-Reply-To: <cover.1466741835.git.luto@kernel.org>
 References: <cover.1466741835.git.luto@kernel.org>
 In-Reply-To: <cover.1466741835.git.luto@kernel.org>
 References: <cover.1466741835.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 09/16] fork: Add generic vmalloced stack support
+Subject: [kernel-hardening] [PATCH v4 15/16] x86/mm/64: Enable vmapped stacks
 To: x86@kernel.org, linux-kernel@vger.kernel.org
 Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
-vmalloc_node.
+This allows x86_64 kernels to enable vmapped stacks.  There are a
+couple of interesting bits.
+
+First, x86 lazily faults in top-level paging entries for the vmalloc
+area.  This won't work if we get a page fault while trying to access
+the stack: the CPU will promote it to a double-fault and we'll die.
+To avoid this problem, probe the new stack when switching stacks and
+forcibly populate the pgd entry for the stack when switching mms.
+
+Second, once we have guard pages around the stack, we'll want to
+detect and handle stack overflow.
+
+I didn't enable it on x86_32.  We'd need to rework the double-fault
+code a bit and I'm concerned about running out of vmalloc virtual
+addresses under some workloads.
+
+This patch, by itself, will behave somewhat erratically when the
+stack overflows while RSP is still more than a few tens of bytes
+above the bottom of the stack.  Specifically, we'll get #PF and make
+it to no_context and an oops without triggering a double-fault, and
+no_context doesn't know about stack overflows.  The next patch will
+improve that case.
 
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/Kconfig                        | 29 +++++++++++++
- arch/ia64/include/asm/thread_info.h |  2 +-
- include/linux/sched.h               | 15 +++++++
- kernel/fork.c                       | 82 +++++++++++++++++++++++++++++--------
- 4 files changed, 110 insertions(+), 18 deletions(-)
+ arch/x86/Kconfig                 |  1 +
+ arch/x86/include/asm/switch_to.h | 28 +++++++++++++++++++++++++++-
+ arch/x86/kernel/traps.c          | 32 ++++++++++++++++++++++++++++++++
+ arch/x86/mm/tlb.c                | 15 +++++++++++++++
+ 4 files changed, 75 insertions(+), 1 deletion(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index e9734796531f..835eeef0f14d 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -661,4 +661,33 @@ config ARCH_NO_COHERENT_DMA_MMAP
- config CPU_NO_EFFICIENT_FFS
- 	def_bool n
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index d9a94da0c29f..afdcf96ef109 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -92,6 +92,7 @@ config X86
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+ 	select HAVE_EBPF_JIT			if X86_64
++	select HAVE_ARCH_VMAP_STACK		if X86_64
+ 	select HAVE_CC_STACKPROTECTOR
+ 	select HAVE_CMPXCHG_DOUBLE
+ 	select HAVE_CMPXCHG_LOCAL
+diff --git a/arch/x86/include/asm/switch_to.h b/arch/x86/include/asm/switch_to.h
+index 8f321a1b03a1..14e4b20f0aaf 100644
+--- a/arch/x86/include/asm/switch_to.h
++++ b/arch/x86/include/asm/switch_to.h
+@@ -8,6 +8,28 @@ struct tss_struct;
+ void __switch_to_xtra(struct task_struct *prev_p, struct task_struct *next_p,
+ 		      struct tss_struct *tss);
  
-+config HAVE_ARCH_VMAP_STACK
-+	def_bool n
-+	help
-+	  An arch should select this symbol if it can support kernel stacks
-+	  in vmalloc space.  This means:
-+
-+	  - vmalloc space must be large enough to hold many kernel stacks.
-+	    This may rule out many 32-bit architectures.
-+
-+	  - Stacks in vmalloc space need to work reliably.  For example, if
-+	    vmap page tables are created on demand, either this mechanism
-+	    needs to work while the stack points to a virtual address with
-+	    unpopulated page tables or arch code (switch_to and switch_mm,
-+	    most likely) needs to ensure that the stack's page table entries
-+	    are populated before running on a possibly unpopulated stack.
-+
-+	  - If the stack overflows into a guard page, something reasonable
-+	    should happen.  The definition of "reasonable" is flexible, but
-+	    instantly rebooting without logging anything would be unfriendly.
-+
-+config VMAP_STACK
-+	bool "Use a virtually-mapped stack"
-+	depends on HAVE_ARCH_VMAP_STACK
-+	---help---
-+	  Enable this if you want the use virtually-mapped kernel stacks
-+	  with guard pages.  This causes kernel stack overflows to be
-+	  caught immediately rather than causing difficult-to-diagnose
-+	  corruption.
-+
- source "kernel/gcov/Kconfig"
-diff --git a/arch/ia64/include/asm/thread_info.h b/arch/ia64/include/asm/thread_info.h
-index aa995b67c3f5..d13edda6e09c 100644
---- a/arch/ia64/include/asm/thread_info.h
-+++ b/arch/ia64/include/asm/thread_info.h
-@@ -56,7 +56,7 @@ struct thread_info {
- #define alloc_thread_info_node(tsk, node)	((struct thread_info *) 0)
- #define task_thread_info(tsk)	((struct thread_info *) 0)
- #endif
--#define free_thread_info(ti)	/* nothing */
-+#define free_thread_info(tsk)	/* nothing */
- #define task_stack_page(tsk)	((void *)(tsk))
- 
- #define __HAVE_THREAD_FUNCTIONS
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 6e42ada26345..a37c3b790309 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1918,6 +1918,9 @@ struct task_struct {
- #ifdef CONFIG_MMU
- 	struct task_struct *oom_reaper_list;
- #endif
-+#ifdef CONFIG_VMAP_STACK
-+	struct vm_struct *stack_vm_area;
-+#endif
- /* CPU-specific state of this task */
- 	struct thread_struct thread;
- /*
-@@ -1934,6 +1937,18 @@ extern int arch_task_struct_size __read_mostly;
- # define arch_task_struct_size (sizeof(struct task_struct))
- #endif
- 
-+#ifdef CONFIG_VMAP_STACK
-+static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
++/* This runs runs on the previous thread's stack. */
++static inline void prepare_switch_to(struct task_struct *prev,
++				     struct task_struct *next)
 +{
-+	return t->stack_vm_area;
-+}
-+#else
-+static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
-+{
-+	return NULL;
-+}
-+#endif
-+
- /* Future-safe accessor for struct task_struct's cpus_allowed. */
- #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
- 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index ff3c41c2ba96..fe1c785e5f8c 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -158,19 +158,38 @@ void __weak arch_release_thread_info(struct thread_info *ti)
-  * Allocate pages if THREAD_SIZE is >= PAGE_SIZE, otherwise use a
-  * kmemcache based allocator.
-  */
--# if THREAD_SIZE >= PAGE_SIZE
-+# if THREAD_SIZE >= PAGE_SIZE || defined(CONFIG_VMAP_STACK)
- static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
- 						  int node)
- {
 +#ifdef CONFIG_VMAP_STACK
-+	struct thread_info *ti = __vmalloc_node_range(
-+		THREAD_SIZE, THREAD_SIZE, VMALLOC_START, VMALLOC_END,
-+		THREADINFO_GFP | __GFP_HIGHMEM, PAGE_KERNEL,
-+		0, node, __builtin_return_address(0));
-+
 +	/*
-+	 * We can't call find_vm_area() in interrupt context, and
-+	 * free_thread_info can be called in interrupt context, so cache
-+	 * the vm_struct.
++	 * If we switch to a stack that has a top-level paging entry
++	 * that is not present in the current mm, the resulting #PF will
++	 * will be promoted to a double-fault and we'll panic.  Probe
++	 * the new stack now so that vmalloc_fault can fix up the page
++	 * tables if needed.  This can only happen if we use a stack
++	 * in vmap space.
++	 *
++	 * We assume that the stack is aligned so that it never spans
++	 * more than one top-level paging entry.
++	 *
++	 * To minimize cache pollution, just follow the stack pointer.
 +	 */
-+	if (ti)
-+		tsk->stack_vm_area = find_vm_area(ti);
-+	return ti;
-+#else
- 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
- 						  THREAD_SIZE_ORDER);
- 
- 	return page ? page_address(page) : NULL;
++	READ_ONCE(*(unsigned char *)next->thread.sp);
 +#endif
- }
- 
--static inline void free_thread_info(struct thread_info *ti)
-+static inline void free_thread_info(struct task_struct *tsk)
- {
--	free_kmem_pages((unsigned long)ti, THREAD_SIZE_ORDER);
-+	if (task_stack_vm_area(tsk))
-+		vfree(tsk->stack);
-+	else
-+		free_kmem_pages((unsigned long)tsk->stack, THREAD_SIZE_ORDER);
- }
- # else
- static struct kmem_cache *thread_info_cache;
-@@ -181,9 +200,9 @@ static struct thread_info *alloc_thread_info_node(struct task_struct *tsk,
- 	return kmem_cache_alloc_node(thread_info_cache, THREADINFO_GFP, node);
- }
- 
--static void free_thread_info(struct thread_info *ti)
-+static void free_thread_info(struct task_struct *tsk)
- {
--	kmem_cache_free(thread_info_cache, ti);
-+	kmem_cache_free(thread_info_cache, tsk->stack);
- }
- 
- void thread_info_cache_init(void)
-@@ -213,24 +232,47 @@ struct kmem_cache *vm_area_cachep;
- /* SLAB cache for mm_struct structures (tsk->mm) */
- static struct kmem_cache *mm_cachep;
- 
--static void account_kernel_stack(struct thread_info *ti, int account)
-+static void account_kernel_stack(struct task_struct *tsk, int account)
- {
--	struct zone *zone = page_zone(virt_to_page(ti));
-+	struct zone *zone;
-+	struct thread_info *ti = task_thread_info(tsk);
-+	struct vm_struct *vm = task_stack_vm_area(tsk);
++}
 +
-+	BUILD_BUG_ON(IS_ENABLED(CONFIG_VMAP_STACK) && PAGE_SIZE % 1024 != 0);
+ #ifdef CONFIG_X86_32
+ 
+ #ifdef CONFIG_CC_STACKPROTECTOR
+@@ -39,6 +61,8 @@ do {									\
+ 	 */								\
+ 	unsigned long ebx, ecx, edx, esi, edi;				\
+ 									\
++	prepare_switch_to(prev, next);					\
++									\
+ 	asm volatile("pushl %%ebp\n\t"		/* save    EBP   */	\
+ 		     "movl %%esp,%[prev_sp]\n\t"	/* save    ESP   */ \
+ 		     "movl %[next_sp],%%esp\n\t"	/* restore ESP   */ \
+@@ -103,7 +127,9 @@ do {									\
+  * clean in kernel mode, with the possible exception of IOPL.  Kernel IOPL
+  * has no effect.
+  */
+-#define switch_to(prev, next, last) \
++#define switch_to(prev, next, last)					  \
++	prepare_switch_to(prev, next);					  \
++									  \
+ 	asm volatile(SAVE_CONTEXT					  \
+ 	     "movq %%rsp,%P[threadrsp](%[prev])\n\t" /* save RSP */	  \
+ 	     "movq %P[threadrsp](%[next]),%%rsp\n\t" /* restore RSP */	  \
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index 00f03d82e69a..9cb7ea781176 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -292,12 +292,30 @@ DO_ERROR(X86_TRAP_NP,     SIGBUS,  "segment not present",	segment_not_present)
+ DO_ERROR(X86_TRAP_SS,     SIGBUS,  "stack segment",		stack_segment)
+ DO_ERROR(X86_TRAP_AC,     SIGBUS,  "alignment check",		alignment_check)
+ 
++#ifdef CONFIG_VMAP_STACK
++static void __noreturn handle_stack_overflow(const char *message,
++					     struct pt_regs *regs,
++					     unsigned long fault_address)
++{
++	printk(KERN_EMERG "BUG: stack guard page was hit at %p (stack is %p..%p)\n",
++		 (void *)fault_address, current->stack,
++		 (char *)current->stack + THREAD_SIZE - 1);
++	die(message, regs, 0);
 +
-+	if (vm) {
-+		int i;
++	/* Be absolutely certain we don't return. */
++	panic(message);
++}
++#endif
++
+ #ifdef CONFIG_X86_64
+ /* Runs on IST stack */
+ dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
+ {
+ 	static const char str[] = "double fault";
+ 	struct task_struct *tsk = current;
++#ifdef CONFIG_VMAP_STACK
++	unsigned long cr2;
++#endif
  
--	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
--			    THREAD_SIZE / 1024 * account);
-+		BUG_ON(vm->nr_pages != THREAD_SIZE / PAGE_SIZE);
+ #ifdef CONFIG_X86_ESPFIX64
+ 	extern unsigned char native_irq_return_iret[];
+@@ -332,6 +350,20 @@ dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
+ 	tsk->thread.error_code = error_code;
+ 	tsk->thread.trap_nr = X86_TRAP_DF;
  
--	/* All stack pages belong to the same memcg. */
--	memcg_kmem_update_page_stat(
--		virt_to_page(ti), MEMCG_KERNEL_STACK_KB,
--		account * (THREAD_SIZE / 1024));
-+		for (i = 0; i < THREAD_SIZE / PAGE_SIZE; i++) {
-+			mod_zone_page_state(page_zone(vm->pages[i]),
-+					    NR_KERNEL_STACK_KB,
-+					    PAGE_SIZE / 1024 * account);
++#ifdef CONFIG_VMAP_STACK
++	/*
++	 * If we overflow the stack into a guard page, the CPU will fail
++	 * to deliver #PF and will send #DF instead.  CR2 will contain
++	 * the linear address of the second fault, which will be in the
++	 * guard page below the bottom of the stack.
++	 */
++	cr2 = read_cr2();
++	if ((unsigned long)tsk->stack - 1 - cr2 < PAGE_SIZE)
++		handle_stack_overflow(
++			"kernel stack overflow (double-fault)",
++			regs, cr2);
++#endif
++
+ #ifdef CONFIG_DOUBLEFAULT
+ 	df_debug(regs, error_code);
+ #endif
+diff --git a/arch/x86/mm/tlb.c b/arch/x86/mm/tlb.c
+index 5643fd0b1a7d..fbf036ae72ac 100644
+--- a/arch/x86/mm/tlb.c
++++ b/arch/x86/mm/tlb.c
+@@ -77,10 +77,25 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
+ 	unsigned cpu = smp_processor_id();
+ 
+ 	if (likely(prev != next)) {
++		if (IS_ENABLED(CONFIG_VMAP_STACK)) {
++			/*
++			 * If our current stack is in vmalloc space and isn't
++			 * mapped in the new pgd, we'll double-fault.  Forcibly
++			 * map it.
++			 */
++			unsigned int stack_pgd_index =
++				pgd_index(current_stack_pointer());
++			pgd_t *pgd = next->pgd + stack_pgd_index;
++
++			if (unlikely(pgd_none(*pgd)))
++				set_pgd(pgd, init_mm.pgd[stack_pgd_index]);
 +		}
 +
-+		/* All stack pages belong to the same memcg. */
-+		memcg_kmem_update_page_stat(
-+			vm->pages[0], MEMCG_KERNEL_STACK_KB,
-+			account * (THREAD_SIZE / 1024));
-+	} else {
-+		zone = page_zone(virt_to_page(ti));
+ #ifdef CONFIG_SMP
+ 		this_cpu_write(cpu_tlbstate.state, TLBSTATE_OK);
+ 		this_cpu_write(cpu_tlbstate.active_mm, next);
+ #endif
 +
-+		mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
-+				    THREAD_SIZE / 1024 * account);
-+
-+		/* All stack pages belong to the same memcg. */
-+		memcg_kmem_update_page_stat(
-+			virt_to_page(ti), MEMCG_KERNEL_STACK_KB,
-+			account * (THREAD_SIZE / 1024));
-+	}
- }
+ 		cpumask_set_cpu(cpu, mm_cpumask(next));
  
- void free_task(struct task_struct *tsk)
- {
--	account_kernel_stack(tsk->stack, -1);
-+	account_kernel_stack(tsk, -1);
- 	arch_release_thread_info(tsk->stack);
--	free_thread_info(tsk->stack);
-+	free_thread_info(tsk);
- 	rt_mutex_debug_task_free(tsk);
- 	ftrace_graph_exit_task(tsk);
- 	put_seccomp_filter(tsk);
-@@ -342,6 +384,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- {
- 	struct task_struct *tsk;
- 	struct thread_info *ti;
-+	struct vm_struct *stack_vm_area;
- 	int err;
- 
- 	if (node == NUMA_NO_NODE)
-@@ -354,11 +397,16 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- 	if (!ti)
- 		goto free_tsk;
- 
-+	stack_vm_area = task_stack_vm_area(tsk);
-+
- 	err = arch_dup_task_struct(tsk, orig);
- 	if (err)
- 		goto free_ti;
- 
- 	tsk->stack = ti;
-+#ifdef CONFIG_VMAP_STACK
-+	tsk->stack_vm_area = stack_vm_area;
-+#endif
- #ifdef CONFIG_SECCOMP
- 	/*
- 	 * We must handle setting up seccomp filters once we're under
-@@ -390,14 +438,14 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- 	tsk->task_frag.page = NULL;
- 	tsk->wake_q.next = NULL;
- 
--	account_kernel_stack(ti, 1);
-+	account_kernel_stack(tsk, 1);
- 
- 	kcov_task_init(tsk);
- 
- 	return tsk;
- 
- free_ti:
--	free_thread_info(ti);
-+	free_thread_info(tsk);
- free_tsk:
- 	free_task_struct(tsk);
- 	return NULL;
+ 		/*
 -- 
 2.5.5
