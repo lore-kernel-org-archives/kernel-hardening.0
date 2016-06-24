@@ -1,36 +1,90 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 24 Jun 2016 15:51:16 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20160624205116.4hbnurrnan4afq2t@treble>
+References: <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
+ <20160623185340.GO30154@twins.programming.kicks-ass.net>
+ <CA+55aFzhUo=2M-y39NOpWAVm1h0ADfjR3dxszJmefvoEYLa2og@mail.gmail.com>
+ <CA+55aFxo8tU42+hMjRgs1dUrqn1=rzDnvikRHHWV9HwDVeYkuQ@mail.gmail.com>
+ <CAMzpN2i7ve0Rq9BCxjp2FUw5naPLrGDd7Mf3evrrRjUZN75oJQ@mail.gmail.com>
+ <CA+55aFwJ1=pyr9fP_UzDjnyX2qJ4mpxg_DTTiOJTv9PFW4dHgg@mail.gmail.com>
+ <CA+55aFyu=G09-Qg=M-7CmAudS1Mj+OZMPNerd9VfUwvNk8VL+Q@mail.gmail.com>
+ <CA+55aFyKxNZQtCS3VY_8qMS4B=q-ar5ST8RdCTwAC07ZOkBjQA@mail.gmail.com>
+ <CA+55aFx=wdH4v7cD2F5Kq+jwDfV5cz9qTANgOwpMTC3MY=99AQ@mail.gmail.com>
+ <20160624202530.unmidps4kpebo2na@treble>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+hsPcrCAEcY-s9EDDUVqWOhpdx5iGNTBRqCqkExOJh5w@mail.gmail.com>
-References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
- <20160622124707.GC9922@io.lakedaemon.net> <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
- <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com>
- <20160623193358.GL9922@io.lakedaemon.net> <CAGXu5jJpFPuOrKSWT_H1oeTDObQKcgqL9ZwAHUV7y9=how_n9w@mail.gmail.com>
- <CAKv+Gu8SGsLCbVqDQVtZU4nNf=zzhONSFoSNF_Q29VmD=TZMWw@mail.gmail.com>
- <20160624011115.GU9922@io.lakedaemon.net> <CAKv+Gu_p5WLXBO0k=VWuX_ps1SMSte4_BhZFQY9pjveiTbSxAA@mail.gmail.com>
- <20160624160238.GV9922@io.lakedaemon.net> <CAGXu5j+hsPcrCAEcY-s9EDDUVqWOhpdx5iGNTBRqCqkExOJh5w@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 24 Jun 2016 13:40:41 -0700
-Message-ID: <CALCETrX0bsFiykT=6d8K_igkBCDavdzxmq-A3VJ+7nht2s8FFg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: devicetree random-seed properties, was: "Re: [PATCH v7 0/9]
- x86/mm: memory area address KASLR"
-To: Kees Cook <keescook@chromium.org>
-Cc: Jason Cooper <jason@lakedaemon.net>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Garnier <thgarnie@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <20160624202530.unmidps4kpebo2na@treble>
+Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86,
+ core)
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Brian Gerst <brgerst@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 24, 2016 at 12:04 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Jun 24, 2016 at 9:02 AM, Jason Cooper <jason@lakedaemon.net> wrote:
->> Thomas,
->>
->> Sorry for wandering off the topic of your series.  The big take away for
->> me is that you and Kees are concerned about x86 systems pre-RDRAND.
->> Just as I'm concerned about deployed embedded systems without bootloader
->> support for hw-rngs and so forth.
->>
->> Whatever final form the approach takes for ARM/dt, I'll make sure we can
->> extend it to legacy x86 systems.
->
-> Yeah, this seems like a productive conversation to me. :)
+On Fri, Jun 24, 2016 at 03:25:30PM -0500, Josh Poimboeuf wrote:
+> On Fri, Jun 24, 2016 at 11:11:47AM -0700, Linus Torvalds wrote:
+> > On Fri, Jun 24, 2016 at 10:51 AM, Linus Torvalds
+> > <torvalds@linux-foundation.org> wrote:
+> > >
+> > > And in particular, the init_task stack initialization initialized it
+> > > to the init_thread pointer. Which was definitely deadly.
+> > >
+> > > Let's see if that was it..
+> > 
+> > No, it's still broken. But it's *less* broken, so here's a new version
+> > of the patch that at least gets some of the stack setup right, in my
+> > hope that somebody will bother to look at this, and being less broken
+> > might mean that somebody sees what else I missed..
+> 
+> I found at least one bug.  The changing of task->stack from a "void *" to an
+> "unsigned long *":
+> 
+> > -	void *stack;
+> > +	unsigned long *stack;
+> 
+> That subtly changes the pointer arithmetic in do_boot_cpu():
+> 
+> 
+> 	idle->thread.sp = (unsigned long) (((struct pt_regs *)
+> 			  (THREAD_SIZE +  task_stack_page(idle))) - 1);
+> 
+> 
+> That ends up adding 128k to the stack page bottom instead of 16k.
+> 
+> But fixing that doesn't seem to fix this:
+> 
+> [18446743832.576241] ------------[ cut here ]------------
+> [18446743832.576241] WARNING: CPU: 1 PID: 0 at /home/jpoimboe/git/linux/arch/x86/kernel/cpu/common.c:1434 cpu_init+0x34b/0x440
+> [18446743832.576241] Modules linked in:
+> [18446743832.576241] CPU: 1 PID: 0 Comm: swapper/1 Not tainted 4.7.0-rc4+ #47
+> [18446743832.576241] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.8.1-20150318_183358- 04/01/2014
+> [18446743832.576241]  0000000000000086 574e5e6c6855ace9 ffff88007c553e88 ffffffff8143cb83
+> [18446743832.576241]  0000000000000000 0000000000000000 ffff88007c553ec8 ffffffff810b0e7b
+> [18446743832.576241]  0000059a00000000 0000000000000000 0000000000000000 0000000000000000
+> [18446743832.576241] Call Trace:
+> [18446743832.576241]  [<ffffffff8143cb83>] dump_stack+0x85/0xc2
+> [18446743832.576241]  [<ffffffff810b0e7b>] __warn+0xcb/0xf0
+> [18446743832.576241]  [<ffffffff810b0fad>] warn_slowpath_null+0x1d/0x20
+> [18446743832.576241]  [<ffffffff810491bb>] cpu_init+0x34b/0x440
+> [18446743832.576241]  [<ffffffff8105ab7c>] start_secondary+0x1c/0x1a0
+> [18446743832.576241] ---[ end trace 924d57afbaca0720 ]---
+> 
+> So there's at least another bug lurking..
 
-I have an old patch and spec I need to dust off that does this during
-*very* early boot on x86 using MSRs so that kASLR can use it.
+Found another bug:
+
+#define stack_smp_processor_id()					\
+({								\
+	struct thread_info *ti;						\
+	__asm__("andq %%rsp,%0; ":"=r" (ti) : "0" (CURRENT_MASK));	\
+	ti->cpu;							\
+})
+
+That macro is obviously no longer valid.
+
+That seems to cause the above warning.  When trying to boot CPU 1,
+cpu_init() calls the above macro which incorrectly returns 0.
+
+-- 
+Josh
