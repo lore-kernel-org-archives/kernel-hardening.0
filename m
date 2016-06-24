@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: linus971@gmail.com
-In-Reply-To: <CA+55aFyu=G09-Qg=M-7CmAudS1Mj+OZMPNerd9VfUwvNk8VL+Q@mail.gmail.com>
+In-Reply-To: <CALCETrUh0s8zV0S=Si4V_RB1dEUx6n2RtALC-+VJhGMEBqPTzA@mail.gmail.com>
 References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
  <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
  <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
@@ -11,28 +11,37 @@ References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3V
  <20160623185340.GO30154@twins.programming.kicks-ass.net> <CA+55aFzhUo=2M-y39NOpWAVm1h0ADfjR3dxszJmefvoEYLa2og@mail.gmail.com>
  <CA+55aFxo8tU42+hMjRgs1dUrqn1=rzDnvikRHHWV9HwDVeYkuQ@mail.gmail.com>
  <CAMzpN2i7ve0Rq9BCxjp2FUw5naPLrGDd7Mf3evrrRjUZN75oJQ@mail.gmail.com>
- <CA+55aFwJ1=pyr9fP_UzDjnyX2qJ4mpxg_DTTiOJTv9PFW4dHgg@mail.gmail.com> <CA+55aFyu=G09-Qg=M-7CmAudS1Mj+OZMPNerd9VfUwvNk8VL+Q@mail.gmail.com>
+ <CA+55aFwJ1=pyr9fP_UzDjnyX2qJ4mpxg_DTTiOJTv9PFW4dHgg@mail.gmail.com>
+ <CA+55aFyu=G09-Qg=M-7CmAudS1Mj+OZMPNerd9VfUwvNk8VL+Q@mail.gmail.com> <CALCETrUh0s8zV0S=Si4V_RB1dEUx6n2RtALC-+VJhGMEBqPTzA@mail.gmail.com>
 From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Fri, 24 Jun 2016 10:51:35 -0700
-Message-ID: <CA+55aFyKxNZQtCS3VY_8qMS4B=q-ar5ST8RdCTwAC07ZOkBjQA@mail.gmail.com>
+Date: Fri, 24 Jun 2016 10:56:00 -0700
+Message-ID: <CA+55aFzXYTOBxRW7mCub9Wt8F5KzhFZRkx_XFZFg2coN+66PjQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Brian Gerst <brgerst@gmail.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Brian Gerst <brgerst@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 24, 2016 at 10:40 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
+On Fri, Jun 24, 2016 at 10:47 AM, Andy Lutomirski <luto@amacapital.net> wrote:
 >
-> I think I have a few new places to look at..
+> FWIW, your patch is much more lenient than my approach.
 
-Yeah, making the 'stack' pointer be 'unsigned long *' rather than
-'void *' shows a number of places where we were very confused about
-things.
+I hate big flag-days - they cause so much pain for everybody. The
+people who get it to work and can test it, can't test all the other
+cases (whether they be drivers or other architectures), so I'd much
+rather implement something that allows a gradual per-architecture
+change from having the thread_info on the stack into having the
+thread_info in the task_struct.
 
-And in particular, the init_task stack initialization initialized it
-to the init_thread pointer. Which was definitely deadly.
+Bit "let's just change everything at once" patches are fine (and, in
+fact, preferable) when you can test everything in one go. So something
+that can be statically verified (ie "patch makes no semantic
+difference, but changes calling convention or naming, so if it
+compiles it is fine") I much prefer just getting the pain over and
+done with rather than some lingering thing.
 
-Let's see if that was it..
+But when it's something where "oops, I broke every other architecture,
+and I can't even test it", I'd much rather do it in a way where each
+architecture can move over to the new model one by one.
 
                   Linus
