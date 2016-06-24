@@ -1,45 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 24 Jun 2016 22:22:55 +0200
-From: Oleg Nesterov <oleg@redhat.com>
-Message-ID: <20160624202254.GA30695@redhat.com>
-References: <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com> <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com> <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com> <20160623143126.GA16664@redhat.com> <CA+55aFwBL5ArLXZ0+YggTbp6Qon+OM+Foihe0yrQOmRRvu96VQ@mail.gmail.com> <20160623170352.GA17372@redhat.com> <CA+55aFwHUw+6xEc-M+mZvwOxCsBD6zZDwyAQ-a_xupaH8py7cA@mail.gmail.com> <20160623185221.GA17983@redhat.com> <20160624140558.GA20208@dhcp22.suse.cz> <20160624150637.GD20203@dhcp22.suse.cz>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160624150637.GD20203@dhcp22.suse.cz>
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages
-	(x86, core)
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+In-Reply-To: <CAGXu5j+hsPcrCAEcY-s9EDDUVqWOhpdx5iGNTBRqCqkExOJh5w@mail.gmail.com>
+References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+ <20160622124707.GC9922@io.lakedaemon.net> <CAJcbSZHbGJBhTMeAEJF4VVazYypDCO=UFJpi8y0kXKrdM=WXQA@mail.gmail.com>
+ <CAGXu5jK_42d+jkPr4Ck0iL52-ignY9gq-eUZ73_YuhKJERrRxA@mail.gmail.com>
+ <20160623193358.GL9922@io.lakedaemon.net> <CAGXu5jJpFPuOrKSWT_H1oeTDObQKcgqL9ZwAHUV7y9=how_n9w@mail.gmail.com>
+ <CAKv+Gu8SGsLCbVqDQVtZU4nNf=zzhONSFoSNF_Q29VmD=TZMWw@mail.gmail.com>
+ <20160624011115.GU9922@io.lakedaemon.net> <CAKv+Gu_p5WLXBO0k=VWuX_ps1SMSte4_BhZFQY9pjveiTbSxAA@mail.gmail.com>
+ <20160624160238.GV9922@io.lakedaemon.net> <CAGXu5j+hsPcrCAEcY-s9EDDUVqWOhpdx5iGNTBRqCqkExOJh5w@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Fri, 24 Jun 2016 13:40:41 -0700
+Message-ID: <CALCETrX0bsFiykT=6d8K_igkBCDavdzxmq-A3VJ+7nht2s8FFg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: devicetree random-seed properties, was: "Re: [PATCH v7 0/9]
+ x86/mm: memory area address KASLR"
+To: Kees Cook <keescook@chromium.org>
+Cc: Jason Cooper <jason@lakedaemon.net>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Thomas Garnier <thgarnie@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/24, Michal Hocko wrote:
+On Fri, Jun 24, 2016 at 12:04 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Jun 24, 2016 at 9:02 AM, Jason Cooper <jason@lakedaemon.net> wrote:
+>> Thomas,
+>>
+>> Sorry for wandering off the topic of your series.  The big take away for
+>> me is that you and Kees are concerned about x86 systems pre-RDRAND.
+>> Just as I'm concerned about deployed embedded systems without bootloader
+>> support for hw-rngs and so forth.
+>>
+>> Whatever final form the approach takes for ARM/dt, I'll make sure we can
+>> extend it to legacy x86 systems.
 >
-> On Fri 24-06-16 16:05:58, Michal Hocko wrote:
-> > On Thu 23-06-16 20:52:21, Oleg Nesterov wrote:
-> > >
-> > > But I agree, this is fixable (and in fact I still hope TIF_MEMDIE will die,
-> > > at least in its current form).
-> >
-> > We can move the flag to the task_struct.
+> Yeah, this seems like a productive conversation to me. :)
 
-Well, I actually meant that to me its usage doesn't look really
-right and we need to change this logic. But this is off-topic.
-
-> Here is the patch.
-
-Can't comment, but note that it was decided to move ti->flags into
-task_struct, so the patch is "off-topic" too ;)
-
-> @@ -1856,6 +1856,8 @@ struct task_struct {
->  	unsigned long	task_state_change;
->  #endif
->  	int pagefault_disabled;
-> +	/* oom victim - give it access to memory reserves */
-> +	atomic_t	memdie;
-
-Yet another oom member. And these atomic_add_unless's look a bit
-strange, it seems that you could add "bool memdie" and use xchg()
-with the same effect?
-
-Oleg.
+I have an old patch and spec I need to dust off that does this during
+*very* early boot on x86 using MSRs so that kASLR can use it.
