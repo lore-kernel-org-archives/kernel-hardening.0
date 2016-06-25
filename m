@@ -1,66 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CA+55aFw96289kXRz9q7N=d4GD3eJxQB8ddV=GXMYm+Cd6Pk=Bg@mail.gmail.com>
-References: <CA+55aFy54iDN56FDJAz3A8epRvKECVO+nL5LaMxdmKrFEOm05w@mail.gmail.com>
- <20160623185340.GO30154@twins.programming.kicks-ass.net> <CA+55aFzhUo=2M-y39NOpWAVm1h0ADfjR3dxszJmefvoEYLa2og@mail.gmail.com>
- <CA+55aFxo8tU42+hMjRgs1dUrqn1=rzDnvikRHHWV9HwDVeYkuQ@mail.gmail.com>
- <CAMzpN2i7ve0Rq9BCxjp2FUw5naPLrGDd7Mf3evrrRjUZN75oJQ@mail.gmail.com>
- <CA+55aFwJ1=pyr9fP_UzDjnyX2qJ4mpxg_DTTiOJTv9PFW4dHgg@mail.gmail.com>
- <CA+55aFyu=G09-Qg=M-7CmAudS1Mj+OZMPNerd9VfUwvNk8VL+Q@mail.gmail.com>
- <CA+55aFyKxNZQtCS3VY_8qMS4B=q-ar5ST8RdCTwAC07ZOkBjQA@mail.gmail.com>
- <CA+55aFx=wdH4v7cD2F5Kq+jwDfV5cz9qTANgOwpMTC3MY=99AQ@mail.gmail.com>
- <20160624202530.unmidps4kpebo2na@treble> <20160624205116.4hbnurrnan4afq2t@treble>
- <CA+55aFyWJSE3DdoZvtc=tkuqvn1eQC=-dK=kfQ70ZR_7xLTkvA@mail.gmail.com>
- <CALCETrXUZbsr+ZvcCsffCMGFwX7xs8zqM2WGtfwLd+ws7T5A6A@mail.gmail.com> <CA+55aFw96289kXRz9q7N=d4GD3eJxQB8ddV=GXMYm+Cd6Pk=Bg@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 24 Jun 2016 14:34:59 -0700
-Message-ID: <CALCETrWC4u55TsW_B+DJOdfR8XkbZ5cXGtgKj5+JL5UU2ntUAg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+From: Jann Horn <jannh@google.com>
+Date: Sat, 25 Jun 2016 03:13:11 +0200
+Message-Id: <1466817192-9586-1-git-send-email-jannh@google.com>
+Subject: [kernel-hardening] [RFC] reference count hardening via kref: another attempt
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: pageexec@freemail.hu, Kees Cook <keescook@google.com>, jann@thejh.net, Jann Horn <jannh@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 24, 2016 at 2:32 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Fri, Jun 24, 2016 at 2:25 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->>
->> What's the prognosis for this patch?  Should I queue up all the pieces
->> and send them out after the vmap-stack thing?
->
-> I'm going to split this thing up and apply the "semantically null"
-> cleanup parts.
->
-> For example, this patch makes it clear that our current
-> "alloc_thread_info_node()" this is entirely insane.
->
-> We literally do:
->
->         ti = alloc_thread_info_node(tsk, node);
->         ...
->         tsk->stack = ti;
->
-> and
->
->         arch_release_thread_info(tsk->stack);
->         free_thread_info(tsk->stack);
->
-> and the pure *confusion* there is just crazy. We're talking
-> "tsk->stack", but then we talk about freeing and allocating
-> "thread_info"
->
-> So I'll apply the whole "rename 'free_thread_info()' into
-> 'free_thread_stack()'" part independently of anything else. It will
-> not change any semantics at all, since we currently have "tsk->stack
-> == thread_info", but it's too ugly to live, and it will then make the
-> patches that *do* change semantics much clearer and easier to see.
->
-> So let me get the pure semantic patches done, and then for 4.8 when we
-> do the things that actually change real meaning we'll have a sane
-> base. Ok?
->
+I would like to harden the kernel against reference count
+overflow bugs. The commit message of the patch contains
+a short analysis of code size impact, an explanation why I
+want reference count hardening to land in the kernel, and a
+description of the algorithm I'd want to use.
 
-Works for me.  I'll see whether my vmap patches still apply and, if
-needed, rebase and send a v5.
+The reason I'm writing a cover letter is that my patch, on
+its own, is pretty useless: My patch only adds hardening to
+struct kref, but nearly all reference counters are
+currently implemented using atomic_t, which is a generic
+atomic number type. For the patch to be useful, I'll have
+to go through the kernel and, for every atomic_t, decide
+whether it is a reference count and, if so, change it
+(together with all accesses to it) to a kref. According to
+a quick grep, there are currently about 2700 atomic_t
+struct members or variables in the kernel, so it's going to
+be a big amount of work, and the resulting patches will be
+gigantic.
 
---Andy
+Therefore, before I actually spend lots of time on this,
+I'd like to know:
+
+ - Does the reference count hardening in my patch look
+   okay, and does it have good chances to get accepted
+   when submitted for inclusion in the kernel at a later
+   point in time?
+
+ - If I manually go through the kernel and write a
+   gigantic atomic_t -> struct kref patch (or a few
+   patches coarsely grouped by subsystem), how high is
+   the probability that it will get accepted?
+
+(Note: I won't have much time for kernel work in the next
+four months or so - but afterwards, I could probably
+allocate time for getting this done.)
+
+Jann Horn (1):
+  kref: pin objects with dangerously high reference count
+
+ include/linux/kref.h | 39 +++++++++++++++++++++++++++++++++------
+ init/Kconfig         | 16 ++++++++++++++++
+ kernel/Makefile      |  2 +-
+ kernel/kref.c        | 17 +++++++++++++++++
+ 4 files changed, 67 insertions(+), 7 deletions(-)
+ create mode 100644 kernel/kref.c
+
+-- 
+2.8.0.rc3.226.g39d4020
