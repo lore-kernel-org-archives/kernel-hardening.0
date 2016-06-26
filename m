@@ -1,69 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 26 Jun 2016 17:38:20 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160626173820.13ad67e14e7a29a6563fe129@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH] Add support for complex gcc plugins that don't fit in a
- single file
-To: keescook@chromium.org
-Cc: mmarek@suse.com, linux-kbuild@vger.kernel.org, kernel-hardening@lists.openwall.com, pageexec@freemail.hu
+MIME-Version: 1.0
+In-Reply-To: <20160624153503.oeivkn7djnxdi5oq@treble>
+References: <cover.1466741835.git.luto@kernel.org> <f76b49739625fce1264428155540ca7161925511.1466741835.git.luto@kernel.org>
+ <20160624153503.oeivkn7djnxdi5oq@treble>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Sun, 26 Jun 2016 09:59:44 -0700
+Message-ID: <CALCETrXz_GHZzx=F3AgQ8FNQ0BJROhnvK5E6-zQd57xpBFAreA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 13/16] x86/dumpstack: Try harder to get a call trace on
+ stack overflow
+To: Josh Poimboeuf <jpoimboe@redhat.com>
+Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, Jun 24, 2016 at 8:35 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
+> On Thu, Jun 23, 2016 at 09:23:08PM -0700, Andy Lutomirski wrote:
+>> If we overflow the stack, print_context_stack will abort.  Detect
+>> this case and rewind back into the valid part of the stack so that
+>> we can trace it.
+>>
+>> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+>
+> Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+>
 
-Reported-by: PaX Team <pageexec@freemail.hu>
-Signed-off-by: Emese Revfy <re.emese@gmail.com>
----
- scripts/Makefile.gcc-plugins | 3 ++-
- scripts/gcc-plugins/Makefile | 9 ++++++---
- 2 files changed, 8 insertions(+), 4 deletions(-)
+FWIW, I'm making a trivial change here for v4: task->stack ->
+task_stack_page(task).  Since it seems inconsequential, I'm keeping
+your reviewed-by.
 
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 61fc4bb..1f922df 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -27,7 +27,7 @@ ifdef CONFIG_GCC_PLUGINS
- 
-   GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
- 
--  export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
-+  export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR SANCOV_PLUGIN DISABLE_LATENT_ENTROPY_PLUGIN
- 
-   ifneq ($(PLUGINCC),)
-     # SANCOV_PLUGIN can be only in CFLAGS_KCOV because avoid duplication.
-@@ -36,6 +36,7 @@ ifdef CONFIG_GCC_PLUGINS
- 
-   KBUILD_CFLAGS += $(GCC_PLUGINS_CFLAGS)
-   GCC_PLUGIN := $(gcc-plugin-y)
-+  GCC_PLUGIN_SUBDIR := $(gcc-plugin-subdir-y)
- endif
- 
- # If plugins aren't supported, abort the build before hard-to-read compiler
-diff --git a/scripts/gcc-plugins/Makefile b/scripts/gcc-plugins/Makefile
-index 898449d..94fa139 100644
---- a/scripts/gcc-plugins/Makefile
-+++ b/scripts/gcc-plugins/Makefile
-@@ -12,14 +12,17 @@ else
-   export HOST_EXTRACXXFLAGS
- endif
- 
--export GCCPLUGINS_DIR HOSTLIBS
--
- ifneq ($(CFLAGS_KCOV), $(SANCOV_PLUGIN))
-   GCC_PLUGIN := $(filter-out $(SANCOV_PLUGIN), $(GCC_PLUGIN))
- endif
- 
--$(HOSTLIBS)-y := $(GCC_PLUGIN)
-+export HOSTLIBS
-+
-+$(HOSTLIBS)-y := $(foreach p,$(GCC_PLUGIN),$(if $(findstring /,$(p)),,$(p)))
- always := $($(HOSTLIBS)-y)
- $(foreach p,$($(HOSTLIBS)-y:%.so=%),$(eval $(p)-objs := $(p).o))
- 
-+subdir-y := $(GCC_PLUGIN_SUBDIR)
-+subdir-  += $(GCC_PLUGIN_SUBDIR)
-+
- clean-files += *.so
+> --
+> Josh
+
+
+
 -- 
-2.8.1
+Andy Lutomirski
+AMA Capital Management, LLC
