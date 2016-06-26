@@ -1,365 +1,216 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 26 Jun 2016 14:55:40 -0700
-Message-Id: <2ccf82343340f8d6f8b34bcf52afd7ab670cd672.1466974736.git.luto@kernel.org>
+Date: Sun, 26 Jun 2016 14:55:48 -0700
+Message-Id: <aeea9c1c41e889065b2c9ecd6d0694e4dfb529c8.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 18/29] x86: Move addr_limit to thread_struct
+Subject: [kernel-hardening] [PATCH v4 26/29] sched: Allow putting thread_info into task_struct
 To: x86@kernel.org
 Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-thread_info is a legacy mess.  To prepare for its partial removal,
-move addr_limit out.
+If an arch opts in by setting CONFIG_THREAD_INFO_IN_TASK_STRUCT,
+then thread_info is defined as a single 'u32 flags' and is the first
+entry of task_struct.  thread_info::task is removed (it serves no
+purpose if thread_info is embedded in task_struct), and
+thread_info::cpu gets its own slot in task_struct.
 
-As an added benefit, this way is simpler.
+This is heavily based on a patch written by Linus.
 
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/x86/include/asm/checksum_32.h |  3 +--
- arch/x86/include/asm/processor.h   | 17 ++++++++++-------
- arch/x86/include/asm/thread_info.h |  7 -------
- arch/x86/include/asm/uaccess.h     |  6 +++---
- arch/x86/kernel/asm-offsets.c      |  4 +++-
- arch/x86/lib/copy_user_64.S        |  8 ++++----
- arch/x86/lib/csum-wrappers_64.c    |  1 +
- arch/x86/lib/getuser.S             | 20 ++++++++++----------
- arch/x86/lib/putuser.S             | 10 +++++-----
- arch/x86/lib/usercopy_64.c         |  2 +-
- drivers/pnp/isapnp/proc.c          |  2 +-
- lib/bitmap.c                       |  2 +-
- 12 files changed, 40 insertions(+), 42 deletions(-)
+ include/linux/init_task.h   |  9 +++++++++
+ include/linux/sched.h       | 36 ++++++++++++++++++++++++++++++++++--
+ include/linux/thread_info.h | 15 +++++++++++++++
+ init/Kconfig                |  3 +++
+ init/init_task.c            |  7 +++++--
+ kernel/sched/sched.h        |  4 ++++
+ 6 files changed, 70 insertions(+), 4 deletions(-)
 
-diff --git a/arch/x86/include/asm/checksum_32.h b/arch/x86/include/asm/checksum_32.h
-index 532f85e6651f..7b53743ed267 100644
---- a/arch/x86/include/asm/checksum_32.h
-+++ b/arch/x86/include/asm/checksum_32.h
-@@ -2,8 +2,7 @@
- #define _ASM_X86_CHECKSUM_32_H
+diff --git a/include/linux/init_task.h b/include/linux/init_task.h
+index f8834f820ec2..9c04d44eeb3c 100644
+--- a/include/linux/init_task.h
++++ b/include/linux/init_task.h
+@@ -15,6 +15,8 @@
+ #include <net/net_namespace.h>
+ #include <linux/sched/rt.h>
  
- #include <linux/in6.h>
--
--#include <asm/uaccess.h>
-+#include <linux/uaccess.h>
- 
- /*
-  * computes the checksum of a memory block at buff, length len,
-diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
-index f53ae57bd985..a2e20d6d01fe 100644
---- a/arch/x86/include/asm/processor.h
-+++ b/arch/x86/include/asm/processor.h
-@@ -371,6 +371,10 @@ extern unsigned int xstate_size;
- 
- struct perf_event;
- 
-+typedef struct {
-+	unsigned long		seg;
-+} mm_segment_t;
++#include <asm/thread_info.h>
 +
- struct thread_struct {
- 	/* Cached TLS descriptors: */
- 	struct desc_struct	tls_array[GDT_ENTRY_TLS_ENTRIES];
-@@ -419,6 +423,8 @@ struct thread_struct {
- 	/* Max allowed port in the bitmap, in bytes: */
- 	unsigned		io_bitmap_max;
- 
-+	mm_segment_t		addr_limit;
-+
- 	unsigned int		sig_on_uaccess_error:1;
- 	unsigned int		uaccess_err:1;	/* uaccess failed */
- 
-@@ -493,11 +499,6 @@ static inline void load_sp0(struct tss_struct *tss,
- #define set_iopl_mask native_set_iopl_mask
- #endif /* CONFIG_PARAVIRT */
- 
--typedef struct {
--	unsigned long		seg;
--} mm_segment_t;
--
--
- /* Free all resources held by a thread. */
- extern void release_thread(struct task_struct *);
- 
-@@ -719,6 +720,7 @@ static inline void spin_lock_prefetch(const void *x)
- 	.sp0			= TOP_OF_INIT_STACK,			  \
- 	.sysenter_cs		= __KERNEL_CS,				  \
- 	.io_bitmap_ptr		= NULL,					  \
-+	.addr_limit		= KERNEL_DS,				  \
- }
- 
- extern unsigned long thread_saved_pc(struct task_struct *tsk);
-@@ -768,8 +770,9 @@ extern unsigned long thread_saved_pc(struct task_struct *tsk);
- #define STACK_TOP		TASK_SIZE
- #define STACK_TOP_MAX		TASK_SIZE_MAX
- 
--#define INIT_THREAD  { \
--	.sp0 = TOP_OF_INIT_STACK \
-+#define INIT_THREAD  {						\
-+	.sp0			= TOP_OF_INIT_STACK,		\
-+	.addr_limit		= KERNEL_DS,			\
- }
- 
- /*
-diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-index 7c47bb659ecd..89bff044a6f5 100644
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -57,7 +57,6 @@ struct thread_info {
- 	__u32			flags;		/* low level flags */
- 	__u32			status;		/* thread synchronous flags */
- 	__u32			cpu;		/* current CPU */
--	mm_segment_t		addr_limit;
- };
- 
- #define INIT_THREAD_INFO(tsk)			\
-@@ -65,7 +64,6 @@ struct thread_info {
- 	.task		= &tsk,			\
- 	.flags		= 0,			\
- 	.cpu		= 0,			\
--	.addr_limit	= KERNEL_DS,		\
- }
- 
- #define init_thread_info	(init_thread_union.thread_info)
-@@ -184,11 +182,6 @@ static inline unsigned long current_stack_pointer(void)
- # define cpu_current_top_of_stack (cpu_tss + TSS_sp0)
+ #ifdef CONFIG_SMP
+ # define INIT_PUSHABLE_TASKS(tsk)					\
+ 	.pushable_tasks = PLIST_NODE_INIT(tsk.pushable_tasks, MAX_PRIO),
+@@ -183,12 +185,19 @@ extern struct task_group root_task_group;
+ # define INIT_KASAN(tsk)
  #endif
  
--/* Load thread_info address into "reg" */
--#define GET_THREAD_INFO(reg) \
--	_ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
--	_ASM_SUB $(THREAD_SIZE),reg ;
--
- /*
-  * ASM operand which evaluates to a 'thread_info' address of
-  * the current task, if it is known that "reg" is exactly "off"
-diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
-index 4d2a726e8e6d..0eb18b4ac492 100644
---- a/arch/x86/include/asm/uaccess.h
-+++ b/arch/x86/include/asm/uaccess.h
-@@ -29,12 +29,12 @@
- #define USER_DS 	MAKE_MM_SEG(TASK_SIZE_MAX)
- 
- #define get_ds()	(KERNEL_DS)
--#define get_fs()	(current_thread_info()->addr_limit)
--#define set_fs(x)	(current_thread_info()->addr_limit = (x))
-+#define get_fs()	(current->thread.addr_limit)
-+#define set_fs(x)	(current->thread.addr_limit = (x))
- 
- #define segment_eq(a, b)	((a).seg == (b).seg)
- 
--#define user_addr_max() (current_thread_info()->addr_limit.seg)
-+#define user_addr_max() (current->thread.addr_limit.seg)
- #define __addr_ok(addr) 	\
- 	((unsigned long __force)(addr) < user_addr_max())
- 
-diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
-index 674134e9f5e5..2bd5c6ff7ee7 100644
---- a/arch/x86/kernel/asm-offsets.c
-+++ b/arch/x86/kernel/asm-offsets.c
-@@ -31,7 +31,9 @@ void common(void) {
- 	BLANK();
- 	OFFSET(TI_flags, thread_info, flags);
- 	OFFSET(TI_status, thread_info, status);
--	OFFSET(TI_addr_limit, thread_info, addr_limit);
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++# define INIT_TASK_TI(tsk) .thread_info = INIT_THREAD_INFO(tsk),
++#else
++# define INIT_TASK_TI(tsk)
++#endif
 +
-+	BLANK();
-+	OFFSET(TASK_addr_limit, task_struct, thread.addr_limit);
- 
- 	BLANK();
- 	OFFSET(crypto_tfm_ctx_offset, crypto_tfm, __crt_ctx);
-diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
-index 2b0ef26da0bd..bf603ebbfd8e 100644
---- a/arch/x86/lib/copy_user_64.S
-+++ b/arch/x86/lib/copy_user_64.S
-@@ -17,11 +17,11 @@
- 
- /* Standard copy_to_user with segment limit checking */
- ENTRY(_copy_to_user)
--	GET_THREAD_INFO(%rax)
-+	mov PER_CPU_VAR(current_task), %rax
- 	movq %rdi,%rcx
- 	addq %rdx,%rcx
- 	jc bad_to_user
--	cmpq TI_addr_limit(%rax),%rcx
-+	cmpq TASK_addr_limit(%rax),%rcx
- 	ja bad_to_user
- 	ALTERNATIVE_2 "jmp copy_user_generic_unrolled",		\
- 		      "jmp copy_user_generic_string",		\
-@@ -32,11 +32,11 @@ ENDPROC(_copy_to_user)
- 
- /* Standard copy_from_user with segment limit checking */
- ENTRY(_copy_from_user)
--	GET_THREAD_INFO(%rax)
-+	mov PER_CPU_VAR(current_task), %rax
- 	movq %rsi,%rcx
- 	addq %rdx,%rcx
- 	jc bad_from_user
--	cmpq TI_addr_limit(%rax),%rcx
-+	cmpq TASK_addr_limit(%rax),%rcx
- 	ja bad_from_user
- 	ALTERNATIVE_2 "jmp copy_user_generic_unrolled",		\
- 		      "jmp copy_user_generic_string",		\
-diff --git a/arch/x86/lib/csum-wrappers_64.c b/arch/x86/lib/csum-wrappers_64.c
-index 28a6654f0d08..b6fcb9a9ddbc 100644
---- a/arch/x86/lib/csum-wrappers_64.c
-+++ b/arch/x86/lib/csum-wrappers_64.c
-@@ -6,6 +6,7 @@
-  */
- #include <asm/checksum.h>
- #include <linux/module.h>
-+#include <linux/uaccess.h>
- #include <asm/smap.h>
- 
- /**
-diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
-index 46668cda4ffd..0ef5128c2de8 100644
---- a/arch/x86/lib/getuser.S
-+++ b/arch/x86/lib/getuser.S
-@@ -35,8 +35,8 @@
- 
- 	.text
- ENTRY(__get_user_1)
--	GET_THREAD_INFO(%_ASM_DX)
--	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
-+	mov PER_CPU_VAR(current_task), %_ASM_DX
-+	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
- 1:	movzbl (%_ASM_AX),%edx
-@@ -48,8 +48,8 @@ ENDPROC(__get_user_1)
- ENTRY(__get_user_2)
- 	add $1,%_ASM_AX
- 	jc bad_get_user
--	GET_THREAD_INFO(%_ASM_DX)
--	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
-+	mov PER_CPU_VAR(current_task), %_ASM_DX
-+	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
- 2:	movzwl -1(%_ASM_AX),%edx
-@@ -61,8 +61,8 @@ ENDPROC(__get_user_2)
- ENTRY(__get_user_4)
- 	add $3,%_ASM_AX
- 	jc bad_get_user
--	GET_THREAD_INFO(%_ASM_DX)
--	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
-+	mov PER_CPU_VAR(current_task), %_ASM_DX
-+	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
- 3:	movl -3(%_ASM_AX),%edx
-@@ -75,8 +75,8 @@ ENTRY(__get_user_8)
- #ifdef CONFIG_X86_64
- 	add $7,%_ASM_AX
- 	jc bad_get_user
--	GET_THREAD_INFO(%_ASM_DX)
--	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
-+	mov PER_CPU_VAR(current_task), %_ASM_DX
-+	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user
- 	ASM_STAC
- 4:	movq -7(%_ASM_AX),%rdx
-@@ -86,8 +86,8 @@ ENTRY(__get_user_8)
- #else
- 	add $7,%_ASM_AX
- 	jc bad_get_user_8
--	GET_THREAD_INFO(%_ASM_DX)
--	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
-+	mov PER_CPU_VAR(current_task), %_ASM_DX
-+	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
- 	jae bad_get_user_8
- 	ASM_STAC
- 4:	movl -7(%_ASM_AX),%edx
-diff --git a/arch/x86/lib/putuser.S b/arch/x86/lib/putuser.S
-index e0817a12d323..c891ece81e5b 100644
---- a/arch/x86/lib/putuser.S
-+++ b/arch/x86/lib/putuser.S
-@@ -29,14 +29,14 @@
-  * as they get called from within inline assembly.
-  */
- 
--#define ENTER	GET_THREAD_INFO(%_ASM_BX)
-+#define ENTER	mov PER_CPU_VAR(current_task), %_ASM_BX
- #define EXIT	ASM_CLAC ;	\
- 		ret
- 
- .text
- ENTRY(__put_user_1)
- 	ENTER
--	cmp TI_addr_limit(%_ASM_BX),%_ASM_CX
-+	cmp TASK_addr_limit(%_ASM_BX),%_ASM_CX
- 	jae bad_put_user
- 	ASM_STAC
- 1:	movb %al,(%_ASM_CX)
-@@ -46,7 +46,7 @@ ENDPROC(__put_user_1)
- 
- ENTRY(__put_user_2)
- 	ENTER
--	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
-+	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
- 	sub $1,%_ASM_BX
- 	cmp %_ASM_BX,%_ASM_CX
- 	jae bad_put_user
-@@ -58,7 +58,7 @@ ENDPROC(__put_user_2)
- 
- ENTRY(__put_user_4)
- 	ENTER
--	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
-+	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
- 	sub $3,%_ASM_BX
- 	cmp %_ASM_BX,%_ASM_CX
- 	jae bad_put_user
-@@ -70,7 +70,7 @@ ENDPROC(__put_user_4)
- 
- ENTRY(__put_user_8)
- 	ENTER
--	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
-+	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
- 	sub $7,%_ASM_BX
- 	cmp %_ASM_BX,%_ASM_CX
- 	jae bad_put_user
-diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
-index 0a42327a59d7..9f760cdcaf40 100644
---- a/arch/x86/lib/usercopy_64.c
-+++ b/arch/x86/lib/usercopy_64.c
-@@ -6,7 +6,7 @@
-  * Copyright 2002 Andi Kleen <ak@suse.de>
-  */
- #include <linux/module.h>
--#include <asm/uaccess.h>
-+#include <linux/uaccess.h>
- 
  /*
-  * Zero Userspace
-diff --git a/drivers/pnp/isapnp/proc.c b/drivers/pnp/isapnp/proc.c
-index 5edee645d890..262285e48a09 100644
---- a/drivers/pnp/isapnp/proc.c
-+++ b/drivers/pnp/isapnp/proc.c
-@@ -21,7 +21,7 @@
- #include <linux/isapnp.h>
- #include <linux/proc_fs.h>
- #include <linux/init.h>
--#include <asm/uaccess.h>
-+#include <linux/uaccess.h>
+  *  INIT_TASK is used to set up the first task table, touch at
+  * your own risk!. Base=0, limit=0x1fffff (=2MB)
+  */
+ #define INIT_TASK(tsk)	\
+ {									\
++	INIT_TASK_TI(tsk)						\
+ 	.state		= 0,						\
+ 	.stack		= init_stack,					\
+ 	.usage		= ATOMIC_INIT(2),				\
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 569df670407a..4108b4880b86 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1456,6 +1456,13 @@ struct tlbflush_unmap_batch {
+ };
  
- extern struct pnp_protocol isapnp_protocol;
+ struct task_struct {
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++	/*
++	 * For reasons of header soup (see current_thread_info()), this
++	 * must be the first element of task_struct.
++	 */
++	struct thread_info thread_info;
++#endif
+ 	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
+ 	void *stack;
+ 	atomic_t usage;
+@@ -1465,6 +1472,9 @@ struct task_struct {
+ #ifdef CONFIG_SMP
+ 	struct llist_node wake_entry;
+ 	int on_cpu;
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++	unsigned int cpu;	/* current CPU */
++#endif
+ 	unsigned int wakee_flips;
+ 	unsigned long wakee_flip_decay_ts;
+ 	struct task_struct *last_wakee;
+@@ -2557,7 +2567,9 @@ extern void set_curr_task(int cpu, struct task_struct *p);
+ void yield(void);
  
-diff --git a/lib/bitmap.c b/lib/bitmap.c
-index c66da508cbf7..eca88087fa8a 100644
---- a/lib/bitmap.c
-+++ b/lib/bitmap.c
-@@ -14,9 +14,9 @@
- #include <linux/bug.h>
- #include <linux/kernel.h>
- #include <linux/string.h>
-+#include <linux/uaccess.h>
+ union thread_union {
++#ifndef CONFIG_THREAD_INFO_IN_TASK
+ 	struct thread_info thread_info;
++#endif
+ 	unsigned long stack[THREAD_SIZE/sizeof(long)];
+ };
  
- #include <asm/page.h>
--#include <asm/uaccess.h>
+@@ -3045,10 +3057,26 @@ static inline void threadgroup_change_end(struct task_struct *tsk)
+ 	cgroup_threadgroup_change_end(tsk);
+ }
  
+-#ifndef __HAVE_THREAD_FUNCTIONS
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++
++static inline struct thread_info *task_thread_info(struct task_struct *task)
++{
++	return &task->thread_info;
++}
++static inline void *task_stack_page(const struct task_struct *task)
++{
++	return task->stack;
++}
++#define setup_thread_stack(new,old)	do { } while(0)
++static inline unsigned long *end_of_stack(const struct task_struct *task)
++{
++	return task->stack;
++}
++
++#elif !defined(__HAVE_THREAD_FUNCTIONS)
+ 
+ #define task_thread_info(task)	((struct thread_info *)(task)->stack)
+-#define task_stack_page(task)	((task)->stack)
++#define task_stack_page(task)	((void *)(task)->stack)
+ 
+ static inline void setup_thread_stack(struct task_struct *p, struct task_struct *org)
+ {
+@@ -3348,7 +3376,11 @@ static inline void ptrace_signal_wake_up(struct task_struct *t, bool resume)
+ 
+ static inline unsigned int task_cpu(const struct task_struct *p)
+ {
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++	return p->cpu;
++#else
+ 	return task_thread_info(p)->cpu;
++#endif
+ }
+ 
+ static inline int task_node(const struct task_struct *p)
+diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+index 352b1542f5cc..b2b32d63bc8e 100644
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -13,6 +13,21 @@
+ struct timespec;
+ struct compat_timespec;
+ 
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++struct thread_info {
++	u32			flags;		/* low level flags */
++};
++
++#define INIT_THREAD_INFO(tsk)			\
++{						\
++	.flags		= 0,			\
++}
++#endif
++
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++#define current_thread_info() ((struct thread_info *)current)
++#endif
++
  /*
-  * bitmaps provide an array of bits, implemented using an an
+  * System call restart block.
+  */
+diff --git a/init/Kconfig b/init/Kconfig
+index f755a602d4a1..0c83af6d3753 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -26,6 +26,9 @@ config IRQ_WORK
+ config BUILDTIME_EXTABLE_SORT
+ 	bool
+ 
++config THREAD_INFO_IN_TASK
++	bool
++
+ menu "General setup"
+ 
+ config BROKEN
+diff --git a/init/init_task.c b/init/init_task.c
+index ba0a7f362d9e..11f83be1fa79 100644
+--- a/init/init_task.c
++++ b/init/init_task.c
+@@ -22,5 +22,8 @@ EXPORT_SYMBOL(init_task);
+  * Initial thread structure. Alignment of this is handled by a special
+  * linker map entry.
+  */
+-union thread_union init_thread_union __init_task_data =
+-	{ INIT_THREAD_INFO(init_task) };
++union thread_union init_thread_union __init_task_data = {
++#ifndef CONFIG_THREAD_INFO_IN_TASK
++	INIT_THREAD_INFO(init_task)
++#endif
++};
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 7cbeb92a1cb9..a1cabcea4c54 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -999,7 +999,11 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
+ 	 * per-task data have been completed by this moment.
+ 	 */
+ 	smp_wmb();
++#ifdef CONFIG_THREAD_INFO_IN_TASK
++	p->cpu = cpu;
++#else
+ 	task_thread_info(p)->cpu = cpu;
++#endif
+ 	p->wake_cpu = cpu;
+ #endif
+ }
 -- 
 2.7.4
