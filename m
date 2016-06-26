@@ -1,279 +1,298 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 26 Jun 2016 14:55:23 -0700
-Message-Id: <264af59a3060c2bc2a725cfc66a8fa68219d1c4a.1466974736.git.luto@kernel.org>
+Date: Sun, 26 Jun 2016 14:55:24 -0700
+Message-Id: <1eeb00c5098d8096cdb61dc7ee1ddc61b3e80f9e.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 01/29] bluetooth: Switch SMP to crypto_cipher_encrypt_one()
+Subject: [kernel-hardening] [PATCH v4 02/29] rxrpc: Avoid using stack memory in SG lists in rxkad
 To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Marcel Holtmann <marcel@holtmann.org>, Gustavo Padovan <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>, "David S. Miller" <davem@davemloft.net>, linux-bluetooth@vger.kernel.org, netdev@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Herbert Xu <herbert@gondor.apana.org.au>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SMP does ECB crypto on stack buffers.  This is complicated and
-fragile, and it will not work if the stack is virtually allocated.
+From: Herbert Xu <herbert@gondor.apana.org.au>
 
-Switch to the crypto_cipher interface, which is simpler and safer.
+rxkad uses stack memory in SG lists which would not work if stacks
+were allocated from vmalloc memory.  In fact, in most cases this
+isn't even necessary as the stack memory ends up getting copied
+over to kmalloc memory.
 
-Cc: Marcel Holtmann <marcel@holtmann.org>
-Cc: Gustavo Padovan <gustavo@padovan.org>
-Cc: Johan Hedberg <johan.hedberg@gmail.com>
-Cc: "David S. Miller" <davem@davemloft.net>
-Cc: linux-bluetooth@vger.kernel.org
-Cc: netdev@vger.kernel.org
-Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
-Acked-and-tested-by: Johan Hedberg <johan.hedberg@intel.com>
+This patch eliminates all the unnecessary stack memory uses by
+supplying the final destination directly to the crypto API.  In
+two instances where a temporary buffer is actually needed we also
+switch use the skb->cb area instead of the stack.
+
+Finally there is no need to split a split-page buffer into two SG
+entries so code dealing with that has been removed.
+
+Message-Id: <20160623064137.GA8958@gondor.apana.org.au>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- net/bluetooth/smp.c | 67 ++++++++++++++++++++++-------------------------------
- 1 file changed, 28 insertions(+), 39 deletions(-)
+ net/rxrpc/ar-internal.h |   1 +
+ net/rxrpc/rxkad.c       | 103 ++++++++++++++++++++----------------------------
+ 2 files changed, 44 insertions(+), 60 deletions(-)
 
-diff --git a/net/bluetooth/smp.c b/net/bluetooth/smp.c
-index 50976a6481f3..4c1a16a96ae5 100644
---- a/net/bluetooth/smp.c
-+++ b/net/bluetooth/smp.c
-@@ -22,9 +22,9 @@
+diff --git a/net/rxrpc/ar-internal.h b/net/rxrpc/ar-internal.h
+index f0b807a163fa..8ee5933982f3 100644
+--- a/net/rxrpc/ar-internal.h
++++ b/net/rxrpc/ar-internal.h
+@@ -277,6 +277,7 @@ struct rxrpc_connection {
+ 	struct key		*key;		/* security for this connection (client) */
+ 	struct key		*server_key;	/* security for this service */
+ 	struct crypto_skcipher	*cipher;	/* encryption handle */
++	struct rxrpc_crypt	csum_iv_head;	/* leading block for csum_iv */
+ 	struct rxrpc_crypt	csum_iv;	/* packet checksum base */
+ 	unsigned long		events;
+ #define RXRPC_CONN_CHALLENGE	0		/* send challenge packet */
+diff --git a/net/rxrpc/rxkad.c b/net/rxrpc/rxkad.c
+index bab56ed649ba..a28a3c6fdf1d 100644
+--- a/net/rxrpc/rxkad.c
++++ b/net/rxrpc/rxkad.c
+@@ -105,11 +105,9 @@ static void rxkad_prime_packet_security(struct rxrpc_connection *conn)
+ {
+ 	struct rxrpc_key_token *token;
+ 	SKCIPHER_REQUEST_ON_STACK(req, conn->cipher);
+-	struct scatterlist sg[2];
++	struct rxrpc_crypt *csum_iv;
++	struct scatterlist sg;
+ 	struct rxrpc_crypt iv;
+-	struct {
+-		__be32 x[4];
+-	} tmpbuf __attribute__((aligned(16))); /* must all be in same page */
  
- #include <linux/debugfs.h>
- #include <linux/scatterlist.h>
-+#include <linux/crypto.h>
- #include <crypto/b128ops.h>
- #include <crypto/hash.h>
--#include <crypto/skcipher.h>
+ 	_enter("");
  
- #include <net/bluetooth/bluetooth.h>
- #include <net/bluetooth/hci_core.h>
-@@ -88,7 +88,7 @@ struct smp_dev {
- 	u8			min_key_size;
- 	u8			max_key_size;
+@@ -119,24 +117,21 @@ static void rxkad_prime_packet_security(struct rxrpc_connection *conn)
+ 	token = conn->key->payload.data[0];
+ 	memcpy(&iv, token->kad->session_key, sizeof(iv));
  
--	struct crypto_skcipher	*tfm_aes;
-+	struct crypto_cipher	*tfm_aes;
- 	struct crypto_shash	*tfm_cmac;
- };
+-	tmpbuf.x[0] = htonl(conn->epoch);
+-	tmpbuf.x[1] = htonl(conn->cid);
+-	tmpbuf.x[2] = 0;
+-	tmpbuf.x[3] = htonl(conn->security_ix);
++	csum_iv = &conn->csum_iv_head;
++	csum_iv[0].x[0] = htonl(conn->epoch);
++	csum_iv[0].x[1] = htonl(conn->cid);
++	csum_iv[1].x[0] = 0;
++	csum_iv[1].x[1] = htonl(conn->security_ix);
  
-@@ -127,7 +127,7 @@ struct smp_chan {
- 	u8			dhkey[32];
- 	u8			mackey[16];
+-	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
+-	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
++	sg_init_one(&sg, csum_iv, 16);
  
--	struct crypto_skcipher	*tfm_aes;
-+	struct crypto_cipher	*tfm_aes;
- 	struct crypto_shash	*tfm_cmac;
- };
+ 	skcipher_request_set_tfm(req, conn->cipher);
+ 	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
++	skcipher_request_set_crypt(req, &sg, &sg, 16, iv.x);
  
-@@ -361,10 +361,8 @@ static int smp_h6(struct crypto_shash *tfm_cmac, const u8 w[16],
-  * s1 and ah.
+ 	crypto_skcipher_encrypt(req);
+ 	skcipher_request_zero(req);
+ 
+-	memcpy(&conn->csum_iv, &tmpbuf.x[2], sizeof(conn->csum_iv));
+-	ASSERTCMP((u32 __force)conn->csum_iv.n[0], ==, (u32 __force)tmpbuf.x[2]);
+-
+ 	_leave("");
+ }
+ 
+@@ -150,12 +145,9 @@ static int rxkad_secure_packet_auth(const struct rxrpc_call *call,
+ {
+ 	struct rxrpc_skb_priv *sp;
+ 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
++	struct rxkad_level1_hdr hdr;
+ 	struct rxrpc_crypt iv;
+-	struct scatterlist sg[2];
+-	struct {
+-		struct rxkad_level1_hdr hdr;
+-		__be32	first;	/* first four bytes of data and padding */
+-	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
++	struct scatterlist sg;
+ 	u16 check;
+ 
+ 	sp = rxrpc_skb(skb);
+@@ -165,24 +157,21 @@ static int rxkad_secure_packet_auth(const struct rxrpc_call *call,
+ 	check = sp->hdr.seq ^ sp->hdr.callNumber;
+ 	data_size |= (u32)check << 16;
+ 
+-	tmpbuf.hdr.data_size = htonl(data_size);
+-	memcpy(&tmpbuf.first, sechdr + 4, sizeof(tmpbuf.first));
++	hdr.data_size = htonl(data_size);
++	memcpy(sechdr, &hdr, sizeof(hdr));
+ 
+ 	/* start the encryption afresh */
+ 	memset(&iv, 0, sizeof(iv));
+ 
+-	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
+-	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
++	sg_init_one(&sg, sechdr, 8);
+ 
+ 	skcipher_request_set_tfm(req, call->conn->cipher);
+ 	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
++	skcipher_request_set_crypt(req, &sg, &sg, 8, iv.x);
+ 
+ 	crypto_skcipher_encrypt(req);
+ 	skcipher_request_zero(req);
+ 
+-	memcpy(sechdr, &tmpbuf, sizeof(tmpbuf));
+-
+ 	_leave(" = 0");
+ 	return 0;
+ }
+@@ -196,8 +185,7 @@ static int rxkad_secure_packet_encrypt(const struct rxrpc_call *call,
+ 				       void *sechdr)
+ {
+ 	const struct rxrpc_key_token *token;
+-	struct rxkad_level2_hdr rxkhdr
+-		__attribute__((aligned(8))); /* must be all on one page */
++	struct rxkad_level2_hdr rxkhdr;
+ 	struct rxrpc_skb_priv *sp;
+ 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
+ 	struct rxrpc_crypt iv;
+@@ -216,17 +204,17 @@ static int rxkad_secure_packet_encrypt(const struct rxrpc_call *call,
+ 
+ 	rxkhdr.data_size = htonl(data_size | (u32)check << 16);
+ 	rxkhdr.checksum = 0;
++	memcpy(sechdr, &rxkhdr, sizeof(rxkhdr));
+ 
+ 	/* encrypt from the session key */
+ 	token = call->conn->key->payload.data[0];
+ 	memcpy(&iv, token->kad->session_key, sizeof(iv));
+ 
+ 	sg_init_one(&sg[0], sechdr, sizeof(rxkhdr));
+-	sg_init_one(&sg[1], &rxkhdr, sizeof(rxkhdr));
+ 
+ 	skcipher_request_set_tfm(req, call->conn->cipher);
+ 	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(rxkhdr), iv.x);
++	skcipher_request_set_crypt(req, &sg[0], &sg[0], sizeof(rxkhdr), iv.x);
+ 
+ 	crypto_skcipher_encrypt(req);
+ 
+@@ -265,10 +253,11 @@ static int rxkad_secure_packet(const struct rxrpc_call *call,
+ 	struct rxrpc_skb_priv *sp;
+ 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
+ 	struct rxrpc_crypt iv;
+-	struct scatterlist sg[2];
+-	struct {
++	struct scatterlist sg;
++	union {
+ 		__be32 x[2];
+-	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
++		__be64 xl;
++	} tmpbuf;
+ 	u32 x, y;
+ 	int ret;
+ 
+@@ -294,16 +283,19 @@ static int rxkad_secure_packet(const struct rxrpc_call *call,
+ 	tmpbuf.x[0] = htonl(sp->hdr.callNumber);
+ 	tmpbuf.x[1] = htonl(x);
+ 
+-	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
+-	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
++	swap(tmpbuf.xl, *(__be64 *)sp);
++
++	sg_init_one(&sg, sp, sizeof(tmpbuf));
+ 
+ 	skcipher_request_set_tfm(req, call->conn->cipher);
+ 	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
++	skcipher_request_set_crypt(req, &sg, &sg, sizeof(tmpbuf), iv.x);
+ 
+ 	crypto_skcipher_encrypt(req);
+ 	skcipher_request_zero(req);
+ 
++	swap(tmpbuf.xl, *(__be64 *)sp);
++
+ 	y = ntohl(tmpbuf.x[1]);
+ 	y = (y >> 16) & 0xffff;
+ 	if (y == 0)
+@@ -503,10 +495,11 @@ static int rxkad_verify_packet(const struct rxrpc_call *call,
+ 	SKCIPHER_REQUEST_ON_STACK(req, call->conn->cipher);
+ 	struct rxrpc_skb_priv *sp;
+ 	struct rxrpc_crypt iv;
+-	struct scatterlist sg[2];
+-	struct {
++	struct scatterlist sg;
++	union {
+ 		__be32 x[2];
+-	} tmpbuf __attribute__((aligned(8))); /* must all be in same page */
++		__be64 xl;
++	} tmpbuf;
+ 	u16 cksum;
+ 	u32 x, y;
+ 	int ret;
+@@ -534,16 +527,19 @@ static int rxkad_verify_packet(const struct rxrpc_call *call,
+ 	tmpbuf.x[0] = htonl(call->call_id);
+ 	tmpbuf.x[1] = htonl(x);
+ 
+-	sg_init_one(&sg[0], &tmpbuf, sizeof(tmpbuf));
+-	sg_init_one(&sg[1], &tmpbuf, sizeof(tmpbuf));
++	swap(tmpbuf.xl, *(__be64 *)sp);
++
++	sg_init_one(&sg, sp, sizeof(tmpbuf));
+ 
+ 	skcipher_request_set_tfm(req, call->conn->cipher);
+ 	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg[1], &sg[0], sizeof(tmpbuf), iv.x);
++	skcipher_request_set_crypt(req, &sg, &sg, sizeof(tmpbuf), iv.x);
+ 
+ 	crypto_skcipher_encrypt(req);
+ 	skcipher_request_zero(req);
+ 
++	swap(tmpbuf.xl, *(__be64 *)sp);
++
+ 	y = ntohl(tmpbuf.x[1]);
+ 	cksum = (y >> 16) & 0xffff;
+ 	if (cksum == 0)
+@@ -708,26 +704,13 @@ static void rxkad_calc_response_checksum(struct rxkad_response *response)
+ }
+ 
+ /*
+- * load a scatterlist with a potentially split-page buffer
++ * load a scatterlist
   */
- 
--static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
-+static int smp_e(struct crypto_cipher *tfm, const u8 *k, u8 *r)
+-static void rxkad_sg_set_buf2(struct scatterlist sg[2],
++static void rxkad_sg_set_buf2(struct scatterlist sg[1],
+ 			      void *buf, size_t buflen)
  {
--	SKCIPHER_REQUEST_ON_STACK(req, tfm);
--	struct scatterlist sg;
- 	uint8_t tmp[16], data[16];
- 	int err;
- 
-@@ -378,7 +376,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
- 	/* The most significant octet of key corresponds to k[0] */
- 	swap_buf(k, tmp, 16);
- 
--	err = crypto_skcipher_setkey(tfm, tmp, 16);
-+	err = crypto_cipher_setkey(tfm, tmp, 16);
- 	if (err) {
- 		BT_ERR("cipher setkey failed: %d", err);
- 		return err;
-@@ -387,16 +385,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
- 	/* Most significant octet of plaintextData corresponds to data[0] */
- 	swap_buf(r, data, 16);
- 
--	sg_init_one(&sg, data, 16);
+-	int nsg = 1;
 -
--	skcipher_request_set_tfm(req, tfm);
--	skcipher_request_set_callback(req, 0, NULL, NULL);
--	skcipher_request_set_crypt(req, &sg, &sg, 16, NULL);
+-	sg_init_table(sg, 2);
 -
--	err = crypto_skcipher_encrypt(req);
--	skcipher_request_zero(req);
--	if (err)
--		BT_ERR("Encrypt data error %d", err);
-+	crypto_cipher_encrypt_one(tfm, data, data);
- 
- 	/* Most significant octet of encryptedData corresponds to data[0] */
- 	swap_buf(data, r, 16);
-@@ -406,7 +395,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
- 	return err;
++	sg_init_table(sg, 1);
+ 	sg_set_buf(&sg[0], buf, buflen);
+-	if (sg[0].offset + buflen > PAGE_SIZE) {
+-		/* the buffer was split over two pages */
+-		sg[0].length = PAGE_SIZE - sg[0].offset;
+-		sg_set_buf(&sg[1], buf + sg[0].length, buflen - sg[0].length);
+-		nsg++;
+-	}
+-
+-	sg_mark_end(&sg[nsg - 1]);
+-
+-	ASSERTCMP(sg[0].length + sg[1].length, ==, buflen);
  }
  
--static int smp_c1(struct crypto_skcipher *tfm_aes, const u8 k[16],
-+static int smp_c1(struct crypto_cipher *tfm_aes, const u8 k[16],
- 		  const u8 r[16], const u8 preq[7], const u8 pres[7], u8 _iat,
- 		  const bdaddr_t *ia, u8 _rat, const bdaddr_t *ra, u8 res[16])
+ /*
+@@ -739,7 +722,7 @@ static void rxkad_encrypt_response(struct rxrpc_connection *conn,
  {
-@@ -455,7 +444,7 @@ static int smp_c1(struct crypto_skcipher *tfm_aes, const u8 k[16],
- 	return err;
- }
+ 	SKCIPHER_REQUEST_ON_STACK(req, conn->cipher);
+ 	struct rxrpc_crypt iv;
+-	struct scatterlist sg[2];
++	struct scatterlist sg[1];
  
--static int smp_s1(struct crypto_skcipher *tfm_aes, const u8 k[16],
-+static int smp_s1(struct crypto_cipher *tfm_aes, const u8 k[16],
- 		  const u8 r1[16], const u8 r2[16], u8 _r[16])
+ 	/* continue encrypting from where we left off */
+ 	memcpy(&iv, s2->session_key, sizeof(iv));
+@@ -999,7 +982,7 @@ static void rxkad_decrypt_response(struct rxrpc_connection *conn,
+ 				   const struct rxrpc_crypt *session_key)
  {
- 	int err;
-@@ -471,7 +460,7 @@ static int smp_s1(struct crypto_skcipher *tfm_aes, const u8 k[16],
- 	return err;
- }
+ 	SKCIPHER_REQUEST_ON_STACK(req, rxkad_ci);
+-	struct scatterlist sg[2];
++	struct scatterlist sg[1];
+ 	struct rxrpc_crypt iv;
  
--static int smp_ah(struct crypto_skcipher *tfm, const u8 irk[16],
-+static int smp_ah(struct crypto_cipher *tfm, const u8 irk[16],
- 		  const u8 r[3], u8 res[3])
- {
- 	u8 _res[16];
-@@ -759,7 +748,7 @@ static void smp_chan_destroy(struct l2cap_conn *conn)
- 	kzfree(smp->slave_csrk);
- 	kzfree(smp->link_key);
- 
--	crypto_free_skcipher(smp->tfm_aes);
-+	crypto_free_cipher(smp->tfm_aes);
- 	crypto_free_shash(smp->tfm_cmac);
- 
- 	/* Ensure that we don't leave any debug key around if debug key
-@@ -1359,9 +1348,9 @@ static struct smp_chan *smp_chan_create(struct l2cap_conn *conn)
- 	if (!smp)
- 		return NULL;
- 
--	smp->tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
-+	smp->tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
- 	if (IS_ERR(smp->tfm_aes)) {
--		BT_ERR("Unable to create ECB crypto context");
-+		BT_ERR("Unable to create AES crypto context");
- 		kzfree(smp);
- 		return NULL;
- 	}
-@@ -1369,7 +1358,7 @@ static struct smp_chan *smp_chan_create(struct l2cap_conn *conn)
- 	smp->tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, 0);
- 	if (IS_ERR(smp->tfm_cmac)) {
- 		BT_ERR("Unable to create CMAC crypto context");
--		crypto_free_skcipher(smp->tfm_aes);
-+		crypto_free_cipher(smp->tfm_aes);
- 		kzfree(smp);
- 		return NULL;
- 	}
-@@ -3120,7 +3109,7 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
- {
- 	struct l2cap_chan *chan;
- 	struct smp_dev *smp;
--	struct crypto_skcipher *tfm_aes;
-+	struct crypto_cipher *tfm_aes;
- 	struct crypto_shash *tfm_cmac;
- 
- 	if (cid == L2CAP_CID_SMP_BREDR) {
-@@ -3132,9 +3121,9 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
- 	if (!smp)
- 		return ERR_PTR(-ENOMEM);
- 
--	tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
-+	tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
- 	if (IS_ERR(tfm_aes)) {
--		BT_ERR("Unable to create ECB crypto context");
-+		BT_ERR("Unable to create AES crypto context");
- 		kzfree(smp);
- 		return ERR_CAST(tfm_aes);
- 	}
-@@ -3142,7 +3131,7 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
- 	tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, 0);
- 	if (IS_ERR(tfm_cmac)) {
- 		BT_ERR("Unable to create CMAC crypto context");
--		crypto_free_skcipher(tfm_aes);
-+		crypto_free_cipher(tfm_aes);
- 		kzfree(smp);
- 		return ERR_CAST(tfm_cmac);
- 	}
-@@ -3156,7 +3145,7 @@ create_chan:
- 	chan = l2cap_chan_create();
- 	if (!chan) {
- 		if (smp) {
--			crypto_free_skcipher(smp->tfm_aes);
-+			crypto_free_cipher(smp->tfm_aes);
- 			crypto_free_shash(smp->tfm_cmac);
- 			kzfree(smp);
- 		}
-@@ -3203,7 +3192,7 @@ static void smp_del_chan(struct l2cap_chan *chan)
- 	smp = chan->data;
- 	if (smp) {
- 		chan->data = NULL;
--		crypto_free_skcipher(smp->tfm_aes);
-+		crypto_free_cipher(smp->tfm_aes);
- 		crypto_free_shash(smp->tfm_cmac);
- 		kzfree(smp);
- 	}
-@@ -3440,7 +3429,7 @@ void smp_unregister(struct hci_dev *hdev)
- 
- #if IS_ENABLED(CONFIG_BT_SELFTEST_SMP)
- 
--static int __init test_ah(struct crypto_skcipher *tfm_aes)
-+static int __init test_ah(struct crypto_cipher *tfm_aes)
- {
- 	const u8 irk[16] = {
- 			0x9b, 0x7d, 0x39, 0x0a, 0xa6, 0x10, 0x10, 0x34,
-@@ -3460,7 +3449,7 @@ static int __init test_ah(struct crypto_skcipher *tfm_aes)
- 	return 0;
- }
- 
--static int __init test_c1(struct crypto_skcipher *tfm_aes)
-+static int __init test_c1(struct crypto_cipher *tfm_aes)
- {
- 	const u8 k[16] = {
- 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-@@ -3490,7 +3479,7 @@ static int __init test_c1(struct crypto_skcipher *tfm_aes)
- 	return 0;
- }
- 
--static int __init test_s1(struct crypto_skcipher *tfm_aes)
-+static int __init test_s1(struct crypto_cipher *tfm_aes)
- {
- 	const u8 k[16] = {
- 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-@@ -3686,7 +3675,7 @@ static const struct file_operations test_smp_fops = {
- 	.llseek		= default_llseek,
- };
- 
--static int __init run_selftests(struct crypto_skcipher *tfm_aes,
-+static int __init run_selftests(struct crypto_cipher *tfm_aes,
- 				struct crypto_shash *tfm_cmac)
- {
- 	ktime_t calltime, delta, rettime;
-@@ -3764,27 +3753,27 @@ done:
- 
- int __init bt_selftest_smp(void)
- {
--	struct crypto_skcipher *tfm_aes;
-+	struct crypto_cipher *tfm_aes;
- 	struct crypto_shash *tfm_cmac;
- 	int err;
- 
--	tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
-+	tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
- 	if (IS_ERR(tfm_aes)) {
--		BT_ERR("Unable to create ECB crypto context");
-+		BT_ERR("Unable to create AES crypto context");
- 		return PTR_ERR(tfm_aes);
- 	}
- 
- 	tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, CRYPTO_ALG_ASYNC);
- 	if (IS_ERR(tfm_cmac)) {
- 		BT_ERR("Unable to create CMAC crypto context");
--		crypto_free_skcipher(tfm_aes);
-+		crypto_free_cipher(tfm_aes);
- 		return PTR_ERR(tfm_cmac);
- 	}
- 
- 	err = run_selftests(tfm_aes, tfm_cmac);
- 
- 	crypto_free_shash(tfm_cmac);
--	crypto_free_skcipher(tfm_aes);
-+	crypto_free_cipher(tfm_aes);
- 
- 	return err;
- }
+ 	_enter(",,%08x%08x",
 -- 
 2.7.4
