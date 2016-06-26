@@ -1,42 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 26 Jun 2016 14:55:26 -0700
-Message-Id: <edf5c9e2572b2ea6e1a7f7b3f1c5e9968907b7fb.1466974736.git.luto@kernel.org>
+Date: Sun, 26 Jun 2016 14:55:28 -0700
+Message-Id: <7042d0e35631cf932449f044f45c89054422f56c.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 04/29] x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
+Subject: [kernel-hardening] [PATCH v4 06/29] mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
 To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This avoids pointless races in which another CPU or task might see a
-partially populated global pgd entry.  These races should normally
-be harmless, but, if another CPU propagates the entry via
-vmalloc_fault and then populate_pgd fails (due to memory allocation
-failure, for example), this prevents a use-after-free of the pgd
-entry.
+Currently, NR_KERNEL_STACK tracks the number of kernel stacks in a
+zone.  This only makes sense if each kernel stack exists entirely in
+one zone, and allowing vmapped stacks could break this assumption.
 
+Since frv has THREAD_SIZE < PAGE_SIZE, we need to track kernel stack
+allocations in a unit that divides both THREAD_SIZE and PAGE_SIZE on
+all architectures.  Keep it simple and use KiB.
+
+Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
+Cc: Johannes Weiner <hannes@cmpxchg.org>
+Cc: Michal Hocko <mhocko@kernel.org>
+Cc: linux-mm@kvack.org
+Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+Reviewed-by: Vladimir Davydov <vdavydov@virtuozzo.com>
+Acked-by: Michal Hocko <mhocko@suse.com>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/x86/mm/pageattr.c | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
+ drivers/base/node.c    | 3 +--
+ fs/proc/meminfo.c      | 2 +-
+ include/linux/mmzone.h | 2 +-
+ kernel/fork.c          | 3 ++-
+ mm/page_alloc.c        | 3 +--
+ 5 files changed, 6 insertions(+), 7 deletions(-)
 
-diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-index 7a1f7bbf4105..6a8026918bf6 100644
---- a/arch/x86/mm/pageattr.c
-+++ b/arch/x86/mm/pageattr.c
-@@ -1113,7 +1113,9 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
+diff --git a/drivers/base/node.c b/drivers/base/node.c
+index 560751bad294..27dc68a0ed2d 100644
+--- a/drivers/base/node.c
++++ b/drivers/base/node.c
+@@ -121,8 +121,7 @@ static ssize_t node_read_meminfo(struct device *dev,
+ 		       nid, K(node_page_state(nid, NR_FILE_MAPPED)),
+ 		       nid, K(node_page_state(nid, NR_ANON_PAGES)),
+ 		       nid, K(i.sharedram),
+-		       nid, node_page_state(nid, NR_KERNEL_STACK) *
+-				THREAD_SIZE / 1024,
++		       nid, node_page_state(nid, NR_KERNEL_STACK_KB),
+ 		       nid, K(node_page_state(nid, NR_PAGETABLE)),
+ 		       nid, K(node_page_state(nid, NR_UNSTABLE_NFS)),
+ 		       nid, K(node_page_state(nid, NR_BOUNCE)),
+diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
+index 83720460c5bc..239b5a06cee0 100644
+--- a/fs/proc/meminfo.c
++++ b/fs/proc/meminfo.c
+@@ -145,7 +145,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
+ 				global_page_state(NR_SLAB_UNRECLAIMABLE)),
+ 		K(global_page_state(NR_SLAB_RECLAIMABLE)),
+ 		K(global_page_state(NR_SLAB_UNRECLAIMABLE)),
+-		global_page_state(NR_KERNEL_STACK) * THREAD_SIZE / 1024,
++		global_page_state(NR_KERNEL_STACK_KB),
+ 		K(global_page_state(NR_PAGETABLE)),
+ #ifdef CONFIG_QUICKLIST
+ 		K(quicklist_total_size()),
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index 02069c23486d..63f05a7efb54 100644
+--- a/include/linux/mmzone.h
++++ b/include/linux/mmzone.h
+@@ -127,7 +127,7 @@ enum zone_stat_item {
+ 	NR_SLAB_RECLAIMABLE,
+ 	NR_SLAB_UNRECLAIMABLE,
+ 	NR_PAGETABLE,		/* used for pagetables */
+-	NR_KERNEL_STACK,
++	NR_KERNEL_STACK_KB,	/* measured in KiB */
+ 	/* Second 128 byte cacheline */
+ 	NR_UNSTABLE_NFS,	/* NFS unstable pages */
+ 	NR_BOUNCE,
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 4a7ec0c6c88c..466ba8febe3b 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -225,7 +225,8 @@ static void account_kernel_stack(unsigned long *stack, int account)
+ {
+ 	struct zone *zone = page_zone(virt_to_page(stack));
  
- 	ret = populate_pud(cpa, addr, pgd_entry, pgprot);
- 	if (ret < 0) {
--		unmap_pgd_range(cpa->pgd, addr,
-+		if (pud)
-+			free_page((unsigned long)pud);
-+		unmap_pud_range(pgd_entry, addr,
- 				addr + (cpa->numpages << PAGE_SHIFT));
- 		return ret;
- 	}
+-	mod_zone_page_state(zone, NR_KERNEL_STACK, account);
++	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
++			    THREAD_SIZE / 1024 * account);
+ }
+ 
+ void free_task(struct task_struct *tsk)
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 6903b695ebae..a277dea926c9 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -4457,8 +4457,7 @@ void show_free_areas(unsigned int filter)
+ 			K(zone_page_state(zone, NR_SHMEM)),
+ 			K(zone_page_state(zone, NR_SLAB_RECLAIMABLE)),
+ 			K(zone_page_state(zone, NR_SLAB_UNRECLAIMABLE)),
+-			zone_page_state(zone, NR_KERNEL_STACK) *
+-				THREAD_SIZE / 1024,
++			zone_page_state(zone, NR_KERNEL_STACK_KB),
+ 			K(zone_page_state(zone, NR_PAGETABLE)),
+ 			K(zone_page_state(zone, NR_UNSTABLE_NFS)),
+ 			K(zone_page_state(zone, NR_BOUNCE)),
 -- 
 2.7.4
