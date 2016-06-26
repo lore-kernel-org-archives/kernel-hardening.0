@@ -1,38 +1,194 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Andy Lutomirski <luto@kernel.org>
+Date: Sun, 26 Jun 2016 14:55:22 -0700
+Message-Id: <cover.1466974736.git.luto@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <20160624153503.oeivkn7djnxdi5oq@treble>
-References: <cover.1466741835.git.luto@kernel.org> <f76b49739625fce1264428155540ca7161925511.1466741835.git.luto@kernel.org>
- <20160624153503.oeivkn7djnxdi5oq@treble>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Sun, 26 Jun 2016 09:59:44 -0700
-Message-ID: <CALCETrXz_GHZzx=F3AgQ8FNQ0BJROhnvK5E6-zQd57xpBFAreA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 13/16] x86/dumpstack: Try harder to get a call trace on
- stack overflow
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH v4 00/29] virtually mapped stacks and thread_info cleanup
+To: x86@kernel.org
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jun 24, 2016 at 8:35 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
-> On Thu, Jun 23, 2016 at 09:23:08PM -0700, Andy Lutomirski wrote:
->> If we overflow the stack, print_context_stack will abort.  Detect
->> this case and rewind back into the valid part of the stack so that
->> we can trace it.
->>
->> Signed-off-by: Andy Lutomirski <luto@kernel.org>
->
-> Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
->
+Hi all-
 
-FWIW, I'm making a trivial change here for v4: task->stack ->
-task_stack_page(task).  Since it seems inconsequential, I'm keeping
-your reviewed-by.
+Since the dawn of time, a kernel stack overflow has been a real PITA
+to debug, has caused nondeterministic crashes some time after the
+actual overflow, and has generally been easy to exploit for root.
 
-> --
-> Josh
+With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+that enable it (just x86 for now) get virtually mapped stacks with
+guard pages.  This causes reliable faults when the stack overflows.
 
+If the arch implements it well, we get a nice OOPS on stack overflow
+(as opposed to panicing directly or otherwise exploding badly).  On
+x86, the OOPS is nice, has a usable call trace, and the overflowing
+task is killed cleanly.
 
+This series (starting with this version, v4) also extensively cleans
+up thread_info.  thread_info has been partially redundant with
+thread_struct for a long time -- both are places for arch code to
+add additional per-task variables.  thread_struct is much cleaner:
+it's always in task_struct, and there's nothing particularly magical
+about it.  So this series contains a bunch of cleanups on x86 to
+move almost everything from thread_info to thread_struct (which,
+even by itself, deletes more code than it adds) and to remove x86's
+dependence on thread_info's position on the stack.  Then it opts x86
+into a new config option THREAD_INFO_IN_TASK to get rid of
+arch-specific thread_info entirely and simply embed a defanged
+thread_info (containing only flags) and 'int cpu' into task_struct.
+
+Once thread_info stops being magical, there's another benefit: we
+can free the thread stack as soon as the task is dead (without
+waiting for RCU) and then, if vmapped stacks are in use, cache the
+entire stack for reuse on the same cpu.
+
+This seems to be an overall speedup of about 0.5-1 µs per
+pthread_create/join in a simple test -- a percpu cache of vmalloced
+stacks appears to be a bit faster than a high-order stack
+allocation, at least when the cache hits.  (I expect that workloads
+with a low cache hit rate are likely to be dominated by other
+effects anyway.)
+
+This does not address interrupt stacks.
+
+It's worth noting that s390 has an arch-specific gcc feature that
+detects stack overflows by adjusting function prologues.  Arches
+with features like that may wish to avoid using vmapped stacks to
+minimize the performance hit.
+
+Known issues:
+ - tcp md5, virtio_net, and virtio_console will have issues.  Eric Dumazet
+   has a patch for tcp md5, and Michael Tsirkin says he'll fix virtio_net
+   and virtio_console.
+
+Changes from v3:
+ - Minor cleanups
+ - Rebased onto Linus' tree
+ - All the thread_info stuff is new
+
+Changes from v2:
+ - Delete kerne_unmap_pages_in_pgd rather than hardening it (Borislav)
+ - Fix sub-page stack accounting better (Josh)
+
+Changes from v1:
+ - Fix rewind_stack_and_do_exit (Josh)
+ - Fix deadlock under load
+ - Clean up generic stack vmalloc code
+ - Many other minor fixes
+
+Andy Lutomirski (25):
+  bluetooth: Switch SMP to crypto_cipher_encrypt_one()
+  x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
+  x86/mm: Remove kernel_unmap_pages_in_pgd() and
+    efi_cleanup_page_tables()
+  mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
+  mm: Fix memcg stack accounting for sub-page stacks
+  dma-api: Teach the "DMA-from-stack" check about vmapped stacks
+  fork: Add generic vmalloced stack support
+  x86/die: Don't try to recover from an OOPS on a non-default stack
+  x86/dumpstack: When OOPSing, rewind the stack before do_exit
+  x86/dumpstack: When dumping stack bytes due to OOPS, start with
+    regs->sp
+  x86/dumpstack: Try harder to get a call trace on stack overflow
+  x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
+    OOPS
+  x86/mm/64: Enable vmapped stacks
+  x86/mm: Improve stack-overflow #PF handling
+  x86: Move uaccess_err and sig_on_uaccess_err to thread_struct
+  x86: Move addr_limit to thread_struct
+  signal: Consolidate {TS,TLF}_RESTORE_SIGMASK code
+  x86/smp: Remove stack_smp_processor_id()
+  x86/smp: Remove unnecessary initialization of thread_info::cpu
+  x86/asm: Move 'status' from struct thread_info to struct thread_struct
+  kdb: Use task_cpu() instead of task_thread_info()->cpu
+  sched: Allow putting thread_info into task_struct
+  x86: Move thread_info into task_struct
+  sched: Free the stack early if CONFIG_THREAD_INFO_IN_TASK
+  fork: Cache two thread stacks per cpu if CONFIG_VMAP_STACK is set
+
+Herbert Xu (1):
+  rxrpc: Avoid using stack memory in SG lists in rxkad
+
+Ingo Molnar (1):
+  x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
+
+Linus Torvalds (2):
+  x86/entry: Get rid of pt_regs_to_thread_info()
+  um: Stop conflating task_struct::stack with thread_info
+
+ arch/Kconfig                              |  29 ++++++
+ arch/alpha/include/asm/thread_info.h      |  27 -----
+ arch/ia64/include/asm/thread_info.h       |  30 +-----
+ arch/microblaze/include/asm/thread_info.h |  27 -----
+ arch/powerpc/include/asm/thread_info.h    |  25 -----
+ arch/sh/include/asm/thread_info.h         |  26 -----
+ arch/sparc/include/asm/thread_info_64.h   |  24 -----
+ arch/tile/include/asm/thread_info.h       |  27 -----
+ arch/x86/Kconfig                          |   2 +
+ arch/x86/entry/common.c                   |  25 ++---
+ arch/x86/entry/entry_32.S                 |  11 +++
+ arch/x86/entry/entry_64.S                 |  20 +++-
+ arch/x86/entry/vsyscall/vsyscall_64.c     |   6 +-
+ arch/x86/include/asm/checksum_32.h        |   3 +-
+ arch/x86/include/asm/cpu.h                |   1 -
+ arch/x86/include/asm/efi.h                |   1 -
+ arch/x86/include/asm/pgtable_types.h      |   2 -
+ arch/x86/include/asm/processor.h          |  32 ++++--
+ arch/x86/include/asm/smp.h                |   6 --
+ arch/x86/include/asm/switch_to.h          |  34 ++++++-
+ arch/x86/include/asm/syscall.h            |  23 +----
+ arch/x86/include/asm/thread_info.h        | 102 +------------------
+ arch/x86/include/asm/traps.h              |   6 ++
+ arch/x86/include/asm/uaccess.h            |  10 +-
+ arch/x86/kernel/asm-offsets.c             |   5 +-
+ arch/x86/kernel/cpu/common.c              |   2 +-
+ arch/x86/kernel/dumpstack.c               |  20 +++-
+ arch/x86/kernel/dumpstack_32.c            |   4 +-
+ arch/x86/kernel/dumpstack_64.c            |  16 ++-
+ arch/x86/kernel/fpu/init.c                |   1 -
+ arch/x86/kernel/irq_64.c                  |   3 +-
+ arch/x86/kernel/process.c                 |   6 +-
+ arch/x86/kernel/process_64.c              |   4 +-
+ arch/x86/kernel/ptrace.c                  |   2 +-
+ arch/x86/kernel/smpboot.c                 |   1 -
+ arch/x86/kernel/traps.c                   |  32 ++++++
+ arch/x86/lib/copy_user_64.S               |   8 +-
+ arch/x86/lib/csum-wrappers_64.c           |   1 +
+ arch/x86/lib/getuser.S                    |  20 ++--
+ arch/x86/lib/putuser.S                    |  10 +-
+ arch/x86/lib/usercopy_64.c                |   2 +-
+ arch/x86/mm/extable.c                     |   2 +-
+ arch/x86/mm/fault.c                       |  41 +++++++-
+ arch/x86/mm/init_64.c                     |  27 -----
+ arch/x86/mm/pageattr.c                    |  32 +-----
+ arch/x86/mm/tlb.c                         |  15 +++
+ arch/x86/platform/efi/efi.c               |   2 -
+ arch/x86/platform/efi/efi_32.c            |   3 -
+ arch/x86/platform/efi/efi_64.c            |   5 -
+ arch/x86/um/ptrace_32.c                   |   8 +-
+ drivers/base/node.c                       |   3 +-
+ drivers/pnp/isapnp/proc.c                 |   2 +-
+ fs/proc/meminfo.c                         |   2 +-
+ include/linux/init_task.h                 |   9 ++
+ include/linux/kdb.h                       |   2 +-
+ include/linux/memcontrol.h                |   2 +-
+ include/linux/mmzone.h                    |   2 +-
+ include/linux/sched.h                     | 115 +++++++++++++++++++++-
+ include/linux/thread_info.h               |  56 +++--------
+ init/Kconfig                              |   3 +
+ init/init_task.c                          |   7 +-
+ kernel/fork.c                             | 158 +++++++++++++++++++++++++-----
+ kernel/sched/core.c                       |   9 ++
+ kernel/sched/sched.h                      |   4 +
+ lib/bitmap.c                              |   2 +-
+ lib/dma-debug.c                           |  39 ++++++--
+ mm/memcontrol.c                           |   2 +-
+ mm/page_alloc.c                           |   3 +-
+ net/bluetooth/smp.c                       |  67 ++++++-------
+ net/rxrpc/ar-internal.h                   |   1 +
+ net/rxrpc/rxkad.c                         | 103 ++++++++-----------
+ 71 files changed, 714 insertions(+), 648 deletions(-)
 
 -- 
-Andy Lutomirski
-AMA Capital Management, LLC
+2.7.4
