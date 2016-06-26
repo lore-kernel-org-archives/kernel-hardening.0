@@ -1,105 +1,67 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Sun, 26 Jun 2016 14:55:50 -0700
-Message-Id: <ec58e505925c46bd43f9c4275c78292d4483af16.1466974736.git.luto@kernel.org>
+Date: Sun, 26 Jun 2016 14:55:42 -0700
+Message-Id: <6c8610ea4d224d14699f62c07e569e2f01499234.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
 In-Reply-To: <cover.1466974736.git.luto@kernel.org>
 References: <cover.1466974736.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v4 28/29] sched: Free the stack early if CONFIG_THREAD_INFO_IN_TASK
+Subject: [kernel-hardening] [PATCH v4 20/29] x86/smp: Remove stack_smp_processor_id()
 To: x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>
+Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-We currently keep every task's stack around until the task_struct
-itself is freed.  This means that we keep the stack allocation alive
-for longer than necessary and that, under load, we free stacks in
-big batches whenever RCU drops the last task reference.  Neither of
-these is good for reuse of cache-hot memory, and freeing in batches
-prevents us from usefully caching small numbers of vmalloced stacks.
+It serves no purpose -- raw_smp_processor_id() works fine.  This
+change will be needed to move thread_info off the stack.
 
-On architectures that have thread_info on the stack, we can't easily
-change this, but on architectures that set THREAD_INFO_IN_TASK, we
-can free it as soon as the task is dead.
-
-Cc: Oleg Nesterov <oleg@redhat.com>
-Cc: Peter Zijlstra <peterz@infradead.org>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- include/linux/sched.h |  1 +
- kernel/fork.c         | 23 ++++++++++++++++++++++-
- kernel/sched/core.c   |  9 +++++++++
- 3 files changed, 32 insertions(+), 1 deletion(-)
+ arch/x86/include/asm/cpu.h   | 1 -
+ arch/x86/include/asm/smp.h   | 6 ------
+ arch/x86/kernel/cpu/common.c | 2 +-
+ 3 files changed, 1 insertion(+), 8 deletions(-)
 
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 4108b4880b86..0b9486826d62 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -2659,6 +2659,7 @@ static inline void kernel_signal_stop(void)
- }
+diff --git a/arch/x86/include/asm/cpu.h b/arch/x86/include/asm/cpu.h
+index 678637ad7476..59d34c521d96 100644
+--- a/arch/x86/include/asm/cpu.h
++++ b/arch/x86/include/asm/cpu.h
+@@ -17,7 +17,6 @@ static inline void prefill_possible_map(void) {}
  
- extern void release_task(struct task_struct * p);
-+extern void release_task_stack(struct task_struct *tsk);
- extern int send_sig_info(int, struct siginfo *, struct task_struct *);
- extern int force_sigsegv(int, struct task_struct *);
- extern int force_sig_info(int, struct siginfo *, struct task_struct *);
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 06761de69360..8dd1329e1bf8 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -269,11 +269,32 @@ static void account_kernel_stack(struct task_struct *tsk, int account)
- 	}
- }
+ #define cpu_physical_id(cpu)			boot_cpu_physical_apicid
+ #define safe_smp_processor_id()			0
+-#define stack_smp_processor_id()		0
  
--void free_task(struct task_struct *tsk)
-+void release_task_stack(struct task_struct *tsk)
- {
- 	account_kernel_stack(tsk, -1);
- 	arch_release_thread_stack(tsk->stack);
- 	free_thread_stack(tsk);
-+	tsk->stack = NULL;
-+#ifdef CONFIG_VMAP_STACK
-+	tsk->stack_vm_area = NULL;
-+#endif
-+}
-+
-+void free_task(struct task_struct *tsk)
-+{
-+#ifndef CONFIG_THREAD_INFO_IN_TASK
-+	/*
-+	 * The task is finally done with both the stack and thread_info,
-+	 * so free both.
-+	 */
-+	release_task_stack(tsk);
-+#else
-+	/*
-+	 * If the task had a separate stack allocation, it should be gone
-+	 * by now.
-+	 */
-+	WARN_ON_ONCE(tsk->stack);
-+#endif
- 	rt_mutex_debug_task_free(tsk);
- 	ftrace_graph_exit_task(tsk);
- 	put_seccomp_filter(tsk);
-diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 51d7105f529a..00c9ba5cf605 100644
---- a/kernel/sched/core.c
-+++ b/kernel/sched/core.c
-@@ -2742,6 +2742,15 @@ static struct rq *finish_task_switch(struct task_struct *prev)
- 		 * task and put them back on the free list.
- 		 */
- 		kprobe_flush_task(prev);
-+
-+#ifdef CONFIG_THREAD_INFO_IN_TASK
-+		/*
-+		 * If thread_info is in task_struct, then the dead task no
-+		 * longer needs its stack.  Free it right away.
-+		 */
-+		release_task_stack(prev);
-+#endif
-+
- 		put_task_struct(prev);
- 	}
+ #endif /* CONFIG_SMP */
  
+diff --git a/arch/x86/include/asm/smp.h b/arch/x86/include/asm/smp.h
+index 66b057306f40..0576b6157f3a 100644
+--- a/arch/x86/include/asm/smp.h
++++ b/arch/x86/include/asm/smp.h
+@@ -172,12 +172,6 @@ extern int safe_smp_processor_id(void);
+ #elif defined(CONFIG_X86_64_SMP)
+ #define raw_smp_processor_id() (this_cpu_read(cpu_number))
+ 
+-#define stack_smp_processor_id()					\
+-({								\
+-	struct thread_info *ti;						\
+-	__asm__("andq %%rsp,%0; ":"=r" (ti) : "0" (CURRENT_MASK));	\
+-	ti->cpu;							\
+-})
+ #define safe_smp_processor_id()		smp_processor_id()
+ 
+ #endif
+diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
+index 0fe6953f421c..d22a7b9c4f0e 100644
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -1452,7 +1452,7 @@ void cpu_init(void)
+ 	struct task_struct *me;
+ 	struct tss_struct *t;
+ 	unsigned long v;
+-	int cpu = stack_smp_processor_id();
++	int cpu = raw_smp_processor_id();
+ 	int i;
+ 
+ 	wait_for_master_cpu(cpu);
 -- 
 2.7.4
