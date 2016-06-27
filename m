@@ -1,42 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-In-Reply-To: <f49fbe4a40e1630981614b910fbfbcaa387e6c8f.1466974736.git.luto@kernel.org>
-References: <cover.1466974736.git.luto@kernel.org><cover.1466974736.git.luto@kernel.org> <f49fbe4a40e1630981614b910fbfbcaa387e6c8f.1466974736.git.luto@kernel.org>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Mon, 27 Jun 2016 10:54:03 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160627085403.GA26865@gmail.com>
+References: <cover.1466974736.git.luto@kernel.org>
+ <cover.1466974736.git.luto@kernel.org>
+ <264af59a3060c2bc2a725cfc66a8fa68219d1c4a.1466974736.git.luto@kernel.org>
+ <8C5360E3-94EE-4869-B9B9-AF9D41B5A3AC@holtmann.org>
 MIME-Version: 1.0
-Content-Type: text/plain;
- charset=UTF-8
-Content-Transfer-Encoding: 8bit
-From: Borislav Petkov <bp@alien8.de>
-Date: Mon, 27 Jun 2016 09:19:10 +0200
-Message-ID: <f7f8c528-b72d-4b3d-a595-2c7c4743d0f0@email.android.com>
-Subject: [kernel-hardening] Re: [PATCH v4 05/29] x86/mm: Remove kernel_unmap_pages_in_pgd() and efi_cleanup_page_tables()
-To: Andy Lutomirski <luto@kernel.org>, x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Matt Fleming <matt@codeblueprint.co.uk>, linux-efi@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <8C5360E3-94EE-4869-B9B9-AF9D41B5A3AC@holtmann.org>
+Subject: [kernel-hardening] Re: [PATCH v4 01/29] bluetooth: Switch SMP to
+ crypto_cipher_encrypt_one()
+To: Marcel Holtmann <marcel@holtmann.org>
+Cc: Andy Lutomirski <luto@kernel.org>, x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, "Gustavo F. Padovan" <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>, "David S. Miller" <davem@davemloft.net>, linux-bluetooth@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Andy Lutomirski <luto@kernel.org> wrote:
 
->kernel_unmap_pages_in_pgd() is dangerous: if a pgd entry in
->init_mm.pgd were to be cleared, callers would need to ensure that
->the pgd entry hadn't been propagated to any other pgd.
->
->Its only caller was efi_cleanup_page_tables(), and that, in turn,
->was unused, so just delete both functions.  This leaves a couple of
->other helpers unused, so delete them, too.
->
->Cc: Matt Fleming <matt@codeblueprint.co.uk>
->Cc: linux-efi@vger.kernel.org
->Reviewed-by: Matt Fleming <matt@codeblueprint.co.uk>
->Signed-off-by: Andy Lutomirski <luto@kernel.org>
->---
-> arch/x86/include/asm/efi.h           |  1 -
-> arch/x86/include/asm/pgtable_types.h |  2 --
-> arch/x86/mm/pageattr.c               | 28 ----------------------------
-> arch/x86/platform/efi/efi.c          |  2 --
-> arch/x86/platform/efi/efi_32.c       |  3 ---
-> arch/x86/platform/efi/efi_64.c       |  5 -----
-> 6 files changed, 41 deletions(-)
+* Marcel Holtmann <marcel@holtmann.org> wrote:
 
-Acked-by: Borislav Petkov <bp@suse.de>
+> Hi Andy,
+> 
+> > SMP does ECB crypto on stack buffers.  This is complicated and
+> > fragile, and it will not work if the stack is virtually allocated.
+> > 
+> > Switch to the crypto_cipher interface, which is simpler and safer.
+> > 
+> > Cc: Marcel Holtmann <marcel@holtmann.org>
+> > Cc: Gustavo Padovan <gustavo@padovan.org>
+> > Cc: Johan Hedberg <johan.hedberg@gmail.com>
+> > Cc: "David S. Miller" <davem@davemloft.net>
+> > Cc: linux-bluetooth@vger.kernel.org
+> > Cc: netdev@vger.kernel.org
+> > Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+> > Acked-and-tested-by: Johan Hedberg <johan.hedberg@intel.com>
+> > Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> > ---
+> > net/bluetooth/smp.c | 67 ++++++++++++++++++++++-------------------------------
+> > 1 file changed, 28 insertions(+), 39 deletions(-)
+> 
+> patch has been applied to bluetooth-next tree.
 
--- 
-Sent from a small device: formatting sucks and brevity is inevitable. 
+Sadly carrying this separately will delay the virtual kernel stacks feature by a 
+kernel cycle, because it's a must-have prerequisite.
+
+Thanks,
+
+	Ingo
