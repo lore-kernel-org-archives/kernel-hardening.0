@@ -1,52 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAMzpN2jAh4MTdRHfOmG7F7QWjyVeuWj8cjDpCWx8j7hYbQtSjw@mail.gmail.com>
-References: <cover.1466974736.git.luto@kernel.org> <9eeb4be3c4e91d4155d0c4c234858f4259c5993d.1466974736.git.luto@kernel.org>
- <CAMzpN2hO-c+dKF+TnEn8GzWVton_=_5jKCU7g6bFb=SC=hfnoA@mail.gmail.com>
- <CALCETrXYtQUtLU-wF5YCxY9ZfNCDMZo1614Tg+FhcybPnCj4kw@mail.gmail.com> <CAMzpN2jAh4MTdRHfOmG7F7QWjyVeuWj8cjDpCWx8j7hYbQtSjw@mail.gmail.com>
+In-Reply-To: <ec58e505925c46bd43f9c4275c78292d4483af16.1466974736.git.luto@kernel.org>
+References: <cover.1466974736.git.luto@kernel.org> <ec58e505925c46bd43f9c4275c78292d4483af16.1466974736.git.luto@kernel.org>
 From: Andy Lutomirski <luto@amacapital.net>
-Date: Sun, 26 Jun 2016 17:40:22 -0700
-Message-ID: <CALCETrWcRgU9fLYEeUQVv79BwwSF+ehhn_fyUNYg+99nePk+vA@mail.gmail.com>
+Date: Sun, 26 Jun 2016 19:35:11 -0700
+Message-ID: <CALCETrVFC+X6uLe-ce7BePBTM5zCnAUn_vV73jyS-evTbmg6PA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 22/29] x86/asm: Move 'status' from struct thread_info
- to struct thread_struct
-To: Brian Gerst <brgerst@gmail.com>
-Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH v4 28/29] sched: Free the stack early if CONFIG_THREAD_INFO_IN_TASK
+To: Andy Lutomirski <luto@kernel.org>
+Cc: X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Oleg Nesterov <oleg@redhat.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 26, 2016 at 5:36 PM, Brian Gerst <brgerst@gmail.com> wrote:
-> On Sun, Jun 26, 2016 at 8:23 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Sun, Jun 26, 2016 at 4:55 PM, Brian Gerst <brgerst@gmail.com> wrote:
->>> On Sun, Jun 26, 2016 at 5:55 PM, Andy Lutomirski <luto@kernel.org> wrote:
->>>> --- a/arch/x86/kernel/asm-offsets.c
->>>> +++ b/arch/x86/kernel/asm-offsets.c
->>>> @@ -30,7 +30,6 @@
->>>>  void common(void) {
->>>>         BLANK();
->>>>         OFFSET(TI_flags, thread_info, flags);
->>>> -       OFFSET(TI_status, thread_info, status);
->>>
->>> TI_status can be deleted.  It's last users were removed in commit ee08c6bd.
->>
->> Indeed.
->>
->> Just to double-check: are you saying that this patch is okay?
+On Sun, Jun 26, 2016 at 2:55 PM, Andy Lutomirski <luto@kernel.org> wrote:
+> We currently keep every task's stack around until the task_struct
+> itself is freed.  This means that we keep the stack allocation alive
+> for longer than necessary and that, under load, we free stacks in
+> big batches whenever RCU drops the last task reference.  Neither of
+> these is good for reuse of cache-hot memory, and freeing in batches
+> prevents us from usefully caching small numbers of vmalloced stacks.
 >
-> It looks OK to me, but I haven't tested it.  Another suggestion is to
-> change the compat flag to a bitfield, since there is only one TS_*
-> flag now and it's not referenced from asm.
+> On architectures that have thread_info on the stack, we can't easily
+> change this, but on architectures that set THREAD_INFO_IN_TASK, we
+> can free it as soon as the task is dead.
 
-That could also work.
+This is broken:
 
-As a silly alternative thought: we just might be able to get away with
-shoving the "is ia32" flag into one of the high bits of
-pt_regs->orig_ax.  It wouldn't break any 32-bit ptrace users because
-they can't see the high bits.  It wouldn't break most 64-bit ptrace
-users because they use the silly PTRACE_GETREGSET API that doesn't
-show the high bits if the tracee is "32-bit".  It would change
-behavior when a 64-bit tracer traces a 64-bit process that does int
-$0x80, but at least strace already gets that case completely wrong.
+> -void free_task(struct task_struct *tsk)
+> +void release_task_stack(struct task_struct *tsk)
+>  {
+>         account_kernel_stack(tsk, -1);
+>         arch_release_thread_stack(tsk->stack);
+>         free_thread_stack(tsk);
+> +       tsk->stack = NULL;
+> +#ifdef CONFIG_VMAP_STACK
+> +       tsk->stack_vm_area = NULL;
+> +#endif
+> +}
+> +
+> +void free_task(struct task_struct *tsk)
+> +{
+> +#ifndef CONFIG_THREAD_INFO_IN_TASK
+> +       /*
+> +        * The task is finally done with both the stack and thread_info,
+> +        * so free both.
+> +        */
+> +       release_task_stack(tsk);
+> +#else
+> +       /*
+> +        * If the task had a separate stack allocation, it should be gone
+> +        * by now.
+> +        */
+> +       WARN_ON_ONCE(tsk->stack);
+> +#endif
 
-Of course, this proposal has all kinds of problems.
+We can get to free_task without first going through TASK_DEAD if we
+fail to clone().  I'm inclined to make release_task_stack be safe to
+call more than once and to call it unconditionally in free_task, since
+doing it without branches (calling release_task_stack in the
+copy_process failure path) will require more ifdeffery and sounds like
+more trouble than it's worth.
 
 --Andy
