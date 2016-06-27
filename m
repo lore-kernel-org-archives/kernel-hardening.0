@@ -1,57 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160626173451.c8406cd0c7a87cc3f94d9753@gmail.com>
-References: <20160626173451.c8406cd0c7a87cc3f94d9753@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Jun 2016 09:05:08 -0700
-Message-ID: <CAGXu5jJw-HcYRo8muSQ7Av9ZGuO3jTgV2x_xDcqmK-i=2nu1aw@mail.gmail.com>
+In-Reply-To: <CALCETrXVtjPQHx2g_O3HRr-DNLWRpDL3Pftt2peoVrfNGiSucA@mail.gmail.com>
+References: <cover.1466974736.git.luto@kernel.org> <f0a81fa3f7f81422cca23c9d6c88a555d89787ab.1466974736.git.luto@kernel.org>
+ <CAMzpN2gBgZbBBJ_kAT=fty7=8z3xDyv2gzz9xuGLoK7EUuHh0A@mail.gmail.com>
+ <CAMzpN2ggqbwkfNjHtYg3KU5oeerU6NPa0AqzG7PFtJuWy3dyKA@mail.gmail.com>
+ <CALCETrWQCpNWum5WofkApw4Ht+KB5H=tmPS5GummTFsSVfNF7g@mail.gmail.com> <CALCETrXVtjPQHx2g_O3HRr-DNLWRpDL3Pftt2peoVrfNGiSucA@mail.gmail.com>
+From: Brian Gerst <brgerst@gmail.com>
+Date: Mon, 27 Jun 2016 12:17:50 -0400
+Message-ID: <CAMzpN2jVghmEbpx7yyOVcOa4GMw8iRUez0WeehGYnrtdm7Ad1w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] powerpc/kernel: Disable the latent entropy plugin unconditionally
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Michal Marek <mmarek@suse.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>
+Subject: [kernel-hardening] Re: [PATCH v4 15/29] x86/mm/64: Enable vmapped stacks
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 26, 2016 at 8:34 AM, Emese Revfy <re.emese@gmail.com> wrote:
+On Mon, Jun 27, 2016 at 11:54 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Mon, Jun 27, 2016 at 8:22 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+>> On Mon, Jun 27, 2016 at 8:12 AM, Brian Gerst <brgerst@gmail.com> wrote:
+>>> On Mon, Jun 27, 2016 at 11:01 AM, Brian Gerst <brgerst@gmail.com> wrote:
+>>>> On Sun, Jun 26, 2016 at 5:55 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>>>>>  #ifdef CONFIG_X86_64
+>>>>>  /* Runs on IST stack */
+>>>>>  dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
+>>>>>  {
+>>>>>         static const char str[] = "double fault";
+>>>>>         struct task_struct *tsk = current;
+>>>>> +#ifdef CONFIG_VMAP_STACK
+>>>>> +       unsigned long cr2;
+>>>>> +#endif
+>>>>>
+>>>>>  #ifdef CONFIG_X86_ESPFIX64
+>>>>>         extern unsigned char native_irq_return_iret[];
+>>>>> @@ -332,6 +350,20 @@ dotraplinkage void do_double_fault(struct pt_regs *regs, long error_code)
+>>>>>         tsk->thread.error_code = error_code;
+>>>>>         tsk->thread.trap_nr = X86_TRAP_DF;
+>>>>>
+>>>>> +#ifdef CONFIG_VMAP_STACK
+>>>>> +       /*
+>>>>> +        * If we overflow the stack into a guard page, the CPU will fail
+>>>>> +        * to deliver #PF and will send #DF instead.  CR2 will contain
+>>>>> +        * the linear address of the second fault, which will be in the
+>>>>> +        * guard page below the bottom of the stack.
+>>>>> +        */
+>>>>> +       cr2 = read_cr2();
+>>>>> +       if ((unsigned long)tsk->stack - 1 - cr2 < PAGE_SIZE)
+>>>>> +               handle_stack_overflow(
+>>>>> +                       "kernel stack overflow (double-fault)",
+>>>>> +                       regs, cr2);
+>>>>> +#endif
+>>>>
+>>>> Is there any other way to tell if this was from a page fault?  If it
+>>>> wasn't a page fault then CR2 is undefined.
+>>>
+>>> I guess it doesn't really matter, since the fault is fatal either way.
+>>> The error message might be incorrect though.
+>>>
+>>
+>> It's at least worth a comment, though.  Maybe I should check if
+>> regs->rsp is within 40 bytes of the bottom of the stack, too, such
+>> that delivery of an inner fault would have double-faulted assuming the
+>> inner fault didn't use an IST vector.
+>>
 >
-> Reported-by: PaX Team <pageexec@freemail.hu>
-> Signed-off-by: Emese Revfy <re.emese@gmail.com>
-
-Thanks! Can you include a body in the commit message? For this, something like:
-
-Disable the gcc-plugin unconditionlly here because ... *reason it is required*
-
-etc
-
--Kees
-
-> ---
->  arch/powerpc/kernel/Makefile | 3 ++-
->  1 file changed, 2 insertions(+), 1 deletion(-)
+> How about:
 >
-> diff --git a/arch/powerpc/kernel/Makefile b/arch/powerpc/kernel/Makefile
-> index 01935b8..e9ef44f 100644
-> --- a/arch/powerpc/kernel/Makefile
-> +++ b/arch/powerpc/kernel/Makefile
-> @@ -14,11 +14,12 @@ CFLAGS_prom_init.o      += -fPIC
->  CFLAGS_btext.o         += -fPIC
->  endif
->
-> -ifdef CONFIG_FUNCTION_TRACER
->  CFLAGS_cputable.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
->  CFLAGS_init.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
->  CFLAGS_btext.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
->  CFLAGS_prom.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
-> +
-> +ifdef CONFIG_FUNCTION_TRACER
->  # Do not trace early boot code
->  CFLAGS_REMOVE_cputable.o = -mno-sched-epilog $(CC_FLAGS_FTRACE)
->  CFLAGS_REMOVE_prom_init.o = -mno-sched-epilog $(CC_FLAGS_FTRACE)
-> --
-> 2.8.1
+>     /*
+>      * If we overflow the stack into a guard page, the CPU will fail
+>      * to deliver #PF and will send #DF instead.  CR2 will contain
+>      * the linear address of the second fault, which will be in the
+>      * guard page below the bottom of the stack.
+>      *
+>      * We're limited to using heuristics here, since the CPU does
+>      * not tell us what type of fault failed and, if the first fault
+>      * wasn't a page fault, CR2 may contain stale garbage.  To mostly
+>      * rule out garbage, we check if the saved RSP is close enough to
+>      * the bottom of the stack to cause exception delivery to fail.
+>      * The worst case is 7 stack slots: one for alignment, five for
+>      * SS..RIP, and one for the error code.
+>      */
+>     tsk_stack = (unsigned long)task_stack_page(tsk);
+>     if (regs->rsp <= tsk_stack + 7*8 && regs->rsp > tsk_stack - PAGE_SIZE) {
+>         /* A double-fault due to #PF delivery failure is plausible. */
+>         cr2 = read_cr2();
+>         if (tsk_stack - 1 - cr2 < PAGE_SIZE)
+>             handle_stack_overflow(
+>                 "kernel stack overflow (double-fault)",
+>                 regs, cr2);
+>     }
 
+I think RSP anywhere in the guard page would be best, since it could
+have been decremented by a function prologue into the guard page
+before an access that triggers the page fault.
 
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+--
+Brian Gerst
