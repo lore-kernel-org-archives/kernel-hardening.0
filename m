@@ -1,35 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 28 Jun 2016 13:39:42 +0200
+Date: Tue, 28 Jun 2016 13:42:37 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160628133942.3ef9ea556a38f98a4c5dcd05@gmail.com>
-In-Reply-To: <CAGXu5jJw-HcYRo8muSQ7Av9ZGuO3jTgV2x_xDcqmK-i=2nu1aw@mail.gmail.com>
-References: <20160626173451.c8406cd0c7a87cc3f94d9753@gmail.com>
-	<CAGXu5jJw-HcYRo8muSQ7Av9ZGuO3jTgV2x_xDcqmK-i=2nu1aw@mail.gmail.com>
+Message-Id: <20160628134237.910997b2430dfdf4c55b05ee@gmail.com>
+In-Reply-To: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] powerpc/kernel: Disable the latent entropy plugin
- unconditionally
-To: Kees Cook <keescook@chromium.org>
-Cc: Michal Marek <mmarek@suse.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>
+Subject: [kernel-hardening] Re: [PATCH v1 0/2] Introduce the initify gcc plugin
+To: kernel-hardening@lists.openwall.com
+Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 27 Jun 2016 09:05:08 -0700
-Kees Cook <keescook@chromium.org> wrote:
+On Tue, 28 Jun 2016 13:34:07 +0200
+Emese Revfy <re.emese@gmail.com> wrote:
 
-> On Sun, Jun 26, 2016 at 8:34 AM, Emese Revfy <re.emese@gmail.com> wrote:
-> >
-> > Reported-by: PaX Team <pageexec@freemail.hu>
-> > Signed-off-by: Emese Revfy <re.emese@gmail.com>
-> 
-> Thanks! Can you include a body in the commit message? For this, something like:
-> 
-> Disable the gcc-plugin unconditionlly here because ... *reason it is required*
+>  * automatically discover init/exit functions and apply the __init or
+>    __exit attributes on them
 
 Hi,
 
-You can see it here:
-https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next/commit/a1bb2bd3fd9ac414623ec3210e9c514d9d38cf9e
+I have a question about this. If a function is called by __init and __exit functions as well then
+I move it to the __exit section. I think this is correct because such a function is available to
+both __init and __exit functions as well at runtime.
+However this generates a section mismatch (from scripts/mod/modpost.c) e.g.,
 
+   WARNING: vmlinux.o(.init.text+0x196849): Section mismatch in reference from the function sctp_init() to the function .exit.text:sctp_v4_del_protocol()
+   The function __init sctp_init() references
+   a function __exit sctp_v4_del_protocol().
+   This is often seen when error handling in the init function
+   uses functionality in the exit path.
+   The fix is often to remove the __exit annotation of
+   sctp_v4_del_protocol() so it may be used outside an exit section.
+
+This check was introduced by this commit (588ccd732ba2d):
+kbuild: add verbose option to Section mismatch reporting in modpost
+
+If this move doesn't cause a problem then I would like to keep it because there are a lot of functions that can become __exit and I would like to remove this warning.
+
+Thanks
 -- 
 Emese
