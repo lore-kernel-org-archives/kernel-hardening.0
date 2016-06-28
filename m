@@ -1,36 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 28 Jun 2016 18:14:56 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160628181456.21c1f567271b6f19fac1d886@gmail.com>
-In-Reply-To: <20160628125748.GK31744@leverpostej>
-References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-	<20160628125748.GK31744@leverpostej>
+From: Valdis.Kletnieks@vt.edu
+In-Reply-To: <20160628131525.GB1255@suse.de>
+References: <57138.1466998197@turing-police.cc.vt.edu>
+ <20160628131525.GB1255@suse.de>
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+Content-Type: multipart/signed; boundary="==_Exmh_1467131509_1978P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
 Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH v1 0/2] Introduce the initify gcc
- plugin
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+Date: Tue, 28 Jun 2016 12:31:49 -0400
+Message-ID: <17753.1467131509@turing-police.cc.vt.edu>
+Subject: Re: [kernel-hardening] Usercopy caught another one - ping IPv6...
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 28 Jun 2016 13:57:49 +0100
-Mark Rutland <mark.rutland@arm.com> wrote:
+--==_Exmh_1467131509_1978P
+Content-Type: text/plain; charset=us-ascii
 
-> On Tue, Jun 28, 2016 at 01:34:07PM +0200, Emese Revfy wrote:
-> > This patch set is based on the "Add support for complex gcc plugins that
-> > don't fit in a single file" patch set (git/kees/linux.git#kspp HEAD:
-> > e5d4798b284cd192c8b).
-> 
-> I was hoping to give this a spin on arm/arm64, but I couldn't find the
-> prerequisite branch/tag/commit in that tree:
-> 
-> https://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?id=e5d4798b284cd192c8b
-> 
-> Where should I be looking?
+On Tue, 28 Jun 2016 15:15:25 +0200, Marcus Meissner said:
+> Hi,
+>
+> This is probably the ICMPV6_FILTER setting?
+>
+>                 if (optlen > sizeof(struct icmp6_filter))
+> 		                        optlen = sizeof(struct icmp6_filter);
+>                 if (copy_from_user(&raw6_sk(sk)->filter, optval, optlen))
+> 		                        return -EFAULT;
+>
+> struct raw6_sock has
+>         struct icmp6_filter     filter;
+>
+> not sure where the bug is.
 
-Sorry, this commit was disappear. You can apply these patches to this tree:
-https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next.git (initify branch)
+Probably no actual bug, but the allocation of storage for 'filter' needs to be
+annotated.  Thanks for finding that, that's the *hard* part.  I'll look at it
+and see if a reasonable patch is doable...
 
--- 
-Emese
+
+--==_Exmh_1467131509_1978P
+Content-Type: application/pgp-signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+Comment: Exmh version 2.5 07/13/2001
+
+iQIVAwUBV3KmdQdmEQWDXROgAQKMHw/+Ik6VMe/+DJP7VPAT8tW8Pdk+5Cxcxm6m
+1qDxxiFvPrehPWbtCvzqWKWqMmQ49iny8Is9NF3F7nJYeBTUphoGH/D8+BJabn8i
+BPkiJQVxBSNVRoqzn0933qDLzqCewcw9PVYq/BLu72U2inKCGF9oMbsukoD9hnR3
+FznbpqZ1jToI/ZE1OVsS1hlRrybb5iVTJ4jZnnOOciXaanSxeS+zgeHDuRWuO3hx
+fAW247xQRmz3+D4LNlV+8kHQXdh+3EMvG4jIxDzBzE+HLat3TYt+XVzPHrl8iSwD
+WVluX3mrASuOE1KXaRPbUWzxPsLRtcxnqxi+9OoYK/0YdIsJCTXunkqKwCTQkhJS
+F6iAJtCJopb+2ScND9kXPag0GBbNtyO+NhksicVL7cwIwj2GAYA/MyWVVVAVZxsp
+LE8j1q0PHaOuTR8jbyZx9Fp+R4Am9e03xZfUDmMldhn+scddtjT34qz0K47kBVqS
+iOrM6JGAJ5u8x1V+IkKvGSEktuKiNupBSej7tkFj0oysicAnHnhE366cH633752s
+170HIyLKft3WOyU2lovnrjWycUteEOldfdt+f03p3H1Y6RR49K7IlsTogc9ehDg1
+h97CtAWyTYGSUKq8tgJtltxLB4376OpLkkJQHnz2/ZnYHQ989aYqHYPbB17NEbK7
+iZE8os+oE3o=
+=DD/N
+-----END PGP SIGNATURE-----
+
+--==_Exmh_1467131509_1978P--
