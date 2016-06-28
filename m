@@ -1,43 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 28 Jun 2016 13:42:37 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160628134237.910997b2430dfdf4c55b05ee@gmail.com>
-In-Reply-To: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+Date: Tue, 28 Jun 2016 13:57:49 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160628125748.GK31744@leverpostej>
 References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v1 0/2] Introduce the initify gcc plugin
-To: kernel-hardening@lists.openwall.com
-Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+Subject: Re: [kernel-hardening] [PATCH v1 0/2] Introduce the initify gcc
+ plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 28 Jun 2016 13:34:07 +0200
-Emese Revfy <re.emese@gmail.com> wrote:
-
+On Tue, Jun 28, 2016 at 01:34:07PM +0200, Emese Revfy wrote:
+> I would like to introduce the initify gcc plugin. The kernel already has
+> a mechanism to free up code and data memory that is only used during kernel
+> or module initialization.
+> This plugin will teach the compiler to find more such code and data that
+> can be freed after initialization. It reduces memory usage.
+> The initify gcc plugin can be useful for embedded systems.
+> 
+> It is a CII project supported by the Linux Foundation.
+> 
+> This plugin is the part of grsecurity/PaX.
+> 
+> The plugin supports all gcc versions from 4.5 to 6.0.
+> 
+> I made some changes on top of the PaX version (since March 6.). These are
+> the important ones:
+>  * move all local strings to init.rodata.str and exit.rodata.str
+>    (not just __func__)
+>  * report all initified strings and functions
+>    (GCC_PLUGIN_INITIFY_VERBOSE config option)
 >  * automatically discover init/exit functions and apply the __init or
 >    __exit attributes on them
+> 
+> You can find more about the changes here:
+> https://github.com/ephox-gcc-plugins/initify
+> 
+> This patch set is based on the "Add support for complex gcc plugins that
+> don't fit in a single file" patch set (git/kees/linux.git#kspp HEAD:
+> e5d4798b284cd192c8b).
 
-Hi,
+I was hoping to give this a spin on arm/arm64, but I couldn't find the
+prerequisite branch/tag/commit in that tree:
 
-I have a question about this. If a function is called by __init and __exit functions as well then
-I move it to the __exit section. I think this is correct because such a function is available to
-both __init and __exit functions as well at runtime.
-However this generates a section mismatch (from scripts/mod/modpost.c) e.g.,
+https://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?id=e5d4798b284cd192c8b
 
-   WARNING: vmlinux.o(.init.text+0x196849): Section mismatch in reference from the function sctp_init() to the function .exit.text:sctp_v4_del_protocol()
-   The function __init sctp_init() references
-   a function __exit sctp_v4_del_protocol().
-   This is often seen when error handling in the init function
-   uses functionality in the exit path.
-   The fix is often to remove the __exit annotation of
-   sctp_v4_del_protocol() so it may be used outside an exit section.
+Where should I be looking?
 
-This check was introduced by this commit (588ccd732ba2d):
-kbuild: add verbose option to Section mismatch reporting in modpost
-
-If this move doesn't cause a problem then I would like to keep it because there are a lot of functions that can become __exit and I would like to remove this warning.
-
-Thanks
--- 
-Emese
+Thanks,
+Mark.
