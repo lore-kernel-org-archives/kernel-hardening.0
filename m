@@ -1,35 +1,85 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20160628094357.GA16467@gondor.apana.org.au>
-References: <20160628094357.GA16467@gondor.apana.org.au> <20160628075546.GA15690@gondor.apana.org.au> <1eeb00c5098d8096cdb61dc7ee1ddc61b3e80f9e.1466974736.git.luto@kernel.org> <cover.1466974736.git.luto@kernel.org> <cover.1466974736.git.luto@kernel.org> <699.1467100340@warthog.procyon.org.uk> <4339.1467104063@warthog.procyon.org.uk>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <14864.1467108030.1@warthog.procyon.org.uk>
-Date: Tue, 28 Jun 2016 11:00:30 +0100
-Message-ID: <14865.1467108030@warthog.procyon.org.uk>
-Subject: [kernel-hardening] Re: [PATCH v4 02/29] rxrpc: Avoid using stack memory in SG lists in rxkad
-To: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: dhowells@redhat.com, Andy Lutomirski <luto@kernel.org>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Date: Tue, 28 Jun 2016 13:34:07 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] [PATCH v1 0/2] Introduce the initify gcc plugin
+To: kernel-hardening@lists.openwall.com
+Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Herbert Xu <herbert@gondor.apana.org.au> wrote:
+I would like to introduce the initify gcc plugin. The kernel already has
+a mechanism to free up code and data memory that is only used during kernel
+or module initialization.
+This plugin will teach the compiler to find more such code and data that
+can be freed after initialization. It reduces memory usage.
+The initify gcc plugin can be useful for embedded systems.
 
-> > I'm using the per-skb state for my own purposes and might be looking at it
-> > elsewhere at the same time.
-> 
-> AFAICS this cannot happen for secure_packet/verify_packet.  In both
-> cases we have exclusive ownership of the skb.
+It is a CII project supported by the Linux Foundation.
 
-In code I'm busy working on the patch I'm decrypting may be on the receive
-queue several times.  rxrpc has a jumbo packet concept whereby a packet may be
-constructed in such a way that it's actually several packets stitched together
-- the idea being that a router can split it up (not that any actually do that
-I know of) - but each segment of the jumbo packet may be enqueued as a
-separate entity.
+This plugin is the part of grsecurity/PaX.
 
-> But it's your code so feel free to send your own patch.
+The plugin supports all gcc versions from 4.5 to 6.0.
 
-I will apply something very similar to my tree.  Andy's patch does not apply
-as-is due to conflicts.
+I made some changes on top of the PaX version (since March 6.). These are
+the important ones:
+ * move all local strings to init.rodata.str and exit.rodata.str
+   (not just __func__)
+ * report all initified strings and functions
+   (GCC_PLUGIN_INITIFY_VERBOSE config option)
+ * automatically discover init/exit functions and apply the __init or
+   __exit attributes on them
 
-David
+You can find more about the changes here:
+https://github.com/ephox-gcc-plugins/initify
+
+This patch set is based on the "Add support for complex gcc plugins that
+don't fit in a single file" patch set (git/kees/linux.git#kspp HEAD:
+e5d4798b284cd192c8b).
+
+Some statistics about the plugin:
+
+On allyes config (amd64, gcc-6):
+* 7731 initified strings
+*  231 initified functions
+
+On allmod config (i386, gcc-6):
+* 8846 initified strings
+*  252 initified functions
+
+On allyes config (amd64, gcc-6):
+
+section         vanilla                 vanilla + initify        change
+-----------------------------------------------------------------------
+.rodata         39059688 (0x25400e8)    38527210 (0x24be0ea)    -532478
+.data           45744128 (0x2ba0000)    45404160 (0x2b4d000)    -339968
+.init.data       1361144  (0x14c4f8)     1674200  (0x198bd8)    +313056
+.text           77615128 (0x4a05018)    77576664 (0x49fb9d8)     -38464
+.init.text       1108455  (0x10e9e7)     1137618  (0x115bd2)     +29163
+
+
+Emese Revfy (2):
+ Add the initify gcc plugin
+ Mark functions with the __nocapture attribute
+
+---
+ arch/Kconfig                         |   23 +
+ arch/arm/include/asm/string.h        |   10 +-
+ arch/arm64/include/asm/string.h      |   23 +-
+ arch/powerpc/include/asm/string.h    |   19 +-
+ arch/x86/boot/string.h               |    4 +-
+ arch/x86/include/asm/string_32.h     |   21 +-
+ arch/x86/include/asm/string_64.h     |   18 +-
+ arch/x86/kernel/hpet.c               |    2 +-
+ include/asm-generic/bug.h            |    6 +-
+ include/asm-generic/vmlinux.lds.h    |    2 +
+ include/linux/compiler-gcc.h         |   10 +-
+ include/linux/compiler.h             |    4 +
+ include/linux/fs.h                   |    5 +-
+ include/linux/printk.h               |    2 +-
+ include/linux/string.h               |   73 +--
+ scripts/Makefile.gcc-plugins         |    4 +
+ scripts/gcc-plugins/initify_plugin.c | 1147 ++++++++++++++++++++++++++++++++++
+ 17 files changed, 1283 insertions(+), 90 deletions(-)
