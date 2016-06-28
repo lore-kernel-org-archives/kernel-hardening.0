@@ -1,34 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-	<20160628133520.5baf644afca97c464b9cdb17@gmail.com>
-Date: Tue, 28 Jun 2016 23:05:56 +0200
-In-Reply-To: <20160628133520.5baf644afca97c464b9cdb17@gmail.com> (Emese
-	Revfy's message of "Tue, 28 Jun 2016 13:35:20 +0200")
-Message-ID: <87vb0tgh1n.fsf@rasmusvillemoes.dk>
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Tue, 28 Jun 2016 23:38:42 +0200
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH v1 1/2] Add the initify gcc plugin
-To: Emese Revfy <re.emese@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+Message-ID: <5772EE62.11219.7B892887@pageexec.freemail.hu>
+In-reply-to: <874m8dhwb4.fsf@rasmusvillemoes.dk>
+References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>, <20160628133645.8f3cac0df4fc363e308426ac@gmail.com> (Emese Revfy's message of "Tue, 28 Jun 2016 13:36:45 +0200"), <874m8dhwb4.fsf@rasmusvillemoes.dk>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: [kernel-hardening] Re: [PATCH v1 2/2] Mark functions with the __nocapture attribute
+To: Emese Revfy <re.emese@gmail.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Cc: kernel-hardening@lists.openwall.com, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 28 2016, Emese Revfy <re.emese@gmail.com> wrote:
+On 28 Jun 2016 at 22:50, Rasmus Villemoes wrote:
 
-> The kernel already has a mechanism to free up code and data memory that
-> is only used during kernel or module initialization.
-> This plugin will teach the compiler to find more such code and data that
-> can be freed after initialization.
-> It has two passes. The first one tries to find all functions that
-> can be become __init/__exit. The second one moves string constants
-> (local variables and function string arguments marked by
-> the nocapture attribute) only referenced in __init/__exit functions
-> to the __initconst/__exitconst sections.
-> It reduces memory usage. This plugin can be useful for embedded systems.
+> > +extern const char *kstrdup_const(const char *s, gfp_t gfp) __nocapture(1);
+> 
+> OK, so this one is pretty dangerous, and probably wrong. If one does
+> 
+>   foo->bar = kstrdup_const(a-macro-that-might-be-a-string-literal)
+> 
+> in an .init function, foo->bar will very likely become dangling.
 
-May I suggest, as a followup patch, a debug option/plugin parameter to
-put the strings in a section which will not be reaped after init, but
-just marked inaccessible, with graceful handling of bad accesses (print
-a big fat warning, make the page(s) readable, continue)?
+doesn't kstrdup_const omit the copy only for arguments that are stored in
+.rodata (which doesn't include .init.rodata* and other init sections)?
 
-Rasmus
+cheers,
+ PaX Team
