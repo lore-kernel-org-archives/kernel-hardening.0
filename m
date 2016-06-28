@@ -1,40 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+Message-ID: <1467158049.24287.90.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Tue, 28 Jun 2016 16:54:09 -0700
+In-Reply-To: <47053.1467151621@turing-police.cc.vt.edu>
 References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-	<20160628133645.8f3cac0df4fc363e308426ac@gmail.com>
-	<874m8dhwb4.fsf@rasmusvillemoes.dk>
-	<5772EE62.11219.7B892887@pageexec.freemail.hu>
-Date: Wed, 29 Jun 2016 00:41:57 +0200
-In-Reply-To: <5772EE62.11219.7B892887@pageexec.freemail.hu> (PaX Team's
-	message of "Tue, 28 Jun 2016 23:38:42 +0200")
-Message-ID: <87furxgclm.fsf@rasmusvillemoes.dk>
-MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH v1 2/2] Mark functions with the __nocapture attribute
-To: pageexec@freemail.hu
-Cc: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+	 <1467150555.24287.77.camel@perches.com>
+	 <47053.1467151621@turing-police.cc.vt.edu>
+Content-Type: text/plain; charset="ISO-8859-1"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH v1 0/2] Introduce the initify gcc
+ plugin
+To: Valdis.Kletnieks@vt.edu, kernel-hardening@lists.openwall.com
+Cc: Emese Revfy <re.emese@gmail.com>, Matt Davis <mattdavis9@gmail.com>, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jun 28 2016, "PaX Team" <pageexec@freemail.hu> wrote:
+On Tue, 2016-06-28 at 18:07 -0400, Valdis.Kletnieks@vt.edu wrote:
+> On Tue, 28 Jun 2016 14:49:15 -0700, Joe Perches said:
+> 
+> > 
+> > Another potentially useful plugin, especially for embedded systems,
+> > would be to compress any string literal marked with
+> > 
+> > 	 __attribute__((format(printf, string-index,)))
+> > 
+> > and decompress the compressed format on the stack in lib/vsprintf.c
+> > vsnprintf just before use.
+> Are there enough such strings in the kernel to make it worth the effort?
+> I'm assuming that the string literals in printk("some string here") are
+> automatically so marked?
 
-> On 28 Jun 2016 at 22:50, Rasmus Villemoes wrote:
->
->> > +extern const char *kstrdup_const(const char *s, gfp_t gfp) __nocapture(1);
->> 
->> OK, so this one is pretty dangerous, and probably wrong. If one does
->> 
->>   foo->bar = kstrdup_const(a-macro-that-might-be-a-string-literal)
->> 
->> in an .init function, foo->bar will very likely become dangling.
->
-> doesn't kstrdup_const omit the copy only for arguments that are stored in
-> .rodata (which doesn't include .init.rodata* and other init sections)?
->
+Yes, that's the concept.
 
-Ah, right. But that's a little subtle. Also, it kind of defeats the
-purpose of kstrdup_const - but it's probably not actually called with a
-string literal all that often.
+> Is there a minimum length under which the compression overhead actually
+> makes it larger?
 
-In any case, I think there's still a problem with strchr() and friends.
+No, compression would have to be possible, otherwise it'd
+be stored directly.  Compression would use a special
+"compressed string" header with a 2 byte overhead and
+then stored with no trailing \0.
 
-Rasmus
+Something like struct compressed_format_header {
+	u8	flag;	/* Must be ASCII STX or "\b" */
+	u8	length;
+}
+
+Depends on the config of course, but it could reduce total
+image size ~50k on an x86-32 defconfig
