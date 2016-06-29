@@ -1,27 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <cover.1466974736.git.luto@kernel.org>
-From: =?UTF-8?Q?Mika_Penttil=c3=a4?= <mika.penttila@nextfour.com>
-Message-ID: <5773736D.40500@nextfour.com>
-Date: Wed, 29 Jun 2016 10:06:21 +0300
+Date: Wed, 29 Jun 2016 09:21:38 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160629082137.GA16387@leverpostej>
+References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+ <20160628125748.GK31744@leverpostej>
+ <20160628181456.21c1f567271b6f19fac1d886@gmail.com>
+ <CAGXu5jLa20aqna_RW6Egd7Y1Wd4yajkZpj8rP5BWWZyUkfWbKQ@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <cover.1466974736.git.luto@kernel.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 00/29] virtually mapped stacks and thread_info cleanup
-To: Andy Lutomirski <luto@kernel.org>, x86@kernel.org
-Cc: linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLa20aqna_RW6Egd7Y1Wd4yajkZpj8rP5BWWZyUkfWbKQ@mail.gmail.com>
+Subject: Re: [kernel-hardening] [PATCH v1 0/2] Introduce the initify gcc
+ plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, jlayton@poochiereds.net, Arnd Bergmann <arnd@arndb.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 06/27/2016 12:55 AM, Andy Lutomirski wrote:
-> Hi all-
+On Tue, Jun 28, 2016 at 01:46:04PM -0700, Kees Cook wrote:
+> On Tue, Jun 28, 2016 at 9:14 AM, Emese Revfy <re.emese@gmail.com> wrote:
+> > On Tue, 28 Jun 2016 13:57:49 +0100
+> > Mark Rutland <mark.rutland@arm.com> wrote:
+> >
+> >> On Tue, Jun 28, 2016 at 01:34:07PM +0200, Emese Revfy wrote:
+> >> > This patch set is based on the "Add support for complex gcc plugins that
+> >> > don't fit in a single file" patch set (git/kees/linux.git#kspp HEAD:
+> >> > e5d4798b284cd192c8b).
+> >>
+> >> I was hoping to give this a spin on arm/arm64, but I couldn't find the
+> >> prerequisite branch/tag/commit in that tree:
+> >>
+> >> https://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?id=e5d4798b284cd192c8b
+> >>
+> >> Where should I be looking?
+> >
+> > Sorry, this commit was disappear. You can apply these patches to this tree:
+> > https://github.com/ephox-gcc-plugins/gcc-plugins_linux-next.git (initify branch)
 > 
+> The linux-next tree should have what you need for the plugin support.
+> This is merging from my KSPP tree:
+> 
+> https://git.kernel.org/linux/kernel/git/kees/linux.git for-next/kspp
 
-> 
-> Known issues:
->  - tcp md5, virtio_net, and virtio_console will have issues.  Eric Dumazet
->    has a patch for tcp md5, and Michael Tsirkin says he'll fix virtio_net
->    and virtio_console.
-> 
- How about PTRACE_SETREGS, it's using the child stack's vmapped address to put regs?
+I didn't see the complex gcc plugins patch in that branch or linux-next,
+so I take it you mean a a base for applying the complex plugin patch and
+initify patches.
 
---Mika
+I'll try to give that a go shortly.
+
+Thanks,
+Mark.
