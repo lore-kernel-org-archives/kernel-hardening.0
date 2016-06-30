@@ -1,42 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 29 Jun 2016 21:03:19 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160629210319.07dc960dc26fd109a636b1ff@gmail.com>
-In-Reply-To: <87vb0tgh1n.fsf@rasmusvillemoes.dk>
+Message-ID: <1467245565.24287.115.camel@perches.com>
+From: Joe Perches <joe@perches.com>
+Date: Wed, 29 Jun 2016 17:12:45 -0700
+In-Reply-To: <20160629204204.859692ea2b7f570260ed18a0@gmail.com>
 References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-	<20160628133520.5baf644afca97c464b9cdb17@gmail.com>
-	<87vb0tgh1n.fsf@rasmusvillemoes.dk>
+	 <20160628133645.8f3cac0df4fc363e308426ac@gmail.com>
+	 <1467132211.24287.31.camel@perches.com>
+	 <20160628224043.c543b2b01e776e7757bbb3f4@gmail.com>
+	 <1467147657.24287.59.camel@perches.com>
+	 <20160629204204.859692ea2b7f570260ed18a0@gmail.com>
+Content-Type: text/plain; charset="ISO-8859-1"
 Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v1 1/2] Add the initify gcc plugin
-To: Rasmus Villemoes <linux@rasmusvillemoes.dk>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+Subject: [kernel-hardening] Re: [PATCH v1 2/2] Mark functions with the __nocapture attribute
+To: Emese Revfy <re.emese@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 28 Jun 2016 23:05:56 +0200
-Rasmus Villemoes <linux@rasmusvillemoes.dk> wrote:
+On Wed, 2016-06-29 at 20:42 +0200, Emese Revfy wrote:
+> On Tue, 28 Jun 2016 14:00:57 -0700 Joe Perches <joe@perches.com> wrote:
+> > On Tue, 2016-06-28 at 22:40 +0200, Emese Revfy wrote:
+> > > On Tue, 28 Jun 2016 09:43:31 -0700 Joe Perches <joe@perches.com> wrote:
+> > > > On Tue, 2016-06-28 at 13:36 +0200, Emese Revfy wrote:
+> > > > > The nocapture gcc attribute can be on functions only.
+> > > > > The attribute takes one or more unsigned integer constants as parameters
+> > > > > that specify the function argument(s) of const char* type to initify.
+> > > > Perhaps this should be const <void>*
+> > > For me function arguments are the values passed to a function call so
+> > > the const char* type is good because this is the only one that the plugin handles
+> > > (for now at least).
+> > OK, but this function prototype specified takes a const void *
+> > 
+> > +extern void * memcpy(void *, const void *, __kernel_size_t) __nocapture(2);
+> What matters for the plugin is the type of the passed arguments (which can be const char*
+> in the current implementation), not that of the parameters.
 
-> On Tue, Jun 28 2016, Emese Revfy <re.emese@gmail.com> wrote:
-> 
-> > The kernel already has a mechanism to free up code and data memory that
-> > is only used during kernel or module initialization.
-> > This plugin will teach the compiler to find more such code and data that
-> > can be freed after initialization.
-> > It has two passes. The first one tries to find all functions that
-> > can be become __init/__exit. The second one moves string constants
-> > (local variables and function string arguments marked by
-> > the nocapture attribute) only referenced in __init/__exit functions
-> > to the __initconst/__exitconst sections.
-> > It reduces memory usage. This plugin can be useful for embedded systems.
-> 
-> May I suggest, as a followup patch, a debug option/plugin parameter to
-> put the strings in a section which will not be reaped after init, but
-> just marked inaccessible, with graceful handling of bad accesses (print
-> a big fat warning, make the page(s) readable, continue)?
-
-I think even better would be to verify the whole init section.
-Unfortunately, I won't implement it anytime soon because my project ends this week.
-
--- 
-Emese
+And how does this work when the prototype requires the compiler to
+implicit cast to const void * before calling the function?
