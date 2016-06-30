@@ -1,39 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1467245565.24287.115.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Wed, 29 Jun 2016 17:12:45 -0700
-In-Reply-To: <20160629204204.859692ea2b7f570260ed18a0@gmail.com>
-References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
-	 <20160628133645.8f3cac0df4fc363e308426ac@gmail.com>
-	 <1467132211.24287.31.camel@perches.com>
-	 <20160628224043.c543b2b01e776e7757bbb3f4@gmail.com>
-	 <1467147657.24287.59.camel@perches.com>
-	 <20160629204204.859692ea2b7f570260ed18a0@gmail.com>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v1 2/2] Mark functions with the __nocapture attribute
-To: Emese Revfy <re.emese@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
+Date: Thu, 30 Jun 2016 21:37:23 +0200
+From: Borislav Petkov <bp@alien8.de>
+Message-ID: <20160630193723.GE3932@pd.tnic>
+References: <cover.1466974736.git.luto@kernel.org>
+ <fbaa1409c74ddc7b29b52c87303d2af1db91e2ba.1466974736.git.luto@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <fbaa1409c74ddc7b29b52c87303d2af1db91e2ba.1466974736.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v4 08/29] dma-api: Teach the "DMA-from-stack" check about
+ vmapped stacks
+To: Andy Lutomirski <luto@kernel.org>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andrew Morton <akpm@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2016-06-29 at 20:42 +0200, Emese Revfy wrote:
-> On Tue, 28 Jun 2016 14:00:57 -0700 Joe Perches <joe@perches.com> wrote:
-> > On Tue, 2016-06-28 at 22:40 +0200, Emese Revfy wrote:
-> > > On Tue, 28 Jun 2016 09:43:31 -0700 Joe Perches <joe@perches.com> wrote:
-> > > > On Tue, 2016-06-28 at 13:36 +0200, Emese Revfy wrote:
-> > > > > The nocapture gcc attribute can be on functions only.
-> > > > > The attribute takes one or more unsigned integer constants as parameters
-> > > > > that specify the function argument(s) of const char* type to initify.
-> > > > Perhaps this should be const <void>*
-> > > For me function arguments are the values passed to a function call so
-> > > the const char* type is good because this is the only one that the plugin handles
-> > > (for now at least).
-> > OK, but this function prototype specified takes a const void *
-> > 
-> > +extern void * memcpy(void *, const void *, __kernel_size_t) __nocapture(2);
-> What matters for the plugin is the type of the passed arguments (which can be const char*
-> in the current implementation), not that of the parameters.
+On Sun, Jun 26, 2016 at 02:55:30PM -0700, Andy Lutomirski wrote:
+> If we're using CONFIG_VMAP_STACK and we manage to point an sg entry
+> at the stack, then either the sg page will be in highmem or sg_virt
+> will return the direct-map alias.  In neither case will the existing
+> check_for_stack() implementation realize that it's a stack page.
+> 
+> Fix it by explicitly checking for stack pages.
+> 
+> This has no effect by itself.  It's broken out for ease of review.
+> 
+> Cc: Andrew Morton <akpm@linux-foundation.org>
+> Cc: Arnd Bergmann <arnd@arndb.de>
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+>  lib/dma-debug.c | 39 +++++++++++++++++++++++++++++++++------
+>  1 file changed, 33 insertions(+), 6 deletions(-)
+> 
+> diff --git a/lib/dma-debug.c b/lib/dma-debug.c
+> index 51a76af25c66..5b2e63cba90e 100644
+> --- a/lib/dma-debug.c
+> +++ b/lib/dma-debug.c
+> @@ -22,6 +22,7 @@
+>  #include <linux/stacktrace.h>
+>  #include <linux/dma-debug.h>
+>  #include <linux/spinlock.h>
+> +#include <linux/vmalloc.h>
+>  #include <linux/debugfs.h>
+>  #include <linux/uaccess.h>
+>  #include <linux/export.h>
+> @@ -1162,11 +1163,35 @@ static void check_unmap(struct dma_debug_entry *ref)
+>  	put_hash_bucket(bucket, &flags);
+>  }
+>  
+> -static void check_for_stack(struct device *dev, void *addr)
+> +static void check_for_stack(struct device *dev,
+> +			    struct page *page, size_t offset)
+>  {
+> -	if (object_is_on_stack(addr))
+> -		err_printk(dev, NULL, "DMA-API: device driver maps memory from "
+> -				"stack [addr=%p]\n", addr);
+> +	void *addr;
+> +	struct vm_struct *stack_vm_area = task_stack_vm_area(current);
 
-And how does this work when the prototype requires the compiler to
-implicit cast to const void * before calling the function?
+lib/dma-debug.c: In function ‘check_for_stack’:
+lib/dma-debug.c:1170:36: error: implicit declaration of function ‘task_stack_vm_area’ [-Werror=implicit-function-declaration]
+  struct vm_struct *stack_vm_area = task_stack_vm_area(current);
+                                    ^
+lib/dma-debug.c:1170:36: warning: initialization makes pointer from integer without a cast [-Wint-conversion]
+cc1: some warnings being treated as errors
+make[1]: *** [lib/dma-debug.o] Error 1
+make: *** [lib] Error 2
+make: *** Waiting for unfinished jobs....
+
+Probably reorder pieces from patch 9 to earlier ones...
+
+-- 
+Regards/Gruss,
+    Boris.
+
+ECO tip #101: Trim your mails when you reply.
