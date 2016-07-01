@@ -1,86 +1,52 @@
-Return-Path: <linux-next-owner@vger.kernel.org>
-MIME-Version: 1.0
-Reply-To: sedat.dilek@gmail.com
-In-Reply-To: <20160611161212.GA29370@www.outflux.net>
-References: <20160611161212.GA29370@www.outflux.net>
-From: Sedat Dilek <sedat.dilek@gmail.com>
-Date: Mon, 13 Jun 2016 10:40:11 +0200
-Message-ID: <CA+icZUW-OZMh2foyiQK=0NfakwbiFHTkouMjptgokKTFLZQFQQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Sender: linux-next-owner@vger.kernel.org
-Subject: Re: [PATCH] gcc-plugins: disable under COMPILE_TEST
-Content-Transfer-Encoding: 8bit
-To: Kees Cook <keescook@chromium.org>
-Cc: Michal Marek <mmarek@suse.com>, Stephen Rothwell <sfr@canb.auug.org.au>, Emese Revfy <re.emese@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Sudip Mukherjee <sudipm.mukherjee@gmail.com>, Linux-Next <linux-next@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 1 Jul 2016 16:03:30 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160701160330.1ce5a95e8c64c89af49155bb@gmail.com>
+In-Reply-To: <1467245565.24287.115.camel@perches.com>
+References: <20160628133407.10c2ea1ecd194e8085e84c5a@gmail.com>
+	<20160628133645.8f3cac0df4fc363e308426ac@gmail.com>
+	<1467132211.24287.31.camel@perches.com>
+	<20160628224043.c543b2b01e776e7757bbb3f4@gmail.com>
+	<1467147657.24287.59.camel@perches.com>
+	<20160629204204.859692ea2b7f570260ed18a0@gmail.com>
+	<1467245565.24287.115.camel@perches.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v1 2/2] Mark functions with the __nocapture attribute
+To: Joe Perches <joe@perches.com>
+Cc: kernel-hardening@lists.openwall.com, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jun 11, 2016 at 6:12 PM, Kees Cook <keescook@chromium.org> wrote:
-> Since adding the gcc plugin development headers is required for the
-> gcc plugin support, we should ease into this new kernel build dependency
-> more slowly. For now, disable the gcc plugins under COMPILE_TEST so that
-> all*config builds will skip it.
->
+On Wed, 29 Jun 2016 17:12:45 -0700
+Joe Perches <joe@perches.com> wrote:
 
-[ This might be a bit off-topic - Feel free to answer ]
+> On Wed, 2016-06-29 at 20:42 +0200, Emese Revfy wrote:
+> > On Tue, 28 Jun 2016 14:00:57 -0700 Joe Perches <joe@perches.com> wrote:
+> > > On Tue, 2016-06-28 at 22:40 +0200, Emese Revfy wrote:
+> > > > On Tue, 28 Jun 2016 09:43:31 -0700 Joe Perches <joe@perches.com> wrote:
+> > > > > On Tue, 2016-06-28 at 13:36 +0200, Emese Revfy wrote:
+> > > > > > The nocapture gcc attribute can be on functions only.
+> > > > > > The attribute takes one or more unsigned integer constants as parameters
+> > > > > > that specify the function argument(s) of const char* type to initify.
+> > > > > Perhaps this should be const <void>*
+> > > > For me function arguments are the values passed to a function call so
+> > > > the const char* type is good because this is the only one that the plugin handles
+> > > > (for now at least).
+> > > OK, but this function prototype specified takes a const void *
+> > > 
+> > > +extern void * memcpy(void *, const void *, __kernel_size_t) __nocapture(2);
+> > What matters for the plugin is the type of the passed arguments (which can be const char*
+> > in the current implementation), not that of the parameters.
+> 
+> And how does this work when the prototype requires the compiler to
+> implicit cast to const void * before calling the function?
 
-Hi,
 
-I want to try that new "GCC-plugin" feature.
-Do you have a Git repo for "easy-testing"?
+The plugin searches for the nocapture attribute that does not depend on the type.
+If the function argument is not a string constant just a pointer then
+the plugin walks the data flow (use-def chain) and tries to find a string constant.
+If there is a cast to void * then the use-def chain will walk across it.
 
-Does the kernel's build-system check for installed "gcc-plugin
-development headers"?
-Which GCC versions support "gcc-plugin" feature?
-I am here on Ubuntu/precise AMD64 and have gcc-4.6.4 and gcc-4.9.2.
-
-[ Optional ]
-What about the topic and support for "LLVM/Clang and hardening" of the
-Linux-kernel?
-
-Regards,
-- Sedat -
-
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  arch/Kconfig      | 1 +
->  lib/Kconfig.debug | 4 ++--
->  2 files changed, 3 insertions(+), 2 deletions(-)
->
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 83aa2a3c470d..3f06d678b1d7 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -366,6 +366,7 @@ config HAVE_GCC_PLUGINS
->  menuconfig GCC_PLUGINS
->         bool "GCC plugins"
->         depends on HAVE_GCC_PLUGINS
-> +       depends on !COMPILE_TEST
->         help
->           GCC plugins are loadable modules that provide extra features to the
->           compiler. They are useful for runtime instrumentation and static analysis.
-> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-> index d40833b9b7f4..0f9981999a27 100644
-> --- a/lib/Kconfig.debug
-> +++ b/lib/Kconfig.debug
-> @@ -713,8 +713,8 @@ config KCOV
->         bool "Code coverage for fuzzing"
->         depends on ARCH_HAS_KCOV
->         select DEBUG_FS
-> -       select GCC_PLUGINS
-> -       select GCC_PLUGIN_SANCOV
-> +       select GCC_PLUGINS if !COMPILE_TEST
-> +       select GCC_PLUGIN_SANCOV if !COMPILE_TEST
->         help
->           KCOV exposes kernel code coverage information in a form suitable
->           for coverage-guided fuzzing (randomized testing).
-> --
-> 2.7.4
->
->
-> --
-> Kees Cook
-> Chrome OS & Brillo Security
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-next" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+-- 
+Emese
