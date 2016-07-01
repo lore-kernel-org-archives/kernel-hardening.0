@@ -1,210 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 1 Jul 2016 16:59:20 +0200
-From: Borislav Petkov <bp@alien8.de>
-Message-ID: <20160701145920.GF4593@pd.tnic>
-References: <cover.1466974736.git.luto@kernel.org>
- <fa7bc42def35d37f8237d8f9b2f1b1e05eb885b8.1466974736.git.luto@kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <fa7bc42def35d37f8237d8f9b2f1b1e05eb885b8.1466974736.git.luto@kernel.org>
-Subject: [kernel-hardening] Re: [PATCH v4 09/29] fork: Add generic vmalloced stack support
-To: Andy Lutomirski <luto@kernel.org>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Oleg Nesterov <oleg@redhat.com>
+From: Valdis Kletnieks <Valdis.Kletnieks@vt.edu>
+Mime-Version: 1.0
+Content-Type: multipart/signed; boundary="==_Exmh_1467388521_2022P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
+Content-Transfer-Encoding: 7bit
+Date: Fri, 01 Jul 2016 11:55:21 -0400
+Message-ID: <9493.1467388521@turing-police.cc.vt.edu>
+Subject: [kernel-hardening] usercopy - goood news and bad news
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jun 26, 2016 at 02:55:31PM -0700, Andy Lutomirski wrote:
-> If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
-> vmalloc_node.
-> 
-> grsecurity has had a similar feature (called
-> GRKERNSEC_KSTACKOVERFLOW) for a long time.
-> 
-> Cc: Oleg Nesterov <oleg@redhat.com>
-> Signed-off-by: Andy Lutomirski <luto@kernel.org>
-> ---
->  arch/Kconfig                        | 29 +++++++++++++
->  arch/ia64/include/asm/thread_info.h |  2 +-
->  include/linux/sched.h               | 15 +++++++
->  kernel/fork.c                       | 87 +++++++++++++++++++++++++++++--------
->  4 files changed, 113 insertions(+), 20 deletions(-)
-> 
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 15996290fed4..18a2c3a7b460 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -661,4 +661,33 @@ config ARCH_NO_COHERENT_DMA_MMAP
->  config CPU_NO_EFFICIENT_FFS
->  	def_bool n
->  
-> +config HAVE_ARCH_VMAP_STACK
-> +	def_bool n
-> +	help
-> +	  An arch should select this symbol if it can support kernel stacks
-> +	  in vmalloc space.  This means:
-> +
-> +	  - vmalloc space must be large enough to hold many kernel stacks.
-> +	    This may rule out many 32-bit architectures.
-> +
-> +	  - Stacks in vmalloc space need to work reliably.  For example, if
-> +	    vmap page tables are created on demand, either this mechanism
-> +	    needs to work while the stack points to a virtual address with
-> +	    unpopulated page tables or arch code (switch_to and switch_mm,
-> +	    most likely) needs to ensure that the stack's page table entries
-> +	    are populated before running on a possibly unpopulated stack.
-> +
-> +	  - If the stack overflows into a guard page, something reasonable
-> +	    should happen.  The definition of "reasonable" is flexible, but
-> +	    instantly rebooting without logging anything would be unfriendly.
+--==_Exmh_1467388521_2022P
+Content-Type: text/plain; charset=us-ascii
 
-Nice, I wish more people would actually *explain* their Kconfig options
-properly.
+The good news - I ran my laptop through pretty much all of the Linux Test
+Project code (20160510 release) - it ran pretty much everything except the NUMA
+tests and the deprecated 16-bit UID/GID stuff, and didn't trigger the usercopy
+code except for the already-known issue with ping/ping6.  So we're in
+reasonably good shape there - it isn't like there's zillions of corner cases
+we'll need to track down.
 
-...
-
-> diff --git a/kernel/fork.c b/kernel/fork.c
-> index 146c9840c079..06761de69360 100644
-> --- a/kernel/fork.c
-> +++ b/kernel/fork.c
-> @@ -158,19 +158,37 @@ void __weak arch_release_thread_stack(unsigned long *stack)
->   * Allocate pages if THREAD_SIZE is >= PAGE_SIZE, otherwise use a
->   * kmemcache based allocator.
->   */
-> -# if THREAD_SIZE >= PAGE_SIZE
-> -static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
-> -						  int node)
-> +# if THREAD_SIZE >= PAGE_SIZE || defined(CONFIG_VMAP_STACK)
-> +static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
->  {
-> +#ifdef CONFIG_VMAP_STACK
-> +	void *stack = __vmalloc_node_range(
-> +		THREAD_SIZE, THREAD_SIZE, VMALLOC_START, VMALLOC_END,
-> +		THREADINFO_GFP | __GFP_HIGHMEM, PAGE_KERNEL,
-> +		0, node, __builtin_return_address(0));
-
-Reformat:
-
-        void *stack = __vmalloc_node_range(THREAD_SIZE, THREAD_SIZE,
-                                           VMALLOC_START, VMALLOC_END,
-                                           THREADINFO_GFP | __GFP_HIGHMEM,
-                                           PAGE_KERNEL,
-                                           0, node, __builtin_return_address(0));
+The bad news:  Triggered another issue - ptrace this time, while trying to
+attach gdb to a running process:
 
 
-> +
-> +	/*
-> +	 * We can't call find_vm_area() in interrupt context, and
-> +	 * free_thread_info can be called in interrupt context, so cache
+Jun 30 20:43:08 turing-police kernel: [ 1712.780889] usercopy: kernel memory exposure attempt detected from ffff8801c8102fc0 (task_struct) (576 bytes)
+Jun 30 20:43:08 turing-police kernel: [ 1712.780902] CPU: 3 PID: 24085 Comm: gdb Tainted: G           OE   4.7.0-rc5-next-20160628-dirty #305
+Jun 30 20:43:08 turing-police kernel: [ 1712.780908] Hardware name: Dell Inc. Latitude E6530/07Y85M, BIOS A17 08/19/2015
+Jun 30 20:43:08 turing-police kernel: [ 1712.780914]  0000000000000000 000000008822eeb4 ffff88012ff1bd10 ffffffffa06e7dea
+Jun 30 20:43:08 turing-police kernel: [ 1712.780928]  ffff8801c8102fc0 000000008822eeb4 0000000000000240 0000000000000001
+Jun 30 20:43:08 turing-police kernel: [ 1712.780942]  ffff88012ff1bd60 ffffffffa03a0440 00007ffee54243b0 ffffea00072040a0
+Jun 30 20:43:08 turing-police kernel: [ 1712.780954] Call Trace:
+Jun 30 20:43:08 turing-police kernel: [ 1712.780969]  [<ffffffffa06e7dea>] dump_stack+0x7b/0xd1
+Jun 30 20:43:08 turing-police kernel: [ 1712.780975]  [<ffffffffa03a0440>] __check_object_size+0x70/0x3be
+Jun 30 20:43:08 turing-police kernel: [ 1712.780980]  [<ffffffffa004ada0>] xstateregs_get+0x110/0x140
+Jun 30 20:43:08 turing-police kernel: [ 1712.780984]  [<ffffffffa00ca4aa>] ptrace_regset+0x28a/0x450
+Jun 30 20:43:08 turing-police kernel: [ 1712.780988]  [<ffffffffa015c8ca>] ? do_raw_spin_lock+0x15a/0x210
+Jun 30 20:43:08 turing-police kernel: [ 1712.780992]  [<ffffffffa00cca90>] ptrace_request+0x440/0x780
+Jun 30 20:43:08 turing-police kernel: [ 1712.780997]  [<ffffffffa01055ca>] ? preempt_count_sub+0x4a/0x90
+Jun 30 20:43:08 turing-police kernel: [ 1712.781002]  [<ffffffffa10f3264>] ? _raw_spin_unlock_irqrestore+0x74/0x90
+Jun 30 20:43:08 turing-police kernel: [ 1712.781005]  [<ffffffffa010eb4e>] ? wait_task_inactive+0x25e/0x430
+Jun 30 20:43:08 turing-police kernel: [ 1712.781009]  [<ffffffffa00ca140>] ? ptrace_check_attach+0x160/0x200
+Jun 30 20:43:08 turing-police kernel: [ 1712.781013]  [<ffffffffa004ffc2>] arch_ptrace+0x522/0x7a0
+Jun 30 20:43:08 turing-police kernel: [ 1712.781016]  [<ffffffffa00cc561>] SyS_ptrace+0xa1/0x110
+Jun 30 20:43:08 turing-police kernel: [ 1712.781020]  [<ffffffffa10f3ae5>] entry_SYSCALL_64_fastpath+0x18/0xa8
+Jun 30 20:43:08 turing-police kernel: [ 1712.781024]  [<ffffffffa014f4df>] ? trace_hardirqs_off_caller+0x1f/0xf0
 
-free_thread_stack() ?
+So I'm up to 3 hits now (ptrace, sctp, and ping).
 
-> +	 * the vm_struct.
-> +	 */
-> +	if (stack)
-> +		tsk->stack_vm_area = find_vm_area(stack);
-> +	return stack;
-> +#else
->  	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
->  						  THREAD_SIZE_ORDER);
->  
->  	return page ? page_address(page) : NULL;
-> +#endif
->  }
->  
-> -static inline void free_thread_stack(unsigned long *stack)
-> +static inline void free_thread_stack(struct task_struct *tsk)
->  {
-> -	free_kmem_pages((unsigned long)stack, THREAD_SIZE_ORDER);
-> +	if (task_stack_vm_area(tsk))
-> +		vfree(tsk->stack);
-> +	else
-> +		free_kmem_pages((unsigned long)tsk->stack, THREAD_SIZE_ORDER);
->  }
->  # else
->  static struct kmem_cache *thread_stack_cache;
-> @@ -181,9 +199,9 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
->  	return kmem_cache_alloc_node(thread_stack_cache, THREADINFO_GFP, node);
->  }
->  
-> -static void free_thread_stack(unsigned long *stack)
-> +static void free_thread_stack(struct task_struct *tsk)
->  {
-> -	kmem_cache_free(thread_stack_cache, stack);
-> +	kmem_cache_free(thread_stack_cache, tsk->stack);
->  }
->  
->  void thread_stack_cache_init(void)
-> @@ -213,24 +231,49 @@ struct kmem_cache *vm_area_cachep;
->  /* SLAB cache for mm_struct structures (tsk->mm) */
->  static struct kmem_cache *mm_cachep;
->  
-> -static void account_kernel_stack(unsigned long *stack, int account)
-> +static void account_kernel_stack(struct task_struct *tsk, int account)
->  {
-> -	/* All stack pages are in the same zone and belong to the same memcg. */
-> -	struct page *first_page = virt_to_page(stack);
-> +	void *stack = task_stack_page(tsk);
-> +	struct vm_struct *vm = task_stack_vm_area(tsk);
-> +
-> +	BUILD_BUG_ON(IS_ENABLED(CONFIG_VMAP_STACK) && PAGE_SIZE % 1024 != 0);
-> +
-> +	if (vm) {
-> +		int i;
->  
-> -	mod_zone_page_state(page_zone(first_page), NR_KERNEL_STACK_KB,
-> -			    THREAD_SIZE / 1024 * account);
-> +		BUG_ON(vm->nr_pages != THREAD_SIZE / PAGE_SIZE);
->  
-> -	memcg_kmem_update_page_stat(
-> -		first_page, MEMCG_KERNEL_STACK_KB,
-> -		account * (THREAD_SIZE / 1024));
-> +		for (i = 0; i < THREAD_SIZE / PAGE_SIZE; i++) {
-> +			mod_zone_page_state(page_zone(vm->pages[i]),
-> +					    NR_KERNEL_STACK_KB,
-> +					    PAGE_SIZE / 1024 * account);
-> +		}
-> +
-> +		/* All stack pages belong to the same memcg. */
-> +		memcg_kmem_update_page_stat(
-> +			vm->pages[0], MEMCG_KERNEL_STACK_KB,
-> +			account * (THREAD_SIZE / 1024));
+--==_Exmh_1467388521_2022P
+Content-Type: application/pgp-signature
 
-Formatting:
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+Comment: Exmh version 2.5 07/13/2001
 
-		function_name(arg0, arg1,
-			      arg2, arg3, ...);
+iQIVAwUBV3aSaQdmEQWDXROgAQJ/XQ/9HJkvCB1Ud9waOtE/RbHy/aK+m0xS7PZG
+mex7s4a//GDOZ6/SuS2JYcWLL7G4iy4knY2N4mdS2bWWCt8jTH+Su0h3yfb23r5u
+i7cQFq+Cb/1nImkc747/Tcb9eX1GDwYuuDSYQz5E49Ey60uJ6fyjNzM8MKPIjI/R
+UgWR3xoi/UootstyXv+uVX8kVFUep6ubbERnHYuyYPIB6aIWrkvYYaSo7N9oOqp5
+PlRJP4CcMOdr/l8Jx9ytAER7jZ1Gb/sTrYY8qBbVgGuYAM6hYjVnR5KVus5NyWAf
+lumuJGFiJ72SdSr52MIX4LYSY3XizYK3A3k25nr+lbJqErBk9queSSQxJbjwOydU
+Gd98036ZGELHk0iJ1bDug2aHtWH5VEhJ8wMr9jXZKRmlTvXMrvZSx9lRZa9a58SL
+fgI+V5/VqKZrVOv+XlqBHcpPkTrJX1OGEJZPh0hVBzQaEPOH8fpuFJCUKxdMsVAG
+ln0VmUSMnN0SF+F/VXl1XCOPHqqOZIROS8GKM+l4Lm6VroqAiXs8FbqBYB27f/Ks
+tSsae2pLiTaozq7d39oLPsjh5JTQhnF6yJO9oAdbuMFicQYs2PRDW0omUeMb3TTE
+grOzzHZzQCwYw6c4Vja4i3JAmjazR+lpzwRpw6QS+BifIxWziXm2GCcl+FF4z2Vu
+62zUDxeJnMg=
+=xfwe
+-----END PGP SIGNATURE-----
 
-> +	} else {
-> +		/*
-> +		 * All stack pages are in the same zone and belong to the
-> +		 * same memcg.
-> +		 */
-> +		struct page *first_page = virt_to_page(stack);
-> +
-> +		mod_zone_page_state(page_zone(first_page), NR_KERNEL_STACK_KB,
-> +				    THREAD_SIZE / 1024 * account);
-> +
-> +		memcg_kmem_update_page_stat(
-> +			first_page, MEMCG_KERNEL_STACK_KB,
-> +			account * (THREAD_SIZE / 1024));
-
-Ditto.
-
-> +	}
->  }
->  
->  void free_task(struct task_struct *tsk)
->  {
-> -	account_kernel_stack(tsk->stack, -1);
-> +	account_kernel_stack(tsk, -1);
->  	arch_release_thread_stack(tsk->stack);
-> -	free_thread_stack(tsk->stack);
-> +	free_thread_stack(tsk);
->  	rt_mutex_debug_task_free(tsk);
->  	ftrace_graph_exit_task(tsk);
->  	put_seccomp_filter(tsk);
--- 
-Regards/Gruss,
-    Boris.
-
-ECO tip #101: Trim your mails when you reply.
+--==_Exmh_1467388521_2022P--
