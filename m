@@ -1,61 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Content-Type: text/plain; charset=us-ascii
-Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
-From: Marcel Holtmann <marcel@holtmann.org>
-In-Reply-To: <CALCETrVx6PDUb+5S9eYuB+Dhu2VEkz-iz=hpRJdzxRfXypwK8A@mail.gmail.com>
-Date: Mon, 4 Jul 2016 19:56:00 +0200
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <73C272C5-ECDB-4508-B8D3-1F54D5E8E6AB@holtmann.org>
-References: <cover.1466974736.git.luto@kernel.org> <264af59a3060c2bc2a725cfc66a8fa68219d1c4a.1466974736.git.luto@kernel.org> <8C5360E3-94EE-4869-B9B9-AF9D41B5A3AC@holtmann.org> <20160627085403.GA26865@gmail.com> <2833CC26-7306-4803-A5DB-4CBECCF35C08@holtmann.org> <CALCETrVx6PDUb+5S9eYuB+Dhu2VEkz-iz=hpRJdzxRfXypwK8A@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v4 01/29] bluetooth: Switch SMP to crypto_cipher_encrypt_one()
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, "Gustavo F. Padovan" <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>, "David S. Miller" <davem@davemloft.net>, linux-bluetooth@vger.kernel.org, Network Development <netdev@vger.kernel.org>
+Date: Mon, 4 Jul 2016 20:45:00 +0200
+From: Borislav Petkov <bp@alien8.de>
+Message-ID: <20160704184500.GD7261@pd.tnic>
+References: <cover.1466974736.git.luto@kernel.org>
+ <b05602fd545f3ddbb2c3e2bfd2ef5d18e85edd50.1466974736.git.luto@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <b05602fd545f3ddbb2c3e2bfd2ef5d18e85edd50.1466974736.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v4 11/29] x86/dumpstack: When OOPSing, rewind the stack
+ before do_exit
+To: Andy Lutomirski <luto@kernel.org>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Andy,
+On Sun, Jun 26, 2016 at 02:55:33PM -0700, Andy Lutomirski wrote:
+> If we call do_exit with a clean stack, we greatly reduce the risk of
 
->>>>> SMP does ECB crypto on stack buffers.  This is complicated and
->>>>> fragile, and it will not work if the stack is virtually allocated.
->>>>>=20
->>>>> Switch to the crypto_cipher interface, which is simpler and safer.
->>>>>=20
->>>>> Cc: Marcel Holtmann <marcel@holtmann.org>
->>>>> Cc: Gustavo Padovan <gustavo@padovan.org>
->>>>> Cc: Johan Hedberg <johan.hedberg@gmail.com>
->>>>> Cc: "David S. Miller" <davem@davemloft.net>
->>>>> Cc: linux-bluetooth@vger.kernel.org
->>>>> Cc: netdev@vger.kernel.org
->>>>> Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
->>>>> Acked-and-tested-by: Johan Hedberg <johan.hedberg@intel.com>
->>>>> Signed-off-by: Andy Lutomirski <luto@kernel.org>
->>>>> ---
->>>>> net/bluetooth/smp.c | 67 =
-++++++++++++++++++++++-------------------------------
->>>>> 1 file changed, 28 insertions(+), 39 deletions(-)
->>>>=20
->>>> patch has been applied to bluetooth-next tree.
->>>=20
->>> Sadly carrying this separately will delay the virtual kernel stacks =
-feature by a
->>> kernel cycle, because it's a must-have prerequisite.
->>=20
->> I can take it back out, but then I have the fear the the ECDH change =
-to use KPP for SMP might be the one that has to wait a kernel cycle. =
-Either way is fine with me, but I want to avoid nasty merge conflicts in =
-the Bluetooth SMP code.
->=20
-> Nothing goes wrong if an identical patch is queued in both places,
-> right?  Or, if you prefer not to duplicate it, could one of you commit
-> it and the other one pull it?  Ingo, given that this is patch 1 in the
-> series and unlikely to change, if you want to make this whole thing
-> have a separate branch in -tip, this could live there for starters.
-> (But, if you do so, please make sure you base off a very new copy of
-> Linus' tree -- the series is heavily dependent on the thread_info
-> change he applied a few days ago.)
+Nits:	    do_exit()
 
-so what are doing now? I take this back out or we keep it in and let git =
-deal with it when merging the trees?
+> recursive oopses due to stack overflow in do_exit, and we allow
 
-Regards
+s/ in do_exit//
 
-Marcel
+> do_exit to work even if we OOPS from an IST stack.  The latter gives
+
+Append "()" to the function names.
+
+> us a much better chance of surviving long enough after we detect a
+> stack overflow to write out our logs.
+> 
+> I intentionally separated this from the preceding patch that
+> disables do_exit-on-OOPS on IST stacks.  This way, if we need to
+> revert this patch, we still end up in an acceptable state wrt stack
+> overflow handling.
+> 
+> Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+> Signed-off-by: Andy Lutomirski <luto@kernel.org>
+> ---
+
+...
+
+> diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
+> index 352f022cfd5b..0d05f113805e 100644
+> --- a/arch/x86/kernel/dumpstack.c
+> +++ b/arch/x86/kernel/dumpstack.c
+> @@ -226,6 +226,8 @@ unsigned long oops_begin(void)
+>  EXPORT_SYMBOL_GPL(oops_begin);
+>  NOKPROBE_SYMBOL(oops_begin);
+>  
+> +extern void __noreturn rewind_stack_do_exit(int signr);
+
+You don't need the "extern" here.
+
+> +
+>  void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
+>  {
+>  	if (regs && kexec_should_crash(current))
+-- 
+Regards/Gruss,
+    Boris.
+
+ECO tip #101: Trim your mails when you reply.
