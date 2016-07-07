@@ -1,29 +1,89 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 7 Jul 2016 21:34:53 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <CAGXu5jJWVow4i_M7Qg4ZFgZh3k_fUxUs4pDJSf5Yc8Q-FK9HoQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.11.1607072133550.4083@nanos>
-References: <1467843928-29351-1-git-send-email-keescook@chromium.org> <1467843928-29351-2-git-send-email-keescook@chromium.org> <alpine.DEB.2.11.1607070938430.4083@nanos> <CAGXu5jJWVow4i_M7Qg4ZFgZh3k_fUxUs4pDJSf5Yc8Q-FK9HoQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH 1/9] mm: Hardened usercopy
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+References: <1466556426-32664-1-git-send-email-keescook@chromium.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 7 Jul 2016 18:24:36 -0400
+Message-ID: <CAGXu5jLkq-mRMZ_NtXf6M_4YPrMWVEV3U-iF1qt49LRXPTrxEA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v7 0/9] x86/mm: memory area address KASLR
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Andy Lutomirski <luto@kernel.org>, "x86@kernel.org" <x86@kernel.org>, Borislav Petkov <bp@suse.de>, Baoquan He <bhe@redhat.com>, Yinghai Lu <yinghai@kernel.org>, Juergen Gross <jgross@suse.com>, Matt Fleming <matt@codeblueprint.co.uk>, Toshi Kani <toshi.kani@hpe.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Dave Hansen <dave.hansen@linux.intel.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Alexander Kuleshov <kuleshovmail@gmail.com>, Alexander Popov <alpopov@ptsecurity.com>, Dave Young <dyoung@redhat.com>, Joerg Roedel <jroedel@suse.de>, Lv Zheng <lv.zheng@intel.com>, Mark Salter <msalter@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Stephen Smalley <sds@tycho.nsa.gov>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Jan Beulich <JBeulich@suse.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 7 Jul 2016, Kees Cook wrote:
-> On Thu, Jul 7, 2016 at 3:42 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
-> > I'd rather make that a weak function returning 1 which can be replaced by
-> > x86 for CONFIG_FRAME_POINTER=y. That also allows other architectures to
-> > implement their specific frame checks.
-> 
-> Yeah, though I prefer CONFIG-controlled stuff over weak functions, but
-> I agree, something like arch_check_stack_frame(...) or similar. I'll
-> build something for this on the next revision.
+On Tue, Jun 21, 2016 at 8:46 PM, Kees Cook <keescook@chromium.org> wrote:
+> This is v7 of Thomas Garnier's KASLR for memory areas (physical memory
+> mapping, vmalloc, vmemmap). It expects to be applied on top of the
+> x86/boot tip.
+>
+> The current implementation of KASLR randomizes only the base address of
+> the kernel and its modules. Research was published showing that static
+> memory addresses can be found and used in exploits, effectively ignoring
+> base address KASLR:
+>
+>    The physical memory mapping holds most allocations from boot and
+>    heap allocators. Knowning the base address and physical memory
+>    size, an attacker can deduce the PDE virtual address for the vDSO
+>    memory page.  This attack was demonstrated at CanSecWest 2016, in
+>    the "Getting Physical: Extreme Abuse of Intel Based Paged Systems"
+>    https://goo.gl/ANpWdV (see second part of the presentation). The
+>    exploits used against Linux worked successfuly against 4.6+ but fail
+>    with KASLR memory enabled (https://goo.gl/iTtXMJ). Similar research
+>    was done at Google leading to this patch proposal. Variants exists
+>    to overwrite /proc or /sys objects ACLs leading to elevation of
+>    privileges.  These variants were tested against 4.6+.
+>
+> This set of patches randomizes the base address and padding of three
+> major memory sections (physical memory mapping, vmalloc, and vmemmap).
+> It mitigates exploits relying on predictable kernel addresses in these
+> areas. This feature can be enabled with the CONFIG_RANDOMIZE_MEMORY
+> option. (This CONFIG, along with CONFIG_RANDOMIZE may be renamed in
+> the future, but stands for now as other architectures continue to
+> implement KASLR.)
+>
+> Padding for the memory hotplug support is managed by
+> CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING. The default value is 10
+> terabytes.
+>
+> The patches were tested on qemu & physical machines. Xen compatibility was
+> also verified. Multiple reboots were used to verify entropy for each
+> memory section.
+>
+> Notable problems that needed solving:
+>  - The three target memory sections need to not be at the same place
+>    across reboots.
+>  - The physical memory mapping can use a virtual address not aligned on
+>    the PGD page table.
+>  - Reasonable entropy is needed early at boot before get_random_bytes()
+>    is available.
+>  - Memory hotplug needs KASLR padding.
+>
+> Patches:
+>  - 1: refactor KASLR functions (moves them from boot/compressed/ into lib/)
+>  - 2: clarifies the variables used for physical mapping.
+>  - 3: PUD virtual address support for physical mapping.
+>  - 4: split out the trampoline PGD
+>  - 5: KASLR memory infrastructure code
+>  - 6: randomize base of physical mapping region
+>  - 7: randomize base of vmalloc region
+>  - 8: randomize base of vmemmap region
+>  - 9: provide memory hotplug padding support
+>
+> There is no measurable performance impact:
+>
+>  - Kernbench shows almost no difference (-+ less than 1%).
+>  - Hackbench shows 0% difference on average (hackbench 90 repeated 10 times).
 
-I'm fine with CONFIG_CONTROLLED as long as the ifdeffery is limited to header
-files.
+Hi again,
 
-Thanks,
+Just a friendly ping -- I'd love to get this into -tip for wider testing.
 
-	tglx
+Thanks!
+
+-Kees
+
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
