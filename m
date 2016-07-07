@@ -1,63 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1467909317.13253.17.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Thu, 07 Jul 2016 12:35:17 -0400
-In-Reply-To: <1467843928-29351-2-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160707100717.GB8306@leverpostej>
 References: <1467843928-29351-1-git-send-email-keescook@chromium.org>
-	 <1467843928-29351-2-git-send-email-keescook@chromium.org>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-A8whchtqc1mx2jHwm8hg"
-Mime-Version: 1.0
-Subject: [kernel-hardening] Re: [PATCH 1/9] mm: Hardened usercopy
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S.
- Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, linux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+ <1467843928-29351-5-git-send-email-keescook@chromium.org> <20160707100717.GB8306@leverpostej>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 7 Jul 2016 13:19:26 -0400
+Message-ID: <CAGXu5jLeH2KL+FVi7mxBF5oH2-zMfwSY=2ReJOL4JYsQuJKy6Q@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 4/9] arm64/uaccess: Enable hardened usercopy
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Jan Kara <jack@suse.cz>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Linux-MM <linux-mm@kvack.org>, sparclinux <sparclinux@vger.kernel.org>, linux-ia64@vger.kernel.org, Christoph Lameter <cl@linux.com>, Andrea Arcangeli <aarcange@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, Michael Ellerman <mpe@ellerman.id.au>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, PaX Team <pageexec@freemail.hu>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Fenghua Yu <fenghua.yu@intel.com>, Rik van Riel <riel@redhat.com>, Vitaly Wool <vitalywool@gmail.com>, David Rientjes <rientjes@google.com>, Tony Luck <tony.luck@intel.com>, Andy Lutomirski <luto@kernel.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, Brad Spengler <spender@grsecurity.net>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Pekka Enberg <penberg@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Andrew Morton <akpm@linux-foundation.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "David S. Miller" <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Thu, Jul 7, 2016 at 6:07 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> Hi,
+>
+> On Wed, Jul 06, 2016 at 03:25:23PM -0700, Kees Cook wrote:
+>> Enables CONFIG_HARDENED_USERCOPY checks on arm64. As done by KASAN in -next,
+>> renames the low-level functions to __arch_copy_*_user() so a static inline
+>> can do additional work before the copy.
+>
+> The checks themselves look fine, but as with the KASAN checks, it seems
+> a shame that this logic is duplicated per arch, integrated in subtly
+> different ways.
+>
+> Can we not __arch prefix all the arch uaccess helpers, and place
+> kasan_check_*() and check_object_size() calls in generic wrappers?
+>
+> If we're going to update all the arch uaccess helpers anyway, doing that
+> would make it easier to fix things up, or to add new checks in future.
 
---=-A8whchtqc1mx2jHwm8hg
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Yeah, I totally agree, and my work on the next step of this hardening
+will require something like this to separate the "check" logic from
+the "copy" logic, as I want to introduce a set of constant-sized
+copy_*_user helpers.
 
-On Wed, 2016-07-06 at 15:25 -0700, Kees Cook wrote:
->=C2=A0
-> +	/* Allow kernel rodata region (if not marked as Reserved).
-> */
-> +	if (ptr >=3D (const void *)__start_rodata &&
-> +	=C2=A0=C2=A0=C2=A0=C2=A0end <=3D (const void *)__end_rodata)
-> +		return NULL;
->=20
-One comment here.
+Though currently x86 poses a weird problem in this regard (they have
+separate code paths for copy_* and __copy*, but I think it's actually
+a harmless(?) mistake.
 
-__check_object_size gets "to_user" as an argument.
+For now, I'd like to leave this as-is, and then do the copy_* cleanup,
+then do step 2 (slab whitelisting).
 
-It may make sense to pass that to check_heap_object, and
-only allow copy_to_user from rodata, never copy_from_user,
-since that section should be read only.
+-Kees
 
-> +void __check_object_size(const void *ptr, unsigned long n, bool
-> to_user)
-> +{
->=C2=A0
-
---=20
-
-All Rights Reversed.
---=-A8whchtqc1mx2jHwm8hg
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQEcBAABCAAGBQJXfoTFAAoJEM553pKExN6DSm8H/03wOEjAiET+COdQLbDEWApC
-bEAOboYqibBhVsPZ557+S9y/UClhKOdBwA+nOKYw7ftj8gZZibkVBFbel7NV+s24
-GHC3R1i1kGYK2YQflr2F2HGe1a8L1AWV7XuuxoBxqxP53zMrb9kAR3+vxRiz/bLc
-nd4uQ1VhgPHOn1Ny6SSO6Ss6kM3wrsJw0+b2LS6erOUeA0IV7Wi01AMaRvLYiARR
-yQEeIwn+lsENGCUMK/RGyiOJCW0m8FV6DrjtG3crG2CUtbjFnpMo225PrdOJMcBh
-p5XyisW8AiGPrKm3ykxzNhPbOtP+2r8fVGgcUv7apHt+oORVNmVeEO1mP/yJATo=
-=SHUM
------END PGP SIGNATURE-----
-
---=-A8whchtqc1mx2jHwm8hg--
+-- 
+Kees Cook
+Chrome OS & Brillo Security
