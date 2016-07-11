@@ -1,145 +1,121 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CALCETrXfdEbmSTs6XkZjHkAc3W_380bpde4bWQgRA5CQM0PtLA@mail.gmail.com>
-References: <1467843928-29351-1-git-send-email-keescook@chromium.org>
- <578185D4.29090.242668C8@pageexec.freemail.hu> <20160710091632.GA14172@gmail.com>
- <5782398B.32731.26E46C3D@pageexec.freemail.hu> <CALCETrXfdEbmSTs6XkZjHkAc3W_380bpde4bWQgRA5CQM0PtLA@mail.gmail.com>
+In-Reply-To: <CAHgaXdLPLCiggTrKGcFZzmGiBUmdmNGAt0_nO9BS5aGoP=bVmw@mail.gmail.com>
+References: <CAHgaXdKW4=y-PviWudtMAThuB=GEW-73RejSHRMYNVzLyxP+iA@mail.gmail.com>
+ <CAGXu5jLA+ri_RwWSOoZwAtv6a6pXL_EzUx6BZ0Mmc-n0+We9vg@mail.gmail.com> <CAHgaXdLPLCiggTrKGcFZzmGiBUmdmNGAt0_nO9BS5aGoP=bVmw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 11 Jul 2016 14:40:15 -0400
-Message-ID: <CAGXu5jKO2Yihuaw7f087tdAWPQZE+nk+6bdC5VWRws3f1V1y1g@mail.gmail.com>
+Date: Mon, 11 Jul 2016 14:52:40 -0400
+Message-ID: <CAGXu5jJofXU-KsZ+1vxHHKHQFcVv5YSi1wtx3DR0sAZto-NvsQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 0/9] mm: Hardened usercopy
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: PaX Team <pageexec@freemail.hu>, Ingo Molnar <mingo@kernel.org>, Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Brad Spengler <spender@grsecurity.net>, Pekka Enberg <penberg@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Casey Schaufler <casey@schaufler-ca.com>, Will Deacon <will.deacon@arm.com>, Rik van Riel <riel@redhat.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Dmitry Vyukov <dvyukov@google.com>, "linux-ia64@vger.kernel.org" <linux-ia64@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, X86 ML <x86@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, linux-arch <linux-arch@vger.kernel.org>, David Rientjes <rientjes@google.com>, Mathias Krause <minipli@googlemail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@fedoraproject.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, Jan Kara <jack@suse.cz>, Russell King <linux@armlinux.org.uk>, Michael Ellerman <mpe@ellerman.id.au>, Andrea Arcangeli <aarcange@redhat.com>, Fenghua Yu <fenghua.yu@intel.com>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Vitaly Wool <vitalywool@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@suse.de>, Tony Luck <tony.luck@intel.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, sparclinux <sparclinux@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "H. Peter Anvin" <hpa@zytor.com>
+Subject: Re: [kernel-hardening] Looking for something to WORK ON
+To: Shubham Bansal <illusionist.neo@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Daniel Borkmann <daniel@iogearbox.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 10, 2016 at 8:38 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Sun, Jul 10, 2016 at 5:03 AM, PaX Team <pageexec@freemail.hu> wrote:
->> On 10 Jul 2016 at 11:16, Ingo Molnar wrote:
->>
->>> * PaX Team <pageexec@freemail.hu> wrote:
->>>
->>> > On 9 Jul 2016 at 14:27, Andy Lutomirski wrote:
->>> >
->>> > > I like the series, but I have one minor nit to pick.  The effect of this
->>> > > series is to harden usercopy, but most of the code is really about
->>> > > infrastructure to validate that a pointed-to object is valid.
->>> >
->>> > actually USERCOPY has never been about validating pointers. its sole purpose is
->>> > to validate the *size* argument of copy*user calls, a very specific form of
->>> > runtime bounds checking.
->>>
->>> What this code has been about originally is largely immaterial, unless you can
->>> formulate it into a technical argument.
->>
->> we design defense mechanisms for specific and clear purposes, starting with
->> a threat model, evaluating defense options based on various criteria, etc.
->> USERCOPY underwent this same process and taking it out of its original context
->> means that all you get in the end is cargo cult security (wouldn't be the first
->> time it has happened (ExecShield, ASLR, etc)).
->>
->> that said, i actually started that discussion but for some reason you chose
->> not to respond to that one part of my mail so let me ask it again:
->>
->>   what kind of checks are you thinking of here? and more fundamentally, against
->>   what kind of threats?
->>
->> as far as i'm concerned, a defense mechanism is only as good as its underlying
->> threat model. by validating pointers (for yet to be stated security related
->> properties) you're presumably assuming some kind of threat and unless stated
->> clearly what that threat is (unintended pointer modification through memory
->> corruption and/or other bugs?) noone can tell whether the proposed defense
->> mechanism will actually be effective in preventing exploitation. it is the
->> worst kind of defense that doesn't actually achieve its stated goals, that
->> way lies false sense of security and i hope noone here is in that business.
+On Sun, Jul 10, 2016 at 12:04 PM, Shubham Bansal
+<illusionist.neo@gmail.com> wrote:
+> Hi Kees,
 >
-> I'm imaging security bugs that involve buffer length corruption but
-> that don't call copy_to/from_user.  Hardened usercopy shuts
-> expoitation down if the first use of the corrupt size is
-> copy_to/from_user or similar.  I bet that a bit better coverage could
-> be achieved by instrumenting more functions.
->
-> To be clear: I'm not objecting to calling the overall feature hardened
-> usercopy or similar.  I object to
-> CONFIG_HAVE_HARDENED_USERCOPY_ALLOCATOR.  That feature is *used* for
-> hardened usercopy but is not, in and of itself, a usercopy thing.
-> It's an object / memory range validation thing.  So we'll feel silly
-> down the road if we use it for something else and the config option
-> name has nothing to do with the feature.
+> Sorry for the late reply. I am having some problems with arranging a lot of
+> mails from the list.
 
-Well, the CONFIG_HAVE* stuff is almost entirely invisible to the
-end-user, and I feel like it's better to be specific about names now,
-and when they change their meaning, we can change their names with it.
-
-I intend to extend the HARDENED_USERCOPY logic in similar ways to how
-it is extended in Grsecurity: parts can be used for the "is this
-destined for a userspace memory buffer?" test when rejecting writing
-pointers or other sensitive information during sprintf (see the
-HIDESYM work in grsecurity).
-
-But, I don't like to over-think it: right now, it is named for what it
-does, and we can adjust as we need to.
+No worries! Glad to have you interested in the discussions. :)
 
 >
->>> > [...] like the renaming of .data..read_only to .data..ro_after_init which also
->>> > had nothing to do with init but everything to do with objects being conceptually
->>> > read-only...
+> On Wed, Jul 6, 2016 at 11:05 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Wed, Jul 6, 2016 at 10:40 AM, Shubham Bansal
+>> <illusionist.neo@gmail.com> wrote:
+>>> Hi guys,
 >>>
->>> .data..ro_after_init objects get written to during bootup so it's conceptually
->>> quite confusing to name it "read-only" without any clear qualifiers.
+>>> I want to start with linux kernel development and looking for some
+>>> project
+>>> where I can contribute. I was looking at
+>>> http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project which
+>>> asked
+>>> to introduce myself on the list if I am looking for some work (thats what
+>>> I
+>>> am doing :) ). It would be highly appreciated if any of you guys have
+>>> something where I can contribute.
 >>>
->>> That it's named consistently with its role of "read-write before init and read
->>> only after init" on the other hand is not confusing at all. Not sure what your
->>> problem is with the new name.
+>>> Best,
+>>> Shubham Bansal
 >>
->> the new name reflects a complete misunderstanding of the PaX feature it was based
->> on (typical case of cargo cult security). in particular, the __read_only facility
->> in PaX is part of a defense mechanism that attempts to solve a specific problem
->> (like everything else) and that problem has nothing whatsoever to do with what
->> happens before/after the kernel init process. enforcing read-ony kernel memory at
->> the end of kernel initialization is an implementation detail only and wasn't even
->> true always (and still isn't true for kernel modules for example): in the linux 2.4
->> days PaX actually enforced read-only kernel memory properties in startup_32 already
->> but i relaxed that for the 2.6+ port as the maintenance cost (finding out and
->> handling new exceptional cases) wasn't worth it.
+>> Welcome to the fun! :)
 >>
->> also naming things after their implementation is poor taste and can result in
->> even bigger problems down the line since as soon as the implementation changes,
->> you will have a flag day or have to keep a bad name. this is a lesson that the
->> REFCOUNT submission will learn too since the kernel's atomic*_t types (an
->> implementation detail) are used extensively for different purposes, instead of
->> using specialized types (kref is a good example of that). for .data..ro_after_init
->> the lesson will happen when you try to add back the remaining pieces from PaX,
->> such as module handling and not-always-const-in-the-C-sense objects and associated
->> accessors.
+>> What things are you generally interested in?
 >
-> The name is related to how the thing works.  If I understand
-> correctly, in PaX, the idea is to make some things readonly and use
-> pax_open_kernel(), etc to write it as needed.  This is a nifty
-> mechanism, but it's *not* what .data..ro_after_init does upstream.  If
-> I mark something __ro_after_init, then I can write it freely during
-> boot, but I can't write it thereafter.  In contrast, if I put
-> something in .rodata (using 'const', for example), then I must not
-> write it *at all* unless I use special helpers (kmap, pax_open_kernel,
-> etc).  So the practical effect from a programer's perspective of
-> __ro_after_init is quite different from .rodata, and I think the names
-> should reflect that.
+> Well, I don't have any preference as such. I am open to any work that is
+> related to security. I have just graduated from the college. I have
+> background in Crypto, Reverse engg. and exploit development. But if you need
+> a specific topic, I would say I want to add some features from grsecurity to
+> main linux kernel.
 
-I expect that if/when we add the open/close_kernel logic, we'll have a
-new section and it will be named accordingly (since it, too, is not
-const-in-the-C-sense, and shouldn't live in the standard .rodata
-section).
+That's ultimately where a lot of the work comes from: most of the
+interesting protections have an implementation in the grsecurity
+patch, but tends not to be in a form that is easily upstreamed.
 
-> (And yes, the upstream kernel should soon have __ro_after_init working
-> in modules.  And the not-always-const-in-the-C-sense objects using
-> accessors will need changes to add those accessors, and we can and
-> should change the annotation on the object itself at the same time.
-> But if I mark something __ro_after_init, I can write it using normal C
-> during init, and there's nothing wrong with that.)
+>> Do you have familiarity
+>> with a specific architecture (or do you want to _gain_ familiarity
+>> with a specific architecture)?
+>
+> I have a good familiarity with x86,x86-64 but I also know arm. Although, its
+> not a problem if there is a need, I will read about it.
+
+If you want to poke at tricky/hard arch-specific issues, I'd love to
+see ARMv8.1's PAN emulated on ARMv8.0. That one looks to be possible,
+but tricky to find all the right ways to handle it.
+
+If you're really feeling adventurous, I'd love to see the PaX's UDEREF
+feature on x86_64 implemented in upstream.
+
+>> There's a small list of stuff that is related to the larger project
+>> pieces that I try to keep up to date, of varying difficulty:
+>>
+>>
+>> http://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project#Specific_TODO_Items
+>
+> All of these sounds interesting to me. Although I didn't fully understand
+> some of the TODO items but few of these which I think I would like to work :
+>
+> Move kernel stack to vmap area
+
+This one is under way by Andy Lutomirski for x86, but it'd be great to
+see it done on arm and arm64 or other architectures.
+
+> Split thread_info off of kernel stack
+
+This is in progress for x86 too, but again, we need it for other architectures.
+
+> Convert remaining BPF JITs to eBPF JIT (with blinding)
+
+This would be nice for gaining BPF performance on the architectures
+that don't support the JIT currently.
+
+> Write lib/test_bpf.c tests for eBPF constant blinding
+
+And this is good for testing the eBPF JIT blinding -- right now it's
+kind of a manual check, and that makes me nervous since it's harder to
+notice regressions.
+
+(I've added Daniel Borkmann and Elena Reshetova to CC, since they
+could help direct you with the BPF work.)
+
+> But, I can work on other things also, whatever you think is appropriate. I
+> would prefer working on challenging project though.
+
+If you can solve the PAN emulation on ARMv8.0, that would be very
+valuable -- most newer phones and tablets are moving to arm64, and
+none are ARMv8.1, so they only have PXN and no PAN (where as 32-bit
+arm can do full PAN emulation with Domains right now, so there's this
+weird gap where we're actually going to regress in memory protections
+for a few years until everything is shipping with ARMv8.1 devices).
+
+> Hoping for a quick reply. I want to start working as soon as possible.
+
+Hopefully this is quick enough. :)
 
 -Kees
-
 
 -- 
 Kees Cook
