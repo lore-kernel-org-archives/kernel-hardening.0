@@ -1,63 +1,144 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <1466533948.2756.56.camel@redhat.com>
-References: <cover.1466466093.git.luto@kernel.org> <f7855f9eae0a27f5a03db1291f46fea1cc0a2a3f.1466466093.git.luto@kernel.org>
- <CAG48ez3WGu+03HDBA5daSV+zXGoR+iFHHYxZav0o6JCM9-EPMg@mail.gmail.com>
- <CALCETrWp+7+9j1vMgv5hxvtq3akZZZVdaVDfOLoFwhX+kL=Ntw@mail.gmail.com>
- <CAGXu5jJjihEU0HkSTWJymLZ5y=J03bkBHNgVf9QOSgWz6bf-SQ@mail.gmail.com> <1466533948.2756.56.camel@redhat.com>
-From: Andrey Ryabinin <ryabinin.a.a@gmail.com>
-Date: Mon, 11 Jul 2016 20:00:43 +0300
-Message-ID: <CAPAsAGzOyOvfiZZArra2JhCeaa7pd9tnva28rD7L8Yx-2BDj-w@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <5782398B.32731.26E46C3D@pageexec.freemail.hu>
+References: <1467843928-29351-1-git-send-email-keescook@chromium.org>
+ <578185D4.29090.242668C8@pageexec.freemail.hu> <20160710091632.GA14172@gmail.com>
+ <5782398B.32731.26E46C3D@pageexec.freemail.hu>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 11 Jul 2016 14:34:59 -0400
+Message-ID: <CAGXu5jLnCNHo2uPxeQeFF8DY0QG1x2QEnzmvevDqbjZ5ey2=Aw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v3 06/13] fork: Add generic
- vmalloced stack support
-To: Rik van Riel <riel@redhat.com>
-Cc: kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>, Jann Horn <jannh@google.com>, Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH 0/9] mm: Hardened usercopy
+To: PaX Team <pageexec@freemail.hu>
+Cc: Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Christoph Lameter <cl@linux.com>, Andrew Morton <akpm@linux-foundation.org>, Brad Spengler <spender@grsecurity.net>, Pekka Enberg <penberg@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Casey Schaufler <casey@schaufler-ca.com>, Will Deacon <will.deacon@arm.com>, Rik van Riel <riel@redhat.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Dmitry Vyukov <dvyukov@google.com>, "linux-ia64@vger.kernel.org" <linux-ia64@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, X86 ML <x86@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, linux-arch <linux-arch@vger.kernel.org>, David Rientjes <rientjes@google.com>, Mathias Krause <minipli@googlemail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "David S. Miller" <davem@davemloft.net>, Laura Abbott <labbott@fedoraproject.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, Jan Kara <jack@suse.cz>, Russell King <linux@armlinux.org.uk>, Michael Ellerman <mpe@ellerman.id.au>, Andrea Arcangeli <aarcange@redhat.com>, Fenghua Yu <fenghua.yu@intel.com>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Vitaly Wool <vitalywool@gmail.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Borislav Petkov <bp@suse.de>, Tony Luck <tony.luck@intel.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, sparclinux <sparclinux@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Thomas Gleixner <tglx@linutronix.de>, Peter Zijlstra <a.p.zijlstra@chello.nl>, "H. Peter Anvin" <hpa@zytor.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-2016-06-21 21:32 GMT+03:00 Rik van Riel <riel@redhat.com>:
-> On Tue, 2016-06-21 at 10:13 -0700, Kees Cook wrote:
->> On Tue, Jun 21, 2016 at 9:59 AM, Andy Lutomirski <luto@amacapital.net
->> > wrote:
->> >
->> > I'm tempted to explicitly disallow VM_NO_GUARD in the vmalloc
->> > range.
->> > It has no in-tree users for non-fixed addresses right now.
->> What about the lack of pre-range guard page? That seems like a
->> critical feature for this. :)
->
-> If VM_NO_GUARD is disallowed, and every vmalloc area has
-> a guard area behind it, then every subsequent vmalloc area
-> will have a guard page ahead of it.
->
-> I think disallowing VM_NO_GUARD will be all that is required.
->
+On Sun, Jul 10, 2016 at 8:03 AM, PaX Team <pageexec@freemail.hu> wrote:
+> i note that this analysis is also missing from this USERCOPY submission except
+> for stating what Kees assumed about USERCOPY (and apparently noone could be
+> bothered to read the original Kconfig help of it which clearly states that the
+> purpose is copy size checking, not some elaborate pointer validation, the latter
+> is an implementation detail only and is necessary to be able to derive the
+> underlying slab object's intended size).
 
-VM_NO_GUARD is a flag of vm_struct. But some vmalloc areas don't have
-vm_struct (see vm_map_ram())
-and don't have guard pages too. Once, vm_map_ram() had guard pages,
-but they were removed in
-248ac0e1943a ("mm/vmalloc: remove guard page from between vmap blocks")
-due to exhaustion of vmalloc space on 32-bits. I guess we can
-resurrect guard page on 64bits without any problems.
+I read the Kconfig text, but it's not entirely accurate. While size is
+being checked, it's all nonsense without also the address, so it's
+really an object checker. The original design intent may have been the
+slab size checks, but it grew beyond that (both within PaX and within
+Grsecurity which explicitly added the check for pointers into kernel
+text).
 
-AFAICS per-cpu vmap blocks also don't have guard pages. pcpu vmaps
-have vm_struct *without* VM_NO_GUARD, but
-don't actually have the guard pages. It seems to be a harmless bug,
-because pcpu vmaps use their own alloc/free paths
-(pcp_get_vm_areas()/pcpu_free_vm_areas())
-and just don't care about vm->flags content.
-Fortunately, pcpu_get_vm_areas() allocates from top of vmalloc, so the
-gap between pcpu vmap and regular vmalloc() should be huge.
+I'm just trying to explain as fully as possible what the resulting
+code does and why.
 
-> The only thing we may want to verify on the architectures that
-> we care about is that there is nothing mapped immediately before
-> the start of the vmalloc range, otherwise the first vmalloced
-> area will not have a guard page below it.
+> it's not pointer validation but bounds checking: you already know which memory
+> object the pointer is supposed to point to, you only check its bounds. if it was
+> an attacker controlled pointer then all this would be a pointless check of course,
+> trivial for an attacker to circumvent (and this is why it's not part of the
+> USERCOPY design).
+
+Agreed: but the pointer is being checked to attempt to figure out what
+KIND of object is being copied. It is part of the logic. If it helps
+people understand it more clearly, I can describe them as separate
+steps: identify the object type, then perform bounds checking of the
+size on that type.
+
+>> > yes, more bikeshedding will surely help, [...]
+>>
+>> Insulting and ridiculing a reviewer who explicitly qualified his comments with
+>> "one minor nit to pick" sure does not help upstream integration either.
 >
-> I suspect all the 64 bit architectures are fine in that regard,
-> with enormous gaps between kernel memory ranges.
+> sorry Ingo, but calling a spade a spade isn't insulting, at best it's exposing
+> some painful truth. you yourself used that term several times in the past, were
+> you insulting and ridiculing people then?
 >
-> --
-> All Rights Reversed.
+> as for the ad hominem that you displayed here and later, i hope that in the
+> future you will display the same professional conduct that you apparently expect
+> from others.
+
+There's a long history of misunderstanding and miscommunication
+(intentional or otherwise) by everyone on these topics. I'd love it if
+we can just side-step all of it, and try to stick as closely to the
+technical discussions as possible. Everyone involved in these
+discussions wants better security, even if we go about it in different
+ways. If anyone finds themselves feeling insulted, just try to let it
+go, and focus on the places where we can find productive common
+ground, remembering that any fighting just distracts from the more
+important issues at hand.
+
+> i'll voice my opinion when you guys are about to screw it up (as it happened in
+> the past and apparently history keeps repeating itself). if you don't want my
+> opinion then don't ask for it (in that case we'll write a blog at most ;).
+
+I am hugely interested in your involvement in these discussions:
+you're by far the most knowledgeable about them. You generally give
+very productive feedback, and for that I'm thankful. I prefer that to
+just saying something is wrong/broken without any actionable
+follow-up. :)
+
+>> > [...] like the renaming of .data..read_only to .data..ro_after_init which also
+>> > had nothing to do with init but everything to do with objects being conceptually
+>> > read-only...
+>>
+>> .data..ro_after_init objects get written to during bootup so it's conceptually
+>> quite confusing to name it "read-only" without any clear qualifiers.
+>>
+>> That it's named consistently with its role of "read-write before init and read
+>> only after init" on the other hand is not confusing at all. Not sure what your
+>> problem is with the new name.
 >
+> the new name reflects a complete misunderstanding of the PaX feature it was based
+> on (typical case of cargo cult security). in particular, the __read_only facility
+> in PaX is part of a defense mechanism that attempts to solve a specific problem
+> (like everything else) and that problem has nothing whatsoever to do with what
+> happens before/after the kernel init process. enforcing read-ony kernel memory at
+> the end of kernel initialization is an implementation detail only and wasn't even
+> true always (and still isn't true for kernel modules for example): in the linux 2.4
+> days PaX actually enforced read-only kernel memory properties in startup_32 already
+> but i relaxed that for the 2.6+ port as the maintenance cost (finding out and
+> handling new exceptional cases) wasn't worth it.
+
+Part of getting protections into upstream is doing them in ways that
+make them palatable for incremental work. As it happened, the
+read-after-init piece of the larger read-only attack surface reduction
+effort was small enough to make it in. As more work is done, we can
+continue to build on it.
+
+Making rodata read-only before mark_rodata() is part of my longer goal
+since other architectures (e.g. s390) already do this, and is
+technically the more correct thing to do: rodata should start its life
+read-only. It's a weird hack that it is delayed at all.
+
+> also naming things after their implementation is poor taste and can result in
+> even bigger problems down the line since as soon as the implementation changes,
+
+On the surface, I don't disagree, but as upstream is a large-scale
+collaborative effort, I tend to focus on what things are specifically
+critical, and naming isn't one of them. :)
+
+> you will have a flag day or have to keep a bad name. this is a lesson that the
+> REFCOUNT submission will learn too since the kernel's atomic*_t types (an
+> implementation detail) are used extensively for different purposes, instead of
+> using specialized types (kref is a good example of that).
+
+Right, and I think part of this is a failure of documentation and
+examples. As we make progress with REFCOUNT, we can learn about the
+best way to approach these kinds of larger tree-wide changes under the
+constraints of the existing upstream development process.
+
+> For .data..ro_after_init
+> the lesson will happen when you try to add back the remaining pieces from PaX,
+> such as module handling and not-always-const-in-the-C-sense objects and associated
+> accessors.
+
+Do you mean the rest of the KERNEXEC (hopefully I'm not confusing
+implementation names) code that uses pax_open/close_kernel()? I expect
+that to be a gradual addition too, and I'd love participation to get
+it and the constify plugin into the kernel.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
