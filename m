@@ -1,95 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:42 -0700
-Message-Id: <dac83682fc628d52e8a9167bd17215ba7914bac7.1468270393.git.luto@kernel.org>
+Date: Mon, 11 Jul 2016 13:53:43 -0700
+Message-Id: <7207ea4229bf55bbfad565f693f33151d9e7c006.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v5 09/32] x86/dumpstack: When OOPSing, rewind the stack before do_exit()
+Subject: [kernel-hardening] [PATCH v5 10/32] x86/dumpstack: Honor supplied @regs arg
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@amacapital.net>, Denys Vlasenko <dvlasenk@redhat.com>, Frederic Weisbecker <fweisbec@gmail.com>, "H . Peter Anvin" <hpa@zytor.com>, Peter Zijlstra <peterz@infradead.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If we call do_exit() with a clean stack, we greatly reduce the risk of
-recursive oopses due to stack overflow in do_exit, and we allow
-do_exit to work even if we OOPS from an IST stack.  The latter gives
-us a much better chance of surviving long enough after we detect a
-stack overflow to write out our logs.
+[cherry-picked from ef16dd0c2a523d2e3975bb1bea9f5727e3e7146f to
+ avoid tangling the trees too much.]
 
-Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
+The comment suggests that show_stack(NULL, NULL) should backtrace the
+current context, but the code doesn't match the comment. If regs are
+given, start the "Stack:" hexdump at regs->sp.
+
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
+Signed-off-by: Borislav Petkov <bp@suse.de>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: Brian Gerst <brgerst@gmail.com>
+Cc: Denys Vlasenko <dvlasenk@redhat.com>
+Cc: Frederic Weisbecker <fweisbec@gmail.com>
+Cc: H. Peter Anvin <hpa@zytor.com>
+Cc: Josh Poimboeuf <jpoimboe@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Link: http://lkml.kernel.org/r/1467671487-10344-2-git-send-email-bp@alien8.de
+Link: http://lkml.kernel.org/r/efcd79bf4106d61f1cd258c2caa87f3a0618eeac.1466036668.git.luto@kernel.org
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
 ---
- arch/x86/entry/entry_32.S   | 11 +++++++++++
- arch/x86/entry/entry_64.S   | 11 +++++++++++
- arch/x86/kernel/dumpstack.c | 10 +++++++++-
- 3 files changed, 31 insertions(+), 1 deletion(-)
+ arch/x86/kernel/dumpstack_32.c | 4 +++-
+ arch/x86/kernel/dumpstack_64.c | 4 +++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
 
-diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
-index 983e5d3a0d27..0b56666e6039 100644
---- a/arch/x86/entry/entry_32.S
-+++ b/arch/x86/entry/entry_32.S
-@@ -1153,3 +1153,14 @@ ENTRY(async_page_fault)
- 	jmp	error_code
- END(async_page_fault)
- #endif
-+
-+ENTRY(rewind_stack_do_exit)
-+	/* Prevent any naive code from trying to unwind to our caller. */
-+	xorl	%ebp, %ebp
-+
-+	movl	PER_CPU_VAR(cpu_current_top_of_stack), %esi
-+	leal	-TOP_OF_KERNEL_STACK_PADDING-PTREGS_SIZE(%esi), %esp
-+
-+	call	do_exit
-+1:	jmp 1b
-+END(rewind_stack_do_exit)
-diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 9ee0da1807ed..b846875aeea6 100644
---- a/arch/x86/entry/entry_64.S
-+++ b/arch/x86/entry/entry_64.S
-@@ -1423,3 +1423,14 @@ ENTRY(ignore_sysret)
- 	mov	$-ENOSYS, %eax
- 	sysret
- END(ignore_sysret)
-+
-+ENTRY(rewind_stack_do_exit)
-+	/* Prevent any naive code from trying to unwind to our caller. */
-+	xorl	%ebp, %ebp
-+
-+	movq	PER_CPU_VAR(cpu_current_top_of_stack), %rax
-+	leaq	-TOP_OF_KERNEL_STACK_PADDING-PTREGS_SIZE(%rax), %rsp
-+
-+	call	do_exit
-+1:	jmp 1b
-+END(rewind_stack_do_exit)
-diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
-index ef8017ca5ba9..4eefee06f6fd 100644
---- a/arch/x86/kernel/dumpstack.c
-+++ b/arch/x86/kernel/dumpstack.c
-@@ -226,6 +226,8 @@ unsigned long oops_begin(void)
- EXPORT_SYMBOL_GPL(oops_begin);
- NOKPROBE_SYMBOL(oops_begin);
+diff --git a/arch/x86/kernel/dumpstack_32.c b/arch/x86/kernel/dumpstack_32.c
+index fef917e79b9d..948d77da3881 100644
+--- a/arch/x86/kernel/dumpstack_32.c
++++ b/arch/x86/kernel/dumpstack_32.c
+@@ -96,7 +96,9 @@ show_stack_log_lvl(struct task_struct *task, struct pt_regs *regs,
+ 	int i;
  
-+void __noreturn rewind_stack_do_exit(int signr);
-+
- void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
- {
- 	if (regs && kexec_should_crash(current))
-@@ -247,7 +249,13 @@ void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
- 		panic("Fatal exception in interrupt");
- 	if (panic_on_oops)
- 		panic("Fatal exception");
--	do_exit(signr);
-+
-+	/*
-+	 * We're not going to return, but we might be on an IST stack or
-+	 * have very little stack space left.  Rewind the stack and kill
-+	 * the task.
-+	 */
-+	rewind_stack_do_exit(signr);
- }
- NOKPROBE_SYMBOL(oops_end);
- 
+ 	if (sp == NULL) {
+-		if (task)
++		if (regs)
++			sp = (unsigned long *)regs->sp;
++		else if (task)
+ 			sp = (unsigned long *)task->thread.sp;
+ 		else
+ 			sp = (unsigned long *)&sp;
+diff --git a/arch/x86/kernel/dumpstack_64.c b/arch/x86/kernel/dumpstack_64.c
+index d558a8a49016..a81e1ef73bf2 100644
+--- a/arch/x86/kernel/dumpstack_64.c
++++ b/arch/x86/kernel/dumpstack_64.c
+@@ -264,7 +264,9 @@ show_stack_log_lvl(struct task_struct *task, struct pt_regs *regs,
+ 	 * back trace for this cpu:
+ 	 */
+ 	if (sp == NULL) {
+-		if (task)
++		if (regs)
++			sp = (unsigned long *)regs->sp;
++		else if (task)
+ 			sp = (unsigned long *)task->thread.sp;
+ 		else
+ 			sp = (unsigned long *)&sp;
 -- 
 2.7.4
