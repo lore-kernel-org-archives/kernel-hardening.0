@@ -1,203 +1,279 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:33 -0700
-Message-Id: <cover.1468270393.git.luto@kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v5 00/32] virtually mapped stacks and thread_info cleanup
+Date: Mon, 11 Jul 2016 13:53:34 -0700
+Message-Id: <264af59a3060c2bc2a725cfc66a8fa68219d1c4a.1468270393.git.luto@kernel.org>
+In-Reply-To: <cover.1468270393.git.luto@kernel.org>
+References: <cover.1468270393.git.luto@kernel.org>
+In-Reply-To: <cover.1468270393.git.luto@kernel.org>
+References: <cover.1468270393.git.luto@kernel.org>
+Subject: [kernel-hardening] [PATCH v5 01/32] bluetooth: Switch SMP to crypto_cipher_encrypt_one()
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Marcel Holtmann <marcel@holtmann.org>, Gustavo Padovan <gustavo@padovan.org>, Johan Hedberg <johan.hedberg@gmail.com>, "David S. Miller" <davem@davemloft.net>, linux-bluetooth@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi all-
+SMP does ECB crypto on stack buffers.  This is complicated and
+fragile, and it will not work if the stack is virtually allocated.
 
-Since the dawn of time, a kernel stack overflow has been a real PITA
-to debug, has caused nondeterministic crashes some time after the
-actual overflow, and has generally been easy to exploit for root.
+Switch to the crypto_cipher interface, which is simpler and safer.
 
-With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
-that enable it (just x86 for now) get virtually mapped stacks with
-guard pages.  This causes reliable faults when the stack overflows.
+Cc: Marcel Holtmann <marcel@holtmann.org>
+Cc: Gustavo Padovan <gustavo@padovan.org>
+Cc: Johan Hedberg <johan.hedberg@gmail.com>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: linux-bluetooth@vger.kernel.org
+Cc: netdev@vger.kernel.org
+Acked-by: Herbert Xu <herbert@gondor.apana.org.au>
+Acked-and-tested-by: Johan Hedberg <johan.hedberg@intel.com>
+Signed-off-by: Andy Lutomirski <luto@kernel.org>
+---
+ net/bluetooth/smp.c | 67 ++++++++++++++++++++++-------------------------------
+ 1 file changed, 28 insertions(+), 39 deletions(-)
 
-If the arch implements it well, we get a nice OOPS on stack overflow
-(as opposed to panicing directly or otherwise exploding badly).  On
-x86, the OOPS is nice, has a usable call trace, and the overflowing
-task is killed cleanly.
-
-This series (starting with v4) also extensively cleans up
-thread_info.  thread_info has been partially redundant with
-thread_struct for a long time -- both are places for arch code to
-add additional per-task variables.  thread_struct is much cleaner:
-it's always in task_struct, and there's nothing particularly magical
-about it.  So this series contains a bunch of cleanups on x86 to
-move almost everything from thread_info to thread_struct (which,
-even by itself, deletes more code than it adds) and to remove x86's
-dependence on thread_info's position on the stack.  Then it opts x86
-into a new config option THREAD_INFO_IN_TASK to get rid of
-arch-specific thread_info entirely and simply embed a defanged
-thread_info (containing only flags) and 'int cpu' into task_struct.
-
-Once thread_info stops being magical, there's another benefit: we
-can free the thread stack as soon as the task is dead (without
-waiting for RCU) and then, if vmapped stacks are in use, cache the
-entire stack for reuse on the same cpu.
-
-This seems to be an overall speedup of about 0.5-1 µs per
-pthread_create/join in a simple test -- a percpu cache of vmalloced
-stacks appears to be a bit faster than a high-order stack
-allocation, at least when the cache hits.  (I expect that workloads
-with a low cache hit rate are likely to be dominated by other
-effects anyway.)
-
-This does not address interrupt stacks.
-
-It's worth noting that s390 has an arch-specific gcc feature that
-detects stack overflows by adjusting function prologues.  Arches
-with features like that may wish to avoid using vmapped stacks to
-minimize the performance hit.
-
-Known issues: - tcp md5, rxkad, virtio_net, and virtio_console will
-have issues.  Eric Dumazet has a patch for tcp md5, and Michael
-Tsirkin says he'll fix virtio_net and virtio_console.  rxkad will be
-fixed via net-next.
-
-Changes from v4:
- - Fix kthread (Oleg)
- - Tidy up some changelongs and fold some patches (Borislav, Josh)
- - Add "x86/mm/64: In vmalloc_fault(), use CR3 instead of current->active_mm"
- - Make VMAP_STACK depend on !KASAN (not worth waiting for the fix, I think)
-
-Changes from v3:
- - Minor cleanups
- - Rebased onto Linus' tree
- - All the thread_info stuff is new
-
-Changes from v2:
- - Delete kerne_unmap_pages_in_pgd rather than hardening it (Borislav)
- - Fix sub-page stack accounting better (Josh)
-
-Changes from v1:
- - Fix rewind_stack_and_do_exit (Josh)
- - Fix deadlock under load
- - Clean up generic stack vmalloc code
- - Many other minor fixes
-
-Andy Lutomirski (28):
-  bluetooth: Switch SMP to crypto_cipher_encrypt_one()
-  x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
-  x86/mm: Remove kernel_unmap_pages_in_pgd() and
-    efi_cleanup_page_tables()
-  mm: Track NR_KERNEL_STACK in KiB instead of number of stacks
-  mm: Fix memcg stack accounting for sub-page stacks
-  fork: Add generic vmalloced stack support
-  dma-api: Teach the "DMA-from-stack" check about vmapped stacks
-  x86/dumpstack: When OOPSing, rewind the stack before do_exit()
-  x86/dumpstack: Honor supplied @regs arg
-  x86/dumpstack: Try harder to get a call trace on stack overflow
-  x86/dumpstack/64: Handle faults when printing the "Stack:" part of an
-    OOPS
-  x86/mm/64: In vmalloc_fault(), use CR3 instead of current->active_mm
-  x86/mm/64: Enable vmapped stacks
-  x86/mm: Improve stack-overflow #PF handling
-  x86: Move uaccess_err and sig_on_uaccess_err to thread_struct
-  x86: Move addr_limit to thread_struct
-  signal: Consolidate {TS,TLF}_RESTORE_SIGMASK code
-  x86/smp: Remove stack_smp_processor_id()
-  x86/smp: Remove unnecessary initialization of thread_info::cpu
-  x86/asm: Move 'status' from struct thread_info to struct thread_struct
-  kdb: Use task_cpu() instead of task_thread_info()->cpu
-  printk: When dumping regs, show the stack, not thread_info
-  sched: Allow putting thread_info into task_struct
-  x86: Move thread_info into task_struct
-  sched: Add try_get_task_stack() and put_task_stack()
-  x86/dumpstack: Pin the target stack in save_stack_trace_tsk()
-  sched: Free the stack early if CONFIG_THREAD_INFO_IN_TASK
-  fork: Cache two thread stacks per cpu if CONFIG_VMAP_STACK is set
-
-Ingo Molnar (1):
-  x86/mm/hotplug: Don't remove PGD entries in remove_pagetable()
-
-Linus Torvalds (2):
-  x86/entry: Get rid of pt_regs_to_thread_info()
-  um: Stop conflating task_struct::stack with thread_info
-
-Oleg Nesterov (1):
-  kthread: to_live_kthread() needs try_get_task_stack()
-
- arch/Kconfig                              |  33 ++++++
- arch/alpha/include/asm/thread_info.h      |  27 -----
- arch/ia64/include/asm/thread_info.h       |  30 +----
- arch/microblaze/include/asm/thread_info.h |  27 -----
- arch/powerpc/include/asm/thread_info.h    |  25 -----
- arch/sh/include/asm/thread_info.h         |  26 -----
- arch/sparc/include/asm/thread_info_64.h   |  24 ----
- arch/tile/include/asm/thread_info.h       |  27 -----
- arch/x86/Kconfig                          |   2 +
- arch/x86/entry/common.c                   |  25 ++---
- arch/x86/entry/entry_32.S                 |  11 ++
- arch/x86/entry/entry_64.S                 |  20 +++-
- arch/x86/entry/vsyscall/vsyscall_64.c     |   6 +-
- arch/x86/include/asm/checksum_32.h        |   3 +-
- arch/x86/include/asm/cpu.h                |   1 -
- arch/x86/include/asm/efi.h                |   1 -
- arch/x86/include/asm/pgtable_types.h      |   2 -
- arch/x86/include/asm/processor.h          |  32 ++++--
- arch/x86/include/asm/smp.h                |   6 -
- arch/x86/include/asm/switch_to.h          |  34 +++++-
- arch/x86/include/asm/syscall.h            |  23 +---
- arch/x86/include/asm/thread_info.h        | 102 +----------------
- arch/x86/include/asm/traps.h              |   6 +
- arch/x86/include/asm/uaccess.h            |  10 +-
- arch/x86/kernel/asm-offsets.c             |   5 +-
- arch/x86/kernel/cpu/common.c              |   2 +-
- arch/x86/kernel/dumpstack.c               |  20 +++-
- arch/x86/kernel/dumpstack_32.c            |   4 +-
- arch/x86/kernel/dumpstack_64.c            |  16 ++-
- arch/x86/kernel/fpu/init.c                |   1 -
- arch/x86/kernel/irq_64.c                  |   3 +-
- arch/x86/kernel/process.c                 |   6 +-
- arch/x86/kernel/process_64.c              |   4 +-
- arch/x86/kernel/ptrace.c                  |   2 +-
- arch/x86/kernel/smpboot.c                 |   1 -
- arch/x86/kernel/stacktrace.c              |   5 +
- arch/x86/kernel/traps.c                   |  62 +++++++++++
- arch/x86/lib/copy_user_64.S               |   8 +-
- arch/x86/lib/csum-wrappers_64.c           |   1 +
- arch/x86/lib/getuser.S                    |  20 ++--
- arch/x86/lib/putuser.S                    |  10 +-
- arch/x86/lib/usercopy_64.c                |   2 +-
- arch/x86/mm/extable.c                     |   2 +-
- arch/x86/mm/fault.c                       |  38 ++++++-
- arch/x86/mm/init_64.c                     |  27 -----
- arch/x86/mm/pageattr.c                    |  37 +------
- arch/x86/mm/tlb.c                         |  15 +++
- arch/x86/platform/efi/efi.c               |   2 -
- arch/x86/platform/efi/efi_32.c            |   3 -
- arch/x86/platform/efi/efi_64.c            |   5 -
- arch/x86/um/ptrace_32.c                   |   8 +-
- drivers/base/node.c                       |   3 +-
- drivers/pnp/isapnp/proc.c                 |   2 +-
- fs/proc/meminfo.c                         |   2 +-
- include/linux/init_task.h                 |  11 ++
- include/linux/kdb.h                       |   2 +-
- include/linux/memcontrol.h                |   2 +-
- include/linux/mmzone.h                    |   2 +-
- include/linux/sched.h                     | 144 +++++++++++++++++++++++-
- include/linux/thread_info.h               |  56 +++-------
- init/Kconfig                              |  10 ++
- init/init_task.c                          |   7 +-
- kernel/fork.c                             | 177 ++++++++++++++++++++++++++----
- kernel/kthread.c                          |   8 +-
- kernel/printk/printk.c                    |   5 +-
- kernel/sched/core.c                       |   4 +
- kernel/sched/sched.h                      |   4 +
- lib/bitmap.c                              |   2 +-
- lib/dma-debug.c                           |  39 ++++++-
- mm/memcontrol.c                           |   2 +-
- mm/page_alloc.c                           |   3 +-
- net/bluetooth/smp.c                       |  67 +++++------
- 72 files changed, 767 insertions(+), 597 deletions(-)
-
+diff --git a/net/bluetooth/smp.c b/net/bluetooth/smp.c
+index 50976a6481f3..4c1a16a96ae5 100644
+--- a/net/bluetooth/smp.c
++++ b/net/bluetooth/smp.c
+@@ -22,9 +22,9 @@
+ 
+ #include <linux/debugfs.h>
+ #include <linux/scatterlist.h>
++#include <linux/crypto.h>
+ #include <crypto/b128ops.h>
+ #include <crypto/hash.h>
+-#include <crypto/skcipher.h>
+ 
+ #include <net/bluetooth/bluetooth.h>
+ #include <net/bluetooth/hci_core.h>
+@@ -88,7 +88,7 @@ struct smp_dev {
+ 	u8			min_key_size;
+ 	u8			max_key_size;
+ 
+-	struct crypto_skcipher	*tfm_aes;
++	struct crypto_cipher	*tfm_aes;
+ 	struct crypto_shash	*tfm_cmac;
+ };
+ 
+@@ -127,7 +127,7 @@ struct smp_chan {
+ 	u8			dhkey[32];
+ 	u8			mackey[16];
+ 
+-	struct crypto_skcipher	*tfm_aes;
++	struct crypto_cipher	*tfm_aes;
+ 	struct crypto_shash	*tfm_cmac;
+ };
+ 
+@@ -361,10 +361,8 @@ static int smp_h6(struct crypto_shash *tfm_cmac, const u8 w[16],
+  * s1 and ah.
+  */
+ 
+-static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
++static int smp_e(struct crypto_cipher *tfm, const u8 *k, u8 *r)
+ {
+-	SKCIPHER_REQUEST_ON_STACK(req, tfm);
+-	struct scatterlist sg;
+ 	uint8_t tmp[16], data[16];
+ 	int err;
+ 
+@@ -378,7 +376,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
+ 	/* The most significant octet of key corresponds to k[0] */
+ 	swap_buf(k, tmp, 16);
+ 
+-	err = crypto_skcipher_setkey(tfm, tmp, 16);
++	err = crypto_cipher_setkey(tfm, tmp, 16);
+ 	if (err) {
+ 		BT_ERR("cipher setkey failed: %d", err);
+ 		return err;
+@@ -387,16 +385,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
+ 	/* Most significant octet of plaintextData corresponds to data[0] */
+ 	swap_buf(r, data, 16);
+ 
+-	sg_init_one(&sg, data, 16);
+-
+-	skcipher_request_set_tfm(req, tfm);
+-	skcipher_request_set_callback(req, 0, NULL, NULL);
+-	skcipher_request_set_crypt(req, &sg, &sg, 16, NULL);
+-
+-	err = crypto_skcipher_encrypt(req);
+-	skcipher_request_zero(req);
+-	if (err)
+-		BT_ERR("Encrypt data error %d", err);
++	crypto_cipher_encrypt_one(tfm, data, data);
+ 
+ 	/* Most significant octet of encryptedData corresponds to data[0] */
+ 	swap_buf(data, r, 16);
+@@ -406,7 +395,7 @@ static int smp_e(struct crypto_skcipher *tfm, const u8 *k, u8 *r)
+ 	return err;
+ }
+ 
+-static int smp_c1(struct crypto_skcipher *tfm_aes, const u8 k[16],
++static int smp_c1(struct crypto_cipher *tfm_aes, const u8 k[16],
+ 		  const u8 r[16], const u8 preq[7], const u8 pres[7], u8 _iat,
+ 		  const bdaddr_t *ia, u8 _rat, const bdaddr_t *ra, u8 res[16])
+ {
+@@ -455,7 +444,7 @@ static int smp_c1(struct crypto_skcipher *tfm_aes, const u8 k[16],
+ 	return err;
+ }
+ 
+-static int smp_s1(struct crypto_skcipher *tfm_aes, const u8 k[16],
++static int smp_s1(struct crypto_cipher *tfm_aes, const u8 k[16],
+ 		  const u8 r1[16], const u8 r2[16], u8 _r[16])
+ {
+ 	int err;
+@@ -471,7 +460,7 @@ static int smp_s1(struct crypto_skcipher *tfm_aes, const u8 k[16],
+ 	return err;
+ }
+ 
+-static int smp_ah(struct crypto_skcipher *tfm, const u8 irk[16],
++static int smp_ah(struct crypto_cipher *tfm, const u8 irk[16],
+ 		  const u8 r[3], u8 res[3])
+ {
+ 	u8 _res[16];
+@@ -759,7 +748,7 @@ static void smp_chan_destroy(struct l2cap_conn *conn)
+ 	kzfree(smp->slave_csrk);
+ 	kzfree(smp->link_key);
+ 
+-	crypto_free_skcipher(smp->tfm_aes);
++	crypto_free_cipher(smp->tfm_aes);
+ 	crypto_free_shash(smp->tfm_cmac);
+ 
+ 	/* Ensure that we don't leave any debug key around if debug key
+@@ -1359,9 +1348,9 @@ static struct smp_chan *smp_chan_create(struct l2cap_conn *conn)
+ 	if (!smp)
+ 		return NULL;
+ 
+-	smp->tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
++	smp->tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
+ 	if (IS_ERR(smp->tfm_aes)) {
+-		BT_ERR("Unable to create ECB crypto context");
++		BT_ERR("Unable to create AES crypto context");
+ 		kzfree(smp);
+ 		return NULL;
+ 	}
+@@ -1369,7 +1358,7 @@ static struct smp_chan *smp_chan_create(struct l2cap_conn *conn)
+ 	smp->tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, 0);
+ 	if (IS_ERR(smp->tfm_cmac)) {
+ 		BT_ERR("Unable to create CMAC crypto context");
+-		crypto_free_skcipher(smp->tfm_aes);
++		crypto_free_cipher(smp->tfm_aes);
+ 		kzfree(smp);
+ 		return NULL;
+ 	}
+@@ -3120,7 +3109,7 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
+ {
+ 	struct l2cap_chan *chan;
+ 	struct smp_dev *smp;
+-	struct crypto_skcipher *tfm_aes;
++	struct crypto_cipher *tfm_aes;
+ 	struct crypto_shash *tfm_cmac;
+ 
+ 	if (cid == L2CAP_CID_SMP_BREDR) {
+@@ -3132,9 +3121,9 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
+ 	if (!smp)
+ 		return ERR_PTR(-ENOMEM);
+ 
+-	tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
++	tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
+ 	if (IS_ERR(tfm_aes)) {
+-		BT_ERR("Unable to create ECB crypto context");
++		BT_ERR("Unable to create AES crypto context");
+ 		kzfree(smp);
+ 		return ERR_CAST(tfm_aes);
+ 	}
+@@ -3142,7 +3131,7 @@ static struct l2cap_chan *smp_add_cid(struct hci_dev *hdev, u16 cid)
+ 	tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, 0);
+ 	if (IS_ERR(tfm_cmac)) {
+ 		BT_ERR("Unable to create CMAC crypto context");
+-		crypto_free_skcipher(tfm_aes);
++		crypto_free_cipher(tfm_aes);
+ 		kzfree(smp);
+ 		return ERR_CAST(tfm_cmac);
+ 	}
+@@ -3156,7 +3145,7 @@ create_chan:
+ 	chan = l2cap_chan_create();
+ 	if (!chan) {
+ 		if (smp) {
+-			crypto_free_skcipher(smp->tfm_aes);
++			crypto_free_cipher(smp->tfm_aes);
+ 			crypto_free_shash(smp->tfm_cmac);
+ 			kzfree(smp);
+ 		}
+@@ -3203,7 +3192,7 @@ static void smp_del_chan(struct l2cap_chan *chan)
+ 	smp = chan->data;
+ 	if (smp) {
+ 		chan->data = NULL;
+-		crypto_free_skcipher(smp->tfm_aes);
++		crypto_free_cipher(smp->tfm_aes);
+ 		crypto_free_shash(smp->tfm_cmac);
+ 		kzfree(smp);
+ 	}
+@@ -3440,7 +3429,7 @@ void smp_unregister(struct hci_dev *hdev)
+ 
+ #if IS_ENABLED(CONFIG_BT_SELFTEST_SMP)
+ 
+-static int __init test_ah(struct crypto_skcipher *tfm_aes)
++static int __init test_ah(struct crypto_cipher *tfm_aes)
+ {
+ 	const u8 irk[16] = {
+ 			0x9b, 0x7d, 0x39, 0x0a, 0xa6, 0x10, 0x10, 0x34,
+@@ -3460,7 +3449,7 @@ static int __init test_ah(struct crypto_skcipher *tfm_aes)
+ 	return 0;
+ }
+ 
+-static int __init test_c1(struct crypto_skcipher *tfm_aes)
++static int __init test_c1(struct crypto_cipher *tfm_aes)
+ {
+ 	const u8 k[16] = {
+ 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+@@ -3490,7 +3479,7 @@ static int __init test_c1(struct crypto_skcipher *tfm_aes)
+ 	return 0;
+ }
+ 
+-static int __init test_s1(struct crypto_skcipher *tfm_aes)
++static int __init test_s1(struct crypto_cipher *tfm_aes)
+ {
+ 	const u8 k[16] = {
+ 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+@@ -3686,7 +3675,7 @@ static const struct file_operations test_smp_fops = {
+ 	.llseek		= default_llseek,
+ };
+ 
+-static int __init run_selftests(struct crypto_skcipher *tfm_aes,
++static int __init run_selftests(struct crypto_cipher *tfm_aes,
+ 				struct crypto_shash *tfm_cmac)
+ {
+ 	ktime_t calltime, delta, rettime;
+@@ -3764,27 +3753,27 @@ done:
+ 
+ int __init bt_selftest_smp(void)
+ {
+-	struct crypto_skcipher *tfm_aes;
++	struct crypto_cipher *tfm_aes;
+ 	struct crypto_shash *tfm_cmac;
+ 	int err;
+ 
+-	tfm_aes = crypto_alloc_skcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
++	tfm_aes = crypto_alloc_cipher("aes", 0, CRYPTO_ALG_ASYNC);
+ 	if (IS_ERR(tfm_aes)) {
+-		BT_ERR("Unable to create ECB crypto context");
++		BT_ERR("Unable to create AES crypto context");
+ 		return PTR_ERR(tfm_aes);
+ 	}
+ 
+ 	tfm_cmac = crypto_alloc_shash("cmac(aes)", 0, CRYPTO_ALG_ASYNC);
+ 	if (IS_ERR(tfm_cmac)) {
+ 		BT_ERR("Unable to create CMAC crypto context");
+-		crypto_free_skcipher(tfm_aes);
++		crypto_free_cipher(tfm_aes);
+ 		return PTR_ERR(tfm_cmac);
+ 	}
+ 
+ 	err = run_selftests(tfm_aes, tfm_cmac);
+ 
+ 	crypto_free_shash(tfm_cmac);
+-	crypto_free_skcipher(tfm_aes);
++	crypto_free_cipher(tfm_aes);
+ 
+ 	return err;
+ }
 -- 
 2.7.4
