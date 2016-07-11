@@ -1,107 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:48 -0700
-Message-Id: <6ec969dbe40e32a004d4ef6da623bab4881411f7.1468270393.git.luto@kernel.org>
+Date: Mon, 11 Jul 2016 13:53:41 -0700
+Message-Id: <4a1d5fa16a28b32509ece3611690be48a8746778.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v5 15/32] x86/mm: Improve stack-overflow #PF handling
+Subject: [kernel-hardening] [PATCH v5 08/32] dma-api: Teach the "DMA-from-stack" check about vmapped stacks
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Arnd Bergmann <arnd@arndb.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If we get a page fault indicating kernel stack overflow, invoke
-handle_stack_overflow().  To prevent us from overflowing the stack
-again while handling the overflow (because we are likely to have
-very little stack space left), call handle_stack_overflow() on the
-double-fault stack
+If we're using CONFIG_VMAP_STACK and we manage to point an sg entry
+at the stack, then either the sg page will be in highmem or sg_virt
+will return the direct-map alias.  In neither case will the existing
+check_for_stack() implementation realize that it's a stack page.
 
+Fix it by explicitly checking for stack pages.
+
+This has no effect by itself.  It's broken out for ease of review.
+
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Arnd Bergmann <arnd@arndb.de>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/x86/include/asm/traps.h |  6 ++++++
- arch/x86/kernel/traps.c      |  6 +++---
- arch/x86/mm/fault.c          | 34 ++++++++++++++++++++++++++++++++++
- 3 files changed, 43 insertions(+), 3 deletions(-)
+ lib/dma-debug.c | 39 +++++++++++++++++++++++++++++++++------
+ 1 file changed, 33 insertions(+), 6 deletions(-)
 
-diff --git a/arch/x86/include/asm/traps.h b/arch/x86/include/asm/traps.h
-index c3496619740a..01fd0a7f48cd 100644
---- a/arch/x86/include/asm/traps.h
-+++ b/arch/x86/include/asm/traps.h
-@@ -117,6 +117,12 @@ extern void ist_exit(struct pt_regs *regs);
- extern void ist_begin_non_atomic(struct pt_regs *regs);
- extern void ist_end_non_atomic(void);
+diff --git a/lib/dma-debug.c b/lib/dma-debug.c
+index 51a76af25c66..5b2e63cba90e 100644
+--- a/lib/dma-debug.c
++++ b/lib/dma-debug.c
+@@ -22,6 +22,7 @@
+ #include <linux/stacktrace.h>
+ #include <linux/dma-debug.h>
+ #include <linux/spinlock.h>
++#include <linux/vmalloc.h>
+ #include <linux/debugfs.h>
+ #include <linux/uaccess.h>
+ #include <linux/export.h>
+@@ -1162,11 +1163,35 @@ static void check_unmap(struct dma_debug_entry *ref)
+ 	put_hash_bucket(bucket, &flags);
+ }
  
-+#ifdef CONFIG_VMAP_STACK
-+void __noreturn handle_stack_overflow(const char *message,
-+				      struct pt_regs *regs,
-+				      unsigned long fault_address);
-+#endif
-+
- /* Interrupts/Exceptions */
- enum {
- 	X86_TRAP_DE = 0,	/*  0, Divide-by-zero */
-diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
-index f0345284c30b..33d4e7629a42 100644
---- a/arch/x86/kernel/traps.c
-+++ b/arch/x86/kernel/traps.c
-@@ -293,9 +293,9 @@ DO_ERROR(X86_TRAP_SS,     SIGBUS,  "stack segment",		stack_segment)
- DO_ERROR(X86_TRAP_AC,     SIGBUS,  "alignment check",		alignment_check)
- 
- #ifdef CONFIG_VMAP_STACK
--static void __noreturn handle_stack_overflow(const char *message,
--					     struct pt_regs *regs,
--					     unsigned long fault_address)
-+__visible void __noreturn handle_stack_overflow(const char *message,
-+						struct pt_regs *regs,
-+						unsigned long fault_address)
+-static void check_for_stack(struct device *dev, void *addr)
++static void check_for_stack(struct device *dev,
++			    struct page *page, size_t offset)
  {
- 	printk(KERN_EMERG "BUG: stack guard page was hit at %p (stack is %p..%p)\n",
- 		 (void *)fault_address, current->stack,
-diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
-index ca44e2e7fd00..76c58fdcfb29 100644
---- a/arch/x86/mm/fault.c
-+++ b/arch/x86/mm/fault.c
-@@ -753,6 +753,40 @@ no_context(struct pt_regs *regs, unsigned long error_code,
- 		return;
+-	if (object_is_on_stack(addr))
+-		err_printk(dev, NULL, "DMA-API: device driver maps memory from "
+-				"stack [addr=%p]\n", addr);
++	void *addr;
++	struct vm_struct *stack_vm_area = task_stack_vm_area(current);
++
++	if (!stack_vm_area) {
++		/* Stack is direct-mapped. */
++		if (PageHighMem(page))
++			return;
++		addr = page_address(page) + offset;
++		if (object_is_on_stack(addr))
++			err_printk(dev, NULL, "DMA-API: device driver maps memory from stack [addr=%p]\n",
++				   addr);
++	} else {
++		/* Stack is vmalloced. */
++		int i;
++
++		for (i = 0; i < stack_vm_area->nr_pages; i++) {
++			if (page != stack_vm_area->pages[i])
++				continue;
++
++			addr = (u8 *)current->stack + i * PAGE_SIZE +
++				offset;
++			err_printk(dev, NULL, "DMA-API: device driver maps memory from stack [probable addr=%p]\n",
++				   addr);
++			break;
++		}
++	}
+ }
+ 
+ static inline bool overlap(void *addr, unsigned long len, void *start, void *end)
+@@ -1289,10 +1314,11 @@ void debug_dma_map_page(struct device *dev, struct page *page, size_t offset,
+ 	if (map_single)
+ 		entry->type = dma_debug_single;
+ 
++	check_for_stack(dev, page, offset);
++
+ 	if (!PageHighMem(page)) {
+ 		void *addr = page_address(page) + offset;
+ 
+-		check_for_stack(dev, addr);
+ 		check_for_illegal_area(dev, addr, size);
  	}
  
-+#ifdef CONFIG_VMAP_STACK
-+	/*
-+	 * Stack overflow?  During boot, we can fault near the initial
-+	 * stack in the direct map, but that's not an overflow -- check
-+	 * that we're in vmalloc space to avoid this.
-+	 */
-+	if (is_vmalloc_addr((void *)address) &&
-+	    (((unsigned long)tsk->stack - 1 - address < PAGE_SIZE) ||
-+	     address - ((unsigned long)tsk->stack + THREAD_SIZE) < PAGE_SIZE)) {
-+		register void *__sp asm("rsp");
-+		unsigned long stack =
-+			this_cpu_read(orig_ist.ist[DOUBLEFAULT_STACK]) -
-+			sizeof(void *);
-+		/*
-+		 * We're likely to be running with very little stack space
-+		 * left.  It's plausible that we'd hit this condition but
-+		 * double-fault even before we get this far, in which case
-+		 * we're fine: the double-fault handler will deal with it.
-+		 *
-+		 * We don't want to make it all the way into the oops code
-+		 * and then double-fault, though, because we're likely to
-+		 * break the console driver and lose most of the stack dump.
-+		 */
-+		asm volatile ("movq %[stack], %%rsp\n\t"
-+			      "call handle_stack_overflow\n\t"
-+			      "1: jmp 1b"
-+			      : "+r" (__sp)
-+			      : "D" ("kernel stack overflow (page fault)"),
-+				"S" (regs), "d" (address),
-+				[stack] "rm" (stack));
-+		unreachable();
-+	}
-+#endif
+@@ -1384,8 +1410,9 @@ void debug_dma_map_sg(struct device *dev, struct scatterlist *sg,
+ 		entry->sg_call_ents   = nents;
+ 		entry->sg_mapped_ents = mapped_ents;
+ 
++		check_for_stack(dev, sg_page(s), s->offset);
 +
- 	/*
- 	 * 32-bit:
- 	 *
+ 		if (!PageHighMem(sg_page(s))) {
+-			check_for_stack(dev, sg_virt(s));
+ 			check_for_illegal_area(dev, sg_virt(s), sg_dma_len(s));
+ 		}
+ 
 -- 
 2.7.4
