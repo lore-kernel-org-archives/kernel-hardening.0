@@ -1,287 +1,365 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:40 -0700
-Message-Id: <51f37059777910f989486657d1e27ded4c7edad2.1468270393.git.luto@kernel.org>
+Date: Mon, 11 Jul 2016 13:53:50 -0700
+Message-Id: <2a53fd4c1f6c0e1f71d01ef46372df7f99edc4c2.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v5 07/32] fork: Add generic vmalloced stack support
+Subject: [kernel-hardening] [PATCH v5 17/32] x86: Move addr_limit to thread_struct
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Oleg Nesterov <oleg@redhat.com>
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-If CONFIG_VMAP_STACK is selected, kernel stacks are allocated with
-vmalloc_node.
+thread_info is a legacy mess.  To prepare for its partial removal,
+move addr_limit out.
 
-grsecurity has had a similar feature (called
-GRKERNSEC_KSTACKOVERFLOW) for a long time.
+As an added benefit, this way is simpler.
 
-Cc: Oleg Nesterov <oleg@redhat.com>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/Kconfig                        | 33 +++++++++++++
- arch/ia64/include/asm/thread_info.h |  2 +-
- include/linux/sched.h               | 15 ++++++
- kernel/fork.c                       | 96 +++++++++++++++++++++++++++++--------
- 4 files changed, 125 insertions(+), 21 deletions(-)
+ arch/x86/include/asm/checksum_32.h |  3 +--
+ arch/x86/include/asm/processor.h   | 17 ++++++++++-------
+ arch/x86/include/asm/thread_info.h |  7 -------
+ arch/x86/include/asm/uaccess.h     |  6 +++---
+ arch/x86/kernel/asm-offsets.c      |  4 +++-
+ arch/x86/lib/copy_user_64.S        |  8 ++++----
+ arch/x86/lib/csum-wrappers_64.c    |  1 +
+ arch/x86/lib/getuser.S             | 20 ++++++++++----------
+ arch/x86/lib/putuser.S             | 10 +++++-----
+ arch/x86/lib/usercopy_64.c         |  2 +-
+ drivers/pnp/isapnp/proc.c          |  2 +-
+ lib/bitmap.c                       |  2 +-
+ 12 files changed, 40 insertions(+), 42 deletions(-)
 
-diff --git a/arch/Kconfig b/arch/Kconfig
-index 15996290fed4..14398fcf8292 100644
---- a/arch/Kconfig
-+++ b/arch/Kconfig
-@@ -661,4 +661,37 @@ config ARCH_NO_COHERENT_DMA_MMAP
- config CPU_NO_EFFICIENT_FFS
- 	def_bool n
+diff --git a/arch/x86/include/asm/checksum_32.h b/arch/x86/include/asm/checksum_32.h
+index 532f85e6651f..7b53743ed267 100644
+--- a/arch/x86/include/asm/checksum_32.h
++++ b/arch/x86/include/asm/checksum_32.h
+@@ -2,8 +2,7 @@
+ #define _ASM_X86_CHECKSUM_32_H
  
-+config HAVE_ARCH_VMAP_STACK
-+	def_bool n
-+	help
-+	  An arch should select this symbol if it can support kernel stacks
-+	  in vmalloc space.  This means:
-+
-+	  - vmalloc space must be large enough to hold many kernel stacks.
-+	    This may rule out many 32-bit architectures.
-+
-+	  - Stacks in vmalloc space need to work reliably.  For example, if
-+	    vmap page tables are created on demand, either this mechanism
-+	    needs to work while the stack points to a virtual address with
-+	    unpopulated page tables or arch code (switch_to and switch_mm,
-+	    most likely) needs to ensure that the stack's page table entries
-+	    are populated before running on a possibly unpopulated stack.
-+
-+	  - If the stack overflows into a guard page, something reasonable
-+	    should happen.  The definition of "reasonable" is flexible, but
-+	    instantly rebooting without logging anything would be unfriendly.
-+
-+config VMAP_STACK
-+	bool "Use a virtually-mapped stack"
-+	depends on HAVE_ARCH_VMAP_STACK && !KASAN
-+	---help---
-+	  Enable this if you want the use virtually-mapped kernel stacks
-+	  with guard pages.  This causes kernel stack overflows to be
-+	  caught immediately rather than causing difficult-to-diagnose
-+	  corruption.
-+
-+	  This is presently incompatible with KASAN because KASAN expects
-+	  the stack to map directly to the KASAN shadow map using a formula
-+	  that is incorrect if the stack is in vmalloc space.
-+
- source "kernel/gcov/Kconfig"
-diff --git a/arch/ia64/include/asm/thread_info.h b/arch/ia64/include/asm/thread_info.h
-index d1212b84fb83..f0a72e98e5a4 100644
---- a/arch/ia64/include/asm/thread_info.h
-+++ b/arch/ia64/include/asm/thread_info.h
-@@ -56,7 +56,7 @@ struct thread_info {
- #define alloc_thread_stack_node(tsk, node)	((unsigned long *) 0)
- #define task_thread_info(tsk)	((struct thread_info *) 0)
- #endif
--#define free_thread_stack(ti)	/* nothing */
-+#define free_thread_stack(tsk)	/* nothing */
- #define task_stack_page(tsk)	((void *)(tsk))
+ #include <linux/in6.h>
+-
+-#include <asm/uaccess.h>
++#include <linux/uaccess.h>
  
- #define __HAVE_THREAD_FUNCTIONS
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 253538f29ade..26869dba21f1 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1918,6 +1918,9 @@ struct task_struct {
- #ifdef CONFIG_MMU
- 	struct task_struct *oom_reaper_list;
- #endif
-+#ifdef CONFIG_VMAP_STACK
-+	struct vm_struct *stack_vm_area;
-+#endif
- /* CPU-specific state of this task */
- 	struct thread_struct thread;
  /*
-@@ -1934,6 +1937,18 @@ extern int arch_task_struct_size __read_mostly;
- # define arch_task_struct_size (sizeof(struct task_struct))
+  * computes the checksum of a memory block at buff, length len,
+diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+index f53ae57bd985..a2e20d6d01fe 100644
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -371,6 +371,10 @@ extern unsigned int xstate_size;
+ 
+ struct perf_event;
+ 
++typedef struct {
++	unsigned long		seg;
++} mm_segment_t;
++
+ struct thread_struct {
+ 	/* Cached TLS descriptors: */
+ 	struct desc_struct	tls_array[GDT_ENTRY_TLS_ENTRIES];
+@@ -419,6 +423,8 @@ struct thread_struct {
+ 	/* Max allowed port in the bitmap, in bytes: */
+ 	unsigned		io_bitmap_max;
+ 
++	mm_segment_t		addr_limit;
++
+ 	unsigned int		sig_on_uaccess_error:1;
+ 	unsigned int		uaccess_err:1;	/* uaccess failed */
+ 
+@@ -493,11 +499,6 @@ static inline void load_sp0(struct tss_struct *tss,
+ #define set_iopl_mask native_set_iopl_mask
+ #endif /* CONFIG_PARAVIRT */
+ 
+-typedef struct {
+-	unsigned long		seg;
+-} mm_segment_t;
+-
+-
+ /* Free all resources held by a thread. */
+ extern void release_thread(struct task_struct *);
+ 
+@@ -719,6 +720,7 @@ static inline void spin_lock_prefetch(const void *x)
+ 	.sp0			= TOP_OF_INIT_STACK,			  \
+ 	.sysenter_cs		= __KERNEL_CS,				  \
+ 	.io_bitmap_ptr		= NULL,					  \
++	.addr_limit		= KERNEL_DS,				  \
+ }
+ 
+ extern unsigned long thread_saved_pc(struct task_struct *tsk);
+@@ -768,8 +770,9 @@ extern unsigned long thread_saved_pc(struct task_struct *tsk);
+ #define STACK_TOP		TASK_SIZE
+ #define STACK_TOP_MAX		TASK_SIZE_MAX
+ 
+-#define INIT_THREAD  { \
+-	.sp0 = TOP_OF_INIT_STACK \
++#define INIT_THREAD  {						\
++	.sp0			= TOP_OF_INIT_STACK,		\
++	.addr_limit		= KERNEL_DS,			\
+ }
+ 
+ /*
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index 7c47bb659ecd..89bff044a6f5 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -57,7 +57,6 @@ struct thread_info {
+ 	__u32			flags;		/* low level flags */
+ 	__u32			status;		/* thread synchronous flags */
+ 	__u32			cpu;		/* current CPU */
+-	mm_segment_t		addr_limit;
+ };
+ 
+ #define INIT_THREAD_INFO(tsk)			\
+@@ -65,7 +64,6 @@ struct thread_info {
+ 	.task		= &tsk,			\
+ 	.flags		= 0,			\
+ 	.cpu		= 0,			\
+-	.addr_limit	= KERNEL_DS,		\
+ }
+ 
+ #define init_thread_info	(init_thread_union.thread_info)
+@@ -184,11 +182,6 @@ static inline unsigned long current_stack_pointer(void)
+ # define cpu_current_top_of_stack (cpu_tss + TSS_sp0)
  #endif
  
-+#ifdef CONFIG_VMAP_STACK
-+static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
-+{
-+	return t->stack_vm_area;
-+}
-+#else
-+static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
-+{
-+	return NULL;
-+}
-+#endif
-+
- /* Future-safe accessor for struct task_struct's cpus_allowed. */
- #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
+-/* Load thread_info address into "reg" */
+-#define GET_THREAD_INFO(reg) \
+-	_ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
+-	_ASM_SUB $(THREAD_SIZE),reg ;
+-
+ /*
+  * ASM operand which evaluates to a 'thread_info' address of
+  * the current task, if it is known that "reg" is exactly "off"
+diff --git a/arch/x86/include/asm/uaccess.h b/arch/x86/include/asm/uaccess.h
+index 4d2a726e8e6d..0eb18b4ac492 100644
+--- a/arch/x86/include/asm/uaccess.h
++++ b/arch/x86/include/asm/uaccess.h
+@@ -29,12 +29,12 @@
+ #define USER_DS 	MAKE_MM_SEG(TASK_SIZE_MAX)
  
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 146c9840c079..d2a64a0413be 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -158,19 +158,39 @@ void __weak arch_release_thread_stack(unsigned long *stack)
-  * Allocate pages if THREAD_SIZE is >= PAGE_SIZE, otherwise use a
-  * kmemcache based allocator.
+ #define get_ds()	(KERNEL_DS)
+-#define get_fs()	(current_thread_info()->addr_limit)
+-#define set_fs(x)	(current_thread_info()->addr_limit = (x))
++#define get_fs()	(current->thread.addr_limit)
++#define set_fs(x)	(current->thread.addr_limit = (x))
+ 
+ #define segment_eq(a, b)	((a).seg == (b).seg)
+ 
+-#define user_addr_max() (current_thread_info()->addr_limit.seg)
++#define user_addr_max() (current->thread.addr_limit.seg)
+ #define __addr_ok(addr) 	\
+ 	((unsigned long __force)(addr) < user_addr_max())
+ 
+diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
+index 674134e9f5e5..2bd5c6ff7ee7 100644
+--- a/arch/x86/kernel/asm-offsets.c
++++ b/arch/x86/kernel/asm-offsets.c
+@@ -31,7 +31,9 @@ void common(void) {
+ 	BLANK();
+ 	OFFSET(TI_flags, thread_info, flags);
+ 	OFFSET(TI_status, thread_info, status);
+-	OFFSET(TI_addr_limit, thread_info, addr_limit);
++
++	BLANK();
++	OFFSET(TASK_addr_limit, task_struct, thread.addr_limit);
+ 
+ 	BLANK();
+ 	OFFSET(crypto_tfm_ctx_offset, crypto_tfm, __crt_ctx);
+diff --git a/arch/x86/lib/copy_user_64.S b/arch/x86/lib/copy_user_64.S
+index 2b0ef26da0bd..bf603ebbfd8e 100644
+--- a/arch/x86/lib/copy_user_64.S
++++ b/arch/x86/lib/copy_user_64.S
+@@ -17,11 +17,11 @@
+ 
+ /* Standard copy_to_user with segment limit checking */
+ ENTRY(_copy_to_user)
+-	GET_THREAD_INFO(%rax)
++	mov PER_CPU_VAR(current_task), %rax
+ 	movq %rdi,%rcx
+ 	addq %rdx,%rcx
+ 	jc bad_to_user
+-	cmpq TI_addr_limit(%rax),%rcx
++	cmpq TASK_addr_limit(%rax),%rcx
+ 	ja bad_to_user
+ 	ALTERNATIVE_2 "jmp copy_user_generic_unrolled",		\
+ 		      "jmp copy_user_generic_string",		\
+@@ -32,11 +32,11 @@ ENDPROC(_copy_to_user)
+ 
+ /* Standard copy_from_user with segment limit checking */
+ ENTRY(_copy_from_user)
+-	GET_THREAD_INFO(%rax)
++	mov PER_CPU_VAR(current_task), %rax
+ 	movq %rsi,%rcx
+ 	addq %rdx,%rcx
+ 	jc bad_from_user
+-	cmpq TI_addr_limit(%rax),%rcx
++	cmpq TASK_addr_limit(%rax),%rcx
+ 	ja bad_from_user
+ 	ALTERNATIVE_2 "jmp copy_user_generic_unrolled",		\
+ 		      "jmp copy_user_generic_string",		\
+diff --git a/arch/x86/lib/csum-wrappers_64.c b/arch/x86/lib/csum-wrappers_64.c
+index 28a6654f0d08..b6fcb9a9ddbc 100644
+--- a/arch/x86/lib/csum-wrappers_64.c
++++ b/arch/x86/lib/csum-wrappers_64.c
+@@ -6,6 +6,7 @@
   */
--# if THREAD_SIZE >= PAGE_SIZE
--static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
--						  int node)
-+# if THREAD_SIZE >= PAGE_SIZE || defined(CONFIG_VMAP_STACK)
-+static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
- {
-+#ifdef CONFIG_VMAP_STACK
-+	void *stack = __vmalloc_node_range(THREAD_SIZE, THREAD_SIZE,
-+					   VMALLOC_START, VMALLOC_END,
-+					   THREADINFO_GFP | __GFP_HIGHMEM,
-+					   PAGE_KERNEL,
-+					   0, node,
-+					   __builtin_return_address(0));
-+
-+	/*
-+	 * We can't call find_vm_area() in interrupt context, and
-+	 * free_thread_stack can be called in interrupt context, so cache
-+	 * the vm_struct.
-+	 */
-+	if (stack)
-+		tsk->stack_vm_area = find_vm_area(stack);
-+	return stack;
-+#else
- 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
- 						  THREAD_SIZE_ORDER);
+ #include <asm/checksum.h>
+ #include <linux/module.h>
++#include <linux/uaccess.h>
+ #include <asm/smap.h>
  
- 	return page ? page_address(page) : NULL;
-+#endif
- }
+ /**
+diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
+index 46668cda4ffd..0ef5128c2de8 100644
+--- a/arch/x86/lib/getuser.S
++++ b/arch/x86/lib/getuser.S
+@@ -35,8 +35,8 @@
  
--static inline void free_thread_stack(unsigned long *stack)
-+static inline void free_thread_stack(struct task_struct *tsk)
- {
--	free_kmem_pages((unsigned long)stack, THREAD_SIZE_ORDER);
-+	if (task_stack_vm_area(tsk))
-+		vfree(tsk->stack);
-+	else
-+		free_kmem_pages((unsigned long)tsk->stack, THREAD_SIZE_ORDER);
- }
- # else
- static struct kmem_cache *thread_stack_cache;
-@@ -181,9 +201,9 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
- 	return kmem_cache_alloc_node(thread_stack_cache, THREADINFO_GFP, node);
- }
+ 	.text
+ ENTRY(__get_user_1)
+-	GET_THREAD_INFO(%_ASM_DX)
+-	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
++	mov PER_CPU_VAR(current_task), %_ASM_DX
++	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
+ 	ASM_STAC
+ 1:	movzbl (%_ASM_AX),%edx
+@@ -48,8 +48,8 @@ ENDPROC(__get_user_1)
+ ENTRY(__get_user_2)
+ 	add $1,%_ASM_AX
+ 	jc bad_get_user
+-	GET_THREAD_INFO(%_ASM_DX)
+-	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
++	mov PER_CPU_VAR(current_task), %_ASM_DX
++	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
+ 	ASM_STAC
+ 2:	movzwl -1(%_ASM_AX),%edx
+@@ -61,8 +61,8 @@ ENDPROC(__get_user_2)
+ ENTRY(__get_user_4)
+ 	add $3,%_ASM_AX
+ 	jc bad_get_user
+-	GET_THREAD_INFO(%_ASM_DX)
+-	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
++	mov PER_CPU_VAR(current_task), %_ASM_DX
++	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
+ 	ASM_STAC
+ 3:	movl -3(%_ASM_AX),%edx
+@@ -75,8 +75,8 @@ ENTRY(__get_user_8)
+ #ifdef CONFIG_X86_64
+ 	add $7,%_ASM_AX
+ 	jc bad_get_user
+-	GET_THREAD_INFO(%_ASM_DX)
+-	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
++	mov PER_CPU_VAR(current_task), %_ASM_DX
++	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user
+ 	ASM_STAC
+ 4:	movq -7(%_ASM_AX),%rdx
+@@ -86,8 +86,8 @@ ENTRY(__get_user_8)
+ #else
+ 	add $7,%_ASM_AX
+ 	jc bad_get_user_8
+-	GET_THREAD_INFO(%_ASM_DX)
+-	cmp TI_addr_limit(%_ASM_DX),%_ASM_AX
++	mov PER_CPU_VAR(current_task), %_ASM_DX
++	cmp TASK_addr_limit(%_ASM_DX),%_ASM_AX
+ 	jae bad_get_user_8
+ 	ASM_STAC
+ 4:	movl -7(%_ASM_AX),%edx
+diff --git a/arch/x86/lib/putuser.S b/arch/x86/lib/putuser.S
+index e0817a12d323..c891ece81e5b 100644
+--- a/arch/x86/lib/putuser.S
++++ b/arch/x86/lib/putuser.S
+@@ -29,14 +29,14 @@
+  * as they get called from within inline assembly.
+  */
  
--static void free_thread_stack(unsigned long *stack)
-+static void free_thread_stack(struct task_struct *tsk)
- {
--	kmem_cache_free(thread_stack_cache, stack);
-+	kmem_cache_free(thread_stack_cache, tsk->stack);
- }
+-#define ENTER	GET_THREAD_INFO(%_ASM_BX)
++#define ENTER	mov PER_CPU_VAR(current_task), %_ASM_BX
+ #define EXIT	ASM_CLAC ;	\
+ 		ret
  
- void thread_stack_cache_init(void)
-@@ -213,24 +233,47 @@ struct kmem_cache *vm_area_cachep;
- /* SLAB cache for mm_struct structures (tsk->mm) */
- static struct kmem_cache *mm_cachep;
+ .text
+ ENTRY(__put_user_1)
+ 	ENTER
+-	cmp TI_addr_limit(%_ASM_BX),%_ASM_CX
++	cmp TASK_addr_limit(%_ASM_BX),%_ASM_CX
+ 	jae bad_put_user
+ 	ASM_STAC
+ 1:	movb %al,(%_ASM_CX)
+@@ -46,7 +46,7 @@ ENDPROC(__put_user_1)
  
--static void account_kernel_stack(unsigned long *stack, int account)
-+static void account_kernel_stack(struct task_struct *tsk, int account)
- {
--	/* All stack pages are in the same zone and belong to the same memcg. */
--	struct page *first_page = virt_to_page(stack);
-+	void *stack = task_stack_page(tsk);
-+	struct vm_struct *vm = task_stack_vm_area(tsk);
-+
-+	BUILD_BUG_ON(IS_ENABLED(CONFIG_VMAP_STACK) && PAGE_SIZE % 1024 != 0);
-+
-+	if (vm) {
-+		int i;
-+
-+		BUG_ON(vm->nr_pages != THREAD_SIZE / PAGE_SIZE);
-+
-+		for (i = 0; i < THREAD_SIZE / PAGE_SIZE; i++) {
-+			mod_zone_page_state(page_zone(vm->pages[i]),
-+					    NR_KERNEL_STACK_KB,
-+					    PAGE_SIZE / 1024 * account);
-+		}
+ ENTRY(__put_user_2)
+ 	ENTER
+-	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
++	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
+ 	sub $1,%_ASM_BX
+ 	cmp %_ASM_BX,%_ASM_CX
+ 	jae bad_put_user
+@@ -58,7 +58,7 @@ ENDPROC(__put_user_2)
  
--	mod_zone_page_state(page_zone(first_page), NR_KERNEL_STACK_KB,
--			    THREAD_SIZE / 1024 * account);
-+		/* All stack pages belong to the same memcg. */
-+		memcg_kmem_update_page_stat(vm->pages[0], MEMCG_KERNEL_STACK_KB,
-+					    account * (THREAD_SIZE / 1024));
-+	} else {
-+		/*
-+		 * All stack pages are in the same zone and belong to the
-+		 * same memcg.
-+		 */
-+		struct page *first_page = virt_to_page(stack);
-+
-+		mod_zone_page_state(page_zone(first_page), NR_KERNEL_STACK_KB,
-+				    THREAD_SIZE / 1024 * account);
+ ENTRY(__put_user_4)
+ 	ENTER
+-	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
++	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
+ 	sub $3,%_ASM_BX
+ 	cmp %_ASM_BX,%_ASM_CX
+ 	jae bad_put_user
+@@ -70,7 +70,7 @@ ENDPROC(__put_user_4)
  
--	memcg_kmem_update_page_stat(
--		first_page, MEMCG_KERNEL_STACK_KB,
--		account * (THREAD_SIZE / 1024));
-+		memcg_kmem_update_page_stat(first_page, MEMCG_KERNEL_STACK_KB,
-+					    account * (THREAD_SIZE / 1024));
-+	}
- }
+ ENTRY(__put_user_8)
+ 	ENTER
+-	mov TI_addr_limit(%_ASM_BX),%_ASM_BX
++	mov TASK_addr_limit(%_ASM_BX),%_ASM_BX
+ 	sub $7,%_ASM_BX
+ 	cmp %_ASM_BX,%_ASM_CX
+ 	jae bad_put_user
+diff --git a/arch/x86/lib/usercopy_64.c b/arch/x86/lib/usercopy_64.c
+index 0a42327a59d7..9f760cdcaf40 100644
+--- a/arch/x86/lib/usercopy_64.c
++++ b/arch/x86/lib/usercopy_64.c
+@@ -6,7 +6,7 @@
+  * Copyright 2002 Andi Kleen <ak@suse.de>
+  */
+ #include <linux/module.h>
+-#include <asm/uaccess.h>
++#include <linux/uaccess.h>
  
- void free_task(struct task_struct *tsk)
- {
--	account_kernel_stack(tsk->stack, -1);
-+	account_kernel_stack(tsk, -1);
- 	arch_release_thread_stack(tsk->stack);
--	free_thread_stack(tsk->stack);
-+	free_thread_stack(tsk);
- 	rt_mutex_debug_task_free(tsk);
- 	ftrace_graph_exit_task(tsk);
- 	put_seccomp_filter(tsk);
-@@ -342,6 +385,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- {
- 	struct task_struct *tsk;
- 	unsigned long *stack;
-+	struct vm_struct *stack_vm_area;
- 	int err;
+ /*
+  * Zero Userspace
+diff --git a/drivers/pnp/isapnp/proc.c b/drivers/pnp/isapnp/proc.c
+index 5edee645d890..262285e48a09 100644
+--- a/drivers/pnp/isapnp/proc.c
++++ b/drivers/pnp/isapnp/proc.c
+@@ -21,7 +21,7 @@
+ #include <linux/isapnp.h>
+ #include <linux/proc_fs.h>
+ #include <linux/init.h>
+-#include <asm/uaccess.h>
++#include <linux/uaccess.h>
  
- 	if (node == NUMA_NO_NODE)
-@@ -354,11 +398,23 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- 	if (!stack)
- 		goto free_tsk;
+ extern struct pnp_protocol isapnp_protocol;
  
-+	stack_vm_area = task_stack_vm_area(tsk);
-+
- 	err = arch_dup_task_struct(tsk, orig);
-+
-+	/*
-+	 * arch_dup_task_struct clobbers the stack-related fields.  Make
-+	 * sure they're properly initialized before using any stack-related
-+	 * functions again.
-+	 */
-+	tsk->stack = stack;
-+#ifdef CONFIG_VMAP_STACK
-+	tsk->stack_vm_area = stack_vm_area;
-+#endif
-+
- 	if (err)
- 		goto free_stack;
+diff --git a/lib/bitmap.c b/lib/bitmap.c
+index c66da508cbf7..eca88087fa8a 100644
+--- a/lib/bitmap.c
++++ b/lib/bitmap.c
+@@ -14,9 +14,9 @@
+ #include <linux/bug.h>
+ #include <linux/kernel.h>
+ #include <linux/string.h>
++#include <linux/uaccess.h>
  
--	tsk->stack = stack;
- #ifdef CONFIG_SECCOMP
- 	/*
- 	 * We must handle setting up seccomp filters once we're under
-@@ -390,14 +446,14 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- 	tsk->task_frag.page = NULL;
- 	tsk->wake_q.next = NULL;
+ #include <asm/page.h>
+-#include <asm/uaccess.h>
  
--	account_kernel_stack(stack, 1);
-+	account_kernel_stack(tsk, 1);
- 
- 	kcov_task_init(tsk);
- 
- 	return tsk;
- 
- free_stack:
--	free_thread_stack(stack);
-+	free_thread_stack(tsk);
- free_tsk:
- 	free_task_struct(tsk);
- 	return NULL;
+ /*
+  * bitmaps provide an array of bits, implemented using an an
 -- 
 2.7.4
