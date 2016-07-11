@@ -1,104 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:39 -0700
-Message-Id: <a7755819f46c6895c3546af882741c511d58b167.1468270393.git.luto@kernel.org>
+Date: Mon, 11 Jul 2016 13:53:48 -0700
+Message-Id: <6ec969dbe40e32a004d4ef6da623bab4881411f7.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v5 06/32] mm: Fix memcg stack accounting for sub-page stacks
+Subject: [kernel-hardening] [PATCH v5 15/32] x86/mm: Improve stack-overflow #PF handling
 To: x86@kernel.org, linux-kernel@vger.kernel.org
-Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>, Vladimir Davydov <vdavydov@virtuozzo.com>, Johannes Weiner <hannes@cmpxchg.org>, Michal Hocko <mhocko@kernel.org>, linux-mm@kvack.org
+Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-We should account for stacks regardless of stack size, and we need
-to account in sub-page units if THREAD_SIZE < PAGE_SIZE.  Change the
-units to kilobytes and Move it into account_kernel_stack().
+If we get a page fault indicating kernel stack overflow, invoke
+handle_stack_overflow().  To prevent us from overflowing the stack
+again while handling the overflow (because we are likely to have
+very little stack space left), call handle_stack_overflow() on the
+double-fault stack
 
-Fixes: 12580e4b54ba8 ("mm: memcontrol: report kernel stack usage in cgroup2 memory.stat")
-Cc: Vladimir Davydov <vdavydov@virtuozzo.com>
-Cc: Johannes Weiner <hannes@cmpxchg.org>
-Cc: Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org
-Reviewed-by: Josh Poimboeuf <jpoimboe@redhat.com>
-Reviewed-by: Vladimir Davydov <vdavydov@virtuozzo.com>
-Acked-by: Michal Hocko <mhocko@suse.com>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- include/linux/memcontrol.h |  2 +-
- kernel/fork.c              | 19 ++++++++-----------
- mm/memcontrol.c            |  2 +-
- 3 files changed, 10 insertions(+), 13 deletions(-)
+ arch/x86/include/asm/traps.h |  6 ++++++
+ arch/x86/kernel/traps.c      |  6 +++---
+ arch/x86/mm/fault.c          | 34 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 43 insertions(+), 3 deletions(-)
 
-diff --git a/include/linux/memcontrol.h b/include/linux/memcontrol.h
-index a805474df4ab..3b653b86bb8f 100644
---- a/include/linux/memcontrol.h
-+++ b/include/linux/memcontrol.h
-@@ -52,7 +52,7 @@ enum mem_cgroup_stat_index {
- 	MEM_CGROUP_STAT_SWAP,		/* # of pages, swapped out */
- 	MEM_CGROUP_STAT_NSTATS,
- 	/* default hierarchy stats */
--	MEMCG_KERNEL_STACK = MEM_CGROUP_STAT_NSTATS,
-+	MEMCG_KERNEL_STACK_KB = MEM_CGROUP_STAT_NSTATS,
- 	MEMCG_SLAB_RECLAIMABLE,
- 	MEMCG_SLAB_UNRECLAIMABLE,
- 	MEMCG_SOCK,
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 466ba8febe3b..146c9840c079 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -165,20 +165,12 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
- 	struct page *page = alloc_kmem_pages_node(node, THREADINFO_GFP,
- 						  THREAD_SIZE_ORDER);
+diff --git a/arch/x86/include/asm/traps.h b/arch/x86/include/asm/traps.h
+index c3496619740a..01fd0a7f48cd 100644
+--- a/arch/x86/include/asm/traps.h
++++ b/arch/x86/include/asm/traps.h
+@@ -117,6 +117,12 @@ extern void ist_exit(struct pt_regs *regs);
+ extern void ist_begin_non_atomic(struct pt_regs *regs);
+ extern void ist_end_non_atomic(void);
  
--	if (page)
--		memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
--					    1 << THREAD_SIZE_ORDER);
--
- 	return page ? page_address(page) : NULL;
- }
- 
- static inline void free_thread_stack(unsigned long *stack)
- {
--	struct page *page = virt_to_page(stack);
--
--	memcg_kmem_update_page_stat(page, MEMCG_KERNEL_STACK,
--				    -(1 << THREAD_SIZE_ORDER));
--	__free_kmem_pages(page, THREAD_SIZE_ORDER);
-+	free_kmem_pages((unsigned long)stack, THREAD_SIZE_ORDER);
- }
- # else
- static struct kmem_cache *thread_stack_cache;
-@@ -223,10 +215,15 @@ static struct kmem_cache *mm_cachep;
- 
- static void account_kernel_stack(unsigned long *stack, int account)
- {
--	struct zone *zone = page_zone(virt_to_page(stack));
-+	/* All stack pages are in the same zone and belong to the same memcg. */
-+	struct page *first_page = virt_to_page(stack);
- 
--	mod_zone_page_state(zone, NR_KERNEL_STACK_KB,
-+	mod_zone_page_state(page_zone(first_page), NR_KERNEL_STACK_KB,
- 			    THREAD_SIZE / 1024 * account);
++#ifdef CONFIG_VMAP_STACK
++void __noreturn handle_stack_overflow(const char *message,
++				      struct pt_regs *regs,
++				      unsigned long fault_address);
++#endif
 +
-+	memcg_kmem_update_page_stat(
-+		first_page, MEMCG_KERNEL_STACK_KB,
-+		account * (THREAD_SIZE / 1024));
- }
+ /* Interrupts/Exceptions */
+ enum {
+ 	X86_TRAP_DE = 0,	/*  0, Divide-by-zero */
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index f0345284c30b..33d4e7629a42 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -293,9 +293,9 @@ DO_ERROR(X86_TRAP_SS,     SIGBUS,  "stack segment",		stack_segment)
+ DO_ERROR(X86_TRAP_AC,     SIGBUS,  "alignment check",		alignment_check)
  
- void free_task(struct task_struct *tsk)
-diff --git a/mm/memcontrol.c b/mm/memcontrol.c
-index ac8664db3823..ee44afc1f2d0 100644
---- a/mm/memcontrol.c
-+++ b/mm/memcontrol.c
-@@ -5133,7 +5133,7 @@ static int memory_stat_show(struct seq_file *m, void *v)
- 	seq_printf(m, "file %llu\n",
- 		   (u64)stat[MEM_CGROUP_STAT_CACHE] * PAGE_SIZE);
- 	seq_printf(m, "kernel_stack %llu\n",
--		   (u64)stat[MEMCG_KERNEL_STACK] * PAGE_SIZE);
-+		   (u64)stat[MEMCG_KERNEL_STACK_KB] * 1024);
- 	seq_printf(m, "slab %llu\n",
- 		   (u64)(stat[MEMCG_SLAB_RECLAIMABLE] +
- 			 stat[MEMCG_SLAB_UNRECLAIMABLE]) * PAGE_SIZE);
+ #ifdef CONFIG_VMAP_STACK
+-static void __noreturn handle_stack_overflow(const char *message,
+-					     struct pt_regs *regs,
+-					     unsigned long fault_address)
++__visible void __noreturn handle_stack_overflow(const char *message,
++						struct pt_regs *regs,
++						unsigned long fault_address)
+ {
+ 	printk(KERN_EMERG "BUG: stack guard page was hit at %p (stack is %p..%p)\n",
+ 		 (void *)fault_address, current->stack,
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index ca44e2e7fd00..76c58fdcfb29 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -753,6 +753,40 @@ no_context(struct pt_regs *regs, unsigned long error_code,
+ 		return;
+ 	}
+ 
++#ifdef CONFIG_VMAP_STACK
++	/*
++	 * Stack overflow?  During boot, we can fault near the initial
++	 * stack in the direct map, but that's not an overflow -- check
++	 * that we're in vmalloc space to avoid this.
++	 */
++	if (is_vmalloc_addr((void *)address) &&
++	    (((unsigned long)tsk->stack - 1 - address < PAGE_SIZE) ||
++	     address - ((unsigned long)tsk->stack + THREAD_SIZE) < PAGE_SIZE)) {
++		register void *__sp asm("rsp");
++		unsigned long stack =
++			this_cpu_read(orig_ist.ist[DOUBLEFAULT_STACK]) -
++			sizeof(void *);
++		/*
++		 * We're likely to be running with very little stack space
++		 * left.  It's plausible that we'd hit this condition but
++		 * double-fault even before we get this far, in which case
++		 * we're fine: the double-fault handler will deal with it.
++		 *
++		 * We don't want to make it all the way into the oops code
++		 * and then double-fault, though, because we're likely to
++		 * break the console driver and lose most of the stack dump.
++		 */
++		asm volatile ("movq %[stack], %%rsp\n\t"
++			      "call handle_stack_overflow\n\t"
++			      "1: jmp 1b"
++			      : "+r" (__sp)
++			      : "D" ("kernel stack overflow (page fault)"),
++				"S" (regs), "d" (address),
++				[stack] "rm" (stack));
++		unreachable();
++	}
++#endif
++
+ 	/*
+ 	 * 32-bit:
+ 	 *
 -- 
 2.7.4
