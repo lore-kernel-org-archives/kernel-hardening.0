@@ -1,114 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 11 Jul 2016 13:53:57 -0700
-Message-Id: <0beec068e1d2a4a510087332f4442d8c3c23b85e.1468270393.git.luto@kernel.org>
+Date: Mon, 11 Jul 2016 13:53:58 -0700
+Message-Id: <e6a9327942cc033f7d225b8202ecfc3ec3c6dec8.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
 In-Reply-To: <cover.1468270393.git.luto@kernel.org>
 References: <cover.1468270393.git.luto@kernel.org>
-Subject: [kernel-hardening] [PATCH v5 24/32] x86/entry: Get rid of pt_regs_to_thread_info()
+Subject: [kernel-hardening] [PATCH v5 25/32] um: Stop conflating task_struct::stack with thread_info
 To: x86@kernel.org, linux-kernel@vger.kernel.org
 Cc: linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Linus Torvalds <torvalds@linux-foundation.org>
 
-It was a nice optimization while it lasted, but thread_info is moving
-and this optimization will no longer work.
+thread_info may move in the future, so use the accessors.
 
-Quoting Linus:
+Andy Lutomirski wrote this changelog message and changed
+"task_thread_info(child)->cpu" to "task_cpu(child)".
 
-    Oh Gods, Andy. That pt_regs_to_thread_info() thing made me want
-    to do unspeakable acts on a poor innocent wax figure that looked
-    _exactly_ like you.
-
-[changelog written by Andy]
 Message-Id: <CA+55aFxvZhBu9U1cqpVm4frv0p5mqu=0TxsSqE-=95ft8HvCVA@mail.gmail.com>
 Signed-off-by: Andy Lutomirski <luto@kernel.org>
 ---
- arch/x86/entry/common.c | 21 +++++++--------------
- 1 file changed, 7 insertions(+), 14 deletions(-)
+ arch/x86/um/ptrace_32.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
-index c4150bec7982..804487f126cb 100644
---- a/arch/x86/entry/common.c
-+++ b/arch/x86/entry/common.c
-@@ -31,13 +31,6 @@
- #define CREATE_TRACE_POINTS
- #include <trace/events/syscalls.h>
+diff --git a/arch/x86/um/ptrace_32.c b/arch/x86/um/ptrace_32.c
+index ebd4dd6ef73b..2a6f781ce9cf 100644
+--- a/arch/x86/um/ptrace_32.c
++++ b/arch/x86/um/ptrace_32.c
+@@ -191,7 +191,7 @@ int peek_user(struct task_struct *child, long addr, long data)
  
--static struct thread_info *pt_regs_to_thread_info(struct pt_regs *regs)
--{
--	unsigned long top_of_stack =
--		(unsigned long)(regs + 1) + TOP_OF_KERNEL_STACK_PADDING;
--	return (struct thread_info *)(top_of_stack - THREAD_SIZE);
--}
--
- #ifdef CONFIG_CONTEXT_TRACKING
- /* Called on entry from user mode with IRQs off. */
- __visible void enter_from_user_mode(void)
-@@ -78,7 +71,7 @@ static void do_audit_syscall_entry(struct pt_regs *regs, u32 arch)
-  */
- unsigned long syscall_trace_enter_phase1(struct pt_regs *regs, u32 arch)
+ static int get_fpregs(struct user_i387_struct __user *buf, struct task_struct *child)
  {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	unsigned long ret = 0;
- 	u32 work;
+-	int err, n, cpu = ((struct thread_info *) child->stack)->cpu;
++	int err, n, cpu = task_cpu(child);
+ 	struct user_i387_struct fpregs;
  
-@@ -156,7 +149,7 @@ unsigned long syscall_trace_enter_phase1(struct pt_regs *regs, u32 arch)
- long syscall_trace_enter_phase2(struct pt_regs *regs, u32 arch,
- 				unsigned long phase1_result)
+ 	err = save_i387_registers(userspace_pid[cpu],
+@@ -208,7 +208,7 @@ static int get_fpregs(struct user_i387_struct __user *buf, struct task_struct *c
+ 
+ static int set_fpregs(struct user_i387_struct __user *buf, struct task_struct *child)
  {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	long ret = 0;
- 	u32 work = ACCESS_ONCE(ti->flags) & _TIF_WORK_SYSCALL_ENTRY;
+-	int n, cpu = ((struct thread_info *) child->stack)->cpu;
++	int n, cpu = task_cpu(child);
+ 	struct user_i387_struct fpregs;
  
-@@ -239,7 +232,7 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
- 		/* Disable IRQs and retry */
- 		local_irq_disable();
+ 	n = copy_from_user(&fpregs, buf, sizeof(fpregs));
+@@ -221,7 +221,7 @@ static int set_fpregs(struct user_i387_struct __user *buf, struct task_struct *c
  
--		cached_flags = READ_ONCE(pt_regs_to_thread_info(regs)->flags);
-+		cached_flags = READ_ONCE(current_thread_info()->flags);
- 
- 		if (!(cached_flags & EXIT_TO_USERMODE_LOOP_FLAGS))
- 			break;
-@@ -250,7 +243,7 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
- /* Called with IRQs disabled. */
- __visible inline void prepare_exit_to_usermode(struct pt_regs *regs)
+ static int get_fpxregs(struct user_fxsr_struct __user *buf, struct task_struct *child)
  {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	u32 cached_flags;
+-	int err, n, cpu = ((struct thread_info *) child->stack)->cpu;
++	int err, n, cpu = task_cpu(child);
+ 	struct user_fxsr_struct fpregs;
  
- 	if (IS_ENABLED(CONFIG_PROVE_LOCKING) && WARN_ON(!irqs_disabled()))
-@@ -309,7 +302,7 @@ static void syscall_slow_exit_work(struct pt_regs *regs, u32 cached_flags)
-  */
- __visible inline void syscall_return_slowpath(struct pt_regs *regs)
+ 	err = save_fpx_registers(userspace_pid[cpu], (unsigned long *) &fpregs);
+@@ -237,7 +237,7 @@ static int get_fpxregs(struct user_fxsr_struct __user *buf, struct task_struct *
+ 
+ static int set_fpxregs(struct user_fxsr_struct __user *buf, struct task_struct *child)
  {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	u32 cached_flags = READ_ONCE(ti->flags);
+-	int n, cpu = ((struct thread_info *) child->stack)->cpu;
++	int n, cpu = task_cpu(child);
+ 	struct user_fxsr_struct fpregs;
  
- 	CT_WARN_ON(ct_state() != CONTEXT_KERNEL);
-@@ -332,7 +325,7 @@ __visible inline void syscall_return_slowpath(struct pt_regs *regs)
- #ifdef CONFIG_X86_64
- __visible void do_syscall_64(struct pt_regs *regs)
- {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	unsigned long nr = regs->orig_ax;
- 
- 	enter_from_user_mode();
-@@ -365,7 +358,7 @@ __visible void do_syscall_64(struct pt_regs *regs)
-  */
- static __always_inline void do_syscall_32_irqs_on(struct pt_regs *regs)
- {
--	struct thread_info *ti = pt_regs_to_thread_info(regs);
-+	struct thread_info *ti = current_thread_info();
- 	unsigned int nr = (unsigned int)regs->orig_ax;
- 
- #ifdef CONFIG_IA32_EMULATION
+ 	n = copy_from_user(&fpregs, buf, sizeof(fpregs));
 -- 
 2.7.4
