@@ -1,87 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Stephan Mueller <smueller@chronox.de>
-Date: Sun, 10 Jul 2016 21:29:08 +0200
-Message-ID: <3354538.ebClkig31Y@positron.chronox.de>
-In-Reply-To: <CAHgaXdJSH3O6q5ZPRRyUwYhCH1M7xQOXGsiynDFNaRjTGebZHg@mail.gmail.com>
-References: <CAHgaXdKW4=y-PviWudtMAThuB=GEW-73RejSHRMYNVzLyxP+iA@mail.gmail.com> <CACXcFmm-maS9mpMhXF+boqZ5Os1KYzDpCzYepEwkNJcuuPdbhw@mail.gmail.com> <CAHgaXdJSH3O6q5ZPRRyUwYhCH1M7xQOXGsiynDFNaRjTGebZHg@mail.gmail.com>
+Date: Mon, 11 Jul 2016 15:08:29 +0900
+From: Joonsoo Kim <iamjoonsoo.kim@lge.com>
+Message-ID: <20160711060829.GB14107@js1304-P5Q-DELUXE>
+References: <577f7e55.4668420a.84f17.5cb9SMTPIN_ADDED_MISSING@mx.google.com>
+ <alpine.DEB.2.20.1607080844370.3379@east.gentwo.org>
+ <CAGXu5jKE=h32tHVLsDeaPN1GfC+BB3YbFvC+5TE5TK1oR-xU3A@mail.gmail.com>
+ <alpine.DEB.2.20.1607081119170.6192@east.gentwo.org>
+ <CAGXu5j+UdkQA+k39GNLe5CwBPVD5ZbRGTCQLqS8VF=kWx+PtsQ@mail.gmail.com>
+ <CAGXu5jKxw3RxWNKLX4XVCwJ6x_zA=_RwiU9jLDm2+VRO79G7+w@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Subject: Re: [kernel-hardening] Looking for something to WORK ON
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, sandyinchina@gmail.com, tytso@mit.edu, keescook@chromium.org, jsd@av8n.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKxw3RxWNKLX4XVCwJ6x_zA=_RwiU9jLDm2+VRO79G7+w@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 9/9] mm: SLUB hardened usercopy
+ support
+To: Kees Cook <keescook@chromium.org>
+Cc: Christoph Lameter <cl@linux.com>, Michael Ellerman <mpe@ellerman.id.au>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jan Kara <jack@suse.cz>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Linux-MM <linux-mm@kvack.org>, sparclinux <sparclinux@vger.kernel.org>, linux-ia64@vger.kernel.org, Andrea Arcangeli <aarcange@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, PaX Team <pageexec@freemail.hu>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Fenghua Yu <fenghua.yu@intel.com>, Rik van Riel <riel@redhat.com>, David Rientjes <rientjes@google.com>, Tony Luck <tony.luck@intel.com>, Andy Lutomirski <luto@kernel.org>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, Brad Spengler <spender@grsecurity.net>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Pekka Enberg <penberg@kernel.org>, Case y Schauf ler <casey@schaufler-ca.com>, Andrew Morton <akpm@linux-foundation.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "David S. Miller" <davem@davemloft.net>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Am Sonntag, 10. Juli 2016, 22:12:53 CEST schrieb Shubham Bansal:
-
-Hi Shubham,
-
-> Hi Sandy,
+On Fri, Jul 08, 2016 at 04:48:38PM -0400, Kees Cook wrote:
+> On Fri, Jul 8, 2016 at 1:41 PM, Kees Cook <keescook@chromium.org> wrote:
+> > On Fri, Jul 8, 2016 at 12:20 PM, Christoph Lameter <cl@linux.com> wrote:
+> >> On Fri, 8 Jul 2016, Kees Cook wrote:
+> >>
+> >>> Is check_valid_pointer() making sure the pointer is within the usable
+> >>> size? It seemed like it was checking that it was within the slub
+> >>> object (checks against s->size, wants it above base after moving
+> >>> pointer to include redzone, etc).
+> >>
+> >> check_valid_pointer verifies that a pointer is pointing to the start of an
+> >> object. It is used to verify the internal points that SLUB used and
+> >> should not be modified to do anything different.
+> >
+> > Yup, no worries -- I won't touch it. :) I just wanted to verify my
+> > understanding.
+> >
+> > And after playing a bit more, I see that the only thing to the left is
+> > padding and redzone. SLUB layout, from what I saw:
+> >
+> > offset: what's there
+> > -------
+> > start: padding, redzone
+> > red_left_pad: object itself
+> > inuse: rest of metadata
+> > size: start of next slub object
+> >
+> > (and object_size == inuse - red_left_pad)
+> >
+> > i.e. a pointer must be between red_left_pad and inuse, which is the
+> > same as pointer - ref_left_pad being less than object_size.
+> >
+> > So, as found already, the position in the usercopy check needs to be
+> > bumped down by red_left_pad, which is what Michael's fix does, so I'll
+> > include it in the next version.
 > 
-> On Wed, Jul 6, 2016 at 8:44 PM, Sandy Harris <sandyinchina@gmail.com> wrote:
-> > Shubham Bansal <illusionist.neo@gmail.com> wrote:
-> > > I want to start with linux kernel development and looking for some
-> > 
-> > project
-> > 
-> > > where I can contribute.
-> > 
-> > Nearly all crypto and the address randomisation that is part of kernel
-> > hardening depend on good random numbers, for Linux on the random(4)
-> > driver. Getting it initialised early enough & well enough is an
-> > extremely tricky problem. Several people have proposed solutions but
-> > AFAIK none are complete and it might benefit from having fresh eyes
-> > take a look, especially if you have a good background in crypto or
-> > math.
+> Actually, after some offline chats, I think this is better, since it
+> makes sure the ptr doesn't end up somewhere weird before we start the
+> calculations. This leaves the pointer as-is, but explicitly handles
+> the redzone on the offset instead, with no wrapping, etc:
 > 
-> I have a basic understanding of crypto as I just graduated. But it sound
-> really interesting to work on. I am happy to work on it if you think it
-> would be good, But I must tell you that I have to read a lot for this.
+>         /* Find offset within object. */
+>         offset = (ptr - page_address(page)) % s->size;
 > 
-> > Not all discussion is here; other relevant lists include
-> > linux-crypto@vger.kernel.org and cryptography@metzdowd.com.
+> +       /* Adjust for redzone and reject if within the redzone. */
+> +       if (s->flags & SLAB_RED_ZONE) {
+> +               if (offset < s->red_left_pad)
+> +                       return s->name;
+> +               offset -= s->red_left_pad;
+> +       }
+> +
+>         /* Allow address range falling entirely within object size. */
+>         if (offset <= s->object_size && n <= s->object_size - offset)
+>                 return NULL;
 > 
-> Subscribed.
-> 
-> > People to
-> > look for include the maintainer, tytso@mit.edu, the main person
-> > working on the problem here, keescook@chromium.org,
-> 
-> Should I mail them to get the update and how can I start contributing ?
-> 
-> > two guys who have
-> > proposed drive rewrites that partly solve the problem, me and
-> > smueller@chronox.de, and one with a lot of excellent comments,
-> > jsd@av8n.com.
-> 
-> Would it be possible to work with you on this ? I would try my best. I
-> would need some help from your side though.
-> 
-> Looking forward to hearing back from you. I would like to get started with
-> it soon.
 
-My code is in the kernel at crypto/jitterentropy.c. It is completely 
-standalone and does not require anything, provided the intended architecture 
-has either random_get_entropy() or get_cycles implemented. I have tested it on 
-bare metal without a kernel. Thus, it can be operational as early as you need 
-it.
+As Christoph saids, please use slab_ksize() rather than
+s->object_size.
 
-To make it fully standalone, you have to:
+Otherwise, looks good to me.
 
-- compile jitterentropy.c and the helper functions listed at the top in 
-jitterentropy.c and implemented in jitterentropy_kcapi.c (note, 
-jent_fips_enabled is not needed for your purpose)
-
-- statically allocate the memory obtained in jent_entropy_collector_alloc
-
-- ensure serialization as necessary
-
-I strongly suggest that you call jent_entropy_init to ensure that the timer 
-has a sufficient high resolution before you collect entropy with 
-jent_read_entropy.
-
-Note, I am currently getting help from a big chip vendor tracking down the 
-root cause that beyond the analysis of chapter 6.1 in my report.
-
-Ciao
-Stephan
+Thanks.
