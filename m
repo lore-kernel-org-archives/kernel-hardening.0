@@ -1,49 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160712220853.GU1041@n2100.armlinux.org.uk>
-References: <20160705013928.396ce4a7cbbc40e6c09efc43@gmail.com>
- <20160705014033.afc9a463b518e2e239c6301b@gmail.com> <CAGXu5jLG6bprjCpu2oF6dexsu+8jU-WX59LY-=wUx27U459Y5Q@mail.gmail.com>
- <20160712220853.GU1041@n2100.armlinux.org.uk>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 12 Jul 2016 18:38:47 -0400
-Message-ID: <CAGXu5j+99nc9s-ci46s3r_CU5-6O6JeHERcW3mYRtnP71871rw@mail.gmail.com>
+In-Reply-To: <CAMzpN2j2F9gQCRGmzVb0LjQT9mmU9m=HRG2Vbf-g79+i57dvdg@mail.gmail.com>
+References: <cover.1468270393.git.luto@kernel.org> <dc84a1b979d800049bfd0629ed9380238cba2807.1468270393.git.luto@kernel.org>
+ <CAMzpN2j2F9gQCRGmzVb0LjQT9mmU9m=HRG2Vbf-g79+i57dvdg@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Tue, 12 Jul 2016 16:01:23 -0700
+Message-ID: <CALCETrXN3Jd=8TOsHejVNQj8ef4KH-GYzW8rD6ounq=ZX9TT5A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 1/3] Add the initify gcc plugin
-To: Russell King - ARM Linux <linux@armlinux.org.uk>
-Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Arnd Bergmann <arnd@arndb.de>, Sam Ravnborg <sam@ravnborg.org>, Karsten Keil <isdn@linux-pingi.de>
+Subject: [kernel-hardening] Re: [PATCH v5 18/32] signal: Consolidate {TS,TLF}_RESTORE_SIGMASK code
+To: Brian Gerst <brgerst@gmail.com>
+Cc: Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Richard Henderson <rth@twiddle.net>, Ivan Kokshaysky <ink@jurassic.park.msu.ru>, Matt Turner <mattst88@gmail.com>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, Michal Simek <monstr@monstr.eu>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, Yoshinori Sato <ysato@users.sourceforge.jp>, Rich Felker <dalias@libc.org>, "David S. Miller" <davem@davemloft.net>, Chris Metcalf <cmetcalf@mellanox.com>, Peter Zijlstra <peterz@infradead.org>, Borislav Petkov <bp@suse.de>, Dmitry Safonov <dsafonov@virtuozzo.com>, Andrew Morton <akpm@linux-foundation.org>, linux-alpha@vger.kernel.org, "linux-ia64@vger.kernel.org" <linux-ia64@vger.kernel.org>, linuxppc-dev@lists.ozlabs.org, "linux-sh@vger.kernel.org" <linux-sh@vger.kernel.org>, sparclinux@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 12, 2016 at 6:08 PM, Russell King - ARM Linux
-<linux@armlinux.org.uk> wrote:
-> On Tue, Jul 12, 2016 at 03:45:56PM -0400, Kees Cook wrote:
->> On Mon, Jul 4, 2016 at 7:40 PM, Emese Revfy <re.emese@gmail.com> wrote:
->> > If a function is called by __init and __exit functions as well then
->> > the plugin moves it to the __exit section. This causes false positive
->> > section mismatch errors/warnings that I don't know how to handle yet.
+On Tue, Jul 12, 2016 at 4:57 AM, Brian Gerst <brgerst@gmail.com> wrote:
+> On Mon, Jul 11, 2016 at 4:53 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>> In general, there's no need for the "restore sigmask" flag to live in
+>> ti->flags.  alpha, ia64, microblaze, powerpc, sh, sparc (64-bit only),
+>> tile, and x86 use essentially identical alternative implementations,
+>> placing the flag in ti->status.
 >>
->> Should the mismatch checker be updated to recognize this case? Without
->> the plugin, I assume these kinds of functions would only ever be
->> marked for __exit? If so, should the plugin strip the __init marking
->> and only add __exit?
+>> Replace those optimized implementations with an equally good common
+>> implementation that stores it in a bitfield in struct task_struct
+>> and drop the custom implementations.
+>>
+>> Additional architectures can opt in by removing their
+>> TIF_RESTORE_SIGMASK defines.
 >
-> That sounds like a problem for architectures that still discard the
-> __exit section at link time to reduce the size of the linked kernel
-> image - though, obviously, if using the plugin results in a smaller
-> kernel image _with_ the exit sections, then there's a net benefit
-> size-wise.
+> There is a small typo in the subject, should be "signal: Consolidate
+> {TS,TIF}_RESTORE_SIGMASK code"
 
-Ah right, __exit is dropped for non-modular builds. So, for "both
-__init and __exit" it sounds like the behavior depends on the build:
+I really did mean "TLF" -- it's a powerpc-ism.  This patch doesn't
+affect TIF_RESTORE_SIGMASK on architectures that have that flag,
+although it makes it much easier for them to get rid of it.
 
-- if modular: remove __init marking (since we need it after init)
-- if non-modular: remove __exit marking (since we'll never call exit)
-
-Is this something the build itself (rather than the plugin) could
-notice and fix up? Hmmm
-
--Kees
-
--- 
-Kees Cook
-Chrome OS & Brillo Security
+--Andy
