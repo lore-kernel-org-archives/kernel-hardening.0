@@ -1,64 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1468351439.32683.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Tue, 12 Jul 2016 15:23:59 -0400
-In-Reply-To: <CAGXu5jKKd-VcuLooiRV-ktbnYuB_EaOtUbQOOy7e5VGNgWBU-A@mail.gmail.com>
-References: <20160705013928.396ce4a7cbbc40e6c09efc43@gmail.com>
-	 <20160705014209.caca7667ac0984c2975b4f41@gmail.com>
-	 <CAGXu5jKKd-VcuLooiRV-ktbnYuB_EaOtUbQOOy7e5VGNgWBU-A@mail.gmail.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-Y29sRYWzknlJzkFhq+5Y"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH v2 2/3] Mark functions with the
- __nocapture attribute
-To: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>
-Cc: PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Arnd Bergmann <arnd@arndb.de>, Sam Ravnborg <sam@ravnborg.org>, Karsten Keil <isdn@linux-pingi.de>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20160705014033.afc9a463b518e2e239c6301b@gmail.com>
+References: <20160705013928.396ce4a7cbbc40e6c09efc43@gmail.com> <20160705014033.afc9a463b518e2e239c6301b@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 12 Jul 2016 15:45:56 -0400
+Message-ID: <CAGXu5jLG6bprjCpu2oF6dexsu+8jU-WX59LY-=wUx27U459Y5Q@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 1/3] Add the initify gcc plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Arnd Bergmann <arnd@arndb.de>, Sam Ravnborg <sam@ravnborg.org>, Karsten Keil <isdn@linux-pingi.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Jul 4, 2016 at 7:40 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> The kernel already has a mechanism to free up code and data memory that
+> is only used during kernel or module initialization.
+> This plugin will teach the compiler to find more such code and data that
+> can be freed after initialization.
+> It has two passes. The first one tries to find all functions that
+> can be become __init/__exit. The second one moves string constants
+> (local variables and function string arguments marked by
+> the nocapture attribute) only referenced in __init/__exit functions
+> to the __initconst/__exitconst sections.
+> It reduces memory usage. This plugin can be useful for embedded systems.
+>
+> If a function is called by __init and __exit functions as well then
+> the plugin moves it to the __exit section. This causes false positive
+> section mismatch errors/warnings that I don't know how to handle yet.
 
---=-Y29sRYWzknlJzkFhq+5Y
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Should the mismatch checker be updated to recognize this case? Without
+the plugin, I assume these kinds of functions would only ever be
+marked for __exit? If so, should the plugin strip the __init marking
+and only add __exit?
 
-On Tue, 2016-07-12 at 15:08 -0400, Kees Cook wrote:
-> On Mon, Jul 4, 2016 at 7:42 PM, Emese Revfy <re.emese@gmail.com>
-> wrote:
-> >=20
-> > The nocapture gcc attribute can be on functions only.
-> > The attribute takes one or more unsigned integer constants as
-> > parameters
-> > that specify the function argument(s) of const char* type to
-> > initify.
-> > If the marked argument is a vararg then the plugin initifies
-> > all vararg arguments.
->=20
-> Why is this called "nocapture"? Not captured by what? It seems like
-> it
-> means "initify this if possible". Am I misunderstanding its purpose?
+> The instrumentation pass of the latent_entropy plugin must run after
+> the initify plugin to increase coverage.
+>
+> Signed-off-by: Emese Revfy <re.emese@gmail.com>
 
-It means they don't escape via that function, i.e. they aren't stored
-anywhere to be used in any way after the call.
---=-Y29sRYWzknlJzkFhq+5Y
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+Thanks for sending this! I'll get it added to my tree for some 0day
+build testing, and then get it into my -next tree.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
+-Kees
 
-iQIzBAABCAAdBQJXhUPPFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
-8ioIrhAAkoGYfw4Z8fPR7cOJDfp5kG0LFds+25zqzQhR6cLw1K7pOJ0hNZO+DV9W
-Z2aSG99PYtPAipEiIuN3IZkaVq5Io2T51xyHil4ngNI+aZgnLTFSlklNAYDNjQjj
-XxLSNjneCJkl652jdGVxVcvv0kU2+PjHwO5AK/9Qbj+AwtTrRVgXHS3VTpRi9y6y
-8kneie8ChYCg29SmknoZaEuKuuwcI5Wld+nHvTkuZnBCqkgZfw+YRMz2K1S6jgQB
-vMBwiTeAj4HzzxyHerPKP6xUS+ARp+HFQEYc0M2n72GolpWfEiYKa6NxJ+wHEY5V
-ooD4wgI5y3Ee8YQJg9EV7bXR54HSv6VdxJcule5L2Ls6Wp4It5rwnPF8GL/e4Cz/
-PiSaPnfn2qYT+mX5CBplec93vAwEflm5J485RmAmJtyR7JewAMBb2hUZzmxBew2h
-uVO7DfN7PvgwfAB+XGS0Zk9PVKTZqXhNkuIviqd5S2qLORxYV9P1ckUCJECJ0Qk/
-xWJAoBChjVRcbC9BCii3fi55/RBVZgDIBMDCK/pS7ORuOwoWudNN4IXDzClxNg2G
-O0A8WJYE7LDX/9mBVZ9tUrqHcifKp6cecosvSij6QMZJ7GhNc+jLCgHfqsewVcFV
-VxQnFm6hee1rR3tn7MW/2/dhDXQe9eMcX2w1Eg7npMWgFp6Fugs=
-=aUpr
------END PGP SIGNATURE-----
-
---=-Y29sRYWzknlJzkFhq+5Y--
+-- 
+Kees Cook
+Chrome OS & Brillo Security
