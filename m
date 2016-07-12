@@ -1,30 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <57852E3D.6010107@intel.com>
-References: <cover.1468270393.git.luto@kernel.org> <3213d3f31959a6467b1feb80a384c1e11341b2be.1468270393.git.luto@kernel.org>
- <57852E3D.6010107@intel.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Tue, 12 Jul 2016 11:03:02 -0700
-Message-ID: <CALCETrXc58v2PbJyTOYmX0AV6Ud39sQitbFBcMrSccwR=K9Dbg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v5 13/32] x86/mm/64: In
- vmalloc_fault(), use CR3 instead of current->active_mm
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Andy Lutomirski <luto@kernel.org>
+From: Valdis.Kletnieks@vt.edu
+In-Reply-To: <1467843928-29351-1-git-send-email-keescook@chromium.org>
+References: <1467843928-29351-1-git-send-email-keescook@chromium.org>
+Mime-Version: 1.0
+Content-Type: multipart/signed; boundary="==_Exmh_1468347964_2257P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
+Content-Transfer-Encoding: 7bit
+Date: Tue, 12 Jul 2016 14:26:04 -0400
+Message-ID: <86866.1468347964@turing-police.cc.vt.edu>
+Subject: [kernel-hardening] Re: [PATCH 0/9] mm: Hardened usercopy
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 12, 2016 at 10:51 AM, Dave Hansen <dave.hansen@intel.com> wrote:
-> On 07/11/2016 01:53 PM, Andy Lutomirski wrote:
->> If we get a vmalloc fault while current->active_mm->pgd doesn't
->> match CR3, we'll crash without this change.  I've seen this failure
->> mode on heavily instrumented kernels with virtually mapped stacks.
+--==_Exmh_1468347964_2257P
+Content-Type: text/plain; charset=us-ascii
+
+On Wed, 06 Jul 2016 15:25:19 -0700, Kees Cook said:
+> Hi,
 >
-> When does this happen, btw?  Crossing page boundaries on the stack
-> between the time we swap mm's and the time we switch stacks?
+> This is a start of the mainline port of PAX_USERCOPY[1]. After I started
+> writing tests (now in lkdtm in -next) for Casey's earlier port[2], I
+> kept tweaking things further and further until I ended up with a whole
+> new patch series. To that end, I took Rik's feedback and made a number
+> of other changes and clean-ups as well.
 
-This can happen for any vmalloc fault between the mm swap and writing
-to current or current->active_mm.  I hit it when playing with KASAN
-during the first clone.  (KASAN has other issues, but this was one of
-them AFAICT.)
+And the good news is that my issues with ptrace() and ping seem to
+have cleared up - I suspect there was a dangling piece of the original
+4-patch series still lurking in my tree that appears to have been
+slayed by a 'git reset --hard'.
 
---Andy
+Am running a next-20160708 kernel with the 9-patch series and it's working...
+
+--==_Exmh_1468347964_2257P
+Content-Type: application/pgp-signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+Comment: Exmh version 2.5 07/13/2001
+
+iQIVAwUBV4U2PAdmEQWDXROgAQJyFA/8DxSvclE9PpMHLFM48L0KCljNrEkeF0K4
+JFL+edjUn62QeEndfVbKmhB548QQxou8tEtf8j6Gg79ZTqNvvJnZZYeWQ7mMCmVG
+JKIl/anKTkX/eZVBDRzvztDPhy3VhmR/GnkTSaI+V3X5xxuG3b7IzmDHHhXI98Mi
+jYbEbdAqd0AVZp28es92g6JmpKrjgVEig7q6R9KLAvEknNFCd4V2AMeexvhNQ6GR
+r0NK9ceh97AgBdB2OJE4ClQsK7ndOSTsw7NWa0yJElR/c8iN4LCEz9khpnFA9OZC
+rCOjvAwwVHHLnAgdBJM1tNA3YpgNAtxvEZwfs227kJAEzWK0c4U4VwgvJywvdG7x
+bU8J/yd/67qglWJ9eFxMN+Dgswb8O/D7fjl87ssO0FG5iWeGo77B3Gvq5EVdaU52
+A9QQtebOOscKkg1uy75bIII6TeC4tAiCl8HWCrL4Jh7A/RFn9oStKiJHGUnRIu7t
+JSoJ41TYQt07fEZ+q7TR0c0lAu4ipJ3Z2uKCokzqw/4VJYP86X11S5yFqTWsINDv
+HwIvTgi5BomNJ7rc6GwdE+9yapKCEubKUAj1Y45A9REn4AEDgr9uLks/34Bf9u9m
+GPhx/CN07iXJFDPHEpmFhx1OTHFo1J7XcZf7d75P4oh4vB1NbvqFwBNH2N2vlAlD
+aHWnDM5jsOc=
+=fNmC
+-----END PGP SIGNATURE-----
+
+--==_Exmh_1468347964_2257P--
