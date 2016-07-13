@@ -1,46 +1,134 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 13 Jul 2016 23:26:14 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160713232614.94c653f7eb415d8f969a11c0@gmail.com>
-In-Reply-To: <CAGXu5j+99nc9s-ci46s3r_CU5-6O6JeHERcW3mYRtnP71871rw@mail.gmail.com>
-References: <20160705013928.396ce4a7cbbc40e6c09efc43@gmail.com>
-	<20160705014033.afc9a463b518e2e239c6301b@gmail.com>
-	<CAGXu5jLG6bprjCpu2oF6dexsu+8jU-WX59LY-=wUx27U459Y5Q@mail.gmail.com>
-	<20160712220853.GU1041@n2100.armlinux.org.uk>
-	<CAGXu5j+99nc9s-ci46s3r_CU5-6O6JeHERcW3mYRtnP71871rw@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/3] Add the initify gcc plugin
-To: Kees Cook <keescook@chromium.org>
-Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Arnd Bergmann <arnd@arndb.de>, Sam Ravnborg <sam@ravnborg.org>, Karsten Keil <isdn@linux-pingi.de>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 13 Jul 2016 14:55:54 -0700
+Message-Id: <1468446964-22213-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1468446964-22213-1-git-send-email-keescook@chromium.org>
+References: <1468446964-22213-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v2 01/11] mm: Implement stack frame object validation
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, linux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 12 Jul 2016 18:38:47 -0400
-Kees Cook <keescook@chromium.org> wrote:
+This creates per-architecture function arch_within_stack_frames() that
+should validate if a given object is contained by a kernel stack frame.
+Initial implementation is on x86.
 
-> On Tue, Jul 12, 2016 at 6:08 PM, Russell King - ARM Linux
-> <linux@armlinux.org.uk> wrote:
-> > On Tue, Jul 12, 2016 at 03:45:56PM -0400, Kees Cook wrote:
-> >> On Mon, Jul 4, 2016 at 7:40 PM, Emese Revfy <re.emese@gmail.com> wrote:
-> > That sounds like a problem for architectures that still discard the
-> > __exit section at link time to reduce the size of the linked kernel
-> > image - though, obviously, if using the plugin results in a smaller
-> > kernel image _with_ the exit sections, then there's a net benefit
-> > size-wise.
-> 
-> Ah right, __exit is dropped for non-modular builds. So, for "both
-> __init and __exit" it sounds like the behavior depends on the build:
-> 
-> - if modular: remove __init marking (since we need it after init)
-> - if non-modular: remove __exit marking (since we'll never call exit)
+This is based on code from PaX.
 
-When gcc compiles vmlinux these functions should be in __init and when
-it compiles *.ko then they can be in __exit. I have no time to do this
-now but I added it to my todo list.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/Kconfig                       |  9 ++++++++
+ arch/x86/Kconfig                   |  1 +
+ arch/x86/include/asm/thread_info.h | 44 ++++++++++++++++++++++++++++++++++++++
+ include/linux/thread_info.h        |  9 ++++++++
+ 4 files changed, 63 insertions(+)
 
-The temporary fix can be that I enable this section move only on x86
-(on other archs it will decrase the coverage).
-
+diff --git a/arch/Kconfig b/arch/Kconfig
+index d794384a0404..5e2776562035 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -424,6 +424,15 @@ config CC_STACKPROTECTOR_STRONG
+ 
+ endchoice
+ 
++config HAVE_ARCH_WITHIN_STACK_FRAMES
++	bool
++	help
++	  An architecture should select this if it can walk the kernel stack
++	  frames to determine if an object is part of either the arguments
++	  or local variables (i.e. that it excludes saved return addresses,
++	  and similar) by implementing an inline arch_within_stack_frames(),
++	  which is used by CONFIG_HARDENED_USERCOPY.
++
+ config HAVE_CONTEXT_TRACKING
+ 	bool
+ 	help
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index 0a7b885964ba..4407f596b72c 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -91,6 +91,7 @@ config X86
+ 	select HAVE_ARCH_SOFT_DIRTY		if X86_64
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
++	select HAVE_ARCH_WITHIN_STACK_FRAMES
+ 	select HAVE_EBPF_JIT			if X86_64
+ 	select HAVE_CC_STACKPROTECTOR
+ 	select HAVE_CMPXCHG_DOUBLE
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index 30c133ac05cd..ab386f1336f2 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -180,6 +180,50 @@ static inline unsigned long current_stack_pointer(void)
+ 	return sp;
+ }
+ 
++/*
++ * Walks up the stack frames to make sure that the specified object is
++ * entirely contained by a single stack frame.
++ *
++ * Returns:
++ *		 1 if within a frame
++ *		-1 if placed across a frame boundary (or outside stack)
++ *		 0 unable to determine (no frame pointers, etc)
++ */
++static inline int arch_within_stack_frames(const void * const stack,
++					   const void * const stackend,
++					   const void *obj, unsigned long len)
++{
++#if defined(CONFIG_FRAME_POINTER)
++	const void *frame = NULL;
++	const void *oldframe;
++
++	oldframe = __builtin_frame_address(1);
++	if (oldframe)
++		frame = __builtin_frame_address(2);
++	/*
++	 * low ----------------------------------------------> high
++	 * [saved bp][saved ip][args][local vars][saved bp][saved ip]
++	 *                     ^----------------^
++	 *               allow copies only within here
++	 */
++	while (stack <= frame && frame < stackend) {
++		/*
++		 * If obj + len extends past the last frame, this
++		 * check won't pass and the next frame will be 0,
++		 * causing us to bail out and correctly report
++		 * the copy as invalid.
++		 */
++		if (obj + len <= frame)
++			return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
++		oldframe = frame;
++		frame = *(const void * const *)frame;
++	}
++	return -1;
++#else
++	return 0;
++#endif
++}
++
+ #else /* !__ASSEMBLY__ */
+ 
+ #ifdef CONFIG_X86_64
+diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+index b4c2a485b28a..3d5c80b4391d 100644
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -146,6 +146,15 @@ static inline bool test_and_clear_restore_sigmask(void)
+ #error "no set_restore_sigmask() provided and default one won't work"
+ #endif
+ 
++#ifndef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
++static inline int arch_within_stack_frames(const void * const stack,
++					   const void * const stackend,
++					   const void *obj, unsigned long len)
++{
++	return 0;
++}
++#endif
++
+ #endif	/* __KERNEL__ */
+ 
+ #endif /* _LINUX_THREAD_INFO_H */
 -- 
-Emese
+2.7.4
