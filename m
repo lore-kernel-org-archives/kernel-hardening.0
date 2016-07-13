@@ -1,57 +1,84 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <cover.1468270393.git.luto@kernel.org>
+ <578601B3.3050903@de.ibm.com>
+ <CALCETrUD0R08xkpTgBgey1zMVk4kKm9ZgdXC+KpHQHqCjw9_sg@mail.gmail.com>
+From: Christian Borntraeger <borntraeger@de.ibm.com>
+Date: Wed, 13 Jul 2016 20:53:42 +0200
 MIME-Version: 1.0
-In-Reply-To: <20160713075314.GA32700@gmail.com>
-References: <cover.1468270393.git.luto@kernel.org> <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
- <20160713075314.GA32700@gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 13 Jul 2016 11:42:35 -0700
-Message-ID: <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v5 14/32] x86/mm/64: Enable vmapped stacks
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+In-Reply-To: <CALCETrUD0R08xkpTgBgey1zMVk4kKm9ZgdXC+KpHQHqCjw9_sg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Message-Id: <57868E36.7050605@de.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH v5 00/32] virtually mapped stacks and thread_info cleanup
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, linux-s390 <linux-s390@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 13, 2016 at 12:53 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> * Andy Lutomirski <luto@kernel.org> wrote:
->
->> This allows x86_64 kernels to enable vmapped stacks.  There are a
->> couple of interesting bits.
->
->> --- a/arch/x86/Kconfig
->> +++ b/arch/x86/Kconfig
->> @@ -92,6 +92,7 @@ config X86
->>       select HAVE_ARCH_TRACEHOOK
->>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
->>       select HAVE_EBPF_JIT                    if X86_64
->> +     select HAVE_ARCH_VMAP_STACK             if X86_64
->
-> So what is the performance impact?
+On 07/13/2016 08:36 PM, Andy Lutomirski wrote:
+> On Wed, Jul 13, 2016 at 1:54 AM, Christian Borntraeger
+> <borntraeger@de.ibm.com> wrote:
+>> On 07/11/2016 10:53 PM, Andy Lutomirski wrote:
+>>> Hi all-
+>>>
+>>> Since the dawn of time, a kernel stack overflow has been a real PITA
+>>> to debug, has caused nondeterministic crashes some time after the
+>>> actual overflow, and has generally been easy to exploit for root.
+>>>
+>>> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
+>>> that enable it (just x86 for now) get virtually mapped stacks with
+>>> guard pages.  This causes reliable faults when the stack overflows.
+>>>
+>>> If the arch implements it well, we get a nice OOPS on stack overflow
+>>> (as opposed to panicing directly or otherwise exploding badly).  On
+>>> x86, the OOPS is nice, has a usable call trace, and the overflowing
+>>> task is killed cleanly.
+>>>
+>>> This series (starting with v4) also extensively cleans up
+>>> thread_info.  thread_info has been partially redundant with
+>>> thread_struct for a long time -- both are places for arch code to
+>>> add additional per-task variables.  thread_struct is much cleaner:
+>>> it's always in task_struct, and there's nothing particularly magical
+>>> about it.  So this series contains a bunch of cleanups on x86 to
+>>> move almost everything from thread_info to thread_struct (which,
+>>> even by itself, deletes more code than it adds) and to remove x86's
+>>> dependence on thread_info's position on the stack.  Then it opts x86
+>>> into a new config option THREAD_INFO_IN_TASK to get rid of
+>>> arch-specific thread_info entirely and simply embed a defanged
+>>> thread_info (containing only flags) and 'int cpu' into task_struct.
+>>>
+>>> Once thread_info stops being magical, there's another benefit: we
+>>> can free the thread stack as soon as the task is dead (without
+>>> waiting for RCU) and then, if vmapped stacks are in use, cache the
+>>> entire stack for reuse on the same cpu.
+>>>
+>>> This seems to be an overall speedup of about 0.5-1 µs per
+>>> pthread_create/join in a simple test -- a percpu cache of vmalloced
+>>> stacks appears to be a bit faster than a high-order stack
+>>> allocation, at least when the cache hits.  (I expect that workloads
+>>> with a low cache hit rate are likely to be dominated by other
+>>> effects anyway.)
+>>>
+>>> This does not address interrupt stacks.
+>>>
+>>> It's worth noting that s390 has an arch-specific gcc feature that
+>>> detects stack overflows by adjusting function prologues.  Arches
+>>> with features like that may wish to avoid using vmapped stacks to
+>>> minimize the performance hit.
+>>
+>> Yes, might not need this for stack overflow detection. What might
+>> be interesting is the thread_info/thread_struct change, if we can
+>> strip down thread_info.(CONFIG_THREAD_INFO_IN_TASK). Would it actually
+>> make sense to separate these two changes to see what performance
+>> impact  CONFIG_THREAD_INFO_IN_TASK has on its own?
+>>
+> 
+> They're already separated.
+> 
+> CONFIG_THREAD_INFO_IN_TASK should have basically no performance impact
+> unless there are arch-dependent (percpu?) issues involved.  It does
+> enable immediate thread stack deallocation, though, and it would be
+> straightforward to make CONFIG_THREAD_INFO_IN_TASK cache stacks even
+> if CONFIG_VMAP_STACK=n.  That should be a moderate clone() speedup.
 
-Seems to be a very slight speedup (0.5 =C2=B5s or so) on my silly benchmark
-(pthread_create, pthread_join in a loop).  It should be a small
-slowdown on workloads that create many threads all at once, thus
-defeating the stack cache.  It should be a *large* speedup on any
-workload that would trigger compaction on clone() to satisfy the
-high-order allocation.
-
->
-> Because I think we should consider enabling this feature by default on x8=
-6 - but
-> the way it's selected here it will be default-off.
->
-> On the plus side: the debuggability and reliability improvements are real=
- and
-> making it harder for exploits to use kernel stack overflows is a nice bon=
-us as
-> well. There's two performance effects:
-
-Agreed.  At the very least, I want to wait until after net-next gets
-pulled to flip the default to y.  I'm also a bit concerned about more
-random driver issues that I haven't found yet.  I suppose we could
-flip the default to y for a few -rc releases and see what, if
-anything, shakes loose.
-
---Andy
+Yes. My point was more of having two patch series in case the discussion goes
+on regarding virtual stack.
