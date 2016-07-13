@@ -1,84 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <cover.1468270393.git.luto@kernel.org>
- <578601B3.3050903@de.ibm.com>
- <CALCETrUD0R08xkpTgBgey1zMVk4kKm9ZgdXC+KpHQHqCjw9_sg@mail.gmail.com>
-From: Christian Borntraeger <borntraeger@de.ibm.com>
-Date: Wed, 13 Jul 2016 20:53:42 +0200
-MIME-Version: 1.0
-In-Reply-To: <CALCETrUD0R08xkpTgBgey1zMVk4kKm9ZgdXC+KpHQHqCjw9_sg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Message-Id: <57868E36.7050605@de.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH v5 00/32] virtually mapped stacks and thread_info cleanup
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, linux-s390 <linux-s390@vger.kernel.org>
+Date: Wed, 13 Jul 2016 22:34:08 +0200
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20160713223408.8e52842ddda8818cec83d6a6@gmail.com>
+In-Reply-To: <CAGXu5j+W2hZGkudskkmEn+beEN04qmg16-k7Rna-QRT3vyEW2g@mail.gmail.com>
+References: <20160705013928.396ce4a7cbbc40e6c09efc43@gmail.com>
+	<20160705014033.afc9a463b518e2e239c6301b@gmail.com>
+	<CAGXu5jLG6bprjCpu2oF6dexsu+8jU-WX59LY-=wUx27U459Y5Q@mail.gmail.com>
+	<20160712220717.297fea731dd53123efd7974f@gmail.com>
+	<CAGXu5j+W2hZGkudskkmEn+beEN04qmg16-k7Rna-QRT3vyEW2g@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 1/3] Add the initify gcc plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, LKML <linux-kernel@vger.kernel.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Arnd Bergmann <arnd@arndb.de>, Sam Ravnborg <sam@ravnborg.org>, Karsten Keil <isdn@linux-pingi.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/13/2016 08:36 PM, Andy Lutomirski wrote:
-> On Wed, Jul 13, 2016 at 1:54 AM, Christian Borntraeger
-> <borntraeger@de.ibm.com> wrote:
->> On 07/11/2016 10:53 PM, Andy Lutomirski wrote:
->>> Hi all-
->>>
->>> Since the dawn of time, a kernel stack overflow has been a real PITA
->>> to debug, has caused nondeterministic crashes some time after the
->>> actual overflow, and has generally been easy to exploit for root.
->>>
->>> With this series, arches can enable HAVE_ARCH_VMAP_STACK.  Arches
->>> that enable it (just x86 for now) get virtually mapped stacks with
->>> guard pages.  This causes reliable faults when the stack overflows.
->>>
->>> If the arch implements it well, we get a nice OOPS on stack overflow
->>> (as opposed to panicing directly or otherwise exploding badly).  On
->>> x86, the OOPS is nice, has a usable call trace, and the overflowing
->>> task is killed cleanly.
->>>
->>> This series (starting with v4) also extensively cleans up
->>> thread_info.  thread_info has been partially redundant with
->>> thread_struct for a long time -- both are places for arch code to
->>> add additional per-task variables.  thread_struct is much cleaner:
->>> it's always in task_struct, and there's nothing particularly magical
->>> about it.  So this series contains a bunch of cleanups on x86 to
->>> move almost everything from thread_info to thread_struct (which,
->>> even by itself, deletes more code than it adds) and to remove x86's
->>> dependence on thread_info's position on the stack.  Then it opts x86
->>> into a new config option THREAD_INFO_IN_TASK to get rid of
->>> arch-specific thread_info entirely and simply embed a defanged
->>> thread_info (containing only flags) and 'int cpu' into task_struct.
->>>
->>> Once thread_info stops being magical, there's another benefit: we
->>> can free the thread stack as soon as the task is dead (without
->>> waiting for RCU) and then, if vmapped stacks are in use, cache the
->>> entire stack for reuse on the same cpu.
->>>
->>> This seems to be an overall speedup of about 0.5-1 µs per
->>> pthread_create/join in a simple test -- a percpu cache of vmalloced
->>> stacks appears to be a bit faster than a high-order stack
->>> allocation, at least when the cache hits.  (I expect that workloads
->>> with a low cache hit rate are likely to be dominated by other
->>> effects anyway.)
->>>
->>> This does not address interrupt stacks.
->>>
->>> It's worth noting that s390 has an arch-specific gcc feature that
->>> detects stack overflows by adjusting function prologues.  Arches
->>> with features like that may wish to avoid using vmapped stacks to
->>> minimize the performance hit.
->>
->> Yes, might not need this for stack overflow detection. What might
->> be interesting is the thread_info/thread_struct change, if we can
->> strip down thread_info.(CONFIG_THREAD_INFO_IN_TASK). Would it actually
->> make sense to separate these two changes to see what performance
->> impact  CONFIG_THREAD_INFO_IN_TASK has on its own?
->>
-> 
-> They're already separated.
-> 
-> CONFIG_THREAD_INFO_IN_TASK should have basically no performance impact
-> unless there are arch-dependent (percpu?) issues involved.  It does
-> enable immediate thread stack deallocation, though, and it would be
-> straightforward to make CONFIG_THREAD_INFO_IN_TASK cache stacks even
-> if CONFIG_VMAP_STACK=n.  That should be a moderate clone() speedup.
+On Tue, 12 Jul 2016 16:05:45 -0400
+Kees Cook <keescook@chromium.org> wrote:
 
-Yes. My point was more of having two patch series in case the discussion goes
-on regarding virtual stack.
+> /*
+>  * The initify gcc-plugin attempts to identify const arguments that are only
+>  * used during init (see __init), so they can be moved to the .init.rodata
+>  * section. If an argument is passed to a non-init function, it must
+>  * normally be assumed that such an argument has been captured by that
+>  * function and may be used in the future when .init has been unmapped from
+>  * memory. In order to identify functions that are confirmed to not capture
+>  * their arguments, the __nocapture() attribute is used so that initify can
+>  * better identify candidate variables.
+>  */
+> #ifdef INITIFY_PLUGIN
+> # define __nocapture(...) __attribute__((nocapture(__VA_ARGS__)))
+> #endif
+
+Thanks, I'll take it in the next patch set with some additions (the attribute
+also handles __exit functions and the plugin does other things e.g., it can
+identify candidate init/exit functions and move them automatically to init.text/exit.text).
+
+-- 
+Emese
