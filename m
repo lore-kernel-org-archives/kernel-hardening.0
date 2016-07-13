@@ -1,95 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 13 Jul 2016 09:53:31 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160713075314.GA32700@gmail.com>
+References: <cover.1468270393.git.luto@kernel.org>
+ <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJEtLuvotLpBFS9yP2nt5rRtxsmFSJO31Jnc==-XFS1ig@mail.gmail.com>
-References: <CAHgaXdKW4=y-PviWudtMAThuB=GEW-73RejSHRMYNVzLyxP+iA@mail.gmail.com>
- <CAGXu5jLA+ri_RwWSOoZwAtv6a6pXL_EzUx6BZ0Mmc-n0+We9vg@mail.gmail.com>
- <CAHgaXdLPLCiggTrKGcFZzmGiBUmdmNGAt0_nO9BS5aGoP=bVmw@mail.gmail.com>
- <CAGXu5jJofXU-KsZ+1vxHHKHQFcVv5YSi1wtx3DR0sAZto-NvsQ@mail.gmail.com>
- <CAHgaXdJ_kTp7u1tEr4VTLyw7nVyz_L5P7WcuO2=WLtpE_CdeKw@mail.gmail.com> <CAGXu5jJEtLuvotLpBFS9yP2nt5rRtxsmFSJO31Jnc==-XFS1ig@mail.gmail.com>
-From: Shubham Bansal <illusionist.neo@gmail.com>
-Date: Wed, 13 Jul 2016 13:07:07 +0530
-Message-ID: <CAHgaXdKrA4ZkK3rWA8eH4PzdvTHb2LeWfDX-PL159OapX1_WDA@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=001a113e161ce39e1305377f7337
-Subject: Re: [kernel-hardening] Looking for something to WORK ON
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Daniel Borkmann <daniel@iogearbox.net>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v5 14/32] x86/mm/64: Enable vmapped stacks
+To: Andy Lutomirski <luto@kernel.org>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a113e161ce39e1305377f7337
-Content-Type: text/plain; charset=UTF-8
 
-Hi,
+* Andy Lutomirski <luto@kernel.org> wrote:
 
-> So overall I have 3 options :
-> >
-> > PaX's UDEREF feature - I want to work on this if its needed
->
-> This is a large project.
->
-I am happy to do it. Do you have anything where I can start ? I might need
-someone who could guide me through it. It would be great if you could.
+> This allows x86_64 kernels to enable vmapped stacks.  There are a
+> couple of interesting bits.
 
->
-> > PAN emulation on ARMv8.0 - My second preference would be this.
->
-> This sounds like it requires more research?
->
-> > Convert remaining BPF JITs to eBPF JIT (with blinding) - Happy to do it
-> if
-> > need
->
-> I think this has value and there are folks that can help direct you
-> through this. Since you're new to kernel development, maybe start here
-> to get a sense of the amount of work needed, and then go from there?
->
-Okay. I will start here. I will keep the PAX's UDREF feature in the
-background and start working on this. I will reach out to Daniel Borkmann
-and Elena Reshetova for the starting pointers.
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -92,6 +92,7 @@ config X86
+>  	select HAVE_ARCH_TRACEHOOK
+>  	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>  	select HAVE_EBPF_JIT			if X86_64
+> +	select HAVE_ARCH_VMAP_STACK		if X86_64
 
-Daniel , Elena : Any update/help from your side is highly appreciated. If
-you want I can start another thread with "Converting BPF JITs to eBPF JIT"
-Subject, where we can discuss it.
+So what is the performance impact?
 
-Best,
-Shubham Bansal
+Because I think we should consider enabling this feature by default on x86 - but 
+the way it's selected here it will be default-off.
 
---001a113e161ce39e1305377f7337
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+On the plus side: the debuggability and reliability improvements are real and 
+making it harder for exploits to use kernel stack overflows is a nice bonus as 
+well. There's two performance effects:
 
-<div dir=3D"ltr">Hi,<div class=3D"gmail_extra"><div class=3D"gmail_quote"><=
-span class=3D""></span><br><span class=3D""></span><blockquote class=3D"gma=
-il_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,2=
-04,204);padding-left:1ex"><span class=3D"">
-&gt; So overall I have 3 options :<br>
-&gt;<br>
-&gt; PaX&#39;s UDEREF feature - I want to work on this if its needed<br>
-<br>
-</span>This is a large project.<br></blockquote><div>I am happy to do it. D=
-o you have anything where I can start ? I might need someone who could guid=
-e me through it. It would be great if you could.<br></div><blockquote class=
-=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid rg=
-b(204,204,204);padding-left:1ex">
-<span class=3D""><br>
-&gt; PAN emulation on ARMv8.0 - My second preference would be this.<br>
-<br>
-</span>This sounds like it requires more research?<br>
-<span class=3D""><br>
-&gt; Convert remaining BPF JITs to eBPF JIT (with blinding) - Happy to do i=
-t if<br>
-&gt; need<br>
-<br>
-</span>I think this has value and there are folks that can help direct you<=
-br>
-through this. Since you&#39;re new to kernel development, maybe start here<=
-br>
-to get a sense of the amount of work needed, and then go from there?<br></b=
-lockquote><div>Okay. I will start here. I will keep the PAX&#39;s UDREF fea=
-ture in the background and start working on this. I will reach out to Danie=
-l Borkmann and Elena Reshetova for the starting pointers.<br><br></div><div=
->Daniel , Elena : Any update/help from your side is highly appreciated. If =
-you want I can start another thread with &quot;Converting BPF JITs to eBPF =
-JIT&quot; Subject, where we can discuss it.<br></div><div><br></div><div>Be=
-st,<br></div><div>Shubham Bansal<br></div></div><br></div></div>
+ - vmalloc now potentially moves into the thread pool create/destroy hot path.
 
---001a113e161ce39e1305377f7337--
+ - we use 4K TLBs for kernel stacks instead of 2MB TLBs.
+
+The TLB effect should be relatively modest on modern CPUs, given that the kernel 
+stack size is limited and 4K TLBs are plenty. The vmalloc() part should be 
+measured I suspect.
+
+Thanks,
+
+	Ingo
