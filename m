@@ -1,68 +1,81 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 14 Jul 2016 00:48:42 -0500
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-Message-ID: <20160714054842.6zal5rqawpgew26r@treble>
-References: <1468446964-22213-1-git-send-email-keescook@chromium.org>
- <1468446964-22213-2-git-send-email-keescook@chromium.org>
- <CALCETrVDJDjdoh7yvOPd=_5twQnzQRhe8G2KLaRw-NnA1Uf__g@mail.gmail.com>
- <CAGXu5jLPZiRJx8n3_7GW2bufiuUgE9=c6dQcNxDRPHMU72sD9g@mail.gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 14 Jul 2016 10:34:11 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20160714083411.GA15437@gmail.com>
+References: <cover.1468270393.git.luto@kernel.org>
+ <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
+ <20160713075314.GA32700@gmail.com>
+ <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jLPZiRJx8n3_7GW2bufiuUgE9=c6dQcNxDRPHMU72sD9g@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 01/11] mm: Implement stack frame object validation
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, X86 ML <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-ia64@vger.kernel.org" <linux-ia64@vger.kernel.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 14/32] x86/mm/64: Enable vmapped stacks
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 13, 2016 at 03:04:26PM -0700, Kees Cook wrote:
-> On Wed, Jul 13, 2016 at 3:01 PM, Andy Lutomirski <luto@amacapital.net> wrote:
-> > On Wed, Jul 13, 2016 at 2:55 PM, Kees Cook <keescook@chromium.org> wrote:
-> >> This creates per-architecture function arch_within_stack_frames() that
-> >> should validate if a given object is contained by a kernel stack frame.
-> >> Initial implementation is on x86.
-> >>
-> >> This is based on code from PaX.
-> >>
+
+* Andy Lutomirski <luto@amacapital.net> wrote:
+
+> On Wed, Jul 13, 2016 at 12:53 AM, Ingo Molnar <mingo@kernel.org> wrote:
 > >
-> > This, along with Josh's livepatch work, are two examples of unwinders
-> > that matter for correctness instead of just debugging.  ISTM this
-> > should just use Josh's code directly once it's been written.
+> > * Andy Lutomirski <luto@kernel.org> wrote:
+> >
+> >> This allows x86_64 kernels to enable vmapped stacks.  There are a
+> >> couple of interesting bits.
+> >
+> >> --- a/arch/x86/Kconfig
+> >> +++ b/arch/x86/Kconfig
+> >> @@ -92,6 +92,7 @@ config X86
+> >>       select HAVE_ARCH_TRACEHOOK
+> >>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+> >>       select HAVE_EBPF_JIT                    if X86_64
+> >> +     select HAVE_ARCH_VMAP_STACK             if X86_64
+> >
+> > So what is the performance impact?
 > 
-> Do you have URL for Josh's code? I'd love to see what happening there.
+> Seems to be a very slight speedup (0.5 µs or so) on my silly benchmark
+> (pthread_create, pthread_join in a loop). [...]
 
-The code is actually going to be 100% different next time around, but
-FWIW, here's the last attempt:
+Music to my ears - although TBH there's probably two opposing forces: advantages 
+from the cache versus (possibly very minor, if measurable at all) disadvantages 
+from the 4K granularity.
 
-  https://lkml.kernel.org/r/4d34d452bf8f85c7d6d5f93db1d3eeb4cba335c7.1461875890.git.jpoimboe@redhat.com
+> [...]  It should be a small slowdown on workloads that create many threads all 
+> at once, thus defeating the stack cache.  It should be a *large* speedup on any 
+> workload that would trigger compaction on clone() to satisfy the high-order 
+> allocation.
+> 
+> >
+> > Because I think we should consider enabling this feature by default on x86 - but
+> > the way it's selected here it will be default-off.
+> >
+> > On the plus side: the debuggability and reliability improvements are real and
+> > making it harder for exploits to use kernel stack overflows is a nice bonus as
+> > well. There's two performance effects:
+> 
+> Agreed.  At the very least, I want to wait until after net-next gets
+> pulled to flip the default to y.  I'm also a bit concerned about more
+> random driver issues that I haven't found yet.  I suppose we could
+> flip the default to y for a few -rc releases and see what, if
+> anything, shakes loose.
 
-In the meantime I've realized the need to rewrite the x86 core stack
-walking code to something much more manageable so we don't need all
-these unwinders everywhere.  I'll probably post the patches in the next
-week or so.  I'll add you to the CC list.
+So I'd prefer the following approach: to apply it to a v4.8-rc1 base in ~2 weeks 
+and keep it default-y for much of the next development cycle. If no serious 
+problems are found in those ~2 months then send it to Linus in that fashion. We 
+can still turn it off by default (or re-spin the whole approach) if it turns out 
+to be too risky.
 
-With the new interface I think you'll be able to do something like:
+Exposing it as default-n for even a small amount of time will massively reduce the 
+testing we'll get, as most people will just use the N setting (often without 
+noticing).
 
-	struct unwind_state;
+Plus this also gives net-next and other preparatory patches applied directly to 
+maintainer trees time to trickle upstream.
 
-	unwind_start(&state, current, NULL, NULL);
-	unwind_next_frame(&state);
-	oldframe = unwind_get_stack_pointer(&state);
+Thanks,
 
-	unwind_next_frame(&state);
-	frame = unwind_get_stack_pointer(&state);
-
-	do {
-		if (obj + len <= frame)
-			return blah;
-		oldframe = frame;
-		frame = unwind_get_stack_pointer(&state);
-
-	} while (unwind_next_frame(&state);
-
-And then at the end there'll be some (still TBD) way to query whether it
-reached the last syscall pt_regs frame, or if it instead encountered a
-bogus frame pointer along the way and had to bail early.
-
--- 
-Josh
+	Ingo
