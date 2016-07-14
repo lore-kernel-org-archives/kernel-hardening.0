@@ -1,25 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <1468446964-22213-12-git-send-email-keescook@chromium.org>
-References: <1468446964-22213-1-git-send-email-keescook@chromium.org> <1468446964-22213-12-git-send-email-keescook@chromium.org>
-Date: Thu, 14 Jul 2016 20:07:01 +1000
-Message-ID: <87k2goa5yy.fsf@@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] [PATCH v2 11/11] mm: SLUB hardened usercopy support
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, lin ux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20160714083411.GA15437@gmail.com>
+References: <cover.1468270393.git.luto@kernel.org> <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
+ <20160713075314.GA32700@gmail.com> <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
+ <20160714083411.GA15437@gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 14 Jul 2016 09:51:29 -0700
+Message-ID: <CALCETrUk9Ae-kGixsoqZZG3gb+=JCpQ-zbuNU8R+V6TFg4ymeA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v5 14/32] x86/mm/64: Enable vmapped stacks
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
+On Thu, Jul 14, 2016 at 1:34 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>
+> * Andy Lutomirski <luto@amacapital.net> wrote:
+>
+>> On Wed, Jul 13, 2016 at 12:53 AM, Ingo Molnar <mingo@kernel.org> wrote:
+>> >
+>> > * Andy Lutomirski <luto@kernel.org> wrote:
+>> >
+>> >> This allows x86_64 kernels to enable vmapped stacks.  There are a
+>> >> couple of interesting bits.
+>> >
+>> >> --- a/arch/x86/Kconfig
+>> >> +++ b/arch/x86/Kconfig
+>> >> @@ -92,6 +92,7 @@ config X86
+>> >>       select HAVE_ARCH_TRACEHOOK
+>> >>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+>> >>       select HAVE_EBPF_JIT                    if X86_64
+>> >> +     select HAVE_ARCH_VMAP_STACK             if X86_64
+>> >
+>> > So what is the performance impact?
+>>
+>> Seems to be a very slight speedup (0.5 =E7=9B=9C or so) on my silly benc=
+hmark
+>> (pthread_create, pthread_join in a loop). [...]
+>
+> Music to my ears - although TBH there's probably two opposing forces: adv=
+antages
+> from the cache versus (possibly very minor, if measurable at all) disadva=
+ntages
+> from the 4K granularity.
 
-> Under CONFIG_HARDENED_USERCOPY, this adds object size checking to the
-> SLUB allocator to catch any copies that may span objects. Includes a
-> redzone handling fix from Michael Ellerman.
+True.  It's also plausible that there will be different lock
+contention issues on very large system with vmalloc vs using the page
+allocator.
 
-Actually I think you wrote the fix, I just pointed you in that
-direction. But anyway, this works for me, so if you like:
+And there's one other issue.  The patchset will considerably increase
+the frequency with which vmap gets called, which will make the giant
+hole in Chris Metcalf's isolation series more apparent.  But that's
+not really a regression -- the problem is pre-existing, and I've
+pointed it out a few times before.  Arguably it's even a benefit --
+someone will have to *fix* it now :)
 
-Tested-by: Michael Ellerman <mpe@ellerman.id.au>
+> So I'd prefer the following approach: to apply it to a v4.8-rc1 base in ~=
+2 weeks
+> and keep it default-y for much of the next development cycle. If no serio=
+us
+> problems are found in those ~2 months then send it to Linus in that fashi=
+on. We
+> can still turn it off by default (or re-spin the whole approach) if it tu=
+rns out
+> to be too risky.
+>
+> Exposing it as default-n for even a small amount of time will massively r=
+educe the
+> testing we'll get, as most people will just use the N setting (often with=
+out
+> noticing).
+>
+> Plus this also gives net-next and other preparatory patches applied direc=
+tly to
+> maintainer trees time to trickle upstream.
 
-cheers
+Works for me.
+
+If you think it makes sense, I can split out a bunch of the x86 and mm
+preparatory patches and, if it reorders cleanly and still works, the
+THREAD_INFO_IN_TASK thing.  Those could plausibly go in 4.7.  Would
+you like me to see how that goes?  (I'll verify that it builds, that
+the 0day bot likes it, and that the final result of the patchset is
+exactly identical to what I already sent.)
+
+--Andy
