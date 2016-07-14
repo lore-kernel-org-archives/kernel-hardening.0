@@ -1,81 +1,25 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 14 Jul 2016 10:34:11 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160714083411.GA15437@gmail.com>
-References: <cover.1468270393.git.luto@kernel.org>
- <8d36dd9b2430b61db64333af7b911d0bca7d5d2f.1468270393.git.luto@kernel.org>
- <20160713075314.GA32700@gmail.com>
- <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <1468446964-22213-12-git-send-email-keescook@chromium.org>
+References: <1468446964-22213-1-git-send-email-keescook@chromium.org> <1468446964-22213-12-git-send-email-keescook@chromium.org>
+Date: Thu, 14 Jul 2016 20:07:01 +1000
+Message-ID: <87k2goa5yy.fsf@@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CALCETrW9B=MAGaLAV0Y86MQ2==pjoShHdOPNM_8ZR1OKZDy2ZQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v5 14/32] x86/mm/64: Enable vmapped stacks
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Andy Lutomirski <luto@kernel.org>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] [PATCH v2 11/11] mm: SLUB hardened usercopy support
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, lin ux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Kees Cook <keescook@chromium.org> writes:
 
-* Andy Lutomirski <luto@amacapital.net> wrote:
+> Under CONFIG_HARDENED_USERCOPY, this adds object size checking to the
+> SLUB allocator to catch any copies that may span objects. Includes a
+> redzone handling fix from Michael Ellerman.
 
-> On Wed, Jul 13, 2016 at 12:53 AM, Ingo Molnar <mingo@kernel.org> wrote:
-> >
-> > * Andy Lutomirski <luto@kernel.org> wrote:
-> >
-> >> This allows x86_64 kernels to enable vmapped stacks.  There are a
-> >> couple of interesting bits.
-> >
-> >> --- a/arch/x86/Kconfig
-> >> +++ b/arch/x86/Kconfig
-> >> @@ -92,6 +92,7 @@ config X86
-> >>       select HAVE_ARCH_TRACEHOOK
-> >>       select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-> >>       select HAVE_EBPF_JIT                    if X86_64
-> >> +     select HAVE_ARCH_VMAP_STACK             if X86_64
-> >
-> > So what is the performance impact?
-> 
-> Seems to be a very slight speedup (0.5 µs or so) on my silly benchmark
-> (pthread_create, pthread_join in a loop). [...]
+Actually I think you wrote the fix, I just pointed you in that
+direction. But anyway, this works for me, so if you like:
 
-Music to my ears - although TBH there's probably two opposing forces: advantages 
-from the cache versus (possibly very minor, if measurable at all) disadvantages 
-from the 4K granularity.
+Tested-by: Michael Ellerman <mpe@ellerman.id.au>
 
-> [...]  It should be a small slowdown on workloads that create many threads all 
-> at once, thus defeating the stack cache.  It should be a *large* speedup on any 
-> workload that would trigger compaction on clone() to satisfy the high-order 
-> allocation.
-> 
-> >
-> > Because I think we should consider enabling this feature by default on x86 - but
-> > the way it's selected here it will be default-off.
-> >
-> > On the plus side: the debuggability and reliability improvements are real and
-> > making it harder for exploits to use kernel stack overflows is a nice bonus as
-> > well. There's two performance effects:
-> 
-> Agreed.  At the very least, I want to wait until after net-next gets
-> pulled to flip the default to y.  I'm also a bit concerned about more
-> random driver issues that I haven't found yet.  I suppose we could
-> flip the default to y for a few -rc releases and see what, if
-> anything, shakes loose.
-
-So I'd prefer the following approach: to apply it to a v4.8-rc1 base in ~2 weeks 
-and keep it default-y for much of the next development cycle. If no serious 
-problems are found in those ~2 months then send it to Linus in that fashion. We 
-can still turn it off by default (or re-spin the whole approach) if it turns out 
-to be too risky.
-
-Exposing it as default-n for even a small amount of time will massively reduce the 
-testing we'll get, as most people will just use the N setting (often without 
-noticing).
-
-Plus this also gives net-next and other preparatory patches applied directly to 
-maintainer trees time to trickle upstream.
-
-Thanks,
-
-	Ingo
+cheers
