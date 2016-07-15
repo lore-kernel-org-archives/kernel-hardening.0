@@ -1,109 +1,132 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 15 Jul 2016 14:44:14 -0700
-Message-Id: <1468619065-3222-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v3 00/11] mm: Hardened usercopy
+Date: Fri, 15 Jul 2016 14:44:19 -0700
+Message-Id: <1468619065-3222-6-git-send-email-keescook@chromium.org>
+In-Reply-To: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+References: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v3 05/11] arm64/uaccess: Enable hardened usercopy
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, Balbir Singh <bsingharora@gmail.com>, Daniel Micay <danielmicay@gmail.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, linux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Enables CONFIG_HARDENED_USERCOPY checks on arm64. As done by KASAN in -next,
+renames the low-level functions to __arch_copy_*_user() so a static inline
+can do additional work before the copy.
 
-[I'm going to carry this series in my kspp -next tree now, though I'd
-really love to have some explicit Acked-bys or Reviewed-bys. If you've
-looked through it or tested it, please consider it. :) (I added Valdis
-and mpe's Tested-bys where they seemed correct, thank you!)]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/arm64/Kconfig               |  2 ++
+ arch/arm64/include/asm/uaccess.h | 16 ++++++++++++++--
+ arch/arm64/kernel/arm64ksyms.c   |  4 ++--
+ arch/arm64/lib/copy_from_user.S  |  4 ++--
+ arch/arm64/lib/copy_to_user.S    |  4 ++--
+ 5 files changed, 22 insertions(+), 8 deletions(-)
 
-This is a start of the mainline port of PAX_USERCOPY[1]. After I started
-writing tests (now in lkdtm in -next) for Casey's earlier port[2], I kept
-tweaking things further and further until I ended up with a whole new
-patch series. To that end, I took Rik and other people's feedback along
-with other changes and clean-ups.
-
-Based on my understanding, PAX_USERCOPY was designed to catch a
-few classes of flaws (mainly bad bounds checking) around the use of
-copy_to_user()/copy_from_user(). These changes don't touch get_user() and
-put_user(), since these operate on constant sized lengths, and tend to be
-much less vulnerable. There are effectively three distinct protections in
-the whole series, each of which I've given a separate CONFIG, though this
-patch set is only the first of the three intended protections. (Generally
-speaking, PAX_USERCOPY covers what I'm calling CONFIG_HARDENED_USERCOPY
-(this) and CONFIG_HARDENED_USERCOPY_WHITELIST (future), and
-PAX_USERCOPY_SLABS covers CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
-(future).)
-
-This series, which adds CONFIG_HARDENED_USERCOPY, checks that objects
-being copied to/from userspace meet certain criteria:
-- if address is a heap object, the size must not exceed the object's
-  allocated size. (This will catch all kinds of heap overflow flaws.)
-- if address range is in the current process stack, it must be within the
-  current stack frame (if such checking is possible) or at least entirely
-  within the current process's stack. (This could catch large lengths that
-  would have extended beyond the current process stack, or overflows if
-  their length extends back into the original stack.)
-- if the address range is part of kernel data, rodata, or bss, allow it.
-- if address range is page-allocated, that it doesn't span multiple
-  allocations.
-- if address is within the kernel text, reject it.
-- everything else is accepted
-
-The patches in the series are:
-- Support for arch-specific stack frame checking (which will likely be
-  replaced in the future by Josh's more comprehensive unwinder):
-        1- mm: Implement stack frame object validation
-- The core copy_to/from_user() checks, without the slab object checks:
-        2- mm: Hardened usercopy
-- Per-arch enablement of the protection:
-        3- x86/uaccess: Enable hardened usercopy
-        4- ARM: uaccess: Enable hardened usercopy
-        5- arm64/uaccess: Enable hardened usercopy
-        6- ia64/uaccess: Enable hardened usercopy
-        7- powerpc/uaccess: Enable hardened usercopy
-        8- sparc/uaccess: Enable hardened usercopy
-        9- s390/uaccess: Enable hardened usercopy
-- The heap allocator implementation of object size checking:
-       10- mm: SLAB hardened usercopy support
-       11- mm: SLUB hardened usercopy support
-
-Some notes:
-
-- This is expected to apply on top of -next which contains fixes for the
-  position of _etext on both arm and arm64, though it has minor conflicts
-  with KASAN that are trivial to fix up. Living in -next are also tests
-  for this protection in lkdtm, prefixed with USERCOPY_.
-
-- I couldn't detect a measurable performance change with these features
-  enabled. Kernel build times were unchanged, hackbench was unchanged,
-  etc. I think we could flip this to "on by default" at some point, but
-  for now, I'm leaving it off until I can get some more definitive
-  measurements. I would love if someone with greater familiarity with
-  perf could give this a spin and report results.
-
-- The SLOB support extracted from grsecurity seems entirely broken. I
-  have no idea what's going on there, I spent my time testing SLAB and
-  SLUB. Having someone else look at SLOB would be nice, but this series
-  doesn't depend on it.
-
-Additional features that would be nice, but aren't blocking this series:
-
-- Needs more architecture support for stack frame checking (only x86 now,
-  but it seems Josh will have a good solution for this soon).
-
-
-Thanks!
-
--Kees
-
-[1] https://grsecurity.net/download.php "grsecurity - test kernel patch"
-[2] http://www.openwall.com/lists/kernel-hardening/2016/05/19/5
-
-v3:
-- switch to using BUG for better Oops integration
-- when checking page allocations, check each for Reserved
-- use enums for the stack check return for readability
-
-v2:
-- added s390 support
-- handle slub red zone
-- disallow writes to rodata area
-- stack frame walker now CONFIG-controlled arch-specific helper
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 5a0a691d4220..b771cd97f74b 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -51,10 +51,12 @@ config ARM64
+ 	select HAVE_ALIGNED_STRUCT_PAGE if SLUB
+ 	select HAVE_ARCH_AUDITSYSCALL
+ 	select HAVE_ARCH_BITREVERSE
++	select HAVE_ARCH_HARDENED_USERCOPY
+ 	select HAVE_ARCH_HUGE_VMAP
+ 	select HAVE_ARCH_JUMP_LABEL
+ 	select HAVE_ARCH_KASAN if SPARSEMEM_VMEMMAP && !(ARM64_16K_PAGES && ARM64_VA_BITS_48)
+ 	select HAVE_ARCH_KGDB
++	select HAVE_ARCH_LINEAR_KERNEL_MAPPING
+ 	select HAVE_ARCH_MMAP_RND_BITS
+ 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+ 	select HAVE_ARCH_SECCOMP_FILTER
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index 9e397a542756..5d0dacdb695b 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -256,11 +256,23 @@ do {									\
+ 		-EFAULT;						\
+ })
+ 
+-extern unsigned long __must_check __copy_from_user(void *to, const void __user *from, unsigned long n);
+-extern unsigned long __must_check __copy_to_user(void __user *to, const void *from, unsigned long n);
++extern unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n);
++extern unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n);
+ extern unsigned long __must_check __copy_in_user(void __user *to, const void __user *from, unsigned long n);
+ extern unsigned long __must_check __clear_user(void __user *addr, unsigned long n);
+ 
++static inline unsigned long __must_check __copy_from_user(void *to, const void __user *from, unsigned long n)
++{
++	check_object_size(to, n, false);
++	return __arch_copy_from_user(to, from, n);
++}
++
++static inline unsigned long __must_check __copy_to_user(void __user *to, const void *from, unsigned long n)
++{
++	check_object_size(from, n, true);
++	return __arch_copy_to_user(to, from, n);
++}
++
+ static inline unsigned long __must_check copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+ 	if (access_ok(VERIFY_READ, from, n))
+diff --git a/arch/arm64/kernel/arm64ksyms.c b/arch/arm64/kernel/arm64ksyms.c
+index 678f30b05a45..2dc44406a7ad 100644
+--- a/arch/arm64/kernel/arm64ksyms.c
++++ b/arch/arm64/kernel/arm64ksyms.c
+@@ -34,8 +34,8 @@ EXPORT_SYMBOL(copy_page);
+ EXPORT_SYMBOL(clear_page);
+ 
+ 	/* user mem (segment) */
+-EXPORT_SYMBOL(__copy_from_user);
+-EXPORT_SYMBOL(__copy_to_user);
++EXPORT_SYMBOL(__arch_copy_from_user);
++EXPORT_SYMBOL(__arch_copy_to_user);
+ EXPORT_SYMBOL(__clear_user);
+ EXPORT_SYMBOL(__copy_in_user);
+ 
+diff --git a/arch/arm64/lib/copy_from_user.S b/arch/arm64/lib/copy_from_user.S
+index 17e8306dca29..0b90497d4424 100644
+--- a/arch/arm64/lib/copy_from_user.S
++++ b/arch/arm64/lib/copy_from_user.S
+@@ -66,7 +66,7 @@
+ 	.endm
+ 
+ end	.req	x5
+-ENTRY(__copy_from_user)
++ENTRY(__arch_copy_from_user)
+ ALTERNATIVE("nop", __stringify(SET_PSTATE_PAN(0)), ARM64_ALT_PAN_NOT_UAO, \
+ 	    CONFIG_ARM64_PAN)
+ 	add	end, x0, x2
+@@ -75,7 +75,7 @@ ALTERNATIVE("nop", __stringify(SET_PSTATE_PAN(1)), ARM64_ALT_PAN_NOT_UAO, \
+ 	    CONFIG_ARM64_PAN)
+ 	mov	x0, #0				// Nothing to copy
+ 	ret
+-ENDPROC(__copy_from_user)
++ENDPROC(__arch_copy_from_user)
+ 
+ 	.section .fixup,"ax"
+ 	.align	2
+diff --git a/arch/arm64/lib/copy_to_user.S b/arch/arm64/lib/copy_to_user.S
+index 21faae60f988..7a7efe255034 100644
+--- a/arch/arm64/lib/copy_to_user.S
++++ b/arch/arm64/lib/copy_to_user.S
+@@ -65,7 +65,7 @@
+ 	.endm
+ 
+ end	.req	x5
+-ENTRY(__copy_to_user)
++ENTRY(__arch_copy_to_user)
+ ALTERNATIVE("nop", __stringify(SET_PSTATE_PAN(0)), ARM64_ALT_PAN_NOT_UAO, \
+ 	    CONFIG_ARM64_PAN)
+ 	add	end, x0, x2
+@@ -74,7 +74,7 @@ ALTERNATIVE("nop", __stringify(SET_PSTATE_PAN(1)), ARM64_ALT_PAN_NOT_UAO, \
+ 	    CONFIG_ARM64_PAN)
+ 	mov	x0, #0
+ 	ret
+-ENDPROC(__copy_to_user)
++ENDPROC(__arch_copy_to_user)
+ 
+ 	.section .fixup,"ax"
+ 	.align	2
+-- 
+2.7.4
