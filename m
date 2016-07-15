@@ -1,40 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1468610363.32683.42.camel@gmail.com>
-References: <1468446964-22213-1-git-send-email-keescook@chromium.org>
- <1468446964-22213-3-git-send-email-keescook@chromium.org> <20160714232019.GA28254@350D>
- <CAGXu5jKzD_rCMNJQU1bB5KDfKTsb+AaidZwe=FAfGMqt_FkfqQ@mail.gmail.com>
- <1468609254.32683.34.camel@gmail.com> <CAGXu5jLiD1xEb=dDuf+_2JVzmkH_6O5-m=p=AVvi7qgQ+SV4UA@mail.gmail.com>
- <1468610363.32683.42.camel@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 15 Jul 2016 12:23:11 -0700
-Message-ID: <CAGXu5jJC0KGR1Q44MW_Rv_N1yFu8m4b8EQY59J-VhLHj_wt+Uw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v2 02/11] mm: Hardened usercopy
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Balbir Singh <bsingharora@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>
+Date: Fri, 15 Jul 2016 14:44:18 -0700
+Message-Id: <1468619065-3222-5-git-send-email-keescook@chromium.org>
+In-Reply-To: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+References: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v3 04/11] ARM: uaccess: Enable hardened usercopy
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Balbir Singh <bsingharora@gmail.com>, Daniel Micay <danielmicay@gmail.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, x86@kernel.org, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, linux-arm-kernel@lists.infradead.org, linux-ia64@vger.kernel.org, linuxppc-dev@lists.ozlabs.org, sparclinux@vger.kernel.org, linux-arch@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jul 15, 2016 at 12:19 PM, Daniel Micay <danielmicay@gmail.com> wrote:
->> I'd like it to dump stack and be fatal to the process involved, but
->> yeah, I guess BUG() would work. Creating an infrastructure for
->> handling security-related Oopses can be done separately from this
->> (and
->> I'd like to see that added, since it's a nice bit of configurable
->> reactivity to possible attacks).
->
-> In grsecurity, the oops handling also uses do_group_exit instead of
-> do_exit but both that change (or at least the option to do it) and the
-> exploit handling could be done separately from this without actually
-> needing special treatment for USERCOPY. Could expose is as something
-> like panic_on_oops=2 as a balance between the existing options.
+Enables CONFIG_HARDENED_USERCOPY checks on arm.
 
-I'm also uncomfortable about BUG() being removed by unsetting
-CONFIG_BUG, but that seems unlikely. :)
+Based on code from PaX and grsecurity.
 
--Kees
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/arm/Kconfig               |  1 +
+ arch/arm/include/asm/uaccess.h | 11 +++++++++--
+ 2 files changed, 10 insertions(+), 2 deletions(-)
 
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 90542db1220d..f56b29b3f57e 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -35,6 +35,7 @@ config ARM
+ 	select HARDIRQS_SW_RESEND
+ 	select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
+ 	select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
++	select HAVE_ARCH_HARDENED_USERCOPY
+ 	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
+ 	select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
+ 	select HAVE_ARCH_MMAP_RND_BITS if MMU
+diff --git a/arch/arm/include/asm/uaccess.h b/arch/arm/include/asm/uaccess.h
+index 35c9db857ebe..7fb59199c6bb 100644
+--- a/arch/arm/include/asm/uaccess.h
++++ b/arch/arm/include/asm/uaccess.h
+@@ -496,7 +496,10 @@ arm_copy_from_user(void *to, const void __user *from, unsigned long n);
+ static inline unsigned long __must_check
+ __copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+-	unsigned int __ua_flags = uaccess_save_and_enable();
++	unsigned int __ua_flags;
++
++	check_object_size(to, n, false);
++	__ua_flags = uaccess_save_and_enable();
+ 	n = arm_copy_from_user(to, from, n);
+ 	uaccess_restore(__ua_flags);
+ 	return n;
+@@ -511,11 +514,15 @@ static inline unsigned long __must_check
+ __copy_to_user(void __user *to, const void *from, unsigned long n)
+ {
+ #ifndef CONFIG_UACCESS_WITH_MEMCPY
+-	unsigned int __ua_flags = uaccess_save_and_enable();
++	unsigned int __ua_flags;
++
++	check_object_size(from, n, true);
++	__ua_flags = uaccess_save_and_enable();
+ 	n = arm_copy_to_user(to, from, n);
+ 	uaccess_restore(__ua_flags);
+ 	return n;
+ #else
++	check_object_size(from, n, true);
+ 	return arm_copy_to_user(to, from, n);
+ #endif
+ }
 -- 
-Kees Cook
-Chrome OS & Brillo Security
+2.7.4
