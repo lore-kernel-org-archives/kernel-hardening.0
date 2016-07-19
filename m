@@ -1,61 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1468965604-25023-1-git-send-email-labbott@redhat.com>
-References: <CAGXu5j+nHpHcYT8FyHNe6AFQCdakoSMW=UWDatyxhRK7CB7_=g@mail.gmail.com>
- <1468965604-25023-1-git-send-email-labbott@redhat.com>
+In-Reply-To: <CAGXu5jJqo55G0tHzbdobEg_rjKvFONQRk7mkPq1JXOd-Hneipw@mail.gmail.com>
+References: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+ <1468619065-3222-3-git-send-email-keescook@chromium.org> <ea4cdd53-7336-63b5-25ed-a397859eca4d@redhat.com>
+ <CAGXu5jJqo55G0tHzbdobEg_rjKvFONQRk7mkPq1JXOd-Hneipw@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 19 Jul 2016 15:40:46 -0700
-Message-ID: <CAGXu5jLRkRMutEauAg7dWV9CeDP3nzE4d71Fqt6H2d7OHTy71w@mail.gmail.com>
+Date: Tue, 19 Jul 2016 15:55:54 -0700
+Message-ID: <CAGXu5j+0RryPNbSeEYcn6o9zTqz4DKZV3XCuRVuus_X9oUfmww@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] mm: Add is_migrate_cma_page
+Subject: [kernel-hardening] Re: [PATCH v3 02/11] mm: Hardened usercopy
 To: Laura Abbott <labbott@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Balbir Singh <bsingharora@gmail.com>, Daniel Micay <danielmicay@gmail.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jul 19, 2016 at 3:00 PM, Laura Abbott <labbott@redhat.com> wrote:
-> Code such as hardened user copy[1] needs a way to tell if a
-> page is CMA or not. Add is_migrate_cma_page in a similar way
-> to is_migrate_isolate_page.
+On Tue, Jul 19, 2016 at 12:12 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Mon, Jul 18, 2016 at 6:52 PM, Laura Abbott <labbott@redhat.com> wrote:
+>> On 07/15/2016 02:44 PM, Kees Cook wrote:
+>>> +static inline const char *check_heap_object(const void *ptr, unsigned
+>>> long n,
+>>> +                                           bool to_user)
+>>> +{
+>>> +       struct page *page, *endpage;
+>>> +       const void *end = ptr + n - 1;
+>>> +
+>>> +       if (!virt_addr_valid(ptr))
+>>> +               return NULL;
+>>> +
+>>
+>>
+>> virt_addr_valid returns true on vmalloc addresses on arm64 which causes some
+>> intermittent false positives (tab completion in a qemu buildroot environment
+>> was showing it fairly reliably). I think this is an arm64 bug because
+>> virt_addr_valid should return true if and only if virt_to_page returns the
+>> corresponding page. We can work around this for now by explicitly
+>> checking against is_vmalloc_addr.
 >
-> [1]http://article.gmane.org/gmane.linux.kernel.mm/155238
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> Hrm, that's weird. Sounds like a bug too, but I'll add a check for
+> is_vmalloc_addr() to catch it for now.
 
-Great, thanks!
-
-> ---
-> Here's an explicit patch, slightly different than what I posted before. It can
-> be kept separate or folded in as needed.
-
-Assuming there's no objection, I'll add it to my tree and use the new macro.
+BTW, if you were testing against -next, KASAN moved things around in
+copy_*_user() in a way I wasn't expecting (__copy* and copy* now both
+call __arch_copy* instead of copy* calling __copy*). I'll have this
+fixed in the next version.
 
 -Kees
-
-> ---
->  include/linux/mmzone.h | 2 ++
->  1 file changed, 2 insertions(+)
->
-> diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
-> index 02069c2..c8478b2 100644
-> --- a/include/linux/mmzone.h
-> +++ b/include/linux/mmzone.h
-> @@ -68,8 +68,10 @@ extern char * const migratetype_names[MIGRATE_TYPES];
->
->  #ifdef CONFIG_CMA
->  #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
-> +#  define is_migrate_cma_page(_page) (get_pageblock_migratetype(_page) == MIGRATE_CMA)
->  #else
->  #  define is_migrate_cma(migratetype) false
-> +#  define is_migrate_cma_page(_page) false
->  #endif
->
->  #define for_each_migratetype_order(order, type) \
-> --
-> 2.7.4
->
-
-
 
 -- 
 Kees Cook
