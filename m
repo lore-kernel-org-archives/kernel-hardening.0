@@ -1,59 +1,143 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Mon, 25 Jul 2016 09:27:31 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6D5F502102@AcuExch.aculab.com>
-References: <1468619065-3222-1-git-send-email-keescook@chromium.org>
- <1468619065-3222-3-git-send-email-keescook@chromium.org>
- <5790711f.2350420a.b4287.2cc0SMTPIN_ADDED_BROKEN@mx.google.com>
- <CAGXu5jLCu1Vv0uugKZrsjSEsoABgXJSOJ8GkKmrHbvj9jkC2YA@mail.gmail.com>
- <20160722174551.jddle6mf7zlq6xmb@treble>
-In-Reply-To: <20160722174551.jddle6mf7zlq6xmb@treble>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v3 02/11] mm: Hardened usercopy
-To: 'Josh Poimboeuf' <jpoimboe@redhat.com>, Kees Cook <keescook@chromium.org>
-Cc: Jan Kara <jack@suse.cz>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Linux-MM <linux-mm@kvack.org>, sparclinux <sparclinux@vger.kernel.org>, "linux-ia64@vger.kernel.org" <linux-ia64@vger.kernel.org>, Christoph Lameter <cl@linux.com>, Andrea Arcangeli <aarcange@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Catalin Marinas <catalin.marinas@arm.com>, PaX Team <pageexec@freemail.hu>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Fenghua Yu <fenghua.yu@intel.com>, Rik van Riel <riel@redhat.com>, David Rientjes <rientjes@google.com>, Tony Luck <tony.luck@intel.com>, Andy Lutomirski <luto@kernel.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, Brad Spengler <spender@grsecurity.net>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, LKML <linux-kernel@vger.kernel.org>, Pekka Enberg <penberg@kernel.org>, Daniel
- Micay <danielmicay@gmail.com>, Casey Schaufler <casey@schaufler-ca.com>, Andrew Morton <akpm@linux-foundation.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "David S. Miller" <davem@davemloft.net>
+Sender: keescook@google.com
+In-Reply-To: <93009d46-0171-7398-4add-98e09ade608b@redhat.com>
+References: <1469046427-12696-1-git-send-email-keescook@chromium.org> <93009d46-0171-7398-4add-98e09ade608b@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 25 Jul 2016 10:50:05 -0700
+Message-ID: <CAGXu5jJYYaedBZPoEWz5KROP=tn8hAmOepoC+gMpXkRn8SCyTw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 00/12] mm: Hardened usercopy
+To: Laura Abbott <labbott@redhat.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Balbir Singh <bsingharora@gmail.com>, Daniel Micay <danielmicay@gmail.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Michael Ellerman <mpe@ellerman.id.au>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Andrea Arcangeli <aarcange@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogSm9zaCBQb2ltYm9ldWYNCj4gU2VudDogMjIgSnVseSAyMDE2IDE4OjQ2DQouLg0KPiA+
-ID4+ICsvKg0KPiA+ID4+ICsgKiBDaGVja3MgaWYgYSBnaXZlbiBwb2ludGVyIGFuZCBsZW5ndGgg
-aXMgY29udGFpbmVkIGJ5IHRoZSBjdXJyZW50DQo+ID4gPj4gKyAqIHN0YWNrIGZyYW1lIChpZiBw
-b3NzaWJsZSkuDQo+ID4gPj4gKyAqDQo+ID4gPj4gKyAqICAgMDogbm90IGF0IGFsbCBvbiB0aGUg
-c3RhY2sNCj4gPiA+PiArICogICAxOiBmdWxseSB3aXRoaW4gYSB2YWxpZCBzdGFjayBmcmFtZQ0K
-PiA+ID4+ICsgKiAgIDI6IGZ1bGx5IG9uIHRoZSBzdGFjayAod2hlbiBjYW4ndCBkbyBmcmFtZS1j
-aGVja2luZykNCj4gPiA+PiArICogICAtMTogZXJyb3IgY29uZGl0aW9uIChpbnZhbGlkIHN0YWNr
-IHBvc2l0aW9uIG9yIGJhZCBzdGFjayBmcmFtZSkNCj4gPiA+PiArICovDQo+ID4gPj4gK3N0YXRp
-YyBub2lubGluZSBpbnQgY2hlY2tfc3RhY2tfb2JqZWN0KGNvbnN0IHZvaWQgKm9iaiwgdW5zaWdu
-ZWQgbG9uZyBsZW4pDQo+ID4gPj4gK3sNCj4gPiA+PiArICAgICBjb25zdCB2b2lkICogY29uc3Qg
-c3RhY2sgPSB0YXNrX3N0YWNrX3BhZ2UoY3VycmVudCk7DQo+ID4gPj4gKyAgICAgY29uc3Qgdm9p
-ZCAqIGNvbnN0IHN0YWNrZW5kID0gc3RhY2sgKyBUSFJFQURfU0laRTsNCj4gPiA+DQo+ID4gPiBU
-aGF0IGFsbG93cyBhY2Nlc3MgdG8gdGhlIGVudGlyZSBzdGFjaywgaW5jbHVkaW5nIHRoZSBzdHJ1
-Y3QgdGhyZWFkX2luZm8sDQo+ID4gPiBpcyB0aGF0IHdoYXQgd2Ugd2FudCAtIGl0IHNlZW1zIGRh
-bmdlcm91cz8gT3IgZGlkIEkgbWlzcyBhIGNoZWNrDQo+ID4gPiBzb21ld2hlcmUgZWxzZT8NCj4g
-Pg0KPiA+IFRoYXQgc2VlbXMgbGlrZSBhIG5pY2UgaW1wcm92ZW1lbnQgdG8gbWFrZSwgeWVhaC4N
-Cj4gPg0KPiA+ID4gV2UgaGF2ZSBlbmRfb2Zfc3RhY2soKSB3aGljaCBjb21wdXRlcyB0aGUgZW5k
-IG9mIHRoZSBzdGFjayB0YWtpbmcNCj4gPiA+IHRocmVhZF9pbmZvIGludG8gYWNjb3VudCAoZW5k
-IGJlaW5nIHRoZSBvcHBvc2l0ZSBvZiB5b3VyIGVuZCBhYm92ZSkuDQo+ID4NCj4gPiBBbXVzaW5n
-bHksIHRoZSBvYmplY3RfaXNfb25fc3RhY2soKSBjaGVjayBpbiBzY2hlZC5oIGRvZXNuJ3QgdGFr
-ZQ0KPiA+IHRocmVhZF9pbmZvIGludG8gYWNjb3VudCBlaXRoZXIuIDpQIFJlZ2FyZGxlc3MsIEkg
-dGhpbmsgdXNpbmcNCj4gPiBlbmRfb2Zfc3RhY2soKSBtYXkgbm90IGJlIGJlc3QuIFRvIHRpZ2h0
-ZW4gdGhlIGNoZWNrLCBJIHRoaW5rIHdlIGNvdWxkDQo+ID4gYWRkIHRoaXMgYWZ0ZXIgY2hlY2tp
-bmcgdGhhdCB0aGUgb2JqZWN0IGlzIG9uIHRoZSBzdGFjazoNCj4gPg0KPiA+ICNpZmRlZiBDT05G
-SUdfU1RBQ0tfR1JPV1NVUA0KPiA+ICAgICAgICAgc3RhY2tlbmQgLT0gc2l6ZW9mKHN0cnVjdCB0
-aHJlYWRfaW5mbyk7DQo+ID4gI2Vsc2UNCj4gPiAgICAgICAgIHN0YWNrICs9IHNpemVvZihzdHJ1
-Y3QgdGhyZWFkX2luZm8pOw0KPiA+ICNlbmRpZg0KPiA+DQo+ID4gZS5nLiB0aGVuIGlmIHRoZSBw
-b2ludGVyIHdhcyBpbiB0aGUgdGhyZWFkX2luZm8sIHRoZSBzZWNvbmQgdGVzdCB3b3VsZA0KPiA+
-IGZhaWwsIHRyaWdnZXJpbmcgdGhlIHByb3RlY3Rpb24uDQo+IA0KPiBGV0lXLCB0aGlzIHdvbid0
-IHdvcmsgcmlnaHQgb24geDg2IGFmdGVyIEFuZHkncw0KPiBDT05GSUdfVEhSRUFEX0lORk9fSU5f
-VEFTSyBwYXRjaGVzIGdldCBtZXJnZWQuDQoNCldoYXQgZW5kcyB1cCBpbiB0aGUgJ3RocmVhZF9p
-bmZvJyBhcmVhPw0KSWYgaXQgY29udGFpbnMgdGhlIGZwIHNhdmUgYXJlYSB0aGVuIHByb2dyYW1z
-IGxpa2UgZ2RiIG1heSBlbmQgdXAgcmVxdWVzdGluZw0KY29weV9pbi9vdXQgZGlyZWN0bHkgZnJv
-bSB0aGF0IGFyZWEuDQoNCkludGVyZXN0aW5nbHkgdGhlIGF2eCByZWdpc3RlcnMgZG9uJ3QgbmVl
-ZCBzYXZpbmcgb24gYSBub3JtYWwgc3lzdGVtIGNhbGwNCmVudHJ5ICh0aGV5IGFyZSBhbGwgY2Fs
-bGVyLXNhdmVkKSBzbyB0aGUga2VybmVsIHN0YWNrIGNhbiBzYWZlbHkgb3ZlcndyaXRlDQp0aGF0
-IGFyZWEuDQpTeXNjYWxsIGVudHJ5IHByb2JhYmx5IG91Z2h0IHRvIGV4ZWN1dGUgdGhlICd6ZXJv
-IGFsbCBhdnggcmVnaXN0ZXJzJyBpbnN0cnVjdGlvbi4NClRoZXkgZG8gbmVlZCBzYXZpbmcgb24g
-aW50ZXJydXB0IGVudHJ5IC0gYnV0IHRoZSBzdGFjayB1c2VkIHdpbGwgYmUgbGVzcy4NCg0KCURh
-dmlkDQoNCg==
+On Fri, Jul 22, 2016 at 5:36 PM, Laura Abbott <labbott@redhat.com> wrote:
+> On 07/20/2016 01:26 PM, Kees Cook wrote:
+>>
+>> Hi,
+>>
+>> [This is now in my kspp -next tree, though I'd really love to add some
+>> additional explicit Tested-bys, Reviewed-bys, or Acked-bys. If you've
+>> looked through any part of this or have done any testing, please consider
+>> sending an email with your "*-by:" line. :)]
+>>
+>> This is a start of the mainline port of PAX_USERCOPY[1]. After writing
+>> tests (now in lkdtm in -next) for Casey's earlier port[2], I kept tweaking
+>> things further and further until I ended up with a whole new patch series.
+>> To that end, I took Rik, Laura, and other people's feedback along with
+>> additional changes and clean-ups.
+>>
+>> Based on my understanding, PAX_USERCOPY was designed to catch a
+>> few classes of flaws (mainly bad bounds checking) around the use of
+>> copy_to_user()/copy_from_user(). These changes don't touch get_user() and
+>> put_user(), since these operate on constant sized lengths, and tend to be
+>> much less vulnerable. There are effectively three distinct protections in
+>> the whole series, each of which I've given a separate CONFIG, though this
+>> patch set is only the first of the three intended protections. (Generally
+>> speaking, PAX_USERCOPY covers what I'm calling CONFIG_HARDENED_USERCOPY
+>> (this) and CONFIG_HARDENED_USERCOPY_WHITELIST (future), and
+>> PAX_USERCOPY_SLABS covers CONFIG_HARDENED_USERCOPY_SPLIT_KMALLOC
+>> (future).)
+>>
+>> This series, which adds CONFIG_HARDENED_USERCOPY, checks that objects
+>> being copied to/from userspace meet certain criteria:
+>> - if address is a heap object, the size must not exceed the object's
+>>   allocated size. (This will catch all kinds of heap overflow flaws.)
+>> - if address range is in the current process stack, it must be within the
+>>   a valid stack frame (if such checking is possible) or at least entirely
+>>   within the current process's stack. (This could catch large lengths that
+>>   would have extended beyond the current process stack, or overflows if
+>>   their length extends back into the original stack.)
+>> - if the address range is part of kernel data, rodata, or bss, allow it.
+>> - if address range is page-allocated, that it doesn't span multiple
+>>   allocations (excepting Reserved and CMA pages).
+>> - if address is within the kernel text, reject it.
+>> - everything else is accepted
+>>
+>> The patches in the series are:
+>> - Support for examination of CMA page types:
+>>         1- mm: Add is_migrate_cma_page
+>> - Support for arch-specific stack frame checking (which will likely be
+>>   replaced in the future by Josh's more comprehensive unwinder):
+>>         2- mm: Implement stack frame object validation
+>> - The core copy_to/from_user() checks, without the slab object checks:
+>>         3- mm: Hardened usercopy
+>> - Per-arch enablement of the protection:
+>>         4- x86/uaccess: Enable hardened usercopy
+>>         5- ARM: uaccess: Enable hardened usercopy
+>>         6- arm64/uaccess: Enable hardened usercopy
+>>         7- ia64/uaccess: Enable hardened usercopy
+>>         8- powerpc/uaccess: Enable hardened usercopy
+>>         9- sparc/uaccess: Enable hardened usercopy
+>>        10- s390/uaccess: Enable hardened usercopy
+>> - The heap allocator implementation of object size checking:
+>>        11- mm: SLAB hardened usercopy support
+>>        12- mm: SLUB hardened usercopy support
+>>
+>> Some notes:
+>>
+>> - This is expected to apply on top of -next which contains fixes for the
+>>   position of _etext on both arm and arm64, though it has some conflicts
+>>   with KASAN that should be trivial to fix up. Also in -next are the
+>>   tests for this protection (in lkdtm), prefixed with USERCOPY_.
+>>
+>> - I couldn't detect a measurable performance change with these features
+>>   enabled. Kernel build times were unchanged, hackbench was unchanged,
+>>   etc. I think we could flip this to "on by default" at some point, but
+>>   for now, I'm leaving it off until I can get some more definitive
+>>   measurements. I would love if someone with greater familiarity with
+>>   perf could give this a spin and report results.
+>>
+>> - The SLOB support extracted from grsecurity seems entirely broken. I
+>>   have no idea what's going on there, I spent my time testing SLAB and
+>>   SLUB. Having someone else look at SLOB would be nice, but this series
+>>   doesn't depend on it.
+>>
+>> Additional features that would be nice, but aren't blocking this series:
+>>
+>> - Needs more architecture support for stack frame checking (only x86 now,
+>>   but it seems Josh will have a good solution for this soon).
+>>
+>>
+>> Thanks!
+>>
+>> -Kees
+>>
+>> [1] https://grsecurity.net/download.php "grsecurity - test kernel patch"
+>> [2] http://www.openwall.com/lists/kernel-hardening/2016/05/19/5
+>>
+>> v4:
+>> - handle CMA pages, labbott
+>> - update stack checker comments, labbott
+>> - check for vmalloc addresses, labbott
+>> - deal with KASAN in -next changing arm64 copy*user calls
+>> - check for linear mappings at runtime instead of via CONFIG
+>>
+>> v3:
+>> - switch to using BUG for better Oops integration
+>> - when checking page allocations, check each for Reserved
+>> - use enums for the stack check return for readability
+>>
+>> v2:
+>> - added s390 support
+>> - handle slub red zone
+>> - disallow writes to rodata area
+>> - stack frame walker now CONFIG-controlled arch-specific helper
+>>
+>
+> Do you have/plan to have LKDTM or the like tests for this? I started
+> reviewing
+> the slub code and was about to write some test cases for myself. I did that
+> for CMA as well which is a decent indicator these should all go somewhere.
+
+Yeah, there is an entire section of tests in lkdtm for the usercopy
+protection. I didn't add anything for CMA or multipage allocations
+yet, though. Feel free to add those if you have a moment! :) It's on
+my todo list.
+
+-Kees
+
+-- 
+Kees Cook
+Chrome OS & Brillo Security
