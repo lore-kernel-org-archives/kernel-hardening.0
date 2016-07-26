@@ -1,128 +1,107 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jul 2016 22:38:13 +0200
+Date: Tue, 26 Jul 2016 22:39:35 +0200
 From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160726223813.16d7cfd7f7dc514c6f7f9e9d@gmail.com>
+Message-Id: <20160726223935.403f0994a64a6f72ef91b4f1@gmail.com>
 In-Reply-To: <20160726223541.513ce76f6de65389da6a6abe@gmail.com>
 References: <20160726223541.513ce76f6de65389da6a6abe@gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 2/7] Split up struct warn_args
+Subject: [kernel-hardening] [PATCH v3 3/7] Constify some function parameters
 To: kernel-hardening@lists.openwall.com
 Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de, sam@ravnborg.org, isdn@linux-pingi.de
 List-ID: <kernel-hardening.lists.openwall.com>
 
-to enable dataflow verification by the initify plugin. This allows marking
-warn_slowpath* parameters as nocapture and compile time verification of
-the related dataflows.
+Initify needs const pointer types, the initify plugin caught some __printf
+arguments that weren't const yet.
 
 Signed-off-by: Emese Revfy <re.emese@gmail.com>
 ---
- include/asm-generic/bug.h |  5 +----
- kernel/panic.c            | 32 ++++++++++++--------------------
- lib/bug.c                 |  2 +-
- 3 files changed, 14 insertions(+), 25 deletions(-)
+ drivers/isdn/hisax/config.c | 16 ++++++++--------
+ drivers/isdn/hisax/hisax.h  |  4 ++--
+ 2 files changed, 10 insertions(+), 10 deletions(-)
 
-diff --git a/include/asm-generic/bug.h b/include/asm-generic/bug.h
-index 6f96247..3048d10 100644
---- a/include/asm-generic/bug.h
-+++ b/include/asm-generic/bug.h
-@@ -81,11 +81,8 @@ extern void warn_slowpath_null(const char *file, const int line);
- 	do { printk(arg); __WARN_TAINT(taint); } while (0)
- #endif
+diff --git a/drivers/isdn/hisax/config.c b/drivers/isdn/hisax/config.c
+index bf04d2a..2d12c6c 100644
+--- a/drivers/isdn/hisax/config.c
++++ b/drivers/isdn/hisax/config.c
+@@ -659,7 +659,7 @@ int jiftime(char *s, long mark)
  
--/* used internally by panic.c */
--struct warn_args;
--
- void __warn(const char *file, int line, void *caller, unsigned taint,
--	    struct pt_regs *regs, struct warn_args *args);
-+	    struct pt_regs *regs, const char *fmt, va_list args);
+ static u_char tmpbuf[HISAX_STATUS_BUFSIZE];
  
- #ifndef WARN_ON
- #define WARN_ON(condition) ({						\
-diff --git a/kernel/panic.c b/kernel/panic.c
-index ca8cea1..993ad20 100644
---- a/kernel/panic.c
-+++ b/kernel/panic.c
-@@ -475,13 +475,8 @@ void oops_exit(void)
- 	kmsg_dump(KMSG_DUMP_OOPS);
- }
- 
--struct warn_args {
--	const char *fmt;
--	va_list args;
--};
--
- void __warn(const char *file, int line, void *caller, unsigned taint,
--	    struct pt_regs *regs, struct warn_args *args)
-+	    struct pt_regs *regs, const char *fmt, va_list args)
+-void VHiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt,
++void VHiSax_putstatus(struct IsdnCardState *cs, char *head, const char *fmt,
+ 		      va_list args)
  {
- 	disable_trace_on_warning();
+ 	/* if head == NULL the fmt contains the full info */
+@@ -669,23 +669,24 @@ void VHiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt,
+ 	u_char		*p;
+ 	isdn_ctrl	ic;
+ 	int		len;
++	const u_char	*data;
  
-@@ -495,8 +490,8 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
- 		pr_warn("WARNING: CPU: %d PID: %d at %pS\n",
- 			raw_smp_processor_id(), current->pid, caller);
- 
--	if (args)
--		vprintk(args->fmt, args->args);
-+	if (fmt)
-+		vprintk(fmt, args);
- 
- 	if (panic_on_warn) {
- 		/*
-@@ -525,31 +520,28 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
- #ifdef WANT_WARN_ON_SLOWPATH
- void warn_slowpath_fmt(const char *file, int line, const char *fmt, ...)
- {
--	struct warn_args args;
-+	va_list args;
- 
--	args.fmt = fmt;
--	va_start(args.args, fmt);
--	__warn(file, line, __builtin_return_address(0), TAINT_WARN, NULL,
--	       &args);
--	va_end(args.args);
-+	va_start(args, fmt);
-+	__warn(file, line, __builtin_return_address(0), TAINT_WARN, NULL, fmt, args);
-+	va_end(args);
- }
- EXPORT_SYMBOL(warn_slowpath_fmt);
- 
- void warn_slowpath_fmt_taint(const char *file, int line,
- 			     unsigned taint, const char *fmt, ...)
- {
--	struct warn_args args;
-+	va_list args;
- 
--	args.fmt = fmt;
--	va_start(args.args, fmt);
--	__warn(file, line, __builtin_return_address(0), taint, NULL, &args);
--	va_end(args.args);
-+	va_start(args, fmt);
-+	__warn(file, line, __builtin_return_address(0), taint, NULL, fmt, args);
-+	va_end(args);
- }
- EXPORT_SYMBOL(warn_slowpath_fmt_taint);
- 
- void warn_slowpath_null(const char *file, int line)
- {
--	__warn(file, line, __builtin_return_address(0), TAINT_WARN, NULL, NULL);
-+	__warn(file, line, __builtin_return_address(0), TAINT_WARN, NULL, NULL, NULL);
- }
- EXPORT_SYMBOL(warn_slowpath_null);
- #endif
-diff --git a/lib/bug.c b/lib/bug.c
-index bc3656e..c8bdebb 100644
---- a/lib/bug.c
-+++ b/lib/bug.c
-@@ -168,7 +168,7 @@ enum bug_trap_type report_bug(unsigned long bugaddr, struct pt_regs *regs)
- 	if (warning) {
- 		/* this is a WARN_ON rather than BUG/BUG_ON */
- 		__warn(file, line, (void *)bugaddr, BUG_GET_TAINT(bug), regs,
--		       NULL);
-+		       NULL, NULL);
- 		return BUG_TRAP_TYPE_WARN;
+ 	if (!cs) {
+ 		printk(KERN_WARNING "HiSax: No CardStatus for message");
+ 		return;
  	}
+ 	spin_lock_irqsave(&cs->statlock, flags);
+-	p = tmpbuf;
+ 	if (head) {
++		p = tmpbuf;
+ 		p += jiftime(p, jiffies);
+ 		p += sprintf(p, " %s", head);
+ 		p += vsprintf(p, fmt, args);
+ 		*p++ = '\n';
+ 		*p = 0;
+ 		len = p - tmpbuf;
+-		p = tmpbuf;
++		data = tmpbuf;
+ 	} else {
+-		p = fmt;
++		data = fmt;
+ 		len = strlen(fmt);
+ 	}
+ 	if (len > HISAX_STATUS_BUFSIZE) {
+@@ -699,13 +700,12 @@ void VHiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt,
+ 	if (i >= len)
+ 		i = len;
+ 	len -= i;
+-	memcpy(cs->status_write, p, i);
++	memcpy(cs->status_write, data, i);
+ 	cs->status_write += i;
+ 	if (cs->status_write > cs->status_end)
+ 		cs->status_write = cs->status_buf;
+-	p += i;
+ 	if (len) {
+-		memcpy(cs->status_write, p, len);
++		memcpy(cs->status_write, data + i, len);
+ 		cs->status_write += len;
+ 	}
+ #ifdef KERNELSTACK_DEBUG
+@@ -729,7 +729,7 @@ void VHiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt,
+ 	}
+ }
  
+-void HiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt, ...)
++void HiSax_putstatus(struct IsdnCardState *cs, char *head, const char *fmt, ...)
+ {
+ 	va_list args;
+ 
+diff --git a/drivers/isdn/hisax/hisax.h b/drivers/isdn/hisax/hisax.h
+index 6ead6314..338d040 100644
+--- a/drivers/isdn/hisax/hisax.h
++++ b/drivers/isdn/hisax/hisax.h
+@@ -1288,9 +1288,9 @@ int jiftime(char *s, long mark);
+ int HiSax_command(isdn_ctrl *ic);
+ int HiSax_writebuf_skb(int id, int chan, int ack, struct sk_buff *skb);
+ __printf(3, 4)
+-void HiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt, ...);
++void HiSax_putstatus(struct IsdnCardState *cs, char *head, const char *fmt, ...);
+ __printf(3, 0)
+-void VHiSax_putstatus(struct IsdnCardState *cs, char *head, char *fmt, va_list args);
++void VHiSax_putstatus(struct IsdnCardState *cs, char *head, const char *fmt, va_list args);
+ void HiSax_reportcard(int cardnr, int sel);
+ int QuickHex(char *txt, u_char *p, int cnt);
+ void LogFrame(struct IsdnCardState *cs, u_char *p, int size);
 -- 
 2.8.1
