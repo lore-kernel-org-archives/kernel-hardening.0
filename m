@@ -1,181 +1,84 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Tue, 26 Jul 2016 20:11:28 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC560125F272@ORSMSX103.amr.corp.intel.com>
+Message-ID: <1469563923.10218.13.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Tue, 26 Jul 2016 16:12:03 -0400
+In-Reply-To: <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
 References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
- <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
- <20160726200309.GJ4541@io.lakedaemon.net>
-In-Reply-To: <20160726200309.GJ4541@io.lakedaemon.net>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] [RFC] Introduce mmap randomization
-To: Jason Cooper <jason@lakedaemon.net>
-Cc: "linux-mm@vger.kernel.org" <linux-mm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "nnk@google.com" <nnk@google.com>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
+	 <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-uInklHcATbRBVk/CLPm9"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] [PATCH] [RFC] Introduce mmap randomization
+To: kernel-hardening@lists.openwall.com, jason@lakedaemon.net, linux-mm@vger.kernel.org, linux-kernel@vger.kernel.org, akpm@linux-foundation.org
+Cc: keescook@chromium.org, gregkh@linuxfoundation.org, nnk@google.com, jeffv@google.com, salyzyn@android.com, dcashman@android.com, William Roberts <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
+--=-uInklHcATbRBVk/CLPm9
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-> -----Original Message-----
-> From: Jason Cooper [mailto:jason@lakedaemon.net]
-> Sent: Tuesday, July 26, 2016 1:03 PM
-> To: Roberts, William C <william.c.roberts@intel.com>
-> Cc: linux-mm@vger.kernel.org; linux-kernel@vger.kernel.org; kernel-
-> hardening@lists.openwall.com; akpm@linux-foundation.org;
-> keescook@chromium.org; gregkh@linuxfoundation.org; nnk@google.com;
-> jeffv@google.com; salyzyn@android.com; dcashman@android.com
-> Subject: Re: [PATCH] [RFC] Introduce mmap randomization
+On Tue, 2016-07-26 at 11:22 -0700, william.c.roberts@intel.com wrote:
+> From: William Roberts <william.c.roberts@intel.com>
 >=20
-> Hi William!
+> This patch introduces the ability randomize mmap locations where the
+> address is not requested, for instance when ld is allocating pages
+> for
+> shared libraries. It chooses to randomize based on the current
+> personality for ASLR.
 >=20
-> On Tue, Jul 26, 2016 at 11:22:26AM -0700, william.c.roberts@intel.com wro=
-te:
-> > From: William Roberts <william.c.roberts@intel.com>
-> >
-> > This patch introduces the ability randomize mmap locations where the
-> > address is not requested, for instance when ld is allocating pages for
-> > shared libraries. It chooses to randomize based on the current
-> > personality for ASLR.
+> Currently, allocations are done sequentially within unmapped address
+> space gaps. This may happen top down or bottom up depending on
+> scheme.
 >=20
-> Now I see how you found the randomize_range() fix. :-P
->=20
-> > Currently, allocations are done sequentially within unmapped address
-> > space gaps. This may happen top down or bottom up depending on scheme.
-> >
-> > For instance these mmap calls produce contiguous mappings:
-> > int size =3D getpagesize();
-> > mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
+> For instance these mmap calls produce contiguous mappings:
+> int size =3D getpagesize();
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
 > 0x40026000
-> > mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
 > 0x40027000
-> >
-> > Note no gap between.
-> >
-> > After patches:
-> > int size =3D getpagesize();
-> > mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
+>=20
+> Note no gap between.
+>=20
+> After patches:
+> int size =3D getpagesize();
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
 > 0x400b4000
-> > mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) =3D
 > 0x40055000
-> >
-> > Note gap between.
-> >
-> > Using the test program mentioned here, that allocates fixed sized
-> > blocks till exhaustion:
-> > https://www.linux-mips.org/archives/linux-mips/2011-05/msg00252.html,
-> > no difference was noticed in the number of allocations. Most varied
-> > from run to run, but were always within a few allocations of one
-> > another between patched and un-patched runs.
 >=20
-> Did you test this with different allocation sizes?
+> Note gap between.
 
-No I didn't it. I wasn't sure the best way to test this, any ideas?
+I suspect this randomization will be more useful
+for file mappings than for anonymous mappings.
 
->=20
-> > Performance Measurements:
-> > Using strace with -T option and filtering for mmap on the program ls
-> > shows a slowdown of approximate 3.7%
->=20
-> I think it would be helpful to show the effect on the resulting object co=
-de.
+I don't know whether there are downsides to creating
+more anonymous VMAs than we have to, with malloc
+libraries that may perform various kinds of tricks
+with mmap for their own performance reasons.
 
-Do you mean the maps of the process? I have some captures for whoopsie on m=
-y Ubuntu
-system I can share.
+Does anyone have convincing reasons why mmap
+randomization should do both file and anon, or
+whether it should do just file mappings?
 
-One thing I didn't make clear in my commit message is why this is good. Rig=
-ht now, if you know
-An address within in a process, you know all offsets done with mmap(). For =
-instance, an offset
-To libX can yield libY by adding/subtracting an offset. This is meant to ma=
-ke rops a bit harder, or
-In general any mapping offset mmore difficult to find/guess.
+--=20
+All rights reversed
 
->=20
-> > Signed-off-by: William Roberts <william.c.roberts@intel.com>
-> > ---
-> >  mm/mmap.c | 24 ++++++++++++++++++++++++
-> >  1 file changed, 24 insertions(+)
-> >
-> > diff --git a/mm/mmap.c b/mm/mmap.c
-> > index de2c176..7891272 100644
-> > --- a/mm/mmap.c
-> > +++ b/mm/mmap.c
-> > @@ -43,6 +43,7 @@
-> >  #include <linux/userfaultfd_k.h>
-> >  #include <linux/moduleparam.h>
-> >  #include <linux/pkeys.h>
-> > +#include <linux/random.h>
-> >
-> >  #include <asm/uaccess.h>
-> >  #include <asm/cacheflush.h>
-> > @@ -1582,6 +1583,24 @@ unacct_error:
-> >  	return error;
-> >  }
-> >
-> > +/*
-> > + * Generate a random address within a range. This differs from
-> > +randomize_addr() by randomizing
-> > + * on len sized chunks. This helps prevent fragmentation of the virtua=
-l
-> memory map.
-> > + */
-> > +static unsigned long randomize_mmap(unsigned long start, unsigned
-> > +long end, unsigned long len) {
-> > +	unsigned long slots;
-> > +
-> > +	if ((current->personality & ADDR_NO_RANDOMIZE) ||
-> !randomize_va_space)
-> > +		return 0;
->=20
-> Couldn't we avoid checking this every time?  Say, by assigning a function=
- pointer
-> during init?
+--=-uInklHcATbRBVk/CLPm9
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
-Yeah that could be done. I just copied the way others checked elsewhere in =
-the kernel :-P
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
->=20
-> > +
-> > +	slots =3D (end - start)/len;
-> > +	if (!slots)
-> > +		return 0;
-> > +
-> > +	return PAGE_ALIGN(start + ((get_random_long() % slots) * len)); }
-> > +
->=20
-> Personally, I'd prefer this function noop out based on a configuration op=
-tion.
+iQEcBAABCAAGBQJXl8QTAAoJEM553pKExN6D3iIH/R1kNo97Yvqrfjxh4QPJWDL5
+d4EoNba8popXiLyfs2cmxIZOTBcrMtF7iHBQj1rc2ZC/jsrRihuhi8iIFRmHp/mi
+7MRjdv+dfLic3Uf+pcacUG/YQxu03NVM9zW7MFMg0UXOZb5JSA38mHg6bts3udns
+84j5HVpJYZgDYkcWwTFlOP6vBoAvkHsDzI+MJLe2zsj9Cyi8M0CqUIIBx3dcYV36
+533wufpFkyfreqmxLyyv0VCehH6G21HYCzzavbjkNaNHrdhwyfNrCEbssyx5jrUD
+NjzEkkeZkb8wOOyLuGGRvXIXIt3uF//svs834MAGG71jMsdIFi9gaxqqyOdEQQ4=
+=1Tax
+-----END PGP SIGNATURE-----
 
-Me too.
-
->=20
-> >  unsigned long unmapped_area(struct vm_unmapped_area_info *info)  {
-> >  	/*
-> > @@ -1676,6 +1695,8 @@ found:
-> >  	if (gap_start < info->low_limit)
-> >  		gap_start =3D info->low_limit;
-> >
-> > +	gap_start =3D randomize_mmap(gap_start, gap_end, length) ? :
-> > +gap_start;
-> > +
-> >  	/* Adjust gap address to the desired alignment */
-> >  	gap_start +=3D (info->align_offset - gap_start) & info->align_mask;
-> >
-> > @@ -1775,6 +1796,9 @@ found:
-> >  found_highest:
-> >  	/* Compute highest gap address at the desired alignment */
-> >  	gap_end -=3D info->length;
-> > +
-> > +	gap_end =3D randomize_mmap(gap_start, gap_end, length) ? : gap_end;
-> > +
-> >  	gap_end -=3D (gap_end - info->align_offset) & info->align_mask;
-> >
-> >  	VM_BUG_ON(gap_end < info->low_limit);
->=20
-> I'll have to dig into the mm code more before I can comment intelligently=
- on this.
->=20
-> thx,
->=20
-> Jason.
+--=-uInklHcATbRBVk/CLPm9--
