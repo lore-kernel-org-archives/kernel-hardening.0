@@ -1,77 +1,154 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 26 Jul 2016 22:43:27 +0200
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20160726224327.c9b41ba7c1c37771f49968ce@gmail.com>
-In-Reply-To: <20160726223541.513ce76f6de65389da6a6abe@gmail.com>
-References: <20160726223541.513ce76f6de65389da6a6abe@gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] [PATCH v3 7/7] Mark functions with the __unverified_nocapture
- attribute
-To: kernel-hardening@lists.openwall.com
-Cc: pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, keescook@chromium.org, linux-kernel@vger.kernel.org, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, arnd@arndb.de, sam@ravnborg.org, isdn@linux-pingi.de
+MIME-Version: 1.0
+In-Reply-To: <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com> <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+From: Nick Kralevich <nnk@google.com>
+Date: Tue, 26 Jul 2016 13:41:09 -0700
+Message-ID: <CAFJ0LnENnrpVA_SdngGxeShsmxq9Mvc0h9EH1=8vEP=hFFnt1g@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] [RFC] Introduce mmap randomization
+To: "Roberts, William C" <william.c.roberts@intel.com>
+Cc: jason@lakedaemon.net, linux-mm@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, Jeffrey Vander Stoep <jeffv@google.com>, salyzyn@android.com, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This attribute disables the compile data flow verification of the
-designated nocapture parameters of the function. Use it only on function
-parameters that are difficult for the plugin to analyze.
+My apologies in advance if I misunderstand the purposes of this patch.
 
-Signed-off-by: Emese Revfy <re.emese@gmail.com>
----
- include/linux/compiler-gcc.h | 1 +
- include/linux/compiler.h     | 4 ++++
- lib/vsprintf.c               | 4 ++--
- 3 files changed, 7 insertions(+), 2 deletions(-)
+IIUC, this patch adds a random gap between various mmap() mappings,
+with the goal of ensuring that both the mmap base address and gaps
+between pages are randomized.
 
-diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
-index 6697ea3..76797b9 100644
---- a/include/linux/compiler-gcc.h
-+++ b/include/linux/compiler-gcc.h
-@@ -207,6 +207,7 @@
-  */
- #ifdef INITIFY_PLUGIN
- #define __nocapture(...) __attribute__((nocapture(__VA_ARGS__)))
-+#define __unverified_nocapture(...) __attribute__((unverified_nocapture(__VA_ARGS__)))
- #endif
- 
- /*
-diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-index 391b48b..f0b4156 100644
---- a/include/linux/compiler.h
-+++ b/include/linux/compiler.h
-@@ -416,6 +416,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
- # define __nocapture(...)
- #endif
- 
-+#ifndef __unverified_nocapture
-+# define __unverified_nocapture(...)
-+#endif
-+
- /*
-  * Tell gcc if a function is cold. The compiler will assume any path
-  * directly leading to the call is unlikely.
-diff --git a/lib/vsprintf.c b/lib/vsprintf.c
-index a192761..cb964b5 100644
---- a/lib/vsprintf.c
-+++ b/lib/vsprintf.c
-@@ -118,7 +118,7 @@ long long simple_strtoll(const char *cp, char **endp, unsigned int base)
- }
- EXPORT_SYMBOL(simple_strtoll);
- 
--static noinline_for_stack __nocapture(1)
-+static noinline_for_stack __nocapture(1) __unverified_nocapture(1)
- int skip_atoi(const char **s)
- {
- 	int i = 0;
-@@ -1570,7 +1570,7 @@ int kptr_restrict __read_mostly;
-  * function pointers are really function descriptors, which contain a
-  * pointer to the real address.
-  */
--static noinline_for_stack __nocapture(1)
-+static noinline_for_stack __nocapture(1) __unverified_nocapture(1)
- char *pointer(const char *fmt, char *buf, char *end, void *ptr,
- 	      struct printf_spec spec)
- {
+If that's the goal, please note that this behavior has caused
+significant performance problems to Android in the past. Specifically,
+random gaps between mmap()ed regions causes memory space
+fragmentation. After a program runs for a long time, the ability to
+find large contiguous blocks of memory becomes impossible, and mmap()s
+fail due to lack of a large enough address space.
+
+This isn't just a theoretical concern. Android actually hit this on
+kernels prior to
+http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=7dbaa466780a754154531b44c2086f6618cee3a8
+. Before that patch, the gaps between mmap()ed pages were randomized.
+See the discussion at:
+
+  http://lists.infradead.org/pipermail/linux-arm-kernel/2011-November/073082.html
+  http://marc.info/?t=132070957400005&r=1&w=2
+
+We ended up having to work around this problem in the following commits:
+
+  https://android.googlesource.com/platform/dalvik/+/311886c6c6fcd3b531531f592d56caab5e2a259c
+  https://android.googlesource.com/platform/art/+/51e5386
+  https://android.googlesource.com/platform/art/+/f94b781
+
+If this behavior was re-introduced, it's likely to cause
+hard-to-reproduce problems, and I suspect Android based distributions
+would tend to disable this feature either globally, or for
+applications which make a large number of mmap() calls.
+
+-- Nick
+
+
+
+On Tue, Jul 26, 2016 at 11:22 AM,  <william.c.roberts@intel.com> wrote:
+> From: William Roberts <william.c.roberts@intel.com>
+>
+> This patch introduces the ability randomize mmap locations where the
+> address is not requested, for instance when ld is allocating pages for
+> shared libraries. It chooses to randomize based on the current
+> personality for ASLR.
+>
+> Currently, allocations are done sequentially within unmapped address
+> space gaps. This may happen top down or bottom up depending on scheme.
+>
+> For instance these mmap calls produce contiguous mappings:
+> int size = getpagesize();
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40026000
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40027000
+>
+> Note no gap between.
+>
+> After patches:
+> int size = getpagesize();
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x400b4000
+> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40055000
+>
+> Note gap between.
+>
+> Using the test program mentioned here, that allocates fixed sized blocks
+> till exhaustion: https://www.linux-mips.org/archives/linux-mips/2011-05/msg00252.html,
+> no difference was noticed in the number of allocations. Most varied from
+> run to run, but were always within a few allocations of one another
+> between patched and un-patched runs.
+>
+> Performance Measurements:
+> Using strace with -T option and filtering for mmap on the program
+> ls shows a slowdown of approximate 3.7%
+>
+> Signed-off-by: William Roberts <william.c.roberts@intel.com>
+> ---
+>  mm/mmap.c | 24 ++++++++++++++++++++++++
+>  1 file changed, 24 insertions(+)
+>
+> diff --git a/mm/mmap.c b/mm/mmap.c
+> index de2c176..7891272 100644
+> --- a/mm/mmap.c
+> +++ b/mm/mmap.c
+> @@ -43,6 +43,7 @@
+>  #include <linux/userfaultfd_k.h>
+>  #include <linux/moduleparam.h>
+>  #include <linux/pkeys.h>
+> +#include <linux/random.h>
+>
+>  #include <asm/uaccess.h>
+>  #include <asm/cacheflush.h>
+> @@ -1582,6 +1583,24 @@ unacct_error:
+>         return error;
+>  }
+>
+> +/*
+> + * Generate a random address within a range. This differs from randomize_addr() by randomizing
+> + * on len sized chunks. This helps prevent fragmentation of the virtual memory map.
+> + */
+> +static unsigned long randomize_mmap(unsigned long start, unsigned long end, unsigned long len)
+> +{
+> +       unsigned long slots;
+> +
+> +       if ((current->personality & ADDR_NO_RANDOMIZE) || !randomize_va_space)
+> +               return 0;
+> +
+> +       slots = (end - start)/len;
+> +       if (!slots)
+> +               return 0;
+> +
+> +       return PAGE_ALIGN(start + ((get_random_long() % slots) * len));
+> +}
+> +
+>  unsigned long unmapped_area(struct vm_unmapped_area_info *info)
+>  {
+>         /*
+> @@ -1676,6 +1695,8 @@ found:
+>         if (gap_start < info->low_limit)
+>                 gap_start = info->low_limit;
+>
+> +       gap_start = randomize_mmap(gap_start, gap_end, length) ? : gap_start;
+> +
+>         /* Adjust gap address to the desired alignment */
+>         gap_start += (info->align_offset - gap_start) & info->align_mask;
+>
+> @@ -1775,6 +1796,9 @@ found:
+>  found_highest:
+>         /* Compute highest gap address at the desired alignment */
+>         gap_end -= info->length;
+> +
+> +       gap_end = randomize_mmap(gap_start, gap_end, length) ? : gap_end;
+> +
+>         gap_end -= (gap_end - info->align_offset) & info->align_mask;
+>
+>         VM_BUG_ON(gap_end < info->low_limit);
+> --
+> 1.9.1
+>
+
+
+
 -- 
-2.8.1
+Nick Kralevich | Android Security | nnk@google.com | 650.214.4037
