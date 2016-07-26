@@ -1,95 +1,101 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160726030201.6775-1-jason@lakedaemon.net>
-References: <1469471141-25669-1-git-send-email-william.c.roberts@intel.com> <20160726030201.6775-1-jason@lakedaemon.net>
+In-Reply-To: <87poq1jgtw.fsf@concordia.ellerman.id.au>
+References: <1468619065-3222-1-git-send-email-keescook@chromium.org>
+ <1468619065-3222-3-git-send-email-keescook@chromium.org> <5790711f.2350420a.b4287.2cc0SMTPIN_ADDED_BROKEN@mx.google.com>
+ <CAGXu5jLCu1Vv0uugKZrsjSEsoABgXJSOJ8GkKmrHbvj9jkC2YA@mail.gmail.com>
+ <20160722174551.jddle6mf7zlq6xmb@treble> <87poq1jgtw.fsf@concordia.ellerman.id.au>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 25 Jul 2016 21:44:27 -0700
-Message-ID: <CAGXu5jKpJwurH5wgsMmaWC4mZLFTRLTT_r4ny3iohSBS2WUDEw@mail.gmail.com>
+Date: Mon, 25 Jul 2016 21:46:36 -0700
+Message-ID: <CAGXu5jJDHYfGwsULKqpWVykPB9TJHNy8pBELq-K08HnHGE2Tjw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC patch 1/6] random: Simplify API for random address requests
-To: Jason Cooper <jason@lakedaemon.net>
-Cc: "Roberts, William C" <william.c.roberts@intel.com>, linux-mm@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, Greg KH <gregkh@linuxfoundation.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, Mark Salyzyn <salyzyn@android.com>, Daniel Cashman <dcashman@android.com>
+Subject: [kernel-hardening] Re: [PATCH v3 02/11] mm: Hardened usercopy
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Josh Poimboeuf <jpoimboe@redhat.com>, LKML <linux-kernel@vger.kernel.org>, Balbir Singh <bsingharora@gmail.com>, Daniel Micay <danielmicay@gmail.com>, Rik van Riel <riel@redhat.com>, Casey Schaufler <casey@schaufler-ca.com>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Tony Luck <tony.luck@intel.com>, Fenghua Yu <fenghua.yu@intel.com>, "David S. Miller" <davem@davemloft.net>, "x86@kernel.org" <x86@kernel.org>, Christoph Lameter <cl@linux.com>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Andrew Morton <akpm@linux-foundation.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Mathias Krause <minipli@googlemail.com>, Jan Kara <jack@suse.cz>, Vitaly Wool <vitalywool@gmail.com>, Dmitry Vyukov <dvyukov@google.com>, Laura Abbott <labbott@fedoraproject.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-ia64@vger.kernel.org, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, sparclinux <sparclinux@vger.kernel.org>, linux-arch <linux-arch@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jul 25, 2016 at 8:01 PM, Jason Cooper <jason@lakedaemon.net> wrote:
-> To date, all callers of randomize_range() have set the length to 0, and
-> check for a zero return value.  For the current callers, the only way
-> to get zero returned is if end <= start.  Since they are all adding a
-> constant to the start address, this is unnecessary.
+On Mon, Jul 25, 2016 at 7:03 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> Josh Poimboeuf <jpoimboe@redhat.com> writes:
 >
-> We can remove a bunch of needless checks by simplifying the API to do
-> just what everyone wants, return an address between [start, start +
-> range].
+>> On Thu, Jul 21, 2016 at 11:34:25AM -0700, Kees Cook wrote:
+>>> On Wed, Jul 20, 2016 at 11:52 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+>>> > Kees Cook <keescook@chromium.org> writes:
+>>> >
+>>> >> diff --git a/mm/usercopy.c b/mm/usercopy.c
+>>> >> new file mode 100644
+>>> >> index 000000000000..e4bf4e7ccdf6
+>>> >> --- /dev/null
+>>> >> +++ b/mm/usercopy.c
+>>> >> @@ -0,0 +1,234 @@
+>>> > ...
+>>> >> +
+>>> >> +/*
+>>> >> + * Checks if a given pointer and length is contained by the current
+>>> >> + * stack frame (if possible).
+>>> >> + *
+>>> >> + *   0: not at all on the stack
+>>> >> + *   1: fully within a valid stack frame
+>>> >> + *   2: fully on the stack (when can't do frame-checking)
+>>> >> + *   -1: error condition (invalid stack position or bad stack frame)
+>>> >> + */
+>>> >> +static noinline int check_stack_object(const void *obj, unsigned long len)
+>>> >> +{
+>>> >> +     const void * const stack = task_stack_page(current);
+>>> >> +     const void * const stackend = stack + THREAD_SIZE;
+>>> >
+>>> > That allows access to the entire stack, including the struct thread_info,
+>>> > is that what we want - it seems dangerous? Or did I miss a check
+>>> > somewhere else?
+>>>
+>>> That seems like a nice improvement to make, yeah.
+>>>
+>>> > We have end_of_stack() which computes the end of the stack taking
+>>> > thread_info into account (end being the opposite of your end above).
+>>>
+>>> Amusingly, the object_is_on_stack() check in sched.h doesn't take
+>>> thread_info into account either. :P Regardless, I think using
+>>> end_of_stack() may not be best. To tighten the check, I think we could
+>>> add this after checking that the object is on the stack:
+>>>
+>>> #ifdef CONFIG_STACK_GROWSUP
+>>>         stackend -= sizeof(struct thread_info);
+>>> #else
+>>>         stack += sizeof(struct thread_info);
+>>> #endif
+>>>
+>>> e.g. then if the pointer was in the thread_info, the second test would
+>>> fail, triggering the protection.
+>>
+>> FWIW, this won't work right on x86 after Andy's
+>> CONFIG_THREAD_INFO_IN_TASK patches get merged.
 >
-> While we're here, s/get_random_int/get_random_long/.  No current call
-> site is adversely affected by get_random_int(), since all current range
-> requests are < MAX_UINT.  However, we should match caller expectations
-> to avoid coming up short (ha!) in the future.
+> Yeah. I wonder if it's better for the arch helper to just take the obj and len,
+> and work out it's own bounds for the stack using current and whatever makes
+> sense on that arch.
 >
-> Signed-off-by: Jason Cooper <jason@lakedaemon.net>
-> ---
->  drivers/char/random.c  | 17 ++++-------------
->  include/linux/random.h |  2 +-
->  2 files changed, 5 insertions(+), 14 deletions(-)
+> It would avoid too much ifdefery in the generic code, and also avoid any
+> confusion about whether stackend is the high or low address.
 >
-> diff --git a/drivers/char/random.c b/drivers/char/random.c
-> index 0158d3bff7e5..1251cb2cbab2 100644
-> --- a/drivers/char/random.c
-> +++ b/drivers/char/random.c
-> @@ -1822,22 +1822,13 @@ unsigned long get_random_long(void)
->  EXPORT_SYMBOL(get_random_long);
+> eg. on powerpc we could do:
 >
->  /*
-> - * randomize_range() returns a start address such that
-> - *
-> - *    [...... <range> .....]
-> - *  start                  end
-> - *
-> - * a <range> with size "len" starting at the return value is inside in the
-> - * area defined by [start, end], but is otherwise randomized.
-> + * randomize_addr() returns a page aligned address within [start, start +
-> + * range]
->   */
->  unsigned long
-> -randomize_range(unsigned long start, unsigned long end, unsigned long len)
-> +randomize_addr(unsigned long start, unsigned long range)
+> int noinline arch_within_stack_frames(const void *obj, unsigned long len)
+> {
+>         void *stack_low  = end_of_stack(current);
+>         void *stack_high = task_stack_page(current) + THREAD_SIZE;
+>
+>
+> Whereas arches with STACK_GROWSUP=y could do roughly the reverse, and x86 can do
+> whatever it needs to depending on whether the thread_info is on or off stack.
+>
+> cheers
 
-Also, this series isn't bisectable since randomize_range gets removed
-here before the callers are updated. Perhaps add a macro that calls
-randomize_addr with a BUG_ON for len != 0? (And then remove it in the
-last patch?)
+Yeah, I agree: this should be in the arch code. If the arch can
+actually do frame checking, the thread_info (if it exists on the
+stack) would already be excluded. But it'd be a nice tightening of the
+check.
 
 -Kees
-
->  {
-> -       unsigned long range = end - len - start;
-> -
-> -       if (end <= start + len)
-> -               return 0;
-> -       return PAGE_ALIGN(get_random_int() % range + start);
-> +       return PAGE_ALIGN(get_random_long() % range + start);
->  }
->
->  /* Interface for in-kernel drivers of true hardware RNGs.
-> diff --git a/include/linux/random.h b/include/linux/random.h
-> index e47e533742b5..1ad877a98186 100644
-> --- a/include/linux/random.h
-> +++ b/include/linux/random.h
-> @@ -34,7 +34,7 @@ extern const struct file_operations random_fops, urandom_fops;
->
->  unsigned int get_random_int(void);
->  unsigned long get_random_long(void);
-> -unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
-> +unsigned long randomize_addr(unsigned long start, unsigned long range);
->
->  u32 prandom_u32(void);
->  void prandom_bytes(void *buf, size_t nbytes);
-> --
-> 2.9.2
->
-
-
 
 -- 
 Kees Cook
