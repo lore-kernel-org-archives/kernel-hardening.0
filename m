@@ -1,133 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Tue, 26 Jul 2016 21:02:48 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC5601260044@ORSMSX103.amr.corp.intel.com>
+Date: Tue, 26 Jul 2016 21:06:30 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC5601260068@ORSMSX103.amr.corp.intel.com>
 References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
  <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
- <CAFJ0LnENnrpVA_SdngGxeShsmxq9Mvc0h9EH1=8vEP=hFFnt1g@mail.gmail.com>
-In-Reply-To: <CAFJ0LnENnrpVA_SdngGxeShsmxq9Mvc0h9EH1=8vEP=hFFnt1g@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <20160726200309.GJ4541@io.lakedaemon.net>
+ <476DC76E7D1DF2438D32BFADF679FC560125F29C@ORSMSX103.amr.corp.intel.com>
+ <20160726205944.GM4541@io.lakedaemon.net>
+In-Reply-To: <20160726205944.GM4541@io.lakedaemon.net>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
 Subject: [kernel-hardening] RE: [PATCH] [RFC] Introduce mmap randomization
-To: Nick Kralevich <nnk@google.com>
-Cc: "jason@lakedaemon.net" <jason@lakedaemon.net>, "linux-mm@vger.kernel.org" <linux-mm@vger.kernel.org>, lkml <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Greg KH <gregkh@linuxfoundation.org>, Jeffrey Vander Stoep <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, Daniel
- Cashman <dcashman@android.com>
+To: Jason Cooper <jason@lakedaemon.net>
+Cc: "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "nnk@google.com" <nnk@google.com>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbTogTmljayBLcmFsZXZpY2gg
-W21haWx0bzpubmtAZ29vZ2xlLmNvbV0NCj4gU2VudDogVHVlc2RheSwgSnVseSAyNiwgMjAxNiAx
-OjQxIFBNDQo+IFRvOiBSb2JlcnRzLCBXaWxsaWFtIEMgPHdpbGxpYW0uYy5yb2JlcnRzQGludGVs
-LmNvbT4NCj4gQ2M6IGphc29uQGxha2VkYWVtb24ubmV0OyBsaW51eC1tbUB2Z2VyLmtlcm5lbC5v
-cmc7IGxrbWwgPGxpbnV4LQ0KPiBrZXJuZWxAdmdlci5rZXJuZWwub3JnPjsga2VybmVsLWhhcmRl
-bmluZ0BsaXN0cy5vcGVud2FsbC5jb207IEFuZHJldw0KPiBNb3J0b24gPGFrcG1AbGludXgtZm91
-bmRhdGlvbi5vcmc+OyBLZWVzIENvb2sgPGtlZXNjb29rQGNocm9taXVtLm9yZz47DQo+IEdyZWcg
-S0ggPGdyZWdraEBsaW51eGZvdW5kYXRpb24ub3JnPjsgSmVmZnJleSBWYW5kZXIgU3RvZXANCj4g
-PGplZmZ2QGdvb2dsZS5jb20+OyBzYWx5enluQGFuZHJvaWQuY29tOyBEYW5pZWwgQ2FzaG1hbg0K
-PiA8ZGNhc2htYW5AYW5kcm9pZC5jb20+DQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0hdIFtSRkNdIElu
-dHJvZHVjZSBtbWFwIHJhbmRvbWl6YXRpb24NCj4gDQo+IE15IGFwb2xvZ2llcyBpbiBhZHZhbmNl
-IGlmIEkgbWlzdW5kZXJzdGFuZCB0aGUgcHVycG9zZXMgb2YgdGhpcyBwYXRjaC4NCj4gDQo+IElJ
-VUMsIHRoaXMgcGF0Y2ggYWRkcyBhIHJhbmRvbSBnYXAgYmV0d2VlbiB2YXJpb3VzIG1tYXAoKSBt
-YXBwaW5ncywgd2l0aCB0aGUNCj4gZ29hbCBvZiBlbnN1cmluZyB0aGF0IGJvdGggdGhlIG1tYXAg
-YmFzZSBhZGRyZXNzIGFuZCBnYXBzIGJldHdlZW4gcGFnZXMgYXJlDQo+IHJhbmRvbWl6ZWQuDQo+
-IA0KPiBJZiB0aGF0J3MgdGhlIGdvYWwsIHBsZWFzZSBub3RlIHRoYXQgdGhpcyBiZWhhdmlvciBo
-YXMgY2F1c2VkIHNpZ25pZmljYW50DQo+IHBlcmZvcm1hbmNlIHByb2JsZW1zIHRvIEFuZHJvaWQg
-aW4gdGhlIHBhc3QuIFNwZWNpZmljYWxseSwgcmFuZG9tIGdhcHMgYmV0d2Vlbg0KPiBtbWFwKCll
-ZCByZWdpb25zIGNhdXNlcyBtZW1vcnkgc3BhY2UgZnJhZ21lbnRhdGlvbi4gQWZ0ZXIgYSBwcm9n
-cmFtIHJ1bnMgZm9yDQo+IGEgbG9uZyB0aW1lLCB0aGUgYWJpbGl0eSB0byBmaW5kIGxhcmdlIGNv
-bnRpZ3VvdXMgYmxvY2tzIG9mIG1lbW9yeSBiZWNvbWVzDQo+IGltcG9zc2libGUsIGFuZCBtbWFw
-KClzIGZhaWwgZHVlIHRvIGxhY2sgb2YgYSBsYXJnZSBlbm91Z2ggYWRkcmVzcyBzcGFjZS4NCg0K
-WWVzIGFuZCBmcmFnbWVudGF0aW9uIGlzIGRlZmluaXRlbHkgYSBwcm9ibGVtIGhlcmUuIEVzcGVj
-aWFsbHkgd2hlbiB0aGUgbW1hcHMoKQ0KYXJlIG5vdCBhIGNvbnNpc3RlbnQgbGVuZ3RoIGZvciBw
-cm9ncmFtIGxpZmUuDQoNCj4gDQo+IFRoaXMgaXNuJ3QganVzdCBhIHRoZW9yZXRpY2FsIGNvbmNl
-cm4uIEFuZHJvaWQgYWN0dWFsbHkgaGl0IHRoaXMgb24ga2VybmVscyBwcmlvciB0bw0KPiBodHRw
-Oi8vZ2l0Lmtlcm5lbC5vcmcvY2dpdC9saW51eC9rZXJuZWwvZ2l0L3RvcnZhbGRzL2xpbnV4Lmdp
-dC9jb21taXQvP2lkPTdkYmFhNDYNCj4gNjc4MGE3NTQxNTQ1MzFiNDRjMjA4NmY2NjE4Y2VlM2E4
-DQo+IC4gQmVmb3JlIHRoYXQgcGF0Y2gsIHRoZSBnYXBzIGJldHdlZW4gbW1hcCgpZWQgcGFnZXMg
-d2VyZSByYW5kb21pemVkLg0KPiBTZWUgdGhlIGRpc2N1c3Npb24gYXQ6DQo+IA0KPiAgIGh0dHA6
-Ly9saXN0cy5pbmZyYWRlYWQub3JnL3BpcGVybWFpbC9saW51eC1hcm0ta2VybmVsLzIwMTEtDQo+
-IE5vdmVtYmVyLzA3MzA4Mi5odG1sDQo+ICAgaHR0cDovL21hcmMuaW5mby8/dD0xMzIwNzA5NTc0
-MDAwMDUmcj0xJnc9Mg0KPiANCj4gV2UgZW5kZWQgdXAgaGF2aW5nIHRvIHdvcmsgYXJvdW5kIHRo
-aXMgcHJvYmxlbSBpbiB0aGUgZm9sbG93aW5nIGNvbW1pdHM6DQo+IA0KPiANCj4gaHR0cHM6Ly9h
-bmRyb2lkLmdvb2dsZXNvdXJjZS5jb20vcGxhdGZvcm0vZGFsdmlrLysvMzExODg2YzZjNmZjZDNi
-NTMxNTMxZjU5DQo+IDJkNTZjYWFiNWUyYTI1OWMNCj4gICBodHRwczovL2FuZHJvaWQuZ29vZ2xl
-c291cmNlLmNvbS9wbGF0Zm9ybS9hcnQvKy81MWU1Mzg2DQo+ICAgaHR0cHM6Ly9hbmRyb2lkLmdv
-b2dsZXNvdXJjZS5jb20vcGxhdGZvcm0vYXJ0LysvZjk0Yjc4MQ0KPiANCj4gSWYgdGhpcyBiZWhh
-dmlvciB3YXMgcmUtaW50cm9kdWNlZCwgaXQncyBsaWtlbHkgdG8gY2F1c2UgaGFyZC10by1yZXBy
-b2R1Y2UNCj4gcHJvYmxlbXMsIGFuZCBJIHN1c3BlY3QgQW5kcm9pZCBiYXNlZCBkaXN0cmlidXRp
-b25zIHdvdWxkIHRlbmQgdG8gZGlzYWJsZSB0aGlzDQo+IGZlYXR1cmUgZWl0aGVyIGdsb2JhbGx5
-LCBvciBmb3IgYXBwbGljYXRpb25zIHdoaWNoIG1ha2UgYSBsYXJnZSBudW1iZXIgb2YgbW1hcCgp
-DQo+IGNhbGxzLg0KDQpZZWFoIGFuZCB0aGlzIGlzIHRoZSBpc3N1ZSBJIHdhbnQgdG8gc2VlIGlm
-IHdlIGNhbiBvdmVyY29tZS4gSSBzZWUgdGhlIGJpZ2dlc3QgYmVuZWZpdA0KYmVpbmcgb24gbGli
-cmFyaWVzIGxvYWRlZCBieSBkbC4gUGVyaGFwcyBhIHJhbmRvbSBmbGFnIGFuZCBtb2RpZnkgdG8g
-bGlua2Vycy4gSW0ganVzdA0Kc3BpdCBiYWxsaW5nIGhlcmUgYW5kIGNvbGxlY3RpbmcgdGhlIGZl
-ZWRiYWNrLCBsaWtlIHRoaXMuIFRoYW5rcyBmb3IgdGhlIGRldGFpbCwgdGhhdA0KaGVscHMgYSBs
-b3QuDQoNCj4gDQo+IC0tIE5pY2sNCj4gDQo+IA0KPiANCj4gT24gVHVlLCBKdWwgMjYsIDIwMTYg
-YXQgMTE6MjIgQU0sICA8d2lsbGlhbS5jLnJvYmVydHNAaW50ZWwuY29tPiB3cm90ZToNCj4gPiBG
-cm9tOiBXaWxsaWFtIFJvYmVydHMgPHdpbGxpYW0uYy5yb2JlcnRzQGludGVsLmNvbT4NCj4gPg0K
-PiA+IFRoaXMgcGF0Y2ggaW50cm9kdWNlcyB0aGUgYWJpbGl0eSByYW5kb21pemUgbW1hcCBsb2Nh
-dGlvbnMgd2hlcmUgdGhlDQo+ID4gYWRkcmVzcyBpcyBub3QgcmVxdWVzdGVkLCBmb3IgaW5zdGFu
-Y2Ugd2hlbiBsZCBpcyBhbGxvY2F0aW5nIHBhZ2VzIGZvcg0KPiA+IHNoYXJlZCBsaWJyYXJpZXMu
-IEl0IGNob29zZXMgdG8gcmFuZG9taXplIGJhc2VkIG9uIHRoZSBjdXJyZW50DQo+ID4gcGVyc29u
-YWxpdHkgZm9yIEFTTFIuDQo+ID4NCj4gPiBDdXJyZW50bHksIGFsbG9jYXRpb25zIGFyZSBkb25l
-IHNlcXVlbnRpYWxseSB3aXRoaW4gdW5tYXBwZWQgYWRkcmVzcw0KPiA+IHNwYWNlIGdhcHMuIFRo
-aXMgbWF5IGhhcHBlbiB0b3AgZG93biBvciBib3R0b20gdXAgZGVwZW5kaW5nIG9uIHNjaGVtZS4N
-Cj4gPg0KPiA+IEZvciBpbnN0YW5jZSB0aGVzZSBtbWFwIGNhbGxzIHByb2R1Y2UgY29udGlndW91
-cyBtYXBwaW5nczoNCj4gPiBpbnQgc2l6ZSA9IGdldHBhZ2VzaXplKCk7DQo+ID4gbW1hcChOVUxM
-LCBzaXplLCBmbGFncywgTUFQX1BSSVZBVEV8TUFQX0FOT05ZTU9VUywgLTEsIDApID0NCj4gMHg0
-MDAyNjAwMA0KPiA+IG1tYXAoTlVMTCwgc2l6ZSwgZmxhZ3MsIE1BUF9QUklWQVRFfE1BUF9BTk9O
-WU1PVVMsIC0xLCAwKSA9DQo+IDB4NDAwMjcwMDANCj4gPg0KPiA+IE5vdGUgbm8gZ2FwIGJldHdl
-ZW4uDQo+ID4NCj4gPiBBZnRlciBwYXRjaGVzOg0KPiA+IGludCBzaXplID0gZ2V0cGFnZXNpemUo
-KTsNCj4gPiBtbWFwKE5VTEwsIHNpemUsIGZsYWdzLCBNQVBfUFJJVkFURXxNQVBfQU5PTllNT1VT
-LCAtMSwgMCkgPQ0KPiAweDQwMGI0MDAwDQo+ID4gbW1hcChOVUxMLCBzaXplLCBmbGFncywgTUFQ
-X1BSSVZBVEV8TUFQX0FOT05ZTU9VUywgLTEsIDApID0NCj4gMHg0MDA1NTAwMA0KPiA+DQo+ID4g
-Tm90ZSBnYXAgYmV0d2Vlbi4NCj4gPg0KPiA+IFVzaW5nIHRoZSB0ZXN0IHByb2dyYW0gbWVudGlv
-bmVkIGhlcmUsIHRoYXQgYWxsb2NhdGVzIGZpeGVkIHNpemVkDQo+ID4gYmxvY2tzIHRpbGwgZXho
-YXVzdGlvbjoNCj4gPiBodHRwczovL3d3dy5saW51eC1taXBzLm9yZy9hcmNoaXZlcy9saW51eC1t
-aXBzLzIwMTEtMDUvbXNnMDAyNTIuaHRtbCwNCj4gPiBubyBkaWZmZXJlbmNlIHdhcyBub3RpY2Vk
-IGluIHRoZSBudW1iZXIgb2YgYWxsb2NhdGlvbnMuIE1vc3QgdmFyaWVkDQo+ID4gZnJvbSBydW4g
-dG8gcnVuLCBidXQgd2VyZSBhbHdheXMgd2l0aGluIGEgZmV3IGFsbG9jYXRpb25zIG9mIG9uZQ0K
-PiA+IGFub3RoZXIgYmV0d2VlbiBwYXRjaGVkIGFuZCB1bi1wYXRjaGVkIHJ1bnMuDQo+ID4NCj4g
-PiBQZXJmb3JtYW5jZSBNZWFzdXJlbWVudHM6DQo+ID4gVXNpbmcgc3RyYWNlIHdpdGggLVQgb3B0
-aW9uIGFuZCBmaWx0ZXJpbmcgZm9yIG1tYXAgb24gdGhlIHByb2dyYW0gbHMNCj4gPiBzaG93cyBh
-IHNsb3dkb3duIG9mIGFwcHJveGltYXRlIDMuNyUNCj4gPg0KPiA+IFNpZ25lZC1vZmYtYnk6IFdp
-bGxpYW0gUm9iZXJ0cyA8d2lsbGlhbS5jLnJvYmVydHNAaW50ZWwuY29tPg0KPiA+IC0tLQ0KPiA+
-ICBtbS9tbWFwLmMgfCAyNCArKysrKysrKysrKysrKysrKysrKysrKysNCj4gPiAgMSBmaWxlIGNo
-YW5nZWQsIDI0IGluc2VydGlvbnMoKykNCj4gPg0KPiA+IGRpZmYgLS1naXQgYS9tbS9tbWFwLmMg
-Yi9tbS9tbWFwLmMNCj4gPiBpbmRleCBkZTJjMTc2Li43ODkxMjcyIDEwMDY0NA0KPiA+IC0tLSBh
-L21tL21tYXAuYw0KPiA+ICsrKyBiL21tL21tYXAuYw0KPiA+IEBAIC00Myw2ICs0Myw3IEBADQo+
-ID4gICNpbmNsdWRlIDxsaW51eC91c2VyZmF1bHRmZF9rLmg+DQo+ID4gICNpbmNsdWRlIDxsaW51
-eC9tb2R1bGVwYXJhbS5oPg0KPiA+ICAjaW5jbHVkZSA8bGludXgvcGtleXMuaD4NCj4gPiArI2lu
-Y2x1ZGUgPGxpbnV4L3JhbmRvbS5oPg0KPiA+DQo+ID4gICNpbmNsdWRlIDxhc20vdWFjY2Vzcy5o
-Pg0KPiA+ICAjaW5jbHVkZSA8YXNtL2NhY2hlZmx1c2guaD4NCj4gPiBAQCAtMTU4Miw2ICsxNTgz
-LDI0IEBAIHVuYWNjdF9lcnJvcjoNCj4gPiAgICAgICAgIHJldHVybiBlcnJvcjsNCj4gPiAgfQ0K
-PiA+DQo+ID4gKy8qDQo+ID4gKyAqIEdlbmVyYXRlIGEgcmFuZG9tIGFkZHJlc3Mgd2l0aGluIGEg
-cmFuZ2UuIFRoaXMgZGlmZmVycyBmcm9tDQo+ID4gK3JhbmRvbWl6ZV9hZGRyKCkgYnkgcmFuZG9t
-aXppbmcNCj4gPiArICogb24gbGVuIHNpemVkIGNodW5rcy4gVGhpcyBoZWxwcyBwcmV2ZW50IGZy
-YWdtZW50YXRpb24gb2YgdGhlIHZpcnR1YWwNCj4gbWVtb3J5IG1hcC4NCj4gPiArICovDQo+ID4g
-K3N0YXRpYyB1bnNpZ25lZCBsb25nIHJhbmRvbWl6ZV9tbWFwKHVuc2lnbmVkIGxvbmcgc3RhcnQs
-IHVuc2lnbmVkDQo+ID4gK2xvbmcgZW5kLCB1bnNpZ25lZCBsb25nIGxlbikgew0KPiA+ICsgICAg
-ICAgdW5zaWduZWQgbG9uZyBzbG90czsNCj4gPiArDQo+ID4gKyAgICAgICBpZiAoKGN1cnJlbnQt
-PnBlcnNvbmFsaXR5ICYgQUREUl9OT19SQU5ET01JWkUpIHx8DQo+ICFyYW5kb21pemVfdmFfc3Bh
-Y2UpDQo+ID4gKyAgICAgICAgICAgICAgIHJldHVybiAwOw0KPiA+ICsNCj4gPiArICAgICAgIHNs
-b3RzID0gKGVuZCAtIHN0YXJ0KS9sZW47DQo+ID4gKyAgICAgICBpZiAoIXNsb3RzKQ0KPiA+ICsg
-ICAgICAgICAgICAgICByZXR1cm4gMDsNCj4gPiArDQo+ID4gKyAgICAgICByZXR1cm4gUEFHRV9B
-TElHTihzdGFydCArICgoZ2V0X3JhbmRvbV9sb25nKCkgJSBzbG90cykgKg0KPiA+ICtsZW4pKTsg
-fQ0KPiA+ICsNCj4gPiAgdW5zaWduZWQgbG9uZyB1bm1hcHBlZF9hcmVhKHN0cnVjdCB2bV91bm1h
-cHBlZF9hcmVhX2luZm8gKmluZm8pICB7DQo+ID4gICAgICAgICAvKg0KPiA+IEBAIC0xNjc2LDYg
-KzE2OTUsOCBAQCBmb3VuZDoNCj4gPiAgICAgICAgIGlmIChnYXBfc3RhcnQgPCBpbmZvLT5sb3df
-bGltaXQpDQo+ID4gICAgICAgICAgICAgICAgIGdhcF9zdGFydCA9IGluZm8tPmxvd19saW1pdDsN
-Cj4gPg0KPiA+ICsgICAgICAgZ2FwX3N0YXJ0ID0gcmFuZG9taXplX21tYXAoZ2FwX3N0YXJ0LCBn
-YXBfZW5kLCBsZW5ndGgpID8gOg0KPiA+ICsgZ2FwX3N0YXJ0Ow0KPiA+ICsNCj4gPiAgICAgICAg
-IC8qIEFkanVzdCBnYXAgYWRkcmVzcyB0byB0aGUgZGVzaXJlZCBhbGlnbm1lbnQgKi8NCj4gPiAg
-ICAgICAgIGdhcF9zdGFydCArPSAoaW5mby0+YWxpZ25fb2Zmc2V0IC0gZ2FwX3N0YXJ0KSAmDQo+
-ID4gaW5mby0+YWxpZ25fbWFzazsNCj4gPg0KPiA+IEBAIC0xNzc1LDYgKzE3OTYsOSBAQCBmb3Vu
-ZDoNCj4gPiAgZm91bmRfaGlnaGVzdDoNCj4gPiAgICAgICAgIC8qIENvbXB1dGUgaGlnaGVzdCBn
-YXAgYWRkcmVzcyBhdCB0aGUgZGVzaXJlZCBhbGlnbm1lbnQgKi8NCj4gPiAgICAgICAgIGdhcF9l
-bmQgLT0gaW5mby0+bGVuZ3RoOw0KPiA+ICsNCj4gPiArICAgICAgIGdhcF9lbmQgPSByYW5kb21p
-emVfbW1hcChnYXBfc3RhcnQsIGdhcF9lbmQsIGxlbmd0aCkgPyA6DQo+ID4gKyBnYXBfZW5kOw0K
-PiA+ICsNCj4gPiAgICAgICAgIGdhcF9lbmQgLT0gKGdhcF9lbmQgLSBpbmZvLT5hbGlnbl9vZmZz
-ZXQpICYgaW5mby0+YWxpZ25fbWFzazsNCj4gPg0KPiA+ICAgICAgICAgVk1fQlVHX09OKGdhcF9l
-bmQgPCBpbmZvLT5sb3dfbGltaXQpOw0KPiA+IC0tDQo+ID4gMS45LjENCj4gPg0KPiANCj4gDQo+
-IA0KPiAtLQ0KPiBOaWNrIEtyYWxldmljaCB8IEFuZHJvaWQgU2VjdXJpdHkgfCBubmtAZ29vZ2xl
-LmNvbSB8IDY1MC4yMTQuNDAzNw0K
+
+
+> -----Original Message-----
+> From: owner-linux-mm@kvack.org [mailto:owner-linux-mm@kvack.org] On
+> Behalf Of Jason Cooper
+> Sent: Tuesday, July 26, 2016 2:00 PM
+> To: Roberts, William C <william.c.roberts@intel.com>
+> Cc: linux-mm@kvack.org; linux-kernel@vger.kernel.org; kernel-
+> hardening@lists.openwall.com; akpm@linux-foundation.org;
+> keescook@chromium.org; gregkh@linuxfoundation.org; nnk@google.com;
+> jeffv@google.com; salyzyn@android.com; dcashman@android.com
+> Subject: Re: [PATCH] [RFC] Introduce mmap randomization
+>=20
+> Hi William,
+>=20
+> On Tue, Jul 26, 2016 at 08:13:23PM +0000, Roberts, William C wrote:
+> > > > From: Jason Cooper [mailto:jason@lakedaemon.net] On Tue, Jul 26,
+> > > > 2016 at 11:22:26AM -0700, william.c.roberts@intel.com wrote:
+> > > > > Performance Measurements:
+> > > > > Using strace with -T option and filtering for mmap on the
+> > > > > program ls shows a slowdown of approximate 3.7%
+> > > >
+> > > > I think it would be helpful to show the effect on the resulting obj=
+ect code.
+> > >
+> > > Do you mean the maps of the process? I have some captures for
+> > > whoopsie on my Ubuntu system I can share.
+>=20
+> No, I mean changes to mm/mmap.o.
+
+Sure I can post the objdump of that, do you just want a diff of old vs new?
+
+>=20
+> > > One thing I didn't make clear in my commit message is why this is
+> > > good. Right now, if you know An address within in a process, you
+> > > know all offsets done with mmap(). For instance, an offset To libX
+> > > can yield libY by adding/subtracting an offset. This is meant to
+> > > make rops a bit harder, or In general any mapping offset mmore diffic=
+ult to
+> find/guess.
+>=20
+> Are you able to quantify how many bits of entropy you're imposing on the
+> attacker?  Is this a chair in the hallway or a significant increase in th=
+e chances of
+> crashing the program before finding the desired address?
+
+I'd likely need to take a small sample of programs and examine them, especi=
+ally considering
+That as gaps are harder to find, it forces the randomization down and rando=
+mization can
+Be directly altered with length on mmap(), versus randomize_addr() which di=
+dn't have this
+restriction but OOM'd do to fragmented easier.
+
+>=20
+> thx,
+>=20
+> Jason.
+>=20
+> --
+> To unsubscribe, send a message with 'unsubscribe linux-mm' in the body to
+> majordomo@kvack.org.  For more info on Linux MM,
+> see: http://www.linux-mm.org/ .
+> Don't email: <a href=3Dmailto:"dont@kvack.org"> email@kvack.org </a>
