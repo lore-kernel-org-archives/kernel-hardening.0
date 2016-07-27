@@ -1,100 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1469627517.16837.9.camel@opteya.com>
-From: Yann Droneaud <ydroneaud@opteya.com>
-Date: Wed, 27 Jul 2016 15:51:57 +0200
-In-Reply-To: <20160726030201.6775-1-jason@lakedaemon.net>
-References: <1469471141-25669-1-git-send-email-william.c.roberts@intel.com>
-	 <20160726030201.6775-1-jason@lakedaemon.net>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [RFC patch 1/6] random: Simplify API for
- random address requests
-To: kernel-hardening@lists.openwall.com, william.c.roberts@intel.com, linux-mm@vger.kernel.org, linux-kernel@vger.kernel.org
-Cc: Jason Cooper <jason@lakedaemon.net>, linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, alyzyn@android.com, dcashman@android.com
+From: Jeff Vander Stoep <jeffv@google.com>
+Date: Wed, 27 Jul 2016 07:45:46 -0700
+Message-Id: <1469630746-32279-1-git-send-email-jeffv@google.com>
+Subject: [kernel-hardening] [PATCH 1/2] security, perf: allow further restriction of perf_event_open
+To: kernel-hardening@lists.openwall.com
+Cc: peterz@infradead.org, mingo@redhat.com, acme@kernel.org, alexander.shishkin@linux.intel.com, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Jeff Vander Stoep <jeffv@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+When kernel.perf_event_paranoid is set to 3 (or greater), disallow
+all access to performance events by users without CAP_SYS_ADMIN.
 
-Le mardi 26 juillet 2016 à 03:01 +0000, Jason Cooper a écrit :
-> To date, all callers of randomize_range() have set the length to 0,
-> and check for a zero return value.  For the current callers, the only
-> way to get zero returned is if end <= start.  Since they are all
-> adding a constant to the start address, this is unnecessary.
-> 
+This new level of restriction is intended to reduce the attack
+surface of the kernel. Perf is a valuable tool for developers but
+is generally unnecessary and unused on production systems. Perf may
+open up an attack vector to vulnerable device-specific drivers as
+recently demonstrated in CVE-2016-0805, CVE-2016-0819,
+CVE-2016-0843, CVE-2016-3768, and CVE-2016-3843. This new level of
+restriction allows for a safe default to be set on production systems
+while leaving a simple means for developers to grant access [1].
 
-I agree.
+This feature is derived from CONFIG_GRKERNSEC_PERF_HARDEN by Brad
+Spengler. It is based on a patch by Ben Hutchings [2]. Ben's patches
+have been modified and split up to address on-list feedback.
 
-> We can remove a bunch of needless checks by simplifying the API to do
-> just what everyone wants, return an address between [start, start +
-> range].
-> 
+kernel.perf_event_paranoid=3 is the default on both Debian [2] and
+Android [3].
 
-I agree.
+[1] Making perf available to developers on Android:
+https://android-review.googlesource.com/#/c/234400/
+[2] Original patch by Ben Hutchings:
+https://lkml.org/lkml/2016/1/11/587
+[3] https://android-review.googlesource.com/#/c/234743/
 
-For the record:
+Signed-off-by: Jeff Vander Stoep <jeffv@google.com>
+---
+ Documentation/sysctl/kernel.txt | 1 +
+ include/linux/perf_event.h      | 5 +++++
+ kernel/events/core.c            | 4 ++++
+ 3 files changed, 10 insertions(+)
 
-http://lkml.kernel.org/r/cover.1390770607.git.ydroneaud@opteya.com
-
-
-> While we're here, s/get_random_int/get_random_long/.  No current call
-> site is adversely affected by get_random_int(), since all current
-> range requests are < MAX_UINT.  However, we should match caller
-> expectations to avoid coming up short (ha!) in the future.
-> 
-> Signed-off-by: Jason Cooper <jason@lakedaemon.net>
-> ---
->  drivers/char/random.c  | 17 ++++-------------
->  include/linux/random.h |  2 +-
->  2 files changed, 5 insertions(+), 14 deletions(-)
-> 
-> diff --git a/drivers/char/random.c b/drivers/char/random.c
-> index 0158d3bff7e5..1251cb2cbab2 100644
-> --- a/drivers/char/random.c
-> +++ b/drivers/char/random.c
-> @@ -1822,22 +1822,13 @@ unsigned long get_random_long(void)
->  EXPORT_SYMBOL(get_random_long);
->  
->  /*
-> - * randomize_range() returns a start address such that
-> - *
-> - *    [...... <range> .....]
-> - *  start                  end
-> - *
-> - * a <range> with size "len" starting at the return value is inside
-> in the
-> - * area defined by [start, end], but is otherwise randomized.
-> + * randomize_addr() returns a page aligned address within [start,
-> start +
-> + * range]
->   */
->  unsigned long
-> -randomize_range(unsigned long start, unsigned long end, unsigned
-> long len)
-> +randomize_addr(unsigned long start, unsigned long range)
->  {
-> -	unsigned long range = end - len - start;
-> -
-> -	if (end <= start + len)
-> -		return 0;
-> -	return PAGE_ALIGN(get_random_int() % range + start);
-> +	return PAGE_ALIGN(get_random_long() % range + start);
->  }
->  
->  /* Interface for in-kernel drivers of true hardware RNGs.
-> diff --git a/include/linux/random.h b/include/linux/random.h
-> index e47e533742b5..1ad877a98186 100644
-> --- a/include/linux/random.h
-> +++ b/include/linux/random.h
-> @@ -34,7 +34,7 @@ extern const struct file_operations random_fops,
-> urandom_fops;
->  
->  unsigned int get_random_int(void);
->  unsigned long get_random_long(void);
-> -unsigned long randomize_range(unsigned long start, unsigned long
-> end, unsigned long len);
-> +unsigned long randomize_addr(unsigned long start, unsigned long
-> range);
->  
->  u32 prandom_u32(void);
->  void prandom_bytes(void *buf, size_t nbytes);
+diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
+index ffab8b5..fac9798 100644
+--- a/Documentation/sysctl/kernel.txt
++++ b/Documentation/sysctl/kernel.txt
+@@ -665,6 +665,7 @@ users (without CAP_SYS_ADMIN).  The default value is 2.
+ >=0: Disallow raw tracepoint access by users without CAP_IOC_LOCK
+ >=1: Disallow CPU event access by users without CAP_SYS_ADMIN
+ >=2: Disallow kernel profiling by users without CAP_SYS_ADMIN
++>=3: Disallow all event access by users without CAP_SYS_ADMIN
+ 
+ ==============================================================
+ 
+diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
+index 8ed43261..1e2080f 100644
+--- a/include/linux/perf_event.h
++++ b/include/linux/perf_event.h
+@@ -1156,6 +1156,11 @@ static inline bool perf_paranoid_kernel(void)
+ 	return sysctl_perf_event_paranoid > 1;
+ }
+ 
++static inline bool perf_paranoid_any(void)
++{
++	return sysctl_perf_event_paranoid > 2;
++}
++
+ extern void perf_event_init(void);
+ extern void perf_tp_event(u16 event_type, u64 count, void *record,
+ 			  int entry_size, struct pt_regs *regs,
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index 356a6c7..52bd100 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -353,6 +353,7 @@ static struct srcu_struct pmus_srcu;
+  *   0 - disallow raw tracepoint access for unpriv
+  *   1 - disallow cpu events for unpriv
+  *   2 - disallow kernel profiling for unpriv
++ *   3 - disallow all unpriv perf event use
+  */
+ int sysctl_perf_event_paranoid __read_mostly = 2;
+ 
+@@ -9296,6 +9297,9 @@ SYSCALL_DEFINE5(perf_event_open,
+ 	if (flags & ~PERF_FLAG_ALL)
+ 		return -EINVAL;
+ 
++	if (perf_paranoid_any() && !capable(CAP_SYS_ADMIN))
++				return -EACCES;
++
+ 	err = perf_copy_attr(attr_uptr, &attr);
+ 	if (err)
+ 		return err;
+-- 
+2.8.0.rc3.226.g39d4020
