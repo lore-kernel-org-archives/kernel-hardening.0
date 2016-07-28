@@ -1,91 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Jason Cooper <jason@lakedaemon.net>
-Date: Thu, 28 Jul 2016 20:47:24 +0000
-Message-Id: <20160728204730.27453-2-jason@lakedaemon.net>
+Date: Thu, 28 Jul 2016 20:47:25 +0000
+Message-Id: <20160728204730.27453-3-jason@lakedaemon.net>
 In-Reply-To: <20160728204730.27453-1-jason@lakedaemon.net>
 References: <20160728204730.27453-1-jason@lakedaemon.net>
-Subject: [kernel-hardening] [PATCH 1/7] random: Simplify API for random address requests
+Subject: [kernel-hardening] [PATCH 2/7] x86: Use simpler API for random address requests
 To: william.c.roberts@intel.com, Yann Droneaud <ydroneaud@opteya.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com, Jason Cooper <jason@lakedaemon.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To date, all callers of randomize_range() have set the length to 0, and
-check for a zero return value.  For the current callers, the only way
-to get zero returned is if end <= start.  Since they are all adding a
-constant to the start address, this is unnecessary.
+Currently, all callers to randomize_range() set the length to 0 and
+calculate end by adding a constant to the start address.  We can
+simplify the API to remove a bunch of needless checks and variables.
 
-We can remove a bunch of needless checks by simplifying the API to do
-just what everyone wants, return an address between [start, start +
-range).
-
-While we're here, s/get_random_int/get_random_long/.  No current call
-site is adversely affected by get_random_int(), since all current range
-requests are < UINT_MAX.  However, we should match caller expectations
-to avoid coming up short (ha!) in the future.
-
-Address generation within [start, start + range) behavior is preserved.
-
-All current callers to randomize_range() chose to use the start address
-if randomize_range() failed.  Therefore, we simplify things by just
-returning the start address on error.
-
-randomize_range() will be removed once all callers have been converted
-over to randomize_addr().
+Use the new randomize_addr(start, range) call to set the requested
+address.
 
 Signed-off-by: Jason Cooper <jason@lakedaemon.net>
 ---
- drivers/char/random.c  | 26 ++++++++++++++++++++++++++
- include/linux/random.h |  1 +
- 2 files changed, 27 insertions(+)
+ arch/x86/kernel/process.c    | 3 +--
+ arch/x86/kernel/sys_x86_64.c | 5 +----
+ 2 files changed, 2 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 0158d3bff7e5..3610774bcc53 100644
---- a/drivers/char/random.c
-+++ b/drivers/char/random.c
-@@ -1840,6 +1840,32 @@ randomize_range(unsigned long start, unsigned long end, unsigned long len)
- 	return PAGE_ALIGN(get_random_int() % range + start);
+diff --git a/arch/x86/kernel/process.c b/arch/x86/kernel/process.c
+index 96becbbb52e0..a083a2c0744e 100644
+--- a/arch/x86/kernel/process.c
++++ b/arch/x86/kernel/process.c
+@@ -507,8 +507,7 @@ unsigned long arch_align_stack(unsigned long sp)
+ 
+ unsigned long arch_randomize_brk(struct mm_struct *mm)
+ {
+-	unsigned long range_end = mm->brk + 0x02000000;
+-	return randomize_range(mm->brk, range_end, 0) ? : mm->brk;
++	return randomize_addr(mm->brk, 0x02000000);
  }
  
-+/**
-+ * randomize_addr - Generate a random, page aligned address
-+ * @start:	The smallest acceptable address the caller will take.
-+ * @range:	The size of the area, starting at @start, within which the
-+ *		random address must fall.
-+ *
-+ * Before page alignment, the random address generated can be any value from
-+ * @start, to @start + @range - 1 inclusive.
-+ *
-+ * If @start + @range would overflow, @range is capped.
-+ *
-+ * Return: A page aligned address within [start, start + range).  On error,
-+ * @start is returned.
-+ */
-+unsigned long
-+randomize_addr(unsigned long start, unsigned long range)
-+{
-+	if (range == 0)
-+		return start;
-+
-+	if (start > ULONG_MAX - range)
-+		range = ULONG_MAX - start;
-+
-+	return PAGE_ALIGN(get_random_long() % range + start);
-+}
-+
- /* Interface for in-kernel drivers of true hardware RNGs.
-  * Those devices may produce endless random bits and will be throttled
-  * when our pool is full.
-diff --git a/include/linux/random.h b/include/linux/random.h
-index e47e533742b5..f1ca2fa4c071 100644
---- a/include/linux/random.h
-+++ b/include/linux/random.h
-@@ -35,6 +35,7 @@ extern const struct file_operations random_fops, urandom_fops;
- unsigned int get_random_int(void);
- unsigned long get_random_long(void);
- unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
-+unsigned long randomize_addr(unsigned long start, unsigned long range);
- 
- u32 prandom_u32(void);
- void prandom_bytes(void *buf, size_t nbytes);
+ /*
+diff --git a/arch/x86/kernel/sys_x86_64.c b/arch/x86/kernel/sys_x86_64.c
+index 10e0272d789a..f9cad22808fc 100644
+--- a/arch/x86/kernel/sys_x86_64.c
++++ b/arch/x86/kernel/sys_x86_64.c
+@@ -101,7 +101,6 @@ static void find_start_end(unsigned long flags, unsigned long *begin,
+ 			   unsigned long *end)
+ {
+ 	if (!test_thread_flag(TIF_ADDR32) && (flags & MAP_32BIT)) {
+-		unsigned long new_begin;
+ 		/* This is usually used needed to map code in small
+ 		   model, so it needs to be in the first 31bit. Limit
+ 		   it to that.  This means we need to move the
+@@ -112,9 +111,7 @@ static void find_start_end(unsigned long flags, unsigned long *begin,
+ 		*begin = 0x40000000;
+ 		*end = 0x80000000;
+ 		if (current->flags & PF_RANDOMIZE) {
+-			new_begin = randomize_range(*begin, *begin + 0x02000000, 0);
+-			if (new_begin)
+-				*begin = new_begin;
++			*begin = randomize_addr(*begin, 0x02000000);
+ 		}
+ 	} else {
+ 		*begin = current->mm->mmap_legacy_base;
 -- 
 2.9.2
