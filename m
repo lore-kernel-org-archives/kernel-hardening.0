@@ -1,56 +1,35 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Valdis.Kletnieks@vt.edu
-In-Reply-To: <877fc69cnn.fsf@d080-201.cis.zmaw.de>
-References: <27907.1469706366@turing-police.cc.vt.edu>
- <877fc69cnn.fsf@d080-201.cis.zmaw.de>
-Mime-Version: 1.0
-Content-Type: multipart/signed; boundary="==_Exmh_1469712083_4839P";
-	 micalg=pgp-sha1; protocol="application/pgp-signature"
-Content-Transfer-Encoding: 7bit
-Date: Thu, 28 Jul 2016 09:21:23 -0400
-Message-ID: <35991.1469712083@turing-police.cc.vt.edu>
-Subject: [kernel-hardening] Re: linux-next - modprobe causes BUG: sleeping function called from invalid context at mm/slab.h:393
-To: Nicolai Stange <nicstange@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Date: Thu, 28 Jul 2016 19:02:40 +0000
+From: Jason Cooper <jason@lakedaemon.net>
+Message-ID: <20160728190240.GS4541@io.lakedaemon.net>
+References: <1469471141-25669-1-git-send-email-william.c.roberts@intel.com>
+ <20160726030201.6775-1-jason@lakedaemon.net>
+ <20160726033032.GD4541@io.lakedaemon.net>
+ <CAGXu5jJo=8LYRarF8WqJg+b8Jf6ngZ_P_400HmuAk_j5-N-TcA@mail.gmail.com>
+ <20160726170052.GI4541@io.lakedaemon.net>
+ <CAGXu5jLT-pZc_67UeTJj-dCsRJteT2CCwaviGOKCXHnL8t-URw@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jLT-pZc_67UeTJj-dCsRJteT2CCwaviGOKCXHnL8t-URw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC patch 1/6] random: Simplify API for random address requests
+To: Kees Cook <keescook@chromium.org>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, linux-mm@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, Greg KH <gregkh@linuxfoundation.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, alyzyn@android.com, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---==_Exmh_1469712083_4839P
-Content-Type: text/plain; charset=us-ascii
+On Tue, Jul 26, 2016 at 10:07:22AM -0700, Kees Cook wrote:
+> On Tue, Jul 26, 2016 at 10:00 AM, Jason Cooper <jason@lakedaemon.net> wrote:
+...
+> > if (range == 0 || ULONG_MAX - range < start)
+> >         return start;
+> 
+> Should it "abort" like this? I was thinking just cap the range, something like:
+> 
+> if (range > ULONG_MAX - start)
+>     range = ULONG_MAX - start
 
-On Thu, 28 Jul 2016 14:21:00 +0200, Nicolai Stange said:
-> Hi Valdis,
->
-> Valdis Kletnieks <Valdis.Kletnieks@vt.edu> writes:
->
-> > This ring any bells for anybody?
+yes, will do.
 
-> Please see the thread rooted at
-> http://lkml.kernel.org/r/87d1lyiygu.fsf@gmail.com
->
-> Herbert Xu has provided a fix for this already (which works for me).
+thx,
 
-Obviously Nicolai is running one step ahead of me all this week. :)
-
---==_Exmh_1469712083_4839P
-Content-Type: application/pgp-signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-Comment: Exmh version 2.5 07/13/2001
-
-iQIVAwUBV5oG0wdmEQWDXROgAQK6LA//TiOCyx6GE+1Sz5I17qM9ysBSdHTBlHe0
-gbzRNOHWIeCZnOFBCLaudFPqFFFeKm3rHZyVYnFJ0fC8hK6abwQxZGgpyGHHPnys
-RfNmgECzsfmnfYth8MYpJI8Z1d5iyzobESF2qktylONQ6E3d83WMuxj1QUPpBx/h
-id+/NU44IKMXfqEmgHjFnGqUwGpCJn5M4lIxdizFShICvESvkZJjE0O46ngI+eHq
-BmbXxWUzovE0j0sGjZhii2q4bAsbQyY+B941yYTNlS92CQ/v+d2hGPAVmiGtCcLv
-LPQOnooMA47LSpvWV/fhEGwsczR3ZlYFaHfSzA1M+i4R4SnmKuAi1qOXdGCWrxbS
-Zy/S9AH27GNbISVKiP4BtzUrctM3GX4rZXOoCM5cvdODpQf05oHGs92IL/Jvk4gS
-pSYEYgTn+cWbmUAp5+CSUCnVY3k+OVmj20VEmfoG0Y/m431WTnbfFvn+w9U4DBFi
-ijgS0gVZ8cBGTUrOnx5s3WpCSR5GJTt1gXb/XJeRUD66ixQIkteyT1naELE7k6Np
-L9Y5J4/dF8h2FMS5YO46nI9R4d0BzY1jhWN4PoVDxURMLAbhhNNK8O4KD21ZnPCA
-xB4wSuzDPe2iPtdxvUNW6/5g9ySP+rdSmCOnxV42gIgh0x2yXRrIH9rv+HMI0reT
-Lc3L6yw6Z+8=
-=tP5D
------END PGP SIGNATURE-----
-
---==_Exmh_1469712083_4839P--
+Jason.
