@@ -1,95 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1469630783-32413-1-git-send-email-jeffv@google.com>
-References: <1469630783-32413-1-git-send-email-jeffv@google.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 27 Jul 2016 13:43:59 -0700
-Message-ID: <CAGXu5j+fJn4_UpmrPc16paz-MOmoG90_30OJdUrq6gpC0VEe+A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 2/2] security, perf: Add config option to restrict perf_event_open
-To: Jeff Vander Stoep <jeffv@google.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
+From: Valdis.Kletnieks@vt.edu
+In-Reply-To: <87mvl8tn93.fsf@gmail.com>
+References: <cover.1468270393.git.luto@kernel.org> <cover.1468270393.git.luto@kernel.org> <fb3254e25e38790c538cca0f46c4a7a714c77ddf.1468270393.git.luto@kernel.org> <5741.1469162592@turing-police.cc.vt.edu> <4b028b92-81f3-362f-c5be-b7a35cedf5ee@kernel.org> <8376.1469251283@turing-police.cc.vt.edu>
+ <87mvl8tn93.fsf@gmail.com>
+Mime-Version: 1.0
+Content-Type: multipart/signed; boundary="==_Exmh_1469698007_4839P";
+	 micalg=pgp-sha1; protocol="application/pgp-signature"
+Content-Transfer-Encoding: 7bit
+Date: Thu, 28 Jul 2016 05:26:47 -0400
+Message-ID: <16850.1469698007@turing-police.cc.vt.edu>
+Subject: Re: [kernel-hardening] [PATCH v5 03/32] x86/cpa: In populate_pgd, don't set the pgd entry until it's populated
+To: Nicolai Stange <nicstange@gmail.com>
+Cc: Andy Lutomirski <luto@kernel.org>, kernel-hardening@lists.openwall.com, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arch@vger.kernel.org, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Jann Horn <jann@thejh.net>, Heiko Carstens <heiko.carstens@de.ibm.com>, Ingo Molnar <mingo@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 27, 2016 at 7:46 AM, Jeff Vander Stoep <jeffv@google.com> wrote:
-> When CONFIG_SECURITY_PERF_EVENTS_RESTRICT=y kernel.perf_event_paranoid
-> sysctl will be set to 3 by default, and no unprivileged use of the
-> perf_event_open syscall will be permitted unless it is changed.
->
-> This new level of restriction is intended to reduce the attack
-> surface of the kernel. It allows for a safe default to be set on
-> production systems at build time while leaving a simple means for
-> developers to grant access.
->
-> Signed-off-by: Jeff Vander Stoep <jeffv@google.com>
+--==_Exmh_1469698007_4839P
+Content-Type: text/plain; charset=us-ascii
 
-Reviewed-by: Kees Cook <keescook@chromium.org>
+On Sat, 23 Jul 2016 16:58:16 +0200, Nicolai Stange said:
+> Valdis.Kletnieks@vt.edu writes:
 
--Kees
+> The reason the patch didn't work for Valdis might be that there is
+> another issue in next-20150722 with the same symptoms (provided you
+> don't watch the serial console). Valdis, did you apply the provided
+> patch on top of next?
 
-> ---
->  Documentation/sysctl/kernel.txt | 3 ++-
->  kernel/events/core.c            | 4 ++++
->  security/Kconfig                | 9 +++++++++
->  3 files changed, 15 insertions(+), 1 deletion(-)
+Sorry, am on vacation, and no option for a serial console, that's why
+I missed the part about there being *two* issues...
+
+> The "other issue" is:
 >
-> diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-> index fac9798..52daff6 100644
-> --- a/Documentation/sysctl/kernel.txt
-> +++ b/Documentation/sysctl/kernel.txt
-> @@ -659,7 +659,8 @@ allowed to execute.
->  perf_event_paranoid:
->
->  Controls use of the performance events system by unprivileged
-> -users (without CAP_SYS_ADMIN).  The default value is 2.
-> +users (without CAP_SYS_ADMIN).  The default value is 3 if
-> +CONFIG_SECURITY_PERF_EVENTS_RESTRICT is set, or 2 otherwise.
->
->   -1: Allow use of (almost) all events by all users
->  >=0: Disallow raw tracepoint access by users without CAP_IOC_LOCK
-> diff --git a/kernel/events/core.c b/kernel/events/core.c
-> index 52bd100..df9df87 100644
-> --- a/kernel/events/core.c
-> +++ b/kernel/events/core.c
-> @@ -355,7 +355,11 @@ static struct srcu_struct pmus_srcu;
->   *   2 - disallow kernel profiling for unpriv
->   *   3 - disallow all unpriv perf event use
->   */
-> +#ifdef CONFIG_SECURITY_PERF_EVENTS_RESTRICT
-> +int sysctl_perf_event_paranoid __read_mostly = 3;
-> +#else
->  int sysctl_perf_event_paranoid __read_mostly = 2;
-> +#endif
->
->  /* Minimum for 512 kiB + 1 user control page */
->  int sysctl_perf_event_mlock __read_mostly = 512 + (PAGE_SIZE / 1024); /* 'free' kiB per user */
-> diff --git a/security/Kconfig b/security/Kconfig
-> index df28f2b..2a93551 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -18,6 +18,15 @@ config SECURITY_DMESG_RESTRICT
->
->           If you are unsure how to answer this question, answer N.
->
-> +config SECURITY_PERF_EVENTS_RESTRICT
-> +       bool "Restrict unprivileged use of performance events"
-> +       depends on PERF_EVENTS
-> +       help
-> +         If you say Y here, the kernel.perf_event_paranoid sysctl
-> +         will be set to 3 by default, and no unprivileged use of the
-> +         perf_event_open syscall will be permitted unless it is
-> +         changed.
-> +
->  config SECURITY
->         bool "Enable different security models"
->         depends on SYSFS
-> --
-> 2.8.0.rc3.226.g39d4020
->
+> (...)
+>  [<ffffffffb6055487>] load_microcode.isra.1.constprop.12+0x37/0xa0
+
+> I bisected this one to 21ef9a5c3164 ("Merge branch 'x86/microcode'"). Both
+> of its parents do not exhibit that behaviour.  This merge's author is
+> Ingo Molnar, so I added him to the CC list.
+
+Confirming that I'm up and running on next-20160727 plus Borislav's patch:
+
+Subject: [PATCH -v2 2/2] x86/microcode/intel: Fix initrd loading with  CONFIG_RANDOMIZE_MEMORY
+
+with USERCOPY, Andy Lutomirski's stack/thread cleanup work, and microcode loading
+from initramfs all working....
 
 
 
--- 
-Kees Cook
-Chrome OS & Brillo Security
+
+--==_Exmh_1469698007_4839P
+Content-Type: application/pgp-signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+Comment: Exmh version 2.5 07/13/2001
+
+iQIVAwUBV5nP1wdmEQWDXROgAQLW9Q/+IDHjTFFsV+V7Q7bbyXVGiNume5W7ruWY
+y+mhckRcX6hU5ZyFOYTDXDJCb3tRFjWmfqmxO8I8VCo6z1bTkkbEFPUxRYlqGdNA
+iea0Qn9VcMiwS757JR6VIlGvnQbNizLK18FltCNnSHUw0E8P3n8sIvZ0c9N39rDH
+0UV53Ak3Z0/Ix/TV4Nr2SpO7HLPSR027gi2xLZ9ArlcjYKtXDXTmJt2kctTUEaYH
+O6przlJFzrx6HzsApBgpTzJ3rtsyjsgXw16DouqXMlMHdftKrw7z34x+5PN/pkOj
+P7iCmFOQrEtH83Lui+CB9mW1sn2L6m8Oqaml1xtoVc6HVcGsBTZMh8m2F/iUE5tW
+TM016SU1wDhPlP+nwjPiK4nQA+0A+fD5rCj4P0wW081cLppeJGW6OOBRtc+FtWqA
+GRXJuYSqdrqmNCOcvNO08/tAnXW1JYEO5AGAVnl27HG0u+LhZ1jq0mLIJGRjVqFu
+hpbk9Dz9+8paHzqEODGTSx72XvEEgS0SVFZDSRqqj0dN0Mg+fz1XW1GxEibOaUGd
+RFcbb5rA0pQwkHQtqjidPb9xPUBN12Xud95fUaJ0C+Jtw+Pu1UdaVQpdOzKw2v7H
+xw0Ipfi/7BC1ApFMRadHwr9436GBkX7//+8iHsAJrWKjTX4AF/jcJNsPG0At6+3L
+/51sVWJ0B5w=
+=zpBj
+-----END PGP SIGNATURE-----
+
+--==_Exmh_1469698007_4839P--
