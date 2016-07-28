@@ -1,10 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Jason Cooper <jason@lakedaemon.net>
-Date: Thu, 28 Jul 2016 20:47:25 +0000
-Message-Id: <20160728204730.27453-3-jason@lakedaemon.net>
+Date: Thu, 28 Jul 2016 20:47:26 +0000
+Message-Id: <20160728204730.27453-4-jason@lakedaemon.net>
 In-Reply-To: <20160728204730.27453-1-jason@lakedaemon.net>
 References: <20160728204730.27453-1-jason@lakedaemon.net>
-Subject: [kernel-hardening] [PATCH 2/7] x86: Use simpler API for random address requests
+Subject: [kernel-hardening] [PATCH 3/7] ARM: Use simpler API for random address requests
 To: william.c.roberts@intel.com, Yann Droneaud <ydroneaud@opteya.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 Cc: linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com, Jason Cooper <jason@lakedaemon.net>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -18,15 +18,14 @@ address.
 
 Signed-off-by: Jason Cooper <jason@lakedaemon.net>
 ---
- arch/x86/kernel/process.c    | 3 +--
- arch/x86/kernel/sys_x86_64.c | 5 +----
- 2 files changed, 2 insertions(+), 6 deletions(-)
+ arch/arm/kernel/process.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/arch/x86/kernel/process.c b/arch/x86/kernel/process.c
-index 96becbbb52e0..a083a2c0744e 100644
---- a/arch/x86/kernel/process.c
-+++ b/arch/x86/kernel/process.c
-@@ -507,8 +507,7 @@ unsigned long arch_align_stack(unsigned long sp)
+diff --git a/arch/arm/kernel/process.c b/arch/arm/kernel/process.c
+index 4a803c5a1ff7..02dee671cded 100644
+--- a/arch/arm/kernel/process.c
++++ b/arch/arm/kernel/process.c
+@@ -314,8 +314,7 @@ unsigned long get_wchan(struct task_struct *p)
  
  unsigned long arch_randomize_brk(struct mm_struct *mm)
  {
@@ -35,29 +34,6 @@ index 96becbbb52e0..a083a2c0744e 100644
 +	return randomize_addr(mm->brk, 0x02000000);
  }
  
- /*
-diff --git a/arch/x86/kernel/sys_x86_64.c b/arch/x86/kernel/sys_x86_64.c
-index 10e0272d789a..f9cad22808fc 100644
---- a/arch/x86/kernel/sys_x86_64.c
-+++ b/arch/x86/kernel/sys_x86_64.c
-@@ -101,7 +101,6 @@ static void find_start_end(unsigned long flags, unsigned long *begin,
- 			   unsigned long *end)
- {
- 	if (!test_thread_flag(TIF_ADDR32) && (flags & MAP_32BIT)) {
--		unsigned long new_begin;
- 		/* This is usually used needed to map code in small
- 		   model, so it needs to be in the first 31bit. Limit
- 		   it to that.  This means we need to move the
-@@ -112,9 +111,7 @@ static void find_start_end(unsigned long flags, unsigned long *begin,
- 		*begin = 0x40000000;
- 		*end = 0x80000000;
- 		if (current->flags & PF_RANDOMIZE) {
--			new_begin = randomize_range(*begin, *begin + 0x02000000, 0);
--			if (new_begin)
--				*begin = new_begin;
-+			*begin = randomize_addr(*begin, 0x02000000);
- 		}
- 	} else {
- 		*begin = current->mm->mmap_legacy_base;
+ #ifdef CONFIG_MMU
 -- 
 2.9.2
