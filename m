@@ -1,64 +1,125 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Fri, 29 Jul 2016 10:34:35 +0300
-Message-Id: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC] [PATCH 0/5] Hardchroot LSM + additional hooks
-To: kernel-hardening@lists.openwall.com
-Cc: linux-security-module@vger.kernel.org, keescook@chromium.org, spender@grsecurity.net, jmorris@namei.org, casey.schaufler@intel.com, michael.leibowitz@intel.com, william.c.roberts@intel.com, Elena Reshetova <elena.reshetova@intel.com>
+Message-ID: <1469782754.16837.20.camel@opteya.com>
+From: Yann Droneaud <ydroneaud@opteya.com>
+Date: Fri, 29 Jul 2016 10:59:14 +0200
+In-Reply-To: <20160728204730.27453-2-jason@lakedaemon.net>
+References: <20160728204730.27453-1-jason@lakedaemon.net>
+	 <20160728204730.27453-2-jason@lakedaemon.net>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH 1/7] random: Simplify API for random address requests
+To: Jason Cooper <jason@lakedaemon.net>, william.c.roberts@intel.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces a new Hardchroot LSM that is
-based on GRKERNSEC_CHROOT feature, as well
-as couple of new LSM hooks needed for its
-operation.
+Hi,
 
-The Hardchroot is implemented as LSM in
-order to better fit the upstream kernel
-design, as well as coexist with other
-security subsystems. The Hardchroot LSM
-is a minor LSM, and can easily be stacked
-with other major and minor LSMs.
+Le jeudi 28 juillet 2016 à 20:47 +0000, Jason Cooper a écrit :
+> To date, all callers of randomize_range() have set the length to 0,
+> and check for a zero return value.  For the current callers, the only
+> way to get zero returned is if end <= start.  Since they are all
+> adding a constant to the start address, this is unnecessary.
+> 
+> We can remove a bunch of needless checks by simplifying the API to do
+> just what everyone wants, return an address between [start, start +
+> range).
+> 
+> While we're here, s/get_random_int/get_random_long/.  No current call
+> site is adversely affected by get_random_int(), since all current
+> range requests are < UINT_MAX.  However, we should match caller
+> expectations to avoid coming up short (ha!) in the future.
+> 
+> Address generation within [start, start + range) behavior is
+> preserved.
+> 
+> All current callers to randomize_range() chose to use the start
+> address if randomize_range() failed.  Therefore, we simplify things
+> by just returning the start address on error.
+> 
+> randomize_range() will be removed once all callers have been
+> converted over to randomize_addr().
+> 
+> Signed-off-by: Jason Cooper <jason@lakedaemon.net>
+> ---
+>  drivers/char/random.c  | 26 ++++++++++++++++++++++++++
+>  include/linux/random.h |  1 +
+>  2 files changed, 27 insertions(+)
+> 
+> diff --git a/drivers/char/random.c b/drivers/char/random.c
+> index 0158d3bff7e5..3610774bcc53 100644
+> --- a/drivers/char/random.c
+> +++ b/drivers/char/random.c
+> @@ -1840,6 +1840,32 @@ randomize_range(unsigned long start, unsigned
+> long end, unsigned long len)
+>  	return PAGE_ALIGN(get_random_int() % range + start);
+>  }
+>  
+> +/**
+> + * randomize_addr - Generate a random, page aligned address
+> + * @start:	The smallest acceptable address the caller will take.
+> + * @range:	The size of the area, starting at @start, within which the
+> + *		random address must fall.
+> + *
+> + * Before page alignment, the random address generated can be any value from
+> + * @start, to @start + @range - 1 inclusive.
+> + *
+> + * If @start + @range would overflow, @range is capped.
+> + *
+> + * Return: A page aligned address within [start, start + range).
 
-Chroot is still quite widely used in Linux
-for jailing some system daemons (despite
-its security limitations), and therefore
-having an LSM that can be used to make
-such jails more secure can bring value.
-For more information about Harchroot and
-its features, see commit message on
-Patch 5.
+PAGE_ALIGN(start + range - 1) can be greater than start + range ..
 
-In order to implement certain features of
-Hardchroot, it was necessary to create
-additional LSM hooks. If there is a way to
-achieve the same functionality with
-existing hooks, the implementation can be
-easily adjusted.
+In the worst case, when start = 0, range = ULONG_MAX, the result would
+be 0.
 
-Elena Reshetova (5):
-  path_fchdir and path_fhandle LSM hooks
-  task_unshare LSM hook
-  sb_unsharefs LSM hook
-  invoke path_chroot() LSM hook on mntns_install()
-  Hardchroot LSM
+In order to stay in the bounds, the start address must be rounded up,
+and the random offset must be rounded down.
 
- fs/fhandle.c                         |   5 +
- fs/fs_struct.c                       |   7 +-
- fs/namespace.c                       |  15 +-
- fs/open.c                            |   3 +
- include/linux/lsm_hooks.h            |  37 ++
- include/linux/security.h             |  19 +
- kernel/fork.c                        |   5 +
- security/Kconfig                     |   1 +
- security/Makefile                    |   2 +
- security/hardchroot/Kconfig          |  10 +
- security/hardchroot/Makefile         |   3 +
- security/hardchroot/hardchroot_lsm.c | 654 +++++++++++++++++++++++++++++++++++
- security/security.c                  |  30 ++
- 13 files changed, 786 insertions(+), 5 deletions(-)
- create mode 100644 security/hardchroot/Kconfig
- create mode 100644 security/hardchroot/Makefile
- create mode 100644 security/hardchroot/hardchroot_lsm.c
+Something I haven't found the time to send was looking like this:
+
+  unsigned long base = PAGE_ALIGN(start);
+
+  range -= (base - start);
+  range >>= PAGE_SHIFT;
+
+  return base + ((get_random_int() % range) << PAGE_SHIFT);
+
+
+>   On error,
+> + * @start is returned.
+> + */
+> +unsigned long
+> +randomize_addr(unsigned long start, unsigned long range)
+> +{
+> +	if (range == 0)
+> +		return start;
+> +
+> +	if (start > ULONG_MAX - range)
+> +		range = ULONG_MAX - start;
+> +
+> +	return PAGE_ALIGN(get_random_long() % range + start);
+> +}
+> +
+>  /* Interface for in-kernel drivers of true hardware RNGs.
+>   * Those devices may produce endless random bits and will be throttled
+>   * when our pool is full.
+> diff --git a/include/linux/random.h b/include/linux/random.h
+> index e47e533742b5..f1ca2fa4c071 100644
+> --- a/include/linux/random.h
+> +++ b/include/linux/random.h
+> @@ -35,6 +35,7 @@ extern const struct file_operations random_fops, urandom_fops;
+>  unsigned int get_random_int(void);
+>  unsigned long get_random_long(void);
+>  unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
+> +unsigned long randomize_addr(unsigned long start, unsigned long range);
+>  
+>  u32 prandom_u32(void);
+>  void prandom_bytes(void *buf, size_t nbytes);
+
+
+Regards.
 
 -- 
-1.9.1
+Yann Droneaud
+OPTEYA
