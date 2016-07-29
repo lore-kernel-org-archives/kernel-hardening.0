@@ -1,52 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 29 Jul 2016 14:48:05 +0100
-From: Will Deacon <will.deacon@arm.com>
-Message-ID: <20160729134804.GJ16593@arm.com>
-References: <20160728204730.27453-1-jason@lakedaemon.net>
- <20160728204730.27453-5-jason@lakedaemon.net>
+Date: Fri, 29 Jul 2016 19:58:19 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20160729175819.GA11621@pc.thejh.net>
+References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+ <1469777680-3687-3-git-send-email-elena.reshetova@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="rwEMma7ioTxnRzrJ"
 Content-Disposition: inline
-In-Reply-To: <20160728204730.27453-5-jason@lakedaemon.net>
-Subject: [kernel-hardening] Re: [PATCH 4/7] arm64: Use simpler API for random address requests
-To: Jason Cooper <jason@lakedaemon.net>
-Cc: william.c.roberts@intel.com, Yann Droneaud <ydroneaud@opteya.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com
+In-Reply-To: <1469777680-3687-3-git-send-email-elena.reshetova@intel.com>
+Subject: Re: [kernel-hardening] [RFC] [PATCH 2/5] task_unshare LSM hook
+To: kernel-hardening@lists.openwall.com
+Cc: linux-security-module@vger.kernel.org, keescook@chromium.org, spender@grsecurity.net, jmorris@namei.org, casey.schaufler@intel.com, michael.leibowitz@intel.com, william.c.roberts@intel.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jul 28, 2016 at 08:47:27PM +0000, Jason Cooper wrote:
-> Currently, all callers to randomize_range() set the length to 0 and
-> calculate end by adding a constant to the start address.  We can
-> simplify the API to remove a bunch of needless checks and variables.
-> 
-> Use the new randomize_addr(start, range) call to set the requested
-> address.
-> 
-> Signed-off-by: Jason Cooper <jason@lakedaemon.net>
+
+--rwEMma7ioTxnRzrJ
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+
+On Fri, Jul 29, 2016 at 10:34:37AM +0300, Elena Reshetova wrote:
+> This adds a new security_task_unshare() LSM hook.
+> It can be used by LSMs concerned about unshare
+> system call.
+>=20
+> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 > ---
->  arch/arm64/kernel/process.c | 8 ++------
->  1 file changed, 2 insertions(+), 6 deletions(-)
-> 
-> diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-> index 6cd2612236dc..11bf454baf86 100644
-> --- a/arch/arm64/kernel/process.c
-> +++ b/arch/arm64/kernel/process.c
-> @@ -374,12 +374,8 @@ unsigned long arch_align_stack(unsigned long sp)
->  
->  unsigned long arch_randomize_brk(struct mm_struct *mm)
->  {
-> -	unsigned long range_end = mm->brk;
-> -
->  	if (is_compat_task())
-> -		range_end += 0x02000000;
-> +		return randomize_addr(mm->brk, 0x02000000);
->  	else
-> -		range_end += 0x40000000;
-> -
-> -	return randomize_range(mm->brk, range_end, 0) ? : mm->brk;
-> +		return randomize_addr(mm->brk, 0x40000000);
+[...]
+> @@ -2052,6 +2052,11 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_fl=
+ags)
+>  	if (err)
+>  		goto bad_unshare_cleanup_cred;
+> =20
+> +	err =3D security_task_unshare(unshare_flags, new_fs, new_fd,
+> +			new_cred, new_nsproxy);
+> +	if (err)
+> +		goto bad_unshare_cleanup_cred;
+> +
+>  	if (new_fs || new_fd || do_sysvsem || new_cred || new_nsproxy) {
+>  		if (do_sysvsem) {
+>  			/*
 
-Looks fine to me, once the core code has settled down:
+Why would you have an LSM hook just for the unshare() syscall given
+that clone() exposes nearly the same functionality?
 
-Acked-by: Will Deacon <will.deacon@arm.com>
+--rwEMma7ioTxnRzrJ
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
 
-Will
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJXm5k7AAoJED4KNFJOeCOo/jkP/iJf8diM73DK5/3d0G7uuW5q
+des/ZvKy1uZjd/sOKCmlwzAILK9Eo1RvJEOSjx8EzmoY30G8xD5IHw1xxC7V1+C8
+hTA6zqygNH/byp6ZHBHpKMqlk14QO9QgxJdkb1+jAxyl1kPLZj875bMVbMcZ/dVY
+8QWN1immSARWl9h/KfUNup+OztT3auMwrq8Cx7ZfGgoym6iJuRFkG2BNKVm2ZeMG
+ufvVsjoHRdJCdqL4bMvU19NbhGHsZ6uf48BZzd7vWl0nL16+XwmHXn3bciRXyiOU
+SVSemyqY9AMsFhwT2UTXhQP+BM/Mt759+vcs+dbYZeLZxQR3Onvu6+ScCcVNIvZ/
+E8PyQ6Fs8wMkCV60Su9Ji7hxpqdkC4CBGYRor2IAX4nl0ecgNYGqUI7vyCk+7xuk
+GijoJ/3sfGW8OXQfUDNVEW7hYj2VUuzDohMhFLxrs5qt2eRd0E/kQtXhvlAwn5Wm
+xz1O1+ZlskTzspcQYP5ErIJ9UE2RKr0NK2KqJon4J2kj+lJRzUCvwPA6my91AzZG
+m3d/HrOyeUQgEPxZESqCwECKoIZnTKDEXYgUB1+U9uBhzlzlprP307Yh7c6qBQwX
+XRikqPC1Y/lwKSLbsnIFqMmg+Nwr+qXdXQe/WU1TJZERWOPk6TlNaw9ZvSOhZvMr
+m7OBcmo9r5GT5Uqyg+TJ
+=U8EX
+-----END PGP SIGNATURE-----
+
+--rwEMma7ioTxnRzrJ--
