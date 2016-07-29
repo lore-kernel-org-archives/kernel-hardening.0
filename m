@@ -1,65 +1,167 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Jason Cooper <jason@lakedaemon.net>
-Date: Thu, 28 Jul 2016 20:47:30 +0000
-Message-Id: <20160728204730.27453-8-jason@lakedaemon.net>
-In-Reply-To: <20160728204730.27453-1-jason@lakedaemon.net>
-References: <20160728204730.27453-1-jason@lakedaemon.net>
-Subject: [kernel-hardening] [PATCH 7/7] random: Remove unused randomize_range()
-To: william.c.roberts@intel.com, Yann Droneaud <ydroneaud@opteya.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com, Jason Cooper <jason@lakedaemon.net>
+From: Elena Reshetova <elena.reshetova@intel.com>
+Date: Fri, 29 Jul 2016 10:34:36 +0300
+Message-Id: <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
+In-Reply-To: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and path_fhandle LSM hooks
+To: kernel-hardening@lists.openwall.com
+Cc: linux-security-module@vger.kernel.org, keescook@chromium.org, spender@grsecurity.net, jmorris@namei.org, casey.schaufler@intel.com, michael.leibowitz@intel.com, william.c.roberts@intel.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-All call sites for randomize_range have been updated to use the much
-simpler and more robust randomize_addr.  Remove the now unnecessary
-code.
+This introduces two new LSM hooks operating on paths.
 
-Signed-off-by: Jason Cooper <jason@lakedaemon.net>
+  - security_path_fchdir() checks for permission on
+    changing working directory. It can be used by
+    LSMs concerned on fchdir system call
+  - security_path_fhandle() checks for permission
+    before converting file handle to path. It can be
+    used by LSMs concerned with file handle transfers
+
+Both hooks are under CONFIG_SECURITY_PATH.
+
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 ---
- drivers/char/random.c  | 19 -------------------
- include/linux/random.h |  1 -
- 2 files changed, 20 deletions(-)
+ fs/fhandle.c              |  5 +++++
+ fs/open.c                 |  3 +++
+ include/linux/lsm_hooks.h | 12 ++++++++++++
+ include/linux/security.h  | 13 +++++++++++++
+ security/security.c       | 11 +++++++++++
+ 5 files changed, 44 insertions(+)
 
-diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 3610774bcc53..5333763a4820 100644
---- a/drivers/char/random.c
-+++ b/drivers/char/random.c
-@@ -1821,25 +1821,6 @@ unsigned long get_random_long(void)
+diff --git a/fs/fhandle.c b/fs/fhandle.c
+index ca3c3dd..6e8aba5 100644
+--- a/fs/fhandle.c
++++ b/fs/fhandle.c
+@@ -8,6 +8,7 @@
+ #include <linux/fs_struct.h>
+ #include <linux/fsnotify.h>
+ #include <linux/personality.h>
++#include <linux/security.h>
+ #include <asm/uaccess.h>
+ #include "internal.h"
+ #include "mount.h"
+@@ -179,6 +180,10 @@ static int handle_to_path(int mountdirfd, struct file_handle __user *ufh,
+ 		retval = -EPERM;
+ 		goto out_err;
+ 	}
++	retval = security_path_fhandle(path);
++	if (retval)
++		goto out_err;
++
+ 	if (copy_from_user(&f_handle, ufh, sizeof(struct file_handle))) {
+ 		retval = -EFAULT;
+ 		goto out_err;
+diff --git a/fs/open.c b/fs/open.c
+index 93ae3cd..9c260d4 100644
+--- a/fs/open.c
++++ b/fs/open.c
+@@ -458,6 +458,9 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
+ 		goto out_putf;
+ 
+ 	error = inode_permission(inode, MAY_EXEC | MAY_CHDIR);
++	if (error)
++		goto out_putf;
++	error = security_path_fchdir(&f.file->f_path);
+ 	if (!error)
+ 		set_fs_pwd(current->fs, &f.file->f_path);
+ out_putf:
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index 7ae3976..25164b6 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -308,6 +308,14 @@
+  *	Check for permission to change root directory.
+  *	@path contains the path structure.
+  *	Return 0 if permission is granted.
++ * @path_fchdir:
++ *	Check for permission to change working directory.
++ *	@path contains the path structure.
++ *	Return 0 if permission is granted.
++ * @path_fhandle:
++ *	Check for permission to convert handle to path.
++ *	@path contains the path structure.
++ *	Return 0 if permission is granted.
+  * @inode_readlink:
+  *	Check the permission to read the symbolic link.
+  *	@dentry contains the dentry structure for the file link.
+@@ -1378,6 +1386,8 @@ union security_list_options {
+ 	int (*path_chmod)(const struct path *path, umode_t mode);
+ 	int (*path_chown)(const struct path *path, kuid_t uid, kgid_t gid);
+ 	int (*path_chroot)(const struct path *path);
++	int (*path_fchdir)(const struct path *path);
++	int (*path_fhandle)(const struct path *path);
+ #endif
+ 
+ 	int (*inode_alloc_security)(struct inode *inode);
+@@ -1668,6 +1678,8 @@ struct security_hook_heads {
+ 	struct list_head path_chmod;
+ 	struct list_head path_chown;
+ 	struct list_head path_chroot;
++	struct list_head path_fchdir;
++	struct list_head path_fhandle;
+ #endif
+ 	struct list_head inode_alloc_security;
+ 	struct list_head inode_free_security;
+diff --git a/include/linux/security.h b/include/linux/security.h
+index 14df373..6745c06 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -1472,6 +1472,9 @@ int security_path_rename(const struct path *old_dir, struct dentry *old_dentry,
+ int security_path_chmod(const struct path *path, umode_t mode);
+ int security_path_chown(const struct path *path, kuid_t uid, kgid_t gid);
+ int security_path_chroot(const struct path *path);
++int security_path_fchdir(const struct path *path);
++int security_path_fhandle(const struct path *path);
++
+ #else	/* CONFIG_SECURITY_PATH */
+ static inline int security_path_unlink(const struct path *dir, struct dentry *dentry)
+ {
+@@ -1536,6 +1539,16 @@ static inline int security_path_chroot(const struct path *path)
+ {
+ 	return 0;
  }
- EXPORT_SYMBOL(get_random_long);
++
++static inline int security_path_fchdir(const struct path *path)
++{
++	return 0;
++}
++
++static inline int security_path_fhandle(const struct path *path)
++{
++	return 0;
++}
+ #endif	/* CONFIG_SECURITY_PATH */
  
--/*
-- * randomize_range() returns a start address such that
-- *
-- *    [...... <range> .....]
-- *  start                  end
-- *
-- * a <range> with size "len" starting at the return value is inside in the
-- * area defined by [start, end], but is otherwise randomized.
-- */
--unsigned long
--randomize_range(unsigned long start, unsigned long end, unsigned long len)
--{
--	unsigned long range = end - len - start;
--
--	if (end <= start + len)
--		return 0;
--	return PAGE_ALIGN(get_random_int() % range + start);
--}
--
- /**
-  * randomize_addr - Generate a random, page aligned address
-  * @start:	The smallest acceptable address the caller will take.
-diff --git a/include/linux/random.h b/include/linux/random.h
-index f1ca2fa4c071..1ad877a98186 100644
---- a/include/linux/random.h
-+++ b/include/linux/random.h
-@@ -34,7 +34,6 @@ extern const struct file_operations random_fops, urandom_fops;
+ #ifdef CONFIG_KEYS
+diff --git a/security/security.c b/security/security.c
+index 7095693..cd82276 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -504,6 +504,15 @@ int security_path_chroot(const struct path *path)
+ {
+ 	return call_int_hook(path_chroot, 0, path);
+ }
++
++int security_path_fchdir(const struct path *path)
++{
++	return call_int_hook(path_fchdir, 0, path);
++}
++int security_path_fhandle(const struct path *path)
++{
++	return call_int_hook(path_fhandle, 0, path);
++}
+ #endif
  
- unsigned int get_random_int(void);
- unsigned long get_random_long(void);
--unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
- unsigned long randomize_addr(unsigned long start, unsigned long range);
- 
- u32 prandom_u32(void);
+ int security_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode)
+@@ -1615,6 +1624,8 @@ struct security_hook_heads security_hook_heads = {
+ 	.path_chmod =	LIST_HEAD_INIT(security_hook_heads.path_chmod),
+ 	.path_chown =	LIST_HEAD_INIT(security_hook_heads.path_chown),
+ 	.path_chroot =	LIST_HEAD_INIT(security_hook_heads.path_chroot),
++	.path_fchdir =	LIST_HEAD_INIT(security_hook_heads.path_fchdir),
++	.path_fhandle =	LIST_HEAD_INIT(security_hook_heads.path_fhandle),
+ #endif
+ 	.inode_alloc_security =
+ 		LIST_HEAD_INIT(security_hook_heads.inode_alloc_security),
 -- 
-2.9.2
+1.9.1
