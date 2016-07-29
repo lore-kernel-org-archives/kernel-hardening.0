@@ -1,149 +1,260 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 29 Jul 2016 18:20:14 +0000
-From: Jason Cooper <jason@lakedaemon.net>
-Message-ID: <20160729182014.GW4541@io.lakedaemon.net>
-References: <20160728204730.27453-1-jason@lakedaemon.net>
- <20160728204730.27453-2-jason@lakedaemon.net>
- <1469782754.16837.20.camel@opteya.com>
+Date: Fri, 29 Jul 2016 20:53:17 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20160729185317.GF11621@pc.thejh.net>
+References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+ <1469777680-3687-6-git-send-email-elena.reshetova@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="rWhLK7VZz0iBluhq"
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1469782754.16837.20.camel@opteya.com>
-Subject: [kernel-hardening] Re: [PATCH 1/7] random: Simplify API for random address requests
-To: Yann Droneaud <ydroneaud@opteya.com>
-Cc: william.c.roberts@intel.com, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux@arm.linux.org.uk, akpm@linux-foundation.org, keescook@chromium.org, tytso@mit.edu, arnd@arndb.de, gregkh@linuxfoundation.org, catalin.marinas@arm.com, will.deacon@arm.com, ralf@linux-mips.org, benh@kernel.crashing.org, paulus@samba.org, mpe@ellerman.id.au, davem@davemloft.net, tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, viro@zeniv.linux.org.uk, nnk@google.com, jeffv@google.com, dcashman@android.com
+In-Reply-To: <1469777680-3687-6-git-send-email-elena.reshetova@intel.com>
+Subject: Re: [kernel-hardening] [RFC] [PATCH 5/5] Hardchroot LSM
+To: kernel-hardening@lists.openwall.com
+Cc: linux-security-module@vger.kernel.org, keescook@chromium.org, spender@grsecurity.net, jmorris@namei.org, casey.schaufler@intel.com, michael.leibowitz@intel.com, william.c.roberts@intel.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Yann,
 
-First, thanks for the review!
+--rWhLK7VZz0iBluhq
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-On Fri, Jul 29, 2016 at 10:59:14AM +0200, Yann Droneaud wrote:
-> Le jeudi 28 juillet 2016 à 20:47 +0000, Jason Cooper a écrit :
-> > To date, all callers of randomize_range() have set the length to 0,
-> > and check for a zero return value.  For the current callers, the only
-> > way to get zero returned is if end <= start.  Since they are all
-> > adding a constant to the start address, this is unnecessary.
-> > 
-> > We can remove a bunch of needless checks by simplifying the API to do
-> > just what everyone wants, return an address between [start, start +
-> > range).
-> > 
-> > While we're here, s/get_random_int/get_random_long/.  No current call
-> > site is adversely affected by get_random_int(), since all current
-> > range requests are < UINT_MAX.  However, we should match caller
-> > expectations to avoid coming up short (ha!) in the future.
-> > 
-> > Address generation within [start, start + range) behavior is
-> > preserved.
-> > 
-> > All current callers to randomize_range() chose to use the start
-> > address if randomize_range() failed.  Therefore, we simplify things
-> > by just returning the start address on error.
-> > 
-> > randomize_range() will be removed once all callers have been
-> > converted over to randomize_addr().
-> > 
-> > Signed-off-by: Jason Cooper <jason@lakedaemon.net>
-> > ---
-> >  drivers/char/random.c  | 26 ++++++++++++++++++++++++++
-> >  include/linux/random.h |  1 +
-> >  2 files changed, 27 insertions(+)
-> > 
-> > diff --git a/drivers/char/random.c b/drivers/char/random.c
-> > index 0158d3bff7e5..3610774bcc53 100644
-> > --- a/drivers/char/random.c
-> > +++ b/drivers/char/random.c
-> > @@ -1840,6 +1840,32 @@ randomize_range(unsigned long start, unsigned
-> > long end, unsigned long len)
-> >  	return PAGE_ALIGN(get_random_int() % range + start);
-> >  }
-> >  
-> > +/**
-> > + * randomize_addr - Generate a random, page aligned address
-> > + * @start:	The smallest acceptable address the caller will take.
-> > + * @range:	The size of the area, starting at @start, within which the
-> > + *		random address must fall.
-> > + *
-> > + * Before page alignment, the random address generated can be any value from
-> > + * @start, to @start + @range - 1 inclusive.
-> > + *
-> > + * If @start + @range would overflow, @range is capped.
-> > + *
-> > + * Return: A page aligned address within [start, start + range).
-> 
-> PAGE_ALIGN(start + range - 1) can be greater than start + range ..
+On Fri, Jul 29, 2016 at 10:34:40AM +0300, Elena Reshetova wrote:
+> This adds a new Hardchroot LSM that is intended to make
+> classical chroot more secure. It is based on
+> GRKERNSEC_CHROOT feature with necessary changes needed to
+> make it fit inside LSM. Currently not all GRKERNSEC_CHROOT
+> features are supported, but support is planned to be added
+> on granular basis.
+>=20
+> The credits for feature itself should go to the original
+> authors of GRKERNSEC_CHROOT. Since there is no way to share
+> security metadata between LSMs yet, the Hardchroot info task
+> management is done based on Yama LSM. When support is added,
+> the required info can be stored as part of task struct and it
+> can drastically simplify the internal management.
 
-Ok, so I need to reword my Return desription. :)
+I really don't like this series.
 
-> In the worst case, when start = 0, range = ULONG_MAX, the result would
-> be 0.
-> 
-> In order to stay in the bounds, the start address must be rounded up,
-> and the random offset must be rounded down.
+First off: On Linux, as far as I know, chroots were never meant
+to be a security feature, and chroot "jails" break in a number
+of different ways. A lot of effort went into making bind mounts
+actually secure with reasonable performance, and I doubt that
+something like this can provide anything close to that, at least
+not without gigantic runtime overhead. Instead of making people
+believe that it's now okay to use chroot for security, I would
+very much prefer to keep the "never use this for security
+purposes" warning in the chroot() manpage and encourage people
+to use namespaces with bind mounts instead.
 
-Well, I'm trying to preserve existing behavior.  Of which, it seems to
-be presumed that start was page aligned.  Since it was used unaltered in
-all cases when randomize_range failed.
+I think that a somewhat more formal specification of what this
+is supposed to be good for might help.
 
-I'll add that to the kerneldoc.
+As far as I can tell, you haven't done anything to restrict
+the access to unix domain sockets or ptrace, which are probably
+the main tricks people would actually use to break out of a
+chroot "jail". Instead, you add support for some weird edgecase
+things like "if you are privileged and inside a chroot, you can
+renice processes outside the chroot".
 
-> Something I haven't found the time to send was looking like this:
-> 
->   unsigned long base = PAGE_ALIGN(start);
-> 
->   range -= (base - start);
 
-I think the above two lines are unnecessary due to my comment above.
+>     Note: this feature currently prevents rtkit daemon from
+>     normal operation.
 
->   range >>= PAGE_SHIFT;
-> 
->   return base + ((get_random_int() % range) << PAGE_SHIFT);
+And it probably also prevents people from using chroot() for
+what it's actually intended to do.
 
-However, this is interesting.  Instead of a random address, you're
-picking a random page.  If we combine this with the requirement that
-start be page aligned, we can remove the PAGE_ALIGN().  Which neatly
-handles your first listed concern.
+> +/**
+> + * is_process_chrooted - process is inside chroot
+> + * @task: the task_struct of the process to be checked
+> + *
+> + * Returns 1 if task is inside chroot.
+> + */
+> +static int is_process_chrooted(struct task_struct *task)
+> +{
+> +	int rc =3D 0;
+> +	struct hardchroot_info *entry;
+> +
+> +	rcu_read_lock();
+> +	list_for_each_entry_rcu(entry, &hardchroot_infos, node) {
 
-> >   On error,
-> > + * @start is returned.
-> > + */
-> > +unsigned long
-> > +randomize_addr(unsigned long start, unsigned long range)
-> > +{
-> > +	if (range == 0)
-> > +		return start;
-> > +
-> > +	if (start > ULONG_MAX - range)
-> > +		range = ULONG_MAX - start;
-> > +
-> > +	return PAGE_ALIGN(get_random_long() % range + start);
+Wait, what? Is this really a function that has execution time linear
+in the number of running processes and that is called for every
+fchdir()? That seems slow. Did you benchmark this on a system with
+lots of processes?
 
-On digging in to this, I found the following scenario:
 
-start=ULONG_MAX, range=ULONG_MAX
-	range=0 by our second test
-	UB by get_random_long() % 0
+> +/**
+> + * is_same_root - check if two tasks share the same root
+> + * @task1: the task_struct of the first task to be checked
+> + * @task2: the task_struct of the second task to be checked
+> + *
+> + * Returns 1 if tasks share the same root.
+> + */
+> +static int is_same_root(struct task_struct *task1, struct task_struct *t=
+ask2)
+> +{
+> +	int rc =3D 0;
+> +	struct hardchroot_info *entry;
+> +	struct dentry *dentry1 =3D NULL;
+> +	struct dentry *dentry2 =3D NULL;
+> +
+> +	rcu_read_lock();
+> +	list_for_each_entry_rcu(entry, &hardchroot_infos, node) {
+> +		if (entry->invalid)
+> +			continue;
+> +		if (entry->task =3D=3D task1)
+> +			dentry1 =3D entry->dentry;
+> +		if (entry->task =3D=3D task2)
+> +			dentry2 =3D entry->dentry;
+> +	}
+> +	if (dentry1 && (dentry1 =3D=3D dentry2)) {
+> +		rc =3D 1;
+> +		pr_info("HCRT: pids %d and %d have the same root\n",
+> +				task_pid_nr(task1), task_pid_nr(task2));
+> +	}
 
-This should be mitigated by swapping the tests.  So, we would have:
+You're comparing dentries, not paths? So using the same directory
+through different bind mounts as root directories will still count
+as "same root" even though for chroot breakouts, it's like having
+different roots?
 
-unsigned long
-randomize_addr(unsigned long start, unsigned long range)
-{
-	if (start > ULONG_MAX - range)
-		range = ULONG_MAX - start;
 
-	range >>= PAGE_SHIFT;
+> +/**
+> + * hardchroot_path_chroot - validate chroot entry
+> + * @path contains the path structure.
+> + *
+> + * Returns 0 if chroot is allowed, -ve on error.
+> + */
+> +static int hardchroot_path_chroot(const struct path *path)
+> +{
+> +	int rc =3D 0;
+> +	struct task_struct *myself =3D current;
+> +
+> +	pr_info("HCRT, chroot: inode %lu and pid %d\n",
+> +			d_backing_inode(path->dentry)->i_ino,
+> +			task_pid_nr(myself));
+> +
+> +	get_task_struct(myself);
+> +	if (is_process_chrooted(myself) &&
+> +		!is_inside_chroot(path->dentry, path->mnt)) {
+> +		put_task_struct(myself);
+> +		pr_info("HCRT, chroot denied: for inode %lu and pid %d\n",
+> +				d_backing_inode(path->dentry)->i_ino,
+> +				task_pid_nr(myself));
+> +		return -EACCES;
+> +	}
+> +
+> +	if (task_pid_nr(myself) > 1 &&
+> +		path->dentry !=3D init_task.fs->root.dentry &&
+> +		path->dentry !=3D myself->nsproxy->mnt_ns->root->mnt.mnt_root) {
+> +		/* task is attempting to chroot, add it to the list */
+> +		rc =3D hardchroot_info_add(myself, path->dentry);
+> +		pr_info("HCRT, chroot: adding %d to chrooted task list\n",
+> +			task_pid_nr(myself));
+> +	}
+> +
+> +	/* set the current working directory of all newly-chrooted
+> +	 * processes to the the root directory of the chroot
+> +	 */
+> +	set_fs_pwd(myself->fs, path);
 
-	if (range == 0)
-		return start;
+That seems pretty broken, considering the possibility of open
+file descriptors pointing to the old root or so.
 
-	return start + ((get_random_long() % range) << PAGE_SHIFT);
-}
+And again, chroot only works if the current process is privileged.
+If it is, there are probably other ways to break out.
 
-Look better?
 
-thx,
+> +/**
+> + * hardchroot_task_unshare - check if process is
+> + * allowed to unshare its namespaces
+> + * @unshare_flags flags
+> + * @new_fs contains the new fs_struct if created.
+> + * @new_fd contains the new files_struct if created.
+> + * @new_creds contains the new cred if created.
+> + * @new_nsproxy contains the new nsproxy if created.
+> + *
+> + * Returns 0 if unshare is allowed, -ve on error.
+> + */
+> +static int hardchroot_task_unshare(unsigned long unshare_flags,
+> +		const struct fs_struct *new_fs,
+> +		const struct files_struct *new_fd,
+> +		const struct cred *new_cred,
+> +		const struct nsproxy *new_nsproxy)
+> +{
+> +	int rc =3D 0;
+> +	struct task_struct *myself =3D current;
+> +	const struct nsproxy *tnsproxy =3D new_nsproxy;
+> +
+> +	pr_info("HCRT, unshare: unshare_flags %lu and pid %d\n",
+> +			unshare_flags, task_pid_nr(myself));
+> +	if (new_fs)
+> +		pr_info("HCRT, unshare: new_fs->root.dentry inode%lu\n",
+> +			d_backing_inode(new_fs->root.dentry)->i_ino);
+> +
+> +	if (!tnsproxy)
+> +		tnsproxy =3D myself->nsproxy;
+> +
+> +	if (new_fs && task_pid_nr(myself) > 1 &&
+> +		new_fs->root.dentry !=3D init_task.fs->root.dentry &&
 
-Jason.
+Hm? You're accessing the fs_struct of init_task without any explicit lockin=
+g?
+
+
+> +/**
+> + * hardchroot_shm_shmat - check if shmat is allowed
+> + * @shp contains the shared memory structure to be modified.
+> + * @shmaddr contains the address to attach memory region to.
+> + * @shmflg contains the operational flags.
+> + *
+> + * Return 0 if allowed, -ve on error.
+> + */
+> +int hardchroot_shm_shmat(struct shmid_kernel *shp, char __user *shmaddr,
+> +			int shmflg)
+> +{
+> +	int rc =3D 0;
+> +	struct task_struct *p;
+> +	struct task_struct *myself =3D current;
+> +	u64 st;
+> +	time_t ct;
+> +
+> +	pr_info("HCRT, shmat: shp %d, shmflg %d, pid %d\n",
+> +			shp->shm_perm.id, shmflg,
+> +			task_pid_nr(myself));
+> +
+> +	if (likely(!is_process_chrooted(myself)))
+> +		return rc;
+> +
+> +	rcu_read_lock();
+> +	read_lock(&tasklist_lock);
+> +
+> +	p =3D find_task_by_vpid(shp->shm_cprid);
+
+Not exactly your fault, but this is broken when PID namespaces are involved.
+
+--rWhLK7VZz0iBluhq
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJXm6YdAAoJED4KNFJOeCOoXxkP/3lDmIOCWegB1FSsDg6rxYmq
+Owl5bEKW8i88H+Ei4sMMKs8oYsYG/ZfzF1QyDqbBN591DVBDMyqcFR8clPyfIixc
+Gp/FVNC1HSfWNY4W8qHQcwi0RvXyEAM47YYfLMWE5SKyTkhYZocM1pQWnOEywtH8
+CRuPn5eN6/rleTXPtkiGIOUbKw5QsMQtXSzUpaGKvCvK7QoKdMQ3KJyFXlFsuxVL
+B6Q31ggOaMThg20NULlcPG7v05TqIZFZSH3Rqv2tJ2DNE8dFO7nPA0o6pKSOeUhe
+MggKHA2mpxcmzI8YIalgIanUcY7QpgeuRfQS74bcYfjkKXB44wlmUDN+Vzb6ewlI
+VjZAq6cSvJcxo+kVXJcZk7bOzRzIQr6ZZ7t1ziWB0CJJccbpTZExZ34V8YqLg23s
+BWH2Mujxa9NazSiKcgexV9QpJi9hd4jgO0BOXEuTXptjjW4+yAzTInQgfjlYYLJB
+q4cytbqcV6FGtySowpsd9kblYzjwOKLeG3OdjPVKXB3Egr3XiFZWDWFDD9m46N6Y
+CaCBPLkFKj3tNyLBPYeviLs9pDy6W0dRKjPERR8aaPHhi66sf1NhpbFKlL+ztbcD
+X+bOd59gMeL+gT4j5uNiKUe/lx+5zR7FwNUnPyekTpqC5fv1IfIFEPrYpmS4ExZ7
+8qYaCol+WhwLstFQGPyk
+=m9WG
+-----END PGP SIGNATURE-----
+
+--rWhLK7VZz0iBluhq--
