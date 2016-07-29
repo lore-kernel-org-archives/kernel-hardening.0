@@ -1,45 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Fri, 29 Jul 2016 18:17:26 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B6FDA1@IRSMSX102.ger.corp.intel.com>
+Date: Fri, 29 Jul 2016 18:19:07 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B6FDBB@IRSMSX102.ger.corp.intel.com>
 References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
- <1469777680-3687-3-git-send-email-elena.reshetova@intel.com>
- <20160729175819.GA11621@pc.thejh.net>
-In-Reply-To: <20160729175819.GA11621@pc.thejh.net>
+ <1469777680-3687-4-git-send-email-elena.reshetova@intel.com>
+ <20160729181526.GE11621@pc.thejh.net>
+In-Reply-To: <20160729181526.GE11621@pc.thejh.net>
 Content-Type: multipart/signed; protocol="application/x-pkcs7-signature";
-	micalg=SHA1; boundary="----=_NextPart_000_0184_01D1E9DE.9A073470"
+	micalg=SHA1; boundary="----=_NextPart_000_0197_01D1E9DE.D6672330"
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC] [PATCH 2/5] task_unshare LSM hook
+Subject: RE: [kernel-hardening] [RFC] [PATCH 3/5] sb_unsharefs LSM hook
 To: Jann Horn <jann@thejh.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Cc: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-------=_NextPart_000_0184_01D1E9DE.9A073470
+------=_NextPart_000_0197_01D1E9DE.D6672330
 Content-Type: text/plain;
 	charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 
+>On Fri, Jul 29, 2016 at 10:34:38AM +0300, Elena Reshetova wrote:
+> This adds a new security_sb_unsharefs() LSM hook.
+> It can be used by LSMs concerned about unsharefs() system call.
+> 
+> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+> ---
+[...]
+> @@ -132,11 +133,15 @@ int unshare_fs_struct(void)  {
+>  	struct fs_struct *fs = current->fs;
+>  	struct fs_struct *new_fs = copy_fs_struct(fs);
+> -	int kill;
+> +	int kill, retval;
+>  
+>  	if (!new_fs)
+>  		return -ENOMEM;
+>  
+> +	retval = security_sb_unsharefs(&new_fs->root);
+> +	if (retval)
+> +		return retval;
 
-> Why would you have an LSM hook just for the unshare() syscall given that
-clone() exposes nearly the same functionality?
+>Oh, and this is a memory leak. If copy_fs_struct() succeeds but
+>security_sb_unsharefs() fails, new_fs isn't deallocated.
 
-My trace of thought was like this: Clone creates new process, so we have two
-options: 
+That's true, thank you, missed this. Will fix. I don't fail
+security_sb_unsharefs check ever (I use it to update info only), so I missed
+it fully. 
 
--  do one more hook here also (or have a joint hook) and then also add the
-info about this process into the hardchroot info list
-
-or 
-
-- do not add this child process to the list and therefore we don't need
-updated pointers on fs for it, but just treat it as a child (since it would
-be chrooted to the same location unless it calls unshare, chroot, pivot_root
-or similar).
-
-I went with the second approach to minimize the hooks changes needed and
-number of processes to store in internal list. 
-
-------=_NextPart_000_0184_01D1E9DE.9A073470
+------=_NextPart_000_0197_01D1E9DE.D6672330
 Content-Type: application/pkcs7-signature; name="smime.p7s"
 Content-Transfer-Encoding: base64
 Content-Disposition: attachment; filename="smime.p7s"
@@ -163,7 +170,7 @@ z1fq9jGCA/kwggP1AgEBMIGQMHkxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEUMBIGA1UEBxML
 U2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9uMSswKQYDVQQDEyJJbnRlbCBF
 eHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRCAhMzAAAPeuDTfWPn74vVAAAAAA96MAkGBSsOAwIa
 BQCgggI9MBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDcyOTE4
-MTcyNFowIwYJKoZIhvcNAQkEMRYEFO/lNvuP9i6njEYFYoZDTTamUc7OMIGTBgkqhkiG9w0BCQ8x
+MTkwNVowIwYJKoZIhvcNAQkEMRYEFIe8YoANP4in8ZkmiXyygaArY6j7MIGTBgkqhkiG9w0BCQ8x
 gYUwgYIwCwYJYIZIAWUDBAEqMAsGCWCGSAFlAwQBFjAKBggqhkiG9w0DBzALBglghkgBZQMEAQIw
 DgYIKoZIhvcNAwICAgCAMA0GCCqGSIb3DQMCAgFAMAcGBSsOAwIaMAsGCWCGSAFlAwQCAzALBglg
 hkgBZQMEAgIwCwYJYIZIAWUDBAIBMIGhBgkrBgEEAYI3EAQxgZMwgZAweTELMAkGA1UEBhMCVVMx
@@ -172,11 +179,11 @@ YXRpb24xKzApBgNVBAMTIkludGVsIEV4dGVybmFsIEJhc2ljIElzc3VpbmcgQ0EgNEECEzMAAGce
 yeUJ4F3k0k4AAAAAZx4wgaMGCyqGSIb3DQEJEAILMYGToIGQMHkxCzAJBgNVBAYTAlVTMQswCQYD
 VQQIEwJDQTEUMBIGA1UEBxMLU2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9u
 MSswKQYDVQQDEyJJbnRlbCBFeHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRBAhMzAABnHsnlCeBd
-5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBAI8uD2tn06edYJhgDQECPJ4M4EMafiyLKIt+DSvK
-J9g4nzD0xrUjLU5m4IDowQtqJI2SNgLOhmfEveIttL9pplSRSdXjuwdXBLrLAw8UoywgJ0iZu0i5
-3igUGyVyx1T2cuq70fwI/lMffSHonCEkdX4X6HjwXnVd71q7k60Y+UZtYxEy3bVp/1jAT9D3XBtF
-KNcWOOUHKE5jVmK9Sj2xrbCapypym/EXVeuXPTTXInA+BHEnDcsHT57lEpOLCuXF9pRLvE7IVEZU
-adWpp2kDvItWwV65nAanU7cGVJw8G1nZ0SMn5ExuZMncno2X1qsrYdF23DMuRGjE1z7SjVHnh5cA
+5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBAFr3ekVgzxKFmTUNEIzUfSvA6g4ISVrvpUeznm6n
+2Txp3VeNGf5DR48lu/2Ba2yCdw6X3KQHaITO9YlTPkWie395t2U2ZD4gVUmUo/qBcnV2+ySavGIe
+M/2wlj7yzKScrzfL9/14DShN1h/qSjUn04H7zsaLbcVvYL9IMjW0L6uKfT2RQ7BCVj0BJMVVh21D
+vCtI37ejECjVaTNmQf/nbMRvrz45ms8DBf2sX+arpVxVAnlE3xqZnXOUXAbCR+df3BLESxs0AQ0s
+Z8z6ilxJn/MMIHZcDZDAWEYgi3cxlQayYRcQ9SYzNKn7ndJkcr2PTFZ2iwRUcU+J7PJ/Xpiq4N0A
 AAAAAAA=
 
-------=_NextPart_000_0184_01D1E9DE.9A073470--
+------=_NextPart_000_0197_01D1E9DE.D6672330--
