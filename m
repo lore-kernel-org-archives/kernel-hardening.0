@@ -1,99 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 31 Jul 2016 20:56:32 +0000
-From: Jason Cooper <jason@lakedaemon.net>
-Message-ID: <20160731205632.GY4541@io.lakedaemon.net>
-References: <20160728204730.27453-1-jason@lakedaemon.net>
- <20160730154244.403-1-jason@lakedaemon.net>
- <20160730154244.403-2-jason@lakedaemon.net>
- <CAGXu5jL3ZtjbhOYujVUpBuDttPjetaz8rSY_hNK13r6OtR4sFQ@mail.gmail.com>
+Date: Sun, 31 Jul 2016 23:23:18 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20160731212318.GA31482@pc.thejh.net>
+References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+ <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
+ <20160729181213.GD11621@pc.thejh.net>
+ <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
+ <20160731120255.GB14676@pc.thejh.net>
+ <2236FBA76BA1254E88B949DDB74E612B41B70337@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="SLDf9lqlvOQaIe6s"
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jL3ZtjbhOYujVUpBuDttPjetaz8rSY_hNK13r6OtR4sFQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 1/7] random: Simplify API for random address requests
-To: Kees Cook <keescook@chromium.org>
-Cc: "Roberts, William C" <william.c.roberts@intel.com>, Yann Droneaud <ydroneaud@opteya.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, Greg KH <gregkh@linuxfoundation.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, Daniel Cashman <dcashman@android.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41B70337@IRSMSX102.ger.corp.intel.com>
+Subject: Re: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and
+ path_fhandle LSM hooks
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 31, 2016 at 09:46:53AM -0700, Kees Cook wrote:
-> On Sat, Jul 30, 2016 at 8:42 AM, Jason Cooper <jason@lakedaemon.net> wrote:
-> > To date, all callers of randomize_range() have set the length to 0, and
-> > check for a zero return value.  For the current callers, the only way
-> > to get zero returned is if end <= start.  Since they are all adding a
-> > constant to the start address, this is unnecessary.
-> >
-> > We can remove a bunch of needless checks by simplifying the API to do
-> > just what everyone wants, return an address between [start, start +
-> > range).
-> >
-> > While we're here, s/get_random_int/get_random_long/.  No current call
-> > site is adversely affected by get_random_int(), since all current range
-> > requests are < UINT_MAX.  However, we should match caller expectations
-> > to avoid coming up short (ha!) in the future.
-> >
-> > All current callers to randomize_range() chose to use the start address
-> > if randomize_range() failed.  Therefore, we simplify things by just
-> > returning the start address on error.
-> >
-> > randomize_range() will be removed once all callers have been converted
-> > over to randomize_addr().
-> >
-> > Signed-off-by: Jason Cooper <jason@lakedaemon.net>
-> > ---
-> > Changes from v1:
-> >  - Explicitly mention page_aligned start assumption (Yann Droneaud)
-> >  - pick random pages vice random addresses (Yann Droneaud)
-> >  - catch range=0 last
-> >
-> >  drivers/char/random.c  | 28 ++++++++++++++++++++++++++++
-> >  include/linux/random.h |  1 +
-> >  2 files changed, 29 insertions(+)
-> >
-> > diff --git a/drivers/char/random.c b/drivers/char/random.c
-> > index 0158d3bff7e5..3bedf69546d6 100644
-> > --- a/drivers/char/random.c
-> > +++ b/drivers/char/random.c
-> > @@ -1840,6 +1840,34 @@ randomize_range(unsigned long start, unsigned long end, unsigned long len)
-> >         return PAGE_ALIGN(get_random_int() % range + start);
-> >  }
-> >
-> > +/**
-> > + * randomize_addr - Generate a random, page aligned address
-> > + * @start:     The smallest acceptable address the caller will take.
-> > + * @range:     The size of the area, starting at @start, within which the
-> > + *             random address must fall.
-> > + *
-> > + * If @start + @range would overflow, @range is capped.
-> > + *
-> > + * NOTE: Historical use of randomize_range, which this replaces, presumed that
-> > + * @start was already page aligned.  This assumption still holds.
-> > + *
-> > + * Return: A page aligned address within [start, start + range).  On error,
-> > + * @start is returned.
-> > + */
-> > +unsigned long
-> > +randomize_addr(unsigned long start, unsigned long range)
-> 
-> Since we're changing other things about this, let's try to document
-> its behavior in its name too and call this "randomize_page" instead.
 
-Ack.  Definitely more accurate.
+--SLDf9lqlvOQaIe6s
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-> If it requires a page-aligned value, we should probably also BUG_ON
-> it, or adjust the start too.
+On Sun, Jul 31, 2016 at 06:28:08PM +0000, Reshetova, Elena wrote:
+> On Sun, Jul 31, 2016 at 10:55:04AM +0000, Reshetova, Elena wrote:
+[...]
+> >Alternatively, you could forbid double-chroots and use the LSM hooks for
+> file descriptor passing via unix domain sockets and binder to check incom=
+ing
+> file descriptors.
+>=20
+> This would not prevent guessing the file descriptor unfortunately.
 
-merf.  So, this whole series started from a suggested cleanup by William
-to s/get_random_int/get_random_long/.
+That doesn't make sense to me. Can you elaborate on that, please?
 
-The current users have all been stable the way they are for a long time.
-Like pre-git long.  So, if this is just a cleanup for those callers, I
-don't think we need to do more than we already are.
+How would you "guess" a file descriptor? Are you talking about file
+descriptors opened before chroot() that have been leaked accidentally?
+In that case, you could just do on chroot() what SELinux does on a domain
+transition and replace all dangerous open file descriptors with /dev/null.
 
-However, if the intent is for this function to see wider use, then by
-all means, we need to handle start != PAGE_ALIGN(start).
+Or are you concerned about shared file descriptor tables (which really
+shouldn't happen accidentally, at least when you keep in mind that for
+this to be an issue, the fs_struct would have to not be shared)?
 
-Do you have any new call sites in mind?
+--SLDf9lqlvOQaIe6s
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
 
-thx,
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
 
-Jason.
+iQIcBAEBAgAGBQJXnmxGAAoJED4KNFJOeCOoPFAP/0zRC/Nl0VyALflqBXyYPkg9
+GGma7FASncduXB3kDjJ9wlkqnY7217jesvBue1uKFskVc1YN5FDR7sUytqWGRLZx
+ABL/pS39Wts+U/cpq5V2a111ia3nhnDAdpuAXppB9/MFKkddO5Uk8LGJamtXTSGu
+f2f9EGuLMEgwTMSO9kDfDwepKF5Jf8A2RAALWaVVIsmk5ka6PRzBdfzjZXBgxB5E
+UbxiqWrwONSK6Ek0h24tKY9OLfYJ5yS6eGN4sPjusNx07Md3vhzx2EOCMJ6WhRDn
+u5ukI4BMhCUplLMTqhPPggUaEhOI5ZRAI8Af/PXXJy6PeDqm6YGwpc3shFXV9JPR
+RCRrfBxdIRWRkWG1xp37CukCMaMe1qKi+8/yGYDgnWvEucRMyrtc+1COv0releNz
+y7GDed0qtt8yYmY+HExPRKPlrMUkCb2SPvy6m4EjxJ8jxApw3X5Xa/P3BRrsGN99
+O5aZW3ISHbqW0qvqL6t+iDSy+o/gD9BsXtQNF8d1e+swqW9J+UZDmdcuP3on2m2u
+2YQODPykyb7IIcdR6T/tSb84UWFcy+3jLMAtCSbKw0KTnmJyToSoRsooRpke9vpO
+8wA/ivYpKIdoh8m3fWw1isDSm/NxbyW71KYwBb39zmq3GYvS4oQH67B7yMygELHR
+2zjcslMiC9ARfDdSVwQZ
+=0x/p
+-----END PGP SIGNATURE-----
+
+--SLDf9lqlvOQaIe6s--
