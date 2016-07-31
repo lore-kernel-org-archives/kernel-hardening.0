@@ -1,71 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 31 Jul 2016 23:23:18 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20160731212318.GA31482@pc.thejh.net>
-References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
- <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
- <20160729181213.GD11621@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
- <20160731120255.GB14676@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41B70337@IRSMSX102.ger.corp.intel.com>
+Date: Sun, 31 Jul 2016 22:24:16 +0000
+From: Jason Cooper <jason@lakedaemon.net>
+Message-ID: <20160731222416.GZ4541@io.lakedaemon.net>
+References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
+ <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+ <20160726200309.GJ4541@io.lakedaemon.net>
+ <476DC76E7D1DF2438D32BFADF679FC560125F29C@ORSMSX103.amr.corp.intel.com>
+ <20160726205944.GM4541@io.lakedaemon.net>
+ <CAFJ0LnEZW7Y1zfN8v0_ckXQZn1n-UKEhf_tSmNOgHwrrnNnuMg@mail.gmail.com>
+ <20160728210734.GU4541@io.lakedaemon.net>
+ <1469787002.10626.34.camel@gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="SLDf9lqlvOQaIe6s"
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41B70337@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and
- path_fhandle LSM hooks
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---SLDf9lqlvOQaIe6s
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1469787002.10626.34.camel@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH] [RFC] Introduce mmap randomization
+To: kernel-hardening@lists.openwall.com
+Cc: Nick Kralevich <nnk@google.com>, "Roberts, William C" <william.c.roberts@intel.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Jul 31, 2016 at 06:28:08PM +0000, Reshetova, Elena wrote:
-> On Sun, Jul 31, 2016 at 10:55:04AM +0000, Reshetova, Elena wrote:
-[...]
-> >Alternatively, you could forbid double-chroots and use the LSM hooks for
-> file descriptor passing via unix domain sockets and binder to check incom=
-ing
-> file descriptors.
->=20
-> This would not prevent guessing the file descriptor unfortunately.
+Hi Daniel,
 
-That doesn't make sense to me. Can you elaborate on that, please?
+On Fri, Jul 29, 2016 at 06:10:02AM -0400, Daniel Micay wrote:
+> > > In the Project Zero Stagefright post
+> > > (http://googleprojectzero.blogspot.com/2015/09/stagefrightened.html)
+> > > , we see that the linear allocation of memory combined with the
+> > > low number of bits in the initial mmap offset resulted in a much
+> > > more predictable layout which aided the attacker. The initial
+> > > random mmap base range was increased by Daniel Cashman in
+> > > d07e22597d1d355829b7b18ac19afa912cf758d1, but we've done nothing
+> > > to address page relative attacks.
+> > > 
+> > > Inter-mmap randomization will decrease the predictability of later
+> > > mmap() allocations, which should help make data structures harder
+> > > to find in memory. In addition, this patch will also introduce
+> > > unmapped gaps between pages, preventing linear overruns from one
+> > > mapping to another another mapping. I am unable to quantify how
+> > > much this will improve security, but it should be > 0.
+> > 
+> > One person calls "unmapped gaps between pages" a feature, others
+> > call it a mess. ;-)
+> 
+> It's very hard to quantify the benefits of fine-grained randomization,
 
-How would you "guess" a file descriptor? Are you talking about file
-descriptors opened before chroot() that have been leaked accidentally?
-In that case, you could just do on chroot() what SELinux does on a domain
-transition and replace all dangerous open file descriptors with /dev/null.
+?  N = # of possible addresses.  The bigger N is, the more chances the
+attacker will trip up before finding what they were looking for.
 
-Or are you concerned about shared file descriptor tables (which really
-shouldn't happen accidentally, at least when you keep in mind that for
-this to be an issue, the fs_struct would have to not be shared)?
+> but there are other useful guarantees you could provide. It would be
+> quite helpful for the kernel to expose the option to force a PROT_NONE
+> mapping after every allocation. The gaps should actually be enforced.
+> 
+> So perhaps 3 things, simply exposed as off-by-default sysctl options
+> (no need for special treatment on 32-bit):
 
---SLDf9lqlvOQaIe6s
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+I'm certainly not an mm-developer, but this looks to me like we're
+pushing the work of creating efficient, random mappings out to
+userspace.  :-/
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+> a) configurable minimum gap size in pages (for protection against
+> linear and small {under,over}flows) b) configurable minimum gap size
+> based on a ratio to allocation size (for making the heap sparse to
+> mitigate heap sprays, especially when mixed with fine-grained
+> randomization - for example 2x would add a 2M gap after a 1M mapping)
 
-iQIcBAEBAgAGBQJXnmxGAAoJED4KNFJOeCOoPFAP/0zRC/Nl0VyALflqBXyYPkg9
-GGma7FASncduXB3kDjJ9wlkqnY7217jesvBue1uKFskVc1YN5FDR7sUytqWGRLZx
-ABL/pS39Wts+U/cpq5V2a111ia3nhnDAdpuAXppB9/MFKkddO5Uk8LGJamtXTSGu
-f2f9EGuLMEgwTMSO9kDfDwepKF5Jf8A2RAALWaVVIsmk5ka6PRzBdfzjZXBgxB5E
-UbxiqWrwONSK6Ek0h24tKY9OLfYJ5yS6eGN4sPjusNx07Md3vhzx2EOCMJ6WhRDn
-u5ukI4BMhCUplLMTqhPPggUaEhOI5ZRAI8Af/PXXJy6PeDqm6YGwpc3shFXV9JPR
-RCRrfBxdIRWRkWG1xp37CukCMaMe1qKi+8/yGYDgnWvEucRMyrtc+1COv0releNz
-y7GDed0qtt8yYmY+HExPRKPlrMUkCb2SPvy6m4EjxJ8jxApw3X5Xa/P3BRrsGN99
-O5aZW3ISHbqW0qvqL6t+iDSy+o/gD9BsXtQNF8d1e+swqW9J+UZDmdcuP3on2m2u
-2YQODPykyb7IIcdR6T/tSb84UWFcy+3jLMAtCSbKw0KTnmJyToSoRsooRpke9vpO
-8wA/ivYpKIdoh8m3fWw1isDSm/NxbyW71KYwBb39zmq3GYvS4oQH67B7yMygELHR
-2zjcslMiC9ARfDdSVwQZ
-=0x/p
------END PGP SIGNATURE-----
+mmm, this looks like an information leak.  Best to set a range of pages
+and pick a random number within that range for each call.
 
---SLDf9lqlvOQaIe6s--
+> c) configurable maximum random gap size (the random gap would be in
+> addition to the enforced minimums)
+> 
+> The randomization could just be considered an extra with minor
+> benefits rather than the whole feature. A full fine-grained
+> randomization implementation would need a higher-level form of
+> randomization than gaps in the kernel along with cooperation from
+> userspace allocators. This would make sense as one part of it though.
+
+Ok, so here's an idea.  This idea could be used in conjunction with
+random gaps, or on it's own.  It would be enhanced by userspace random
+load order.
+
+The benefit is that with 32bit address space, and no random gapping,
+it's still not wasting much space.
+
+Given a memory space, break it up into X bands such that there are 2*X
+possible addresses.
+
+  |A     B|C     D|E     F|G     H| ... |2*X-2  2*X-1|
+  |--> <--|--> <--|--> <--|--> <--| ... |-->      <--|
+min                                                  max
+
+For each call to mmap, we randomly pick a value within [0 - 2*X).
+Assuming A=0 in the diagram above, even values grow up, odd values grow
+down.  Gradually consuming the single gap in the middle of each band.
+
+How many bands to use would depend on:
+  * 32/64bit
+  * Average number of mmap calls
+  * largest single mmap call usually seen
+  * if using random gaps and range used
+
+If the free gap in a chosen band is too small for the request, pick
+again among the other bands.
+
+Again, I'm not an mm dev, so I might be totally smoking crack on this
+one...
+
+thx,
+
+Jason.
