@@ -1,88 +1,116 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 31 Jul 2016 14:02:55 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20160731120255.GB14676@pc.thejh.net>
-References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
- <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
- <20160729181213.GD11621@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="3lcZGd9BuhuYXNfi"
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and
- path_fhandle LSM hooks
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <20160730154244.403-2-jason@lakedaemon.net>
+References: <20160728204730.27453-1-jason@lakedaemon.net> <20160730154244.403-1-jason@lakedaemon.net>
+ <20160730154244.403-2-jason@lakedaemon.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Sun, 31 Jul 2016 09:46:53 -0700
+Message-ID: <CAGXu5jL3ZtjbhOYujVUpBuDttPjetaz8rSY_hNK13r6OtR4sFQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 1/7] random: Simplify API for random address requests
+To: Jason Cooper <jason@lakedaemon.net>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, Yann Droneaud <ydroneaud@opteya.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, Greg KH <gregkh@linuxfoundation.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Michael Ellerman <mpe@ellerman.id.au>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sat, Jul 30, 2016 at 8:42 AM, Jason Cooper <jason@lakedaemon.net> wrote:
+> To date, all callers of randomize_range() have set the length to 0, and
+> check for a zero return value.  For the current callers, the only way
+> to get zero returned is if end <= start.  Since they are all adding a
+> constant to the start address, this is unnecessary.
+>
+> We can remove a bunch of needless checks by simplifying the API to do
+> just what everyone wants, return an address between [start, start +
+> range).
+>
+> While we're here, s/get_random_int/get_random_long/.  No current call
+> site is adversely affected by get_random_int(), since all current range
+> requests are < UINT_MAX.  However, we should match caller expectations
+> to avoid coming up short (ha!) in the future.
+>
+> All current callers to randomize_range() chose to use the start address
+> if randomize_range() failed.  Therefore, we simplify things by just
+> returning the start address on error.
+>
+> randomize_range() will be removed once all callers have been converted
+> over to randomize_addr().
+>
+> Signed-off-by: Jason Cooper <jason@lakedaemon.net>
+> ---
+> Changes from v1:
+>  - Explicitly mention page_aligned start assumption (Yann Droneaud)
+>  - pick random pages vice random addresses (Yann Droneaud)
+>  - catch range=0 last
+>
+>  drivers/char/random.c  | 28 ++++++++++++++++++++++++++++
+>  include/linux/random.h |  1 +
+>  2 files changed, 29 insertions(+)
+>
+> diff --git a/drivers/char/random.c b/drivers/char/random.c
+> index 0158d3bff7e5..3bedf69546d6 100644
+> --- a/drivers/char/random.c
+> +++ b/drivers/char/random.c
+> @@ -1840,6 +1840,34 @@ randomize_range(unsigned long start, unsigned long end, unsigned long len)
+>         return PAGE_ALIGN(get_random_int() % range + start);
+>  }
+>
+> +/**
+> + * randomize_addr - Generate a random, page aligned address
+> + * @start:     The smallest acceptable address the caller will take.
+> + * @range:     The size of the area, starting at @start, within which the
+> + *             random address must fall.
+> + *
+> + * If @start + @range would overflow, @range is capped.
+> + *
+> + * NOTE: Historical use of randomize_range, which this replaces, presumed that
+> + * @start was already page aligned.  This assumption still holds.
+> + *
+> + * Return: A page aligned address within [start, start + range).  On error,
+> + * @start is returned.
+> + */
+> +unsigned long
+> +randomize_addr(unsigned long start, unsigned long range)
 
---3lcZGd9BuhuYXNfi
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+Since we're changing other things about this, let's try to document
+its behavior in its name too and call this "randomize_page" instead.
+If it requires a page-aligned value, we should probably also BUG_ON
+it, or adjust the start too.
 
-On Sun, Jul 31, 2016 at 10:55:04AM +0000, Reshetova, Elena wrote:
-> On Fri, Jul 29, 2016 at 10:34:36AM +0300, Elena Reshetova wrote:
-> > This introduces two new LSM hooks operating on paths.
-> >=20
-> >   - security_path_fchdir() checks for permission on
-> >     changing working directory. It can be used by
-> >     LSMs concerned on fchdir system call
->=20
-> >I don't think security_path_fchdir() is a good abstraction level. It
-> neither covers the whole case of "cwd is changed" nor does it cover the
-> whole case of "someone uses a file descriptor to a directory to look up
-> stuff outside that directory".
-> Do you have a suggestion on what can be a good place?=20
->=20
-> >For example, security_path_fchdir() seems to be intended to prevent the =
-use
-> of a leaked file descriptor to the outside world for accessing other files
-> in the outside world.=20
-> Yes, this was exactly the use case.
->=20
-> >But this is trivially bypassed by first using openat() directly instead =
-of
-> fchdir()+open() (something that used to work against grsecurity, but was
-> fixed quite a while ago).
-> The way it has been addressed in grsecurity is having a check inside
-> filename_lookup() , but it doesn't look a very great place for putting a
-> hook. I was thinking about it , but so far didn't find any other good
-> alternatives.=20
+-Kees
 
-Yeah, if you want to have such a hook, I think it needs to be in
-filename_lookup() or below - but that's a relatively hot function, so it
-might have a measurable performance impact.
+> +{
+> +       if (start > ULONG_MAX - range)
+> +               range = ULONG_MAX - start;
+> +
+> +       range >>= PAGE_SHIFT;
+> +
+> +       if (range == 0)
+> +               return start;
+> +
+> +       return start + (get_random_long() % range << PAGE_SHIFT);
+> +}
+> +
+>  /* Interface for in-kernel drivers of true hardware RNGs.
+>   * Those devices may produce endless random bits and will be throttled
+>   * when our pool is full.
+> diff --git a/include/linux/random.h b/include/linux/random.h
+> index e47e533742b5..f1ca2fa4c071 100644
+> --- a/include/linux/random.h
+> +++ b/include/linux/random.h
+> @@ -35,6 +35,7 @@ extern const struct file_operations random_fops, urandom_fops;
+>  unsigned int get_random_int(void);
+>  unsigned long get_random_long(void);
+>  unsigned long randomize_range(unsigned long start, unsigned long end, unsigned long len);
+> +unsigned long randomize_addr(unsigned long start, unsigned long range);
+>
+>  u32 prandom_u32(void);
+>  void prandom_bytes(void *buf, size_t nbytes);
+> --
+> 2.9.2
+>
 
-Alternatively, you could forbid double-chroots and use the LSM hooks for
-file descriptor passing via unix domain sockets and binder to check
-incoming file descriptors. As long as no directories are moved out of the
-chroot directory by something outside the chroot (a process chrooted into
-a parent directory or a process that isn't chrooted), that should
-prooobably work?
 
---3lcZGd9BuhuYXNfi
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJXnejvAAoJED4KNFJOeCOobAoQAIJu6hA+mDWsnxhB7ngeUdSf
-fdb8SMt2zZ3xiIA9AQc3Rfhx0yd2wrf+UO1Bt/7bCt2r1IFDeQEE9jPm4MOi7N2N
-iM0dLuyr9khpYI4Cg1wcbV/7kbeJpLy7Rx8XL0gTmWB4DylpqsX7ERFTzTmWg2TF
-Kg/RNStK2/4BnOw+IPbe/B4K+TWXkc2A3faoxbuOZNtnFEYFk2kM+2HJBinzXxI0
-i4ZTGG8leC6jRsfIZYF5CnFbb8/HmoNqisR2sLh3cXlrioeMAK2VXxqhUcuTn5VD
-91Nljy5R6ChsYvPctskgnor1Q22ZXN6au3oQ3i4hsJtSBAbs6IbTPJiWzKDnfHgK
-fhVj1hQlELLkmFFgXLmpY7ruVavHiUl/znHAu4cOyn7O9Nu8xs+9lKpRrffqKhEX
-4d/EyMsWwRhOIxiugJfyas2XtVWwmMdOqazUZeecMtmEG0M4nHPYKZ2EkZJcAqU5
-nqRwrm+vFFHCbY6StQQgaaz+54jiTrpCLiS9mYRAtRTaiU0k7bFA3hqqXQksBNZr
-HAmNjZHXY8ngIOBVSYNwFvRe40agOfFuUgGj/tsyknLiGj6Z4noHKnHJcCGE2vDh
-bhwFSwPexIhi8SAVZMfwjKiQuhtoUrm9CjC0YFpzLCi7jzfb2fz3pltGprPSiy0V
-Cmr2bHVnlWNbhRx8Yen5
-=h74U
------END PGP SIGNATURE-----
-
---3lcZGd9BuhuYXNfi--
+-- 
+Kees Cook
+Chrome OS & Brillo Security
