@@ -1,75 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Sun, 31 Jul 2016 10:39:04 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B70283@IRSMSX102.ger.corp.intel.com>
+Date: Sun, 31 Jul 2016 10:55:04 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
 References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
- <1469777680-3687-5-git-send-email-elena.reshetova@intel.com>
- <20160729181123.GC11621@pc.thejh.net>
-In-Reply-To: <20160729181123.GC11621@pc.thejh.net>
+ <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
+ <20160729181213.GD11621@pc.thejh.net>
+In-Reply-To: <20160729181213.GD11621@pc.thejh.net>
 Content-Type: multipart/signed; protocol="application/x-pkcs7-signature";
-	micalg=SHA1; boundary="----=_NextPart_000_020E_01D1EB30.E6A0A3E0"
+	micalg=SHA1; boundary="----=_NextPart_000_021C_01D1EB33.22BC99E0"
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC] [PATCH 4/5] invoke path_chroot() LSM
- hook on mntns_install()
+Subject: RE: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and
+ path_fhandle LSM hooks
 To: Jann Horn <jann@thejh.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Cc: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-------=_NextPart_000_020E_01D1EB30.E6A0A3E0
+------=_NextPart_000_021C_01D1EB33.22BC99E0
 Content-Type: text/plain;
 	charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 
-On Fri, Jul 29, 2016 at 10:34:39AM +0300, Elena Reshetova wrote:
-> This adds an additional invocation of the security_path_chroot LSM 
-> hook inside mntns_install().
-> Currently only capabilities are checked at this point, while process 
-> root actually changes.
+On Fri, Jul 29, 2016 at 10:34:36AM +0300, Elena Reshetova wrote:
+> This introduces two new LSM hooks operating on paths.
+> 
+>   - security_path_fchdir() checks for permission on
+>     changing working directory. It can be used by
+>     LSMs concerned on fchdir system call
 
->Are you aware that unprivileged user namespace creation doesn't work in a
-chrooted process? See the invocation of current_chrooted() in
-create_user_ns(). This means that for this new LSM hook to make any sense, a
-namespace admin has to attempt >to sandbox himself with chroot().
+>I don't think security_path_fchdir() is a good abstraction level. It
+neither covers the whole case of "cwd is changed" nor does it cover the
+whole case of "someone uses a file descriptor to a directory to look up
+stuff outside that directory".
+Do you have a suggestion on what can be a good place? 
 
-I am not sure I understand you fully here. It is possible to create new
-mount namespace without creating new user namespace, and when this happens,
-if I understand the code right, there is no check like current_chrooted() or
-smth like this. 
-So, how does it relate to user namespace? 
+>For example, security_path_fchdir() seems to be intended to prevent the use
+of a leaked file descriptor to the outside world for accessing other files
+in the outside world. 
+Yes, this was exactly the use case.
 
->If the current namespace is the init namespace, the process has
-CAP_SYS_ADMIN in the init namespace, meaning that filesystem sandboxing is
-probably useless.
->If the current namespace is not the init namespace, the process probably
-used namespaces to sandbox itself, in which case it wouldn't be using chroot
-in the first place, 
-Why? It is possible that we might be running in the namespace some daemon
-which just uses chroot by default (legacy or whatever). I think you even
-proposed that in another email. 
+>But this is trivially bypassed by first using openat() directly instead of
+fchdir()+open() (something that used to work against grsecurity, but was
+fixed quite a while ago).
+The way it has been addressed in grsecurity is having a check inside
+filename_lookup() , but it doesn't look a very great place for putting a
+hook. I was thinking about it , but so far didn't find any other good
+alternatives. 
 
->r it is running in a container with admin privileges. 
->In the latter case, this mitigation miiight make a difference, I'm not sure
-exactly how powerful the APIs for namespace admins are - but a mitigation
-that only makes a difference inside containers would be weird anyway.
->So: What is your specific usecase here?
 
-The usecase was similar to the unshare cases: we need to find places where
-current process's root changes in the code and make sure we catch this
-change in order to have the up-to-date information about each process's
-root.  
-So, if we have a process that was put into chroot, but then also creates a
-mount ns inside? If we recorded the dentry of chrooted process , but then
-not update it upon mount ns creation, we might end up with wrong entry and
-all kinds of problems around it. 
 
-But yes, the whole relationship with namespaces is tricky and there are sooo
-many edge cases. I will try to create a list of possible combinations  and
-use cases. It is true that this hardening LSM has a particular set of
-use-cases in mind and there is no need to support all possible combinations.
-I haven't even tested this at all with namespaces yet, which would be
-separate fun on its own...
-
-------=_NextPart_000_020E_01D1EB30.E6A0A3E0
+------=_NextPart_000_021C_01D1EB33.22BC99E0
 Content-Type: application/pkcs7-signature; name="smime.p7s"
 Content-Transfer-Encoding: base64
 Content-Disposition: attachment; filename="smime.p7s"
@@ -193,7 +172,7 @@ z1fq9jGCA/kwggP1AgEBMIGQMHkxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEUMBIGA1UEBxML
 U2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9uMSswKQYDVQQDEyJJbnRlbCBF
 eHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRCAhMzAAAPeuDTfWPn74vVAAAAAA96MAkGBSsOAwIa
 BQCgggI9MBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDczMTEw
-MzkwM1owIwYJKoZIhvcNAQkEMRYEFMCFdRbWJKplutQNrbxGO6+KiQKwMIGTBgkqhkiG9w0BCQ8x
+NTUwMlowIwYJKoZIhvcNAQkEMRYEFMd03qZS4lsBUX/qUvmbqyprybV0MIGTBgkqhkiG9w0BCQ8x
 gYUwgYIwCwYJYIZIAWUDBAEqMAsGCWCGSAFlAwQBFjAKBggqhkiG9w0DBzALBglghkgBZQMEAQIw
 DgYIKoZIhvcNAwICAgCAMA0GCCqGSIb3DQMCAgFAMAcGBSsOAwIaMAsGCWCGSAFlAwQCAzALBglg
 hkgBZQMEAgIwCwYJYIZIAWUDBAIBMIGhBgkrBgEEAYI3EAQxgZMwgZAweTELMAkGA1UEBhMCVVMx
@@ -202,11 +181,11 @@ YXRpb24xKzApBgNVBAMTIkludGVsIEV4dGVybmFsIEJhc2ljIElzc3VpbmcgQ0EgNEECEzMAAGce
 yeUJ4F3k0k4AAAAAZx4wgaMGCyqGSIb3DQEJEAILMYGToIGQMHkxCzAJBgNVBAYTAlVTMQswCQYD
 VQQIEwJDQTEUMBIGA1UEBxMLU2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9u
 MSswKQYDVQQDEyJJbnRlbCBFeHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRBAhMzAABnHsnlCeBd
-5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBAFhR25vI7+r1vILCDoeKyTqJWoCpv0v04vB2cHx9
-/jzKOVwAPLt34HAZuNLLHnQzqM4gUtOzJmXgdnIS35swRI3c6wg/6rRhanLcSw2vK4LY8V+tiAqs
-dI17aOM8eQ09VkvffpramAeBry9oI15Lcq2Q7ZPAfmM+EainlsaViAa1faNy46SuUq+f4sM5vJbN
-GWIHX47vjG2C+8uge8vL4DDKgBF8+nsp4VI/Q0YL7DT+ccud0NqdS162amx1AG99EyDMBqBB6oFQ
-tudYRVoBjpgzRFfUdhumf53UTLenDXLDwCmkH87jNrWHLJNZm4PZYqiz+wN2ZHRWxeWRgMyAQhQA
+5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBACuBFoUBPoc3kZeVGEJBZUArFNM1aqB4rn/NKNKK
+NVJtOr/PFVcgP46uKwlWPHPMYVBI31eWR2db5xF0DkHHY9YaED1LBKVvsJsh/mvH98M7zjvwxDN/
+eJbjwNzjdDWSIAHsS42E9b4phPSZgoavvy6d7AQ8Gk1DHQcsL5sBmasrnqR/5gpARDdt4xGGS/c/
+uq0TBp7yohSJIx2LXfN4VAmj1qin3CsxfqlQPHpXktgxKNX+noEEaFQrpxbiNZhv7M/i2F/8PqoI
+RLNcZMpCarxz70oxUBXNWL9RQ2iCU1aTnwsRSiWg4OnyoqBg2/vNwxOO1rEr0VcPnVtMZ3XTg5kA
 AAAAAAA=
 
-------=_NextPart_000_020E_01D1EB30.E6A0A3E0--
+------=_NextPart_000_021C_01D1EB33.22BC99E0--
