@@ -1,77 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Thomas Garnier <thgarnie@google.com>
-Date: Mon,  1 Aug 2016 10:07:59 -0700
-Message-Id: <1470071280-78706-2-git-send-email-thgarnie@google.com>
+Date: Mon,  1 Aug 2016 10:08:00 -0700
+Message-Id: <1470071280-78706-3-git-send-email-thgarnie@google.com>
 In-Reply-To: <1470071280-78706-1-git-send-email-thgarnie@google.com>
 References: <1470071280-78706-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v1 1/2] x86/power/64: Support unaligned addresses for temporary mapping
+Subject: [kernel-hardening] [PATCH v1 2/2] x86/power/64: Fix __PAGE_OFFSET usage on restore
 To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Thomas Garnier <thgarnie@google.com>, Yinghai Lu <yinghai@kernel.org>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Pavel Machek <pavel@ucw.cz>
 Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Correctly setup the temporary mapping for hibernation. Previous
-implementation assumed the address was aligned on the PGD level. With
-KASLR memory randomization enabled, the address is randomized on the PUD
-level. This change supports unaligned address up to PMD.
+When KASLR memory randomization is used, __PAGE_OFFSET is a global
+variable changed during boot. The assembly code was using the variable
+as an immediate value to calculate the cr3 physical address. The
+physical address was incorrect resulting to a GP fault.
 
 Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- arch/x86/mm/ident_map.c | 18 ++++++++++--------
- 1 file changed, 10 insertions(+), 8 deletions(-)
+ arch/x86/power/hibernate_asm_64.S | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/mm/ident_map.c b/arch/x86/mm/ident_map.c
-index ec21796..ea1ebf1 100644
---- a/arch/x86/mm/ident_map.c
-+++ b/arch/x86/mm/ident_map.c
-@@ -3,15 +3,16 @@
-  * included by both the compressed kernel and the regular kernel.
-  */
+diff --git a/arch/x86/power/hibernate_asm_64.S b/arch/x86/power/hibernate_asm_64.S
+index 8eee0e9..8db4905 100644
+--- a/arch/x86/power/hibernate_asm_64.S
++++ b/arch/x86/power/hibernate_asm_64.S
+@@ -23,6 +23,16 @@
+ #include <asm/processor-flags.h>
+ #include <asm/frame.h>
  
--static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
-+static void ident_pmd_init(struct x86_mapping_info *info, pmd_t *pmd_page,
- 			   unsigned long addr, unsigned long end)
- {
--	addr &= PMD_MASK;
--	for (; addr < end; addr += PMD_SIZE) {
--		pmd_t *pmd = pmd_page + pmd_index(addr);
-+	int off = info->kernel_mapping ? pmd_index(__PAGE_OFFSET) : 0;
++/*
++ * A global variable holds the page_offset when KASLR memory randomization
++ * is enabled.
++ */
++#ifdef CONFIG_RANDOMIZE_MEMORY
++#define __PAGE_OFFSET_REF __PAGE_OFFSET
++#else
++#define __PAGE_OFFSET_REF $__PAGE_OFFSET
++#endif
 +
-+	for (addr &= PMD_MASK; addr < end; addr += PMD_SIZE) {
-+		pmd_t *pmd = pmd_page + pmd_index(addr) + off;
- 
- 		if (!pmd_present(*pmd))
--			set_pmd(pmd, __pmd(addr | pmd_flag));
-+			set_pmd(pmd, __pmd(addr | info->pmd_flag));
- 	}
- }
- 
-@@ -19,9 +20,10 @@ static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
- 			  unsigned long addr, unsigned long end)
- {
- 	unsigned long next;
-+	int off = info->kernel_mapping ? pud_index(__PAGE_OFFSET) : 0;
- 
- 	for (; addr < end; addr = next) {
--		pud_t *pud = pud_page + pud_index(addr);
-+		pud_t *pud = pud_page + pud_index(addr) + off;
- 		pmd_t *pmd;
- 
- 		next = (addr & PUD_MASK) + PUD_SIZE;
-@@ -30,13 +32,13 @@ static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
- 
- 		if (pud_present(*pud)) {
- 			pmd = pmd_offset(pud, 0);
--			ident_pmd_init(info->pmd_flag, pmd, addr, next);
-+			ident_pmd_init(info, pmd, addr, next);
- 			continue;
- 		}
- 		pmd = (pmd_t *)info->alloc_pgt_page(info->context);
- 		if (!pmd)
- 			return -ENOMEM;
--		ident_pmd_init(info->pmd_flag, pmd, addr, next);
-+		ident_pmd_init(info, pmd, addr, next);
- 		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
- 	}
- 
+ ENTRY(swsusp_arch_suspend)
+ 	movq	$saved_context, %rax
+ 	movq	%rsp, pt_regs_sp(%rax)
+@@ -72,7 +82,7 @@ ENTRY(restore_image)
+ 	/* code below has been relocated to a safe page */
+ ENTRY(core_restore_code)
+ 	/* switch to temporary page tables */
+-	movq	$__PAGE_OFFSET, %rcx
++	movq	__PAGE_OFFSET_REF, %rcx
+ 	subq	%rcx, %rax
+ 	movq	%rax, %cr3
+ 	/* flush TLB */
 -- 
 2.8.0.rc3.226.g39d4020
