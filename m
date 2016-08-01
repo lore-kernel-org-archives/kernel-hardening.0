@@ -1,75 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Mon, 1 Aug 2016 08:38:45 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B70522@IRSMSX102.ger.corp.intel.com>
+Date: Mon, 1 Aug 2016 09:26:17 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41B70552@IRSMSX102.ger.corp.intel.com>
 References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
- <1469777680-3687-2-git-send-email-elena.reshetova@intel.com>
- <20160729181213.GD11621@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41B7029C@IRSMSX102.ger.corp.intel.com>
- <20160731120255.GB14676@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41B70337@IRSMSX102.ger.corp.intel.com>
- <20160731212318.GA31482@pc.thejh.net>
-In-Reply-To: <20160731212318.GA31482@pc.thejh.net>
+ <1469777680-3687-5-git-send-email-elena.reshetova@intel.com>
+ <20160729181123.GC11621@pc.thejh.net>
+ <2236FBA76BA1254E88B949DDB74E612B41B70283@IRSMSX102.ger.corp.intel.com>
+ <20160731112927.GA14676@pc.thejh.net>
+In-Reply-To: <20160731112927.GA14676@pc.thejh.net>
 Content-Type: multipart/signed; micalg=SHA1;
 	protocol="application/x-pkcs7-signature";
-	boundary="----=_NextPart_000_0050_01D1EBE9.428BA390"
+	boundary="----=_NextPart_000_0073_01D1EBEF.E5965200"
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC] [PATCH 1/5] path_fchdir and
- path_fhandle LSM hooks
+Subject: RE: [kernel-hardening] [RFC] [PATCH 4/5] invoke path_chroot() LSM
+ hook on mntns_install()
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 Cc: "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "keescook@chromium.org" <keescook@chromium.org>, "spender@grsecurity.net" <spender@grsecurity.net>, "jmorris@namei.org" <jmorris@namei.org>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Leibowitz, Michael" <michael.leibowitz@intel.com>, "Roberts, William C" <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-------=_NextPart_000_0050_01D1EBE9.428BA390
+------=_NextPart_000_0073_01D1EBEF.E5965200
 Content-Type: text/plain;
 	charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 
->On Sun, Jul 31, 2016 at 06:28:08PM +0000, Reshetova, Elena wrote:
-> On Sun, Jul 31, 2016 at 10:55:04AM +0000, Reshetova, Elena wrote:
-[...]
-> >Alternatively, you could forbid double-chroots and use the LSM hooks 
-> >for
-> file descriptor passing via unix domain sockets and binder to check 
-> incoming file descriptors.
+
+On Sun, Jul 31, 2016 at 10:39:04AM +0000, Reshetova, Elena wrote:
+> On Fri, Jul 29, 2016 at 10:34:39AM +0300, Elena Reshetova wrote:
+> > This adds an additional invocation of the security_path_chroot LSM 
+> > hook inside mntns_install().
+> > Currently only capabilities are checked at this point, while process 
+> > root actually changes.
 > 
-> This would not prevent guessing the file descriptor unfortunately.
+> >Are you aware that unprivileged user namespace creation doesn't work 
+> >in a
+> chrooted process? See the invocation of current_chrooted() in 
+> create_user_ns(). This means that for this new LSM hook to make any 
+> sense, a namespace admin has to attempt >to sandbox himself with chroot().
+> 
+> I am not sure I understand you fully here. It is possible to create 
+> new mount namespace without creating new user namespace, and when this 
+> happens, if I understand the code right, there is no check like 
+> current_chrooted() or smth like this.
+> So, how does it relate to user namespace? 
 
->That doesn't make sense to me. Can you elaborate on that, please?
+>You can only create a new mount namespace if you're privileged relative to
+your current namespace. See the second and third invocation of ns_capable()
+in mntns_install(). To get those privileges, you have to either be
+privileged already or unshare the user namespace to get new namespaced
+privileges.
+An unprivileged, chrooted process doesn't have existing privileges and can't
+unshare the user namespace to get new ones, so it can't unshare other
+namespaces (like the mount namespace) anymore.
 
->How would you "guess" a file descriptor? Are you talking about file
-descriptors opened before chroot() that have been leaked accidentally?
+Yes, all true, I just got confused that you said that checks for chroot are
+done. So, yes, you need to have CAP_SYS_ADMIN in current namespace, and then
+you can get your new mount ns. 
+After thinking more on this, I think I will get rid of this altogether. Yes,
+there is a case when a process first enters a new user ns, then enters
+chroot and forgets to drop its caps. Then it runs for a while, gets
+exploited and now it tries to get out of chroot. It can create a new mount
+ns since it has CAP_SYS_ADMIN in his user ns, but what is the outcome?
+Probably not much, it certainly doesn't help it much from chroot
+perspective. And I can't think of a reason why a legitimate process would
+want to create a new namespace inside the chroot.... 
+ 
 
-Yes, these ones. Also I guess in general security-wise it is better approach
-to have a check in a place where descriptor will be attempted to
-use/resolved vs. trying to make sure you caught all cases where/how process
-might obtain some. 
-Various IPC, leaked descriptors, some other potential surprises... But I
-think in this case it might be worth trying to do what you suggest since I
-don't see good alternatives either. 
-
->In that case, you could just do on chroot() what SELinux does on a domain
-transition and replace all dangerous open file descriptors with /dev/null.
-
-I guess this could work, if I can correctly close the ones that are outside
-of the chroot. I will check how SELinux does it. Thank you for the tip! 
-
->Or are you concerned about shared file descriptor tables (which really
-shouldn't happen accidentally, 
-
-You mean CLONE_FILES on clone()? If yes, then I am less concerned of this
-since it really not common as far as I understood for legitimate
-processes/daemons to be started this way. However, if this case needs to be
-addressed, it is trickier, you cannot just substitute these ones with
-/dev/null without breaking the parent also and you would need to check them
-all, not just opened ones. 
-
-> at least when you keep in mind that for this to be an issue, the fs_struct
-would have to not be shared)?
-
-What do you mean by the last part? Not sure I understand here...
-
-------=_NextPart_000_0050_01D1EBE9.428BA390
+------=_NextPart_000_0073_01D1EBEF.E5965200
 Content-Type: application/pkcs7-signature; name="smime.p7s"
 Content-Transfer-Encoding: base64
 Content-Disposition: attachment; filename="smime.p7s"
@@ -192,8 +188,8 @@ WOJYZCer+SGEGCYldn7YSPDOmlxpd8XlO3M1m1gAfsmnU/AjacOYnKyp/THuGC97/7NcWHfkR9vD
 z1fq9jGCA/kwggP1AgEBMIGQMHkxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEUMBIGA1UEBxML
 U2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9uMSswKQYDVQQDEyJJbnRlbCBF
 eHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRCAhMzAAAPeuDTfWPn74vVAAAAAA96MAkGBSsOAwIa
-BQCgggI9MBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDgwMTA4
-Mzg0NFowIwYJKoZIhvcNAQkEMRYEFNPF4uD5E7zSuhHDV8wmHDtVWP3iMIGTBgkqhkiG9w0BCQ8x
+BQCgggI9MBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDgwMTA5
+MjYxNVowIwYJKoZIhvcNAQkEMRYEFKBn+uWUhP8w9LKZF9enh9iZyv/AMIGTBgkqhkiG9w0BCQ8x
 gYUwgYIwCwYJYIZIAWUDBAEqMAsGCWCGSAFlAwQBFjAKBggqhkiG9w0DBzALBglghkgBZQMEAQIw
 DgYIKoZIhvcNAwICAgCAMA0GCCqGSIb3DQMCAgFAMAcGBSsOAwIaMAsGCWCGSAFlAwQCAzALBglg
 hkgBZQMEAgIwCwYJYIZIAWUDBAIBMIGhBgkrBgEEAYI3EAQxgZMwgZAweTELMAkGA1UEBhMCVVMx
@@ -202,11 +198,11 @@ YXRpb24xKzApBgNVBAMTIkludGVsIEV4dGVybmFsIEJhc2ljIElzc3VpbmcgQ0EgNEECEzMAAGce
 yeUJ4F3k0k4AAAAAZx4wgaMGCyqGSIb3DQEJEAILMYGToIGQMHkxCzAJBgNVBAYTAlVTMQswCQYD
 VQQIEwJDQTEUMBIGA1UEBxMLU2FudGEgQ2xhcmExGjAYBgNVBAoTEUludGVsIENvcnBvcmF0aW9u
 MSswKQYDVQQDEyJJbnRlbCBFeHRlcm5hbCBCYXNpYyBJc3N1aW5nIENBIDRBAhMzAABnHsnlCeBd
-5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBAFPul/S8fDtRboJF8tMcJ71Qqy3Abx/fK8aJ6WkB
-rBzsnDNatkCQDaZVg/q+7QZEZ8AhgELCmSpdNKCuuSRgW/j1qQdGtbDMef/GHiwMyqwQNWZIRTpp
-vh0XDpAbHcmteIvRou4v8IojLT8P5La2pRBgduokT8ohMrGSrkf251gqpCt4iE74/esRODBO4/ym
-xJl4VsuysgA6SvxGI7PdMaP5qif+NQ83QOsw8BFiXf6FDxOrj6aXs37IblMQd/ukzCF8y4kr4JCD
-FbWe/oe9wiU4lLGR/jJgCLnRyl8g7vGjibE465v9VuMEA0QO9S5dJ8Nx8CSVobTCpoZEoGKfsVQA
+5NJOAAAAAGceMA0GCSqGSIb3DQEBAQUABIIBALxtMwClX1tkrXUSnSAyFYjE1XTaPgQqGdb9nqWP
+VaMbJeaq1RrkyJ+QKbM/g2jAO8fnN6R+N7FHI3OF80iRawz3FrTbmtwrt+d+/2dZs+64ty6oPMfL
+F46PSTYGzje8V6gLd1oBrlJfS4oyWA7WPu6HX51nE27Qx+T36yjaKrQYj/vX7zVN4KSZvtzo9VQF
+rf//Jr22CXtaO7ruGktn87lFG02les3wlu8f/q1cKZ+wEbc6kT24ZKTdy7aBUbqMEfdry15lHSm1
+C1Ss56guYIzjMluVldXTPUEn+jmyCvx+Knv/eY7clTwP7SyNjHtD5KMBEinMqunZK7LS7hN03qoA
 AAAAAAA=
 
-------=_NextPart_000_0050_01D1EBE9.428BA390--
+------=_NextPart_000_0073_01D1EBEF.E5965200--
