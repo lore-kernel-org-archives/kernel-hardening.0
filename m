@@ -1,53 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 2 Aug 2016 11:55:46 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20160802095546.GE6862@twins.programming.kicks-ass.net>
-References: <1469630783-32413-1-git-send-email-jeffv@google.com>
+Date: Tue, 2 Aug 2016 10:04:57 -0300
+From: Arnaldo Carvalho de Melo <acme@kernel.org>
+Message-ID: <20160802130457.GD26514@kernel.org>
+References: <1469630746-32279-1-git-send-email-jeffv@google.com>
+ <20160802095243.GD6862@twins.programming.kicks-ass.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1469630783-32413-1-git-send-email-jeffv@google.com>
-Subject: [kernel-hardening] Re: [PATCH 2/2] security, perf: Add config option to restrict
+In-Reply-To: <20160802095243.GD6862@twins.programming.kicks-ass.net>
+Subject: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further restriction of
  perf_event_open
-To: Jeff Vander Stoep <jeffv@google.com>
-Cc: kernel-hardening@lists.openwall.com, mingo@redhat.com, acme@kernel.org, alexander.shishkin@linux.intel.com, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Jeff Vander Stoep <jeffv@google.com>, kernel-hardening@lists.openwall.com, mingo@redhat.com, alexander.shishkin@linux.intel.com, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jul 27, 2016 at 07:46:23AM -0700, Jeff Vander Stoep wrote:
-> +++ b/kernel/events/core.c
-> @@ -355,7 +355,11 @@ static struct srcu_struct pmus_srcu;
->   *   2 - disallow kernel profiling for unpriv
->   *   3 - disallow all unpriv perf event use
->   */
-> +#ifdef CONFIG_SECURITY_PERF_EVENTS_RESTRICT
-> +int sysctl_perf_event_paranoid __read_mostly = 3;
-> +#else
->  int sysctl_perf_event_paranoid __read_mostly = 2;
-> +#endif
->  
->  /* Minimum for 512 kiB + 1 user control page */
->  int sysctl_perf_event_mlock __read_mostly = 512 + (PAGE_SIZE / 1024); /* 'free' kiB per user */
-> diff --git a/security/Kconfig b/security/Kconfig
-> index df28f2b..2a93551 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -18,6 +18,15 @@ config SECURITY_DMESG_RESTRICT
->  
->  	  If you are unsure how to answer this question, answer N.
->  
-> +config SECURITY_PERF_EVENTS_RESTRICT
-> +	bool "Restrict unprivileged use of performance events"
-> +	depends on PERF_EVENTS
-> +	help
-> +	  If you say Y here, the kernel.perf_event_paranoid sysctl
-> +	  will be set to 3 by default, and no unprivileged use of the
-> +	  perf_event_open syscall will be permitted unless it is
-> +	  changed.
+Em Tue, Aug 02, 2016 at 11:52:43AM +0200, Peter Zijlstra escreveu:
+> On Wed, Jul 27, 2016 at 07:45:46AM -0700, Jeff Vander Stoep wrote:
+> > When kernel.perf_event_paranoid is set to 3 (or greater), disallow
+> > all access to performance events by users without CAP_SYS_ADMIN.
 
-NAK.
+> > This new level of restriction is intended to reduce the attack
+> > surface of the kernel. Perf is a valuable tool for developers but
+> > is generally unnecessary and unused on production systems. Perf may
+> > open up an attack vector to vulnerable device-specific drivers as
+> > recently demonstrated in CVE-2016-0805, CVE-2016-0819,
+> > CVE-2016-0843, CVE-2016-3768, and CVE-2016-3843.
+ 
+> We have bugs we fix them, we don't kill complete infrastructure because
+> of them.
+ 
+> > This new level of
+> > restriction allows for a safe default to be set on production systems
+> > while leaving a simple means for developers to grant access [1].
+ 
+> So the problem I have with this is that it will completely inhibit
+> development of things like JITs that self-profile to re-compile
+> frequently used code.
 
-Apart from the fact that I hate the 3 thing this is not how you do
-default CONFIG knobs for !bool state variables.
+Or reimplement strace with sys_perf_event_open(), speeding it up greatly
+by not using ptrace (see 'perf trace', one such attempt), combining it
+with sys_bpf(), which can run unpriviledged as well, provides lots of
+possibilities for efficient tooling that would be greatly stiffled by
+such big hammer restrictions :-(
+ 
+> I would much rather have an LSM hook where the security stuff can do
+> more fine grained control of things. Allowing some apps perf usage while
+> denying others.
 
-Use an "int" config not a "bool" config and allow all options to be
-default.
+- Arnaldo
