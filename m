@@ -1,76 +1,91 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160802095243.GD6862@twins.programming.kicks-ass.net>
-References: <1469630746-32279-1-git-send-email-jeffv@google.com> <20160802095243.GD6862@twins.programming.kicks-ass.net>
+In-Reply-To: <87eg67ooe5.fsf@concordia.ellerman.id.au>
+References: <1465336628-18219-1-git-send-email-keescook@chromium.org>
+ <1465336628-18219-4-git-send-email-keescook@chromium.org> <87h9b4oebf.fsf@concordia.ellerman.id.au>
+ <CAGXu5jL8UBfs7NjSgKOeqd9toRgtW3gPu53TPLbTMRJiwRUvPg@mail.gmail.com> <87eg67ooe5.fsf@concordia.ellerman.id.au>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 2 Aug 2016 12:04:34 -0700
-Message-ID: <CAGXu5j+q4qWFspRCPEd5-MM05Sh_r6VYSQhP7gcAuRMygeZwjg@mail.gmail.com>
+Date: Tue, 2 Aug 2016 12:12:33 -0700
+Message-ID: <CAGXu5j+tc8Q9NkDi7Wf_JV=D65WC=v=y4ormng9nJ6avDKCMZQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further
- restriction of perf_event_open
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "Eric W. Biederman" <ebiederm@xmission.com>
+Subject: Re: [kernel-hardening] Re: Linker segfault on powerpc when
+ CONFIG_LKDTM=y (was Re: [kernel-hardening] [PATCH 3/5] lkdtm: add function
+ for testing .rodata section)
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, LKML <linux-kernel@vger.kernel.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Anton Blanchard <anton@samba.org>, Alan Modra <amodra@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 2, 2016 at 2:52 AM, Peter Zijlstra <peterz@infradead.org> wrote:
-> On Wed, Jul 27, 2016 at 07:45:46AM -0700, Jeff Vander Stoep wrote:
->> When kernel.perf_event_paranoid is set to 3 (or greater), disallow
->> all access to performance events by users without CAP_SYS_ADMIN.
+On Mon, Aug 1, 2016 at 8:12 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> Kees Cook <keescook@chromium.org> writes:
+>
+>> On Mon, Aug 1, 2016 at 5:37 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+>>> Kees Cook <keescook@chromium.org> writes:
+>>>
+>>>> This adds a function that lives in the .rodata section. The section
+>>>> flags are corrected using objcopy since there is no way with gcc to
+>>>> declare section flags in an architecture-agnostic way.
+>>>>
+>>>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>>>> ---
+>>>>  drivers/misc/Makefile       |  7 +++++++
+>>>>  drivers/misc/lkdtm.h        |  6 ++++++
+>>>>  drivers/misc/lkdtm_core.c   | 24 +++++++++++++++++-------
+>>>>  drivers/misc/lkdtm_rodata.c | 10 ++++++++++
+>>>>  4 files changed, 40 insertions(+), 7 deletions(-)
+>>>>  create mode 100644 drivers/misc/lkdtm.h
+>>>>  create mode 100644 drivers/misc/lkdtm_rodata.c
+>>>
+>>> This is blowing up my linker :(
+>>>
+>>>   scripts/link-vmlinux.sh: line 52: 36260 Segmentation fault      (core dumped) ${LD} ${LDFLAGS} ${LDFLAGS_vmlinux} -o ${2} -T ${lds} ${KBUILD_VMLINUX_INIT} --start-group ${KBUILD_VMLINUX_MAIN} --end-group ${1}
+>>>
+>>> Haven't had a chance to debug it further.
 >>
->> This new level of restriction is intended to reduce the attack
->> surface of the kernel. Perf is a valuable tool for developers but
->> is generally unnecessary and unused on production systems. Perf may
->> open up an attack vector to vulnerable device-specific drivers as
->> recently demonstrated in CVE-2016-0805, CVE-2016-0819,
->> CVE-2016-0843, CVE-2016-3768, and CVE-2016-3843.
+>> Argh. Do you want a quick fix for this now? I can add a PPC CONFIG
+>> blacklist for the rodata check, maybe?
 >
-> We have bugs we fix them, we don't kill complete infrastructure because
-> of them.
+> Nah that's OK, none of our defconfigs have it enabled so it's not a real
+> blocker. It also builds OK as a module - though I haven't tested the
+> result yet.
 
-I understand that point of view, but it isn't what things look like
-for the average end-user of Linux. The lifetime on bugs is very long,
-even in upstream (see both Jon Corbet and my talks about this: an
-average of 5 years from introduction to fix), and gets drawn out even
-further by vendors with slow (or missing) update processes. Being able
-to remove attack surface is a fundamental first step of security
-defense, and things like perf, user namespaces, and similar APIs,
-expose a lot of attack surface when they are enabled. And the evidence
-for this attack surface being a real-world risk is in the history of
-security vulnerabilities (that we know about!) in these various APIs.
+Okay, I'll leave it as is.
 
-Now, obviously, these API have huge value, otherwise they wouldn't
-exist in the first place, and they wouldn't be built into end-user
-kernels if they were universally undesirable. But that's not the
-situation: the APIs are needed, but they lack the appropriate knobs to
-control their availability. And this isn't just about Android: regular
-distro kernels (like Debian, who also uses this patch) tend to build
-in everything so people can use whatever they want. But for admins
-that want to reduce their systems' attack surface, there needs to be
-ways to disable things like this.
-
->> This new level of
->> restriction allows for a safe default to be set on production systems
->> while leaving a simple means for developers to grant access [1].
+>> Also, what version of gcc? I'll see if I can reproduce this with a
+>> cross compiler...
 >
-> So the problem I have with this is that it will completely inhibit
-> development of things like JITs that self-profile to re-compile
-> frequently used code.
+> The original hit was with gcc-5.3 (which is actually a x86->ppc cross):
+>
+>   http://kisskb.ellerman.id.au/kisskb/buildresult/12762730/
+>
+> But I can also reproduce with 5.4, and 6.1.0.
+>
+> Interestingly I *can't* reproduce with the Ubuntu x86->ppc cross
+> (5.4.0-6ubuntu1~16.04.1).
 
-This is a good example of a use-case where this knob would be turned
-down. But for many many other use-cases, when presented with a
-pre-built kernel, there isn't a way to remove the attack surface.
+Oh, weird. Well, that does explains my lack of hitting the problem,
+though: that's the cross compiler I was using. :P
 
-> I would much rather have an LSM hook where the security stuff can do
-> more fine grained control of things. Allowing some apps perf usage while
-> denying others.
+> Those toolchains are all using binutils 2.26 AFAIK.
 
-I'm not against an LSM, but I think it's needless complexity when
-there is already a knob for this but it just doesn't go "high" enough.
-:)
+I wonder if this is some gold vs bfd issue, or a specific bug that got
+fixed in the Ubuntu tree but hasn't landed in 6.1 or 5.4 (??)
+
+> Going back to a really old toolchain (gcc 4.6.3/binutils 2.22) it does
+> build but I get these warnings:
+>
+>  powerpc64-linux-ld: drivers/misc/built-in.o: .opd is not a regular array of opd entries
+>  powerpc64-linux-ld: drivers/built-in.o: .opd is not a regular array of opd entries
+
+How strange. I wonder if there's some corner case of the objcopy that
+is wrong...
+
+> So probably don't worry about it and we'll try and work it out on our end.
+
+Okay, sounds good.
 
 -Kees
 
 -- 
 Kees Cook
-Brillo & Chrome OS Security
+Chrome OS & Brillo Security
