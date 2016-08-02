@@ -1,37 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: yhlu.kernel@gmail.com
-In-Reply-To: <2005875.PA9bTzjxie@vostro.rjw.lan>
-References: <1470071280-78706-1-git-send-email-thgarnie@google.com>
- <1470071280-78706-2-git-send-email-thgarnie@google.com> <2005875.PA9bTzjxie@vostro.rjw.lan>
-From: Yinghai Lu <yinghai@kernel.org>
-Date: Tue, 2 Aug 2016 11:01:50 -0700
-Message-ID: <CAE9FiQU2+Omiy9SUWDOvaE3gjVvJjMcVk_h4E8bHeg-vym-2KA@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20160802095243.GD6862@twins.programming.kicks-ass.net>
+References: <1469630746-32279-1-git-send-email-jeffv@google.com> <20160802095243.GD6862@twins.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 2 Aug 2016 12:04:34 -0700
+Message-ID: <CAGXu5j+q4qWFspRCPEd5-MM05Sh_r6VYSQhP7gcAuRMygeZwjg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v1 1/2] x86/power/64: Support unaligned addresses for
- temporary mapping
-To: "Rafael J. Wysocki" <rjw@rjwysocki.net>
-Cc: Thomas Garnier <thgarnie@google.com>, Ingo Molnar <mingo@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further
+ restriction of perf_event_open
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 1, 2016 at 5:36 PM, Rafael J. Wysocki <rjw@rjwysocki.net> wrote:
-> On Monday, August 01, 2016 10:07:59 AM Thomas Garnier wrote:
->> Correctly setup the temporary mapping for hibernation. Previous
->> implementation assumed the address was aligned on the PGD level. With
->> KASLR memory randomization enabled, the address is randomized on the PUD
->> level. This change supports unaligned address up to PMD.
+On Tue, Aug 2, 2016 at 2:52 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Wed, Jul 27, 2016 at 07:45:46AM -0700, Jeff Vander Stoep wrote:
+>> When kernel.perf_event_paranoid is set to 3 (or greater), disallow
+>> all access to performance events by users without CAP_SYS_ADMIN.
+>>
+>> This new level of restriction is intended to reduce the attack
+>> surface of the kernel. Perf is a valuable tool for developers but
+>> is generally unnecessary and unused on production systems. Perf may
+>> open up an attack vector to vulnerable device-specific drivers as
+>> recently demonstrated in CVE-2016-0805, CVE-2016-0819,
+>> CVE-2016-0843, CVE-2016-3768, and CVE-2016-3843.
 >
-> This code is shared with kexec AFAICS, so it likely is better to push it
-> through tip rather than through the PM tree.
+> We have bugs we fix them, we don't kill complete infrastructure because
+> of them.
 
-Only calling path via arch/x86/power/hibernate_64.c have
-   kernel_mapping = true;
-other two paths: arch/x86/boot/compressed/pagetable.c and
-arch/x86/kernel/machine_kexec_64.c
-all have kernel_mapping as false.
+I understand that point of view, but it isn't what things look like
+for the average end-user of Linux. The lifetime on bugs is very long,
+even in upstream (see both Jon Corbet and my talks about this: an
+average of 5 years from introduction to fix), and gets drawn out even
+further by vendors with slow (or missing) update processes. Being able
+to remove attack surface is a fundamental first step of security
+defense, and things like perf, user namespaces, and similar APIs,
+expose a lot of attack surface when they are enabled. And the evidence
+for this attack surface being a real-world risk is in the history of
+security vulnerabilities (that we know about!) in these various APIs.
 
-maybe that path need simplified kernel_physical_mapping_init() instead?
+Now, obviously, these API have huge value, otherwise they wouldn't
+exist in the first place, and they wouldn't be built into end-user
+kernels if they were universally undesirable. But that's not the
+situation: the APIs are needed, but they lack the appropriate knobs to
+control their availability. And this isn't just about Android: regular
+distro kernels (like Debian, who also uses this patch) tend to build
+in everything so people can use whatever they want. But for admins
+that want to reduce their systems' attack surface, there needs to be
+ways to disable things like this.
 
-Thanks
+>> This new level of
+>> restriction allows for a safe default to be set on production systems
+>> while leaving a simple means for developers to grant access [1].
+>
+> So the problem I have with this is that it will completely inhibit
+> development of things like JITs that self-profile to re-compile
+> frequently used code.
 
-Yinghai
+This is a good example of a use-case where this knob would be turned
+down. But for many many other use-cases, when presented with a
+pre-built kernel, there isn't a way to remove the attack surface.
+
+> I would much rather have an LSM hook where the security stuff can do
+> more fine grained control of things. Allowing some apps perf usage while
+> denying others.
+
+I'm not against an LSM, but I think it's needless complexity when
+there is already a knob for this but it just doesn't go "high" enough.
+:)
+
+-Kees
+
+-- 
+Kees Cook
+Brillo & Chrome OS Security
