@@ -1,150 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <1771166.6Dy2cXd33p@vostro.rjw.lan>
-References: <1470071280-78706-1-git-send-email-thgarnie@google.com>
- <1470071280-78706-3-git-send-email-thgarnie@google.com> <1771166.6Dy2cXd33p@vostro.rjw.lan>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 2 Aug 2016 07:34:26 -0700
-Message-ID: <CAJcbSZGUEg-udR3jG2V=16xmG3z_jE1V4WcDbbrV854E5WrT8g@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20160802095546.GE6862@twins.programming.kicks-ass.net>
+References: <1469630783-32413-1-git-send-email-jeffv@google.com> <20160802095546.GE6862@twins.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 2 Aug 2016 08:19:38 -0700
+Message-ID: <CAGXu5jL3fLwEQBLa1iWQPJaKaujiCYY1p7n8AOsdnedFrcpxvw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v1 2/2] x86/power/64: Fix __PAGE_OFFSET usage on restore
-To: "Rafael J. Wysocki" <rjw@rjwysocki.net>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Yinghai Lu <yinghai@kernel.org>, Pavel Machek <pavel@ucw.cz>, x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Subject: Re: [kernel-hardening] Re: [PATCH 2/2] security, perf: Add config
+ option to restrict perf_event_open
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 1, 2016 at 5:38 PM, Rafael J. Wysocki <rjw@rjwysocki.net> wrote:
-> On Monday, August 01, 2016 10:08:00 AM Thomas Garnier wrote:
->> When KASLR memory randomization is used, __PAGE_OFFSET is a global
->> variable changed during boot. The assembly code was using the variable
->> as an immediate value to calculate the cr3 physical address. The
->> physical address was incorrect resulting to a GP fault.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->>  arch/x86/power/hibernate_asm_64.S | 12 +++++++++++-
->>  1 file changed, 11 insertions(+), 1 deletion(-)
->>
->> diff --git a/arch/x86/power/hibernate_asm_64.S b/arch/x86/power/hibernate_asm_64.S
->> index 8eee0e9..8db4905 100644
->> --- a/arch/x86/power/hibernate_asm_64.S
->> +++ b/arch/x86/power/hibernate_asm_64.S
->> @@ -23,6 +23,16 @@
->>  #include <asm/processor-flags.h>
->>  #include <asm/frame.h>
->>
->> +/*
->> + * A global variable holds the page_offset when KASLR memory randomization
->> + * is enabled.
->> + */
->> +#ifdef CONFIG_RANDOMIZE_MEMORY
->> +#define __PAGE_OFFSET_REF __PAGE_OFFSET
+On Tue, Aug 2, 2016 at 2:55 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Wed, Jul 27, 2016 at 07:46:23AM -0700, Jeff Vander Stoep wrote:
+>> +++ b/kernel/events/core.c
+>> @@ -355,7 +355,11 @@ static struct srcu_struct pmus_srcu;
+>>   *   2 - disallow kernel profiling for unpriv
+>>   *   3 - disallow all unpriv perf event use
+>>   */
+>> +#ifdef CONFIG_SECURITY_PERF_EVENTS_RESTRICT
+>> +int sysctl_perf_event_paranoid __read_mostly = 3;
 >> +#else
->> +#define __PAGE_OFFSET_REF $__PAGE_OFFSET
+>>  int sysctl_perf_event_paranoid __read_mostly = 2;
 >> +#endif
->> +
->>  ENTRY(swsusp_arch_suspend)
->>       movq    $saved_context, %rax
->>       movq    %rsp, pt_regs_sp(%rax)
->> @@ -72,7 +82,7 @@ ENTRY(restore_image)
->>       /* code below has been relocated to a safe page */
->>  ENTRY(core_restore_code)
->>       /* switch to temporary page tables */
->> -     movq    $__PAGE_OFFSET, %rcx
->> +     movq    __PAGE_OFFSET_REF, %rcx
->>       subq    %rcx, %rax
->>       movq    %rax, %cr3
->>       /* flush TLB */
 >>
+>>  /* Minimum for 512 kiB + 1 user control page */
+>>  int sysctl_perf_event_mlock __read_mostly = 512 + (PAGE_SIZE / 1024); /* 'free' kiB per user */
+>> diff --git a/security/Kconfig b/security/Kconfig
+>> index df28f2b..2a93551 100644
+>> --- a/security/Kconfig
+>> +++ b/security/Kconfig
+>> @@ -18,6 +18,15 @@ config SECURITY_DMESG_RESTRICT
+>>
+>>         If you are unsure how to answer this question, answer N.
+>>
+>> +config SECURITY_PERF_EVENTS_RESTRICT
+>> +     bool "Restrict unprivileged use of performance events"
+>> +     depends on PERF_EVENTS
+>> +     help
+>> +       If you say Y here, the kernel.perf_event_paranoid sysctl
+>> +       will be set to 3 by default, and no unprivileged use of the
+>> +       perf_event_open syscall will be permitted unless it is
+>> +       changed.
 >
-> I'm not particularly liking the #ifdefs and they won't be really
-> necessary if the subtraction is carried out by the C code IMO.
+> NAK.
 >
-> What about the patch below instead?
+> Apart from the fact that I hate the 3 thing this is not how you do
+> default CONFIG knobs for !bool state variables.
 >
+> Use an "int" config not a "bool" config and allow all options to be
+> default.
 
-Yes, I think that's a good idea. I will test it and send PATCH v2.
+How about leaving off 2/2 and just keeping 1/2 of this series?
 
-Thanks for the quick feedback.
+-Kees
 
-> ---
->  arch/x86/power/hibernate_64.c     |   18 +++++++++---------
->  arch/x86/power/hibernate_asm_64.S |    2 --
->  2 files changed, 9 insertions(+), 11 deletions(-)
->
-> Index: linux-pm/arch/x86/power/hibernate_asm_64.S
-> ===================================================================
-> --- linux-pm.orig/arch/x86/power/hibernate_asm_64.S
-> +++ linux-pm/arch/x86/power/hibernate_asm_64.S
-> @@ -72,8 +72,6 @@ ENTRY(restore_image)
->         /* code below has been relocated to a safe page */
->  ENTRY(core_restore_code)
->         /* switch to temporary page tables */
-> -       movq    $__PAGE_OFFSET, %rcx
-> -       subq    %rcx, %rax
->         movq    %rax, %cr3
->         /* flush TLB */
->         movq    %rbx, %rcx
-> Index: linux-pm/arch/x86/power/hibernate_64.c
-> ===================================================================
-> --- linux-pm.orig/arch/x86/power/hibernate_64.c
-> +++ linux-pm/arch/x86/power/hibernate_64.c
-> @@ -37,11 +37,11 @@ unsigned long jump_address_phys;
->   */
->  unsigned long restore_cr3 __visible;
->
-> -pgd_t *temp_level4_pgt __visible;
-> +unsigned long temp_level4_pgt __visible;
->
->  unsigned long relocated_restore_code __visible;
->
-> -static int set_up_temporary_text_mapping(void)
-> +static int set_up_temporary_text_mapping(pgd_t *pgd)
->  {
->         pmd_t *pmd;
->         pud_t *pud;
-> @@ -71,7 +71,7 @@ static int set_up_temporary_text_mapping
->                 __pmd((jump_address_phys & PMD_MASK) | __PAGE_KERNEL_LARGE_EXEC));
->         set_pud(pud + pud_index(restore_jump_address),
->                 __pud(__pa(pmd) | _KERNPG_TABLE));
-> -       set_pgd(temp_level4_pgt + pgd_index(restore_jump_address),
-> +       set_pgd(pgd + pgd_index(restore_jump_address),
->                 __pgd(__pa(pud) | _KERNPG_TABLE));
->
->         return 0;
-> @@ -90,15 +90,16 @@ static int set_up_temporary_mappings(voi
->                 .kernel_mapping = true,
->         };
->         unsigned long mstart, mend;
-> +       pgd_t *pgd;
->         int result;
->         int i;
->
-> -       temp_level4_pgt = (pgd_t *)get_safe_page(GFP_ATOMIC);
-> -       if (!temp_level4_pgt)
-> +       pgd = (pgd_t *)get_safe_page(GFP_ATOMIC);
-> +       if (!pgd)
->                 return -ENOMEM;
->
->         /* Prepare a temporary mapping for the kernel text */
-> -       result = set_up_temporary_text_mapping();
-> +       result = set_up_temporary_text_mapping(pgd);
->         if (result)
->                 return result;
->
-> @@ -107,13 +108,12 @@ static int set_up_temporary_mappings(voi
->                 mstart = pfn_mapped[i].start << PAGE_SHIFT;
->                 mend   = pfn_mapped[i].end << PAGE_SHIFT;
->
-> -               result = kernel_ident_mapping_init(&info, temp_level4_pgt,
-> -                                                  mstart, mend);
-> -
-> +               result = kernel_ident_mapping_init(&info, pgd, mstart, mend);
->                 if (result)
->                         return result;
->         }
->
-> +       temp_level4_pgt = (unsigned long)pgd - __PAGE_OFFSET;
->         return 0;
->  }
->
->
+-- 
+Kees Cook
+Chrome OS & Brillo Security
