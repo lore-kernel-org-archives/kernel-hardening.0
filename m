@@ -1,47 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Tue, 2 Aug 2016 10:14:56 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20160802081438.GE9601@gmail.com>
-References: <1469635196-122447-1-git-send-email-thgarnie@google.com>
- <CAJcbSZHZa0tk29i08xKwRuSA0hSQJ7ec3+-1W3zQ5pibC19v_Q@mail.gmail.com>
+Date: Tue, 2 Aug 2016 11:52:43 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20160802095243.GD6862@twins.programming.kicks-ass.net>
+References: <1469630746-32279-1-git-send-email-jeffv@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAJcbSZHZa0tk29i08xKwRuSA0hSQJ7ec3+-1W3zQ5pibC19v_Q@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH] x86/mm: Enable KASLR for vmemmap memory region (x86_64)
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, x86@kernel.org, LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <1469630746-32279-1-git-send-email-jeffv@google.com>
+Subject: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further restriction of
+ perf_event_open
+To: Jeff Vander Stoep <jeffv@google.com>
+Cc: kernel-hardening@lists.openwall.com, mingo@redhat.com, acme@kernel.org, alexander.shishkin@linux.intel.com, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Thomas Garnier <thgarnie@google.com> wrote:
-
-> On Wed, Jul 27, 2016 at 8:59 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> > Add vmemmap in the list of randomized memory regions.
-> >
-> > The vmemmap region holds a representation of the physical memory (through
-> > a struct page array). An attacker could use this region to disclose the
-> > kernel memory layout (walking the page linked list).
-> >
-> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > ---
-> > Missing patch didn't pick-up by the tip bot on KASLR memory randomization.
-> > Resending after rebase on tip and tests as discussed with Ingo.
-> > Based on tip 4bcc8cf6ab5932cbb2511c8e18065e61b069f21c
+On Wed, Jul 27, 2016 at 07:45:46AM -0700, Jeff Vander Stoep wrote:
+> When kernel.perf_event_paranoid is set to 3 (or greater), disallow
+> all access to performance events by users without CAP_SYS_ADMIN.
 > 
-> Ingo: Any comment? Can you integrate it on tip?
-> 
-> > ---
-> >  arch/x86/include/asm/kaslr.h            |  1 +
-> >  arch/x86/include/asm/pgtable_64_types.h |  4 +++-
-> >  arch/x86/mm/kaslr.c                     | 24 +++++++++++++++++++++++-
-> >  3 files changed, 27 insertions(+), 2 deletions(-)
+> This new level of restriction is intended to reduce the attack
+> surface of the kernel. Perf is a valuable tool for developers but
+> is generally unnecessary and unused on production systems. Perf may
+> open up an attack vector to vulnerable device-specific drivers as
+> recently demonstrated in CVE-2016-0805, CVE-2016-0819,
+> CVE-2016-0843, CVE-2016-3768, and CVE-2016-3843.
 
-After the merge window is over. There's no bad effect from the lack of this patch, 
-other than lower level of randomization of kernel virtual addresses, right?
+We have bugs we fix them, we don't kill complete infrastructure because
+of them.
 
-Thanks,
+> This new level of
+> restriction allows for a safe default to be set on production systems
+> while leaving a simple means for developers to grant access [1].
 
-	Ingo
+So the problem I have with this is that it will completely inhibit
+development of things like JITs that self-profile to re-compile
+frequently used code.
+
+I would much rather have an LSM hook where the security stuff can do
+more fine grained control of things. Allowing some apps perf usage while
+denying others.
