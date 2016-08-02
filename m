@@ -1,114 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Tue, 2 Aug 2016 17:17:19 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC560127815C@ORSMSX103.amr.corp.intel.com>
-References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
- <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
- <20160726200309.GJ4541@io.lakedaemon.net>
- <476DC76E7D1DF2438D32BFADF679FC560125F29C@ORSMSX103.amr.corp.intel.com>
- <20160726205944.GM4541@io.lakedaemon.net>
- <476DC76E7D1DF2438D32BFADF679FC5601260068@ORSMSX103.amr.corp.intel.com>
- <20160726214453.GN4541@io.lakedaemon.net>
-In-Reply-To: <20160726214453.GN4541@io.lakedaemon.net>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] [RFC] Introduce mmap randomization
-To: Jason Cooper <jason@lakedaemon.net>
-Cc: "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "nnk@google.com" <nnk@google.com>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
+Sender: yhlu.kernel@gmail.com
+In-Reply-To: <1470071280-78706-2-git-send-email-thgarnie@google.com>
+References: <1470071280-78706-1-git-send-email-thgarnie@google.com> <1470071280-78706-2-git-send-email-thgarnie@google.com>
+From: Yinghai Lu <yinghai@kernel.org>
+Date: Tue, 2 Aug 2016 10:36:27 -0700
+Message-ID: <CAE9FiQXPnXa_Ep2nk+y5boZ9Csdk_yoH5Ws8SaExn0-VHU9bBg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v1 1/2] x86/power/64: Support unaligned addresses for
+ temporary mapping
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Pavel Machek <pavel@ucw.cz>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Aug 1, 2016 at 10:07 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> Correctly setup the temporary mapping for hibernation. Previous
+> implementation assumed the address was aligned on the PGD level. With
+> KASLR memory randomization enabled, the address is randomized on the PUD
+> level. This change supports unaligned address up to PMD.
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+>  arch/x86/mm/ident_map.c | 18 ++++++++++--------
+>  1 file changed, 10 insertions(+), 8 deletions(-)
+>
+> diff --git a/arch/x86/mm/ident_map.c b/arch/x86/mm/ident_map.c
+> index ec21796..ea1ebf1 100644
+> --- a/arch/x86/mm/ident_map.c
+> +++ b/arch/x86/mm/ident_map.c
+> @@ -3,15 +3,16 @@
+>   * included by both the compressed kernel and the regular kernel.
+>   */
+>
+> -static void ident_pmd_init(unsigned long pmd_flag, pmd_t *pmd_page,
+> +static void ident_pmd_init(struct x86_mapping_info *info, pmd_t *pmd_page,
+>                            unsigned long addr, unsigned long end)
+>  {
+> -       addr &= PMD_MASK;
+> -       for (; addr < end; addr += PMD_SIZE) {
+> -               pmd_t *pmd = pmd_page + pmd_index(addr);
+> +       int off = info->kernel_mapping ? pmd_index(__PAGE_OFFSET) : 0;
+> +
+> +       for (addr &= PMD_MASK; addr < end; addr += PMD_SIZE) {
+> +               pmd_t *pmd = pmd_page + pmd_index(addr) + off;
+>
+>                 if (!pmd_present(*pmd))
+> -                       set_pmd(pmd, __pmd(addr | pmd_flag));
+> +                       set_pmd(pmd, __pmd(addr | info->pmd_flag));
+>         }
+>  }
+>
+> @@ -19,9 +20,10 @@ static int ident_pud_init(struct x86_mapping_info *info, pud_t *pud_page,
+>                           unsigned long addr, unsigned long end)
+>  {
+>         unsigned long next;
+> +       int off = info->kernel_mapping ? pud_index(__PAGE_OFFSET) : 0;
+>
+>         for (; addr < end; addr = next) {
+> -               pud_t *pud = pud_page + pud_index(addr);
+> +               pud_t *pud = pud_page + pud_index(addr) + off;
+>                 pmd_t *pmd;
+>
+>                 next = (addr & PUD_MASK) + PUD_SIZE;
 
+Is there any chance for (pud_index(addr) + off) or (pmd_index(addr) + off)
+bigger than 512?
 
-> -----Original Message-----
-> From: Jason Cooper [mailto:jason@lakedaemon.net]
-> Sent: Tuesday, July 26, 2016 2:45 PM
-> To: Roberts, William C <william.c.roberts@intel.com>
-> Cc: linux-mm@kvack.org; linux-kernel@vger.kernel.org; kernel-
-> hardening@lists.openwall.com; akpm@linux-foundation.org;
-> keescook@chromium.org; gregkh@linuxfoundation.org; nnk@google.com;
-> jeffv@google.com; salyzyn@android.com; dcashman@android.com
-> Subject: Re: [PATCH] [RFC] Introduce mmap randomization
->=20
-> On Tue, Jul 26, 2016 at 09:06:30PM +0000, Roberts, William C wrote:
-> > > From: owner-linux-mm@kvack.org [mailto:owner-linux-mm@kvack.org] On
-> > > Behalf Of Jason Cooper On Tue, Jul 26, 2016 at 08:13:23PM +0000,
-> > > Roberts, William C wrote:
-> > > > > > From: Jason Cooper [mailto:jason@lakedaemon.net] On Tue, Jul
-> > > > > > 26,
-> > > > > > 2016 at 11:22:26AM -0700, william.c.roberts@intel.com wrote:
-> > > > > > > Performance Measurements:
-> > > > > > > Using strace with -T option and filtering for mmap on the
-> > > > > > > program ls shows a slowdown of approximate 3.7%
-> > > > > >
-> > > > > > I think it would be helpful to show the effect on the resulting=
- object
-> code.
-> > > > >
-> > > > > Do you mean the maps of the process? I have some captures for
-> > > > > whoopsie on my Ubuntu system I can share.
-> > >
-> > > No, I mean changes to mm/mmap.o.
-> >
-> > Sure I can post the objdump of that, do you just want a diff of old vs =
-new?
->=20
-> Well, I'm partial to scripts/objdiff, but bloat-o-meter might be more fam=
-iliar to
-> most of the folks who you'll be trying to convince to merge this.
+Looks like we need to change the loop from phys address to virtual
+address instead.
+to avoid the overflow.
 
-Ahh I didn't know there were tools for this, thanks.
+Thanks
 
->=20
-> But that's the least of your worries atm. :-/  I was going to dig into mm=
-ap.c to
-> confirm my suspicions, but Nick answered it for me.
-> Fragmentation caused by this sort of feature is known to have caused prob=
-lems
-> in the past.
-
-I don't know of any mmap randomization done in the past like this. Only the=
- ASLR stuff, which
-has had known issues on 32 bit address spaces.
-
->=20
-> I would highly recommend studying those prior use cases and answering tho=
-se
-> concerns before progressing too much further.  As I've mentioned elsewher=
-e,
-> you'll need to quantify the increased difficulty to the attacker that you=
-r patch
-> imposes.  Personally, I would assess that first to see if it's worth the =
-effort at all.
-
-Yes agreed.
-
->=20
-> > > > > One thing I didn't make clear in my commit message is why this
-> > > > > is good. Right now, if you know An address within in a process,
-> > > > > you know all offsets done with mmap(). For instance, an offset
-> > > > > To libX can yield libY by adding/subtracting an offset. This is
-> > > > > meant to make rops a bit harder, or In general any mapping
-> > > > > offset mmore difficult to
-> > > find/guess.
-> > >
-> > > Are you able to quantify how many bits of entropy you're imposing on
-> > > the attacker?  Is this a chair in the hallway or a significant
-> > > increase in the chances of crashing the program before finding the
-> > > desired address?
-> >
-> > I'd likely need to take a small sample of programs and examine them,
-> > especially considering That as gaps are harder to find, it forces the
-> > randomization down and randomization can Be directly altered with
-> > length on mmap(), versus randomize_addr() which didn't have this
-> > restriction but OOM'd do to fragmented easier.
->=20
-> Right, after the Android feedback from Nick, I think you have a lot of wo=
-rk on
-> your hands.  Not just in design, but also in developing convincing argume=
-nts
-> derived from real use cases.
->=20
-> thx,
->=20
-> Jason.
+Yinghai
