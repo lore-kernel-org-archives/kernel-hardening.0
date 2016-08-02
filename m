@@ -1,72 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <CAGXu5jL8UBfs7NjSgKOeqd9toRgtW3gPu53TPLbTMRJiwRUvPg@mail.gmail.com>
-References: <1465336628-18219-1-git-send-email-keescook@chromium.org> <1465336628-18219-4-git-send-email-keescook@chromium.org> <87h9b4oebf.fsf@concordia.ellerman.id.au> <CAGXu5jL8UBfs7NjSgKOeqd9toRgtW3gPu53TPLbTMRJiwRUvPg@mail.gmail.com>
-Date: Tue, 02 Aug 2016 13:12:02 +1000
-Message-ID: <87eg67ooe5.fsf@concordia.ellerman.id.au>
+In-Reply-To: <20160801231723.GG4541@io.lakedaemon.net>
+References: <20160728204730.27453-1-jason@lakedaemon.net> <20160730154244.403-1-jason@lakedaemon.net> <20160730154244.403-2-jason@lakedaemon.net> <CAGXu5jL3ZtjbhOYujVUpBuDttPjetaz8rSY_hNK13r6OtR4sFQ@mail.gmail.com> <20160731205632.GY4541@io.lakedaemon.net> <CAGXu5jJVM=LXA10z06zVcFDSbf8s72HcOPRc_nUeuU7W=-3JWg@mail.gmail.com> <20160801231723.GG4541@io.lakedaemon.net>
+Date: Tue, 02 Aug 2016 13:35:13 +1000
+Message-ID: <878twfonbi.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
 Content-Type: text/plain
-Subject: Re: [kernel-hardening] Re: Linker segfault on powerpc when CONFIG_LKDTM=y (was Re: [kernel-hardening] [PATCH 3/5] lkdtm: add function for testing .rodata section)
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Andrew Morton <akpm@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Mauro Carvalho Chehab <mchehab@osg.samsung.com>, Jiri Slaby <jslaby@suse.cz>, Guenter Roeck <linux@roeck-us.net>, LKML <linux-kernel@vger.kernel.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Anton Blanchard <anton@samba.org>, Alan Modra <amodra@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v2 1/7] random: Simplify API for random address requests
+To: Jason Cooper <jason@lakedaemon.net>, Kees Cook <keescook@chromium.org>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, Yann Droneaud <ydroneaud@opteya.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, Greg KH <gregkh@linuxfoundation.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Al Viro <viro@zeniv.linux.org.uk>, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
-
-> On Mon, Aug 1, 2016 at 5:37 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
->> Kees Cook <keescook@chromium.org> writes:
->>
->>> This adds a function that lives in the .rodata section. The section
->>> flags are corrected using objcopy since there is no way with gcc to
->>> declare section flags in an architecture-agnostic way.
->>>
->>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>> ---
->>>  drivers/misc/Makefile       |  7 +++++++
->>>  drivers/misc/lkdtm.h        |  6 ++++++
->>>  drivers/misc/lkdtm_core.c   | 24 +++++++++++++++++-------
->>>  drivers/misc/lkdtm_rodata.c | 10 ++++++++++
->>>  4 files changed, 40 insertions(+), 7 deletions(-)
->>>  create mode 100644 drivers/misc/lkdtm.h
->>>  create mode 100644 drivers/misc/lkdtm_rodata.c
->>
->> This is blowing up my linker :(
->>
->>   scripts/link-vmlinux.sh: line 52: 36260 Segmentation fault      (core dumped) ${LD} ${LDFLAGS} ${LDFLAGS_vmlinux} -o ${2} -T ${lds} ${KBUILD_VMLINUX_INIT} --start-group ${KBUILD_VMLINUX_MAIN} --end-group ${1}
->>
->> Haven't had a chance to debug it further.
+Jason Cooper <jason@lakedaemon.net> writes:
+> On Mon, Aug 01, 2016 at 12:47:59PM -0700, Kees Cook wrote:
+>> On Sun, Jul 31, 2016 at 1:56 PM, Jason Cooper <jason@lakedaemon.net> wrote:
+>> 
+>> I have no new call sites in mind, but it seems safe to add a BUG_ON to
+>> verify we don't gain callers that don't follow the correct
+>> expectations. (Or maybe WARN and return start.)
 >
-> Argh. Do you want a quick fix for this now? I can add a PPC CONFIG
-> blacklist for the rodata check, maybe?
+> No, I think BUG_ON is appropriate.  afaict, the only time this will be
+> encountered is during the development process.
 
-Nah that's OK, none of our defconfigs have it enabled so it's not a real
-blocker. It also builds OK as a module - though I haven't tested the
-result yet.
+Unless it's not.
 
-> Also, what version of gcc? I'll see if I can reproduce this with a
-> cross compiler...
-
-The original hit was with gcc-5.3 (which is actually a x86->ppc cross):
-
-  http://kisskb.ellerman.id.au/kisskb/buildresult/12762730/
-
-But I can also reproduce with 5.4, and 6.1.0.
-
-Interestingly I *can't* reproduce with the Ubuntu x86->ppc cross
-(5.4.0-6ubuntu1~16.04.1).
-
-Those toolchains are all using binutils 2.26 AFAIK.
-
-Going back to a really old toolchain (gcc 4.6.3/binutils 2.22) it does
-build but I get these warnings:
-
- powerpc64-linux-ld: drivers/misc/built-in.o: .opd is not a regular array of opd entries
- powerpc64-linux-ld: drivers/built-in.o: .opd is not a regular array of opd entries
- powerpc64-linux-ld: drivers/built-in.o: .opd is not a regular array of opd entries
- powerpc64-linux-ld: drivers/built-in.o: .opd is not a regular array of opd entries
- powerpc64-linux-ld: drivers/built-in.o: .opd is not a regular array of opd entries
-
-
-So probably don't worry about it and we'll try and work it out on our end.
+Why crash someone's system when you could just page align the value
+you're given?
 
 cheers
