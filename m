@@ -1,39 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 3 Aug 2016 23:44:37 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20160803214437.GI6879@twins.programming.kicks-ass.net>
-References: <1469630746-32279-1-git-send-email-jeffv@google.com>
- <20160802095243.GD6862@twins.programming.kicks-ass.net>
- <CAGXu5j+q4qWFspRCPEd5-MM05Sh_r6VYSQhP7gcAuRMygeZwjg@mail.gmail.com>
- <20160802203037.GC6879@twins.programming.kicks-ass.net>
- <CAGXu5jJ+b4mWQ+RwPLo26di1qUwKT344GoN6xwzA1fw5Ke=ydA@mail.gmail.com>
- <87shulix2z.fsf@x220.int.ebiederm.org>
- <CAGXu5j+wrXtp5oDAmyUWf7Gt9mWa4SfuqnnMBW+74UuC0YDD1A@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+wrXtp5oDAmyUWf7Gt9mWa4SfuqnnMBW+74UuC0YDD1A@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further
- restriction of perf_event_open
-To: Kees Cook <keescook@chromium.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>
+From: Jason Cooper <jason@lakedaemon.net>
+Date: Wed,  3 Aug 2016 23:39:06 +0000
+Message-Id: <20160803233913.32511-1-jason@lakedaemon.net>
+In-Reply-To: <20160728204730.27453-1-jason@lakedaemon.net>
+References: <20160728204730.27453-1-jason@lakedaemon.net>
+Subject: [kernel-hardening] [PATCH v3 0/7] char/random: Simplify random address requests
+To: Kees Cook <keescook@chromium.org>, Michael Ellerman <mpe@ellerman.id.au>, "Roberts, William C" <william.c.roberts@intel.com>, Yann Droneaud <ydroneaud@opteya.com>
+Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, kernel-hardening <kernel-hardening@lists.openwall.com>, Russell King - ARM Linux <linux@arm.linux.org.uk>, Andrew Morton <akpm@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Arnd Bergmann <arnd@arndb.de>, gregkh@linuxfoundation.org, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ralf Baechle <ralf@linux-mips.org>, benh@kernel.crashing.org, paulus@samba.org, "David S. Miller" <davem@davemloft.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, x86@kernel.org, viro@zeniv.linux.org.uk, Nick Kralevich <nnk@google.com>, Jeffrey Vander Stoep <jeffv@google.com>, Daniel Cashman <dcashman@android.com>, Jason Cooper <jason@lakedaemon.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 03, 2016 at 11:53:41AM -0700, Kees Cook wrote:
-> > Kees Cook <keescook@chromium.org> writes:
-> >
-> >> On Tue, Aug 2, 2016 at 1:30 PM, Peter Zijlstra <peterz@infradead.org> wrote:
-> >> Let me take this another way instead. What would be a better way to
-> >> provide a mechanism for system owners to disable perf without an LSM?
-> >> (Since far fewer folks run with an enforcing "big" LSM: I'm seeking as
-> >> wide a coverage as possible.)
-> >
-> > I vote for sandboxes.  Perhaps seccomp.  Perhaps a per userns sysctl.
-> > Perhaps something else.
-> 
-> Peter, did you happen to see Eric's solution to this problem for
-> namespaces? Basically, a per-userns sysctl instead of a global sysctl.
-> Is that something that would be acceptable here?
+Two previous attempts have been made to rework this API.  The first can be
+found at:
 
-Someone would have to educate me on what a userns is and how that would
-help here.
+  https://lkml.kernel.org/r/cover.1390770607.git.ydroneaud@opteya.com
+
+The second at:
+
+  https://lkml.kernel.org/r/1469471141-25669-1-git-send-email-william.c.roberts@intel.com
+
+Previous versions of this series can been seen at:
+
+RFC:  https://lkml.kernel.org/r/20160726030201.6775-1-jason@lakedaemon.net
+ v1:  https://lkml.kernel.org/r/20160728204730.27453-1-jason@lakedaemon.net
+ v2:  https://lkml.kernel.org/r/20160730154244.403-1-jason@lakedaemon.net
+
+In addition to incorporating ideas from these two previous efforts, this series
+adds several desirable features.  First, we take the range as an argument
+directly, which removes math both before the call and inside the function.
+Second, we return the start address on error.  All callers fell back to the
+start address on error, so we remove the need to check for errors.  Third, we
+cap range to prevent overflow.  Last, we use kerneldoc to describe the new
+function.
+
+If possible, I'd like to request Acks from the various subsystems so that we
+can merge this as one bisectable branch.
+
+Changes from v2:
+ - s/randomize_addr/randomize_page/ (Kees Cook)
+ - PAGE_ALIGN(start) if it wasn't (Kees Cook, Michael Ellerman)
+
+Changes from v1:
+ - Explicitly mention page_aligned start assumption (Yann Droneaud)
+ - pick random pages vice random addresses (Yann Droneaud)
+ - catch range=0 last
+ - Add Ack for arm64 (Will Deacon)
+
+Jason Cooper (7):
+  random: Simplify API for random address requests
+  x86: Use simpler API for random address requests
+  ARM: Use simpler API for random address requests
+  arm64: Use simpler API for random address requests
+  tile: Use simpler API for random address requests
+  unicore32: Use simpler API for random address requests
+  random: Remove unused randomize_range()
+
+ arch/arm/kernel/process.c       |  3 +--
+ arch/arm64/kernel/process.c     |  8 ++------
+ arch/tile/mm/mmap.c             |  3 +--
+ arch/unicore32/kernel/process.c |  3 +--
+ arch/x86/kernel/process.c       |  3 +--
+ arch/x86/kernel/sys_x86_64.c    |  5 +----
+ drivers/char/random.c           | 36 +++++++++++++++++++++++++-----------
+ include/linux/random.h          |  2 +-
+ 8 files changed, 33 insertions(+), 30 deletions(-)
+
+-- 
+2.9.2
