@@ -1,50 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Michael Ellerman <mpe@ellerman.id.au>
-Date: Wed,  3 Aug 2016 14:59:31 +1000
-Message-Id: <1470200371-31565-1-git-send-email-mpe@ellerman.id.au>
-Subject: [kernel-hardening] [PATCH] lkdtm: Mark lkdtm_rodata_do_nothing() notrace
-To: Kees Cook <keescook@chromium.org>
-Cc: linuxppc-dev@ozlabs.org, linux-kernel@vger.kernel.org, Andrew Morton <akpm@osdl.org>, Greg Kroah-Hartman <greg@kroah.com>, kernel-hardening@lists.openwall.com, Anton Blanchard <anton@samba.org>, amodra@gmail.com, Nick Piggin <npiggin@gmail.com>
+Date: Wed, 3 Aug 2016 16:36:23 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+Message-ID: <alpine.LRH.2.20.1608031635340.19613@namei.org>
+References: <1469777680-3687-1-git-send-email-elena.reshetova@intel.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [RFC] [PATCH 0/5] Hardchroot LSM + additional hooks
+To: Elena Reshetova <elena.reshetova@intel.com>
+Cc: kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, keescook@chromium.org, spender@grsecurity.net, casey.schaufler@intel.com, michael.leibowitz@intel.com, william.c.roberts@intel.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-lkdtm_rodata_do_nothing() is an empty function which is generated in
-order to test the non-executability of rodata.
+On Fri, 29 Jul 2016, Elena Reshetova wrote:
 
-Currently if function tracing is enabled then an mcount callsite will be
-generated for lkdtm_rodata_do_nothing(), and it will appear in the list
-of available functions for function tracing (available_filter_functions).
+>  fs/fhandle.c                         |   5 +
+>  fs/fs_struct.c                       |   7 +-
+>  fs/namespace.c                       |  15 +-
+>  fs/open.c                            |   3 +
+>  include/linux/lsm_hooks.h            |  37 ++
+>  include/linux/security.h             |  19 +
+>  kernel/fork.c                        |   5 +
+>  security/Kconfig                     |   1 +
+>  security/Makefile                    |   2 +
+>  security/hardchroot/Kconfig          |  10 +
+>  security/hardchroot/Makefile         |   3 +
+>  security/hardchroot/hardchroot_lsm.c | 654 +++++++++++++++++++++++++++++++++++
+>  security/security.c                  |  30 ++
+>  13 files changed, 786 insertions(+), 5 deletions(-)
+>  create mode 100644 security/hardchroot/Kconfig
+>  create mode 100644 security/hardchroot/Makefile
+>  create mode 100644 security/hardchroot/hardchroot_lsm.c
 
-Given it's purpose purely as a test function, it seems preferable for
-lkdtm_rodata_do_nothing() to be marked notrace, so it doesn't appear as
-traceable.
+Please cc: Al Viro on these changes.
 
-This also avoids triggering a linker bug on powerpc:
 
-  https://sourceware.org/bugzilla/show_bug.cgi?id=20428
-
-When the linker sees code that needs to generate a call stub, eg. a
-branch to mcount(), it assumes the section is executable and
-dereferences a NULL pointer leading to a linker segfault. Marking
-lkdtm_rodata_do_nothing() notrace avoids triggering the bug because the
-function contains no other function calls.
-
-Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
----
- drivers/misc/lkdtm_rodata.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/drivers/misc/lkdtm_rodata.c b/drivers/misc/lkdtm_rodata.c
-index 166b1db3969f..3564477b8c2d 100644
---- a/drivers/misc/lkdtm_rodata.c
-+++ b/drivers/misc/lkdtm_rodata.c
-@@ -4,7 +4,7 @@
-  */
- #include "lkdtm.h"
- 
--void lkdtm_rodata_do_nothing(void)
-+void notrace lkdtm_rodata_do_nothing(void)
- {
- 	/* Does nothing. We just want an architecture agnostic "return". */
- }
 -- 
-2.7.4
+James Morris
+<jmorris@namei.org>
