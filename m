@@ -1,54 +1,36 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1470329589.22643.117.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Thu, 04 Aug 2016 12:53:09 -0400
-In-Reply-To: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Thu, 4 Aug 2016 16:55:19 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC560127DD18@ORSMSX103.amr.corp.intel.com>
 References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-XkGgBfrMkywwOo3O8N1Z"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] [PATCH] [RFC] Introduce mmap randomization
-To: kernel-hardening@lists.openwall.com, jason@lakedaemon.net, linux-mm@vger.kernel.org, linux-kernel@vger.kernel.org, akpm@linux-foundation.org
-Cc: keescook@chromium.org, gregkh@linuxfoundation.org, nnk@google.com, jeffv@google.com, salyzyn@android.com, dcashman@android.com
+ <1470329589.22643.117.camel@gmail.com>
+In-Reply-To: <1470329589.22643.117.camel@gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] [PATCH] [RFC] Introduce mmap randomization
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "jason@lakedaemon.net" <jason@lakedaemon.net>, "linux-mm@vger.kernel.org" <linux-mm@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "nnk@google.com" <nnk@google.com>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
---=-XkGgBfrMkywwOo3O8N1Z
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-
-On Tue, 2016-07-26 at 11:22 -0700, william.c.roberts@intel.com wrote:
-> The recent get_random_long() change in get_random_range() and then the
-> subsequent patches Jason put out, all stemmed from my tinkering
-> with the concept of randomizing mmap.
->=20
-> Any feedback would be greatly appreciated, including any feedback
-> indicating that I am idiot.
-
-The RAND_THREADSTACK feature in grsecurity makes the gaps the way I
-think would be ideal, i.e. tracked as part of the appropriate VMA. It
-would be straightforward to make it more general purpose.
---=-XkGgBfrMkywwOo3O8N1Z
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIyBAABCAAdBQJXo3L1FhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
-8iqJJw/4/LHorEjAdGH7oSLHhx6KzY8DkiPZG1RrqDOggPNsZI+ACDAZtp/c7J5m
-sdBYRsSK3wr4rsVAlWSPwh81J/Iabr9KsLiJbZJbLMn9bBQuuPsei3ySpOxK8PiG
-FSdWZmYe1LRRHSGCUETbOLpkDWikLKGJIUlgDMWDcNce5wCXwm/uUnAkwUXGHF69
-S2JM3CfJxq9U3H+VmBxQFA9SW+Wb8Lls3VaMPOheZvmTwg418N/W1BaUaF59OOI7
-ZjAnIAJcryi+iSuguyhLB3CIi/VKMu8K9fvi61d7bPuUIXCico/UriXzCiHEaUoM
-VdFv0YksnthcWL/kqseH79KtVMz2isvgwEkGD7TuZRYp4f1osCZC6mf23C6eTt1S
-6OJuR3QGhw8DJWqB/4biAYn9637jDiIXa3dCwEI2TqVDfdMTpTVYScKmDevtWQAf
-n02EIoMXp61cJ/ystly9Rls1jpfQ1AVDuHYqLOVM/QadCnfqG6TPcP2Irck/GeWl
-PWsbvwhe3WuGhCoP51LvPbbN6WHBKhpmrSjLEIKyuPtCazPucZpz2GhSNY1RVkwp
-Qj6HgTyCyI93P7veINj/Zu0eqx/BlqkyNsgL0Zq8X+/zJkdqsR3pAYUY6IbPSzfk
-uhHRw5oUiXqmnYKA9D83qTRvhoMI1YtkN2QR2Yi8xHugeV3NZg==
-=Ptbg
------END PGP SIGNATURE-----
-
---=-XkGgBfrMkywwOo3O8N1Z--
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBEYW5pZWwgTWljYXkgW21haWx0
+bzpkYW5pZWxtaWNheUBnbWFpbC5jb21dDQo+IFNlbnQ6IFRodXJzZGF5LCBBdWd1c3QgNCwgMjAx
+NiA5OjUzIEFNDQo+IFRvOiBrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgamFz
+b25AbGFrZWRhZW1vbi5uZXQ7IGxpbnV4LQ0KPiBtbUB2Z2VyLmtlcm5lbC5vcmc7IGxpbnV4LWtl
+cm5lbEB2Z2VyLmtlcm5lbC5vcmc7IGFrcG1AbGludXgtDQo+IGZvdW5kYXRpb24ub3JnDQo+IENj
+OiBrZWVzY29va0BjaHJvbWl1bS5vcmc7IGdyZWdraEBsaW51eGZvdW5kYXRpb24ub3JnOyBubmtA
+Z29vZ2xlLmNvbTsNCj4gamVmZnZAZ29vZ2xlLmNvbTsgc2FseXp5bkBhbmRyb2lkLmNvbTsgZGNh
+c2htYW5AYW5kcm9pZC5jb20NCj4gU3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVuaW5nXSBbUEFU
+Q0hdIFtSRkNdIEludHJvZHVjZSBtbWFwIHJhbmRvbWl6YXRpb24NCj4gDQo+IE9uIFR1ZSwgMjAx
+Ni0wNy0yNiBhdCAxMToyMiAtMDcwMCwgd2lsbGlhbS5jLnJvYmVydHNAaW50ZWwuY29tIHdyb3Rl
+Og0KPiA+IFRoZSByZWNlbnQgZ2V0X3JhbmRvbV9sb25nKCkgY2hhbmdlIGluIGdldF9yYW5kb21f
+cmFuZ2UoKSBhbmQgdGhlbiB0aGUNCj4gPiBzdWJzZXF1ZW50IHBhdGNoZXMgSmFzb24gcHV0IG91
+dCwgYWxsIHN0ZW1tZWQgZnJvbSBteSB0aW5rZXJpbmcgd2l0aA0KPiA+IHRoZSBjb25jZXB0IG9m
+IHJhbmRvbWl6aW5nIG1tYXAuDQo+ID4NCj4gPiBBbnkgZmVlZGJhY2sgd291bGQgYmUgZ3JlYXRs
+eSBhcHByZWNpYXRlZCwgaW5jbHVkaW5nIGFueSBmZWVkYmFjaw0KPiA+IGluZGljYXRpbmcgdGhh
+dCBJIGFtIGlkaW90Lg0KPiANCj4gVGhlIFJBTkRfVEhSRUFEU1RBQ0sgZmVhdHVyZSBpbiBncnNl
+Y3VyaXR5IG1ha2VzIHRoZSBnYXBzIHRoZSB3YXkgSSB0aGluaw0KPiB3b3VsZCBiZSBpZGVhbCwg
+aS5lLiB0cmFja2VkIGFzIHBhcnQgb2YgdGhlIGFwcHJvcHJpYXRlIFZNQS4gSXQgd291bGQgYmUN
+Cj4gc3RyYWlnaHRmb3J3YXJkIHRvIG1ha2UgaXQgbW9yZSBnZW5lcmFsIHB1cnBvc2UuDQoNCkkg
+YW0gbm90IGZhbWlsaWFyIHdpdGggdGhhdCwgdGhhbmtzIGZvciBwb2ludGluZyBpdCBvdXQuIEkn
+bGwgdGFrZSBhIGxvb2sgd2hlbiBteSB0aW1lDQpmcmVlcyB1cCBmb3IgdGhpcyBhZ2Fpbi4NCg==
