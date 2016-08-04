@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 4 Aug 2016 17:55:23 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20160804155523.GO6879@twins.programming.kicks-ass.net>
+Date: Thu, 4 Aug 2016 17:10:01 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160804161000.GA11673@leverpostej>
 References: <20160802095243.GD6862@twins.programming.kicks-ass.net>
  <CAGXu5j+q4qWFspRCPEd5-MM05Sh_r6VYSQhP7gcAuRMygeZwjg@mail.gmail.com>
  <20160802203037.GC6879@twins.programming.kicks-ass.net>
@@ -18,21 +18,38 @@ Content-Disposition: inline
 In-Reply-To: <1470325468.22643.95.camel@gmail.com>
 Subject: Re: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow further
  restriction of perf_event_open
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>
+To: kernel-hardening@lists.openwall.com
+Cc: Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Thu, Aug 04, 2016 at 11:44:28AM -0400, Daniel Micay wrote:
+> Qualcomm's drivers might be lower quality than core kernel code, but
+> they're way above the baseline set by mainline kernel drivers...
 
-> This feature doesn't come from Android. The perf events subsystem in the
-> mainline kernel is packed full of vulnerabilities too. 
+I don't think that's true for the arm/arm64 perf code.
 
-Uhh, not so much. I spend a _lot_ of time a while back to get the core
-and x86 solid. I could run the fuzzers for hours on end at some point.
+I think we've done a reasonable job of testing and fixing those, along
+with core infrastructure issues. The perf fuzzer runs for a very long
+time on a mainline kernel without issues, while on my Nexus 5x I get a
+hard lockup after ~85 seconds (and prior to the last android update the
+lockup was instantaneous).
 
-> The problem is so bad that pointing one of the public fuzzers at it
-> for a short period of time is all that's required to start finding
-> them.
+> Shining the same light on mainline drivers wouldn't be pretty. The work
+> going into hardening the Qualcomm drivers isn't happening upstream to
+> any comparable extent.
 
-If you know of any that reproduce on x86 I'll go fix. For anything else
-you need to complain elsewhere as I don't have hardware nor bandwidth.
+>From my personal experience (and as above), and talking specifically
+about PMU drivers, I think that the opposite is true. This is not to say
+there aren't issues; I would not be surprised if there are. But it's
+disingenuous to say that mainline code is worse than that which exists
+in a vendor kernel when the latter is demonstrably much easier to break
+than the former.
+
+If there are issues you are aware of, please report them. If those
+issues only exist in non-upstream code, then the applicable concerns are
+somewhat different (though certainly still exist).
+
+But please, let's frame the argument to match reality.
+
+Thanks,
+Mark.
