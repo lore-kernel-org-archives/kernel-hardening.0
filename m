@@ -1,77 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1470328352.22643.110.camel@gmail.com>
+Message-ID: <1470329589.22643.117.camel@gmail.com>
 From: Daniel Micay <danielmicay@gmail.com>
-Date: Thu, 04 Aug 2016 12:32:32 -0400
-In-Reply-To: <20160804161000.GA11673@leverpostej>
-References: <20160802095243.GD6862@twins.programming.kicks-ass.net>
-	 <CAGXu5j+q4qWFspRCPEd5-MM05Sh_r6VYSQhP7gcAuRMygeZwjg@mail.gmail.com>
-	 <20160802203037.GC6879@twins.programming.kicks-ass.net>
-	 <CAGXu5jJ+b4mWQ+RwPLo26di1qUwKT344GoN6xwzA1fw5Ke=ydA@mail.gmail.com>
-	 <87shulix2z.fsf@x220.int.ebiederm.org>
-	 <1470252976.22643.41.camel@gmail.com> <20160804102854.GB4483@leverpostej>
-	 <1470318323.22643.70.camel@gmail.com>
-	 <20160804141109.GM6879@twins.programming.kicks-ass.net>
-	 <1470325468.22643.95.camel@gmail.com> <20160804161000.GA11673@leverpostej>
+Date: Thu, 04 Aug 2016 12:53:09 -0400
+In-Reply-To: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
+References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
 Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-6mNzZXwJf1XajooxiGYw"
+	protocol="application/pgp-signature"; boundary="=-XkGgBfrMkywwOo3O8N1Z"
 Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH 1/2] security, perf: allow
- further restriction of perf_event_open
-To: kernel-hardening@lists.openwall.com
-Cc: Peter Zijlstra <peterz@infradead.org>, Kees Cook <keescook@chromium.org>, Jeff Vander Stoep <jeffv@google.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jonathan Corbet <corbet@lwn.net>
+Subject: Re: [kernel-hardening] [PATCH] [RFC] Introduce mmap randomization
+To: kernel-hardening@lists.openwall.com, jason@lakedaemon.net, linux-mm@vger.kernel.org, linux-kernel@vger.kernel.org, akpm@linux-foundation.org
+Cc: keescook@chromium.org, gregkh@linuxfoundation.org, nnk@google.com, jeffv@google.com, salyzyn@android.com, dcashman@android.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-6mNzZXwJf1XajooxiGYw
+--=-XkGgBfrMkywwOo3O8N1Z
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Thu, 2016-08-04 at 17:10 +0100, Mark Rutland wrote:
-> On Thu, Aug 04, 2016 at 11:44:28AM -0400, Daniel Micay wrote:
-> >=20
-> > Qualcomm's drivers might be lower quality than core kernel code, but
-> > they're way above the baseline set by mainline kernel drivers...
+On Tue, 2016-07-26 at 11:22 -0700, william.c.roberts@intel.com wrote:
+> The recent get_random_long() change in get_random_range() and then the
+> subsequent patches Jason put out, all stemmed from my tinkering
+> with the concept of randomizing mmap.
 >=20
-> I don't think that's true for the arm/arm64 perf code.
+> Any feedback would be greatly appreciated, including any feedback
+> indicating that I am idiot.
 
-The baseline architecture support is essentially core kernel code. I
-agree it's much better than the SoC vendor code. You're spending a lot
-of time auditing, fuzzing and improving the code in general, which is
-not true for most drivers. They don't get that attention.
-
-> I think we've done a reasonable job of testing and fixing those, along
-> with core infrastructure issues. The perf fuzzer runs for a very long
-> time on a mainline kernel without issues, while on my Nexus 5x I get a
-> hard lockup after ~85 seconds (and prior to the last android update
-> the
-> lockup was instantaneous).
->
-> From my personal experience (and as above), and talking specifically
-> about PMU drivers, I think that the opposite is true. This is not to
-> say
-> there aren't issues; I would not be surprised if there are. But it's
-> disingenuous to say that mainline code is worse than that which exists
-> in a vendor kernel when the latter is demonstrably much easier to
-> break
-> than the former.
-
-I wasn't talking specifically about perf.
-
-> If there are issues you are aware of, please report them. If those
-> issues only exist in non-upstream code, then the applicable concerns
-> are
-> somewhat different (though certainly still exist).
-
-I'm not going to do volunteer work for a corporation. I've learned that
-lesson after spending years doing it.
-
-> But please, let's frame the argument to match reality.
-
-The argument is framed in reality. Stating that it now often takes a few
-hours to find a vulnerability with the unaltered, widely known public
-perf fuzzer is not impressive. It's really an argument for claiming that
-it's a significant security issue.
---=-6mNzZXwJf1XajooxiGYw
+The RAND_THREADSTACK feature in grsecurity makes the gaps the way I
+think would be ideal, i.e. tracked as part of the appropriate VMA. It
+would be straightforward to make it more general purpose.
+--=-XkGgBfrMkywwOo3O8N1Z
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: This is a digitally signed message part
 Content-Transfer-Encoding: 7bit
@@ -79,19 +36,19 @@ Content-Transfer-Encoding: 7bit
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQIzBAABCAAdBQJXo24gFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
-8ir1Hg//WBuCvmojXN//kOkxYRzNY5nBo/ijvVlpFihf8sdKI1nqJCiletPnSH7F
-DTwwktn38oo+G8h5cqWpYP1eKLmQ9KSTl7DbCaiCLJRME6hRXD2nrjcyko3hXLSk
-tfkKxbiVzO++V8J7hlrOomUZFO2+r+j2NRQeEkd1aGSje5fkFGYci7VMRhiu/mco
-o+NnaLejWFIy6IHym7K5mCSPUbMiXNCMvo1WgUaabSm2h3ZC/5yrLdDbXAoD4RJm
-ijH5B9+yPThc5e9gJLgPaOkMC0+Oy5RXBF7X7vSUZnmVWY+GdY7UzstV7lemVI9A
-bO0JkFrifo8O56mpik111h3gDBM5enZigVH/szERgaWzO+MXUzPfQWsub5SSIND2
-BDOODlCtbhDoKoCqnSZ4zh7VKCaqfE3/KSGKguI+4h5HDUsudAaXp82dGg8/jTL3
-+0VF8/xi22gZSQZXrK5yt2vT9BY9CmQ/iFbR7YcQIFi/wgF/ARUcTdPch1dayySf
-ggrsqziBDFXb7bT3N9nGU0oo+XCxOIU/2y4xvND1w7p1iNWbSrtX3gflQV7dXWI+
-JxgzBBg1s/wzhAGN/oMFUwqZKA5O8aWFh13ZudLevLUyp4R6UzpIRNAl0TEdzCQ0
-eTSmha4aUHZ2eKpkivm6/h2XGyhf0oKc0OTv5ebI/4+iOFlCzPs=
-=SnIe
+iQIyBAABCAAdBQJXo3L1FhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
+8iqJJw/4/LHorEjAdGH7oSLHhx6KzY8DkiPZG1RrqDOggPNsZI+ACDAZtp/c7J5m
+sdBYRsSK3wr4rsVAlWSPwh81J/Iabr9KsLiJbZJbLMn9bBQuuPsei3ySpOxK8PiG
+FSdWZmYe1LRRHSGCUETbOLpkDWikLKGJIUlgDMWDcNce5wCXwm/uUnAkwUXGHF69
+S2JM3CfJxq9U3H+VmBxQFA9SW+Wb8Lls3VaMPOheZvmTwg418N/W1BaUaF59OOI7
+ZjAnIAJcryi+iSuguyhLB3CIi/VKMu8K9fvi61d7bPuUIXCico/UriXzCiHEaUoM
+VdFv0YksnthcWL/kqseH79KtVMz2isvgwEkGD7TuZRYp4f1osCZC6mf23C6eTt1S
+6OJuR3QGhw8DJWqB/4biAYn9637jDiIXa3dCwEI2TqVDfdMTpTVYScKmDevtWQAf
+n02EIoMXp61cJ/ystly9Rls1jpfQ1AVDuHYqLOVM/QadCnfqG6TPcP2Irck/GeWl
+PWsbvwhe3WuGhCoP51LvPbbN6WHBKhpmrSjLEIKyuPtCazPucZpz2GhSNY1RVkwp
+Qj6HgTyCyI93P7veINj/Zu0eqx/BlqkyNsgL0Zq8X+/zJkdqsR3pAYUY6IbPSzfk
+uhHRw5oUiXqmnYKA9D83qTRvhoMI1YtkN2QR2Yi8xHugeV3NZg==
+=Ptbg
 -----END PGP SIGNATURE-----
 
---=-6mNzZXwJf1XajooxiGYw--
+--=-XkGgBfrMkywwOo3O8N1Z--
