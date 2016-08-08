@@ -1,67 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAJZ5v0hE7ND5y-q+o-M9ck05VFDKWkBYJ-=3C2ZRn_aw5o4y+Q@mail.gmail.com>
-References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <20160808134001.GC29757@nazgul.tnic>
- <CAJZ5v0hE7ND5y-q+o-M9ck05VFDKWkBYJ-=3C2ZRn_aw5o4y+Q@mail.gmail.com>
 From: Thomas Garnier <thgarnie@google.com>
-Date: Mon, 8 Aug 2016 11:00:40 -0700
-Message-ID: <CAJcbSZFkDjaYq=-J-Vs84zKdKQFskjkie-6fa6tC9Mm=h3Eu1w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
- mapping correctly
-To: "Rafael J. Wysocki" <rafael@kernel.org>
-Cc: Borislav Petkov <bp@suse.de>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bpetkov@suse.de>
+Date: Mon,  8 Aug 2016 11:40:06 -0700
+Message-Id: <1470681607-36883-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v1 1/2] x86/KASLR: Fix physical memory calculation on KASLR memory randomization
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@suse.de>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lv Zheng <lv.zheng@intel.com>, Thomas Garnier <thgarnie@google.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Aleksey Makarov <aleksey.makarov@linaro.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Christian Borntraeger <borntraeger@de.ibm.com>, Fabian Frederick <fabf@skynet.be>, Toshi Kani <toshi.kani@hp.com>, Dan Williams <dan.j.williams@intel.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Aug 8, 2016 at 6:54 AM, Rafael J. Wysocki <rafael@kernel.org> wrote:
-> On Mon, Aug 8, 2016 at 3:40 PM, Borislav Petkov <bp@suse.de> wrote:
->> On Mon, Aug 08, 2016 at 03:31:31PM +0200, Rafael J. Wysocki wrote:
->>> From: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
->>>
->>> The low-level resume-from-hibernation code on x86-64 uses
->>> kernel_ident_mapping_init() to create the temoprary identity mapping,
->>> but that function assumes that the offset between kernel virtual
->>> addresses and physical addresses is aligned on the PGD level.
->>>
->>> However, with a randomized identity mapping base, it may be aligned
->>> on the PUD level and if that happens, the temporary identity mapping
->>> created by set_up_temporary_mappings() will not reflect the actual
->>> kernel identity mapping and the image restoration will fail as a
->>> result (leading to a kernel panic most of the time).
->>>
->>> To fix this problem, rework kernel_ident_mapping_init() to support
->>> unaligned offsets between KVA and PA up to the PMD level and make
->>> set_up_temporary_mappings() use it as approprtiate.
->>>
->>> Reported-by: Thomas Garnier <thgarnie@google.com>
->>
->> Reported-by: Borislav Petkov <bp@suse.de>
->>
->>> Suggested-by: Yinghai Lu <yinghai@kernel.org>
->>> Signed-off-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
->>> Acked-by: Yinghai Lu <yinghai@kernel.org>
->>> ---
->>>
->>> This is sort of urgent, because hibernation doesn't work with KASLR on x86-64
->>> in 4.8-rc1 AFAICS and this should make them work together again.
->>>
->>> Unless anyone sees any problems with it, I'll queue it up for 4.8-rc2.
->>>
->>> Thomas, would it be possible to test it with KASLR enabled, please?
->>
+Initialize KASLR memory randomization after max_pfn is initialized. Also
+ensure the size is rounded up. Could have create problems on machines
+with more than 1Tb of memory on certain random addresses.
 
-I tested it on my setup couple times. Worked well.
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20160805
+---
+ arch/x86/kernel/setup.c | 4 ++--
+ arch/x86/mm/kaslr.c     | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
 
->> Is that the only patch which needs to be tested? Ontop of which tree?
->
-> That should be the only one on top of plain 4.8-rc1.
->
-> If it doesn't help, we need more work to do. :-)
->
->> CONFIG_RANDOMIZE_MEMORY blew up s2d on my laptop here so I'll run it
->> once I have the required info from you :)
->
-> Thanks!
->
-> Best,
-> Rafael
+diff --git a/arch/x86/kernel/setup.c b/arch/x86/kernel/setup.c
+index bcabb88..8dda0ce 100644
+--- a/arch/x86/kernel/setup.c
++++ b/arch/x86/kernel/setup.c
+@@ -936,8 +936,6 @@ void __init setup_arch(char **cmdline_p)
+ 
+ 	x86_init.oem.arch_setup();
+ 
+-	kernel_randomize_memory();
+-
+ 	iomem_resource.end = (1ULL << boot_cpu_data.x86_phys_bits) - 1;
+ 	setup_memory_map();
+ 	parse_setup_data();
+@@ -1071,6 +1069,8 @@ void __init setup_arch(char **cmdline_p)
+ 	high_memory = (void *)__va(max_pfn * PAGE_SIZE - 1) + 1;
+ #endif
+ 
++	kernel_randomize_memory();
++
+ 	/*
+ 	 * Find and reserve possible boot-time SMP configuration:
+ 	 */
+diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
+index 26dccd6..ec8654f 100644
+--- a/arch/x86/mm/kaslr.c
++++ b/arch/x86/mm/kaslr.c
+@@ -97,7 +97,7 @@ void __init kernel_randomize_memory(void)
+ 	 * add padding if needed (especially for memory hotplug support).
+ 	 */
+ 	BUG_ON(kaslr_regions[0].base != &page_offset_base);
+-	memory_tb = ((max_pfn << PAGE_SHIFT) >> TB_SHIFT) +
++	memory_tb = DIV_ROUND_UP(max_pfn << PAGE_SHIFT, 1UL << TB_SHIFT) +
+ 		CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING;
+ 
+ 	/* Adapt phyiscal memory region size based on available memory */
+-- 
+2.8.0.rc3.226.g39d4020
