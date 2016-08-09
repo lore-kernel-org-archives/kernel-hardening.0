@@ -1,54 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue,  9 Aug 2016 10:11:05 -0700
-Message-Id: <1470762665-88032-2-git-send-email-thgarnie@google.com>
-In-Reply-To: <1470762665-88032-1-git-send-email-thgarnie@google.com>
-References: <1470762665-88032-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v4 2/2] x86/KASLR: Increase BRK pages for KASLR memory randomization
-To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Borislav Petkov <bp@suse.de>, Joerg Roedel <jroedel@suse.de>, Dave Young <dyoung@redhat.com>, "Rafael J . Wysocki" <rafael.j.wysocki@intel.com>, Lv Zheng <lv.zheng@intel.com>, Thomas Garnier <thgarnie@google.com>, Baoquan He <bhe@redhat.com>, Dave Hansen <dave.hansen@linux.intel.com>, Mark Salter <msalter@redhat.com>, Aleksey Makarov <aleksey.makarov@linaro.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Christian Borntraeger <borntraeger@de.ibm.com>, Fabian Frederick <fabf@skynet.be>, Toshi Kani <toshi.kani@hp.com>, Dan Williams <dan.j.williams@intel.com>
-Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Tue, 9 Aug 2016 22:02:25 +0200 (CEST)
+From: Jiri Kosina <jikos@kernel.org>
+In-Reply-To: <CAJZ5v0hciyV01GMxBV6fQmdXRrZYbkDb9_JUoLPh1+EwG0oRow@mail.gmail.com>
+Message-ID: <alpine.LNX.2.00.1608092119260.22028@cbobk.fhfr.pm>
+References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <alpine.LRH.2.00.1608091121120.19185@gjva.wvxbf.pm> <CAJZ5v0iAiQwpBgY=4hH-RsBB54tD8FY4C8pWbjNNRmAjJ9Xg+Q@mail.gmail.com> <alpine.LNX.2.00.1608091457370.22028@cbobk.fhfr.pm> <alpine.LNX.2.00.1608091525540.22028@cbobk.fhfr.pm>
+ <CAJcbSZHdTJC8ys-rhi19k+gmxe+U3m_e+i4aRTuuyV18r6ukCA@mail.gmail.com> <alpine.LNX.2.00.1608091702240.22028@cbobk.fhfr.pm> <CAJZ5v0hciyV01GMxBV6fQmdXRrZYbkDb9_JUoLPh1+EwG0oRow@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
+ mapping correctly
+To: "Rafael J. Wysocki" <rafael@kernel.org>
+Cc: Thomas Garnier <thgarnie@google.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bpetkov@suse.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Default implementation expects 6 pages maximum are needed for low page
-allocations. If KASLR memory randomization is enabled, the worse case
-of e820 layout would require 12 pages (no large pages). It is due to the
-PUD level randomization and the variable e820 memory layout.
+On Tue, 9 Aug 2016, Rafael J. Wysocki wrote:
 
-This bug was found while doing extensive testing of KASLR memory
-randomization on different type of hardware.
+> I have a murky suspicion, but it is really weird.  Namely, what if
+> restore_jump_address in set_up_temporary_text_mapping() happens to be
+> covered by the restore kernel's identity mapping?  Then, the image
+> kernel's entry point may get overwritten by something else in
+> core_restore_code().
 
-Fixes: 021182e52fe0 ("Enable KASLR for physical mapping memory regions")
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
-Based on next-20160805
----
- arch/x86/mm/init.c | 14 ++++++++++++--
- 1 file changed, 12 insertions(+), 2 deletions(-)
+So this made me to actually test a scenario where I'd suspend a kernel 
+that's known-broken (i.e. contains 021182e52fe), and then have it resumed 
+by a kernel that has 021182e52fe reverted. It resumed successfully.
 
-diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
-index 6209289..796e7af 100644
---- a/arch/x86/mm/init.c
-+++ b/arch/x86/mm/init.c
-@@ -122,8 +122,18 @@ __ref void *alloc_low_pages(unsigned int num)
- 	return __va(pfn << PAGE_SHIFT);
- }
- 
--/* need 3 4k for initial PMD_SIZE,  3 4k for 0-ISA_END_ADDRESS */
--#define INIT_PGT_BUF_SIZE	(6 * PAGE_SIZE)
-+/*
-+ * By default need 3 4k for initial PMD_SIZE,  3 4k for 0-ISA_END_ADDRESS.
-+ * With KASLR memory randomization, depending on the machine e820 memory
-+ * and the PUD alignment. We may need twice more pages when KASLR memory
-+ * randomization is enabled.
-+ */
-+#ifndef CONFIG_RANDOMIZE_MEMORY
-+#define INIT_PGD_PAGE_COUNT      6
-+#else
-+#define INIT_PGD_PAGE_COUNT      12
-+#endif
-+#define INIT_PGT_BUF_SIZE	(INIT_PGD_PAGE_COUNT * PAGE_SIZE)
- RESERVE_BRK(early_pgt_alloc, INIT_PGT_BUF_SIZE);
- void  __init early_alloc_pgt_buf(void)
- {
+Just a datapoint.
+
 -- 
-2.8.0.rc3.226.g39d4020
+Jiri Kosina
+SUSE Labs
