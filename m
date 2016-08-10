@@ -1,67 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Arnd Bergmann <arnd@arndb.de>
-Date: Wed, 10 Aug 2016 21:41:23 +0200
-Message-ID: <2760702.46Rp2Juk5b@wuerfel>
-In-Reply-To: <CAGXu5j+9saxwnKTK_vdnLCuXdbvUqQWXkbxOu8QrzB9SHmQGYA@mail.gmail.com>
-References: <1464979224-2085-1-git-send-email-keescook@chromium.org> <20160810094339.GK1041@n2100.armlinux.org.uk> <CAGXu5j+9saxwnKTK_vdnLCuXdbvUqQWXkbxOu8QrzB9SHmQGYA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Subject: [kernel-hardening] Re: [PATCH 2/2] arm: apply more __ro_after_init
-To: linux-arm-kernel@lists.infradead.org
-Cc: Kees Cook <keescook@chromium.org>, Russell King - ARM Linux <linux@armlinux.org.uk>, linux-arch <linux-arch@vger.kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>
+Sender: rjwysocki@gmail.com
+In-Reply-To: <20160810163500.GA9424@nazgul.tnic>
+References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <2010434.TyoHiO9eal@vostro.rjw.lan>
+ <alpine.LNX.2.00.1608100948560.22028@cbobk.fhfr.pm> <1779906.DOHeuFCiDy@vostro.rjw.lan>
+ <alpine.LNX.2.00.1608101517380.22028@cbobk.fhfr.pm> <CAJcbSZHGH8G01zXSE6y9A19ZxFYY0bzeqcfHBEAYZcn8ZeX3+g@mail.gmail.com>
+ <alpine.LNX.2.00.1608101658070.22028@cbobk.fhfr.pm> <20160810163500.GA9424@nazgul.tnic>
+From: "Rafael J. Wysocki" <rafael@kernel.org>
+Date: Wed, 10 Aug 2016 22:56:34 +0200
+Message-ID: <CAJZ5v0h_N5KvjUZjDDdoXMP3UoMmyYKOrHUpyGH14EYWMbxvPA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
+ mapping correctly
+To: Borislav Petkov <bp@suse.de>, Thomas Garnier <thgarnie@google.com>
+Cc: Jiri Kosina <jikos@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, "Rafael J. Wysocki" <rafael@kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wednesday, August 10, 2016 11:32:07 AM CEST Kees Cook wrote:
-> On Wed, Aug 10, 2016 at 2:43 AM, Russell King - ARM Linux
-> <linux@armlinux.org.uk> wrote:
-> > On Fri, Jun 03, 2016 at 11:40:24AM -0700, Kees Cook wrote:
-> >> @@ -1309,16 +1309,11 @@ void __init arm_mm_memblock_reserve(void)
-> >>   * Any other function or debugging method which may touch any device _will_
-> >>   * crash the kernel.
-> >>   */
-> >> +static char vectors[PAGE_SIZE * 2] __ro_after_init __aligned(PAGE_SIZE);
-> >>  static void __init devicemaps_init(const struct machine_desc *mdesc)
-> >>  {
-> >>       struct map_desc map;
-> >>       unsigned long addr;
-> >> -     void *vectors;
-> >> -
-> >> -     /*
-> >> -      * Allocate the vector page early.
-> >> -      */
-> >> -     vectors = early_alloc(PAGE_SIZE * 2);
-> >
-> > This one is not appropriate.  We _do_ write to these pages after init
-> > for FIQ handler updates.  See set_fiq_handler().
-> 
-> Ah, interesting. I guess none of that hardware is being tested on
-> linux-next.
+On Wed, Aug 10, 2016 at 6:35 PM, Borislav Petkov <bp@suse.de> wrote:
+> On Wed, Aug 10, 2016 at 04:59:40PM +0200, Jiri Kosina wrote:
+>> Mine is Lenovo thinkpad x200s; I think Boris has been testing it on x230s,
+>
+> It says "X230" here under the screen.
+>
+>> but not sure whether any of the latest patches didn't actually fix it for
+>> him.
+>
+> Haven't tested them yet. I'm waiting for you to test them first since
+> this is the only machine I have right now and I need it for work.
+>
+>> The machine I am seeing the issue on, has 2G RAM, with this e820 map:
+>
+> 8G here:
+>
+> e820: BIOS-provided physical RAM map:
+> BIOS-e820: [mem 0x0000000000000000-0x000000000009d7ff] usable
+> BIOS-e820: [mem 0x000000000009d800-0x000000000009ffff] reserved
+> BIOS-e820: [mem 0x00000000000e0000-0x00000000000fffff] reserved
+> BIOS-e820: [mem 0x0000000000100000-0x000000001fffffff] usable
+> BIOS-e820: [mem 0x0000000020000000-0x00000000201fffff] reserved
+> BIOS-e820: [mem 0x0000000020200000-0x0000000040003fff] usable
+> BIOS-e820: [mem 0x0000000040004000-0x0000000040004fff] reserved
+> BIOS-e820: [mem 0x0000000040005000-0x00000000cec2ffff] usable
+> BIOS-e820: [mem 0x00000000cec30000-0x00000000dae9efff] reserved
+> BIOS-e820: [mem 0x00000000dae9f000-0x00000000daf9efff] ACPI NVS
+> BIOS-e820: [mem 0x00000000daf9f000-0x00000000daffefff] ACPI data
+> BIOS-e820: [mem 0x00000000dafff000-0x00000000df9fffff] reserved
+> BIOS-e820: [mem 0x00000000f8000000-0x00000000fbffffff] reserved
+> BIOS-e820: [mem 0x00000000fec00000-0x00000000fec00fff] reserved
+> BIOS-e820: [mem 0x00000000fed08000-0x00000000fed08fff] reserved
+> BIOS-e820: [mem 0x00000000fed10000-0x00000000fed19fff] reserved
+> BIOS-e820: [mem 0x00000000fed1c000-0x00000000fed1ffff] reserved
+> BIOS-e820: [mem 0x00000000fee00000-0x00000000fee00fff] reserved
+> BIOS-e820: [mem 0x00000000ffc00000-0x00000000ffffffff] reserved
+> BIOS-e820: [mem 0x0000000100000000-0x000000021e5fffff] usable
+> BIOS-e820: [mem 0x000000021e600000-0x000000021e7fffff] reserved
+> debug: ignoring loglevel setting.
+> NX (Execute Disable) protection: active
+> SMBIOS 2.7 present.
+> DMI: LENOVO 2320CTO/2320CTO, BIOS G2ET86WW (2.06 ) 11/13/2012
+> e820: update [mem 0x00000000-0x00000fff] usable ==> reserved
+> e820: remove [mem 0x000a0000-0x000fffff] usable
+> e820: last_pfn = 0x21e600 max_arch_pfn = 0x400000000
 
-Right. The OMAP1 Amstrad Delta is a somewhat obscure machine, and that
-would be the most likely candidate to run into this.
+So far, I'm unable to reproduce the problem (with the $subject patch
+applied) on two different Intel-base machines with 4 Gig and 8 Gig of
+RAM.
 
-RiscPC also has FIQ support, but I have not heard of anyone other
-than Russell still using one with a modern kernel, and I doubt he
-tests linux-next on it.
+One thing that's clearly different on my machines is that they both
+have usable memory at the end of the e820 map (and the one where Jiri
+can reproduce the problem has reserved memory at the end of it, just
+like yours).
 
-The s3c24xx and imx machines that could use FIQ probably don't
-use it in practice, last time I checked, I didn't see any DTS file
-or platform data definition in the kernel that activated that
-code path.
+Thomas, what about the e820 map on your machine?
 
-> I'll drop that chunk and resubmit.
+I'm not sure why that would matter, though.
 
-Good enough for now, but it may be worth revisiting this, as the
-vector page might be a good target for an attack if you have a
-way to overwrite a few bytes in the kernel.
-
-Note that there are two mappings for the pages, and as Russell
-mentioned, the TLS emulation writes to the other one that is
-at a fixed virtual address.
-
-It might be better to start by making the fixed mapping readonly,
-as KASLR doesn't protect that one at all, and change the TLS
-code accordingly.
-
-	Arnd
+Thanks,
+Rafael
