@@ -1,77 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 10 Aug 2016 23:52:38 +0200 (CEST)
+From: Jiri Kosina <jikos@kernel.org>
+In-Reply-To: <CAJcbSZF6k0=NXvqMGedcSPiMLwGBG3tZGBwCMJWgMm2AXDY9hQ@mail.gmail.com>
+Message-ID: <alpine.LNX.2.00.1608102351140.22028@cbobk.fhfr.pm>
+References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <2010434.TyoHiO9eal@vostro.rjw.lan> <alpine.LNX.2.00.1608100948560.22028@cbobk.fhfr.pm> <1779906.DOHeuFCiDy@vostro.rjw.lan> <alpine.LNX.2.00.1608101517380.22028@cbobk.fhfr.pm>
+ <CAJcbSZHGH8G01zXSE6y9A19ZxFYY0bzeqcfHBEAYZcn8ZeX3+g@mail.gmail.com> <alpine.LNX.2.00.1608101658070.22028@cbobk.fhfr.pm> <20160810163500.GA9424@nazgul.tnic> <CAJcbSZF6k0=NXvqMGedcSPiMLwGBG3tZGBwCMJWgMm2AXDY9hQ@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <2760702.46Rp2Juk5b@wuerfel>
-References: <1464979224-2085-1-git-send-email-keescook@chromium.org>
- <20160810094339.GK1041@n2100.armlinux.org.uk> <CAGXu5j+9saxwnKTK_vdnLCuXdbvUqQWXkbxOu8QrzB9SHmQGYA@mail.gmail.com>
- <2760702.46Rp2Juk5b@wuerfel>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 10 Aug 2016 14:40:11 -0700
-Message-ID: <CAGXu5jLstVv7+QHJe7pGdHkd9beSyqXq2N7G9xX-frmFjeGuiA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 2/2] arm: apply more __ro_after_init
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Russell King - ARM Linux <linux@armlinux.org.uk>, linux-arch <linux-arch@vger.kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
+ mapping correctly
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Borislav Petkov <bp@suse.de>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, "Rafael J. Wysocki" <rafael@kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 10, 2016 at 12:41 PM, Arnd Bergmann <arnd@arndb.de> wrote:
-> On Wednesday, August 10, 2016 11:32:07 AM CEST Kees Cook wrote:
->> On Wed, Aug 10, 2016 at 2:43 AM, Russell King - ARM Linux
->> <linux@armlinux.org.uk> wrote:
->> > On Fri, Jun 03, 2016 at 11:40:24AM -0700, Kees Cook wrote:
->> >> @@ -1309,16 +1309,11 @@ void __init arm_mm_memblock_reserve(void)
->> >>   * Any other function or debugging method which may touch any device _will_
->> >>   * crash the kernel.
->> >>   */
->> >> +static char vectors[PAGE_SIZE * 2] __ro_after_init __aligned(PAGE_SIZE);
->> >>  static void __init devicemaps_init(const struct machine_desc *mdesc)
->> >>  {
->> >>       struct map_desc map;
->> >>       unsigned long addr;
->> >> -     void *vectors;
->> >> -
->> >> -     /*
->> >> -      * Allocate the vector page early.
->> >> -      */
->> >> -     vectors = early_alloc(PAGE_SIZE * 2);
->> >
->> > This one is not appropriate.  We _do_ write to these pages after init
->> > for FIQ handler updates.  See set_fiq_handler().
->>
->> Ah, interesting. I guess none of that hardware is being tested on
->> linux-next.
->
-> Right. The OMAP1 Amstrad Delta is a somewhat obscure machine, and that
-> would be the most likely candidate to run into this.
->
-> RiscPC also has FIQ support, but I have not heard of anyone other
-> than Russell still using one with a modern kernel, and I doubt he
-> tests linux-next on it.
->
-> The s3c24xx and imx machines that could use FIQ probably don't
-> use it in practice, last time I checked, I didn't see any DTS file
-> or platform data definition in the kernel that activated that
-> code path.
->
->> I'll drop that chunk and resubmit.
->
-> Good enough for now, but it may be worth revisiting this, as the
-> vector page might be a good target for an attack if you have a
-> way to overwrite a few bytes in the kernel.
->
-> Note that there are two mappings for the pages, and as Russell
-> mentioned, the TLS emulation writes to the other one that is
-> at a fixed virtual address.
->
-> It might be better to start by making the fixed mapping readonly,
-> as KASLR doesn't protect that one at all, and change the TLS
-> code accordingly.
+On Wed, 10 Aug 2016, Thomas Garnier wrote:
 
-That sounds good (anyone want to work on this?). Does arm64 need a
-similar vector page protection?
+> Ok, I want to know if the problem is the PUD alignment or the change
+> of PAGE_OFFSET based all together. Can you test the following change?
+> (on top of everything else with KASLR enabled). It will randomize the
+> memory sections only on PGD level.
+> 
+> diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
+> index ec8654f..a8477b0 100644
+> --- a/arch/x86/mm/kaslr.c
+> +++ b/arch/x86/mm/kaslr.c
+> @@ -120,7 +120,7 @@ void __init kernel_randomize_memory(void)
+>                  */
+>                 entropy = remain_entropy / (ARRAY_SIZE(kaslr_regions) - i);
+>                 prandom_bytes_state(&rand_state, &rand, sizeof(rand));
+> -               entropy = (rand % (entropy + 1)) & PUD_MASK;
+> +               entropy = (rand % (entropy + 1)) & PGDIR_MASK;
+>                 vaddr += entropy;
+>                 *kaslr_regions[i].base = vaddr;
+> 
+> @@ -129,7 +129,7 @@ void __init kernel_randomize_memory(void)
+>                  * randomization alignment.
+>                  */
+>                 vaddr += get_padding(&kaslr_regions[i]);
+> -               vaddr = round_up(vaddr + 1, PUD_SIZE);
+> +               vaddr = round_up(vaddr + 1, PGDIR_SIZE);
+>                 remain_entropy -= entropy;
+>         }
+>  }
 
--Kees
+I applied this on top of both fixes from Rafael from this thread; still no 
+change in behavior, i.e. reboot immediately after reading the hibernation 
+image.
 
 -- 
-Kees Cook
-Nexus Security
+Jiri Kosina
+SUSE Labs
