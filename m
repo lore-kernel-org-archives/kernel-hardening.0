@@ -1,33 +1,102 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 10 Aug 2016 23:59:32 +0200 (CEST)
-From: Jiri Kosina <jikos@kernel.org>
-In-Reply-To: <CAJZ5v0icnK4jBGkmHb7jJFEcusQyjJGYEG8yhOzMDa_hMQSj_w@mail.gmail.com>
-Message-ID: <alpine.LNX.2.00.1608102358320.22028@cbobk.fhfr.pm>
-References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <2010434.TyoHiO9eal@vostro.rjw.lan> <alpine.LNX.2.00.1608100948560.22028@cbobk.fhfr.pm> <1779906.DOHeuFCiDy@vostro.rjw.lan> <alpine.LNX.2.00.1608101517380.22028@cbobk.fhfr.pm>
- <CAJcbSZHGH8G01zXSE6y9A19ZxFYY0bzeqcfHBEAYZcn8ZeX3+g@mail.gmail.com> <alpine.LNX.2.00.1608101658070.22028@cbobk.fhfr.pm> <20160810163500.GA9424@nazgul.tnic> <CAJZ5v0h_N5KvjUZjDDdoXMP3UoMmyYKOrHUpyGH14EYWMbxvPA@mail.gmail.com>
- <CAJZ5v0icnK4jBGkmHb7jJFEcusQyjJGYEG8yhOzMDa_hMQSj_w@mail.gmail.com>
+Date: Wed, 10 Aug 2016 15:28:05 -0700
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20160810222805.GA13733@www.outflux.net>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
- mapping correctly
-To: "Rafael J. Wysocki" <rafael@kernel.org>
-Cc: Borislav Petkov <bp@suse.de>, Thomas Garnier <thgarnie@google.com>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] mm: Add the ram_latent_entropy kernel parameter
+To: linux-kernel@vger.kernel.org
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, Vlastimil Babka <vbabka@suse.cz>, Mel Gorman <mgorman@techsingularity.net>, Michal Hocko <mhocko@suse.com>, Johannes Weiner <hannes@cmpxchg.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Taku Izumi <izumi.taku@jp.fujitsu.com>, linux-doc@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 10 Aug 2016, Rafael J. Wysocki wrote:
+From: Emese Revfy <re.emese@gmail.com>
 
-> So I used your .config to generate one for my test machine and with
-> that I can reproduce.
+When "ram_latent_entropy" is passed on the kernel command line, entropy
+will be extracted from up to the first 4GB of RAM while the runtime memory
+allocator is being initialized. This entropy isn't cryptographically
+secure, but does help provide additional unpredictability on otherwise
+low-entropy systems.
 
-Was that the config I've sent, or did Boris provide one as well? Which one 
-are you able to reproduce with please?
+Based on work created by the PaX Team.
 
-> The hardware configuration doesn't matter, then, the issue is config-related.
+Signed-off-by: Emese Revfy <re.emese@gmail.com>
+[kees: renamed parameter, dropped relationship with plugin, updated log]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+This patch has been extracted from the latent_entropy gcc plugin, as
+suggested by Linus: https://lkml.org/lkml/2016/8/8/840
+---
+ Documentation/kernel-parameters.txt |  5 +++++
+ mm/page_alloc.c                     | 21 +++++++++++++++++++++
+ 2 files changed, 26 insertions(+)
 
-How big is the diff between the two configs? Could you please share it?
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index 46c030a49186..9d054984370f 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -3245,6 +3245,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+ 	raid=		[HW,RAID]
+ 			See Documentation/md.txt.
+ 
++	ram_latent_entropy
++			Enable a very simple form of latent entropy extraction
++			from the first 4GB of memory as the bootmem allocator
++			passes the memory pages to the buddy allocator.
++
+ 	ramdisk_size=	[RAM] Sizes of RAM disks in kilobytes
+ 			See Documentation/blockdev/ramdisk.txt.
+ 
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index fb975cec3518..1de94f0ff29d 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -64,6 +64,7 @@
+ #include <linux/page_owner.h>
+ #include <linux/kthread.h>
+ #include <linux/memcontrol.h>
++#include <linux/random.h>
+ 
+ #include <asm/sections.h>
+ #include <asm/tlbflush.h>
+@@ -1236,6 +1237,15 @@ static void __free_pages_ok(struct page *page, unsigned int order)
+ 	local_irq_restore(flags);
+ }
+ 
++bool __meminitdata ram_latent_entropy;
++
++static int __init setup_ram_latent_entropy(char *str)
++{
++	ram_latent_entropy = true;
++	return 0;
++}
++early_param("ram_latent_entropy", setup_ram_latent_entropy);
++
+ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
+ {
+ 	unsigned int nr_pages = 1 << order;
+@@ -1251,6 +1261,17 @@ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
+ 	__ClearPageReserved(p);
+ 	set_page_count(p, 0);
+ 
++	if (ram_latent_entropy && !PageHighMem(page) &&
++		page_to_pfn(page) < 0x100000) {
++		u64 hash = 0;
++		size_t index, end = PAGE_SIZE * nr_pages / sizeof(hash);
++		const u64 *data = lowmem_page_address(page);
++
++		for (index = 0; index < end; index++)
++			hash ^= hash + data[index];
++		add_device_randomness((const void *)&hash, sizeof(hash));
++	}
++
+ 	page_zone(page)->managed_pages += nr_pages;
+ 	set_page_refcounted(page);
+ 	__free_pages(page, order);
+-- 
+2.7.4
 
-Thanks,
 
 -- 
-Jiri Kosina
-SUSE Labs
+Kees Cook
+Nexus Security
