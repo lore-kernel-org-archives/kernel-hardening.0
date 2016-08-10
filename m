@@ -1,140 +1,83 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160810163500.GA9424@nazgul.tnic>
-References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <2010434.TyoHiO9eal@vostro.rjw.lan>
- <alpine.LNX.2.00.1608100948560.22028@cbobk.fhfr.pm> <1779906.DOHeuFCiDy@vostro.rjw.lan>
- <alpine.LNX.2.00.1608101517380.22028@cbobk.fhfr.pm> <CAJcbSZHGH8G01zXSE6y9A19ZxFYY0bzeqcfHBEAYZcn8ZeX3+g@mail.gmail.com>
- <alpine.LNX.2.00.1608101658070.22028@cbobk.fhfr.pm> <20160810163500.GA9424@nazgul.tnic>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 10 Aug 2016 09:44:44 -0700
-Message-ID: <CAJcbSZF6k0=NXvqMGedcSPiMLwGBG3tZGBwCMJWgMm2AXDY9hQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
- mapping correctly
-To: Borislav Petkov <bp@suse.de>
-Cc: Jiri Kosina <jikos@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, "Rafael J. Wysocki" <rafael@kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Message-ID: <1470848794.22360.1.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Wed, 10 Aug 2016 13:06:34 -0400
+In-Reply-To: <20160810094339.GK1041@n2100.armlinux.org.uk>
+References: <1464979224-2085-1-git-send-email-keescook@chromium.org>
+	 <1464979224-2085-3-git-send-email-keescook@chromium.org>
+	 <20160810094339.GK1041@n2100.armlinux.org.uk>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-Q/qlRIpvYaP1z5fi9iJQ"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [PATCH 2/2] arm: apply more
+ __ro_after_init
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: linux-arch@vger.kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, x86@kernel.org, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Aug 10, 2016 at 9:35 AM, Borislav Petkov <bp@suse.de> wrote:
-> On Wed, Aug 10, 2016 at 04:59:40PM +0200, Jiri Kosina wrote:
->> Mine is Lenovo thinkpad x200s; I think Boris has been testing it on x230=
-s,
->
-> It says "X230" here under the screen.
->
->> but not sure whether any of the latest patches didn't actually fix it fo=
-r
->> him.
->
-> Haven't tested them yet. I'm waiting for you to test them first since
-> this is the only machine I have right now and I need it for work.
->
->> The machine I am seeing the issue on, has 2G RAM, with this e820 map:
->
-> 8G here:
->
-> e820: BIOS-provided physical RAM map:
-> BIOS-e820: [mem 0x0000000000000000-0x000000000009d7ff] usable
-> BIOS-e820: [mem 0x000000000009d800-0x000000000009ffff] reserved
-> BIOS-e820: [mem 0x00000000000e0000-0x00000000000fffff] reserved
-> BIOS-e820: [mem 0x0000000000100000-0x000000001fffffff] usable
-> BIOS-e820: [mem 0x0000000020000000-0x00000000201fffff] reserved
-> BIOS-e820: [mem 0x0000000020200000-0x0000000040003fff] usable
-> BIOS-e820: [mem 0x0000000040004000-0x0000000040004fff] reserved
-> BIOS-e820: [mem 0x0000000040005000-0x00000000cec2ffff] usable
-> BIOS-e820: [mem 0x00000000cec30000-0x00000000dae9efff] reserved
-> BIOS-e820: [mem 0x00000000dae9f000-0x00000000daf9efff] ACPI NVS
-> BIOS-e820: [mem 0x00000000daf9f000-0x00000000daffefff] ACPI data
-> BIOS-e820: [mem 0x00000000dafff000-0x00000000df9fffff] reserved
-> BIOS-e820: [mem 0x00000000f8000000-0x00000000fbffffff] reserved
-> BIOS-e820: [mem 0x00000000fec00000-0x00000000fec00fff] reserved
-> BIOS-e820: [mem 0x00000000fed08000-0x00000000fed08fff] reserved
-> BIOS-e820: [mem 0x00000000fed10000-0x00000000fed19fff] reserved
-> BIOS-e820: [mem 0x00000000fed1c000-0x00000000fed1ffff] reserved
-> BIOS-e820: [mem 0x00000000fee00000-0x00000000fee00fff] reserved
-> BIOS-e820: [mem 0x00000000ffc00000-0x00000000ffffffff] reserved
-> BIOS-e820: [mem 0x0000000100000000-0x000000021e5fffff] usable
-> BIOS-e820: [mem 0x000000021e600000-0x000000021e7fffff] reserved
-> debug: ignoring loglevel setting.
-> NX (Execute Disable) protection: active
-> SMBIOS 2.7 present.
-> DMI: LENOVO 2320CTO/2320CTO, BIOS G2ET86WW (2.06 ) 11/13/2012
-> e820: update [mem 0x00000000-0x00000fff] usable =3D=3D> reserved
-> e820: remove [mem 0x000a0000-0x000fffff] usable
-> e820: last_pfn =3D 0x21e600 max_arch_pfn =3D 0x400000000
->
->> CPU:
->
-> processor       : 0
-> vendor_id       : GenuineIntel
-> cpu family      : 6
-> model           : 58
-> model name      : Intel(R) Core(TM) i7-3520M CPU @ 2.90GHz
-> stepping        : 9
-> microcode       : 0x1c
-> cpu MHz         : 1257.421
-> cache size      : 4096 KB
-> physical id     : 0
-> siblings        : 4
-> core id         : 0
-> cpu cores       : 2
-> apicid          : 0
-> initial apicid  : 0
-> fpu             : yes
-> fpu_exception   : yes
-> cpuid level     : 13
-> wp              : yes
-> flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mc=
-a cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx=
- rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonst=
-op_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est =
-tm2 ssse3 cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic popcnt tsc_deadline_time=
-r aes xsave avx f16c rdrand lahf_lm epb tpr_shadow vnmi flexpriority ept vp=
-id fsgsbase smep erms xsaveopt dtherm ida arat pln pts
-> bugs            :
-> bogomips        : 5786.68
-> clflush size    : 64
-> cache_alignment : 64
-> address sizes   : 36 bits physical, 48 bits virtual
-> power management:
->
 
-Ok, I want to know if the problem is the PUD alignment or the change
-of PAGE_OFFSET based all together. Can you test the following change?
-(on top of everything else with KASLR enabled). It will randomize the
-memory sections only on PGD level.
+--=-Q/qlRIpvYaP1z5fi9iJQ
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
-index ec8654f..a8477b0 100644
---- a/arch/x86/mm/kaslr.c
-+++ b/arch/x86/mm/kaslr.c
-@@ -120,7 +120,7 @@ void __init kernel_randomize_memory(void)
-                 */
-                entropy =3D remain_entropy / (ARRAY_SIZE(kaslr_regions) - i=
-);
-                prandom_bytes_state(&rand_state, &rand, sizeof(rand));
--               entropy =3D (rand % (entropy + 1)) & PUD_MASK;
-+               entropy =3D (rand % (entropy + 1)) & PGDIR_MASK;
-                vaddr +=3D entropy;
-                *kaslr_regions[i].base =3D vaddr;
+On Wed, 2016-08-10 at 10:43 +0100, Russell King - ARM Linux wrote:
+> On Fri, Jun 03, 2016 at 11:40:24AM -0700, Kees Cook wrote:
+> >=20
+> > @@ -1309,16 +1309,11 @@ void __init arm_mm_memblock_reserve(void)
+> > =C2=A0 * Any other function or debugging method which may touch any
+> > device _will_
+> > =C2=A0 * crash the kernel.
+> > =C2=A0 */
+> > +static char vectors[PAGE_SIZE * 2] __ro_after_init
+> > __aligned(PAGE_SIZE);
+> > =C2=A0static void __init devicemaps_init(const struct machine_desc
+> > *mdesc)
+> > =C2=A0{
+> > =C2=A0	struct map_desc map;
+> > =C2=A0	unsigned long addr;
+> > -	void *vectors;
+> > -
+> > -	/*
+> > -	=C2=A0* Allocate the vector page early.
+> > -	=C2=A0*/
+> > -	vectors =3D early_alloc(PAGE_SIZE * 2);
+>=20
+> This one is not appropriate.=C2=A0=C2=A0We _do_ write to these pages afte=
+r init
+> for FIQ handler updates.=C2=A0=C2=A0See set_fiq_handler().
 
-@@ -129,7 +129,7 @@ void __init kernel_randomize_memory(void)
-                 * randomization alignment.
-                 */
-                vaddr +=3D get_padding(&kaslr_regions[i]);
--               vaddr =3D round_up(vaddr + 1, PUD_SIZE);
-+               vaddr =3D round_up(vaddr + 1, PGDIR_SIZE);
-                remain_entropy -=3D entropy;
-        }
- }
+This is one of the many cases where pax_open_kernel/pax_close_kernel are
+needed to temporarily toggle it read-only. From grsecurity:
 
-> --
-> Regards/Gruss,
->     Boris.
->
-> ECO tip #101: Trim your mails when you reply.
->
-> SUSE Linux GmbH, GF: Felix Imend=C3=B6rffer, Jane Smithard, Graham Norton=
-, HRB 21284 (AG N=C3=BCrnberg)
-> --
+@@ -95,7 +95,10 @@ void set_fiq_handler(void *start, unsigned int
+length)
+=C2=A0	void *base =3D vectors_page;
+=C2=A0	unsigned offset =3D FIQ_OFFSET;
+=C2=A0
++	pax_open_kernel();
+=C2=A0	memcpy(base + offset, start, length);
++	pax_close_kernel();
+--=-Q/qlRIpvYaP1z5fi9iJQ
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIzBAABCAAdBQJXq18aFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
+8irePg//TKe757WyOXALrOMRUCu23Hyabo8KH2hG1+89dhY5wcf8WU62MetiI2ES
+yI8i464YC/IQJaPt3ue6DUgI59msSXjbgHFRxUWA/lZBL1AnQQ751g6dQW1Fe52c
+KI1DoNcCKEhRFOSRRInhWHjmw0norIb89Uj2VpZzDUigil47mBgDF+cJupV/T+JA
+qpgeqHPFRX8x9qB6xySHlrWCShpRobYWqJ3A1o0mPPNucha1S7/HvWbcoLSKxEkS
+a+C+At+C8bb5ADgwj+fDEhx1cwLF5GQMyWMFG3X7iEe/FhwAXqtxeALMXpndFjH1
+t0iV4yyeiXG4hz+9rbVh6A176rYUC8nQIHKSZNMNo9W/A9zL3qy3l/IjvuPMF71F
+xR44u/kXQ8W7ZFFaGV3FgIFNLP72Aedx26CeDwAfMTf0M79QsUOuRatQfi5WSHQZ
+w2So8K+u9C4ZpDWdvMvz+0MxqSrzi6Wscrxnzcy0MnWxYvxDFctGSC71vZCmm5yj
+SkZzCN0AXkzBc/u6WgRvUJzbOWLG/VWDAq/NtyCl5WJd2Brn27Wpsw9BGDWbyPUR
+HeNXLNfHvk1iCs8ZjHhWmqK+D9hkCL8HhtR0ZTO3u6X+yxyXXC8ThEw/7xVFVjKp
+yD0kYhouVM5I/TniKly285OD5WfNlSe1+GL76LiK/sL44uFzOZk=
+=ES56
+-----END PGP SIGNATURE-----
+
+--=-Q/qlRIpvYaP1z5fi9iJQ--
