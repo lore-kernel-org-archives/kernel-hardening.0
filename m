@@ -1,38 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 10 Aug 2016 09:50:15 +0200 (CEST)
-From: Jiri Kosina <jikos@kernel.org>
-In-Reply-To: <2010434.TyoHiO9eal@vostro.rjw.lan>
-Message-ID: <alpine.LNX.2.00.1608100948560.22028@cbobk.fhfr.pm>
-References: <2206547.eDj3RJQyE5@vostro.rjw.lan> <alpine.LNX.2.00.1608092119260.22028@cbobk.fhfr.pm> <CAJZ5v0hWRH0zVjNDH6cjNn8kSSXSW0qc-aQZ8p_5EVS3cajcQA@mail.gmail.com> <2010434.TyoHiO9eal@vostro.rjw.lan>
+Date: Wed, 10 Aug 2016 10:43:39 +0100
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20160810094339.GK1041@n2100.armlinux.org.uk>
+References: <1464979224-2085-1-git-send-email-keescook@chromium.org>
+ <1464979224-2085-3-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [Resend][PATCH] x86/power/64: Always create temporary identity
- mapping correctly
-To: "Rafael J. Wysocki" <rjw@rjwysocki.net>
-Cc: "Rafael J. Wysocki" <rafael@kernel.org>, Thomas Garnier <thgarnie@google.com>, Linux PM list <linux-pm@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Yinghai Lu <yinghai@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bpetkov@suse.de>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1464979224-2085-3-git-send-email-keescook@chromium.org>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH 2/2] arm: apply more __ro_after_init
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, linux-arch@vger.kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, x86@kernel.org, linux-kernel@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 10 Aug 2016, Rafael J. Wysocki wrote:
+On Fri, Jun 03, 2016 at 11:40:24AM -0700, Kees Cook wrote:
+> @@ -1309,16 +1309,11 @@ void __init arm_mm_memblock_reserve(void)
+>   * Any other function or debugging method which may touch any device _will_
+>   * crash the kernel.
+>   */
+> +static char vectors[PAGE_SIZE * 2] __ro_after_init __aligned(PAGE_SIZE);
+>  static void __init devicemaps_init(const struct machine_desc *mdesc)
+>  {
+>  	struct map_desc map;
+>  	unsigned long addr;
+> -	void *vectors;
+> -
+> -	/*
+> -	 * Allocate the vector page early.
+> -	 */
+> -	vectors = early_alloc(PAGE_SIZE * 2);
 
-> For the lack of better ideas, below is a patch to try.
-> 
-> It avoids the possible issue with the restore kernel's identity mapping overlap
-> with restore_jump_address by creating special super-simple page tables just
-> for the final jump to the image kernel.
-> 
-> It is on top of the $subject patch.  My test box still works with this applied,
-> but then it worked without it as well.
-> 
-> If it doesn't help, the identity mapping created by set_up_temporary_mappings()
-> is still not adequate for some reason most likely and we'll need to find out
-> why.
-
-Unfortunately, still with $subject patch + this one, triple fault and 
-reboot after reading the hibernation image.
-
-Due to being slightly out of ideas currently, I'll play a little bit more 
-with the relocation offsets to see whether that makes any difference.
+This one is not appropriate.  We _do_ write to these pages after init
+for FIQ handler updates.  See set_fiq_handler().
 
 -- 
-Jiri Kosina
-SUSE Labs
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
