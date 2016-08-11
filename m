@@ -1,41 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Arnd Bergmann <arnd@arndb.de>
-Date: Thu, 11 Aug 2016 17:54:08 +0200
-Message-ID: <2188666.QKZtt2vNXZ@wuerfel>
-In-Reply-To: <20160810230645.GP1041@n2100.armlinux.org.uk>
-References: <1464979224-2085-1-git-send-email-keescook@chromium.org> <2760702.46Rp2Juk5b@wuerfel> <20160810230645.GP1041@n2100.armlinux.org.uk>
+Date: Thu, 11 Aug 2016 18:02:15 +0200
+Message-ID: <28485373.pjx0rukqdF@wuerfel>
+In-Reply-To: <20160810230242.GO1041@n2100.armlinux.org.uk>
+References: <1464979224-2085-1-git-send-email-keescook@chromium.org> <2096112.OBiRuggdEi@wuerfel> <20160810230242.GO1041@n2100.armlinux.org.uk>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
 Subject: [kernel-hardening] Re: [PATCH 2/2] arm: apply more __ro_after_init
-To: Russell King - ARM Linux <linux@armlinux.org.uk>
-Cc: linux-arm-kernel@lists.infradead.org, Kees Cook <keescook@chromium.org>, linux-arch <linux-arch@vger.kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>
+To: linux-arm-kernel@lists.infradead.org
+Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, linux-arch@vger.kernel.org, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, x86@kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>, Mark Brown <broonie@kernel.org>, Daniel Thompson <daniel.thompson@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thursday, August 11, 2016 12:06:45 AM CEST Russell King - ARM Linux wrote:
-> On Wed, Aug 10, 2016 at 09:41:23PM +0200, Arnd Bergmann wrote:
-> > It might be better to start by making the fixed mapping readonly,
-> > as KASLR doesn't protect that one at all, and change the TLS
-> > code accordingly.
+On Thursday, August 11, 2016 12:02:42 AM CEST Russell King - ARM Linux wrote:
+> On Wed, Aug 10, 2016 at 09:31:05PM +0200, Arnd Bergmann wrote:
+> > On Wednesday, August 10, 2016 11:12:53 AM CEST Russell King - ARM Linux wrote:
+> > > There's the TLS emulation too, but that writes via the vectors mapping
+> > > at 0xffff0ff0.
+> > 
+> > Ok, so that should be safe. Can we change the fiq code to also use the
+> > high mapping and then take the __ro_after_init patch on top?
 > 
-> I think that's impossible, because we gave userspace permission to
-> read 0xffff0ff0 directly without using __kuser_get_tls.  You're
-> talking about potentially breaking userspace.
-> 
-> If you disable kuser helpers, then the page becomes read-only and
-> invisible to userspace anyway.  So, everything is being done there
-> which can be done - if you have kuser helpers enabled, then you
-> lose some opportunities for these security improvements.
+> We can't - if the kernel is configured without the kuser helpers in
+> the vectors page, it's mapped read-only. I'm not sure what the
+> intersection is between platforms that can have FIQs and platforms
+> that can disable the kuser helpers.
 
-What I meant was writing to the page through the linear mapping
-rather than the virtual mapping at 0xffff0000 so we can leave that
-one read-only (I did not consider whether that might cause cache
-aliasing problems when reading from the other address).
+>From Kconfig logic and callers of set_fiq_handler(), theoretically
+there is just i.MX3, but I think they never use fiq in their
+audio drivers in practice already, and Mark Brown mentioned
+that we could remove fiq support in the imx audio driver (don't
+remember the details at the moment).
 
-Your other point is more important though: if one really cares
-about optimizing security here, they probably should disable
-kuser helpers completely anyway.
+If we can prove that i.MX3 PCM FIQ support is never used, then the
+intersection is empty, and all machines that use FIQ require kuser
+helpers.
 
-Kees, is that something you have on your radar already?
+This may change with Daniel Thompson's patches that use the FIQ
+for NMI backtrace.
 
 	Arnd
