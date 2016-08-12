@@ -1,49 +1,108 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160810222805.GA13733@www.outflux.net>
+From: Balbir Singh <bsingharora@gmail.com>
+Message-ID: <99df3a39-ecf1-90a0-2649-fa0bda270ceb@gmail.com>
+Date: Fri, 12 Aug 2016 13:52:21 +1000
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <2188666.QKZtt2vNXZ@wuerfel>
-References: <1464979224-2085-1-git-send-email-keescook@chromium.org>
- <2760702.46Rp2Juk5b@wuerfel> <20160810230645.GP1041@n2100.armlinux.org.uk> <2188666.QKZtt2vNXZ@wuerfel>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 11 Aug 2016 15:16:50 -0700
-Message-ID: <CAGXu5j+RA+fepUEXoqXEBmyhBokQxv0csO=VuzFpHd4Fk4dH4A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 2/2] arm: apply more __ro_after_init
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Russell King - ARM Linux <linux@armlinux.org.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-arch <linux-arch@vger.kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "x86@kernel.org" <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Morton <akpm@linux-foundation.org>, Mathias Krause <minipli@googlemail.com>
+In-Reply-To: <20160810222805.GA13733@www.outflux.net>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] mm: Add the ram_latent_entropy kernel parameter
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, Vlastimil Babka <vbabka@suse.cz>, Mel Gorman <mgorman@techsingularity.net>, Michal Hocko <mhocko@suse.com>, Johannes Weiner <hannes@cmpxchg.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Taku Izumi <izumi.taku@jp.fujitsu.com>, linux-doc@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 11, 2016 at 8:54 AM, Arnd Bergmann <arnd@arndb.de> wrote:
-> On Thursday, August 11, 2016 12:06:45 AM CEST Russell King - ARM Linux wrote:
->> On Wed, Aug 10, 2016 at 09:41:23PM +0200, Arnd Bergmann wrote:
->> > It might be better to start by making the fixed mapping readonly,
->> > as KASLR doesn't protect that one at all, and change the TLS
->> > code accordingly.
->>
->> I think that's impossible, because we gave userspace permission to
->> read 0xffff0ff0 directly without using __kuser_get_tls.  You're
->> talking about potentially breaking userspace.
->>
->> If you disable kuser helpers, then the page becomes read-only and
->> invisible to userspace anyway.  So, everything is being done there
->> which can be done - if you have kuser helpers enabled, then you
->> lose some opportunities for these security improvements.
->
-> What I meant was writing to the page through the linear mapping
-> rather than the virtual mapping at 0xffff0000 so we can leave that
-> one read-only (I did not consider whether that might cause cache
-> aliasing problems when reading from the other address).
->
-> Your other point is more important though: if one really cares
-> about optimizing security here, they probably should disable
-> kuser helpers completely anyway.
->
-> Kees, is that something you have on your radar already?
 
-It wasn't no. I will add it. :)
 
--Kees
+On 11/08/16 08:28, Kees Cook wrote:
+> From: Emese Revfy <re.emese@gmail.com>
+> 
+> When "ram_latent_entropy" is passed on the kernel command line, entropy
+> will be extracted from up to the first 4GB of RAM while the runtime memory
+> allocator is being initialized. This entropy isn't cryptographically
+> secure, but does help provide additional unpredictability on otherwise
+> low-entropy systems.
+> 
+> Based on work created by the PaX Team.
+> 
+> Signed-off-by: Emese Revfy <re.emese@gmail.com>
+> [kees: renamed parameter, dropped relationship with plugin, updated log]
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+> This patch has been extracted from the latent_entropy gcc plugin, as
+> suggested by Linus: https://lkml.org/lkml/2016/8/8/840
+> ---
+>  Documentation/kernel-parameters.txt |  5 +++++
+>  mm/page_alloc.c                     | 21 +++++++++++++++++++++
+>  2 files changed, 26 insertions(+)
+> 
+> diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+> index 46c030a49186..9d054984370f 100644
+> --- a/Documentation/kernel-parameters.txt
+> +++ b/Documentation/kernel-parameters.txt
+> @@ -3245,6 +3245,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
+>  	raid=		[HW,RAID]
+>  			See Documentation/md.txt.
+>  
+> +	ram_latent_entropy
+> +			Enable a very simple form of latent entropy extraction
+> +			from the first 4GB of memory as the bootmem allocator
+> +			passes the memory pages to the buddy allocator.
+> +
+>  	ramdisk_size=	[RAM] Sizes of RAM disks in kilobytes
+>  			See Documentation/blockdev/ramdisk.txt.
+>  
+> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+> index fb975cec3518..1de94f0ff29d 100644
+> --- a/mm/page_alloc.c
+> +++ b/mm/page_alloc.c
+> @@ -64,6 +64,7 @@
+>  #include <linux/page_owner.h>
+>  #include <linux/kthread.h>
+>  #include <linux/memcontrol.h>
+> +#include <linux/random.h>
+>  
+>  #include <asm/sections.h>
+>  #include <asm/tlbflush.h>
+> @@ -1236,6 +1237,15 @@ static void __free_pages_ok(struct page *page, unsigned int order)
+>  	local_irq_restore(flags);
+>  }
+>  
+> +bool __meminitdata ram_latent_entropy;
+> +
+> +static int __init setup_ram_latent_entropy(char *str)
+> +{
+> +	ram_latent_entropy = true;
+> +	return 0;
+> +}
+> +early_param("ram_latent_entropy", setup_ram_latent_entropy);
+> +
+>  static void __init __free_pages_boot_core(struct page *page, unsigned int order)
+>  {
+>  	unsigned int nr_pages = 1 << order;
+> @@ -1251,6 +1261,17 @@ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
+>  	__ClearPageReserved(p);
+>  	set_page_count(p, 0);
+>  
+> +	if (ram_latent_entropy && !PageHighMem(page) &&
+> +		page_to_pfn(page) < 0x100000) {
+> +		u64 hash = 0;
+> +		size_t index, end = PAGE_SIZE * nr_pages / sizeof(hash);
+> +		const u64 *data = lowmem_page_address(page);
+> +
+> +		for (index = 0; index < end; index++)
+> +			hash ^= hash + data[index];
 
--- 
-Kees Cook
-Nexus Security
+Won't the hash be the same across boots? Is this entropy addition for
+KASLR, since it is so early in boot?q
+
+> +		add_device_randomness((const void *)&hash, sizeof(hash));
+> +	}
+> +
+>  	page_zone(page)->managed_pages += nr_pages;
+>  	set_page_refcounted(page);
+>  	__free_pages(page, order);
+> 
+
+
+Balbir Singh
