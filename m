@@ -1,43 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Catalin Marinas <catalin.marinas@arm.com>
-Date: Fri, 12 Aug 2016 16:27:46 +0100
-Message-Id: <1471015666-23125-8-git-send-email-catalin.marinas@arm.com>
-In-Reply-To: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
-References: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
-Subject: [kernel-hardening] [PATCH 7/7] arm64: Enable CONFIG_ARM64_TTBR0_PAN
-To: linux-arm-kernel@lists.infradead.org
-Cc: kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>
+MIME-Version: 1.0
+In-Reply-To: <alpine.LNX.2.00.1608121044120.22028@cbobk.fhfr.pm>
+References: <1470952169-39061-1-git-send-email-thgarnie@google.com>
+ <alpine.LNX.2.00.1608120800100.22028@cbobk.fhfr.pm> <alpine.LNX.2.00.1608121044120.22028@cbobk.fhfr.pm>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 12 Aug 2016 09:03:05 -0700
+Message-ID: <CAJcbSZHG3ULCATigD0hhzOEXWi+GiDhtiBQdgaTiYnkP3k2fHw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v1] x86/power/64: Restore processor state before using
+ per-cpu variables
+To: Jiri Kosina <jikos@kernel.org>
+Cc: "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Linux PM list <linux-pm@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Borislav Petkov <bpetkov@suse.de>, Yinghai Lu <yinghai@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch adds the Kconfig option to enable support for TTBR0 PAN. The
-option is default off because of a slight performance hit when enabled,
-caused by the additional TTBR0_EL1 switching during user access
-operations or exception entry/exit code.
+On Fri, Aug 12, 2016 at 2:23 AM, Jiri Kosina <jikos@kernel.org> wrote:
+> On Fri, 12 Aug 2016, Jiri Kosina wrote:
+>
+> That's pretty nasty, as turning LOCKDEP on has sideffects on the code
+> that'd normally not be expected to be run at all (tracepoint off).
+>
+> Oh well.
 
-Cc: Will Deacon <will.deacon@arm.com>
-Cc: James Morse <james.morse@arm.com>
-Cc: Kees Cook <keescook@chromium.org>
-Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
----
- arch/arm64/Kconfig | 8 ++++++++
- 1 file changed, 8 insertions(+)
+Thanks for the analysis, I didn't got that far so I had no idea how
+everything was connected.
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 69c8787bec7d..e7d5d0a7f6b4 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -784,6 +784,14 @@ config SETEND_EMULATION
- 	  If unsure, say Y
- endif
- 
-+config ARM64_TTBR0_PAN
-+	bool "Priviledged Access Never using TTBR0_EL1 switching"
-+	help
-+	  Enabling this option prevents the kernel from accessing
-+	  user-space memory directly by pointing TTBR0_EL1 to a reserved
-+	  zeroed area and reserved ASID. The user access routines
-+	  restore the valid TTBR0_EL1 temporarily.
-+
- menu "ARMv8.1 architectural features"
- 
- config ARM64_HW_AFDBM
+> Thanks again,
+
+Thanks you and Borislav for finding it.
