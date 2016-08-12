@@ -1,108 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20160810222805.GA13733@www.outflux.net>
-From: Balbir Singh <bsingharora@gmail.com>
-Message-ID: <99df3a39-ecf1-90a0-2649-fa0bda270ceb@gmail.com>
-Date: Fri, 12 Aug 2016 13:52:21 +1000
+Date: Fri, 12 Aug 2016 07:49:13 +0200
+From: Borislav Petkov <bp@suse.de>
+Message-ID: <20160812054913.GA24303@nazgul.tnic>
+References: <1470952169-39061-1-git-send-email-thgarnie@google.com>
 MIME-Version: 1.0
-In-Reply-To: <20160810222805.GA13733@www.outflux.net>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] mm: Add the ram_latent_entropy kernel parameter
-To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, Andrew Morton <akpm@linux-foundation.org>, Jonathan Corbet <corbet@lwn.net>, Vlastimil Babka <vbabka@suse.cz>, Mel Gorman <mgorman@techsingularity.net>, Michal Hocko <mhocko@suse.com>, Johannes Weiner <hannes@cmpxchg.org>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Taku Izumi <izumi.taku@jp.fujitsu.com>, linux-doc@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1470952169-39061-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v1] x86/power/64: Restore processor state before using
+ per-cpu variables
+To: Thomas Garnier <thgarnie@google.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>
+Cc: Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, jikos@kernel.org, yinghai@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On 11/08/16 08:28, Kees Cook wrote:
-> From: Emese Revfy <re.emese@gmail.com>
+On Thu, Aug 11, 2016 at 02:49:29PM -0700, Thomas Garnier wrote:
+> Restore the processor state before calling any other function to ensure
+> per-cpu variables can be used with KASLR memory randomization.
 > 
-> When "ram_latent_entropy" is passed on the kernel command line, entropy
-> will be extracted from up to the first 4GB of RAM while the runtime memory
-> allocator is being initialized. This entropy isn't cryptographically
-> secure, but does help provide additional unpredictability on otherwise
-> low-entropy systems.
+> Tracing functions use per-cpu variables (gs based) and one was called
+> just before restoring the processor state fully. It resulted in a double
+> fault when both the tracing & the exception handler functions tried to
+> use a per-cpu variable.
 > 
-> Based on work created by the PaX Team.
-> 
-> Signed-off-by: Emese Revfy <re.emese@gmail.com>
-> [kees: renamed parameter, dropped relationship with plugin, updated log]
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 > ---
-> This patch has been extracted from the latent_entropy gcc plugin, as
-> suggested by Linus: https://lkml.org/lkml/2016/8/8/840
-> ---
->  Documentation/kernel-parameters.txt |  5 +++++
->  mm/page_alloc.c                     | 21 +++++++++++++++++++++
->  2 files changed, 26 insertions(+)
-> 
-> diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
-> index 46c030a49186..9d054984370f 100644
-> --- a/Documentation/kernel-parameters.txt
-> +++ b/Documentation/kernel-parameters.txt
-> @@ -3245,6 +3245,11 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
->  	raid=		[HW,RAID]
->  			See Documentation/md.txt.
->  
-> +	ram_latent_entropy
-> +			Enable a very simple form of latent entropy extraction
-> +			from the first 4GB of memory as the bootmem allocator
-> +			passes the memory pages to the buddy allocator.
-> +
->  	ramdisk_size=	[RAM] Sizes of RAM disks in kilobytes
->  			See Documentation/blockdev/ramdisk.txt.
->  
-> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-> index fb975cec3518..1de94f0ff29d 100644
-> --- a/mm/page_alloc.c
-> +++ b/mm/page_alloc.c
-> @@ -64,6 +64,7 @@
->  #include <linux/page_owner.h>
->  #include <linux/kthread.h>
->  #include <linux/memcontrol.h>
-> +#include <linux/random.h>
->  
->  #include <asm/sections.h>
->  #include <asm/tlbflush.h>
-> @@ -1236,6 +1237,15 @@ static void __free_pages_ok(struct page *page, unsigned int order)
->  	local_irq_restore(flags);
->  }
->  
-> +bool __meminitdata ram_latent_entropy;
-> +
-> +static int __init setup_ram_latent_entropy(char *str)
-> +{
-> +	ram_latent_entropy = true;
-> +	return 0;
-> +}
-> +early_param("ram_latent_entropy", setup_ram_latent_entropy);
-> +
->  static void __init __free_pages_boot_core(struct page *page, unsigned int order)
->  {
->  	unsigned int nr_pages = 1 << order;
-> @@ -1251,6 +1261,17 @@ static void __init __free_pages_boot_core(struct page *page, unsigned int order)
->  	__ClearPageReserved(p);
->  	set_page_count(p, 0);
->  
-> +	if (ram_latent_entropy && !PageHighMem(page) &&
-> +		page_to_pfn(page) < 0x100000) {
-> +		u64 hash = 0;
-> +		size_t index, end = PAGE_SIZE * nr_pages / sizeof(hash);
-> +		const u64 *data = lowmem_page_address(page);
-> +
-> +		for (index = 0; index < end; index++)
-> +			hash ^= hash + data[index];
+> Based on next-20160808
 
-Won't the hash be the same across boots? Is this entropy addition for
-KASLR, since it is so early in boot?q
+Ok, I believe before I test this, I need to apply another patch from
+Rafael. I think it is the "Always create temporary identity mapping
+correctly" thing.
 
-> +		add_device_randomness((const void *)&hash, sizeof(hash));
-> +	}
-> +
->  	page_zone(page)->managed_pages += nr_pages;
->  	set_page_refcounted(page);
->  	__free_pages(page, order);
-> 
+Yes, no?
 
+Rafael, can you please apply everything on a test branch for us to run?
 
-Balbir Singh
+Thanks.
+
+-- 
+Regards/Gruss,
+    Boris.
+
+ECO tip #101: Trim your mails when you reply.
+
+SUSE Linux GmbH, GF: Felix Imendörffer, Jane Smithard, Graham Norton, HRB 21284 (AG Nürnberg)
+--
