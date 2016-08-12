@@ -1,46 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 12 Aug 2016 19:45:06 +0200
-From: Borislav Petkov <bp@suse.de>
-Message-ID: <20160812174506.GA3119@nazgul.tnic>
-References: <1470952169-39061-1-git-send-email-thgarnie@google.com>
- <20160812054913.GA24303@nazgul.tnic>
- <CAJZ5v0hC28BMqgurck0oiQGxf=XhYwseiVs+DeLdv9wKHFCa7w@mail.gmail.com>
- <CAJcbSZEAyS6Lp=Cuz=-4yL39yz=Z_FpVuY2NiYjM=fchFtpTEg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <CAJcbSZEAyS6Lp=Cuz=-4yL39yz=Z_FpVuY2NiYjM=fchFtpTEg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v1] x86/power/64: Restore processor state before using
- per-cpu variables
-To: Thomas Garnier <thgarnie@google.com>
-Cc: "Rafael J. Wysocki" <rafael@kernel.org>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Linux PM <linux-pm@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Jiri Kosina <jikos@kernel.org>, Yinghai Lu <yinghai@kernel.org>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 12 Aug 2016 10:52:44 -0700
+Message-Id: <1471024364-46217-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v2] x86/power/64: Restore processor state before using per-cpu variables
+To: "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>
+Cc: linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, jikos@kernel.org, bpetkov@suse.de, yinghai@kernel.org, Thomas Garnier <thgarnie@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 12, 2016 at 09:03:52AM -0700, Thomas Garnier wrote:
-> Borislav, let me know once you tested it and I will send a v2 with
-> acked/tested.
+Restore the processor state before calling any other function to ensure
+per-cpu variables can be used with KASLR memory randomization.
 
-Just did 5 s2d runs, back-to-back, with Rafael's linux-next branch.
-Looks good so far, no hickups. I'll watch it the coming days if there
-are any changes.
+Tracing functions use per-cpu variables (gs based) and one was called
+just before restoring the processor state fully. It resulted in a double
+fault when both the tracing & the exception handler functions tried to
+use a per-cpu variable.
 
+Reported-by: Jiri Kosina <jkosina@suse.cz>
+Tested-by: Jiri Kosina <jkosina@suse.cz>
+Acked-by: Pavel Machek <pavel@ucw.cz>
 Reported-and-tested-by: Borislav Petkov <bp@suse.de>
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20160808
 
-Btw, I'm running with:
+Thanks to Rafael, Jiri & Borislav in tracking down this bug and help
+testing this fix.
+---
+ kernel/power/hibernate.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-CONFIG_ARCH_HAS_ELF_RANDOMIZE=y
-CONFIG_RANDOMIZE_BASE=y
-CONFIG_RANDOMIZE_MEMORY=y
-CONFIG_RANDOMIZE_MEMORY_PHYSICAL_PADDING=0x0
-
-Thanks guys for the fixes.
-
+diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
+index a881c6a..33c79b6 100644
+--- a/kernel/power/hibernate.c
++++ b/kernel/power/hibernate.c
+@@ -300,12 +300,12 @@ static int create_image(int platform_mode)
+ 	save_processor_state();
+ 	trace_suspend_resume(TPS("machine_suspend"), PM_EVENT_HIBERNATE, true);
+ 	error = swsusp_arch_suspend();
++	/* Restore control flow magically appears here */
++	restore_processor_state();
+ 	trace_suspend_resume(TPS("machine_suspend"), PM_EVENT_HIBERNATE, false);
+ 	if (error)
+ 		printk(KERN_ERR "PM: Error %d creating hibernation image\n",
+ 			error);
+-	/* Restore control flow magically appears here */
+-	restore_processor_state();
+ 	if (!in_suspend)
+ 		events_check_enabled = false;
+ 
 -- 
-Regards/Gruss,
-    Boris.
-
-ECO tip #101: Trim your mails when you reply.
-
-SUSE Linux GmbH, GF: Felix Imendörffer, Jane Smithard, Graham Norton, HRB 21284 (AG Nürnberg)
---
+2.8.0.rc3.226.g39d4020
