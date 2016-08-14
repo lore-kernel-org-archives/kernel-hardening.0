@@ -1,46 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 14 Aug 2016 18:22:26 +0200
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20160814162226.GA7583@amd>
+Date: Sun, 14 Aug 2016 18:31:26 +0200
+From: Pavel Machek 1 <pavel@denx.de>
+Message-ID: <20160814163126.GA19472@amd>
 References: <1469557346-5534-1-git-send-email-william.c.roberts@intel.com>
  <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+ <20160726200309.GJ4541@io.lakedaemon.net>
+ <476DC76E7D1DF2438D32BFADF679FC560125F29C@ORSMSX103.amr.corp.intel.com>
+ <20160726205944.GM4541@io.lakedaemon.net>
+ <CAFJ0LnEZW7Y1zfN8v0_ckXQZn1n-UKEhf_tSmNOgHwrrnNnuMg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1469557346-5534-2-git-send-email-william.c.roberts@intel.com>
+In-Reply-To: <CAFJ0LnEZW7Y1zfN8v0_ckXQZn1n-UKEhf_tSmNOgHwrrnNnuMg@mail.gmail.com>
 Subject: [kernel-hardening] Re: [PATCH] [RFC] Introduce mmap randomization
-To: william.c.roberts@intel.com
-Cc: jason@lakedaemon.net, linux-mm@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, akpm@linux-foundation.org, keescook@chromium.org, gregkh@linuxfoundation.org, nnk@google.com, jeffv@google.com, salyzyn@android.com, dcashman@android.com
+To: Nick Kralevich <nnk@google.com>
+Cc: Jason Cooper <jason@lakedaemon.net>, "Roberts, William C" <william.c.roberts@intel.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "akpm@linux-foundation.org" <akpm@linux-foundation.org>, "keescook@chromium.org" <keescook@chromium.org>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "jeffv@google.com" <jeffv@google.com>, "salyzyn@android.com" <salyzyn@android.com>, "dcashman@android.com" <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue 2016-07-26 11:22:26, william.c.roberts@intel.com wrote:
-> From: William Roberts <william.c.roberts@intel.com>
-> 
-> This patch introduces the ability randomize mmap locations where the
-> address is not requested, for instance when ld is allocating pages for
-> shared libraries. It chooses to randomize based on the current
-> personality for ASLR.
-> 
-> Currently, allocations are done sequentially within unmapped address
-> space gaps. This may happen top down or bottom up depending on scheme.
-> 
-> For instance these mmap calls produce contiguous mappings:
-> int size = getpagesize();
-> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40026000
-> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40027000
-> 
-> Note no gap between.
-> 
-> After patches:
-> int size = getpagesize();
-> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x400b4000
-> mmap(NULL, size, flags, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40055000
-> 
-> Note gap between.
+Hi!
 
-Ok, I guess you can do it... but... what will be the effect on
-available address space for a process? By doing this, won't you
-fragment it horribly? This might be nasty on 32-bit systems...
+> Inter-mmap randomization will decrease the predictability of later
+> mmap() allocations, which should help make data structures harder to
+> find in memory. In addition, this patch will also introduce unmapped
+> gaps between pages, preventing linear overruns from one mapping to
+> another another mapping. I am unable to quantify how much this will
+> improve security, but it should be > 0.
+> 
+> I like Dave Hansen's suggestion that this functionality be limited to
+> 64 bits, where concerns about running out of address space are
+> essentially nil. I'd be supportive of this change if it was limited to
+> 64 bits.
+
+Yep, 64bits is easier. But notice that x86-64 machines do _not_ have
+full 64bits of address space...
+
+...and that if you use as much address space as possible, TLB flushes
+will be slower because page table entries will need more cache.
+
+So this will likely have performance implications even when
+application does no syscalls :-(.
+
+How do you plan to deal with huge memory pages support?
 
 Best regards,
 								Pavel
