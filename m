@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 15 Aug 2016 11:06:49 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160815100649.GB1996@svinekod>
+Date: Mon, 15 Aug 2016 11:08:38 +0100
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20160815100838.GB13262@arm.com>
 References: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
  <CAKv+Gu9hz_=GSRYgW3RueVhUA8F3HaM5DC_8Jkbx1JHF3x5mKg@mail.gmail.com>
  <20160815094842.GB22320@e104818-lin.cambridge.arm.com>
@@ -14,7 +14,7 @@ In-Reply-To: <CAKv+Gu99SNzKVccod_2At1vsmHfgO4fnqVYbVJ8Fjdd4k68RXg@mail.gmail.com
 Subject: Re: [kernel-hardening] [PATCH 0/7] arm64: Privileged Access Never
  using TTBR0_EL1 switching
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Julien Grall <julien.grall@arm.com>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Julien Grall <julien.grall@arm.com>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Mon, Aug 15, 2016 at 12:02:33PM +0200, Ard Biesheuvel wrote:
@@ -38,6 +38,7 @@ On Mon, Aug 15, 2016 at 12:02:33PM +0200, Ard Biesheuvel wrote:
 > > control only affects the behaviour on a TLB miss. Thus to use EPD0 we'd at
 > > least need TLB invalidation by ASID to remove previously-allocated entries from
 > > TLBs.
+> >
 > 
 > ... or update the ASID to the reserved ASID in TTBR0_EL1, but leave
 > the actual TTBR address alone.
@@ -45,12 +46,7 @@ On Mon, Aug 15, 2016 at 12:02:33PM +0200, Ard Biesheuvel wrote:
 > This would remove the need for a zero page, and for recording the
 > original TTBR address in a per-cpu variable.
 
-That's a good point, and a better approach.
+Hmm, how does that work? The ASID and EPDx are in different registers,
+so there's still a window where we could get speculative TLB fills.
 
-Unfortunately, we're still left with the issue that TCR_EL1.* can be cached in
-a TLB, as Catalin pointed out. Which at minimum would require a TLBI ASIDE1,
-and may require something stronger, given the precise rules for TLB-cached
-fields isn't clear.
-
-Thanks,
-Mark.
+Will
