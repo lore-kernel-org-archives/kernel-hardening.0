@@ -1,96 +1,144 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20160815161318.GH22320@e104818-lin.cambridge.arm.com>
-References: <20160815095813.GA1996@svinekod> <CAKv+Gu99SNzKVccod_2At1vsmHfgO4fnqVYbVJ8Fjdd4k68RXg@mail.gmail.com>
- <20160815100649.GB1996@svinekod> <CAKv+Gu-nrAvdqy9Yb=vP1RysWY+gZqHdiMv6fdDKN4-gBPivDA@mail.gmail.com>
- <20160815103000.GE13262@arm.com> <CAKv+Gu_8d7Vf+TzQnqaofNj62L-=qkht4av-6mCYZoWkucz8RA@mail.gmail.com>
- <20160815103721.GF13262@arm.com> <CAKv+Gu-5Ckd0_ot-Le=7dL2Wn8E6198vEHPk0-E4VtRUw8c0BQ@mail.gmail.com>
- <20160815105205.GD22320@e104818-lin.cambridge.arm.com> <CAKv+Gu87t-AnDKvtk699CpEfkEPgB=6DE-8EhBCMMnczemVQ4Q@mail.gmail.com>
- <20160815161318.GH22320@e104818-lin.cambridge.arm.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 15 Aug 2016 21:04:58 +0200
-Message-ID: <CAKv+Gu_eEHnQ1zJojCUwK8E8dyfSGkJPSa8Up-yVPw70PLB4JA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 0/7] arm64: Privileged Access Never
- using TTBR0_EL1 switching
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Julien Grall <julien.grall@arm.com>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 16 Aug 2016 14:11:03 -0700
+Message-Id: <1471381865-25724-4-git-send-email-keescook@chromium.org>
+In-Reply-To: <1471381865-25724-1-git-send-email-keescook@chromium.org>
+References: <1471381865-25724-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH 3/5] list: Split list_del() debug checking into separate function
+To: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>
+Cc: Kees Cook <keescook@chromium.org>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Steven Rostedt <rostedt@goodmis.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Tejun Heo <tj@kernel.org>, Michael Ellerman <mpe@ellerman.id.au>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Josef Bacik <jbacik@fb.com>, Thomas Gleixner <tglx@linutronix.de>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 15 August 2016 at 18:13, Catalin Marinas <catalin.marinas@arm.com> wrote:
-> On Mon, Aug 15, 2016 at 12:56:58PM +0200, Ard Biesheuvel wrote:
->> On 15 August 2016 at 12:52, Catalin Marinas <catalin.marinas@arm.com> wrote:
->> > On Mon, Aug 15, 2016 at 12:43:31PM +0200, Ard Biesheuvel wrote:
->> >> But, how about we store the reserved ASID in TTBR1_EL1 instead, and
->> >> switch TCR_EL1.A1 and TCR_EL1.EPD0 in a single write? That way, we can
->> >> switch ASIDs and disable table walks atomically (I hope), and we
->> >> wouldn't need to change TTBR0_EL1 at all.
->> >
->> > I did this before for AArch32 + LPAE (patches on the list sometime last
->> > year I think). But the idea was nak'ed by the ARM architects. The
->> > TCR_EL1.A1 can be cached somewhere in the TLB state machine, so you need
->> > TLBI (IOW, toggling A1 does not guarantee an ASID switch).
->>
->> But how is TTBR0_EL1 any different? The ARM ARM equally mentions that
->> any of its field can be cached in a TLB, so by that reasoning, setting
->> a new ASID in TTBR0_EL1 would also require TLB maintenance.
->
-> Not really because this register is also described as part of the
-> context switching operation, so that would be an exception to the
-> general rule of requiring TLB invalidation for cached registers.
->
+Similar to the list_add() debug consolidation, this consolidates the
+debug checking performed during CONFIG_DEBUG_LIST, and stops list
+updates when corruption is found.
 
-Well, of course, requiring TLB maintenance to change the current ASID
-would be silly. But the ASID is obviously cached in each TLB entry
-that is generated while the ASID is active, which makes the sentence
-'Any of the fields in this register are permitted to be cached in a
-TLB.' a bit ambiguous, since it obviously does not mean that a stale
-ASID may be cached by the table walker.
+Refactored from same hardening in PaX and Grsecurity.
 
-> If you keep reading the same paragraph, the ARM ARM becomes more
-> subjective ;) and you may come to the conclusion that the reserved ASID
-> (not TCR_EL1.A1 though) + TCR_EL1.EDP0 would do the trick but we need
-> clarification from the architects rather than my random interpretation:
->
-> Section "D4.7.1 General TLB maintenance requirements" states:
->
->   Some System register field descriptions state that the effect of the
->   field is permitted to be cached in a TLB. This means that all TLB
->   entries that might be affected by a change of the field must be
->   invalidated whenever that field is changed
->
-> So the above kind of implies that only TLB *entries* that might be
-> affected by a change of a control bit need to be invalidated and only
-> the effect of such bit is cached (rather than the bit itself). The
-> effect of EDP0==1 is that there is no page table walk on a miss, so
-> there won't be any new entries cached in the TLB that would
-> reflect/cache the effect of EDP0==1. We still need to follow this by a
-> switch to the reserved ASID to make sure there are no other TLB entries
-> for TTBR0 (and we shouldn't care about the window between EDP0=1 and
-> ASID=reserved).
->
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ include/linux/list.h | 15 +++++++++------
+ lib/list_debug.c     | 53 +++++++++++++++++++++++-----------------------------
+ 2 files changed, 32 insertions(+), 36 deletions(-)
 
-Indeed.
-
-> Anyway, the above wouldn't help the code much since we still need to
-> preserve/restore/switch the ASID of the current thread (that's unless we
-> temporarily store TTBR0_EL1.ASID into the TTBR1_EL1.ASID field).
-
-That is actually not such a bad idea. We could assign both fields at
-context switch time, and simply copy it from TTBR1_EL1 to TTBR0_EL1
-before doing the user access.
-
-> The
-> TCR_EL1.A1 trick would have been nice but explicitly rejected by the
-> architects (I guess it's not part of the context switching sequence, so
-> the hardware may not notice the A1 bit change).
->
-
-Yeah, that's unfortunate. But I think this feature is important, and
-combined with the hardened usercopy feature drastically reduces the
-attack surface of the kernel, so I expect it to quickly make its way
-into various 'stable' downstream trees. So I would really like to get
-to the bottom of this.
-
+diff --git a/include/linux/list.h b/include/linux/list.h
+index c38ff652ab59..09b857a0dda1 100644
+--- a/include/linux/list.h
++++ b/include/linux/list.h
+@@ -32,6 +32,7 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
+ extern bool __list_add_debug(struct list_head *new,
+ 			      struct list_head *prev,
+ 			      struct list_head *next);
++extern bool __list_del_entry_debug(struct list_head *entry);
+ #else
+ static inline bool __list_add_debug(struct list_head *new,
+ 				struct list_head *prev,
+@@ -39,6 +40,10 @@ static inline bool __list_add_debug(struct list_head *new,
+ {
+ 	return true;
+ }
++static inline bool __list_del_entry_debug(struct list_head *entry)
++{
++	return true;
++}
+ #endif
+ 
+ /*
+@@ -106,22 +111,20 @@ static inline void __list_del(struct list_head * prev, struct list_head * next)
+  * Note: list_empty() on entry does not return true after this, the entry is
+  * in an undefined state.
+  */
+-#ifndef CONFIG_DEBUG_LIST
+ static inline void __list_del_entry(struct list_head *entry)
+ {
++	if (!__list_del_entry_debug(entry))
++		return;
++
+ 	__list_del(entry->prev, entry->next);
+ }
+ 
+ static inline void list_del(struct list_head *entry)
+ {
+-	__list_del(entry->prev, entry->next);
++	__list_del_entry(entry);
+ 	entry->next = LIST_POISON1;
+ 	entry->prev = LIST_POISON2;
+ }
+-#else
+-extern void __list_del_entry(struct list_head *entry);
+-extern void list_del(struct list_head *entry);
+-#endif
+ 
+ /**
+  * list_replace - replace old entry by new one
+diff --git a/lib/list_debug.c b/lib/list_debug.c
+index e90a931bd5ab..80e2e40a6a4e 100644
+--- a/lib/list_debug.c
++++ b/lib/list_debug.c
+@@ -42,41 +42,34 @@ bool __list_add_debug(struct list_head *new,
+ }
+ EXPORT_SYMBOL(__list_add_debug);
+ 
+-void __list_del_entry(struct list_head *entry)
++bool __list_del_entry_debug(struct list_head *entry)
+ {
+ 	struct list_head *prev, *next;
+ 
+ 	prev = entry->prev;
+ 	next = entry->next;
+ 
+-	if (WARN(next == LIST_POISON1,
+-		"list_del corruption, %p->next is LIST_POISON1 (%p)\n",
+-		entry, LIST_POISON1) ||
+-	    WARN(prev == LIST_POISON2,
+-		"list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
+-		entry, LIST_POISON2) ||
+-	    WARN(prev->next != entry,
+-		"list_del corruption. prev->next should be %p, "
+-		"but was %p\n", entry, prev->next) ||
+-	    WARN(next->prev != entry,
+-		"list_del corruption. next->prev should be %p, "
+-		"but was %p\n", entry, next->prev))
+-		return;
+-
+-	__list_del(prev, next);
+-}
+-EXPORT_SYMBOL(__list_del_entry);
++	if (unlikely(next == LIST_POISON1)) {
++		WARN(1, "list_del corruption, %p->next is LIST_POISON1 (%p)\n",
++			entry, LIST_POISON1);
++		return false;
++	}
++	if (unlikely(prev == LIST_POISON2)) {
++		WARN(1, "list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
++			entry, LIST_POISON2);
++		return false;
++	}
++	if (unlikely(prev->next != entry)) {
++		WARN(1, "list_del corruption. prev->next should be %p, but was %p\n",
++			entry, prev->next);
++		return false;
++	}
++	if (unlikely(next->prev != entry)) {
++		WARN(1, "list_del corruption. next->prev should be %p, but was %p\n",
++			entry, next->prev);
++		return false;
++	}
++	return true;
+ 
+-/**
+- * list_del - deletes entry from list.
+- * @entry: the element to delete from the list.
+- * Note: list_empty on entry does not return true after this, the entry is
+- * in an undefined state.
+- */
+-void list_del(struct list_head *entry)
+-{
+-	__list_del_entry(entry);
+-	entry->next = LIST_POISON1;
+-	entry->prev = LIST_POISON2;
+ }
+-EXPORT_SYMBOL(list_del);
++EXPORT_SYMBOL(__list_del_entry_debug);
 -- 
-Ard.
+2.7.4
