@@ -1,55 +1,202 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 16 Aug 2016 17:57:26 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20160816175726.31b55326@gandalf.local.home>
-In-Reply-To: <20160816175354.0b58d5f3@gandalf.local.home>
-References: <1471381865-25724-1-git-send-email-keescook@chromium.org>
-	<1471381865-25724-5-git-send-email-keescook@chromium.org>
-	<20160816212605.GY3482@linux.vnet.ibm.com>
-	<CAGXu5jLGRL9PaLMVwGQ39_GUeMdBJgD03-PCYZ9KvtUF7aHt=Q@mail.gmail.com>
-	<20160816175354.0b58d5f3@gandalf.local.home>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
+Sender: keescook@google.com
+In-Reply-To: <167f13a1-b857-56b2-548b-1581bd69ffd7@redhat.com>
+References: <1471381865-25724-1-git-send-email-keescook@chromium.org>
+ <1471381865-25724-5-git-send-email-keescook@chromium.org> <167f13a1-b857-56b2-548b-1581bd69ffd7@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 16 Aug 2016 16:11:05 -0700
+Message-ID: <CAGXu5jLzF7=jpt4h6gdJiiKmAV=JobY+pLh48pCcza=8mzrKLA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH 4/5] bug: Provide toggle for BUG on data corruption
-To: Kees Cook <keescook@chromium.org>
-Cc: Paul McKenney <paulmck@linux.vnet.ibm.com>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Tejun Heo <tj@kernel.org>, Michael Ellerman <mpe@ellerman.id.au>, "Aneesh
- Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Josef Bacik <jbacik@fb.com>, Thomas Gleixner <tglx@linutronix.de>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Joe Perches <joe@perches.com>
+To: Laura Abbott <labbott@redhat.com>
+Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Steven Rostedt <rostedt@goodmis.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Tejun Heo <tj@kernel.org>, Michael Ellerman <mpe@ellerman.id.au>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Josef Bacik <jbacik@fb.com>, Thomas Gleixner <tglx@linutronix.de>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 16 Aug 2016 17:53:54 -0400
-Steven Rostedt <rostedt@goodmis.org> wrote:
+On Tue, Aug 16, 2016 at 2:50 PM, Laura Abbott <labbott@redhat.com> wrote:
+> On 08/16/2016 02:11 PM, Kees Cook wrote:
+>>
+>> The kernel checks for several cases of data structure corruption under
+>> either normal runtime, or under various CONFIG_DEBUG_* settings. When
+>> corruption is detected, some systems may want to BUG() immediately instead
+>> of letting the corruption continue. Many of these manipulation primitives
+>> can be used by security flaws to gain arbitrary memory write control. This
+>> provides CONFIG_BUG_ON_CORRUPTION to control newly added BUG() locations.
+>>
+>> This is inspired by similar hardening in PaX and Grsecurity, and by
+>> Stephen Boyd in MSM kernels.
+>>
+>
+> This was never my favorite patch in the MSM tree, mostly because it seemed
+> to proliferate in random places. Some of these like the list were legit
+> corruption but others like the spinlock and workqueue were indication of
+> more hardware induced corruption and less kernel or software bugs.
+> I'd rather see the detection added in structures specifically identified to
+> be vulnerable. spinlocks and workqueues don't seem to be high on the
+> list to me. If they are, I think this could use some explanation of why
+> these in particular deserve checks vs. any other place where we might
+> detect corruption.
 
+Ah, interesting. I was wondering about why those two were added,
+especially the workqueue one which seemed to be a counter issue
+(hopefully we'll get the counter protection in soon too).
 
->              WARN(1, "list_del corruption. next->prev should be %p, but was %p\n",
->                      entry, next->prev);
->              BUG_ON(CORRUPTED_DATA_STRUCTURE);
-> 
-> Will always warn (as stated by "1") and and the BUG_ON() will bug if
-> CORRUPTED_DATA_STRUCTURE is set. Although, I don't like that name. Can
-> we have a:
-> 
->  BUG_ON(BUG_ON_CORRUPTED_DATA_STRUCTURES);
-> 
-> Or maybe have that as a macro:
-> 
-> #ifdef CONFIG_BUG_ON_CORRUPTION
-> # define BUG_ON_CORRUPTED_DATA_STRUCTURE() BUG_ON(1)
-> #else
-> # define BUG_ON_CORRUPTED_DATA_STRUCTURE() do {} while (0)
-> #endif
-> 
-> Then we can have:
-> 
->              WARN(1, "list_del corruption. next->prev should be %p, but was %p\n",
->                      entry, next->prev);
->              BUG_ON_CORRUPTED_DATA_STRUCTURE();
-> 
-> ??
-> 
+Unless Stephen speaks up, I'll just drop the spinlock and workqueue chunks.
 
-Hmm, maybe better yet, just have it called "CORRUPTED_DATA_STRUCTURE()"
-because it wont bug if the config is not set, and having "BUG_ON" in
-the name, it might be somewhat confusing.
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  include/linux/bug.h             |  7 +++++++
+>>  kernel/locking/spinlock_debug.c |  1 +
+>>  kernel/workqueue.c              |  2 ++
+>>  lib/Kconfig.debug               | 10 ++++++++++
+>>  lib/list_debug.c                |  7 +++++++
+>>  5 files changed, 27 insertions(+)
+>>
+>> diff --git a/include/linux/bug.h b/include/linux/bug.h
+>> index e51b0709e78d..7e69758dd798 100644
+>> --- a/include/linux/bug.h
+>> +++ b/include/linux/bug.h
+>> @@ -118,4 +118,11 @@ static inline enum bug_trap_type report_bug(unsigned
+>> long bug_addr,
+>>  }
+>>
+>>  #endif /* CONFIG_GENERIC_BUG */
+>> +
+>> +#ifdef CONFIG_BUG_ON_CORRUPTION
+>> +# define CORRUPTED_DATA_STRUCTURE      true
+>> +#else
+>> +# define CORRUPTED_DATA_STRUCTURE      false
+>> +#endif
+>> +
+>>  #endif /* _LINUX_BUG_H */
+>> diff --git a/kernel/locking/spinlock_debug.c
+>> b/kernel/locking/spinlock_debug.c
+>> index 0374a596cffa..d5f833769feb 100644
+>> --- a/kernel/locking/spinlock_debug.c
+>> +++ b/kernel/locking/spinlock_debug.c
+>> @@ -64,6 +64,7 @@ static void spin_dump(raw_spinlock_t *lock, const char
+>> *msg)
+>>                 owner ? owner->comm : "<none>",
+>>                 owner ? task_pid_nr(owner) : -1,
+>>                 lock->owner_cpu);
+>> +       BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>         dump_stack();
+>>  }
+>>
+>> diff --git a/kernel/workqueue.c b/kernel/workqueue.c
+>> index ef071ca73fc3..ea0132b55eca 100644
+>> --- a/kernel/workqueue.c
+>> +++ b/kernel/workqueue.c
+>> @@ -48,6 +48,7 @@
+>>  #include <linux/nodemask.h>
+>>  #include <linux/moduleparam.h>
+>>  #include <linux/uaccess.h>
+>> +#include <linux/bug.h>
+>>
+>>  #include "workqueue_internal.h"
+>>
+>> @@ -2108,6 +2109,7 @@ __acquires(&pool->lock)
+>>                        current->comm, preempt_count(),
+>> task_pid_nr(current),
+>>                        worker->current_func);
+>>                 debug_show_held_locks(current);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 dump_stack();
+>>         }
+>>
+>> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+>> index 2307d7c89dac..d64bd6b6fd45 100644
+>> --- a/lib/Kconfig.debug
+>> +++ b/lib/Kconfig.debug
+>> @@ -1987,6 +1987,16 @@ config TEST_STATIC_KEYS
+>>
+>>           If unsure, say N.
+>>
+>> +config BUG_ON_CORRUPTION
+>> +       bool "Trigger a BUG when data corruption is detected"
+>> +       help
+>> +         Select this option if the kernel should BUG when it encounters
+>> +         data corruption in various kernel memory structures during
+>> checks
+>> +         added by options like CONFIG_DEBUG_LIST, CONFIG_DEBUG_SPINLOCK,
+>> +         etc.
+>> +
+>> +         If unsure, say N.
+>> +
+>>  source "samples/Kconfig"
+>>
+>>  source "lib/Kconfig.kgdb"
+>> diff --git a/lib/list_debug.c b/lib/list_debug.c
+>> index 80e2e40a6a4e..161c7e7d3478 100644
+>> --- a/lib/list_debug.c
+>> +++ b/lib/list_debug.c
+>> @@ -26,16 +26,19 @@ bool __list_add_debug(struct list_head *new,
+>>         if (unlikely(next->prev != prev)) {
+>>                 WARN(1, "list_add corruption. next->prev should be prev
+>> (%p), but was %p. (next=%p).\n",
+>>                         prev, next->prev, next);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         if (unlikely(prev->next != next)) {
+>>                 WARN(1, "list_add corruption. prev->next should be next
+>> (%p), but was %p. (prev=%p).\n",
+>>                         next, prev->next, prev);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         if (unlikely(new == prev || new == next)) {
+>>                 WARN(1, "list_add double add: new=%p, prev=%p,
+>> next=%p.\n",
+>>                         new, prev, next);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         return true;
+>> @@ -52,21 +55,25 @@ bool __list_del_entry_debug(struct list_head *entry)
+>>         if (unlikely(next == LIST_POISON1)) {
+>>                 WARN(1, "list_del corruption, %p->next is LIST_POISON1
+>> (%p)\n",
+>>                         entry, LIST_POISON1);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         if (unlikely(prev == LIST_POISON2)) {
+>>                 WARN(1, "list_del corruption, %p->prev is LIST_POISON2
+>> (%p)\n",
+>>                         entry, LIST_POISON2);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         if (unlikely(prev->next != entry)) {
+>>                 WARN(1, "list_del corruption. prev->next should be %p, but
+>> was %p\n",
+>>                         entry, prev->next);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         if (unlikely(next->prev != entry)) {
+>>                 WARN(1, "list_del corruption. next->prev should be %p, but
+>> was %p\n",
+>>                         entry, next->prev);
+>> +               BUG_ON(CORRUPTED_DATA_STRUCTURE);
+>>                 return false;
+>>         }
+>>         return true;
+>>
+>
+> The git history shows 924d9addb9b1 ("list debugging: use
+> WARN() instead of BUG()") deliberately switched this from BUG to WARN.
+> Do we still need the WARN at all or can we just switch to BUG permanently?
 
--- Steve
+Hah. Yeah, okay, so that explains the history of this a little more.
+Looks like when this was converted to WARN, the "stop execution flow"
+part of that was not retained (which is what PaX/Grsecurity added
+back). Regardless, it certainly supports having a CONFIG for "should
+this WARN and abort, or BUG?"
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
