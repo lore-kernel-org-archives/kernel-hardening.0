@@ -1,99 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 17 Aug 2016 09:47:42 -0700
-Message-Id: <1471452462-42560-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v1] kexec/arch/i386: Add support for KASLR memory randomization
-To: kexec@lists.infradead.org
-Cc: horms@verge.net.au, keescook@chromium.org, kernel-hardening@lists.openwall.com, Thomas Garnier <thgarnie@google.com>
+Date: Wed, 17 Aug 2016 13:17:36 -0700
+From: Stephen Boyd <sboyd@codeaurora.org>
+Message-ID: <20160817201736.GB361@codeaurora.org>
+References: <1471393229-27182-1-git-send-email-keescook@chromium.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1471393229-27182-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v2 0/5] bug: Provide toggle for BUG on data corruption
+To: Kees Cook <keescook@chromium.org>
+Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Dan Williams <dan.j.williams@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Tejun Heo <tj@kernel.org>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Multiple changes were made on KASLR (right now in linux-next). One of
-them is randomizing the virtual address of the physical mapping, vmalloc
-and vmemmap memory sections. It breaks kdump ability to read physical
-memory.
+On 08/16, Kees Cook wrote:
+> This adds a CONFIG to trigger BUG()s when the kernel encounters
+> unexpected data structure integrity as currently detected with
+> CONFIG_DEBUG_LIST.
+> 
+> Specifically list operations have been a target for widening flaws to gain
+> "write anywhere" primitives for attackers, so this also consolidates the
+> debug checking to avoid code and check duplication (e.g. RCU list debug
+> was missing a check that got added to regular list debug). It also stops
+> manipulations when corruption is detected, since worsening the corruption
+> makes no sense. (Really, everyone should build with CONFIG_DEBUG_LIST
+> since the checks are so inexpensive.)
+> 
+> This is mostly a refactoring of similar code from PaX and Grsecurity,
+> along with MSM kernel changes by Stephen Boyd.
 
-This change identifies if KASLR memories randomization is used by
-checking if the page_offset_base variable exists. It search for the
-correct PAGE_OFFSET value by looking at the loaded memory section and
-find the lowest aligned on PUD (the randomization level).
+Which commit in the MSM kernel from me? I wonder if perhaps
+you're thinking of a patch from Syed Rameez Mustafa like commit
+1c014f321e6d67f47 in the msm-3.4 kernel.
 
-Related commits on linux-next:
- - 0483e1fa6e09d4948272680f691dccb1edb9677f: Base for randomization
- - 021182e52fe01c1f7b126f97fd6ba048dc4234fd: Enable for PAGE_OFFSET
-
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
----
- kexec/arch/i386/crashdump-x86.c | 29 ++++++++++++++++++++++-------
- 1 file changed, 22 insertions(+), 7 deletions(-)
-
-diff --git a/kexec/arch/i386/crashdump-x86.c b/kexec/arch/i386/crashdump-x86.c
-index bbc0f35..ab833d4 100644
---- a/kexec/arch/i386/crashdump-x86.c
-+++ b/kexec/arch/i386/crashdump-x86.c
-@@ -102,11 +102,10 @@ static int get_kernel_paddr(struct kexec_info *UNUSED(info),
- 	return -1;
- }
- 
--/* Retrieve kernel _stext symbol virtual address from /proc/kallsyms */
--static unsigned long long get_kernel_stext_sym(void)
-+/* Retrieve kernel symbol virtual address from /proc/kallsyms */
-+static unsigned long long get_kernel_sym(const char *symbol)
- {
- 	const char *kallsyms = "/proc/kallsyms";
--	const char *stext = "_stext";
- 	char sym[128];
- 	char line[128];
- 	FILE *fp;
-@@ -122,13 +121,13 @@ static unsigned long long get_kernel_stext_sym(void)
- 	while(fgets(line, sizeof(line), fp) != NULL) {
- 		if (sscanf(line, "%Lx %c %s", &vaddr, &type, sym) != 3)
- 			continue;
--		if (strcmp(sym, stext) == 0) {
--			dbgprintf("kernel symbol %s vaddr = %16llx\n", stext, vaddr);
-+		if (strcmp(sym, symbol) == 0) {
-+			dbgprintf("kernel symbol %s vaddr = %16llx\n", symbol, vaddr);
- 			return vaddr;
- 		}
- 	}
- 
--	fprintf(stderr, "Cannot get kernel %s symbol address\n", stext);
-+	fprintf(stderr, "Cannot get kernel %s symbol address\n", symbol);
- 	return 0;
- }
- 
-@@ -151,6 +150,8 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
- 	off_t size;
- 	uint32_t elf_flags = 0;
- 	uint64_t stext_sym;
-+	const unsigned long long pud_mask = ~((1 << 30) - 1);
-+	unsigned long long vaddr, lowest_vaddr = 0;
- 
- 	if (elf_info->machine != EM_X86_64)
- 		return 0;
-@@ -180,9 +181,23 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
- 
- 	end_phdr = &ehdr.e_phdr[ehdr.e_phnum];
- 
-+	/* Search for the real PAGE_OFFSET when KASLR memory randomization
-+	 * is enabled */
-+	if (get_kernel_sym("page_offset_base") != 0) {
-+		for(phdr = ehdr.e_phdr; phdr != end_phdr; phdr++) {
-+			if (phdr->p_type == PT_LOAD) {
-+				vaddr = phdr->p_vaddr & pud_mask;
-+				if (lowest_vaddr == 0 || lowest_vaddr > vaddr)
-+					lowest_vaddr = vaddr;
-+			}
-+		}
-+		if (lowest_vaddr != 0)
-+			elf_info->page_offset = lowest_vaddr;
-+	}
-+
- 	/* Traverse through the Elf headers and find the region where
- 	 * _stext symbol is located in. That's where kernel is mapped */
--	stext_sym = get_kernel_stext_sym();
-+	stext_sym = get_kernel_sym("_stext");
- 	for(phdr = ehdr.e_phdr; stext_sym && phdr != end_phdr; phdr++) {
- 		if (phdr->p_type == PT_LOAD) {
- 			unsigned long long saddr = phdr->p_vaddr;
 -- 
-2.8.0.rc3.226.g39d4020
+Qualcomm Innovation Center, Inc. is a member of Code Aurora Forum,
+a Linux Foundation Collaborative Project
