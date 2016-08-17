@@ -1,65 +1,116 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 17 Aug 2016 09:20:16 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20160817092016.30f8fc5c@gandalf.local.home>
-In-Reply-To: <1471393229-27182-5-git-send-email-keescook@chromium.org>
-References: <1471393229-27182-1-git-send-email-keescook@chromium.org>
-	<1471393229-27182-5-git-send-email-keescook@chromium.org>
+Date: Wed, 17 Aug 2016 09:09:56 -0700
+From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
+References: <1471381865-25724-1-git-send-email-keescook@chromium.org>
+ <1471381865-25724-5-git-send-email-keescook@chromium.org>
+ <20160816212605.GY3482@linux.vnet.ibm.com>
+ <CAGXu5jLGRL9PaLMVwGQ39_GUeMdBJgD03-PCYZ9KvtUF7aHt=Q@mail.gmail.com>
+ <20160817000133.GZ3482@linux.vnet.ibm.com>
+ <CAGXu5j+5i+sdAebvwSnwoDUFCTAHOV4za+jvw9stV5cSAEd_Lg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 4/5] bug: Provide toggle for BUG on data corruption
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+5i+sdAebvwSnwoDUFCTAHOV4za+jvw9stV5cSAEd_Lg@mail.gmail.com>
+Message-Id: <20160817160956.GD3482@linux.vnet.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH 4/5] bug: Provide toggle for BUG on data corruption
 To: Kees Cook <keescook@chromium.org>
-Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Dan Williams <dan.j.williams@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Tejun Heo <tj@kernel.org>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Steven Rostedt <rostedt@goodmis.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Tejun Heo <tj@kernel.org>, Michael Ellerman <mpe@ellerman.id.au>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Josef Bacik <jbacik@fb.com>, Thomas Gleixner <tglx@linutronix.de>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Joe Perches <joe@perches.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 16 Aug 2016 17:20:28 -0700
-Kees Cook <keescook@chromium.org> wrote:
+On Tue, Aug 16, 2016 at 05:09:53PM -0700, Kees Cook wrote:
+> On Tue, Aug 16, 2016 at 5:01 PM, Paul E. McKenney
+> <paulmck@linux.vnet.ibm.com> wrote:
+> > On Tue, Aug 16, 2016 at 02:42:28PM -0700, Kees Cook wrote:
+> >> On Tue, Aug 16, 2016 at 2:26 PM, Paul E. McKenney
+> >> <paulmck@linux.vnet.ibm.com> wrote:
+> >> > On Tue, Aug 16, 2016 at 02:11:04PM -0700, Kees Cook wrote:
+> >> >> The kernel checks for several cases of data structure corruption under
+> >> >> either normal runtime, or under various CONFIG_DEBUG_* settings. When
+> >> >> corruption is detected, some systems may want to BUG() immediately instead
+> >> >> of letting the corruption continue. Many of these manipulation primitives
+> >> >> can be used by security flaws to gain arbitrary memory write control. This
+> >> >> provides CONFIG_BUG_ON_CORRUPTION to control newly added BUG() locations.
+> >> >>
+> >> >> This is inspired by similar hardening in PaX and Grsecurity, and by
+> >> >> Stephen Boyd in MSM kernels.
+> >> >>
+> >> >> Signed-off-by: Kees Cook <keescook@chromium.org>
+> >> >
+> >> > OK, I will bite...  Why both the WARN() and the BUG_ON()?
+> >>
+> >> Mostly because not every case of BUG(CORRUPTED_DATA_STRUCTURE) is
+> >> cleanly paired with a WARN (see the workqueue addition that wants to
+> >> dump locks too). I could rearrange things a bit, though, and create
+> >> something like:
+> >>
+> >> #ifdef CONFIG_BUG_ON_CORRUPTION
+> >> # define CORRUPTED(format...) { \
+> >>     printk(KERN_ERR format); \
+> >>     BUG(); \
+> >> }
+> >> #else
+> >> # define CORRUPTED(format...) WARN(1, format)
+> >> #endif
+> >>
+> >> What do you think?
+> >
+> > First let me see if I understand the rationale...  The idea is to allow
+> > those in security-irrelevant environments, such as test systems, to
+> > have the old "complain but soldier on" semantics, while security-conscious
+> > systems just panic, thereby hopefully converting a more dangerous form
+> > of attack into a denial-of-service attack.
+> 
+> Right, we don't want to wholesale upgrade all WARNs to BUGs. Just any
+> security-sensitive conditionals. And based on Laura's feedback, this
+> is really just about CONFIG_DEBUG_LIST now. We'll likely find some
+> more to add this to, but for the moment, we'll focus on list.
+> 
+> Here are the rationales as I see it:
+> 
+> - if you've enabled CONFIG_DEBUG_LIST
+>   - you want to get a report of the corruption
+>   - you want the kernel to _not operate on the structure_ (this went
+> missing when s/BUG/WARN/)
+> - if you've enabled CONFIG_BUG_ON_DATA_CORRUPTION
+>   - everything from CONFIG_DEBUG_LIST
+>   - you want the offending process to go away (i.e. BUG instead of WARN)
+>   - you may want the entire system to dump if you've set the
+> panic_on_oops sysctl (i.e. BUG)
 
+OK, this looks good to me.
 
->  EXPORT_SYMBOL(__list_add_valid);
-> @@ -46,26 +41,18 @@ bool __list_del_entry_valid(struct list_head *entry)
->  	prev = entry->prev;
->  	next = entry->next;
->  
-> -	if (unlikely(next == LIST_POISON1)) {
-> -		WARN(1, "list_del corruption, %p->next is LIST_POISON1 (%p)\n",
-> -			entry, LIST_POISON1);
-> -		return false;
-> -	}
-> -	if (unlikely(prev == LIST_POISON2)) {
-> -		WARN(1, "list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
-> -			entry, LIST_POISON2);
-> -		return false;
-> -	}
-> -	if (unlikely(prev->next != entry)) {
-> -		WARN(1, "list_del corruption. prev->next should be %p, but was %p\n",
-> -			entry, prev->next);
-> -		return false;
-> -	}
-> -	if (unlikely(next->prev != entry)) {
-> -		WARN(1, "list_del corruption. next->prev should be %p, but was %p\n",
-> -			entry, next->prev);
-> -		return false;
-> -	}
-> +	CHECK_DATA_CORRUPTION(next == LIST_POISON1,
-> +		"list_del corruption, %p->next is LIST_POISON1 (%p)\n",
-> +		entry, LIST_POISON1);
-> +	CHECK_DATA_CORRUPTION(prev == LIST_POISON2,
-> +		"list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
-> +		entry, LIST_POISON2);
-> +	CHECK_DATA_CORRUPTION(prev->next != entry,
-> +		"list_del corruption. prev->next should be %p, but was %p\n",
-> +		entry, prev->next);
-> +	CHECK_DATA_CORRUPTION(next->prev != entry,
-> +		"list_del corruption. next->prev should be %p, but was %p\n",
-> +		entry, next->prev);
+Just to be clear, if you've enabled neither CONFIG_DEBUG_LIST nor
+CONFIG_BUG_ON_DATA_CORRUPTION, then you get better performance, but are
+taking responsibility for using some other means of shielding your system
+from attack, correct?  (I believe that we do need to give the user this
+choice, just checking your intent.)
 
-OK, you totally rewrote the WARN() section anyway, thus ignore my
-comment on the previous email.
+> > An alternative approach would be to make WARN() panic on systems built
+> > with CONFIG_BUG_ON_CORRUPTION, but we might instead want to choose which
+> > warnings are fatal on security-conscious systems.
+> >
+> > Or am I missing the point?
+> >
+> > At a more detailed level, one could argue for something like this:
+> >
+> > #define CORRUPTED(format...) \
+> > do { \
+> >         if (IS_ENABLED(CONFIG_BUG_ON_CORRUPTION)) { \
+> >                 printk(KERN_ERR format); \
+> >                 BUG(); \
+> >         } else { \
+> >                 WARN(1, format); \
+> >         } \
+> > } while (0)
+> >
+> > Some might prefer #ifdef to IS_ENABLED(), but the bare {} needs to
+> > be do-while in any case.
+> 
+> Yup, this is almost exactly what I've got in the v2. I wanted to
+> enforce a control-flow side-effect, though, so I've included a
+> non-optional "return false" as well.
 
--- Steve
+Sounds good!  And yes, pulling the condition in makes a lot of sense
+to me as well.  Looking forward to seeing v3.
 
->  	return true;
->  
->  }
+							Thanx, Paul
