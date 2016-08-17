@@ -1,166 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 17 Aug 2016 09:16:52 -0400
+Date: Wed, 17 Aug 2016 09:20:16 -0400
 From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20160817091652.59fa2668@gandalf.local.home>
-In-Reply-To: <1471393229-27182-2-git-send-email-keescook@chromium.org>
+Message-ID: <20160817092016.30f8fc5c@gandalf.local.home>
+In-Reply-To: <1471393229-27182-5-git-send-email-keescook@chromium.org>
 References: <1471393229-27182-1-git-send-email-keescook@chromium.org>
-	<1471393229-27182-2-git-send-email-keescook@chromium.org>
+	<1471393229-27182-5-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/5] list: Split list_add() debug checking into
- separate function
+Subject: [kernel-hardening] Re: [PATCH v2 4/5] bug: Provide toggle for BUG on data corruption
 To: Kees Cook <keescook@chromium.org>
 Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Dan Williams <dan.j.williams@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Tejun Heo <tj@kernel.org>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 16 Aug 2016 17:20:25 -0700
+On Tue, 16 Aug 2016 17:20:28 -0700
 Kees Cook <keescook@chromium.org> wrote:
 
-> Right now, __list_add() code is repeated either in list.h or in
-> list_debug.c, but only the debug checks are the different part. This
-> extracts the checking into a separate function and consolidates
-> __list_add(). Additionally this __list_add_debug() will stop list
-> manipulations if a corruption is detected, instead of allowing for further
-> corruption that may lead to even worse conditions.
-> 
-> This is slight refactoring of the same hardening done in PaX and Grsecurity.
-> 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  include/linux/list.h | 22 ++++++++++++++++------
->  lib/list_debug.c     | 48 +++++++++++++++++++++++-------------------------
->  2 files changed, 39 insertions(+), 31 deletions(-)
-> 
-> diff --git a/include/linux/list.h b/include/linux/list.h
-> index 5183138aa932..0ed58591538e 100644
-> --- a/include/linux/list.h
-> +++ b/include/linux/list.h
-> @@ -28,27 +28,37 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
->  	list->prev = list;
->  }
->  
-> +#ifdef CONFIG_DEBUG_LIST
-> +extern bool __list_add_valid(struct list_head *new,
-> +			      struct list_head *prev,
-> +			      struct list_head *next);
-> +#else
-> +static inline bool __list_add_valid(struct list_head *new,
-> +				struct list_head *prev,
-> +				struct list_head *next)
-> +{
-> +	return true;
-> +}
-> +#endif
-> +
->  /*
->   * Insert a new entry between two known consecutive entries.
->   *
->   * This is only for internal list manipulation where we know
->   * the prev/next entries already!
->   */
-> -#ifndef CONFIG_DEBUG_LIST
->  static inline void __list_add(struct list_head *new,
->  			      struct list_head *prev,
->  			      struct list_head *next)
->  {
-> +	if (!__list_add_valid(new, prev, next))
-> +		return;
-> +
->  	next->prev = new;
->  	new->next = next;
->  	new->prev = prev;
->  	WRITE_ONCE(prev->next, new);
->  }
-> -#else
-> -extern void __list_add(struct list_head *new,
-> -			      struct list_head *prev,
-> -			      struct list_head *next);
-> -#endif
->  
->  /**
->   * list_add - add a new entry
-> diff --git a/lib/list_debug.c b/lib/list_debug.c
-> index 3859bf63561c..149dd57b583b 100644
-> --- a/lib/list_debug.c
-> +++ b/lib/list_debug.c
-> @@ -2,8 +2,7 @@
->   * Copyright 2006, Red Hat, Inc., Dave Jones
->   * Released under the General Public License (GPL).
->   *
-> - * This file contains the linked list implementations for
-> - * DEBUG_LIST.
-> + * This file contains the linked list validation for DEBUG_LIST.
->   */
->  
->  #include <linux/export.h>
-> @@ -13,33 +12,32 @@
->  #include <linux/rculist.h>
->  
->  /*
-> - * Insert a new entry between two known consecutive entries.
-> - *
-> - * This is only for internal list manipulation where we know
-> - * the prev/next entries already!
-> + * Check that the data structures for the list manipulations are reasonably
-> + * valid. Failures here indicate memory corruption (and possibly an exploit
-> + * attempt).
->   */
->  
-> -void __list_add(struct list_head *new,
-> -			      struct list_head *prev,
-> -			      struct list_head *next)
-> +bool __list_add_valid(struct list_head *new, struct list_head *prev,
-> +		      struct list_head *next)
->  {
-> -	WARN(next->prev != prev,
-> -		"list_add corruption. next->prev should be "
-> -		"prev (%p), but was %p. (next=%p).\n",
-> -		prev, next->prev, next);
-> -	WARN(prev->next != next,
-> -		"list_add corruption. prev->next should be "
-> -		"next (%p), but was %p. (prev=%p).\n",
-> -		next, prev->next, prev);
-> -	WARN(new == prev || new == next,
-> -	     "list_add double add: new=%p, prev=%p, next=%p.\n",
-> -	     new, prev, next);
-> -	next->prev = new;
-> -	new->next = next;
-> -	new->prev = prev;
-> -	WRITE_ONCE(prev->next, new);
-> +	if (unlikely(next->prev != prev)) {
-> +		WARN(1, "list_add corruption. next->prev should be prev (%p), but was %p. (next=%p).\n",
-> +			prev, next->prev, next);
-> +		return false;
 
-BTW, WARN() does return the result, thus you could have just wrapped the
-if () around them:
+>  EXPORT_SYMBOL(__list_add_valid);
+> @@ -46,26 +41,18 @@ bool __list_del_entry_valid(struct list_head *entry)
+>  	prev = entry->prev;
+>  	next = entry->next;
+>  
+> -	if (unlikely(next == LIST_POISON1)) {
+> -		WARN(1, "list_del corruption, %p->next is LIST_POISON1 (%p)\n",
+> -			entry, LIST_POISON1);
+> -		return false;
+> -	}
+> -	if (unlikely(prev == LIST_POISON2)) {
+> -		WARN(1, "list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
+> -			entry, LIST_POISON2);
+> -		return false;
+> -	}
+> -	if (unlikely(prev->next != entry)) {
+> -		WARN(1, "list_del corruption. prev->next should be %p, but was %p\n",
+> -			entry, prev->next);
+> -		return false;
+> -	}
+> -	if (unlikely(next->prev != entry)) {
+> -		WARN(1, "list_del corruption. next->prev should be %p, but was %p\n",
+> -			entry, next->prev);
+> -		return false;
+> -	}
+> +	CHECK_DATA_CORRUPTION(next == LIST_POISON1,
+> +		"list_del corruption, %p->next is LIST_POISON1 (%p)\n",
+> +		entry, LIST_POISON1);
+> +	CHECK_DATA_CORRUPTION(prev == LIST_POISON2,
+> +		"list_del corruption, %p->prev is LIST_POISON2 (%p)\n",
+> +		entry, LIST_POISON2);
+> +	CHECK_DATA_CORRUPTION(prev->next != entry,
+> +		"list_del corruption. prev->next should be %p, but was %p\n",
+> +		entry, prev->next);
+> +	CHECK_DATA_CORRUPTION(next->prev != entry,
+> +		"list_del corruption. next->prev should be %p, but was %p\n",
+> +		entry, next->prev);
 
-	if (WARN(next->prev != prev,
-			"list_add corruption. next->prev should be prev (%p), but was %p. (next=%p).\n",
-			prev, next->prev, next))
-		return;
-
-Just FYI.
+OK, you totally rewrote the WARN() section anyway, thus ignore my
+comment on the previous email.
 
 -- Steve
 
-
-> +	}
-> +	if (unlikely(prev->next != next)) {
-> +		WARN(1, "list_add corruption. prev->next should be next (%p), but was %p. (prev=%p).\n",
-> +			next, prev->next, prev);
-> +		return false;
-> +	}
-> +	if (unlikely(new == prev || new == next)) {
-> +		WARN(1, "list_add double add: new=%p, prev=%p, next=%p.\n",
-> +			new, prev, next);
-> +		return false;
-> +	}
-> +	return true;
->  }
-> -EXPORT_SYMBOL(__list_add);
-> +EXPORT_SYMBOL(__list_add_valid);
+>  	return true;
 >  
->  void __list_del_entry(struct list_head *entry)
->  {
+>  }
