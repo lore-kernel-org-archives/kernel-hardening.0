@@ -1,34 +1,166 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 16 Aug 2016 21:55:09 -0300
-From: Henrique de Moraes Holschuh <hmh@hmh.eng.br>
-Message-ID: <20160817005509.GA6281@khazad-dum.debian.net>
+Date: Wed, 17 Aug 2016 09:16:52 -0400
+From: Steven Rostedt <rostedt@goodmis.org>
+Message-ID: <20160817091652.59fa2668@gandalf.local.home>
+In-Reply-To: <1471393229-27182-2-git-send-email-keescook@chromium.org>
 References: <1471393229-27182-1-git-send-email-keescook@chromium.org>
+	<1471393229-27182-2-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1471393229-27182-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [PATCH v2 0/5] bug: Provide toggle for BUG on data corruption
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 1/5] list: Split list_add() debug checking into
+ separate function
 To: Kees Cook <keescook@chromium.org>
-Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Dan Williams <dan.j.williams@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Tejun Heo <tj@kernel.org>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Stephen Boyd <sboyd@codeaurora.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Dan Williams <dan.j.williams@intel.com>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Tejun Heo <tj@kernel.org>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 16 Aug 2016, Kees Cook wrote:
-> This adds a CONFIG to trigger BUG()s when the kernel encounters
-> unexpected data structure integrity as currently detected with
-> CONFIG_DEBUG_LIST.
+On Tue, 16 Aug 2016 17:20:25 -0700
+Kees Cook <keescook@chromium.org> wrote:
+
+> Right now, __list_add() code is repeated either in list.h or in
+> list_debug.c, but only the debug checks are the different part. This
+> extracts the checking into a separate function and consolidates
+> __list_add(). Additionally this __list_add_debug() will stop list
+> manipulations if a corruption is detected, instead of allowing for further
+> corruption that may lead to even worse conditions.
 > 
-> Specifically list operations have been a target for widening flaws to gain
-> "write anywhere" primitives for attackers, so this also consolidates the
-> debug checking to avoid code and check duplication (e.g. RCU list debug
-> was missing a check that got added to regular list debug). It also stops
-> manipulations when corruption is detected, since worsening the corruption
-> makes no sense. (Really, everyone should build with CONFIG_DEBUG_LIST
-> since the checks are so inexpensive.)
+> This is slight refactoring of the same hardening done in PaX and Grsecurity.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  include/linux/list.h | 22 ++++++++++++++++------
+>  lib/list_debug.c     | 48 +++++++++++++++++++++++-------------------------
+>  2 files changed, 39 insertions(+), 31 deletions(-)
+> 
+> diff --git a/include/linux/list.h b/include/linux/list.h
+> index 5183138aa932..0ed58591538e 100644
+> --- a/include/linux/list.h
+> +++ b/include/linux/list.h
+> @@ -28,27 +28,37 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
+>  	list->prev = list;
+>  }
+>  
+> +#ifdef CONFIG_DEBUG_LIST
+> +extern bool __list_add_valid(struct list_head *new,
+> +			      struct list_head *prev,
+> +			      struct list_head *next);
+> +#else
+> +static inline bool __list_add_valid(struct list_head *new,
+> +				struct list_head *prev,
+> +				struct list_head *next)
+> +{
+> +	return true;
+> +}
+> +#endif
+> +
+>  /*
+>   * Insert a new entry between two known consecutive entries.
+>   *
+>   * This is only for internal list manipulation where we know
+>   * the prev/next entries already!
+>   */
+> -#ifndef CONFIG_DEBUG_LIST
+>  static inline void __list_add(struct list_head *new,
+>  			      struct list_head *prev,
+>  			      struct list_head *next)
+>  {
+> +	if (!__list_add_valid(new, prev, next))
+> +		return;
+> +
+>  	next->prev = new;
+>  	new->next = next;
+>  	new->prev = prev;
+>  	WRITE_ONCE(prev->next, new);
+>  }
+> -#else
+> -extern void __list_add(struct list_head *new,
+> -			      struct list_head *prev,
+> -			      struct list_head *next);
+> -#endif
+>  
+>  /**
+>   * list_add - add a new entry
+> diff --git a/lib/list_debug.c b/lib/list_debug.c
+> index 3859bf63561c..149dd57b583b 100644
+> --- a/lib/list_debug.c
+> +++ b/lib/list_debug.c
+> @@ -2,8 +2,7 @@
+>   * Copyright 2006, Red Hat, Inc., Dave Jones
+>   * Released under the General Public License (GPL).
+>   *
+> - * This file contains the linked list implementations for
+> - * DEBUG_LIST.
+> + * This file contains the linked list validation for DEBUG_LIST.
+>   */
+>  
+>  #include <linux/export.h>
+> @@ -13,33 +12,32 @@
+>  #include <linux/rculist.h>
+>  
+>  /*
+> - * Insert a new entry between two known consecutive entries.
+> - *
+> - * This is only for internal list manipulation where we know
+> - * the prev/next entries already!
+> + * Check that the data structures for the list manipulations are reasonably
+> + * valid. Failures here indicate memory corruption (and possibly an exploit
+> + * attempt).
+>   */
+>  
+> -void __list_add(struct list_head *new,
+> -			      struct list_head *prev,
+> -			      struct list_head *next)
+> +bool __list_add_valid(struct list_head *new, struct list_head *prev,
+> +		      struct list_head *next)
+>  {
+> -	WARN(next->prev != prev,
+> -		"list_add corruption. next->prev should be "
+> -		"prev (%p), but was %p. (next=%p).\n",
+> -		prev, next->prev, next);
+> -	WARN(prev->next != next,
+> -		"list_add corruption. prev->next should be "
+> -		"next (%p), but was %p. (prev=%p).\n",
+> -		next, prev->next, prev);
+> -	WARN(new == prev || new == next,
+> -	     "list_add double add: new=%p, prev=%p, next=%p.\n",
+> -	     new, prev, next);
+> -	next->prev = new;
+> -	new->next = next;
+> -	new->prev = prev;
+> -	WRITE_ONCE(prev->next, new);
+> +	if (unlikely(next->prev != prev)) {
+> +		WARN(1, "list_add corruption. next->prev should be prev (%p), but was %p. (next=%p).\n",
+> +			prev, next->prev, next);
+> +		return false;
 
-Well, maybe it wants a name that it looks like something that should be
-enabled by default on production kernels?
+BTW, WARN() does return the result, thus you could have just wrapped the
+if () around them:
 
-I.e. CONFIG_DETECT_LIST_CORRUPTION or somesuch?
+	if (WARN(next->prev != prev,
+			"list_add corruption. next->prev should be prev (%p), but was %p. (next=%p).\n",
+			prev, next->prev, next))
+		return;
 
--- 
-  Henrique Holschuh
+Just FYI.
+
+-- Steve
+
+
+> +	}
+> +	if (unlikely(prev->next != next)) {
+> +		WARN(1, "list_add corruption. prev->next should be next (%p), but was %p. (prev=%p).\n",
+> +			next, prev->next, prev);
+> +		return false;
+> +	}
+> +	if (unlikely(new == prev || new == next)) {
+> +		WARN(1, "list_add double add: new=%p, prev=%p, next=%p.\n",
+> +			new, prev, next);
+> +		return false;
+> +	}
+> +	return true;
+>  }
+> -EXPORT_SYMBOL(__list_add);
+> +EXPORT_SYMBOL(__list_add_valid);
+>  
+>  void __list_del_entry(struct list_head *entry)
+>  {
