@@ -1,136 +1,121 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 17 Aug 2016 14:42:12 -0700
-Message-Id: <1471470132-29499-6-git-send-email-keescook@chromium.org>
-In-Reply-To: <1471470132-29499-1-git-send-email-keescook@chromium.org>
-References: <1471470132-29499-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v3 5/5] lkdtm: Add tests for struct list corruption
-To: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>
-Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Stephen Boyd <sboyd@codeaurora.org>, Syed Rameez Mustafa <rameezmustafa@codeaurora.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Thu, 18 Aug 2016 12:59:22 +0800
+From: Baoquan He <bhe@redhat.com>
+Message-ID: <20160818045922.GA23981@x1.redhat.com>
+References: <1471452462-42560-1-git-send-email-thgarnie@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1471452462-42560-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v1] kexec/arch/i386: Add support for KASLR memory
+ randomization
+To: Thomas Garnier <thgarnie@google.com>
+Cc: kexec@lists.infradead.org, horms@verge.net.au, keescook@chromium.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When building under CONFIG_DEBUG_LIST, list addition and removal will be
-sanity-checked. This validates that the check is working as expected by
-setting up classic corruption attacks against list manipulations, available
-with the new lkdtm tests CORRUPT_LIST_ADD and CORRUPT_LIST_DEL.
+On 08/17/16 at 09:47am, Thomas Garnier wrote:
+> Multiple changes were made on KASLR (right now in linux-next). One of
+> them is randomizing the virtual address of the physical mapping, vmalloc
+> and vmemmap memory sections. It breaks kdump ability to read physical
+> memory.
+> 
+> This change identifies if KASLR memories randomization is used by
+> checking if the page_offset_base variable exists. It search for the
+> correct PAGE_OFFSET value by looking at the loaded memory section and
+> find the lowest aligned on PUD (the randomization level).
+> 
+> Related commits on linux-next:
+>  - 0483e1fa6e09d4948272680f691dccb1edb9677f: Base for randomization
+>  - 021182e52fe01c1f7b126f97fd6ba048dc4234fd: Enable for PAGE_OFFSET
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- drivers/misc/lkdtm.h      |  2 ++
- drivers/misc/lkdtm_bugs.c | 68 +++++++++++++++++++++++++++++++++++++++++++++++
- drivers/misc/lkdtm_core.c |  2 ++
- 3 files changed, 72 insertions(+)
+Seems above two commits have been inside Linus's tree, while vmemmap
+not yet.
 
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index fdf954c2107f..cfa1039c62e7 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -21,6 +21,8 @@ void lkdtm_SPINLOCKUP(void);
- void lkdtm_HUNG_TASK(void);
- void lkdtm_ATOMIC_UNDERFLOW(void);
- void lkdtm_ATOMIC_OVERFLOW(void);
-+void lkdtm_CORRUPT_LIST_ADD(void);
-+void lkdtm_CORRUPT_LIST_DEL(void);
- 
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
-diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
-index 182ae1894b32..f336206d4b1f 100644
---- a/drivers/misc/lkdtm_bugs.c
-+++ b/drivers/misc/lkdtm_bugs.c
-@@ -5,8 +5,13 @@
-  * test source files.
-  */
- #include "lkdtm.h"
-+#include <linux/list.h>
- #include <linux/sched.h>
- 
-+struct lkdtm_list {
-+	struct list_head node;
-+};
-+
- /*
-  * Make sure our attempts to over run the kernel stack doesn't trigger
-  * a compiler warning when CONFIG_FRAME_WARN is set. Then make sure we
-@@ -146,3 +151,66 @@ void lkdtm_ATOMIC_OVERFLOW(void)
- 	pr_info("attempting bad atomic overflow\n");
- 	atomic_inc(&over);
- }
-+
-+void lkdtm_CORRUPT_LIST_ADD(void)
-+{
-+	/*
-+	 * Initially, an empty list via LIST_HEAD:
-+	 *	test_head.next = &test_head
-+	 *	test_head.prev = &test_head
-+	 */
-+	LIST_HEAD(test_head);
-+	struct lkdtm_list good, bad;
-+	void *target[2] = { };
-+	void *redirection = &target;
-+
-+	pr_info("attempting good list addition\n");
-+
-+	/*
-+	 * Adding to the list performs these actions:
-+	 *	test_head.next->prev = &good.node
-+	 *	good.node.next = test_head.next
-+	 *	good.node.prev = test_head
-+	 *	test_head.next = good.node
-+	 */
-+	list_add(&good.node, &test_head);
-+
-+	pr_info("attempting corrupted list addition\n");
-+	/*
-+	 * In simulating this "write what where" primitive, the "what" is
-+	 * the address of &bad.node, and the "where" is the address held
-+	 * by "redirection".
-+	 */
-+	test_head.next = redirection;
-+	list_add(&bad.node, &test_head);
-+
-+	if (target[0] == NULL && target[1] == NULL)
-+		pr_err("Overwrite did not happen, but no BUG?!\n");
-+	else
-+		pr_err("list_add() corruption not detected!\n");
-+}
-+
-+void lkdtm_CORRUPT_LIST_DEL(void)
-+{
-+	LIST_HEAD(test_head);
-+	struct lkdtm_list item;
-+	void *target[2] = { };
-+	void *redirection = &target;
-+
-+	list_add(&item.node, &test_head);
-+
-+	pr_info("attempting good list removal\n");
-+	list_del(&item.node);
-+
-+	pr_info("attempting corrupted list removal\n");
-+	list_add(&item.node, &test_head);
-+
-+	/* As with the list_add() test above, this corrupts "next". */
-+	item.node.next = redirection;
-+	list_del(&item.node);
-+
-+	if (target[0] == NULL && target[1] == NULL)
-+		pr_err("Overwrite did not happen, but no BUG?!\n");
-+	else
-+		pr_err("list_del() corruption not detected!\n");
-+}
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index f9154b8d67f6..7eeb71a75549 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -197,6 +197,8 @@ struct crashtype crashtypes[] = {
- 	CRASHTYPE(EXCEPTION),
- 	CRASHTYPE(LOOP),
- 	CRASHTYPE(OVERFLOW),
-+	CRASHTYPE(CORRUPT_LIST_ADD),
-+	CRASHTYPE(CORRUPT_LIST_DEL),
- 	CRASHTYPE(CORRUPT_STACK),
- 	CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
- 	CRASHTYPE(OVERWRITE_ALLOCATION),
--- 
-2.7.4
+> 
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+>  kexec/arch/i386/crashdump-x86.c | 29 ++++++++++++++++++++++-------
+>  1 file changed, 22 insertions(+), 7 deletions(-)
+> 
+> diff --git a/kexec/arch/i386/crashdump-x86.c b/kexec/arch/i386/crashdump-x86.c
+> index bbc0f35..ab833d4 100644
+> --- a/kexec/arch/i386/crashdump-x86.c
+> +++ b/kexec/arch/i386/crashdump-x86.c
+> @@ -102,11 +102,10 @@ static int get_kernel_paddr(struct kexec_info *UNUSED(info),
+>  	return -1;
+>  }
+>  
+> -/* Retrieve kernel _stext symbol virtual address from /proc/kallsyms */
+> -static unsigned long long get_kernel_stext_sym(void)
+> +/* Retrieve kernel symbol virtual address from /proc/kallsyms */
+> +static unsigned long long get_kernel_sym(const char *symbol)
+>  {
+>  	const char *kallsyms = "/proc/kallsyms";
+> -	const char *stext = "_stext";
+>  	char sym[128];
+>  	char line[128];
+>  	FILE *fp;
+> @@ -122,13 +121,13 @@ static unsigned long long get_kernel_stext_sym(void)
+>  	while(fgets(line, sizeof(line), fp) != NULL) {
+>  		if (sscanf(line, "%Lx %c %s", &vaddr, &type, sym) != 3)
+>  			continue;
+> -		if (strcmp(sym, stext) == 0) {
+> -			dbgprintf("kernel symbol %s vaddr = %16llx\n", stext, vaddr);
+> +		if (strcmp(sym, symbol) == 0) {
+> +			dbgprintf("kernel symbol %s vaddr = %16llx\n", symbol, vaddr);
+>  			return vaddr;
+>  		}
+>  	}
+>  
+> -	fprintf(stderr, "Cannot get kernel %s symbol address\n", stext);
+> +	fprintf(stderr, "Cannot get kernel %s symbol address\n", symbol);
+>  	return 0;
+>  }
+>  
+> @@ -151,6 +150,8 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
+>  	off_t size;
+>  	uint32_t elf_flags = 0;
+>  	uint64_t stext_sym;
+> +	const unsigned long long pud_mask = ~((1 << 30) - 1);
+> +	unsigned long long vaddr, lowest_vaddr = 0;
+>  
+>  	if (elf_info->machine != EM_X86_64)
+>  		return 0;
+> @@ -180,9 +181,23 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
+>  
+>  	end_phdr = &ehdr.e_phdr[ehdr.e_phnum];
+>  
+> +	/* Search for the real PAGE_OFFSET when KASLR memory randomization
+> +	 * is enabled */
+
+Yeah, this is necessary. That would be great if it can be put into
+get_kernel_page_offset. But then it need parse kcore elf file again,
+seems no better way.
+
+> +	if (get_kernel_sym("page_offset_base") != 0) {
+> +		for(phdr = ehdr.e_phdr; phdr != end_phdr; phdr++) {
+> +			if (phdr->p_type == PT_LOAD) {
+> +				vaddr = phdr->p_vaddr & pud_mask;
+> +				if (lowest_vaddr == 0 || lowest_vaddr > vaddr)
+> +					lowest_vaddr = vaddr;
+> +			}
+> +		}
+> +		if (lowest_vaddr != 0)
+> +			elf_info->page_offset = lowest_vaddr;
+> +	}
+> +
+>  	/* Traverse through the Elf headers and find the region where
+>  	 * _stext symbol is located in. That's where kernel is mapped */
+> -	stext_sym = get_kernel_stext_sym();
+> +	stext_sym = get_kernel_sym("_stext");
+>  	for(phdr = ehdr.e_phdr; stext_sym && phdr != end_phdr; phdr++) {
+>  		if (phdr->p_type == PT_LOAD) {
+>  			unsigned long long saddr = phdr->p_vaddr;
+> -- 
+> 2.8.0.rc3.226.g39d4020
+> 
+> 
+> _______________________________________________
+> kexec mailing list
+> kexec@lists.infradead.org
+> http://lists.infradead.org/mailman/listinfo/kexec
