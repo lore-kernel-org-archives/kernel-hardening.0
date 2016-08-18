@@ -1,53 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 18 Aug 2016 09:46:57 -0400
-From: Steven Rostedt <rostedt@goodmis.org>
-Message-ID: <20160818094657.5572a19a@gandalf.local.home>
-In-Reply-To: <1471470132-29499-1-git-send-email-keescook@chromium.org>
-References: <1471470132-29499-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 0/5] bug: Provide toggle for BUG on data corruption
-To: Kees Cook <keescook@chromium.org>
-Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Stephen Boyd <sboyd@codeaurora.org>, Syed Rameez Mustafa <rameezmustafa@codeaurora.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 18 Aug 2016 07:47:12 -0700
+Message-Id: <1471531632-23003-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v1] kdump, vmcoreinfo: report memory sections virtual addresses
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, Thomas Garnier <thgarnie@google.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kexec@lists.infradead.org, keescook@chromium.org, kernel-hardening@lists.openwall.com, surovegin@google.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 17 Aug 2016 14:42:07 -0700
-Kees Cook <keescook@chromium.org> wrote:
+KASLR memory randomization can randomize the base of the physical memory
+mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
+(VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
+easily identify the base of each memory section.
 
-> This adds CONFIG_BUG_ON_DATA_CORRUPTION to trigger BUG()s when the kernel
-> encounters unexpected data structure integrity as currently detected
-> with CONFIG_DEBUG_LIST.
-> 
-> Specifically list operations have been a target for widening flaws to gain
-> "write anywhere" primitives for attackers, so this also consolidates the
-> debug checking to avoid code and check duplication (e.g. RCU list debug
-> was missing a check that got added to regular list debug). It also stops
-> manipulations when corruption is detected, since worsening the corruption
-> makes no sense. (Really, everyone should build with CONFIG_DEBUG_LIST
-> since the checks are so inexpensive.)
-> 
-> This is mostly a refactoring of similar code from PaX and Grsecurity,
-> along with MSM kernel changes by Syed Rameez Mustafa.
-> 
-> Along with the patches is a new lkdtm test to validate that setting
-> CONFIG_DEBUG_LIST actually does what is desired.
-> 
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20160817
+---
+ arch/x86/kernel/machine_kexec_64.c | 3 +++
+ include/linux/kexec.h              | 6 ++++++
+ 2 files changed, 9 insertions(+)
 
-The series looks fine by me.
-
-Acked-by: Steven Rostedt <rostedt@goodmis.org>
-
--- Steve
-
-> Thanks,
-> 
-> -Kees
-> 
-> v3:
-> - fix MSM attribution, sboyd
-> - use pr_err, joe
-> 
-> v2:
-> - consolidate printk/WARN/BUG/return logic into a CONFIG-specific macro
-> - drop non-list BUGs, labbott
+diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
+index fc3389f..b1f15a2 100644
+--- a/arch/x86/kernel/machine_kexec_64.c
++++ b/arch/x86/kernel/machine_kexec_64.c
+@@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
+ 	vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
+ 			      kaslr_offset());
+ 	VMCOREINFO_PHYS_BASE(phys_base);
++	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
++	VMCOREINFO_VMALLOC_START(VMALLOC_START);
++	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
+ }
+ 
+ /* arch-dependent functionality related to kexec file-based syscall */
+diff --git a/include/linux/kexec.h b/include/linux/kexec.h
+index d3ae429..cd3874c 100644
+--- a/include/linux/kexec.h
++++ b/include/linux/kexec.h
+@@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
+ 	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
+ #define VMCOREINFO_PHYS_BASE(value) \
+ 	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
++#define VMCOREINFO_PAGE_OFFSET(value) \
++	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
++#define VMCOREINFO_VMALLOC_START(value) \
++	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
++#define VMCOREINFO_VMEMMAP_START(value) \
++	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
+ 
+ extern struct kimage *kexec_image;
+ extern struct kimage *kexec_crash_image;
+-- 
+2.8.0.rc3.226.g39d4020
