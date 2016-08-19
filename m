@@ -1,77 +1,88 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 19 Aug 2016 10:41:46 +0800
-From: Baoquan He <bhe@redhat.com>
-Message-ID: <20160819024146.GA12340@x1.redhat.com>
-References: <1471531632-23003-1-git-send-email-thgarnie@google.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1471531632-23003-1-git-send-email-thgarnie@google.com>
-Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual
- addresses
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, surovegin@google.com, x86@kernel.org, kexec@lists.infradead.org, linux-kernel@vger.kernel.org
+Message-ID: <1471575198.32433.75.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Thu, 18 Aug 2016 22:53:18 -0400
+In-Reply-To: <20160818205700.GZ3482@linux.vnet.ibm.com>
+References: <1471470132-29499-1-git-send-email-keescook@chromium.org>	
+ <1471542175.2581.22.camel@redhat.com>
+	 <20160818205700.GZ3482@linux.vnet.ibm.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-U4CzW6VtNEjjo0OkDg+p"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] [PATCH v3 0/5] bug: Provide toggle for BUG
+ on data corruption
+To: paulmck@linux.vnet.ibm.com
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Stephen Boyd <sboyd@codeaurora.org>, Syed Rameez Mustafa <rameezmustafa@codeaurora.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-This makes sense. Makedumpfile need this to parse memory sections.
+--=-U4CzW6VtNEjjo0OkDg+p
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-Ack.
+On Thu, 2016-08-18 at 13:57 -0700, Paul E. McKenney wrote:
+> On Thu, Aug 18, 2016 at 01:42:55PM -0400, Rik van Riel wrote:
+> > On Wed, 2016-08-17 at 14:42 -0700, Kees Cook wrote:
+> > > This adds CONFIG_BUG_ON_DATA_CORRUPTION to trigger BUG()s when
+> > > the
+> > > kernel
+> > > encounters unexpected data structure integrity as currently
+> > > detected
+> > > with CONFIG_DEBUG_LIST.
+> > >=20
+> > > Specifically list operations have been a target for widening
+> > > flaws to
+> > > gain
+> > > "write anywhere" primitives for attackers, so this also
+> > > consolidates
+> > > the
+> > > debug checking to avoid code and check duplication (e.g. RCU list
+> > > debug
+> > > was missing a check that got added to regular list debug). It
+> > > also
+> > > stops
+> > > manipulations when corruption is detected, since worsening the
+> > > corruption
+> > > makes no sense. (Really, everyone should build with
+> > > CONFIG_DEBUG_LIST
+> > > since the checks are so inexpensive.)
+> > >=20
+> > > This is mostly a refactoring of similar code from PaX and
+> > > Grsecurity,
+> > > along with MSM kernel changes by Syed Rameez Mustafa.
+> > >=20
+> > > Along with the patches is a new lkdtm test to validate that
+> > > setting
+> > > CONFIG_DEBUG_LIST actually does what is desired.
+> >=20
+> > Series looks good to me, too.
+>=20
+> Reviewed-by?=C2=A0=C2=A0Acked-by?=C2=A0=C2=A0Ephemeral accolades?=C2=A0=
+=C2=A0;-)
 
-Acked-by: Baoquan He <bhe@redhat.com>
+Acked-by: Rik van Riel <riel@redhat.com>
 
-On 08/18/16 at 07:47am, Thomas Garnier wrote:
-> KASLR memory randomization can randomize the base of the physical memory
-> mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
-> (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
-> easily identify the base of each memory section.
-> 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> ---
-> Based on next-20160817
-> ---
->  arch/x86/kernel/machine_kexec_64.c | 3 +++
->  include/linux/kexec.h              | 6 ++++++
->  2 files changed, 9 insertions(+)
-> 
-> diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
-> index fc3389f..b1f15a2 100644
-> --- a/arch/x86/kernel/machine_kexec_64.c
-> +++ b/arch/x86/kernel/machine_kexec_64.c
-> @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
->  	vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
->  			      kaslr_offset());
->  	VMCOREINFO_PHYS_BASE(phys_base);
-> +	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
-> +	VMCOREINFO_VMALLOC_START(VMALLOC_START);
-> +	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
->  }
->  
->  /* arch-dependent functionality related to kexec file-based syscall */
-> diff --git a/include/linux/kexec.h b/include/linux/kexec.h
-> index d3ae429..cd3874c 100644
-> --- a/include/linux/kexec.h
-> +++ b/include/linux/kexec.h
-> @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
->  	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
->  #define VMCOREINFO_PHYS_BASE(value) \
->  	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
+works, but I saw you already committed the series to
+your tree, and was not sure you would add more reviews :)
 
-Could it be better to define only one MACRO like VMCOREINFO_
-> +#define VMCOREINFO_PAGE_OFFSET(value) \
-> +	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
-> +#define VMCOREINFO_VMALLOC_START(value) \
-> +	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
-> +#define VMCOREINFO_VMEMMAP_START(value) \
-> +	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
->  
->  extern struct kimage *kexec_image;
->  extern struct kimage *kexec_crash_image;
-> -- 
-> 2.8.0.rc3.226.g39d4020
-> 
-> 
-> _______________________________________________
-> kexec mailing list
-> kexec@lists.infradead.org
-> http://lists.infradead.org/mailman/listinfo/kexec
+--=20
+
+All Rights Reversed.
+--=-U4CzW6VtNEjjo0OkDg+p
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJXtnSfAAoJEM553pKExN6DSSMH/3SmTmpjJPrMLMFtdmupT/aY
+BADRQlb0KZBRkbVWN+3AIi9qXujfMKRQpijsa5un6maDXtpJu6dM+HgULxa0QrcY
+gt546tB486Q9Z4X6agL6/TkICIQdaPWN6benPBtO9Wr02c2VQGYOQ8S8rY6qXLlF
+OEpv/7FXSdiQHRoxYAA1iB6LIcTgrZv0YFwhXFF1PqHk8FaHR6gdmIHlySV5IU21
+tFFXu7wJrVzFcmae8V2K2XF9AiBEtm39NzC/rQrfLkXBackgX67CT2rvVWitSwbI
+8DqBhSt7vo57Xx+LiWBGbXXS5IdC1tDCP17yekn+IBYPUvgni5TEeAbIfR/7710=
+=9IWQ
+-----END PGP SIGNATURE-----
+
+--=-U4CzW6VtNEjjo0OkDg+p--
