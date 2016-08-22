@@ -1,90 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Mon, 22 Aug 2016 15:15:35 +0200
+Message-ID: <4367840.AWTJIHYqbe@wuerfel>
+In-Reply-To: <1471470132-29499-5-git-send-email-keescook@chromium.org>
+References: <1471470132-29499-1-git-send-email-keescook@chromium.org> <1471470132-29499-5-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160819024146.GA12340@x1.redhat.com>
-References: <1471531632-23003-1-git-send-email-thgarnie@google.com> <20160819024146.GA12340@x1.redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 19 Aug 2016 11:01:36 -0700
-Message-ID: <CAGXu5j+2o5iPbesqJA5t2QDM2hK=g7mZAAdoS4EqHzVE76DzcA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual addresses
-To: Baoquan He <bhe@redhat.com>
-Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Eugene Surovegin <surovegin@google.com>, "x86@kernel.org" <x86@kernel.org>, Kexec Mailing List <kexec@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Subject: [kernel-hardening] Re: [PATCH v3 4/5] bug: Provide toggle for BUG on data corruption
+To: Kees Cook <keescook@chromium.org>
+Cc: "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Laura Abbott <labbott@redhat.com>, Steven Rostedt <rostedt@goodmis.org>, Daniel Micay <danielmicay@gmail.com>, Joe Perches <joe@perches.com>, Stephen Boyd <sboyd@codeaurora.org>, Syed Rameez Mustafa <rameezmustafa@codeaurora.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Josh Triplett <josh@joshtriplett.org>, Mathieu Desnoyers <mathieu.desnoyers@efficios.com>, Lai Jiangshan <jiangshanlai@gmail.com>, "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Michael Ellerman <mpe@ellerman.id.au>, Andrew Morton <akpm@linux-foundation.org>, Dan Williams <dan.j.williams@intel.com>, Jan Kara <jack@suse.cz>, Thomas Gleixner <tglx@linutronix.de>, Josef Bacik <jbacik@fb.com>, Ingo Molnar <mingo@kernel.org>, Tejun Heo <tj@kernel.org>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Nikolay Aleksandrov <nikolay@cumulusnetworks.com>, Dmitry Vyukov <dvyukov@google.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 18, 2016 at 7:41 PM, Baoquan He <bhe@redhat.com> wrote:
->
-> This makes sense. Makedumpfile need this to parse memory sections.
+On Wednesday, August 17, 2016 2:42:11 PM CEST Kees Cook wrote:
+> +
+> +/*
+> + * Since detected data corruption should stop operation on the affected
+> + * structures, this returns false if the corruption condition is found.
+> + */
+> +#define CHECK_DATA_CORRUPTION(condition, fmt, ...)                      \
+> +       do {                                                             \
+> +               if (unlikely(condition)) {                               \
+> +                       if (IS_ENABLED(CONFIG_BUG_ON_DATA_CORRUPTION)) { \
+> +                               pr_err(fmt, ##__VA_ARGS__);              \
+> +                               BUG();                                   \
+> +                       } else                                           \
+> +                               WARN(1, fmt, ##__VA_ARGS__);             \
+> +                       return false;                                    \
+> +               }                                                        \
+> +       } while (0)
+> +
 
-Yup, good addition.
+I think the "return false" inside of the macro makes it easy to misread
+what is actually going on.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+How about making it a macro that returns the condition argument?
 
--Kees
+#define CHECK_DATA_CORRUPTION(condition, fmt, ...)	\
+({	\
+	bool _condition = unlikely(condition);	\
+	if (_condition) {	\
+		...
+	}	\
+	_condition;	\
+})
 
->
-> Ack.
->
-> Acked-by: Baoquan He <bhe@redhat.com>
->
-> On 08/18/16 at 07:47am, Thomas Garnier wrote:
->> KASLR memory randomization can randomize the base of the physical memory
->> mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
->> (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
->> easily identify the base of each memory section.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->> Based on next-20160817
->> ---
->>  arch/x86/kernel/machine_kexec_64.c | 3 +++
->>  include/linux/kexec.h              | 6 ++++++
->>  2 files changed, 9 insertions(+)
->>
->> diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
->> index fc3389f..b1f15a2 100644
->> --- a/arch/x86/kernel/machine_kexec_64.c
->> +++ b/arch/x86/kernel/machine_kexec_64.c
->> @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
->>       vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
->>                             kaslr_offset());
->>       VMCOREINFO_PHYS_BASE(phys_base);
->> +     VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
->> +     VMCOREINFO_VMALLOC_START(VMALLOC_START);
->> +     VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
->>  }
->>
->>  /* arch-dependent functionality related to kexec file-based syscall */
->> diff --git a/include/linux/kexec.h b/include/linux/kexec.h
->> index d3ae429..cd3874c 100644
->> --- a/include/linux/kexec.h
->> +++ b/include/linux/kexec.h
->> @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
->>       vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
->>  #define VMCOREINFO_PHYS_BASE(value) \
->>       vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
->
-> Could it be better to define only one MACRO like VMCOREINFO_
->> +#define VMCOREINFO_PAGE_OFFSET(value) \
->> +     vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
->> +#define VMCOREINFO_VMALLOC_START(value) \
->> +     vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
->> +#define VMCOREINFO_VMEMMAP_START(value) \
->> +     vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
->>
->>  extern struct kimage *kexec_image;
->>  extern struct kimage *kexec_crash_image;
->> --
->> 2.8.0.rc3.226.g39d4020
->>
->>
->> _______________________________________________
->> kexec mailing list
->> kexec@lists.infradead.org
->> http://lists.infradead.org/mailman/listinfo/kexec
-
-
-
--- 
-Kees Cook
-Nexus Security
+	Arnd
