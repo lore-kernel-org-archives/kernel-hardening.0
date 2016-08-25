@@ -1,520 +1,411 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Thu, 25 Aug 2016 12:32:40 +0200
-Message-Id: <1472121165-29071-6-git-send-email-mic@digikod.net>
+Date: Thu, 25 Aug 2016 12:32:44 +0200
+Message-Id: <1472121165-29071-10-git-send-email-mic@digikod.net>
 In-Reply-To: <1472121165-29071-1-git-send-email-mic@digikod.net>
 References: <1472121165-29071-1-git-send-email-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v2 05/10] seccomp: Handle Landlock
+Subject: [kernel-hardening] [RFC v2 09/10] landlock: Handle cgroups
 To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, Andrew Morton <akpm@linux-foundation.org>
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-A Landlock program can be triggered when a seccomp filter return
-RET_LANDLOCK. Moreover, it is possible to return a 16-bit cookie which
-will be readable by the Landlock programs.
+Add an eBPF function bpf_landlock_cmp_cgroup_beneath(opt, map, map_op)
+to compare the current process cgroup with a cgroup handle, The handle
+can match the current cgroup if it is the same or a child. This allows
+to make conditional rules according to the current cgroup.
 
-Only seccomp filters loaded from the same thread and before a Landlock
-program can trigger it. Multiple Landlock programs can be triggered by
-one or more seccomp filters. This way, each RET_LANDLOCK (with specific
-cookie) will trigger all the allowed Landlock programs once.
+A cgroup handle is a map entry created from a file descriptor referring
+a cgroup directory (e.g. by opening /sys/fs/cgroup/X). In this case, the
+map entry is of type BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD and the
+inferred array map is of type BPF_MAP_ARRAY_TYPE_LANDLOCK_CGROUP.
+
+An unprivileged process can create and manipulate cgroups thanks to
+cgroup delegation.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Will Drewry <wad@chromium.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: James Morris <james.l.morris@oracle.com>
+Cc: Serge E. Hallyn <serge@hallyn.com>
+Cc: David S. Miller <davem@davemloft.net>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
 ---
- include/linux/seccomp.h      |  49 +++++++++++
- include/uapi/linux/seccomp.h |   2 +
- kernel/fork.c                |  39 ++++++++-
- kernel/seccomp.c             | 190 ++++++++++++++++++++++++++++++++++++++++++-
- 4 files changed, 275 insertions(+), 5 deletions(-)
+ include/linux/bpf.h                |  8 ++++
+ include/uapi/linux/bpf.h           | 15 ++++++
+ kernel/bpf/arraymap.c              | 30 ++++++++++++
+ kernel/bpf/verifier.c              |  6 +++
+ security/landlock/Kconfig          |  3 ++
+ security/landlock/Makefile         |  2 +-
+ security/landlock/checker_cgroup.c | 96 ++++++++++++++++++++++++++++++++++++++
+ security/landlock/checker_cgroup.h | 18 +++++++
+ security/landlock/lsm.c            |  8 ++++
+ 9 files changed, 185 insertions(+), 1 deletion(-)
+ create mode 100644 security/landlock/checker_cgroup.c
+ create mode 100644 security/landlock/checker_cgroup.h
 
-diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
-index 29b20fe8fd4d..785ccbebf687 100644
---- a/include/linux/seccomp.h
-+++ b/include/linux/seccomp.h
-@@ -10,7 +10,33 @@
- #include <linux/thread_info.h>
- #include <asm/seccomp.h>
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index 79014aedbea4..9e6786e7a40a 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -14,6 +14,9 @@
  
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+#include <linux/bpf.h>	/* struct bpf_prog */
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- struct seccomp_filter;
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+struct seccomp_landlock_ret {
-+	struct seccomp_landlock_ret *prev;
-+	/* @filter points to a @landlock_filter list */
-+	struct seccomp_filter *filter;
-+	u16 cookie;
-+	bool triggered;
-+};
-+
-+struct seccomp_landlock_prog {
-+	atomic_t usage;
-+	struct seccomp_landlock_prog *prev;
-+	/*
-+	 * List of filters (through filter->landlock_prev) allowed to trigger
-+	 * this Landlock program.
+ #ifdef CONFIG_SECURITY_LANDLOCK
+ #include <linux/fs.h> /* struct file */
++#ifdef CONFIG_CGROUPS
++#include <linux/cgroup-defs.h> /* struct cgroup_subsys_state */
++#endif	/* CONFIG_CGROUPS */
+ #endif /* CONFIG_SECURITY_LANDLOCK */
+ 
+ struct bpf_map;
+@@ -85,6 +88,7 @@ enum bpf_arg_type {
+ 	ARG_PTR_TO_STRUCT_FILE,		/* pointer to struct file */
+ 	ARG_PTR_TO_STRUCT_CRED,		/* pointer to struct cred */
+ 	ARG_CONST_PTR_TO_LANDLOCK_HANDLE_FS,	/* pointer to Landlock FS handle */
++	ARG_CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP,	/* pointer to Landlock cgroup handle */
+ };
+ 
+ /* type of values returned from helper functions */
+@@ -148,6 +152,7 @@ enum bpf_reg_type {
+ 	PTR_TO_STRUCT_FILE,
+ 	PTR_TO_STRUCT_CRED,
+ 	CONST_PTR_TO_LANDLOCK_HANDLE_FS,
++	CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP,
+ };
+ 
+ struct bpf_prog;
+@@ -212,6 +217,9 @@ struct map_landlock_handle {
+ 	u32 type; /* e.g. BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD */
+ 	union {
+ 		struct file *file;
++#ifdef CONFIG_CGROUPS
++		struct cgroup_subsys_state *css;
++#endif	/* CONFIG_CGROUPS */
+ 	};
+ };
+ #endif /* CONFIG_SECURITY_LANDLOCK */
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 88af79dd668c..7f60b9fdb35c 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -90,12 +90,14 @@ enum bpf_map_type {
+ enum bpf_map_array_type {
+ 	BPF_MAP_ARRAY_TYPE_UNSPEC,
+ 	BPF_MAP_ARRAY_TYPE_LANDLOCK_FS,
++	BPF_MAP_ARRAY_TYPE_LANDLOCK_CGROUP,
+ };
+ 
+ enum bpf_map_handle_type {
+ 	BPF_MAP_HANDLE_TYPE_UNSPEC,
+ 	BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD,
+ 	BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_GLOB,
++	BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD,
+ };
+ 
+ enum bpf_map_array_op {
+@@ -364,6 +366,19 @@ enum bpf_func_id {
+ 	 */
+ 	BPF_FUNC_landlock_cmp_fs_beneath_with_struct_file,
+ 
++	/**
++	 * bpf_landlock_cmp_cgroup_beneath(opt, map, map_op)
++	 * Check if the current process is a leaf of cgroup handles
++	 *
++	 * @opt: check options (e.g. LANDLOCK_FLAG_OPT_REVERSE)
++	 * @map: handles to compare against
++	 * @map_op: which elements of the map to use (e.g. BPF_MAP_ARRAY_OP_OR)
++	 *
++	 * Return: 0 if the current cgroup is the sam or beneath the handle,
++	 * 1 otherwise, or a negative value if an error occurred.
 +	 */
-+	struct seccomp_filter *filter;
-+	struct bpf_prog *prog;
-+};
-+#endif /* CONFIG_SECURITY_LANDLOCK */
++	BPF_FUNC_landlock_cmp_cgroup_beneath,
 +
- /**
-  * struct seccomp - the state of a seccomp'ed process
-  *
-@@ -18,6 +44,10 @@ struct seccomp_filter;
-  *         system calls available to a process.
-  * @filter: must always point to a valid seccomp-filter or NULL as it is
-  *          accessed without locking during system call entry.
-+ * @landlock_filter: list of filters allowed to trigger an associated
-+ *                    Landlock hook via a RET_LANDLOCK.
-+ * @landlock_ret: stored values from a RET_LANDLOCK.
-+ * @landlock_prog: list of Landlock programs.
-  *
-  *          @filter must only be accessed from the context of current as there
-  *          is no read locking.
-@@ -25,6 +55,12 @@ struct seccomp_filter;
- struct seccomp {
- 	int mode;
- 	struct seccomp_filter *filter;
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	struct seccomp_filter *landlock_filter;
-+	struct seccomp_landlock_ret *landlock_ret;
-+	struct seccomp_landlock_prog *landlock_prog;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
+ 	__BPF_FUNC_MAX_ID,
  };
  
- #ifdef CONFIG_HAVE_ARCH_SECCOMP_FILTER
-@@ -85,6 +121,12 @@ static inline int seccomp_mode(struct seccomp *s)
- #ifdef CONFIG_SECCOMP_FILTER
- extern void put_seccomp(struct task_struct *tsk);
- extern void get_seccomp_filter(struct task_struct *tsk);
+diff --git a/kernel/bpf/arraymap.c b/kernel/bpf/arraymap.c
+index 6804dafd8355..050b3d8d88c8 100644
+--- a/kernel/bpf/arraymap.c
++++ b/kernel/bpf/arraymap.c
+@@ -19,6 +19,12 @@
+ #include <linux/file.h> /* fput() */
+ #include <linux/fs.h> /* struct file */
+ 
 +#ifdef CONFIG_SECURITY_LANDLOCK
-+extern void put_landlock_ret(struct seccomp_landlock_ret *landlock_ret);
-+extern struct seccomp_landlock_ret *dup_landlock_ret(
-+		struct seccomp_landlock_ret *ret_orig);
++#ifdef CONFIG_CGROUPS
++#include <linux/cgroup-defs.h> /* struct cgroup_subsys_state */
++#endif	/* CONFIG_CGROUPS */
 +#endif /* CONFIG_SECURITY_LANDLOCK */
 +
- #else  /* CONFIG_SECCOMP_FILTER */
- static inline void put_seccomp(struct task_struct *tsk)
+ static void bpf_array_free_percpu(struct bpf_array *array)
  {
-@@ -95,6 +137,13 @@ static inline void get_seccomp_filter(struct task_struct *tsk)
- {
- 	return;
- }
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+static inline void put_landlock_ret(struct seccomp_landlock_ret *landlock_ret) {}
-+static inline struct seccomp_landlock_ret *dup_landlock_ret(
-+		struct seccomp_landlock_ret *ret_orig) {}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- #endif /* CONFIG_SECCOMP_FILTER */
- 
- #if defined(CONFIG_SECCOMP_FILTER) && defined(CONFIG_CHECKPOINT_RESTORE)
-diff --git a/include/uapi/linux/seccomp.h b/include/uapi/linux/seccomp.h
-index 0f238a43ff1e..b4aab1c19b8a 100644
---- a/include/uapi/linux/seccomp.h
-+++ b/include/uapi/linux/seccomp.h
-@@ -13,6 +13,7 @@
- /* Valid operations for seccomp syscall. */
- #define SECCOMP_SET_MODE_STRICT	0
- #define SECCOMP_SET_MODE_FILTER	1
-+#define SECCOMP_SET_LANDLOCK_HOOK	2
- 
- /* Valid flags for SECCOMP_SET_MODE_FILTER */
- #define SECCOMP_FILTER_FLAG_TSYNC	1
-@@ -28,6 +29,7 @@
- #define SECCOMP_RET_KILL	0x00000000U /* kill the task immediately */
- #define SECCOMP_RET_TRAP	0x00030000U /* disallow and force a SIGSYS */
- #define SECCOMP_RET_ERRNO	0x00050000U /* returns an errno */
-+#define SECCOMP_RET_LANDLOCK	0x00070000U /* trigger LSM evaluation */
- #define SECCOMP_RET_TRACE	0x7ff00000U /* pass to a tracer or disallow */
- #define SECCOMP_RET_ALLOW	0x7fff0000U /* allow */
- 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index b23a71ec8003..3658c1e95e03 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -369,7 +369,12 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
- 	 * the usage counts on the error path calling free_task.
- 	 */
- 	tsk->seccomp.filter = NULL;
--#endif
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	tsk->seccomp.landlock_filter = NULL;
-+	tsk->seccomp.landlock_ret = NULL;
-+	tsk->seccomp.landlock_prog = NULL;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+#endif /* CONFIG_SECCOMP */
- 
- 	setup_thread_stack(tsk, orig);
- 	clear_user_return_notifier(tsk);
-@@ -1200,9 +1205,12 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
- 	return 0;
- }
- 
--static void copy_seccomp(struct task_struct *p)
-+static int copy_seccomp(struct task_struct *p)
- {
- #ifdef CONFIG_SECCOMP
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	struct seccomp_landlock_ret *ret_walk;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 	/*
- 	 * Must be called with sighand->lock held, which is common to
- 	 * all threads in the group. Holding cred_guard_mutex is not
-@@ -1213,7 +1221,27 @@ static void copy_seccomp(struct task_struct *p)
- 
- 	/* Ref-count the new filter user, and assign it. */
- 	get_seccomp_filter(current);
--	p->seccomp = current->seccomp;
-+	p->seccomp.mode = current->seccomp.mode;
-+	p->seccomp.filter = current->seccomp.filter;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	/* No copy for: landlock_filter, landlock_handle */
-+	p->seccomp.landlock_prog = current->seccomp.landlock_prog;
-+	if (p->seccomp.landlock_prog)
-+		atomic_inc(&p->seccomp.landlock_prog->usage);
-+	/* Deep copy for landlock_ret to avoid allocating for each syscall */
-+	for (ret_walk = current->seccomp.landlock_ret;
-+			ret_walk; ret_walk = ret_walk->prev) {
-+		struct seccomp_landlock_ret *ret_new;
-+
-+		ret_new = dup_landlock_ret(ret_walk);
-+		if (IS_ERR(ret_new)) {
-+			put_landlock_ret(p->seccomp.landlock_ret);
-+			return PTR_ERR(ret_new);
-+		}
-+		ret_new->prev = p->seccomp.landlock_ret;
-+		p->seccomp.landlock_ret = ret_new;
-+	}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 
- 	/*
- 	 * Explicitly enable no_new_privs here in case it got set
-@@ -1231,6 +1259,7 @@ static void copy_seccomp(struct task_struct *p)
- 	if (p->seccomp.mode != SECCOMP_MODE_DISABLED)
- 		set_tsk_thread_flag(p, TIF_SECCOMP);
- #endif
-+	return 0;
- }
- 
- SYSCALL_DEFINE1(set_tid_address, int __user *, tidptr)
-@@ -1589,7 +1618,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
- 	 * Copy seccomp details explicitly here, in case they were changed
- 	 * before holding sighand lock.
- 	 */
--	copy_seccomp(p);
-+	retval = copy_seccomp(p);
-+	if (retval)
-+		goto bad_fork_cancel_cgroup;
- 
- 	/*
- 	 * Process group and session signals need to be delivered to just the
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index f1f475691c27..5df7274c7ec3 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -6,6 +6,8 @@
-  * Copyright (C) 2012 Google, Inc.
-  * Will Drewry <wad@chromium.org>
-  *
-+ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
-+ *
-  * This defines a simple but solid secure-computing facility.
-  *
-  * Mode 1 uses a fixed list of allowed system calls.
-@@ -33,6 +35,10 @@
- #include <linux/tracehook.h>
- #include <linux/uaccess.h>
- 
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+#include <linux/bpf.h>	/* bpf_prog_put()  */
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- /**
-  * struct seccomp_filter - container for seccomp BPF programs
-  *
-@@ -58,6 +64,9 @@ struct seccomp_filter {
- 	atomic_t usage;
- 	struct seccomp_filter *prev;
- 	struct bpf_prog *prog;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	struct seccomp_filter *landlock_prev;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- };
- 
- static void put_seccomp_filter(struct seccomp_filter *filter);
-@@ -179,6 +188,10 @@ static u32 seccomp_run_filters(struct seccomp_data *sd)
- {
- 	struct seccomp_data sd_local;
- 	u32 ret = SECCOMP_RET_ALLOW;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	struct seccomp_landlock_ret *landlock_ret, *init_landlock_ret =
-+		current->seccomp.landlock_ret;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 	/* Make sure cross-thread synced filter points somewhere sane. */
- 	struct seccomp_filter *f =
- 			lockless_dereference(current->seccomp.filter);
-@@ -191,6 +204,14 @@ static u32 seccomp_run_filters(struct seccomp_data *sd)
- 		populate_seccomp_data(&sd_local);
- 		sd = &sd_local;
+ 	int i;
+@@ -514,6 +520,12 @@ static void landlock_put_handle(struct map_landlock_handle *handle)
+ 		else
+ 			WARN_ON(1);
+ 		break;
++	case BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD:
++		if (likely(handle->css))
++			css_put(handle->css);
++		else
++			WARN_ON(1);
++		break;
+ 	default:
+ 		WARN_ON(1);
  	}
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	for (landlock_ret = init_landlock_ret;
-+			landlock_ret;
-+			landlock_ret = landlock_ret->prev) {
-+		/* No need to clean the cookie. */
-+		landlock_ret->triggered = false;
-+	}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 
- 	/*
- 	 * All filters in the list are evaluated and the lowest BPF return
-@@ -198,8 +219,27 @@ static u32 seccomp_run_filters(struct seccomp_data *sd)
- 	 */
- 	for (; f; f = f->prev) {
- 		u32 cur_ret = BPF_PROG_RUN(f->prog, (void *)sd);
-+		u32 action = cur_ret & SECCOMP_RET_ACTION;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+		u32 data = cur_ret & SECCOMP_RET_DATA;
-+		if (action == SECCOMP_RET_LANDLOCK) {
-+			/*
-+			 * Keep track of filters from the current task that
-+			 * trigger a RET_LANDLOCK.
-+			 */
-+			for (landlock_ret = init_landlock_ret;
-+					landlock_ret;
-+					landlock_ret = landlock_ret->prev) {
-+				if (landlock_ret->filter == f) {
-+					landlock_ret->triggered = true;
-+					landlock_ret->cookie = data;
-+					break;
-+				}
-+			}
-+		}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 
--		if ((cur_ret & SECCOMP_RET_ACTION) < (ret & SECCOMP_RET_ACTION))
-+		if (action < (ret & SECCOMP_RET_ACTION))
- 			ret = cur_ret;
- 	}
- 	return ret;
-@@ -426,6 +466,9 @@ static long seccomp_attach_filter(unsigned int flags,
- {
- 	unsigned long total_insns;
- 	struct seccomp_filter *walker;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	struct seccomp_landlock_ret *landlock_ret;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 
- 	assert_spin_locked(&current->sighand->siglock);
- 
-@@ -450,6 +493,21 @@ static long seccomp_attach_filter(unsigned int flags,
- 	 * task reference.
- 	 */
- 	filter->prev = current->seccomp.filter;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	filter->landlock_prev = current->seccomp.landlock_filter;
-+	current->seccomp.landlock_filter = filter;
-+
-+	/* Dedicated Landlock result */
-+	landlock_ret = kmalloc(sizeof(*landlock_ret), GFP_KERNEL);
-+	if (!landlock_ret)
-+		return -ENOMEM;
-+	landlock_ret->prev = current->seccomp.landlock_ret;
-+	atomic_inc(&filter->usage);
-+	landlock_ret->filter = filter;
-+	landlock_ret->cookie = 0;
-+	landlock_ret->triggered = false;
-+	current->seccomp.landlock_ret = landlock_ret;
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 	current->seccomp.filter = filter;
- 
- 	/* Now that the new filter is in place, synchronize to all threads. */
-@@ -459,6 +517,55 @@ static long seccomp_attach_filter(unsigned int flags,
- 	return 0;
- }
- 
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+struct seccomp_landlock_ret *dup_landlock_ret(
-+		struct seccomp_landlock_ret *ret_orig)
-+{
-+	struct seccomp_landlock_ret *ret_new;
-+
-+	if (!ret_orig)
-+		return NULL;
-+	ret_new = kmalloc(sizeof(*ret_new), GFP_KERNEL);
-+	if (!ret_new)
-+		return ERR_PTR(-ENOMEM);
-+	ret_new->filter = ret_orig->filter;
-+	if (ret_new->filter)
-+		atomic_inc(&ret_new->filter->usage);
-+	ret_new->cookie = 0;
-+	ret_new->triggered = false;
-+	ret_new->prev = NULL;
-+	return ret_new;
-+}
-+
-+static void put_landlock_prog(struct seccomp_landlock_prog *landlock_prog)
-+{
-+	struct seccomp_landlock_prog *orig = landlock_prog;
-+
-+	/* Clean up single-reference branches iteratively. */
-+	while (orig && atomic_dec_and_test(&orig->usage)) {
-+		struct seccomp_landlock_prog *freeme = orig;
-+
-+		put_seccomp_filter(orig->filter);
-+		bpf_prog_put(orig->prog);
-+		orig = orig->prev;
-+		kfree(freeme);
-+	}
-+}
-+
-+void put_landlock_ret(struct seccomp_landlock_ret *landlock_ret)
-+{
-+	struct seccomp_landlock_ret *orig = landlock_ret;
-+
-+	while (orig) {
-+		struct seccomp_landlock_ret *freeme = orig;
-+
-+		put_seccomp_filter(orig->filter);
-+		orig = orig->prev;
-+		kfree(freeme);
-+	}
-+}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- /* get_seccomp_filter - increments the reference count of the filter on @tsk */
- void get_seccomp_filter(struct task_struct *tsk)
- {
-@@ -485,7 +592,9 @@ static void put_seccomp_filter(struct seccomp_filter *filter)
- 	/* Clean up single-reference branches iteratively. */
- 	while (orig && atomic_dec_and_test(&orig->usage)) {
- 		struct seccomp_filter *freeme = orig;
-+
- 		orig = orig->prev;
-+		/* must not put orig->landlock_prev */
- 		seccomp_filter_free(freeme);
- 	}
- }
-@@ -493,6 +602,10 @@ static void put_seccomp_filter(struct seccomp_filter *filter)
- void put_seccomp(struct task_struct *tsk)
- {
- 	put_seccomp_filter(tsk->seccomp.filter);
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	put_landlock_prog(tsk->seccomp.landlock_prog);
-+	put_landlock_ret(tsk->seccomp.landlock_ret);
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- }
- 
- /**
-@@ -609,6 +722,8 @@ static u32 __seccomp_phase1_filter(int this_syscall, struct seccomp_data *sd)
- 	case SECCOMP_RET_TRACE:
- 		return filter_ret;  /* Save the rest for phase 2. */
- 
-+	case SECCOMP_RET_LANDLOCK:
-+		/* fall through */
- 	case SECCOMP_RET_ALLOW:
- 		return SECCOMP_PHASE1_OK;
- 
-@@ -814,6 +929,75 @@ static inline long seccomp_set_mode_filter(unsigned int flags,
- }
- #endif
- 
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+
-+/* Limit Landlock programs to 256KB. */
-+#define LANDLOCK_PROG_LIST_MAX_PAGES (1 << 6)
-+
-+static long landlock_set_hook(unsigned int flags, const char __user *user_bpf_fd)
-+{
-+	long result;
-+	unsigned long prog_list_pages;
-+	struct seccomp_landlock_prog *landlock_prog, *cp_walker;
-+	int bpf_fd;
-+	struct bpf_prog *prog;
-+
-+	if (!task_no_new_privs(current) &&
-+	    security_capable_noaudit(current_cred(),
-+				     current_user_ns(), CAP_SYS_ADMIN) != 0)
-+		return -EACCES;
-+	if (!user_bpf_fd)
-+		return -EINVAL;
-+
-+	/* could be used for TSYNC */
-+	if (flags)
-+		return -EINVAL;
-+
-+	if (copy_from_user(&bpf_fd, user_bpf_fd, sizeof(user_bpf_fd)))
-+		return -EFAULT;
-+	prog = bpf_prog_get(bpf_fd);
-+	if (IS_ERR(prog))
-+		return PTR_ERR(prog);
-+	switch (prog->type) {
-+		/* TODO: add LSM hooks */
-+	default:
-+		result = -EINVAL;
-+		goto put_prog;
-+	}
-+
-+	/* validate allocated memory */
-+	prog_list_pages = prog->pages;
-+	for (cp_walker = current->seccomp.landlock_prog; cp_walker;
-+			cp_walker = cp_walker->prev) {
-+		/* TODO: add penalty for each prog? */
-+		prog_list_pages += cp_walker->prog->pages;
-+	}
-+	if (prog_list_pages > LANDLOCK_PROG_LIST_MAX_PAGES) {
-+		result = -ENOMEM;
-+		goto put_prog;
-+	}
-+
-+	landlock_prog = kmalloc(sizeof(*landlock_prog), GFP_KERNEL);
-+	if (!landlock_prog) {
-+		result = -ENOMEM;
-+		goto put_prog;
-+	}
-+	landlock_prog->prog = prog;
-+	landlock_prog->filter = current->seccomp.filter;
-+	if (landlock_prog->filter)
-+		atomic_inc(&landlock_prog->filter->usage);
-+	atomic_set(&landlock_prog->usage, 1);
-+	landlock_prog->prev = current->seccomp.landlock_prog;
-+	current->seccomp.landlock_prog = landlock_prog;
-+	return 0;
-+
-+put_prog:
-+	bpf_prog_put(prog);
-+	return result;
-+}
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- /* Common entry point for both prctl and syscall. */
- static long do_seccomp(unsigned int op, unsigned int flags,
- 		       const char __user *uargs)
-@@ -825,6 +1009,10 @@ static long do_seccomp(unsigned int op, unsigned int flags,
- 		return seccomp_set_mode_strict();
- 	case SECCOMP_SET_MODE_FILTER:
- 		return seccomp_set_mode_filter(flags, uargs);
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	case SECCOMP_SET_LANDLOCK_HOOK:
-+		return landlock_set_hook(flags, uargs);
-+#endif /* CONFIG_SECURITY_LANDLOCK */
+@@ -541,6 +553,10 @@ static enum bpf_map_array_type landlock_get_array_type(
+ 	case BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD:
+ 	case BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_GLOB:
+ 		return BPF_MAP_ARRAY_TYPE_LANDLOCK_FS;
++	case BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD:
++#ifdef CONFIG_CGROUPS
++		return BPF_MAP_ARRAY_TYPE_LANDLOCK_CGROUP;
++#endif	/* CONFIG_CGROUPS */
+ 	case BPF_MAP_HANDLE_TYPE_UNSPEC:
  	default:
  		return -EINVAL;
+@@ -557,6 +573,9 @@ static inline long landlock_store_handle(struct map_landlock_handle *dst,
+ 		struct landlock_handle *khandle)
+ {
+ 	struct path kpath;
++#ifdef CONFIG_CGROUPS
++	struct cgroup_subsys_state *css;
++#endif	/* CONFIG_CGROUPS */
+ 	struct file *handle_file;
+ 
+ 	if (unlikely(!khandle))
+@@ -569,6 +588,17 @@ static inline long landlock_store_handle(struct map_landlock_handle *dst,
+ 		FGET_OR_RET(handle_file, khandle->fd);
+ 		dst->file = handle_file;
+ 		break;
++#ifdef CONFIG_CGROUPS
++	case BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD:
++		FGET_OR_RET(handle_file, khandle->fd);
++		css = css_tryget_online_from_dir(file_dentry(handle_file), NULL);
++		fput(handle_file);
++		/* NULL css check done by css_tryget_online_from_dir() */
++		if (IS_ERR(css))
++			return PTR_ERR(css);
++		dst->css = css;
++		break;
++#endif	/* CONFIG_CGROUPS */
+ 	default:
+ 		WARN_ON(1);
+ 		path_put(&kpath);
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index b182c88d5c13..b4e5c3bbc520 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -247,6 +247,7 @@ static const char * const reg_type_str[] = {
+ 	[PTR_TO_STRUCT_FILE]	= "struct_file",
+ 	[PTR_TO_STRUCT_CRED]	= "struct_cred",
+ 	[CONST_PTR_TO_LANDLOCK_HANDLE_FS] = "landlock_handle_fs",
++	[CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP] = "landlock_handle_cgroup",
+ };
+ 
+ static void print_verifier_state(struct verifier_state *state)
+@@ -560,6 +561,7 @@ static bool is_spillable_regtype(enum bpf_reg_type type)
+ 	case PTR_TO_STRUCT_FILE:
+ 	case PTR_TO_STRUCT_CRED:
+ 	case CONST_PTR_TO_LANDLOCK_HANDLE_FS:
++	case CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP:
+ 		return true;
+ 	default:
+ 		return false;
+@@ -955,6 +957,8 @@ static int check_func_arg(struct verifier_env *env, u32 regno,
+ 		expected_type = PTR_TO_STRUCT_CRED;
+ 	} else if (arg_type == ARG_CONST_PTR_TO_LANDLOCK_HANDLE_FS) {
+ 		expected_type = CONST_PTR_TO_LANDLOCK_HANDLE_FS;
++	} else if (arg_type == ARG_CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP) {
++		expected_type = CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP;
+ 	} else if (arg_type == ARG_PTR_TO_STACK ||
+ 		   arg_type == ARG_PTR_TO_RAW_STACK) {
+ 		expected_type = PTR_TO_STACK;
+@@ -1733,6 +1737,8 @@ static inline enum bpf_reg_type bpf_reg_type_from_map(struct bpf_map *map)
+ 	switch (map->map_array_type) {
+ 	case BPF_MAP_ARRAY_TYPE_LANDLOCK_FS:
+ 		return CONST_PTR_TO_LANDLOCK_HANDLE_FS;
++	case BPF_MAP_ARRAY_TYPE_LANDLOCK_CGROUP:
++		return CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP;
+ 	case BPF_MAP_ARRAY_TYPE_UNSPEC:
+ 	default:
+ 		return CONST_PTR_TO_MAP;
+diff --git a/security/landlock/Kconfig b/security/landlock/Kconfig
+index dc8328d216d7..414eb047e50e 100644
+--- a/security/landlock/Kconfig
++++ b/security/landlock/Kconfig
+@@ -10,6 +10,9 @@ config SECURITY_LANDLOCK
+ 	  of stacked eBPF programs for some LSM hooks. Each program can do some
+ 	  access comparison to check if an access request is legitimate.
+ 
++	  It is recommended to enable cgroups to be able to match a policy
++	  according to a group of processes.
++
+ 	  Further information about eBPF can be found in
+ 	  Documentation/networking/filter.txt
+ 
+diff --git a/security/landlock/Makefile b/security/landlock/Makefile
+index 27f359a8cfaa..cdaaa152b849 100644
+--- a/security/landlock/Makefile
++++ b/security/landlock/Makefile
+@@ -1,3 +1,3 @@
+ obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ 
+-landlock-y := lsm.o checker_fs.o
++landlock-y := lsm.o checker_fs.o checker_cgroup.o
+diff --git a/security/landlock/checker_cgroup.c b/security/landlock/checker_cgroup.c
+new file mode 100644
+index 000000000000..97f29ac64188
+--- /dev/null
++++ b/security/landlock/checker_cgroup.c
+@@ -0,0 +1,96 @@
++/*
++ * Landlock LSM - cgroup Checkers
++ *
++ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#ifdef CONFIG_CGROUPS
++
++#include <asm/current.h>
++#include <linux/bpf.h> /* enum bpf_map_array_op */
++#include <linux/cgroup-defs.h> /* struct cgroup_subsys_state */
++#include <linux/cgroup.h> /* cgroup_is_descendant(), task_css_set() */
++#include <linux/errno.h>
++
++#include "checker_cgroup.h"
++
++
++/*
++ * bpf_landlock_cmp_cgroup_beneath
++ *
++ * Cf. include/uapi/linux/bpf.h
++ */
++static inline u64 bpf_landlock_cmp_cgroup_beneath(u64 r1_option, u64 r2_map,
++		u64 r3_map_op, u64 r4, u64 r5)
++{
++	u8 option = (u8) r1_option;
++	struct bpf_map *map = (struct bpf_map *) (unsigned long) r2_map;
++	enum bpf_map_array_op map_op = r3_map_op;
++	struct bpf_array *array = container_of(map, struct bpf_array, map);
++	struct cgroup *cg1, *cg2;
++	struct map_landlock_handle *handle;
++	int i;
++
++	/* ARG_CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP is an arraymap */
++	if (unlikely(!map)) {
++		WARN_ON(1);
++		return -EFAULT;
++	}
++	if (unlikely((option | _LANDLOCK_FLAG_OPT_MASK) != _LANDLOCK_FLAG_OPT_MASK))
++		return -EINVAL;
++
++	/* for now, only handle OP_OR */
++	switch (map_op) {
++	case BPF_MAP_ARRAY_OP_OR:
++		break;
++	case BPF_MAP_ARRAY_OP_UNSPEC:
++	case BPF_MAP_ARRAY_OP_AND:
++	case BPF_MAP_ARRAY_OP_XOR:
++	default:
++		return -EINVAL;
++	}
++
++	synchronize_rcu();
++
++	for (i = 0; i < array->n_entries; i++) {
++		handle = (struct map_landlock_handle *)
++				(array->value + array->elem_size * i);
++
++		/* protected by the proto types, should not happen */
++		if (unlikely(handle->type != BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD)) {
++			WARN_ON(1);
++			return -EFAULT;
++		}
++		if (unlikely(!handle->css)) {
++			WARN_ON(1);
++			return -EFAULT;
++		}
++
++		if (option & LANDLOCK_FLAG_OPT_REVERSE) {
++			cg1 = handle->css->cgroup;
++			cg2 = task_css_set(current)->dfl_cgrp;
++		} else {
++			cg1 = task_css_set(current)->dfl_cgrp;
++			cg2 = handle->css->cgroup;
++		}
++
++		if (cgroup_is_descendant(cg1, cg2))
++			return 0;
++	}
++	return 1;
++}
++
++const struct bpf_func_proto bpf_landlock_cmp_cgroup_beneath_proto = {
++	.func		= bpf_landlock_cmp_cgroup_beneath,
++	.gpl_only	= true,
++	.ret_type	= RET_INTEGER,
++	.arg1_type	= ARG_ANYTHING,
++	.arg2_type	= ARG_CONST_PTR_TO_LANDLOCK_HANDLE_CGROUP,
++	.arg3_type	= ARG_ANYTHING,
++};
++
++#endif	/* CONFIG_CGROUPS */
+diff --git a/security/landlock/checker_cgroup.h b/security/landlock/checker_cgroup.h
+new file mode 100644
+index 000000000000..497cad7c2bb8
+--- /dev/null
++++ b/security/landlock/checker_cgroup.h
+@@ -0,0 +1,18 @@
++/*
++ * Landlock LSM - cgroup Checkers
++ *
++ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#ifdef CONFIG_CGROUPS
++#ifndef _SECURITY_LANDLOCK_CHECKER_CGROUP_H
++#define _SECURITY_LANDLOCK_CHECKER_CGROUP_H
++
++extern const struct bpf_func_proto bpf_landlock_cmp_cgroup_beneath_proto;
++
++#endif /* _SECURITY_LANDLOCK_CHECKER_CGROUP_H */
++#endif /* CONFIG_CGROUPS */
+diff --git a/security/landlock/lsm.c b/security/landlock/lsm.c
+index 8645743243b6..cc4759f4e6c5 100644
+--- a/security/landlock/lsm.c
++++ b/security/landlock/lsm.c
+@@ -18,6 +18,10 @@
+ 
+ #include "checker_fs.h"
+ 
++#ifdef CONFIG_CGROUPS
++#include "checker_cgroup.h"
++#endif /* CONFIG_CGROUPS */
++
+ #define LANDLOCK_HOOK_INIT(NAME) LSM_HOOK_INIT(NAME, landlock_hook_##NAME)
+ 
+ #define LANDLOCK_HOOKx(X, NAME, CNAME, ...)				\
+@@ -124,6 +128,10 @@ static const struct bpf_func_proto *bpf_landlock_func_proto(
+ 		return &bpf_landlock_cmp_fs_prop_with_struct_file_proto;
+ 	case BPF_FUNC_landlock_cmp_fs_beneath_with_struct_file:
+ 		return &bpf_landlock_cmp_fs_beneath_with_struct_file_proto;
++	case BPF_FUNC_landlock_cmp_cgroup_beneath:
++#ifdef CONFIG_CGROUPS
++		return &bpf_landlock_cmp_cgroup_beneath_proto;
++#endif	/* CONFIG_CGROUPS */
+ 	default:
+ 		return NULL;
  	}
 -- 
 2.8.1
