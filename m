@@ -1,39 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 26 Aug 2016 11:39:04 -0400
-From: David Brown <david.brown@linaro.org>
-Message-ID: <20160826153904.GA19844@davidb.org>
-References: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
+Sender: Tejun Heo <htejun@gmail.com>
+Date: Fri, 26 Aug 2016 11:50:26 -0400
+From: Tejun Heo <tj@kernel.org>
+Message-ID: <20160826155026.GD16906@mtj.duckdns.org>
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+ <1472121165-29071-10-git-send-email-mic@digikod.net>
+ <CALCETrVqfTaY4gfwNdwynBqWwYh6xsGHaqdoA3uc_jHogbkA-A@mail.gmail.com>
+ <57BF043D.4000300@digikod.net>
+ <CALCETrVFSbrW9VzdNirtwCXZ3-Ce1DnXoQcPgEQgbyy0=W0rEQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
-Subject: Re: [kernel-hardening] [PATCH 0/7] arm64: Privileged Access Never
- using TTBR0_EL1 switching
-To: kernel-hardening@lists.openwall.com
-Cc: linux-arm-kernel@lists.infradead.org, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, Julien Grall <julien.grall@arm.com>
+In-Reply-To: <CALCETrVFSbrW9VzdNirtwCXZ3-Ce1DnXoQcPgEQgbyy0=W0rEQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC v2 09/10] landlock: Handle cgroups
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 12, 2016 at 04:27:39PM +0100, Catalin Marinas wrote:
->This is the first (public) attempt at emulating PAN by disabling
->TTBR0_EL1 accesses on arm64. I chose to use a per-CPU saved_ttbr0_el1
->variable to store the actual TTBR0 as, IMO, it looks better w.r.t. the
->context switching code, to the detriment of a slightly more complex
->uaccess_enable() implementation. The alternative was storing the saved
->TTBR0 in thread_info but with more complex thread switching since TTBR0
->is normally tied to switch_mm() rather than switch_to(). The latter may
->also get more complicated if we are to decouple the kernel stack from
->thread_info at some point (vmalloc'ed stacks).
->
->The code requires more testing, especially for combinations where UAO is
->present but PAN is not.
+Hello,
 
-I briefly tried to run these patches on my HiKey board and I get a
-panic on boot.  Unfortunately, I've had to head off to the Linux
-Security Summit, so I haven't been able to try to figure out what is
-going on (and I don't seem to be able to even get a capture of the log
-output).  But I ran into Mark Rutland who convinced me to at least
-state the failure on the list here.
+On Fri, Aug 26, 2016 at 07:20:35AM -0700, Andy Lutomirski wrote:
+> > This is simply the action of changing the owner of cgroup sysfs files to
+> > allow an unprivileged user to handle them (cf. Documentation/cgroup-v2.txt)
+> 
+> As far as I can tell, Tejun and systemd both actively discourage doing
+> this.  Maybe I misunderstand.  But in any event, the admin giving you
 
-The same kernel boots fine in Qemu.
+Please refer to "2-5. Delegation" of Documentation/cgroup-v2.txt.
+Delegation on v1 is broken on both core and specific controller
+behaviors and thus discouraged.  On v2, delegation should work just
+fine.
 
-David
+I haven't looked in detail but in general I'm not too excited about
+layering security mechanism on top of cgroup.  Maybe it makes some
+sense when security domain coincides with resource domains but at any
+rate please keep me in the loop.
+
+Thanks.
+
+-- 
+tejun
