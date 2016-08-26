@@ -1,82 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <57BF043D.4000300@digikod.net>
-References: <1472121165-29071-1-git-send-email-mic@digikod.net>
- <1472121165-29071-10-git-send-email-mic@digikod.net> <CALCETrVqfTaY4gfwNdwynBqWwYh6xsGHaqdoA3uc_jHogbkA-A@mail.gmail.com>
- <57BF043D.4000300@digikod.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 26 Aug 2016 07:20:35 -0700
-Message-ID: <CALCETrVFSbrW9VzdNirtwCXZ3-Ce1DnXoQcPgEQgbyy0=W0rEQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC v2 09/10] landlock: Handle cgroups
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
+From: Mark Rutland <mark.rutland@arm.com>
+Date: Fri, 26 Aug 2016 15:31:43 +0100
+Message-Id: <1472221903-31181-1-git-send-email-mark.rutland@arm.com>
+Subject: [kernel-hardening] [PATCH] lib: harden strncpy_from_user
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Mark Rutland <mark.rutland@arm.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Aug 25, 2016 at 7:44 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
- wrote:
->
-> On 25/08/2016 13:09, Andy Lutomirski wrote:
->> On Thu, Aug 25, 2016 at 3:32 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
-et> wrote:
->>> Add an eBPF function bpf_landlock_cmp_cgroup_beneath(opt, map, map_op)
->>> to compare the current process cgroup with a cgroup handle, The handle
->>> can match the current cgroup if it is the same or a child. This allows
->>> to make conditional rules according to the current cgroup.
->>>
->>> A cgroup handle is a map entry created from a file descriptor referring
->>> a cgroup directory (e.g. by opening /sys/fs/cgroup/X). In this case, th=
-e
->>> map entry is of type BPF_MAP_HANDLE_TYPE_LANDLOCK_CGROUP_FD and the
->>> inferred array map is of type BPF_MAP_ARRAY_TYPE_LANDLOCK_CGROUP.
->>
->> Can you elaborate on why this is useful?  I.e. why not just supply
->> different policies to different subtrees.
->
-> The main use case I see is to load the security policies at the start of
-> a user session for all processes but not enforce them right away. The
-> user can then keep a shell for Landlock administration tasks and lock
-> the other processes with a dedicated cgroup on the fly. This allows the
-> user to make unremovable Landlock security policies but only activate
-> them when needed for specific processes.
+The strncpy_from_user() accessor is effectively a copy_from_user()
+specialised to copy strings, terminating early at a NUL byte if
+possible. In other respects it is identical, and can be used to copy an
+arbitrarily large buffer from userspace into the kernel. Conceptually,
+it exposes a similar attack surface.
 
-This seems like a bit of a dubious use case to me.  The landlock
-mechanism should be flexible enough to do this kind of thing even
-without cgroups, and "spawn a process, wait a while, and then confine
-it by fiddling with cgroups" seems a lot dicier than just loading the
-right policy in the first place, especially since eBPF policies can be
-stateful.
+As with copy_from_user(), we check the destination range when the kernel
+is built with KASAN, but unlike copy_from_user() we do not check the
+destination buffer when using HARDENED_USERCOPY. As strncpy_from_user()
+calls get_user() in a loop, we must call check_object_size() explicitly.
 
->
->>
->> Also, how does this interact with the current cgroup v1 vs v2 mess?
->> As far as I can tell, no one can even really agree on what "what
->> cgroup am I in" means right now.
->
-> I tested with cgroup-v2 but indeed, it seems a bit different with
-> cgroup-v1 :)
-> Does anyone know how to handle both cases?
->
->>
->>>
->>> An unprivileged process can create and manipulate cgroups thanks to
->>> cgroup delegation.
->>
->> What is cgroup delegation?
->
-> This is simply the action of changing the owner of cgroup sysfs files to
-> allow an unprivileged user to handle them (cf. Documentation/cgroup-v2.tx=
-t)
+This patch adds this instrumentation to strncpy_from_user(), per the
+same rationale as with the regular copy_from_user(). In the absence of
+hardened usercopy this will have no impact as the instrumentation
+expands to an empty static inline function.
 
-As far as I can tell, Tejun and systemd both actively discourage doing
-this.  Maybe I misunderstand.  But in any event, the admin giving you
-a cgroup hierarchy you can use for this means that the admin has to
-cooperate with your policy, and it further requires (with cgroup v2 or
-similar, which is most likely the future) that your lockdown policy be
-compatible with your resource control policy.
+Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Kees Cook <keescook@chromium.org>
+---
+ lib/strncpy_from_user.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
-I would suggest dropping this lockdown feature until a use case
-emerges that really can't be addressed adequately without it.
-
---Andy
+diff --git a/lib/strncpy_from_user.c b/lib/strncpy_from_user.c
+index 9c5fe81..7e35fc4 100644
+--- a/lib/strncpy_from_user.c
++++ b/lib/strncpy_from_user.c
+@@ -1,6 +1,7 @@
+ #include <linux/compiler.h>
+ #include <linux/export.h>
+ #include <linux/kasan-checks.h>
++#include <linux/thread_info.h>
+ #include <linux/uaccess.h>
+ #include <linux/kernel.h>
+ #include <linux/errno.h>
+@@ -111,6 +112,7 @@ long strncpy_from_user(char *dst, const char __user *src, long count)
+ 		long retval;
+ 
+ 		kasan_check_write(dst, count);
++		check_object_size(dst, count, false);
+ 		user_access_begin();
+ 		retval = do_strncpy_from_user(dst, src, count, max);
+ 		user_access_end();
+-- 
+2.7.4
