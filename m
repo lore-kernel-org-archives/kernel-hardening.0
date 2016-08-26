@@ -1,54 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Mark Rutland <mark.rutland@arm.com>
-Date: Fri, 26 Aug 2016 15:31:43 +0100
-Message-Id: <1472221903-31181-1-git-send-email-mark.rutland@arm.com>
-Subject: [kernel-hardening] [PATCH] lib: harden strncpy_from_user
-To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: Mark Rutland <mark.rutland@arm.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+MIME-Version: 1.0
+In-Reply-To: <57BEFC65.3090305@digikod.net>
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+ <1472121165-29071-9-git-send-email-mic@digikod.net> <CALCETrWzfgNvOHmKy5205A2qLJLYCZ+5RZOQR9vzQ1ubpo0vNA@mail.gmail.com>
+ <57BEFC65.3090305@digikod.net>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Fri, 26 Aug 2016 07:57:18 -0700
+Message-ID: <CALCETrWwTiz3kZTkEgOW24-DvhQq6LftwEXh77FD2G5o71yD7g@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC v2 08/10] landlock: Handle file system comparisons
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: "Eric W. Biederman" <ebiederm@xmission.com>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, kernel-hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The strncpy_from_user() accessor is effectively a copy_from_user()
-specialised to copy strings, terminating early at a NUL byte if
-possible. In other respects it is identical, and can be used to copy an
-arbitrarily large buffer from userspace into the kernel. Conceptually,
-it exposes a similar attack surface.
+On Thu, Aug 25, 2016 at 7:10 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
+ wrote:
+>
+> On 25/08/2016 13:12, Andy Lutomirski wrote:
+>> On Thu, Aug 25, 2016 at 3:32 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
+et> wrote:
+>>> Add eBPF functions to compare file system access with a Landlock file
+>>> system handle:
+>>> * bpf_landlock_cmp_fs_prop_with_struct_file(prop, map, map_op, file)
+>>>   This function allows to compare the dentry, inode, device or mount
+>>>   point of the currently accessed file, with a reference handle.
+>>> * bpf_landlock_cmp_fs_beneath_with_struct_file(opt, map, map_op, file)
+>>>   This function allows an eBPF program to check if the current accessed
+>>>   file is the same or in the hierarchy of a reference handle.
+>>>
+>>> The goal of file system handle is to abstract kernel objects such as a
+>>> struct file or a struct inode. Userland can create this kind of handle
+>>> thanks to the BPF_MAP_UPDATE_ELEM command. The element is a struct
+>>> landlock_handle containing the handle type (e.g.
+>>> BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD) and a file descriptor. This could
+>>> also be any descriptions able to match a struct file or a struct inode
+>>> (e.g. path or glob string).
+>>
+>> This needs Eric's opinion.
+>>
+>> Also, where do all the struct file *'s get stashed?  Are they
+>> preserved in the arraymap?  What prevents reference cycles or absurdly
+>> large numbers of struct files getting pinned?
+>
+> Yes, the struct file are kept in the arraymap and dropped when there is
+> no more reference on them. Currently, the limitations are the maximum
+> number of open file descriptors referring to an arraymap and the maximum
+> number of eBPF Landlock programs loaded in a process
+> (LANDLOCK_PROG_LIST_MAX_PAGES in kernel/seccomp.c).
+>
+> What kind of reference cycles have you in mind?
 
-As with copy_from_user(), we check the destination range when the kernel
-is built with KASAN, but unlike copy_from_user() we do not check the
-destination buffer when using HARDENED_USERCOPY. As strncpy_from_user()
-calls get_user() in a loop, we must call check_object_size() explicitly.
+Shoving evil things into the arraymaps, e.g. unix sockets with
+SCM_RIGHTS messages pending, eBPF program references, the arraymap fd
+itself, another arraymap fd, etc.
 
-This patch adds this instrumentation to strncpy_from_user(), per the
-same rationale as with the regular copy_from_user(). In the absence of
-hardened usercopy this will have no impact as the instrumentation
-expands to an empty static inline function.
+>
+> It probably needs another limit for kernel object references as well.
+> What is the best option here? Add another static limitation or use an
+> existing one?
 
-Signed-off-by: Mark Rutland <mark.rutland@arm.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Kees Cook <keescook@chromium.org>
----
- lib/strncpy_from_user.c | 2 ++
- 1 file changed, 2 insertions(+)
+Dunno.  If RLIMIT_FILE could be made to work, that would be nice.
 
-diff --git a/lib/strncpy_from_user.c b/lib/strncpy_from_user.c
-index 9c5fe81..7e35fc4 100644
---- a/lib/strncpy_from_user.c
-+++ b/lib/strncpy_from_user.c
-@@ -1,6 +1,7 @@
- #include <linux/compiler.h>
- #include <linux/export.h>
- #include <linux/kasan-checks.h>
-+#include <linux/thread_info.h>
- #include <linux/uaccess.h>
- #include <linux/kernel.h>
- #include <linux/errno.h>
-@@ -111,6 +112,7 @@ long strncpy_from_user(char *dst, const char __user *src, long count)
- 		long retval;
- 
- 		kasan_check_write(dst, count);
-+		check_object_size(dst, count, false);
- 		user_access_begin();
- 		retval = do_strncpy_from_user(dst, src, count, max);
- 		user_access_end();
--- 
-2.7.4
+--Andy
