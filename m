@@ -1,46 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 26 Aug 2016 18:24:15 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20160826172414.GE15779@e104818-lin.cambridge.arm.com>
-References: <1471015666-23125-1-git-send-email-catalin.marinas@arm.com>
- <20160826153904.GA19844@davidb.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160826153904.GA19844@davidb.org>
-Subject: Re: [kernel-hardening] [PATCH 0/7] arm64: Privileged Access Never
- using TTBR0_EL1 switching
-To: David Brown <david.brown@linaro.org>
-Cc: kernel-hardening@lists.openwall.com, James Morse <james.morse@arm.com>, Julien Grall <julien.grall@arm.com>, Will Deacon <will.deacon@arm.com>, Kees Cook <keescook@chromium.org>, linux-arm-kernel@lists.infradead.org
+Sender: keescook@google.com
+In-Reply-To: <1472221903-31181-1-git-send-email-mark.rutland@arm.com>
+References: <1472221903-31181-1-git-send-email-mark.rutland@arm.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 26 Aug 2016 14:57:58 -0400
+Message-ID: <CAGXu5jKdu+8zf+NM6nFMwWgs=AVcAE5c0tiq+AvADqCAVL4BFg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [PATCH] lib: harden strncpy_from_user
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, Andrew Morton <akpm@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Aug 26, 2016 at 11:39:04AM -0400, David Brown wrote:
-> On Fri, Aug 12, 2016 at 04:27:39PM +0100, Catalin Marinas wrote:
-> >This is the first (public) attempt at emulating PAN by disabling
-> >TTBR0_EL1 accesses on arm64. I chose to use a per-CPU saved_ttbr0_el1
-> >variable to store the actual TTBR0 as, IMO, it looks better w.r.t. the
-> >context switching code, to the detriment of a slightly more complex
-> >uaccess_enable() implementation. The alternative was storing the saved
-> >TTBR0 in thread_info but with more complex thread switching since TTBR0
-> >is normally tied to switch_mm() rather than switch_to(). The latter may
-> >also get more complicated if we are to decouple the kernel stack from
-> >thread_info at some point (vmalloc'ed stacks).
-> >
-> >The code requires more testing, especially for combinations where UAO is
-> >present but PAN is not.
-> 
-> I briefly tried to run these patches on my HiKey board and I get a
-> panic on boot.  Unfortunately, I've had to head off to the Linux
-> Security Summit, so I haven't been able to try to figure out what is
-> going on (and I don't seem to be able to even get a capture of the log
-> output).  But I ran into Mark Rutland who convinced me to at least
-> state the failure on the list here.
+On Fri, Aug 26, 2016 at 10:31 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> The strncpy_from_user() accessor is effectively a copy_from_user()
+> specialised to copy strings, terminating early at a NUL byte if
+> possible. In other respects it is identical, and can be used to copy an
+> arbitrarily large buffer from userspace into the kernel. Conceptually,
+> it exposes a similar attack surface.
+>
+> As with copy_from_user(), we check the destination range when the kernel
+> is built with KASAN, but unlike copy_from_user() we do not check the
+> destination buffer when using HARDENED_USERCOPY. As strncpy_from_user()
+> calls get_user() in a loop, we must call check_object_size() explicitly.
+>
+> This patch adds this instrumentation to strncpy_from_user(), per the
+> same rationale as with the regular copy_from_user(). In the absence of
+> hardened usercopy this will have no impact as the instrumentation
+> expands to an empty static inline function.
+>
+> Signed-off-by: Mark Rutland <mark.rutland@arm.com>
+> Cc: Andrew Morton <akpm@linux-foundation.org>
+> Cc: Kees Cook <keescook@chromium.org>
+> ---
+>  lib/strncpy_from_user.c | 2 ++
+>  1 file changed, 2 insertions(+)
+>
+> diff --git a/lib/strncpy_from_user.c b/lib/strncpy_from_user.c
+> index 9c5fe81..7e35fc4 100644
+> --- a/lib/strncpy_from_user.c
+> +++ b/lib/strncpy_from_user.c
+> @@ -1,6 +1,7 @@
+>  #include <linux/compiler.h>
+>  #include <linux/export.h>
+>  #include <linux/kasan-checks.h>
+> +#include <linux/thread_info.h>
+>  #include <linux/uaccess.h>
+>  #include <linux/kernel.h>
+>  #include <linux/errno.h>
+> @@ -111,6 +112,7 @@ long strncpy_from_user(char *dst, const char __user *src, long count)
+>                 long retval;
+>
+>                 kasan_check_write(dst, count);
+> +               check_object_size(dst, count, false);
+>                 user_access_begin();
+>                 retval = do_strncpy_from_user(dst, src, count, max);
+>                 user_access_end();
+> --
+> 2.7.4
+>
 
-Thanks for trying to test this series. Without more information, I can't
-really say where the problem is or why it fails that early (in theory it
-should only affect user space). Is it with recent/latest mainline?
-defconfig? Anyway, I'll wait until you get back from the conference,
-maybe you get some early console output.
+Ah, yes, good catch! (And to repeat what you mentioned to me in
+passing in the hall: there appear to be other users of get_user() in a
+loop in other places in the kernel that will likely need some
+attention too.)
+
+I'll get this into the hardened usercopy tree when I get back from the
+Security Summit. This will likely need to grow knowledge about
+builtin-const "count" arguments like we need to the architectures that
+are missing them in the copy_*_user calls.
+
+Thanks!
+
+-Kees
 
 -- 
-Catalin
+Kees Cook
+Nexus Security
