@@ -1,47 +1,103 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 30 Aug 2016 20:23:37 +0100 (IST)
+From: Julia Lawall <julia.lawall@lip6.fr>
+In-Reply-To: <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
+Message-ID: <alpine.DEB.2.10.1608302023020.3120@hadrien>
+References: <alpine.DEB.2.10.1608272058090.3363@hadrien> <1472325098.26978.14.camel@perches.com> <alpine.DEB.2.10.1608281509480.3321@hadrien> <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1472121165-29071-7-git-send-email-mic@digikod.net>
-References: <1472121165-29071-1-git-send-email-mic@digikod.net> <1472121165-29071-7-git-send-email-mic@digikod.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Tue, 30 Aug 2016 11:56:33 -0700
-Message-ID: <CALCETrXRXxQ26caQW6Vh-NriDeSvnOb=yAu-F=3pvmd0Py+1Pg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC v2 06/10] landlock: Add LSM hooks
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, David Drysdale <drysdale@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Alexei Starovoitov <ast@kernel.org>, James Morris <james.l.morris@oracle.com>, Sargun Dhillon <sargun@sargun.me>, Network Development <netdev@vger.kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Linux API <linux-api@vger.kernel.org>, Kees Cook <keescook@chromium.org>, LSM List <linux-security-module@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "David S . Miller" <davem@davemloft.net>, Daniel Mack <daniel@zonque.org>, Arnd Bergmann <arnd@arndb.de>, Will Drewry <wad@chromium.org>, Paul Moore <pmoore@redhat.com>, Elena Reshetova <elena.reshetova@intel.com>, Daniel Borkmann <daniel@iogearbox.net>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: constification and cocci / kernel build test robot ?
+To: Kees Cook <keescook@chromium.org>
+Cc: Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Aug 25, 2016 12:34 PM, "Micka=C3=ABl Sala=C3=BCn" <mic@digikod.net> wrot=
-e:
->
-> Add LSM hooks which can be used by userland through Landlock (eBPF)
-> programs. This programs are limited to a whitelist of functions (cf.
-> next commit). The eBPF program context is depicted by the struct
-> landlock_data (cf. include/uapi/linux/bpf.h):
-> * hook: LSM hook ID (useful when using the same program for multiple LSM
->   hooks);
-> * cookie: the 16-bit value from the seccomp filter that triggered this
->   Landlock program;
-> * args[6]: array of LSM hook arguments.
->
-> The LSM hook arguments can contain raw values as integers or
-> (unleakable) pointers. The only way to use the pointers are to pass them
-> to an eBPF function according to their types (e.g. the
-> bpf_landlock_cmp_fs_beneath_with_struct_file function can use a struct
-> file pointer).
->
-> For now, there is three hooks for file system access control:
-> * file_open;
-> * file_permission;
-> * mmap_file.
->
 
-What's the purpose of exposing struct cred * to userspace?  It's
-primarily just an optimization to save a bit of RAM, and it's a
-dubious optimization at that.  What are you using it for?  Would it
-make more sense to use struct task_struct * or struct pid * instead?
 
-Also, exposing struct cred * has a really weird side-effect: it allows
-(maybe even encourages) checking for pointer equality between two
-struct cred * objects.  Doing so will have erratic results.
+On Tue, 30 Aug 2016, Kees Cook wrote:
+
+> On Sun, Aug 28, 2016 at 9:13 AM, Julia Lawall <julia.lawall@lip6.fr> wrote:
+> > [Adding Kees, in case it's of interest]
+> >
+> > Below is the list of types of top-level initialized structures and the
+> > number that are const.  For quicker reading, here are some that are
+> > sometimes const (numerator), but not always (denominator):
+> >
+> > file_operations: 2221/2233
+> > attribute_group: 447/919
+> > irq_chip: 1/518
+> > net_device_ops: 488/498
+> > regmap_config: 407/447
+> > dev_pm_ops: 398/415
+> > clk_ops: 314/386
+> > resource: 6/385
+> > seq_operations: 327/328
+> > snd_pcm_ops: 9/288
+> >
+> > and here are the most used ones that are never const at all:
+> >
+> > platform_driver: 2943
+> > platform_device: 2226
+> > clk_branch: 1131
+> > i2c_driver: 786
+> > pci_driver: 781
+> > omap_hwmod_ocp_if: 670
+> > omap_hwmod: 582
+> > notifier_block: 556
+> > clk: 473
+> > clk_rcg2: 384
+> >
+> > [...]
+>
+> The structures that should get the greatest level of attention are
+> those that contain function pointers. The "constify" gcc plugin from
+> PaX/Grsecurity does this, but it uses a big hammer: it moves all of
+> them const even if they receive assignment. To handle this, there is
+> the concept of an open/close method to gain temporary access to the
+> structure. For example:
+>
+> drivers/cdrom/cdrom.c:
+>
+> int register_cdrom(...) {
+>         ...
+>         if (!cdo->generic_packet) {
+>                 pax_open_kernel();
+>                 const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
+>                 pax_close_kernel();
+
+Thanks for the clarification.  The above has to be added to the code
+manually, or the plugin does it?
+
+julia
+
+>         }
+>
+> (The "const_cast" here is just a macro to convince gcc it's only to
+> write to a const value, so really it should maybe be called
+> "unconst_cast", but whatever...)
+>
+> This allows all of struct cdrom_device_ops to be const, even if they
+> need to be updated once during registration.
+>
+> (This is a stronger version of __ro_after_init, which is for things
+> that are only written during __init.)
+>
+> AUIU, the goals of the open/close_kernel idea are:
+> - always inline
+> - make sure the CPU cannot be interrupted
+> - BUG if memory is already writable
+> - make the memory writable only by the current CPU
+> - update the value
+> - restore memory permissions
+> - allow CPU interruption again
+>
+> This makes sure there aren't races with other CPUs to write things,
+> and that it's harder to use for an attack since with the "make
+> writable" code is always followed by a "make read-only" action (i.e.
+> not separate functions that could be used as a trivial ROP gadget).
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Nexus Security
+>
