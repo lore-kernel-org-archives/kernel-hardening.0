@@ -1,97 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20160829101137.GA29344@x1.redhat.com>
-References: <1471531632-23003-1-git-send-email-thgarnie@google.com> <20160829101137.GA29344@x1.redhat.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Mon, 29 Aug 2016 07:20:08 -0700
-Message-ID: <CAJcbSZFOeFsFH8itdLJqEDiUyhAE+pYPZgb8mFYukiKD4Fd5fA@mail.gmail.com>
+In-Reply-To: <1472121165-29071-1-git-send-email-mic@digikod.net>
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Tue, 30 Aug 2016 09:06:30 -0700
+Message-ID: <CALCETrWw6fTTugSFcBhW=fv09GrSXQ+vZxuG0ewb+cod8nq4MQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual addresses
-To: Baoquan He <bhe@redhat.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, Kees Cook <keescook@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Eugene Surovegin <surovegin@google.com>, the arch/x86 maintainers <x86@kernel.org>, kexec@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Great, thanks Baoquan.
+On Thu, Aug 25, 2016 at 3:32 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
+ wrote:
+> Hi,
+>
+> This series is a proof of concept to fill some missing part of seccomp as=
+ the
+> ability to check syscall argument pointers or creating more dynamic secur=
+ity
+> policies. The goal of this new stackable Linux Security Module (LSM) call=
+ed
+> Landlock is to allow any process, including unprivileged ones, to create
+> powerful security sandboxes comparable to the Seatbelt/XNU Sandbox or the
+> OpenBSD Pledge. This kind of sandbox help to mitigate the security impact=
+ of
+> bugs or unexpected/malicious behaviors in userland applications.
 
-On Mon, Aug 29, 2016 at 3:11 AM, Baoquan He <bhe@redhat.com> wrote:
-> Hi Thomas,
->
-> I used below code and it works. Since using VMCOREINFO_NUMBER can reuse
-> the existing struct number_table to import the data. It makes change
-> easier. But the place could be next to KERNEL_IMAGE_SIZE, or as your
-> patch did, both is fine.
->
-> ---
->  kernel/kexec_core.c | 3 +++
->  1 file changed, 3 insertions(+)
->
-> diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
-> index 5616755..81bde86 100644
-> --- a/kernel/kexec_core.c
-> +++ b/kernel/kexec_core.c
-> @@ -1469,6 +1469,9 @@ static int __init crash_save_vmcoreinfo_init(void)
->         VMCOREINFO_NUMBER(PAGE_BUDDY_MAPCOUNT_VALUE);
->  #ifdef CONFIG_X86
->         VMCOREINFO_NUMBER(KERNEL_IMAGE_SIZE);
-> +       VMCOREINFO_NUMBER(PAGE_OFFSET);
-> +       VMCOREINFO_NUMBER(VMALLOC_START);
-> +       VMCOREINFO_NUMBER(VMEMMAP_START);
->  #endif
->  #ifdef CONFIG_HUGETLB_PAGE
->         VMCOREINFO_NUMBER(HUGETLB_PAGE_DTOR);
-> --
-> 2.5.5
->
-> On 08/18/16 at 07:47am, Thomas Garnier wrote:
->> KASLR memory randomization can randomize the base of the physical memory
->> mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
->> (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
->> easily identify the base of each memory section.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->> Based on next-20160817
->> ---
->>  arch/x86/kernel/machine_kexec_64.c | 3 +++
->>  include/linux/kexec.h              | 6 ++++++
->>  2 files changed, 9 insertions(+)
->>
->> diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
->> index fc3389f..b1f15a2 100644
->> --- a/arch/x86/kernel/machine_kexec_64.c
->> +++ b/arch/x86/kernel/machine_kexec_64.c
->> @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
->>       vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
->>                             kaslr_offset());
->>       VMCOREINFO_PHYS_BASE(phys_base);
->> +     VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
->> +     VMCOREINFO_VMALLOC_START(VMALLOC_START);
->> +     VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
->>  }
->>
->>  /* arch-dependent functionality related to kexec file-based syscall */
->> diff --git a/include/linux/kexec.h b/include/linux/kexec.h
->> index d3ae429..cd3874c 100644
->> --- a/include/linux/kexec.h
->> +++ b/include/linux/kexec.h
->> @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
->>       vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
->>  #define VMCOREINFO_PHYS_BASE(value) \
->>       vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
->> +#define VMCOREINFO_PAGE_OFFSET(value) \
->> +     vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
->> +#define VMCOREINFO_VMALLOC_START(value) \
->> +     vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
->> +#define VMCOREINFO_VMEMMAP_START(value) \
->> +     vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
->>
->>  extern struct kimage *kexec_image;
->>  extern struct kimage *kexec_crash_image;
->> --
->> 2.8.0.rc3.226.g39d4020
->>
->>
->> _______________________________________________
->> kexec mailing list
->> kexec@lists.infradead.org
->> http://lists.infradead.org/mailman/listinfo/kexec
+Micka=C3=ABl, will you be at KS and/or LPC?
