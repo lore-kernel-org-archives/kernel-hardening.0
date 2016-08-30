@@ -1,103 +1,92 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 30 Aug 2016 20:23:37 +0100 (IST)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
-Message-ID: <alpine.DEB.2.10.1608302023020.3120@hadrien>
-References: <alpine.DEB.2.10.1608272058090.3363@hadrien> <1472325098.26978.14.camel@perches.com> <alpine.DEB.2.10.1608281509480.3321@hadrien> <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+ <CALCETrWw6fTTugSFcBhW=fv09GrSXQ+vZxuG0ewb+cod8nq4MQ@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <57C5E3C8.1080103@digikod.net>
+Date: Tue, 30 Aug 2016 21:51:36 +0200
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: constification and cocci / kernel build test robot ?
-To: Kees Cook <keescook@chromium.org>
-Cc: Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>, Mark Rutland <mark.rutland@arm.com>
+In-Reply-To: <CALCETrWw6fTTugSFcBhW=fv09GrSXQ+vZxuG0ewb+cod8nq4MQ@mail.gmail.com>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="iS68pljTlh2L1r0VbXfQSnmHJ4I1fSRTV"
+Subject: [kernel-hardening] Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Tejun Heo <tj@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--iS68pljTlh2L1r0VbXfQSnmHJ4I1fSRTV
+Content-Type: multipart/mixed; boundary="1tA95sEOkeODQ2R2gdE5d6A5uwahQeFil";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>,
+ Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>,
+ David Drysdale <drysdale@google.com>, "David S . Miller"
+ <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>,
+ James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>,
+ Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>,
+ Kernel Hardening <kernel-hardening@lists.openwall.com>,
+ Linux API <linux-api@vger.kernel.org>,
+ LSM List <linux-security-module@vger.kernel.org>,
+ Network Development <netdev@vger.kernel.org>, Tejun Heo <tj@kernel.org>
+Message-ID: <57C5E3C8.1080103@digikod.net>
+Subject: Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+ <CALCETrWw6fTTugSFcBhW=fv09GrSXQ+vZxuG0ewb+cod8nq4MQ@mail.gmail.com>
+In-Reply-To: <CALCETrWw6fTTugSFcBhW=fv09GrSXQ+vZxuG0ewb+cod8nq4MQ@mail.gmail.com>
+
+--1tA95sEOkeODQ2R2gdE5d6A5uwahQeFil
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
 
-On Tue, 30 Aug 2016, Kees Cook wrote:
+On 30/08/2016 18:06, Andy Lutomirski wrote:
+> On Thu, Aug 25, 2016 at 3:32 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
+net> wrote:
+>> Hi,
+>>
+>> This series is a proof of concept to fill some missing part of seccomp=
+ as the
+>> ability to check syscall argument pointers or creating more dynamic se=
+curity
+>> policies. The goal of this new stackable Linux Security Module (LSM) c=
+alled
+>> Landlock is to allow any process, including unprivileged ones, to crea=
+te
+>> powerful security sandboxes comparable to the Seatbelt/XNU Sandbox or =
+the
+>> OpenBSD Pledge. This kind of sandbox help to mitigate the security imp=
+act of
+>> bugs or unexpected/malicious behaviors in userland applications.
+>=20
+> Micka=C3=ABl, will you be at KS and/or LPC?
+>=20
 
-> On Sun, Aug 28, 2016 at 9:13 AM, Julia Lawall <julia.lawall@lip6.fr> wrote:
-> > [Adding Kees, in case it's of interest]
-> >
-> > Below is the list of types of top-level initialized structures and the
-> > number that are const.  For quicker reading, here are some that are
-> > sometimes const (numerator), but not always (denominator):
-> >
-> > file_operations: 2221/2233
-> > attribute_group: 447/919
-> > irq_chip: 1/518
-> > net_device_ops: 488/498
-> > regmap_config: 407/447
-> > dev_pm_ops: 398/415
-> > clk_ops: 314/386
-> > resource: 6/385
-> > seq_operations: 327/328
-> > snd_pcm_ops: 9/288
-> >
-> > and here are the most used ones that are never const at all:
-> >
-> > platform_driver: 2943
-> > platform_device: 2226
-> > clk_branch: 1131
-> > i2c_driver: 786
-> > pci_driver: 781
-> > omap_hwmod_ocp_if: 670
-> > omap_hwmod: 582
-> > notifier_block: 556
-> > clk: 473
-> > clk_rcg2: 384
-> >
-> > [...]
->
-> The structures that should get the greatest level of attention are
-> those that contain function pointers. The "constify" gcc plugin from
-> PaX/Grsecurity does this, but it uses a big hammer: it moves all of
-> them const even if they receive assignment. To handle this, there is
-> the concept of an open/close method to gain temporary access to the
-> structure. For example:
->
-> drivers/cdrom/cdrom.c:
->
-> int register_cdrom(...) {
->         ...
->         if (!cdo->generic_packet) {
->                 pax_open_kernel();
->                 const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
->                 pax_close_kernel();
+I won't be at KS/LPC but I will give a talk at Kernel Recipes (Paris)
+for which registration will start Thursday (and will not last long). :)
 
-Thanks for the clarification.  The above has to be added to the code
-manually, or the plugin does it?
+ Micka=C3=ABl
 
-julia
 
->         }
->
-> (The "const_cast" here is just a macro to convince gcc it's only to
-> write to a const value, so really it should maybe be called
-> "unconst_cast", but whatever...)
->
-> This allows all of struct cdrom_device_ops to be const, even if they
-> need to be updated once during registration.
->
-> (This is a stronger version of __ro_after_init, which is for things
-> that are only written during __init.)
->
-> AUIU, the goals of the open/close_kernel idea are:
-> - always inline
-> - make sure the CPU cannot be interrupted
-> - BUG if memory is already writable
-> - make the memory writable only by the current CPU
-> - update the value
-> - restore memory permissions
-> - allow CPU interruption again
->
-> This makes sure there aren't races with other CPUs to write things,
-> and that it's harder to use for an attack since with the "make
-> writable" code is always followed by a "make read-only" action (i.e.
-> not separate functions that could be used as a trivial ROP gadget).
->
-> -Kees
->
-> --
-> Kees Cook
-> Nexus Security
->
+--1tA95sEOkeODQ2R2gdE5d6A5uwahQeFil--
+
+--iS68pljTlh2L1r0VbXfQSnmHJ4I1fSRTV
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEcBAEBCgAGBQJXxePNAAoJECLe/t9zvWqVD7gH/R/P8OY0f0gIgcwfp22iq+XG
+dj6V72UyTuwaYpECkpit9eaXPdvPLSSMezPIvTtl6FFJz0Y/5njuEEGL+K6L5zrk
+8xicrpS30jXmG2SPlGZSuWzWW3MThDGS2OLYKa/1FlWlwsxLIXQnyL7LsBihHV5C
+7M0YzJw3he/Ip/MyNVvfR+opibT9dA+ZTpoD//Q7e6Zk3RZi8BYMjzwhreRFmJTY
+3ZYjSzMXV1qHcz/alrFfc6UABKZ77WQu0kf2tAzykaSm4biqdMoWeuRYnxJi8JEg
+g7BCyS2fwqEPgpDfWpGMY2oVP1eexlrrg4j2LvU7rkaIJKY81BEX3kZtncEfVLg=
+=G+wn
+-----END PGP SIGNATURE-----
+
+--iS68pljTlh2L1r0VbXfQSnmHJ4I1fSRTV--
