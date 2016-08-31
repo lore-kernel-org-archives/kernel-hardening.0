@@ -1,87 +1,85 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 31 Aug 2016 06:22:49 +0100 (IST)
+From: Julia Lawall <julia.lawall@lip6.fr>
+In-Reply-To: <CAGXu5j+3HpPfJ8vUr45oQdc30ZUOokvffPfSGCz+VfJxCB95Dw@mail.gmail.com>
+Message-ID: <alpine.DEB.2.10.1608310620420.3026@hadrien>
+References: <alpine.DEB.2.10.1608272058090.3363@hadrien> <1472325098.26978.14.camel@perches.com> <alpine.DEB.2.10.1608281509480.3321@hadrien> <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com> <alpine.DEB.2.10.1608302023020.3120@hadrien>
+ <CAGXu5j+3HpPfJ8vUr45oQdc30ZUOokvffPfSGCz+VfJxCB95Dw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20160831013605.GB75654@ast-mbp.thefacebook.com>
-References: <20160827204307.GA43714@ast-mbp.thefacebook.com>
- <57C202BF.7000207@digikod.net> <CALCETrXgQ+njtupXiKcOXG8ZRzD=n2LhT45NiJr1Ehob7bHskQ@mail.gmail.com>
- <57C2B21E.9040705@digikod.net> <CALCETrXU64+UApeKL_NogpBYk5kN7zA7UwkypZt8SYfvkuQrbA@mail.gmail.com>
- <57C5EAA3.5090901@digikod.net> <CALCETrWAYyx_5Axyeqiz6tQa0kqTeNTuHRrERcM2G8ROhaphVw@mail.gmail.com>
- <57C5ED9B.3040303@digikod.net> <20160830205552.GB71063@ast-mbp.thefacebook.com>
- <CALCETrX6hPFZwdnypkPA0p9VjdcK=ZFYpR8zXpzOYS6f=fx3_g@mail.gmail.com> <20160831013605.GB75654@ast-mbp.thefacebook.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Tue, 30 Aug 2016 20:29:17 -0700
-Message-ID: <CALCETrUeRH6bpY_7WQh_SKiURPEExtw67+Mj26u4aveV9EgWxA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC v2 09/10] landlock: Handle cgroups (performance)
-To: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Cc: LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Linux API <linux-api@vger.kernel.org>, Sargun Dhillon <sargun@sargun.me>, Tejun Heo <tj@kernel.org>, Kees Cook <keescook@chromium.org>, "David S . Miller" <davem@davemloft.net>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>, =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>, Daniel Mack <daniel@zonque.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Borkmann <daniel@iogearbox.net>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: constification and cocci / kernel build test robot ?
+To: Kees Cook <keescook@chromium.org>
+Cc: Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Aug 30, 2016 at 6:36 PM, Alexei Starovoitov
-<alexei.starovoitov@gmail.com> wrote:
-> On Tue, Aug 30, 2016 at 02:45:14PM -0700, Andy Lutomirski wrote:
->>
->> One might argue that landlock shouldn't be tied to seccomp (in theory,
->> attached progs could be given access to syscall_get_xyz()), but I
+
+
+On Tue, 30 Aug 2016, Kees Cook wrote:
+
+> On Tue, Aug 30, 2016 at 3:23 PM, Julia Lawall <julia.lawall@lip6.fr> wrote:
+> >
+> >
+> > On Tue, 30 Aug 2016, Kees Cook wrote:
+> >
+> >> On Sun, Aug 28, 2016 at 9:13 AM, Julia Lawall <julia.lawall@lip6.fr> wrote:
+> >> > [Adding Kees, in case it's of interest]
+> >> >
+> >> > Below is the list of types of top-level initialized structures and the
+> >> > number that are const.  For quicker reading, here are some that are
+> >> > sometimes const (numerator), but not always (denominator):
+> >> >
+> >> > file_operations: 2221/2233
+> >> > attribute_group: 447/919
+> >> > irq_chip: 1/518
+> >> > net_device_ops: 488/498
+> >> > regmap_config: 407/447
+> >> > dev_pm_ops: 398/415
+> >> > clk_ops: 314/386
+> >> > resource: 6/385
+> >> > seq_operations: 327/328
+> >> > snd_pcm_ops: 9/288
+> >> >
+> >> > and here are the most used ones that are never const at all:
+> >> >
+> >> > platform_driver: 2943
+> >> > platform_device: 2226
+> >> > clk_branch: 1131
+> >> > i2c_driver: 786
+> >> > pci_driver: 781
+> >> > omap_hwmod_ocp_if: 670
+> >> > omap_hwmod: 582
+> >> > notifier_block: 556
+> >> > clk: 473
+> >> > clk_rcg2: 384
+> >> >
+> >> > [...]
+> >>
+> >> The structures that should get the greatest level of attention are
+> >> those that contain function pointers. The "constify" gcc plugin from
+> >> PaX/Grsecurity does this, but it uses a big hammer: it moves all of
+> >> them const even if they receive assignment. To handle this, there is
+> >> the concept of an open/close method to gain temporary access to the
+> >> structure. For example:
+> >>
+> >> drivers/cdrom/cdrom.c:
+> >>
+> >> int register_cdrom(...) {
+> >>         ...
+> >>         if (!cdo->generic_packet) {
+> >>                 pax_open_kernel();
+> >>                 const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
+> >>                 pax_close_kernel();
+> >
+> > Thanks for the clarification.  The above has to be added to the code
+> > manually, or the plugin does it?
 >
-> proposed lsm is way more powerful than syscall_get_xyz.
-> no need to dumb it down.
+> Currently, the plugin just warns, and a successful build depends on
+> manually adding the open/close logic. For simple cases, the plugin
+> could be taught to do this automatically, but some situations are more
+> complex.
 
-I think you're misunderstanding me.
+I guess it would be desirable to avoid this if at all possible. But maybe
+it would end up in some library functions, because some drivers would call
+them from an init context.
 
-Micka=C3=ABl's code allows one to make the LSM hook filters depend on the
-syscall using SECCOMP_RET_LANDLOCK.  I'm suggesting that a similar
-effect could be achieved by allowing the eBPF LSM hook to call
-syscall_get_xyz() if it wants to.
-
->
->> think that the seccomp attachment mechanism is the right way to
->> install unprivileged filters.  It handles the no_new_privs stuff, it
->> allows TSYNC, it's totally independent of systemwide policy, etc.
->>
->> Trying to use cgroups or similar for this is going to be much nastier.
->> Some tighter sandboxes (Sandstorm, etc) aren't even going to dream of
->> putting cgroupfs in their containers, so requiring cgroups or similar
->> would be a mess for that type of application.
->
-> I don't see why it is a 'mess'. cgroups are already used by majority
-> of the systems, so I don't see why requiring a cgroup is such a big deal.
-
-Requiring cgroup to be configured in isn't a big deal.  Requiring
-
-> But let's say we don't do them. How implementation is going to look like
-> for task based hierarchy? Note that we need an array of bpf_prog pointers=
-.
-> One for each lsm hook. Where this array is going to be stored?
-> We cannot put in task_struct, since it's too large. Cannot put it
-> into 'struct seccomp' directly either, unless it will become a pointer.
-> Is that the proposal?
-
-It would go in struct seccomp_filter or in something pointed to from there.
-
-> So now we will be wasting extra 1kbyte of memory per task. Not great.
-> We'd want to optimize it by sharing this such struct seccomp with prog ar=
-ray
-> across threads of the same task? Or dynimically allocating it when
-> landlock is in use? May sound nice, but how to account for that kernel
-> memory? I guess also solvable by charging memlock.
-> With cgroup based approach we don't need to worry about all that.
->
-
-The considerations are essentially identical either way.
-
-With cgroups, if you want to share the memory between multiple
-separate sandboxes (Firejail instances, Sandstorm grains, Chromium
-instances, xdg-apps, etc), you'd need to get them to all coordinate to
-share a cgroup.  With a seccomp-like interface, you'd need to get them
-to coordinate to share an installed layer (using my FD idea or
-similar).
-
-There would *not* be any duplication of this memory just because a
-sandboxed process called fork().
-
---Andy
-
---=20
-Andy Lutomirski
-AMA Capital Management, LLC
+julia
