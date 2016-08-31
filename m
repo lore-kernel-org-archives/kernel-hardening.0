@@ -1,85 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 31 Aug 2016 06:22:49 +0100 (IST)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <CAGXu5j+3HpPfJ8vUr45oQdc30ZUOokvffPfSGCz+VfJxCB95Dw@mail.gmail.com>
-Message-ID: <alpine.DEB.2.10.1608310620420.3026@hadrien>
-References: <alpine.DEB.2.10.1608272058090.3363@hadrien> <1472325098.26978.14.camel@perches.com> <alpine.DEB.2.10.1608281509480.3321@hadrien> <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com> <alpine.DEB.2.10.1608302023020.3120@hadrien>
- <CAGXu5j+3HpPfJ8vUr45oQdc30ZUOokvffPfSGCz+VfJxCB95Dw@mail.gmail.com>
+Date: Wed, 31 Aug 2016 11:08:48 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160831100848.GB4783@leverpostej>
+References: <alpine.DEB.2.10.1608272058090.3363@hadrien>
+ <1472325098.26978.14.camel@perches.com>
+ <alpine.DEB.2.10.1608281509480.3321@hadrien>
+ <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKZrHEZqyby-Gjrx=wjjCPw-kmkYBcW--+J5Y3w5QwNbg@mail.gmail.com>
 Subject: [kernel-hardening] Re: constification and cocci / kernel build test robot ?
 To: Kees Cook <keescook@chromium.org>
-Cc: Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>, Mark Rutland <mark.rutland@arm.com>
+Cc: Julia Lawall <julia.lawall@lip6.fr>, Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Aug 30, 2016 at 02:50:36PM -0400, Kees Cook wrote:
+> The structures that should get the greatest level of attention are
+> those that contain function pointers. The "constify" gcc plugin from
+> PaX/Grsecurity does this, but it uses a big hammer: it moves all of
+> them const even if they receive assignment. To handle this, there is
+> the concept of an open/close method to gain temporary access to the
+> structure. For example:
+> 
+> drivers/cdrom/cdrom.c:
+> 
+> int register_cdrom(...) {
+>         ...
+>         if (!cdo->generic_packet) {
+>                 pax_open_kernel();
+>                 const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
+>                 pax_close_kernel();
+>         }
+> 
+> (The "const_cast" here is just a macro to convince gcc it's only to
+> write to a const value, so really it should maybe be called
+> "unconst_cast", but whatever...)
 
+Just to check, are they actually marked as const, or some pseudo-const
+like __ro_after_init?
 
-On Tue, 30 Aug 2016, Kees Cook wrote:
+I can imagine a number of issues with casting a real const away (e.g. if
+the compiler decides to cache the value in a register and decides since
+it is const it need not hazard with a memory clobber).
 
-> On Tue, Aug 30, 2016 at 3:23 PM, Julia Lawall <julia.lawall@lip6.fr> wrote:
-> >
-> >
-> > On Tue, 30 Aug 2016, Kees Cook wrote:
-> >
-> >> On Sun, Aug 28, 2016 at 9:13 AM, Julia Lawall <julia.lawall@lip6.fr> wrote:
-> >> > [Adding Kees, in case it's of interest]
-> >> >
-> >> > Below is the list of types of top-level initialized structures and the
-> >> > number that are const.  For quicker reading, here are some that are
-> >> > sometimes const (numerator), but not always (denominator):
-> >> >
-> >> > file_operations: 2221/2233
-> >> > attribute_group: 447/919
-> >> > irq_chip: 1/518
-> >> > net_device_ops: 488/498
-> >> > regmap_config: 407/447
-> >> > dev_pm_ops: 398/415
-> >> > clk_ops: 314/386
-> >> > resource: 6/385
-> >> > seq_operations: 327/328
-> >> > snd_pcm_ops: 9/288
-> >> >
-> >> > and here are the most used ones that are never const at all:
-> >> >
-> >> > platform_driver: 2943
-> >> > platform_device: 2226
-> >> > clk_branch: 1131
-> >> > i2c_driver: 786
-> >> > pci_driver: 781
-> >> > omap_hwmod_ocp_if: 670
-> >> > omap_hwmod: 582
-> >> > notifier_block: 556
-> >> > clk: 473
-> >> > clk_rcg2: 384
-> >> >
-> >> > [...]
-> >>
-> >> The structures that should get the greatest level of attention are
-> >> those that contain function pointers. The "constify" gcc plugin from
-> >> PaX/Grsecurity does this, but it uses a big hammer: it moves all of
-> >> them const even if they receive assignment. To handle this, there is
-> >> the concept of an open/close method to gain temporary access to the
-> >> structure. For example:
-> >>
-> >> drivers/cdrom/cdrom.c:
-> >>
-> >> int register_cdrom(...) {
-> >>         ...
-> >>         if (!cdo->generic_packet) {
-> >>                 pax_open_kernel();
-> >>                 const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
-> >>                 pax_close_kernel();
-> >
-> > Thanks for the clarification.  The above has to be added to the code
-> > manually, or the plugin does it?
->
-> Currently, the plugin just warns, and a successful build depends on
-> manually adding the open/close logic. For simple cases, the plugin
-> could be taught to do this automatically, but some situations are more
-> complex.
+> This allows all of struct cdrom_device_ops to be const, even if they
+> need to be updated once during registration.
+> 
+> (This is a stronger version of __ro_after_init, which is for things
+> that are only written during __init.)
+> 
+> AUIU, the goals of the open/close_kernel idea are:
+> - always inline
+> - make sure the CPU cannot be interrupted
 
-I guess it would be desirable to avoid this if at all possible. But maybe
-it would end up in some library functions, because some drivers would call
-them from an init context.
+I guess s/be interrupted/take an exception/, to cover stuff like debug
+breakpoints and such.
 
-julia
+That might not always be possible, and might not strictly be a
+requirement, if you can guarantee that taking an exception will cause
+the mapping to become non-writeable during the handler.
+
+That's one approach I plan to look into for arm64, assuming that we
+create a temporarily RW alias in TTBR0.
+
+> - BUG if memory is already writable
+> - make the memory writable only by the current CPU
+> - update the value
+> - restore memory permissions
+> - allow CPU interruption again
+> 
+> This makes sure there aren't races with other CPUs to write things,
+> and that it's harder to use for an attack since with the "make
+> writable" code is always followed by a "make read-only" action (i.e.
+> not separate functions that could be used as a trivial ROP gadget).
+
+FWIW, on that front we may want to look into reworking the fixmap code.
+For at least arm, arm64, microblaze, and powerpc, __set_fixmap is a C
+function that might offer a trivial ROP gadget for creating a RW
+mapping.
+
+Other architectures have that as a static inline in a header, which
+ensures that it's folded into callers, making it less trivial to reuse.
+
+Thanks,
+Mark.
