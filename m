@@ -1,40 +1,81 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Thu, 01 Sep 2016 16:10:25 +0200
-MIME-Version: 1.0
-Message-ID: <57C836D1.25222.4A0B007@pageexec.freemail.hu>
-In-reply-to: <20160831164119.GA6633@leverpostej>
-References: <alpine.DEB.2.10.1608272058090.3363@hadrien>, <CAGXu5jLUunTNw8LoNQdSoP2NU=SxzKDmXExEBeg-vSeOxk4iYA@mail.gmail.com>, <20160831164119.GA6633@leverpostej>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: constification and cocci / kernel build test robot ?
-To: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>
-Cc: Julia Lawall <julia.lawall@lip6.fr>, Joe Perches <joe@perches.com>, Fengguang Wu <fengguang.wu@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Glenn Wurster <gwurster@blackberry.com>
+From: Catalin Marinas <catalin.marinas@arm.com>
+Date: Fri,  2 Sep 2016 16:02:06 +0100
+Message-Id: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
+Subject: [kernel-hardening] [PATCH v2 0/7] arm64: Privileged Access Never using TTBR0_EL1 switching
+To: linux-arm-kernel@lists.infradead.org
+Cc: kernel-hardening@lists.openwall.com, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, Julien Grall <julien.grall@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 31 Aug 2016 at 17:41, Mark Rutland wrote:
+This is the second version of the arm64 PAN emulation by disabling
+TTBR0_EL1 accesses. The major change from v1 is the use of a thread_info
+member to store the real TTBR0_EL1 value. The advantage is slightly
+simpler assembler macros for uaccess_enable with the downside that
+switch_mm() must always update the saved ttbr0 even if there is no mm
+switch.
 
-> > The plugin marks them actually const, so the const_cast() is needed to
-> > "forget" that marking and treat it as a normal variable. (And PaX Team
-> > noted that this is the name used in C++ already.)
-> 
-> From having a look around, my understanding is that with C++ this is
-> only valid if the underlying object is not const (i.e. it's only valid
-> to remove constness from a pointer or reference which had itself added
-> constness to a non-const object).
-> 
-> I see that GCC is happy to constant-fold function pointers in const
-> objects it has visibility of; example below. Making the objects
-> themselves const is bound to lead to fragility (e.g. static inline
-> functions in a header behaving differently from related functions in
-> another file).
-> 
-> Have I misunderstood something?
+Whether we could simplify these patches further to use some TCR_EL1.EPD0
+tricks remains to be confirmed with the ARM architects. However, it is
+unlikely that they would deem such idea architecturally safe, hence this
+series only switches TTBR0_EL1 in accordance with the ARM ARM.
 
-it's all correct but it's also not what PaX does for exactly this reason.
-instead we only constify types where no global variable instances are accessed
-directly. for directly accessed global variables we use __read_only and
-pax_open/close_kernel calls. ideally, this should be done for all cases and
-then const_cast would no longer be needed however that requires some non-trivial
-work on the plugin side.
+Changes since v1:
+
+- Using thread_info instead of per-CPU variable for the real TTBR0_EL1
+  value (mentioned above)
+
+- Factored out the cpu_do_switch_mm errata workaround to a separate
+  macro and avoided the "errata" argument to the uaccess_enable asm
+  macro
+
+- Fix build error with allnoconfig by moving the uaccess_* asm macros to
+  asm/uaccess.h and avoid some cyclic header includes
+
+- _PSR_PAN_BIT moved to the non-uapi ptrace.h
+
+- Use x21 instead of lr as temporary register in entry.S
+
+As per v1, the code requires more testing, especially for combinations
+where hardware PAN and/or UAO are present.
+
+The patches are also available on this branch:
+
+  git://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux ttbr0-pan
+
+Thanks for reviewing/testing.
+
+Catalin Marinas (7):
+  arm64: Factor out PAN enabling/disabling into separate uaccess_* macros
+  arm64: Factor out TTBR0_EL1 post-update workaround into a specific asm macro
+  arm64: Introduce uaccess_{disable,enable} functionality based on TTBR0_EL1
+  arm64: Disable TTBR0_EL1 during normal kernel execution
+  arm64: Handle faults caused by inadvertent user access with PAN enabled
+  arm64: xen: Enable user access before a privcmd hvc call
+  arm64: Enable CONFIG_ARM64_TTBR0_PAN
+
+ arch/arm64/Kconfig                      |   8 ++
+ arch/arm64/include/asm/assembler.h      |  37 +++++++++
+ arch/arm64/include/asm/cpufeature.h     |   6 ++
+ arch/arm64/include/asm/efi.h            |  14 ++++
+ arch/arm64/include/asm/futex.h          |  14 ++--
+ arch/arm64/include/asm/kernel-pgtable.h |   7 ++
+ arch/arm64/include/asm/mmu_context.h    |  32 ++++++--
+ arch/arm64/include/asm/ptrace.h         |   2 +
+ arch/arm64/include/asm/thread_info.h    |   3 +
+ arch/arm64/include/asm/uaccess.h        | 136 ++++++++++++++++++++++++++++++--
+ arch/arm64/kernel/armv8_deprecated.c    |  10 +--
+ arch/arm64/kernel/asm-offsets.c         |   3 +
+ arch/arm64/kernel/cpufeature.c          |   1 +
+ arch/arm64/kernel/entry.S               |  71 ++++++++++++++++-
+ arch/arm64/kernel/head.S                |   6 +-
+ arch/arm64/kernel/setup.c               |   8 ++
+ arch/arm64/kernel/vmlinux.lds.S         |   5 ++
+ arch/arm64/lib/clear_user.S             |   8 +-
+ arch/arm64/lib/copy_from_user.S         |   8 +-
+ arch/arm64/lib/copy_in_user.S           |   8 +-
+ arch/arm64/lib/copy_to_user.S           |   8 +-
+ arch/arm64/mm/context.c                 |   7 +-
+ arch/arm64/mm/fault.c                   |  22 ++++--
+ arch/arm64/mm/proc.S                    |  12 +--
+ arch/arm64/xen/hypercall.S              |  19 +++++
+ 25 files changed, 381 insertions(+), 74 deletions(-)
