@@ -1,35 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-Date: Fri,  2 Sep 2016 13:39:09 +0200
-Message-Id: <20160902113909.32631-4-juerg.haefliger@hpe.com>
-In-Reply-To: <20160902113909.32631-1-juerg.haefliger@hpe.com>
 References: <1456496467-14247-1-git-send-email-juerg.haefliger@hpe.com>
  <20160902113909.32631-1-juerg.haefliger@hpe.com>
-Subject: [kernel-hardening] [RFC PATCH v2 3/3] block: Always use a bounce buffer when XPFO is enabled
-To: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
-Cc: juerg.haefliger@hpe.com, vpk@cs.columbia.edu
+ <20160902113909.32631-3-juerg.haefliger@hpe.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <57C9E37A.9070805@intel.com>
+Date: Fri, 2 Sep 2016 13:39:22 -0700
+MIME-Version: 1.0
+In-Reply-To: <20160902113909.32631-3-juerg.haefliger@hpe.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC PATCH v2 2/3] xpfo: Only put previous userspace pages into
+ the hot cache
+To: Juerg Haefliger <juerg.haefliger@hpe.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
+Cc: vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a temporary hack to prevent the use of bio_map_user_iov()
-which causes XPFO page faults.
+On 09/02/2016 04:39 AM, Juerg Haefliger wrote:
+> Allocating a page to userspace that was previously allocated to the
+> kernel requires an expensive TLB shootdown. To minimize this, we only
+> put non-kernel pages into the hot cache to favor their allocation.
 
-Signed-off-by: Juerg Haefliger <juerg.haefliger@hpe.com>
----
- block/blk-map.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+But kernel allocations do allocate from these pools, right?  Does this
+just mean that kernel allocations usually have to pay the penalty to
+convert a page?
 
-diff --git a/block/blk-map.c b/block/blk-map.c
-index b8657fa8dc9a..e889dbfee6fb 100644
---- a/block/blk-map.c
-+++ b/block/blk-map.c
-@@ -52,7 +52,7 @@ static int __blk_rq_map_user_iov(struct request *rq,
- 	struct bio *bio, *orig_bio;
- 	int ret;
- 
--	if (copy)
-+	if (copy || IS_ENABLED(CONFIG_XPFO))
- 		bio = bio_copy_user_iov(q, map_data, iter, gfp_mask);
- 	else
- 		bio = bio_map_user_iov(q, iter, gfp_mask);
--- 
-2.9.3
+So, what's the logic here?  You're assuming that order-0 kernel
+allocations are more rare than allocations for userspace?
