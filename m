@@ -1,78 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Catalin Marinas <catalin.marinas@arm.com>
-Date: Fri,  2 Sep 2016 16:02:11 +0100
-Message-Id: <1472828533-28197-6-git-send-email-catalin.marinas@arm.com>
+Date: Fri,  2 Sep 2016 16:02:12 +0100
+Message-Id: <1472828533-28197-7-git-send-email-catalin.marinas@arm.com>
 In-Reply-To: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
 References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
-Subject: [kernel-hardening] [PATCH v2 5/7] arm64: Handle faults caused by inadvertent user access with PAN enabled
+Subject: [kernel-hardening] [PATCH v2 6/7] arm64: xen: Enable user access before a privcmd hvc call
 To: linux-arm-kernel@lists.infradead.org
-Cc: kernel-hardening@lists.openwall.com, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, AKASHI Takahiro <takahiro.akashi@linaro.org>, Julien Grall <julien.grall@arm.com>, Stefano Stabellini <sstabellini@kernel.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-When TTBR0_EL1 is set to the reserved page, an erroneous kernel access
-to user space would generate a translation fault. This patch adds the
-checks for the software-set PSR_PAN_BIT to emulate a permission fault
-and report it accordingly.
+Privcmd calls are issued by the userspace. The kernel needs to enable
+access to TTBR0_EL1 as the hypervisor would issue stage 1 translations
+to user memory via AT instructions. Since AT instructions are not
+affected by the PAN bit (ARMv8.1), we only need the explicit
+uaccess_enable/disable if the TTBR0 PAN option is enabled.
 
-This patch also updates the description of the synchronous external
-aborts on translation table walks.
-
+Reviewed-by: Julien Grall <julien.grall@arm.com>
+Acked-by: Stefano Stabellini <sstabellini@kernel.org>
 Cc: Will Deacon <will.deacon@arm.com>
 Cc: James Morse <james.morse@arm.com>
 Cc: Kees Cook <keescook@chromium.org>
 Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
 ---
- arch/arm64/mm/fault.c | 22 ++++++++++++++--------
- 1 file changed, 14 insertions(+), 8 deletions(-)
+ arch/arm64/xen/hypercall.S | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
 
-diff --git a/arch/arm64/mm/fault.c b/arch/arm64/mm/fault.c
-index 05d2bd776c69..bd2af612f0df 100644
---- a/arch/arm64/mm/fault.c
-+++ b/arch/arm64/mm/fault.c
-@@ -268,13 +268,19 @@ out:
- 	return fault;
- }
+diff --git a/arch/arm64/xen/hypercall.S b/arch/arm64/xen/hypercall.S
+index 329c8027b0a9..211620dde4de 100644
+--- a/arch/arm64/xen/hypercall.S
++++ b/arch/arm64/xen/hypercall.S
+@@ -49,6 +49,7 @@
  
--static inline bool is_permission_fault(unsigned int esr)
-+static inline bool is_permission_fault(unsigned int esr, struct pt_regs *regs)
- {
- 	unsigned int ec       = ESR_ELx_EC(esr);
- 	unsigned int fsc_type = esr & ESR_ELx_FSC_TYPE;
+ #include <linux/linkage.h>
+ #include <asm/assembler.h>
++#include <asm/uaccess.h>
+ #include <xen/interface/xen.h>
  
--	return (ec == ESR_ELx_EC_DABT_CUR && fsc_type == ESR_ELx_FSC_PERM) ||
--	       (ec == ESR_ELx_EC_IABT_CUR && fsc_type == ESR_ELx_FSC_PERM);
-+	if (ec != ESR_ELx_EC_DABT_CUR && ec != ESR_ELx_EC_IABT_CUR)
-+		return false;
+ 
+@@ -91,6 +92,24 @@ ENTRY(privcmd_call)
+ 	mov x2, x3
+ 	mov x3, x4
+ 	mov x4, x5
++#ifdef CONFIG_ARM64_TTBR0_PAN
++	/*
++	 * Privcmd calls are issued by the userspace. The kernel needs to
++	 * enable access to TTBR0_EL1 as the hypervisor would issue stage 1
++	 * translations to user memory via AT instructions. Since AT
++	 * instructions are not affected by the PAN bit (ARMv8.1), we only
++	 * need the explicit uaccess_enable/disable if the TTBR0 PAN option is
++	 * enabled.
++	 */
++	uaccess_enable x6, x7
++#endif
+ 	hvc XEN_IMM
 +
-+	if (system_supports_ttbr0_pan())
-+		return fsc_type == ESR_ELx_FSC_FAULT &&
-+			(regs->pstate & PSR_PAN_BIT);
-+	else
-+		return fsc_type == ESR_ELx_FSC_PERM;
- }
- 
- static bool is_el0_instruction_abort(unsigned int esr)
-@@ -314,7 +320,7 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
- 		mm_flags |= FAULT_FLAG_WRITE;
- 	}
- 
--	if (is_permission_fault(esr) && (addr < USER_DS)) {
-+	if (addr < USER_DS && is_permission_fault(esr, regs)) {
- 		/* regs->orig_addr_limit may be 0 if we entered from EL0 */
- 		if (regs->orig_addr_limit == KERNEL_DS)
- 			die("Accessing user space memory with fs=KERNEL_DS", regs, esr);
-@@ -506,10 +512,10 @@ static const struct fault_info {
- 	{ do_bad,		SIGBUS,  0,		"unknown 17"			},
- 	{ do_bad,		SIGBUS,  0,		"unknown 18"			},
- 	{ do_bad,		SIGBUS,  0,		"unknown 19"			},
--	{ do_bad,		SIGBUS,  0,		"synchronous abort (translation table walk)" },
--	{ do_bad,		SIGBUS,  0,		"synchronous abort (translation table walk)" },
--	{ do_bad,		SIGBUS,  0,		"synchronous abort (translation table walk)" },
--	{ do_bad,		SIGBUS,  0,		"synchronous abort (translation table walk)" },
-+	{ do_bad,		SIGBUS,  0,		"synchronous external abort (translation table walk)" },
-+	{ do_bad,		SIGBUS,  0,		"synchronous external abort (translation table walk)" },
-+	{ do_bad,		SIGBUS,  0,		"synchronous external abort (translation table walk)" },
-+	{ do_bad,		SIGBUS,  0,		"synchronous external abort (translation table walk)" },
- 	{ do_bad,		SIGBUS,  0,		"synchronous parity error"	},
- 	{ do_bad,		SIGBUS,  0,		"unknown 25"			},
- 	{ do_bad,		SIGBUS,  0,		"unknown 26"			},
++#ifdef CONFIG_ARM64_TTBR0_PAN
++	/*
++	 * Disable userspace access from kernel once the hyp call completed.
++	 */
++	uaccess_disable x6
++#endif
+ 	ret
+ ENDPROC(privcmd_call);
