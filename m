@@ -1,65 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 2 Sep 2016 16:47:17 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160902154716.GA17347@leverpostej>
-References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
- <1472828533-28197-8-git-send-email-catalin.marinas@arm.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1472828533-28197-8-git-send-email-catalin.marinas@arm.com>
-Subject: [kernel-hardening] Re: [PATCH v2 7/7] arm64: Enable CONFIG_ARM64_TTBR0_PAN
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+Date: Fri,  2 Sep 2016 13:39:06 +0200
+Message-Id: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+In-Reply-To: <1456496467-14247-1-git-send-email-juerg.haefliger@hpe.com>
+References: <1456496467-14247-1-git-send-email-juerg.haefliger@hpe.com>
+Subject: [kernel-hardening] [RFC PATCH v2 0/3] Add support for eXclusive Page Frame Ownership (XPFO)
+To: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
+Cc: juerg.haefliger@hpe.com, vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Sep 02, 2016 at 04:02:13PM +0100, Catalin Marinas wrote:
-> This patch adds the Kconfig option to enable support for TTBR0 PAN. The
-> option is default off because of a slight performance hit when enabled,
-> caused by the additional TTBR0_EL1 switching during user access
-> operations or exception entry/exit code.
-> 
-> Cc: Will Deacon <will.deacon@arm.com>
-> Cc: James Morse <james.morse@arm.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
-> ---
->  arch/arm64/Kconfig | 8 ++++++++
->  1 file changed, 8 insertions(+)
-> 
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index bc3f00f586f1..3fb9a6ce464d 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -785,6 +785,14 @@ config SETEND_EMULATION
->  	  If unsure, say Y
->  endif
->  
-> +config ARM64_TTBR0_PAN
-> +	bool "Priviledged Access Never using TTBR0_EL1 switching"
+Changes from:
+  v1 -> v2:
+    - Moved the code from arch/x86/mm/ to mm/ since it's (mostly)
+      arch-agnostic.
+    - Moved the config to the generic layer and added ARCH_SUPPORTS_XPFO
+      for x86.
+    - Use page_ext for the additional per-page data.
+    - Removed the clearing of pages. This can be accomplished by using
+      PAGE_POISONING.
+    - Split up the patch into multiple patches.
+    - Fixed additional issues identified by reviewers.
 
-Minor nit/bikeshed, but could we follow the example of arch/arm's
-SW_DOMAIN_PAN and call this ARM64_SW_TTRBR0_PAN, prepending "Emulate "
-to the dsecription?
+This patch series adds support for XPFO which protects against 'ret2dir'
+kernel attacks. The basic idea is to enforce exclusive ownership of page
+frames by either the kernel or userspace, unless explicitly requested by
+the kernel. Whenever a page destined for userspace is allocated, it is
+unmapped from physmap (the kernel's page table). When such a page is
+reclaimed from userspace, it is mapped back to physmap.
 
-That makes it very clear that this is a SW feature, rather than using
-the real PAN, but only on TTBR0.
+Additional fields in the page_ext struct are used for XPFO housekeeping.
+Specifically two flags to distinguish user vs. kernel pages and to tag
+unmapped pages and a reference counter to balance kmap/kunmap operations
+and a lock to serialize access to the XPFO fields.
 
-Thanks,
-Mark.
+Known issues/limitations:
+  - Only supports x86-64 (for now)
+  - Only supports 4k pages (for now)
+  - There are most likely some legitimate uses cases where the kernel needs
+    to access userspace which need to be made XPFO-aware
+  - Performance penalty
 
-> +	help
-> +	  Enabling this option prevents the kernel from accessing
-> +	  user-space memory directly by pointing TTBR0_EL1 to a reserved
-> +	  zeroed area and reserved ASID. The user access routines
-> +	  restore the valid TTBR0_EL1 temporarily.
-> +
->  menu "ARMv8.1 architectural features"
->  
->  config ARM64_HW_AFDBM
-> 
-> _______________________________________________
-> linux-arm-kernel mailing list
-> linux-arm-kernel@lists.infradead.org
-> http://lists.infradead.org/mailman/listinfo/linux-arm-kernel
-> 
+Reference paper by the original patch authors:
+  http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
+
+Juerg Haefliger (3):
+  Add support for eXclusive Page Frame Ownership (XPFO)
+  xpfo: Only put previous userspace pages into the hot cache
+  block: Always use a bounce buffer when XPFO is enabled
+
+ arch/x86/Kconfig         |   3 +-
+ arch/x86/mm/init.c       |   2 +-
+ block/blk-map.c          |   2 +-
+ include/linux/highmem.h  |  15 +++-
+ include/linux/page_ext.h |   7 ++
+ include/linux/xpfo.h     |  41 +++++++++
+ lib/swiotlb.c            |   3 +-
+ mm/Makefile              |   1 +
+ mm/page_alloc.c          |  10 ++-
+ mm/page_ext.c            |   4 +
+ mm/xpfo.c                | 213 +++++++++++++++++++++++++++++++++++++++++++++++
+ security/Kconfig         |  20 +++++
+ 12 files changed, 314 insertions(+), 7 deletions(-)
+ create mode 100644 include/linux/xpfo.h
+ create mode 100644 mm/xpfo.c
+
+-- 
+2.9.3
