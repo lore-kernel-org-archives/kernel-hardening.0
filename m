@@ -1,97 +1,114 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1456496467-14247-1-git-send-email-juerg.haefliger@hpe.com>
- <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160902113909.32631-3-juerg.haefliger@hpe.com> <57C9E37A.9070805@intel.com>
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-Message-ID: <e7a0789e-585c-839d-d8ea-95b1c9aef38a@hpe.com>
-Date: Mon, 5 Sep 2016 13:54:47 +0200
+Date: Mon, 5 Sep 2016 16:38:28 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160905153828.GA27305@leverpostej>
+References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
+ <1472828533-28197-2-git-send-email-catalin.marinas@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <57C9E37A.9070805@intel.com>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="feNkja7ck77XjJ8qB7LALqg0b3p8XSw7t"
-Subject: [kernel-hardening] Re: [RFC PATCH v2 2/3] xpfo: Only put previous userspace pages into
- the hot cache
-To: Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
-Cc: vpk@cs.columbia.edu
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1472828533-28197-2-git-send-email-catalin.marinas@arm.com>
+Subject: [kernel-hardening] Re: [PATCH v2 1/7] arm64: Factor out PAN enabling/disabling into
+ separate uaccess_* macros
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---feNkja7ck77XjJ8qB7LALqg0b3p8XSw7t
-Content-Type: multipart/mixed; boundary="HHOVQnPV2XNCXH9POK17P2Fj5EiJGnEta";
- protected-headers="v1"
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-To: Dave Hansen <dave.hansen@intel.com>, linux-kernel@vger.kernel.org,
- linux-mm@kvack.org, kernel-hardening@lists.openwall.com,
- linux-x86_64@vger.kernel.org
-Cc: vpk@cs.columbia.edu
-Message-ID: <e7a0789e-585c-839d-d8ea-95b1c9aef38a@hpe.com>
-Subject: Re: [RFC PATCH v2 2/3] xpfo: Only put previous userspace pages into
- the hot cache
-References: <1456496467-14247-1-git-send-email-juerg.haefliger@hpe.com>
- <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160902113909.32631-3-juerg.haefliger@hpe.com> <57C9E37A.9070805@intel.com>
-In-Reply-To: <57C9E37A.9070805@intel.com>
+Hi Catalin,
 
---HHOVQnPV2XNCXH9POK17P2Fj5EiJGnEta
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
+On Fri, Sep 02, 2016 at 04:02:07PM +0100, Catalin Marinas wrote:
+> This patch moves the directly coded alternatives for turning PAN on/off
+> into separate uaccess_{enable,disable} macros or functions. The asm
+> macros take a few arguments which will be used in subsequent patches.
+> 
+> Cc: Will Deacon <will.deacon@arm.com>
+> Cc: James Morse <james.morse@arm.com>
+> Cc: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
+> ---
+>  arch/arm64/include/asm/futex.h       | 14 ++++-----
+>  arch/arm64/include/asm/uaccess.h     | 55 ++++++++++++++++++++++++++++++------
+>  arch/arm64/kernel/armv8_deprecated.c | 10 +++----
+>  arch/arm64/lib/clear_user.S          |  8 ++----
+>  arch/arm64/lib/copy_from_user.S      |  8 ++----
+>  arch/arm64/lib/copy_in_user.S        |  8 ++----
+>  arch/arm64/lib/copy_to_user.S        |  8 ++----
+>  7 files changed, 71 insertions(+), 40 deletions(-)
+> 
+> diff --git a/arch/arm64/include/asm/futex.h b/arch/arm64/include/asm/futex.h
+> index f2585cdd32c2..7e5f236093be 100644
+> --- a/arch/arm64/include/asm/futex.h
+> +++ b/arch/arm64/include/asm/futex.h
+> @@ -27,9 +27,9 @@
+>  #include <asm/sysreg.h>
+>  
+>  #define __futex_atomic_op(insn, ret, oldval, uaddr, tmp, oparg)		\
+> +do {									\
+> +	uaccess_enable(ARM64_HAS_PAN);					\
+>  	asm volatile(							\
+> -	ALTERNATIVE("nop", SET_PSTATE_PAN(0), ARM64_HAS_PAN,		\
+> -		    CONFIG_ARM64_PAN)					\
+>  "	prfm	pstl1strm, %2\n"					\
+>  "1:	ldxr	%w1, %2\n"						\
+>  	insn "\n"							\
+> @@ -44,11 +44,11 @@
+>  "	.popsection\n"							\
+>  	_ASM_EXTABLE(1b, 4b)						\
+>  	_ASM_EXTABLE(2b, 4b)						\
+> -	ALTERNATIVE("nop", SET_PSTATE_PAN(1), ARM64_HAS_PAN,		\
+> -		    CONFIG_ARM64_PAN)					\
+>  	: "=&r" (ret), "=&r" (oldval), "+Q" (*uaddr), "=&r" (tmp)	\
+>  	: "r" (oparg), "Ir" (-EFAULT)					\
+> -	: "memory")
+> +	: "memory");							\
+> +	uaccess_disable(ARM64_HAS_PAN);					\
+> +} while (0)
 
-On 09/02/2016 10:39 PM, Dave Hansen wrote:
-> On 09/02/2016 04:39 AM, Juerg Haefliger wrote:
->> Allocating a page to userspace that was previously allocated to the
->> kernel requires an expensive TLB shootdown. To minimize this, we only
->> put non-kernel pages into the hot cache to favor their allocation.
->=20
-> But kernel allocations do allocate from these pools, right?
+It might be worth noting in the commit message that this change means
+that any memory accesses the compiler decides to spill between uaccess_*
+calls and the main asm block are unprotected, but that's unlikely to be
+an issue in practice.
 
-Yes.
+[...]
 
+>  /*
+> + * User access enabling/disabling.
+> + */
+> +#define uaccess_disable(alt)						\
+> +do {									\
+> +	asm(ALTERNATIVE("nop", SET_PSTATE_PAN(1), alt,			\
+> +			CONFIG_ARM64_PAN));				\
+> +} while (0)
+> +
+> +#define uaccess_enable(alt)						\
+> +do {									\
+> +	asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,			\
+> +			CONFIG_ARM64_PAN));				\
+> +} while (0)
 
-> Does this
-> just mean that kernel allocations usually have to pay the penalty to
-> convert a page?
+Passing the alternative down is somewhat confusing. e.g. in the futex
+case it looks like we're only doing something when PAN is present,
+whereas we'll manipulate TTBR0 in the absence of PAN.
 
-Only pages that are allocated for userspace (gfp & GFP_HIGHUSER =3D=3D GF=
-P_HIGHUSER) which were
-previously allocated for the kernel (gfp & GFP_HIGHUSER !=3D GFP_HIGHUSER=
-) have to pay the penalty.
+If I've understood correctly, we need this to distinguish regular
+load/store uaccess sequences (eg. the futex code) from potentially
+patched unprivileged load/store sequences (e.g. {get,put}_user) when
+poking PSTATE.PAN.
 
+So perhaps we could ahve something like:
 
-> So, what's the logic here?  You're assuming that order-0 kernel
-> allocations are more rare than allocations for userspace?
+* privileged_uaccess_{enable,disable}()
+  Which toggle TTBR0, or PAN (always).
+  These would handle cases like the futex/swp code.
+ 
+* (unprivileged_)uaccess_{enable,disable}()
+  Which toggle TTBR0, or PAN (in the absence of UAO).
+  These would handle cases like the {get,put}_user sequences.
 
-The logic is to put reclaimed kernel pages into the cold cache to postpon=
-e their allocation as long
-as possible to minimize (potential) TLB flushes.
+Though perhaps that is just as confusing. ;)
 
-=2E..Juerg
+Otherwise, this looks like a nice centralisation of the PSTATE.PAN
+manipulation code.
 
-
-
---HHOVQnPV2XNCXH9POK17P2Fj5EiJGnEta--
-
---feNkja7ck77XjJ8qB7LALqg0b3p8XSw7t
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCAAGBQJXzV0HAAoJEHVMOpb5+LSM304QAINSMlOQKNAIRon29Uy318Sf
-J9Vfv3p2L/WIxrL6kKaHYkDqj+b0XnSVlWvnxNp1MX1qAOqeUSipfymvwNaYGuIV
-IJQeahOcJccupJMw1ILF+H1Rhxn+gBOc9I745omwO/CtlqYaYaXfCeIxI/R1Q9LQ
-yCtBPnbL4v1St7FnjDhZd3FdgiP+F98MAz8040FYq1cO+qWVDTyIRcpq4rPaAJNi
-8zcpLB+A34qjA2i3ZFV/ZNls2L4Buw4pYW1ZGnHxNTKKmbrYkZhBuxYuCNpfnyhB
-M00AnBKJQ7fqHKxCa64eo59rRTpYQ0Zd8KaKvVaZfZfbBaAg8Ir2UWNoBcPvE8ox
-D8TMhKlORMhHfnAE73DIlkENt1wYt2gGGScIJ+bL8nulJpqvNo5lPyTT3NHhrNZa
-prre5DzDQFvyv2SLx2P3MDqtyJ658hKx5own+82N99K5GuhC2++Xaq3/BpOC4rQI
-rEONoXhm0j63g2udCmkc1BIRSb+ZTaqzC1fxWoYH75nYEiIhGcgTQVJWXMx5DB/Y
-gvJJn/okC97zSXGk8zQtYIO2aDhUzRowYoy5bslzlR20hoNTWL9ctySE2OobqIdM
-WmWm/Hyq59cAMneimMv68+/RiWtxL2s5Q+8lci8uf18ollN1g/zp6H/1qOOMWvAr
-vqBZxyugEM72PbSEFv8Y
-=Jva/
------END PGP SIGNATURE-----
-
---feNkja7ck77XjJ8qB7LALqg0b3p8XSw7t--
+Thanks,
+Mark.
