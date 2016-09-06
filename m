@@ -1,29 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 6 Sep 2016 18:31:39 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20160906173139.GA13934@leverpostej>
+References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
+ <1472828533-28197-5-git-send-email-catalin.marinas@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <20160906161921.GB31384@pc.thejh.net>
-References: <cover.1466466093.git.luto@kernel.org> <CA+55aFyahpuy94qqECj0ZA6oD3Vy0r=gY2cH8_dB1a-4XURV2Q@mail.gmail.com>
- <CALCETrUuG0-tGNQ5iAEO2_gaK1eUq7AoALoBeQKcOP8cvxr=eA@mail.gmail.com>
- <CA+55aFx480bxx7VAmFqdsVGHjoSav4eCvVpcx5ZSpBQuq+=1Mw@mail.gmail.com>
- <20160623143126.GA16664@redhat.com> <CA+55aFwBL5ArLXZ0+YggTbp6Qon+OM+Foihe0yrQOmRRvu96VQ@mail.gmail.com>
- <CALCETrU2B0QYBgTTSAFiK026Bx96+Bk=k64bhrDT+TiXsV7D4A@mail.gmail.com> <20160906161921.GB31384@pc.thejh.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Tue, 6 Sep 2016 09:40:08 -0700
-Message-ID: <CALCETrVPhm37JJh+0qGjUBhxyDAF6R4ZpCX22UQvBzgYz6zzpw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 00/13] Virtually mapped stacks with guard pages (x86, core)
-To: Jann Horn <jann@thejh.net>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>, Andy Lutomirski <luto@kernel.org>, the arch/x86 maintainers <x86@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>, Borislav Petkov <bp@alien8.de>, Nadav Amit <nadav.amit@gmail.com>, Kees Cook <keescook@chromium.org>, Brian Gerst <brgerst@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Heiko Carstens <heiko.carstens@de.ibm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1472828533-28197-5-git-send-email-catalin.marinas@arm.com>
+Subject: [kernel-hardening] Re: [PATCH v2 4/7] arm64: Disable TTBR0_EL1 during normal kernel
+ execution
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: linux-arm-kernel@lists.infradead.org, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 6, 2016 at 9:19 AM, Jann Horn <jann@thejh.net> wrote:
-> On Thu, Jun 23, 2016 at 09:41:11AM -0700, Andy Lutomirski wrote:
->> 3. Free stacks immediately and cache them (really easy).
->
-> Random note: task_current_syscall() (via /proc/$pid/syscall) will probably need additional
-> locking when the stack is freed before the task.
+Hi Catalin,
 
-Thanks.  I'm testing a patch now.
+This generally looks fine, and my comments below are mostly nits. :)
 
--- 
-Andy Lutomirski
-AMA Capital Management, LLC
+On Fri, Sep 02, 2016 at 04:02:10PM +0100, Catalin Marinas wrote:
+>  static inline void
+> -switch_mm(struct mm_struct *prev, struct mm_struct *next,
+> -	  struct task_struct *tsk)
+> +__switch_mm(struct mm_struct *prev, struct mm_struct *next,
+> +	    struct task_struct *tsk)
+
+It looks like the comment above this function is now out-of-date, and
+has been somewhat misleading for a while. While we're making changes
+here, can we remove it entirely?
+
+[...]
+
+> @@ -109,6 +111,34 @@
+>  	mrs	x22, elr_el1
+>  	mrs	x23, spsr_el1
+>  	stp	lr, x21, [sp, #S_LR]
+> +
+> +#ifdef CONFIG_ARM64_TTBR0_PAN
+> +	/*
+> +	 * Set the TTBR0 PAN in SPSR. When the exception is taken from EL0,
+> +	 * there is no need to check the state of TTBR0_EL1 since accesses are
+> +	 * always enabled.
+
+Nit: missing 'bit' from the first sentence?
+
+[...]
+
+> diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
+> index 536dce22fe76..4a4aaa47f869 100644
+> --- a/arch/arm64/kernel/setup.c
+> +++ b/arch/arm64/kernel/setup.c
+> @@ -228,6 +228,14 @@ void __init setup_arch(char **cmdline_p)
+>  {
+>  	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
+>  
+> +#ifdef CONFIG_ARM64_TTBR0_PAN
+> +	/*
+> +	 * uaccess_enable() may be called on the init thread, so make sure
+> +	 * the saved TTBR0_EL1 always generates translation faults.
+> +	 */
+> +	init_thread_info.ttbr0 = virt_to_phys(empty_zero_page);
+> +#endif
+
+Just to check, does this need to happen so early? e.g. do we need this
+to report exceptions safely? Otherwise, it would be nice if we could
+group this with the uninstall of the idmap a little later in setup_arch.
+
+Thanks,
+Mark.
