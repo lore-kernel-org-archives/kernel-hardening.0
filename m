@@ -1,70 +1,104 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 6 Sep 2016 18:31:39 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160906173139.GA13934@leverpostej>
-References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
- <1472828533-28197-5-git-send-email-catalin.marinas@arm.com>
+Date: Wed, 7 Sep 2016 15:09:57 +0900
+From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Message-ID: <20160907060954.GF16712@linaro.org>
+References: <1471531632-23003-1-git-send-email-thgarnie@google.com>
+ <20160829101137.GA29344@x1.redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=iso-2022-jp
 Content-Disposition: inline
-In-Reply-To: <1472828533-28197-5-git-send-email-catalin.marinas@arm.com>
-Subject: [kernel-hardening] Re: [PATCH v2 4/7] arm64: Disable TTBR0_EL1 during normal kernel
- execution
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+In-Reply-To: <20160829101137.GA29344@x1.redhat.com>
+Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual
+ addresses
+To: Baoquan He <bhe@redhat.com>
+Cc: Thomas Garnier <thgarnie@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, surovegin@google.com, x86@kernel.org, kexec@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Catalin,
+On Mon, Aug 29, 2016 at 06:11:37PM +0800, Baoquan He wrote:
+> Hi Thomas,
+> 
+> I used below code and it works. Since using VMCOREINFO_NUMBER can reuse
+> the existing struct number_table to import the data. It makes change
+> easier. But the place could be next to KERNEL_IMAGE_SIZE, or as your
+> patch did, both is fine.
 
-This generally looks fine, and my comments below are mostly nits. :)
+I think we'd better avoid adding arch-specific code in generic code
+if possible, especially in this case, since there is a dedicated interface,
+arch_crash_save_vmcoreinfo().
 
-On Fri, Sep 02, 2016 at 04:02:10PM +0100, Catalin Marinas wrote:
->  static inline void
-> -switch_mm(struct mm_struct *prev, struct mm_struct *next,
-> -	  struct task_struct *tsk)
-> +__switch_mm(struct mm_struct *prev, struct mm_struct *next,
-> +	    struct task_struct *tsk)
+-Takahiro AKASHI
 
-It looks like the comment above this function is now out-of-date, and
-has been somewhat misleading for a while. While we're making changes
-here, can we remove it entirely?
-
-[...]
-
-> @@ -109,6 +111,34 @@
->  	mrs	x22, elr_el1
->  	mrs	x23, spsr_el1
->  	stp	lr, x21, [sp, #S_LR]
-> +
-> +#ifdef CONFIG_ARM64_TTBR0_PAN
-> +	/*
-> +	 * Set the TTBR0 PAN in SPSR. When the exception is taken from EL0,
-> +	 * there is no need to check the state of TTBR0_EL1 since accesses are
-> +	 * always enabled.
-
-Nit: missing 'bit' from the first sentence?
-
-[...]
-
-> diff --git a/arch/arm64/kernel/setup.c b/arch/arm64/kernel/setup.c
-> index 536dce22fe76..4a4aaa47f869 100644
-> --- a/arch/arm64/kernel/setup.c
-> +++ b/arch/arm64/kernel/setup.c
-> @@ -228,6 +228,14 @@ void __init setup_arch(char **cmdline_p)
->  {
->  	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
->  
-> +#ifdef CONFIG_ARM64_TTBR0_PAN
-> +	/*
-> +	 * uaccess_enable() may be called on the init thread, so make sure
-> +	 * the saved TTBR0_EL1 always generates translation faults.
-> +	 */
-> +	init_thread_info.ttbr0 = virt_to_phys(empty_zero_page);
-> +#endif
-
-Just to check, does this need to happen so early? e.g. do we need this
-to report exceptions safely? Otherwise, it would be nice if we could
-group this with the uninstall of the idmap a little later in setup_arch.
-
-Thanks,
-Mark.
+> ---
+>  kernel/kexec_core.c | 3 +++
+>  1 file changed, 3 insertions(+)
+> 
+> diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
+> index 5616755..81bde86 100644
+> --- a/kernel/kexec_core.c
+> +++ b/kernel/kexec_core.c
+> @@ -1469,6 +1469,9 @@ static int __init crash_save_vmcoreinfo_init(void)
+>  	VMCOREINFO_NUMBER(PAGE_BUDDY_MAPCOUNT_VALUE);
+>  #ifdef CONFIG_X86
+>  	VMCOREINFO_NUMBER(KERNEL_IMAGE_SIZE);
+> +	VMCOREINFO_NUMBER(PAGE_OFFSET);
+> +	VMCOREINFO_NUMBER(VMALLOC_START);
+> +	VMCOREINFO_NUMBER(VMEMMAP_START);
+>  #endif
+>  #ifdef CONFIG_HUGETLB_PAGE
+>  	VMCOREINFO_NUMBER(HUGETLB_PAGE_DTOR);
+> -- 
+> 2.5.5
+> 
+> On 08/18/16 at 07:47am, Thomas Garnier wrote:
+> > KASLR memory randomization can randomize the base of the physical memory
+> > mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
+> > (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
+> > easily identify the base of each memory section.
+> > 
+> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> > ---
+> > Based on next-20160817
+> > ---
+> >  arch/x86/kernel/machine_kexec_64.c | 3 +++
+> >  include/linux/kexec.h              | 6 ++++++
+> >  2 files changed, 9 insertions(+)
+> > 
+> > diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
+> > index fc3389f..b1f15a2 100644
+> > --- a/arch/x86/kernel/machine_kexec_64.c
+> > +++ b/arch/x86/kernel/machine_kexec_64.c
+> > @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
+> >  	vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
+> >  			      kaslr_offset());
+> >  	VMCOREINFO_PHYS_BASE(phys_base);
+> > +	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
+> > +	VMCOREINFO_VMALLOC_START(VMALLOC_START);
+> > +	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
+> >  }
+> >  
+> >  /* arch-dependent functionality related to kexec file-based syscall */
+> > diff --git a/include/linux/kexec.h b/include/linux/kexec.h
+> > index d3ae429..cd3874c 100644
+> > --- a/include/linux/kexec.h
+> > +++ b/include/linux/kexec.h
+> > @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
+> >  	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
+> >  #define VMCOREINFO_PHYS_BASE(value) \
+> >  	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
+> > +#define VMCOREINFO_PAGE_OFFSET(value) \
+> > +	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
+> > +#define VMCOREINFO_VMALLOC_START(value) \
+> > +	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
+> > +#define VMCOREINFO_VMEMMAP_START(value) \
+> > +	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
+> >  
+> >  extern struct kimage *kexec_image;
+> >  extern struct kimage *kexec_crash_image;
+> > -- 
+> > 2.8.0.rc3.226.g39d4020
+> > 
+> > 
+> > _______________________________________________
+> > kexec mailing list
+> > kexec@lists.infradead.org
+> > http://lists.infradead.org/mailman/listinfo/kexec
