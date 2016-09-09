@@ -1,48 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20160909163116.GA10792@leverpostej>
+Date: Fri, 9 Sep 2016 17:40:48 -0600
+From: David Brown <david.brown@linaro.org>
+Message-ID: <20160909234048.GA9803@davidb.org>
 References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
- <CAGXu5j++0LgDEv=m1yQb4hB57MQ2MYVCpeex9TFTRmQpNYhNsQ@mail.gmail.com>
- <20160908125123.ypkye5nclsi5vx4f@localhost> <20160909163116.GA10792@leverpostej>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 9 Sep 2016 11:24:30 -0700
-Message-ID: <CAGXu5jJMdym7jWv5P7YHdqu4eU7a3dzQqgXHppzOwRCYQ6O1Cg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 0/7] arm64: Privileged Access Never using TTBR0_EL1 switching
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Catalin Marinas <catalin.marinas@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Julien Grall <julien.grall@arm.com>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
+Subject: Re: [kernel-hardening] [PATCH v2 0/7] arm64: Privileged Access Never
+ using TTBR0_EL1 switching
+To: kernel-hardening@lists.openwall.com
+Cc: linux-arm-kernel@lists.infradead.org, AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, Julien Grall <julien.grall@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Sep 9, 2016 at 9:31 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Thu, Sep 08, 2016 at 01:51:24PM +0100, Catalin Marinas wrote:
->> On Wed, Sep 07, 2016 at 04:20:55PM -0700, Kees Cook wrote:
->> > On Fri, Sep 2, 2016 at 8:02 AM, Catalin Marinas <catalin.marinas@arm.com> wrote:
->> > > This is the second version of the arm64 PAN emulation by disabling
->> > > TTBR0_EL1 accesses. The major change from v1 is the use of a thread_info
->> > > member to store the real TTBR0_EL1 value. The advantage is slightly
->> > > simpler assembler macros for uaccess_enable with the downside that
->> > > switch_mm() must always update the saved ttbr0 even if there is no mm
->> > > switch.
->> >
->> > Is arm64 thread_info attached to the kernel stack? (i.e. is this
->> > introducing a valuable target for stack-based attacks?)
->>
->> Currently yes, thread_info is on the kernel stack. At some point we'll
->> decouple it in a similar way to what x86 are doing/planning.
->
-> FWIW, I'm currently working on this (atop of Andy's x86 patches). The
-> IRQ stack work largely removed out dependence on the stack pointer to
-> find thread_info, and I have a plan for the remaining places.
->
-> There's a fair amount of ground work to do first (e.g. reworking headers
-> to avoid circular dependencies), but hopefully I'll have something that
-> I can share soon.
+On Fri, Sep 02, 2016 at 04:02:06PM +0100, Catalin Marinas wrote:
+>This is the second version of the arm64 PAN emulation by disabling
+>TTBR0_EL1 accesses. The major change from v1 is the use of a thread_info
+>member to store the real TTBR0_EL1 value. The advantage is slightly
+>simpler assembler macros for uaccess_enable with the downside that
+>switch_mm() must always update the saved ttbr0 even if there is no mm
+>switch.
 
-Fantastic! Thanks for the heads-up. :)
+I seem to have a lot better results with this series than I was having
+with v1.  I've tested this both within qemu, and on the HiKey board
+and with OP-TEE (to make sure it didn't break anything), and
+everything seems to be working.
 
--Kees
-
--- 
-Kees Cook
-Nexus Security
+Tested-by: David Brown <david.brown@linaro.org>
