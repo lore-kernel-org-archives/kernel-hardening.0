@@ -1,83 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 12 Sep 2016 17:26:23 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20160912162622.GD2492@e104818-lin.cambridge.arm.com>
-References: <1472828533-28197-1-git-send-email-catalin.marinas@arm.com>
- <1472828533-28197-2-git-send-email-catalin.marinas@arm.com>
- <20160905153828.GA27305@leverpostej>
- <20160912145219.GC2492@e104818-lin.cambridge.arm.com>
- <20160912150958.GC14165@leverpostej>
+From: Baoquan He <bhe@redhat.com>
+Date: Tue, 13 Sep 2016 15:08:37 +0800
+Message-Id: <1473750517-5749-1-git-send-email-bhe@redhat.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160912150958.GC14165@leverpostej>
-Subject: [kernel-hardening] Re: [PATCH v2 1/7] arm64: Factor out PAN enabling/disabling into
- separate uaccess_* macros
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, linux-arm-kernel@lists.infradead.org
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual addresses
+To: tonli@redhat.com, Thomas Garnier <thgarnie@google.com>
+Cc: Baoquan He <bhe@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, surovegin@google.com, x86@kernel.org, kexec@lists.infradead.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Sep 12, 2016 at 04:09:59PM +0100, Mark Rutland wrote:
-> On Mon, Sep 12, 2016 at 03:52:19PM +0100, Catalin Marinas wrote:
-> > On Mon, Sep 05, 2016 at 04:38:28PM +0100, Mark Rutland wrote:
-> > > On Fri, Sep 02, 2016 at 04:02:07PM +0100, Catalin Marinas wrote:
-> > > >  /*
-> > > > + * User access enabling/disabling.
-> > > > + */
-> > > > +#define uaccess_disable(alt)						\
-> > > > +do {									\
-> > > > +	asm(ALTERNATIVE("nop", SET_PSTATE_PAN(1), alt,			\
-> > > > +			CONFIG_ARM64_PAN));				\
-> > > > +} while (0)
-> > > > +
-> > > > +#define uaccess_enable(alt)						\
-> > > > +do {									\
-> > > > +	asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,			\
-> > > > +			CONFIG_ARM64_PAN));				\
-> > > > +} while (0)
-> > > 
-> > > Passing the alternative down is somewhat confusing. e.g. in the futex
-> > > case it looks like we're only doing something when PAN is present,
-> > > whereas we'll manipulate TTBR0 in the absence of PAN.
-> > 
-> > I agree it's confusing (I got it wrong first time as well and used the
-> > wrong alternative for futex).
-> > 
-> > > If I've understood correctly, we need this to distinguish regular
-> > > load/store uaccess sequences (eg. the futex code) from potentially
-> > > patched unprivileged load/store sequences (e.g. {get,put}_user) when
-> > > poking PSTATE.PAN.
-> > > 
-> > > So perhaps we could ahve something like:
-> > > 
-> > > * privileged_uaccess_{enable,disable}()
-> > >   Which toggle TTBR0, or PAN (always).
-> > >   These would handle cases like the futex/swp code.
-> > >  
-> > > * (unprivileged_)uaccess_{enable,disable}()
-> > >   Which toggle TTBR0, or PAN (in the absence of UAO).
-> > >   These would handle cases like the {get,put}_user sequences.
-> > > 
-> > > Though perhaps that is just as confusing. ;)
-> > 
-> > I find it more confusing. 
-> 
-> Fair enough. :)
-> 
-> > In the non-UAO case, get_user etc. would
-> > normally have to use privileged_uaccess_enable() since ldr is not
-> > replaced with ldtr. Maybe uaccess_enable_for_exclusives() but it doesn't
-> > look any better. 
-> 
-> I strongly prefer uaccess_enable_exclusives(), or something of that sort
-> to both of the above. ;)
+Hi Thomas,
 
-I think we would need a few more uaccess_enable_* variants (cache
-maintenance, Xen) which makes this impractical.
+I used below code and it works. Since using VMCOREINFO_NUMBER can reuse
+the existing struct number_table to import the data. It makes change
+easier. But the place could be next to KERNEL_IMAGE_SIZE, or as your
+patch did, both is fine.
 
-We can consider the PAN_NOT_UAO the special case and if we assume that
-UAO also implies PAN (ARMv8.2), we can define uaccess_enable_not_uao()
-for the get_user etc. cases. We would use uaccess_enable() for the rest.
+---
+ kernel/kexec_core.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
+diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
+index 5616755..81bde86 100644
+--- a/kernel/kexec_core.c
++++ b/kernel/kexec_core.c
+@@ -1469,6 +1469,9 @@ static int __init crash_save_vmcoreinfo_init(void)
+ 	VMCOREINFO_NUMBER(PAGE_BUDDY_MAPCOUNT_VALUE);
+ #ifdef CONFIG_X86
+ 	VMCOREINFO_NUMBER(KERNEL_IMAGE_SIZE);
++	VMCOREINFO_NUMBER(PAGE_OFFSET);
++	VMCOREINFO_NUMBER(VMALLOC_START);
++	VMCOREINFO_NUMBER(VMEMMAP_START);
+ #endif
+ #ifdef CONFIG_HUGETLB_PAGE
+ 	VMCOREINFO_NUMBER(HUGETLB_PAGE_DTOR);
 -- 
-Catalin
+2.5.5
+
+On 08/18/16 at 07:47am, Thomas Garnier wrote:
+> KASLR memory randomization can randomize the base of the physical memory
+> mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
+> (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
+> easily identify the base of each memory section.
+> 
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+> Based on next-20160817
+> ---
+>  arch/x86/kernel/machine_kexec_64.c | 3 +++
+>  include/linux/kexec.h              | 6 ++++++
+>  2 files changed, 9 insertions(+)
+> 
+> diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
+> index fc3389f..b1f15a2 100644
+> --- a/arch/x86/kernel/machine_kexec_64.c
+> +++ b/arch/x86/kernel/machine_kexec_64.c
+> @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
+>  	vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
+>  			      kaslr_offset());
+>  	VMCOREINFO_PHYS_BASE(phys_base);
+> +	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
+> +	VMCOREINFO_VMALLOC_START(VMALLOC_START);
+> +	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
+>  }
+>  
+>  /* arch-dependent functionality related to kexec file-based syscall */
+> diff --git a/include/linux/kexec.h b/include/linux/kexec.h
+> index d3ae429..cd3874c 100644
+> --- a/include/linux/kexec.h
+> +++ b/include/linux/kexec.h
+> @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
+>  	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
+>  #define VMCOREINFO_PHYS_BASE(value) \
+>  	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
+> +#define VMCOREINFO_PAGE_OFFSET(value) \
+> +	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
+> +#define VMCOREINFO_VMALLOC_START(value) \
+> +	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
+> +#define VMCOREINFO_VMEMMAP_START(value) \
+> +	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
+>  
+>  extern struct kimage *kexec_image;
+>  extern struct kimage *kexec_crash_image;
+> -- 
+> 2.8.0.rc3.226.g39d4020
+> 
+> 
+> _______________________________________________
+> kexec mailing list
+> kexec@lists.infradead.org
+> http://lists.infradead.org/mailman/listinfo/kexec
