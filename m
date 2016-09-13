@@ -1,93 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Baoquan He <bhe@redhat.com>
-Date: Tue, 13 Sep 2016 15:08:37 +0800
-Message-Id: <1473750517-5749-1-git-send-email-bhe@redhat.com>
+Date: Tue, 13 Sep 2016 15:10:05 +0800
+Message-Id: <1473750605-5955-1-git-send-email-bhe@redhat.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH v1] kdump, vmcoreinfo: report memory sections virtual addresses
-To: tonli@redhat.com, Thomas Garnier <thgarnie@google.com>
-Cc: Baoquan He <bhe@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>, keescook@chromium.org, kernel-hardening@lists.openwall.com, surovegin@google.com, x86@kernel.org, kexec@lists.infradead.org, linux-kernel@vger.kernel.org
+Subject: [kernel-hardening] [PATCH v1] kexec/arch/i386: Add support for KASLR memory randomization
+To: tonli@redhat.com, kexec@lists.infradead.org
+Cc: Thomas Garnier <thgarnie@google.com>, horms@verge.net.au, keescook@chromium.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Thomas,
+From: Thomas Garnier <thgarnie@google.com>
 
-I used below code and it works. Since using VMCOREINFO_NUMBER can reuse
-the existing struct number_table to import the data. It makes change
-easier. But the place could be next to KERNEL_IMAGE_SIZE, or as your
-patch did, both is fine.
+Multiple changes were made on KASLR (right now in linux-next). One of
+them is randomizing the virtual address of the physical mapping, vmalloc
+and vmemmap memory sections. It breaks kdump ability to read physical
+memory.
 
+This change identifies if KASLR memories randomization is used by
+checking if the page_offset_base variable exists. It search for the
+correct PAGE_OFFSET value by looking at the loaded memory section and
+find the lowest aligned on PUD (the randomization level).
+
+Related commits on linux-next:
+ - 0483e1fa6e09d4948272680f691dccb1edb9677f: Base for randomization
+ - 021182e52fe01c1f7b126f97fd6ba048dc4234fd: Enable for PAGE_OFFSET
+
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- kernel/kexec_core.c | 3 +++
- 1 file changed, 3 insertions(+)
+ kexec/arch/i386/crashdump-x86.c | 29 ++++++++++++++++++++++-------
+ 1 file changed, 22 insertions(+), 7 deletions(-)
 
-diff --git a/kernel/kexec_core.c b/kernel/kexec_core.c
-index 5616755..81bde86 100644
---- a/kernel/kexec_core.c
-+++ b/kernel/kexec_core.c
-@@ -1469,6 +1469,9 @@ static int __init crash_save_vmcoreinfo_init(void)
- 	VMCOREINFO_NUMBER(PAGE_BUDDY_MAPCOUNT_VALUE);
- #ifdef CONFIG_X86
- 	VMCOREINFO_NUMBER(KERNEL_IMAGE_SIZE);
-+	VMCOREINFO_NUMBER(PAGE_OFFSET);
-+	VMCOREINFO_NUMBER(VMALLOC_START);
-+	VMCOREINFO_NUMBER(VMEMMAP_START);
- #endif
- #ifdef CONFIG_HUGETLB_PAGE
- 	VMCOREINFO_NUMBER(HUGETLB_PAGE_DTOR);
+diff --git a/kexec/arch/i386/crashdump-x86.c b/kexec/arch/i386/crashdump-x86.c
+index bbc0f35..ab833d4 100644
+--- a/kexec/arch/i386/crashdump-x86.c
++++ b/kexec/arch/i386/crashdump-x86.c
+@@ -102,11 +102,10 @@ static int get_kernel_paddr(struct kexec_info *UNUSED(info),
+ 	return -1;
+ }
+ 
+-/* Retrieve kernel _stext symbol virtual address from /proc/kallsyms */
+-static unsigned long long get_kernel_stext_sym(void)
++/* Retrieve kernel symbol virtual address from /proc/kallsyms */
++static unsigned long long get_kernel_sym(const char *symbol)
+ {
+ 	const char *kallsyms = "/proc/kallsyms";
+-	const char *stext = "_stext";
+ 	char sym[128];
+ 	char line[128];
+ 	FILE *fp;
+@@ -122,13 +121,13 @@ static unsigned long long get_kernel_stext_sym(void)
+ 	while(fgets(line, sizeof(line), fp) != NULL) {
+ 		if (sscanf(line, "%Lx %c %s", &vaddr, &type, sym) != 3)
+ 			continue;
+-		if (strcmp(sym, stext) == 0) {
+-			dbgprintf("kernel symbol %s vaddr = %16llx\n", stext, vaddr);
++		if (strcmp(sym, symbol) == 0) {
++			dbgprintf("kernel symbol %s vaddr = %16llx\n", symbol, vaddr);
+ 			return vaddr;
+ 		}
+ 	}
+ 
+-	fprintf(stderr, "Cannot get kernel %s symbol address\n", stext);
++	fprintf(stderr, "Cannot get kernel %s symbol address\n", symbol);
+ 	return 0;
+ }
+ 
+@@ -151,6 +150,8 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
+ 	off_t size;
+ 	uint32_t elf_flags = 0;
+ 	uint64_t stext_sym;
++	const unsigned long long pud_mask = ~((1 << 30) - 1);
++	unsigned long long vaddr, lowest_vaddr = 0;
+ 
+ 	if (elf_info->machine != EM_X86_64)
+ 		return 0;
+@@ -180,9 +181,23 @@ static int get_kernel_vaddr_and_size(struct kexec_info *UNUSED(info),
+ 
+ 	end_phdr = &ehdr.e_phdr[ehdr.e_phnum];
+ 
++	/* Search for the real PAGE_OFFSET when KASLR memory randomization
++	 * is enabled */
++	if (get_kernel_sym("page_offset_base") != 0) {
++		for(phdr = ehdr.e_phdr; phdr != end_phdr; phdr++) {
++			if (phdr->p_type == PT_LOAD) {
++				vaddr = phdr->p_vaddr & pud_mask;
++				if (lowest_vaddr == 0 || lowest_vaddr > vaddr)
++					lowest_vaddr = vaddr;
++			}
++		}
++		if (lowest_vaddr != 0)
++			elf_info->page_offset = lowest_vaddr;
++	}
++
+ 	/* Traverse through the Elf headers and find the region where
+ 	 * _stext symbol is located in. That's where kernel is mapped */
+-	stext_sym = get_kernel_stext_sym();
++	stext_sym = get_kernel_sym("_stext");
+ 	for(phdr = ehdr.e_phdr; stext_sym && phdr != end_phdr; phdr++) {
+ 		if (phdr->p_type == PT_LOAD) {
+ 			unsigned long long saddr = phdr->p_vaddr;
 -- 
-2.5.5
+2.8.0.rc3.226.g39d4020
 
-On 08/18/16 at 07:47am, Thomas Garnier wrote:
-> KASLR memory randomization can randomize the base of the physical memory
-> mapping (PAGE_OFFSET), vmalloc (VMALLOC_START) and vmemmap
-> (VMEMMAP_START). Adding these variables on VMCOREINFO so tools can
-> easily identify the base of each memory section.
-> 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
-> ---
-> Based on next-20160817
-> ---
->  arch/x86/kernel/machine_kexec_64.c | 3 +++
->  include/linux/kexec.h              | 6 ++++++
->  2 files changed, 9 insertions(+)
-> 
-> diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
-> index fc3389f..b1f15a2 100644
-> --- a/arch/x86/kernel/machine_kexec_64.c
-> +++ b/arch/x86/kernel/machine_kexec_64.c
-> @@ -338,6 +338,9 @@ void arch_crash_save_vmcoreinfo(void)
->  	vmcoreinfo_append_str("KERNELOFFSET=%lx\n",
->  			      kaslr_offset());
->  	VMCOREINFO_PHYS_BASE(phys_base);
-> +	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
-> +	VMCOREINFO_VMALLOC_START(VMALLOC_START);
-> +	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
->  }
->  
->  /* arch-dependent functionality related to kexec file-based syscall */
-> diff --git a/include/linux/kexec.h b/include/linux/kexec.h
-> index d3ae429..cd3874c 100644
-> --- a/include/linux/kexec.h
-> +++ b/include/linux/kexec.h
-> @@ -261,6 +261,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
->  	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
->  #define VMCOREINFO_PHYS_BASE(value) \
->  	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
-> +#define VMCOREINFO_PAGE_OFFSET(value) \
-> +	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
-> +#define VMCOREINFO_VMALLOC_START(value) \
-> +	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
-> +#define VMCOREINFO_VMEMMAP_START(value) \
-> +	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
->  
->  extern struct kimage *kexec_image;
->  extern struct kimage *kexec_crash_image;
-> -- 
-> 2.8.0.rc3.226.g39d4020
-> 
-> 
-> _______________________________________________
-> kexec mailing list
-> kexec@lists.infradead.org
-> http://lists.infradead.org/mailman/listinfo/kexec
+
+_______________________________________________
+kexec mailing list
+kexec@lists.infradead.org
+http://lists.infradead.org/mailman/listinfo/kexec
