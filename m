@@ -1,48 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Sep 2016 10:49:02 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160914094902.GA14330@leverpostej>
-References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20160914093634.GB13121@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160914093634.GB13121@leverpostej>
-Subject: Re: [kernel-hardening] [RFC PATCH v2 0/3] Add support for eXclusive
- Page Frame Ownership (XPFO)
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org, juerg.haefliger@hpe.com, vpk@cs.columbia.edu
+In-Reply-To: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 14 Sep 2016 11:13:33 +0100
+Message-ID: <CAKv+Gu-zHmExwk-YqXVg2ZuVi1M8L4BbJb6-iARxQ7b_2eH-rA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1 switching
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 14, 2016 at 10:36:34AM +0100, Mark Rutland wrote:
-> On Wed, Sep 14, 2016 at 09:18:58AM +0200, Juerg Haefliger wrote:
-> > This patch series adds support for XPFO which protects against 'ret2dir'
-> > kernel attacks. The basic idea is to enforce exclusive ownership of page
-> > frames by either the kernel or userspace, unless explicitly requested by
-> > the kernel. Whenever a page destined for userspace is allocated, it is
-> > unmapped from physmap (the kernel's page table). When such a page is
-> > reclaimed from userspace, it is mapped back to physmap.
+On 13 September 2016 at 18:46, Catalin Marinas <catalin.marinas@arm.com> wrote:
+> This is the third version of the arm64 PAN emulation using TTBR0_EL1
+> switching. The series has not yet included the alternative nop patches
+> from Mark Rutland, nor the empty_zero_page from Ard B. This will be done
+> in a subsequent version once 4.9-rc1 is out (which will include Mark's
+> alternative nop patches).
+>
+> Changes since v2:
+>
+> - efi_set_pgd() reworked to update the saved ttbr0 during run-time
+>   services as this value is used during exception return
+>
+> - uaccess_(enable|disable) C macros no longer take an 'alt' parameter
+>   Instead, uaccess_(enable|disable)_not_uao are introduced for the case
+>   where hardware PAN switching is not required when UAO is present
+>
+> - post_ttbr0_update_workaround macro no longer takes a 'ret' parameter
+>
+> - system_supports_ttbr0_pan renamed to system_uses_ttbr0_pan
+>
+> - init_thread_info.ttbr0 moved towards the end of the setup_arch()
+>   function and comment updated
+>
+> - vmlinux.lds.S fixed to use RESERVED_TTBR0_SIZE
+>
+> - Config option changed to ARM64_SW_TTBR0_PAN
+>
+> - Some comment clean-ups and commit log updates
+>
 
-> > Reference paper by the original patch authors:
-> >   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
-
-> For both arm64 and x86_64, DEBUG_RODATA is mandatory (or soon to be so).
-> Assuming that implies a lack of execute permission for x86_64, that
-> should provide a similar level of protection against erroneously
-> branching to addresses in the linear map, without the complexity and
-> overhead of mapping/unmapping pages.
-> 
-> So to me it looks like this approach may only be useful for
-> architectures without page-granular execute permission controls.
-> 
-> Is this also intended to protect against erroneous *data* accesses to
-> the linear map?
-
-Now that I read the paper more carefully, I can see that this is the
-case, and this does catch issues which DEBUG_RODATA cannot.
-
-Apologies for the noise.
-
-Thanks,
-Mark.
+Given that every __get_user() call now incurs the PAN switch overhead,
+I wonder if it would be worth it to stash the real TTBR0_EL1 value in,
+e.g., TPIDRRO_EL0 rather than load it from memory each time. We'd have
+to reload the real value of TPIDRRO_EL0 at kernel exit every time, but
+only for compat tasks, and not nearly as often, obviously.
