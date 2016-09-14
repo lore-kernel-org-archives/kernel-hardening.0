@@ -1,62 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Sep 2016 11:48:01 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160914104732.GE14330@leverpostej>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <CAKv+Gu-zHmExwk-YqXVg2ZuVi1M8L4BbJb6-iARxQ7b_2eH-rA@mail.gmail.com>
- <20160914102659.GC14330@leverpostej>
- <CAKv+Gu_ww5+_vcKfnFsUgG6h1v87-CWhLp_o7qHS6=3nd6-cow@mail.gmail.com>
- <20160914103632.GD14330@leverpostej>
+Date: Wed, 14 Sep 2016 15:04:16 +0100
+From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
+In-Reply-To: <43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
+References: <20160908223558.GA11742@www.outflux.net>
+	<43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160914103632.GD14330@leverpostej>
-Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1
- switching
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] pty: make ptmx file ops read-only after init
+To: Jiri Slaby <jslaby@suse.cz>
+Cc: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 14, 2016 at 11:36:46AM +0100, Mark Rutland wrote:
-> On Wed, Sep 14, 2016 at 11:30:05AM +0100, Ard Biesheuvel wrote:
-> > On 14 September 2016 at 11:27, Mark Rutland <mark.rutland@arm.com> wrote:
-> > > On Wed, Sep 14, 2016 at 11:13:33AM +0100, Ard Biesheuvel wrote:
-> > >> On 13 September 2016 at 18:46, Catalin Marinas <catalin.marinas@arm.com> wrote:
-> > >> > This is the third version of the arm64 PAN emulation using TTBR0_EL1
-> > >> > switching.
-> > >
-> > >> Given that every __get_user() call now incurs the PAN switch overhead,
-> > >> I wonder if it would be worth it to stash the real TTBR0_EL1 value in,
-> > >> e.g., TPIDRRO_EL0 rather than load it from memory each time. We'd have
-> > >> to reload the real value of TPIDRRO_EL0 at kernel exit every time, but
-> > >> only for compat tasks, and not nearly as often, obviously.
-> > >
-> > > FWIW, my plan for vmap'd stacks involves clobbering TPIDRRO_EL0 early
-> > > upon kernel entry to reliably detect/handle stack overflow (as we need
-> > > to free up GPR to detect overflow, and we need to detect that before we
-> > > try to store to the stack).
-> > >
-> > > For non-compat tasks we must restore zero, so either way we'll end up
-> > > with a load (to determine compat-ness or to load the precise value).
-> > 
-> > Are you saying that with vmapped stacks, we'll end up clobbering it
-> > (and thus restoring it) anyway when entering the kernel, and so we
-> > could use it for free afterwards while running in the kernel,
-> > potentially for the real value of TTBR0_EL1?
+On Wed, 14 Sep 2016 09:59:42 +0200
+Jiri Slaby <jslaby@suse.cz> wrote:
+
+> On 09/09/2016, 12:35 AM, Kees Cook wrote:
+> > The ptmx_fops structure is only changed during init, so mark it as such.  
 > 
-> Yes, assuming that we end up following my current plan for how to
-> implement that.
+> Right, but I am missing what is the benefit? You would have to elaborate
+> here...
 
-Actually, after thinknig for more than a picosecond, no we can't.
-
-We need to be able to clbober it on EL1 -> EL1 exceptions, to catch
-kernel stack overflow.
-
-So if anything, the two approaches are mutually exclusive, unless we
-restore the stashed TTBR0 value back into TPIDRRO_EL0 before returning
-from EL1 -> EL1.
-
-/me fetches some more coffee.
-
-Thanks,
-Mark.
+The pages end up marked read only even to the kernel (and in future could
+even be marked read only forever when in kvm if we get suitable virtual
+machine extensions). That makes it much harder to patch those vectors
+when making security attacks.
