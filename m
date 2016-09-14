@@ -1,54 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Sep 2016 09:52:29 +0100
+Date: Wed, 14 Sep 2016 10:36:34 +0100
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160914085159.GA13121@leverpostej>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <1473788797-10879-4-git-send-email-catalin.marinas@arm.com>
- <CAGXu5jJETdRtuonhtkSxMf+sgCdBj2t2_U8yW2cDwcoGY=qvJw@mail.gmail.com>
+Message-ID: <20160914093634.GB13121@leverpostej>
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jJETdRtuonhtkSxMf+sgCdBj2t2_U8yW2cDwcoGY=qvJw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 3/7] arm64: Introduce uaccess_{disable,enable}
- functionality based on TTBR0_EL1
-To: Kees Cook <keescook@chromium.org>
-Cc: Catalin Marinas <catalin.marinas@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20160914071901.8127-1-juerg.haefliger@hpe.com>
+Subject: Re: [kernel-hardening] [RFC PATCH v2 0/3] Add support for eXclusive
+ Page Frame Ownership (XPFO)
+To: kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org, juerg.haefliger@hpe.com, vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 13, 2016 at 01:45:21PM -0700, Kees Cook wrote:
-> On Tue, Sep 13, 2016 at 10:46 AM, Catalin Marinas
-> > +static inline bool system_uses_ttbr0_pan(void)
-> > +{
-> > +       return IS_ENABLED(CONFIG_ARM64_SW_TTBR0_PAN) &&
-> > +               !cpus_have_cap(ARM64_HAS_PAN);
-> > +}
-> > +
+Hi,
 
-[...]
+On Wed, Sep 14, 2016 at 09:18:58AM +0200, Juerg Haefliger wrote:
 
-> >  #define __uaccess_enable(alt)                                          \
-> >  do {                                                                   \
-> > -       asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,                  \
-> > -                       CONFIG_ARM64_PAN));                             \
-> > +       if (system_uses_ttbr0_pan())                                    \
-> > +               uaccess_ttbr0_enable();                                 \
-> > +       else                                                            \
-> > +               asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,          \
-> > +                               CONFIG_ARM64_PAN));                     \
-> >  } while (0)
+> This patch series adds support for XPFO which protects against 'ret2dir'
+> kernel attacks. The basic idea is to enforce exclusive ownership of page
+> frames by either the kernel or userspace, unless explicitly requested by
+> the kernel. Whenever a page destined for userspace is allocated, it is
+> unmapped from physmap (the kernel's page table). When such a page is
+> reclaimed from userspace, it is mapped back to physmap.
+
+> Known issues/limitations:
+>   - Only supports x86-64 (for now)
+>   - Only supports 4k pages (for now)
+>   - There are most likely some legitimate uses cases where the kernel needs
+>     to access userspace which need to be made XPFO-aware
+>   - Performance penalty
 > 
-> Does this mean that with CONFIG_ARM64_SW_TTBR0_PAN, even with ARMv8.1,
-> a cpu capability bitmask check is done each time we go through
-> __uaccess_{en,dis}able?
+> Reference paper by the original patch authors:
+>   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
 
-Catalin reworked cpus_have_cap() to use static keys [1], and that's
-queued in the arm64 for-next/core branch [2].
+Just to check, doesn't DEBUG_RODATA ensure that the linear mapping is
+non-executable on x86_64 (as it does for arm64)?
 
-So this should expand to a single branch or nop that we patch when we
-detect the presence/absence of PAN. There should be no bitmap check.
+For both arm64 and x86_64, DEBUG_RODATA is mandatory (or soon to be so).
+Assuming that implies a lack of execute permission for x86_64, that
+should provide a similar level of protection against erroneously
+branching to addresses in the linear map, without the complexity and
+overhead of mapping/unmapping pages.
+
+So to me it looks like this approach may only be useful for
+architectures without page-granular execute permission controls.
+
+Is this also intended to protect against erroneous *data* accesses to
+the linear map?
+
+Am I missing something?
 
 Thanks,
 Mark.
-
-[1] http://lists.infradead.org/pipermail/linux-arm-kernel/2016-September/454025.html
-[2] https://git.kernel.org/cgit/linux/kernel/git/arm64/linux.git/log/?h=for-next/core
