@@ -1,28 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Sep 2016 15:04:16 +0100
-From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
-In-Reply-To: <43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
-References: <20160908223558.GA11742@www.outflux.net>
-	<43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-3-juerg.haefliger@hpe.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <57D95FA3.3030103@intel.com>
+Date: Wed, 14 Sep 2016 07:33:07 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+In-Reply-To: <20160914071901.8127-3-juerg.haefliger@hpe.com>
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] pty: make ptmx file ops read-only after init
-To: Jiri Slaby <jslaby@suse.cz>
-Cc: Kees Cook <keescook@chromium.org>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
+ userspace pages into the hot cache
+To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org
+Cc: juerg.haefliger@hpe.com, vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 14 Sep 2016 09:59:42 +0200
-Jiri Slaby <jslaby@suse.cz> wrote:
+On 09/14/2016 12:19 AM, Juerg Haefliger wrote:
+> Allocating a page to userspace that was previously allocated to the
+> kernel requires an expensive TLB shootdown. To minimize this, we only
+> put non-kernel pages into the hot cache to favor their allocation.
 
-> On 09/09/2016, 12:35 AM, Kees Cook wrote:
-> > The ptmx_fops structure is only changed during init, so mark it as such.  
-> 
-> Right, but I am missing what is the benefit? You would have to elaborate
-> here...
+Hi, I had some questions about this the last time you posted it.  Maybe
+you want to address them now.
 
-The pages end up marked read only even to the kernel (and in future could
-even be marked read only forever when in kvm if we get suitable virtual
-machine extensions). That makes it much harder to patch those vectors
-when making security attacks.
+--
+
+But kernel allocations do allocate from these pools, right?  Does this
+just mean that kernel allocations usually have to pay the penalty to
+convert a page?
+
+So, what's the logic here?  You're assuming that order-0 kernel
+allocations are more rare than allocations for userspace?
