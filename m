@@ -1,35 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Wed, 14 Sep 2016 14:36:40 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB00FC881@AcuExch.aculab.com>
-References: <20160914072415.26021-1-mic@digikod.net>
-In-Reply-To: <20160914072415.26021-1-mic@digikod.net>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-3-juerg.haefliger@hpe.com> <57D95FA3.3030103@intel.com>
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+Message-ID: <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com>
+Date: Wed, 14 Sep 2016 16:40:49 +0200
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [RFC v3 00/22] Landlock LSM: Unprivileged sandboxing
-To: =?utf-8?B?J01pY2thw6tsIFNhbGHDvG4n?= <mic@digikod.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
-Cc: Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W
- . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-api@vger.kernel.org" <linux-api@vger.kernel.org>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>, "netdev@vger.kernel.org" <netdev@vger.kernel.org>, "cgroups@vger.kernel.org" <cgroups@vger.kernel.org>
+In-Reply-To: <57D95FA3.3030103@intel.com>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="MvDRGgCgUqFIL4RSGlCO7Xs24fkENiwV2"
+Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
+ userspace pages into the hot cache
+To: Dave Hansen <dave.hansen@intel.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org
+Cc: vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogTWlja2HDq2wgU2FsYcO8bg0KPiBTZW50OiAxNCBTZXB0ZW1iZXIgMjAxNiAwODoyNA0K
-Li4uDQo+ICMjIFdoeSBkb2VzIHNlY2NvbXAtZmlsdGVyIGlzIG5vdCBlbm91Z2g/DQo+IA0KPiBB
-IHNlY2NvbXAgZmlsdGVyIGNhbiBhY2Nlc3MgdG8gcmF3IHN5c2NhbGwgYXJndW1lbnRzIHdoaWNo
-IG1lYW5zIHRoYXQgaXQgaXMgbm90DQo+IHBvc3NpYmxlIHRvIGZpbHRlciBhY2NvcmRpbmcgdG8g
-cG9pbnRlZCBkYXRhIGFzIGEgZmlsZSBwYXRoLiBBcyBkZW1vbnN0cmF0ZWQNCj4gdGhlIGZpcnN0
-IHZlcnNpb24gb2YgdGhpcyBwYXRjaCBzZXJpZXMsIGZpbHRlcmluZyBhdCB0aGUgc3lzY2FsbCBs
-ZXZlbCBpcw0KPiBjb21wbGljYXRlZCAoZS5nLiBuZWVkIHRvIHRha2UgY2FyZSBvZiByYWNlIGNv
-bmRpdGlvbnMpLiBUaGlzIGlzIG1haW5seSBiZWNhdXNlDQo+IHRoZSBhY2Nlc3MgY29udHJvbCBj
-aGVja3BvaW50cyBvZiB0aGUga2VybmVsIGFyZSBub3QgYXQgdGhpcyBoaWdoLWxldmVsIGJ1dA0K
-PiBtb3JlIHVuZGVybmVhdGgsIGF0IExTTSBob29rcyBsZXZlbC4gVGhlIExTTSBob29rcyBhcmUg
-ZGVzaWduZWQgdG8gaGFuZGxlIHRoaXMNCj4ga2luZCBvZiBjaGVja3MuIFRoaXMgc2VyaWVzIHVz
-ZSB0aGlzIGFwcHJvYWNoIHRvIGxldmVyYWdlIHRoZSBhYmlsaXR5IG9mDQo+IHVucHJpdmlsZWdl
-ZCB1c2VycyB0byBsaW1pdCB0aGVtc2VsdmVzLg0KDQpZb3UgY2Fubm90IHZhbGlkYXRlIGZpbGUg
-cGF0aCBwYXJhbWV0ZXJzIGR1cmluZyBzeXNjYWxsIGVudHJ5Lg0KSXQgY2FuIG9ubHkgYmUgZG9u
-ZSBhZnRlciB0aGUgdXNlciBidWZmZXIgaGFzIGJlZW4gcmVhZCBpbnRvIGtlcm5lbCBtZW1vcnku
-DQooaWUgeW91IG11c3Qgb25seSBhY2Nlc3MgdGhlIGJ1ZmZlciBvbmNlLikNCg0KVGhpcyBoYXMg
-bm90aGluZyB0byBkbyB3aXRoIHdoZXJlIHRoZSBrZXJuZWwgZG9lcyBhbnkgYWNjZXNzIGNoZWNr
-cywNCmFuZCBldmVyeXRoaW5nIHRvIGRvIHdpdGggdGhlIGZhY3QgdGhhdCBhbm90aGVyIHRocmVh
-ZC9wcm9jZXNzIGNhbg0KbW9kaWZ5IHRoZSBidWZmZXIgYWZ0ZXIgeW91IGhhdmUgdmFsaWRhdGVk
-IGl0Lg0KDQoJRGF2aWQNCg0K
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--MvDRGgCgUqFIL4RSGlCO7Xs24fkENiwV2
+Content-Type: multipart/mixed; boundary="O1CtIAVv6aLLWs1NIc0rmG57UUaBW7E7P";
+ protected-headers="v1"
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+To: Dave Hansen <dave.hansen@intel.com>, kernel-hardening@lists.openwall.com,
+ linux-kernel@vger.kernel.org, linux-mm@kvack.org,
+ linux-x86_64@vger.kernel.org
+Cc: vpk@cs.columbia.edu
+Message-ID: <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com>
+Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
+ userspace pages into the hot cache
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-3-juerg.haefliger@hpe.com> <57D95FA3.3030103@intel.com>
+In-Reply-To: <57D95FA3.3030103@intel.com>
+
+--O1CtIAVv6aLLWs1NIc0rmG57UUaBW7E7P
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
+
+Hi Dave,
+
+On 09/14/2016 04:33 PM, Dave Hansen wrote:
+> On 09/14/2016 12:19 AM, Juerg Haefliger wrote:
+>> Allocating a page to userspace that was previously allocated to the
+>> kernel requires an expensive TLB shootdown. To minimize this, we only
+>> put non-kernel pages into the hot cache to favor their allocation.
+>=20
+> Hi, I had some questions about this the last time you posted it.  Maybe=
+
+> you want to address them now.
+
+I did reply: https://lkml.org/lkml/2016/9/5/249
+
+=2E..Juerg
+
+
+> --
+>=20
+> But kernel allocations do allocate from these pools, right?  Does this
+> just mean that kernel allocations usually have to pay the penalty to
+> convert a page?
+>=20
+> So, what's the logic here?  You're assuming that order-0 kernel
+> allocations are more rare than allocations for userspace?
+>=20
+
+
+
+--O1CtIAVv6aLLWs1NIc0rmG57UUaBW7E7P--
+
+--MvDRGgCgUqFIL4RSGlCO7Xs24fkENiwV2
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJX2WFxAAoJEHVMOpb5+LSMrQoP/jtdf3Fbc1bSXJXL93ntuPf7
+i3r1RKdrhfJgT8ScBPMs4PUahWaZMA/ktMfteu53+HXIIThGZNc5N5+T7VIrt7Xn
+rj594vhVfeXftedOqjlRIO2r2LRubX6qD+7oRHf5yLHhdr7W1wgFv7cZModu6Nuj
+h61J5RZoKGzogN0/Tn5hOoe6s6MS3qdcBaPNDFBTs0ZJz4s0X+i70pz9ysIH2jgS
+kgxuQJ1bWnvZztlkzGJZLiK1CNBezHHy58zFyFx7HJTNR4G5FW+2nNyqVUUXIRvi
+GddECUJaPPIIuIyNfeuiFqiJ5oYjuzhWKDbMfZXTaRfZr1mCtmUcwSjuiv/NlOJI
+ynuq+A+GnTxSiXqQtenuARSzgz8QCkBi9ZuDzHU6wlSY3/GVO3XVf0yhqpYwEbQF
+pHV3Rjrwkx+rOa35wTYkdR+JCEZZQoxQj9tXyGpctxrbZStc5eOuIRHzJu2mZo7P
+eiGy4UsdNR+RtClauD+4QMLb4udStmFMG3RMwA78ioJYZE4j93QHGJN7+HBq/e7d
+FuEkuWcAk/UsNVJdfuBjHyATNin+wjxrllEcPA4OPzHEbMevsXO4AE8ucmDSNGvD
+hWa50Ahf8x/Zx/FvyBUSD7+g5c5CK9wNLdE70WwWUkphFGEhbJFhIm7wrTv0700g
+KGlgI1DsXBwxzIzvnv/8
+=T/wt
+-----END PGP SIGNATURE-----
+
+--MvDRGgCgUqFIL4RSGlCO7Xs24fkENiwV2--
