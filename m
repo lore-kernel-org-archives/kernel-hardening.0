@@ -1,44 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
-References: <20160908223558.GA11742@www.outflux.net> <43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
- <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
+In-Reply-To: <20160914085159.GA13121@leverpostej>
+References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+ <1473788797-10879-4-git-send-email-catalin.marinas@arm.com>
+ <CAGXu5jJETdRtuonhtkSxMf+sgCdBj2t2_U8yW2cDwcoGY=qvJw@mail.gmail.com> <20160914085159.GA13121@leverpostej>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 14 Sep 2016 09:17:44 -0700
-Message-ID: <CAGXu5jJWE-z_DLwP=cZdSMkJLYhQ+B2=AEEdCuFDucxsSn9b-w@mail.gmail.com>
+Date: Wed, 14 Sep 2016 09:27:33 -0700
+Message-ID: <CAGXu5jJOfYadrV20KAfN_LC8Jy6ayg1dGS3dkSNpXXhnmz=h4A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] pty: make ptmx file ops read-only after init
-To: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
-Cc: Jiri Slaby <jslaby@suse.cz>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 3/7] arm64: Introduce
+ uaccess_{disable,enable} functionality based on TTBR0_EL1
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Catalin Marinas <catalin.marinas@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Sep 14, 2016 at 7:04 AM, One Thousand Gnomes
-<gnomes@lxorguk.ukuu.org.uk> wrote:
-> On Wed, 14 Sep 2016 09:59:42 +0200
-> Jiri Slaby <jslaby@suse.cz> wrote:
+On Wed, Sep 14, 2016 at 1:52 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Tue, Sep 13, 2016 at 01:45:21PM -0700, Kees Cook wrote:
+>> On Tue, Sep 13, 2016 at 10:46 AM, Catalin Marinas
+>> > +static inline bool system_uses_ttbr0_pan(void)
+>> > +{
+>> > +       return IS_ENABLED(CONFIG_ARM64_SW_TTBR0_PAN) &&
+>> > +               !cpus_have_cap(ARM64_HAS_PAN);
+>> > +}
+>> > +
 >
->> On 09/09/2016, 12:35 AM, Kees Cook wrote:
->> > The ptmx_fops structure is only changed during init, so mark it as such.
+> [...]
+>
+>> >  #define __uaccess_enable(alt)                                          \
+>> >  do {                                                                   \
+>> > -       asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,                  \
+>> > -                       CONFIG_ARM64_PAN));                             \
+>> > +       if (system_uses_ttbr0_pan())                                    \
+>> > +               uaccess_ttbr0_enable();                                 \
+>> > +       else                                                            \
+>> > +               asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,          \
+>> > +                               CONFIG_ARM64_PAN));                     \
+>> >  } while (0)
 >>
->> Right, but I am missing what is the benefit? You would have to elaborate
->> here...
+>> Does this mean that with CONFIG_ARM64_SW_TTBR0_PAN, even with ARMv8.1,
+>> a cpu capability bitmask check is done each time we go through
+>> __uaccess_{en,dis}able?
 >
-> The pages end up marked read only even to the kernel (and in future could
-> even be marked read only forever when in kvm if we get suitable virtual
-> machine extensions). That makes it much harder to patch those vectors
-> when making security attacks.
+> Catalin reworked cpus_have_cap() to use static keys [1], and that's
+> queued in the arm64 for-next/core branch [2].
 
-Correct, this is a continuing effort to reduce the internal attack
-surface of the kernel, where one of the most common exploitation
-methods is overwriting function pointers.
+Oh awesome! Okay, thanks.
 
-Some examples of attacks and mitigations are here:
-http://kernsec.org/wiki/index.php/Exploit_Methods/Function_pointer_overwrite
+> So this should expand to a single branch or nop that we patch when we
+> detect the presence/absence of PAN. There should be no bitmap check.
 
-While this patch isn't a huge change, it's still a viable candidate. I
-send these as I notice them, and hope that other folks will start to
-see these opportunities and send more patches too. :)
+/me is looking forward to v4.9 :)
+
+>
+> Thanks,
+> Mark.
+>
+> [1] http://lists.infradead.org/pipermail/linux-arm-kernel/2016-September/454025.html
+> [2] https://git.kernel.org/cgit/linux/kernel/git/arm64/linux.git/log/?h=for-next/core
 
 -Kees
 
