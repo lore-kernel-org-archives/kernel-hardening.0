@@ -1,97 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1473788797-10879-4-git-send-email-catalin.marinas@arm.com>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com> <1473788797-10879-4-git-send-email-catalin.marinas@arm.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 13 Sep 2016 13:45:21 -0700
-Message-ID: <CAGXu5jJETdRtuonhtkSxMf+sgCdBj2t2_U8yW2cDwcoGY=qvJw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 3/7] arm64: Introduce uaccess_{disable,enable}
- functionality based on TTBR0_EL1
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+Date: Wed, 14 Sep 2016 09:18:58 +0200
+Message-Id: <20160914071901.8127-1-juerg.haefliger@hpe.com>
+In-Reply-To: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+Subject: [kernel-hardening] [RFC PATCH v2 0/3] Add support for eXclusive Page Frame Ownership (XPFO)
+To: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
+Cc: juerg.haefliger@hpe.com, vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 13, 2016 at 10:46 AM, Catalin Marinas
-<catalin.marinas@arm.com> wrote:
-> This patch adds the uaccess macros/functions to disable access to user
-> space by setting TTBR0_EL1 to a reserved zeroed page. Since the value
-> written to TTBR0_EL1 must be a physical address, for simplicity this
-> patch introduces a reserved_ttbr0 page at a constant offset from
-> swapper_pg_dir. The uaccess_disable code uses the ttbr1_el1 value
-> adjusted by the reserved_ttbr0 offset.
->
-> Enabling access to user is done by restoring TTBR0_EL1 with the value
-> from the struct thread_info ttbr0 variable. Interrupts must be disabled
-> during the uaccess_ttbr0_enable code to ensure the atomicity of the
-> thread_info.ttbr0 read and TTBR0_EL1 write. This patch also moves the
-> get_thread_info asm macro from entry.S to assembler.h for reuse in the
-> uaccess_ttbr0_* macros.
->
-> Cc: Will Deacon <will.deacon@arm.com>
-> Cc: James Morse <james.morse@arm.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Mark Rutland <mark.rutland@arm.com>
-> Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
-> ---
-> [...]
-> diff --git a/arch/arm64/include/asm/cpufeature.h b/arch/arm64/include/asm/cpufeature.h
-> index 7099f26e3702..042d49c7b231 100644
-> --- a/arch/arm64/include/asm/cpufeature.h
-> +++ b/arch/arm64/include/asm/cpufeature.h
-> @@ -216,6 +216,12 @@ static inline bool system_supports_mixed_endian_el0(void)
->         return id_aa64mmfr0_mixed_endian_el0(read_system_reg(SYS_ID_AA64MMFR0_EL1));
->  }
->
-> +static inline bool system_uses_ttbr0_pan(void)
-> +{
-> +       return IS_ENABLED(CONFIG_ARM64_SW_TTBR0_PAN) &&
-> +               !cpus_have_cap(ARM64_HAS_PAN);
-> +}
-> +
->  #endif /* __ASSEMBLY__ */
->
->  #endif
-> [...]
-> diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
-> index cc6c32d4dcc4..115b5fa8dc3f 100644
-> --- a/arch/arm64/include/asm/uaccess.h
-> +++ b/arch/arm64/include/asm/uaccess.h
-> [...]
-> @@ -116,16 +117,57 @@ static inline void set_fs(mm_segment_t fs)
-> [...]
->  #define __uaccess_disable(alt)                                         \
->  do {                                                                   \
-> -       asm(ALTERNATIVE("nop", SET_PSTATE_PAN(1), alt,                  \
-> -                       CONFIG_ARM64_PAN));                             \
-> +       if (system_uses_ttbr0_pan())                                    \
-> +               uaccess_ttbr0_disable();                                \
-> +       else                                                            \
-> +               asm(ALTERNATIVE("nop", SET_PSTATE_PAN(1), alt,          \
-> +                               CONFIG_ARM64_PAN));                     \
->  } while (0)
->
->  #define __uaccess_enable(alt)                                          \
->  do {                                                                   \
-> -       asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,                  \
-> -                       CONFIG_ARM64_PAN));                             \
-> +       if (system_uses_ttbr0_pan())                                    \
-> +               uaccess_ttbr0_enable();                                 \
-> +       else                                                            \
-> +               asm(ALTERNATIVE("nop", SET_PSTATE_PAN(0), alt,          \
-> +                               CONFIG_ARM64_PAN));                     \
->  } while (0)
+Changes from:
+  v1 -> v2:
+    - Moved the code from arch/x86/mm/ to mm/ since it's (mostly)
+      arch-agnostic.
+    - Moved the config to the generic layer and added ARCH_SUPPORTS_XPFO
+      for x86.
+    - Use page_ext for the additional per-page data.
+    - Removed the clearing of pages. This can be accomplished by using
+      PAGE_POISONING.
+    - Split up the patch into multiple patches.
+    - Fixed additional issues identified by reviewers.
 
-Does this mean that with CONFIG_ARM64_SW_TTBR0_PAN, even with ARMv8.1,
-a cpu capability bitmask check is done each time we go through
-__uaccess_{en,dis}able?
+This patch series adds support for XPFO which protects against 'ret2dir'
+kernel attacks. The basic idea is to enforce exclusive ownership of page
+frames by either the kernel or userspace, unless explicitly requested by
+the kernel. Whenever a page destined for userspace is allocated, it is
+unmapped from physmap (the kernel's page table). When such a page is
+reclaimed from userspace, it is mapped back to physmap.
 
-Could the alternative get moved around slightly to avoid this, or am I
-misunderstanding something here?
+Additional fields in the page_ext struct are used for XPFO housekeeping.
+Specifically two flags to distinguish user vs. kernel pages and to tag
+unmapped pages and a reference counter to balance kmap/kunmap operations
+and a lock to serialize access to the XPFO fields.
 
--Kees
+Known issues/limitations:
+  - Only supports x86-64 (for now)
+  - Only supports 4k pages (for now)
+  - There are most likely some legitimate uses cases where the kernel needs
+    to access userspace which need to be made XPFO-aware
+  - Performance penalty
+
+Reference paper by the original patch authors:
+  http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
+
+Juerg Haefliger (3):
+  Add support for eXclusive Page Frame Ownership (XPFO)
+  xpfo: Only put previous userspace pages into the hot cache
+  block: Always use a bounce buffer when XPFO is enabled
+
+ arch/x86/Kconfig         |   3 +-
+ arch/x86/mm/init.c       |   2 +-
+ block/blk-map.c          |   2 +-
+ include/linux/highmem.h  |  15 +++-
+ include/linux/page_ext.h |   7 ++
+ include/linux/xpfo.h     |  41 +++++++++
+ lib/swiotlb.c            |   3 +-
+ mm/Makefile              |   1 +
+ mm/page_alloc.c          |  10 ++-
+ mm/page_ext.c            |   4 +
+ mm/xpfo.c                | 213 +++++++++++++++++++++++++++++++++++++++++++++++
+ security/Kconfig         |  20 +++++
+ 12 files changed, 314 insertions(+), 7 deletions(-)
+ create mode 100644 include/linux/xpfo.h
+ create mode 100644 mm/xpfo.c
 
 -- 
-Kees Cook
-Nexus Security
+2.9.3
