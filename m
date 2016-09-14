@@ -1,40 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20160914071901.8127-3-juerg.haefliger@hpe.com> <57D95FA3.3030103@intel.com>
- <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <57D9633A.2010702@intel.com>
-Date: Wed, 14 Sep 2016 07:48:26 -0700
 MIME-Version: 1.0
-In-Reply-To: <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
- userspace pages into the hot cache
-To: Juerg Haefliger <juerg.haefliger@hpe.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org
-Cc: vpk@cs.columbia.edu
+Sender: keescook@google.com
+In-Reply-To: <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
+References: <20160908223558.GA11742@www.outflux.net> <43f1953c-d8a3-647f-20eb-bec4898e1b8e@suse.cz>
+ <20160914150416.2d938c60@lxorguk.ukuu.org.uk>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 14 Sep 2016 09:17:44 -0700
+Message-ID: <CAGXu5jJWE-z_DLwP=cZdSMkJLYhQ+B2=AEEdCuFDucxsSn9b-w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] pty: make ptmx file ops read-only after init
+To: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
+Cc: Jiri Slaby <jslaby@suse.cz>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On 09/02/2016 10:39 PM, Dave Hansen wrote:
->> On 09/02/2016 04:39 AM, Juerg Haefliger wrote:
->> Does this
->> just mean that kernel allocations usually have to pay the penalty to
->> convert a page?
-> 
-> Only pages that are allocated for userspace (gfp & GFP_HIGHUSER == GFP_HIGHUSER) which were
-> previously allocated for the kernel (gfp & GFP_HIGHUSER != GFP_HIGHUSER) have to pay the penalty.
-> 
->> So, what's the logic here?  You're assuming that order-0 kernel
->> allocations are more rare than allocations for userspace?
-> 
-> The logic is to put reclaimed kernel pages into the cold cache to
-> postpone their allocation as long as possible to minimize (potential)
-> TLB flushes.
+On Wed, Sep 14, 2016 at 7:04 AM, One Thousand Gnomes
+<gnomes@lxorguk.ukuu.org.uk> wrote:
+> On Wed, 14 Sep 2016 09:59:42 +0200
+> Jiri Slaby <jslaby@suse.cz> wrote:
+>
+>> On 09/09/2016, 12:35 AM, Kees Cook wrote:
+>> > The ptmx_fops structure is only changed during init, so mark it as such.
+>>
+>> Right, but I am missing what is the benefit? You would have to elaborate
+>> here...
+>
+> The pages end up marked read only even to the kernel (and in future could
+> even be marked read only forever when in kvm if we get suitable virtual
+> machine extensions). That makes it much harder to patch those vectors
+> when making security attacks.
 
-OK, but if we put them in the cold area but kernel allocations pull them
-from the hot cache, aren't we virtually guaranteeing that kernel
-allocations will have to to TLB shootdown to convert a page?
+Correct, this is a continuing effort to reduce the internal attack
+surface of the kernel, where one of the most common exploitation
+methods is overwriting function pointers.
 
-It seems like you also need to convert all kernel allocations to pull
-from the cold area.
+Some examples of attacks and mitigations are here:
+http://kernsec.org/wiki/index.php/Exploit_Methods/Function_pointer_overwrite
+
+While this patch isn't a huge change, it's still a viable candidate. I
+send these as I notice them, and hope that other folks will start to
+see these opportunities and send more patches too. :)
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
