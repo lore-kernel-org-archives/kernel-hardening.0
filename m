@@ -1,390 +1,397 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 14 Sep 2016 09:23:56 +0200
-Message-Id: <20160914072415.26021-4-mic@digikod.net>
-In-Reply-To: <20160914072415.26021-1-mic@digikod.net>
-References: <20160914072415.26021-1-mic@digikod.net>
+Date: Wed, 14 Sep 2016 09:23:53 +0200
+Message-Id: <20160914072415.26021-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v3 03/22] bpf,landlock: Add a new arraymap type to deal with (Landlock) handles
+Subject: [kernel-hardening] [RFC v3 00/22] Landlock LSM: Unprivileged sandboxing
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This new arraymap looks like a set and brings new properties:
-* strong typing of entries: the eBPF functions get the array type of
-  elements instead of CONST_PTR_TO_MAP (e.g.
-  CONST_PTR_TO_LANDLOCK_HANDLE_FS);
-* force sequential filling (i.e. replace or append-only update), which
-  allow quick browsing of all entries.
+Hi,
 
-This strong typing is useful to statically check if the content of a map
-can be passed to an eBPF function. For example, Landlock use it to store
-and manage kernel objects (e.g. struct file) instead of dealing with
-userland raw data. This improve efficiency and ensure that an eBPF
-program can only call functions with the right high-level arguments.
+This series, improvement of the previous RFC [1], is a proof of concept to fill
+some missing part of seccomp as the ability to check syscall argument pointers
+or creating more dynamic security policies. The goal of this new stackable
+Linux Security Module (LSM) called Landlock is to allow any process, including
+unprivileged ones, to create powerful security sandboxes comparable to the
+Seatbelt/XNU Sandbox or the OpenBSD Pledge. This kind of sandbox help to
+mitigate the security impact of bugs or unexpected/malicious behaviors in
+userland applications.
 
-The enum bpf_map_handle_type list low-level types (e.g.
-BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD) which are identified when
-updating a map entry (handle). This handle types are used to infer a
-high-level arraymap type which are listed in enum bpf_map_array_type
-(e.g. BPF_MAP_ARRAY_TYPE_LANDLOCK_FS).
 
-For now, this new arraymap is only used by Landlock LSM (cf. next
-commits) but it could be useful for other needs.
+# Landlock LSM
 
-Changes since v2:
-* add a RLIMIT_NOFILE-based limit to the maximum number of arraymap
-  handle entries (suggested by Andy Lutomirski)
-* remove useless checks
+This series is mainly focused on cgroups while keeping the possibility to
+enforce access rules through seccomp. eBPF programs are used to create a
+security rule. They are very limited (i.e. can only call a whitelist of
+functions) and can not do a denial of service (i.e. no loop). A new dedicated
+eBPF map allows to collect and compare Landlock handles with system resources
+(e.g. files or network connections).
 
-Changes since v1:
-* arraymap of handles replace custom checker groups
-* simpler userland API
+The approach taken is to add the minimum amount of code while still allowing
+the userland to create quite complex access rules. A dedicated security policy
+language such as used by SELinux, AppArmor and other major LSMs is a lot of
+code and dedicated to a trusted process (i.e. root/administrator).
 
-Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Alexei Starovoitov <ast@kernel.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Daniel Borkmann <daniel@iogearbox.net>
-Cc: David S. Miller <davem@davemloft.net>
-Cc: Kees Cook <keescook@chromium.org>
-Link: https://lkml.kernel.org/r/CALCETrWwTiz3kZTkEgOW24-DvhQq6LftwEXh77FD2G5o71yD7g@mail.gmail.com
----
- include/linux/bpf.h      |  14 ++++
- include/uapi/linux/bpf.h |  18 +++++
- kernel/bpf/arraymap.c    | 203 +++++++++++++++++++++++++++++++++++++++++++++++
- kernel/bpf/verifier.c    |  12 ++-
- 4 files changed, 246 insertions(+), 1 deletion(-)
 
-diff --git a/include/linux/bpf.h b/include/linux/bpf.h
-index fa9a988400d9..eae4ce4542c1 100644
---- a/include/linux/bpf.h
-+++ b/include/linux/bpf.h
-@@ -13,6 +13,10 @@
- #include <linux/percpu.h>
- #include <linux/err.h>
- 
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+#include <linux/fs.h> /* struct file */
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- struct perf_event;
- struct bpf_map;
- 
-@@ -38,6 +42,7 @@ struct bpf_map_ops {
- struct bpf_map {
- 	atomic_t refcnt;
- 	enum bpf_map_type map_type;
-+	enum bpf_map_array_type map_array_type;
- 	u32 key_size;
- 	u32 value_size;
- 	u32 max_entries;
-@@ -187,6 +192,9 @@ struct bpf_array {
- 	 */
- 	enum bpf_prog_type owner_prog_type;
- 	bool owner_jited;
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+	u32 n_entries;	/* number of entries in a handle array */
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 	union {
- 		char value[0] __aligned(8);
- 		void *ptrs[0] __aligned(8);
-@@ -194,6 +202,12 @@ struct bpf_array {
- 	};
- };
- 
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+struct map_landlock_handle {
-+	u32 type; /* enum bpf_map_handle_type */
-+};
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-+
- #define MAX_TAIL_CALL_CNT 32
- 
- struct bpf_event_entry {
-diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
-index 7cd36166f9b7..b68de57f7ab8 100644
---- a/include/uapi/linux/bpf.h
-+++ b/include/uapi/linux/bpf.h
-@@ -87,6 +87,15 @@ enum bpf_map_type {
- 	BPF_MAP_TYPE_PERCPU_ARRAY,
- 	BPF_MAP_TYPE_STACK_TRACE,
- 	BPF_MAP_TYPE_CGROUP_ARRAY,
-+	BPF_MAP_TYPE_LANDLOCK_ARRAY,
-+};
-+
-+enum bpf_map_array_type {
-+	BPF_MAP_ARRAY_TYPE_UNSPEC,
-+};
-+
-+enum bpf_map_handle_type {
-+	BPF_MAP_HANDLE_TYPE_UNSPEC,
- };
- 
- enum bpf_prog_type {
-@@ -510,4 +519,13 @@ struct xdp_md {
- 	__u32 data_end;
- };
- 
-+/* Map handle entry */
-+struct landlock_handle {
-+	__u32 type; /* enum bpf_map_handle_type */
-+	union {
-+		__u32 fd;
-+		__aligned_u64 glob;
-+	};
-+} __attribute__((aligned(8)));
-+
- #endif /* _UAPI__LINUX_BPF_H__ */
-diff --git a/kernel/bpf/arraymap.c b/kernel/bpf/arraymap.c
-index a2ac051c342f..94256597eacd 100644
---- a/kernel/bpf/arraymap.c
-+++ b/kernel/bpf/arraymap.c
-@@ -16,6 +16,13 @@
- #include <linux/mm.h>
- #include <linux/filter.h>
- #include <linux/perf_event.h>
-+#include <linux/file.h> /* fput() */
-+#include <linux/fs.h> /* struct file */
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+#include <asm/resource.h> /* RLIMIT_NOFILE */
-+#include <linux/sched.h> /* rlimit() */
-+#endif /* CONFIG_SECURITY_LANDLOCK */
- 
- static void bpf_array_free_percpu(struct bpf_array *array)
- {
-@@ -580,3 +587,199 @@ static int __init register_cgroup_array_map(void)
- }
- late_initcall(register_cgroup_array_map);
- #endif
-+
-+#ifdef CONFIG_SECURITY_LANDLOCK
-+static struct bpf_map *landlock_array_map_alloc(union bpf_attr *attr)
-+{
-+	if (attr->value_size != sizeof(struct landlock_handle))
-+		return ERR_PTR(-EINVAL);
-+	attr->value_size = sizeof(struct map_landlock_handle);
-+
-+	return array_map_alloc(attr);
-+}
-+
-+static void landlock_put_handle(struct map_landlock_handle *handle)
-+{
-+	enum bpf_map_handle_type handle_type = handle->type;
-+
-+	switch (handle_type) {
-+	case BPF_MAP_HANDLE_TYPE_UNSPEC:
-+	default:
-+		WARN_ON(1);
-+	}
-+	/* safeguard */
-+	handle->type = BPF_MAP_HANDLE_TYPE_UNSPEC;
-+}
-+
-+static void landlock_array_map_free(struct bpf_map *map)
-+{
-+	struct bpf_array *array = container_of(map, struct bpf_array, map);
-+	int i;
-+
-+	synchronize_rcu();
-+
-+	for (i = 0; i < array->n_entries; i++)
-+		landlock_put_handle((struct map_landlock_handle *)
-+				(array->value + array->elem_size * i));
-+	kvfree(array);
-+}
-+
-+static enum bpf_map_array_type landlock_get_array_type(
-+		enum bpf_map_handle_type handle_type)
-+{
-+	switch (handle_type) {
-+	case BPF_MAP_HANDLE_TYPE_UNSPEC:
-+	default:
-+		return -EINVAL;
-+	}
-+}
-+
-+#define FGET_OR_RET(file, fd) { \
-+	file = fget(fd); \
-+	if (unlikely(IS_ERR(file))) \
-+		return PTR_ERR(file); \
-+	}
-+
-+/**
-+ * landlock_store_handle - store an user handle in an arraymap entry
-+ *
-+ * @dst: non-NULL kernel-side Landlock handle destination
-+ * @handle: non-NULL user-side Landlock handle source
-+ */
-+static inline long landlock_store_handle(struct map_landlock_handle *dst,
-+		struct landlock_handle *handle)
-+{
-+	enum bpf_map_handle_type handle_type = handle->type;
-+
-+	switch (handle_type) {
-+	case BPF_MAP_HANDLE_TYPE_UNSPEC:
-+	default:
-+		WARN_ON(1);
-+		return -EINVAL;
-+	}
-+	dst->type = handle_type;
-+	return 0;
-+}
-+
-+static void *nop_map_lookup_elem(struct bpf_map *map, void *key)
-+{
-+	return ERR_PTR(-EINVAL);
-+}
-+
-+/* called from syscall or from eBPF program */
-+static int landlock_array_map_update_elem(struct bpf_map *map, void *key,
-+		void *value, u64 map_flags)
-+{
-+	struct bpf_array *array = container_of(map, struct bpf_array, map);
-+	u32 index = *(u32 *)key;
-+	enum bpf_map_array_type array_type;
-+	int ret;
-+	struct landlock_handle *khandle = (struct landlock_handle *)value;
-+	struct map_landlock_handle *handle, handle_new;
-+
-+	if (unlikely(map_flags > BPF_EXIST))
-+		/* unknown flags */
-+		return -EINVAL;
-+
-+	/*
-+	 * Limit number of entries in an arraymap of handles to the maximum
-+	 * number of open files for the current process. The maximum number of
-+	 * handle entries (including all arraymaps) for a process is then
-+	 * (RLIMIT_NOFILE - 1) * RLIMIT_NOFILE. If the process' RLIMIT_NOFILE
-+	 * is 0, then any entry update is forbidden.
-+	 *
-+	 * An eBPF program can inherit all the arraymap FD. The worse case is
-+	 * to fill a bunch of arraymaps, create an eBPF program, close the
-+	 * arraymap FDs, and start again. The maximum number of arraymap
-+	 * entries can then be close to RLIMIT_NOFILE^3.
-+	 *
-+	 * FIXME: This should be improved... any idea?
-+	 */
-+	if (unlikely(index >= rlimit(RLIMIT_NOFILE)))
-+		return -EMFILE;
-+
-+	if (unlikely(index >= array->map.max_entries))
-+		/* all elements were pre-allocated, cannot insert a new one */
-+		return -E2BIG;
-+
-+	/* FIXME: add lock */
-+	if (unlikely(index > array->n_entries))
-+		/* only replace an existing entry or append a new one */
-+		return -EINVAL;
-+
-+	/* TODO: handle all flags, not only BPF_ANY */
-+	if (unlikely(map_flags == BPF_NOEXIST))
-+		/* all elements already exist */
-+		return -EEXIST;
-+
-+	if (unlikely(!khandle))
-+		return -EINVAL;
-+
-+	array_type = landlock_get_array_type(khandle->type);
-+	if (array_type < 0)
-+		return array_type;
-+
-+	if (!map->map_array_type) {
-+		/* set the initial set type */
-+		map->map_array_type = array_type;
-+	} else if (map->map_array_type != array_type) {
-+		return -EINVAL;
-+	}
-+
-+	ret = landlock_store_handle(&handle_new, khandle);
-+	if (!ret) {
-+		/* map->value_size == sizeof(struct map_landlock_handle) */
-+		handle = (struct map_landlock_handle *)
-+			(array->value + array->elem_size * index);
-+		/* FIXME: make atomic update */
-+		if (index < array->n_entries)
-+			landlock_put_handle(handle);
-+		*handle = handle_new;
-+		/* TODO: use atomic_inc? */
-+		if (index == array->n_entries)
-+			array->n_entries++;
-+	}
-+	/* FIXME: unlock */
-+
-+	return ret;
-+}
-+
-+/* called from syscall or from eBPF program */
-+static int landlock_array_map_delete_elem(struct bpf_map *map, void *key)
-+{
-+	struct bpf_array *array = container_of(map, struct bpf_array, map);
-+	u32 index = *(u32 *)key;
-+
-+	/* only remove the last element */
-+	/* TODO: use atomic_dec? */
-+	if (array->n_entries && index == array->n_entries - 1) {
-+		array->n_entries--;
-+		landlock_put_handle((struct map_landlock_handle *)
-+				(array->value + array->elem_size * index));
-+		return 0;
-+	}
-+	return -EINVAL;
-+}
-+
-+static const struct bpf_map_ops landlock_array_ops = {
-+	.map_alloc = landlock_array_map_alloc,
-+	.map_free = landlock_array_map_free,
-+	.map_get_next_key = array_map_get_next_key,
-+	.map_lookup_elem = nop_map_lookup_elem,
-+	.map_update_elem = landlock_array_map_update_elem,
-+	.map_delete_elem = landlock_array_map_delete_elem,
-+};
-+
-+static struct bpf_map_type_list landlock_array_type __read_mostly = {
-+	.ops = &landlock_array_ops,
-+	.type = BPF_MAP_TYPE_LANDLOCK_ARRAY,
-+};
-+
-+static int __init register_landlock_array_map(void)
-+{
-+	bpf_register_map_type(&landlock_array_type);
-+	return 0;
-+}
-+
-+late_initcall(register_landlock_array_map);
-+#endif /* CONFIG_SECURITY_LANDLOCK */
-diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
-index d5d28758d04c..c0c4a92dae8c 100644
---- a/kernel/bpf/verifier.c
-+++ b/kernel/bpf/verifier.c
-@@ -1793,6 +1793,15 @@ static struct bpf_map *ld_imm64_to_map_ptr(struct bpf_insn *insn)
- 	return (struct bpf_map *) (unsigned long) imm64;
- }
- 
-+static inline enum bpf_reg_type bpf_reg_type_from_map(struct bpf_map *map)
-+{
-+	switch (map->map_array_type) {
-+	case BPF_MAP_ARRAY_TYPE_UNSPEC:
-+	default:
-+		return CONST_PTR_TO_MAP;
-+	}
-+}
-+
- /* verify BPF_LD_IMM64 instruction */
- static int check_ld_imm(struct verifier_env *env, struct bpf_insn *insn)
- {
-@@ -1819,8 +1828,9 @@ static int check_ld_imm(struct verifier_env *env, struct bpf_insn *insn)
- 	/* replace_map_fd_with_map_ptr() should have caught bad ld_imm64 */
- 	BUG_ON(insn->src_reg != BPF_PSEUDO_MAP_FD);
- 
--	regs[insn->dst_reg].type = CONST_PTR_TO_MAP;
- 	regs[insn->dst_reg].map_ptr = ld_imm64_to_map_ptr(insn);
-+	regs[insn->dst_reg].type =
-+		bpf_reg_type_from_map(regs[insn->dst_reg].map_ptr);
- 	return 0;
- }
- 
+# eBPF
+
+To get an expressive language while still being safe and small, Landlock is
+based on eBPF. Landlock should be usable by untrusted processes and must then
+expose a minimal attack surface. The eBPF bytecode is minimal while powerful,
+widely used and thought to be used by not so trusted application. Reusing this
+code allows to not reproduce the same mistakes and minimize new code  while
+still taking a generic approach. There is only some new features like a new
+kind of arraymap and few dedicated eBPF functions.
+
+An eBPF program have access to an eBPF context which contains the LSM hook
+arguments (as does seccomp-bpf with syscall arguments). They can be used
+directly or passed to helper functions according to their types. It is then
+possible to do complex access checks without race conditions nor inconsistent
+evaluation (i.e. incorrect mirroring of the OS code and state [2]).
+
+There is one eBPF program subtype per LSM hook. This allow to statically check
+which context access is performed by an eBPF program. This is needed to deny
+kernel address leak and ensure the right use of LSM hook arguments with eBPF
+functions. Moreover, this safe pointer handling remove the need for runtime
+check or abstract data, which improve performances. Any user can add multiple
+Landlock eBPF programs per LSM hook. They are stacked and evaluated one after
+the other (cf. seccomp-bpf).
+
+
+# LSM hooks
+
+Contrary to syscalls, LSM hooks are security checkpoints and are not
+architecture dependant. They are designed to match a security need reflected by
+a security policy (e.g. access to a file). Exposing parts of some LSM hooks
+instead of using the syscall API for sandboxing should help to avoid bugs and
+hacks as encountered by the first RFC. Instead of redoing the work of the LSM
+hooks through syscalls, we should use and expose them as does policies of
+access control LSM.
+
+Only a subset of the hooks are meaningful for an unprivileged sandbox mechanism
+(e.g. file system or network access control). Landlock use an abstraction of
+raw LSM hooks, which allow to deal with possible future API changes of the LSM
+hook API. Moreover, thanks to the ePBF program typing (per LSM hook) used by
+Landlock, it should not be hard to make such evolutions backward compatible.
+
+
+# Use case scenario
+
+First, a process need to create a new dedicated eBPF map containing handles.
+This handles are references to system resources (e.g. file or directory) and
+grouped in one or multiple maps to be efficiently managed and checked in
+batches. This kind of map can be passed to Landlock eBPF functions to compare,
+for example, with a file access request. The handles are only accessible from
+the eBPF programs created by the same thread.
+
+The loaded Landlock eBPF programs can be triggered by a seccomp filter
+returning RET_LANDLOCK. In addition, a cookie (16-bit value) can be passed from
+a seccomp filter to eBPF programs. This allow flexible security policies
+between seccomp and Landlock.
+
+Another way to enforce a Landlock security policy is to attach Landlock
+programs to a dedicated cgroup. All the processes in this cgroup will then be
+subject to this policy. For unprivileged processes, this can be done thanks to
+cgroup delegation.
+
+A triggered Landlock eBPF program can allows or deny an access, according to
+its subtype (i.e. LSM hook), thanks to errno return values.
+
+
+# Sandbox example with process hierarchy sandboxing (seccomp)
+
+  $ ls /home
+  user1
+  $ LANDLOCK_ALLOWED='/bin:/lib:/usr:/tmp:/proc/self/fd/0' \
+      ./samples/landlock/sandbox /bin/sh -i
+  Launching a new sandboxed process.
+  $ ls /home
+  ls: cannot open directory '/home': Permission denied
+
+
+# Sandbox example with conditional access control depending on a cgroup
+
+  $ mkdir /sys/fs/cgroup/sandboxed
+  $ ls /home
+  user1
+  $ LANDLOCK_CGROUPS='/sys/fs/cgroup/sandboxed' \
+      LANDLOCK_ALLOWED='/bin:/lib:/usr:/tmp:/proc/self/fd/0' \
+      ./samples/landlock/sandbox
+  Ready to sandbox with cgroups.
+  $ ls /home
+  user1
+  $ echo $$ > /sys/fs/cgroup/sandboxed/cgroup.procs
+  $ ls /home
+  ls: cannot open directory '/home': Permission denied
+
+
+# Current limitations and possible improvements
+
+For now, eBPF programs can only return an errno code. It may be interesting to
+be able to do other actions like seccomp-filter does (e.g. kill process). Such
+features can easily be implemented but the main advantage of the current
+approach is to be able to only execute eBPF programs until one return an errno
+code instead of executing all programs like seccomp-filter does.
+
+It is quite easy to add new eBPF functions to extend Landlock. The main concern
+should be about the ability to leak information from the current process to
+another one (e.g. through maps) to not reproduce the same security sensitive
+behavior as ptrace.
+
+This design does not seems too intrusive but is flexible enough to allow a
+powerful sandbox mechanism accessible by any process on Linux. The use of
+seccomp and Landlock is more suitable with the help of a userland library (e.g.
+libseccomp) that could help to specify a high-level language to express a
+security policy instead of raw eBPF programs. Moreover, thanks to LLVM, it is
+possible to express an eBPF program with a subset of C.
+
+
+# FAQ
+
+## Why not use a policy language like used by SElinux or AppArmor?
+
+This kind of LSMs are dedicated to administrators. They already manage the
+system and are not a threat to the system security. However, seccomp, and
+Landlock too, should be available to anyone, which potentially include
+untrusted users and processes. To reduce the attack surface, Landlock should
+expose the minimum amount of code, hence minimal complexity. Moreover, another
+threat is to make accessible to a malicious code a new way to gain more
+information. For example, Landlock features should not allow a program to get
+the file owner if the directory containing this file is not readable. This data
+could then be exfiltrated thanks to the access result. Thus, we should limit
+the expressiveness of the available checks. The current approach is to do the
+checks in such a way that only a comparison with an already accessed resource
+(e.g. file descriptor) is possible. This allow to have a reference to compare
+with, without exposing much information.
+
+
+## Why a new LSM? Does SELinux, AppArmor, Smack or Tomoyo are not good enough?
+
+The current access control LSMs are fine for their purpose which is to give the
+*root* the ability to enforce a security policy for the *system*. What is
+missing is a way to enforce a security policy for any applications by its
+developer and *unprivileged user* as seccomp can do for raw syscall filtering.
+Moreover, Landlock handles stacked hook programs from different users. It must
+then ensure there is no possible malicious interactions between this programs.
+
+Difference with other (access control) LSMs:
+* not only dedicated to administrators (i.e. no_new_priv);
+* limited kernel attack surface (e.g. policy parsing);
+* helpers to compare complex objects (path/FD), no access to internal kernel
+  data (do not leak addresses);
+* constraint policy rules/programs (no DoS: deterministic execution time);
+* do not leak more information than the loader process can legitimately have
+  access to (minimize metadata inference): must compare from an already allowed
+  file (through a handle).
+
+
+## Why does seccomp-filter is not enough?
+
+A seccomp filter can access to raw syscall arguments which means that it is not
+possible to filter according to pointed data as a file path. As demonstrated
+the first version of this patch series, filtering at the syscall level is
+complicated (e.g. need to take care of race conditions). This is mainly because
+the access control checkpoints of the kernel are not at this high-level but
+more underneath, at LSM hooks level. The LSM hooks are designed to handle this
+kind of checks. This series use this approach to leverage the ability of
+unprivileged users to limit themselves.
+
+Cf. "What it isn't?" in Documentation/prctl/seccomp_filter.txt
+
+
+## As a developer, why do I need this feature?
+
+Landlock's goal is to help userland to limit its attack surface.
+Security-conscious developers would like to protect users from a security bug
+in their applications and the third-party dependencies they are using. Such a
+bug can compromise all the user data and help an attacker to perform a
+privilege escalation. Using an *unprivileged sandbox* feature such as Landlock
+empower the developer with the ability to properly compartmentalize its
+software and limit the impact of being compromised.
+
+
+## As a user, why do I need a this feature?
+
+Any user can already use seccomp-filter to whitelist a set of syscalls to
+reduce the kernel attack surface for a set of processes. However an
+unprivileged user can't create a security policy as the root user can thanks to
+SELinux and other access control LSMs. Landlock allows any unprivileged user to
+protect their data from being accessed by any process they run but only an
+identified subset. User tools can be created to help create such a high-level
+access control policy. This policy may not be powerful enough to express the
+same policies as the current access control LSMs, because of the threat an
+unprivileged user can be to the system, but it should be enough for most
+use-cases (e.g. blacklist or whitelist a set of file hierarchies).
+
+
+## Does Landlock can limit network access or other resources?
+
+Limiting network access is obviously in the scope of Landlock but it is not yet
+implemented. The main goal now is to get feedback about the whole concept, the
+API and the file access control part. More access control types could be
+implemented in the future.
+
+
+## Why using the seccomp(2) syscall?
+
+Landlock use the same semantic as seccomp to apply access rule restrictions. It
+add a new layer of security for the current process which is inherited by its
+childs. It make sense to use an unique access-restricting syscall (that should
+be allowed by seccomp-filter rules) which can only drop privileges. Moreover, a
+Landlock eBPF program could come from outside a process (e.g. passed through a
+UNIX socket). It is then useful to differentiate the creation/load of Landlock
+eBPF programs via bpf(2), from rule enforcing via seccomp(2).
+
+
+## Why using cgroups?
+
+cgroups are designed to handle groups of processes. One use case is to manage
+containers. Sandboxing based on process hierarchy (seccomp) is design to handle
+immutable security policies, which is a good security property but does not
+match all use cases. A user can attach Landlock rules to a cgroup. Doing so,
+all the processes in that cgroup will be subject to the security policy.
+However, if the user is allowed to manage this cgroup, it could dynamically
+move this group of processes to a cgroup with another security policy (or
+none). Landlock rules can be applied either on a process hierarchy (e.g.
+application with built-in sandboxing) or a group of processes (e.g. container
+sandboxing). Both approaches can be combined for the same process.
+
+
+# Changes since RFC v2
+
+* revamp cgroup handling:
+  * use Daniel Mack's patches "Add eBPF hooks for cgroups" v5 [3]
+  * remove bpf_landlock_cmp_cgroup_beneath()
+  * make BPF_PROG_ATTACH usable with delegated cgroups
+  * add a new CGRP_NO_NEW_PRIVS flag for safe cgroups
+  * handle Landlock sandboxing for cgroups hierarchy
+  * allow unprivileged processes to attach Landlock eBPF program to cgroups
+* add subtype to eBPF programs:
+  * replace Landlock hook identification by custom eBPF program types with a
+    dedicated subtype field
+  * manage fine-grained privileged Landlock programs
+  * register Landlock programs for dedicated trigger origins (e.g. syscall,
+    return from seccomp filter and/or interruption)
+* performance and memory optimizations: use an array to access Landlock hooks
+  directly but do not duplicated it for each thread (seccomp-based)
+* allow running Landlock programs without seccomp filter
+* fix seccomp-related issues
+* remove extra errno bounding check for Landlock programs
+* add some examples for optional eBPF functions or context access (network
+  related) according to security checks to allow more features for privileged
+  programs (e.g. Checmate)
+
+
+# Changes since RFC v1
+
+* focus on the LSM hooks, not the syscalls:
+  * much more simple implementation
+  * does not need audit cache tricks to avoid race conditions
+  * more simple to use and more generic because using the LSM hook abstraction
+    directly
+  * more efficient because only checking in LSM hooks
+  * architecture agnostic
+* switch from cBPF to eBPF:
+  * new eBPF program types dedicated to Landlock
+  * custom functions used by the eBPF program
+  * gain some new features (e.g. 10 registers, can load values of different
+	size, LLVM translator) but only a few functions allowed and a dedicated map
+    type
+  * new context: LSM hook ID, cookie and LSM hook arguments
+  * need to set the sysctl kernel.unprivileged_bpf_disable to 0 (default value)
+    to be able to load hook filters as unprivileged users
+* smaller and simpler:
+  * no more checker groups but dedicated arraymap of handles
+  * simpler userland structs thanks to eBPF functions
+* distinctive name: Landlock
+
+
+This series can be applied on top of the Daniel Mack's patches for
+BPF_PROG_ATTACH v5 [3] on Linux next-20160913 (commit
+562d4a2d7fa26b11d995f418951f3396a5d0f550). This can be
+tested with CONFIG_SECURITY_LANDLOCK, CONFIG_SECCOMP_FILTER and
+CONFIG_CGROUP_BPF. I would really appreciate constructive comments on the
+usability, architecture, code and userland API of Landlock LSM.
+
+[1] https://lkml.kernel.org/r/1472121165-29071-1-git-send-email-mic@digikod.net
+[2] https://crypto.stanford.edu/cs155/papers/traps.pdf
+[3] https://lkml.kernel.org/r/1473696735-11269-1-git-send-email-daniel@zonque.org
+
+Regards,
+
+Mickaël Salaün (22):
+  landlock: Add Kconfig
+  bpf: Move u64_to_ptr() to BPF headers and inline it
+  bpf,landlock: Add a new arraymap type to deal with (Landlock) handles
+  bpf: Set register type according to is_valid_access()
+  bpf,landlock: Add eBPF program subtype and is_valid_subtype() verifier
+  landlock: Add LSM hooks
+  landlock: Handle file comparisons
+  seccomp: Fix documentation for struct seccomp_filter
+  seccomp: Move struct seccomp_filter in seccomp.h
+  seccomp: Split put_seccomp_filter() with put_seccomp()
+  seccomp,landlock: Handle Landlock hooks per process hierarchy
+  bpf: Cosmetic change for bpf_prog_attach()
+  bpf/cgroup: Replace struct bpf_prog with union bpf_object
+  bpf/cgroup: Make cgroup_bpf_update() return an error code
+  bpf/cgroup: Move capability check
+  bpf/cgroup,landlock: Handle Landlock hooks per cgroup
+  cgroup: Add access check for cgroup_get_from_fd()
+  cgroup,landlock: Add CGRP_NO_NEW_PRIVS to handle unprivileged hooks
+  landlock: Add interrupted origin
+  landlock: Add update and debug access flags
+  bpf,landlock: Add optional skb pointer in the Landlock context
+  samples/landlock: Add sandbox example
+
+ include/linux/bpf-cgroup.h     |  19 +-
+ include/linux/bpf.h            |  45 +++-
+ include/linux/cgroup-defs.h    |   9 +
+ include/linux/cgroup.h         |   2 +-
+ include/linux/filter.h         |   1 +
+ include/linux/landlock.h       |  86 ++++++++
+ include/linux/lsm_hooks.h      |   5 +
+ include/linux/seccomp.h        |  58 +++++-
+ include/uapi/linux/bpf.h       | 122 +++++++++++
+ include/uapi/linux/seccomp.h   |   2 +
+ kernel/bpf/arraymap.c          | 226 ++++++++++++++++++++-
+ kernel/bpf/cgroup.c            |  78 ++++---
+ kernel/bpf/syscall.c           |  78 ++++---
+ kernel/bpf/verifier.c          |  47 ++++-
+ kernel/cgroup.c                |  66 +++++-
+ kernel/fork.c                  |  25 ++-
+ kernel/seccomp.c               | 107 +++++++---
+ kernel/trace/bpf_trace.c       |  12 +-
+ net/core/filter.c              |  21 +-
+ samples/Makefile               |   2 +-
+ samples/landlock/.gitignore    |   1 +
+ samples/landlock/Makefile      |  16 ++
+ samples/landlock/sandbox.c     | 307 ++++++++++++++++++++++++++++
+ security/Kconfig               |   1 +
+ security/Makefile              |   2 +
+ security/landlock/Kconfig      |  23 +++
+ security/landlock/Makefile     |   3 +
+ security/landlock/checker_fs.c | 179 ++++++++++++++++
+ security/landlock/checker_fs.h |  20 ++
+ security/landlock/common.h     |  27 +++
+ security/landlock/lsm.c        | 451 +++++++++++++++++++++++++++++++++++++++++
+ security/landlock/manager.c    | 281 +++++++++++++++++++++++++
+ security/security.c            |   1 +
+ 33 files changed, 2194 insertions(+), 129 deletions(-)
+ create mode 100644 include/linux/landlock.h
+ create mode 100644 samples/landlock/.gitignore
+ create mode 100644 samples/landlock/Makefile
+ create mode 100644 samples/landlock/sandbox.c
+ create mode 100644 security/landlock/Kconfig
+ create mode 100644 security/landlock/Makefile
+ create mode 100644 security/landlock/checker_fs.c
+ create mode 100644 security/landlock/checker_fs.h
+ create mode 100644 security/landlock/common.h
+ create mode 100644 security/landlock/lsm.c
+ create mode 100644 security/landlock/manager.c
+
 -- 
 2.9.3
