@@ -1,139 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160914071901.8127-1-juerg.haefliger@hpe.com>
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-Message-ID: <afe6dc8e-7e53-e4e4-8959-0098d3d0c92a@hpe.com>
-Date: Wed, 14 Sep 2016 09:23:58 +0200
+From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
+Date: Wed, 14 Sep 2016 09:23:57 +0200
+Message-Id: <20160914072415.26021-5-mic@digikod.net>
+In-Reply-To: <20160914072415.26021-1-mic@digikod.net>
+References: <20160914072415.26021-1-mic@digikod.net>
 MIME-Version: 1.0
-In-Reply-To: <20160914071901.8127-1-juerg.haefliger@hpe.com>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="X1S6k1OXnDBv9lOh0eaK4rxduXi2rQ5fA"
-Subject: [kernel-hardening] Re: [RFC PATCH v2 0/3] Add support for eXclusive Page Frame Ownership
- (XPFO)
-To: linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
-Cc: vpk@cs.columbia.edu
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [RFC v3 04/22] bpf: Set register type according to is_valid_access()
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---X1S6k1OXnDBv9lOh0eaK4rxduXi2rQ5fA
-Content-Type: multipart/mixed; boundary="rOu3TDjgvxEHAGHDHwIoR03apojltv8SM";
- protected-headers="v1"
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-To: linux-kernel@vger.kernel.org, linux-mm@kvack.org,
- kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org
-Cc: vpk@cs.columbia.edu
-Message-ID: <afe6dc8e-7e53-e4e4-8959-0098d3d0c92a@hpe.com>
-Subject: Re: [RFC PATCH v2 0/3] Add support for eXclusive Page Frame Ownership
- (XPFO)
-References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
- <20160914071901.8127-1-juerg.haefliger@hpe.com>
-In-Reply-To: <20160914071901.8127-1-juerg.haefliger@hpe.com>
+This fix a pointer leak when an unprivileged eBPF program read a pointer
+value from the context. Even if is_valid_access() returns a pointer
+type, the eBPF verifier replace it with UNKNOWN_VALUE. The register
+value containing an address is then allowed to leak. Moreover, this
+prevented unprivileged eBPF programs to use functions with (legitimate)
+pointer arguments.
 
---rOu3TDjgvxEHAGHDHwIoR03apojltv8SM
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
+This bug was not a problem until now because the only unprivileged eBPF
+program allowed is of type BPF_PROG_TYPE_SOCKET_FILTER and all the types
+from its context are UNKNOWN_VALUE.
 
-Resending to include the kernel-hardening list. Sorry, I wasn't subscribe=
-d with the correct email
-address when I sent this the first time.
+Signed-off-by: Mickaël Salaün <mic@digikod.net>
+Fixes: 969bf05eb3ce ("bpf: direct packet access")
+Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
+---
+ kernel/bpf/verifier.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
-=2E..Juerg
-
-On 09/14/2016 09:18 AM, Juerg Haefliger wrote:
-> Changes from:
->   v1 -> v2:
->     - Moved the code from arch/x86/mm/ to mm/ since it's (mostly)
->       arch-agnostic.
->     - Moved the config to the generic layer and added ARCH_SUPPORTS_XPF=
-O
->       for x86.
->     - Use page_ext for the additional per-page data.
->     - Removed the clearing of pages. This can be accomplished by using
->       PAGE_POISONING.
->     - Split up the patch into multiple patches.
->     - Fixed additional issues identified by reviewers.
->=20
-> This patch series adds support for XPFO which protects against 'ret2dir=
-'
-> kernel attacks. The basic idea is to enforce exclusive ownership of pag=
-e
-> frames by either the kernel or userspace, unless explicitly requested b=
-y
-> the kernel. Whenever a page destined for userspace is allocated, it is
-> unmapped from physmap (the kernel's page table). When such a page is
-> reclaimed from userspace, it is mapped back to physmap.
->=20
-> Additional fields in the page_ext struct are used for XPFO housekeeping=
-=2E
-> Specifically two flags to distinguish user vs. kernel pages and to tag
-> unmapped pages and a reference counter to balance kmap/kunmap operation=
-s
-> and a lock to serialize access to the XPFO fields.
->=20
-> Known issues/limitations:
->   - Only supports x86-64 (for now)
->   - Only supports 4k pages (for now)
->   - There are most likely some legitimate uses cases where the kernel n=
-eeds
->     to access userspace which need to be made XPFO-aware
->   - Performance penalty
->=20
-> Reference paper by the original patch authors:
->   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
->=20
-> Juerg Haefliger (3):
->   Add support for eXclusive Page Frame Ownership (XPFO)
->   xpfo: Only put previous userspace pages into the hot cache
->   block: Always use a bounce buffer when XPFO is enabled
->=20
->  arch/x86/Kconfig         |   3 +-
->  arch/x86/mm/init.c       |   2 +-
->  block/blk-map.c          |   2 +-
->  include/linux/highmem.h  |  15 +++-
->  include/linux/page_ext.h |   7 ++
->  include/linux/xpfo.h     |  41 +++++++++
->  lib/swiotlb.c            |   3 +-
->  mm/Makefile              |   1 +
->  mm/page_alloc.c          |  10 ++-
->  mm/page_ext.c            |   4 +
->  mm/xpfo.c                | 213 +++++++++++++++++++++++++++++++++++++++=
-++++++++
->  security/Kconfig         |  20 +++++
->  12 files changed, 314 insertions(+), 7 deletions(-)
->  create mode 100644 include/linux/xpfo.h
->  create mode 100644 mm/xpfo.c
->=20
-
-
---=20
-Juerg Haefliger
-Hewlett Packard Enterprise
-
-
---rOu3TDjgvxEHAGHDHwIoR03apojltv8SM--
-
---X1S6k1OXnDBv9lOh0eaK4rxduXi2rQ5fA
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
-
-iQIcBAEBCAAGBQJX2PsOAAoJEHVMOpb5+LSMsA0QAIHMfTGCGDrTmqVL6Bi7/947
-CYxgUUi235iAvh9DX+c50Oci+IrhRGKOiXOw7D4lj6MFYnhoBFKFlT/hioJoB+KU
-iv+Kb9HfN8Ab0BITVhmFKOJ8vsELLI/gbOTBceDimVoEndlkYXeP1AnVL56Y1Dmr
-17k5Yhy4pdKLvOt4NYTprKEnc+td1XtbZ/biRZhrCRrhLFgaQDB2gOYZmu0kny7X
-Plp04Ts/fhsh8nh86ej1BeU4yg0XPexi9I+O8TSrzsG8LUSj3Ev1g/56rETzYeze
-+QOzUhuMOEZLju+5Cix9tjPG7RPPQJ+k1SqNhE4q+YHwwOhx+Qa5RJRL92/hyoDk
-cMBhDb5Mk/G2Y0CzvGYurfJxFny6h324NTjvUhNquTV5hXwy61e2qAkd0bOh2W3o
-8RfwVp/xYoYeqbkcNcq+tyPSx6rC4MUC07jm28pn9McAyaLIBN63tuyAX9Hm8lAh
-euxdnSG0EcFMA2PpFVAvIoTY+a7l3gEViQPYdjmDgVY3Sbq7cBZJv4mBcgsnI7oY
-S2Jbd0y9oE7zv2lJL2xbt1Ylu3wR5+BHUWcg6nUrEHrNNJ/C3QRtoMEKA7MqP+l7
-DgSIbUQZ5IFDZ5nNHUmGI6pz49PG+4k8aef2hoH3tzFJ1Az1u/qCSB5H0obSez9Q
-2WwUHG3aQkkJwO5Rd0DS
-=Wq/n
------END PGP SIGNATURE-----
-
---X1S6k1OXnDBv9lOh0eaK4rxduXi2rQ5fA--
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index c0c4a92dae8c..608cbffb0e86 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -794,10 +794,8 @@ static int check_mem_access(struct verifier_env *env, u32 regno, int off,
+ 		}
+ 		err = check_ctx_access(env, off, size, t, &reg_type);
+ 		if (!err && t == BPF_READ && value_regno >= 0) {
+-			mark_reg_unknown_value(state->regs, value_regno);
+-			if (env->allow_ptr_leaks)
+-				/* note that reg.[id|off|range] == 0 */
+-				state->regs[value_regno].type = reg_type;
++			/* note that reg.[id|off|range] == 0 */
++			state->regs[value_regno].type = reg_type;
+ 		}
+ 
+ 	} else if (reg->type == FRAME_PTR || reg->type == PTR_TO_STACK) {
+-- 
+2.9.3
