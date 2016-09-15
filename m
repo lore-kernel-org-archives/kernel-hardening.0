@@ -1,30 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 15 Sep 2016 17:41:14 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160915164114.GC19214@leverpostej>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <20160915162044.GB19214@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20160915162044.GB19214@leverpostej>
-Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1
- switching
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, andre.przywara@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, suzuki.poulose@arm.com, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <1473947349-14521-3-git-send-email-mark.rutland@arm.com>
+References: <1473947349-14521-1-git-send-email-mark.rutland@arm.com> <1473947349-14521-3-git-send-email-mark.rutland@arm.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 15 Sep 2016 11:37:47 -0700
+Message-ID: <CALCETrWni0aZ71r-R6oYG98kZvZA8a184UR0YURk_=tXu8HXMw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC PATCH 2/8] thread_info: allow custom in-task thread_info
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, james.morse@arm.com, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, lorenzo.pieralisi@arm.com, Andrew Lutomirski <luto@kernel.org>, suzuki.poulose@arm.com, Takahiro Akashi <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 15, 2016 at 05:20:45PM +0100, Mark Rutland wrote:
-> Don't we need to fix up do_sysinstr() (which performs raw cache
-> maintenance ops on __user addresses) with
-> uaccess_{enable,disable}_not_uao()?
+On Thu, Sep 15, 2016 at 6:49 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> Currently, task_struct is defined in <linux/sched.h>, which (indirectly)
+> pulls in a number of low-level arch headers such as <asm/preempt.h>
+> through a number of other headers. Thus, code and structures in these
+> headers can't rely on the definition of task_struct. Some of these
+> headers are necessary for the definition of task_struct, so moving
+> task_struct into its own header is insufficient tio avoid circular
+> includes.
 
-Actually, we don't even need to do anything in the case of PAN since
-cache ops aren't affected by PAN/UAO; we just need to map/unmap in the
-TTBR0-switching case to ensure we don't get stup fixing things up
-forever.
+The flippant answer is to fix the headers, but I tried that myself and
+gave up :(
 
-/me commences name bikeshedding.
+But how about this slightly less duplicative alternative:
 
-Thanks,
-Mark.
+struct thread_info {
+#ifdef arch_thread_info
+  struct arch_thread_info arch_ti;
+#endif
+};
