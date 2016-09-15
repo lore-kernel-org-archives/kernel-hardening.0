@@ -1,73 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 15 Sep 2016 16:19:05 +0100
+Date: Thu, 15 Sep 2016 17:20:45 +0100
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20160915151905.GE9316@leverpostej>
+Message-ID: <20160915162044.GB19214@leverpostej>
 References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <1473788797-10879-3-git-send-email-catalin.marinas@arm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1473788797-10879-3-git-send-email-catalin.marinas@arm.com>
-Subject: [kernel-hardening] Re: [PATCH v3 2/7] arm64: Factor out TTBR0_EL1 post-update
- workaround into a specific asm macro
+In-Reply-To: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1
+ switching
 To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: linux-arm-kernel@lists.infradead.org, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, kernel-hardening@lists.openwall.com
+Cc: linux-arm-kernel@lists.infradead.org, Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, andre.przywara@arm.com, suzuki.poulose@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 13, 2016 at 06:46:32PM +0100, Catalin Marinas wrote:
-> This patch takes the errata workaround code out of cpu_do_switch_mm into
-> a dedicated post_ttbr0_update_workaround macro which will be reused in a
-> subsequent patch.
-> 
-> Cc: Will Deacon <will.deacon@arm.com>
-> Cc: James Morse <james.morse@arm.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Mark Rutland <mark.rutland@arm.com>
-> Signed-off-by: Catalin Marinas <catalin.marinas@arm.com>
-> ---
->  arch/arm64/include/asm/assembler.h | 17 +++++++++++++++++
->  arch/arm64/mm/proc.S               | 11 +----------
->  2 files changed, 18 insertions(+), 10 deletions(-)
-> 
-> diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
-> index d5025c69ca81..0a47632787d9 100644
-> --- a/arch/arm64/include/asm/assembler.h
-> +++ b/arch/arm64/include/asm/assembler.h
-> @@ -350,4 +350,21 @@ alternative_endif
->  	movk	\reg, :abs_g0_nc:\val
->  	.endm
->  
-> +/*
-> + * Errata workaround post TTBR0_EL1 update.
-> + */
-> +	.macro	post_ttbr0_update_workaround
-> +#ifdef CONFIG_CAVIUM_ERRATUM_27456
-> +alternative_if_not ARM64_WORKAROUND_CAVIUM_27456
-> +	nop
-> +	nop
-> +	nop
-> +alternative_else
-> +	ic	iallu
-> +	dsb	nsh
-> +	isb
-> +alternative_endif
-> +#endif
-> +	.endm
-> +
->  #endif	/* __ASM_ASSEMBLER_H */
+Hi Catalin,
 
-As a general note, it's unfortunate that we put asm with alternatives in
-<asm/assembler.h>, as that's included by <asm/alternative.h>, so we're
-relying on things that aren't defined yet, and users have to remember to
-include <asm/alternative.h>.
+On Tue, Sep 13, 2016 at 06:46:30PM +0100, Catalin Marinas wrote:
+> This is the third version of the arm64 PAN emulation using TTBR0_EL1
+> switching. The series has not yet included the alternative nop patches
+> from Mark Rutland, nor the empty_zero_page from Ard B. This will be done
+> in a subsequent version once 4.9-rc1 is out (which will include Mark's
+> alternative nop patches).
+ 
+>  arch/arm64/Kconfig                      |   8 ++
+>  arch/arm64/include/asm/assembler.h      |  33 +++++++
+>  arch/arm64/include/asm/cpufeature.h     |   6 ++
+>  arch/arm64/include/asm/efi.h            |  26 ++++-
+>  arch/arm64/include/asm/futex.h          |  14 +--
+>  arch/arm64/include/asm/kernel-pgtable.h |   7 ++
+>  arch/arm64/include/asm/mmu_context.h    |  51 +++++++---
+>  arch/arm64/include/asm/ptrace.h         |   2 +
+>  arch/arm64/include/asm/thread_info.h    |   3 +
+>  arch/arm64/include/asm/uaccess.h        | 163 ++++++++++++++++++++++++++++++--
+>  arch/arm64/kernel/armv8_deprecated.c    |  10 +-
+>  arch/arm64/kernel/asm-offsets.c         |   3 +
+>  arch/arm64/kernel/cpufeature.c          |   1 +
+>  arch/arm64/kernel/entry.S               |  71 +++++++++++++-
+>  arch/arm64/kernel/head.S                |   6 +-
+>  arch/arm64/kernel/setup.c               |   9 ++
+>  arch/arm64/kernel/vmlinux.lds.S         |   5 +
+>  arch/arm64/lib/clear_user.S             |   8 +-
+>  arch/arm64/lib/copy_from_user.S         |   8 +-
+>  arch/arm64/lib/copy_in_user.S           |   8 +-
+>  arch/arm64/lib/copy_to_user.S           |   8 +-
+>  arch/arm64/mm/context.c                 |   7 +-
+>  arch/arm64/mm/fault.c                   |  22 +++--
+>  arch/arm64/mm/proc.S                    |  11 +--
+>  arch/arm64/xen/hypercall.S              |  19 ++++
+>  25 files changed, 428 insertions(+), 81 deletions(-)
 
-That's already the case for dcache_by_line_op, so I guess that's
-something to deal with another day.
+I don't seee traps.c there. Don't we need to fix up do_sysinstr() (which
+performs raw cache maintenance ops on __user addresses) with
+uaccess_{enable,disable}_not_uao()?
 
-Otherwise, this looks good, and I guess this wil be auto-nopped in a
-subsqeuent version, so FWIW:
+Likewise, how do we handle __flush_cache_user_range and
+flush_icache_range? Some callers (e.g. __do_compat_cache_op) pass in
+__user addresses.
 
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+I hope we have some tests lying around for those. ;)
 
 Thanks,
 Mark.
