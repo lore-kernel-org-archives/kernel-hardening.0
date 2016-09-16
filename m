@@ -1,61 +1,90 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 16 Sep 2016 16:55:51 +0100
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20160916155550.GC1904@e104818-lin.cambridge.arm.com>
+References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+ <1473788797-10879-6-git-send-email-catalin.marinas@arm.com>
+ <20160916113325.GB21702@leverpostej>
 MIME-Version: 1.0
-In-Reply-To: <20160916103101.GA21702@leverpostej>
-References: <1473947349-14521-1-git-send-email-mark.rutland@arm.com>
- <1473947349-14521-3-git-send-email-mark.rutland@arm.com> <CALCETrWni0aZ71r-R6oYG98kZvZA8a184UR0YURk_=tXu8HXMw@mail.gmail.com>
- <20160916103101.GA21702@leverpostej>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 16 Sep 2016 08:11:14 -0700
-Message-ID: <CALCETrUDWiDmLbMqw9sQYEzvDuSVfmT_UscxQXfmf8YYyTOC=Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC PATCH 2/8] thread_info: allow custom in-task thread_info
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20160916113325.GB21702@leverpostej>
+Subject: [kernel-hardening] Re: [PATCH v3 5/7] arm64: Handle faults caused by inadvertent user
+ access with PAN enabled
 To: Mark Rutland <mark.rutland@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Andrew Morton <akpm@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Catalin Marinas <catalin.marinas@arm.com>, james.morse@arm.com, Kees Cook <keescook@chromium.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, lorenzo.pieralisi@arm.com, Andrew Lutomirski <luto@kernel.org>, suzuki.poulose@arm.com, Takahiro Akashi <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On Thu, Sep 15, 2016 at 11:37:47AM -0700, Andy Lutomirski wrote:
-> > On Thu, Sep 15, 2016 at 6:49 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> > > Currently, task_struct is defined in <linux/sched.h>, which (indirectly)
-> > > pulls in a number of low-level arch headers such as <asm/preempt.h>
-> > > through a number of other headers. Thus, code and structures in these
-> > > headers can't rely on the definition of task_struct. Some of these
-> > > headers are necessary for the definition of task_struct, so moving
-> > > task_struct into its own header is insufficient tio avoid circular
-> > > includes.
-> >
-> > The flippant answer is to fix the headers, but I tried that myself and
-> > gave up :(
->
-> Agreed; likewise (though I gave up quicker, I suspect). :(
->
-> Longer-term I'd still hope that we can do this.
->
-> > But how about this slightly less duplicative alternative:
-> >
-> > struct thread_info {
-> > #ifdef arch_thread_info
-> >   struct arch_thread_info arch_ti;
-> > #endif
-> > };
->
-> I'm happy to have an arch_thread_info.
->
-> Just to check, what do you mean to happen with the flags field? Should
-> that always be in the generic thread_info? e.g.
->
-> struct thread_info {
->         u32 flags;
-> #ifdef arch_thread_info
->         struct arch_thread_info arch_ti;
-> #endif
-> };
+On Fri, Sep 16, 2016 at 12:33:25PM +0100, Mark Rutland wrote:
+> On Tue, Sep 13, 2016 at 06:46:35PM +0100, Catalin Marinas wrote:
+> > When TTBR0_EL1 is set to the reserved page, an erroneous kernel access
+> > to user space would generate a translation fault. This patch adds the
+> > checks for the software-set PSR_PAN_BIT to emulate a permission fault
+> > and report it accordingly.
+> 
+> Why do we need to treat this case as a permission fault? It looks like a
+> fault that wasn't a deliberate uaccess (which thus doesn't have a fixup
+> handler) should have do_page_fault call __do_kernel_fault, where we
+> should die().
 
-Exactly.  Possibly with a comment that using thread_struct should be
-preferred and that arch_thread_info should be used only if some header
-file requires access via current_thread_info() or task_thread_info().
+We don't always check the exception table for a dedicated uaccess. The
+only cases where the exception table is checked is when
+down_read_trylock(mmap_sem) fails or CONFIG_DEBUG_VM is enabled. This is
+a slight optimisation of the fast path of the page fault handling. So,
+without is_permission_fault() (which much quicker than
+search_exception_tables()) the kernel would keep restarting the same
+instruction.
 
---Andy
+> > -static inline bool is_permission_fault(unsigned int esr)
+> > +static inline bool is_permission_fault(unsigned int esr, struct pt_regs *regs)
+> >  {
+> >  	unsigned int ec       = ESR_ELx_EC(esr);
+> >  	unsigned int fsc_type = esr & ESR_ELx_FSC_TYPE;
+> >  
+> > -	return (ec == ESR_ELx_EC_DABT_CUR && fsc_type == ESR_ELx_FSC_PERM) ||
+> > -	       (ec == ESR_ELx_EC_IABT_CUR && fsc_type == ESR_ELx_FSC_PERM);
+> > +	if (ec != ESR_ELx_EC_DABT_CUR && ec != ESR_ELx_EC_IABT_CUR)
+> > +		return false;
+> > +
+> > +	if (system_uses_ttbr0_pan())
+> > +		return fsc_type == ESR_ELx_FSC_FAULT &&
+> > +			(regs->pstate & PSR_PAN_BIT);
+> > +	else
+> > +		return fsc_type == ESR_ELx_FSC_PERM;
+> >  }
+> 
+> Since the entry code will clear the PAN bit in the SPSR when we see the
+> reserved ASID,
 
->
-> Thanks,
-> Mark,
+It actually sets the PAN bit in regs->pstate when it sees the reserved
+ASID.
+
+> faults in EFI runtime services will still be correctly reported,
+> though that's somewhat subtle (and it took me a while to convince
+> myself that was the case).
+
+The EFI runtime services use a non-reserved ASID, so a fault taken while
+executing EFI services would clear the PAN bit in regs->pstate. Such
+faults would not trigger is_permission_fault() == true above.
+
+> Also, I think that faults elsewhere may be misreported, e.g. in cold
+> entry to kernel paths (idle, hotplug) where we have a global mapping in
+> TTBR0, and it looks like we're using the reserved ASID.
+> 
+> I'm not immediately sure how to distinguish those cases.
+
+We don't normally expect faults on those paths. If we get one, they are
+usually fatal, so the kernel still dies but with a slightly misleading
+message.
+
+We could improve this I think if we can distinguished between
+reserved_ttbr0 after swapper (set on exception entry) and the reserved
+TTBR0_EL1 pointing to empty_zero_page (and not merging Ard's patch). Is
+it worth having such distinction? I'm not convinced, the only thing you
+probably save is not printing "Accessing user space memory outside
+uaccess.h routines" during fault (there may be other ways to mark these
+special cases maybe by checking the current thread_info but it needs
+more thinking).
+
+-- 
+Catalin
