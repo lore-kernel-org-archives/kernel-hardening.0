@@ -1,158 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 19 Sep 2016 21:37:46 -0700
-From: Sargun Dhillon <sargun@sargun.me>
-Message-ID: <20160920043744.GA13906@ircssh.c.rugged-nimbus-611.internal>
-References: <57D9CB25.1010103@digikod.net>
- <CALCETrVjyLaL-0H1AFsfYUtDGA8NSn4R8LkvBMQT7Gpmxeswgg@mail.gmail.com>
- <20160915021940.GA65119@ast-mbp.thefacebook.com>
- <CALCETrWXjJZZRj5XvDQ+-Grue+b4MW2TFKsfgYYFYoFBFVH71g@mail.gmail.com>
- <20160915040054.GA65308@ast-mbp.thefacebook.com>
- <CALCETrXTS8R1E2b9mmWzpOO6QOW5nWYW_RQRJYU1CGRsbNy+Yw@mail.gmail.com>
- <20160915043120.GA65819@ast-mbp.thefacebook.com>
- <CALCETrU=tGLx8s_eqji6SfXRi=3W8FkGC7wA6VMfD-_wAVb66w@mail.gmail.com>
- <20160915044852.GA66000@ast-mbp.thefacebook.com>
- <57DAF96D.3060609@digikod.net>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <57DAF96D.3060609@digikod.net>
-Subject: [kernel-hardening] Re: [RFC v3 18/22] cgroup,landlock: Add CGRP_NO_NEW_PRIVS to handle
- unprivileged hooks
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: Alexei Starovoitov <alexei.starovoitov@gmail.com>, Andy Lutomirski <luto@amacapital.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
+From: Laura Abbott <labbott@redhat.com>
+Date: Tue, 20 Sep 2016 08:56:36 -0700
+Message-Id: <1474386996-16049-1-git-send-email-labbott@redhat.com>
+Subject: [kernel-hardening] [PATCH] mm: usercopy: Check for module addresses
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, linux-mm@kvack.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Sep 15, 2016 at 09:41:33PM +0200, Mickaël Salaün wrote:
-> 
-> On 15/09/2016 06:48, Alexei Starovoitov wrote:
-> > On Wed, Sep 14, 2016 at 09:38:16PM -0700, Andy Lutomirski wrote:
-> >> On Wed, Sep 14, 2016 at 9:31 PM, Alexei Starovoitov
-> >> <alexei.starovoitov@gmail.com> wrote:
-> >>> On Wed, Sep 14, 2016 at 09:08:57PM -0700, Andy Lutomirski wrote:
-> >>>> On Wed, Sep 14, 2016 at 9:00 PM, Alexei Starovoitov
-> >>>> <alexei.starovoitov@gmail.com> wrote:
-> >>>>> On Wed, Sep 14, 2016 at 07:27:08PM -0700, Andy Lutomirski wrote:
-> >>>>>>>>>
-> >>>>>>>>> This RFC handle both cgroup and seccomp approaches in a similar way. I
-> >>>>>>>>> don't see why building on top of cgroup v2 is a problem. Is there
-> >>>>>>>>> security issues with delegation?
-> >>>>>>>>
-> >>>>>>>> What I mean is: cgroup v2 delegation has a functionality problem.
-> >>>>>>>> Tejun says [1]:
-> >>>>>>>>
-> >>>>>>>> We haven't had to face this decision because cgroup has never properly
-> >>>>>>>> supported delegating to applications and the in-use setups where this
-> >>>>>>>> happens are custom configurations where there is no boundary between
-> >>>>>>>> system and applications and adhoc trial-and-error is good enough a way
-> >>>>>>>> to find a working solution.  That wiggle room goes away once we
-> >>>>>>>> officially open this up to individual applications.
-> >>>>>>>>
-> >>>>>>>> Unless and until that changes, I think that landlock should stay away
-> >>>>>>>> from cgroups.  Others could reasonably disagree with me.
-> >>>>>>>
-> >>>>>>> Ours and Sargun's use cases for cgroup+lsm+bpf is not for security
-> >>>>>>> and not for sandboxing. So the above doesn't matter in such contexts.
-> >>>>>>> lsm hooks + cgroups provide convenient scope and existing entry points.
-> >>>>>>> Please see checmate examples how it's used.
-> >>>>>>>
-> >>>>>>
-> >>>>>> To be clear: I'm not arguing at all that there shouldn't be
-> >>>>>> bpf+lsm+cgroup integration.  I'm arguing that the unprivileged
-> >>>>>> landlock interface shouldn't expose any cgroup integration, at least
-> >>>>>> until the cgroup situation settles down a lot.
-> >>>>>
-> >>>>> ahh. yes. we're perfectly in agreement here.
-> >>>>> I'm suggesting that the next RFC shouldn't include unpriv
-> >>>>> and seccomp at all. Once bpf+lsm+cgroup is merged, we can
-> >>>>> argue about unpriv with cgroups and even unpriv as a whole,
-> >>>>> since it's not a given. Seccomp integration is also questionable.
-> >>>>> I'd rather not have seccomp as a gate keeper for this lsm.
-> >>>>> lsm and seccomp are orthogonal hook points. Syscalls and lsm hooks
-> >>>>> don't have one to one relationship, so mixing them up is only
-> >>>>> asking for trouble further down the road.
-> >>>>> If we really need to carry some information from seccomp to lsm+bpf,
-> >>>>> it's easier to add eBPF support to seccomp and let bpf side deal
-> >>>>> with passing whatever information.
-> >>>>>
-> >>>>
-> >>>> As an argument for keeping seccomp (or an extended seccomp) as the
-> >>>> interface for an unprivileged bpf+lsm: seccomp already checks off most
-> >>>> of the boxes for safely letting unprivileged programs sandbox
-> >>>> themselves.
-> >>>
-> >>> you mean the attach part of seccomp syscall that deals with no_new_priv?
-> >>> sure, that's reusable.
-> >>>
-> >>>> Furthermore, to the extent that there are use cases for
-> >>>> unprivileged bpf+lsm that *aren't* expressible within the seccomp
-> >>>> hierarchy, I suspect that syscall filters have exactly the same
-> >>>> problem and that we should fix seccomp to cover it.
-> >>>
-> >>> not sure what you mean by 'seccomp hierarchy'. The normal process
-> >>> hierarchy ?
-> >>
-> >> Kind of.  I mean the filter layers that are inherited across fork(),
-> >> the TSYNC mechanism, etc.
-> >>
-> >>> imo the main deficiency of secccomp is inability to look into arguments.
-> >>> One can argue that it's a blessing, since composite args
-> >>> are not yet copied into the kernel memory.
-> >>> But in a lot of cases the seccomp arguments are FDs pointing
-> >>> to kernel objects and if programs could examine those objects
-> >>> the sandboxing scope would be more precise.
-> >>> lsm+bpf solves that part and I'd still argue that it's
-> >>> orthogonal to seccomp's pass/reject flow.
-> >>> I mean if seccomp says 'ok' the syscall should continue executing
-> >>> as normal and whatever LSM hooks were triggered by it may have
-> >>> their own lsm+bpf verdicts.
-> >>
-> >> I agree with all of this...
-> >>
-> >>> Furthermore in the process hierarchy different children
-> >>> should be able to set their own lsm+bpf filters that are not
-> >>> related to parallel seccomp+bpf hierarchy of programs.
-> >>> seccomp syscall can be an interface to attach programs
-> >>> to lsm hooks, but nothing more than that.
-> >>
-> >> I'm not sure what you mean.  I mean that, logically, I think we should
-> >> be able to do:
-> >>
-> >> seccomp(attach a syscall filter);
-> >> fork();
-> >> child does seccomp(attach some lsm filters);
-> >>
-> >> I think that they *should* be related to the seccomp+bpf hierarchy of
-> >> programs in that they are entries in the same logical list of filter
-> >> layers installed.  Some of those layers can be syscall filters and
-> >> some of the layers can be lsm filters.  If we subsequently add a way
-> >> to attach a removable seccomp filter or a way to attach a seccomp
-> >> filter that logs failures to some fd watched by an outside monitor, I
-> >> think that should work for lsm, too, with more or less the same
-> >> interface.
-> >>
-> >> If we need a way for a sandbox manager to opt different children into
-> >> different subsets of fancy filters, then I think that syscall filters
-> >> and lsm filters should use the same mechanism.
-> >>
-> >> I think we might be on the same page here and just saying it different ways.
-> > 
-> > Sounds like it :)
-> > All of the above makes sense to me.
-> > The 'orthogonal' part is that the user should be able to use
-> > this seccomp-managed hierarchy without actually enabling
-> > TIF_SECCOMP for the task and syscalls should still go through
-> > fast path and all the way till lsm hooks as normal.
-> > I don't want to pay _any_ performance penalty for this feature
-> > for lsm hooks (and all syscalls) that don't have bpf programs attached.
-> 
-> Yes, it seems that we are all on the same page here, and that match this
-> RFC implementation. So, using the seccomp(2) *interface* to attach
-> Landlock programs to a process hierarchy is still on track. :)
-> 
+While running a compile on arm64, I hit a memory exposure
 
-So, I'm catching up on this after a little while away. I really like the 
-simplicity of the approach Daniel took with his patches. I began to have 
-difficulty reading your patchset once you got into using seccomp + unprivileged 
-mode. I would love to see a separate patchset that only have the verifier, and
-lsm hook changes. Do you think you could decompose your patchset into an MVP?
+usercopy: kernel memory exposure attempt detected from fffffc0000f3b1a8 (buffer_head) (1 bytes)
+------------[ cut here ]------------
+kernel BUG at mm/usercopy.c:75!
+Internal error: Oops - BUG: 0 [#1] SMP
+Modules linked in: ip6t_rpfilter ip6t_REJECT
+nf_reject_ipv6 xt_conntrack ip_set nfnetlink ebtable_broute bridge stp
+llc ebtable_nat ip6table_security ip6table_raw ip6table_nat
+nf_conntrack_ipv6 nf_defrag_ipv6 nf_nat_ipv6 ip6table_mangle
+iptable_security iptable_raw iptable_nat nf_conntrack_ipv4
+nf_defrag_ipv4 nf_nat_ipv4 nf_nat nf_conntrack iptable_mangle
+ebtable_filter ebtables ip6table_filter ip6_tables vfat fat xgene_edac
+xgene_enet edac_core i2c_xgene_slimpro i2c_core at803x realtek xgene_dma
+mdio_xgene gpio_dwapb gpio_xgene_sb xgene_rng mailbox_xgene_slimpro nfsd
+auth_rpcgss nfs_acl lockd grace sunrpc xfs libcrc32c sdhci_of_arasan
+sdhci_pltfm sdhci mmc_core xhci_plat_hcd gpio_keys
+CPU: 0 PID: 19744 Comm: updatedb Tainted: G        W 4.8.0-rc3-threadinfo+ #1
+Hardware name: AppliedMicro X-Gene Mustang Board/X-Gene Mustang Board, BIOS 3.06.12 Aug 12 2016
+task: fffffe03df944c00 task.stack: fffffe00d128c000
+PC is at __check_object_size+0x70/0x3f0
+LR is at __check_object_size+0x70/0x3f0
+...
+[<fffffc00082b4280>] __check_object_size+0x70/0x3f0
+[<fffffc00082cdc30>] filldir64+0x158/0x1a0
+[<fffffc0000f327e8>] __fat_readdir+0x4a0/0x558 [fat]
+[<fffffc0000f328d4>] fat_readdir+0x34/0x40 [fat]
+[<fffffc00082cd8f8>] iterate_dir+0x190/0x1e0
+[<fffffc00082cde58>] SyS_getdents64+0x88/0x120
+[<fffffc0008082c70>] el0_svc_naked+0x24/0x28
+
+fffffc0000f3b1a8 is a module address. Modules may have compiled in
+strings which could get copied to userspace. In this instance, it
+looks like "." which matches with a size of 1 byte. Extend the
+is_vmalloc_addr check to be is_vmalloc_or_module_addr to cover
+all possible cases.
+
+Signed-off-by: Laura Abbott <labbott@redhat.com>
+---
+Longer term, it would be good to expand the check for to regions like
+regular kernel memory.
+---
+ mm/usercopy.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/mm/usercopy.c b/mm/usercopy.c
+index 8ebae91..d8b5bd3 100644
+--- a/mm/usercopy.c
++++ b/mm/usercopy.c
+@@ -145,8 +145,11 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
+ 	 * Some architectures (arm64) return true for virt_addr_valid() on
+ 	 * vmalloced addresses. Work around this by checking for vmalloc
+ 	 * first.
++	 *
++	 * We also need to check for module addresses explicitly since we
++	 * may copy static data from modules to userspace
+ 	 */
+-	if (is_vmalloc_addr(ptr))
++	if (is_vmalloc_or_module_addr(ptr))
+ 		return NULL;
+ 
+ 	if (!virt_addr_valid(ptr))
+-- 
+2.7.4
