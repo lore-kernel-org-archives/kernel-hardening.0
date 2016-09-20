@@ -1,142 +1,98 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1472121165-29071-1-git-send-email-mic@digikod.net>
- <20160915091902.GA13132@amd>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <57E16D07.4050301@digikod.net>
-Date: Tue, 20 Sep 2016 19:08:23 +0200
 MIME-Version: 1.0
-In-Reply-To: <20160915091902.GA13132@amd>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="qCGnkx6Xsl403aB6RcdWeL44MRl01kuMn"
-Subject: [kernel-hardening] Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
-To: Pavel Machek <pavel@ucw.cz>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+Sender: keescook@google.com
+In-Reply-To: <1474386996-16049-1-git-send-email-labbott@redhat.com>
+References: <1474386996-16049-1-git-send-email-labbott@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 20 Sep 2016 16:01:43 -0700
+Message-ID: <CAGXu5jJBhNRF50q562THamJY-PKm9RpFW+id9GCaRzwezQ_xZA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] mm: usercopy: Check for module addresses
+To: Laura Abbott <labbott@redhat.com>
+Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---qCGnkx6Xsl403aB6RcdWeL44MRl01kuMn
-Content-Type: multipart/mixed; boundary="2xnahhT8xFxA5OadQCPpMiuTdVSSUewE4";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Pavel Machek <pavel@ucw.cz>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>,
- David Drysdale <drysdale@google.com>, "David S . Miller"
- <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>,
- James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>,
- kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org,
- linux-security-module@vger.kernel.org, netdev@vger.kernel.org
-Message-ID: <57E16D07.4050301@digikod.net>
-Subject: Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
-References: <1472121165-29071-1-git-send-email-mic@digikod.net>
- <20160915091902.GA13132@amd>
-In-Reply-To: <20160915091902.GA13132@amd>
+On Tue, Sep 20, 2016 at 8:56 AM, Laura Abbott <labbott@redhat.com> wrote:
+> While running a compile on arm64, I hit a memory exposure
+>
+> usercopy: kernel memory exposure attempt detected from fffffc0000f3b1a8 (buffer_head) (1 bytes)
+> ------------[ cut here ]------------
+> kernel BUG at mm/usercopy.c:75!
+> Internal error: Oops - BUG: 0 [#1] SMP
+> Modules linked in: ip6t_rpfilter ip6t_REJECT
+> nf_reject_ipv6 xt_conntrack ip_set nfnetlink ebtable_broute bridge stp
+> llc ebtable_nat ip6table_security ip6table_raw ip6table_nat
+> nf_conntrack_ipv6 nf_defrag_ipv6 nf_nat_ipv6 ip6table_mangle
+> iptable_security iptable_raw iptable_nat nf_conntrack_ipv4
+> nf_defrag_ipv4 nf_nat_ipv4 nf_nat nf_conntrack iptable_mangle
+> ebtable_filter ebtables ip6table_filter ip6_tables vfat fat xgene_edac
+> xgene_enet edac_core i2c_xgene_slimpro i2c_core at803x realtek xgene_dma
+> mdio_xgene gpio_dwapb gpio_xgene_sb xgene_rng mailbox_xgene_slimpro nfsd
+> auth_rpcgss nfs_acl lockd grace sunrpc xfs libcrc32c sdhci_of_arasan
+> sdhci_pltfm sdhci mmc_core xhci_plat_hcd gpio_keys
+> CPU: 0 PID: 19744 Comm: updatedb Tainted: G        W 4.8.0-rc3-threadinfo+ #1
+> Hardware name: AppliedMicro X-Gene Mustang Board/X-Gene Mustang Board, BIOS 3.06.12 Aug 12 2016
+> task: fffffe03df944c00 task.stack: fffffe00d128c000
+> PC is at __check_object_size+0x70/0x3f0
+> LR is at __check_object_size+0x70/0x3f0
+> ...
+> [<fffffc00082b4280>] __check_object_size+0x70/0x3f0
+> [<fffffc00082cdc30>] filldir64+0x158/0x1a0
+> [<fffffc0000f327e8>] __fat_readdir+0x4a0/0x558 [fat]
+> [<fffffc0000f328d4>] fat_readdir+0x34/0x40 [fat]
+> [<fffffc00082cd8f8>] iterate_dir+0x190/0x1e0
+> [<fffffc00082cde58>] SyS_getdents64+0x88/0x120
+> [<fffffc0008082c70>] el0_svc_naked+0x24/0x28
+>
+> fffffc0000f3b1a8 is a module address. Modules may have compiled in
+> strings which could get copied to userspace. In this instance, it
+> looks like "." which matches with a size of 1 byte. Extend the
+> is_vmalloc_addr check to be is_vmalloc_or_module_addr to cover
+> all possible cases.
+>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> Longer term, it would be good to expand the check for to regions like
+> regular kernel memory.
+> ---
+>  mm/usercopy.c | 5 ++++-
+>  1 file changed, 4 insertions(+), 1 deletion(-)
+>
+> diff --git a/mm/usercopy.c b/mm/usercopy.c
+> index 8ebae91..d8b5bd3 100644
+> --- a/mm/usercopy.c
+> +++ b/mm/usercopy.c
+> @@ -145,8 +145,11 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
+>          * Some architectures (arm64) return true for virt_addr_valid() on
+>          * vmalloced addresses. Work around this by checking for vmalloc
+>          * first.
+> +        *
+> +        * We also need to check for module addresses explicitly since we
+> +        * may copy static data from modules to userspace
+>          */
+> -       if (is_vmalloc_addr(ptr))
+> +       if (is_vmalloc_or_module_addr(ptr))
+>                 return NULL;
 
---2xnahhT8xFxA5OadQCPpMiuTdVSSUewE4
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
+I still don't understand why this happens on arm64 and not x86.
+(Really what I don't understand is what virt_addr_valid() is actually
+checking -- they seem to be checking very different things between x86
+and arm64.)
 
+Regardless, I'll get this pushed to Linus and try to make the -rc8 cut.
 
-On 15/09/2016 11:19, Pavel Machek wrote:
-> Hi!
->=20
->> This series is a proof of concept to fill some missing part of seccomp=
- as the
->> ability to check syscall argument pointers or creating more dynamic se=
-curity
->> policies. The goal of this new stackable Linux Security Module (LSM) c=
-alled
->> Landlock is to allow any process, including unprivileged ones, to crea=
-te
->> powerful security sandboxes comparable to the Seatbelt/XNU Sandbox or =
-the
->> OpenBSD Pledge. This kind of sandbox help to mitigate the security imp=
-act of
->> bugs or unexpected/malicious behaviors in userland applications.
->>
->> The first RFC [1] was focused on extending seccomp while staying at th=
-e syscall
->> level. This brought a working PoC but with some (mitigated) ToCToU rac=
-e
->> conditions due to the seccomp ptrace hole (now fixed) and the non-atom=
-ic
->> syscall argument evaluation (hence the LSM hooks).
->=20
-> Long and nice description follows. Should it go to Documentation/
-> somewhere?
->=20
-> Because some documentation would be useful...
-> 								Pavel
+Thanks!
 
-Right, but I was looking for feedback before investing in documentation. =
-:)
+-Kees
 
-
->=20
->>  include/linux/bpf.h                   |  41 +++++
->>  include/linux/lsm_hooks.h             |   5 +
->>  include/linux/seccomp.h               |  54 ++++++-
->>  include/uapi/asm-generic/errno-base.h |   1 +
->>  include/uapi/linux/bpf.h              | 103 ++++++++++++
->>  include/uapi/linux/seccomp.h          |   2 +
->>  kernel/bpf/arraymap.c                 | 222 +++++++++++++++++++++++++=
-
->>  kernel/bpf/syscall.c                  |  18 ++-
->>  kernel/bpf/verifier.c                 |  32 +++-
->>  kernel/fork.c                         |  41 ++++-
->>  kernel/seccomp.c                      | 211 +++++++++++++++++++++++-
->>  samples/Makefile                      |   2 +-
->>  samples/landlock/.gitignore           |   1 +
->>  samples/landlock/Makefile             |  16 ++
->>  samples/landlock/sandbox.c            | 295 +++++++++++++++++++++++++=
-+++++++++
->>  security/Kconfig                      |   1 +
->>  security/Makefile                     |   2 +
->>  security/landlock/Kconfig             |  19 +++
->>  security/landlock/Makefile            |   3 +
->>  security/landlock/checker_cgroup.c    |  96 +++++++++++
->>  security/landlock/checker_cgroup.h    |  18 +++
->>  security/landlock/checker_fs.c        | 183 +++++++++++++++++++++
->>  security/landlock/checker_fs.h        |  20 +++
->>  security/landlock/lsm.c               | 228 +++++++++++++++++++++++++=
-+
->>  security/security.c                   |   1 +
->>  25 files changed, 1592 insertions(+), 23 deletions(-)
->>  create mode 100644 samples/landlock/.gitignore
->>  create mode 100644 samples/landlock/Makefile
->>  create mode 100644 samples/landlock/sandbox.c
->>  create mode 100644 security/landlock/Kconfig
->>  create mode 100644 security/landlock/Makefile
->>  create mode 100644 security/landlock/checker_cgroup.c
->>  create mode 100644 security/landlock/checker_cgroup.h
->>  create mode 100644 security/landlock/checker_fs.c
->>  create mode 100644 security/landlock/checker_fs.h
->>  create mode 100644 security/landlock/lsm.c
->>
->=20
+>
+>         if (!virt_addr_valid(ptr))
+> --
+> 2.7.4
+>
 
 
---2xnahhT8xFxA5OadQCPpMiuTdVSSUewE4--
 
---qCGnkx6Xsl403aB6RcdWeL44MRl01kuMn
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQEcBAEBCgAGBQJX4W0HAAoJECLe/t9zvWqVHacH/ipSB6nL2c5sDoB6jrPNVins
-pMccCBGxJnFe1+ha++v5N/zEabUeWe997GcmZOyGosO5b6HmHY1GvK2cH3T1qfiO
-3TfLPqPaXdBG28VOhsd7JD3uSgH33rQfQ0tJMHBklbtQbAtFa34II1j+o0gbYx0E
-YTRntshXVrRrkpP8RxLehIrn7oSQ3Z9gnvqzBQU/31FLNJBn4uVr7FJrswOio1tU
-drVgZxJ0R1y+JAP7CfR31CsR3Sbvj2rRRhMVOOtHrU7twwHNDJjhlC6FHW0z2qYv
-WUAfml6fHRvE0ERBEyA06g+SnjrcaJ2uHhsz7Xsx1sUcxGj7L51vAWAQr+R6efw=
-=Pc46
------END PGP SIGNATURE-----
-
---qCGnkx6Xsl403aB6RcdWeL44MRl01kuMn--
+-- 
+Kees Cook
+Nexus Security
