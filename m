@@ -1,98 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <1473947349-14521-1-git-send-email-mark.rutland@arm.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <f954c330-fb58-5f8f-1d66-5bbcd0d9dadb@redhat.com>
+Date: Tue, 20 Sep 2016 18:26:54 -0700
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1474386996-16049-1-git-send-email-labbott@redhat.com>
-References: <1474386996-16049-1-git-send-email-labbott@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 20 Sep 2016 16:01:43 -0700
-Message-ID: <CAGXu5jJBhNRF50q562THamJY-PKm9RpFW+id9GCaRzwezQ_xZA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] mm: usercopy: Check for module addresses
-To: Laura Abbott <labbott@redhat.com>
-Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1473947349-14521-1-git-send-email-mark.rutland@arm.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC PATCH 0/8] arm64: move thread_info off of the task stack
+To: Mark Rutland <mark.rutland@arm.com>, linux-arm-kernel@lists.infradead.org
+Cc: akpm@linux-foundation.org, ard.biesheuvel@linaro.org, catalin.marinas@arm.com, james.morse@arm.com, keescook@chromium.org, linux-kernel@vger.kernel.org, lorenzo.pieralisi@arm.com, luto@kernel.org, suzuki.poulose@arm.com, takahiro.akashi@linaro.org, will.deacon@arm.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Sep 20, 2016 at 8:56 AM, Laura Abbott <labbott@redhat.com> wrote:
-> While running a compile on arm64, I hit a memory exposure
+On 09/15/2016 06:49 AM, Mark Rutland wrote:
+> Building atop of Andy's work on x86 and generic code, these patches move
+> arm64's thread_info off of the stack and into task_struct. This protects
+> thread_info from corruption in the face of stack overflow, and serves as
+> a step towards fully robust stack overflow handling will be addressed by
+> subsequent patches.
 >
-> usercopy: kernel memory exposure attempt detected from fffffc0000f3b1a8 (buffer_head) (1 bytes)
-> ------------[ cut here ]------------
-> kernel BUG at mm/usercopy.c:75!
-> Internal error: Oops - BUG: 0 [#1] SMP
-> Modules linked in: ip6t_rpfilter ip6t_REJECT
-> nf_reject_ipv6 xt_conntrack ip_set nfnetlink ebtable_broute bridge stp
-> llc ebtable_nat ip6table_security ip6table_raw ip6table_nat
-> nf_conntrack_ipv6 nf_defrag_ipv6 nf_nat_ipv6 ip6table_mangle
-> iptable_security iptable_raw iptable_nat nf_conntrack_ipv4
-> nf_defrag_ipv4 nf_nat_ipv4 nf_nat nf_conntrack iptable_mangle
-> ebtable_filter ebtables ip6table_filter ip6_tables vfat fat xgene_edac
-> xgene_enet edac_core i2c_xgene_slimpro i2c_core at803x realtek xgene_dma
-> mdio_xgene gpio_dwapb gpio_xgene_sb xgene_rng mailbox_xgene_slimpro nfsd
-> auth_rpcgss nfs_acl lockd grace sunrpc xfs libcrc32c sdhci_of_arasan
-> sdhci_pltfm sdhci mmc_core xhci_plat_hcd gpio_keys
-> CPU: 0 PID: 19744 Comm: updatedb Tainted: G        W 4.8.0-rc3-threadinfo+ #1
-> Hardware name: AppliedMicro X-Gene Mustang Board/X-Gene Mustang Board, BIOS 3.06.12 Aug 12 2016
-> task: fffffe03df944c00 task.stack: fffffe00d128c000
-> PC is at __check_object_size+0x70/0x3f0
-> LR is at __check_object_size+0x70/0x3f0
-> ...
-> [<fffffc00082b4280>] __check_object_size+0x70/0x3f0
-> [<fffffc00082cdc30>] filldir64+0x158/0x1a0
-> [<fffffc0000f327e8>] __fat_readdir+0x4a0/0x558 [fat]
-> [<fffffc0000f328d4>] fat_readdir+0x34/0x40 [fat]
-> [<fffffc00082cd8f8>] iterate_dir+0x190/0x1e0
-> [<fffffc00082cde58>] SyS_getdents64+0x88/0x120
-> [<fffffc0008082c70>] el0_svc_naked+0x24/0x28
+> In contrast to x86, we can't place some critical data such as
+> preempt_count in percpu variables, and we must store these in some
+> per-task location. This, compounded with the way headers are organised
+> conspires to require us to still define our own thread_info. I
+> understand that the longer term plan is to kill off thread_info
+> entirely, hence I'm sending this as an RFC so we can figure out if/how
+> we can achieve that.
 >
-> fffffc0000f3b1a8 is a module address. Modules may have compiled in
-> strings which could get copied to userspace. In this instance, it
-> looks like "." which matches with a size of 1 byte. Extend the
-> is_vmalloc_addr check to be is_vmalloc_or_module_addr to cover
-> all possible cases.
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
-> Longer term, it would be good to expand the check for to regions like
-> regular kernel memory.
-> ---
->  mm/usercopy.c | 5 ++++-
->  1 file changed, 4 insertions(+), 1 deletion(-)
->
-> diff --git a/mm/usercopy.c b/mm/usercopy.c
-> index 8ebae91..d8b5bd3 100644
-> --- a/mm/usercopy.c
-> +++ b/mm/usercopy.c
-> @@ -145,8 +145,11 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
->          * Some architectures (arm64) return true for virt_addr_valid() on
->          * vmalloced addresses. Work around this by checking for vmalloc
->          * first.
-> +        *
-> +        * We also need to check for module addresses explicitly since we
-> +        * may copy static data from modules to userspace
->          */
-> -       if (is_vmalloc_addr(ptr))
-> +       if (is_vmalloc_or_module_addr(ptr))
->                 return NULL;
-
-I still don't understand why this happens on arm64 and not x86.
-(Really what I don't understand is what virt_addr_valid() is actually
-checking -- they seem to be checking very different things between x86
-and arm64.)
-
-Regardless, I'll get this pushed to Linus and try to make the -rc8 cut.
-
-Thanks!
-
--Kees
-
->
->         if (!virt_addr_valid(ptr))
-> --
-> 2.7.4
+> These patches are based on Andy's x86/vmap_stack branch [1,2], and I've
+> pushed a copy to me arm64/ti-stack-split branch [3,4]. The result of
+> these patches boots happily on platforms within reach of my desk, but
+> has not seen much stressing so far.
 >
 
+FWIW, I used your ti-stack-split branch while running some kernel builds
+and it seems to work well enough. You can take that as a Tested-by or I
+can re-test with a non-RFC version.
 
-
--- 
-Kees Cook
-Nexus Security
+> Thanks,
+> Mark.
+>
+> [1] git://git.kernel.org/pub/scm/linux/kernel/git/luto/linux.git x86/vmap_stack
+> [2] https://git.kernel.org/cgit/linux/kernel/git/luto/linux.git/log/?h=x86/vmap_stack
+> [3] git://git.kernel.org/pub/scm/linux/kernel/git/mark/linux.git arm64/ti-stack-split
+> [4] https://git.kernel.org/cgit/linux/kernel/git/mark/linux.git/log/?h=arm64/ti-stack-split
+>
+> Mark Rutland (8):
+>   thread_info: include <current.h> for THREAD_INFO_IN_TASK
+>   thread_info: allow custom in-task thread_info
+>   arm64: thread_info remove stale items
+>   arm64: asm-offsets: remove unused definitions
+>   arm64: assembler: introduce ldr_this_cpu
+>   arm64: traps: use task_struct instead of thread_info
+>   arm64: move sp_el0 and tpidr_el1 into cpu_suspend_ctx
+>   arm64: split thread_info from task stack
+>
+>  arch/arm64/Kconfig                   |  2 ++
+>  arch/arm64/include/asm/Kbuild        |  1 -
+>  arch/arm64/include/asm/assembler.h   | 19 +++++++++++++++----
+>  arch/arm64/include/asm/current.h     | 22 ++++++++++++++++++++++
+>  arch/arm64/include/asm/smp.h         |  1 +
+>  arch/arm64/include/asm/suspend.h     |  2 +-
+>  arch/arm64/include/asm/thread_info.h | 21 ---------------------
+>  arch/arm64/kernel/asm-offsets.c      |  3 +--
+>  arch/arm64/kernel/entry.S            |  6 +++---
+>  arch/arm64/kernel/head.S             | 11 +++++------
+>  arch/arm64/kernel/process.c          | 31 ++++++++++++++++++++++++++-----
+>  arch/arm64/kernel/sleep.S            |  3 ---
+>  arch/arm64/kernel/smp.c              |  2 ++
+>  arch/arm64/kernel/stacktrace.c       |  5 +++++
+>  arch/arm64/kernel/suspend.c          |  6 ------
+>  arch/arm64/kernel/traps.c            | 12 ++++++------
+>  arch/arm64/mm/proc.S                 |  6 ++++++
+>  include/linux/thread_info.h          |  4 +++-
+>  init/Kconfig                         |  3 +++
+>  19 files changed, 101 insertions(+), 59 deletions(-)
+>  create mode 100644 arch/arm64/include/asm/current.h
+>
