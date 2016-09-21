@@ -1,103 +1,108 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1474386996-16049-1-git-send-email-labbott@redhat.com>
- <CAGXu5jJBhNRF50q562THamJY-PKm9RpFW+id9GCaRzwezQ_xZA@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <c9060494-5b69-b346-b44d-249d62a3f662@redhat.com>
-Date: Tue, 20 Sep 2016 20:08:06 -0700
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-3-juerg.haefliger@hpe.com> <57D95FA3.3030103@intel.com>
+ <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com> <57D9633A.2010702@intel.com>
+Message-ID: <09d3ac8c-1111-b7aa-4720-b7a7b7c7798b@hpe.com>
+Date: Wed, 21 Sep 2016 07:32:09 +0200
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jJBhNRF50q562THamJY-PKm9RpFW+id9GCaRzwezQ_xZA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] mm: usercopy: Check for module addresses
-To: Kees Cook <keescook@chromium.org>
-Cc: Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <57D9633A.2010702@intel.com>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="c2csM3GwGuAP6k4UUq4uQ3pOeC0oH3gwe"
+Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
+ userspace pages into the hot cache
+To: Dave Hansen <dave.hansen@intel.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, linux-mm@kvack.org, linux-x86_64@vger.kernel.org
+Cc: vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 09/20/2016 04:01 PM, Kees Cook wrote:
-> On Tue, Sep 20, 2016 at 8:56 AM, Laura Abbott <labbott@redhat.com> wrote:
->> While running a compile on arm64, I hit a memory exposure
->>
->> usercopy: kernel memory exposure attempt detected from fffffc0000f3b1a8 (buffer_head) (1 bytes)
->> ------------[ cut here ]------------
->> kernel BUG at mm/usercopy.c:75!
->> Internal error: Oops - BUG: 0 [#1] SMP
->> Modules linked in: ip6t_rpfilter ip6t_REJECT
->> nf_reject_ipv6 xt_conntrack ip_set nfnetlink ebtable_broute bridge stp
->> llc ebtable_nat ip6table_security ip6table_raw ip6table_nat
->> nf_conntrack_ipv6 nf_defrag_ipv6 nf_nat_ipv6 ip6table_mangle
->> iptable_security iptable_raw iptable_nat nf_conntrack_ipv4
->> nf_defrag_ipv4 nf_nat_ipv4 nf_nat nf_conntrack iptable_mangle
->> ebtable_filter ebtables ip6table_filter ip6_tables vfat fat xgene_edac
->> xgene_enet edac_core i2c_xgene_slimpro i2c_core at803x realtek xgene_dma
->> mdio_xgene gpio_dwapb gpio_xgene_sb xgene_rng mailbox_xgene_slimpro nfsd
->> auth_rpcgss nfs_acl lockd grace sunrpc xfs libcrc32c sdhci_of_arasan
->> sdhci_pltfm sdhci mmc_core xhci_plat_hcd gpio_keys
->> CPU: 0 PID: 19744 Comm: updatedb Tainted: G        W 4.8.0-rc3-threadinfo+ #1
->> Hardware name: AppliedMicro X-Gene Mustang Board/X-Gene Mustang Board, BIOS 3.06.12 Aug 12 2016
->> task: fffffe03df944c00 task.stack: fffffe00d128c000
->> PC is at __check_object_size+0x70/0x3f0
->> LR is at __check_object_size+0x70/0x3f0
->> ...
->> [<fffffc00082b4280>] __check_object_size+0x70/0x3f0
->> [<fffffc00082cdc30>] filldir64+0x158/0x1a0
->> [<fffffc0000f327e8>] __fat_readdir+0x4a0/0x558 [fat]
->> [<fffffc0000f328d4>] fat_readdir+0x34/0x40 [fat]
->> [<fffffc00082cd8f8>] iterate_dir+0x190/0x1e0
->> [<fffffc00082cde58>] SyS_getdents64+0x88/0x120
->> [<fffffc0008082c70>] el0_svc_naked+0x24/0x28
->>
->> fffffc0000f3b1a8 is a module address. Modules may have compiled in
->> strings which could get copied to userspace. In this instance, it
->> looks like "." which matches with a size of 1 byte. Extend the
->> is_vmalloc_addr check to be is_vmalloc_or_module_addr to cover
->> all possible cases.
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->> Longer term, it would be good to expand the check for to regions like
->> regular kernel memory.
->> ---
->>  mm/usercopy.c | 5 ++++-
->>  1 file changed, 4 insertions(+), 1 deletion(-)
->>
->> diff --git a/mm/usercopy.c b/mm/usercopy.c
->> index 8ebae91..d8b5bd3 100644
->> --- a/mm/usercopy.c
->> +++ b/mm/usercopy.c
->> @@ -145,8 +145,11 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
->>          * Some architectures (arm64) return true for virt_addr_valid() on
->>          * vmalloced addresses. Work around this by checking for vmalloc
->>          * first.
->> +        *
->> +        * We also need to check for module addresses explicitly since we
->> +        * may copy static data from modules to userspace
->>          */
->> -       if (is_vmalloc_addr(ptr))
->> +       if (is_vmalloc_or_module_addr(ptr))
->>                 return NULL;
->
-> I still don't understand why this happens on arm64 and not x86.
-> (Really what I don't understand is what virt_addr_valid() is actually
-> checking -- they seem to be checking very different things between x86
-> and arm64.)
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--c2csM3GwGuAP6k4UUq4uQ3pOeC0oH3gwe
+Content-Type: multipart/mixed; boundary="cp3KG1pRWNVkg2cUrE2FeqpfXPuIvKHFp";
+ protected-headers="v1"
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+To: Dave Hansen <dave.hansen@intel.com>, kernel-hardening@lists.openwall.com,
+ linux-kernel@vger.kernel.org, linux-mm@kvack.org,
+ linux-x86_64@vger.kernel.org
+Cc: vpk@cs.columbia.edu
+Message-ID: <09d3ac8c-1111-b7aa-4720-b7a7b7c7798b@hpe.com>
+Subject: Re: [kernel-hardening] [RFC PATCH v2 2/3] xpfo: Only put previous
+ userspace pages into the hot cache
+References: <20160902113909.32631-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20160914071901.8127-3-juerg.haefliger@hpe.com> <57D95FA3.3030103@intel.com>
+ <7badeb6c-e343-4327-29ed-f9c9c0b6654b@hpe.com> <57D9633A.2010702@intel.com>
+In-Reply-To: <57D9633A.2010702@intel.com>
 
-virt_addr_valid is supposed to return true if and only if virt_to_page
-returns a valid pointer. arm64 is currently returning true in some
-cases it shouldn't. I finally got to work on a patch to fix it up so
-hopefully once that gets submitted we can drop these extra checks.
+--cp3KG1pRWNVkg2cUrE2FeqpfXPuIvKHFp
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
 
->
-> Regardless, I'll get this pushed to Linus and try to make the -rc8 cut.
->
-> Thanks!
->
-> -Kees
->
+On 09/14/2016 04:48 PM, Dave Hansen wrote:
+>> On 09/02/2016 10:39 PM, Dave Hansen wrote:
+>>> On 09/02/2016 04:39 AM, Juerg Haefliger wrote:
+>>> Does this
+>>> just mean that kernel allocations usually have to pay the penalty to
+>>> convert a page?
 >>
->>         if (!virt_addr_valid(ptr))
->> --
->> 2.7.4
+>> Only pages that are allocated for userspace (gfp & GFP_HIGHUSER =3D=3D=
+ GFP_HIGHUSER) which were
+>> previously allocated for the kernel (gfp & GFP_HIGHUSER !=3D GFP_HIGHU=
+SER) have to pay the penalty.
 >>
->
->
->
+>>> So, what's the logic here?  You're assuming that order-0 kernel
+>>> allocations are more rare than allocations for userspace?
+>>
+>> The logic is to put reclaimed kernel pages into the cold cache to
+>> postpone their allocation as long as possible to minimize (potential)
+>> TLB flushes.
+>=20
+> OK, but if we put them in the cold area but kernel allocations pull the=
+m
+> from the hot cache, aren't we virtually guaranteeing that kernel
+> allocations will have to to TLB shootdown to convert a page?
+
+No. Allocations for the kernel never require a TLB shootdown. Only alloca=
+tions for userspace (and
+only if the page was previously a kernel page).
+
+
+> It seems like you also need to convert all kernel allocations to pull
+> from the cold area.
+
+Kernel allocations can continue to pull from the hot cache. Maybe introdu=
+ce another cache for the
+userspace pages? But I'm not sure what other implications this might have=
+=2E
+
+=2E..Juerg
+
+
+
+--cp3KG1pRWNVkg2cUrE2FeqpfXPuIvKHFp--
+
+--c2csM3GwGuAP6k4UUq4uQ3pOeC0oH3gwe
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJX4httAAoJEHVMOpb5+LSMZ70P+wUBIgtKwmFUXkR1gRWJRVMx
+qaebjDcW32Edkxrg0579JSX3QHbpdQ9FU/oA/2gAGWpBi+w1WzJM/RzRHPxEG+ef
+e9vimmquTKzWdJSwEy1AqJSwF3QE39o0aJmsGBycvrc9mKQKb8rSSjpthSlOPCtb
+S8a9IRL3zghpOAeQSkKuiWYhYTHcfmYQpSBcBrzP3cCuX17LNKNHIGeRb4uFdbMA
+MMtSUCnXt8mkk5HgTXkAGv0UN+ox+bBIQ1hzHbdyTSahKzi6pIDlcufMaz9JSxHH
+CVVdll/vzPBB2hAQ7nTa+4bOULe091bHMDM4ibI9O3e70E1HIdGwjyKHZFdTMQeT
+Ft8GC4+LRQYphOlZi/UrhzLPaZMfew4PZAslo6EuPyixxZ+9B/hMy70O35p8y1zL
+3RYb+oAPF8WGUQXQ71DHj3eOVaHxPwTxFXSF2rdRoGeicQEN1UP8J3X6ztbrUXR6
+rPVoArezDHp1vaj7IzeLAK/HDUKGQvhMi4sur9AHgdu6GK0zKg59OYZEgUHcilOU
+TvatAm5stL1IA127BzN1LBE4TZgIx78PxIqtTHXX5SR6n0x0WstcEgXuV5gR1YF+
+vxHNnBNBlLWTI5ztKRu5fD5pJRlRdqdua9WZEJVjj94vR+WgkE0tD5yMr2YPGoDZ
+9F1XnrIX6PCxw9lxJ8mq
+=MRdI
+-----END PGP SIGNATURE-----
+
+--c2csM3GwGuAP6k4UUq4uQ3pOeC0oH3gwe--
