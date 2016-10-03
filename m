@@ -1,44 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <57F2B105.9050400@intel.com>
-Date: Mon, 3 Oct 2016 12:27:01 -0700
-MIME-Version: 1.0
-In-Reply-To: <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for
- HARDENED_ATOMIC
+Message-ID: <1475522869.3304.0.camel@debian.org>
+From: Yves-Alexis Perez <corsac@debian.org>
+Date: Mon, 03 Oct 2016 21:27:49 +0200
+In-Reply-To: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
+References: 
+	<CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-oAIoIdBCy/CTww8gTio/"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Any artists around?
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/02/2016 11:41 PM, Elena Reshetova wrote:
->  static __always_inline void atomic_add(int i, atomic_t *v)
->  {
-> -	asm volatile(LOCK_PREFIX "addl %1,%0"
-> +	asm volatile(LOCK_PREFIX "addl %1,%0\n"
-> +
-> +#ifdef CONFIG_HARDENED_ATOMIC
-> +		     "jno 0f\n"
-> +		     LOCK_PREFIX "subl %1,%0\n"
-> +		     "int $4\n0:\n"
-> +		     _ASM_EXTABLE(0b, 0b)
-> +#endif
-> +
-> +		     : "+m" (v->counter)
-> +		     : "ir" (i));
-> +}
 
-Rather than doing all this assembly and exception stuff, could we just do:
+--=-oAIoIdBCy/CTww8gTio/
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-static __always_inline void atomic_add(int i, atomic_t *v)
-{
-	if (atomic_add_unless(v, a, INT_MAX))
-		BUG_ON_OVERFLOW_FOO()...
-}
+On Mon, 2016-10-03 at 12:16 -0700, Kees Cook wrote:
+> Does anyone have some suggestions or sketches for a logo we could use?
 
-That way, there's also no transient state where somebody can have
-observed the overflow before it is fixed up.  Granted, this
-cmpxchg-based operation _is_ more expensive than the fast-path locked addl.
+What about=C2=A0http://kernsec.org/images/overlord59-tux-halo.png=C2=A0from=
+ kernsec
+wiki?
+--=20
+Yves-Alexis
+--=-oAIoIdBCy/CTww8gTio/
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEcBAABCAAGBQJX8rE1AAoJEG3bU/KmdcClCeYH/1HeDS5b72rIwI/aWZjS8pcc
+e80gLl5yVd1/6OaLnMVuUm3ajhtCTcmzrEDan2Ye774lxp7MIhFoNluM3/LBVlB6
+CRDtPK6OE0OGkBiSLkgp2a1fbC/2UKobafUjmYCZ/z8825Ndt08RmXEDxOVg28h6
+mxBk4BOHN1lSzThkd7vTkKqojSur1/EKCXp2nqM2Y6vI3IRGbT511jSQkuxGKzX6
+9jtgK2QtYfnZSTPQLufjawpj9c6MwNgM9UZjc7NEzRnmPr/B5t86kOLC8IwzJnP4
+525D602FAuR+qGvvPuxzyQZ9quyeJUq0zOEyudfh3iDKppX5WDCdEbyKCOfFM6I=
+=qmMd
+-----END PGP SIGNATURE-----
+
+--=-oAIoIdBCy/CTww8gTio/--
