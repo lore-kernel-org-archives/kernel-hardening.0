@@ -1,33 +1,30 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Mon, 3 Oct 2016 19:21:47 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F31399D@ORSMSX107.amr.corp.intel.com>
+References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
+In-Reply-To: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-From: Kees Cook <keescook@google.com>
-Date: Mon, 3 Oct 2016 12:16:07 -0700
-Message-ID: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Any artists around?
+Subject: RE: [kernel-hardening] Any artists around?
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
-
-I've been asked if the Kernel Self-Protection Project has a logo. We
-don't have one, but in a world with logos even for exploits, it seems
-like we're missing something. :) Other defensive projects (like the
-major LSMs) have logos:
-
-SELinux:
-http://selinuxproject.org/images/selinux-penguin-125.png
-
-AppArmor:
-http://archive.is/pm43d/0d9cb927561e325784f3e6d20c97f56361795918.png
-
-Smack:
-https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Smack-tux.svg/237px-Smack-tux.svg.png
-
-Does anyone have some suggestions or sketches for a logo we could use?
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+SSBoYXZlIGEgbmFzdHkgaWRlYSwgYnV0IGl0IG1heSB0YWtlIGEgZGF5IG9yIHR3by4NCkJ3YWgg
+SGFoIEhhaCwNCg0KDQo+IC0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQo+IEZyb206IEtlZXMg
+Q29vayBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dDQo+IFNlbnQ6IE1vbmRheSwgT2N0b2Jl
+ciAwMywgMjAxNiAxMjoxNiBQTQ0KPiBUbzoga2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2Fs
+bC5jb20NCj4gU3ViamVjdDogW2tlcm5lbC1oYXJkZW5pbmddIEFueSBhcnRpc3RzIGFyb3VuZD8N
+Cj4gDQo+IEhpLA0KPiANCj4gSSd2ZSBiZWVuIGFza2VkIGlmIHRoZSBLZXJuZWwgU2VsZi1Qcm90
+ZWN0aW9uIFByb2plY3QgaGFzIGEgbG9nby4gV2UNCj4gZG9uJ3QgaGF2ZSBvbmUsIGJ1dCBpbiBh
+IHdvcmxkIHdpdGggbG9nb3MgZXZlbiBmb3IgZXhwbG9pdHMsIGl0IHNlZW1zDQo+IGxpa2Ugd2Un
+cmUgbWlzc2luZyBzb21ldGhpbmcuIDopIE90aGVyIGRlZmVuc2l2ZSBwcm9qZWN0cyAobGlrZSB0
+aGUNCj4gbWFqb3IgTFNNcykgaGF2ZSBsb2dvczoNCj4gDQo+IFNFTGludXg6DQo+IGh0dHA6Ly9z
+ZWxpbnV4cHJvamVjdC5vcmcvaW1hZ2VzL3NlbGludXgtcGVuZ3Vpbi0xMjUucG5nDQo+IA0KPiBB
+cHBBcm1vcjoNCj4gaHR0cDovL2FyY2hpdmUuaXMvcG00M2QvMGQ5Y2I5Mjc1NjFlMzI1Nzg0ZjNl
+NmQyMGM5N2Y1NjM2MTc5NTkxOC5wbmcNCj4gDQo+IFNtYWNrOg0KPiBodHRwczovL3VwbG9hZC53
+aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iLzAvMGMvU21hY2stDQo+IHR1eC5z
+dmcvMjM3cHgtU21hY2stdHV4LnN2Zy5wbmcNCj4gDQo+IERvZXMgYW55b25lIGhhdmUgc29tZSBz
+dWdnZXN0aW9ucyBvciBza2V0Y2hlcyBmb3IgYSBsb2dvIHdlIGNvdWxkIHVzZT8NCj4gDQo+IC1L
+ZWVzDQo+IA0KPiAtLQ0KPiBLZWVzIENvb2sNCj4gTmV4dXMgU2VjdXJpdHkNCg==
