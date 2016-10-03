@@ -1,111 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAEXv5_h55L8UyYpFy6qQUPBqGfxOOR+DEXywbNVkBb89a336UQ@mail.gmail.com>
+Date: Mon, 3 Oct 2016 23:57:40 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20161003215739.GO14666@pc.thejh.net>
 References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
- <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com> <CAEXv5_h55L8UyYpFy6qQUPBqGfxOOR+DEXywbNVkBb89a336UQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 3 Oct 2016 14:38:24 -0700
-Message-ID: <CAGXu5jLitFEp__P43VYqvq42At9qMo2_wpf=AR-8sDkmS06_LQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture independent hardened atomic base
-To: David Windsor <dwindsor@gmail.com>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>
+ <1475476886-26232-6-git-send-email-elena.reshetova@intel.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="Jl+DbTnyraiZ/loT"
+Content-Disposition: inline
+In-Reply-To: <1475476886-26232-6-git-send-email-elena.reshetova@intel.com>
+Subject: Re: [kernel-hardening] [RFC PATCH 05/13] fs: identify wrapping
+ atomic usage
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 3, 2016 at 2:26 PM, David Windsor <dwindsor@gmail.com> wrote:
-> On Mon, Oct 3, 2016 at 5:10 PM, Kees Cook <keescook@chromium.org> wrote:
->
->> > +}
->> > +#endif
->> > diff --git a/security/Kconfig b/security/Kconfig
->> > index 118f454..dc39f7e 100644
->> > --- a/security/Kconfig
->> > +++ b/security/Kconfig
->> > @@ -158,6 +158,21 @@ config HARDENED_USERCOPY_PAGESPAN
->> >           been removed. This config is intended to be used only while
->> >           trying to find such users.
->> >
->> > +config HAVE_ARCH_HARDENED_ATOMIC
->> > +       bool
->> > +       help
->> > +         The architecture supports CONFIG_HARDENED_ATOMIC by
->> > +         providing additional checks on counter overflows for atomic_t
->> > +
->> > +config HARDENED_ATOMIC
->> > +       bool "Prevent reference counter overflow in atomic_t"
->> > +       depends on HAVE_ARCH_HARDENED_ATOMIC
->>
->> Oh, this should select BUG too.
->>
->> > +       help
->> > +         This option prevents reference counters in atomic_t from
->> > +         overflow. This allows to avoid the
->> > +         situation when counter overflow leads to an exploitable
->> > +         use-after-free situation.
->>
->> I think the Kconfig help text could be clarified up a bit (and needs
->> some minor formatting adjustments). Perhaps something like:
->>
->> config HAVE_ARCH_HARDENED_ATOMIC
->> ...
->>   The architecture supports CONFIG_HARDENED_ATOMIC by
->>   providing trapping on atomic_t wraps, with a call to
->>   hardened_atomic_overflow().
->>
->> config HARDENED_ATOMIC
->> ...
->>   This option catches counter wrapping in atomic_t, which
->>   can turn refcounting over/underflow bugs into resource
->>   consumption bugs instead of exploitable user-after-free flaws.
->>
->
-> Sorry to be pedantic, but this feature doesn't actually protect
-> against underflowing atomic_t, and you actually meant "use-after-free"
-> flaws.
 
-Oh right, thank you! So, better would be:
+--Jl+DbTnyraiZ/loT
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-   This option catches counter wrapping in atomic_t, which
-   can turn refcounting overflow bugs into resource
-   consumption bugs instead of exploitable user-after-free flaws.
+On Mon, Oct 03, 2016 at 09:41:18AM +0300, Elena Reshetova wrote:
+> From: David Windsor <dwindsor@gmail.com>
+>=20
+> In some cases atomic is not used for reference
+> counting and therefore should be allowed to overflow.
+> Identify such cases and make a switch to non-hardened
+> atomic version.
 
-> Do we want to mention something about the negligible performance
-> impact, as is done in the original PAX_REFCOUNT feature:
->   Since this has a negligible performance impact, you should enable
-> this feature.
->
-> Not sure if we eventually envision this feature being on-by-default;
-> if not, it may be useful to include this text.
+Depending on what the overhead ends up being, it might make sense to opt
+f_count in struct file out of the protection. It is the hottest user of
+atomic_t/atomic_long_t that I know of (incremented and decremented for
+every operation on a file descriptor in a multithreaded process), it is
+64 bits wide and it's only incremented and decremented in steps of 1.
 
-Yeah, actually, the performance impact should be mentioned. I'd be
-good to actually try to measure this, just to have looked at a
-specific workload.
+--Jl+DbTnyraiZ/loT
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
 
-This could also be the basis for Dave Hanson's suggestion to use
-cmpchxg: would the expense of that instead of locked addl get noticed,
-etc?
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
 
--Kees
+iQIcBAEBAgAGBQJX8tRTAAoJED4KNFJOeCOor1MQALWtmHBfTV1OyicF+Ek+UCvy
+ogz0Is88Qg2+8EC2PVYU8mkaa3UEGEIu5z64oamR6s/WFmuFERQxA6gOTWiv/62X
+EocAXQ6P3B1R7mThJME8mRd+uhDUawfTmMYo3zAWXeRyIH1p/XwJz8huhW39/wMA
+9eRHFP18peOO6jrHwQQM+x0f87pF+TMFdsL8YjtT4DCLR6x8Fn2vsTb8HAIwTt0L
+CdNvnx9FE1lIsuHMLamdFzdh2ZYBqDVYIfVuPpaMvC9uLTbEVIHTuefg8w8W/Q1X
+0D8RHMafzfu+/cTNOZWQ3n8g8Y7tBVUsLq3amarD9ZseUz8zdai91Ztn0mIsAL/8
+Cd3K5hcmAY3xeIQOOib+nCdYlJZybhJtx+NVlLeXFzH0vspKgmh+wYwHxvyU1wDf
+J17Bl9N2rT3F4jknKDY41rfohlXmUe7iFSIpoXy/NVgDQ2C97BDTdN/25eTsO7gM
+MkOW0QFc8fMtGTErYi2K1fu5sr0VT4HQLNalQrmNPD2TzqtcIcd49ucnroaFgsk/
+JiyZvuwLgZuAYZgfzmBc3/AmX1Zko/9aXzE1nt6Agn5g1iP6aSmp6MxyaDOQO8Xx
+6e6d03r4UG0CQZEE2qKmJJop+KbaHyjv62FWHUFJigA3Zi2njR/zARCPHU3h+Y9E
+BbOLLkCcWjMw8KkZ2ywR
+=8h8F
+-----END PGP SIGNATURE-----
 
->
->> > +
->> >  source security/selinux/Kconfig
->> >  source security/smack/Kconfig
->> >  source security/tomoyo/Kconfig
->> > --
->> > 2.7.4
->> >
->>
->> -Kees
->>
->> --
->> Kees Cook
->> Nexus Security
-
-
-
--- 
-Kees Cook
-Nexus Security
+--Jl+DbTnyraiZ/loT--
