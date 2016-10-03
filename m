@@ -1,44 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 3 Oct 2016 17:14:38 +0900
-From: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Message-ID: <20161003081437.GB14025@linaro.org>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Mon, 3 Oct 2016 08:13:12 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDA671@IRSMSX102.ger.corp.intel.com>
 References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <20161003081437.GB14025@linaro.org>
+In-Reply-To: <20161003081437.GB14025@linaro.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-2022-jp
-Content-Disposition: inline
-In-Reply-To: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
-Subject: Re: [kernel-hardening] [RFC PATCH 00/13] HARDENING_ATOMIC feature
-To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>
+Subject: RE: [kernel-hardening] [RFC PATCH 00/13] HARDENING_ATOMIC feature
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "keescook@chromium.org" <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
+
+Takahiro,=20
+
+This patch series is based on linux-next tree. You can see the actual tree =
+at  https://github.com/ereshetova/linux-stable/commits/hardened_atomic_on_n=
+ext
+We used to have it on top of linux-stable, but for merge purpose I guess it=
+ is better to be as close to linux-next as possible.=20
+
+Best Regards,
+Elena.
+
+-----Original Message-----
+From: AKASHI Takahiro [mailto:takahiro.akashi@linaro.org]=20
+Sent: Monday, October 3, 2016 11:15 AM
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org; Reshetova, Elena <elena.reshetova@intel.com>
+Subject: Re: [kernel-hardening] [RFC PATCH 00/13] HARDENING_ATOMIC feature
 
 Elena,
 
 Some of patches in this series were not cleanly applied to v4.8.
-(fixing them seems to be quite straightforward, though.)
-Which version of kernel are you using?
+(fixing them seems to be quite straightforward, though.) Which version of k=
+ernel are you using?
 
 Thanks,
 -Takahiro AKASHI
 
 On Mon, Oct 03, 2016 at 09:41:13AM +0300, Elena Reshetova wrote:
-> This series brings the PaX/Grsecurity PAX_REFCOUNT [1]
-> feature support to the upstream kernel. All credit for the
-> feature goes to the feature authors.
-> 
-> The name of the upstream feature is HARDENED_ATOMIC
-> and it is configured using CONFIG_HARDENED_ATOMIC and
-> HAVE_ARCH_HARDENED_ATOMIC.
-> 
-> This series only adds x86 support; other architectures are expected
-> to add similar support gradually.
-> 
-> More information about the feature can be found in the following
+> This series brings the PaX/Grsecurity PAX_REFCOUNT [1] feature support=20
+> to the upstream kernel. All credit for the feature goes to the feature=20
+> authors.
+>=20
+> The name of the upstream feature is HARDENED_ATOMIC and it is=20
+> configured using CONFIG_HARDENED_ATOMIC and HAVE_ARCH_HARDENED_ATOMIC.
+>=20
+> This series only adds x86 support; other architectures are expected to=20
+> add similar support gradually.
+>=20
+> More information about the feature can be found in the following=20
 > commit messages.
-> 
-> Special thank you goes to Kees Cook for pre-reviwing this feature
-> and all the valuable feedback he provided to us.
-> 
+>=20
+> Special thank you goes to Kees Cook for pre-reviwing this feature and=20
+> all the valuable feedback he provided to us.
+>=20
 > David Windsor (7):
 >   kernel: identify wrapping atomic usage
 >   mm: identify wrapping atomic usage
@@ -47,19 +65,20 @@ On Mon, Oct 03, 2016 at 09:41:13AM +0300, Elena Reshetova wrote:
 >   security: identify wrapping atomic usage
 >   drivers: identify wrapping atomic usage (part 1/2)
 >   drivers: identify wrapping atomic usage (part 2/2)
-> 
+>=20
 > Elena Reshetova (2):
 >   Add architecture independent hardened atomic base
 >   x86: x86 implementation for HARDENED_ATOMIC
-> 
+>=20
 > Hans Liljestrand (4):
 >   percpu-refcount: leave atomic counter unprotected
 >   net: atm: identify wrapping atomic usage
 >   x86: identify wrapping atomic usage
 >   lkdtm: add tests for atomic over-/underflow
-> 
+>=20
 >  arch/x86/Kconfig                                 |   1 +
->  arch/x86/include/asm/atomic.h                    | 274 +++++++++++++++++-
+>  arch/x86/include/asm/atomic.h                    | 274 +++++++++++++++++=
+-
 >  arch/x86/include/asm/atomic64_32.h               | 157 +++++++++-
 >  arch/x86/include/asm/atomic64_64.h               | 166 ++++++++++-
 >  arch/x86/include/asm/bitops.h                    |   8 +-
@@ -256,7 +275,8 @@ On Mon, Oct 03, 2016 at 09:41:13AM +0300, Elena Reshetova wrote:
 >  fs/fscache/object.c                              |  26 +-
 >  fs/fscache/operation.c                           |  38 +--
 >  fs/fscache/page.c                                | 110 +++----
->  fs/fscache/stats.c                               | 348 +++++++++++------------
+>  fs/fscache/stats.c                               | 348 +++++++++++------=
+------
 >  fs/inode.c                                       |   5 +-
 >  fs/kernfs/file.c                                 |  12 +-
 >  fs/lockd/clntproc.c                              |   4 +-
@@ -431,7 +451,7 @@ On Mon, Oct 03, 2016 at 09:41:13AM +0300, Elena Reshetova wrote:
 >  security/selinux/avc.c                           |   7 +-
 >  security/selinux/include/xfrm.h                  |   2 +-
 >  372 files changed, 3520 insertions(+), 2017 deletions(-)
-> 
-> -- 
+>=20
+> --
 > 2.7.4
-> 
+>=20
