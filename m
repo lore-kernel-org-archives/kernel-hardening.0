@@ -1,30 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Mon, 3 Oct 2016 19:21:47 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F31399D@ORSMSX107.amr.corp.intel.com>
-References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
-In-Reply-To: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <57F2B105.9050400@intel.com>
+Date: Mon, 3 Oct 2016 12:27:01 -0700
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Any artists around?
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for
+ HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SSBoYXZlIGEgbmFzdHkgaWRlYSwgYnV0IGl0IG1heSB0YWtlIGEgZGF5IG9yIHR3by4NCkJ3YWgg
-SGFoIEhhaCwNCg0KDQo+IC0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQo+IEZyb206IEtlZXMg
-Q29vayBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dDQo+IFNlbnQ6IE1vbmRheSwgT2N0b2Jl
-ciAwMywgMjAxNiAxMjoxNiBQTQ0KPiBUbzoga2VybmVsLWhhcmRlbmluZ0BsaXN0cy5vcGVud2Fs
-bC5jb20NCj4gU3ViamVjdDogW2tlcm5lbC1oYXJkZW5pbmddIEFueSBhcnRpc3RzIGFyb3VuZD8N
-Cj4gDQo+IEhpLA0KPiANCj4gSSd2ZSBiZWVuIGFza2VkIGlmIHRoZSBLZXJuZWwgU2VsZi1Qcm90
-ZWN0aW9uIFByb2plY3QgaGFzIGEgbG9nby4gV2UNCj4gZG9uJ3QgaGF2ZSBvbmUsIGJ1dCBpbiBh
-IHdvcmxkIHdpdGggbG9nb3MgZXZlbiBmb3IgZXhwbG9pdHMsIGl0IHNlZW1zDQo+IGxpa2Ugd2Un
-cmUgbWlzc2luZyBzb21ldGhpbmcuIDopIE90aGVyIGRlZmVuc2l2ZSBwcm9qZWN0cyAobGlrZSB0
-aGUNCj4gbWFqb3IgTFNNcykgaGF2ZSBsb2dvczoNCj4gDQo+IFNFTGludXg6DQo+IGh0dHA6Ly9z
-ZWxpbnV4cHJvamVjdC5vcmcvaW1hZ2VzL3NlbGludXgtcGVuZ3Vpbi0xMjUucG5nDQo+IA0KPiBB
-cHBBcm1vcjoNCj4gaHR0cDovL2FyY2hpdmUuaXMvcG00M2QvMGQ5Y2I5Mjc1NjFlMzI1Nzg0ZjNl
-NmQyMGM5N2Y1NjM2MTc5NTkxOC5wbmcNCj4gDQo+IFNtYWNrOg0KPiBodHRwczovL3VwbG9hZC53
-aWtpbWVkaWEub3JnL3dpa2lwZWRpYS9jb21tb25zL3RodW1iLzAvMGMvU21hY2stDQo+IHR1eC5z
-dmcvMjM3cHgtU21hY2stdHV4LnN2Zy5wbmcNCj4gDQo+IERvZXMgYW55b25lIGhhdmUgc29tZSBz
-dWdnZXN0aW9ucyBvciBza2V0Y2hlcyBmb3IgYSBsb2dvIHdlIGNvdWxkIHVzZT8NCj4gDQo+IC1L
-ZWVzDQo+IA0KPiAtLQ0KPiBLZWVzIENvb2sNCj4gTmV4dXMgU2VjdXJpdHkNCg==
+On 10/02/2016 11:41 PM, Elena Reshetova wrote:
+>  static __always_inline void atomic_add(int i, atomic_t *v)
+>  {
+> -	asm volatile(LOCK_PREFIX "addl %1,%0"
+> +	asm volatile(LOCK_PREFIX "addl %1,%0\n"
+> +
+> +#ifdef CONFIG_HARDENED_ATOMIC
+> +		     "jno 0f\n"
+> +		     LOCK_PREFIX "subl %1,%0\n"
+> +		     "int $4\n0:\n"
+> +		     _ASM_EXTABLE(0b, 0b)
+> +#endif
+> +
+> +		     : "+m" (v->counter)
+> +		     : "ir" (i));
+> +}
+
+Rather than doing all this assembly and exception stuff, could we just do:
+
+static __always_inline void atomic_add(int i, atomic_t *v)
+{
+	if (atomic_add_unless(v, a, INT_MAX))
+		BUG_ON_OVERFLOW_FOO()...
+}
+
+That way, there's also no transient state where somebody can have
+observed the overflow before it is fixed up.  Granted, this
+cmpxchg-based operation _is_ more expensive than the fast-path locked addl.
