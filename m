@@ -1,31 +1,25 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161003193418.GA7071@openwall.com>
+In-Reply-To: <1475522869.3304.0.camel@debian.org>
 References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
- <20161003193418.GA7071@openwall.com>
+ <1475522869.3304.0.camel@debian.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 3 Oct 2016 12:59:31 -0700
-Message-ID: <CAGXu5jKfU9Wg1Vd_bz1d--qC02C9xzD_0JJo7seK1M+1tLeszg@mail.gmail.com>
+Date: Mon, 3 Oct 2016 13:00:00 -0700
+Message-ID: <CAGXu5j+SOmCF1NJm=pUjAbC0N2xBh93Xo-g7rmj+-2wdukSMSQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Any artists around?
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, James Morris <jmorris@namei.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 3, 2016 at 12:34 PM, Solar Designer <solar@openwall.com> wrote:
-> On Mon, Oct 03, 2016 at 12:16:07PM -0700, Kees Cook wrote:
+On Mon, Oct 3, 2016 at 12:27 PM, Yves-Alexis Perez <corsac@debian.org> wrote:
+> On Mon, 2016-10-03 at 12:16 -0700, Kees Cook wrote:
 >> Does anyone have some suggestions or sketches for a logo we could use?
 >
-> How about a bikeshed?  It would convey how hardening is not "perfect
-> security", and ack the irony of spending time on discussing a logo.
-> I don't even have a preference as to which color the bikeshed should be.
+> What about http://kernsec.org/images/overlord59-tux-halo.png from kernsec
+> wiki?
 
-Haha, yes, exactly. This is the opening image I used in my slides
-covering the uid-0/ring-0 lockdown series at LSS on 2014:
-
-https://outflux.net/bikeshed.jpg
-
-:)
+What's the origin of that one, exactly? Maybe James knows?
 
 -Kees
 
