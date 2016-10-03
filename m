@@ -1,127 +1,499 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Mon,  3 Oct 2016 09:41:15 +0300
-Message-Id: <1475476886-26232-3-git-send-email-elena.reshetova@intel.com>
+Date: Mon,  3 Oct 2016 09:41:17 +0300
+Message-Id: <1475476886-26232-5-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
 References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC PATCH 02/13] percpu-refcount: leave atomic counter unprotected
+Subject: [kernel-hardening] [RFC PATCH 04/13] mm: identify wrapping atomic usage
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>
+Cc: keescook@chromium.org, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Hans Liljestrand <ishkamiel@gmail.com>
+From: David Windsor <dwindsor@gmail.com>
 
-This is a temporary solution, and a deviation from the PaX/Grsecurity
-implementation where the counter in question is protected against
-overflows. That however necessitates decreasing the PERCPU_COUNT_BIAS
-which is used in lib/percpu-refcount.c. Such a change effectively cuts
-the safe counter range down by half, and still allows the counter to,
-without warning, prematurely reach zero (which is what the bias aims to
-prevent).
+In some cases atomic is not used for reference
+counting and therefore should be allowed to overflow.
+Identify such cases and make a switch to non-hardened
+atomic version.
 
 Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
-Signed-off-by: David Windsor <dwindsor@gmail.com>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: David Windsor <dwindsor@gmail.com>
 ---
- include/linux/percpu-refcount.h | 18 ++++++++++++++----
- lib/percpu-refcount.c           | 12 ++++++------
- 2 files changed, 20 insertions(+), 10 deletions(-)
+ fs/proc/meminfo.c        |  2 +-
+ include/linux/mm.h       |  2 +-
+ include/linux/mmzone.h   |  4 ++--
+ include/linux/slab_def.h |  8 ++++----
+ include/linux/swapops.h  | 10 +++++-----
+ include/linux/vmstat.h   | 38 +++++++++++++++++++-------------------
+ lib/show_mem.c           |  3 ++-
+ mm/backing-dev.c         |  4 ++--
+ mm/memory-failure.c      |  2 +-
+ mm/slab.c                | 16 ++++++++--------
+ mm/sparse.c              |  2 +-
+ mm/swapfile.c            | 12 ++++++------
+ mm/vmstat.c              | 26 ++++++++++++++------------
+ 13 files changed, 66 insertions(+), 63 deletions(-)
 
-diff --git a/include/linux/percpu-refcount.h b/include/linux/percpu-refcount.h
-index 1c7eec0..7c6a482 100644
---- a/include/linux/percpu-refcount.h
-+++ b/include/linux/percpu-refcount.h
-@@ -81,7 +81,17 @@ enum {
- };
+diff --git a/fs/proc/meminfo.c b/fs/proc/meminfo.c
+index 8a42849..1e6f3d0 100644
+--- a/fs/proc/meminfo.c
++++ b/fs/proc/meminfo.c
+@@ -136,7 +136,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
  
- struct percpu_ref {
--	atomic_long_t		count;
-+	/*
-+	 * This is a temporary solution.
-+	 *
-+	 * The count should technically not be allowed to wrap, but due to the
-+	 * way the counter is used (in lib/percpu-refcount.c) together with the
-+	 * PERCPU_COUNT_BIAS it needs to wrap. This leaves the counter open
-+	 * to over/underflows. A non-wrapping atomic, together with a bias
-+	 * decrease would reduce the safe range in half, and also offer only
-+	 * partial protection.
-+	 */
-+	atomic_long_wrap_t	count;
- 	/*
- 	 * The low bit of the pointer indicates whether the ref is in percpu
- 	 * mode; if set, then get/put will manipulate the atomic_t.
-@@ -174,7 +184,7 @@ static inline void percpu_ref_get_many(struct percpu_ref *ref, unsigned long nr)
- 	if (__ref_is_percpu(ref, &percpu_count))
- 		this_cpu_add(*percpu_count, nr);
- 	else
--		atomic_long_add(nr, &ref->count);
-+		atomic_long_add_wrap(nr, &ref->count);
- 
- 	rcu_read_unlock_sched();
- }
-@@ -272,7 +282,7 @@ static inline void percpu_ref_put_many(struct percpu_ref *ref, unsigned long nr)
- 
- 	if (__ref_is_percpu(ref, &percpu_count))
- 		this_cpu_sub(*percpu_count, nr);
--	else if (unlikely(atomic_long_sub_and_test(nr, &ref->count)))
-+	else if (unlikely(atomic_long_sub_and_test_wrap(nr, &ref->count)))
- 		ref->release(ref);
- 
- 	rcu_read_unlock_sched();
-@@ -320,7 +330,7 @@ static inline bool percpu_ref_is_zero(struct percpu_ref *ref)
- 
- 	if (__ref_is_percpu(ref, &percpu_count))
- 		return false;
--	return !atomic_long_read(&ref->count);
-+	return !atomic_long_read_wrap(&ref->count);
- }
- 
+ #ifdef CONFIG_MEMORY_FAILURE
+ 	seq_printf(m, "HardwareCorrupted: %5lu kB\n",
+-		   atomic_long_read(&num_poisoned_pages) << (PAGE_SHIFT - 10));
++		   atomic_long_read_wrap(&num_poisoned_pages) << (PAGE_SHIFT - 10));
  #endif
-diff --git a/lib/percpu-refcount.c b/lib/percpu-refcount.c
-index 9ac959e..2849e06 100644
---- a/lib/percpu-refcount.c
-+++ b/lib/percpu-refcount.c
-@@ -80,7 +80,7 @@ int percpu_ref_init(struct percpu_ref *ref, percpu_ref_func_t *release,
- 	else
- 		start_count++;
  
--	atomic_long_set(&ref->count, start_count);
-+	atomic_long_set_wrap(&ref->count, start_count);
+ #ifdef CONFIG_TRANSPARENT_HUGEPAGE
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index fa4277b..4b5a524 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -2364,7 +2364,7 @@ extern int get_hwpoison_page(struct page *page);
+ extern int sysctl_memory_failure_early_kill;
+ extern int sysctl_memory_failure_recovery;
+ extern void shake_page(struct page *p, int access);
+-extern atomic_long_t num_poisoned_pages;
++extern atomic_long_wrap_t num_poisoned_pages;
+ extern int soft_offline_page(struct page *page, int flags);
  
- 	ref->release = release;
- 	ref->confirm_switch = NULL;
-@@ -134,7 +134,7 @@ static void percpu_ref_switch_to_atomic_rcu(struct rcu_head *rcu)
- 		count += *per_cpu_ptr(percpu_count, cpu);
  
- 	pr_debug("global %ld percpu %ld",
--		 atomic_long_read(&ref->count), (long)count);
-+		 atomic_long_read_wrap(&ref->count), (long)count);
+diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
+index 7f2ae99..6fc60fb 100644
+--- a/include/linux/mmzone.h
++++ b/include/linux/mmzone.h
+@@ -517,7 +517,7 @@ struct zone {
  
- 	/*
- 	 * It's crucial that we sum the percpu counters _before_ adding the sum
-@@ -148,11 +148,11 @@ static void percpu_ref_switch_to_atomic_rcu(struct rcu_head *rcu)
- 	 * reaching 0 before we add the percpu counts. But doing it at the same
- 	 * time is equivalent and saves us atomic operations:
- 	 */
--	atomic_long_add((long)count - PERCPU_COUNT_BIAS, &ref->count);
-+	atomic_long_add_wrap((long)count - PERCPU_COUNT_BIAS, &ref->count);
+ 	ZONE_PADDING(_pad3_)
+ 	/* Zone statistics */
+-	atomic_long_t		vm_stat[NR_VM_ZONE_STAT_ITEMS];
++	atomic_long_wrap_t		vm_stat[NR_VM_ZONE_STAT_ITEMS];
+ } ____cacheline_internodealigned_in_smp;
  
--	WARN_ONCE(atomic_long_read(&ref->count) <= 0,
-+	WARN_ONCE(atomic_long_read_wrap(&ref->count) <= 0,
- 		  "percpu ref (%pf) <= 0 (%ld) after switching to atomic",
--		  ref->release, atomic_long_read(&ref->count));
-+		  ref->release, atomic_long_read_wrap(&ref->count));
+ enum pgdat_flags {
+@@ -721,7 +721,7 @@ typedef struct pglist_data {
  
- 	/* @ref is viewed as dead on all CPUs, send out switch confirmation */
- 	percpu_ref_call_confirm_rcu(rcu);
-@@ -194,7 +194,7 @@ static void __percpu_ref_switch_to_percpu(struct percpu_ref *ref)
- 	if (!(ref->percpu_count_ptr & __PERCPU_REF_ATOMIC))
- 		return;
+ 	/* Per-node vmstats */
+ 	struct per_cpu_nodestat __percpu *per_cpu_nodestats;
+-	atomic_long_t		vm_stat[NR_VM_NODE_STAT_ITEMS];
++	atomic_long_wrap_t		vm_stat[NR_VM_NODE_STAT_ITEMS];
+ } pg_data_t;
  
--	atomic_long_add(PERCPU_COUNT_BIAS, &ref->count);
-+	atomic_long_add_wrap(PERCPU_COUNT_BIAS, &ref->count);
+ #define node_present_pages(nid)	(NODE_DATA(nid)->node_present_pages)
+diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
+index 4ad2c5a..601c69a 100644
+--- a/include/linux/slab_def.h
++++ b/include/linux/slab_def.h
+@@ -56,10 +56,10 @@ struct kmem_cache {
+ 	unsigned long node_allocs;
+ 	unsigned long node_frees;
+ 	unsigned long node_overflow;
+-	atomic_t allochit;
+-	atomic_t allocmiss;
+-	atomic_t freehit;
+-	atomic_t freemiss;
++	atomic_wrap_t allochit;
++	atomic_wrap_t allocmiss;
++	atomic_wrap_t freehit;
++	atomic_wrap_t freemiss;
+ #ifdef CONFIG_DEBUG_SLAB_LEAK
+ 	atomic_t store_user_clean;
+ #endif
+diff --git a/include/linux/swapops.h b/include/linux/swapops.h
+index 5c3a5f3..04f5430 100644
+--- a/include/linux/swapops.h
++++ b/include/linux/swapops.h
+@@ -165,7 +165,7 @@ static inline int is_write_migration_entry(swp_entry_t entry)
  
- 	/*
- 	 * Restore per-cpu operation.  smp_store_release() is paired with
+ #ifdef CONFIG_MEMORY_FAILURE
+ 
+-extern atomic_long_t num_poisoned_pages __read_mostly;
++extern atomic_long_wrap_t num_poisoned_pages __read_mostly;
+ 
+ /*
+  * Support for hardware poisoned pages
+@@ -188,22 +188,22 @@ static inline bool test_set_page_hwpoison(struct page *page)
+ 
+ static inline void num_poisoned_pages_inc(void)
+ {
+-	atomic_long_inc(&num_poisoned_pages);
++	atomic_long_inc_wrap(&num_poisoned_pages);
+ }
+ 
+ static inline void num_poisoned_pages_dec(void)
+ {
+-	atomic_long_dec(&num_poisoned_pages);
++	atomic_long_dec_wrap(&num_poisoned_pages);
+ }
+ 
+ static inline void num_poisoned_pages_add(long num)
+ {
+-	atomic_long_add(num, &num_poisoned_pages);
++	atomic_long_add_wrap(num, &num_poisoned_pages);
+ }
+ 
+ static inline void num_poisoned_pages_sub(long num)
+ {
+-	atomic_long_sub(num, &num_poisoned_pages);
++	atomic_long_sub_wrap(num, &num_poisoned_pages);
+ }
+ #else
+ 
+diff --git a/include/linux/vmstat.h b/include/linux/vmstat.h
+index 6137719..9e0830e 100644
+--- a/include/linux/vmstat.h
++++ b/include/linux/vmstat.h
+@@ -107,26 +107,26 @@ static inline void vm_events_fold_cpu(int cpu)
+ /*
+  * Zone and node-based page accounting with per cpu differentials.
+  */
+-extern atomic_long_t vm_zone_stat[NR_VM_ZONE_STAT_ITEMS];
+-extern atomic_long_t vm_node_stat[NR_VM_NODE_STAT_ITEMS];
++extern atomic_long_wrap_t vm_zone_stat[NR_VM_ZONE_STAT_ITEMS];
++extern atomic_long_wrap_t vm_node_stat[NR_VM_NODE_STAT_ITEMS];
+ 
+ static inline void zone_page_state_add(long x, struct zone *zone,
+ 				 enum zone_stat_item item)
+ {
+-	atomic_long_add(x, &zone->vm_stat[item]);
+-	atomic_long_add(x, &vm_zone_stat[item]);
++	atomic_long_add_wrap(x, &zone->vm_stat[item]);
++	atomic_long_add_wrap(x, &vm_zone_stat[item]);
+ }
+ 
+ static inline void node_page_state_add(long x, struct pglist_data *pgdat,
+ 				 enum node_stat_item item)
+ {
+-	atomic_long_add(x, &pgdat->vm_stat[item]);
+-	atomic_long_add(x, &vm_node_stat[item]);
++	atomic_long_add_wrap(x, &pgdat->vm_stat[item]);
++	atomic_long_add_wrap(x, &vm_node_stat[item]);
+ }
+ 
+ static inline unsigned long global_page_state(enum zone_stat_item item)
+ {
+-	long x = atomic_long_read(&vm_zone_stat[item]);
++	long x = atomic_long_read_wrap(&vm_zone_stat[item]);
+ #ifdef CONFIG_SMP
+ 	if (x < 0)
+ 		x = 0;
+@@ -136,7 +136,7 @@ static inline unsigned long global_page_state(enum zone_stat_item item)
+ 
+ static inline unsigned long global_node_page_state(enum node_stat_item item)
+ {
+-	long x = atomic_long_read(&vm_node_stat[item]);
++	long x = atomic_long_read_wrap(&vm_node_stat[item]);
+ #ifdef CONFIG_SMP
+ 	if (x < 0)
+ 		x = 0;
+@@ -147,7 +147,7 @@ static inline unsigned long global_node_page_state(enum node_stat_item item)
+ static inline unsigned long zone_page_state(struct zone *zone,
+ 					enum zone_stat_item item)
+ {
+-	long x = atomic_long_read(&zone->vm_stat[item]);
++	long x = atomic_long_read_wrap(&zone->vm_stat[item]);
+ #ifdef CONFIG_SMP
+ 	if (x < 0)
+ 		x = 0;
+@@ -164,7 +164,7 @@ static inline unsigned long zone_page_state(struct zone *zone,
+ static inline unsigned long zone_page_state_snapshot(struct zone *zone,
+ 					enum zone_stat_item item)
+ {
+-	long x = atomic_long_read(&zone->vm_stat[item]);
++	long x = atomic_long_read_wrap(&zone->vm_stat[item]);
+ 
+ #ifdef CONFIG_SMP
+ 	int cpu;
+@@ -180,7 +180,7 @@ static inline unsigned long zone_page_state_snapshot(struct zone *zone,
+ static inline unsigned long node_page_state_snapshot(pg_data_t *pgdat,
+ 					enum node_stat_item item)
+ {
+-	long x = atomic_long_read(&pgdat->vm_stat[item]);
++	long x = atomic_long_read_wrap(&pgdat->vm_stat[item]);
+ 
+ #ifdef CONFIG_SMP
+ 	int cpu;
+@@ -267,26 +267,26 @@ static inline void __mod_node_page_state(struct pglist_data *pgdat,
+ 
+ static inline void __inc_zone_state(struct zone *zone, enum zone_stat_item item)
+ {
+-	atomic_long_inc(&zone->vm_stat[item]);
+-	atomic_long_inc(&vm_zone_stat[item]);
++	atomic_long_inc_wrap(&zone->vm_stat[item]);
++	atomic_long_inc_wrap(&vm_zone_stat[item]);
+ }
+ 
+ static inline void __inc_node_state(struct pglist_data *pgdat, enum node_stat_item item)
+ {
+-	atomic_long_inc(&pgdat->vm_stat[item]);
+-	atomic_long_inc(&vm_node_stat[item]);
++	atomic_long_inc_wrap(&pgdat->vm_stat[item]);
++	atomic_long_inc_wrap(&vm_node_stat[item]);
+ }
+ 
+ static inline void __dec_zone_state(struct zone *zone, enum zone_stat_item item)
+ {
+-	atomic_long_dec(&zone->vm_stat[item]);
+-	atomic_long_dec(&vm_zone_stat[item]);
++	atomic_long_dec_wrap(&zone->vm_stat[item]);
++	atomic_long_dec_wrap(&vm_zone_stat[item]);
+ }
+ 
+ static inline void __dec_node_state(struct pglist_data *pgdat, enum node_stat_item item)
+ {
+-	atomic_long_dec(&pgdat->vm_stat[item]);
+-	atomic_long_dec(&vm_node_stat[item]);
++	atomic_long_dec_wrap(&pgdat->vm_stat[item]);
++	atomic_long_dec_wrap(&vm_node_stat[item]);
+ }
+ 
+ static inline void __inc_zone_page_state(struct page *page,
+diff --git a/lib/show_mem.c b/lib/show_mem.c
+index 1feed6a..b92a754 100644
+--- a/lib/show_mem.c
++++ b/lib/show_mem.c
+@@ -47,6 +47,7 @@ void show_mem(unsigned int filter)
+ 		quicklist_total_size());
+ #endif
+ #ifdef CONFIG_MEMORY_FAILURE
+-	printk("%lu pages hwpoisoned\n", atomic_long_read(&num_poisoned_pages));
++	printk("%lu pages hwpoisoned\n",
++			atomic_long_read_wrap(&num_poisoned_pages));
+ #endif
+ }
+diff --git a/mm/backing-dev.c b/mm/backing-dev.c
+index 8fde443..8e44fcc 100644
+--- a/mm/backing-dev.c
++++ b/mm/backing-dev.c
+@@ -12,7 +12,7 @@
+ #include <linux/device.h>
+ #include <trace/events/writeback.h>
+ 
+-static atomic_long_t bdi_seq = ATOMIC_LONG_INIT(0);
++static atomic_long_wrap_t bdi_seq = ATOMIC_LONG_INIT(0);
+ 
+ struct backing_dev_info noop_backing_dev_info = {
+ 	.name		= "noop",
+@@ -898,7 +898,7 @@ int bdi_setup_and_register(struct backing_dev_info *bdi, char *name)
+ 		return err;
+ 
+ 	err = bdi_register(bdi, NULL, "%.28s-%ld", name,
+-			   atomic_long_inc_return(&bdi_seq));
++			   atomic_long_inc_return_wrap(&bdi_seq));
+ 	if (err) {
+ 		bdi_destroy(bdi);
+ 		return err;
+diff --git a/mm/memory-failure.c b/mm/memory-failure.c
+index de88f33..2797182 100644
+--- a/mm/memory-failure.c
++++ b/mm/memory-failure.c
+@@ -64,7 +64,7 @@ int sysctl_memory_failure_early_kill __read_mostly = 0;
+ 
+ int sysctl_memory_failure_recovery __read_mostly = 1;
+ 
+-atomic_long_t num_poisoned_pages __read_mostly = ATOMIC_LONG_INIT(0);
++atomic_long_wrap_t num_poisoned_pages __read_mostly = ATOMIC_LONG_INIT(0);
+ 
+ #if defined(CONFIG_HWPOISON_INJECT) || defined(CONFIG_HWPOISON_INJECT_MODULE)
+ 
+diff --git a/mm/slab.c b/mm/slab.c
+index 6508b4d..8a0e112 100644
+--- a/mm/slab.c
++++ b/mm/slab.c
+@@ -284,10 +284,10 @@ static void kmem_cache_node_init(struct kmem_cache_node *parent)
+ 		if ((x)->max_freeable < i)				\
+ 			(x)->max_freeable = i;				\
+ 	} while (0)
+-#define STATS_INC_ALLOCHIT(x)	atomic_inc(&(x)->allochit)
+-#define STATS_INC_ALLOCMISS(x)	atomic_inc(&(x)->allocmiss)
+-#define STATS_INC_FREEHIT(x)	atomic_inc(&(x)->freehit)
+-#define STATS_INC_FREEMISS(x)	atomic_inc(&(x)->freemiss)
++#define STATS_INC_ALLOCHIT(x)	atomic_inc_wrap(&(x)->allochit)
++#define STATS_INC_ALLOCMISS(x)	atomic_inc_wrap(&(x)->allocmiss)
++#define STATS_INC_FREEHIT(x)	atomic_inc_wrap(&(x)->freehit)
++#define STATS_INC_FREEMISS(x)	atomic_inc_wrap(&(x)->freemiss)
+ #else
+ #define	STATS_INC_ACTIVE(x)	do { } while (0)
+ #define	STATS_DEC_ACTIVE(x)	do { } while (0)
+@@ -4173,10 +4173,10 @@ void slabinfo_show_stats(struct seq_file *m, struct kmem_cache *cachep)
+ 	}
+ 	/* cpu stats */
+ 	{
+-		unsigned long allochit = atomic_read(&cachep->allochit);
+-		unsigned long allocmiss = atomic_read(&cachep->allocmiss);
+-		unsigned long freehit = atomic_read(&cachep->freehit);
+-		unsigned long freemiss = atomic_read(&cachep->freemiss);
++		unsigned long allochit = atomic_read_wrap(&cachep->allochit);
++		unsigned long allocmiss = atomic_read_wrap(&cachep->allocmiss);
++		unsigned long freehit = atomic_read_wrap(&cachep->freehit);
++		unsigned long freemiss = atomic_read_wrap(&cachep->freemiss);
+ 
+ 		seq_printf(m, " : cpustat %6lu %6lu %6lu %6lu",
+ 			   allochit, allocmiss, freehit, freemiss);
+diff --git a/mm/sparse.c b/mm/sparse.c
+index 1e168bf..56f7ee9 100644
+--- a/mm/sparse.c
++++ b/mm/sparse.c
+@@ -749,7 +749,7 @@ static void clear_hwpoisoned_pages(struct page *memmap, int nr_pages)
+ 
+ 	for (i = 0; i < nr_pages; i++) {
+ 		if (PageHWPoison(&memmap[i])) {
+-			atomic_long_sub(1, &num_poisoned_pages);
++			atomic_long_sub_wrap(1, &num_poisoned_pages);
+ 			ClearPageHWPoison(&memmap[i]);
+ 		}
+ 	}
+diff --git a/mm/swapfile.c b/mm/swapfile.c
+index 2210de2..e56a677 100644
+--- a/mm/swapfile.c
++++ b/mm/swapfile.c
+@@ -90,7 +90,7 @@ static DEFINE_MUTEX(swapon_mutex);
+ 
+ static DECLARE_WAIT_QUEUE_HEAD(proc_poll_wait);
+ /* Activity counter to indicate that a swapon or swapoff has occurred */
+-static atomic_t proc_poll_event = ATOMIC_INIT(0);
++static atomic_wrap_t proc_poll_event = ATOMIC_INIT(0);
+ 
+ static inline unsigned char swap_count(unsigned char ent)
+ {
+@@ -1985,7 +1985,7 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
+ 	spin_unlock(&swap_lock);
+ 
+ 	err = 0;
+-	atomic_inc(&proc_poll_event);
++	atomic_inc_wrap(&proc_poll_event);
+ 	wake_up_interruptible(&proc_poll_wait);
+ 
+ out_dput:
+@@ -2002,8 +2002,8 @@ static unsigned swaps_poll(struct file *file, poll_table *wait)
+ 
+ 	poll_wait(file, &proc_poll_wait, wait);
+ 
+-	if (seq->poll_event != atomic_read(&proc_poll_event)) {
+-		seq->poll_event = atomic_read(&proc_poll_event);
++	if (seq->poll_event != atomic_read_wrap(&proc_poll_event)) {
++		seq->poll_event = atomic_read_wrap(&proc_poll_event);
+ 		return POLLIN | POLLRDNORM | POLLERR | POLLPRI;
+ 	}
+ 
+@@ -2101,7 +2101,7 @@ static int swaps_open(struct inode *inode, struct file *file)
+ 		return ret;
+ 
+ 	seq = file->private_data;
+-	seq->poll_event = atomic_read(&proc_poll_event);
++	seq->poll_event = atomic_read_wrap(&proc_poll_event);
+ 	return 0;
+ }
+ 
+@@ -2536,7 +2536,7 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
+ 		(frontswap_map) ? "FS" : "");
+ 
+ 	mutex_unlock(&swapon_mutex);
+-	atomic_inc(&proc_poll_event);
++	atomic_inc_wrap(&proc_poll_event);
+ 	wake_up_interruptible(&proc_poll_wait);
+ 
+ 	if (S_ISREG(inode->i_mode))
+diff --git a/mm/vmstat.c b/mm/vmstat.c
+index 604f26a..70fb0a2 100644
+--- a/mm/vmstat.c
++++ b/mm/vmstat.c
+@@ -86,8 +86,10 @@ void vm_events_fold_cpu(int cpu)
+  *
+  * vm_stat contains the global counters
+  */
+-atomic_long_t vm_zone_stat[NR_VM_ZONE_STAT_ITEMS] __cacheline_aligned_in_smp;
+-atomic_long_t vm_node_stat[NR_VM_NODE_STAT_ITEMS] __cacheline_aligned_in_smp;
++atomic_long_wrap_t vm_zone_stat[NR_VM_ZONE_STAT_ITEMS]
++		__cacheline_aligned_in_smp;
++atomic_long_wrap_t vm_node_stat[NR_VM_NODE_STAT_ITEMS]
++		__cacheline_aligned_in_smp;
+ EXPORT_SYMBOL(vm_zone_stat);
+ EXPORT_SYMBOL(vm_node_stat);
+ 
+@@ -611,13 +613,13 @@ static int fold_diff(int *zone_diff, int *node_diff)
+ 
+ 	for (i = 0; i < NR_VM_ZONE_STAT_ITEMS; i++)
+ 		if (zone_diff[i]) {
+-			atomic_long_add(zone_diff[i], &vm_zone_stat[i]);
++			atomic_long_add_wrap(zone_diff[i], &vm_zone_stat[i]);
+ 			changes++;
+ 	}
+ 
+ 	for (i = 0; i < NR_VM_NODE_STAT_ITEMS; i++)
+ 		if (node_diff[i]) {
+-			atomic_long_add(node_diff[i], &vm_node_stat[i]);
++			atomic_long_add_wrap(node_diff[i], &vm_node_stat[i]);
+ 			changes++;
+ 	}
+ 	return changes;
+@@ -657,7 +659,7 @@ static int refresh_cpu_vm_stats(bool do_pagesets)
+ 			v = this_cpu_xchg(p->vm_stat_diff[i], 0);
+ 			if (v) {
+ 
+-				atomic_long_add(v, &zone->vm_stat[i]);
++				atomic_long_add_wrap(v, &zone->vm_stat[i]);
+ 				global_zone_diff[i] += v;
+ #ifdef CONFIG_NUMA
+ 				/* 3 seconds idle till flush */
+@@ -706,7 +708,7 @@ static int refresh_cpu_vm_stats(bool do_pagesets)
+ 
+ 			v = this_cpu_xchg(p->vm_node_stat_diff[i], 0);
+ 			if (v) {
+-				atomic_long_add(v, &pgdat->vm_stat[i]);
++				atomic_long_add_wrap(v, &pgdat->vm_stat[i]);
+ 				global_node_diff[i] += v;
+ 			}
+ 		}
+@@ -740,7 +742,7 @@ void cpu_vm_stats_fold(int cpu)
+ 
+ 				v = p->vm_stat_diff[i];
+ 				p->vm_stat_diff[i] = 0;
+-				atomic_long_add(v, &zone->vm_stat[i]);
++				atomic_long_add_wrap(v, &zone->vm_stat[i]);
+ 				global_zone_diff[i] += v;
+ 			}
+ 	}
+@@ -756,7 +758,7 @@ void cpu_vm_stats_fold(int cpu)
+ 
+ 				v = p->vm_node_stat_diff[i];
+ 				p->vm_node_stat_diff[i] = 0;
+-				atomic_long_add(v, &pgdat->vm_stat[i]);
++				atomic_long_add_wrap(v, &pgdat->vm_stat[i]);
+ 				global_node_diff[i] += v;
+ 			}
+ 	}
+@@ -776,8 +778,8 @@ void drain_zonestat(struct zone *zone, struct per_cpu_pageset *pset)
+ 		if (pset->vm_stat_diff[i]) {
+ 			int v = pset->vm_stat_diff[i];
+ 			pset->vm_stat_diff[i] = 0;
+-			atomic_long_add(v, &zone->vm_stat[i]);
+-			atomic_long_add(v, &vm_zone_stat[i]);
++			atomic_long_add_wrap(v, &zone->vm_stat[i]);
++			atomic_long_add_wrap(v, &vm_zone_stat[i]);
+ 		}
+ }
+ #endif
+@@ -807,7 +809,7 @@ unsigned long sum_zone_node_page_state(int node,
+ unsigned long node_page_state(struct pglist_data *pgdat,
+ 				enum node_stat_item item)
+ {
+-	long x = atomic_long_read(&pgdat->vm_stat[item]);
++	long x = atomic_long_read_wrap(&pgdat->vm_stat[item]);
+ #ifdef CONFIG_SMP
+ 	if (x < 0)
+ 		x = 0;
+@@ -1580,7 +1582,7 @@ int vmstat_refresh(struct ctl_table *table, int write,
+ 	if (err)
+ 		return err;
+ 	for (i = 0; i < NR_VM_ZONE_STAT_ITEMS; i++) {
+-		val = atomic_long_read(&vm_zone_stat[i]);
++		val = atomic_long_read_wrap(&vm_zone_stat[i]);
+ 		if (val < 0) {
+ 			switch (i) {
+ 			case NR_PAGES_SCANNED:
 -- 
 2.7.4
