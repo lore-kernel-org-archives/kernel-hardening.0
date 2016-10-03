@@ -1,78 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <57F2B105.9050400@intel.com>
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-13-git-send-email-elena.reshetova@intel.com> <57F2B105.9050400@intel.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Mon, 3 Oct 2016 18:49:01 -0400
-Message-ID: <CAEXv5_jdQM0X1XNtxNVJi4Ftf8w4P4WN6sy_MK64=0Gmo8oWKQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <57E16D07.4050301@digikod.net>
+References: <1472121165-29071-1-git-send-email-mic@digikod.net>
+ <20160915091902.GA13132@amd> <57E16D07.4050301@digikod.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 3 Oct 2016 15:56:56 -0700
+Message-ID: <CAGXu5jLp=GMpjqdCCPWeKHNseEv5DLPC7YN6EwhR1PJsei5cHw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for HARDENED_ATOMIC
-To: Dave Hansen <dave.hansen@intel.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [RFC v2 00/10] Landlock LSM: Unprivileged sandboxing
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: Pavel Machek <pavel@ucw.cz>, LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 3, 2016 at 3:27 PM, Dave Hansen <dave.hansen@intel.com> wrote:
-> On 10/02/2016 11:41 PM, Elena Reshetova wrote:
->>  static __always_inline void atomic_add(int i, atomic_t *v)
->>  {
->> -     asm volatile(LOCK_PREFIX "addl %1,%0"
->> +     asm volatile(LOCK_PREFIX "addl %1,%0\n"
->> +
->> +#ifdef CONFIG_HARDENED_ATOMIC
->> +                  "jno 0f\n"
->> +                  LOCK_PREFIX "subl %1,%0\n"
->> +                  "int $4\n0:\n"
->> +                  _ASM_EXTABLE(0b, 0b)
->> +#endif
->> +
->> +                  : "+m" (v->counter)
->> +                  : "ir" (i));
->> +}
+On Tue, Sep 20, 2016 at 10:08 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net=
+> wrote:
 >
-> Rather than doing all this assembly and exception stuff, could we just do:
+> On 15/09/2016 11:19, Pavel Machek wrote:
+>> Hi!
+>>
+>>> This series is a proof of concept to fill some missing part of seccomp =
+as the
+>>> ability to check syscall argument pointers or creating more dynamic sec=
+urity
+>>> policies. The goal of this new stackable Linux Security Module (LSM) ca=
+lled
+>>> Landlock is to allow any process, including unprivileged ones, to creat=
+e
+>>> powerful security sandboxes comparable to the Seatbelt/XNU Sandbox or t=
+he
+>>> OpenBSD Pledge. This kind of sandbox help to mitigate the security impa=
+ct of
+>>> bugs or unexpected/malicious behaviors in userland applications.
+>>>
+>>> The first RFC [1] was focused on extending seccomp while staying at the=
+ syscall
+>>> level. This brought a working PoC but with some (mitigated) ToCToU race
+>>> conditions due to the seccomp ptrace hole (now fixed) and the non-atomi=
+c
+>>> syscall argument evaluation (hence the LSM hooks).
+>>
+>> Long and nice description follows. Should it go to Documentation/
+>> somewhere?
+>>
+>> Because some documentation would be useful...
+>>                                                               Pavel
 >
-> static __always_inline void atomic_add(int i, atomic_t *v)
-> {
->         if (atomic_add_unless(v, a, INT_MAX))
->                 BUG_ON_OVERFLOW_FOO()...
-> }
->
-> That way, there's also no transient state where somebody can have
-> observed the overflow before it is fixed up.  Granted, this
-> cmpxchg-based operation _is_ more expensive than the fast-path locked addl.
+> Right, but I was looking for feedback before investing in documentation. =
+:)
 
-I'm not opposed to this, as this would allow us to eliminate the race
-on x86 and this doesn't really change how things work on a fundamental
-level here.  The overflow detection mechanism essentially remains the
-same: __atomic_add_unless still would use exception dispatching as the
-means of signaling that an overflow has occurred:
+Heh, understood. There are a number of grammar issues that slow me
+down when reading this, so when it does move into Documentation/, I'll
+have some English nit-picks. :)
 
-static __always_inline int __atomic_add_unless(atomic_t *v, int a, int u)
-{
-    int c, old, new;
-    c = atomic_read(v);
-    for (;;) {
-        if (unlikely(c == (u)))
-            break;
-        asm volatile("addl %2,%0\n"
+While reading I found myself wanting an explicit list of "guiding
+principles" for anyone implementing new hooks. It is touched on in
+several places (don't expose things, don't allow for privilege
+changes, etc). Having that spelled out somewhere would be nice.
 
- #ifdef CONFIG_HARDENED_ATOMIC
-            "jno 0f\n"
-            "subl %2,%0\n"
-            "int $4\n0:\n"
-            _ASM_EXTABLE(0b, 0b)
-#endif
-            : "=r" (new)
-            : "0" (c), "ir" (a));
-        old = atomic_cmpxchg((v), c, new);
-        if (likely(old == c))
-            break;
-            c = old;
-    }
-    return c;
-}
+-Kees
 
-I'm unsure about the performance implications of cmpxchg, though, so I
-agree with Kees: we should subject this feature (and this series as a
-whole) to benchmarking.
+--=20
+Kees Cook
+Nexus Security
