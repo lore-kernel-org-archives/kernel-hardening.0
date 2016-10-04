@@ -1,90 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 4 Oct 2016 14:46:16 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20161004124616.GF2040@pc.thejh.net>
+Date: Tue, 4 Oct 2016 16:06:31 +0300
+From: Hans Liljestrand <ishkamiel@gmail.com>
+Message-ID: <20161004130631.GA17762@thigreal>
 References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
- <20161003094752.GN14666@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41BDAC5B@IRSMSX102.ger.corp.intel.com>
+ <1475476886-26232-3-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5jJnJODOzv4Yk=c-n9wA=hP=qza57q1EBcD4sJboVqXr3g@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41BDAB84@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="HCdXmnRlPgeNBad2"
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BDAC5B@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for
- HARDENED_ATOMIC
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---HCdXmnRlPgeNBad2
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BDAB84@IRSMSX102.ger.corp.intel.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 02/13] percpu-refcount: leave atomic counter
+ unprotected
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dwindsor@gmail.com>
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 04, 2016 at 07:15:56AM +0000, Reshetova, Elena wrote:
-> >An additional idea for future development:
->=20
-> >One way to work around that would be to interpret the stored value 2^30 =
-as zero, and interpret other values accordingly. Like this:
->=20
-> >#define SIGNED_ATOMIC_BASE 0x40000000U
->=20
-> >static __always_inline int atomic_read(const atomic_t *v) {
->   return READ_ONCE((v)->counter) - SIGNED_ATOMIC_BASE; }
->=20
-> >static __always_inline void atomic_set(atomic_t *v, int i) {
->   WRITE_ONCE(v->counter, i + SIGNED_ATOMIC_BASE); }
->=20
-> >static __always_inline int atomic_add_return(int i, atomic_t *v) {
->   return i + xadd_check_overflow(&v->counter, i) - SIGNED_ATOMIC_BASE; }
->=20
-> >With this change, atomic_t could still be used as a signed integer with =
-half the range of an int, but its stored value would only become negative o=
-n overflow. Then, the "jno" instruction in the hardening code could be repl=
-aced with "jns" to reliably block overflows.
->=20
-> >The downsides of this approach would be:
-> > - One extra increment or decrement every time an atomic_t is read
->    or written. This should be relatively cheap - it should be
->    operating on a register -, but it's still not ideal. atomic_t
->    users could perhaps opt out with something like
->    atomic_unsigned_t.
->  - Implicit atomic_t initialization to zero by zeroing memory
->    would stop working. This would probably be the biggest issue
->    with this approach.
->=20
-> I am not sure the BIAS is a good idea at all. Makes things much more comp=
-licated, potentially impacts performance...
+On Tue, Oct 04, 2016 at 06:24:29AM +0000, Reshetova, Elena wrote:
+> On Sun, Oct 2, 2016 at 11:41 PM, Elena Reshetova <elena.reshetova@intel.com> wrote:
+> > From: Hans Liljestrand <ishkamiel@gmail.com>
+> >
+> > This is a temporary solution, and a deviation from the PaX/Grsecurity 
+> > implementation where the counter in question is protected against 
+> > overflows. That however necessitates decreasing the PERCPU_COUNT_BIAS 
+> > which is used in lib/percpu-refcount.c. Such a change effectively cuts 
+> > the safe counter range down by half, and still allows the counter to, 
+> > without warning, prematurely reach zero (which is what the bias aims 
+> > to prevent).
+> 
+> >It might be useful to include a link to the earlier discussions that led to this solution.
+> 
+> Big part of it was in private emails, not sure how to reference that. Maybe we can just add more explanation here?
 
-Yeah, it does make things more complicated. And I just noticed that with the
-BIAS, atomic_sub_and_test() would likely have to be implemented with cmpxch=
-g,
-so it probably doesn't help much performance-wise.
+I can try to summarize the discussion/reasoning here. Please correct me
+if/when I'm wrong.
 
-In summary: Nevermind, it was a stupid idea.
+percpu-refcount uses an atomic, which should be protected similarly to
+other reference counters that this patch series tries to address. But it
+is not.
 
---HCdXmnRlPgeNBad2
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+--- a/include/linux/percpu-refcount.h
++++ b/include/linux/percpu-refcount.h
+@@ -81,7 +81,17 @@
+...
+ struct percpu_ref {
+-       atomic_long_t           count;
+...
++       atomic_long_wrap_t      count;
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+The way it works (before and after our patch) is that the count needs to
+be updated in a non-atomic way. This means that before all the percpu
+refs are added the value could be off in either direction, but no more
+than the actual "true" value of the counter. In order to prevent the
+counter prematurely reaching zero, a bias (defined in
+lib/percup-refcount.c) is used to offset the range from [MIN,MAX] to
+[1,MAX]+[MIN,-1] (with "zero" in the middle, as far from 0 as possible).
 
-iQIbBAEBAgAGBQJX86SYAAoJED4KNFJOeCOoE0sP+Na3F+GFTnwXVuMnWNKQ956U
-18PxcczZS49TKRmmSDDGdi+X4/igu1EwG95t1bqktRIEZvh+ZVump0j25MBKw9Ei
-q6fS7i769aott4fZGyI5iFgEoPXnzIB5OeRs9WNQ91rZ/9mwdLfj/KuaHHMzdT4c
-ekTU7oyJG7VubjUjphidioMwiyKzPYKkxwV1cyHpKTW8JFICpicURreXZc1fkcaJ
-kmuEiMlFtV3hApu269I/wPq5Pxq+sv6fdvBmSfP5Az8HRIGrtoS0qDwm4J6ONKao
-T4jejL1xjihlRn3avtgp0u35pfop8jvemgIsUE1nTHjzCZnf+YCK08XYKDqWmLQF
-cxi66oyF1+tPqKgfRuETpu4lcf+f/z4SHv8zPFtbhoVBAhNkFGYFSsD7Demb0b2B
-Fr37bWhAhoVNlA8UVBTT0vffcJEUlEGADNgHhogK/IYM3jfX/ht7uPvjsS0EtLLs
-W0Jq/9i0isY7/mFakUBW/uZGA655gPCGmT+RJ7wigr93aIFCEyUV935rr4hEN3D4
-Pv1N0dCr+B+mxuZvgQXBG1lqfq33+NVDKFF6u2haQDq6j8aeW0oPod+A4Vwlxy2G
-kouuyyITXGjBgFSSmPO2nNeqU7hzfFOUJGmdWwGc/qsxtAMIlDaxss8b+voCTtc9
-MZb3c8NzIU7Yi/6Q1aI=
-=wzML
------END PGP SIGNATURE-----
+https://github.com/ereshetova/linux-stable/commit/af44298668d12bf79f48e14396568e9f29ca4bef#diff-be7e4fe901ed6a9d5292276fef233468R34
 
---HCdXmnRlPgeNBad2--
+The problem is then that if the atomic is protected it cannot wrap (and
+zero is already offset next to the "wrap-barrier", so it is practically
+guaranteed to do just that). The PaX/Grsecurity solution is to decrease
+this bias, effectively cutting the safe range in half (now [1,MAX]). And
+while overflows at MAX would be caught, the counter could still
+prematurely reach zero. (Although since the counter can be off at most
+by it's true value, presumably an overflow would still trigger at some
+point during the percpu ref additions, but not necessarily before zero
+had been reached one or more times.)
+
+The immediate solution would be to go with the bias decrease (and
+document the repercussions), but we had already seen some objections to
+that due to the reasons above. Other solutions would seem to require
+more comprehensive changes percpu-ref, which we felt were not suited for
+this patch series. We therefore decided to switch the counter to an
+atomic_long_wrap_t and just document the issue for now.
