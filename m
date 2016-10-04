@@ -1,76 +1,136 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 4 Oct 2016 16:06:31 +0300
-From: Hans Liljestrand <ishkamiel@gmail.com>
-Message-ID: <20161004130631.GA17762@thigreal>
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-3-git-send-email-elena.reshetova@intel.com>
- <CAGXu5jJnJODOzv4Yk=c-n9wA=hP=qza57q1EBcD4sJboVqXr3g@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41BDAB84@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BDAB84@IRSMSX102.ger.corp.intel.com>
-Subject: [kernel-hardening] Re: [RFC PATCH 02/13] percpu-refcount: leave atomic counter
- unprotected
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dwindsor@gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20161004124156.GE2040@pc.thejh.net>
+References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
+ <57F2B105.9050400@intel.com> <20161004124156.GE2040@pc.thejh.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 4 Oct 2016 11:51:09 -0700
+Message-ID: <CAGXu5j+6dBJ17UK-=DH7Vz-8qJSPnQ=CCyq4mjAiUJHEd9HfnA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for HARDENED_ATOMIC
+To: Jann Horn <jann@thejh.net>
+Cc: Dave Hansen <dave.hansen@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 04, 2016 at 06:24:29AM +0000, Reshetova, Elena wrote:
-> On Sun, Oct 2, 2016 at 11:41 PM, Elena Reshetova <elena.reshetova@intel.com> wrote:
-> > From: Hans Liljestrand <ishkamiel@gmail.com>
-> >
-> > This is a temporary solution, and a deviation from the PaX/Grsecurity 
-> > implementation where the counter in question is protected against 
-> > overflows. That however necessitates decreasing the PERCPU_COUNT_BIAS 
-> > which is used in lib/percpu-refcount.c. Such a change effectively cuts 
-> > the safe counter range down by half, and still allows the counter to, 
-> > without warning, prematurely reach zero (which is what the bias aims 
-> > to prevent).
-> 
-> >It might be useful to include a link to the earlier discussions that led to this solution.
-> 
-> Big part of it was in private emails, not sure how to reference that. Maybe we can just add more explanation here?
+On Tue, Oct 4, 2016 at 5:41 AM, Jann Horn <jann@thejh.net> wrote:
+> On Mon, Oct 03, 2016 at 12:27:01PM -0700, Dave Hansen wrote:
+>> On 10/02/2016 11:41 PM, Elena Reshetova wrote:
+>> >  static __always_inline void atomic_add(int i, atomic_t *v)
+>> >  {
+>> > -   asm volatile(LOCK_PREFIX "addl %1,%0"
+>> > +   asm volatile(LOCK_PREFIX "addl %1,%0\n"
+>> > +
+>> > +#ifdef CONFIG_HARDENED_ATOMIC
+>> > +                "jno 0f\n"
+>> > +                LOCK_PREFIX "subl %1,%0\n"
+>> > +                "int $4\n0:\n"
+>> > +                _ASM_EXTABLE(0b, 0b)
+>> > +#endif
+>> > +
+>> > +                : "+m" (v->counter)
+>> > +                : "ir" (i));
+>> > +}
+>>
+>> Rather than doing all this assembly and exception stuff, could we just do:
+>>
+>> static __always_inline void atomic_add(int i, atomic_t *v)
+>> {
+>>       if (atomic_add_unless(v, a, INT_MAX))
+>>               BUG_ON_OVERFLOW_FOO()...
+>> }
+>>
+>> That way, there's also no transient state where somebody can have
+>> observed the overflow before it is fixed up.  Granted, this
+>> cmpxchg-based operation _is_ more expensive than the fast-path locked addl.
+>
+> I think we need some numbers, so I copypasted a bunch of kernel code together
+> so that I can benchmark this stuff in userspace without having a full kernel
+> implementation of refcounting protection. My code is at the bottom of
+> the mail - please test this on other CPUs, these are just numbers from my
+> machine.
+>
+> The following numbers are from tests on a
+> "Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz" CPU.
+>
+> First, I'm testing the single-threaded (uncontended) case:
+>
+> $ gcc -o atomic_user_test atomic_user_test.c -std=gnu99 -Wall -pthread -ggdb
+> $ time ./atomic_user_test 1 1 1000000000 # single-threaded, no protection
+> real    0m9.281s
+> user    0m9.251s
+> sys     0m0.004s
+> $ time ./atomic_user_test 1 2 1000000000 # single-threaded, racy protection
+> real    0m9.385s
+> user    0m9.365s
+> sys     0m0.003s
+> $ time ./atomic_user_test 1 3 1000000000 # single-threaded, cmpxchg protection
+> real    0m12.399s
+> user    0m12.375s
+> sys     0m0.000s
+>
+> The cmpxchg protection is something like 30% slower than the racy one. The
+> cmpxchg protection needs something like 12.4ns per operation, or around 45
+> cycles per operation. (Well, probably actually a bit less, considering that
+> the loop also costs some time.) My guess is that this wouldn't be noticeable.
+>
+> Now, I'm testing the multi-threaded (contended) case, with two threads that
+> only try to increment the same counter over and over again - so this is a
+> pretty extreme worst-case microbenchmark:
+>
+> $ time ./atomic_user_test 2 1 1000000000 # multi-threaded, no protection
+> real    0m9.550s
+> user    0m18.988s
+> sys     0m0.000s
+> $ time ./atomic_user_test 2 2 1000000000 # multi-threaded, racy protection
+> real    0m9.249s
+> user    0m18.430s
+> sys     0m0.004s
+> $ time ./atomic_user_test 2 3 1000000000 # multi-threaded, cmpxchg protection
+> real    1m47.331s
+> user    3m34.390s
+> sys     0m0.024s
+>
+> Here, the cmpxchg-protected counter is around 11 times as slow as the
+> unprotected counter, with around 107ns per average increment. That's around
+> 380 cycles per increment.
+>
+> I guess we probably don't care all that much about the few extra cycles in
+> the uncontended case.
+> So I think the big question now is how important the performance of the
+> high-contention case is.
 
-I can try to summarize the discussion/reasoning here. Please correct me
-if/when I'm wrong.
+What I find quite exciting about this benchmark is that they're the
+absolute worst-case: the process is doing nothing but atomic
+operations (which won't be the case for general kernel workloads) and
+the fact that the racy protection is basically lost in the noise is
+great.
 
-percpu-refcount uses an atomic, which should be protected similarly to
-other reference counters that this patch series tries to address. But it
-is not.
+Now, cmpxchg looks bad here, but is, again, in the worst-case
+environment. I'll be curious to see kernel workloads with it, though.
 
---- a/include/linux/percpu-refcount.h
-+++ b/include/linux/percpu-refcount.h
-@@ -81,7 +81,17 @@
-...
- struct percpu_ref {
--       atomic_long_t           count;
-...
-+       atomic_long_wrap_t      count;
+As for the "racy" part, I'm not too concerned about it. (I would like
+it not to race, but given a choice, I would rather this protection was
+enabled by default.) As-is, with two threads fighting for a race, it
+can be hard to win the race, and even if there's a success, one will
+still Oops, so it's still better than what we have today: no
+notification of failure and an exploitable condition. (And, frankly,
+the act of racing and _failing_ is both threads Oopsing, so performing
+a racy would be extremely noisy on systems where they're not already
+set to panic on the first Oops...)
 
-The way it works (before and after our patch) is that the count needs to
-be updated in a non-atomic way. This means that before all the percpu
-refs are added the value could be off in either direction, but no more
-than the actual "true" value of the counter. In order to prevent the
-counter prematurely reaching zero, a bias (defined in
-lib/percup-refcount.c) is used to offset the range from [MIN,MAX] to
-[1,MAX]+[MIN,-1] (with "zero" in the middle, as far from 0 as possible).
+Just to make sure I'm not imagining the wrong thing, the race looks like this:
 
-https://github.com/ereshetova/linux-stable/commit/af44298668d12bf79f48e14396568e9f29ca4bef#diff-be7e4fe901ed6a9d5292276fef233468R34
+CPU0  CPU1
+inc->0
+            inc->1
+dec->0
+Oops
+            carry on
 
-The problem is then that if the atomic is protected it cannot wrap (and
-zero is already offset next to the "wrap-barrier", so it is practically
-guaranteed to do just that). The PaX/Grsecurity solution is to decrease
-this bias, effectively cutting the safe range in half (now [1,MAX]). And
-while overflows at MAX would be caught, the counter could still
-prematurely reach zero. (Although since the counter can be off at most
-by it's true value, presumably an overflow would still trigger at some
-point during the percpu ref additions, but not necessarily before zero
-had been reached one or more times.)
+-Kees
 
-The immediate solution would be to go with the bias decrease (and
-document the repercussions), but we had already seen some objections to
-that due to the reasons above. Other solutions would seem to require
-more comprehensive changes percpu-ref, which we felt were not suited for
-this patch series. We therefore decided to switch the counter to an
-atomic_long_wrap_t and just document the issue for now.
+-- 
+Kees Cook
+Nexus Security
