@@ -1,117 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <57F5696E.6020502@digikod.net>
-References: <20160914072415.26021-1-mic@digikod.net> <20160914072415.26021-17-mic@digikod.net>
- <CAGXu5jJ-Heb0nnLygYo0xHaJKSrQM5RSVRNYN2NnYddwGHtWkA@mail.gmail.com> <57F5696E.6020502@digikod.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Oct 2016 14:25:33 -0700
-Message-ID: <CAGXu5j+F80XCPSVL0VxAAoTiYk5D1NKKC3jyAU=Z0Gi7L9S0aw@mail.gmail.com>
+In-Reply-To: <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
+References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
+ <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 5 Oct 2016 14:45:04 -0700
+Message-ID: <CAKv+Gu9hWvAjckVjEHwNqTeRQgA-5YUatgAZXM-TtTVi6t4yng@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [RFC v3 16/22] bpf/cgroup,landlock: Handle Landlock hooks per cgroup
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Cgroups <cgroups@vger.kernel.org>
+Subject: Re: [kernel-hardening] initcall randomization
+To: kernel-hardening@lists.openwall.com
+Cc: Laura Abbott <labbott@fedoraproject.org>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 5, 2016 at 1:58 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
-wrote:
+On 5 October 2016 at 13:30, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Oct 5, 2016 at 10:09 AM, Ard Biesheuvel
+> <ard.biesheuvel@linaro.org> wrote:
+>> Did anyone ever look into whether there is anything to gain in terms
+>> of hardening from randomizing the order initcalls are issued at each
+>> level? I know entropy is hard to come by at this stage, but on recent
+>> UEFI systems, this is something we could potentially solve
+>> generically. (It may uncover some breakage as well, but only hidden
+>> breakage that could already surface at any time due to linker changes,
+>> so I think this could serve as a diagnostic option as well)
 >
+> It could be a nice addition to CONFIG_RANDOMIZE_MEMORY which already
+> tries to address the "predictable memory locations at every boot"
+> problem by randomizing the offset of the kernel memory mappings on
+> x86_64. Could this be done on arm64 too?
 >
-> On 04/10/2016 01:43, Kees Cook wrote:
->> On Wed, Sep 14, 2016 at 12:24 AM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
-net> wrote:
->>> This allows to add new eBPF programs to Landlock hooks dedicated to a
->>> cgroup thanks to the BPF_PROG_ATTACH command. Like for socket eBPF
->>> programs, the Landlock hooks attached to a cgroup are propagated to the
->>> nested cgroups. However, when a new Landlock program is attached to one
->>> of this nested cgroup, this cgroup hierarchy fork the Landlock hooks.
->>> This design is simple and match the current CONFIG_BPF_CGROUP
->>> inheritance. The difference lie in the fact that Landlock programs can
->>> only be stacked but not removed. This match the append-only seccomp
->>> behavior. Userland is free to handle Landlock hooks attached to a cgrou=
-p
->>> in more complicated ways (e.g. continuous inheritance), but care should
->>> be taken to properly handle error cases (e.g. memory allocation errors)=
-.
->>>
->>> Changes since v2:
->>> * new design based on BPF_PROG_ATTACH (suggested by Alexei Starovoitov)
->>>
->>> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->>> Cc: Alexei Starovoitov <ast@kernel.org>
->>> Cc: Andy Lutomirski <luto@amacapital.net>
->>> Cc: Daniel Borkmann <daniel@iogearbox.net>
->>> Cc: Daniel Mack <daniel@zonque.org>
->>> Cc: David S. Miller <davem@davemloft.net>
->>> Cc: Kees Cook <keescook@chromium.org>
->>> Cc: Tejun Heo <tj@kernel.org>
->>> Link: https://lkml.kernel.org/r/20160826021432.GA8291@ast-mbp.thefacebo=
-ok.com
->>> Link: https://lkml.kernel.org/r/20160827204307.GA43714@ast-mbp.thefaceb=
-ook.com
->>> ---
->>>  include/linux/bpf-cgroup.h  |  7 +++++++
->>>  include/linux/cgroup-defs.h |  2 ++
->>>  include/linux/landlock.h    |  9 +++++++++
->>>  include/uapi/linux/bpf.h    |  1 +
->>>  kernel/bpf/cgroup.c         | 33 ++++++++++++++++++++++++++++++---
->>>  kernel/bpf/syscall.c        | 11 +++++++++++
->>>  security/landlock/lsm.c     | 40 +++++++++++++++++++++++++++++++++++++=
-++-
->>>  security/landlock/manager.c | 32 ++++++++++++++++++++++++++++++++
->>>  8 files changed, 131 insertions(+), 4 deletions(-)
->>>
->>> [...]
->>> diff --git a/kernel/bpf/cgroup.c b/kernel/bpf/cgroup.c
->>> index 7b75fa692617..1c18fe46958a 100644
->>> --- a/kernel/bpf/cgroup.c
->>> +++ b/kernel/bpf/cgroup.c
->>> @@ -15,6 +15,7 @@
->>>  #include <linux/bpf.h>
->>>  #include <linux/bpf-cgroup.h>
->>>  #include <net/sock.h>
->>> +#include <linux/landlock.h>
->>>
->>>  DEFINE_STATIC_KEY_FALSE(cgroup_bpf_enabled_key);
->>>  EXPORT_SYMBOL(cgroup_bpf_enabled_key);
->>> @@ -31,7 +32,15 @@ void cgroup_bpf_put(struct cgroup *cgrp)
->>>                 union bpf_object pinned =3D cgrp->bpf.pinned[type];
->>>
->>>                 if (pinned.prog) {
->>> -                       bpf_prog_put(pinned.prog);
->>> +                       switch (type) {
->>> +                       case BPF_CGROUP_LANDLOCK:
->>> +#ifdef CONFIG_SECURITY_LANDLOCK
->>> +                               put_landlock_hooks(pinned.hooks);
->>> +                               break;
->>> +#endif /* CONFIG_SECURITY_LANDLOCK */
->>> +                       default:
->>> +                               bpf_prog_put(pinned.prog);
->>> +                       }
->>>                         static_branch_dec(&cgroup_bpf_enabled_key);
->>>                 }
->>>         }
->>
->> I get creeped out by type-controlled unions of pointers. :P I don't
->> have a suggestion to improve this, but I don't like seeing a pointer
->> type managed separately from the pointer itself as it tends to bypass
->> a lot of both static and dynamic checking. A union is better than a
->> cast of void *, but it still worries me. :)
+
+The arm64 implementation of KASLR randomizes the placement of
+installed memory inside the linear mapping. If this is the same thing,
+it seems this should be configurable under CONFIG_RANDOMIZE_MEMORY
+instead?
+
+But indeed, as Mark points out, this would primarily affect the
+vmalloc space, and would be defeated by dependency based init (if that
+ever materialises), and so it might make more sense to target __init
+stage vmalloc/ioremap invocations specifically.
+
+>> Since boot time mappings are often performed in initcalls, this could
+>> potentially reduce the predictability of the layout of the virtual
+>> kernel space. But before I start experimenting with this, I thought
+>> I'd ask if anyone has ever looked into this.
 >
-> This is not fully satisfactory for me neither but the other approach is
-> to use two distinct struct fields instead of a union.
-> Do you prefer if there is a "type" field in the "pinned" struct to
-> select the union?
+> As Greg mentioned, I bet there are some implicit ordering (and
+> explicit) that would need solving.
+>
 
-Since memory usage isn't a huge deal for this, I'd actually prefer
-there just be no union at all. Have a type field, and a distinct
-pointer field for each type you're expecting to use. That way there
-can never be confusion between types and you could even validate that
-only a single field type has been populated, etc.
+I guess we should expect some things to break if initcalls within the
+same levels are reordered. The question is if we should treat those as
+defects. I understand that we can currently rely on GNU ld not to
+reorder section contents, even with the multiple levels of partial
+linking that we do in the kernel, but this is not documented afaik,
+and not guaranteed. Things like LTO may break some assumptions here,
+if anyone ever attempts that.
 
--Kees
+But given the feedback, it seems to make more sense to randomise
+boottime vmalloc/ioremap calls directly, so I will experiment with
+that first.
 
---=20
-Kees Cook
-Nexus Security
+-- 
+Ard.
