@@ -1,62 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Wed, 5 Oct 2016 20:43:55 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20161005194354.GA26546@remoulade>
+References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
-References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Oct 2016 12:34:07 -0700
-Message-ID: <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] printk: introduce kptr_restrict level 3
-To: "Roberts, William C" <william.c.roberts@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Dave Weinstein <olorin@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
+Subject: [kernel-hardening] Re: initcall randomization
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 5, 2016 at 11:04 AM,  <william.c.roberts@intel.com> wrote:
-> From: William Roberts <william.c.roberts@intel.com>
->
-> Some out-of-tree modules do not use %pK and just use %p, as it's
-> the common C paradigm for printing pointers. Because of this,
-> kptr_restrict has no affect on the output and thus, no way to
-> contain the kernel address leak.
+Hi Ard,
 
-Solving this is certainly a good idea -- I'm all for finding a solid solution.
+On Wed, Oct 05, 2016 at 06:09:01PM +0100, Ard Biesheuvel wrote:
+> Did anyone ever look into whether there is anything to gain in terms
+> of hardening from randomizing the order initcalls are issued at each
+> level? I know entropy is hard to come by at this stage, but on recent
+> UEFI systems, this is something we could potentially solve
+> generically. (It may uncover some breakage as well, but only hidden
+> breakage that could already surface at any time due to linker changes,
+> so I think this could serve as a diagnostic option as well)
 
-> Introduce kptr_restrict level 3 that causes the kernel to
-> treat %p as if it was %pK and thus always prints zeros.
+As a stress-testing/debugging feature, this would certainly be useful.
 
-I'm worried that this could break kernel internals where %p is being
-used and not exposed to userspace. Maybe those situations don't
-exist...
+>From a hardening PoV, I can't immediately see what this would gain us.
 
-Regardless, I would rather do what Grsecurity has done in this area,
-and whitelist known-safe values instead. For example, they have %pP
-for approved pointers, and %pX for approved
-dereference_function_descriptor() output. Everything else is censored
-if it is a value in kernel memory and destined for a user-space memory
-buffer:
+Also, if we ever solve probe dependencies, I suspect that will remove a lot of
+scope for re-ordering.
 
-        if ((unsigned long)ptr > TASK_SIZE && *fmt != 'P' && *fmt !=
-'X' && *fmt != 'K' && is_usercopy_object(buf)) {
-                printk(KERN_ALERT "grsec: kernel infoleak detected!
-Please report this log to spender@grsecurity.net.\n");
-                dump_stack();
-                ptr = NULL;
-        }
+> Since boot time mappings are often performed in initcalls, this could
+> potentially reduce the predictability of the layout of the virtual
+> kernel space.
 
-The "is_usercopy_object()" test is something we can add, which is
-testing for a new SLAB flag that is used to mark slab caches as either
-used by user-space or not, which is done also through whitelisting.
-(For more details on this, see:
-http://www.openwall.com/lists/kernel-hardening/2016/06/08/10)
+Given you say 'mappings', I assume you mean {io,mem}remap() and friends. If we
+have the entropy to randomize the initcalls, can't we use that to randomize the
+VAs of those mappings? Or is this for the early allocators where that is
+trickier?
 
-Would you have time/interest to add the slab flags and
-is_usercopy_object()? The hardened usercopy part of the slab
-whitelisting can be separate, since it likely needs a different
-usercopy interface to sanely integrate with upstream.
+For general allocations there's the freelist randomization, though I believe
+that the order is predictable at boot time, per the commit message for
+210e7a43fa905bcc ("mm: SLUB freelist randomization").
 
--Kees
-
--- 
-Kees Cook
-Nexus Security
+Thanks,
+Mark.
