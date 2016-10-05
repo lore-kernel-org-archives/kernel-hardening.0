@@ -1,18 +1,16 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 5 Oct 2016 20:43:55 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20161005194354.GA26546@remoulade>
+Date: Wed, 5 Oct 2016 22:23:08 +0200
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20161005202308.GA20923@kroah.com>
 References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
-Subject: [kernel-hardening] Re: initcall randomization
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>
+Subject: Re: [kernel-hardening] initcall randomization
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
-
-Hi Ard,
 
 On Wed, Oct 05, 2016 at 06:09:01PM +0100, Ard Biesheuvel wrote:
 > Did anyone ever look into whether there is anything to gain in terms
@@ -23,25 +21,16 @@ On Wed, Oct 05, 2016 at 06:09:01PM +0100, Ard Biesheuvel wrote:
 > breakage that could already surface at any time due to linker changes,
 > so I think this could serve as a diagnostic option as well)
 
-As a stress-testing/debugging feature, this would certainly be useful.
-
->From a hardening PoV, I can't immediately see what this would gain us.
-
-Also, if we ever solve probe dependencies, I suspect that will remove a lot of
-scope for re-ordering.
+We rely on link-order init call dependancy in the kernel a lot, so be
+very careful about reording them.
 
 > Since boot time mappings are often performed in initcalls, this could
 > potentially reduce the predictability of the layout of the virtual
-> kernel space.
+> kernel space. But before I start experimenting with this, I thought
+> I'd ask if anyone has ever looked into this.
 
-Given you say 'mappings', I assume you mean {io,mem}remap() and friends. If we
-have the entropy to randomize the initcalls, can't we use that to randomize the
-VAs of those mappings? Or is this for the early allocators where that is
-trickier?
+I think you will break things, try it yourself and see :)
 
-For general allocations there's the freelist randomization, though I believe
-that the order is predictable at boot time, per the commit message for
-210e7a43fa905bcc ("mm: SLUB freelist randomization").
+good luck!
 
-Thanks,
-Mark.
+greg k-h
