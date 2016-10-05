@@ -1,31 +1,27 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 5 Oct 2016 18:08:30 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <CAGXu5j+SOmCF1NJm=pUjAbC0N2xBh93Xo-g7rmj+-2wdukSMSQ@mail.gmail.com>
-Message-ID: <alpine.LRH.2.20.1610051806300.5651@namei.org>
-References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com> <1475522869.3304.0.camel@debian.org> <CAGXu5j+SOmCF1NJm=pUjAbC0N2xBh93Xo-g7rmj+-2wdukSMSQ@mail.gmail.com>
+References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com>
+ <CAEXv5_h55L8UyYpFy6qQUPBqGfxOOR+DEXywbNVkBb89a336UQ@mail.gmail.com>
+ <CAGXu5jLitFEp__P43VYqvq42At9qMo2_wpf=AR-8sDkmS06_LQ@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41BDAC2F@IRSMSX102.ger.corp.intel.com>
+From: Dave Hansen <dave.hansen@intel.com>
+Message-ID: <57F51E29.9040408@intel.com>
+Date: Wed, 5 Oct 2016 08:37:13 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] Any artists around?
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BDAC2F@IRSMSX102.ger.corp.intel.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture independent hardened atomic
+ base
+To: "Reshetova, Elena" <elena.reshetova@intel.com>, Kees Cook <keescook@chromium.org>, David Windsor <dwindsor@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 3 Oct 2016, Kees Cook wrote:
+On 10/04/2016 12:05 AM, Reshetova, Elena wrote:
+>> >This could also be the basis for Dave Hanson's suggestion to use
+>> >cmpchxg: would the expense of that instead of locked addl get noticed, etc?
+> Do you mean cmpxchg? Dave, I could not find your suggestion, which mail thread was it?
 
-> On Mon, Oct 3, 2016 at 12:27 PM, Yves-Alexis Perez <corsac@debian.org> wrote:
-> > On Mon, 2016-10-03 at 12:16 -0700, Kees Cook wrote:
-> >> Does anyone have some suggestions or sketches for a logo we could use?
-> >
-> > What about http://kernsec.org/images/overlord59-tux-halo.png from kernsec
-> > wiki?
-> 
-> What's the origin of that one, exactly? Maybe James knows?
-
-As I recall, it's from this artist:
-
-http://overlord59.deviantart.com/
-
-
--- 
-James Morris
-<jmorris@namei.org>
+Using cmpxchg() is implied if we use atomic_add_unless().  So it was a
+part of my suggestion to use atomic_add_unless().
