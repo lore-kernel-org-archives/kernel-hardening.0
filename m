@@ -1,42 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Rasmus Villemoes <linux@rasmusvillemoes.dk>
+References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
+Date: Wed, 05 Oct 2016 22:52:39 +0200
+In-Reply-To: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
+	(william c. roberts's message of "Wed, 5 Oct 2016 14:04:46 -0400")
+Message-ID: <87eg3umsbs.fsf@rasmusvillemoes.dk>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
-References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Oct 2016 13:30:48 -0700
-Message-ID: <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] initcall randomization
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Laura Abbott <labbott@fedoraproject.org>, Mark Rutland <mark.rutland@arm.com>
+Content-Type: text/plain
+Subject: [kernel-hardening] Re: [PATCH] printk: introduce kptr_restrict level 3
+To: william.c.roberts@intel.com
+Cc: kernel-hardening@lists.openwall.com, corbet@lwn.net, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 5, 2016 at 10:09 AM, Ard Biesheuvel
-<ard.biesheuvel@linaro.org> wrote:
-> Did anyone ever look into whether there is anything to gain in terms
-> of hardening from randomizing the order initcalls are issued at each
-> level? I know entropy is hard to come by at this stage, but on recent
-> UEFI systems, this is something we could potentially solve
-> generically. (It may uncover some breakage as well, but only hidden
-> breakage that could already surface at any time due to linker changes,
-> so I think this could serve as a diagnostic option as well)
+On Wed, Oct 05 2016, william.c.roberts@intel.com wrote:
 
-It could be a nice addition to CONFIG_RANDOMIZE_MEMORY which already
-tries to address the "predictable memory locations at every boot"
-problem by randomizing the offset of the kernel memory mappings on
-x86_64. Could this be done on arm64 too?
+> From: William Roberts <william.c.roberts@intel.com>
+>
+> Some out-of-tree modules do not use %pK and just use %p, as it's
+> the common C paradigm for printing pointers. Because of this,
+> kptr_restrict has no affect on the output and thus, no way to
+> contain the kernel address leak.
+>
+> Introduce kptr_restrict level 3 that causes the kernel to
+> treat %p as if it was %pK and thus always prints zeros.
+>
+> Sample Output:
+> kptr_restrict == 2:
+> p: 00000000604369f4
+> pK: 0000000000000000
+>
+> kptr_restrict == 3:
+> p: 0000000000000000
+> pK: 0000000000000000
+>
+> Signed-off-by: William Roberts <william.c.roberts@intel.com>
+> ---
+>  Documentation/sysctl/kernel.txt |   3 ++
+>  kernel/sysctl.c                 |   3 +-
+>  lib/vsprintf.c                  | 107 ++++++++++++++++++++++++----------------
 
-> Since boot time mappings are often performed in initcalls, this could
-> potentially reduce the predictability of the layout of the virtual
-> kernel space. But before I start experimenting with this, I thought
-> I'd ask if anyone has ever looked into this.
+That's a lot of changed lines. Why isn't this just
 
-As Greg mentioned, I bet there are some implicit ordering (and
-explicit) that would need solving.
+--- a/lib/vsprintf.c
++++ b/lib/vsprintf.c
+@@ -1719,6 +1719,8 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
+        case 'G':
+                return flags_string(buf, end, ptr, fmt);
+        }
++       if (kptr_restrict == 3)
++               ptr = NULL;
+        spec.flags |= SMALL;
+        if (spec.field_width == -1) {
+                spec.field_width = default_width;
 
--Kees
-
--- 
-Kees Cook
-Nexus Security
+?
