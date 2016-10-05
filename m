@@ -1,38 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-13-git-send-email-elena.reshetova@intel.com>
- <57F2B105.9050400@intel.com> <20161004124156.GE2040@pc.thejh.net>
- <57F51EB3.1030605@intel.com> <20161005161845.GR14666@pc.thejh.net>
-From: Dave Hansen <dave.hansen@intel.com>
-Message-ID: <57F52B03.8070300@intel.com>
-Date: Wed, 5 Oct 2016 09:32:03 -0700
 MIME-Version: 1.0
-In-Reply-To: <20161005161845.GR14666@pc.thejh.net>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC PATCH 12/13] x86: x86 implementation for
- HARDENED_ATOMIC
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 5 Oct 2016 18:09:01 +0100
+Message-ID: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] initcall randomization
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/05/2016 09:18 AM, Jann Horn wrote:
-> 1. Pipeline flushes because of branch prediction failures caused by
->    more-or-less random cmpxchg retries? Pipeline flushes are pretty
->    expensive, right?
-> 2. Repeated back-and-forth bouncing of the cacheline because an increment
->    via cmpxchg needs at least two accesses instead of one, and the
->    cacheline could be "stolen" by the other thread between the READ_ONCE
->    and the cmpxchg.
-> 3. Simply the cost of retrying if the value has changed in the meantime.
-> 4. Maybe if two CPUs try increments at the same time, with exactly the
->    same timing, they get stuck in a tiny livelock where every cmpxchg
->    fails because the value was just updated by the other core? And then
->    something slightly disturbs the timing (interrupt / clock speed
->    change / ...), allowing one task to win the race?
+Did anyone ever look into whether there is anything to gain in terms
+of hardening from randomizing the order initcalls are issued at each
+level? I know entropy is hard to come by at this stage, but on recent
+UEFI systems, this is something we could potentially solve
+generically. (It may uncover some breakage as well, but only hidden
+breakage that could already surface at any time due to linker changes,
+so I think this could serve as a diagnostic option as well)
 
-I can speculate about it, but I don't know for sure.  The topdown tool
-from pmu-tools is usually a great way to figure out what's causing these
-kinds of bottlenecks in the CPU:
+Since boot time mappings are often performed in initcalls, this could
+potentially reduce the predictability of the layout of the virtual
+kernel space. But before I start experimenting with this, I thought
+I'd ask if anyone has ever looked into this.
 
-	https://github.com/andikleen/pmu-tools
+Regards,
+Ard.
