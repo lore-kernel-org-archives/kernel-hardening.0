@@ -1,39 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1475788788.1820.4.camel@perches.com>
-References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
- <20161006133147.GA20206@infradead.org> <476DC76E7D1DF2438D32BFADF679FC561CD14651@ORSMSX103.amr.corp.intel.com>
- <20161006135612.GA21342@infradead.org> <CAGXu5jJsj=4=j1R6aUYiDvdWqY916pJbBdXCEbQFFoyQ0QP4Yw@mail.gmail.com>
- <1475788788.1820.4.camel@perches.com>
+In-Reply-To: <99FC4B6EFCEFD44486C35F4C281DC6731F314AAE@ORSMSX107.amr.corp.intel.com>
+References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
+ <20161003193418.GA7071@openwall.com> <CAGXu5jKfU9Wg1Vd_bz1d--qC02C9xzD_0JJo7seK1M+1tLeszg@mail.gmail.com>
+ <20161005223220.GA6533@openwall.com> <20161006022441.c2gyogl32tnrlnvg@thunk.org>
+ <99FC4B6EFCEFD44486C35F4C281DC6731F314AAE@ORSMSX107.amr.corp.intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 6 Oct 2016 14:25:57 -0700
-Message-ID: <CAGXu5jL5R+roHcChEfq8PBJV+hcZNR8Z19pWrpJU9Kg8tfb_ew@mail.gmail.com>
+Date: Thu, 6 Oct 2016 14:29:03 -0700
+Message-ID: <CAGXu5jL+Zp1jqHPS8wOzbZNYhXei6=PY+MkR+UnmBf-L4TfzFQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] printk: introduce kptr_restrict level 3
-To: Joe Perches <joe@perches.com>
-Cc: Christoph Hellwig <hch@infradead.org>, "Roberts, William C" <william.c.roberts@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "corbet@lwn.net" <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: Re: [kernel-hardening] Any artists around?
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 6, 2016 at 2:19 PM, Joe Perches <joe@perches.com> wrote:
-> On Thu, 2016-10-06 at 14:00 -0700, Kees Cook wrote:
+On Wed, Oct 5, 2016 at 11:50 PM, Schaufler, Casey
+<casey.schaufler@intel.com> wrote:
+>> -----Original Message-----
+>> From: Theodore Ts'o [mailto:tytso@mit.edu]
+>> Sent: Wednesday, October 05, 2016 7:25 PM
+>> To: kernel-hardening@lists.openwall.com
+>> Subject: Re: [kernel-hardening] Any artists around?
+>>
+>> On Thu, Oct 06, 2016 at 12:32:20AM +0200, Solar Designer wrote:
+>> >
+>> > Oh, cool.  Meanwhile, my Twitter poll ended in favor of bikeshed:
+>> >
+>> > https://twitter.com/solardiz/status/783033528736940032
+>> >
+>> > "What should (Linux) Kernel Self Protection Project's logo be?
+>> >
+>> > 32% A fancy penguin
+>> > 42% A bikeshed
+>> >  7% Other (please tweet what)
+>> > 19% No logo
+>> >
+>> > 116 votes"
+>>
+>> Ah, but what _color_ should the bikeshed be?  :-)
 >
->> And based on my read of this thread, we all appear to be in violent
->> agreement. :) "always protect %p" is absolutely the goal, and we can
->> figure out the best way to get there.
->
-> I proposed emitting pointers from the const and text sections by default
-> and using NULL for data pointers.
->
-> https://lkml.org/lkml/2016/8/5/380
+> Blue! No, Red! Ahhhhhhhhh!
 
-Leaks of const and text (while not useful for write-attacks) can leak
-KASLR offset (though yes, yes, there are many existing leaks -- but we
-should avoid adding a new one regardless).
+New logo idea: the face of the Bridge Keeper of the Bridge of Death. ;)
 
-I think the logic of "is this destined for userspace" is likely the
-cleanest approach. There still may be many things this breaks, though.
-(I expect perf. Everything breaks perf. ;)
+http://villains.wikia.com/wiki/Bridge_Keeper
 
 -Kees
 
