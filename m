@@ -1,66 +1,89 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Thu, 6 Oct 2016 15:18:03 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC561CD14829@ORSMSX103.amr.corp.intel.com>
-References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
- <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
-In-Reply-To: <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] printk: introduce kptr_restrict level 3
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <20161006135612.GA21342@infradead.org>
+References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
+ <20161006133147.GA20206@infradead.org> <476DC76E7D1DF2438D32BFADF679FC561CD14651@ORSMSX103.amr.corp.intel.com>
+ <20161006135612.GA21342@infradead.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 6 Oct 2016 14:00:41 -0700
+Message-ID: <CAGXu5jJsj=4=j1R6aUYiDvdWqY916pJbBdXCEbQFFoyQ0QP4Yw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] printk: introduce kptr_restrict level 3
+To: Christoph Hellwig <hch@infradead.org>
+Cc: "Roberts, William C" <william.c.roberts@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "corbet@lwn.net" <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
-LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
-b2sNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDUsIDIwMTYgMzozNCBQTQ0KPiBUbzogUm9i
-ZXJ0cywgV2lsbGlhbSBDIDx3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+DQo+IENjOiBrZXJu
-ZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgSm9uYXRoYW4gQ29yYmV0IDxjb3JiZXRA
-bHduLm5ldD47DQo+IGxpbnV4LWRvY0B2Z2VyLmtlcm5lbC5vcmc7IExLTUwgPGxpbnV4LWtlcm5l
-bEB2Z2VyLmtlcm5lbC5vcmc+OyBOaWNrDQo+IERlc2F1bG5pZXJzIDxuZGVzYXVsbmllcnNAZ29v
-Z2xlLmNvbT47IERhdmUgV2VpbnN0ZWluIDxvbG9yaW5AZ29vZ2xlLmNvbT4NCj4gU3ViamVjdDog
-UmU6IFtQQVRDSF0gcHJpbnRrOiBpbnRyb2R1Y2Uga3B0cl9yZXN0cmljdCBsZXZlbCAzDQo+IA0K
-PiBPbiBXZWQsIE9jdCA1LCAyMDE2IGF0IDExOjA0IEFNLCAgPHdpbGxpYW0uYy5yb2JlcnRzQGlu
-dGVsLmNvbT4gd3JvdGU6DQo+ID4gRnJvbTogV2lsbGlhbSBSb2JlcnRzIDx3aWxsaWFtLmMucm9i
-ZXJ0c0BpbnRlbC5jb20+DQo+ID4NCj4gPiBTb21lIG91dC1vZi10cmVlIG1vZHVsZXMgZG8gbm90
-IHVzZSAlcEsgYW5kIGp1c3QgdXNlICVwLCBhcyBpdCdzIHRoZQ0KPiA+IGNvbW1vbiBDIHBhcmFk
-aWdtIGZvciBwcmludGluZyBwb2ludGVycy4gQmVjYXVzZSBvZiB0aGlzLA0KPiA+IGtwdHJfcmVz
-dHJpY3QgaGFzIG5vIGFmZmVjdCBvbiB0aGUgb3V0cHV0IGFuZCB0aHVzLCBubyB3YXkgdG8gY29u
-dGFpbg0KPiA+IHRoZSBrZXJuZWwgYWRkcmVzcyBsZWFrLg0KPiANCj4gU29sdmluZyB0aGlzIGlz
-IGNlcnRhaW5seSBhIGdvb2QgaWRlYSAtLSBJJ20gYWxsIGZvciBmaW5kaW5nIGEgc29saWQgc29s
-dXRpb24uDQo+IA0KPiA+IEludHJvZHVjZSBrcHRyX3Jlc3RyaWN0IGxldmVsIDMgdGhhdCBjYXVz
-ZXMgdGhlIGtlcm5lbCB0byB0cmVhdCAlcCBhcw0KPiA+IGlmIGl0IHdhcyAlcEsgYW5kIHRodXMg
-YWx3YXlzIHByaW50cyB6ZXJvcy4NCj4gDQo+IEknbSB3b3JyaWVkIHRoYXQgdGhpcyBjb3VsZCBi
-cmVhayBrZXJuZWwgaW50ZXJuYWxzIHdoZXJlICVwIGlzIGJlaW5nIHVzZWQgYW5kIG5vdA0KPiBl
-eHBvc2VkIHRvIHVzZXJzcGFjZS4gTWF5YmUgdGhvc2Ugc2l0dWF0aW9ucyBkb24ndCBleGlzdC4u
-Lg0KPiANCj4gUmVnYXJkbGVzcywgSSB3b3VsZCByYXRoZXIgZG8gd2hhdCBHcnNlY3VyaXR5IGhh
-cyBkb25lIGluIHRoaXMgYXJlYSwgYW5kIHdoaXRlbGlzdA0KPiBrbm93bi1zYWZlIHZhbHVlcyBp
-bnN0ZWFkLiBGb3IgZXhhbXBsZSwgdGhleSBoYXZlICVwUCBmb3IgYXBwcm92ZWQgcG9pbnRlcnMs
-DQo+IGFuZCAlcFggZm9yIGFwcHJvdmVkDQo+IGRlcmVmZXJlbmNlX2Z1bmN0aW9uX2Rlc2NyaXB0
-b3IoKSBvdXRwdXQuIEV2ZXJ5dGhpbmcgZWxzZSBpcyBjZW5zb3JlZCBpZiBpdCBpcyBhDQo+IHZh
-bHVlIGluIGtlcm5lbCBtZW1vcnkgYW5kIGRlc3RpbmVkIGZvciBhIHVzZXItc3BhY2UgbWVtb3J5
-DQo+IGJ1ZmZlcjoNCj4gDQo+ICAgICAgICAgaWYgKCh1bnNpZ25lZCBsb25nKXB0ciA+IFRBU0tf
-U0laRSAmJiAqZm10ICE9ICdQJyAmJiAqZm10ICE9ICdYJyAmJiAqZm10ICE9DQo+ICdLJyAmJiBp
-c191c2VyY29weV9vYmplY3QoYnVmKSkgew0KPiAgICAgICAgICAgICAgICAgcHJpbnRrKEtFUk5f
-QUxFUlQgImdyc2VjOiBrZXJuZWwgaW5mb2xlYWsgZGV0ZWN0ZWQhDQo+IFBsZWFzZSByZXBvcnQg
-dGhpcyBsb2cgdG8gc3BlbmRlckBncnNlY3VyaXR5Lm5ldC5cbiIpOw0KPiAgICAgICAgICAgICAg
-ICAgZHVtcF9zdGFjaygpOw0KPiAgICAgICAgICAgICAgICAgcHRyID0gTlVMTDsNCj4gICAgICAg
-ICB9DQo+IA0KPiBUaGUgImlzX3VzZXJjb3B5X29iamVjdCgpIiB0ZXN0IGlzIHNvbWV0aGluZyB3
-ZSBjYW4gYWRkLCB3aGljaCBpcyB0ZXN0aW5nIGZvciBhDQo+IG5ldyBTTEFCIGZsYWcgdGhhdCBp
-cyB1c2VkIHRvIG1hcmsgc2xhYiBjYWNoZXMgYXMgZWl0aGVyIHVzZWQgYnkgdXNlci1zcGFjZSBv
-cg0KPiBub3QsIHdoaWNoIGlzIGRvbmUgYWxzbyB0aHJvdWdoIHdoaXRlbGlzdGluZy4NCj4gKEZv
-ciBtb3JlIGRldGFpbHMgb24gdGhpcywgc2VlOg0KPiBodHRwOi8vd3d3Lm9wZW53YWxsLmNvbS9s
-aXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTYvMDYvMDgvMTApDQo+IA0KPiBXb3VsZCB5b3UgaGF2
-ZSB0aW1lL2ludGVyZXN0IHRvIGFkZCB0aGUgc2xhYiBmbGFncyBhbmQgaXNfdXNlcmNvcHlfb2Jq
-ZWN0KCk/DQo+IFRoZSBoYXJkZW5lZCB1c2VyY29weSBwYXJ0IG9mIHRoZSBzbGFiIHdoaXRlbGlz
-dGluZyBjYW4gYmUgc2VwYXJhdGUsIHNpbmNlIGl0IGxpa2VseQ0KPiBuZWVkcyBhIGRpZmZlcmVu
-dCB1c2VyY29weSBpbnRlcmZhY2UgdG8gc2FuZWx5IGludGVncmF0ZSB3aXRoIHVwc3RyZWFtLg0K
-DQpBIGNvdXBsZSBvZiBxdWVzdGlvbnMgb2ZmIGhhbmQ6DQoxLiBXaGF0IGFib3V0IGJzcyBzdGF0
-aWNzPyBJIGFtIGFzc3VtaW5nIHRoYXQgd2hlbiB0aGUgbG9hZGVyIGxvYWRzIHVwIGEgbW9kdWxl
-DQogICAgIFRoYXQgaXQncyBkeW5hbWljYWxseSBhbGxvY2F0aW5nIHRoZSAuYnNzIHNlY3Rpb24g
-b3Igc29tZSBlcXVpdmFsZW50LiBJIHdvdWxkDQogICAgIEFsc28gYXNzdW1lIHRoZSBtZXRob2Qg
-eW91IGRlc2NyaWJlIHdvdWxkIGNhdGNoIHRoYXQsIGlzIHRoYXQgY29ycmVjdD8NCg0KMi4gV2hh
-dCBhYm91dCBzdGFjayB2YXJpYWJsZXM/IA0KDQo+IA0KPiAtS2Vlcw0KPiANCj4gLS0NCj4gS2Vl
-cyBDb29rDQo+IE5leHVzIFNlY3VyaXR5DQo=
+On Thu, Oct 6, 2016 at 6:56 AM, Christoph Hellwig <hch@infradead.org> wrote:
+> On Thu, Oct 06, 2016 at 01:47:47PM +0000, Roberts, William C wrote:
+> > On Thu, Oct 6, 2016 at 6:31 AM, Christoph Hellwig <hch@infradead.org> wrote:
+> > > So what?  We a) don't care about out of tree modules and b) you could just triviall
+> > > fix them up if you care.
+> >
+> > Out of tree modules still affect core kernel security.
+>
+> So don't use them.
+
+I'm really interested in keeping these discussions productive.
+Declaring that the upstream kernel community (your implied "we")
+doesn't care about out-of-tree code is both false and short-sighted.
+Huge numbers of people depend on Linux on their phones, their IoT
+devices, cars, etc, and huge volumes of those (unfortunately) are
+running out-of-tree code.
+
+This isn't about supporting some special interface that a single third
+party driver uses; this is about robust engineering and security
+practices that benefits everything, even out-of-tree code.
+
+>> I would also bet money, that somewhere
+>> In-tree someone has put a %p when they wanted a %pK.
+>
+> So fix them.
+
+%pK is an ugly situation that I'd like to fix correctly. It was
+designed originally as a blacklisting method, when it should have been
+designed as a whitelist (as William mentions). This is what will need
+fixing (and is what I was suggesting in my original reply to the
+patch).
+
+All that said, "so fix them" sounds very much like "just fix the bugs"
+which is another troublesome attitude to have for dealing with
+potential security flaws. The kernel community already finds/fixes
+obvious flaws; the efforts with changes like what William is proposing
+are based around assuming (correctly, I can argue) that there are
+already bugs present, and they will remain in the kernel for years to
+come. Designing the kernel to safely deal with bugs being present is a
+fundamental design principle for kernel security self-defense
+technologies.
+
+The challenge is not "fix them", the challenge is "design the kernel
+to do the right thing even when the bugs are unfixed".
+
+>> So this method is just quite error
+>> prone. We currently have a blacklist approach versus whitelist.
+>
+> Or fix the entire thing, get rid of %pK and always protect %p if you
+> can show that it doesn't break anything.
+>
+> But stop posting patches with bullshit arguments like out of tree
+> modules.
+
+As a _singlular_ argument, "it's for out-of-tree code" is weak. As an
+_additional_ argument, it has value. Saying "this only helps
+out-of-tree code" doesn't carry much weight. Saying "this helps kernel
+security, even for out-of-tree code" is perfectly valid. And a wrinkle
+in this is that some day, either that out-of-tree code, or brand new
+code, will land in the kernel, and we don't want to continue to
+require authors be aware of an opt-in security feature. The kernel
+should protect itself (and all of itself, including out-of-tree or
+future code) by default.
+
+And based on my read of this thread, we all appear to be in violent
+agreement. :) "always protect %p" is absolutely the goal, and we can
+figure out the best way to get there.
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
