@@ -1,66 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Thu, 6 Oct 2016 14:59:54 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC561CD14812@ORSMSX103.amr.corp.intel.com>
+Date: Thu, 6 Oct 2016 15:18:03 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC561CD14829@ORSMSX103.amr.corp.intel.com>
 References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
- <20161006133147.GA20206@infradead.org>
- <476DC76E7D1DF2438D32BFADF679FC561CD14651@ORSMSX103.amr.corp.intel.com>
- <20161006135612.GA21342@infradead.org>
-In-Reply-To: <20161006135612.GA21342@infradead.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+ <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
+In-Reply-To: <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
 Subject: [kernel-hardening] RE: [PATCH] printk: introduce kptr_restrict level 3
-To: Christoph Hellwig <hch@infradead.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "corbet@lwn.net" <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-> -----Original Message-----
-> From: Christoph Hellwig [mailto:hch@infradead.org]
-> Sent: Thursday, October 6, 2016 9:56 AM
-> To: Roberts, William C <william.c.roberts@intel.com>
-> Cc: Christoph Hellwig <hch@infradead.org>; kernel-
-> hardening@lists.openwall.com; corbet@lwn.net; linux-doc@vger.kernel.org;
-> linux-kernel@vger.kernel.org
-> Subject: Re: [PATCH] printk: introduce kptr_restrict level 3
->=20
-> On Thu, Oct 06, 2016 at 01:47:47PM +0000, Roberts, William C wrote:
-> > Out of tree modules still affect core kernel security.
->=20
-> So don't use them.
->=20
-> > I would also bet money, that somewhere In-tree someone has put a %p
-> > when they wanted a %pK.
->=20
-> So fix them.
-
-As Jann Horn points out, "And in total, there are 13578 matches for %p[^FfS=
-sBRrhbMmIiEUVKNadCDgG] throughout the kernel. Reviewing all of those manual=
-ly would suck."
-
->=20
-> > So this method is just quite error
-> > prone. We currently have a blacklist approach versus whitelist.
->=20
-> Or fix the entire thing, get rid of %pK and always protect %p if you can =
-show that
-> it doesn't break anything.
->=20
-> But stop posting patches with bullshit arguments like out of tree modules=
-.
-
-Ok perhaps the commit message sucks, and I should have included the large s=
-pread usages of %p throughout
-the kernel, I assumed those would just be known, I shouldn't have made that=
- assumption.
-
-We should care about out-of-tree modules wrt security as they affect the se=
-curity of the whole system, especially when the
-modules are linking to core symbols like printing and string routines. Ther=
-e are tons of %p usages throughout the
-kernel as noted above.
-
-This is pretty low hanging fruit and we should fix this, as Kees points out=
-.
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDUsIDIwMTYgMzozNCBQTQ0KPiBUbzogUm9i
+ZXJ0cywgV2lsbGlhbSBDIDx3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+DQo+IENjOiBrZXJu
+ZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgSm9uYXRoYW4gQ29yYmV0IDxjb3JiZXRA
+bHduLm5ldD47DQo+IGxpbnV4LWRvY0B2Z2VyLmtlcm5lbC5vcmc7IExLTUwgPGxpbnV4LWtlcm5l
+bEB2Z2VyLmtlcm5lbC5vcmc+OyBOaWNrDQo+IERlc2F1bG5pZXJzIDxuZGVzYXVsbmllcnNAZ29v
+Z2xlLmNvbT47IERhdmUgV2VpbnN0ZWluIDxvbG9yaW5AZ29vZ2xlLmNvbT4NCj4gU3ViamVjdDog
+UmU6IFtQQVRDSF0gcHJpbnRrOiBpbnRyb2R1Y2Uga3B0cl9yZXN0cmljdCBsZXZlbCAzDQo+IA0K
+PiBPbiBXZWQsIE9jdCA1LCAyMDE2IGF0IDExOjA0IEFNLCAgPHdpbGxpYW0uYy5yb2JlcnRzQGlu
+dGVsLmNvbT4gd3JvdGU6DQo+ID4gRnJvbTogV2lsbGlhbSBSb2JlcnRzIDx3aWxsaWFtLmMucm9i
+ZXJ0c0BpbnRlbC5jb20+DQo+ID4NCj4gPiBTb21lIG91dC1vZi10cmVlIG1vZHVsZXMgZG8gbm90
+IHVzZSAlcEsgYW5kIGp1c3QgdXNlICVwLCBhcyBpdCdzIHRoZQ0KPiA+IGNvbW1vbiBDIHBhcmFk
+aWdtIGZvciBwcmludGluZyBwb2ludGVycy4gQmVjYXVzZSBvZiB0aGlzLA0KPiA+IGtwdHJfcmVz
+dHJpY3QgaGFzIG5vIGFmZmVjdCBvbiB0aGUgb3V0cHV0IGFuZCB0aHVzLCBubyB3YXkgdG8gY29u
+dGFpbg0KPiA+IHRoZSBrZXJuZWwgYWRkcmVzcyBsZWFrLg0KPiANCj4gU29sdmluZyB0aGlzIGlz
+IGNlcnRhaW5seSBhIGdvb2QgaWRlYSAtLSBJJ20gYWxsIGZvciBmaW5kaW5nIGEgc29saWQgc29s
+dXRpb24uDQo+IA0KPiA+IEludHJvZHVjZSBrcHRyX3Jlc3RyaWN0IGxldmVsIDMgdGhhdCBjYXVz
+ZXMgdGhlIGtlcm5lbCB0byB0cmVhdCAlcCBhcw0KPiA+IGlmIGl0IHdhcyAlcEsgYW5kIHRodXMg
+YWx3YXlzIHByaW50cyB6ZXJvcy4NCj4gDQo+IEknbSB3b3JyaWVkIHRoYXQgdGhpcyBjb3VsZCBi
+cmVhayBrZXJuZWwgaW50ZXJuYWxzIHdoZXJlICVwIGlzIGJlaW5nIHVzZWQgYW5kIG5vdA0KPiBl
+eHBvc2VkIHRvIHVzZXJzcGFjZS4gTWF5YmUgdGhvc2Ugc2l0dWF0aW9ucyBkb24ndCBleGlzdC4u
+Lg0KPiANCj4gUmVnYXJkbGVzcywgSSB3b3VsZCByYXRoZXIgZG8gd2hhdCBHcnNlY3VyaXR5IGhh
+cyBkb25lIGluIHRoaXMgYXJlYSwgYW5kIHdoaXRlbGlzdA0KPiBrbm93bi1zYWZlIHZhbHVlcyBp
+bnN0ZWFkLiBGb3IgZXhhbXBsZSwgdGhleSBoYXZlICVwUCBmb3IgYXBwcm92ZWQgcG9pbnRlcnMs
+DQo+IGFuZCAlcFggZm9yIGFwcHJvdmVkDQo+IGRlcmVmZXJlbmNlX2Z1bmN0aW9uX2Rlc2NyaXB0
+b3IoKSBvdXRwdXQuIEV2ZXJ5dGhpbmcgZWxzZSBpcyBjZW5zb3JlZCBpZiBpdCBpcyBhDQo+IHZh
+bHVlIGluIGtlcm5lbCBtZW1vcnkgYW5kIGRlc3RpbmVkIGZvciBhIHVzZXItc3BhY2UgbWVtb3J5
+DQo+IGJ1ZmZlcjoNCj4gDQo+ICAgICAgICAgaWYgKCh1bnNpZ25lZCBsb25nKXB0ciA+IFRBU0tf
+U0laRSAmJiAqZm10ICE9ICdQJyAmJiAqZm10ICE9ICdYJyAmJiAqZm10ICE9DQo+ICdLJyAmJiBp
+c191c2VyY29weV9vYmplY3QoYnVmKSkgew0KPiAgICAgICAgICAgICAgICAgcHJpbnRrKEtFUk5f
+QUxFUlQgImdyc2VjOiBrZXJuZWwgaW5mb2xlYWsgZGV0ZWN0ZWQhDQo+IFBsZWFzZSByZXBvcnQg
+dGhpcyBsb2cgdG8gc3BlbmRlckBncnNlY3VyaXR5Lm5ldC5cbiIpOw0KPiAgICAgICAgICAgICAg
+ICAgZHVtcF9zdGFjaygpOw0KPiAgICAgICAgICAgICAgICAgcHRyID0gTlVMTDsNCj4gICAgICAg
+ICB9DQo+IA0KPiBUaGUgImlzX3VzZXJjb3B5X29iamVjdCgpIiB0ZXN0IGlzIHNvbWV0aGluZyB3
+ZSBjYW4gYWRkLCB3aGljaCBpcyB0ZXN0aW5nIGZvciBhDQo+IG5ldyBTTEFCIGZsYWcgdGhhdCBp
+cyB1c2VkIHRvIG1hcmsgc2xhYiBjYWNoZXMgYXMgZWl0aGVyIHVzZWQgYnkgdXNlci1zcGFjZSBv
+cg0KPiBub3QsIHdoaWNoIGlzIGRvbmUgYWxzbyB0aHJvdWdoIHdoaXRlbGlzdGluZy4NCj4gKEZv
+ciBtb3JlIGRldGFpbHMgb24gdGhpcywgc2VlOg0KPiBodHRwOi8vd3d3Lm9wZW53YWxsLmNvbS9s
+aXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTYvMDYvMDgvMTApDQo+IA0KPiBXb3VsZCB5b3UgaGF2
+ZSB0aW1lL2ludGVyZXN0IHRvIGFkZCB0aGUgc2xhYiBmbGFncyBhbmQgaXNfdXNlcmNvcHlfb2Jq
+ZWN0KCk/DQo+IFRoZSBoYXJkZW5lZCB1c2VyY29weSBwYXJ0IG9mIHRoZSBzbGFiIHdoaXRlbGlz
+dGluZyBjYW4gYmUgc2VwYXJhdGUsIHNpbmNlIGl0IGxpa2VseQ0KPiBuZWVkcyBhIGRpZmZlcmVu
+dCB1c2VyY29weSBpbnRlcmZhY2UgdG8gc2FuZWx5IGludGVncmF0ZSB3aXRoIHVwc3RyZWFtLg0K
+DQpBIGNvdXBsZSBvZiBxdWVzdGlvbnMgb2ZmIGhhbmQ6DQoxLiBXaGF0IGFib3V0IGJzcyBzdGF0
+aWNzPyBJIGFtIGFzc3VtaW5nIHRoYXQgd2hlbiB0aGUgbG9hZGVyIGxvYWRzIHVwIGEgbW9kdWxl
+DQogICAgIFRoYXQgaXQncyBkeW5hbWljYWxseSBhbGxvY2F0aW5nIHRoZSAuYnNzIHNlY3Rpb24g
+b3Igc29tZSBlcXVpdmFsZW50LiBJIHdvdWxkDQogICAgIEFsc28gYXNzdW1lIHRoZSBtZXRob2Qg
+eW91IGRlc2NyaWJlIHdvdWxkIGNhdGNoIHRoYXQsIGlzIHRoYXQgY29ycmVjdD8NCg0KMi4gV2hh
+dCBhYm91dCBzdGFjayB2YXJpYWJsZXM/IA0KDQo+IA0KPiAtS2Vlcw0KPiANCj4gLS0NCj4gS2Vl
+cyBDb29rDQo+IE5leHVzIFNlY3VyaXR5DQo=
