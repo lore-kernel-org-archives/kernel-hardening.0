@@ -1,44 +1,63 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Thu, 6 Oct 2016 06:50:44 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F314AAE@ORSMSX107.amr.corp.intel.com>
-References: <CAGXu5jKxx0iJaM=ncCCaUdJDaJadvUGPPKaQOwFKr_LToh4y-A@mail.gmail.com>
- <20161003193418.GA7071@openwall.com>
- <CAGXu5jKfU9Wg1Vd_bz1d--qC02C9xzD_0JJo7seK1M+1tLeszg@mail.gmail.com>
- <20161005223220.GA6533@openwall.com>
- <20161006022441.c2gyogl32tnrlnvg@thunk.org>
-In-Reply-To: <20161006022441.c2gyogl32tnrlnvg@thunk.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Thu, 6 Oct 2016 13:17:11 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC561CD1458F@ORSMSX103.amr.corp.intel.com>
+References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
+ <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
+In-Reply-To: <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Any artists around?
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] RE: [PATCH] printk: introduce kptr_restrict level 3
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jonathan Corbet <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Nick Desaulniers <ndesaulniers@google.com>, Dave Weinstein <olorin@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> -----Original Message-----
-> From: Theodore Ts'o [mailto:tytso@mit.edu]
-> Sent: Wednesday, October 05, 2016 7:25 PM
-> To: kernel-hardening@lists.openwall.com
-> Subject: Re: [kernel-hardening] Any artists around?
->=20
-> On Thu, Oct 06, 2016 at 12:32:20AM +0200, Solar Designer wrote:
-> >
-> > Oh, cool.  Meanwhile, my Twitter poll ended in favor of bikeshed:
-> >
-> > https://twitter.com/solardiz/status/783033528736940032
-> >
-> > "What should (Linux) Kernel Self Protection Project's logo be?
-> >
-> > 32% A fancy penguin
-> > 42% A bikeshed
-> >  7% Other (please tweet what)
-> > 19% No logo
-> >
-> > 116 votes"
->=20
-> Ah, but what _color_ should the bikeshed be?  :-)
-
-Blue! No, Red! Ahhhhhhhhh!
-
->=20
->     	     	     	    		 - Ted
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogV2VkbmVzZGF5LCBPY3RvYmVyIDUsIDIwMTYgMzozNCBQTQ0KPiBUbzogUm9i
+ZXJ0cywgV2lsbGlhbSBDIDx3aWxsaWFtLmMucm9iZXJ0c0BpbnRlbC5jb20+DQo+IENjOiBrZXJu
+ZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgSm9uYXRoYW4gQ29yYmV0IDxjb3JiZXRA
+bHduLm5ldD47DQo+IGxpbnV4LWRvY0B2Z2VyLmtlcm5lbC5vcmc7IExLTUwgPGxpbnV4LWtlcm5l
+bEB2Z2VyLmtlcm5lbC5vcmc+OyBOaWNrDQo+IERlc2F1bG5pZXJzIDxuZGVzYXVsbmllcnNAZ29v
+Z2xlLmNvbT47IERhdmUgV2VpbnN0ZWluIDxvbG9yaW5AZ29vZ2xlLmNvbT4NCj4gU3ViamVjdDog
+UmU6IFtQQVRDSF0gcHJpbnRrOiBpbnRyb2R1Y2Uga3B0cl9yZXN0cmljdCBsZXZlbCAzDQo+IA0K
+PiBPbiBXZWQsIE9jdCA1LCAyMDE2IGF0IDExOjA0IEFNLCAgPHdpbGxpYW0uYy5yb2JlcnRzQGlu
+dGVsLmNvbT4gd3JvdGU6DQo+ID4gRnJvbTogV2lsbGlhbSBSb2JlcnRzIDx3aWxsaWFtLmMucm9i
+ZXJ0c0BpbnRlbC5jb20+DQo+ID4NCj4gPiBTb21lIG91dC1vZi10cmVlIG1vZHVsZXMgZG8gbm90
+IHVzZSAlcEsgYW5kIGp1c3QgdXNlICVwLCBhcyBpdCdzIHRoZQ0KPiA+IGNvbW1vbiBDIHBhcmFk
+aWdtIGZvciBwcmludGluZyBwb2ludGVycy4gQmVjYXVzZSBvZiB0aGlzLA0KPiA+IGtwdHJfcmVz
+dHJpY3QgaGFzIG5vIGFmZmVjdCBvbiB0aGUgb3V0cHV0IGFuZCB0aHVzLCBubyB3YXkgdG8gY29u
+dGFpbg0KPiA+IHRoZSBrZXJuZWwgYWRkcmVzcyBsZWFrLg0KPiANCj4gU29sdmluZyB0aGlzIGlz
+IGNlcnRhaW5seSBhIGdvb2QgaWRlYSAtLSBJJ20gYWxsIGZvciBmaW5kaW5nIGEgc29saWQgc29s
+dXRpb24uDQo+IA0KPiA+IEludHJvZHVjZSBrcHRyX3Jlc3RyaWN0IGxldmVsIDMgdGhhdCBjYXVz
+ZXMgdGhlIGtlcm5lbCB0byB0cmVhdCAlcCBhcw0KPiA+IGlmIGl0IHdhcyAlcEsgYW5kIHRodXMg
+YWx3YXlzIHByaW50cyB6ZXJvcy4NCj4gDQo+IEknbSB3b3JyaWVkIHRoYXQgdGhpcyBjb3VsZCBi
+cmVhayBrZXJuZWwgaW50ZXJuYWxzIHdoZXJlICVwIGlzIGJlaW5nIHVzZWQgYW5kIG5vdA0KPiBl
+eHBvc2VkIHRvIHVzZXJzcGFjZS4gTWF5YmUgdGhvc2Ugc2l0dWF0aW9ucyBkb24ndCBleGlzdC4u
+Lg0KDQpOb3Qgc2F5aW5nIHRoZXkgZG9uJ3QgSSBkaWRuJ3QgZmluZCBhbnkuDQoNCj4gDQo+IFJl
+Z2FyZGxlc3MsIEkgd291bGQgcmF0aGVyIGRvIHdoYXQgR3JzZWN1cml0eSBoYXMgZG9uZSBpbiB0
+aGlzIGFyZWEsIGFuZCB3aGl0ZWxpc3QNCj4ga25vd24tc2FmZSB2YWx1ZXMgaW5zdGVhZC4gRm9y
+IGV4YW1wbGUsIHRoZXkgaGF2ZSAlcFAgZm9yIGFwcHJvdmVkIHBvaW50ZXJzLA0KPiBhbmQgJXBY
+IGZvciBhcHByb3ZlZA0KPiBkZXJlZmVyZW5jZV9mdW5jdGlvbl9kZXNjcmlwdG9yKCkgb3V0cHV0
+LiBFdmVyeXRoaW5nIGVsc2UgaXMgY2Vuc29yZWQgaWYgaXQgaXMgYQ0KPiB2YWx1ZSBpbiBrZXJu
+ZWwgbWVtb3J5IGFuZCBkZXN0aW5lZCBmb3IgYSB1c2VyLXNwYWNlIG1lbW9yeQ0KPiBidWZmZXI6
+DQo+IA0KPiAgICAgICAgIGlmICgodW5zaWduZWQgbG9uZylwdHIgPiBUQVNLX1NJWkUgJiYgKmZt
+dCAhPSAnUCcgJiYgKmZtdCAhPSAnWCcgJiYgKmZtdCAhPQ0KPiAnSycgJiYgaXNfdXNlcmNvcHlf
+b2JqZWN0KGJ1ZikpIHsNCj4gICAgICAgICAgICAgICAgIHByaW50ayhLRVJOX0FMRVJUICJncnNl
+Yzoga2VybmVsIGluZm9sZWFrIGRldGVjdGVkIQ0KPiBQbGVhc2UgcmVwb3J0IHRoaXMgbG9nIHRv
+IHNwZW5kZXJAZ3JzZWN1cml0eS5uZXQuXG4iKTsNCj4gICAgICAgICAgICAgICAgIGR1bXBfc3Rh
+Y2soKTsNCj4gICAgICAgICAgICAgICAgIHB0ciA9IE5VTEw7DQo+ICAgICAgICAgfQ0KPiANCj4g
+VGhlICJpc191c2VyY29weV9vYmplY3QoKSIgdGVzdCBpcyBzb21ldGhpbmcgd2UgY2FuIGFkZCwg
+d2hpY2ggaXMgdGVzdGluZyBmb3IgYQ0KPiBuZXcgU0xBQiBmbGFnIHRoYXQgaXMgdXNlZCB0byBt
+YXJrIHNsYWIgY2FjaGVzIGFzIGVpdGhlciB1c2VkIGJ5IHVzZXItc3BhY2Ugb3INCj4gbm90LCB3
+aGljaCBpcyBkb25lIGFsc28gdGhyb3VnaCB3aGl0ZWxpc3RpbmcuDQo+IChGb3IgbW9yZSBkZXRh
+aWxzIG9uIHRoaXMsIHNlZToNCj4gaHR0cDovL3d3dy5vcGVud2FsbC5jb20vbGlzdHMva2VybmVs
+LWhhcmRlbmluZy8yMDE2LzA2LzA4LzEwKQ0KPiANCj4gV291bGQgeW91IGhhdmUgdGltZS9pbnRl
+cmVzdCB0byBhZGQgdGhlIHNsYWIgZmxhZ3MgYW5kIGlzX3VzZXJjb3B5X29iamVjdCgpPw0KPiBU
+aGUgaGFyZGVuZWQgdXNlcmNvcHkgcGFydCBvZiB0aGUgc2xhYiB3aGl0ZWxpc3RpbmcgY2FuIGJl
+IHNlcGFyYXRlLCBzaW5jZSBpdCBsaWtlbHkNCj4gbmVlZHMgYSBkaWZmZXJlbnQgdXNlcmNvcHkg
+aW50ZXJmYWNlIHRvIHNhbmVseSBpbnRlZ3JhdGUgd2l0aCB1cHN0cmVhbS4NCg0KSSBjb3VsZCBs
+aWtlbHkgdGFrZSB0aGlzIG9uLiBJIHdvdWxkIG5lZWQgdG8gcmVhZCB1cCBvbiB0aGUgbGlua3Mg
+YW5kIGhhdmUgYSBiZXR0ZXIgY29uY2VwdA0Kb2Ygd2hhdCBpdCBpcy4NCg0KPiANCj4gLUtlZXMN
+Cj4gDQo+IC0tDQo+IEtlZXMgQ29vaw0KPiBOZXh1cyBTZWN1cml0eQ0K
