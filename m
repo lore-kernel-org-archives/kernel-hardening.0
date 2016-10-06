@@ -1,86 +1,92 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161006135612.GA21342@infradead.org>
+In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC561CD14829@ORSMSX103.amr.corp.intel.com>
 References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
- <20161006133147.GA20206@infradead.org> <476DC76E7D1DF2438D32BFADF679FC561CD14651@ORSMSX103.amr.corp.intel.com>
- <20161006135612.GA21342@infradead.org>
+ <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com> <476DC76E7D1DF2438D32BFADF679FC561CD14829@ORSMSX103.amr.corp.intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 6 Oct 2016 14:00:41 -0700
-Message-ID: <CAGXu5jJsj=4=j1R6aUYiDvdWqY916pJbBdXCEbQFFoyQ0QP4Yw@mail.gmail.com>
+Date: Thu, 6 Oct 2016 14:04:41 -0700
+Message-ID: <CAGXu5jK6JFjnp25WopT=gqjMG2rb+MJJmsiX8t+D40jgs4640A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH] printk: introduce kptr_restrict level 3
-To: Christoph Hellwig <hch@infradead.org>
-Cc: "Roberts, William C" <william.c.roberts@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "corbet@lwn.net" <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+To: "Roberts, William C" <william.c.roberts@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 6, 2016 at 6:56 AM, Christoph Hellwig <hch@infradead.org> wrote:
-> On Thu, Oct 06, 2016 at 01:47:47PM +0000, Roberts, William C wrote:
-> > On Thu, Oct 6, 2016 at 6:31 AM, Christoph Hellwig <hch@infradead.org> wrote:
-> > > So what?  We a) don't care about out of tree modules and b) you could just triviall
-> > > fix them up if you care.
-> >
-> > Out of tree modules still affect core kernel security.
+On Thu, Oct 6, 2016 at 8:18 AM, Roberts, William C
+<william.c.roberts@intel.com> wrote:
 >
-> So don't use them.
-
-I'm really interested in keeping these discussions productive.
-Declaring that the upstream kernel community (your implied "we")
-doesn't care about out-of-tree code is both false and short-sighted.
-Huge numbers of people depend on Linux on their phones, their IoT
-devices, cars, etc, and huge volumes of those (unfortunately) are
-running out-of-tree code.
-
-This isn't about supporting some special interface that a single third
-party driver uses; this is about robust engineering and security
-practices that benefits everything, even out-of-tree code.
-
->> I would also bet money, that somewhere
->> In-tree someone has put a %p when they wanted a %pK.
 >
-> So fix them.
-
-%pK is an ugly situation that I'd like to fix correctly. It was
-designed originally as a blacklisting method, when it should have been
-designed as a whitelist (as William mentions). This is what will need
-fixing (and is what I was suggesting in my original reply to the
-patch).
-
-All that said, "so fix them" sounds very much like "just fix the bugs"
-which is another troublesome attitude to have for dealing with
-potential security flaws. The kernel community already finds/fixes
-obvious flaws; the efforts with changes like what William is proposing
-are based around assuming (correctly, I can argue) that there are
-already bugs present, and they will remain in the kernel for years to
-come. Designing the kernel to safely deal with bugs being present is a
-fundamental design principle for kernel security self-defense
-technologies.
-
-The challenge is not "fix them", the challenge is "design the kernel
-to do the right thing even when the bugs are unfixed".
-
->> So this method is just quite error
->> prone. We currently have a blacklist approach versus whitelist.
+>> -----Original Message-----
+>> From: keescook@google.com [mailto:keescook@google.com] On Behalf Of Kees
+>> Cook
+>> Sent: Wednesday, October 5, 2016 3:34 PM
+>> To: Roberts, William C <william.c.roberts@intel.com>
+>> Cc: kernel-hardening@lists.openwall.com; Jonathan Corbet <corbet@lwn.net>;
+>> linux-doc@vger.kernel.org; LKML <linux-kernel@vger.kernel.org>; Nick
+>> Desaulniers <ndesaulniers@google.com>; Dave Weinstein <olorin@google.com>
+>> Subject: Re: [PATCH] printk: introduce kptr_restrict level 3
+>>
+>> On Wed, Oct 5, 2016 at 11:04 AM,  <william.c.roberts@intel.com> wrote:
+>> > From: William Roberts <william.c.roberts@intel.com>
+>> >
+>> > Some out-of-tree modules do not use %pK and just use %p, as it's the
+>> > common C paradigm for printing pointers. Because of this,
+>> > kptr_restrict has no affect on the output and thus, no way to contain
+>> > the kernel address leak.
+>>
+>> Solving this is certainly a good idea -- I'm all for finding a solid solution.
+>>
+>> > Introduce kptr_restrict level 3 that causes the kernel to treat %p as
+>> > if it was %pK and thus always prints zeros.
+>>
+>> I'm worried that this could break kernel internals where %p is being used and not
+>> exposed to userspace. Maybe those situations don't exist...
+>>
+>> Regardless, I would rather do what Grsecurity has done in this area, and whitelist
+>> known-safe values instead. For example, they have %pP for approved pointers,
+>> and %pX for approved
+>> dereference_function_descriptor() output. Everything else is censored if it is a
+>> value in kernel memory and destined for a user-space memory
+>> buffer:
+>>
+>>         if ((unsigned long)ptr > TASK_SIZE && *fmt != 'P' && *fmt != 'X' && *fmt !=
+>> 'K' && is_usercopy_object(buf)) {
+>>                 printk(KERN_ALERT "grsec: kernel infoleak detected!
+>> Please report this log to spender@grsecurity.net.\n");
+>>                 dump_stack();
+>>                 ptr = NULL;
+>>         }
+>>
+>> The "is_usercopy_object()" test is something we can add, which is testing for a
+>> new SLAB flag that is used to mark slab caches as either used by user-space or
+>> not, which is done also through whitelisting.
+>> (For more details on this, see:
+>> http://www.openwall.com/lists/kernel-hardening/2016/06/08/10)
+>>
+>> Would you have time/interest to add the slab flags and is_usercopy_object()?
+>> The hardened usercopy part of the slab whitelisting can be separate, since it likely
+>> needs a different usercopy interface to sanely integrate with upstream.
 >
-> Or fix the entire thing, get rid of %pK and always protect %p if you
-> can show that it doesn't break anything.
+> A couple of questions off hand:
+> 1. What about bss statics? I am assuming that when the loader loads up a module
+>      That it's dynamically allocating the .bss section or some equivalent. I would
+>      Also assume the method you describe would catch that, is that correct?
 >
-> But stop posting patches with bullshit arguments like out of tree
-> modules.
+> 2. What about stack variables?
 
-As a _singlular_ argument, "it's for out-of-tree code" is weak. As an
-_additional_ argument, it has value. Saying "this only helps
-out-of-tree code" doesn't carry much weight. Saying "this helps kernel
-security, even for out-of-tree code" is perfectly valid. And a wrinkle
-in this is that some day, either that out-of-tree code, or brand new
-code, will land in the kernel, and we don't want to continue to
-require authors be aware of an opt-in security feature. The kernel
-should protect itself (and all of itself, including out-of-tree or
-future code) by default.
+It looks like what Grsecurity is doing is saying "if the address is
+outside of user-space" (" > TASK_SIZE") and it's not whitelisted ('P',
+'X') and it's going to land in a user-space buffer
+("is_usercopy_object()", censor it. ("K" is already censored --
+they're just optimizing to avoid re-checking it needlessly.)
 
-And based on my read of this thread, we all appear to be in violent
-agreement. :) "always protect %p" is absolutely the goal, and we can
-figure out the best way to get there.
+So, in this case, all kernel memory, bss and stack included, would be
+outside the user-space address range. (I am curious, however, how to
+apply this to an architecture like s390 which has overlapping address
+ranges... probably the TASK_SIZE test needs to use some other "is in
+kernel memory" check that compiles down to TASK_SIZE on non-s390, and
+DTRT on s390, etc.)
 
 -Kees
 
