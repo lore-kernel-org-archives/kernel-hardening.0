@@ -1,109 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 7 Oct 2016 13:52:39 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20161007115239.GA14666@pc.thejh.net>
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Fri, 7 Oct 2016 14:19:43 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC561CD14B1C@ORSMSX103.amr.corp.intel.com>
 References: <1475690686-16138-1-git-send-email-william.c.roberts@intel.com>
- <20161006133147.GA20206@infradead.org>
- <476DC76E7D1DF2438D32BFADF679FC561CD14651@ORSMSX103.amr.corp.intel.com>
- <20161006140553.GY14666@pc.thejh.net>
+ <CAGXu5j+EtVPabrwPXU0W8yJ5Fg0H0Nc6aPjJqqNOSx+m+TBu2Q@mail.gmail.com>
+ <476DC76E7D1DF2438D32BFADF679FC561CD14829@ORSMSX103.amr.corp.intel.com>
+ <CAGXu5jK6JFjnp25WopT=gqjMG2rb+MJJmsiX8t+D40jgs4640A@mail.gmail.com>
+In-Reply-To: <CAGXu5jK6JFjnp25WopT=gqjMG2rb+MJJmsiX8t+D40jgs4640A@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="XCIqNWEteo88hZlY"
-Content-Disposition: inline
-In-Reply-To: <20161006140553.GY14666@pc.thejh.net>
-Subject: Re: [kernel-hardening] RE: [PATCH] printk: introduce kptr_restrict
- level 3
-To: "Roberts, William C" <william.c.roberts@intel.com>
-Cc: Christoph Hellwig <hch@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "corbet@lwn.net" <corbet@lwn.net>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] RE: [PATCH] printk: introduce kptr_restrict level 3
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
---XCIqNWEteo88hZlY
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-
-On Thu, Oct 06, 2016 at 04:05:53PM +0200, Jann Horn wrote:
-> On Thu, Oct 06, 2016 at 01:47:47PM +0000, Roberts, William C wrote:
-> > > -----Original Message-----
-> > > From: Christoph Hellwig [mailto:hch@infradead.org]
-> > > Sent: Thursday, October 6, 2016 9:32 AM
-> > > To: Roberts, William C <william.c.roberts@intel.com>
-> > > Cc: kernel-hardening@lists.openwall.com; corbet@lwn.net; linux-
-> > > doc@vger.kernel.org; linux-kernel@vger.kernel.org
-> > > Subject: Re: [PATCH] printk: introduce kptr_restrict level 3
-> > >=20
-> > > On Wed, Oct 05, 2016 at 02:04:46PM -0400, william.c.roberts@intel.com=
- wrote:
-> > > > From: William Roberts <william.c.roberts@intel.com>
-> > > >
-> > > > Some out-of-tree modules do not use %pK and just use %p, as it's the
-> > > > common C paradigm for printing pointers. Because of this,
-> > > > kptr_restrict has no affect on the output and thus, no way to conta=
-in
-> > > > the kernel address leak.
-> > >=20
-> > > So what?  We a) don't care about out of tree modules and b) you could=
- just triviall
-> > > fix them up if you care.
-> >=20
-> > Out of tree modules still affect core kernel security. I would also bet=
- money, that somewhere
-> > In-tree someone has put a %p when they wanted a %pK. So this method is =
-just quite error
-> > prone. We currently have a blacklist approach versus whitelist.
->=20
-> grep says you have a point:
->=20
-> $ grep -IR 'seq_printf.*%p[^FfSsBRrhbMmIiEUVKNadCDgG].*&'
-> drivers/dma/qcom/hidma_dbg.c:	seq_printf(s, "dev_trca=3D%p\n", &dmadev->d=
-ev_trca);
-> drivers/dma/qcom/hidma_dbg.c:	seq_printf(s, "dev_evca=3D%p\n", &dmadev->d=
-ev_evca);
->=20
-> $ grep -IR 'pr_info.*%p[^FfSsBRrhbMmIiEUVKNadCDgG].*&'
-> drivers/misc/lkdtm_heap.c:	pr_info("Allocated memory %p-%p\n", base, &bas=
-e[offset * 2]);
->=20
-> $ grep -IR 'pr_err.*%p[^FfSsBRrhbMmIiEUVKNadCDgG].*&'
-> drivers/net/ethernet/qlogic/qlge/qlge_dbg.c:	pr_err("rx_ring->cqicb =3D %=
-p\n", &rx_ring->cqicb);
-
-Actually, I think I missed something here.
-
-We don't really want to censor pointers in dmesg, right? dmesg can
-contain pointers by design - and in particular, when an oops
-happens, the register dump will reveal pointers. dmesg should just
-be restricted using dmesg_restrict.
-
-(What is annoying, though, is that e.g. Debian's default rsyslog
-config sends all KERN_EMERG messages to all active PTYs by default,
-meaning that on a system with such a config, making the kernel oops
-can be used to leak some ASLR information.)
-
-(And why does __die() in arch/x86/kernel/dumpstack.c use KERN_EMERG
-for CONFIG_X86_32, but KERN_ALERT for !CONFIG_X86_32?)
-
---XCIqNWEteo88hZlY
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJX94yGAAoJED4KNFJOeCOo23AP/A8ckLuaFR98c5smrxOejd+5
-hYWWEWVoz/KFvobzIywgs8cJRRW/oyCExP7X385rmi6QEfa09p2ucbMlY1s8cZtx
-muERWdyXkKjGJdWFitLtxecnLu2FOCcQi4WQgEapbsczSx4Q3SVEpVh/5QpD2BLc
-XY8Khz145CMS7H9CigHQf5BRT2SvZhUPR6GhfLjMfeZRKFYOQdfZV60VkHX4KFM/
-CDxuc72zYPoeANhYaPbQW8Mh17UnV8Sq2G17d0nLq9jIy8bMwSTpWKDovRQB6U4C
-OGp2hDszfFv/eHvW7DJ0cz4nKg+wbouKBmYbv6tKcba8b+cZsE8C0A+Ftp3Tq7zA
-nWNorXQHhVOomMj9ywUoLdOB5kbrygILfPtSKeG07MwgIaWWea7mDW33Nc2T0/b7
-KItgoJBT0e1MQu3IBkAhNbL4h1xW79a6NzVKxYTiMLjFIGIR5UyNUR2qnFvivLMS
-/kGIKHzYU0qq8JDufBNhKtgLBNgmlZfxK8YpemJRcnRtx/jtVLhQMJpDaoYDBPX2
-ntQPoizdLOnoy8qFjEcv/QpQo3w2pclfYP7fIQW+Dhj8VTzkvvMguYWsXt+a6jdk
-LkDw13HKpvo38kv1RkU1U6lWtucfh/v2fMIOTen0jHv2UQMqbW1f3qpHKdrgWIhd
-2mQ+yLLTyMA0wZpOOcMA
-=V4ca
------END PGP SIGNATURE-----
-
---XCIqNWEteo88hZlY--
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogVGh1cnNkYXksIE9jdG9iZXIgNiwgMjAxNiA1OjA1IFBNDQo+IFRvOiBSb2Jl
+cnRzLCBXaWxsaWFtIEMgPHdpbGxpYW0uYy5yb2JlcnRzQGludGVsLmNvbT4NCj4gQ2M6IGtlcm5l
+bC1oYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tDQo+IFN1YmplY3Q6IFJlOiBbUEFUQ0hdIHBy
+aW50azogaW50cm9kdWNlIGtwdHJfcmVzdHJpY3QgbGV2ZWwgMw0KPiANCj4gT24gVGh1LCBPY3Qg
+NiwgMjAxNiBhdCA4OjE4IEFNLCBSb2JlcnRzLCBXaWxsaWFtIEMgPHdpbGxpYW0uYy5yb2JlcnRz
+QGludGVsLmNvbT4NCj4gd3JvdGU6DQo+ID4NCj4gPg0KPiA+PiAtLS0tLU9yaWdpbmFsIE1lc3Nh
+Z2UtLS0tLQ0KPiA+PiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29tIFttYWlsdG86a2Vlc2Nvb2tA
+Z29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+ID4+IEtlZXMgQ29vaw0KPiA+PiBTZW50OiBXZWRu
+ZXNkYXksIE9jdG9iZXIgNSwgMjAxNiAzOjM0IFBNDQo+ID4+IFRvOiBSb2JlcnRzLCBXaWxsaWFt
+IEMgPHdpbGxpYW0uYy5yb2JlcnRzQGludGVsLmNvbT4NCj4gPj4gQ2M6IGtlcm5lbC1oYXJkZW5p
+bmdAbGlzdHMub3BlbndhbGwuY29tOyBKb25hdGhhbiBDb3JiZXQNCj4gPj4gPGNvcmJldEBsd24u
+bmV0PjsgbGludXgtZG9jQHZnZXIua2VybmVsLm9yZzsgTEtNTA0KPiA+PiA8bGludXgta2VybmVs
+QHZnZXIua2VybmVsLm9yZz47IE5pY2sgRGVzYXVsbmllcnMNCj4gPj4gPG5kZXNhdWxuaWVyc0Bn
+b29nbGUuY29tPjsgRGF2ZSBXZWluc3RlaW4gPG9sb3JpbkBnb29nbGUuY29tPg0KPiA+PiBTdWJq
+ZWN0OiBSZTogW1BBVENIXSBwcmludGs6IGludHJvZHVjZSBrcHRyX3Jlc3RyaWN0IGxldmVsIDMN
+Cj4gPj4NCj4gPj4gT24gV2VkLCBPY3QgNSwgMjAxNiBhdCAxMTowNCBBTSwgIDx3aWxsaWFtLmMu
+cm9iZXJ0c0BpbnRlbC5jb20+IHdyb3RlOg0KPiA+PiA+IEZyb206IFdpbGxpYW0gUm9iZXJ0cyA8
+d2lsbGlhbS5jLnJvYmVydHNAaW50ZWwuY29tPg0KPiA+PiA+DQo+ID4+ID4gU29tZSBvdXQtb2Yt
+dHJlZSBtb2R1bGVzIGRvIG5vdCB1c2UgJXBLIGFuZCBqdXN0IHVzZSAlcCwgYXMgaXQncw0KPiA+
+PiA+IHRoZSBjb21tb24gQyBwYXJhZGlnbSBmb3IgcHJpbnRpbmcgcG9pbnRlcnMuIEJlY2F1c2Ug
+b2YgdGhpcywNCj4gPj4gPiBrcHRyX3Jlc3RyaWN0IGhhcyBubyBhZmZlY3Qgb24gdGhlIG91dHB1
+dCBhbmQgdGh1cywgbm8gd2F5IHRvDQo+ID4+ID4gY29udGFpbiB0aGUga2VybmVsIGFkZHJlc3Mg
+bGVhay4NCj4gPj4NCj4gPj4gU29sdmluZyB0aGlzIGlzIGNlcnRhaW5seSBhIGdvb2QgaWRlYSAt
+LSBJJ20gYWxsIGZvciBmaW5kaW5nIGEgc29saWQgc29sdXRpb24uDQo+ID4+DQo+ID4+ID4gSW50
+cm9kdWNlIGtwdHJfcmVzdHJpY3QgbGV2ZWwgMyB0aGF0IGNhdXNlcyB0aGUga2VybmVsIHRvIHRy
+ZWF0ICVwDQo+ID4+ID4gYXMgaWYgaXQgd2FzICVwSyBhbmQgdGh1cyBhbHdheXMgcHJpbnRzIHpl
+cm9zLg0KPiA+Pg0KPiA+PiBJJ20gd29ycmllZCB0aGF0IHRoaXMgY291bGQgYnJlYWsga2VybmVs
+IGludGVybmFscyB3aGVyZSAlcCBpcyBiZWluZw0KPiA+PiB1c2VkIGFuZCBub3QgZXhwb3NlZCB0
+byB1c2Vyc3BhY2UuIE1heWJlIHRob3NlIHNpdHVhdGlvbnMgZG9uJ3QgZXhpc3QuLi4NCj4gPj4N
+Cj4gPj4gUmVnYXJkbGVzcywgSSB3b3VsZCByYXRoZXIgZG8gd2hhdCBHcnNlY3VyaXR5IGhhcyBk
+b25lIGluIHRoaXMgYXJlYSwNCj4gPj4gYW5kIHdoaXRlbGlzdCBrbm93bi1zYWZlIHZhbHVlcyBp
+bnN0ZWFkLiBGb3IgZXhhbXBsZSwgdGhleSBoYXZlICVwUA0KPiA+PiBmb3IgYXBwcm92ZWQgcG9p
+bnRlcnMsIGFuZCAlcFggZm9yIGFwcHJvdmVkDQo+ID4+IGRlcmVmZXJlbmNlX2Z1bmN0aW9uX2Rl
+c2NyaXB0b3IoKSBvdXRwdXQuIEV2ZXJ5dGhpbmcgZWxzZSBpcyBjZW5zb3JlZA0KPiA+PiBpZiBp
+dCBpcyBhIHZhbHVlIGluIGtlcm5lbCBtZW1vcnkgYW5kIGRlc3RpbmVkIGZvciBhIHVzZXItc3Bh
+Y2UNCj4gPj4gbWVtb3J5DQo+ID4+IGJ1ZmZlcjoNCj4gPj4NCj4gPj4gICAgICAgICBpZiAoKHVu
+c2lnbmVkIGxvbmcpcHRyID4gVEFTS19TSVpFICYmICpmbXQgIT0gJ1AnICYmICpmbXQgIT0NCj4g
+Pj4gJ1gnICYmICpmbXQgIT0gJ0snICYmIGlzX3VzZXJjb3B5X29iamVjdChidWYpKSB7DQo+ID4+
+ICAgICAgICAgICAgICAgICBwcmludGsoS0VSTl9BTEVSVCAiZ3JzZWM6IGtlcm5lbCBpbmZvbGVh
+ayBkZXRlY3RlZCENCj4gPj4gUGxlYXNlIHJlcG9ydCB0aGlzIGxvZyB0byBzcGVuZGVyQGdyc2Vj
+dXJpdHkubmV0LlxuIik7DQo+ID4+ICAgICAgICAgICAgICAgICBkdW1wX3N0YWNrKCk7DQo+ID4+
+ICAgICAgICAgICAgICAgICBwdHIgPSBOVUxMOw0KPiA+PiAgICAgICAgIH0NCj4gPj4NCj4gPj4g
+VGhlICJpc191c2VyY29weV9vYmplY3QoKSIgdGVzdCBpcyBzb21ldGhpbmcgd2UgY2FuIGFkZCwg
+d2hpY2ggaXMNCj4gPj4gdGVzdGluZyBmb3IgYSBuZXcgU0xBQiBmbGFnIHRoYXQgaXMgdXNlZCB0
+byBtYXJrIHNsYWIgY2FjaGVzIGFzDQo+ID4+IGVpdGhlciB1c2VkIGJ5IHVzZXItc3BhY2Ugb3Ig
+bm90LCB3aGljaCBpcyBkb25lIGFsc28gdGhyb3VnaCB3aGl0ZWxpc3RpbmcuDQo+ID4+IChGb3Ig
+bW9yZSBkZXRhaWxzIG9uIHRoaXMsIHNlZToNCj4gPj4gaHR0cDovL3d3dy5vcGVud2FsbC5jb20v
+bGlzdHMva2VybmVsLWhhcmRlbmluZy8yMDE2LzA2LzA4LzEwKQ0KPiA+Pg0KPiA+PiBXb3VsZCB5
+b3UgaGF2ZSB0aW1lL2ludGVyZXN0IHRvIGFkZCB0aGUgc2xhYiBmbGFncyBhbmQgaXNfdXNlcmNv
+cHlfb2JqZWN0KCk/DQo+ID4+IFRoZSBoYXJkZW5lZCB1c2VyY29weSBwYXJ0IG9mIHRoZSBzbGFi
+IHdoaXRlbGlzdGluZyBjYW4gYmUgc2VwYXJhdGUsDQo+ID4+IHNpbmNlIGl0IGxpa2VseSBuZWVk
+cyBhIGRpZmZlcmVudCB1c2VyY29weSBpbnRlcmZhY2UgdG8gc2FuZWx5IGludGVncmF0ZSB3aXRo
+DQo+IHVwc3RyZWFtLg0KPiA+DQo+ID4gQSBjb3VwbGUgb2YgcXVlc3Rpb25zIG9mZiBoYW5kOg0K
+PiA+IDEuIFdoYXQgYWJvdXQgYnNzIHN0YXRpY3M/IEkgYW0gYXNzdW1pbmcgdGhhdCB3aGVuIHRo
+ZSBsb2FkZXIgbG9hZHMgdXAgYQ0KPiBtb2R1bGUNCj4gPiAgICAgIFRoYXQgaXQncyBkeW5hbWlj
+YWxseSBhbGxvY2F0aW5nIHRoZSAuYnNzIHNlY3Rpb24gb3Igc29tZSBlcXVpdmFsZW50LiBJIHdv
+dWxkDQo+ID4gICAgICBBbHNvIGFzc3VtZSB0aGUgbWV0aG9kIHlvdSBkZXNjcmliZSB3b3VsZCBj
+YXRjaCB0aGF0LCBpcyB0aGF0IGNvcnJlY3Q/DQo+ID4NCj4gPiAyLiBXaGF0IGFib3V0IHN0YWNr
+IHZhcmlhYmxlcz8NCj4gDQo+IEl0IGxvb2tzIGxpa2Ugd2hhdCBHcnNlY3VyaXR5IGlzIGRvaW5n
+IGlzIHNheWluZyAiaWYgdGhlIGFkZHJlc3MgaXMgb3V0c2lkZSBvZiB1c2VyLQ0KPiBzcGFjZSIg
+KCIgPiBUQVNLX1NJWkUiKSBhbmQgaXQncyBub3Qgd2hpdGVsaXN0ZWQgKCdQJywNCj4gJ1gnKSBh
+bmQgaXQncyBnb2luZyB0byBsYW5kIGluIGEgdXNlci1zcGFjZSBidWZmZXIgKCJpc191c2VyY29w
+eV9vYmplY3QoKSIsIGNlbnNvciBpdC4NCj4gKCJLIiBpcyBhbHJlYWR5IGNlbnNvcmVkIC0tIHRo
+ZXkncmUganVzdCBvcHRpbWl6aW5nIHRvIGF2b2lkIHJlLWNoZWNraW5nIGl0DQo+IG5lZWRsZXNz
+bHkuKQ0KPiANCj4gU28sIGluIHRoaXMgY2FzZSwgYWxsIGtlcm5lbCBtZW1vcnksIGJzcyBhbmQg
+c3RhY2sgaW5jbHVkZWQsIHdvdWxkIGJlIG91dHNpZGUgdGhlDQo+IHVzZXItc3BhY2UgYWRkcmVz
+cyByYW5nZS4gKEkgYW0gY3VyaW91cywgaG93ZXZlciwgaG93IHRvIGFwcGx5IHRoaXMgdG8gYW4N
+Cj4gYXJjaGl0ZWN0dXJlIGxpa2UgczM5MCB3aGljaCBoYXMgb3ZlcmxhcHBpbmcgYWRkcmVzcyBy
+YW5nZXMuLi4gcHJvYmFibHkgdGhlDQo+IFRBU0tfU0laRSB0ZXN0IG5lZWRzIHRvIHVzZSBzb21l
+IG90aGVyICJpcyBpbiBrZXJuZWwgbWVtb3J5IiBjaGVjayB0aGF0DQo+IGNvbXBpbGVzIGRvd24g
+dG8gVEFTS19TSVpFIG9uIG5vbi1zMzkwLCBhbmQgRFRSVCBvbiBzMzkwLCBldGMuKQ0KPiANCg0K
+QmVmb3JlIEkgZ28gb2ZmIGFuZCBhdHRlbXB0IHRoaXMsIEkganVzdCBoYXZlIGFub3RoZXIgZHVt
+YiBxdWVzdGlvbiB0byBhc2s6DQoNCklmIHRoZSBwcmludGsgY29waWVzIGl0IGludG8gdGhlIGtl
+cm5lbCByaW5nIGJ1ZmZlciwgYXQgc29tZSBwb2ludCwgc29tZW9uZSBjb21lcw0KQW5kIGFza3Mg
+Zm9yIGEgY29weSBpbnRvIGEgdXNlcnNwYWNlIGJ1ZmZlciBlaXRoZXIgdmlhIGRtZXNnIG9yIHBy
+b2Mva21zZyBpbnRlcmZhY2VzLg0KSGVjaywgaXQgbWF5IGV2ZW4gYmUgb24gYW4gb3BlbiB1YXJ0
+IHNlcmlhbC4gSG93IHdvdWxkIHRoZSBjaGVjayBhY3R1YWxseSB3b3JrLA0KTXkgdW5kZXJzdGFu
+ZGluZywgYXQgdGhlIHRpbWUgJXAgaXMgcmVzb2x2ZWQgaW50byBhIHN0cmluZywgaXQgbWlnaHQg
+bm90IGJlIGhlYWRpbmcNCnRvIGEgdXNlcnNwYWNlIGJ1ZmZlci4gUGVyaGFwcyB5b3UgY2FuIGhl
+bHAgZmlsbCBpbiB3aGF0IEkgYW0gbWlzc2luZz8NCg0KDQo=
