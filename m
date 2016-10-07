@@ -1,82 +1,100 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20161007154008.GB15400@twin.jikos.cz>
-References: <1462468869-6210-1-git-send-email-michael.leibowitz@intel.com> <20161007154008.GB15400@twin.jikos.cz>
-From: "Leibowitz, Michael" <michael.leibowitz@intel.com>
-Date: Fri, 7 Oct 2016 09:39:54 -0700
-Message-ID: <CAB-iPKUu=KM-KtzHBxt3oQ6eWzZjkkw3Qk+tYqkqbirLHz6rvw@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CAB-iPKUu=KM-KtzHBxt3oQ6eWzZjkkw3Qk+tYqkqbirLHz6rvw@mail.gmail.com>
+References: <1462468869-6210-1-git-send-email-michael.leibowitz@intel.com>
+ <20161007154008.GB15400@twin.jikos.cz> <CAB-iPKUu=KM-KtzHBxt3oQ6eWzZjkkw3Qk+tYqkqbirLHz6rvw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 7 Oct 2016 10:07:50 -0700
+Message-ID: <CAGXu5jJKSLifUfcC1OxEjb-atvPTM14r_6=35gHgZoWVYoScGA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] [RFC 0/3] Add struct randomization plugin
-To: kernel-hardening@lists.openwall.com
-Cc: Brad Spengler <spender@grsecurity.net>, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>
+To: "Leibowitz, Michael" <michael.leibowitz@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Brad Spengler <spender@grsecurity.net>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 7, 2016 at 8:40 AM, David Sterba <dave@jikos.cz> wrote:
-> Hi,
->
-> On Thu, May 05, 2016 at 10:21:06AM -0700, Michael Leibowitz wrote:
->> This patch set ports over grsecurity's structure randomization
->> feature.  The plugin is largely unchanged from grsecurity, with some
->> porting to go over Emese Revfy's v7 patch set for gcc plugin
->> infrastructure.  This is an RFC.
+On Fri, Oct 7, 2016 at 9:39 AM, Leibowitz, Michael
+<michael.leibowitz@intel.com> wrote:
+> On Fri, Oct 7, 2016 at 8:40 AM, David Sterba <dave@jikos.cz> wrote:
+>> Hi,
 >>
->> Although this set of changes does not directly make exploitation
->> harder, when a number of structures are randomized, it will make it
->> difficult to splat many relevant structures without knowing the exact
->> build of the kernel the target is using.  While for one structure,
->> there are limited number of guesses required, in aggregate, this can
->> be a large obstacle for exploitation.
+>> On Thu, May 05, 2016 at 10:21:06AM -0700, Michael Leibowitz wrote:
+>>> This patch set ports over grsecurity's structure randomization
+>>> feature.  The plugin is largely unchanged from grsecurity, with some
+>>> porting to go over Emese Revfy's v7 patch set for gcc plugin
+>>> infrastructure.  This is an RFC.
+>>>
+>>> Although this set of changes does not directly make exploitation
+>>> harder, when a number of structures are randomized, it will make it
+>>> difficult to splat many relevant structures without knowing the exact
+>>> build of the kernel the target is using.  While for one structure,
+>>> there are limited number of guesses required, in aggregate, this can
+>>> be a large obstacle for exploitation.
+>>>
+>>> Patch 3 is a grab bag that probably needs to be broken up, although
+>>> I'm not sure of the best way to do so.  Breaking by subsystem would
+>>> seem to make an unwieldy patch set.
+>>>
+>>> Known TODO that is not addressed as part of this patch set:
+>>>   * tag security relevant structures for randomization
+>>>   * add checkpatch checking for non-C99 initialization
+>>>   * automated testing of randomization
+>>>   * better description and examples of exploits effectively mitigated
+>>>     by this feature
+>>>
+>>> Tagging of structures to be randomized will come in subsequent series
+>>> of patches.
 >>
->> Patch 3 is a grab bag that probably needs to be broken up, although
->> I'm not sure of the best way to do so.  Breaking by subsystem would
->> seem to make an unwieldy patch set.
+>> may I ask what's the status of this patchset? As 4.8 now contains the
+>> plugin infrastructure, which I really like to see happening, we could
+>> add the remaining plugins. I'm specifically interested in the struct
+>> layout randomization.
+>
+> I'm afraid to say that it got stalled as life moved on.  I saw the 4.8
+> merge and I have renewed ambition.
+>
+>> In your initial RFC, the patch 3/3 touches a lot of subsystems, which
+>> means potentially dealing with many maintainers. As the patch is a
+>> prerequsite for unmodified randstrcut plugin, I think this would stall
+>> the inclusion for a long time.
 >>
->> Known TODO that is not addressed as part of this patch set:
->>   * tag security relevant structures for randomization
->>   * add checkpatch checking for non-C99 initialization
->>   * automated testing of randomization
->>   * better description and examples of exploits effectively mitigated
->>     by this feature
+>> The plugin detects "structs with function pointers only" and
+>> automatically adds the randomization. I suggest to start without this
+>> particular feature, and avoid dependency on patch 3/3.
 >>
->> Tagging of structures to be randomized will come in subsequent series
->> of patches.
+>> Only the explicit randomize_layout attributes would actually do
+>> something. That way the patches could be submitted separately, with it's
+>> own reasoning. See the grsecruity patch for examples.
 >
-> may I ask what's the status of this patchset? As 4.8 now contains the
-> plugin infrastructure, which I really like to see happening, we could
-> add the remaining plugins. I'm specifically interested in the struct
-> layout randomization.
+> This is an excellent idea.  I'm trying that out right now.
 
-I'm afraid to say that it got stalled as life moved on.  I saw the 4.8
-merge and I have renewed ambition.
+Another approach would be to retain the feature, but make it a
+separate patch from the main plugin patch. In other words, have the
+series as:
 
-> In your initial RFC, the patch 3/3 touches a lot of subsystems, which
-> means potentially dealing with many maintainers. As the patch is a
-> prerequsite for unmodified randstrcut plugin, I think this would stall
-> the inclusion for a long time.
+- plugin itself (minus all-function-pointers)
+- opt-in markings
+- C99 changes
+- out-out markings
+- all-function-pointers plugin logic
+
 >
-> The plugin detects "structs with function pointers only" and
-> automatically adds the randomization. I suggest to start without this
-> particular feature, and avoid dependency on patch 3/3.
+>> This is not perfect compared to the full featured plugin but I think the
+>> proposed way is better than waiting until all issues from patch 3/3 are
+>> fixed.
+>>
+>> I'm willing to help and push things forward, but as you've submitted the
+>> patches I'm asking first.
 >
-> Only the explicit randomize_layout attributes would actually do
-> something. That way the patches could be submitted separately, with it's
-> own reasoning. See the grsecruity patch for examples.
+> Thanks for the push.  I'll give it another try and see if I can a
+> patch set out.  If I get diverted, though, I'll give you a holler.
 
-This is an excellent idea.  I'm trying that out right now.
+Excellent. If you get stalled out, I nominate David to continue the push. :)
 
-> This is not perfect compared to the full featured plugin but I think the
-> proposed way is better than waiting until all issues from patch 3/3 are
-> fixed.
->
-> I'm willing to help and push things forward, but as you've submitted the
-> patches I'm asking first.
+Thanks!
 
-Thanks for the push.  I'll give it another try and see if I can a
-patch set out.  If I get diverted, though, I'll give you a holler.
-
-Cheers
-
-
+-Kees
 
 -- 
-Michael Leibowitz
+Kees Cook
+Nexus Security
