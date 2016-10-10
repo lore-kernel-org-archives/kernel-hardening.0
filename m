@@ -1,64 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1476016472.2329.38.camel@cvidal.org>
-References: <1476016472.2329.38.camel@cvidal.org>
+In-Reply-To: <1476115319.2329.108.camel@cvidal.org>
+References: <1476016472.2329.38.camel@cvidal.org> <CE954033-54F3-47AE-9788-B26B9CE45401@gmail.com>
+ <1476040182.2329.72.camel@cvidal.org> <20161009193731.GD14666@pc.thejh.net>
+ <2236FBA76BA1254E88B949DDB74E612B41BDCAF6@IRSMSX102.ger.corp.intel.com> <1476115319.2329.108.camel@cvidal.org>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 10 Oct 2016 13:57:29 -0700
-Message-ID: <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
+Date: Mon, 10 Oct 2016 14:05:19 -0700
+Message-ID: <CAGXu5jLvBMWHw_Y8ntmKB3GFqWfmT_E1neUiVQLJAsErLxFLWw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] self introduction
-To: Colin Vidal <colin@cvidal.org>, Andy Lutomirski <luto@kernel.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Oct 9, 2016 at 5:34 AM, Colin Vidal <colin@cvidal.org> wrote:
-> My name is Colin Vidal. I am currently a PhD student in computer
-> science. My researches  consist on building a dedicated specific
-> language on top of JavaScript in order to handle asynchronous events in
-> a synchronous style. Hence, with a direct relation between the control
-> flow and the instruction flow.
+On Mon, Oct 10, 2016 at 9:01 AM, Colin Vidal <colin@cvidal.org> wrote:
+>> This branch to be precise:
+>> https://github.com/ereshetova/linux-stable/tree/hardened_atomic_on_next
+>>
+>> This is where the latest code for linux-next is hosted now and where
+>> we work with David and Hans.
+>> >
+>> > >
+>> > > Please contact me if you have any questions; I'd be glad to help!
+>> >
+>> > I actually have question. :-) As far as I understand, PAX_REFCOUNT
+>> > [1] is mainly a x86-only
+>>
+>> >
+>> > No, PAX_REFCOUNT also supports a bunch of other architectures. As
+>> > far as I can tell from a quick look: ARM, MIPS, PowerPC and SPARC.
+>>
+>> Yes, just in our patch series we only made implementation for x86.
+>> But if you look into Grsecurity/PaX patches, it has support for
+>> others implemented.
 >
-> Beside my researches, I am taking up the Eudyptula Challenge (task 15
-> submitted). It helps me to have a global view of the kernel
-> (organization, tree, some features), but it is not enough to get
-> involved in serious development. Therefore, I am looking for task I can
-> accomplish to be involved into real kernel development!
+> OK, got it! Thanks for this clarification.
+>
+> So, I will try to start to port PAX_REFCOUNT arm-specific features to
+> hardened_atomic_on_next, and keep you in touch. Is there a deadline?
+> (4.10 / 5.0 merge window?)
 
-Hi! Welcome to the fun! :)
+You may want to compare notes with Takahiro (CCed) who may have
+started to look at arm64 (and maybe arm too).
 
-I see there's already a thread getting into the HARDENED_ATOMIC
-effort, though I thought I might bring up some other areas too, in
-case they entice you as well. You've got some background in control
-flow -- have you spent much time in compiler internals? The recent
-addition of the gcc plugin infrastructure means there's a much wider
-ability for the kernel to do compiler tricks now. Two things that come
-to mind for CFI when looking at the existing PaX/Grsecurity gcc
-plugins are the kernexec plugin (which, AIUI, is mainly a weak form of
-SMEP emulation on x86, using simple CFI to keep the high bit set on
-all kernel function calls) which I think would be easy to extract as a
-stand-alone plugin:
+As for a deadline, as Elena says, we have no specific target. ("As
+soon as possible.") The only thing around timing that I like to see is
+persistent progress: if a patch series goes up for review, getting
+people to take a look at it, ask questions, make comments, and then
+hopefully within a week or so, the next version comes up. Momentum is
+easier to maintain than to build. ;)
 
-https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/scripts/gcc-plugins/kernexec_plugin.c
+> Just to be sure, the patch [1] and documentation [2] of PaX are still
+> up-to-date, or there is another references I missed?
+>
+> Thanks
+>
+> Colin
+>
+> [1] https://pax.grsecurity.net/pax-linux-3.6-201210022100.patch
 
-And at the other end of the spectrum is the RAP plugin (which does a
-portion of PaX's full RAP, though there appear to be some non-trivial
-kernel changes need to support it, e.g. per-cpu PGD):
+This is a quite old version of PaX. (Note the date.) If you want to
+examine PaX separately from Grsecurity (noting differences can be
+enlightening), check here:
 
-https://pax.grsecurity.net/docs/PaXTeam-H2HC15-RAP-RIP-ROP.pdf
+https://www.grsecurity.net/~paxguy1/?C=M;O=D
 
-> I still don't have yet a narrow idea about where I can begin. I like
-> though the idea of kernel self protection. For instance, I find the VM-
-> mapped stack to be really interesting, but I think it is an overkill as
-> a beginning, and a lot of work have already been done on it. On the
-> architecture point-of-view, I have a preference of x86 since I only
-> have this hardware for now, but I can work on ARM and others with QEMU
-> too.
+> [2] https://forums.grsecurity.net/viewtopic.php?f=7&t=4173
 
-A piece missing from vmap-stack (I think) is having guard pages at
-_both_ ends of the kernel stack. Andy Lutomirski surely knows better
-than I do, but I'm hoping he's working on looking at PCID-based SMAP
-emulation. (Hi Andy!) :)
+Yes, outside of reading the code itself, I believe this to be the most
+comprehensive piece of documentation about PAX_REFCOUNT.
 
 -Kees
 
