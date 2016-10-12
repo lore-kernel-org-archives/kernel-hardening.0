@@ -1,69 +1,80 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476260730.19479.3.camel@cvidal.org>
+Message-ID: <1476260846.19479.5.camel@cvidal.org>
 From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 12 Oct 2016 10:25:30 +0200
-In-Reply-To: <CAGXu5jLvBMWHw_Y8ntmKB3GFqWfmT_E1neUiVQLJAsErLxFLWw@mail.gmail.com>
+Date: Wed, 12 Oct 2016 10:27:26 +0200
+In-Reply-To: <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
 References: <1476016472.2329.38.camel@cvidal.org>
-	 <CE954033-54F3-47AE-9788-B26B9CE45401@gmail.com>
-	 <1476040182.2329.72.camel@cvidal.org> <20161009193731.GD14666@pc.thejh.net>
-	 <2236FBA76BA1254E88B949DDB74E612B41BDCAF6@IRSMSX102.ger.corp.intel.com>
-	 <1476115319.2329.108.camel@cvidal.org>
-	 <CAGXu5jLvBMWHw_Y8ntmKB3GFqWfmT_E1neUiVQLJAsErLxFLWw@mail.gmail.com>
+	 <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] self introduction
-To: kernel-hardening@lists.openwall.com, AKASHI Takahiro <takahiro.akashi@linaro.org>, Kees Cook <keescook@chromium.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> > So, I will try to start to port PAX_REFCOUNT arm-specific features
-> > to hardened_atomic_on_next, and keep you in touch. Is there a
-> > deadline?  (4.10 / 5.0 merge window?)
+> > Beside my researches, I am taking up the Eudyptula Challenge (task
+> > 15 submitted). It helps me to have a global view of the kernel
+> > (organization, tree, some features), but it is not enough to get
+> > involved in serious development. Therefore, I am looking for task
+> > I can accomplish to be involved into real kernel development!
 >
-> You may want to compare notes with Takahiro (CCed) who may have
-> started to look at arm64 (and maybe arm too).
+> Hi! Welcome to the fun! :)
 
-Thanks, I would be grateful!
+Cheers :)
 
-> As for a deadline, as Elena says, we have no specific target. ("As
-> soon as possible.") The only thing around timing that I like to see
-> is persistent progress: if a patch series goes up for review,
-> getting people to take a look at it, ask questions, make comments,
-> and then hopefully within a week or so, the next version comes
-> up. Momentum is easier to maintain than to build. ;)
+> I see there's already a thread getting into the HARDENED_ATOMIC
+> effort, though I thought I might bring up some other areas too, in
+> case they entice you as well. You've got some background in control
+> flow -- have you spent much time in compiler internals? The recent
 
-OK, good! I will have more time to work on it this WE, still I began to
-familiarize myself with atomic_t internals (and PaX patch).
+Not really on mainstream compilers. I've done some static inter/intra
+procedural analysis on previous projects (in order to optimize object
+call site), and the compiler of the DSL I'm working on is based on a
+completely different theories (it uses Esterel synchronous language
+semantic) and does not uses static CFG. Hence, I am quite far of CFI
+analysis :(
 
-I noticed the build is broken for non-x86 architecture (at least
-arm/arm64), since basically each arch needs to provide atomic_*_wrap()
-functions. Is there plans to have (probably dummies) functions in case
-the architecture does not implements this functionality? I noticed the
-list of define atomic_*_wrap at the end of atomic-long.h, but it does
-not seems to works (they are defined after the call sites in the
-expansion of previous macros).
-
-Apart from that, in case of over-/underflow, hardened_atomic_overflow()
-is called to hang the system if CONFIG_HARDENED_ATOMIC is set. I don't
-get why the test in arch/x86/include/kernel/traps.c
-
-	if (trapnr == X86_TRAP_OF)
-        	hardened_atomic_overflow(regs);
-
-is not guarded by CONFIG_HARDENED_ATOMIC: the trap cannot occurs if
-CONFIG_HARDENED_ATOMIC is unset (since "int" instructions in
-arch/x86/include/asm/atomic.h are guarded by it), and it would avoid
-the other implementation of hardened_atomic_overflow in
-include/asm-generic/bug.h.
-
-> > [1] https://pax.grsecurity.net/pax-linux-3.6-201210022100.patch
+> addition of the gcc plugin infrastructure means there's a much wider
+> ability for the kernel to do compiler tricks now. Two things that
+> come to mind for CFI when looking at the existing PaX/Grsecurity gcc
+> plugins are the kernexec plugin (which, AIUI, is mainly a weak form
+> of SMEP emulation on x86, using simple CFI to keep the high bit set
+> on all kernel function calls) which I think would be easy to extract
+> as a stand-alone plugin:
 >
-> This is a quite old version of PaX. (Note the date.) If you want to
-> examine PaX separately from Grsecurity (noting differences can be
-> enlightening), check here:
+> https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/sc
+> ripts/gcc-plugins/kernexec_plugin.c
+
+If I understand, this plugin protects against running user-space code
+in supervisor mode (SMEP emulation, so avoid ROP class exploit), but
+since this analysis is purely static, it does not protects again
+out-of-tree dynamically loaded modules, right?
+
+> And at the other end of the spectrum is the RAP plugin (which does a
+> portion of PaX's full RAP, though there appear to be some non-trivial
+> kernel changes need to support it, e.g. per-cpu PGD):
 >
-> https://www.grsecurity.net/~paxguy1/?C=M;O=D
+> https://pax.grsecurity.net/docs/PaXTeam-H2HC15-RAP-RIP-ROP.pdf
+
+Seems really interesting, though! I have plenty of food for thought
+with HARDENED_ATOMIC port for now, but I keep that in the back of my
+mind!
+
+> > I still don't have yet a narrow idea about where I can begin. I
+> > like though the idea of kernel self protection. For instance, I
+> > find the VM- mapped stack to be really interesting, but I think it
+> > is an overkill as a beginning, and a lot of work have already been
+> > done on it. On the architecture point-of-view, I have a preference
+> > of x86 since I only have this hardware for now, but I can work on
+> > ARM and others with QEMU too.
+>
+> A piece missing from vmap-stack (I think) is having guard pages at
+> _both_ ends of the kernel stack. Andy Lutomirski surely knows better
+> than I do, but I'm hoping he's working on looking at PCID-based SMAP
+> emulation. (Hi Andy!) :)
+>
+> -Kees
 
 Thanks!
 
