@@ -1,67 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1476260846.19479.5.camel@cvidal.org>
-References: <1476016472.2329.38.camel@cvidal.org> <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
- <1476260846.19479.5.camel@cvidal.org>
+In-Reply-To: <1476311522-15381-2-git-send-email-labbott@redhat.com>
+References: <1476311522-15381-1-git-send-email-labbott@redhat.com> <1476311522-15381-2-git-send-email-labbott@redhat.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 12 Oct 2016 15:40:55 -0700
-Message-ID: <CAGXu5jK+80C8FM__Z4nY64VsN4Y+RNGt1OVGonLjQW_T8mTf=w@mail.gmail.com>
+Date: Wed, 12 Oct 2016 15:45:43 -0700
+Message-ID: <CAGXu5jLNUrt22Qg2gFmLj9rgStOTTTsOT7QGaw5efk==WbFwRg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] self introduction
-To: Colin Vidal <colin@cvidal.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCHv2 1/4] arm64: dump: Make ptdump debugfs a separate option
+To: Laura Abbott <labbott@redhat.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 12, 2016 at 1:27 AM, Colin Vidal <colin@cvidal.org> wrote:
->> I see there's already a thread getting into the HARDENED_ATOMIC
->> effort, though I thought I might bring up some other areas too, in
->> case they entice you as well. You've got some background in control
->> flow -- have you spent much time in compiler internals? The recent
+On Wed, Oct 12, 2016 at 3:31 PM, Laura Abbott <labbott@redhat.com> wrote:
 >
-> Not really on mainstream compilers. I've done some static inter/intra
-> procedural analysis on previous projects (in order to optimize object
-> call site), and the compiler of the DSL I'm working on is based on a
-> completely different theories (it uses Esterel synchronous language
-> semantic) and does not uses static CFG. Hence, I am quite far of CFI
-> analysis :(
-
-Heh, okay, no worries. I just thought I'd ask. I saw some key words in
-your introduction. ;)
-
->> addition of the gcc plugin infrastructure means there's a much wider
->> ability for the kernel to do compiler tricks now. Two things that
->> come to mind for CFI when looking at the existing PaX/Grsecurity gcc
->> plugins are the kernexec plugin (which, AIUI, is mainly a weak form
->> of SMEP emulation on x86, using simple CFI to keep the high bit set
->> on all kernel function calls) which I think would be easy to extract
->> as a stand-alone plugin:
->>
->> https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/sc
->> ripts/gcc-plugins/kernexec_plugin.c
+> ptdump_register currently initializes a set of page table information and
+> registers debugfs. There are uses for the ptdump option without wanting the
+> debugfs options. Split this out to make it a separate option.
 >
-> If I understand, this plugin protects against running user-space code
-> in supervisor mode (SMEP emulation, so avoid ROP class exploit), but
-> since this analysis is purely static, it does not protects again
-> out-of-tree dynamically loaded modules, right?
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v2: Minor style fixups per Mark Rutland, intialization is now separate from
+>     register since it never needed to be combined in the first place, EFI
+>     page table registration.
+> ---
+>  arch/arm64/Kconfig.debug           |  6 +++++-
+>  arch/arm64/include/asm/ptdump.h    | 13 ++++++++-----
+>  arch/arm64/mm/Makefile             |  3 ++-
+>  arch/arm64/mm/dump.c               | 26 +++++---------------------
+>  arch/arm64/mm/ptdump_debugfs.c     | 31 +++++++++++++++++++++++++++++++
+>  drivers/firmware/efi/arm-runtime.c |  5 ++---
+>  6 files changed, 53 insertions(+), 31 deletions(-)
+>  create mode 100644 arch/arm64/mm/ptdump_debugfs.c
+>
+> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
+> index b661fe7..21a5b74 100644
+> --- a/arch/arm64/Kconfig.debug
+> +++ b/arch/arm64/Kconfig.debug
+> @@ -2,9 +2,13 @@ menu "Kernel hacking"
+>
+>  source "lib/Kconfig.debug"
+>
+> -config ARM64_PTDUMP
+> +config ARM64_PTDUMP_CORE
+> +       def_bool n
+> +
+> +config ARM64_PTDUMP_DEBUGFS
+>         bool "Export kernel pagetable layout to userspace via debugfs"
 
-I can't tell which of two questions you're asking, so I'll answer both. :)
+I think this can be a tristate now, yes? (I did this on x86 so I could
+load ptdump as a module for Chrome OS image testing but then leave the
+module off the read-only partition for release images...)
 
-The gcc plugin infrastructure in the kernel is designed so that any
-kernel modules built for the kernel will get the plugin run on it. The
-kernexec plugin in particular, however, has logic to handle totally
-out-of-tree builds that lack the instrumentation (see the Kconfig for
-it). In that case, that module would not be protected, but the rest of
-the kernel would be.
-
-And, allowing arbitrary module loading on a system would nullify
-virtually all kernel self-protection efforts when defending against
-the root user, so it's an assumed that systems that are serious about
-system security are either built monolithic (without modules) or
-perform some kind of module verification (module signing, or LoadPin
-with dm-verity).
+https://git.kernel.org/linus/8609d1b5daa36350e020e737946c40887af1743a
 
 -Kees
+
+>         depends on DEBUG_KERNEL
+> +       select ARM64_PTDUMP_CORE
+>         select DEBUG_FS
+>          help
+>           Say Y here if you want to show the kernel pagetable layout in a
+
+
 
 -- 
 Kees Cook
