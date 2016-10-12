@@ -1,61 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476301332.19131.24.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 12 Oct 2016 21:42:12 +0200
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] atomic64_wrap_t generic implementation
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <CAKv+Gu8dP33UYh-Vq1z-kXa+R_nXrFqpVOTsCW7qc2excrN4AA@mail.gmail.com>
+References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
+ <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
+ <CAKv+Gu9hWvAjckVjEHwNqTeRQgA-5YUatgAZXM-TtTVi6t4yng@mail.gmail.com>
+ <CAGXu5jJaAsED5=YX7RWtkHc8b219MEZ_7doohLUDics5nZY3ag@mail.gmail.com>
+ <CAKv+Gu-LUZOCAYLi+DvNmuVjMC_0OMjZKkCu8+XfH_Z7RQbifQ@mail.gmail.com>
+ <20161011234021.GA16858@remoulade> <CAKv+Gu8dP33UYh-Vq1z-kXa+R_nXrFqpVOTsCW7qc2excrN4AA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 12 Oct 2016 13:19:42 -0700
+Message-ID: <CAGXu5jKh8avawXm9-5MvRQrBqPWN3txLFbPVjS7rqqLSR0VAeg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] initcall randomization
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Mark Rutland <mark.rutland@arm.com>, Nick Kralevich <nnk@google.com>, Laura Abbott <labbott@fedoraproject.org>, Thomas Garnier <thgarnie@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Elena,
+On Wed, Oct 12, 2016 at 1:55 AM, Ard Biesheuvel
+<ard.biesheuvel@linaro.org> wrote:
+> (+ Nick)
+>
+> On 12 October 2016 at 00:40, Mark Rutland <mark.rutland@arm.com> wrote:
+>> On Tue, Oct 11, 2016 at 07:28:46PM +0100, Ard Biesheuvel wrote:
+>>> vmalloc and ioremap calls will simply be served bottom up, which is
+>>> why the beginning of the vmalloc area mostly looks the same between
+>>> boots, i.e., all non-kaslr boots look identical, and all kaslr boots
+>>> look identical with little variation.
+>>>
+>>> I am aware that random vmalloc is a bad idea,
+>>
+>> I must confess ignorance here; what problems does random vmalloc pose in
+>> particular?
+>>
+>
+> It has been attempted in Android, and resulted in vmalloc failures due
+> to fragmentation. I realize this may not apply to 64-bit ARM, though
+> (and I assume the Android example concerned 32-bit ARM)
+>
+>>> hence my suggestion to perhaps randomize during the __init phase. I
+>>> must admit that this is simply me holding the randomization hammer and
+>>> looking for things that vaguely resemble nails, hence my request for
+>>> discussion rather than proposing patches.
+>>
+>> Do we have a particular threat model this helps with?
+>>
+>> Is it similar to that for SLUB freelist randomization?
+>>
+>> Do we have vmalloc area sepcific information leaks?
+>>
+>
+> Well, that was my question as well. Given that it seemed like a good
+> idea for the Android guys at the time, I would assume yes
+>
+> Nick?
 
-diff --git a/include/asm-generic/atomic64.h b/include/asm-generic/atomic64.h
-index dad68bf..4987419 100644
---- a/include/asm-generic/atomic64.h
-+++ b/include/asm-generic/atomic64.h
-@@ -16,6 +16,8 @@ typedef struct {
-        long long counter;
- } atomic64_t;
- 
-+typedef atomic64_t atomic64_wrap_t;
-+
- #define ATOMIC64_INIT(i)       { (i) }
- 
- extern long long atomic64_read(const atomic64_t *v);
-@@ -62,4 +64,15 @@ extern int    atomic64_add_unless(atomic64_t *v, long long a, long long u);
- #define atomic64_dec_and_test(v)       (atomic64_dec_return((v)) == 0)
- #define atomic64_inc_not_zero(v)       atomic64_add_unless((v), 1LL, 0LL)
- 
-+#define atomic64_read_wrap(v) atomic64_read(v)
-+#define atomic64_set_wrap(v, i) atomic64_set((v), (i))
-+#define atomic64_add_wrap(a, v) atomic64_add((a), (v))
-+#define atomic64_add_return_wrap(a, v) atomic64_add_return((a), (v))
-+#define atomic64_sub_wrap(a, v) atomic64_sub((a), (v))
-+#define atomic64_inc_wrap(v) atomic64_inc(v)
-+#define atomic64_inc_return_wrap(v) atomic64_inc_return(v)
-+#define atomic64_dec_wrap(v) atomic64_dec(v)
-+#define atomic64_cmpxchg_wrap(v, o, n) atomic64_cmpxchg((v), (o), (n))
-+#define atomic64_xchg_wrap(v, n) atomic64_xchg((v), (n))
+The specific issue is to randomize any targets living in vmalloc areas
+that are allocated at boot time, which results in effectively static
+locations for a given software/hardware combination. Thomas
+(explicitly CCed now) saw a bunch of these when he was looking for
+possible targets, which motivated his RANDOMIZE_MEMORY config for x86.
+He also randomized the base offset for page tables, which are another
+very common target, though it sounds to me like those would already be
+randomized with the kernel position?
 
-Isen't there a type error ? For instance:
+-Kees
 
-atomic64_wrap_t atom_wrap;
-
-atomic64_read_wrap(atom_wrap) will be expanded into
-atomic64_read(atom_wrap), which would lead to a type error (atomic64_t
-expected).
-
-Perhaps the more simple thing to do would be
-
--typedef atomic64_t atomic64_wrap_t;
-+#define atomic64_wrap_t atomic64_t
-
-since the implementations are the same here.
-
-Or I missed something obvious?
-
-Thanks,
-
-Colin
+-- 
+Kees Cook
+Nexus Security
