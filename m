@@ -1,52 +1,105 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 12 Oct 2016 17:25:29 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDDB97@IRSMSX102.ger.corp.intel.com>
+References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com>
+ <20161012082634.GK19531@linaro.org>
+In-Reply-To: <20161012082634.GK19531@linaro.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <20161011234021.GA16858@remoulade>
-References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
- <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
- <CAKv+Gu9hWvAjckVjEHwNqTeRQgA-5YUatgAZXM-TtTVi6t4yng@mail.gmail.com>
- <CAGXu5jJaAsED5=YX7RWtkHc8b219MEZ_7doohLUDics5nZY3ag@mail.gmail.com>
- <CAKv+Gu-LUZOCAYLi+DvNmuVjMC_0OMjZKkCu8+XfH_Z7RQbifQ@mail.gmail.com> <20161011234021.GA16858@remoulade>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 12 Oct 2016 09:55:03 +0100
-Message-ID: <CAKv+Gu8dP33UYh-Vq1z-kXa+R_nXrFqpVOTsCW7qc2excrN4AA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] initcall randomization
-To: Mark Rutland <mark.rutland@arm.com>, Nick Kralevich <nnk@google.com>
-Cc: kernel-hardening@lists.openwall.com, Laura Abbott <labbott@fedoraproject.org>
+Subject: RE: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture
+ independent hardened atomic base
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(+ Nick)
+Hi!
+<snip>
 
-On 12 October 2016 at 00:40, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Tue, Oct 11, 2016 at 07:28:46PM +0100, Ard Biesheuvel wrote:
->> vmalloc and ioremap calls will simply be served bottom up, which is
->> why the beginning of the vmalloc area mostly looks the same between
->> boots, i.e., all non-kaslr boots look identical, and all kaslr boots
->> look identical with little variation.
->>
->> I am aware that random vmalloc is a bad idea,
->
-> I must confess ignorance here; what problems does random vmalloc pose in
-> particular?
->
+> > -ATOMIC_LONG_ADD_SUB_OP(sub, _relaxed) -ATOMIC_LONG_ADD_SUB_OP(sub,=20
+> > _acquire) -ATOMIC_LONG_ADD_SUB_OP(sub, _release)
+> > +ATOMIC_LONG_ADD_SUB_OP(add,,)
+> > +ATOMIC_LONG_ADD_SUB_OP(add,,_wrap)
+> > +ATOMIC_LONG_ADD_SUB_OP(add, _relaxed,) ATOMIC_LONG_ADD_SUB_OP(add,=20
+> > +_acquire,) ATOMIC_LONG_ADD_SUB_OP(add, _release,)
+> > +ATOMIC_LONG_ADD_SUB_OP(sub,,)
+> > +//ATOMIC_LONG_ADD_SUB_OP(sub,,_wrap) todo: check if this is really=20
+> > +not needed
+>=20
+> Let's get this question answered. Seems like it'd make sense to create=20
+> complete function coverage?
 
-It has been attempted in Android, and resulted in vmalloc failures due
-to fragmentation. I realize this may not apply to 64-bit ARM, though
-(and I assume the Android example concerned 32-bit ARM)
+>I'd love to know the answer since there tons of variants of atomic operati=
+ons.
 
->> hence my suggestion to perhaps randomize during the __init phase. I
->> must admit that this is simply me holding the randomization hammer and
->> looking for things that vaguely resemble nails, hence my request for
->> discussion rather than proposing patches.
->
-> Do we have a particular threat model this helps with?
->
-> Is it similar to that for SLUB freelist randomization?
->
-> Do we have vmalloc area sepcific information leaks?
->
+So, the approach we have taken so far is to define only functions that are =
+used/needed so far in the changes that we did in subsystems.
+This obviously doesn't cover all possible options. I guess in order to supp=
+ort future changes we need a full coverage, indeed...   =20
 
-Well, that was my question as well. Given that it seemed like a good
-idea for the Android guys at the time, I would assume yes
+<snip>
 
-Nick?
+> > -ATOMIC_LONG_OP(add)
+> > -ATOMIC_LONG_OP(sub)
+> > -ATOMIC_LONG_OP(and)
+> > -ATOMIC_LONG_OP(andnot)
+> > -ATOMIC_LONG_OP(or)
+> > -ATOMIC_LONG_OP(xor)
+> > +ATOMIC_LONG_OP(add,)
+> > +ATOMIC_LONG_OP(add,_wrap)
+> > +ATOMIC_LONG_OP(sub,)
+> > +ATOMIC_LONG_OP(sub,_wrap)
+> > +ATOMIC_LONG_OP(and,)
+> > +ATOMIC_LONG_OP(or,)
+> > +ATOMIC_LONG_OP(xor,)
+> > +ATOMIC_LONG_OP(andnot,)
+
+>For instance, are we sure that we would never call atomic_long_and_wrap() =
+to atomic_long_wrap_t variable?
+Yes, same story, now we are not calling it, but things change obviously. We=
+ wanted to start somewhere, and this set is already quite big even with the=
+ current needs.=20
+So, does everyone agree that we should provide full coverage?=20
+
+<snip>=20
+
+> >
+> > +#ifndef CONFIG_HARDENED_ATOMIC
+> > +#define atomic_read_wrap(v) atomic_read(v) #define=20
+> > +atomic_set_wrap(v, i) atomic_set((v), (i)) #define=20
+> > +atomic_add_wrap(i, v) atomic_add((i), (v)) #define=20
+> > +atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))=20
+> > +#define atomic_sub_wrap(i, v) atomic_sub((i), (v)) #define=20
+> > +atomic_inc_wrap(v) atomic_inc(v) #define=20
+> > +atomic_inc_and_test_wrap(v) atomic_inc_and_test(v) #define=20
+> > +atomic_inc_return_wrap(v) atomic_inc_return(v) #define=20
+> > +atomic_add_return_wrap(i, v) atomic_add_return((i), (v)) #define=20
+> > +atomic_dec_wrap(v) atomic_dec(v) #define atomic_cmpxchg_wrap(v, o,=20
+> > +n) atomic_cmpxchg((v), (o), (n)) #define atomic_xchg_wrap(v, i)=20
+> > +atomic_xchg((v), (i)) #define atomic_long_read_wrap(v)=20
+> > +atomic_long_read(v) #define atomic_long_set_wrap(v, i)=20
+> > +atomic_long_set((v), (i)) #define atomic_long_add_wrap(i, v)=20
+> > +atomic_long_add((i), (v)) #define atomic_long_sub_wrap(i, v)=20
+> > +atomic_long_sub((i), (v)) #define atomic_long_inc_wrap(v)=20
+> > +atomic_long_inc(v) #define atomic_long_add_return_wrap(i, v)=20
+> > +atomic_long_add_return((i), (v)) #define=20
+> > +atomic_long_inc_return_wrap(v) atomic_long_inc_return(v) #define=20
+> > +atomic_long_sub_and_test_wrap(v) atomic_long_sub_and_test(v)=20
+> > +#define atomic_long_dec_wrap(v) atomic_long_dec(v) #define=20
+> > +atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i)) #endif /*=20
+> > +CONFIG_HARDENED_ATOMIC */
+
+>It seems that there are missing function definitions here if atomic_long s=
+hould have all the counterparts to atomic:
+>    atomic_long_add_unless_wrap()
+>    atomic_long_cmpxchg_wrap()
+
+
+Again, this is based on the current usage of atomic_long_wrap_t, not the fu=
+ll coverage.=20
+
+Best Regards,
+Elena.
