@@ -1,81 +1,116 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476260846.19479.5.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 12 Oct 2016 10:27:26 +0200
-In-Reply-To: <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
-References: <1476016472.2329.38.camel@cvidal.org>
-	 <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] self introduction
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5j+K0uAWxMddtvcC40BE5wGkfT1crsExxG5SB7sQv4ZcrQ@mail.gmail.com>
+References: <CAKv+Gu_7AdRk7O-Mt8oS=t6prJY56=nS5CS1stgfqHzJ--YD9Q@mail.gmail.com>
+ <CAGXu5j+FjPie_mfVhyPa77BrOf+XkAfkZgc+T3RNjecTLH6w2Q@mail.gmail.com>
+ <CAKv+Gu9hWvAjckVjEHwNqTeRQgA-5YUatgAZXM-TtTVi6t4yng@mail.gmail.com>
+ <CAGXu5jJaAsED5=YX7RWtkHc8b219MEZ_7doohLUDics5nZY3ag@mail.gmail.com>
+ <CAKv+Gu-LUZOCAYLi+DvNmuVjMC_0OMjZKkCu8+XfH_Z7RQbifQ@mail.gmail.com> <CAGXu5j+K0uAWxMddtvcC40BE5wGkfT1crsExxG5SB7sQv4ZcrQ@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 12 Oct 2016 09:50:54 +0100
+Message-ID: <CAKv+Gu-4tKuWQXZvY8Obd9q=P6e9T-sPLRuxsnMtamd+YKg3kg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] initcall randomization
 To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@fedoraproject.org>, Mark Rutland <mark.rutland@arm.com>, Thomas Garnier <thgarnie@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> > Beside my researches, I am taking up the Eudyptula Challenge (task
-> > 15 submitted). It helps me to have a global view of the kernel
-> > (organization, tree, some features), but it is not enough to get
-> > involved in serious development. Therefore, I am looking for task
-> > I can accomplish to be involved into real kernel development!
+On 11 October 2016 at 20:59, Kees Cook <keescook@chromium.org> wrote:
+> On Tue, Oct 11, 2016 at 11:28 AM, Ard Biesheuvel
+> <ard.biesheuvel@linaro.org> wrote:
+>> On 10 October 2016 at 23:17, Kees Cook <keescook@chromium.org> wrote:
+>>> On Wed, Oct 5, 2016 at 2:45 PM, Ard Biesheuvel
+>>> <ard.biesheuvel@linaro.org> wrote:
+>>>> On 5 October 2016 at 13:30, Kees Cook <keescook@chromium.org> wrote:
+>>>>> On Wed, Oct 5, 2016 at 10:09 AM, Ard Biesheuvel
+>>>>> <ard.biesheuvel@linaro.org> wrote:
+>>>>>> Did anyone ever look into whether there is anything to gain in terms
+>>>>>> of hardening from randomizing the order initcalls are issued at each
+>>>>>> level? I know entropy is hard to come by at this stage, but on recent
+>>>>>> UEFI systems, this is something we could potentially solve
+>>>>>> generically. (It may uncover some breakage as well, but only hidden
+>>>>>> breakage that could already surface at any time due to linker changes,
+>>>>>> so I think this could serve as a diagnostic option as well)
+>>>>>
+>>>>> It could be a nice addition to CONFIG_RANDOMIZE_MEMORY which already
+>>>>> tries to address the "predictable memory locations at every boot"
+>>>>> problem by randomizing the offset of the kernel memory mappings on
+>>>>> x86_64. Could this be done on arm64 too?
+>>>>>
+>>>>
+>>>> The arm64 implementation of KASLR randomizes the placement of
+>>>> installed memory inside the linear mapping. If this is the same thing,
+>>>> it seems this should be configurable under CONFIG_RANDOMIZE_MEMORY
+>>>> instead?
+>>>>
+>>>> But indeed, as Mark points out, this would primarily affect the
+>>>> vmalloc space, and would be defeated by dependency based init (if that
+>>>> ever materialises), and so it might make more sense to target __init
+>>>> stage vmalloc/ioremap invocations specifically.
+>>>
+>>> I've almost got my HiKey running a modern kernel so I can answer with
+>>> some level of certainty, but looking at an older kernel's memory
+>>> layout, it seemed like arm64 has two primary memory areas, "kernel"
+>>> and "everything else". Did I understand that correctly, and/or is it
+>>> still true?
+>>>
+>>> Is the vmalloc area offset from the kernel text, or does it have its
+>>> own static location in kernel virtual memory?
+>>>
+>>
+>> It typically looks like
+>>
+>>     modules : 0xffff000000000000 - 0xffff000008000000   (   128 MB)
+>>     vmalloc : 0xffff000008000000 - 0xffff7dffbfff0000   (129022 GB)
+>>       .text : 0xffff0d61922a0000 - 0xffff0d6192a80000   (  8064 KB)
+>>     .rodata : 0xffff0d6192a80000 - 0xffff0d6192dd0000   (  3392 KB)
+>>       .init : 0xffff0d6192dd0000 - 0xffff0d6193020000   (  2368 KB)
+>>       .data : 0xffff0d6193020000 - 0xffff0d61930d3200   (   717 KB)
+>>        .bss : 0xffff0d61930d3200 - 0xffff0d6193116d2c   (   271 KB)
+>>     fixed   : 0xffff7dfffe7fd000 - 0xffff7dfffec00000   (  4108 KB)
+>>     PCI I/O : 0xffff7dfffee00000 - 0xffff7dffffe00000   (    16 MB)
+>>     vmemmap : 0xffff7e0000000000 - 0xffff800000000000   (  2048 GB maximum)
+>>               0xffff7ebfb4000000 - 0xffff7ebfb7ff0000   (    63 MB actual)
+>>     memory  : 0xffffafed00000000 - 0xffffafedffc00000   (  4092 MB)
+>>
+>> So the kernel virtual mapping is covered by the vmalloc area (and will
+>> be randomized to somewhere in the first half of that range when kaslr
+>> is in effect). The module area is listed separately, but that range is
+>> only used when kaslr is off. If kaslr is on, the 128 MB module region
+>> will be placed randomly in the first half of the vmalloc region as
+>> well, and depending on CONFIG_RANDOMIZE_MODULE_REGION_FULL, it will
+>> intersect the kernel mapping (to allow relative branches without PLT
+>> entries), or be randomized completely independently.
+>>
+>> vmalloc and ioremap calls will simply be served bottom up, which is
+>> why the beginning of the vmalloc area mostly looks the same between
+>> boots, i.e., all non-kaslr boots look identical, and all kaslr boots
+>> look identical with little variation.
+>>
+>> I am aware that random vmalloc is a bad idea, hence my suggestion to
+>> perhaps randomize during the __init phase. I must admit that this is
+>> simply me holding the randomization hammer and looking for things that
+>> vaguely resemble nails, hence my request for discussion rather than
+>> proposing patches.
 >
-> Hi! Welcome to the fun! :)
-
-Cheers :)
-
-> I see there's already a thread getting into the HARDENED_ATOMIC
-> effort, though I thought I might bring up some other areas too, in
-> case they entice you as well. You've got some background in control
-> flow -- have you spent much time in compiler internals? The recent
-
-Not really on mainstream compilers. I've done some static inter/intra
-procedural analysis on previous projects (in order to optimize object
-call site), and the compiler of the DSL I'm working on is based on a
-completely different theories (it uses Esterel synchronous language
-semantic) and does not uses static CFG. Hence, I am quite far of CFI
-analysis :(
-
-> addition of the gcc plugin infrastructure means there's a much wider
-> ability for the kernel to do compiler tricks now. Two things that
-> come to mind for CFI when looking at the existing PaX/Grsecurity gcc
-> plugins are the kernexec plugin (which, AIUI, is mainly a weak form
-> of SMEP emulation on x86, using simple CFI to keep the high bit set
-> on all kernel function calls) which I think would be easy to extract
-> as a stand-alone plugin:
+> Ah-ha, thanks for the details here. And the KASLR offset will push all
+> of these around, then? Would it be possible to separately randomize
+> the base of vmalloc and vmemmap?
 >
-> https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/sc
-> ripts/gcc-plugins/kernexec_plugin.c
 
-If I understand, this plugin protects against running user-space code
-in supervisor mode (SMEP emulation, so avoid ROP class exploit), but
-since this analysis is purely static, it does not protects again
-out-of-tree dynamically loaded modules, right?
+When KASLR is in effect:
+- the text/rodata/init/data/bss regions are kept together and moved
+around inside the vmalloc area
+- the fixed 'modules' region will not be used, and another randomly
+placed 128 MB region inside the vmalloc region will be used
+- the 'memory' region will be randomized, and by association, the
+vmemmap 'actual' region
+- the 'fixed' and 'PCI I/O' regions always stay in the same place
 
-> And at the other end of the spectrum is the RAP plugin (which does a
-> portion of PaX's full RAP, though there appear to be some non-trivial
-> kernel changes need to support it, e.g. per-cpu PGD):
->
-> https://pax.grsecurity.net/docs/PaXTeam-H2HC15-RAP-RIP-ROP.pdf
-
-Seems really interesting, though! I have plenty of food for thought
-with HARDENED_ATOMIC port for now, but I keep that in the back of my
-mind!
-
-> > I still don't have yet a narrow idea about where I can begin. I
-> > like though the idea of kernel self protection. For instance, I
-> > find the VM- mapped stack to be really interesting, but I think it
-> > is an overkill as a beginning, and a lot of work have already been
-> > done on it. On the architecture point-of-view, I have a preference
-> > of x86 since I only have this hardware for now, but I can work on
-> > ARM and others with QEMU too.
->
-> A piece missing from vmap-stack (I think) is having guard pages at
-> _both_ ends of the kernel stack. Andy Lutomirski surely knows better
-> than I do, but I'm hoping he's working on looking at PCID-based SMAP
-> emulation. (Hi Andy!) :)
->
-> -Kees
-
-Thanks!
-
-Colin
+Randomizing the base of vmemmap independently would result in
+page_address()/virt_to_page() translations that are no longer strictly
+based on build time constants, and so I would prefer to avoid that
+(and vmemmap is already randomized along with the 'memory' region)
+As for the vmalloc region, I guess it would be possible to simply
+start the bottom up allocations at a random offset into the region
+rather than at the base.
