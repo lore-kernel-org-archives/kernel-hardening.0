@@ -1,105 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 12 Oct 2016 17:25:29 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDDB97@IRSMSX102.ger.corp.intel.com>
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
- <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com>
- <20161012082634.GK19531@linaro.org>
-In-Reply-To: <20161012082634.GK19531@linaro.org>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture
- independent hardened atomic base
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Message-ID: <1476301332.19131.24.camel@cvidal.org>
+From: Colin Vidal <colin@cvidal.org>
+Date: Wed, 12 Oct 2016 21:42:12 +0200
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] atomic64_wrap_t generic implementation
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi!
-<snip>
+Hi Elena,
 
-> > -ATOMIC_LONG_ADD_SUB_OP(sub, _relaxed) -ATOMIC_LONG_ADD_SUB_OP(sub,=20
-> > _acquire) -ATOMIC_LONG_ADD_SUB_OP(sub, _release)
-> > +ATOMIC_LONG_ADD_SUB_OP(add,,)
-> > +ATOMIC_LONG_ADD_SUB_OP(add,,_wrap)
-> > +ATOMIC_LONG_ADD_SUB_OP(add, _relaxed,) ATOMIC_LONG_ADD_SUB_OP(add,=20
-> > +_acquire,) ATOMIC_LONG_ADD_SUB_OP(add, _release,)
-> > +ATOMIC_LONG_ADD_SUB_OP(sub,,)
-> > +//ATOMIC_LONG_ADD_SUB_OP(sub,,_wrap) todo: check if this is really=20
-> > +not needed
->=20
-> Let's get this question answered. Seems like it'd make sense to create=20
-> complete function coverage?
+diff --git a/include/asm-generic/atomic64.h b/include/asm-generic/atomic64.h
+index dad68bf..4987419 100644
+--- a/include/asm-generic/atomic64.h
++++ b/include/asm-generic/atomic64.h
+@@ -16,6 +16,8 @@ typedef struct {
+        long long counter;
+ } atomic64_t;
+ 
++typedef atomic64_t atomic64_wrap_t;
++
+ #define ATOMIC64_INIT(i)       { (i) }
+ 
+ extern long long atomic64_read(const atomic64_t *v);
+@@ -62,4 +64,15 @@ extern int    atomic64_add_unless(atomic64_t *v, long long a, long long u);
+ #define atomic64_dec_and_test(v)       (atomic64_dec_return((v)) == 0)
+ #define atomic64_inc_not_zero(v)       atomic64_add_unless((v), 1LL, 0LL)
+ 
++#define atomic64_read_wrap(v) atomic64_read(v)
++#define atomic64_set_wrap(v, i) atomic64_set((v), (i))
++#define atomic64_add_wrap(a, v) atomic64_add((a), (v))
++#define atomic64_add_return_wrap(a, v) atomic64_add_return((a), (v))
++#define atomic64_sub_wrap(a, v) atomic64_sub((a), (v))
++#define atomic64_inc_wrap(v) atomic64_inc(v)
++#define atomic64_inc_return_wrap(v) atomic64_inc_return(v)
++#define atomic64_dec_wrap(v) atomic64_dec(v)
++#define atomic64_cmpxchg_wrap(v, o, n) atomic64_cmpxchg((v), (o), (n))
++#define atomic64_xchg_wrap(v, n) atomic64_xchg((v), (n))
 
->I'd love to know the answer since there tons of variants of atomic operati=
-ons.
+Isen't there a type error ? For instance:
 
-So, the approach we have taken so far is to define only functions that are =
-used/needed so far in the changes that we did in subsystems.
-This obviously doesn't cover all possible options. I guess in order to supp=
-ort future changes we need a full coverage, indeed...   =20
+atomic64_wrap_t atom_wrap;
 
-<snip>
+atomic64_read_wrap(atom_wrap) will be expanded into
+atomic64_read(atom_wrap), which would lead to a type error (atomic64_t
+expected).
 
-> > -ATOMIC_LONG_OP(add)
-> > -ATOMIC_LONG_OP(sub)
-> > -ATOMIC_LONG_OP(and)
-> > -ATOMIC_LONG_OP(andnot)
-> > -ATOMIC_LONG_OP(or)
-> > -ATOMIC_LONG_OP(xor)
-> > +ATOMIC_LONG_OP(add,)
-> > +ATOMIC_LONG_OP(add,_wrap)
-> > +ATOMIC_LONG_OP(sub,)
-> > +ATOMIC_LONG_OP(sub,_wrap)
-> > +ATOMIC_LONG_OP(and,)
-> > +ATOMIC_LONG_OP(or,)
-> > +ATOMIC_LONG_OP(xor,)
-> > +ATOMIC_LONG_OP(andnot,)
+Perhaps the more simple thing to do would be
 
->For instance, are we sure that we would never call atomic_long_and_wrap() =
-to atomic_long_wrap_t variable?
-Yes, same story, now we are not calling it, but things change obviously. We=
- wanted to start somewhere, and this set is already quite big even with the=
- current needs.=20
-So, does everyone agree that we should provide full coverage?=20
+-typedef atomic64_t atomic64_wrap_t;
++#define atomic64_wrap_t atomic64_t
 
-<snip>=20
+since the implementations are the same here.
 
-> >
-> > +#ifndef CONFIG_HARDENED_ATOMIC
-> > +#define atomic_read_wrap(v) atomic_read(v) #define=20
-> > +atomic_set_wrap(v, i) atomic_set((v), (i)) #define=20
-> > +atomic_add_wrap(i, v) atomic_add((i), (v)) #define=20
-> > +atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))=20
-> > +#define atomic_sub_wrap(i, v) atomic_sub((i), (v)) #define=20
-> > +atomic_inc_wrap(v) atomic_inc(v) #define=20
-> > +atomic_inc_and_test_wrap(v) atomic_inc_and_test(v) #define=20
-> > +atomic_inc_return_wrap(v) atomic_inc_return(v) #define=20
-> > +atomic_add_return_wrap(i, v) atomic_add_return((i), (v)) #define=20
-> > +atomic_dec_wrap(v) atomic_dec(v) #define atomic_cmpxchg_wrap(v, o,=20
-> > +n) atomic_cmpxchg((v), (o), (n)) #define atomic_xchg_wrap(v, i)=20
-> > +atomic_xchg((v), (i)) #define atomic_long_read_wrap(v)=20
-> > +atomic_long_read(v) #define atomic_long_set_wrap(v, i)=20
-> > +atomic_long_set((v), (i)) #define atomic_long_add_wrap(i, v)=20
-> > +atomic_long_add((i), (v)) #define atomic_long_sub_wrap(i, v)=20
-> > +atomic_long_sub((i), (v)) #define atomic_long_inc_wrap(v)=20
-> > +atomic_long_inc(v) #define atomic_long_add_return_wrap(i, v)=20
-> > +atomic_long_add_return((i), (v)) #define=20
-> > +atomic_long_inc_return_wrap(v) atomic_long_inc_return(v) #define=20
-> > +atomic_long_sub_and_test_wrap(v) atomic_long_sub_and_test(v)=20
-> > +#define atomic_long_dec_wrap(v) atomic_long_dec(v) #define=20
-> > +atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i)) #endif /*=20
-> > +CONFIG_HARDENED_ATOMIC */
+Or I missed something obvious?
 
->It seems that there are missing function definitions here if atomic_long s=
-hould have all the counterparts to atomic:
->    atomic_long_add_unless_wrap()
->    atomic_long_cmpxchg_wrap()
+Thanks,
 
-
-Again, this is based on the current usage of atomic_long_wrap_t, not the fu=
-ll coverage.=20
-
-Best Regards,
-Elena.
+Colin
