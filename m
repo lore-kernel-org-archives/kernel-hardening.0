@@ -1,37 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 13 Oct 2016 17:31:59 +0300
-From: Hans Liljestrand <ishkamiel@gmail.com>
-Message-ID: <20161013143159.GA3525@thigreal>
-References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
- <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
- <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com>
- <20161012082634.GK19531@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41BDDB97@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+X4TkaZN2pQseWKBAjbirF06aUMjGqZ2La3ODGutFf8A@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Thu, 13 Oct 2016 17:25:53 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDE37B@IRSMSX102.ger.corp.intel.com>
+References: <1476301332.19131.24.camel@cvidal.org>
+In-Reply-To: <1476301332.19131.24.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+X4TkaZN2pQseWKBAjbirF06aUMjGqZ2La3ODGutFf8A@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture
- independent hardened atomic base
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dwindsor@gmail.com>
+Subject: [kernel-hardening] RE: atomic64_wrap_t generic implementation
+To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 12, 2016 at 03:50:12PM -0700, Kees Cook wrote:
-> On Wed, Oct 12, 2016 at 10:25 AM, Reshetova, Elena
-> <elena.reshetova@intel.com> wrote:
-> > Yes, same story, now we are not calling it, but things change obviously. We wanted to start somewhere, and this set is already quite big even with the current needs.
-> > So, does everyone agree that we should provide full coverage?
-> 
-> I think it makes sense. That means no one wanting the function ends up
-> with a surprise depending on CONFIG selection, etc.
-> 
-
-Yes, sounds reasonable, I will get started on this tomorrow.
-
-Once I get that sorted I'll also check on our lkdtm coverage, since I'm pretty
-sure it's somewhat spotty even before any new implementations.
-
-Best Regards,
--hans
+SGkgQ29saW4sIA0KDQpkaWZmIC0tZ2l0IGEvaW5jbHVkZS9hc20tZ2VuZXJpYy9hdG9taWM2NC5o
+IGIvaW5jbHVkZS9hc20tZ2VuZXJpYy9hdG9taWM2NC5oIGluZGV4IGRhZDY4YmYuLjQ5ODc0MTkg
+MTAwNjQ0DQotLS0gYS9pbmNsdWRlL2FzbS1nZW5lcmljL2F0b21pYzY0LmgNCisrKyBiL2luY2x1
+ZGUvYXNtLWdlbmVyaWMvYXRvbWljNjQuaA0KQEAgLTE2LDYgKzE2LDggQEAgdHlwZWRlZiBzdHJ1
+Y3Qgew0KwqDCoMKgwqDCoMKgwqDCoGxvbmcgbG9uZyBjb3VudGVyOw0KwqB9IGF0b21pYzY0X3Q7
+DQrCoA0KK3R5cGVkZWYgYXRvbWljNjRfdCBhdG9taWM2NF93cmFwX3Q7DQorDQrCoCNkZWZpbmUg
+QVRPTUlDNjRfSU5JVChpKcKgwqDCoMKgwqDCoMKgeyAoaSkgfQ0KwqANCsKgZXh0ZXJuIGxvbmcg
+bG9uZyBhdG9taWM2NF9yZWFkKGNvbnN0IGF0b21pYzY0X3QgKnYpOyBAQCAtNjIsNCArNjQsMTUg
+QEAgZXh0ZXJuIGludMKgwqDCoMKgYXRvbWljNjRfYWRkX3VubGVzcyhhdG9taWM2NF90ICp2LCBs
+b25nIGxvbmcgYSwgbG9uZyBsb25nIHUpOw0KwqAjZGVmaW5lIGF0b21pYzY0X2RlY19hbmRfdGVz
+dCh2KcKgwqDCoMKgwqDCoMKgKGF0b21pYzY0X2RlY19yZXR1cm4oKHYpKSA9PSAwKQ0KwqAjZGVm
+aW5lIGF0b21pYzY0X2luY19ub3RfemVybyh2KcKgwqDCoMKgwqDCoMKgYXRvbWljNjRfYWRkX3Vu
+bGVzcygodiksIDFMTCwgMExMKQ0KwqANCisjZGVmaW5lIGF0b21pYzY0X3JlYWRfd3JhcCh2KSBh
+dG9taWM2NF9yZWFkKHYpICNkZWZpbmUgDQorYXRvbWljNjRfc2V0X3dyYXAodiwgaSkgYXRvbWlj
+NjRfc2V0KCh2KSwgKGkpKSAjZGVmaW5lIA0KK2F0b21pYzY0X2FkZF93cmFwKGEsIHYpIGF0b21p
+YzY0X2FkZCgoYSksICh2KSkgI2RlZmluZSANCithdG9taWM2NF9hZGRfcmV0dXJuX3dyYXAoYSwg
+dikgYXRvbWljNjRfYWRkX3JldHVybigoYSksICh2KSkgI2RlZmluZSANCithdG9taWM2NF9zdWJf
+d3JhcChhLCB2KSBhdG9taWM2NF9zdWIoKGEpLCAodikpICNkZWZpbmUgDQorYXRvbWljNjRfaW5j
+X3dyYXAodikgYXRvbWljNjRfaW5jKHYpICNkZWZpbmUgDQorYXRvbWljNjRfaW5jX3JldHVybl93
+cmFwKHYpIGF0b21pYzY0X2luY19yZXR1cm4odikgI2RlZmluZSANCithdG9taWM2NF9kZWNfd3Jh
+cCh2KSBhdG9taWM2NF9kZWModikgI2RlZmluZSBhdG9taWM2NF9jbXB4Y2hnX3dyYXAodiwgDQor
+bywgbikgYXRvbWljNjRfY21weGNoZygodiksIChvKSwgKG4pKSAjZGVmaW5lIGF0b21pYzY0X3hj
+aGdfd3JhcCh2LCBuKSANCithdG9taWM2NF94Y2hnKCh2KSwgKG4pKQ0KDQo+SXNlbid0IHRoZXJl
+IGEgdHlwZSBlcnJvciA/IEZvciBpbnN0YW5jZToNCj5hdG9taWM2NF93cmFwX3QgYXRvbV93cmFw
+Ow0KPmF0b21pYzY0X3JlYWRfd3JhcChhdG9tX3dyYXApIHdpbGwgYmUgZXhwYW5kZWQgaW50byBh
+dG9taWM2NF9yZWFkKGF0b21fd3JhcCksIHdoaWNoIHdvdWxkIGxlYWQgdG8gYSB0eXBlIGVycm9y
+IChhdG9taWM2NF90IGV4cGVjdGVkKS4NCg0KSSBoYXZlIGJlZW4gZG91YmxlIGNoZWNraW5nIHRo
+aXMgbm93IGFuZCBJIHRoaW5rIGZvciB4ODYsIGFsbCB0aGUgY2hhbmdlcyBpbiBhc20tZ2VuZXJp
+Yy9hdG9taWM2NC5oIGFyZSBub3QgbmVlZGVkLiANClg4NiBvdmVycmlkZXMgdGhlbSB3aXRoIGFy
+Y2guIHNwZWNpZmljIGltcGxlbWVudGF0aW9ucyBpbiBpbmNsdWRlL2FzbS9hdG9taWM2NF82NC5o
+IGFuZCBpbmNsdWRlL2FzbS9hdG9taWM2NF8zMi5oDQoNClRha2FoaXJvLCB5b3UgaGF2ZSBiZWVu
+IGxvb2tpbmcgaW50byBhcm0uIEFyZSB0aGUgYWJvdmUgb25lcyB1c2VkIGluIGFueSB3YXkgaW4g
+YXJtIG9yIGNhbiB3ZSBzaW1wbHkgZ2V0IHJpZCBvZiB0aGUgd2hvbGUgYnVuZGxlIG9mIGNoYW5n
+ZXM/DQoNCkJlc3QgUmVnYXJkcywNCkVsZW5hLg0KDQoNCg==
