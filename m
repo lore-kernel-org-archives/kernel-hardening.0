@@ -1,38 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Thu, 13 Oct 2016 13:54:53 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDE1E5@IRSMSX102.ger.corp.intel.com>
-References: <1476016472.2329.38.camel@cvidal.org>
- <CE954033-54F3-47AE-9788-B26B9CE45401@gmail.com>
- <1476040182.2329.72.camel@cvidal.org> <20161009193731.GD14666@pc.thejh.net>
- <2236FBA76BA1254E88B949DDB74E612B41BDCAF6@IRSMSX102.ger.corp.intel.com>
- <1476115319.2329.108.camel@cvidal.org>
- <CAGXu5jLvBMWHw_Y8ntmKB3GFqWfmT_E1neUiVQLJAsErLxFLWw@mail.gmail.com>
- <1476260730.19479.3.camel@cvidal.org>
- <CAGXu5jJEfVn_EGQhZ5Jc8kEUsG2EfN3FmaGvjD9rjK_TBPZbFA@mail.gmail.com>
-In-Reply-To: <CAGXu5jJEfVn_EGQhZ5Jc8kEUsG2EfN3FmaGvjD9rjK_TBPZbFA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Thu, 13 Oct 2016 17:31:59 +0300
+From: Hans Liljestrand <ishkamiel@gmail.com>
+Message-ID: <20161013143159.GA3525@thigreal>
+References: <1475476886-26232-1-git-send-email-elena.reshetova@intel.com>
+ <1475476886-26232-2-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5j+7_cd4GgX46wSMv9LHpogwH7qrU8=K8OPEed4hCGr65g@mail.gmail.com>
+ <20161012082634.GK19531@linaro.org>
+ <2236FBA76BA1254E88B949DDB74E612B41BDDB97@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5j+X4TkaZN2pQseWKBAjbirF06aUMjGqZ2La3ODGutFf8A@mail.gmail.com>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] self introduction
-To: Kees Cook <keescook@chromium.org>, Colin Vidal <colin@cvidal.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+X4TkaZN2pQseWKBAjbirF06aUMjGqZ2La3ODGutFf8A@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 01/13] Add architecture
+ independent hardened atomic base
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBnZXQgd2h5IHRoZSB0ZXN0IGluIGFyY2gveDg2L2luY2x1ZGUva2VybmVsL3RyYXBzLmMNCj4N
-Cj4gICAgICAgICBpZiAodHJhcG5yID09IFg4Nl9UUkFQX09GKQ0KPiAgICAgICAgICAgICAgICAg
-aGFyZGVuZWRfYXRvbWljX292ZXJmbG93KHJlZ3MpOw0KPg0KPiBpcyBub3QgZ3VhcmRlZCBieSBD
-T05GSUdfSEFSREVORURfQVRPTUlDOiB0aGUgdHJhcCBjYW5ub3Qgb2NjdXJzIGlmIA0KPiBDT05G
-SUdfSEFSREVORURfQVRPTUlDIGlzIHVuc2V0IChzaW5jZSAiaW50IiBpbnN0cnVjdGlvbnMgaW4g
-DQo+IGFyY2gveDg2L2luY2x1ZGUvYXNtL2F0b21pYy5oIGFyZSBndWFyZGVkIGJ5IGl0KSwgYW5k
-IGl0IHdvdWxkIGF2b2lkIA0KPiB0aGUgb3RoZXIgaW1wbGVtZW50YXRpb24gb2YgaGFyZGVuZWRf
-YXRvbWljX292ZXJmbG93IGluIA0KPiBpbmNsdWRlL2FzbS1nZW5lcmljL2J1Zy5oLg0KDQo+VGhl
-IGltcGxlbWVudGF0aW9uIGlzIGEgc3RhdGljIGlubGluZSB3aXRoIG5vIGJvZHksIHNvIHRoZSBj
-b21waWxlciB3aWxsIGF1dG9tYXRpY2FsbHkgZWxpbWluYXRlIHRoZSBlbnRpcmUgImlmIiBzdGF0
-ZW1lbnQsIHNpbmNlIGl0J3MgYSBuby1vcC4NCg0KVXBzLCBteSBtaXN0YWtlIGhlcmUsICB0aGlz
-IHN0YXRpYyBpbmxpbmUgZnVuY3Rpb24gY3VycmVudGx5IGlzIG5vdCBlbXB0eSwgc2VlOiBodHRw
-czovL2dpdGh1Yi5jb20vZXJlc2hldG92YS9saW51eC1zdGFibGUvY29tbWl0LzM1OTE0MzBjMGM3
-NTYwZGU4OGI0NzIxMDIxZjQ2MWU4MTZkNmNmMzgjZGlmZi05NGQwYmUyNjQ5ODEwOWYyMzQ2NjY5
-MjNhYWFmYzdkOVIyMjEgDQpJIGRpZG4ndCB1bmRlcnN0b29kIHRoaXMgcGFydCBwcm9wZXJseSwg
-d2lsbCBmaXggaXQgdG8gYmUgYSByZWFsIGVtcHR5IGZ1bmN0aW9uLiANCg0KVGhhbmsgeW91IGZv
-ciBub3RpY2luZyB0aGlzIQ0KDQpCZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg0K
+On Wed, Oct 12, 2016 at 03:50:12PM -0700, Kees Cook wrote:
+> On Wed, Oct 12, 2016 at 10:25 AM, Reshetova, Elena
+> <elena.reshetova@intel.com> wrote:
+> > Yes, same story, now we are not calling it, but things change obviously. We wanted to start somewhere, and this set is already quite big even with the current needs.
+> > So, does everyone agree that we should provide full coverage?
+> 
+> I think it makes sense. That means no one wanting the function ends up
+> with a surprise depending on CONFIG selection, etc.
+> 
+
+Yes, sounds reasonable, I will get started on this tomorrow.
+
+Once I get that sorted I'll also check on our lkdtm coverage, since I'm pretty
+sure it's somewhat spotty even before any new implementations.
+
+Best Regards,
+-hans
