@@ -1,68 +1,103 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
-References: <1476016472.2329.38.camel@cvidal.org> <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 14 Oct 2016 11:32:07 -0700
-Message-ID: <CALCETrUvC5ySGE1nAoWo9JTNXAcE6xkWyLkeqhV19vP4juErfQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] self introduction
-To: Kees Cook <keescook@chromium.org>
-Cc: Colin Vidal <colin@cvidal.org>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Colin Vidal <colin@cvidal.org>
+Date: Fri, 14 Oct 2016 21:10:55 +0200
+Message-Id: <1476472255-15851-1-git-send-email-colin@cvidal.org>
+Subject: [kernel-hardening] include/asm-generic/atomic-long.h: Reordering atomic_*_wrap macros
+To: "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Hans Liljestrand <ishkamiel@gmail.com>, kernel-hardening@lists.openwall.com
+Cc: Colin Vidal <colin@cvidal.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 10, 2016 at 1:57 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Sun, Oct 9, 2016 at 5:34 AM, Colin Vidal <colin@cvidal.org> wrote:
->> My name is Colin Vidal. I am currently a PhD student in computer
->> science. My researches  consist on building a dedicated specific
->> language on top of JavaScript in order to handle asynchronous events in
->> a synchronous style. Hence, with a direct relation between the control
->> flow and the instruction flow.
->>
->> Beside my researches, I am taking up the Eudyptula Challenge (task 15
->> submitted). It helps me to have a global view of the kernel
->> (organization, tree, some features), but it is not enough to get
->> involved in serious development. Therefore, I am looking for task I can
->> accomplish to be involved into real kernel development!
->
-> Hi! Welcome to the fun! :)
->
-> I see there's already a thread getting into the HARDENED_ATOMIC
-> effort, though I thought I might bring up some other areas too, in
-> case they entice you as well. You've got some background in control
-> flow -- have you spent much time in compiler internals? The recent
-> addition of the gcc plugin infrastructure means there's a much wider
-> ability for the kernel to do compiler tricks now. Two things that come
-> to mind for CFI when looking at the existing PaX/Grsecurity gcc
-> plugins are the kernexec plugin (which, AIUI, is mainly a weak form of
-> SMEP emulation on x86, using simple CFI to keep the high bit set on
-> all kernel function calls) which I think would be easy to extract as a
-> stand-alone plugin:
->
-> https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/scripts/gcc-plugins/kernexec_plugin.c
->
-> And at the other end of the spectrum is the RAP plugin (which does a
-> portion of PaX's full RAP, though there appear to be some non-trivial
-> kernel changes need to support it, e.g. per-cpu PGD):
->
-> https://pax.grsecurity.net/docs/PaXTeam-H2HC15-RAP-RIP-ROP.pdf
+Hi Elena,
 
-Linus has loudly poo-pooed per-cpu PGD, and I'm not sure I disagree.
-It would be *really* nice to find a clean way to do RAP without it.
+I don't know if it may helps for the v2, but here is the (tiny)
+modifications I have done on a generic part to be able to build on ARM
+without CONFIG_HARDENING_ATOMIC (of course, there is also some
+modifications in arch/arm, but it is not the subject, and it only a
+prototype for now). It does not break x86 builds.
 
->
->> I still don't have yet a narrow idea about where I can begin. I like
->> though the idea of kernel self protection. For instance, I find the VM-
->> mapped stack to be really interesting, but I think it is an overkill as
->> a beginning, and a lot of work have already been done on it. On the
->> architecture point-of-view, I have a preference of x86 since I only
->> have this hardware for now, but I can work on ARM and others with QEMU
->> too.
->
-> A piece missing from vmap-stack (I think) is having guard pages at
-> _both_ ends of the kernel stack. Andy Lutomirski surely knows better
-> than I do, but I'm hoping he's working on looking at PCID-based SMAP
-> emulation. (Hi Andy!) :)
->
+It basically a reordering / guard on macros atomic_*_wrap in order to
+avoid implicitly defined / redefined error about them, when
+CONFIG_HARDENED_ATOMIC is unset.
 
-Hi!  I'm not presently working on it, and I'm a bit swamped, but maybe soon.
+Thanks,
+
+Colin
+
+---
+ include/asm-generic/atomic-long.h | 43 ++++++++++++++++-----------------------
+ 1 file changed, 18 insertions(+), 25 deletions(-)
+
+diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
+index 790cb00..6f1dc3e 100644
+--- a/include/asm-generic/atomic-long.h
++++ b/include/asm-generic/atomic-long.h
+@@ -46,6 +46,22 @@ typedef atomic_t atomic_long_wrap_t;
+ 
+ #endif
+ 
++#ifndef CONFIG_HARDENED_ATOMIC
++#define atomic_read_wrap(v) atomic_read(v)
++#define atomic_set_wrap(v, i) atomic_set((v), (i))
++#define atomic_add_wrap(i, v) atomic_add((i), (v))
++#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
++#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
++#define atomic_inc_wrap(v) atomic_inc(v)
++#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
++#define atomic_inc_return_wrap(v) atomic_inc_return(v)
++#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
++#define atomic_dec_wrap(v) atomic_dec(v)
++#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
++#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
++#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test(i, v)
++#endif /* CONFIG_HARDENED_ATOMIC */
++
+ #define ATOMIC_LONG_READ_OP(mo, suffix)						\
+ static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
+ {									\
+@@ -233,12 +249,14 @@ static inline int atomic_long_sub_and_test(long i, atomic_long_t *l)
+ 	return ATOMIC_LONG_PFX(_sub_and_test)(i, v);
+ }
+ 
++#ifdef CONFIG_HARDENED_ATOMIC
+ static inline int atomic_long_sub_and_test_wrap(long i, atomic_long_wrap_t *l)
+ {
+ 	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
+ 
+ 	return ATOMIC_LONG_PFX(_sub_and_test_wrap)(i, v);
+ }
++#endif
+ 
+ static inline int atomic_long_dec_and_test(atomic_long_t *l)
+ {
+@@ -291,29 +309,4 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
+ #define atomic_long_inc_not_zero(l) \
+ 	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
+ 
+-#ifndef CONFIG_HARDENED_ATOMIC
+-#define atomic_read_wrap(v) atomic_read(v)
+-#define atomic_set_wrap(v, i) atomic_set((v), (i))
+-#define atomic_add_wrap(i, v) atomic_add((i), (v))
+-#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+-#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+-#define atomic_inc_wrap(v) atomic_inc(v)
+-#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+-#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+-#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+-#define atomic_dec_wrap(v) atomic_dec(v)
+-#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
+-#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+-#define atomic_long_read_wrap(v) atomic_long_read(v)
+-#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
+-#define atomic_long_add_wrap(i, v) atomic_long_add((i), (v))
+-#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v))
+-#define atomic_long_inc_wrap(v) atomic_long_inc(v)
+-#define atomic_long_add_return_wrap(i, v) atomic_long_add_return((i), (v))
+-#define atomic_long_inc_return_wrap(v) atomic_long_inc_return(v)
+-#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
+-#define atomic_long_dec_wrap(v) atomic_long_dec(v)
+-#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
+-#endif /* CONFIG_HARDENED_ATOMIC */
+-
+ #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
+-- 
+2.7.4
