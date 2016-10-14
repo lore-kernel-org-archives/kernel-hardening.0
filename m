@@ -1,103 +1,109 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Colin Vidal <colin@cvidal.org>
-Date: Fri, 14 Oct 2016 21:10:55 +0200
-Message-Id: <1476472255-15851-1-git-send-email-colin@cvidal.org>
-Subject: [kernel-hardening] include/asm-generic/atomic-long.h: Reordering atomic_*_wrap macros
-To: "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Hans Liljestrand <ishkamiel@gmail.com>, kernel-hardening@lists.openwall.com
-Cc: Colin Vidal <colin@cvidal.org>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 14 Oct 2016 14:44:33 -0700
+Message-ID: <CAGXu5jKMZTo7m=ygm7x8w__1my0jiQiVAiv9NowQ8pfQqCnjmw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1 switching
+To: Catalin Marinas <catalin.marinas@arm.com>
+Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, James Morse <james.morse@arm.com>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Elena,
+Hi,
 
-I don't know if it may helps for the v2, but here is the (tiny)
-modifications I have done on a generic part to be able to build on ARM
-without CONFIG_HARDENING_ATOMIC (of course, there is also some
-modifications in arch/arm, but it is not the subject, and it only a
-prototype for now). It does not break x86 builds.
+Just checking in on this feature -- I don't see it in -next nor
+already in the tree. Is there any chance this is going to make the
+v4.9 merge window?
 
-It basically a reordering / guard on macros atomic_*_wrap in order to
-avoid implicitly defined / redefined error about them, when
-CONFIG_HARDENED_ATOMIC is unset.
+It didn't sound like there were any unresolved issues remaining?
 
-Thanks,
+Thanks!
 
-Colin
+-Kees
 
----
- include/asm-generic/atomic-long.h | 43 ++++++++++++++++-----------------------
- 1 file changed, 18 insertions(+), 25 deletions(-)
 
-diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
-index 790cb00..6f1dc3e 100644
---- a/include/asm-generic/atomic-long.h
-+++ b/include/asm-generic/atomic-long.h
-@@ -46,6 +46,22 @@ typedef atomic_t atomic_long_wrap_t;
- 
- #endif
- 
-+#ifndef CONFIG_HARDENED_ATOMIC
-+#define atomic_read_wrap(v) atomic_read(v)
-+#define atomic_set_wrap(v, i) atomic_set((v), (i))
-+#define atomic_add_wrap(i, v) atomic_add((i), (v))
-+#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
-+#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
-+#define atomic_inc_wrap(v) atomic_inc(v)
-+#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
-+#define atomic_inc_return_wrap(v) atomic_inc_return(v)
-+#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
-+#define atomic_dec_wrap(v) atomic_dec(v)
-+#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
-+#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
-+#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test(i, v)
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- #define ATOMIC_LONG_READ_OP(mo, suffix)						\
- static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
- {									\
-@@ -233,12 +249,14 @@ static inline int atomic_long_sub_and_test(long i, atomic_long_t *l)
- 	return ATOMIC_LONG_PFX(_sub_and_test)(i, v);
- }
- 
-+#ifdef CONFIG_HARDENED_ATOMIC
- static inline int atomic_long_sub_and_test_wrap(long i, atomic_long_wrap_t *l)
- {
- 	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
- 
- 	return ATOMIC_LONG_PFX(_sub_and_test_wrap)(i, v);
- }
-+#endif
- 
- static inline int atomic_long_dec_and_test(atomic_long_t *l)
- {
-@@ -291,29 +309,4 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
- #define atomic_long_inc_not_zero(l) \
- 	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
- 
--#ifndef CONFIG_HARDENED_ATOMIC
--#define atomic_read_wrap(v) atomic_read(v)
--#define atomic_set_wrap(v, i) atomic_set((v), (i))
--#define atomic_add_wrap(i, v) atomic_add((i), (v))
--#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
--#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
--#define atomic_inc_wrap(v) atomic_inc(v)
--#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
--#define atomic_inc_return_wrap(v) atomic_inc_return(v)
--#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
--#define atomic_dec_wrap(v) atomic_dec(v)
--#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
--#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
--#define atomic_long_read_wrap(v) atomic_long_read(v)
--#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
--#define atomic_long_add_wrap(i, v) atomic_long_add((i), (v))
--#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v))
--#define atomic_long_inc_wrap(v) atomic_long_inc(v)
--#define atomic_long_add_return_wrap(i, v) atomic_long_add_return((i), (v))
--#define atomic_long_inc_return_wrap(v) atomic_long_inc_return(v)
--#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
--#define atomic_long_dec_wrap(v) atomic_long_dec(v)
--#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
--#endif /* CONFIG_HARDENED_ATOMIC */
--
- #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
+On Tue, Sep 13, 2016 at 10:46 AM, Catalin Marinas
+<catalin.marinas@arm.com> wrote:
+> This is the third version of the arm64 PAN emulation using TTBR0_EL1
+> switching. The series has not yet included the alternative nop patches
+> from Mark Rutland, nor the empty_zero_page from Ard B. This will be done
+> in a subsequent version once 4.9-rc1 is out (which will include Mark's
+> alternative nop patches).
+>
+> Changes since v2:
+>
+> - efi_set_pgd() reworked to update the saved ttbr0 during run-time
+>   services as this value is used during exception return
+>
+> - uaccess_(enable|disable) C macros no longer take an 'alt' parameter
+>   Instead, uaccess_(enable|disable)_not_uao are introduced for the case
+>   where hardware PAN switching is not required when UAO is present
+>
+> - post_ttbr0_update_workaround macro no longer takes a 'ret' parameter
+>
+> - system_supports_ttbr0_pan renamed to system_uses_ttbr0_pan
+>
+> - init_thread_info.ttbr0 moved towards the end of the setup_arch()
+>   function and comment updated
+>
+> - vmlinux.lds.S fixed to use RESERVED_TTBR0_SIZE
+>
+> - Config option changed to ARM64_SW_TTBR0_PAN
+>
+> - Some comment clean-ups and commit log updates
+>
+> Catalin Marinas (7):
+>   arm64: Factor out PAN enabling/disabling into separate uaccess_*
+>     macros
+>   arm64: Factor out TTBR0_EL1 post-update workaround into a specific asm
+>     macro
+>   arm64: Introduce uaccess_{disable,enable} functionality based on
+>     TTBR0_EL1
+>   arm64: Disable TTBR0_EL1 during normal kernel execution
+>   arm64: Handle faults caused by inadvertent user access with PAN
+>     enabled
+>   arm64: xen: Enable user access before a privcmd hvc call
+>   arm64: Enable CONFIG_ARM64_SW_TTBR0_PAN
+>
+> The patches are also available on this branch:
+>
+>   git://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux ttbr0-pan
+>
+> Thanks for reviewing/testing.
+>
+>  arch/arm64/Kconfig                      |   8 ++
+>  arch/arm64/include/asm/assembler.h      |  33 +++++++
+>  arch/arm64/include/asm/cpufeature.h     |   6 ++
+>  arch/arm64/include/asm/efi.h            |  26 ++++-
+>  arch/arm64/include/asm/futex.h          |  14 +--
+>  arch/arm64/include/asm/kernel-pgtable.h |   7 ++
+>  arch/arm64/include/asm/mmu_context.h    |  51 +++++++---
+>  arch/arm64/include/asm/ptrace.h         |   2 +
+>  arch/arm64/include/asm/thread_info.h    |   3 +
+>  arch/arm64/include/asm/uaccess.h        | 163 ++++++++++++++++++++++++++++++--
+>  arch/arm64/kernel/armv8_deprecated.c    |  10 +-
+>  arch/arm64/kernel/asm-offsets.c         |   3 +
+>  arch/arm64/kernel/cpufeature.c          |   1 +
+>  arch/arm64/kernel/entry.S               |  71 +++++++++++++-
+>  arch/arm64/kernel/head.S                |   6 +-
+>  arch/arm64/kernel/setup.c               |   9 ++
+>  arch/arm64/kernel/vmlinux.lds.S         |   5 +
+>  arch/arm64/lib/clear_user.S             |   8 +-
+>  arch/arm64/lib/copy_from_user.S         |   8 +-
+>  arch/arm64/lib/copy_in_user.S           |   8 +-
+>  arch/arm64/lib/copy_to_user.S           |   8 +-
+>  arch/arm64/mm/context.c                 |   7 +-
+>  arch/arm64/mm/fault.c                   |  22 +++--
+>  arch/arm64/mm/proc.S                    |  11 +--
+>  arch/arm64/xen/hypercall.S              |  19 ++++
+>  25 files changed, 428 insertions(+), 81 deletions(-)
+>
+
+
+
 -- 
-2.7.4
+Kees Cook
+Nexus Security
