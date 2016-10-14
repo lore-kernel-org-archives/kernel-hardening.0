@@ -1,27 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Fri, 14 Oct 2016 12:47:02 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BDE8BB@IRSMSX102.ger.corp.intel.com>
-References: <1476301332.19131.24.camel@cvidal.org>
- <2236FBA76BA1254E88B949DDB74E612B41BDE37B@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_h_N2VjHnjZHgNovwcJtKgObD6=jPsJjitLf61m_UEV+g@mail.gmail.com>
-In-Reply-To: <CAEXv5_h_N2VjHnjZHgNovwcJtKgObD6=jPsJjitLf61m_UEV+g@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] RE: atomic64_wrap_t generic implementation
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Colin Vidal <colin@cvidal.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "paulus@samba.org" <paulus@samba.org>
+In-Reply-To: <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
+References: <1476016472.2329.38.camel@cvidal.org> <CAGXu5jK9ZNr+AbVxfAns7PGEiw9NQ5zOp_EG_9dG7i+oeYwyCg@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Fri, 14 Oct 2016 11:32:07 -0700
+Message-ID: <CALCETrUvC5ySGE1nAoWo9JTNXAcE6xkWyLkeqhV19vP4juErfQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] self introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: Colin Vidal <colin@cvidal.org>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PkkgdGhpbmsgaXQgYmVzdCB0byBsZWF2ZSB0aGUgZGVmaW5pdGlvbnMgaW4gYXNtLWdlbmVyaWMv
-YXRvbWljNjQuaC4NCj5XaGlsZSBub3QgdXNlZCBvbiB4ODYsIHRoZXJlIGFyZSBvdGhlciBhcmNo
-aXRlY3R1cmVzIGxhY2tpbmcgNjQtYml0IGF0b21pYyBvcGVyYXRpb25zIHRoYXQgbmVlZCB0aGlz
-IGRlZmluaXRpb24gb2YgYXRvbWljNjRfdCAoYW5kIGl0cyBhc3NvY2lhdGVkIGltcGxlbWVudGF0
-aW9uIHdpdGggaGFzaGVkIHNwaW5sb2Nrcyk6IHRoaXMgb3JpZ2luYWwgZmVhdHVyZSB3YXMgYWRk
-ZWQgaW4gc3VwcG9ydCBvZiB0aGUgcGVyZl9jb3VudGVyID5zdWJzeXN0ZW0gWzFdOyB5ZXQgYW5v
-dGhlciBwZXJmLXJlbGF0ZWQgZXhjZXB0aW9uLiAgSWYgd2Ugd2FudCB0aGUgc3VwcG9ydCBvZiBI
-QVJERU5FRF9BVE9NSUMgdG8gZXh0ZW5kIHRvIHRoZXNlIG90aGVyIGFyY2hpdGVjdHVyZXMsIEkg
-dGhpbmsgd2Ugc2hvdWxkIGxlYXZlIHRoaXMgaW4gdGhlcmUuDQoNCkZhaXIgcG9pbnQuICBTbywg
-SSBsZXQgdGhlbSBsaXZlIHdoZXJlIHRoZXkgYXJlIG5vdy4gDQoNCkJlc3QgUmVnYXJkcywNCkVs
-ZW5hDQo=
+On Mon, Oct 10, 2016 at 1:57 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Sun, Oct 9, 2016 at 5:34 AM, Colin Vidal <colin@cvidal.org> wrote:
+>> My name is Colin Vidal. I am currently a PhD student in computer
+>> science. My researches  consist on building a dedicated specific
+>> language on top of JavaScript in order to handle asynchronous events in
+>> a synchronous style. Hence, with a direct relation between the control
+>> flow and the instruction flow.
+>>
+>> Beside my researches, I am taking up the Eudyptula Challenge (task 15
+>> submitted). It helps me to have a global view of the kernel
+>> (organization, tree, some features), but it is not enough to get
+>> involved in serious development. Therefore, I am looking for task I can
+>> accomplish to be involved into real kernel development!
+>
+> Hi! Welcome to the fun! :)
+>
+> I see there's already a thread getting into the HARDENED_ATOMIC
+> effort, though I thought I might bring up some other areas too, in
+> case they entice you as well. You've got some background in control
+> flow -- have you spent much time in compiler internals? The recent
+> addition of the gcc plugin infrastructure means there's a much wider
+> ability for the kernel to do compiler tricks now. Two things that come
+> to mind for CFI when looking at the existing PaX/Grsecurity gcc
+> plugins are the kernexec plugin (which, AIUI, is mainly a weak form of
+> SMEP emulation on x86, using simple CFI to keep the high bit set on
+> all kernel function calls) which I think would be easy to extract as a
+> stand-alone plugin:
+>
+> https://github.com/linux-scraping/linux-grsecurity/blob/grsec-test/scripts/gcc-plugins/kernexec_plugin.c
+>
+> And at the other end of the spectrum is the RAP plugin (which does a
+> portion of PaX's full RAP, though there appear to be some non-trivial
+> kernel changes need to support it, e.g. per-cpu PGD):
+>
+> https://pax.grsecurity.net/docs/PaXTeam-H2HC15-RAP-RIP-ROP.pdf
+
+Linus has loudly poo-pooed per-cpu PGD, and I'm not sure I disagree.
+It would be *really* nice to find a clean way to do RAP without it.
+
+>
+>> I still don't have yet a narrow idea about where I can begin. I like
+>> though the idea of kernel self protection. For instance, I find the VM-
+>> mapped stack to be really interesting, but I think it is an overkill as
+>> a beginning, and a lot of work have already been done on it. On the
+>> architecture point-of-view, I have a preference of x86 since I only
+>> have this hardware for now, but I can work on ARM and others with QEMU
+>> too.
+>
+> A piece missing from vmap-stack (I think) is having guard pages at
+> _both_ ends of the kernel stack. Andy Lutomirski surely knows better
+> than I do, but I'm hoping he's working on looking at PCID-based SMAP
+> emulation. (Hi Andy!) :)
+>
+
+Hi!  I'm not presently working on it, and I'm a bit swamped, but maybe soon.
