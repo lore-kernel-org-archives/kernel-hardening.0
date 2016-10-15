@@ -1,34 +1,112 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 15 Oct 2016 15:35:49 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20161015143548.GA31114@MBP.local>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <CAGXu5jKMZTo7m=ygm7x8w__1my0jiQiVAiv9NowQ8pfQqCnjmw@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKMZTo7m=ygm7x8w__1my0jiQiVAiv9NowQ8pfQqCnjmw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1
- switching
-To: Kees Cook <keescook@chromium.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Message-ID: <1476572013.2136.14.camel@cvidal.org>
+From: Colin Vidal <colin@cvidal.org>
+Date: Sun, 16 Oct 2016 00:53:33 +0200
+In-Reply-To: <1476472255-15851-1-git-send-email-colin@cvidal.org>
+References: <1476472255-15851-1-git-send-email-colin@cvidal.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] include/asm-generic/atomic-long.h:
+ Reordering atomic_*_wrap macros
+To: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+On Fri, 2016-10-14 at 21:10 +0200, Colin Vidal wrote:
+> Hi Elena,
+> 
+> I don't know if it may helps for the v2, but here is the (tiny)
+> modifications I have done on a generic part to be able to build on ARM
+> without CONFIG_HARDENING_ATOMIC (of course, there is also some
+> modifications in arch/arm, but it is not the subject, and it only a
+> prototype for now). It does not break x86 builds.
+> 
+> It basically a reordering / guard on macros atomic_*_wrap in order to
+> avoid implicitly defined / redefined error about them, when
+> CONFIG_HARDENED_ATOMIC is unset.
+> 
+> Thanks,
+> 
+> Colin
+> 
+> ---
+>  include/asm-generic/atomic-long.h | 43 ++++++++++++++++-----------------------
+>  1 file changed, 18 insertions(+), 25 deletions(-)
+> 
+> diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
+> index 790cb00..6f1dc3e 100644
+> --- a/include/asm-generic/atomic-long.h
+> +++ b/include/asm-generic/atomic-long.h
+> @@ -46,6 +46,22 @@ typedef atomic_t atomic_long_wrap_t;
+>  
+>  #endif
+>  
+> +#ifndef CONFIG_HARDENED_ATOMIC
+> +#define atomic_read_wrap(v) atomic_read(v)
+> +#define atomic_set_wrap(v, i) atomic_set((v), (i))
+> +#define atomic_add_wrap(i, v) atomic_add((i), (v))
+> +#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+> +#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+> +#define atomic_inc_wrap(v) atomic_inc(v)
+> +#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+> +#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+> +#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+> +#define atomic_dec_wrap(v) atomic_dec(v)
+> +#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
+> +#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+> +#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test(i, v)
+> +#endif /* CONFIG_HARDENED_ATOMIC */
+> +
+>  #define ATOMIC_LONG_READ_OP(mo, suffix)						\
+>  static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
+>  {									\
+> @@ -233,12 +249,14 @@ static inline int atomic_long_sub_and_test(long i, atomic_long_t *l)
+>  	return ATOMIC_LONG_PFX(_sub_and_test)(i, v);
+>  }
+>  
+> +#ifdef CONFIG_HARDENED_ATOMIC
+>  static inline int atomic_long_sub_and_test_wrap(long i, atomic_long_wrap_t *l)
+>  {
+>  	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
+>  
+>  	return ATOMIC_LONG_PFX(_sub_and_test_wrap)(i, v);
+>  }
+> +#endif
+>  
+>  static inline int atomic_long_dec_and_test(atomic_long_t *l)
+>  {
+> @@ -291,29 +309,4 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
+>  #define atomic_long_inc_not_zero(l) \
+>  	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
+>  
+> -#ifndef CONFIG_HARDENED_ATOMIC
+> -#define atomic_read_wrap(v) atomic_read(v)
+> -#define atomic_set_wrap(v, i) atomic_set((v), (i))
+> -#define atomic_add_wrap(i, v) atomic_add((i), (v))
+> -#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+> -#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+> -#define atomic_inc_wrap(v) atomic_inc(v)
+> -#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+> -#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+> -#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+> -#define atomic_dec_wrap(v) atomic_dec(v)
+> -#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
+> -#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+> -#define atomic_long_read_wrap(v) atomic_long_read(v)
+> -#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
+> -#define atomic_long_add_wrap(i, v) atomic_long_add((i), (v))
+> -#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v))
+> -#define atomic_long_inc_wrap(v) atomic_long_inc(v)
+> -#define atomic_long_add_return_wrap(i, v) atomic_long_add_return((i), (v))
+> -#define atomic_long_inc_return_wrap(v) atomic_long_inc_return(v)
+> -#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
+> -#define atomic_long_dec_wrap(v) atomic_long_dec(v)
+> -#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
+> -#endif /* CONFIG_HARDENED_ATOMIC */
+> -
+>  #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
 
-On Fri, Oct 14, 2016 at 02:44:33PM -0700, Kees Cook wrote:
-> Just checking in on this feature -- I don't see it in -next nor
-> already in the tree. Is there any chance this is going to make the
-> v4.9 merge window?
+Argh. I actually had to make some modifications on it today... I will
+resend a new version with a RFC of the arm port as soon as I finish it.
 
-As I said in the cover letter, I'll rebase it on top of 4.9-rc1 as there
-are some clean-ups that this series would conflict with. So I am
-targeting 4.10 with this patch series.
-
-> It didn't sound like there were any unresolved issues remaining?
-
-There are a few issues spotted by Mark which I'll address in the next
-version, but nothing major.
-
--- 
-Catalin
+Colin
