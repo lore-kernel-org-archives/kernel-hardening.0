@@ -1,40 +1,111 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Mon, 17 Oct 2016 11:52:53 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20161017105252.GA29095@leverpostej>
+References: <1476311522-15381-1-git-send-email-labbott@redhat.com>
+ <1476311522-15381-2-git-send-email-labbott@redhat.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161015143548.GA31114@MBP.local>
-References: <1473788797-10879-1-git-send-email-catalin.marinas@arm.com>
- <CAGXu5jKMZTo7m=ygm7x8w__1my0jiQiVAiv9NowQ8pfQqCnjmw@mail.gmail.com> <20161015143548.GA31114@MBP.local>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 15 Oct 2016 19:04:21 -0700
-Message-ID: <CAGXu5jJE475sVEkb=cTXFxoM+zt2x2rAAX+qDz3wyJ1Gi5kyyA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 0/7] arm64: Privileged Access Never using TTBR0_EL1 switching
-To: Catalin Marinas <catalin.marinas@arm.com>
-Cc: Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, James Morse <james.morse@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1476311522-15381-2-git-send-email-labbott@redhat.com>
+Subject: [kernel-hardening] Re: [PATCHv2 1/4] arm64: dump: Make ptdump debugfs a separate option
+To: Laura Abbott <labbott@redhat.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 15, 2016 at 7:35 AM, Catalin Marinas
-<catalin.marinas@arm.com> wrote:
-> Hi Kees,
->
-> On Fri, Oct 14, 2016 at 02:44:33PM -0700, Kees Cook wrote:
->> Just checking in on this feature -- I don't see it in -next nor
->> already in the tree. Is there any chance this is going to make the
->> v4.9 merge window?
->
-> As I said in the cover letter, I'll rebase it on top of 4.9-rc1 as there
-> are some clean-ups that this series would conflict with. So I am
-> targeting 4.10 with this patch series.
->
->> It didn't sound like there were any unresolved issues remaining?
->
-> There are a few issues spotted by Mark which I'll address in the next
-> version, but nothing major.
+Hi Laura,
 
-Ah-ha! I misunderstood that to mean -rc2. :) Thanks for the update!
+In looking at this, I realised I was confused about ptdump_initialize()
+previously, and now see why we can't decouple the debugfs registration
+of the kernel page tables from the rest of the ptdump init. Sorry for
+the noise on that.
 
--Kees
+Aside from one issue below, this looks good to me.
 
--- 
-Kees Cook
-Nexus Security
+On Wed, Oct 12, 2016 at 03:31:59PM -0700, Laura Abbott wrote:
+> diff --git a/arch/arm64/include/asm/ptdump.h b/arch/arm64/include/asm/ptdump.h
+> index 07b8ed0..7c35689 100644
+> --- a/arch/arm64/include/asm/ptdump.h
+> +++ b/arch/arm64/include/asm/ptdump.h
+> @@ -16,9 +16,10 @@
+>  #ifndef __ASM_PTDUMP_H
+>  #define __ASM_PTDUMP_H
+>  
+> -#ifdef CONFIG_ARM64_PTDUMP
+> +#ifdef CONFIG_ARM64_PTDUMP_CORE
+>  
+>  #include <linux/mm_types.h>
+> +#include <linux/seq_file.h>
+>  
+>  struct addr_marker {
+>  	unsigned long start_address;
+> @@ -32,13 +33,15 @@ struct ptdump_info {
+>  	unsigned long			max_addr;
+>  };
+>  
+> -int ptdump_register(struct ptdump_info *info, const char *name);
+> -
+> +void ptdump_walk_pgd(struct seq_file *s, struct ptdump_info *info);
+> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
+> +int ptdump_debugfs_register(struct ptdump_info *info, const char *name);
+>  #else
+> -static inline int ptdump_register(struct ptdump_info *info, const char *name)
+> +static inline int ptdump_debugfs_register(struct ptdump_info *info,
+> +					const char *name)
+>  {
+>  	return 0;
+>  }
+> -#endif /* CONFIG_ARM64_PTDUMP */
+> +#endif
+
+I think you didn't mean to remove the existing endif here?
+
+It's still needed to guard the CONFIG_ARM64_PTDUMP_CORE case, and the
+new one is needed for the new #ifdef CONFIG_ARM64_PTDUMP_DEBUGFS.
+Without it, I get a build error with this patch atop of v4.9-rc1 with
+CONFIG_ARM64_PTDUMP_DEBUGFS selected:
+
+[mark@leverpostej:~/src/linux]% uselinaro 15.08 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j10 -s
+In file included from arch/arm64/mm/ptdump_debugfs.c:4:0:
+./arch/arm64/include/asm/ptdump.h:16:0: error: unterminated #ifndef
+ #ifndef __ASM_PTDUMP_H
+ ^
+make[1]: *** [arch/arm64/mm/ptdump_debugfs.o] Error 1
+make[1]: *** Waiting for unfinished jobs....
+
+With that #endif restored, everything works fine. So FWIW, with that:
+
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+Tested-by: Mark Rutland <mark.rutland@arm.com>
+
+[...]
+
+> diff --git a/drivers/firmware/efi/arm-runtime.c b/drivers/firmware/efi/arm-runtime.c
+> index 7c75a8d..33d35e8 100644
+> --- a/drivers/firmware/efi/arm-runtime.c
+> +++ b/drivers/firmware/efi/arm-runtime.c
+> @@ -39,7 +39,7 @@ static struct mm_struct efi_mm = {
+>  	.mmlist			= LIST_HEAD_INIT(efi_mm.mmlist),
+>  };
+>  
+> -#ifdef CONFIG_ARM64_PTDUMP
+> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
+>  #include <asm/ptdump.h>
+>  
+>  static struct ptdump_info efi_ptdump_info = {
+> @@ -53,10 +53,9 @@ static struct ptdump_info efi_ptdump_info = {
+>  
+>  static int __init ptdump_init(void)
+>  {
+> -	return ptdump_register(&efi_ptdump_info, "efi_page_tables");
+> +	return ptdump_debugfs_register(&efi_ptdump_info, "efi_page_tables");
+>  }
+>  device_initcall(ptdump_init);
+> -
+>  #endif
+
+For the EFI changes, we'll need an ack from Ard or Matt; this should
+probably be Cc'd to the linux-efi list for that.
+
+Thanks,
+Mark.
