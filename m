@@ -1,123 +1,138 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <1476311522-15381-1-git-send-email-labbott@redhat.com>
- <1476311522-15381-2-git-send-email-labbott@redhat.com>
- <20161017105252.GA29095@leverpostej>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <76e2bd52-7efc-c8af-74ea-90fb7426e044@redhat.com>
-Date: Mon, 17 Oct 2016 15:16:07 -0700
+Date: Tue, 18 Oct 2016 15:09:51 +0900
+From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Message-ID: <20161018060950.GM19531@linaro.org>
 MIME-Version: 1.0
-In-Reply-To: <20161017105252.GA29095@leverpostej>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2 1/4] arm64: dump: Make ptdump debugfs a separate option
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, matt@codeblueprint.co.uk
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [RFC] module: add 'module_ronx=off' boot cmdline parameter to
+ disable ro/nx module mappings
+To: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10/17/2016 03:52 AM, Mark Rutland wrote:
-> Hi Laura,
->
-> In looking at this, I realised I was confused about ptdump_initialize()
-> previously, and now see why we can't decouple the debugfs registration
-> of the kernel page tables from the rest of the ptdump init. Sorry for
-> the noise on that.
->
-> Aside from one issue below, this looks good to me.
->
-> On Wed, Oct 12, 2016 at 03:31:59PM -0700, Laura Abbott wrote:
->> diff --git a/arch/arm64/include/asm/ptdump.h b/arch/arm64/include/asm/ptdump.h
->> index 07b8ed0..7c35689 100644
->> --- a/arch/arm64/include/asm/ptdump.h
->> +++ b/arch/arm64/include/asm/ptdump.h
->> @@ -16,9 +16,10 @@
->>  #ifndef __ASM_PTDUMP_H
->>  #define __ASM_PTDUMP_H
->>
->> -#ifdef CONFIG_ARM64_PTDUMP
->> +#ifdef CONFIG_ARM64_PTDUMP_CORE
->>
->>  #include <linux/mm_types.h>
->> +#include <linux/seq_file.h>
->>
->>  struct addr_marker {
->>  	unsigned long start_address;
->> @@ -32,13 +33,15 @@ struct ptdump_info {
->>  	unsigned long			max_addr;
->>  };
->>
->> -int ptdump_register(struct ptdump_info *info, const char *name);
->> -
->> +void ptdump_walk_pgd(struct seq_file *s, struct ptdump_info *info);
->> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
->> +int ptdump_debugfs_register(struct ptdump_info *info, const char *name);
->>  #else
->> -static inline int ptdump_register(struct ptdump_info *info, const char *name)
->> +static inline int ptdump_debugfs_register(struct ptdump_info *info,
->> +					const char *name)
->>  {
->>  	return 0;
->>  }
->> -#endif /* CONFIG_ARM64_PTDUMP */
->> +#endif
->
-> I think you didn't mean to remove the existing endif here?
->
-> It's still needed to guard the CONFIG_ARM64_PTDUMP_CORE case, and the
-> new one is needed for the new #ifdef CONFIG_ARM64_PTDUMP_DEBUGFS.
-> Without it, I get a build error with this patch atop of v4.9-rc1 with
-> CONFIG_ARM64_PTDUMP_DEBUGFS selected:
->
-> [mark@leverpostej:~/src/linux]% uselinaro 15.08 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j10 -s
-> In file included from arch/arm64/mm/ptdump_debugfs.c:4:0:
-> ./arch/arm64/include/asm/ptdump.h:16:0: error: unterminated #ifndef
->  #ifndef __ASM_PTDUMP_H
->  ^
-> make[1]: *** [arch/arm64/mm/ptdump_debugfs.o] Error 1
-> make[1]: *** Waiting for unfinished jobs....
->
-> With that #endif restored, everything works fine. So FWIW, with that:
->
+As making CONFIG_DEBUG_RODATA mandatory is a good idea, so will be
+for CONFIG_SET_MODULE_RONX.
+This patch adds a command line parameter, "module_ronx=," in order to
+make this configuration always on in the future, but still allowing for
+disabling read-only module mappings at boot time as "rodata=" does.
 
-Ugh rebase/refactor failure on my part.
+I have, however, some concerns on this prototype:
+(1) should we use a separate parameter like "module_ronx=," or
+    unify it with "rodata="?
+(2) should we keep NX permission set even if module_ronx=off?
 
-> Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-> Tested-by: Mark Rutland <mark.rutland@arm.com>
->
-> [...]
->
->> diff --git a/drivers/firmware/efi/arm-runtime.c b/drivers/firmware/efi/arm-runtime.c
->> index 7c75a8d..33d35e8 100644
->> --- a/drivers/firmware/efi/arm-runtime.c
->> +++ b/drivers/firmware/efi/arm-runtime.c
->> @@ -39,7 +39,7 @@ static struct mm_struct efi_mm = {
->>  	.mmlist			= LIST_HEAD_INIT(efi_mm.mmlist),
->>  };
->>
->> -#ifdef CONFIG_ARM64_PTDUMP
->> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
->>  #include <asm/ptdump.h>
->>
->>  static struct ptdump_info efi_ptdump_info = {
->> @@ -53,10 +53,9 @@ static struct ptdump_info efi_ptdump_info = {
->>
->>  static int __init ptdump_init(void)
->>  {
->> -	return ptdump_register(&efi_ptdump_info, "efi_page_tables");
->> +	return ptdump_debugfs_register(&efi_ptdump_info, "efi_page_tables");
->>  }
->>  device_initcall(ptdump_init);
->> -
->>  #endif
->
-> For the EFI changes, we'll need an ack from Ard or Matt; this should
-> probably be Cc'd to the linux-efi list for that.
+I tested this patch with:
+  - insmod lkdtm.ko cpoint_name=DIRECT cpoint_type="WRITE_KERN"
+  - insmod lkdtm.ko cpoint_name=DIRECT cpoint_type="WRITE_RO"
+  - insmod lkdtm.ko cpoint_name=DIRECT cpoint_type="EXEC_DATA"
 
-Good point, I'll do that for v3.
+WRITE_RO_AFTER_INIT case doesn't fail because the test is executed
+*before* setting the ro_after_init data ro.
 
->
-> Thanks,
-> Mark.
->
+Any comments are welcome.
 
 Thanks,
-Laura
+-Takahiro AKASHI
+===8<===
+>From aeb6bcdbe462251f5aab828ba58f2f64e9c51d69 Mon Sep 17 00:00:00 2001
+From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Date: Thu, 13 Oct 2016 14:39:20 +0900
+Subject: [RFC] module: add 'module_ronx=off' boot cmdline parameter to disable
+ ro/nx module mappings
+
+"module_ronx=off" allows for writing to read-only module text as well as
+executing any code in data section (as if !CONFIG_SET_MODULE_RONX).
+It corresponds to the kernel patch:
+    commit d2aa1acad22f ("mm/init: Add 'rodata=off' boot cmdline parameter
+    to disable read-only kernel mappings")
+
+Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+---
+ kernel/module.c | 29 +++++++++++++++++++++--------
+ 1 file changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/kernel/module.c b/kernel/module.c
+index f57dd63..cc75ad6 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1855,6 +1855,9 @@ static void mod_sysfs_teardown(struct module *mod)
+ }
+ 
+ #ifdef CONFIG_DEBUG_SET_MODULE_RONX
++static bool module_ronx_enabled = true;
++core_param(module_ronx, module_ronx_enabled, bool, 0);
++
+ /*
+  * LKM RO/NX protection: protect module's text/ro-data
+  * from modification and any data from execution.
+@@ -1989,6 +1992,8 @@ static void disable_ro_nx(const struct module_layout *layout)
+ }
+ 
+ #else
++#define module_ronx_enabled false
++
+ static void disable_ro_nx(const struct module_layout *layout) { }
+ static void module_enable_nx(const struct module *mod) { }
+ static void module_disable_nx(const struct module *mod) { }
+@@ -2124,7 +2129,8 @@ static void free_module(struct module *mod)
+ 	mutex_unlock(&module_mutex);
+ 
+ 	/* This may be empty, but that's OK */
+-	disable_ro_nx(&mod->init_layout);
++	if (module_ronx_enabled)
++		disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+ 	module_memfree(mod->init_layout.base);
+ 	kfree(mod->args);
+@@ -2134,7 +2140,8 @@ static void free_module(struct module *mod)
+ 	lockdep_free_key_range(mod->core_layout.base, mod->core_layout.size);
+ 
+ 	/* Finally, free the core (containing the module structure) */
+-	disable_ro_nx(&mod->core_layout);
++	if (module_ronx_enabled)
++		disable_ro_nx(&mod->core_layout);
+ 	module_memfree(mod->core_layout.base);
+ 
+ #ifdef CONFIG_MPU
+@@ -3428,9 +3435,11 @@ static noinline int do_init_module(struct module *mod)
+ 	/* Switch to core kallsyms now init is done: kallsyms may be walking! */
+ 	rcu_assign_pointer(mod->kallsyms, &mod->core_kallsyms);
+ #endif
+-	module_enable_ro(mod, true);
++	if (module_ronx_enabled)
++		module_enable_ro(mod, true);
+ 	mod_tree_remove_init(mod);
+-	disable_ro_nx(&mod->init_layout);
++	if (module_ronx_enabled)
++		disable_ro_nx(&mod->init_layout);
+ 	module_arch_freeing_init(mod);
+ 	mod->init_layout.base = NULL;
+ 	mod->init_layout.size = 0;
+@@ -3527,8 +3536,10 @@ static int complete_formation(struct module *mod, struct load_info *info)
+ 	/* This relies on module_mutex for list integrity. */
+ 	module_bug_finalize(info->hdr, info->sechdrs, mod);
+ 
+-	module_enable_ro(mod, false);
+-	module_enable_nx(mod);
++	if (module_ronx_enabled) {
++		module_enable_ro(mod, false);
++		module_enable_nx(mod);
++	}
+ 
+ 	/* Mark state as coming so strong_try_module_get() ignores us,
+ 	 * but kallsyms etc. can see us. */
+@@ -3718,8 +3729,10 @@ static int load_module(struct load_info *info, const char __user *uargs,
+ 	mutex_unlock(&module_mutex);
+ 
+ 	/* we can't deallocate the module until we clear memory protection */
+-	module_disable_ro(mod);
+-	module_disable_nx(mod);
++	if (module_ronx_enabled) {
++		module_disable_ro(mod);
++		module_disable_nx(mod);
++	}
+ 
+  ddebug_cleanup:
+ 	dynamic_debug_remove(info->debug);
+-- 
+2.10.0
