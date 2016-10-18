@@ -1,78 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1476802761-24340-3-git-send-email-colin@cvidal.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org> <1476802761-24340-3-git-send-email-colin@cvidal.org>
+In-Reply-To: <58061416.7020209@oracle.com>
+References: <58061416.7020209@oracle.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 18 Oct 2016 14:29:15 -0700
-Message-ID: <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
+Date: Tue, 18 Oct 2016 14:36:55 -0700
+Message-ID: <CAGXu5jJU0rtzyYbmv7x=GJF2c8rmW2MyZaSDn_+U94PjkmT_tg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: Colin Vidal <colin@cvidal.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: Re: [kernel-hardening] Use-after-free and management of reference counts
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Julia Lawall <julia.lawall@lip6.fr>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 18, 2016 at 7:59 AM, Colin Vidal <colin@cvidal.org> wrote:
-> This adds arm-specific code in order to support HARDENED_ATOMIC
-> feature. When overflow is detected in atomic_t, atomic64_t or
-> atomic_long_t, an exception is raised and call
-> hardened_atomic_overflow.
-
-Can you include some notes that this was originally in PaX/grsecurity,
-and detail what is different from their implemention?
-
+On Tue, Oct 18, 2016 at 5:22 AM, Vaishali Thakkar
+<vaishali.thakkar@oracle.com> wrote:
+> Hi,
 >
-> Signed-off-by: Colin Vidal <colin@cvidal.org>
-> ---
->  arch/arm/Kconfig              |   1 +
->  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
->  arch/arm/mm/fault.c           |  15 ++
->  3 files changed, 320 insertions(+), 130 deletions(-)
+> Recently I studied the reported CVEs of last 2 years and there were
+> fair number of use-after-free bugs. Usually we also see many reports
+> of use-after-free bugs in the LKML [reported by one or other tools].
 >
-> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> index b5d529f..fcf4a64 100644
-> --- a/arch/arm/Kconfig
-> +++ b/arch/arm/Kconfig
-> @@ -36,6 +36,7 @@ config ARM
->         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
->         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
->         select HAVE_ARCH_HARDENED_USERCOPY
-> +       select HAVE_ARCH_HARDENED_ATOMIC
->         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
->         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
->         select HAVE_ARCH_MMAP_RND_BITS if MMU
-> diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> index 66d0e21..fdaee17 100644
-> --- a/arch/arm/include/asm/atomic.h
-> +++ b/arch/arm/include/asm/atomic.h
-> @@ -17,18 +17,52 @@
->  #include <linux/irqflags.h>
->  #include <asm/barrier.h>
->  #include <asm/cmpxchg.h>
-> +#include <linux/bug.h>
+> Also, at Kernel recipes Jonathan Corbet  mentioned reference counts as
+> a security issue. I believe if we have more kernel hardening patches
+> then we can avoid such bugs. I was wondering if there is some ongoing
+> work in the both [use-after-free and management of reference counts]
+> of these areas?
 >
->  #define ATOMIC_INIT(i) { (i) }
->
->  #ifdef __KERNEL__
->
-> +#ifdef CONFIG_HARDENED_ATOMIC
-> +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
+> If not, then I would like to work on the same. Any pointers on this
+> would be appreciated.
 
-In PaX, I see a check for THUMB2 config:
+Others have already mentioned the HARDENED_ATOMIC work that is
+underway, but one place I'd really like to take a little bit more time
+to examine is how to improve the zero-poisoning work that Laura Abbott
+did recently. Having this feature reduces the availability of a subset
+of kernel memory exposures and can frustrate a subset of
+use-after-free exploits. It's been in the kernel since v4.6, but it
+needs some performance tuning and likely some other adjustments. I
+talk about it a bit here:
 
-#ifdef CONFIG_THUMB2_KERNEL
-#define REFCOUNT_TRAP_INSN "bkpt        0xf1"
-#else
-#define REFCOUNT_TRAP_INSN "bkpt        0xf103"
-#endif
+https://outflux.net/blog/archives/2016/09/30/security-things-in-linux-v4-6/
 
-That should probably stay unless I'm misunderstanding something. Also,
-for your new ISNS define name, I'd leave "TRAP" in the name, since
-that describes more clearly what it does.
+I think to really dial in this protection so it is more like
+PAX_MEMORY_SANITIZE, we'd need to do the following:
 
-Beyond these things, it looks great to me -- though I'm hardly an ARM expert. :)
-
-Were you able to test on ARM with this for overflow with the lkdtm tests?
+- adjust the slab poisoning to do zeroing (upstream's slab poisoning
+uses a different value)
+- consolidate the CONFIG and run-time cmdlines to give us a single "do
+the right thing" CONFIG
+- identify frequently-freed slabs that are less security-sensitive and
+whitelist them from the poisoning (as done by PAX_MEMORY_SANITIZE)
+- add kernel command-line argument to control poisoning (as done by
+PAX_MEMORY_SANITIZE)
 
 -Kees
 
