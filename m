@@ -1,79 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 18 Oct 2016 17:04:35 +0900
-From: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Message-ID: <20161018080433.GP19531@linaro.org>
-References: <1476301332.19131.24.camel@cvidal.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1476301332.19131.24.camel@cvidal.org>
-Subject: Re: [kernel-hardening] atomic64_wrap_t generic implementation
-To: kernel-hardening@lists.openwall.com
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>
+Message-ID: <1476779058.2421.14.camel@cvidal.org>
+From: Colin Vidal <colin@cvidal.org>
+Date: Tue, 18 Oct 2016 10:24:18 +0200
+In-Reply-To: <20161018070656.GO19531@linaro.org>
+References: <1476472255-15851-1-git-send-email-colin@cvidal.org>
+	 <20161018070656.GO19531@linaro.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: include/asm-generic/atomic-long.h: Reordering atomic_*_wrap
+ macros
+To: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 12, 2016 at 09:42:12PM +0200, Colin Vidal wrote:
-> Hi Elena,
-> 
-> diff --git a/include/asm-generic/atomic64.h b/include/asm-generic/atomic64.h
-> index dad68bf..4987419 100644
-> --- a/include/asm-generic/atomic64.h
-> +++ b/include/asm-generic/atomic64.h
-> @@ -16,6 +16,8 @@ typedef struct {
->         long long counter;
->  } atomic64_t;
->  
-> +typedef atomic64_t atomic64_wrap_t;
-> +
->  #define ATOMIC64_INIT(i)       { (i) }
->  
->  extern long long atomic64_read(const atomic64_t *v);
-> @@ -62,4 +64,15 @@ extern int    atomic64_add_unless(atomic64_t *v, long long a, long long u);
->  #define atomic64_dec_and_test(v)       (atomic64_dec_return((v)) == 0)
->  #define atomic64_inc_not_zero(v)       atomic64_add_unless((v), 1LL, 0LL)
->  
-> +#define atomic64_read_wrap(v) atomic64_read(v)
-> +#define atomic64_set_wrap(v, i) atomic64_set((v), (i))
-> +#define atomic64_add_wrap(a, v) atomic64_add((a), (v))
-> +#define atomic64_add_return_wrap(a, v) atomic64_add_return((a), (v))
-> +#define atomic64_sub_wrap(a, v) atomic64_sub((a), (v))
-> +#define atomic64_inc_wrap(v) atomic64_inc(v)
-> +#define atomic64_inc_return_wrap(v) atomic64_inc_return(v)
-> +#define atomic64_dec_wrap(v) atomic64_dec(v)
-> +#define atomic64_cmpxchg_wrap(v, o, n) atomic64_cmpxchg((v), (o), (n))
-> +#define atomic64_xchg_wrap(v, n) atomic64_xchg((v), (n))
-> 
-> Isen't there a type error ? For instance:
-> 
-> atomic64_wrap_t atom_wrap;
-> 
-> atomic64_read_wrap(atom_wrap) will be expanded into
-> atomic64_read(atom_wrap), which would lead to a type error (atomic64_t
-> expected).
-> 
-> Perhaps the more simple thing to do would be
-> 
-> -typedef atomic64_t atomic64_wrap_t;
+Hi Takahiro,
 
-As atomic64_wrap_t is always defined in include/linux/types.h
-(under CONFIG_64BIT), this definition should not be here.
-
-> +#define atomic64_wrap_t atomic64_t
-
-and it would be better off to always define atomic(64)_wrap_t as a struct
-in order to detect potential misusages like:
-    atomic64_t atom_var;
-    atomic64_read_wrap(&atom_var);
-?
-
-Thanks,
--Takahiro AKASHI
-
-> since the implementations are the same here.
+> > +#ifndef CONFIG_HARDENED_ATOMIC
+> > +#define atomic_read_wrap(v) atomic_read(v)
+> > +#define atomic_set_wrap(v, i) atomic_set((v), (i))
+> > +#define atomic_add_wrap(i, v) atomic_add((i), (v))
+> > +#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+> > +#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+> > +#define atomic_inc_wrap(v) atomic_inc(v)
+> > +#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+> > +#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+> > +#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+> > +#define atomic_dec_wrap(v) atomic_dec(v)
+> > +#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
+> > +#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+> > +#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test(i, v)
 > 
-> Or I missed something obvious?
+> removing this definition (atomic_long_sub_and_test_wrap) in
+> the original location and
 > 
-> Thanks,
+> > 
+> > +#endif /* CONFIG_HARDENED_ATOMIC */
+> > +
+> >  #define ATOMIC_LONG_READ_OP(mo, suffix)						\
+> >  static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
+> >  {									\
+> > @@ -233,12 +249,14 @@ static inline int atomic_long_sub_and_test(long i, atomic_long_t *l)
+> >  	return ATOMIC_LONG_PFX(_sub_and_test)(i, v);
+> >  }
+> >  
+> > +#ifdef CONFIG_HARDENED_ATOMIC
+> removing this guard would work both for HARDENED_ATOMIC and
+> !HARDENED_ATOMIC.
 > 
-> Colin
+> Anyway, IMO, we should (and can) generate _wrap version of definitions
+> in a more systematic way to cover whole functions.
+
+Absolutely, thanks. I will remove them and re-test this evening.
+
+Besides, I actually try to be must generic possible (I don't know in
+arm64, but in arm most of atomic functions are generated via macro).
+Still, I fall down on some specific cases. For instance, we need to
+guard atomic_inc_return_wrap in the ifndef bloc (it is missing in my
+previous patch) since the definition is made via a macro in arm (via
+atomic_inc_return_wrap_relaxed, which will define and generate
+atomic_inc_return_wrap in include/linux/atomic.h).
+
+Except if there is a big unexpected problem, I will send a RFC this
+week (overflow detection begin to works in my first attempt), I would
+be grateful if there is a nicer solution to those problem :-)
+
+Thanks!
+
+Colin
