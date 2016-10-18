@@ -1,59 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <58061416.7020209@oracle.com>
-References: <58061416.7020209@oracle.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 18 Oct 2016 14:36:55 -0700
-Message-ID: <CAGXu5jJU0rtzyYbmv7x=GJF2c8rmW2MyZaSDn_+U94PjkmT_tg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Use-after-free and management of reference counts
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Julia Lawall <julia.lawall@lip6.fr>
+From: Laura Abbott <labbott@redhat.com>
+Date: Tue, 18 Oct 2016 15:01:27 -0700
+Message-Id: <1476828091-17802-1-git-send-email-labbott@redhat.com>
+Subject: [kernel-hardening] [PATCHv3 0/4] WX checking for arm64
+To: AKASHI Takahiro <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>
+Cc: Laura Abbott <labbott@redhat.com>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, linux-efi@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 18, 2016 at 5:22 AM, Vaishali Thakkar
-<vaishali.thakkar@oracle.com> wrote:
-> Hi,
->
-> Recently I studied the reported CVEs of last 2 years and there were
-> fair number of use-after-free bugs. Usually we also see many reports
-> of use-after-free bugs in the LKML [reported by one or other tools].
->
-> Also, at Kernel recipes Jonathan Corbet  mentioned reference counts as
-> a security issue. I believe if we have more kernel hardening patches
-> then we can avoid such bugs. I was wondering if there is some ongoing
-> work in the both [use-after-free and management of reference counts]
-> of these areas?
->
-> If not, then I would like to work on the same. Any pointers on this
-> would be appreciated.
+Hi,
 
-Others have already mentioned the HARDENED_ATOMIC work that is
-underway, but one place I'd really like to take a little bit more time
-to examine is how to improve the zero-poisoning work that Laura Abbott
-did recently. Having this feature reduces the availability of a subset
-of kernel memory exposures and can frustrate a subset of
-use-after-free exploits. It's been in the kernel since v4.6, but it
-needs some performance tuning and likely some other adjustments. I
-talk about it a bit here:
+This is v3 of the implementation to check for writable and executable pages on
+arm64. This is a basically a rebase + acks.
 
-https://outflux.net/blog/archives/2016/09/30/security-things-in-linux-v4-6/
+Laura Abbott (4):
+  arm64: dump: Make ptdump debugfs a separate option
+  arm64: dump: Make the page table dumping seq_file optional
+  arm64: dump: Remove max_addr
+  arm64: dump: Add checking for writable and exectuable pages
 
-I think to really dial in this protection so it is more like
-PAX_MEMORY_SANITIZE, we'd need to do the following:
-
-- adjust the slab poisoning to do zeroing (upstream's slab poisoning
-uses a different value)
-- consolidate the CONFIG and run-time cmdlines to give us a single "do
-the right thing" CONFIG
-- identify frequently-freed slabs that are less security-sensitive and
-whitelist them from the poisoning (as done by PAX_MEMORY_SANITIZE)
-- add kernel command-line argument to control poisoning (as done by
-PAX_MEMORY_SANITIZE)
-
--Kees
+ arch/arm64/Kconfig.debug           |  35 ++++++++++++-
+ arch/arm64/include/asm/ptdump.h    |  22 +++++---
+ arch/arm64/mm/Makefile             |   3 +-
+ arch/arm64/mm/dump.c               | 104 +++++++++++++++++++++++++++----------
+ arch/arm64/mm/mmu.c                |   2 +
+ arch/arm64/mm/ptdump_debugfs.c     |  31 +++++++++++
+ drivers/firmware/efi/arm-runtime.c |   5 +-
+ 7 files changed, 163 insertions(+), 39 deletions(-)
+ create mode 100644 arch/arm64/mm/ptdump_debugfs.c
 
 -- 
-Kees Cook
-Nexus Security
+2.7.4
