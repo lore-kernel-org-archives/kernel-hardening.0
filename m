@@ -1,102 +1,112 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20160914072415.26021-1-mic@digikod.net>
+ <20160914072415.26021-7-mic@digikod.net>
+ <20161019151906.GC22003@pox.localdomain>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <5807F6DA.1090807@digikod.net>
+Date: Thu, 20 Oct 2016 00:42:34 +0200
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1476866702.21069.8.camel@cvidal.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
- <1476802761-24340-3-git-send-email-colin@cvidal.org> <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
- <1476866702.21069.8.camel@cvidal.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 19 Oct 2016 13:11:46 -0700
-Message-ID: <CAGXu5j+AT4rnD5Zo6qdr76aJZLnvuknx-=UE57CTD1+WxmX=1A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: Colin Vidal <colin@cvidal.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>, Mark Rutland <mark.rutland@arm.com>
+In-Reply-To: <20161019151906.GC22003@pox.localdomain>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="RIxjbA0OLHDrI3OErWHHuNObMiMcqC5oj"
+Subject: [kernel-hardening] Re: [RFC v3 06/22] landlock: Add LSM hooks
+To: Thomas Graf <tgraf@suug.ch>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 19, 2016 at 1:45 AM, Colin Vidal <colin@cvidal.org> wrote:
-> Hi Kees,
->
->> > This adds arm-specific code in order to support HARDENED_ATOMIC
->> > feature. When overflow is detected in atomic_t, atomic64_t or
->> > atomic_long_t, an exception is raised and call
->> > hardened_atomic_overflow.
->>
->> Can you include some notes that this was originally in PaX/grsecurity,
->> and detail what is different from their implemention?
->
-> Of course. I add it in the next version.
->
->> > Signed-off-by: Colin Vidal <colin@cvidal.org>
->> > ---
->> >  arch/arm/Kconfig              |   1 +
->> >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
->> >  arch/arm/mm/fault.c           |  15 ++
->> >  3 files changed, 320 insertions(+), 130 deletions(-)
->> >
->> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
->> > index b5d529f..fcf4a64 100644
->> > --- a/arch/arm/Kconfig
->> > +++ b/arch/arm/Kconfig
->> > @@ -36,6 +36,7 @@ config ARM
->> >         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
->> >         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
->> >         select HAVE_ARCH_HARDENED_USERCOPY
->> > +       select HAVE_ARCH_HARDENED_ATOMIC
->> >         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
->> >         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
->> >         select HAVE_ARCH_MMAP_RND_BITS if MMU
->> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
->> > index 66d0e21..fdaee17 100644
->> > --- a/arch/arm/include/asm/atomic.h
->> > +++ b/arch/arm/include/asm/atomic.h
->> > @@ -17,18 +17,52 @@
->> >  #include <linux/irqflags.h>
->> >  #include <asm/barrier.h>
->> >  #include <asm/cmpxchg.h>
->> > +#include <linux/bug.h>
->> >
->> >  #define ATOMIC_INIT(i) { (i) }
->> >
->> >  #ifdef __KERNEL__
->> >
->> > +#ifdef CONFIG_HARDENED_ATOMIC
->> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
->>
->> In PaX, I see a check for THUMB2 config:
->>
->> #ifdef CONFIG_THUMB2_KERNEL
->> #define REFCOUNT_TRAP_INSN "bkpt        0xf1"
->> #else
->> #define REFCOUNT_TRAP_INSN "bkpt        0xf103"
->> #endif
->>
->> That should probably stay unless I'm misunderstanding something. Also,
->> for your new ISNS define name, I'd leave "TRAP" in the name, since
->> that describes more clearly what it does.
->
-> Oh yeah. I will add it. Actually I does not add it at first since I
-> does not really understand why there is a special case for Thumbs2 (as
-> far I understand, instructions size can also be 4 bytes). If ARM
-> experts are around, I would appreciate pointers about it :-)
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--RIxjbA0OLHDrI3OErWHHuNObMiMcqC5oj
+Content-Type: multipart/mixed; boundary="CA7XFcoWrm6LRSTSGSLRBnGFvQu4sfc0k";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Thomas Graf <tgraf@suug.ch>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
+ Andy Lutomirski <luto@amacapital.net>, Arnd Bergmann <arnd@arndb.de>,
+ Casey Schaufler <casey@schaufler-ca.com>,
+ Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>,
+ David Drysdale <drysdale@google.com>, "David S . Miller"
+ <davem@davemloft.net>, Elena Reshetova <elena.reshetova@intel.com>,
+ "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>,
+ Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>,
+ Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
+ linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
+ netdev@vger.kernel.org, cgroups@vger.kernel.org
+Message-ID: <5807F6DA.1090807@digikod.net>
+Subject: Re: [RFC v3 06/22] landlock: Add LSM hooks
+References: <20160914072415.26021-1-mic@digikod.net>
+ <20160914072415.26021-7-mic@digikod.net>
+ <20161019151906.GC22003@pox.localdomain>
+In-Reply-To: <20161019151906.GC22003@pox.localdomain>
 
-Cool. Perhaps Takahiro or Mark (now on CC) can comment on it.
+--CA7XFcoWrm6LRSTSGSLRBnGFvQu4sfc0k
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
 
->> Beyond these things, it looks great to me -- though I'm hardly an ARM expert. :)
->>
->> Were you able to test on ARM with this for overflow with the lkdtm tests?
->
-> Yep. I have to make more thorough tests, but things like
->
->     echo HARDENED_ATOMIC_OVERFLOW > <debugfsmountpoint>/provoke-crash/DIRECT
->
-> raise the exception as well (with hardened message and stack trace). I
-> tested it with armv7/qemu.
 
-Great!
+On 19/10/2016 17:19, Thomas Graf wrote:
+> On 09/14/16 at 09:23am, Micka=EBl Sala=FCn wrote:
+>> diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+>> index 9aa01d9d3d80..36c3e482239c 100644
+>> --- a/include/linux/bpf.h
+>> +++ b/include/linux/bpf.h
+>> @@ -85,6 +85,8 @@ enum bpf_arg_type {
+>> =20
+>>  	ARG_PTR_TO_CTX,		/* pointer to context */
+>>  	ARG_ANYTHING,		/* any (initialized) argument is ok */
+>> +
+>> +	ARG_PTR_TO_STRUCT_FILE,		/* pointer to struct file */
+>=20
+> This should go into patch 7 I guess?
 
--Kees
+Right, the ARG_PTR_* are only used by BPF helpers.
 
--- 
-Kees Cook
-Nexus Security
+>=20
+>> +void __init landlock_add_hooks(void)
+>> +{
+>> +	pr_info("landlock: Becoming ready for sandboxing\n");
+>> +	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks));
+>> +}
+>=20
+> Can we add the hooks when we load the first BPF program for a hook? Tha=
+t
+> would also allow to not make this conditional on a new config option
+> which all all distros have to enable anyway.
+
+We could either add hook by hook or all hooks at once when loading a BPF
+program for which its subtype match the hook type, but I'm not sure it
+is worth it.
+
+I'd like to enable this LSM by default but we should be able to disable
+it if needed, like most kernel features.
+
+>=20
+> I would really like to see this patch split into the LSM part which
+> allows running BPF progs at LSM and your specific sandboxing use case
+> which requires the new BPF helpers, new reg type, etc.
+>=20
+
+I'll try to split it as much as possible.
+
+
+--CA7XFcoWrm6LRSTSGSLRBnGFvQu4sfc0k--
+
+--RIxjbA0OLHDrI3OErWHHuNObMiMcqC5oj
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEcBAEBCgAGBQJYB/baAAoJECLe/t9zvWqVYYkH/1oSGtjxwvJ2odiESyJuok6F
+O1nNK2CoGlkqX1aUVq8hDyxPOCm3zwF2N0bYJCjHlwdaohF7EiBZcUi1MBf3AkrO
+q8+UFjaRnpQQSU8ZKOLffLhycCXc0aL+8rSjFiEDPQvFzqzU/lrdyptjvl+Yj3Lz
+UgvxLqaB5F6M+dBMEg41Dcxv32KX61HvhvkZFMQt3oErt3i7H9ca4m7ivJ8AMmmh
+Y46ViLKce7qu7SJEtAB7VuGrmVG+Y6apJpYGSbZG90rU/laiw/fnKvG/O2Pio9Yk
+w3Cm2aAdaqsWu4WtpKvffKt7K4+1H8Q0VOOR8BwzKNPfwiiBxFp+b/Yw2glACKo=
+=BE99
+-----END PGP SIGNATURE-----
+
+--RIxjbA0OLHDrI3OErWHHuNObMiMcqC5oj--
