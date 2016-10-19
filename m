@@ -1,95 +1,268 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476866702.21069.8.camel@cvidal.org>
+Message-ID: <1476866888.21069.10.camel@cvidal.org>
 From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 19 Oct 2016 10:45:02 +0200
-In-Reply-To: <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
+Date: Wed, 19 Oct 2016 10:48:08 +0200
+In-Reply-To: <5806481C.1070807@oracle.com>
 References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
-	 <1476802761-24340-3-git-send-email-colin@cvidal.org>
-	 <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
+	 <1476802761-24340-2-git-send-email-colin@cvidal.org>
+	 <5806481C.1070807@oracle.com>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: Re: [kernel-hardening] [RFC 1/2] Reordering / guard definition on
+ atomic_*_wrap function in order to avoid implicitly defined / redefined
+ error on them, when CONFIG_HARDENED_ATOMIC is unset.
+To: Vaishali Thakkar <vaishali.thakkar@oracle.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+Hi,
 
-> > This adds arm-specific code in order to support HARDENED_ATOMIC
-> > feature. When overflow is detected in atomic_t, atomic64_t or
-> > atomic_long_t, an exception is raised and call
-> > hardened_atomic_overflow.
+On Tue, 2016-10-18 at 21:34 +0530, Vaishali Thakkar wrote:
 > 
-> Can you include some notes that this was originally in PaX/grsecurity,
-> and detail what is different from their implemention?
-
-Of course. I add it in the next version.
-
+> On Tuesday 18 October 2016 08:29 PM, Colin Vidal wrote:
+> > 
 > > Signed-off-by: Colin Vidal <colin@cvidal.org>
-> > ---
-> >  arch/arm/Kconfig              |   1 +
-> >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
-> >  arch/arm/mm/fault.c           |  15 ++
-> >  3 files changed, 320 insertions(+), 130 deletions(-)
-> > 
-> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > index b5d529f..fcf4a64 100644
-> > --- a/arch/arm/Kconfig
-> > +++ b/arch/arm/Kconfig
-> > @@ -36,6 +36,7 @@ config ARM
-> >         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
-> >         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
-> >         select HAVE_ARCH_HARDENED_USERCOPY
-> > +       select HAVE_ARCH_HARDENED_ATOMIC
-> >         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
-> >         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
-> >         select HAVE_ARCH_MMAP_RND_BITS if MMU
-> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> > index 66d0e21..fdaee17 100644
-> > --- a/arch/arm/include/asm/atomic.h
-> > +++ b/arch/arm/include/asm/atomic.h
-> > @@ -17,18 +17,52 @@
-> >  #include <linux/irqflags.h>
-> >  #include <asm/barrier.h>
-> >  #include <asm/cmpxchg.h>
-> > +#include <linux/bug.h>
-> > 
-> >  #define ATOMIC_INIT(i) { (i) }
-> > 
-> >  #ifdef __KERNEL__
-> > 
-> > +#ifdef CONFIG_HARDENED_ATOMIC
-> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
 > 
-> In PaX, I see a check for THUMB2 config:
+> Hi,
 > 
-> #ifdef CONFIG_THUMB2_KERNEL
-> #define REFCOUNT_TRAP_INSN "bkpt        0xf1"
-> #else
-> #define REFCOUNT_TRAP_INSN "bkpt        0xf103"
-> #endif
+> While I can't comment on technical things because of my limited arm
+> specific knowledge [although these are simple changes, I would let
+> others comment on this], I think subject is too long according to the
+> kernel's patch submission guidelines.
 > 
-> That should probably stay unless I'm misunderstanding something. Also,
-> for your new ISNS define name, I'd leave "TRAP" in the name, since
-> that describes more clearly what it does.
-
-Oh yeah. I will add it. Actually I does not add it at first since I
-does not really understand why there is a special case for Thumbs2 (as
-far I understand, instructions size can also be 4 bytes). If ARM
-experts are around, I would appreciate pointers about it :-)
-
-> Beyond these things, it looks great to me -- though I'm hardly an ARM expert. :)
+> Also, I know these are simple mechanic changes. But I still think
+> that having a commit log can help here. May be you can have something
+> similar to Elena's x86 patches. 
 > 
-> Were you able to test on ARM with this for overflow with the lkdtm tests?
+> Your other patch in the series looks good to me. :)
+> 
 
-Yep. I have to make more thorough tests, but things like
-
-    echo HARDENED_ATOMIC_OVERFLOW > <debugfsmountpoint>/provoke-crash/DIRECT
-
-raise the exception as well (with hardened message and stack trace). I
-tested it with armv7/qemu.
-
-Thanks!
+Thanks about those observations, I fix that for next RFC!
 
 Colin
+
+> Thanks.
+> 
+> 
+> > 
+> > ---
+> >  include/asm-generic/atomic-long.h | 55 +++++++++++++++++++++------------------
+> >  include/linux/atomic.h            | 55 +++++++++++++++++++++++++++++++++++++++
+> >  2 files changed, 85 insertions(+), 25 deletions(-)
+> > 
+> > diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
+> > index 790cb00..94d712b 100644
+> > --- a/include/asm-generic/atomic-long.h
+> > +++ b/include/asm-generic/atomic-long.h
+> > @@ -46,6 +46,30 @@ typedef atomic_t atomic_long_wrap_t;
+> >  
+> >  #endif
+> >  
+> > +#ifndef CONFIG_HARDENED_ATOMIC
+> > +#define atomic_read_wrap(v) atomic_read(v)
+> > +#define atomic_set_wrap(v, i) atomic_set((v), (i))
+> > +#define atomic_add_wrap(i, v) atomic_add((i), (v))
+> > +#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+> > +#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+> > +#define atomic_inc_wrap(v) atomic_inc(v)
+> > +#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+> > +#ifndef atomic_inc_return_wrap
+> > +#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+> > +#endif
+> > +#ifndef atomic_add_return_wrap
+> > +#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+> > +#endif
+> > +#define atomic_dec_wrap(v) atomic_dec(v)
+> > +#ifndef atomic_xchg_wrap
+> > +#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+> > +#endif
+> > +#define atomic_long_inc_wrap(v) atomic_long_inc(v)
+> > +#define atomic_long_dec_wrap(v) atomic_long_dec(v)
+> > +#define atomic_long_xchg_wrap(v, n) atomic_long_xchg(v, n)
+> > +#define atomic_long_cmpxchg_wrap(l, o, n) atomic_long_cmpxchg(l, o, n)
+> > +#endif /* CONFIG_HARDENED_ATOMIC */
+> > +
+> >  #define ATOMIC_LONG_READ_OP(mo, suffix)						\
+> >  static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
+> >  {									\
+> > @@ -104,6 +128,12 @@ ATOMIC_LONG_ADD_SUB_OP(sub, _release,)
+> >  #define atomic_long_cmpxchg(l, old, new) \
+> >  	(ATOMIC_LONG_PFX(_cmpxchg)((ATOMIC_LONG_PFX(_t) *)(l), (old), (new)))
+> >  
+> > +#ifdef CONFIG_HARDENED_ATOMIC
+> > +#define atomic_long_cmpxchg_wrap(l, old, new)				\
+> > +	(ATOMIC_LONG_PFX(_cmpxchg_wrap)((ATOMIC_LONG_PFX(_wrap_t) *)(l),\
+> > +					(old), (new)))
+> > +#endif
+> > +
+> >  #define atomic_long_xchg_relaxed(v, new) \
+> >  	(ATOMIC_LONG_PFX(_xchg_relaxed)((ATOMIC_LONG_PFX(_t) *)(v), (new)))
+> >  #define atomic_long_xchg_acquire(v, new) \
+> > @@ -291,29 +321,4 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
+> >  #define atomic_long_inc_not_zero(l) \
+> >  	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
+> >  
+> > -#ifndef CONFIG_HARDENED_ATOMIC
+> > -#define atomic_read_wrap(v) atomic_read(v)
+> > -#define atomic_set_wrap(v, i) atomic_set((v), (i))
+> > -#define atomic_add_wrap(i, v) atomic_add((i), (v))
+> > -#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
+> > -#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
+> > -#define atomic_inc_wrap(v) atomic_inc(v)
+> > -#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
+> > -#define atomic_inc_return_wrap(v) atomic_inc_return(v)
+> > -#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
+> > -#define atomic_dec_wrap(v) atomic_dec(v)
+> > -#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
+> > -#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
+> > -#define atomic_long_read_wrap(v) atomic_long_read(v)
+> > -#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
+> > -#define atomic_long_add_wrap(i, v) atomic_long_add((i), (v))
+> > -#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v))
+> > -#define atomic_long_inc_wrap(v) atomic_long_inc(v)
+> > -#define atomic_long_add_return_wrap(i, v) atomic_long_add_return((i), (v))
+> > -#define atomic_long_inc_return_wrap(v) atomic_long_inc_return(v)
+> > -#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
+> > -#define atomic_long_dec_wrap(v) atomic_long_dec(v)
+> > -#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
+> > -#endif /* CONFIG_HARDENED_ATOMIC */
+> > -
+> >  #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
+> > diff --git a/include/linux/atomic.h b/include/linux/atomic.h
+> > index b5817c8..be16ea1 100644
+> > --- a/include/linux/atomic.h
+> > +++ b/include/linux/atomic.h
+> > @@ -89,6 +89,11 @@
+> >  #define  atomic_add_return(...)						\
+> >  	__atomic_op_fence(atomic_add_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic_add_return_wrap_relaxed
+> > +#define atomic_add_return_wrap(...)		                        \
+> > +	__atomic_op_fence(atomic_add_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic_add_return_relaxed */
+> >  
+> >  /* atomic_inc_return_relaxed */
+> > @@ -113,6 +118,11 @@
+> >  #define  atomic_inc_return(...)						\
+> >  	__atomic_op_fence(atomic_inc_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic_inc_return_wrap
+> > +#define  atomic_inc_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic_inc_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic_inc_return_relaxed */
+> >  
+> >  /* atomic_sub_return_relaxed */
+> > @@ -137,6 +147,11 @@
+> >  #define  atomic_sub_return(...)						\
+> >  	__atomic_op_fence(atomic_sub_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic_sub_return_wrap_relaxed
+> > +#define atomic_sub_return_wrap(...)		                        \
+> > +	__atomic_op_fence(atomic_sub_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic_sub_return_relaxed */
+> >  
+> >  /* atomic_dec_return_relaxed */
+> > @@ -161,6 +176,11 @@
+> >  #define  atomic_dec_return(...)						\
+> >  	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic_dec_return_wrap
+> > +#define  atomic_dec_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic_dec_return_relaxed */
+> >  
+> >  
+> > @@ -421,6 +441,11 @@
+> >  #define  atomic_cmpxchg(...)						\
+> >  	__atomic_op_fence(atomic_cmpxchg, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic_cmpxchg_wrap
+> > +#define  atomic_cmpxchg_wrap(...)					\
+> > +	__atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic_cmpxchg_relaxed */
+> >  
+> >  /* cmpxchg_relaxed */
+> > @@ -675,6 +700,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_add_return(...)					\
+> >  	__atomic_op_fence(atomic64_add_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_add_return_wrap
+> > +#define  atomic64_add_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_add_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_add_return_relaxed */
+> >  
+> >  /* atomic64_inc_return_relaxed */
+> > @@ -699,6 +729,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_inc_return(...)					\
+> >  	__atomic_op_fence(atomic64_inc_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_inc_return_wrap
+> > +#define  atomic64_inc_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_inc_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_inc_return_relaxed */
+> >  
+> >  
+> > @@ -724,6 +759,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_sub_return(...)					\
+> >  	__atomic_op_fence(atomic64_sub_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_sub_return_wrap
+> > +#define  atomic64_sub_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_sub_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_sub_return_relaxed */
+> >  
+> >  /* atomic64_dec_return_relaxed */
+> > @@ -748,6 +788,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_dec_return(...)					\
+> >  	__atomic_op_fence(atomic64_dec_return, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_dec_return_wrap
+> > +#define  atomic64_dec_return_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_dec_return_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_dec_return_relaxed */
+> >  
+> >  
+> > @@ -984,6 +1029,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_xchg(...)						\
+> >  	__atomic_op_fence(atomic64_xchg, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_xchg_wrap
+> > +#define  atomic64_xchg_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_xchg_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_xchg_relaxed */
+> >  
+> >  /* atomic64_cmpxchg_relaxed */
+> > @@ -1008,6 +1058,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
+> >  #define  atomic64_cmpxchg(...)						\
+> >  	__atomic_op_fence(atomic64_cmpxchg, __VA_ARGS__)
+> >  #endif
+> > +
+> > +#ifndef atomic64_cmpxchg_wrap
+> > +#define  atomic64_cmpxchg_wrap(...)					\
+> > +	__atomic_op_fence(atomic64_cmpxchg_wrap, __VA_ARGS__)
+> > +#endif
+> >  #endif /* atomic64_cmpxchg_relaxed */
+> >  
+> >  #ifndef atomic64_andnot
+> > 
+> 
