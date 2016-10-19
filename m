@@ -1,49 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476866888.21069.10.camel@cvidal.org>
+Message-ID: <1476867489.21069.19.camel@cvidal.org>
 From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 19 Oct 2016 10:48:08 +0200
-In-Reply-To: <5806481C.1070807@oracle.com>
+Date: Wed, 19 Oct 2016 10:58:09 +0200
+In-Reply-To: <20161019083110.GD6447@kroah.com>
 References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
 	 <1476802761-24340-2-git-send-email-colin@cvidal.org>
-	 <5806481C.1070807@oracle.com>
+	 <2236FBA76BA1254E88B949DDB74E612B41BE01A7@IRSMSX102.ger.corp.intel.com>
+	 <20161019083110.GD6447@kroah.com>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC 1/2] Reordering / guard definition on
- atomic_*_wrap function in order to avoid implicitly defined / redefined
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] RE: [RFC 1/2] Reordering / guard definition
+ on atomic_*_wrap function in order to avoid implicitly defined / redefined
  error on them, when CONFIG_HARDENED_ATOMIC is unset.
-To: Vaishali Thakkar <vaishali.thakkar@oracle.com>, kernel-hardening@lists.openwall.com
+To: kernel-hardening@lists.openwall.com
+Cc: Greg KH <greg@kroah.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+Hi Greg,
 
-On Tue, 2016-10-18 at 21:34 +0530, Vaishali Thakkar wrote:
-> 
-> On Tuesday 18 October 2016 08:29 PM, Colin Vidal wrote:
+On Wed, 2016-10-19 at 10:31 +0200, Greg KH wrote:
+> On Wed, Oct 19, 2016 at 08:21:06AM +0000, Reshetova, Elena wrote:
 > > 
 > > Signed-off-by: Colin Vidal <colin@cvidal.org>
 > 
-> Hi,
-> 
-> While I can't comment on technical things because of my limited arm
-> specific knowledge [although these are simple changes, I would let
-> others comment on this], I think subject is too long according to the
-> kernel's patch submission guidelines.
-> 
-> Also, I know these are simple mechanic changes. But I still think
-> that having a commit log can help here. May be you can have something
-> similar to Elena's x86 patches. 
-> 
-> Your other patch in the series looks good to me. :)
-> 
+> No changelog at all?
 
-Thanks about those observations, I fix that for next RFC!
+My mistake, I fix that for the next review (some informations was
+actually in the cover-letter).
 
-Colin
-
-> Thanks.
-> 
-> 
 > > 
 > > ---
 > >  include/asm-generic/atomic-long.h | 55 +++++++++++++++++++++------------------
@@ -81,188 +66,14 @@ Colin
 > > +#define atomic_long_xchg_wrap(v, n) atomic_long_xchg(v, n)
 > > +#define atomic_long_cmpxchg_wrap(l, o, n) atomic_long_cmpxchg(l, o, n)
 > > +#endif /* CONFIG_HARDENED_ATOMIC */
-> > +
-> >  #define ATOMIC_LONG_READ_OP(mo, suffix)						\
-> >  static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
-> >  {									\
-> > @@ -104,6 +128,12 @@ ATOMIC_LONG_ADD_SUB_OP(sub, _release,)
-> >  #define atomic_long_cmpxchg(l, old, new) \
-> >  	(ATOMIC_LONG_PFX(_cmpxchg)((ATOMIC_LONG_PFX(_t) *)(l), (old), (new)))
-> >  
-> > +#ifdef CONFIG_HARDENED_ATOMIC
-> > +#define atomic_long_cmpxchg_wrap(l, old, new)				\
-> > +	(ATOMIC_LONG_PFX(_cmpxchg_wrap)((ATOMIC_LONG_PFX(_wrap_t) *)(l),\
-> > +					(old), (new)))
-> > +#endif
-> > +
-> >  #define atomic_long_xchg_relaxed(v, new) \
-> >  	(ATOMIC_LONG_PFX(_xchg_relaxed)((ATOMIC_LONG_PFX(_t) *)(v), (new)))
-> >  #define atomic_long_xchg_acquire(v, new) \
-> > @@ -291,29 +321,4 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
-> >  #define atomic_long_inc_not_zero(l) \
-> >  	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
-> >  
-> > -#ifndef CONFIG_HARDENED_ATOMIC
-> > -#define atomic_read_wrap(v) atomic_read(v)
-> > -#define atomic_set_wrap(v, i) atomic_set((v), (i))
-> > -#define atomic_add_wrap(i, v) atomic_add((i), (v))
-> > -#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
-> > -#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
-> > -#define atomic_inc_wrap(v) atomic_inc(v)
-> > -#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
-> > -#define atomic_inc_return_wrap(v) atomic_inc_return(v)
-> > -#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
-> > -#define atomic_dec_wrap(v) atomic_dec(v)
-> > -#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
-> > -#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
-> > -#define atomic_long_read_wrap(v) atomic_long_read(v)
-> > -#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
-> > -#define atomic_long_add_wrap(i, v) atomic_long_add((i), (v))
-> > -#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v))
-> > -#define atomic_long_inc_wrap(v) atomic_long_inc(v)
-> > -#define atomic_long_add_return_wrap(i, v) atomic_long_add_return((i), (v))
-> > -#define atomic_long_inc_return_wrap(v) atomic_long_inc_return(v)
-> > -#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
-> > -#define atomic_long_dec_wrap(v) atomic_long_dec(v)
-> > -#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
-> > -#endif /* CONFIG_HARDENED_ATOMIC */
-> > -
-> >  #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
-> > diff --git a/include/linux/atomic.h b/include/linux/atomic.h
-> > index b5817c8..be16ea1 100644
-> > --- a/include/linux/atomic.h
-> > +++ b/include/linux/atomic.h
-> > @@ -89,6 +89,11 @@
-> >  #define  atomic_add_return(...)						\
-> >  	__atomic_op_fence(atomic_add_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic_add_return_wrap_relaxed
-> > +#define atomic_add_return_wrap(...)		                        \
-> > +	__atomic_op_fence(atomic_add_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic_add_return_relaxed */
-> >  
-> >  /* atomic_inc_return_relaxed */
-> > @@ -113,6 +118,11 @@
-> >  #define  atomic_inc_return(...)						\
-> >  	__atomic_op_fence(atomic_inc_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic_inc_return_wrap
-> > +#define  atomic_inc_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic_inc_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic_inc_return_relaxed */
-> >  
-> >  /* atomic_sub_return_relaxed */
-> > @@ -137,6 +147,11 @@
-> >  #define  atomic_sub_return(...)						\
-> >  	__atomic_op_fence(atomic_sub_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic_sub_return_wrap_relaxed
-> > +#define atomic_sub_return_wrap(...)		                        \
-> > +	__atomic_op_fence(atomic_sub_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic_sub_return_relaxed */
-> >  
-> >  /* atomic_dec_return_relaxed */
-> > @@ -161,6 +176,11 @@
-> >  #define  atomic_dec_return(...)						\
-> >  	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic_dec_return_wrap
-> > +#define  atomic_dec_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic_dec_return_relaxed */
-> >  
-> >  
-> > @@ -421,6 +441,11 @@
-> >  #define  atomic_cmpxchg(...)						\
-> >  	__atomic_op_fence(atomic_cmpxchg, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic_cmpxchg_wrap
-> > +#define  atomic_cmpxchg_wrap(...)					\
-> > +	__atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic_cmpxchg_relaxed */
-> >  
-> >  /* cmpxchg_relaxed */
-> > @@ -675,6 +700,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_add_return(...)					\
-> >  	__atomic_op_fence(atomic64_add_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_add_return_wrap
-> > +#define  atomic64_add_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_add_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_add_return_relaxed */
-> >  
-> >  /* atomic64_inc_return_relaxed */
-> > @@ -699,6 +729,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_inc_return(...)					\
-> >  	__atomic_op_fence(atomic64_inc_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_inc_return_wrap
-> > +#define  atomic64_inc_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_inc_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_inc_return_relaxed */
-> >  
-> >  
-> > @@ -724,6 +759,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_sub_return(...)					\
-> >  	__atomic_op_fence(atomic64_sub_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_sub_return_wrap
-> > +#define  atomic64_sub_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_sub_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_sub_return_relaxed */
-> >  
-> >  /* atomic64_dec_return_relaxed */
-> > @@ -748,6 +788,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_dec_return(...)					\
-> >  	__atomic_op_fence(atomic64_dec_return, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_dec_return_wrap
-> > +#define  atomic64_dec_return_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_dec_return_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_dec_return_relaxed */
-> >  
-> >  
-> > @@ -984,6 +1029,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_xchg(...)						\
-> >  	__atomic_op_fence(atomic64_xchg, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_xchg_wrap
-> > +#define  atomic64_xchg_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_xchg_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_xchg_relaxed */
-> >  
-> >  /* atomic64_cmpxchg_relaxed */
-> > @@ -1008,6 +1058,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
-> >  #define  atomic64_cmpxchg(...)						\
-> >  	__atomic_op_fence(atomic64_cmpxchg, __VA_ARGS__)
-> >  #endif
-> > +
-> > +#ifndef atomic64_cmpxchg_wrap
-> > +#define  atomic64_cmpxchg_wrap(...)					\
-> > +	__atomic_op_fence(atomic64_cmpxchg_wrap, __VA_ARGS__)
-> > +#endif
-> >  #endif /* atomic64_cmpxchg_relaxed */
-> >  
-> >  #ifndef atomic64_andnot
-> > 
 > 
+> That doesn't look correct to me at all, does it to you?
+
+That patch will be removed in next version since it will be not needed
+anymore (Elena's RFC will include those changes). However, I wonder
+what is obviously wrong here? (in order to avoid it in futures
+patches). Complex nested #ifdef/#ifndef?
+
+Thanks,
+
+Colin 
