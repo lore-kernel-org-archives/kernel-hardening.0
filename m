@@ -1,73 +1,148 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <58061416.7020209@oracle.com>
- <20161018131300.GM14666@pc.thejh.net>
- <CACXcFmnOjbxXf9ek2mwgyYSXvf=aUY5FcOsgNC8GbA2at=D9tQ@mail.gmail.com>
- <CAEXv5_gS-rS_31DoDFGu3YaknLpK654+S5-d=KXAHa8+ziPjYA@mail.gmail.com>
-From: Vaishali Thakkar <vaishali.thakkar@oracle.com>
-Message-ID: <5806E8EE.1060104@oracle.com>
-Date: Wed, 19 Oct 2016 09:00:54 +0530
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 19 Oct 2016 08:21:06 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BE01A7@IRSMSX102.ger.corp.intel.com>
+References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
+ <1476802761-24340-2-git-send-email-colin@cvidal.org>
+In-Reply-To: <1476802761-24340-2-git-send-email-colin@cvidal.org>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <CAEXv5_gS-rS_31DoDFGu3YaknLpK654+S5-d=KXAHa8+ziPjYA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Use-after-free and management of reference
- counts
-To: David Windsor <dave@progbits.org>, kernel-hardening@lists.openwall.com
-Cc: Julia Lawall <julia.lawall@lip6.fr>
+Subject: [kernel-hardening] RE: [RFC 1/2] Reordering / guard definition on atomic_*_wrap
+ function in order to avoid implicitly defined / redefined error on them,
+ when CONFIG_HARDENED_ATOMIC is unset.
+To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Signed-off-by: Colin Vidal <colin@cvidal.org>
+---
+ include/asm-generic/atomic-long.h | 55 +++++++++++++++++++++--------------=
+----
+ include/linux/atomic.h            | 55 +++++++++++++++++++++++++++++++++++=
+++++
+ 2 files changed, 85 insertions(+), 25 deletions(-)
+
+diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic=
+-long.h
+index 790cb00..94d712b 100644
+--- a/include/asm-generic/atomic-long.h
++++ b/include/asm-generic/atomic-long.h
+@@ -46,6 +46,30 @@ typedef atomic_t atomic_long_wrap_t;
+=20
+ #endif
+=20
++#ifndef CONFIG_HARDENED_ATOMIC
++#define atomic_read_wrap(v) atomic_read(v) #define atomic_set_wrap(v,=20
++i) atomic_set((v), (i)) #define atomic_add_wrap(i, v) atomic_add((i),=20
++(v)) #define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v),=20
++(i), (j)) #define atomic_sub_wrap(i, v) atomic_sub((i), (v)) #define=20
++atomic_inc_wrap(v) atomic_inc(v) #define atomic_inc_and_test_wrap(v)=20
++atomic_inc_and_test(v) #ifndef atomic_inc_return_wrap #define=20
++atomic_inc_return_wrap(v) atomic_inc_return(v) #endif #ifndef=20
++atomic_add_return_wrap #define atomic_add_return_wrap(i, v)=20
++atomic_add_return((i), (v)) #endif #define atomic_dec_wrap(v)=20
++atomic_dec(v) #ifndef atomic_xchg_wrap #define atomic_xchg_wrap(v, i)=20
++atomic_xchg((v), (i)) #endif #define atomic_long_inc_wrap(v)=20
++atomic_long_inc(v) #define atomic_long_dec_wrap(v) atomic_long_dec(v)=20
++#define atomic_long_xchg_wrap(v, n) atomic_long_xchg(v, n) #define=20
++atomic_long_cmpxchg_wrap(l, o, n) atomic_long_cmpxchg(l, o, n) #endif=20
++/* CONFIG_HARDENED_ATOMIC */
++
+ #define ATOMIC_LONG_READ_OP(mo, suffix)						\
+ static inline long atomic_long_read##mo##suffix(const atomic_long##suffix#=
+#_t *l)\
+ {									\
+@@ -104,6 +128,12 @@ ATOMIC_LONG_ADD_SUB_OP(sub, _release,)  #define atomic=
+_long_cmpxchg(l, old, new) \
+ 	(ATOMIC_LONG_PFX(_cmpxchg)((ATOMIC_LONG_PFX(_t) *)(l), (old), (new)))
+=20
++#ifdef CONFIG_HARDENED_ATOMIC
++#define atomic_long_cmpxchg_wrap(l, old, new)				\
++	(ATOMIC_LONG_PFX(_cmpxchg_wrap)((ATOMIC_LONG_PFX(_wrap_t) *)(l),\
++					(old), (new)))
++#endif
++
+ #define atomic_long_xchg_relaxed(v, new) \
+ 	(ATOMIC_LONG_PFX(_xchg_relaxed)((ATOMIC_LONG_PFX(_t) *)(v), (new)))  #def=
+ine atomic_long_xchg_acquire(v, new) \ @@ -291,29 +321,4 @@ static inline l=
+ong atomic_long_add_unless(atomic_long_t *l, long a, long u)  #define atomi=
+c_long_inc_not_zero(l) \
+ 	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
+=20
+-#ifndef CONFIG_HARDENED_ATOMIC
+-#define atomic_read_wrap(v) atomic_read(v) -#define atomic_set_wrap(v, i) =
+atomic_set((v), (i)) -#define atomic_add_wrap(i, v) atomic_add((i), (v)) -#=
+define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j)) -#d=
+efine atomic_sub_wrap(i, v) atomic_sub((i), (v)) -#define atomic_inc_wrap(v=
+) atomic_inc(v) -#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)=
+ -#define atomic_inc_return_wrap(v) atomic_inc_return(v) -#define atomic_ad=
+d_return_wrap(i, v) atomic_add_return((i), (v)) -#define atomic_dec_wrap(v)=
+ atomic_dec(v) -#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o=
+), (n)) -#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i)) -#define atom=
+ic_long_read_wrap(v) atomic_long_read(v) -#define atomic_long_set_wrap(v, i=
+) atomic_long_set((v), (i)) -#define atomic_long_add_wrap(i, v) atomic_long=
+_add((i), (v)) -#define atomic_long_sub_wrap(i, v) atomic_long_sub((i), (v)=
+) -#define atomic_long_inc_wrap(v) atomic_long_inc(v) -#define atomic_long_=
+add_return_wrap(i, v) atomic_long_add_return((i), (v)) -#define atomic_long=
+_inc_return_wrap(v) atomic_long_inc_return(v) -#define atomic_long_sub_and_=
+test_wrap(i, v) atomic_long_sub_and_test((i), (v)) -#define atomic_long_dec=
+_wrap(v) atomic_long_dec(v) -#define atomic_long_xchg_wrap(v, i) atomic_lon=
+g_xchg((v), (i)) -#endif /* CONFIG_HARDENED_ATOMIC */
+-
+ #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */ diff --git a/include/linux/atom=
+ic.h b/include/linux/atomic.h index b5817c8..be16ea1 100644
+--- a/include/linux/atomic.h
++++ b/include/linux/atomic.h
+@@ -89,6 +89,11 @@
+ #define  atomic_add_return(...)						\
+ 	__atomic_op_fence(atomic_add_return, __VA_ARGS__)  #endif
++
++#ifndef atomic_add_return_wrap_relaxed
+
+ER: I guess this is a typo, should be ifndef atomic_add_return_wrap
+
++#define atomic_add_return_wrap(...)		                        \
++	__atomic_op_fence(atomic_add_return_wrap, __VA_ARGS__) #endif
+ #endif /* atomic_add_return_relaxed */
+=20
+ /* atomic_inc_return_relaxed */
+@@ -113,6 +118,11 @@
+ #define  atomic_inc_return(...)						\
+ 	__atomic_op_fence(atomic_inc_return, __VA_ARGS__)  #endif
++
++#ifndef atomic_inc_return_wrap
++#define  atomic_inc_return_wrap(...)					\
++	__atomic_op_fence(atomic_inc_return_wrap, __VA_ARGS__) #endif
+ #endif /* atomic_inc_return_relaxed */
+=20
+ /* atomic_sub_return_relaxed */
+@@ -137,6 +147,11 @@
+ #define  atomic_sub_return(...)						\
+ 	__atomic_op_fence(atomic_sub_return, __VA_ARGS__)  #endif
++
++#ifndef atomic_sub_return_wrap_relaxed
+
+ER: Same as above
+
++#define atomic_sub_return_wrap(...)		                        \
++	__atomic_op_fence(atomic_sub_return_wrap, __VA_ARGS__) #endif
+ #endif /* atomic_sub_return_relaxed */
+=20
+ /* atomic_dec_return_relaxed */
+@@ -161,6 +176,11 @@
+ #define  atomic_dec_return(...)						\
+ 	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)  #endif
++
++#ifndef atomic_dec_return_wrap
++#define  atomic_dec_return_wrap(...)					\
++	__atomic_op_fence(atomic_dec_return, __VA_ARGS__) #endif
+
+ER: Another typo? atomic_dec_return_wrap?
 
 
-On Wednesday 19 October 2016 05:49 AM, David Windsor wrote:
-> On Tue, Oct 18, 2016 at 6:56 PM, Sandy Harris <sandyinchina@gmail.com> wrote:
->> On Tue, Oct 18, 2016 at 9:13 AM, Jann Horn <jann@thejh.net> wrote:
->>
->>> Use-after-frees are really hard to deal with.
->>
->> I want to ask a possibly naive questions -- why can't we avoid the
->> whole class of bugs in the first place? I can think of only two main
->> sources for use-after-free bugs, both avoidable.
->>
->> One is allocating something within a function, then returning a
->> pointer to it. I know I've done that on occasion, got a warning from
->> lint(1) or the compiler, & fixed it; I have forgotten details. Surely
->> current static analysis tools can catch nearly all of these. If not,
->> writing one looks fairly straightforward. Sure, complex code with a
->> lot of indirection might fool such tools, but in general such code
->> should not be used anyway.
->>
-> 
-> The main use case in the kernel of reference counters is garbage
-> collection: the kernel manages a particular object that has multiple
-> users.  It cannot safely delete this object until all users of the
-> object have finished using it.   Users acquire and release references
-> to this object via a get()/put() API.  When all users have called
-> put(), the reference counter becomes 0 (or -1, or some other
-> sentinel), and the kernel frees the object.
-> 
-> Things go wrong when the reference counter gets overflowed.  If the
-> reference counter is represented with a signed integer type,
-> overflowing the reference counter causes it to go from INT_MAX to
-> INT_MIN, then approach 0.  Depending on the logic, the transition to
-> INT_MIN may be enough to trigger the bug, but when the reference
-> counter becomes 0, the kernel will free the underlying object guarded
-> by the reference counter while it still has valid users.
+Actually we will hopefully send next rfc today-tomorrow and we plan to incl=
+ude the above and other general declarations, so hopefully you don't need t=
+o carry this part with your rfc anymore!
 
-One of the other case is when users forget to call put() functions.
-I think we have seen many such missing put() cases in the kernel.
-Sometimes in some cases it is also possible that users may call put()
-little early. 
-
->> The other is misusing malloc()/free() or their kernel code analogs, &
->> the obvious solution is to avoid using those wherever possible. There
->> are some kernel data structures that need to grow dynamically, but I
->> do not think there need to be a lot. Code the few very carefully and
->> refuse to accept patches elsewhere that use dynamic allocation; the
->> problem may not vanish, but it looks like this reduces it to
->> manageable size.
->>
->> I have the feeling I might be missing something here. Pointers welcome.
-> 
-
--- 
-Vaishali
+Best Regards,
+Elena.
