@@ -1,56 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 19 Oct 2016 11:16:45 +0200
-From: Greg KH <greg@kroah.com>
-Message-ID: <20161019091645.GA8456@kroah.com>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
- <1476802761-24340-2-git-send-email-colin@cvidal.org>
- <2236FBA76BA1254E88B949DDB74E612B41BE01A7@IRSMSX102.ger.corp.intel.com>
- <20161019083110.GD6447@kroah.com>
- <1476867489.21069.19.camel@cvidal.org>
+Date: Wed, 19 Oct 2016 10:41:16 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20161019094115.GC9616@leverpostej>
+References: <1469630746-32279-1-git-send-email-jeffv@google.com>
+ <20161017134413.GK29095@leverpostej>
+ <1476716073.4032.5.camel@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1476867489.21069.19.camel@cvidal.org>
-Subject: Re: [kernel-hardening] RE: [RFC 1/2] Reordering / guard definition
- on atomic_*_wrap function in order to avoid implicitly defined / redefined
- error on them, when CONFIG_HARDENED_ATOMIC is unset.
-To: Colin Vidal <colin@cvidal.org>
-Cc: kernel-hardening@lists.openwall.com
+In-Reply-To: <1476716073.4032.5.camel@gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 1/2] security, perf: allow further
+ restriction of perf_event_open
+To: kernel-hardening@lists.openwall.com
+Cc: peterz@infradead.org, mingo@redhat.com, acme@kernel.org, alexander.shishkin@linux.intel.com, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, Jeff Vander Stoep <jeffv@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 19, 2016 at 10:58:09AM +0200, Colin Vidal wrote:
-> > > +#ifndef CONFIG_HARDENED_ATOMIC
-> > > +#define atomic_read_wrap(v) atomic_read(v)
-> > > +#define atomic_set_wrap(v, i) atomic_set((v), (i))
-> > > +#define atomic_add_wrap(i, v) atomic_add((i), (v))
-> > > +#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
-> > > +#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
-> > > +#define atomic_inc_wrap(v) atomic_inc(v)
-> > > +#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
-> > > +#ifndef atomic_inc_return_wrap
-> > > +#define atomic_inc_return_wrap(v) atomic_inc_return(v)
-> > > +#endif
-> > > +#ifndef atomic_add_return_wrap
-> > > +#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
-> > > +#endif
-> > > +#define atomic_dec_wrap(v) atomic_dec(v)
-> > > +#ifndef atomic_xchg_wrap
-> > > +#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
-> > > +#endif
-> > > +#define atomic_long_inc_wrap(v) atomic_long_inc(v)
-> > > +#define atomic_long_dec_wrap(v) atomic_long_dec(v)
-> > > +#define atomic_long_xchg_wrap(v, n) atomic_long_xchg(v, n)
-> > > +#define atomic_long_cmpxchg_wrap(l, o, n) atomic_long_cmpxchg(l, o, n)
-> > > +#endif /* CONFIG_HARDENED_ATOMIC */
-> > 
-> > That doesn't look correct to me at all, does it to you?
+On Mon, Oct 17, 2016 at 10:54:33AM -0400, Daniel Micay wrote:
+> On Mon, 2016-10-17 at 14:44 +0100, Mark Rutland wrote:
+> > It's also my understanding that for Android, perf_event_paranoid is
+> > lowered when the user enables developer mode (rather than only when an
+> > external debugger is attached); is that correct?
 > 
-> That patch will be removed in next version since it will be not needed
-> anymore (Elena's RFC will include those changes). However, I wonder
-> what is obviously wrong here? (in order to avoid it in futures
-> patches). Complex nested #ifdef/#ifndef?
+> It's exposed as a "system property" marked as writable by the shell
+> user, so the Android Debug Bridge shell can lower it. The debugging
+> tools learned how to toggle it off automatically when they're used. It
+> intentionally isn't a persist. prefixed property so the setting also
+> goes away on reboot.
+> 
+> ADB (incl. the shell user) isn't available until developer mode is
+> enabled + ADB is toggled on in the developer settings, and then it still
+> requires whitelisting keys.
 
-Odd, the version I had had all of the line-ends gone, and it was wrapped
-horribly, but this email shows it correctly.  email is fun...
+Ah; so I'd misunderstood somewhat.
 
-greg k-h
+I was under the (clearly mistaken) impression that this was lowered when
+developer mode was enabled, rather than only when it was both enabled
+and ADB was connected, for example.
+
+Thanks for clearing that up!
+
+Thanks,
+Mark.
