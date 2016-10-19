@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 19 Oct 2016 10:56:05 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20161019095605.GD9616@leverpostej>
+Date: Wed, 19 Oct 2016 12:01:26 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161019100126.GI3102@twins.programming.kicks-ass.net>
 References: <1469630746-32279-1-git-send-email-jeffv@google.com>
  <20161017134413.GK29095@leverpostej>
  <CAGXu5jLnjWV5i3-6+wE2ME0fr4QcMsvtwQ2Q2AZNurxrxKBfRA@mail.gmail.com>
@@ -13,33 +13,25 @@ In-Reply-To: <1476825301.4032.7.camel@gmail.com>
 Subject: Re: [kernel-hardening] [PATCH 1/2] security, perf: allow further
  restriction of perf_event_open
 To: Daniel Micay <danielmicay@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jeff Vander Stoep <jeffv@google.com>
+Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Ingo Molnar <mingo@redhat.com>, Arnaldo Carvalho de Melo <acme@kernel.org>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jeff Vander Stoep <jeffv@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Tue, Oct 18, 2016 at 05:15:01PM -0400, Daniel Micay wrote:
-> It's also worth noting that fine-grained control via a scoped
-> mechanism would likely only be used to implement *more restrictions*
-> on Android, not to make the feature less aggressive. It's desirable
-> for perf events to be disabled by default for non-root across the
-> board on Android.  The part that's imperfect is that when a developer
-> uses a profiling tool, unprivileged usage is automatically enabled
-> across the board until reboot. Ideally, it would be enabled only for
-> the scope where it's needed. 
+> It's also worth noting that fine-grained control via a scoped mechanism
+> would likely only be used to implement *more restrictions* on Android,
+> not to make the feature less aggressive.
 
-Sure; understood.
+> It's desirable for perf events to be disabled by default for non-root
+> across the board on Android.
 
-> It would be very tricky to implement though, especially without adding
-> friction, and it would only have value for protecting devices being
-> used for development. It really doesn't seem to be worth the trouble,
-> especially since it doesn't persist on reboot. It's only a temporary
-> security hole and only for developer devices.
+Right, but this is Android. The knob seems to now also live in Debian
+(and derived) distros. And there it is utter crap.
 
-I can see that for Android this isn't much of a win. It is beneficial
-elsewhere, and covers a larger set of use-cases.
+It completely defeats having perf for a fairly large segment of
+corporate developers who do not get to have root on their own machines
+(which is stupid policy but whatever).
 
-If perf were a filesystem object, we'd only allow access by a given
-'perf' group, and that would be sufficient to avoid most of that
-friction (IIUC). I wonder what we can do that's similar.
+It similarly defeats development of self profiling JITs and whatnot.
 
-Thanks,
-Mark.
+A capability would allow people to run perf (or another sanctioned
+binary), even though in general they cannot do sys_perf_event_open().
