@@ -1,99 +1,102 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476891544.4032.11.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Wed, 19 Oct 2016 11:39:04 -0400
-In-Reply-To: <20161019102602.GA25522@kernel.org>
-References: <1469630746-32279-1-git-send-email-jeffv@google.com>
-	 <20161017134413.GK29095@leverpostej>
-	 <CAGXu5jLnjWV5i3-6+wE2ME0fr4QcMsvtwQ2Q2AZNurxrxKBfRA@mail.gmail.com>
-	 <1476825301.4032.7.camel@gmail.com>
-	 <20161019100126.GI3102@twins.programming.kicks-ass.net>
-	 <20161019102602.GA25522@kernel.org>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-aVODqEHD+Ce685wk9hAX"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] [PATCH 1/2] security, perf: allow further
- restriction of perf_event_open
-To: Arnaldo Carvalho de Melo <arnaldo.melo@gmail.com>, Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Jeff Vander Stoep <jeffv@google.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <1476866702.21069.8.camel@cvidal.org>
+References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
+ <1476802761-24340-3-git-send-email-colin@cvidal.org> <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
+ <1476866702.21069.8.camel@cvidal.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 19 Oct 2016 13:11:46 -0700
+Message-ID: <CAGXu5j+AT4rnD5Zo6qdr76aJZLnvuknx-=UE57CTD1+WxmX=1A@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
+To: Colin Vidal <colin@cvidal.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>, Mark Rutland <mark.rutland@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, Oct 19, 2016 at 1:45 AM, Colin Vidal <colin@cvidal.org> wrote:
+> Hi Kees,
+>
+>> > This adds arm-specific code in order to support HARDENED_ATOMIC
+>> > feature. When overflow is detected in atomic_t, atomic64_t or
+>> > atomic_long_t, an exception is raised and call
+>> > hardened_atomic_overflow.
+>>
+>> Can you include some notes that this was originally in PaX/grsecurity,
+>> and detail what is different from their implemention?
+>
+> Of course. I add it in the next version.
+>
+>> > Signed-off-by: Colin Vidal <colin@cvidal.org>
+>> > ---
+>> >  arch/arm/Kconfig              |   1 +
+>> >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
+>> >  arch/arm/mm/fault.c           |  15 ++
+>> >  3 files changed, 320 insertions(+), 130 deletions(-)
+>> >
+>> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+>> > index b5d529f..fcf4a64 100644
+>> > --- a/arch/arm/Kconfig
+>> > +++ b/arch/arm/Kconfig
+>> > @@ -36,6 +36,7 @@ config ARM
+>> >         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
+>> >         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
+>> >         select HAVE_ARCH_HARDENED_USERCOPY
+>> > +       select HAVE_ARCH_HARDENED_ATOMIC
+>> >         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
+>> >         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
+>> >         select HAVE_ARCH_MMAP_RND_BITS if MMU
+>> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
+>> > index 66d0e21..fdaee17 100644
+>> > --- a/arch/arm/include/asm/atomic.h
+>> > +++ b/arch/arm/include/asm/atomic.h
+>> > @@ -17,18 +17,52 @@
+>> >  #include <linux/irqflags.h>
+>> >  #include <asm/barrier.h>
+>> >  #include <asm/cmpxchg.h>
+>> > +#include <linux/bug.h>
+>> >
+>> >  #define ATOMIC_INIT(i) { (i) }
+>> >
+>> >  #ifdef __KERNEL__
+>> >
+>> > +#ifdef CONFIG_HARDENED_ATOMIC
+>> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
+>>
+>> In PaX, I see a check for THUMB2 config:
+>>
+>> #ifdef CONFIG_THUMB2_KERNEL
+>> #define REFCOUNT_TRAP_INSN "bkpt        0xf1"
+>> #else
+>> #define REFCOUNT_TRAP_INSN "bkpt        0xf103"
+>> #endif
+>>
+>> That should probably stay unless I'm misunderstanding something. Also,
+>> for your new ISNS define name, I'd leave "TRAP" in the name, since
+>> that describes more clearly what it does.
+>
+> Oh yeah. I will add it. Actually I does not add it at first since I
+> does not really understand why there is a special case for Thumbs2 (as
+> far I understand, instructions size can also be 4 bytes). If ARM
+> experts are around, I would appreciate pointers about it :-)
 
---=-aVODqEHD+Ce685wk9hAX
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Cool. Perhaps Takahiro or Mark (now on CC) can comment on it.
 
-On Wed, 2016-10-19 at 07:26 -0300, Arnaldo Carvalho de Melo wrote:
->=20
-> But self profiling JITs would be useful for non-developers, on Android
-> (anywhere, really), and for that it would require being able to at
-> least, well, self profile, using sys_perf_event_open() by a normal
-> process, limited to profiling itself, no?
->=20
-> This not being possible, self profiling will use some other means, its
-> like sys_perf_event_open() never existed for them.
->=20
-> - Arnaldo
+>> Beyond these things, it looks great to me -- though I'm hardly an ARM expert. :)
+>>
+>> Were you able to test on ARM with this for overflow with the lkdtm tests?
+>
+> Yep. I have to make more thorough tests, but things like
+>
+>     echo HARDENED_ATOMIC_OVERFLOW > <debugfsmountpoint>/provoke-crash/DIRECT
+>
+> raise the exception as well (with hardened message and stack trace). I
+> tested it with armv7/qemu.
 
-It would defeat the purpose of the security feature if it was exposed to
-apps on Android. There are other ways for Chromium (including WebView)
-and the ART JIT to profile. AFAIK, they've never actually considered
-using perf for their JIT profiling. It wasn't something that anyone
-cared about when this was implemented.
+Great!
 
-Chromium would *certainly* never use perf for this. They use a much
-tighter sandbox than the Android app sandbox. It doesn't have system
-calls like open(), let alone perf events. Their seccomp-bpf usage is to
-reduce kernel attack surface, since it has proven to be the easiest way
-out of a sandbox. They don't even allow futex() without filtering based=20
-on the parameters anymore. That proved to be a major
-issue.
+-Kees
 
-The only case where untrusted apps declaring the privileges they need
-actually works out is when the privileges are high-level controls over
-access to a user's personal information. That way, they can be exposed
-to the user with the ability to reject access when it's first needed or
-toggle it off later. The strength of the app sandbox isn't something
-that end users can be responsible for. Permissions also don't work if
-apps bypass them with local privilege escalation vulnerabilities.
-
-Even for the base system, no perf access is better than having it used
-anywhere. The difference is only that the base system can actually be
-trusted to declare what it needs, but those components can be exploited
-so it's still best if they are trusted as little as possible at runtime.
-
-I could see Android completely removing unprivileged access down the
-road too, not as a form of access control (apps already run as unique
-uid/gid pairs, etc.) but to remove a non-trivial form of kernel attack
-surface. The perf API isn't being singled out here. It just happened to
-be the first case where a kernel API was restricted to developer usage
-on Android. Should expect more of this.
-
-If you want perf exposed, make it secure. Stop writing kernel code in a
-memory unsafe language and start using isolation. Not going to happen in
-all likelihood, so kernel code will be increasingly walled off instead
-since it's the biggest liability on the system. Fixing bugs on a case by
-case basis doesn't work for systems that need even basic security.
---=-aVODqEHD+Ce685wk9hAX
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-
-iQIzBAABCAAdBQJYB5OZFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
-8ioKNg//doRuU/akc2OnyiBA/8/6hVygrNQOLPHwL5/r+VISxPFajsupPugf07Bf
-0iDlQzFr0LBWj5HYsIScaoyoF+6UIe0XZHB7CD7yOiJJQGF52AHWXru97tof63+r
-e8K6un9rrspysHx76bhfcn+u2Id08ehQEt2vGmIGZUIw2voqk2VDhkvSvMODByqg
-AUS8DcXexqysHgZ3K8w5mJ2YuY1ceUiR9x18zD6hAei6dEyIwM4AUxIqgmytPhzO
-Bp7DXU2jME+CtQGWdchmIggOzvWP4qf9BUXfo7I+tgTQYe92abd6RMOlDFoIv/4z
-ZTbsw7LgJbSt06hHz3nmua8Ahet5noRwIl5bxhUzFbWz+IKE9jdpamAau+TRNx62
-ievNs2rmTp0PzuErIMbP5Pzt/GboSOx0huklT8/6hlHoZSxZMIRvCNsmToB2hm34
-gpDSiZPvt7abIYQ0cf1kOdcUs8qA2ZaZateV1YQoZJwbm127BJUJsbTey+Zx9507
-mib3OJDLPWYC68pMVlMuppLZQyrNRSR+JNbardHHH7fHPoX3k/Go89MpXTQMSxdw
-pgo9o2xqLx1DeB6YsbTGDN9rafgr68b3a2bqtgd6uinhhxpWw5V/CuLpxW7tCsYo
-/+QdbVWHnzXJAAZSuiQYRrFx/aisFezfWPdPOMj1WtHv2NOqUaQ=
-=3Szv
------END PGP SIGNATURE-----
-
---=-aVODqEHD+Ce685wk9hAX--
+-- 
+Kees Cook
+Nexus Security
