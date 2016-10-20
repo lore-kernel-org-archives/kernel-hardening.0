@@ -1,109 +1,125 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 20 Oct 2016 14:58:57 +0900
 From: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Message-ID: <20161020055856.GS19531@linaro.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
- <1476802761-24340-3-git-send-email-colin@cvidal.org>
- <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
- <1476866702.21069.8.camel@cvidal.org>
- <CAGXu5j+AT4rnD5Zo6qdr76aJZLnvuknx-=UE57CTD1+WxmX=1A@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5j+AT4rnD5Zo6qdr76aJZLnvuknx-=UE57CTD1+WxmX=1A@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: Kees Cook <keescook@chromium.org>
-Cc: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>, Mark Rutland <mark.rutland@arm.com>
+Date: Thu, 20 Oct 2016 15:24:58 +0900
+Message-Id: <20161020062458.14014-1-takahiro.akashi@linaro.org>
+Subject: [kernel-hardening] [PATCH] module: extend 'rodata=off' boot cmdline parameter to module mappings
+To: rusty@rustcorp.com.au
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, AKASHI Takahiro <takahiro.akashi@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 19, 2016 at 01:11:46PM -0700, Kees Cook wrote:
-> On Wed, Oct 19, 2016 at 1:45 AM, Colin Vidal <colin@cvidal.org> wrote:
-> > Hi Kees,
-> >
-> >> > This adds arm-specific code in order to support HARDENED_ATOMIC
-> >> > feature. When overflow is detected in atomic_t, atomic64_t or
-> >> > atomic_long_t, an exception is raised and call
-> >> > hardened_atomic_overflow.
-> >>
-> >> Can you include some notes that this was originally in PaX/grsecurity,
-> >> and detail what is different from their implemention?
-> >
-> > Of course. I add it in the next version.
-> >
-> >> > Signed-off-by: Colin Vidal <colin@cvidal.org>
-> >> > ---
-> >> >  arch/arm/Kconfig              |   1 +
-> >> >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
-> >> >  arch/arm/mm/fault.c           |  15 ++
-> >> >  3 files changed, 320 insertions(+), 130 deletions(-)
-> >> >
-> >> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> >> > index b5d529f..fcf4a64 100644
-> >> > --- a/arch/arm/Kconfig
-> >> > +++ b/arch/arm/Kconfig
-> >> > @@ -36,6 +36,7 @@ config ARM
-> >> >         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
-> >> >         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
-> >> >         select HAVE_ARCH_HARDENED_USERCOPY
-> >> > +       select HAVE_ARCH_HARDENED_ATOMIC
-> >> >         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
-> >> >         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
-> >> >         select HAVE_ARCH_MMAP_RND_BITS if MMU
-> >> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> >> > index 66d0e21..fdaee17 100644
-> >> > --- a/arch/arm/include/asm/atomic.h
-> >> > +++ b/arch/arm/include/asm/atomic.h
-> >> > @@ -17,18 +17,52 @@
-> >> >  #include <linux/irqflags.h>
-> >> >  #include <asm/barrier.h>
-> >> >  #include <asm/cmpxchg.h>
-> >> > +#include <linux/bug.h>
-> >> >
-> >> >  #define ATOMIC_INIT(i) { (i) }
-> >> >
-> >> >  #ifdef __KERNEL__
-> >> >
-> >> > +#ifdef CONFIG_HARDENED_ATOMIC
-> >> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
-> >>
-> >> In PaX, I see a check for THUMB2 config:
-> >>
-> >> #ifdef CONFIG_THUMB2_KERNEL
-> >> #define REFCOUNT_TRAP_INSN "bkpt        0xf1"
-> >> #else
-> >> #define REFCOUNT_TRAP_INSN "bkpt        0xf103"
-> >> #endif
-> >>
-> >> That should probably stay unless I'm misunderstanding something. Also,
-> >> for your new ISNS define name, I'd leave "TRAP" in the name, since
-> >> that describes more clearly what it does.
-> >
-> > Oh yeah. I will add it. Actually I does not add it at first since I
-> > does not really understand why there is a special case for Thumbs2 (as
-> > far I understand, instructions size can also be 4 bytes). If ARM
-> > experts are around, I would appreciate pointers about it :-)
-> 
-> Cool. Perhaps Takahiro or Mark (now on CC) can comment on it.
+The current "rodata=off" parameter disables read-only kernel mappings
+under CONFIG_DEBUG_RODATA:
+    commit d2aa1acad22f ("mm/init: Add 'rodata=off' boot cmdline parameter
+    to disable read-only kernel mappings")
 
-"bkpt" is a 16-bit instruction with an 8-bit immediate value in thumb2.
+This patch is a logical extension to module mappings ie. read-only mappings
+at module loading can be disabled even if CONFIG_DEBUG_SET_MODULE_RONX
+(mainly for debug use). Please note, however, that it only affects RO/RW
+permissions, keeping NX set.
 
--Takahiro AKASHI
+This is the first step to make CONFIG_DEBUG_SET_MODULE_RONX mandatory
+(always-on) in the future as CONFIG_DEBUG_RODATA on x86 and arm64.
 
-> >> Beyond these things, it looks great to me -- though I'm hardly an ARM expert. :)
-> >>
-> >> Were you able to test on ARM with this for overflow with the lkdtm tests?
-> >
-> > Yep. I have to make more thorough tests, but things like
-> >
-> >     echo HARDENED_ATOMIC_OVERFLOW > <debugfsmountpoint>/provoke-crash/DIRECT
-> >
-> > raise the exception as well (with hardened message and stack trace). I
-> > tested it with armv7/qemu.
-> 
-> Great!
-> 
-> -Kees
-> 
-> -- 
-> Kees Cook
-> Nexus Security
+Suggested-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Cc: Rusty Russell <rusty@rustcorp.com.au>
+---
+v1:
+  * remove RFC's "module_ronx=" and merge it with "rodata="
+  * always keep NX set if CONFIG_SET_MODULE_RONX
+
+ include/linux/init.h |  3 ++-
+ init/main.c          |  2 +-
+ kernel/module.c      | 21 ++++++++++++++++++---
+ 3 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/include/linux/init.h b/include/linux/init.h
+index e30104c..20aa2eb 100644
+--- a/include/linux/init.h
++++ b/include/linux/init.h
+@@ -126,7 +126,8 @@ void prepare_namespace(void);
+ void __init load_default_modules(void);
+ int __init init_rootfs(void);
+ 
+-#ifdef CONFIG_DEBUG_RODATA
++#if defined(CONFIG_DEBUG_RODATA) || defined(CONFIG_DEBUG_SET_MODULE_RONX)
++extern bool rodata_enabled;
+ void mark_rodata_ro(void);
+ #endif
+ 
+diff --git a/init/main.c b/init/main.c
+index 2858be7..92db2f3 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -915,7 +915,7 @@ static int try_to_run_init_process(const char *init_filename)
+ static noinline void __init kernel_init_freeable(void);
+ 
+ #ifdef CONFIG_DEBUG_RODATA
+-static bool rodata_enabled = true;
++bool rodata_enabled = true;
+ static int __init set_debug_rodata(char *str)
+ {
+ 	return strtobool(str, &rodata_enabled);
+diff --git a/kernel/module.c b/kernel/module.c
+index f57dd63..34d1880 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -1910,6 +1910,9 @@ static void frob_writable_data(const struct module_layout *layout,
+ /* livepatching wants to disable read-only so it can frob module. */
+ void module_disable_ro(const struct module *mod)
+ {
++	if (!rodata_enabled)
++		return;
++
+ 	frob_text(&mod->core_layout, set_memory_rw);
+ 	frob_rodata(&mod->core_layout, set_memory_rw);
+ 	frob_ro_after_init(&mod->core_layout, set_memory_rw);
+@@ -1919,6 +1922,9 @@ void module_disable_ro(const struct module *mod)
+ 
+ void module_enable_ro(const struct module *mod, bool after_init)
+ {
++	if (!rodata_enabled)
++		return;
++
+ 	frob_text(&mod->core_layout, set_memory_ro);
+ 	frob_rodata(&mod->core_layout, set_memory_ro);
+ 	frob_text(&mod->init_layout, set_memory_ro);
+@@ -1951,6 +1957,9 @@ void set_all_modules_text_rw(void)
+ {
+ 	struct module *mod;
+ 
++	if (!rodata_enabled)
++		return;
++
+ 	mutex_lock(&module_mutex);
+ 	list_for_each_entry_rcu(mod, &modules, list) {
+ 		if (mod->state == MODULE_STATE_UNFORMED)
+@@ -1967,6 +1976,9 @@ void set_all_modules_text_ro(void)
+ {
+ 	struct module *mod;
+ 
++	if (!rodata_enabled)
++		return;
++
+ 	mutex_lock(&module_mutex);
+ 	list_for_each_entry_rcu(mod, &modules, list) {
+ 		if (mod->state == MODULE_STATE_UNFORMED)
+@@ -1980,10 +1992,13 @@ void set_all_modules_text_ro(void)
+ 
+ static void disable_ro_nx(const struct module_layout *layout)
+ {
+-	frob_text(layout, set_memory_rw);
+-	frob_rodata(layout, set_memory_rw);
++	if (rodata_enabled) {
++		frob_text(layout, set_memory_rw);
++		frob_rodata(layout, set_memory_rw);
++	}
+ 	frob_rodata(layout, set_memory_x);
+-	frob_ro_after_init(layout, set_memory_rw);
++	if (rodata_enabled)
++		frob_ro_after_init(layout, set_memory_rw);
+ 	frob_ro_after_init(layout, set_memory_x);
+ 	frob_writable_data(layout, set_memory_x);
+ }
+-- 
+2.10.0
