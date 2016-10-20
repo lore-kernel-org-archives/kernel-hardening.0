@@ -1,223 +1,214 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Thu, 20 Oct 2016 13:25:31 +0300
-Message-Id: <1476959131-6153-14-git-send-email-elena.reshetova@intel.com>
-In-Reply-To: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC v2 PATCH 13/13] lkdtm: add tests for atomic over-/underflow
-To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Hans Liljestrand <ishkamiel@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <1476828091-17802-5-git-send-email-labbott@redhat.com>
+References: <1476828091-17802-1-git-send-email-labbott@redhat.com> <1476828091-17802-5-git-send-email-labbott@redhat.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 20 Oct 2016 11:32:45 +0100
+Message-ID: <CAKv+Gu-jmocWVRgRzd10VBD9+E_w33DfLm-zj_=iVGodczsnmw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCHv3 4/4] arm64: dump: Add checking for writable and
+ exectuable pages
+To: Laura Abbott <labbott@redhat.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Hans Liljestrand <ishkamiel@gmail.com>
+On 18 October 2016 at 23:01, Laura Abbott <labbott@redhat.com> wrote:
+>
+> Page mappings with full RWX permissions are a security risk. x86
+> has an option to walk the page tables and dump any bad pages.
+> (See e1a58320a38d ("x86/mm: Warn on W^X mappings")). Add a similar
+> implementation for arm64.
+>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+> Tested-by: Mark Rutland <mark.rutland@arm.com>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v3: Rebased for header guard fixup, whitespace fixes
+> ---
+>  arch/arm64/Kconfig.debug        | 29 +++++++++++++++++++++++
+>  arch/arm64/include/asm/ptdump.h |  8 +++++++
+>  arch/arm64/mm/dump.c            | 52 +++++++++++++++++++++++++++++++++++++++++
+>  arch/arm64/mm/mmu.c             |  2 ++
+>  4 files changed, 91 insertions(+)
+>
+> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
+> index 21a5b74..d1ebd46 100644
+> --- a/arch/arm64/Kconfig.debug
+> +++ b/arch/arm64/Kconfig.debug
+> @@ -42,6 +42,35 @@ config ARM64_RANDOMIZE_TEXT_OFFSET
+>           of TEXT_OFFSET and platforms must not require a specific
+>           value.
+>
+> +config DEBUG_WX
+> +       bool "Warn on W+X mappings at boot"
+> +       select ARM64_PTDUMP_CORE
+> +       ---help---
+> +         Generate a warning if any W+X mappings are found at boot.
+> +
+> +         This is useful for discovering cases where the kernel is leaving
+> +         W+X mappings after applying NX, as such mappings are a security risk.
+> +         This check also includes UXN, which should be set on all kernel
+> +         mappings.
+> +
+> +         Look for a message in dmesg output like this:
+> +
+> +           arm64/mm: Checked W+X mappings: passed, no W+X pages found.
+> +
+> +         or like this, if the check failed:
+> +
+> +           arm64/mm: Checked W+X mappings: FAILED, <N> W+X pages found.
+> +
+> +         Note that even if the check fails, your kernel is possibly
+> +         still fine, as W+X mappings are not a security hole in
+> +         themselves, what they do is that they make the exploitation
+> +         of other unfixed kernel bugs easier.
+> +
+> +         There is no runtime or memory usage effect of this option
+> +         once the kernel has booted up - it's a one time check.
+> +
+> +         If in doubt, say "Y".
+> +
+>  config DEBUG_SET_MODULE_RONX
+>         bool "Set loadable kernel module data as NX and text as RO"
+>         depends on MODULES
+> diff --git a/arch/arm64/include/asm/ptdump.h b/arch/arm64/include/asm/ptdump.h
+> index f72ee69..6afd847 100644
+> --- a/arch/arm64/include/asm/ptdump.h
+> +++ b/arch/arm64/include/asm/ptdump.h
+> @@ -42,5 +42,13 @@ static inline int ptdump_debugfs_register(struct ptdump_info *info,
+>         return 0;
+>  }
+>  #endif
+> +void ptdump_check_wx(void);
+>  #endif /* CONFIG_ARM64_PTDUMP_CORE */
+> +
+> +#ifdef CONFIG_DEBUG_WX
+> +#define debug_checkwx()        ptdump_check_wx()
+> +#else
+> +#define debug_checkwx()        do { } while (0)
+> +#endif
+> +
+>  #endif /* __ASM_PTDUMP_H */
+> diff --git a/arch/arm64/mm/dump.c b/arch/arm64/mm/dump.c
+> index bb36649..4913af5 100644
+> --- a/arch/arm64/mm/dump.c
+> +++ b/arch/arm64/mm/dump.c
+> @@ -74,6 +74,8 @@ struct pg_state {
+>         unsigned long start_address;
+>         unsigned level;
+>         u64 current_prot;
+> +       bool check_wx;
+> +       unsigned long wx_pages;
+>  };
+>
+>  struct prot_bits {
+> @@ -202,6 +204,35 @@ static void dump_prot(struct pg_state *st, const struct prot_bits *bits,
+>         }
+>  }
+>
+> +static void note_prot_uxn(struct pg_state *st, unsigned long addr)
+> +{
+> +       if (!st->check_wx)
+> +               return;
+> +
+> +       if ((st->current_prot & PTE_UXN) == PTE_UXN)
+> +               return;
+> +
+> +       WARN_ONCE(1, "arm64/mm: Found non-UXN mapping at address %p/%pS\n",
+> +                 (void *)st->start_address, (void *)st->start_address);
+> +
+> +       st->wx_pages += (addr - st->start_address) / PAGE_SIZE;
+> +}
+> +
+> +static void note_prot_wx(struct pg_state *st, unsigned long addr)
+> +{
+> +       if (!st->check_wx)
+> +               return;
+> +       if ((st->current_prot & PTE_RDONLY) == PTE_RDONLY)
+> +               return;
+> +       if ((st->current_prot & PTE_PXN) == PTE_PXN)
+> +               return;
+> +
+> +       WARN_ONCE(1, "arm64/mm: Found insecure W+X mapping at address %p/%pS\n",
+> +                 (void *)st->start_address, (void *)st->start_address);
+> +
+> +       st->wx_pages += (addr - st->start_address) / PAGE_SIZE;
+> +}
+> +
 
-This adds additional tests for modified atomic functions.
+Why are these separate functions, and why is wx_pages increased twice,
+potentially?
 
-Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
-Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
-Signed-off-by: David Windsor <dwindsor@gmail.com>
----
- drivers/misc/lkdtm.h      |  17 +++++++
- drivers/misc/lkdtm_bugs.c | 122 +++++++++++++++++++++++++++++++++++++++-------
- drivers/misc/lkdtm_core.c |  17 +++++++
- 3 files changed, 138 insertions(+), 18 deletions(-)
+Given how rare non-UXN kernel mappings should be, could we not just add
 
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
-index cfa1039..224713a 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -20,7 +20,24 @@ void lkdtm_HARDLOCKUP(void);
- void lkdtm_SPINLOCKUP(void);
- void lkdtm_HUNG_TASK(void);
- void lkdtm_ATOMIC_UNDERFLOW(void);
-+void lkdtm_ATOMIC_DEC_RETURN_UNDERFLOW(void);
-+void lkdtm_ATOMIC_SUB_UNDERFLOW(void);
-+void lkdtm_ATOMIC_SUB_RETURN_UNDERFLOW(void);
- void lkdtm_ATOMIC_OVERFLOW(void);
-+void lkdtm_ATOMIC_INC_RETURN_OVERFLOW(void);
-+void lkdtm_ATOMIC_ADD_OVERFLOW(void);
-+void lkdtm_ATOMIC_ADD_RETURN_OVERFLOW(void);
-+void lkdtm_ATOMIC_ADD_UNLESS_OVERFLOW(void);
-+void lkdtm_ATOMIC_INC_AND_TEST_OVERFLOW(void);
-+void lkdtm_ATOMIC_LONG_UNDERFLOW(void);
-+void lkdtm_ATOMIC_LONG_DEC_RETURN_UNDERFLOW(void);
-+void lkdtm_ATOMIC_LONG_SUB_UNDERFLOW(void);
-+void lkdtm_ATOMIC_LONG_SUB_RETURN_UNDERFLOW(void);
-+void lkdtm_ATOMIC_LONG_OVERFLOW(void);
-+void lkdtm_ATOMIC_LONG_INC_RETURN_OVERFLOW(void);
-+void lkdtm_ATOMIC_LONG_ADD_OVERFLOW(void);
-+void lkdtm_ATOMIC_LONG_ADD_RETURN_OVERFLOW(void);
-+void lkdtm_ATOMIC_LONG_SUB_AND_TEST(void);
- void lkdtm_CORRUPT_LIST_ADD(void);
- void lkdtm_CORRUPT_LIST_DEL(void);
- 
-diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
-index f336206..bd79a88 100644
---- a/drivers/misc/lkdtm_bugs.c
-+++ b/drivers/misc/lkdtm_bugs.c
-@@ -128,30 +128,116 @@ void lkdtm_HUNG_TASK(void)
- 	schedule();
- }
- 
--void lkdtm_ATOMIC_UNDERFLOW(void)
--{
--	atomic_t under = ATOMIC_INIT(INT_MIN);
--
--	pr_info("attempting good atomic increment\n");
--	atomic_inc(&under);
--	atomic_dec(&under);
--
--	pr_info("attempting bad atomic underflow\n");
--	atomic_dec(&under);
-+#define ATOMIC_LKDTM_MIN(tag,fun) void lkdtm_ATOMIC_##tag(void)	\
-+{									\
-+	atomic_t atomic = ATOMIC_INIT(INT_MIN);				\
-+									\
-+	pr_info("attempting good atomic_" #fun "\n");			\
-+	atomic_inc(&atomic);						\
-+	TEST_FUNC(&atomic);						\
-+									\
-+	pr_info("attempting bad atomic_" #fun "\n");			\
-+	TEST_FUNC(&atomic);						\
- }
- 
--void lkdtm_ATOMIC_OVERFLOW(void)
--{
--	atomic_t over = ATOMIC_INIT(INT_MAX);
-+#define ATOMIC_LKDTM_MAX(tag,fun,...)					\
-+void lkdtm_ATOMIC_##tag(void)						\
-+{									\
-+	atomic_t atomic = ATOMIC_INIT(INT_MAX);				\
-+									\
-+	pr_info("attempting good atomic_" #fun "\n");			\
-+	atomic_dec(&atomic);						\
-+	TEST_FUNC(&atomic);						\
-+									\
-+	pr_info("attempting bad atomic_" #fun "\n");			\
-+	TEST_FUNC(&atomic);						\
-+}
- 
--	pr_info("attempting good atomic decrement\n");
--	atomic_dec(&over);
--	atomic_inc(&over);
-+#define ATOMIC_LKDTM_LONG_MIN(tag,fun,...)				\
-+void lkdtm_ATOMIC_LONG_##tag(void)					\
-+{									\
-+	atomic_long_t atomic  = ATOMIC_LONG_INIT(LONG_MIN);		\
-+									\
-+	pr_info("attempting good atomic_long_" #fun "\n");		\
-+	atomic_long_inc(&atomic);					\
-+	TEST_FUNC(&atomic);						\
-+									\
-+	pr_info("attempting bad atomic_long_" #fun "\n");		\
-+	TEST_FUNC(&atomic);						\
-+}
- 
--	pr_info("attempting bad atomic overflow\n");
--	atomic_inc(&over);
-+#define ATOMIC_LKDTM_LONG_MAX(tag,fun,...)				\
-+void lkdtm_ATOMIC_LONG_##tag(void)					\
-+{									\
-+	atomic_long_t atomic = ATOMIC_LONG_INIT(LONG_MAX);		\
-+									\
-+	pr_info("attempting good atomic_long_" #fun "\n");		\
-+	atomic_long_dec(&atomic);					\
-+	TEST_FUNC(&atomic);						\
-+									\
-+	pr_info("attempting bad atomic_long_" #fun "\n");		\
-+	TEST_FUNC(&atomic);						\
- }
- 
-+#define TEST_FUNC(x) atomic_dec(x)
-+ATOMIC_LKDTM_MIN(UNDERFLOW,dec)
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_dec_return(x)
-+ATOMIC_LKDTM_MIN(DEC_RETURN_UNDERFLOW,dec_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_sub(1,x)
-+ATOMIC_LKDTM_MIN(SUB_UNDERFLOW,sub);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_sub_return(1,x);
-+ATOMIC_LKDTM_MIN(SUB_RETURN_UNDERFLOW,sub_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_inc(x);
-+ATOMIC_LKDTM_MAX(OVERFLOW,inc);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_inc_return(x);
-+ATOMIC_LKDTM_MAX(INC_RETURN_OVERFLOW,inc_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_add(1,x);
-+ATOMIC_LKDTM_MAX(ADD_OVERFLOW,add);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_add_return(1,x);
-+ATOMIC_LKDTM_MAX(ADD_RETURN_OVERFLOW,add_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_add_unless(x,1,0);
-+ATOMIC_LKDTM_MAX(ADD_UNLESS_OVERFLOW,add_unless);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_inc_and_test(x);
-+ATOMIC_LKDTM_MAX(INC_AND_TEST_OVERFLOW,inc_and_test);
-+#undef TEST_FUNC
-+
-+#define TEST_FUNC(x) atomic_long_dec(x);
-+ATOMIC_LKDTM_LONG_MIN(UNDERFLOW,dec);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_dec_return(x);
-+ATOMIC_LKDTM_LONG_MIN(DEC_RETURN_UNDERFLOW,dec_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_sub(1,x);
-+ATOMIC_LKDTM_LONG_MIN(SUB_UNDERFLOW,sub);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_sub_return(1,x);
-+ATOMIC_LKDTM_LONG_MIN(SUB_RETURN_UNDERFLOW,sub_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_inc(x);
-+ATOMIC_LKDTM_LONG_MAX(OVERFLOW,inc);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_inc_return(x);
-+ATOMIC_LKDTM_LONG_MAX(INC_RETURN_OVERFLOW,inc_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_add(1,x);
-+ATOMIC_LKDTM_LONG_MAX(ADD_OVERFLOW,add);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_add_return(1,x);
-+ATOMIC_LKDTM_LONG_MAX(ADD_RETURN_OVERFLOW,add_return);
-+#undef TEST_FUNC
-+#define TEST_FUNC(x) atomic_long_sub_and_test(1,x);
-+ATOMIC_LKDTM_LONG_MIN(SUB_AND_TEST,sub_and_test);
-+#undef TEST_FUNC
-+
- void lkdtm_CORRUPT_LIST_ADD(void)
- {
- 	/*
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
-index 7eeb71a..4b05803 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -221,7 +221,24 @@ struct crashtype crashtypes[] = {
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
- 	CRASHTYPE(WRITE_KERN),
- 	CRASHTYPE(ATOMIC_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_DEC_RETURN_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_SUB_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_SUB_RETURN_UNDERFLOW),
- 	CRASHTYPE(ATOMIC_OVERFLOW),
-+	CRASHTYPE(ATOMIC_INC_RETURN_OVERFLOW),
-+	CRASHTYPE(ATOMIC_ADD_OVERFLOW),
-+	CRASHTYPE(ATOMIC_ADD_RETURN_OVERFLOW),
-+	CRASHTYPE(ATOMIC_ADD_UNLESS_OVERFLOW),
-+	CRASHTYPE(ATOMIC_INC_AND_TEST_OVERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_DEC_RETURN_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_SUB_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_SUB_RETURN_UNDERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_OVERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_INC_RETURN_OVERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_ADD_OVERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_ADD_RETURN_OVERFLOW),
-+	CRASHTYPE(ATOMIC_LONG_SUB_AND_TEST),
- 	CRASHTYPE(USERCOPY_HEAP_SIZE_TO),
- 	CRASHTYPE(USERCOPY_HEAP_SIZE_FROM),
- 	CRASHTYPE(USERCOPY_HEAP_FLAG_TO),
--- 
-2.7.4
+       if ((st->current_prot & PTE_UXN) == 0)
+               WARN(xxx)
+
+(without the _ONCE) to note_prot_wx(), and drop note_prot_uxn() entirely?
+
+
+>  static void note_page(struct pg_state *st, unsigned long addr, unsigned level,
+>                                 u64 val)
+>  {
+> @@ -219,6 +250,8 @@ static void note_page(struct pg_state *st, unsigned long addr, unsigned level,
+>                 unsigned long delta;
+>
+>                 if (st->current_prot) {
+> +                       note_prot_uxn(st, addr);
+> +                       note_prot_wx(st, addr);
+>                         pt_dump_seq_printf(st->seq, "0x%016lx-0x%016lx   ",
+>                                    st->start_address, addr);
+>
+> @@ -344,6 +377,25 @@ static struct ptdump_info kernel_ptdump_info = {
+>         .base_addr      = VA_START,
+>  };
+>
+> +void ptdump_check_wx(void)
+> +{
+> +       struct pg_state st = {
+> +               .seq = NULL,
+> +               .marker = (struct addr_marker[]) {
+> +                       { -1, NULL},
+> +               },
+> +               .check_wx = true,
+> +       };
+> +
+> +       walk_pgd(&st, &init_mm, 0);
+> +       note_page(&st, 0, 0, 0);
+> +       if (st.wx_pages)
+> +               pr_info("Checked W+X mappings: FAILED, %lu W+X pages found\n",
+> +                       st.wx_pages);
+
+Could we upgrade this to pr_warn?
+
+> +       else
+> +               pr_info("Checked W+X mappings: passed, no W+X pages found\n");
+> +}
+> +
+>  static int ptdump_init(void)
+>  {
+>         ptdump_initialize();
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index 05615a3..2cbe2fe 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -42,6 +42,7 @@
+>  #include <asm/tlb.h>
+>  #include <asm/memblock.h>
+>  #include <asm/mmu_context.h>
+> +#include <asm/ptdump.h>
+>
+>  u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
+>
+> @@ -396,6 +397,7 @@ void mark_rodata_ro(void)
+>         section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
+>         create_mapping_late(__pa(__start_rodata), (unsigned long)__start_rodata,
+>                             section_size, PAGE_KERNEL_RO);
+> +       debug_checkwx();
+>  }
+>
+>  static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+> --
+> 2.7.4
+>
