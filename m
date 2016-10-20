@@ -1,1114 +1,1485 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Thu, 20 Oct 2016 13:25:19 +0300
-Message-Id: <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
+Date: Thu, 20 Oct 2016 13:25:21 +0300
+Message-Id: <1476959131-6153-4-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
 References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v2 PATCH 01/13] Add architecture independent hardened atomic base
+Subject: [kernel-hardening] [RFC v2 PATCH 03/13] kernel: identify wrapping atomic usage
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Cc: keescook@chromium.org, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This series brings the PaX/Grsecurity PAX_REFCOUNT [1]
-feature support to the upstream kernel. All credit for the
-feature goes to the feature authors.
+From: David Windsor <dwindsor@gmail.com>
 
-The name of the upstream feature is HARDENED_ATOMIC
-and it is configured using CONFIG_HARDENED_ATOMIC and
-HAVE_ARCH_HARDENED_ATOMIC.
+In some cases atomic is not used for reference
+counting and therefore should be allowed to overflow.
+Identify such cases and make a switch to non-hardened
+atomic version.
 
-This series only adds x86 support; other architectures are expected
-to add similar support gradually.
-
-Feature Summary
----------------
-The primary goal of KSPP is to provide protection against classes
-of vulnerabilities.  One such class of vulnerabilities, known as
-use-after-free bugs, frequently results when reference counters
-guarding shared kernel objects are overflowed.  The existence of
-a kernel path in which a reference counter is incremented more
-than it is decremented can lead to wrapping. This buggy path can be
-executed until INT_MAX/LONG_MAX is reached, at which point further
-increments will cause the counter to wrap to 0.  At this point, the
-kernel will erroneously mark the object as not in use, resulting in
-a multitude of undesirable cases: releasing the object to other users,
-freeing the object while it still has legitimate users, or other
-undefined conditions.  The above scenario is known as a use-after-free
-bug.
-
-HARDENED_ATOMIC provides mandatory protection against kernel
-reference counter overflows.  In Linux, reference counters
-are implemented using the atomic_t and atomic_long_t types.
-HARDENED_ATOMIC modifies the functions dealing with these types
-such that when INT_MAX/LONG_MAX is reached, the atomic variables
-remain saturated at these maximum values, rather than wrapping.
-
-There are several non-reference counter users of atomic_t and
-atomic_long_t (the fact that these types are being so widely
-misused is not addressed by this series).  These users, typically
-statistical counters, are not concerned with whether the values of
-these types wrap, and therefore can dispense with the added performance
-penalty incurred from protecting against overflows. New types have
-been introduced for these users: atomic_wrap_t and atomic_long_wrap_t.
-Functions for manipulating these types have been added as well.
-
-Note that the protection provided by HARDENED_ATOMIC is not "opt-in":
-since atomic_t is so widely misused, it must be protected as-is.
-HARDENED_ATOMIC protects all users of atomic_t and atomic_long_t
-against overflow.  New users wishing to use atomic types, but not
-needing protection against overflows, should use the new types
-introduced by this series: atomic_wrap_t and atomic_long_wrap_t.
-
-Bugs Prevented
---------------
-HARDENED_ATOMIC would directly mitigate these Linux kernel bugs:
-
-CVE-2016-3135 - Netfilter xt_alloc_table_info integer overflow
-CVE-2016-0728 - Keyring refcount overflow
-CVE-2014-2851 - Group_info refcount overflow
-CVE-2010-2959 - CAN integer overflow vulnerability,
-related post: https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
-
-And a relatively fresh exploit example:
-https://www.exploit-db.com/exploits/39773/
-
-[1] https://forums.grsecurity.net/viewtopic.php?f=7&t=4173
-
-Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
+Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: David Windsor <dwindsor@gmail.com>
 ---
- Documentation/security/hardened-atomic.txt | 141 +++++++++++++++
- include/asm-generic/atomic-long.h          | 264 ++++++++++++++++++++++++-----
- include/asm-generic/atomic.h               |  56 ++++++
- include/asm-generic/atomic64.h             |  13 ++
- include/asm-generic/bug.h                  |   7 +
- include/asm-generic/local.h                |  15 ++
- include/linux/atomic.h                     | 114 +++++++++++++
- include/linux/types.h                      |  17 ++
- kernel/panic.c                             |  11 ++
- security/Kconfig                           |  19 +++
- 10 files changed, 611 insertions(+), 46 deletions(-)
- create mode 100644 Documentation/security/hardened-atomic.txt
+ include/linux/blktrace_api.h         |  2 +-
+ include/linux/irqdesc.h              |  2 +-
+ include/linux/kgdb.h                 |  2 +-
+ include/linux/padata.h               |  2 +-
+ include/linux/perf_event.h           | 10 ++--
+ include/linux/sched.h                |  2 +-
+ kernel/audit.c                       |  8 +--
+ kernel/auditsc.c                     |  4 +-
+ kernel/debug/debug_core.c            | 16 +++---
+ kernel/events/core.c                 | 27 +++++-----
+ kernel/irq/manage.c                  |  2 +-
+ kernel/irq/spurious.c                |  2 +-
+ kernel/locking/lockdep.c             |  2 +-
+ kernel/padata.c                      |  4 +-
+ kernel/profile.c                     | 14 +++---
+ kernel/rcu/rcutorture.c              | 61 +++++++++++-----------
+ kernel/rcu/tree.c                    | 36 ++++++-------
+ kernel/rcu/tree.h                    | 10 ++--
+ kernel/rcu/tree_exp.h                |  2 +-
+ kernel/rcu/tree_plugin.h             | 12 ++---
+ kernel/rcu/tree_trace.c              | 14 +++---
+ kernel/sched/auto_group.c            |  4 +-
+ kernel/time/timer_stats.c            | 11 ++--
+ kernel/trace/blktrace.c              |  6 +--
+ kernel/trace/ftrace.c                |  4 +-
+ kernel/trace/ring_buffer.c           | 98 ++++++++++++++++++------------------
+ kernel/trace/trace_clock.c           |  4 +-
+ kernel/trace/trace_functions_graph.c |  4 +-
+ kernel/trace/trace_mmiotrace.c       |  8 +--
+ 29 files changed, 192 insertions(+), 181 deletions(-)
 
-diff --git a/Documentation/security/hardened-atomic.txt b/Documentation/security/hardened-atomic.txt
-new file mode 100644
-index 0000000..c17131e
---- /dev/null
-+++ b/Documentation/security/hardened-atomic.txt
-@@ -0,0 +1,141 @@
-+=====================
-+KSPP: HARDENED_ATOMIC
-+=====================
-+
-+Risks/Vulnerabilities Addressed
-+===============================
-+
-+The Linux Kernel Self Protection Project (KSPP) was created with a mandate
-+to eliminate classes of kernel bugs. The class of vulnerabilities addressed
-+by HARDENED_ATOMIC is known as use-after-free vulnerabilities.
-+
-+HARDENED_ATOMIC is based off of work done by the PaX Team [1].  The feature
-+on which HARDENED_ATOMIC is based is called PAX_REFCOUNT in the original 
-+PaX patch.
-+
-+Use-after-free Vulnerabilities
-+------------------------------
-+Use-after-free vulnerabilities are aptly named: they are classes of bugs in
-+which an attacker is able to gain control of a piece of memory after it has
-+already been freed and use this memory for nefarious purposes: introducing
-+malicious code into the address space of an existing process, redirecting
-+the flow of execution, etc.
-+
-+While use-after-free vulnerabilities can arise in a variety of situations, 
-+the use case addressed by HARDENED_ATOMIC is that of referenced counted 
-+objects.  The kernel can only safely free these objects when all existing 
-+users of these objects are finished using them.  This necessitates the 
-+introduction of some sort of accounting system to keep track of current
-+users of kernel objects.  Reference counters and get()/put() APIs are the 
-+means typically chosen to do this: calls to get() increment the reference
-+counter, put() decrments it.  When the value of the reference counter
-+becomes some sentinel (typically 0), the kernel can safely free the counted
-+object.  
-+
-+Problems arise when the reference counter gets overflowed.  If the reference
-+counter is represented with a signed integer type, overflowing the reference
-+counter causes it to go from INT_MAX to INT_MIN, then approach 0.  Depending
-+on the logic, the transition to INT_MIN may be enough to trigger the bug,
-+but when the reference counter becomes 0, the kernel will free the
-+underlying object guarded by the reference counter while it still has valid
-+users.
-+
-+
-+HARDENED_ATOMIC Design
-+======================
-+
-+HARDENED_ATOMIC provides its protections by modifying the data type used in
-+the Linux kernel to implement reference counters: atomic_t. atomic_t is a
-+type that contains an integer type, used for counting. HARDENED_ATOMIC
-+modifies atomic_t and its associated API so that the integer type contained
-+inside of atomic_t cannot be overflowed.
-+
-+A key point to remember about HARDENED_ATOMIC is that, once enabled, it 
-+protects all users of atomic_t without any additional code changes. The
-+protection provided by HARDENED_ATOMIC is not “opt-in”: since atomic_t is so
-+widely misused, it must be protected as-is. HARDENED_ATOMIC protects all
-+users of atomic_t and atomic_long_t against overflow. New users wishing to
-+use atomic types, but not needing protection against overflows, should use
-+the new types introduced by this series: atomic_wrap_t and
-+atomic_long_wrap_t.
-+
-+Detect/Mitigate
-+---------------
-+The mechanism of HARDENED_ATOMIC can be viewed as a bipartite process:
-+detection of an overflow and mitigating the effects of the overflow, either
-+by not performing or performing, then reversing, the operation that caused
-+the overflow.
-+
-+Overflow detection is architecture-specific. Details of the approach used to
-+detect overflows on each architecture can be found in the PAX_REFCOUNT
-+documentation. [1]
-+
-+Once an overflow has been detected, HARDENED_ATOMIC mitigates the overflow
-+by either reverting the operation or simply not writing the result of the
-+operation to memory.
-+
-+
-+HARDENED_ATOMIC Implementation
-+==============================
-+
-+As mentioned above, HARDENED_ATOMIC modifies the atomic_t API to provide its
-+protections. Following is a description of the functions that have been
-+modified.
-+
-+First, the type atomic_wrap_t needs to be defined for those kernel users who
-+want an atomic type that may be allowed to overflow/wrap (e.g. statistical
-+counters). Otherwise, the built-in protections (and associated costs) for
-+atomic_t would erroneously apply to these non-reference counter users of
-+atomic_t:
-+
-+  * include/linux/types.h: define atomic_wrap_t and atomic64_wrap_t
-+
-+Next, we define the mechanism for reporting an overflow of a protected 
-+atomic type:
-+
-+  * kernel/panic.c: void hardened_atomic_overflow(struct pt_regs)
-+
-+The following functions are an extension of the atomic_t API, supporting
-+this new “wrappable” type:
-+
-+  * static inline int atomic_read_wrap()
-+  * static inline void atomic_set_wrap()
-+  * static inline void atomic_inc_wrap()
-+  * static inline void atomic_dec_wrap()
-+  * static inline void atomic_add_wrap()
-+  * static inline long atomic_inc_return_wrap()
-+
-+Departures from Original PaX Implementation
-+-------------------------------------------
-+While HARDENED_ATOMIC is based largely upon the work done by PaX in their
-+original PAX_REFCOUNT patchset, HARDENED_ATOMIC does in fact have a few
-+minor differences. We will be posting them here as final decisions are made
-+regarding how certain core protections are implemented.
-+
-+x86 Race Condition
-+------------------
-+In the original implementation of PAX_REFCOUNT, a known race condition
-+exists when performing atomic add operations.  The crux of the problem lies
-+in the fact that, on x86, there is no way to know a priori whether a 
-+prospective atomic operation will result in an overflow.  To detect an
-+overflow, PAX_REFCOUNT had to perform an operation then check if the 
-+operation caused an overflow.  
-+
-+Therefore, there exists a set of conditions in which, given the correct
-+timing of threads, an overflowed counter could be visible to a processor.
-+If multiple threads execute in such a way so that one thread overflows the
-+counter with an addition operation, while a second thread executes another
-+addition operation on the same counter before the first thread is able to
-+revert the previously executed addition operation (by executing a
-+subtraction operation of the same (or greater) magnitude), the counter will
-+have been incremented to a value greater than INT_MAX. At this point, the
-+protection provided by PAX_REFCOUNT has been bypassed, as further increments
-+to the counter will not be detected by the processor’s overflow detection
-+mechanism.
-+
-+The likelihood of an attacker being able to exploit this race was 
-+sufficiently insignificant such that fixing the race would be
-+counterproductive. 
-+
-+[1] https://pax.grsecurity.net
-+[2] https://forums.grsecurity.net/viewtopic.php?f=7&t=4173
-diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
-index 288cc9e..425f34b 100644
---- a/include/asm-generic/atomic-long.h
-+++ b/include/asm-generic/atomic-long.h
-@@ -22,6 +22,12 @@
+diff --git a/include/linux/blktrace_api.h b/include/linux/blktrace_api.h
+index cceb72f..0dfd3b4 100644
+--- a/include/linux/blktrace_api.h
++++ b/include/linux/blktrace_api.h
+@@ -25,7 +25,7 @@ struct blk_trace {
+ 	struct dentry *dropped_file;
+ 	struct dentry *msg_file;
+ 	struct list_head running_list;
+-	atomic_t dropped;
++	atomic_wrap_t dropped;
+ };
  
- typedef atomic64_t atomic_long_t;
+ extern int blk_trace_ioctl(struct block_device *, unsigned, char __user *);
+diff --git a/include/linux/irqdesc.h b/include/linux/irqdesc.h
+index c9be579..8260b31 100644
+--- a/include/linux/irqdesc.h
++++ b/include/linux/irqdesc.h
+@@ -64,7 +64,7 @@ struct irq_desc {
+ 	unsigned int		irq_count;	/* For detecting broken IRQs */
+ 	unsigned long		last_unhandled;	/* Aging timer for unhandled count */
+ 	unsigned int		irqs_unhandled;
+-	atomic_t		threads_handled;
++	atomic_wrap_t		threads_handled;
+ 	int			threads_handled_last;
+ 	raw_spinlock_t		lock;
+ 	struct cpumask		*percpu_enabled;
+diff --git a/include/linux/kgdb.h b/include/linux/kgdb.h
+index e465bb1..e1330c3 100644
+--- a/include/linux/kgdb.h
++++ b/include/linux/kgdb.h
+@@ -52,7 +52,7 @@ extern int kgdb_connected;
+ extern int kgdb_io_module_registered;
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+typedef atomic64_wrap_t atomic_long_wrap_t;
-+#else
-+typedef atomic64_t atomic_long_wrap_t;
-+#endif
-+
- #define ATOMIC_LONG_INIT(i)	ATOMIC64_INIT(i)
- #define ATOMIC_LONG_PFX(x)	atomic64 ## x
+ extern atomic_t			kgdb_setting_breakpoint;
+-extern atomic_t			kgdb_cpu_doing_single_step;
++extern atomic_wrap_t		kgdb_cpu_doing_single_step;
  
-@@ -29,51 +35,77 @@ typedef atomic64_t atomic_long_t;
+ extern struct task_struct	*kgdb_usethread;
+ extern struct task_struct	*kgdb_contthread;
+diff --git a/include/linux/padata.h b/include/linux/padata.h
+index 0f9e567..c3a30eb 100644
+--- a/include/linux/padata.h
++++ b/include/linux/padata.h
+@@ -129,7 +129,7 @@ struct parallel_data {
+ 	struct padata_serial_queue	__percpu *squeue;
+ 	atomic_t			reorder_objects;
+ 	atomic_t			refcnt;
+-	atomic_t			seq_nr;
++	atomic_wrap_t			seq_nr;
+ 	struct padata_cpumask		cpumask;
+ 	spinlock_t                      lock ____cacheline_aligned;
+ 	unsigned int			processed;
+diff --git a/include/linux/perf_event.h b/include/linux/perf_event.h
+index 060d0ed..9da5a0f 100644
+--- a/include/linux/perf_event.h
++++ b/include/linux/perf_event.h
+@@ -49,6 +49,7 @@ struct perf_guest_info_callbacks {
+ #include <linux/irq_work.h>
+ #include <linux/static_key.h>
+ #include <linux/jump_label_ratelimit.h>
++#include <linux/types.h>
+ #include <linux/atomic.h>
+ #include <linux/sysfs.h>
+ #include <linux/perf_regs.h>
+@@ -587,7 +588,7 @@ struct perf_event {
+ 	enum perf_event_active_state	state;
+ 	unsigned int			attach_state;
+ 	local64_t			count;
+-	atomic64_t			child_count;
++	atomic64_wrap_t			child_count;
  
- typedef atomic_t atomic_long_t;
+ 	/*
+ 	 * These are the total time in nanoseconds that the event
+@@ -638,8 +639,8 @@ struct perf_event {
+ 	 * These accumulate total time (in nanoseconds) that children
+ 	 * events have been enabled and running, respectively.
+ 	 */
+-	atomic64_t			child_total_time_enabled;
+-	atomic64_t			child_total_time_running;
++	atomic64_wrap_t			child_total_time_enabled;
++	atomic64_wrap_t			child_total_time_running;
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+typedef atomic_wrap_t atomic_long_wrap_t;
-+#else
-+typedef atomic_t atomic_long_wrap_t;
-+#endif
-+
- #define ATOMIC_LONG_INIT(i)	ATOMIC_INIT(i)
- #define ATOMIC_LONG_PFX(x)	atomic ## x
+ 	/*
+ 	 * Protect attach/detach and child_list:
+@@ -1100,7 +1101,8 @@ static inline void perf_event_task_sched_out(struct task_struct *prev,
  
+ static inline u64 __perf_event_count(struct perf_event *event)
+ {
+-	return local64_read(&event->count) + atomic64_read(&event->child_count);
++	return local64_read(&event->count) +
++		atomic64_read_wrap(&event->child_count);
+ }
+ 
+ extern void perf_event_mmap(struct vm_area_struct *vma);
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index a1c9b42..f5ee17e 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1896,7 +1896,7 @@ struct task_struct {
+ 	 * Number of functions that haven't been traced
+ 	 * because of depth overrun.
+ 	 */
+-	atomic_t trace_overrun;
++	atomic_wrap_t trace_overrun;
+ 	/* Pause for the tracing */
+ 	atomic_t tracing_graph_pause;
  #endif
+diff --git a/kernel/audit.c b/kernel/audit.c
+index f1ca116..861ece3 100644
+--- a/kernel/audit.c
++++ b/kernel/audit.c
+@@ -122,7 +122,7 @@ u32		audit_sig_sid = 0;
+    3) suppressed due to audit_rate_limit
+    4) suppressed due to audit_backlog_limit
+ */
+-static atomic_t    audit_lost = ATOMIC_INIT(0);
++static atomic_wrap_t    audit_lost = ATOMIC_INIT(0);
  
--#define ATOMIC_LONG_READ_OP(mo)						\
--static inline long atomic_long_read##mo(const atomic_long_t *l)		\
-+#define ATOMIC_LONG_READ_OP(mo, suffix)						\
-+static inline long atomic_long_read##mo##suffix(const atomic_long##suffix##_t *l)\
- {									\
--	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-+	ATOMIC_LONG_PFX(suffix##_t) *v = (ATOMIC_LONG_PFX(suffix##_t) *)l;\
- 									\
--	return (long)ATOMIC_LONG_PFX(_read##mo)(v);			\
-+	return (long)ATOMIC_LONG_PFX(_read##mo##suffix)(v);		\
+ /* The netlink socket. */
+ static struct sock *audit_sock;
+@@ -256,7 +256,7 @@ void audit_log_lost(const char *message)
+ 	unsigned long		now;
+ 	int			print;
+ 
+-	atomic_inc(&audit_lost);
++	atomic_inc_wrap(&audit_lost);
+ 
+ 	print = (audit_failure == AUDIT_FAIL_PANIC || !audit_rate_limit);
+ 
+@@ -273,7 +273,7 @@ void audit_log_lost(const char *message)
+ 	if (print) {
+ 		if (printk_ratelimit())
+ 			pr_warn("audit_lost=%u audit_rate_limit=%u audit_backlog_limit=%u\n",
+-				atomic_read(&audit_lost),
++				atomic_read_wrap(&audit_lost),
+ 				audit_rate_limit,
+ 				audit_backlog_limit);
+ 		audit_panic(message);
+@@ -854,7 +854,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
+ 		s.pid			= audit_pid;
+ 		s.rate_limit		= audit_rate_limit;
+ 		s.backlog_limit		= audit_backlog_limit;
+-		s.lost			= atomic_read(&audit_lost);
++		s.lost			= atomic_read_wrap(&audit_lost);
+ 		s.backlog		= skb_queue_len(&audit_skb_queue);
+ 		s.feature_bitmap	= AUDIT_FEATURE_BITMAP_ALL;
+ 		s.backlog_wait_time	= audit_backlog_wait_time_master;
+diff --git a/kernel/auditsc.c b/kernel/auditsc.c
+index 2cd5256..12c9cb6 100644
+--- a/kernel/auditsc.c
++++ b/kernel/auditsc.c
+@@ -1954,7 +1954,7 @@ int auditsc_get_stamp(struct audit_context *ctx,
  }
--ATOMIC_LONG_READ_OP()
--ATOMIC_LONG_READ_OP(_acquire)
-+ATOMIC_LONG_READ_OP(,)
-+ATOMIC_LONG_READ_OP(_acquire,)
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+ATOMIC_LONG_READ_OP(,_wrap)
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_read_wrap(v) atomic_long_read((v))
-+#endif /* CONFIG_HARDENED_ATOMIC */
  
- #undef ATOMIC_LONG_READ_OP
+ /* global counter which is incremented every time something logs in */
+-static atomic_t session_id = ATOMIC_INIT(0);
++static atomic_wrap_t session_id = ATOMIC_INIT(0);
  
--#define ATOMIC_LONG_SET_OP(mo)						\
--static inline void atomic_long_set##mo(atomic_long_t *l, long i)	\
-+#define ATOMIC_LONG_SET_OP(mo, suffix)					\
-+static inline void atomic_long_set##mo##suffix(atomic_long##suffix##_t *l, long i)\
- {									\
--	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-+	ATOMIC_LONG_PFX(suffix##_t) *v = (ATOMIC_LONG_PFX(suffix##_t) *)l;\
- 									\
--	ATOMIC_LONG_PFX(_set##mo)(v, i);				\
-+	ATOMIC_LONG_PFX(_set##mo##suffix)(v, i);			\
- }
--ATOMIC_LONG_SET_OP()
--ATOMIC_LONG_SET_OP(_release)
-+ATOMIC_LONG_SET_OP(,)
-+ATOMIC_LONG_SET_OP(_release,)
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+ATOMIC_LONG_SET_OP(,_wrap)
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_set_wrap(v, i) atomic_long_set((v), (i))
-+#endif /* CONFIG_HARDENED_ATOMIC */
- 
- #undef ATOMIC_LONG_SET_OP
- 
--#define ATOMIC_LONG_ADD_SUB_OP(op, mo)					\
-+#define ATOMIC_LONG_ADD_SUB_OP(op, mo, suffix)				\
- static inline long							\
--atomic_long_##op##_return##mo(long i, atomic_long_t *l)			\
-+atomic_long_##op##_return##mo##suffix(long i, atomic_long##suffix##_t *l)\
- {									\
--	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-+	ATOMIC_LONG_PFX(suffix##_t) *v = (ATOMIC_LONG_PFX(suffix##_t) *)l;\
- 									\
--	return (long)ATOMIC_LONG_PFX(_##op##_return##mo)(i, v);		\
-+	return (long)ATOMIC_LONG_PFX(_##op##_return##mo##suffix)(i, v);\
- }
--ATOMIC_LONG_ADD_SUB_OP(add,)
--ATOMIC_LONG_ADD_SUB_OP(add, _relaxed)
--ATOMIC_LONG_ADD_SUB_OP(add, _acquire)
--ATOMIC_LONG_ADD_SUB_OP(add, _release)
--ATOMIC_LONG_ADD_SUB_OP(sub,)
--ATOMIC_LONG_ADD_SUB_OP(sub, _relaxed)
--ATOMIC_LONG_ADD_SUB_OP(sub, _acquire)
--ATOMIC_LONG_ADD_SUB_OP(sub, _release)
-+ATOMIC_LONG_ADD_SUB_OP(add,,)
-+ATOMIC_LONG_ADD_SUB_OP(add, _relaxed,)
-+ATOMIC_LONG_ADD_SUB_OP(add, _acquire,)
-+ATOMIC_LONG_ADD_SUB_OP(add, _release,)
-+ATOMIC_LONG_ADD_SUB_OP(sub,,)
-+ATOMIC_LONG_ADD_SUB_OP(sub, _relaxed,)
-+ATOMIC_LONG_ADD_SUB_OP(sub, _acquire,)
-+ATOMIC_LONG_ADD_SUB_OP(sub, _release,)
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+ATOMIC_LONG_ADD_SUB_OP(add,,_wrap)
-+ATOMIC_LONG_ADD_SUB_OP(sub,,_wrap)
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_add_return_wrap(i,v) atomic_long_add_return((i), (v))
-+#define atomic_long_sub_return_wrap(i,v) atomic_long_sub_return((i), (v))
-+#endif /* CONFIG_HARDENED_ATOMIC */
- 
- #undef ATOMIC_LONG_ADD_SUB_OP
- 
-@@ -89,6 +121,13 @@ ATOMIC_LONG_ADD_SUB_OP(sub, _release)
- #define atomic_long_cmpxchg(l, old, new) \
- 	(ATOMIC_LONG_PFX(_cmpxchg)((ATOMIC_LONG_PFX(_t) *)(l), (old), (new)))
- 
-+#ifdef CONFIG_HARDENED_ATOMIC
-+#define atomic_long_cmpxchg_wrap(l, old, new) \
-+	(ATOMIC_LONG_PFX(_cmpxchg_wrap)((ATOMIC_LONG_PFX(_wrap_t) *)(l), (old), (new)))
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_cmpxchg_wrap(v, o, n) atomic_long_cmpxchg((v), (o), (n))
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- #define atomic_long_xchg_relaxed(v, new) \
- 	(ATOMIC_LONG_PFX(_xchg_relaxed)((ATOMIC_LONG_PFX(_t) *)(v), (new)))
- #define atomic_long_xchg_acquire(v, new) \
-@@ -98,6 +137,13 @@ ATOMIC_LONG_ADD_SUB_OP(sub, _release)
- #define atomic_long_xchg(v, new) \
- 	(ATOMIC_LONG_PFX(_xchg)((ATOMIC_LONG_PFX(_t) *)(v), (new)))
- 
-+#ifdef CONFIG_HARDENED_ATOMIC
-+#define atomic_long_xchg_wrap(v, new) \
-+	(ATOMIC_LONG_PFX(_xchg_wrap)((ATOMIC_LONG_PFX(_wrap_t) *)(v), (new)))
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_xchg_wrap(v, i) atomic_long_xchg((v), (i))
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- static __always_inline void atomic_long_inc(atomic_long_t *l)
+ static int audit_set_loginuid_perm(kuid_t loginuid)
  {
- 	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;
-@@ -105,6 +151,17 @@ static __always_inline void atomic_long_inc(atomic_long_t *l)
- 	ATOMIC_LONG_PFX(_inc)(v);
- }
+@@ -2026,7 +2026,7 @@ int audit_set_loginuid(kuid_t loginuid)
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+static __always_inline void atomic_long_inc_wrap(atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	ATOMIC_LONG_PFX(_inc_wrap)(v);
-+}
-+#else
-+#define atomic_long_inc_wrap(v) atomic_long_inc(v)
-+#endif
-+
- static __always_inline void atomic_long_dec(atomic_long_t *l)
- {
- 	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;
-@@ -112,6 +169,17 @@ static __always_inline void atomic_long_dec(atomic_long_t *l)
- 	ATOMIC_LONG_PFX(_dec)(v);
- }
+ 	/* are we setting or clearing? */
+ 	if (uid_valid(loginuid))
+-		sessionid = (unsigned int)atomic_inc_return(&session_id);
++		sessionid = (unsigned int)atomic_inc_return_wrap(&session_id);
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+static __always_inline void atomic_long_dec_wrap(atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	ATOMIC_LONG_PFX(_dec_wrap)(v);
-+}
-+#else
-+#define atomic_long_dec_wrap(v) atomic_long_dec(v)
-+#endif
-+
- #define ATOMIC_LONG_FETCH_OP(op, mo)					\
- static inline long							\
- atomic_long_fetch_##op##mo(long i, atomic_long_t *l)			\
-@@ -168,21 +236,29 @@ ATOMIC_LONG_FETCH_INC_DEC_OP(dec, _release)
- 
- #undef ATOMIC_LONG_FETCH_INC_DEC_OP
- 
--#define ATOMIC_LONG_OP(op)						\
-+#define ATOMIC_LONG_OP(op, suffix)					\
- static __always_inline void						\
--atomic_long_##op(long i, atomic_long_t *l)				\
-+atomic_long_##op##suffix(long i, atomic_long##suffix##_t *l)		\
- {									\
--	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-+	ATOMIC_LONG_PFX(suffix##_t) *v = (ATOMIC_LONG_PFX(suffix##_t) *)l;\
- 									\
--	ATOMIC_LONG_PFX(_##op)(i, v);					\
-+	ATOMIC_LONG_PFX(_##op##suffix)(i, v);				\
- }
- 
--ATOMIC_LONG_OP(add)
--ATOMIC_LONG_OP(sub)
--ATOMIC_LONG_OP(and)
--ATOMIC_LONG_OP(andnot)
--ATOMIC_LONG_OP(or)
--ATOMIC_LONG_OP(xor)
-+ATOMIC_LONG_OP(add,)
-+ATOMIC_LONG_OP(sub,)
-+ATOMIC_LONG_OP(and,)
-+ATOMIC_LONG_OP(or,)
-+ATOMIC_LONG_OP(xor,)
-+ATOMIC_LONG_OP(andnot,)
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+ATOMIC_LONG_OP(add,_wrap)
-+ATOMIC_LONG_OP(sub,_wrap)
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_add_wrap(i,v) atomic_long_add((i),(v))
-+#define atomic_long_sub_wrap(i,v) atomic_long_sub((i),(v))
-+#endif /* CONFIG_HARDENED_ATOMIC */
- 
- #undef ATOMIC_LONG_OP
- 
-@@ -193,6 +269,15 @@ static inline int atomic_long_sub_and_test(long i, atomic_long_t *l)
- 	return ATOMIC_LONG_PFX(_sub_and_test)(i, v);
- }
- 
-+/*
-+static inline int atomic_long_add_and_test(long i, atomic_long_t *l)
-+{
-+	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_add_and_test)(i, v);
-+}
-+*/
-+
- static inline int atomic_long_dec_and_test(atomic_long_t *l)
- {
- 	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;
-@@ -214,22 +299,75 @@ static inline int atomic_long_add_negative(long i, atomic_long_t *l)
- 	return ATOMIC_LONG_PFX(_add_negative)(i, v);
- }
- 
--#define ATOMIC_LONG_INC_DEC_OP(op, mo)					\
-+#ifdef CONFIG_HARDENED_ATOMIC
-+static inline int atomic_long_sub_and_test_wrap(long i, atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_sub_and_test_wrap)(i, v);
-+}
-+
-+
-+static inline int atomic_long_add_and_test_wrap(long i, atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_add_and_test_wrap)(i, v);
-+}
-+
-+
-+static inline int atomic_long_dec_and_test_wrap(atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_dec_and_test_wrap)(v);
-+}
-+
-+static inline int atomic_long_inc_and_test_wrap(atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_inc_and_test_wrap)(v);
-+}
-+
-+static inline int atomic_long_add_negative_wrap(long i, atomic_long_wrap_t *l)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return ATOMIC_LONG_PFX(_add_negative_wrap)(i, v);
-+}
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_sub_and_test_wrap(i, v) atomic_long_sub_and_test((i), (v))
-+#define atomic_long_add_and_test_wrap(i, v) atomic_long_add_and_test((i), (v))
-+#define atomic_long_dec_and_test_wrap(i, v) atomic_long_dec_and_test((i), (v))
-+#define atomic_long_inc_and_test_wrap(i, v) atomic_long_inc_and_test((i), (v))
-+#define atomic_long_add_negative_wrap(i, v) atomic_long_add_negative((i), (v))
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
-+#define ATOMIC_LONG_INC_DEC_OP(op, mo, suffix)				\
- static inline long							\
--atomic_long_##op##_return##mo(atomic_long_t *l)				\
-+atomic_long_##op##_return##mo##suffix(atomic_long##suffix##_t *l)	\
- {									\
--	ATOMIC_LONG_PFX(_t) *v = (ATOMIC_LONG_PFX(_t) *)l;		\
-+	ATOMIC_LONG_PFX(suffix##_t) *v = (ATOMIC_LONG_PFX(suffix##_t) *)l;\
- 									\
--	return (long)ATOMIC_LONG_PFX(_##op##_return##mo)(v);		\
-+	return (long)ATOMIC_LONG_PFX(_##op##_return##mo##suffix)(v);	\
- }
--ATOMIC_LONG_INC_DEC_OP(inc,)
--ATOMIC_LONG_INC_DEC_OP(inc, _relaxed)
--ATOMIC_LONG_INC_DEC_OP(inc, _acquire)
--ATOMIC_LONG_INC_DEC_OP(inc, _release)
--ATOMIC_LONG_INC_DEC_OP(dec,)
--ATOMIC_LONG_INC_DEC_OP(dec, _relaxed)
--ATOMIC_LONG_INC_DEC_OP(dec, _acquire)
--ATOMIC_LONG_INC_DEC_OP(dec, _release)
-+ATOMIC_LONG_INC_DEC_OP(inc,,)
-+ATOMIC_LONG_INC_DEC_OP(inc, _relaxed,)
-+ATOMIC_LONG_INC_DEC_OP(inc, _acquire,)
-+ATOMIC_LONG_INC_DEC_OP(inc, _release,)
-+ATOMIC_LONG_INC_DEC_OP(dec,,)
-+ATOMIC_LONG_INC_DEC_OP(dec, _relaxed,)
-+ATOMIC_LONG_INC_DEC_OP(dec, _acquire,)
-+ATOMIC_LONG_INC_DEC_OP(dec, _release,)
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+ATOMIC_LONG_INC_DEC_OP(inc,,_wrap)
-+ATOMIC_LONG_INC_DEC_OP(dec,,_wrap)
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_inc_return_wrap(v) atomic_long_inc_return((v))
-+#define atomic_long_dec_return_wrap(v) atomic_long_dec_return((v))
-+#endif /*  CONFIG_HARDENED_ATOMIC */
- 
- #undef ATOMIC_LONG_INC_DEC_OP
- 
-@@ -240,7 +378,41 @@ static inline long atomic_long_add_unless(atomic_long_t *l, long a, long u)
- 	return (long)ATOMIC_LONG_PFX(_add_unless)(v, a, u);
- }
- 
-+#ifdef CONFIG_HARDENED_ATOMIC
-+static inline long atomic_long_add_unless_wrap(atomic_long_wrap_t *l, long a, long u)
-+{
-+	ATOMIC_LONG_PFX(_wrap_t) *v = (ATOMIC_LONG_PFX(_wrap_t) *)l;
-+
-+	return (long)ATOMIC_LONG_PFX(_add_unless_wrap)(v, a, u);
-+}
-+#else /* CONFIG_HARDENED_ATOMIC */
-+#define atomic_long_add_unless_wrap(v, i, j) atomic_long_add_unless((v), (i), (j))
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- #define atomic_long_inc_not_zero(l) \
- 	ATOMIC_LONG_PFX(_inc_not_zero)((ATOMIC_LONG_PFX(_t) *)(l))
- 
-+#ifndef CONFIG_HARDENED_ATOMIC
-+#define atomic_read_wrap(v) atomic_read(v)
-+#define atomic_set_wrap(v, i) atomic_set((v), (i))
-+#define atomic_add_wrap(i, v) atomic_add((i), (v))
-+#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
-+#define atomic_inc_wrap(v) atomic_inc(v)
-+#define atomic_dec_wrap(v) atomic_dec(v)
-+#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
-+#define atomic_sub_return_wrap(i, v) atomic_sub_return((i), (v))
-+#define atoimc_dec_return_wrap(v) atomic_dec_return(v)
-+#ifndef atomic_inc_return_wrap
-+#define atomic_inc_return_wrap(v) atomic_inc_return(v)
-+#endif /* atomic_inc_return */
-+#define atomic_dec_and_test_wrap(v) atomic_dec_and_test(v)
-+#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
-+#define atomic_add_and_test_wrap(i, v) atomic_add_and_test((v), (i))
-+#define atomic_sub_and_test_wrap(i, v) atomic_sub_and_test((v), (i))
-+#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
-+#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
-+#define atomic_add_negative_wrap(i, v) atomic_add_negative((i), (v))
-+#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
-diff --git a/include/asm-generic/atomic.h b/include/asm-generic/atomic.h
-index 9ed8b98..6c3ed48 100644
---- a/include/asm-generic/atomic.h
-+++ b/include/asm-generic/atomic.h
-@@ -177,6 +177,10 @@ ATOMIC_OP(xor, ^)
- #define atomic_read(v)	READ_ONCE((v)->counter)
- #endif
- 
-+#ifndef atomic_read_wrap
-+#define atomic_read_wrap(v)	READ_ONCE((v)->counter)
-+#endif
-+
- /**
-  * atomic_set - set atomic variable
-  * @v: pointer of type atomic_t
-@@ -186,6 +190,10 @@ ATOMIC_OP(xor, ^)
+ 	task->sessionid = sessionid;
+ 	task->loginuid = loginuid;
+diff --git a/kernel/debug/debug_core.c b/kernel/debug/debug_core.c
+index 0874e2e..07eeaf8 100644
+--- a/kernel/debug/debug_core.c
++++ b/kernel/debug/debug_core.c
+@@ -127,7 +127,7 @@ static DEFINE_RAW_SPINLOCK(dbg_slave_lock);
   */
- #define atomic_set(v, i) WRITE_ONCE(((v)->counter), (i))
+ static atomic_t			masters_in_kgdb;
+ static atomic_t			slaves_in_kgdb;
+-static atomic_t			kgdb_break_tasklet_var;
++static atomic_wrap_t	kgdb_break_tasklet_var;
+ atomic_t			kgdb_setting_breakpoint;
  
-+#ifndef atomic_set_wrap
-+#define atomic_set_wrap(v, i) WRITE_ONCE(((v)->counter), (i))
-+#endif
-+
- #include <linux/irqflags.h>
+ struct task_struct		*kgdb_usethread;
+@@ -137,7 +137,7 @@ int				kgdb_single_step;
+ static pid_t			kgdb_sstep_pid;
  
- static inline int atomic_add_negative(int i, atomic_t *v)
-@@ -193,33 +201,72 @@ static inline int atomic_add_negative(int i, atomic_t *v)
- 	return atomic_add_return(i, v) < 0;
- }
+ /* to keep track of the CPU which is doing the single stepping*/
+-atomic_t			kgdb_cpu_doing_single_step = ATOMIC_INIT(-1);
++atomic_wrap_t		kgdb_cpu_doing_single_step = ATOMIC_INIT(-1);
  
-+static inline int atomic_add_negative_wrap(int i, atomic_wrap_t *v)
-+{
-+	return atomic_add_return_wrap(i, v) < 0;
-+}
-+
- static inline void atomic_add(int i, atomic_t *v)
+ /*
+  * If you are debugging a problem where roundup (the collection of
+@@ -552,7 +552,7 @@ static int kgdb_cpu_enter(struct kgdb_state *ks, struct pt_regs *regs,
+ 	 * kernel will only try for the value of sstep_tries before
+ 	 * giving up and continuing on.
+ 	 */
+-	if (atomic_read(&kgdb_cpu_doing_single_step) != -1 &&
++	if (atomic_read_wrap(&kgdb_cpu_doing_single_step) != -1 &&
+ 	    (kgdb_info[cpu].task &&
+ 	     kgdb_info[cpu].task->pid != kgdb_sstep_pid) && --sstep_tries) {
+ 		atomic_set(&kgdb_active, -1);
+@@ -654,8 +654,8 @@ static int kgdb_cpu_enter(struct kgdb_state *ks, struct pt_regs *regs,
+ 	}
+ 
+ kgdb_restore:
+-	if (atomic_read(&kgdb_cpu_doing_single_step) != -1) {
+-		int sstep_cpu = atomic_read(&kgdb_cpu_doing_single_step);
++	if (atomic_read_wrap(&kgdb_cpu_doing_single_step) != -1) {
++		int sstep_cpu = atomic_read_wrap(&kgdb_cpu_doing_single_step);
+ 		if (kgdb_info[sstep_cpu].task)
+ 			kgdb_sstep_pid = kgdb_info[sstep_cpu].task->pid;
+ 		else
+@@ -949,18 +949,18 @@ static void kgdb_unregister_callbacks(void)
+ static void kgdb_tasklet_bpt(unsigned long ing)
  {
- 	atomic_add_return(i, v);
+ 	kgdb_breakpoint();
+-	atomic_set(&kgdb_break_tasklet_var, 0);
++	atomic_set_wrap(&kgdb_break_tasklet_var, 0);
  }
  
-+static inline void atomic_add_wrap(int i, atomic_wrap_t *v)
-+{
-+	atomic_add_return_wrap(i, v);
-+}
-+
- static inline void atomic_sub(int i, atomic_t *v)
+ static DECLARE_TASKLET(kgdb_tasklet_breakpoint, kgdb_tasklet_bpt, 0);
+ 
+ void kgdb_schedule_breakpoint(void)
  {
- 	atomic_sub_return(i, v);
+-	if (atomic_read(&kgdb_break_tasklet_var) ||
++	if (atomic_read_wrap(&kgdb_break_tasklet_var) ||
+ 		atomic_read(&kgdb_active) != -1 ||
+ 		atomic_read(&kgdb_setting_breakpoint))
+ 		return;
+-	atomic_inc(&kgdb_break_tasklet_var);
++	atomic_inc_wrap(&kgdb_break_tasklet_var);
+ 	tasklet_schedule(&kgdb_tasklet_breakpoint);
+ }
+ EXPORT_SYMBOL_GPL(kgdb_schedule_breakpoint);
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index c6e47e9..c859bc2 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -46,6 +46,7 @@
+ #include <linux/filter.h>
+ #include <linux/namei.h>
+ #include <linux/parser.h>
++#include <linux/atomic.h>
+ 
+ #include "internal.h"
+ 
+@@ -545,7 +546,7 @@ void perf_sample_event_took(u64 sample_len_ns)
+ 	}
  }
  
-+static inline void atomic_sub_wrap(int i, atomic_wrap_t *v)
-+{
-+	atomic_sub_return_wrap(i, v);
-+}
-+
- static inline void atomic_inc(atomic_t *v)
+-static atomic64_t perf_event_id;
++static atomic64_wrap_t perf_event_id;
+ 
+ static void cpu_ctx_sched_out(struct perf_cpu_context *cpuctx,
+ 			      enum event_type_t event_type);
+@@ -4230,9 +4231,9 @@ u64 perf_event_read_value(struct perf_event *event, u64 *enabled, u64 *running)
+ 	total += perf_event_count(event);
+ 
+ 	*enabled += event->total_time_enabled +
+-			atomic64_read(&event->child_total_time_enabled);
++			atomic64_read_wrap(&event->child_total_time_enabled);
+ 	*running += event->total_time_running +
+-			atomic64_read(&event->child_total_time_running);
++			atomic64_read_wrap(&event->child_total_time_running);
+ 
+ 	list_for_each_entry(child, &event->child_list, child_list) {
+ 		(void)perf_event_read(child, false);
+@@ -4264,12 +4265,12 @@ static int __perf_read_group_add(struct perf_event *leader,
+ 	 */
+ 	if (read_format & PERF_FORMAT_TOTAL_TIME_ENABLED) {
+ 		values[n++] += leader->total_time_enabled +
+-			atomic64_read(&leader->child_total_time_enabled);
++			atomic64_read_wrap(&leader->child_total_time_enabled);
+ 	}
+ 
+ 	if (read_format & PERF_FORMAT_TOTAL_TIME_RUNNING) {
+ 		values[n++] += leader->total_time_running +
+-			atomic64_read(&leader->child_total_time_running);
++			atomic64_read_wrap(&leader->child_total_time_running);
+ 	}
+ 
+ 	/*
+@@ -4792,10 +4793,10 @@ void perf_event_update_userpage(struct perf_event *event)
+ 		userpg->offset -= local64_read(&event->hw.prev_count);
+ 
+ 	userpg->time_enabled = enabled +
+-			atomic64_read(&event->child_total_time_enabled);
++			atomic64_read_wrap(&event->child_total_time_enabled);
+ 
+ 	userpg->time_running = running +
+-			atomic64_read(&event->child_total_time_running);
++			atomic64_read_wrap(&event->child_total_time_running);
+ 
+ 	arch_perf_update_userpage(event, userpg, now);
+ 
+@@ -5589,11 +5590,11 @@ static void perf_output_read_one(struct perf_output_handle *handle,
+ 	values[n++] = perf_event_count(event);
+ 	if (read_format & PERF_FORMAT_TOTAL_TIME_ENABLED) {
+ 		values[n++] = enabled +
+-			atomic64_read(&event->child_total_time_enabled);
++			atomic64_read_wrap(&event->child_total_time_enabled);
+ 	}
+ 	if (read_format & PERF_FORMAT_TOTAL_TIME_RUNNING) {
+ 		values[n++] = running +
+-			atomic64_read(&event->child_total_time_running);
++			atomic64_read_wrap(&event->child_total_time_running);
+ 	}
+ 	if (read_format & PERF_FORMAT_ID)
+ 		values[n++] = primary_event_id(event);
+@@ -9108,7 +9109,7 @@ perf_event_alloc(struct perf_event_attr *attr, int cpu,
+ 	event->parent		= parent_event;
+ 
+ 	event->ns		= get_pid_ns(task_active_pid_ns(current));
+-	event->id		= atomic64_inc_return(&perf_event_id);
++	event->id		= atomic64_inc_return_wrap(&perf_event_id);
+ 
+ 	event->state		= PERF_EVENT_STATE_INACTIVE;
+ 
+@@ -10032,10 +10033,10 @@ static void sync_child_event(struct perf_event *child_event,
+ 	/*
+ 	 * Add back the child's count to the parent's count:
+ 	 */
+-	atomic64_add(child_val, &parent_event->child_count);
+-	atomic64_add(child_event->total_time_enabled,
++	atomic64_add_wrap(child_val, &parent_event->child_count);
++	atomic64_add_wrap(child_event->total_time_enabled,
+ 		     &parent_event->child_total_time_enabled);
+-	atomic64_add(child_event->total_time_running,
++	atomic64_add_wrap(child_event->total_time_running,
+ 		     &parent_event->child_total_time_running);
+ }
+ 
+diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
+index 0c5f1a5..248dae7 100644
+--- a/kernel/irq/manage.c
++++ b/kernel/irq/manage.c
+@@ -971,7 +971,7 @@ static int irq_thread(void *data)
+ 
+ 		action_ret = handler_fn(desc, action);
+ 		if (action_ret == IRQ_HANDLED)
+-			atomic_inc(&desc->threads_handled);
++			atomic_inc_wrap(&desc->threads_handled);
+ 		if (action_ret == IRQ_WAKE_THREAD)
+ 			irq_wake_secondary(desc, action);
+ 
+diff --git a/kernel/irq/spurious.c b/kernel/irq/spurious.c
+index 5707f97..b0df627 100644
+--- a/kernel/irq/spurious.c
++++ b/kernel/irq/spurious.c
+@@ -334,7 +334,7 @@ void note_interrupt(struct irq_desc *desc, irqreturn_t action_ret)
+ 			 * count. We just care about the count being
+ 			 * different than the one we saw before.
+ 			 */
+-			handled = atomic_read(&desc->threads_handled);
++			handled = atomic_read_wrap(&desc->threads_handled);
+ 			handled |= SPURIOUS_DEFERRED;
+ 			if (handled != desc->threads_handled_last) {
+ 				action_ret = IRQ_HANDLED;
+diff --git a/kernel/locking/lockdep.c b/kernel/locking/lockdep.c
+index 589d763..198e3a37 100644
+--- a/kernel/locking/lockdep.c
++++ b/kernel/locking/lockdep.c
+@@ -3231,7 +3231,7 @@ static int __lock_acquire(struct lockdep_map *lock, unsigned int subclass,
+ 		if (!class)
+ 			return 0;
+ 	}
+-	atomic_inc((atomic_t *)&class->ops);
++	atomic_long_inc_wrap((atomic_long_wrap_t *)&class->ops);
+ 	if (very_verbose(class)) {
+ 		printk("\nacquire class [%p] %s", class->key, class->name);
+ 		if (class->name_version > 1)
+diff --git a/kernel/padata.c b/kernel/padata.c
+index 7848f05..f91003e 100644
+--- a/kernel/padata.c
++++ b/kernel/padata.c
+@@ -55,7 +55,7 @@ static int padata_cpu_hash(struct parallel_data *pd)
+ 	 * seq_nr mod. number of cpus in use.
+ 	 */
+ 
+-	seq_nr = atomic_inc_return(&pd->seq_nr);
++	seq_nr = atomic_inc_return_wrap(&pd->seq_nr);
+ 	cpu_index = seq_nr % cpumask_weight(pd->cpumask.pcpu);
+ 
+ 	return padata_index_to_cpu(pd, cpu_index);
+@@ -429,7 +429,7 @@ static struct parallel_data *padata_alloc_pd(struct padata_instance *pinst,
+ 	padata_init_pqueues(pd);
+ 	padata_init_squeues(pd);
+ 	setup_timer(&pd->timer, padata_reorder_timer, (unsigned long)pd);
+-	atomic_set(&pd->seq_nr, -1);
++	atomic_set_wrap(&pd->seq_nr, -1);
+ 	atomic_set(&pd->reorder_objects, 0);
+ 	atomic_set(&pd->refcnt, 0);
+ 	pd->pinst = pinst;
+diff --git a/kernel/profile.c b/kernel/profile.c
+index 2dbccf2..b8f24e3 100644
+--- a/kernel/profile.c
++++ b/kernel/profile.c
+@@ -37,7 +37,7 @@ struct profile_hit {
+ #define NR_PROFILE_HIT		(PAGE_SIZE/sizeof(struct profile_hit))
+ #define NR_PROFILE_GRP		(NR_PROFILE_HIT/PROFILE_GRPSZ)
+ 
+-static atomic_t *prof_buffer;
++static atomic_wrap_t *prof_buffer;
+ static unsigned long prof_len, prof_shift;
+ 
+ int prof_on __read_mostly;
+@@ -257,7 +257,7 @@ static void profile_flip_buffers(void)
+ 					hits[i].pc = 0;
+ 				continue;
+ 			}
+-			atomic_add(hits[i].hits, &prof_buffer[hits[i].pc]);
++			atomic_add_wrap(hits[i].hits, &prof_buffer[hits[i].pc]);
+ 			hits[i].hits = hits[i].pc = 0;
+ 		}
+ 	}
+@@ -318,9 +318,9 @@ static void do_profile_hits(int type, void *__pc, unsigned int nr_hits)
+ 	 * Add the current hit(s) and flush the write-queue out
+ 	 * to the global buffer:
+ 	 */
+-	atomic_add(nr_hits, &prof_buffer[pc]);
++	atomic_add_wrap(nr_hits, &prof_buffer[pc]);
+ 	for (i = 0; i < NR_PROFILE_HIT; ++i) {
+-		atomic_add(hits[i].hits, &prof_buffer[hits[i].pc]);
++		atomic_add_wrap(hits[i].hits, &prof_buffer[hits[i].pc]);
+ 		hits[i].pc = hits[i].hits = 0;
+ 	}
+ out:
+@@ -384,7 +384,7 @@ static void do_profile_hits(int type, void *__pc, unsigned int nr_hits)
  {
- 	atomic_add_return(1, v);
+ 	unsigned long pc;
+ 	pc = ((unsigned long)__pc - (unsigned long)_stext) >> prof_shift;
+-	atomic_add(nr_hits, &prof_buffer[min(pc, prof_len - 1)]);
++	atomic_add_wrap(nr_hits, &prof_buffer[min(pc, prof_len - 1)]);
+ }
+ #endif /* !CONFIG_SMP */
+ 
+@@ -479,7 +479,7 @@ read_profile(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+ 			return -EFAULT;
+ 		buf++; p++; count--; read++;
+ 	}
+-	pnt = (char *)prof_buffer + p - sizeof(atomic_t);
++	pnt = (char *)prof_buffer + p - sizeof(atomic_wrap_t);
+ 	if (copy_to_user(buf, (void *)pnt, count))
+ 		return -EFAULT;
+ 	read += count;
+@@ -510,7 +510,7 @@ static ssize_t write_profile(struct file *file, const char __user *buf,
+ 	}
+ #endif
+ 	profile_discard_flip_buffers();
+-	memset(prof_buffer, 0, prof_len * sizeof(atomic_t));
++	memset(prof_buffer, 0, prof_len * sizeof(atomic_wrap_t));
+ 	return count;
  }
  
-+static inline void atomic_inc_wrap(atomic_wrap_t *v)
-+{
-+	atomic_add_return_wrap(1, v);
-+}
-+
- static inline void atomic_dec(atomic_t *v)
+diff --git a/kernel/rcu/rcutorture.c b/kernel/rcu/rcutorture.c
+index bf08fee..44e2fe6 100644
+--- a/kernel/rcu/rcutorture.c
++++ b/kernel/rcu/rcutorture.c
+@@ -132,12 +132,12 @@ static struct rcu_torture rcu_tortures[10 * RCU_TORTURE_PIPE_LEN];
+ static DEFINE_SPINLOCK(rcu_torture_lock);
+ static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1], rcu_torture_count);
+ static DEFINE_PER_CPU(long [RCU_TORTURE_PIPE_LEN + 1], rcu_torture_batch);
+-static atomic_t rcu_torture_wcount[RCU_TORTURE_PIPE_LEN + 1];
+-static atomic_t n_rcu_torture_alloc;
+-static atomic_t n_rcu_torture_alloc_fail;
+-static atomic_t n_rcu_torture_free;
+-static atomic_t n_rcu_torture_mberror;
+-static atomic_t n_rcu_torture_error;
++static atomic_wrap_t rcu_torture_wcount[RCU_TORTURE_PIPE_LEN + 1];
++static atomic_wrap_t n_rcu_torture_alloc;
++static atomic_wrap_t n_rcu_torture_alloc_fail;
++static atomic_wrap_t n_rcu_torture_free;
++static atomic_wrap_t n_rcu_torture_mberror;
++static atomic_wrap_t n_rcu_torture_error;
+ static long n_rcu_torture_barrier_error;
+ static long n_rcu_torture_boost_ktrerror;
+ static long n_rcu_torture_boost_rterror;
+@@ -146,7 +146,7 @@ static long n_rcu_torture_boosts;
+ static long n_rcu_torture_timers;
+ static long n_barrier_attempts;
+ static long n_barrier_successes;
+-static atomic_long_t n_cbfloods;
++static atomic_long_wrap_t n_cbfloods;
+ static struct list_head rcu_torture_removed;
+ 
+ static int rcu_torture_writer_state;
+@@ -225,11 +225,11 @@ rcu_torture_alloc(void)
+ 
+ 	spin_lock_bh(&rcu_torture_lock);
+ 	if (list_empty(&rcu_torture_freelist)) {
+-		atomic_inc(&n_rcu_torture_alloc_fail);
++		atomic_inc_wrap(&n_rcu_torture_alloc_fail);
+ 		spin_unlock_bh(&rcu_torture_lock);
+ 		return NULL;
+ 	}
+-	atomic_inc(&n_rcu_torture_alloc);
++	atomic_inc_wrap(&n_rcu_torture_alloc);
+ 	p = rcu_torture_freelist.next;
+ 	list_del_init(p);
+ 	spin_unlock_bh(&rcu_torture_lock);
+@@ -242,7 +242,7 @@ rcu_torture_alloc(void)
+ static void
+ rcu_torture_free(struct rcu_torture *p)
  {
- 	atomic_sub_return(1, v);
- }
+-	atomic_inc(&n_rcu_torture_free);
++	atomic_inc_wrap(&n_rcu_torture_free);
+ 	spin_lock_bh(&rcu_torture_lock);
+ 	list_add_tail(&p->rtort_free, &rcu_torture_freelist);
+ 	spin_unlock_bh(&rcu_torture_lock);
+@@ -323,7 +323,7 @@ rcu_torture_pipe_update_one(struct rcu_torture *rp)
+ 	i = rp->rtort_pipe_count;
+ 	if (i > RCU_TORTURE_PIPE_LEN)
+ 		i = RCU_TORTURE_PIPE_LEN;
+-	atomic_inc(&rcu_torture_wcount[i]);
++	atomic_inc_wrap(&rcu_torture_wcount[i]);
+ 	if (++rp->rtort_pipe_count >= RCU_TORTURE_PIPE_LEN) {
+ 		rp->rtort_mbtest = 0;
+ 		return true;
+@@ -853,7 +853,7 @@ rcu_torture_cbflood(void *arg)
+ 	VERBOSE_TOROUT_STRING("rcu_torture_cbflood task started");
+ 	do {
+ 		schedule_timeout_interruptible(cbflood_inter_holdoff);
+-		atomic_long_inc(&n_cbfloods);
++		atomic_long_inc_wrap(&n_cbfloods);
+ 		WARN_ON(signal_pending(current));
+ 		for (i = 0; i < cbflood_n_burst; i++) {
+ 			for (j = 0; j < cbflood_n_per_burst; j++) {
+@@ -983,7 +983,7 @@ rcu_torture_writer(void *arg)
+ 			i = old_rp->rtort_pipe_count;
+ 			if (i > RCU_TORTURE_PIPE_LEN)
+ 				i = RCU_TORTURE_PIPE_LEN;
+-			atomic_inc(&rcu_torture_wcount[i]);
++			atomic_inc_wrap(&rcu_torture_wcount[i]);
+ 			old_rp->rtort_pipe_count++;
+ 			switch (synctype[torture_random(&rand) % nsynctypes]) {
+ 			case RTWS_DEF_FREE:
+@@ -1111,7 +1111,7 @@ static void rcu_torture_timer(unsigned long unused)
+ 		return;
+ 	}
+ 	if (p->rtort_mbtest == 0)
+-		atomic_inc(&n_rcu_torture_mberror);
++		atomic_inc_wrap(&n_rcu_torture_mberror);
+ 	spin_lock(&rand_lock);
+ 	cur_ops->read_delay(&rand);
+ 	n_rcu_torture_timers++;
+@@ -1187,7 +1187,7 @@ rcu_torture_reader(void *arg)
+ 			continue;
+ 		}
+ 		if (p->rtort_mbtest == 0)
+-			atomic_inc(&n_rcu_torture_mberror);
++			atomic_inc_wrap(&n_rcu_torture_mberror);
+ 		cur_ops->read_delay(&rand);
+ 		preempt_disable();
+ 		pipe_count = p->rtort_pipe_count;
+@@ -1256,11 +1256,11 @@ rcu_torture_stats_print(void)
+ 		rcu_torture_current,
+ 		rcu_torture_current_version,
+ 		list_empty(&rcu_torture_freelist),
+-		atomic_read(&n_rcu_torture_alloc),
+-		atomic_read(&n_rcu_torture_alloc_fail),
+-		atomic_read(&n_rcu_torture_free));
++		atomic_read_wrap(&n_rcu_torture_alloc),
++		atomic_read_wrap(&n_rcu_torture_alloc_fail),
++		atomic_read_wrap(&n_rcu_torture_free));
+ 	pr_cont("rtmbe: %d rtbe: %ld rtbke: %ld rtbre: %ld ",
+-		atomic_read(&n_rcu_torture_mberror),
++		atomic_read_wrap(&n_rcu_torture_mberror),
+ 		n_rcu_torture_barrier_error,
+ 		n_rcu_torture_boost_ktrerror,
+ 		n_rcu_torture_boost_rterror);
+@@ -1273,17 +1273,17 @@ rcu_torture_stats_print(void)
+ 		n_barrier_successes,
+ 		n_barrier_attempts,
+ 		n_rcu_torture_barrier_error);
+-	pr_cont("cbflood: %ld\n", atomic_long_read(&n_cbfloods));
++	pr_cont("cbflood: %ld\n", atomic_long_read_wrap(&n_cbfloods));
  
-+static inline void atomic_dec_wrap(atomic_wrap_t *v)
-+{
-+	atomic_sub_return_wrap(1, v);
-+}
-+
- #define atomic_dec_return(v)		atomic_sub_return(1, (v))
- #define atomic_inc_return(v)		atomic_add_return(1, (v))
+ 	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
+-	if (atomic_read(&n_rcu_torture_mberror) != 0 ||
++	if (atomic_read_wrap(&n_rcu_torture_mberror) != 0 ||
+ 	    n_rcu_torture_barrier_error != 0 ||
+ 	    n_rcu_torture_boost_ktrerror != 0 ||
+ 	    n_rcu_torture_boost_rterror != 0 ||
+ 	    n_rcu_torture_boost_failure != 0 ||
+ 	    i > 1) {
+ 		pr_cont("%s", "!!! ");
+-		atomic_inc(&n_rcu_torture_error);
++		atomic_inc_wrap(&n_rcu_torture_error);
+ 		WARN_ON_ONCE(1);
+ 	}
+ 	pr_cont("Reader Pipe: ");
+@@ -1300,7 +1300,7 @@ rcu_torture_stats_print(void)
+ 	pr_alert("%s%s ", torture_type, TORTURE_FLAG);
+ 	pr_cont("Free-Block Circulation: ");
+ 	for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++) {
+-		pr_cont(" %d", atomic_read(&rcu_torture_wcount[i]));
++		pr_cont(" %d", atomic_read_wrap(&rcu_torture_wcount[i]));
+ 	}
+ 	pr_cont("\n");
  
-+#define atomic_add_and_test(i, v)	(atomic_add_return((i), (v)) == 0)
- #define atomic_sub_and_test(i, v)	(atomic_sub_return((i), (v)) == 0)
- #define atomic_dec_and_test(v)		(atomic_dec_return(v) == 0)
- #define atomic_inc_and_test(v)		(atomic_inc_return(v) == 0)
+@@ -1636,7 +1636,8 @@ rcu_torture_cleanup(void)
  
-+#ifndef atomic_add_and_test_wrap
-+#define atomic_add_and_test_wrap(i, v)	(atomic_add_return_wrap((i), (v)) == 0)
-+#endif
-+#ifndef atomic_sub_and_test_wrap
-+#define atomic_sub_and_test_wrap(i, v)	(atomic_sub_return_wrap((i), (v)) == 0)
-+#endif
-+#ifndef atomic_dec_and_test_wrap
-+#define atomic_dec_and_test_wrap(v)		(atomic_dec_return_wrap(v) == 0)
-+#endif
-+#ifndef atomic_inc_and_test_wrap
-+#define atomic_inc_and_test_wrap(v)		(atomic_inc_return_wrap(v) == 0)
-+#endif
-+
- #define atomic_xchg(ptr, v)		(xchg(&(ptr)->counter, (v)))
- #define atomic_cmpxchg(v, old, new)	(cmpxchg(&((v)->counter), (old), (new)))
+ 	rcu_torture_stats_print();  /* -After- the stats thread is stopped! */
  
-@@ -232,4 +279,13 @@ static inline int __atomic_add_unless(atomic_t *v, int a, int u)
- 	return c;
- }
+-	if (atomic_read(&n_rcu_torture_error) || n_rcu_torture_barrier_error)
++	if (atomic_read_wrap(&n_rcu_torture_error) ||
++			n_rcu_torture_barrier_error)
+ 		rcu_torture_print_module_parms(cur_ops, "End of test: FAILURE");
+ 	else if (torture_onoff_failures())
+ 		rcu_torture_print_module_parms(cur_ops,
+@@ -1761,18 +1762,18 @@ rcu_torture_init(void)
  
-+static inline int __atomic_add_unless_wrap(atomic_wrap_t *v, int a, int u)
-+{
-+	int c, old;
-+	c = atomic_read_wrap(v);
-+	while (c != u && (old = atomic_cmpxchg_wrap(v, c, c + a)) != c)
-+		c = old;
-+	return c;
-+}
-+
- #endif /* __ASM_GENERIC_ATOMIC_H */
-diff --git a/include/asm-generic/atomic64.h b/include/asm-generic/atomic64.h
-index dad68bf..0bb63b9 100644
---- a/include/asm-generic/atomic64.h
-+++ b/include/asm-generic/atomic64.h
-@@ -56,10 +56,23 @@ extern int	 atomic64_add_unless(atomic64_t *v, long long a, long long u);
- #define atomic64_inc(v)			atomic64_add(1LL, (v))
- #define atomic64_inc_return(v)		atomic64_add_return(1LL, (v))
- #define atomic64_inc_and_test(v) 	(atomic64_inc_return(v) == 0)
-+#define atomic64_add_and_test(a, v)	(atomic64_add_return((a), (v)) == 0)
- #define atomic64_sub_and_test(a, v)	(atomic64_sub_return((a), (v)) == 0)
- #define atomic64_dec(v)			atomic64_sub(1LL, (v))
- #define atomic64_dec_return(v)		atomic64_sub_return(1LL, (v))
- #define atomic64_dec_and_test(v)	(atomic64_dec_return((v)) == 0)
- #define atomic64_inc_not_zero(v) 	atomic64_add_unless((v), 1LL, 0LL)
+ 	rcu_torture_current = NULL;
+ 	rcu_torture_current_version = 0;
+-	atomic_set(&n_rcu_torture_alloc, 0);
+-	atomic_set(&n_rcu_torture_alloc_fail, 0);
+-	atomic_set(&n_rcu_torture_free, 0);
+-	atomic_set(&n_rcu_torture_mberror, 0);
+-	atomic_set(&n_rcu_torture_error, 0);
++	atomic_set_wrap(&n_rcu_torture_alloc, 0);
++	atomic_set_wrap(&n_rcu_torture_alloc_fail, 0);
++	atomic_set_wrap(&n_rcu_torture_free, 0);
++	atomic_set_wrap(&n_rcu_torture_mberror, 0);
++	atomic_set_wrap(&n_rcu_torture_error, 0);
+ 	n_rcu_torture_barrier_error = 0;
+ 	n_rcu_torture_boost_ktrerror = 0;
+ 	n_rcu_torture_boost_rterror = 0;
+ 	n_rcu_torture_boost_failure = 0;
+ 	n_rcu_torture_boosts = 0;
+ 	for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++)
+-		atomic_set(&rcu_torture_wcount[i], 0);
++		atomic_set_wrap(&rcu_torture_wcount[i], 0);
+ 	for_each_possible_cpu(cpu) {
+ 		for (i = 0; i < RCU_TORTURE_PIPE_LEN + 1; i++) {
+ 			per_cpu(rcu_torture_count, cpu)[i] = 0;
+diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
+index 96c52e4..1e88e5c 100644
+--- a/kernel/rcu/tree.c
++++ b/kernel/rcu/tree.c
+@@ -326,7 +326,7 @@ static void rcu_momentary_dyntick_idle(void)
+ 		 */
+ 		rdtp = this_cpu_ptr(&rcu_dynticks);
+ 		smp_mb__before_atomic(); /* Earlier stuff before QS. */
+-		atomic_add(2, &rdtp->dynticks);  /* QS. */
++		atomic_add_wrap(2, &rdtp->dynticks);  /* QS. */
+ 		smp_mb__after_atomic(); /* Later stuff after QS. */
+ 		break;
+ 	}
+@@ -691,10 +691,10 @@ static void rcu_eqs_enter_common(long long oldval, bool user)
+ 	rcu_prepare_for_idle();
+ 	/* CPUs seeing atomic_inc() must see prior RCU read-side crit sects */
+ 	smp_mb__before_atomic();  /* See above. */
+-	atomic_inc(&rdtp->dynticks);
++	atomic_inc_wrap(&rdtp->dynticks);
+ 	smp_mb__after_atomic();  /* Force ordering with next sojourn. */
+ 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
+-		     atomic_read(&rdtp->dynticks) & 0x1);
++		     atomic_read_wrap(&rdtp->dynticks) & 0x1);
+ 	rcu_dynticks_task_enter();
  
-+#define atomic64_read_wrap(v) atomic64_read(v)
-+#define atomic64_set_wrap(v, i) atomic64_set((v), (i))
-+#define atomic64_add_wrap(a, v) atomic64_add((a), (v))
-+#define atomic64_add_return_wrap(a, v) atomic64_add_return((a), (v))
-+#define atomic64_sub_wrap(a, v) atomic64_sub((a), (v))
-+#define atomic64_inc_wrap(v) atomic64_inc(v)
-+#define atomic64_inc_return_wrap(v) atomic64_inc_return(v)
-+#define atomic64_dec_wrap(v) atomic64_dec(v)
-+#define atomic64_dec_return_wrap(v) atomic64_return_dec(v)
-+#define atomic64_cmpxchg_wrap(v, o, n) atomic64_cmpxchg((v), (o), (n))
-+#define atomic64_xchg_wrap(v, n) atomic64_xchg((v), (n))
-+
- #endif  /*  _ASM_GENERIC_ATOMIC64_H  */
-diff --git a/include/asm-generic/bug.h b/include/asm-generic/bug.h
-index 6f96247..20ce604 100644
---- a/include/asm-generic/bug.h
-+++ b/include/asm-generic/bug.h
-@@ -215,6 +215,13 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
- # define WARN_ON_SMP(x)			({0;})
- #endif
+ 	/*
+@@ -827,11 +827,11 @@ static void rcu_eqs_exit_common(long long oldval, int user)
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+void hardened_atomic_overflow(struct pt_regs *regs);
-+#else
-+static inline void hardened_atomic_overflow(struct pt_regs *regs){
-+}
-+#endif
-+
- #endif /* __ASSEMBLY__ */
+ 	rcu_dynticks_task_exit();
+ 	smp_mb__before_atomic();  /* Force ordering w/previous sojourn. */
+-	atomic_inc(&rdtp->dynticks);
++	atomic_inc_wrap(&rdtp->dynticks);
+ 	/* CPUs seeing atomic_inc() must see later RCU read-side crit sects */
+ 	smp_mb__after_atomic();  /* See above. */
+ 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
+-		     !(atomic_read(&rdtp->dynticks) & 0x1));
++		     !(atomic_read_wrap(&rdtp->dynticks) & 0x1));
+ 	rcu_cleanup_after_idle();
+ 	trace_rcu_dyntick(TPS("End"), oldval, rdtp->dynticks_nesting);
+ 	if (IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
+@@ -977,12 +977,12 @@ void rcu_nmi_enter(void)
+ 	 * to be in the outermost NMI handler that interrupted an RCU-idle
+ 	 * period (observation due to Andy Lutomirski).
+ 	 */
+-	if (!(atomic_read(&rdtp->dynticks) & 0x1)) {
++	if (!(atomic_read_wrap(&rdtp->dynticks) & 0x1)) {
+ 		smp_mb__before_atomic();  /* Force delay from prior write. */
+-		atomic_inc(&rdtp->dynticks);
++		atomic_inc_wrap(&rdtp->dynticks);
+ 		/* atomic_inc() before later RCU read-side crit sects */
+ 		smp_mb__after_atomic();  /* See above. */
+-		WARN_ON_ONCE(!(atomic_read(&rdtp->dynticks) & 0x1));
++		WARN_ON_ONCE(!(atomic_read_wrap(&rdtp->dynticks) & 0x1));
+ 		incby = 1;
+ 	}
+ 	rdtp->dynticks_nmi_nesting += incby;
+@@ -1007,7 +1007,7 @@ void rcu_nmi_exit(void)
+ 	 * to us!)
+ 	 */
+ 	WARN_ON_ONCE(rdtp->dynticks_nmi_nesting <= 0);
+-	WARN_ON_ONCE(!(atomic_read(&rdtp->dynticks) & 0x1));
++	WARN_ON_ONCE(!(atomic_read_wrap(&rdtp->dynticks) & 0x1));
  
- #endif
-diff --git a/include/asm-generic/local.h b/include/asm-generic/local.h
-index 9ceb03b..a98ad1d 100644
---- a/include/asm-generic/local.h
-+++ b/include/asm-generic/local.h
-@@ -23,24 +23,39 @@ typedef struct
- 	atomic_long_t a;
- } local_t;
- 
-+typedef struct {
-+	atomic_long_wrap_t a;
-+} local_wrap_t;
-+
- #define LOCAL_INIT(i)	{ ATOMIC_LONG_INIT(i) }
- 
- #define local_read(l)	atomic_long_read(&(l)->a)
-+#define local_read_wrap(l)	atomic_long_read_wrap(&(l)->a)
- #define local_set(l,i)	atomic_long_set((&(l)->a),(i))
-+#define local_set_wrap(l,i)	atomic_long_set_wrap((&(l)->a),(i))
- #define local_inc(l)	atomic_long_inc(&(l)->a)
-+#define local_inc_wrap(l)	atomic_long_inc_wrap(&(l)->a)
- #define local_dec(l)	atomic_long_dec(&(l)->a)
-+#define local_dec_wrap(l)	atomic_long_dec_wrap(&(l)->a)
- #define local_add(i,l)	atomic_long_add((i),(&(l)->a))
-+#define local_add_wrap(i,l)	atomic_long_add_wrap((i),(&(l)->a))
- #define local_sub(i,l)	atomic_long_sub((i),(&(l)->a))
-+#define local_sub_wrap(i,l)	atomic_long_sub_wrap((i),(&(l)->a))
- 
- #define local_sub_and_test(i, l) atomic_long_sub_and_test((i), (&(l)->a))
-+#define local_sub_and_test_wrap(i, l) atomic_long_sub_and_test_wrap((i), (&(l)->a))
- #define local_dec_and_test(l) atomic_long_dec_and_test(&(l)->a)
- #define local_inc_and_test(l) atomic_long_inc_and_test(&(l)->a)
- #define local_add_negative(i, l) atomic_long_add_negative((i), (&(l)->a))
- #define local_add_return(i, l) atomic_long_add_return((i), (&(l)->a))
-+#define local_add_return_wrap(i, l) atomic_long_add_return_wrap((i), (&(l)->a))
- #define local_sub_return(i, l) atomic_long_sub_return((i), (&(l)->a))
- #define local_inc_return(l) atomic_long_inc_return(&(l)->a)
-+/* verify that below function is needed */
-+#define local_dec_return(l) atomic_long_dec_return(&(l)->a)
- 
- #define local_cmpxchg(l, o, n) atomic_long_cmpxchg((&(l)->a), (o), (n))
-+#define local_cmpxchg_wrap(l, o, n) atomic_long_cmpxchg_wrap((&(l)->a), (o), (n))
- #define local_xchg(l, n) atomic_long_xchg((&(l)->a), (n))
- #define local_add_unless(l, _a, u) atomic_long_add_unless((&(l)->a), (_a), (u))
- #define local_inc_not_zero(l) atomic_long_inc_not_zero(&(l)->a)
-diff --git a/include/linux/atomic.h b/include/linux/atomic.h
-index e71835b..3cb48f0 100644
---- a/include/linux/atomic.h
-+++ b/include/linux/atomic.h
-@@ -89,6 +89,11 @@
- #define  atomic_add_return(...)						\
- 	__atomic_op_fence(atomic_add_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_add_return_wrap
-+#define atomic_add_return_wrap(...)					\
-+	__atomic_op_fence(atomic_add_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_add_return_relaxed */
- 
- /* atomic_inc_return_relaxed */
-@@ -113,6 +118,11 @@
- #define  atomic_inc_return(...)						\
- 	__atomic_op_fence(atomic_inc_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_inc_return_wrap
-+#define  atomic_inc_return_wrap(...)				\
-+	__atomic_op_fence(atomic_inc_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_inc_return_relaxed */
- 
- /* atomic_sub_return_relaxed */
-@@ -137,6 +147,11 @@
- #define  atomic_sub_return(...)						\
- 	__atomic_op_fence(atomic_sub_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_sub_return_wrap
-+#define atomic_sub_return_wrap(...)				\
-+	__atomic_op_fence(atomic_sub_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_sub_return_relaxed */
- 
- /* atomic_dec_return_relaxed */
-@@ -161,6 +176,11 @@
- #define  atomic_dec_return(...)						\
- 	__atomic_op_fence(atomic_dec_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_dec_return_wrap
-+#define  atomic_dec_return_wrap(...)				\
-+	__atomic_op_fence(atomic_dec_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_dec_return_relaxed */
- 
- 
-@@ -397,6 +417,11 @@
- #define  atomic_xchg(...)						\
- 	__atomic_op_fence(atomic_xchg, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_xchg_wrap
-+#define  atomic_xchg_wrap(...)				\
-+	_atomic_op_fence(atomic_xchg_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_xchg_relaxed */
- 
- /* atomic_cmpxchg_relaxed */
-@@ -421,6 +446,11 @@
- #define  atomic_cmpxchg(...)						\
- 	__atomic_op_fence(atomic_cmpxchg, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic_cmpxchg_wrap
-+#define  atomic_cmpxchg_wrap(...)				\
-+	_atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic_cmpxchg_relaxed */
- 
- /* cmpxchg_relaxed */
-@@ -507,6 +537,22 @@ static inline int atomic_add_unless(atomic_t *v, int a, int u)
+ 	/*
+ 	 * If the nesting level is not 1, the CPU wasn't RCU-idle, so
+@@ -1022,9 +1022,9 @@ void rcu_nmi_exit(void)
+ 	rdtp->dynticks_nmi_nesting = 0;
+ 	/* CPUs seeing atomic_inc() must see prior RCU read-side crit sects */
+ 	smp_mb__before_atomic();  /* See above. */
+-	atomic_inc(&rdtp->dynticks);
++	atomic_inc_wrap(&rdtp->dynticks);
+ 	smp_mb__after_atomic();  /* Force delay to next write. */
+-	WARN_ON_ONCE(atomic_read(&rdtp->dynticks) & 0x1);
++	WARN_ON_ONCE(atomic_read_wrap(&rdtp->dynticks) & 0x1);
  }
  
  /**
-+ * atomic_add_unless_wrap - add unless the number is already a given value
-+ * @v: pointer of type atomic_wrap_t
-+ * @a: the amount to add to v...
-+ * @u: ...unless v is equal to u.
-+ *
-+ * Atomically adds @a to @v, so long as @v was not already @u.
-+ * Returns non-zero if @v was not @u, and zero otherwise.
-+ */
-+#ifdef CONFIG_HARDENED_ATOMIC
-+static inline int atomic_add_unless_wrap(atomic_wrap_t *v, int a, int u)
-+{
-+	return __atomic_add_unless_wrap(v, a, u) != u;
-+}
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
-+/**
-  * atomic_inc_not_zero - increment unless the number is zero
-  * @v: pointer of type atomic_t
-  *
-@@ -631,6 +677,43 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #include <asm-generic/atomic64.h>
- #endif
+@@ -1037,7 +1037,7 @@ void rcu_nmi_exit(void)
+  */
+ bool notrace __rcu_is_watching(void)
+ {
+-	return atomic_read(this_cpu_ptr(&rcu_dynticks.dynticks)) & 0x1;
++	return atomic_read_wrap(this_cpu_ptr(&rcu_dynticks.dynticks)) & 0x1;
+ }
  
-+#ifndef CONFIG_HARDENED_ATOMIC
-+#define atomic64_wrap_t atomic64_t
-+#ifndef atomic64_read_wrap
-+#define atomic64_read_wrap(v)		atomic64_read(v)
-+#endif
-+#ifndef atomic64_set_wrap
-+#define atomic64_set_wrap(v, i)		atomic64_set((v), (i))
-+#endif
-+#ifndef atomic64_add_wrap
-+#define atomic64_add_wrap(a, v)		atomic64_add((a), (v))
-+#endif
-+#ifndef atomic64_add_return_wrap
-+#define atomic64_add_return_wrap(a, v)	atomic64_add_return((a), (v))
-+#endif
-+#ifndef atomic64_sub_wrap
-+#define atomic64_sub_wrap(a, v)		atomic64_sub((a), (v))
-+#endif
-+#ifndef atomic64_inc_wrap
-+#define atomic64_inc_wrap(v)		atomic64_inc((v))
-+#endif
-+#ifndef atomic64_inc_return_wrap
-+#define atomic64_inc_return_wrap(v)	atomic64_inc_return((v))
-+#endif
-+#ifndef atomic64_dec_wrap
-+#define atomic64_dec_wrap(v)		atomic64_dec((v))
-+#endif
-+#ifndef atomic64_dec_return_wrap
-+#define atomic64_dec_return_wrap(v)	atomic64_dec_return((v))
-+#endif
-+#ifndef atomic64_cmpxchg_wrap
-+#define atomic64_cmpxchg_wrap(v, o, n) atomic64_cmpxchg((v), (o), (n))
-+#endif
-+#ifndef atomic64_xchg_wrap
-+#define atomic64_xchg_wrap(v, n) atomic64_xchg((v), (n))
-+#endif
-+#endif /* CONFIG_HARDENED_ATOMIC */
-+
- #ifndef atomic64_read_acquire
- #define  atomic64_read_acquire(v)	smp_load_acquire(&(v)->counter)
- #endif
-@@ -661,6 +744,12 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_add_return(...)					\
- 	__atomic_op_fence(atomic64_add_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_add_return_wrap
-+#define  atomic64_add_return_wrap(...)				\
-+	__atomic_op_fence(atomic64_add_return_wrap, __VA_ARGS__)
-+#endif
-+
- #endif /* atomic64_add_return_relaxed */
+ /**
+@@ -1120,7 +1120,8 @@ static int rcu_is_cpu_rrupt_from_idle(void)
+ static int dyntick_save_progress_counter(struct rcu_data *rdp,
+ 					 bool *isidle, unsigned long *maxj)
+ {
+-	rdp->dynticks_snap = atomic_add_return(0, &rdp->dynticks->dynticks);
++	rdp->dynticks_snap = atomic_add_return_wrap(0,
++			&rdp->dynticks->dynticks);
+ 	rcu_sysidle_check_cpu(rdp, isidle, maxj);
+ 	if ((rdp->dynticks_snap & 0x1) == 0) {
+ 		trace_rcu_fqs(rdp->rsp->name, rdp->gpnum, rdp->cpu, TPS("dti"));
+@@ -1145,7 +1146,8 @@ static int rcu_implicit_dynticks_qs(struct rcu_data *rdp,
+ 	int *rcrmp;
+ 	unsigned int snap;
  
- /* atomic64_inc_return_relaxed */
-@@ -685,6 +774,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_inc_return(...)					\
- 	__atomic_op_fence(atomic64_inc_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_inc_return_wrap
-+#define  atomic64_inc_return_wrap(...)				\
-+	__atomic_op_fence(atomic64_inc_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic64_inc_return_relaxed */
+-	curr = (unsigned int)atomic_add_return(0, &rdp->dynticks->dynticks);
++	curr = (unsigned int)atomic_add_return_wrap(0,
++			&rdp->dynticks->dynticks);
+ 	snap = (unsigned int)rdp->dynticks_snap;
  
+ 	/*
+@@ -3745,7 +3747,7 @@ rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
+ 	rdp->grpmask = leaf_node_cpu_bit(rdp->mynode, cpu);
+ 	rdp->dynticks = &per_cpu(rcu_dynticks, cpu);
+ 	WARN_ON_ONCE(rdp->dynticks->dynticks_nesting != DYNTICK_TASK_EXIT_IDLE);
+-	WARN_ON_ONCE(atomic_read(&rdp->dynticks->dynticks) != 1);
++	WARN_ON_ONCE(atomic_read_wrap(&rdp->dynticks->dynticks) != 1);
+ 	rdp->cpu = cpu;
+ 	rdp->rsp = rsp;
+ 	rcu_boot_init_nocb_percpu_data(rdp);
+@@ -3775,8 +3777,8 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
+ 		init_callback_list(rdp);  /* Re-enable callbacks on this CPU. */
+ 	rdp->dynticks->dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
+ 	rcu_sysidle_init_percpu_data(rdp->dynticks);
+-	atomic_set(&rdp->dynticks->dynticks,
+-		   (atomic_read(&rdp->dynticks->dynticks) & ~0x1) + 1);
++	atomic_set_wrap(&rdp->dynticks->dynticks,
++		   (atomic_read_wrap(&rdp->dynticks->dynticks) & ~0x1) + 1);
+ 	raw_spin_unlock_rcu_node(rnp);		/* irqs remain disabled. */
  
-@@ -710,6 +804,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_sub_return(...)					\
- 	__atomic_op_fence(atomic64_sub_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_sub_return_wrap
-+#define  atomic64_sub_return_wrap(...)				\
-+	__atomic_op_fence(atomic64_sub_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic64_sub_return_relaxed */
+ 	/*
+diff --git a/kernel/rcu/tree.h b/kernel/rcu/tree.h
+index e99a523..1898a05 100644
+--- a/kernel/rcu/tree.h
++++ b/kernel/rcu/tree.h
+@@ -111,11 +111,13 @@ struct rcu_dynticks {
+ 	long long dynticks_nesting; /* Track irq/process nesting level. */
+ 				    /* Process level is worth LLONG_MAX/2. */
+ 	int dynticks_nmi_nesting;   /* Track NMI nesting level. */
+-	atomic_t dynticks;	    /* Even value for idle, else odd. */
++	atomic_wrap_t dynticks;
++				    /* Even value for idle, else odd. */
+ #ifdef CONFIG_NO_HZ_FULL_SYSIDLE
+ 	long long dynticks_idle_nesting;
+ 				    /* irq/process nesting level from idle. */
+-	atomic_t dynticks_idle;	    /* Even value for idle, else odd. */
++	atomic_wrap_t dynticks_idle;
++				    /* Even value for idle, else odd. */
+ 				    /*  "Idle" excludes userspace execution. */
+ 	unsigned long dynticks_idle_jiffies;
+ 				    /* End of last non-NMI non-idle period. */
+@@ -520,8 +522,8 @@ struct rcu_state {
+ 	struct mutex exp_mutex;			/* Serialize expedited GP. */
+ 	struct mutex exp_wake_mutex;		/* Serialize wakeup. */
+ 	unsigned long expedited_sequence;	/* Take a ticket. */
+-	atomic_long_t expedited_normal;		/* # fallbacks to normal. */
+-	atomic_t expedited_need_qs;		/* # CPUs left to check in. */
++	atomic_long_wrap_t expedited_normal;	/* # fallbacks to normal. */
++	atomic_wrap_t expedited_need_qs;	/* # CPUs left to check in. */
+ 	struct swait_queue_head expedited_wq;	/* Wait for check-ins. */
+ 	int ncpus_snap;				/* # CPUs seen last time. */
  
- /* atomic64_dec_return_relaxed */
-@@ -734,6 +833,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_dec_return(...)					\
- 	__atomic_op_fence(atomic64_dec_return, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_dec_return_wrap
-+#define  atomic64_dec_return_wrap(...)				\
-+	__atomic_op_fence(atomic64_dec_return_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic64_dec_return_relaxed */
+diff --git a/kernel/rcu/tree_exp.h b/kernel/rcu/tree_exp.h
+index 24343eb..f1a39a8 100644
+--- a/kernel/rcu/tree_exp.h
++++ b/kernel/rcu/tree_exp.h
+@@ -359,7 +359,7 @@ static void sync_rcu_exp_select_cpus(struct rcu_state *rsp,
+ 			struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
  
+ 			if (raw_smp_processor_id() == cpu ||
+-			    !(atomic_add_return(0, &rdtp->dynticks) & 0x1) ||
++			    !(atomic_add_return_wrap(0, &rdtp->dynticks) & 0x1) ||
+ 			    !(rnp->qsmaskinitnext & rdp->grpmask))
+ 				mask_ofl_test |= rdp->grpmask;
+ 		}
+diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
+index 85c5a88..dbdf147 100644
+--- a/kernel/rcu/tree_plugin.h
++++ b/kernel/rcu/tree_plugin.h
+@@ -1643,7 +1643,7 @@ static void print_cpu_stall_info(struct rcu_state *rsp, int cpu)
+ 	       "o."[!!(rdp->grpmask & rdp->mynode->qsmaskinit)],
+ 	       "N."[!!(rdp->grpmask & rdp->mynode->qsmaskinitnext)],
+ 	       ticks_value, ticks_title,
+-	       atomic_read(&rdtp->dynticks) & 0xfff,
++	       atomic_read_wrap(&rdtp->dynticks) & 0xfff,
+ 	       rdtp->dynticks_nesting, rdtp->dynticks_nmi_nesting,
+ 	       rdp->softirq_snap, kstat_softirqs_cpu(RCU_SOFTIRQ, cpu),
+ 	       READ_ONCE(rsp->n_force_qs) - rsp->n_force_qs_gpstart,
+@@ -2534,9 +2534,9 @@ static void rcu_sysidle_enter(int irq)
+ 	j = jiffies;
+ 	WRITE_ONCE(rdtp->dynticks_idle_jiffies, j);
+ 	smp_mb__before_atomic();
+-	atomic_inc(&rdtp->dynticks_idle);
++	atomic_inc_wrap(&rdtp->dynticks_idle);
+ 	smp_mb__after_atomic();
+-	WARN_ON_ONCE(atomic_read(&rdtp->dynticks_idle) & 0x1);
++	WARN_ON_ONCE(atomic_read_wrap(&rdtp->dynticks_idle) & 0x1);
+ }
  
-@@ -970,6 +1074,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_xchg(...)						\
- 	__atomic_op_fence(atomic64_xchg, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_xchg_wrap
-+#define  atomic64_xchg_wrap(...)				\
-+	__atomic_op_fence(atomic64_xchg_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic64_xchg_relaxed */
+ /*
+@@ -2607,9 +2607,9 @@ static void rcu_sysidle_exit(int irq)
  
- /* atomic64_cmpxchg_relaxed */
-@@ -994,6 +1103,11 @@ static inline int atomic_dec_if_positive(atomic_t *v)
- #define  atomic64_cmpxchg(...)						\
- 	__atomic_op_fence(atomic64_cmpxchg, __VA_ARGS__)
- #endif
-+
-+#ifndef atomic64_cmpxchg_wrap
-+#define  atomic64_cmpxchg_wrap(...)					\
-+	__atomic_op_fence(atomic64_cmpxchg_wrap, __VA_ARGS__)
-+#endif
- #endif /* atomic64_cmpxchg_relaxed */
+ 	/* Record end of idle period. */
+ 	smp_mb__before_atomic();
+-	atomic_inc(&rdtp->dynticks_idle);
++	atomic_inc_wrap(&rdtp->dynticks_idle);
+ 	smp_mb__after_atomic();
+-	WARN_ON_ONCE(!(atomic_read(&rdtp->dynticks_idle) & 0x1));
++	WARN_ON_ONCE(!(atomic_read_wrap(&rdtp->dynticks_idle) & 0x1));
  
- #ifndef atomic64_andnot
-diff --git a/include/linux/types.h b/include/linux/types.h
-index baf7183..b47a7f8 100644
---- a/include/linux/types.h
-+++ b/include/linux/types.h
-@@ -175,10 +175,27 @@ typedef struct {
- 	int counter;
- } atomic_t;
+ 	/*
+ 	 * If we are the timekeeping CPU, we are permitted to be non-idle
+@@ -2655,7 +2655,7 @@ static void rcu_sysidle_check_cpu(struct rcu_data *rdp, bool *isidle,
+ 	WARN_ON_ONCE(smp_processor_id() != tick_do_timer_cpu);
  
-+#ifdef CONFIG_HARDENED_ATOMIC
-+typedef struct {
-+	int counter;
-+} atomic_wrap_t;
-+#else
-+typedef atomic_t atomic_wrap_t;
-+#endif
-+
- #ifdef CONFIG_64BIT
- typedef struct {
- 	long counter;
- } atomic64_t;
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+typedef struct {
-+	long counter;
-+} atomic64_wrap_t;
-+#else
-+typedef atomic64_t atomic64_wrap_t;
-+#endif
-+
- #endif
+ 	/* Pick up current idle and NMI-nesting counter and check. */
+-	cur = atomic_read(&rdtp->dynticks_idle);
++	cur = atomic_read_wrap(&rdtp->dynticks_idle);
+ 	if (cur & 0x1) {
+ 		*isidle = false; /* We are not idle! */
+ 		return;
+diff --git a/kernel/rcu/tree_trace.c b/kernel/rcu/tree_trace.c
+index b1f2897..be80cfc 100644
+--- a/kernel/rcu/tree_trace.c
++++ b/kernel/rcu/tree_trace.c
+@@ -124,7 +124,7 @@ static void print_one_rcu_data(struct seq_file *m, struct rcu_data *rdp)
+ 		   rdp->rcu_qs_ctr_snap == per_cpu(rcu_qs_ctr, rdp->cpu),
+ 		   rdp->core_needs_qs);
+ 	seq_printf(m, " dt=%d/%llx/%d df=%lu",
+-		   atomic_read(&rdp->dynticks->dynticks),
++		   atomic_read_wrap(&rdp->dynticks->dynticks),
+ 		   rdp->dynticks->dynticks_nesting,
+ 		   rdp->dynticks->dynticks_nmi_nesting,
+ 		   rdp->dynticks_fqs);
+@@ -189,15 +189,15 @@ static int show_rcuexp(struct seq_file *m, void *v)
  
- struct list_head {
-diff --git a/kernel/panic.c b/kernel/panic.c
-index e6480e2..cb1d6db 100644
---- a/kernel/panic.c
-+++ b/kernel/panic.c
-@@ -616,3 +616,14 @@ static int __init oops_setup(char *s)
+ 	for_each_possible_cpu(cpu) {
+ 		rdp = per_cpu_ptr(rsp->rda, cpu);
+-		s0 += atomic_long_read(&rdp->exp_workdone0);
+-		s1 += atomic_long_read(&rdp->exp_workdone1);
+-		s2 += atomic_long_read(&rdp->exp_workdone2);
+-		s3 += atomic_long_read(&rdp->exp_workdone3);
++		s0 += atomic_long_read_wrap(&rdp->exp_workdone0);
++		s1 += atomic_long_read_wrap(&rdp->exp_workdone1);
++		s2 += atomic_long_read_wrap(&rdp->exp_workdone2);
++		s3 += atomic_long_read_wrap(&rdp->exp_workdone3);
+ 	}
+ 	seq_printf(m, "s=%lu wd0=%lu wd1=%lu wd2=%lu wd3=%lu n=%lu enq=%d sc=%lu\n",
+ 		   rsp->expedited_sequence, s0, s1, s2, s3,
+-		   atomic_long_read(&rsp->expedited_normal),
+-		   atomic_read(&rsp->expedited_need_qs),
++		   atomic_long_read_wrap(&rsp->expedited_normal),
++		   atomic_read_wrap(&rsp->expedited_need_qs),
+ 		   rsp->expedited_sequence / 2);
  	return 0;
  }
- early_param("oops", oops_setup);
-+
-+#ifdef CONFIG_HARDENED_ATOMIC
-+void hardened_atomic_overflow(struct pt_regs *regs)
-+{
-+	pr_emerg(KERN_EMERG "HARDENED_ATOMIC: overflow detected in: %s:%d, uid/euid: %u/%u\n",
-+		current->comm, task_pid_nr(current),
-+		from_kuid_munged(&init_user_ns, current_uid()),
-+		from_kuid_munged(&init_user_ns, current_euid()));
-+	BUG();
-+}
-+#endif
-diff --git a/security/Kconfig b/security/Kconfig
-index 118f454..abcf1cc 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -158,6 +158,25 @@ config HARDENED_USERCOPY_PAGESPAN
- 	  been removed. This config is intended to be used only while
- 	  trying to find such users.
+diff --git a/kernel/sched/auto_group.c b/kernel/sched/auto_group.c
+index a5d966c..5bd802b 100644
+--- a/kernel/sched/auto_group.c
++++ b/kernel/sched/auto_group.c
+@@ -9,7 +9,7 @@
  
-+config HAVE_ARCH_HARDENED_ATOMIC
-+	bool
-+	help
-+	  The architecture supports CONFIG_HARDENED_ATOMIC by
-+	  providing trapping on atomic_t wraps, with a call to
-+	  hardened_atomic_overflow().
-+
-+config HARDENED_ATOMIC
-+	bool "Prevent reference counter overflow in atomic_t"
-+	depends on HAVE_ARCH_HARDENED_ATOMIC
-+	select BUG
-+	help
-+	  This option catches counter wrapping in atomic_t, which
-+	  can turn refcounting overflow bugs into resource
-+	  consumption bugs instead of exploitable use-after-free
-+	  flaws. This feature has a negligible
-+	  performance impact and therefore recommended to be turned
-+	  on for security reasons.
-+
- source security/selinux/Kconfig
- source security/smack/Kconfig
- source security/tomoyo/Kconfig
+ unsigned int __read_mostly sysctl_sched_autogroup_enabled = 1;
+ static struct autogroup autogroup_default;
+-static atomic_t autogroup_seq_nr;
++static atomic_wrap_t autogroup_seq_nr;
+ 
+ void __init autogroup_init(struct task_struct *init_task)
+ {
+@@ -77,7 +77,7 @@ static inline struct autogroup *autogroup_create(void)
+ 
+ 	kref_init(&ag->kref);
+ 	init_rwsem(&ag->lock);
+-	ag->id = atomic_inc_return(&autogroup_seq_nr);
++	ag->id = atomic_inc_return_wrap(&autogroup_seq_nr);
+ 	ag->tg = tg;
+ #ifdef CONFIG_RT_GROUP_SCHED
+ 	/*
+diff --git a/kernel/time/timer_stats.c b/kernel/time/timer_stats.c
+index 087204c..5db1e66 100644
+--- a/kernel/time/timer_stats.c
++++ b/kernel/time/timer_stats.c
+@@ -116,7 +116,7 @@ static ktime_t time_start, time_stop;
+ static unsigned long nr_entries;
+ static struct entry entries[MAX_ENTRIES];
+ 
+-static atomic_t overflow_count;
++static atomic_wrap_t overflow_count;
+ 
+ /*
+  * The entries are in a hash-table, for fast lookup:
+@@ -140,7 +140,7 @@ static void reset_entries(void)
+ 	nr_entries = 0;
+ 	memset(entries, 0, sizeof(entries));
+ 	memset(tstat_hash_table, 0, sizeof(tstat_hash_table));
+-	atomic_set(&overflow_count, 0);
++	atomic_set_wrap(&overflow_count, 0);
+ }
+ 
+ static struct entry *alloc_entry(void)
+@@ -261,7 +261,7 @@ void timer_stats_update_stats(void *timer, pid_t pid, void *startf,
+ 	if (likely(entry))
+ 		entry->count++;
+ 	else
+-		atomic_inc(&overflow_count);
++		atomic_inc_wrap(&overflow_count);
+ 
+  out_unlock:
+ 	raw_spin_unlock_irqrestore(lock, flags);
+@@ -300,8 +300,9 @@ static int tstats_show(struct seq_file *m, void *v)
+ 
+ 	seq_puts(m, "Timer Stats Version: v0.3\n");
+ 	seq_printf(m, "Sample period: %ld.%03ld s\n", (long)period.tv_sec, ms);
+-	if (atomic_read(&overflow_count))
+-		seq_printf(m, "Overflow: %d entries\n", atomic_read(&overflow_count));
++	if (atomic_read_wrap(&overflow_count))
++		seq_printf(m, "Overflow: %d entries\n",
++				atomic_read_wrap(&overflow_count));
+ 	seq_printf(m, "Collection: %s\n", timer_stats_active ? "active" : "inactive");
+ 
+ 	for (i = 0; i < nr_entries; i++) {
+diff --git a/kernel/trace/blktrace.c b/kernel/trace/blktrace.c
+index dbafc5d..235cabf 100644
+--- a/kernel/trace/blktrace.c
++++ b/kernel/trace/blktrace.c
+@@ -334,7 +334,7 @@ static ssize_t blk_dropped_read(struct file *filp, char __user *buffer,
+ 	struct blk_trace *bt = filp->private_data;
+ 	char buf[16];
+ 
+-	snprintf(buf, sizeof(buf), "%u\n", atomic_read(&bt->dropped));
++	snprintf(buf, sizeof(buf), "%u\n", atomic_read_wrap(&bt->dropped));
+ 
+ 	return simple_read_from_buffer(buffer, count, ppos, buf, strlen(buf));
+ }
+@@ -386,7 +386,7 @@ static int blk_subbuf_start_callback(struct rchan_buf *buf, void *subbuf,
+ 		return 1;
+ 
+ 	bt = buf->chan->private_data;
+-	atomic_inc(&bt->dropped);
++	atomic_inc_wrap(&bt->dropped);
+ 	return 0;
+ }
+ 
+@@ -485,7 +485,7 @@ int do_blk_trace_setup(struct request_queue *q, char *name, dev_t dev,
+ 
+ 	bt->dir = dir;
+ 	bt->dev = dev;
+-	atomic_set(&bt->dropped, 0);
++	atomic_set_wrap(&bt->dropped, 0);
+ 	INIT_LIST_HEAD(&bt->running_list);
+ 
+ 	ret = -EIO;
+diff --git a/kernel/trace/ftrace.c b/kernel/trace/ftrace.c
+index 2050a765..362d7b5 100644
+--- a/kernel/trace/ftrace.c
++++ b/kernel/trace/ftrace.c
+@@ -5730,7 +5730,7 @@ static int alloc_retstack_tasklist(struct ftrace_ret_stack **ret_stack_list)
+ 
+ 		if (t->ret_stack == NULL) {
+ 			atomic_set(&t->tracing_graph_pause, 0);
+-			atomic_set(&t->trace_overrun, 0);
++			atomic_set_wrap(&t->trace_overrun, 0);
+ 			t->curr_ret_stack = -1;
+ 			/* Make sure the tasks see the -1 first: */
+ 			smp_wmb();
+@@ -5953,7 +5953,7 @@ static void
+ graph_init_task(struct task_struct *t, struct ftrace_ret_stack *ret_stack)
+ {
+ 	atomic_set(&t->tracing_graph_pause, 0);
+-	atomic_set(&t->trace_overrun, 0);
++	atomic_set_wrap(&t->trace_overrun, 0);
+ 	t->ftrace_timestamp = 0;
+ 	/* make curr_ret_stack visible before we add the ret_stack */
+ 	smp_wmb();
+diff --git a/kernel/trace/ring_buffer.c b/kernel/trace/ring_buffer.c
+index 9c14373..88638d6 100644
+--- a/kernel/trace/ring_buffer.c
++++ b/kernel/trace/ring_buffer.c
+@@ -296,9 +296,9 @@ struct buffer_data_page {
+  */
+ struct buffer_page {
+ 	struct list_head list;		/* list of buffer pages */
+-	local_t		 write;		/* index for next write */
++	local_wrap_t	 write;		/* index for next write */
+ 	unsigned	 read;		/* index for next read */
+-	local_t		 entries;	/* entries on this page */
++	local_wrap_t	 entries;	/* entries on this page */
+ 	unsigned long	 real_end;	/* real end of data */
+ 	struct buffer_data_page *page;	/* Actual data page */
+ };
+@@ -448,11 +448,11 @@ struct ring_buffer_per_cpu {
+ 	unsigned long			last_overrun;
+ 	local_t				entries_bytes;
+ 	local_t				entries;
+-	local_t				overrun;
+-	local_t				commit_overrun;
+-	local_t				dropped_events;
++	local_wrap_t			overrun;
++	local_wrap_t			commit_overrun;
++	local_wrap_t			dropped_events;
+ 	local_t				committing;
+-	local_t				commits;
++	local_wrap_t			commits;
+ 	unsigned long			read;
+ 	unsigned long			read_bytes;
+ 	u64				write_stamp;
+@@ -1018,8 +1018,9 @@ static void rb_tail_page_update(struct ring_buffer_per_cpu *cpu_buffer,
+ 	 *
+ 	 * We add a counter to the write field to denote this.
+ 	 */
+-	old_write = local_add_return(RB_WRITE_INTCNT, &next_page->write);
+-	old_entries = local_add_return(RB_WRITE_INTCNT, &next_page->entries);
++	old_write = local_add_return_wrap(RB_WRITE_INTCNT, &next_page->write);
++	old_entries = local_add_return_wrap(RB_WRITE_INTCNT,
++			&next_page->entries);
+ 
+ 	/*
+ 	 * Just make sure we have seen our old_write and synchronize
+@@ -1047,8 +1048,9 @@ static void rb_tail_page_update(struct ring_buffer_per_cpu *cpu_buffer,
+ 		 * cmpxchg to only update if an interrupt did not already
+ 		 * do it for us. If the cmpxchg fails, we don't care.
+ 		 */
+-		(void)local_cmpxchg(&next_page->write, old_write, val);
+-		(void)local_cmpxchg(&next_page->entries, old_entries, eval);
++		(void)local_cmpxchg_wrap(&next_page->write, old_write, val);
++		(void)local_cmpxchg_wrap(&next_page->entries,
++				old_entries, eval);
+ 
+ 		/*
+ 		 * No need to worry about races with clearing out the commit.
+@@ -1412,12 +1414,12 @@ static void rb_reset_cpu(struct ring_buffer_per_cpu *cpu_buffer);
+ 
+ static inline unsigned long rb_page_entries(struct buffer_page *bpage)
+ {
+-	return local_read(&bpage->entries) & RB_WRITE_MASK;
++	return local_read_wrap(&bpage->entries) & RB_WRITE_MASK;
+ }
+ 
+ static inline unsigned long rb_page_write(struct buffer_page *bpage)
+ {
+-	return local_read(&bpage->write) & RB_WRITE_MASK;
++	return local_read_wrap(&bpage->write) & RB_WRITE_MASK;
+ }
+ 
+ static int
+@@ -1512,7 +1514,7 @@ rb_remove_pages(struct ring_buffer_per_cpu *cpu_buffer, unsigned long nr_pages)
+ 			 * bytes consumed in ring buffer from here.
+ 			 * Increment overrun to account for the lost events.
+ 			 */
+-			local_add(page_entries, &cpu_buffer->overrun);
++			local_add_wrap(page_entries, &cpu_buffer->overrun);
+ 			local_sub(BUF_PAGE_SIZE, &cpu_buffer->entries_bytes);
+ 		}
+ 
+@@ -1942,7 +1944,7 @@ rb_handle_head_page(struct ring_buffer_per_cpu *cpu_buffer,
+ 		 * it is our responsibility to update
+ 		 * the counters.
+ 		 */
+-		local_add(entries, &cpu_buffer->overrun);
++		local_add_wrap(entries, &cpu_buffer->overrun);
+ 		local_sub(BUF_PAGE_SIZE, &cpu_buffer->entries_bytes);
+ 
+ 		/*
+@@ -2079,7 +2081,7 @@ rb_reset_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 		if (tail == BUF_PAGE_SIZE)
+ 			tail_page->real_end = 0;
+ 
+-		local_sub(length, &tail_page->write);
++		local_sub_wrap(length, &tail_page->write);
+ 		return;
+ 	}
+ 
+@@ -2114,7 +2116,7 @@ rb_reset_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 		rb_event_set_padding(event);
+ 
+ 		/* Set the write back to the previous setting */
+-		local_sub(length, &tail_page->write);
++		local_sub_wrap(length, &tail_page->write);
+ 		return;
+ 	}
+ 
+@@ -2126,7 +2128,7 @@ rb_reset_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 
+ 	/* Set write to end of buffer */
+ 	length = (tail + length) - BUF_PAGE_SIZE;
+-	local_sub(length, &tail_page->write);
++	local_sub_wrap(length, &tail_page->write);
+ }
+ 
+ static inline void rb_end_commit(struct ring_buffer_per_cpu *cpu_buffer);
+@@ -2154,7 +2156,7 @@ rb_move_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 	 * about it.
+ 	 */
+ 	if (unlikely(next_page == commit_page)) {
+-		local_inc(&cpu_buffer->commit_overrun);
++		local_inc_wrap(&cpu_buffer->commit_overrun);
+ 		goto out_reset;
+ 	}
+ 
+@@ -2184,7 +2186,7 @@ rb_move_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 			 * this is easy, just stop here.
+ 			 */
+ 			if (!(buffer->flags & RB_FL_OVERWRITE)) {
+-				local_inc(&cpu_buffer->dropped_events);
++				local_inc_wrap(&cpu_buffer->dropped_events);
+ 				goto out_reset;
+ 			}
+ 
+@@ -2210,7 +2212,7 @@ rb_move_tail(struct ring_buffer_per_cpu *cpu_buffer,
+ 				      cpu_buffer->tail_page) &&
+ 				     (cpu_buffer->commit_page ==
+ 				      cpu_buffer->reader_page))) {
+-				local_inc(&cpu_buffer->commit_overrun);
++				local_inc_wrap(&cpu_buffer->commit_overrun);
+ 				goto out_reset;
+ 			}
+ 		}
+@@ -2358,7 +2360,7 @@ rb_try_to_discard(struct ring_buffer_per_cpu *cpu_buffer,
+ 
+ 	if (bpage->page == (void *)addr && rb_page_write(bpage) == old_index) {
+ 		unsigned long write_mask =
+-			local_read(&bpage->write) & ~RB_WRITE_MASK;
++			local_read_wrap(&bpage->write) & ~RB_WRITE_MASK;
+ 		unsigned long event_length = rb_event_length(event);
+ 		/*
+ 		 * This is on the tail page. It is possible that
+@@ -2368,7 +2370,7 @@ rb_try_to_discard(struct ring_buffer_per_cpu *cpu_buffer,
+ 		 */
+ 		old_index += write_mask;
+ 		new_index += write_mask;
+-		index = local_cmpxchg(&bpage->write, old_index, new_index);
++		index = local_cmpxchg_wrap(&bpage->write, old_index, new_index);
+ 		if (index == old_index) {
+ 			/* update counters */
+ 			local_sub(event_length, &cpu_buffer->entries_bytes);
+@@ -2383,7 +2385,7 @@ rb_try_to_discard(struct ring_buffer_per_cpu *cpu_buffer,
+ static void rb_start_commit(struct ring_buffer_per_cpu *cpu_buffer)
+ {
+ 	local_inc(&cpu_buffer->committing);
+-	local_inc(&cpu_buffer->commits);
++	local_inc_wrap(&cpu_buffer->commits);
+ }
+ 
+ static void
+@@ -2450,7 +2452,7 @@ static inline void rb_end_commit(struct ring_buffer_per_cpu *cpu_buffer)
+ 		return;
+ 
+  again:
+-	commits = local_read(&cpu_buffer->commits);
++	commits = local_read_wrap(&cpu_buffer->commits);
+ 	/* synchronize with interrupts */
+ 	barrier();
+ 	if (local_read(&cpu_buffer->committing) == 1)
+@@ -2466,7 +2468,7 @@ static inline void rb_end_commit(struct ring_buffer_per_cpu *cpu_buffer)
+ 	 * updating of the commit page and the clearing of the
+ 	 * committing counter.
+ 	 */
+-	if (unlikely(local_read(&cpu_buffer->commits) != commits) &&
++	if (unlikely(local_read_wrap(&cpu_buffer->commits) != commits) &&
+ 	    !local_read(&cpu_buffer->committing)) {
+ 		local_inc(&cpu_buffer->committing);
+ 		goto again;
+@@ -2695,7 +2697,7 @@ __rb_reserve_next(struct ring_buffer_per_cpu *cpu_buffer,
+ 
+ 	/* Don't let the compiler play games with cpu_buffer->tail_page */
+ 	tail_page = info->tail_page = READ_ONCE(cpu_buffer->tail_page);
+-	write = local_add_return(info->length, &tail_page->write);
++	write = local_add_return_wrap(info->length, &tail_page->write);
+ 
+ 	/* set write to only the index of the write */
+ 	write &= RB_WRITE_MASK;
+@@ -2718,7 +2720,7 @@ __rb_reserve_next(struct ring_buffer_per_cpu *cpu_buffer,
+ 	kmemcheck_annotate_bitfield(event, bitfield);
+ 	rb_update_event(cpu_buffer, event, info);
+ 
+-	local_inc(&tail_page->entries);
++	local_inc_wrap(&tail_page->entries);
+ 
+ 	/*
+ 	 * If this is the first commit on the page, then update
+@@ -2755,7 +2757,7 @@ rb_reserve_next_event(struct ring_buffer *buffer,
+ 	barrier();
+ 	if (unlikely(ACCESS_ONCE(cpu_buffer->buffer) != buffer)) {
+ 		local_dec(&cpu_buffer->committing);
+-		local_dec(&cpu_buffer->commits);
++		local_dec_wrap(&cpu_buffer->commits);
+ 		return NULL;
+ 	}
+ #endif
+@@ -2884,7 +2886,7 @@ rb_decrement_entry(struct ring_buffer_per_cpu *cpu_buffer,
+ 
+ 	/* Do the likely case first */
+ 	if (likely(bpage->page == (void *)addr)) {
+-		local_dec(&bpage->entries);
++		local_dec_wrap(&bpage->entries);
+ 		return;
+ 	}
+ 
+@@ -2896,7 +2898,7 @@ rb_decrement_entry(struct ring_buffer_per_cpu *cpu_buffer,
+ 	start = bpage;
+ 	do {
+ 		if (bpage->page == (void *)addr) {
+-			local_dec(&bpage->entries);
++			local_dec_wrap(&bpage->entries);
+ 			return;
+ 		}
+ 		rb_inc_page(cpu_buffer, &bpage);
+@@ -3184,7 +3186,7 @@ static inline unsigned long
+ rb_num_of_entries(struct ring_buffer_per_cpu *cpu_buffer)
+ {
+ 	return local_read(&cpu_buffer->entries) -
+-		(local_read(&cpu_buffer->overrun) + cpu_buffer->read);
++		(local_read_wrap(&cpu_buffer->overrun) + cpu_buffer->read);
+ }
+ 
+ /**
+@@ -3273,7 +3275,7 @@ unsigned long ring_buffer_overrun_cpu(struct ring_buffer *buffer, int cpu)
+ 		return 0;
+ 
+ 	cpu_buffer = buffer->buffers[cpu];
+-	ret = local_read(&cpu_buffer->overrun);
++	ret = local_read_wrap(&cpu_buffer->overrun);
+ 
+ 	return ret;
+ }
+@@ -3296,7 +3298,7 @@ ring_buffer_commit_overrun_cpu(struct ring_buffer *buffer, int cpu)
+ 		return 0;
+ 
+ 	cpu_buffer = buffer->buffers[cpu];
+-	ret = local_read(&cpu_buffer->commit_overrun);
++	ret = local_read_wrap(&cpu_buffer->commit_overrun);
+ 
+ 	return ret;
+ }
+@@ -3318,7 +3320,7 @@ ring_buffer_dropped_events_cpu(struct ring_buffer *buffer, int cpu)
+ 		return 0;
+ 
+ 	cpu_buffer = buffer->buffers[cpu];
+-	ret = local_read(&cpu_buffer->dropped_events);
++	ret = local_read_wrap(&cpu_buffer->dropped_events);
+ 
+ 	return ret;
+ }
+@@ -3381,7 +3383,7 @@ unsigned long ring_buffer_overruns(struct ring_buffer *buffer)
+ 	/* if you care about this being correct, lock the buffer */
+ 	for_each_buffer_cpu(buffer, cpu) {
+ 		cpu_buffer = buffer->buffers[cpu];
+-		overruns += local_read(&cpu_buffer->overrun);
++		overruns += local_read_wrap(&cpu_buffer->overrun);
+ 	}
+ 
+ 	return overruns;
+@@ -3552,8 +3554,8 @@ rb_get_reader_page(struct ring_buffer_per_cpu *cpu_buffer)
+ 	/*
+ 	 * Reset the reader page to size zero.
+ 	 */
+-	local_set(&cpu_buffer->reader_page->write, 0);
+-	local_set(&cpu_buffer->reader_page->entries, 0);
++	local_set_wrap(&cpu_buffer->reader_page->write, 0);
++	local_set_wrap(&cpu_buffer->reader_page->entries, 0);
+ 	local_set(&cpu_buffer->reader_page->page->commit, 0);
+ 	cpu_buffer->reader_page->real_end = 0;
+ 
+@@ -3587,7 +3589,7 @@ rb_get_reader_page(struct ring_buffer_per_cpu *cpu_buffer)
+ 	 * want to compare with the last_overrun.
+ 	 */
+ 	smp_mb();
+-	overwrite = local_read(&(cpu_buffer->overrun));
++	overwrite = local_read_wrap(&(cpu_buffer->overrun));
+ 
+ 	/*
+ 	 * Here's the tricky part.
+@@ -4173,8 +4175,8 @@ rb_reset_cpu(struct ring_buffer_per_cpu *cpu_buffer)
+ 
+ 	cpu_buffer->head_page
+ 		= list_entry(cpu_buffer->pages, struct buffer_page, list);
+-	local_set(&cpu_buffer->head_page->write, 0);
+-	local_set(&cpu_buffer->head_page->entries, 0);
++	local_set_wrap(&cpu_buffer->head_page->write, 0);
++	local_set_wrap(&cpu_buffer->head_page->entries, 0);
+ 	local_set(&cpu_buffer->head_page->page->commit, 0);
+ 
+ 	cpu_buffer->head_page->read = 0;
+@@ -4184,18 +4186,18 @@ rb_reset_cpu(struct ring_buffer_per_cpu *cpu_buffer)
+ 
+ 	INIT_LIST_HEAD(&cpu_buffer->reader_page->list);
+ 	INIT_LIST_HEAD(&cpu_buffer->new_pages);
+-	local_set(&cpu_buffer->reader_page->write, 0);
+-	local_set(&cpu_buffer->reader_page->entries, 0);
++	local_set_wrap(&cpu_buffer->reader_page->write, 0);
++	local_set_wrap(&cpu_buffer->reader_page->entries, 0);
+ 	local_set(&cpu_buffer->reader_page->page->commit, 0);
+ 	cpu_buffer->reader_page->read = 0;
+ 
+ 	local_set(&cpu_buffer->entries_bytes, 0);
+-	local_set(&cpu_buffer->overrun, 0);
+-	local_set(&cpu_buffer->commit_overrun, 0);
+-	local_set(&cpu_buffer->dropped_events, 0);
++	local_set_wrap(&cpu_buffer->overrun, 0);
++	local_set_wrap(&cpu_buffer->commit_overrun, 0);
++	local_set_wrap(&cpu_buffer->dropped_events, 0);
+ 	local_set(&cpu_buffer->entries, 0);
+ 	local_set(&cpu_buffer->committing, 0);
+-	local_set(&cpu_buffer->commits, 0);
++	local_set_wrap(&cpu_buffer->commits, 0);
+ 	cpu_buffer->read = 0;
+ 	cpu_buffer->read_bytes = 0;
+ 
+@@ -4585,8 +4587,8 @@ int ring_buffer_read_page(struct ring_buffer *buffer,
+ 		rb_init_page(bpage);
+ 		bpage = reader->page;
+ 		reader->page = *data_page;
+-		local_set(&reader->write, 0);
+-		local_set(&reader->entries, 0);
++		local_set_wrap(&reader->write, 0);
++		local_set_wrap(&reader->entries, 0);
+ 		reader->read = 0;
+ 		*data_page = bpage;
+ 
+diff --git a/kernel/trace/trace_clock.c b/kernel/trace/trace_clock.c
+index 0f06532..846080f 100644
+--- a/kernel/trace/trace_clock.c
++++ b/kernel/trace/trace_clock.c
+@@ -127,7 +127,7 @@ u64 notrace trace_clock_global(void)
+ }
+ EXPORT_SYMBOL_GPL(trace_clock_global);
+ 
+-static atomic64_t trace_counter;
++static atomic64_wrap_t trace_counter;
+ 
+ /*
+  * trace_clock_counter(): simply an atomic counter.
+@@ -136,5 +136,5 @@ static atomic64_t trace_counter;
+  */
+ u64 notrace trace_clock_counter(void)
+ {
+-	return atomic64_add_return(1, &trace_counter);
++	return atomic64_inc_return_wrap(&trace_counter);
+ }
+diff --git a/kernel/trace/trace_functions_graph.c b/kernel/trace/trace_functions_graph.c
+index 4e480e8..963d160 100644
+--- a/kernel/trace/trace_functions_graph.c
++++ b/kernel/trace/trace_functions_graph.c
+@@ -138,7 +138,7 @@ ftrace_push_return_trace(unsigned long ret, unsigned long func, int *depth,
+ 
+ 	/* The return trace stack is full */
+ 	if (current->curr_ret_stack == FTRACE_RETFUNC_DEPTH - 1) {
+-		atomic_inc(&current->trace_overrun);
++		atomic_inc_wrap(&current->trace_overrun);
+ 		return -EBUSY;
+ 	}
+ 
+@@ -239,7 +239,7 @@ ftrace_pop_return_trace(struct ftrace_graph_ret *trace, unsigned long *ret,
+ 	*ret = current->ret_stack[index].ret;
+ 	trace->func = current->ret_stack[index].func;
+ 	trace->calltime = current->ret_stack[index].calltime;
+-	trace->overrun = atomic_read(&current->trace_overrun);
++	trace->overrun = atomic_read_wrap(&current->trace_overrun);
+ 	trace->depth = index;
+ }
+ 
+diff --git a/kernel/trace/trace_mmiotrace.c b/kernel/trace/trace_mmiotrace.c
+index cd7480d..4fcb280 100644
+--- a/kernel/trace/trace_mmiotrace.c
++++ b/kernel/trace/trace_mmiotrace.c
+@@ -24,7 +24,7 @@ struct header_iter {
+ static struct trace_array *mmio_trace_array;
+ static bool overrun_detected;
+ static unsigned long prev_overruns;
+-static atomic_t dropped_count;
++static atomic_wrap_t dropped_count;
+ 
+ static void mmio_reset_data(struct trace_array *tr)
+ {
+@@ -120,7 +120,7 @@ static void mmio_close(struct trace_iterator *iter)
+ 
+ static unsigned long count_overruns(struct trace_iterator *iter)
+ {
+-	unsigned long cnt = atomic_xchg(&dropped_count, 0);
++	unsigned long cnt = atomic_xchg_wrap(&dropped_count, 0);
+ 	unsigned long over = ring_buffer_overruns(iter->trace_buffer->buffer);
+ 
+ 	if (over > prev_overruns)
+@@ -303,7 +303,7 @@ static void __trace_mmiotrace_rw(struct trace_array *tr,
+ 	event = trace_buffer_lock_reserve(buffer, TRACE_MMIO_RW,
+ 					  sizeof(*entry), 0, pc);
+ 	if (!event) {
+-		atomic_inc(&dropped_count);
++		atomic_inc_wrap(&dropped_count);
+ 		return;
+ 	}
+ 	entry	= ring_buffer_event_data(event);
+@@ -333,7 +333,7 @@ static void __trace_mmiotrace_map(struct trace_array *tr,
+ 	event = trace_buffer_lock_reserve(buffer, TRACE_MMIO_MAP,
+ 					  sizeof(*entry), 0, pc);
+ 	if (!event) {
+-		atomic_inc(&dropped_count);
++		atomic_inc_wrap(&dropped_count);
+ 		return;
+ 	}
+ 	entry	= ring_buffer_event_data(event);
 -- 
 2.7.4
