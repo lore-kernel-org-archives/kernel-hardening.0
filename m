@@ -1,501 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 20 Oct 2016 16:13:50 +0300
-From: Hans Liljestrand <ishkamiel@gmail.com>
-Message-ID: <20161020131350.GA18331@thigreal>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, Elena Reshetova <elena.reshetova@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <20161020062458.14014-1-takahiro.akashi@linaro.org>
+References: <20161020062458.14014-1-takahiro.akashi@linaro.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 20 Oct 2016 13:48:15 -0700
+Message-ID: <CAGXu5jJ9jWxsjcPwc9v87ecPYPzoSLTq5bzA0h3t5nSobGdWVQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [PATCH] module: extend 'rodata=off' boot
+ cmdline parameter to module mappings
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 20, 2016 at 01:25:18PM +0300, Elena Reshetova wrote:
-> Changes since RFC v1:
-> 
->  - documentation added: Documentation/security/hardened-atomic.txt
->  - percpu-refcount diversion from PaX/Grsecurity explained better
->  - arch. independent base has full functional coverage for atomic,
->    atomic-long and atomic64 types.
->  - arch. independent base is better structured and organized
->  - lkdtm: tests are now defined using macros
->  - x86 implementation added for missing functions
->  - fixed trap handling on x86 and overall reporting
->  - many small polishing and fixes
-> 
-> Open items:
-> 
->  - performance measurements: we are still waiting for numbers
->  - arch. independent implementation doesn't have coverage for
->    local_wrap_t type in cases when include/asm-generic/local.h
->    is not used (meaning architecture does provide its implementation
->    but does not yet provide *_wrap functions). We haven't yet
->    find a nice way of doing it in arch. independent definitions,
->    since some kernel code includes asm/local.h directly and we
->    are not sure where to place new definitions (new file under
->    inlcude/linux/local_wrap.h (to be inline with include/linux/
->    atomic.h) + definition of local_wrap_t to include/linux/types.h?)
->    Ideas and suggestions on this are very warlmy welcomed!
-> 
-> Compilation and testing results:
-> 
->  - CONFIG_HARDENED_ATOMIC=y, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, lkdtm atomic tests PASS
->  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, feature not enabled, so tests not run   
->  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, with x86 hardening implementation removed
->    (simulate not implemented for arch. case): compile does not yet pass due to issues with local_wrap_t decribed above   
+On Wed, Oct 19, 2016 at 11:24 PM, AKASHI Takahiro
+<takahiro.akashi@linaro.org> wrote:
+> The current "rodata=off" parameter disables read-only kernel mappings
+> under CONFIG_DEBUG_RODATA:
+>     commit d2aa1acad22f ("mm/init: Add 'rodata=off' boot cmdline parameter
+>     to disable read-only kernel mappings")
+>
+> This patch is a logical extension to module mappings ie. read-only mappings
+> at module loading can be disabled even if CONFIG_DEBUG_SET_MODULE_RONX
+> (mainly for debug use). Please note, however, that it only affects RO/RW
+> permissions, keeping NX set.
+>
+> This is the first step to make CONFIG_DEBUG_SET_MODULE_RONX mandatory
+> (always-on) in the future as CONFIG_DEBUG_RODATA on x86 and arm64.
+>
+> Suggested-by: Mark Rutland <mark.rutland@arm.com>
+> Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+> Cc: Rusty Russell <rusty@rustcorp.com.au>
+> ---
+> v1:
+>   * remove RFC's "module_ronx=" and merge it with "rodata="
+>   * always keep NX set if CONFIG_SET_MODULE_RONX
+>
+>  include/linux/init.h |  3 ++-
+>  init/main.c          |  2 +-
+>  kernel/module.c      | 21 ++++++++++++++++++---
+>  3 files changed, 21 insertions(+), 5 deletions(-)
+>
+> diff --git a/include/linux/init.h b/include/linux/init.h
+> index e30104c..20aa2eb 100644
+> --- a/include/linux/init.h
+> +++ b/include/linux/init.h
+> @@ -126,7 +126,8 @@ void prepare_namespace(void);
+>  void __init load_default_modules(void);
+>  int __init init_rootfs(void);
+>
+> -#ifdef CONFIG_DEBUG_RODATA
+> +#if defined(CONFIG_DEBUG_RODATA) || defined(CONFIG_DEBUG_SET_MODULE_RONX)
+> +extern bool rodata_enabled;
+>  void mark_rodata_ro(void);
+>  #endif
+>
+> diff --git a/init/main.c b/init/main.c
+> index 2858be7..92db2f3 100644
+> --- a/init/main.c
+> +++ b/init/main.c
+> @@ -915,7 +915,7 @@ static int try_to_run_init_process(const char *init_filename)
+>  static noinline void __init kernel_init_freeable(void);
+>
+>  #ifdef CONFIG_DEBUG_RODATA
+> -static bool rodata_enabled = true;
+> +bool rodata_enabled = true;
 
-As noted our current implementation fails on local_t without arch support (at
-least in kernel/trace/ring_buffer.c where local_wrap_t is used). It seems that
-local_t is almost never used, which is also what the related documentation
-recommends (at Documentation/local_ops.txt). I would be inclined to drop local_t
-support and switch the generic implementation to use atomic_long_wrap_t instead
-of atomic_long_t.
+Is there a mismatch here between the extern ifdef and the bool ifdef?
+I.e. shouldn't the ifdef here be || DEBUG_SET_MODULE_RONX too?
 
-So my question is then, do we actually want to provide a protected version of
-local_t, or can we just drop this support?
+Also, can you mark this as __ro_after_init, since nothing changes it
+after the kernel command line is parsed?
 
-> 
-> This series brings the PaX/Grsecurity PAX_REFCOUNT
-> feature support to the upstream kernel. All credit for the
-> feature goes to the feature authors.
-> 
-> The name of the upstream feature is HARDENED_ATOMIC
-> and it is configured using CONFIG_HARDENED_ATOMIC and
-> HAVE_ARCH_HARDENED_ATOMIC.
-> 
-> This series only adds x86 support; other architectures are expected
-> to add similar support gradually.
+Otherwise, this looks fine to me.
 
-I have some worries on the generic arch independent implementation of
-atomic64_t/atomic64_wrap_t (include/asm-generic/atomic64.h). We provide _wrap
-versions for atomic64, but protection is dependant on arch implementation and
-config. That is, one could possibly implement HARDENED_ATOMIC support while
-leaving atomic64_t unprotected depending on specific configs, for instance by
-then defaulting to CONFIG_GENERIC_ATOMIC64 (in linuc/hardened/atomic.h:676). Or
-maybe I'm just under-/overthinking this?
+-Kees
 
-My concern is that this is a very easy place to include errors and
-inconsistencies. We've been trying to cleanly fix this, but haven't really found
-a satisfactory solution (e.g. one that actually works on different configs/arcs
-and isn't a horrible mess). I recall that the hardened_atomic ARM implementation
-already faced issues with atomic64, so this seems to be a real cause for
-problems. Any suggestions on how to do this more cleanly?
 
-In contrast to local_t issue, atomic64_t is in fact directly used in several
-places, including some that we patch to use atomic64_wrap_t. The atomic_(long)_t
-implementation is also possibly intertwined with atomic64_t, so I doubt just
-dropping bare atomic64_t protections is a viable solution.
-
-On that note, our lkdtm test are still lacking atomic64 tests, which would
-probably be good idea to add.
-
-Best Regards,
--hans
-
-> 
-> More information about the feature can be found in the following
-> commit messages.
-> 
-> Special thank you goes to Kees Cook for pre-reviwing this feature
-> and all the valuable feedback he provided to us.
-> 
-> David Windsor (7):
->   kernel: identify wrapping atomic usage
->   mm: identify wrapping atomic usage
->   fs: identify wrapping atomic usage
->   net: identify wrapping atomic usage
->   security: identify wrapping atomic usage
->   drivers: identify wrapping atomic usage (part 1/2)
->   drivers: identify wrapping atomic usage (part 2/2)
-> 
-> Elena Reshetova (2):
->   Add architecture independent hardened atomic base
->   x86: implementation for HARDENED_ATOMIC
-> 
-> Hans Liljestrand (4):
->   percpu-refcount: leave atomic counter unprotected
->   net: atm: identify wrapping atomic usage
->   x86: identify wrapping atomic usage
->   lkdtm: add tests for atomic over-/underflow
-> 
->  Documentation/security/hardened-atomic.txt       | 141 +++++++++
->  arch/x86/Kconfig                                 |   1 +
->  arch/x86/include/asm/atomic.h                    | 323 ++++++++++++++++++++-
->  arch/x86/include/asm/atomic64_32.h               | 201 ++++++++++++-
->  arch/x86/include/asm/atomic64_64.h               | 228 ++++++++++++++-
->  arch/x86/include/asm/bitops.h                    |   8 +-
->  arch/x86/include/asm/cmpxchg.h                   |  39 +++
->  arch/x86/include/asm/hw_irq.h                    |   4 +-
->  arch/x86/include/asm/local.h                     |  89 +++++-
->  arch/x86/include/asm/preempt.h                   |   2 +-
->  arch/x86/include/asm/rmwcc.h                     |  82 +++++-
->  arch/x86/include/asm/rwsem.h                     |  50 ++++
->  arch/x86/kernel/apic/apic.c                      |   2 +-
->  arch/x86/kernel/apic/io_apic.c                   |   4 +-
->  arch/x86/kernel/cpu/mcheck/mce.c                 |  12 +-
->  arch/x86/kernel/i8259.c                          |   2 +-
->  arch/x86/kernel/irq.c                            |   8 +-
->  arch/x86/kernel/kgdb.c                           |   6 +-
->  arch/x86/kernel/pvclock.c                        |   8 +-
->  arch/x86/kernel/tboot.c                          |   8 +-
->  arch/x86/kernel/traps.c                          |   4 +
->  arch/x86/lib/atomic64_386_32.S                   | 135 +++++++++
->  arch/x86/lib/atomic64_cx8_32.S                   |  78 ++++-
->  arch/x86/mm/mmio-mod.c                           |   4 +-
->  drivers/acpi/apei/ghes.c                         |   4 +-
->  drivers/ata/libata-core.c                        |   5 +-
->  drivers/ata/libata-scsi.c                        |   2 +-
->  drivers/ata/libata.h                             |   2 +-
->  drivers/atm/adummy.c                             |   2 +-
->  drivers/atm/ambassador.c                         |   8 +-
->  drivers/atm/atmtcp.c                             |  14 +-
->  drivers/atm/eni.c                                |  10 +-
->  drivers/atm/firestream.c                         |   8 +-
->  drivers/atm/fore200e.c                           |  14 +-
->  drivers/atm/he.c                                 |  18 +-
->  drivers/atm/horizon.c                            |   4 +-
->  drivers/atm/idt77252.c                           |  36 +--
->  drivers/atm/iphase.c                             |  34 +--
->  drivers/atm/lanai.c                              |  12 +-
->  drivers/atm/nicstar.c                            |  47 +--
->  drivers/atm/solos-pci.c                          |   4 +-
->  drivers/atm/suni.c                               |   5 +-
->  drivers/atm/uPD98402.c                           |  16 +-
->  drivers/atm/zatm.c                               |   7 +-
->  drivers/base/power/wakeup.c                      |   8 +-
->  drivers/block/drbd/drbd_bitmap.c                 |   2 +-
->  drivers/block/drbd/drbd_int.h                    |   9 +-
->  drivers/block/drbd/drbd_main.c                   |  15 +-
->  drivers/block/drbd/drbd_nl.c                     |  16 +-
->  drivers/block/drbd/drbd_receiver.c               |  34 +--
->  drivers/block/drbd/drbd_worker.c                 |   8 +-
->  drivers/char/ipmi/ipmi_msghandler.c              |   8 +-
->  drivers/char/ipmi/ipmi_si_intf.c                 |   8 +-
->  drivers/crypto/hifn_795x.c                       |   4 +-
->  drivers/edac/edac_device.c                       |   4 +-
->  drivers/edac/edac_pci.c                          |   4 +-
->  drivers/edac/edac_pci_sysfs.c                    |  20 +-
->  drivers/firewire/core-card.c                     |   4 +-
->  drivers/firmware/efi/cper.c                      |   8 +-
->  drivers/gpio/gpio-vr41xx.c                       |   2 +-
->  drivers/gpu/drm/i810/i810_drv.h                  |   4 +-
->  drivers/gpu/drm/mga/mga_drv.h                    |   4 +-
->  drivers/gpu/drm/mga/mga_irq.c                    |   9 +-
->  drivers/gpu/drm/qxl/qxl_cmd.c                    |  12 +-
->  drivers/gpu/drm/qxl/qxl_debugfs.c                |   8 +-
->  drivers/gpu/drm/qxl/qxl_drv.h                    |   8 +-
->  drivers/gpu/drm/qxl/qxl_irq.c                    |  16 +-
->  drivers/gpu/drm/r128/r128_cce.c                  |   2 +-
->  drivers/gpu/drm/r128/r128_drv.h                  |   4 +-
->  drivers/gpu/drm/r128/r128_irq.c                  |   4 +-
->  drivers/gpu/drm/r128/r128_state.c                |   4 +-
->  drivers/gpu/drm/via/via_drv.h                    |   4 +-
->  drivers/gpu/drm/via/via_irq.c                    |  18 +-
->  drivers/gpu/drm/vmwgfx/vmwgfx_drv.h              |   2 +-
->  drivers/gpu/drm/vmwgfx/vmwgfx_fifo.c             |   6 +-
->  drivers/gpu/drm/vmwgfx/vmwgfx_irq.c              |   4 +-
->  drivers/gpu/drm/vmwgfx/vmwgfx_marker.c           |   2 +-
->  drivers/hid/hid-core.c                           |   4 +-
->  drivers/hv/channel.c                             |   4 +-
->  drivers/hv/hv_balloon.c                          |  19 +-
->  drivers/hv/hyperv_vmbus.h                        |   2 +-
->  drivers/hwmon/sht15.c                            |  12 +-
->  drivers/infiniband/core/cm.c                     |  52 ++--
->  drivers/infiniband/core/fmr_pool.c               |  23 +-
->  drivers/infiniband/hw/cxgb4/mem.c                |   4 +-
->  drivers/infiniband/hw/mlx4/mad.c                 |   2 +-
->  drivers/infiniband/hw/mlx4/mcg.c                 |   2 +-
->  drivers/infiniband/hw/mlx4/mlx4_ib.h             |   2 +-
->  drivers/infiniband/hw/nes/nes.c                  |   4 +-
->  drivers/infiniband/hw/nes/nes.h                  |  40 +--
->  drivers/infiniband/hw/nes/nes_cm.c               |  62 ++--
->  drivers/infiniband/hw/nes/nes_mgt.c              |   8 +-
->  drivers/infiniband/hw/nes/nes_nic.c              |  40 +--
->  drivers/infiniband/hw/nes/nes_verbs.c            |  10 +-
->  drivers/input/gameport/gameport.c                |   4 +-
->  drivers/input/input.c                            |   4 +-
->  drivers/input/misc/ims-pcu.c                     |   4 +-
->  drivers/input/serio/serio.c                      |   4 +-
->  drivers/input/serio/serio_raw.c                  |   4 +-
->  drivers/isdn/capi/capi.c                         |  11 +-
->  drivers/md/dm-core.h                             |   4 +-
->  drivers/md/dm-raid.c                             |   3 +-
->  drivers/md/dm-raid1.c                            |  18 +-
->  drivers/md/dm-stripe.c                           |  11 +-
->  drivers/md/dm.c                                  |  12 +-
->  drivers/md/md.c                                  |  32 ++-
->  drivers/md/md.h                                  |  15 +-
->  drivers/md/raid1.c                               |   8 +-
->  drivers/md/raid10.c                              |  20 +-
->  drivers/md/raid5.c                               |  17 +-
->  drivers/media/pci/ivtv/ivtv-driver.c             |   2 +-
->  drivers/media/pci/solo6x10/solo6x10-p2m.c        |   3 +-
->  drivers/media/pci/solo6x10/solo6x10.h            |   2 +-
->  drivers/media/pci/tw68/tw68-core.c               |   2 +-
->  drivers/media/radio/radio-maxiradio.c            |   2 +-
->  drivers/media/radio/radio-shark.c                |   2 +-
->  drivers/media/radio/radio-shark2.c               |   2 +-
->  drivers/media/radio/radio-si476x.c               |   2 +-
->  drivers/media/v4l2-core/v4l2-device.c            |   4 +-
->  drivers/misc/lis3lv02d/lis3lv02d.c               |   8 +-
->  drivers/misc/lis3lv02d/lis3lv02d.h               |   2 +-
->  drivers/misc/lkdtm.h                             |  17 ++
->  drivers/misc/lkdtm_bugs.c                        | 122 ++++++--
->  drivers/misc/lkdtm_core.c                        |  17 ++
->  drivers/misc/sgi-gru/gruhandles.c                |   4 +-
->  drivers/misc/sgi-gru/gruprocfs.c                 |   8 +-
->  drivers/misc/sgi-gru/grutables.h                 | 158 +++++-----
->  drivers/net/hyperv/hyperv_net.h                  |   2 +-
->  drivers/net/hyperv/rndis_filter.c                |   4 +-
->  drivers/net/ipvlan/ipvlan_core.c                 |   2 +-
->  drivers/net/macvlan.c                            |   2 +-
->  drivers/net/usb/sierra_net.c                     |   4 +-
->  drivers/net/wireless/ralink/rt2x00/rt2x00.h      |   2 +-
->  drivers/net/wireless/ralink/rt2x00/rt2x00queue.c |   4 +-
->  drivers/oprofile/buffer_sync.c                   |   8 +-
->  drivers/oprofile/event_buffer.c                  |   2 +-
->  drivers/oprofile/oprof.c                         |   2 +-
->  drivers/oprofile/oprofile_stats.c                |  10 +-
->  drivers/oprofile/oprofile_stats.h                |  10 +-
->  drivers/oprofile/oprofilefs.c                    |   8 +-
->  drivers/regulator/core.c                         |   4 +-
->  drivers/scsi/fcoe/fcoe_sysfs.c                   |  12 +-
->  drivers/scsi/libfc/fc_exch.c                     |  54 ++--
->  drivers/scsi/lpfc/lpfc.h                         |   8 +-
->  drivers/scsi/lpfc/lpfc_debugfs.c                 |  18 +-
->  drivers/scsi/lpfc/lpfc_scsi.c                    |  10 +-
->  drivers/scsi/pmcraid.c                           |  24 +-
->  drivers/scsi/pmcraid.h                           |   8 +-
->  drivers/scsi/qla4xxx/ql4_def.h                   |   3 +-
->  drivers/scsi/qla4xxx/ql4_os.c                    |   7 +-
->  drivers/scsi/scsi_lib.c                          |   8 +-
->  drivers/scsi/scsi_sysfs.c                        |   2 +-
->  drivers/scsi/scsi_transport_fc.c                 |   6 +-
->  drivers/scsi/scsi_transport_iscsi.c              |   7 +-
->  drivers/scsi/scsi_transport_srp.c                |   6 +-
->  drivers/scsi/sd.c                                |   2 +-
->  drivers/target/sbp/sbp_target.c                  |   4 +-
->  drivers/tty/hvc/hvsi.c                           |  12 +-
->  drivers/tty/hvc/hvsi_lib.c                       |   4 +-
->  drivers/tty/serial/ioc4_serial.c                 |   6 +-
->  drivers/tty/serial/msm_serial.c                  |   4 +-
->  drivers/uio/uio.c                                |  13 +-
->  drivers/usb/atm/usbatm.c                         |  24 +-
->  drivers/usb/core/devices.c                       |   6 +-
->  drivers/usb/core/hcd.c                           |   4 +-
->  drivers/usb/core/sysfs.c                         |   2 +-
->  drivers/usb/core/usb.c                           |   2 +-
->  drivers/usb/host/ehci-hub.c                      |   4 +-
->  drivers/usb/misc/appledisplay.c                  |   4 +-
->  drivers/usb/usbip/vhci.h                         |   2 +-
->  drivers/usb/usbip/vhci_hcd.c                     |   6 +-
->  drivers/usb/usbip/vhci_rx.c                      |   2 +-
->  drivers/usb/wusbcore/wa-hc.h                     |   4 +-
->  drivers/usb/wusbcore/wa-xfer.c                   |   2 +-
->  drivers/video/fbdev/hyperv_fb.c                  |   4 +-
->  drivers/video/fbdev/udlfb.c                      |  32 +--
->  fs/afs/inode.c                                   |   4 +-
->  fs/btrfs/delayed-inode.c                         |   6 +-
->  fs/btrfs/delayed-inode.h                         |   4 +-
->  fs/cachefiles/daemon.c                           |   4 +-
->  fs/cachefiles/internal.h                         |  16 +-
->  fs/cachefiles/namei.c                            |   6 +-
->  fs/cachefiles/proc.c                             |  12 +-
->  fs/ceph/super.c                                  |   4 +-
->  fs/cifs/cifs_debug.c                             |  14 +-
->  fs/cifs/cifsfs.c                                 |   4 +-
->  fs/cifs/cifsglob.h                               |  55 ++--
->  fs/cifs/misc.c                                   |   4 +-
->  fs/cifs/smb1ops.c                                |  80 +++---
->  fs/cifs/smb2ops.c                                |  84 +++---
->  fs/coda/cache.c                                  |  10 +-
->  fs/coredump.c                                    |   6 +-
->  fs/ext4/ext4.h                                   |  20 +-
->  fs/ext4/mballoc.c                                |  44 +--
->  fs/fscache/cookie.c                              |  40 +--
->  fs/fscache/internal.h                            | 202 ++++++-------
->  fs/fscache/object.c                              |  26 +-
->  fs/fscache/operation.c                           |  38 +--
->  fs/fscache/page.c                                | 110 +++----
->  fs/fscache/stats.c                               | 348 +++++++++++------------
->  fs/inode.c                                       |   5 +-
->  fs/kernfs/file.c                                 |  12 +-
->  fs/lockd/clntproc.c                              |   4 +-
->  fs/namespace.c                                   |   4 +-
->  fs/nfs/inode.c                                   |   6 +-
->  fs/notify/notification.c                         |   4 +-
->  fs/ocfs2/localalloc.c                            |   2 +-
->  fs/ocfs2/ocfs2.h                                 |  10 +-
->  fs/ocfs2/suballoc.c                              |  12 +-
->  fs/ocfs2/super.c                                 |  20 +-
->  fs/proc/meminfo.c                                |   2 +-
->  fs/quota/netlink.c                               |   4 +-
->  fs/reiserfs/do_balan.c                           |   2 +-
->  fs/reiserfs/procfs.c                             |   2 +-
->  fs/reiserfs/reiserfs.h                           |   4 +-
->  include/asm-generic/atomic-long.h                | 264 ++++++++++++++---
->  include/asm-generic/atomic.h                     |  56 ++++
->  include/asm-generic/atomic64.h                   |  13 +
->  include/asm-generic/bug.h                        |   7 +
->  include/asm-generic/local.h                      |  15 +
->  include/linux/atmdev.h                           |   2 +-
->  include/linux/atomic.h                           | 114 ++++++++
->  include/linux/blktrace_api.h                     |   2 +-
->  include/linux/fscache-cache.h                    |   2 +-
->  include/linux/genhd.h                            |   2 +-
->  include/linux/irqdesc.h                          |   2 +-
->  include/linux/kgdb.h                             |   2 +-
->  include/linux/mm.h                               |   2 +-
->  include/linux/mmzone.h                           |   4 +-
->  include/linux/netdevice.h                        |   8 +-
->  include/linux/oprofile.h                         |   2 +-
->  include/linux/padata.h                           |   2 +-
->  include/linux/percpu-refcount.h                  |  18 +-
->  include/linux/perf_event.h                       |  10 +-
->  include/linux/sched.h                            |   2 +-
->  include/linux/slab_def.h                         |   8 +-
->  include/linux/sonet.h                            |   2 +-
->  include/linux/sunrpc/svc_rdma.h                  |  18 +-
->  include/linux/swapops.h                          |  10 +-
->  include/linux/types.h                            |  17 ++
->  include/linux/uio_driver.h                       |   2 +-
->  include/linux/usb.h                              |   2 +-
->  include/linux/vmstat.h                           |  38 +--
->  include/media/v4l2-device.h                      |   2 +-
->  include/net/bonding.h                            |   2 +-
->  include/net/caif/cfctrl.h                        |   4 +-
->  include/net/flow.h                               |   2 +-
->  include/net/gro_cells.h                          |   2 +-
->  include/net/inetpeer.h                           |   3 +-
->  include/net/ip_fib.h                             |   2 +-
->  include/net/ip_vs.h                              |   4 +-
->  include/net/iucv/af_iucv.h                       |   2 +-
->  include/net/net_namespace.h                      |  12 +-
->  include/net/netns/ipv4.h                         |   4 +-
->  include/net/netns/ipv6.h                         |   4 +-
->  include/net/netns/xfrm.h                         |   2 +-
->  include/net/sock.h                               |   8 +-
->  include/net/tcp.h                                |   2 +-
->  include/net/xfrm.h                               |   2 +-
->  include/scsi/scsi_device.h                       |   6 +-
->  include/video/udlfb.h                            |  12 +-
->  kernel/audit.c                                   |   8 +-
->  kernel/auditsc.c                                 |   4 +-
->  kernel/debug/debug_core.c                        |  16 +-
->  kernel/events/core.c                             |  27 +-
->  kernel/irq/manage.c                              |   2 +-
->  kernel/irq/spurious.c                            |   2 +-
->  kernel/locking/lockdep.c                         |   2 +-
->  kernel/padata.c                                  |   4 +-
->  kernel/panic.c                                   |  11 +
->  kernel/profile.c                                 |  14 +-
->  kernel/rcu/rcutorture.c                          |  61 ++--
->  kernel/rcu/tree.c                                |  36 +--
->  kernel/rcu/tree.h                                |  10 +-
->  kernel/rcu/tree_exp.h                            |   2 +-
->  kernel/rcu/tree_plugin.h                         |  12 +-
->  kernel/rcu/tree_trace.c                          |  14 +-
->  kernel/sched/auto_group.c                        |   4 +-
->  kernel/time/timer_stats.c                        |  11 +-
->  kernel/trace/blktrace.c                          |   6 +-
->  kernel/trace/ftrace.c                            |   4 +-
->  kernel/trace/ring_buffer.c                       |  98 +++----
->  kernel/trace/trace_clock.c                       |   4 +-
->  kernel/trace/trace_functions_graph.c             |   4 +-
->  kernel/trace/trace_mmiotrace.c                   |   8 +-
->  lib/percpu-refcount.c                            |  12 +-
->  lib/show_mem.c                                   |   3 +-
->  mm/backing-dev.c                                 |   4 +-
->  mm/memory-failure.c                              |   2 +-
->  mm/slab.c                                        |  16 +-
->  mm/sparse.c                                      |   2 +-
->  mm/swapfile.c                                    |  12 +-
->  mm/vmstat.c                                      |  26 +-
->  net/atm/atm_misc.c                               |   8 +-
->  net/atm/proc.c                                   |   8 +-
->  net/atm/resources.c                              |   4 +-
->  net/batman-adv/bat_iv_ogm.c                      |   8 +-
->  net/batman-adv/fragmentation.c                   |   3 +-
->  net/batman-adv/soft-interface.c                  |   6 +-
->  net/batman-adv/types.h                           |   6 +-
->  net/caif/cfctrl.c                                |  11 +-
->  net/ceph/messenger.c                             |   4 +-
->  net/core/datagram.c                              |   2 +-
->  net/core/dev.c                                   |  18 +-
->  net/core/flow.c                                  |   9 +-
->  net/core/net-sysfs.c                             |   2 +-
->  net/core/netpoll.c                               |   4 +-
->  net/core/rtnetlink.c                             |   2 +-
->  net/core/sock.c                                  |  14 +-
->  net/core/sock_diag.c                             |   8 +-
->  net/ipv4/devinet.c                               |   4 +-
->  net/ipv4/fib_frontend.c                          |   6 +-
->  net/ipv4/fib_semantics.c                         |   2 +-
->  net/ipv4/inet_connection_sock.c                  |   4 +-
->  net/ipv4/inet_timewait_sock.c                    |   3 +-
->  net/ipv4/inetpeer.c                              |   2 +-
->  net/ipv4/ip_fragment.c                           |   2 +-
->  net/ipv4/ping.c                                  |   2 +-
->  net/ipv4/raw.c                                   |   5 +-
->  net/ipv4/route.c                                 |  12 +-
->  net/ipv4/tcp_input.c                             |   2 +-
->  net/ipv4/udp.c                                   |  10 +-
->  net/ipv6/addrconf.c                              |   7 +-
->  net/ipv6/af_inet6.c                              |   2 +-
->  net/ipv6/datagram.c                              |   2 +-
->  net/ipv6/ip6_fib.c                               |   4 +-
->  net/ipv6/raw.c                                   |   6 +-
->  net/ipv6/udp.c                                   |   6 +-
->  net/iucv/af_iucv.c                               |   5 +-
->  net/key/af_key.c                                 |   4 +-
->  net/l2tp/l2tp_eth.c                              |  38 +--
->  net/netfilter/ipvs/ip_vs_conn.c                  |   6 +-
->  net/netfilter/ipvs/ip_vs_core.c                  |   8 +-
->  net/netfilter/ipvs/ip_vs_ctl.c                   |  12 +-
->  net/netfilter/ipvs/ip_vs_sync.c                  |   6 +-
->  net/netfilter/ipvs/ip_vs_xmit.c                  |   4 +-
->  net/netfilter/nfnetlink_log.c                    |   4 +-
->  net/netfilter/xt_statistic.c                     |   9 +-
->  net/netlink/af_netlink.c                         |   4 +-
->  net/packet/af_packet.c                           |   4 +-
->  net/phonet/pep.c                                 |   6 +-
->  net/phonet/socket.c                              |   2 +-
->  net/rds/cong.c                                   |   6 +-
->  net/rds/ib.h                                     |   2 +-
->  net/rds/ib_cm.c                                  |   2 +-
->  net/rds/ib_recv.c                                |   4 +-
->  net/rxrpc/af_rxrpc.c                             |   2 +-
->  net/rxrpc/ar-internal.h                          |   4 +-
->  net/rxrpc/call_object.c                          |   2 +-
->  net/rxrpc/conn_event.c                           |   4 +-
->  net/rxrpc/conn_object.c                          |   2 +-
->  net/rxrpc/local_object.c                         |   2 +-
->  net/rxrpc/output.c                               |   4 +-
->  net/rxrpc/peer_object.c                          |   2 +-
->  net/rxrpc/proc.c                                 |   2 +-
->  net/rxrpc/rxkad.c                                |   4 +-
->  net/sched/sch_generic.c                          |   4 +-
->  net/sctp/sctp_diag.c                             |   2 +-
->  net/sunrpc/auth_gss/svcauth_gss.c                |   4 +-
->  net/sunrpc/sched.c                               |   4 +-
->  net/sunrpc/xprtrdma/svc_rdma.c                   |  36 +--
->  net/sunrpc/xprtrdma/svc_rdma_recvfrom.c          |   8 +-
->  net/sunrpc/xprtrdma/svc_rdma_sendto.c            |   2 +-
->  net/sunrpc/xprtrdma/svc_rdma_transport.c         |   2 +-
->  net/xfrm/xfrm_policy.c                           |  11 +-
->  net/xfrm/xfrm_state.c                            |   4 +-
->  security/Kconfig                                 |  19 ++
->  security/integrity/ima/ima.h                     |   4 +-
->  security/integrity/ima/ima_api.c                 |   2 +-
->  security/integrity/ima/ima_fs.c                  |   4 +-
->  security/integrity/ima/ima_queue.c               |   2 +-
->  security/selinux/avc.c                           |   7 +-
->  security/selinux/include/xfrm.h                  |   2 +-
->  373 files changed, 3964 insertions(+), 2035 deletions(-)
->  create mode 100644 Documentation/security/hardened-atomic.txt
-> 
-> -- 
-> 2.7.4
-> 
+-- 
+Kees Cook
+Nexus Security
