@@ -1,103 +1,233 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1476952250.2339.2.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Thu, 20 Oct 2016 10:30:50 +0200
-In-Reply-To: <20161020055856.GS19531@linaro.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
-	 <1476802761-24340-3-git-send-email-colin@cvidal.org>
-	 <CAGXu5jJXRxCvO6YiBWt4-mWMO_pbrurViWcFODbN2NtjJ3PSmQ@mail.gmail.com>
-	 <1476866702.21069.8.camel@cvidal.org>
-	 <CAGXu5j+AT4rnD5Zo6qdr76aJZLnvuknx-=UE57CTD1+WxmX=1A@mail.gmail.com>
-	 <20161020055856.GS19531@linaro.org>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: [RFC 2/2] arm: implementation for
- HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>, Mark Rutland <mark.rutland@arm.com>
+MIME-Version: 1.0
+In-Reply-To: <1476828091-17802-2-git-send-email-labbott@redhat.com>
+References: <1476828091-17802-1-git-send-email-labbott@redhat.com> <1476828091-17802-2-git-send-email-labbott@redhat.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 20 Oct 2016 11:17:58 +0100
+Message-ID: <CAKv+Gu8SR_+zNQ7D2yHwznKAxs8f7WToBEHr7RmgkyuswhM8bA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCHv3 1/4] arm64: dump: Make ptdump debugfs a separate option
+To: Laura Abbott <labbott@redhat.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Matt Fleming <matt@codeblueprint.co.uk>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2016-10-20 at 14:58 +0900, AKASHI Takahiro wrote:
-> On Wed, Oct 19, 2016 at 01:11:46PM -0700, Kees Cook wrote:
-> > 
-> > On Wed, Oct 19, 2016 at 1:45 AM, Colin Vidal <colin@cvidal.org> wrote:
-> > > 
-> > > Hi Kees,
-> > > 
-> > > > 
-> > > > > 
-> > > > > This adds arm-specific code in order to support HARDENED_ATOMIC
-> > > > > feature. When overflow is detected in atomic_t, atomic64_t or
-> > > > > atomic_long_t, an exception is raised and call
-> > > > > hardened_atomic_overflow.
-> > > > 
-> > > > Can you include some notes that this was originally in PaX/grsecurity,
-> > > > and detail what is different from their implemention?
-> > > 
-> > > Of course. I add it in the next version.
-> > > 
-> > > > 
-> > > > > 
-> > > > > Signed-off-by: Colin Vidal <colin@cvidal.org>
-> > > > > ---
-> > > > >  arch/arm/Kconfig              |   1 +
-> > > > >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
-> > > > >  arch/arm/mm/fault.c           |  15 ++
-> > > > >  3 files changed, 320 insertions(+), 130 deletions(-)
-> > > > > 
-> > > > > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > > > > index b5d529f..fcf4a64 100644
-> > > > > --- a/arch/arm/Kconfig
-> > > > > +++ b/arch/arm/Kconfig
-> > > > > @@ -36,6 +36,7 @@ config ARM
-> > > > >         select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
-> > > > >         select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
-> > > > >         select HAVE_ARCH_HARDENED_USERCOPY
-> > > > > +       select HAVE_ARCH_HARDENED_ATOMIC
-> > > > >         select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
-> > > > >         select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
-> > > > >         select HAVE_ARCH_MMAP_RND_BITS if MMU
-> > > > > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> > > > > index 66d0e21..fdaee17 100644
-> > > > > --- a/arch/arm/include/asm/atomic.h
-> > > > > +++ b/arch/arm/include/asm/atomic.h
-> > > > > @@ -17,18 +17,52 @@
-> > > > >  #include <linux/irqflags.h>
-> > > > >  #include <asm/barrier.h>
-> > > > >  #include <asm/cmpxchg.h>
-> > > > > +#include <linux/bug.h>
-> > > > > 
-> > > > >  #define ATOMIC_INIT(i) { (i) }
-> > > > > 
-> > > > >  #ifdef __KERNEL__
-> > > > > 
-> > > > > +#ifdef CONFIG_HARDENED_ATOMIC
-> > > > > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
-> > > > 
-> > > > In PaX, I see a check for THUMB2 config:
-> > > > 
-> > > > #ifdef CONFIG_THUMB2_KERNEL
-> > > > #define REFCOUNT_TRAP_INSN "bkpt        0xf1"
-> > > > #else
-> > > > #define REFCOUNT_TRAP_INSN "bkpt        0xf103"
-> > > > #endif
-> > > > 
-> > > > That should probably stay unless I'm misunderstanding something. Also,
-> > > > for your new ISNS define name, I'd leave "TRAP" in the name, since
-> > > > that describes more clearly what it does.
-> > > 
-> > > Oh yeah. I will add it. Actually I does not add it at first since I
-> > > does not really understand why there is a special case for Thumbs2 (as
-> > > far I understand, instructions size can also be 4 bytes). If ARM
-> > > experts are around, I would appreciate pointers about it :-)
-> > 
-> > Cool. Perhaps Takahiro or Mark (now on CC) can comment on it.
-> 
-> "bkpt" is a 16-bit instruction with an 8-bit immediate value in thumb2.
+On 18 October 2016 at 23:01, Laura Abbott <labbott@redhat.com> wrote:
+>
+> ptdump_register currently initializes a set of page table information and
+> registers debugfs. There are uses for the ptdump option without wanting the
+> debugfs options. Split this out to make it a separate option.
+>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> Reviewed-by: Mark Rutland <mark.rutland@arm.com>
+> Tested-by: Mark Rutland <mark.rutland@arm.com>
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+> v3: Minor header guard fixup.
+>
+> Mark Rutland pointed out that this needs to be reviewed by the EFI maintainers
+> so I'm explicitly adding appropriate people/lists.
 
-Ok, I better understand why PaX uses this guard now.
+Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Thanks!
-
-Colin
+> ---
+>  arch/arm64/Kconfig.debug           |  6 +++++-
+>  arch/arm64/include/asm/ptdump.h    | 15 +++++++++------
+>  arch/arm64/mm/Makefile             |  3 ++-
+>  arch/arm64/mm/dump.c               | 26 +++++---------------------
+>  arch/arm64/mm/ptdump_debugfs.c     | 31 +++++++++++++++++++++++++++++++
+>  drivers/firmware/efi/arm-runtime.c |  4 ++--
+>  6 files changed, 54 insertions(+), 31 deletions(-)
+>  create mode 100644 arch/arm64/mm/ptdump_debugfs.c
+>
+> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
+> index b661fe7..21a5b74 100644
+> --- a/arch/arm64/Kconfig.debug
+> +++ b/arch/arm64/Kconfig.debug
+> @@ -2,9 +2,13 @@ menu "Kernel hacking"
+>
+>  source "lib/Kconfig.debug"
+>
+> -config ARM64_PTDUMP
+> +config ARM64_PTDUMP_CORE
+> +       def_bool n
+> +
+> +config ARM64_PTDUMP_DEBUGFS
+>         bool "Export kernel pagetable layout to userspace via debugfs"
+>         depends on DEBUG_KERNEL
+> +       select ARM64_PTDUMP_CORE
+>         select DEBUG_FS
+>          help
+>           Say Y here if you want to show the kernel pagetable layout in a
+> diff --git a/arch/arm64/include/asm/ptdump.h b/arch/arm64/include/asm/ptdump.h
+> index 07b8ed0..16335da 100644
+> --- a/arch/arm64/include/asm/ptdump.h
+> +++ b/arch/arm64/include/asm/ptdump.h
+> @@ -16,9 +16,10 @@
+>  #ifndef __ASM_PTDUMP_H
+>  #define __ASM_PTDUMP_H
+>
+> -#ifdef CONFIG_ARM64_PTDUMP
+> +#ifdef CONFIG_ARM64_PTDUMP_CORE
+>
+>  #include <linux/mm_types.h>
+> +#include <linux/seq_file.h>
+>
+>  struct addr_marker {
+>         unsigned long start_address;
+> @@ -32,13 +33,15 @@ struct ptdump_info {
+>         unsigned long                   max_addr;
+>  };
+>
+> -int ptdump_register(struct ptdump_info *info, const char *name);
+> -
+> +void ptdump_walk_pgd(struct seq_file *s, struct ptdump_info *info);
+> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
+> +int ptdump_debugfs_register(struct ptdump_info *info, const char *name);
+>  #else
+> -static inline int ptdump_register(struct ptdump_info *info, const char *name)
+> +static inline int ptdump_debugfs_register(struct ptdump_info *info,
+> +                                       const char *name)
+>  {
+>         return 0;
+>  }
+> -#endif /* CONFIG_ARM64_PTDUMP */
+> -
+> +#endif
+> +#endif /* CONFIG_ARM64_PTDUMP_CORE */
+>  #endif /* __ASM_PTDUMP_H */
+> diff --git a/arch/arm64/mm/Makefile b/arch/arm64/mm/Makefile
+> index 54bb209..e703fb9 100644
+> --- a/arch/arm64/mm/Makefile
+> +++ b/arch/arm64/mm/Makefile
+> @@ -3,7 +3,8 @@ obj-y                           := dma-mapping.o extable.o fault.o init.o \
+>                                    ioremap.o mmap.o pgd.o mmu.o \
+>                                    context.o proc.o pageattr.o
+>  obj-$(CONFIG_HUGETLB_PAGE)     += hugetlbpage.o
+> -obj-$(CONFIG_ARM64_PTDUMP)     += dump.o
+> +obj-$(CONFIG_ARM64_PTDUMP_CORE)        += dump.o
+> +obj-$(CONFIG_ARM64_PTDUMP_DEBUGFS)     += ptdump_debugfs.o
+>  obj-$(CONFIG_NUMA)             += numa.o
+>
+>  obj-$(CONFIG_KASAN)            += kasan_init.o
+> diff --git a/arch/arm64/mm/dump.c b/arch/arm64/mm/dump.c
+> index 9c3e75d..f0f0be7 100644
+> --- a/arch/arm64/mm/dump.c
+> +++ b/arch/arm64/mm/dump.c
+> @@ -304,9 +304,8 @@ static void walk_pgd(struct pg_state *st, struct mm_struct *mm,
+>         }
+>  }
+>
+> -static int ptdump_show(struct seq_file *m, void *v)
+> +void ptdump_walk_pgd(struct seq_file *m, struct ptdump_info *info)
+>  {
+> -       struct ptdump_info *info = m->private;
+>         struct pg_state st = {
+>                 .seq = m,
+>                 .marker = info->markers,
+> @@ -315,33 +314,16 @@ static int ptdump_show(struct seq_file *m, void *v)
+>         walk_pgd(&st, info->mm, info->base_addr);
+>
+>         note_page(&st, 0, 0, 0);
+> -       return 0;
+>  }
+>
+> -static int ptdump_open(struct inode *inode, struct file *file)
+> +static void ptdump_initialize(void)
+>  {
+> -       return single_open(file, ptdump_show, inode->i_private);
+> -}
+> -
+> -static const struct file_operations ptdump_fops = {
+> -       .open           = ptdump_open,
+> -       .read           = seq_read,
+> -       .llseek         = seq_lseek,
+> -       .release        = single_release,
+> -};
+> -
+> -int ptdump_register(struct ptdump_info *info, const char *name)
+> -{
+> -       struct dentry *pe;
+>         unsigned i, j;
+>
+>         for (i = 0; i < ARRAY_SIZE(pg_level); i++)
+>                 if (pg_level[i].bits)
+>                         for (j = 0; j < pg_level[i].num; j++)
+>                                 pg_level[i].mask |= pg_level[i].bits[j].mask;
+> -
+> -       pe = debugfs_create_file(name, 0400, NULL, info, &ptdump_fops);
+> -       return pe ? 0 : -ENOMEM;
+>  }
+>
+>  static struct ptdump_info kernel_ptdump_info = {
+> @@ -352,6 +334,8 @@ static struct ptdump_info kernel_ptdump_info = {
+>
+>  static int ptdump_init(void)
+>  {
+> -       return ptdump_register(&kernel_ptdump_info, "kernel_page_tables");
+> +       ptdump_initialize();
+> +       return ptdump_debugfs_register(&kernel_ptdump_info,
+> +                                       "kernel_page_tables");
+>  }
+>  device_initcall(ptdump_init);
+> diff --git a/arch/arm64/mm/ptdump_debugfs.c b/arch/arm64/mm/ptdump_debugfs.c
+> new file mode 100644
+> index 0000000..eee4d86
+> --- /dev/null
+> +++ b/arch/arm64/mm/ptdump_debugfs.c
+> @@ -0,0 +1,31 @@
+> +#include <linux/debugfs.h>
+> +#include <linux/seq_file.h>
+> +
+> +#include <asm/ptdump.h>
+> +
+> +static int ptdump_show(struct seq_file *m, void *v)
+> +{
+> +       struct ptdump_info *info = m->private;
+> +       ptdump_walk_pgd(m, info);
+> +       return 0;
+> +}
+> +
+> +static int ptdump_open(struct inode *inode, struct file *file)
+> +{
+> +       return single_open(file, ptdump_show, inode->i_private);
+> +}
+> +
+> +static const struct file_operations ptdump_fops = {
+> +       .open           = ptdump_open,
+> +       .read           = seq_read,
+> +       .llseek         = seq_lseek,
+> +       .release        = single_release,
+> +};
+> +
+> +int ptdump_debugfs_register(struct ptdump_info *info, const char *name)
+> +{
+> +       struct dentry *pe;
+> +       pe = debugfs_create_file(name, 0400, NULL, info, &ptdump_fops);
+> +       return pe ? 0 : -ENOMEM;
+> +
+> +}
+> diff --git a/drivers/firmware/efi/arm-runtime.c b/drivers/firmware/efi/arm-runtime.c
+> index 7c75a8d..349dc3e 100644
+> --- a/drivers/firmware/efi/arm-runtime.c
+> +++ b/drivers/firmware/efi/arm-runtime.c
+> @@ -39,7 +39,7 @@ static struct mm_struct efi_mm = {
+>         .mmlist                 = LIST_HEAD_INIT(efi_mm.mmlist),
+>  };
+>
+> -#ifdef CONFIG_ARM64_PTDUMP
+> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
+>  #include <asm/ptdump.h>
+>
+>  static struct ptdump_info efi_ptdump_info = {
+> @@ -53,7 +53,7 @@ static struct ptdump_info efi_ptdump_info = {
+>
+>  static int __init ptdump_init(void)
+>  {
+> -       return ptdump_register(&efi_ptdump_info, "efi_page_tables");
+> +       return ptdump_debugfs_register(&efi_ptdump_info, "efi_page_tables");
+>  }
+>  device_initcall(ptdump_init);
+>
+> --
+> 2.7.4
+>
