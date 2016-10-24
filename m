@@ -1,174 +1,52 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAEXv5_gjsCrY6dGq3tKfArXMvcn65R=Bw8q8Gvo2+qjc75MuSQ@mail.gmail.com>
-References: <CAEXv5_jjqZkLEsPY_B6++pf8EeVY=2YkvRJc+rGvEFSaXdRX=A@mail.gmail.com>
- <CAGXu5j+bH3sGMxW0Giav4hsHtNGkmV9Z0DdTKAh5M9L1Bj+nHw@mail.gmail.com> <CAEXv5_gjsCrY6dGq3tKfArXMvcn65R=Bw8q8Gvo2+qjc75MuSQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 24 Oct 2016 14:12:37 -0700
-Message-ID: <CAGXu5jLRierLAFabHusxL8X60XHJ=p3wAMUYm8CEpSTv8yb3SA@mail.gmail.com>
+In-Reply-To: <20161018235835.GB1210@laptop.thejh.net>
+References: <58061416.7020209@oracle.com> <20161018131300.GM14666@pc.thejh.net>
+ <CACXcFmnOjbxXf9ek2mwgyYSXvf=aUY5FcOsgNC8GbA2at=D9tQ@mail.gmail.com> <20161018235835.GB1210@laptop.thejh.net>
+From: Sandy Harris <sandyinchina@gmail.com>
+Date: Mon, 24 Oct 2016 18:02:46 -0400
+Message-ID: <CACXcFmnW7ZLFRbhp-srw5Wx-wvtMj7sbd0cm-0M2+tLqQbGz6A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: HARDENED_ATOMIC benchmarks
-To: David Windsor <dwindsor@gmail.com>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Use-after-free and management of reference counts
+To: Jann Horn <jann@thejh.net>
+Cc: kernel-hardening@lists.openwall.com, Vaishali Thakkar <vaishali.thakkar@oracle.com>, Julia Lawall <julia.lawall@lip6.fr>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 24, 2016 at 2:04 PM, David Windsor <dwindsor@gmail.com> wrote:
-> On Mon, Oct 24, 2016 at 4:53 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Sat, Oct 22, 2016 at 3:13 PM, David Windsor <dwindsor@gmail.com> wrote:
->>> Hi,
->>>
->>> The following are the results of benchmarking HARDENED_ATOMIC.  The
->>> benchmarks performed were dbench and a timed Linux kernel compile using the
->>> Phoronix test suite [1] on a Linux VirtualBox guest.
->>>
->>> dbench was chosen specifically to gauge the performance penalty involved in
->>> heavy usage of struct file->f_count, as this is one of the hottest users of
->>> atomic_t/atomic_long_t.
->>>
->>> A small performance degradation was noticeable with HARDENED_ATOMIC enabled.
->>> The numbers are such that I'm unsure if this was due to the feature itself
->>> or to random line noise.  What follows is a summary of the benchmark
->>> results, then the results themselves.
->>>
->>> [1] http://www.phoronix-test-suite.com/
->>>
->>> HARDENED_ATOMIC Benchmarking Summary
->>> ===================================
->>>
->>> dbench
->>> ======
->>> CONFIG_HARDENED_ATOMIC not set: 109.79 MB/s
->>> CONFIG_HARDENED_ATOMIC set: 106.75 MB/s
->>> 2.8% slowdown
->>>
->>> Timed Linux kernel compile
->>> =====================
->>> CONFIG_HARDENED_ATOMIC not set: 504.12 seconds
->>> CONFIG_HARDENED_ATOMIC set: 504.81 seconds
->>> 0.01% slowdown
->>>
->>>
->>>
->>>
->>> HARDENED_ATOMIC Benchmark Results
->>> ===============================
->>>
->>> dbench
->>> ======
->>> HARDENED_ATOMIC disabled:
->>> dbenchDbench 4.0:
->>>     pts/dbench-1.0.0 [Client Count: 12]
->>>     Test 1 of 1
->>>     Estimated Trial Run Count:    3
->>>     Estimated Time To Completion: 1 Hour, 25 Minutes
->>>         Started Run 1 @ 08:48:01
->>>         Started Run 2 @ 09:00:04
->>>         Started Run 3 @ 09:12:07  [Std. Dev: 1.39%]
->>>
->>>     Test Results:
->>>         109.613
->>>         108.351
->>>         111.393
->>>
->>>     Average: 109.79 MB/s
->>>
->>>
->>> HARDENED_ATOMIC enabled:
->>> Dbench 4.0:
->>>     pts/dbench-1.0.0 [Client Count: 12]
->>>     Test 1 of 1
->>>     Estimated Trial Run Count:    3
->>>     Estimated Time To Completion: 1 Hour, 28 Minutes
->>>         Started Run 1 @ 06:48:33
->>>         Started Run 2 @ 07:00:37
->>>         Started Run 3 @ 07:12:40  [Std. Dev: 12.66%]
->>>         Started Run 4 @ 07:24:43  [Std. Dev: 10.94%]
->>>         Started Run 5 @ 07:36:46  [Std. Dev: 9.98%]
->>>         Started Run 6 @ 07:48:50  [Std. Dev: 9.30%]
->>>
->>>     Test Results:
->>>         87.0504
->>>         106.451
->>>         111.377
->>>         110.239
->>>         112.226
->>>         113.152
->>>
->>>     Average: 106.75 MB/s
+On Tue, Oct 18, 2016 at 7:58 PM, Jann Horn <jann@thejh.net> wrote:
+> On Tue, Oct 18, 2016 at 06:56:24PM -0400, Sandy Harris wrote:
+>> On Tue, Oct 18, 2016 at 9:13 AM, Jann Horn <jann@thejh.net> wrote:
 >>
->> Variation here is as large as the measured difference, so yeah, this
->> looks like it's mostly in the noise.
+>> > Use-after-frees are really hard to deal with.
 >>
->>> Timed Linux Kernel Compile
->>> ======================
->>> HARDENED_ATOMIC disabled:
->>> Timed Linux Kernel Compilation 4.3:
->>>     pts/build-linux-kernel-1.6.0
->>>     Test 4 of 4
->>>     Estimated Trial Run Count:    3
->>>     Estimated Time To Completion: 55 Minutes
->>>     Estimated Trial Run Count:    3
->>>     Estimated Time To Completion: 55 Minutes
->>>         Running Pre-Test Script @ 02:39:33
->>>         Started Run 1 @ 02:40:06
->>>         Running Interim Test Script @ 02:48:39
->>>         Started Run 2 @ 02:48:45
->>>         Running Interim Test Script @ 02:57:07
->>>         Started Run 3 @ 02:57:14  [Std. Dev: 0.84%]
->>>         Running Post-Test Script @ 03:05:35
->>>
->>>     Test Results:
->>>         509.00912308693
->>>         501.88456201553
->>>         501.46281981468
->>>
->>>     Average: 504.12 Seconds
->>>
->>>
->>> HARDENED_ATOMIC enabled:
->>> Timed Linux Kernel Compilation 4.3:
->>>     pts/build-linux-kernel-1.6.0
->>>     Test 4 of 4
->>>     Estimated Trial Run Count:    3
->>>     Estimated Time To Completion: 45 Minutes
->>>         Running Pre-Test Script @ 05:26:55
->>>         Started Run 1 @ 05:27:30
->>>         Running Interim Test Script @ 05:36:01
->>>         Started Run 2 @ 05:36:08
->>>         Running Interim Test Script @ 05:44:32
->>>         Started Run 3 @ 05:44:38  [Std. Dev: 0.36%]
->>>         Running Post-Test Script @ 05:53:02
->>>
->>>     Test Results:
->>>         506.84527802467
->>>         504.29637002945
->>>         503.30119299889
->>>
->>>     Average: 504.81 Seconds
+>> I want to ask a possibly naive questions -- why can't we avoid the
+>> whole class of bugs in the first place? I can think of only two main
+>> sources for use-after-free bugs, both avoidable.
 >>
->> These have much smaller std deviations.
->>
->> Thanks for the testing! The cover letter can likely get updated to
->> include the overview: no meaningfully measurable performance
->> difference. :)
->>
+>> One is allocating something within a function, then returning a
+>> pointer to it. I know I've done that on occasion, got a warning from
+>> lint(1) or the compiler, & fixed it; I have forgotten details. Surely
+>> current static analysis tools can catch nearly all of these. If not,
+>> writing one looks fairly straightforward. Sure, complex code with a
+>> lot of indirection might fool such tools, but in general such code
+>> should not be used anyway.
 >
-> Ok, that sounds good.  Although, Jann Horn and I worked together to
-> come up with a better benchmark that directly targets the
-> file_get->atomic_add path, which is one of the hottest paths to be
-> impacted by HARDENED_ATOMIC.
+> I'm pretty sure the kernel does that in a lot of places, actually.
+
+I meant code like this:
+
+char * something(void)
+{
+      char array[SIZE], *p ;
+
 >
-> I'm running those benchmarks now; they should be finished in a few hours.
-
-Oh perfect! Yeah, I really like being able to see "general case" (as
-already measured: no impact) and "worst case" (this test), since that
-can really help people calibrate what the numbers mean to them.
-
-Thanks!
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+>
+>> The other is misusing malloc()/free() or their kernel code analogs, &
+>> the obvious solution is to avoid using those wherever possible. There
+>> are some kernel data structures that need to grow dynamically, but I
+>> do not think there need to be a lot.
+>
+> Actually, nearly everything in the kernel is allocated dynamically.
+> Even data that you might normally put on the stack is allocated
+> dynamically because kernel stacks are so small.
+> And thanks to namespaces, even things like the hostname can be stored
+> in dynamically allocated memory.
