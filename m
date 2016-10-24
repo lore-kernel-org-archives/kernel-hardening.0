@@ -1,64 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 23 Oct 2016 01:17:17 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20161022231717.GE3334@pc.thejh.net>
-References: <CAEXv5_jjqZkLEsPY_B6++pf8EeVY=2YkvRJc+rGvEFSaXdRX=A@mail.gmail.com>
+References: <58061416.7020209@oracle.com>
+ <CAGXu5jJU0rtzyYbmv7x=GJF2c8rmW2MyZaSDn_+U94PjkmT_tg@mail.gmail.com>
+From: Vaishali Thakkar <vaishali.thakkar@oracle.com>
+Message-ID: <580DB4B4.4060607@oracle.com>
+Date: Mon, 24 Oct 2016 12:43:56 +0530
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="dFWYt1i2NyOo1oI9"
-Content-Disposition: inline
-In-Reply-To: <CAEXv5_jjqZkLEsPY_B6++pf8EeVY=2YkvRJc+rGvEFSaXdRX=A@mail.gmail.com>
-Subject: Re: [kernel-hardening] HARDENED_ATOMIC benchmarks
-To: David Windsor <dwindsor@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>
+In-Reply-To: <CAGXu5jJU0rtzyYbmv7x=GJF2c8rmW2MyZaSDn_+U94PjkmT_tg@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Use-after-free and management of reference
+ counts
+To: kernel-hardening@lists.openwall.com
+Cc: Julia Lawall <julia.lawall@lip6.fr>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---dFWYt1i2NyOo1oI9
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
 
-On Sat, Oct 22, 2016 at 06:13:29PM -0400, David Windsor wrote:
-> Hi,
->=20
-> The following are the results of benchmarking HARDENED_ATOMIC.  The
-> benchmarks performed were dbench and a timed Linux kernel compile using t=
-he
-> Phoronix test suite [1] on a Linux VirtualBox guest.
->=20
-> dbench was chosen specifically to gauge the performance penalty involved =
-in
-> heavy usage of struct file->f_count, as this is one of the hottest users =
-of
-> atomic_t/atomic_long_t.
+On Wednesday 19 October 2016 03:06 AM, Kees Cook wrote:
+> On Tue, Oct 18, 2016 at 5:22 AM, Vaishali Thakkar
+> <vaishali.thakkar@oracle.com> wrote:
+>> Hi,
+>>
+>> Recently I studied the reported CVEs of last 2 years and there were
+>> fair number of use-after-free bugs. Usually we also see many reports
+>> of use-after-free bugs in the LKML [reported by one or other tools].
+>>
+>> Also, at Kernel recipes Jonathan Corbet  mentioned reference counts as
+>> a security issue. I believe if we have more kernel hardening patches
+>> then we can avoid such bugs. I was wondering if there is some ongoing
+>> work in the both [use-after-free and management of reference counts]
+>> of these areas?
+>>
+>> If not, then I would like to work on the same. Any pointers on this
+>> would be appreciated.
+> 
+> Others have already mentioned the HARDENED_ATOMIC work that is
+> underway, but one place I'd really like to take a little bit more time
+> to examine is how to improve the zero-poisoning work that Laura Abbott
+> did recently. Having this feature reduces the availability of a subset
+> of kernel memory exposures and can frustrate a subset of
+> use-after-free exploits. It's been in the kernel since v4.6, but it
+> needs some performance tuning and likely some other adjustments. I
+> talk about it a bit here:
 
-As far as I can tell, dbench doesn't actually exercise f_count all that much
-because it doesn't use threads, it just forks, meaning that the file
-descriptor table isn't shared, which in turn means that fdget() and fdput()
-don't do any refcounting. (And even if it did use threads, it probably
-wouldn't be testing the contended case.)
+Hi,
 
---dFWYt1i2NyOo1oI9
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+Sorry, I missed this as I was not CC'ed. Thanks for the pointers.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+> https://outflux.net/blog/archives/2016/09/30/security-things-in-linux-v4-6/
+> 
+> I think to really dial in this protection so it is more like
+> PAX_MEMORY_SANITIZE, we'd need to do the following:
+> 
+> - adjust the slab poisoning to do zeroing (upstream's slab poisoning
+> uses a different value)
+> - consolidate the CONFIG and run-time cmdlines to give us a single "do
+> the right thing" CONFIG
+> - identify frequently-freed slabs that are less security-sensitive and
+> whitelist them from the poisoning (as done by PAX_MEMORY_SANITIZE)
+> - add kernel command-line argument to control poisoning (as done by
+> PAX_MEMORY_SANITIZE)
 
-iQIcBAEBAgAGBQJYC/N9AAoJED4KNFJOeCOoJkwP/A4giA38nyXUTXaTTndjIIeT
-eyUdfCbVdDOq8S+3us54UxKTrFwXYp74GZQReEdCoCYGj7cpvEXoLw/dBBNxbJEk
-F6VIZnzkCW5rtV7EHxXYrlhaltMqxLyxdEKxXl58e8WYZirlnVNU/YFIWrAfXtWI
-T9rwh4N2HC+f9trNsb95TiB8QshSV/s5zxs7rN84ISKGDTUu2JS/6SN/MzLCk20I
-H8/umcNHXnk51FQ0mV7VctEkA1yPRUzRrHXWV2cFXQHBvuede5ye/z7Cza91XEcV
-aZqQJrYYvZzkjaH9wc/9xvaNIK0DX9OStA7hbBpcmbMr6+euyj7yJmH25QHYO3C5
-/7EPdiPdzGlK+/lC/1uwAalTTLMVHD9QX1hR7U0sMsJQ55BbH7PThKQp/Co2gb/b
-9TrNZlh97pWLHmB5smed4hibdquuXoWpbZJk1s4xU8vrGy6MhvMPe2izur9aFcoK
-go96Bz93PIlfOI6cN75RgKcma07fduEOwPUV/Km2nc2ZMVqod9CR2WDnBJoXCOj1
-UxL2dOoyLPY3dVwM0BL4PRUQR+I2XAIg4R0E6bPfmf2dffkC8ZvWDkO8MXT6IdAT
-AqNWmKLVJwWcjhEaTITJWqxElKrIaM4qwz3qCWT0wC25pRwR4tJGzYG/NN0K9u16
-tDFjpeEgT0wRDeLQIMpk
-=W5fw
------END PGP SIGNATURE-----
+I am looking in to the work done by Laura and PAX team. I'll get back to you
+on this soon.
 
---dFWYt1i2NyOo1oI9--
+> -Kees
+> 
+
+-- 
+Vaishali
