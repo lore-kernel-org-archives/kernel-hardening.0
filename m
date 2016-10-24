@@ -1,112 +1,62 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161020131350.GA18331@thigreal>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com> <20161020131350.GA18331@thigreal>
+In-Reply-To: <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com> <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 24 Oct 2016 15:38:23 -0700
-Message-ID: <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+Date: Mon, 24 Oct 2016 16:04:58 -0700
+Message-ID: <CAGXu5jJKa=dRX403On4iCLyNdjW6evT7TWAJCxMvV+qRJPYjag@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: Hans Liljestrand <ishkamiel@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>
+Subject: [kernel-hardening] Re: [RFC v2 PATCH 01/13] Add architecture independent hardened atomic base
+To: Elena Reshetova <elena.reshetova@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 20, 2016 at 6:13 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
-> On Thu, Oct 20, 2016 at 01:25:18PM +0300, Elena Reshetova wrote:
->> Changes since RFC v1:
->>
->>  - documentation added: Documentation/security/hardened-atomic.txt
->>  - percpu-refcount diversion from PaX/Grsecurity explained better
->>  - arch. independent base has full functional coverage for atomic,
->>    atomic-long and atomic64 types.
->>  - arch. independent base is better structured and organized
->>  - lkdtm: tests are now defined using macros
->>  - x86 implementation added for missing functions
->>  - fixed trap handling on x86 and overall reporting
->>  - many small polishing and fixes
->>
->> Open items:
->>
->>  - performance measurements: we are still waiting for numbers
->>  - arch. independent implementation doesn't have coverage for
->>    local_wrap_t type in cases when include/asm-generic/local.h
->>    is not used (meaning architecture does provide its implementation
->>    but does not yet provide *_wrap functions). We haven't yet
->>    find a nice way of doing it in arch. independent definitions,
->>    since some kernel code includes asm/local.h directly and we
->>    are not sure where to place new definitions (new file under
->>    inlcude/linux/local_wrap.h (to be inline with include/linux/
->>    atomic.h) + definition of local_wrap_t to include/linux/types.h?)
->>    Ideas and suggestions on this are very warlmy welcomed!
->>
->> Compilation and testing results:
->>
->>  - CONFIG_HARDENED_ATOMIC=y, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, lkdtm atomic tests PASS
->>  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, feature not enabled, so tests not run
->>  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, with x86 hardening implementation removed
->>    (simulate not implemented for arch. case): compile does not yet pass due to issues with local_wrap_t decribed above
+On Thu, Oct 20, 2016 at 3:25 AM, Elena Reshetova
+<elena.reshetova@intel.com> wrote:
+> This series brings the PaX/Grsecurity PAX_REFCOUNT [1]
+> feature support to the upstream kernel. All credit for the
+> feature goes to the feature authors.
 >
-> As noted our current implementation fails on local_t without arch support (at
-> least in kernel/trace/ring_buffer.c where local_wrap_t is used). It seems that
-> local_t is almost never used, which is also what the related documentation
-> recommends (at Documentation/local_ops.txt). I would be inclined to drop local_t
-> support and switch the generic implementation to use atomic_long_wrap_t instead
-> of atomic_long_t.
+> The name of the upstream feature is HARDENED_ATOMIC
+> and it is configured using CONFIG_HARDENED_ATOMIC and
+> HAVE_ARCH_HARDENED_ATOMIC.
 >
-> So my question is then, do we actually want to provide a protected version of
-> local_t, or can we just drop this support?
-
-What is the combination of arch/CONFIG that causes local_t to fail?
-I'd prefer to retain coverage, but I don't quite understand where the
-problem is. It sounds like this is a header file issue? Should local.h
-get moved under asm-generic?
-
->> This series brings the PaX/Grsecurity PAX_REFCOUNT
->> feature support to the upstream kernel. All credit for the
->> feature goes to the feature authors.
->>
->> The name of the upstream feature is HARDENED_ATOMIC
->> and it is configured using CONFIG_HARDENED_ATOMIC and
->> HAVE_ARCH_HARDENED_ATOMIC.
->>
->> This series only adds x86 support; other architectures are expected
->> to add similar support gradually.
+> This series only adds x86 support; other architectures are expected
+> to add similar support gradually.
+> [...]
+> Bugs Prevented
+> --------------
+> HARDENED_ATOMIC would directly mitigate these Linux kernel bugs:
 >
-> I have some worries on the generic arch independent implementation of
-> atomic64_t/atomic64_wrap_t (include/asm-generic/atomic64.h). We provide _wrap
-> versions for atomic64, but protection is dependant on arch implementation and
-> config. That is, one could possibly implement HARDENED_ATOMIC support while
-> leaving atomic64_t unprotected depending on specific configs, for instance by
-> then defaulting to CONFIG_GENERIC_ATOMIC64 (in linuc/hardened/atomic.h:676). Or
-> maybe I'm just under-/overthinking this?
+> CVE-2016-3135 - Netfilter xt_alloc_table_info integer overflow
+> CVE-2010-2959 - CAN integer overflow vulnerability,
+> related post: https://jon.oberheide.org/blog/2010/09/10/linux-kernel-can-slub-overflow/
 
-IIUC, ARMv6 builds could have GENERIC_ATOMIC64 and (once implemented)
-HARDENED_ATOMIC, so I think that combination is worth spending time
-on.
+These CVEs are "regular" integer overflows, rather than ref-counting
+flaws, so they should be left off the example list. (On kernsec.org,
+ref counting is a sub-set of integer overflow flaws, but the exploit
+examples are all merged together; Sorry for the confusion!)
 
-> My concern is that this is a very easy place to include errors and
-> inconsistencies. We've been trying to cleanly fix this, but haven't really found
-> a satisfactory solution (e.g. one that actually works on different configs/arcs
-> and isn't a horrible mess). I recall that the hardened_atomic ARM implementation
-> already faced issues with atomic64, so this seems to be a real cause for
-> problems. Any suggestions on how to do this more cleanly?
+> CVE-2016-0728 - Keyring refcount overflow
 
-I haven't looked too closely yet, though maybe Colin will have some
-thoughts as he looks at the ARM port.
+Exploit link is https://www.exploit-db.com/exploits/39277/
 
-> In contrast to local_t issue, atomic64_t is in fact directly used in several
-> places, including some that we patch to use atomic64_wrap_t. The atomic_(long)_t
-> implementation is also possibly intertwined with atomic64_t, so I doubt just
-> dropping bare atomic64_t protections is a viable solution.
+> CVE-2014-2851 - Group_info refcount overflow
 
-Agreed.
+Exploit link is https://www.exploit-db.com/exploits/32926/
 
-> On that note, our lkdtm test are still lacking atomic64 tests, which would
-> probably be good idea to add.
+>
+> And a relatively fresh exploit example:
+> https://www.exploit-db.com/exploits/39773/
 
-Agreed, I'd like as much coverage as possible (especially if we have
-some fragile combinations).
+For completeness, this is CVE-2016-4558.
+
+> [...]
+>  Documentation/security/hardened-atomic.txt | 141 +++++++++++++++
+
+Nit on whitespace: I get warnings from git about trailing whitespace
+in this file.
 
 -Kees
 
