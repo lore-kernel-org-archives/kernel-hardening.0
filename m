@@ -4,8 +4,8 @@ In-Reply-To: <20161018235835.GB1210@laptop.thejh.net>
 References: <58061416.7020209@oracle.com> <20161018131300.GM14666@pc.thejh.net>
  <CACXcFmnOjbxXf9ek2mwgyYSXvf=aUY5FcOsgNC8GbA2at=D9tQ@mail.gmail.com> <20161018235835.GB1210@laptop.thejh.net>
 From: Sandy Harris <sandyinchina@gmail.com>
-Date: Mon, 24 Oct 2016 18:02:46 -0400
-Message-ID: <CACXcFmnW7ZLFRbhp-srw5Wx-wvtMj7sbd0cm-0M2+tLqQbGz6A@mail.gmail.com>
+Date: Mon, 24 Oct 2016 18:16:47 -0400
+Message-ID: <CACXcFm=hqQQWGfQcZtMUkL82S12M9eksBtf_fjyq0J+bNKbxWQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Use-after-free and management of reference counts
 To: Jann Horn <jann@thejh.net>
@@ -18,9 +18,7 @@ On Tue, Oct 18, 2016 at 7:58 PM, Jann Horn <jann@thejh.net> wrote:
 >>
 >> > Use-after-frees are really hard to deal with.
 >>
->> I want to ask a possibly naive questions -- why can't we avoid the
->> whole class of bugs in the first place? I can think of only two main
->> sources for use-after-free bugs, both avoidable.
+>> ...
 >>
 >> One is allocating something within a function, then returning a
 >> pointer to it. I know I've done that on occasion, got a warning from
@@ -32,21 +30,14 @@ On Tue, Oct 18, 2016 at 7:58 PM, Jann Horn <jann@thejh.net> wrote:
 >
 > I'm pretty sure the kernel does that in a lot of places, actually.
 
-I meant code like this:
+I meant code that allocates things on the stack & then returns a
+pointer to them. That memory is guaranteed invalid since the
+function's stack area is invalid after return. Surely such errors
+are rare & can be caught by static analysis. Their frequency
+should be near zero in any well-written code and zero once it
+has gone through the sort of testing kernel code gets.
 
-char * something(void)
-{
-      char array[SIZE], *p ;
-
->
->
->> The other is misusing malloc()/free() or their kernel code analogs, &
->> the obvious solution is to avoid using those wherever possible. There
->> are some kernel data structures that need to grow dynamically, but I
->> do not think there need to be a lot.
->
-> Actually, nearly everything in the kernel is allocated dynamically.
-> Even data that you might normally put on the stack is allocated
-> dynamically because kernel stacks are so small.
-> And thanks to namespaces, even things like the hostname can be stored
-> in dynamically allocated memory.
+I think you meant calling something from the malloc() family
+of functions, doing some error checking or initialisation, &
+then returning the pointer. That is valid code; it just requires
+great care to balance *alloc()s and free()s,
