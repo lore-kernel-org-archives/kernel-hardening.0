@@ -1,43 +1,115 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20161018235835.GB1210@laptop.thejh.net>
-References: <58061416.7020209@oracle.com> <20161018131300.GM14666@pc.thejh.net>
- <CACXcFmnOjbxXf9ek2mwgyYSXvf=aUY5FcOsgNC8GbA2at=D9tQ@mail.gmail.com> <20161018235835.GB1210@laptop.thejh.net>
-From: Sandy Harris <sandyinchina@gmail.com>
-Date: Mon, 24 Oct 2016 18:16:47 -0400
-Message-ID: <CACXcFm=hqQQWGfQcZtMUkL82S12M9eksBtf_fjyq0J+bNKbxWQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20161020131350.GA18331@thigreal>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com> <20161020131350.GA18331@thigreal>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 24 Oct 2016 15:38:23 -0700
+Message-ID: <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Use-after-free and management of reference counts
-To: Jann Horn <jann@thejh.net>
-Cc: kernel-hardening@lists.openwall.com, Vaishali Thakkar <vaishali.thakkar@oracle.com>, Julia Lawall <julia.lawall@lip6.fr>
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: Hans Liljestrand <ishkamiel@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 18, 2016 at 7:58 PM, Jann Horn <jann@thejh.net> wrote:
-> On Tue, Oct 18, 2016 at 06:56:24PM -0400, Sandy Harris wrote:
->> On Tue, Oct 18, 2016 at 9:13 AM, Jann Horn <jann@thejh.net> wrote:
+On Thu, Oct 20, 2016 at 6:13 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
+> On Thu, Oct 20, 2016 at 01:25:18PM +0300, Elena Reshetova wrote:
+>> Changes since RFC v1:
 >>
->> > Use-after-frees are really hard to deal with.
+>>  - documentation added: Documentation/security/hardened-atomic.txt
+>>  - percpu-refcount diversion from PaX/Grsecurity explained better
+>>  - arch. independent base has full functional coverage for atomic,
+>>    atomic-long and atomic64 types.
+>>  - arch. independent base is better structured and organized
+>>  - lkdtm: tests are now defined using macros
+>>  - x86 implementation added for missing functions
+>>  - fixed trap handling on x86 and overall reporting
+>>  - many small polishing and fixes
 >>
->> ...
+>> Open items:
 >>
->> One is allocating something within a function, then returning a
->> pointer to it. I know I've done that on occasion, got a warning from
->> lint(1) or the compiler, & fixed it; I have forgotten details. Surely
->> current static analysis tools can catch nearly all of these. If not,
->> writing one looks fairly straightforward. Sure, complex code with a
->> lot of indirection might fool such tools, but in general such code
->> should not be used anyway.
+>>  - performance measurements: we are still waiting for numbers
+>>  - arch. independent implementation doesn't have coverage for
+>>    local_wrap_t type in cases when include/asm-generic/local.h
+>>    is not used (meaning architecture does provide its implementation
+>>    but does not yet provide *_wrap functions). We haven't yet
+>>    find a nice way of doing it in arch. independent definitions,
+>>    since some kernel code includes asm/local.h directly and we
+>>    are not sure where to place new definitions (new file under
+>>    inlcude/linux/local_wrap.h (to be inline with include/linux/
+>>    atomic.h) + definition of local_wrap_t to include/linux/types.h?)
+>>    Ideas and suggestions on this are very warlmy welcomed!
+>>
+>> Compilation and testing results:
+>>
+>>  - CONFIG_HARDENED_ATOMIC=y, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, lkdtm atomic tests PASS
+>>  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, full x86 coverage implementation: compiles, feature not enabled, so tests not run
+>>  - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, with x86 hardening implementation removed
+>>    (simulate not implemented for arch. case): compile does not yet pass due to issues with local_wrap_t decribed above
 >
-> I'm pretty sure the kernel does that in a lot of places, actually.
+> As noted our current implementation fails on local_t without arch support (at
+> least in kernel/trace/ring_buffer.c where local_wrap_t is used). It seems that
+> local_t is almost never used, which is also what the related documentation
+> recommends (at Documentation/local_ops.txt). I would be inclined to drop local_t
+> support and switch the generic implementation to use atomic_long_wrap_t instead
+> of atomic_long_t.
+>
+> So my question is then, do we actually want to provide a protected version of
+> local_t, or can we just drop this support?
 
-I meant code that allocates things on the stack & then returns a
-pointer to them. That memory is guaranteed invalid since the
-function's stack area is invalid after return. Surely such errors
-are rare & can be caught by static analysis. Their frequency
-should be near zero in any well-written code and zero once it
-has gone through the sort of testing kernel code gets.
+What is the combination of arch/CONFIG that causes local_t to fail?
+I'd prefer to retain coverage, but I don't quite understand where the
+problem is. It sounds like this is a header file issue? Should local.h
+get moved under asm-generic?
 
-I think you meant calling something from the malloc() family
-of functions, doing some error checking or initialisation, &
-then returning the pointer. That is valid code; it just requires
-great care to balance *alloc()s and free()s,
+>> This series brings the PaX/Grsecurity PAX_REFCOUNT
+>> feature support to the upstream kernel. All credit for the
+>> feature goes to the feature authors.
+>>
+>> The name of the upstream feature is HARDENED_ATOMIC
+>> and it is configured using CONFIG_HARDENED_ATOMIC and
+>> HAVE_ARCH_HARDENED_ATOMIC.
+>>
+>> This series only adds x86 support; other architectures are expected
+>> to add similar support gradually.
+>
+> I have some worries on the generic arch independent implementation of
+> atomic64_t/atomic64_wrap_t (include/asm-generic/atomic64.h). We provide _wrap
+> versions for atomic64, but protection is dependant on arch implementation and
+> config. That is, one could possibly implement HARDENED_ATOMIC support while
+> leaving atomic64_t unprotected depending on specific configs, for instance by
+> then defaulting to CONFIG_GENERIC_ATOMIC64 (in linuc/hardened/atomic.h:676). Or
+> maybe I'm just under-/overthinking this?
+
+IIUC, ARMv6 builds could have GENERIC_ATOMIC64 and (once implemented)
+HARDENED_ATOMIC, so I think that combination is worth spending time
+on.
+
+> My concern is that this is a very easy place to include errors and
+> inconsistencies. We've been trying to cleanly fix this, but haven't really found
+> a satisfactory solution (e.g. one that actually works on different configs/arcs
+> and isn't a horrible mess). I recall that the hardened_atomic ARM implementation
+> already faced issues with atomic64, so this seems to be a real cause for
+> problems. Any suggestions on how to do this more cleanly?
+
+I haven't looked too closely yet, though maybe Colin will have some
+thoughts as he looks at the ARM port.
+
+> In contrast to local_t issue, atomic64_t is in fact directly used in several
+> places, including some that we patch to use atomic64_wrap_t. The atomic_(long)_t
+> implementation is also possibly intertwined with atomic64_t, so I doubt just
+> dropping bare atomic64_t protections is a viable solution.
+
+Agreed.
+
+> On that note, our lkdtm test are still lacking atomic64 tests, which would
+> probably be good idea to add.
+
+Agreed, I'd like as much coverage as possible (especially if we have
+some fragile combinations).
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
