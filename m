@@ -1,85 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Schaufler, Casey" <casey.schaufler@intel.com>
+Date: Tue, 25 Oct 2016 22:21:21 +0000
+Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F330ED1@ORSMSX107.amr.corp.intel.com>
+References: <201610251247.sRs00hNq%fengguang.wu@intel.com>
+ <CAEXv5_jPfV9aV1KP=cmoBMGXuCCVEtXZhGmvtuFAL8qfLi+oYA@mail.gmail.com>
+ <20161025125510.iuia42t3qdow5yer@thigreal>
+ <CAGXu5j+QU3MHfjG7NVRh2MsK9sESoJpJ6S6h5MdR52NAVM=--Q@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41BF8853@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5j+4tdxJbQGu+ShqdGOR_Y30G4hrYk7OZ2RJa75ptUcPfA@mail.gmail.com>
+In-Reply-To: <CAGXu5j+4tdxJbQGu+ShqdGOR_Y30G4hrYk7OZ2RJa75ptUcPfA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
- <20161025085109.GV19531@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Oct 2016 15:18:44 -0700
-Message-ID: <CAGXu5jL4hZTBdmLpOmjaKOan6NfBtnpyBk6m1rpMFbTZsd3cFw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 01/13] Add architecture
- independent hardened atomic base
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Subject: RE: [kernel-hardening] Re: [kees:kspp/hardened-atomic 3/14]
+ kernel/trace/ring_buffer.c:299:2: error: unknown type name 'local_wrap_t'
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 25, 2016 at 11:20 AM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
->>  struct list_head {
->> diff --git a/kernel/panic.c b/kernel/panic.c index e6480e2..cb1d6db
->> 100644
->> --- a/kernel/panic.c
->> +++ b/kernel/panic.c
->> @@ -616,3 +616,14 @@ static int __init oops_setup(char *s)
->>       return 0;
->>  }
->>  early_param("oops", oops_setup);
->> +
->> +#ifdef CONFIG_HARDENED_ATOMIC
->> +void hardened_atomic_overflow(struct pt_regs *regs) {
->> +     pr_emerg(KERN_EMERG "HARDENED_ATOMIC: overflow detected in: %s:%d, uid/euid: %u/%u\n",
->> +             current->comm, task_pid_nr(current),
->> +             from_kuid_munged(&init_user_ns, current_uid()),
->> +             from_kuid_munged(&init_user_ns, current_euid()));
->> +     BUG();
->
-> BUG() will print a message like "kernel BUG at kernel/panic.c:627!"
-> and a stack trace dump with extra frames including hardened_atomic_overflow() and some exception handler routines (do_trap() on x86), which are totally useless. So I don't want to call BUG() here.
->
-> Instead, we will fall back to a normal "BUG" handler, bug_handler() on arm64, which eventually calls die(), generating more *intuitive* messages:
-> ===8<===
-> [   29.082336] lkdtm: attempting good atomic_add_return
-> [   29.082391] lkdtm: attempting bad atomic_add_return
-> [   29.082830] ------------[ cut here ]------------
-> [   29.082889] Kernel BUG at ffff0000008b07fc [verbose debug info unavailable]
->                             (Actually, this is lkdtm_ATOMIC_ADD_RETURN_OVERFLOW)
-> [   29.082968] HARDENED_ATOMIC: overflow detected in: insmod:1152, uid/euid: 0/0
-> [   29.083043] Internal error: Oops - BUG: 0 [#1] PREEMPT SMP
-> [   29.083098] Modules linked in: lkdtm(+)
-> [   29.083189] CPU: 1 PID: 1152 Comm: insmod Not tainted 4.9.0-rc1-00024-gb757839-dirty #12
-> [   29.083262] Hardware name: FVP Base (DT)
-> [   29.083324] task: ffff80087aa21900 task.stack: ffff80087a36c000
-> [   29.083557] PC is at lkdtm_ATOMIC_ADD_RETURN_OVERFLOW+0x6c/0xa0 [lkdtm]
-> [   29.083627] LR is at 0x7fffffff
-> [   29.083687] pc : [<ffff0000008b07fc>] lr : [<000000007fffffff>] pstate: 90400149
-> [   29.083757] sp : ffff80087a36fbe0
-> [   29.083810] x29: ffff80087a36fbe0 [   29.083858] x28: ffff000008ec3000
-> [   29.083906]
->
-> ...
->
-> [   29.090842] [<ffff0000008b07fc>] lkdtm_ATOMIC_ADD_RETURN_OVERFLOW+0x6c/0xa0 [lkdtm]
-> [   29.091090] [<ffff0000008b20a4>] lkdtm_do_action+0x1c/0x28 [lkdtm]
-> [   29.091334] [<ffff0000008bb118>] lkdtm_module_init+0x118/0x210 [lkdtm]
-> [   29.091422] [<ffff000008083150>] do_one_initcall+0x38/0x128
-> [   29.091503] [<ffff000008166ad4>] do_init_module+0x5c/0x1c8
-> [   29.091586] [<ffff00000812e1ec>] load_module+0x1b24/0x20b0
-> [   29.091670] [<ffff00000812e920>] SyS_init_module+0x1a8/0x1d8
-> [   29.091753] [<ffff000008082ef0>] el0_svc_naked+0x24/0x28
-> [   29.091843] Code: 910063a1 b8e0003e 2b1e0010 540000c7 (d4210020)
-> ===>8===
->
-> So, you propose to remove call to BUG() fully from there? Funny, I think on x86 the output was actually like you wanted with just calling BUG().
-
-The x86 BUG isn't as nice:
-- "kernel BUG at kernel/panic.c:627" is bogus, the bug is a frame above, etc
-- the meaningful message "HARDENED_ATOMIC: overflow detected" happens
-above the ==cut== line
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29t
+IFttYWlsdG86a2Vlc2Nvb2tAZ29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+IEtlZXMgQ29vaw0K
+PiBTZW50OiBUdWVzZGF5LCBPY3RvYmVyIDI1LCAyMDE2IDM6MDEgUE0NCj4gVG86IFJlc2hldG92
+YSwgRWxlbmEgPGVsZW5hLnJlc2hldG92YUBpbnRlbC5jb20+OyBrZXJuZWwtDQo+IGhhcmRlbmlu
+Z0BsaXN0cy5vcGVud2FsbC5jb20NCj4gQ2M6IEhhbnMgTGlsamVzdHJhbmQgPGlzaGthbWllbEBn
+bWFpbC5jb20+OyBEYXZpZCBXaW5kc29yDQo+IDxkd2luZHNvckBnbWFpbC5jb20+DQo+IFN1Ympl
+Y3Q6IFtrZXJuZWwtaGFyZGVuaW5nXSBSZTogW2tlZXM6a3NwcC9oYXJkZW5lZC1hdG9taWMgMy8x
+NF0NCj4ga2VybmVsL3RyYWNlL3JpbmdfYnVmZmVyLmM6Mjk5OjI6IGVycm9yOiB1bmtub3duIHR5
+cGUgbmFtZSAnbG9jYWxfd3JhcF90Jw0KPiANCj4gT24gVHVlLCBPY3QgMjUsIDIwMTYgYXQgMTE6
+MTQgQU0sIFJlc2hldG92YSwgRWxlbmENCj4gPGVsZW5hLnJlc2hldG92YUBpbnRlbC5jb20+IHdy
+b3RlOg0KPiA+PkkgcHVsbGVkIGluIHRoZSBSRkMgdjIsIGFuZCBzaW5jZSBpdCB3YXMgYmFzZWQg
+b24gYSBwcmlvciAtbmV4dCwgSSBlbmRlZCB1cA0KPiBjaG9vc2luZyA0LjktcmMyIHRvIGJhc2Ug
+aXQgb24gc2luY2UgaXQgaGFkIGZld2VyIGNvbmZsaWN0cy4NCj4gPg0KPiA+IEkgZ3Vlc3MgSSBu
+ZWVkIHRvIGRvIGEgcmViYXNlLiBEbyB3ZSBzdGlsbCB3YW50IHRvIGtlZXAgaXQgb24gdG9wIG9m
+IG5leHQ/DQo+IA0KPiBJIGRlZmVyIHRvIHlvdXIgcHJlZmVyZW5jZSwgdGhvdWdoIC1uZXh0IGlz
+IGEgbW92aW5nIHRhcmdldCwgc28gYXQNCj4gc29tZSBwb2ludCBoZXJlIHdlJ2xsIG5lZWQgdG8g
+anVzdCBiYXNlIGl0IG9uIExpbnVzJ3MgdHJlZSwgYnV0IHRoYXQNCj4gbWlnaHQgbWFrZSBzb21l
+IG1lcmdlcyBtb3JlIGRpZmZpY3VsdC4NCj4gDQo+IFdoYXQgZG8gb3RoZXIgZm9sa3MgZmluZCBl
+YXNpZXIgdG8gdGVzdCB3aXRoPw0KDQpJIHdvcmsgb2ZmIEphbWVzIE1vcnJpcycgc2VjdXJpdHkt
+bmV4dCwgd2hpY2ggdXN1YWxseSBnZXRzIHNldCBhdCByYzIuDQoNCj4gDQo+IC1LZWVzDQo+IA0K
+PiAtLQ0KPiBLZWVzIENvb2sNCj4gTmV4dXMgU2VjdXJpdHkNCg==
