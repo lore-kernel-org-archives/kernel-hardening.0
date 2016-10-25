@@ -1,23 +1,34 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161025085109.GV19531@linaro.org>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
 References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-2-git-send-email-elena.reshetova@intel.com> <20161025085109.GV19531@linaro.org>
+ <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
+ <20161025085109.GV19531@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Oct 2016 15:16:59 -0700
-Message-ID: <CAGXu5jK-HeBCwon+u76pe3mqfL9Rag2me7WCG3XZCDGgBWGPWA@mail.gmail.com>
+Date: Tue, 25 Oct 2016 15:18:44 -0700
+Message-ID: <CAGXu5jL4hZTBdmLpOmjaKOan6NfBtnpyBk6m1rpMFbTZsd3cFw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] [RFC v2 PATCH 01/13] Add architecture
  independent hardened atomic base
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Oct 25, 2016 at 1:51 AM, AKASHI Takahiro
-<takahiro.akashi@linaro.org> wrote:
->> +void hardened_atomic_overflow(struct pt_regs *regs)
->> +{
+On Tue, Oct 25, 2016 at 11:20 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+>>  struct list_head {
+>> diff --git a/kernel/panic.c b/kernel/panic.c index e6480e2..cb1d6db
+>> 100644
+>> --- a/kernel/panic.c
+>> +++ b/kernel/panic.c
+>> @@ -616,3 +616,14 @@ static int __init oops_setup(char *s)
+>>       return 0;
+>>  }
+>>  early_param("oops", oops_setup);
+>> +
+>> +#ifdef CONFIG_HARDENED_ATOMIC
+>> +void hardened_atomic_overflow(struct pt_regs *regs) {
 >> +     pr_emerg(KERN_EMERG "HARDENED_ATOMIC: overflow detected in: %s:%d, uid/euid: %u/%u\n",
 >> +             current->comm, task_pid_nr(current),
 >> +             from_kuid_munged(&init_user_ns, current_uid()),
@@ -25,12 +36,9 @@ On Tue, Oct 25, 2016 at 1:51 AM, AKASHI Takahiro
 >> +     BUG();
 >
 > BUG() will print a message like "kernel BUG at kernel/panic.c:627!"
-> and a stack trace dump with extra frames including hardened_atomic_overflow()
-> and some exception handler routines (do_trap() on x86), which are totally
-> useless. So I don't want to call BUG() here.
+> and a stack trace dump with extra frames including hardened_atomic_overflow() and some exception handler routines (do_trap() on x86), which are totally useless. So I don't want to call BUG() here.
 >
-> Instead, we will fall back to a normal "BUG" handler, bug_handler() on arm64,
-> which eventually calls die(), generating more *intuitive* messages:
+> Instead, we will fall back to a normal "BUG" handler, bug_handler() on arm64, which eventually calls die(), generating more *intuitive* messages:
 > ===8<===
 > [   29.082336] lkdtm: attempting good atomic_add_return
 > [   29.082391] lkdtm: attempting bad atomic_add_return
@@ -62,10 +70,13 @@ On Tue, Oct 25, 2016 at 1:51 AM, AKASHI Takahiro
 > [   29.091753] [<ffff000008082ef0>] el0_svc_naked+0x24/0x28
 > [   29.091843] Code: 910063a1 b8e0003e 2b1e0010 540000c7 (d4210020)
 > ===>8===
+>
+> So, you propose to remove call to BUG() fully from there? Funny, I think on x86 the output was actually like you wanted with just calling BUG().
 
-This looks much nicer, yes. Is there a similar function that can be
-used on x86? I've been wanting to reorganize these hardening traps so
-they're less ugly. :P
+The x86 BUG isn't as nice:
+- "kernel BUG at kernel/panic.c:627" is bogus, the bug is a frame above, etc
+- the meaningful message "HARDENED_ATOMIC: overflow detected" happens
+above the ==cut== line
 
 -Kees
 
