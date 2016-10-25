@@ -1,95 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jJKa=dRX403On4iCLyNdjW6evT7TWAJCxMvV+qRJPYjag@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Tue, 25 Oct 2016 07:57:52 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF84FF@IRSMSX102.ger.corp.intel.com>
 References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-2-git-send-email-elena.reshetova@intel.com> <CAGXu5jJKa=dRX403On4iCLyNdjW6evT7TWAJCxMvV+qRJPYjag@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 24 Oct 2016 17:28:16 -0700
-Message-ID: <CAGXu5jLXGtPs4MMQT8+yjXNG1UhkHmSnHawKAePQQCXqX7vcDQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v2 PATCH 01/13] Add architecture independent hardened atomic base
-To: Elena Reshetova <elena.reshetova@intel.com>
+ <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
+ <CAGXu5jJKa=dRX403On4iCLyNdjW6evT7TWAJCxMvV+qRJPYjag@mail.gmail.com>
+In-Reply-To: <CAGXu5jJKa=dRX403On4iCLyNdjW6evT7TWAJCxMvV+qRJPYjag@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [RFC v2 PATCH 01/13] Add architecture independent hardened
+ atomic base
+To: Kees Cook <keescook@chromium.org>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Oct 24, 2016 at 4:04 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Oct 20, 2016 at 3:25 AM, Elena Reshetova
-> <elena.reshetova@intel.com> wrote:
->> This series brings the PaX/Grsecurity PAX_REFCOUNT [1]
->> feature support to the upstream kernel. All credit for the
->> feature goes to the feature authors.
->>
->> The name of the upstream feature is HARDENED_ATOMIC
->> and it is configured using CONFIG_HARDENED_ATOMIC and
->> HAVE_ARCH_HARDENED_ATOMIC.
->>
->> This series only adds x86 support; other architectures are expected
->> to add similar support gradually.
->> [...]
->> Bugs Prevented
->> --------------
->> HARDENED_ATOMIC would directly mitigate these Linux kernel bugs:
->> [...]
->> CVE-2016-0728 - Keyring refcount overflow
->
-> Exploit link is https://www.exploit-db.com/exploits/39277/
-
-BTW, this is easy to test. By reverting 23567fd052a9, I can run the
-exploit, and it gets killed. In dmesg, as expected, is:
-
-[ 4546.204612] HARDENED_ATOMIC: overflow detected in:
-CVE-2016-0728:3912, uid/euid: 1000/1000
-[ 4546.205322] ------------[ cut here ]------------
-[ 4546.205692] kernel BUG at kernel/panic.c:627!
-[ 4546.206028] invalid opcode: 0000 [#1] SMP
-[ 4546.206304] Modules linked in:
-[ 4546.206304] CPU: 1 PID: 3912 Comm: CVE-2016-0728 Not tainted 4.9.0-rc2+ #265
-[ 4546.206304] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996),
-BIOS Ubuntu-1.8.2-1ubuntu1 04/01/2014
-[ 4546.206304] task: ffff993869d91640 task.stack: ffff9e20c4360000
-[ 4546.206304] RIP: 0010:[<ffffffffb4067e56>]  [<ffffffffb4067e56>]
-hardened_atomic_overflow+0x66/0x70
-[ 4546.206304] RSP: 0018:ffff9e20c4363ca8  EFLAGS: 00010286
-[ 4546.206304] RAX: 000000000000004e RBX: ffff993869d91640 RCX: 0000000000000000
-[ 4546.206304] RDX: 0000000000000000 RSI: ffff99387fc8ccc8 RDI: ffff99387fc8ccc8
-[ 4546.206304] RBP: ffff9e20c4363cb8 R08: 0000000000000001 R09: 0000000000000000
-[ 4546.206304] R10: ffffffffb4f4e9c3 R11: 0000000000000001 R12: 00000000000003e8
-[ 4546.206304] R13: ffff9e20c4363de8 R14: ffffffffb4f4e9c3 R15: 0000000000000000
-[ 4546.206304] FS:  00007f01b632b700(0000) GS:ffff99387fc80000(0000)
-knlGS:0000000000000000
-[ 4546.206304] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
-[ 4546.206304] CR2: 00007fff9c39e080 CR3: 000000042979e000 CR4: 00000000001406e0
-[ 4546.206304] Stack:
-[ 4546.206304]  0000000000000004 ffff993869d91640 ffff9e20c4363d08
-ffffffffb401f1c6
-[ 4546.206304]  ffff9e20c4363d08 0000000000000000 ffffffffb4f4e9c3
-0000000000000004
-[ 4546.206304]  ffff9e20c4363de8 000000000000000b ffffffffb4f4e9c3
-0000000000000000
-[ 4546.206304] Call Trace:
-[ 4546.206304]  [<ffffffffb401f1c6>] do_trap+0xa6/0x160
-[ 4546.206304]  [<ffffffffb401f32b>] do_error_trap+0xab/0x170
-[ 4546.206304]  [<ffffffffb4002036>] ? trace_hardirqs_off_thunk+0x1a/0x1c
-[ 4546.206304]  [<ffffffffb401fc90>] do_overflow+0x20/0x30
-[ 4546.206304]  [<ffffffffb4ae3ef8>] overflow+0x18/0x20
-[ 4546.206304]  [<ffffffffb409180e>] ? prepare_creds+0x9e/0x130
-[ 4546.206304]  [<ffffffffb40917aa>] ? prepare_creds+0x3a/0x130
-[ 4546.206304]  [<ffffffffb43559ae>] join_session_keyring+0x1e/0x180
-[ 4546.206304]  [<ffffffffb43537d1>] keyctl_join_session_keyring+0x31/0x50
-[ 4546.206304]  [<ffffffffb435506b>] SyS_keyctl+0xeb/0x110
-[ 4546.206304]  [<ffffffffb4002ddc>] do_syscall_64+0x5c/0x140
-[ 4546.206304]  [<ffffffffb4ae32a4>] entry_SYSCALL64_slow_path+0x25/0x25
-[ 4546.206304] Code: 00 00 8b 93 60 04 00 00 48 8d b3 40 06 00 00 48
-c7 c7 50 4d ea b4 45 89 e0 8b 48 14 83 f9 ff 0f 44 0d 9b 5d fe 00 e8
-5d 65 10 00 <0f> 0b 0f 1f 84 00 00 00 00 00 0f 1f 44 00 00 55 48 c7 c0
-a0 ca
-[ 4546.206304] RIP  [<ffffffffb4067e56>] hardened_atomic_overflow+0x66/0x70
-[ 4546.206304]  RSP <ffff9e20c4363ca8>
-[ 4546.224401] ---[ end trace 6aca77070d529c86 ]---
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+T24gVGh1LCBPY3QgMjAsIDIwMTYgYXQgMzoyNSBBTSwgRWxlbmEgUmVzaGV0b3ZhIDxlbGVuYS5y
+ZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gVGhpcyBzZXJpZXMgYnJpbmdzIHRoZSBQYVgv
+R3JzZWN1cml0eSBQQVhfUkVGQ09VTlQgWzFdIGZlYXR1cmUgc3VwcG9ydCANCj4gdG8gdGhlIHVw
+c3RyZWFtIGtlcm5lbC4gQWxsIGNyZWRpdCBmb3IgdGhlIGZlYXR1cmUgZ29lcyB0byB0aGUgZmVh
+dHVyZSANCj4gYXV0aG9ycy4NCj4NCj4gVGhlIG5hbWUgb2YgdGhlIHVwc3RyZWFtIGZlYXR1cmUg
+aXMgSEFSREVORURfQVRPTUlDIGFuZCBpdCBpcyANCj4gY29uZmlndXJlZCB1c2luZyBDT05GSUdf
+SEFSREVORURfQVRPTUlDIGFuZCBIQVZFX0FSQ0hfSEFSREVORURfQVRPTUlDLg0KPg0KPiBUaGlz
+IHNlcmllcyBvbmx5IGFkZHMgeDg2IHN1cHBvcnQ7IG90aGVyIGFyY2hpdGVjdHVyZXMgYXJlIGV4
+cGVjdGVkIHRvIA0KPiBhZGQgc2ltaWxhciBzdXBwb3J0IGdyYWR1YWxseS4NCj4gWy4uLl0NCj4g
+QnVncyBQcmV2ZW50ZWQNCj4gLS0tLS0tLS0tLS0tLS0NCj4gSEFSREVORURfQVRPTUlDIHdvdWxk
+IGRpcmVjdGx5IG1pdGlnYXRlIHRoZXNlIExpbnV4IGtlcm5lbCBidWdzOg0KPg0KPiBDVkUtMjAx
+Ni0zMTM1IC0gTmV0ZmlsdGVyIHh0X2FsbG9jX3RhYmxlX2luZm8gaW50ZWdlciBvdmVyZmxvdw0K
+PiBDVkUtMjAxMC0yOTU5IC0gQ0FOIGludGVnZXIgb3ZlcmZsb3cgdnVsbmVyYWJpbGl0eSwgcmVs
+YXRlZCBwb3N0OiANCj4gaHR0cHM6Ly9qb24ub2JlcmhlaWRlLm9yZy9ibG9nLzIwMTAvMDkvMTAv
+bGludXgta2VybmVsLWNhbi1zbHViLW92ZXJmbA0KPiBvdy8NCg0KPlRoZXNlIENWRXMgYXJlICJy
+ZWd1bGFyIiBpbnRlZ2VyIG92ZXJmbG93cywgcmF0aGVyIHRoYW4gcmVmLWNvdW50aW5nIGZsYXdz
+LCBzbyB0aGV5IHNob3VsZCBiZSBsZWZ0IG9mZiB0aGUgZXhhbXBsZSBsaXN0LiAoT24ga2VybnNl
+Yy5vcmcsIHJlZiBjb3VudGluZyBpcyBhIHN1Yi1zZXQgb2YgaW50ZWdlciBvdmVyZmxvdyBmbGF3
+cywgYnV0IHRoZSBleHBsb2l0IGV4YW1wbGVzIGFyZSBhbGwgbWVyZ2VkIHRvZ2V0aGVyOyBTb3Jy
+eSBmb3IgdGhlID4gY29uZnVzaW9uISkNCg0KPiBDVkUtMjAxNi0wNzI4IC0gS2V5cmluZyByZWZj
+b3VudCBvdmVyZmxvdw0KDQo+RXhwbG9pdCBsaW5rIGlzIGh0dHBzOi8vd3d3LmV4cGxvaXQtZGIu
+Y29tL2V4cGxvaXRzLzM5Mjc3Lw0KDQo+IENWRS0yMDE0LTI4NTEgLSBHcm91cF9pbmZvIHJlZmNv
+dW50IG92ZXJmbG93DQoNCj5FeHBsb2l0IGxpbmsgaXMgaHR0cHM6Ly93d3cuZXhwbG9pdC1kYi5j
+b20vZXhwbG9pdHMvMzI5MjYvDQoNCj4NCj4gQW5kIGEgcmVsYXRpdmVseSBmcmVzaCBleHBsb2l0
+IGV4YW1wbGU6DQo+IGh0dHBzOi8vd3d3LmV4cGxvaXQtZGIuY29tL2V4cGxvaXRzLzM5NzczLw0K
+DQo+Rm9yIGNvbXBsZXRlbmVzcywgdGhpcyBpcyBDVkUtMjAxNi00NTU4Lg0KDQpJIHdpbGwgZml4
+IGFsbCBhYm92ZSEgVGhhbmtzIGZvciBwb2ludGluZyENCg0KPiBbLi4uXQ0KPiAgRG9jdW1lbnRh
+dGlvbi9zZWN1cml0eS9oYXJkZW5lZC1hdG9taWMudHh0IHwgMTQxICsrKysrKysrKysrKysrKw0K
+DQo+Tml0IG9uIHdoaXRlc3BhY2U6IEkgZ2V0IHdhcm5pbmdzIGZyb20gZ2l0IGFib3V0IHRyYWls
+aW5nIHdoaXRlc3BhY2UgaW4gdGhpcyBmaWxlLg0KDQpEYXZpZCwgd291bGQgeW91IGJlIGFibGUg
+dG8gc3VibWl0IGEgZml4IGZvciBEb2N1bWVudGF0aW9uPyBZb3Ugd2VyZSBwbGFubmluZyB0byB1
+cGRhdGUgdGhlIHdvcmRpbmcgaW4gaXQgYWxzbywgc28gSSB0aGluayB0aGlzIGNhbiBiZSBoYW5k
+bGVkIGF0IHRoZSBzYW1lIHRpbWUuIA0KDQpCZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg==
