@@ -1,69 +1,185 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Tue, 25 Oct 2016 18:20:14 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
- <20161025085109.GV19531@linaro.org>
-In-Reply-To: <20161025085109.GV19531@linaro.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v2 PATCH 01/13] Add architecture
- independent hardened atomic base
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: "keescook@chromium.org" <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20161025091106.4hawzkkz57q362p5@thigreal>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+ <1476959131-6153-14-git-send-email-elena.reshetova@intel.com>
+ <20161025085655.GW19531@linaro.org> <1477386248.2263.9.camel@cvidal.org> <20161025091106.4hawzkkz57q362p5@thigreal>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 25 Oct 2016 11:30:18 -0700
+Message-ID: <CAGXu5jKz8YYG8V33_mBaOqfijQCBEfuOTsWXOYOO6+7fUD_=WQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 13/13] lkdtm: add tests for
+ atomic over-/underflow
+To: Hans Liljestrand <ishkamiel@gmail.com>
+Cc: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo8c25pcD4NCiAgDQo+ICBzdHJ1Y3QgbGlzdF9oZWFkIHsNCj4gZGlmZiAtLWdpdCBhL2tlcm5l
-bC9wYW5pYy5jIGIva2VybmVsL3BhbmljLmMgaW5kZXggZTY0ODBlMi4uY2IxZDZkYiANCj4gMTAw
-NjQ0DQo+IC0tLSBhL2tlcm5lbC9wYW5pYy5jDQo+ICsrKyBiL2tlcm5lbC9wYW5pYy5jDQo+IEBA
-IC02MTYsMyArNjE2LDE0IEBAIHN0YXRpYyBpbnQgX19pbml0IG9vcHNfc2V0dXAoY2hhciAqcykN
-Cj4gIAlyZXR1cm4gMDsNCj4gIH0NCj4gIGVhcmx5X3BhcmFtKCJvb3BzIiwgb29wc19zZXR1cCk7
-DQo+ICsNCj4gKyNpZmRlZiBDT05GSUdfSEFSREVORURfQVRPTUlDDQo+ICt2b2lkIGhhcmRlbmVk
-X2F0b21pY19vdmVyZmxvdyhzdHJ1Y3QgcHRfcmVncyAqcmVncykgew0KPiArCXByX2VtZXJnKEtF
-Uk5fRU1FUkcgIkhBUkRFTkVEX0FUT01JQzogb3ZlcmZsb3cgZGV0ZWN0ZWQgaW46ICVzOiVkLCB1
-aWQvZXVpZDogJXUvJXVcbiIsDQo+ICsJCWN1cnJlbnQtPmNvbW0sIHRhc2tfcGlkX25yKGN1cnJl
-bnQpLA0KPiArCQlmcm9tX2t1aWRfbXVuZ2VkKCZpbml0X3VzZXJfbnMsIGN1cnJlbnRfdWlkKCkp
-LA0KPiArCQlmcm9tX2t1aWRfbXVuZ2VkKCZpbml0X3VzZXJfbnMsIGN1cnJlbnRfZXVpZCgpKSk7
-DQo+ICsJQlVHKCk7DQoNCkJVRygpIHdpbGwgcHJpbnQgYSBtZXNzYWdlIGxpa2UgImtlcm5lbCBC
-VUcgYXQga2VybmVsL3BhbmljLmM6NjI3ISINCmFuZCBhIHN0YWNrIHRyYWNlIGR1bXAgd2l0aCBl
-eHRyYSBmcmFtZXMgaW5jbHVkaW5nIGhhcmRlbmVkX2F0b21pY19vdmVyZmxvdygpIGFuZCBzb21l
-IGV4Y2VwdGlvbiBoYW5kbGVyIHJvdXRpbmVzIChkb190cmFwKCkgb24geDg2KSwgd2hpY2ggYXJl
-IHRvdGFsbHkgdXNlbGVzcy4gU28gSSBkb24ndCB3YW50IHRvIGNhbGwgQlVHKCkgaGVyZS4NCg0K
-SW5zdGVhZCwgd2Ugd2lsbCBmYWxsIGJhY2sgdG8gYSBub3JtYWwgIkJVRyIgaGFuZGxlciwgYnVn
-X2hhbmRsZXIoKSBvbiBhcm02NCwgd2hpY2ggZXZlbnR1YWxseSBjYWxscyBkaWUoKSwgZ2VuZXJh
-dGluZyBtb3JlICppbnR1aXRpdmUqIG1lc3NhZ2VzOg0KPT09ODw9PT0NClsgICAyOS4wODIzMzZd
-IGxrZHRtOiBhdHRlbXB0aW5nIGdvb2QgYXRvbWljX2FkZF9yZXR1cm4NClsgICAyOS4wODIzOTFd
-IGxrZHRtOiBhdHRlbXB0aW5nIGJhZCBhdG9taWNfYWRkX3JldHVybg0KWyAgIDI5LjA4MjgzMF0g
-LS0tLS0tLS0tLS0tWyBjdXQgaGVyZSBdLS0tLS0tLS0tLS0tDQpbICAgMjkuMDgyODg5XSBLZXJu
-ZWwgQlVHIGF0IGZmZmYwMDAwMDA4YjA3ZmMgW3ZlcmJvc2UgZGVidWcgaW5mbyB1bmF2YWlsYWJs
-ZV0NCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAoQWN0dWFsbHksIHRoaXMgaXMgbGtkdG1f
-QVRPTUlDX0FERF9SRVRVUk5fT1ZFUkZMT1cpDQpbICAgMjkuMDgyOTY4XSBIQVJERU5FRF9BVE9N
-SUM6IG92ZXJmbG93IGRldGVjdGVkIGluOiBpbnNtb2Q6MTE1MiwgdWlkL2V1aWQ6IDAvMA0KWyAg
-IDI5LjA4MzA0M10gSW50ZXJuYWwgZXJyb3I6IE9vcHMgLSBCVUc6IDAgWyMxXSBQUkVFTVBUIFNN
-UA0KWyAgIDI5LjA4MzA5OF0gTW9kdWxlcyBsaW5rZWQgaW46IGxrZHRtKCspDQpbICAgMjkuMDgz
-MTg5XSBDUFU6IDEgUElEOiAxMTUyIENvbW06IGluc21vZCBOb3QgdGFpbnRlZCA0LjkuMC1yYzEt
-MDAwMjQtZ2I3NTc4MzktZGlydHkgIzEyDQpbICAgMjkuMDgzMjYyXSBIYXJkd2FyZSBuYW1lOiBG
-VlAgQmFzZSAoRFQpDQpbICAgMjkuMDgzMzI0XSB0YXNrOiBmZmZmODAwODdhYTIxOTAwIHRhc2su
-c3RhY2s6IGZmZmY4MDA4N2EzNmMwMDANClsgICAyOS4wODM1NTddIFBDIGlzIGF0IGxrZHRtX0FU
-T01JQ19BRERfUkVUVVJOX09WRVJGTE9XKzB4NmMvMHhhMCBbbGtkdG1dDQpbICAgMjkuMDgzNjI3
-XSBMUiBpcyBhdCAweDdmZmZmZmZmDQpbICAgMjkuMDgzNjg3XSBwYyA6IFs8ZmZmZjAwMDAwMDhi
-MDdmYz5dIGxyIDogWzwwMDAwMDAwMDdmZmZmZmZmPl0gcHN0YXRlOiA5MDQwMDE0OQ0KWyAgIDI5
-LjA4Mzc1N10gc3AgOiBmZmZmODAwODdhMzZmYmUwDQpbICAgMjkuMDgzODEwXSB4Mjk6IGZmZmY4
-MDA4N2EzNmZiZTAgWyAgIDI5LjA4Mzg1OF0geDI4OiBmZmZmMDAwMDA4ZWMzMDAwDQpbICAgMjku
-MDgzOTA2XQ0KDQouLi4NCg0KWyAgIDI5LjA5MDg0Ml0gWzxmZmZmMDAwMDAwOGIwN2ZjPl0gbGtk
-dG1fQVRPTUlDX0FERF9SRVRVUk5fT1ZFUkZMT1crMHg2Yy8weGEwIFtsa2R0bV0NClsgICAyOS4w
-OTEwOTBdIFs8ZmZmZjAwMDAwMDhiMjBhND5dIGxrZHRtX2RvX2FjdGlvbisweDFjLzB4MjggW2xr
-ZHRtXQ0KWyAgIDI5LjA5MTMzNF0gWzxmZmZmMDAwMDAwOGJiMTE4Pl0gbGtkdG1fbW9kdWxlX2lu
-aXQrMHgxMTgvMHgyMTAgW2xrZHRtXQ0KWyAgIDI5LjA5MTQyMl0gWzxmZmZmMDAwMDA4MDgzMTUw
-Pl0gZG9fb25lX2luaXRjYWxsKzB4MzgvMHgxMjgNClsgICAyOS4wOTE1MDNdIFs8ZmZmZjAwMDAw
-ODE2NmFkND5dIGRvX2luaXRfbW9kdWxlKzB4NWMvMHgxYzgNClsgICAyOS4wOTE1ODZdIFs8ZmZm
-ZjAwMDAwODEyZTFlYz5dIGxvYWRfbW9kdWxlKzB4MWIyNC8weDIwYjANClsgICAyOS4wOTE2NzBd
-IFs8ZmZmZjAwMDAwODEyZTkyMD5dIFN5U19pbml0X21vZHVsZSsweDFhOC8weDFkOA0KWyAgIDI5
-LjA5MTc1M10gWzxmZmZmMDAwMDA4MDgyZWYwPl0gZWwwX3N2Y19uYWtlZCsweDI0LzB4MjgNClsg
-ICAyOS4wOTE4NDNdIENvZGU6IDkxMDA2M2ExIGI4ZTAwMDNlIDJiMWUwMDEwIDU0MDAwMGM3IChk
-NDIxMDAyMCkNCj09PT44PT09DQoNClNvLCB5b3UgcHJvcG9zZSB0byByZW1vdmUgY2FsbCB0byBC
-VUcoKSBmdWxseSBmcm9tIHRoZXJlPyBGdW5ueSwgSSB0aGluayBvbiB4ODYgdGhlIG91dHB1dCB3
-YXMgYWN0dWFsbHkgbGlrZSB5b3Ugd2FudGVkIHdpdGgganVzdCBjYWxsaW5nIEJVRygpLg0KDQpC
-ZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg==
+On Tue, Oct 25, 2016 at 2:11 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
+> On Tue, Oct 25, 2016 at 11:04:08AM +0200, Colin Vidal wrote:
+>> On Tue, 2016-10-25 at 17:56 +0900, AKASHI Takahiro wrote:
+>> > On Thu, Oct 20, 2016 at 01:25:31PM +0300, Elena Reshetova wrote:
+>> > >
+>> > > From: Hans Liljestrand <ishkamiel@gmail.com>
+>> > >
+>> > > This adds additional tests for modified atomic functions.
+>> > >
+>> > > Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
+>> > > Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+>> > > Signed-off-by: David Windsor <dwindsor@gmail.com>
+>> > > ---
+>> > >  drivers/misc/lkdtm.h      |  17 +++++++
+>> > >  drivers/misc/lkdtm_bugs.c | 122 +++++++++++++++++++++++++++++++++++++++-------
+>> > >  drivers/misc/lkdtm_core.c |  17 +++++++
+>> > >  3 files changed, 138 insertions(+), 18 deletions(-)
+>> > >
+>> > > diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+>> > > index cfa1039..224713a 100644
+>> > > --- a/drivers/misc/lkdtm.h
+>> > > +++ b/drivers/misc/lkdtm.h
+>> > > @@ -20,7 +20,24 @@ void lkdtm_HARDLOCKUP(void);
+>> > >  void lkdtm_SPINLOCKUP(void);
+>> > >  void lkdtm_HUNG_TASK(void);
+>> > >  void lkdtm_ATOMIC_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_DEC_RETURN_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_SUB_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_SUB_RETURN_UNDERFLOW(void);
+>> > >  void lkdtm_ATOMIC_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_INC_RETURN_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_ADD_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_ADD_RETURN_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_ADD_UNLESS_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_INC_AND_TEST_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_DEC_RETURN_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_SUB_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_SUB_RETURN_UNDERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_INC_RETURN_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_ADD_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_ADD_RETURN_OVERFLOW(void);
+>> > > +void lkdtm_ATOMIC_LONG_SUB_AND_TEST(void);
+>> > >  void lkdtm_CORRUPT_LIST_ADD(void);
+>> > >  void lkdtm_CORRUPT_LIST_DEL(void);
+>> > >
+>> > > diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+>> > > index f336206..bd79a88 100644
+>> > > --- a/drivers/misc/lkdtm_bugs.c
+>> > > +++ b/drivers/misc/lkdtm_bugs.c
+>> > > @@ -128,30 +128,116 @@ void lkdtm_HUNG_TASK(void)
+>> > >   schedule();
+>> > >  }
+>> > >
+>> > > -void lkdtm_ATOMIC_UNDERFLOW(void)
+>> > > -{
+>> > > - atomic_t under = ATOMIC_INIT(INT_MIN);
+>> > > -
+>> > > - pr_info("attempting good atomic increment\n");
+>> > > - atomic_inc(&under);
+>> > > - atomic_dec(&under);
+>> > > -
+>> > > - pr_info("attempting bad atomic underflow\n");
+>> > > - atomic_dec(&under);
+>> > > +#define ATOMIC_LKDTM_MIN(tag,fun) void lkdtm_ATOMIC_##tag(void)  \
+>> > > +{                                                                        \
+>> > > + atomic_t atomic = ATOMIC_INIT(INT_MIN);                         \
+>> > > +                                                                 \
+>> > > + pr_info("attempting good atomic_" #fun "\n");                   \
+>> > > + atomic_inc(&atomic);                                            \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +                                                                 \
+>> > > + pr_info("attempting bad atomic_" #fun "\n");                    \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > >  }
+>> > >
+>> > > -void lkdtm_ATOMIC_OVERFLOW(void)
+>> > > -{
+>> > > - atomic_t over = ATOMIC_INIT(INT_MAX);
+>> > > +#define ATOMIC_LKDTM_MAX(tag,fun,...)                                    \
+>> > > +void lkdtm_ATOMIC_##tag(void)                                            \
+>> > > +{                                                                        \
+>> > > + atomic_t atomic = ATOMIC_INIT(INT_MAX);                         \
+>> > > +                                                                 \
+>> > > + pr_info("attempting good atomic_" #fun "\n");                   \
+>> > > + atomic_dec(&atomic);                                            \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +                                                                 \
+>> > > + pr_info("attempting bad atomic_" #fun "\n");                    \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +}
+>> > >
+>> > > - pr_info("attempting good atomic decrement\n");
+>> > > - atomic_dec(&over);
+>> > > - atomic_inc(&over);
+>> > > +#define ATOMIC_LKDTM_LONG_MIN(tag,fun,...)                               \
+>> > > +void lkdtm_ATOMIC_LONG_##tag(void)                                       \
+>> > > +{                                                                        \
+>> > > + atomic_long_t atomic  = ATOMIC_LONG_INIT(LONG_MIN);             \
+>> > > +                                                                 \
+>> > > + pr_info("attempting good atomic_long_" #fun "\n");              \
+>> > > + atomic_long_inc(&atomic);                                       \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +                                                                 \
+>> > > + pr_info("attempting bad atomic_long_" #fun "\n");               \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +}
+>> > >
+>> > > - pr_info("attempting bad atomic overflow\n");
+>> > > - atomic_inc(&over);
+>> > > +#define ATOMIC_LKDTM_LONG_MAX(tag,fun,...)                               \
+>> > > +void lkdtm_ATOMIC_LONG_##tag(void)                                       \
+>> > > +{                                                                        \
+>> > > + atomic_long_t atomic = ATOMIC_LONG_INIT(LONG_MAX);              \
+>> > > +                                                                 \
+>> > > + pr_info("attempting good atomic_long_" #fun "\n");              \
+>> > > + atomic_long_dec(&atomic);                                       \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > > +                                                                 \
+>> > > + pr_info("attempting bad atomic_long_" #fun "\n");               \
+>> > > + TEST_FUNC(&atomic);                                             \
+>> > >  }
+>> > >
+>> > > +#define TEST_FUNC(x) atomic_dec(x)
+>> > > +ATOMIC_LKDTM_MIN(UNDERFLOW,dec)
+>> > > +#undef TEST_FUNC
+>> > > +#define TEST_FUNC(x) atomic_dec_return(x)
+>> > > +ATOMIC_LKDTM_MIN(DEC_RETURN_UNDERFLOW,dec_return);
+>> > > +#undef TEST_FUNC
+>> > > +#define TEST_FUNC(x) atomic_sub(1,x)
+>> > > +ATOMIC_LKDTM_MIN(SUB_UNDERFLOW,sub);
+>> > > +#undef TEST_FUNC
+>> > > +#define TEST_FUNC(x) atomic_sub_return(1,x);
+>> > > +ATOMIC_LKDTM_MIN(SUB_RETURN_UNDERFLOW,sub_return);
+>> > > +#undef TEST_FUNC
+>> > > +#define TEST_FUNC(x) atomic_inc(x);
+>> > > +ATOMIC_LKDTM_MAX(OVERFLOW,inc);
+>> > > +#undef TEST_FUNC
+>> > > +#define TEST_FUNC(x) atomic_inc_return(x);
+>> > > +ATOMIC_LKDTM_MAX(INC_RETURN_OVERFLOW,inc_return);
+>> >
+>> > Please note that this definition causes a compiler warning:
+>> > /home/akashi/arm/armv8/linaro/linux-aarch64/drivers/misc/lkdtm_bugs.c: In function 'lkdtm_ATOMIC_INC_AND_TEST_OVERFLOW':
+>> > /home/akashi/arm/armv8/linaro/linux-aarch64/arch/arm64/include/asm/atomic.h:222:55: warning: value computed is not used [-Wunused-value]
+>> >  #define atomic_inc_and_test(v)  (atomic_inc_return(v) == 0)
+>> >                                                        ^
+>> > /home/akashi/arm/armv8/linaro/linux-aarch64/drivers/misc/lkdtm_bugs.c:204:22: note: in expansion of macro 'atomic_inc_and_test'
+>> >  #define TEST_FUNC(x) atomic_inc_and_test(x);
+>> >
+>>
+>> There is the same issue with arm.
+>>
+>> Thanks,
+>>
+>> Colin
+>>
+>
+> Yes, thanks! Looks like the same issue should be on x86, not sure why I didn't
+> catch that. Will fix.
+
+I've got a clean-up for the macros too, I'll send that out in a minute here...
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
