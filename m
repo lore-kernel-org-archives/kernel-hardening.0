@@ -1,186 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477407767.2263.22.camel@cvidal.org>
+Message-ID: <1477415895.2263.43.camel@cvidal.org>
 From: Colin Vidal <colin@cvidal.org>
-Date: Tue, 25 Oct 2016 17:02:47 +0200
-In-Reply-To: <20161025091807.GX19531@linaro.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
-	 <1476802761-24340-3-git-send-email-colin@cvidal.org>
-	 <20161025091807.GX19531@linaro.org>
+Date: Tue, 25 Oct 2016 19:18:15 +0200
+In-Reply-To: <20161025090559.eqsll3d7y2ifdaug@thigreal>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+	 <20161020131350.GA18331@thigreal>
+	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
 Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Cc: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 2016-10-25 at 18:18 +0900, AKASHI Takahiro wrote:
-> On Tue, Oct 18, 2016 at 04:59:21PM +0200, Colin Vidal wrote:
+Hi Kees, Hans,
+
+> > > > This series brings the PaX/Grsecurity PAX_REFCOUNT
+> > > > feature support to the upstream kernel. All credit for the
+> > > > feature goes to the feature authors.
+> > > > 
+> > > > The name of the upstream feature is HARDENED_ATOMIC
+> > > > and it is configured using CONFIG_HARDENED_ATOMIC and
+> > > > HAVE_ARCH_HARDENED_ATOMIC.
+> > > > 
+> > > > This series only adds x86 support; other architectures are expected
+> > > > to add similar support gradually.
+> > > 
+> > > I have some worries on the generic arch independent implementation of
+> > > atomic64_t/atomic64_wrap_t (include/asm-generic/atomic64.h). We provide _wrap
+> > > versions for atomic64, but protection is dependant on arch implementation and
+> > > config. That is, one could possibly implement HARDENED_ATOMIC support while
+> > > leaving atomic64_t unprotected depending on specific configs, for instance by
+> > > then defaulting to CONFIG_GENERIC_ATOMIC64 (in linuc/hardened/atomic.h:676). Or
+> > > maybe I'm just under-/overthinking this?
 > > 
-> > This adds arm-specific code in order to support HARDENED_ATOMIC
-> > feature. When overflow is detected in atomic_t, atomic64_t or
-> > atomic_long_t, an exception is raised and call
-> > hardened_atomic_overflow.
+> > IIUC, ARMv6 builds could have GENERIC_ATOMIC64 and (once implemented)
+> > HARDENED_ATOMIC, so I think that combination is worth spending time
+> > on.
+> 
+> I'm not completely sure what you mean? Our current patchset doesn't implement
+> any protections for the generic atomic64, but rather relies on HARDENED_ATOMIC
+> enabled archs to provide a protected implementation. So currently any
+> HARDENED_ATOMIC archs cannot depend on GENERIC_ATOMIC64. Does this sound
+> reasonable?
+
+In the actual situation, you can use a architecture with
+GENERIC_ATOMIC64 (imx_v6_v7_defconfig on arm for instance), and set
+CONFIG_HARDENED_ATOMIC=y. That will broke the build. Therefore, we
+should put a negative dependency between GENERIC_ATOMIC64 and
+HAVE_ARCH_HARDENED_ATOMIC, in order to be sure that HARDENED_ATOMIC
+cannot be set when GENERIC_ATOMIC64 is set.
+
+But it seems wired, or a pity, that HARDENED_ATOMIC is disabled on some
+architecture just because code implementation issues, no?
+
+> > > My concern is that this is a very easy place to include errors and
+> > > inconsistencies. We've been trying to cleanly fix this, but haven't really found
+> > > a satisfactory solution (e.g. one that actually works on different configs/arcs
+> > > and isn't a horrible mess). I recall that the hardened_atomic ARM implementation
+> > > already faced issues with atomic64, so this seems to be a real cause for
+> > > problems. Any suggestions on how to do this more cleanly?
 > > 
-> > Signed-off-by: Colin Vidal <colin@cvidal.org>
-> > ---
-> >  arch/arm/Kconfig              |   1 +
-> >  arch/arm/include/asm/atomic.h | 434 +++++++++++++++++++++++++++++-------------
-> >  arch/arm/mm/fault.c           |  15 ++
-> >  3 files changed, 320 insertions(+), 130 deletions(-)
-> > 
-> > diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> > index b5d529f..fcf4a64 100644
-> > --- a/arch/arm/Kconfig
-> > +++ b/arch/arm/Kconfig
-> > @@ -36,6 +36,7 @@ config ARM
-> >  	select HAVE_ARCH_AUDITSYSCALL if (AEABI && !OABI_COMPAT)
-> >  	select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
-> >  	select HAVE_ARCH_HARDENED_USERCOPY
-> > +	select HAVE_ARCH_HARDENED_ATOMIC
-> >  	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
-> >  	select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
-> >  	select HAVE_ARCH_MMAP_RND_BITS if MMU
-> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> > index 66d0e21..fdaee17 100644
-> > --- a/arch/arm/include/asm/atomic.h
-> > +++ b/arch/arm/include/asm/atomic.h
-> > @@ -17,18 +17,52 @@
-> >  #include <linux/irqflags.h>
-> >  #include <asm/barrier.h>
-> >  #include <asm/cmpxchg.h>
-> > +#include <linux/bug.h>
-> >  
-> >  #define ATOMIC_INIT(i)	{ (i) }
-> >  
-> >  #ifdef __KERNEL__
-> >  
-> > +#ifdef CONFIG_HARDENED_ATOMIC
-> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
-> > +#define _ASM_EXTABLE(from, to)			\
-> > +	".pushsection __ex_table,\"a\"\n"	\
-> > +	".align 3\n"				\
-> > +	".long "#from","#to"\n"			\
-> > +	".popsection"
-> > +#define __OVERFLOW_POST				\
-> > +	"bvc 3f\n"				\
-> > +	"2: "HARDENED_ATOMIC_INSN"\n"		\
-> > +	"3:\n"
-> > +#define __OVERFLOW_POST_RETURN			\
-> > +	"bvc 3f\n"				\
-> > +	"mov %0,%1\n"				\
-> > +	"2: "HARDENED_ATOMIC_INSN"\n"		\
-> > +	"3:\n"
-> > +#define __OVERFLOW_EXTABLE			\
-> > +	"4:\n"					\
-> > +	_ASM_EXTABLE(2b, 4b)
-> > +#else
-> > +#define __OVERFLOW_POST
-> > +#define __OVERFLOW_POST_RETURN
-> > +#define __OVERFLOW_EXTABLE
-> > +#endif
-> > +
-> >  /*
-> >   * On ARM, ordinary assignment (str instruction) doesn't clear the local
-> >   * strex/ldrex monitor on some implementations. The reason we can use it for
-> >   * atomic_set() is the clrex or dummy strex done on every exception return.
-> >   */
-> >  #define atomic_read(v)	READ_ONCE((v)->counter)
-> > +static inline int atomic_read_wrap(const atomic_wrap_t *v)
-> > +{
-> > +	return atomic_read(v);
-> > +}
-> >  #define atomic_set(v,i)	WRITE_ONCE(((v)->counter), (i))
-> > +static inline void atomic_set_wrap(atomic_wrap_t *v, int i)
-> > +{
-> > +	atomic_set(v, i);
-> > +}
-> >  
-> >  #if __LINUX_ARM_ARCH__ >= 6
-> >  
-> > @@ -38,38 +72,46 @@
-> >   * to ensure that the update happens.
-> >   */
-> >  
-> > -#define ATOMIC_OP(op, c_op, asm_op)					\
-> > -static inline void atomic_##op(int i, atomic_t *v)			\
-> > +#define __ATOMIC_OP(op, suffix, c_op, asm_op, post_op, extable)		\
-> > +static inline void atomic_##op##suffix(int i, atomic##suffix##_t *v)	\
-> >  {									\
-> >  	unsigned long tmp;						\
-> >  	int result;							\
-> >  									\
-> >  	prefetchw(&v->counter);						\
-> > -	__asm__ __volatile__("@ atomic_" #op "\n"			\
-> > +	__asm__ __volatile__("@ atomic_" #op #suffix "\n"		\
-> >  "1:	ldrex	%0, [%3]\n"						\
-> >  "	" #asm_op "	%0, %0, %4\n"					\
-> > +        post_op                 					\
-> >  "	strex	%1, %0, [%3]\n"						\
-> >  "	teq	%1, #0\n"						\
-> > -"	bne	1b"							\
-> > +"	bne	1b\n"							\
-> > +        extable                 					\
-> >  	: "=&r" (result), "=&r" (tmp), "+Qo" (v->counter)		\
-> >  	: "r" (&v->counter), "Ir" (i)					\
-> >  	: "cc");							\
-> >  }									\
-> >  
-> > -#define ATOMIC_OP_RETURN(op, c_op, asm_op)				\
-> > -static inline int atomic_##op##_return_relaxed(int i, atomic_t *v)	\
-> > +#define ATOMIC_OP(op, c_op, asm_op)		                        \
-> > +	__ATOMIC_OP(op, _wrap, c_op, asm_op, , )			\
-> > +	__ATOMIC_OP(op, , c_op, asm_op##s, __OVERFLOW_POST, __OVERFLOW_EXTABLE)
-> > +
-> > +#define __ATOMIC_OP_RETURN(op, suffix, c_op, asm_op, post_op, extable)	\
-> > +static inline int atomic_##op##_return##suffix##_relaxed(int i, atomic##suffix##_t *v) \
-> >  {									\
-> >  	unsigned long tmp;						\
-> >  	int result;							\
-> >  									\
-> >  	prefetchw(&v->counter);						\
-> >  									\
-> > -	__asm__ __volatile__("@ atomic_" #op "_return\n"		\
-> > +	__asm__ __volatile__("@ atomic_" #op "_return" #suffix "\n"	\
-> >  "1:	ldrex	%0, [%3]\n"						\
-> >  "	" #asm_op "	%0, %0, %4\n"					\
-> > +        post_op                 					\
-> >  "	strex	%1, %0, [%3]\n"						\
-> >  "	teq	%1, #0\n"						\
-> > -"	bne	1b"							\
-> > +"	bne	1b\n"							\
-> > +        extable                 					\
-> >  	: "=&r" (result), "=&r" (tmp), "+Qo" (v->counter)		\
-> >  	: "r" (&v->counter), "Ir" (i)					\
-> >  	: "cc");							\
-> > @@ -77,6 +119,11 @@ static inline int atomic_##op##_return_relaxed(int i, atomic_t *v)	\
-> >  	return result;							\
-> >  }
-> >  
-> > +#define ATOMIC_OP_RETURN(op, c_op, asm_op)	                        \
-> > +	__ATOMIC_OP_RETURN(op, _wrap, c_op, asm_op, , )			\
-> > +	__ATOMIC_OP_RETURN(op, , c_op, asm_op##s,			\
-> > +			   __OVERFLOW_POST_RETURN, __OVERFLOW_EXTABLE)
-> > +
+> > I haven't looked too closely yet, though maybe Colin will have some
+> > thoughts as he looks at the ARM port.
 > 
-> This definition will create atomic_add_return_wrap_relaxed(),
-> but should the name be atomic_add_return_relaxed_wrap()?
-> 
-> (I don't know we need _wrap version of _relaxed functions.
-> See Elena's atomic-long.h.)
-> 
-> Thanks,
-> -Takahiro AKASHI
+> Ok, that would probably be helpful. It would be good to get this cleanly done
+> from the start so it doesn't grow increasingly messy with every arch needing to
+> do incremental fixes/hacks as they get implemented.
 
-Hi Takahiro,
+Since GENERIC_ATOMIC64 is only on few architecture (arm, metatag,
+microblaze, sparc, and perhaps mips?), I wonder if it would not be a
+better idea to drop asm-generic/atomic64.h: it will induces a code
+duplication, for sure, but avoid the wired situation above.
 
-as far I understand, the name should be atomic_add_return_wrap_relaxed
-since atomic_add_return_wrap is created by __atomic_op_fence (in order
-to put memory barrier around the call to
-atomic_add_return_wrap_relaxed) in include/linux/atomic.h.
+That said, I don't really understand how asm-generic/atomic64.h works:
+it defines lot of extern functions (atomic64_add, for instance) and a
+can't find the implementation in the arch directory (in sparc, for
+instance)... Some ideas? It could be an interesting workaround: define
+atomic64_*_wrap prototypes in asm-generic/atomic64.h, and each
+architecture with GENERIC_ATOMIC64 must implement them.
 
-Am I wrong?
-
-Thanks!
+Thanks,
 
 Colin
