@@ -1,70 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 26 Oct 2016 08:56:48 +0200
-Message-Id: <20161026065654.19166-13-mic@digikod.net>
+Date: Wed, 26 Oct 2016 08:56:51 +0200
+Message-Id: <20161026065654.19166-16-mic@digikod.net>
 In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
 References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v4 12/18] bpf: Cosmetic change for bpf_prog_attach()
+Subject: [kernel-hardening] [RFC v4 15/18] bpf/cgroup: Move capability check
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Move code outside a switch/case to ease code factoring (cf. next
-commit).
-
-This apply on Daniel Mack's "Add eBPF hooks for cgroups" v7:
-https://lkml.kernel.org/r/1477390454-12553-1-git-send-email-daniel@zonque.org
+This will be useful to be able to add more BPF attach type with
+different capability checks.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
 Cc: Daniel Borkmann <daniel@iogearbox.net>
 Cc: Daniel Mack <daniel@zonque.org>
 ---
- kernel/bpf/syscall.c | 23 ++++++++++++-----------
- 1 file changed, 12 insertions(+), 11 deletions(-)
+ kernel/bpf/syscall.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
-index 0f7faa9d2262..ac4cbb98596d 100644
+index e62123aeb202..128acb4f7177 100644
 --- a/kernel/bpf/syscall.c
 +++ b/kernel/bpf/syscall.c
-@@ -843,23 +843,24 @@ static int bpf_prog_attach(const union bpf_attr *attr)
+@@ -833,15 +833,15 @@ static int bpf_prog_attach(const union bpf_attr *attr)
+ 	struct cgroup *cgrp;
+ 	int result;
+ 
+-	if (!capable(CAP_NET_ADMIN))
+-		return -EPERM;
+-
+ 	if (CHECK_ATTR(BPF_PROG_ATTACH))
+ 		return -EINVAL;
+ 
+ 	switch (attr->attach_type) {
+ 	case BPF_CGROUP_INET_INGRESS:
  	case BPF_CGROUP_INET_EGRESS:
++		if (!capable(CAP_NET_ADMIN))
++			return -EPERM;
++
  		prog = bpf_prog_get_type(attr->attach_bpf_fd,
  					 BPF_PROG_TYPE_CGROUP_SKB);
--		if (IS_ERR(prog))
--			return PTR_ERR(prog);
--
--		cgrp = cgroup_get_from_fd(attr->target_fd);
--		if (IS_ERR(cgrp)) {
--			bpf_prog_put(prog);
--			return PTR_ERR(cgrp);
--		}
--
--		cgroup_bpf_update(cgrp, prog, attr->attach_type);
--		cgroup_put(cgrp);
  		break;
+@@ -872,15 +872,15 @@ static int bpf_prog_detach(const union bpf_attr *attr)
+ 	struct cgroup *cgrp;
+ 	int result = 0;
  
- 	default:
+-	if (!capable(CAP_NET_ADMIN))
+-		return -EPERM;
+-
+ 	if (CHECK_ATTR(BPF_PROG_DETACH))
  		return -EINVAL;
- 	}
  
-+	if (IS_ERR(prog))
-+		return PTR_ERR(prog);
+ 	switch (attr->attach_type) {
+ 	case BPF_CGROUP_INET_INGRESS:
+ 	case BPF_CGROUP_INET_EGRESS:
++		if (!capable(CAP_NET_ADMIN))
++			return -EPERM;
 +
-+	cgrp = cgroup_get_from_fd(attr->target_fd);
-+	if (IS_ERR(cgrp)) {
-+		bpf_prog_put(prog);
-+		return PTR_ERR(cgrp);
-+	}
-+
-+	cgroup_bpf_update(cgrp, prog, attr->attach_type);
-+	cgroup_put(cgrp);
-+
- 	return 0;
- }
- 
+ 		cgrp = cgroup_get_from_fd(attr->target_fd);
+ 		if (IS_ERR(cgrp))
+ 			return PTR_ERR(cgrp);
 -- 
 2.9.3
