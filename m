@@ -1,41 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Schaufler, Casey" <casey.schaufler@intel.com>
-Date: Tue, 25 Oct 2016 22:21:21 +0000
-Message-ID: <99FC4B6EFCEFD44486C35F4C281DC6731F330ED1@ORSMSX107.amr.corp.intel.com>
-References: <201610251247.sRs00hNq%fengguang.wu@intel.com>
- <CAEXv5_jPfV9aV1KP=cmoBMGXuCCVEtXZhGmvtuFAL8qfLi+oYA@mail.gmail.com>
- <20161025125510.iuia42t3qdow5yer@thigreal>
- <CAGXu5j+QU3MHfjG7NVRh2MsK9sESoJpJ6S6h5MdR52NAVM=--Q@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41BF8853@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+4tdxJbQGu+ShqdGOR_Y30G4hrYk7OZ2RJa75ptUcPfA@mail.gmail.com>
-In-Reply-To: <CAGXu5j+4tdxJbQGu+ShqdGOR_Y30G4hrYk7OZ2RJa75ptUcPfA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+From: Rusty Russell <rusty@rustcorp.com.au>
+In-Reply-To: <20161021011210.GT19531@linaro.org>
+References: <20161020062458.14014-1-takahiro.akashi@linaro.org> <CAGXu5jJ9jWxsjcPwc9v87ecPYPzoSLTq5bzA0h3t5nSobGdWVQ@mail.gmail.com> <20161021011210.GT19531@linaro.org>
+Date: Wed, 26 Oct 2016 10:43:32 +1030
+Message-ID: <87wpgw3r2r.fsf@rustcorp.com.au>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Re: [kees:kspp/hardened-atomic 3/14]
- kernel/trace/ring_buffer.c:299:2: error: unknown type name 'local_wrap_t'
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] [PATCH] module: extend 'rodata=off' boot cmdline parameter to module mappings
+To: AKASHI Takahiro <takahiro.akashi@linaro.org>, Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Jessica Yu <jeyu@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBrZWVzY29va0Bnb29nbGUuY29t
-IFttYWlsdG86a2Vlc2Nvb2tAZ29vZ2xlLmNvbV0gT24gQmVoYWxmIE9mDQo+IEtlZXMgQ29vaw0K
-PiBTZW50OiBUdWVzZGF5LCBPY3RvYmVyIDI1LCAyMDE2IDM6MDEgUE0NCj4gVG86IFJlc2hldG92
-YSwgRWxlbmEgPGVsZW5hLnJlc2hldG92YUBpbnRlbC5jb20+OyBrZXJuZWwtDQo+IGhhcmRlbmlu
-Z0BsaXN0cy5vcGVud2FsbC5jb20NCj4gQ2M6IEhhbnMgTGlsamVzdHJhbmQgPGlzaGthbWllbEBn
-bWFpbC5jb20+OyBEYXZpZCBXaW5kc29yDQo+IDxkd2luZHNvckBnbWFpbC5jb20+DQo+IFN1Ympl
-Y3Q6IFtrZXJuZWwtaGFyZGVuaW5nXSBSZTogW2tlZXM6a3NwcC9oYXJkZW5lZC1hdG9taWMgMy8x
-NF0NCj4ga2VybmVsL3RyYWNlL3JpbmdfYnVmZmVyLmM6Mjk5OjI6IGVycm9yOiB1bmtub3duIHR5
-cGUgbmFtZSAnbG9jYWxfd3JhcF90Jw0KPiANCj4gT24gVHVlLCBPY3QgMjUsIDIwMTYgYXQgMTE6
-MTQgQU0sIFJlc2hldG92YSwgRWxlbmENCj4gPGVsZW5hLnJlc2hldG92YUBpbnRlbC5jb20+IHdy
-b3RlOg0KPiA+PkkgcHVsbGVkIGluIHRoZSBSRkMgdjIsIGFuZCBzaW5jZSBpdCB3YXMgYmFzZWQg
-b24gYSBwcmlvciAtbmV4dCwgSSBlbmRlZCB1cA0KPiBjaG9vc2luZyA0LjktcmMyIHRvIGJhc2Ug
-aXQgb24gc2luY2UgaXQgaGFkIGZld2VyIGNvbmZsaWN0cy4NCj4gPg0KPiA+IEkgZ3Vlc3MgSSBu
-ZWVkIHRvIGRvIGEgcmViYXNlLiBEbyB3ZSBzdGlsbCB3YW50IHRvIGtlZXAgaXQgb24gdG9wIG9m
-IG5leHQ/DQo+IA0KPiBJIGRlZmVyIHRvIHlvdXIgcHJlZmVyZW5jZSwgdGhvdWdoIC1uZXh0IGlz
-IGEgbW92aW5nIHRhcmdldCwgc28gYXQNCj4gc29tZSBwb2ludCBoZXJlIHdlJ2xsIG5lZWQgdG8g
-anVzdCBiYXNlIGl0IG9uIExpbnVzJ3MgdHJlZSwgYnV0IHRoYXQNCj4gbWlnaHQgbWFrZSBzb21l
-IG1lcmdlcyBtb3JlIGRpZmZpY3VsdC4NCj4gDQo+IFdoYXQgZG8gb3RoZXIgZm9sa3MgZmluZCBl
-YXNpZXIgdG8gdGVzdCB3aXRoPw0KDQpJIHdvcmsgb2ZmIEphbWVzIE1vcnJpcycgc2VjdXJpdHkt
-bmV4dCwgd2hpY2ggdXN1YWxseSBnZXRzIHNldCBhdCByYzIuDQoNCj4gDQo+IC1LZWVzDQo+IA0K
-PiAtLQ0KPiBLZWVzIENvb2sNCj4gTmV4dXMgU2VjdXJpdHkNCg==
+AKASHI Takahiro <takahiro.akashi@linaro.org> writes:
+> On Thu, Oct 20, 2016 at 01:48:15PM -0700, Kees Cook wrote:
+>> On Wed, Oct 19, 2016 at 11:24 PM, AKASHI Takahiro
+>> <takahiro.akashi@linaro.org> wrote:
+>> > The current "rodata=off" parameter disables read-only kernel mappings
+>> > under CONFIG_DEBUG_RODATA:
+>> >     commit d2aa1acad22f ("mm/init: Add 'rodata=off' boot cmdline parameter
+>> >     to disable read-only kernel mappings")
+>> >
+>> > This patch is a logical extension to module mappings ie. read-only mappings
+>> > at module loading can be disabled even if CONFIG_DEBUG_SET_MODULE_RONX
+>> > (mainly for debug use). Please note, however, that it only affects RO/RW
+>> > permissions, keeping NX set.
+
+This patch looks good (except the minor issues noted by Kees); please CC
+the followup version to Jessica as new module maintainer.
+
+Thanks!
+Rusty.
+
+>> >
+>> > This is the first step to make CONFIG_DEBUG_SET_MODULE_RONX mandatory
+>> > (always-on) in the future as CONFIG_DEBUG_RODATA on x86 and arm64.
+>> >
+>> > Suggested-by: Mark Rutland <mark.rutland@arm.com>
+>> > Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+>> > Cc: Rusty Russell <rusty@rustcorp.com.au>
+>> > ---
+>> > v1:
+>> >   * remove RFC's "module_ronx=" and merge it with "rodata="
+>> >   * always keep NX set if CONFIG_SET_MODULE_RONX
+>> >
+>> >  include/linux/init.h |  3 ++-
+>> >  init/main.c          |  2 +-
+>> >  kernel/module.c      | 21 ++++++++++++++++++---
+>> >  3 files changed, 21 insertions(+), 5 deletions(-)
+>> >
+>> > diff --git a/include/linux/init.h b/include/linux/init.h
+>> > index e30104c..20aa2eb 100644
+>> > --- a/include/linux/init.h
+>> > +++ b/include/linux/init.h
+>> > @@ -126,7 +126,8 @@ void prepare_namespace(void);
+>> >  void __init load_default_modules(void);
+>> >  int __init init_rootfs(void);
+>> >
+>> > -#ifdef CONFIG_DEBUG_RODATA
+>> > +#if defined(CONFIG_DEBUG_RODATA) || defined(CONFIG_DEBUG_SET_MODULE_RONX)
+>> > +extern bool rodata_enabled;
+>> >  void mark_rodata_ro(void);
+>> >  #endif
+>> >
+>> > diff --git a/init/main.c b/init/main.c
+>> > index 2858be7..92db2f3 100644
+>> > --- a/init/main.c
+>> > +++ b/init/main.c
+>> > @@ -915,7 +915,7 @@ static int try_to_run_init_process(const char *init_filename)
+>> >  static noinline void __init kernel_init_freeable(void);
+>> >
+>> >  #ifdef CONFIG_DEBUG_RODATA
+>> > -static bool rodata_enabled = true;
+>> > +bool rodata_enabled = true;
+>> 
+>> Is there a mismatch here between the extern ifdef and the bool ifdef?
+>> I.e. shouldn't the ifdef here be || DEBUG_SET_MODULE_RONX too?
+>
+> Yes.
+>
+>> Also, can you mark this as __ro_after_init, since nothing changes it
+>> after the kernel command line is parsed?
+>
+> Yes, yes.
+>
+> Thanks,
+> -Takahiro AKASHI
+>
+>> Otherwise, this looks fine to me.
+>> 
+>> -Kees
+>> 
+>> 
+>> -- 
+>> Kees Cook
+>> Nexus Security
