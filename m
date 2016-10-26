@@ -1,24 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Taesoo Kim <tsgatesv@gmail.com>
-Date: Wed, 26 Oct 2016 10:47:58 -0400
-From: Taesoo Kim <taesoo@gatech.edu>
-Message-ID: <20161026144758.GG23590@taesoo.org>
+Date: Wed, 26 Oct 2016 16:52:07 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20161026145207.GM3334@pc.thejh.net>
+References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="yaap9KN+GmBP785v"
 Content-Disposition: inline
-Subject: [kernel-hardening] Breaking Kernel ASLR by using Intel TSX
-To: kernel-hardening@lists.openwall.com
-Cc: Yeongjin Jang <yeongjin.jang@gatech.edu>, Sangho Lee <sangho@gatech.edu>
+In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
+Subject: [kernel-hardening] Re: [RFC v4 00/18] Landlock LSM: Unprivileged sandboxing
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Dear all,
 
-Someone in this mailinglist might find this work interesting:
+--yaap9KN+GmBP785v
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-  https://github.com/sslab-gatech/DrK
-  https://news.ycombinator.com/item?id=12796199
+On Wed, Oct 26, 2016 at 08:56:36AM +0200, Micka=EBl Sala=FCn wrote:
+> The loaded Landlock eBPF programs can be triggered by a seccomp filter
+> returning RET_LANDLOCK. In addition, a cookie (16-bit value) can be passe=
+d from
+> a seccomp filter to eBPF programs. This allow flexible security policies
+> between seccomp and Landlock.
 
-Feel free to approach us if you have any question or suggestion.
+Is this still up to date, or was that removed in v3?
 
-Thank you,
-Taesoo
+--yaap9KN+GmBP785v
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJYEMMXAAoJED4KNFJOeCOonusQAM5j2Ow/y58PGiGJA7wIc6Cn
+QaKfhNQ94fZ6c3jA63hsTT0Ojd4TWUyFwlX23GDPOmIEhEDYZhz56eE7Yn5nnF24
+F0joLIR0v1ONtZEIm6830MzkTtyT4YY9H2Fu00xRIZ6ZGM2IyRe9Il/X8/ZZ9L3t
+2Nl0KYiIhO37DDh5sCE64U094jdLkhoWKiN1mYenRm7ScyvI4lnhdvhm7wyhSiE4
+oL5HBaAArwvYoydag6zUWEjUOguFelNzCcoA1dRhqllhkDrgSSceTv34xXLOjeVM
+Umb8CVjdmm3vM3lxl2eZHIkR/Lz6dyFoUNJZuVBZ9A9U3yv5glpeuPhEyUISD4Ii
+hZpne98TxDZeOCNN8EbKhDXrsAYe/9M2Cy+853ns0ZUdFX/mxfADROjmd1Ev3EpF
+KG9TsYi4M28BB0OUJta/rcEM3wDHhSjBGF5TTMpOoYL3DgjRm7jxbemxkpDdlrOn
+YUO/9iBnaWyf6ZqJm1RspcIo+iosBtKFXAZCLm39xmwRxWyCpbPfsPa36QA6CdB5
+WBNpvrbrnY6Dnayj6ZNDWEgusuIxoABplvG9N7p8t1yHwZkVs2Ak7ZyvaHS8Gx32
+HIhHXXQjrLqQXPK5sxrI+RU5ThJFXCHiTnCGOWw3OkW/pezPjYGY7xgUnmHHFTZk
+3ZyIbEzOKKzhXWYG1Alv
+=QX63
+-----END PGP SIGNATURE-----
+
+--yaap9KN+GmBP785v--
