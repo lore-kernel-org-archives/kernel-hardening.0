@@ -1,117 +1,147 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 26 Oct 2016 08:56:46 +0200
-Message-Id: <20161026065654.19166-11-mic@digikod.net>
+Date: Wed, 26 Oct 2016 08:56:49 +0200
+Message-Id: <20161026065654.19166-14-mic@digikod.net>
 In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
 References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v4 10/18] seccomp: Split put_seccomp_filter() with put_seccomp()
+Subject: [kernel-hardening] [RFC v4 13/18] bpf/cgroup: Replace struct bpf_prog with struct bpf_object
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The semantic is unchanged. This will be useful for the Landlock
-integration with seccomp (next commit).
+This allows CONFIG_CGROUP_BPF to manage different type of pointers
+instead of only eBPF programs. This will be useful for the next commits
+to support Landlock with cgroups.
+
+Changes since v3:
+* do not use an union of pointers but a struct (suggested by Kees Cook)
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Will Drewry <wad@chromium.org>
+Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Daniel Mack <daniel@zonque.org>
+Cc: David S. Miller <davem@davemloft.net>
+Cc: Tejun Heo <tj@kernel.org>
+Link: https://lkml.kernel.org/r/CAGXu5j+F80XCPSVL0VxAAoTiYk5D1NKKC3jyAU=Z0Gi7L9S0aw@mail.gmail.com
 ---
- include/linux/seccomp.h |  4 ++--
- kernel/fork.c           |  2 +-
- kernel/seccomp.c        | 18 +++++++++++++-----
- 3 files changed, 16 insertions(+), 8 deletions(-)
+ include/linux/bpf-cgroup.h |  8 ++++++--
+ kernel/bpf/cgroup.c        | 35 ++++++++++++++++++-----------------
+ 2 files changed, 24 insertions(+), 19 deletions(-)
 
-diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
-index ecc296c137cd..e25aee2cdfc0 100644
---- a/include/linux/seccomp.h
-+++ b/include/linux/seccomp.h
-@@ -77,10 +77,10 @@ static inline int seccomp_mode(struct seccomp *s)
- #endif /* CONFIG_SECCOMP */
+diff --git a/include/linux/bpf-cgroup.h b/include/linux/bpf-cgroup.h
+index fc076de74ab9..2f608e5d94e9 100644
+--- a/include/linux/bpf-cgroup.h
++++ b/include/linux/bpf-cgroup.h
+@@ -14,14 +14,18 @@ struct sk_buff;
+ extern struct static_key_false cgroup_bpf_enabled_key;
+ #define cgroup_bpf_enabled static_branch_unlikely(&cgroup_bpf_enabled_key)
  
- #ifdef CONFIG_SECCOMP_FILTER
--extern void put_seccomp_filter(struct task_struct *tsk);
-+extern void put_seccomp(struct task_struct *tsk);
- extern void get_seccomp_filter(struct task_struct *tsk);
- #else  /* CONFIG_SECCOMP_FILTER */
--static inline void put_seccomp_filter(struct task_struct *tsk)
-+static inline void put_seccomp(struct task_struct *tsk)
- {
- 	return;
- }
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 623259fc794d..0690e43bdda5 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -349,7 +349,7 @@ void free_task(struct task_struct *tsk)
- #endif
- 	rt_mutex_debug_task_free(tsk);
- 	ftrace_graph_exit_task(tsk);
--	put_seccomp_filter(tsk);
-+	put_seccomp(tsk);
- 	arch_release_task_struct(tsk);
- 	free_task_struct(tsk);
- }
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index 0db7c8a2afe2..e741a82eab4d 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -63,6 +63,8 @@ struct seccomp_filter {
- /* Limit any path through the tree to 256KB worth of instructions. */
- #define MAX_INSNS_PER_PATH ((1 << 18) / sizeof(struct sock_filter))
- 
-+static void put_seccomp_filter(struct seccomp_filter *filter);
++struct bpf_object {
++	struct bpf_prog *prog;
++};
 +
- /*
-  * Endianness is explicitly ignored and left for BPF program authors to manage
-  * as per the specific architecture.
-@@ -313,7 +315,7 @@ static inline void seccomp_sync_threads(void)
- 		 * current's path will hold a reference.  (This also
- 		 * allows a put before the assignment.)
- 		 */
--		put_seccomp_filter(thread);
-+		put_seccomp_filter(thread->seccomp.filter);
- 		smp_store_release(&thread->seccomp.filter,
- 				  caller->seccomp.filter);
+ struct cgroup_bpf {
+ 	/*
+ 	 * Store two sets of bpf_prog pointers, one for programs that are
+ 	 * pinned directly to this cgroup, and one for those that are effective
+ 	 * when this cgroup is accessed.
+ 	 */
+-	struct bpf_prog *prog[MAX_BPF_ATTACH_TYPE];
+-	struct bpf_prog *effective[MAX_BPF_ATTACH_TYPE];
++	struct bpf_object pinned[MAX_BPF_ATTACH_TYPE];
++	struct bpf_object effective[MAX_BPF_ATTACH_TYPE];
+ };
  
-@@ -475,10 +477,11 @@ static inline void seccomp_filter_free(struct seccomp_filter *filter)
- 	}
- }
+ void cgroup_bpf_put(struct cgroup *cgrp);
+diff --git a/kernel/bpf/cgroup.c b/kernel/bpf/cgroup.c
+index a0ab43f264b0..75482cd92d56 100644
+--- a/kernel/bpf/cgroup.c
++++ b/kernel/bpf/cgroup.c
+@@ -20,18 +20,18 @@ DEFINE_STATIC_KEY_FALSE(cgroup_bpf_enabled_key);
+ EXPORT_SYMBOL(cgroup_bpf_enabled_key);
  
--/* put_seccomp_filter - decrements the ref count of tsk->seccomp.filter */
--void put_seccomp_filter(struct task_struct *tsk)
-+/* put_seccomp_filter - decrements the ref count of a filter */
-+static void put_seccomp_filter(struct seccomp_filter *filter)
- {
--	struct seccomp_filter *orig = tsk->seccomp.filter;
-+	struct seccomp_filter *orig = filter;
-+
- 	/* Clean up single-reference branches iteratively. */
- 	while (orig && atomic_dec_and_test(&orig->usage)) {
- 		struct seccomp_filter *freeme = orig;
-@@ -487,6 +490,11 @@ void put_seccomp_filter(struct task_struct *tsk)
- 	}
- }
- 
-+void put_seccomp(struct task_struct *tsk)
-+{
-+	put_seccomp_filter(tsk->seccomp.filter);
-+}
-+
  /**
-  * seccomp_send_sigsys - signals the task to allow in-process syscall emulation
-  * @syscall: syscall number to send to userland
-@@ -898,7 +906,7 @@ long seccomp_get_filter(struct task_struct *task, unsigned long filter_off,
- 	if (copy_to_user(data, fprog->filter, bpf_classic_proglen(fprog)))
- 		ret = -EFAULT;
+- * cgroup_bpf_put() - put references of all bpf programs
++ * cgroup_bpf_put() - put references of all bpf objects
+  * @cgrp: the cgroup to modify
+  */
+ void cgroup_bpf_put(struct cgroup *cgrp)
+ {
+ 	unsigned int type;
  
--	put_seccomp_filter(task);
-+	put_seccomp_filter(task->seccomp.filter);
- 	return ret;
+-	for (type = 0; type < ARRAY_SIZE(cgrp->bpf.prog); type++) {
+-		struct bpf_prog *prog = cgrp->bpf.prog[type];
++	for (type = 0; type < ARRAY_SIZE(cgrp->bpf.pinned); type++) {
++		struct bpf_object pinned = cgrp->bpf.pinned[type];
  
- out:
+-		if (prog) {
+-			bpf_prog_put(prog);
++		if (pinned.prog) {
++			bpf_prog_put(pinned.prog);
+ 			static_branch_dec(&cgroup_bpf_enabled_key);
+ 		}
+ 	}
+@@ -47,11 +47,12 @@ void cgroup_bpf_inherit(struct cgroup *cgrp, struct cgroup *parent)
+ 	unsigned int type;
+ 
+ 	for (type = 0; type < ARRAY_SIZE(cgrp->bpf.effective); type++) {
+-		struct bpf_prog *e;
++		struct bpf_prog *prog;
+ 
+-		e = rcu_dereference_protected(parent->bpf.effective[type],
+-					      lockdep_is_held(&cgroup_mutex));
+-		rcu_assign_pointer(cgrp->bpf.effective[type], e);
++		prog = rcu_dereference_protected(
++				parent->bpf.effective[type].prog,
++				lockdep_is_held(&cgroup_mutex));
++		rcu_assign_pointer(cgrp->bpf.effective[type].prog, prog);
+ 	}
+ }
+ 
+@@ -87,13 +88,13 @@ void __cgroup_bpf_update(struct cgroup *cgrp,
+ 			 struct bpf_prog *prog,
+ 			 enum bpf_attach_type type)
+ {
+-	struct bpf_prog *old_prog, *effective;
++	struct bpf_prog *old_prog = NULL, *effective_prog;
+ 	struct cgroup_subsys_state *pos;
+ 
+-	old_prog = xchg(cgrp->bpf.prog + type, prog);
++	old_prog = xchg(&cgrp->bpf.pinned[type].prog, prog);
+ 
+-	effective = (!prog && parent) ?
+-		rcu_dereference_protected(parent->bpf.effective[type],
++	effective_prog = (!prog && parent) ?
++		rcu_dereference_protected(parent->bpf.effective[type].prog,
+ 					  lockdep_is_held(&cgroup_mutex)) :
+ 		prog;
+ 
+@@ -101,11 +102,11 @@ void __cgroup_bpf_update(struct cgroup *cgrp,
+ 		struct cgroup *desc = container_of(pos, struct cgroup, self);
+ 
+ 		/* skip the subtree if the descendant has its own program */
+-		if (desc->bpf.prog[type] && desc != cgrp)
++		if (desc->bpf.pinned[type].prog && desc != cgrp)
+ 			pos = css_rightmost_descendant(pos);
+ 		else
+-			rcu_assign_pointer(desc->bpf.effective[type],
+-					   effective);
++			rcu_assign_pointer(desc->bpf.effective[type].prog,
++					   effective_prog);
+ 	}
+ 
+ 	if (prog)
+@@ -151,7 +152,7 @@ int __cgroup_bpf_run_filter(struct sock *sk,
+ 
+ 	rcu_read_lock();
+ 
+-	prog = rcu_dereference(cgrp->bpf.effective[type]);
++	prog = rcu_dereference(cgrp->bpf.effective[type].prog);
+ 	if (prog) {
+ 		unsigned int offset = skb->data - skb_network_header(skb);
+ 
 -- 
 2.9.3
