@@ -1,529 +1,496 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 26 Oct 2016 08:56:54 +0200
-Message-Id: <20161026065654.19166-19-mic@digikod.net>
+Date: Wed, 26 Oct 2016 08:56:52 +0200
+Message-Id: <20161026065654.19166-17-mic@digikod.net>
 In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
 References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v4 18/18] samples/landlock: Add sandbox example
+Subject: [kernel-hardening] [RFC v4 16/18] bpf/cgroup,landlock: Handle Landlock hooks per cgroup
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a basic sandbox tool to create a process isolated from some part of
-the system. This can depend of the current cgroup.
+This allows to add new eBPF programs to Landlock hooks dedicated to a
+cgroup thanks to the BPF_PROG_ATTACH command. The Landlock hooks
+attached to a cgroup are propagated to the children cgroups. When a new
+Landlock program is attached to one of this nested cgroup, this cgroup
+hierarchy fork the Landlock hooks but will still get the updates from
+its parents. This design is easy to deal with. The main difference with
+the BPF_PROG_TYPE_CGROUP_SKB lie in the fact that Landlock rules can
+only be stacked but not removed. This append-only behavior is consistent
+through all the cgroup hierarchy.
 
-A sandbox process can stat the directories from the root up to the
-allowed files. This then allow to stat ".." in an allowed directory.
-Accessing to other sibling files (not parent of allowed files), are
-denied with ENOENT to forbid file names discovery by bruteforcing.
-
-Example with the current process hierarchy (seccomp):
-
-  $ ls /home
-  user1
-  $ LANDLOCK_ALLOWED='/bin:/lib:/usr:/tmp:/proc/self/fd/0' \
-      ./samples/landlock/sandbox /bin/sh -i
-  Launching a new sandboxed process.
-  $ ls /home
-  ls: cannot access '/home': No such file or directory
-
-Example with a cgroup:
-
-  $ mkdir /sys/fs/cgroup/sandboxed
-  $ ls /home
-  user1
-  $ LANDLOCK_CGROUPS='/sys/fs/cgroup/sandboxed' \
-      LANDLOCK_ALLOWED='/bin:/lib:/usr:/tmp:/proc/self/fd/0' \
-      ./samples/landlock/sandbox
-  Ready to sandbox with cgroups.
-  $ ls /home
-  user1
-  $ echo $$ > /sys/fs/cgroup/sandboxed/cgroup.procs
-  $ ls /home
-  ls: cannot access '/home': No such file or directory
+A node references a rule list and an optional parent node. A node can be
+updated on the fly by its owner to point to a new rule list. This is
+useful to be able to atomically and consistently update an inherited
+part of a chain of rules. This way, when a parent cgroup add a new
+Landlock rule, all the child cgroups atomically update their rules to
+include this new one. This is the behavior expected for hierarchy of
+rules where the parent can enforce a rule on all its children at any
+time.
 
 Changes since v3:
-* remove seccomp and origin field: completely free from seccomp programs
-* handle more FS-related hooks
-* handle inode hooks and directory traversal
-* add faked but consistent view thanks to ENOENT
-* add /lib64 in the example
-* fix spelling
-* rename some types and definitions (e.g. SECCOMP_ADD_LANDLOCK_RULE)
+* keep the Landlock rules consistent over all the cgroup hierarchy:
+  update/insert new parent rules over all its children
+* do not use an union of pointers but a struct (suggested by Kees Cook)
+* internal renaming
 
 Changes since v2:
-* use BPF_PROG_ATTACH for cgroup handling
+* new design based on BPF_PROG_ATTACH (suggested by Alexei Starovoitov)
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
 Cc: Andy Lutomirski <luto@amacapital.net>
 Cc: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Daniel Mack <daniel@zonque.org>
 Cc: David S. Miller <davem@davemloft.net>
-Cc: James Morris <james.l.morris@oracle.com>
 Cc: Kees Cook <keescook@chromium.org>
-Cc: Serge E. Hallyn <serge@hallyn.com>
+Cc: Tejun Heo <tj@kernel.org>
 ---
- samples/Makefile            |   2 +-
- samples/landlock/.gitignore |   1 +
- samples/landlock/Makefile   |  16 ++
- samples/landlock/sandbox.c  | 405 ++++++++++++++++++++++++++++++++++++++++++++
- 4 files changed, 423 insertions(+), 1 deletion(-)
- create mode 100644 samples/landlock/.gitignore
- create mode 100644 samples/landlock/Makefile
- create mode 100644 samples/landlock/sandbox.c
+ include/linux/bpf-cgroup.h  |   7 +++
+ include/linux/cgroup-defs.h |   2 +
+ include/linux/landlock.h    |  12 +++++
+ include/uapi/linux/bpf.h    |   1 +
+ kernel/bpf/cgroup.c         | 117 ++++++++++++++++++++++++++++++++++++--------
+ kernel/bpf/syscall.c        |  11 +++++
+ security/landlock/lsm.c     |  34 ++++++++++++-
+ security/landlock/manager.c |  63 ++++++++++++++++++++++++
+ 8 files changed, 226 insertions(+), 21 deletions(-)
 
-diff --git a/samples/Makefile b/samples/Makefile
-index e17d66d77f09..9f1b87bad1c0 100644
---- a/samples/Makefile
-+++ b/samples/Makefile
-@@ -2,4 +2,4 @@
+diff --git a/include/linux/bpf-cgroup.h b/include/linux/bpf-cgroup.h
+index aab1aa91c064..1bf77c5a6895 100644
+--- a/include/linux/bpf-cgroup.h
++++ b/include/linux/bpf-cgroup.h
+@@ -14,8 +14,15 @@ struct sk_buff;
+ extern struct static_key_false cgroup_bpf_enabled_key;
+ #define cgroup_bpf_enabled static_branch_unlikely(&cgroup_bpf_enabled_key)
  
- obj-$(CONFIG_SAMPLES)	+= kobject/ kprobes/ trace_events/ livepatch/ \
- 			   hw_breakpoint/ kfifo/ kdb/ hidraw/ rpmsg/ seccomp/ \
--			   configfs/ connector/ v4l/ trace_printk/ blackfin/
-+			   configfs/ connector/ v4l/ trace_printk/ blackfin/ landlock/
-diff --git a/samples/landlock/.gitignore b/samples/landlock/.gitignore
-new file mode 100644
-index 000000000000..f6c6da930a30
---- /dev/null
-+++ b/samples/landlock/.gitignore
-@@ -0,0 +1 @@
-+/sandbox
-diff --git a/samples/landlock/Makefile b/samples/landlock/Makefile
-new file mode 100644
-index 000000000000..d1044b2afd27
---- /dev/null
-+++ b/samples/landlock/Makefile
-@@ -0,0 +1,16 @@
-+# kbuild trick to avoid linker error. Can be omitted if a module is built.
-+obj- := dummy.o
++#ifdef CONFIG_SECURITY_LANDLOCK
++struct landlock_hooks;
++#endif /* CONFIG_SECURITY_LANDLOCK */
 +
-+hostprogs-$(CONFIG_SECURITY_LANDLOCK) := sandbox
-+sandbox-objs := sandbox.o
+ struct bpf_object {
+ 	struct bpf_prog *prog;
++#ifdef CONFIG_SECURITY_LANDLOCK
++	struct landlock_hooks *hooks;
++#endif /* CONFIG_SECURITY_LANDLOCK */
+ };
+ 
+ struct cgroup_bpf {
+diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
+index 861b4677fc5b..fe1023bf7b9d 100644
+--- a/include/linux/cgroup-defs.h
++++ b/include/linux/cgroup-defs.h
+@@ -301,8 +301,10 @@ struct cgroup {
+ 	/* used to schedule release agent */
+ 	struct work_struct release_agent_work;
+ 
++#ifdef CONFIG_CGROUP_BPF
+ 	/* used to store eBPF programs */
+ 	struct cgroup_bpf bpf;
++#endif /* CONFIG_CGROUP_BPF */
+ 
+ 	/* ids of the ancestors at each level including self */
+ 	int ancestor_ids[];
+diff --git a/include/linux/landlock.h b/include/linux/landlock.h
+index 72b4235d255f..eb2d5986c980 100644
+--- a/include/linux/landlock.h
++++ b/include/linux/landlock.h
+@@ -19,6 +19,10 @@
+ #include <linux/seccomp.h> /* struct seccomp_filter */
+ #endif /* CONFIG_SECCOMP_FILTER */
+ 
++#ifdef CONFIG_CGROUP_BPF
++#include <linux/cgroup-defs.h> /* struct cgroup */
++#endif /* CONFIG_CGROUP_BPF */
 +
-+always := $(hostprogs-y)
+ struct landlock_rule;
+ 
+ /**
+@@ -73,11 +77,19 @@ struct landlock_hooks {
+ };
+ 
+ void put_landlock_hooks(struct landlock_hooks *hooks);
++void get_landlock_hooks(struct landlock_hooks *hooks);
+ 
+ #ifdef CONFIG_SECCOMP_FILTER
+ int landlock_seccomp_append_prog(unsigned int flags,
+ 		const char __user *user_bpf_fd);
+ #endif /* CONFIG_SECCOMP_FILTER */
+ 
++#ifdef CONFIG_CGROUP_BPF
++struct landlock_hooks *landlock_cgroup_append_prog(struct cgroup *cgrp,
++		struct bpf_prog *prog);
++void landlock_insert_node(struct landlock_hooks *dst,
++		enum landlock_hook hook, struct landlock_hooks *src);
++#endif /* CONFIG_CGROUP_BPF */
 +
-+HOSTCFLAGS += -I$(objtree)/usr/include
-+
-+# Trick to allow make to be run from this directory
-+all:
-+	$(MAKE) -C ../../ $$PWD/
-+
-+clean:
-+	$(MAKE) -C ../../ M=$$PWD clean
-diff --git a/samples/landlock/sandbox.c b/samples/landlock/sandbox.c
-new file mode 100644
-index 000000000000..9a36ebdf02d8
---- /dev/null
-+++ b/samples/landlock/sandbox.c
-@@ -0,0 +1,405 @@
-+/*
-+ * Landlock LSM - Sandbox example
-+ *
-+ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 3, as
-+ * published by the Free Software Foundation.
-+ */
-+
-+#define _GNU_SOURCE
-+#include <errno.h>
-+#include <fcntl.h> /* open() */
-+#include <linux/bpf.h>
-+#include <linux/filter.h>
-+#include <linux/prctl.h>
-+#include <linux/seccomp.h>
-+#include <linux/stat.h> /* S_IFDIR() */
-+#include <stddef.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <string.h>
-+#include <sys/prctl.h>
-+#include <sys/syscall.h>
-+#include <unistd.h>
-+
-+#include "../../tools/include/linux/filter.h"
-+
-+#include "../bpf/libbpf.c"
-+
-+#ifndef seccomp
-+static int seccomp(unsigned int op, unsigned int flags, void *args)
-+{
-+	errno = 0;
-+	return syscall(__NR_seccomp, op, flags, args);
-+}
-+#endif
-+
-+static int landlock_prog_load(const struct bpf_insn *insns, int prog_len,
-+		enum landlock_hook hook, __u64 access)
-+{
-+	union bpf_attr attr = {
-+		.prog_type = BPF_PROG_TYPE_LANDLOCK,
-+		.insns = ptr_to_u64((void *) insns),
-+		.insn_cnt = prog_len / sizeof(struct bpf_insn),
-+		.license = ptr_to_u64((void *) "GPL"),
-+		.log_buf = ptr_to_u64(bpf_log_buf),
-+		.log_size = LOG_BUF_SIZE,
-+		.log_level = 1,
-+		.prog_subtype.landlock_rule = {
-+			.hook = hook,
-+			.access = access,
-+		},
-+	};
-+
-+	/* assign one field outside of struct init to make sure any
-+	 * padding is zero initialized
-+	 */
-+	attr.kern_version = 0;
-+
-+	bpf_log_buf[0] = 0;
-+
-+	return syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
-+}
-+
-+#define ARRAY_SIZE(a)	(sizeof(a) / sizeof(a[0]))
-+#define MAX_ERRNO	4095
-+#define MAY_EXEC	0x00000001
-+
-+struct landlock_rule {
-+	enum landlock_hook hook;
-+	struct bpf_insn *bpf;
-+	size_t size;
-+};
-+
-+static int apply_sandbox(const char **allowed_paths, int path_nb, const char
-+		**cgroup_paths, int cgroup_nb)
-+{
-+	__u32 key;
-+	int i, ret = 0, map_fs = -1;
-+
-+	/* set up the test sandbox */
-+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-+		perror("prctl(no_new_priv)");
-+		return 1;
-+	}
-+
-+	if (path_nb) {
-+		map_fs = bpf_create_map(BPF_MAP_TYPE_LANDLOCK_ARRAY,
-+				sizeof(key), sizeof(struct landlock_handle),
-+				10, 0);
-+		if (map_fs < 0) {
-+			fprintf(stderr, "bpf_create_map(fs): %s\n",
-+					strerror(errno));
-+			return 1;
-+		}
-+		for (key = 0; key < path_nb; key++) {
-+			int fd = open(allowed_paths[key],
-+					O_RDONLY | O_CLOEXEC);
-+			if (fd < 0) {
-+				fprintf(stderr, "open(fs: \"%s\"): %s\n",
-+						allowed_paths[key],
-+						strerror(errno));
-+				return 1;
+ #endif /* CONFIG_SECURITY_LANDLOCK */
+ #endif /* _LINUX_LANDLOCK_H */
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 5f09eda3ab68..1d36f7d99288 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -124,6 +124,7 @@ enum bpf_prog_type {
+ enum bpf_attach_type {
+ 	BPF_CGROUP_INET_INGRESS,
+ 	BPF_CGROUP_INET_EGRESS,
++	BPF_CGROUP_LANDLOCK,
+ 	__MAX_BPF_ATTACH_TYPE
+ };
+ 
+diff --git a/kernel/bpf/cgroup.c b/kernel/bpf/cgroup.c
+index 269b410d890c..c2417416abdf 100644
+--- a/kernel/bpf/cgroup.c
++++ b/kernel/bpf/cgroup.c
+@@ -15,6 +15,7 @@
+ #include <linux/bpf.h>
+ #include <linux/bpf-cgroup.h>
+ #include <net/sock.h>
++#include <linux/landlock.h>
+ 
+ DEFINE_STATIC_KEY_FALSE(cgroup_bpf_enabled_key);
+ EXPORT_SYMBOL(cgroup_bpf_enabled_key);
+@@ -31,7 +32,15 @@ void cgroup_bpf_put(struct cgroup *cgrp)
+ 		struct bpf_object pinned = cgrp->bpf.pinned[type];
+ 
+ 		if (pinned.prog) {
+-			bpf_prog_put(pinned.prog);
++			switch (type) {
++			case BPF_CGROUP_LANDLOCK:
++#ifdef CONFIG_SECURITY_LANDLOCK
++				put_landlock_hooks(pinned.hooks);
++				break;
++#endif /* CONFIG_SECURITY_LANDLOCK */
++			default:
++				bpf_prog_put(pinned.prog);
 +			}
-+			struct landlock_handle handle = {
-+				.type = BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD,
-+				.fd = (__u64)fd,
-+			};
+ 			static_branch_dec(&cgroup_bpf_enabled_key);
+ 		}
+ 	}
+@@ -48,11 +57,30 @@ void cgroup_bpf_inherit(struct cgroup *cgrp, struct cgroup *parent)
+ 
+ 	for (type = 0; type < ARRAY_SIZE(cgrp->bpf.effective); type++) {
+ 		struct bpf_prog *prog;
+-
+-		prog = rcu_dereference_protected(
+-				parent->bpf.effective[type].prog,
+-				lockdep_is_held(&cgroup_mutex));
+-		rcu_assign_pointer(cgrp->bpf.effective[type].prog, prog);
++#ifdef CONFIG_SECURITY_LANDLOCK
++		struct landlock_hooks *hooks;
++#endif /* CONFIG_SECURITY_LANDLOCK */
 +
-+			/* register a new LSM handle */
-+			if (bpf_update_elem(map_fs, &key, &handle, BPF_ANY)) {
-+				fprintf(stderr, "bpf_update_elem(fs: \"%s\"): %s\n",
-+						allowed_paths[key],
-+						strerror(errno));
-+				close(fd);
-+				return 1;
-+			}
-+			close(fd);
-+		}
-+	}
-+
-+	/* Landlock rule for file-based and path-based hooks */
-+	struct bpf_insn hook_file[] = {
-+		/* save context */
-+		BPF_MOV64_REG(BPF_REG_6, BPF_REG_1),
-+		/* specify an option, if any */
-+		BPF_MOV32_IMM(BPF_REG_1, 0),
-+		/* handles to compare with */
-+		BPF_LD_MAP_FD(BPF_REG_2, map_fs),
-+		BPF_MOV64_IMM(BPF_REG_3, BPF_MAP_ARRAY_OP_OR),
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_cmp_fs_beneath),
-+		/* if the checked path is beneath the handle */
-+		BPF_JMP_IMM(BPF_JNE, BPF_REG_0, 0, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+		/* allow anonymous mapping */
-+		BPF_JMP_IMM(BPF_JNE, BPF_REG_0, -ENOENT, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+		/* deny by default, if any error */
-+		BPF_MOV32_IMM(BPF_REG_0, EACCES),
-+		BPF_EXIT_INSN(),
-+	};
-+
-+	/* Landlock rule for inode-based hooks */
-+	struct bpf_insn hook_inode[] = {
-+		/* save context */
-+		BPF_MOV64_REG(BPF_REG_6, BPF_REG_1),
-+		/* specify an option, if any */
-+		BPF_MOV32_IMM(BPF_REG_1, 0),
-+		/* handles to compare with */
-+		BPF_LD_MAP_FD(BPF_REG_2, map_fs),
-+		BPF_MOV64_IMM(BPF_REG_3, BPF_MAP_ARRAY_OP_OR),
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_cmp_fs_beneath),
-+		/* if the checked path is beneath the handle */
-+		BPF_JMP_IMM(BPF_JNE, BPF_REG_0, 0, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+
-+		/*
-+		 * We must allow MAY_EXEC access on directories from the root to the
-+		 * handles, otherwise they are not reachable.
-+		 */
-+
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_1, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_get_fs_mode),
-+		/* check if it returned an error */
-+		BPF_MOV64_IMM(BPF_REG_7, 0),
-+		BPF_ALU64_IMM(BPF_SUB, BPF_REG_7, MAX_ERRNO),
-+		BPF_JMP_REG(BPF_JGE, BPF_REG_0, BPF_REG_7, 2),
-+		/* check if the inode is a directory */
-+		BPF_ALU64_IMM(BPF_AND, BPF_REG_0, S_IFMT),
-+		BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, S_IFDIR, 2),
-+		/* no entry by default, if any error */
-+		BPF_MOV32_IMM(BPF_REG_0, ENOENT),
-+		BPF_EXIT_INSN(),
-+
-+		/* specify an option, if any */
-+		BPF_MOV32_IMM(BPF_REG_1, LANDLOCK_FLAG_OPT_REVERSE),
-+		/* handles to compare with */
-+		BPF_LD_MAP_FD(BPF_REG_2, map_fs),
-+		BPF_MOV64_IMM(BPF_REG_3, BPF_MAP_ARRAY_OP_OR),
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_cmp_fs_beneath),
-+		/* if one handle is not beneath the checked path */
-+		BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 0, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, ENOENT),
-+		BPF_EXIT_INSN(),
-+
-+		/* check access mask */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_7, BPF_REG_6, offsetof(struct
-+					landlock_data, args[1])),
-+		BPF_JMP_IMM(BPF_JNE, BPF_REG_7, MAY_EXEC, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+		BPF_MOV32_IMM(BPF_REG_0, EACCES),
-+		BPF_EXIT_INSN(),
-+	};
-+
-+	/* Landlock rule for the stat hook */
-+	struct bpf_insn hook_stat[] = {
-+		/* save context */
-+		BPF_MOV64_REG(BPF_REG_6, BPF_REG_1),
-+		/* specify an option, if any */
-+		BPF_MOV32_IMM(BPF_REG_1, 0),
-+		/* handles to compare with */
-+		BPF_LD_MAP_FD(BPF_REG_2, map_fs),
-+		BPF_MOV64_IMM(BPF_REG_3, BPF_MAP_ARRAY_OP_OR),
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_cmp_fs_beneath),
-+		/* if the checked path is beneath the handle */
-+		BPF_JMP_IMM(BPF_JNE, BPF_REG_0, 0, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+
-+		/*
-+		 * We may want to allow discovery of the directories hierarchy
-+		 * (from the root to the handles).
-+		 */
-+
-+		/* hook argument */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_1, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_get_fs_mode),
-+		/* check if it returned an error */
-+		BPF_MOV64_IMM(BPF_REG_7, 0),
-+		BPF_ALU64_IMM(BPF_SUB, BPF_REG_7, MAX_ERRNO),
-+		BPF_JMP_REG(BPF_JGE, BPF_REG_0, BPF_REG_7, 2),
-+		/* check if the inode is a directory */
-+		BPF_ALU64_IMM(BPF_AND, BPF_REG_0, S_IFMT),
-+		BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, S_IFDIR, 2),
-+		/* no entry by default, if any error */
-+		BPF_MOV32_IMM(BPF_REG_0, ENOENT),
-+		BPF_EXIT_INSN(),
-+
-+		/* specify an option, if any */
-+		BPF_MOV32_IMM(BPF_REG_1, LANDLOCK_FLAG_OPT_REVERSE),
-+		/* handles to compare with */
-+		BPF_LD_MAP_FD(BPF_REG_2, map_fs),
-+		BPF_MOV64_IMM(BPF_REG_3, BPF_MAP_ARRAY_OP_OR),
-+		/* hook argument) */
-+		BPF_LDX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, offsetof(struct
-+					landlock_data, args[0])),
-+		/* checker function */
-+		BPF_EMIT_CALL(BPF_FUNC_landlock_cmp_fs_beneath),
-+		/* if one handle is not beneath the checked path */
-+		BPF_JMP_IMM(BPF_JEQ, BPF_REG_0, 0, 2),
-+		BPF_MOV32_IMM(BPF_REG_0, ENOENT),
-+		BPF_EXIT_INSN(),
-+		BPF_MOV32_IMM(BPF_REG_0, 0),
-+		BPF_EXIT_INSN(),
-+	};
-+
-+	struct landlock_rule rules[] = {
-+		{
-+			.hook = LANDLOCK_HOOK_FILE_OPEN,
-+			.bpf = hook_file,
-+			.size = sizeof(hook_file),
-+		},
-+		{
-+			.hook = LANDLOCK_HOOK_FILE_PERMISSION,
-+			.bpf = hook_file,
-+			.size = sizeof(hook_file),
-+		},
-+		{
-+			.hook = LANDLOCK_HOOK_MMAP_FILE,
-+			.bpf = hook_file,
-+			.size = sizeof(hook_file),
-+		},
-+		{
-+			.hook = LANDLOCK_HOOK_INODE_PERMISSION,
-+			.bpf = hook_inode,
-+			.size = sizeof(hook_inode),
-+		},
-+		{
-+			.hook = LANDLOCK_HOOK_INODE_GETATTR,
-+			.bpf = hook_stat,
-+			.size = sizeof(hook_stat),
-+		},
-+	};
-+	for (i = 0; i < ARRAY_SIZE(rules) && !ret; i++) {
-+		int bpf0 = landlock_prog_load(rules[i].bpf, rules[i].size, rules[i].hook, 0);
-+		if (bpf0 == -1) {
-+			perror("prog_load");
-+			fprintf(stderr, "%s", bpf_log_buf);
-+			ret = 1;
++		switch (type) {
++		case BPF_CGROUP_INET_INGRESS:
++		case BPF_CGROUP_INET_EGRESS:
++			prog = rcu_dereference_protected(
++					parent->bpf.effective[type].prog,
++					lockdep_is_held(&cgroup_mutex));
++			rcu_assign_pointer(cgrp->bpf.effective[type].prog, prog);
 +			break;
++		case BPF_CGROUP_LANDLOCK:
++#ifdef CONFIG_SECURITY_LANDLOCK
++			hooks = rcu_dereference_protected(
++					parent->bpf.effective[type].hooks,
++					lockdep_is_held(&cgroup_mutex));
++			rcu_assign_pointer(cgrp->bpf.effective[type].hooks, hooks);
++			get_landlock_hooks(hooks);
++			break;
++#endif /* CONFIG_SECURITY_LANDLOCK */
++		default:
++			WARN_ON(1);
 +		}
-+		if (!cgroup_nb) {
-+			if (seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &bpf0)) {
-+				perror("seccomp(set_hook)");
-+				ret = 1;
+ 	}
+ }
+ 
+@@ -89,31 +117,80 @@ int __cgroup_bpf_update(struct cgroup *cgrp,
+ 			 enum bpf_attach_type type)
+ {
+ 	struct bpf_prog *old_prog = NULL, *effective_prog;
++#ifdef CONFIG_SECURITY_LANDLOCK
++	struct landlock_hooks *effective_hooks;
++#endif /* CONFIG_SECURITY_LANDLOCK */
+ 	struct cgroup_subsys_state *pos;
+-
+-	old_prog = xchg(&cgrp->bpf.pinned[type].prog, prog);
+-
+-	effective_prog = (!prog && parent) ?
+-		rcu_dereference_protected(parent->bpf.effective[type].prog,
+-					  lockdep_is_held(&cgroup_mutex)) :
+-		prog;
++	bool had_obj = false;
++
++	switch (type) {
++	case BPF_CGROUP_INET_INGRESS:
++	case BPF_CGROUP_INET_EGRESS:
++		old_prog = xchg(&cgrp->bpf.pinned[type].prog, prog);
++		if (old_prog)
++			had_obj = true;
++		effective_prog = (!prog && parent) ? rcu_dereference_protected(
++				parent->bpf.effective[type].prog,
++				lockdep_is_held(&cgroup_mutex)) : prog;
++		break;
++	case BPF_CGROUP_LANDLOCK:
++#ifdef CONFIG_SECURITY_LANDLOCK
++		/* append hook */
++		had_obj = !!rcu_dereference_protected(
++				cgrp->bpf.pinned[type].hooks,
++				lockdep_is_held(&cgroup_mutex));
++		effective_hooks = landlock_cgroup_append_prog(cgrp, prog);
++		if (IS_ERR(effective_hooks))
++			return PTR_ERR(effective_hooks);
++		break;
++#endif /* CONFIG_SECURITY_LANDLOCK */
++	default:
++		return -EINVAL;
++	}
+ 
+ 	css_for_each_descendant_pre(pos, &cgrp->self) {
+ 		struct cgroup *desc = container_of(pos, struct cgroup, self);
+ 
+-		/* skip the subtree if the descendant has its own program */
+-		if (desc->bpf.pinned[type].prog && desc != cgrp)
+-			pos = css_rightmost_descendant(pos);
+-		else
++		switch (type) {
++		case BPF_CGROUP_INET_INGRESS:
++		case BPF_CGROUP_INET_EGRESS:
++			/*
++			 * skip the subtree if the descendant has its own
++			 * program
++			 */
++			if (desc->bpf.pinned[type].prog && desc != cgrp) {
++				pos = css_rightmost_descendant(pos);
++				break;
 +			}
-+		} else {
-+			for (key = 0; key < cgroup_nb && !ret; key++) {
-+				int fd = open(cgroup_paths[key],
-+						O_DIRECTORY | O_CLOEXEC);
-+				if (fd < 0) {
-+					fprintf(stderr, "open(cgroup: \"%s\"): %s\n",
-+							cgroup_paths[key], strerror(errno));
-+					ret = 1;
-+					break;
-+				}
-+				if (bpf_prog_attach(bpf0, fd, BPF_CGROUP_LANDLOCK)) {
-+					fprintf(stderr, "bpf_prog_attach(cgroup: \"%s\"): %s\n",
-+							cgroup_paths[key], strerror(errno));
-+					ret = 1;
-+				}
-+				close(fd);
+ 			rcu_assign_pointer(desc->bpf.effective[type].prog,
+ 					   effective_prog);
++			break;
++		case BPF_CGROUP_LANDLOCK:
++#ifdef CONFIG_SECURITY_LANDLOCK
++			/*
++			 * extend the subtree hooks if the descendant has its
++			 * own hooks
++			 */
++			if (desc->bpf.pinned[type].hooks && desc != cgrp) {
++				landlock_insert_node(desc->bpf.pinned[type].hooks,
++						prog->subtype.landlock_rule.hook,
++						effective_hooks);
++				break;
 +			}
++			rcu_assign_pointer(desc->bpf.effective[type].hooks,
++					effective_hooks);
++			break;
++#endif /* CONFIG_SECURITY_LANDLOCK */
++		default:
++			WARN_ON(1);
 +		}
-+		close(bpf0);
+ 	}
+ 
+ 	if (prog)
+ 		static_branch_inc(&cgroup_bpf_enabled_key);
+-
+-	if (old_prog) {
+-		bpf_prog_put(old_prog);
++	if (had_obj) {
++		if (old_prog)
++			bpf_prog_put(old_prog);
+ 		static_branch_dec(&cgroup_bpf_enabled_key);
+ 	}
+ 	return 0;
+diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
+index 128acb4f7177..8980b3218203 100644
+--- a/kernel/bpf/syscall.c
++++ b/kernel/bpf/syscall.c
+@@ -846,6 +846,16 @@ static int bpf_prog_attach(const union bpf_attr *attr)
+ 					 BPF_PROG_TYPE_CGROUP_SKB);
+ 		break;
+ 
++	case BPF_CGROUP_LANDLOCK:
++#ifdef CONFIG_SECURITY_LANDLOCK
++		if (!capable(CAP_SYS_ADMIN))
++			return -EPERM;
++
++		prog = bpf_prog_get_type(attr->attach_bpf_fd,
++				BPF_PROG_TYPE_LANDLOCK);
++		break;
++#endif /* CONFIG_SECURITY_LANDLOCK */
++
+ 	default:
+ 		return -EINVAL;
+ 	}
+@@ -889,6 +899,7 @@ static int bpf_prog_detach(const union bpf_attr *attr)
+ 		cgroup_put(cgrp);
+ 		break;
+ 
++	case BPF_CGROUP_LANDLOCK:
+ 	default:
+ 		return -EINVAL;
+ 	}
+diff --git a/security/landlock/lsm.c b/security/landlock/lsm.c
+index 572f4f7f9f19..b5180aa7291f 100644
+--- a/security/landlock/lsm.c
++++ b/security/landlock/lsm.c
+@@ -9,6 +9,7 @@
+  */
+ 
+ #include <asm/current.h>
++#include <linux/bpf-cgroup.h> /* cgroup_bpf_enabled */
+ #include <linux/bpf.h> /* enum bpf_reg_type, struct landlock_data */
+ #include <linux/cred.h>
+ #include <linux/err.h> /* MAX_ERRNO */
+@@ -24,6 +25,10 @@
+ #include <linux/fs.h> /* struct inode */
+ #include <linux/path.h> /* struct path */
+ 
++#ifdef CONFIG_CGROUP_BPF
++#include <linux/cgroup-defs.h> /* struct cgroup */
++#endif /* CONFIG_CGROUP_BPF */
++
+ #include "checker_fs.h"
+ #include "common.h"
+ 
+@@ -151,6 +156,9 @@ static u32 landlock_run_prog(u32 hook_idx, const struct landlock_data *ctx,
+ static int landlock_enforce(enum landlock_hook hook, __u64 args[6])
+ {
+ 	u32 ret = 0;
++#ifdef CONFIG_CGROUP_BPF
++	struct cgroup *cgrp;
++#endif /* CONFIG_CGROUP_BPF */
+ 	u32 hook_idx = get_index(hook);
+ 
+ 	struct landlock_data ctx = {
+@@ -166,8 +174,20 @@ static int landlock_enforce(enum landlock_hook hook, __u64 args[6])
+ #ifdef CONFIG_SECCOMP_FILTER
+ 	ret = landlock_run_prog(hook_idx, &ctx,
+ 			current->seccomp.landlock_hooks);
++	if (ret)
++		goto out;
+ #endif /* CONFIG_SECCOMP_FILTER */
+ 
++#ifdef CONFIG_CGROUP_BPF
++	if (cgroup_bpf_enabled) {
++		/* get the default cgroup associated with the current thread */
++		cgrp = task_css_set(current)->dfl_cgrp;
++		ret = landlock_run_prog(hook_idx, &ctx,
++				cgrp->bpf.effective[BPF_CGROUP_LANDLOCK].hooks);
 +	}
++#endif /* CONFIG_CGROUP_BPF */
 +
-+	if (path_nb) {
-+		close(map_fs);
-+	}
-+	return ret;
-+}
++out:
+ 	return -ret;
+ }
+ 
+@@ -282,9 +302,21 @@ static struct security_hook_list landlock_hooks[] = {
+ 	LANDLOCK_HOOK_INIT(inode_getattr),
+ };
+ 
++#ifdef CONFIG_SECCOMP_FILTER
++#ifdef CONFIG_CGROUP_BPF
++#define LANDLOCK_MANAGERS "seccomp and cgroups"
++#else /* CONFIG_CGROUP_BPF */
++#define LANDLOCK_MANAGERS "seccomp"
++#endif /* CONFIG_CGROUP_BPF */
++#elif define(CONFIG_CGROUP_BPF)
++#define LANDLOCK_MANAGERS "cgroups"
++#else
++#error "Need CONFIG_SECCOMP_FILTER or CONFIG_CGROUP_BPF"
++#endif /* CONFIG_SECCOMP_FILTER */
 +
-+#define ENV_FS_PATH_NAME "LANDLOCK_ALLOWED"
-+#define ENV_CGROUP_PATH_NAME "LANDLOCK_CGROUPS"
-+#define ENV_PATH_TOKEN ":"
+ void __init landlock_add_hooks(void)
+ {
+-	pr_info("landlock: Becoming ready to sandbox with seccomp\n");
++	pr_info("landlock: Becoming ready to sandbox with " LANDLOCK_MANAGERS "\n");
+ 	security_add_hooks(landlock_hooks, ARRAY_SIZE(landlock_hooks));
+ }
+ 
+diff --git a/security/landlock/manager.c b/security/landlock/manager.c
+index 56e99ccd5708..18ae6c0c4dbf 100644
+--- a/security/landlock/manager.c
++++ b/security/landlock/manager.c
+@@ -20,6 +20,11 @@
+ #include <linux/types.h> /* atomic_t */
+ #include <linux/uaccess.h> /* copy_from_user() */
+ 
++#ifdef CONFIG_CGROUP_BPF
++#include <linux/bpf-cgroup.h> /* struct cgroup_bpf */
++#include <linux/cgroup-defs.h> /* struct cgroup */
++#endif /* CONFIG_CGROUP_BPF */
 +
-+static int parse_path(char *env_path, const char ***path_list)
+ #include "common.h"
+ 
+ static void put_landlock_rule(struct landlock_rule *rule)
+@@ -68,6 +73,12 @@ void put_landlock_hooks(struct landlock_hooks *hooks)
+ 	}
+ }
+ 
++void get_landlock_hooks(struct landlock_hooks *hooks)
 +{
-+	int i, path_nb = 0;
-+
-+	if (env_path) {
-+		path_nb++;
-+		for (i = 0; env_path[i]; i++) {
-+			if (env_path[i] == ENV_PATH_TOKEN[0]) {
-+				path_nb++;
-+			}
-+		}
-+	}
-+	*path_list = malloc(path_nb * sizeof(**path_list));
-+	for (i = 0; i < path_nb; i++) {
-+		(*path_list)[i] = strsep(&env_path, ENV_PATH_TOKEN);
-+	}
-+
-+	return path_nb;
++	if (hooks)
++		atomic_inc(&hooks->usage);
 +}
 +
-+int main(int argc, char * const argv[], char * const *envp)
+ static struct landlock_hooks *new_raw_landlock_hooks(void)
+ {
+ 	struct landlock_hooks *ret;
+@@ -314,3 +325,55 @@ int landlock_seccomp_append_prog(unsigned int flags, const char __user *user_bpf
+ 	return 0;
+ }
+ #endif /* CONFIG_SECCOMP_FILTER */
++
++/**
++ * landlock_cgroup_set_hook - attach a Landlock program to a cgroup
++ *
++ * Must be called with cgroup_mutex held.
++ *
++ * @crgp: non-NULL cgroup pointer to attach to
++ * @prog: Landlock program pointer
++ */
++#ifdef CONFIG_CGROUP_BPF
++struct landlock_hooks *landlock_cgroup_append_prog(struct cgroup *cgrp,
++		struct bpf_prog *prog)
 +{
-+	char *cmd_path;
-+	char *env_path_allowed, *env_path_cgroup;
-+	int path_nb, cgroup_nb;
-+	const char **sb_paths = NULL;
-+	const char **cg_paths = NULL;
-+	char * const *cmd_argv;
++	if (!prog)
++		return ERR_PTR(-EINVAL);
 +
-+	env_path_allowed = getenv(ENV_FS_PATH_NAME);
-+	if (env_path_allowed)
-+		env_path_allowed = strdup(env_path_allowed);
-+	env_path_cgroup = getenv(ENV_CGROUP_PATH_NAME);
-+	if (env_path_cgroup)
-+		env_path_cgroup = strdup(env_path_cgroup);
-+
-+	path_nb = parse_path(env_path_allowed, &sb_paths);
-+	cgroup_nb = parse_path(env_path_cgroup, &cg_paths);
-+	if (argc < 2 && !cgroup_nb) {
-+		fprintf(stderr, "usage: %s <cmd> [args]...\n\n", argv[0]);
-+		fprintf(stderr, "Environment variables containing paths, each separated by a colon:\n");
-+		fprintf(stderr, "* %s (whitelist of allowed files and directories)\n",
-+				ENV_FS_PATH_NAME);
-+		fprintf(stderr, "* %s (optional cgroup paths for which the sandbox is enabled)\n",
-+				ENV_CGROUP_PATH_NAME);
-+		fprintf(stderr, "\nexample:\n%s='/bin:/lib:/lib64:/usr:/tmp:/proc/self/fd/0' %s /bin/sh -i\n",
-+				ENV_FS_PATH_NAME, argv[0]);
-+		return 1;
-+	}
-+	if (apply_sandbox(sb_paths, path_nb, cg_paths, cgroup_nb))
-+		return 1;
-+	if (!cgroup_nb) {
-+		cmd_path = argv[1];
-+		cmd_argv = argv + 1;
-+		fprintf(stderr, "Launching a new sandboxed process.\n");
-+		execve(cmd_path, cmd_argv, envp);
-+		perror("execve");
-+		return 1;
-+	}
-+	fprintf(stderr, "Ready to sandbox with cgroups.\n");
-+	return 0;
++	/* copy the inherited hooks and append a new one */
++	return landlock_append_prog(cgrp->bpf.effective[BPF_CGROUP_LANDLOCK].hooks,
++			prog);
 +}
++
++/**
++ * landlock_insert_node - insert a Landlock node in an existing hook
++ *
++ * This is useful to keep a consistent hierarchy tree whenever a branch add
++ * its one rules. However, this must be called at every new rule addition to
++ * keep it consistent.
++ *
++ * @dst: Landlock hooks to update. They must not have more than one
++ *       missing/desynchronized node to keep the same hierarchy than @src.
++ * @hook: hook to synchronize.
++ * @src: Landlock hooks reference.
++ */
++void landlock_insert_node(struct landlock_hooks *dst,
++		enum landlock_hook hook, struct landlock_hooks *src)
++{
++	struct landlock_node **walker;
++	u32 hook_idx = get_index(hook);
++
++	for (walker = &dst->nodes[hook_idx]; *walker;
++			walker = &(*walker)->prev) {
++		if (*walker == src->nodes[hook_idx])
++			return;
++		/* assume that the parent node was inherited */
++		if (*walker == src->nodes[hook_idx]->prev)
++			break;
++	}
++	atomic_inc(&src->nodes[hook_idx]->usage);
++	put_landlock_node(*walker);
++	smp_store_release(walker, src->nodes[hook_idx]);
++}
++#endif /* CONFIG_CGROUP_BPF */
 -- 
 2.9.3
