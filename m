@@ -1,77 +1,120 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477512469.2263.141.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 26 Oct 2016 22:07:49 +0200
-In-Reply-To: <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-	 <20161020131350.GA18331@thigreal>
-	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
-	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
-	 <1477415895.2263.43.camel@cvidal.org>
-	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
-	 <1477428836.2263.70.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
-	 <1477471489.2263.107.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
-	 <1477507968.2263.125.camel@cvidal.org>
-	 <1477511274.2263.135.camel@cvidal.org>
-	 <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>
+Date: Wed, 26 Oct 2016 22:16:00 +0200
+From: Jann Horn <jann@thejh.net>
+Message-ID: <20161026201559.GO3334@pc.thejh.net>
+References: <20161026065654.19166-1-mic@digikod.net>
+ <20161026065654.19166-4-mic@digikod.net>
+ <20161026190147.GN3334@pc.thejh.net>
+ <58110BFD.5090005@digikod.net>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="Sr6hGnsCY8KeifOY"
+Content-Disposition: inline
+In-Reply-To: <58110BFD.5090005@digikod.net>
+Subject: Re: [kernel-hardening] [RFC v4 03/18] bpf,landlock: Add a new
+ arraymap type to deal with (Landlock) handles
+To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
+Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2016-10-26 at 12:52 -0700, Kees Cook wrote:
-> On Wed, Oct 26, 2016 at 12:47 PM, Colin Vidal <colin@cvidal.org> wrote:
-> > 
-> > > 
-> > > BTW, I just looked to the generic implementation of atomic64. It seems
-> > > quite understandable: methods use spinlock to access/modify to the
-> > > value of an atomic64 variable. It seems possible to check the value
-> > > before the increment/decrements and if the resulting value is 0, but
-> > > the value before the operation was different of -1 or 1, is that an
-> > > overflow just happened (well, it is not exactly right, but this is the
-> > > global idea). Hence, we revert the change, release the lock, and kill
-> > > the process.
-> > > 
-> > > If this idea is correct, it would avoid specific implementation of
-> > > protected version of atomic64 for architecture with
-> > > GENERIC_ATOMIC64. And case (3) would be easily protected. What do you
-> > > think?
-> > 
-> > What I am saying here is quite confusing. Here is a cleaner
-> > explanation:
-> > 
-> >  * the generic atomic64 method enter and takes the lock
-> >  * before making the operation, check v->counter > INT_MAX - value (ifadd) or check v->counter < INT_MIN - value (if sub)
-> >  * if the previous check is true, release the lock and kill the process
-> >  * otherwise, let the operation process.
-> > 
-> > Obviously, if this approach is not wrong, there will be a significant
-> > overhead, but it happens only on CONFIG_GENERIC_ATOMIC64 &&
-> > CONFIG_HARDENED_ATOMIC.
-> 
-> I think this would be fine -- though I think it should be a distinct
-> patch. Anything we can do to separate changes into logical chunks
-> makes reviewing easier.
-> 
-> i.e. patch ordering could look like this:
-> 
-> - original series with HARDENED_ATOMIC depending on !GENERIC_ATOMIC64
-> - implementation of protection on GENERIC_ATOMIC64, removing above
-> depends limitation
-> - ARM hardened atomic implementation
 
-Great!
+--Sr6hGnsCY8KeifOY
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-Elena, I will wait that you applies HARDENED_ATOMIC depending on
-!GENERIC_ATOMIC64, and I submit a new RFC with the implementation of
-protection on GENERIC_ATOMIC64 and a v2 of ARM port. Sounds good for
-everybody? 
+On Wed, Oct 26, 2016 at 10:03:09PM +0200, Micka=EBl Sala=FCn wrote:
+> On 26/10/2016 21:01, Jann Horn wrote:
+> > On Wed, Oct 26, 2016 at 08:56:39AM +0200, Micka=EBl Sala=FCn wrote:
+> >> This new arraymap looks like a set and brings new properties:
+> >> * strong typing of entries: the eBPF functions get the array type of
+> >>   elements instead of CONST_PTR_TO_MAP (e.g.
+> >>   CONST_PTR_TO_LANDLOCK_HANDLE_FS);
+> >> * force sequential filling (i.e. replace or append-only update), which
+> >>   allow quick browsing of all entries.
+> >>
+> >> This strong typing is useful to statically check if the content of a m=
+ap
+> >> can be passed to an eBPF function. For example, Landlock use it to sto=
+re
+> >> and manage kernel objects (e.g. struct file) instead of dealing with
+> >> userland raw data. This improve efficiency and ensure that an eBPF
+> >> program can only call functions with the right high-level arguments.
+> >>
+> >> The enum bpf_map_handle_type list low-level types (e.g.
+> >> BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD) which are identified when
+> >> updating a map entry (handle). This handle types are used to infer a
+> >> high-level arraymap type which are listed in enum bpf_map_array_type
+> >> (e.g. BPF_MAP_ARRAY_TYPE_LANDLOCK_FS).
+> >>
+> >> For now, this new arraymap is only used by Landlock LSM (cf. next
+> >> commits) but it could be useful for other needs.
+> >>
+> >> Changes since v3:
+> >> * make handle arraymap safe (RCU) and remove buggy synchronize_rcu()
+> >> * factor out the arraymay walk
+> >>
+> >> Changes since v2:
+> >> * add a RLIMIT_NOFILE-based limit to the maximum number of arraymap
+> >>   handle entries (suggested by Andy Lutomirski)
+> >> * remove useless checks
+> >>
+> >> Changes since v1:
+> >> * arraymap of handles replace custom checker groups
+> >> * simpler userland API
+> > [...]
+> >> +	case BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD:
+> >> +		handle_file =3D fget(handle->fd);
+> >> +		if (IS_ERR(handle_file))
+> >> +			return ERR_CAST(handle_file);
+> >> +		/* check if the FD is tied to a user mount point */
+> >> +		if (unlikely(handle_file->f_path.mnt->mnt_flags & MNT_INTERNAL)) {
+> >> +			fput(handle_file);
+> >> +			return ERR_PTR(-EINVAL);
+> >> +		}
+> >> +		path_get(&handle_file->f_path);
+> >> +		ret =3D kmalloc(sizeof(*ret), GFP_KERNEL);
+> >> +		ret->path =3D handle_file->f_path;
+> >> +		fput(handle_file);
+> >=20
+> > You can use fdget() and fdput() here because the reference to
+> > handle_file is dropped before the end of the syscall.
+>=20
+> The reference to handle_file is dropped but not the reference to the
+> (inner) path thanks to path_get().
 
-Thanks,
+That's irrelevant. As long as you promise to fdput() any references
+acquired using fdget() before any of the following can happen, using
+fdget() is okay:
+ - the syscall exits
+ - the fd table is shared with a process that might write to it
+ - an fd is closed by the kernel
+In other words, you must be able to prove that nobody can remove the
+struct file * from your fd table before you fdput().
 
-Colin
+Taking a long-term reference to an object pointed to by a struct file
+that was looked up with fdget() is fine.
+
+--Sr6hGnsCY8KeifOY
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJYEQ7/AAoJED4KNFJOeCOoEFsP/RfNBa0kgGar2d0Pe7pFqsb1
+egAUR2bPYV/FWgrpiX0W0hTB6kjwDtSg8lw048hJA+d9Ns3HIZ2SNh+8l2hN0xrk
+Nxws8Gv4J4Ikrtu2ZmiG3mwlFKMBkGCyo5UehnvA2XrUyJTA13cyzGyPIxBNbQAJ
+HZFrGh9LgIIOTpeZWTdqf3DRsyzAx5CaoZZxDHR+WzTZ2rlsPe8Wt4KyIcfZkFDF
+XVsLEPbryxPvC9jWm4ucWxZsooVfLsdvuXtxOddkMpBn/BrfB6gIQ/fbcM+3EpOv
+NHw8fzZrvmuLiPu6sMVEMvrt2YWpBeiG1Go9dm/icuGhpeaiMXnv9ZaPGsGgERsQ
+Z1xjuuz3qIYuxrOCH1E9l9Nn5OXAy9dORedDN3jafyfSVe4+vyC6SagvgKak+PHP
+1j5bwv72O+FW/zQugD2t1jkPd+O6q4j7DC6hXogSreOTvD/9AC/Waa9jchs32eLR
+3qbTFRBSYZwfNnGtiChC1cfubis1UcLm54qzZ40IfPN3z5RG0PEM6OhVN32YaEkm
+eDiKDUATOL3rpph2vXyHd7+B1D6O1cvQEhyB/IuvjFJhjIgdxhLa1dnnEGe5mZMG
+/6KOKVT1h3AymGe0mMQLLmi9ZhuSrtRTzPBUHDm9c0L5OeLvkkUvvxWH99L9Ae/+
+AclBGkTlccYYtgpFot6x
+=LKSv
+-----END PGP SIGNATURE-----
+
+--Sr6hGnsCY8KeifOY--
