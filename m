@@ -1,22 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF8C0A@IRSMSX102.ger.corp.intel.com>
-References: <20161025204303.GA36052@beast> <2236FBA76BA1254E88B949DDB74E612B41BF8C0A@IRSMSX102.ger.corp.intel.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF8DB2@IRSMSX102.ger.corp.intel.com>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+ <1476959131-6153-2-git-send-email-elena.reshetova@intel.com>
+ <20161025085109.GV19531@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41BF8867@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jL4hZTBdmLpOmjaKOan6NfBtnpyBk6m1rpMFbTZsd3cFw@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41BF8DB2@IRSMSX102.ger.corp.intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 26 Oct 2016 13:41:34 -0700
-Message-ID: <CAGXu5jJ2MmY=qDT420F9_hbKtkdRvXC+Juf0J8WKJmtZN4jC0g@mail.gmail.com>
+Date: Wed, 26 Oct 2016 13:44:50 -0700
+Message-ID: <CAGXu5jJ_8_Q_HukwuBEdtK4NQGp-Fnxhd2-1hXu7-KBfGX8CBw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v2 PATCH 13.1/13] lkdtm: add tests for atomic over-/underflow
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 01/13] Add architecture
+ independent hardened atomic base
 To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 26, 2016 at 12:29 AM, Reshetova, Elena
+On Wed, Oct 26, 2016 at 3:27 AM, Reshetova, Elena
 <elena.reshetova@intel.com> wrote:
-> Thank you Kees! I applied the commit to our hardened_atomic_on_next branch and it will be included into the next rfc.
+> On Tue, Oct 25, 2016 at 11:20 AM, Reshetova, Elena <elena.reshetova@intel.com> wrote:
+>>>  struct list_head {
+>>> diff --git a/kernel/panic.c b/kernel/panic.c index e6480e2..cb1d6db
+>>> 100644
+>>> --- a/kernel/panic.c
+>>> +++ b/kernel/panic.c
+>>> @@ -616,3 +616,14 @@ static int __init oops_setup(char *s)
+>>>       return 0;
+>>>  }
+>>>  early_param("oops", oops_setup);
+>>> +
+>>> +#ifdef CONFIG_HARDENED_ATOMIC
+>>> +void hardened_atomic_overflow(struct pt_regs *regs) {
+>>> +     pr_emerg(KERN_EMERG "HARDENED_ATOMIC: overflow detected in: %s:%d, uid/euid: %u/%u\n",
+>>> +             current->comm, task_pid_nr(current),
+>>> +             from_kuid_munged(&init_user_ns, current_uid()),
+>>> +             from_kuid_munged(&init_user_ns, current_euid()));
+>>> +     BUG();
+>>
+>> BUG() will print a message like "kernel BUG at kernel/panic.c:627!"
+>> and a stack trace dump with extra frames including hardened_atomic_overflow() and some exception handler routines (do_trap() on x86), which are totally useless. So I don't want to call BUG() here.
+>>
+>> Instead, we will fall back to a normal "BUG" handler, bug_handler() on arm64, which eventually calls die(), generating more *intuitive* messages:
+>> ===8<===
+>> [   29.082336] lkdtm: attempting good atomic_add_return
+>> [   29.082391] lkdtm: attempting bad atomic_add_return
+>> [   29.082830] ------------[ cut here ]------------
+>> [   29.082889] Kernel BUG at ffff0000008b07fc [verbose debug info unavailable]
+>>                             (Actually, this is lkdtm_ATOMIC_ADD_RETURN_OVERFLOW)
+>> [   29.082968] HARDENED_ATOMIC: overflow detected in: insmod:1152, uid/euid: 0/0
+>> [   29.083043] Internal error: Oops - BUG: 0 [#1] PREEMPT SMP
+>> [   29.083098] Modules linked in: lkdtm(+)
+>> [   29.083189] CPU: 1 PID: 1152 Comm: insmod Not tainted 4.9.0-rc1-00024-gb757839-dirty #12
+>> [   29.083262] Hardware name: FVP Base (DT)
+>> [   29.083324] task: ffff80087aa21900 task.stack: ffff80087a36c000
+>> [   29.083557] PC is at lkdtm_ATOMIC_ADD_RETURN_OVERFLOW+0x6c/0xa0 [lkdtm]
+>> [   29.083627] LR is at 0x7fffffff
+>> [   29.083687] pc : [<ffff0000008b07fc>] lr : [<000000007fffffff>] pstate: 90400149
+>> [   29.083757] sp : ffff80087a36fbe0
+>> [   29.083810] x29: ffff80087a36fbe0 [   29.083858] x28: ffff000008ec3000
+>> [   29.083906]
+>>
+>> ...
+>>
+>> [   29.090842] [<ffff0000008b07fc>] lkdtm_ATOMIC_ADD_RETURN_OVERFLOW+0x6c/0xa0 [lkdtm]
+>> [   29.091090] [<ffff0000008b20a4>] lkdtm_do_action+0x1c/0x28 [lkdtm]
+>> [   29.091334] [<ffff0000008bb118>] lkdtm_module_init+0x118/0x210 [lkdtm]
+>> [   29.091422] [<ffff000008083150>] do_one_initcall+0x38/0x128
+>> [   29.091503] [<ffff000008166ad4>] do_init_module+0x5c/0x1c8
+>> [   29.091586] [<ffff00000812e1ec>] load_module+0x1b24/0x20b0
+>> [   29.091670] [<ffff00000812e920>] SyS_init_module+0x1a8/0x1d8
+>> [   29.091753] [<ffff000008082ef0>] el0_svc_naked+0x24/0x28
+>> [   29.091843] Code: 910063a1 b8e0003e 2b1e0010 540000c7 (d4210020)
+>> ===>8===
+>>
+>> So, you propose to remove call to BUG() fully from there? Funny, I think on x86 the output was actually like you wanted with just calling BUG().
+>
+> The x86 BUG isn't as nice:
+> - "kernel BUG at kernel/panic.c:627" is bogus, the bug is a frame above, etc
+> - the meaningful message "HARDENED_ATOMIC: overflow detected" happens above the ==cut== line
+>
+> Ok, what should we use instead then? Should I go back to the previous version and print this in addition:
+>
+> print_symbol(KERN_EMERG "HARDENED_ATOMIC: refcount overflow occurred at: %s\n", instruction_pointer(regs));
 
-Cool, thanks. I assume this should get atomic64_t and local_t tests as well?
+For now, we can stick to BUG(), but we'll find a way to improve it in
+the future. I'll want to change these for HARDENED_ATOMIC,
+HARDENED_USERCOPY, and BUG_ON_CORRUPTION (in -next), so it's not
+specific to this series.
+
+I'm open to Takahiro's suggestions for how to actually make these
+changes, though. Notably neither bug_handler() nor die() are exported
+outside the respective arch/ trees, so it's not clear what needs
+changing. But it'll likely be separate from this series. :)
 
 -Kees
 
