@@ -1,85 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 26 Oct 2016 11:15:37 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF8DFB@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-13-git-send-email-elena.reshetova@intel.com>
- <20161026050631.GZ19531@linaro.org>
- <CAEXv5_h5ezZwXcC-sTND_WxPwjNx3Yz-0M40WzqdC_gF-cP20g@mail.gmail.com>
-In-Reply-To: <CAEXv5_h5ezZwXcC-sTND_WxPwjNx3Yz-0M40WzqdC_gF-cP20g@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Wed, 26 Oct 2016 15:52:16 +0200
+From: David Sterba <dave@jikos.cz>
+Message-ID: <20161026135216.GE15400@twin.jikos.cz>
+References: <20161026065654.19166-1-mic@digikod.net>
+ <20161026065654.19166-3-mic@digikod.net>
+ <4045933.vGduYR3PCp@wuerfel>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v2 PATCH 12/13] x86: implementation for
- HARDENED_ATOMIC
-To: David Windsor <dwindsor@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <4045933.vGduYR3PCp@wuerfel>
+Subject: Re: [kernel-hardening] Re: [RFC v4 02/18] bpf: Move u64_to_ptr() to
+ BPF headers and inline it
+To: kernel-hardening@lists.openwall.com
+Cc: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>, linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PHNuaXA+DQoNCkJ0dywgaG9wZSBubyBvbmUgbWluZHMgd2hlbiBJIGN1dCBvdXQgaXJyZWxldmFu
-dCBwYXJ0cyBvdXQgb2YgY29udmVyc2F0aW9uIHdpdGggc25pcHMgbGlrZSBhYm92ZS4gDQpPdGhl
-cndpc2UgSSBwZXJzb25hbGx5IGZpbmQgdGFraW5nIG1vcmUgdGltZSB0byBzY3JvbGwgZG93biB0
-byBmaW5kIHJpZ2h0IHBsYWNlcyBhbmQgcmlzayB0byBtaXNzIHNtdGggaXMgaGlnaGVyLiAgDQoN
-Cj4+ICsjaWZkZWYgQ09ORklHX0hBUkRFTkVEX0FUT01JQw0KPj4gK3N0YXRpYyBfX2Fsd2F5c19p
-bmxpbmUgYm9vbCBhdG9taWNfYWRkX25lZ2F0aXZlX3dyYXAoaW50IGksIGF0b21pY193cmFwX3Qg
-KnYpDQo+PiArew0KPj4gKyAgICAgR0VOX0JJTkFSWV9STVdjY193cmFwKExPQ0tfUFJFRklYICJh
-ZGRsIiwgdi0+Y291bnRlciwgImVyIiwgaSwgIiUwIiwgcyk7DQo+PiArfQ0KPj4gKyNlbmRpZiAv
-KiBDT05GSUdfSEFSREVORURfQVRPTUlDICovDQo+PiArDQo+PiAgLyoqDQo+PiAgICogYXRvbWlj
-X2FkZF9yZXR1cm4gLSBhZGQgaW50ZWdlciBhbmQgcmV0dXJuDQo+PiAgICogQGk6IGludGVnZXIg
-dmFsdWUgdG8gYWRkDQo+PiBAQCAtMTUzLDYgKzMyMiwxOCBAQCBzdGF0aWMgX19hbHdheXNfaW5s
-aW5lIGJvb2wgYXRvbWljX2FkZF9uZWdhdGl2ZShpbnQgaSwgYXRvbWljX3QgKnYpDQo+PiAgICov
-DQo+PiAgc3RhdGljIF9fYWx3YXlzX2lubGluZSBpbnQgYXRvbWljX2FkZF9yZXR1cm4oaW50IGks
-IGF0b21pY190ICp2KQ0KPj4gIHsNCj4+ICsgICAgIHJldHVybiBpICsgeGFkZF9jaGVja19vdmVy
-Zmxvdygmdi0+Y291bnRlciwgaSk7DQo+PiArfQ0KPg0KPiBJZiBvdmVyZmxvdywgc2hvdWxkIHRo
-aXMgZnVuY3Rpb24gc3RpbGwgcmV0dXJuIGkgKyB2LT5jb3VudGVyPw0KPiAoVGhlIGNhbGxlciB3
-b3VsZCBkaWUgYW55d2F5LCB0aG91Z2guKQ0KPg0KDQo+WWVzLCBiZWNhdXNlIGluIHRoZSBub24t
-b3ZlcmZsb3cgY2FzZSwgeGFkZF9jaGVja19vdmVyZmxvdygpIHdvdWxkDQo+cmV0dXJuIHRoZSBw
-cmV2aW91cyB2YWx1ZSBvZiB2LT5jb3VudGVyLiAgVGhpcyBnZXRzIGFkZGVkIHRvIGkgYW5kDQo+
-cmV0dXJuZWQsIHdoaWNoIGlzIGNvcnJlY3QgYW5kIGd1YXJhbnRlZWQgdG8gbm90IHJlc3VsdCBp
-biBhbiBvdmVyZmxvdw0KPihpZiBpdCBkaWQsIHRoZSBjaGVja3MgaW4geGFkZF9jaGVja19vdmVy
-ZmxvdygpIHdvdWxkIGtpbGwgdGhlDQo+cHJvY2VzcywgYXMgeW91IG5vdGVkKS4NCg0KPkluIHRo
-ZSBvdmVyZmxvdyBjYXNlLCB0aGUgY2FsbGVyIGdldHMga2lsbGVkIGFueXdheTogYmVmb3JlDQo+
-eGFkZF9jaGVja19vdmVyZmxvdygpIGNhbiByZXR1cm4sIGRvX3RyYXAoKSBjYWxscw0KPmhhcmRl
-bmVkX2F0b21pY19vdmVyZmxvdygpIHdoaWNoIGNhbGxzIEJVRygpLCBzbyB0aGUgcmV0dXJuIHN0
-YXRlbWVudA0KPndvbid0IGZpbmlzaCBleGVjdXRpbmcuDQoNCj5PbmUgdGhpbmcgdG8gbm90ZSBh
-Ym91dCB0aGUgcGF0dGVybiBvZiB1c2luZyBpICsNCj54YWRkX2NoZWNrX292ZXJmbG93KCk6IHRo
-ZXJlJ3MgYSBwb3RlbnRpYWwgVE9DVE9VIGlzc3VlIGlmIGkgY2FuIGJlDQo+bW9kaWZpZWQgYWZ0
-ZXIgeGFkZF9jaGVja19vdmVyZmxvdygpIHJldHVybnMsIGJ1dCBiZWZvcmUgdGhlDQo+ZXhwcmVz
-c2lvbiAoaSArIHhhZGRfY2hlY2tfb3ZlcmZsb3coKSkgaXMgZXZhbHVhdGVkLiAgSW4gYXJlYXMg
-d2hlcmUgaQ0KPmlzIHNoYXJlZCBiZXR3ZWVuIHRocmVhZHMsIHdlIG1pZ2h0IHdhbnQgdG8gbWFr
-ZSAoaSArDQo+eGFkZF9jaGVja19vdmVyZmxvdygpKSBhIGNyaXRpY2FsIHNlY3Rpb24uDQoNCkhv
-dyBzaG91bGQgd2UgbWFyayBjcml0aWNhbCBzZWN0aW9uIGhlcmU/IA0KDQo+PiAgI2RlZmluZSBh
-dG9taWNfZGVjX3JldHVybih2KSAgKGF0b21pY19zdWJfcmV0dXJuKDEsIHYpKQ0KPj4gKyNpZmRl
-ZiBDT05GSUdfSEFSREVORURfQVRPTUlDDQo+PiArc3RhdGljIF9fYWx3YXlzX2lubGluZSBpbnQg
-YXRvbWljX2RlY19yZXR1cm5fd3JhcChhdG9taWNfd3JhcF90ICp2KQ0KPj4gK3sNCj4+ICsgICAg
-IHJldHVybiBhdG9taWNfc3ViX3JldHVybl93cmFwKDEsIHYpOw0KPj4gK30NCj4+ICsjZW5kaWYg
-LyogQ09ORklHX0hBUkRFTkVEX0FUT01JQyAqLw0KPj4NCj4+ICBzdGF0aWMgX19hbHdheXNfaW5s
-aW5lIGludCBhdG9taWNfZmV0Y2hfYWRkKGludCBpLCBhdG9taWNfdCAqdikNCj4+ICB7DQo+DQo+
-IGFuZCBhdG9taWNfZmV0Y2hfYWRkL3N1YigpIHNob3VsZCBkbw0KPg0KPiAgICAgICAgIHJldHVy
-biB4YWRkX2NoZWNrX292ZXJmbG93KCgrLy0paSwgdik7DQoNCldlIGRvbid0IGhhdmUgaW5kZWVk
-IHdyYXAgdmVyc2lvbnMgZGVmaW5lZCBoZXJlLCBzbyBiYXNpYyBvbmVzIHdlcmUgbGVmdCB1bnBy
-b3RlY3RlZC4gDQpGaXhlZCBub3cuIFRoYW5rIHlvdSBmb3Igbm90aWNpbmchDQoNCj4+ICsgKiBB
-dG9taWNhbGx5IGFkZHMgQGEgdG8gQHYsIHNvIGxvbmcgYXMgQHYgd2FzIG5vdCBhbHJlYWR5IEB1
-Lg0KPj4gKyAqIFJldHVybnMgdGhlIG9sZCB2YWx1ZSBvZiBAdi4NCj4+ICsgKi8NCj4+ICtzdGF0
-aWMgX19hbHdheXNfaW5saW5lIGludCBfX2F0b21pY19hZGRfdW5sZXNzX3dyYXAoYXRvbWljX3dy
-YXBfdCAqdiwNCj4+ICsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgaW50IGEsIGludCB1KQ0KPj4gK3sNCj4+ICsgICAgIGludCBjLCBvbGQsIG5ldzsNCj4+
-ICsgICAgIGMgPSBhdG9taWNfcmVhZF93cmFwKHYpOw0KPj4gKyAgICAgZm9yICg7Oykgew0KPj4g
-KyAgICAgICAgICAgICBpZiAodW5saWtlbHkoYyA9PSAodSkpKQ0KPj4gKyAgICAgICAgICAgICAg
-ICAgICAgIGJyZWFrOw0KPj4gKw0KPj4gKyAgICAgICAgICAgICBhc20gdm9sYXRpbGUoImFkZGwg
-JTIsJTBcbiINCj4+ICsNCj4+ICsjaWZkZWYgQ09ORklHX0hBUkRFTkVEX0FUT01JQw0KPj4gKyAg
-ICAgICAgICAgICAgICAgICAgICAgICAgImpubyAwZlxuIg0KPj4gKyAgICAgICAgICAgICAgICAg
-ICAgICAgICAgInN1YmwgJTIsJTBcbiINCj4+ICsgICAgICAgICAgICAgICAgICAgICAgICAgICJp
-bnQgJDRcbjA6XG4iDQo+PiArICAgICAgICAgICAgICAgICAgICAgICAgICBfQVNNX0VYVEFCTEUo
-MGIsIDBiKQ0KPj4gKyNlbmRpZg0KPg0KPiBJcyB0aGlzIGEgbWlzdGFrZT8gV2UgZG9uJ3QgbmVl
-ZCBhIGNoZWNrIGhlcmUuDQo+DQoNCj5ZZXMsIHRoaXMgYXBwZWFycyB0byBiZSBhIG1pc3Rha2Uu
-DQoNCkNsZWFyIGNvcHkgcGFzdGUgbWlzdGFrZS4gRml4ZWQgbm93LiBUaGFua3MgYWdhaW4hDQoN
-Cj4+ICAgKiBPdGhlciB2YXJpYW50cyB3aXRoIGRpZmZlcmVudCBhcml0aG1ldGljIG9wZXJhdG9y
-czoNCj4+ICAgKi8NCj4+IEBAIC0xNDksNiArMjQ1LDE0IEBAIHN0YXRpYyBpbmxpbmUgbG9uZyBs
-b25nIGF0b21pYzY0X3N1Yl9yZXR1cm4obG9uZyBsb25nIGksIGF0b21pYzY0X3QgKnYpDQo+PiAg
-ICAgICByZXR1cm4gaTsNCj4+ICB9DQo+Pg0KPj4gK3N0YXRpYyBpbmxpbmUgbG9uZyBsb25nIGF0
-b21pYzY0X3N1Yl9yZXR1cm5fd3JhcChsb25nIGxvbmcgaSwgYXRvbWljNjRfd3JhcF90ICp2KQ0K
-Pj4gK3sNCj4+ICsgICAgIGFsdGVybmF0aXZlX2F0b21pYzY0KHN1Yl9yZXR1cm4sDQo+DQo+IHN1
-Yl9yZXR1cm5fd3JhcD8NCg0KWWVzLCB0aGFuayB5b3UgYWdhaW4hIEkgdGhvdWdodCBJIGNhdWd0
-aCB0aGVtIGFsbCBsYXN0IHRpbWUsIGJ1dCBubywgdGhpcyBvbmUgc3RpbGwgZ290IGluIDooDQoN
-CkJlc3QgUmVnYXJkcywNCkVsZW5hLg0K
+On Wed, Oct 26, 2016 at 09:19:08AM +0200, Arnd Bergmann wrote:
+> On Wednesday, October 26, 2016 8:56:38 AM CEST Mickaël Salaün wrote:
+> >  include/linux/bpf.h  | 6 ++++++
+> >  kernel/bpf/syscall.c | 6 ------
+> >  2 files changed, 6 insertions(+), 6 deletions(-)
+> > 
+> > diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+> > index c201017b5730..cf87db6daf27 100644
+> > --- a/include/linux/bpf.h
+> > +++ b/include/linux/bpf.h
+> > @@ -283,6 +283,12 @@ static inline void bpf_long_memcpy(void *dst, const void *src, u32 size)
+> >  
+> >  /* verify correctness of eBPF program */
+> >  int bpf_check(struct bpf_prog **fp, union bpf_attr *attr);
+> > +
+> > +/* helper to convert user pointers passed inside __aligned_u64 fields */
+> > +static inline void __user *u64_to_ptr(__u64 val)
+> > +{
+> > +       return (void __user *) (unsigned long) val;
+> > +}
+> >  #else
+> > 
+> 
+> 
+> We already have at least six copies of this helper:
+> 
+> fs/btrfs/qgroup.c:#define u64_to_ptr(x) ((struct btrfs_qgroup *)(uintptr_t)x)
+
+This one does not take __user pointers, unlike the rest. Anyway, the name is
+misleading, I'll send a cleanup. Thanks.
+
+> kernel/bpf/syscall.c:static void __user *u64_to_ptr(__u64 val)
+> drivers/staging/android/ion/ion_test.c:#define u64_to_uptr(x) ((void __user *)(unsigned long)(x))
+> drivers/firewire/core-cdev.c:static void __user *u64_to_uptr(u64 value)
+> drivers/staging/android/ion/ion_test.c:#define u64_to_uptr(x) ((void __user *)(unsigned long)(x))
+> include/linux/kernel.h:#define u64_to_user_ptr(x) (            \
+> 
+> Just use the one in linux/kernel.h
+> 
+> 	Arnd
