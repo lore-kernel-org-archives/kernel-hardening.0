@@ -1,22 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 26 Oct 2016 08:56:41 +0200
-Message-Id: <20161026065654.19166-6-mic@digikod.net>
+Date: Wed, 26 Oct 2016 08:56:44 +0200
+Message-Id: <20161026065654.19166-9-mic@digikod.net>
 In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
 References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v4 05/18] bpf,landlock: Define an eBPF program type for Landlock
+Subject: [kernel-hardening] [RFC v4 08/18] landlock: Handle file comparisons
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a new type of eBPF program used by Landlock rules and the functions
-to verify and evaluate them.
+Add eBPF functions to compare file system access with a Landlock file
+system handle:
+* bpf_landlock_cmp_fs_beneath(opt, map, map_op, fs_arg)
+  This function allows an eBPF program to check if the current accessed
+  file is the same or in the hierarchy of a reference handle.
+* bpf_landlock_get_fs_mode(arg_fs)
+  This function return the mode of a file. This is useful to check if
+  a process try to walk through a directory.
+
+The goal of file system handle is to abstract kernel objects such as a
+struct file or a struct inode. Userland can create this kind of handle
+thanks to the BPF_MAP_UPDATE_ELEM command. The element is a struct
+landlock_handle containing the handle type (e.g.
+BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD) and a file descriptor. This could
+also be any descriptions able to match a struct file or a struct inode
+(e.g. path or glob string).
 
 Changes since v3:
-* split commit
+* remove bpf_landlock_cmp_fs_prop() (suggested by Alexie Starovoitov)
+* add hooks dealing with struct inode and struct path pointers:
+  inode_permission and inode_getattr
+* add abstraction over eBPF helper arguments thanks to wrapping structs
+* add bpf_landlock_get_fs_mode() helper to check file type and mode
+* merge WARN_ON() (suggested by Kees Cook)
+* fix and update bpf_helpers.h
+* use BPF_CALL_* for eBPF helpers (suggested by Alexie Starovoitov)
+* make handle arraymap safe (RCU) and remove buggy synchronize_rcu()
+* factor out the arraymay walk
+* use size_t to index array (suggested by Jann Horn)
+
+Changes since v2:
+* add MNT_INTERNAL check to only add file handle from user-visible FS
+  (e.g. no anonymous inode)
+* replace struct file* with struct path* in map_landlock_handle
+* add BPF protos
+* fix bpf_landlock_cmp_fs_prop_with_struct_file()
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
@@ -26,203 +57,131 @@ Cc: David S. Miller <davem@davemloft.net>
 Cc: James Morris <james.l.morris@oracle.com>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Serge E. Hallyn <serge@hallyn.com>
+Cc: Jann Horn <jann@thejh.net>
+Link: https://lkml.kernel.org/r/CALCETrWwTiz3kZTkEgOW24-DvhQq6LftwEXh77FD2G5o71yD7g@mail.gmail.com
+Link: https://lkml.kernel.org/r/20160914190723.GB5617@pc.thejh.net
 ---
- include/linux/landlock.h   |  76 +++++++++++++++++++
- include/uapi/linux/bpf.h   |  20 +++++
- kernel/bpf/syscall.c       |  10 ++-
- security/Makefile          |   2 +
- security/landlock/Makefile |   3 +
- security/landlock/common.h |  27 +++++++
- security/landlock/lsm.c    | 181 +++++++++++++++++++++++++++++++++++++++++++++
- 7 files changed, 317 insertions(+), 2 deletions(-)
- create mode 100644 include/linux/landlock.h
- create mode 100644 security/landlock/Makefile
- create mode 100644 security/landlock/common.h
- create mode 100644 security/landlock/lsm.c
+ include/linux/bpf.h            |   5 ++
+ include/uapi/linux/bpf.h       |  35 ++++++++++
+ samples/bpf/bpf_helpers.h      |   5 ++
+ security/landlock/Makefile     |   2 +-
+ security/landlock/checker_fs.c | 152 +++++++++++++++++++++++++++++++++++++++++
+ security/landlock/checker_fs.h |  20 ++++++
+ security/landlock/common.h     |  13 ++++
+ security/landlock/lsm.c        |   6 ++
+ 8 files changed, 237 insertions(+), 1 deletion(-)
+ create mode 100644 security/landlock/checker_fs.c
+ create mode 100644 security/landlock/checker_fs.h
 
-diff --git a/include/linux/landlock.h b/include/linux/landlock.h
-new file mode 100644
-index 000000000000..2ab2be8e3e6e
---- /dev/null
-+++ b/include/linux/landlock.h
-@@ -0,0 +1,76 @@
-+/*
-+ * Landlock LSM - Public headers
-+ *
-+ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
-+ */
-+
-+#ifndef _LINUX_LANDLOCK_H
-+#define _LINUX_LANDLOCK_H
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index e7ce49642f50..50fbeaac03fe 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -363,6 +363,11 @@ extern const struct bpf_func_proto bpf_skb_vlan_push_proto;
+ extern const struct bpf_func_proto bpf_skb_vlan_pop_proto;
+ extern const struct bpf_func_proto bpf_get_stackid_proto;
+ 
 +#ifdef CONFIG_SECURITY_LANDLOCK
-+
-+#include <linux/bpf.h>	/* _LANDLOCK_HOOK_LAST */
-+#include <linux/types.h> /* atomic_t */
-+
-+#ifdef CONFIG_SECCOMP_FILTER
-+#include <linux/seccomp.h> /* struct seccomp_filter */
-+#endif /* CONFIG_SECCOMP_FILTER */
-+
-+struct landlock_rule;
-+
-+/**
-+ * struct landlock_node - node in the rule hierarchy
-+ *
-+ * This is created when a task insert its first rule in the Landlock rule
-+ * hierarchy. The set of Landlock rules referenced by this node is then
-+ * enforced for all the task that inherit this node. However, if a task is
-+ * cloned before inserting new rules, it doesn't get a dedicated node and its
-+ * children will not inherit this new rules.
-+ *
-+ * @usage: reference count to manage the node lifetime.
-+ * @rule: list of Landlock rules managed by this node.
-+ * @prev: reference the parent node.
-+ * @owner: reference the address of the node in the struct landlock_hooks. This
-+ *         is needed to know if we need to append a rule to the current node or
-+ *         create a new node.
-+ */
-+struct landlock_node {
-+	atomic_t usage;
-+	struct landlock_rule *rule;
-+	struct landlock_node *prev;
-+	struct landlock_node **owner;
-+};
-+
-+struct landlock_rule {
-+	atomic_t usage;
-+	struct landlock_rule *prev;
-+	struct bpf_prog *prog;
-+};
-+
-+/**
-+ * struct landlock_hooks - Landlock hook programs enforced on a thread
-+ *
-+ * This is used for low performance impact when forking a process. Instead of
-+ * copying the full array and incrementing the usage field of each entries,
-+ * only create a pointer to struct landlock_hooks and increment the usage
-+ * field.
-+ *
-+ * A new struct landlock_hooks must be created thanks to a call to
-+ * new_landlock_hooks().
-+ *
-+ * @usage: reference count to manage the object lifetime. When a thread need to
-+ *         add Landlock programs and if @usage is greater than 1, then the
-+ *         thread must duplicate struct landlock_hooks to not change the
-+ *         children' rules as well. FIXME
-+ * @nodes: array of non-NULL struct landlock_node pointers.
-+ */
-+struct landlock_hooks {
-+	atomic_t usage;
-+	struct landlock_node *nodes[_LANDLOCK_HOOK_LAST];
-+};
-+
++extern const struct bpf_func_proto bpf_landlock_cmp_fs_beneath_proto;
++extern const struct bpf_func_proto bpf_landlock_get_fs_mode_proto;
 +#endif /* CONFIG_SECURITY_LANDLOCK */
-+#endif /* _LINUX_LANDLOCK_H */
++
+ /* Shared helpers among cBPF and eBPF. */
+ void bpf_user_rnd_init_once(void);
+ u64 bpf_user_rnd_u32(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5);
 diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
-index 06621c401bc0..335616ab63ff 100644
+index b6b531a868c0..5f09eda3ab68 100644
 --- a/include/uapi/linux/bpf.h
 +++ b/include/uapi/linux/bpf.h
-@@ -111,6 +111,7 @@ enum bpf_prog_type {
- 	BPF_PROG_TYPE_XDP,
- 	BPF_PROG_TYPE_PERF_EVENT,
- 	BPF_PROG_TYPE_CGROUP_SKB,
-+	BPF_PROG_TYPE_LANDLOCK,
+@@ -101,6 +101,13 @@ enum bpf_map_handle_type {
+ 	/* BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_GLOB, */
  };
  
- enum bpf_attach_type {
-@@ -559,6 +560,12 @@ struct xdp_md {
- 	__u32 data_end;
++enum bpf_map_array_op {
++	BPF_MAP_ARRAY_OP_UNSPEC,
++	BPF_MAP_ARRAY_OP_OR,
++	BPF_MAP_ARRAY_OP_AND,
++	BPF_MAP_ARRAY_OP_XOR,
++};
++
+ enum bpf_prog_type {
+ 	BPF_PROG_TYPE_UNSPEC,
+ 	BPF_PROG_TYPE_SOCKET_FILTER,
+@@ -465,6 +472,30 @@ enum bpf_func_id {
+ 	 */
+ 	BPF_FUNC_set_hash_invalid,
+ 
++	/**
++	 * bpf_landlock_cmp_fs_beneath(opt, map, map_op, arg_fs)
++	 * Check if a struct inode is a leaf of file system handles
++	 *
++	 * @opt: check options (e.g. LANDLOCK_FLAG_OPT_REVERSE)
++	 * @map: handles to compare against
++	 * @map_op: which elements of the map to use (e.g. BPF_MAP_ARRAY_OP_OR)
++	 * @arg_fs: struct landlock_arg_fs address to compare with
++	 *
++	 * Return: 0 if the file is the same or beneath the handles,
++	 * 1 otherwise, or a negative value if an error occurred.
++	 */
++	BPF_FUNC_landlock_cmp_fs_beneath,
++
++	/**
++	 * bpf_landlock_get_fs_mode(arg_fs)
++	 * Get the mode of a struct landlock_arg_fs
++	 *
++	 * @arg_fs: struct landlock_arg_fs address
++	 *
++	 * Return: the file mode
++	 */
++	BPF_FUNC_landlock_get_fs_mode,
++
+ 	__BPF_FUNC_MAX_ID,
  };
  
-+/* LSM hooks */
-+enum landlock_hook {
-+	LANDLOCK_HOOK_UNSPEC,
-+};
-+#define _LANDLOCK_HOOK_LAST LANDLOCK_HOOK_UNSPEC
+@@ -583,6 +614,10 @@ enum landlock_hook {
+  */
+ #define _LANDLOCK_SUBTYPE_OPTION_MASK	((1ULL << 0) - 1)
+ 
++/* Handle option flags */
++#define LANDLOCK_FLAG_OPT_REVERSE	(1<<0)
++#define _LANDLOCK_FLAG_OPT_MASK		((1ULL << 1) - 1)
 +
- /* eBPF context and functions allowed for a rule */
- #define _LANDLOCK_SUBTYPE_ACCESS_MASK		((1ULL << 0) - 1)
+ /* Map handle entry */
+ struct landlock_handle {
+ 	__u32 type; /* enum bpf_map_handle_type */
+diff --git a/samples/bpf/bpf_helpers.h b/samples/bpf/bpf_helpers.h
+index 90f44bd2045e..52fa1ab1c0c4 100644
+--- a/samples/bpf/bpf_helpers.h
++++ b/samples/bpf/bpf_helpers.h
+@@ -57,6 +57,11 @@ static int (*bpf_skb_set_tunnel_opt)(void *ctx, void *md, int size) =
+ 	(void *) BPF_FUNC_skb_set_tunnel_opt;
+ static unsigned long long (*bpf_get_prandom_u32)(void) =
+ 	(void *) BPF_FUNC_get_prandom_u32;
++static unsigned long long (*bpf_landlock_cmp_fs_beneath)
++	(int option, void *map, int map_op, void *arg_fs) =
++	(void *) BPF_FUNC_landlock_cmp_fs_beneath;
++static unsigned long long (*bpf_landlock_get_fs_mode)(void *arg_fs) =
++	(void *) BPF_FUNC_landlock_get_fs_mode;
  
-@@ -577,4 +584,17 @@ struct landlock_handle {
- 	};
- } __attribute__((aligned(8)));
- 
-+/**
-+ * struct landlock_data
-+ *
-+ * @hook: LSM hook ID (e.g. BPF_PROG_TYPE_LANDLOCK_FILE_OPEN)
-+ * @args: LSM hook arguments, see include/linux/lsm_hooks.h for there
-+ *        description and the LANDLOCK_HOOK* definitions from
-+ *        security/landlock/lsm.c for their types.
-+ */
-+struct landlock_data {
-+	__u32 hook; /* enum landlock_hook */
-+	__u64 args[6];
-+};
-+
- #endif /* _UAPI__LINUX_BPF_H__ */
-diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
-index 6eef1da1e8a3..0f7faa9d2262 100644
---- a/kernel/bpf/syscall.c
-+++ b/kernel/bpf/syscall.c
-@@ -739,8 +739,14 @@ static int bpf_prog_load(union bpf_attr *attr)
- 	    attr->kern_version != LINUX_VERSION_CODE)
- 		return -EINVAL;
- 
--	if (type != BPF_PROG_TYPE_SOCKET_FILTER && !capable(CAP_SYS_ADMIN))
--		return -EPERM;
-+	switch (type) {
-+	case BPF_PROG_TYPE_SOCKET_FILTER:
-+	case BPF_PROG_TYPE_LANDLOCK:
-+		break;
-+	default:
-+		if (!capable(CAP_SYS_ADMIN))
-+			return -EPERM;
-+	}
- 
- 	/* plain bpf_prog allocation */
- 	prog = bpf_prog_alloc(bpf_prog_size(attr->insn_cnt), GFP_USER);
-diff --git a/security/Makefile b/security/Makefile
-index f2d71cdb8e19..3fdc2f19dc48 100644
---- a/security/Makefile
-+++ b/security/Makefile
-@@ -9,6 +9,7 @@ subdir-$(CONFIG_SECURITY_TOMOYO)        += tomoyo
- subdir-$(CONFIG_SECURITY_APPARMOR)	+= apparmor
- subdir-$(CONFIG_SECURITY_YAMA)		+= yama
- subdir-$(CONFIG_SECURITY_LOADPIN)	+= loadpin
-+subdir-$(CONFIG_SECURITY_LANDLOCK)		+= landlock
- 
- # always enable default capabilities
- obj-y					+= commoncap.o
-@@ -24,6 +25,7 @@ obj-$(CONFIG_SECURITY_TOMOYO)		+= tomoyo/
- obj-$(CONFIG_SECURITY_APPARMOR)		+= apparmor/
- obj-$(CONFIG_SECURITY_YAMA)		+= yama/
- obj-$(CONFIG_SECURITY_LOADPIN)		+= loadpin/
-+obj-$(CONFIG_SECURITY_LANDLOCK)	+= landlock/
- obj-$(CONFIG_CGROUP_DEVICE)		+= device_cgroup.o
- 
- # Object integrity file lists
+ /* llvm builtin functions that eBPF C program may use to
+  * emit BPF_LD_ABS and BPF_LD_IND instructions
 diff --git a/security/landlock/Makefile b/security/landlock/Makefile
-new file mode 100644
-index 000000000000..59669d70bc7e
---- /dev/null
+index 59669d70bc7e..27f359a8cfaa 100644
+--- a/security/landlock/Makefile
 +++ b/security/landlock/Makefile
-@@ -0,0 +1,3 @@
-+obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
-+
-+landlock-y := lsm.o
-diff --git a/security/landlock/common.h b/security/landlock/common.h
+@@ -1,3 +1,3 @@
+ obj-$(CONFIG_SECURITY_LANDLOCK) := landlock.o
+ 
+-landlock-y := lsm.o
++landlock-y := lsm.o checker_fs.o
+diff --git a/security/landlock/checker_fs.c b/security/landlock/checker_fs.c
 new file mode 100644
-index 000000000000..0b5aad4a7aaa
+index 000000000000..01a929a269e6
 --- /dev/null
-+++ b/security/landlock/common.h
-@@ -0,0 +1,27 @@
++++ b/security/landlock/checker_fs.c
+@@ -0,0 +1,152 @@
 +/*
-+ * Landlock LSM - private headers
++ * Landlock LSM - File System Checkers
 + *
 + * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
 + *
@@ -231,209 +190,221 @@ index 000000000000..0b5aad4a7aaa
 + * published by the Free Software Foundation.
 + */
 +
-+#ifndef _SECURITY_LANDLOCK_COMMON_H
-+#define _SECURITY_LANDLOCK_COMMON_H
++#include <linux/bpf.h> /* enum bpf_map_array_op */
++#include <linux/errno.h>
++#include <linux/filter.h> /* BPF_CALL*() */
++#include <linux/fs.h> /* path_is_under() */
++#include <linux/path.h> /* struct path */
 +
-+#include <linux/bpf.h> /* enum landlock_hook */
++#include "common.h" /* struct landlock_arg_fs */
++#include "checker_fs.h"
 +
-+/**
-+ * get_index - get an index for the rules of struct landlock_hooks
-+ *
-+ * @hook: a Landlock hook ID
-+ */
-+static inline int get_index(enum landlock_hook hook)
-+{
-+	/* hook ID > 0 for loaded programs */
-+	return hook - 1;
-+}
-+
-+#endif /* _SECURITY_LANDLOCK_COMMON_H */
-diff --git a/security/landlock/lsm.c b/security/landlock/lsm.c
-new file mode 100644
-index 000000000000..d7564540c493
---- /dev/null
-+++ b/security/landlock/lsm.c
-@@ -0,0 +1,181 @@
 +/*
-+ * Landlock LSM
++ * bpf_landlock_cmp_fs_beneath
 + *
-+ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2, as
-+ * published by the Free Software Foundation.
++ * Cf. include/uapi/linux/bpf.h
 + */
-+
-+#include <linux/bpf.h> /* enum bpf_reg_type, struct landlock_data */
-+#include <linux/cred.h>
-+#include <linux/err.h> /* MAX_ERRNO */
-+#include <linux/filter.h> /* struct bpf_prog, BPF_PROG_RUN() */
-+#include <linux/kernel.h> /* FIELD_SIZEOF() */
-+#include <linux/landlock.h>
-+#include <linux/lsm_hooks.h>
-+
-+#include "common.h"
-+
-+/**
-+ * landlock_run_prog - run Landlock program for a syscall
-+ *
-+ * @hook_idx: hook index in the rules array
-+ * @ctx: non-NULL eBPF context
-+ * @hooks: Landlock hooks pointer
-+ */
-+static u32 landlock_run_prog(u32 hook_idx, const struct landlock_data *ctx,
-+		struct landlock_hooks *hooks)
++BPF_CALL_4(bpf_landlock_cmp_fs_beneath, u8, option, struct bpf_map *, map,
++		enum bpf_map_array_op, map_op,
++		struct landlock_arg_fs *, arg_fs)
 +{
-+	struct landlock_node *node;
-+	u32 ret = 0;
++	struct bpf_array *array = container_of(map, struct bpf_array, map);
++	const struct path *p1 = NULL, *p2 = NULL;
++	struct dentry *d1 = NULL, *d2 = NULL;
++	struct map_landlock_handle *handle;
++	size_t i;
 +
-+	if (!hooks)
-+		return 0;
++	if (WARN_ON(!map))
++		return -EFAULT;
++	if (WARN_ON(!arg_fs))
++		return -EFAULT;
++	if (unlikely((option | _LANDLOCK_FLAG_OPT_MASK) != _LANDLOCK_FLAG_OPT_MASK))
++		return -EINVAL;
 +
-+	for (node = hooks->nodes[hook_idx]; node; node = node->prev) {
-+		struct landlock_rule *rule;
++	if (!arg_fs->file) {
++		/* file can be null for anonymous mmap */
++		WARN_ON(arg_fs->type != LANDLOCK_ARGTYPE_FILE);
++		return -ENOENT;
++	}
 +
-+		for (rule = node->rule; rule; rule = rule->prev) {
-+			if (WARN_ON(!rule->prog))
-+				continue;
-+			rcu_read_lock();
-+			ret = BPF_PROG_RUN(rule->prog, (void *)ctx);
-+			rcu_read_unlock();
-+			if (ret) {
-+				if (ret > MAX_ERRNO)
-+					ret = MAX_ERRNO;
-+				goto out;
-+			}
++	/* for now, only handle OP_OR */
++	switch (map_op) {
++	case BPF_MAP_ARRAY_OP_OR:
++		break;
++	case BPF_MAP_ARRAY_OP_UNSPEC:
++	case BPF_MAP_ARRAY_OP_AND:
++	case BPF_MAP_ARRAY_OP_XOR:
++	default:
++		return -EINVAL;
++	}
++	switch (arg_fs->type) {
++		case LANDLOCK_ARGTYPE_FILE:
++			p1 = &arg_fs->file->f_path;
++			break;
++		case LANDLOCK_ARGTYPE_PATH:
++			p1 = arg_fs->path;
++			break;
++		case LANDLOCK_ARGTYPE_INODE:
++			d1 = d_find_alias(arg_fs->inode);
++			if (WARN_ON(!d1))
++				return -ENOENT;
++			break;
++		case LANDLOCK_ARGTYPE_NONE:
++		default:
++			WARN_ON(1);
++			return -EFAULT;
++	}
++	/* {p,d}1 and {p,d}2 will be set correctly in the loop */
++	p2 = p1;
++	d2 = d1;
++
++	if (p1) {
++		for_each_handle(i, handle, array) {
++			if (WARN_ON(handle->type != BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD))
++				return -EINVAL;
++
++			if (option & LANDLOCK_FLAG_OPT_REVERSE)
++				p2 = &handle->path;
++			else
++				p1 = &handle->path;
++
++			if (path_is_under(p2, p1))
++				return 0;
++		}
++	} else if (d1) {
++		for_each_handle(i, handle, array) {
++			if (WARN_ON(handle->type != BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD))
++				return -EINVAL;
++
++			if (option & LANDLOCK_FLAG_OPT_REVERSE)
++				d2 = handle->path.dentry;
++			else
++				d1 = handle->path.dentry;
++
++			if (is_subdir(d2, d1))
++				return 0;
 +		}
 +	}
-+
-+out:
-+	return ret;
++	return 1;
 +}
 +
-+static int landlock_enforce(enum landlock_hook hook, __u64 args[6])
-+{
-+	u32 ret = 0;
-+	u32 hook_idx = get_index(hook);
-+
-+	struct landlock_data ctx = {
-+		.hook = hook,
-+		.args[0] = args[0],
-+		.args[1] = args[1],
-+		.args[2] = args[2],
-+		.args[3] = args[3],
-+		.args[4] = args[4],
-+		.args[5] = args[5],
-+	};
-+
-+	/* placeholder for seccomp and cgroup managers */
-+	ret = landlock_run_prog(hook_idx, &ctx, NULL);
-+
-+	return -ret;
-+}
-+
-+static const struct bpf_func_proto *bpf_landlock_func_proto(
-+		enum bpf_func_id func_id, union bpf_prog_subtype *prog_subtype)
-+{
-+	switch (func_id) {
-+	default:
-+		return NULL;
-+	}
-+}
-+
-+static bool __is_valid_access(int off, int size, enum bpf_access_type type,
-+		enum bpf_reg_type *reg_type,
-+		enum bpf_reg_type arg_types[6],
-+		union bpf_prog_subtype *prog_subtype)
-+{
-+	int arg_nb, expected_size;
-+
-+	if (type != BPF_READ)
-+		return false;
-+	if (off < 0 || off >= sizeof(struct landlock_data))
-+		return false;
-+
-+	/* check size */
-+	switch (off) {
-+	case offsetof(struct landlock_data, hook):
-+		expected_size = sizeof(__u32);
-+		break;
-+	case offsetof(struct landlock_data, args[0]) ...
-+			offsetof(struct landlock_data, args[5]):
-+		expected_size = sizeof(__u64);
-+		break;
-+	default:
-+		return false;
-+	}
-+	if (expected_size != size)
-+		return false;
-+
-+	/* check pointer access and set pointer type */
-+	switch (off) {
-+	case offsetof(struct landlock_data, args[0]) ...
-+			offsetof(struct landlock_data, args[5]):
-+		arg_nb = (off - offsetof(struct landlock_data, args[0]))
-+			/ FIELD_SIZEOF(struct landlock_data, args[0]);
-+		*reg_type = arg_types[arg_nb];
-+		if (*reg_type == NOT_INIT)
-+			return false;
-+		break;
-+	}
-+
-+	return true;
-+}
-+
-+static inline bool bpf_landlock_is_valid_access(int off, int size,
-+		enum bpf_access_type type, enum bpf_reg_type *reg_type,
-+		union bpf_prog_subtype *prog_subtype)
-+{
-+	enum landlock_hook hook = prog_subtype->landlock_rule.hook;
-+
-+	switch (hook) {
-+	case LANDLOCK_HOOK_UNSPEC:
-+	default:
-+		return false;
-+	}
-+}
-+
-+static inline bool bpf_landlock_is_valid_subtype(
-+		union bpf_prog_subtype *prog_subtype)
-+{
-+	enum landlock_hook hook = prog_subtype->landlock_rule.hook;
-+
-+	switch (hook) {
-+	case LANDLOCK_HOOK_UNSPEC:
-+	default:
-+		return false;
-+	}
-+	if (!prog_subtype->landlock_rule.hook ||
-+			prog_subtype->landlock_rule.hook > _LANDLOCK_HOOK_LAST)
-+		return false;
-+	if (prog_subtype->landlock_rule.access & ~_LANDLOCK_SUBTYPE_ACCESS_MASK)
-+		return false;
-+	if (prog_subtype->landlock_rule.option & ~_LANDLOCK_SUBTYPE_OPTION_MASK)
-+		return false;
-+
-+	return true;
-+}
-+
-+static const struct bpf_verifier_ops bpf_landlock_ops = {
-+	.get_func_proto	= bpf_landlock_func_proto,
-+	.is_valid_access = bpf_landlock_is_valid_access,
-+	.is_valid_subtype = bpf_landlock_is_valid_subtype,
++const struct bpf_func_proto bpf_landlock_cmp_fs_beneath_proto = {
++	.func		= bpf_landlock_cmp_fs_beneath,
++	.gpl_only	= true,
++	.ret_type	= RET_INTEGER,
++	.arg1_type	= ARG_ANYTHING,
++	.arg2_type	= ARG_CONST_PTR_TO_LANDLOCK_HANDLE_FS,
++	.arg3_type	= ARG_ANYTHING,
++	.arg4_type	= ARG_CONST_PTR_TO_LANDLOCK_ARG_FS,
 +};
 +
-+static struct bpf_prog_type_list bpf_landlock_type __read_mostly = {
-+	.ops	= &bpf_landlock_ops,
-+	.type	= BPF_PROG_TYPE_LANDLOCK,
-+};
-+
-+static int __init register_landlock_filter_ops(void)
++BPF_CALL_1(bpf_landlock_get_fs_mode, struct landlock_arg_fs *, arg_fs)
 +{
-+	bpf_register_prog_type(&bpf_landlock_type);
-+	return 0;
++	if (WARN_ON(!arg_fs))
++		return -EFAULT;
++	if (!arg_fs->file) {
++		/* file can be null for anonymous mmap */
++		WARN_ON(arg_fs->type != LANDLOCK_ARGTYPE_FILE);
++		return -ENOENT;
++	}
++	switch (arg_fs->type) {
++		case LANDLOCK_ARGTYPE_FILE:
++			if (WARN_ON(!arg_fs->file->f_inode))
++				return -ENOENT;
++			return arg_fs->file->f_inode->i_mode;
++		case LANDLOCK_ARGTYPE_INODE:
++			return arg_fs->inode->i_mode;
++		case LANDLOCK_ARGTYPE_PATH:
++			if (WARN_ON(!arg_fs->path->dentry ||
++					!arg_fs->path->dentry->d_inode))
++				return -ENOENT;
++			return arg_fs->path->dentry->d_inode->i_mode;
++		case LANDLOCK_ARGTYPE_NONE:
++		default:
++			WARN_ON(1);
++			return -EFAULT;
++	}
 +}
 +
-+late_initcall(register_landlock_filter_ops);
++const struct bpf_func_proto bpf_landlock_get_fs_mode_proto = {
++	.func		= bpf_landlock_get_fs_mode,
++	.gpl_only	= true,
++	.ret_type	= RET_INTEGER,
++	.arg1_type	= ARG_CONST_PTR_TO_LANDLOCK_ARG_FS,
++};
+diff --git a/security/landlock/checker_fs.h b/security/landlock/checker_fs.h
+new file mode 100644
+index 000000000000..8bcdc9cba2b8
+--- /dev/null
++++ b/security/landlock/checker_fs.h
+@@ -0,0 +1,20 @@
++/*
++ * Landlock LSM - File System Checkers
++ *
++ * Copyright (C) 2016  Mickaël Salaün <mic@digikod.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ */
++
++#ifndef _SECURITY_LANDLOCK_CHECKER_FS_H
++#define _SECURITY_LANDLOCK_CHECKER_FS_H
++
++#include <linux/fs.h>
++#include <linux/seccomp.h>
++
++extern const struct bpf_func_proto bpf_landlock_cmp_fs_beneath_proto;
++extern const struct bpf_func_proto bpf_landlock_get_fs_mode_proto;
++
++#endif /* _SECURITY_LANDLOCK_CHECKER_FS_H */
+diff --git a/security/landlock/common.h b/security/landlock/common.h
+index dd64e6391dd8..a30aa93dc1ae 100644
+--- a/security/landlock/common.h
++++ b/security/landlock/common.h
+@@ -15,6 +15,19 @@
+ #include <linux/fs.h> /* struct file, struct inode */
+ #include <linux/path.h> /* struct path */
+ 
++/**
++ * for_each_handle - iterate over all handles of an arraymap
++ *
++ * @i: index in the arraymap
++ * @handle: struct map_landlock_handle pointer
++ * @array: struct bpf_array pointer to walk through
++ */
++#define for_each_handle(i, handle, array)				\
++	for (i = 0; i < atomic_read(&array->n_entries) &&		\
++			(handle = *((struct map_landlock_handle **)	\
++				(array->value + array->elem_size * i)));\
++		i++)
++
+ enum landlock_argtype {
+ 	LANDLOCK_ARGTYPE_NONE,
+ 	LANDLOCK_ARGTYPE_FILE,
+diff --git a/security/landlock/lsm.c b/security/landlock/lsm.c
+index b3d154275be6..b3c107244df9 100644
+--- a/security/landlock/lsm.c
++++ b/security/landlock/lsm.c
+@@ -22,6 +22,7 @@
+ #include <linux/fs.h> /* struct inode */
+ #include <linux/path.h> /* struct path */
+ 
++#include "checker_fs.h"
+ #include "common.h"
+ 
+ #define MAP0(s, m, ...)
+@@ -170,6 +171,11 @@ static const struct bpf_func_proto *bpf_landlock_func_proto(
+ 		enum bpf_func_id func_id, union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
++	case BPF_FUNC_landlock_get_fs_mode:
++		return &bpf_landlock_get_fs_mode_proto;
++	case BPF_FUNC_landlock_cmp_fs_beneath:
++		return &bpf_landlock_cmp_fs_beneath_proto;
++
+ 	default:
+ 		return NULL;
+ 	}
 -- 
 2.9.3
