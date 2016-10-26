@@ -1,8 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477471489.2263.107.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Wed, 26 Oct 2016 10:44:49 +0200
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 26 Oct 2016 09:46:49 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
 References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
 	 <20161020131350.GA18331@thigreal>
 	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
@@ -11,54 +10,103 @@ References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
 	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
 	 <1477428836.2263.70.camel@cvidal.org>
 	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@progbits.org>, "Reshetova, Elena" <elena.reshetova@intel.com>
+ <1477471489.2263.107.camel@cvidal.org>
+In-Reply-To: <1477471489.2263.107.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Elena,
-
-> > Perhaps the cleaner solution would be to define prototypes (of real functions, not macros) of atomic64_*_wrap functions in asm- generic/atomic64.h. If the arch has its own implementation of atomic64, no problems (asm-generic/atomic64.h is not >included), and if
-> > CONFIG_GENERIC_ATOMIC64 is set, we just need to implements atomic64_*_wrap functions (in a arch/lib/atomic64.c, for instance).
-> 
-> Why not in lib/atomic64.c? Because this is what would be used in the case when CONFIG_GENERIC_ATOMIC is set. Also, when you say "implement", do you mean actually provide "protected" versions of wrap functions or just wrap functions themselves operating on wrap_t types but providing no difference from non-wrap functions?
-> 
-
-The point is if CONFIG_GENERIC_ATOMIC64 is unset, asm-
-generic/atomic64.h and lib/atomic64.c (see lib/Makefile) are not
-included in compilation, therefore we don't care about that: the
-architecture has its own implementation of atomic64 (protected and wrap
-version).
-
-If CONFIG_GENERIC_ATOMIC64 is set, the common implementation is in
-lib/atomic64.c. Therefore, any functions in lib/atomic64.c should be
-renamed to be suffixed by _wrap (unprotected versions), and prototypes
-with _wrap suffix should be added in asm-generic/atomic64.h.
-
-The protected versions of functions depends of each architecture,
-therefore they can't be generic. That why I propose to add implements
-them in arch/lib/atomic64.c (or even arch/lib/atomic64_wrap.c, it is
-much clear).
-
-And yes, by "implement" I means write "protected" versions. Err... Yes,
-in that case, we don't have the "examples" implemented in PAX. But the
-other solution would be leave GENERIC_ATOMIC64 unprotected, which is
-really unclear from the "user" point-of-view.
-
-If CONFIG_GENERIC_ATOMIC64 is set and CONFIG_HARDENED_ATOMIC is unset,
-the implementations in arch/lib/atomic64_wrap.c just does not include
-the overflow test on the add/sub operations, like the current protected
-arm/x64 implementations.
-
-> Overall, I agree, there is no magic, but IMO definitions are so confusing even without wrap added (local_t and its functions is a good example), that tracking them all down is a pain. 
-> At some point we used this table to track functions and their definition:  https://docs.google.com/spreadsheets/d/12wX-csPY8tnHpQVRKVFPSOoV8o6WXtAwKKTAkx8uUIQ/edit?usp=sharing 
-> Maybe it can be extended to include more info that people would like to see there. 
-
-That would be useful and avoid numerous post-it on my desk :-) Thanks!
-
-Best regards,
-
-Colin
+PkhpIEVsZW5hLA0KDQpIaSBDb2xpbiENCg0KPiA+IFBlcmhhcHMgdGhlIGNsZWFuZXIgc29sdXRp
+b24gd291bGQgYmUgdG8gZGVmaW5lIHByb3RvdHlwZXMgKG9mIHJlYWwgDQo+ID4gZnVuY3Rpb25z
+LCBub3QgbWFjcm9zKSBvZiBhdG9taWM2NF8qX3dyYXAgZnVuY3Rpb25zIGluIGFzbS0gDQo+ID4g
+Z2VuZXJpYy9hdG9taWM2NC5oLiBJZiB0aGUgYXJjaCBoYXMgaXRzIG93biBpbXBsZW1lbnRhdGlv
+biBvZiANCj4gPiBhdG9taWM2NCwgbm8gcHJvYmxlbXMgKGFzbS1nZW5lcmljL2F0b21pYzY0Lmgg
+aXMgbm90ID5pbmNsdWRlZCksIGFuZCANCj4gPiBpZg0KPiA+IENPTkZJR19HRU5FUklDX0FUT01J
+QzY0IGlzIHNldCwgd2UganVzdCBuZWVkIHRvIGltcGxlbWVudHMgYXRvbWljNjRfKl93cmFwIGZ1
+bmN0aW9ucyAoaW4gYSBhcmNoL2xpYi9hdG9taWM2NC5jLCBmb3IgaW5zdGFuY2UpLg0KPiANCj4g
+V2h5IG5vdCBpbiBsaWIvYXRvbWljNjQuYz8gQmVjYXVzZSB0aGlzIGlzIHdoYXQgd291bGQgYmUg
+dXNlZCBpbiB0aGUgY2FzZSB3aGVuIENPTkZJR19HRU5FUklDX0FUT01JQyBpcyBzZXQuIEFsc28s
+IHdoZW4geW91IHNheSAiaW1wbGVtZW50IiwgZG8geW91IG1lYW4gYWN0dWFsbHkgcHJvdmlkZSAi
+cHJvdGVjdGVkIiB2ZXJzaW9ucyBvZiB3cmFwIGZ1bmN0aW9ucyBvciBqdXN0IHdyYXAgZnVuY3Rp
+b25zIHRoZW1zZWx2ZXMgb3BlcmF0aW5nIG9uIHdyYXBfdCB0eXBlcyBidXQgcHJvdmlkaW5nIG5v
+IGRpZmZlcmVuY2UgZnJvbSBub24td3JhcCBmdW5jdGlvbnM/DQo+IA0KDQo+VGhlIHBvaW50IGlz
+IGlmIENPTkZJR19HRU5FUklDX0FUT01JQzY0IGlzIHVuc2V0LCBhc20tIGdlbmVyaWMvYXRvbWlj
+NjQuaCBhbmQgbGliL2F0b21pYzY0LmMgKHNlZSBsaWIvTWFrZWZpbGUpIGFyZSBub3QgaW5jbHVk
+ZWQgaW4gY29tcGlsYXRpb24sIHRoZXJlZm9yZSB3ZSBkb24ndCBjYXJlIGFib3V0IHRoYXQ6IHRo
+ZSBhcmNoaXRlY3R1cmUgaGFzIGl0cyBvd24gaW1wbGVtZW50YXRpb24gb2YgYXRvbWljNjQgKHBy
+b3RlY3RlZCA+YW5kIHdyYXAgdmVyc2lvbikuDQoNCkkgd291bGQgc3RpbGwgYnJlYWsgdGhpcyBj
+YXNlIGludG8gdHdvIGNhc2VzIHRvIGhhdmUgZnVsbCBwaWN0dXJlOg0KDQooMSkgQ09ORklHX0dF
+TkVSSUNfQVRPTUlDNjQgaXMgdW5zZXQsIGFyY2hpdGVjdHVyZSBoYXMgaXRzIG93biBpbXBsZW1l
+bnRhdGlvbiBvZiBhdG9taWM2NCwgYnV0IG5vIHByb3RlY3RlZCBhbmQgd3JhcCB2ZXJzaW9ucyAo
+eWV0KSwgQ09ORklHX0FSQ0hfSEFSREVORURfQVRPTUlDIGlzIHVuc2V0IGFuZCBjYW5ub3QgYmUg
+c2V0Lg0KKDIpIENPTkZJR19HRU5FUklDX0FUT01JQzY0IGlzIHVuc2V0LCBhcmNoaXRlY3R1cmUg
+aGFzIGl0cyBvd24gaW1wbGVtZW50YXRpb24gb2YgYXRvbWljNjQsIHdpdGggcHJvdGVjdGVkIGFu
+ZCB3cmFwIHZlcnNpb24sIENPTkZJR19BUkNIX0hBUkRFTkVEX0FUT01JQyBjYW4gYmUgYm90aCBz
+ZXQgYW5kIHVuc2V0LiANCg0KVGhlIGxhdHRlciBjYXNlIGlzIHN1cHBvcnRlZCBmb3IgeDg2IGFu
+ZCB3b3JrIGlzIGdvaW5nIGZvciBhcm0gYW5kIGFybTY0IG5vdy4gDQpUaGUgZmlyc3QgY2FzZSBz
+dGlsbCByZXF1aXJlcyB0aGF0ICpfd3JhcCBmdW5jdGlvbnMgYXJlIGRlZmluZWQgaW4gb25lIHdh
+eSBvciBhbm90aGVyIGFuZCBzaW5jZSB3ZSBjYW5ub3QgcmVseSBvbiBhbGwgYXJjaC4gdG8gcHJv
+dmlkZSB0aGVtLCB0aGV5IGFyZSBjdXJyZW50bHkgZGVmaW5lZCBpbiBsaW51eC9hdG9taWMuaCBh
+bmQgc2ltcGx5IHJlZGlyZWN0IHRvIG5vbi13cmFwIGZ1bmN0aW9ucy4gDQoNCkkgZ3Vlc3Mgd2Ug
+YWxsIGFncmVlIHdpdGggdGhlIGFib3ZlIGJlaGF2aW9yPw0KDQoNCj5JZiBDT05GSUdfR0VORVJJ
+Q19BVE9NSUM2NCBpcyBzZXQsIHRoZSBjb21tb24gaW1wbGVtZW50YXRpb24gaXMgaW4gbGliL2F0
+b21pYzY0LmMuIFRoZXJlZm9yZSwgYW55IGZ1bmN0aW9ucyBpbiBsaWIvYXRvbWljNjQuYyBzaG91
+bGQgYmUgcmVuYW1lZCB0byBiZSBzdWZmaXhlZCBieSBfd3JhcCAodW5wcm90ZWN0ZWQgdmVyc2lv
+bnMpLCBhbmQgcHJvdG90eXBlcyB3aXRoIF93cmFwIHN1ZmZpeCBzaG91bGQgYmUgYWRkZWQgaW4g
+YXNtLWdlbmVyaWMvYXRvbWljNjQuaC4NCg0KU28sIGFnYWluIGZvciBjbGFyaXR5LCBsZXQncyBi
+cmVhayB0aGlzIGNhc2UgaW50byB0d28gY2FzZXMgYWxzbzoNCigzKSBDT05GSUdfR0VORVJJQ19B
+VE9NSUM2NCBpcyBzZXQsIGFyY2hpdGVjdHVyZSBkb2VzIG5vdCBwcm92aWRlIGFueSBhdG9taWM2
+NCBpbXBsZW1lbnRhdGlvbnMsIENPTkZJR19BUkNIX0hBUkRFTkVEX0FUT01JQyBpcyBzZXQNCig0
+KSBDT05GSUdfR0VORVJJQ19BVE9NSUM2NCBpcyBzZXQsIGFyY2hpdGVjdHVyZSBkb2VzIG5vdCBw
+cm92aWRlIGFueSBhdG9taWM2NCBpbXBsZW1lbnRhdGlvbnMsIENPTkZJR19BUkNIX0hBUkRFTkVE
+X0FUT01JQyBpcyB1bnNldA0KDQpUaGUgY3VycmVudCBpbXBsZW1lbnRhdGlvbiB3aGF0IHdlIGhh
+dmUgaW4gdGhlIGhhcmRlbmVkX2F0b21pY19vbl9uZXh0IGJyYW5jaCBhY3R1YWxseSB0cmVhdHMg
+Ym90aCBvZiB0aGVzZSBjYXNlcyBpbiB0aGUgc2FtZSB3YXkgKHRoaXMgaXMgd2hhdCBIYW5zIHdh
+cyBleHBsYWluaW5nIGJlZm9yZSk6IGl0IGRvZXMgZGVmaW5lIGF0b21pYzY0Kl93cmFwIGZ1bmN0
+aW9ucyBpbiBib3RoIGNhc2VzLCBidXQgdGhleSBwb2ludCB0byB0aGUgc2FtZSBub3JtYWwgZnVu
+Y3Rpb25zLiBTbywgbm8gcHJvdGVjdGlvbiBwcm92aWRlZCBpbiBhbnkgY2FzZS4gQmFzZWQgb24g
+dGhlIGN1cnJlbnQgdGhyZWFkIGl0IHNlZW1zIHRoYXQgd2UgbWlnaHQgd2FudCB0byBoYXZlIHBy
+b3RlY3Rpb24gaW4gdGhlIGNhc2UgKDMpIGFmdGVyIGFsbCwgd2hpY2ggaXMgbm90IHJlYWxseSBz
+dHJhaWdodGZvcndhcmQgKG1heWJlIHRoYXQncyB3aHkgZ3JzZWN1cml0eSBkaWRuJ3QgaGF2ZSBz
+dXBwb3J0IGZvciBpdCkuICANCkFsc28sIHdoYXQncyB3aHkgd2UgZmlyc3Qgd2FudGVkIHRvIGtu
+b3cgaG93IGNvbW1vbiB0aGlzIGNhc2UgKDMpIHdvdWxkIGJlIGluIHByYWN0aWNlPyBTaG91bGQg
+d2UganVzdCBtZXJnZSBmaXJzdCB0aGUgY29tbW9uIGNhc2VzIGFuZCBmb3IgZXhhbXBsZSBhcyBD
+b2xpbiB3YXMgcHJvcG9zaW5nIG1ha2UgaXQgaW1wb3NzaWJsZSBmb3Igbm93IHRvIHNlbGVjdCBD
+T05GSUdfSEFSREVORURfQVRPTUlDIGZvciB0aGUgY2FzZSAoMyk/IEFjdHVhbGx5IEkgYmVsaWV2
+ZSBpdCBpcyBub3QgZXZlbiByZWFsbHkgcG9zc2libGUgdG8gc2VsZWN0IGl0IG5vdyBpbiB0aGlz
+IGNhc2UsIG9yIGFtIEkgd3Jvbmc/IElNTyB3ZSBkb24ndCBoYXZlIGFueXRoaW5nIHByb3ZpZGlu
+ZyBDT05GSUdfQVJDSF9IQVJERU5FRF9BVE9NSUMgaW4gdGhpcyBjYXNlLiANCg0KPlRoZSBwcm90
+ZWN0ZWQgdmVyc2lvbnMgb2YgZnVuY3Rpb25zIGRlcGVuZHMgb2YgZWFjaCBhcmNoaXRlY3R1cmUs
+IHRoZXJlZm9yZSB0aGV5IGNhbid0IGJlIGdlbmVyaWMuIFRoYXQgd2h5IEkgcHJvcG9zZSB0byBh
+ZGQgaW1wbGVtZW50cyB0aGVtIGluIGFyY2gvbGliL2F0b21pYzY0LmMgKG9yIGV2ZW4gYXJjaC9s
+aWIvYXRvbWljNjRfd3JhcC5jLCBpdCBpcyBtdWNoIGNsZWFyKS4NCj5BbmQgeWVzLCBieSAiaW1w
+bGVtZW50IiBJIG1lYW5zIHdyaXRlICJwcm90ZWN0ZWQiIHZlcnNpb25zLiBFcnIuLi4gWWVzLCBp
+biB0aGF0IGNhc2UsIHdlIGRvbid0IGhhdmUgdGhlICJleGFtcGxlcyIgaW1wbGVtZW50ZWQgaW4g
+UEFYLiBCdXQgdGhlIG90aGVyIHNvbHV0aW9uIHdvdWxkIGJlIGxlYXZlIEdFTkVSSUNfQVRPTUlD
+NjQgdW5wcm90ZWN0ZWQsIHdoaWNoIGlzIHJlYWxseSB1bmNsZWFyIGZyb20gdGhlICJ1c2VyIiBw
+b2ludC0+b2Ytdmlldy4NCj5JZiBDT05GSUdfR0VORVJJQ19BVE9NSUM2NCBpcyBzZXQgYW5kIENP
+TkZJR19IQVJERU5FRF9BVE9NSUMgaXMgdW5zZXQsIHRoZSBpbXBsZW1lbnRhdGlvbnMgaW4gYXJj
+aC9saWIvYXRvbWljNjRfd3JhcC5jIGp1c3QgZG9lcyBub3QgaW5jbHVkZSB0aGUgb3ZlcmZsb3cg
+dGVzdCBvbiB0aGUgYWRkL3N1YiBvcGVyYXRpb25zLCBsaWtlIHRoZSBjdXJyZW50IHByb3RlY3Rl
+ZA0KPmFybS94NjQgaW1wbGVtZW50YXRpb25zLg0KDQpOb3Qgc3VyZSBJIGZ1bGx5IGZvbGxvdyBo
+ZXJlLi4uIEluIHg4NiBjYXNlICByY2gtc3BlY2lmaWMgYXRvbWljNjQqIGZ1bmN0aW9ucyBhcmUg
+ZGVmaW5lZCBpbiBhcmNoL3g4Ni9pbmNsdWRlL2FzbS9hdG9taWM2NF8zMi82NC5oLiBXaGF0IGxv
+Y2F0aW9uIHdvdWxkIGNvcnJlc3BvbmQgdG8gYXJjaC9saWIvYXRvbWljNjQuYyBpbiB0aGF0IGNh
+c2U/DQoNCj4gT3ZlcmFsbCwgSSBhZ3JlZSwgdGhlcmUgaXMgbm8gbWFnaWMsIGJ1dCBJTU8gZGVm
+aW5pdGlvbnMgYXJlIHNvIGNvbmZ1c2luZyBldmVuIHdpdGhvdXQgd3JhcCBhZGRlZCAobG9jYWxf
+dCBhbmQgaXRzIGZ1bmN0aW9ucyBpcyBhIGdvb2QgZXhhbXBsZSksIHRoYXQgdHJhY2tpbmcgdGhl
+bSBhbGwgZG93biBpcyBhIHBhaW4uIA0KPiBBdCBzb21lIHBvaW50IHdlIHVzZWQgdGhpcyB0YWJs
+ZSB0byB0cmFjayBmdW5jdGlvbnMgYW5kIHRoZWlyIA0KPiBkZWZpbml0aW9uOiAgDQo+IGh0dHBz
+Oi8vZG9jcy5nb29nbGUuY29tL3NwcmVhZHNoZWV0cy9kLzEyd1gtY3NQWTh0bkhwUVZSS1ZGUFNP
+b1Y4bzZXWHQNCj4gQXdLS1RBa3g4dVVJUS9lZGl0P3VzcD1zaGFyaW5nIE1heWJlIGl0IGNhbiBi
+ZSBleHRlbmRlZCB0byBpbmNsdWRlIA0KPiBtb3JlIGluZm8gdGhhdCBwZW9wbGUgd291bGQgbGlr
+ZSB0byBzZWUgdGhlcmUuDQoNCj5UaGF0IHdvdWxkIGJlIHVzZWZ1bCBhbmQgYXZvaWQgbnVtZXJv
+dXMgcG9zdC1pdCBvbiBteSBkZXNrIDotKSBUaGFua3MhDQoNClNvLCB3aGF0IGluZm8gZG8geW91
+IHdhbnQgdG8gc2VlIHRoZXJlPyA6KSBTaG91bGQgSSBtYWtlIG9uZSBtb3JlIHRhYmxlIHdpdGgg
+ZGlmZmVyZW50IENPTkZJRyBvbi9vZmYgb3B0aW9ucyBhbmQgbGluayB3aGVyZSBmdW5jdGlvbiBp
+cyBkZWZpbmVkL2ltcGxlbWVudGVkIGluIHRoYXQgY2FzZT8NCg0KQmVzdCBSZWdhcmRzLA0KRWxl
+bmEuDQo=
