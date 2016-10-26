@@ -1,122 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 26 Oct 2016 21:01:47 +0200
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20161026190147.GN3334@pc.thejh.net>
-References: <20161026065654.19166-1-mic@digikod.net>
- <20161026065654.19166-4-mic@digikod.net>
-MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="K4LMwn8CgX2KMboP"
-Content-Disposition: inline
-In-Reply-To: <20161026065654.19166-4-mic@digikod.net>
-Subject: Re: [kernel-hardening] [RFC v4 03/18] bpf,landlock: Add a new
- arraymap type to deal with (Landlock) handles
-To: =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
+Message-ID: <1477511274.2263.135.camel@cvidal.org>
+From: Colin Vidal <colin@cvidal.org>
+Date: Wed, 26 Oct 2016 21:47:54 +0200
+In-Reply-To: <1477507968.2263.125.camel@cvidal.org>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+	 <20161020131350.GA18331@thigreal>
+	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
+	 <1477415895.2263.43.camel@cvidal.org>
+	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
+	 <1477428836.2263.70.camel@cvidal.org>
+	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
+	 <1477471489.2263.107.camel@cvidal.org>
+	 <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
+	 <1477507968.2263.125.camel@cvidal.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+> BTW, I just looked to the generic implementation of atomic64. It seems
+> quite understandable: methods use spinlock to access/modify to the
+> value of an atomic64 variable. It seems possible to check the value
+> before the increment/decrements and if the resulting value is 0, but
+> the value before the operation was different of -1 or 1, is that an
+> overflow just happened (well, it is not exactly right, but this is the
+> global idea). Hence, we revert the change, release the lock, and kill
+> the process.
+> 
+> If this idea is correct, it would avoid specific implementation of
+> protected version of atomic64 for architecture with
+> GENERIC_ATOMIC64. And case (3) would be easily protected. What do you
+> think?
 
---K4LMwn8CgX2KMboP
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+What I am saying here is quite confusing. Here is a cleaner
+explanation:
 
-On Wed, Oct 26, 2016 at 08:56:39AM +0200, Micka=EBl Sala=FCn wrote:
-> This new arraymap looks like a set and brings new properties:
-> * strong typing of entries: the eBPF functions get the array type of
->   elements instead of CONST_PTR_TO_MAP (e.g.
->   CONST_PTR_TO_LANDLOCK_HANDLE_FS);
-> * force sequential filling (i.e. replace or append-only update), which
->   allow quick browsing of all entries.
->=20
-> This strong typing is useful to statically check if the content of a map
-> can be passed to an eBPF function. For example, Landlock use it to store
-> and manage kernel objects (e.g. struct file) instead of dealing with
-> userland raw data. This improve efficiency and ensure that an eBPF
-> program can only call functions with the right high-level arguments.
->=20
-> The enum bpf_map_handle_type list low-level types (e.g.
-> BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD) which are identified when
-> updating a map entry (handle). This handle types are used to infer a
-> high-level arraymap type which are listed in enum bpf_map_array_type
-> (e.g. BPF_MAP_ARRAY_TYPE_LANDLOCK_FS).
->=20
-> For now, this new arraymap is only used by Landlock LSM (cf. next
-> commits) but it could be useful for other needs.
->=20
-> Changes since v3:
-> * make handle arraymap safe (RCU) and remove buggy synchronize_rcu()
-> * factor out the arraymay walk
->=20
-> Changes since v2:
-> * add a RLIMIT_NOFILE-based limit to the maximum number of arraymap
->   handle entries (suggested by Andy Lutomirski)
-> * remove useless checks
->=20
-> Changes since v1:
-> * arraymap of handles replace custom checker groups
-> * simpler userland API
-[...]
-> +	case BPF_MAP_HANDLE_TYPE_LANDLOCK_FS_FD:
-> +		handle_file =3D fget(handle->fd);
-> +		if (IS_ERR(handle_file))
-> +			return ERR_CAST(handle_file);
-> +		/* check if the FD is tied to a user mount point */
-> +		if (unlikely(handle_file->f_path.mnt->mnt_flags & MNT_INTERNAL)) {
-> +			fput(handle_file);
-> +			return ERR_PTR(-EINVAL);
-> +		}
-> +		path_get(&handle_file->f_path);
-> +		ret =3D kmalloc(sizeof(*ret), GFP_KERNEL);
-> +		ret->path =3D handle_file->f_path;
-> +		fput(handle_file);
+ * the generic atomic64 method enter and takes the lock
+ * before making the operation, check v->counter > INT_MAX - value (ifadd) or check v->counter < INT_MIN - value (if sub)
+ * if the previous check is true, release the lock and kill the process
+ * otherwise, let the operation process.
 
-You can use fdget() and fdput() here because the reference to
-handle_file is dropped before the end of the syscall.
+Obviously, if this approach is not wrong, there will be a significant
+overhead, but it happens only on CONFIG_GENERIC_ATOMIC64 &&
+CONFIG_HARDENED_ATOMIC.
 
+Thanks,
 
-> +		break;
-> +	case BPF_MAP_HANDLE_TYPE_UNSPEC:
-> +	default:
-> +		return ERR_PTR(-EINVAL);
-> +	}
-> +	ret->type =3D handle_type;
-> +	return ret;
-> +}
-> +
-> +static void *nop_map_lookup_elem(struct bpf_map *map, void *key)
-> +{
-> +	return ERR_PTR(-EINVAL);
-> +}
-> +
-> +/* called from syscall or from eBPF program */
-> +static int landlock_array_map_update_elem(struct bpf_map *map, void *key,
-> +		void *value, u64 map_flags)
-> +{
-
-This being callable from eBPF context is IMO pretty surprising and should
-at least be well-documented. Also: What is the usecase here?
-
---K4LMwn8CgX2KMboP
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJYEP2bAAoJED4KNFJOeCOoXs0QANR8eMzG7RvxyXZC6zHMmWfe
-yrRyDtTcXPmndGQHfU6YWsdl9vM6bHcb0gWl44k40QmrPPcVd7zu6wpkghMkJLRp
-h+pCrkpNx0gOpuxx0pTu6d8sHFmyh+lM+BlkbvTGvctUADLu5f+r0w/R/4cIPIB4
-NVGAY7wG3QrH/2VYc+0Uz4wb6JFMVxoRAYkvUD/tvVMXfwlfl4TDxL946Caw7XPP
-J2cCs1/FyZ9ahwnPLkI3tAkPkqFnR7Qh7cXks9ofTGtG1z8j2l+RCtrbZMWB2lsW
-VQvkFjkCUzuUVIRRuZE2E1zmekZxlOp4MvQpE5bCyWwKVcFPnsAPdcPQ8LBJ2Aak
-SSgvPc5jDp1ZzxDihwJ6Lr43k1w+MR6SF3x7uCkd5FOR+R3vBU/UUg4XUfQKqoIp
-jCysAr7wEqY/tdh4BkR/bDGaoOeEq6oFKaVu+VnySS76mq0YKFR7rcbz/tMe0gCT
-+lL6OkSmev/1NOiF86DUGEbRZv8ctK411/FxMz5adOrsU/jcTMwDfgu/ggZR7hoz
-v/kpOnrTsul/LTITxhwvXRt21AqDcq9qfVjS83BWy1nTWU3nmfDfy0Xbn14YLCXz
-hk9UNi3xndluRJ+lnPAoM9o+UpUbHoqyB1qYdObvf9FSlSxtQOX6AgPDjjJv/NkT
-TS0aueHFQqZvSkwk/0V/
-=LPFG
------END PGP SIGNATURE-----
-
---K4LMwn8CgX2KMboP--
+Colin
