@@ -1,69 +1,141 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 26 Oct 2016 08:56:51 +0200
-Message-Id: <20161026065654.19166-16-mic@digikod.net>
+Date: Wed, 26 Oct 2016 08:56:53 +0200
+Message-Id: <20161026065654.19166-18-mic@digikod.net>
 In-Reply-To: <20161026065654.19166-1-mic@digikod.net>
 References: <20161026065654.19166-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [RFC v4 15/18] bpf/cgroup: Move capability check
+Subject: [kernel-hardening] [RFC v4 17/18] landlock: Add update and debug access flags
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, cgroups@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This will be useful to be able to add more BPF attach type with
-different capability checks.
+For now, the update and debug accesses are only accessible to a process
+with CAP_SYS_ADMIN. This could change in the future.
+
+The capability check is statically done when loading an eBPF program,
+according to the current process. If the process has enough rights and
+set the appropriate access flags, then the dedicated functions or data
+will be accessible.
+
+With the update access, the following functions are available:
+* bpf_map_lookup_elem
+* bpf_map_update_elem
+* bpf_map_delete_elem
+* bpf_tail_call
+
+With the debug access, the following functions are available:
+* bpf_trace_printk
+* bpf_get_prandom_u32
+* bpf_get_current_pid_tgid
+* bpf_get_current_uid_gid
+* bpf_get_current_comm
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
 Cc: Daniel Borkmann <daniel@iogearbox.net>
-Cc: Daniel Mack <daniel@zonque.org>
+Cc: David S. Miller <davem@davemloft.net>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Sargun Dhillon <sargun@sargun.me>
 ---
- kernel/bpf/syscall.c | 12 ++++++------
- 1 file changed, 6 insertions(+), 6 deletions(-)
+ include/uapi/linux/bpf.h |  4 +++-
+ security/landlock/lsm.c  | 53 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 56 insertions(+), 1 deletion(-)
 
-diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
-index e62123aeb202..128acb4f7177 100644
---- a/kernel/bpf/syscall.c
-+++ b/kernel/bpf/syscall.c
-@@ -833,15 +833,15 @@ static int bpf_prog_attach(const union bpf_attr *attr)
- 	struct cgroup *cgrp;
- 	int result;
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 1d36f7d99288..013f661e27f8 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -607,7 +607,9 @@ enum landlock_hook {
+ #define _LANDLOCK_HOOK_LAST LANDLOCK_HOOK_INODE_GETATTR
  
--	if (!capable(CAP_NET_ADMIN))
--		return -EPERM;
--
- 	if (CHECK_ATTR(BPF_PROG_ATTACH))
- 		return -EINVAL;
+ /* eBPF context and functions allowed for a rule */
+-#define _LANDLOCK_SUBTYPE_ACCESS_MASK		((1ULL << 0) - 1)
++#define LANDLOCK_SUBTYPE_ACCESS_UPDATE		(1 << 0)
++#define LANDLOCK_SUBTYPE_ACCESS_DEBUG		(1 << 1)
++#define _LANDLOCK_SUBTYPE_ACCESS_MASK		((1ULL << 2) - 1)
  
- 	switch (attr->attach_type) {
- 	case BPF_CGROUP_INET_INGRESS:
- 	case BPF_CGROUP_INET_EGRESS:
-+		if (!capable(CAP_NET_ADMIN))
-+			return -EPERM;
+ /*
+  * (future) options for a Landlock rule (e.g. run even if a previous rule
+diff --git a/security/landlock/lsm.c b/security/landlock/lsm.c
+index b5180aa7291f..1d924d2414f2 100644
+--- a/security/landlock/lsm.c
++++ b/security/landlock/lsm.c
+@@ -194,12 +194,57 @@ static int landlock_enforce(enum landlock_hook hook, __u64 args[6])
+ static const struct bpf_func_proto *bpf_landlock_func_proto(
+ 		enum bpf_func_id func_id, union bpf_prog_subtype *prog_subtype)
+ {
++	bool access_update = !!(prog_subtype->landlock_rule.access &
++			LANDLOCK_SUBTYPE_ACCESS_UPDATE);
++	bool access_debug = !!(prog_subtype->landlock_rule.access &
++			LANDLOCK_SUBTYPE_ACCESS_DEBUG);
 +
- 		prog = bpf_prog_get_type(attr->attach_bpf_fd,
- 					 BPF_PROG_TYPE_CGROUP_SKB);
- 		break;
-@@ -872,15 +872,15 @@ static int bpf_prog_detach(const union bpf_attr *attr)
- 	struct cgroup *cgrp;
- 	int result = 0;
+ 	switch (func_id) {
+ 	case BPF_FUNC_landlock_get_fs_mode:
+ 		return &bpf_landlock_get_fs_mode_proto;
+ 	case BPF_FUNC_landlock_cmp_fs_beneath:
+ 		return &bpf_landlock_cmp_fs_beneath_proto;
  
--	if (!capable(CAP_NET_ADMIN))
--		return -EPERM;
--
- 	if (CHECK_ATTR(BPF_PROG_DETACH))
- 		return -EINVAL;
- 
- 	switch (attr->attach_type) {
- 	case BPF_CGROUP_INET_INGRESS:
- 	case BPF_CGROUP_INET_EGRESS:
-+		if (!capable(CAP_NET_ADMIN))
-+			return -EPERM;
++	/* access_update */
++	case BPF_FUNC_map_lookup_elem:
++		if (access_update)
++			return &bpf_map_lookup_elem_proto;
++		return NULL;
++	case BPF_FUNC_map_update_elem:
++		if (access_update)
++			return &bpf_map_update_elem_proto;
++		return NULL;
++	case BPF_FUNC_map_delete_elem:
++		if (access_update)
++			return &bpf_map_delete_elem_proto;
++		return NULL;
++	case BPF_FUNC_tail_call:
++		if (access_update)
++			return &bpf_tail_call_proto;
++		return NULL;
 +
- 		cgrp = cgroup_get_from_fd(attr->target_fd);
- 		if (IS_ERR(cgrp))
- 			return PTR_ERR(cgrp);
++	/* access_debug */
++	case BPF_FUNC_trace_printk:
++		if (access_debug)
++			return bpf_get_trace_printk_proto();
++		return NULL;
++	case BPF_FUNC_get_prandom_u32:
++		if (access_debug)
++			return &bpf_get_prandom_u32_proto;
++		return NULL;
++	case BPF_FUNC_get_current_pid_tgid:
++		if (access_debug)
++			return &bpf_get_current_pid_tgid_proto;
++		return NULL;
++	case BPF_FUNC_get_current_uid_gid:
++		if (access_debug)
++			return &bpf_get_current_uid_gid_proto;
++		return NULL;
++	case BPF_FUNC_get_current_comm:
++		if (access_debug)
++			return &bpf_get_current_comm_proto;
++		return NULL;
++
+ 	default:
+ 		return NULL;
+ 	}
+@@ -373,6 +418,14 @@ static inline bool bpf_landlock_is_valid_subtype(
+ 	if (prog_subtype->landlock_rule.option & ~_LANDLOCK_SUBTYPE_OPTION_MASK)
+ 		return false;
+ 
++	/* check access flags */
++	if (prog_subtype->landlock_rule.access & LANDLOCK_SUBTYPE_ACCESS_UPDATE &&
++			!capable(CAP_SYS_ADMIN))
++		return false;
++	if (prog_subtype->landlock_rule.access & LANDLOCK_SUBTYPE_ACCESS_DEBUG &&
++			!capable(CAP_SYS_ADMIN))
++		return false;
++
+ 	return true;
+ }
+ 
 -- 
 2.9.3
