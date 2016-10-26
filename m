@@ -1,199 +1,147 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 26 Oct 2016 07:29:58 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF8C0A@IRSMSX102.ger.corp.intel.com>
-References: <20161025204303.GA36052@beast>
-In-Reply-To: <20161025204303.GA36052@beast>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Date: Wed, 26 Oct 2016 08:17:44 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+	 <20161020131350.GA18331@thigreal>
+	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
+	 <1477415895.2263.43.camel@cvidal.org>
+	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
+ <1477428836.2263.70.camel@cvidal.org>
+In-Reply-To: <1477428836.2263.70.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [RFC v2 PATCH 13.1/13] lkdtm: add tests for atomic
- over-/underflow
-To: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
-Cc: David Windsor <dwindsor@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thank you Kees! I applied the commit to our hardened_atomic_on_next branch =
-and it will be included into the next rfc.=20
-
------Original Message-----
-From: Kees Cook [mailto:keescook@chromium.org]=20
-Sent: Tuesday, October 25, 2016 11:43 PM
-To: Hans Liljestrand <ishkamiel@gmail.com>
-Cc: Reshetova, Elena <elena.reshetova@intel.com>; David Windsor <dwindsor@g=
-mail.com>; kernel-hardening@lists.openwall.com
-Subject: [RFC v2 PATCH 13.1/13] lkdtm: add tests for atomic over-/underflow
-
-This adds additional tests for the remaining atomic functions. Since the bu=
-lk of the logic is identical, the functions are generated with macros.
-Based on work by Hans Liljestrand.
-
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-This is a replacement for the 13/13 patch, using macros more extensively an=
-d also ignores return values to avoid "calculated but unused" warnings.
----
- drivers/misc/lkdtm.h      | 24 +++++++++++++--
- drivers/misc/lkdtm_bugs.c | 74 ++++++++++++++++++++++++++++++++-----------=
-----
- drivers/misc/lkdtm_core.c | 24 +++++++++++++--
- 3 files changed, 95 insertions(+), 27 deletions(-)
-
-diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h index fdf954c2107f=
-..62a29b9cd767 100644
---- a/drivers/misc/lkdtm.h
-+++ b/drivers/misc/lkdtm.h
-@@ -19,8 +19,28 @@ void lkdtm_SOFTLOCKUP(void);  void lkdtm_HARDLOCKUP(void=
-);  void lkdtm_SPINLOCKUP(void);  void lkdtm_HUNG_TASK(void); -void lkdtm_A=
-TOMIC_UNDERFLOW(void); -void lkdtm_ATOMIC_OVERFLOW(void);
-+void lkdtm_OVERFLOW_atomic_inc(void);
-+void lkdtm_OVERFLOW_atomic_inc_return(void);
-+void lkdtm_OVERFLOW_atomic_inc_and_test(void);
-+void lkdtm_OVERFLOW_atomic_add(void);
-+void lkdtm_OVERFLOW_atomic_add_return(void);
-+void lkdtm_OVERFLOW_atomic_add_unless(void);
-+void lkdtm_OVERFLOW_atomic_long_inc(void);
-+void lkdtm_OVERFLOW_atomic_long_inc_return(void);
-+void lkdtm_OVERFLOW_atomic_long_inc_and_test(void);
-+void lkdtm_OVERFLOW_atomic_long_add(void);
-+void lkdtm_OVERFLOW_atomic_long_add_return(void);
-+void lkdtm_OVERFLOW_atomic_long_add_unless(void);
-+void lkdtm_UNDERFLOW_atomic_dec(void);
-+void lkdtm_UNDERFLOW_atomic_dec_return(void);
-+void lkdtm_UNDERFLOW_atomic_sub(void);
-+void lkdtm_UNDERFLOW_atomic_sub_return(void);
-+void lkdtm_UNDERFLOW_atomic_sub_and_test(void);
-+void lkdtm_UNDERFLOW_atomic_long_dec(void);
-+void lkdtm_UNDERFLOW_atomic_long_dec_return(void);
-+void lkdtm_UNDERFLOW_atomic_long_sub(void);
-+void lkdtm_UNDERFLOW_atomic_long_sub_return(void);
-+void lkdtm_UNDERFLOW_atomic_long_sub_and_test(void);
-=20
- /* lkdtm_heap.c */
- void lkdtm_OVERWRITE_ALLOCATION(void);
-diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c index 18=
-2ae1894b32..2473bd275a87 100644
---- a/drivers/misc/lkdtm_bugs.c
-+++ b/drivers/misc/lkdtm_bugs.c
-@@ -123,26 +123,54 @@ void lkdtm_HUNG_TASK(void)
- 	schedule();
- }
-=20
--void lkdtm_ATOMIC_UNDERFLOW(void)
--{
--	atomic_t under =3D ATOMIC_INIT(INT_MIN);
--
--	pr_info("attempting good atomic increment\n");
--	atomic_inc(&under);
--	atomic_dec(&under);
--
--	pr_info("attempting bad atomic underflow\n");
--	atomic_dec(&under);
--}
--
--void lkdtm_ATOMIC_OVERFLOW(void)
--{
--	atomic_t over =3D ATOMIC_INIT(INT_MAX);
--
--	pr_info("attempting good atomic decrement\n");
--	atomic_dec(&over);
--	atomic_inc(&over);
--
--	pr_info("attempting bad atomic overflow\n");
--	atomic_inc(&over);
--}
-+/*
-+ * Handle the various atomic function prototypes (potentially ignoring
-+ * return values).
-+ */
-+#define ATOMIC_ARG_X(func, x)		func(x)
-+#define ATOMIC_ARG_1_X(func, x)		func(1, x)
-+#define ATOMIC_RET_ARG_X(func, x)	if (func(x)) ;
-+#define ATOMIC_RET_ARG_1_X(func, x)	if (func(1, x)) ;
-+#define ATOMIC_RET_ARG_X_1_0(func, x)	if (func(x, 1, 0)) ;
-+
-+#define ATOMIC_ANY(name, atomic_type, init_func, start, safe_func,	\
-+		   test_func_proto, testfunc)				\
-+void lkdtm_##name##_##testfunc(void)					\
-+{									\
-+	atomic_type atomic =3D init_func(start);				\
-+									\
-+	pr_info("attempting good " #testfunc "\n");			\
-+	safe_func(&atomic);						\
-+	test_func_proto(testfunc, &atomic);				\
-+									\
-+	pr_info("attempting bad " #testfunc "\n");			\
-+	test_func_proto(testfunc, &atomic);				\
-+}
-+
-+/* Declare underflow test functions for atomic_t and atomic_long_t types. =
-*/
-+#define LKDTM_ATOMIC_UNDERFLOW(operation, test_func_proto)		\
-+	ATOMIC_ANY(UNDERFLOW, atomic_t, ATOMIC_INIT, INT_MIN,		\
-+		   atomic_inc, test_func_proto, atomic_##operation)	\
-+	ATOMIC_ANY(UNDERFLOW, atomic_long_t, ATOMIC_LONG_INIT,		\
-+		   LONG_MIN, atomic_long_inc, test_func_proto,		\
-+		   atomic_long_##operation)
-+
-+/* Declare overflow test functions for atomic_t and atomic_long_t types. *=
-/
-+#define LKDTM_ATOMIC_OVERFLOW(operation, test_func_proto)		\
-+	ATOMIC_ANY(OVERFLOW, atomic_t, ATOMIC_INIT, INT_MAX,		\
-+		   atomic_dec, test_func_proto, atomic_##operation)	\
-+	ATOMIC_ANY(OVERFLOW, atomic_long_t, ATOMIC_LONG_INIT,		\
-+		   LONG_MAX, atomic_long_dec, test_func_proto,		\
-+		   atomic_long_##operation)
-+
-+LKDTM_ATOMIC_UNDERFLOW(dec,		ATOMIC_ARG_X)
-+LKDTM_ATOMIC_UNDERFLOW(dec_return,	ATOMIC_RET_ARG_X)
-+LKDTM_ATOMIC_UNDERFLOW(sub,		ATOMIC_ARG_1_X)
-+LKDTM_ATOMIC_UNDERFLOW(sub_return,	ATOMIC_RET_ARG_1_X)
-+LKDTM_ATOMIC_UNDERFLOW(sub_and_test,	ATOMIC_RET_ARG_1_X)
-+LKDTM_ATOMIC_OVERFLOW(inc,		ATOMIC_ARG_X)
-+LKDTM_ATOMIC_OVERFLOW(inc_return,	ATOMIC_RET_ARG_X)
-+LKDTM_ATOMIC_OVERFLOW(add,		ATOMIC_ARG_1_X)
-+LKDTM_ATOMIC_OVERFLOW(add_return,	ATOMIC_RET_ARG_1_X)
-+LKDTM_ATOMIC_OVERFLOW(add_unless,	ATOMIC_RET_ARG_X_1_0)
-+LKDTM_ATOMIC_OVERFLOW(inc_and_test,	ATOMIC_RET_ARG_X)
-diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c index f9=
-154b8d67f6..05b097f02ce4 100644
---- a/drivers/misc/lkdtm_core.c
-+++ b/drivers/misc/lkdtm_core.c
-@@ -218,8 +218,28 @@ struct crashtype crashtypes[] =3D {
- 	CRASHTYPE(WRITE_RO),
- 	CRASHTYPE(WRITE_RO_AFTER_INIT),
- 	CRASHTYPE(WRITE_KERN),
--	CRASHTYPE(ATOMIC_UNDERFLOW),
--	CRASHTYPE(ATOMIC_OVERFLOW),
-+	CRASHTYPE(OVERFLOW_atomic_inc),
-+	CRASHTYPE(OVERFLOW_atomic_inc_return),
-+	CRASHTYPE(OVERFLOW_atomic_inc_and_test),
-+	CRASHTYPE(OVERFLOW_atomic_add),
-+	CRASHTYPE(OVERFLOW_atomic_add_return),
-+	CRASHTYPE(OVERFLOW_atomic_add_unless),
-+	CRASHTYPE(OVERFLOW_atomic_long_inc),
-+	CRASHTYPE(OVERFLOW_atomic_long_inc_return),
-+	CRASHTYPE(OVERFLOW_atomic_long_inc_and_test),
-+	CRASHTYPE(OVERFLOW_atomic_long_add),
-+	CRASHTYPE(OVERFLOW_atomic_long_add_return),
-+	CRASHTYPE(OVERFLOW_atomic_long_add_unless),
-+	CRASHTYPE(UNDERFLOW_atomic_dec),
-+	CRASHTYPE(UNDERFLOW_atomic_dec_return),
-+	CRASHTYPE(UNDERFLOW_atomic_sub),
-+	CRASHTYPE(UNDERFLOW_atomic_sub_return),
-+	CRASHTYPE(UNDERFLOW_atomic_sub_and_test),
-+	CRASHTYPE(UNDERFLOW_atomic_long_dec),
-+	CRASHTYPE(UNDERFLOW_atomic_long_dec_return),
-+	CRASHTYPE(UNDERFLOW_atomic_long_sub),
-+	CRASHTYPE(UNDERFLOW_atomic_long_sub_return),
-+	CRASHTYPE(UNDERFLOW_atomic_long_sub_and_test),
- 	CRASHTYPE(USERCOPY_HEAP_SIZE_TO),
- 	CRASHTYPE(USERCOPY_HEAP_SIZE_FROM),
- 	CRASHTYPE(USERCOPY_HEAP_FLAG_TO),
---
-2.7.4
-
-
---=20
-Kees Cook
-Nexus Security
+T24gVHVlLCAyMDE2LTEwLTI1IGF0IDEzOjUxIC0wNDAwLCBEYXZpZCBXaW5kc29yIHdyb3RlOg0K
+PiBPbiBUdWUsIE9jdCAyNSwgMjAxNiBhdCAxOjE4IFBNLCBDb2xpbiBWaWRhbCA8Y29saW5AY3Zp
+ZGFsLm9yZz4gd3JvdGU6DQo+ID4gDQo+ID4gSGkgS2VlcywgSGFucywNCj4gPiANCj4gPiA+IA0K
+PiA+ID4gPiANCj4gPiA+ID4gPiANCj4gPiA+ID4gPiA+IA0KPiA+ID4gPiA+ID4gVGhpcyBzZXJp
+ZXMgYnJpbmdzIHRoZSBQYVgvR3JzZWN1cml0eSBQQVhfUkVGQ09VTlQgZmVhdHVyZSANCj4gPiA+
+ID4gPiA+IHN1cHBvcnQgdG8gdGhlIHVwc3RyZWFtIGtlcm5lbC4gQWxsIGNyZWRpdCBmb3IgdGhl
+IGZlYXR1cmUgDQo+ID4gPiA+ID4gPiBnb2VzIHRvIHRoZSBmZWF0dXJlIGF1dGhvcnMuDQo+ID4g
+PiA+ID4gPiANCj4gPiA+ID4gPiA+IFRoZSBuYW1lIG9mIHRoZSB1cHN0cmVhbSBmZWF0dXJlIGlz
+IEhBUkRFTkVEX0FUT01JQyBhbmQgaXQgDQo+ID4gPiA+ID4gPiBpcyBjb25maWd1cmVkIHVzaW5n
+IENPTkZJR19IQVJERU5FRF9BVE9NSUMgYW5kIA0KPiA+ID4gPiA+ID4gSEFWRV9BUkNIX0hBUkRF
+TkVEX0FUT01JQy4NCj4gPiA+ID4gPiA+IA0KPiA+ID4gPiA+ID4gVGhpcyBzZXJpZXMgb25seSBh
+ZGRzIHg4NiBzdXBwb3J0OyBvdGhlciBhcmNoaXRlY3R1cmVzIGFyZSANCj4gPiA+ID4gPiA+IGV4
+cGVjdGVkIHRvIGFkZCBzaW1pbGFyIHN1cHBvcnQgZ3JhZHVhbGx5Lg0KPiA+ID4gPiA+IA0KPiA+
+ID4gPiA+IEkgaGF2ZSBzb21lIHdvcnJpZXMgb24gdGhlIGdlbmVyaWMgYXJjaCBpbmRlcGVuZGVu
+dCANCj4gPiA+ID4gPiBpbXBsZW1lbnRhdGlvbiBvZiBhdG9taWM2NF90L2F0b21pYzY0X3dyYXBf
+dCANCj4gPiA+ID4gPiAoaW5jbHVkZS9hc20tZ2VuZXJpYy9hdG9taWM2NC5oKS4gV2UgcHJvdmlk
+ZSBfd3JhcCB2ZXJzaW9ucyANCj4gPiA+ID4gPiBmb3IgYXRvbWljNjQsIGJ1dCBwcm90ZWN0aW9u
+IGlzIGRlcGVuZGFudCBvbiBhcmNoIA0KPiA+ID4gPiA+IGltcGxlbWVudGF0aW9uIGFuZCBjb25m
+aWcuIFRoYXQgaXMsIG9uZSBjb3VsZCBwb3NzaWJseSANCj4gPiA+ID4gPiBpbXBsZW1lbnQgSEFS
+REVORURfQVRPTUlDIHN1cHBvcnQgd2hpbGUgbGVhdmluZyBhdG9taWM2NF90IA0KPiA+ID4gPiA+
+IHVucHJvdGVjdGVkIGRlcGVuZGluZyBvbiBzcGVjaWZpYyBjb25maWdzLCBmb3IgaW5zdGFuY2Ug
+YnkgdGhlbiBkZWZhdWx0aW5nIHRvIENPTkZJR19HRU5FUklDX0FUT01JQzY0IChpbiBsaW51Yy9o
+YXJkZW5lZC9hdG9taWMuaDo2NzYpLiBPciBtYXliZSBJJ20ganVzdCB1bmRlci0vb3ZlcnRoaW5r
+aW5nIHRoaXM/DQo+ID4gPiA+IA0KPiA+ID4gPiBJSVVDLCBBUk12NiBidWlsZHMgY291bGQgaGF2
+ZSBHRU5FUklDX0FUT01JQzY0IGFuZCAob25jZSANCj4gPiA+ID4gaW1wbGVtZW50ZWQpIEhBUkRF
+TkVEX0FUT01JQywgc28gSSB0aGluayB0aGF0IGNvbWJpbmF0aW9uIGlzIA0KPiA+ID4gPiB3b3J0
+aCBzcGVuZGluZyB0aW1lIG9uLg0KPiA+ID4gDQo+ID4gPiBJJ20gbm90IGNvbXBsZXRlbHkgc3Vy
+ZSB3aGF0IHlvdSBtZWFuPyBPdXIgY3VycmVudCBwYXRjaHNldCANCj4gPiA+IGRvZXNuJ3QgaW1w
+bGVtZW50IGFueSBwcm90ZWN0aW9ucyBmb3IgdGhlIGdlbmVyaWMgYXRvbWljNjQsIGJ1dCANCj4g
+PiA+IHJhdGhlciByZWxpZXMgb24gSEFSREVORURfQVRPTUlDIGVuYWJsZWQgYXJjaHMgdG8gcHJv
+dmlkZSBhIA0KPiA+ID4gcHJvdGVjdGVkIGltcGxlbWVudGF0aW9uLiBTbyBjdXJyZW50bHkgYW55
+IEhBUkRFTkVEX0FUT01JQyBhcmNocyANCj4gPiA+IGNhbm5vdCBkZXBlbmQgb24gR0VORVJJQ19B
+VE9NSUM2NC4gRG9lcyB0aGlzIHNvdW5kIHJlYXNvbmFibGU/DQo+ID4gDQo+ID4gSW4gdGhlIGFj
+dHVhbCBzaXR1YXRpb24sIHlvdSBjYW4gdXNlIGEgYXJjaGl0ZWN0dXJlIHdpdGgNCj4gPiBHRU5F
+UklDX0FUT01JQzY0IChpbXhfdjZfdjdfZGVmY29uZmlnIG9uIGFybSBmb3IgaW5zdGFuY2UpLCBh
+bmQgc2V0IA0KPiA+IENPTkZJR19IQVJERU5FRF9BVE9NSUM9eS4gVGhhdCB3aWxsIGJyb2tlIHRo
+ZSBidWlsZC4gVGhlcmVmb3JlLCB3ZSANCj4gPiBzaG91bGQgcHV0IGEgbmVnYXRpdmUgZGVwZW5k
+ZW5jeSBiZXR3ZWVuIEdFTkVSSUNfQVRPTUlDNjQgYW5kIA0KPiA+IEhBVkVfQVJDSF9IQVJERU5F
+RF9BVE9NSUMsIGluIG9yZGVyIHRvIGJlIHN1cmUgdGhhdCBIQVJERU5FRF9BVE9NSUMgDQo+ID4g
+Y2Fubm90IGJlIHNldCB3aGVuIEdFTkVSSUNfQVRPTUlDNjQgaXMgc2V0Lg0KPiA+IA0KPiANCj4g
+VGhpcyBpcyBzdGFydGluZyB0byBnZXQgb3V0IG9mIGhhbmQuICBJJ20gcmV2aWV3aW5nIHRoZSBz
+aXR1YXRpb24gbm93IA0KPiBhcyBpdCByZWxhdGVzIHRvIGxvY2FsX3dyYXBfdCBnZXR0aW5nIGRl
+ZmluZWQgaW4gY2VydGFpbiANCj4gY2lyY3Vtc3RhbmNlcywgYnV0IG5vdCBvdGhlcnMsIGFuZCBo
+YXZlIGZvdW5kIHRoYXQgdGhlIGRlcGVuZGVuY3kgDQo+IHJlc29sdXRpb24gc2NoZW1lIGluIEhB
+UkRFTkVEX0FUT01JQyBpcyBjb25mdXNpbmcuICBJIHRoaW5rIHdlIG5lZWQgdG8gDQo+IGRvY3Vt
+ZW50IHRoaXMgc29tZXdoZXJlLiAgSWYgbm90IGluLXRyZWUsIHRoZW4gb24gdGhpcyBtYWlsaW5n
+IGxpc3QsIA0KPiBhdCBsZWFzdC4NCj4gDQo+IElmIHlvdSBoYXZlIGEgc29saWQgdW5kZXJzdGFu
+ZGluZyBvZiB3aGF0IHR5cGVzIGdldCBkZWZpbmVkIHdoZW4gDQo+IGFyY2hpdGVjdHVyYWwgc3Vw
+cG9ydCBmb3IgQ09ORklHX0hBUkRFTkVEX0FUT01JQyBpcyBlbmFibGVkLCB3aGVyZSANCj4gdGhv
+c2UgdHlwZXMgZ2V0IGRlZmluZWQgKGFyY2gtc3BlY2lmaWMgdnMuIGFyY2gtaW5kZXBlbmRlbnQg
+Y29kZSksIA0KPiB3b3VsZCB5b3UgbWluZCB3cml0aW5nIHNvbWV0aGluZyB1cCBoZXJlIGZvciBh
+bGwgb2YgdXM/ICBBbHNvLCBpdCB2ZXJ5IA0KPiB3ZWxsIGNvdWxkIGJlIHRoZSBjYXNlIHRoYXQg
+dGhpcyBpcyBlYXNpZXIgdGhhbiBJJ20gbWFraW5nIGl0IG91dCB0byANCj4gYmUuICBJZiBzbywg
+anVzdCB0ZWxsIG1lIGFuZCBJJ2xsIGdvIGF3YXkuDQoNCj5JZiB5b3UgaGF2ZSBDT05GSUdfSEFS
+REVORURfQVRPTUlDLCB0aGUgdHlwZSBvZiBhdG9taWM2NF93cmFwX3QgaXMgc3RydWN0IGF0b21p
+YzY0X3dyYXBfdCwgb3RoZXJ3aXNlLCBpdCBpcyBqdXN0IGFuIGFsaWFzIChjb21wYXRpYmxlKSBv
+ZiBhdG9taWM2NF90Lg0KDQo+U28sIGlmIENPTkZJR19HRU5FUklDX0FUT01JQzY0IGlzIHNldCwg
+YW5kIENPTkZJR19IQVJERU5FRF9BVE9NSUMgaXMgc2V0IHRvbywgYWxsIG1hY3JvIGRlZmluaXRp
+b25zIGF0b21pY18qX3dyYXAgaW4gYXNtLWdlbmVyaWMvYXRvbWljNjQuaCB3aWxsIGJlIHJlZHVj
+ZWQgaW50byBhdG9taWNfKi4gQnV0IGFzIENPTkZJR19IQVJERU5FRF9BVE9NSUMgaXMgc2V0LCB0
+aGUgdHlwZSBvZiBhcmd1bWVudCBpcyA+YXRvbWljNjRfd3JhcF90ICh3aGljaCBpcyBkaWZmZXJl
+bnQgYW5kIGluY29tcGF0aWJsZSB3aXRoIGF0b21pYzY0X3QgaW4gdGhhdCBjYXNlKS4gU28gdGhl
+IGNvbXBpbGUgZXJyb3IgaXMgb2J2aW91cy4NCg0KPkkgdGhpbmsgKHNvbWVvbmUgZWxzZSB0b28s
+IE1hcmsgaWYgSSByZW1lbWJlcj8pIHRoYXQgd2Ugc2hvdWxkIG5ldmVyIHVzZSAidHlwZWRlZiBh
+dG9taWNfdCBhdG9taWNfd3JhcF90IiBhbmQgc28gb24gZm9yIHR3byBtYWluIHJlYXNvbnMgOg0K
+DQo+LSBpdCBhdm9pZCB0byBtaXggYXRvbWljX3QgYW5kIGF0b21pY193cmFwX3Qgd2l0aG91dCBl
+cnJvciBpZiBDT05GSUdfSEFSREVORURfQVRPTUlDIGlzIHVuc2V0DQoNCj4tIGl0IG1ha2UgdGhl
+IHR5cGluZyBzeXN0ZW0gb2YgYXRvbWljXyogbXVjaCBtb3JlIGNsZWFyOiBhdG9taWMqX3dyYXBf
+dCBpcyBhbHdheXMgYSBkaWZmZXJlbnQgdHlwZSBvZiBhdG9taWNfdCwgYW5kIGRvZXMgbm90IGRl
+cGVuZHMgb2YgYSBjb21waWxlIG9wdGlvbi4gVGhlcmVmb3JlLCBpdCB3b3VsZCBhdm9pZCBkZWFk
+LWVuZCBsaWtlIGFzbS0gZ2VuZXJpYy9hdG9taWM2NC5oDQoNCj4gPiANCj4gPiBCdXQgaXQgc2Vl
+bXMgd2lyZWQsIG9yIGEgcGl0eSwgdGhhdCBIQVJERU5FRF9BVE9NSUMgaXMgZGlzYWJsZWQgb24g
+DQo+ID4gc29tZSBhcmNoaXRlY3R1cmUganVzdCBiZWNhdXNlIGNvZGUgaW1wbGVtZW50YXRpb24g
+aXNzdWVzLCBubz8NCj4gPiANCj4gPiA+IA0KPiA+ID4gPiANCj4gPiA+ID4gPiANCj4gPiA+ID4g
+PiBNeSBjb25jZXJuIGlzIHRoYXQgdGhpcyBpcyBhIHZlcnkgZWFzeSBwbGFjZSB0byBpbmNsdWRl
+IGVycm9ycyANCj4gPiA+ID4gPiBhbmQgaW5jb25zaXN0ZW5jaWVzLiBXZSd2ZSBiZWVuIHRyeWlu
+ZyB0byBjbGVhbmx5IGZpeCB0aGlzLCANCj4gPiA+ID4gPiBidXQgaGF2ZW4ndCByZWFsbHkgZm91
+bmQgYSBzYXRpc2ZhY3Rvcnkgc29sdXRpb24gKGUuZy4gb25lIA0KPiA+ID4gPiA+IHRoYXQgYWN0
+dWFsbHkgd29ya3Mgb24gZGlmZmVyZW50IGNvbmZpZ3MvYXJjcyBhbmQgaXNuJ3QgYSANCj4gPiA+
+ID4gPiBob3JyaWJsZSBtZXNzKS4gSSByZWNhbGwgdGhhdCB0aGUgaGFyZGVuZWRfYXRvbWljIEFS
+TSANCj4gPiA+ID4gPiBpbXBsZW1lbnRhdGlvbiBhbHJlYWR5IGZhY2VkIGlzc3VlcyB3aXRoIGF0
+b21pYzY0LCBzbyB0aGlzIHNlZW1zIHRvIGJlIGEgcmVhbCBjYXVzZSBmb3IgcHJvYmxlbXMuIEFu
+eSBzdWdnZXN0aW9ucyBvbiBob3cgdG8gZG8gdGhpcyBtb3JlIGNsZWFubHk/DQo+ID4gPiA+IA0K
+PiA+ID4gPiBJIGhhdmVuJ3QgbG9va2VkIHRvbyBjbG9zZWx5IHlldCwgdGhvdWdoIG1heWJlIENv
+bGluIHdpbGwgaGF2ZSANCj4gPiA+ID4gc29tZSB0aG91Z2h0cyBhcyBoZSBsb29rcyBhdCB0aGUg
+QVJNIHBvcnQuDQo+ID4gPiANCj4gPiA+IE9rLCB0aGF0IHdvdWxkIHByb2JhYmx5IGJlIGhlbHBm
+dWwuIEl0IHdvdWxkIGJlIGdvb2QgdG8gZ2V0IHRoaXMgDQo+ID4gPiBjbGVhbmx5IGRvbmUgZnJv
+bSB0aGUgc3RhcnQgc28gaXQgZG9lc24ndCBncm93IGluY3JlYXNpbmdseSBtZXNzeSANCj4gPiA+
+IHdpdGggZXZlcnkgYXJjaCBuZWVkaW5nIHRvIGRvIGluY3JlbWVudGFsIGZpeGVzL2hhY2tzIGFz
+IHRoZXkgZ2V0IGltcGxlbWVudGVkLg0KPiA+IA0KPiA+IFNpbmNlIEdFTkVSSUNfQVRPTUlDNjQg
+aXMgb25seSBvbiBmZXcgYXJjaGl0ZWN0dXJlIChhcm0sIG1ldGF0YWcsIA0KPiA+IG1pY3JvYmxh
+emUsIHNwYXJjLCBhbmQgcGVyaGFwcyBtaXBzPyksIEkgd29uZGVyIGlmIGl0IHdvdWxkIG5vdCBi
+ZSBhIA0KPiA+IGJldHRlciBpZGVhIHRvIGRyb3AgYXNtLWdlbmVyaWMvYXRvbWljNjQuaDogaXQg
+d2lsbCBpbmR1Y2VzIGEgY29kZSANCj4gPiBkdXBsaWNhdGlvbiwgZm9yIHN1cmUsIGJ1dCBhdm9p
+ZCB0aGUgd2lyZWQgc2l0dWF0aW9uIGFib3ZlLg0KPiA+IA0KPiA+IFRoYXQgc2FpZCwgSSBkb24n
+dCByZWFsbHkgdW5kZXJzdGFuZCBob3cgYXNtLWdlbmVyaWMvYXRvbWljNjQuaCB3b3JrczoNCj4g
+PiBpdCBkZWZpbmVzIGxvdCBvZiBleHRlcm4gZnVuY3Rpb25zIChhdG9taWM2NF9hZGQsIGZvciBp
+bnN0YW5jZSkgYW5kIA0KPiA+IGEgY2FuJ3QgZmluZCB0aGUgaW1wbGVtZW50YXRpb24gaW4gdGhl
+IGFyY2ggZGlyZWN0b3J5IChpbiBzcGFyYywgZm9yIA0KPiA+IGluc3RhbmNlKS4uLiBTb21lIGlk
+ZWFzPyBJdCBjb3VsZCBiZSBhbiBpbnRlcmVzdGluZyB3b3JrYXJvdW5kOiANCj4gPiBkZWZpbmUg
+YXRvbWljNjRfKl93cmFwIHByb3RvdHlwZXMgaW4gYXNtLWdlbmVyaWMvYXRvbWljNjQuaCwgYW5k
+IA0KPiA+IGVhY2ggYXJjaGl0ZWN0dXJlIHdpdGggR0VORVJJQ19BVE9NSUM2NCBtdXN0IGltcGxl
+bWVudCB0aGVtLg0KPiA+IA0KPiANCj4gSSBkb24ndCB0aGluayBhbnlvbmUgZWxzZSB1bmRlcnN0
+YW5kcywgZWl0aGVyLiAgSXQgd291bGQgYmUgZ3JlYXQgdG8gDQo+IGhhdmUgc29tZSBkb2N1bWVu
+dGF0aW9uIG9mIGhvdyB0aGlzIGFsbCB3b3Jrcy4NCg0KPkkganVzdCBmb3VuZCBpdDogbGliL2F0
+b21pYzY0LmMuIFBoZXcsIG5vIG1hZ2ljcyA6LSkNCg0KPlBlcmhhcHMgdGhlIGNsZWFuZXIgc29s
+dXRpb24gd291bGQgYmUgdG8gZGVmaW5lIHByb3RvdHlwZXMgKG9mIHJlYWwgZnVuY3Rpb25zLCBu
+b3QgbWFjcm9zKSBvZiBhdG9taWM2NF8qX3dyYXAgZnVuY3Rpb25zIGluIGFzbS0gZ2VuZXJpYy9h
+dG9taWM2NC5oLiBJZiB0aGUgYXJjaCBoYXMgaXRzIG93biBpbXBsZW1lbnRhdGlvbiBvZiBhdG9t
+aWM2NCwgbm8gcHJvYmxlbXMgKGFzbS1nZW5lcmljL2F0b21pYzY0LmggaXMgbm90ID5pbmNsdWRl
+ZCksIGFuZCBpZg0KPkNPTkZJR19HRU5FUklDX0FUT01JQzY0IGlzIHNldCwgd2UganVzdCBuZWVk
+IHRvIGltcGxlbWVudHMgYXRvbWljNjRfKl93cmFwIGZ1bmN0aW9ucyAoaW4gYSBhcmNoL2xpYi9h
+dG9taWM2NC5jLCBmb3IgaW5zdGFuY2UpLg0KDQpXaHkgbm90IGluIGxpYi9hdG9taWM2NC5jPyBC
+ZWNhdXNlIHRoaXMgaXMgd2hhdCB3b3VsZCBiZSB1c2VkIGluIHRoZSBjYXNlIHdoZW4gQ09ORklH
+X0dFTkVSSUNfQVRPTUlDIGlzIHNldC4gQWxzbywgd2hlbiB5b3Ugc2F5ICJpbXBsZW1lbnQiLCBk
+byB5b3UgbWVhbiBhY3R1YWxseSBwcm92aWRlICJwcm90ZWN0ZWQiIHZlcnNpb25zIG9mIHdyYXAg
+ZnVuY3Rpb25zIG9yIGp1c3Qgd3JhcCBmdW5jdGlvbnMgdGhlbXNlbHZlcyBvcGVyYXRpbmcgb24g
+d3JhcF90IHR5cGVzIGJ1dCBwcm92aWRpbmcgbm8gZGlmZmVyZW5jZSBmcm9tIG5vbi13cmFwIGZ1
+bmN0aW9ucz8NCg0KT3ZlcmFsbCwgSSBhZ3JlZSwgdGhlcmUgaXMgbm8gbWFnaWMsIGJ1dCBJTU8g
+ZGVmaW5pdGlvbnMgYXJlIHNvIGNvbmZ1c2luZyBldmVuIHdpdGhvdXQgd3JhcCBhZGRlZCAobG9j
+YWxfdCBhbmQgaXRzIGZ1bmN0aW9ucyBpcyBhIGdvb2QgZXhhbXBsZSksIHRoYXQgdHJhY2tpbmcg
+dGhlbSBhbGwgZG93biBpcyBhIHBhaW4uIA0KQXQgc29tZSBwb2ludCB3ZSB1c2VkIHRoaXMgdGFi
+bGUgdG8gdHJhY2sgZnVuY3Rpb25zIGFuZCB0aGVpciBkZWZpbml0aW9uOiAgaHR0cHM6Ly9kb2Nz
+Lmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvMTJ3WC1jc1BZOHRuSHBRVlJLVkZQU09vVjhvNldY
+dEF3S0tUQWt4OHVVSVEvZWRpdD91c3A9c2hhcmluZyANCk1heWJlIGl0IGNhbiBiZSBleHRlbmRl
+ZCB0byBpbmNsdWRlIG1vcmUgaW5mbyB0aGF0IHBlb3BsZSB3b3VsZCBsaWtlIHRvIHNlZSB0aGVy
+ZS4gDQoNCkJlc3QgUmVnYXJkcywNCkVsZW5hLg0KDQo=
