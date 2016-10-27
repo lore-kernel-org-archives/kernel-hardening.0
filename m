@@ -1,59 +1,70 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAEXv5_hkJVbN4QtYsMP7D2gcrOEOqMaCVoB-DiEKm65HEiwWZQ@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Thu, 27 Oct 2016 07:35:40 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF93F3@IRSMSX102.ger.corp.intel.com>
 References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <1476959131-6153-13-git-send-email-elena.reshetova@intel.com>
- <20161026050631.GZ19531@linaro.org> <CAEXv5_h5ezZwXcC-sTND_WxPwjNx3Yz-0M40WzqdC_gF-cP20g@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41BF8DFB@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+uUH9fRbFSkVGeAc1Z6+oLHPLLFFvkU6KDC6nuDX-8Lw@mail.gmail.com> <CAEXv5_hkJVbN4QtYsMP7D2gcrOEOqMaCVoB-DiEKm65HEiwWZQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 26 Oct 2016 14:52:45 -0700
-Message-ID: <CAGXu5jJPimDmQT62UkWxZ8CW4DKPF-wjurdLa4Jz=+U6Cak0WA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 12/13] x86: implementation for HARDENED_ATOMIC
-To: David Windsor <dwindsor@gmail.com>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>
+	 <20161020131350.GA18331@thigreal>
+	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
+	 <1477415895.2263.43.camel@cvidal.org>
+	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
+	 <1477428836.2263.70.camel@cvidal.org>
+	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
+	 <1477471489.2263.107.camel@cvidal.org>
+	 <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
+	 <1477507968.2263.125.camel@cvidal.org>
+	 <1477511274.2263.135.camel@cvidal.org>
+	 <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
+ <1477512469.2263.141.camel@cvidal.org>
+In-Reply-To: <1477512469.2263.141.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: Colin Vidal <colin@cvidal.org>, Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@progbits.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Oct 26, 2016 at 2:48 PM, David Windsor <dwindsor@gmail.com> wrote:
-> On Wed, Oct 26, 2016 at 4:51 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Wed, Oct 26, 2016 at 4:15 AM, Reshetova, Elena
->> <elena.reshetova@intel.com> wrote:
->>>>> +static __always_inline int __atomic_add_unless_wrap(atomic_wrap_t *v,
->>>>> +                                                 int a, int u)
->>>>> +{
->>>>> +     int c, old, new;
->>>>> +     c = atomic_read_wrap(v);
->>>>> +     for (;;) {
->>>>> +             if (unlikely(c == (u)))
->>>>> +                     break;
->>>>> +
->>>>> +             asm volatile("addl %2,%0\n"
->>>>> +
->>>>> +#ifdef CONFIG_HARDENED_ATOMIC
->>>>> +                          "jno 0f\n"
->>>>> +                          "subl %2,%0\n"
->>>>> +                          "int $4\n0:\n"
->>>>> +                          _ASM_EXTABLE(0b, 0b)
->>>>> +#endif
->>>>
->>>> Is this a mistake? We don't need a check here.
->>>
->>>>Yes, this appears to be a mistake.
->>>
->>> Clear copy paste mistake. Fixed now. Thanks again!
->>
->> What was the mistake here?
->>
->
-> It's an function that allows wrapping to occur: overflow protection
-> shouldn't happen here.
-
-Oh! Yes, of course. My eyes missed the _wrap part. :)
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+DQo+T24gV2VkLCAyMDE2LTEwLTI2IGF0IDEyOjUyIC0wNzAwLCBLZWVzIENvb2sgd3JvdGU6DQo+
+IE9uIFdlZCwgT2N0IDI2LCAyMDE2IGF0IDEyOjQ3IFBNLCBDb2xpbiBWaWRhbCA8Y29saW5AY3Zp
+ZGFsLm9yZz4gd3JvdGU6DQo+ID4gDQo+ID4gPiANCj4gPiA+IEJUVywgSSBqdXN0IGxvb2tlZCB0
+byB0aGUgZ2VuZXJpYyBpbXBsZW1lbnRhdGlvbiBvZiBhdG9taWM2NC4gSXQgDQo+ID4gPiBzZWVt
+cyBxdWl0ZSB1bmRlcnN0YW5kYWJsZTogbWV0aG9kcyB1c2Ugc3BpbmxvY2sgdG8gYWNjZXNzL21v
+ZGlmeSANCj4gPiA+IHRvIHRoZSB2YWx1ZSBvZiBhbiBhdG9taWM2NCB2YXJpYWJsZS4gSXQgc2Vl
+bXMgcG9zc2libGUgdG8gY2hlY2sgDQo+ID4gPiB0aGUgdmFsdWUgYmVmb3JlIHRoZSBpbmNyZW1l
+bnQvZGVjcmVtZW50cyBhbmQgaWYgdGhlIHJlc3VsdGluZyANCj4gPiA+IHZhbHVlIGlzIDAsIGJ1
+dCB0aGUgdmFsdWUgYmVmb3JlIHRoZSBvcGVyYXRpb24gd2FzIGRpZmZlcmVudCBvZiAtMSANCj4g
+PiA+IG9yIDEsIGlzIHRoYXQgYW4gb3ZlcmZsb3cganVzdCBoYXBwZW5lZCAod2VsbCwgaXQgaXMg
+bm90IGV4YWN0bHkgDQo+ID4gPiByaWdodCwgYnV0IHRoaXMgaXMgdGhlIGdsb2JhbCBpZGVhKS4g
+SGVuY2UsIHdlIHJldmVydCB0aGUgY2hhbmdlLCANCj4gPiA+IHJlbGVhc2UgdGhlIGxvY2ssIGFu
+ZCBraWxsIHRoZSBwcm9jZXNzLg0KPiA+ID4gDQo+ID4gPiBJZiB0aGlzIGlkZWEgaXMgY29ycmVj
+dCwgaXQgd291bGQgYXZvaWQgc3BlY2lmaWMgaW1wbGVtZW50YXRpb24gb2YgDQo+ID4gPiBwcm90
+ZWN0ZWQgdmVyc2lvbiBvZiBhdG9taWM2NCBmb3IgYXJjaGl0ZWN0dXJlIHdpdGggDQo+ID4gPiBH
+RU5FUklDX0FUT01JQzY0LiBBbmQgY2FzZSAoMykgd291bGQgYmUgZWFzaWx5IHByb3RlY3RlZC4g
+V2hhdCBkbyANCj4gPiA+IHlvdSB0aGluaz8NCj4gPiANCj4gPiBXaGF0IEkgYW0gc2F5aW5nIGhl
+cmUgaXMgcXVpdGUgY29uZnVzaW5nLiBIZXJlIGlzIGEgY2xlYW5lcg0KPiA+IGV4cGxhbmF0aW9u
+Og0KPiA+IA0KPiA+ICAqIHRoZSBnZW5lcmljIGF0b21pYzY0IG1ldGhvZCBlbnRlciBhbmQgdGFr
+ZXMgdGhlIGxvY2sNCj4gPiAgKiBiZWZvcmUgbWFraW5nIHRoZSBvcGVyYXRpb24sIGNoZWNrIHYt
+PmNvdW50ZXIgPiBJTlRfTUFYIC0gdmFsdWUgDQo+ID4gKGlmYWRkKSBvciBjaGVjayB2LT5jb3Vu
+dGVyIDwgSU5UX01JTiAtIHZhbHVlIChpZiBzdWIpDQo+ID4gICogaWYgdGhlIHByZXZpb3VzIGNo
+ZWNrIGlzIHRydWUsIHJlbGVhc2UgdGhlIGxvY2sgYW5kIGtpbGwgdGhlIA0KPiA+IHByb2Nlc3MN
+Cj4gPiAgKiBvdGhlcndpc2UsIGxldCB0aGUgb3BlcmF0aW9uIHByb2Nlc3MuDQo+ID4gDQo+ID4g
+T2J2aW91c2x5LCBpZiB0aGlzIGFwcHJvYWNoIGlzIG5vdCB3cm9uZywgdGhlcmUgd2lsbCBiZSBh
+IA0KPiA+IHNpZ25pZmljYW50IG92ZXJoZWFkLCBidXQgaXQgaGFwcGVucyBvbmx5IG9uIENPTkZJ
+R19HRU5FUklDX0FUT01JQzY0IA0KPiA+ICYmIENPTkZJR19IQVJERU5FRF9BVE9NSUMuDQo+IA0K
+PiBJIHRoaW5rIHRoaXMgd291bGQgYmUgZmluZSAtLSB0aG91Z2ggSSB0aGluayBpdCBzaG91bGQg
+YmUgYSBkaXN0aW5jdCANCj4gcGF0Y2guIEFueXRoaW5nIHdlIGNhbiBkbyB0byBzZXBhcmF0ZSBj
+aGFuZ2VzIGludG8gbG9naWNhbCBjaHVua3MgDQo+IG1ha2VzIHJldmlld2luZyBlYXNpZXIuDQo+
+IA0KPiBpLmUuIHBhdGNoIG9yZGVyaW5nIGNvdWxkIGxvb2sgbGlrZSB0aGlzOg0KPiANCj4gLSBv
+cmlnaW5hbCBzZXJpZXMgd2l0aCBIQVJERU5FRF9BVE9NSUMgZGVwZW5kaW5nIG9uICFHRU5FUklD
+X0FUT01JQzY0DQo+IC0gaW1wbGVtZW50YXRpb24gb2YgcHJvdGVjdGlvbiBvbiBHRU5FUklDX0FU
+T01JQzY0LCByZW1vdmluZyBhYm92ZSANCj4gZGVwZW5kcyBsaW1pdGF0aW9uDQo+IC0gQVJNIGhh
+cmRlbmVkIGF0b21pYyBpbXBsZW1lbnRhdGlvbg0KDQo+R3JlYXQhDQoNCj5FbGVuYSwgSSB3aWxs
+IHdhaXQgdGhhdCB5b3UgYXBwbGllcyBIQVJERU5FRF9BVE9NSUMgZGVwZW5kaW5nIG9uICFHRU5F
+UklDX0FUT01JQzY0LCBhbmQgSSBzdWJtaXQgYSBuZXcgUkZDIHdpdGggdGhlIGltcGxlbWVudGF0
+aW9uIG9mIHByb3RlY3Rpb24gb24gR0VORVJJQ19BVE9NSUM2NCBhbmQgYSB2MiBvZiBBUk0gcG9y
+dC4gU291bmRzIGdvb2QgZm9yIGV2ZXJ5Ym9keT/CoA0KDQpDaGFuZ2UgcHVzaGVkLiBOb3cgaXQg
+c2hvdWxkIGJlICFHRU5FUklDX0FUT01JQzY0LiBIb3BlZnVsbHkgdGhpcyBmb3Igbm93IGNvbmNs
+dWRlcyBvdXIgc3RhdGUgb24gYXRvbWljNjQqIHZhcmlhYmxlcy4gDQoNCk5vdyB3ZSBhcmUgbGVm
+dCB3aXRoIGxvY2FsX3dyYXBfdCBwcm9ibGVtIHN0aWxsLi4uIEJ1dCBpdCBkb2VzbuKAmXQgY29u
+Y2VybiBhcm0gSSB0aGluayBhdCBhbGwuIA0KDQpCZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg==
