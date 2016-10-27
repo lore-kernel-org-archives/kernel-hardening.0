@@ -1,45 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161027110742.GD27135@leverpostej>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
- <1476802761-24340-3-git-send-email-colin@cvidal.org> <20161025091807.GX19531@linaro.org>
- <1477407767.2263.22.camel@cvidal.org> <20161026072423.GB19531@linaro.org>
- <1477470016.2263.87.camel@cvidal.org> <20161027110742.GD27135@leverpostej>
+In-Reply-To: <1477071466-19256-1-git-send-email-michael.leibowitz@intel.com>
+References: <1477071466-19256-1-git-send-email-michael.leibowitz@intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 27 Oct 2016 14:37:34 -0700
-Message-ID: <CAGXu5jJx-c4zENdrQ0bJrKEGVAiWthutsgDtkGBeA4wSwgw=pA@mail.gmail.com>
+Date: Thu, 27 Oct 2016 16:01:25 -0700
+Message-ID: <CAGXu5j+R4stGdd1Prg5-vD6K609dNdDSRAfhDNoE0-jkSRBpVA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC 2/2] arm: implementation for HARDENED_ATOMIC
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] Add the randstruct gcc plugin
+To: Michael Leibowitz <michael.leibowitz@intel.com>
+Cc: Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 27, 2016 at 4:08 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Wed, Oct 26, 2016 at 10:20:16AM +0200, Colin Vidal wrote:
-> Given it looks like there's at least one necessary round of bikeshedding, it
-> would be best to discuss this with the usual atomic maintainers included, so as
-> to avoid several more rounds over subsequent postings. i.e.
+On Fri, Oct 21, 2016 at 10:37 AM, Michael Leibowitz
+<michael.leibowitz@intel.com> wrote:
+> This plugin randomizes the layout of certain structures at compile
+
+"allows for the randomization of"... :)
+
+> time.  This introduces two defines __randomize_layout and
+> __no_randomize_layout.  Which, in turn, tell the compiler to either
+> try to randomize or not to randomize the struct in question.
 >
-> [mark@leverpostej:~/src/linux]% ./scripts/get_maintainer.pl -f \
->         include/asm-generic/atomic.h \
->         include/asm-generic/atomic-long.h \
->         include/linux/atomic.h
-> Arnd Bergmann <arnd@arndb.de> (maintainer:GENERIC INCLUDE/ASM HEADER FILES)
-> Ingo Molnar <mingo@kernel.org> (commit_signer:8/11=73%)
-> Peter Zijlstra <peterz@infradead.org> (commit_signer:6/11=55%,authored:5/11=45%,added_lines:491/671=73%,removed_lines:186/225=83%)
-> Frederic Weisbecker <fweisbec@gmail.com> (commit_signer:3/11=27%,authored:3/11=27%,added_lines:42/671=6%,removed_lines:21/225=9%)
-> Boqun Feng <boqun.feng@gmail.com> (commit_signer:1/11=9%,authored:1/11=9%)
-> Chris Metcalf <cmetcalf@ezchip.com> (commit_signer:1/11=9%)
-> Davidlohr Bueso <dave@stgolabs.net> (authored:1/11=9%,added_lines:128/671=19%)
-> linux-arch@vger.kernel.org (open list:GENERIC INCLUDE/ASM HEADER FILES)
-> linux-kernel@vger.kernel.org (open list)
+> This feature is ported over from grsecurity.  The implementation is
+> nearly identical to the original code written by the PaX Team and
+> Spender.  To make integration simpler, this version only supports
+> explicit marking of structures.  However, it retains the
+> __no_randomize_layout support for the future.
+>
+> The UAPI checks are
+> retained as well.  Structures that are to be randomized are required
+> to use the C99 designated initializer form.
+>
+> Signed-off-by: Michael Leibowitz <michael.leibowitz@intel.com>
 
-Yeah, I'll be bringing the hardened atomic patch up during kernel
-summit, but I think the RFC has gotten to the point where we need to
-loop in more maintainers.
+In the earlier thread, I suggested a series that looked like this:
 
-Thanks!
+- plugin itself (minus all-function-pointers)
+- opt-in markings
+- C99 changes
+- out-out markings
+- all-function-pointers plugin logic
+
+It sounds like this is the first step of that idea -- what was changed
+to remove the auto-marking logic?
+
+(Also, this needs extensive 80-char wrapping done... see how close you
+can get it to be scripts/checkpatch.pl clean...)
+
+Thanks for the update!
 
 -Kees
 
