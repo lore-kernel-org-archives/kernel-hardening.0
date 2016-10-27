@@ -1,70 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Thu, 27 Oct 2016 07:35:40 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF93F3@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-	 <20161020131350.GA18331@thigreal>
-	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
-	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
-	 <1477415895.2263.43.camel@cvidal.org>
-	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
-	 <1477428836.2263.70.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
-	 <1477471489.2263.107.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
-	 <1477507968.2263.125.camel@cvidal.org>
-	 <1477511274.2263.135.camel@cvidal.org>
-	 <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
- <1477512469.2263.141.camel@cvidal.org>
-In-Reply-To: <1477512469.2263.141.camel@cvidal.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Thu, 27 Oct 2016 11:32:15 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20161027103143.GB27135@leverpostej>
+References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: Colin Vidal <colin@cvidal.org>, Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, David Windsor <dave@progbits.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1476802761-24340-1-git-send-email-colin@cvidal.org>
+Subject: Re: [kernel-hardening] [RFC 0/2] arm: implementation of
+ HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, Colin Vidal <colin@cvidal.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo+T24gV2VkLCAyMDE2LTEwLTI2IGF0IDEyOjUyIC0wNzAwLCBLZWVzIENvb2sgd3JvdGU6DQo+
-IE9uIFdlZCwgT2N0IDI2LCAyMDE2IGF0IDEyOjQ3IFBNLCBDb2xpbiBWaWRhbCA8Y29saW5AY3Zp
-ZGFsLm9yZz4gd3JvdGU6DQo+ID4gDQo+ID4gPiANCj4gPiA+IEJUVywgSSBqdXN0IGxvb2tlZCB0
-byB0aGUgZ2VuZXJpYyBpbXBsZW1lbnRhdGlvbiBvZiBhdG9taWM2NC4gSXQgDQo+ID4gPiBzZWVt
-cyBxdWl0ZSB1bmRlcnN0YW5kYWJsZTogbWV0aG9kcyB1c2Ugc3BpbmxvY2sgdG8gYWNjZXNzL21v
-ZGlmeSANCj4gPiA+IHRvIHRoZSB2YWx1ZSBvZiBhbiBhdG9taWM2NCB2YXJpYWJsZS4gSXQgc2Vl
-bXMgcG9zc2libGUgdG8gY2hlY2sgDQo+ID4gPiB0aGUgdmFsdWUgYmVmb3JlIHRoZSBpbmNyZW1l
-bnQvZGVjcmVtZW50cyBhbmQgaWYgdGhlIHJlc3VsdGluZyANCj4gPiA+IHZhbHVlIGlzIDAsIGJ1
-dCB0aGUgdmFsdWUgYmVmb3JlIHRoZSBvcGVyYXRpb24gd2FzIGRpZmZlcmVudCBvZiAtMSANCj4g
-PiA+IG9yIDEsIGlzIHRoYXQgYW4gb3ZlcmZsb3cganVzdCBoYXBwZW5lZCAod2VsbCwgaXQgaXMg
-bm90IGV4YWN0bHkgDQo+ID4gPiByaWdodCwgYnV0IHRoaXMgaXMgdGhlIGdsb2JhbCBpZGVhKS4g
-SGVuY2UsIHdlIHJldmVydCB0aGUgY2hhbmdlLCANCj4gPiA+IHJlbGVhc2UgdGhlIGxvY2ssIGFu
-ZCBraWxsIHRoZSBwcm9jZXNzLg0KPiA+ID4gDQo+ID4gPiBJZiB0aGlzIGlkZWEgaXMgY29ycmVj
-dCwgaXQgd291bGQgYXZvaWQgc3BlY2lmaWMgaW1wbGVtZW50YXRpb24gb2YgDQo+ID4gPiBwcm90
-ZWN0ZWQgdmVyc2lvbiBvZiBhdG9taWM2NCBmb3IgYXJjaGl0ZWN0dXJlIHdpdGggDQo+ID4gPiBH
-RU5FUklDX0FUT01JQzY0LiBBbmQgY2FzZSAoMykgd291bGQgYmUgZWFzaWx5IHByb3RlY3RlZC4g
-V2hhdCBkbyANCj4gPiA+IHlvdSB0aGluaz8NCj4gPiANCj4gPiBXaGF0IEkgYW0gc2F5aW5nIGhl
-cmUgaXMgcXVpdGUgY29uZnVzaW5nLiBIZXJlIGlzIGEgY2xlYW5lcg0KPiA+IGV4cGxhbmF0aW9u
-Og0KPiA+IA0KPiA+ICAqIHRoZSBnZW5lcmljIGF0b21pYzY0IG1ldGhvZCBlbnRlciBhbmQgdGFr
-ZXMgdGhlIGxvY2sNCj4gPiAgKiBiZWZvcmUgbWFraW5nIHRoZSBvcGVyYXRpb24sIGNoZWNrIHYt
-PmNvdW50ZXIgPiBJTlRfTUFYIC0gdmFsdWUgDQo+ID4gKGlmYWRkKSBvciBjaGVjayB2LT5jb3Vu
-dGVyIDwgSU5UX01JTiAtIHZhbHVlIChpZiBzdWIpDQo+ID4gICogaWYgdGhlIHByZXZpb3VzIGNo
-ZWNrIGlzIHRydWUsIHJlbGVhc2UgdGhlIGxvY2sgYW5kIGtpbGwgdGhlIA0KPiA+IHByb2Nlc3MN
-Cj4gPiAgKiBvdGhlcndpc2UsIGxldCB0aGUgb3BlcmF0aW9uIHByb2Nlc3MuDQo+ID4gDQo+ID4g
-T2J2aW91c2x5LCBpZiB0aGlzIGFwcHJvYWNoIGlzIG5vdCB3cm9uZywgdGhlcmUgd2lsbCBiZSBh
-IA0KPiA+IHNpZ25pZmljYW50IG92ZXJoZWFkLCBidXQgaXQgaGFwcGVucyBvbmx5IG9uIENPTkZJ
-R19HRU5FUklDX0FUT01JQzY0IA0KPiA+ICYmIENPTkZJR19IQVJERU5FRF9BVE9NSUMuDQo+IA0K
-PiBJIHRoaW5rIHRoaXMgd291bGQgYmUgZmluZSAtLSB0aG91Z2ggSSB0aGluayBpdCBzaG91bGQg
-YmUgYSBkaXN0aW5jdCANCj4gcGF0Y2guIEFueXRoaW5nIHdlIGNhbiBkbyB0byBzZXBhcmF0ZSBj
-aGFuZ2VzIGludG8gbG9naWNhbCBjaHVua3MgDQo+IG1ha2VzIHJldmlld2luZyBlYXNpZXIuDQo+
-IA0KPiBpLmUuIHBhdGNoIG9yZGVyaW5nIGNvdWxkIGxvb2sgbGlrZSB0aGlzOg0KPiANCj4gLSBv
-cmlnaW5hbCBzZXJpZXMgd2l0aCBIQVJERU5FRF9BVE9NSUMgZGVwZW5kaW5nIG9uICFHRU5FUklD
-X0FUT01JQzY0DQo+IC0gaW1wbGVtZW50YXRpb24gb2YgcHJvdGVjdGlvbiBvbiBHRU5FUklDX0FU
-T01JQzY0LCByZW1vdmluZyBhYm92ZSANCj4gZGVwZW5kcyBsaW1pdGF0aW9uDQo+IC0gQVJNIGhh
-cmRlbmVkIGF0b21pYyBpbXBsZW1lbnRhdGlvbg0KDQo+R3JlYXQhDQoNCj5FbGVuYSwgSSB3aWxs
-IHdhaXQgdGhhdCB5b3UgYXBwbGllcyBIQVJERU5FRF9BVE9NSUMgZGVwZW5kaW5nIG9uICFHRU5F
-UklDX0FUT01JQzY0LCBhbmQgSSBzdWJtaXQgYSBuZXcgUkZDIHdpdGggdGhlIGltcGxlbWVudGF0
-aW9uIG9mIHByb3RlY3Rpb24gb24gR0VORVJJQ19BVE9NSUM2NCBhbmQgYSB2MiBvZiBBUk0gcG9y
-dC4gU291bmRzIGdvb2QgZm9yIGV2ZXJ5Ym9keT/CoA0KDQpDaGFuZ2UgcHVzaGVkLiBOb3cgaXQg
-c2hvdWxkIGJlICFHRU5FUklDX0FUT01JQzY0LiBIb3BlZnVsbHkgdGhpcyBmb3Igbm93IGNvbmNs
-dWRlcyBvdXIgc3RhdGUgb24gYXRvbWljNjQqIHZhcmlhYmxlcy4gDQoNCk5vdyB3ZSBhcmUgbGVm
-dCB3aXRoIGxvY2FsX3dyYXBfdCBwcm9ibGVtIHN0aWxsLi4uIEJ1dCBpdCBkb2VzbuKAmXQgY29u
-Y2VybiBhcm0gSSB0aGluayBhdCBhbGwuIA0KDQpCZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg==
+Hi,
+
+On Tue, Oct 18, 2016 at 04:59:19PM +0200, Colin Vidal wrote:
+> Hi,
+> 
+> This is the first attempt of HARDENED_ATOMIC port to arm arch.
+
+As a general note, please Cc relevant lists and people, as per
+get_maintainer.pl. For these patches that should tell you to Cc
+linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, and
+a number of people familiar with the atomics.
+
+Even if things are far from perfect, and people don't reply (or reply
+but not too kindly), having them on Cc earlier makes it far more likely
+that issues are spotted and addressed earlier, minimizes repeatedly
+discussing the same issues, and also minimizes the potential for future
+arguments about these things being developed in isolation.
+
+Unless you do that, critical review for core code and arch code will
+come very late, and that could potentially delay this being merged for a
+very long time, which would be unfortunate.
+
+> About the fault handling I have some questions (perhaps some arm
+> expert are reading?):
+> 
+>    - As the process that made the overflow is killed, the kernel will
+>      not try to go to a fixup address when the exception is raised,
+>      right ? Therefore, is still mandatory to add an entry in the
+>      __extable section?
+> 
+>    - In do_PrefetchAbort, I am unsure the code that follow the call to
+>      hardened_atomic_overflow is needed: the process will be killed
+>      anyways.
+
+Unfortunately, I'm only somewhat familiar with the ARM atomics, and I
+have absolutely no familiarity with the existing PaX patchset.
+
+For both of these, some background rationale would be helpful. e.g. what
+does the fixup entry do? When is it invoked?
+
+I'll see what I can reverse-engineer from the patches.
+
+> I take some freedom compared to PaX patch, especially by adding some
+> macro to expand functions in arm/include/asm/atomic.h.
+> 
+> The first patch is the modification I have done is generic part to
+> make it work.
+
+If you're relying on a prior patch series, please refer to that in the
+cover, to make it possible for reviewers to find.
+
+If you have a public git repo, placing this in a branch (or a tagged
+commit), and referring to that in the cover messages would make it much
+easier for people to review and/or test.
+
+Thanks,
+Mark.
