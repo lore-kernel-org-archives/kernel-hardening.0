@@ -1,8 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Fri, 28 Oct 2016 10:59:37 +0200
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20161028085937.GA21247@gmail.com>
+Date: Fri, 28 Oct 2016 11:04:23 +0200
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161028090423.GY3102@twins.programming.kicks-ass.net>
 References: <20161026204748.GA11177@amd>
  <20161027082801.GE3568@worktop.programming.kicks-ass.net>
  <20161027091104.GB19469@amd>
@@ -18,12 +17,10 @@ In-Reply-To: <20161028085039.GA15032@amd>
 Subject: [kernel-hardening] Re: rowhammer protection [was Re: Getting interrupt every million
  cache misses]
 To: Pavel Machek <pavel@ucw.cz>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Ingo Molnar <mingo@kernel.org>, Kees Cook <keescook@chromium.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-* Pavel Machek <pavel@ucw.cz> wrote:
-
+On Fri, Oct 28, 2016 at 10:50:39AM +0200, Pavel Machek wrote:
 > On Fri 2016-10-28 09:07:01, Ingo Molnar wrote:
 > > 
 > > * Pavel Machek <pavel@ucw.cz> wrote:
@@ -48,21 +45,7 @@ List-ID: <kernel-hardening.lists.openwall.com>
 > I agree this needs to be tunable (and with the other suggestions). But
 > this is actually not the most important tunable: the detection
 > threshold (rh_attr.sample_period) should be way more important.
-> 
-> And yes, this will all need to be tunable, somehow. But lets verify
-> that this works, first :-).
 
-Yeah.
-
-Btw., a 56 NMI delay is pretty brutal in terms of latencies - it might
-result in a smoother system to detect 100,000 cache misses and do a
-~5.6 msecs delay instead?
-
-(Assuming the shorter threshold does not trigger too often, of course.)
-
-With all the tunables and statistics it would be possible to enumerate how 
-frequently the protection mechanism kicks in during regular workloads.
-
-Thanks,
-
-	Ingo
+So being totally ignorant of the detail of how rowhammer abuses the DDR
+thing, would it make sense to trigger more often and delay shorter? Or
+is there some minimal delay required for things to settle or something.
