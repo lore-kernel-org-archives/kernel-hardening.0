@@ -1,85 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477643844.2263.172.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Fri, 28 Oct 2016 10:37:24 +0200
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
-	 <20161020131350.GA18331@thigreal>
-	 <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
-	 <20161025090559.eqsll3d7y2ifdaug@thigreal>
-	 <1477415895.2263.43.camel@cvidal.org>
-	 <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
-	 <1477428836.2263.70.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
-	 <1477471489.2263.107.camel@cvidal.org>
-	 <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
-	 <1477507968.2263.125.camel@cvidal.org>
-	 <1477511274.2263.135.camel@cvidal.org>
-	 <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
-	 <1477512469.2263.141.camel@cvidal.org>
-	  <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
-Cc: David Windsor <dave@progbits.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Date: Fri, 28 Oct 2016 10:50:39 +0200
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20161028085039.GA15032@amd>
+References: <20161026204748.GA11177@amd>
+ <20161027082801.GE3568@worktop.programming.kicks-ass.net>
+ <20161027091104.GB19469@amd>
+ <20161027093334.GK3102@twins.programming.kicks-ass.net>
+ <CAGXu5jL=xzyPRQgOp5ON2+X0=5z4-jg4NyFCrTSrRPm5puOm0Q@mail.gmail.com>
+ <20161027212747.GA18147@amd>
+ <20161028070701.GA11376@gmail.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="/9DWx/yDrRhgMJTb"
+Content-Disposition: inline
+In-Reply-To: <20161028070701.GA11376@gmail.com>
+Subject: [kernel-hardening] Re: rowhammer protection [was Re: Getting interrupt every million
+ cache misses]
+To: Ingo Molnar <mingo@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Elena,
 
-On Thu, 2016-10-27 at 12:00 +0000, Reshetova, Elena wrote:
-> > 
-> > I think this would be fine -- though I think it should be a distinct 
-> > patch. Anything we can do to separate changes into logical chunks 
-> > makes reviewing easier.
-> > 
-> > i.e. patch ordering could look like this:
-> > 
-> > - original series with HARDENED_ATOMIC depending on !GENERIC_ATOMIC64
-> > - implementation of protection on GENERIC_ATOMIC64, removing above 
-> > depends limitation
-> > - ARM hardened atomic implementation
-> 
-> > 
-> > Great!
-> 
-> > 
-> > Elena, I will wait that you applies HARDENED_ATOMIC depending on 
-> > !GENERIC_ATOMIC64, and I submit a new RFC with the implementation of protection on GENERIC_ATOMIC64 and a v2 of ARM port. Sounds good for everybody?
-> 
-> > 
-> > Change pushed. Now it should be !GENERIC_ATOMIC64. Hopefully this for now concludes our state on atomic64* variables. 
-> 
+--/9DWx/yDrRhgMJTb
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-Thanks!
+On Fri 2016-10-28 09:07:01, Ingo Molnar wrote:
+>=20
+> * Pavel Machek <pavel@ucw.cz> wrote:
+>=20
+> > +static void rh_overflow(struct perf_event *event, struct perf_sample_d=
+ata *data, struct pt_regs *regs)
+> > +{
+> > +	u64 *ts =3D this_cpu_ptr(&rh_timestamp); /* this is NMI context */
+> > +	u64 now =3D ktime_get_mono_fast_ns();
+> > +	s64 delta =3D now - *ts;
+> > +
+> > +	*ts =3D now;
+> > +
+> > +	/* FIXME msec per usec, reverse logic? */
+> > +	if (delta < 64 * NSEC_PER_MSEC)
+> > +		mdelay(56);
+> > +}
+>=20
+> I'd suggest making the absolute delay sysctl tunable, because 'wait 56 ms=
+ecs' is=20
+> very magic, and do we know it 100% that 56 msecs is what is needed
+> everywhere?
 
-> > 
-> > Now we are left with local_wrap_t problem still... But it doesn’t concern arm I think at all. 
+I agree this needs to be tunable (and with the other suggestions). But
+this is actually not the most important tunable: the detection
+threshold (rh_attr.sample_period) should be way more important.
 
-Indeed, I never notice it (however, I try to make tiny build config,
-since my laptop would take a looooong time to compile otherwise).
+And yes, this will all need to be tunable, somehow. But lets verify
+that this works, first :-).
 
-> 
-> Ok, we managed to address this today finally hopefully in a non-ugly way. At least we are kind of happy with it. 
-> So, from our side what we do today/tomorrow with Hans:
-> 
-> - finalize coverage on atomic64 and local wrap functions
-> - add missing tests for atomic64 and local
-> - rebase on top of latest linux-next
-> - compile test and test run the whole thing in different combinations
-> - send rfcv3 with also all atomic maintainers included for wider blame/feedback
-> 
-> Does it sound like a good plan for everyone?
-> 
+Thanks and best regards,
+								Pavel
 
-Sounds good for me!
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
 
-FYI, I will probably takes a week or two before posting a new RFC
-containing (1) the generic atomic64 part, and (2) a new version of the
-ARM port, since I have some work to improve of the ARM port. I hope
-this is ok!
+--/9DWx/yDrRhgMJTb
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
 
-Best Regards,
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
 
-Colin
+iEYEARECAAYFAlgTEV8ACgkQMOfwapXb+vInWgCgkxN612QLhTOaFrxBGh+uc6Op
+5WMAoIRCUeLRxbOtQ0496Lc7Ij8nAxkl
+=8m/2
+-----END PGP SIGNATURE-----
+
+--/9DWx/yDrRhgMJTb--
