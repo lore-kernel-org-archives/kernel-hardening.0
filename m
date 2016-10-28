@@ -1,223 +1,73 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 28 Oct 2016 14:18:57 +0900
-From: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Message-ID: <20161028051856.GE19531@linaro.org>
-References: <1476802761-24340-1-git-send-email-colin@cvidal.org>
- <1476802761-24340-3-git-send-email-colin@cvidal.org>
- <20161027132235.GA30193@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161027132235.GA30193@leverpostej>
-Subject: Re: [kernel-hardening] [RFC 2/2] arm: implementation for
- HARDENED_ATOMIC
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dave@progbits.org>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, Colin Vidal <colin@cvidal.org>
+Sender: keescook@google.com
+In-Reply-To: <CAGXu5jLN5NLH+ScR_i+C18EXqektP92vCrb2h8K_pvR0Yb1bYg@mail.gmail.com>
+References: <1477071466-19256-1-git-send-email-michael.leibowitz@intel.com> <CAGXu5jLN5NLH+ScR_i+C18EXqektP92vCrb2h8K_pvR0Yb1bYg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 27 Oct 2016 23:01:46 -0700
+Message-ID: <CAGXu5jLCCUK0AWBf4V-Djqydd3y3JxT5ccLmg8ATwn7_1-DTaQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] Add the randstruct gcc plugin
+To: Michael Leibowitz <michael.leibowitz@intel.com>
+Cc: Brad Spengler <spender@grsecurity.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Oct 27, 2016 at 02:24:36PM +0100, Mark Rutland wrote:
-> Hi,
-> 
-> On Tue, Oct 18, 2016 at 04:59:21PM +0200, Colin Vidal wrote:
-> > This adds arm-specific code in order to support HARDENED_ATOMIC
-> > feature. When overflow is detected in atomic_t, atomic64_t or
-> > atomic_long_t, an exception is raised and call
-> > hardened_atomic_overflow.
-> 
-> I have some comments below, but for real review this needs to go via the
-> linux-arm-kernel list.
+On Thu, Oct 27, 2016 at 9:09 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Fri, Oct 21, 2016 at 10:37 AM, Michael Leibowitz
+> <michael.leibowitz@intel.com> wrote:
+>> This plugin randomizes the layout of certain structures at compile
+>> time.  This introduces two defines __randomize_layout and
+>> __no_randomize_layout.  Which, in turn, tell the compiler to either
+>> try to randomize or not to randomize the struct in question.
+>>
+>> This feature is ported over from grsecurity.  The implementation is
+>> nearly identical to the original code written by the PaX Team and
+>> Spender.  To make integration simpler, this version only supports
+>> explicit marking of structures.  However, it retains the
+>> __no_randomize_layout support for the future.  The UAPI checks are
+>> retained as well.  Structures that are to be randomized are required
+>> to use the C99 designated initializer form.
+>>
+>> Signed-off-by: Michael Leibowitz <michael.leibowitz@intel.com>
+>> [...]
+>> diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
+>> index 61f0e6d..94bfffe 100644
+>> --- a/scripts/Makefile.gcc-plugins
+>> +++ b/scripts/Makefile.gcc-plugins
+>> @@ -19,9 +19,19 @@ ifdef CONFIG_GCC_PLUGINS
+>>      endif
+>>    endif
+>>
+>> -  GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
+>> +  RANDSTRUCT_PLUGIN := -fplugin=$(objtree)/scripts/gcc-plugins/randomize_layout_plugin.so
+>> +  ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
+>> +    gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)         += randomize_layout_plugin.so
+>>
+>> -  export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR SANCOV_PLUGIN
+>> +    GCC_PLUGIN_RANDSTRUCT_CFLAGS := -fplugin=$(objtree)/scripts/gcc-plugins/randomize_layout_plugin.so -DRANDSTRUCT_PLUGIN
+>> +    ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE
+>> +      GCC_PLUGIN_RANDSTRUCT_CFLAGS = -fplugin-arg-randomize_layout_plugin-performance-mode
+>
+> Found it: this "=" should be "+=", though really the whole section
+> should just be updated to the new style of plugin handling:
+>
+>   gcc-plugin-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)    += randomize_layout_plugin.so
+>   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT)     += -DRANDSTRUCT_PLUGIN
+>   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_RANDSTRUCT_PERFORMANCE) +=
+> -fplugin-arg-randomize_layout_plugin-performance-mode
+>
+> and the export of RANDSTRUCT_PLUGIN
 
-Yeah, definitely, but
+Also, it looks like "pahole" (or the DWARF record) is lying. :P
+Printing out offsetof()s shows things clearly randomized.
 
-> > diff --git a/arch/arm/include/asm/atomic.h b/arch/arm/include/asm/atomic.h
-> > index 66d0e21..fdaee17 100644
-> > --- a/arch/arm/include/asm/atomic.h
-> > +++ b/arch/arm/include/asm/atomic.h
-> > @@ -17,18 +17,52 @@
-> >  #include <linux/irqflags.h>
-> >  #include <asm/barrier.h>
-> >  #include <asm/cmpxchg.h>
-> > +#include <linux/bug.h>
-> >  
-> >  #define ATOMIC_INIT(i)	{ (i) }
-> >  
-> >  #ifdef __KERNEL__
-> >  
-> > +#ifdef CONFIG_HARDENED_ATOMIC
-> > +#define HARDENED_ATOMIC_INSN "bkpt 0xf103"
-> 
-> Please put the immediate in a #define somewhere.
-> 
-> What about thumb2 kernels?
-> 
-> > +#define _ASM_EXTABLE(from, to)			\
-> > +	".pushsection __ex_table,\"a\"\n"	\
-> > +	".align 3\n"				\
-> > +	".long "#from","#to"\n"			\
-> > +	".popsection"
-> > +#define __OVERFLOW_POST				\
-> > +	"bvc 3f\n"				\
-> > +	"2: "HARDENED_ATOMIC_INSN"\n"		\
-> > +	"3:\n"
-> > +#define __OVERFLOW_POST_RETURN			\
-> > +	"bvc 3f\n"				\
-> > +	"mov %0,%1\n"				\
-> > +	"2: "HARDENED_ATOMIC_INSN"\n"		\
-> > +	"3:\n"
-> > +#define __OVERFLOW_EXTABLE			\
-> > +	"4:\n"					\
-> > +	_ASM_EXTABLE(2b, 4b)
-> > +#else
-> > +#define __OVERFLOW_POST
-> > +#define __OVERFLOW_POST_RETURN
-> > +#define __OVERFLOW_EXTABLE
-> > +#endif
-> > +
-> 
-> All this should live close to the assembly using it, to make it possible
-> to follow.
-> 
-> This may also not be the best way of structuring this code. The
-> additional indirection of passing this in at a high level makes it hard
-> to read and potentially fragile. For single instructions it was ok, but
-> I'm not so sure that it's ok for larger sequences like this.
+For the next version: can you update to the latest version of this
+plugin? What you sent seems out of date compared to current
+grsecurity. Disabling is_pure_ops_struct() with a "return 0" looks to
+be sufficient to stop the automatic randomization.
 
-I did the similar thing for arm64 port (ll/sc version) as the current
-macros are already complicated and I have no other better idea to
-generate definitions for protected and _wrap versions equally.
+-Kees
 
-See below. What are different from Colin's arm port are:
-  * control __HARDENED_ATOMIC_CHECK/__CL* directly instead of passing them
-    as an argument
-  * modify regs->pc directly in a handler to skip "brk" (not shown in this
-    hunk) instead of using _ASM_EXTABLE (& fixup_exception())
-
-Anyway, I'm putting off posting my arm64 port while some discussions are
-going on against Elena's x86 patch.
-
-Thanks,
--Takahiro AKASHI
-===8<===
-#define ATOMIC_OP(op, asm_op, wrap, cl)					\
-  ...
-
-#define ATOMIC_OP_RETURN(name, mb, acq, rel, op, asm_op, wrap, cl)	\
-__LL_SC_INLINE int							\
-__LL_SC_PREFIX(atomic_##op##_return##wrap##name(int i, atomic##wrap##_t *v))\
-{									\
-	unsigned long tmp;						\
-	int result;							\
-									\
-	asm volatile("// atomic_" #op "_return" #name "\n"		\
-"	prfm	pstl1strm, %2\n"					\
-"1:	ld" #acq "xr	%w0, %2\n"					\
-"	" #asm_op "	%w0, %w0, %w3\n"				\
-	__HARDENED_ATOMIC_CHECK						\
-"	st" #rel "xr	%w1, %w0, %2\n"					\
-"	cbnz	%w1, 1b\n"						\
-"	" #mb "\n"							\
-"4:"									\
-	: "=&r" (result), "=&r" (tmp), "+Q" (v->counter)		\
-	: "Ir" (i)							\
-	: cl);								\
-									\
-	return result;							\
-}									\
-__LL_SC_EXPORT(atomic_##op##_return##wrap##name);
-
-#define ATOMIC_FETCH_OP(name, mb, acq, rel, op, asm_op, wrap, cl)	\
-  ...
-
-#define ATOMIC_OPS(...)							\
-	ATOMIC_OP(__VA_ARGS__, __CL)					\
-	ATOMIC_OP_RETURN(        , dmb ish,  , l, __VA_ARGS__, __CL_MEM)\
-	ATOMIC_OP_RETURN(_relaxed,        ,  ,  , __VA_ARGS__, __CL)	\
-	ATOMIC_OP_RETURN(_acquire,        , a,  , __VA_ARGS__, __CL_MEM)\
-	ATOMIC_OP_RETURN(_release,        ,  , l, __VA_ARGS__, __CL_MEM)\
-	ATOMIC_FETCH_OP (        , dmb ish,  , l, __VA_ARGS__, __CL_MEM)\
-	ATOMIC_FETCH_OP (_relaxed,        ,  ,  , __VA_ARGS__, __CL)	\
-	ATOMIC_FETCH_OP (_acquire,        , a,  , __VA_ARGS__, __CL_MEM)\
-	ATOMIC_FETCH_OP (_release,        ,  , l, __VA_ARGS__, __CL_MEM)
-
-#ifdef CONFIG_HARDENED_ATOMIC
-#define __HARDENED_ATOMIC_CHECK						\
-"	bvc	3f\n"							\
-"2:	brk	" __stringify(BUG_ATOMIC_OVERFLOW_BRK_IMM) "\n"		\
-"	b	4f\n"							\
-"3:"
-#define __CL     "cc"
-#define __CL_MEM "cc", "memory"
-
-ATOMIC_OPS(add, adds,      )
-ATOMIC_OPS(sub, subs,      )
-#else
-#define __HARDENED_ATOMIC_CHECK
-#define __CL
-#define __CL_MEM
-
-ATOMIC_OPS(add,  add,      )
-ATOMIC_OPS(sub,  sub,      )
-#endif
-
-#undef __HARDENED_ATOMIC_CHECK
-#define __HARDENED_ATOMIC_CHECK
-#undef __CL
-#undef __CL_MEM
-#define __CL
-#define __CL_MEM "memory"
-ATOMIC_OPS(add,  add, _wrap)
-ATOMIC_OPS(sub,  sub, _wrap)
-===>8===
-
-
-> > diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
-> > index 3a2e678..ce8ee00 100644
-> > --- a/arch/arm/mm/fault.c
-> > +++ b/arch/arm/mm/fault.c
-> > @@ -580,6 +580,21 @@ do_PrefetchAbort(unsigned long addr, unsigned int ifsr, struct pt_regs *regs)
-> >  	const struct fsr_info *inf = ifsr_info + fsr_fs(ifsr);
-> >  	struct siginfo info;
-> >  
-> > +#ifdef CONFIG_HARDENED_ATOMIC
-> > +	if (fsr_fs(ifsr) == FAULT_CODE_DEBUG) {
-> 
-> You'll need to justify why this isn't in the ifsr_info table. It has the
-> same basic shape as the usual set of handlers.
-> 
-> I note that we don't seem to use SW breakpoints at all currently, and I
-> suspect there's a reason for that which we need to consider.
-> 
-> Also, if this *must* live here, please make it a static inline with an
-> empty stub, rather than an ifdef'd block.
-> 
-> > +		unsigned long pc = instruction_pointer(regs);
-> > +		unsigned int bkpt;
-> > +
-> > +		if (!probe_kernel_address((const unsigned int *)pc, bkpt) &&
-> > +		    cpu_to_le32(bkpt) == 0xe12f1073) {
-> 
-> This appears to be the A1 encoding from the ARM ARM. What about the T1
-> encoding, i.e. thumb?
-> 
-> Regardless, *please* de-magic the number using a #define.
-> 
-> Also, this should be le32_to_cpu -- in the end we're treating the
-> coverted value as cpu-native. The variable itself should be a __le32.
-> 
-> Thanks,
-> Mark.
-> 
-> > +			current->thread.error_code = ifsr;
-> > +			current->thread.trap_no = 0;
-> > +			hardened_atomic_overflow(regs);
-> > +			fixup_exception(regs);
-> > +			return;
-> > +		}
-> > +	}
-> > +#endif
-> >  	if (!inf->fn(addr, ifsr | FSR_LNX_PF, regs))
-> >  		return;
-> >  
-> > -- 
-> > 2.7.4
-> > 
+-- 
+Kees Cook
+Nexus Security
