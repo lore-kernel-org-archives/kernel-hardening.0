@@ -1,53 +1,123 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <20161020131350.GA18331@thigreal> <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
- <20161025090559.eqsll3d7y2ifdaug@thigreal> <1477415895.2263.43.camel@cvidal.org>
- <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
- <1477428836.2263.70.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
- <1477471489.2263.107.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
- <1477507968.2263.125.camel@cvidal.org> <1477511274.2263.135.camel@cvidal.org>
- <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
- <1477512469.2263.141.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_jDAPAqHp7vfOzU+WqN_h3g00_VUOz2_xxp9nJNzzFjxg@mail.gmail.com>
- <CAEXv5_izCpFQ39SGL_CD9J2A5XD1TVNJm8C3S+a3TuyriLcbJQ@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Fri, 28 Oct 2016 11:20:33 -0400
-Message-ID: <CAEXv5_g1VEWY9yEnbSihiCxBJYENCJDmitFJ66ihPwO5eNzLog@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20161028023027.GD19531@linaro.org>
+References: <20161025204303.GA36052@beast> <2236FBA76BA1254E88B949DDB74E612B41BF8C0A@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jJ2MmY=qDT420F9_hbKtkdRvXC+Juf0J8WKJmtZN4jC0g@mail.gmail.com>
+ <20161027124652.2pys4h7tug5wmqge@thigreal> <CAGXu5jLnuny-rEcck5SKnORqFU0=Jqt8Pzomv+KdL7JRrB=S5A@mail.gmail.com>
+ <20161028023027.GD19531@linaro.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 28 Oct 2016 10:21:52 -0700
+Message-ID: <CAGXu5jJyQSfkN3LTbCL9+dH4QX2VGdE36kwe75j2McEiZekv+Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: Re: [kernel-hardening] Re: [RFC v2 PATCH 13.1/13] lkdtm: add tests
+ for atomic over-/underflow
+To: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Done.  I added a line to the "HARDENED_ATOMIC Implementation" section
-of Documentation/security/hardened-atomic.txt describing the results
-of the benchmarks (no measurable performance difference).  You might
-want to add this line to the cover letter as well.
-
-I know I promised to post the results of another set of benchmarks I
-performed, and I will do that soon.
-
-Thanks,
-David
-
-On Fri, Oct 28, 2016 at 9:02 AM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
->>> - add missing tests for atomic64 and local
->>> - rebase on top of latest linux-next
->>> - compile test and test run the whole thing in different combinations
->>> - send rfcv3 with also all atomic maintainers included for wider
->>> blame/feedback
->>>
->>> Does it sound like a good plan for everyone?
->>>
+On Thu, Oct 27, 2016 at 7:30 PM, AKASHI Takahiro
+<takahiro.akashi@linaro.org> wrote:
+> On Thu, Oct 27, 2016 at 02:36:25PM -0700, Kees Cook wrote:
+>> On Thu, Oct 27, 2016 at 5:46 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
+>> > On Wed, Oct 26, 2016 at 01:41:34PM -0700, Kees Cook wrote:
+>> >> On Wed, Oct 26, 2016 at 12:29 AM, Reshetova, Elena
+>> >> <elena.reshetova@intel.com> wrote:
+>> >> > Thank you Kees! I applied the commit to our hardened_atomic_on_next branch and it will be included into the next rfc.
+>> >>
+>> >> Cool, thanks. I assume this should get atomic64_t and local_t tests as well?
+>> >>
+>> >
+>> > Yes, I'm currently compiling a build with atomic64_t and local_t tests added.
+>> > With the improved lkdtm macros its much easier to add the extra types, thank
+>> > you Kees!
+>>
+>> Sure thing! I may have yet-another patch for this, as I didn't like
+>> repeating the same things in three files whenever a new test was
+>> added. Moar macro magick!
 >
->> Actually, it doesn't look like I've updated Documentation/security/hardened-atomic.txt yet.  I need to fix the language explaining the x86 race condition to make it clear that we're discussing the SMP case.
->> I also want to add a sentence somewhere (either in your cover letter or in the kernel documentation, or both), referencing the benchmark results and lack of demonstrable performance degradation.
+> It would be nice to expose atomic* variables to userspace via debugfs
+> so that we can confirm that the values will not be changed if overflowed.
+> See the attached patch.
 >
-> David, could you please push the changes you want to do to the documentation in separate commit to the top of hardened_atomic_on_next?
->  I will cherry pick them to our new rebased branch hardened_atomic_next that we still working actively now.
+> We will be able to check the test result:
 >
-> Best Regards,
-> Elena.
+>  # /bin/echo ATOMIC_ADD_OVERFLOW > /debug/provoke-crash/DIRECT
+>  # echo $?
+>  # if [ cat /debug/provoke-crash/atomic -eq INT_MAX ]; then
+>  # echo PASS ; fi
+>
+> Thanks,
+> -Takahiro AKASHI
+>
+>>
+>> -Kees
+>>
+>> --
+>> Kees Cook
+>> Nexus Security
+> ===8<===
+> From c516b50b4764c5c1ba0dd39e3a5022d026e35514 Mon Sep 17 00:00:00 2001
+> From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+> Date: Fri, 28 Oct 2016 10:55:50 +0900
+> Subject: [PATCH] lkdtm: expose atomic variables via debugfs
+>
+> Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+> ---
+>  drivers/misc/lkdtm.h      |  2 ++
+>  drivers/misc/lkdtm_bugs.c | 75 +++++++++++++++++++++++++++++++++++++----------
+>  drivers/misc/lkdtm_core.c |  3 ++
+>  3 files changed, 64 insertions(+), 16 deletions(-)
+>
+> diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+> index 0ef66ff..b4dd231 100644
+> --- a/drivers/misc/lkdtm.h
+> +++ b/drivers/misc/lkdtm.h
+> @@ -3,10 +3,12 @@
+>
+>  #define pr_fmt(fmt) "lkdtm: " fmt
+>
+> +#include <linux/fs.h>
+>  #include <linux/kernel.h>
+>
+>  /* lkdtm_bugs.c */
+>  void __init lkdtm_bugs_init(int *recur_param);
+> +void __init lkdtm_bugs_init2(struct dentry *parent);
+>  void lkdtm_PANIC(void);
+>  void lkdtm_BUG(void);
+>  void lkdtm_WARNING(void);
+> diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+> index 7b4067b..dd5003f 100644
+> --- a/drivers/misc/lkdtm_bugs.c
+> +++ b/drivers/misc/lkdtm_bugs.c
+> @@ -5,6 +5,8 @@
+>   * test source files.
+>   */
+>  #include "lkdtm.h"
+> +#include <linux/debugfs.h>
+> +#include <linux/fs.h>
+>  #include <linux/sched.h>
+>
+>  /*
+> @@ -35,6 +37,33 @@ static int recursive_loop(int remaining)
+>                 return recursive_loop(remaining - 1);
+>  }
+>
+> +/* from fs/debugfs/file.c */
+> +static int debugfs_atomic_long_t_set(void *data, u64 val)
+> +{
+> +       atomic_long_set((atomic_long_t *)data, val);
+> +       return 0;
+> +}
+
+Ah yes! Thanks; I had been pondering how to correctly validate that
+the values were correct after the protection triggered. Thanks!
+
+I'll get a version of this into my hyper-macro-ized version of the
+lkdtm patch and get it sent to Hans. :)
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
