@@ -1,41 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 28 Oct 2016 16:18:40 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161028141840.GI3142@twins.programming.kicks-ass.net>
-References: <20161026204748.GA11177@amd>
- <20161027082801.GE3568@worktop.programming.kicks-ass.net>
- <20161027091104.GB19469@amd>
- <20161027093334.GK3102@twins.programming.kicks-ass.net>
- <CAGXu5jL=xzyPRQgOp5ON2+X0=5z4-jg4NyFCrTSrRPm5puOm0Q@mail.gmail.com>
- <20161027212747.GA18147@amd>
- <20161028095141.GA5806@leverpostej>
- <20161028112136.GA5635@amd>
- <20161028140522.GH5806@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161028140522.GH5806@leverpostej>
-Subject: Re: [kernel-hardening] rowhammer protection [was Re: Getting
- interrupt every million cache misses]
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Pavel Machek <pavel@ucw.cz>, Kees Cook <keescook@chromium.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
+References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
+ <20161020131350.GA18331@thigreal> <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
+ <20161025090559.eqsll3d7y2ifdaug@thigreal> <1477415895.2263.43.camel@cvidal.org>
+ <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
+ <1477428836.2263.70.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
+ <1477471489.2263.107.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
+ <1477507968.2263.125.camel@cvidal.org> <1477511274.2263.135.camel@cvidal.org>
+ <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
+ <1477512469.2263.141.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
+ <CAEXv5_jDAPAqHp7vfOzU+WqN_h3g00_VUOz2_xxp9nJNzzFjxg@mail.gmail.com>
+ <CAEXv5_izCpFQ39SGL_CD9J2A5XD1TVNJm8C3S+a3TuyriLcbJQ@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Fri, 28 Oct 2016 11:20:33 -0400
+Message-ID: <CAEXv5_g1VEWY9yEnbSihiCxBJYENCJDmitFJ66ihPwO5eNzLog@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 28, 2016 at 03:05:22PM +0100, Mark Rutland wrote:
-> 
-> > > * the precise semantics of performance counter events varies drastically
-> > >   across implementations. PERF_COUNT_HW_CACHE_MISSES, might only map to
-> > >   one particular level of cache, and/or may not be implemented on all
-> > >   cores.
-> > 
-> > If it maps to one particular cache level, we are fine (or maybe will
-> > trigger protection too often). If some cores are not counted, that's bad.
-> 
-> Perhaps, but that depends on a number of implementation details. If "too
-> often" means "all the time", people will turn this off when they could
-> otherwise have been protected (e.g. if we can accurately monitor the
-> last level of cache).
+Done.  I added a line to the "HARDENED_ATOMIC Implementation" section
+of Documentation/security/hardened-atomic.txt describing the results
+of the benchmarks (no measurable performance difference).  You might
+want to add this line to the cover letter as well.
 
-Right, so one of the things mentioned in the paper is x86 NT stores.
-Those are not cached and I'm not at all sure they're accounted in the
-event we use for cache misses.
+I know I promised to post the results of another set of benchmarks I
+performed, and I will do that soon.
+
+Thanks,
+David
+
+On Fri, Oct 28, 2016 at 9:02 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+>>> - add missing tests for atomic64 and local
+>>> - rebase on top of latest linux-next
+>>> - compile test and test run the whole thing in different combinations
+>>> - send rfcv3 with also all atomic maintainers included for wider
+>>> blame/feedback
+>>>
+>>> Does it sound like a good plan for everyone?
+>>>
+>
+>> Actually, it doesn't look like I've updated Documentation/security/hardened-atomic.txt yet.  I need to fix the language explaining the x86 race condition to make it clear that we're discussing the SMP case.
+>> I also want to add a sentence somewhere (either in your cover letter or in the kernel documentation, or both), referencing the benchmark results and lack of demonstrable performance degradation.
+>
+> David, could you please push the changes you want to do to the documentation in separate commit to the top of hardened_atomic_on_next?
+>  I will cherry pick them to our new rebased branch hardened_atomic_next that we still working actively now.
+>
+> Best Regards,
+> Elena.
