@@ -1,120 +1,87 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 29 Oct 2016 21:42:24 +0200
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20161029194224.GB3827@amd>
 References: <20161028172710.GA10309@amd>
- <d2f7dc1d-12ab-de12-cf73-7565fc27f5f7@gruss.cc>
+ <d2f7dc1d-12ab-de12-cf73-7565fc27f5f7@gruss.cc> <20161029194224.GB3827@amd>
+From: Daniel Gruss <daniel@gruss.cc>
+Message-ID: <5f5741d5-0695-6a56-6c05-ebdaaa896f54@gruss.cc>
+Date: Sat, 29 Oct 2016 22:05:16 +0200
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="qlTNgmc+xy1dBmNv"
-Content-Disposition: inline
-In-Reply-To: <d2f7dc1d-12ab-de12-cf73-7565fc27f5f7@gruss.cc>
-Subject: Re: Re: [kernel-hardening] rowhammer protection [was Re: Getting
+In-Reply-To: <20161029194224.GB3827@amd>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] rowhammer protection [was Re: Getting
  interrupt every million cache misses]
-To: Daniel Gruss <daniel@gruss.cc>
+To: Pavel Machek <pavel@ucw.cz>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 29.10.2016 21:42, Pavel Machek wrote:
+> Congratulations. Now I'd like to take away your toys :-).
 
---qlTNgmc+xy1dBmNv
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+I'm would like you to do that, but I'm very confident you're not 
+successful the way your starting ;)
 
-Hi!
+> Not in my testing.
 
-> I think that this idea to mitigate Rowhammer is not a good approach.
+Have you tried music/video reencoding? Games? Anything that works with a 
+decent amount of memory but not too much hard disk i/o?
+Numbers are very clear there...
 
-Well.. it does not have to be good if it is the best we have.
+> First, I'm not at all sure lowest CPU speed would
+> make any difference at all
 
-> I wrote Rowhammer.js (we published a paper on that) and I had the first
-> reproducible bit flips on DDR4 at both, increased and default refresh rat=
-es
-> (published in our DRAMA paper).
+It would. I've seen many bitflips but none where the CPU operated in the 
+lower frequency range.
 
-Congratulations. Now I'd like to take away your toys :-).
+> Second, going to lowest clock speed will reduce performance
 
-> We have researched the number of cache misses induced from different
-> applications in the past and there are many applications that cause more
-> cache misses than Rowhammer (published in our Flush+Flush paper) they just
-> cause them on different rows.
-> Slowing down a system surely works, but you could also, as a mitigation j=
-ust
-> make this CPU core run at the lowest possible frequency. That would likely
-> be more effective than the solution you suggest.
+As does the countermeasure you propose...
 
-Not in my testing. First, I'm not at all sure lowest CPU speed would
-make any difference at all (even CPU at lowest clock is way faster
-than DRAM). Second, going to lowest clock speed will reduce
-performance
+> No, sorry, not going to play this particular whack-a-mole game.
 
-[But if you can test it and it works... it would be nice to know. It
-is very simple to implement w/o kernel changes.]=20
+But you are already with the countermeasure you propose...
 
-> Now, every Rowhammer attack exploits not only the DRAM effects but also t=
-he
-> way the operating system organizes memory.
->=20
-> Some papers exploit page deduplication and disabling page deduplication
-> should be the default also for other reasons, such as information disclos=
-ure
-> attacks. If page deduplication is disabled, attacks like Dedup est Machina
-> and Flip Feng Shui are inherently not possible anymore.
+> Linux is designed for working hardware, and with bit flips, something is
+> going to break. (Does Flip Feng Shui really depend on dedup?)
 
-No, sorry, not going to play this particular whack-a-mole game. Linux
-is designed for working hardware, and with bit flips, something is
-going to break. (Does Flip Feng Shui really depend on dedup?)=20
+Deduplication should be disabled not because of bit flips but because of 
+information leakage (deduplication attacks, cache side-channel attacks, ...)
 
-> Most other attacks target page tables (the Google exploit, Rowhammer.js,
-> Drammer). Now in Rowhammer.js we suggested a very simple fix, that is just
-> an extension of what Linux already does.
-> Unless out of memory page tables and user pages are not placed in the same
-> 2MB region. We suggested that this behavior should be more strict even in
-> memory pressure situations. If the OS can only find a page table that
-> resides in the same 2MB region as a user page, the request should fail
-> instead and the process requesting it should go out of memory. More
-> generally, the attack surface is gone if the OS never places a page table=
- in
-> proximity of less than 2MB to a user page.
+Yes, Flip Feng Shui requires deduplication and does not work without.
+Disabling deduplication is what the authors recommend as a countermeasure.
 
-But it will be nowhere near complete fix, right?
+> But it will be nowhere near complete fix, right?
+>
+> Will fix user attacking kernel, but not user1 attacking user2. You
+> could put each "user" into separate 2MB region, but then you'd have to
+> track who needs go go where. (Same uid is not enough, probably "can
+> ptrace"?)
 
-Will fix user attacking kernel, but not user1 attacking user2. You
-could put each "user" into separate 2MB region, but then you'd have to
-track who needs go go where. (Same uid is not enough, probably "can
-ptrace"?)
+Exactly. But preventing user2kernel is already a good start, and you 
+would prevent that without any doubt and without any cost.
 
-But more importantly....
+user2user is something else to think about and more complicated because 
+you have shared libraries + copy on write --> same problems as 
+deduplication. I think it might make sense to discuss whether separating 
+by uids or even pids would be viable.
 
-That'll still let remote server gain permissons of local user running
-web server... using javascript exploit right? And that's actually
-attack that I find most scary. Local user to root exploit is bad, but
-getting permissions of web browser from remote web server is very,
-very, very bad.
+> That'll still let remote server gain permissons of local user running
+> web server... using javascript exploit right?  And that's actually
+> attack that I find most scary. Local user to root exploit is bad, but
+> getting permissions of web browser from remote web server is very,
+> very, very bad.
 
-> That is a simple fix that does not cost any runtime performance.
+Rowhammer.js skips the browser... it goes JS to full phys. memory 
+access. Anyway, preventing Rowhammer from JS should be easy because even 
+the slightest slow down should be enough to prevent any Rowhammer attack 
+from JS.
 
-Simple? Not really, I'm afraid. Feel free to try to implement it.
+>> That is a simple fix that does not cost any runtime performance.
+>
+> Simple? Not really, I'm afraid. Feel free to try to implement it.
 
-Best regards,
+I had a student who already implemented this in another OS, I'm 
+confident it can be done in Linux as well...
 
-									Pavel
 
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
-
---qlTNgmc+xy1dBmNv
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iEYEARECAAYFAlgU+6AACgkQMOfwapXb+vIyqgCdHAyrKCh12BmZeJMwA47CeZCu
-JVsAn0acrvilfl4OrIlKfrJM7IxJhHgn
-=RKaX
------END PGP SIGNATURE-----
-
---qlTNgmc+xy1dBmNv--
+Cheers,
+Daniel
