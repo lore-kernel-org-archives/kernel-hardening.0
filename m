@@ -1,51 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20161028172710.GA10309@amd>
+From: Daniel Gruss <daniel@gruss.cc>
+Message-ID: <d2f7dc1d-12ab-de12-cf73-7565fc27f5f7@gruss.cc>
+Date: Sat, 29 Oct 2016 15:06:02 +0200
 MIME-Version: 1.0
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9F9E@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <20161020131350.GA18331@thigreal> <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
- <20161025090559.eqsll3d7y2ifdaug@thigreal> <1477415895.2263.43.camel@cvidal.org>
- <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
- <1477428836.2263.70.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
- <1477471489.2263.107.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
- <1477507968.2263.125.camel@cvidal.org> <1477511274.2263.135.camel@cvidal.org>
- <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
- <1477512469.2263.141.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_jDAPAqHp7vfOzU+WqN_h3g00_VUOz2_xxp9nJNzzFjxg@mail.gmail.com>
- <CAEXv5_izCpFQ39SGL_CD9J2A5XD1TVNJm8C3S+a3TuyriLcbJQ@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_g1VEWY9yEnbSihiCxBJYENCJDmitFJ66ihPwO5eNzLog@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41BF9F9E@IRSMSX102.ger.corp.intel.com>
-From: David Windsor <dave@progbits.org>
-Date: Sat, 29 Oct 2016 07:48:00 -0400
-Message-ID: <CAEXv5_g4xSAX3U7hXhAObWuwWDvy4WnuCR55QH_JhgqJcVvFgg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
+In-Reply-To: <20161028172710.GA10309@amd>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: Re: Re: [kernel-hardening] rowhammer protection [was Re: Getting
+ interrupt every million cache misses]
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Oct 29, 2016 at 6:31 AM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
->
->>Done.  I added a line to the "HARDENED_ATOMIC Implementation" section of =
-Documentation/security/hardened-atomic.txt describing the results of the be=
-nchmarks (no measurable performance difference).  You might want to add thi=
-s line to the cover >letter as well.
->
-> Oh, one more thing. David you were planning to change a bit the wording o=
-n the racing issue in the documentation. Could you please still do it? Woul=
-d be great to fix that before sending next rfc.
->
+I think that this idea to mitigate Rowhammer is not a good approach.
 
-Ah yes, I forgot about this, sorry!  I just updated the language in
-Documentation/security/hardened-atomic.txt to include a line
-indicating that the x86 race is only reachable in SMP conditions.
+I wrote Rowhammer.js (we published a paper on that) and I had the first 
+reproducible bit flips on DDR4 at both, increased and default refresh 
+rates (published in our DRAMA paper).
 
-I push --force'd the change to hardened_atomic_next.
+We have researched the number of cache misses induced from different 
+applications in the past and there are many applications that cause more 
+cache misses than Rowhammer (published in our Flush+Flush paper) they 
+just cause them on different rows.
+Slowing down a system surely works, but you could also, as a mitigation 
+just make this CPU core run at the lowest possible frequency. That would 
+likely be more effective than the solution you suggest.
 
-> @everyone: Now I finally cleaned up and repo and deleted all unneeded bra=
-nches. The main working branch is *hardened_atomic_next* now (based on linu=
-x-next stable branch)
->
-> Best Regards,
-> Elena.
+Now, every Rowhammer attack exploits not only the DRAM effects but also 
+the way the operating system organizes memory.
+
+Some papers exploit page deduplication and disabling page deduplication 
+should be the default also for other reasons, such as information 
+disclosure attacks. If page deduplication is disabled, attacks like 
+Dedup est Machina and Flip Feng Shui are inherently not possible anymore.
+
+Most other attacks target page tables (the Google exploit, Rowhammer.js, 
+Drammer). Now in Rowhammer.js we suggested a very simple fix, that is 
+just an extension of what Linux already does.
+Unless out of memory page tables and user pages are not placed in the 
+same 2MB region. We suggested that this behavior should be more strict 
+even in memory pressure situations. If the OS can only find a page table 
+that resides in the same 2MB region as a user page, the request should 
+fail instead and the process requesting it should go out of memory. More 
+generally, the attack surface is gone if the OS never places a page 
+table in proximity of less than 2MB to a user page.
+That is a simple fix that does not cost any runtime performance. It 
+mitigates all these scary attacks and won't even incur a memory cost in 
+most situation.
