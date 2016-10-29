@@ -1,49 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161028195800.GA6193@grsecurity.net>
-References: <1477071466-19256-1-git-send-email-michael.leibowitz@intel.com>
- <CAGXu5jLN5NLH+ScR_i+C18EXqektP92vCrb2h8K_pvR0Yb1bYg@mail.gmail.com>
- <CAGXu5jLCCUK0AWBf4V-Djqydd3y3JxT5ccLmg8ATwn7_1-DTaQ@mail.gmail.com>
- <CAGXu5jKpjZ9KbUCsTSPxO7pGqKra+K28aECxvA4VRR9Tfrzh+A@mail.gmail.com> <20161028195800.GA6193@grsecurity.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 28 Oct 2016 13:40:11 -0700
-Message-ID: <CAGXu5jKqEV9GJ=zgn-aNJw2tv80PQ5Q4VZJ7KgMTGNDXeiz3TA@mail.gmail.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Sat, 29 Oct 2016 01:05:29 -0400
+Message-ID: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] Add the randstruct gcc plugin
-To: Brad Spengler <spender@grsecurity.net>
-Cc: Michael Leibowitz <michael.leibowitz@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, PaX Team <pageexec@freemail.hu>, "Schaufler, Casey" <casey.schaufler@intel.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: [kernel-hardening] Expanding HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Colin Vidal <colin@cvidal.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 28, 2016 at 12:58 PM, Brad Spengler <spender@grsecurity.net> wrote:
-> Just curious:
->
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/randstruct&id=cd7686ee26b839ad5e0467ac2162b360bf1fa673
->
-> "These were found using allyesconfig on x86, arm, and arm64."
->
-> Who found them, and whose code is all that?
->
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/randstruct&id=6dd5fff4a626c8db8800d76f5096f6efcd2a675f
->
-> Who decided on these, whose code is it?
->
-> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/commit/?h=kspp/gcc-plugin/randstruct&id=7169767228cd6d117a0908997d9a3b38bfb6a1b9
->
-> Ditto -- did you spend the hours to figure the ARM hunk out?  I only see your
-> name there.
->
-> Show the world you can do something more than plagiarize code.  This is the
-> third time I'm having to warn you guys collectively about this.  How hard
-> is it to not plagiarize?
+Hi,
 
-I already said the commit logs needed work. I think I have a
-reasonable track record giving you and PaX Team credit for things --
-this isn't the final version by a long shot. I wanted to give Michael
-something to work from before the weekend got here.
+I've created a branch on Elena's github repo called
+hardened_atomic_on_next_expanded
+(https://github.com/ereshetova/linux-stable/tree/hardened_atomic_on_next_expanded)
+which incorporates the PAX_REFCOUNT changes to extend atomic_t
+coverage to kernel reference counters that were originally integer
+types.  Our work to this point only addresses existing atomic_t users:
+this patch is a first attempt to convert non-atomic_t reference
+counter users to use atomic_t, and thus get overflow protection.
 
--Kees
+The users addressed in this branch are:
+  * struct fs_struct.users
+  * struct tty_port.count
+  * struct tty_ldisc_ops.refcount
+  * struct pipe_inode_info.{readers|writers|files|waiting_writers}
+  * struct kmem_cache.refcount
 
--- 
-Kees Cook
-Nexus Security
+This branch currently does not compile, as I am in the process of
+cherrypicking the necessary changes from PAX_REFCOUNT.
+
+I wanted to let Elena/Hans know about this now, as they are preparing
+the next RFC.  I don't know if we want to actually expand kernel
+coverage in this round of RFC's, but there shouldn't be much more work
+left to get this working.
+
+Thanks,
+David
