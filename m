@@ -1,43 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Sat, 29 Oct 2016 06:57:07 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF9F28@IRSMSX102.ger.corp.intel.com>
-References: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
-In-Reply-To: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: Expanding HARDENED_ATOMIC
-To: David Windsor <dwindsor@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Colin Vidal <colin@cvidal.org>
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9F28@IRSMSX102.ger.corp.intel.com>
+References: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41BF9F28@IRSMSX102.ger.corp.intel.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Sat, 29 Oct 2016 03:13:15 -0400
+Message-ID: <CAEXv5_jSRz2F=JrVo-EFUSftvNbFSumDeZcypvFRpXsVyrskjg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: Expanding HARDENED_ATOMIC
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Colin Vidal <colin@cvidal.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SGkgRGF2aWQsIA0KDQpUaGFuayB5b3UgZm9yIGxldHRpbmcgdXMga25vdyEgVGhlIG1vc3QgdXAt
-dG8tZGF0ZSBicmFuY2ggbm93IGlzIGhhcmRlbmVkX2F0b21pY19uZXh0IHNpbmNlIGl0IGNvbnRh
-aW5zIG1vc3QgcmVjZW50IGZpeGVzIGFuZCBpdCBpcyByZWJhc2VkIG9uIHRvcCBvZiBsYXRlc3Qg
-TGludXgtbmV4dCBzdGFibGUuIA0KSSB3aWxsIHByb2JhYmx5IHRlcm1pbmF0ZSBoYXJkZW5lZF9h
-dG9taWNfb25fbmV4dCBicmFuY2ggYWZ0ZXIgSSBjaGVycnktcGljayB5b3VyIGRvY3VtZW50YXRp
-b24gY2hhbmdlLiANCg0KSSB3b3VsZCBwcm9wb3NlIHRoYXQgd2Ugc2VuZCB0aGUgZXhpc3Rpbmcg
-cmZjIHRoaXMgd2Vla2VuZCB3aXRob3V0IHlvdXIgbmV3IGFkZGl0aW9ucyBhbmQgdGhlbiB3ZSBj
-YW4gaW5jbHVkZSB0aGVtIGludG8gbmV3IHJmY3Y0IG9yIGl0IG1pZ2h0IGJlIGFsc28gbmV3IHBh
-dGNoIHNldCBhbGwgdG9nZXRoZXIgc2luY2UgdGhpcyBvbmUgaXMgYWxyZWFkeSBzbyBiaWcuIA0K
-V2hhdCBkbyB5b3UgdGhpbms/DQoNCkJlc3QgUmVnYXJkcywNCkVsZW5hLg0KDQo+IEkndmUgY3Jl
-YXRlZCBhIGJyYW5jaCBvbiBFbGVuYSdzIGdpdGh1YiByZXBvIGNhbGxlZCBoYXJkZW5lZF9hdG9t
-aWNfb25fbmV4dF9leHBhbmRlZA0KKGh0dHBzOi8vZ2l0aHViLmNvbS9lcmVzaGV0b3ZhL2xpbnV4
-LXN0YWJsZS90cmVlL2hhcmRlbmVkX2F0b21pY19vbl9uZXh0X2V4cGFuZGVkKQ0Kd2hpY2ggaW5j
-b3Jwb3JhdGVzIHRoZSBQQVhfUkVGQ09VTlQgY2hhbmdlcyB0byBleHRlbmQgYXRvbWljX3QgY292
-ZXJhZ2UgdG8ga2VybmVsIHJlZmVyZW5jZSBjb3VudGVycyB0aGF0IHdlcmUgb3JpZ2luYWxseSBp
-bnRlZ2VyIHR5cGVzLiAgT3VyIHdvcmsgdG8gdGhpcyBwb2ludCBvbmx5IGFkZHJlc3NlcyBleGlz
-dGluZyBhdG9taWNfdCB1c2VyczoNCnRoaXMgcGF0Y2ggaXMgYSBmaXJzdCBhdHRlbXB0IHRvIGNv
-bnZlcnQgbm9uLWF0b21pY190IHJlZmVyZW5jZSBjb3VudGVyIHVzZXJzIHRvIHVzZSBhdG9taWNf
-dCwgYW5kIHRodXMgZ2V0IG92ZXJmbG93IHByb3RlY3Rpb24uDQoNClRoZSB1c2VycyBhZGRyZXNz
-ZWQgaW4gdGhpcyBicmFuY2ggYXJlOg0KICAqIHN0cnVjdCBmc19zdHJ1Y3QudXNlcnMNCiAgKiBz
-dHJ1Y3QgdHR5X3BvcnQuY291bnQNCiAgKiBzdHJ1Y3QgdHR5X2xkaXNjX29wcy5yZWZjb3VudA0K
-ICAqIHN0cnVjdCBwaXBlX2lub2RlX2luZm8ue3JlYWRlcnN8d3JpdGVyc3xmaWxlc3x3YWl0aW5n
-X3dyaXRlcnN9DQogICogc3RydWN0IGttZW1fY2FjaGUucmVmY291bnQNCg0KVGhpcyBicmFuY2gg
-Y3VycmVudGx5IGRvZXMgbm90IGNvbXBpbGUsIGFzIEkgYW0gaW4gdGhlIHByb2Nlc3Mgb2YgY2hl
-cnJ5cGlja2luZyB0aGUgbmVjZXNzYXJ5IGNoYW5nZXMgZnJvbSBQQVhfUkVGQ09VTlQuDQoNCkkg
-d2FudGVkIHRvIGxldCBFbGVuYS9IYW5zIGtub3cgYWJvdXQgdGhpcyBub3csIGFzIHRoZXkgYXJl
-IHByZXBhcmluZyB0aGUgbmV4dCBSRkMuICBJIGRvbid0IGtub3cgaWYgd2Ugd2FudCB0byBhY3R1
-YWxseSBleHBhbmQga2VybmVsIGNvdmVyYWdlIGluIHRoaXMgcm91bmQgb2YgUkZDJ3MsIGJ1dCB0
-aGVyZSBzaG91bGRuJ3QgYmUgbXVjaCBtb3JlIHdvcmsgbGVmdCB0byBnZXQgdGhpcyB3b3JraW5n
-Lg0KDQpUaGFua3MsDQpEYXZpZA0K
+On Sat, Oct 29, 2016 at 2:57 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+> Hi David,
+>
+> Thank you for letting us know! The most up-to-date branch now is hardened_atomic_next since it contains most recent fixes and it is rebased on top of latest Linux-next stable.
+> I will probably terminate hardened_atomic_on_next branch after I cherry-pick your documentation change.
+>
+> I would propose that we send the existing rfc this weekend without your new additions and then we can include them into new rfcv4 or it might be also new patch set all together since this one is already so big.
+> What do you think?
+>
+
+I tend to agree: I will recreate the hardened_atomic_on_next_expanded
+branch on top of hardened_atomic_next and call it
+hardened_atomic_next_expanded.  I will post patches as soon as it
+compiles.
+
+> Best Regards,
+> Elena.
+>
+>> I've created a branch on Elena's github repo called hardened_atomic_on_next_expanded
+> (https://github.com/ereshetova/linux-stable/tree/hardened_atomic_on_next_expanded)
+> which incorporates the PAX_REFCOUNT changes to extend atomic_t coverage to kernel reference counters that were originally integer types.  Our work to this point only addresses existing atomic_t users:
+> this patch is a first attempt to convert non-atomic_t reference counter users to use atomic_t, and thus get overflow protection.
+>
+> The users addressed in this branch are:
+>   * struct fs_struct.users
+>   * struct tty_port.count
+>   * struct tty_ldisc_ops.refcount
+>   * struct pipe_inode_info.{readers|writers|files|waiting_writers}
+>   * struct kmem_cache.refcount
+>
+> This branch currently does not compile, as I am in the process of cherrypicking the necessary changes from PAX_REFCOUNT.
+>
+> I wanted to let Elena/Hans know about this now, as they are preparing the next RFC.  I don't know if we want to actually expand kernel coverage in this round of RFC's, but there shouldn't be much more work left to get this working.
+>
+> Thanks,
+> David
