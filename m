@@ -1,81 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Sat, 29 Oct 2016 06:57:07 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BF9F28@IRSMSX102.ger.corp.intel.com>
+References: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
+In-Reply-To: <CAEXv5_iWUUs-NwzJn7n38cX0R_Mdd2V4+T6E16akwrAMqhsuiA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BF9D21@IRSMSX102.ger.corp.intel.com>
-References: <1476959131-6153-1-git-send-email-elena.reshetova@intel.com>
- <20161020131350.GA18331@thigreal> <CAGXu5jK1MNzM5Qi8o+HHekWm38n-WVPQ1Q3_EPpjYqE0kk8X0w@mail.gmail.com>
- <20161025090559.eqsll3d7y2ifdaug@thigreal> <1477415895.2263.43.camel@cvidal.org>
- <CAEXv5_jk+2KOxL9UdZ5+6B8+JV2CBtNGi65a7ddtvxwUGmnPkA@mail.gmail.com>
- <1477428836.2263.70.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8C68@IRSMSX102.ger.corp.intel.com>
- <1477471489.2263.107.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF8D57@IRSMSX102.ger.corp.intel.com>
- <1477507968.2263.125.camel@cvidal.org> <1477511274.2263.135.camel@cvidal.org>
- <CAGXu5j+N8cm=4Wu8EmqXrEYXj-P4GwJX3fmKMcUM27zjEy+dig@mail.gmail.com>
- <1477512469.2263.141.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BF9479@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_jDAPAqHp7vfOzU+WqN_h3g00_VUOz2_xxp9nJNzzFjxg@mail.gmail.com>
- <CAEXv5_izCpFQ39SGL_CD9J2A5XD1TVNJm8C3S+a3TuyriLcbJQ@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41BF9AD4@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_g1VEWY9yEnbSihiCxBJYENCJDmitFJ66ihPwO5eNzLog@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41BF9D21@IRSMSX102.ger.corp.intel.com>
-From: David Windsor <dave@progbits.org>
-Date: Sat, 29 Oct 2016 01:27:38 -0400
-Message-ID: <CAEXv5_i-9=6B9Ngm93ccH662eqkbHttDcZpiYUxTz_er8FKt=w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: [kernel-hardening] RE: Expanding HARDENED_ATOMIC
+To: David Windsor <dwindsor@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>, Kees Cook <keescook@chromium.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Colin Vidal <colin@cvidal.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Oct 28, 2016 at 3:51 PM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
->>Done.  I added a line to the "HARDENED_ATOMIC Implementation" section of =
-Documentation/security/hardened-atomic.txt describing the results of the be=
-nchmarks (no measurable performance difference).  You might want to add thi=
-s line to the cover >letter as well.
->
-> Thank you David! I will merge it tomorrow before sending a new rfc. I wil=
-l also add the performance line to cover letter.
->
->> I know I promised to post the results of another set of benchmarks I per=
-formed, and I will do that soon.
->
-> If you can send it before tomorrow, would be great! We can include them i=
-n v3 straight then.
-> I would like to get v3 out tomorrow that people can look at it before the=
- kernel summit.
->
-
-The benchmark results don't have anything that will actually go into
-the RFC.  The results were that there's no measurable performance
-degradation, and this language has already been included in my update
-to the documentation.  I'll post the benchmark results when I get a
-chance, but they're really just for informational purposes at this
-point.
-
-> Best Regards,
-> Elena.
->
-> On Fri, Oct 28, 2016 at 9:02 AM, Reshetova, Elena <elena.reshetova@intel.=
-com> wrote:
->>>> - add missing tests for atomic64 and local
->>>> - rebase on top of latest linux-next
->>>> - compile test and test run the whole thing in different
->>>> combinations
->>>> - send rfcv3 with also all atomic maintainers included for wider
->>>> blame/feedback
->>>>
->>>> Does it sound like a good plan for everyone?
->>>>
->>
->>> Actually, it doesn't look like I've updated Documentation/security/hard=
-ened-atomic.txt yet.  I need to fix the language explaining the x86 race co=
-ndition to make it clear that we're discussing the SMP case.
->>> I also want to add a sentence somewhere (either in your cover letter or=
- in the kernel documentation, or both), referencing the benchmark results a=
-nd lack of demonstrable performance degradation.
->>
->> David, could you please push the changes you want to do to the documenta=
-tion in separate commit to the top of hardened_atomic_on_next?
->>  I will cherry pick them to our new rebased branch hardened_atomic_next =
-that we still working actively now.
->>
->> Best Regards,
->> Elena.
+SGkgRGF2aWQsIA0KDQpUaGFuayB5b3UgZm9yIGxldHRpbmcgdXMga25vdyEgVGhlIG1vc3QgdXAt
+dG8tZGF0ZSBicmFuY2ggbm93IGlzIGhhcmRlbmVkX2F0b21pY19uZXh0IHNpbmNlIGl0IGNvbnRh
+aW5zIG1vc3QgcmVjZW50IGZpeGVzIGFuZCBpdCBpcyByZWJhc2VkIG9uIHRvcCBvZiBsYXRlc3Qg
+TGludXgtbmV4dCBzdGFibGUuIA0KSSB3aWxsIHByb2JhYmx5IHRlcm1pbmF0ZSBoYXJkZW5lZF9h
+dG9taWNfb25fbmV4dCBicmFuY2ggYWZ0ZXIgSSBjaGVycnktcGljayB5b3VyIGRvY3VtZW50YXRp
+b24gY2hhbmdlLiANCg0KSSB3b3VsZCBwcm9wb3NlIHRoYXQgd2Ugc2VuZCB0aGUgZXhpc3Rpbmcg
+cmZjIHRoaXMgd2Vla2VuZCB3aXRob3V0IHlvdXIgbmV3IGFkZGl0aW9ucyBhbmQgdGhlbiB3ZSBj
+YW4gaW5jbHVkZSB0aGVtIGludG8gbmV3IHJmY3Y0IG9yIGl0IG1pZ2h0IGJlIGFsc28gbmV3IHBh
+dGNoIHNldCBhbGwgdG9nZXRoZXIgc2luY2UgdGhpcyBvbmUgaXMgYWxyZWFkeSBzbyBiaWcuIA0K
+V2hhdCBkbyB5b3UgdGhpbms/DQoNCkJlc3QgUmVnYXJkcywNCkVsZW5hLg0KDQo+IEkndmUgY3Jl
+YXRlZCBhIGJyYW5jaCBvbiBFbGVuYSdzIGdpdGh1YiByZXBvIGNhbGxlZCBoYXJkZW5lZF9hdG9t
+aWNfb25fbmV4dF9leHBhbmRlZA0KKGh0dHBzOi8vZ2l0aHViLmNvbS9lcmVzaGV0b3ZhL2xpbnV4
+LXN0YWJsZS90cmVlL2hhcmRlbmVkX2F0b21pY19vbl9uZXh0X2V4cGFuZGVkKQ0Kd2hpY2ggaW5j
+b3Jwb3JhdGVzIHRoZSBQQVhfUkVGQ09VTlQgY2hhbmdlcyB0byBleHRlbmQgYXRvbWljX3QgY292
+ZXJhZ2UgdG8ga2VybmVsIHJlZmVyZW5jZSBjb3VudGVycyB0aGF0IHdlcmUgb3JpZ2luYWxseSBp
+bnRlZ2VyIHR5cGVzLiAgT3VyIHdvcmsgdG8gdGhpcyBwb2ludCBvbmx5IGFkZHJlc3NlcyBleGlz
+dGluZyBhdG9taWNfdCB1c2VyczoNCnRoaXMgcGF0Y2ggaXMgYSBmaXJzdCBhdHRlbXB0IHRvIGNv
+bnZlcnQgbm9uLWF0b21pY190IHJlZmVyZW5jZSBjb3VudGVyIHVzZXJzIHRvIHVzZSBhdG9taWNf
+dCwgYW5kIHRodXMgZ2V0IG92ZXJmbG93IHByb3RlY3Rpb24uDQoNClRoZSB1c2VycyBhZGRyZXNz
+ZWQgaW4gdGhpcyBicmFuY2ggYXJlOg0KICAqIHN0cnVjdCBmc19zdHJ1Y3QudXNlcnMNCiAgKiBz
+dHJ1Y3QgdHR5X3BvcnQuY291bnQNCiAgKiBzdHJ1Y3QgdHR5X2xkaXNjX29wcy5yZWZjb3VudA0K
+ICAqIHN0cnVjdCBwaXBlX2lub2RlX2luZm8ue3JlYWRlcnN8d3JpdGVyc3xmaWxlc3x3YWl0aW5n
+X3dyaXRlcnN9DQogICogc3RydWN0IGttZW1fY2FjaGUucmVmY291bnQNCg0KVGhpcyBicmFuY2gg
+Y3VycmVudGx5IGRvZXMgbm90IGNvbXBpbGUsIGFzIEkgYW0gaW4gdGhlIHByb2Nlc3Mgb2YgY2hl
+cnJ5cGlja2luZyB0aGUgbmVjZXNzYXJ5IGNoYW5nZXMgZnJvbSBQQVhfUkVGQ09VTlQuDQoNCkkg
+d2FudGVkIHRvIGxldCBFbGVuYS9IYW5zIGtub3cgYWJvdXQgdGhpcyBub3csIGFzIHRoZXkgYXJl
+IHByZXBhcmluZyB0aGUgbmV4dCBSRkMuICBJIGRvbid0IGtub3cgaWYgd2Ugd2FudCB0byBhY3R1
+YWxseSBleHBhbmQga2VybmVsIGNvdmVyYWdlIGluIHRoaXMgcm91bmQgb2YgUkZDJ3MsIGJ1dCB0
+aGVyZSBzaG91bGRuJ3QgYmUgbXVjaCBtb3JlIHdvcmsgbGVmdCB0byBnZXQgdGhpcyB3b3JraW5n
+Lg0KDQpUaGFua3MsDQpEYXZpZA0K
