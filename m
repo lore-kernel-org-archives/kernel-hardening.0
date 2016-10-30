@@ -1,25 +1,25 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20161028172710.GA10309@amd>
- <d2f7dc1d-12ab-de12-cf73-7565fc27f5f7@gruss.cc> <20161029194224.GB3827@amd>
- <5f5741d5-0695-6a56-6c05-ebdaaa896f54@gruss.cc> <20161029210518.GC3827@amd>
- <571c5ef8-ccce-0b7a-b506-c69a024276a0@gruss.cc> <20161029214540.GD3827@amd>
- <c16d6b6c-608e-c711-cc18-34b8d0082183@gruss.cc> <20161029220133.GE3827@amd>
-From: Daniel Gruss <daniel@gruss.cc>
-Message-ID: <b73caa1b-fde5-c10f-8c28-014027a55333@gruss.cc>
-Date: Sun, 30 Oct 2016 00:02:46 +0200
+Date: Sun, 30 Oct 2016 15:03:07 +0000
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20161030150307.33vc2m7y5y6wzbqc@localhost>
+References: <1477585654-8908-1-git-send-email-labbott@redhat.com>
 MIME-Version: 1.0
-In-Reply-To: <20161029220133.GE3827@amd>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] rowhammer protection [was Re: Getting
- interrupt every million cache misses]
-To: Pavel Machek <pavel@ucw.cz>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1477585654-8908-1-git-send-email-labbott@redhat.com>
+Subject: [kernel-hardening] Re: [PATCHv4 0/4] WX checking for arm64
+To: Laura Abbott <labbott@redhat.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, David Brown <david.brown@linaro.org>, Will Deacon <will.deacon@arm.com>, linux-efi@vger.kernel.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 30.10.2016 00:01, Pavel Machek wrote:
-> Hmm, maybe I'm glad I don't have a new machine :-).
->
-> I assume you still get _some_ bitflips with generic "rowhammer"?
+On Thu, Oct 27, 2016 at 09:27:30AM -0700, Laura Abbott wrote:
+> Laura Abbott (4):
+>   arm64: dump: Make ptdump debugfs a separate option
+>   arm64: dump: Make the page table dumping seq_file optional
+>   arm64: dump: Remove max_addr
+>   arm64: dump: Add checking for writable and exectuable pages
 
-1 or 2 every 20-30 minutes...
+Queued for 4.10. Thanks.
+
+-- 
+Catalin
