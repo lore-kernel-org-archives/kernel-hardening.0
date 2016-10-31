@@ -1,82 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477949185.8761.13.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Mon, 31 Oct 2016 17:26:25 -0400
-In-Reply-To: <20161031212251.GB3286@pc.thejh.net>
+From: Florian Weimer <fw@deneb.enyo.de>
 References: <1477922641-2221-1-git-send-email-jann@thejh.net>
-	 <CAGXu5j+Hz=AmmTAh3+QOv1wTG3HA60LPK0Dq6F8uybNQ5e+sHw@mail.gmail.com>
-	 <20161031162918.GA2994@pc.thejh.net> <87mvhks0vs.fsf@mid.deneb.enyo.de>
-	 <1477947388.8761.3.camel@gmail.com> <1477947674.8761.4.camel@gmail.com>
-	 <87ins8rzqm.fsf@mid.deneb.enyo.de> <20161031212251.GB3286@pc.thejh.net>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-R6vl2bnfngJG/0ZwYDkc"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH] fork: make whole stack_canary
- random
-To: Jann Horn <jann@thejh.net>, Florian Weimer <fw@deneb.enyo.de>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, LKML <linux-kernel@vger.kernel.org>
+	<CAGXu5j+Hz=AmmTAh3+QOv1wTG3HA60LPK0Dq6F8uybNQ5e+sHw@mail.gmail.com>
+	<20161031162918.GA2994@pc.thejh.net>
+	<87mvhks0vs.fsf@mid.deneb.enyo.de> <1477947388.8761.3.camel@gmail.com>
+	<1477947674.8761.4.camel@gmail.com> <87ins8rzqm.fsf@mid.deneb.enyo.de>
+	<1477948871.8761.9.camel@gmail.com>
+Date: Mon, 31 Oct 2016 22:38:00 +0100
+In-Reply-To: <1477948871.8761.9.camel@gmail.com> (Daniel Micay's message of
+	"Mon, 31 Oct 2016 17:21:11 -0400")
+Message-ID: <8760o8ryh3.fsf@mid.deneb.enyo.de>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Re: [PATCH] fork: make whole stack_canary random
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+* Daniel Micay:
 
---=-R6vl2bnfngJG/0ZwYDkc
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+> -fstack-stack is supposed to handle a single guard by default, and
+> that's all there is for thread stacks by default.
 
-On Mon, 2016-10-31 at 22:22 +0100, Jann Horn wrote:
-> On Mon, Oct 31, 2016 at 10:10:41PM +0100, Florian Weimer wrote:
-> > * Daniel Micay:
-> >=20
-> > > > It makes a lot of sense on x86_64 where it means the canary is
-> > > > still 56 bits. Also, you want -fstack-check for protecting again
-> > > > stack overflows rather than stack *buffer* overflow. SSP won't
-> > > > really help you in that regard. Sadly, while -fstack-check now
-> > > > works well in GCC 6 with little performance cost, it's not
-> > > > really a
-> >=20
-> > I think GCC still does not treat the return address push on
-> > architectures which have such a CALL instruction as an implicit
-> > stack
-> > probe.
-> >=20
-> > > > complete feature (and Clang impls it as a no-op!).
-> >=20
-> > How many guard pages at the end of the stack does the kernel
-> > guarantee?=C2=A0=C2=A0I saw some -fstack-check-generated code which see=
-med to
-> > jump over a single guard page.
->=20
-> Until recently: Zero, no guard pages below stacks, stack overflow
-> goes straight into some other allocation.
-> Now: One guard page, thanks to a lot of work by Andy Lutomirski.
-> (I think that change is in the current 4.9-rc3 kernel, but not in
-> any stable kernel yet.)
+Okay, then I'll really have to look at the probing offsets again.
+It's been on my to-do list since about 2012, and arguably, it *is* a
+user-space thing.
 
-I think Florian is talking about the main thread stack in userspace.
+And I just realized that we should probably fail at dlopen time if
+some tries to open a DSO which needs an executable stack, rather than
+silently changing all thread stacks to executable. *sigh*
 
-Thus the next part about how it doesn't actually *guarantee* a guard
-page at all right now for that. Userspace has to work around that if
-it's worried about it (it can't really happen in practice though, but
-it's not great that mmap with a hint + no MAP_FIXED can break it).
---=-R6vl2bnfngJG/0ZwYDkc
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+>> > Note: talking about userspace after the entropy bit. The kernel
+>> > doesn't
+>> > really -fstack-check, at least in even slightly sane code...
+>>=A0
+>> There used to be lots of discussions about kernel stack sizes ...
+>
+> It should just be banning VLAs, alloca and large stack frames though, if
+> it's not already. There wasn't even support for guard pages with kernel
+> stacks until recently outside grsecurity,
 
------BEGIN PGP SIGNATURE-----
+Which is not surprising, considering that one prime motivation for
+small stacks was to conserve 32-bit address space.  But I'm glad that
+there is now a guard page.  Hopefully, it does not affect performance,
+and on 64-bit, at least there isn't the address space limit to worry
+about.
 
-iQIzBAABCAAdBQJYF7cBFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
-8iph8BAAgFAsZs12DwPHpBQQVAW444EEG0vsSXOvRaGbQhqAfw47Aj8ht9gFcIwb
-IriMbDEiqmAa9bzhXsvglvi/2ewDt8PT2haEM7S+zvqeY/j8ooK31Zzmu68Tkym9
-hu+x/0bBiP3DGYq2sBxc9MCNrVTEJYWde0TPBINWH81yJrPIueEARqrX34gZyMr6
-UtPPVssEw9xIbxK2xbsnBv7IcM54iyYp0EiPfoUq7teUKGNNFV+jyX75eJsK9Jz7
-Ye3zxMahnXVxUAN4vH7l0Orw5XR0ev6MTNPb56q3jBxyJR5Jsl3ai4p8e4chTKhR
-bED5d9uSl+3eYynWFtOSS8DzU9k66RiPxr2/70oZLHAsnOSlxuUSUbQQXVvLsEDw
-+NaoK92Q4N3dRVqwwP7tnpKYPgFMdiY7vVq28CUgcCF0qYpPs5cDrTuiOG1XwUZU
-XXsGyiOW9PmFvePaJVZURBsAWDN/MtJRckvkp0S/omMXKw+rE9xyNsUlOnim9Ec4
-vLj7xglETgC3BpZ0JLd/W6gtiUwcKTL2tjiYtgabLPIjvsESxzPoCnep7nC1R3vB
-DQTWyntqlegs0yXHjo5vqmiJDoWuaLjdwFYFv/JoKdez+ohCoVfm8PDWhKZVdK1n
-Ks0m7266gjdH8GAn6NulWazPh+AZzxs/9kgewTjn9RDz7ooRG0Q=
-=b0Nx
------END PGP SIGNATURE-----
+> and -fstack-check relies on them so it doesn't seem like a great
+> solution for the kernel.
 
---=-R6vl2bnfngJG/0ZwYDkc--
+-fsplit-stack could enforce stack usage limits even without guard
+pages, but of course, there is some run-time overhead, and the limit
+has to come from somewhere (typically the TCB).
