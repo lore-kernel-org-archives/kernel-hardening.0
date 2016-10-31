@@ -1,122 +1,94 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 31 Oct 2016 22:13:03 +0100
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20161031211303.GA15724@amd>
-References: <20161027082801.GE3568@worktop.programming.kicks-ass.net>
- <20161027091104.GB19469@amd>
- <20161027093334.GK3102@twins.programming.kicks-ass.net>
- <CAGXu5jL=xzyPRQgOp5ON2+X0=5z4-jg4NyFCrTSrRPm5puOm0Q@mail.gmail.com>
- <20161027212747.GA18147@amd>
- <20161028095141.GA5806@leverpostej>
- <20161028112136.GA5635@amd>
- <20161028140522.GH5806@leverpostej>
- <20161031082705.GA2863@amd>
- <20161031144739.GA6007@remoulade>
-MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="HcAYCG3uE/tztfnV"
-Content-Disposition: inline
-In-Reply-To: <20161031144739.GA6007@remoulade>
-Subject: Re: [kernel-hardening] rowhammer protection [was Re: Getting
- interrupt every million cache misses]
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Arnaldo Carvalho de Melo <acme@redhat.com>, kernel list <linux-kernel@vger.kernel.org>, Ingo Molnar <mingo@redhat.com>, Alexander Shishkin <alexander.shishkin@linux.intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1477948871.8761.9.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Mon, 31 Oct 2016 17:21:11 -0400
+In-Reply-To: <87ins8rzqm.fsf@mid.deneb.enyo.de>
+References: <1477922641-2221-1-git-send-email-jann@thejh.net>
+	 <CAGXu5j+Hz=AmmTAh3+QOv1wTG3HA60LPK0Dq6F8uybNQ5e+sHw@mail.gmail.com>
+	 <20161031162918.GA2994@pc.thejh.net> <87mvhks0vs.fsf@mid.deneb.enyo.de>
+	 <1477947388.8761.3.camel@gmail.com> <1477947674.8761.4.camel@gmail.com>
+	 <87ins8rzqm.fsf@mid.deneb.enyo.de>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-AyK6V0Lx2ymOWFCjM29W"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [PATCH] fork: make whole stack_canary
+ random
+To: Florian Weimer <fw@deneb.enyo.de>
+Cc: Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---HcAYCG3uE/tztfnV
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+--=-AyK6V0Lx2ymOWFCjM29W
+Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Mon 2016-10-31 14:47:39, Mark Rutland wrote:
-> On Mon, Oct 31, 2016 at 09:27:05AM +0100, Pavel Machek wrote:
-> > > On Fri, Oct 28, 2016 at 01:21:36PM +0200, Pavel Machek wrote:
-> > > > > Has this been tested on a system vulnerable to rowhammer, and if =
-so, was
-> > > > > it reliable in mitigating the issue?
->=20
-> > > > I do not have vulnerable machine near me, so no "real" tests, but
-> > > > I'm pretty sure it will make the error no longer reproducible with =
-the
-> > > > newer version. [Help welcome ;-)]
-> > >=20
-> > > Even if we hope this works, I think we have to be very careful with t=
-hat
-> > > kind of assertion. Until we have data is to its efficacy, I don't thi=
-nk
-> > > we should claim that this is an effective mitigation.
-=2E..
->=20
-> To be quite frank, this is anecdotal. It only shows one particular attack=
- is
-> made slower (or perhaps defeated), and doesn't show that the mitigation is
-> reliable or generally applicable (to other machines or other variants of =
-the
-> attack).
+On Mon, 2016-10-31 at 22:10 +0100, Florian Weimer wrote:
+> * Daniel Micay:
+>=C2=A0
+> > > It makes a lot of sense on x86_64 where it means the canary is
+> > > still 56 bits. Also, you want -fstack-check for protecting again
+> > > stack overflows rather than stack *buffer* overflow. SSP won't
+> > > really help you in that regard. Sadly, while -fstack-check now
+> > > works well in GCC 6 with little performance cost, it's not really
+> > > a
+>=C2=A0
+> I think GCC still does not treat the return address push on
+> architectures which have such a CALL instruction as an implicit stack
+> probe.
+>=C2=A0
+> > > complete feature (and Clang impls it as a no-op!).
+>=C2=A0
+> How many guard pages at the end of the stack does the kernel
+> guarantee?=C2=A0=C2=A0I saw some -fstack-check-generated code which seeme=
+d to
+> jump over a single guard page.
+>
+> The other thing I've seen which could impact the effectiveness of
+> -fstack-check: mmap *without* MAP_FIXED and a hint within stack
+> allocation can create a mapping inside the stack.=C2=A0=C2=A0That's rathe=
+r
+> surprising, and I'm not sure if the net result is that there actually
+> is a guard page in all cases.
 
-So... I said that I'm pretty sure it will fix problem in my testing,
-then you say that I should be careful with my words, I confirm it was
-true, and now you complain that it is anecdotal?
+It's not ideal but userspace can work around it. OpenJDK and ART both do
+something like walking to the end of the main thread stack during init
+to install their own guard region. ART then uses all but the last guard
+page it installed as a red zone to handle out-of-stack (not sure about
+OpenJDK).
 
-Are you serious?
+-fstack-stack is supposed to handle a single guard by default, and
+that's all there is for thread stacks by default.
 
-Of course I know that fixing rowhammer-test on my machine is quite a
-low bar to ask. _And that's also why I said I'm pretty sure I'd pass
-that bar_.
+> > Note: talking about userspace after the entropy bit. The kernel
+> > doesn't
+> > really -fstack-check, at least in even slightly sane code...
+>=C2=A0
+> There used to be lots of discussions about kernel stack sizes ...
 
-I'm still asking for help with testing, but all you do is claim that
-"we can't be sure".
-
-> Even if this happens to work on some machines, I still do not think one c=
-an
-> sell this as a generally applicable and reliable mitigation. Especially g=
-iven
-> that others working in this area seem to have evidence otherwise, e.g. [1=
-] (as
-> noted by spender in the LWN comments).
-
-Slowing this attack _is_ defeating it. It is enough to slow it 8
-times, and it is gone, boom, not there any more.
-
-Now.. I have to figure out what to do with movnt. No currently known
-attack uses movnt. Still, that one should be solved.
-
-Other than that... this is not magic. Attack is quite well
-understood. All you have to do is prevent more than 8msec worth of
-memory accesses. My patch can do that, and it will work,
-everywhere... you just won't like the fact that your machine now works
-on 10% of original performance.
-
-Now, it is possible that researches will come up with attack that only
-needs 2msec worth of accesses. So we change the constants. Performance
-will be even worse. It is also possible that even more broken DRAM
-comes out. Same solution. Plus someone certainly has a memory that
-flips some bits even without help from funny access patterns. Too
-bad. We can't help them.
-
-Would it be less confusing if we redefined task description from
-"prevent rowhammer" to "prevent more than X memory accesses in 64
-msec"?
-
-Best regards,
-									Pavel
-
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
-
---HcAYCG3uE/tztfnV
+It should just be banning VLAs, alloca and large stack frames though, if
+it's not already. There wasn't even support for guard pages with kernel
+stacks until recently outside grsecurity, and -fstack-check relies on
+them so it doesn't seem like a great solution for the kernel.
+--=-AyK6V0Lx2ymOWFCjM29W
 Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
 
-iEYEARECAAYFAlgXs94ACgkQMOfwapXb+vIhjQCfXUwqw3ptw0b5WCddHxVP6m1G
-m2wAn2n3FTUmz7VfowZQNM/XxhvZMDR8
-=neRu
+iQIzBAABCAAdBQJYF7XHFhxkYW5pZWxtaWNheUBnbWFpbC5jb20ACgkQ+ecS5Zr1
+8iplbg/8Cxs037rjkbWibrUfsfUMMGJYZT3khr/hv6jyQmRjhE16yOW/mCoGy1R3
+QL/7VFwN+T0JkwfSeR6Vn6sfCcCyVL68wWt78IIudIV2t20ZdTwHTDXe5XgAMJfp
++YE4T5UgIVIli0E1jpAY7+NQjyz+ATQVMoyXnZ+yk6ZssfB5KSDJ0DHOZ5MEuQzK
+tkwUdRCLqmu/7n5eX1pTtnL/SlhECWb4dPpblPe5ZQCca2LsaJjwxQuK8G35HBIQ
+9keEp6b9BQBPJA/RHCMJO491FenxINB0lAURkIYWwEH1onJUyQXpTSQ0WbZlQ2MP
+Gb9bngknls/4r0gsb8smiSMpY5oLNsdQxc30Dzc0gECL/fRkhaI/Pqpd5nG8lTeM
+nFcp8iwFs7cKwPszd1qAUH3R2lwkjZ6jmQh7hUR20THVfuCKt+/lloVG5dczUTIP
+9kNIwWrxri2oH3drP2vZ69RT6hOZC5OkAQ8tXQA6V5FMTDWkuYRuQqgImm1rfSxV
+GTa6hr/e55/x0ACAEMyhrewFud4odHog0YBGu6MXNWWvF73boocqTvK1cjpk7FUl
+E0QWu8pVdqDrm4ZAU2wYtcVah9SVraNGV6e7ZrvsrFW/IE1Pqrf0PSrgJYzz6Y/x
+eeXMrh60ZUi6k4Pm+zX43deo3mfy2siZkOYcLrXI5C2zkbuTyZE=
+=pouk
 -----END PGP SIGNATURE-----
 
---HcAYCG3uE/tztfnV--
+--=-AyK6V0Lx2ymOWFCjM29W--
