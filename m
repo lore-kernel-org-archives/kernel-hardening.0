@@ -1,80 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Tue, 1 Nov 2016 11:02:41 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFACB6@IRSMSX102.ger.corp.intel.com>
+Date: Tue, 1 Nov 2016 13:35:42 +0200
+From: Hans Liljestrand <ishkamiel@gmail.com>
+Message-ID: <20161101113542.rofdy3cbgt6c3cvp@thigreal>
 References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
-	 <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
- <1477996972.2236.19.camel@cvidal.org>
-In-Reply-To: <1477996972.2236.19.camel@cvidal.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
+ <1477993456.2236.7.camel@cvidal.org>
+ <2236FBA76BA1254E88B949DDB74E612B41BFACA1@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BFACA1@IRSMSX102.ger.corp.intel.com>
+Subject: Re: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
  independent hardened atomic base
-To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hans Liljestrand <ishkamiel@gmail.com>
-Cc: "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PkVsZW5hLA0KDQo+IGRpZmYgLS1naXQgYS9pbmNsdWRlL2FzbS1nZW5lcmljL2F0b21pYy1sb25n
-LmggDQo+IGIvaW5jbHVkZS9hc20tZ2VuZXJpYy9hdG9taWMtbG9uZy5oDQo8c25pcD4NCj4gKyNp
-Zm5kZWYgQ09ORklHX0hBUkRFTkVEX0FUT01JQw0KPiArI2lmbmRlZiBhdG9taWNfcmVhZF93cmFw
-DQo+ICsjZGVmaW5lIGF0b21pY19yZWFkX3dyYXAodikgYXRvbWljX3JlYWQodikgI2VuZGlmIC8q
-IGF0b21pY19yZWFkX3dyYXAgDQo+ICsqLyAjaWZuZGVmIGF0b21pY19zZXRfd3JhcCAjZGVmaW5l
-IGF0b21pY19zZXRfd3JhcCh2LCBpKSANCj4gK2F0b21pY19zZXQoKHYpLCAoaSkpICNlbmRpZiAv
-KiBhdG9taWNfc2V0X3dyYXAgKi8gI2RlZmluZSANCj4gK2F0b21pY19hZGRfd3JhcChpLCB2KSBh
-dG9taWNfYWRkKChpKSwgKHYpKSAjZGVmaW5lIGF0b21pY19zdWJfd3JhcChpLCANCj4gK3YpIGF0
-b21pY19zdWIoKGkpLCAodikpICNkZWZpbmUgYXRvbWljX2luY193cmFwKHYpIGF0b21pY19pbmMo
-dikgDQo+ICsjZGVmaW5lIGF0b21pY19kZWNfd3JhcCh2KSBhdG9taWNfZGVjKHYpICNpZm5kZWYg
-DQo+ICthdG9taWNfYWRkX3JldHVybl93cmFwICNkZWZpbmUgYXRvbWljX2FkZF9yZXR1cm5fd3Jh
-cChpLCB2KSANCj4gK2F0b21pY19hZGRfcmV0dXJuKChpKSwgKHYpKSAjZW5kaWYgLyogYXRvbWlj
-X2FkZF9yZXR1cm5fd3JhcCAqLyANCj4gKyNpZm5kZWYgYXRvbWljX3N1Yl9yZXR1cm5fd3JhcCAj
-ZGVmaW5lIGF0b21pY19zdWJfcmV0dXJuX3dyYXAoaSwgdikgDQo+ICthdG9taWNfc3ViX3JldHVy
-bigoaSksICh2KSkgI2VuZGlmIC8qIGF0b21pY19zdWJfcmV0dXJuX3dyYXAgKi8gDQo+ICsjZGVm
-aW5lIGF0b2ltY19kZWNfcmV0dXJuX3dyYXAodikgYXRvbWljX2RlY19yZXR1cm4odikgI2lmbmRl
-ZiANCj4gK2F0b21pY19pbmNfcmV0dXJuX3dyYXAgI2RlZmluZSBhdG9taWNfaW5jX3JldHVybl93
-cmFwKHYpIA0KPiArYXRvbWljX2luY19yZXR1cm4odikgI2VuZGlmIC8qIGF0b21pY19pbmNfcmV0
-dXJuICovICNpZm5kZWYgDQo+ICthdG9taWNfZGVjX2FuZF90ZXN0X3dyYXAgI2RlZmluZSBhdG9t
-aWNfZGVjX2FuZF90ZXN0X3dyYXAodikgDQo+ICthdG9taWNfZGVjX2FuZF90ZXN0KHYpICNlbmRp
-ZiAvKiBhdG9taWNfZGVjX2FuZF90ZXN0X3dyYXAgKi8gI2lmbmRlZiANCj4gK2F0b21pY19pbmNf
-YW5kX3Rlc3Rfd3JhcCAjZGVmaW5lIGF0b21pY19pbmNfYW5kX3Rlc3Rfd3JhcCh2KSANCj4gK2F0
-b21pY19pbmNfYW5kX3Rlc3QodikgI2VuZGlmIC8qIGF0b21pY19pbmNfYW5kX3Rlc3Rfd3JhcCAq
-LyAjZGVmaW5lIA0KPiArYXRvbWljX3N1Yl9hbmRfdGVzdF93cmFwKGksIHYpIGF0b21pY19zdWJf
-YW5kX3Rlc3QoKHYpLCAoaSkpICNpZm5kZWYgDQo+ICthdG9taWNfeGNoZ193cmFwICNkZWZpbmUg
-YXRvbWljX3hjaGdfd3JhcCh2LCBpKSBhdG9taWNfeGNoZygodiksIChpKSkgDQo+ICsjZW5kaWYg
-LyogIGF0b21pY194Y2hnX3dyYXAodiwgaSkgKi8gI2lmbmRlZiBhdG9taWNfY21weGNoZ193cmFw
-IA0KPiArI2RlZmluZSBhdG9taWNfY21weGNoZ193cmFwKHYsIG8sIG4pIGF0b21pY19jbXB4Y2hn
-KCh2KSwgKG8pLCAobikpIA0KPiArI2VuZGlmIC8qIGF0b21pY19jbXB4Y2hnX3dyYXAgKi8gI2Rl
-ZmluZSBhdG9taWNfYWRkX25lZ2F0aXZlX3dyYXAoaSwgDQo+ICt2KSBhdG9taWNfYWRkX25lZ2F0
-aXZlKChpKSwgKHYpKSAjZGVmaW5lIGF0b21pY19hZGRfdW5sZXNzX3dyYXAodiwgaSwgDQo+ICtq
-KSBhdG9taWNfYWRkX3VubGVzcygodiksIChpKSwgKGopKSAjZW5kaWYgLyogQ09ORklHX0hBUkRF
-TkVEX0FUT01JQyANCj4gKyovDQo+ICsNCj4gICNlbmRpZiAgLyogIF9BU01fR0VORVJJQ19BVE9N
-SUNfTE9OR19IICAqLw0KPiANCg0KPkl0IHNlZW1zIHRoZXJlIGFyZSB0d28gbWlzc2luZyBndWFy
-ZCBoZXJlLiBJJ3ZlIGdvdCByZWRlZmluaXRpb24gZXJyb3JzIG9uIEFSTSAod2l0aG91dCBteSBw
-cm90b3R5cGVzIG9mIGFybSBnZW5lcmljIGF0b21pYzY0IGFuZCBhcm0gaGFyZGVuZWQgYXRvbWlj
-IHBhdGNoZXMpLg0KDQpZZXMsIEkgdGhpbmsgZXZlcnkgZnVuY3Rpb24gaGVyZSBuZWVkcyBhIGd1
-YXJkLCBub3Qgc3VyZSB3aHkgaXQgd2FzIGxlZnQgdGhpcyB3YXkuLi4gSSB3aWxsIGdvIGFoZWFk
-IGFuZCBtYWtlIHRoZSBjaGFuZ2UuIA0KSGFucywgcGxlYXNlIHNjcmVhbSBpZiB0aGlzIHdhcyBp
-bnRlbnRpb25hbCBmb3Igc29tZSByZWFzb24gYW5kIGJyZWFrcyBhbnl0aGluZyBlbHNlIChJIGRv
-dWJ0IHRob3VnaC4uKQ0KVGhhbmsgeW91IGFnYWluISBJIHdpbGwgdXBkYXRlIHRoZSBoYXJkZW5l
-ZF9hdG9taWNfbmV4dCB3aXRoIGZpeGVzLCBzbyB5b3UgY2FuIGJhc2UgeW91ciBwYXRjaGVzIG91
-dCBvZiBpdC4gDQoNCg0KPlRoYW5rcw0KDQo+Q29saW4NCg0KZGlmZiAtLWdpdCBhL2luY2x1ZGUv
-YXNtLWdlbmVyaWMvYXRvbWljLWxvbmcuaCBiL2luY2x1ZGUvYXNtLSBnZW5lcmljL2F0b21pYy1s
-b25nLmggaW5kZXggNjBlYjllMC4uMTMxZjYzNyAxMDA2NDQNCi0tLSBhL2luY2x1ZGUvYXNtLWdl
-bmVyaWMvYXRvbWljLWxvbmcuaA0KKysrIGIvaW5jbHVkZS9hc20tZ2VuZXJpYy9hdG9taWMtbG9u
-Zy5oDQpAQCAtNDAwLDE0ICs0MDAsMTggQEAgc3RhdGljIGlubGluZSBsb25nIGF0b21pY19sb25n
-X2FkZF91bmxlc3Nfd3JhcChhdG9taWNfbG9uZ193cmFwX3QgKmwsIGxvbmcgYSwgbG8NCsKgI2lm
-bmRlZiBhdG9taWNfaW5jX2FuZF90ZXN0X3dyYXANCsKgI2RlZmluZSBhdG9taWNfaW5jX2FuZF90
-ZXN0X3dyYXAodikgYXRvbWljX2luY19hbmRfdGVzdCh2KQ0KwqAjZW5kaWYgLyogYXRvbWljX2lu
-Y19hbmRfdGVzdF93cmFwICovDQorI2lmbmRlZiBhdG9taWNfc3ViX2FuZF90ZXN0X3dyYXANCsKg
-I2RlZmluZSBhdG9taWNfc3ViX2FuZF90ZXN0X3dyYXAoaSwgdikgYXRvbWljX3N1Yl9hbmRfdGVz
-dCgodiksIChpKSkNCisjZW5kaWYgLyogYXRvbWljX3N1Yl9hbmRfdGVzdF93cmFwICovDQrCoCNp
-Zm5kZWYgYXRvbWljX3hjaGdfd3JhcA0KwqAjZGVmaW5lIGF0b21pY194Y2hnX3dyYXAodiwgaSkg
-YXRvbWljX3hjaGcoKHYpLCAoaSkpDQrCoCNlbmRpZiAvKsKgwqBhdG9taWNfeGNoZ193cmFwKHYs
-IGkpICovDQrCoCNpZm5kZWYgYXRvbWljX2NtcHhjaGdfd3JhcA0KwqAjZGVmaW5lIGF0b21pY19j
-bXB4Y2hnX3dyYXAodiwgbywgbikgYXRvbWljX2NtcHhjaGcoKHYpLCAobyksIChuKSkNCsKgI2Vu
-ZGlmIC8qIGF0b21pY19jbXB4Y2hnX3dyYXAgKi8NCisjaWZuZGVmIGF0b21pY19hZGRfbmVnYXRp
-dmVfd3JhcA0KwqAjZGVmaW5lIGF0b21pY19hZGRfbmVnYXRpdmVfd3JhcChpLCB2KSBhdG9taWNf
-YWRkX25lZ2F0aXZlKChpKSwgKHYpKQ0KKyNlbmRpZiAvKiBhdG9taWNfYWRkX25lZ2F0aXZlX3dy
-YXAgKi8NCsKgI2RlZmluZSBhdG9taWNfYWRkX3VubGVzc193cmFwKHYsIGksIGopIGF0b21pY19h
-ZGRfdW5sZXNzKCh2KSwgKGkpLA0KKGopKQ0KwqAjZW5kaWYgLyogQ09ORklHX0hBUkRFTkVEX0FU
-T01JQyAqLw0K
+On Tue, Nov 01, 2016 at 10:59:03AM +0000, Reshetova, Elena wrote:
+> >Hi Elena,
+> 
+> Hi!
+> 
+> <snip>
+> 
+> > diff --git a/include/linux/types.h b/include/linux/types.h index 
+> > baf7183..b47a7f8 100644
+> > --- a/include/linux/types.h
+> > +++ b/include/linux/types.h
+> > @@ -175,10 +175,27 @@ typedef struct {
+> >  	int counter;
+> >  } atomic_t;
+> >  
+> > +#ifdef CONFIG_HARDENED_ATOMIC
+> > +typedef struct {
+> > +	int counter;
+> > +} atomic_wrap_t;
+> > +#else
+> > +typedef atomic_t atomic_wrap_t;
+> > +#endif
+> > +
+> >  #ifdef CONFIG_64BIT
+> >  typedef struct {
+> >  	long counter;
+> >  } atomic64_t;
+> > +
+> > +#ifdef CONFIG_HARDENED_ATOMIC
+> > +typedef struct {
+> > +	long counter;
+> > +} atomic64_wrap_t;
+> > +#else
+> > +typedef atomic64_t atomic64_wrap_t;
+> > +#endif
+> > +
+> >  #endif
+> >  
+> 
+> >I still think it would be a good idea to always distinct atomic*_wrap_t and atomic_t. Otherwise, it is possible to mix those two types without getting any error, if CONFIG_HARDENED_ATOMIC is disabled (no big deal in that case, since there is no protection anyways, but it is quite unclean...). What do you think?
+> 
+> Yes, now after we hopefully have all the coverage done and other issues resolved, it might be time to address this. 
+> But I am not 100% sure what is the proper way. Defining the same struct type as for hardening case?
+
+Hi Colin, Elena,
+
+Wouldn't that also necessitate that we provide implementations for the wrap
+functions? As it is now, we can just define the _wrap functions as macros
+pointing the plain functions, but if the types are distinct that wouldn't work
+(which, if I understand correctly, is the whole point).
+
+So then we'd need to add default implementations for the _wrap functions. And
+wouldn't those essentially have to use the arch implemented plain function to
+ensure it actually works in all cases?
+
+So I'm not disagreeing with you, I'm just not clear on the proper/clean way to
+approach this either.
+
+Thanks,
+-hans
+
+> 
+> Best Regards,
+> Elena.
