@@ -1,82 +1,105 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 1 Nov 2016 14:55:16 +0200
-From: Hans Liljestrand <ishkamiel@gmail.com>
-Message-ID: <20161101125516.qwf5ccaun2nd3qvi@thigreal>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20161101113542.rofdy3cbgt6c3cvp@thigreal>
 References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
  <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
- <1478001210.2236.28.camel@cvidal.org>
- <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
+ <1477993456.2236.7.camel@cvidal.org> <2236FBA76BA1254E88B949DDB74E612B41BFACA1@IRSMSX102.ger.corp.intel.com>
+ <20161101113542.rofdy3cbgt6c3cvp@thigreal>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 1 Nov 2016 06:57:08 -0700
+Message-ID: <CAGXu5jL_7JQ-XKogBUo2f=7ZEX+FPdLQZQegfU1qTRBYX_ekgw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 Subject: Re: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
  independent hardened atomic base
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
+To: Hans Liljestrand <ishkamiel@gmail.com>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Nov 01, 2016 at 12:15:25PM +0000, Reshetova, Elena wrote:
-> >Hi (again :-)) Elena, Hans,
-> 
-> > diff --git a/include/linux/atomic.h b/include/linux/atomic.h
-> <snip>
-> > +#ifndef atomic_cmpxchg_wrap
-> > +#define  atomic_cmpxchg_wrap(...)				\
-> > +	__atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__) #endif
-> >  #endif /* atomic_cmpxchg_relaxed */
-> > 
-> 
-> >I have a problem here. With ARMv7 (without any of my patches), I have a
-> >implicit declaration of atomic_cmpxchg_wrap. Perhaps something like
-> 
-> >    #ifndef atomic_cmpxchg_wrap_relaxed
-> >    #define atomic_cmpxchg_wrap_relaxed atomic_cmpxchg_wrap
-> 
-> >is missing? I didn't follow the recent changes of that part, so I am
-> >not quite sure...
-> 
-> >Thanks!
-> 
-> >Colin
-> 
-> >In file included from ./include/linux/spinlock.h:406:0,
->                  from ./include/linux/seqlock.h:35,
->                  from ./include/linux/time.h:5,
->                  from ./include/linux/stat.h:18,
->                  from ./include/linux/module.h:10,
->                  from net/ipv4/route.c:67:
-> >net/ipv4/route.c: In function ‘ip_idents_reserve’:
-> >./include/linux/atomic.h:459:20: error: implicit declaration of function ‘atomic_cmpxchg_wrap_relaxed’ [-Werror=implicit-function-declaration]
->   __atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__)
->                     ^
-> >./include/linux/atomic.h:62:9: note: in definition of macro ‘__atomic_op_fence’
->  > typeof(op##_relaxed(args)) __ret;    \
->          ^~
-> >net/ipv4/route.c:488:11: note: in expansion of macro ‘atomic_cmpxchg_wrap’
-> >  } while (atomic_cmpxchg_wrap(p_id, old, new) != old);
-> 
-> Oh, I think this is because we don't have atomic_cmpxchg_wrap_relaxed defined neither atomic_xchg_wrap_relaxed. Wonder why this doesn't show up on x86, I did many builds without our x86 changes to verify. 
-> Hans could you please handle this change today to unblock Colin? 
+On Tue, Nov 1, 2016 at 4:35 AM, Hans Liljestrand <ishkamiel@gmail.com> wrot=
+e:
+> On Tue, Nov 01, 2016 at 10:59:03AM +0000, Reshetova, Elena wrote:
+>> >Hi Elena,
+>>
+>> Hi!
+>>
+>> <snip>
+>>
+>> > diff --git a/include/linux/types.h b/include/linux/types.h index
+>> > baf7183..b47a7f8 100644
+>> > --- a/include/linux/types.h
+>> > +++ b/include/linux/types.h
+>> > @@ -175,10 +175,27 @@ typedef struct {
+>> >     int counter;
+>> >  } atomic_t;
+>> >
+>> > +#ifdef CONFIG_HARDENED_ATOMIC
+>> > +typedef struct {
+>> > +   int counter;
+>> > +} atomic_wrap_t;
+>> > +#else
+>> > +typedef atomic_t atomic_wrap_t;
+>> > +#endif
+>> > +
+>> >  #ifdef CONFIG_64BIT
+>> >  typedef struct {
+>> >     long counter;
+>> >  } atomic64_t;
+>> > +
+>> > +#ifdef CONFIG_HARDENED_ATOMIC
+>> > +typedef struct {
+>> > +   long counter;
+>> > +} atomic64_wrap_t;
+>> > +#else
+>> > +typedef atomic64_t atomic64_wrap_t;
+>> > +#endif
+>> > +
+>> >  #endif
+>> >
+>>
+>> >I still think it would be a good idea to always distinct atomic*_wrap_t=
+ and atomic_t. Otherwise, it is possible to mix those two types without get=
+ting any error, if CONFIG_HARDENED_ATOMIC is disabled (no big deal in that =
+case, since there is no protection anyways, but it is quite unclean...). Wh=
+at do you think?
+>>
+>> Yes, now after we hopefully have all the coverage done and other issues =
+resolved, it might be time to address this.
+>> But I am not 100% sure what is the proper way. Defining the same struct =
+type as for hardening case?
+>
+> Hi Colin, Elena,
+>
+> Wouldn't that also necessitate that we provide implementations for the wr=
+ap
+> functions? As it is now, we can just define the _wrap functions as macros
+> pointing the plain functions, but if the types are distinct that wouldn't=
+ work
+> (which, if I understand correctly, is the whole point).
+>
+> So then we'd need to add default implementations for the _wrap functions.=
+ And
+> wouldn't those essentially have to use the arch implemented plain functio=
+n to
+> ensure it actually works in all cases?
+>
+> So I'm not disagreeing with you, I'm just not clear on the proper/clean w=
+ay to
+> approach this either.
 
-Could have been this was an error that didn't show up on x86, but not sure why
-cmpxchg and xchg wasn't guarded as the other atomic_*_relaxed functions. This
-whole section is a bit iffy, the aim is to be analogous to the non-wrap relaxed
-functions, but without actually having relaxed_wrap functions, so basically
-these probably always just end up defining the _wrap_relaxed as _wrap functions.
+I think the not-hardened _wrap functions would just look like this:
 
-I've committed a possible "fix". But I cannot confirm since I don't see the
-error on my build setups.
+static inline atomic_inc_wrap(atomic_wrap_t *atomic) {
+          atomic_inc((atomic_wrap *)atomic);
+}
 
-BR,
--hans
+Then type checking is done with or without CONFIG_HARDENED_ATOMIC, and
+there is no change in binary code size (the compiler will just replace
+the call).
 
-> 
-> Actually this brings us to the fact that we tried to stay away from various relaxed/acquire/release functions (in providing default wrap implementations), but it seems that they are also needed...
-> Sigh.. This grows bigger and bigger every day. I hope atomic doesn't plan to come with more functions in the nearest future :)
-> 
-> Kees, what is your opinion on relaxed/acquire/release coverage?
-> 
-> Best Regards,
-> Elena. 
+-Kees
+
+--=20
+Kees Cook
+Nexus Security
