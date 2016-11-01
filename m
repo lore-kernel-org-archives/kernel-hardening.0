@@ -1,94 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1477996972.2236.19.camel@cvidal.org>
-From: Colin Vidal <colin@cvidal.org>
-Date: Tue, 01 Nov 2016 11:42:52 +0100
-In-Reply-To: <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Tue, 1 Nov 2016 10:55:47 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFAC8B@IRSMSX102.ger.corp.intel.com>
 References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
 	 <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
+ <1477995348.2236.14.camel@cvidal.org>
+In-Reply-To: <1477995348.2236.14.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
  independent hardened atomic base
-To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David
+ Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Elena,
-
-> diff --git a/include/asm-generic/atomic-long.h b/include/asm-generic/atomic-long.h
-<snip>
-> +#ifndef CONFIG_HARDENED_ATOMIC
-> +#ifndef atomic_read_wrap
-> +#define atomic_read_wrap(v) atomic_read(v)
-> +#endif /* atomic_read_wrap */
-> +#ifndef atomic_set_wrap
-> +#define atomic_set_wrap(v, i) atomic_set((v), (i))
-> +#endif /* atomic_set_wrap */
-> +#define atomic_add_wrap(i, v) atomic_add((i), (v))
-> +#define atomic_sub_wrap(i, v) atomic_sub((i), (v))
-> +#define atomic_inc_wrap(v) atomic_inc(v)
-> +#define atomic_dec_wrap(v) atomic_dec(v)
-> +#ifndef atomic_add_return_wrap
-> +#define atomic_add_return_wrap(i, v) atomic_add_return((i), (v))
-> +#endif /* atomic_add_return_wrap */
-> +#ifndef atomic_sub_return_wrap
-> +#define atomic_sub_return_wrap(i, v) atomic_sub_return((i), (v))
-> +#endif /* atomic_sub_return_wrap */
-> +#define atoimc_dec_return_wrap(v) atomic_dec_return(v)
-> +#ifndef atomic_inc_return_wrap
-> +#define atomic_inc_return_wrap(v) atomic_inc_return(v)
-> +#endif /* atomic_inc_return */
-> +#ifndef atomic_dec_and_test_wrap
-> +#define atomic_dec_and_test_wrap(v) atomic_dec_and_test(v)
-> +#endif /* atomic_dec_and_test_wrap */
-> +#ifndef atomic_inc_and_test_wrap
-> +#define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
-> +#endif /* atomic_inc_and_test_wrap */
-> +#define atomic_sub_and_test_wrap(i, v) atomic_sub_and_test((v), (i))
-> +#ifndef atomic_xchg_wrap
-> +#define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
-> +#endif /*  atomic_xchg_wrap(v, i) */
-> +#ifndef atomic_cmpxchg_wrap
-> +#define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
-> +#endif /* atomic_cmpxchg_wrap */
-> +#define atomic_add_negative_wrap(i, v) atomic_add_negative((i), (v))
-> +#define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i), (j))
-> +#endif /* CONFIG_HARDENED_ATOMIC */
-> +
->  #endif  /*  _ASM_GENERIC_ATOMIC_LONG_H  */
-> 
-
-It seems there are two missing guard here. I've got redefinition errors
-on ARM (without my prototypes of arm generic atomic64 and arm hardened
-atomic patches).
-
-Thanks
-
-Colin
-
-diff --git a/include/asm-generic/atomic-long.h b/include/asm-
-generic/atomic-long.h
-index 60eb9e0..131f637 100644
---- a/include/asm-generic/atomic-long.h
-+++ b/include/asm-generic/atomic-long.h
-@@ -400,14 +400,18 @@ static inline long
-atomic_long_add_unless_wrap(atomic_long_wrap_t *l, long a, lo
- #ifndef atomic_inc_and_test_wrap
- #define atomic_inc_and_test_wrap(v) atomic_inc_and_test(v)
- #endif /* atomic_inc_and_test_wrap */
-+#ifndef atomic_sub_and_test_wrap
- #define atomic_sub_and_test_wrap(i, v) atomic_sub_and_test((v), (i))
-+#endif /* atomic_sub_and_test_wrap */
- #ifndef atomic_xchg_wrap
- #define atomic_xchg_wrap(v, i) atomic_xchg((v), (i))
- #endif /*  atomic_xchg_wrap(v, i) */
- #ifndef atomic_cmpxchg_wrap
- #define atomic_cmpxchg_wrap(v, o, n) atomic_cmpxchg((v), (o), (n))
- #endif /* atomic_cmpxchg_wrap */
-+#ifndef atomic_add_negative_wrap
- #define atomic_add_negative_wrap(i, v) atomic_add_negative((i), (v))
-+#endif /* atomic_add_negative_wrap */
- #define atomic_add_unless_wrap(v, i, j) atomic_add_unless((v), (i),
-(j))
- #endif /* CONFIG_HARDENED_ATOMIC */
+PHNuaXA+DQo+ICBhcmNoL2FscGhhL2luY2x1ZGUvYXNtL2xvY2FsLmggICAgICAgICAgICAgfCAg
+IDIgKw0KPiAgYXJjaC9tMzJyL2luY2x1ZGUvYXNtL2xvY2FsLmggICAgICAgICAgICAgIHwgICAy
+ICsNCj4gIGFyY2gvbWlwcy9pbmNsdWRlL2FzbS9sb2NhbC5oICAgICAgICAgICAgICB8ICAgMiAr
+DQo+ICBhcmNoL3Bvd2VycGMvaW5jbHVkZS9hc20vbG9jYWwuaCAgICAgICAgICAgfCAgIDIgKw0K
+PiAgYXJjaC94ODYvaW5jbHVkZS9hc20vbG9jYWwuaCAgICAgICAgICAgICAgIHwgICAyICsNCjxz
+bmlwPg0KPiAgaW5jbHVkZS9hc20tZ2VuZXJpYy9sb2NhbC5oICAgICAgICAgICAgICAgIHwgIDIw
+ICsrKw0KPiAgaW5jbHVkZS9hc20tZ2VuZXJpYy9sb2NhbF93cmFwLmggICAgICAgICAgIHwgIDg5
+ICsrKysrKysrKysNCjxzbmlwPg0KPiBkaWZmIC0tZ2l0IGEvaW5jbHVkZS9hc20tZ2VuZXJpYy9s
+b2NhbC5oIGIvaW5jbHVkZS9hc20tZ2VuZXJpYy9sb2NhbC5oIA0KPiBpbmRleCA5Y2ViMDNiLi5l
+MWM4MWMzIDEwMDY0NA0KPiAtLS0gYS9pbmNsdWRlL2FzbS1nZW5lcmljL2xvY2FsLmgNCj4gKysr
+IGIvaW5jbHVkZS9hc20tZ2VuZXJpYy9sb2NhbC5oDQo+IEBAIC00LDYgKzQsNyBAQA0KPiAgI2lu
+Y2x1ZGUgPGxpbnV4L3BlcmNwdS5oPg0KPiAgI2luY2x1ZGUgPGxpbnV4L2F0b21pYy5oPg0KPiAg
+I2luY2x1ZGUgPGFzbS90eXBlcy5oPg0KPiArI2luY2x1ZGUgPGFzbS1nZW5lcmljL2xvY2FsX3dy
+YXAuaD4NCg0KPlRoYXQgYnJha2UgYnVpbGQgZm9yIGFueSBhcmNoaXRlY3R1cmUgdGhhdCB1c2Vz
+IGFzbS1nZW5lcmljL2xvY2FsLmggKGxpa2UgQVJNIHY2L3Y3KTogYXNtLWdlbmVyaWMvbG9jYWxf
+d3JhcC5oIGNvbnRhaW5zDQoNCj4gICAgdHlwZWRlZiBsb2NhbF90IGxvY2FsX3dyYXBfdA0KDQo+
+YnV0IGF0IHRoaXMgdGltZSwgbG9jYWxfdCBpcyBub3QgeWV0IGRlZmluZWQsIHNpbmNlIGFzbS0g
+Z2VuZXJpYy9sb2NhbF93cmFwLmggaXMgaW5jbHVkZWQgYmVmb3JlIHRoZSBkZWZpbml0aW9uIG9m
+IGxvY2FsX3QuIFRoZSBmb2xsb3dpbmcgcGF0Y2ggZml4ZXMgdGhhdC4NCg0KT2gsIHllcywgd2Ug
+Zml4ZWQgdGhpcyBmb3IgYWxsIGFyY2hzLiB0aGF0IGRlZmluZSBsb2NhbF90IGJ5IGluY2x1ZGlu
+ZyB0aGlzIGhlYWRlciBfYWZ0ZXJfIGRlZmluaXRpb24sIGJ1dCBhc20tZ2VuZXJpYyBzbGlwcGVk
+IHRocm91Z2guIA0KV2lsbCBmaXggcmlnaHQgYXdheS4gVGhhbmtzIGZvciBjYXRjaGluZyB0aGlz
+IQ0KDQpCZXN0IFJlZ2FyZHMsDQpFbGVuYS4NCg==
