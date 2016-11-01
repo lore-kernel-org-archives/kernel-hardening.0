@@ -1,58 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Tue, 1 Nov 2016 12:15:25 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
+Date: Tue, 1 Nov 2016 14:55:16 +0200
+From: Hans Liljestrand <ishkamiel@gmail.com>
+Message-ID: <20161101125516.qwf5ccaun2nd3qvi@thigreal>
 References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
-	 <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
+ <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
  <1478001210.2236.28.camel@cvidal.org>
-In-Reply-To: <1478001210.2236.28.camel@cvidal.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
+Subject: Re: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
  independent hardened atomic base
-To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>
-Cc: "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David
- Windsor <dwindsor@gmail.com>
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PkhpIChhZ2FpbiA6LSkpIEVsZW5hLCBIYW5zLA0KDQo+IGRpZmYgLS1naXQgYS9pbmNsdWRlL2xp
-bnV4L2F0b21pYy5oIGIvaW5jbHVkZS9saW51eC9hdG9taWMuaA0KPHNuaXA+DQo+ICsjaWZuZGVm
-IGF0b21pY19jbXB4Y2hnX3dyYXANCj4gKyNkZWZpbmUgIGF0b21pY19jbXB4Y2hnX3dyYXAoLi4u
-KQkJCQlcDQo+ICsJX19hdG9taWNfb3BfZmVuY2UoYXRvbWljX2NtcHhjaGdfd3JhcCwgX19WQV9B
-UkdTX18pICNlbmRpZg0KPiAgI2VuZGlmIC8qIGF0b21pY19jbXB4Y2hnX3JlbGF4ZWQgKi8NCj4g
-DQoNCj5JIGhhdmUgYSBwcm9ibGVtIGhlcmUuIFdpdGggQVJNdjcgKHdpdGhvdXQgYW55IG9mIG15
-IHBhdGNoZXMpLCBJIGhhdmUgYQ0KPmltcGxpY2l0IGRlY2xhcmF0aW9uIG9mIGF0b21pY19jbXB4
-Y2hnX3dyYXAuIFBlcmhhcHMgc29tZXRoaW5nIGxpa2UNCg0KPiAgICAjaWZuZGVmwqBhdG9taWNf
-Y21weGNoZ193cmFwX3JlbGF4ZWQNCj4gICAgI2RlZmluZcKgYXRvbWljX2NtcHhjaGdfd3JhcF9y
-ZWxheGVkIGF0b21pY19jbXB4Y2hnX3dyYXANCg0KPmlzIG1pc3Npbmc/IEkgZGlkbid0IGZvbGxv
-dyB0aGUgcmVjZW50IGNoYW5nZXMgb2YgdGhhdCBwYXJ0LCBzbyBJIGFtDQo+bm90IHF1aXRlIHN1
-cmUuLi4NCg0KPlRoYW5rcyENCg0KPkNvbGluDQoNCj5JbiBmaWxlIGluY2x1ZGVkIGZyb20gLi9p
-bmNsdWRlL2xpbnV4L3NwaW5sb2NrLmg6NDA2OjAsDQogICAgICAgICAgICAgICAgIGZyb20gLi9p
-bmNsdWRlL2xpbnV4L3NlcWxvY2suaDozNSwNCiAgICAgICAgICAgICAgICAgZnJvbSAuL2luY2x1
-ZGUvbGludXgvdGltZS5oOjUsDQogICAgICAgICAgICAgICAgIGZyb20gLi9pbmNsdWRlL2xpbnV4
-L3N0YXQuaDoxOCwNCiAgICAgICAgICAgICAgICAgZnJvbSAuL2luY2x1ZGUvbGludXgvbW9kdWxl
-Lmg6MTAsDQogICAgICAgICAgICAgICAgIGZyb20gbmV0L2lwdjQvcm91dGUuYzo2NzoNCj5uZXQv
-aXB2NC9yb3V0ZS5jOiBJbiBmdW5jdGlvbiDigJhpcF9pZGVudHNfcmVzZXJ2ZeKAmToNCj4uL2lu
-Y2x1ZGUvbGludXgvYXRvbWljLmg6NDU5OjIwOiBlcnJvcjogaW1wbGljaXQgZGVjbGFyYXRpb24g
-b2YgZnVuY3Rpb24g4oCYYXRvbWljX2NtcHhjaGdfd3JhcF9yZWxheGVk4oCZIFstV2Vycm9yPWlt
-cGxpY2l0LWZ1bmN0aW9uLWRlY2xhcmF0aW9uXQ0KICBfX2F0b21pY19vcF9mZW5jZShhdG9taWNf
-Y21weGNoZ193cmFwLCBfX1ZBX0FSR1NfXykNCiAgICAgICAgICAgICAgICAgICAgXg0KPi4vaW5j
-bHVkZS9saW51eC9hdG9taWMuaDo2Mjo5OiBub3RlOiBpbiBkZWZpbml0aW9uIG9mIG1hY3JvIOKA
-mF9fYXRvbWljX29wX2ZlbmNl4oCZDQogPiB0eXBlb2Yob3AjI19yZWxheGVkKGFyZ3MpKSBfX3Jl
-dDsgICAgXA0KICAgICAgICAgXn4NCj5uZXQvaXB2NC9yb3V0ZS5jOjQ4ODoxMTogbm90ZTogaW4g
-ZXhwYW5zaW9uIG9mIG1hY3JvIOKAmGF0b21pY19jbXB4Y2hnX3dyYXDigJkNCj4gIH0gd2hpbGUg
-KGF0b21pY19jbXB4Y2hnX3dyYXAocF9pZCwgb2xkLCBuZXcpICE9IG9sZCk7DQoNCk9oLCBJIHRo
-aW5rIHRoaXMgaXMgYmVjYXVzZSB3ZSBkb24ndCBoYXZlIGF0b21pY19jbXB4Y2hnX3dyYXBfcmVs
-YXhlZCBkZWZpbmVkIG5laXRoZXIgYXRvbWljX3hjaGdfd3JhcF9yZWxheGVkLiBXb25kZXIgd2h5
-IHRoaXMgZG9lc24ndCBzaG93IHVwIG9uIHg4NiwgSSBkaWQgbWFueSBidWlsZHMgd2l0aG91dCBv
-dXIgeDg2IGNoYW5nZXMgdG8gdmVyaWZ5LiANCkhhbnMgY291bGQgeW91IHBsZWFzZSBoYW5kbGUg
-dGhpcyBjaGFuZ2UgdG9kYXkgdG8gdW5ibG9jayBDb2xpbj8gDQoNCkFjdHVhbGx5IHRoaXMgYnJp
-bmdzIHVzIHRvIHRoZSBmYWN0IHRoYXQgd2UgdHJpZWQgdG8gc3RheSBhd2F5IGZyb20gdmFyaW91
-cyByZWxheGVkL2FjcXVpcmUvcmVsZWFzZSBmdW5jdGlvbnMgKGluIHByb3ZpZGluZyBkZWZhdWx0
-IHdyYXAgaW1wbGVtZW50YXRpb25zKSwgYnV0IGl0IHNlZW1zIHRoYXQgdGhleSBhcmUgYWxzbyBu
-ZWVkZWQuLi4NClNpZ2guLiBUaGlzIGdyb3dzIGJpZ2dlciBhbmQgYmlnZ2VyIGV2ZXJ5IGRheS4g
-SSBob3BlIGF0b21pYyBkb2Vzbid0IHBsYW4gdG8gY29tZSB3aXRoIG1vcmUgZnVuY3Rpb25zIGlu
-IHRoZSBuZWFyZXN0IGZ1dHVyZSA6KQ0KDQpLZWVzLCB3aGF0IGlzIHlvdXIgb3BpbmlvbiBvbiBy
-ZWxheGVkL2FjcXVpcmUvcmVsZWFzZSBjb3ZlcmFnZT8NCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEu
-IA0K
+On Tue, Nov 01, 2016 at 12:15:25PM +0000, Reshetova, Elena wrote:
+> >Hi (again :-)) Elena, Hans,
+> 
+> > diff --git a/include/linux/atomic.h b/include/linux/atomic.h
+> <snip>
+> > +#ifndef atomic_cmpxchg_wrap
+> > +#define  atomic_cmpxchg_wrap(...)				\
+> > +	__atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__) #endif
+> >  #endif /* atomic_cmpxchg_relaxed */
+> > 
+> 
+> >I have a problem here. With ARMv7 (without any of my patches), I have a
+> >implicit declaration of atomic_cmpxchg_wrap. Perhaps something like
+> 
+> >    #ifndef atomic_cmpxchg_wrap_relaxed
+> >    #define atomic_cmpxchg_wrap_relaxed atomic_cmpxchg_wrap
+> 
+> >is missing? I didn't follow the recent changes of that part, so I am
+> >not quite sure...
+> 
+> >Thanks!
+> 
+> >Colin
+> 
+> >In file included from ./include/linux/spinlock.h:406:0,
+>                  from ./include/linux/seqlock.h:35,
+>                  from ./include/linux/time.h:5,
+>                  from ./include/linux/stat.h:18,
+>                  from ./include/linux/module.h:10,
+>                  from net/ipv4/route.c:67:
+> >net/ipv4/route.c: In function ‘ip_idents_reserve’:
+> >./include/linux/atomic.h:459:20: error: implicit declaration of function ‘atomic_cmpxchg_wrap_relaxed’ [-Werror=implicit-function-declaration]
+>   __atomic_op_fence(atomic_cmpxchg_wrap, __VA_ARGS__)
+>                     ^
+> >./include/linux/atomic.h:62:9: note: in definition of macro ‘__atomic_op_fence’
+>  > typeof(op##_relaxed(args)) __ret;    \
+>          ^~
+> >net/ipv4/route.c:488:11: note: in expansion of macro ‘atomic_cmpxchg_wrap’
+> >  } while (atomic_cmpxchg_wrap(p_id, old, new) != old);
+> 
+> Oh, I think this is because we don't have atomic_cmpxchg_wrap_relaxed defined neither atomic_xchg_wrap_relaxed. Wonder why this doesn't show up on x86, I did many builds without our x86 changes to verify. 
+> Hans could you please handle this change today to unblock Colin? 
+
+Could have been this was an error that didn't show up on x86, but not sure why
+cmpxchg and xchg wasn't guarded as the other atomic_*_relaxed functions. This
+whole section is a bit iffy, the aim is to be analogous to the non-wrap relaxed
+functions, but without actually having relaxed_wrap functions, so basically
+these probably always just end up defining the _wrap_relaxed as _wrap functions.
+
+I've committed a possible "fix". But I cannot confirm since I don't see the
+error on my build setups.
+
+BR,
+-hans
+
+> 
+> Actually this brings us to the fact that we tried to stay away from various relaxed/acquire/release functions (in providing default wrap implementations), but it seems that they are also needed...
+> Sigh.. This grows bigger and bigger every day. I hope atomic doesn't plan to come with more functions in the nearest future :)
+> 
+> Kees, what is your opinion on relaxed/acquire/release coverage?
+> 
+> Best Regards,
+> Elena. 
