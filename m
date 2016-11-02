@@ -1,67 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 2 Nov 2016 04:55:35 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFC2F6@IRSMSX102.ger.corp.intel.com>
-References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
- <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
- <1477993456.2236.7.camel@cvidal.org>
- <2236FBA76BA1254E88B949DDB74E612B41BFACA1@IRSMSX102.ger.corp.intel.com>
- <20161101113542.rofdy3cbgt6c3cvp@thigreal>
- <CAGXu5jL_7JQ-XKogBUo2f=7ZEX+FPdLQZQegfU1qTRBYX_ekgw@mail.gmail.com>
-In-Reply-To: <CAGXu5jL_7JQ-XKogBUo2f=7ZEX+FPdLQZQegfU1qTRBYX_ekgw@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+References: <20160626173451.c8406cd0c7a87cc3f94d9753@gmail.com>
+From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+Date: Wed, 2 Nov 2016 16:06:26 +1100
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
- independent hardened atomic base
-To: Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
+In-Reply-To: <20160626173451.c8406cd0c7a87cc3f94d9753@gmail.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Message-Id: <70eb7a4c-be31-3fdd-a5b4-8075b29b3b38@au1.ibm.com>
+Subject: Re: [kernel-hardening] [PATCH] powerpc/kernel: Disable the latent
+ entropy plugin unconditionally
+To: kernel-hardening@lists.openwall.com, keescook@chromium.org
+Cc: mmarek@suse.com, linux-kbuild@vger.kernel.org, pageexec@freemail.hu, linuxppc-dev <linuxppc-dev@lists.ozlabs.org>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVHVlLCBOb3YgMSwgMjAxNiBhdCA0OjM1IEFNLCBIYW5zIExpbGplc3RyYW5kIDxpc2hrYW1p
-ZWxAZ21haWwuY29tPiB3cm90ZToNCj4gT24gVHVlLCBOb3YgMDEsIDIwMTYgYXQgMTA6NTk6MDNB
-TSArMDAwMCwgUmVzaGV0b3ZhLCBFbGVuYSB3cm90ZToNCj4+ID5IaSBFbGVuYSwNCj4+DQo+PiBI
-aSENCj4+DQo+PiA8c25pcD4NCj4+DQo+PiA+IGRpZmYgLS1naXQgYS9pbmNsdWRlL2xpbnV4L3R5
-cGVzLmggYi9pbmNsdWRlL2xpbnV4L3R5cGVzLmggaW5kZXgNCj4+ID4gYmFmNzE4My4uYjQ3YTdm
-OCAxMDA2NDQNCj4+ID4gLS0tIGEvaW5jbHVkZS9saW51eC90eXBlcy5oDQo+PiA+ICsrKyBiL2lu
-Y2x1ZGUvbGludXgvdHlwZXMuaA0KPj4gPiBAQCAtMTc1LDEwICsxNzUsMjcgQEAgdHlwZWRlZiBz
-dHJ1Y3Qgew0KPj4gPiAgICAgaW50IGNvdW50ZXI7DQo+PiA+ICB9IGF0b21pY190Ow0KPj4gPg0K
-Pj4gPiArI2lmZGVmIENPTkZJR19IQVJERU5FRF9BVE9NSUMNCj4+ID4gK3R5cGVkZWYgc3RydWN0
-IHsNCj4+ID4gKyAgIGludCBjb3VudGVyOw0KPj4gPiArfSBhdG9taWNfd3JhcF90Ow0KPj4gPiAr
-I2Vsc2UNCj4+ID4gK3R5cGVkZWYgYXRvbWljX3QgYXRvbWljX3dyYXBfdDsNCj4+ID4gKyNlbmRp
-Zg0KPj4gPiArDQo+PiA+ICAjaWZkZWYgQ09ORklHXzY0QklUDQo+PiA+ICB0eXBlZGVmIHN0cnVj
-dCB7DQo+PiA+ICAgICBsb25nIGNvdW50ZXI7DQo+PiA+ICB9IGF0b21pYzY0X3Q7DQo+PiA+ICsN
-Cj4+ID4gKyNpZmRlZiBDT05GSUdfSEFSREVORURfQVRPTUlDDQo+PiA+ICt0eXBlZGVmIHN0cnVj
-dCB7DQo+PiA+ICsgICBsb25nIGNvdW50ZXI7DQo+PiA+ICt9IGF0b21pYzY0X3dyYXBfdDsNCj4+
-ID4gKyNlbHNlDQo+PiA+ICt0eXBlZGVmIGF0b21pYzY0X3QgYXRvbWljNjRfd3JhcF90OyAjZW5k
-aWYNCj4+ID4gKw0KPj4gPiAgI2VuZGlmDQo+PiA+DQo+Pg0KPj4gPkkgc3RpbGwgdGhpbmsgaXQg
-d291bGQgYmUgYSBnb29kIGlkZWEgdG8gYWx3YXlzIGRpc3RpbmN0IGF0b21pYypfd3JhcF90IGFu
-ZCBhdG9taWNfdC4gT3RoZXJ3aXNlLCBpdCBpcyBwb3NzaWJsZSB0byBtaXggdGhvc2UgdHdvIHR5
-cGVzIHdpdGhvdXQgZ2V0dGluZyBhbnkgZXJyb3IsIGlmIENPTkZJR19IQVJERU5FRF9BVE9NSUMg
-aXMgZGlzYWJsZWQgKG5vIGJpZyBkZWFsIGluIHRoYXQgY2FzZSwgc2luY2UgdGhlcmUgaXMgbm8g
-cHJvdGVjdGlvbiBhbnl3YXlzLCBidXQgaXQgaXMgcXVpdGUgdW5jbGVhbi4uLikuIFdoYXQgZG8g
-eW91IHRoaW5rPw0KPj4NCj4+IFllcywgbm93IGFmdGVyIHdlIGhvcGVmdWxseSBoYXZlIGFsbCB0
-aGUgY292ZXJhZ2UgZG9uZSBhbmQgb3RoZXIgaXNzdWVzIHJlc29sdmVkLCBpdCBtaWdodCBiZSB0
-aW1lIHRvIGFkZHJlc3MgdGhpcy4NCj4+IEJ1dCBJIGFtIG5vdCAxMDAlIHN1cmUgd2hhdCBpcyB0
-aGUgcHJvcGVyIHdheS4gRGVmaW5pbmcgdGhlIHNhbWUgc3RydWN0IHR5cGUgYXMgZm9yIGhhcmRl
-bmluZyBjYXNlPw0KPg0KPiBIaSBDb2xpbiwgRWxlbmEsDQo+DQo+IFdvdWxkbid0IHRoYXQgYWxz
-byBuZWNlc3NpdGF0ZSB0aGF0IHdlIHByb3ZpZGUgaW1wbGVtZW50YXRpb25zIGZvciB0aGUgDQo+
-IHdyYXAgZnVuY3Rpb25zPyBBcyBpdCBpcyBub3csIHdlIGNhbiBqdXN0IGRlZmluZSB0aGUgX3dy
-YXAgZnVuY3Rpb25zIA0KPiBhcyBtYWNyb3MgcG9pbnRpbmcgdGhlIHBsYWluIGZ1bmN0aW9ucywg
-YnV0IGlmIHRoZSB0eXBlcyBhcmUgZGlzdGluY3QgDQo+IHRoYXQgd291bGRuJ3Qgd29yayAod2hp
-Y2gsIGlmIEkgdW5kZXJzdGFuZCBjb3JyZWN0bHksIGlzIHRoZSB3aG9sZSBwb2ludCkuDQo+DQo+
-IFNvIHRoZW4gd2UnZCBuZWVkIHRvIGFkZCBkZWZhdWx0IGltcGxlbWVudGF0aW9ucyBmb3IgdGhl
-IF93cmFwIA0KPiBmdW5jdGlvbnMuIEFuZCB3b3VsZG4ndCB0aG9zZSBlc3NlbnRpYWxseSBoYXZl
-IHRvIHVzZSB0aGUgYXJjaCANCj4gaW1wbGVtZW50ZWQgcGxhaW4gZnVuY3Rpb24gdG8gZW5zdXJl
-IGl0IGFjdHVhbGx5IHdvcmtzIGluIGFsbCBjYXNlcz8NCj4NCj4gU28gSSdtIG5vdCBkaXNhZ3Jl
-ZWluZyB3aXRoIHlvdSwgSSdtIGp1c3Qgbm90IGNsZWFyIG9uIHRoZSANCj4gcHJvcGVyL2NsZWFu
-IHdheSB0byBhcHByb2FjaCB0aGlzIGVpdGhlci4NCg0KPkkgdGhpbmsgdGhlIG5vdC1oYXJkZW5l
-ZCBfd3JhcCBmdW5jdGlvbnMgd291bGQganVzdCBsb29rIGxpa2UgdGhpczoNCg0KPnN0YXRpYyBp
-bmxpbmUgYXRvbWljX2luY193cmFwKGF0b21pY193cmFwX3QgKmF0b21pYykgew0KPiAgICAgICAg
-ICBhdG9taWNfaW5jKChhdG9taWNfd3JhcCAqKWF0b21pYyk7IH0NCj4NCj5UaGVuIHR5cGUgY2hl
-Y2tpbmcgaXMgZG9uZSB3aXRoIG9yIHdpdGhvdXQgQ09ORklHX0hBUkRFTkVEX0FUT01JQywgYW5k
-IHRoZXJlIGlzIG5vIGNoYW5nZSBpbiBiaW5hcnkgY29kZSBzaXplICh0aGUgY29tcGlsZXIgd2ls
-bCBqdXN0IHJlcGxhY2UgdGhlIGNhbGwpLg0KDQpJIGxpa2UgaXQgdGhpcyB3YXkuIEFuZCB0aGVu
-IHRoZSBhdG9taWNfd3JhcF90IGNhbiBiZSBkZWZpbmVkIGFzIGEgc3RydWN0IG9mIGl0cyBvd24g
-ZXZlbiBpbiBjYXNlIG9mIGhhcmRlbmluZyBhdG9taWMgaXMgb2ZmLiANCldlIHdpbGwgaW5jbHVk
-ZSB0aGlzIGZvciByZmMgdjQhDQoNCkJlc3QgUmVnYXJkcywNCkVsZW5hLg0K
+On 27/06/16 01:34, Emese Revfy wrote:
+>
+> Reported-by: PaX Team <pageexec@freemail.hu>
+> Signed-off-by: Emese Revfy <re.emese@gmail.com>
+> ---
+>  arch/powerpc/kernel/Makefile | 3 ++-
+>  1 file changed, 2 insertions(+), 1 deletion(-)
+>
+> diff --git a/arch/powerpc/kernel/Makefile b/arch/powerpc/kernel/Makefile
+> index 01935b8..e9ef44f 100644
+> --- a/arch/powerpc/kernel/Makefile
+> +++ b/arch/powerpc/kernel/Makefile
+> @@ -14,11 +14,12 @@ CFLAGS_prom_init.o      += -fPIC
+>  CFLAGS_btext.o         += -fPIC
+>  endif
+>
+> -ifdef CONFIG_FUNCTION_TRACER
+>  CFLAGS_cputable.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+>  CFLAGS_init.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+
+I think you meant prom_init.o...
+
+Additionally, DISABLE_LATENT_ENTROPY_PLUGIN is conditioned on 
+CONFIG_PAX_LATENT_ENTROPY rather than CONFIG_GCC_PLUGIN_LATENT_ENTROPY, 
+so it doesn't get exported correctly.
+
+Will submit fixes along with patches to enable plugins on powerpc once I 
+get that sorted.
+
+(In future please remember to cc linuxppc-dev.)
+
+-- 
+Andrew Donnellan              OzLabs, ADL Canberra
+andrew.donnellan@au1.ibm.com  IBM Australia Limited
