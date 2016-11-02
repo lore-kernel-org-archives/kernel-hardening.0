@@ -1,36 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Adam Sampson <ats@offog.org>
-References: <93057ac3-301d-ed5d-405d-93eb4e3deb30@yuhu.biz>
-Date: Wed, 02 Nov 2016 16:10:30 +0000
-In-Reply-To: <93057ac3-301d-ed5d-405d-93eb4e3deb30@yuhu.biz> (Marian Marinov's
-	message of "Wed, 2 Nov 2016 05:42:41 +0200")
-Message-ID: <y2apomdx3pl.fsf@offog.org>
-MIME-Version: 1.0
-Content-Type: text/plain
-Sender: Adam Sampson <ats@offog.org>
-Subject: Re: [kernel-hardening] Legitimate use of /proc/PID/mem,maps and smaps
+From: Vaishali Thakkar <vaishali.thakkar@oracle.com>
+Date: Wed,  2 Nov 2016 22:32:49 +0530
+Message-Id: <1478106169-25770-1-git-send-email-vaishali.thakkar@oracle.com>
+Subject: [kernel-hardening] [RFC PATCH] lib: Harden csum_partial_copy_from_user
 To: kernel-hardening@lists.openwall.com
+Cc: Vaishali Thakkar <vaishali.thakkar@oracle.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Marian Marinov <mm-l@yuhu.biz> writes:
+The routine csum_partial_copy_from_user is same as csum_partial_copy
+but it copies from user space for the checksumming. In other respects
+it is identical, and can be used to copy an arbitrarily large buffer
+from userspace into the kernel. Conceptually this exposes a similar
+attack surface like copy_from_user. So, to validate the given address
+we should call check_object_size here.
 
-> Are there any other legitimate users of these files, maybe X?
+Note that in the absence of hardened usercopy this will have no impact.
 
-This is the kind of question that Debian Code Search is useful for
-(although it's not exhaustive):
-https://codesearch.debian.net/search?q=%2Fproc%2Fself%2Fmem&perpkg=1
-https://codesearch.debian.net/search?q=%2Fproc%2Fself%2Fmaps&perpkg=1
-https://codesearch.debian.net/search?q=%2Fproc%2Fself%2Fsmaps&perpkg=1
+Signed-off-by: Vaishali Thakkar <vaishali.thakkar@oracle.com>
+---
+ lib/checksum.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
->From my bug-hunting experience, programs use /proc/self/maps for all
-sorts of weird things -- e.g. working out the full path of the
-executable, or what version of a shared library they've been linked
-against, or guessing whether some random value is a valid pointer. Many
-have embedded copies of code from gettext or BinReloc that uses it.
-
-On the other hand, many of these don't actually need all the information
-in /proc/self/maps, so you could get away with a simplified version that
-only had valid filenames.
-
+diff --git a/lib/checksum.c b/lib/checksum.c
+index d3ec93f..2e0fec8 100644
+--- a/lib/checksum.c
++++ b/lib/checksum.c
+@@ -33,6 +33,7 @@
+  kills, so most of the assembly has to go. */
+ 
+ #include <linux/export.h>
++#include <linux/thread_info.h>
+ #include <net/checksum.h>
+ 
+ #include <asm/byteorder.h>
+@@ -158,6 +159,7 @@ csum_partial_copy_from_user(const void __user *src, void *dst, int len,
+ {
+ 	int missing;
+ 
++	check_object_size(dst, len, false);
+ 	missing = __copy_from_user(dst, src, len);
+ 	if (missing) {
+ 		memset(dst + len - missing, 0, missing);
 -- 
-Adam Sampson <ats@offog.org>                         <http://offog.org/>
+2.1.4
