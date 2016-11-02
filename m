@@ -1,23 +1,75 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Marian Marinov <mm-l@yuhu.biz>
-Message-ID: <93057ac3-301d-ed5d-405d-93eb4e3deb30@yuhu.biz>
-Date: Wed, 2 Nov 2016 05:42:41 +0200
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 2 Nov 2016 04:51:56 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFC2E7@IRSMSX102.ger.corp.intel.com>
+References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
+	 <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
+	 <1478001210.2236.28.camel@cvidal.org>
+	 <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
+	 <20161101125516.qwf5ccaun2nd3qvi@thigreal>
+ <1478020909.2236.31.camel@cvidal.org>
+In-Reply-To: <1478020909.2236.31.camel@cvidal.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Legitimate use of /proc/PID/mem,maps and smaps
-To: kernel-hardening@lists.openwall.com
+Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
+ independent hardened atomic base
+To: Colin Vidal <colin@cvidal.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi guys,
-after dirtyCoW me and colleges of mine started discussing different vectors of exploiting applications and we noticed that a lot of the exploits we were discussing relied on /proc/PID/mem or mpas or smaps to be readable by the same user.
-
-We started thinking of legitimate use of these files (lsof, gdb with plugins and valgrind). Are there any other legitimate users of these files, maybe X?
-
-I'm considering writing a patch, which will make sure that nobody, even the owner of the process, can't open these files and only root or users with CAP_DAC_OVERRIDE and/or CAP_SYS_ADMIN can see these files.
-For everyone that is not root and lacks DAC_OVERRIDE and SYS_ADMIN the files should not exists.
-
-What do you think about this?
-
-Best regards,
-Marian
+T24gVHVlLCAyMDE2LTExLTAxIGF0IDE0OjU1ICswMjAwLCBIYW5zIExpbGplc3RyYW5kIHdyb3Rl
+Og0KPiBPbiBUdWUsIE5vdiAwMSwgMjAxNiBhdCAxMjoxNToyNVBNICswMDAwLCBSZXNoZXRvdmEs
+IEVsZW5hIHdyb3RlOg0KPiA+IA0KPiA+ID4gDQo+ID4gPiBIaSAoYWdhaW4gOi0pKSBFbGVuYSwg
+SGFucywNCj4gPiANCj4gPiA+IA0KPiA+ID4gZGlmZiAtLWdpdCBhL2luY2x1ZGUvbGludXgvYXRv
+bWljLmggYi9pbmNsdWRlL2xpbnV4L2F0b21pYy5oDQo+ID4gPHNuaXA+DQo+ID4gPiANCj4gPiA+
+ICsjaWZuZGVmIGF0b21pY19jbXB4Y2hnX3dyYXANCj4gPiA+ICsjZGVmaW5lICBhdG9taWNfY21w
+eGNoZ193cmFwKC4uLikJCQkJXA0KPiA+ID4gKwlfX2F0b21pY19vcF9mZW5jZShhdG9taWNfY21w
+eGNoZ193cmFwLCBfX1ZBX0FSR1NfXykgI2VuZGlmDQo+ID4gPiAgI2VuZGlmIC8qIGF0b21pY19j
+bXB4Y2hnX3JlbGF4ZWQgKi8NCj4gPiA+IA0KPiA+IA0KPiA+ID4gDQo+ID4gPiBJIGhhdmUgYSBw
+cm9ibGVtIGhlcmUuIFdpdGggQVJNdjcgKHdpdGhvdXQgYW55IG9mIG15IHBhdGNoZXMpLCBJIA0K
+PiA+ID4gaGF2ZSBhIGltcGxpY2l0IGRlY2xhcmF0aW9uIG9mIGF0b21pY19jbXB4Y2hnX3dyYXAu
+IFBlcmhhcHMgDQo+ID4gPiBzb21ldGhpbmcgbGlrZQ0KPiA+IA0KPiA+ID4gDQo+ID4gPiAgICAj
+aWZuZGVmwqBhdG9taWNfY21weGNoZ193cmFwX3JlbGF4ZWQNCj4gPiA+ICAgICNkZWZpbmXCoGF0
+b21pY19jbXB4Y2hnX3dyYXBfcmVsYXhlZCBhdG9taWNfY21weGNoZ193cmFwDQo+ID4gDQo+ID4g
+PiANCj4gPiA+IGlzIG1pc3Npbmc/IEkgZGlkbid0IGZvbGxvdyB0aGUgcmVjZW50IGNoYW5nZXMg
+b2YgdGhhdCBwYXJ0LCBzbyBJIA0KPiA+ID4gYW0gbm90IHF1aXRlIHN1cmUuLi4NCj4gPiANCj4g
+PiA+IA0KPiA+ID4gVGhhbmtzIQ0KPiA+IA0KPiA+ID4gDQo+ID4gPiBDb2xpbg0KPiA+IA0KPiA+
+ID4gDQo+ID4gPiBJbiBmaWxlIGluY2x1ZGVkIGZyb20gLi9pbmNsdWRlL2xpbnV4L3NwaW5sb2Nr
+Lmg6NDA2OjAsDQo+ID4gICAgICAgICAgICAgICAgICBmcm9tIC4vaW5jbHVkZS9saW51eC9zZXFs
+b2NrLmg6MzUsDQo+ID4gICAgICAgICAgICAgICAgICBmcm9tIC4vaW5jbHVkZS9saW51eC90aW1l
+Lmg6NSwNCj4gPiAgICAgICAgICAgICAgICAgIGZyb20gLi9pbmNsdWRlL2xpbnV4L3N0YXQuaDox
+OCwNCj4gPiAgICAgICAgICAgICAgICAgIGZyb20gLi9pbmNsdWRlL2xpbnV4L21vZHVsZS5oOjEw
+LA0KPiA+ICAgICAgICAgICAgICAgICAgZnJvbSBuZXQvaXB2NC9yb3V0ZS5jOjY3Og0KPiA+ID4g
+DQo+ID4gPiBuZXQvaXB2NC9yb3V0ZS5jOiBJbiBmdW5jdGlvbiDigJhpcF9pZGVudHNfcmVzZXJ2
+ZeKAmToNCj4gPiA+IC4vaW5jbHVkZS9saW51eC9hdG9taWMuaDo0NTk6MjA6IGVycm9yOiBpbXBs
+aWNpdCBkZWNsYXJhdGlvbiBvZiANCj4gPiA+IGZ1bmN0aW9uIOKAmGF0b21pY19jbXB4Y2hnX3dy
+YXBfcmVsYXhlZOKAmSANCj4gPiA+IFstV2Vycm9yPWltcGxpY2l0LWZ1bmN0aW9uLWRlY2xhcmF0
+aW9uXQ0KPiA+ICAgX19hdG9taWNfb3BfZmVuY2UoYXRvbWljX2NtcHhjaGdfd3JhcCwgX19WQV9B
+UkdTX18pDQo+ID4gICAgICAgICAgICAgICAgICAgICBeDQo+ID4gPiANCj4gPiA+IC4vaW5jbHVk
+ZS9saW51eC9hdG9taWMuaDo2Mjo5OiBub3RlOiBpbiBkZWZpbml0aW9uIG9mIG1hY3JvIOKAmF9f
+YXRvbWljX29wX2ZlbmNl4oCZDQo+ID4gID4gdHlwZW9mKG9wIyNfcmVsYXhlZChhcmdzKSkgX19y
+ZXQ7ICAgIFwNCj4gPiAgICAgICAgICBefg0KPiA+ID4gDQo+ID4gPiBuZXQvaXB2NC9yb3V0ZS5j
+OjQ4ODoxMTogbm90ZTogaW4gZXhwYW5zaW9uIG9mIG1hY3JvIOKAmGF0b21pY19jbXB4Y2hnX3dy
+YXDigJkNCj4gPiA+ICB9IHdoaWxlIChhdG9taWNfY21weGNoZ193cmFwKHBfaWQsIG9sZCwgbmV3
+KSAhPSBvbGQpOw0KPiA+IA0KPiA+IE9oLCBJIHRoaW5rIHRoaXMgaXMgYmVjYXVzZSB3ZSBkb24n
+dCBoYXZlIGF0b21pY19jbXB4Y2hnX3dyYXBfcmVsYXhlZCBkZWZpbmVkIG5laXRoZXIgYXRvbWlj
+X3hjaGdfd3JhcF9yZWxheGVkLiBXb25kZXIgd2h5IHRoaXMgZG9lc24ndCBzaG93IHVwIG9uIHg4
+NiwgSSBkaWQgbWFueSBidWlsZHMgd2l0aG91dCBvdXIgeDg2IGNoYW5nZXMgdG8gdmVyaWZ5LiAN
+Cj4gPiBIYW5zIGNvdWxkIHlvdSBwbGVhc2UgaGFuZGxlIHRoaXMgY2hhbmdlIHRvZGF5IHRvIHVu
+YmxvY2sgQ29saW4/IA0KPiANCj4gQ291bGQgaGF2ZSBiZWVuIHRoaXMgd2FzIGFuIGVycm9yIHRo
+YXQgZGlkbid0IHNob3cgdXAgb24geDg2LCBidXQgbm90IA0KPiBzdXJlIHdoeSBjbXB4Y2hnIGFu
+ZCB4Y2hnIHdhc24ndCBndWFyZGVkIGFzIHRoZSBvdGhlciBhdG9taWNfKl9yZWxheGVkIA0KPiBm
+dW5jdGlvbnMuIFRoaXMgd2hvbGUgc2VjdGlvbiBpcyBhIGJpdCBpZmZ5LCB0aGUgYWltIGlzIHRv
+IGJlIA0KPiBhbmFsb2dvdXMgdG8gdGhlIG5vbi13cmFwIHJlbGF4ZWQgZnVuY3Rpb25zLCBidXQg
+d2l0aG91dCBhY3R1YWxseSANCj4gaGF2aW5nIHJlbGF4ZWRfd3JhcCBmdW5jdGlvbnMsIHNvIGJh
+c2ljYWxseSB0aGVzZSBwcm9iYWJseSBhbHdheXMganVzdCBlbmQgdXAgZGVmaW5pbmcgdGhlIF93
+cmFwX3JlbGF4ZWQgYXMgX3dyYXAgZnVuY3Rpb25zLg0KPiANCj4gSSd2ZSBjb21taXR0ZWQgYSBw
+b3NzaWJsZSAiZml4Ii4gQnV0IEkgY2Fubm90IGNvbmZpcm0gc2luY2UgSSBkb24ndCANCj4gc2Vl
+IHRoZSBlcnJvciBvbiBteSBidWlsZCBzZXR1cHMuDQoNClRoYW5rIHlvdSBIYW5zIQ0KDQo+IA0K
+DQo+WWVwLCBzZWVtcyBnb29kIGhlcmUhIFRoYW5rcyENCg0KPkZZSSwgSSB1c2UgZ2VuZXJpYyBj
+b25maWcgZmlsZXMgZ2VuZXJhdGVkIGJ5DQo+DQo+ICAgbWFrZSBBUkNIPWFybSBkZWZjb25maWcg
+I2ZvciB2Nw0KPiAgIG1ha2UgQVJDSD1hcm3CoGlteF92Nl92N19kZWZjb25maWcgI2ZvciBnZW5l
+cmljIGF0b21pYzY0ICh2NikNCg0KV2Ugd2lsbCBhZGQgdGhpcyBjb25maWd1cmF0aW9uIHRvIG91
+ciBidWlsZCB0ZXN0IHNldCB0byBtYWtlIHN1cmUgd2UgZG9uJ3QgbWFrZSBtaXN0YWtlcyBoZXJl
+IGFnYWluLiANCg0KQmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
