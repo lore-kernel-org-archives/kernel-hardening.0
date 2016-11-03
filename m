@@ -1,43 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 3 Nov 2016 18:05:37 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20161103180524.GA27785@remoulade>
+References: <1478106169-25770-1-git-send-email-vaishali.thakkar@oracle.com>
+ <20161102204453.GA18842@remoulade>
+ <CAGXu5j+go+Fr2OeF-R4BtVHRcBRrC0TaU477J4RwEAe4zDRZ9A@mail.gmail.com>
+ <581A9D8B.5040200@oracle.com>
+ <20161103042301.GA24968@remoulade>
+ <581AC389.10507@oracle.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161103175558.GA1177@laptop.thejh.net>
-References: <1478187038-19954-1-git-send-email-wluikil@gmail.com>
- <1478187038-19954-2-git-send-email-wluikil@gmail.com> <CAGXu5jLZnkwK3NRV7qy=fi51_W4rP4-jGzeYSwceuvSz7_Ht8g@mail.gmail.com>
- <20161103175558.GA1177@laptop.thejh.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 3 Nov 2016 12:05:22 -0600
-Message-ID: <CAGXu5j+FBu1mnbiPa=fMB8Hgq0iUCdoWGhJKJcBukE4n-iF1+Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 2/2] procfs/tasks: add a simple per-task procfs hidepid= field
-To: Jann Horn <jann@thejh.net>
-Cc: Lafcadio Wluiki <wluikil@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-arch <linux-arch@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <581AC389.10507@oracle.com>
+Subject: Re: [kernel-hardening] [RFC PATCH] lib: Harden
+ csum_partial_copy_from_user
+To: Vaishali Thakkar <vaishali.thakkar@oracle.com>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Al Viro <viro@zeniv.linux.org.uk>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 3, 2016 at 11:55 AM, Jann Horn <jann@thejh.net> wrote:
-> On Thu, Nov 03, 2016 at 10:12:55AM -0600, Kees Cook wrote:
->> On Thu, Nov 3, 2016 at 9:30 AM, Lafcadio Wluiki <wluikil@gmail.com> wrote:
->> > (Third, rebased submission, since first two submissions yielded no replies.)
->> >
->> > This adds a new per-task hidepid= flag that is honored by procfs when
->> > presenting /proc to the user, in addition to the existing hidepid= mount
->> > option. So far, hidepid= was exclusively a per-pidns setting. Locking
->> > down a set of processes so that they cannot see other user's processes
->> > without affecting the rest of the system thus currently requires
->> > creation of a private PID namespace, with all the complexity it brings,
->> > including maintaining a stub init process as PID 1 and losing the
->> > ability to see processes of the same user on the rest of the system.
-> [...]
->> Since this adds a new prctl interface, it's best to Cc linux-arch
->> (which I added now).
->
-> Please also CC linux-api for the next iteration, since this is a new
-> userspace-facing API.
+On Thu, Nov 03, 2016 at 10:26:41AM +0530, Vaishali Thakkar wrote:
+> On Thursday 03 November 2016 09:53 AM, Mark Rutland wrote:
+> > On Thu, Nov 03, 2016 at 07:44:35AM +0530, Vaishali Thakkar wrote:
+> >> On Thursday 03 November 2016 03:29 AM, Kees Cook wrote:
+> >>> On Wed, Nov 2, 2016 at 2:44 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+> >>>> I know that both arm64 and x86 have a check_object_size() call in their
+> >>>> __copy_from_user() implementations.
+> > 
+> >>>> Is that missing on some architectures?
 
-Oops, thank you. I meant linux-api, not linux-arch. :P
+> > Looking again, a grep shows many (even those with MMUs) don't do anything at
+> > all in v4.9-rc2:
+> > 
+> > [mark@remoulade:~/src/linux]% for ARCH in arch/*; do
+> > printf "%d %s\n" $(git grep check_object_size -- "${ARCH}" | wc -l) ${ARCH};
+> > done | sort -n
 
--Kees
+> Hmm, should we go for sending patches for them? [atleast for the ones with MMUs
+> and then may be maintainers/developers can check the change]
 
--- 
-Kees Cook
-Nexus Security
+If Al's uaccess unification work is arriving shortly, sending patches for those
+in parallel is just going to make matters more painful.
+
+So it really depends on when that's likely to appear.
+
+> Also, I think same goes for the the kasan_check. We have only arm64 and x86  
+> with these checks.
+
+Yes. I'd hoped to collect all of those behind a common helper, something like:
+
+static inline void check_uaccess_read(void *kaddr, const void __user *uaddr, unsigned long n)
+{
+	kasan_check_write(kaddr, n);
+	check_object_size(kaddr, n, false);
+	any_uaddr_sanity_check(uaddr, n);
+}
+
+Thanks,
+Mark.
