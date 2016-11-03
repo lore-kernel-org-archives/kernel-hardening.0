@@ -1,106 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 3 Nov 2016 05:03:02 +0000
+From: Al Viro <viro@ZenIV.linux.org.uk>
+Message-ID: <20161103050302.GC19539@ZenIV.linux.org.uk>
 References: <1478106169-25770-1-git-send-email-vaishali.thakkar@oracle.com>
  <20161102204453.GA18842@remoulade>
  <CAGXu5j+go+Fr2OeF-R4BtVHRcBRrC0TaU477J4RwEAe4zDRZ9A@mail.gmail.com>
- <581A9D8B.5040200@oracle.com> <20161103042301.GA24968@remoulade>
-From: Vaishali Thakkar <vaishali.thakkar@oracle.com>
-Message-ID: <581AC389.10507@oracle.com>
-Date: Thu, 3 Nov 2016 10:26:41 +0530
 MIME-Version: 1.0
-In-Reply-To: <20161103042301.GA24968@remoulade>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+go+Fr2OeF-R4BtVHRcBRrC0TaU477J4RwEAe4zDRZ9A@mail.gmail.com>
+Sender: Al Viro <viro@ftp.linux.org.uk>
 Subject: Re: [kernel-hardening] [RFC PATCH] lib: Harden
  csum_partial_copy_from_user
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Al Viro <viro@zeniv.linux.org.uk>, David Windsor <dwindsor@gmail.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Vaishali Thakkar <vaishali.thakkar@oracle.com>, Mark Rutland <mark.rutland@arm.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
-
-On Thursday 03 November 2016 09:53 AM, Mark Rutland wrote:
-> Hi Vaishali,
-
-Hi Mark,
- 
-> On Thu, Nov 03, 2016 at 07:44:35AM +0530, Vaishali Thakkar wrote:
->> On Thursday 03 November 2016 03:29 AM, Kees Cook wrote:
->>> On Wed, Nov 2, 2016 at 2:44 PM, Mark Rutland <mark.rutland@arm.com> wrote:
->>>> I know that both arm64 and x86 have a check_object_size() call in their
->>>> __copy_from_user() implementations.
+On Wed, Nov 02, 2016 at 03:59:25PM -0600, Kees Cook wrote:
+> On Wed, Nov 2, 2016 at 2:44 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+> > Hi,
+> >
+> > On Wed, Nov 02, 2016 at 10:32:49PM +0530, Vaishali Thakkar wrote:
+> >> The routine csum_partial_copy_from_user is same as csum_partial_copy
+> >> but it copies from user space for the checksumming. In other respects
+> >> it is identical, and can be used to copy an arbitrarily large buffer
+> >> from userspace into the kernel. Conceptually this exposes a similar
+> >> attack surface like copy_from_user. So, to validate the given address
+> >> we should call check_object_size here.
+> >
+> > Thanks for looking at this! I agree that we should be trying lock down these
+> > homebrew/specialised copy_{to,from}_user routines.
 > 
->>>> Is that missing on some architectures?
->>>
->>> Every architecture is _slightly_ different. Most put the check in
->>> __copy_from_user() so it's correctly caught. (x86 puts them in both
->>> since copy*() calls _copy*(), not __copy*() ... >_<)
->>
->> I think still there are some architectures which didn't put the check
->> in __copy_from_user() [eg. tile].
-> 
-> I see. :(
-> 
-> Looking again, a grep shows many (even those with MMUs) don't do anything at
-> all in v4.9-rc2:
-> 
-> [mark@remoulade:~/src/linux]% for ARCH in arch/*; do
-> printf "%d %s\n" $(git grep check_object_size -- "${ARCH}" | wc -l) ${ARCH};
-> done | sort -n
-> 0 arch/alpha
-> 0 arch/arc
-> 0 arch/avr32
-> 0 arch/blackfin
-> 0 arch/c6x
-> 0 arch/cris
-> 0 arch/frv
-> 0 arch/h8300
-> 0 arch/hexagon
-> 0 arch/Kconfig
-> 0 arch/m32r
-> 0 arch/m68k
-> 0 arch/metag
-> 0 arch/microblaze
-> 0 arch/mn10300
-> 0 arch/nios2
-> 0 arch/openrisc
-> 0 arch/score
-> 0 arch/sh
-> 0 arch/tile
-> 0 arch/um
-> 0 arch/unicore32
-> 0 arch/xtensa
-> 2 arch/parisc
-> 2 arch/s390
-> 3 arch/arm
-> 4 arch/arm64
-> 4 arch/ia64
-> 4 arch/powerpc
-> 5 arch/sparc
-> 6 arch/mips
-> 6 arch/x86
+> Yes, I'm glad to have more eyes on this. I did notice that these are
+> almost exclusively used in networking. I'd be curious to see how
+> noticeable this is on performance (though see my inlining comment
+> below...)
 
-Hmm, should we go for sending patches for them? [atleast for the ones with MMUs
-and then may be maintainers/developers can check the change]
+No check_object_size() in that place.  Really.  Look through the call chains.
 
-Also, I think same goes for the the kasan_check. We have only arm64 and x86  
-with these checks.
+> Al, is your pass at improving uaccess currently finished, or do you
+> have more changes coming?
 
->> I was actually wondering if there are any cases where we need any
->> architecture specific extra check(s)?
-> 
-> Generally, I'd expect that to be orthogonal to the hardened usercopy work, and
-> that check would still be present in the low-level architecture-specific code
-> even if we made the check_object_size() checks common.
-> 
-> Do you have an example of the kind of thing you're worried about?
+Yes, and quite a few.  There's going to be a lot of merging between the
+architectures in that area.
 
-Ahmm, no. Not at the moment. But I was actually thinking that this might be possible
-based on how architecture copies data from the userspace. Probably this can be figure
-out later on by architecture maintainers once they have this check ...
- 
-> Thanks,
-> Mark.
-> 
+As for csum stuff...  csum_partial_copy_from_user() is *NOT* an exposed
+API.  Really.  It's a helper often used by implementations of
+csum_partial_copy_nocheck() and csum_and_copy_from_user().  Those two
+are parts of API.  With very limited use.  csum_and_copy_from_user()
+has literally only one user - csum_and_copy_from_iter().
 
--- 
-Vaishali
+csum_partial_copy_nocheck() has slightly wider use.  It has nothing to do
+with userland memory, though, and should never be used for such.  First of all,
+it's used in implementation of csum_and_copy_{to,from}_iter().  Then
+there are
+	* skb_copy_and_csum_bits()
+	* getfrag callbacks of ip_append_data() - icmp_push_reply(),
+ip_reply_glue_bits(), raw_getfrag(), raw6_getfrag()
+	* tcp_fragment()
+	* really weird shit in drivers/net/ethernet/3com/typhoon.c - the
+hardware apparently uses IP-style csum as a signature for the firmware.
+Yes, really.  Comments regarding the value of such 'protection' (whatever
+it was they were trying to protect) are best directed to 3COM people.
+
+	What would you check the sizes of?  The most common users are
+csum_and_copy_from_iter() and skb_copy_and_csum_bits().  And serious
+overhead added to either of those will be _very_ painful.
