@@ -1,55 +1,46 @@
-Reply-To: kernel-hardening@lists.openwall.com
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
- <20161128121347.GY3092@twins.programming.kicks-ass.net>
- <000779ba-0b53-3064-db8a-f309b2c993f5@ozlabs.ru>
- <20161129093159.GD3092@twins.programming.kicks-ass.net>
-From: Alexey Kardashevskiy <aik@ozlabs.ru>
-Message-ID: <8fe0521f-6f42-65fa-2266-d7f2d47b6052@ozlabs.ru>
-Date: Wed, 30 Nov 2016 11:23:22 +1100
-MIME-Version: 1.0
-In-Reply-To: <20161129093159.GD3092@twins.programming.kicks-ass.net>
-Content-Type: text/plain; charset=koi8-r
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, david@gibson.dropbear.id.au
+Return-Path: 
+ <kernel-hardening-return-5229-ydroneaud=opteya.com@lists.openwall.com>
+List-Post: <mailto:kernel-hardening@lists.openwall.com>
+List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
+List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
+List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
+Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 03 Nov 2016 02:03:58 +0000
+From: Daniel Gruss <daniel@gruss.cc>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Subject: Re: [kernel-hardening] Breaking Kernel ASLR by using Intel TSX
+Content-Transfer-Encoding: 8bit
+Message-ID: <b24e635b4cdac9eda1542da7d36aceef5d36d62f.camel@gruss.cc>
+To: Marian Marinov <mm-l@yuhu.biz>
+Cc: Sangho Lee <sangho@gatech.edu>, kernel-hardening@lists.openwall.com, Taesoo Kim <taesoo@gatech.edu>, Yeongjin Jang <yeongjin.jang@gatech.edu>
 
-On 29/11/16 20:31, Peter Zijlstra wrote:
-> On Tue, Nov 29, 2016 at 02:19:56PM +1100, Alexey Kardashevskiy wrote:
->> On 28/11/16 23:13, Peter Zijlstra wrote:
->>> On Mon, Nov 28, 2016 at 11:56:17AM +0000, Reshetova, Elena wrote:
->>>> First, about the types. 
->>>> We do have a number of instances of atomic_long_t used as refcounters, see below:
->>>
->>> Right, those were expected. We could do long_refcount_t I suppose.
->>>
->>>> And yes, we *do* have at least one instance (again not 100% finished,
->>>> more might show up) of atomic64_t used as refcounter:
->>>>
->>>> arch/powerpc/mm/mmu_context_iommu.c:
->>>> struct mm_iommu_table_group_mem_t {
->>>> ...
->>>>     atomic64_t mapped;
->>>> ...
->>>> }
->>>
->>> *urgh*, Alexey does that really need to be atomic64_t ? Wouldn't
->>> atomic_long_t work for you?
->>
->>
->> It would, this code only works in 64bit where long==64bit anyway (in fact
->> even 32bit variant would do).
->>
-> 
-> Thanks, we'll convert it to a 32bit refcount then.
+These are two different attacks... 
 
-
-I'd rather make it "long" as everything else in that struct is long (€¿’¿
-64…€≈) and having 32bit value in a middle won't save space but create an
-useless gap.
-
-
-
--- 
-Alexey
+Cheers
+Daniel Am 03.11.2016 12:58 vorm. schrieb Marian Marinov <mm-l@yuhu.biz>:
+>
+> On 10/26/2016 05:47 PM, Taesoo Kim wrote: 
+> > Dear all, 
+> > 
+> > Someone in this mailinglist might find this work interesting: 
+> > 
+> >¬†¬†¬† https://github.com/sslab-gatech/DrK 
+> >¬†¬†¬† https://news.ycombinator.com/item?id=12796199 
+> > 
+> > Feel free to approach us if you have any question or suggestion. 
+> > 
+> > Thank you, 
+> > Taesoo 
+> > 
+> > 
+> Hmm Shawn Webb does not agree: 
+>
+> https://github.com/lattera/articles/blob/master/infosec/Exploit%20Mitigations/ASLR/2016-10-19_btb/article.md 
+>
+>
+> Regards, 
+>
+> Marian 
+>
