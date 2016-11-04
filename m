@@ -1,95 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 3 Nov 2016 21:42:39 +0100
-From: Jann Horn <jann@thejh.net>
-Message-ID: <20161103204239.GN8196@pc.thejh.net>
-References: <1478187038-19954-2-git-send-email-wluikil@gmail.com>
- <20161103182441.GA29904@laptop.thejh.net>
- <CAGXu5jJ9d+hiHdS_Ge6H+Jxz3py-RNAEx626M9L2doSZ608LDQ@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Fri, 4 Nov 2016 07:04:07 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFD153@IRSMSX102.ger.corp.intel.com>
+References: <1477914225-11298-1-git-send-email-elena.reshetova@intel.com>
+ <1477914225-11298-2-git-send-email-elena.reshetova@intel.com>
+ <1478001210.2236.28.camel@cvidal.org>
+ <2236FBA76BA1254E88B949DDB74E612B41BFAD4B@IRSMSX102.ger.corp.intel.com>
+ <20161102065505.GA381@linaro.org>
+In-Reply-To: <20161102065505.GA381@linaro.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="tjOMJDssiV0CZSJH"
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ9d+hiHdS_Ge6H+Jxz3py-RNAEx626M9L2doSZ608LDQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [2/2] procfs/tasks: add a simple per-task
- procfs hidepid= field
-To: Kees Cook <keescook@chromium.org>
-Cc: Lafcadio Wluiki <wluikil@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [kernel-hardening] [RFC v3 PATCH 01/13] Add architecture
+ independent hardened atomic base
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Colin Vidal <colin@cvidal.org>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, Hans
+ Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
---tjOMJDssiV0CZSJH
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-
-On Thu, Nov 03, 2016 at 02:34:16PM -0600, Kees Cook wrote:
-> On Thu, Nov 3, 2016 at 12:24 PM, Jann Horn <jann@thejh.net> wrote:
-> > On Thu, Nov 03, 2016 at 09:30:38AM -0600, Lafcadio Wluiki wrote:
-> >> This adds a new per-task hidepid=3D flag that is honored by procfs when
-> >> presenting /proc to the user, in addition to the existing hidepid=3D m=
-ount
-> >> option. So far, hidepid=3D was exclusively a per-pidns setting. Locking
-> >> down a set of processes so that they cannot see other user's processes
-> >> without affecting the rest of the system thus currently requires
-> >> creation of a private PID namespace, with all the complexity it brings,
-> >> including maintaining a stub init process as PID 1 and losing the
-> >> ability to see processes of the same user on the rest of the system.
-> > [...]
-> >> diff --git a/kernel/sys.c b/kernel/sys.c
-> >> index 89d5be4..c0a1d3e 100644
-> >> --- a/kernel/sys.c
-> >> +++ b/kernel/sys.c
-> >> @@ -2270,6 +2270,16 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned lo=
-ng, arg2, unsigned long, arg3,
-> >>       case PR_GET_FP_MODE:
-> >>               error =3D GET_FP_MODE(me);
-> >>               break;
-> >> +     case PR_SET_HIDEPID:
-> >> +             if (arg2 < HIDEPID_OFF || arg2 > HIDEPID_INVISIBLE)
-> >> +                     return -EINVAL;
-> >> +             if (arg2 < me->hide_pid)
-> >> +                     return -EPERM;
-> >> +             me->hide_pid =3D arg2;
-> >> +             break;
-> >
-> > Should we test for ns_capable(CAP_SYS_ADMIN)||no_new_privs here?
-> > I think it wouldn't hurt, and I'd like to avoid adding new ways in which
-> > the execution of setuid programs can be influenced. OTOH, people already
-> > use hidepid now, and it's not an issue... I'm not sure. Opinions?
->=20
-> Hrrm, I'm really on the fence. I don't feel like having things in
-> /proc go invisible for a setuid would be bad, but I wouldn't be
-> surprised to eat my words. :) On the other hand, I can't think of a
-> place where this requirement would create a problem.
->=20
-> e.g. init launching a web server as root could set nnp and this, and
-> it would still be able to switch down to www-data, etc. If someone has
-> www-data in their /etc/sudoers file, I already fear for their sanity.
-> ;)
-
-(and init launching a web server as root could also set hidepid without
-setting nnp if it really wants to)
-
---tjOMJDssiV0CZSJH
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iQIcBAEBAgAGBQJYG6E/AAoJED4KNFJOeCOoJpgP/jPkc1Ol53lyN6wqq30bKaZw
-/tn7QysAK+Fr5NpHrk41jPZ0XTXlHbKFzvnRfOX65qp1EEZLM+mcrj318tBt7hdr
-R+OjlYMMx2SQnfp6Nz6BSh9fbEt5n391zEvxDqft4MDmWFfQUwPADbKZ4e9IU3Aj
-TwFHe1Gelj1bggOWKJmO6lYED0ws1BDURNeu0Sw3FF8dzO/wG12VoMNkMoeIqfRw
-p6MjyFttwwGUDUISLLijuR8uErwAc0cFWSHBZZkHzy30r5UQmmn9OrJV3QCQ6Q9w
-JwrJMM1okfNNyxHAqg+BDu6SUFYQDddolAdi6Ha4sfIU7F8+fwZy/gQLoDCellF2
-hyBvsoSQwlE913h3/y/SuYklw7koyl3bSg4ABNAWl4uMgY3mW2OWJ6TDLJErx5PL
-HaKm7ysjXb0lEk73O6dfO8xEzzTxbjdBDPFdgunNN4y4mYOqTtIjgIy6OGzeZ5p1
-I1/nV/bHaGwmF9ahJSjGWIr7/Ejy1DB1/n0eelTETU+ltVtXqijPhou0E2wIsppT
-4UP5qWA99brTo0nOYQIVZgI7k7ph2DhYR/d9P9/pZ2QtsRrWsfM8smQTSZUKyivv
-12apwb9hITlbuXvpvPRRo47q3uoJI6FyG+uTcdfilokjesXMew6kMTRy4IyuOwaG
-LElHlDC7SsW4UMVhggwn
-=ooIc
------END PGP SIGNATURE-----
-
---tjOMJDssiV0CZSJH--
+T24gVHVlLCBOb3YgMDEsIDIwMTYgYXQgMTI6MTU6MjVQTSArMDAwMCwgUmVzaGV0b3ZhLCBFbGVu
+YSB3cm90ZToNCj4gPkhpIChhZ2FpbiA6LSkpIEVsZW5hLCBIYW5zLA0KPiANCj4gPiBkaWZmIC0t
+Z2l0IGEvaW5jbHVkZS9saW51eC9hdG9taWMuaCBiL2luY2x1ZGUvbGludXgvYXRvbWljLmgNCj4g
+PHNuaXA+DQo+ID4gKyNpZm5kZWYgYXRvbWljX2NtcHhjaGdfd3JhcA0KPiA+ICsjZGVmaW5lICBh
+dG9taWNfY21weGNoZ193cmFwKC4uLikJCQkJXA0KPiA+ICsJX19hdG9taWNfb3BfZmVuY2UoYXRv
+bWljX2NtcHhjaGdfd3JhcCwgX19WQV9BUkdTX18pICNlbmRpZg0KPiA+ICAjZW5kaWYgLyogYXRv
+bWljX2NtcHhjaGdfcmVsYXhlZCAqLw0KPiA+IA0KPiANCj4gPkkgaGF2ZSBhIHByb2JsZW0gaGVy
+ZS4gV2l0aCBBUk12NyAod2l0aG91dCBhbnkgb2YgbXkgcGF0Y2hlcyksIEkgaGF2ZSANCj4gPmEg
+aW1wbGljaXQgZGVjbGFyYXRpb24gb2YgYXRvbWljX2NtcHhjaGdfd3JhcC4gUGVyaGFwcyBzb21l
+dGhpbmcgbGlrZQ0KPiANCj4gPiAgICAjaWZuZGVmwqBhdG9taWNfY21weGNoZ193cmFwX3JlbGF4
+ZWQNCj4gPiAgICAjZGVmaW5lwqBhdG9taWNfY21weGNoZ193cmFwX3JlbGF4ZWQgYXRvbWljX2Nt
+cHhjaGdfd3JhcA0KPiANCj4gPmlzIG1pc3Npbmc/IEkgZGlkbid0IGZvbGxvdyB0aGUgcmVjZW50
+IGNoYW5nZXMgb2YgdGhhdCBwYXJ0LCBzbyBJIGFtIA0KPiA+bm90IHF1aXRlIHN1cmUuLi4NCj4g
+DQo+ID5UaGFua3MhDQo+IA0KPiA+Q29saW4NCj4gDQo+ID5JbiBmaWxlIGluY2x1ZGVkIGZyb20g
+Li9pbmNsdWRlL2xpbnV4L3NwaW5sb2NrLmg6NDA2OjAsDQo+ICAgICAgICAgICAgICAgICAgZnJv
+bSAuL2luY2x1ZGUvbGludXgvc2VxbG9jay5oOjM1LA0KPiAgICAgICAgICAgICAgICAgIGZyb20g
+Li9pbmNsdWRlL2xpbnV4L3RpbWUuaDo1LA0KPiAgICAgICAgICAgICAgICAgIGZyb20gLi9pbmNs
+dWRlL2xpbnV4L3N0YXQuaDoxOCwNCj4gICAgICAgICAgICAgICAgICBmcm9tIC4vaW5jbHVkZS9s
+aW51eC9tb2R1bGUuaDoxMCwNCj4gICAgICAgICAgICAgICAgICBmcm9tIG5ldC9pcHY0L3JvdXRl
+LmM6Njc6DQo+ID5uZXQvaXB2NC9yb3V0ZS5jOiBJbiBmdW5jdGlvbiDigJhpcF9pZGVudHNfcmVz
+ZXJ2ZeKAmToNCj4gPi4vaW5jbHVkZS9saW51eC9hdG9taWMuaDo0NTk6MjA6IGVycm9yOiBpbXBs
+aWNpdCBkZWNsYXJhdGlvbiBvZiANCj4gPmZ1bmN0aW9uIOKAmGF0b21pY19jbXB4Y2hnX3dyYXBf
+cmVsYXhlZOKAmSANCj4gPlstV2Vycm9yPWltcGxpY2l0LWZ1bmN0aW9uLWRlY2xhcmF0aW9uXQ0K
+PiAgIF9fYXRvbWljX29wX2ZlbmNlKGF0b21pY19jbXB4Y2hnX3dyYXAsIF9fVkFfQVJHU19fKQ0K
+PiAgICAgICAgICAgICAgICAgICAgIF4NCj4gPi4vaW5jbHVkZS9saW51eC9hdG9taWMuaDo2Mjo5
+OiBub3RlOiBpbiBkZWZpbml0aW9uIG9mIG1hY3JvIOKAmF9fYXRvbWljX29wX2ZlbmNl4oCZDQo+
+ICA+IHR5cGVvZihvcCMjX3JlbGF4ZWQoYXJncykpIF9fcmV0OyAgICBcDQo+ICAgICAgICAgIF5+
+DQo+ID5uZXQvaXB2NC9yb3V0ZS5jOjQ4ODoxMTogbm90ZTogaW4gZXhwYW5zaW9uIG9mIG1hY3Jv
+IOKAmGF0b21pY19jbXB4Y2hnX3dyYXDigJkNCj4gPiAgfSB3aGlsZSAoYXRvbWljX2NtcHhjaGdf
+d3JhcChwX2lkLCBvbGQsIG5ldykgIT0gb2xkKTsNCj4gDQo+IE9oLCBJIHRoaW5rIHRoaXMgaXMg
+YmVjYXVzZSB3ZSBkb24ndCBoYXZlIGF0b21pY19jbXB4Y2hnX3dyYXBfcmVsYXhlZCBkZWZpbmVk
+IG5laXRoZXIgYXRvbWljX3hjaGdfd3JhcF9yZWxheGVkLiBXb25kZXIgd2h5IHRoaXMgZG9lc24n
+dCBzaG93IHVwIG9uIHg4NiwgSSBkaWQgbWFueSBidWlsZHMgd2l0aG91dCBvdXIgeDg2IGNoYW5n
+ZXMgdG8gdmVyaWZ5LiANCj4gSGFucyBjb3VsZCB5b3UgcGxlYXNlIGhhbmRsZSB0aGlzIGNoYW5n
+ZSB0b2RheSB0byB1bmJsb2NrIENvbGluPyANCj4gDQo+IEFjdHVhbGx5IHRoaXMgYnJpbmdzIHVz
+IHRvIHRoZSBmYWN0IHRoYXQgd2UgdHJpZWQgdG8gc3RheSBhd2F5IGZyb20gdmFyaW91cyByZWxh
+eGVkL2FjcXVpcmUvcmVsZWFzZSBmdW5jdGlvbnMgKGluIHByb3ZpZGluZyBkZWZhdWx0IHdyYXAg
+aW1wbGVtZW50YXRpb25zKSwgYnV0IGl0IHNlZW1zIHRoYXQgdGhleSBhcmUgYWxzbyBuZWVkZWQu
+Li4NCg0KPlRoaXMgaXMganVzdCBhIHJlbWluZGVyLg0KPlRoZXJlIGlzIGEgcG90ZW50aWFsIGlu
+Y29uc2lzdGVuY3kgaW4gbmFtaW5nOg0KPiAgICBhdG9taWNfeHhfd3JhcF9yZWxheGVkIHZzLiBh
+dG9taWNfeHhfcmVsYXhlZF93cmFwDQo+U2VlOg0KPmh0dHA6Ly93d3cub3BlbndhbGwuY29tL2xp
+c3RzL2tlcm5lbC1oYXJkZW5pbmcvMjAxNi8xMC8yNS83DQoNCj4tVGFrYWhpcm8gQUtBU0hJDQoN
+ClllcywgdGhhbmsgeW91IGZvciByZW1pbmRlciEgRWVhc3kgdG8gZm9yZ2V0IGFsbCB0aGUgc21h
+bGwgdGhpbmdzLiBJIHByb3Bvc2UgdG8gc3RpY2sgdG8gYXRvbWljX3h4X3JlbGF4ZWRfd3JhcCAo
+aGF2aW5nIHdyYXAgYWx3YXlzIGF0IHRoZSBlbmQpLCANClNpbmNlIHRoaXMgaXMgd2hhdCB3ZSBo
+YXZlIGZvciBvdGhlciBmdW5jdGlvbnMuIEFueSBvYmplY3Rpb25zPw0KDQogDQo=
