@@ -1,86 +1,80 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161110222744.GD8086@kroah.com>
+Date: Fri, 11 Nov 2016 00:30:04 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161110233004.GQ3568@worktop.programming.kicks-ass.net>
 References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
- <20161110203749.GV3117@twins.programming.kicks-ass.net> <20161110204838.GE17134@arm.com>
- <20161110211310.GX3117@twins.programming.kicks-ass.net> <20161110222744.GD8086@kroah.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 10 Nov 2016 15:15:44 -0800
-Message-ID: <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Greg KH <gregkh@linuxfoundation.org>, Peter Zijlstra <peterz@infradead.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, LKML <linux-kernel@vger.kernel.org>
+ <1478809488-18303-13-git-send-email-elena.reshetova@intel.com>
+ <20161110204046.GW3117@twins.programming.kicks-ass.net>
+ <20161110225031.GA26751@worktop>
+ <CAGXu5j+yy8Y=_bDhsTgEugJnN5=u8_XMSOAnqJBab-1+9v8+CA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+yy8Y=_bDhsTgEugJnN5=u8_XMSOAnqJBab-1+9v8+CA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC v4 PATCH 12/13] x86: implementation for HARDENED_ATOMIC
+To: Kees Cook <keescook@chromium.org>
+Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(PeterZ went missing from your reply? I've added him back to the thread...)
+On Thu, Nov 10, 2016 at 03:07:37PM -0800, Kees Cook wrote:
+> On Thu, Nov 10, 2016 at 2:50 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+> > On Thu, Nov 10, 2016 at 09:40:46PM +0100, Peter Zijlstra wrote:
+> >> On Thu, Nov 10, 2016 at 10:24:47PM +0200, Elena Reshetova wrote:
+> >> >  static __always_inline void atomic_add(int i, atomic_t *v)
+> >> >  {
+> >> > +   asm volatile(LOCK_PREFIX "addl %1,%0\n"
+> >> > +
+> >> > +#ifdef CONFIG_HARDENED_ATOMIC
+> >> > +                "jno 0f\n"
+> >> > +                LOCK_PREFIX "subl %1,%0\n"
+> >> > +                "int $4\n0:\n"
+> >> > +                _ASM_EXTABLE(0b, 0b)
+> >>
+> >>
+> >> This is unreadable gunk.
+> >
+> > Worse, this is fundamentally racy and therefore not a proper atomic at
+> > all.
+> 
+> The race was discussed earlier as well 
 
-On Thu, Nov 10, 2016 at 2:27 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> On Thu, Nov 10, 2016 at 10:13:10PM +0100, Peter Zijlstra wrote:
->> On Thu, Nov 10, 2016 at 08:48:38PM +0000, Will Deacon wrote:
->> > > That said, I still don't much like this.
->> > >
->> > > I would much rather you make kref useful and use that. It still means
->> > > you get to audit all refcounts in the kernel, but hey, you had to do
->> > > that anyway.
->> >
->> > What needs to happen to kref to make it useful? Like many others, I've
->> > been guilty of using atomic_t for refcounts in the past.
->>
->> As it stands kref is a pointless wrapper. If it were to provide
->> something actually useful, like wrap protection, then it might actually
->> make sense to use it.
->
-> It provides the correct cleanup ability for a reference count and the
-> object it is in, so it's not all that pointless :)
->
-> But I'm always willing to change it to make it work better for people,
-> if kref did the wrapping protection (i.e. used a non-wrapping atomic
-> type), then you would have that.  I thought that was what this patchset
-> provided...
->
-> And yes, this is a horridly large patchset.  I've looked at these
-> changes, and in almost all of them, people are using atomic_t as merely
-> a "counter" for something (sequences, rx/tx stats, etc), to get away
-> without having to lock it with an external lock.
->
-> So, does it make more sense to just provide a "pointless" api for this
-> type of "counter" pattern:
->         counter_inc()
->         counter_dec()
->         counter_read()
->         counter_set()
->         counter_add()
->         counter_subtract()
-> Those would use the wrapping atomic type, as they can wrap all they want
-> and no one really is in trouble.  Once those changes are done, just make
-> atomic_t not wrap and all should be fine, no other code should need to
-> be changed.
->
-> We can bikeshed on the function names for a while, to let everyone feel
-> they contributed (counter, kcount, ksequence, sequence_t, cnt_t, etc.)...
+Which is useless, since nobody was listening etc..
 
-Bikeshed: "counter" doesn't tell me anything about its behavior at max value.
+> (and some of that should
+> already have been covered in the commit message)
 
-> And yes, out-of-tree code will work differently, but really, the worse
-> that could happen is their "sequence number" stops wrapping :)
->
-> Would that be a better way to implement this?
+it does not.
 
-A thought I had if the opt-out approach is totally unacceptable would
-be to make it a CONFIG option that can toggle the risk as desired. It
-would require splitting into three cases:
+> , but basically this
+> is a race in the overflow protection, so it's not operationally a
+> problem. The process that caused the overflow still gets killed, and
+> if the system isn't already set up to panic on oops, this becomes a
+> resource leak instead of an exploitable condition.
 
-reference counters (say, "refcount" implemented with new atomic_nowrap_t)
+Now is this harmless? If you have two increments racing like:
 
-statistic counters (say, "statcount" implemented with new atomic_wrap_t)
+	  inc
+	  jno 1 // overflow
 
-everything else (named "atomic_t", implemented as either
-atomic_nowrap_t or atomic_wrap_t, depending on CONFIG)
+			  inc
+			  jno 1 // !overflow
 
--Kees
+	  dec
+	1:		1:
 
--- 
-Kees Cook
-Nexus Security
+The second thread will still affect your wrap and not BUG.
+
+> 
+> > The only way to do this is a cmpxchg loop and not issue the result on
+> > overflow. Of course, that would completely suck performance wise, but
+> > having a non atomic atomic blows more.
+> 
+> There was some work to examine this performance impact, and it didn't
+> look terrible, but this race-on-overflow isn't viewed as a meaningful
+> risk in the refcount situation.
+
+I have a benchmark somewhere, I can run numbers tomorrow, but it really
+shows once you get a bit of contention going. Once you hit 4 nodes
+contending on a variable its completely out there IIRC.
+
+The unconditional atomic ops really are loads faster than cmpxchg loops.
