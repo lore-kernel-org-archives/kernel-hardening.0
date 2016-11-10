@@ -1,7 +1,7 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 11 Nov 2016 00:38:35 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161110233835.GA23164@kroah.com>
+Date: Fri, 11 Nov 2016 00:57:14 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161110235714.GR3568@worktop.programming.kicks-ass.net>
 References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
  <20161110203749.GV3117@twins.programming.kicks-ass.net>
  <20161110204838.GE17134@arm.com>
@@ -14,38 +14,39 @@ Content-Disposition: inline
 In-Reply-To: <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
 Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
 To: Kees Cook <keescook@chromium.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, LKML <linux-kernel@vger.kernel.org>
+Cc: Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Thu, Nov 10, 2016 at 03:15:44PM -0800, Kees Cook wrote:
-> (PeterZ went missing from your reply? I've added him back to the thread...)
-
-argh, not intentional at all, thanks for that...
-
 > On Thu, Nov 10, 2016 at 2:27 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
 > > On Thu, Nov 10, 2016 at 10:13:10PM +0100, Peter Zijlstra wrote:
-> >> On Thu, Nov 10, 2016 at 08:48:38PM +0000, Will Deacon wrote:
-> >> > > That said, I still don't much like this.
-> >> > >
-> >> > > I would much rather you make kref useful and use that. It still means
-> >> > > you get to audit all refcounts in the kernel, but hey, you had to do
-> >> > > that anyway.
-> >> >
-> >> > What needs to happen to kref to make it useful? Like many others, I've
-> >> > been guilty of using atomic_t for refcounts in the past.
-> >>
+
 > >> As it stands kref is a pointless wrapper. If it were to provide
 > >> something actually useful, like wrap protection, then it might actually
 > >> make sense to use it.
 > >
 > > It provides the correct cleanup ability for a reference count and the
 > > object it is in, so it's not all that pointless :)
-> >
+
+I really fail to see the point of:
+
+	kref_put(&obj->ref, obj_free);
+
+over:
+
+	if (atomic_dec_and_test(&obj->ref))
+		obj_free(obj);
+
+Utter pointless wrappery afaict.
+
 > > But I'm always willing to change it to make it work better for people,
 > > if kref did the wrapping protection (i.e. used a non-wrapping atomic
 > > type), then you would have that.  I thought that was what this patchset
 > > provided...
-> >
+
+So kref could simply do something like the below patch. But this patch
+set completely rapes the atomic interface.
+
 > > And yes, this is a horridly large patchset.  I've looked at these
 > > changes, and in almost all of them, people are using atomic_t as merely
 > > a "counter" for something (sequences, rx/tx stats, etc), to get away
@@ -63,43 +64,120 @@ argh, not intentional at all, thanks for that...
 > > and no one really is in trouble.  Once those changes are done, just make
 > > atomic_t not wrap and all should be fine, no other code should need to
 > > be changed.
-> >
-> > We can bikeshed on the function names for a while, to let everyone feel
-> > they contributed (counter, kcount, ksequence, sequence_t, cnt_t, etc.)...
-> 
-> Bikeshed: "counter" doesn't tell me anything about its behavior at max value.
 
-True :)
+Still hate; yes there's a lot of stats which are just fine to wrap. But
+there's a lot more atomic out there than refcounts and stats.
 
-> > And yes, out-of-tree code will work differently, but really, the worse
-> > that could happen is their "sequence number" stops wrapping :)
-> >
-> > Would that be a better way to implement this?
-> 
-> A thought I had if the opt-out approach is totally unacceptable would
-> be to make it a CONFIG option that can toggle the risk as desired. It
-> would require splitting into three cases:
-> 
+The locking primitives for example use atomic_t, and they really don't
+want the extra overhead associated with this overflow crap, or the
+namespace pollution.
+
 > reference counters (say, "refcount" implemented with new atomic_nowrap_t)
-
-These should almost always be just using a kref.  Yes, there are some
-vfs reference counters that can't use a kref, but those are rare.  And
-make kref use atomic_nowrap_t.
-
-This should be a very rare type, hopefully.
-
+> 
 > statistic counters (say, "statcount" implemented with new atomic_wrap_t)
-
-Lots of these are also "sequences", that drivers rely on.  Hopefully
-they can wrap as that's what happens today.  So that might not be the
-best name, but naming is hard...
-
+> 
 > everything else (named "atomic_t", implemented as either
 > atomic_nowrap_t or atomic_wrap_t, depending on CONFIG)
 
-Sounds reasonable, will that still give you the protection that you want
-here?
+So the problem is that atomic_t has _much_ _much_ more than just add/sub
+operations, which are the only ones modified for this patch set.
 
-thanks,
+The whole wrap/nowrap thing doesn't make any bloody sense what so ever
+for !arith operators like bitops or just plain cmpxchg.
 
-greg k-h
+
+---
+ include/linux/kref.h | 55 ++++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 51 insertions(+), 4 deletions(-)
+
+diff --git a/include/linux/kref.h b/include/linux/kref.h
+index e15828fd71f1..6af1f9344793 100644
+--- a/include/linux/kref.h
++++ b/include/linux/kref.h
+@@ -39,11 +39,26 @@ static inline void kref_init(struct kref *kref)
+  */
+ static inline void kref_get(struct kref *kref)
+ {
+-	/* If refcount was 0 before incrementing then we have a race
++	/*
++	 * If refcount was 0 before incrementing then we have a race
+ 	 * condition when this kref is freeing by some other thread right now.
+ 	 * In this case one should use kref_get_unless_zero()
+ 	 */
+-	WARN_ON_ONCE(atomic_inc_return(&kref->refcount) < 2);
++	unsigned int old, new, val = atomic_read(&kref->refcount);
++
++	for (;;) {
++		WARN_ON_ONCE(val < 1);
++
++		new = val + 1;
++		if (new < val)
++			BUG(); /* overflow */
++
++		old = atomic_cmpxchg_relaxed(&kref->refcount, val, new);
++		if (old == val)
++			break;
++
++		val = old;
++	}
+ }
+ 
+ /**
+@@ -67,9 +82,23 @@ static inline void kref_get(struct kref *kref)
+ static inline int kref_sub(struct kref *kref, unsigned int count,
+ 	     void (*release)(struct kref *kref))
+ {
++	unsigned int old, new, val = atomic_read(&kref->refcount);
++
+ 	WARN_ON(release == NULL);
+ 
+-	if (atomic_sub_and_test((int) count, &kref->refcount)) {
++	for (;;) {
++		new = val - count;
++		if (new > val)
++			BUG(); /* underflow */
++
++		old = atomic_cmpxchg_release(&kref->refcount, val, new);
++		if (old == val)
++			break;
++
++		val = old;
++	}
++
++	if (!new) {
+ 		release(kref);
+ 		return 1;
+ 	}
+@@ -102,6 +131,7 @@ static inline int kref_put_mutex(struct kref *kref,
+ 				 void (*release)(struct kref *kref),
+ 				 struct mutex *lock)
+ {
++	/* XXX also fix */
+ 	WARN_ON(release == NULL);
+ 	if (unlikely(!atomic_add_unless(&kref->refcount, -1, 1))) {
+ 		mutex_lock(lock);
+@@ -133,6 +163,23 @@ static inline int kref_put_mutex(struct kref *kref,
+  */
+ static inline int __must_check kref_get_unless_zero(struct kref *kref)
+ {
+-	return atomic_add_unless(&kref->refcount, 1, 0);
++	unsigned int old, new, val = atomic_read(&kref->refcount);
++
++	for (;;) {
++		if (!val)
++			return 0;
++
++		new = val + 1;
++		if (new < val)
++			BUG(); /* overflow */
++
++		old = atomic_cmpxchg_relaxed(&kref->refcount, val, new);
++		if (old == val)
++			break;
++
++		val = old;
++	}
++
++	return 1;
+ }
+ #endif /* _KREF_H_ */
