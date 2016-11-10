@@ -1,10 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Thu, 10 Nov 2016 22:24:40 +0200
-Message-Id: <1478809488-18303-6-git-send-email-elena.reshetova@intel.com>
+Date: Thu, 10 Nov 2016 22:24:41 +0200
+Message-Id: <1478809488-18303-7-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
 References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC v4 PATCH 05/13] fs: identify wrapping atomic usage
+Subject: [kernel-hardening] [RFC v4 PATCH 06/13] net: identify wrapping atomic usage
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -24,2712 +24,2282 @@ Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: David Windsor <dwindsor@gmail.com>
 ---
- fs/afs/inode.c                |   4 +-
- fs/btrfs/delayed-inode.c      |   6 +-
- fs/btrfs/delayed-inode.h      |   4 +-
- fs/cachefiles/daemon.c        |   4 +-
- fs/cachefiles/internal.h      |  16 +-
- fs/cachefiles/namei.c         |   6 +-
- fs/cachefiles/proc.c          |  12 +-
- fs/ceph/super.c               |   4 +-
- fs/cifs/cifs_debug.c          |  14 +-
- fs/cifs/cifsfs.c              |   4 +-
- fs/cifs/cifsglob.h            |  55 +++----
- fs/cifs/misc.c                |   4 +-
- fs/cifs/smb1ops.c             |  80 +++++-----
- fs/cifs/smb2ops.c             |  84 +++++-----
- fs/coda/cache.c               |  10 +-
- fs/coredump.c                 |   6 +-
- fs/ext4/ext4.h                |  20 +--
- fs/ext4/mballoc.c             |  44 +++---
- fs/fscache/cookie.c           |  40 ++---
- fs/fscache/internal.h         | 202 ++++++++++++------------
- fs/fscache/object.c           |  26 ++--
- fs/fscache/operation.c        |  38 ++---
- fs/fscache/page.c             | 110 ++++++-------
- fs/fscache/stats.c            | 348 +++++++++++++++++++++---------------------
- fs/inode.c                    |   5 +-
- fs/kernfs/file.c              |  12 +-
- fs/lockd/clntproc.c           |   4 +-
- fs/namespace.c                |   4 +-
- fs/nfs/inode.c                |   6 +-
- fs/notify/notification.c      |   4 +-
- fs/ocfs2/localalloc.c         |   2 +-
- fs/ocfs2/ocfs2.h              |  10 +-
- fs/ocfs2/suballoc.c           |  12 +-
- fs/ocfs2/super.c              |  20 +--
- fs/quota/netlink.c            |   4 +-
- fs/reiserfs/do_balan.c        |   2 +-
- fs/reiserfs/procfs.c          |   2 +-
- fs/reiserfs/reiserfs.h        |   4 +-
- include/linux/fscache-cache.h |   2 +-
- 39 files changed, 622 insertions(+), 612 deletions(-)
+ drivers/net/ipvlan/ipvlan_core.c         |  2 +-
+ drivers/net/macvlan.c                    |  2 +-
+ include/linux/netdevice.h                |  8 +++----
+ include/linux/sunrpc/svc_rdma.h          | 18 +++++++--------
+ include/net/bonding.h                    |  2 +-
+ include/net/caif/cfctrl.h                |  4 ++--
+ include/net/flow.h                       |  2 +-
+ include/net/gro_cells.h                  |  2 +-
+ include/net/inetpeer.h                   |  3 ++-
+ include/net/ip_fib.h                     |  2 +-
+ include/net/ip_vs.h                      |  4 ++--
+ include/net/iucv/af_iucv.h               |  2 +-
+ include/net/net_namespace.h              | 12 +++++-----
+ include/net/netns/ipv4.h                 |  4 ++--
+ include/net/netns/ipv6.h                 |  4 ++--
+ include/net/netns/xfrm.h                 |  2 +-
+ include/net/sock.h                       |  8 +++----
+ include/net/tcp.h                        |  2 +-
+ include/net/xfrm.h                       |  2 +-
+ net/batman-adv/bat_iv_ogm.c              |  8 +++----
+ net/batman-adv/fragmentation.c           |  3 ++-
+ net/batman-adv/soft-interface.c          |  6 ++---
+ net/batman-adv/types.h                   |  6 ++---
+ net/caif/cfctrl.c                        | 11 +++++----
+ net/ceph/messenger.c                     |  4 ++--
+ net/core/datagram.c                      |  2 +-
+ net/core/dev.c                           | 18 +++++++--------
+ net/core/flow.c                          |  9 ++++----
+ net/core/net-sysfs.c                     |  2 +-
+ net/core/netpoll.c                       |  4 ++--
+ net/core/rtnetlink.c                     |  2 +-
+ net/core/sock.c                          | 14 ++++++------
+ net/core/sock_diag.c                     |  8 +++----
+ net/ipv4/devinet.c                       |  4 ++--
+ net/ipv4/fib_frontend.c                  |  6 ++---
+ net/ipv4/fib_semantics.c                 |  2 +-
+ net/ipv4/inet_connection_sock.c          |  4 ++--
+ net/ipv4/inet_timewait_sock.c            |  3 ++-
+ net/ipv4/inetpeer.c                      |  2 +-
+ net/ipv4/ip_fragment.c                   |  2 +-
+ net/ipv4/ping.c                          |  2 +-
+ net/ipv4/raw.c                           |  5 +++--
+ net/ipv4/route.c                         | 12 +++++-----
+ net/ipv4/tcp_input.c                     |  2 +-
+ net/ipv4/udp.c                           | 10 ++++-----
+ net/ipv6/addrconf.c                      |  7 +++---
+ net/ipv6/af_inet6.c                      |  2 +-
+ net/ipv6/datagram.c                      |  2 +-
+ net/ipv6/ip6_fib.c                       |  4 ++--
+ net/ipv6/raw.c                           |  6 ++---
+ net/ipv6/udp.c                           |  6 ++---
+ net/iucv/af_iucv.c                       |  5 +++--
+ net/key/af_key.c                         |  4 ++--
+ net/l2tp/l2tp_eth.c                      | 38 ++++++++++++++++----------------
+ net/netfilter/ipvs/ip_vs_conn.c          |  6 ++---
+ net/netfilter/ipvs/ip_vs_core.c          |  8 +++----
+ net/netfilter/ipvs/ip_vs_ctl.c           | 12 +++++-----
+ net/netfilter/ipvs/ip_vs_sync.c          |  6 ++---
+ net/netfilter/ipvs/ip_vs_xmit.c          |  4 ++--
+ net/netfilter/nfnetlink_log.c            |  4 ++--
+ net/netfilter/xt_statistic.c             |  9 ++++----
+ net/netlink/af_netlink.c                 |  4 ++--
+ net/packet/af_packet.c                   |  4 ++--
+ net/phonet/pep.c                         |  6 ++---
+ net/phonet/socket.c                      |  2 +-
+ net/rds/cong.c                           |  6 ++---
+ net/rds/ib.h                             |  2 +-
+ net/rds/ib_cm.c                          |  2 +-
+ net/rds/ib_recv.c                        |  4 ++--
+ net/rxrpc/af_rxrpc.c                     |  2 +-
+ net/rxrpc/ar-internal.h                  |  4 ++--
+ net/rxrpc/call_object.c                  |  2 +-
+ net/rxrpc/conn_event.c                   |  4 ++--
+ net/rxrpc/conn_object.c                  |  2 +-
+ net/rxrpc/local_object.c                 |  2 +-
+ net/rxrpc/output.c                       |  6 ++---
+ net/rxrpc/peer_object.c                  |  2 +-
+ net/rxrpc/proc.c                         |  2 +-
+ net/rxrpc/rxkad.c                        |  4 ++--
+ net/sched/sch_generic.c                  |  4 ++--
+ net/sctp/sctp_diag.c                     |  2 +-
+ net/sunrpc/auth_gss/svcauth_gss.c        |  4 ++--
+ net/sunrpc/sched.c                       |  4 ++--
+ net/sunrpc/xprtrdma/svc_rdma.c           | 36 +++++++++++++++---------------
+ net/sunrpc/xprtrdma/svc_rdma_recvfrom.c  |  8 +++----
+ net/sunrpc/xprtrdma/svc_rdma_sendto.c    |  2 +-
+ net/sunrpc/xprtrdma/svc_rdma_transport.c |  2 +-
+ net/xfrm/xfrm_policy.c                   | 11 ++++-----
+ net/xfrm/xfrm_state.c                    |  4 ++--
+ security/selinux/include/xfrm.h          |  2 +-
+ 90 files changed, 254 insertions(+), 244 deletions(-)
 
-diff --git a/fs/afs/inode.c b/fs/afs/inode.c
-index 86cc726..d600c1b 100644
---- a/fs/afs/inode.c
-+++ b/fs/afs/inode.c
-@@ -142,7 +142,7 @@ struct inode *afs_iget_autocell(struct inode *dir, const char *dev_name,
- 	struct afs_vnode *vnode;
- 	struct super_block *sb;
- 	struct inode *inode;
--	static atomic_t afs_autocell_ino;
-+	static atomic_wrap_t afs_autocell_ino;
+diff --git a/drivers/net/ipvlan/ipvlan_core.c b/drivers/net/ipvlan/ipvlan_core.c
+index b4e9907..17712d4 100644
+--- a/drivers/net/ipvlan/ipvlan_core.c
++++ b/drivers/net/ipvlan/ipvlan_core.c
+@@ -484,7 +484,7 @@ static void ipvlan_multicast_enqueue(struct ipvl_port *port,
+ 		schedule_work(&port->wq);
+ 	} else {
+ 		spin_unlock(&port->backlog.lock);
+-		atomic_long_inc(&skb->dev->rx_dropped);
++		atomic_long_inc_wrap(&skb->dev->rx_dropped);
+ 		kfree_skb(skb);
+ 	}
+ }
+diff --git a/drivers/net/macvlan.c b/drivers/net/macvlan.c
+index 3234fcd..9d5435f 100644
+--- a/drivers/net/macvlan.c
++++ b/drivers/net/macvlan.c
+@@ -343,7 +343,7 @@ static void macvlan_broadcast_enqueue(struct macvlan_port *port,
+ free_nskb:
+ 	kfree_skb(nskb);
+ err:
+-	atomic_long_inc(&skb->dev->rx_dropped);
++	atomic_long_inc_wrap(&skb->dev->rx_dropped);
+ }
  
- 	_enter("{%x:%u},%*.*s,",
- 	       AFS_FS_I(dir)->fid.vid, AFS_FS_I(dir)->fid.vnode,
-@@ -155,7 +155,7 @@ struct inode *afs_iget_autocell(struct inode *dir, const char *dev_name,
- 	data.fid.unique = 0;
- 	data.fid.vnode = 0;
+ static void macvlan_flush_sources(struct macvlan_port *port,
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 136ae6bb..21ad33b 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -1651,7 +1651,7 @@ struct net_device {
+ 	unsigned long		base_addr;
+ 	int			irq;
  
--	inode = iget5_locked(sb, atomic_inc_return(&afs_autocell_ino),
-+	inode = iget5_locked(sb, atomic_inc_return_wrap(&afs_autocell_ino),
- 			     afs_iget5_autocell_test, afs_iget5_set,
- 			     &data);
- 	if (!inode) {
-diff --git a/fs/btrfs/delayed-inode.c b/fs/btrfs/delayed-inode.c
-index 0fcf5f2..9ad1063 100644
---- a/fs/btrfs/delayed-inode.c
-+++ b/fs/btrfs/delayed-inode.c
-@@ -453,7 +453,7 @@ static int __btrfs_add_delayed_deletion_item(struct btrfs_delayed_node *node,
- 
- static void finish_one_item(struct btrfs_delayed_root *delayed_root)
- {
--	int seq = atomic_inc_return(&delayed_root->items_seq);
-+	int seq = atomic_inc_return_wrap(&delayed_root->items_seq);
+-	atomic_t		carrier_changes;
++	atomic_wrap_t		carrier_changes;
  
  	/*
- 	 * atomic_dec_return implies a barrier for waitqueue_active
-@@ -1394,7 +1394,7 @@ void btrfs_assert_delayed_root_empty(struct btrfs_root *root)
+ 	 *	Some hardware also needs these fields (state,dev_list,
+@@ -1691,9 +1691,9 @@ struct net_device {
  
- static int could_end_wait(struct btrfs_delayed_root *delayed_root, int seq)
- {
--	int val = atomic_read(&delayed_root->items_seq);
-+	int val = atomic_read_wrap(&delayed_root->items_seq);
+ 	struct net_device_stats	stats;
  
- 	if (val < seq || val >= seq + BTRFS_DELAYED_BATCH)
- 		return 1;
-@@ -1419,7 +1419,7 @@ void btrfs_balance_delayed_items(struct btrfs_root *root)
- 		int seq;
- 		int ret;
+-	atomic_long_t		rx_dropped;
+-	atomic_long_t		tx_dropped;
+-	atomic_long_t		rx_nohandler;
++	atomic_long_wrap_t	rx_dropped;
++	atomic_long_wrap_t	tx_dropped;
++	atomic_long_wrap_t	rx_nohandler;
  
--		seq = atomic_read(&delayed_root->items_seq);
-+		seq = atomic_read_wrap(&delayed_root->items_seq);
+ #ifdef CONFIG_WIRELESS_EXT
+ 	const struct iw_handler_def *wireless_handlers;
+diff --git a/include/linux/sunrpc/svc_rdma.h b/include/linux/sunrpc/svc_rdma.h
+index cc3ae16..b257f44 100644
+--- a/include/linux/sunrpc/svc_rdma.h
++++ b/include/linux/sunrpc/svc_rdma.h
+@@ -54,15 +54,15 @@ extern unsigned int svcrdma_max_requests;
+ extern unsigned int svcrdma_max_bc_requests;
+ extern unsigned int svcrdma_max_req_size;
  
- 		ret = btrfs_wq_run_delayed_node(delayed_root, fs_info, 0);
- 		if (ret)
-diff --git a/fs/btrfs/delayed-inode.h b/fs/btrfs/delayed-inode.h
-index 2495b3d..983f0ba 100644
---- a/fs/btrfs/delayed-inode.h
-+++ b/fs/btrfs/delayed-inode.h
-@@ -43,7 +43,7 @@ struct btrfs_delayed_root {
- 	 */
- 	struct list_head prepare_list;
- 	atomic_t items;		/* for delayed items */
--	atomic_t items_seq;	/* for delayed items */
-+	atomic_wrap_t items_seq;	/* for delayed items */
- 	int nodes;		/* for delayed nodes */
- 	wait_queue_head_t wait;
- };
-@@ -90,7 +90,7 @@ static inline void btrfs_init_delayed_root(
- 				struct btrfs_delayed_root *delayed_root)
- {
- 	atomic_set(&delayed_root->items, 0);
--	atomic_set(&delayed_root->items_seq, 0);
-+	atomic_set_wrap(&delayed_root->items_seq, 0);
- 	delayed_root->nodes = 0;
- 	spin_lock_init(&delayed_root->lock);
- 	init_waitqueue_head(&delayed_root->wait);
-diff --git a/fs/cachefiles/daemon.c b/fs/cachefiles/daemon.c
-index 1ee54ff..fbf3322 100644
---- a/fs/cachefiles/daemon.c
-+++ b/fs/cachefiles/daemon.c
-@@ -176,8 +176,8 @@ static ssize_t cachefiles_daemon_read(struct file *file, char __user *_buffer,
- 	cachefiles_has_space(cache, 0, 0);
- 
- 	/* summarise */
--	f_released = atomic_xchg(&cache->f_released, 0);
--	b_released = atomic_long_xchg(&cache->b_released, 0);
-+	f_released = atomic_xchg_wrap(&cache->f_released, 0);
-+	b_released = atomic_long_xchg_wrap(&cache->b_released, 0);
- 	clear_bit(CACHEFILES_STATE_CHANGED, &cache->flags);
- 
- 	n = snprintf(buffer, sizeof(buffer),
-diff --git a/fs/cachefiles/internal.h b/fs/cachefiles/internal.h
-index cd1effe..668cfc5 100644
---- a/fs/cachefiles/internal.h
-+++ b/fs/cachefiles/internal.h
-@@ -65,9 +65,9 @@ struct cachefiles_cache {
- 	wait_queue_head_t		daemon_pollwq;	/* poll waitqueue for daemon */
- 	struct rb_root			active_nodes;	/* active nodes (can't be culled) */
- 	rwlock_t			active_lock;	/* lock for active_nodes */
--	atomic_t			gravecounter;	/* graveyard uniquifier */
--	atomic_t			f_released;	/* number of objects released lately */
--	atomic_long_t			b_released;	/* number of blocks released lately */
-+	atomic_wrap_t			gravecounter;	/* graveyard uniquifier */
-+	atomic_wrap_t			f_released;	/* number of objects released lately */
-+	atomic_long_wrap_t		b_released;	/* number of blocks released lately */
- 	unsigned			frun_percent;	/* when to stop culling (% files) */
- 	unsigned			fcull_percent;	/* when to start culling (% files) */
- 	unsigned			fstop_percent;	/* when to stop allocating (% files) */
-@@ -182,19 +182,19 @@ extern int cachefiles_check_in_use(struct cachefiles_cache *cache,
-  * proc.c
-  */
- #ifdef CONFIG_CACHEFILES_HISTOGRAM
--extern atomic_t cachefiles_lookup_histogram[HZ];
--extern atomic_t cachefiles_mkdir_histogram[HZ];
--extern atomic_t cachefiles_create_histogram[HZ];
-+extern atomic_wrap_t cachefiles_lookup_histogram[HZ];
-+extern atomic_wrap_t cachefiles_mkdir_histogram[HZ];
-+extern atomic_wrap_t cachefiles_create_histogram[HZ];
- 
- extern int __init cachefiles_proc_init(void);
- extern void cachefiles_proc_cleanup(void);
- static inline
--void cachefiles_hist(atomic_t histogram[], unsigned long start_jif)
-+void cachefiles_hist(atomic_wrap_t histogram[], unsigned long start_jif)
- {
- 	unsigned long jif = jiffies - start_jif;
- 	if (jif >= HZ)
- 		jif = HZ - 1;
--	atomic_inc(&histogram[jif]);
-+	atomic_inc_wrap(&histogram[jif]);
- }
- 
- #else
-diff --git a/fs/cachefiles/namei.c b/fs/cachefiles/namei.c
-index 41df8a2..9e4342f 100644
---- a/fs/cachefiles/namei.c
-+++ b/fs/cachefiles/namei.c
-@@ -275,8 +275,8 @@ void cachefiles_mark_object_inactive(struct cachefiles_cache *cache,
- 	/* This object can now be culled, so we need to let the daemon know
- 	 * that there is something it can remove if it needs to.
- 	 */
--	atomic_long_add(i_blocks, &cache->b_released);
--	if (atomic_inc_return(&cache->f_released))
-+	atomic_long_add_wrap(i_blocks, &cache->b_released);
-+	if (atomic_inc_return_wrap(&cache->f_released))
- 		cachefiles_state_changed(cache);
- }
- 
-@@ -335,7 +335,7 @@ static int cachefiles_bury_object(struct cachefiles_cache *cache,
- 	/* first step is to make up a grave dentry in the graveyard */
- 	sprintf(nbuffer, "%08x%08x",
- 		(uint32_t) get_seconds(),
--		(uint32_t) atomic_inc_return(&cache->gravecounter));
-+		(uint32_t) atomic_inc_return_wrap(&cache->gravecounter));
- 
- 	/* do the multiway lock magic */
- 	trap = lock_rename(cache->graveyard, dir);
-diff --git a/fs/cachefiles/proc.c b/fs/cachefiles/proc.c
-index 125b90f..2264edf 100644
---- a/fs/cachefiles/proc.c
-+++ b/fs/cachefiles/proc.c
-@@ -14,9 +14,9 @@
- #include <linux/seq_file.h>
- #include "internal.h"
- 
--atomic_t cachefiles_lookup_histogram[HZ];
--atomic_t cachefiles_mkdir_histogram[HZ];
--atomic_t cachefiles_create_histogram[HZ];
-+atomic_wrap_t cachefiles_lookup_histogram[HZ];
-+atomic_wrap_t cachefiles_mkdir_histogram[HZ];
-+atomic_wrap_t cachefiles_create_histogram[HZ];
+-extern atomic_t rdma_stat_recv;
+-extern atomic_t rdma_stat_read;
+-extern atomic_t rdma_stat_write;
+-extern atomic_t rdma_stat_sq_starve;
+-extern atomic_t rdma_stat_rq_starve;
+-extern atomic_t rdma_stat_rq_poll;
+-extern atomic_t rdma_stat_rq_prod;
+-extern atomic_t rdma_stat_sq_poll;
+-extern atomic_t rdma_stat_sq_prod;
++extern atomic_wrap_t rdma_stat_recv;
++extern atomic_wrap_t rdma_stat_read;
++extern atomic_wrap_t rdma_stat_write;
++extern atomic_wrap_t rdma_stat_sq_starve;
++extern atomic_wrap_t rdma_stat_rq_starve;
++extern atomic_wrap_t rdma_stat_rq_poll;
++extern atomic_wrap_t rdma_stat_rq_prod;
++extern atomic_wrap_t rdma_stat_sq_poll;
++extern atomic_wrap_t rdma_stat_sq_prod;
  
  /*
-  * display the latency histogram
-@@ -35,9 +35,9 @@ static int cachefiles_histogram_show(struct seq_file *m, void *v)
- 		return 0;
- 	default:
- 		index = (unsigned long) v - 3;
--		x = atomic_read(&cachefiles_lookup_histogram[index]);
--		y = atomic_read(&cachefiles_mkdir_histogram[index]);
--		z = atomic_read(&cachefiles_create_histogram[index]);
-+		x = atomic_read_wrap(&cachefiles_lookup_histogram[index]);
-+		y = atomic_read_wrap(&cachefiles_mkdir_histogram[index]);
-+		z = atomic_read_wrap(&cachefiles_create_histogram[index]);
- 		if (x == 0 && y == 0 && z == 0)
- 			return 0;
+  * Contexts are built when an RDMA request is created and are a
+diff --git a/include/net/bonding.h b/include/net/bonding.h
+index f32f7ef..1de3052 100644
+--- a/include/net/bonding.h
++++ b/include/net/bonding.h
+@@ -695,7 +695,7 @@ extern struct rtnl_link_ops bond_link_ops;
  
-diff --git a/fs/ceph/super.c b/fs/ceph/super.c
-index b382e59..3c30925 100644
---- a/fs/ceph/super.c
-+++ b/fs/ceph/super.c
-@@ -926,7 +926,7 @@ static int ceph_compare_super(struct super_block *sb, void *data)
- /*
-  * construct our own bdi so we can control readahead, etc.
-  */
--static atomic_long_t bdi_seq = ATOMIC_LONG_INIT(0);
-+static atomic_long_wrap_t bdi_seq = ATOMIC_LONG_INIT(0);
+ static inline void bond_tx_drop(struct net_device *dev, struct sk_buff *skb)
+ {
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_wrap(&dev->tx_dropped);
+ 	dev_kfree_skb_any(skb);
+ }
  
- static int ceph_register_bdi(struct super_block *sb,
- 			     struct ceph_fs_client *fsc)
-@@ -943,7 +943,7 @@ static int ceph_register_bdi(struct super_block *sb,
- 			VM_MAX_READAHEAD * 1024 / PAGE_SIZE;
+diff --git a/include/net/caif/cfctrl.h b/include/net/caif/cfctrl.h
+index f2ae33d..1ef13f2 100644
+--- a/include/net/caif/cfctrl.h
++++ b/include/net/caif/cfctrl.h
+@@ -101,8 +101,8 @@ struct cfctrl_request_info {
+ struct cfctrl {
+ 	struct cfsrvl serv;
+ 	struct cfctrl_rsp res;
+-	atomic_t req_seq_no;
+-	atomic_t rsp_seq_no;
++	atomic_wrap_t req_seq_no;
++	atomic_wrap_t rsp_seq_no;
+ 	struct list_head list;
+ 	/* Protects from simultaneous access to first_req list */
+ 	spinlock_t info_list_lock;
+diff --git a/include/net/flow.h b/include/net/flow.h
+index 035aa77..37f1358 100644
+--- a/include/net/flow.h
++++ b/include/net/flow.h
+@@ -242,7 +242,7 @@ void flow_cache_fini(struct net *net);
  
- 	err = bdi_register(&fsc->backing_dev_info, NULL, "ceph-%ld",
--			   atomic_long_inc_return(&bdi_seq));
-+			   atomic_long_inc_return_wrap(&bdi_seq));
- 	if (!err)
- 		sb->s_bdi = &fsc->backing_dev_info;
- 	return err;
-diff --git a/fs/cifs/cifs_debug.c b/fs/cifs/cifs_debug.c
-index 3d03e48..d5df3b6 100644
---- a/fs/cifs/cifs_debug.c
-+++ b/fs/cifs/cifs_debug.c
-@@ -265,8 +265,8 @@ static ssize_t cifs_stats_proc_write(struct file *file,
- 	rc = kstrtobool_from_user(buffer, count, &bv);
- 	if (rc == 0) {
- #ifdef CONFIG_CIFS_STATS2
--		atomic_set(&totBufAllocCount, 0);
--		atomic_set(&totSmBufAllocCount, 0);
-+		atomic_set_wrap(&totBufAllocCount, 0);
-+		atomic_set_wrap(&totSmBufAllocCount, 0);
- #endif /* CONFIG_CIFS_STATS2 */
- 		spin_lock(&cifs_tcp_ses_lock);
- 		list_for_each(tmp1, &cifs_tcp_ses_list) {
-@@ -279,7 +279,8 @@ static ssize_t cifs_stats_proc_write(struct file *file,
- 					tcon = list_entry(tmp3,
- 							  struct cifs_tcon,
- 							  tcon_list);
--					atomic_set(&tcon->num_smbs_sent, 0);
-+					atomic_set_wrap(&tcon->num_smbs_sent,
-+							0);
- 					if (server->ops->clear_stats)
- 						server->ops->clear_stats(tcon);
- 				}
-@@ -313,8 +314,8 @@ static int cifs_stats_proc_show(struct seq_file *m, void *v)
- 			smBufAllocCount.counter, cifs_min_small);
- #ifdef CONFIG_CIFS_STATS2
- 	seq_printf(m, "Total Large %d Small %d Allocations\n",
--				atomic_read(&totBufAllocCount),
--				atomic_read(&totSmBufAllocCount));
-+				atomic_read_wrap(&totBufAllocCount),
-+				atomic_read_wrap(&totSmBufAllocCount));
- #endif /* CONFIG_CIFS_STATS2 */
+ void flow_cache_flush(struct net *net);
+ void flow_cache_flush_deferred(struct net *net);
+-extern atomic_t flow_cache_genid;
++extern atomic_wrap_t flow_cache_genid;
  
- 	seq_printf(m, "Operations (MIDs): %d\n", atomic_read(&midCount));
-@@ -343,7 +344,8 @@ static int cifs_stats_proc_show(struct seq_file *m, void *v)
- 				if (tcon->need_reconnect)
- 					seq_puts(m, "\tDISCONNECTED ");
- 				seq_printf(m, "\nSMBs: %d",
--					   atomic_read(&tcon->num_smbs_sent));
-+					   atomic_read_wrap(&tcon->
-+						   num_smbs_sent));
- 				if (server->ops->print_stats)
- 					server->ops->print_stats(m, tcon);
- 			}
-diff --git a/fs/cifs/cifsfs.c b/fs/cifs/cifsfs.c
-index 15261ba..010ffec 100644
---- a/fs/cifs/cifsfs.c
-+++ b/fs/cifs/cifsfs.c
-@@ -1255,8 +1255,8 @@ init_cifs(void)
- 	atomic_set(&bufAllocCount, 0);
- 	atomic_set(&smBufAllocCount, 0);
- #ifdef CONFIG_CIFS_STATS2
--	atomic_set(&totBufAllocCount, 0);
--	atomic_set(&totSmBufAllocCount, 0);
-+	atomic_set_wrap(&totBufAllocCount, 0);
-+	atomic_set_wrap(&totSmBufAllocCount, 0);
- #endif /* CONFIG_CIFS_STATS2 */
+ __u32 __get_hash_from_flowi6(const struct flowi6 *fl6, struct flow_keys *keys);
  
- 	atomic_set(&midCount, 0);
-diff --git a/fs/cifs/cifsglob.h b/fs/cifs/cifsglob.h
-index 1f17f6b..47663f2 100644
---- a/fs/cifs/cifsglob.h
-+++ b/fs/cifs/cifsglob.h
-@@ -859,35 +859,35 @@ struct cifs_tcon {
- 	__u16 Flags;		/* optional support bits */
- 	enum statusEnum tidStatus;
- #ifdef CONFIG_CIFS_STATS
--	atomic_t num_smbs_sent;
-+	atomic_wrap_t num_smbs_sent;
+diff --git a/include/net/gro_cells.h b/include/net/gro_cells.h
+index d15214d..32a3166 100644
+--- a/include/net/gro_cells.h
++++ b/include/net/gro_cells.h
+@@ -25,7 +25,7 @@ static inline int gro_cells_receive(struct gro_cells *gcells, struct sk_buff *sk
+ 	cell = this_cpu_ptr(gcells->cells);
+ 
+ 	if (skb_queue_len(&cell->napi_skbs) > netdev_max_backlog) {
+-		atomic_long_inc(&dev->rx_dropped);
++		atomic_long_inc_wrap(&dev->rx_dropped);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+diff --git a/include/net/inetpeer.h b/include/net/inetpeer.h
+index 235c781..c81eb78 100644
+--- a/include/net/inetpeer.h
++++ b/include/net/inetpeer.h
+@@ -52,7 +52,8 @@ struct inet_peer {
+ 	 */
  	union {
  		struct {
--			atomic_t num_writes;
--			atomic_t num_reads;
--			atomic_t num_flushes;
--			atomic_t num_oplock_brks;
--			atomic_t num_opens;
--			atomic_t num_closes;
--			atomic_t num_deletes;
--			atomic_t num_mkdirs;
--			atomic_t num_posixopens;
--			atomic_t num_posixmkdirs;
--			atomic_t num_rmdirs;
--			atomic_t num_renames;
--			atomic_t num_t2renames;
--			atomic_t num_ffirst;
--			atomic_t num_fnext;
--			atomic_t num_fclose;
--			atomic_t num_hardlinks;
--			atomic_t num_symlinks;
--			atomic_t num_locks;
--			atomic_t num_acl_get;
--			atomic_t num_acl_set;
-+			atomic_wrap_t num_writes;
-+			atomic_wrap_t num_reads;
-+			atomic_wrap_t num_flushes;
-+			atomic_wrap_t num_oplock_brks;
-+			atomic_wrap_t num_opens;
-+			atomic_wrap_t num_closes;
-+			atomic_wrap_t num_deletes;
-+			atomic_wrap_t num_mkdirs;
-+			atomic_wrap_t num_posixopens;
-+			atomic_wrap_t num_posixmkdirs;
-+			atomic_wrap_t num_rmdirs;
-+			atomic_wrap_t num_renames;
-+			atomic_wrap_t num_t2renames;
-+			atomic_wrap_t num_ffirst;
-+			atomic_wrap_t num_fnext;
-+			atomic_wrap_t num_fclose;
-+			atomic_wrap_t num_hardlinks;
-+			atomic_wrap_t num_symlinks;
-+			atomic_wrap_t num_locks;
-+			atomic_wrap_t num_acl_get;
-+			atomic_wrap_t num_acl_set;
- 		} cifs_stats;
- #ifdef CONFIG_CIFS_SMB2
- 		struct {
--			atomic_t smb2_com_sent[NUMBER_OF_SMB2_COMMANDS];
--			atomic_t smb2_com_failed[NUMBER_OF_SMB2_COMMANDS];
-+			atomic_wrap_t smb2_com_sent[NUMBER_OF_SMB2_COMMANDS];
-+			atomic_wrap_t smb2_com_failed[NUMBER_OF_SMB2_COMMANDS];
- 		} smb2_stats;
- #endif /* CONFIG_CIFS_SMB2 */
- 	} stats;
-@@ -1241,7 +1241,7 @@ convert_delimiter(char *path, char delim)
- }
- 
- #ifdef CONFIG_CIFS_STATS
--#define cifs_stats_inc atomic_inc
-+#define cifs_stats_inc atomic_inc_wrap
- 
- static inline void cifs_stats_bytes_written(struct cifs_tcon *tcon,
- 					    unsigned int bytes)
-@@ -1604,8 +1604,9 @@ GLOBAL_EXTERN atomic_t tconInfoReconnectCount;
- /* Various Debug counters */
- GLOBAL_EXTERN atomic_t bufAllocCount;    /* current number allocated  */
- #ifdef CONFIG_CIFS_STATS2
--GLOBAL_EXTERN atomic_t totBufAllocCount; /* total allocated over all time */
--GLOBAL_EXTERN atomic_t totSmBufAllocCount;
-+GLOBAL_EXTERN atomic_wrap_t totBufAllocCount;
-+					/* total allocated over all time */
-+GLOBAL_EXTERN atomic_wrap_t totSmBufAllocCount;
- #endif
- GLOBAL_EXTERN atomic_t smBufAllocCount;
- GLOBAL_EXTERN atomic_t midCount;
-diff --git a/fs/cifs/misc.c b/fs/cifs/misc.c
-index c672915..e244789 100644
---- a/fs/cifs/misc.c
-+++ b/fs/cifs/misc.c
-@@ -171,7 +171,7 @@ cifs_buf_get(void)
- 		memset(ret_buf, 0, buf_size + 3);
- 		atomic_inc(&bufAllocCount);
- #ifdef CONFIG_CIFS_STATS2
--		atomic_inc(&totBufAllocCount);
-+		atomic_inc_wrap(&totBufAllocCount);
- #endif /* CONFIG_CIFS_STATS2 */
- 	}
- 
-@@ -206,7 +206,7 @@ cifs_small_buf_get(void)
- 	/*	memset(ret_buf, 0, sizeof(struct smb_hdr) + 27);*/
- 		atomic_inc(&smBufAllocCount);
- #ifdef CONFIG_CIFS_STATS2
--		atomic_inc(&totSmBufAllocCount);
-+		atomic_inc_wrap(&totSmBufAllocCount);
- #endif /* CONFIG_CIFS_STATS2 */
- 
- 	}
-diff --git a/fs/cifs/smb1ops.c b/fs/cifs/smb1ops.c
-index fc537c2..1a37358 100644
---- a/fs/cifs/smb1ops.c
-+++ b/fs/cifs/smb1ops.c
-@@ -622,27 +622,27 @@ static void
- cifs_clear_stats(struct cifs_tcon *tcon)
- {
- #ifdef CONFIG_CIFS_STATS
--	atomic_set(&tcon->stats.cifs_stats.num_writes, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_reads, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_flushes, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_oplock_brks, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_opens, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_posixopens, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_posixmkdirs, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_closes, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_deletes, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_mkdirs, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_rmdirs, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_renames, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_t2renames, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_ffirst, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_fnext, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_fclose, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_hardlinks, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_symlinks, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_locks, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_acl_get, 0);
--	atomic_set(&tcon->stats.cifs_stats.num_acl_set, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_writes, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_reads, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_flushes, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_oplock_brks, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_opens, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_posixopens, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_posixmkdirs, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_closes, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_deletes, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_mkdirs, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_rmdirs, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_renames, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_t2renames, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_ffirst, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_fnext, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_fclose, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_hardlinks, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_symlinks, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_locks, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_acl_get, 0);
-+	atomic_set_wrap(&tcon->stats.cifs_stats.num_acl_set, 0);
- #endif
- }
- 
-@@ -651,36 +651,36 @@ cifs_print_stats(struct seq_file *m, struct cifs_tcon *tcon)
- {
- #ifdef CONFIG_CIFS_STATS
- 	seq_printf(m, " Oplocks breaks: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_oplock_brks));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_oplock_brks));
- 	seq_printf(m, "\nReads:  %d Bytes: %llu",
--		   atomic_read(&tcon->stats.cifs_stats.num_reads),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_reads),
- 		   (long long)(tcon->bytes_read));
- 	seq_printf(m, "\nWrites: %d Bytes: %llu",
--		   atomic_read(&tcon->stats.cifs_stats.num_writes),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_writes),
- 		   (long long)(tcon->bytes_written));
- 	seq_printf(m, "\nFlushes: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_flushes));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_flushes));
- 	seq_printf(m, "\nLocks: %d HardLinks: %d Symlinks: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_locks),
--		   atomic_read(&tcon->stats.cifs_stats.num_hardlinks),
--		   atomic_read(&tcon->stats.cifs_stats.num_symlinks));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_locks),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_hardlinks),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_symlinks));
- 	seq_printf(m, "\nOpens: %d Closes: %d Deletes: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_opens),
--		   atomic_read(&tcon->stats.cifs_stats.num_closes),
--		   atomic_read(&tcon->stats.cifs_stats.num_deletes));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_opens),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_closes),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_deletes));
- 	seq_printf(m, "\nPosix Opens: %d Posix Mkdirs: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_posixopens),
--		   atomic_read(&tcon->stats.cifs_stats.num_posixmkdirs));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_posixopens),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_posixmkdirs));
- 	seq_printf(m, "\nMkdirs: %d Rmdirs: %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_mkdirs),
--		   atomic_read(&tcon->stats.cifs_stats.num_rmdirs));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_mkdirs),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_rmdirs));
- 	seq_printf(m, "\nRenames: %d T2 Renames %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_renames),
--		   atomic_read(&tcon->stats.cifs_stats.num_t2renames));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_renames),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_t2renames));
- 	seq_printf(m, "\nFindFirst: %d FNext %d FClose %d",
--		   atomic_read(&tcon->stats.cifs_stats.num_ffirst),
--		   atomic_read(&tcon->stats.cifs_stats.num_fnext),
--		   atomic_read(&tcon->stats.cifs_stats.num_fclose));
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_ffirst),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_fnext),
-+		   atomic_read_wrap(&tcon->stats.cifs_stats.num_fclose));
- #endif
- }
- 
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index 5d456eb..159be2f 100644
---- a/fs/cifs/smb2ops.c
-+++ b/fs/cifs/smb2ops.c
-@@ -432,8 +432,8 @@ smb2_clear_stats(struct cifs_tcon *tcon)
- #ifdef CONFIG_CIFS_STATS
- 	int i;
- 	for (i = 0; i < NUMBER_OF_SMB2_COMMANDS; i++) {
--		atomic_set(&tcon->stats.smb2_stats.smb2_com_sent[i], 0);
--		atomic_set(&tcon->stats.smb2_stats.smb2_com_failed[i], 0);
-+		atomic_set_wrap(&tcon->stats.smb2_stats.smb2_com_sent[i], 0);
-+		atomic_set_wrap(&tcon->stats.smb2_stats.smb2_com_failed[i], 0);
- 	}
- #endif
- }
-@@ -473,65 +473,65 @@ static void
- smb2_print_stats(struct seq_file *m, struct cifs_tcon *tcon)
- {
- #ifdef CONFIG_CIFS_STATS
--	atomic_t *sent = tcon->stats.smb2_stats.smb2_com_sent;
--	atomic_t *failed = tcon->stats.smb2_stats.smb2_com_failed;
-+	atomic_wrap_t *sent = tcon->stats.smb2_stats.smb2_com_sent;
-+	atomic_wrap_t *failed = tcon->stats.smb2_stats.smb2_com_failed;
- 	seq_printf(m, "\nNegotiates: %d sent %d failed",
--		   atomic_read(&sent[SMB2_NEGOTIATE_HE]),
--		   atomic_read(&failed[SMB2_NEGOTIATE_HE]));
-+		   atomic_read_wrap(&sent[SMB2_NEGOTIATE_HE]),
-+		   atomic_read_wrap(&failed[SMB2_NEGOTIATE_HE]));
- 	seq_printf(m, "\nSessionSetups: %d sent %d failed",
--		   atomic_read(&sent[SMB2_SESSION_SETUP_HE]),
--		   atomic_read(&failed[SMB2_SESSION_SETUP_HE]));
-+		   atomic_read_wrap(&sent[SMB2_SESSION_SETUP_HE]),
-+		   atomic_read_wrap(&failed[SMB2_SESSION_SETUP_HE]));
- 	seq_printf(m, "\nLogoffs: %d sent %d failed",
--		   atomic_read(&sent[SMB2_LOGOFF_HE]),
--		   atomic_read(&failed[SMB2_LOGOFF_HE]));
-+		   atomic_read_wrap(&sent[SMB2_LOGOFF_HE]),
-+		   atomic_read_wrap(&failed[SMB2_LOGOFF_HE]));
- 	seq_printf(m, "\nTreeConnects: %d sent %d failed",
--		   atomic_read(&sent[SMB2_TREE_CONNECT_HE]),
--		   atomic_read(&failed[SMB2_TREE_CONNECT_HE]));
-+		   atomic_read_wrap(&sent[SMB2_TREE_CONNECT_HE]),
-+		   atomic_read_wrap(&failed[SMB2_TREE_CONNECT_HE]));
- 	seq_printf(m, "\nTreeDisconnects: %d sent %d failed",
--		   atomic_read(&sent[SMB2_TREE_DISCONNECT_HE]),
--		   atomic_read(&failed[SMB2_TREE_DISCONNECT_HE]));
-+		   atomic_read_wrap(&sent[SMB2_TREE_DISCONNECT_HE]),
-+		   atomic_read_wrap(&failed[SMB2_TREE_DISCONNECT_HE]));
- 	seq_printf(m, "\nCreates: %d sent %d failed",
--		   atomic_read(&sent[SMB2_CREATE_HE]),
--		   atomic_read(&failed[SMB2_CREATE_HE]));
-+		   atomic_read_wrap(&sent[SMB2_CREATE_HE]),
-+		   atomic_read_wrap(&failed[SMB2_CREATE_HE]));
- 	seq_printf(m, "\nCloses: %d sent %d failed",
--		   atomic_read(&sent[SMB2_CLOSE_HE]),
--		   atomic_read(&failed[SMB2_CLOSE_HE]));
-+		   atomic_read_wrap(&sent[SMB2_CLOSE_HE]),
-+		   atomic_read_wrap(&failed[SMB2_CLOSE_HE]));
- 	seq_printf(m, "\nFlushes: %d sent %d failed",
--		   atomic_read(&sent[SMB2_FLUSH_HE]),
--		   atomic_read(&failed[SMB2_FLUSH_HE]));
-+		   atomic_read_wrap(&sent[SMB2_FLUSH_HE]),
-+		   atomic_read_wrap(&failed[SMB2_FLUSH_HE]));
- 	seq_printf(m, "\nReads: %d sent %d failed",
--		   atomic_read(&sent[SMB2_READ_HE]),
--		   atomic_read(&failed[SMB2_READ_HE]));
-+		   atomic_read_wrap(&sent[SMB2_READ_HE]),
-+		   atomic_read_wrap(&failed[SMB2_READ_HE]));
- 	seq_printf(m, "\nWrites: %d sent %d failed",
--		   atomic_read(&sent[SMB2_WRITE_HE]),
--		   atomic_read(&failed[SMB2_WRITE_HE]));
-+		   atomic_read_wrap(&sent[SMB2_WRITE_HE]),
-+		   atomic_read_wrap(&failed[SMB2_WRITE_HE]));
- 	seq_printf(m, "\nLocks: %d sent %d failed",
--		   atomic_read(&sent[SMB2_LOCK_HE]),
--		   atomic_read(&failed[SMB2_LOCK_HE]));
-+		   atomic_read_wrap(&sent[SMB2_LOCK_HE]),
-+		   atomic_read_wrap(&failed[SMB2_LOCK_HE]));
- 	seq_printf(m, "\nIOCTLs: %d sent %d failed",
--		   atomic_read(&sent[SMB2_IOCTL_HE]),
--		   atomic_read(&failed[SMB2_IOCTL_HE]));
-+		   atomic_read_wrap(&sent[SMB2_IOCTL_HE]),
-+		   atomic_read_wrap(&failed[SMB2_IOCTL_HE]));
- 	seq_printf(m, "\nCancels: %d sent %d failed",
--		   atomic_read(&sent[SMB2_CANCEL_HE]),
--		   atomic_read(&failed[SMB2_CANCEL_HE]));
-+		   atomic_read_wrap(&sent[SMB2_CANCEL_HE]),
-+		   atomic_read_wrap(&failed[SMB2_CANCEL_HE]));
- 	seq_printf(m, "\nEchos: %d sent %d failed",
--		   atomic_read(&sent[SMB2_ECHO_HE]),
--		   atomic_read(&failed[SMB2_ECHO_HE]));
-+		   atomic_read_wrap(&sent[SMB2_ECHO_HE]),
-+		   atomic_read_wrap(&failed[SMB2_ECHO_HE]));
- 	seq_printf(m, "\nQueryDirectories: %d sent %d failed",
--		   atomic_read(&sent[SMB2_QUERY_DIRECTORY_HE]),
--		   atomic_read(&failed[SMB2_QUERY_DIRECTORY_HE]));
-+		   atomic_read_wrap(&sent[SMB2_QUERY_DIRECTORY_HE]),
-+		   atomic_read_wrap(&failed[SMB2_QUERY_DIRECTORY_HE]));
- 	seq_printf(m, "\nChangeNotifies: %d sent %d failed",
--		   atomic_read(&sent[SMB2_CHANGE_NOTIFY_HE]),
--		   atomic_read(&failed[SMB2_CHANGE_NOTIFY_HE]));
-+		   atomic_read_wrap(&sent[SMB2_CHANGE_NOTIFY_HE]),
-+		   atomic_read_wrap(&failed[SMB2_CHANGE_NOTIFY_HE]));
- 	seq_printf(m, "\nQueryInfos: %d sent %d failed",
--		   atomic_read(&sent[SMB2_QUERY_INFO_HE]),
--		   atomic_read(&failed[SMB2_QUERY_INFO_HE]));
-+		   atomic_read_wrap(&sent[SMB2_QUERY_INFO_HE]),
-+		   atomic_read_wrap(&failed[SMB2_QUERY_INFO_HE]));
- 	seq_printf(m, "\nSetInfos: %d sent %d failed",
--		   atomic_read(&sent[SMB2_SET_INFO_HE]),
--		   atomic_read(&failed[SMB2_SET_INFO_HE]));
-+		   atomic_read_wrap(&sent[SMB2_SET_INFO_HE]),
-+		   atomic_read_wrap(&failed[SMB2_SET_INFO_HE]));
- 	seq_printf(m, "\nOplockBreaks: %d sent %d failed",
--		   atomic_read(&sent[SMB2_OPLOCK_BREAK_HE]),
--		   atomic_read(&failed[SMB2_OPLOCK_BREAK_HE]));
-+		   atomic_read_wrap(&sent[SMB2_OPLOCK_BREAK_HE]),
-+		   atomic_read_wrap(&failed[SMB2_OPLOCK_BREAK_HE]));
- #endif
- }
- 
-diff --git a/fs/coda/cache.c b/fs/coda/cache.c
-index 5bb630a..43303b5 100644
---- a/fs/coda/cache.c
-+++ b/fs/coda/cache.c
-@@ -24,7 +24,7 @@
- #include "coda_linux.h"
- #include "coda_cache.h"
- 
--static atomic_t permission_epoch = ATOMIC_INIT(0);
-+static atomic_wrap_t permission_epoch = ATOMIC_INIT(0);
- 
- /* replace or extend an acl cache hit */
- void coda_cache_enter(struct inode *inode, int mask)
-@@ -32,7 +32,7 @@ void coda_cache_enter(struct inode *inode, int mask)
- 	struct coda_inode_info *cii = ITOC(inode);
- 
- 	spin_lock(&cii->c_lock);
--	cii->c_cached_epoch = atomic_read(&permission_epoch);
-+	cii->c_cached_epoch = atomic_read_wrap(&permission_epoch);
- 	if (!uid_eq(cii->c_uid, current_fsuid())) {
- 		cii->c_uid = current_fsuid();
-                 cii->c_cached_perm = mask;
-@@ -46,14 +46,14 @@ void coda_cache_clear_inode(struct inode *inode)
- {
- 	struct coda_inode_info *cii = ITOC(inode);
- 	spin_lock(&cii->c_lock);
--	cii->c_cached_epoch = atomic_read(&permission_epoch) - 1;
-+	cii->c_cached_epoch = atomic_read_wrap(&permission_epoch) - 1;
- 	spin_unlock(&cii->c_lock);
- }
- 
- /* remove all acl caches */
- void coda_cache_clear_all(struct super_block *sb)
- {
--	atomic_inc(&permission_epoch);
-+	atomic_inc_wrap(&permission_epoch);
- }
- 
- 
-@@ -66,7 +66,7 @@ int coda_cache_check(struct inode *inode, int mask)
- 	spin_lock(&cii->c_lock);
- 	hit = (mask & cii->c_cached_perm) == mask &&
- 	    uid_eq(cii->c_uid, current_fsuid()) &&
--	    cii->c_cached_epoch == atomic_read(&permission_epoch);
-+	    cii->c_cached_epoch == atomic_read_wrap(&permission_epoch);
- 	spin_unlock(&cii->c_lock);
- 
- 	return hit;
-diff --git a/fs/coredump.c b/fs/coredump.c
-index 281b768..8d323b4 100644
---- a/fs/coredump.c
-+++ b/fs/coredump.c
-@@ -544,7 +544,7 @@ void do_coredump(const siginfo_t *siginfo)
- 	/* require nonrelative corefile path and be extra careful */
- 	bool need_suid_safe = false;
- 	bool core_dumped = false;
--	static atomic_t core_dump_count = ATOMIC_INIT(0);
-+	static atomic_wrap_t core_dump_count = ATOMIC_INIT(0);
- 	struct coredump_params cprm = {
- 		.siginfo = siginfo,
- 		.regs = signal_pt_regs(),
-@@ -623,7 +623,7 @@ void do_coredump(const siginfo_t *siginfo)
- 		}
- 		cprm.limit = RLIM_INFINITY;
- 
--		dump_count = atomic_inc_return(&core_dump_count);
-+		dump_count = atomic_inc_return_wrap(&core_dump_count);
- 		if (core_pipe_limit && (core_pipe_limit < dump_count)) {
- 			printk(KERN_WARNING "Pid %d(%s) over core_pipe_limit\n",
- 			       task_tgid_vnr(current), current->comm);
-@@ -763,7 +763,7 @@ void do_coredump(const siginfo_t *siginfo)
- 		filp_close(cprm.file, NULL);
- fail_dropcount:
- 	if (ispipe)
--		atomic_dec(&core_dump_count);
-+		atomic_dec_wrap(&core_dump_count);
- fail_unlock:
- 	kfree(cn.corename);
- 	coredump_finish(mm, core_dumped);
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 282a51b..debbff4 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -1448,19 +1448,19 @@ struct ext4_sb_info {
- 	unsigned long s_mb_last_start;
- 
- 	/* stats for buddy allocator */
--	atomic_t s_bal_reqs;	/* number of reqs with len > 1 */
--	atomic_t s_bal_success;	/* we found long enough chunks */
--	atomic_t s_bal_allocated;	/* in blocks */
--	atomic_t s_bal_ex_scanned;	/* total extents scanned */
--	atomic_t s_bal_goals;	/* goal hits */
--	atomic_t s_bal_breaks;	/* too long searches */
--	atomic_t s_bal_2orders;	/* 2^order hits */
-+	atomic_wrap_t s_bal_reqs;	/* number of reqs with len > 1 */
-+	atomic_wrap_t s_bal_success;	/* we found long enough chunks */
-+	atomic_wrap_t s_bal_allocated;	/* in blocks */
-+	atomic_wrap_t s_bal_ex_scanned;	/* total extents scanned */
-+	atomic_wrap_t s_bal_goals;	/* goal hits */
-+	atomic_wrap_t s_bal_breaks;	/* too long searches */
-+	atomic_wrap_t s_bal_2orders;	/* 2^order hits */
- 	spinlock_t s_bal_lock;
- 	unsigned long s_mb_buddies_generated;
- 	unsigned long long s_mb_generation_time;
--	atomic_t s_mb_lost_chunks;
--	atomic_t s_mb_preallocated;
--	atomic_t s_mb_discarded;
-+	atomic_wrap_t s_mb_lost_chunks;
-+	atomic_wrap_t s_mb_preallocated;
-+	atomic_wrap_t s_mb_discarded;
- 	atomic_t s_lock_busy;
- 
- 	/* locality groups */
-diff --git a/fs/ext4/mballoc.c b/fs/ext4/mballoc.c
-index f418f55..2dc1d6d 100644
---- a/fs/ext4/mballoc.c
-+++ b/fs/ext4/mballoc.c
-@@ -1921,7 +1921,7 @@ void ext4_mb_simple_scan_group(struct ext4_allocation_context *ac,
- 		BUG_ON(ac->ac_b_ex.fe_len != ac->ac_g_ex.fe_len);
- 
- 		if (EXT4_SB(sb)->s_mb_stats)
--			atomic_inc(&EXT4_SB(sb)->s_bal_2orders);
-+			atomic_inc_wrap(&EXT4_SB(sb)->s_bal_2orders);
- 
- 		break;
- 	}
-@@ -2244,7 +2244,7 @@ ext4_mb_regular_allocator(struct ext4_allocation_context *ac)
- 			ac->ac_status = AC_STATUS_CONTINUE;
- 			ac->ac_flags |= EXT4_MB_HINT_FIRST;
- 			cr = 3;
--			atomic_inc(&sbi->s_mb_lost_chunks);
-+			atomic_inc_wrap(&sbi->s_mb_lost_chunks);
- 			goto repeat;
- 		}
- 	}
-@@ -2743,25 +2743,25 @@ int ext4_mb_release(struct super_block *sb)
- 	if (sbi->s_mb_stats) {
- 		ext4_msg(sb, KERN_INFO,
- 		       "mballoc: %u blocks %u reqs (%u success)",
--				atomic_read(&sbi->s_bal_allocated),
--				atomic_read(&sbi->s_bal_reqs),
--				atomic_read(&sbi->s_bal_success));
-+				atomic_read_wrap(&sbi->s_bal_allocated),
-+				atomic_read_wrap(&sbi->s_bal_reqs),
-+				atomic_read_wrap(&sbi->s_bal_success));
- 		ext4_msg(sb, KERN_INFO,
- 		      "mballoc: %u extents scanned, %u goal hits, "
- 				"%u 2^N hits, %u breaks, %u lost",
--				atomic_read(&sbi->s_bal_ex_scanned),
--				atomic_read(&sbi->s_bal_goals),
--				atomic_read(&sbi->s_bal_2orders),
--				atomic_read(&sbi->s_bal_breaks),
--				atomic_read(&sbi->s_mb_lost_chunks));
-+				atomic_read_wrap(&sbi->s_bal_ex_scanned),
-+				atomic_read_wrap(&sbi->s_bal_goals),
-+				atomic_read_wrap(&sbi->s_bal_2orders),
-+				atomic_read_wrap(&sbi->s_bal_breaks),
-+				atomic_read_wrap(&sbi->s_mb_lost_chunks));
- 		ext4_msg(sb, KERN_INFO,
- 		       "mballoc: %lu generated and it took %Lu",
- 				sbi->s_mb_buddies_generated,
- 				sbi->s_mb_generation_time);
- 		ext4_msg(sb, KERN_INFO,
- 		       "mballoc: %u preallocated, %u discarded",
--				atomic_read(&sbi->s_mb_preallocated),
--				atomic_read(&sbi->s_mb_discarded));
-+				atomic_read_wrap(&sbi->s_mb_preallocated),
-+				atomic_read_wrap(&sbi->s_mb_discarded));
- 	}
- 
- 	free_percpu(sbi->s_locality_groups);
-@@ -3222,16 +3222,16 @@ static void ext4_mb_collect_stats(struct ext4_allocation_context *ac)
- 	struct ext4_sb_info *sbi = EXT4_SB(ac->ac_sb);
- 
- 	if (sbi->s_mb_stats && ac->ac_g_ex.fe_len > 1) {
--		atomic_inc(&sbi->s_bal_reqs);
--		atomic_add(ac->ac_b_ex.fe_len, &sbi->s_bal_allocated);
-+		atomic_inc_wrap(&sbi->s_bal_reqs);
-+		atomic_add_wrap(ac->ac_b_ex.fe_len, &sbi->s_bal_allocated);
- 		if (ac->ac_b_ex.fe_len >= ac->ac_o_ex.fe_len)
--			atomic_inc(&sbi->s_bal_success);
--		atomic_add(ac->ac_found, &sbi->s_bal_ex_scanned);
-+			atomic_inc_wrap(&sbi->s_bal_success);
-+		atomic_add_wrap(ac->ac_found, &sbi->s_bal_ex_scanned);
- 		if (ac->ac_g_ex.fe_start == ac->ac_b_ex.fe_start &&
- 				ac->ac_g_ex.fe_group == ac->ac_b_ex.fe_group)
--			atomic_inc(&sbi->s_bal_goals);
-+			atomic_inc_wrap(&sbi->s_bal_goals);
- 		if (ac->ac_found > sbi->s_mb_max_to_scan)
--			atomic_inc(&sbi->s_bal_breaks);
-+			atomic_inc_wrap(&sbi->s_bal_breaks);
- 	}
- 
- 	if (ac->ac_op == EXT4_MB_HISTORY_ALLOC)
-@@ -3658,7 +3658,7 @@ ext4_mb_new_inode_pa(struct ext4_allocation_context *ac)
- 	trace_ext4_mb_new_inode_pa(ac, pa);
- 
- 	ext4_mb_use_inode_pa(ac, pa);
--	atomic_add(pa->pa_free, &sbi->s_mb_preallocated);
-+	atomic_add_wrap(pa->pa_free, &sbi->s_mb_preallocated);
- 
- 	ei = EXT4_I(ac->ac_inode);
- 	grp = ext4_get_group_info(sb, ac->ac_b_ex.fe_group);
-@@ -3718,7 +3718,7 @@ ext4_mb_new_group_pa(struct ext4_allocation_context *ac)
- 	trace_ext4_mb_new_group_pa(ac, pa);
- 
- 	ext4_mb_use_group_pa(ac, pa);
--	atomic_add(pa->pa_free, &EXT4_SB(sb)->s_mb_preallocated);
-+	atomic_add_wrap(pa->pa_free, &EXT4_SB(sb)->s_mb_preallocated);
- 
- 	grp = ext4_get_group_info(sb, ac->ac_b_ex.fe_group);
- 	lg = ac->ac_lg;
-@@ -3807,7 +3807,7 @@ ext4_mb_release_inode_pa(struct ext4_buddy *e4b, struct buffer_head *bitmap_bh,
- 		 * from the bitmap and continue.
- 		 */
- 	}
--	atomic_add(free, &sbi->s_mb_discarded);
-+	atomic_add_wrap(free, &sbi->s_mb_discarded);
- 
- 	return err;
- }
-@@ -3825,7 +3825,7 @@ ext4_mb_release_group_pa(struct ext4_buddy *e4b,
- 	ext4_get_group_no_and_offset(sb, pa->pa_pstart, &group, &bit);
- 	BUG_ON(group != e4b->bd_group && pa->pa_len != 0);
- 	mb_free_blocks(pa->pa_inode, e4b, bit, pa->pa_len);
--	atomic_add(pa->pa_len, &EXT4_SB(sb)->s_mb_discarded);
-+	atomic_add_wrap(pa->pa_len, &EXT4_SB(sb)->s_mb_discarded);
- 	trace_ext4_mballoc_discard(sb, NULL, group, bit, pa->pa_len);
- 
- 	return 0;
-diff --git a/fs/fscache/cookie.c b/fs/fscache/cookie.c
-index 43040721..e3d750c 100644
---- a/fs/fscache/cookie.c
-+++ b/fs/fscache/cookie.c
-@@ -19,7 +19,7 @@
- 
- struct kmem_cache *fscache_cookie_jar;
- 
--static atomic_t fscache_object_debug_id = ATOMIC_INIT(0);
-+static atomic_wrap_t fscache_object_debug_id = ATOMIC_INIT(0);
- 
- static int fscache_acquire_non_index_cookie(struct fscache_cookie *cookie);
- static int fscache_alloc_object(struct fscache_cache *cache,
-@@ -69,11 +69,11 @@ struct fscache_cookie *__fscache_acquire_cookie(
- 	       parent ? (char *) parent->def->name : "<no-parent>",
- 	       def->name, netfs_data, enable);
- 
--	fscache_stat(&fscache_n_acquires);
-+	fscache_stat_wrap(&fscache_n_acquires);
- 
- 	/* if there's no parent cookie, then we don't create one here either */
- 	if (!parent) {
--		fscache_stat(&fscache_n_acquires_null);
-+		fscache_stat_wrap(&fscache_n_acquires_null);
- 		_leave(" [no parent]");
- 		return NULL;
- 	}
-@@ -88,7 +88,7 @@ struct fscache_cookie *__fscache_acquire_cookie(
- 	/* allocate and initialise a cookie */
- 	cookie = kmem_cache_alloc(fscache_cookie_jar, GFP_KERNEL);
- 	if (!cookie) {
--		fscache_stat(&fscache_n_acquires_oom);
-+		fscache_stat_wrap(&fscache_n_acquires_oom);
- 		_leave(" [ENOMEM]");
- 		return NULL;
- 	}
-@@ -115,13 +115,13 @@ struct fscache_cookie *__fscache_acquire_cookie(
- 
- 	switch (cookie->def->type) {
- 	case FSCACHE_COOKIE_TYPE_INDEX:
--		fscache_stat(&fscache_n_cookie_index);
-+		fscache_stat_wrap(&fscache_n_cookie_index);
- 		break;
- 	case FSCACHE_COOKIE_TYPE_DATAFILE:
--		fscache_stat(&fscache_n_cookie_data);
-+		fscache_stat_wrap(&fscache_n_cookie_data);
- 		break;
- 	default:
--		fscache_stat(&fscache_n_cookie_special);
-+		fscache_stat_wrap(&fscache_n_cookie_special);
- 		break;
- 	}
- 
-@@ -135,7 +135,7 @@ struct fscache_cookie *__fscache_acquire_cookie(
- 			} else {
- 				atomic_dec(&parent->n_children);
- 				__fscache_cookie_put(cookie);
--				fscache_stat(&fscache_n_acquires_nobufs);
-+				fscache_stat_wrap(&fscache_n_acquires_nobufs);
- 				_leave(" = NULL");
- 				return NULL;
- 			}
-@@ -144,7 +144,7 @@ struct fscache_cookie *__fscache_acquire_cookie(
- 		}
- 	}
- 
--	fscache_stat(&fscache_n_acquires_ok);
-+	fscache_stat_wrap(&fscache_n_acquires_ok);
- 	_leave(" = %p", cookie);
- 	return cookie;
- }
-@@ -213,7 +213,7 @@ static int fscache_acquire_non_index_cookie(struct fscache_cookie *cookie)
- 	cache = fscache_select_cache_for_object(cookie->parent);
- 	if (!cache) {
- 		up_read(&fscache_addremove_sem);
--		fscache_stat(&fscache_n_acquires_no_cache);
-+		fscache_stat_wrap(&fscache_n_acquires_no_cache);
- 		_leave(" = -ENOMEDIUM [no cache]");
- 		return -ENOMEDIUM;
- 	}
-@@ -297,14 +297,14 @@ static int fscache_alloc_object(struct fscache_cache *cache,
- 	object = cache->ops->alloc_object(cache, cookie);
- 	fscache_stat_d(&fscache_n_cop_alloc_object);
- 	if (IS_ERR(object)) {
--		fscache_stat(&fscache_n_object_no_alloc);
-+		fscache_stat_wrap(&fscache_n_object_no_alloc);
- 		ret = PTR_ERR(object);
- 		goto error;
- 	}
- 
--	fscache_stat(&fscache_n_object_alloc);
-+	fscache_stat_wrap(&fscache_n_object_alloc);
- 
--	object->debug_id = atomic_inc_return(&fscache_object_debug_id);
-+	object->debug_id = atomic_inc_return_wrap(&fscache_object_debug_id);
- 
- 	_debug("ALLOC OBJ%x: %s {%lx}",
- 	       object->debug_id, cookie->def->name, object->events);
-@@ -419,7 +419,7 @@ void __fscache_invalidate(struct fscache_cookie *cookie)
- 
- 	_enter("{%s}", cookie->def->name);
- 
--	fscache_stat(&fscache_n_invalidates);
-+	fscache_stat_wrap(&fscache_n_invalidates);
- 
- 	/* Only permit invalidation of data files.  Invalidating an index will
- 	 * require the caller to release all its attachments to the tree rooted
-@@ -477,10 +477,10 @@ void __fscache_update_cookie(struct fscache_cookie *cookie)
- {
- 	struct fscache_object *object;
- 
--	fscache_stat(&fscache_n_updates);
-+	fscache_stat_wrap(&fscache_n_updates);
- 
- 	if (!cookie) {
--		fscache_stat(&fscache_n_updates_null);
-+		fscache_stat_wrap(&fscache_n_updates_null);
- 		_leave(" [no cookie]");
- 		return;
- 	}
-@@ -581,12 +581,12 @@ EXPORT_SYMBOL(__fscache_disable_cookie);
-  */
- void __fscache_relinquish_cookie(struct fscache_cookie *cookie, bool retire)
- {
--	fscache_stat(&fscache_n_relinquishes);
-+	fscache_stat_wrap(&fscache_n_relinquishes);
- 	if (retire)
--		fscache_stat(&fscache_n_relinquishes_retire);
-+		fscache_stat_wrap(&fscache_n_relinquishes_retire);
- 
- 	if (!cookie) {
--		fscache_stat(&fscache_n_relinquishes_null);
-+		fscache_stat_wrap(&fscache_n_relinquishes_null);
- 		_leave(" [no cookie]");
- 		return;
- 	}
-@@ -687,7 +687,7 @@ int __fscache_check_consistency(struct fscache_cookie *cookie)
- 	if (test_bit(FSCACHE_IOERROR, &object->cache->flags))
- 		goto inconsistent;
- 
--	op->debug_id = atomic_inc_return(&fscache_op_debug_id);
-+	op->debug_id = atomic_inc_return_wrap(&fscache_op_debug_id);
- 
- 	__fscache_use_cookie(cookie);
- 	if (fscache_submit_op(object, op) < 0)
-diff --git a/fs/fscache/internal.h b/fs/fscache/internal.h
-index 97ec451..f56d965 100644
---- a/fs/fscache/internal.h
-+++ b/fs/fscache/internal.h
-@@ -136,8 +136,8 @@ extern void fscache_operation_gc(struct work_struct *);
- extern int fscache_wait_for_deferred_lookup(struct fscache_cookie *);
- extern int fscache_wait_for_operation_activation(struct fscache_object *,
- 						 struct fscache_operation *,
--						 atomic_t *,
--						 atomic_t *);
-+						 atomic_wrap_t *,
-+						 atomic_wrap_t *);
- extern void fscache_invalidate_writes(struct fscache_cookie *);
- 
- /*
-@@ -155,102 +155,102 @@ extern void fscache_proc_cleanup(void);
-  * stats.c
-  */
- #ifdef CONFIG_FSCACHE_STATS
--extern atomic_t fscache_n_ops_processed[FSCACHE_MAX_THREADS];
--extern atomic_t fscache_n_objs_processed[FSCACHE_MAX_THREADS];
--
--extern atomic_t fscache_n_op_pend;
--extern atomic_t fscache_n_op_run;
--extern atomic_t fscache_n_op_enqueue;
--extern atomic_t fscache_n_op_deferred_release;
--extern atomic_t fscache_n_op_initialised;
--extern atomic_t fscache_n_op_release;
--extern atomic_t fscache_n_op_gc;
--extern atomic_t fscache_n_op_cancelled;
--extern atomic_t fscache_n_op_rejected;
--
--extern atomic_t fscache_n_attr_changed;
--extern atomic_t fscache_n_attr_changed_ok;
--extern atomic_t fscache_n_attr_changed_nobufs;
--extern atomic_t fscache_n_attr_changed_nomem;
--extern atomic_t fscache_n_attr_changed_calls;
--
--extern atomic_t fscache_n_allocs;
--extern atomic_t fscache_n_allocs_ok;
--extern atomic_t fscache_n_allocs_wait;
--extern atomic_t fscache_n_allocs_nobufs;
--extern atomic_t fscache_n_allocs_intr;
--extern atomic_t fscache_n_allocs_object_dead;
--extern atomic_t fscache_n_alloc_ops;
--extern atomic_t fscache_n_alloc_op_waits;
--
--extern atomic_t fscache_n_retrievals;
--extern atomic_t fscache_n_retrievals_ok;
--extern atomic_t fscache_n_retrievals_wait;
--extern atomic_t fscache_n_retrievals_nodata;
--extern atomic_t fscache_n_retrievals_nobufs;
--extern atomic_t fscache_n_retrievals_intr;
--extern atomic_t fscache_n_retrievals_nomem;
--extern atomic_t fscache_n_retrievals_object_dead;
--extern atomic_t fscache_n_retrieval_ops;
--extern atomic_t fscache_n_retrieval_op_waits;
--
--extern atomic_t fscache_n_stores;
--extern atomic_t fscache_n_stores_ok;
--extern atomic_t fscache_n_stores_again;
--extern atomic_t fscache_n_stores_nobufs;
--extern atomic_t fscache_n_stores_oom;
--extern atomic_t fscache_n_store_ops;
--extern atomic_t fscache_n_store_calls;
--extern atomic_t fscache_n_store_pages;
--extern atomic_t fscache_n_store_radix_deletes;
--extern atomic_t fscache_n_store_pages_over_limit;
--
--extern atomic_t fscache_n_store_vmscan_not_storing;
--extern atomic_t fscache_n_store_vmscan_gone;
--extern atomic_t fscache_n_store_vmscan_busy;
--extern atomic_t fscache_n_store_vmscan_cancelled;
--extern atomic_t fscache_n_store_vmscan_wait;
--
--extern atomic_t fscache_n_marks;
--extern atomic_t fscache_n_uncaches;
--
--extern atomic_t fscache_n_acquires;
--extern atomic_t fscache_n_acquires_null;
--extern atomic_t fscache_n_acquires_no_cache;
--extern atomic_t fscache_n_acquires_ok;
--extern atomic_t fscache_n_acquires_nobufs;
--extern atomic_t fscache_n_acquires_oom;
--
--extern atomic_t fscache_n_invalidates;
--extern atomic_t fscache_n_invalidates_run;
--
--extern atomic_t fscache_n_updates;
--extern atomic_t fscache_n_updates_null;
--extern atomic_t fscache_n_updates_run;
--
--extern atomic_t fscache_n_relinquishes;
--extern atomic_t fscache_n_relinquishes_null;
--extern atomic_t fscache_n_relinquishes_waitcrt;
--extern atomic_t fscache_n_relinquishes_retire;
--
--extern atomic_t fscache_n_cookie_index;
--extern atomic_t fscache_n_cookie_data;
--extern atomic_t fscache_n_cookie_special;
--
--extern atomic_t fscache_n_object_alloc;
--extern atomic_t fscache_n_object_no_alloc;
--extern atomic_t fscache_n_object_lookups;
--extern atomic_t fscache_n_object_lookups_negative;
--extern atomic_t fscache_n_object_lookups_positive;
--extern atomic_t fscache_n_object_lookups_timed_out;
--extern atomic_t fscache_n_object_created;
--extern atomic_t fscache_n_object_avail;
--extern atomic_t fscache_n_object_dead;
--
--extern atomic_t fscache_n_checkaux_none;
--extern atomic_t fscache_n_checkaux_okay;
--extern atomic_t fscache_n_checkaux_update;
--extern atomic_t fscache_n_checkaux_obsolete;
-+extern atomic_wrap_t fscache_n_ops_processed[FSCACHE_MAX_THREADS];
-+extern atomic_wrap_t fscache_n_objs_processed[FSCACHE_MAX_THREADS];
-+
-+extern atomic_wrap_t fscache_n_op_pend;
-+extern atomic_wrap_t fscache_n_op_run;
-+extern atomic_wrap_t fscache_n_op_enqueue;
-+extern atomic_wrap_t fscache_n_op_deferred_release;
-+extern atomic_wrap_t fscache_n_op_initialised;
-+extern atomic_wrap_t fscache_n_op_release;
-+extern atomic_wrap_t fscache_n_op_gc;
-+extern atomic_wrap_t fscache_n_op_cancelled;
-+extern atomic_wrap_t fscache_n_op_rejected;
-+
-+extern atomic_wrap_t fscache_n_attr_changed;
-+extern atomic_wrap_t fscache_n_attr_changed_ok;
-+extern atomic_wrap_t fscache_n_attr_changed_nobufs;
-+extern atomic_wrap_t fscache_n_attr_changed_nomem;
-+extern atomic_wrap_t fscache_n_attr_changed_calls;
-+
-+extern atomic_wrap_t fscache_n_allocs;
-+extern atomic_wrap_t fscache_n_allocs_ok;
-+extern atomic_wrap_t fscache_n_allocs_wait;
-+extern atomic_wrap_t fscache_n_allocs_nobufs;
-+extern atomic_wrap_t fscache_n_allocs_intr;
-+extern atomic_wrap_t fscache_n_allocs_object_dead;
-+extern atomic_wrap_t fscache_n_alloc_ops;
-+extern atomic_wrap_t fscache_n_alloc_op_waits;
-+
-+extern atomic_wrap_t fscache_n_retrievals;
-+extern atomic_wrap_t fscache_n_retrievals_ok;
-+extern atomic_wrap_t fscache_n_retrievals_wait;
-+extern atomic_wrap_t fscache_n_retrievals_nodata;
-+extern atomic_wrap_t fscache_n_retrievals_nobufs;
-+extern atomic_wrap_t fscache_n_retrievals_intr;
-+extern atomic_wrap_t fscache_n_retrievals_nomem;
-+extern atomic_wrap_t fscache_n_retrievals_object_dead;
-+extern atomic_wrap_t fscache_n_retrieval_ops;
-+extern atomic_wrap_t fscache_n_retrieval_op_waits;
-+
-+extern atomic_wrap_t fscache_n_stores;
-+extern atomic_wrap_t fscache_n_stores_ok;
-+extern atomic_wrap_t fscache_n_stores_again;
-+extern atomic_wrap_t fscache_n_stores_nobufs;
-+extern atomic_wrap_t fscache_n_stores_oom;
-+extern atomic_wrap_t fscache_n_store_ops;
-+extern atomic_wrap_t fscache_n_store_calls;
-+extern atomic_wrap_t fscache_n_store_pages;
-+extern atomic_wrap_t fscache_n_store_radix_deletes;
-+extern atomic_wrap_t fscache_n_store_pages_over_limit;
-+
-+extern atomic_wrap_t fscache_n_store_vmscan_not_storing;
-+extern atomic_wrap_t fscache_n_store_vmscan_gone;
-+extern atomic_wrap_t fscache_n_store_vmscan_busy;
-+extern atomic_wrap_t fscache_n_store_vmscan_cancelled;
-+extern atomic_wrap_t fscache_n_store_vmscan_wait;
-+
-+extern atomic_wrap_t fscache_n_marks;
-+extern atomic_wrap_t fscache_n_uncaches;
-+
-+extern atomic_wrap_t fscache_n_acquires;
-+extern atomic_wrap_t fscache_n_acquires_null;
-+extern atomic_wrap_t fscache_n_acquires_no_cache;
-+extern atomic_wrap_t fscache_n_acquires_ok;
-+extern atomic_wrap_t fscache_n_acquires_nobufs;
-+extern atomic_wrap_t fscache_n_acquires_oom;
-+
-+extern atomic_wrap_t fscache_n_invalidates;
-+extern atomic_wrap_t fscache_n_invalidates_run;
-+
-+extern atomic_wrap_t fscache_n_updates;
-+extern atomic_wrap_t fscache_n_updates_null;
-+extern atomic_wrap_t fscache_n_updates_run;
-+
-+extern atomic_wrap_t fscache_n_relinquishes;
-+extern atomic_wrap_t fscache_n_relinquishes_null;
-+extern atomic_wrap_t fscache_n_relinquishes_waitcrt;
-+extern atomic_wrap_t fscache_n_relinquishes_retire;
-+
-+extern atomic_wrap_t fscache_n_cookie_index;
-+extern atomic_wrap_t fscache_n_cookie_data;
-+extern atomic_wrap_t fscache_n_cookie_special;
-+
-+extern atomic_wrap_t fscache_n_object_alloc;
-+extern atomic_wrap_t fscache_n_object_no_alloc;
-+extern atomic_wrap_t fscache_n_object_lookups;
-+extern atomic_wrap_t fscache_n_object_lookups_negative;
-+extern atomic_wrap_t fscache_n_object_lookups_positive;
-+extern atomic_wrap_t fscache_n_object_lookups_timed_out;
-+extern atomic_wrap_t fscache_n_object_created;
-+extern atomic_wrap_t fscache_n_object_avail;
-+extern atomic_wrap_t fscache_n_object_dead;
-+
-+extern atomic_wrap_t fscache_n_checkaux_none;
-+extern atomic_wrap_t fscache_n_checkaux_okay;
-+extern atomic_wrap_t fscache_n_checkaux_update;
-+extern atomic_wrap_t fscache_n_checkaux_obsolete;
- 
- extern atomic_t fscache_n_cop_alloc_object;
- extern atomic_t fscache_n_cop_lookup_object;
-@@ -280,6 +280,11 @@ static inline void fscache_stat(atomic_t *stat)
- 	atomic_inc(stat);
- }
- 
-+static inline void fscache_stat_wrap(atomic_wrap_t *stat)
-+{
-+	atomic_inc_wrap(stat);
-+}
-+
- static inline void fscache_stat_d(atomic_t *stat)
- {
- 	atomic_dec(stat);
-@@ -292,6 +297,7 @@ extern const struct file_operations fscache_stats_fops;
- 
- #define __fscache_stat(stat) (NULL)
- #define fscache_stat(stat) do {} while (0)
-+#define fscache_stat_wrap(stat) do {} while (0)
- #define fscache_stat_d(stat) do {} while (0)
- #endif
- 
-diff --git a/fs/fscache/object.c b/fs/fscache/object.c
-index 9e792e3..6a7e3e0 100644
---- a/fs/fscache/object.c
-+++ b/fs/fscache/object.c
-@@ -465,7 +465,7 @@ static const struct fscache_state *fscache_look_up_object(struct fscache_object
- 	_debug("LOOKUP \"%s\" in \"%s\"",
- 	       cookie->def->name, object->cache->tag->name);
- 
--	fscache_stat(&fscache_n_object_lookups);
-+	fscache_stat_wrap(&fscache_n_object_lookups);
- 	fscache_stat(&fscache_n_cop_lookup_object);
- 	ret = object->cache->ops->lookup_object(object);
- 	fscache_stat_d(&fscache_n_cop_lookup_object);
-@@ -475,7 +475,7 @@ static const struct fscache_state *fscache_look_up_object(struct fscache_object
- 	if (ret == -ETIMEDOUT) {
- 		/* probably stuck behind another object, so move this one to
- 		 * the back of the queue */
--		fscache_stat(&fscache_n_object_lookups_timed_out);
-+		fscache_stat_wrap(&fscache_n_object_lookups_timed_out);
- 		_leave(" [timeout]");
- 		return NO_TRANSIT;
- 	}
-@@ -503,7 +503,7 @@ void fscache_object_lookup_negative(struct fscache_object *object)
- 	_enter("{OBJ%x,%s}", object->debug_id, object->state->name);
- 
- 	if (!test_and_set_bit(FSCACHE_OBJECT_IS_LOOKED_UP, &object->flags)) {
--		fscache_stat(&fscache_n_object_lookups_negative);
-+		fscache_stat_wrap(&fscache_n_object_lookups_negative);
- 
- 		/* Allow write requests to begin stacking up and read requests to begin
- 		 * returning ENODATA.
-@@ -538,7 +538,7 @@ void fscache_obtained_object(struct fscache_object *object)
- 	/* if we were still looking up, then we must have a positive lookup
- 	 * result, in which case there may be data available */
- 	if (!test_and_set_bit(FSCACHE_OBJECT_IS_LOOKED_UP, &object->flags)) {
--		fscache_stat(&fscache_n_object_lookups_positive);
-+		fscache_stat_wrap(&fscache_n_object_lookups_positive);
- 
- 		/* We do (presumably) have data */
- 		clear_bit_unlock(FSCACHE_COOKIE_NO_DATA_YET, &cookie->flags);
-@@ -550,7 +550,7 @@ void fscache_obtained_object(struct fscache_object *object)
- 		clear_bit_unlock(FSCACHE_COOKIE_LOOKING_UP, &cookie->flags);
- 		wake_up_bit(&cookie->flags, FSCACHE_COOKIE_LOOKING_UP);
- 	} else {
--		fscache_stat(&fscache_n_object_created);
-+		fscache_stat_wrap(&fscache_n_object_created);
- 	}
- 
- 	set_bit(FSCACHE_OBJECT_IS_AVAILABLE, &object->flags);
-@@ -586,7 +586,7 @@ static const struct fscache_state *fscache_object_available(struct fscache_objec
- 	fscache_stat_d(&fscache_n_cop_lookup_complete);
- 
- 	fscache_hist(fscache_obj_instantiate_histogram, object->lookup_jif);
--	fscache_stat(&fscache_n_object_avail);
-+	fscache_stat_wrap(&fscache_n_object_avail);
- 
- 	_leave("");
- 	return transit_to(JUMPSTART_DEPS);
-@@ -735,7 +735,7 @@ static const struct fscache_state *fscache_drop_object(struct fscache_object *ob
- 
- 	/* this just shifts the object release to the work processor */
- 	fscache_put_object(object);
--	fscache_stat(&fscache_n_object_dead);
-+	fscache_stat_wrap(&fscache_n_object_dead);
- 
- 	_leave("");
- 	return transit_to(OBJECT_DEAD);
-@@ -900,7 +900,7 @@ enum fscache_checkaux fscache_check_aux(struct fscache_object *object,
- 	enum fscache_checkaux result;
- 
- 	if (!object->cookie->def->check_aux) {
--		fscache_stat(&fscache_n_checkaux_none);
-+		fscache_stat_wrap(&fscache_n_checkaux_none);
- 		return FSCACHE_CHECKAUX_OKAY;
- 	}
- 
-@@ -909,17 +909,17 @@ enum fscache_checkaux fscache_check_aux(struct fscache_object *object,
- 	switch (result) {
- 		/* entry okay as is */
- 	case FSCACHE_CHECKAUX_OKAY:
--		fscache_stat(&fscache_n_checkaux_okay);
-+		fscache_stat_wrap(&fscache_n_checkaux_okay);
- 		break;
- 
- 		/* entry requires update */
- 	case FSCACHE_CHECKAUX_NEEDS_UPDATE:
--		fscache_stat(&fscache_n_checkaux_update);
-+		fscache_stat_wrap(&fscache_n_checkaux_update);
- 		break;
- 
- 		/* entry requires deletion */
- 	case FSCACHE_CHECKAUX_OBSOLETE:
--		fscache_stat(&fscache_n_checkaux_obsolete);
-+		fscache_stat_wrap(&fscache_n_checkaux_obsolete);
- 		break;
- 
- 	default:
-@@ -1007,7 +1007,7 @@ static const struct fscache_state *fscache_invalidate_object(struct fscache_obje
- {
- 	const struct fscache_state *s;
- 
--	fscache_stat(&fscache_n_invalidates_run);
-+	fscache_stat_wrap(&fscache_n_invalidates_run);
- 	fscache_stat(&fscache_n_cop_invalidate_object);
- 	s = _fscache_invalidate_object(object, event);
- 	fscache_stat_d(&fscache_n_cop_invalidate_object);
-@@ -1022,7 +1022,7 @@ static const struct fscache_state *fscache_update_object(struct fscache_object *
- {
- 	_enter("{OBJ%x},%d", object->debug_id, event);
- 
--	fscache_stat(&fscache_n_updates_run);
-+	fscache_stat_wrap(&fscache_n_updates_run);
- 	fscache_stat(&fscache_n_cop_update_object);
- 	object->cache->ops->update_object(object);
- 	fscache_stat_d(&fscache_n_cop_update_object);
-diff --git a/fs/fscache/operation.c b/fs/fscache/operation.c
-index de67745..e405c41 100644
---- a/fs/fscache/operation.c
-+++ b/fs/fscache/operation.c
-@@ -17,7 +17,7 @@
- #include <linux/slab.h>
- #include "internal.h"
- 
--atomic_t fscache_op_debug_id;
-+atomic_wrap_t fscache_op_debug_id;
- EXPORT_SYMBOL(fscache_op_debug_id);
- 
- static void fscache_operation_dummy_cancel(struct fscache_operation *op)
-@@ -40,12 +40,12 @@ void fscache_operation_init(struct fscache_operation *op,
- 	INIT_WORK(&op->work, fscache_op_work_func);
- 	atomic_set(&op->usage, 1);
- 	op->state = FSCACHE_OP_ST_INITIALISED;
--	op->debug_id = atomic_inc_return(&fscache_op_debug_id);
-+	op->debug_id = atomic_inc_return_wrap(&fscache_op_debug_id);
- 	op->processor = processor;
- 	op->cancel = cancel ?: fscache_operation_dummy_cancel;
- 	op->release = release;
- 	INIT_LIST_HEAD(&op->pend_link);
--	fscache_stat(&fscache_n_op_initialised);
-+	fscache_stat_wrap(&fscache_n_op_initialised);
- }
- EXPORT_SYMBOL(fscache_operation_init);
- 
-@@ -68,7 +68,7 @@ void fscache_enqueue_operation(struct fscache_operation *op)
- 	ASSERTCMP(atomic_read(&op->usage), >, 0);
- 	ASSERTCMP(op->state, ==, FSCACHE_OP_ST_IN_PROGRESS);
- 
--	fscache_stat(&fscache_n_op_enqueue);
-+	fscache_stat_wrap(&fscache_n_op_enqueue);
- 	switch (op->flags & FSCACHE_OP_TYPE) {
- 	case FSCACHE_OP_ASYNC:
- 		_debug("queue async");
-@@ -101,7 +101,7 @@ static void fscache_run_op(struct fscache_object *object,
- 		wake_up_bit(&op->flags, FSCACHE_OP_WAITING);
- 	if (op->processor)
- 		fscache_enqueue_operation(op);
--	fscache_stat(&fscache_n_op_run);
-+	fscache_stat_wrap(&fscache_n_op_run);
- }
- 
- /*
-@@ -169,7 +169,7 @@ int fscache_submit_exclusive_op(struct fscache_object *object,
- 	op->state = FSCACHE_OP_ST_PENDING;
- 	flags = READ_ONCE(object->flags);
- 	if (unlikely(!(flags & BIT(FSCACHE_OBJECT_IS_LIVE)))) {
--		fscache_stat(&fscache_n_op_rejected);
-+		fscache_stat_wrap(&fscache_n_op_rejected);
- 		op->cancel(op);
- 		op->state = FSCACHE_OP_ST_CANCELLED;
- 		ret = -ENOBUFS;
-@@ -185,11 +185,11 @@ int fscache_submit_exclusive_op(struct fscache_object *object,
- 		if (object->n_in_progress > 0) {
- 			atomic_inc(&op->usage);
- 			list_add_tail(&op->pend_link, &object->pending_ops);
--			fscache_stat(&fscache_n_op_pend);
-+			fscache_stat_wrap(&fscache_n_op_pend);
- 		} else if (!list_empty(&object->pending_ops)) {
- 			atomic_inc(&op->usage);
- 			list_add_tail(&op->pend_link, &object->pending_ops);
--			fscache_stat(&fscache_n_op_pend);
-+			fscache_stat_wrap(&fscache_n_op_pend);
- 			fscache_start_operations(object);
- 		} else {
- 			ASSERTCMP(object->n_in_progress, ==, 0);
-@@ -205,7 +205,7 @@ int fscache_submit_exclusive_op(struct fscache_object *object,
- 		object->n_exclusive++;	/* reads and writes must wait */
- 		atomic_inc(&op->usage);
- 		list_add_tail(&op->pend_link, &object->pending_ops);
--		fscache_stat(&fscache_n_op_pend);
-+		fscache_stat_wrap(&fscache_n_op_pend);
- 		ret = 0;
- 	} else if (flags & BIT(FSCACHE_OBJECT_KILLED_BY_CACHE)) {
- 		op->cancel(op);
-@@ -254,7 +254,7 @@ int fscache_submit_op(struct fscache_object *object,
- 	op->state = FSCACHE_OP_ST_PENDING;
- 	flags = READ_ONCE(object->flags);
- 	if (unlikely(!(flags & BIT(FSCACHE_OBJECT_IS_LIVE)))) {
--		fscache_stat(&fscache_n_op_rejected);
-+		fscache_stat_wrap(&fscache_n_op_rejected);
- 		op->cancel(op);
- 		op->state = FSCACHE_OP_ST_CANCELLED;
- 		ret = -ENOBUFS;
-@@ -269,11 +269,11 @@ int fscache_submit_op(struct fscache_object *object,
- 		if (object->n_exclusive > 0) {
- 			atomic_inc(&op->usage);
- 			list_add_tail(&op->pend_link, &object->pending_ops);
--			fscache_stat(&fscache_n_op_pend);
-+			fscache_stat_wrap(&fscache_n_op_pend);
- 		} else if (!list_empty(&object->pending_ops)) {
- 			atomic_inc(&op->usage);
- 			list_add_tail(&op->pend_link, &object->pending_ops);
--			fscache_stat(&fscache_n_op_pend);
-+			fscache_stat_wrap(&fscache_n_op_pend);
- 			fscache_start_operations(object);
- 		} else {
- 			ASSERTCMP(object->n_exclusive, ==, 0);
-@@ -285,7 +285,7 @@ int fscache_submit_op(struct fscache_object *object,
- 		object->n_ops++;
- 		atomic_inc(&op->usage);
- 		list_add_tail(&op->pend_link, &object->pending_ops);
--		fscache_stat(&fscache_n_op_pend);
-+		fscache_stat_wrap(&fscache_n_op_pend);
- 		ret = 0;
- 	} else if (flags & BIT(FSCACHE_OBJECT_KILLED_BY_CACHE)) {
- 		op->cancel(op);
-@@ -369,7 +369,7 @@ int fscache_cancel_op(struct fscache_operation *op,
- 		list_del_init(&op->pend_link);
- 		put = true;
- 
--		fscache_stat(&fscache_n_op_cancelled);
-+		fscache_stat_wrap(&fscache_n_op_cancelled);
- 		op->cancel(op);
- 		op->state = FSCACHE_OP_ST_CANCELLED;
- 		if (test_bit(FSCACHE_OP_EXCLUSIVE, &op->flags))
-@@ -385,7 +385,7 @@ int fscache_cancel_op(struct fscache_operation *op,
- 		if (object->n_in_progress == 0)
- 			fscache_start_operations(object);
- 
--		fscache_stat(&fscache_n_op_cancelled);
-+		fscache_stat_wrap(&fscache_n_op_cancelled);
- 		op->cancel(op);
- 		op->state = FSCACHE_OP_ST_CANCELLED;
- 		if (test_bit(FSCACHE_OP_EXCLUSIVE, &op->flags))
-@@ -416,7 +416,7 @@ void fscache_cancel_all_ops(struct fscache_object *object)
- 	while (!list_empty(&object->pending_ops)) {
- 		op = list_entry(object->pending_ops.next,
- 				struct fscache_operation, pend_link);
--		fscache_stat(&fscache_n_op_cancelled);
-+		fscache_stat_wrap(&fscache_n_op_cancelled);
- 		list_del_init(&op->pend_link);
- 
- 		ASSERTCMP(op->state, ==, FSCACHE_OP_ST_PENDING);
-@@ -493,7 +493,7 @@ void fscache_put_operation(struct fscache_operation *op)
- 		    op->state != FSCACHE_OP_ST_COMPLETE,
- 		    op->state, ==, FSCACHE_OP_ST_CANCELLED);
- 
--	fscache_stat(&fscache_n_op_release);
-+	fscache_stat_wrap(&fscache_n_op_release);
- 
- 	if (op->release) {
- 		op->release(op);
-@@ -513,7 +513,7 @@ void fscache_put_operation(struct fscache_operation *op)
- 		 * lock, and defer it otherwise */
- 		if (!spin_trylock(&object->lock)) {
- 			_debug("defer put");
--			fscache_stat(&fscache_n_op_deferred_release);
-+			fscache_stat_wrap(&fscache_n_op_deferred_release);
- 
- 			cache = object->cache;
- 			spin_lock(&cache->op_gc_list_lock);
-@@ -567,7 +567,7 @@ void fscache_operation_gc(struct work_struct *work)
- 
- 		_debug("GC DEFERRED REL OBJ%x OP%x",
- 		       object->debug_id, op->debug_id);
--		fscache_stat(&fscache_n_op_gc);
-+		fscache_stat_wrap(&fscache_n_op_gc);
- 
- 		ASSERTCMP(atomic_read(&op->usage), ==, 0);
- 		ASSERTCMP(op->state, ==, FSCACHE_OP_ST_DEAD);
-diff --git a/fs/fscache/page.c b/fs/fscache/page.c
-index c8c4f79..1bc9466 100644
---- a/fs/fscache/page.c
-+++ b/fs/fscache/page.c
-@@ -74,7 +74,7 @@ bool __fscache_maybe_release_page(struct fscache_cookie *cookie,
- 	val = radix_tree_lookup(&cookie->stores, page->index);
- 	if (!val) {
- 		rcu_read_unlock();
--		fscache_stat(&fscache_n_store_vmscan_not_storing);
-+		fscache_stat_wrap(&fscache_n_store_vmscan_not_storing);
- 		__fscache_uncache_page(cookie, page);
- 		return true;
- 	}
-@@ -104,11 +104,11 @@ bool __fscache_maybe_release_page(struct fscache_cookie *cookie,
- 	spin_unlock(&cookie->stores_lock);
- 
- 	if (xpage) {
--		fscache_stat(&fscache_n_store_vmscan_cancelled);
--		fscache_stat(&fscache_n_store_radix_deletes);
-+		fscache_stat_wrap(&fscache_n_store_vmscan_cancelled);
-+		fscache_stat_wrap(&fscache_n_store_radix_deletes);
- 		ASSERTCMP(xpage, ==, page);
- 	} else {
--		fscache_stat(&fscache_n_store_vmscan_gone);
-+		fscache_stat_wrap(&fscache_n_store_vmscan_gone);
- 	}
- 
- 	wake_up_bit(&cookie->flags, 0);
-@@ -123,11 +123,11 @@ bool __fscache_maybe_release_page(struct fscache_cookie *cookie,
- 	 * sleeping on memory allocation, so we may need to impose a timeout
- 	 * too. */
- 	if (!(gfp & __GFP_DIRECT_RECLAIM) || !(gfp & __GFP_FS)) {
--		fscache_stat(&fscache_n_store_vmscan_busy);
-+		fscache_stat_wrap(&fscache_n_store_vmscan_busy);
- 		return false;
- 	}
- 
--	fscache_stat(&fscache_n_store_vmscan_wait);
-+	fscache_stat_wrap(&fscache_n_store_vmscan_wait);
- 	if (!release_page_wait_timeout(cookie, page))
- 		_debug("fscache writeout timeout page: %p{%lx}",
- 			page, page->index);
-@@ -156,7 +156,7 @@ static void fscache_end_page_write(struct fscache_object *object,
- 				     FSCACHE_COOKIE_STORING_TAG);
- 		if (!radix_tree_tag_get(&cookie->stores, page->index,
- 					FSCACHE_COOKIE_PENDING_TAG)) {
--			fscache_stat(&fscache_n_store_radix_deletes);
-+			fscache_stat_wrap(&fscache_n_store_radix_deletes);
- 			xpage = radix_tree_delete(&cookie->stores, page->index);
- 		}
- 		spin_unlock(&cookie->stores_lock);
-@@ -177,7 +177,7 @@ static void fscache_attr_changed_op(struct fscache_operation *op)
- 
- 	_enter("{OBJ%x OP%x}", object->debug_id, op->debug_id);
- 
--	fscache_stat(&fscache_n_attr_changed_calls);
-+	fscache_stat_wrap(&fscache_n_attr_changed_calls);
- 
- 	if (fscache_object_is_active(object)) {
- 		fscache_stat(&fscache_n_cop_attr_changed);
-@@ -204,11 +204,11 @@ int __fscache_attr_changed(struct fscache_cookie *cookie)
- 
- 	ASSERTCMP(cookie->def->type, !=, FSCACHE_COOKIE_TYPE_INDEX);
- 
--	fscache_stat(&fscache_n_attr_changed);
-+	fscache_stat_wrap(&fscache_n_attr_changed);
- 
- 	op = kzalloc(sizeof(*op), GFP_KERNEL);
- 	if (!op) {
--		fscache_stat(&fscache_n_attr_changed_nomem);
-+		fscache_stat_wrap(&fscache_n_attr_changed_nomem);
- 		_leave(" = -ENOMEM");
- 		return -ENOMEM;
- 	}
-@@ -230,7 +230,7 @@ int __fscache_attr_changed(struct fscache_cookie *cookie)
- 	if (fscache_submit_exclusive_op(object, op) < 0)
- 		goto nobufs_dec;
- 	spin_unlock(&cookie->lock);
--	fscache_stat(&fscache_n_attr_changed_ok);
-+	fscache_stat_wrap(&fscache_n_attr_changed_ok);
- 	fscache_put_operation(op);
- 	_leave(" = 0");
- 	return 0;
-@@ -242,7 +242,7 @@ int __fscache_attr_changed(struct fscache_cookie *cookie)
- 	fscache_put_operation(op);
- 	if (wake_cookie)
- 		__fscache_wake_unused_cookie(cookie);
--	fscache_stat(&fscache_n_attr_changed_nobufs);
-+	fscache_stat_wrap(&fscache_n_attr_changed_nobufs);
- 	_leave(" = %d", -ENOBUFS);
- 	return -ENOBUFS;
- }
-@@ -293,7 +293,7 @@ static struct fscache_retrieval *fscache_alloc_retrieval(
- 	/* allocate a retrieval operation and attempt to submit it */
- 	op = kzalloc(sizeof(*op), GFP_NOIO);
- 	if (!op) {
--		fscache_stat(&fscache_n_retrievals_nomem);
-+		fscache_stat_wrap(&fscache_n_retrievals_nomem);
- 		return NULL;
- 	}
- 
-@@ -332,12 +332,12 @@ int fscache_wait_for_deferred_lookup(struct fscache_cookie *cookie)
- 		return 0;
- 	}
- 
--	fscache_stat(&fscache_n_retrievals_wait);
-+	fscache_stat_wrap(&fscache_n_retrievals_wait);
- 
- 	jif = jiffies;
- 	if (wait_on_bit(&cookie->flags, FSCACHE_COOKIE_LOOKING_UP,
- 			TASK_INTERRUPTIBLE) != 0) {
--		fscache_stat(&fscache_n_retrievals_intr);
-+		fscache_stat_wrap(&fscache_n_retrievals_intr);
- 		_leave(" = -ERESTARTSYS");
- 		return -ERESTARTSYS;
- 	}
-@@ -355,8 +355,8 @@ int fscache_wait_for_deferred_lookup(struct fscache_cookie *cookie)
-  */
- int fscache_wait_for_operation_activation(struct fscache_object *object,
- 					  struct fscache_operation *op,
--					  atomic_t *stat_op_waits,
--					  atomic_t *stat_object_dead)
-+					  atomic_wrap_t *stat_op_waits,
-+					  atomic_wrap_t *stat_object_dead)
- {
- 	int ret;
- 
-@@ -365,7 +365,7 @@ int fscache_wait_for_operation_activation(struct fscache_object *object,
- 
- 	_debug(">>> WT");
- 	if (stat_op_waits)
--		fscache_stat(stat_op_waits);
-+		fscache_stat_wrap(stat_op_waits);
- 	if (wait_on_bit(&op->flags, FSCACHE_OP_WAITING,
- 			TASK_INTERRUPTIBLE) != 0) {
- 		ret = fscache_cancel_op(op, false);
-@@ -382,7 +382,7 @@ int fscache_wait_for_operation_activation(struct fscache_object *object,
- check_if_dead:
- 	if (op->state == FSCACHE_OP_ST_CANCELLED) {
- 		if (stat_object_dead)
--			fscache_stat(stat_object_dead);
-+			fscache_stat_wrap(stat_object_dead);
- 		_leave(" = -ENOBUFS [cancelled]");
- 		return -ENOBUFS;
- 	}
-@@ -391,7 +391,7 @@ int fscache_wait_for_operation_activation(struct fscache_object *object,
- 		enum fscache_operation_state state = op->state;
- 		fscache_cancel_op(op, true);
- 		if (stat_object_dead)
--			fscache_stat(stat_object_dead);
-+			fscache_stat_wrap(stat_object_dead);
- 		_leave(" = -ENOBUFS [obj dead %d]", state);
- 		return -ENOBUFS;
- 	}
-@@ -420,7 +420,7 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
- 
- 	_enter("%p,%p,,,", cookie, page);
- 
--	fscache_stat(&fscache_n_retrievals);
-+	fscache_stat_wrap(&fscache_n_retrievals);
- 
- 	if (hlist_empty(&cookie->backing_objects))
- 		goto nobufs;
-@@ -462,7 +462,7 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
- 		goto nobufs_unlock_dec;
- 	spin_unlock(&cookie->lock);
- 
--	fscache_stat(&fscache_n_retrieval_ops);
-+	fscache_stat_wrap(&fscache_n_retrieval_ops);
- 
- 	/* we wait for the operation to become active, and then process it
- 	 * *here*, in this thread, and not in the thread pool */
-@@ -488,15 +488,15 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
- 
- error:
- 	if (ret == -ENOMEM)
--		fscache_stat(&fscache_n_retrievals_nomem);
-+		fscache_stat_wrap(&fscache_n_retrievals_nomem);
- 	else if (ret == -ERESTARTSYS)
--		fscache_stat(&fscache_n_retrievals_intr);
-+		fscache_stat_wrap(&fscache_n_retrievals_intr);
- 	else if (ret == -ENODATA)
--		fscache_stat(&fscache_n_retrievals_nodata);
-+		fscache_stat_wrap(&fscache_n_retrievals_nodata);
- 	else if (ret < 0)
--		fscache_stat(&fscache_n_retrievals_nobufs);
-+		fscache_stat_wrap(&fscache_n_retrievals_nobufs);
- 	else
--		fscache_stat(&fscache_n_retrievals_ok);
-+		fscache_stat_wrap(&fscache_n_retrievals_ok);
- 
- 	fscache_put_retrieval(op);
- 	_leave(" = %d", ret);
-@@ -511,7 +511,7 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
- 		__fscache_wake_unused_cookie(cookie);
- 	fscache_put_retrieval(op);
- nobufs:
--	fscache_stat(&fscache_n_retrievals_nobufs);
-+	fscache_stat_wrap(&fscache_n_retrievals_nobufs);
- 	_leave(" = -ENOBUFS");
- 	return -ENOBUFS;
- }
-@@ -550,7 +550,7 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
- 
- 	_enter("%p,,%d,,,", cookie, *nr_pages);
- 
--	fscache_stat(&fscache_n_retrievals);
-+	fscache_stat_wrap(&fscache_n_retrievals);
- 
- 	if (hlist_empty(&cookie->backing_objects))
- 		goto nobufs;
-@@ -588,7 +588,7 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
- 		goto nobufs_unlock_dec;
- 	spin_unlock(&cookie->lock);
- 
--	fscache_stat(&fscache_n_retrieval_ops);
-+	fscache_stat_wrap(&fscache_n_retrieval_ops);
- 
- 	/* we wait for the operation to become active, and then process it
- 	 * *here*, in this thread, and not in the thread pool */
-@@ -614,15 +614,15 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
- 
- error:
- 	if (ret == -ENOMEM)
--		fscache_stat(&fscache_n_retrievals_nomem);
-+		fscache_stat_wrap(&fscache_n_retrievals_nomem);
- 	else if (ret == -ERESTARTSYS)
--		fscache_stat(&fscache_n_retrievals_intr);
-+		fscache_stat_wrap(&fscache_n_retrievals_intr);
- 	else if (ret == -ENODATA)
--		fscache_stat(&fscache_n_retrievals_nodata);
-+		fscache_stat_wrap(&fscache_n_retrievals_nodata);
- 	else if (ret < 0)
--		fscache_stat(&fscache_n_retrievals_nobufs);
-+		fscache_stat_wrap(&fscache_n_retrievals_nobufs);
- 	else
--		fscache_stat(&fscache_n_retrievals_ok);
-+		fscache_stat_wrap(&fscache_n_retrievals_ok);
- 
- 	fscache_put_retrieval(op);
- 	_leave(" = %d", ret);
-@@ -637,7 +637,7 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
- 	if (wake_cookie)
- 		__fscache_wake_unused_cookie(cookie);
- nobufs:
--	fscache_stat(&fscache_n_retrievals_nobufs);
-+	fscache_stat_wrap(&fscache_n_retrievals_nobufs);
- 	_leave(" = -ENOBUFS");
- 	return -ENOBUFS;
- }
-@@ -662,7 +662,7 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
- 
- 	_enter("%p,%p,,,", cookie, page);
- 
--	fscache_stat(&fscache_n_allocs);
-+	fscache_stat_wrap(&fscache_n_allocs);
- 
- 	if (hlist_empty(&cookie->backing_objects))
- 		goto nobufs;
-@@ -696,7 +696,7 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
- 		goto nobufs_unlock_dec;
- 	spin_unlock(&cookie->lock);
- 
--	fscache_stat(&fscache_n_alloc_ops);
-+	fscache_stat_wrap(&fscache_n_alloc_ops);
- 
- 	ret = fscache_wait_for_operation_activation(
- 		object, &op->op,
-@@ -712,11 +712,11 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
- 
- error:
- 	if (ret == -ERESTARTSYS)
--		fscache_stat(&fscache_n_allocs_intr);
-+		fscache_stat_wrap(&fscache_n_allocs_intr);
- 	else if (ret < 0)
--		fscache_stat(&fscache_n_allocs_nobufs);
-+		fscache_stat_wrap(&fscache_n_allocs_nobufs);
- 	else
--		fscache_stat(&fscache_n_allocs_ok);
-+		fscache_stat_wrap(&fscache_n_allocs_ok);
- 
- 	fscache_put_retrieval(op);
- 	_leave(" = %d", ret);
-@@ -730,7 +730,7 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
- 	if (wake_cookie)
- 		__fscache_wake_unused_cookie(cookie);
- nobufs:
--	fscache_stat(&fscache_n_allocs_nobufs);
-+	fscache_stat_wrap(&fscache_n_allocs_nobufs);
- 	_leave(" = -ENOBUFS");
- 	return -ENOBUFS;
- }
-@@ -806,7 +806,7 @@ static void fscache_write_op(struct fscache_operation *_op)
- 
- 	spin_lock(&cookie->stores_lock);
- 
--	fscache_stat(&fscache_n_store_calls);
-+	fscache_stat_wrap(&fscache_n_store_calls);
- 
- 	/* find a page to store */
- 	page = NULL;
-@@ -817,7 +817,7 @@ static void fscache_write_op(struct fscache_operation *_op)
- 	page = results[0];
- 	_debug("gang %d [%lx]", n, page->index);
- 	if (page->index >= op->store_limit) {
--		fscache_stat(&fscache_n_store_pages_over_limit);
-+		fscache_stat_wrap(&fscache_n_store_pages_over_limit);
- 		goto superseded;
- 	}
- 
-@@ -829,7 +829,7 @@ static void fscache_write_op(struct fscache_operation *_op)
- 	spin_unlock(&cookie->stores_lock);
- 	spin_unlock(&object->lock);
- 
--	fscache_stat(&fscache_n_store_pages);
-+	fscache_stat_wrap(&fscache_n_store_pages);
- 	fscache_stat(&fscache_n_cop_write_page);
- 	ret = object->cache->ops->write_page(op, page);
- 	fscache_stat_d(&fscache_n_cop_write_page);
-@@ -935,7 +935,7 @@ int __fscache_write_page(struct fscache_cookie *cookie,
- 	ASSERTCMP(cookie->def->type, !=, FSCACHE_COOKIE_TYPE_INDEX);
- 	ASSERT(PageFsCache(page));
- 
--	fscache_stat(&fscache_n_stores);
-+	fscache_stat_wrap(&fscache_n_stores);
- 
- 	if (test_bit(FSCACHE_COOKIE_INVALIDATING, &cookie->flags)) {
- 		_leave(" = -ENOBUFS [invalidating]");
-@@ -994,7 +994,7 @@ int __fscache_write_page(struct fscache_cookie *cookie,
- 	spin_unlock(&cookie->stores_lock);
- 	spin_unlock(&object->lock);
- 
--	op->op.debug_id	= atomic_inc_return(&fscache_op_debug_id);
-+	op->op.debug_id	= atomic_inc_return_wrap(&fscache_op_debug_id);
- 	op->store_limit = object->store_limit;
- 
- 	__fscache_use_cookie(cookie);
-@@ -1003,8 +1003,8 @@ int __fscache_write_page(struct fscache_cookie *cookie,
- 
- 	spin_unlock(&cookie->lock);
- 	radix_tree_preload_end();
--	fscache_stat(&fscache_n_store_ops);
--	fscache_stat(&fscache_n_stores_ok);
-+	fscache_stat_wrap(&fscache_n_store_ops);
-+	fscache_stat_wrap(&fscache_n_stores_ok);
- 
- 	/* the work queue now carries its own ref on the object */
- 	fscache_put_operation(&op->op);
-@@ -1012,14 +1012,14 @@ int __fscache_write_page(struct fscache_cookie *cookie,
- 	return 0;
- 
- already_queued:
--	fscache_stat(&fscache_n_stores_again);
-+	fscache_stat_wrap(&fscache_n_stores_again);
- already_pending:
- 	spin_unlock(&cookie->stores_lock);
- 	spin_unlock(&object->lock);
- 	spin_unlock(&cookie->lock);
- 	radix_tree_preload_end();
- 	fscache_put_operation(&op->op);
--	fscache_stat(&fscache_n_stores_ok);
-+	fscache_stat_wrap(&fscache_n_stores_ok);
- 	_leave(" = 0");
- 	return 0;
- 
-@@ -1041,14 +1041,14 @@ int __fscache_write_page(struct fscache_cookie *cookie,
- 	fscache_put_operation(&op->op);
- 	if (wake_cookie)
- 		__fscache_wake_unused_cookie(cookie);
--	fscache_stat(&fscache_n_stores_nobufs);
-+	fscache_stat_wrap(&fscache_n_stores_nobufs);
- 	_leave(" = -ENOBUFS");
- 	return -ENOBUFS;
- 
- nomem_free:
- 	fscache_put_operation(&op->op);
- nomem:
--	fscache_stat(&fscache_n_stores_oom);
-+	fscache_stat_wrap(&fscache_n_stores_oom);
- 	_leave(" = -ENOMEM");
- 	return -ENOMEM;
- }
-@@ -1066,7 +1066,7 @@ void __fscache_uncache_page(struct fscache_cookie *cookie, struct page *page)
- 	ASSERTCMP(cookie->def->type, !=, FSCACHE_COOKIE_TYPE_INDEX);
- 	ASSERTCMP(page, !=, NULL);
- 
--	fscache_stat(&fscache_n_uncaches);
-+	fscache_stat_wrap(&fscache_n_uncaches);
- 
- 	/* cache withdrawal may beat us to it */
- 	if (!PageFsCache(page))
-@@ -1117,7 +1117,7 @@ void fscache_mark_page_cached(struct fscache_retrieval *op, struct page *page)
- 	struct fscache_cookie *cookie = op->op.object->cookie;
- 
- #ifdef CONFIG_FSCACHE_STATS
--	atomic_inc(&fscache_n_marks);
-+	atomic_inc_wrap(&fscache_n_marks);
- #endif
- 
- 	_debug("- mark %p{%lx}", page, page->index);
-diff --git a/fs/fscache/stats.c b/fs/fscache/stats.c
-index 7ac6e83..29a983e 100644
---- a/fs/fscache/stats.c
-+++ b/fs/fscache/stats.c
-@@ -18,100 +18,100 @@
- /*
-  * operation counters
-  */
--atomic_t fscache_n_op_pend;
--atomic_t fscache_n_op_run;
--atomic_t fscache_n_op_enqueue;
--atomic_t fscache_n_op_requeue;
--atomic_t fscache_n_op_deferred_release;
--atomic_t fscache_n_op_initialised;
--atomic_t fscache_n_op_release;
--atomic_t fscache_n_op_gc;
--atomic_t fscache_n_op_cancelled;
--atomic_t fscache_n_op_rejected;
--
--atomic_t fscache_n_attr_changed;
--atomic_t fscache_n_attr_changed_ok;
--atomic_t fscache_n_attr_changed_nobufs;
--atomic_t fscache_n_attr_changed_nomem;
--atomic_t fscache_n_attr_changed_calls;
--
--atomic_t fscache_n_allocs;
--atomic_t fscache_n_allocs_ok;
--atomic_t fscache_n_allocs_wait;
--atomic_t fscache_n_allocs_nobufs;
--atomic_t fscache_n_allocs_intr;
--atomic_t fscache_n_allocs_object_dead;
--atomic_t fscache_n_alloc_ops;
--atomic_t fscache_n_alloc_op_waits;
--
--atomic_t fscache_n_retrievals;
--atomic_t fscache_n_retrievals_ok;
--atomic_t fscache_n_retrievals_wait;
--atomic_t fscache_n_retrievals_nodata;
--atomic_t fscache_n_retrievals_nobufs;
--atomic_t fscache_n_retrievals_intr;
--atomic_t fscache_n_retrievals_nomem;
--atomic_t fscache_n_retrievals_object_dead;
--atomic_t fscache_n_retrieval_ops;
--atomic_t fscache_n_retrieval_op_waits;
--
--atomic_t fscache_n_stores;
--atomic_t fscache_n_stores_ok;
--atomic_t fscache_n_stores_again;
--atomic_t fscache_n_stores_nobufs;
--atomic_t fscache_n_stores_oom;
--atomic_t fscache_n_store_ops;
--atomic_t fscache_n_store_calls;
--atomic_t fscache_n_store_pages;
--atomic_t fscache_n_store_radix_deletes;
--atomic_t fscache_n_store_pages_over_limit;
--
--atomic_t fscache_n_store_vmscan_not_storing;
--atomic_t fscache_n_store_vmscan_gone;
--atomic_t fscache_n_store_vmscan_busy;
--atomic_t fscache_n_store_vmscan_cancelled;
--atomic_t fscache_n_store_vmscan_wait;
--
--atomic_t fscache_n_marks;
--atomic_t fscache_n_uncaches;
--
--atomic_t fscache_n_acquires;
--atomic_t fscache_n_acquires_null;
--atomic_t fscache_n_acquires_no_cache;
--atomic_t fscache_n_acquires_ok;
--atomic_t fscache_n_acquires_nobufs;
--atomic_t fscache_n_acquires_oom;
--
--atomic_t fscache_n_invalidates;
--atomic_t fscache_n_invalidates_run;
--
--atomic_t fscache_n_updates;
--atomic_t fscache_n_updates_null;
--atomic_t fscache_n_updates_run;
--
--atomic_t fscache_n_relinquishes;
--atomic_t fscache_n_relinquishes_null;
--atomic_t fscache_n_relinquishes_waitcrt;
--atomic_t fscache_n_relinquishes_retire;
--
--atomic_t fscache_n_cookie_index;
--atomic_t fscache_n_cookie_data;
--atomic_t fscache_n_cookie_special;
--
--atomic_t fscache_n_object_alloc;
--atomic_t fscache_n_object_no_alloc;
--atomic_t fscache_n_object_lookups;
--atomic_t fscache_n_object_lookups_negative;
--atomic_t fscache_n_object_lookups_positive;
--atomic_t fscache_n_object_lookups_timed_out;
--atomic_t fscache_n_object_created;
--atomic_t fscache_n_object_avail;
--atomic_t fscache_n_object_dead;
--
--atomic_t fscache_n_checkaux_none;
--atomic_t fscache_n_checkaux_okay;
--atomic_t fscache_n_checkaux_update;
--atomic_t fscache_n_checkaux_obsolete;
-+atomic_wrap_t fscache_n_op_pend;
-+atomic_wrap_t fscache_n_op_run;
-+atomic_wrap_t fscache_n_op_enqueue;
-+atomic_wrap_t fscache_n_op_requeue;
-+atomic_wrap_t fscache_n_op_deferred_release;
-+atomic_wrap_t fscache_n_op_initialised;
-+atomic_wrap_t fscache_n_op_release;
-+atomic_wrap_t fscache_n_op_gc;
-+atomic_wrap_t fscache_n_op_cancelled;
-+atomic_wrap_t fscache_n_op_rejected;
-+
-+atomic_wrap_t fscache_n_attr_changed;
-+atomic_wrap_t fscache_n_attr_changed_ok;
-+atomic_wrap_t fscache_n_attr_changed_nobufs;
-+atomic_wrap_t fscache_n_attr_changed_nomem;
-+atomic_wrap_t fscache_n_attr_changed_calls;
-+
-+atomic_wrap_t fscache_n_allocs;
-+atomic_wrap_t fscache_n_allocs_ok;
-+atomic_wrap_t fscache_n_allocs_wait;
-+atomic_wrap_t fscache_n_allocs_nobufs;
-+atomic_wrap_t fscache_n_allocs_intr;
-+atomic_wrap_t fscache_n_allocs_object_dead;
-+atomic_wrap_t fscache_n_alloc_ops;
-+atomic_wrap_t fscache_n_alloc_op_waits;
-+
-+atomic_wrap_t fscache_n_retrievals;
-+atomic_wrap_t fscache_n_retrievals_ok;
-+atomic_wrap_t fscache_n_retrievals_wait;
-+atomic_wrap_t fscache_n_retrievals_nodata;
-+atomic_wrap_t fscache_n_retrievals_nobufs;
-+atomic_wrap_t fscache_n_retrievals_intr;
-+atomic_wrap_t fscache_n_retrievals_nomem;
-+atomic_wrap_t fscache_n_retrievals_object_dead;
-+atomic_wrap_t fscache_n_retrieval_ops;
-+atomic_wrap_t fscache_n_retrieval_op_waits;
-+
-+atomic_wrap_t fscache_n_stores;
-+atomic_wrap_t fscache_n_stores_ok;
-+atomic_wrap_t fscache_n_stores_again;
-+atomic_wrap_t fscache_n_stores_nobufs;
-+atomic_wrap_t fscache_n_stores_oom;
-+atomic_wrap_t fscache_n_store_ops;
-+atomic_wrap_t fscache_n_store_calls;
-+atomic_wrap_t fscache_n_store_pages;
-+atomic_wrap_t fscache_n_store_radix_deletes;
-+atomic_wrap_t fscache_n_store_pages_over_limit;
-+
-+atomic_wrap_t fscache_n_store_vmscan_not_storing;
-+atomic_wrap_t fscache_n_store_vmscan_gone;
-+atomic_wrap_t fscache_n_store_vmscan_busy;
-+atomic_wrap_t fscache_n_store_vmscan_cancelled;
-+atomic_wrap_t fscache_n_store_vmscan_wait;
-+
-+atomic_wrap_t fscache_n_marks;
-+atomic_wrap_t fscache_n_uncaches;
-+
-+atomic_wrap_t fscache_n_acquires;
-+atomic_wrap_t fscache_n_acquires_null;
-+atomic_wrap_t fscache_n_acquires_no_cache;
-+atomic_wrap_t fscache_n_acquires_ok;
-+atomic_wrap_t fscache_n_acquires_nobufs;
-+atomic_wrap_t fscache_n_acquires_oom;
-+
-+atomic_wrap_t fscache_n_invalidates;
-+atomic_wrap_t fscache_n_invalidates_run;
-+
-+atomic_wrap_t fscache_n_updates;
-+atomic_wrap_t fscache_n_updates_null;
-+atomic_wrap_t fscache_n_updates_run;
-+
-+atomic_wrap_t fscache_n_relinquishes;
-+atomic_wrap_t fscache_n_relinquishes_null;
-+atomic_wrap_t fscache_n_relinquishes_waitcrt;
-+atomic_wrap_t fscache_n_relinquishes_retire;
-+
-+atomic_wrap_t fscache_n_cookie_index;
-+atomic_wrap_t fscache_n_cookie_data;
-+atomic_wrap_t fscache_n_cookie_special;
-+
-+atomic_wrap_t fscache_n_object_alloc;
-+atomic_wrap_t fscache_n_object_no_alloc;
-+atomic_wrap_t fscache_n_object_lookups;
-+atomic_wrap_t fscache_n_object_lookups_negative;
-+atomic_wrap_t fscache_n_object_lookups_positive;
-+atomic_wrap_t fscache_n_object_lookups_timed_out;
-+atomic_wrap_t fscache_n_object_created;
-+atomic_wrap_t fscache_n_object_avail;
-+atomic_wrap_t fscache_n_object_dead;
-+
-+atomic_wrap_t fscache_n_checkaux_none;
-+atomic_wrap_t fscache_n_checkaux_okay;
-+atomic_wrap_t fscache_n_checkaux_update;
-+atomic_wrap_t fscache_n_checkaux_obsolete;
- 
- atomic_t fscache_n_cop_alloc_object;
- atomic_t fscache_n_cop_lookup_object;
-@@ -144,119 +144,119 @@ static int fscache_stats_show(struct seq_file *m, void *v)
- 	seq_puts(m, "FS-Cache statistics\n");
- 
- 	seq_printf(m, "Cookies: idx=%u dat=%u spc=%u\n",
--		   atomic_read(&fscache_n_cookie_index),
--		   atomic_read(&fscache_n_cookie_data),
--		   atomic_read(&fscache_n_cookie_special));
-+		   atomic_read_wrap(&fscache_n_cookie_index),
-+		   atomic_read_wrap(&fscache_n_cookie_data),
-+		   atomic_read_wrap(&fscache_n_cookie_special));
- 
- 	seq_printf(m, "Objects: alc=%u nal=%u avl=%u ded=%u\n",
--		   atomic_read(&fscache_n_object_alloc),
--		   atomic_read(&fscache_n_object_no_alloc),
--		   atomic_read(&fscache_n_object_avail),
--		   atomic_read(&fscache_n_object_dead));
-+		   atomic_read_wrap(&fscache_n_object_alloc),
-+		   atomic_read_wrap(&fscache_n_object_no_alloc),
-+		   atomic_read_wrap(&fscache_n_object_avail),
-+		   atomic_read_wrap(&fscache_n_object_dead));
- 	seq_printf(m, "ChkAux : non=%u ok=%u upd=%u obs=%u\n",
--		   atomic_read(&fscache_n_checkaux_none),
--		   atomic_read(&fscache_n_checkaux_okay),
--		   atomic_read(&fscache_n_checkaux_update),
--		   atomic_read(&fscache_n_checkaux_obsolete));
-+		   atomic_read_wrap(&fscache_n_checkaux_none),
-+		   atomic_read_wrap(&fscache_n_checkaux_okay),
-+		   atomic_read_wrap(&fscache_n_checkaux_update),
-+		   atomic_read_wrap(&fscache_n_checkaux_obsolete));
- 
- 	seq_printf(m, "Pages  : mrk=%u unc=%u\n",
--		   atomic_read(&fscache_n_marks),
--		   atomic_read(&fscache_n_uncaches));
-+		   atomic_read_wrap(&fscache_n_marks),
-+		   atomic_read_wrap(&fscache_n_uncaches));
- 
- 	seq_printf(m, "Acquire: n=%u nul=%u noc=%u ok=%u nbf=%u"
- 		   " oom=%u\n",
--		   atomic_read(&fscache_n_acquires),
--		   atomic_read(&fscache_n_acquires_null),
--		   atomic_read(&fscache_n_acquires_no_cache),
--		   atomic_read(&fscache_n_acquires_ok),
--		   atomic_read(&fscache_n_acquires_nobufs),
--		   atomic_read(&fscache_n_acquires_oom));
-+		   atomic_read_wrap(&fscache_n_acquires),
-+		   atomic_read_wrap(&fscache_n_acquires_null),
-+		   atomic_read_wrap(&fscache_n_acquires_no_cache),
-+		   atomic_read_wrap(&fscache_n_acquires_ok),
-+		   atomic_read_wrap(&fscache_n_acquires_nobufs),
-+		   atomic_read_wrap(&fscache_n_acquires_oom));
- 
- 	seq_printf(m, "Lookups: n=%u neg=%u pos=%u crt=%u tmo=%u\n",
--		   atomic_read(&fscache_n_object_lookups),
--		   atomic_read(&fscache_n_object_lookups_negative),
--		   atomic_read(&fscache_n_object_lookups_positive),
--		   atomic_read(&fscache_n_object_created),
--		   atomic_read(&fscache_n_object_lookups_timed_out));
-+		   atomic_read_wrap(&fscache_n_object_lookups),
-+		   atomic_read_wrap(&fscache_n_object_lookups_negative),
-+		   atomic_read_wrap(&fscache_n_object_lookups_positive),
-+		   atomic_read_wrap(&fscache_n_object_created),
-+		   atomic_read_wrap(&fscache_n_object_lookups_timed_out));
- 
- 	seq_printf(m, "Invals : n=%u run=%u\n",
--		   atomic_read(&fscache_n_invalidates),
--		   atomic_read(&fscache_n_invalidates_run));
-+		   atomic_read_wrap(&fscache_n_invalidates),
-+		   atomic_read_wrap(&fscache_n_invalidates_run));
- 
- 	seq_printf(m, "Updates: n=%u nul=%u run=%u\n",
--		   atomic_read(&fscache_n_updates),
--		   atomic_read(&fscache_n_updates_null),
--		   atomic_read(&fscache_n_updates_run));
-+		   atomic_read_wrap(&fscache_n_updates),
-+		   atomic_read_wrap(&fscache_n_updates_null),
-+		   atomic_read_wrap(&fscache_n_updates_run));
- 
- 	seq_printf(m, "Relinqs: n=%u nul=%u wcr=%u rtr=%u\n",
--		   atomic_read(&fscache_n_relinquishes),
--		   atomic_read(&fscache_n_relinquishes_null),
--		   atomic_read(&fscache_n_relinquishes_waitcrt),
--		   atomic_read(&fscache_n_relinquishes_retire));
-+		   atomic_read_wrap(&fscache_n_relinquishes),
-+		   atomic_read_wrap(&fscache_n_relinquishes_null),
-+		   atomic_read_wrap(&fscache_n_relinquishes_waitcrt),
-+		   atomic_read_wrap(&fscache_n_relinquishes_retire));
- 
- 	seq_printf(m, "AttrChg: n=%u ok=%u nbf=%u oom=%u run=%u\n",
--		   atomic_read(&fscache_n_attr_changed),
--		   atomic_read(&fscache_n_attr_changed_ok),
--		   atomic_read(&fscache_n_attr_changed_nobufs),
--		   atomic_read(&fscache_n_attr_changed_nomem),
--		   atomic_read(&fscache_n_attr_changed_calls));
-+		   atomic_read_wrap(&fscache_n_attr_changed),
-+		   atomic_read_wrap(&fscache_n_attr_changed_ok),
-+		   atomic_read_wrap(&fscache_n_attr_changed_nobufs),
-+		   atomic_read_wrap(&fscache_n_attr_changed_nomem),
-+		   atomic_read_wrap(&fscache_n_attr_changed_calls));
- 
- 	seq_printf(m, "Allocs : n=%u ok=%u wt=%u nbf=%u int=%u\n",
--		   atomic_read(&fscache_n_allocs),
--		   atomic_read(&fscache_n_allocs_ok),
--		   atomic_read(&fscache_n_allocs_wait),
--		   atomic_read(&fscache_n_allocs_nobufs),
--		   atomic_read(&fscache_n_allocs_intr));
-+		   atomic_read_wrap(&fscache_n_allocs),
-+		   atomic_read_wrap(&fscache_n_allocs_ok),
-+		   atomic_read_wrap(&fscache_n_allocs_wait),
-+		   atomic_read_wrap(&fscache_n_allocs_nobufs),
-+		   atomic_read_wrap(&fscache_n_allocs_intr));
- 	seq_printf(m, "Allocs : ops=%u owt=%u abt=%u\n",
--		   atomic_read(&fscache_n_alloc_ops),
--		   atomic_read(&fscache_n_alloc_op_waits),
--		   atomic_read(&fscache_n_allocs_object_dead));
-+		   atomic_read_wrap(&fscache_n_alloc_ops),
-+		   atomic_read_wrap(&fscache_n_alloc_op_waits),
-+		   atomic_read_wrap(&fscache_n_allocs_object_dead));
- 
- 	seq_printf(m, "Retrvls: n=%u ok=%u wt=%u nod=%u nbf=%u"
- 		   " int=%u oom=%u\n",
--		   atomic_read(&fscache_n_retrievals),
--		   atomic_read(&fscache_n_retrievals_ok),
--		   atomic_read(&fscache_n_retrievals_wait),
--		   atomic_read(&fscache_n_retrievals_nodata),
--		   atomic_read(&fscache_n_retrievals_nobufs),
--		   atomic_read(&fscache_n_retrievals_intr),
--		   atomic_read(&fscache_n_retrievals_nomem));
-+		   atomic_read_wrap(&fscache_n_retrievals),
-+		   atomic_read_wrap(&fscache_n_retrievals_ok),
-+		   atomic_read_wrap(&fscache_n_retrievals_wait),
-+		   atomic_read_wrap(&fscache_n_retrievals_nodata),
-+		   atomic_read_wrap(&fscache_n_retrievals_nobufs),
-+		   atomic_read_wrap(&fscache_n_retrievals_intr),
-+		   atomic_read_wrap(&fscache_n_retrievals_nomem));
- 	seq_printf(m, "Retrvls: ops=%u owt=%u abt=%u\n",
--		   atomic_read(&fscache_n_retrieval_ops),
--		   atomic_read(&fscache_n_retrieval_op_waits),
--		   atomic_read(&fscache_n_retrievals_object_dead));
-+		   atomic_read_wrap(&fscache_n_retrieval_ops),
-+		   atomic_read_wrap(&fscache_n_retrieval_op_waits),
-+		   atomic_read_wrap(&fscache_n_retrievals_object_dead));
- 
- 	seq_printf(m, "Stores : n=%u ok=%u agn=%u nbf=%u oom=%u\n",
--		   atomic_read(&fscache_n_stores),
--		   atomic_read(&fscache_n_stores_ok),
--		   atomic_read(&fscache_n_stores_again),
--		   atomic_read(&fscache_n_stores_nobufs),
--		   atomic_read(&fscache_n_stores_oom));
-+		   atomic_read_wrap(&fscache_n_stores),
-+		   atomic_read_wrap(&fscache_n_stores_ok),
-+		   atomic_read_wrap(&fscache_n_stores_again),
-+		   atomic_read_wrap(&fscache_n_stores_nobufs),
-+		   atomic_read_wrap(&fscache_n_stores_oom));
- 	seq_printf(m, "Stores : ops=%u run=%u pgs=%u rxd=%u olm=%u\n",
--		   atomic_read(&fscache_n_store_ops),
--		   atomic_read(&fscache_n_store_calls),
--		   atomic_read(&fscache_n_store_pages),
--		   atomic_read(&fscache_n_store_radix_deletes),
--		   atomic_read(&fscache_n_store_pages_over_limit));
-+		   atomic_read_wrap(&fscache_n_store_ops),
-+		   atomic_read_wrap(&fscache_n_store_calls),
-+		   atomic_read_wrap(&fscache_n_store_pages),
-+		   atomic_read_wrap(&fscache_n_store_radix_deletes),
-+		   atomic_read_wrap(&fscache_n_store_pages_over_limit));
- 
- 	seq_printf(m, "VmScan : nos=%u gon=%u bsy=%u can=%u wt=%u\n",
--		   atomic_read(&fscache_n_store_vmscan_not_storing),
--		   atomic_read(&fscache_n_store_vmscan_gone),
--		   atomic_read(&fscache_n_store_vmscan_busy),
--		   atomic_read(&fscache_n_store_vmscan_cancelled),
--		   atomic_read(&fscache_n_store_vmscan_wait));
-+		   atomic_read_wrap(&fscache_n_store_vmscan_not_storing),
-+		   atomic_read_wrap(&fscache_n_store_vmscan_gone),
-+		   atomic_read_wrap(&fscache_n_store_vmscan_busy),
-+		   atomic_read_wrap(&fscache_n_store_vmscan_cancelled),
-+		   atomic_read_wrap(&fscache_n_store_vmscan_wait));
- 
- 	seq_printf(m, "Ops    : pend=%u run=%u enq=%u can=%u rej=%u\n",
--		   atomic_read(&fscache_n_op_pend),
--		   atomic_read(&fscache_n_op_run),
--		   atomic_read(&fscache_n_op_enqueue),
--		   atomic_read(&fscache_n_op_cancelled),
--		   atomic_read(&fscache_n_op_rejected));
-+		   atomic_read_wrap(&fscache_n_op_pend),
-+		   atomic_read_wrap(&fscache_n_op_run),
-+		   atomic_read_wrap(&fscache_n_op_enqueue),
-+		   atomic_read_wrap(&fscache_n_op_cancelled),
-+		   atomic_read_wrap(&fscache_n_op_rejected));
- 	seq_printf(m, "Ops    : ini=%u dfr=%u rel=%u gc=%u\n",
--		   atomic_read(&fscache_n_op_initialised),
--		   atomic_read(&fscache_n_op_deferred_release),
--		   atomic_read(&fscache_n_op_release),
--		   atomic_read(&fscache_n_op_gc));
-+		   atomic_read_wrap(&fscache_n_op_initialised),
-+		   atomic_read_wrap(&fscache_n_op_deferred_release),
-+		   atomic_read_wrap(&fscache_n_op_release),
-+		   atomic_read_wrap(&fscache_n_op_gc));
- 
- 	seq_printf(m, "CacheOp: alo=%d luo=%d luc=%d gro=%d\n",
- 		   atomic_read(&fscache_n_cop_alloc_object),
-diff --git a/fs/inode.c b/fs/inode.c
-index 88110fd..46bf8ee1 100644
---- a/fs/inode.c
-+++ b/fs/inode.c
-@@ -857,8 +857,9 @@ unsigned int get_next_ino(void)
- 
- #ifdef CONFIG_SMP
- 	if (unlikely((res & (LAST_INO_BATCH-1)) == 0)) {
--		static atomic_t shared_last_ino;
--		int next = atomic_add_return(LAST_INO_BATCH, &shared_last_ino);
-+		static atomic_wrap_t shared_last_ino;
-+		int next = atomic_add_return_wrap(LAST_INO_BATCH,
-+				&shared_last_ino);
- 
- 		res = next - LAST_INO_BATCH;
- 	}
-diff --git a/fs/kernfs/file.c b/fs/kernfs/file.c
-index 2bcb86e..5366020 100644
---- a/fs/kernfs/file.c
-+++ b/fs/kernfs/file.c
-@@ -34,7 +34,7 @@ static DEFINE_MUTEX(kernfs_open_file_mutex);
- 
- struct kernfs_open_node {
- 	atomic_t		refcnt;
--	atomic_t		event;
-+	atomic_wrap_t		event;
- 	wait_queue_head_t	poll;
- 	struct list_head	files; /* goes through kernfs_open_file.list */
+-			atomic_t			rid;		/* Frag reception counter */
++			atomic_wrap_t		rid;
++					/* Frag reception counter */
+ 		};
+ 		struct rcu_head         rcu;
+ 		struct inet_peer	*gc_next;
+diff --git a/include/net/ip_fib.h b/include/net/ip_fib.h
+index b9314b4..a8c2b24 100644
+--- a/include/net/ip_fib.h
++++ b/include/net/ip_fib.h
+@@ -189,7 +189,7 @@ static inline void fib_info_offload_dec(struct fib_info *fi)
+ 
+ #define FIB_RES_SADDR(net, res)				\
+ 	((FIB_RES_NH(res).nh_saddr_genid ==		\
+-	  atomic_read(&(net)->ipv4.dev_addr_genid)) ?	\
++	  atomic_read_wrap(&(net)->ipv4.dev_addr_genid)) ?	\
+ 	 FIB_RES_NH(res).nh_saddr :			\
+ 	 fib_info_update_nh_saddr((net), &FIB_RES_NH(res)))
+ #define FIB_RES_GW(res)			(FIB_RES_NH(res).nh_gw)
+diff --git a/include/net/ip_vs.h b/include/net/ip_vs.h
+index cd6018a..49835c6 100644
+--- a/include/net/ip_vs.h
++++ b/include/net/ip_vs.h
+@@ -543,7 +543,7 @@ struct ip_vs_conn {
+ 	struct ip_vs_conn       *control;       /* Master control connection */
+ 	atomic_t                n_control;      /* Number of controlled ones */
+ 	struct ip_vs_dest       *dest;          /* real server */
+-	atomic_t                in_pkts;        /* incoming packet counter */
++	atomic_wrap_t           in_pkts;        /* incoming packet counter */
+ 
+ 	/* Packet transmitter for different forwarding methods.  If it
+ 	 * mangles the packet, it must return NF_DROP or better NF_STOLEN,
+@@ -664,7 +664,7 @@ struct ip_vs_dest {
+ 	__be16			port;		/* port number of the server */
+ 	union nf_inet_addr	addr;		/* IP address of the server */
+ 	volatile unsigned int	flags;		/* dest status flags */
+-	atomic_t		conn_flags;	/* flags to copy to conn */
++	atomic_wrap_t		conn_flags;	/* flags to copy to conn */
+ 	atomic_t		weight;		/* server weight */
+ 
+ 	atomic_t		refcnt;		/* reference counter */
+diff --git a/include/net/iucv/af_iucv.h b/include/net/iucv/af_iucv.h
+index 714cc9a..2401e9e 100644
+--- a/include/net/iucv/af_iucv.h
++++ b/include/net/iucv/af_iucv.h
+@@ -149,7 +149,7 @@ struct iucv_skb_cb {
+ struct iucv_sock_list {
+ 	struct hlist_head head;
+ 	rwlock_t	  lock;
+-	atomic_t	  autobind_name;
++	atomic_wrap_t	  autobind_name;
  };
-@@ -163,7 +163,7 @@ static int kernfs_seq_show(struct seq_file *sf, void *v)
+ 
+ unsigned int iucv_sock_poll(struct file *file, struct socket *sock,
+diff --git a/include/net/net_namespace.h b/include/net/net_namespace.h
+index fc4f757..792c736 100644
+--- a/include/net/net_namespace.h
++++ b/include/net/net_namespace.h
+@@ -53,7 +53,7 @@ struct net {
+ 						 */
+ 	spinlock_t		rules_mod_lock;
+ 
+-	atomic64_t		cookie_gen;
++	atomic64_wrap_t		cookie_gen;
+ 
+ 	struct list_head	list;		/* list of network namespaces */
+ 	struct list_head	cleanup_list;	/* namespaces on death row */
+@@ -142,7 +142,7 @@ struct net {
+ 	struct netns_mpls	mpls;
+ #endif
+ 	struct sock		*diag_nlsk;
+-	atomic_t		fnhe_genid;
++	atomic_wrap_t		fnhe_genid;
+ };
+ 
+ #include <linux/seq_file_net.h>
+@@ -341,12 +341,12 @@ static inline void unregister_net_sysctl_table(struct ctl_table_header *header)
+ 
+ static inline int rt_genid_ipv4(struct net *net)
  {
- 	struct kernfs_open_file *of = sf->private;
- 
--	of->event = atomic_read(&of->kn->attr.open->event);
-+	of->event = atomic_read_wrap(&of->kn->attr.open->event);
- 
- 	return of->kn->attr.ops->seq_show(sf, v);
+-	return atomic_read(&net->ipv4.rt_genid);
++	return atomic_read_wrap(&net->ipv4.rt_genid);
  }
-@@ -208,7 +208,7 @@ static ssize_t kernfs_file_direct_read(struct kernfs_open_file *of,
- 		goto out_free;
- 	}
  
--	of->event = atomic_read(&of->kn->attr.open->event);
-+	of->event = atomic_read_wrap(&of->kn->attr.open->event);
- 	ops = kernfs_ops(of->kn);
- 	if (ops->read)
- 		len = ops->read(of, buf, len, *ppos);
-@@ -575,7 +575,7 @@ static int kernfs_get_open_node(struct kernfs_node *kn,
- 		return -ENOMEM;
+ static inline void rt_genid_bump_ipv4(struct net *net)
+ {
+-	atomic_inc(&net->ipv4.rt_genid);
++	atomic_inc_wrap(&net->ipv4.rt_genid);
+ }
  
- 	atomic_set(&new_on->refcnt, 0);
--	atomic_set(&new_on->event, 1);
-+	atomic_set_wrap(&new_on->event, 1);
- 	init_waitqueue_head(&new_on->poll);
- 	INIT_LIST_HEAD(&new_on->files);
- 	goto retry;
-@@ -799,7 +799,7 @@ static unsigned int kernfs_fop_poll(struct file *filp, poll_table *wait)
+ extern void (*__fib6_flush_trees)(struct net *net);
+@@ -373,12 +373,12 @@ static inline void rt_genid_bump_all(struct net *net)
  
- 	kernfs_put_active(kn);
+ static inline int fnhe_genid(struct net *net)
+ {
+-	return atomic_read(&net->fnhe_genid);
++	return atomic_read_wrap(&net->fnhe_genid);
+ }
  
--	if (of->event != atomic_read(&on->event))
-+	if (of->event != atomic_read_wrap(&on->event))
- 		goto trigger;
+ static inline void fnhe_genid_bump(struct net *net)
+ {
+-	atomic_inc(&net->fnhe_genid);
++	atomic_inc_wrap(&net->fnhe_genid);
+ }
  
- 	return DEFAULT_POLLMASK;
-@@ -830,7 +830,7 @@ static void kernfs_notify_workfn(struct work_struct *work)
+ #endif /* __NET_NET_NAMESPACE_H */
+diff --git a/include/net/netns/ipv4.h b/include/net/netns/ipv4.h
+index 7adf438..33130b6 100644
+--- a/include/net/netns/ipv4.h
++++ b/include/net/netns/ipv4.h
+@@ -118,7 +118,7 @@ struct netns_ipv4 {
  
- 	on = kn->attr.open;
- 	if (on) {
--		atomic_inc(&on->event);
-+		atomic_inc_wrap(&on->event);
- 		wake_up_interruptible(&on->poll);
- 	}
+ 	struct ping_group_range ping_group_range;
  
-diff --git a/fs/lockd/clntproc.c b/fs/lockd/clntproc.c
-index 1129520..ca9d834 100644
---- a/fs/lockd/clntproc.c
-+++ b/fs/lockd/clntproc.c
-@@ -36,11 +36,11 @@ static const struct rpc_call_ops nlmclnt_cancel_ops;
- /*
-  * Cookie counter for NLM requests
+-	atomic_t dev_addr_genid;
++	atomic_wrap_t dev_addr_genid;
+ 
+ #ifdef CONFIG_SYSCTL
+ 	unsigned long *sysctl_local_reserved_ports;
+@@ -135,6 +135,6 @@ struct netns_ipv4 {
+ #ifdef CONFIG_IP_ROUTE_MULTIPATH
+ 	int sysctl_fib_multipath_use_neigh;
+ #endif
+-	atomic_t	rt_genid;
++	atomic_wrap_t	rt_genid;
+ };
+ #endif
+diff --git a/include/net/netns/ipv6.h b/include/net/netns/ipv6.h
+index 10d0848..a0eb0a9 100644
+--- a/include/net/netns/ipv6.h
++++ b/include/net/netns/ipv6.h
+@@ -83,8 +83,8 @@ struct netns_ipv6 {
+ 	struct fib_rules_ops	*mr6_rules_ops;
+ #endif
+ #endif
+-	atomic_t		dev_addr_genid;
+-	atomic_t		fib6_sernum;
++	atomic_wrap_t		dev_addr_genid;
++	atomic_wrap_t		fib6_sernum;
+ };
+ 
+ #if IS_ENABLED(CONFIG_NF_DEFRAG_IPV6)
+diff --git a/include/net/netns/xfrm.h b/include/net/netns/xfrm.h
+index 27bb963..a39e73e 100644
+--- a/include/net/netns/xfrm.h
++++ b/include/net/netns/xfrm.h
+@@ -76,7 +76,7 @@ struct netns_xfrm {
+ 
+ 	/* flow cache part */
+ 	struct flow_cache	flow_cache_global;
+-	atomic_t		flow_cache_genid;
++	atomic_wrap_t		flow_cache_genid;
+ 	struct list_head	flow_cache_gc_list;
+ 	atomic_t		flow_cache_gc_count;
+ 	spinlock_t		flow_cache_gc_lock;
+diff --git a/include/net/sock.h b/include/net/sock.h
+index ebf75db..7253c97 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -188,7 +188,7 @@ struct sock_common {
+ 	struct in6_addr		skc_v6_rcv_saddr;
+ #endif
+ 
+-	atomic64_t		skc_cookie;
++	atomic64_wrap_t		skc_cookie;
+ 
+ 	/* following fields are padding to force
+ 	 * offset(struct sock, sk_refcnt) == 128 on 64bit arches
+@@ -364,7 +364,7 @@ struct sock {
+ 	unsigned int		sk_napi_id;
+ 	unsigned int		sk_ll_usec;
+ #endif
+-	atomic_t		sk_drops;
++	atomic_wrap_t		sk_drops;
+ 	int			sk_rcvbuf;
+ 
+ 	struct sk_filter __rcu	*sk_filter;
+@@ -2106,14 +2106,14 @@ struct sock_skb_cb {
+ static inline void
+ sock_skb_set_dropcount(const struct sock *sk, struct sk_buff *skb)
+ {
+-	SOCK_SKB_CB(skb)->dropcount = atomic_read(&sk->sk_drops);
++	SOCK_SKB_CB(skb)->dropcount = atomic_read_wrap(&sk->sk_drops);
+ }
+ 
+ static inline void sk_drops_add(struct sock *sk, const struct sk_buff *skb)
+ {
+ 	int segs = max_t(u16, 1, skb_shinfo(skb)->gso_segs);
+ 
+-	atomic_add(segs, &sk->sk_drops);
++	atomic_add_wrap(segs, &sk->sk_drops);
+ }
+ 
+ void __sock_recv_timestamp(struct msghdr *msg, struct sock *sk,
+diff --git a/include/net/tcp.h b/include/net/tcp.h
+index f83b7f2..64a2571 100644
+--- a/include/net/tcp.h
++++ b/include/net/tcp.h
+@@ -1919,7 +1919,7 @@ static inline void tcp_segs_in(struct tcp_sock *tp, const struct sk_buff *skb)
   */
--static atomic_t	nlm_cookie = ATOMIC_INIT(0x1234);
-+static atomic_wrap_t	nlm_cookie = ATOMIC_INIT(0x1234);
- 
- void nlmclnt_next_cookie(struct nlm_cookie *c)
+ static inline void tcp_listendrop(const struct sock *sk)
  {
--	u32	cookie = atomic_inc_return(&nlm_cookie);
-+	u32	cookie = atomic_inc_return_wrap(&nlm_cookie);
- 
- 	memcpy(c->data, &cookie, 4);
- 	c->len=4;
-diff --git a/fs/namespace.c b/fs/namespace.c
-index e6c234b..5d205f9 100644
---- a/fs/namespace.c
-+++ b/fs/namespace.c
-@@ -2787,7 +2787,7 @@ static void free_mnt_ns(struct mnt_namespace *ns)
-  * number incrementing at 10Ghz will take 12,427 years to wrap which
-  * is effectively never, so we can ignore the possibility.
-  */
--static atomic64_t mnt_ns_seq = ATOMIC64_INIT(1);
-+static atomic64_wrap_t mnt_ns_seq = ATOMIC64_INIT(1);
- 
- static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns)
- {
-@@ -2811,7 +2811,7 @@ static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns)
- 		return ERR_PTR(ret);
- 	}
- 	new_ns->ns.ops = &mntns_operations;
--	new_ns->seq = atomic64_add_return(1, &mnt_ns_seq);
-+	new_ns->seq = atomic64_add_return_wrap(1, &mnt_ns_seq);
- 	atomic_set(&new_ns->count, 1);
- 	new_ns->root = NULL;
- 	INIT_LIST_HEAD(&new_ns->list);
-diff --git a/fs/nfs/inode.c b/fs/nfs/inode.c
-index bf4ec5e..0fc6dbb 100644
---- a/fs/nfs/inode.c
-+++ b/fs/nfs/inode.c
-@@ -1323,16 +1323,16 @@ static int nfs_check_inode_attributes(struct inode *inode, struct nfs_fattr *fat
- 	return 0;
+-	atomic_inc(&((struct sock *)sk)->sk_drops);
++	atomic_inc_wrap(&((struct sock *)sk)->sk_drops);
+ 	__NET_INC_STATS(sock_net(sk), LINUX_MIB_LISTENDROPS);
  }
  
--static atomic_long_t nfs_attr_generation_counter;
-+static atomic_long_wrap_t nfs_attr_generation_counter;
+diff --git a/include/net/xfrm.h b/include/net/xfrm.h
+index 31947b9..d24fca3 100644
+--- a/include/net/xfrm.h
++++ b/include/net/xfrm.h
+@@ -528,7 +528,7 @@ struct xfrm_policy {
+ 	struct timer_list	timer;
  
- static unsigned long nfs_read_attr_generation_counter(void)
- {
--	return atomic_long_read(&nfs_attr_generation_counter);
-+	return atomic_long_read_wrap(&nfs_attr_generation_counter);
- }
+ 	struct flow_cache_object flo;
+-	atomic_t		genid;
++	atomic_wrap_t		genid;
+ 	u32			priority;
+ 	u32			index;
+ 	struct xfrm_mark	mark;
+diff --git a/net/batman-adv/bat_iv_ogm.c b/net/batman-adv/bat_iv_ogm.c
+index e2d18d0..445263c7 100644
+--- a/net/batman-adv/bat_iv_ogm.c
++++ b/net/batman-adv/bat_iv_ogm.c
+@@ -368,7 +368,7 @@ static int batadv_iv_ogm_iface_enable(struct batadv_hard_iface *hard_iface)
  
- unsigned long nfs_inc_attr_generation_counter(void)
- {
--	return atomic_long_inc_return(&nfs_attr_generation_counter);
-+	return atomic_long_inc_return_wrap(&nfs_attr_generation_counter);
- }
- EXPORT_SYMBOL_GPL(nfs_inc_attr_generation_counter);
+ 	/* randomize initial seqno to avoid collision */
+ 	get_random_bytes(&random_seqno, sizeof(random_seqno));
+-	atomic_set(&hard_iface->bat_iv.ogm_seqno, random_seqno);
++	atomic_set_wrap(&hard_iface->bat_iv.ogm_seqno, random_seqno);
  
-diff --git a/fs/notify/notification.c b/fs/notify/notification.c
-index 66f85c6..5425201 100644
---- a/fs/notify/notification.c
-+++ b/fs/notify/notification.c
-@@ -48,7 +48,7 @@
- #include <linux/fsnotify_backend.h>
- #include "fsnotify.h"
+ 	hard_iface->bat_iv.ogm_buff_len = BATADV_OGM_HLEN;
+ 	ogm_buff = kmalloc(hard_iface->bat_iv.ogm_buff_len, GFP_ATOMIC);
+@@ -953,9 +953,9 @@ static void batadv_iv_ogm_schedule(struct batadv_hard_iface *hard_iface)
+ 	batadv_ogm_packet->tvlv_len = htons(tvlv_len);
  
--static atomic_t fsnotify_sync_cookie = ATOMIC_INIT(0);
-+static atomic_wrap_t fsnotify_sync_cookie = ATOMIC_INIT(0);
+ 	/* change sequence number to network order */
+-	seqno = (u32)atomic_read(&hard_iface->bat_iv.ogm_seqno);
++	seqno = (u32)atomic_read_wrap(&hard_iface->bat_iv.ogm_seqno);
+ 	batadv_ogm_packet->seqno = htonl(seqno);
+-	atomic_inc(&hard_iface->bat_iv.ogm_seqno);
++	atomic_inc_wrap(&hard_iface->bat_iv.ogm_seqno);
+ 
+ 	batadv_iv_ogm_slide_own_bcast_window(hard_iface);
+ 
+@@ -1653,7 +1653,7 @@ static void batadv_iv_ogm_process(const struct sk_buff *skb, int ogm_offset,
+ 		return;
+ 
+ 	/* could be changed by schedule_own_packet() */
+-	if_incoming_seqno = atomic_read(&if_incoming->bat_iv.ogm_seqno);
++	if_incoming_seqno = atomic_read_wrap(&if_incoming->bat_iv.ogm_seqno);
+ 
+ 	if (ogm_packet->flags & BATADV_DIRECTLINK)
+ 		has_directlink_flag = true;
+diff --git a/net/batman-adv/fragmentation.c b/net/batman-adv/fragmentation.c
+index 0934730..0f45636 100644
+--- a/net/batman-adv/fragmentation.c
++++ b/net/batman-adv/fragmentation.c
+@@ -469,7 +469,8 @@ int batadv_frag_send_packet(struct sk_buff *skb,
+ 	frag_header.packet_type = BATADV_UNICAST_FRAG;
+ 	frag_header.version = BATADV_COMPAT_VERSION;
+ 	frag_header.ttl = BATADV_TTL;
+-	frag_header.seqno = htons(atomic_inc_return(&bat_priv->frag_seqno));
++	frag_header.seqno = htons(atomic_inc_return_wrap(
++				&bat_priv->frag_seqno));
+ 	frag_header.reserved = 0;
+ 	frag_header.no = 0;
+ 	frag_header.total_size = htons(skb->len);
+diff --git a/net/batman-adv/soft-interface.c b/net/batman-adv/soft-interface.c
+index 49e16b6..1716004 100644
+--- a/net/batman-adv/soft-interface.c
++++ b/net/batman-adv/soft-interface.c
+@@ -333,7 +333,7 @@ static int batadv_interface_tx(struct sk_buff *skb,
+ 				primary_if->net_dev->dev_addr);
+ 
+ 		/* set broadcast sequence number */
+-		seqno = atomic_inc_return(&bat_priv->bcast_seqno);
++		seqno = atomic_inc_return_wrap(&bat_priv->bcast_seqno);
+ 		bcast_packet->seqno = htonl(seqno);
+ 
+ 		batadv_add_bcast_packet_to_list(bat_priv, skb, brd_delay);
+@@ -813,7 +813,7 @@ static int batadv_softif_init_late(struct net_device *dev)
+ 	atomic_set(&bat_priv->batman_queue_left, BATADV_BATMAN_QUEUE_LEN);
+ 
+ 	atomic_set(&bat_priv->mesh_state, BATADV_MESH_INACTIVE);
+-	atomic_set(&bat_priv->bcast_seqno, 1);
++	atomic_set_wrap(&bat_priv->bcast_seqno, 1);
+ 	atomic_set(&bat_priv->tt.vn, 0);
+ 	atomic_set(&bat_priv->tt.local_changes, 0);
+ 	atomic_set(&bat_priv->tt.ogm_append_cnt, 0);
+@@ -829,7 +829,7 @@ static int batadv_softif_init_late(struct net_device *dev)
+ 
+ 	/* randomize initial seqno to avoid collision */
+ 	get_random_bytes(&random_seqno, sizeof(random_seqno));
+-	atomic_set(&bat_priv->frag_seqno, random_seqno);
++	atomic_set_wrap(&bat_priv->frag_seqno, random_seqno);
+ 
+ 	bat_priv->primary_if = NULL;
+ 	bat_priv->num_ifaces = 0;
+diff --git a/net/batman-adv/types.h b/net/batman-adv/types.h
+index b3dd1a3..e7debc5 100644
+--- a/net/batman-adv/types.h
++++ b/net/batman-adv/types.h
+@@ -85,7 +85,7 @@ enum batadv_dhcp_recipient {
+ struct batadv_hard_iface_bat_iv {
+ 	unsigned char *ogm_buff;
+ 	int ogm_buff_len;
+-	atomic_t ogm_seqno;
++	atomic_wrap_t ogm_seqno;
+ };
  
  /**
-  * fsnotify_get_cookie - return a unique cookie for use in synchronizing events.
-@@ -56,7 +56,7 @@ static atomic_t fsnotify_sync_cookie = ATOMIC_INIT(0);
-  */
- u32 fsnotify_get_cookie(void)
+@@ -1040,7 +1040,7 @@ struct batadv_priv {
+ 	atomic_t bonding;
+ 	atomic_t fragmentation;
+ 	atomic_t packet_size_max;
+-	atomic_t frag_seqno;
++	atomic_wrap_t frag_seqno;
+ #ifdef CONFIG_BATMAN_ADV_BLA
+ 	atomic_t bridge_loop_avoidance;
+ #endif
+@@ -1057,7 +1057,7 @@ struct batadv_priv {
+ #endif
+ 	u32 isolation_mark;
+ 	u32 isolation_mark_mask;
+-	atomic_t bcast_seqno;
++	atomic_wrap_t bcast_seqno;
+ 	atomic_t bcast_queue_left;
+ 	atomic_t batman_queue_left;
+ 	char num_ifaces;
+diff --git a/net/caif/cfctrl.c b/net/caif/cfctrl.c
+index f5afda1..d40394a 100644
+--- a/net/caif/cfctrl.c
++++ b/net/caif/cfctrl.c
+@@ -43,8 +43,8 @@ struct cflayer *cfctrl_create(void)
+ 	memset(&dev_info, 0, sizeof(dev_info));
+ 	dev_info.id = 0xff;
+ 	cfsrvl_init(&this->serv, 0, &dev_info, false);
+-	atomic_set(&this->req_seq_no, 1);
+-	atomic_set(&this->rsp_seq_no, 1);
++	atomic_set_wrap(&this->req_seq_no, 1);
++	atomic_set_wrap(&this->rsp_seq_no, 1);
+ 	this->serv.layer.receive = cfctrl_recv;
+ 	sprintf(this->serv.layer.name, "ctrl");
+ 	this->serv.layer.ctrlcmd = cfctrl_ctrlcmd;
+@@ -130,8 +130,8 @@ static void cfctrl_insert_req(struct cfctrl *ctrl,
+ 			      struct cfctrl_request_info *req)
  {
--	return atomic_inc_return(&fsnotify_sync_cookie);
-+	return atomic_inc_return_wrap(&fsnotify_sync_cookie);
+ 	spin_lock_bh(&ctrl->info_list_lock);
+-	atomic_inc(&ctrl->req_seq_no);
+-	req->sequence_no = atomic_read(&ctrl->req_seq_no);
++	atomic_inc_wrap(&ctrl->req_seq_no);
++	req->sequence_no = atomic_read_wrap(&ctrl->req_seq_no);
+ 	list_add_tail(&req->list, &ctrl->list);
+ 	spin_unlock_bh(&ctrl->info_list_lock);
  }
- EXPORT_SYMBOL_GPL(fsnotify_get_cookie);
+@@ -149,8 +149,7 @@ static struct cfctrl_request_info *cfctrl_remove_req(struct cfctrl *ctrl,
+ 			if (p != first)
+ 				pr_warn("Requests are not received in order\n");
  
-diff --git a/fs/ocfs2/localalloc.c b/fs/ocfs2/localalloc.c
-index fe0d1f9..7c39a40 100644
---- a/fs/ocfs2/localalloc.c
-+++ b/fs/ocfs2/localalloc.c
-@@ -1317,7 +1317,7 @@ static int ocfs2_local_alloc_slide_window(struct ocfs2_super *osb,
- 		goto bail;
- 	}
- 
--	atomic_inc(&osb->alloc_stats.moves);
-+	atomic_inc_wrap(&osb->alloc_stats.moves);
- 
- bail:
- 	if (handle)
-diff --git a/fs/ocfs2/ocfs2.h b/fs/ocfs2/ocfs2.h
-index e63af7d..4824fea 100644
---- a/fs/ocfs2/ocfs2.h
-+++ b/fs/ocfs2/ocfs2.h
-@@ -247,11 +247,11 @@ enum ocfs2_vol_state
- 
- struct ocfs2_alloc_stats
- {
--	atomic_t moves;
--	atomic_t local_data;
--	atomic_t bitmap_data;
--	atomic_t bg_allocs;
--	atomic_t bg_extends;
-+	atomic_wrap_t moves;
-+	atomic_wrap_t local_data;
-+	atomic_wrap_t bitmap_data;
-+	atomic_wrap_t bg_allocs;
-+	atomic_wrap_t bg_extends;
- };
- 
- enum ocfs2_local_alloc_state
-diff --git a/fs/ocfs2/suballoc.c b/fs/ocfs2/suballoc.c
-index 6ad3533..eeea79b 100644
---- a/fs/ocfs2/suballoc.c
-+++ b/fs/ocfs2/suballoc.c
-@@ -851,7 +851,7 @@ static int ocfs2_reserve_suballoc_bits(struct ocfs2_super *osb,
- 				mlog_errno(status);
- 			goto bail;
+-			atomic_set(&ctrl->rsp_seq_no,
+-					 p->sequence_no);
++			atomic_set_wrap(&ctrl->rsp_seq_no, p->sequence_no);
+ 			list_del(&p->list);
+ 			goto out;
  		}
--		atomic_inc(&osb->alloc_stats.bg_extends);
-+		atomic_inc_wrap(&osb->alloc_stats.bg_extends);
+diff --git a/net/ceph/messenger.c b/net/ceph/messenger.c
+index a550289..9e0a0dd 100644
+--- a/net/ceph/messenger.c
++++ b/net/ceph/messenger.c
+@@ -187,7 +187,7 @@ static void con_fault(struct ceph_connection *con);
+ #define MAX_ADDR_STR_LEN	64	/* 54 is enough */
  
- 		/* You should never ask for this much metadata */
- 		BUG_ON(bits_wanted >
-@@ -2026,7 +2026,7 @@ int ocfs2_claim_metadata(handle_t *handle,
- 		mlog_errno(status);
- 		goto bail;
+ static char addr_str[ADDR_STR_COUNT][MAX_ADDR_STR_LEN];
+-static atomic_t addr_str_seq = ATOMIC_INIT(0);
++static atomic_wrap_t addr_str_seq = ATOMIC_INIT(0);
+ 
+ static struct page *zero_page;		/* used in certain error cases */
+ 
+@@ -198,7 +198,7 @@ const char *ceph_pr_addr(const struct sockaddr_storage *ss)
+ 	struct sockaddr_in *in4 = (struct sockaddr_in *) ss;
+ 	struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) ss;
+ 
+-	i = atomic_inc_return(&addr_str_seq) & ADDR_STR_COUNT_MASK;
++	i = atomic_inc_return_wrap(&addr_str_seq) & ADDR_STR_COUNT_MASK;
+ 	s = addr_str[i];
+ 
+ 	switch (ss->ss_family) {
+diff --git a/net/core/datagram.c b/net/core/datagram.c
+index b7de71f..4fef0c8 100644
+--- a/net/core/datagram.c
++++ b/net/core/datagram.c
+@@ -360,7 +360,7 @@ int skb_kill_datagram(struct sock *sk, struct sk_buff *skb, unsigned int flags)
  	}
--	atomic_inc(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
-+	atomic_inc_wrap(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
  
- 	*suballoc_loc = res.sr_bg_blkno;
- 	*suballoc_bit_start = res.sr_bit_offset;
-@@ -2192,7 +2192,7 @@ int ocfs2_claim_new_inode_at_loc(handle_t *handle,
- 	trace_ocfs2_claim_new_inode_at_loc((unsigned long long)di_blkno,
- 					   res->sr_bits);
+ 	kfree_skb(skb);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_wrap(&sk->sk_drops);
+ 	sk_mem_reclaim_partial(sk);
  
--	atomic_inc(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
-+	atomic_inc_wrap(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
- 
- 	BUG_ON(res->sr_bits != 1);
- 
-@@ -2234,7 +2234,7 @@ int ocfs2_claim_new_inode(handle_t *handle,
- 		mlog_errno(status);
- 		goto bail;
+ 	return err;
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 4bc19a1..3465949 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -1768,7 +1768,7 @@ int __dev_forward_skb(struct net_device *dev, struct sk_buff *skb)
+ {
+ 	if (skb_orphan_frags(skb, GFP_ATOMIC) ||
+ 	    unlikely(!is_skb_forwardable(dev, skb))) {
+-		atomic_long_inc(&dev->rx_dropped);
++		atomic_long_inc_wrap(&dev->rx_dropped);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
  	}
--	atomic_inc(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
-+	atomic_inc_wrap(&OCFS2_SB(ac->ac_inode->i_sb)->alloc_stats.bg_allocs);
+@@ -3005,7 +3005,7 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device
+ out_kfree_skb:
+ 	kfree_skb(skb);
+ out_null:
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_wrap(&dev->tx_dropped);
+ 	return NULL;
+ }
  
- 	BUG_ON(res.sr_bits != 1);
+@@ -3415,7 +3415,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+ 	rc = -ENETDOWN;
+ 	rcu_read_unlock_bh();
  
-@@ -2338,7 +2338,7 @@ int __ocfs2_claim_clusters(handle_t *handle,
- 						      cluster_start,
- 						      num_clusters);
- 		if (!status)
--			atomic_inc(&osb->alloc_stats.local_data);
-+			atomic_inc_wrap(&osb->alloc_stats.local_data);
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_wrap(&dev->tx_dropped);
+ 	kfree_skb_list(skb);
+ 	return rc;
+ out:
+@@ -3768,7 +3768,7 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
+ 
+ 	local_irq_restore(flags);
+ 
+-	atomic_long_inc(&skb->dev->rx_dropped);
++	atomic_long_inc_wrap(&skb->dev->rx_dropped);
+ 	kfree_skb(skb);
+ 	return NET_RX_DROP;
+ }
+@@ -4212,9 +4212,9 @@ static int __netif_receive_skb_core(struct sk_buff *skb, bool pfmemalloc)
  	} else {
- 		if (min_clusters > (osb->bitmap_cpg - 1)) {
- 			/* The only paths asking for contiguousness
-@@ -2364,7 +2364,7 @@ int __ocfs2_claim_clusters(handle_t *handle,
- 				ocfs2_desc_bitmap_to_cluster_off(ac->ac_inode,
- 								 res.sr_bg_blkno,
- 								 res.sr_bit_offset);
--			atomic_inc(&osb->alloc_stats.bitmap_data);
-+			atomic_inc_wrap(&osb->alloc_stats.bitmap_data);
- 			*num_clusters = res.sr_bits;
- 		}
+ drop:
+ 		if (!deliver_exact)
+-			atomic_long_inc(&skb->dev->rx_dropped);
++			atomic_long_inc_wrap(&skb->dev->rx_dropped);
+ 		else
+-			atomic_long_inc(&skb->dev->rx_nohandler);
++			atomic_long_inc_wrap(&skb->dev->rx_nohandler);
+ 		kfree_skb(skb);
+ 		/* Jamal, now you will not able to escape explaining
+ 		 * me how you were going to use this. :-)
+@@ -7537,9 +7537,9 @@ struct rtnl_link_stats64 *dev_get_stats(struct net_device *dev,
+ 	} else {
+ 		netdev_stats_to_stats64(storage, &dev->stats);
  	}
-diff --git a/fs/ocfs2/super.c b/fs/ocfs2/super.c
-index f56fe39..8ad149b 100644
---- a/fs/ocfs2/super.c
-+++ b/fs/ocfs2/super.c
-@@ -306,11 +306,11 @@ static int ocfs2_osb_dump(struct ocfs2_super *osb, char *buf, int len)
- 			"%10s => GlobalAllocs: %d  LocalAllocs: %d  "
- 			"SubAllocs: %d  LAWinMoves: %d  SAExtends: %d\n",
- 			"Stats",
--			atomic_read(&osb->alloc_stats.bitmap_data),
--			atomic_read(&osb->alloc_stats.local_data),
--			atomic_read(&osb->alloc_stats.bg_allocs),
--			atomic_read(&osb->alloc_stats.moves),
--			atomic_read(&osb->alloc_stats.bg_extends));
-+			atomic_read_wrap(&osb->alloc_stats.bitmap_data),
-+			atomic_read_wrap(&osb->alloc_stats.local_data),
-+			atomic_read_wrap(&osb->alloc_stats.bg_allocs),
-+			atomic_read_wrap(&osb->alloc_stats.moves),
-+			atomic_read_wrap(&osb->alloc_stats.bg_extends));
- 
- 	out += snprintf(buf + out, len - out,
- 			"%10s => State: %u  Descriptor: %llu  Size: %u bits  "
-@@ -2087,11 +2087,11 @@ static int ocfs2_initialize_super(struct super_block *sb,
- 
- 	mutex_init(&osb->system_file_mutex);
- 
--	atomic_set(&osb->alloc_stats.moves, 0);
--	atomic_set(&osb->alloc_stats.local_data, 0);
--	atomic_set(&osb->alloc_stats.bitmap_data, 0);
--	atomic_set(&osb->alloc_stats.bg_allocs, 0);
--	atomic_set(&osb->alloc_stats.bg_extends, 0);
-+	atomic_set_wrap(&osb->alloc_stats.moves, 0);
-+	atomic_set_wrap(&osb->alloc_stats.local_data, 0);
-+	atomic_set_wrap(&osb->alloc_stats.bitmap_data, 0);
-+	atomic_set_wrap(&osb->alloc_stats.bg_allocs, 0);
-+	atomic_set_wrap(&osb->alloc_stats.bg_extends, 0);
- 
- 	/* Copy the blockcheck stats from the superblock probe */
- 	osb->osb_ecc_stats = *stats;
-diff --git a/fs/quota/netlink.c b/fs/quota/netlink.c
-index 8b25267..719a02b 100644
---- a/fs/quota/netlink.c
-+++ b/fs/quota/netlink.c
-@@ -42,7 +42,7 @@ static struct genl_family quota_genl_family = {
- void quota_send_warning(struct kqid qid, dev_t dev,
- 			const char warntype)
+-	storage->rx_dropped += atomic_long_read(&dev->rx_dropped);
+-	storage->tx_dropped += atomic_long_read(&dev->tx_dropped);
+-	storage->rx_nohandler += atomic_long_read(&dev->rx_nohandler);
++	storage->rx_dropped += atomic_long_read_wrap(&dev->rx_dropped);
++	storage->tx_dropped += atomic_long_read_wrap(&dev->tx_dropped);
++	storage->rx_nohandler += atomic_long_read_wrap(&dev->rx_nohandler);
+ 	return storage;
+ }
+ EXPORT_SYMBOL(dev_get_stats);
+diff --git a/net/core/flow.c b/net/core/flow.c
+index 3937b1b..ee91374 100644
+--- a/net/core/flow.c
++++ b/net/core/flow.c
+@@ -65,7 +65,7 @@ static void flow_cache_new_hashrnd(unsigned long arg)
+ static int flow_entry_valid(struct flow_cache_entry *fle,
+ 				struct netns_xfrm *xfrm)
  {
--	static atomic_t seq;
-+	static atomic_wrap_t seq;
- 	struct sk_buff *skb;
- 	void *msg_head;
- 	int ret;
-@@ -58,7 +58,7 @@ void quota_send_warning(struct kqid qid, dev_t dev,
- 		  "VFS: Not enough memory to send quota warning.\n");
- 		return;
+-	if (atomic_read(&xfrm->flow_cache_genid) != fle->genid)
++	if (atomic_read_wrap(&xfrm->flow_cache_genid) != fle->genid)
+ 		return 0;
+ 	if (fle->object && !fle->object->ops->check(fle->object))
+ 		return 0;
+@@ -238,7 +238,7 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
+ 
+ 		if (fcp->hash_count > 2 * fc->high_watermark ||
+ 		    atomic_read(&net->xfrm.flow_cache_gc_count) > fc->high_watermark) {
+-			atomic_inc(&net->xfrm.flow_cache_genid);
++			atomic_inc_wrap(&net->xfrm.flow_cache_genid);
+ 			flo = ERR_PTR(-ENOBUFS);
+ 			goto ret_object;
+ 		}
+@@ -253,7 +253,8 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
+ 			hlist_add_head(&fle->u.hlist, &fcp->hash_table[hash]);
+ 			fcp->hash_count++;
+ 		}
+-	} else if (likely(fle->genid == atomic_read(&net->xfrm.flow_cache_genid))) {
++	} else if (likely(fle->genid == atomic_read_wrap(
++					&net->xfrm.flow_cache_genid))) {
+ 		flo = fle->object;
+ 		if (!flo)
+ 			goto ret_object;
+@@ -274,7 +275,7 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
  	}
--	msg_head = genlmsg_put(skb, 0, atomic_add_return(1, &seq),
-+	msg_head = genlmsg_put(skb, 0, atomic_add_return_wrap(1, &seq),
- 			&quota_genl_family, 0, QUOTA_NL_C_WARNING);
- 	if (!msg_head) {
- 		printk(KERN_ERR
-diff --git a/fs/reiserfs/do_balan.c b/fs/reiserfs/do_balan.c
-index 9c02d96..be87c96 100644
---- a/fs/reiserfs/do_balan.c
-+++ b/fs/reiserfs/do_balan.c
-@@ -1887,7 +1887,7 @@ void do_balance(struct tree_balance *tb, struct item_head *ih,
- 		return;
+ 	flo = resolver(net, key, family, dir, flo, ctx);
+ 	if (fle) {
+-		fle->genid = atomic_read(&net->xfrm.flow_cache_genid);
++		fle->genid = atomic_read_wrap(&net->xfrm.flow_cache_genid);
+ 		if (!IS_ERR(flo))
+ 			fle->object = flo;
+ 		else
+diff --git a/net/core/net-sysfs.c b/net/core/net-sysfs.c
+index 6e4f347..c1a9bfc 100644
+--- a/net/core/net-sysfs.c
++++ b/net/core/net-sysfs.c
+@@ -290,7 +290,7 @@ static ssize_t carrier_changes_show(struct device *dev,
+ {
+ 	struct net_device *netdev = to_net_dev(dev);
+ 	return sprintf(buf, fmt_dec,
+-		       atomic_read(&netdev->carrier_changes));
++		       atomic_read_wrap(&netdev->carrier_changes));
+ }
+ static DEVICE_ATTR_RO(carrier_changes);
+ 
+diff --git a/net/core/netpoll.c b/net/core/netpoll.c
+index 53599bd..dab9d4d 100644
+--- a/net/core/netpoll.c
++++ b/net/core/netpoll.c
+@@ -382,7 +382,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
+ 	struct udphdr *udph;
+ 	struct iphdr *iph;
+ 	struct ethhdr *eth;
+-	static atomic_t ip_ident;
++	static atomic_wrap_t ip_ident;
+ 	struct ipv6hdr *ip6h;
+ 
+ 	WARN_ON_ONCE(!irqs_disabled());
+@@ -455,7 +455,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
+ 		put_unaligned(0x45, (unsigned char *)iph);
+ 		iph->tos      = 0;
+ 		put_unaligned(htons(ip_len), &(iph->tot_len));
+-		iph->id       = htons(atomic_inc_return(&ip_ident));
++		iph->id       = htons(atomic_inc_return_wrap(&ip_ident));
+ 		iph->frag_off = 0;
+ 		iph->ttl      = 64;
+ 		iph->protocol = IPPROTO_UDP;
+diff --git a/net/core/rtnetlink.c b/net/core/rtnetlink.c
+index fb7348f..0f04cd5 100644
+--- a/net/core/rtnetlink.c
++++ b/net/core/rtnetlink.c
+@@ -1322,7 +1322,7 @@ static int rtnl_fill_ifinfo(struct sk_buff *skb, struct net_device *dev,
+ 	    (dev->ifalias &&
+ 	     nla_put_string(skb, IFLA_IFALIAS, dev->ifalias)) ||
+ 	    nla_put_u32(skb, IFLA_CARRIER_CHANGES,
+-			atomic_read(&dev->carrier_changes)) ||
++			atomic_read_wrap(&dev->carrier_changes)) ||
+ 	    nla_put_u8(skb, IFLA_PROTO_DOWN, dev->proto_down))
+ 		goto nla_put_failure;
+ 
+diff --git a/net/core/sock.c b/net/core/sock.c
+index c73e28f..10cf15b 100644
+--- a/net/core/sock.c
++++ b/net/core/sock.c
+@@ -411,13 +411,13 @@ int __sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 	struct sk_buff_head *list = &sk->sk_receive_queue;
+ 
+ 	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		trace_sock_rcvqueue_full(sk, skb);
+ 		return -ENOMEM;
  	}
  
--	atomic_inc(&fs_generation(tb->tb_sb));
-+	atomic_inc_wrap(&fs_generation(tb->tb_sb));
- 	do_balance_starts(tb);
+ 	if (!sk_rmem_schedule(sk, skb, skb->truesize)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		return -ENOBUFS;
+ 	}
  
- 	/*
-diff --git a/fs/reiserfs/procfs.c b/fs/reiserfs/procfs.c
-index fe99915..5c1d84f 100644
---- a/fs/reiserfs/procfs.c
-+++ b/fs/reiserfs/procfs.c
-@@ -114,7 +114,7 @@ static int show_super(struct seq_file *m, void *unused)
- 		   "SMALL_TAILS " : "NO_TAILS ",
- 		   replay_only(sb) ? "REPLAY_ONLY " : "",
- 		   convert_reiserfs(sb) ? "CONV " : "",
--		   atomic_read(&r->s_generation_counter),
-+		   atomic_read_wrap(&r->s_generation_counter),
- 		   SF(s_disk_reads), SF(s_disk_writes), SF(s_fix_nodes),
- 		   SF(s_do_balance), SF(s_unneeded_left_neighbor),
- 		   SF(s_good_search_by_key_reada), SF(s_bmaps),
-diff --git a/fs/reiserfs/reiserfs.h b/fs/reiserfs/reiserfs.h
-index 2adcde1..ab90b7d 100644
---- a/fs/reiserfs/reiserfs.h
-+++ b/fs/reiserfs/reiserfs.h
-@@ -580,7 +580,7 @@ struct reiserfs_sb_info {
- 	/* Comment? -Hans */
- 	wait_queue_head_t s_wait;
- 	/* increased by one every time the  tree gets re-balanced */
--	atomic_t s_generation_counter;
-+	atomic_wrap_t s_generation_counter;
+@@ -463,7 +463,7 @@ int __sk_receive_skb(struct sock *sk, struct sk_buff *skb,
+ 	skb->dev = NULL;
  
- 	/* File system properties. Currently holds on-disk FS format */
- 	unsigned long s_properties;
-@@ -2300,7 +2300,7 @@ static inline loff_t max_reiserfs_offset(struct inode *inode)
- #define REISERFS_USER_MEM		1	/* user memory mode */
+ 	if (sk_rcvqueues_full(sk, sk->sk_rcvbuf)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		goto discard_and_relse;
+ 	}
+ 	if (nested)
+@@ -481,7 +481,7 @@ int __sk_receive_skb(struct sock *sk, struct sk_buff *skb,
+ 		mutex_release(&sk->sk_lock.dep_map, 1, _RET_IP_);
+ 	} else if (sk_add_backlog(sk, skb, sk->sk_rcvbuf)) {
+ 		bh_unlock_sock(sk);
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		goto discard_and_relse;
+ 	}
  
- #define fs_generation(s) (REISERFS_SB(s)->s_generation_counter)
--#define get_generation(s) atomic_read (&fs_generation(s))
-+#define get_generation(s) atomic_read_wrap(&fs_generation(s))
- #define FILESYSTEM_CHANGED_TB(tb)  (get_generation((tb)->tb_sb) != (tb)->fs_gen)
- #define __fs_changed(gen,s) (gen != get_generation (s))
- #define fs_changed(gen,s)		\
-diff --git a/include/linux/fscache-cache.h b/include/linux/fscache-cache.h
-index 13ba552..afae1f7 100644
---- a/include/linux/fscache-cache.h
-+++ b/include/linux/fscache-cache.h
-@@ -117,7 +117,7 @@ struct fscache_operation {
- 	fscache_operation_release_t release;
+@@ -1516,7 +1516,7 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
+ 		newsk->sk_dst_cache	= NULL;
+ 		newsk->sk_wmem_queued	= 0;
+ 		newsk->sk_forward_alloc = 0;
+-		atomic_set(&newsk->sk_drops, 0);
++		atomic_set_wrap(&newsk->sk_drops, 0);
+ 		newsk->sk_send_head	= NULL;
+ 		newsk->sk_userlocks	= sk->sk_userlocks & ~SOCK_BINDPORT_LOCK;
+ 
+@@ -1545,7 +1545,7 @@ struct sock *sk_clone_lock(const struct sock *sk, const gfp_t priority)
+ 		newsk->sk_err	   = 0;
+ 		newsk->sk_priority = 0;
+ 		newsk->sk_incoming_cpu = raw_smp_processor_id();
+-		atomic64_set(&newsk->sk_cookie, 0);
++		atomic64_set_wrap(&newsk->sk_cookie, 0);
+ 
+ 		mem_cgroup_sk_alloc(newsk);
+ 		cgroup_sk_alloc(&newsk->sk_cgrp_data);
+@@ -2475,7 +2475,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
+ 	 */
+ 	smp_wmb();
+ 	atomic_set(&sk->sk_refcnt, 1);
+-	atomic_set(&sk->sk_drops, 0);
++	atomic_set_wrap(&sk->sk_drops, 0);
+ }
+ EXPORT_SYMBOL(sock_init_data);
+ 
+diff --git a/net/core/sock_diag.c b/net/core/sock_diag.c
+index 6b10573..b726bcb 100644
+--- a/net/core/sock_diag.c
++++ b/net/core/sock_diag.c
+@@ -22,12 +22,12 @@ static struct workqueue_struct *broadcast_wq;
+ static u64 sock_gen_cookie(struct sock *sk)
+ {
+ 	while (1) {
+-		u64 res = atomic64_read(&sk->sk_cookie);
++		u64 res = atomic64_read_wrap(&sk->sk_cookie);
+ 
+ 		if (res)
+ 			return res;
+-		res = atomic64_inc_return(&sock_net(sk)->cookie_gen);
+-		atomic64_cmpxchg(&sk->sk_cookie, 0, res);
++		res = atomic64_inc_return_wrap(&sock_net(sk)->cookie_gen);
++		atomic64_cmpxchg_wrap(&sk->sk_cookie, 0, res);
+ 	}
+ }
+ 
+@@ -67,7 +67,7 @@ int sock_diag_put_meminfo(struct sock *sk, struct sk_buff *skb, int attrtype)
+ 	mem[SK_MEMINFO_WMEM_QUEUED] = sk->sk_wmem_queued;
+ 	mem[SK_MEMINFO_OPTMEM] = atomic_read(&sk->sk_omem_alloc);
+ 	mem[SK_MEMINFO_BACKLOG] = sk->sk_backlog.len;
+-	mem[SK_MEMINFO_DROPS] = atomic_read(&sk->sk_drops);
++	mem[SK_MEMINFO_DROPS] = atomic_read_wrap(&sk->sk_drops);
+ 
+ 	return nla_put(skb, attrtype, sizeof(mem), &mem);
+ }
+diff --git a/net/ipv4/devinet.c b/net/ipv4/devinet.c
+index 062a67c..19201f0 100644
+--- a/net/ipv4/devinet.c
++++ b/net/ipv4/devinet.c
+@@ -1605,7 +1605,7 @@ static int inet_dump_ifaddr(struct sk_buff *skb, struct netlink_callback *cb)
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv4.dev_addr_genid) ^
++		cb->seq = atomic_read_wrap(&net->ipv4.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+@@ -1939,7 +1939,7 @@ static int inet_netconf_dump_devconf(struct sk_buff *skb,
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv4.dev_addr_genid) ^
++		cb->seq = atomic_read_wrap(&net->ipv4.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+diff --git a/net/ipv4/fib_frontend.c b/net/ipv4/fib_frontend.c
+index c3b8047..f3b24aa 100644
+--- a/net/ipv4/fib_frontend.c
++++ b/net/ipv4/fib_frontend.c
+@@ -1122,12 +1122,12 @@ static int fib_inetaddr_event(struct notifier_block *this, unsigned long event,
+ #ifdef CONFIG_IP_ROUTE_MULTIPATH
+ 		fib_sync_up(dev, RTNH_F_DEAD);
+ #endif
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_wrap(&net->ipv4.dev_addr_genid);
+ 		rt_cache_flush(dev_net(dev));
+ 		break;
+ 	case NETDEV_DOWN:
+ 		fib_del_ifaddr(ifa, NULL);
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_wrap(&net->ipv4.dev_addr_genid);
+ 		if (!ifa->ifa_dev->ifa_list) {
+ 			/* Last address was deleted from this interface.
+ 			 * Disable IP.
+@@ -1167,7 +1167,7 @@ static int fib_netdev_event(struct notifier_block *this, unsigned long event, vo
+ #ifdef CONFIG_IP_ROUTE_MULTIPATH
+ 		fib_sync_up(dev, RTNH_F_DEAD);
+ #endif
+-		atomic_inc(&net->ipv4.dev_addr_genid);
++		atomic_inc_wrap(&net->ipv4.dev_addr_genid);
+ 		rt_cache_flush(net);
+ 		break;
+ 	case NETDEV_DOWN:
+diff --git a/net/ipv4/fib_semantics.c b/net/ipv4/fib_semantics.c
+index 388d3e2..ab24e60 100644
+--- a/net/ipv4/fib_semantics.c
++++ b/net/ipv4/fib_semantics.c
+@@ -916,7 +916,7 @@ __be32 fib_info_update_nh_saddr(struct net *net, struct fib_nh *nh)
+ 	nh->nh_saddr = inet_select_addr(nh->nh_dev,
+ 					nh->nh_gw,
+ 					nh->nh_parent->fib_scope);
+-	nh->nh_saddr_genid = atomic_read(&net->ipv4.dev_addr_genid);
++	nh->nh_saddr_genid = atomic_read_wrap(&net->ipv4.dev_addr_genid);
+ 
+ 	return nh->nh_saddr;
+ }
+diff --git a/net/ipv4/inet_connection_sock.c b/net/ipv4/inet_connection_sock.c
+index 61a9dee..2d327aa 100644
+--- a/net/ipv4/inet_connection_sock.c
++++ b/net/ipv4/inet_connection_sock.c
+@@ -666,8 +666,8 @@ struct sock *inet_csk_clone_lock(const struct sock *sk,
+ 		sock_reset_flag(newsk, SOCK_RCU_FREE);
+ 
+ 		newsk->sk_mark = inet_rsk(req)->ir_mark;
+-		atomic64_set(&newsk->sk_cookie,
+-			     atomic64_read(&inet_rsk(req)->ir_cookie));
++		atomic64_set_wrap(&newsk->sk_cookie, atomic64_read_wrap(
++					&inet_rsk(req)->ir_cookie));
+ 
+ 		newicsk->icsk_retransmits = 0;
+ 		newicsk->icsk_backoff	  = 0;
+diff --git a/net/ipv4/inet_timewait_sock.c b/net/ipv4/inet_timewait_sock.c
+index ddcd56c..e36fd88 100644
+--- a/net/ipv4/inet_timewait_sock.c
++++ b/net/ipv4/inet_timewait_sock.c
+@@ -186,7 +186,8 @@ struct inet_timewait_sock *inet_twsk_alloc(const struct sock *sk,
+ 		tw->tw_ipv6only	    = 0;
+ 		tw->tw_transparent  = inet->transparent;
+ 		tw->tw_prot	    = sk->sk_prot_creator;
+-		atomic64_set(&tw->tw_cookie, atomic64_read(&sk->sk_cookie));
++		atomic64_set_wrap(&tw->tw_cookie, atomic64_read_wrap(
++					&sk->sk_cookie));
+ 		twsk_net_set(tw, sock_net(sk));
+ 		setup_pinned_timer(&tw->tw_timer, tw_timer_handler,
+ 				   (unsigned long)tw);
+diff --git a/net/ipv4/inetpeer.c b/net/ipv4/inetpeer.c
+index 86fa458..1bd7d85 100644
+--- a/net/ipv4/inetpeer.c
++++ b/net/ipv4/inetpeer.c
+@@ -445,7 +445,7 @@ struct inet_peer *inet_getpeer(struct inet_peer_base *base,
+ 	if (p) {
+ 		p->daddr = *daddr;
+ 		atomic_set(&p->refcnt, 1);
+-		atomic_set(&p->rid, 0);
++		atomic_set_wrap(&p->rid, 0);
+ 		p->metrics[RTAX_LOCK-1] = INETPEER_METRICS_NEW;
+ 		p->rate_tokens = 0;
+ 		/* 60*HZ is arbitrary, but chosen enough high so that the first
+diff --git a/net/ipv4/ip_fragment.c b/net/ipv4/ip_fragment.c
+index bbe7f72..2d58187 100644
+--- a/net/ipv4/ip_fragment.c
++++ b/net/ipv4/ip_fragment.c
+@@ -282,7 +282,7 @@ static int ip_frag_too_far(struct ipq *qp)
+ 		return 0;
+ 
+ 	start = qp->rid;
+-	end = atomic_inc_return(&peer->rid);
++	end = atomic_inc_return_wrap(&peer->rid);
+ 	qp->rid = end;
+ 
+ 	rc = qp->q.fragments && (end - start) > max;
+diff --git a/net/ipv4/ping.c b/net/ipv4/ping.c
+index 7cf7d6e..5c0a197 100644
+--- a/net/ipv4/ping.c
++++ b/net/ipv4/ping.c
+@@ -1119,7 +1119,7 @@ static void ping_v4_format_sock(struct sock *sp, struct seq_file *f,
+ 		from_kuid_munged(seq_user_ns(f), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+ 		atomic_read(&sp->sk_refcnt), sp,
+-		atomic_read(&sp->sk_drops));
++		atomic_read_wrap(&sp->sk_drops));
+ }
+ 
+ static int ping_v4_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv4/raw.c b/net/ipv4/raw.c
+index 90a85c9..691dbd3 100644
+--- a/net/ipv4/raw.c
++++ b/net/ipv4/raw.c
+@@ -325,7 +325,7 @@ static int raw_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ int raw_rcv(struct sock *sk, struct sk_buff *skb)
+ {
+ 	if (!xfrm4_policy_check(sk, XFRM_POLICY_IN, skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -1029,7 +1029,8 @@ static void raw_sock_seq_show(struct seq_file *seq, struct sock *sp, int i)
+ 		0, 0L, 0,
+ 		from_kuid_munged(seq_user_ns(seq), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+-		atomic_read(&sp->sk_refcnt), sp, atomic_read(&sp->sk_drops));
++		atomic_read(&sp->sk_refcnt), sp,
++			    atomic_read_wrap(&sp->sk_drops));
+ }
+ 
+ static int raw_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index 62d4d90..099bd83 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -463,7 +463,7 @@ static struct neighbour *ipv4_neigh_lookup(const struct dst_entry *dst,
+ 
+ #define IP_IDENTS_SZ 2048u
+ 
+-static atomic_t *ip_idents __read_mostly;
++static atomic_wrap_t *ip_idents __read_mostly;
+ static u32 *ip_tstamps __read_mostly;
+ 
+ /* In order to protect privacy, we add a perturbation to identifiers
+@@ -473,7 +473,7 @@ static u32 *ip_tstamps __read_mostly;
+ u32 ip_idents_reserve(u32 hash, int segs)
+ {
+ 	u32 *p_tstamp = ip_tstamps + hash % IP_IDENTS_SZ;
+-	atomic_t *p_id = ip_idents + hash % IP_IDENTS_SZ;
++	atomic_wrap_t *p_id = ip_idents + hash % IP_IDENTS_SZ;
+ 	u32 old = ACCESS_ONCE(*p_tstamp);
+ 	u32 now = (u32)jiffies;
+ 	u32 new, delta = 0;
+@@ -483,9 +483,9 @@ u32 ip_idents_reserve(u32 hash, int segs)
+ 
+ 	/* Do not use atomic_add_return() as it makes UBSAN unhappy */
+ 	do {
+-		old = (u32)atomic_read(p_id);
++		old = (u32)atomic_read_wrap(p_id);
+ 		new = old + delta + segs;
+-	} while (atomic_cmpxchg(p_id, old, new) != old);
++	} while (atomic_cmpxchg_wrap(p_id, old, new) != old);
+ 
+ 	return new - segs;
+ }
+@@ -2824,8 +2824,8 @@ static __net_initdata struct pernet_operations sysctl_route_ops = {
+ 
+ static __net_init int rt_genid_init(struct net *net)
+ {
+-	atomic_set(&net->ipv4.rt_genid, 0);
+-	atomic_set(&net->fnhe_genid, 0);
++	atomic_set_wrap(&net->ipv4.rt_genid, 0);
++	atomic_set_wrap(&net->fnhe_genid, 0);
+ 	get_random_bytes(&net->ipv4.dev_addr_genid,
+ 			 sizeof(net->ipv4.dev_addr_genid));
+ 	return 0;
+diff --git a/net/ipv4/tcp_input.c b/net/ipv4/tcp_input.c
+index a27b9c0..287f8d1 100644
+--- a/net/ipv4/tcp_input.c
++++ b/net/ipv4/tcp_input.c
+@@ -6215,7 +6215,7 @@ struct request_sock *inet_reqsk_alloc(const struct request_sock_ops *ops,
+ #if IS_ENABLED(CONFIG_IPV6)
+ 		ireq->pktopts = NULL;
+ #endif
+-		atomic64_set(&ireq->ir_cookie, 0);
++		atomic64_set_wrap(&ireq->ir_cookie, 0);
+ 		ireq->ireq_state = TCP_NEW_SYN_RECV;
+ 		write_pnet(&ireq->ireq_net, sock_net(sk_listener));
+ 		ireq->ireq_family = sk_listener->sk_family;
+diff --git a/net/ipv4/udp.c b/net/ipv4/udp.c
+index 7d96dc2..145846f 100644
+--- a/net/ipv4/udp.c
++++ b/net/ipv4/udp.c
+@@ -1194,7 +1194,7 @@ static int first_packet_length(struct sock *sk)
+ 				IS_UDPLITE(sk));
+ 		__UDP_INC_STATS(sock_net(sk), UDP_MIB_INERRORS,
+ 				IS_UDPLITE(sk));
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		__skb_unlink(skb, rcvq);
+ 		__skb_queue_tail(&list_kill, skb);
+ 	}
+@@ -1299,7 +1299,7 @@ int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, int noblock,
+ 	if (unlikely(err)) {
+ 		trace_kfree_skb(skb, udp_recvmsg);
+ 		if (!peeked) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			UDP_INC_STATS(sock_net(sk),
+ 				      UDP_MIB_INERRORS, is_udplite);
+ 		}
+@@ -1604,7 +1604,7 @@ int udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 	__UDP_INC_STATS(sock_net(sk), UDP_MIB_CSUMERRORS, is_udplite);
+ drop:
+ 	__UDP_INC_STATS(sock_net(sk), UDP_MIB_INERRORS, is_udplite);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_wrap(&sk->sk_drops);
+ 	kfree_skb(skb);
+ 	return -1;
+ }
+@@ -1662,7 +1662,7 @@ static int __udp4_lib_mcast_deliver(struct net *net, struct sk_buff *skb,
+ 		nskb = skb_clone(skb, GFP_ATOMIC);
+ 
+ 		if (unlikely(!nskb)) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			__UDP_INC_STATS(net, UDP_MIB_RCVBUFERRORS,
+ 					IS_UDPLITE(sk));
+ 			__UDP_INC_STATS(net, UDP_MIB_INERRORS,
+@@ -2381,7 +2381,7 @@ static void udp4_format_sock(struct sock *sp, struct seq_file *f,
+ 		from_kuid_munged(seq_user_ns(f), sock_i_uid(sp)),
+ 		0, sock_i_ino(sp),
+ 		atomic_read(&sp->sk_refcnt), sp,
+-		atomic_read(&sp->sk_drops));
++		atomic_read_wrap(&sp->sk_drops));
+ }
+ 
+ int udp4_seq_show(struct seq_file *seq, void *v)
+diff --git a/net/ipv6/addrconf.c b/net/ipv6/addrconf.c
+index d8983e1..1084a86 100644
+--- a/net/ipv6/addrconf.c
++++ b/net/ipv6/addrconf.c
+@@ -673,7 +673,7 @@ static int inet6_netconf_dump_devconf(struct sk_buff *skb,
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+ 		rcu_read_lock();
+-		cb->seq = atomic_read(&net->ipv6.dev_addr_genid) ^
++		cb->seq = atomic_read_wrap(&net->ipv6.dev_addr_genid) ^
+ 			  net->dev_base_seq;
+ 		hlist_for_each_entry_rcu(dev, head, index_hlist) {
+ 			if (idx < s_idx)
+@@ -4773,7 +4773,8 @@ static int inet6_dump_addr(struct sk_buff *skb, struct netlink_callback *cb,
+ 	s_ip_idx = ip_idx = cb->args[2];
+ 
+ 	rcu_read_lock();
+-	cb->seq = atomic_read(&net->ipv6.dev_addr_genid) ^ net->dev_base_seq;
++	cb->seq = atomic_read_wrap(
++			&net->ipv6.dev_addr_genid) ^ net->dev_base_seq;
+ 	for (h = s_h; h < NETDEV_HASHENTRIES; h++, s_idx = 0) {
+ 		idx = 0;
+ 		head = &net->dev_index_head[h];
+@@ -5457,7 +5458,7 @@ static void __ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
+ 		rt_genid_bump_ipv6(net);
+ 		break;
+ 	}
+-	atomic_inc(&net->ipv6.dev_addr_genid);
++	atomic_inc_wrap(&net->ipv6.dev_addr_genid);
+ }
+ 
+ static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
+diff --git a/net/ipv6/af_inet6.c b/net/ipv6/af_inet6.c
+index 46ad699..635b455 100644
+--- a/net/ipv6/af_inet6.c
++++ b/net/ipv6/af_inet6.c
+@@ -796,7 +796,7 @@ static int __net_init inet6_net_init(struct net *net)
+ 	net->ipv6.sysctl.idgen_retries = 3;
+ 	net->ipv6.sysctl.idgen_delay = 1 * HZ;
+ 	net->ipv6.sysctl.flowlabel_state_ranges = 0;
+-	atomic_set(&net->ipv6.fib6_sernum, 1);
++	atomic_set_wrap(&net->ipv6.fib6_sernum, 1);
+ 
+ 	err = ipv6_init_mibs(net);
+ 	if (err)
+diff --git a/net/ipv6/datagram.c b/net/ipv6/datagram.c
+index 37874e2..05a0e03 100644
+--- a/net/ipv6/datagram.c
++++ b/net/ipv6/datagram.c
+@@ -1032,5 +1032,5 @@ void ip6_dgram_sock_seq_show(struct seq_file *seq, struct sock *sp,
+ 		   0,
+ 		   sock_i_ino(sp),
+ 		   atomic_read(&sp->sk_refcnt), sp,
+-		   atomic_read(&sp->sk_drops));
++		   atomic_read_wrap(&sp->sk_drops));
+ }
+diff --git a/net/ipv6/ip6_fib.c b/net/ipv6/ip6_fib.c
+index ef54852..5932a9a 100644
+--- a/net/ipv6/ip6_fib.c
++++ b/net/ipv6/ip6_fib.c
+@@ -98,9 +98,9 @@ static int fib6_new_sernum(struct net *net)
+ 	int new, old;
+ 
+ 	do {
+-		old = atomic_read(&net->ipv6.fib6_sernum);
++		old = atomic_read_wrap(&net->ipv6.fib6_sernum);
+ 		new = old < INT_MAX ? old + 1 : 1;
+-	} while (atomic_cmpxchg(&net->ipv6.fib6_sernum,
++	} while (atomic_cmpxchg_wrap(&net->ipv6.fib6_sernum,
+ 				old, new) != old);
+ 	return new;
+ }
+diff --git a/net/ipv6/raw.c b/net/ipv6/raw.c
+index 54404f0..0fcc926 100644
+--- a/net/ipv6/raw.c
++++ b/net/ipv6/raw.c
+@@ -389,7 +389,7 @@ static inline int rawv6_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ {
+ 	if ((raw6_sk(sk)->checksum || rcu_access_pointer(sk->sk_filter)) &&
+ 	    skb_checksum_complete(skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -417,7 +417,7 @@ int rawv6_rcv(struct sock *sk, struct sk_buff *skb)
+ 	struct raw6_sock *rp = raw6_sk(sk);
+ 
+ 	if (!xfrm6_policy_check(sk, XFRM_POLICY_IN, skb)) {
+-		atomic_inc(&sk->sk_drops);
++		atomic_inc_wrap(&sk->sk_drops);
+ 		kfree_skb(skb);
+ 		return NET_RX_DROP;
+ 	}
+@@ -441,7 +441,7 @@ int rawv6_rcv(struct sock *sk, struct sk_buff *skb)
+ 
+ 	if (inet->hdrincl) {
+ 		if (skb_checksum_complete(skb)) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			kfree_skb(skb);
+ 			return NET_RX_DROP;
+ 		}
+diff --git a/net/ipv6/udp.c b/net/ipv6/udp.c
+index 9aa7c1c..45c01a8 100644
+--- a/net/ipv6/udp.c
++++ b/net/ipv6/udp.c
+@@ -380,7 +380,7 @@ int udpv6_recvmsg(struct sock *sk, struct msghdr *msg, size_t len,
+ 	if (unlikely(err)) {
+ 		trace_kfree_skb(skb, udpv6_recvmsg);
+ 		if (!peeked) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			if (is_udp4)
+ 				UDP_INC_STATS(sock_net(sk), UDP_MIB_INERRORS,
+ 					      is_udplite);
+@@ -646,7 +646,7 @@ int udpv6_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+ 	__UDP6_INC_STATS(sock_net(sk), UDP_MIB_CSUMERRORS, is_udplite);
+ drop:
+ 	__UDP6_INC_STATS(sock_net(sk), UDP_MIB_INERRORS, is_udplite);
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_wrap(&sk->sk_drops);
+ 	kfree_skb(skb);
+ 	return -1;
+ }
+@@ -727,7 +727,7 @@ static int __udp6_lib_mcast_deliver(struct net *net, struct sk_buff *skb,
+ 		}
+ 		nskb = skb_clone(skb, GFP_ATOMIC);
+ 		if (unlikely(!nskb)) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			__UDP6_INC_STATS(net, UDP_MIB_RCVBUFERRORS,
+ 					 IS_UDPLITE(sk));
+ 			__UDP6_INC_STATS(net, UDP_MIB_INERRORS,
+diff --git a/net/iucv/af_iucv.c b/net/iucv/af_iucv.c
+index 02b45a8..16f0511 100644
+--- a/net/iucv/af_iucv.c
++++ b/net/iucv/af_iucv.c
+@@ -688,10 +688,11 @@ static void __iucv_auto_name(struct iucv_sock *iucv)
+ {
+ 	char name[12];
+ 
+-	sprintf(name, "%08x", atomic_inc_return(&iucv_sk_list.autobind_name));
++	sprintf(name, "%08x", atomic_inc_return_wrap(
++				&iucv_sk_list.autobind_name));
+ 	while (__iucv_get_sock_by_name(name)) {
+ 		sprintf(name, "%08x",
+-			atomic_inc_return(&iucv_sk_list.autobind_name));
++			atomic_inc_return_wrap(&iucv_sk_list.autobind_name));
+ 	}
+ 	memcpy(iucv->src_name, name, 8);
+ }
+diff --git a/net/key/af_key.c b/net/key/af_key.c
+index f9c9ecb..039a50f 100644
+--- a/net/key/af_key.c
++++ b/net/key/af_key.c
+@@ -3050,10 +3050,10 @@ static int pfkey_send_policy_notify(struct xfrm_policy *xp, int dir, const struc
+ static u32 get_acqseq(void)
+ {
+ 	u32 res;
+-	static atomic_t acqseq;
++	static atomic_wrap_t acqseq;
+ 
+ 	do {
+-		res = atomic_inc_return(&acqseq);
++		res = atomic_inc_return_wrap(&acqseq);
+ 	} while (!res);
+ 	return res;
+ }
+diff --git a/net/l2tp/l2tp_eth.c b/net/l2tp/l2tp_eth.c
+index 965f7e3..aaea87f 100644
+--- a/net/l2tp/l2tp_eth.c
++++ b/net/l2tp/l2tp_eth.c
+@@ -42,12 +42,12 @@ struct l2tp_eth {
+ 	struct sock		*tunnel_sock;
+ 	struct l2tp_session	*session;
+ 	struct list_head	list;
+-	atomic_long_t		tx_bytes;
+-	atomic_long_t		tx_packets;
+-	atomic_long_t		tx_dropped;
+-	atomic_long_t		rx_bytes;
+-	atomic_long_t		rx_packets;
+-	atomic_long_t		rx_errors;
++	atomic_long_wrap_t	tx_bytes;
++	atomic_long_wrap_t	tx_packets;
++	atomic_long_wrap_t	tx_dropped;
++	atomic_long_wrap_t	rx_bytes;
++	atomic_long_wrap_t	rx_packets;
++	atomic_long_wrap_t	rx_errors;
  };
  
--extern atomic_t fscache_op_debug_id;
-+extern atomic_wrap_t fscache_op_debug_id;
- extern void fscache_op_work_func(struct work_struct *work);
+ /* via l2tp_session_priv() */
+@@ -98,10 +98,10 @@ static int l2tp_eth_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	int ret = l2tp_xmit_skb(session, skb, session->hdr_len);
  
- extern void fscache_enqueue_operation(struct fscache_operation *);
+ 	if (likely(ret == NET_XMIT_SUCCESS)) {
+-		atomic_long_add(len, &priv->tx_bytes);
+-		atomic_long_inc(&priv->tx_packets);
++		atomic_long_add_wrap(len, &priv->tx_bytes);
++		atomic_long_inc_wrap(&priv->tx_packets);
+ 	} else {
+-		atomic_long_inc(&priv->tx_dropped);
++		atomic_long_inc_wrap(&priv->tx_dropped);
+ 	}
+ 	return NETDEV_TX_OK;
+ }
+@@ -111,12 +111,12 @@ static struct rtnl_link_stats64 *l2tp_eth_get_stats64(struct net_device *dev,
+ {
+ 	struct l2tp_eth *priv = netdev_priv(dev);
+ 
+-	stats->tx_bytes   = atomic_long_read(&priv->tx_bytes);
+-	stats->tx_packets = atomic_long_read(&priv->tx_packets);
+-	stats->tx_dropped = atomic_long_read(&priv->tx_dropped);
+-	stats->rx_bytes   = atomic_long_read(&priv->rx_bytes);
+-	stats->rx_packets = atomic_long_read(&priv->rx_packets);
+-	stats->rx_errors  = atomic_long_read(&priv->rx_errors);
++	stats->tx_bytes   = atomic_long_read_wrap(&priv->tx_bytes);
++	stats->tx_packets = atomic_long_read_wrap(&priv->tx_packets);
++	stats->tx_dropped = atomic_long_read_wrap(&priv->tx_dropped);
++	stats->rx_bytes   = atomic_long_read_wrap(&priv->rx_bytes);
++	stats->rx_packets = atomic_long_read_wrap(&priv->rx_packets);
++	stats->rx_errors  = atomic_long_read_wrap(&priv->rx_errors);
+ 	return stats;
+ }
+ 
+@@ -167,15 +167,15 @@ static void l2tp_eth_dev_recv(struct l2tp_session *session, struct sk_buff *skb,
+ 	nf_reset(skb);
+ 
+ 	if (dev_forward_skb(dev, skb) == NET_RX_SUCCESS) {
+-		atomic_long_inc(&priv->rx_packets);
+-		atomic_long_add(data_len, &priv->rx_bytes);
++		atomic_long_inc_wrap(&priv->rx_packets);
++		atomic_long_add_wrap(data_len, &priv->rx_bytes);
+ 	} else {
+-		atomic_long_inc(&priv->rx_errors);
++		atomic_long_inc_wrap(&priv->rx_errors);
+ 	}
+ 	return;
+ 
+ error:
+-	atomic_long_inc(&priv->rx_errors);
++	atomic_long_inc_wrap(&priv->rx_errors);
+ 	kfree_skb(skb);
+ }
+ 
+diff --git a/net/netfilter/ipvs/ip_vs_conn.c b/net/netfilter/ipvs/ip_vs_conn.c
+index 096a451..8da8794 100644
+--- a/net/netfilter/ipvs/ip_vs_conn.c
++++ b/net/netfilter/ipvs/ip_vs_conn.c
+@@ -591,7 +591,7 @@ ip_vs_bind_dest(struct ip_vs_conn *cp, struct ip_vs_dest *dest)
+ 	/* Increase the refcnt counter of the dest */
+ 	ip_vs_dest_hold(dest);
+ 
+-	conn_flags = atomic_read(&dest->conn_flags);
++	conn_flags = atomic_read_wrap(&dest->conn_flags);
+ 	if (cp->protocol != IPPROTO_UDP)
+ 		conn_flags &= ~IP_VS_CONN_F_ONE_PACKET;
+ 	flags = cp->flags;
+@@ -945,7 +945,7 @@ ip_vs_conn_new(const struct ip_vs_conn_param *p, int dest_af,
+ 
+ 	cp->control = NULL;
+ 	atomic_set(&cp->n_control, 0);
+-	atomic_set(&cp->in_pkts, 0);
++	atomic_set_wrap(&cp->in_pkts, 0);
+ 
+ 	cp->packet_xmit = NULL;
+ 	cp->app = NULL;
+@@ -1252,7 +1252,7 @@ static inline int todrop_entry(struct ip_vs_conn *cp)
+ 
+ 	/* Don't drop the entry if its number of incoming packets is not
+ 	   located in [0, 8] */
+-	i = atomic_read(&cp->in_pkts);
++	i = atomic_read_wrap(&cp->in_pkts);
+ 	if (i > 8 || i < 0) return 0;
+ 
+ 	if (!todrop_rate[i]) return 0;
+diff --git a/net/netfilter/ipvs/ip_vs_core.c b/net/netfilter/ipvs/ip_vs_core.c
+index 2c1b498..a1fdff2 100644
+--- a/net/netfilter/ipvs/ip_vs_core.c
++++ b/net/netfilter/ipvs/ip_vs_core.c
+@@ -613,9 +613,9 @@ int ip_vs_leave(struct ip_vs_service *svc, struct sk_buff *skb,
+ 		/* do not touch skb anymore */
+ 
+ 		if ((cp->flags & IP_VS_CONN_F_ONE_PACKET) && cp->control)
+-			atomic_inc(&cp->control->in_pkts);
++			atomic_inc_wrap(&cp->control->in_pkts);
+ 		else
+-			atomic_inc(&cp->in_pkts);
++			atomic_inc_wrap(&cp->in_pkts);
+ 		ip_vs_conn_put(cp);
+ 		return ret;
+ 	}
+@@ -1991,13 +1991,13 @@ ip_vs_in(struct netns_ipvs *ipvs, unsigned int hooknum, struct sk_buff *skb, int
+ 	if (cp->flags & IP_VS_CONN_F_ONE_PACKET)
+ 		pkts = sysctl_sync_threshold(ipvs);
+ 	else
+-		pkts = atomic_add_return(1, &cp->in_pkts);
++		pkts = atomic_add_return_wrap(1, &cp->in_pkts);
+ 
+ 	if (ipvs->sync_state & IP_VS_STATE_MASTER)
+ 		ip_vs_sync_conn(ipvs, cp, pkts);
+ 	else if ((cp->flags & IP_VS_CONN_F_ONE_PACKET) && cp->control)
+ 		/* increment is done inside ip_vs_sync_conn too */
+-		atomic_inc(&cp->control->in_pkts);
++		atomic_inc_wrap(&cp->control->in_pkts);
+ 
+ 	ip_vs_conn_put(cp);
+ 	return ret;
+diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
+index c3c809b..534e6a1 100644
+--- a/net/netfilter/ipvs/ip_vs_ctl.c
++++ b/net/netfilter/ipvs/ip_vs_ctl.c
+@@ -841,7 +841,7 @@ __ip_vs_update_dest(struct ip_vs_service *svc, struct ip_vs_dest *dest,
+ 		 */
+ 		ip_vs_rs_hash(ipvs, dest);
+ 	}
+-	atomic_set(&dest->conn_flags, conn_flags);
++	atomic_set_wrap(&dest->conn_flags, conn_flags);
+ 
+ 	/* bind the service */
+ 	old_svc = rcu_dereference_protected(dest->svc, 1);
+@@ -2083,7 +2083,8 @@ static int ip_vs_info_seq_show(struct seq_file *seq, void *v)
+ 					   "      %-7s %-6d %-10d %-10d\n",
+ 					   &dest->addr.in6,
+ 					   ntohs(dest->port),
+-					   ip_vs_fwd_name(atomic_read(&dest->conn_flags)),
++					   ip_vs_fwd_name(atomic_read_wrap(
++							   &dest->conn_flags)),
+ 					   atomic_read(&dest->weight),
+ 					   atomic_read(&dest->activeconns),
+ 					   atomic_read(&dest->inactconns));
+@@ -2094,7 +2095,8 @@ static int ip_vs_info_seq_show(struct seq_file *seq, void *v)
+ 					   "%-7s %-6d %-10d %-10d\n",
+ 					   ntohl(dest->addr.ip),
+ 					   ntohs(dest->port),
+-					   ip_vs_fwd_name(atomic_read(&dest->conn_flags)),
++					   ip_vs_fwd_name(atomic_read_wrap(
++							   &dest->conn_flags)),
+ 					   atomic_read(&dest->weight),
+ 					   atomic_read(&dest->activeconns),
+ 					   atomic_read(&dest->inactconns));
+@@ -2603,7 +2605,7 @@ __ip_vs_get_dest_entries(struct netns_ipvs *ipvs, const struct ip_vs_get_dests *
+ 
+ 			entry.addr = dest->addr.ip;
+ 			entry.port = dest->port;
+-			entry.conn_flags = atomic_read(&dest->conn_flags);
++			entry.conn_flags = atomic_read_wrap(&dest->conn_flags);
+ 			entry.weight = atomic_read(&dest->weight);
+ 			entry.u_threshold = dest->u_threshold;
+ 			entry.l_threshold = dest->l_threshold;
+@@ -3196,7 +3198,7 @@ static int ip_vs_genl_fill_dest(struct sk_buff *skb, struct ip_vs_dest *dest)
+ 	if (nla_put(skb, IPVS_DEST_ATTR_ADDR, sizeof(dest->addr), &dest->addr) ||
+ 	    nla_put_be16(skb, IPVS_DEST_ATTR_PORT, dest->port) ||
+ 	    nla_put_u32(skb, IPVS_DEST_ATTR_FWD_METHOD,
+-			(atomic_read(&dest->conn_flags) &
++			(atomic_read_wrap(&dest->conn_flags) &
+ 			 IP_VS_CONN_F_FWD_MASK)) ||
+ 	    nla_put_u32(skb, IPVS_DEST_ATTR_WEIGHT,
+ 			atomic_read(&dest->weight)) ||
+diff --git a/net/netfilter/ipvs/ip_vs_sync.c b/net/netfilter/ipvs/ip_vs_sync.c
+index 1b07578..c469cad 100644
+--- a/net/netfilter/ipvs/ip_vs_sync.c
++++ b/net/netfilter/ipvs/ip_vs_sync.c
+@@ -611,7 +611,7 @@ static void ip_vs_sync_conn_v0(struct netns_ipvs *ipvs, struct ip_vs_conn *cp,
+ 	cp = cp->control;
+ 	if (cp) {
+ 		if (cp->flags & IP_VS_CONN_F_TEMPLATE)
+-			pkts = atomic_add_return(1, &cp->in_pkts);
++			pkts = atomic_add_return_wrap(1, &cp->in_pkts);
+ 		else
+ 			pkts = sysctl_sync_threshold(ipvs);
+ 		ip_vs_sync_conn(ipvs, cp, pkts);
+@@ -772,7 +772,7 @@ void ip_vs_sync_conn(struct netns_ipvs *ipvs, struct ip_vs_conn *cp, int pkts)
+ 	if (!cp)
+ 		return;
+ 	if (cp->flags & IP_VS_CONN_F_TEMPLATE)
+-		pkts = atomic_add_return(1, &cp->in_pkts);
++		pkts = atomic_add_return_wrap(1, &cp->in_pkts);
+ 	else
+ 		pkts = sysctl_sync_threshold(ipvs);
+ 	goto sloop;
+@@ -919,7 +919,7 @@ static void ip_vs_proc_conn(struct netns_ipvs *ipvs, struct ip_vs_conn_param *pa
+ 
+ 	if (opt)
+ 		memcpy(&cp->in_seq, opt, sizeof(*opt));
+-	atomic_set(&cp->in_pkts, sysctl_sync_threshold(ipvs));
++	atomic_set_wrap(&cp->in_pkts, sysctl_sync_threshold(ipvs));
+ 	cp->state = state;
+ 	cp->old_state = cp->state;
+ 	/*
+diff --git a/net/netfilter/ipvs/ip_vs_xmit.c b/net/netfilter/ipvs/ip_vs_xmit.c
+index 01d3d89..91d3157 100644
+--- a/net/netfilter/ipvs/ip_vs_xmit.c
++++ b/net/netfilter/ipvs/ip_vs_xmit.c
+@@ -1255,7 +1255,7 @@ ip_vs_icmp_xmit(struct sk_buff *skb, struct ip_vs_conn *cp,
+ 		else
+ 			rc = NF_ACCEPT;
+ 		/* do not touch skb anymore */
+-		atomic_inc(&cp->in_pkts);
++		atomic_inc_wrap(&cp->in_pkts);
+ 		goto out;
+ 	}
+ 
+@@ -1348,7 +1348,7 @@ ip_vs_icmp_xmit_v6(struct sk_buff *skb, struct ip_vs_conn *cp,
+ 		else
+ 			rc = NF_ACCEPT;
+ 		/* do not touch skb anymore */
+-		atomic_inc(&cp->in_pkts);
++		atomic_inc_wrap(&cp->in_pkts);
+ 		goto out;
+ 	}
+ 
+diff --git a/net/netfilter/nfnetlink_log.c b/net/netfilter/nfnetlink_log.c
+index eb086a1..5d38f7c 100644
+--- a/net/netfilter/nfnetlink_log.c
++++ b/net/netfilter/nfnetlink_log.c
+@@ -85,7 +85,7 @@ static int nfnl_log_net_id __read_mostly;
+ struct nfnl_log_net {
+ 	spinlock_t instances_lock;
+ 	struct hlist_head instance_table[INSTANCE_BUCKETS];
+-	atomic_t global_seq;
++	atomic_wrap_t global_seq;
+ };
+ 
+ static struct nfnl_log_net *nfnl_log_pernet(struct net *net)
+@@ -574,7 +574,7 @@ __build_packet_message(struct nfnl_log_net *log,
+ 	/* global sequence number */
+ 	if ((inst->flags & NFULNL_CFG_F_SEQ_GLOBAL) &&
+ 	    nla_put_be32(inst->skb, NFULA_SEQ_GLOBAL,
+-			 htonl(atomic_inc_return(&log->global_seq))))
++			 htonl(atomic_inc_return_wrap(&log->global_seq))))
+ 		goto nla_put_failure;
+ 
+ 	if (ct && nfnl_ct->build(inst->skb, ct, ctinfo,
+diff --git a/net/netfilter/xt_statistic.c b/net/netfilter/xt_statistic.c
+index 11de55e..03793c1 100644
+--- a/net/netfilter/xt_statistic.c
++++ b/net/netfilter/xt_statistic.c
+@@ -19,7 +19,7 @@
+ #include <linux/module.h>
+ 
+ struct xt_statistic_priv {
+-	atomic_t count;
++	atomic_wrap_t count;
+ } ____cacheline_aligned_in_smp;
+ 
+ MODULE_LICENSE("GPL");
+@@ -42,9 +42,10 @@ statistic_mt(const struct sk_buff *skb, struct xt_action_param *par)
+ 		break;
+ 	case XT_STATISTIC_MODE_NTH:
+ 		do {
+-			oval = atomic_read(&info->master->count);
++			oval = atomic_read_wrap(&info->master->count);
+ 			nval = (oval == info->u.nth.every) ? 0 : oval + 1;
+-		} while (atomic_cmpxchg(&info->master->count, oval, nval) != oval);
++		} while (atomic_cmpxchg_wrap(&info->master->count, oval, nval)
++				!= oval);
+ 		if (nval == 0)
+ 			ret = !ret;
+ 		break;
+@@ -64,7 +65,7 @@ static int statistic_mt_check(const struct xt_mtchk_param *par)
+ 	info->master = kzalloc(sizeof(*info->master), GFP_KERNEL);
+ 	if (info->master == NULL)
+ 		return -ENOMEM;
+-	atomic_set(&info->master->count, info->u.nth.count);
++	atomic_set_wrap(&info->master->count, info->u.nth.count);
+ 
+ 	return 0;
+ }
+diff --git a/net/netlink/af_netlink.c b/net/netlink/af_netlink.c
+index 62bea45..6be0c73 100644
+--- a/net/netlink/af_netlink.c
++++ b/net/netlink/af_netlink.c
+@@ -287,7 +287,7 @@ static void netlink_overrun(struct sock *sk)
+ 			sk->sk_error_report(sk);
+ 		}
+ 	}
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_wrap(&sk->sk_drops);
+ }
+ 
+ static void netlink_rcv_wake(struct sock *sk)
+@@ -2453,7 +2453,7 @@ static int netlink_seq_show(struct seq_file *seq, void *v)
+ 			   sk_wmem_alloc_get(s),
+ 			   nlk->cb_running,
+ 			   atomic_read(&s->sk_refcnt),
+-			   atomic_read(&s->sk_drops),
++			   atomic_read_wrap(&s->sk_drops),
+ 			   sock_i_ino(s)
+ 			);
+ 
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index 11db0d6..c54c6a2 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -279,7 +279,7 @@ static int packet_direct_xmit(struct sk_buff *skb)
+ 
+ 	return ret;
+ drop:
+-	atomic_long_inc(&dev->tx_dropped);
++	atomic_long_inc_wrap(&dev->tx_dropped);
+ 	kfree_skb(skb);
+ 	return NET_XMIT_DROP;
+ }
+@@ -2107,7 +2107,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
+ 	is_drop_n_account = true;
+ 	spin_lock(&sk->sk_receive_queue.lock);
+ 	po->stats.stats1.tp_drops++;
+-	atomic_inc(&sk->sk_drops);
++	atomic_inc_wrap(&sk->sk_drops);
+ 	spin_unlock(&sk->sk_receive_queue.lock);
+ 
+ drop_n_restore:
+diff --git a/net/phonet/pep.c b/net/phonet/pep.c
+index 850a86c..88fda61 100644
+--- a/net/phonet/pep.c
++++ b/net/phonet/pep.c
+@@ -388,7 +388,7 @@ static int pipe_do_rcv(struct sock *sk, struct sk_buff *skb)
+ 
+ 	case PNS_PEP_CTRL_REQ:
+ 		if (skb_queue_len(&pn->ctrlreq_queue) >= PNPIPE_CTRLREQ_MAX) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			break;
+ 		}
+ 		__skb_pull(skb, 4);
+@@ -409,7 +409,7 @@ static int pipe_do_rcv(struct sock *sk, struct sk_buff *skb)
+ 		}
+ 
+ 		if (pn->rx_credits == 0) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			err = -ENOBUFS;
+ 			break;
+ 		}
+@@ -579,7 +579,7 @@ static int pipe_handler_do_rcv(struct sock *sk, struct sk_buff *skb)
+ 		}
+ 
+ 		if (pn->rx_credits == 0) {
+-			atomic_inc(&sk->sk_drops);
++			atomic_inc_wrap(&sk->sk_drops);
+ 			err = NET_RX_DROP;
+ 			break;
+ 		}
+diff --git a/net/phonet/socket.c b/net/phonet/socket.c
+index ffd5f22..1d29fab 100644
+--- a/net/phonet/socket.c
++++ b/net/phonet/socket.c
+@@ -613,7 +613,7 @@ static int pn_sock_seq_show(struct seq_file *seq, void *v)
+ 			from_kuid_munged(seq_user_ns(seq), sock_i_uid(sk)),
+ 			sock_i_ino(sk),
+ 			atomic_read(&sk->sk_refcnt), sk,
+-			atomic_read(&sk->sk_drops));
++			atomic_read_wrap(&sk->sk_drops));
+ 	}
+ 	seq_pad(seq, '\n');
+ 	return 0;
+diff --git a/net/rds/cong.c b/net/rds/cong.c
+index 8398fee..1dcd60a 100644
+--- a/net/rds/cong.c
++++ b/net/rds/cong.c
+@@ -78,7 +78,7 @@
+  * finds that the saved generation number is smaller than the global generation
+  * number, it wakes up the process.
+  */
+-static atomic_t		rds_cong_generation = ATOMIC_INIT(0);
++static atomic_wrap_t		rds_cong_generation = ATOMIC_INIT(0);
+ 
+ /*
+  * Congestion monitoring
+@@ -248,7 +248,7 @@ void rds_cong_map_updated(struct rds_cong_map *map, uint64_t portmask)
+ 	rdsdebug("waking map %p for %pI4\n",
+ 	  map, &map->m_addr);
+ 	rds_stats_inc(s_cong_update_received);
+-	atomic_inc(&rds_cong_generation);
++	atomic_inc_wrap(&rds_cong_generation);
+ 	if (waitqueue_active(&map->m_waitq))
+ 		wake_up(&map->m_waitq);
+ 	if (waitqueue_active(&rds_poll_waitq))
+@@ -274,7 +274,7 @@ EXPORT_SYMBOL_GPL(rds_cong_map_updated);
+ 
+ int rds_cong_updated_since(unsigned long *recent)
+ {
+-	unsigned long gen = atomic_read(&rds_cong_generation);
++	unsigned long gen = atomic_read_wrap(&rds_cong_generation);
+ 
+ 	if (likely(*recent == gen))
+ 		return 0;
+diff --git a/net/rds/ib.h b/net/rds/ib.h
+index 45ac8e8..bddbee2 100644
+--- a/net/rds/ib.h
++++ b/net/rds/ib.h
+@@ -153,7 +153,7 @@ struct rds_ib_connection {
+ 	/* sending acks */
+ 	unsigned long		i_ack_flags;
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_t		i_ack_next;	/* next ACK to send */
++	atomic64_wrap_t		i_ack_next;	/* next ACK to send */
+ #else
+ 	spinlock_t		i_ack_lock;	/* protect i_ack_next */
+ 	u64			i_ack_next;	/* next ACK to send */
+diff --git a/net/rds/ib_cm.c b/net/rds/ib_cm.c
+index 5b2ab95..afad870 100644
+--- a/net/rds/ib_cm.c
++++ b/net/rds/ib_cm.c
+@@ -833,7 +833,7 @@ void rds_ib_conn_path_shutdown(struct rds_conn_path *cp)
+ 	/* Clear the ACK state */
+ 	clear_bit(IB_ACK_IN_FLIGHT, &ic->i_ack_flags);
+ #ifdef KERNEL_HAS_ATOMIC64
+-	atomic64_set(&ic->i_ack_next, 0);
++	atomic64_set_wrap(&ic->i_ack_next, 0);
+ #else
+ 	ic->i_ack_next = 0;
+ #endif
+diff --git a/net/rds/ib_recv.c b/net/rds/ib_recv.c
+index 606a11f..402212a 100644
+--- a/net/rds/ib_recv.c
++++ b/net/rds/ib_recv.c
+@@ -624,7 +624,7 @@ static u64 rds_ib_get_ack(struct rds_ib_connection *ic)
+ #else
+ void rds_ib_set_ack(struct rds_ib_connection *ic, u64 seq, int ack_required)
+ {
+-	atomic64_set(&ic->i_ack_next, seq);
++	atomic64_set_wrap(&ic->i_ack_next, seq);
+ 	if (ack_required) {
+ 		smp_mb__before_atomic();
+ 		set_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+@@ -636,7 +636,7 @@ static u64 rds_ib_get_ack(struct rds_ib_connection *ic)
+ 	clear_bit(IB_ACK_REQUESTED, &ic->i_ack_flags);
+ 	smp_mb__after_atomic();
+ 
+-	return atomic64_read(&ic->i_ack_next);
++	return atomic64_read_wrap(&ic->i_ack_next);
+ }
+ #endif
+ 
+diff --git a/net/rxrpc/af_rxrpc.c b/net/rxrpc/af_rxrpc.c
+index 2d59c9b..1e71e8c 100644
+--- a/net/rxrpc/af_rxrpc.c
++++ b/net/rxrpc/af_rxrpc.c
+@@ -42,7 +42,7 @@ static const struct proto_ops rxrpc_rpc_ops;
+ u32 rxrpc_epoch;
+ 
+ /* current debugging ID */
+-atomic_t rxrpc_debug_id;
++atomic_wrap_t rxrpc_debug_id;
+ 
+ /* count of skbs currently in use */
+ atomic_t rxrpc_n_tx_skbs, rxrpc_n_rx_skbs;
+diff --git a/net/rxrpc/ar-internal.h b/net/rxrpc/ar-internal.h
+index f60e355..1167749 100644
+--- a/net/rxrpc/ar-internal.h
++++ b/net/rxrpc/ar-internal.h
+@@ -379,7 +379,7 @@ struct rxrpc_connection {
+ 	u32			local_abort;	/* local abort code */
+ 	u32			remote_abort;	/* remote abort code */
+ 	int			debug_id;	/* debug ID for printks */
+-	atomic_t		serial;		/* packet serial number counter */
++	atomic_wrap_t		serial;		/* packet serial number counter */
+ 	unsigned int		hi_serial;	/* highest serial number received */
+ 	u32			security_nonce;	/* response re-use preventer */
+ 	u8			size_align;	/* data size alignment (for security) */
+@@ -794,7 +794,7 @@ extern const char rxrpc_ack_names[RXRPC_ACK__INVALID + 1][4];
+  */
+ extern atomic_t rxrpc_n_tx_skbs, rxrpc_n_rx_skbs;
+ extern u32 rxrpc_epoch;
+-extern atomic_t rxrpc_debug_id;
++extern atomic_wrap_t rxrpc_debug_id;
+ extern struct workqueue_struct *rxrpc_workqueue;
+ 
+ /*
+diff --git a/net/rxrpc/call_object.c b/net/rxrpc/call_object.c
+index 4353a29..3a0573d 100644
+--- a/net/rxrpc/call_object.c
++++ b/net/rxrpc/call_object.c
+@@ -145,7 +145,7 @@ struct rxrpc_call *rxrpc_alloc_call(gfp_t gfp)
+ 	spin_lock_init(&call->lock);
+ 	rwlock_init(&call->state_lock);
+ 	atomic_set(&call->usage, 1);
+-	call->debug_id = atomic_inc_return(&rxrpc_debug_id);
++	call->debug_id = atomic_inc_return_wrap(&rxrpc_debug_id);
+ 
+ 	memset(&call->sock_node, 0xed, sizeof(call->sock_node));
+ 
+diff --git a/net/rxrpc/conn_event.c b/net/rxrpc/conn_event.c
+index 3f9d8d7..53bc973 100644
+--- a/net/rxrpc/conn_event.c
++++ b/net/rxrpc/conn_event.c
+@@ -112,7 +112,7 @@ static void rxrpc_conn_retransmit_call(struct rxrpc_connection *conn,
+ 	iov.iov_base	= &pkt;
+ 	iov.iov_len	= len;
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	pkt.whdr.serial = htonl(serial);
+ 
+ 	switch (chan->last_type) {
+@@ -219,7 +219,7 @@ static int rxrpc_abort_connection(struct rxrpc_connection *conn,
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len;
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	whdr.serial = htonl(serial);
+ 	_proto("Tx CONN ABORT %%%u { %d }", serial, conn->local_abort);
+ 
+diff --git a/net/rxrpc/conn_object.c b/net/rxrpc/conn_object.c
+index e1e83af..728d25f 100644
+--- a/net/rxrpc/conn_object.c
++++ b/net/rxrpc/conn_object.c
+@@ -51,7 +51,7 @@ struct rxrpc_connection *rxrpc_alloc_connection(gfp_t gfp)
+ 		skb_queue_head_init(&conn->rx_queue);
+ 		conn->security = &rxrpc_no_security;
+ 		spin_lock_init(&conn->state_lock);
+-		conn->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		conn->debug_id = atomic_inc_return_wrap(&rxrpc_debug_id);
+ 		conn->size_align = 4;
+ 		conn->idle_timestamp = jiffies;
+ 	}
+diff --git a/net/rxrpc/local_object.c b/net/rxrpc/local_object.c
+index ff4864d..49556dc 100644
+--- a/net/rxrpc/local_object.c
++++ b/net/rxrpc/local_object.c
+@@ -93,7 +93,7 @@ static struct rxrpc_local *rxrpc_alloc_local(const struct sockaddr_rxrpc *srx)
+ 		spin_lock_init(&local->client_conns_lock);
+ 		spin_lock_init(&local->lock);
+ 		rwlock_init(&local->services_lock);
+-		local->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		local->debug_id = atomic_inc_return_wrap(&rxrpc_debug_id);
+ 		memcpy(&local->srx, srx, sizeof(*srx));
+ 	}
+ 
+diff --git a/net/rxrpc/output.c b/net/rxrpc/output.c
+index 5dab1ff..77481b9 100644
+--- a/net/rxrpc/output.c
++++ b/net/rxrpc/output.c
+@@ -158,7 +158,7 @@ int rxrpc_send_ack_packet(struct rxrpc_call *call, bool ping)
+ 	iov[1].iov_len	= sizeof(pkt->ackinfo);
+ 	len = iov[0].iov_len + iov[1].iov_len;
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	pkt->whdr.serial = htonl(serial);
+ 	trace_rxrpc_tx_ack(call, serial,
+ 			   ntohl(pkt->ack.firstPacket),
+@@ -249,7 +249,7 @@ int rxrpc_send_abort_packet(struct rxrpc_call *call)
+ 	iov[0].iov_base	= &pkt;
+ 	iov[0].iov_len	= sizeof(pkt);
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	pkt.whdr.serial = htonl(serial);
+ 
+ 	ret = kernel_sendmsg(conn->params.local->socket,
+@@ -278,7 +278,7 @@ int rxrpc_send_data_packet(struct rxrpc_call *call, struct sk_buff *skb,
+ 	_enter(",{%d}", skb->len);
+ 
+ 	/* Each transmission of a Tx packet needs a new serial number */
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 
+ 	whdr.epoch	= htonl(conn->proto.epoch);
+ 	whdr.cid	= htonl(call->cid);
+diff --git a/net/rxrpc/peer_object.c b/net/rxrpc/peer_object.c
+index 941b724..58cee86 100644
+--- a/net/rxrpc/peer_object.c
++++ b/net/rxrpc/peer_object.c
+@@ -229,7 +229,7 @@ struct rxrpc_peer *rxrpc_alloc_peer(struct rxrpc_local *local, gfp_t gfp)
+ 		peer->service_conns = RB_ROOT;
+ 		seqlock_init(&peer->service_conn_lock);
+ 		spin_lock_init(&peer->lock);
+-		peer->debug_id = atomic_inc_return(&rxrpc_debug_id);
++		peer->debug_id = atomic_inc_return_wrap(&rxrpc_debug_id);
+ 	}
+ 
+ 	_leave(" = %p", peer);
+diff --git a/net/rxrpc/proc.c b/net/rxrpc/proc.c
+index 65cd980..72e34c3 100644
+--- a/net/rxrpc/proc.c
++++ b/net/rxrpc/proc.c
+@@ -176,7 +176,7 @@ static int rxrpc_connection_seq_show(struct seq_file *seq, void *v)
+ 		   atomic_read(&conn->usage),
+ 		   rxrpc_conn_states[conn->state],
+ 		   key_serial(conn->params.key),
+-		   atomic_read(&conn->serial),
++		   atomic_read_wrap(&conn->serial),
+ 		   conn->hi_serial);
+ 
+ 	return 0;
+diff --git a/net/rxrpc/rxkad.c b/net/rxrpc/rxkad.c
+index 4374e7b..6b28698 100644
+--- a/net/rxrpc/rxkad.c
++++ b/net/rxrpc/rxkad.c
+@@ -636,7 +636,7 @@ static int rxkad_issue_challenge(struct rxrpc_connection *conn)
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len;
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	whdr.serial = htonl(serial);
+ 	_proto("Tx CHALLENGE %%%u", serial);
+ 
+@@ -690,7 +690,7 @@ static int rxkad_send_response(struct rxrpc_connection *conn,
+ 
+ 	len = iov[0].iov_len + iov[1].iov_len + iov[2].iov_len;
+ 
+-	serial = atomic_inc_return(&conn->serial);
++	serial = atomic_inc_return_wrap(&conn->serial);
+ 	whdr.serial = htonl(serial);
+ 	_proto("Tx RESPONSE %%%u", serial);
+ 
+diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
+index 6cfb6e9..0977283 100644
+--- a/net/sched/sch_generic.c
++++ b/net/sched/sch_generic.c
+@@ -362,7 +362,7 @@ void netif_carrier_on(struct net_device *dev)
+ 	if (test_and_clear_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
+ 		if (dev->reg_state == NETREG_UNINITIALIZED)
+ 			return;
+-		atomic_inc(&dev->carrier_changes);
++		atomic_inc_wrap(&dev->carrier_changes);
+ 		linkwatch_fire_event(dev);
+ 		if (netif_running(dev))
+ 			__netdev_watchdog_up(dev);
+@@ -381,7 +381,7 @@ void netif_carrier_off(struct net_device *dev)
+ 	if (!test_and_set_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
+ 		if (dev->reg_state == NETREG_UNINITIALIZED)
+ 			return;
+-		atomic_inc(&dev->carrier_changes);
++		atomic_inc_wrap(&dev->carrier_changes);
+ 		linkwatch_fire_event(dev);
+ 	}
+ }
+diff --git a/net/sctp/sctp_diag.c b/net/sctp/sctp_diag.c
+index 048954e..2c61be1 100644
+--- a/net/sctp/sctp_diag.c
++++ b/net/sctp/sctp_diag.c
+@@ -157,7 +157,7 @@ static int inet_sctp_diag_fill(struct sock *sk, struct sctp_association *asoc,
+ 		mem[SK_MEMINFO_WMEM_QUEUED] = sk->sk_wmem_queued;
+ 		mem[SK_MEMINFO_OPTMEM] = atomic_read(&sk->sk_omem_alloc);
+ 		mem[SK_MEMINFO_BACKLOG] = sk->sk_backlog.len;
+-		mem[SK_MEMINFO_DROPS] = atomic_read(&sk->sk_drops);
++		mem[SK_MEMINFO_DROPS] = atomic_read_wrap(&sk->sk_drops);
+ 
+ 		if (nla_put(skb, INET_DIAG_SKMEMINFO, sizeof(mem), &mem) < 0)
+ 			goto errout;
+diff --git a/net/sunrpc/auth_gss/svcauth_gss.c b/net/sunrpc/auth_gss/svcauth_gss.c
+index d67f7e1..a2f90b0 100644
+--- a/net/sunrpc/auth_gss/svcauth_gss.c
++++ b/net/sunrpc/auth_gss/svcauth_gss.c
+@@ -1142,7 +1142,7 @@ static int gss_proxy_save_rsc(struct cache_detail *cd,
+ 				uint64_t *handle)
+ {
+ 	struct rsc rsci, *rscp = NULL;
+-	static atomic64_t ctxhctr;
++	static atomic64_wrap_t ctxhctr = ATOMIC64_INIT(0);
+ 	long long ctxh;
+ 	struct gss_api_mech *gm = NULL;
+ 	time_t expiry;
+@@ -1153,7 +1153,7 @@ static int gss_proxy_save_rsc(struct cache_detail *cd,
+ 	status = -ENOMEM;
+ 	/* the handle needs to be just a unique id,
+ 	 * use a static counter */
+-	ctxh = atomic64_inc_return(&ctxhctr);
++	ctxh = atomic64_inc_return_wrap(&ctxhctr);
+ 
+ 	/* make a copy for the caller */
+ 	*handle = ctxh;
+diff --git a/net/sunrpc/sched.c b/net/sunrpc/sched.c
+index 5db68b3..3dc6567 100644
+--- a/net/sunrpc/sched.c
++++ b/net/sunrpc/sched.c
+@@ -262,9 +262,9 @@ static int rpc_wait_bit_killable(struct wait_bit_key *key, int mode)
+ #if IS_ENABLED(CONFIG_SUNRPC_DEBUG) || IS_ENABLED(CONFIG_TRACEPOINTS)
+ static void rpc_task_set_debuginfo(struct rpc_task *task)
+ {
+-	static atomic_t rpc_pid;
++	static atomic_wrap_t rpc_pid;
+ 
+-	task->tk_pid = atomic_inc_return(&rpc_pid);
++	task->tk_pid = atomic_inc_return_wrap(&rpc_pid);
+ }
+ #else
+ static inline void rpc_task_set_debuginfo(struct rpc_task *task)
+diff --git a/net/sunrpc/xprtrdma/svc_rdma.c b/net/sunrpc/xprtrdma/svc_rdma.c
+index c846ca9..211919a 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma.c
++++ b/net/sunrpc/xprtrdma/svc_rdma.c
+@@ -62,15 +62,15 @@ unsigned int svcrdma_max_req_size = RPCRDMA_MAX_REQ_SIZE;
+ static unsigned int min_max_inline = 4096;
+ static unsigned int max_max_inline = 65536;
+ 
+-atomic_t rdma_stat_recv;
+-atomic_t rdma_stat_read;
+-atomic_t rdma_stat_write;
+-atomic_t rdma_stat_sq_starve;
+-atomic_t rdma_stat_rq_starve;
+-atomic_t rdma_stat_rq_poll;
+-atomic_t rdma_stat_rq_prod;
+-atomic_t rdma_stat_sq_poll;
+-atomic_t rdma_stat_sq_prod;
++atomic_wrap_t rdma_stat_recv;
++atomic_wrap_t rdma_stat_read;
++atomic_wrap_t rdma_stat_write;
++atomic_wrap_t rdma_stat_sq_starve;
++atomic_wrap_t rdma_stat_rq_starve;
++atomic_wrap_t rdma_stat_rq_poll;
++atomic_wrap_t rdma_stat_rq_prod;
++atomic_wrap_t rdma_stat_sq_poll;
++atomic_wrap_t rdma_stat_sq_prod;
+ 
+ struct workqueue_struct *svc_rdma_wq;
+ 
+@@ -147,63 +147,63 @@ static struct ctl_table svcrdma_parm_table[] = {
+ 	{
+ 		.procname	= "rdma_stat_read",
+ 		.data		= &rdma_stat_read,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_recv",
+ 		.data		= &rdma_stat_recv,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_write",
+ 		.data		= &rdma_stat_write,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_starve",
+ 		.data		= &rdma_stat_sq_starve,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_starve",
+ 		.data		= &rdma_stat_rq_starve,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_poll",
+ 		.data		= &rdma_stat_rq_poll,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_rq_prod",
+ 		.data		= &rdma_stat_rq_prod,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_poll",
+ 		.data		= &rdma_stat_sq_poll,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+ 	{
+ 		.procname	= "rdma_stat_sq_prod",
+ 		.data		= &rdma_stat_sq_prod,
+-		.maxlen		= sizeof(atomic_t),
++		.maxlen		= sizeof(atomic_wrap_t),
+ 		.mode		= 0644,
+ 		.proc_handler	= read_reset_stat,
+ 	},
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c b/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
+index ad1df97..cfba859 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_recvfrom.c
+@@ -200,7 +200,7 @@ int rdma_read_chunk_lcl(struct svcxprt_rdma *xprt,
+ 	*page_no = pg_no;
+ 	*page_offset = pg_off;
+ 	ret = read;
+-	atomic_inc(&rdma_stat_read);
++	atomic_inc_wrap(&rdma_stat_read);
+ 	return ret;
+  err:
+ 	svc_rdma_unmap_dma(ctxt);
+@@ -345,7 +345,7 @@ int rdma_read_chunk_frmr(struct svcxprt_rdma *xprt,
+ 	*page_no = pg_no;
+ 	*page_offset = pg_off;
+ 	ret = read;
+-	atomic_inc(&rdma_stat_read);
++	atomic_inc_wrap(&rdma_stat_read);
+ 	return ret;
+  err:
+ 	ib_dma_unmap_sg(xprt->sc_cm_id->device,
+@@ -612,7 +612,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
+ 				  dto_q);
+ 		list_del_init(&ctxt->dto_q);
+ 	} else {
+-		atomic_inc(&rdma_stat_rq_starve);
++		atomic_inc_wrap(&rdma_stat_rq_starve);
+ 		clear_bit(XPT_DATA, &xprt->xpt_flags);
+ 		ctxt = NULL;
+ 	}
+@@ -629,7 +629,7 @@ int svc_rdma_recvfrom(struct svc_rqst *rqstp)
+ 	}
+ 	dprintk("svcrdma: processing ctxt=%p on xprt=%p, rqstp=%p, status=%d\n",
+ 		ctxt, rdma_xprt, rqstp, ctxt->wc_status);
+-	atomic_inc(&rdma_stat_recv);
++	atomic_inc_wrap(&rdma_stat_recv);
+ 
+ 	/* Build up the XDR from the receive buffers. */
+ 	rdma_build_arg_xdr(rqstp, ctxt, ctxt->byte_len);
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_sendto.c b/net/sunrpc/xprtrdma/svc_rdma_sendto.c
+index f5a91ed..4612251 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_sendto.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_sendto.c
+@@ -349,7 +349,7 @@ static int send_write(struct svcxprt_rdma *xprt, struct svc_rqst *rqstp,
+ 	write_wr.remote_addr = to;
+ 
+ 	/* Post It */
+-	atomic_inc(&rdma_stat_write);
++	atomic_inc_wrap(&rdma_stat_write);
+ 	if (svc_rdma_send(xprt, &write_wr.wr))
+ 		goto err;
+ 	return write_len - bc;
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_transport.c b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+index 6864fb9..7457aae 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_transport.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+@@ -1336,7 +1336,7 @@ int svc_rdma_send(struct svcxprt_rdma *xprt, struct ib_send_wr *wr)
+ 		spin_lock_bh(&xprt->sc_lock);
+ 		if (xprt->sc_sq_depth < atomic_read(&xprt->sc_sq_count) + wr_count) {
+ 			spin_unlock_bh(&xprt->sc_lock);
+-			atomic_inc(&rdma_stat_sq_starve);
++			atomic_inc_wrap(&rdma_stat_sq_starve);
+ 
+ 			/* Wait until SQ WR available if SQ still full */
+ 			wait_event(xprt->sc_send_wait,
+diff --git a/net/xfrm/xfrm_policy.c b/net/xfrm/xfrm_policy.c
+index fd69866..c8d30df 100644
+--- a/net/xfrm/xfrm_policy.c
++++ b/net/xfrm/xfrm_policy.c
+@@ -338,7 +338,7 @@ static void xfrm_policy_kill(struct xfrm_policy *policy)
+ {
+ 	policy->walk.dead = 1;
+ 
+-	atomic_inc(&policy->genid);
++	atomic_inc_wrap(&policy->genid);
+ 
+ 	if (del_timer(&policy->polq.hold_timer))
+ 		xfrm_pol_put(policy);
+@@ -803,7 +803,7 @@ int xfrm_policy_insert(int dir, struct xfrm_policy *policy, int excl)
+ 	else
+ 		hlist_add_head(&policy->bydst, chain);
+ 	__xfrm_policy_link(policy, dir);
+-	atomic_inc(&net->xfrm.flow_cache_genid);
++	atomic_inc_wrap(&net->xfrm.flow_cache_genid);
+ 
+ 	/* After previous checking, family can either be AF_INET or AF_INET6 */
+ 	if (policy->family == AF_INET)
+@@ -1926,7 +1926,7 @@ xfrm_resolve_and_create_bundle(struct xfrm_policy **pols, int num_pols,
+ 
+ 	xdst->num_pols = num_pols;
+ 	memcpy(xdst->pols, pols, sizeof(struct xfrm_policy *) * num_pols);
+-	xdst->policy_genid = atomic_read(&pols[0]->genid);
++	xdst->policy_genid = atomic_read_wrap(&pols[0]->genid);
+ 
+ 	return xdst;
+ }
+@@ -2793,7 +2793,8 @@ static int xfrm_bundle_ok(struct xfrm_dst *first)
+ 		if (xdst->xfrm_genid != dst->xfrm->genid)
+ 			return 0;
+ 		if (xdst->num_pols > 0 &&
+-		    xdst->policy_genid != atomic_read(&xdst->pols[0]->genid))
++		    xdst->policy_genid !=
++				atomic_read_wrap(&xdst->pols[0]->genid))
+ 			return 0;
+ 
+ 		mtu = dst_mtu(dst->child);
+@@ -3297,7 +3298,7 @@ static int xfrm_policy_migrate(struct xfrm_policy *pol,
+ 			       sizeof(pol->xfrm_vec[i].saddr));
+ 			pol->xfrm_vec[i].encap_family = mp->new_family;
+ 			/* flush bundles */
+-			atomic_inc(&pol->genid);
++			atomic_inc_wrap(&pol->genid);
+ 		}
+ 	}
+ 
+diff --git a/net/xfrm/xfrm_state.c b/net/xfrm/xfrm_state.c
+index 419bf5d..46d5ef2 100644
+--- a/net/xfrm/xfrm_state.c
++++ b/net/xfrm/xfrm_state.c
+@@ -1543,10 +1543,10 @@ EXPORT_SYMBOL(xfrm_find_acq_byseq);
+ u32 xfrm_get_acqseq(void)
+ {
+ 	u32 res;
+-	static atomic_t acqseq;
++	static atomic_wrap_t acqseq;
+ 
+ 	do {
+-		res = atomic_inc_return(&acqseq);
++		res = atomic_inc_return_wrap(&acqseq);
+ 	} while (!res);
+ 
+ 	return res;
+diff --git a/security/selinux/include/xfrm.h b/security/selinux/include/xfrm.h
+index 1450f85..056dfe8 100644
+--- a/security/selinux/include/xfrm.h
++++ b/security/selinux/include/xfrm.h
+@@ -48,7 +48,7 @@ static inline void selinux_xfrm_notify_policyload(void)
+ 
+ 	rtnl_lock();
+ 	for_each_net(net) {
+-		atomic_inc(&net->xfrm.flow_cache_genid);
++		atomic_inc_wrap(&net->xfrm.flow_cache_genid);
+ 		rt_genid_bump_all(net);
+ 	}
+ 	rtnl_unlock();
 -- 
 2.7.4
