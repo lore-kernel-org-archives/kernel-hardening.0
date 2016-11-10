@@ -1,560 +1,527 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161104144534.14790-2-juerg.haefliger@hpe.com>
-References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-1-juerg.haefliger@hpe.com> <20161104144534.14790-2-juerg.haefliger@hpe.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 10 Nov 2016 11:24:46 -0800
-Message-ID: <CAGXu5jKvWZ6=YLkFkA2wEE0gTdESTEifeL5KVXUd+EjKjJm9WQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership (XPFO)
-To: Juerg Haefliger <juerg.haefliger@hpe.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
+From: Elena Reshetova <elena.reshetova@intel.com>
+Date: Thu, 10 Nov 2016 22:24:35 +0200
+Message-Id: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] [RFC v4 PATCH 00/13] HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 4, 2016 at 7:45 AM, Juerg Haefliger <juerg.haefliger@hpe.com> wrote:
-> This patch adds support for XPFO which protects against 'ret2dir' kernel
-> attacks. The basic idea is to enforce exclusive ownership of page frames
-> by either the kernel or userspace, unless explicitly requested by the
-> kernel. Whenever a page destined for userspace is allocated, it is
-> unmapped from physmap (the kernel's page table). When such a page is
-> reclaimed from userspace, it is mapped back to physmap.
->
-> Additional fields in the page_ext struct are used for XPFO housekeeping.
-> Specifically two flags to distinguish user vs. kernel pages and to tag
-> unmapped pages and a reference counter to balance kmap/kunmap operations
-> and a lock to serialize access to the XPFO fields.
->
-> Known issues/limitations:
->   - Only supports x86-64 (for now)
->   - Only supports 4k pages (for now)
->   - There are most likely some legitimate uses cases where the kernel needs
->     to access userspace which need to be made XPFO-aware
->   - Performance penalty
->
-> Reference paper by the original patch authors:
->   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
+Changes since RFC v3:
 
-Would it be possible to create an lkdtm test that can exercise this protection?
+ - function naming is alligned for all cases to end with *_wrap
+ - small fixes and corrections based on feedback
+ - atomic_wrap_t, atomic64_wrap_t and atomic_long_wrap_t are
+   now defined using distint struct definitions to catch
+   possible type mistakes
+ - atomic_*_wrap(), atomic64_*_wrap(), atomic_long_*_wrap()
+   functions are also defined using these distint types
+ - Logic of function and types definition is simplified:
+   regardless if the hardening enabled or not, if an architecture
+   implements wrap functions, they should be used instead of
+   any arch. independent versions. 
 
-> Suggested-by: Vasileios P. Kemerlis <vpk@cs.columbia.edu>
-> Signed-off-by: Juerg Haefliger <juerg.haefliger@hpe.com>
-> ---
->  arch/x86/Kconfig         |   3 +-
->  arch/x86/mm/init.c       |   2 +-
->  drivers/ata/libata-sff.c |   4 +-
->  include/linux/highmem.h  |  15 +++-
->  include/linux/page_ext.h |   7 ++
->  include/linux/xpfo.h     |  39 +++++++++
->  lib/swiotlb.c            |   3 +-
->  mm/Makefile              |   1 +
->  mm/page_alloc.c          |   2 +
->  mm/page_ext.c            |   4 +
->  mm/xpfo.c                | 206 +++++++++++++++++++++++++++++++++++++++++++++++
->  security/Kconfig         |  19 +++++
->  12 files changed, 298 insertions(+), 7 deletions(-)
->  create mode 100644 include/linux/xpfo.h
->  create mode 100644 mm/xpfo.c
->
-> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-> index bada636d1065..38b334f8fde5 100644
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -165,6 +165,7 @@ config X86
->         select HAVE_STACK_VALIDATION            if X86_64
->         select ARCH_USES_HIGH_VMA_FLAGS         if X86_INTEL_MEMORY_PROTECTION_KEYS
->         select ARCH_HAS_PKEYS                   if X86_INTEL_MEMORY_PROTECTION_KEYS
-> +       select ARCH_SUPPORTS_XPFO               if X86_64
->
->  config INSTRUCTION_DECODER
->         def_bool y
-> @@ -1361,7 +1362,7 @@ config ARCH_DMA_ADDR_T_64BIT
->
->  config X86_DIRECT_GBPAGES
->         def_bool y
-> -       depends on X86_64 && !DEBUG_PAGEALLOC && !KMEMCHECK
-> +       depends on X86_64 && !DEBUG_PAGEALLOC && !KMEMCHECK && !XPFO
->         ---help---
->           Certain kernel features effectively disable kernel
->           linear 1 GB mappings (even if the CPU otherwise
-> diff --git a/arch/x86/mm/init.c b/arch/x86/mm/init.c
-> index 22af912d66d2..a6fafbae02bb 100644
-> --- a/arch/x86/mm/init.c
-> +++ b/arch/x86/mm/init.c
-> @@ -161,7 +161,7 @@ static int page_size_mask;
->
->  static void __init probe_page_size_mask(void)
->  {
-> -#if !defined(CONFIG_KMEMCHECK)
-> +#if !defined(CONFIG_KMEMCHECK) && !defined(CONFIG_XPFO)
->         /*
->          * For CONFIG_KMEMCHECK or pagealloc debugging, identity mapping will
->          * use small pages.
-> diff --git a/drivers/ata/libata-sff.c b/drivers/ata/libata-sff.c
-> index 051b6158d1b7..58af734be25d 100644
-> --- a/drivers/ata/libata-sff.c
-> +++ b/drivers/ata/libata-sff.c
-> @@ -715,7 +715,7 @@ static void ata_pio_sector(struct ata_queued_cmd *qc)
->
->         DPRINTK("data %s\n", qc->tf.flags & ATA_TFLAG_WRITE ? "write" : "read");
->
-> -       if (PageHighMem(page)) {
-> +       if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
->                 unsigned long flags;
->
->                 /* FIXME: use a bounce buffer */
-> @@ -860,7 +860,7 @@ static int __atapi_pio_bytes(struct ata_queued_cmd *qc, unsigned int bytes)
->
->         DPRINTK("data %s\n", qc->tf.flags & ATA_TFLAG_WRITE ? "write" : "read");
->
-> -       if (PageHighMem(page)) {
-> +       if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
->                 unsigned long flags;
->
->                 /* FIXME: use bounce buffer */
-> diff --git a/include/linux/highmem.h b/include/linux/highmem.h
-> index bb3f3297062a..7a17c166532f 100644
-> --- a/include/linux/highmem.h
-> +++ b/include/linux/highmem.h
-> @@ -7,6 +7,7 @@
->  #include <linux/mm.h>
->  #include <linux/uaccess.h>
->  #include <linux/hardirq.h>
-> +#include <linux/xpfo.h>
->
->  #include <asm/cacheflush.h>
->
-> @@ -55,24 +56,34 @@ static inline struct page *kmap_to_page(void *addr)
->  #ifndef ARCH_HAS_KMAP
->  static inline void *kmap(struct page *page)
->  {
-> +       void *kaddr;
-> +
->         might_sleep();
-> -       return page_address(page);
-> +       kaddr = page_address(page);
-> +       xpfo_kmap(kaddr, page);
-> +       return kaddr;
->  }
->
->  static inline void kunmap(struct page *page)
->  {
-> +       xpfo_kunmap(page_address(page), page);
->  }
->
->  static inline void *kmap_atomic(struct page *page)
->  {
-> +       void *kaddr;
-> +
->         preempt_disable();
->         pagefault_disable();
-> -       return page_address(page);
-> +       kaddr = page_address(page);
-> +       xpfo_kmap(kaddr, page);
-> +       return kaddr;
->  }
->  #define kmap_atomic_prot(page, prot)   kmap_atomic(page)
->
->  static inline void __kunmap_atomic(void *addr)
->  {
-> +       xpfo_kunmap(addr, virt_to_page(addr));
->         pagefault_enable();
->         preempt_enable();
->  }
-> diff --git a/include/linux/page_ext.h b/include/linux/page_ext.h
-> index 9298c393ddaa..0e451a42e5a3 100644
-> --- a/include/linux/page_ext.h
-> +++ b/include/linux/page_ext.h
-> @@ -29,6 +29,8 @@ enum page_ext_flags {
->         PAGE_EXT_DEBUG_POISON,          /* Page is poisoned */
->         PAGE_EXT_DEBUG_GUARD,
->         PAGE_EXT_OWNER,
-> +       PAGE_EXT_XPFO_KERNEL,           /* Page is a kernel page */
-> +       PAGE_EXT_XPFO_UNMAPPED,         /* Page is unmapped */
->  #if defined(CONFIG_IDLE_PAGE_TRACKING) && !defined(CONFIG_64BIT)
->         PAGE_EXT_YOUNG,
->         PAGE_EXT_IDLE,
-> @@ -44,6 +46,11 @@ enum page_ext_flags {
->   */
->  struct page_ext {
->         unsigned long flags;
-> +#ifdef CONFIG_XPFO
-> +       int inited;             /* Map counter and lock initialized */
-> +       atomic_t mapcount;      /* Counter for balancing map/unmap requests */
-> +       spinlock_t maplock;     /* Lock to serialize map/unmap requests */
-> +#endif
->  };
->
->  extern void pgdat_page_ext_init(struct pglist_data *pgdat);
-> diff --git a/include/linux/xpfo.h b/include/linux/xpfo.h
-> new file mode 100644
-> index 000000000000..77187578ca33
-> --- /dev/null
-> +++ b/include/linux/xpfo.h
-> @@ -0,0 +1,39 @@
-> +/*
-> + * Copyright (C) 2016 Hewlett Packard Enterprise Development, L.P.
-> + * Copyright (C) 2016 Brown University. All rights reserved.
-> + *
-> + * Authors:
-> + *   Juerg Haefliger <juerg.haefliger@hpe.com>
-> + *   Vasileios P. Kemerlis <vpk@cs.brown.edu>
-> + *
-> + * This program is free software; you can redistribute it and/or modify it
-> + * under the terms of the GNU General Public License version 2 as published by
-> + * the Free Software Foundation.
-> + */
-> +
-> +#ifndef _LINUX_XPFO_H
-> +#define _LINUX_XPFO_H
-> +
-> +#ifdef CONFIG_XPFO
-> +
-> +extern struct page_ext_operations page_xpfo_ops;
-> +
-> +extern void xpfo_kmap(void *kaddr, struct page *page);
-> +extern void xpfo_kunmap(void *kaddr, struct page *page);
-> +extern void xpfo_alloc_page(struct page *page, int order, gfp_t gfp);
-> +extern void xpfo_free_page(struct page *page, int order);
-> +
-> +extern bool xpfo_page_is_unmapped(struct page *page);
-> +
-> +#else /* !CONFIG_XPFO */
-> +
-> +static inline void xpfo_kmap(void *kaddr, struct page *page) { }
-> +static inline void xpfo_kunmap(void *kaddr, struct page *page) { }
-> +static inline void xpfo_alloc_page(struct page *page, int order, gfp_t gfp) { }
-> +static inline void xpfo_free_page(struct page *page, int order) { }
-> +
-> +static inline bool xpfo_page_is_unmapped(struct page *page) { return false; }
-> +
-> +#endif /* CONFIG_XPFO */
-> +
-> +#endif /* _LINUX_XPFO_H */
-> diff --git a/lib/swiotlb.c b/lib/swiotlb.c
-> index 22e13a0e19d7..455eff44604e 100644
-> --- a/lib/swiotlb.c
-> +++ b/lib/swiotlb.c
-> @@ -390,8 +390,9 @@ static void swiotlb_bounce(phys_addr_t orig_addr, phys_addr_t tlb_addr,
->  {
->         unsigned long pfn = PFN_DOWN(orig_addr);
->         unsigned char *vaddr = phys_to_virt(tlb_addr);
-> +       struct page *page = pfn_to_page(pfn);
->
-> -       if (PageHighMem(pfn_to_page(pfn))) {
-> +       if (PageHighMem(page) || xpfo_page_is_unmapped(page)) {
->                 /* The buffer does not have a mapping.  Map it in and copy */
->                 unsigned int offset = orig_addr & ~PAGE_MASK;
->                 char *buffer;
-> diff --git a/mm/Makefile b/mm/Makefile
-> index 295bd7a9f76b..175680f516aa 100644
-> --- a/mm/Makefile
-> +++ b/mm/Makefile
-> @@ -100,3 +100,4 @@ obj-$(CONFIG_IDLE_PAGE_TRACKING) += page_idle.o
->  obj-$(CONFIG_FRAME_VECTOR) += frame_vector.o
->  obj-$(CONFIG_DEBUG_PAGE_REF) += debug_page_ref.o
->  obj-$(CONFIG_HARDENED_USERCOPY) += usercopy.o
-> +obj-$(CONFIG_XPFO) += xpfo.o
-> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-> index 8fd42aa7c4bd..100e80e008e2 100644
-> --- a/mm/page_alloc.c
-> +++ b/mm/page_alloc.c
-> @@ -1045,6 +1045,7 @@ static __always_inline bool free_pages_prepare(struct page *page,
->         kernel_poison_pages(page, 1 << order, 0);
->         kernel_map_pages(page, 1 << order, 0);
->         kasan_free_pages(page, order);
-> +       xpfo_free_page(page, order);
->
->         return true;
->  }
-> @@ -1745,6 +1746,7 @@ inline void post_alloc_hook(struct page *page, unsigned int order,
->         kernel_map_pages(page, 1 << order, 1);
->         kernel_poison_pages(page, 1 << order, 1);
->         kasan_alloc_pages(page, order);
-> +       xpfo_alloc_page(page, order, gfp_flags);
->         set_page_owner(page, order, gfp_flags);
->  }
->
-> diff --git a/mm/page_ext.c b/mm/page_ext.c
-> index 121dcffc4ec1..ba6dbcacc2db 100644
-> --- a/mm/page_ext.c
-> +++ b/mm/page_ext.c
-> @@ -7,6 +7,7 @@
->  #include <linux/kmemleak.h>
->  #include <linux/page_owner.h>
->  #include <linux/page_idle.h>
-> +#include <linux/xpfo.h>
->
->  /*
->   * struct page extension
-> @@ -68,6 +69,9 @@ static struct page_ext_operations *page_ext_ops[] = {
->  #if defined(CONFIG_IDLE_PAGE_TRACKING) && !defined(CONFIG_64BIT)
->         &page_idle_ops,
->  #endif
-> +#ifdef CONFIG_XPFO
-> +       &page_xpfo_ops,
-> +#endif
->  };
->
->  static unsigned long total_usage;
-> diff --git a/mm/xpfo.c b/mm/xpfo.c
-> new file mode 100644
-> index 000000000000..8e3a6a694b6a
-> --- /dev/null
-> +++ b/mm/xpfo.c
-> @@ -0,0 +1,206 @@
-> +/*
-> + * Copyright (C) 2016 Hewlett Packard Enterprise Development, L.P.
-> + * Copyright (C) 2016 Brown University. All rights reserved.
-> + *
-> + * Authors:
-> + *   Juerg Haefliger <juerg.haefliger@hpe.com>
-> + *   Vasileios P. Kemerlis <vpk@cs.brown.edu>
-> + *
-> + * This program is free software; you can redistribute it and/or modify it
-> + * under the terms of the GNU General Public License version 2 as published by
-> + * the Free Software Foundation.
-> + */
-> +
-> +#include <linux/mm.h>
-> +#include <linux/module.h>
-> +#include <linux/page_ext.h>
-> +#include <linux/xpfo.h>
-> +
-> +#include <asm/tlbflush.h>
-> +
-> +DEFINE_STATIC_KEY_FALSE(xpfo_inited);
-> +
-> +static bool need_xpfo(void)
-> +{
-> +       return true;
-> +}
-> +
-> +static void init_xpfo(void)
-> +{
-> +       printk(KERN_INFO "XPFO enabled\n");
-> +       static_branch_enable(&xpfo_inited);
-> +}
-> +
-> +struct page_ext_operations page_xpfo_ops = {
-> +       .need = need_xpfo,
-> +       .init = init_xpfo,
-> +};
-> +
-> +/*
-> + * Update a single kernel page table entry
-> + */
-> +static inline void set_kpte(struct page *page, unsigned long kaddr,
-> +                           pgprot_t prot) {
-> +       unsigned int level;
-> +       pte_t *kpte = lookup_address(kaddr, &level);
-> +
-> +       /* We only support 4k pages for now */
-> +       BUG_ON(!kpte || level != PG_LEVEL_4K);
-> +
-> +       set_pte_atomic(kpte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)));
-> +}
-> +
-> +void xpfo_alloc_page(struct page *page, int order, gfp_t gfp)
-> +{
-> +       int i, flush_tlb = 0;
-> +       struct page_ext *page_ext;
-> +       unsigned long kaddr;
-> +
-> +       if (!static_branch_unlikely(&xpfo_inited))
-> +               return;
-> +
-> +       for (i = 0; i < (1 << order); i++)  {
-> +               page_ext = lookup_page_ext(page + i);
-> +
-> +               BUG_ON(test_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags));
-> +
-> +               /* Initialize the map lock and map counter */
-> +               if (!page_ext->inited) {
-> +                       spin_lock_init(&page_ext->maplock);
-> +                       atomic_set(&page_ext->mapcount, 0);
-> +                       page_ext->inited = 1;
-> +               }
-> +               BUG_ON(atomic_read(&page_ext->mapcount));
-> +
-> +               if ((gfp & GFP_HIGHUSER) == GFP_HIGHUSER) {
-> +                       /*
-> +                        * Flush the TLB if the page was previously allocated
-> +                        * to the kernel.
-> +                        */
-> +                       if (test_and_clear_bit(PAGE_EXT_XPFO_KERNEL,
-> +                                              &page_ext->flags))
-> +                               flush_tlb = 1;
-> +               } else {
-> +                       /* Tag the page as a kernel page */
-> +                       set_bit(PAGE_EXT_XPFO_KERNEL, &page_ext->flags);
-> +               }
-> +       }
-> +
-> +       if (flush_tlb) {
-> +               kaddr = (unsigned long)page_address(page);
-> +               flush_tlb_kernel_range(kaddr, kaddr + (1 << order) *
-> +                                      PAGE_SIZE);
-> +       }
-> +}
-> +
-> +void xpfo_free_page(struct page *page, int order)
-> +{
-> +       int i;
-> +       struct page_ext *page_ext;
-> +       unsigned long kaddr;
-> +
-> +       if (!static_branch_unlikely(&xpfo_inited))
-> +               return;
-> +
-> +       for (i = 0; i < (1 << order); i++) {
-> +               page_ext = lookup_page_ext(page + i);
-> +
-> +               if (!page_ext->inited) {
-> +                       /*
-> +                        * The page was allocated before page_ext was
-> +                        * initialized, so it is a kernel page and it needs to
-> +                        * be tagged accordingly.
-> +                        */
-> +                       set_bit(PAGE_EXT_XPFO_KERNEL, &page_ext->flags);
-> +                       continue;
-> +               }
-> +
-> +               /*
-> +                * Map the page back into the kernel if it was previously
-> +                * allocated to user space.
-> +                */
-> +               if (test_and_clear_bit(PAGE_EXT_XPFO_UNMAPPED,
-> +                                      &page_ext->flags)) {
-> +                       kaddr = (unsigned long)page_address(page + i);
-> +                       set_kpte(page + i,  kaddr, __pgprot(__PAGE_KERNEL));
-> +               }
-> +       }
-> +}
-> +
-> +void xpfo_kmap(void *kaddr, struct page *page)
-> +{
-> +       struct page_ext *page_ext;
-> +       unsigned long flags;
-> +
-> +       if (!static_branch_unlikely(&xpfo_inited))
-> +               return;
-> +
-> +       page_ext = lookup_page_ext(page);
-> +
-> +       /*
-> +        * The page was allocated before page_ext was initialized (which means
-> +        * it's a kernel page) or it's allocated to the kernel, so nothing to
-> +        * do.
-> +        */
-> +       if (!page_ext->inited ||
-> +           test_bit(PAGE_EXT_XPFO_KERNEL, &page_ext->flags))
-> +               return;
-> +
-> +       spin_lock_irqsave(&page_ext->maplock, flags);
-> +
-> +       /*
-> +        * The page was previously allocated to user space, so map it back
-> +        * into the kernel. No TLB flush required.
-> +        */
-> +       if ((atomic_inc_return(&page_ext->mapcount) == 1) &&
-> +           test_and_clear_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags))
-> +               set_kpte(page, (unsigned long)kaddr, __pgprot(__PAGE_KERNEL));
-> +
-> +       spin_unlock_irqrestore(&page_ext->maplock, flags);
-> +}
-> +EXPORT_SYMBOL(xpfo_kmap);
-> +
-> +void xpfo_kunmap(void *kaddr, struct page *page)
-> +{
-> +       struct page_ext *page_ext;
-> +       unsigned long flags;
-> +
-> +       if (!static_branch_unlikely(&xpfo_inited))
-> +               return;
-> +
-> +       page_ext = lookup_page_ext(page);
-> +
-> +       /*
-> +        * The page was allocated before page_ext was initialized (which means
-> +        * it's a kernel page) or it's allocated to the kernel, so nothing to
-> +        * do.
-> +        */
-> +       if (!page_ext->inited ||
-> +           test_bit(PAGE_EXT_XPFO_KERNEL, &page_ext->flags))
-> +               return;
-> +
-> +       spin_lock_irqsave(&page_ext->maplock, flags);
-> +
-> +       /*
-> +        * The page is to be allocated back to user space, so unmap it from the
-> +        * kernel, flush the TLB and tag it as a user page.
-> +        */
-> +       if (atomic_dec_return(&page_ext->mapcount) == 0) {
-> +               BUG_ON(test_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags));
-> +               set_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags);
-> +               set_kpte(page, (unsigned long)kaddr, __pgprot(0));
-> +               __flush_tlb_one((unsigned long)kaddr);
-> +       }
-> +
-> +       spin_unlock_irqrestore(&page_ext->maplock, flags);
-> +}
-> +EXPORT_SYMBOL(xpfo_kunmap);
-> +
-> +inline bool xpfo_page_is_unmapped(struct page *page)
-> +{
-> +       if (!static_branch_unlikely(&xpfo_inited))
-> +               return false;
-> +
-> +       return test_bit(PAGE_EXT_XPFO_UNMAPPED, &lookup_page_ext(page)->flags);
-> +}
-> +EXPORT_SYMBOL(xpfo_page_is_unmapped);
-> diff --git a/security/Kconfig b/security/Kconfig
-> index 118f4549404e..4502e15c8419 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -6,6 +6,25 @@ menu "Security options"
->
->  source security/keys/Kconfig
->
-> +config ARCH_SUPPORTS_XPFO
-> +       bool
+   The sequence of *_wrap types and *_wrap() function
+   defintions is the following:
 
-Can you include a "help" section here to describe what requirements an
-architecture needs to support XPFO? See HAVE_ARCH_SECCOMP_FILTER and
-HAVE_ARCH_VMAP_STACK or some examples.
+   -- atomic_*_wrap() functions and types:
+    1) arch. specific implementation defined in asm/atomic.h
+    2) some higher level *_wrap() functions, such as atomic_xchg_relaxed_wrap()
+      and similar may be  defined (depends on architecture providing
+     *_relaxed() and other similar functions) at this point in linux/atomic.h
+     using functions provided in 1)
+    3) definitions from asm-generic/atomic_wrap.h given that
+      CONFIG_HARDENING_ATOMIC is disabled. This is done to force archs
+      to implement basic *_wrap() function coverage fully and avoid
+      mistakes in function redirection
 
-> +config XPFO
-> +       bool "Enable eXclusive Page Frame Ownership (XPFO)"
-> +       default n
-> +       depends on ARCH_SUPPORTS_XPFO
-> +       select PAGE_EXTENSION
-> +       help
-> +         This option offers protection against 'ret2dir' kernel attacks.
-> +         When enabled, every time a page frame is allocated to user space, it
-> +         is unmapped from the direct mapped RAM region in kernel space
-> +         (physmap). Similarly, when a page frame is freed/reclaimed, it is
-> +         mapped back to physmap.
-> +
-> +         There is a slight performance impact when this option is enabled.
-> +
-> +         If in doubt, say "N".
-> +
->  config SECURITY_DMESG_RESTRICT
->         bool "Restrict unprivileged access to the kernel syslog"
->         default n
-> --
-> 2.10.1
->
+   -- atomic64_*_wrap() functions and types: 
+    1) arch. specific implementation defined in asm/atomic.h
+       and other 64 bits arch. specific headers
+    2) if CONFIG_GENERIC_ATOMIC64 is set, then atomic64_*_wrap()
+       functions defined in asm-generic/atomic64_wrap.h
+    3) atomic64_wrap_t type and atomic64_*_wrap() function
+       fall-back definition in linux/atomic.h given that
+       CONFIG_HARDENING_ATOMIC is disabled. This is done to
+       force archs to implement basic atomic64_*_wrap()
+       function coverage fully and avoid mistakes in
+       function redirection
 
-I've added these patches to my kspp tree on kernel.org, so it should
-get some 0-day testing now...
+   -- atomic_long_*_wrap() functions and types:
+    1) all atomic_long_*_wrap() functions and types
+       are declared in asm-generic/atomic_long.h
 
-Thanks!
+   -- atomic_local_*_wrap() functions and types:
+    1) all atomic_local_*_wrap() functions and types are
+      declared in asm-generic/local_wrap.h
 
--Kees
+   As a result of above rearragment, all archs that
+   implement hardening (declare *_wrap types and *_wrap()
+   functions) must declare their *_wrap types and *_wrap()
+   functions using #define statements.
+   This seems to be the only easy way to make sure that
+   no redefinitions happen by mistake. 
+
+Changes since RFC v2:
+
+ - function coverage added for atomic64 and local
+ - lkdtm tests are now fully under macros
+ - lkdtm tests are now covering also atomic64 and local
+ - local_wrap_t and corresponding functions are now
+   defined properly to support all architectures
+ - HARDENED_ATOMIC depends on !CONFIG_GENERIC_ATOMIC64
+ - performance measuments were done and no visible
+   implications
+ - small fixes and corrections
+
+Changes since RFC v1:
+
+ - documentation added: Documentation/security/hardened-atomic.txt
+ - percpu-refcount diversion from PaX/Grsecurity explained better
+ - arch. independent base has full functional coverage for atomic,
+   atomic-long and atomic64 types.
+ - arch. independent base is better structured and organized
+ - lkdtm: tests are now defined using macros
+ - x86 implementation added for missing functions
+ - fixed trap handling on x86 and overall reporting
+ - many small polishing and fixes
+
+Open items:
+
+ - none identified
+
+Compilation and testing results:
+
+ - CONFIG_HARDENED_ATOMIC=y, arch=x86_64 or x86_32,
+   full x86 coverage implementation: compiles, all lkdtm atomic tests PASS
+ - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, 
+   full x86 coverage implementation: compiles, feature not enabled, so tests not run   
+ - CONFIG_HARDENED_ATOMIC=n, arch=x86_64 or x86_32, with x86 hardening implementation removed
+   (simulate not implemented for arch. case): compiles, feature not enabled, so tests not run 
+ - CONFIG_HARDENED_ATOMIC=n, arch=arm, with no hardening implementation,
+   configs: defconfig and imx_v6_v7_defconfig: compiles, feature not enabled, so tests not run
+
+This series brings the PaX/Grsecurity PAX_REFCOUNT
+feature support to the upstream kernel. All credit for the
+feature goes to the feature authors.
+
+The name of the upstream feature is HARDENED_ATOMIC
+and it is configured using CONFIG_HARDENED_ATOMIC and
+HAVE_ARCH_HARDENED_ATOMIC.
+
+This series only adds x86 support; other architectures are expected
+to add similar support gradually.
+
+More information about the feature can be found in the following
+commit messages.
+
+Special thank you goes to Kees Cook for pre-reviwing this feature
+and all the valuable feedback he provided to us.
+
+David Windsor (7):
+  kernel: identify wrapping atomic usage
+  mm: identify wrapping atomic usage
+  fs: identify wrapping atomic usage
+  net: identify wrapping atomic usage
+  security: identify wrapping atomic usage
+  drivers: identify wrapping atomic usage (part 1/2)
+  drivers: identify wrapping atomic usage (part 2/2)
+
+Elena Reshetova (3):
+  Add architecture independent hardened atomic base
+  x86: implementation for HARDENED_ATOMIC
+  lkdtm: add tests for atomic over-/underflow
+
+Hans Liljestrand (3):
+  percpu-refcount: leave atomic counter unprotected
+  net: atm: identify wrapping atomic usage
+  x86: identify wrapping atomic usage
+
+ Documentation/security/hardened-atomic.txt       | 146 ++++++++++
+ arch/alpha/include/asm/local.h                   |   2 +
+ arch/m32r/include/asm/local.h                    |   2 +
+ arch/mips/include/asm/local.h                    |   2 +
+ arch/powerpc/include/asm/local.h                 |   2 +
+ arch/x86/Kconfig                                 |   1 +
+ arch/x86/include/asm/atomic.h                    | 315 +++++++++++++++++++-
+ arch/x86/include/asm/atomic64_32.h               | 227 ++++++++++++++-
+ arch/x86/include/asm/atomic64_64.h               | 219 +++++++++++++-
+ arch/x86/include/asm/bitops.h                    |   8 +-
+ arch/x86/include/asm/cmpxchg.h                   |  39 +++
+ arch/x86/include/asm/hw_irq.h                    |   4 +-
+ arch/x86/include/asm/local.h                     | 149 +++++++++-
+ arch/x86/include/asm/preempt.h                   |   2 +-
+ arch/x86/include/asm/rmwcc.h                     |  82 +++++-
+ arch/x86/include/asm/rwsem.h                     |  50 ++++
+ arch/x86/kernel/apic/apic.c                      |   2 +-
+ arch/x86/kernel/apic/io_apic.c                   |   4 +-
+ arch/x86/kernel/cpu/mcheck/mce.c                 |  12 +-
+ arch/x86/kernel/i8259.c                          |   2 +-
+ arch/x86/kernel/irq.c                            |   8 +-
+ arch/x86/kernel/kgdb.c                           |   6 +-
+ arch/x86/kernel/pvclock.c                        |   8 +-
+ arch/x86/kernel/tboot.c                          |   8 +-
+ arch/x86/kernel/traps.c                          |   4 +
+ arch/x86/lib/atomic64_386_32.S                   | 135 +++++++++
+ arch/x86/lib/atomic64_cx8_32.S                   |  78 ++++-
+ arch/x86/mm/mmio-mod.c                           |   4 +-
+ drivers/acpi/apei/ghes.c                         |   4 +-
+ drivers/ata/libata-core.c                        |   5 +-
+ drivers/ata/libata-scsi.c                        |   2 +-
+ drivers/ata/libata.h                             |   2 +-
+ drivers/atm/adummy.c                             |   2 +-
+ drivers/atm/ambassador.c                         |   8 +-
+ drivers/atm/atmtcp.c                             |  14 +-
+ drivers/atm/eni.c                                |  10 +-
+ drivers/atm/firestream.c                         |   8 +-
+ drivers/atm/fore200e.c                           |  14 +-
+ drivers/atm/he.c                                 |  18 +-
+ drivers/atm/horizon.c                            |   4 +-
+ drivers/atm/idt77252.c                           |  36 +--
+ drivers/atm/iphase.c                             |  34 +--
+ drivers/atm/lanai.c                              |  12 +-
+ drivers/atm/nicstar.c                            |  47 +--
+ drivers/atm/solos-pci.c                          |   4 +-
+ drivers/atm/suni.c                               |   5 +-
+ drivers/atm/uPD98402.c                           |  16 +-
+ drivers/atm/zatm.c                               |   7 +-
+ drivers/base/power/wakeup.c                      |   8 +-
+ drivers/block/drbd/drbd_bitmap.c                 |   2 +-
+ drivers/block/drbd/drbd_int.h                    |   9 +-
+ drivers/block/drbd/drbd_main.c                   |  15 +-
+ drivers/block/drbd/drbd_nl.c                     |  16 +-
+ drivers/block/drbd/drbd_receiver.c               |  34 +--
+ drivers/block/drbd/drbd_worker.c                 |   8 +-
+ drivers/char/ipmi/ipmi_msghandler.c              |   8 +-
+ drivers/char/ipmi/ipmi_si_intf.c                 |   8 +-
+ drivers/crypto/hifn_795x.c                       |   4 +-
+ drivers/edac/edac_device.c                       |   4 +-
+ drivers/edac/edac_pci.c                          |   4 +-
+ drivers/edac/edac_pci_sysfs.c                    |  20 +-
+ drivers/firewire/core-card.c                     |   4 +-
+ drivers/firmware/efi/cper.c                      |   8 +-
+ drivers/gpio/gpio-vr41xx.c                       |   2 +-
+ drivers/gpu/drm/i810/i810_drv.h                  |   4 +-
+ drivers/gpu/drm/mga/mga_drv.h                    |   4 +-
+ drivers/gpu/drm/mga/mga_irq.c                    |   9 +-
+ drivers/gpu/drm/qxl/qxl_cmd.c                    |  12 +-
+ drivers/gpu/drm/qxl/qxl_debugfs.c                |   8 +-
+ drivers/gpu/drm/qxl/qxl_drv.h                    |   8 +-
+ drivers/gpu/drm/qxl/qxl_irq.c                    |  16 +-
+ drivers/gpu/drm/r128/r128_cce.c                  |   2 +-
+ drivers/gpu/drm/r128/r128_drv.h                  |   4 +-
+ drivers/gpu/drm/r128/r128_irq.c                  |   4 +-
+ drivers/gpu/drm/r128/r128_state.c                |   4 +-
+ drivers/gpu/drm/via/via_drv.h                    |   4 +-
+ drivers/gpu/drm/via/via_irq.c                    |  18 +-
+ drivers/gpu/drm/vmwgfx/vmwgfx_drv.h              |   2 +-
+ drivers/gpu/drm/vmwgfx/vmwgfx_fifo.c             |   6 +-
+ drivers/gpu/drm/vmwgfx/vmwgfx_irq.c              |   4 +-
+ drivers/gpu/drm/vmwgfx/vmwgfx_marker.c           |   2 +-
+ drivers/hid/hid-core.c                           |   4 +-
+ drivers/hv/channel.c                             |   4 +-
+ drivers/hv/hv_balloon.c                          |  19 +-
+ drivers/hv/hyperv_vmbus.h                        |   2 +-
+ drivers/hwmon/sht15.c                            |  12 +-
+ drivers/infiniband/core/cm.c                     |  52 ++--
+ drivers/infiniband/core/fmr_pool.c               |  23 +-
+ drivers/infiniband/hw/cxgb4/mem.c                |   4 +-
+ drivers/infiniband/hw/mlx4/mad.c                 |   2 +-
+ drivers/infiniband/hw/mlx4/mcg.c                 |   2 +-
+ drivers/infiniband/hw/mlx4/mlx4_ib.h             |   2 +-
+ drivers/infiniband/hw/nes/nes.c                  |   4 +-
+ drivers/infiniband/hw/nes/nes.h                  |  40 +--
+ drivers/infiniband/hw/nes/nes_cm.c               |  62 ++--
+ drivers/infiniband/hw/nes/nes_mgt.c              |   8 +-
+ drivers/infiniband/hw/nes/nes_nic.c              |  40 +--
+ drivers/infiniband/hw/nes/nes_verbs.c            |  10 +-
+ drivers/input/gameport/gameport.c                |   4 +-
+ drivers/input/input.c                            |   4 +-
+ drivers/input/misc/ims-pcu.c                     |   4 +-
+ drivers/input/serio/serio.c                      |   4 +-
+ drivers/input/serio/serio_raw.c                  |   4 +-
+ drivers/isdn/capi/capi.c                         |  11 +-
+ drivers/md/dm-core.h                             |   4 +-
+ drivers/md/dm-raid.c                             |   3 +-
+ drivers/md/dm-raid1.c                            |  18 +-
+ drivers/md/dm-stripe.c                           |  11 +-
+ drivers/md/dm.c                                  |  12 +-
+ drivers/md/md.c                                  |  32 ++-
+ drivers/md/md.h                                  |  15 +-
+ drivers/md/raid1.c                               |   8 +-
+ drivers/md/raid10.c                              |  20 +-
+ drivers/md/raid5.c                               |  17 +-
+ drivers/media/pci/ivtv/ivtv-driver.c             |   2 +-
+ drivers/media/pci/solo6x10/solo6x10-p2m.c        |   3 +-
+ drivers/media/pci/solo6x10/solo6x10.h            |   2 +-
+ drivers/media/pci/tw68/tw68-core.c               |   2 +-
+ drivers/media/radio/radio-maxiradio.c            |   2 +-
+ drivers/media/radio/radio-shark.c                |   2 +-
+ drivers/media/radio/radio-shark2.c               |   2 +-
+ drivers/media/radio/radio-si476x.c               |   2 +-
+ drivers/media/v4l2-core/v4l2-device.c            |   4 +-
+ drivers/misc/lis3lv02d/lis3lv02d.c               |   8 +-
+ drivers/misc/lis3lv02d/lis3lv02d.h               |   2 +-
+ drivers/misc/lkdtm.h                             |  46 ++-
+ drivers/misc/lkdtm_bugs.c                        | 127 +++++++--
+ drivers/misc/lkdtm_core.c                        |  20 +-
+ drivers/misc/sgi-gru/gruhandles.c                |   4 +-
+ drivers/misc/sgi-gru/gruprocfs.c                 |   8 +-
+ drivers/misc/sgi-gru/grutables.h                 | 158 +++++-----
+ drivers/net/hyperv/hyperv_net.h                  |   2 +-
+ drivers/net/hyperv/rndis_filter.c                |   4 +-
+ drivers/net/ipvlan/ipvlan_core.c                 |   2 +-
+ drivers/net/macvlan.c                            |   2 +-
+ drivers/net/usb/sierra_net.c                     |   4 +-
+ drivers/net/wireless/ralink/rt2x00/rt2x00.h      |   2 +-
+ drivers/net/wireless/ralink/rt2x00/rt2x00queue.c |   4 +-
+ drivers/oprofile/buffer_sync.c                   |   8 +-
+ drivers/oprofile/event_buffer.c                  |   2 +-
+ drivers/oprofile/oprof.c                         |   2 +-
+ drivers/oprofile/oprofile_stats.c                |  10 +-
+ drivers/oprofile/oprofile_stats.h                |  10 +-
+ drivers/oprofile/oprofilefs.c                    |   8 +-
+ drivers/regulator/core.c                         |   4 +-
+ drivers/scsi/fcoe/fcoe_sysfs.c                   |  12 +-
+ drivers/scsi/libfc/fc_exch.c                     |  54 ++--
+ drivers/scsi/lpfc/lpfc.h                         |   8 +-
+ drivers/scsi/lpfc/lpfc_debugfs.c                 |  18 +-
+ drivers/scsi/lpfc/lpfc_scsi.c                    |  10 +-
+ drivers/scsi/pmcraid.c                           |  24 +-
+ drivers/scsi/pmcraid.h                           |   8 +-
+ drivers/scsi/qla4xxx/ql4_def.h                   |   3 +-
+ drivers/scsi/qla4xxx/ql4_os.c                    |   7 +-
+ drivers/scsi/scsi_lib.c                          |   8 +-
+ drivers/scsi/scsi_sysfs.c                        |   2 +-
+ drivers/scsi/scsi_transport_fc.c                 |   6 +-
+ drivers/scsi/scsi_transport_iscsi.c              |   7 +-
+ drivers/scsi/scsi_transport_srp.c                |   6 +-
+ drivers/scsi/sd.c                                |   2 +-
+ drivers/target/sbp/sbp_target.c                  |   4 +-
+ drivers/tty/hvc/hvsi.c                           |  12 +-
+ drivers/tty/hvc/hvsi_lib.c                       |   4 +-
+ drivers/tty/serial/ioc4_serial.c                 |   6 +-
+ drivers/tty/serial/msm_serial.c                  |   4 +-
+ drivers/uio/uio.c                                |  13 +-
+ drivers/usb/atm/usbatm.c                         |  24 +-
+ drivers/usb/core/devices.c                       |   6 +-
+ drivers/usb/core/hcd.c                           |   4 +-
+ drivers/usb/core/sysfs.c                         |   2 +-
+ drivers/usb/core/usb.c                           |   2 +-
+ drivers/usb/host/ehci-hub.c                      |   4 +-
+ drivers/usb/misc/appledisplay.c                  |   4 +-
+ drivers/usb/usbip/vhci.h                         |   2 +-
+ drivers/usb/usbip/vhci_hcd.c                     |   6 +-
+ drivers/usb/usbip/vhci_rx.c                      |   2 +-
+ drivers/usb/wusbcore/wa-hc.h                     |   4 +-
+ drivers/usb/wusbcore/wa-xfer.c                   |   2 +-
+ drivers/video/fbdev/hyperv_fb.c                  |   4 +-
+ drivers/video/fbdev/udlfb.c                      |  32 +--
+ fs/afs/inode.c                                   |   4 +-
+ fs/btrfs/delayed-inode.c                         |   6 +-
+ fs/btrfs/delayed-inode.h                         |   4 +-
+ fs/cachefiles/daemon.c                           |   4 +-
+ fs/cachefiles/internal.h                         |  16 +-
+ fs/cachefiles/namei.c                            |   6 +-
+ fs/cachefiles/proc.c                             |  12 +-
+ fs/ceph/super.c                                  |   4 +-
+ fs/cifs/cifs_debug.c                             |  14 +-
+ fs/cifs/cifsfs.c                                 |   4 +-
+ fs/cifs/cifsglob.h                               |  55 ++--
+ fs/cifs/misc.c                                   |   4 +-
+ fs/cifs/smb1ops.c                                |  80 +++---
+ fs/cifs/smb2ops.c                                |  84 +++---
+ fs/coda/cache.c                                  |  10 +-
+ fs/coredump.c                                    |   6 +-
+ fs/ext4/ext4.h                                   |  20 +-
+ fs/ext4/mballoc.c                                |  44 +--
+ fs/fscache/cookie.c                              |  40 +--
+ fs/fscache/internal.h                            | 202 ++++++-------
+ fs/fscache/object.c                              |  26 +-
+ fs/fscache/operation.c                           |  38 +--
+ fs/fscache/page.c                                | 110 +++----
+ fs/fscache/stats.c                               | 348 +++++++++++------------
+ fs/inode.c                                       |   5 +-
+ fs/kernfs/file.c                                 |  12 +-
+ fs/lockd/clntproc.c                              |   4 +-
+ fs/namespace.c                                   |   4 +-
+ fs/nfs/inode.c                                   |   6 +-
+ fs/notify/notification.c                         |   4 +-
+ fs/ocfs2/localalloc.c                            |   2 +-
+ fs/ocfs2/ocfs2.h                                 |  10 +-
+ fs/ocfs2/suballoc.c                              |  12 +-
+ fs/ocfs2/super.c                                 |  20 +-
+ fs/proc/meminfo.c                                |   2 +-
+ fs/quota/netlink.c                               |   4 +-
+ fs/reiserfs/do_balan.c                           |   2 +-
+ fs/reiserfs/procfs.c                             |   2 +-
+ fs/reiserfs/reiserfs.h                           |   4 +-
+ include/asm-generic/atomic-long.h                | 165 ++++++++---
+ include/asm-generic/atomic.h                     |   4 +
+ include/asm-generic/atomic64.h                   |   2 +
+ include/asm-generic/atomic64_wrap.h              | 123 ++++++++
+ include/asm-generic/atomic_wrap.h                | 114 ++++++++
+ include/asm-generic/bug.h                        |   7 +
+ include/asm-generic/local.h                      |   3 +
+ include/asm-generic/local_wrap.h                 |  63 ++++
+ include/linux/atmdev.h                           |   2 +-
+ include/linux/atomic.h                           | 171 ++++++++++-
+ include/linux/blktrace_api.h                     |   2 +-
+ include/linux/fscache-cache.h                    |   2 +-
+ include/linux/genhd.h                            |   2 +-
+ include/linux/irqdesc.h                          |   2 +-
+ include/linux/kgdb.h                             |   2 +-
+ include/linux/mm.h                               |   2 +-
+ include/linux/mmzone.h                           |   4 +-
+ include/linux/netdevice.h                        |   8 +-
+ include/linux/oprofile.h                         |   2 +-
+ include/linux/padata.h                           |   2 +-
+ include/linux/percpu-refcount.h                  |  18 +-
+ include/linux/perf_event.h                       |  10 +-
+ include/linux/sched.h                            |   2 +-
+ include/linux/slab_def.h                         |   8 +-
+ include/linux/sonet.h                            |   2 +-
+ include/linux/sunrpc/svc_rdma.h                  |  18 +-
+ include/linux/swapops.h                          |  10 +-
+ include/linux/types.h                            |   4 +
+ include/linux/uio_driver.h                       |   2 +-
+ include/linux/usb.h                              |   2 +-
+ include/linux/vmstat.h                           |  38 +--
+ include/media/v4l2-device.h                      |   2 +-
+ include/net/bonding.h                            |   2 +-
+ include/net/caif/cfctrl.h                        |   4 +-
+ include/net/flow.h                               |   2 +-
+ include/net/gro_cells.h                          |   2 +-
+ include/net/inetpeer.h                           |   3 +-
+ include/net/ip_fib.h                             |   2 +-
+ include/net/ip_vs.h                              |   4 +-
+ include/net/iucv/af_iucv.h                       |   2 +-
+ include/net/net_namespace.h                      |  12 +-
+ include/net/netns/ipv4.h                         |   4 +-
+ include/net/netns/ipv6.h                         |   4 +-
+ include/net/netns/xfrm.h                         |   2 +-
+ include/net/sock.h                               |   8 +-
+ include/net/tcp.h                                |   2 +-
+ include/net/xfrm.h                               |   2 +-
+ include/scsi/scsi_device.h                       |   6 +-
+ include/video/udlfb.h                            |  12 +-
+ kernel/audit.c                                   |   8 +-
+ kernel/auditsc.c                                 |   4 +-
+ kernel/debug/debug_core.c                        |  16 +-
+ kernel/events/core.c                             |  27 +-
+ kernel/irq/manage.c                              |   2 +-
+ kernel/irq/spurious.c                            |   2 +-
+ kernel/locking/lockdep.c                         |   2 +-
+ kernel/padata.c                                  |   4 +-
+ kernel/panic.c                                   |  11 +
+ kernel/profile.c                                 |  14 +-
+ kernel/rcu/rcutorture.c                          |  61 ++--
+ kernel/rcu/tree.c                                |  36 +--
+ kernel/rcu/tree.h                                |  18 +-
+ kernel/rcu/tree_exp.h                            |   6 +-
+ kernel/rcu/tree_plugin.h                         |  12 +-
+ kernel/rcu/tree_trace.c                          |  14 +-
+ kernel/sched/auto_group.c                        |   4 +-
+ kernel/time/timer_stats.c                        |  11 +-
+ kernel/trace/blktrace.c                          |   6 +-
+ kernel/trace/ftrace.c                            |   4 +-
+ kernel/trace/ring_buffer.c                       |  99 +++----
+ kernel/trace/trace_clock.c                       |   4 +-
+ kernel/trace/trace_functions_graph.c             |   4 +-
+ kernel/trace/trace_mmiotrace.c                   |   8 +-
+ lib/percpu-refcount.c                            |  12 +-
+ lib/show_mem.c                                   |   3 +-
+ mm/backing-dev.c                                 |   4 +-
+ mm/memory-failure.c                              |   2 +-
+ mm/slab.c                                        |  16 +-
+ mm/sparse.c                                      |   2 +-
+ mm/swapfile.c                                    |  12 +-
+ mm/vmstat.c                                      |  26 +-
+ net/atm/atm_misc.c                               |   8 +-
+ net/atm/proc.c                                   |   8 +-
+ net/atm/resources.c                              |   4 +-
+ net/batman-adv/bat_iv_ogm.c                      |   8 +-
+ net/batman-adv/fragmentation.c                   |   3 +-
+ net/batman-adv/soft-interface.c                  |   6 +-
+ net/batman-adv/types.h                           |   6 +-
+ net/caif/cfctrl.c                                |  11 +-
+ net/ceph/messenger.c                             |   4 +-
+ net/core/datagram.c                              |   2 +-
+ net/core/dev.c                                   |  18 +-
+ net/core/flow.c                                  |   9 +-
+ net/core/net-sysfs.c                             |   2 +-
+ net/core/netpoll.c                               |   4 +-
+ net/core/rtnetlink.c                             |   2 +-
+ net/core/sock.c                                  |  14 +-
+ net/core/sock_diag.c                             |   8 +-
+ net/ipv4/devinet.c                               |   4 +-
+ net/ipv4/fib_frontend.c                          |   6 +-
+ net/ipv4/fib_semantics.c                         |   2 +-
+ net/ipv4/inet_connection_sock.c                  |   4 +-
+ net/ipv4/inet_timewait_sock.c                    |   3 +-
+ net/ipv4/inetpeer.c                              |   2 +-
+ net/ipv4/ip_fragment.c                           |   2 +-
+ net/ipv4/ping.c                                  |   2 +-
+ net/ipv4/raw.c                                   |   5 +-
+ net/ipv4/route.c                                 |  12 +-
+ net/ipv4/tcp_input.c                             |   2 +-
+ net/ipv4/udp.c                                   |  10 +-
+ net/ipv6/addrconf.c                              |   7 +-
+ net/ipv6/af_inet6.c                              |   2 +-
+ net/ipv6/datagram.c                              |   2 +-
+ net/ipv6/ip6_fib.c                               |   4 +-
+ net/ipv6/raw.c                                   |   6 +-
+ net/ipv6/udp.c                                   |   6 +-
+ net/iucv/af_iucv.c                               |   5 +-
+ net/key/af_key.c                                 |   4 +-
+ net/l2tp/l2tp_eth.c                              |  38 +--
+ net/netfilter/ipvs/ip_vs_conn.c                  |   6 +-
+ net/netfilter/ipvs/ip_vs_core.c                  |   8 +-
+ net/netfilter/ipvs/ip_vs_ctl.c                   |  12 +-
+ net/netfilter/ipvs/ip_vs_sync.c                  |   6 +-
+ net/netfilter/ipvs/ip_vs_xmit.c                  |   4 +-
+ net/netfilter/nfnetlink_log.c                    |   4 +-
+ net/netfilter/xt_statistic.c                     |   9 +-
+ net/netlink/af_netlink.c                         |   4 +-
+ net/packet/af_packet.c                           |   4 +-
+ net/phonet/pep.c                                 |   6 +-
+ net/phonet/socket.c                              |   2 +-
+ net/rds/cong.c                                   |   6 +-
+ net/rds/ib.h                                     |   2 +-
+ net/rds/ib_cm.c                                  |   2 +-
+ net/rds/ib_recv.c                                |   4 +-
+ net/rxrpc/af_rxrpc.c                             |   2 +-
+ net/rxrpc/ar-internal.h                          |   4 +-
+ net/rxrpc/call_object.c                          |   2 +-
+ net/rxrpc/conn_event.c                           |   4 +-
+ net/rxrpc/conn_object.c                          |   2 +-
+ net/rxrpc/local_object.c                         |   2 +-
+ net/rxrpc/output.c                               |   6 +-
+ net/rxrpc/peer_object.c                          |   2 +-
+ net/rxrpc/proc.c                                 |   2 +-
+ net/rxrpc/rxkad.c                                |   4 +-
+ net/sched/sch_generic.c                          |   4 +-
+ net/sctp/sctp_diag.c                             |   2 +-
+ net/sunrpc/auth_gss/svcauth_gss.c                |   4 +-
+ net/sunrpc/sched.c                               |   4 +-
+ net/sunrpc/xprtrdma/svc_rdma.c                   |  36 +--
+ net/sunrpc/xprtrdma/svc_rdma_recvfrom.c          |   8 +-
+ net/sunrpc/xprtrdma/svc_rdma_sendto.c            |   2 +-
+ net/sunrpc/xprtrdma/svc_rdma_transport.c         |   2 +-
+ net/xfrm/xfrm_policy.c                           |  11 +-
+ net/xfrm/xfrm_state.c                            |   4 +-
+ security/Kconfig                                 |  20 ++
+ security/integrity/ima/ima.h                     |   4 +-
+ security/integrity/ima/ima_api.c                 |   2 +-
+ security/integrity/ima/ima_fs.c                  |   4 +-
+ security/integrity/ima/ima_queue.c               |   2 +-
+ security/selinux/avc.c                           |   7 +-
+ security/selinux/include/xfrm.h                  |   2 +-
+ 380 files changed, 4228 insertions(+), 2076 deletions(-)
+ create mode 100644 Documentation/security/hardened-atomic.txt
+ create mode 100644 include/asm-generic/atomic64_wrap.h
+ create mode 100644 include/asm-generic/atomic_wrap.h
+ create mode 100644 include/asm-generic/local_wrap.h
 
 -- 
-Kees Cook
-Nexus Security
+2.7.4
