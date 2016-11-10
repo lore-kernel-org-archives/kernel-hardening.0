@@ -1,71 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20161110203749.GV3117@twins.programming.kicks-ass.net>
-References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com> <20161110203749.GV3117@twins.programming.kicks-ass.net>
+In-Reply-To: <20161110204838.GE17134@arm.com>
+References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
+ <20161110203749.GV3117@twins.programming.kicks-ass.net> <20161110204838.GE17134@arm.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 10 Nov 2016 12:56:09 -0800
-Message-ID: <CAGXu5j+4uod4UFAZNj5K=At3x2MUODstfUVMbDFguh5FM_S7cA@mail.gmail.com>
+Date: Thu, 10 Nov 2016 13:01:41 -0800
+Message-ID: <CAGXu5jL0m8_x-eBPQPBvj_O_JRXmh=nc87L0rpPkYUEo+jK97A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>
+To: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 10, 2016 at 12:37 PM, Peter Zijlstra <peterz@infradead.org> wrote:
-> On Thu, Nov 10, 2016 at 10:24:35PM +0200, Elena Reshetova wrote:
->> This series brings the PaX/Grsecurity PAX_REFCOUNT
->> feature support to the upstream kernel. All credit for the
->> feature goes to the feature authors.
+On Thu, Nov 10, 2016 at 12:48 PM, Will Deacon <will.deacon@arm.com> wrote:
+> On Thu, Nov 10, 2016 at 09:37:49PM +0100, Peter Zijlstra wrote:
+>> On Thu, Nov 10, 2016 at 10:24:35PM +0200, Elena Reshetova wrote:
+>> > This series brings the PaX/Grsecurity PAX_REFCOUNT
+>> > feature support to the upstream kernel. All credit for the
+>> > feature goes to the feature authors.
+>> >
+>> > The name of the upstream feature is HARDENED_ATOMIC
+>> > and it is configured using CONFIG_HARDENED_ATOMIC and
+>> > HAVE_ARCH_HARDENED_ATOMIC.
+>> >
+>> > This series only adds x86 support; other architectures are expected
+>> > to add similar support gradually.
+>> >
+>> > More information about the feature can be found in the following
+>> > commit messages.
 >>
->> The name of the upstream feature is HARDENED_ATOMIC
->> and it is configured using CONFIG_HARDENED_ATOMIC and
->> HAVE_ARCH_HARDENED_ATOMIC.
+>> No, this should be here. As it stands this is completely without
+>> content.
 >>
->> This series only adds x86 support; other architectures are expected
->> to add similar support gradually.
+>> In any case, NAK on this approach. Its the wrong way around.
 >>
->> More information about the feature can be found in the following
->> commit messages.
+>> _IF_ you want to do a non-wrapping variant, it must not be the default.
+>>
+>> Since you need to audit every single atomic_t user in the kernel anyway,
+>> it doesn't matter. But changing atomic_t to non-wrap by default is not
+>> robust, if you forgot one, you can then trivially dos the kernel.
 >
-> No, this should be here. As it stands this is completely without
-> content.
+> Completely agreed.
 >
-> In any case, NAK on this approach. Its the wrong way around.
+> Whilst I understand that you're addressing an important and commonly
+> exploited vulnerability, this really needs to be opt-in rather than
+> opt-out given the prevalence of atomic_t users in the kernel. Having a
+> "hardened" kernel that does the wrong thing is useless.
+
+I (obviously) disagree. It's not useless. Such a kernel is totally
+safe against refcount errors and would be exposed to DoS issues only
+where mistakes were made. This is the fundamental shift here:
+
+- we already have exploitable privilege escalation refcount flaws on a
+regular basis
+- this changes things to have zero exploitable refcount flaws now and
+into the future
+- the risk is bugs leading to DoS instead of the risk of exploitable flaws
+
+That's the real trade.
+
+>> That said, I still don't much like this.
+>>
+>> I would much rather you make kref useful and use that. It still means
+>> you get to audit all refcounts in the kernel, but hey, you had to do
+>> that anyway.
 >
-> _IF_ you want to do a non-wrapping variant, it must not be the default.
+> What needs to happen to kref to make it useful? Like many others, I've
+> been guilty of using atomic_t for refcounts in the past.
 
-Unfortunately, we have to do it this way because there are so many
-misuses of atomic_t, and they just keep appearing. We can't do opt-in
-protections for the kernel -- we need to protect atomic_t and opt OUT
-of the protection where it's not needed.
-
-We must change the kernel culture to making things secure-by-default.
-Without this, we're wasting our time and continuing to leave people
-vulnerable every time some new driver lands that refcounts with
-atomic_t. Since education is proven to not work, we have to harden the
-_infrastructure_ of the kernel, of which atomic_t is a part.
-
-> Since you need to audit every single atomic_t user in the kernel anyway,
-> it doesn't matter. But changing atomic_t to non-wrap by default is not
-> robust, if you forgot one, you can then trivially dos the kernel.
-
-Correct: everything must be audited in either case. However, making a
-mistake using opt-out means a DoS. Making a mistake using opt-in means
-an exploitable kernel escalation. We must have the courage to
-recognize this distinction. Right now, every refcount mistake is an
-exploitable kernel flaw. Reducing this to a DoS is a giant
-improvement.
-
-> That said, I still don't much like this.
->
-> I would much rather you make kref useful and use that. It still means
-> you get to audit all refcounts in the kernel, but hey, you had to do
-> that anyway.
-
-This has already been suggested in the past, and suffers from the same
-opt-in problem. I'll let Greg comment on it, though, as he's agreed
-with going opt-out in the past when reviewing this work.
+That's the point: expecting everyone to get this right and not miss
+mistake from now into the future is not a solution. This solves the
+privilege escalation issue for refcounts now and forever.
 
 -Kees
 
