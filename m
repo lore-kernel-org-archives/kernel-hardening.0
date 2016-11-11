@@ -1,56 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 11 Nov 2016 21:17:04 +0100
+Date: Fri, 11 Nov 2016 21:19:43 +0100
 From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161111201704.GQ3117@twins.programming.kicks-ass.net>
-References: <20161110203749.GV3117@twins.programming.kicks-ass.net>
- <20161110204838.GE17134@arm.com>
- <20161110211310.GX3117@twins.programming.kicks-ass.net>
- <20161110222744.GD8086@kroah.com>
- <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
- <20161110233835.GA23164@kroah.com>
- <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
- <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
- <20161111174630.GO3117@twins.programming.kicks-ass.net>
- <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com>
+Message-ID: <20161111201943.GR3117@twins.programming.kicks-ass.net>
+References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
+ <1478809488-18303-13-git-send-email-elena.reshetova@intel.com>
+ <20161110204046.GW3117@twins.programming.kicks-ass.net>
+ <20161110225031.GA26751@worktop>
+ <CAGXu5j+yy8Y=_bDhsTgEugJnN5=u8_XMSOAnqJBab-1+9v8+CA@mail.gmail.com>
+ <20161110233004.GQ3568@worktop.programming.kicks-ass.net>
+ <CAGXu5j++ZZDmgYqzvx104Bs2iQK+7V_Xn2VgTR7eoCwS2JR0tw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
+In-Reply-To: <CAGXu5j++ZZDmgYqzvx104Bs2iQK+7V_Xn2VgTR7eoCwS2JR0tw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC v4 PATCH 12/13] x86: implementation for HARDENED_ATOMIC
 To: Kees Cook <keescook@chromium.org>
-Cc: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
+Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 11, 2016 at 10:04:42AM -0800, Kees Cook wrote:
+On Fri, Nov 11, 2016 at 10:00:27AM -0800, Kees Cook wrote:
+> Agreed: the first thread will BUG and the second thread is still halfway to 0.
+> 
+> On systems that panic on BUG, things are protected. For the rest of
+> the systems, an alternative to "dec" on overflow is to sub (more than)
+> NR_CPUS, to keep the saturation below the overflow level. This means
+> that it is still detected (BUG) by at least 1 thread, and cannot reach
+> 0 (to trigger the flaw) on all other threads, even if they all lose
+> the race.
 
-> I'm totally open about how to get there, but things can't just be opt-in.
+NR_CPUS has nothing to do with anything here. If this is a vcpu that got
+scheduled out in between the inc and dec there can be an arbitrary
+amount of other crap happening.
 
-There really is no alternative.
+> To me, this seems better than taking the cmpxchg performance hit.
 
-refcount_t; should only have: inc, inc_not_zero, dec_and_test
-
-stats_t; should only have: add,sub
-
-atomic_t; has:
-
-	{add,inc,sub,dec} + {and,or,xor,notand}
-
-	{add,inc,sub,dec}_return * {,relaxed,release,acquire}
-
-	(fetch_{add,inc,sub,dec} + {and,or,xor,notand}) * {,relaxed,release,acquire}
-
-	{sub,add,inc,dec}_and_test
-
-	{cmpxchg,xchg}
-
-	add_unless,inc_not_zero,{inc,dec}_unless_negative,dec_if_positive
-
-That is so much more than either refcount_t or stats_t should have, and
-the whole wrap/nowrap thing only matters to part of the ops.
-
-Like said, atomic_cmpxchg_wrap() is utter crap, that's a function name
-that doesn't make sense, and you guys should have realized that the
-moment you typed it.
-
-Its fantasy to think you can 'implement' atomic_t with refcount_t or
-anything else. You're chasing unicorns.
+To me that shows you shouldn't be allowed near atomic_t. You cannot have
+a non-atomic atomic op. That just doesn't happen.
