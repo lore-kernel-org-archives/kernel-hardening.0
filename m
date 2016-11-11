@@ -1,51 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 11 Nov 2016 12:35:16 +0000
+Date: Fri, 11 Nov 2016 12:41:27 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20161111123516.GF11945@leverpostej>
+Message-ID: <20161111124126.GG11945@leverpostej>
 References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
- <1478809488-18303-10-git-send-email-elena.reshetova@intel.com>
- <20161110214810.GH17134@arm.com>
- <2236FBA76BA1254E88B949DDB74E612B41BFF6AA@IRSMSX102.ger.corp.intel.com>
+ <20161110203749.GV3117@twins.programming.kicks-ass.net>
+ <20161110204838.GE17134@arm.com>
+ <20161110211310.GX3117@twins.programming.kicks-ass.net>
+ <20161110222744.GD8086@kroah.com>
+ <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
+ <20161110235714.GR3568@worktop.programming.kicks-ass.net>
+ <1478824161.7326.5.camel@cvidal.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41BFF6AA@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] RE: [RFC v4 PATCH 09/13] drivers: identify
- wrapping atomic usage (part 1/2)
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1478824161.7326.5.camel@cvidal.org>
+Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
 To: kernel-hardening@lists.openwall.com
-Cc: Will Deacon <will.deacon@arm.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>, Will Deacon <will.deacon@arm.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 11, 2016 at 08:57:18AM +0000, Reshetova, Elena wrote:
-> On Thu, Nov 10, 2016 at 10:24:44PM +0200, Elena Reshetova wrote:
-> > From: David Windsor <dwindsor@gmail.com>
-> > 
-> > In some cases atomic is not used for reference counting and therefore 
-> > should be allowed to overflow.
-> > Identify such cases and make a switch to non-hardened atomic version.
-> > 
-> > This might need more fine-grained split between different drivers.
+On Fri, Nov 11, 2016 at 01:29:21AM +0100, Colin Vidal wrote:
+> On Fri, 2016-11-11 at 00:57 +0100, Peter Zijlstra wrote:
+> > On Thu, Nov 10, 2016 at 03:15:44PM -0800, Kees Cook wrote:
+> > > On Thu, Nov 10, 2016 at 2:27 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
+> > > > On Thu, Nov 10, 2016 at 10:13:10PM +0100, Peter Zijlstra wrote:
 
-> >  88 files changed, 491 insertions(+), 459 deletions(-)
-
-> >How did you decide that all of these need to wrap? Code inspection?
+> I wonder if we didn't make a confusion between naming and
+> specifications. I have thought about Kees idea and what you're saying:
 > 
-> Yes. The initial set was taken from Grsecurity/PaX code and while
-> moving the code we manually checked each change. 
+> - The name "atomic_t" name didn't tell anything about if the variable
+>   can wrap or not. It just tells there is no race condition on
+>   concurrent access, nothing else, and users are well with that. OK
+>   then, we don't modify atomic_t, it makes sense.
+> 
+> - Hence, let's say a new type "refcount_t". It names exactly what we
+>   try to protect in this patch set. A much more simpler interface than
+>   atomic_t would be needed, and it protects on race condition and
+>   overflows (precisely what is expected of a counter reference). Not
+>   an opt-in solution, but it is much less invasive since we "just"
+>   have to modify the kref implementation and some vfs reference
+>   counters.
+> 
+> That didn't tell us how actually implements refcount_t: reuse some
+> atomic_t code or not (it would be simpler anyways, since we don't have
+> to implement the whole atomic_t interface). Still, this is another
+> problem.
+> 
+> Sounds better?
 
-That being the case, it would be good if you could provide some
-{driver,subsystem}-specific rationale in the commit messages when this
-is split. i.e. describe what the atomics are acutally used for, and why
-wrapping is (or is not) safe.
+Regardless of atomic_t semantics, a refcount_t would be far more obvious
+to developers than atomic_t and/or kref, and better documents the intent
+of code using it.
 
-> Certainly there are things that are missed here and that's why it
-> needs more review. 
-> Also, we were planning to break this patch even further by related
-> drivers, so we can take it to relevant people for review also. 
-
-I think that's necessary for any reasonable review to happen. Hopefully
-there are subsystem-specific idioms for related drivers that make this
-possible.
+We'd still see abuse of atomic_t (and so this won't solve the problems
+Kees mentioned), but even as something orthogonal I think that would
+make sense to have.
 
 Thanks,
 Mark.
