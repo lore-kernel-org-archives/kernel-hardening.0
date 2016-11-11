@@ -1,47 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 11 Nov 2016 18:46:30 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161111174630.GO3117@twins.programming.kicks-ass.net>
-References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
- <20161110203749.GV3117@twins.programming.kicks-ass.net>
- <20161110204838.GE17134@arm.com>
- <20161110211310.GX3117@twins.programming.kicks-ass.net>
- <20161110222744.GD8086@kroah.com>
- <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
- <20161110233835.GA23164@kroah.com>
- <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
- <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Kees Cook <keescook@chromium.org>
-Cc: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <20161110233004.GQ3568@worktop.programming.kicks-ass.net>
+References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
+ <1478809488-18303-13-git-send-email-elena.reshetova@intel.com>
+ <20161110204046.GW3117@twins.programming.kicks-ass.net> <20161110225031.GA26751@worktop>
+ <CAGXu5j+yy8Y=_bDhsTgEugJnN5=u8_XMSOAnqJBab-1+9v8+CA@mail.gmail.com> <20161110233004.GQ3568@worktop.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 11 Nov 2016 10:00:27 -0800
+Message-ID: <CAGXu5j++ZZDmgYqzvx104Bs2iQK+7V_Xn2VgTR7eoCwS2JR0tw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC v4 PATCH 12/13] x86: implementation for HARDENED_ATOMIC
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 11, 2016 at 09:43:00AM -0800, Kees Cook wrote:
-> > 1) kref: Used for honest-to-goodness reference counters that want
-> > overflow protection.  Uses a new type: atomic_nowrap_t that has
-> > HARDENED_ATOMIC protection.
-> 
-> Based on other feedback, it sounds like we're better off with
-> refcount_t (which kref could be implemented on top of). And refcount_t
-> would have a limited API: inc, dec_and_test (or whatever is determined
-> as sanely minimal).
-> 
-> > 2) statistical counters: Atomic in all cases, but wraps.
-> 
-> Yup. sequence_t seems to make the most sense on naming, I think. If we
-> want to get crazy, the type could be sequence_wrap_t.
+On Thu, Nov 10, 2016 at 3:30 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Thu, Nov 10, 2016 at 03:07:37PM -0800, Kees Cook wrote:
+>> , but basically this
+>> is a race in the overflow protection, so it's not operationally a
+>> problem. The process that caused the overflow still gets killed, and
+>> if the system isn't already set up to panic on oops, this becomes a
+>> resource leak instead of an exploitable condition.
+>
+> Now is this harmless? If you have two increments racing like:
 
-Why? atomic_t is still perfectly fine here, right?
+Adding some annotation for values and the BUG:
 
-> > 3) atomic_t: All other users of atomics (locks, etc.).  Wrapping
-> > behavior depends on a CONFIG setting.
-> 
-> Correct: if CONFIG_PARANOID_ATOMIC (or something) is set, atomic_t is
-> implemented as refcount_t, otherwise as sequence_t.
+>
+    INT_MAX
+>           inc
+    INT_MIN
+>           jno 1 // overflow
+>
+>                           inc
+    INT_MIN+1
+>                           jno 1 // !overflow
+>
+>           dec
+    INT_MIN
+>         1:              1:
+    BUG
+>
+> The second thread will still affect your wrap and not BUG.
 
-Can't happen. There is far more atomic_t usage than reference and/or
-statistics counters.
+Agreed: the first thread will BUG and the second thread is still halfway to 0.
+
+On systems that panic on BUG, things are protected. For the rest of
+the systems, an alternative to "dec" on overflow is to sub (more than)
+NR_CPUS, to keep the saturation below the overflow level. This means
+that it is still detected (BUG) by at least 1 thread, and cannot reach
+0 (to trigger the flaw) on all other threads, even if they all lose
+the race.
+
+Some further details on examining the race is here:
+
+https://bugs.chromium.org/p/project-zero/issues/detail?id=856#c2
+
+To me, this seems better than taking the cmpxchg performance hit.
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
