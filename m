@@ -1,140 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20161110233835.GA23164@kroah.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Fri, 11 Nov 2016 08:49:59 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41BFF68E@IRSMSX102.ger.corp.intel.com>
 References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
- <20161110203749.GV3117@twins.programming.kicks-ass.net> <20161110204838.GE17134@arm.com>
- <20161110211310.GX3117@twins.programming.kicks-ass.net> <20161110222744.GD8086@kroah.com>
- <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com> <20161110233835.GA23164@kroah.com>
-From: David Windsor <dave@progbits.org>
-Date: Fri, 11 Nov 2016 02:50:41 -0500
-Message-ID: <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
+ <1478809488-18303-4-git-send-email-elena.reshetova@intel.com>
+ <20161110215845.GD3117@twins.programming.kicks-ass.net>
+In-Reply-To: <20161110215845.GD3117@twins.programming.kicks-ass.net>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [RFC v4 PATCH 03/13] kernel: identify wrapping atomic usage
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 10, 2016 at 6:38 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> On Thu, Nov 10, 2016 at 03:15:44PM -0800, Kees Cook wrote:
->> (PeterZ went missing from your reply? I've added him back to the thread...)
->
-> argh, not intentional at all, thanks for that...
->
->> On Thu, Nov 10, 2016 at 2:27 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
->> > On Thu, Nov 10, 2016 at 10:13:10PM +0100, Peter Zijlstra wrote:
->> >> On Thu, Nov 10, 2016 at 08:48:38PM +0000, Will Deacon wrote:
->> >> > > That said, I still don't much like this.
->> >> > >
->> >> > > I would much rather you make kref useful and use that. It still means
->> >> > > you get to audit all refcounts in the kernel, but hey, you had to do
->> >> > > that anyway.
->> >> >
->> >> > What needs to happen to kref to make it useful? Like many others, I've
->> >> > been guilty of using atomic_t for refcounts in the past.
->> >>
->> >> As it stands kref is a pointless wrapper. If it were to provide
->> >> something actually useful, like wrap protection, then it might actually
->> >> make sense to use it.
->> >
->> > It provides the correct cleanup ability for a reference count and the
->> > object it is in, so it's not all that pointless :)
->> >
->> > But I'm always willing to change it to make it work better for people,
->> > if kref did the wrapping protection (i.e. used a non-wrapping atomic
->> > type), then you would have that.  I thought that was what this patchset
->> > provided...
->> >
->> > And yes, this is a horridly large patchset.  I've looked at these
->> > changes, and in almost all of them, people are using atomic_t as merely
->> > a "counter" for something (sequences, rx/tx stats, etc), to get away
->> > without having to lock it with an external lock.
->> >
->> > So, does it make more sense to just provide a "pointless" api for this
->> > type of "counter" pattern:
->> >         counter_inc()
->> >         counter_dec()
->> >         counter_read()
->> >         counter_set()
->> >         counter_add()
->> >         counter_subtract()
->> > Those would use the wrapping atomic type, as they can wrap all they want
->> > and no one really is in trouble.  Once those changes are done, just make
->> > atomic_t not wrap and all should be fine, no other code should need to
->> > be changed.
->> >
->> > We can bikeshed on the function names for a while, to let everyone feel
->> > they contributed (counter, kcount, ksequence, sequence_t, cnt_t, etc.)...
->>
->> Bikeshed: "counter" doesn't tell me anything about its behavior at max value.
->
-> True :)
->
->> > And yes, out-of-tree code will work differently, but really, the worse
->> > that could happen is their "sequence number" stops wrapping :)
->> >
->> > Would that be a better way to implement this?
->>
->> A thought I had if the opt-out approach is totally unacceptable would
->> be to make it a CONFIG option that can toggle the risk as desired. It
->> would require splitting into three cases:
->>
->> reference counters (say, "refcount" implemented with new atomic_nowrap_t)
->
+On Thu, Nov 10, 2016 at 10:24:38PM +0200, Elena Reshetova wrote:
+>  include/linux/blktrace_api.h         |   2 +-
+>  include/linux/irqdesc.h              |   2 +-
+>  include/linux/kgdb.h                 |   2 +-
+>  include/linux/padata.h               |   2 +-
+>  include/linux/perf_event.h           |  10 ++--
+>  include/linux/sched.h                |   2 +-
+>  kernel/audit.c                       |   8 +--
+>  kernel/auditsc.c                     |   4 +-
+>  kernel/debug/debug_core.c            |  16 +++---
+>  kernel/events/core.c                 |  27 +++++-----
+>  kernel/irq/manage.c                  |   2 +-
+>  kernel/irq/spurious.c                |   2 +-
+>  kernel/locking/lockdep.c             |   2 +-
 
-Not sure if "refcount" is a label meant just for convenience in this
-thread, or a newly proposed type name.  If the latter, I see no need
-for it: kref should be the type name used for reference counters.
+>That's it for kernel/locking/ ? So qspinlock really needs the overflow tes=
+ts?
+>Colour me less than impressed with the quality of audit.
 
-> These should almost always be just using a kref.  Yes, there are some
-> vfs reference counters that can't use a kref, but those are rare.  And
-> make kref use atomic_nowrap_t.
->
-> This should be a very rare type, hopefully.
->
+The subsystem changes haven't been yet audited on a wider scale and I am su=
+re there are more things to catch.
+The intend was to make more audits later and also include each subsystem ma=
+intainers for reviews.
+To date our primary focus was on getting the approach working/looking less =
+invasive, which wasn't really easy given amount of changes it requires in a=
+tomic...
 
-While I really, really don't want to go down the opt-in route, here
-are the three relevant types and their associated use cases:
-
-1) kref: Used for honest-to-goodness reference counters that want
-overflow protection.  Uses a new type: atomic_nowrap_t that has
-HARDENED_ATOMIC protection.
-2) statistical counters: Atomic in all cases, but wraps.
-3) atomic_t: All other users of atomics (locks, etc.).  Wrapping
-behavior depends on a CONFIG setting.
-
-We'd need to audit the kernel and identify all reference counter users
-of atomic_t and convert them to kref.  This isn't nearly as large a
-task as enumerating all statistical counter users of atomic_t.
-
-The third category, users of atomic_t that fit neither into the
-category of reference counters or stat counters, is the interesting
-case.  I'm drawing a blank as to which of these users would require
-overflow protection?  If none do, we could drastically reduce the size
-of this patchset: leave atomic_t alone and implement kref with
-atomic_nowrap_t.  Again, it's very late and I'm drawing a blank as to
-"misc" users of atomic_t (non-refcount and non-stat-counters).
-
->> statistic counters (say, "statcount" implemented with new atomic_wrap_t)
->
-> Lots of these are also "sequences", that drivers rely on.  Hopefully
-> they can wrap as that's what happens today.  So that might not be the
-> best name, but naming is hard...
->
->> everything else (named "atomic_t", implemented as either
->> atomic_nowrap_t or atomic_wrap_t, depending on CONFIG)
->
-
-I don't like rerfcount/refcount_t: kref should be used.  In the same
-spirit, kstatcount might be more consistent.
-
-Pure, unadulterated bikeshedding.  =)
-
-> Sounds reasonable, will that still give you the protection that you want
-> here?
->
-
-For
-
-> thanks,
->
-> greg k-h
+>  kernel/padata.c                      |   4 +-
+>  kernel/profile.c                     |  14 ++---
+>  kernel/rcu/rcutorture.c              |  61 ++++++++++-----------
+>  kernel/rcu/tree.c                    |  36 +++++++------
+>  kernel/rcu/tree.h                    |  18 ++++---
+>  kernel/rcu/tree_exp.h                |   6 +--
+>  kernel/rcu/tree_plugin.h             |  12 ++---
+>  kernel/rcu/tree_trace.c              |  14 ++---
+>  kernel/sched/auto_group.c            |   4 +-
+>  kernel/time/timer_stats.c            |  11 ++--
+>  kernel/trace/blktrace.c              |   6 +--
+>  kernel/trace/ftrace.c                |   4 +-
+>  kernel/trace/ring_buffer.c           | 100 ++++++++++++++++++-----------=
+------
+>  kernel/trace/trace_clock.c           |   4 +-
+>  kernel/trace/trace_functions_graph.c |   4 +-
+>  kernel/trace/trace_mmiotrace.c       |   8 +--
+>  29 files changed, 199 insertions(+), 188 deletions(-)
