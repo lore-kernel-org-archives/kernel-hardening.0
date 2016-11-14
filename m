@@ -1,90 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20161026065654.19166-1-mic@digikod.net>
+ <5828776A.1010104@digikod.net>
+ <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+Message-ID: <582A23CB.5080506@digikod.net>
+Date: Mon, 14 Nov 2016 21:51:23 +0100
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161111201704.GQ3117@twins.programming.kicks-ass.net>
-References: <20161110203749.GV3117@twins.programming.kicks-ass.net>
- <20161110204838.GE17134@arm.com> <20161110211310.GX3117@twins.programming.kicks-ass.net>
- <20161110222744.GD8086@kroah.com> <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
- <20161110233835.GA23164@kroah.com> <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
- <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
- <20161111174630.GO3117@twins.programming.kicks-ass.net> <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com>
- <20161111201704.GQ3117@twins.programming.kicks-ass.net>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 14 Nov 2016 12:31:32 -0800
-Message-ID: <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
+In-Reply-To: <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
+Content-Type: multipart/signed; micalg=pgp-sha512;
+ protocol="application/pgp-signature";
+ boundary="m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE"
+Subject: [kernel-hardening] Re: [RFC v4 00/18] Landlock LSM: Unprivileged sandboxing
+To: Sargun Dhillon <sargun@sargun.me>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>, LSM <linux-security-module@vger.kernel.org>, netdev <netdev@vger.kernel.org>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 11, 2016 at 12:17 PM, Peter Zijlstra <peterz@infradead.org> wrote:
-> On Fri, Nov 11, 2016 at 10:04:42AM -0800, Kees Cook wrote:
->
->> I'm totally open about how to get there, but things can't just be opt-in.
->
-> There really is no alternative.
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE
+Content-Type: multipart/mixed; boundary="arxkWoIbr02QlsTBHllefpbtpIGhIljxC";
+ protected-headers="v1"
+From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
+To: Sargun Dhillon <sargun@sargun.me>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>,
+ Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann
+ <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>,
+ David Drysdale <drysdale@google.com>, "David S . Miller"
+ <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>,
+ James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
+ Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>,
+ "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>,
+ Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>,
+ kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>,
+ LSM <linux-security-module@vger.kernel.org>, netdev
+ <netdev@vger.kernel.org>,
+ "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
+Message-ID: <582A23CB.5080506@digikod.net>
+Subject: Re: [RFC v4 00/18] Landlock LSM: Unprivileged sandboxing
+References: <20161026065654.19166-1-mic@digikod.net>
+ <5828776A.1010104@digikod.net>
+ <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
+In-Reply-To: <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
 
-I realize you feel that way, but if we can find a way to squeeze
-mistakes down to impossible or very small, that has a strong effect on
-the future of avoiding exploitation of these kinds of things.
+--arxkWoIbr02QlsTBHllefpbtpIGhIljxC
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
-> refcount_t; should only have: inc, inc_not_zero, dec_and_test
 
-Sounds good. Two questions remain:
+On 14/11/2016 11:35, Sargun Dhillon wrote:
+> Was there a plan around getting Daniel's patches in as well? Also,
+> rather than making these handles landlock-specific, can they be
+> implemented in such a way where we can keep track of (some) of these
+> in other types of programs?
+>=20
 
-- how to deal with existing refcounting atomic_t users that want _add and _sub?
-- keeping this fast enough that it can be used even in very sensitive
-places (net, fs, etc).
+About the map of handles, this is only a new type of map so it's not
+particularly Landlock-specific. Anyway, we'll see that in the third step.=
 
-> stats_t; should only have: add,sub
 
-Seems right, though why not inc/dec? And shouldn't it have a _read of some kind?
+ Micka=C3=ABl
 
-Keeping the implementation details of refcount_t and stats_t opaque to
-the users should discourage misuse...
 
-> atomic_t; has:
->
->         {add,inc,sub,dec} + {and,or,xor,notand}
->
->         {add,inc,sub,dec}_return * {,relaxed,release,acquire}
->
->         (fetch_{add,inc,sub,dec} + {and,or,xor,notand}) * {,relaxed,release,acquire}
->
->         {sub,add,inc,dec}_and_test
->
->         {cmpxchg,xchg}
->
->         add_unless,inc_not_zero,{inc,dec}_unless_negative,dec_if_positive
->
-> That is so much more than either refcount_t or stats_t should have, and
-> the whole wrap/nowrap thing only matters to part of the ops.
->
-> Like said, atomic_cmpxchg_wrap() is utter crap, that's a function name
-> that doesn't make sense, and you guys should have realized that the
-> moment you typed it.
->
-> Its fantasy to think you can 'implement' atomic_t with refcount_t or
-> anything else. You're chasing unicorns.
+--arxkWoIbr02QlsTBHllefpbtpIGhIljxC--
 
-So, here's another suggestion on how to avoid this being opt-in: we
-change atomic_t's name along with adding refcount_t and stats_t. We
-need some way to distinguish "true" atomic users from the refcount_t
-and stats_t, without needing to hope we can educate future driver
-writers. Then, after transition to refcount_t, stats_t, and
-bikeshed_atomic_t, we can catch misuse by having a CONFIG that forces
-new/remaining atomic_t into refcount_t (which will blow up the build
-if a driver uses anything besides inc, inc_not_zero, dec_and_test,
-etc).
+--m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
 
-Regardless, adding refcount_t and stats_t will already make the audit
-work of finding misused atomic_t SO much better, so since this is a
-precondition to any other crazier ideas, it looks like we can all
-agree on doing those pieces first.
+-----BEGIN PGP SIGNATURE-----
 
--Kees
+iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlgqI8sACgkQIt7+33O9
+apU+2gf/RSjyuXmqh9+zIykIT/t4iMp3fCJR+HlDodTAGdp8PCVKYPQKJdbeYZih
+GZ8N7biNbo94Ke3t/iZoW3D43y63ZZla9i3qmegbpT6o18IoCIvHA5kuJTMh5EtR
+CKVPtiCw+GvKaUEtunrNeEJts0bztxwQPUa/0lQpLIbBJBrsuFtf7mTI17G1Aujc
+L9BE3XnzWrphT7oCbkqaYhIV9Csl+6LbHp3oBNnQN3rI9VTh49/RIRNLeexflIDh
+5VEq5MAQTvRrU5Nd9Ntc8Lik/pxa1dnjebFyeqsBXZArme5U8YKRVuChb3pEl3b5
+3DjnRqCuaFOh8i2Coj7bs4o0/tNSCg==
+=Yhft
+-----END PGP SIGNATURE-----
 
--- 
-Kees Cook
-Nexus Security
+--m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE--
