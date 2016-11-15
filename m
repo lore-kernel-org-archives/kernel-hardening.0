@@ -1,52 +1,128 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 15 Nov 2016 10:36:45 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20161115103645.GC29104@leverpostej>
-References: <20161110203749.GV3117@twins.programming.kicks-ass.net>
- <20161110204838.GE17134@arm.com>
- <20161110211310.GX3117@twins.programming.kicks-ass.net>
- <20161110222744.GD8086@kroah.com>
- <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
- <20161110233835.GA23164@kroah.com>
- <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
- <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
- <20161111183118.GO11945@leverpostej>
- <20161111200500.GP3117@twins.programming.kicks-ass.net>
+References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20161104144534.14790-1-juerg.haefliger@hpe.com>
+ <20161104144534.14790-2-juerg.haefliger@hpe.com>
+ <CAGXu5jKY56q3Kp+dB0i-jgo7UrujCqnqhzw80+n_7keioKxWkQ@mail.gmail.com>
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+Message-ID: <cdec912a-3e28-b610-31b9-105384867bbf@hpe.com>
+Date: Tue, 15 Nov 2016 12:15:14 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161111200500.GP3117@twins.programming.kicks-ass.net>
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
+In-Reply-To: <CAGXu5jKY56q3Kp+dB0i-jgo7UrujCqnqhzw80+n_7keioKxWkQ@mail.gmail.com>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="MMA5n0WALLx3TQ9tiMHKXcQ7909wPUkXE"
+Subject: [kernel-hardening] Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
+ (XPFO)
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Nov 11, 2016 at 09:05:00PM +0100, Peter Zijlstra wrote:
-> On Fri, Nov 11, 2016 at 06:31:18PM +0000, Mark Rutland wrote:
-> > On Fri, Nov 11, 2016 at 09:43:00AM -0800, Kees Cook wrote:
-> > > (And now Greg went missing from the reply? Re-added...)
-> > > 
-> > > On Thu, Nov 10, 2016 at 11:50 PM, David Windsor <dave@progbits.org> wrote:
-> > > > On Thu, Nov 10, 2016 at 6:38 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> > > >> On Thu, Nov 10, 2016 at 03:15:44PM -0800, Kees Cook wrote:
-> > 
-> > > As far as refcount_t is concerned, I worry using cmpxchg will be too
-> > > costly, but it's worth benchmarking.
-> > 
-> > If that does turn out to be a problem, we could allow architectures to
-> > provide their own implementations of the API, with a generic fallback
-> > otherwise, as we do for other features.
-> 
-> Note that only LL/SC archs can do somewhat better. x86/s390/sparc64 etc
-> al must use cmpxchg, there's just no other way to get an actual atomic
-> inc/dec with over/under-flow detection.
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--MMA5n0WALLx3TQ9tiMHKXcQ7909wPUkXE
+Content-Type: multipart/mixed; boundary="Hdqn216xR43vntA6rDQsbXD8mI2B2GFMR";
+ protected-headers="v1"
+From: Juerg Haefliger <juerg.haefliger@hpe.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>,
+ "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
+ linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
+Message-ID: <cdec912a-3e28-b610-31b9-105384867bbf@hpe.com>
+Subject: Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
+ (XPFO)
+References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
+ <20161104144534.14790-1-juerg.haefliger@hpe.com>
+ <20161104144534.14790-2-juerg.haefliger@hpe.com>
+ <CAGXu5jKY56q3Kp+dB0i-jgo7UrujCqnqhzw80+n_7keioKxWkQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jKY56q3Kp+dB0i-jgo7UrujCqnqhzw80+n_7keioKxWkQ@mail.gmail.com>
 
-Sure; arm64 will also fall into that bucket with the ARMv8.1 atomics.
+--Hdqn216xR43vntA6rDQsbXD8mI2B2GFMR
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
-> The proposed x86 implementation is non-atomic and therefore a complete
-> nonstarter.
+Sorry for the late reply, I just found your email in my cluttered inbox.
 
-No disagreement there.
+On 11/10/2016 08:11 PM, Kees Cook wrote:
+> On Fri, Nov 4, 2016 at 7:45 AM, Juerg Haefliger <juerg.haefliger@hpe.co=
+m> wrote:
+>> This patch adds support for XPFO which protects against 'ret2dir' kern=
+el
+>> attacks. The basic idea is to enforce exclusive ownership of page fram=
+es
+>> by either the kernel or userspace, unless explicitly requested by the
+>> kernel. Whenever a page destined for userspace is allocated, it is
+>> unmapped from physmap (the kernel's page table). When such a page is
+>> reclaimed from userspace, it is mapped back to physmap.
+>>
+>> Additional fields in the page_ext struct are used for XPFO housekeepin=
+g.
+>> Specifically two flags to distinguish user vs. kernel pages and to tag=
 
-Thanks,
-Mark.
+>> unmapped pages and a reference counter to balance kmap/kunmap operatio=
+ns
+>> and a lock to serialize access to the XPFO fields.
+>=20
+> Thanks for keeping on this! I'd really like to see it land and then
+> get more architectures to support it.
+
+Good to hear :-)
+
+
+>> Known issues/limitations:
+>>   - Only supports x86-64 (for now)
+>>   - Only supports 4k pages (for now)
+>>   - There are most likely some legitimate uses cases where the kernel =
+needs
+>>     to access userspace which need to be made XPFO-aware
+>>   - Performance penalty
+>=20
+> In the Kconfig you say "slight", but I'm curious what kinds of
+> benchmarks you've done and if there's a more specific cost we can
+> declare, just to give people more of an idea what the hit looks like?
+> (What workloads would trigger a lot of XPFO unmapping, for example?)
+
+That 'slight' wording is based on the performance numbers published in th=
+e referenced paper.
+
+So far I've only run kernel compilation tests. For that workload, the big=
+ performance hit comes from
+disabling >4k page sizes (around 10%). Adding XPFO on top causes 'only' a=
+nother 0.5% performance
+penalty. I'm currently looking into adding support for larger page sizes =
+to see what the real impact
+is and then generate some more relevant numbers.
+
+=2E..Juerg
+
+
+> Thanks!
+>=20
+> -Kees
+>=20
+
+
+
+--Hdqn216xR43vntA6rDQsbXD8mI2B2GFMR--
+
+--MMA5n0WALLx3TQ9tiMHKXcQ7909wPUkXE
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="signature.asc"
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIcBAEBCAAGBQJYKu5DAAoJEHVMOpb5+LSMzQ8P+wWBd+Sen2m8U4Q7HjsdGCoB
+9fHq5r8x/bt+WvqF2i8vMR5Txrfn/EoOAkxkOu8tYiq7ECnHSnETAR8NVR2ckp0M
+cizhmBdOiiMcOUiLSnPGxEx9390Qdx5li0ODwqQS5dSa9qCkBbbv6qf7ri5CzDFH
+VO+OIAHI/kChTi4baKENq3UNHh0+8s/M0dykDwStIjrDG4Nh+IcEWOeDvOBWZ5HG
+qxZQEg20reipzZTcba7paJ/pJQZBuKg/AFdQW/RFBFK3O0JngWKp67ZmxSU7PHw+
+xr9qpKy+N9Yk3q5id7q2f2zA7eq3a3uYTNC+8d7zc6KQJIofnCLX/3dtuIEwS9rR
+QSxQIPtk2sFmPLy/kXpU2RihdIJijJtx7RmbW7KEiuUMwUO+dDjjwJul9SNxlYWg
+gYjUxPAGP6jxfGL443YKNbss2e5KfIh6LXlJpbtnD0WEfYiI7Ef2Y2qRrXpCkcw/
+Z2kBLojOJOn8HagkHJiiw8lTwgDm2+YNcUWQoDgaTK9xOoAfMssETJfFaiGt6hsG
+7VJot9jHg33kSZDyiTVBV6nwmCkOqtgXINYj8Q82iRmWUKPq2VEQEWWlvg31N9eu
+S1L7EFIaAzZvt+6qc/GCrjjQzgOz+En/UyfmPoojJ+A6dx8/gM6oWkOOZDsG614J
+9rFANUbutWyZav73fc/L
+=Wzyi
+-----END PGP SIGNATURE-----
+
+--MMA5n0WALLx3TQ9tiMHKXcQ7909wPUkXE--
