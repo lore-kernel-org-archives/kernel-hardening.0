@@ -1,164 +1,48 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-2-juerg.haefliger@hpe.com>
- <CAGXu5jKvWZ6=YLkFkA2wEE0gTdESTEifeL5KVXUd+EjKjJm9WQ@mail.gmail.com>
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-Message-ID: <9c558dfc-112a-bb52-88c5-206f5ca4fc42@hpe.com>
-Date: Tue, 15 Nov 2016 12:18:10 +0100
+Date: Tue, 15 Nov 2016 12:21:49 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161115112149.GI3142@twins.programming.kicks-ass.net>
+References: <20161110204838.GE17134@arm.com>
+ <20161110211310.GX3117@twins.programming.kicks-ass.net>
+ <20161110222744.GD8086@kroah.com>
+ <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
+ <20161110233835.GA23164@kroah.com>
+ <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
+ <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
+ <20161111183118.GO11945@leverpostej>
+ <20161111200500.GP3117@twins.programming.kicks-ass.net>
+ <20161115103645.GC29104@leverpostej>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKvWZ6=YLkFkA2wEE0gTdESTEifeL5KVXUd+EjKjJm9WQ@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="tIVC2OL3od72E71xQ07EDiAJ4OLahkkKF"
-Subject: [kernel-hardening] Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
- (XPFO)
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20161115103645.GC29104@leverpostej>
+Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---tIVC2OL3od72E71xQ07EDiAJ4OLahkkKF
-Content-Type: multipart/mixed; boundary="rclb8TCNqwCQ5eCEnVAGCpLPAekUixeEA";
- protected-headers="v1"
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Linux-MM <linux-mm@kvack.org>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
-Message-ID: <9c558dfc-112a-bb52-88c5-206f5ca4fc42@hpe.com>
-Subject: Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
- (XPFO)
-References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-2-juerg.haefliger@hpe.com>
- <CAGXu5jKvWZ6=YLkFkA2wEE0gTdESTEifeL5KVXUd+EjKjJm9WQ@mail.gmail.com>
-In-Reply-To: <CAGXu5jKvWZ6=YLkFkA2wEE0gTdESTEifeL5KVXUd+EjKjJm9WQ@mail.gmail.com>
+On Tue, Nov 15, 2016 at 10:36:45AM +0000, Mark Rutland wrote:
+> On Fri, Nov 11, 2016 at 09:05:00PM +0100, Peter Zijlstra wrote:
+> > On Fri, Nov 11, 2016 at 06:31:18PM +0000, Mark Rutland wrote:
+> > > On Fri, Nov 11, 2016 at 09:43:00AM -0800, Kees Cook wrote:
+> > > > (And now Greg went missing from the reply? Re-added...)
+> > > > 
+> > > > On Thu, Nov 10, 2016 at 11:50 PM, David Windsor <dave@progbits.org> wrote:
+> > > > > On Thu, Nov 10, 2016 at 6:38 PM, Greg KH <gregkh@linuxfoundation.org> wrote:
+> > > > >> On Thu, Nov 10, 2016 at 03:15:44PM -0800, Kees Cook wrote:
+> > > 
+> > > > As far as refcount_t is concerned, I worry using cmpxchg will be too
+> > > > costly, but it's worth benchmarking.
+> > > 
+> > > If that does turn out to be a problem, we could allow architectures to
+> > > provide their own implementations of the API, with a generic fallback
+> > > otherwise, as we do for other features.
+> > 
+> > Note that only LL/SC archs can do somewhat better. x86/s390/sparc64 etc
+> > al must use cmpxchg, there's just no other way to get an actual atomic
+> > inc/dec with over/under-flow detection.
+> 
+> Sure; arm64 will also fall into that bucket with the ARMv8.1 atomics.
 
---rclb8TCNqwCQ5eCEnVAGCpLPAekUixeEA
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-
-On 11/10/2016 08:24 PM, Kees Cook wrote:
-> On Fri, Nov 4, 2016 at 7:45 AM, Juerg Haefliger <juerg.haefliger@hpe.co=
-m> wrote:
->> This patch adds support for XPFO which protects against 'ret2dir' kern=
-el
->> attacks. The basic idea is to enforce exclusive ownership of page fram=
-es
->> by either the kernel or userspace, unless explicitly requested by the
->> kernel. Whenever a page destined for userspace is allocated, it is
->> unmapped from physmap (the kernel's page table). When such a page is
->> reclaimed from userspace, it is mapped back to physmap.
->>
->> Additional fields in the page_ext struct are used for XPFO housekeepin=
-g.
->> Specifically two flags to distinguish user vs. kernel pages and to tag=
-
->> unmapped pages and a reference counter to balance kmap/kunmap operatio=
-ns
->> and a lock to serialize access to the XPFO fields.
->>
->> Known issues/limitations:
->>   - Only supports x86-64 (for now)
->>   - Only supports 4k pages (for now)
->>   - There are most likely some legitimate uses cases where the kernel =
-needs
->>     to access userspace which need to be made XPFO-aware
->>   - Performance penalty
->>
->> Reference paper by the original patch authors:
->>   http://www.cs.columbia.edu/~vpk/papers/ret2dir.sec14.pdf
->=20
-> Would it be possible to create an lkdtm test that can exercise this pro=
-tection?
-
-I'll look into it.
-
-
->> diff --git a/security/Kconfig b/security/Kconfig
->> index 118f4549404e..4502e15c8419 100644
->> --- a/security/Kconfig
->> +++ b/security/Kconfig
->> @@ -6,6 +6,25 @@ menu "Security options"
->>
->>  source security/keys/Kconfig
->>
->> +config ARCH_SUPPORTS_XPFO
->> +       bool
->=20
-> Can you include a "help" section here to describe what requirements an
-> architecture needs to support XPFO? See HAVE_ARCH_SECCOMP_FILTER and
-> HAVE_ARCH_VMAP_STACK or some examples.
-
-Will do.
-
-
->> +config XPFO
->> +       bool "Enable eXclusive Page Frame Ownership (XPFO)"
->> +       default n
->> +       depends on ARCH_SUPPORTS_XPFO
->> +       select PAGE_EXTENSION
->> +       help
->> +         This option offers protection against 'ret2dir' kernel attac=
-ks.
->> +         When enabled, every time a page frame is allocated to user s=
-pace, it
->> +         is unmapped from the direct mapped RAM region in kernel spac=
-e
->> +         (physmap). Similarly, when a page frame is freed/reclaimed, =
-it is
->> +         mapped back to physmap.
->> +
->> +         There is a slight performance impact when this option is ena=
-bled.
->> +
->> +         If in doubt, say "N".
->> +
->>  config SECURITY_DMESG_RESTRICT
->>         bool "Restrict unprivileged access to the kernel syslog"
->>         default n
->=20
-> I've added these patches to my kspp tree on kernel.org, so it should
-> get some 0-day testing now...
-
-Very good. Thanks!
-
-
-> Thanks!
-
-Appreciate the feedback.
-
-=2E..Juerg
-
-
-> -Kees
->=20
-
-
-
---rclb8TCNqwCQ5eCEnVAGCpLPAekUixeEA--
-
---tIVC2OL3od72E71xQ07EDiAJ4OLahkkKF
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQIcBAEBCAAGBQJYKu7zAAoJEHVMOpb5+LSMThkP/1ZSAODxbIB2ebdrvax2absi
-nJwtgo56pBL7g7OJu/OrxUXvMHi9LGfahZOUTUmRCiQIL60EdjCJvQB9wcASVr3i
-7AO1ztMGZxmGl/UlobukQs0xTlFU9FcYJFxTqKQPHA8PFnzQZe5jqG1JwTjhw4Z7
-ANULiFZGG0G0vSXAagWwiwdzZJyt4HCSamfoESBKSBTK8TywvIFDqy/qsHHlmpjd
-EExwax4E/VB+Yl8Tg2RvgHHI1kQpTB1dPBfAQvXOTjujdHVGxVZSZBss+3HXL5vi
-BbNA0Gez+aNvVp2tTTeyWce9y11nIAZgU4rcjxkBqGoU73S+I2ltlIN7MCbKOYR3
-/wGxXpCeOCWRVcFxm4yxnQcWOXWMa7aIVHMf7uHU53oKOqGtglFQcMR6V4bcmNG9
-n+jLQZr/ADR9PJ2Rsb1vVyOlNiy+uQ+JCA5lBfEe+ckPW2MSc5GedzeETGYQgdUS
-u9ZzGrbtW9++PXXjgm6YBoaij0vjhVH2/Q1WU3wwdzBDGIaRpy1Bh0zShDdQ7S8y
-G83c8dHH4Yc1CIljCA0+Ipur3nvuoJKdc6Kxy+j1JK86t6dK8sktXS/1SnBIGM7T
-L30CH60pgfyvpDEWbSXoQXjdyuYMaQALBYX258KXuH8e9+vjPrO/UC8prgJqK/C1
-rbWnk9S8v1HGxMfThiYi
-=Vrrl
------END PGP SIGNATURE-----
-
---tIVC2OL3od72E71xQ07EDiAJ4OLahkkKF--
+arm64v8.1 still has ll/sc surely ;-) Or are you saying a cmpxchg loop is
+better for arm64v8.1 than an ll/sc ?
