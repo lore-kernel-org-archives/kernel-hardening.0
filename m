@@ -1,82 +1,68 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20161026065654.19166-1-mic@digikod.net>
- <5828776A.1010104@digikod.net>
- <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <582A23CB.5080506@digikod.net>
-Date: Mon, 14 Nov 2016 21:51:23 +0100
+Date: Tue, 15 Nov 2016 09:01:33 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161115080133.GC3142@twins.programming.kicks-ass.net>
+References: <20161110211310.GX3117@twins.programming.kicks-ass.net>
+ <20161110222744.GD8086@kroah.com>
+ <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
+ <20161110233835.GA23164@kroah.com>
+ <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
+ <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
+ <20161111174630.GO3117@twins.programming.kicks-ass.net>
+ <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com>
+ <20161111201704.GQ3117@twins.programming.kicks-ass.net>
+ <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE"
-Subject: [kernel-hardening] Re: [RFC v4 00/18] Landlock LSM: Unprivileged sandboxing
-To: Sargun Dhillon <sargun@sargun.me>
-Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>, "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>, LSM <linux-security-module@vger.kernel.org>, netdev <netdev@vger.kernel.org>, "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
+To: Kees Cook <keescook@chromium.org>
+Cc: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE
-Content-Type: multipart/mixed; boundary="arxkWoIbr02QlsTBHllefpbtpIGhIljxC";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Sargun Dhillon <sargun@sargun.me>
-Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>, Daniel Borkmann
- <daniel@iogearbox.net>, Daniel Mack <daniel@zonque.org>,
- David Drysdale <drysdale@google.com>, "David S . Miller"
- <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Kees Cook <keescook@chromium.org>, Paul Moore <pmoore@redhat.com>,
- "Serge E . Hallyn" <serge@hallyn.com>, Tejun Heo <tj@kernel.org>,
- Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>,
- kernel-hardening@lists.openwall.com, Linux API <linux-api@vger.kernel.org>,
- LSM <linux-security-module@vger.kernel.org>, netdev
- <netdev@vger.kernel.org>,
- "open list:CONTROL GROUP (CGROUP)" <cgroups@vger.kernel.org>
-Message-ID: <582A23CB.5080506@digikod.net>
-Subject: Re: [RFC v4 00/18] Landlock LSM: Unprivileged sandboxing
-References: <20161026065654.19166-1-mic@digikod.net>
- <5828776A.1010104@digikod.net>
- <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
-In-Reply-To: <CAMp4zn8u3kg-nhiZ5rSUCLGveAzHr6FoP1x=iJasF2W0S56WfA@mail.gmail.com>
+On Mon, Nov 14, 2016 at 12:31:32PM -0800, Kees Cook wrote:
+> On Fri, Nov 11, 2016 at 12:17 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+> > On Fri, Nov 11, 2016 at 10:04:42AM -0800, Kees Cook wrote:
+> >
+> >> I'm totally open about how to get there, but things can't just be opt-in.
+> >
+> > There really is no alternative.
+> 
+> I realize you feel that way, but if we can find a way to squeeze
+> mistakes down to impossible or very small, that has a strong effect on
+> the future of avoiding exploitation of these kinds of things.
 
---arxkWoIbr02QlsTBHllefpbtpIGhIljxC
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+So new drivers and code in general need review anyway, right? There's
+tons of other ways people can do root holes by accident. And this whole
+refcount thing is something fairly trivial that even tools could spot.
 
+So I really don't see this we must break the world over this argument.
 
-On 14/11/2016 11:35, Sargun Dhillon wrote:
-> Was there a plan around getting Daniel's patches in as well? Also,
-> rather than making these handles landlock-specific, can they be
-> implemented in such a way where we can keep track of (some) of these
-> in other types of programs?
->=20
+> > refcount_t; should only have: inc, inc_not_zero, dec_and_test
+> 
+> Sounds good. Two questions remain:
+> 
+> - how to deal with existing refcounting atomic_t users that want _add and _sub?
 
-About the map of handles, this is only a new type of map so it's not
-particularly Landlock-specific. Anyway, we'll see that in the third step.=
+The consensus seems to be to hit them over the head and not do this :-)
 
+> - keeping this fast enough that it can be used even in very sensitive
+> places (net, fs, etc).
 
- Micka=C3=ABl
+There's really nothing you can do about it except better hardware. If
+you want solid semantics you'll have to have this cmpxchg loop. As said,
+the LL/SC archs can do slightly better and could provide an asm version
+if they feel like it.
 
+> > stats_t; should only have: add,sub
+> 
+> Seems right, though why not inc/dec? 
 
---arxkWoIbr02QlsTBHllefpbtpIGhIljxC--
+Sure, inc/dec are trivial versions of add/sub :-)
 
---m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
+> And shouldn't it have a _read of some kind?
 
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlgqI8sACgkQIt7+33O9
-apU+2gf/RSjyuXmqh9+zIykIT/t4iMp3fCJR+HlDodTAGdp8PCVKYPQKJdbeYZih
-GZ8N7biNbo94Ke3t/iZoW3D43y63ZZla9i3qmegbpT6o18IoCIvHA5kuJTMh5EtR
-CKVPtiCw+GvKaUEtunrNeEJts0bztxwQPUa/0lQpLIbBJBrsuFtf7mTI17G1Aujc
-L9BE3XnzWrphT7oCbkqaYhIV9Csl+6LbHp3oBNnQN3rI9VTh49/RIRNLeexflIDh
-5VEq5MAQTvRrU5Nd9Ntc8Lik/pxa1dnjebFyeqsBXZArme5U8YKRVuChb3pEl3b5
-3DjnRqCuaFOh8i2Coj7bs4o0/tNSCg==
-=Yhft
------END PGP SIGNATURE-----
-
---m6axgi2XTbRK5v5hc0CrFcsnwFgFhv1rE--
+I would imagine _set and _read available for all, although currently
+there is the discussion of taking even _read() away from refcount_t and
+only providing a printk() format specifier.
