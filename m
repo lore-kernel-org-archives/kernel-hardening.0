@@ -1,13 +1,9 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 16 Nov 2016 17:34:48 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C1196C@IRSMSX102.ger.corp.intel.com>
-References: <20161110203749.GV3117@twins.programming.kicks-ass.net>
-	 <20161110204838.GE17134@arm.com>
-	 <20161110211310.GX3117@twins.programming.kicks-ass.net>
-	 <20161110222744.GD8086@kroah.com>
-	 <CAGXu5jJz_dHt-QNqPrYFnQNhj1oV_ux62SSi=PN=VEBm6oq0Mg@mail.gmail.com>
-	 <20161110233835.GA23164@kroah.com>
+Message-ID: <1479318060.21171.31.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Wed, 16 Nov 2016 12:41:00 -0500
+In-Reply-To: <20161116173243.GX3142@twins.programming.kicks-ass.net>
+References: <20161110233835.GA23164@kroah.com>
 	 <CAEXv5_j22xaH4cfVztp58XJxCo8UDut44ei_0Rhv_FUbfHDwsQ@mail.gmail.com>
 	 <CAGXu5jJ0h6+r7T1bcrzVW0gF3Jis1shDbxcpxXR9sniD0B+74A@mail.gmail.com>
 	 <20161111174630.GO3117@twins.programming.kicks-ass.net>
@@ -16,29 +12,59 @@ References: <20161110203749.GV3117@twins.programming.kicks-ass.net>
 	 <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
 	 <1479228602.4622.64.camel@redhat.com>
 	 <CAGXu5j+eA9wPMpM18iiD0RVX7UZVoLRn8JBKG2d8b3FF5+vwKw@mail.gmail.com>
- <1479316156.21171.30.camel@redhat.com>
-In-Reply-To: <1479316156.21171.30.camel@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Rik van Riel <riel@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>
+	 <1479316156.21171.30.camel@redhat.com>
+	 <20161116173243.GX3142@twins.programming.kicks-ass.net>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-nUNcJLHDRolTpmduiTIz"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
+To: kernel-hardening@lists.openwall.com
+Cc: Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Elena Reshetova <elena.reshetova@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter
+ Anvin" <h.peter.anvin@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVHVlLCAyMDE2LTExLTE1IGF0IDA5OjIzIC0wODAwLCBLZWVzIENvb2sgd3JvdGU6DQo+IE9u
-IFR1ZSwgTm92IDE1LCAyMDE2IGF0IDg6NTAgQU0sIFJpayB2YW4gUmllbCA8cmllbEByZWRoYXQu
-Y29tPg0KPiB3cm90ZToNCj4gPiANCj4gPiBPbiBNb24sIDIwMTYtMTEtMTQgYXQgMTI6MzEgLTA4
-MDAsIEtlZXMgQ29vayB3cm90ZToNCj4gPiA+wqANCj4gPiA+IEtlZXBpbmcgdGhlIGltcGxlbWVu
-dGF0aW9uIGRldGFpbHMgb2YgcmVmY291bnRfdCBhbmQgc3RhdHNfdCANCj4gPiA+IG9wYXF1ZSB0
-byB0aGUgdXNlcnMgc2hvdWxkIGRpc2NvdXJhZ2UgbWlzdXNlLi4uDQo+ID4gDQo+ID4gSSBzdXNw
-ZWN0IGEgbGFjayBvZiBpbmNfbm90X3plcm8gYW5kIGRlY19hbmRfdGVzdCB3b3VsZCBiZSB0aGUg
-DQo+ID4gYmlnZ2VzdCB0aGluZ3MgZGlzY291cmFnaW5nIG1pc3VzZSBvZiBzdGF0c190IGZvciBy
-ZWZlcmVuY2UgY291bnRpbmcgDQo+ID4gOikNCj4gDQo+IFJpZ2h0LCBidXQgaXQncyB0aGUgY29u
-dGludWluZyBhdG9taWNfdCB1c2UgdGhhdCBjb25jZXJucyBtZS4uLg0KDQo+Q2FuIHdlIHJlbW92
-ZSBpbmNfbm90X3plcm8gYW5kIGRlY19hbmRfdGVzdCBmdW5jdGlvbmFsaXR5IGZyb20gdGhlIGF0
-b21pY190IG1hY3Jvcz8NCg0KSWYgeW91IGdvIHRoaXMgcm91dGUsIGF0b21pYypfYWRkX3VubGVz
-cyBhbHNvIG5lZWRzIHRvIGJlIHJlbW92ZWQsIHNpbmNlIHRoZXJlIGFyZSBxdWl0ZSBzb21lIGNh
-c2VzIHdoZW4gaXQgaXMgdXNlZCBmb3IgcmVmY291bnQgZnVuY3Rpb25hbGl0eS4gDQpJIGhhdmUg
-YSBjb2NjaW5lbGxlIHJ1bGUgbm93IHRoYXQgZm91bmQgYWJvdXQgMTUgdXNhZ2VzIG9mIGl0LiAN
-Cg0K
+
+--=-nUNcJLHDRolTpmduiTIz
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+On Wed, 2016-11-16 at 18:32 +0100, Peter Zijlstra wrote:
+> On Wed, Nov 16, 2016 at 12:09:16PM -0500, Rik van Riel wrote:
+> > On Tue, 2016-11-15 at 09:23 -0800, Kees Cook wrote:
+> > >=20
+> > > Right, but it's the continuing atomic_t use that concerns me...
+> >=20
+> > Can we remove inc_not_zero and dec_and_test functionality
+> > from the atomic_t macros?
+> >=20
+> > It would require fixing all of the in tree code, and after
+> > that people with out of tree code would have to switch to
+> > refcount_t to make their code work again.
+>=20
+> People will just use (atomic_add_return(-1, &refcount) =3D=3D 0) instead,
+> or
+> any other variant along those lines.
+
+They could, but switching the variable type to refcount_t
+seems like it would be the way of least resistance.
+
+--=20
+All Rights Reversed.
+--=-nUNcJLHDRolTpmduiTIz
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQEcBAABCAAGBQJYLJosAAoJEM553pKExN6DwpIH/RuM7NBMkqURHJbeNcF/UM26
+D4zmJYdp2BIkJbr1icxyx+3/uc34XExzQH0m/CpBAs+jF1/8Zd26wWpmN/WWDMb5
+DIu1fpXLT1hNe4dNSGAW8Hkqu7Uppm6j8WzkdVvPURpeJ/BjypPcsAcoCFCM5CbV
+ZIdn1Cafg3JnNllf0OS/CNqdIGINkKnkyghJXdX6WHL7c20iuX5lj3/mm6apQoeC
+0MIH7C9255wXw6sVBzxNPY6REbBSI0/+IkHfDsl1e6g1aExcNXJoRx/O7d3O1e2K
+7/FSbT3+e/sNWl26NvqMhStcTaxqVJPZ6i2Vhh4FkxvXZYew2V+nnETWy+PW5Ig=
+=lLwL
+-----END PGP SIGNATURE-----
+
+--=-nUNcJLHDRolTpmduiTIz--
