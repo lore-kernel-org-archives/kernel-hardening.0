@@ -1,67 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 17 Nov 2016 11:16:42 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161117101642.GG3142@twins.programming.kicks-ass.net>
-References: <20161111174630.GO3117@twins.programming.kicks-ass.net>
- <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com>
- <20161111201704.GQ3117@twins.programming.kicks-ass.net>
- <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
- <1479228602.4622.64.camel@redhat.com>
- <CAGXu5j+eA9wPMpM18iiD0RVX7UZVoLRn8JBKG2d8b3FF5+vwKw@mail.gmail.com>
- <1479316156.21171.30.camel@redhat.com>
- <2236FBA76BA1254E88B949DDB74E612B41C1196C@IRSMSX102.ger.corp.intel.com>
- <20161117083718.GA3142@twins.programming.kicks-ass.net>
- <alpine.DEB.2.10.1611171035480.2913@hadrien>
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <201611160623.afRvXZ5d%fengguang.wu@intel.com>
+References: <201611160623.afRvXZ5d%fengguang.wu@intel.com>
+Date: Thu, 17 Nov 2016 21:53:31 +1100
+Message-ID: <87bmxextqs.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.10.1611171035480.2913@hadrien>
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Julia Lawall <julia.lawall@lip6.fr>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Rik van Riel <riel@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] Re: [PATCH] lkdtm: Add tests for LIST_POISON and ZERO_SIZE_PTR
+To: keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Nov 17, 2016 at 10:36:47AM +0100, Julia Lawall wrote:
-> 
-> 
-> On Thu, 17 Nov 2016, Peter Zijlstra wrote:
-> 
-> > On Wed, Nov 16, 2016 at 05:34:48PM +0000, Reshetova, Elena wrote:
-> >
-> > > I have a coccinelle rule now that found about 15 usages of it.
-> >
-> > Right, so can coccinelle detect the call_rcu/free call that is
-> > conditional on the dec_and_test when its hidden inside a few function
-> > calls?
-> >
-> > Also, we should really have a "make spatch" target so that we can run
-> > the thing concurrently with -j80 or somesuch, because as is coccinelle
-> > is unbearably slow.
-> 
-> In the kernel, there is already the make coccicheck infrastructure.  It
-> suffices to add the semantic patch to a subdirectory of
-> scripts/coccinelle.
+kbuild test robot <lkp@intel.com> writes:
+> [auto build test ERROR on char-misc/char-misc-testing]
+> [also build test ERROR on v4.9-rc5]
+> [cannot apply to next-20161115]
+> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+>
+> url:    https://github.com/0day-ci/linux/commits/Michael-Ellerman/lkdtm-Add-tests-for-LIST_POISON-and-ZERO_SIZE_PTR/20161115-235441
+> config: i386-randconfig-i0-201646 (attached as .config)
+> compiler: gcc-4.8 (Debian 4.8.4-1) 4.8.4
+> reproduce:
+>         # save the attached .config to linux build tree
+>         make ARCH=i386 
+>
+> All errors (new ones prefixed by >>):
+>
+>>> ERROR: "mmap_min_addr" [drivers/misc/lkdtm.ko] undefined!
 
-Shiny.. however:
+I couldn't see what was causing this, but of course it's just that
+mmap_min_addr is not exported, and in that config LKDTM is a module.
 
-$ make coccicheck COCCI=kref.cocci MODE=patch V=1
-/bin/bash ./scripts/coccicheck
+I always build it in which is why I didn't notice.
 
-Please check for false positives in the output before submitting a patch.
-When using "patch" mode, carefully review the patch before submitting it.
+I'm not sure we want to EXPORT_SYMBOL mmap_min_addr just for this test
+do we? I could change the test to use mmap_min_addr if LKDTM is
+built-in, and otherwise just map at zero. Dunno.
 
-Processing kref.cocci
-with option(s) ""
-
-Message example to submit a patch:
- The semantic patch that makes this change is available
- in kref.cocci.
-
- More information about semantic patching is available at
- http://coccinelle.lip6.fr/
-
-Running (8 in parallel): /usr/bin/spatch -D patch --very-quiet --cocci-file kref.cocci --dir . -I ./arch/x86/include -I ./arch/x86/include/generated/uapi -I ./arch/x86/include/generated -I ./include -I ./arch/x86/include/uapi -I ./include/uapi -I ./include/generated/uapi --include ./include/linux/kconfig.h --jobs 8 --chunksize 1
-coccicheck failed
-
-
-No joy :-(
+cheers
