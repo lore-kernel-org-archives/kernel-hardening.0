@@ -1,35 +1,53 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 17 Nov 2016 13:59:32 +0100 (CET)
-From: Julia Lawall <julia.lawall@lip6.fr>
-In-Reply-To: <20161117101642.GG3142@twins.programming.kicks-ass.net>
-Message-ID: <alpine.DEB.2.10.1611171353150.2913@hadrien>
-References: <20161111174630.GO3117@twins.programming.kicks-ass.net> <CAGXu5j+_wdv_vn=Us-i=bvCwCGk5Ks_gpoK9bHja4dDNUZi9eQ@mail.gmail.com> <20161111201704.GQ3117@twins.programming.kicks-ass.net> <CAGXu5jJG0LUxLPtqr79PG=RmWgV96sy2j7dQKr9yvjadzrc3Ag@mail.gmail.com>
- <1479228602.4622.64.camel@redhat.com> <CAGXu5j+eA9wPMpM18iiD0RVX7UZVoLRn8JBKG2d8b3FF5+vwKw@mail.gmail.com> <1479316156.21171.30.camel@redhat.com> <2236FBA76BA1254E88B949DDB74E612B41C1196C@IRSMSX102.ger.corp.intel.com> <20161117083718.GA3142@twins.programming.kicks-ass.net>
- <alpine.DEB.2.10.1611171035480.2913@hadrien> <20161117101642.GG3142@twins.programming.kicks-ass.net>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC v4 PATCH 00/13] HARDENED_ATOMIC
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Julia Lawall <julia.lawall@lip6.fr>, "Reshetova, Elena" <elena.reshetova@intel.com>, Rik van Riel <riel@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, David Windsor <dave@progbits.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <87bmxextqs.fsf@concordia.ellerman.id.au>
+References: <201611160623.afRvXZ5d%fengguang.wu@intel.com> <87bmxextqs.fsf@concordia.ellerman.id.au>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 17 Nov 2016 11:56:50 -0800
+Message-ID: <CAGXu5jJW=Z1OWUCL_0dRPUua+2PrO1m9U0UokrDMvfQnkLE9Xw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH] lkdtm: Add tests for LIST_POISON
+ and ZERO_SIZE_PTR
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-With the options
+On Thu, Nov 17, 2016 at 2:53 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> kbuild test robot <lkp@intel.com> writes:
+>> [auto build test ERROR on char-misc/char-misc-testing]
+>> [also build test ERROR on v4.9-rc5]
+>> [cannot apply to next-20161115]
+>> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+>>
+>> url:    https://github.com/0day-ci/linux/commits/Michael-Ellerman/lkdtm-Add-tests-for-LIST_POISON-and-ZERO_SIZE_PTR/20161115-235441
+>> config: i386-randconfig-i0-201646 (attached as .config)
+>> compiler: gcc-4.8 (Debian 4.8.4-1) 4.8.4
+>> reproduce:
+>>         # save the attached .config to linux build tree
+>>         make ARCH=i386
+>>
+>> All errors (new ones prefixed by >>):
+>>
+>>>> ERROR: "mmap_min_addr" [drivers/misc/lkdtm.ko] undefined!
+>
+> I couldn't see what was causing this, but of course it's just that
+> mmap_min_addr is not exported, and in that config LKDTM is a module.
+>
+> I always build it in which is why I didn't notice.
+>
+> I'm not sure we want to EXPORT_SYMBOL mmap_min_addr just for this test
+> do we? I could change the test to use mmap_min_addr if LKDTM is
+> built-in, and otherwise just map at zero. Dunno.
 
---all-includes --include-headers --include-headers-for-types -I
-/var/julia/linux-next/include -I /var/julia/linux-next/include/drm -I
-/var/julia/linux-next/include/uapi --use-idutils
+Because of lkdtm's moduleness, I've had to put a lot of weird stuff
+into EXPORT_SYMBOL_GPL(). mmap_min_addr is more sensitive than most,
+though. How about just hard-coding it as 64k instead of using
+mmap_min_addr? Anyone using >64k is likely going to understand why
+lkdtm failed.
 
-with 9 parallel jobs, I get 20 occurrences that have to be checked
-manually due to insufficient type information in 1.5 minutes elapsed time.
+-Kees
 
-Replacing --all-includes with --recursive-includes increases the elapsed
-time to over 12 minutes but give only 9 occurrences that have to be
-checked.
-
---include-headers-for-types does some caching of header file information.
-Make coccicheck by default achieves paralellism by starting a thread for
-each file, which eliminates the benefit of caching.  One then also needs
-the argument --chunksize N, for perhaps N = 20, to get some benefit from
-the caching.
-
-julia
+-- 
+Kees Cook
+Nexus Security
