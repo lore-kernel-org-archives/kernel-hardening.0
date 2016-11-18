@@ -1,60 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: Michael Ellerman <mpe@ellerman.id.au>
+In-Reply-To: <CAGXu5jJW=Z1OWUCL_0dRPUua+2PrO1m9U0UokrDMvfQnkLE9Xw@mail.gmail.com>
+References: <201611160623.afRvXZ5d%fengguang.wu@intel.com> <87bmxextqs.fsf@concordia.ellerman.id.au> <CAGXu5jJW=Z1OWUCL_0dRPUua+2PrO1m9U0UokrDMvfQnkLE9Xw@mail.gmail.com>
+Date: Fri, 18 Nov 2016 13:37:59 +1100
+Message-ID: <871sy9ikc8.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-In-Reply-To: <CA+rpMbK5D5srxhD+oH2QL8RavHNhQh=Bha8WV0N9neRfXvRMKA@mail.gmail.com>
-References: <CA+rpMbL84wDu8e_QzZ86Hp3inrkbdb4XPh41OTV0zdB13cnzwg@mail.gmail.com>
- <CA+rpMbKEFd_vNKaV_+H_dfQX2r=FwxkhP7VbPRyFG04qO6srGw@mail.gmail.com>
- <CA+rpMbKpMGo7YOvroc6YskTOSHFG7m0Wz7-WFieHvGT1ew+YLA@mail.gmail.com>
- <CA+rpMbLYAX14OdD1OOCJ_ZWv6_qs2WxnP=tycoiXFxvasRLLLA@mail.gmail.com>
- <CA+rpMb+dnqmf8JYE4Y5oXNXihba_=-jddyhoFoLj8fxfo8AEfw@mail.gmail.com>
- <CA+rpMbJGWcF=Xa7r=NiBzaqo061GnunhE9eZXdhYMAxgJTaF9w@mail.gmail.com>
- <CA+rpMbLj8WSfmvP0x7SU2VDa09cvwZYm=cfgO-C3E-fvc+_acw@mail.gmail.com>
- <CA+rpMb+tupmqJTCSR9Vkf0N2DEZfOY8ResWCWQTYv2U_eLCRBA@mail.gmail.com>
- <CA+rpMb+vgSh=XPcGrofaopFsdjHMvUMsYubG_2D4CTW4XUaqmg@mail.gmail.com>
- <CA+rpMb+r9P86q+9i0vHfuXYpyY2F8YVQMwWAGTq2=+EwyhxrnA@mail.gmail.com>
- <CA+rpMb+sEZgJLp2Cv9Vtka5Jw=_HiLwgB7WDfKZmkMf_w6bn7A@mail.gmail.com>
- <CA+rpMbLSGALyN15+MEFGo2-N+gZ5SA0b_2urcLww1Z8X3d3wDA@mail.gmail.com>
- <CA+rpMbKBfkS2HNKeYS5CF2YU6S+aCaA=x6Ao0Khn8B64RU5OmA@mail.gmail.com>
- <CA+rpMb+web7zD0FmPPRqa+RH1r9V+=yyUvTD0YDCkWVF1fQ_yg@mail.gmail.com>
- <CA+rpMbJRciGmHgpzn7Tyn-9k+ksRzHROT4wcVC6gPrjv+H2rgQ@mail.gmail.com>
- <CA+rpMbK+aDEDHQZPmuD=Z1NO5U9ifGCF7J6H9voMXRjnPugn9w@mail.gmail.com> <CA+rpMbK5D5srxhD+oH2QL8RavHNhQh=Bha8WV0N9neRfXvRMKA@mail.gmail.com>
-From: Gaurav Minocha <gaurav.minocha.os@gmail.com>
-Date: Thu, 17 Nov 2016 18:06:19 -0800
-Message-ID: <CA+rpMbKZkFRQ6cq-Rgic8XXiV-kh+n0PmNiHwm9mCDdxN_xmCw@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=001a114cd52a907964054189c09f
-Subject: [kernel-hardening] Introduction and task pick
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain
+Subject: Re: [kernel-hardening] Re: [PATCH] lkdtm: Add tests for LIST_POISON and ZERO_SIZE_PTR
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a114cd52a907964054189c09f
-Content-Type: text/plain; charset=UTF-8
+Kees Cook <keescook@chromium.org> writes:
 
-Hello,
+> On Thu, Nov 17, 2016 at 2:53 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+>> kbuild test robot <lkp@intel.com> writes:
+>>> [auto build test ERROR on char-misc/char-misc-testing]
+>>> [also build test ERROR on v4.9-rc5]
+>>> [cannot apply to next-20161115]
+>>> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+>>>
+>>> url:    https://github.com/0day-ci/linux/commits/Michael-Ellerman/lkdtm-Add-tests-for-LIST_POISON-and-ZERO_SIZE_PTR/20161115-235441
+>>> config: i386-randconfig-i0-201646 (attached as .config)
+>>> compiler: gcc-4.8 (Debian 4.8.4-1) 4.8.4
+>>> reproduce:
+>>>         # save the attached .config to linux build tree
+>>>         make ARCH=i386
+>>>
+>>> All errors (new ones prefixed by >>):
+>>>
+>>>>> ERROR: "mmap_min_addr" [drivers/misc/lkdtm.ko] undefined!
+>>
+>> I couldn't see what was causing this, but of course it's just that
+>> mmap_min_addr is not exported, and in that config LKDTM is a module.
+>>
+>> I always build it in which is why I didn't notice.
+>>
+>> I'm not sure we want to EXPORT_SYMBOL mmap_min_addr just for this test
+>> do we? I could change the test to use mmap_min_addr if LKDTM is
+>> built-in, and otherwise just map at zero. Dunno.
+>
+> Because of lkdtm's moduleness, I've had to put a lot of weird stuff
+> into EXPORT_SYMBOL_GPL(). mmap_min_addr is more sensitive than most,
+> though. How about just hard-coding it as 64k instead of using
+> mmap_min_addr?
 
-I have been contributing in kernel as a hobbyist in device tree area.
-Still, a kernel newbie. Here, my intent is to explore kernel and learn its
-design.
+We can just use CONFIG_DEFAULT_MMAP_MIN_ADDR, which should work unless
+someone's actually changed the value at runtime. Will test.
 
-Write a plugin to clear struct padding - If no one has started it, I
-believe this task would be a good start. Could someone please share more
-details..like similar plugin, problem and suggested solution?
+I'd rather that than 64K hard-coded, as I'm thinking of increasing the
+minimum on ppc64.
 
-Please let me know if I'm missing something.
-
-Note: I contribute in my free time in multiple projects, so if task is
-urgent, please let me know in advance.
-
-Regards
-Gaurav Minocha
-
---001a114cd52a907964054189c09f
-Content-Type: text/html; charset=UTF-8
-
-<p dir="ltr">Hello,</p>
-<p dir="ltr">I have been contributing in kernel as a hobbyist in device tree area. Still, a kernel newbie. Here, my intent is to explore kernel and learn its design.</p>
-<p dir="ltr">Write a plugin to clear struct padding - If no one has started it, I believe this task would be a good start. Could someone please share more details..like similar plugin, problem and suggested solution?</p>
-<p dir="ltr">Please let me know if I&#39;m missing something.</p>
-<p dir="ltr">Note: I contribute in my free time in multiple projects, so if task is urgent, please let me know in advance.</p>
-<p dir="ltr">Regards<br>
-Gaurav Minocha</p>
-
---001a114cd52a907964054189c09f--
+cheers
