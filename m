@@ -1,83 +1,60 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161116151611.GD11228@leverpostej>
-References: <CAAseMr6Fae=4otZZX9HmO1YgehjsVmd+44G5RN7Wu8iF2+fruA@mail.gmail.com>
- <20161116151611.GD11228@leverpostej>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 17 Nov 2016 15:47:31 -0800
-Message-ID: <CAGXu5jJ1LwLJ-f1Fx=Mu278-eeeqC+JakrH_WPT99PcHTXzbpA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] patches for __write_rarely section
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CA+rpMbK5D5srxhD+oH2QL8RavHNhQh=Bha8WV0N9neRfXvRMKA@mail.gmail.com>
+References: <CA+rpMbL84wDu8e_QzZ86Hp3inrkbdb4XPh41OTV0zdB13cnzwg@mail.gmail.com>
+ <CA+rpMbKEFd_vNKaV_+H_dfQX2r=FwxkhP7VbPRyFG04qO6srGw@mail.gmail.com>
+ <CA+rpMbKpMGo7YOvroc6YskTOSHFG7m0Wz7-WFieHvGT1ew+YLA@mail.gmail.com>
+ <CA+rpMbLYAX14OdD1OOCJ_ZWv6_qs2WxnP=tycoiXFxvasRLLLA@mail.gmail.com>
+ <CA+rpMb+dnqmf8JYE4Y5oXNXihba_=-jddyhoFoLj8fxfo8AEfw@mail.gmail.com>
+ <CA+rpMbJGWcF=Xa7r=NiBzaqo061GnunhE9eZXdhYMAxgJTaF9w@mail.gmail.com>
+ <CA+rpMbLj8WSfmvP0x7SU2VDa09cvwZYm=cfgO-C3E-fvc+_acw@mail.gmail.com>
+ <CA+rpMb+tupmqJTCSR9Vkf0N2DEZfOY8ResWCWQTYv2U_eLCRBA@mail.gmail.com>
+ <CA+rpMb+vgSh=XPcGrofaopFsdjHMvUMsYubG_2D4CTW4XUaqmg@mail.gmail.com>
+ <CA+rpMb+r9P86q+9i0vHfuXYpyY2F8YVQMwWAGTq2=+EwyhxrnA@mail.gmail.com>
+ <CA+rpMb+sEZgJLp2Cv9Vtka5Jw=_HiLwgB7WDfKZmkMf_w6bn7A@mail.gmail.com>
+ <CA+rpMbLSGALyN15+MEFGo2-N+gZ5SA0b_2urcLww1Z8X3d3wDA@mail.gmail.com>
+ <CA+rpMbKBfkS2HNKeYS5CF2YU6S+aCaA=x6Ao0Khn8B64RU5OmA@mail.gmail.com>
+ <CA+rpMb+web7zD0FmPPRqa+RH1r9V+=yyUvTD0YDCkWVF1fQ_yg@mail.gmail.com>
+ <CA+rpMbJRciGmHgpzn7Tyn-9k+ksRzHROT4wcVC6gPrjv+H2rgQ@mail.gmail.com>
+ <CA+rpMbK+aDEDHQZPmuD=Z1NO5U9ifGCF7J6H9voMXRjnPugn9w@mail.gmail.com> <CA+rpMbK5D5srxhD+oH2QL8RavHNhQh=Bha8WV0N9neRfXvRMKA@mail.gmail.com>
+From: Gaurav Minocha <gaurav.minocha.os@gmail.com>
+Date: Thu, 17 Nov 2016 18:06:19 -0800
+Message-ID: <CA+rpMbKZkFRQ6cq-Rgic8XXiV-kh+n0PmNiHwm9mCDdxN_xmCw@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=001a114cd52a907964054189c09f
+Subject: [kernel-hardening] Introduction and task pick
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Nov 16, 2016 at 7:16 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Wed, Nov 16, 2016 at 10:39:38PM +0800, Gengjia Chen wrote:
->>    Patch 1 introduce the write-rarely memory section for
->>    those kernel objects which are read only mostly
->>    but need to be written to sometimes.
->>    Patch 2 introduce two helper functions (mark_wrdata_rw/
->>    mark_wrdata_ro) to make __write_rarely memory section
->>    writable or unwritable. They play like the pax_open_kernel/
->>    pax_close_kernel functions in grsecurity patch.Right now
->>    this only been implemented on arm32.
+--001a114cd52a907964054189c09f
+Content-Type: text/plain; charset=UTF-8
 
-Thanks Gengjia for working on this!
+Hello,
 
-As part of this, can you add some lkdtm (drivers/misc/lkdtm*.c) tests
-for these kinds of memory sections, so it's possible to test the
-feature? And as other have mentioned, finding some simple examples of
-where to use this primitive would be great. I think I saw a small one
-in grsecurity in drivers/cdrom/cdrom.c where cdo->generic_packet gets
-assigned. It's the only thing updated in the entire cdo object:
+I have been contributing in kernel as a hobbyist in device tree area.
+Still, a kernel newbie. Here, my intent is to explore kernel and learn its
+design.
 
--       if (!cdo->generic_packet)
--               cdo->generic_packet = cdrom_dummy_generic_packet;
-+       if (!cdo->generic_packet) {
-+               pax_open_kernel();
-+               const_cast(cdo->generic_packet) = cdrom_dummy_generic_packet;
-+               pax_close_kernel();
-+       }
+Write a plugin to clear struct padding - If no one has started it, I
+believe this task would be a good start. Could someone please share more
+details..like similar plugin, problem and suggested solution?
 
-> I've mentioned this elsewhere, but I don't think {open,close}_kernel()
-> works as an interface. Specifically, I don't believe it can be safely
-> and efficiently implemented for arm with LPAE, nor arm64.
+Please let me know if I'm missing something.
 
-I've seen similar objections from x86 maintainers.
+Note: I contribute in my free time in multiple projects, so if task is
+urgent, please let me know in advance.
 
-> To cater for those it may be possible to use a temporary RW mapping
-> separate from the usual kernel mapping (e.g. in TTBR0 on arm64). It
-> should be possible to have an API that can use either approach, if
-> writers are suitable annotated.
+Regards
+Gaurav Minocha
 
-Do you mean something besides a new fixmap?
+--001a114cd52a907964054189c09f
+Content-Type: text/html; charset=UTF-8
 
-As for annotation, this was something that came up during Kernel
-Summit too. It'd be nice to have a type-checked function of some kind
-that could be used. Maybe something like this (using the cdrom example
-above):
+<p dir="ltr">Hello,</p>
+<p dir="ltr">I have been contributing in kernel as a hobbyist in device tree area. Still, a kernel newbie. Here, my intent is to explore kernel and learn its design.</p>
+<p dir="ltr">Write a plugin to clear struct padding - If no one has started it, I believe this task would be a good start. Could someone please share more details..like similar plugin, problem and suggested solution?</p>
+<p dir="ltr">Please let me know if I&#39;m missing something.</p>
+<p dir="ltr">Note: I contribute in my free time in multiple projects, so if task is urgent, please let me know in advance.</p>
+<p dir="ltr">Regards<br>
+Gaurav Minocha</p>
 
-   rare_write(cdo, generic_packet, cdrom_dummy_generic_packet);
-
-> That all said, from the two patches it's not even clear how this would
-> be used, as nothing is marked __write_rarely, nor are any writers
-> updated. A demonstration would be helpful.
-
-The primary user of this would be the constify plugin, which marks all
-structures that contain only function pointers as being read-only. It
-also takes annotations for other things that are found manually.
-
-> It would also be worth getting these onto the relevant lists (per
-> scripts/get_maintainer.pl), so as to get the relevant core and
-> architecture maintainers involved as early as possible.
-
-Yeah, once some more examples are seen, it should be clear how to best
-build the API.
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+--001a114cd52a907964054189c09f--
