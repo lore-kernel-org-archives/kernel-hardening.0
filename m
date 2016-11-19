@@ -1,19 +1,23 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 18 Nov 2016 12:19:42 -0600 (CST)
-From: Christoph Lameter <cl@linux.com>
-In-Reply-To: <CAGXu5jKC8XTP=gjCGQYEEwSQEAWM66E8HedaEqZR3F=QSm+aTg@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.1611181219250.27160@east.gentwo.org>
-References: <1479376267-18486-1-git-send-email-mpe@ellerman.id.au> <alpine.DEB.2.20.1611181146330.26818@east.gentwo.org> <CAGXu5jKC8XTP=gjCGQYEEwSQEAWM66E8HedaEqZR3F=QSm+aTg@mail.gmail.com>
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2] slab: Add POISON_POINTER_DELTA to ZERO_SIZE_PTR
-To: Kees Cook <keescook@chromium.org>
-Cc: Michael Ellerman <mpe@ellerman.id.au>, Andrew Morton <akpm@linux-foundation.org>, Pekka Enberg <penberg@kernel.org>, David Rientjes <rientjes@google.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Linux-MM <linux-mm@kvack.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: zerons <zeronsaxm@gmail.com>
+Message-ID: <bf475a29-58cc-7b87-0821-9d23f01851b3@gmail.com>
+Date: Sat, 19 Nov 2016 19:50:16 +0800
+MIME-Version: 1.0
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] get NULL pointer dereferences or #GP fault to infomation leakage
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+I wonder if this could be an issue.
 
-On Fri, 18 Nov 2016, Kees Cook wrote:
-> In this case, what about the original < ZERO_SIZE_PTR check Michael
-> suggested? At least the one use in usercopy.c needs to be fixed, but
-> otherwise, it should be fine?
+Test on Ubuntu 16.04 with linux kernel 4.4.x, x86_64.
 
-Looks like it.
+When a NULL-pointer-deref or a #GP fault
+(e.g: access to 0xdead0000-xxxxxxxx) happens in kernel space,
+it seems that the kernel would kill the current process, then
+output the Oops message or "general protection fault" message.
+
+So we can get these messages via `dmesg` or reading the /var/log/...
+
+I think this may be a way to bypass the KASLR, could it be?
