@@ -1,49 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <bf475a29-58cc-7b87-0821-9d23f01851b3@gmail.com>
+ <CAJcbSZFq_r+bpzyU3VVdukHW3SXsD7EPHkobh7anPVvBgfXtqA@mail.gmail.com>
+From: zerons <zeronsaxm@gmail.com>
+Message-ID: <af8a6c3c-08b9-a354-d984-2428fdeebb8f@gmail.com>
+Date: Sun, 20 Nov 2016 10:12:32 +0800
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161119132832.GK3612@linux.vnet.ibm.com>
-References: <1478809488-18303-1-git-send-email-elena.reshetova@intel.com>
- <1478809488-18303-4-git-send-email-elena.reshetova@intel.com> <20161119132832.GK3612@linux.vnet.ibm.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Sat, 19 Nov 2016 13:39:58 -0800
-Message-ID: <CAGXu5jJ6Av611YQWvHNzVtEoprk-xnB9Ns9MGgg_rs95OPDMoQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v4 PATCH 03/13] kernel: identify wrapping atomic usage
-To: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>
+In-Reply-To: <CAJcbSZFq_r+bpzyU3VVdukHW3SXsD7EPHkobh7anPVvBgfXtqA@mail.gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] get NULL pointer dereferences or #GP fault to
+ infomation leakage
+To: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Nov 19, 2016 at 5:28 AM, Paul E. McKenney
-<paulmck@linux.vnet.ibm.com> wrote:
-> On Thu, Nov 10, 2016 at 10:24:38PM +0200, Elena Reshetova wrote:
->> From: David Windsor <dwindsor@gmail.com>
->>
->> In some cases atomic is not used for reference
->> counting and therefore should be allowed to overflow.
->> Identify such cases and make a switch to non-hardened
->> atomic version.
->>
->> The copyright for the original PAX_REFCOUNT code:
->>   - all REFCOUNT code in general: PaX Team <pageexec@freemail.hu>
->>   - various false positive fixes: Mathias Krause <minipli@googlemail.com>
->>
->> Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
->> Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
->> Signed-off-by: David Windsor <dwindsor@gmail.com>
->
-> Not a fan of the rename from atomic_t to atomic_wrap_t.
+If kernel panic on oops, then NULL pointer deref and others may cause a DoS.
+Maybe restrict user access to dmesg and other log files so that unprivileged
+users couldn't read log messages, or something like /proc/kallsyms(output 0000
+if no permission). Then those faults stll be useless.
 
-Yeah, the thread has grown considerably now. :) We're most likely
-looking at carving off two of the common atomic_t usage patterns into
-"stats_t" (with _add(), _sub(), and _read()), and "refcount_t" (with
-_inc(), _inc_not_zero(), _dec_and_test(), and _read(), along with a
-trap on overflow). With these in place, refcounts will be protected to
-avoid use-after-free exploits, things that don't care about wrapping
-will be annotated without a risk of them being turned into refcounts,
-and the remaining atomic_t uses will be easier to audit for misuse.
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+On 11/20/2016 12:36 AM, Thomas Garnier wrote:
+> It is an issue because having KASLR enable without panic on oops is not
+> really useful. Same apply to other mitigations that rely on randomness.
+> 
+> On Sat, Nov 19, 2016 at 3:50 AM, zerons <zeronsaxm@gmail.com> wrote:
+> 
+>> I wonder if this could be an issue.
+>>
+>> Test on Ubuntu 16.04 with linux kernel 4.4.x, x86_64.
+>>
+>> When a NULL-pointer-deref or a #GP fault
+>> (e.g: access to 0xdead0000-xxxxxxxx) happens in kernel space,
+>> it seems that the kernel would kill the current process, then
+>> output the Oops message or "general protection fault" message.
+>>
+>> So we can get these messages via `dmesg` or reading the /var/log/...
+>>
+>> I think this may be a way to bypass the KASLR, could it be?
+>>
+> 
+> 
+> 
