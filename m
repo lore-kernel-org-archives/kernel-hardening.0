@@ -1,40 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Rusty Russell <rusty@rustcorp.com.au>
-In-Reply-To: <20161125054822.GA2793@packer-debian-8-amd64.digitalocean.com>
-References: <20161114061505.15238-1-takahiro.akashi@linaro.org> <20161125054822.GA2793@packer-debian-8-amd64.digitalocean.com>
-Date: Mon, 28 Nov 2016 10:30:53 +1030
-Message-ID: <8760n88ocq.fsf@rustcorp.com.au>
+Date: Mon, 28 Nov 2016 18:18:31 +0900
+From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Message-ID: <20161128091830.GB23034@linaro.org>
+References: <95e7fd98-c477-0c8a-7195-932e04bba9bb@fau.de>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: module: extend 'rodata=off' boot cmdline parameter to module mappings
-To: Jessica Yu <jeyu@redhat.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>
-Cc: mark.rutland@arm.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <95e7fd98-c477-0c8a-7195-932e04bba9bb@fau.de>
+Subject: [kernel-hardening] Re: [PATCH v3] module: extend 'rodata=off' boot cmdline parameter to
+ module mappings
+To: Andreas Ziegler <andreas.ziegler@fau.de>, Rusty Russell <rusty@rustcorp.com.au>, Jessica Yu <jeyu@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, linux-kernel <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Jessica Yu <jeyu@redhat.com> writes:
+On Mon, Nov 28, 2016 at 08:59:40AM +0100, Andreas Ziegler wrote:
+> Hi Akashi,
+> 
+> your patch "module: extend 'rodata=off' boot cmdline parameter to module
+> mappings" showed up in linux-next today, and I noticed a small error in it.
+> 
+> The first modified #ifdef is fine, the second one, however, has a spelling
+> mistake in it: the CONFIG_ variable should be CONFIG_DEBUG_SET_MODULE_RONX
+> instead of CONFIG_SET_MODULE_RONX (note the missing DEBUG).
 
-> +++ AKASHI Takahiro [14/11/16 15:15 +0900]:
->>The current "rodata=off" parameter disables read-only kernel mappings
->>under CONFIG_DEBUG_RODATA:
->>    commit d2aa1acad22f ("mm/init: Add 'rodata=off' boot cmdline parameter
->>    to disable read-only kernel mappings")
->>
->>This patch is a logical extension to module mappings ie. read-only mappings
->>at module loading can be disabled even if CONFIG_DEBUG_SET_MODULE_RONX
->>(mainly for debug use). Please note, however, that it only affects RO/RW
->>permissions, keeping NX set.
->>
->>This is the first step to make CONFIG_DEBUG_SET_MODULE_RONX mandatory
->>(always-on) in the future as CONFIG_DEBUG_RODATA on x86 and arm64.
->>
->>Suggested-by: and Acked-by: Mark Rutland <mark.rutland@arm.com>
->>Signed-off-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
->>Reviewed-by: Kees Cook <keescook@chromium.org>
->>Cc: Rusty Russell <rusty@rustcorp.com.au>
->
-> Hi Rusty, could I get an (n)ack for this patch? :-)
+Thank you for pointing this out.
+(I didn't notice it because DEBUG_RODATA is always on on arm64.)
 
-Acked-by: Rusty Russell <rusty@rustcorp.com.au>
+Rusty, Jessica, should I submit v4 to correct it?
 
-Cheers,
-Rusty.
+-Takahiro AKASHI
+
+> I noticed it by running 'scripts/checkkconfigsymbols -f --force -f
+> next-20161124..next-20161128', which is essentialy diffing the last two
+> linux-next releases and looks for undefined/unknown Kconfig symbols.
+> You can also run the script on single commits with -c to test them.
+> 
+> Best regards,
+> 
+> Andreas
