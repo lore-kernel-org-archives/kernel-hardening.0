@@ -1,144 +1,110 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-2-juerg.haefliger@hpe.com>
- <20161124105629.GA23034@linaro.org>
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-Message-ID: <795a34a6-ed04-dea3-73f5-d23e48f69de6@hpe.com>
-Date: Mon, 28 Nov 2016 12:15:10 +0100
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Mon, 28 Nov 2016 11:56:17 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <20161124105629.GA23034@linaro.org>
-Content-Type: multipart/signed; micalg=pgp-sha256;
- protocol="application/pgp-signature";
- boundary="xK83457Tl0b0VsjtiEgrgA8md3HirLXVv"
-Subject: [kernel-hardening] Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
- (XPFO)
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>, linux-kernel@vger.kernel.org, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org, vpk@cs.columbia.edu
+Subject: [kernel-hardening] Conversion from atomic_t to refcount_t: summary of issues
+To: Peter Zijlstra <peterz@infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>
+Cc: Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---xK83457Tl0b0VsjtiEgrgA8md3HirLXVv
-Content-Type: multipart/mixed; boundary="7nt0D3PUfp44460FfNLT0gAFB4oxfXvll";
- protected-headers="v1"
-From: Juerg Haefliger <juerg.haefliger@hpe.com>
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>,
- linux-kernel@vger.kernel.org, linux-mm@kvack.org,
- kernel-hardening@lists.openwall.com, linux-x86_64@vger.kernel.org,
- vpk@cs.columbia.edu
-Message-ID: <795a34a6-ed04-dea3-73f5-d23e48f69de6@hpe.com>
-Subject: Re: [RFC PATCH v3 1/2] Add support for eXclusive Page Frame Ownership
- (XPFO)
-References: <20160914071901.8127-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-1-juerg.haefliger@hpe.com>
- <20161104144534.14790-2-juerg.haefliger@hpe.com>
- <20161124105629.GA23034@linaro.org>
-In-Reply-To: <20161124105629.GA23034@linaro.org>
+Hi,
 
---7nt0D3PUfp44460FfNLT0gAFB4oxfXvll
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
+Now when we are almost over the huge set of conversions, I would like to ma=
+ke a summary of issues that we see to be very common.
+So, that we can then decide how to address them.
 
-On 11/24/2016 11:56 AM, AKASHI Takahiro wrote:
-> Hi,
->=20
-> I'm trying to give it a spin on arm64, but ...
+First, about the types.=20
+We do have a number of instances of atomic_long_t used as refcounters, see =
+below:
 
-Thanks for trying this.
+linux/perf_event.h:
+struct perf_event {
+...
+ atomic_long_t refcount;
+ ...
+}
 
+kernel/audit_tree.c:
+struct audit_chunk {
+...
+    atomic_long_t refs;
+..
+}
 
->> +/*
->> + * Update a single kernel page table entry
->> + */
->> +static inline void set_kpte(struct page *page, unsigned long kaddr,
->> +			    pgprot_t prot) {
->> +	unsigned int level;
->> +	pte_t *kpte =3D lookup_address(kaddr, &level);
->> +
->> +	/* We only support 4k pages for now */
->> +	BUG_ON(!kpte || level !=3D PG_LEVEL_4K);
->> +
->> +	set_pte_atomic(kpte, pfn_pte(page_to_pfn(page), canon_pgprot(prot)))=
-;
->> +}
->=20
-> As lookup_address() and set_pte_atomic() (and PG_LEVEL_4K), are arch-sp=
-ecific,
-> would it be better to put the whole definition into arch-specific part?=
+kernel/acct.c:
+struct bsd_acct_struct {
+...
+    atomic_long_t       count;
+...
+};
 
+linux/fs.h:
+struct file {
+    ...
+    atomic_long_t       f_count;
+    ...
+}
 
-Well yes but I haven't really looked into splitting up the arch specific =
-stuff.
+block/blk-ioc.c:
+struct io_context {
+    atomic_long_t refcount;
+    ...
+}
 
+There might be more since we are not 100% finished, but at least struct fil=
+e is pretty important one that we should be covering.=20
 
->> +		/*
->> +		 * Map the page back into the kernel if it was previously
->> +		 * allocated to user space.
->> +		 */
->> +		if (test_and_clear_bit(PAGE_EXT_XPFO_UNMAPPED,
->> +				       &page_ext->flags)) {
->> +			kaddr =3D (unsigned long)page_address(page + i);
->> +			set_kpte(page + i,  kaddr, __pgprot(__PAGE_KERNEL));
->=20
-> Why not PAGE_KERNEL?
+And yes, we *do* have at least one instance (again not 100% finished, more =
+might show up) of atomic64_t used as refcounter:
 
-Good catch, thanks!
+arch/powerpc/mm/mmu_context_iommu.c:
+struct mm_iommu_table_group_mem_t {
+...
+    atomic64_t mapped;
+...
+}
 
+Next with regards to API. Networking code surely wins the competitions of g=
+iving the most trouble.
+The biggest overall issue seem to be in fact that freeing the object happen=
+s not when refcount is zero, but when it is -1,
+which is obviously impossible to implement with current API that only retur=
+ns unsigned int.=20
 
->> +	/*
->> +	 * The page is to be allocated back to user space, so unmap it from =
-the
->> +	 * kernel, flush the TLB and tag it as a user page.
->> +	 */
->> +	if (atomic_dec_return(&page_ext->mapcount) =3D=3D 0) {
->> +		BUG_ON(test_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags));
->> +		set_bit(PAGE_EXT_XPFO_UNMAPPED, &page_ext->flags);
->> +		set_kpte(page, (unsigned long)kaddr, __pgprot(0));
->> +		__flush_tlb_one((unsigned long)kaddr);
->=20
-> Again __flush_tlb_one() is x86-specific.
-> flush_tlb_kernel_range() instead?
+Most common constructions that are hard to fit into current API are:
 
-I'll take a look. If you can tell me what the relevant arm64 equivalents =
-are for the arch-specific
-functions, that would help tremendously.
+-    if (atomic_cmpxchg(&cur->refcnt, 1, 0) =3D=3D 1) {...} (typical for ne=
+tworking code)
+-    if (atomic_cmpxchg(&p->refcnt, 0, -1) =3D=3D 0) {..} (typical for netw=
+orking code)
+-    if (atomic_add_unless(&inode->i_count, -1, 1)) (typical for fs and oth=
+er code)
 
-Thanks for the comments!
+Also, refcount_add() seems to be needed in number of places since it looks =
+like refcounts in some cases are increased by two or by some constant.=20
+Luckily we haven't seen a need a sub().
 
-=2E..Juerg
+The following functions are also needed quite commonly:
+refcount_inc_return()
+refcount_dec_return()
 
+There is also a need for smth like refcount_dec_if_one(), i.e. decrement on=
+ly if counter equals one and then do some housekeeping.=20
 
+I also saw one use of this from net/ipv4/udp.c:
+    if (!sk || !atomic_inc_not_zero_hint(&sk->sk_refcnt, 2))
 
-> Thanks,
-> -Takahiro AKASHI
+Lastly as I mentioned previously, almost half of invocations of dec() in th=
+e code is plain atomic_dec() without any if statements and any checks on wh=
+at happens as a result of dec().=20
+Peter previously suggested to turn them into WARN_ON(refcount_dec_and_test(=
+)), but looking in the code, it is not really clear what would this help to=
+ achieve?=20
+It is clear that in that places the caller explicitly doesn't care about ho=
+w the dec() goes and what is the end result....
 
-
---=20
-Juerg Haefliger
-Hewlett Packard Enterprise
-
-
---7nt0D3PUfp44460FfNLT0gAFB4oxfXvll--
-
---xK83457Tl0b0VsjtiEgrgA8md3HirLXVv
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQIcBAEBCAAGBQJYPBG+AAoJEHVMOpb5+LSMYaUP/ivlQhGWbPz1scInxJxIBSSL
-dHPcug/WEH2XjLIfm1BEhWVNMBYSUrVN/eWWcWE7BjYh7O+/makinUSIESNcbTPw
-uuA5NiMtsBEBgjgReq+hWC/yLJg0P3HFxFIdlg6nl8QnbGe3xT31UUm3/KxowaEb
-QcCvONwXl46FxpCMoQxq8Y4+2oSJm7Skaxp3lP3zPPuLClOvucxtbWOFM77nompO
-1GagLX+kssFGKYNlUdkNlEK487hbLNkOx4Ipz9IqoPLvRNiYSJCjVlelFYkV6dfz
-UzBPbchD/HHiGIs8jPZFucGeFgMr9SMRNhJ6yMDfHjNXGsw1PycW93MVU3h2wIUH
-y+jW1IXmMiOI8q89sHPIAJtBYxRxDIStYmmd6XpdFhEmdhQwTJpR0uObwigDxcHz
-qvy88HvWepH8OnT/XkKfNNT7/HuVkg/jYbmraiLYP+ALWQBJg+iStaQ5bsRGtosh
-eQ17odAAs1438iWIaqSr84KtffSsKO+bNARWXAOhd2RPOoJAsWudpl/EkNQ+fyWd
-Lm0X2UfLQJ9MPRIdfXhFL0LkHGOYHfzut/8yG9KKTglV/sSoxDjtkbsWIm9TgyYT
-wpVs1zRAU9JUOfMkPeb+ih0oYZy7KZ1dJNSYPuBcfsQhHEeAAWYu539L51kmbPyu
-sB/zTqnSlUBfM71Ha3fV
-=GxFB
------END PGP SIGNATURE-----
-
---xK83457Tl0b0VsjtiEgrgA8md3HirLXVv--
+Best Regards,
+Elena.
