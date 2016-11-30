@@ -1,40 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com> <20161128121347.GY3092@twins.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net>
+ <000779ba-0b53-3064-db8a-f309b2c993f5@ozlabs.ru>
+ <20161129093159.GD3092@twins.programming.kicks-ass.net>
+From: Alexey Kardashevskiy <aik@ozlabs.ru>
+Message-ID: <8fe0521f-6f42-65fa-2266-d7f2d47b6052@ozlabs.ru>
+Date: Wed, 30 Nov 2016 11:23:22 +1100
 MIME-Version: 1.0
+In-Reply-To: <20161129093159.GD3092@twins.programming.kicks-ass.net>
+Content-Type: text/plain; charset=koi8-r
 Content-Transfer-Encoding: 8bit
-Content-Type: text/plain;
- charset=UTF-8
-From: Peter Zijlstra <peterz@infradead.org>
-Date: Tue, 29 Nov 2016 16:47:11 +0100
-Message-ID: <445CCB78-B113-4B85-B254-B27E588A9EE6@infradead.org>
-Subject: [kernel-hardening] RE: Conversion from atomic_t to refcount_t: summary of issues
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, david@gibson.dropbear.id.au
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 29/11/16 20:31, Peter Zijlstra wrote:
+> On Tue, Nov 29, 2016 at 02:19:56PM +1100, Alexey Kardashevskiy wrote:
+>> On 28/11/16 23:13, Peter Zijlstra wrote:
+>>> On Mon, Nov 28, 2016 at 11:56:17AM +0000, Reshetova, Elena wrote:
+>>>> First, about the types. 
+>>>> We do have a number of instances of atomic_long_t used as refcounters, see below:
+>>>
+>>> Right, those were expected. We could do long_refcount_t I suppose.
+>>>
+>>>> And yes, we *do* have at least one instance (again not 100% finished,
+>>>> more might show up) of atomic64_t used as refcounter:
+>>>>
+>>>> arch/powerpc/mm/mmu_context_iommu.c:
+>>>> struct mm_iommu_table_group_mem_t {
+>>>> ...
+>>>>     atomic64_t mapped;
+>>>> ...
+>>>> }
+>>>
+>>> *urgh*, Alexey does that really need to be atomic64_t ? Wouldn't
+>>> atomic_long_t work for you?
+>>
+>>
+>> It would, this code only works in 64bit where long==64bit anyway (in fact
+>> even 32bit variant would do).
+>>
+> 
+> Thanks, we'll convert it to a 32bit refcount then.
 
 
-On 29 November 2016 16:35:15 CET, "Reshetova, Elena" <elena.reshetova@intel.com> wrote:
->So, could we agree on the following additions that are needed to
->refcount_t API:
->
->- refcount_long_t and all related functions
->- refcount_add(), refcount_sub(), refcount_sub_and_test()
->- refcount_dec_return(), refcount_inc_return()
->- refcount_dec_if_one()
->
->With the above set we can hopefully convert almost everything we
->already saw and then we can decide what to do with remaining extreme
->cases. 
->
->Peter, if you would be able to send the new patch providing the above
->API, it would be great!
+I'd rather make it "long" as everything else in that struct is long (€¿’¿
+64…€≈) and having 32bit value in a middle won't save space but create an
+useless gap.
 
-I'm not convinced on the return variants. I'll have to look at a number of usage sites to determine wth  they're doing. (Or someone else needs to and explain it here)
 
-Also, I'm ill atm, so I'm not particularly productive.
 
-Also, it would be very good to hear other opinions on the add/sub thing, last time they came up tglx in particular hated them.
 -- 
-Sent from my Android device with K-9 Mail. Please excuse my brevity.
+Alexey
