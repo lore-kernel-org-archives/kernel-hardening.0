@@ -1,46 +1,29 @@
-Return-Path: 
- <kernel-hardening-return-5229-ydroneaud=opteya.com@lists.openwall.com>
-List-Post: <mailto:kernel-hardening@lists.openwall.com>
-List-Help: <mailto:kernel-hardening-help@lists.openwall.com>
-List-Unsubscribe: <mailto:kernel-hardening-unsubscribe@lists.openwall.com>
-List-Subscribe: <mailto:kernel-hardening-subscribe@lists.openwall.com>
-List-ID: <kernel-hardening.lists.openwall.com>
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 03 Nov 2016 02:03:58 +0000
-From: Daniel Gruss <daniel@gruss.cc>
+Date: Thu, 1 Dec 2016 20:15:43 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161201191543.GG3124@twins.programming.kicks-ass.net>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Subject: Re: [kernel-hardening] Breaking Kernel ASLR by using Intel TSX
-Content-Transfer-Encoding: 8bit
-Message-ID: <b24e635b4cdac9eda1542da7d36aceef5d36d62f.camel@gruss.cc>
-To: Marian Marinov <mm-l@yuhu.biz>
-Cc: Sangho Lee <sangho@gatech.edu>, kernel-hardening@lists.openwall.com, Taesoo Kim <taesoo@gatech.edu>, Yeongjin Jang <yeongjin.jang@gatech.edu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+List-ID: <kernel-hardening.lists.openwall.com>
 
-These are two different attacks... 
+On Tue, Nov 29, 2016 at 03:35:15PM +0000, Reshetova, Elena wrote:
+> but Hans will be finishing processing 
 
-Cheers
-Daniel Am 03.11.2016 12:58 vorm. schrieb Marian Marinov <mm-l@yuhu.biz>:
->
-> On 10/26/2016 05:47 PM, Taesoo Kim wrote: 
-> > Dear all, 
+> > > The following functions are also needed quite commonly:
 > > 
-> > Someone in this mailinglist might find this work interesting: 
+> > > refcount_inc_return()
+> > > refcount_dec_return()
 > > 
-> >    https://github.com/sslab-gatech/DrK 
-> >    https://news.ycombinator.com/item?id=12796199 
-> > 
-> > Feel free to approach us if you have any question or suggestion. 
-> > 
-> > Thank you, 
-> > Taesoo 
-> > 
-> > 
-> Hmm Shawn Webb does not agree: 
->
-> https://github.com/lattera/articles/blob/master/infosec/Exploit%20Mitigations/ASLR/2016-10-19_btb/article.md 
->
->
-> Regards, 
->
-> Marian 
->
+> > What for? They don't typicaly make sense for refcounting? Other than the
+> > trivial pattern of dec_return() == 0, which is already well covered.
+
+Hans, could you point me to a few users of {inc,dec}_return() that I can
+audit for (in)sanity?
