@@ -1,63 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 2 Dec 2016 17:14:15 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161202161415.GA6302@kroah.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
- <20161128121347.GY3092@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
- <20161201191543.GG3124@twins.programming.kicks-ass.net>
- <1480693474.28515.56.camel@cs-046.org.aalto.fi>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1480693474.28515.56.camel@cs-046.org.aalto.fi>
+In-Reply-To: <20161202011759.GA28026@tardis.cn.ibm.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+ <20161201191543.GG3124@twins.programming.kicks-ass.net> <CAEXv5_isZ__znAw5vvE_srdP+irJW=TnUy2jQZxM33ZCAg037A@mail.gmail.com>
+ <20161201230328.GS3045@worktop.programming.kicks-ass.net> <CAGXu5jLHLoPPPSEiHq-faWHDxJQWEnfc=HeC=RJ=umaqWX2Yiw@mail.gmail.com>
+ <20161202011759.GA28026@tardis.cn.ibm.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Fri, 2 Dec 2016 15:25:42 -0500
+Message-ID: <CAEXv5_gfPM3BJyoDwPN=0afhO0oQPm=ix1mQvfYuKJephZBAGQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: Liljestrand Hans <ishkamiel@gmail.com>
-Cc: Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+To: Boqun Feng <boqun.feng@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 02, 2016 at 05:44:34PM +0200, Liljestrand Hans wrote:
-> Then there's cases that check for the first increment, like here (maybe
-> something like inc_and_one could allow these without too much leeway?):
-> 
-> http://lxr.free-electrons.com/source/drivers/tty/serial/zs.c#L764
-> 
->  irq_guard = atomic_add_return(1, &scc->irq_guard);
->  	if (irq_guard == 1) {
+On Thu, Dec 1, 2016 at 8:17 PM, Boqun Feng <boqun.feng@gmail.com> wrote:
+> On Thu, Dec 01, 2016 at 03:20:29PM -0800, Kees Cook wrote:
+>> On Thu, Dec 1, 2016 at 3:03 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+>> > On Thu, Dec 01, 2016 at 04:31:16PM -0500, David Windsor wrote:
+>> >> Also, I'd like to point out that while identifying stats_t instances, I
+>> >> have found a similar distribution of non-standard functions (as agreed upon
+>> >> for the stats_t API).
+>> >
+>> >> First, usage of atomic_long_wrap_t (there currently isn't a stats_long_t
+>> >> planned for implementation):
+>> >
+>> > There isn't even a stats_t planned. I'm still very much not convinced
+>> > stats_t is needed or even makes sense.
+>> >
+>> > It wouldn't have any different semantics from atomic_t, and the only
+>> > argument Kees made was that reduced atomic_t usage would make it easier
+>> > to spot refcounts, but you're already building tools to find those.
+>> >
+>> > Once the tools work, who cares.
+>>
+>> The tool is only part of the whole thing. By distinctly splitting the
+>> other major atomic_t usage pattern away from atomic_t, it solidifies a
+>> stats_t as NOT a reference counter. It's the slow feature-creep or bad
+>> example situations that I'd like to avoid. Also, tools won't catch
+>> everything, and doing manual inspection is much easier if we know a
+>> stats_t cannot be misused.
+>>
+>> There doesn't seem to be a good reason NOT to have stats_t, beyond the
+>> work needed to create it and audit the places it should be used.
+>>
+>
+> So we currently don't have a clear semantics for stats_t, do we?
 
-That's horrid, let's fix it correctly, it just wants to know if the
-driver has been initialized or not.  Make it a real lock and a variable
-and all is good.
+We had a discussion about the stats_t API in another thread.  We
+agreed upon add(), sub(), inc(), dec(), read() and set().
 
-> http://lxr.free-electrons.com/source/drivers/usb/gadget/function/f_fs.c#L1497
-> 
->  if (atomic_add_return(1, &ffs->opened) == 1 &&
->  	ffs->state == FFS_DEACTIVATED) {
+> What kind of atomic_t should be replaced with stats_t?
 
-Another horrid hack to try to be "cute" about only allowing one open to
-succeed.  Again, let's do this correctly with a lock.
+stats_t is used for those cases in which an atomic variable is
+required, but the overflow of this variable isn't of much concern.
+Typically, these types of variables are counters of some kind (rx/tx
+counts, etc), but not always.  Perhaps "stats_t" isn't the best type
+name.  We actually used "atomic_wrap_t" in previous iterations.
 
-> And finally some cases with other uses/values:
-> 
-> http://lxr.free-electrons.com/source/kernel/bpf/syscall.c#L231
-> 
->  if (atomic_inc_return(&map->refcnt) > BPF_MAX_REFCNT) {
+> In the link David  pointed out, there are a few cases where a stats_t is put on a
+> correctness-related variable. I don't think that's a good place to use
+> stats_t.
+>
 
-A "don't allow any more than X things through at once" type counter, a
-normal atomic type should be fine for this, it's not a "real" reference
-counter for a data structure.
+Yeah, I just grabbed a few examples I noted during my stats_t
+conversion work.  The drivers/ tree is littered with stats_t
+instances.
 
-> http://lxr.free-electrons.com/source/drivers/staging/lustre/lustre/ptlrpc/client.c#L3081
-> 
->  if (atomic_inc_return(&req->rq_refcount) == 2)
+> Besides, there are many statistics-purpose variables in kernel which are
+> not atomic, given those, only calling atomic statistic variables stats_t
+> seems inappropriate and misleading.
+>
+> How about provide a modifier, say __stats, like __rcu, __percpu. We can
+> add it to the types of the variables that are only for
+> statistics-purpose. I think it won't be difficult to find all related
+> callsites of a __stats with the help of some compiler frontend tools, we
+> can then detect a possible problem if we do a cmpxchg on a __stats,
+> which is unlikely a proper usage for a statistic variable. And we don't
+> need to change or use special APIs, we just need to mark variables and
+> fields.
+>
 
-lustre should never be used as an excuse for anything, except for how to
-not do things.  That's some messed up code that is slowly getting
-better...
+The modifier would definitely allow us to identify abuse of "stats"
+variables.  But, this should be used in conjunction with mandatory
+overflow protection on atomic_t.  As Kees said, tools won't find
+everything; we need to secure the atomic_t type itself.
 
-This audit is turning up good stuff, it will be nice to clean this crud
-up!
-
-thanks,
-
-greg k-h
+> Thoughts?
+>
+> Regards,
+> Boqun
+>
+>> -Kees
+>>
+>> --
+>> Kees Cook
+>> Nexus Security
