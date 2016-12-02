@@ -1,99 +1,151 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <20161202011759.GA28026@tardis.cn.ibm.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
- <20161128121347.GY3092@twins.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
- <20161201191543.GG3124@twins.programming.kicks-ass.net> <CAEXv5_isZ__znAw5vvE_srdP+irJW=TnUy2jQZxM33ZCAg037A@mail.gmail.com>
- <20161201230328.GS3045@worktop.programming.kicks-ass.net> <CAGXu5jLHLoPPPSEiHq-faWHDxJQWEnfc=HeC=RJ=umaqWX2Yiw@mail.gmail.com>
- <20161202011759.GA28026@tardis.cn.ibm.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Fri, 2 Dec 2016 15:25:42 -0500
-Message-ID: <CAEXv5_gfPM3BJyoDwPN=0afhO0oQPm=ix1mQvfYuKJephZBAGQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1480652545-4457-1-git-send-email-mpe@ellerman.id.au>
+References: <1480652545-4457-1-git-send-email-mpe@ellerman.id.au>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 2 Dec 2016 13:32:24 -0800
+Message-ID: <CAGXu5j+B=BTvLWzW7nYCgvdBeL682HibAGisEi=cJUPa0K1U2w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: Boqun Feng <boqun.feng@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+Subject: [kernel-hardening] Re: [PATCH v2] lkdtm: Add tests for LIST_POISON and ZERO_SIZE_PTR
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: Michael Ellerman <mpe@ellerman.id.au>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Dec 1, 2016 at 8:17 PM, Boqun Feng <boqun.feng@gmail.com> wrote:
-> On Thu, Dec 01, 2016 at 03:20:29PM -0800, Kees Cook wrote:
->> On Thu, Dec 1, 2016 at 3:03 PM, Peter Zijlstra <peterz@infradead.org> wrote:
->> > On Thu, Dec 01, 2016 at 04:31:16PM -0500, David Windsor wrote:
->> >> Also, I'd like to point out that while identifying stats_t instances, I
->> >> have found a similar distribution of non-standard functions (as agreed upon
->> >> for the stats_t API).
->> >
->> >> First, usage of atomic_long_wrap_t (there currently isn't a stats_long_t
->> >> planned for implementation):
->> >
->> > There isn't even a stats_t planned. I'm still very much not convinced
->> > stats_t is needed or even makes sense.
->> >
->> > It wouldn't have any different semantics from atomic_t, and the only
->> > argument Kees made was that reduced atomic_t usage would make it easier
->> > to spot refcounts, but you're already building tools to find those.
->> >
->> > Once the tools work, who cares.
->>
->> The tool is only part of the whole thing. By distinctly splitting the
->> other major atomic_t usage pattern away from atomic_t, it solidifies a
->> stats_t as NOT a reference counter. It's the slow feature-creep or bad
->> example situations that I'd like to avoid. Also, tools won't catch
->> everything, and doing manual inspection is much easier if we know a
->> stats_t cannot be misused.
->>
->> There doesn't seem to be a good reason NOT to have stats_t, beyond the
->> work needed to create it and audit the places it should be used.
->>
+On Thu, Dec 1, 2016 at 8:22 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> This adds two tests, to check that a read or write to LIST_POISON1 and
+> ZERO_SIZE_PTR are blocked.
 >
-> So we currently don't have a clear semantics for stats_t, do we?
+> The default values for both (256 and 16) typically fall in the range
+> of valid user space addresses. However in general mmap_min_addr is 64K,
+> which prevents user space from mapping anything at those addresses.
+>
+> However it's feasible that an attacker will be able to find a way to
+> cause an access at an offset from either value, and if that offset is
+> greater than 64K then they can access user space again.
+>
+> To simulate that case, in the test we create a user mapping at
+> approximately mmap_min_addr, and offset the pointer by that amount. This
+> gives the test the greatest chance of failing (ie. an access
+> succeeding). We don't actually use mmap_min_addr, because that would
+> require exporting it to modules, instead we use the default value at
+> compile time as a reasonable approximation.
+>
+> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 
-We had a discussion about the stats_t API in another thread.  We
-agreed upon add(), sub(), inc(), dec(), read() and set().
+Thanks for this! I like it. :)
 
-> What kind of atomic_t should be replaced with stats_t?
+Acked-by: Kees Cook <keescook@chromium.org>
 
-stats_t is used for those cases in which an atomic variable is
-required, but the overflow of this variable isn't of much concern.
-Typically, these types of variables are counters of some kind (rx/tx
-counts, etc), but not always.  Perhaps "stats_t" isn't the best type
-name.  We actually used "atomic_wrap_t" in previous iterations.
+Greg, can you take this into your tree?
 
-> In the link David  pointed out, there are a few cases where a stats_t is put on a
-> correctness-related variable. I don't think that's a good place to use
-> stats_t.
+-Kees
+
+> ---
+>  drivers/misc/lkdtm.h      |  2 ++
+>  drivers/misc/lkdtm_bugs.c | 48 +++++++++++++++++++++++++++++++++++++++++++++++
+>  drivers/misc/lkdtm_core.c |  2 ++
+>  3 files changed, 52 insertions(+)
+>
+> v2: Fix 32-bit compile errors by using int not long.
+>     Avoid need to export mmap_min_addr by using CONFIG_DEFAULT_MMAP_MIN_ADDR.
+>
+> diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+> index fdf954c2107f..cc207f7824f9 100644
+> --- a/drivers/misc/lkdtm.h
+> +++ b/drivers/misc/lkdtm.h
+> @@ -21,6 +21,8 @@ void lkdtm_SPINLOCKUP(void);
+>  void lkdtm_HUNG_TASK(void);
+>  void lkdtm_ATOMIC_UNDERFLOW(void);
+>  void lkdtm_ATOMIC_OVERFLOW(void);
+> +void lkdtm_ACCESS_LIST_POISON(void);
+> +void lkdtm_ACCESS_ZERO_SIZE_PTR(void);
+>
+>  /* lkdtm_heap.c */
+>  void lkdtm_OVERWRITE_ALLOCATION(void);
+> diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+> index 30e62dd7e7ca..9ae079ac9a93 100644
+> --- a/drivers/misc/lkdtm_bugs.c
+> +++ b/drivers/misc/lkdtm_bugs.c
+> @@ -5,7 +5,10 @@
+>   * test source files.
+>   */
+>  #include "lkdtm.h"
+> +#include <linux/mman.h>
+>  #include <linux/sched.h>
+> +#include <linux/security.h>
+> +#include <linux/slab.h>
+>
+>  /*
+>   * Make sure our attempts to over run the kernel stack doesn't trigger
+> @@ -147,3 +150,48 @@ void lkdtm_ATOMIC_OVERFLOW(void)
+>         pr_info("attempting bad atomic overflow\n");
+>         atomic_inc(&over);
+>  }
+> +
+> +static void test_poison_ptr(void *base, const char *desc)
+> +{
+> +       unsigned int *ptr, bias, val;
+> +       unsigned long uaddr;
+> +
+> +       /* We'd rather not export mmap_min_addr, so use the default instead */
+> +       bias = PAGE_ALIGN(CONFIG_DEFAULT_MMAP_MIN_ADDR);
+> +
+> +       uaddr = vm_mmap(NULL, bias, PAGE_SIZE, PROT_READ | PROT_WRITE,
+> +                       MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, 0);
+> +       if (uaddr >= TASK_SIZE) {
+> +               pr_warn("Failed to allocate user memory, can't perform test.\n");
+> +               return;
+> +       }
+> +
+> +       /*
+> +        * Creating a mapping and adding mmap_min_addr to the value is cheating
+> +        * in a way. But it simulates the case where an attacker is able to
+> +        * cause an access at a small offset from the base value, leading to a
+> +        * user space access. If an arch doesn't define CONFIG_ILLEGAL_POINTER_VALUE
+> +        * then it's likely this will work in the absence of other protections.
+> +        */
+> +       ptr = bias + base;
+> +
+> +       pr_info("attempting read of %s %p\n", desc, ptr);
+> +       val = *ptr;
+> +       pr_info("FAIL: Was able to read %s! Got 0x%x\n", desc, val);
+> +
+> +       pr_info("attempting write of %s %p\n", desc, ptr);
+> +       *ptr = 0xdeadbeefU;
+> +       pr_info("FAIL: Was able to write %s! Now = 0x%x\n", desc, *ptr);
+> +
+> +       vm_munmap(uaddr, PAGE_SIZE);
+> +}
+> +
+> +void lkdtm_ACCESS_LIST_POISON(void)
+> +{
+> +       test_poison_ptr(LIST_POISON1, "LIST_POISON");
+> +}
+> +
+> +void lkdtm_ACCESS_ZERO_SIZE_PTR(void)
+> +{
+> +       test_poison_ptr(ZERO_SIZE_PTR, "ZERO_SIZE_PTR");
+> +}
+> diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+> index f9154b8d67f6..025a0ee8d8ee 100644
+> --- a/drivers/misc/lkdtm_core.c
+> +++ b/drivers/misc/lkdtm_core.c
+> @@ -220,6 +220,8 @@ struct crashtype crashtypes[] = {
+>         CRASHTYPE(WRITE_KERN),
+>         CRASHTYPE(ATOMIC_UNDERFLOW),
+>         CRASHTYPE(ATOMIC_OVERFLOW),
+> +       CRASHTYPE(ACCESS_LIST_POISON),
+> +       CRASHTYPE(ACCESS_ZERO_SIZE_PTR),
+>         CRASHTYPE(USERCOPY_HEAP_SIZE_TO),
+>         CRASHTYPE(USERCOPY_HEAP_SIZE_FROM),
+>         CRASHTYPE(USERCOPY_HEAP_FLAG_TO),
+> --
+> 2.7.4
 >
 
-Yeah, I just grabbed a few examples I noted during my stats_t
-conversion work.  The drivers/ tree is littered with stats_t
-instances.
 
-> Besides, there are many statistics-purpose variables in kernel which are
-> not atomic, given those, only calling atomic statistic variables stats_t
-> seems inappropriate and misleading.
->
-> How about provide a modifier, say __stats, like __rcu, __percpu. We can
-> add it to the types of the variables that are only for
-> statistics-purpose. I think it won't be difficult to find all related
-> callsites of a __stats with the help of some compiler frontend tools, we
-> can then detect a possible problem if we do a cmpxchg on a __stats,
-> which is unlikely a proper usage for a statistic variable. And we don't
-> need to change or use special APIs, we just need to mark variables and
-> fields.
->
 
-The modifier would definitely allow us to identify abuse of "stats"
-variables.  But, this should be used in conjunction with mandatory
-overflow protection on atomic_t.  As Kees said, tools won't find
-everything; we need to secure the atomic_t type itself.
-
-> Thoughts?
->
-> Regards,
-> Boqun
->
->> -Kees
->>
->> --
->> Kees Cook
->> Nexus Security
+-- 
+Kees Cook
+Nexus Security
