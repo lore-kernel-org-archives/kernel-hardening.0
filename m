@@ -1,35 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Date: Tue,  6 Dec 2016 17:27:58 +1100
-Message-Id: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
-Subject: [kernel-hardening] [PATCH 1/3] gcc-plugins: fix definition of DISABLE_LATENT_ENTROPY_PLUGIN
+Date: Tue,  6 Dec 2016 17:27:59 +1100
+In-Reply-To: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
+References: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
+Message-Id: <20161206062800.21800-2-andrew.donnellan@au1.ibm.com>
+Subject: [kernel-hardening] [PATCH 2/3] powerpc: correctly disable latent entropy GCC plugin on prom_init.o
 To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, keescook@chromium.org, re.emese@gmail.com
 Cc: linux-kernel@vger.kernel.org, linux-kbuild@vger.kernel.org, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The variable DISABLE_LATENT_ENTROPY_PLUGIN is defined when
-CONFIG_PAX_LATENT_ENTROPY is set. This is leftover from the original PaX
-version of the plugin code and doesn't actually exist. Change the condition
-to depend on CONFIG_GCC_PLUGIN_LATENT_ENTROPY instead.
+Commit 38addce8b600 ("gcc-plugins: Add latent_entropy plugin") excludes
+certain powerpc early boot code from the latent entropy plugin by adding
+appropriate CFLAGS. It looks like this was supposed to cover prom_init.o,
+but ended up saying init.o (which doesn't exist) instead. Fix the typo.
 
 Fixes: 38addce8b600 ("gcc-plugins: Add latent_entropy plugin")
 Signed-off-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+
 ---
- scripts/Makefile.gcc-plugins | 2 +-
+
+I think that we potentially could get rid of some of these disables, but
+it's safer to leave it for now.
+---
+ arch/powerpc/kernel/Makefile | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-index 060d2cb..26c67b7 100644
---- a/scripts/Makefile.gcc-plugins
-+++ b/scripts/Makefile.gcc-plugins
-@@ -8,7 +8,7 @@ ifdef CONFIG_GCC_PLUGINS
+diff --git a/arch/powerpc/kernel/Makefile b/arch/powerpc/kernel/Makefile
+index 1925341..adb52d1 100644
+--- a/arch/powerpc/kernel/Makefile
++++ b/arch/powerpc/kernel/Makefile
+@@ -15,7 +15,7 @@ CFLAGS_btext.o		+= -fPIC
+ endif
  
-   gcc-plugin-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= latent_entropy_plugin.so
-   gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_LATENT_ENTROPY)	+= -DLATENT_ENTROPY_PLUGIN
--  ifdef CONFIG_PAX_LATENT_ENTROPY
-+  ifdef CONFIG_GCC_PLUGIN_LATENT_ENTROPY
-     DISABLE_LATENT_ENTROPY_PLUGIN			+= -fplugin-arg-latent_entropy_plugin-disable
-   endif
+ CFLAGS_cputable.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+-CFLAGS_init.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
++CFLAGS_prom_init.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+ CFLAGS_btext.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+ CFLAGS_prom.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
  
 -- 
 Andrew Donnellan              OzLabs, ADL Canberra
