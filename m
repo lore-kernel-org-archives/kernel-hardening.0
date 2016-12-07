@@ -1,38 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
 References: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
  <20161206062800.21800-3-andrew.donnellan@au1.ibm.com>
- <CAGXu5jKQf4ReBkGC85+r_j1rVUFTZoeWk9A_mjhjnFHq1PAr8Q@mail.gmail.com>
 From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Date: Wed, 7 Dec 2016 12:05:26 +1100
+Date: Wed, 7 Dec 2016 16:45:54 +1100
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKQf4ReBkGC85+r_j1rVUFTZoeWk9A_mjhjnFHq1PAr8Q@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <20161206062800.21800-3-andrew.donnellan@au1.ibm.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
 Content-Transfer-Encoding: 7bit
-Message-Id: <bf236e17-4b0f-e0c4-ba4d-4aadc1662b82@au1.ibm.com>
-Subject: Re: [kernel-hardening] Re: [PATCH 3/3] powerpc: enable support for
- GCC plugins
-To: kernel-hardening@lists.openwall.com
-Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>
+Message-Id: <d7861b43-cda8-0212-b2fb-7331c8f6996d@au1.ibm.com>
+Subject: [kernel-hardening] Re: [PATCH 3/3] powerpc: enable support for GCC plugins
+To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, keescook@chromium.org, re.emese@gmail.com
+Cc: pageexec@freemail.hu, spender@grsecurity.net, linux-kernel@vger.kernel.org, mmarek@suse.com, linux-kbuild@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/12/16 07:40, Kees Cook wrote:
->> Compile tested with all plugins enabled on gcc 4.6-6.2,
->> x86->ppc{32,64,64le} and 4.8-6.2 ppc64le->ppc{32,64,64le}. Thanks to
->> Chris Smart for help with this.
+On 06/12/16 17:28, Andrew Donnellan wrote:
+> Enable support for GCC plugins on powerpc.
 >
-> I assume also tested on 5.2? :)
-
-Tested on the latest subrevision of every release branch up till 6.2, so 
-yes :)
-
->> I think it's best to take this through powerpc#next with an ACK from
->> Kees/Emese?
+> Add an additional version check in gcc-plugins-check to advise users to
+> upgrade to gcc 5.2+ on powerpc to avoid issues with header files (gcc <=
+> 4.6) or missing copies of rs6000-cpus.def (4.8 to 5.1 on 64-bit targets).
 >
-> That would be fine by me. Please consider the whole series:
+> Signed-off-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
 >
-> Acked-by: Kees Cook <keescook@chromium.org>
+> ---
+>
+> Open to bikeshedding on the gcc version check.
+>
+> Compile tested with all plugins enabled on gcc 4.6-6.2,
+> x86->ppc{32,64,64le} and 4.8-6.2 ppc64le->ppc{32,64,64le}. Thanks to
+> Chris Smart for help with this.
+>
+> I think it's best to take this through powerpc#next with an ACK from
+> Kees/Emese?
+> ---
+>  arch/powerpc/Kconfig         | 1 +
+>  scripts/Makefile.gcc-plugins | 8 ++++++++
 
-Thanks!
+Will respin with an update to Documentation/gcc-plugins.txt as well.
 
 -- 
 Andrew Donnellan              OzLabs, ADL Canberra
