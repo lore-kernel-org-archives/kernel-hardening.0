@@ -1,75 +1,121 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CA+xQMzy45NoLqy8XyArT4ZTN1q21zRnjj9VLHz5awmG61eU_9A@mail.gmail.com>
-References: <CA+xQMzy45NoLqy8XyArT4ZTN1q21zRnjj9VLHz5awmG61eU_9A@mail.gmail.com>
+In-Reply-To: <776ce31c-5268-8476-b6b1-989aa462327d@gmail.com>
+References: <776ce31c-5268-8476-b6b1-989aa462327d@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 7 Dec 2016 13:09:09 -0800
-Message-ID: <CAGXu5jK3FqVi+kwD57k1eMYjFniYdFeh6_=D=2HfVx9TWnqSbw@mail.gmail.com>
+Date: Wed, 7 Dec 2016 14:08:40 -0800
+Message-ID: <CAGXu5jLvFbfjYUuZnD0xK-9sgLbb-XPvTp1ieoTrMh_CNj0H-w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Regarding PaX
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Picking "Write a plugin to do format string
+ warnings correctly"
 To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 6, 2016 at 11:46 PM, manjunatha srinivasan
-<manjunathan.n@gmail.com> wrote:
-> Hi
-
-Hi!
-
+On Tue, Dec 6, 2016 at 3:21 PM, Ruslan Kuprieiev <kupruser@gmail.com> wrote=
+:
+> Hi!
 >
-> I am new to PaX.
+> After watching a bunch of talks from Kees about security, I've finally
+> decided to try to participate in KSPP.
+
+Hi and welcome!
+
+> If it's not taken, I would like to start with this task:
 >
-> I have plan to port only PaX (i.e mutual exclusive write/execute
-> pages) for latest kernel (kernel.org) for x86_64 architectures. From
-> other place I found patch from
-> (https://git.m-privacy.de/linux-mprivacy-4.1.git) from branch
-> 'paxonly' for  4.1  kernel. From the commit ID
-> 9474667100c85c944a0d71ede82ef85e3ab502dc (123248 lines).
-> In other place from https://grsecurity.net/download.php, I can see the
->  patch 'grsecurity-3.1-4.8.12-201612062306.patch' .
+>      Write a plugin to do format string warnings correctly (gcc's
+> -Wformat-security is bad about const strings)
 >
-> I don't' know where to start from these places. Please let me know
-> about information on internals i.e. about code implementation and
-> related documents of PaX ( i.e. mutual exclusive write/execute
-> pages.).
+> Unfortunately, I wasn't able to find any details about this task. Could
+> someone provide some info about it, please?
 
-PaX collects a lot of features. It sounds like you're interested only
-in the W^X mmap/mprotect/etc feature?
+Sorry those TODOs items are so terse; they're mostly just brain dumps
+so we don't lose things. :)
 
-> Also if want to do of porting PaX (i.e mutual exclusive write/execute
-> pages) from scratch where can I find internals of it. Is that
-> information from https://pax.grsecurity.net/ is enough idea for kick
-> start.
-> Please let me know the prerequisite knowledge on Linux subsystem like
-> memory management before starting.
+The problem with -Wformat-security in gcc is that it doesn't correctly
+notice a bunch of const string cases. If you look at my
+format-security branch:
+http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=3Dformat-=
+security
 
-I would generally recommend reading the code to understand what's
-happening. Other folks on the list may have better pointers for where
-to learn about Linux mm, but it's a pretty complex area of the kernel.
+There's a commit at the top called "format-security: move static
+strings to const", which illustrates the first kind of problem gcc
+has, which is not realizing that "const char *var" is "const char
+var[]":
 
-For the first step, I'd recommend writing tests that currently fail
-against the upstream kernel, then extract the pieces from PaX that
-cover the feature you're interested in, and make sure your tests then
-pass. From there, cutting up the patches into logically distinct
-pieces would be next, which would be followed by upstream review (and
-likely a few rounds of adjustments to the patches), and hopefully
-finally getting them accept.
+- const char *name =3D "fbcon";
++ const char name[] =3D "fbcon";
 
-> Please let me know any openwall  git repository is  available.
+This can be seen with:
 
-Openwall just hosts this mailing list.
+int main(int argc, char * argv[])
+{
+    char cmd[80];
+    const char *pointer =3D "pointer: %p\n";
 
-> If you feel this not the correct place of asking, please advice where
-> should I post.
+    snprintf(cmd, sizeof(cmd), "cat /proc/%d/maps", getpid());
+    system(cmd);
 
-This is the right place to discuss development and porting of security
-features for the upstream Linux kernel.
+    printf(pointer, pointer);
+    fflush(NULL);
+    pointer[0] =3D 'P';
 
-Thanks for the interest!
+    return 0;
+}
+
+$ gcc -Wall -Wformat=3D2 -Wformat-security format-security.c -o format-secu=
+rity
+format-security.c: In function =E2=80=98main=E2=80=99:
+format-security.c:22:5: warning: format not a string literal, argument
+types not checked [-Wformat-nonliteral]
+     printf(pointer, pointer);
+     ^
+format-security.c:24:16: error: assignment of read-only location =E2=80=98*=
+pointer=E2=80=99
+     pointer[0] =3D 'P';
+                ^
+And, this is right, if line 24 is removed, we can see the contents of
+"pointer" are, as expected, in read-only memory:
+
+$ ./format-security
+55aa9d70b000-55aa9d70c000 r-xp 00000000 fd:06 28
+  /tmp/format-security
+55aa9d90b000-55aa9d90c000 r--p 00000000 fd:06 28
+  /tmp/format-security
+55aa9d90c000-55aa9d90d000 rw-p 00001000 fd:06 28
+  /tmp/format-security
+...
+pointer: 0x55aa9d70b984
+
+The reason gcc DOES warn about "const char *pointer" is because the
+value of pointer itself can change. Building with "const char * const
+pointer" tells gcc "pointer" should be read-only (though usually this
+isn't enforced in variable placement). The goal would be to teach gcc
+that if a variable is only ever assigned to read-only locations, it's
+a false positive, so don't warn about it.
+
+Here's an example from the kernel, in drivers/gpu/drm/ttm/ttm_memory.c:
+
+static int ttm_mem_init_kernel_zone(struct ttm_mem_global *glob,
+                                    const struct sysinfo *si)
+{
+        struct ttm_mem_zone *zone =3D kzalloc(sizeof(*zone), GFP_KERNEL);
+...
+        zone->name =3D "kernel";
+...
+        ret =3D kobject_init_and_add(
+                &zone->kobj, &ttm_mem_zone_kobj_type, &glob->kobj, zone->na=
+me);
+
+
+zone->name is pointing to a read-only string. -Wformat-security yells
+about this because it can't tell that ->name is never reassigned
+between the first place and where it gets used as a format string.
+
 
 -Kees
 
--- 
+--=20
 Kees Cook
 Nexus Security
