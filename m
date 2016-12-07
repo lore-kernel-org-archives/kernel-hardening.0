@@ -1,49 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
- <20161206062800.21800-3-andrew.donnellan@au1.ibm.com>
- <20161206222520.7fb37896488eff1b299eb3db@gmail.com>
-From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Date: Wed, 7 Dec 2016 16:49:41 +1100
+Date: Wed, 7 Dec 2016 14:21:12 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20161207132112.GF3107@twins.programming.kicks-ass.net>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+ <20161201191543.GG3124@twins.programming.kicks-ass.net>
+ <CAEXv5_isZ__znAw5vvE_srdP+irJW=TnUy2jQZxM33ZCAg037A@mail.gmail.com>
+ <20161201230328.GS3045@worktop.programming.kicks-ass.net>
+ <CAEXv5_i18GY0g=QL4McDFqPQWiBU9Powhzxz7USPfh0DTEp36w@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20161206222520.7fb37896488eff1b299eb3db@gmail.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Message-Id: <f32f62b8-dc38-6f0b-e7b7-1f85e504df5d@au1.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH 3/3] powerpc: enable support for GCC plugins
-To: Emese Revfy <re.emese@gmail.com>
-Cc: spender@grsecurity.net, keescook@chromium.org, linux-kbuild@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, mmarek@suse.com, pageexec@freemail.hu, linuxppc-dev@lists.ozlabs.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAEXv5_i18GY0g=QL4McDFqPQWiBU9Powhzxz7USPfh0DTEp36w@mail.gmail.com>
+Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
+To: David Windsor <dwindsor@gmail.com>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 07/12/16 08:25, Emese Revfy wrote:
-> What are these missing headers? Because if they aren't necessary then they can
-> be removed from gcc-common.h. There were missing headers on arm/arm64 and these
-> archs are supported. I think this version check is unnecessary because
-> gcc-plugin.sh also checks the missing headers.
+On Thu, Dec 01, 2016 at 06:20:55PM -0500, David Windsor wrote:
 
-rs6000-cpus.def, included via tm.h - see 
-https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66840
+> Then are we decided that overflow protection is going to be opt-in?
 
-I realise gcc-plugin.sh does detect this, but the point of the 
-additional version check is to provide somewhat more helpful advice to 
-the user.
+The wholesale rape of atomic_t as proposed earlier is not going to
+happen.
 
-> What is the problem on gcc-4.5/gcc-4.6?
-
-On 4.6.4, c-family/c-common.h:
-
-/scratch/ajd/gcc-test-v2/kernel/scripts/gcc-plugins/gcc-common.h:60:31: 
-fatal error: c-family/c-common.h: No such file or directory
-
-ajd@ka1:/scratch/ajd/tmp/cross/gcc-4.6.4-nolibc/powerpc64-linux$ find 
--name c-common.*
-./lib/gcc/powerpc64-linux/4.6.4/plugin/include/c-common.h
-./lib/gcc/powerpc64-linux/4.6.4/plugin/include/c-family/c-common.def
-
-Are we sure the version check in gcc-common.h:59 is correct, or is this 
-just a peculiarity of my particular toolchain?
-
-I need to build another 4.5 toolchain, I'll try to do that this week.
-
--- 
-Andrew Donnellan              OzLabs, ADL Canberra
-andrew.donnellan@au1.ibm.com  IBM Australia Limited
+That results in a terrible and inconsistent API, which will only lead to
+more terrible code.
