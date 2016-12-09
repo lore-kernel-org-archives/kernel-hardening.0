@@ -1,71 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Fri, 09 Dec 2016 11:59:42 +0100
 MIME-Version: 1.0
-Message-ID: <584A8E9E.22035.590FC72@pageexec.freemail.hu>
-In-reply-to: <f5ea8825-532c-93bd-d51d-6ec1e541fae6@au1.ibm.com>
-References: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>, <CAGXu5jKrU5GR3KDb9M-vtSpY+aRm2B0vGpahVYLtFTWs=g7Big@mail.gmail.com>, <f5ea8825-532c-93bd-d51d-6ec1e541fae6@au1.ibm.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH 3/3] powerpc: enable support for GCC plugins
-To: Kees Cook <keescook@chromium.org>, Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>
+In-Reply-To: <CAEXv5_jnsM8z9kNF5Woq-u3m2_Wi3Lnep-aWKNqzULHSqvF0EQ@mail.gmail.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+ <20161201191543.GG3124@twins.programming.kicks-ass.net> <CAEXv5_isZ__znAw5vvE_srdP+irJW=TnUy2jQZxM33ZCAg037A@mail.gmail.com>
+ <20161201230328.GS3045@worktop.programming.kicks-ass.net> <CAGXu5jLHLoPPPSEiHq-faWHDxJQWEnfc=HeC=RJ=umaqWX2Yiw@mail.gmail.com>
+ <20161202011759.GA28026@tardis.cn.ibm.com> <CAEXv5_gfPM3BJyoDwPN=0afhO0oQPm=ix1mQvfYuKJephZBAGQ@mail.gmail.com>
+ <20161207132457.GG3107@twins.programming.kicks-ass.net> <CAEXv5_jnsM8z9kNF5Woq-u3m2_Wi3Lnep-aWKNqzULHSqvF0EQ@mail.gmail.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Fri, 9 Dec 2016 09:48:27 -0500
+Message-ID: <CAEXv5_i92ds+hNyHpO8Uxs3Row2NEko-S=GTS_JBwaCHs6GYSQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Boqun Feng <boqun.feng@gmail.com>, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Hans Liljestrand <ishkamiel@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 Dec 2016 at 13:48, Andrew Donnellan wrote:
+On Wed, Dec 7, 2016 at 2:03 PM, David Windsor <dwindsor@gmail.com> wrote:
+> On Wed, Dec 7, 2016 at 8:24 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+>> On Fri, Dec 02, 2016 at 03:25:42PM -0500, David Windsor wrote:
+>>> On Thu, Dec 1, 2016 at 8:17 PM, Boqun Feng <boqun.feng@gmail.com> wrote:
+>>
+>>> > So we currently don't have a clear semantics for stats_t, do we?
+>>>
+>>> We had a discussion about the stats_t API in another thread.  We
+>>> agreed upon add(), sub(), inc(), dec(), read() and set().
+>>>
+>>> > What kind of atomic_t should be replaced with stats_t?
+>>>
+>>> stats_t is used for those cases in which an atomic variable is
+>>> required, but the overflow of this variable isn't of much concern.
+>>> Typically, these types of variables are counters of some kind (rx/tx
+>>> counts, etc), but not always.  Perhaps "stats_t" isn't the best type
+>>> name.  We actually used "atomic_wrap_t" in previous iterations.
+>>
+>> And atomic_wrap_t is a horrid trainwreck. Please as to explain the
+>> semantics of atomic_wrap_cmpxchg(). How does wrapping apply to something
+>> that doesn't do sign bits.
+>>
+>
+> atomic_wrap_t grew out of a desire to fix an already broken system for
+> doing reference counting.  atomic_t is being widely used for both
+> reference counting (which should not overflow), non-reference
+> counting, and other operations.  atomic_wrap_t provides the semantics
+> of the "original" atomic_t: atomic operations with no overflow
+> protection.  Thus, atomic_wrap_cmpxchg(): the cmpxchg operation for
+> atomic_wrap_t types.  Abominations like this sometimes exist in RFC
+> series.  In this case, we came up with the atomic_wrap API by mostly
+> creating an atomic_wrap-ified version of each atomic_t API function.
+>
 
-> >> as for the solutions, the general advice should enable the use of otherwise
-> >> failing gcc versions instead of forcing updating to new ones (though the
-> >> latter is advisable for other reasons but not everyone's in the position to
-> >> do so easily). in my experience all one needs to do is manually install the
-> >> missing files from the gcc sources (ideally distros would take care of it).
-> 
-> If someone else is willing to write up that advice, then great.
-> 
-> >> the specific problem addressed here can (and IMHO should) be solved in
-> >> another way: remove the inclusion of the offending headers in gcc-common.h
-> >> as neither tm.h nor c-common.h are needed by existing plugins. for background,
-> 
-> We can't build without tm.h: http://pastebin.com/W0azfCr0
-
-you'll need to repeat the removal of dependent headers. based on a quick
-test here across gcc 4.5-6.2, if you remove rtl.h, tm_p.h, hard-reg-set.h
-and emit-rtl.h in addition to tm.h, the plugins should build fine.
-
-> And we get warnings without c-common.h: http://pastebin.com/Aw8CAj10
-
-that's not due to c-common.h. gcc versions 4.5-4.6 are compiled as a C program
-and gcc 4.7 can be compiled both as a C and a C++ program (IIRC, distros opted
-for the latter, i forget what manually built versions default to but i guess you
-went with the C compilation for your gcc anyway). couple that with -Wmissing-prototypes
-and you get that warning regardless of c-common.h being included. something like
-this should fix it:
-
---- a/scripts/gcc-plugins/gcc-generate-gimple-pass.h 2016-12-06 01:01:54.521724573 +0100
-+++ b/scripts/gcc-plugins/gcc-generate-gimple-pass.h      2016-12-09 11:43:32.225226164 +0100
-@@ -136,6 +136,7 @@
-        return new _PASS_NAME_PASS();
- }
- #else
-+struct opt_pass *_MAKE_PASS_NAME_PASS(void);
- struct opt_pass *_MAKE_PASS_NAME_PASS(void)
- {
-        return &_PASS_NAME_PASS.pass;
-
-> These were all manually built using a script running on a Debian box. 
-> Installing precompiled distro versions of rather old gccs would have 
-> been somewhat challenging. I've just rebuilt 4.6.4 to double check that 
-> I wasn't just seeing things, but it seems that it definitely is still 
-> putting c-common.h in the old location.
-
-for reference, this is the git commit that did the move:
-
-commit 7bedc3a05d34cd81e4835a2d3ff8c0ec7108eeb5
-Author: steven <steven@138bc75d-0d04-0410-961f-82ee72b054a4>
-Date:   Sat Jun 5 20:33:22 2010 +0000
-
-    gcc/ChangeLog:
-            * c-common.c: Move to c-family/.
-            * c-common.def: Likewise.
-            * c-common.h: Likewise.
+After giving this some more thought, I feel I should mention that
+kernel reference counting is obviously not "broken" as stated above.
+I was just referring to the fact that a single type is used for both
+reference counting and non-reference counting, so any protection (and
+added performance hit) added to atomic_t will be picked up in the
+non-reference counter cases as well.
