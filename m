@@ -1,96 +1,79 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sun, 11 Dec 2016 21:42:29 -0800
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20161212054229.GA31382@zzz>
-References: <20161211204345.GA1558@kroah.com>
- <20161212034817.1773-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161212034817.1773-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] Re: [PATCH v2] siphash: add cryptographically secure hashtable
- function
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, ak@linux.intel.com, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>
+In-Reply-To: <CA+55aFyfijNTvi0AN1kC4oWZqdGyoRD4WUVAf+kjFytVOE3kNw@mail.gmail.com>
+References: <20161211204345.GA1558@kroah.com> <20161212034817.1773-1-Jason@zx2c4.com>
+ <CA+55aFyfijNTvi0AN1kC4oWZqdGyoRD4WUVAf+kjFytVOE3kNw@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Mon, 12 Dec 2016 06:48:27 +0100
+Message-ID: <CAHmME9qSW1U3dU+VjV8UBz=XOMfpbTkOCyrz74VnQTNcJW_FUw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2] siphash: add cryptographically secure hashtable function
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 12, 2016 at 04:48:17AM +0100, Jason A. Donenfeld wrote:
+Hey Linus,
+
+On Mon, Dec 12, 2016 at 5:01 AM, Linus Torvalds
+<torvalds@linux-foundation.org> wrote:
+> The above is extremely inefficient. Considering that most kernel data
+> would be expected to be smallish, that matters (ie the usual benchmark
+> would not be about hashing megabytes of data, but instead millions of
+> hashes of small data).
 >
-> diff --git a/lib/Makefile b/lib/Makefile
-> index 50144a3aeebd..71d398b04a74 100644
-> --- a/lib/Makefile
-> +++ b/lib/Makefile
-> @@ -22,7 +22,8 @@ lib-y := ctype.o string.o vsprintf.o cmdline.o \
->  	 sha1.o chacha20.o md5.o irq_regs.o argv_split.o \
->  	 flex_proportions.o ratelimit.o show_mem.o \
->  	 is_single_threaded.o plist.o decompress.o kobject_uevent.o \
-> -	 earlycpio.o seq_buf.o nmi_backtrace.o nodemask.o win_minmax.o
-> +	 earlycpio.o seq_buf.o siphash.o \
-> +	 nmi_backtrace.o nodemask.o win_minmax.o
->  
->  lib-$(CONFIG_MMU) += ioremap.o
->  lib-$(CONFIG_SMP) += cpumask.o
-> @@ -44,7 +45,7 @@ obj-$(CONFIG_TEST_HEXDUMP) += test_hexdump.o
->  obj-y += kstrtox.o
->  obj-$(CONFIG_TEST_BPF) += test_bpf.o
->  obj-$(CONFIG_TEST_FIRMWARE) += test_firmware.o
-> -obj-$(CONFIG_TEST_HASH) += test_hash.o
-> +obj-$(CONFIG_TEST_HASH) += test_hash.o test_siphash.o
+> I think this could be rewritten (at least for 64-bit architectures) as
+>
+>     #ifdef CONFIG_DCACHE_WORD_ACCESS
+>
+>         if (left)
+>                 b |= le64_to_cpu(load_unaligned_zeropad(data) &
+> bytemask_from_count(left));
+>
+>     #else
+>
+>         .. do the duff's device thing with the switch() ..
+>
+>     #endif
+>
+> which should give you basically perfect code generation (ie a single
+> 64-bit load and a byte mask).
 
-Maybe add to the help text for CONFIG_TEST_HASH that it now tests siphash too?
+I modified the test to hash data of size 0 through 7 repeatedly
+100000000 times, and benchmarked that a few times on a Skylake laptop.
+The `load_unaligned_zeropad & bytemask_from_count` version was
+consistently 7% slower.
 
-> +static inline u64 le64_to_cpuvp(const void *p)
-> +{
-> +	return le64_to_cpup(p);
-> +}
+I then modified it again to simply hash a 4 byte constant repeatedly
+1000000000 times. The `load_unaligned_zeropad & bytemask_from_count`
+version was around 6% faster. I tried again with a 7 byte constant and
+got more or less a similar result.
 
-This assumes the key and message buffers are aligned to __alignof__(u64).
-Unless that's going to be a clearly documented requirement for callers, you
-should use get_unaligned_le64() instead.  And you can pass a 'u8 *' directly to
-get_unaligned_le64(), no need for a helper function.
+Then I tried with a 1 byte constant, and found that the
+`load_unaligned_zeropad & bytemask_from_count` version was slower.
 
-> +	b = (v0 ^ v1) ^ (v2 ^ v3);
-> +	return (__force u64)cpu_to_le64(b);
-> +}
+So, it would seem that between the `if (left)` and the `switch
+(left)`, there's the same number of branches. But for small values of
+`left`, the duff's device just has simpler arithmetic, whereas for
+large values of `left`, the `load_unaligned_zeropad` prevails. If
+micro-optimization is really appealing, one could imagine a hybrid of
+the two:
 
-It makes sense for this to return a u64, but that means the cpu_to_le64() is
-wrong, since u64 indicates CPU endianness.  It should just return 'b'.
+    switch (left) {
+    case 7:
+    case 6:
+    case 5:
+    case 4:
+        b |= le64_to_cpu(load_unaligned_zeropad(data) &
+bytemask_from_count(left));
+        break;
+    case 3: b |= ((u64)data[2]) << 16;
+    case 2: b |= ((u64)data[1]) <<  8;
+    case 1: b |= ((u64)data[0]); break;
+    case 0: break;
+    }
 
-> +++ b/lib/test_siphash.c
-> @@ -0,0 +1,116 @@
-> +/* Test cases for siphash.c
-> + *
-> + * Copyright (C) 2015-2016 Jason A. Donenfeld <Jason@zx2c4.com>
-> + *
-> + * This file is provided under a dual BSD/GPLv2 license.
-> + *
-> + * SipHash: a fast short-input PRF
-> + * https://131002.net/siphash/
-> + */
-> +
-> +#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-> +
-> +#include <linux/siphash.h>
-> +#include <linux/kernel.h>
-> +#include <linux/string.h>
-> +#include <linux/errno.h>
-> +#include <linux/module.h>
-> +
-> +static const u8 test_vectors[64][8] = {
-> +	{ 0x31, 0x0e, 0x0e, 0xdd, 0x47, 0xdb, 0x6f, 0x72 },
+But I'm not sure this complication is worth it, and it might be more
+likely that the left-over size is 4 bytes most of the time, so we
+should just use your trick on platforms that support it.
 
-Can you mention in a comment where the test vectors came from?
-
-> +		if (memcmp(&out, test_vectors[i], 8)) {
-> +			pr_info("self-test %u: FAIL\n", i + 1);
-> +			ret = -EINVAL;
-> +		}
-
-If you make the output really be CPU-endian like I'm suggesting then this will
-need to be something like:
-
-	if (out != get_unaligned_le64(test_vectors[i])) {
-
-Or else make the test vectors be an array of u64.
-
-- Eric
+Jason
