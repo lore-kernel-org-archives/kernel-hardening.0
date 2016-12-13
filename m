@@ -1,21 +1,69 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 13 Dec 2016 11:39:28 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Message-ID: <20161213033928.GB5601@gondor.apana.org.au>
+References: <20161209230851.GB64048@google.com>
+ <CALCETrWfa5VJQNu3XjeFhF0cDFWF+M-dPwsT_7dzO5YSxsneGg@mail.gmail.com>
 MIME-Version: 1.0
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 13 Dec 2016 00:04:27 +0100
-Message-ID: <CAHmME9qk+Z8CdhTFQnTkwT8S-n56tzi77-uAV3dNigcGMQx7uQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3] siphash: add cryptographically secure hashtable function
-To: Andi Kleen <ak@linux.intel.com>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CALCETrWfa5VJQNu3XjeFhF0cDFWF+M-dPwsT_7dzO5YSxsneGg@mail.gmail.com>
+Subject: [kernel-hardening] Re: Remaining crypto API regressions with CONFIG_VMAP_STACK
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-crypto@vger.kernel.org, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Lutomirski <luto@kernel.org>, Stephan Mueller <smueller@chronox.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 13, 2016 at 12:01 AM, Andi Kleen <ak@linux.intel.com> wrote:
-> It would be nice if the network code could be converted to use siphash
-> for the secure sequence numbers. Right now it pulls in a lot of code
-> for bigger secure hashes just for that, which is a problem for tiny
-> kernels.
+On Mon, Dec 12, 2016 at 10:34:10AM -0800, Andy Lutomirski wrote:
+>
+> Here's my status.
+> 
+> >         drivers/crypto/bfin_crc.c:351
+> >         drivers/crypto/qce/sha.c:299
+> >         drivers/crypto/sahara.c:973,988
+> >         drivers/crypto/talitos.c:1910
+> >         drivers/crypto/qce/sha.c:325
+> 
+> I have a patch to make these depend on !VMAP_STACK.
 
-Indeed this would be a great first candidate. There are lots of places
-where MD5 (!!) is pulled in for this sort of thing, when SipHash could
-be a faster and leaner replacement (and arguably more secure than
-rusty MD5).
+Why? They're all marked as ASYNC AFAIK.
+
+> I have a patch to convert this to, drumroll please:
+> 
+>     priv->tx_tfm_mic = crypto_alloc_shash("michael_mic", 0,
+>                           CRYPTO_ALG_ASYNC);
+> 
+> Herbert, I'm at a loss as what a "shash" that's "ASYNC" even means.
+
+Having 0 as type and CRYPTO_ALG_ASYNC as mask in general means
+that we're requesting a sync algorithm (i.e., ASYNC bit off).
+
+However, it is completely unnecessary for shash as they can never
+be async.  So this could be changed to just ("michael_mic", 0, 0).
+
+> >         net/ceph/crypto.c:182
+> 
+> This:
+> 
+> size_t zero_padding = (0x10 - (src_len & 0x0f));
+> 
+> is an amazing line of code...
+> 
+> But this driver uses cbc and wants to do synchronous crypto, and I
+> don't think that the crypto API supports real synchronous crypto using
+> CBC, so I'm going to let someone else fix this.
+
+It does through skcipher if you allocate with (0, CRYPTO_ALG_ASYNC).
+
+I'll try to fix this.
+
+> >         net/rxrpc/rxkad.c:737,1000
+> 
+> Herbert, can you fix this?
+
+Sure I'll take a look.
+
+Thanks,
+-- 
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
