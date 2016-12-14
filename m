@@ -1,47 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 12:56:14 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Message-ID: <20161214045614.GB9592@gondor.apana.org.au>
-References: <20161209230851.GB64048@google.com>
- <CALCETrWfa5VJQNu3XjeFhF0cDFWF+M-dPwsT_7dzO5YSxsneGg@mail.gmail.com>
- <20161213033928.GB5601@gondor.apana.org.au>
- <CALCETrVz4B2rthaKPJAOpiHm1kCh-mD2C5kKti0q8iBQ0QEzuA@mail.gmail.com>
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Wed, 14 Dec 2016 09:51:16 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB023F4DA@AcuExch.aculab.com>
+References: <20161214001656.19388-1-Jason@zx2c4.com>
+ <20161214001656.19388-3-Jason@zx2c4.com>
+In-Reply-To: <20161214001656.19388-3-Jason@zx2c4.com>
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CALCETrVz4B2rthaKPJAOpiHm1kCh-mD2C5kKti0q8iBQ0QEzuA@mail.gmail.com>
-Subject: [kernel-hardening] Re: Remaining crypto API regressions with CONFIG_VMAP_STACK
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Eric Biggers <ebiggers3@gmail.com>, linux-crypto@vger.kernel.org, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andrew Lutomirski <luto@kernel.org>, Stephan Mueller <smueller@chronox.de>
+Subject: [kernel-hardening] RE: [PATCH 3/3] secure_seq: use fast&secure siphash instead of
+ slow&insecure md5
+To: "'Jason A. Donenfeld'" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andi
+ Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 13, 2016 at 09:06:31AM -0800, Andy Lutomirski wrote:
->
-> > Having 0 as type and CRYPTO_ALG_ASYNC as mask in general means
-> > that we're requesting a sync algorithm (i.e., ASYNC bit off).
-> >
-> > However, it is completely unnecessary for shash as they can never
-> > be async.  So this could be changed to just ("michael_mic", 0, 0).
-> 
-> I'm confused by a bunch of this.
-> 
-> 1. Is it really the case that crypto_alloc_xyz(..., CRYPTO_ALG_ASYNC)
-> means to allocate a *synchronous* transform?  That's not what I
-> expected.
+From: Jason A. Donenfeld
+> Sent: 14 December 2016 00:17
+> This gives a clear speed and security improvement. Rather than manually
+> filling MD5 buffers, we simply create a layout by a simple anonymous
+> struct, for which gcc generates rather efficient code.
+...
+> +	const struct {
+> +		struct in6_addr saddr;
+> +		struct in6_addr daddr;
+> +		__be16 sport;
+> +		__be16 dport;
+> +	} __packed combined =3D {
+> +		.saddr =3D *(struct in6_addr *)saddr,
+> +		.daddr =3D *(struct in6_addr *)daddr,
+> +		.sport =3D sport,
+> +		.dport =3D dport
+> +	};
 
-crypto_alloc_xyz(name, 0, CRYPTO_ALG_ASYNC) allocates a sync tfm
-and crypto_alloc_xyz(name, CRYPTO_ALG_ASYNC, CRYPTO_ALG_ASYNC)
-allocates an async tfm while crypto_alloc_xyz(name, 0, 0) does
-not care whether the allocated tfm is sync or asnc.
+You need to look at the effect of marking this (and the other)
+structures 'packed' on architectures like sparc64.
 
-> 2. What guarantees that an async request is never allocated on the
-> stack?  If it's just convention, could an assertion be added
-> somewhere?
-
-Sure we can add an assertion.
-
-Cheers,
--- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+	David
