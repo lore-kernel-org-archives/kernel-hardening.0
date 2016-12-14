@@ -1,48 +1,96 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 19:25:00 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20161214192459.GA16972@leverpostej>
-References: <20161214185000.GA3930@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161214185000.GA3930@kroah.com>
-Subject: Re: [kernel-hardening] [RFC 0/4] make call_usermodehelper a bit more
- "safe"
-To: Greg KH <gregkh@linuxfoundation.org>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Gengjia Chen <chengjia4574@gmail.com>, Kees Cook <keescook@chromium.org>
+In-Reply-To: <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com>
+References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com>
+ <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 14 Dec 2016 20:35:44 +0100
+Message-ID: <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable function
+To: Tom Herbert <tom@herbertland.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Hi Tom,
 
-Hi,
+On Wed, Dec 14, 2016 at 8:18 PM, Tom Herbert <tom@herbertland.com> wrote:
+> "super fast" is relative. My quick test shows that this faster than
+> Toeplitz (good, but not exactly hard to achieve), but is about 4x
+> slower than jhash.
 
-On Wed, Dec 14, 2016 at 10:50:00AM -0800, Greg KH wrote:
-> The issue is that if you end up getting write access to kernel memory,
-> if you change the string '/sbin/hotplug' to point to
-> '/home/hacked/my_binary', then the next uevent that the system makes
-> will call this binary instead of the "trusted" one.
-> 
-> It does this by moving the location of the binary to be in read-only
-> memory.  This works for a number of call_usermodehelper strings, as they
-> are specified at build or configuration time.  But, some subsystems have
-> the option to let userspace change the value at runtime, so those values
-> can't live in read-only memory. 
+Fast relative to other cryptographically secure PRFs.
 
-> So, anyone have any better ideas?  Is this approach worth it?  Or should
-> we just go down the "whitelist" path?
+>> SipHash isn't just some new trendy hash function. It's been around for a
+>> while, and there really isn't anything that comes remotely close to
+>> being useful in the way SipHash is. With that said, why do we need this?
+> I don't think we need advertising nor a lesson on hashing. It would be
+> much more useful if you just point us to the paper on siphash (which I
+> assume I http://cr.yp.to/siphash/siphash-20120918.pdf ?).
 
-As a general note, I believe the write-rarely / mostly-ro [1] stuff is
-meant to cater for this case, but I haven't heard anything on that front
-recently (and there doesn't appear to be anything on the KSPP TODO
-page).
+Ugh. Sorry. It definitely wasn't my intention to give an uninvited
+lesson or an annoying advert. For the former, I didn't want to make
+any expectations about fields of knowledge, because I honest have no
+idea. For the latter, I wrote that sentence to indicate that siphash
+isn't just some newfangled hipster function, but something useful and
+well established. I didn't mean it as a form of advertising. My
+apologies if I've offended your sensibilities.
 
-If that does cater for this case, and if we're able to implement that
-generically, that might be nicer than locking down the set of binaries
-at build time.
+That cr.yp.to link is fine, or https://131002.net/siphash/siphash.pdf I believe.
 
-Chen, are you still looking at implementing write-rarely support?
+> Key rotation is important anyway, without any key rotation even if the
+> key is compromised in siphash by some external means we would have an
+> insecure hash until the system reboots.
 
-Thanks,
-Mark.
+I'm a bit surprised to read this. I've never designed a system to be
+secure even in the event of remote arbitrary kernel memory disclosure,
+and I wasn't aware this was generally considered an architectural
+requirement or Linux.
 
-[1] http://www.openwall.com/lists/kernel-hardening/2016/11/16/3
+In any case, if you want this, I suppose you can have it with siphash too.
+
+> Maybe so, but we need to do due diligence before considering adopting
+> siphash as the primary hashing in the network stack. Consider that we
+> may very well perform a hash over L4 tuples on _every_ packet. We've
+> done a good job at limiting this to be at most one hash per packet,
+> but nevertheless the performance of the hash function must be take
+> into account.
+
+I agree with you. It seems like each case is going to needed to be
+measured on a case by case basis. In this series I make the first use
+of siphash in the secure sequence generation and get_random_int/long,
+where siphash replaces md5, so there's a pretty clear performance in.
+But for the jhash replacements indeed things are going to need to be
+individually evaluated.
+
+> 1) My quick test shows siphash is about four times more expensive than
+> jhash. On my test system, computing a hash over IPv4 tuple (two 32 bit
+> addresses and 2 16 bit source ports) is 6.9 nsecs in Jenkins hash, 33
+> nsecs with siphash. Given that we have eliminated most of the packet
+> header hashes this might be tolerable, but still should be looking at
+> ways to optimize.
+> 2) I like moving to use u64 (quad words) in the hash, this is an
+> improvement over Jenkins which is based on 32 bit words. If we put
+> this in the kernel we probably want to have several variants of
+> siphash for specific sizes (e.g. siphash1, siphash2, siphash2,
+> siphashn for hash over one, two, three, or n sixty four bit words).
+
+I think your suggestion for (2) will contribute to further
+optimizations for (1). In v2, I had another patch in there adding
+siphash_1word, siphash_2words, etc, like jhash, but I implemented it
+by taking u32 variables and then just concatenating these into a
+buffer and passing them to the main siphash function. I removed it
+from v3 because I thought that these kind of missed the whole point.
+In particular:
+
+a) siphash24_1word, siphash24_2words, siphash24_3words, etc should
+take u64, not u32, since that's what siphash operates on natively
+b) Rather than concatenating them in a buffer, I should write
+specializations of the siphash24 function _especially_ for these size
+inputs to avoid the copy and to reduce the book keeping.
+
+I'll add these functions to v4 implemented like that.
+
+Thanks for the useful feedback and benchmarks!
+
+Jason
