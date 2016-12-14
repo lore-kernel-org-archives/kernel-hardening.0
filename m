@@ -1,45 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CALx6S349hOFhnMgM_TgKXC1O7bmOvR87Nm=5B7_sNLEWiZU8Zg@mail.gmail.com>
-References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com>
- <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com>
- <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
- <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com>
- <CALx6S35VBjw42G6rHPrNfVaBfLMz3YZVjs3D3hBG=4gp5+g5tA@mail.gmail.com>
- <CAHmME9rpvf4tyDjZcJAJxMAW1LcqNm7DiquiYX0uQhRzDLbwqw@mail.gmail.com> <CALx6S349hOFhnMgM_TgKXC1O7bmOvR87Nm=5B7_sNLEWiZU8Zg@mail.gmail.com>
+In-Reply-To: <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
+References: <20161214035927.30004-1-Jason@zx2c4.com> <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
+ <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 15 Dec 2016 00:17:18 +0100
-Message-ID: <CAHmME9qNcsXtdWO_rmngSXXeBsTbA9B_33oLJ_pWOWcO7P2JZg@mail.gmail.com>
+Date: Thu, 15 Dec 2016 00:29:55 +0100
+Message-ID: <CAHmME9r8-JMqkOdz4PLgF13qYGk8XAmEjGep40k3GVYfUS_sPw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable function
-To: Tom Herbert <tom@herbertland.com>
-Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable function
+To: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Cc: David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hey Tom,
+Hi Hannes,
 
-On Thu, Dec 15, 2016 at 12:14 AM, Tom Herbert <tom@herbertland.com> wrote:
-> I'm confused, doesn't 2dword == 1qword? Anyway, I think the qword
-> functions are good enough. If someone needs to hash over some odd
-> length they can either put them in a structure padded to 64 bits or
-> call the hash function that takes a byte length.
+On Wed, Dec 14, 2016 at 11:03 PM, Hannes Frederic Sowa
+<hannes@stressinduktion.org> wrote:
+> I fear that the alignment requirement will be a source of bugs on 32 bit
+> machines, where you cannot even simply take a well aligned struct on a
+> stack and put it into the normal siphash(aligned) function without
+> adding alignment annotations everywhere. Even blocks returned from
+> kmalloc on 32 bit are not aligned to 64 bit.
 
-Yes. Here's an example:
+That's what the "__aligned(SIPHASH24_ALIGNMENT)" attribute is for. The
+aligned siphash function will be for structs explicitly made for
+siphash consumption. For everything else there's siphash_unaligned.
 
-static inline u64 siphash24_2dwords(const u32 a, const u32 b, const u8
-key[SIPHASH24_KEY_LEN])
-{
-       return siphash24_1qword(((u64)b << 32) | a, key);
-}
+> Can we do this a runtime check and just have one function (siphash)
+> dealing with that?
 
-This winds up being extremely useful and syntactically convenient in a
-few places. Check out my git branch in about 10 minutes or wait for v4
-to be posted tomorrow; these are nice helpers.
-
-> I'd still drop the "24" unless you really think we're going to have
-> multiple variants coming into the kernel.
-
-Okay. I don't have a problem with this, unless anybody has some reason
-to the contrary.
+Seems like the runtime branching on the aligned function would be bad
+for performance, when we likely know at compile time if it's going to
+be aligned or not. I suppose we could add that check just to the
+unaligned version, and rename it to "maybe_unaligned"? Is this what
+you have in mind?
 
 Jason
