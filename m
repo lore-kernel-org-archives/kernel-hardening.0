@@ -1,28 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB023F7BD@AcuExch.aculab.com>
-References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214035927.30004-3-Jason@zx2c4.com>
- <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
- <1e502c6b-cda3-c46d-2535-fcfb58f443a9@stressinduktion.org>
- <CAHmME9o4NVi-MPeURio1Ga58rnW6JAGQdTg6scd+K3EZEf3RNA@mail.gmail.com> <063D6719AE5E284EB5DD2968C1650D6DB023F7BD@AcuExch.aculab.com>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 14 Dec 2016 18:49:26 +0100
-Message-ID: <CAHmME9oAnqC9dvgF8ZcJzNX70PsPHu0Nn++eexQvktUR_w8pHA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of md5_transform
-To: David Laight <David.Laight@aculab.com>
-Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>, Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+Date: Wed, 14 Dec 2016 12:56:12 -0500 (EST)
+Message-Id: <20161214.125612.1361254098267633173.davem@davemloft.net>
+From: David Miller <davem@davemloft.net>
+In-Reply-To: <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
+References: <20161214035927.30004-1-Jason@zx2c4.com>
+	<20161214035927.30004-3-Jason@zx2c4.com>
+	<CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: Text/Plain; charset=us-ascii
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of
+ md5_transform
+To: Jason@zx2c4.com
+Cc: David.Laight@aculab.com, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, ak@linux.intel.com, linux-kernel@vger.kernel.org, linux-crypto@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 3:47 PM, David Laight <David.Laight@aculab.com> wrote:
-> Just remove the __packed and ensure that the structure is 'nice'.
-> This includes ensuring there is no 'tail padding'.
-> In some cases you'll need to put the port number into a 32bit field.
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 14 Dec 2016 13:53:10 +0100
 
-I'd rather not. There's no point in wasting extra cycles on hashing
-useless data, just for some particular syntactic improvement. __packed
-__aligned(8) will do what we want perfectly, I think.
+> In all current uses of __packed in the code, I think the impact is
+> precisely zero, because all structures have members in descending
+> order of size, with each member being a perfect multiple of the one
+> below it. The __packed is therefore just there for safety, in case
+> somebody comes in and screws everything up by sticking a u8 in
+> between.
 
-> I'd also require that the key be aligned.
+Just marking the structure __packed, whether necessary or not, makes
+the compiler assume that the members are not aligned and causes
+byte-by-byte accesses to be performed for words.
 
-Yep, I'll certainly do this for the siphash24_aligned version in the v3.
+Never, _ever_, use __packed unless absolutely necessary, it pessimizes
+the code on cpus that require proper alignment of types.
