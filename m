@@ -1,76 +1,130 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 10:50:28 -0800
+Date: Wed, 14 Dec 2016 10:50:40 -0800
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161214185028.GA4939@kroah.com>
+Message-ID: <20161214185040.GB4939@kroah.com>
 References: <20161214185000.GA3930@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20161214185000.GA3930@kroah.com>
-Subject: [kernel-hardening] [PATCH 1/4] kmod: make usermodehelper path a const string
+Subject: [kernel-hardening] [PATCH 2/4] drbd: rename "usermode_helper" to "drbd_usermode_helper"
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is in preparation for making it so that usermode helper programs
-can't be changed, if desired, by userspace.  We will tackle the mess of
-cleaning up the write-ability of argv and env later, that's going to
-take more work, for much less gain...
+
+Nothing like having a very generic global variable in a tiny driver
+subsystem to make a mess of the global namespace...
+
+Anyway, clean it up in anticipation of making drbd_usermode_helper
+read-only in a future patch.
+
+Note, there are many other "generic" named global variables in the drbd
+subsystem, someone should fix those up one day before they hit a linking
+error.
 
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- include/linux/kmod.h | 7 ++++---
- kernel/kmod.c        | 4 ++--
- 2 files changed, 6 insertions(+), 5 deletions(-)
+ drivers/block/drbd/drbd_int.h  |  2 +-
+ drivers/block/drbd/drbd_main.c |  4 ++--
+ drivers/block/drbd/drbd_nl.c   | 20 ++++++++++----------
+ 3 files changed, 13 insertions(+), 13 deletions(-)
 
-diff --git a/include/linux/kmod.h b/include/linux/kmod.h
-index fcfd2bf14d3f..c4e441e00db5 100644
---- a/include/linux/kmod.h
-+++ b/include/linux/kmod.h
-@@ -56,7 +56,7 @@ struct file;
- struct subprocess_info {
- 	struct work_struct work;
- 	struct completion *complete;
--	char *path;
-+	const char *path;
- 	char **argv;
- 	char **envp;
- 	int wait;
-@@ -67,10 +67,11 @@ struct subprocess_info {
- };
+diff --git a/drivers/block/drbd/drbd_int.h b/drivers/block/drbd/drbd_int.h
+index 4cb8f21ff4ef..a139a34f1f1e 100644
+--- a/drivers/block/drbd/drbd_int.h
++++ b/drivers/block/drbd/drbd_int.h
+@@ -75,7 +75,7 @@ extern int fault_rate;
+ extern int fault_devs;
+ #endif
  
- extern int
--call_usermodehelper(char *path, char **argv, char **envp, int wait);
-+call_usermodehelper(const char *path, char **argv, char **envp, int wait);
+-extern char usermode_helper[];
++extern char drbd_usermode_helper[];
  
- extern struct subprocess_info *
--call_usermodehelper_setup(char *path, char **argv, char **envp, gfp_t gfp_mask,
-+call_usermodehelper_setup(const char *path, char **argv, char **envp,
-+			  gfp_t gfp_mask,
- 			  int (*init)(struct subprocess_info *info, struct cred *new),
- 			  void (*cleanup)(struct subprocess_info *), void *data);
  
-diff --git a/kernel/kmod.c b/kernel/kmod.c
-index 0277d1216f80..0c216b76afca 100644
---- a/kernel/kmod.c
-+++ b/kernel/kmod.c
-@@ -516,7 +516,7 @@ static void helper_unlock(void)
-  * Function must be runnable in either a process context or the
-  * context in which call_usermodehelper_exec is called.
-  */
--struct subprocess_info *call_usermodehelper_setup(char *path, char **argv,
-+struct subprocess_info *call_usermodehelper_setup(const char *path, char **argv,
- 		char **envp, gfp_t gfp_mask,
- 		int (*init)(struct subprocess_info *info, struct cred *new),
- 		void (*cleanup)(struct subprocess_info *info),
-@@ -613,7 +613,7 @@ EXPORT_SYMBOL(call_usermodehelper_exec);
-  * This function is the equivalent to use call_usermodehelper_setup() and
-  * call_usermodehelper_exec().
-  */
--int call_usermodehelper(char *path, char **argv, char **envp, int wait)
-+int call_usermodehelper(const char *path, char **argv, char **envp, int wait)
- {
- 	struct subprocess_info *info;
- 	gfp_t gfp_mask = (wait == UMH_NO_WAIT) ? GFP_ATOMIC : GFP_KERNEL;
+ /* This is used to stop/restart our threads.
+diff --git a/drivers/block/drbd/drbd_main.c b/drivers/block/drbd/drbd_main.c
+index 83482721bc01..8f51eccc8de7 100644
+--- a/drivers/block/drbd/drbd_main.c
++++ b/drivers/block/drbd/drbd_main.c
+@@ -108,9 +108,9 @@ int proc_details;       /* Detail level in proc drbd*/
+ 
+ /* Module parameter for setting the user mode helper program
+  * to run. Default is /sbin/drbdadm */
+-char usermode_helper[80] = "/sbin/drbdadm";
++char drbd_usermode_helper[80] = "/sbin/drbdadm";
+ 
+-module_param_string(usermode_helper, usermode_helper, sizeof(usermode_helper), 0644);
++module_param_string(usermode_helper, drbd_usermode_helper, sizeof(drbd_usermode_helper), 0644);
+ 
+ /* in 2.6.x, our device mapping and config info contains our virtual gendisks
+  * as member "struct gendisk *vdisk;"
+diff --git a/drivers/block/drbd/drbd_nl.c b/drivers/block/drbd/drbd_nl.c
+index f35db29cac76..9edc6fb95f19 100644
+--- a/drivers/block/drbd/drbd_nl.c
++++ b/drivers/block/drbd/drbd_nl.c
+@@ -344,7 +344,7 @@ int drbd_khelper(struct drbd_device *device, char *cmd)
+ 			 (char[60]) { }, /* address */
+ 			NULL };
+ 	char mb[14];
+-	char *argv[] = {usermode_helper, cmd, mb, NULL };
++	char *argv[] = {drbd_usermode_helper, cmd, mb, NULL };
+ 	struct drbd_connection *connection = first_peer_device(device)->connection;
+ 	struct sib_info sib;
+ 	int ret;
+@@ -359,19 +359,19 @@ int drbd_khelper(struct drbd_device *device, char *cmd)
+ 	 * write out any unsynced meta data changes now */
+ 	drbd_md_sync(device);
+ 
+-	drbd_info(device, "helper command: %s %s %s\n", usermode_helper, cmd, mb);
++	drbd_info(device, "helper command: %s %s %s\n", drbd_usermode_helper, cmd, mb);
+ 	sib.sib_reason = SIB_HELPER_PRE;
+ 	sib.helper_name = cmd;
+ 	drbd_bcast_event(device, &sib);
+ 	notify_helper(NOTIFY_CALL, device, connection, cmd, 0);
+-	ret = call_usermodehelper(usermode_helper, argv, envp, UMH_WAIT_PROC);
++	ret = call_usermodehelper(drbd_usermode_helper, argv, envp, UMH_WAIT_PROC);
+ 	if (ret)
+ 		drbd_warn(device, "helper command: %s %s %s exit code %u (0x%x)\n",
+-				usermode_helper, cmd, mb,
++				drbd_usermode_helper, cmd, mb,
+ 				(ret >> 8) & 0xff, ret);
+ 	else
+ 		drbd_info(device, "helper command: %s %s %s exit code %u (0x%x)\n",
+-				usermode_helper, cmd, mb,
++				drbd_usermode_helper, cmd, mb,
+ 				(ret >> 8) & 0xff, ret);
+ 	sib.sib_reason = SIB_HELPER_POST;
+ 	sib.helper_exit_code = ret;
+@@ -396,24 +396,24 @@ enum drbd_peer_state conn_khelper(struct drbd_connection *connection, char *cmd)
+ 			 (char[60]) { }, /* address */
+ 			NULL };
+ 	char *resource_name = connection->resource->name;
+-	char *argv[] = {usermode_helper, cmd, resource_name, NULL };
++	char *argv[] = {drbd_usermode_helper, cmd, resource_name, NULL };
+ 	int ret;
+ 
+ 	setup_khelper_env(connection, envp);
+ 	conn_md_sync(connection);
+ 
+-	drbd_info(connection, "helper command: %s %s %s\n", usermode_helper, cmd, resource_name);
++	drbd_info(connection, "helper command: %s %s %s\n", drbd_usermode_helper, cmd, resource_name);
+ 	/* TODO: conn_bcast_event() ?? */
+ 	notify_helper(NOTIFY_CALL, NULL, connection, cmd, 0);
+ 
+-	ret = call_usermodehelper(usermode_helper, argv, envp, UMH_WAIT_PROC);
++	ret = call_usermodehelper(drbd_usermode_helper, argv, envp, UMH_WAIT_PROC);
+ 	if (ret)
+ 		drbd_warn(connection, "helper command: %s %s %s exit code %u (0x%x)\n",
+-			  usermode_helper, cmd, resource_name,
++			  drbd_usermode_helper, cmd, resource_name,
+ 			  (ret >> 8) & 0xff, ret);
+ 	else
+ 		drbd_info(connection, "helper command: %s %s %s exit code %u (0x%x)\n",
+-			  usermode_helper, cmd, resource_name,
++			  drbd_usermode_helper, cmd, resource_name,
+ 			  (ret >> 8) & 0xff, ret);
+ 	/* TODO: conn_bcast_event() ?? */
+ 	notify_helper(NOTIFY_RESPONSE, NULL, connection, cmd, ret);
 -- 
 2.10.2
