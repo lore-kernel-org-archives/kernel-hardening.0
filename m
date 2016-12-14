@@ -1,49 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 11:11:37 -0800
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161214191137.GA6974@kroah.com>
-References: <20161214185000.GA3930@kroah.com>
- <20161214185052.GC4939@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161214185052.GC4939@kroah.com>
-Subject: Re: [kernel-hardening] [PATCH 3/4] Make static usermode helper
- binaries constant
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org
+In-Reply-To: <20161214163731.luj2dzmnihcuhn5p@thunk.org>
+References: <20161214001656.19388-1-Jason@zx2c4.com> <20161214031037.25498-1-Jason@zx2c4.com>
+ <20161214163731.luj2dzmnihcuhn5p@thunk.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 14 Dec 2016 20:12:14 +0100
+Message-ID: <CAHmME9o3uQoi5h=YTKB=5yN1yzz=d3=GFjGiXv_Sf12kAsjx3A@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH 4/3] random: use siphash24 instead
+ of md5 for get_random_int/long
+To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 10:50:52AM -0800, Greg KH wrote:
-> 
-> There are a number of usermode helper binaries that are "hard coded" in
-> the kernel today, so mark them as "const" to make it harder for someone
-> to change where the variables point to.
-> 
-> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> ---
->  drivers/macintosh/windfarm_core.c          | 2 +-
->  drivers/net/hamradio/baycom_epp.c          | 2 +-
->  drivers/pnp/pnpbios/core.c                 | 5 +++--
->  drivers/staging/greybus/svc_watchdog.c     | 4 ++--
->  drivers/staging/rtl8192e/rtl8192e/rtl_dm.c | 6 +++---
->  fs/nfsd/nfs4layouts.c                      | 6 ++++--
->  security/keys/request_key.c                | 7 ++++---
->  7 files changed, 18 insertions(+), 14 deletions(-)
-> 
-> diff --git a/drivers/macintosh/windfarm_core.c b/drivers/macintosh/windfarm_core.c
-> index 465d770ab0bb..1b317cbb73cf 100644
-> --- a/drivers/macintosh/windfarm_core.c
-> +++ b/drivers/macintosh/windfarm_core.c
-> @@ -74,7 +74,7 @@ static inline void wf_notify(int event, void *param)
->  
->  static int wf_critical_overtemp(void)
->  {
-> -	static char * critical_overtemp_path = "/sbin/critical_overtemp";
-> +	static const char * critical_overtemp_path = "/sbin/critical_overtemp";
->  	char *argv[] = { critical_overtemp_path, NULL };
->  	static char *envp[] = { "HOME=/",
->  				"TERM=linux",
+Hi again,
 
-Doh, minor compiler warnings for this one, and others in this patch,
-I'll fix them up...
+On Wed, Dec 14, 2016 at 5:37 PM, Theodore Ts'o <tytso@mit.edu> wrote:
+> [    3.606139] random benchmark!!
+> [    3.606276] get_random_int # cycles: 326578
+> [    3.606317] get_random_int_new # cycles: 95438
+> [    3.607423] get_random_bytes # cycles: 2653388
+
+Looks to me like my siphash implementation is much faster for
+get_random_long, and more or less tied for get_random_int:
+
+[    1.729370] random benchmark!!
+[    1.729710] get_random_long # cycles: 349771
+[    1.730128] get_random_long_chacha # cycles: 359660
+[    1.730457] get_random_long_siphash # cycles: 94255
+[    1.731307] get_random_bytes # cycles: 1354894
+[    1.731707] get_random_int # cycles: 305640
+[    1.732095] get_random_int_chacha # cycles: 80726
+[    1.732425] get_random_int_siphash # cycles: 94265
+[    1.733278] get_random_bytes # cycles: 1315873
+
+Given the increasing usage of get_random_long for ASLR and related, I
+think this makes the siphash approach worth pursuing. The chacha
+approach is also not significantly different from the md5 approach in
+terms of speed for get_rand_long. Additionally, since siphash is a
+PRF, I think this opens up a big window for optimizing it even
+further.
+
+Benchmark here:
+    https://git.zx2c4.com/linux-dev/commit/?h=rng-bench
+
+Jason
