@@ -1,64 +1,54 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20161214035927.30004-1-Jason@zx2c4.com>
- <20161214035927.30004-3-Jason@zx2c4.com>
- <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
- <20161214.125612.1361254098267633173.davem@davemloft.net>
- <CAHmME9pz4XudfeqhKBwFNDmp7AYuNwbnevMqB3e6ScPDnUnq9g@mail.gmail.com>
- <0e708ba2-6a4e-013e-597a-62ab32cc240b@stressinduktion.org>
- <CAHmME9rp2oSCo0eu92jKm00S0eJHz65bJKXRpeS7=_EV6zZNYw@mail.gmail.com>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Message-ID: <ba55e62d-d4e6-97ed-614e-98c33a74347b@stressinduktion.org>
-Date: Wed, 14 Dec 2016 21:27:07 +0100
+Date: Wed, 14 Dec 2016 15:29:52 -0500
+From: Rich Felker <dalias@libc.org>
+Message-ID: <20161214202952.GV1555@brightrain.aerifal.cx>
+References: <20161214185000.GA3930@kroah.com>
+ <20161214185052.GC4939@kroah.com>
 MIME-Version: 1.0
-In-Reply-To: <CAHmME9rp2oSCo0eu92jKm00S0eJHz65bJKXRpeS7=_EV6zZNYw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of md5_transform
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20161214185052.GC4939@kroah.com>
+Sender: Rich Felker <dalias@aerifal.cx>
+Subject: Re: [kernel-hardening] [PATCH 3/4] Make static usermode helper
+ binaries constant
+To: kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hey Jason,
-
-On 14.12.2016 20:38, Jason A. Donenfeld wrote:
-> On Wed, Dec 14, 2016 at 8:22 PM, Hannes Frederic Sowa
-> <hannes@stressinduktion.org> wrote:
->> I don't think this helps. Did you test it? I don't see reason why
->> padding could be left out between `d' and `end' because of the flexible
->> array member?
+On Wed, Dec 14, 2016 at 10:50:52AM -0800, Greg KH wrote:
 > 
-> Because the type u8 doesn't require any alignment requirements, it can
-> nestle right up there cozy with the u16:
+> There are a number of usermode helper binaries that are "hard coded" in
+> the kernel today, so mark them as "const" to make it harder for someone
+> to change where the variables point to.
+
+You're not preventing change of where they point to, but rather
+preventing modification of the pointed-to data through these
+pointers...
+
+> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> ---
+>  drivers/macintosh/windfarm_core.c          | 2 +-
+>  drivers/net/hamradio/baycom_epp.c          | 2 +-
+>  drivers/pnp/pnpbios/core.c                 | 5 +++--
+>  drivers/staging/greybus/svc_watchdog.c     | 4 ++--
+>  drivers/staging/rtl8192e/rtl8192e/rtl_dm.c | 6 +++---
+>  fs/nfsd/nfs4layouts.c                      | 6 ++++--
+>  security/keys/request_key.c                | 7 ++++---
+>  7 files changed, 18 insertions(+), 14 deletions(-)
 > 
-> zx2c4@thinkpad ~ $ cat a.c
-> #include <stdint.h>
-> #include <stdio.h>
-> #include <stddef.h>
-> int main()
-> {
->        struct {
->                uint64_t a;
->                uint32_t b;
->                uint32_t c;
->                uint16_t d;
->                char x[];
->        } a;
->        printf("%zu\n", sizeof(a));
->        printf("%zu\n", offsetof(typeof(a), x));
->        return 0;
-> }
-> zx2c4@thinkpad ~ $ gcc a.c
-> zx2c4@thinkpad ~ $ ./a.out
-> 24
-> 18
+> diff --git a/drivers/macintosh/windfarm_core.c b/drivers/macintosh/windfarm_core.c
+> index 465d770ab0bb..1b317cbb73cf 100644
+> --- a/drivers/macintosh/windfarm_core.c
+> +++ b/drivers/macintosh/windfarm_core.c
+> @@ -74,7 +74,7 @@ static inline void wf_notify(int event, void *param)
+>  
+>  static int wf_critical_overtemp(void)
+>  {
+> -	static char * critical_overtemp_path = "/sbin/critical_overtemp";
+> +	static const char * critical_overtemp_path = "/sbin/critical_overtemp";
 
-Sorry, I misread the patch. You are using offsetof. In this case remove
-the char x[] and just use offsetofend because it is misleading
-otherwise. Should work like that though.
+Should be static char *const critical_overtemp_path, or if you prefer
+static const char *const critical_overtemp_path (since the pointed-to
+data is not modifiable either). Likewise elsewhere.
 
-What I don't really understand is that the addition of this complexity
-actually reduces the performance, as you have to take the "if (left)"
-branch during hashing and causes you to make a load_unaligned_zeropad.
-
-Bye,
-Hannes
+Rich
