@@ -1,46 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20161214035927.30004-1-Jason@zx2c4.com>
+ <20161214035927.30004-3-Jason@zx2c4.com>
+ <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
+ <20161214.125612.1361254098267633173.davem@davemloft.net>
+ <CAHmME9pz4XudfeqhKBwFNDmp7AYuNwbnevMqB3e6ScPDnUnq9g@mail.gmail.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <0e708ba2-6a4e-013e-597a-62ab32cc240b@stressinduktion.org>
+Date: Wed, 14 Dec 2016 20:22:04 +0100
 MIME-Version: 1.0
-In-Reply-To: <20161214163731.luj2dzmnihcuhn5p@thunk.org>
-References: <20161214001656.19388-1-Jason@zx2c4.com> <20161214031037.25498-1-Jason@zx2c4.com>
- <20161214163731.luj2dzmnihcuhn5p@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 14 Dec 2016 20:12:14 +0100
-Message-ID: <CAHmME9o3uQoi5h=YTKB=5yN1yzz=d3=GFjGiXv_Sf12kAsjx3A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH 4/3] random: use siphash24 instead
- of md5 for get_random_int/long
-To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+In-Reply-To: <CAHmME9pz4XudfeqhKBwFNDmp7AYuNwbnevMqB3e6ScPDnUnq9g@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of md5_transform
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>, David Miller <davem@davemloft.net>
+Cc: David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi again,
+On 14.12.2016 19:06, Jason A. Donenfeld wrote:
+> Hi David,
+> 
+> On Wed, Dec 14, 2016 at 6:56 PM, David Miller <davem@davemloft.net> wrote:
+>> Just marking the structure __packed, whether necessary or not, makes
+>> the compiler assume that the members are not aligned and causes
+>> byte-by-byte accesses to be performed for words.
+>> Never, _ever_, use __packed unless absolutely necessary, it pessimizes
+>> the code on cpus that require proper alignment of types.
+> 
+> Oh, jimminy cricket, I did not realize that it made assignments
+> byte-by-byte *always*. So what options am I left with? What
+> immediately comes to mind are:
+> 
+> 1)
+> 
+> struct {
+>     u64 a;
+>     u32 b;
+>     u32 c;
+>     u16 d;
+>     u8 end[];
 
-On Wed, Dec 14, 2016 at 5:37 PM, Theodore Ts'o <tytso@mit.edu> wrote:
-> [    3.606139] random benchmark!!
-> [    3.606276] get_random_int # cycles: 326578
-> [    3.606317] get_random_int_new # cycles: 95438
-> [    3.607423] get_random_bytes # cycles: 2653388
+I don't think this helps. Did you test it? I don't see reason why
+padding could be left out between `d' and `end' because of the flexible
+array member?
 
-Looks to me like my siphash implementation is much faster for
-get_random_long, and more or less tied for get_random_int:
-
-[    1.729370] random benchmark!!
-[    1.729710] get_random_long # cycles: 349771
-[    1.730128] get_random_long_chacha # cycles: 359660
-[    1.730457] get_random_long_siphash # cycles: 94255
-[    1.731307] get_random_bytes # cycles: 1354894
-[    1.731707] get_random_int # cycles: 305640
-[    1.732095] get_random_int_chacha # cycles: 80726
-[    1.732425] get_random_int_siphash # cycles: 94265
-[    1.733278] get_random_bytes # cycles: 1315873
-
-Given the increasing usage of get_random_long for ASLR and related, I
-think this makes the siphash approach worth pursuing. The chacha
-approach is also not significantly different from the md5 approach in
-terms of speed for get_rand_long. Additionally, since siphash is a
-PRF, I think this opens up a big window for optimizing it even
-further.
-
-Benchmark here:
-    https://git.zx2c4.com/linux-dev/commit/?h=rng-bench
-
-Jason
+Bye,
+Hannes
