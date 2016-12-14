@@ -1,63 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 10:50:00 -0800
+Date: Wed, 14 Dec 2016 10:50:28 -0800
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161214185000.GA3930@kroah.com>
+Message-ID: <20161214185028.GA4939@kroah.com>
+References: <20161214185000.GA3930@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Subject: [kernel-hardening] [RFC 0/4] make call_usermodehelper a bit more "safe"
+In-Reply-To: <20161214185000.GA3930@kroah.com>
+Subject: [kernel-hardening] [PATCH 1/4] kmod: make usermodehelper path a const string
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi all,
+This is in preparation for making it so that usermode helper programs
+can't be changed, if desired, by userspace.  We will tackle the mess of
+cleaning up the write-ability of argv and env later, that's going to
+take more work, for much less gain...
 
-Here's a proof-of-concept patch series that tries to work to address the
-issue of call_usermodehelper being abused to have the kernel call any
-userspace binary with full root permissions.
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ include/linux/kmod.h | 7 ++++---
+ kernel/kmod.c        | 4 ++--
+ 2 files changed, 6 insertions(+), 5 deletions(-)
 
-The issue is that if you end up getting write access to kernel memory,
-if you change the string '/sbin/hotplug' to point to
-'/home/hacked/my_binary', then the next uevent that the system makes
-will call this binary instead of the "trusted" one.
-
-It does this by moving the location of the binary to be in read-only
-memory.  This works for a number of call_usermodehelper strings, as they
-are specified at build or configuration time.  But, some subsystems have
-the option to let userspace change the value at runtime, so those values
-can't live in read-only memory.  To resolve this I've created a new
-configuration option, CONFIG_READONLY_USERMODEHELPER to make those
-options not able to be changed.
-
-Yes, this changes existing functionality, but I'm willing to bet that
-almost no one ever changes these binary locations, or if they do, they
-can set them to the "correct" location at built time.
-
-This all happens in the last patch of the series.  Note, I haven't
-caught all places in the kernel that has these options, the messiest
-being coredumps, which I haven't addressed yet, and is going to be a
-pain.
-
-This last patch is hacky, and I'm not really happy about it, so I'm
-posting it here as an RFC to see what others think.
-
-As a contrast, grsec does try to mitigate this same problem, but it does
-so by looking at the location of the binary that is about to be run, and
-only allowing a small whitelist of directories that are "allowed" to be
-used.  That's a much simpler solution, but also feels hacky to me in a
-way given that it's a whitelist and encompasses whole system directories
-(i.e. /sbin/).  My patchset requires that each caller of
-call_usermodehelper be audited, which is a pain, and will be needed to
-be watched out for for new users, which also isn't any good.
-
-So, anyone have any better ideas?  Is this approach worth it?  Or should
-we just go down the "whitelist" path?
-
-Note, the first 3 patches in this series will be submitted for inclusion
-either way, as they are good cleanups, and change no functionality at
-all, and resolve this issue automatically for some subsystems with no
-downside.
-
-thanks,
-
-greg k-h
+diff --git a/include/linux/kmod.h b/include/linux/kmod.h
+index fcfd2bf14d3f..c4e441e00db5 100644
+--- a/include/linux/kmod.h
++++ b/include/linux/kmod.h
+@@ -56,7 +56,7 @@ struct file;
+ struct subprocess_info {
+ 	struct work_struct work;
+ 	struct completion *complete;
+-	char *path;
++	const char *path;
+ 	char **argv;
+ 	char **envp;
+ 	int wait;
+@@ -67,10 +67,11 @@ struct subprocess_info {
+ };
+ 
+ extern int
+-call_usermodehelper(char *path, char **argv, char **envp, int wait);
++call_usermodehelper(const char *path, char **argv, char **envp, int wait);
+ 
+ extern struct subprocess_info *
+-call_usermodehelper_setup(char *path, char **argv, char **envp, gfp_t gfp_mask,
++call_usermodehelper_setup(const char *path, char **argv, char **envp,
++			  gfp_t gfp_mask,
+ 			  int (*init)(struct subprocess_info *info, struct cred *new),
+ 			  void (*cleanup)(struct subprocess_info *), void *data);
+ 
+diff --git a/kernel/kmod.c b/kernel/kmod.c
+index 0277d1216f80..0c216b76afca 100644
+--- a/kernel/kmod.c
++++ b/kernel/kmod.c
+@@ -516,7 +516,7 @@ static void helper_unlock(void)
+  * Function must be runnable in either a process context or the
+  * context in which call_usermodehelper_exec is called.
+  */
+-struct subprocess_info *call_usermodehelper_setup(char *path, char **argv,
++struct subprocess_info *call_usermodehelper_setup(const char *path, char **argv,
+ 		char **envp, gfp_t gfp_mask,
+ 		int (*init)(struct subprocess_info *info, struct cred *new),
+ 		void (*cleanup)(struct subprocess_info *info),
+@@ -613,7 +613,7 @@ EXPORT_SYMBOL(call_usermodehelper_exec);
+  * This function is the equivalent to use call_usermodehelper_setup() and
+  * call_usermodehelper_exec().
+  */
+-int call_usermodehelper(char *path, char **argv, char **envp, int wait)
++int call_usermodehelper(const char *path, char **argv, char **envp, int wait)
+ {
+ 	struct subprocess_info *info;
+ 	gfp_t gfp_mask = (wait == UMH_NO_WAIT) ? GFP_ATOMIC : GFP_KERNEL;
+-- 
+2.10.2
