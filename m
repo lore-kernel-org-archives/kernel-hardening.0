@@ -1,63 +1,38 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 12:54:44 -0800
-From: Greg KH <greg@kroah.com>
-Message-ID: <20161214205444.GA16183@kroah.com>
-References: <20161214185000.GA3930@kroah.com>
- <20161214185052.GC4939@kroah.com>
- <20161214202952.GV1555@brightrain.aerifal.cx>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161214202952.GV1555@brightrain.aerifal.cx>
-Subject: Re: [kernel-hardening] [PATCH 3/4] Make static usermode helper
- binaries constant
-To: kernel-hardening@lists.openwall.com
-Cc: linux-kernel@vger.kernel.org
+In-Reply-To: <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
+References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com>
+ <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com> <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 14 Dec 2016 21:55:51 +0100
+Message-ID: <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable function
+To: Tom Herbert <tom@herbertland.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 03:29:52PM -0500, Rich Felker wrote:
-> On Wed, Dec 14, 2016 at 10:50:52AM -0800, Greg KH wrote:
-> > 
-> > There are a number of usermode helper binaries that are "hard coded" in
-> > the kernel today, so mark them as "const" to make it harder for someone
-> > to change where the variables point to.
-> 
-> You're not preventing change of where they point to, but rather
-> preventing modification of the pointed-to data through these
-> pointers...
-> 
-> > Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> > ---
-> >  drivers/macintosh/windfarm_core.c          | 2 +-
-> >  drivers/net/hamradio/baycom_epp.c          | 2 +-
-> >  drivers/pnp/pnpbios/core.c                 | 5 +++--
-> >  drivers/staging/greybus/svc_watchdog.c     | 4 ++--
-> >  drivers/staging/rtl8192e/rtl8192e/rtl_dm.c | 6 +++---
-> >  fs/nfsd/nfs4layouts.c                      | 6 ++++--
-> >  security/keys/request_key.c                | 7 ++++---
-> >  7 files changed, 18 insertions(+), 14 deletions(-)
-> > 
-> > diff --git a/drivers/macintosh/windfarm_core.c b/drivers/macintosh/windfarm_core.c
-> > index 465d770ab0bb..1b317cbb73cf 100644
-> > --- a/drivers/macintosh/windfarm_core.c
-> > +++ b/drivers/macintosh/windfarm_core.c
-> > @@ -74,7 +74,7 @@ static inline void wf_notify(int event, void *param)
-> >  
-> >  static int wf_critical_overtemp(void)
-> >  {
-> > -	static char * critical_overtemp_path = "/sbin/critical_overtemp";
-> > +	static const char * critical_overtemp_path = "/sbin/critical_overtemp";
-> 
-> Should be static char *const critical_overtemp_path, or if you prefer
-> static const char *const critical_overtemp_path (since the pointed-to
-> data is not modifiable either). Likewise elsewhere.
+Hey Tom,
 
-argh, ok, I failed here, thanks for that, that's what I get for writing
-code on an airplane...
+Just following up on what I mentioned in my last email...
 
-let me rework this, I also want to make argv and env static too, just
-for good measure.
+On Wed, Dec 14, 2016 at 8:35 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+> I think your suggestion for (2) will contribute to further
+> optimizations for (1). In v2, I had another patch in there adding
+> siphash_1word, siphash_2words, etc, like jhash, but I implemented it
+> by taking u32 variables and then just concatenating these into a
+> buffer and passing them to the main siphash function. I removed it
+> from v3 because I thought that these kind of missed the whole point.
+> In particular:
+>
+> a) siphash24_1word, siphash24_2words, siphash24_3words, etc should
+> take u64, not u32, since that's what siphash operates on natively
 
-thanks,
+I implemented these here:
+https://git.zx2c4.com/linux-dev/commit/?h=siphash&id=4652b6f3643bdba217e2194d89661348bbac48a0
 
-greg k-h
+This will be part of the next version of the series I submit. It's not
+immediately clear that using it is strictly faster than the struct
+trick though. However, I'm not yet sure why this would be.
+
+Jason
