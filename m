@@ -1,131 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 14 Dec 2016 12:57:39 -0800
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20161214205739.GA16730@kroah.com>
-References: <20161214185000.GA3930@kroah.com>
- <20161214185110.GD4939@kroah.com>
- <CAGXu5jK-k=Mbk5RxiYk0r3xAQHkMvVZvYiX9mmHGpK1=hsCvtg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jK-k=Mbk5RxiYk0r3xAQHkMvVZvYiX9mmHGpK1=hsCvtg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC 4/4] Introduce CONFIG_READONLY_USERMODEHELPER
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+In-Reply-To: <CALx6S37mGaLJoacxyu3_ZQANSNz9UU38-b-V6g1nma=Gye3pjw@mail.gmail.com>
+References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214035927.30004-3-Jason@zx2c4.com>
+ <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com> <CALx6S37mGaLJoacxyu3_ZQANSNz9UU38-b-V6g1nma=Gye3pjw@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 14 Dec 2016 22:01:29 +0100
+Message-ID: <CAHmME9qtRC5daEPgDEtNgP9tEajd=xRG=qkHE5XoOMA_zAeysw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of md5_transform
+To: Tom Herbert <tom@herbertland.com>
+Cc: David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 12:31:34PM -0800, Kees Cook wrote:
-> On Wed, Dec 14, 2016 at 10:51 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> > If you can write to kernel memory, an "easy" way to get the kernel to
-> > run any application is to change the pointer of one of the usermode
-> > helper program names.  To try to mitigate this, create a new config
-> > option, CONFIG_READONLY_USERMODEHELPER.
-> >
-> > This option only allows "predefined" binaries to be called.  A number of
-> > drivers and subsystems allow for the name of the binary to be changed,
-> > and this config option disables that capability, so be aware of that.
-> >
-> > Note:  Still a proof-of-concept at this point in time, doesn't cover all
-> > of the call_usermodehelper() calls just yet, including the "fun" of
-> > coredumps, it's still a work in progress.
-> >
-> > Not-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> > ---
-> >  arch/x86/kernel/cpu/mcheck/mce.c | 12 ++++++++----
-> >  drivers/block/drbd/drbd_int.h    |  6 +++++-
-> >  drivers/block/drbd/drbd_main.c   |  5 +++++
-> >  drivers/video/fbdev/uvesafb.c    | 19 ++++++++++++++-----
-> >  fs/nfs/cache_lib.c               | 12 ++++++++++--
-> >  include/linux/reboot.h           |  2 ++
-> >  kernel/ksysfs.c                  |  6 +++++-
-> >  kernel/reboot.c                  |  3 +++
-> >  kernel/sysctl.c                  |  4 ++++
-> >  lib/kobject_uevent.c             |  3 +++
-> >  security/Kconfig                 | 17 +++++++++++++++++
-> >  11 files changed, 76 insertions(+), 13 deletions(-)
-> >
-> > diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-> > index 00ef43233e03..92a2ef8ffe3e 100644
-> > --- a/arch/x86/kernel/cpu/mcheck/mce.c
-> > +++ b/arch/x86/kernel/cpu/mcheck/mce.c
-> > @@ -2337,15 +2337,16 @@ static ssize_t set_bank(struct device *s, struct device_attribute *attr,
-> >  }
-> >
-> >  static ssize_t
-> > -show_trigger(struct device *s, struct device_attribute *attr, char *buf)
-> > +trigger_show(struct device *s, struct device_attribute *attr, char *buf)
-> >  {
-> >         strcpy(buf, mce_helper);
-> >         strcat(buf, "\n");
-> >         return strlen(mce_helper) + 1;
-> 
-> The +1 is wrong, AFAICT. Also, is speed really needed here?
+On Wed, Dec 14, 2016 at 9:12 PM, Tom Herbert <tom@herbertland.com> wrote:
+> If you pad the data structure to 64 bits then we can call the version
+> of siphash that only deals in 64 bit words. Writing a zero in the
+> padding will be cheaper than dealing with odd lengths in siphash24.
+On Wed, Dec 14, 2016 at 9:27 PM, Hannes Frederic Sowa
+<hannes@stressinduktion.org> wrote:
+> What I don't really understand is that the addition of this complexity
+> actually reduces the performance, as you have to take the "if (left)"
+> branch during hashing and causes you to make a load_unaligned_zeropad.
 
-No, this is sysfs files, no speed at all :)
+Oh, duh, you guys are right. Fixed in my repo [1]. I'll submit the
+next version in a day or so to let some other comments come in.
 
->     return scnprintf(buf, PAGE_SIZE, "%s\n", mce_helper);
-> 
-> is more readable...
+Thanks again for your reviews.
 
-true, that's nicer, I was trying not to change things that I didn't have
-to.
+Jason
 
-> > -static ssize_t set_trigger(struct device *s, struct device_attribute *attr,
-> > -                               const char *buf, size_t siz)
-> > +#ifndef CONFIG_READONLY_USERMODEHELPER
-> > +static ssize_t trigger_store(struct device *s, struct device_attribute *attr,
-> > +                            const char *buf, size_t siz)
-> >  {
-> >         char *p;
-> >
-> > @@ -2358,6 +2359,10 @@ static ssize_t set_trigger(struct device *s, struct device_attribute *attr,
-> >
-> >         return strlen(mce_helper) + !!p;
-> >  }
-> > +static DEVICE_ATTR_RW(trigger);
-> > +#else
-> > +static DEVICE_ATTR_RO(trigger);
-> > +#endif
-> >
-> >  static ssize_t set_ignore_ce(struct device *s,
-> >                              struct device_attribute *attr,
-> > @@ -2415,7 +2420,6 @@ static ssize_t store_int_with_restart(struct device *s,
-> >         return ret;
-> >  }
-> >
-> > -static DEVICE_ATTR(trigger, 0644, show_trigger, set_trigger);
-> >  static DEVICE_INT_ATTR(tolerant, 0644, mca_cfg.tolerant);
-> >  static DEVICE_INT_ATTR(monarch_timeout, 0644, mca_cfg.monarch_timeout);
-> >  static DEVICE_BOOL_ATTR(dont_log_ce, 0644, mca_cfg.dont_log_ce);
-> > diff --git a/drivers/block/drbd/drbd_int.h b/drivers/block/drbd/drbd_int.h
-> > index a139a34f1f1e..e21ab2bcc482 100644
-> > --- a/drivers/block/drbd/drbd_int.h
-> > +++ b/drivers/block/drbd/drbd_int.h
-> > @@ -75,7 +75,11 @@ extern int fault_rate;
-> >  extern int fault_devs;
-> >  #endif
-> >
-> > -extern char drbd_usermode_helper[];
-> > +extern
-> > +#ifdef CONFIG_READONLY_USERMODEHELPER
-> > +       const
-> > +#endif
-> > +             char drbd_usermode_helper[];
-> 
-> This #ifdef; const; #endif is repeated a few times. Perhaps better to
-> create a separate macro:
-> 
-> #ifdef CONFIG_READONLY_USERMODEHELPER
-> # define __ro_umh const
-> #else
-> # define __ro_umh /**/
-> #endif
-> 
-> ...
-> 
-> extern __ro_umh char drbd_usermode_helper[];
-
-Ah, much cleaner, thanks, I'll go do something like that.  After fixing
-up the static const crap I got wrong...
-
-greg k-h
+[1] https://git.zx2c4.com/linux-dev/log/?h=siphash
