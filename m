@@ -1,65 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20161214035927.30004-1-Jason@zx2c4.com>
+ <20161214035927.30004-3-Jason@zx2c4.com>
+ <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
+ <20161214.125612.1361254098267633173.davem@davemloft.net>
+ <CAHmME9pz4XudfeqhKBwFNDmp7AYuNwbnevMqB3e6ScPDnUnq9g@mail.gmail.com>
+ <0e708ba2-6a4e-013e-597a-62ab32cc240b@stressinduktion.org>
+ <CAHmME9rp2oSCo0eu92jKm00S0eJHz65bJKXRpeS7=_EV6zZNYw@mail.gmail.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <ba55e62d-d4e6-97ed-614e-98c33a74347b@stressinduktion.org>
+Date: Wed, 14 Dec 2016 21:27:07 +0100
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161214192459.GA16972@leverpostej>
-References: <20161214185000.GA3930@kroah.com> <20161214192459.GA16972@leverpostej>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 14 Dec 2016 12:16:56 -0800
-Message-ID: <CAGXu5j+z22GzJYkejrDW2tiT-rZPOp4h-VnoN8gVLBrEmt7Zkw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC 0/4] make call_usermodehelper a bit more "safe"
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Gengjia Chen <chengjia4574@gmail.com>
+In-Reply-To: <CAHmME9rp2oSCo0eu92jKm00S0eJHz65bJKXRpeS7=_EV6zZNYw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 3/4] secure_seq: use siphash24 instead of md5_transform
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 11:25 AM, Mark Rutland <mark.rutland@arm.com> wrote:
->
-> Hi,
->
-> On Wed, Dec 14, 2016 at 10:50:00AM -0800, Greg KH wrote:
->> The issue is that if you end up getting write access to kernel memory,
->> if you change the string '/sbin/hotplug' to point to
->> '/home/hacked/my_binary', then the next uevent that the system makes
->> will call this binary instead of the "trusted" one.
->>
->> It does this by moving the location of the binary to be in read-only
->> memory.  This works for a number of call_usermodehelper strings, as they
->> are specified at build or configuration time.  But, some subsystems have
->> the option to let userspace change the value at runtime, so those values
->> can't live in read-only memory.
->
->> So, anyone have any better ideas?  Is this approach worth it?  Or should
->> we just go down the "whitelist" path?
->
-> As a general note, I believe the write-rarely / mostly-ro [1] stuff is
-> meant to cater for this case, but I haven't heard anything on that front
-> recently (and there doesn't appear to be anything on the KSPP TODO
-> page).
+Hey Jason,
 
-Using write-rarely on sysctls makes sense, though I remain concerned
-about userspace bugs where root gets tricked into writing a bad value
-into a sysctl (which write-rarely wouldn't be able to help). A CONFIG
-here seems okay without the write-rarely infrastructure, though I
-wonder if a write-once runtime value would be better? Something like
-modules_disabled where once flipped, the sysctls become read-only?
+On 14.12.2016 20:38, Jason A. Donenfeld wrote:
+> On Wed, Dec 14, 2016 at 8:22 PM, Hannes Frederic Sowa
+> <hannes@stressinduktion.org> wrote:
+>> I don't think this helps. Did you test it? I don't see reason why
+>> padding could be left out between `d' and `end' because of the flexible
+>> array member?
+> 
+> Because the type u8 doesn't require any alignment requirements, it can
+> nestle right up there cozy with the u16:
+> 
+> zx2c4@thinkpad ~ $ cat a.c
+> #include <stdint.h>
+> #include <stdio.h>
+> #include <stddef.h>
+> int main()
+> {
+>        struct {
+>                uint64_t a;
+>                uint32_t b;
+>                uint32_t c;
+>                uint16_t d;
+>                char x[];
+>        } a;
+>        printf("%zu\n", sizeof(a));
+>        printf("%zu\n", offsetof(typeof(a), x));
+>        return 0;
+> }
+> zx2c4@thinkpad ~ $ gcc a.c
+> zx2c4@thinkpad ~ $ ./a.out
+> 24
+> 18
 
-> If that does cater for this case, and if we're able to implement that
-> generically, that might be nicer than locking down the set of binaries
-> at build time.
->
-> Chen, are you still looking at implementing write-rarely support?
->
-> Thanks,
-> Mark.
->
-> [1] http://www.openwall.com/lists/kernel-hardening/2016/11/16/3
+Sorry, I misread the patch. You are using offsetof. In this case remove
+the char x[] and just use offsetofend because it is misleading
+otherwise. Should work like that though.
 
-Even if it's "wrong", I'd love to see an actual RFC for the
-write-rarely. In the face of a "wrong" patch, we can at least more
-forward with alternative ideas...
+What I don't really understand is that the addition of this complexity
+actually reduces the performance, as you have to take the "if (left)"
+branch during hashing and causes you to make a load_unaligned_zeropad.
 
--Kees
-
--- 
-Kees Cook
-Nexus Security
+Bye,
+Hannes
