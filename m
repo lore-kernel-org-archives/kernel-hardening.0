@@ -1,44 +1,102 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Wed, 14 Dec 2016 14:47:11 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB023F7BD@AcuExch.aculab.com>
 References: <20161214035927.30004-1-Jason@zx2c4.com>
- <20161214035927.30004-3-Jason@zx2c4.com>
- <CAHmME9pEM=cDC5S=j1BU2oCF8-WdnbRfiVojcet4rXcRLcpJRw@mail.gmail.com>
- <1e502c6b-cda3-c46d-2535-fcfb58f443a9@stressinduktion.org>
- <CAHmME9o4NVi-MPeURio1Ga58rnW6JAGQdTg6scd+K3EZEf3RNA@mail.gmail.com>
-In-Reply-To: <CAHmME9o4NVi-MPeURio1Ga58rnW6JAGQdTg6scd+K3EZEf3RNA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <516c5633-14c2-ee18-90e4-84d73870ba2c@stressinduktion.org>
+ <CAHmME9qA6qKdp+qoih2Je4fxU+4E6=Gp7CVfhYU7VbOr6HJ=0Q@mail.gmail.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <9fea41e0-fd55-7328-e2f4-73eb2e7f7a98@stressinduktion.org>
+Date: Wed, 14 Dec 2016 16:09:48 +0100
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v2 3/4] secure_seq: use siphash24 instead of
- md5_transform
-To: "'Jason A. Donenfeld'" <Jason@zx2c4.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>
-Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andi Kleen <ak@linux.intel.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>
+In-Reply-To: <CAHmME9qA6qKdp+qoih2Je4fxU+4E6=Gp7CVfhYU7VbOr6HJ=0Q@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
+ function
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogSmFzb24gQS4gRG9uZW5mZWxkDQo+IFNlbnQ6IDE0IERlY2VtYmVyIDIwMTYgMTM6NDQN
-Cj4gVG86IEhhbm5lcyBGcmVkZXJpYyBTb3dhDQo+ID4gX19wYWNrZWQgbm90IG9ubHkgcmVtb3Zl
-cyBhbGwgcGFkZGluZyBvZiB0aGUgc3RydWN0IGJ1dCBhbHNvIGNoYW5nZXMgdGhlDQo+ID4gYWxp
-Z25tZW50IGFzc3VtcHRpb25zIGZvciB0aGUgd2hvbGUgc3RydWN0IGl0c2VsZi4gVGhlIHJ1bGUs
-IHRoZSBzdHJ1Y3QNCj4gPiBpcyBhbGlnbmVkIGJ5IGl0cyBtYXhpbXVtIGFsaWdubWVudCBvZiBh
-IG1lbWJlciBpcyBubyBsb25nZXIgdHJ1ZS4gVGhhdA0KPiA+IHNhaWQsIHRoZSBjb2RlIGFjY2Vz
-c2luZyB0aGlzIHN0cnVjdCB3aWxsIGNoYW5nZSAobm90IG9uIGFyY2hzIHRoYXQgY2FuDQo+ID4g
-ZGVhbCBlZmZpY2llbnRseSB3aXRoIHVuYWxpZ25lZCBhY2Nlc3MsIGJ1dCBvbiBvdGhlcnMpLg0K
-PiANCj4gVGhhdCdzIGludGVyZXN0aW5nLiBUaGVyZSBjdXJyZW50bHkgYXJlbid0IGFueSBhbGln
-bm1lbnQgcmVxdWlyZW1lbnRzDQo+IGluIHNpcGhhc2ggYmVjYXVzZSB3ZSB1c2UgdGhlIHVuYWxp
-Z25lZCBoZWxwZXIgZnVuY3Rpb25zLCBidXQgYXMgRGF2aWQNCj4gcG9pbnRlZCBvdXQgaW4gYW5v
-dGhlciB0aHJlYWQsIG1heWJlIHRoYXQgdG9vIHNob3VsZCBjaGFuZ2UuIEluIHRoYXQNCj4gY2Fz
-ZSwgd2UnZCBoYXZlIGFuIGFsaWduZWQtb25seSB2ZXJzaW9uIG9mIHRoZSBmdW5jdGlvbiB0aGF0
-IHJlcXVpcmVzDQo+IDgtYnl0ZSBhbGlnbmVkIGlucHV0LiBQZXJoYXBzIHRoZSBiZXN0IHdheSB0
-byBnbyBhYm91dCB0aGF0IHdvdWxkIGJlDQo+IHRvIGp1c3QgbWFyayB0aGUgc3RydWN0IGFzIF9f
-cGFja2VkIF9fYWxpZ25lZCg4KS4gT3IsIEkgZ3Vlc3MsIHNpbmNlDQo+IDY0LWJpdCBhY2Nlc3Nl
-cyBnZXRzIHNwbGl0IGludG8gdHdvIG9uIDMyLWJpdCwgdGhhdCdkIGJlIGJlc3QgZGVzY3JpZWQN
-Cj4gYXMgX19wYWNrZWQgX19hbGlnbmVkKHNpemVvZihsb25nKSkuIFdvdWxkIHRoYXQgYmUgYW4g
-YWNjZXB0YWJsZQ0KPiBzb2x1dGlvbj8NCg0KSnVzdCByZW1vdmUgdGhlIF9fcGFja2VkIGFuZCBl
-bnN1cmUgdGhhdCB0aGUgc3RydWN0dXJlIGlzICduaWNlJy4NClRoaXMgaW5jbHVkZXMgZW5zdXJp
-bmcgdGhlcmUgaXMgbm8gJ3RhaWwgcGFkZGluZycuDQpJbiBzb21lIGNhc2VzIHlvdSdsbCBuZWVk
-IHRvIHB1dCB0aGUgcG9ydCBudW1iZXIgaW50byBhIDMyYml0IGZpZWxkLg0KDQpJJ2QgYWxzbyBy
-ZXF1aXJlIHRoYXQgdGhlIGtleSBiZSBhbGlnbmVkLg0KSXQgcHJvYmFibHkgb3VnaHQgdG8gYmUg
-YSBuYW1lZCBzdHJ1Y3R1cmUgdHlwZSB3aXRoIHR3byA2NGJpdCBtZW1iZXJzDQoob3Igd2l0aCBh
-biBhcnJheSBtZW1iZXIgdGhhdCBoYXMgdHdvIGVsZW1lbnRzKS4NCg0KCURhdmlkDQoNCg==
+Hello,
+
+On 14.12.2016 14:10, Jason A. Donenfeld wrote:
+> On Wed, Dec 14, 2016 at 12:21 PM, Hannes Frederic Sowa
+> <hannes@stressinduktion.org> wrote:
+>> Can you show or cite benchmarks in comparison with jhash? Last time I
+>> looked, especially for short inputs, siphash didn't beat jhash (also on
+>> all the 32 bit devices etc.).
+> 
+> I assume that jhash is likely faster than siphash, but I wouldn't be
+> surprised if with optimization we can make siphash at least pretty
+> close on 64-bit platforms. (I'll do some tests though; maybe I'm wrong
+> and jhash is already slower.)
+
+Yes, numbers would be very usable here. I am mostly concerned about
+small plastic router cases. E.g. assume you double packet processing
+time with a change of the hashing function at what point is the actual
+packet processing more of an attack vector than the hashtable?
+
+> With that said, siphash is here to replace uses of jhash where
+> hashtable poisoning vulnerabilities make it necessary. Where there's
+> no significant security improvement, if there's no speed improvement
+> either, then of course nothing's going to change.
+
+It still changes currently well working source. ;-)
+
+> I should have mentioned md5_transform in this first message too, as
+> two other patches in this series actually replace md5_transform usage
+> with siphash. I think in this case, siphash is a clear performance
+> winner (and security winner) over md5_transform. So if the push back
+> against replacing jhash usages is just too high, at the very least it
+> remains useful already for the md5_transform usage.
+
+MD5 is considered broken because its collision resistance is broken?
+SipHash doesn't even claim to have collision resistance (which we don't
+need here)?
+
+But I agree, certainly it could be a nice speed-up!
+
+>> This pretty much depends on the linearity of the hash function? I don't
+>> think a crypto secure hash function is needed for a hash table. Albeit I
+>> agree that siphash certainly looks good to be used here.
+> 
+> In order to prevent the aforementioned poisoning attacks, a PRF with
+> perfect linearity is required, which is what's achieved when it's a
+> cryptographically secure one. Check out section 7 of
+> https://131002.net/siphash/siphash.pdf .
+
+I think you mean non-linearity. Otherwise I agree that siphash is
+certainly a better suited hashing algorithm as far as I know. But it
+would be really interesting to compare some performance numbers. Hard to
+say anything without them.
+
+>> I am pretty sure that SipHash still needs a random key per hash table
+>> also. So far it was only the choice of hash function you are questioning.
+> 
+> Siphash needs a random secret key, yes. The point is that the hash
+> function remains secure so long as the secret key is kept secret.
+> Other functions can't make the same guarantee, and so nervous periodic
+> key rotation is necessary, but in most cases nothing is done, and so
+> things just leak over time.
+> 
+> 
+>> Hmm, I tried to follow up with all the HashDoS work and so far didn't
+>> see any HashDoS attacks against the Jenkins/SpookyHash family.
+>>
+>> If this is an issue we might need to also put those changes into stable.
+> 
+> jhash just isn't secure; it's not a cryptographically secure PRF. If
+> there hasn't already been an academic paper put out there about it
+> this year, let's make this thread 1000 messages long to garner
+> attention, and next year perhaps we'll see one. No doubt that
+> motivated government organizations, defense contractors, criminals,
+> and other netizens have already done research in private. Replacing
+> insecure functions with secure functions is usually a good thing.
+
+I think this is a weak argument.
+
+In general I am in favor to switch to siphash, but it would be nice to
+see some benchmarks with the specific kernel implementation also on some
+smaller 32 bit CPUs and especially without using any SIMD instructions
+(which might have been used in paper comparison).
+
+Bye,
+Hannes
