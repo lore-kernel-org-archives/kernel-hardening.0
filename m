@@ -1,37 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Thu, 15 Dec 2016 13:56:30 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0240437@AcuExch.aculab.com>
 References: <20161214035927.30004-1-Jason@zx2c4.com>
  <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
  <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
  <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
  <707472e1-b385-836d-c4c6-791c1dcc0776@stressinduktion.org>
  <063D6719AE5E284EB5DD2968C1650D6DB02402C0@AcuExch.aculab.com>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Message-ID: <0f3c3694-c00b-aae2-5b08-25bc64bf6372@stressinduktion.org>
-Date: Thu, 15 Dec 2016 13:50:02 +0100
+ <0f3c3694-c00b-aae2-5b08-25bc64bf6372@stressinduktion.org>
+In-Reply-To: <0f3c3694-c00b-aae2-5b08-25bc64bf6372@stressinduktion.org>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB02402C0@AcuExch.aculab.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
+Subject: [kernel-hardening] RE: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
  function
-To: David Laight <David.Laight@ACULAB.COM>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
+To: 'Hannes Frederic Sowa' <hannes@stressinduktion.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J .
+ Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 15.12.2016 13:28, David Laight wrote:
-> From: Hannes Frederic Sowa
->> Sent: 15 December 2016 12:23
-> ...
->> Hmm? Even the Intel ABI expects alignment of unsigned long long to be 8
->> bytes on 32 bit. Do you question that?
-> 
-> Yes.
-> 
-> The linux ABI for x86 (32 bit) only requires 32bit alignment for u64 (etc).
-
-Hmm, u64 on 32 bit is unsigned long long and not unsigned long. Thus I
-am actually not sure if the ABI would say anything about that (sorry
-also for my wrong statement above).
-
-Alignment requirement of unsigned long long on gcc with -m32 actually
-seem to be 8.
+RnJvbTogSGFubmVzIEZyZWRlcmljIFNvd2ENCj4gU2VudDogMTUgRGVjZW1iZXIgMjAxNiAxMjo1
+MA0KPiBPbiAxNS4xMi4yMDE2IDEzOjI4LCBEYXZpZCBMYWlnaHQgd3JvdGU6DQo+ID4gRnJvbTog
+SGFubmVzIEZyZWRlcmljIFNvd2ENCj4gPj4gU2VudDogMTUgRGVjZW1iZXIgMjAxNiAxMjoyMw0K
+PiA+IC4uLg0KPiA+PiBIbW0/IEV2ZW4gdGhlIEludGVsIEFCSSBleHBlY3RzIGFsaWdubWVudCBv
+ZiB1bnNpZ25lZCBsb25nIGxvbmcgdG8gYmUgOA0KPiA+PiBieXRlcyBvbiAzMiBiaXQuIERvIHlv
+dSBxdWVzdGlvbiB0aGF0Pw0KPiA+DQo+ID4gWWVzLg0KPiA+DQo+ID4gVGhlIGxpbnV4IEFCSSBm
+b3IgeDg2ICgzMiBiaXQpIG9ubHkgcmVxdWlyZXMgMzJiaXQgYWxpZ25tZW50IGZvciB1NjQgKGV0
+YykuDQo+IA0KPiBIbW0sIHU2NCBvbiAzMiBiaXQgaXMgdW5zaWduZWQgbG9uZyBsb25nIGFuZCBu
+b3QgdW5zaWduZWQgbG9uZy4gVGh1cyBJDQo+IGFtIGFjdHVhbGx5IG5vdCBzdXJlIGlmIHRoZSBB
+Qkkgd291bGQgc2F5IGFueXRoaW5nIGFib3V0IHRoYXQgKHNvcnJ5DQo+IGFsc28gZm9yIG15IHdy
+b25nIHN0YXRlbWVudCBhYm92ZSkuDQo+IA0KPiBBbGlnbm1lbnQgcmVxdWlyZW1lbnQgb2YgdW5z
+aWduZWQgbG9uZyBsb25nIG9uIGdjYyB3aXRoIC1tMzIgYWN0dWFsbHkNCj4gc2VlbSB0byBiZSA4
+Lg0KDQpJdCBkZXBlbmRzIG9uIHRoZSBhcmNoaXRlY3R1cmUuDQpGb3IgeDg2IGl0IGlzIGRlZmlu
+aXRlbHkgNC4NCkl0IG1pZ2h0IGJlIDggZm9yIHNwYXJjLCBwcGMgYW5kL29yIGFscGhhLg0KDQoJ
+RGF2aWQNCg0K
