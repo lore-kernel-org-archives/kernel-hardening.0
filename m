@@ -1,62 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: David Laight <David.Laight@ACULAB.COM>
+Date: Thu, 15 Dec 2016 10:14:33 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB02401A1@AcuExch.aculab.com>
 References: <20161214035927.30004-1-Jason@zx2c4.com>
- <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
- <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
- <CAHmME9r8-JMqkOdz4PLgF13qYGk8XAmEjGep40k3GVYfUS_sPw@mail.gmail.com>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Message-ID: <f1ab5685-f8af-5f58-a217-fe53262ecf45@stressinduktion.org>
-Date: Thu, 15 Dec 2016 09:31:25 +0100
+ <20161214184605.24006-1-Jason@zx2c4.com>
+ <20161214184605.24006-3-Jason@zx2c4.com>
+In-Reply-To: <20161214184605.24006-3-Jason@zx2c4.com>
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-In-Reply-To: <CAHmME9r8-JMqkOdz4PLgF13qYGk8XAmEjGep40k3GVYfUS_sPw@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
- function
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: David Laight <David.Laight@aculab.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
+Subject: [kernel-hardening] RE: [PATCH v3 3/3] random: use siphash24 instead of md5 for
+ get_random_int/long
+To: "'Jason A. Donenfeld'" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>
+Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Ted Tso <tytso@mit.edu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 15.12.2016 00:29, Jason A. Donenfeld wrote:
-> Hi Hannes,
-> 
-> On Wed, Dec 14, 2016 at 11:03 PM, Hannes Frederic Sowa
-> <hannes@stressinduktion.org> wrote:
->> I fear that the alignment requirement will be a source of bugs on 32 bit
->> machines, where you cannot even simply take a well aligned struct on a
->> stack and put it into the normal siphash(aligned) function without
->> adding alignment annotations everywhere. Even blocks returned from
->> kmalloc on 32 bit are not aligned to 64 bit.
-> 
-> That's what the "__aligned(SIPHASH24_ALIGNMENT)" attribute is for. The
-> aligned siphash function will be for structs explicitly made for
-> siphash consumption. For everything else there's siphash_unaligned.
+From: Behalf Of Jason A. Donenfeld
+> Sent: 14 December 2016 18:46
+...
+> +	ret =3D *chaining =3D siphash24((u8 *)&combined, offsetof(typeof(combin=
+ed), end),
 
-So in case you have a pointer from somewhere on 32 bit you can
-essentially only guarantee it has natural alignment or max. native
-alignment (based on the arch). gcc only fulfills your request for
-alignment when you allocate on the stack (minus gcc bugs).
+If you make the first argument 'const void *' you won't need the cast
+on every call.
 
-Let's say you get a pointer from somewhere, maybe embedded in a struct,
-which came from kmalloc. kmalloc doesn't care about aligned attribute,
-it will align according to architecture description. That said, if you
-want to hash that, you would need manually align the memory returned
-from kmalloc or make sure the the data is more than naturally aligned on
-that architecture.
+I'd also suggest making the key u64[2].
 
->> Can we do this a runtime check and just have one function (siphash)
->> dealing with that?
-> 
-> Seems like the runtime branching on the aligned function would be bad
-> for performance, when we likely know at compile time if it's going to
-> be aligned or not. I suppose we could add that check just to the
-> unaligned version, and rename it to "maybe_unaligned"? Is this what
-> you have in mind?
-
-I argue that you mostly don't know at compile time if it is correctly
-aligned if the alignment requirements are larger than the natural ones.
-
-Also, we don't even have that for memcpy, even we use it probably much
-more than hashing, so I think this is overkill.
-
-Bye,
-Hannes
+	David
