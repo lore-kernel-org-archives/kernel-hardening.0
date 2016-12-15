@@ -1,313 +1,243 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 15 Dec 2016 02:46:47 +0100
-Message-Id: <20161215014649.20068-2-Jason@zx2c4.com>
+Date: Thu, 15 Dec 2016 02:46:48 +0100
+Message-Id: <20161215014649.20068-3-Jason@zx2c4.com>
 In-Reply-To: <20161215014649.20068-1-Jason@zx2c4.com>
 References: <20161214184605.24006-1-Jason@zx2c4.com>
  <20161215014649.20068-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v4 2/4] siphash: add N[qd]word helpers
+Subject: [kernel-hardening] [PATCH v4 3/4] secure_seq: use siphash instead of md5_transform
 To: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Tom Herbert <tom@herbertland.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Tom Herbert <tom@herbertland.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-These restore parity with the jhash interface by providing high
-performance helpers for common input sizes.
+This gives a clear speed and security improvement. Siphash is both
+faster and is more solid crypto than the aging MD5.
 
-Linus doesn't like the use of "qword" and "dword", but I haven't been
-able to come up with another name for these that fits as well.
+Rather than manually filling MD5 buffers, for IPv6, we simply create
+a layout by a simple anonymous struct, for which gcc generates
+rather efficient code. For IPv4, we pass the values directly to the
+short input convenience functions.
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: Andi Kleen <ak@linux.intel.com>
+Cc: David Miller <davem@davemloft.net>
+Cc: David Laight <David.Laight@aculab.com>
 Cc: Tom Herbert <tom@herbertland.com>
+Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>
 ---
-Changes from v2->v4:
+Changes from v3->v4:
 
-  - Rather than just wrapping siphash(), we actually implement the
-    fully optimized and manually unrolled version, so that lengths
-    don't need to be checked and loops don't need to branch.
-  - We now provide both 32-bit and 64-bit versions, both of which
-    are quite useful for different circumstances.
+  - For the IPv4 cases, we can now use the Ndwords helper functions,
+    which make the calculation simpler and faster.
+  - For the IPv6 cases, which still use the struct, we no longer pack
+    the struct and instead simply pad until the nearest 64-bit size, so
+    that it also avoids the slow branch for left-overs in siphash().
 
- include/linux/siphash.h |  31 ++++++++++
- lib/siphash.c           | 161 ++++++++++++++++++++++++++++++++++++------------
- lib/test_siphash.c      |  18 ++++++
- 3 files changed, 170 insertions(+), 40 deletions(-)
+ net/core/secure_seq.c | 133 ++++++++++++++++++++------------------------------
+ 1 file changed, 52 insertions(+), 81 deletions(-)
 
-diff --git a/include/linux/siphash.h b/include/linux/siphash.h
-index d0bcca7b992b..6e7c2a421bd9 100644
---- a/include/linux/siphash.h
-+++ b/include/linux/siphash.h
-@@ -27,4 +27,35 @@ static inline u64 siphash_unaligned(const u8 *data, size_t len, const u8 key[SIP
- u64 siphash_unaligned(const u8 *data, size_t len, const u8 key[SIPHASH_KEY_LEN]);
- #endif
+diff --git a/net/core/secure_seq.c b/net/core/secure_seq.c
+index 88a8e429fc3e..8fed79932ec4 100644
+--- a/net/core/secure_seq.c
++++ b/net/core/secure_seq.c
+@@ -1,3 +1,5 @@
++/* Copyright (C) 2016 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved. */
++
+ #include <linux/kernel.h>
+ #include <linux/init.h>
+ #include <linux/cryptohash.h>
+@@ -8,14 +10,14 @@
+ #include <linux/ktime.h>
+ #include <linux/string.h>
+ #include <linux/net.h>
+-
++#include <linux/siphash.h>
+ #include <net/secure_seq.h>
  
-+u64 siphash_1qword(const u64 a, const u8 key[SIPHASH_KEY_LEN]);
-+u64 siphash_2qwords(const u64 a, const u64 b, const u8 key[SIPHASH_KEY_LEN]);
-+u64 siphash_3qwords(const u64 a, const u64 b, const u64 c, const u8 key[SIPHASH_KEY_LEN]);
-+u64 siphash_4qwords(const u64 a, const u64 b, const u64 c, const u64 d, const u8 key[SIPHASH_KEY_LEN]);
-+
-+static inline u64 siphash_2dwords(const u32 a, const u32 b, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	return siphash_1qword((u64)b << 32 | a, key);
-+}
-+
-+static inline u64 siphash_4dwords(const u32 a, const u32 b, const u32 c, const u32 d,
-+				  const u8 key[SIPHASH_KEY_LEN])
-+{
-+	return siphash_2qwords((u64)b << 32 | a, (u64)d << 32 | c, key);
-+}
-+
-+static inline u64 siphash_6dwords(const u32 a, const u32 b, const u32 c, const u32 d,
-+				  const u32 e, const u32 f, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	return siphash_3qwords((u64)b << 32 | a, (u64)d << 32 | c, (u64)f << 32 | e,
-+			       key);
-+}
-+
-+static inline u64 siphash_8dwords(const u32 a, const u32 b, const u32 c, const u32 d,
-+				  const u32 e, const u32 f, const u32 g, const u32 h,
-+				  const u8 key[SIPHASH_KEY_LEN])
-+{
-+	return siphash_4qwords((u64)b << 32 | a, (u64)d << 32 | c, (u64)f << 32 | e,
-+			       (u64)h << 32 | g, key);
-+}
-+
- #endif /* _LINUX_SIPHASH_H */
-diff --git a/lib/siphash.c b/lib/siphash.c
-index b500231f61cd..c13d2b2bb76e 100644
---- a/lib/siphash.c
-+++ b/lib/siphash.c
-@@ -38,6 +38,31 @@ static inline u64 le64_to_cpuvp(const void *p)
- 	v2 += v1; v1 = rol64(v1, 17); v1 ^= v2; v2 = rol64(v2, 32); \
- 	} while(0)
+ #if IS_ENABLED(CONFIG_IPV6) || IS_ENABLED(CONFIG_INET)
++#include <linux/in6.h>
+ #include <net/tcp.h>
+-#define NET_SECRET_SIZE (MD5_MESSAGE_BYTES / 4)
  
-+#define PREAMBLE(len) \
-+	u64 v0 = 0x736f6d6570736575ULL; \
-+	u64 v1 = 0x646f72616e646f6dULL; \
-+	u64 v2 = 0x6c7967656e657261ULL; \
-+	u64 v3 = 0x7465646279746573ULL; \
-+	u64 b = ((u64)len) << 56; \
-+	u64 k0 = le64_to_cpuvp(key); \
-+	u64 k1 = le64_to_cpuvp(key + sizeof(u64)); \
-+	v3 ^= k1; \
-+	v2 ^= k0; \
-+	v1 ^= k1; \
-+	v0 ^= k0;
-+
-+#define POSTAMBLE \
-+	v3 ^= b; \
-+	SIPROUND; \
-+	SIPROUND; \
-+	v0 ^= b; \
-+	v2 ^= 0xff; \
-+	SIPROUND; \
-+	SIPROUND; \
-+	SIPROUND; \
-+	SIPROUND; \
-+	return (v0 ^ v1) ^ (v2 ^ v3);
-+
- /**
-  * siphash - compute 64-bit siphash PRF value
-  * @data: buffer to hash, must be aligned to SIPHASH_ALIGNMENT
-@@ -46,20 +71,10 @@ static inline u64 le64_to_cpuvp(const void *p)
-  */
- u64 siphash(const u8 *data, size_t len, const u8 key[SIPHASH_KEY_LEN])
+-static u32 net_secret[NET_SECRET_SIZE] ____cacheline_aligned;
++static u8 net_secret[SIPHASH_KEY_LEN] __aligned(SIPHASH_ALIGNMENT);
+ 
+ static __always_inline void net_secret_init(void)
  {
--	u64 v0 = 0x736f6d6570736575ULL;
--	u64 v1 = 0x646f72616e646f6dULL;
--	u64 v2 = 0x6c7967656e657261ULL;
--	u64 v3 = 0x7465646279746573ULL;
--	u64 b = ((u64)len) << 56;
--	u64 k0 = le64_to_cpuvp(key);
--	u64 k1 = le64_to_cpuvp(key + sizeof(u64));
--	u64 m;
- 	const u8 *end = data + len - (len % sizeof(u64));
- 	const u8 left = len & (sizeof(u64) - 1);
--	v3 ^= k1;
--	v2 ^= k0;
--	v1 ^= k1;
--	v0 ^= k0;
-+	u64 m;
-+	PREAMBLE(len)
- 	for (; data != end; data += sizeof(u64)) {
- 		m = le64_to_cpuvp(data);
- 		v3 ^= m;
-@@ -81,16 +96,7 @@ u64 siphash(const u8 *data, size_t len, const u8 key[SIPHASH_KEY_LEN])
- 	case 1: b |= data[0];
- 	}
- #endif
--	v3 ^= b;
--	SIPROUND;
--	SIPROUND;
--	v0 ^= b;
--	v2 ^= 0xff;
--	SIPROUND;
--	SIPROUND;
--	SIPROUND;
--	SIPROUND;
--	return (v0 ^ v1) ^ (v2 ^ v3);
-+	POSTAMBLE
- }
- EXPORT_SYMBOL(siphash);
- 
-@@ -103,20 +109,10 @@ EXPORT_SYMBOL(siphash);
-  */
- u64 siphash_unaligned(const u8 *data, size_t len, const u8 key[SIPHASH_KEY_LEN])
+@@ -44,44 +46,42 @@ static u32 seq_scale(u32 seq)
+ u32 secure_tcpv6_sequence_number(const __be32 *saddr, const __be32 *daddr,
+ 				 __be16 sport, __be16 dport, u32 *tsoff)
  {
--	u64 v0 = 0x736f6d6570736575ULL;
--	u64 v1 = 0x646f72616e646f6dULL;
--	u64 v2 = 0x6c7967656e657261ULL;
--	u64 v3 = 0x7465646279746573ULL;
--	u64 b = ((u64)len) << 56;
--	u64 k0 = le64_to_cpuvp(key);
--	u64 k1 = le64_to_cpuvp(key + sizeof(u64));
--	u64 m;
- 	const u8 *end = data + len - (len % sizeof(u64));
- 	const u8 left = len & (sizeof(u64) - 1);
--	v3 ^= k1;
--	v2 ^= k0;
--	v1 ^= k1;
--	v0 ^= k0;
-+	u64 m;
-+	PREAMBLE(len)
- 	for (; data != end; data += sizeof(u64)) {
- 		m = get_unaligned_le64(data);
- 		v3 ^= m;
-@@ -138,16 +134,101 @@ u64 siphash_unaligned(const u8 *data, size_t len, const u8 key[SIPHASH_KEY_LEN])
- 	case 1: b |= data[0];
- 	}
- #endif
--	v3 ^= b;
-+	POSTAMBLE
-+}
-+EXPORT_SYMBOL(siphash_unaligned);
-+#endif
-+
-+/**
-+ * siphash_1qword - compute 64-bit siphash PRF value of 1 quad-word
-+ * @first: first quadword
-+ * @key: key buffer of size SIPHASH_KEY_LEN, must be aligned to SIPHASH_ALIGNMENT
-+ */
-+u64 siphash_1qword(const u64 first, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	PREAMBLE(8)
-+	v3 ^= first;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= first;
-+	POSTAMBLE
-+}
-+EXPORT_SYMBOL(siphash_1qword);
-+
-+/**
-+ * siphash_2qwords - compute 64-bit siphash PRF value of 2 quad-words
-+ * @first: first quadword
-+ * @second: second quadword
-+ * @key: key buffer of size SIPHASH_KEY_LEN, must be aligned to SIPHASH_ALIGNMENT
-+ */
-+u64 siphash_2qwords(const u64 first, const u64 second, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	PREAMBLE(16)
-+	v3 ^= first;
- 	SIPROUND;
- 	SIPROUND;
--	v0 ^= b;
--	v2 ^= 0xff;
-+	v0 ^= first;
-+	v3 ^= second;
- 	SIPROUND;
- 	SIPROUND;
-+	v0 ^= second;
-+	POSTAMBLE
-+}
-+EXPORT_SYMBOL(siphash_2qwords);
-+
-+/**
-+ * siphash_3qwords - compute 64-bit siphash PRF value of 3 quad-words
-+ * @first: first quadword
-+ * @second: second quadword
-+ * @third: third quadword
-+ * @key: key buffer of size SIPHASH_KEY_LEN, must be aligned to SIPHASH_ALIGNMENT
-+ */
-+u64 siphash_3qwords(const u64 first, const u64 second, const u64 third, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	PREAMBLE(24)
-+	v3 ^= first;
- 	SIPROUND;
- 	SIPROUND;
--	return (v0 ^ v1) ^ (v2 ^ v3);
-+	v0 ^= first;
-+	v3 ^= second;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= second;
-+	v3 ^= third;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= third;
-+	POSTAMBLE
+-	u32 secret[MD5_MESSAGE_BYTES / 4];
+-	u32 hash[MD5_DIGEST_WORDS];
+-	u32 i;
+-
++	const struct {
++		struct in6_addr saddr;
++		struct in6_addr daddr;
++		__be16 sport;
++		__be16 dport;
++		u32 padding;
++	} __aligned(SIPHASH_ALIGNMENT) combined = {
++		.saddr = *(struct in6_addr *)saddr,
++		.daddr = *(struct in6_addr *)daddr,
++		.sport = sport,
++		.dport = dport
++	};
++	u64 hash;
+ 	net_secret_init();
+-	memcpy(hash, saddr, 16);
+-	for (i = 0; i < 4; i++)
+-		secret[i] = net_secret[i] + (__force u32)daddr[i];
+-	secret[4] = net_secret[4] +
+-		(((__force u16)sport << 16) + (__force u16)dport);
+-	for (i = 5; i < MD5_MESSAGE_BYTES / 4; i++)
+-		secret[i] = net_secret[i];
+-
+-	md5_transform(hash, secret);
+-
+-	*tsoff = sysctl_tcp_timestamps == 1 ? hash[1] : 0;
+-	return seq_scale(hash[0]);
++	hash = siphash((const u8 *)&combined, sizeof(combined), net_secret);
++	*tsoff = sysctl_tcp_timestamps == 1 ? (hash >> 32) : 0;
++	return seq_scale(hash);
  }
--EXPORT_SYMBOL(siphash24_unaligned);
--#endif
-+EXPORT_SYMBOL(siphash_3qwords);
-+
-+/**
-+ * siphash_4qwords - compute 64-bit siphash PRF value of 4 quad-words
-+ * @first: first quadword
-+ * @second: second quadword
-+ * @third: third quadword
-+ * @forth: forth quadword
-+ * @key: key buffer of size SIPHASH_KEY_LEN, must be aligned to SIPHASH_ALIGNMENT
-+ */
-+u64 siphash_4qwords(const u64 first, const u64 second, const u64 third, const u64 forth, const u8 key[SIPHASH_KEY_LEN])
-+{
-+	PREAMBLE(32)
-+	v3 ^= first;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= first;
-+	v3 ^= second;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= second;
-+	v3 ^= third;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= third;
-+	v3 ^= forth;
-+	SIPROUND;
-+	SIPROUND;
-+	v0 ^= forth;
-+	POSTAMBLE
-+}
-+EXPORT_SYMBOL(siphash_4qwords);
-diff --git a/lib/test_siphash.c b/lib/test_siphash.c
-index 444725c7834f..9925a325af35 100644
---- a/lib/test_siphash.c
-+++ b/lib/test_siphash.c
-@@ -68,6 +68,24 @@ static int __init siphash_test_init(void)
- 			ret = -EINVAL;
- 		}
- 	}
-+	if (siphash_1qword(0x0706050403020100ULL, k) != test_vectors[8]) {
-+		pr_info("self-test 1qword: FAIL\n");
-+		ret = -EINVAL;
-+	}
-+	if (siphash_2qwords(0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL, k) != test_vectors[16]) {
-+		pr_info("self-test 2qwords: FAIL\n");
-+		ret = -EINVAL;
-+	}
-+	if (siphash_3qwords(0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL,
-+			    0x1716151413121110ULL, k) != test_vectors[24]) {
-+		pr_info("self-test 3qwords: FAIL\n");
-+		ret = -EINVAL;
-+	}
-+	if (siphash_4qwords(0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL,
-+			    0x1716151413121110ULL, 0x1f1e1d1c1b1a1918ULL, k) != test_vectors[32]) {
-+		pr_info("self-test 4qwords: FAIL\n");
-+		ret = -EINVAL;
-+	}
- 	if (!ret)
- 		pr_info("self-tests: pass\n");
- 	return ret;
+ EXPORT_SYMBOL(secure_tcpv6_sequence_number);
+ 
+ u32 secure_ipv6_port_ephemeral(const __be32 *saddr, const __be32 *daddr,
+ 			       __be16 dport)
+ {
+-	u32 secret[MD5_MESSAGE_BYTES / 4];
+-	u32 hash[MD5_DIGEST_WORDS];
+-	u32 i;
+-
++	const struct {
++		struct in6_addr saddr;
++		struct in6_addr daddr;
++		__be16 dport;
++		u16 padding1;
++		u32 padding2;
++	} __aligned(SIPHASH_ALIGNMENT) combined = {
++		.saddr = *(struct in6_addr *)saddr,
++		.daddr = *(struct in6_addr *)daddr,
++		.dport = dport
++	};
+ 	net_secret_init();
+-	memcpy(hash, saddr, 16);
+-	for (i = 0; i < 4; i++)
+-		secret[i] = net_secret[i] + (__force u32) daddr[i];
+-	secret[4] = net_secret[4] + (__force u32)dport;
+-	for (i = 5; i < MD5_MESSAGE_BYTES / 4; i++)
+-		secret[i] = net_secret[i];
+-
+-	md5_transform(hash, secret);
+-
+-	return hash[0];
++	return siphash((const u8 *)&combined, sizeof(combined), net_secret);
+ }
+ EXPORT_SYMBOL(secure_ipv6_port_ephemeral);
+ #endif
+@@ -91,33 +91,17 @@ EXPORT_SYMBOL(secure_ipv6_port_ephemeral);
+ u32 secure_tcp_sequence_number(__be32 saddr, __be32 daddr,
+ 			       __be16 sport, __be16 dport, u32 *tsoff)
+ {
+-	u32 hash[MD5_DIGEST_WORDS];
+-
++	u64 hash;
+ 	net_secret_init();
+-	hash[0] = (__force u32)saddr;
+-	hash[1] = (__force u32)daddr;
+-	hash[2] = ((__force u16)sport << 16) + (__force u16)dport;
+-	hash[3] = net_secret[15];
+-
+-	md5_transform(hash, net_secret);
+-
+-	*tsoff = sysctl_tcp_timestamps == 1 ? hash[1] : 0;
+-	return seq_scale(hash[0]);
++	hash = siphash_4dwords(saddr, daddr, sport, dport, net_secret);
++	*tsoff = sysctl_tcp_timestamps == 1 ? (hash >> 32) : 0;
++	return seq_scale(hash);
+ }
+ 
+ u32 secure_ipv4_port_ephemeral(__be32 saddr, __be32 daddr, __be16 dport)
+ {
+-	u32 hash[MD5_DIGEST_WORDS];
+-
+ 	net_secret_init();
+-	hash[0] = (__force u32)saddr;
+-	hash[1] = (__force u32)daddr;
+-	hash[2] = (__force u32)dport ^ net_secret[14];
+-	hash[3] = net_secret[15];
+-
+-	md5_transform(hash, net_secret);
+-
+-	return hash[0];
++	return siphash_4dwords(saddr, daddr, dport, 0, net_secret);
+ }
+ EXPORT_SYMBOL_GPL(secure_ipv4_port_ephemeral);
+ #endif
+@@ -126,21 +110,11 @@ EXPORT_SYMBOL_GPL(secure_ipv4_port_ephemeral);
+ u64 secure_dccp_sequence_number(__be32 saddr, __be32 daddr,
+ 				__be16 sport, __be16 dport)
+ {
+-	u32 hash[MD5_DIGEST_WORDS];
+ 	u64 seq;
+-
+ 	net_secret_init();
+-	hash[0] = (__force u32)saddr;
+-	hash[1] = (__force u32)daddr;
+-	hash[2] = ((__force u16)sport << 16) + (__force u16)dport;
+-	hash[3] = net_secret[15];
+-
+-	md5_transform(hash, net_secret);
+-
+-	seq = hash[0] | (((u64)hash[1]) << 32);
++	seq = siphash_4dwords(saddr, daddr, sport, dport, net_secret);
+ 	seq += ktime_get_real_ns();
+ 	seq &= (1ull << 48) - 1;
+-
+ 	return seq;
+ }
+ EXPORT_SYMBOL(secure_dccp_sequence_number);
+@@ -149,26 +123,23 @@ EXPORT_SYMBOL(secure_dccp_sequence_number);
+ u64 secure_dccpv6_sequence_number(__be32 *saddr, __be32 *daddr,
+ 				  __be16 sport, __be16 dport)
+ {
+-	u32 secret[MD5_MESSAGE_BYTES / 4];
+-	u32 hash[MD5_DIGEST_WORDS];
++	const struct {
++		struct in6_addr saddr;
++		struct in6_addr daddr;
++		__be16 sport;
++		__be16 dport;
++		u32 padding;
++	} __aligned(SIPHASH_ALIGNMENT) combined = {
++		.saddr = *(struct in6_addr *)saddr,
++		.daddr = *(struct in6_addr *)daddr,
++		.sport = sport,
++		.dport = dport
++	};
+ 	u64 seq;
+-	u32 i;
+-
+ 	net_secret_init();
+-	memcpy(hash, saddr, 16);
+-	for (i = 0; i < 4; i++)
+-		secret[i] = net_secret[i] + (__force u32)daddr[i];
+-	secret[4] = net_secret[4] +
+-		(((__force u16)sport << 16) + (__force u16)dport);
+-	for (i = 5; i < MD5_MESSAGE_BYTES / 4; i++)
+-		secret[i] = net_secret[i];
+-
+-	md5_transform(hash, secret);
+-
+-	seq = hash[0] | (((u64)hash[1]) << 32);
++	seq = siphash((const u8 *)&combined, sizeof(combined), net_secret);
+ 	seq += ktime_get_real_ns();
+ 	seq &= (1ull << 48) - 1;
+-
+ 	return seq;
+ }
+ EXPORT_SYMBOL(secure_dccpv6_sequence_number);
 -- 
 2.11.0
