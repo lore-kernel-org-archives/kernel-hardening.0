@@ -1,45 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: David Laight <David.Laight@ACULAB.COM>
-Date: Thu, 15 Dec 2016 11:04:37 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
 References: <20161214035927.30004-1-Jason@zx2c4.com>
  <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
  <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
-In-Reply-To: <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <707472e1-b385-836d-c4c6-791c1dcc0776@stressinduktion.org>
+Date: Thu, 15 Dec 2016 13:23:18 +0100
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
+In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
  function
-To: 'Hannes Frederic Sowa' <hannes@stressinduktion.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J .
- Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
+To: David Laight <David.Laight@ACULAB.COM>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogSGFubmVzIEZyZWRlcmljIFNvd2ENCj4gU2VudDogMTQgRGVjZW1iZXIgMjAxNiAyMjow
-Mw0KPiBPbiAxNC4xMi4yMDE2IDEzOjQ2LCBKYXNvbiBBLiBEb25lbmZlbGQgd3JvdGU6DQo+ID4g
-SGkgRGF2aWQsDQo+ID4NCj4gPiBPbiBXZWQsIERlYyAxNCwgMjAxNiBhdCAxMDo1NiBBTSwgRGF2
-aWQgTGFpZ2h0IDxEYXZpZC5MYWlnaHRAYWN1bGFiLmNvbT4gd3JvdGU6DQo+ID4+IC4uLg0KPiA+
-Pj4gK3U2NCBzaXBoYXNoMjQoY29uc3QgdTggKmRhdGEsIHNpemVfdCBsZW4sIGNvbnN0IHU4IGtl
-eVtTSVBIQVNIMjRfS0VZX0xFTl0pDQo+ID4+IC4uLg0KPiA+Pj4gKyAgICAgdTY0IGswID0gZ2V0
-X3VuYWxpZ25lZF9sZTY0KGtleSk7DQo+ID4+PiArICAgICB1NjQgazEgPSBnZXRfdW5hbGlnbmVk
-X2xlNjQoa2V5ICsgc2l6ZW9mKHU2NCkpOw0KPiA+PiAuLi4NCj4gPj4+ICsgICAgICAgICAgICAg
-bSA9IGdldF91bmFsaWduZWRfbGU2NChkYXRhKTsNCj4gPj4NCj4gPj4gQWxsIHRoZXNlIHVuYWxp
-Z25lZCBhY2Nlc3NlcyBhcmUgZ29pbmcgdG8gZ2V0IGV4cGVuc2l2ZSBvbiBhcmNoaXRlY3R1cmVz
-DQo+ID4+IGxpa2Ugc3BhcmM2NC4NCj4gPg0KPiA+IFllcywgdGhlIHVuYWxpZ25lZCBhY2Nlc3Nl
-cyBhcmVuJ3QgcHJldHR5LiBTaW5jZSBpbiBwcmV0dHkgbXVjaCBhbGwNCj4gPiB1c2UgY2FzZXMg
-dGh1cyBmYXIsIHRoZSBkYXRhIGNhbiBlYXNpbHkgYmUgbWFkZSBhbGlnbmVkLCBwZXJoYXBzIGl0
-DQo+ID4gbWFrZXMgc2Vuc2UgdG8gY3JlYXRlIHNpcGhhc2gyNCgpIGFuZCBzaXBoYXNoMjRfdW5h
-bGlnbmVkKCkuIEFueQ0KPiA+IHRob3VnaHRzIG9uIGRvaW5nIHNvbWV0aGluZyBsaWtlIHRoYXQ/
-DQo+IA0KPiBJIGZlYXIgdGhhdCB0aGUgYWxpZ25tZW50IHJlcXVpcmVtZW50IHdpbGwgYmUgYSBz
-b3VyY2Ugb2YgYnVncyBvbiAzMiBiaXQNCj4gbWFjaGluZXMsIHdoZXJlIHlvdSBjYW5ub3QgZXZl
-biBzaW1wbHkgdGFrZSBhIHdlbGwgYWxpZ25lZCBzdHJ1Y3Qgb24gYQ0KPiBzdGFjayBhbmQgcHV0
-IGl0IGludG8gdGhlIG5vcm1hbCBzaXBoYXNoKGFsaWduZWQpIGZ1bmN0aW9uIHdpdGhvdXQNCj4g
-YWRkaW5nIGFsaWdubWVudCBhbm5vdGF0aW9ucyBldmVyeXdoZXJlLiBFdmVuIGJsb2NrcyByZXR1
-cm5lZCBmcm9tDQo+IGttYWxsb2Mgb24gMzIgYml0IGFyZSBub3QgYWxpZ25lZCB0byA2NCBiaXQu
-DQoNCkFyZSB5b3UgZG9pbmcgYW55dGhpbmcgdGhhdCB3aWxsIHJlcXVpcmUgNjRiaXQgYWxpZ25t
-ZW50IG9uIDMyYml0IHN5c3RlbXM/DQpJdCBpcyB1bmxpa2VseSB0aGF0IHRoZSBrZXJuZWwgY2Fu
-IHVzZSBhbnkgc2ltZCByZWdpc3RlcnMgdGhhdCBoYXZlIHdpZGVyDQphbGlnbm1lbnQgcmVxdWly
-ZW1lbnRzLg0KDQpZb3UgYWxzbyByZWFsbHkgZG9uJ3Qgd2FudCB0byByZXF1ZXN0IG9uLXN0YWNr
-IGl0ZW1zIGhhdmUgbGFyZ2UgYWxpZ25tZW50cy4NCldoaWxlIGdjYyBjYW4gZ2VuZXJhdGUgY29k
-ZSB0byBkbyBpdCwgaXQgaXNuJ3QgcHJldHR5Lg0KDQoJRGF2aWQNCg0KDQo=
+On 15.12.2016 12:04, David Laight wrote:
+> From: Hannes Frederic Sowa
+>> Sent: 14 December 2016 22:03
+>> On 14.12.2016 13:46, Jason A. Donenfeld wrote:
+>>> Hi David,
+>>>
+>>> On Wed, Dec 14, 2016 at 10:56 AM, David Laight <David.Laight@aculab.com> wrote:
+>>>> ...
+>>>>> +u64 siphash24(const u8 *data, size_t len, const u8 key[SIPHASH24_KEY_LEN])
+>>>> ...
+>>>>> +     u64 k0 = get_unaligned_le64(key);
+>>>>> +     u64 k1 = get_unaligned_le64(key + sizeof(u64));
+>>>> ...
+>>>>> +             m = get_unaligned_le64(data);
+>>>>
+>>>> All these unaligned accesses are going to get expensive on architectures
+>>>> like sparc64.
+>>>
+>>> Yes, the unaligned accesses aren't pretty. Since in pretty much all
+>>> use cases thus far, the data can easily be made aligned, perhaps it
+>>> makes sense to create siphash24() and siphash24_unaligned(). Any
+>>> thoughts on doing something like that?
+>>
+>> I fear that the alignment requirement will be a source of bugs on 32 bit
+>> machines, where you cannot even simply take a well aligned struct on a
+>> stack and put it into the normal siphash(aligned) function without
+>> adding alignment annotations everywhere. Even blocks returned from
+>> kmalloc on 32 bit are not aligned to 64 bit.
+> 
+> Are you doing anything that will require 64bit alignment on 32bit systems?
+> It is unlikely that the kernel can use any simd registers that have wider
+> alignment requirements.
+> 
+> You also really don't want to request on-stack items have large alignments.
+> While gcc can generate code to do it, it isn't pretty.
+
+Hmm? Even the Intel ABI expects alignment of unsigned long long to be 8
+bytes on 32 bit. Do you question that?
