@@ -1,52 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20161214035927.30004-1-Jason@zx2c4.com>
- <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
- <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
- <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
- <707472e1-b385-836d-c4c6-791c1dcc0776@stressinduktion.org>
- <063D6719AE5E284EB5DD2968C1650D6DB02402C0@AcuExch.aculab.com>
- <0f3c3694-c00b-aae2-5b08-25bc64bf6372@stressinduktion.org>
- <063D6719AE5E284EB5DD2968C1650D6DB0240437@AcuExch.aculab.com>
- <f6813084-6f46-0b22-e9c3-97b2e266f8f6@stressinduktion.org>
- <063D6719AE5E284EB5DD2968C1650D6DB0240529@AcuExch.aculab.com>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Message-ID: <924ef794-eae0-2a6b-508b-069718339edc@stressinduktion.org>
-Date: Thu, 15 Dec 2016 16:53:12 +0100
-MIME-Version: 1.0
-In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB0240529@AcuExch.aculab.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
- function
-To: David Laight <David.Laight@ACULAB.COM>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 15 Dec 2016 08:17:28 -0800
+Message-Id: <1481818648-36201-1-git-send-email-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH] Revert "Revert "kdump, vmcoreinfo: report memory sections virtual addresses""
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Eric Biederman <ebiederm@xmission.com>, Andrew Morton <akpm@linux-foundation.org>, Baoquan He <bhe@redhat.com>, Thomas Garnier <thgarnie@google.com>, Xunlei Pang <xlpang@redhat.com>, HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kexec@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 15.12.2016 16:41, David Laight wrote:
-> Try (retyped):
-> 
-> echo 'struct { long a; long long b; } s; int bar { return sizeof s; }' >foo.c
-> gcc [-m32] -O2 -S foo.c; cat foo.s
-> 
-> And look at what is generated.
+This reverts commit 49fd897573c97b0eaf10f47d850027d78c456cd7.
 
-I used __alignof__(unsigned long long) with -m32.
+Reverting back to commit 0549a3c because the values are used by crash
+and other tools already. I expected this commit would not go through given
+the unresolved comments. I want it to be easy to resolve major memory
+section positions when KASLR memory randomization is enabled.
 
->> Right now ipv6 addresses have an alignment of 4. So we couldn't even
->> naturally pass them to siphash but would need to copy them around, which
->> I feel like a source of bugs.
-> 
-> That is more of a problem on systems that don't support misaligned accesses.
-> Reading the 64bit values with two explicit 32bit reads would work.
-> I think you can get gcc to do that by adding an aligned(4) attribute to the
-> structure member.
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+ arch/x86/kernel/machine_kexec_64.c | 3 +++
+ include/linux/kexec.h              | 6 ++++++
+ 2 files changed, 9 insertions(+)
 
-Yes, and that is actually my fear, because we support those
-architectures. I can't comment on that as I don't understand enough of this.
-
-If someone finds a way to cause misaligned reads on a small box this
-seems (maybe depending on sysctls they get fixed up or panic) to be a
-much bigger issue than having a hash DoS.
-
-Thanks,
-Hannes
+diff --git a/arch/x86/kernel/machine_kexec_64.c b/arch/x86/kernel/machine_kexec_64.c
+index 2e3c34b..05f3367 100644
+--- a/arch/x86/kernel/machine_kexec_64.c
++++ b/arch/x86/kernel/machine_kexec_64.c
+@@ -339,6 +339,9 @@ void arch_crash_save_vmcoreinfo(void)
+ 			      kaslr_offset());
+ 	VMCOREINFO_NUMBER(KERNEL_IMAGE_SIZE);
+ 	VMCOREINFO_PHYS_BASE(phys_base);
++	VMCOREINFO_PAGE_OFFSET(PAGE_OFFSET);
++	VMCOREINFO_VMALLOC_START(VMALLOC_START);
++	VMCOREINFO_VMEMMAP_START(VMEMMAP_START);
+ }
+ 
+ /* arch-dependent functionality related to kexec file-based syscall */
+diff --git a/include/linux/kexec.h b/include/linux/kexec.h
+index e98e546..ff9c876 100644
+--- a/include/linux/kexec.h
++++ b/include/linux/kexec.h
+@@ -285,6 +285,12 @@ phys_addr_t paddr_vmcoreinfo_note(void);
+ 	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
+ #define VMCOREINFO_PHYS_BASE(value) \
+ 	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
++#define VMCOREINFO_PAGE_OFFSET(value) \
++	vmcoreinfo_append_str("PAGE_OFFSET=%lx\n", (unsigned long)value)
++#define VMCOREINFO_VMALLOC_START(value) \
++	vmcoreinfo_append_str("VMALLOC_START=%lx\n", (unsigned long)value)
++#define VMCOREINFO_VMEMMAP_START(value) \
++	vmcoreinfo_append_str("VMEMMAP_START=%lx\n", (unsigned long)value)
+ 
+ extern struct kimage *kexec_image;
+ extern struct kimage *kexec_crash_image;
+-- 
+2.8.0.rc3.226.g39d4020
