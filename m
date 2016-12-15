@@ -1,34 +1,45 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: David Laight <David.Laight@ACULAB.COM>
-Date: Thu, 15 Dec 2016 10:22:41 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB02401BC@AcuExch.aculab.com>
+Date: Thu, 15 Dec 2016 11:04:37 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB02401ED@AcuExch.aculab.com>
 References: <20161214035927.30004-1-Jason@zx2c4.com>
- <20161214184605.24006-1-Jason@zx2c4.com>
- <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com>
- <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
- <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com>
- <CALx6S35VBjw42G6rHPrNfVaBfLMz3YZVjs3D3hBG=4gp5+g5tA@mail.gmail.com>
- <CAHmME9rpvf4tyDjZcJAJxMAW1LcqNm7DiquiYX0uQhRzDLbwqw@mail.gmail.com>
- <CA+55aFyBGQpEKiAcs0w58ZEie+L8OrWvf_2hvGx4E=L56p5hMg@mail.gmail.com>
- <CAHmME9pu6No0wqPzPpaBwQR_b+5CXvh0kke7J8ouN=rx4pxMGg@mail.gmail.com>
- <CA+55aFw4QLuwkxq4VzLMPTJTec-hOu1Fi8e076TNnW0Yq9yp8A@mail.gmail.com>
-In-Reply-To: <CA+55aFw4QLuwkxq4VzLMPTJTec-hOu1Fi8e076TNnW0Yq9yp8A@mail.gmail.com>
+ <CAHmME9q9ffdtWRbzyMO1ktTdtEFdfumTfojTTNLXFhoa+R+MWQ@mail.gmail.com>
+ <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
+In-Reply-To: <8ea3fdff-23c4-b81d-2588-44549bd2d8c1@stressinduktion.org>
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v3 1/3] siphash: add cryptographically secure hashtable
+Subject: [kernel-hardening] RE: [PATCH v2 1/4] siphash: add cryptographically secure hashtable
  function
-To: 'Linus Torvalds' <torvalds@linux-foundation.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Tom Herbert <tom@herbertland.com>, Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>
+To: 'Hannes Frederic Sowa' <hannes@stressinduktion.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "Daniel J .
+ Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RnJvbTogTGludXMgVG9ydmFsZHMNCj4gU2VudDogMTUgRGVjZW1iZXIgMjAxNiAwMDoxMQ0KPiBP
-biBXZWQsIERlYyAxNCwgMjAxNiBhdCAzOjM0IFBNLCBKYXNvbiBBLiBEb25lbmZlbGQgPEphc29u
-QHp4MmM0LmNvbT4gd3JvdGU6DQo+ID4NCj4gPiBPciBkb2VzIHlvdXIgcmVhc29uYWJsZSBkaXNs
-aWtlIG9mICJ3b3JkIiBzdGlsbCBhbGxvdyBmb3IgdGhlIHVzZSBvZg0KPiA+IGR3b3JkIGFuZCBx
-d29yZCwgc28gdGhhdCB0aGUgY3VycmVudCBmdW5jdGlvbiBuYW1lcyBvZjoNCj4gDQo+IGR3b3Jk
-IHJlYWxseSBpcyBjb25mdXNpbmcgdG8gcGVvcGxlLg0KPg0KPiBJZiB5b3UgaGF2ZSBhIE1JUFMg
-YmFja2dyb3VuZCwgaXQgbWVhbnMgNjQgYml0cy4gV2hpbGUgdG8gcGVvcGxlIHdpdGgNCj4gV2lu
-ZG93cyBwcm9ncmFtbWluZyBiYWNrZ3JvdW5kcyBpdCBtZWFucyAzMiBiaXRzLg0KDQpHdWVzcyB3
-aGF0IGEgRFdPUkRfUFRSIGlzIG9uIDY0Yml0IHdpbmRvd3MgLi4uDQooaXQgaXMgYW4gaW50ZWdl
-ciB0eXBlKS4NCg0KCURhdmlkDQoNCg==
+RnJvbTogSGFubmVzIEZyZWRlcmljIFNvd2ENCj4gU2VudDogMTQgRGVjZW1iZXIgMjAxNiAyMjow
+Mw0KPiBPbiAxNC4xMi4yMDE2IDEzOjQ2LCBKYXNvbiBBLiBEb25lbmZlbGQgd3JvdGU6DQo+ID4g
+SGkgRGF2aWQsDQo+ID4NCj4gPiBPbiBXZWQsIERlYyAxNCwgMjAxNiBhdCAxMDo1NiBBTSwgRGF2
+aWQgTGFpZ2h0IDxEYXZpZC5MYWlnaHRAYWN1bGFiLmNvbT4gd3JvdGU6DQo+ID4+IC4uLg0KPiA+
+Pj4gK3U2NCBzaXBoYXNoMjQoY29uc3QgdTggKmRhdGEsIHNpemVfdCBsZW4sIGNvbnN0IHU4IGtl
+eVtTSVBIQVNIMjRfS0VZX0xFTl0pDQo+ID4+IC4uLg0KPiA+Pj4gKyAgICAgdTY0IGswID0gZ2V0
+X3VuYWxpZ25lZF9sZTY0KGtleSk7DQo+ID4+PiArICAgICB1NjQgazEgPSBnZXRfdW5hbGlnbmVk
+X2xlNjQoa2V5ICsgc2l6ZW9mKHU2NCkpOw0KPiA+PiAuLi4NCj4gPj4+ICsgICAgICAgICAgICAg
+bSA9IGdldF91bmFsaWduZWRfbGU2NChkYXRhKTsNCj4gPj4NCj4gPj4gQWxsIHRoZXNlIHVuYWxp
+Z25lZCBhY2Nlc3NlcyBhcmUgZ29pbmcgdG8gZ2V0IGV4cGVuc2l2ZSBvbiBhcmNoaXRlY3R1cmVz
+DQo+ID4+IGxpa2Ugc3BhcmM2NC4NCj4gPg0KPiA+IFllcywgdGhlIHVuYWxpZ25lZCBhY2Nlc3Nl
+cyBhcmVuJ3QgcHJldHR5LiBTaW5jZSBpbiBwcmV0dHkgbXVjaCBhbGwNCj4gPiB1c2UgY2FzZXMg
+dGh1cyBmYXIsIHRoZSBkYXRhIGNhbiBlYXNpbHkgYmUgbWFkZSBhbGlnbmVkLCBwZXJoYXBzIGl0
+DQo+ID4gbWFrZXMgc2Vuc2UgdG8gY3JlYXRlIHNpcGhhc2gyNCgpIGFuZCBzaXBoYXNoMjRfdW5h
+bGlnbmVkKCkuIEFueQ0KPiA+IHRob3VnaHRzIG9uIGRvaW5nIHNvbWV0aGluZyBsaWtlIHRoYXQ/
+DQo+IA0KPiBJIGZlYXIgdGhhdCB0aGUgYWxpZ25tZW50IHJlcXVpcmVtZW50IHdpbGwgYmUgYSBz
+b3VyY2Ugb2YgYnVncyBvbiAzMiBiaXQNCj4gbWFjaGluZXMsIHdoZXJlIHlvdSBjYW5ub3QgZXZl
+biBzaW1wbHkgdGFrZSBhIHdlbGwgYWxpZ25lZCBzdHJ1Y3Qgb24gYQ0KPiBzdGFjayBhbmQgcHV0
+IGl0IGludG8gdGhlIG5vcm1hbCBzaXBoYXNoKGFsaWduZWQpIGZ1bmN0aW9uIHdpdGhvdXQNCj4g
+YWRkaW5nIGFsaWdubWVudCBhbm5vdGF0aW9ucyBldmVyeXdoZXJlLiBFdmVuIGJsb2NrcyByZXR1
+cm5lZCBmcm9tDQo+IGttYWxsb2Mgb24gMzIgYml0IGFyZSBub3QgYWxpZ25lZCB0byA2NCBiaXQu
+DQoNCkFyZSB5b3UgZG9pbmcgYW55dGhpbmcgdGhhdCB3aWxsIHJlcXVpcmUgNjRiaXQgYWxpZ25t
+ZW50IG9uIDMyYml0IHN5c3RlbXM/DQpJdCBpcyB1bmxpa2VseSB0aGF0IHRoZSBrZXJuZWwgY2Fu
+IHVzZSBhbnkgc2ltZCByZWdpc3RlcnMgdGhhdCBoYXZlIHdpZGVyDQphbGlnbm1lbnQgcmVxdWly
+ZW1lbnRzLg0KDQpZb3UgYWxzbyByZWFsbHkgZG9uJ3Qgd2FudCB0byByZXF1ZXN0IG9uLXN0YWNr
+IGl0ZW1zIGhhdmUgbGFyZ2UgYWxpZ25tZW50cy4NCldoaWxlIGdjYyBjYW4gZ2VuZXJhdGUgY29k
+ZSB0byBkbyBpdCwgaXQgaXNuJ3QgcHJldHR5Lg0KDQoJRGF2aWQNCg0KDQo=
