@@ -1,43 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: linus971@gmail.com
-In-Reply-To: <CAHmME9pu6No0wqPzPpaBwQR_b+5CXvh0kke7J8ouN=rx4pxMGg@mail.gmail.com>
-References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com>
- <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com>
- <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
- <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com>
- <CALx6S35VBjw42G6rHPrNfVaBfLMz3YZVjs3D3hBG=4gp5+g5tA@mail.gmail.com>
- <CAHmME9rpvf4tyDjZcJAJxMAW1LcqNm7DiquiYX0uQhRzDLbwqw@mail.gmail.com>
- <CA+55aFyBGQpEKiAcs0w58ZEie+L8OrWvf_2hvGx4E=L56p5hMg@mail.gmail.com> <CAHmME9pu6No0wqPzPpaBwQR_b+5CXvh0kke7J8ouN=rx4pxMGg@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Wed, 14 Dec 2016 16:10:57 -0800
-Message-ID: <CA+55aFw4QLuwkxq4VzLMPTJTec-hOu1Fi8e076TNnW0Yq9yp8A@mail.gmail.com>
+In-Reply-To: <CAHmME9o3uQoi5h=YTKB=5yN1yzz=d3=GFjGiXv_Sf12kAsjx3A@mail.gmail.com>
+References: <20161214001656.19388-1-Jason@zx2c4.com> <20161214031037.25498-1-Jason@zx2c4.com>
+ <20161214163731.luj2dzmnihcuhn5p@thunk.org> <CAHmME9o3uQoi5h=YTKB=5yN1yzz=d3=GFjGiXv_Sf12kAsjx3A@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 15 Dec 2016 02:19:08 +0100
+Message-ID: <CAHmME9qZqEWDOcqPggZW7KBrTz3tPnWz+gyjaj=rO0O_69BtyQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable function
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Tom Herbert <tom@herbertland.com>, Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 4/3] random: use siphash24 instead
+ of md5 for get_random_int/long
+To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, David Miller <davem@davemloft.net>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, George Spelvin <linux@horizon.com>, Scott Bauer <sbauer@eng.utah.edu>, Andi Kleen <ak@linux.intel.com>, Andy Lutomirski <luto@amacapital.net>, Greg KH <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers3@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 14, 2016 at 3:34 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
->
-> Or does your reasonable dislike of "word" still allow for the use of
-> dword and qword, so that the current function names of:
+Hey Ted,
 
-dword really is confusing to people.
+On Wed, Dec 14, 2016 at 8:12 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+> I think this opens up a big window for optimizing it even
+> further.
 
-If you have a MIPS background, it means 64 bits. While to people with
-Windows programming backgrounds it means 32 bits.
+I optimized it a bit further and siphash is now the clear winner over chacha:
 
-Please try to avoid using it.
+[    1.784801] random benchmark!!
+[    1.785161] get_random_long # cycles: 415983
+[    1.785595] get_random_long_chacha # cycles: 242047
+[    1.785997] get_random_long_siphash # cycles: 137130
+[    1.787450] get_random_bytes # cycles: 1452985
+[    1.787947] get_random_int # cycles: 343323
+[    1.788282] get_random_int_chacha # cycles: 170767
+[    1.788656] get_random_int_siphash # cycles: 86384
+[    1.789764] get_random_bytes # cycles: 2279519
 
-As mentioned, I think almost everybody agrees on the "q" part being 64
-bits, but that may just be me not having seen it in any other context.
+And even still, there is more that could be optimized. Therefore, I'll
+continue to keep this patch in the series and will CC you on the next
+patch set that goes out.
 
-And before anybody points it out - yes, we already have lots of uses
-of "dword" in various places. But they tend to be mostly
-hardware-specific - either architectures or drivers.
-
-So I'd _prefer_ to try to keep "word" and "dword" away from generic
-helper routines. But it's not like anything is really black and white.
-
-           Linus
+Jason
