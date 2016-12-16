@@ -1,65 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20161216151045.8b05123396aec5598825f4c3@gmail.com>
-References: <20161216090033.2007806-1-arnd@arndb.de> <20161216151045.8b05123396aec5598825f4c3@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 16 Dec 2016 11:40:16 -0800
-Message-ID: <CAGXu5jKx-dCqzuvNWWW9bi2v2d8Gp1_+UZEYDGwaacJAAnbtyQ@mail.gmail.com>
+In-Reply-To: <CAHmME9pjoAsoct1sVDpFFuqaqutv9X7DGJ5OBQXRAS57KFimUA@mail.gmail.com>
+References: <CAGiyFdfmiCMyHvAg=5sGh8KjBBrF0Wb4Qf=JLzJqUAx4yFSS3Q@mail.gmail.com>
+ <20161216034618.28276.qmail@ns.sciencehorizons.net> <CAGiyFdd6_LVzUUfFcaqMyub1c2WPvWUzAQDCH+Aza-_t6mvmXg@mail.gmail.com>
+ <CAHmME9pjoAsoct1sVDpFFuqaqutv9X7DGJ5OBQXRAS57KFimUA@mail.gmail.com>
+From: Tom Herbert <tom@herbertland.com>
+Date: Fri, 16 Dec 2016 11:47:35 -0800
+Message-ID: <CALx6S351VFRZmEQphRQy6YtmZYPnOtTN7=XiNrJmhWJGv4HUBg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugin: include memmodel.h and tree_vrp.h for gcc-7
-To: Emese Revfy <re.emese@gmail.com>
-Cc: Arnd Bergmann <arnd@arndb.de>, Kugan <kugan.vivekanandarajah@linaro.org>, "# 3.4.x" <stable@vger.kernel.org>, Michal Marek <mmarek@suse.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "pageexec@freemail.hu" <pageexec@freemail.hu>
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, George Spelvin <linux@sciencehorizons.net>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, vegard.nossum@gmail.com, "Daniel J . Bernstein" <djb@cr.yp.to>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 16, 2016 at 6:10 AM, Emese Revfy <re.emese@gmail.com> wrote:
-> On Fri, 16 Dec 2016 10:00:22 +0100
-> Arnd Bergmann <arnd@arndb.de> wrote:
+On Fri, Dec 16, 2016 at 4:39 AM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+> Hey JP,
 >
->> Cc: stable@vger.kernel.org
->> Suggested-by: Kugan <kugan.vivekanandarajah@linaro.org>
->> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
->> ---
->>  scripts/gcc-plugins/gcc-common.h | 6 ++++++
->>  1 file changed, 6 insertions(+)
+> On Fri, Dec 16, 2016 at 9:08 AM, Jean-Philippe Aumasson
+> <jeanphilippe.aumasson@gmail.com> wrote:
+>> Here's a tentative HalfSipHash:
+>> https://github.com/veorq/SipHash/blob/halfsiphash/halfsiphash.c
 >>
->> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
->> index 950fd2e64bb7..cb4a9518b58a 100644
->> --- a/scripts/gcc-plugins/gcc-common.h
->> +++ b/scripts/gcc-plugins/gcc-common.h
->> @@ -18,6 +18,9 @@
->>
->>  #include "tree-inline.h"
->>  #include "version.h"
->> +#if BUILDING_GCC_VERSION >= 7000
->> +#include "memmodel.h"
->> +#endif
->>  #include "rtl.h"
->>  #include "tm_p.h"
->>  #include "flags.h"
->> @@ -66,6 +69,9 @@
->>  #include "tree-flow.h"
->>  #else
->>  #include "tree-cfgcleanup.h"
->> +#if BUILDING_GCC_VERSION >= 7000
->> +#include "tree-vrp.h"
->> +#endif
->>  #include "tree-ssa-operands.h"
->>  #include "tree-into-ssa.h"
->>  #endif
+>> Haven't computed the cycle count nor measured its speed.
 >
-> Hi,
+Tested this. Distribution and avalanche effect are still good. Speed
+wise I see about a 33% improvement over siphash (20 nsecs/op versus 32
+nsecs). That's about 3x of jhash speed (7 nsecs). So that might closer
+to a more palatable replacement for jhash. Do we lose any security
+advantages with halfsiphash?
+
+Tom
+
+> This is incredible. Really. Wow!
 >
-> Could you please use the upstream gcc-common.h? You can find it here:
-> https://www.grsecurity.net/~paxguy1/gcc-common.h
-
-A bunch of the diff between this and the existing gcc-common.h are
-commented out includes. :)
-
-I'll strip out those and send the resulting patch. Thanks!
-
--Kees
-
--- 
-Kees Cook
-Nexus Security
+> I'll integrate this into my patchset and will write up some
+> documentation about when one should be used over the other.
+>
+> Thanks again. Quite exciting.
+>
+> Jason
