@@ -1,34 +1,57 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 16 Dec 2016 15:01:58 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161216140158.GS3107@twins.programming.kicks-ass.net>
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
- <20161128121347.GY3092@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
- <20161201191543.GG3124@twins.programming.kicks-ass.net>
- <1480693474.28515.56.camel@cs-046.org.aalto.fi>
- <20161207135241.GI3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
-Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Liljestrand Hans <ishkamiel@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+Date: Fri, 16 Dec 2016 15:10:45 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20161216151045.8b05123396aec5598825f4c3@gmail.com>
+In-Reply-To: <20161216090033.2007806-1-arnd@arndb.de>
+References: <20161216090033.2007806-1-arnd@arndb.de>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] gcc-plugin: include memmodel.h and tree_vrp.h for gcc-7
+To: Arnd Bergmann <arnd@arndb.de>
+Cc: Kees Cook <keescook@chromium.org>, Kugan <kugan.vivekanandarajah@linaro.org>, stable@vger.kernel.org, Michal Marek <mmarek@suse.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "pageexec@freemail.hu" <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 16, 2016 at 12:10:21PM +0000, Reshetova, Elena wrote:
+On Fri, 16 Dec 2016 10:00:22 +0100
+Arnd Bergmann <arnd@arndb.de> wrote:
 
-> Is it ok to add at least refcount_inc_if_zero() ? 
+> Cc: stable@vger.kernel.org
+> Suggested-by: Kugan <kugan.vivekanandarajah@linaro.org>
+> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+> ---
+>  scripts/gcc-plugins/gcc-common.h | 6 ++++++
+>  1 file changed, 6 insertions(+)
+> 
+> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
+> index 950fd2e64bb7..cb4a9518b58a 100644
+> --- a/scripts/gcc-plugins/gcc-common.h
+> +++ b/scripts/gcc-plugins/gcc-common.h
+> @@ -18,6 +18,9 @@
+>  
+>  #include "tree-inline.h"
+>  #include "version.h"
+> +#if BUILDING_GCC_VERSION >= 7000
+> +#include "memmodel.h"
+> +#endif
+>  #include "rtl.h"
+>  #include "tm_p.h"
+>  #include "flags.h"
+> @@ -66,6 +69,9 @@
+>  #include "tree-flow.h"
+>  #else
+>  #include "tree-cfgcleanup.h"
+> +#if BUILDING_GCC_VERSION >= 7000
+> +#include "tree-vrp.h"
+> +#endif
+>  #include "tree-ssa-operands.h"
+>  #include "tree-into-ssa.h"
+>  #endif
+ 
+Hi,
 
-Of course not.
+Could you please use the upstream gcc-common.h? You can find it here:
+https://www.grsecurity.net/~paxguy1/gcc-common.h
 
-> We already have refcount_dec_if_one(), reffcount_dec_not_one() and
-> refcount_inc_not_zero(), so this one is the only missing one and would
-> greatly help in couple of cases. 
-
-No, its absolutely insane. 0 means its freed, you cannot get another
-reference at that point.
-
-If you have code that relies on that, its broken.
+Thanks
+-- 
+Emese
