@@ -1,68 +1,55 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 16 Dec 2016 13:06:59 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20161216210659.GA85702@beast>
 MIME-Version: 1.0
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Fri, 16 Dec 2016 22:01:10 +0100
-Message-ID: <CAHmME9pz=syTiLXUsbXFyGdbGK6pxbnU+TVLDkbYiTa-9+sckQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add
- cryptographically secure PRF
-To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, George Spelvin <linux@sciencehorizons.net>, Jason <Jason@zx2c4.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] latent_entropy: fix ARM build error on earlier gcc
+To: linux-kernel@vger.kernel.org
+Cc: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ted,
+This fixes build errors seen on gcc-4.9.3 or gcc-5.3.1 for an ARM:
 
-On Fri, Dec 16, 2016 at 9:43 PM, Theodore Ts'o <tytso@mit.edu> wrote:
-> What should we do with get_random_int() and get_random_long()?  In
-> some cases it's being used in performance sensitive areas, and where
-> anti-DoS protection might be enough.  In others, maybe not so much.
->
-> If we rekeyed the secret used by get_random_int() and
-> get_random_long() frequently (say, every minute or every 5 minutes),
-> would that be sufficient for current and future users of these
-> interfaces?
+arm-soc/init/initramfs.c: In function 'error':
+arm-soc/init/initramfs.c:50:1: error: unrecognizable insn:
+ }
+ ^
+(insn 26 25 27 5 (set (reg:SI 111 [ local_entropy.243 ])
+        (rotatert:SI (reg:SI 116 [ local_entropy.243 ])
+            (const_int -30 [0xffffffffffffffe2]))) -1
+     (nil))
 
-get_random_int() and get_random_long() should quite clearly use
-SipHash with its secure 128-bit key and not HalfSipHash with its
-64-bit key. HalfSipHash is absolutely insufficient for this use case.
-Remember, we're already an order of magnitude or more faster than
-md5...
+Patch from PaX Team <pageexec@freemail.hu>
 
-With regard to periodic rekeying... since the secret is 128-bits, I
-believe this is likely sufficient for _not_ rekeying. There's also the
-chaining variable, to tie together invocations of the function. If
-you'd prefer, instead of the chaining variable, we could use some
-siphash output to mutate the original key, but I don't think this
-approach is actually better and might introduce vulnerabilities. In my
-opinion chaining+128bitkey is sufficient. On the other hand, rekeying
-every X minutes is 3 or 4 lines of code. If you want (just say so),
-I'll add this to my next revision.
+Reported-by: Arnd Bergmann <arnd@arndb.de>
+Reported-by: Brad Spengler <spender@grsecurity.net>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ scripts/gcc-plugins/latent_entropy_plugin.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-You asked about the security requirements of these functions. The
-comment says they're not cryptographically secure. And right now with
-MD5 they're not. So the expectations are pretty low. Moving to siphash
-adds some cryptographic security, certainly. Moving to siphash plus
-rekeying adds a bit more. Of course, on recent x86, RDRAND is used
-instead, so the cryptographic strength then depends on the thickness
-of your tinfoil hat. So probably we shouldn't change what we advertise
-these functions provide, even though we're certainly improving them
-performance-wise and security-wise.
+diff --git a/scripts/gcc-plugins/latent_entropy_plugin.c b/scripts/gcc-plugins/latent_entropy_plugin.c
+index ff1939b804ae..eb1964084ccd 100644
+--- a/scripts/gcc-plugins/latent_entropy_plugin.c
++++ b/scripts/gcc-plugins/latent_entropy_plugin.c
+@@ -328,9 +328,9 @@ static enum tree_code get_op(tree *rhs)
+ 			op = LROTATE_EXPR;
+ 			/*
+ 			 * This code limits the value of random_const to
+-			 * the size of a wide int for the rotation
++			 * the size of a long for the rotation
+ 			 */
+-			random_const &= HOST_BITS_PER_WIDE_INT - 1;
++			random_const %= TYPE_PRECISION(long_unsigned_type_node);
+ 			break;
+ 		}
+ 
+-- 
+2.7.4
 
-> P.S.  I'll note that my performance figures when testing changes to
-> get_random_int() were done on a 32-bit x86; Jason, I'm guessing your
-> figures were using a 64-bit x86 system?.  I haven't tried 32-bit ARM
-> or smaller CPU's (e.g., mips, et. al.) that might be more likely to be
-> used on IoT devices, but I'm worried about those too, of course.
 
-Yes, on x86-64. But on i386 chacha20 incurs nearly the same kind of
-slowdown as siphash, so I expect the comparison to be more or less
-equal. There's another thing I really didn't like about your chacha20
-approach which is that it uses the /dev/urandom pool, which means
-various things need to kick in in the background to refill this.
-Additionally, having to refill the buffered chacha output every 32 or
-so longs isn't nice. These things together make for inconsistent and
-hard to understand general operating system performance, because
-get_random_long is called at every process startup for ASLR. So, in
-the end, I believe there's another reason for going with the siphash
-approach: deterministic performance.
-
-Jason
+-- 
+Kees Cook
+Nexus Security
