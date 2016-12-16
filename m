@@ -1,138 +1,97 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Fri, 16 Dec 2016 04:03:28 +0100
-Message-Id: <20161216030328.11602-6-Jason@zx2c4.com>
-In-Reply-To: <20161216030328.11602-1-Jason@zx2c4.com>
-References: <20161215203003.31989-1-Jason@zx2c4.com>
- <20161216030328.11602-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v6 5/5] syncookies: use SipHash in place of SHA1
-To: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, George Spelvin <linux@sciencehorizons.net>, Vegard Nossum <vegard.nossum@gmail.com>, ak@linux.intel.com, davem@davemloft.net, luto@amacapital.net
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: 15 Dec 2016 22:46:18 -0500
+Message-ID: <20161216034618.28276.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <CAGiyFdfmiCMyHvAg=5sGh8KjBBrF0Wb4Qf=JLzJqUAx4yFSS3Q@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, ebiggers3@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux@sciencehorizons.net, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+Cc: djb@cr.yp.to
 List-ID: <kernel-hardening.lists.openwall.com>
 
-SHA1 is slower and less secure than SipHash, and so replacing syncookie
-generation with SipHash makes natural sense. Some BSDs have been doing
-this for several years in fact.
+Jean-Philippe Aumasson wrote:
+> If a halved version of SipHash can bring significant performance boost
+> (with 32b words instead of 64b words) with an acceptable security level
+> (64-bit enough?) then we may design such a version.
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
----
- net/ipv4/syncookies.c | 20 ++++----------------
- net/ipv6/syncookies.c | 37 ++++++++++++++++---------------------
- 2 files changed, 20 insertions(+), 37 deletions(-)
+It would be fairly significant, a 2x speed benefit on a lot of 32-bit
+machines.
 
-diff --git a/net/ipv4/syncookies.c b/net/ipv4/syncookies.c
-index 3e88467d70ee..03bb068f8888 100644
---- a/net/ipv4/syncookies.c
-+++ b/net/ipv4/syncookies.c
-@@ -13,13 +13,13 @@
- #include <linux/tcp.h>
- #include <linux/slab.h>
- #include <linux/random.h>
--#include <linux/cryptohash.h>
-+#include <linux/siphash.h>
- #include <linux/kernel.h>
- #include <linux/export.h>
- #include <net/tcp.h>
- #include <net/route.h>
- 
--static u32 syncookie_secret[2][16-4+SHA_DIGEST_WORDS] __read_mostly;
-+static siphash_key_t syncookie_secret[2] __read_mostly;
- 
- #define COOKIEBITS 24	/* Upper bits store count */
- #define COOKIEMASK (((__u32)1 << COOKIEBITS) - 1)
-@@ -48,24 +48,12 @@ static u32 syncookie_secret[2][16-4+SHA_DIGEST_WORDS] __read_mostly;
- #define TSBITS	6
- #define TSMASK	(((__u32)1 << TSBITS) - 1)
- 
--static DEFINE_PER_CPU(__u32 [16 + 5 + SHA_WORKSPACE_WORDS], ipv4_cookie_scratch);
--
- static u32 cookie_hash(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport,
- 		       u32 count, int c)
- {
--	__u32 *tmp;
--
- 	net_get_random_once(syncookie_secret, sizeof(syncookie_secret));
--
--	tmp  = this_cpu_ptr(ipv4_cookie_scratch);
--	memcpy(tmp + 4, syncookie_secret[c], sizeof(syncookie_secret[c]));
--	tmp[0] = (__force u32)saddr;
--	tmp[1] = (__force u32)daddr;
--	tmp[2] = ((__force u32)sport << 16) + (__force u32)dport;
--	tmp[3] = count;
--	sha_transform(tmp + 16, (__u8 *)tmp, tmp + 16 + 5);
--
--	return tmp[17];
-+	return siphash_4u32(saddr, daddr, (u32)sport << 16 | dport, count,
-+			    syncookie_secret[c]);
- }
- 
- 
-diff --git a/net/ipv6/syncookies.c b/net/ipv6/syncookies.c
-index a4d49760bf43..04d19e89a3e0 100644
---- a/net/ipv6/syncookies.c
-+++ b/net/ipv6/syncookies.c
-@@ -16,7 +16,7 @@
- 
- #include <linux/tcp.h>
- #include <linux/random.h>
--#include <linux/cryptohash.h>
-+#include <linux/siphash.h>
- #include <linux/kernel.h>
- #include <net/ipv6.h>
- #include <net/tcp.h>
-@@ -24,7 +24,7 @@
- #define COOKIEBITS 24	/* Upper bits store count */
- #define COOKIEMASK (((__u32)1 << COOKIEBITS) - 1)
- 
--static u32 syncookie6_secret[2][16-4+SHA_DIGEST_WORDS] __read_mostly;
-+static siphash_key_t syncookie6_secret[2] __read_mostly;
- 
- /* RFC 2460, Section 8.3:
-  * [ipv6 tcp] MSS must be computed as the maximum packet size minus 60 [..]
-@@ -41,30 +41,25 @@ static __u16 const msstab[] = {
- 	9000 - 60,
- };
- 
--static DEFINE_PER_CPU(__u32 [16 + 5 + SHA_WORKSPACE_WORDS], ipv6_cookie_scratch);
--
- static u32 cookie_hash(const struct in6_addr *saddr, const struct in6_addr *daddr,
- 		       __be16 sport, __be16 dport, u32 count, int c)
- {
--	__u32 *tmp;
-+	const struct {
-+		struct in6_addr saddr;
-+		struct in6_addr daddr;
-+		u32 count;
-+		u16 sport;
-+		u16 dport;
-+	} __aligned(SIPHASH_ALIGNMENT) combined = {
-+		.saddr = *saddr,
-+		.daddr = *daddr,
-+		.count = count,
-+		.sport = sport,
-+		.dport = dport
-+	};
- 
- 	net_get_random_once(syncookie6_secret, sizeof(syncookie6_secret));
--
--	tmp  = this_cpu_ptr(ipv6_cookie_scratch);
--
--	/*
--	 * we have 320 bits of information to hash, copy in the remaining
--	 * 192 bits required for sha_transform, from the syncookie6_secret
--	 * and overwrite the digest with the secret
--	 */
--	memcpy(tmp + 10, syncookie6_secret[c], 44);
--	memcpy(tmp, saddr, 16);
--	memcpy(tmp + 4, daddr, 16);
--	tmp[8] = ((__force u32)sport << 16) + (__force u32)dport;
--	tmp[9] = count;
--	sha_transform(tmp + 16, (__u8 *)tmp, tmp + 16 + 5);
--
--	return tmp[17];
-+	return siphash(&combined, sizeof(combined), syncookie6_secret[c]);
- }
- 
- static __u32 secure_tcp_syn_cookie(const struct in6_addr *saddr,
--- 
-2.11.0
+First is the fact that a 64-bit SipHash round on a generic 32-bit machine
+requires not twice as many instructions, but more than three.
+
+Consider the core SipHash quarter-round operation:
+	a += b;
+	b = rotate_left(b, k)
+	b ^= a
+
+The add and xor are equivalent between 32- and 64-bit rounds; twice the
+instructions do twice the work.  (There's a dependency via the carry
+bit between the two halves of the add, but it ends up not being on the
+critical path even in a superscalar implementation.)
+
+The problem is the rotates.  Although some particularly nice code is
+possible on 32-bit ARM due to its support for shift-and-xor operations,
+on a generic 32-bit CPU the rotate grows to 6 instructions with a 2-cycle
+dependency chain (more in practice because barrel shifters are large and
+even quad-issue CPUs can't do 4 shifts per cycle):
+
+	temp_lo = b_lo >> (32-k)
+	temp_hi = b_hi >> (32-k)
+	b_lo <<= k
+	b_hi <<= k
+	b_lo ^= temp_hi
+	b_hi ^= temp_lo
+
+The resultant instruction counts and (assuming wide issue)
+latencies are:
+
+	64-bit SipHash	"Half" SipHash
+	Inst.	Latency	Inst.	Latency
+	 10	 3	  3	 2	Quarter round
+	 40	 6	 12	 4	Full round
+	 80	12	 24	 8	Two rounds
+	 82	13	 26	 9	Mix in one word
+	 82	13	 52	18	Mix in 64 bits
+	166	26	 61	18	Four round finalization + final XOR
+	248	39	113	36	Hash 64 bits
+	330	52	165	54	Hash 128 bits
+	412	65	217	72	Hash 192 bits
+
+While the ideal latencies are actually better for the 64-bit algorithm,
+that requires an unrealistic 6+-wide superscalar implementation that's
+more than twice as wide as the 64-bit code requires (which is already
+optimized for quad-issue).  For a 1- or 2-wide processor, the instruction
+counts dominate, and not only does the 64-bit algorithm take 60% more
+time to mix in the same number of bytes, but the finalization rounds
+bring the ratio to 2:1 for small inputs.
+
+(And I haven't included the possible savings if the input size is an odd
+number of 32-bit words, such as networking applications which include
+the source/dest port numbers.)
+
+
+Notes on particular processors:
+- x86 can do a 64-bit rotate in 3 instructions and 2 cycles using
+  the SHLD/SHRD instructions instead:
+	movl	%b_hi, %temp
+	shldl	$k, %b_lo, %b_hi
+	shldl	$k, %temp, %b_lo
+  ... but as I mentioned the problem is registers.  SipHash needs 8 32-bit
+  words plus at least one temporary, and 32-bit x86 has only 7 available.
+  (And compilers can rarely manage to keep more than 6 of them busy.)
+- 64-bit SipHash is particularly efficient on 32-bit ARM due to its
+  support for shift-and-op instructions.  The 64-bit shift and following
+  xor can be done in 4 instructions.  So the only benefit is from the
+  reduced finalization.
+- Double-width adds cost a little more on CPUs like MIPS and RISC-V without
+  condition codes.
+- Certain particularly crappy uClinux processors with slow shifts
+  (68000, anyone?) really suffer from extra shifts.
+
+One *weakly* requested feature: It might simplify some programming
+interfaces if we could use the same key for multiple hash tables with a
+1-word "tweak" (e.g. pointer to the hash table, so it could be assumed
+non-zero if that helped) to make distinct functions.  That would let us
+more safely use a global key for multiple small hash tables without the
+need to add code to generate and store key material for each place that
+an unkeyed hash is replaced.
