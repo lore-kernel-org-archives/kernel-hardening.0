@@ -1,60 +1,66 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1481921067.1054.6.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 16 Dec 2016 15:44:27 -0500
-In-Reply-To: <CALx6S351VFRZmEQphRQy6YtmZYPnOtTN7=XiNrJmhWJGv4HUBg@mail.gmail.com>
-References: 
-	<CAGiyFdfmiCMyHvAg=5sGh8KjBBrF0Wb4Qf=JLzJqUAx4yFSS3Q@mail.gmail.com>
-	 <20161216034618.28276.qmail@ns.sciencehorizons.net>
-	 <CAGiyFdd6_LVzUUfFcaqMyub1c2WPvWUzAQDCH+Aza-_t6mvmXg@mail.gmail.com>
-	 <CAHmME9pjoAsoct1sVDpFFuqaqutv9X7DGJ5OBQXRAS57KFimUA@mail.gmail.com>
-	 <CALx6S351VFRZmEQphRQy6YtmZYPnOtTN7=XiNrJmhWJGv4HUBg@mail.gmail.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-HimIJJAsxKuzIQvBsNJ2"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add
- cryptographically secure PRF
-To: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, George Spelvin <linux@sciencehorizons.net>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, vegard.nossum@gmail.com, "Daniel J . Bernstein" <djb@cr.yp.to>
+MIME-Version: 1.0
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 16 Dec 2016 21:49:49 +0100
+Message-ID: <CAHmME9q0LaxQ3uinzWyD1mDCpyeLw_2TEAN33T6dDrTKCuHs7g@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: George Spelvin <linux@sciencehorizons.net>
+Cc: Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Vegard Nossum <vegard.nossum@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Fri, Dec 16, 2016 at 9:17 PM, George Spelvin
+<linux@sciencehorizons.net> wrote:
+> My (speaking enerally; I should walk through every hash table you've
+> converted) opinion is that:
+>
+> - Hash tables, even network-facing ones, can all use hsiphash as long
+>   as an attacker can only see collisions, i.e. ((H(x) ^ H(y)) & bits) ==
+>   0, and the consequences of a successful attack is only more collisions
+>   (timing).  While the attack is only 2x the cost (two hashes rather than
+>   one to test a key), the knowledge of the collision is statistical,
+>   especially for network attackers, which raises the cost of guessing
+>   beyond an even more brute-force attack.
+> - When the hash value directly visible (e.g. included in a network
+>   packet), full SipHash should be the default.
+> - Syncookies *could* use hsiphash, especially as there are
+>   two keys in there.  Not sure if we need the performance.
+> - For TCP ISNs, I'd prefer to use full SipHash.  I know this is
+>   a very hot path, and if that's a performance bottleneck,
+>   we can work harder on it.
+>
+> In particular, TCP ISNs *used* to rotate the key periodically,
+> limiting the time available to an attacker to perform an
+> attack before the secret goes stale and is useless.  commit
+> 6e5714eaf77d79ae1c8b47e3e040ff5411b717ec upgraded to md5 and dropped
+> the key rotation.
 
---=-HimIJJAsxKuzIQvBsNJ2
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+While I generally agree with this analysis for the most part, I do
+think we should use SipHash and not HalfSipHash for syncookies.
+Although the security risk is lower than with sequence numbers, it
+previously used full MD5 for this, which means performance is not
+generally a bottleneck and we'll get massive speedups no matter what,
+whether using SipHash or HalfSipHash. In addition, using SipHash means
+that the 128-bit key gives a larger margin and can be safe longterm.
+So, I think we should err on the side of caution and stick with
+SipHash in all cases in which we're upgrading from MD5.
 
-On Fri, 2016-12-16 at 11:47 -0800, Tom Herbert wrote:
->=20
-> That's about 3x of jhash speed (7 nsecs). So that might closer
-> to a more palatable replacement for jhash. Do we lose any security
-> advantages with halfsiphash?
+In other words, only current jhash users should be potentially
+eligible for hsiphash.
 
-Have you tested a lower round SipHash? Probably best to stick with the
-usual construction for non-DoS mitigation, but why not try SipHash 1-3,
-1-2, etc. for DoS mitigation?
 
-Rust and Swift both went with SipHash 1-3 for hash tables.
---=-HimIJJAsxKuzIQvBsNJ2
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+> Current code uses a 64 ns tick for the ISN, so it counts 2^24 per second.
+> (32 bits wraps every 4.6 minutes.)  A 4-bit counter and 28-bit hash
+> (or even 3+29) would work as long as the key is regenerated no more
+> than once per minute.  (Just using the 4.6-minute ISN wrap time is the
+> obvious simple implementation.)
+>
+> (Of course, I defer to DaveM's judgement on all network-related issues.)
 
------BEGIN PGP SIGNATURE-----
-
-iQJKBAABCAA0FiEEZe7+AiEI4rcIy/z3+ecS5Zr18ioFAlhUUisWHGRhbmllbG1p
-Y2F5QGdtYWlsLmNvbQAKCRD55xLlmvXyKk2/D/9gAHNr8TZPGEYv7L/vhsOnsssj
-HRnq0a6FoJT8FdfNxLwffeh2vPLuOVyMNxhOfZtlXLAVwtk8bZrBpJEkM0FSfeEQ
-glKghXGxpnPAtwA2lKX0D9Q8adzUXFUBgxeH1IQuCGcacigsbZf11lnvZU6G++Wj
-GRcKdGFnwia6gF0rRfCtpgj7mGf/E/tzPBe/SY44s45tRsVC5bne4VH4vjQeBby7
-K6YT3VvfIsMIZzaqAzJyS3op1Lz6wlyPIYL6ABqRPFSDgwAewspMhysL954409Za
-stB5EDxG0lU378jBPN2cA54Ys0VM+bFL+gWaM4AZiZngfzQYDPTtzGZXvD8seu9P
-0QZ4NxyosoWB5St9dUQzUyYbCmLOBT8gTkKs9EtBOmHcLDHOU6WcgbeVDwqm2T3u
-So8o4hRu3cggaWbdVyL9QjXazw2VD8BW0CEH4D+qFBFTmAbIvuo0h48LEQ6inv5G
-oTmbusFXUbxHDK8UpRCyWg2WMzKPU8cwNrLcVkQhtijQnuI6nYl8GN3u4EeB0pGM
-8BGoOHXm6NA7VydDpu95fhoy6GsQeWmeDknM0Khbwubc75iFz8KU1hxMfkESlvb6
-Wwz5flHC6TQXG/S6812MHtVh2+undC8SO19y0mfenLZCieLjqC0kj94h67y4xqEw
-+16uBeb7ylA/k7Lgjg==
-=l09G
------END PGP SIGNATURE-----
-
---=-HimIJJAsxKuzIQvBsNJ2--
+I saw that jiffies addition in there and was wondering what it was all
+about. It's currently added _after_ the siphash input, not before, to
+keep with how the old algorithm worked. I'm not sure if this is
+correct or if there's something wrong with that, as I haven't studied
+how it works. If that jiffies should be part of the siphash input and
+not added to the result, please tell me. Otherwise I'll keep things
+how they are to avoid breaking something that seems to be working.
