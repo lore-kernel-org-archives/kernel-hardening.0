@@ -1,68 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Fri, 16 Dec 2016 22:45:16 +0100
-Message-ID: <CAHmME9rbKi3O1SS89LRMEUeMdKyrdutXAfjb9QmW3KNoCuE-wg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v6 3/5] random: use SipHash in place of MD5
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, George Spelvin <linux@sciencehorizons.net>, Vegard Nossum <vegard.nossum@gmail.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 16 Dec 2016 14:06:22 -0800
+Message-Id: <1481925984-98605-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1481925984-98605-1-git-send-email-keescook@chromium.org>
+References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v4 2/4] util: Move type casts into is_kernel_rodata
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, pageexec@freemail.hu, spender@grsecurity.net, mmarek@suse.com, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, sam@ravnborg.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Andy,
+From: Emese Revfy <re.emese@gmail.com>
 
-On Fri, Dec 16, 2016 at 10:31 PM, Andy Lutomirski <luto@amacapital.net> wrote:
-> I think it would be nice to try to strenghen the PRNG construction.
-> FWIW, I'm not an expert in PRNGs, and there's fairly extensive
-> literature, but I can at least try.
+This moves type casts into the is_kernel_rodata() function itself so that
+parameters can be marked as "nocapture" in the coming initify gcc plugin.
 
-In an effort to keep this patchset as initially as uncontroversial as
-possible, I kept the same same construction as before and just swapped
-out slow MD5 for fast Siphash. Additionally, the function
-documentation says that it isn't cryptographically secure. But in the
-end I certainly agree with you; we should most definitely improve
-things, and seeing the eyeballs now on this series, I think we now
-might have a mandate to do so.
+Signed-off-by: Emese Revfy <re.emese@gmail.com>
+[kees: expanded commit message]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ mm/util.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
-> 1. A one-time leak of memory contents doesn't ruin security until
-> reboot.  This is especially value across suspend and/or hibernation.
-
-Ted and I were discussing this in another thread, and it sounds like
-he wants the same thing. I'll add re-generation of the secret every
-once in a while. Perhaps time-based makes more sense than
-counter-based for rekeying frequency?
-
-> 2. An attack with a low work factor (2^64?) shouldn't break the scheme
-> until reboot.
-
-It won't. The key is 128-bits.
-
-> This is effectively doing:
->
-> output = H(prev_output, weak "entropy", per-boot secret);
->
-> One unfortunately downside is that, if used in a context where an
-> attacker can see a single output, the attacker learns the chaining
-> value.  If the attacker can guess the entropy, then, with 2^64 work,
-> they learn the secret, and they can predict future outputs.
-
-No, the secret is 128-bits, which isn't feasibly guessable. The secret
-also isn't part of the hash, but rather is the generator of the hash
-function. A keyed hash (a PRF) is a bit of a different construction
-than just hashing a secret value into a hash function.
-
-> Second, change the mode so that an attacker doesn't learn so much
-> internal state.  For example:
->
-> output = H(old_chain, entropy, secret);
-> new_chain = old_chain + entropy + output;
-
-Happy to make this change, with making the chaining value additive
-rather than a replacement.
-
-However, I'm not sure adding entropy to the new_chain makes a
-different. That entropy is basically just the cycle count plus the
-jiffies count. If an attacker can already guess them, then adding them
-again to the chaining value doesn't really add much.
-
-Jason
+diff --git a/mm/util.c b/mm/util.c
+index 1a41553db866..5606c6b74eee 100644
+--- a/mm/util.c
++++ b/mm/util.c
+@@ -17,10 +17,10 @@
+ 
+ #include "internal.h"
+ 
+-static inline int is_kernel_rodata(unsigned long addr)
++static inline int is_kernel_rodata(const void *addr)
+ {
+-	return addr >= (unsigned long)__start_rodata &&
+-		addr < (unsigned long)__end_rodata;
++	return (unsigned long)addr >= (unsigned long)__start_rodata &&
++		(unsigned long)addr < (unsigned long)__end_rodata;
+ }
+ 
+ /**
+@@ -31,7 +31,7 @@ static inline int is_kernel_rodata(unsigned long addr)
+  */
+ void kfree_const(const void *x)
+ {
+-	if (!is_kernel_rodata((unsigned long)x))
++	if (!is_kernel_rodata(x))
+ 		kfree(x);
+ }
+ EXPORT_SYMBOL(kfree_const);
+@@ -68,7 +68,7 @@ EXPORT_SYMBOL(kstrdup);
+  */
+ const char *kstrdup_const(const char *s, gfp_t gfp)
+ {
+-	if (is_kernel_rodata((unsigned long)s))
++	if (is_kernel_rodata(s))
+ 		return s;
+ 
+ 	return kstrdup(s, gfp);
+-- 
+2.7.4
