@@ -1,50 +1,78 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <585444eb.5d29c80a.fff37.d341@mx.google.com>
-Date: Fri, 16 Dec 2016 16:17:51 -0330
-From: Sandra Escandor-O'Keefe <rvonflugel@gmail.com>
-In-Reply-To: <CAGXu5jKW+fo38ZqNt8u8oW4igY6uRpyfLvU_wD9Aq2zzP0ZVig@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: base64
+Sender: keescook@google.com
+In-Reply-To: <585444eb.5d29c80a.fff37.d341@mx.google.com>
+References: <CAGXu5jKW+fo38ZqNt8u8oW4igY6uRpyfLvU_wD9Aq2zzP0ZVig@mail.gmail.com>
+ <585444eb.5d29c80a.fff37.d341@mx.google.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 16 Dec 2016 12:02:15 -0800
+Message-ID: <CAGXu5jJ=SzfLsLm=CS8FniYqRAntj+_1MH4g1=isHQ1t3rcb4Q@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Working on lib/test_bpf.c tests for eBPF
  constant blinding
-To: Kees Cook <keescook@chromium.org>
+To: Sandra Escandor-O'Keefe <rvonflugel@gmail.com>
 Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Daniel Borkmann <daniel@iogearbox.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-RXhjZWxsZW50ISBUaGFua3MgZm9yIHBvaW50aW5nIHRvIHRoYXQgd3JpdGUtdXAuIFNvLCB3aGF0
-IEkgY2FuIGRvIGlzIGdldCB0byB0aGUgcG9pbnQgd2hlcmUgSSBjYW4gbWFudWFsbHkgcGVyZm9y
-bSB0aGUgdGVzdCB0byBjaGVjayBpbnNlcnRlZCBjb25zdGFudHMgaW4KZUJQRiBpbnN0cnVjdGlv
-bnMgdG8gdmVyaWZ5IHRoYXQgdGhleSBhcmUgZ29uZSBpbiB0aGUgcmVzdWx0aW5nIGVCUEYgSklU
-IGtlcm5lbCBjb2RlIC0gdGhpcyBsb29rcyBsaWtlIEkgd2lsbCBmaXJzdCBuZWVkIHRvIHJ1biB0
-aGUgUG9DIGF0dGFjayB0aGF0IEVsZW5hIGNyZWF0ZWQuIEZyb20gdGhlcmUsIEknbGwgaGF2ZSBh
-IGJldHRlciB1bmRlcnN0YW5kaW5nIG9mIHdoYXQgdG8gdGVzdC4KCldvdWxkIHlvdSBhcHByb2Fj
-aCBpdCB0aGlzIHdheSwgb3Igd291bGQgeW91IGRvIHNvbWV0aGluZyBkaWZmZXJlbnQ/CgpTYW5k
-cmEKCsKgIE9yaWdpbmFsIE1lc3NhZ2UgwqAKRnJvbToga2Vlc2Nvb2tAY2hyb21pdW0ub3JnClNl
-bnQ6IERlY2VtYmVyIDE2LCAyMDE2IDM6MjggUE0KVG86IHJ2b25mbHVnZWxAZ21haWwuY29tCkNj
-OiBrZXJuZWwtaGFyZGVuaW5nQGxpc3RzLm9wZW53YWxsLmNvbTsgZWxlbmEucmVzaGV0b3ZhQGlu
-dGVsLmNvbTsgZGFuaWVsQGlvZ2VhcmJveC5uZXQKU3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVu
-aW5nXSBXb3JraW5nIG9uIGxpYi90ZXN0X2JwZi5jIHRlc3RzIGZvciBlQlBGIGNvbnN0YW50IGJs
-aW5kaW5nCgpPbiBGcmksIERlYyAxNiwgMjAxNiBhdCA5OjEzIEFNLCBTYW5kcmEgRXNjYW5kb3It
-TydLZWVmZQo8cnZvbmZsdWdlbEBnbWFpbC5jb20+IHdyb3RlOgo+IEknbSBpbnRlcmVzdGVkIGlu
-IHN0YXJ0aW5nIG9uIGEgYml0IG9mIGxpbnV4IGtlcm5lbCBkZXZlbG9wbWVudCwgYW5kIGFsc28K
-PiBjb250cmlidXRpbmcgdG8gc29tZXRoaW5nIHNlY3VyaXR5IHJlbGF0ZWQgZm9yIHRoZSBrZXJu
-ZWwuIEkgd2FzIGxvb2tpbmcgYXQKPiB0aGUgcHJvamVjdHMgbGlzdGVkIGluIHRoZSBUT0RPIG9m
-Cj4gaHR0cHM6Ly9rZXJuc2VjLm9yZy93aWtpL2luZGV4LnBocC9LZXJuZWxfU2VsZl9Qcm90ZWN0
-aW9uX1Byb2plY3QgYW5kICJXcml0ZQo+IGxpYi90ZXN0X2JwZi5jIHRlc3RzIGZvciBlQlBGIGNv
-bnN0YW50IGJsaW5kaW5nIiBjYXVnaHQgbXkgZXllLiBJcyB0aGlzCj4gc29tZXRoaW5nIHRoYXQg
-c3RpbGwgbmVlZHMgdG8gYmUgZG9uZT8gSWYgc28sIGlzIHRoZXJlIHNvbWVvbmUgc3BlY2lmaWMg
-dGhhdAo+IEkgY2FuIHJlYWNoIG91dCB0byBpbiBvcmRlciB0byBnZXQgc29tZSBndWlkYW5jZSBv
-biB3aGVyZSB0byBzdGFydD8KCkhpISBXZWxjb21lIHRvIHRoZSBmdW4uIDopCgpJJ3ZlIGFkZGVk
-IEVsZW5hIGFuZCBEYW5pZWwgdG8gQ0MsIHdobyBib3RoIHdvcmtlZCBvbiB0aGUgYmxpbmRpbmcu
-ClRoZSBnb2FsIHdvdWxkIGJlIHRvIGFkZCBzb21lIGtpbmQgb2YgdGVzdCB0aGF0IGluc2VydGVk
-IGNvbnN0YW50cyBpbgplQlBGIGluc3RydWN0aW9ucyBhbmQgdGhlbiB2ZXJpZmllZCB0aGV5IHdl
-cmUgZ29uZSBpbiB0aGUgcmVzdWx0aW5nCmVCUEYgSklUIGtlcm5lbCBjb2RlLiBVbnRpbCBub3cs
-IGl0J3Mgb25seSBiZWVuIGRvbmUgbWFudWFsbHksIGFuZAppdCdkIGJlIG5pY2UgdG8gaGF2ZSBh
-IHRlc3QgdGhhdCBjb3VsZCBzaG93IGlmIHRoZXJlIHdlcmUgcmVncmVzc2lvbnMKb3IgaWYgYW4g
-YXJjaGl0ZWN0dXJlIGRpZG4ndCBzdXBwb3J0IHRoZSBibGluZGluZyBpbiBpdHMgSklULgoKRm9y
-IHNvbWUgYmFja2dyb3VuZCBvbiB0aGUgYmxpbmRpbmcsIEkgd3JvdGUgYSBzaG9ydCBkZXNjcmlw
-dGlvbiBvZiBpdCBoZXJlOgpodHRwczovL291dGZsdXgubmV0L2Jsb2cvYXJjaGl2ZXMvMjAxNi8x
-MC8wMy9zZWN1cml0eS10aGluZ3MtaW4tbGludXgtdjQtNy8KCkxldCBtZSBrbm93IGlmIHRoYXQg
-aGVscHMgZ2V0IHlvdSB0byBhIHN0YXJ0aW5nIHBvaW50ISA6KQoKLUtlZXMKCi0tIApLZWVzIENv
-b2sKTmV4dXMgU2VjdXJpdHkK
+On Fri, Dec 16, 2016 at 11:47 AM, Sandra Escandor-O'Keefe
+<rvonflugel@gmail.com> wrote:
+> Excellent! Thanks for pointing to that write-up. So, what I can do is get to the point where I can manually perform the test to check inserted constants in
+> eBPF instructions to verify that they are gone in the resulting eBPF JIT kernel code - this looks like I will first need to run the PoC attack that Elena created. From there, I'll have a better understanding of what to test.
+>
+> Would you approach it this way, or would you do something different?
+
+That sounds like how I'd start, yes. IIUC, you'll need to modify the
+kernel so you can see the JIT in some way (this is, I think, what's
+needed in test_ebpf.c), but I haven't looked at it very closely.
+Daniel may have suggestions.
+
+> Sandra
+>
+> Original Message
+> From: keescook@chromium.org
+> Sent: December 16, 2016 3:28 PM
+> To: rvonflugel@gmail.com
+> Cc: kernel-hardening@lists.openwall.com; elena.reshetova@intel.com; daniel@iogearbox.net
+> Subject: Re: [kernel-hardening] Working on lib/test_bpf.c tests for eBPF constant blinding
+
+As a side-note on email conventions, I'd recommend in-line replies and
+quoting, which makes technical discussion much easier to follow (i.e.
+don't top-post, etc).
+
+-Kees
+
+> On Fri, Dec 16, 2016 at 9:13 AM, Sandra Escandor-O'Keefe
+> <rvonflugel@gmail.com> wrote:
+>> I'm interested in starting on a bit of linux kernel development, and also
+>> contributing to something security related for the kernel. I was looking at
+>> the projects listed in the TODO of
+>> https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project and "Write
+>> lib/test_bpf.c tests for eBPF constant blinding" caught my eye. Is this
+>> something that still needs to be done? If so, is there someone specific that
+>> I can reach out to in order to get some guidance on where to start?
+>
+> Hi! Welcome to the fun. :)
+>
+> I've added Elena and Daniel to CC, who both worked on the blinding.
+> The goal would be to add some kind of test that inserted constants in
+> eBPF instructions and then verified they were gone in the resulting
+> eBPF JIT kernel code. Until now, it's only been done manually, and
+> it'd be nice to have a test that could show if there were regressions
+> or if an architecture didn't support the blinding in its JIT.
+>
+> For some background on the blinding, I wrote a short description of it here:
+> https://outflux.net/blog/archives/2016/10/03/security-things-in-linux-v4-7/
+>
+> Let me know if that helps get you to a starting point! :)
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Nexus Security
+
+
+
+-- 
+Kees Cook
+Nexus Security
