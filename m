@@ -1,35 +1,22 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Fri, 16 Dec 2016 23:17:04 +0100
 MIME-Version: 1.0
-Message-ID: <585467E0.27237.2C09B8C1@pageexec.freemail.hu>
-In-reply-to: <20161216210659.GA85702@beast>
-References: <20161216210659.GA85702@beast>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH] latent_entropy: fix ARM build error on earlier gcc
-To: linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, Brad Spengler <spender@grsecurity.net>
+In-Reply-To: <20161216221352.26899.qmail@ns.sciencehorizons.net>
+References: <20161216204358.nlwifgcqnu6pitxs@thunk.org> <20161216221352.26899.qmail@ns.sciencehorizons.net>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 16 Dec 2016 23:18:48 +0100
+Message-ID: <CAHmME9oEhmqW3320Ch+Rczu_=CxQyUQXCGLnYjDm-CYbWugnSw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: George Spelvin <linux@sciencehorizons.net>
+Cc: Theodore Ts'o <tytso@mit.edu>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16 Dec 2016 at 13:06, Kees Cook wrote:
+On Fri, Dec 16, 2016 at 11:13 PM, George Spelvin
+<linux@sciencehorizons.net> wrote:
+> Remembering that on "real" machines it's full SipHash, then I'd say that
+> 64-bit security + rekeying seems reasonable.
 
-> This fixes build errors seen on gcc-4.9.3 or gcc-5.3.1 for an ARM:
-> 
-> arm-soc/init/initramfs.c: In function 'error':
-> arm-soc/init/initramfs.c:50:1: error: unrecognizable insn:
->  }
->  ^
-> (insn 26 25 27 5 (set (reg:SI 111 [ local_entropy.243 ])
->         (rotatert:SI (reg:SI 116 [ local_entropy.243 ])
->             (const_int -30 [0xffffffffffffffe2]))) -1
->      (nil))
-> 
-> Patch from PaX Team <pageexec@freemail.hu>
-> 
-> Reported-by: Arnd Bergmann <arnd@arndb.de>
-> Reported-by: Brad Spengler <spender@grsecurity.net>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-
-Cc: stable@vger.kernel.org perhaps?
+64-bit security for an RNG is not reasonable even with rekeying. No no
+no. Considering we already have a massive speed-up here with the
+secure version, there's zero reason to start weakening the security
+because we're trigger happy with our benchmarks. No no no.
