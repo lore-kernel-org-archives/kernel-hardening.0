@@ -1,55 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 16 Dec 2016 13:06:59 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20161216210659.GA85702@beast>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] latent_entropy: fix ARM build error on earlier gcc
-To: linux-kernel@vger.kernel.org
-Cc: Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com, Arnd Bergmann <arnd@arndb.de>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>
+In-Reply-To: <1481921067.1054.6.camel@gmail.com>
+References: <CAGiyFdfmiCMyHvAg=5sGh8KjBBrF0Wb4Qf=JLzJqUAx4yFSS3Q@mail.gmail.com>
+ <20161216034618.28276.qmail@ns.sciencehorizons.net> <CAGiyFdd6_LVzUUfFcaqMyub1c2WPvWUzAQDCH+Aza-_t6mvmXg@mail.gmail.com>
+ <CAHmME9pjoAsoct1sVDpFFuqaqutv9X7DGJ5OBQXRAS57KFimUA@mail.gmail.com>
+ <CALx6S351VFRZmEQphRQy6YtmZYPnOtTN7=XiNrJmhWJGv4HUBg@mail.gmail.com> <1481921067.1054.6.camel@gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 16 Dec 2016 22:09:14 +0100
+Message-ID: <CAHmME9rzHfKxJkU+3+Xg-Wh48nYkhq7bH55RQVCmTXSTgJ2_VA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add
+ cryptographically secure PRF
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, George Spelvin <linux@sciencehorizons.net>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Vegard Nossum <vegard.nossum@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This fixes build errors seen on gcc-4.9.3 or gcc-5.3.1 for an ARM:
+Hi Daniel,
 
-arm-soc/init/initramfs.c: In function 'error':
-arm-soc/init/initramfs.c:50:1: error: unrecognizable insn:
- }
- ^
-(insn 26 25 27 5 (set (reg:SI 111 [ local_entropy.243 ])
-        (rotatert:SI (reg:SI 116 [ local_entropy.243 ])
-            (const_int -30 [0xffffffffffffffe2]))) -1
-     (nil))
+On Fri, Dec 16, 2016 at 9:44 PM, Daniel Micay <danielmicay@gmail.com> wrote:
+> On Fri, 2016-12-16 at 11:47 -0800, Tom Herbert wrote:
+>>
+>> That's about 3x of jhash speed (7 nsecs). So that might closer
+>> to a more palatable replacement for jhash. Do we lose any security
+>> advantages with halfsiphash?
+>
+> Have you tested a lower round SipHash? Probably best to stick with the
+> usual construction for non-DoS mitigation, but why not try SipHash 1-3,
+> 1-2, etc. for DoS mitigation?
+>
+> Rust and Swift both went with SipHash 1-3 for hash tables.
 
-Patch from PaX Team <pageexec@freemail.hu>
+Maybe not a bad idea.
 
-Reported-by: Arnd Bergmann <arnd@arndb.de>
-Reported-by: Brad Spengler <spender@grsecurity.net>
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- scripts/gcc-plugins/latent_entropy_plugin.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+SipHash2-4 for MD5 replacement, as we've done so far. This is when we
+actually want things to be secure (and fast).
 
-diff --git a/scripts/gcc-plugins/latent_entropy_plugin.c b/scripts/gcc-plugins/latent_entropy_plugin.c
-index ff1939b804ae..eb1964084ccd 100644
---- a/scripts/gcc-plugins/latent_entropy_plugin.c
-+++ b/scripts/gcc-plugins/latent_entropy_plugin.c
-@@ -328,9 +328,9 @@ static enum tree_code get_op(tree *rhs)
- 			op = LROTATE_EXPR;
- 			/*
- 			 * This code limits the value of random_const to
--			 * the size of a wide int for the rotation
-+			 * the size of a long for the rotation
- 			 */
--			random_const &= HOST_BITS_PER_WIDE_INT - 1;
-+			random_const %= TYPE_PRECISION(long_unsigned_type_node);
- 			break;
- 		}
- 
--- 
-2.7.4
+And then HalfSipHash1-3 for certain jhash replacements. This is for
+when we're talking only about DoS or sort of just joking about
+security, and want things to be very competitive with jhash. (Of
+course for 64-bit we'd use SipHash1-3 instead of HalfSipHash for the
+speedup.)
 
+I need to think on this a bit more, but preliminarily, I guess this
+would be maybe okay...
 
--- 
-Kees Cook
-Nexus Security
+George, JP - what do you think?
+
+Jason
