@@ -1,55 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: David Laight <David.Laight@ACULAB.COM>
-Date: Fri, 16 Dec 2016 09:59:32 +0000
-Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0240E66@AcuExch.aculab.com>
+Date: Fri, 16 Dec 2016 10:39:35 +0000
+Message-ID: <063D6719AE5E284EB5DD2968C1650D6DB0240EFA@AcuExch.aculab.com>
 References: <20161215203003.31989-1-Jason@zx2c4.com>
- <20161215203003.31989-4-Jason@zx2c4.com>
-In-Reply-To: <20161215203003.31989-4-Jason@zx2c4.com>
+ <20161215203003.31989-3-Jason@zx2c4.com>
+In-Reply-To: <20161215203003.31989-3-Jason@zx2c4.com>
 Content-Type: text/plain; charset="Windows-1252"
 Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH v5 3/4] secure_seq: use SipHash in place of MD5
+Subject: [kernel-hardening] RE: [PATCH v5 2/4] siphash: add Nu{32,64} helpers
 To: "'Jason A. Donenfeld'" <Jason@zx2c4.com>, Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, George Spelvin <linux@sciencehorizons.net>, Vegard Nossum <vegard.nossum@gmail.com>, "ak@linux.intel.com" <ak@linux.intel.com>, "davem@davemloft.net" <davem@davemloft.net>, "luto@amacapital.net" <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Jason A. Donenfeld
 > Sent: 15 December 2016 20:30
-> This gives a clear speed and security improvement. Siphash is both
-> faster and is more solid crypto than the aging MD5.
->=20
-> Rather than manually filling MD5 buffers, for IPv6, we simply create
-> a layout by a simple anonymous struct, for which gcc generates
-> rather efficient code. For IPv4, we pass the values directly to the
-> short input convenience functions.
+> These restore parity with the jhash interface by providing high
+> performance helpers for common input sizes.
 ...
-> diff --git a/net/core/secure_seq.c b/net/core/secure_seq.c
-> index 88a8e429fc3e..c80583bf3213 100644
-...
-> +	const struct {
-> +		struct in6_addr saddr;
-> +		struct in6_addr daddr;
-> +		__be16 sport;
-> +		__be16 dport;
-> +		u32 padding;
-> +	} __aligned(SIPHASH_ALIGNMENT) combined =3D {
-> +		.saddr =3D *(struct in6_addr *)saddr,
-> +		.daddr =3D *(struct in6_addr *)daddr,
-> +		.sport =3D sport,
-> +		.dport =3D dport
-> +	};
+> +#define PREAMBLE(len) \
+> +	u64 v0 =3D 0x736f6d6570736575ULL; \
+> +	u64 v1 =3D 0x646f72616e646f6dULL; \
+> +	u64 v2 =3D 0x6c7967656e657261ULL; \
+> +	u64 v3 =3D 0x7465646279746573ULL; \
+> +	u64 b =3D ((u64)len) << 56; \
+> +	v3 ^=3D key[1]; \
+> +	v2 ^=3D key[0]; \
+> +	v1 ^=3D key[1]; \
+> +	v0 ^=3D key[0];
 
-I think you should explicitly initialise the 'padding'.
-It can do no harm and makes it obvious that it is necessary.
+Isn't that equivalent to:
+	v0 =3D key[0];
+	v1 =3D key[1];
+	v2 =3D key[0] ^ (0x736f6d6570736575ULL ^ 0x646f72616e646f6dULL);
+	v3 =3D key[1] ^ (0x646f72616e646f6dULL ^ 0x7465646279746573ULL);
 
-You are still putting over-aligned data on stack.
-You only need to align it to the alignment of u64 (not the size of u64).
-If an on-stack item has a stronger alignment requirement than the stack
-the gcc has to generate two stack frames for the function.
-
-If you assign to each field (instead of using initialisers) then you
-can get the alignment by making the first member an anonymous union
-of in6_addr and u64.
-
-Oh - and wait a bit longer between revisions.
+Those constants also look like ASCII strings.
+What cryptographic analysis has been done on the values?
 
 	David
