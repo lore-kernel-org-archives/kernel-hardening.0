@@ -1,55 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 16 Dec 2016 17:41:33 -0500
-Message-ID: <20161216224133.27460.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <CAHmME9qPx3WUHF3__3wNOXr-AUti4WPO1qDiFus3Zr133FyV1g@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
-To: Jason@zx2c4.com, kernel-hardening@lists.openwall.com
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, hannes@stressinduktion.org, jeanphilippe.aumasson@gmail.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux@sciencehorizons.net, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Fri, 16 Dec 2016 23:45:42 +0100
+MIME-Version: 1.0
+Message-ID: <58546E96.16770.2C23F1B4@pageexec.freemail.hu>
+In-reply-to: <1481925984-98605-2-git-send-email-keescook@chromium.org>
+References: <1481925984-98605-1-git-send-email-keescook@chromium.org>, <1481925984-98605-2-git-send-email-keescook@chromium.org>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: [kernel-hardening] Re: [PATCH v4 1/4] gcc-plugins: Add the initify gcc plugin
+To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
+Cc: Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, spender@grsecurity.net, mmarek@suse.com, yamada.masahiro@socionext.com, linux-kbuild@vger.kernel.org, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, sam@ravnborg.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-An idea I had which mght be useful:
+On 16 Dec 2016 at 14:06, Kees Cook wrote:
 
-You could perhaps save two rounds in siphash_*u64.
+> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
+> index 950fd2e64bb7..369bfb471e58 100644
+> --- a/scripts/gcc-plugins/gcc-common.h
+> +++ b/scripts/gcc-plugins/gcc-common.h
+> @@ -287,6 +287,26 @@ static inline struct cgraph_node *cgraph_next_function_with_gimple_body(struct c
+>   return NULL;
+>  }
+> 
+> +static inline bool cgraph_for_node_and_aliases(cgraph_node_ptr node,
+> +				bool (*callback)(cgraph_node_ptr, void *),
+> +				void *data, bool include_overwritable)
+> +{
+> +	cgraph_node_ptr alias;
+> +
+> +	if (callback(node, data))
+> +		return true;
+> +
+> +	for (alias = node->same_body; alias; alias = alias->next) {
+> +		if (include_overwritable ||
+> +			cgraph_function_body_availability(alias) > AVAIL_OVERWRITABLE)
+> +			if (cgraph_for_node_and_aliases(alias, callback, data,
+> +							include_overwritable))
+> +				return true;
+> +	}
+> +
+> +	return false;
+> +}
+> +
+>  #define FOR_EACH_FUNCTION_WITH_GIMPLE_BODY(node) \
+>   for ((node) = cgraph_first_function_with_gimple_body(); (node); \
+>    (node) = cgraph_next_function_with_gimple_body(node))
 
-The final word with the length (called "b" in your implementation)
-only needs to be there if the input is variable-sized.
+this hunk above and...
 
-If every use of a given key is of a fixed-size input, you don't need
-a length suffix.  When the input is an even number of words, that can
-save you two rounds.
+> @@ -674,6 +707,14 @@ static inline cgraph_node_ptr cgraph_alias_target(cgraph_node_ptr node)
+>   return node->get_alias_target();
+>  }
+> 
+> +static inline bool cgraph_for_node_and_aliases(cgraph_node_ptr node,
+> +				bool (*callback)(cgraph_node_ptr, void *),
+> +				void *data, bool include_overwritable)
+> +{
+> +	return node->call_for_symbol_thunks_and_aliases(callback, data,
+> +							include_overwritable);
+> +}
+> +
+>  static inline struct cgraph_node_hook_list *cgraph_add_function_insertion_hook(cgraph_node_hook hook, void *data)
+>  {
+>   return symtab->add_cgraph_insertion_hook(hook, data);
 
-This requires an audit of callers (e.g. you have to use different
-keys for IPv4 and IPv6 ISNs), but can save time.
-
-(This is crypto 101; search "MD-strengthening" or see the remark on
-p. 101 on Damgaard's 1989 paper "A design principle for hash functions" at
-http://saluc.engr.uconn.edu/refs/algorithms/hashalg/damgard89adesign.pdf
-but I'm sure that Ted, Jean-Philippe, and/or DJB will confirm if you'd
-like.)
-
-Jason A. Donenfeld wrote:
-> Oh, okay, that is exactly what I thought was going on. I just thought
-> you were implying that jiffies could be moved inside the hash, which
-> then confused my understanding of how things should be. In any case,
-> thanks for the explanation.
-
-No, the rekeying procedure is cleverer.
-
-The thing is, all that matters is that the ISN increments fast enough,
-but not wrap too soon.
-
-It *is* permitted to change the random base, as long as it only
-increases, and slower than the timestamp does.
-
-So what you do is every few minutes, you increment the high 4 bits of the
-random base and change the key used to generate the low 28 bits.
-
-The base used for any particular host might change from 0x10000000
-to 0x2fffffff, or from 0x1fffffff to 0x20000000, but either way, it's
-increasing, and not too fast.
-
-This has the downside that an attacker can see 4 bits of the base,
-so only needs to send send 2^28 = 256 MB to flood the connection,
-but the upside that the key used to generate the low bits changes
-faster than it can be broken.
+...this one aren't needed by any plugins upstream so maybe introduce them when
+the needed arises? and the whole patch against gcc-common.h would also conflict
+with the version i maintain and that you said you'd sync to so there's a decision
+to be made regarding how this will is to be maintained...
