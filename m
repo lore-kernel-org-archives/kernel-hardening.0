@@ -1,84 +1,127 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <58544A55.7080301@iogearbox.net>
-Date: Fri, 16 Dec 2016 21:11:01 +0100
-From: Daniel Borkmann <daniel@iogearbox.net>
-MIME-Version: 1.0
-References: <CAGXu5jKW+fo38ZqNt8u8oW4igY6uRpyfLvU_wD9Aq2zzP0ZVig@mail.gmail.com> <585444eb.5d29c80a.fff37.d341@mx.google.com> <CAGXu5jJ=SzfLsLm=CS8FniYqRAntj+_1MH4g1=isHQ1t3rcb4Q@mail.gmail.com>
-In-Reply-To: <CAGXu5jJ=SzfLsLm=CS8FniYqRAntj+_1MH4g1=isHQ1t3rcb4Q@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Working on lib/test_bpf.c tests for eBPF constant
- blinding
-To: Kees Cook <keescook@chromium.org>, Sandra Escandor-O'Keefe <rvonflugel@gmail.com>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, alexei.starovoitov@gmail.com
+Date: 16 Dec 2016 15:17:39 -0500
+Message-ID: <20161216201739.24567.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <CAHmME9pe39s5FWxfKNiRKkHnEO-9v2yLcEQc8rnMC89P6roTmA@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: Jason@zx2c4.com, linux@sciencehorizons.net
+Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, hannes@stressinduktion.org, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 12/16/2016 09:02 PM, Kees Cook wrote:
-> On Fri, Dec 16, 2016 at 11:47 AM, Sandra Escandor-O'Keefe
-> <rvonflugel@gmail.com> wrote:
->> Excellent! Thanks for pointing to that write-up. So, what I can do is get to the point where I can manually perform the test to check inserted constants in
->> eBPF instructions to verify that they are gone in the resulting eBPF JIT kernel code - this looks like I will first need to run the PoC attack that Elena created. From there, I'll have a better understanding of what to test.
->>
->> Would you approach it this way, or would you do something different?
->
-> That sounds like how I'd start, yes. IIUC, you'll need to modify the
-> kernel so you can see the JIT in some way (this is, I think, what's
-> needed in test_ebpf.c), but I haven't looked at it very closely.
-> Daniel may have suggestions.
+>> On a 64-bit machine, 64-bit SipHash is *always* faster than 32-bit, and
+>> should be used always.  Don't even compile the 32-bit code, to prevent
+>> anyone accidentally using it, and make hsiphash an alias for siphash.
 
-If you're interested, you could ideally write a test suite for it under
-existing tools/testing/selftests/bpf/. If you enable JIT in the mode
-net.core.bpf_jit_enable=2, then you'll get the debug output dump in klog
-and under tools/net/ you have bpf_jit_disasm tool that you could use to
-examine it. This could likely be automated in a tool for various test
-inputs, but probably needs to have some arch specific code to make sense
-out of it. There's also lib/test_bpf.c, if it's not too much complexity,
-something could also be placed there for checking the image directly.
+> Fascinating! Okay. So I'll alias hsiphash to siphash on 64-bit then. I
+> like this arrangement.
 
->> Sandra
->>
->> Original Message
->> From: keescook@chromium.org
->> Sent: December 16, 2016 3:28 PM
->> To: rvonflugel@gmail.com
->> Cc: kernel-hardening@lists.openwall.com; elena.reshetova@intel.com; daniel@iogearbox.net
->> Subject: Re: [kernel-hardening] Working on lib/test_bpf.c tests for eBPF constant blinding
+This is a basic assumption I make in the security analysis below:
+on most machines, it's 128-bit-key SipHash everywhere and we can
+consider security solved.
+
+Our analysis *only* has to consider 32-bit machines.  My big concern
+is home routers, with IoT appliances coming second.  The routers have
+severe hardware cost constraints (so limited CPU power), but see a lot
+of traffic and need to process (NAT) it.
+
+> That's a nice analysis. Might one conclude from that that hsiphash is
+> not useful for our purposes? Or does it still remain useful for
+> network facing code?
+
+I think for attacks where the threat is a DoS, it's usable.  The point
+is you only have to raise the cost to equal that of a packet flood.
+(Just like in electronic warfare, the best you can possibly do is force
+the enemy to use broadband jamming.)
+
+Hash collision attacks just aren't that powerful.  The original PoC
+was against an application that implemented a hard limit on hash chain
+length as a DoS defense, which the attack then exploited to turn it into
+a hard DoS.
+
+>> Let me consider your second example above, "secure against local users".
+>> I should dig through your patchset and find the details, but what exactly
+>> are the consequences of such an attack?  Hasn't a local user already
+>> got much better ways to DoS the system?
+
+> For example, an unpriv'd user putting lots of entries in one hash
+> bucket for a shared resource that's used by root, like filesystems or
+> other lookup tables. If he can cause root to use more of root's cpu
+> schedule budget than otherwise in a directed way, then that's a bad
+> DoS.
+
+This issue was recently discussed when we redesigned the dcache hash.
+Even a successful attack doesn't slow things down all *that* much.
+
+Before you overkill every hash table in the kernel, think about whether
+it's a bigger problem than the dcache.  (Hint: it's probably not.)
+There's no point armor-plating the side door when the front door was
+just upgraded from screen to wood.
+
+>> These days, 32-bit CPUs are for embedded applications: network appliances,
+>> TVs, etc.  That means basically single-user.  Even phones are 64 bit.
+>> Is this really a threat that needs to be defended against?
+
+> I interpret this to indicate all the more reason to alias hsiphash to
+> siphash on 64-bit, and then the problem space collapses in a clear
+> way.
+
+Yes, exactly.  
+
+> Right. Hence the need for always using full siphash and not hsiphash
+> for sequence numbers, per my earlier email to David.
 >
-> As a side-note on email conventions, I'd recommend in-line replies and
-> quoting, which makes technical discussion much easier to follow (i.e.
-> don't top-post, etc).
+>> I wish we could get away with 64-bit security, but given that the
+>> modern internet involves attacks from NSA/Spetssvyaz/3PLA, I agree
+>> it's just not enough.
 >
-> -Kees
->
->> On Fri, Dec 16, 2016 at 9:13 AM, Sandra Escandor-O'Keefe
->> <rvonflugel@gmail.com> wrote:
->>> I'm interested in starting on a bit of linux kernel development, and also
->>> contributing to something security related for the kernel. I was looking at
->>> the projects listed in the TODO of
->>> https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project and "Write
->>> lib/test_bpf.c tests for eBPF constant blinding" caught my eye. Is this
->>> something that still needs to be done? If so, is there someone specific that
->>> I can reach out to in order to get some guidance on where to start?
->>
->> Hi! Welcome to the fun. :)
->>
->> I've added Elena and Daniel to CC, who both worked on the blinding.
->> The goal would be to add some kind of test that inserted constants in
->> eBPF instructions and then verified they were gone in the resulting
->> eBPF JIT kernel code. Until now, it's only been done manually, and
->> it'd be nice to have a test that could show if there were regressions
->> or if an architecture didn't support the blinding in its JIT.
->>
->> For some background on the blinding, I wrote a short description of it here:
->> https://outflux.net/blog/archives/2016/10/03/security-things-in-linux-v4-7/
->>
->> Let me know if that helps get you to a starting point! :)
->>
->> -Kees
->>
->> --
->> Kees Cook
->> Nexus Security
->
->
->
+> I take this comment to be relavent for the sequence number case.
+
+Yes.
+
+> For hashtables and hashtable flooding, is it still your opinion that
+> we will benefit from hsiphash? Or is this final conclusion a rejection
+> of hsiphash for that too? We're talking about two different use cases,
+> and your email kind of interleaved both into your analysis, so I'm not
+> certain so to precisely what your conclusion is for each use case. Can
+> you clear up the ambiguity?
+
+My (speaking enerally; I should walk through every hash table you've
+converted) opinion is that:
+
+- Hash tables, even network-facing ones, can all use hsiphash as long
+  as an attacker can only see collisions, i.e. ((H(x) ^ H(y)) & bits) ==
+  0, and the consequences of a successful attack is only more collisions
+  (timing).  While the attack is only 2x the cost (two hashes rather than
+  one to test a key), the knowledge of the collision is statistical,
+  especially for network attackers, which raises the cost of guessing
+  beyond an even more brute-force attack.
+- When the hash value directly visible (e.g. included in a network
+  packet), full SipHash should be the default.
+- Syncookies *could* use hsiphash, especially as there are
+  two keys in there.  Not sure if we need the performance.
+- For TCP ISNs, I'd prefer to use full SipHash.  I know this is
+  a very hot path, and if that's a performance bottleneck,
+  we can work harder on it.
+
+In particular, TCP ISNs *used* to rotate the key periodically,
+limiting the time available to an attacker to perform an
+attack before the secret goes stale and is useless.  commit
+6e5714eaf77d79ae1c8b47e3e040ff5411b717ec upgraded to md5 and dropped
+the key rotation.
+
+If 2x hsiphash is faster than siphash, we could use a double-hashing
+system like syncookies.  One 32-bit hash with a permanent key, summed
+with a k-bit counter and a (32-k)-bit hash, where the key is rotated
+(and the counter incremented) periodically.
+
+The requirement is that the increment rate of the counter hash doesn't
+shorten the sequence number wraparound too much.  The old code used an
+8-bit counter and 24-bit hash, with the counter bumped every 5 minutes.
+
+Current code uses a 64 ns tick for the ISN, so it counts 2^24 per second.
+(32 bits wraps every 4.6 minutes.)  A 4-bit counter and 28-bit hash
+(or even 3+29) would work as long as the key is regenerated no more
+than once per minute.  (Just using the 4.6-minute ISN wrap time is the
+obvious simple implementation.)
+
+(Of course, I defer to DaveM's judgement on all network-related issues.)
