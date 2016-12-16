@@ -1,57 +1,44 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 16 Dec 2016 15:10:45 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20161216151045.8b05123396aec5598825f4c3@gmail.com>
-In-Reply-To: <20161216090033.2007806-1-arnd@arndb.de>
-References: <20161216090033.2007806-1-arnd@arndb.de>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugin: include memmodel.h and tree_vrp.h for gcc-7
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Kees Cook <keescook@chromium.org>, Kugan <kugan.vivekanandarajah@linaro.org>, stable@vger.kernel.org, Michal Marek <mmarek@suse.com>, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, "pageexec@freemail.hu" <pageexec@freemail.hu>
+Date: 16 Dec 2016 10:44:33 -0500
+Message-ID: <20161216154433.19337.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB0240EFA@AcuExch.aculab.com>
+Subject: [kernel-hardening] RE: [PATCH v5 2/4] siphash: add Nu{32,64} helpers
+To: ak@linux.intel.com, davem@davemloft.net, David.Laight@ACULAB.COM, ebiggers3@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux@sciencehorizons.net, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 16 Dec 2016 10:00:22 +0100
-Arnd Bergmann <arnd@arndb.de> wrote:
+Jason A. Donenfeld wrote:
+> Isn't that equivalent to:
+>	v0 = key[0];
+>	v1 = key[1];
+>	v2 = key[0] ^ (0x736f6d6570736575ULL ^ 0x646f72616e646f6dULL);
+>	v3 = key[1] ^ (0x646f72616e646f6dULL ^ 0x7465646279746573ULL);
 
-> Cc: stable@vger.kernel.org
-> Suggested-by: Kugan <kugan.vivekanandarajah@linaro.org>
-> Signed-off-by: Arnd Bergmann <arnd@arndb.de>
-> ---
->  scripts/gcc-plugins/gcc-common.h | 6 ++++++
->  1 file changed, 6 insertions(+)
-> 
-> diff --git a/scripts/gcc-plugins/gcc-common.h b/scripts/gcc-plugins/gcc-common.h
-> index 950fd2e64bb7..cb4a9518b58a 100644
-> --- a/scripts/gcc-plugins/gcc-common.h
-> +++ b/scripts/gcc-plugins/gcc-common.h
-> @@ -18,6 +18,9 @@
->  
->  #include "tree-inline.h"
->  #include "version.h"
-> +#if BUILDING_GCC_VERSION >= 7000
-> +#include "memmodel.h"
-> +#endif
->  #include "rtl.h"
->  #include "tm_p.h"
->  #include "flags.h"
-> @@ -66,6 +69,9 @@
->  #include "tree-flow.h"
->  #else
->  #include "tree-cfgcleanup.h"
-> +#if BUILDING_GCC_VERSION >= 7000
-> +#include "tree-vrp.h"
-> +#endif
->  #include "tree-ssa-operands.h"
->  #include "tree-into-ssa.h"
->  #endif
- 
-Hi,
+(Pre-XORing key[] with the first two constants which, if the constants
+are random in the first place, can be a no-op.)  Other than the typo
+in the v2 line, yes.  If they key is non-public, then you can xor an
+arbitrary constant in to both halves to slightly speed up the startup.
 
-Could you please use the upstream gcc-common.h? You can find it here:
-https://www.grsecurity.net/~paxguy1/gcc-common.h
+(Nits: There's a typo in the v2 line, you don't need to parenthesize
+associative operators like xor, and the "ull" suffix is redundant here.)
 
-Thanks
--- 
-Emese
+> Those constants also look like ASCII strings.
+
+They are.  The ASCII is "somepseudorandomlygeneratedbytes".
+
+> What cryptographic analysis has been done on the values?
+
+They're "nothing up my sleeve numbers".
+
+They're arbitrary numbers, and almost any other values would do exactly
+as well.  The main properties are:
+
+1) They're different (particulatly v0 != v2 and v1 != v3), and
+2) Neither they, nor their xor, is rotationally symmetric like 0x55555555.
+   (Because SipHash is mostly rotationally symmetric, broken only by the
+   interruption of the carry chain at the msbit, it helps slightly
+   to break this up at the beginning.)
+
+Those exact values only matter for portability.  If you don't need anyone
+else to be able to compute matching outputs, then you could use any other
+convenient constants (like the MD5 round constants).
