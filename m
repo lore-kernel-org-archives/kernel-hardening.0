@@ -1,43 +1,33 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <585467E0.27237.2C09B8C1@pageexec.freemail.hu>
-References: <20161216210659.GA85702@beast> <585467E0.27237.2C09B8C1@pageexec.freemail.hu>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 16 Dec 2016 14:19:51 -0800
-Message-ID: <CAGXu5jKtgY7DzUOBeUvuzgewE3x7+AntMBdRmRZnJgODhNOfnA@mail.gmail.com>
+In-Reply-To: <CALCETrX9v=Uwd1zZub=QpD73Lq0LM67NEi1qwqRUjtD5U1bHYw@mail.gmail.com>
+References: <CAHmME9rbKi3O1SS89LRMEUeMdKyrdutXAfjb9QmW3KNoCuE-wg@mail.gmail.com>
+ <CALCETrX9v=Uwd1zZub=QpD73Lq0LM67NEi1qwqRUjtD5U1bHYw@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 16 Dec 2016 23:23:59 +0100
+Message-ID: <CAHmME9pip1w3fYKKZ==RUYss+GZmQ1w3kjT4Lgvkxi_=SyK+wg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] latent_entropy: fix ARM build error on earlier gcc
-To: PaX Team <pageexec@freemail.hu>
-Cc: LKML <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Brad Spengler <spender@grsecurity.net>
+Subject: [kernel-hardening] Re: [PATCH v6 3/5] random: use SipHash in place of MD5
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, George Spelvin <linux@sciencehorizons.net>, Vegard Nossum <vegard.nossum@gmail.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 16, 2016 at 2:17 PM, PaX Team <pageexec@freemail.hu> wrote:
-> On 16 Dec 2016 at 13:06, Kees Cook wrote:
+Hi Andy,
+
+> Agreed.  A simpler contruction would be:
 >
->> This fixes build errors seen on gcc-4.9.3 or gcc-5.3.1 for an ARM:
->>
->> arm-soc/init/initramfs.c: In function 'error':
->> arm-soc/init/initramfs.c:50:1: error: unrecognizable insn:
->>  }
->>  ^
->> (insn 26 25 27 5 (set (reg:SI 111 [ local_entropy.243 ])
->>         (rotatert:SI (reg:SI 116 [ local_entropy.243 ])
->>             (const_int -30 [0xffffffffffffffe2]))) -1
->>      (nil))
->>
->> Patch from PaX Team <pageexec@freemail.hu>
->>
->> Reported-by: Arnd Bergmann <arnd@arndb.de>
->> Reported-by: Brad Spengler <spender@grsecurity.net>
->> Signed-off-by: Kees Cook <keescook@chromium.org>
+> chaining++;
+> output = H(chaining, secret);
 >
-> Cc: stable@vger.kernel.org perhaps?
+> And this looks a whole lot like Ted's ChaCha20 construction.
 
-Ah yes, good catch.
+In that simpler construction with counter-based secret rekeying and in
+Ted's ChaCha20 construction, the issue is that every X hits, there's a
+call to get_random_bytes, which has variable performance and entropy
+issues. Doing it my way with it being time based, in the event that
+somebody runs ` :(){ :|:& };:`, system performance doesn't suffer
+because ASLR is making repeated calls to get_random_bytes every 128 or
+so process creations. In the time based way, the system performance
+will not suffer.
 
--Kees
-
--- 
-Kees Cook
-Nexus Security
+Jason
