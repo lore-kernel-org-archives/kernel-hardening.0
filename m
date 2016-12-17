@@ -1,371 +1,125 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 17 Dec 2016 10:21:22 -0500
-Message-ID: <20161217152122.19677.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <CALx6S351VFRZmEQphRQy6YtmZYPnOtTN7=XiNrJmhWJGv4HUBg@mail.gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <20161215203003.31989-2-Jason@zx2c4.com>
+References: <20161215203003.31989-1-Jason@zx2c4.com> <20161215203003.31989-2-Jason@zx2c4.com>
+From: Jeffrey Walton <noloader@gmail.com>
+Date: Sat, 17 Dec 2016 09:55:31 -0500
+Message-ID: <CAH8yC8nE5CLfbv8gCRCeiNW3JLCAB3062-6pNO8mEXJYcsFUsw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add cryptographically secure PRF
-To: tom@herbertland.com
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux@sciencehorizons.net, luto@amacapital.net, netdev@vger.kernel.org, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, George Spelvin <linux@sciencehorizons.net>, Vegard Nossum <vegard.nossum@gmail.com>, ak@linux.intel.com, davem@davemloft.net, luto@amacapital.net, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To follow up on my comments that your benchmark results were peculiar,
-here's my benchmark code.
+> diff --git a/lib/test_siphash.c b/lib/test_siphash.c
+> new file mode 100644
+> index 000000000000..93549e4e22c5
+> --- /dev/null
+> +++ b/lib/test_siphash.c
+> @@ -0,0 +1,83 @@
+> +/* Test cases for siphash.c
+> + *
+> + * Copyright (C) 2016 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+> + *
+> + * This file is provided under a dual BSD/GPLv2 license.
+> + *
+> + * SipHash: a fast short-input PRF
+> + * https://131002.net/siphash/
+> + *
+> + * This implementation is specifically for SipHash2-4.
+> + */
+> +
+> +#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+> +
+> +#include <linux/siphash.h>
+> +#include <linux/kernel.h>
+> +#include <linux/string.h>
+> +#include <linux/errno.h>
+> +#include <linux/module.h>
+> +
+> +/* Test vectors taken from official reference source available at:
+> + *     https://131002.net/siphash/siphash24.c
+> + */
+> +static const u64 test_vectors[64] = {
+> +       0x726fdb47dd0e0e31ULL, 0x74f839c593dc67fdULL, 0x0d6c8009d9a94f5aULL,
+> +       0x85676696d7fb7e2dULL, 0xcf2794e0277187b7ULL, 0x18765564cd99a68dULL,
+> +       0xcbc9466e58fee3ceULL, 0xab0200f58b01d137ULL, 0x93f5f5799a932462ULL,
+> +       0x9e0082df0ba9e4b0ULL, 0x7a5dbbc594ddb9f3ULL, 0xf4b32f46226bada7ULL,
+> +       0x751e8fbc860ee5fbULL, 0x14ea5627c0843d90ULL, 0xf723ca908e7af2eeULL,
+> +       0xa129ca6149be45e5ULL, 0x3f2acc7f57c29bdbULL, 0x699ae9f52cbe4794ULL,
+> +       0x4bc1b3f0968dd39cULL, 0xbb6dc91da77961bdULL, 0xbed65cf21aa2ee98ULL,
+> +       0xd0f2cbb02e3b67c7ULL, 0x93536795e3a33e88ULL, 0xa80c038ccd5ccec8ULL,
+> +       0xb8ad50c6f649af94ULL, 0xbce192de8a85b8eaULL, 0x17d835b85bbb15f3ULL,
+> +       0x2f2e6163076bcfadULL, 0xde4daaaca71dc9a5ULL, 0xa6a2506687956571ULL,
+> +       0xad87a3535c49ef28ULL, 0x32d892fad841c342ULL, 0x7127512f72f27cceULL,
+> +       0xa7f32346f95978e3ULL, 0x12e0b01abb051238ULL, 0x15e034d40fa197aeULL,
+> +       0x314dffbe0815a3b4ULL, 0x027990f029623981ULL, 0xcadcd4e59ef40c4dULL,
+> +       0x9abfd8766a33735cULL, 0x0e3ea96b5304a7d0ULL, 0xad0c42d6fc585992ULL,
+> +       0x187306c89bc215a9ULL, 0xd4a60abcf3792b95ULL, 0xf935451de4f21df2ULL,
+> +       0xa9538f0419755787ULL, 0xdb9acddff56ca510ULL, 0xd06c98cd5c0975ebULL,
+> +       0xe612a3cb9ecba951ULL, 0xc766e62cfcadaf96ULL, 0xee64435a9752fe72ULL,
+> +       0xa192d576b245165aULL, 0x0a8787bf8ecb74b2ULL, 0x81b3e73d20b49b6fULL,
+> +       0x7fa8220ba3b2eceaULL, 0x245731c13ca42499ULL, 0xb78dbfaf3a8d83bdULL,
+> +       0xea1ad565322a1a0bULL, 0x60e61c23a3795013ULL, 0x6606d7e446282b93ULL,
+> +       0x6ca4ecb15c5f91e1ULL, 0x9f626da15c9625f3ULL, 0xe51b38608ef25f57ULL,
+> +       0x958a324ceb064572ULL
+> +};
+> +static const siphash_key_t test_key =
+> +       { 0x0706050403020100ULL , 0x0f0e0d0c0b0a0908ULL };
+> +
+> +static int __init siphash_test_init(void)
+> +{
+> +       u8 in[64] __aligned(SIPHASH_ALIGNMENT);
+> +       u8 in_unaligned[65];
+> +       u8 i;
+> +       int ret = 0;
+> +
+> +       for (i = 0; i < 64; ++i) {
+> +               in[i] = i;
+> +               in_unaligned[i + 1] = i;
+> +               if (siphash(in, i, test_key) != test_vectors[i]) {
+> +                       pr_info("self-test aligned %u: FAIL\n", i + 1);
+> +                       ret = -EINVAL;
+> +               }
+> +               if (siphash_unaligned(in_unaligned + 1, i, test_key) != test_vectors[i]) {
+> +                       pr_info("self-test unaligned %u: FAIL\n", i + 1);
+> +                       ret = -EINVAL;
+> +               }
+> +       }
+> +       if (!ret)
+> +               pr_info("self-tests: pass\n");
+> +       return ret;
+> +}
+> +
+> +static void __exit siphash_test_exit(void)
+> +{
+> +}
+> +
+> +module_init(siphash_test_init);
+> +module_exit(siphash_test_exit);
+> +
+> +MODULE_AUTHOR("Jason A. Donenfeld <Jason@zx2c4.com>");
+> +MODULE_LICENSE("Dual BSD/GPL");
+> --
+> 2.11.0
+>
 
-It just computes the hash of all n*(n+1)/2 possible non-empty substrings
-of a buffer of n (called "max" below) bytes.  "cpb" is "cycles per byte".
+I believe the output of SipHash depends upon endianness. Folks who
+request a digest through the af_alg interface will likely expect a
+byte array.
 
-(The average length is (n+2)/3, c.f. https://oeis.org/A000292)
+I think that means on little endian machines, values like element 0
+must be reversed byte reversed:
 
-On x86-32, HSipHash is asymptotically twice the speed of SipHash,
-rising to 2.5x for short strings:
+    0x726fdb47dd0e0e31ULL => 31,0e,0e,dd,47,db,6f,72
 
-SipHash/HSipHash benchmark, sizeof(long) = 4
- SipHash: max=   4 cycles=     10495 cpb=524.7500 (sum=47a4f5554869fa97)
-HSipHash: max=   4 cycles=      3400 cpb=170.0000 (sum=146a863e)
- SipHash: max=   8 cycles=     24468 cpb=203.9000 (sum=21c41a86355affcc)
-HSipHash: max=   8 cycles=      9237 cpb= 76.9750 (sum=d3b5e0cd)
- SipHash: max=  16 cycles=     94622 cpb=115.9583 (sum=26d816b72721e48f)
-HSipHash: max=  16 cycles=     34499 cpb= 42.2782 (sum=16bb7475)
- SipHash: max=  32 cycles=    418767 cpb= 69.9811 (sum=dd5a97694b8a832d)
-HSipHash: max=  32 cycles=    156695 cpb= 26.1857 (sum=eed00fcb)
- SipHash: max=  64 cycles=   2119152 cpb= 46.3101 (sum=a2a725aecc09ed00)
-HSipHash: max=  64 cycles=   1008678 cpb= 22.0428 (sum=99b9f4f)
- SipHash: max= 128 cycles=  12728659 cpb= 35.5788 (sum=420878cd20272817)
-HSipHash: max= 128 cycles=   5452931 cpb= 15.2419 (sum=f1f4ad18)
- SipHash: max= 256 cycles=  38931946 cpb= 13.7615 (sum=e05dfb28b90dfd98)
-HSipHash: max= 256 cycles=  13807312 cpb=  4.8805 (sum=ceeafcc1)
- SipHash: max= 512 cycles= 205537380 cpb=  9.1346 (sum=7d129d4de145fbea)
-HSipHash: max= 512 cycles= 103420960 cpb=  4.5963 (sum=7f15a313)
- SipHash: max=1024 cycles=1540259472 cpb=  8.5817 (sum=cca7cbdc778ca8af)
-HSipHash: max=1024 cycles= 796090824 cpb=  4.4355 (sum=d8f3374f)
+If I am not mistaken, that value (and other tv's) are returned here:
 
-On x86-64, SipHash is consistently faster, asymptotically approaching 2x
-for long strings:
+    return (v0 ^ v1) ^ (v2 ^ v3);
 
-SipHash/HSipHash benchmark, sizeof(long) = 8
- SipHash: max=   4 cycles=      2642 cpb=132.1000 (sum=47a4f5554869fa97)
-HSipHash: max=   4 cycles=      2498 cpb=124.9000 (sum=146a863e)
- SipHash: max=   8 cycles=      5270 cpb= 43.9167 (sum=21c41a86355affcc)
-HSipHash: max=   8 cycles=      7140 cpb= 59.5000 (sum=d3b5e0cd)
- SipHash: max=  16 cycles=     19950 cpb= 24.4485 (sum=26d816b72721e48f)
-HSipHash: max=  16 cycles=     23546 cpb= 28.8554 (sum=16bb7475)
- SipHash: max=  32 cycles=     80188 cpb= 13.4004 (sum=dd5a97694b8a832d)
-HSipHash: max=  32 cycles=    101218 cpb= 16.9148 (sum=eed00fcb)
- SipHash: max=  64 cycles=    373286 cpb=  8.1575 (sum=a2a725aecc09ed00)
-HSipHash: max=  64 cycles=    535568 cpb= 11.7038 (sum=99b9f4f)
- SipHash: max= 128 cycles=   2075224 cpb=  5.8006 (sum=420878cd20272817)
-HSipHash: max= 128 cycles=   3336820 cpb=  9.3270 (sum=f1f4ad18)
- SipHash: max= 256 cycles=  14276278 cpb=  5.0463 (sum=e05dfb28b90dfd98)
-HSipHash: max= 256 cycles=  28847880 cpb= 10.1970 (sum=ceeafcc1)
- SipHash: max= 512 cycles=  50135180 cpb=  2.2281 (sum=7d129d4de145fbea)
-HSipHash: max= 512 cycles=  86145916 cpb=  3.8286 (sum=7f15a313)
- SipHash: max=1024 cycles= 334111900 cpb=  1.8615 (sum=cca7cbdc778ca8af)
-HSipHash: max=1024 cycles= 640432452 cpb=  3.5682 (sum=d8f3374f)
+It may be prudent to include the endian reversal in the test to ensure
+big endian machines produce expected results. Some closely related
+testing on an old Apple PowerMac G5 revealed that result needed to be
+reversed before returning it to a caller.
 
-
-Here's the code; compile with -DSELFTEST.  (The main purpose of
-printing the sum is to prevent dead code elimination.)
-
-
-#if SELFTEST
-#include <stdint.h>
-#include <stdlib.h>
-
-static inline uint64_t rol64(uint64_t word, unsigned int shift)
-{
-	return word << shift | word >> (64 - shift);
-}
-
-static inline uint32_t rol32(uint32_t word, unsigned int shift)
-{
-	return word << shift | word >> (32 - shift);
-}
-
-static inline uint64_t get_unaligned_le64(void const *p)
-{
-	return *(uint64_t const *)p;
-}
-
-static inline uint32_t get_unaligned_le32(void const *p)
-{
-	return *(uint32_t const *)p;
-}
-
-static inline uint64_t le64_to_cpup(uint64_t const *p)
-{
-	return *p;
-}
-
-static inline uint32_t le32_to_cpup(uint32_t const *p)
-{
-	return *p;
-}
-
-
-#else
-#include <linux/bitops.h>	/* For rol64 */
-#include <linux/cryptohash.h>
-#include <asm/byteorder.h>
-#include <asm/unaligned.h>
-#endif
-
-/* The basic ARX mixing function, taken from Skein */
-#define SIP_MIX(a, b, s) ((a) += (b), (b) = rol64(b, s), (b) ^= (a))
-
-/*
- * The complete SipRound.  Note that, when unrolled twice like below,
- * the 32-bit rotates drop out on 32-bit machines.
- */
-#define SIP_ROUND(a, b, c, d) \
-	(SIP_MIX(a, b, 13), SIP_MIX(c, d, 16), (a) = rol64(a, 32), \
-	 SIP_MIX(c, b, 17), SIP_MIX(a, d, 21), (c) = rol64(c, 32))
-
-/*
- * This is rolled up more than most implementations, resulting in about
- * 55% the code size.  Speed is a few precent slower.  A crude benchmark
- * (for (i=1; i <= max; i++) for (j = 0; j < 4096-i; j++) hash(buf+j, i);)
- * produces the following timings (in usec):
- *
- *		i386	i386	i386	x86_64	x86_64	x86_64	x86_64
- * Length	small	unroll  halfmd4 small	unroll	halfmd4 teahash
- * 1..4		   1069	   1029	   1608	    195	    160	    399	    690
- * 1..8		   2483	   2381	   3851	    410	    360	    988	   1659
- * 1..12           4303	   4152	   6207	    690	    618	   1642	   2690
- * 1..16           6122	   5931	   8668	    968	    876	   2363	   3786
- * 1..20           8348	   8137	  11245	   1323	   1185	   3162	   5567
- * 1..24          10580	  10327	  13935	   1657	   1504	   4066	   7635
- * 1..28          13211	  12956	  16803	   2069	   1871	   5028	   9759
- * 1..32          15843	  15572	  19725	   2470	   2260	   6084	  11932
- * 1..36          18864	  18609	  24259	   2934	   2678	   7566	  14794
- * 1..1024      5890194	6130242	10264816 881933	 881244	3617392	7589036
- *
- * The performance penalty is quite minor, decreasing for long strings,
- * and it's significantly faster than half_md4, so I'm going for the
- * I-cache win.
- */
-uint64_t
-siphash24(char const *in, size_t len, uint32_t const seed[4])
-{
-	uint64_t a = 0x736f6d6570736575;	/* somepseu */
-	uint64_t b = 0x646f72616e646f6d;	/* dorandom */
-	uint64_t c = 0x6c7967656e657261;	/* lygenera */
-	uint64_t d = 0x7465646279746573;	/* tedbytes */
-	uint64_t m = 0;
-	uint8_t padbyte = len;
-
-	m = seed[2] | (uint64_t)seed[3] << 32;
-	b ^= m;
-	d ^= m;
-	m = seed[0] | (uint64_t)seed[1] << 32;
-	/* a ^= m; is done in loop below */
-	c ^= m;
-
-	/*
-	 * By using the same SipRound code for all iterations, we
-	 * save space, at the expense of some branch prediction.  But
-	 * branch prediction is hard because of variable length anyway.
-	 */
-	len = len/8 + 3;	/* Now number of rounds to perform */
-	do {
-		a ^= m;
-
-		switch (--len) {
-			unsigned bytes;
-
-		default:	/* Full words */
-			d ^= m = get_unaligned_le64(in);
-			in += 8;
-			break;
-		case 2:		/* Final partial word */
-			/*
-			 * We'd like to do one 64-bit fetch rather than
-			 * mess around with bytes, but reading past the end
-			 * might hit a protection boundary.  Fortunately,
-			 * we know that protection boundaries are aligned,
-			 * so we can consider only three cases:
-			 * - The remainder occupies zero words
-			 * - The remainder fits into one word
-			 * - The remainder straddles two words
-			 */
-			bytes = padbyte & 7;
-
-			if (bytes == 0) {
-				m = 0;
-			} else {
-				unsigned offset = (unsigned)(uintptr_t)in & 7;
-
-				if (offset + bytes <= 8) {
-					m = le64_to_cpup((uint64_t const *)
-								(in - offset));
-					m >>= 8*offset;
-				} else {
-					m = get_unaligned_le64(in);
-				}
-				m &= ((uint64_t)1 << 8*bytes) - 1;
-			}
-			/* Could use | or +, but ^ allows associativity */
-			d ^= m ^= (uint64_t)padbyte << 56;
-			break;
-		case 1:		/* Beginning of finalization */
-			m = 0;
-			c ^= 0xff;
-			/*FALLTHROUGH*/
-		case 0:		/* Second half of finalization */
-			break;
-		}
-
-		SIP_ROUND(a, b, c, d);
-		SIP_ROUND(a, b, c, d);
-	} while (len);
-
-	return a ^ b ^ c ^ d;
-}
-
-#undef SIP_ROUND
-#undef SIP_MIX
-
-
-#define HSIP_MIX(a, b, s) ((a) += (b), (b) = rol32(b, s), (b) ^= (a))
-
-/*
- * These are the PRELIMINARY rotate constants suggested by
- * Jean-Philippe Aumasson.  Update to final when available.
- */
-#define HSIP_ROUND(a, b, c, d) \
-	(HSIP_MIX(a, b,  5), HSIP_MIX(c, d,  8), (a) = rol32(a, 16), \
-	 HSIP_MIX(c, b,  7), HSIP_MIX(a, d, 13), (c) = rol32(c, 16))
-
-uint32_t
-hsiphash24(char const *in, size_t len, uint32_t const key[2])
-{
-	uint32_t c = key[0];
-	uint32_t d = key[1];
-	uint32_t a =     0x6c796765 ^ 0x736f6d65;
-	uint32_t b = d ^ 0x74656462 ^ 0x646f7261;
-	uint32_t m = c;
-	uint8_t padbyte = len;
-
-	/*
-	 * By using the same SipRound code for all iterations, we
-	 * save space, at the expense of some branch prediction.  But
-	 * branch prediction is hard because of variable length anyway.
-	 */
-	len = len/sizeof(m) + 3;	/* Now number of rounds to perform */
-	do {
-		a ^= m;
-
-		switch (--len) {
-			unsigned bytes;
-
-		default:	/* Full words */
-			d ^= m = get_unaligned_le32(in);
-			in += sizeof(m);
-			break;
-		case 2:		/* Final partial word */
-			/*
-			 * We'd like to do one 32-bit fetch rather than
-			 * mess around with bytes, but reading past the end
-			 * might hit a protection boundary.  Fortunately,
-			 * we know that protection boundaries are aligned,
-			 * so we can consider only three cases:
-			 * - The remainder occupies zero words
-			 * - The remainder fits into one word
-			 * - The remainder straddles two words
-			 */
-			bytes = padbyte & 3;
-
-			if (bytes == 0) {
-				m = 0;
-			} else {
-				unsigned offset = (unsigned)(uintptr_t)in & 3;
-
-				if (offset + bytes <= 4) {
-					m = le32_to_cpup((uint32_t const *)
-								(in - offset));
-					m >>= 8*offset;
-				} else {
-					m = get_unaligned_le32(in);
-				}
-				m &= ((uint32_t)1 << 8*bytes) - 1;
-			}
-			/* Could use | or +, but ^ allows associativity */
-			d ^= m ^= (uint32_t)padbyte << 24;
-			break;
-		case 1:		/* Beginning of finalization */
-			m = 0;
-			c ^= 0xff;
-			/*FALLTHROUGH*/
-		case 0:		/* Second half of finalization */
-			break;
-		}
-
-		HSIP_ROUND(a, b, c, d);
-		HSIP_ROUND(a, b, c, d);
-	} while (len);
-
-	return a ^ b ^ c ^ d;
-	// return c + d;
-}
-
-#undef HSIP_ROUND
-#undef HSIP_MIX
-
-/*
- * No objection to EXPORT_SYMBOL, but we should probably figure out
- * how the seed[] array should work first.  Homework for the first
- * person to want to call it from a module!
- */
-
-#if SELFTEST
-
-#include <stdio.h>
-
-static uint64_t rdtsc()
-{
-	uint32_t eax, edx;
-
-	asm volatile ("rdtsc" : "=a" (eax), "=d" (edx));
-	return (uint64_t)edx << 32 | eax;
-}
-
-int
-main(void)
-{
-	static char const buf[1024] = { 0 };
-	unsigned max;
-	static const uint32_t key[4] = { 1, 2, 3, 4 };
-
-	printf("SipHash/HSipHash benchmark, sizeof(long) = %u\n",
-		(unsigned)sizeof(long));
-	for (unsigned max = 4; max <= 1024; max *= 2) {
-		uint64_t sum1 = 0;
-		uint32_t sum2 = 0;
-		uint64_t cycles;
-		uint32_t bytes = 0;
-
-		/* A less lazy person could figure out the closed form */
-		for (int i = 1; i <= max; i++)
-			bytes += i * (max + 1 - i);
-
-		cycles = rdtsc();
-		for (int i = 1; i <= max; i++)
-			for (int j = 0; j <= max-i; j++)
-				sum1 += siphash24(buf+j, i, key);
-		cycles = rdtsc() - cycles;
-
-		printf(" SipHash: max=%4u cycles=%10llu cpb=%8.4f (sum=%llx)\n",
-			max, cycles, (double)cycles/bytes, sum1);
-
-		cycles = rdtsc();
-		for (int i = 1; i <= max; i++)
-			for (int j = 0; j <= max-i; j++)
-				sum2 += hsiphash24(buf+j, i, key);
-		cycles = rdtsc() - cycles;
-		printf("HSipHash: max=%4u cycles=%10llu cpb=%8.4f (sum=%lx)\n",
-			max, cycles, (double)cycles/bytes, sum2);
-	}
-	return 0;
-}
-
-
-#endif
+Jeff
