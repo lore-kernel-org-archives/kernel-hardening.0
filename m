@@ -1,57 +1,32 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Sat, 17 Dec 2016 16:06:15 -0800 (PST)
+From: Christian Kujau <lists@nerdbynature.de>
+In-Reply-To: <CAHmME9qNcsXtdWO_rmngSXXeBsTbA9B_33oLJ_pWOWcO7P2JZg@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.99.1612171601430.31470@trent.utfs.org>
+References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com> <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com> <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
+ <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com> <CALx6S35VBjw42G6rHPrNfVaBfLMz3YZVjs3D3hBG=4gp5+g5tA@mail.gmail.com> <CAHmME9rpvf4tyDjZcJAJxMAW1LcqNm7DiquiYX0uQhRzDLbwqw@mail.gmail.com> <CALx6S349hOFhnMgM_TgKXC1O7bmOvR87Nm=5B7_sNLEWiZU8Zg@mail.gmail.com>
+ <CAHmME9qNcsXtdWO_rmngSXXeBsTbA9B_33oLJ_pWOWcO7P2JZg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20161217154152.5oug7mzb4tmfknwv@thunk.org>
-References: <CAHmME9r4YNqNSZ-KXAHtJN_vm+eL1tSoC-6muHaFUN6fWhkO2g@mail.gmail.com>
- <20161217021503.32767.qmail@ns.sciencehorizons.net> <20161217154152.5oug7mzb4tmfknwv@thunk.org>
-From: Jeffrey Walton <noloader@gmail.com>
-Date: Sat, 17 Dec 2016 11:14:47 -0500
-Message-ID: <CAH8yC8kYHNo6T9-C3E0vyu7Mz-xGRLzLOifLFYsBMkoK92qmiA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v5 1/4] siphash: add
- cryptographically secure PRF
-To: Theodore Ts'o <tytso@mit.edu>, kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, George Spelvin <linux@sciencehorizons.net>, ak@linux.intel.com, davem@davemloft.net, David Laight <David.Laight@aculab.com>, "D. J. Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, linux-crypto@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>, luto@amacapital.net, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable
+ function
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Tom Herbert <tom@herbertland.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> As far as half-siphash is concerned, it occurs to me that the main
-> problem will be those users who need to guarantee that output can't be
-> guessed over a long period of time.  For example, if you have a
-> long-running process, then the output needs to remain unguessable over
-> potentially months or years, or else you might be weakening the ASLR
-> protections.  If on the other hand, the hash table or the process will
-> be going away in a matter of seconds or minutes, the requirements with
-> respect to cryptographic strength go down significantly.
+On Thu, 15 Dec 2016, Jason A. Donenfeld wrote:
+> > I'd still drop the "24" unless you really think we're going to have
+> > multiple variants coming into the kernel.
+> 
+> Okay. I don't have a problem with this, unless anybody has some reason
+> to the contrary.
 
-Perhaps SipHash-4-8 should be used instead of SipHash-2-4. I believe
-SipHash-4-8 is recommended for the security conscious who want to be
-more conservative in their security estimates.
+What if the 2/4-round version falls and we need more rounds to withstand 
+future cryptoanalysis? We'd then have siphash_ and siphash48_ functions, 
+no? My amateurish bike-shedding argument would be "let's keep the 24 then" :-)
 
-SipHash-4-8 does not add much more processing. If you are clocking
-SipHash-2-4 at 2.0 or 2.5 cpb, then SipHash-4-8 will run at 3.0 to
-4.0. Both are well below MD5 times. (At least with the data sets I've
-tested).
+C.
+-- 
+BOFH excuse #354:
 
-> Now, maybe this doesn't matter that much if we can guarantee (or make
-> assumptions) that the attacker doesn't have unlimited access the
-> output stream of get_random_{long,int}(), or if it's being used in an
-> anti-DOS use case where it ultimately only needs to be harder than
-> alternate ways of attacking the system.
->
-> Rekeying every five minutes doesn't necessarily help the with respect
-> to ASLR, but it might reduce the amount of the output stream that
-> would be available to the attacker in order to be able to attack the
-> get_random_{long,int}() generator, and it also reduces the value of
-> doing that attack to only compromising the ASLR for those processes
-> started within that five minute window.
-
-Forgive my ignorance... I did not find reading on using the primitive
-in a PRNG. Does anyone know what Aumasson or Bernstein have to say?
-Aumasson's site does not seem to discuss the use case:
-https://www.google.com/search?q=siphash+rng+site%3A131002.net. (And
-their paper only mentions random-number once in a different context).
-
-Making the leap from internal hash tables and short-lived network
-packets to the rng case may leave something to be desired, especially
-if the bits get used in unanticipated ways, like creating long term
-private keys.
-
-Jeff
+Chewing gum on /dev/sd3c
