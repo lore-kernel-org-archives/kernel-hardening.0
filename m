@@ -1,32 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Sat, 17 Dec 2016 16:06:15 -0800 (PST)
-From: Christian Kujau <lists@nerdbynature.de>
-In-Reply-To: <CAHmME9qNcsXtdWO_rmngSXXeBsTbA9B_33oLJ_pWOWcO7P2JZg@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.99.1612171601430.31470@trent.utfs.org>
-References: <20161214035927.30004-1-Jason@zx2c4.com> <20161214184605.24006-1-Jason@zx2c4.com> <CALx6S35UgTyqkYUjS5gYFH4HnjW974WQ_JiDXxgb9rZ7gnY52Q@mail.gmail.com> <CAHmME9oMaQOhzJbNKh8GN759iJngeRdXt3naOnFhY9mD6t5Kxg@mail.gmail.com>
- <CAHmME9pR3tD2zknKsYaFaTJm_3aBBOA6c174hypm6S-q9wp5nw@mail.gmail.com> <CALx6S35VBjw42G6rHPrNfVaBfLMz3YZVjs3D3hBG=4gp5+g5tA@mail.gmail.com> <CAHmME9rpvf4tyDjZcJAJxMAW1LcqNm7DiquiYX0uQhRzDLbwqw@mail.gmail.com> <CALx6S349hOFhnMgM_TgKXC1O7bmOvR87Nm=5B7_sNLEWiZU8Zg@mail.gmail.com>
- <CAHmME9qNcsXtdWO_rmngSXXeBsTbA9B_33oLJ_pWOWcO7P2JZg@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Mon, 19 Dec 2016 07:55:15 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C220DD@IRSMSX102.ger.corp.intel.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
+ <20161128121347.GY3092@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
+ <20161201191543.GG3124@twins.programming.kicks-ass.net>
+ <1480693474.28515.56.camel@cs-046.org.aalto.fi>
+ <20161207135241.GI3107@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
+ <20161216140158.GS3107@twins.programming.kicks-ass.net>
+In-Reply-To: <20161216140158.GS3107@twins.programming.kicks-ass.net>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v3 1/3] siphash: add cryptographically secure hashtable
- function
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Tom Herbert <tom@herbertland.com>, Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, David Laight <David.Laight@aculab.com>
+Subject: [kernel-hardening] RE: Conversion from atomic_t to refcount_t: summary of issues
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Liljestrand Hans <ishkamiel@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 15 Dec 2016, Jason A. Donenfeld wrote:
-> > I'd still drop the "24" unless you really think we're going to have
-> > multiple variants coming into the kernel.
-> 
-> Okay. I don't have a problem with this, unless anybody has some reason
-> to the contrary.
+> On Fri, Dec 16, 2016 at 12:10:21PM +0000, Reshetova, Elena wrote:
+>=20
+> > Is it ok to add at least refcount_inc_if_zero() ?
+>=20
+> Of course not.
+>=20
+> > We already have refcount_dec_if_one(), reffcount_dec_not_one() and
+> > refcount_inc_not_zero(), so this one is the only missing one and would
+> > greatly help in couple of cases.
+>=20
+> No, its absolutely insane. 0 means its freed, you cannot get another
+> reference at that point.
+>=20
+> If you have code that relies on that, its broken.
 
-What if the 2/4-round version falls and we need more rounds to withstand 
-future cryptoanalysis? We'd then have siphash_ and siphash48_ functions, 
-no? My amateurish bike-shedding argument would be "let's keep the 24 then" :-)
+Well, again, you are right in theory, but in practice for example for struc=
+t sched_group { atomic_t ref; ... }:
 
-C.
--- 
-BOFH excuse #354:
+http://lxr.free-electrons.com/source/kernel/sched/core.c#L6178
 
-Chewing gum on /dev/sd3c
+To me this is a refcounter that needs the protection.
