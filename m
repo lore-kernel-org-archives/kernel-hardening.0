@@ -1,57 +1,83 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Mon, 19 Dec 2016 18:32:44 +0100
-Message-ID: <CAHmME9rPmH=wP_eHYopt8ZPG9TSN7bos3fGOuqKL2HjQW-2SWA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] HalfSipHash Acceptable Usage
-To: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
-Cc: Theodore Ts'o <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, David Laight <David.Laight@aculab.com>, David Miller <davem@davemloft.net>, Andi Kleen <ak@linux.intel.com>, George Spelvin <linux@sciencehorizons.net>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Vegard Nossum <vegard.nossum@gmail.com>, Netdev <netdev@vger.kernel.org>, Linus Torvalds <torvalds@linux-foundation.org>
+Date: 19 Dec 2016 13:10:40 -0500
+Message-ID: <20161219181040.25441.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <063D6719AE5E284EB5DD2968C1650D6DB0242669@AcuExch.aculab.com>
+Subject: [kernel-hardening] RE: [PATCH v5 1/4] siphash: add cryptographically secure PRF
+To: David.Laight@ACULAB.COM, linux@sciencehorizons.net, tom@herbertland.com
+Cc: ak@linux.intel.com, davem@davemloft.net, djb@cr.yp.to, ebiggers3@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi JP,
+David Laight wrote:
+> From: George Spelvin
+...
+>> uint32_t
+>> hsiphash24(char const *in, size_t len, uint32_t const key[2])
+>> {
+>> 	uint32_t c = key[0];
+>> 	uint32_t d = key[1];
+>> 	uint32_t a =     0x6c796765 ^ 0x736f6d65;
+>> 	uint32_t b = d ^ 0x74656462 ^ 0x646f7261;
 
-With the threads getting confusing, I've been urged to try and keep
-the topics and threads more closely constrained. Here's where we're
-at, and here's the current pressing security concern. It'd be helpful
-to have a definitive statement on what you think is best, so we can
-just build on top of that, instead of getting lost in the chorus of
-opinions.
+> I've not looked closely, but is that (in some sense) duplicating
+> the key length?
+> So you could set a = key[2] and b = key[3] and still have an
+> working hash - albeit not exactly the one specified.
 
-1) Anything that requires actual long-term security will use
-SipHash2-4, with the 64-bit output and the 128-bit key. This includes
-things like TCP sequence numbers. This seems pretty uncontroversial to
-me. Seem okay to you?
+That's tempting, but not necessarily effective.  (A similar unsuccesful
+idea can be found in discussions of "DES with independent round keys".
+Or see the design discussion of Salsa20 and the constants in its input.)
 
-2) People seem to want something competitive, performance-wise, with
-jhash if it's going to replace jhash. The kernel community
-instinctively pushes back on anything that could harm performance,
-especially in networking and in critical data structures, so there
-have been some calls for something faster than SipHash. So, questions
-regarding this:
+You can increase the key size, but that might not increase the *security*
+any.
 
-2a) George thinks that HalfSipHash on 32-bit systems will have roughly
-comparable speed as SipHash on 64-bit systems, so the idea would be to
-use HalfSipHash on 32-bit systems' hash tables and SipHash on 64-bit
-systems' hash tables. The big obvious question is: does HalfSipHash
-have a sufficient security margin for hashtable usage and hashtable
-attacks? I'm not wondering about the security margin for other usages,
-but just of the hashtable usage. In your opinion, does HalfSipHash cut
-it?
+The big issue is that there are a *lot* of square root attack in
+cryptanalysis.  Because SipHash's state is twice the size of the key,
+such an attack will have the same complexity as key exhaustion and need
+not be considered.  To make a stronger security claim, you need to start
+working through them all and show that they don't apply.
 
-2b) While I certainly wouldn't consider making the use case in
-question (1) employ a weaker function, for this question (2), there
-has been some discussion about using HalfSipHash1-3 (or SipHash1-3 on
-64-bit) instead of 2-4. So, the same question is therefore posed:
-would using HalfSipHash1-3 give a sufficient security margin for
-hashtable usage and hashtable attacks?
+For SipHash in particular, an important property is asymmetry of the
+internal state.  That's what duplicating the key with XORs guarantees.
+If the two halves of the state end up identical, the mixing is much
+weaker.
 
-My plan is essentially to implement things according to your security
-recommendation. The thread started with me pushing a heavy duty
-security solution -- SipHash2-4 -- for _everything_. I've received
-understandable push back on that notion for certain use cases. So now
-I'm trying to discover what the most acceptable compromise is. Your
-answers on (2a) and (2b) will direct that compromise.
+Now the probability of ending up in a "mirror state" is the square
+root of the state size (1 in 2^64 for HalfSipHash's 128-bit state),
+which is the same probability as guessing a key, so it's not a
+problem that has to be considered when making a 64-bit security claim.
 
-Thanks again,
-Jason
+But if you want a higher security level, you have to think about
+what can happen.
+
+That said, I have been thinking very hard about
+
+	a = c ^ 0x48536970;	/* 'HSip' */
+	d = key[2];
+
+By guaranteeing that a and c are different, we get the desired
+asymmetry, and the XOR of b and d is determined by the first word of
+the message anyway, so this isn't weakening anything.
+
+96 bits is far beyond the reach of any brute-force attack, and if a
+more sophisticated 64-bit attack exists, it's at least out of the reach
+of the script kiddies, and will almost certainly have a non-negligible
+constant factor and more limits in when it can be applied.
+
+> Is it worth using the 32bit hash for IP addresses on 64bit systems that
+> can't do misaligned accessed?
+
+Not a good idea.  To hash 64 bits of input:
+
+* Full SipHash has to do two loads, a shift, an or, and two rounds of mixing.
+* HalfSipHash has to do a load, two rounds, another load, and two more rounds.
+
+In other words, in addition to being less secure, it's half the speed.  
+
+Also, what systems are you thinking about?  x86, ARMv8, PowerPC, and
+S390 (and ia64, if anyone cares) all handle unaligned loads.  MIPS has
+efficient support.  Alpha and HPPA are for retrocomputing fans, not
+people who care about performance.
+
+So you're down to SPARC.  Which conveniently has the same maintainer as
+the networking code, so I figure DaveM can take care of that himself. :-)
