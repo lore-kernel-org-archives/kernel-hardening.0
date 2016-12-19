@@ -1,36 +1,37 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 19 Dec 2016 11:12:43 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20161219101243.GB3107@twins.programming.kicks-ass.net>
-References: <2236FBA76BA1254E88B949DDB74E612B41C1884B@IRSMSX102.ger.corp.intel.com>
- <20161128121347.GY3092@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C190FC@IRSMSX102.ger.corp.intel.com>
- <20161201191543.GG3124@twins.programming.kicks-ass.net>
- <1480693474.28515.56.camel@cs-046.org.aalto.fi>
- <20161207135241.GI3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
- <20161216140158.GS3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C220DD@IRSMSX102.ger.corp.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C220DD@IRSMSX102.ger.corp.intel.com>
-Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Liljestrand Hans <ishkamiel@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+Date: Mon, 19 Dec 2016 12:10:46 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20161219121046.646e5ef425178fce8c2cb555@gmail.com>
+In-Reply-To: <CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
+References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
+	<CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the initify gcc plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Dec 19, 2016 at 07:55:15AM +0000, Reshetova, Elena wrote:
-> Well, again, you are right in theory, but in practice for example for struct sched_group { atomic_t ref; ... }:
+On Fri, 16 Dec 2016 14:19:10 -0800
+Kees Cook <keescook@chromium.org> wrote:
+ 
+> FWIW, it still seems to me that these aren't false positives:
 > 
-> http://lxr.free-electrons.com/source/kernel/sched/core.c#L6178
-> 
-> To me this is a refcounter that needs the protection.
+> WARNING: vmlinux.o(.text.unlikely+0x1b1): Section mismatch in
+> reference from the function uncore_pci_exit.part.22() to the function
+> .init.text:uncore_free_pcibus_map()
+> The function uncore_pci_exit.part.22() references
+> the function __init uncore_free_pcibus_map().
+> This is often because uncore_pci_exit.part.22 lacks a __init
+> annotation or the annotation of uncore_free_pcibus_map is wrong.
 
-Only if you have more than UINT_MAX CPUs or something like that.
+Hi,
 
-And if you really really want to use refcount_t there, you could +1 the
-scheme and it'd work again.
+I can't reproduce this section mismatch. Could you please send me your .config?
+Which gcc version did you use?
+I used this tree: git://git.kernel.org/pub/scm/linux/kernel/git/kees/linux.git initify-v4
 
-One could also split the refcount and initialized state and avoid the
-problem that way.
+Thanks
+-- 
+Emese
