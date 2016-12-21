@@ -1,52 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 21 Dec 2016 13:37:51 -0500
-Message-ID: <20161221183751.1123.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <1482335804.8944.44.camel@edumazet-glaptop3.roam.corp.google.com>
+MIME-Version: 1.0
+In-Reply-To: <20161221183751.1123.qmail@ns.sciencehorizons.net>
+References: <1482335804.8944.44.camel@edumazet-glaptop3.roam.corp.google.com> <20161221183751.1123.qmail@ns.sciencehorizons.net>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Wed, 21 Dec 2016 19:40:12 +0100
+Message-ID: <CAHmME9rbdJKdQ8bfwRgYWbpjHaPX-+zKG9=EP+tW7CnRkQBSWA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: eric.dumazet@gmail.com, Jason@zx2c4.com
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, hannes@stressinduktion.org, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux@sciencehorizons.net, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+To: George Spelvin <linux@sciencehorizons.net>
+Cc: Eric Dumazet <eric.dumazet@gmail.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, kernel-hardening@lists.openwall.com, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Theodore Ts'o <tytso@mit.edu>, Vegard Nossum <vegard.nossum@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Eric Dumazet wrote:
-> Now I am quite confused.
+On Wed, Dec 21, 2016 at 7:37 PM, George Spelvin
+<linux@sciencehorizons.net> wrote:
+> SipHash annihilates the competition on 64-bit superscalar hardware.
+> SipHash dominates the field on 64-bit in-order hardware.
+> SipHash wins easily on 32-bit hardware *with enough registers*.
+> On register-starved 32-bit machines, it really struggles.
 >
-> George said :
->> Cycles per byte on 1024 bytes of data:
->>                       Pentium Core 2  Ivy
->>                       4       Duo     Bridge
->> SipHash-2-4           38.9     8.3     5.8
->> HalfSipHash-2-4       12.7     4.5     3.2
->> MD5                    8.3     5.7     4.7
->
-> That really was for 1024 bytes blocks, so pretty much useless for our
-> discussion ?
+> As I explained, in that last case, SipHash barely wins at all.
+> (On a P4, it actually *loses* to MD5, not that anyone cares.  Running
+> on a P4 and caring about performance are mutually exclusive.)
 
-No, they're actually quite relevant, but you have to interpret them
-correctly.  I thought I explained in the text following that table,
-but let me make it clearer:
-
-To find the time to compute the SipHash of N bytes, round (N+17) up to
-the next multiple of 8 bytes and multiply by the numbers above.
-
-To find the time to compute the HalfSipHash of N bytes, round (N+9) up to
-the next multiple of 4 bytes and multiply by the numbers above.
-
-To find the time to compute the MD5 of N bytes, round (N+9) up to the
-next multiple of 64 bytes and multiply by the numbers above.
-
-It's the different rounding rules that make all the difference.  For small
-input blocks, SipHash can be slower per byte yet still faster because
-it hashes fewer bytes.
-
-> Reading your numbers last week, I thought SipHash was faster, but George
-> numbers are giving the opposite impression.
-
-SipHash annihilates the competition on 64-bit superscalar hardware.
-SipHash dominates the field on 64-bit in-order hardware.
-SipHash wins easily on 32-bit hardware *with enough registers*.
-On register-starved 32-bit machines, it really struggles.
-
-As I explained, in that last case, SipHash barely wins at all.
-(On a P4, it actually *loses* to MD5, not that anyone cares.  Running
-on a P4 and caring about performance are mutually exclusive.)
+>From the discussion off list which examined your benchmark code, it
+looks like we're going to move ahead with SipHash.
