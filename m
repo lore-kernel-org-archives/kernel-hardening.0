@@ -1,41 +1,56 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1482340101.8944.53.camel@edumazet-glaptop3.roam.corp.google.com>
-From: Eric Dumazet <eric.dumazet@gmail.com>
-Date: Wed, 21 Dec 2016 09:08:21 -0800
-In-Reply-To: <1482338385.11006.67.camel@redhat.com>
-References: <20161221032829.3031.qmail@ns.sciencehorizons.net>
-	 <1482298164.8944.8.camel@edumazet-glaptop3.roam.corp.google.com>
-	 <CAHmME9oCfCwAq1qP09uAN6vvakh4wXDMHunsL9D7W_LDeN_OQQ@mail.gmail.com>
-	 <1482335804.8944.44.camel@edumazet-glaptop3.roam.corp.google.com>
-	 <1482338385.11006.67.camel@redhat.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: Rik van Riel <riel@redhat.com>
-Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, George Spelvin <linux@sciencehorizons.net>, Theodore Ts'o <tytso@mit.edu>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J .
- Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
+MIME-Version: 1.0
+Sender: linus971@gmail.com
+In-Reply-To: <20161221155540.29529.qmail@ns.sciencehorizons.net>
+References: <CAHmME9oJDOLpPKRpX=N+DY9BuzTueWjTaWzeVtdVMBG7mcrqKA@mail.gmail.com>
+ <20161221155540.29529.qmail@ns.sciencehorizons.net>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Wed, 21 Dec 2016 09:25:01 -0800
+Message-ID: <CA+55aFy8fNOxw3bnwkX1S46jKnW6i26mueaiuOsScyN3kFJp+A@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
+To: George Spelvin <linux@sciencehorizons.net>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Network Development <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Theodore Ts'o <tytso@mit.edu>, Vegard Nossum <vegard.nossum@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2016-12-21 at 11:39 -0500, Rik van Riel wrote:
+On Wed, Dec 21, 2016 at 7:55 AM, George Spelvin
+<linux@sciencehorizons.net> wrote:
+>
+> How much does kernel_fpu_begin()/kernel_fpu_end() cost?
 
-> Does anybody still have a P4?
-> 
-> If they do, they're probably better off replacing
-> it with an Atom. The reduced power bills will pay
-> for replacing that P4 within a year or two.
+It's now better than it used to be, but it's absolutely disastrous
+still. We're talking easily many hundreds of cycles. Under some loads,
+thousands.
 
-Well, maybe they have millions of units to replace.
+And I warn you already: it will _benchmark_ a hell of a lot better
+than it will work in reality. In benchmarks, you'll hit all the
+optimizations ("oh, I've already saved away all the FP registers, no
+need to do it again").
 
-> 
-> In short, I am not sure how important the P4
-> performance numbers are, especially if we can
-> improve security for everybody else...
+In contrast, in reality, especially with things like "do it once or
+twice per incoming packet", you'll easily hit the absolute worst
+cases, where not only does it take a few hundred cycles to save the FP
+state, you'll then return to user space in between packets, which
+triggers the slow-path return code and reloads the FP state, which is
+another few hundred cycles plus.
 
-Worth adding that the ISN or syncookie generation are less than 10% of
-the actual cost of handling a problematic (having to generate ISN or
-syncookie) TCP packet anyway.
+Similarly, in benchmarks you'll hit the "modern CPU's power on the AVX
+unit and keep it powered up for a while afterwards", while in real
+life you would quite easily hit the "oh, AVX is powered down because
+we were idle, now it powers up at half speed which is another latency
+hit _and_ the AVX unit won't run full out anyway".
 
-So we are talking of minors potential impact for '2000-era' cpus.
+Don't do it. There are basically no real situations where the AVX
+state optimizations help for the kernel. We just don't have the loop
+counts to make up for the problems it causes.
 
-Definitely I vote for using SipHash in TCP ASAP.
+The one exception is likely if you're doing things like
+high-throughput disk IO encryption, and then you'd be much better off
+using SHA256 instead (which often has hw encryption on modern CPU's -
+both x86 and ARM).
+
+(I'm sure that you could see it on some high-throughput network
+benchmark too when the benchmark entirely saturates the CPU. And then
+in real life it would suck horribly for all the reasons above).
+
+                Linus
