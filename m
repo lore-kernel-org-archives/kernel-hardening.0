@@ -1,22 +1,65 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Wed, 21 Dec 2016 23:29:12 +0100
-Message-ID: <CAHmME9pww5Q0Wy9MtkO7PAx2Tstfp=6Og3qZLZ=Rh8NaFo0Gog@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, George Spelvin <linux@sciencehorizons.net>, Eric Dumazet <eric.dumazet@gmail.com>, Jason <Jason@zx2c4.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
+Date: Thu, 22 Dec 2016 00:02:10 +0100
+Message-Id: <20161221230216.25341-1-Jason@zx2c4.com>
+In-Reply-To: <20161216030328.11602-1-Jason@zx2c4.com>
+References: <20161216030328.11602-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v7 0/6] The SipHash Patchset
+To: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, edumazet@google.com, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, ak@linux.intel.com, davem@davemloft.net, luto@amacapital.net, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 21, 2016 at 11:27 PM, Theodore Ts'o <tytso@mit.edu> wrote:
-> And "with enough registers" includes ARM and MIPS, right?  So the only
-> real problem is 32-bit x86, and you're right, at that point, only
-> people who might care are people who are using a space-radiation
-> hardened 386 --- and they're not likely to be doing high throughput
-> TCP connections.  :-)
+Hey folks,
 
-Plus the benchmark was bogus anyway, and when I built a more specific
-harness -- actually comparing the TCP sequence number functions --
-SipHash was faster than MD5, even on register starved x86. So I think
-we're fine and this chapter of the discussion can come to a close, in
-order to move on to more interesting things.
+Again we've made huge progress, with this latest version now shipping
+Jean-Phillipe Aumasson's HalfSipHash, which should be much more competitive
+with jhash (in addition to being more secure, of course).
+
+There are dozens of little cleanups and improvements right and left throughout
+this series, so I urge you to take a look at the whole thing. I've tried to
+take into consideration lots of concerns and suggestions from many of you
+over the last week.
+
+There is also now documentation! And the test suite now has full coverage of
+all functions.
+
+Finally, there's been some significant benchmarking, and now a few commit
+messages have some performance numbers.
+
+Please send your Reviewed-by lines as you see fit.
+
+Regards,
+Jason
+
+Jason A. Donenfeld (6):
+  siphash: add cryptographically secure PRF
+  secure_seq: use SipHash in place of MD5
+  random: use SipHash in place of MD5
+  md5: remove from lib and only live in crypto
+  syncookies: use SipHash in place of SHA1
+  siphash: implement HalfSipHash1-3 for hash tables
+
+ Documentation/siphash.txt | 154 +++++++++++++
+ MAINTAINERS               |   7 +
+ crypto/md5.c              |  95 +++++++-
+ drivers/char/random.c     |  84 ++++---
+ include/linux/random.h    |   1 -
+ include/linux/siphash.h   | 133 +++++++++++
+ init/main.c               |   1 -
+ lib/Kconfig.debug         |   6 +-
+ lib/Makefile              |   7 +-
+ lib/md5.c                 |  95 --------
+ lib/siphash.c             | 548 ++++++++++++++++++++++++++++++++++++++++++++++
+ lib/test_siphash.c        | 208 ++++++++++++++++++
+ net/core/secure_seq.c     | 135 +++++-------
+ net/ipv4/syncookies.c     |  20 +-
+ net/ipv6/syncookies.c     |  37 ++--
+ 15 files changed, 1274 insertions(+), 257 deletions(-)
+ create mode 100644 Documentation/siphash.txt
+ create mode 100644 include/linux/siphash.h
+ delete mode 100644 lib/md5.c
+ create mode 100644 lib/siphash.c
+ create mode 100644 lib/test_siphash.c
+
+-- 
+2.11.0
