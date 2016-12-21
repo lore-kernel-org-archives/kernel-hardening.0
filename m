@@ -1,59 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1482338488.11006.70.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-In-Reply-To: <20161221155540.29529.qmail@ns.sciencehorizons.net>
-References: <20161221155540.29529.qmail@ns.sciencehorizons.net>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-0zGKtKxh0W2ZQTwz4HDa"
-Date: Wed, 21 Dec 2016 11:41:28 -0500
+Message-ID: <1482340101.8944.53.camel@edumazet-glaptop3.roam.corp.google.com>
+From: Eric Dumazet <eric.dumazet@gmail.com>
+Date: Wed, 21 Dec 2016 09:08:21 -0800
+In-Reply-To: <1482338385.11006.67.camel@redhat.com>
+References: <20161221032829.3031.qmail@ns.sciencehorizons.net>
+	 <1482298164.8944.8.camel@edumazet-glaptop3.roam.corp.google.com>
+	 <CAHmME9oCfCwAq1qP09uAN6vvakh4wXDMHunsL9D7W_LDeN_OQQ@mail.gmail.com>
+	 <1482335804.8944.44.camel@edumazet-glaptop3.roam.corp.google.com>
+	 <1482338385.11006.67.camel@redhat.com>
+Content-Type: text/plain; charset="UTF-8"
 Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
 Subject: Re: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: kernel-hardening@lists.openwall.com, Jason@zx2c4.com, linux@sciencehorizons.net
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, hannes@stressinduktion.org, jeanphilippe.aumasson@gmail.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+To: Rik van Riel <riel@redhat.com>
+Cc: kernel-hardening@lists.openwall.com, "Jason A. Donenfeld" <Jason@zx2c4.com>, George Spelvin <linux@sciencehorizons.net>, Theodore Ts'o <tytso@mit.edu>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J .
+ Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Wed, 2016-12-21 at 11:39 -0500, Rik van Riel wrote:
 
---=-0zGKtKxh0W2ZQTwz4HDa
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+> Does anybody still have a P4?
+> 
+> If they do, they're probably better off replacing
+> it with an Atom. The reduced power bills will pay
+> for replacing that P4 within a year or two.
 
-On Wed, 2016-12-21 at 10:55 -0500, George Spelvin wrote:
-> Actually, DJB just made a very relevant suggestion.
->=20
-> As I've mentioned, the 32-bit performance problems are an x86-
-> specific
-> problem.=C2=A0=C2=A0ARM does very well, and other processors aren't bad a=
-t all.
->=20
-> SipHash fits very nicely (and runs very fast) in the MMX registers.
->=20
-> They're 64 bits, and there are 8 of them, so the integer registers
-> can
-> be reserved for pointers and loop counters and all that.=C2=A0=C2=A0And t=
-here's
-> reference code available.
->=20
-> How much does kernel_fpu_begin()/kernel_fpu_end() cost?
+Well, maybe they have millions of units to replace.
 
-Those can be very expensive. Almost certainly not
-worth it for small amounts of data.
+> 
+> In short, I am not sure how important the P4
+> performance numbers are, especially if we can
+> improve security for everybody else...
 
---=20
-All Rights Reversed.
---=-0zGKtKxh0W2ZQTwz4HDa
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
+Worth adding that the ISN or syncookie generation are less than 10% of
+the actual cost of handling a problematic (having to generate ISN or
+syncookie) TCP packet anyway.
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v2
+So we are talking of minors potential impact for '2000-era' cpus.
 
-iQEcBAABCAAGBQJYWrC4AAoJEM553pKExN6DtjoH+gORlWNB2YRtjw6x57PfVui5
-yiPwJ3TxC1y8tbLl+g7Jh7ogmtq3HDO2rss+8yYxdMtYDc2NsDhwG29+sZ+i7Jnh
-jWmgNgufUZ0mC/GI2jkCKL19r4lelXQCLb7RIf1JfVBA6ba65CZ6L7+1FFb4okPy
-QxcyBh4hHuA/VDF5ypiC9gXY5RgJFjLr/LkeUpyogXJ9Kl+8kzMQ80UXoPi3W/go
-8JB7NgXHHTA3Dxo/pjcy0Y//DfBJVRol+p1AE34s8JIQD1hioLR5/YvA4MPn7RLh
-gjGlehVNsqEOirnoDY8LyAPMOy13Su0PAGyHeYVUSIk4fyRs2+hw3JN2t3QtVf0=
-=R3Y6
------END PGP SIGNATURE-----
-
---=-0zGKtKxh0W2ZQTwz4HDa--
+Definitely I vote for using SipHash in TCP ASAP.
