@@ -1,157 +1,61 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 22 Dec 2016 19:07:41 +0100
-Message-Id: <20161222180741.24577-2-Jason@zx2c4.com>
-In-Reply-To: <20161222180741.24577-1-Jason@zx2c4.com>
-References: <20161222180741.24577-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH 2/2] random: convert get_random_int/long into get_random_u32/u64
-To: tytso@mit.edu, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+References: <20161216030328.11602-1-Jason@zx2c4.com>
+ <20161221230216.25341-1-Jason@zx2c4.com>
+ <20161221230216.25341-4-Jason@zx2c4.com>
+ <CALCETrVttVoZMvCYZcrAqM1c=YQP_nCfdfO1MsrSHjvjTFxH+A@mail.gmail.com>
+ <17bd0c70-d2c1-165b-f5b2-252dfca404e8@stressinduktion.org>
+ <CAHmME9phg=GuhEUaMxxv_=RexffPDqrOEhmaKffy_ZSt7bfC7g@mail.gmail.com>
+ <20161222054125.lzxhd6ctovm3wk4p@thunk.org>
+ <1482410840.2472.2.camel@stressinduktion.org>
+ <CAHmME9r_zTHo=dxRRK6UrjJ_dKV14yYsZsxCc362z4CPoVkddw@mail.gmail.com>
+ <20161222155447.u3ayvw4gmorhswjv@thunk.org>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <32db19ab-0c19-628c-3475-2ccb8050563a@stressinduktion.org>
+Date: Thu, 22 Dec 2016 19:08:37 +0100
+MIME-Version: 1.0
+In-Reply-To: <20161222155447.u3ayvw4gmorhswjv@thunk.org>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [PATCH v7 3/6] random: use SipHash in
+ place of MD5
+To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, kernel-hardening@lists.openwall.com, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Many times, when a user wants a random number, he wants a random number
-of a guaranteed size. So, thinking of get_random_int and get_random_long
-in terms of get_random_u32 and get_random_u64 makes it much easier to
-achieve this. It also makes the code simpler.
+On 22.12.2016 16:54, Theodore Ts'o wrote:
+> On Thu, Dec 22, 2016 at 02:10:33PM +0100, Jason A. Donenfeld wrote:
+>> On Thu, Dec 22, 2016 at 1:47 PM, Hannes Frederic Sowa
+>> <hannes@stressinduktion.org> wrote:
+>>> following up on what appears to be a random subject: ;)
+>>>
+>>> IIRC, ext4 code by default still uses half_md4 for hashing of filenames
+>>> in the htree. siphash seems to fit this use case pretty good.
+>>
+>> I saw this too. I'll try to address it in v8 of this series.
+> 
+> This is a separate issue, and this series is getting a bit too
+> complex.  So I'd suggest pushing this off to a separate change.
+> 
+> Changing the htree hash algorithm is an on-disk format change, and so
+> we couldn't roll it out until e2fsprogs gets updated and rolled out
+> pretty broadley.  In fact George sent me patches to add siphash as a
+> hash algorithm for htree a while back (for both the kernel and
+> e2fsprogs), but I never got around to testing and applying them,
+> mainly because while it's technically faster, I had other higher
+> priority issues to work on --- and see previous comments regarding
+> pixel peeping.  Improving the hash algorithm by tens or even hundreds
+> of nanoseconds isn't really going to matter since we only do a htree
+> lookup on a file creation or cold cache lookup, and the SSD or HDD I/O
+> times will dominate.  And from the power perspective, saving
+> microwatts of CPU power isn't going to matter if you're going to be
+> spinning up the storage device....
 
-On 32-bit platforms, get_random_int and get_random_long are both aliased
-to get_random_u32. On 64-bit platforms, int->u32 and long->u64.
+I wasn't concerned about performance but more about DoS resilience. I
+wonder how safe half md4 actually is in terms of allowing users to
+generate long hash chains in the filesystem (in terms of length
+extension attacks against half_md4).
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: Theodore Ts'o <tytso@mit.edu>
----
-I personally would find this extremely useful in my own code, where I
-currently wind up doing something ugly like:
+In ext4, is it actually possible that a "disrupter" learns about the
+hashing secret in the way how the inodes are returned during getdents?
 
-    (u64)get_random_int() << 32 | get_random_int()
-
-But if you have some aversion, don't hesitate to just take 1/2 without
-this 2/2. But hopefully you'll like this 2/2.
-
- drivers/char/random.c  | 55 +++++++++++++++++++++++++-------------------------
- include/linux/random.h | 17 ++++++++++++++--
- 2 files changed, 42 insertions(+), 30 deletions(-)
-
-diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 08d1dd58c0d2..ee737ef41ce9 100644
---- a/drivers/char/random.c
-+++ b/drivers/char/random.c
-@@ -2044,8 +2044,8 @@ struct ctl_table random_table[] = {
- 
- struct batched_entropy {
- 	union {
--		unsigned long entropy_long[CHACHA20_BLOCK_SIZE / sizeof(unsigned long)];
--		unsigned int entropy_int[CHACHA20_BLOCK_SIZE / sizeof(unsigned int)];
-+		u64 entropy_u64[CHACHA20_BLOCK_SIZE / sizeof(u64)];
-+		u32 entropy_u32[CHACHA20_BLOCK_SIZE / sizeof(u32)];
- 	};
- 	unsigned int position;
- };
-@@ -2055,52 +2055,51 @@ struct batched_entropy {
-  * number is either as good as RDRAND or as good as /dev/urandom, with the
-  * goal of being quite fast and not depleting entropy.
-  */
--static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_long);
--unsigned long get_random_long(void)
-+static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
-+u64 get_random_u64(void)
- {
--	unsigned long ret;
-+	u64 ret;
- 	struct batched_entropy *batch;
- 
--	if (arch_get_random_long(&ret))
-+#if BITS_PER_LONG == 64
-+	if (arch_get_random_long((unsigned long *)&ret))
- 		return ret;
-+#else
-+	if (arch_get_random_long((unsigned long *)&ret) &&
-+	    arch_get_random_long((unsigned long *)&ret + 1))
-+	    return ret;
-+#endif
- 
--	batch = &get_cpu_var(batched_entropy_long);
--	if (batch->position % ARRAY_SIZE(batch->entropy_long) == 0) {
--		extract_crng((u8 *)batch->entropy_long);
-+	batch = &get_cpu_var(batched_entropy_u64);
-+	if (batch->position % ARRAY_SIZE(batch->entropy_u64) == 0) {
-+		extract_crng((u8 *)batch->entropy_u64);
- 		batch->position = 0;
- 	}
--	ret = batch->entropy_long[batch->position++];
--	put_cpu_var(batched_entropy_long);
-+	ret = batch->entropy_u64[batch->position++];
-+	put_cpu_var(batched_entropy_u64);
- 	return ret;
- }
--EXPORT_SYMBOL(get_random_long);
-+EXPORT_SYMBOL(get_random_u64);
- 
--#if BITS_PER_LONG == 32
--unsigned int get_random_int(void)
--{
--	return get_random_long();
--}
--#else
--static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_int);
--unsigned int get_random_int(void)
-+static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
-+u32 get_random_u32(void)
- {
--	unsigned int ret;
-+	u32 ret;
- 	struct batched_entropy *batch;
- 
- 	if (arch_get_random_int(&ret))
- 		return ret;
- 
--	batch = &get_cpu_var(batched_entropy_int);
--	if (batch->position % ARRAY_SIZE(batch->entropy_int) == 0) {
--		extract_crng((u8 *)batch->entropy_int);
-+	batch = &get_cpu_var(batched_entropy_u32);
-+	if (batch->position % ARRAY_SIZE(batch->entropy_u32) == 0) {
-+		extract_crng((u8 *)batch->entropy_u32);
- 		batch->position = 0;
- 	}
--	ret = batch->entropy_int[batch->position++];
--	put_cpu_var(batched_entropy_int);
-+	ret = batch->entropy_u32[batch->position++];
-+	put_cpu_var(batched_entropy_u32);
- 	return ret;
- }
--#endif
--EXPORT_SYMBOL(get_random_int);
-+EXPORT_SYMBOL(get_random_u32);
- 
- /**
-  * randomize_page - Generate a random, page aligned address
-diff --git a/include/linux/random.h b/include/linux/random.h
-index 16ab429735a7..ed5c3838780d 100644
---- a/include/linux/random.h
-+++ b/include/linux/random.h
-@@ -42,8 +42,21 @@ extern void get_random_bytes_arch(void *buf, int nbytes);
- extern const struct file_operations random_fops, urandom_fops;
- #endif
- 
--unsigned int get_random_int(void);
--unsigned long get_random_long(void);
-+u32 get_random_u32(void);
-+u64 get_random_u64(void);
-+static inline unsigned int get_random_int(void)
-+{
-+	return get_random_u32();
-+}
-+static inline unsigned long get_random_long(void)
-+{
-+#if BITS_PER_LONG == 64
-+	return get_random_u64();
-+#else
-+	return get_random_u32();
-+#endif
-+}
-+
- unsigned long randomize_page(unsigned long start, unsigned long range);
- 
- u32 prandom_u32(void);
--- 
-2.11.0
+Thanks,
+Hannes
