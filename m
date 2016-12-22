@@ -1,127 +1,182 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <1482428996.2673.7.camel@stressinduktion.org>
-From: Hannes Frederic Sowa <hannes@stressinduktion.org>
-Date: Thu, 22 Dec 2016 18:49:56 +0100
-In-Reply-To: <CALCETrW_T1v4qKPJDs5dXwAnAit3M52AWMH-K+GJLb1WoLMuRQ@mail.gmail.com>
-References: 
-	<CALCETrUATPeaCJTQZN2h=ct6HH-xLt4V8T0PfPHNFGFN2HWtTA@mail.gmail.com>
-	 <1482425969.2673.5.camel@stressinduktion.org>
-	 <CALCETrW_T1v4qKPJDs5dXwAnAit3M52AWMH-K+GJLb1WoLMuRQ@mail.gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: BPF hash algo (Re: [kernel-hardening] Re: [PATCH v7 3/6]
- random: use SipHash in place of MD5)
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <alexei.starovoitov@gmail.com>, "Jason A. Donenfeld" <Jason@zx2c4.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Theodore Ts'o <tytso@mit.edu>, Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 22 Dec 2016 19:07:40 +0100
+Message-Id: <20161222180741.24577-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH 1/2] random: use chacha20 for get_random_int/long
+To: tytso@mit.edu, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Andy Lutomirski <luto@amacapital.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2016-12-22 at 09:25 -0800, Andy Lutomirski wrote:
-> On Thu, Dec 22, 2016 at 8:59 AM, Hannes Frederic Sowa
-> <hannes@stressinduktion.org> wrote:
-> > On Thu, 2016-12-22 at 08:07 -0800, Andy Lutomirski wrote:
-> > > 
-> > > You mean:
-> > > 
-> > > commit 7bd509e311f408f7a5132fcdde2069af65fa05ae
-> > > Author: Daniel Borkmann <daniel@iogearbox.net>
-> > > Date:   Sun Dec 4 23:19:41 2016 +0100
-> > > 
-> > >     bpf: add prog_digest and expose it via fdinfo/netlink
-> > > 
-> > > 
-> > > Yes, please!  This actually matters for security -- imagine a
-> > > malicious program brute-forcing a collision so that it gets loaded
-> > > wrong.  And this is IMO a use case for SHA-256 or SHA-512/256
-> > > (preferably the latter).  Speed basically doesn't matter here and
-> > > Blake2 is both less stable (didn't they slightly change it recently?)
-> > > and much less well studied.
-> > 
-> > We don't prevent ebpf programs being loaded based on the digest but
-> > just to uniquely identify loaded programs from user space and match up
-> > with their source.
-> 
-> The commit log talks about using the hash to see if the program has
-> already been compiled and JITted.  If that's done, then a collision
-> will directly cause the kernel to malfunction.
+Now that our crng uses chacha20, we can rely on its speedy
+characteristics for replacing MD5, while simultaneously achieving a
+higher security guarantee. Before the idea was to use these functions if
+you wanted random integers that aren't stupidly insecure but aren't
+necessarily secure either, a vague gray zone, that hopefully was "good
+enough" for its users. With chacha20, we can strengthen this claim,
+since either we're using an rdrand-like instruction, or we're using the
+same crng as /dev/urandom. And it's faster than what was before.
 
-Yeah, it still shouldn't crash the kernel but it could cause
-malfunctions because assumptions are not met from user space thus it
-could act in a strange way:
+We could have chosen to replace this with a SipHash-derived function,
+which might be slightly faster, but at the cost of having yet another
+RNG construction in the kernel. By moving to chacha20, we have a single
+RNG to analyze and verify, and we also already get good performance
+improvements on all platforms.
 
-My personal biggest concern is that users of this API will at some
-point in time assume this digist is unique (as a key itself for a
-hashtables f.e.), while it is actually not (and not enforced so by the
-kernel). If you can get an unpriv ebpf program inserted to the kernel
-with the same weak hash, a controller daemon could pick it up and bind
-it to another ebpf hook, probably outside of the unpriv realm the user
-was in before. Only the sorting matters, which might be unstable and is
-not guaranteed by anything in most hash table based data structures.
+Implementation-wise, rather than use a generic buffer for both
+get_random_int/long and memcpy based on the size needs, we use a
+specific buffer for 32-bit reads and for 64-bit reads. This way, we're
+guaranteed to always have aligned accesses on all platforms. While
+slightly more verbose in C, the assembly this generates is a lot
+simpler than otherwise.
 
-The API seems flawed to me.
+Finally, on 32-bit platforms where longs and ints are the same size,
+we simply alias get_random_int to get_random_long.
 
-> > > My inclination would have been to seed them with something that isn't
-> > > exposed to userspace for the precise reason that it would prevent user
-> > > code from making assumptions about what's in the hash.  But if there's
-> > > a use case for why user code needs to be able to calculate the hash on
-> > > its own, then that's fine.  But perhaps the actual fdinfo string
-> > > should be "sha256:abcd1234..." to give some flexibility down the road.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Suggested-by: Theodore Ts'o <tytso@mit.edu>
+Cc: Theodore Ts'o <tytso@mit.edu>
+Cc: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Cc: Andy Lutomirski <luto@amacapital.net>
+---
+ drivers/char/random.c  | 84 ++++++++++++++++++++++++++------------------------
+ include/linux/random.h |  1 -
+ init/main.c            |  1 -
+ 3 files changed, 43 insertions(+), 43 deletions(-)
 
-To add to this, I am very much in favor of that. Right now it doesn't
-have a name because it is a custom algorithm. ;)
-
-> > > 
-> > > Also:
-> > > 
-> > > +       result = (__force __be32 *)fp->digest;
-> > > +       for (i = 0; i < SHA_DIGEST_WORDS; i++)
-> > > +               result[i] = cpu_to_be32(fp->digest[i]);
-> > > 
-> > > Everyone, please, please, please don't open-code crypto primitives.
-> > > Is this and the code above it even correct?  It might be but on a very
-> > > brief glance it looks wrong to me.  If you're doing this to avoid
-> > > depending on crypto, then fix crypto so you can pull in the algorithm
-> > > without pulling in the whole crypto core.
-> > 
-> > The hashing is not a proper sha1 neither, unfortunately. I think that
-> > is why it will have a custom implementation in iproute2?
-> 
-> Putting on crypto hat:
-> 
-> NAK NAK NAK NAK NAK.  "The Linux kernel invented a new primitive in
-> 2016 when people know better and is going to handle it by porting that
-> new primitive to userspace" is not a particularly good argument.
-> 
-> Okay, crypto hack back off.
-> 
-> > 
-> > I wondered if bpf program loading should have used the module loading
-> > infrastructure from the beginning...
-> 
-> That would be way too complicated and would be nasty for the unprivileged cases.
-
-I was more or less just thinking about using the syscalls and user
-space representation not the generic infrastructure, as it is anyway
-too much concerned with real kernel modules (would probably also solve
-your cgroup-ebpf thread, as it can be passed by unique name or name and
-hash ;) ). Anyway...
-
-> > > At the very least, there should be a separate function that calculates
-> > > the hash of a buffer and that function should explicitly run itself
-> > > against test vectors of various lengths to make sure that it's
-> > > calculating what it claims to be calculating.  And it doesn't look
-> > > like the userspace code has landed, so, if this thing isn't
-> > > calculating SHA1 correctly, it's plausible that no one has noticed.
-> > 
-> > I hope this was known from the beginning, this is not sha1 unfortunately.
-> > 
-> > But ebpf elf programs also need preprocessing to get rid of some
-> > embedded load-depending data, so maybe it was considered to be just
-> > enough?
-> 
-> I suspect it was actually an accident.
-
-Maybe, I don't know.
-
-Bye,
-Hannes
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index d6876d506220..08d1dd58c0d2 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -2042,63 +2042,65 @@ struct ctl_table random_table[] = {
+ };
+ #endif 	/* CONFIG_SYSCTL */
+ 
+-static u32 random_int_secret[MD5_MESSAGE_BYTES / 4] ____cacheline_aligned;
+-
+-int random_int_secret_init(void)
+-{
+-	get_random_bytes(random_int_secret, sizeof(random_int_secret));
+-	return 0;
+-}
+-
+-static DEFINE_PER_CPU(__u32 [MD5_DIGEST_WORDS], get_random_int_hash)
+-		__aligned(sizeof(unsigned long));
++struct batched_entropy {
++	union {
++		unsigned long entropy_long[CHACHA20_BLOCK_SIZE / sizeof(unsigned long)];
++		unsigned int entropy_int[CHACHA20_BLOCK_SIZE / sizeof(unsigned int)];
++	};
++	unsigned int position;
++};
+ 
+ /*
+- * Get a random word for internal kernel use only. Similar to urandom but
+- * with the goal of minimal entropy pool depletion. As a result, the random
+- * value is not cryptographically secure but for several uses the cost of
+- * depleting entropy is too high
++ * Get a random word for internal kernel use only. The quality of the random
++ * number is either as good as RDRAND or as good as /dev/urandom, with the
++ * goal of being quite fast and not depleting entropy.
+  */
+-unsigned int get_random_int(void)
++static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_long);
++unsigned long get_random_long(void)
+ {
+-	__u32 *hash;
+-	unsigned int ret;
++	unsigned long ret;
++	struct batched_entropy *batch;
+ 
+-	if (arch_get_random_int(&ret))
++	if (arch_get_random_long(&ret))
+ 		return ret;
+ 
+-	hash = get_cpu_var(get_random_int_hash);
+-
+-	hash[0] += current->pid + jiffies + random_get_entropy();
+-	md5_transform(hash, random_int_secret);
+-	ret = hash[0];
+-	put_cpu_var(get_random_int_hash);
+-
++	batch = &get_cpu_var(batched_entropy_long);
++	if (batch->position % ARRAY_SIZE(batch->entropy_long) == 0) {
++		extract_crng((u8 *)batch->entropy_long);
++		batch->position = 0;
++	}
++	ret = batch->entropy_long[batch->position++];
++	put_cpu_var(batched_entropy_long);
+ 	return ret;
+ }
+-EXPORT_SYMBOL(get_random_int);
++EXPORT_SYMBOL(get_random_long);
+ 
+-/*
+- * Same as get_random_int(), but returns unsigned long.
+- */
+-unsigned long get_random_long(void)
++#if BITS_PER_LONG == 32
++unsigned int get_random_int(void)
+ {
+-	__u32 *hash;
+-	unsigned long ret;
++	return get_random_long();
++}
++#else
++static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_int);
++unsigned int get_random_int(void)
++{
++	unsigned int ret;
++	struct batched_entropy *batch;
+ 
+-	if (arch_get_random_long(&ret))
++	if (arch_get_random_int(&ret))
+ 		return ret;
+ 
+-	hash = get_cpu_var(get_random_int_hash);
+-
+-	hash[0] += current->pid + jiffies + random_get_entropy();
+-	md5_transform(hash, random_int_secret);
+-	ret = *(unsigned long *)hash;
+-	put_cpu_var(get_random_int_hash);
+-
++	batch = &get_cpu_var(batched_entropy_int);
++	if (batch->position % ARRAY_SIZE(batch->entropy_int) == 0) {
++		extract_crng((u8 *)batch->entropy_int);
++		batch->position = 0;
++	}
++	ret = batch->entropy_int[batch->position++];
++	put_cpu_var(batched_entropy_int);
+ 	return ret;
+ }
+-EXPORT_SYMBOL(get_random_long);
++#endif
++EXPORT_SYMBOL(get_random_int);
+ 
+ /**
+  * randomize_page - Generate a random, page aligned address
+diff --git a/include/linux/random.h b/include/linux/random.h
+index 7bd2403e4fef..16ab429735a7 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -37,7 +37,6 @@ extern void get_random_bytes(void *buf, int nbytes);
+ extern int add_random_ready_callback(struct random_ready_callback *rdy);
+ extern void del_random_ready_callback(struct random_ready_callback *rdy);
+ extern void get_random_bytes_arch(void *buf, int nbytes);
+-extern int random_int_secret_init(void);
+ 
+ #ifndef MODULE
+ extern const struct file_operations random_fops, urandom_fops;
+diff --git a/init/main.c b/init/main.c
+index c81c9fa21bc7..222d5c2a80cc 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -880,7 +880,6 @@ static void __init do_basic_setup(void)
+ 	do_ctors();
+ 	usermodehelper_enable();
+ 	do_initcalls();
+-	random_int_secret_init();
+ }
+ 
+ static void __init do_pre_smp_initcalls(void)
+-- 
+2.11.0
