@@ -1,51 +1,122 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <20161222054125.lzxhd6ctovm3wk4p@thunk.org>
-References: <20161216030328.11602-1-Jason@zx2c4.com> <20161221230216.25341-1-Jason@zx2c4.com>
- <20161221230216.25341-4-Jason@zx2c4.com> <CALCETrVttVoZMvCYZcrAqM1c=YQP_nCfdfO1MsrSHjvjTFxH+A@mail.gmail.com>
- <17bd0c70-d2c1-165b-f5b2-252dfca404e8@stressinduktion.org>
- <CAHmME9phg=GuhEUaMxxv_=RexffPDqrOEhmaKffy_ZSt7bfC7g@mail.gmail.com> <20161222054125.lzxhd6ctovm3wk4p@thunk.org>
-From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 22 Dec 2016 07:03:29 +0100
-Message-ID: <CAHmME9o=yLOLr2w3xYj2up-UW0tXtv=0A5ffiTiVCCHkv6Twxg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [PATCH v7 3/6] random: use SipHash in
- place of MD5
-To: kernel-hardening@lists.openwall.com, Theodore Ts'o <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+Date: 22 Dec 2016 03:02:16 -0500
+Message-ID: <20161222080216.15157.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <CALCETrU84-EeU91AkoAZLWrhK=FSrBgV139oSSM-Vw5Mc0mdAg@mail.gmail.com>
+Subject: [kernel-hardening] Re: George's crazy full state idea (Re: HalfSipHash Acceptable Usage)
+To: linux@sciencehorizons.net, luto@amacapital.net
+Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@kernel.org, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ted,
+> True, but it's called get_random_int(), and it seems like making it
+> stronger, especially if the performance cost is low to zero, is a good
+> thing.
 
-On Thu, Dec 22, 2016 at 6:41 AM, Theodore Ts'o <tytso@mit.edu> wrote:
-> The bottom line is that I think we're really "pixel peeping" at this
-> point --- which is what obsessed digital photographers will do when
-> debating the quality of a Canon vs Nikon DSLR by blowing up a photo by
-> a thousand times, and then trying to claim that this is visible to the
-> human eye.  Or people who obsessing over the frequency response curves
-> of TH-X00 headphones with Mahogony vs Purpleheart wood, when it's
-> likely that in a blind head-to-head comparison, most people wouldn't
-> be able to tell the difference....
+If it's cheap enough, I don't mind.  But it's documented as being
+marginal-quality, used where speed is more important.
 
-This is hilarious, thanks for the laugh. I believe you're right about this...
+In particular, it's *not* used for key material; only values that matter
+only as long as they are in use.  Whule they're in use, they can't be
+concealed from an attacker with kernel access, and when they're dne
+being used, they're worthless.
 
+>> If you want anti-backtracking, though, it's easy to add.  What we
+>> hash is:
+>>
+>> entropy_0 || secret || output_0 || entropy_1 || secret || output_1 || ...
+>>
+>> You mix the output word right back in to the (unfinalized) state after
+>> generating it.  This is still equivalent to unmodified back-box SipHash,
+>> you're just using a (conceptually independent) SipHash invocation to
+>> produce some of its input.
+
+> Ah, cute.  This could probably be sped up by doing something like:
 >
-> I think the main argument for using the batched getrandom approach is
-> that it, I would argue, simpler than introducing siphash into the
-> picture.  On 64-bit platforms it is faster and more consistent, so
-> it's basically that versus complexity of having to adding siphash to
-> the things that people have to analyze when considering random number
-> security on Linux.   But it's a close call either way, I think.
+> entropy_0 || secret || output_0 ^ entropy_1 || secret || ...
 
-I find this compelling. We'll have one csprng for both
-get_random_int/long and for /dev/urandom, and we'll be able to update
-that silly warning on the comment of get_random_int/long to read
-"gives output of either rdrand quality or of /dev/urandom quality",
-which makes it more useful for other things. It introduces less error
-prone code, and it lets the RNG analysis be spent on just one RNG, not
-two.
+I'm disinclined to do that because that requires deferring the mixing
+until the *next* time you generate something.  Storing the value you
+don't want revealed by a state capture defeats the purpose.
 
-So, with your blessing, I'm going to move ahead with implementing a
-pretty version of this for v8.
+I'd rather mix it in immediately, so you have anti-backtracking from
+the moment of creation.
 
-Regards,
-Jason
+Also, I don't think it's particularly "cute" or clever; mixing output back
+in is the standard way all antibacktracking is accomplished.  It's how
+the Davies-Meyer hash construction makes a reversible function one-way.
+
+(There is a second way to do it by throwing away state, but that's
+expensive in seed entropy.)
+
+> It's a little weak because the output is only 64 bits, so you could
+> plausibly backtrack it on a GPU or FPGA cluster or on an ASIC if the
+> old entropy is guessable.  I suspect there are sneaky ways around it
+> like using output_n-1 ^ output_n-2 or similar.  I'll sleep on it.
+
+Ah, yes, I see.  Given the final state, you guess the output word, go
+back one round, then forward the finalization rounds.   Is the output
+equal to the guessed output?  You'll find the true value, plus
+Poisson(1 - 2^-64) additional.  (Since you have 2^64-1 chances at
+something with probability 1 in 2^64.)
+
+And this can be iterated as often as you like to get earlier output words,
+as long as you can guess the entropy.  *That's* the part that hurts;
+you'd like something that peters out.
+
+You could use the double-length-output SipHash variant (which requires
+a second set of finalization rounds) and mix more output back, but
+that's expensive.
+
+The challenge is coming up with more unpredictable data to mix in than one
+invocation of SipHash returns.  And without storing previous output
+anywhere, because that is exactly wrong.
+
+A running sum or xor or whatever of the outputs doesn't help, because
+once you've guessed the last output, you can backtrack that for no
+additional effort.
+
+State capture is incredibly difficult, our application doesn't require
+resistance anyway... unless you can think of something cheap, I think
+we can just live with this.
+
+>> I'd *like* to persuade you that skipping the padding byte wouldn't
+>> invalidate any security proofs, because it's true and would simplify
+>> the code.  But if you want 100% stock, I'm willing to cater to that.
+
+> I lean toward stock in the absence of a particularly good reason.  At
+> the very least I'd want to read that paper carefully.
+
+Er... adding the length is standard Merkle-Damgaard strengthening.
+Why you do this is described in the original papers by Merkle and Damgaard.
+
+The lay summary is at
+https://en.wikipedia.org/wiki/Merkle-Damgard_construction
+
+The original sources are:
+http://www.merkle.com/papers/Thesis1979.pdf
+http://saluc.engr.uconn.edu/refs/algorithms/hashalg/damgard89adesign.pdf
+
+Merkle describes the construction; Damgaard proves it secure.  Basically,
+appending the length is required to handle variable-length input if the
+input is not itself self-delimiting.
+
+The proof of security is theorem 3.1 in the latter.  (The first, more
+detailed explanation involves the use of an extra bit, which the second
+then explains how todo without.)
+
+In particular, see the top of page 420, which notes that the security
+proof only requires encoding *how much padding is added* in the final
+block, not the overall length of the message, and the second remark on
+p. 421 which notes that no such suffix is required if it's not necessary
+to distinguish messages with different numbers of trailing null bytes.
+
+The rules are alluded to in the "Choice of padding rule" part of the
+"Rationale" section of the SipHash paper (p. 7), but the description is
+very brief because it assumes the reader has the background.
+
+That's why they say "We could have chosen a slightly simpler padding rule,
+such as appending a <tt>80</tt> byte followed by zeroes."
+
+The thing is, if the amount of the last block that is used is fixed
+(within the domain of a particular key), you don't need to encode this
+information at all.
