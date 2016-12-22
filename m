@@ -1,39 +1,41 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 21 Dec 2016 19:18:11 -0500
-Message-ID: <20161222001811.7109.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <20161221222702.h2vboms776zpgpi4@thunk.org>
-Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: linux@sciencehorizons.net, tytso@mit.edu
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, vegard.nossum@gmail.com
+Date: Wed, 21 Dec 2016 16:46:35 -0800
+From: Andi Kleen <ak@linux.intel.com>
+Message-ID: <20161222004635.GV8388@tassilo.jf.intel.com>
+References: <20161216030328.11602-1-Jason@zx2c4.com>
+ <20161221230216.25341-1-Jason@zx2c4.com>
+ <20161221230216.25341-7-Jason@zx2c4.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20161221230216.25341-7-Jason@zx2c4.com>
+Subject: [kernel-hardening] Re: [PATCH v7 6/6] siphash: implement HalfSipHash1-3 for hash tables
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, edumazet@google.com, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, davem@davemloft.net, luto@amacapital.net, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Theodore Ts'o wrote:
-> On Wed, Dec 21, 2016 at 01:37:51PM -0500, George Spelvin wrote:
->> SipHash annihilates the competition on 64-bit superscalar hardware.
->> SipHash dominates the field on 64-bit in-order hardware.
->> SipHash wins easily on 32-bit hardware *with enough registers*.
->> On register-starved 32-bit machines, it really struggles.
+> 64-bit x86_64:
+> [    0.509409] test_siphash:     SipHash2-4 cycles: 4049181
+> [    0.510650] test_siphash:     SipHash1-3 cycles: 2512884
+> [    0.512205] test_siphash: HalfSipHash1-3 cycles: 3429920
+> [    0.512904] test_siphash:    JenkinsHash cycles:  978267
 
-> And "with enough registers" includes ARM and MIPS, right?
+I'm not sure what these numbers mean. Surely a single siphash2-4
+does not take 4+ million cycles? 
 
-Yes.  As a matter of fact, 32-bit ARM does particularly well
-on 64-bit SipHash due to its shift+op instructions.
+If you run them in a loop please divide by the iterations.
 
-There is a noticeable performance drop, but nothing catastrophic.
+But generally running small code in a loop is often an unrealistic
+benchmark strategy because it hides cache misses, primes
+predictors, changes frequencies and changes memory costs,
+but also can overload pipelines and oversubscribe
+resources.
 
-The main thing I've been worried about is all the flow tracking
-and NAT done by small home routers, and that's addressed by using
-HalfSipHash for the hash tables.  They don't *initiate* a lot of
-TCP sessions.
+[see also page 46+ in http://halobates.de/applicative-mental-models.pdf]
 
-> So the only
-> real problem is 32-bit x86, and you're right, at that point, only
-> people who might care are people who are using a space-radiation
-> hardened 386 --- and they're not likely to be doing high throughput
-> TCP connections.  :-)
+So the numbers you get there are at least somewhat
+dubious. It would be good to have at least some test which
+is not just a tiny micro benchmark to compare before making
+conclusions.
 
-The only requirement on performance is "don't make DaveM angry." :-)
-
-I was just trying to answer the question of why we *worried* about the
-performance, not specifically argue that we *should* use HalfSipHash.
+-Andi
