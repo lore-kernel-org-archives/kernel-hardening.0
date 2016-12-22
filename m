@@ -1,41 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 21 Dec 2016 16:46:35 -0800
-From: Andi Kleen <ak@linux.intel.com>
-Message-ID: <20161222004635.GV8388@tassilo.jf.intel.com>
-References: <20161216030328.11602-1-Jason@zx2c4.com>
- <20161221230216.25341-1-Jason@zx2c4.com>
- <20161221230216.25341-7-Jason@zx2c4.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20161221230216.25341-7-Jason@zx2c4.com>
-Subject: [kernel-hardening] Re: [PATCH v7 6/6] siphash: implement HalfSipHash1-3 for hash tables
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, edumazet@google.com, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, davem@davemloft.net, luto@amacapital.net, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+Date: 21 Dec 2016 20:13:35 -0500
+Message-ID: <20161222011335.8023.qmail@ns.sciencehorizons.net>
+From: "George Spelvin" <linux@sciencehorizons.net>
+In-Reply-To: <20161221222702.h2vboms776zpgpi4@thunk.org>
+Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
+To: linux@sciencehorizons.net, tytso@mit.edu
+Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, vegard.nossum@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> 64-bit x86_64:
-> [    0.509409] test_siphash:     SipHash2-4 cycles: 4049181
-> [    0.510650] test_siphash:     SipHash1-3 cycles: 2512884
-> [    0.512205] test_siphash: HalfSipHash1-3 cycles: 3429920
-> [    0.512904] test_siphash:    JenkinsHash cycles:  978267
+As a separate message, to disentangle the threads, I'd like to
+talk about get_random_long().
 
-I'm not sure what these numbers mean. Surely a single siphash2-4
-does not take 4+ million cycles? 
+After some thinking, I still like the "state-preserving" construct
+that's equivalent to the current MD5 code.  Yes, we could just do
+siphash(current_cpu || per_cpu_counter, global_key), but it's nice to
+preserve a bit more.
 
-If you run them in a loop please divide by the iterations.
+It requires library support from the SipHash code to return the full
+SipHash state, but I hope that's a fair thing to ask for.
 
-But generally running small code in a loop is often an unrealistic
-benchmark strategy because it hides cache misses, primes
-predictors, changes frequencies and changes memory costs,
-but also can overload pipelines and oversubscribe
-resources.
+Here's my current straw man design for comment.  It's very similar to
+the current MD5-based design, but feeds all the seed material in the
+"correct" way, as opposed to Xring directly into the MD5 state.
 
-[see also page 46+ in http://halobates.de/applicative-mental-models.pdf]
+* Each CPU has a (Half)SipHash state vector,
+  "unsigned long get_random_int_hash[4]".  Unlike the current
+  MD5 code, we take care to initialize it to an asymmetric state.
 
-So the numbers you get there are at least somewhat
-dubious. It would be good to have at least some test which
-is not just a tiny micro benchmark to compare before making
-conclusions.
+* There's a global 256-bit random_int_secret (which we could
+  reseed periodically).
 
--Andi
+To generate a random number:
+* If get_random_int_hash is all-zero, seed it with fresh a half-sized
+  SipHash key and the appropriate XOR constants.
+* Generate three words of random_get_entropy(), jiffies, and current->pid.
+  (This is arbitary seed material, copied from the current code.)
+* Crank through that with (Half)SipHash-1-0.
+* Crank through the random_int_secret with (Half)SipHash-1-0.
+* Return v1 ^ v3.
+
+Here are the reasons:
+* The first step is just paranoia, but SipHash's security promise depends
+  on starting with an asymmetric state, we want unique per-CPU states,
+  and it's a one-time cost.
+* When the input words are themselves secret, there's no security
+  advantage, and almost no speed advantage, to doing two rounds for one
+  input word versus two words with one round each.  Thus, SipHash-1.
+* The above is not exactly true, due to the before+after XOR pattern
+  that SipHash uses, but I think it's true anyway.
+* Likewise, there's no benefit to unkeyed finalization rounds over keyed
+  ones.  That's why I just enlarged the global secret.
+* The per-call seed material is hashed first on general principles,
+  because that's the novel part that might have fresh entropy.
+* To the extent the initial state is secret, the rounds processing the
+  global secret are 4 finalization rounds for the initial state and
+  the per-call entropy.
+* The final word(s) of the global secret might be vulnerable to analysis,
+  due to incomplete mixing, but since the global secret is always hashed
+  in the same order, and larger that the desired security level, the
+  initial words should be secure.
+* By carrying forward the full internal state, we ensure that repeated
+  calls return different results, and to the extent that the per-call
+  seed material has entropy, it's preserved.
+* The final return is all that's needed, since the last steps in the 
+  SipRound are "v1 ^= v2" and "v3 ^= v0".  It's no security loss,
+  and a very minor speedup.
+* Also, this avoids directly "exposing" the final XOR with the last
+  word of the global secret (which is made to v0).
+
+If I'm allowed to use full SipHash, some shortcuts can be taken,
+but I believe the above would be secure with HalfSipHash.
+
+If additional performance is required, I'd consider shrinking the
+global secret to 192 bits on 32-bit machines but I want more than
+128 bits of ey material, and enough rounds to be equivalent to 4
+finalization rounds.
