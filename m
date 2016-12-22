@@ -1,58 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <20161216030328.11602-1-Jason@zx2c4.com>
+ <20161221230216.25341-1-Jason@zx2c4.com>
+ <20161221230216.25341-4-Jason@zx2c4.com>
+ <CALCETrVttVoZMvCYZcrAqM1c=YQP_nCfdfO1MsrSHjvjTFxH+A@mail.gmail.com>
+From: Hannes Frederic Sowa <hannes@stressinduktion.org>
+Message-ID: <17bd0c70-d2c1-165b-f5b2-252dfca404e8@stressinduktion.org>
+Date: Thu, 22 Dec 2016 03:07:29 +0100
 MIME-Version: 1.0
-In-Reply-To: <CA+55aFy8fNOxw3bnwkX1S46jKnW6i26mueaiuOsScyN3kFJp+A@mail.gmail.com>
-References: <CAHmME9oJDOLpPKRpX=N+DY9BuzTueWjTaWzeVtdVMBG7mcrqKA@mail.gmail.com>
- <20161221155540.29529.qmail@ns.sciencehorizons.net> <CA+55aFy8fNOxw3bnwkX1S46jKnW6i26mueaiuOsScyN3kFJp+A@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Wed, 21 Dec 2016 17:54:26 -0800
-Message-ID: <CALCETrVxFDQGJeQX5k39pM3TvqH4q10SduPY=Os_RiJGEg_0Hg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: George Spelvin <linux@sciencehorizons.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Andi Kleen <ak@linux.intel.com>, David Miller <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "Daniel J . Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Theodore Ts'o <tytso@mit.edu>, Vegard Nossum <vegard.nossum@gmail.com>
+In-Reply-To: <CALCETrVttVoZMvCYZcrAqM1c=YQP_nCfdfO1MsrSHjvjTFxH+A@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v7 3/6] random: use SipHash in place of MD5
+To: Andy Lutomirski <luto@amacapital.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 21, 2016 at 9:25 AM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Wed, Dec 21, 2016 at 7:55 AM, George Spelvin
-> <linux@sciencehorizons.net> wrote:
->>
->> How much does kernel_fpu_begin()/kernel_fpu_end() cost?
->
-> It's now better than it used to be, but it's absolutely disastrous
-> still. We're talking easily many hundreds of cycles. Under some loads,
-> thousands.
->
-> And I warn you already: it will _benchmark_ a hell of a lot better
-> than it will work in reality. In benchmarks, you'll hit all the
-> optimizations ("oh, I've already saved away all the FP registers, no
-> need to do it again").
->
-> In contrast, in reality, especially with things like "do it once or
-> twice per incoming packet", you'll easily hit the absolute worst
-> cases, where not only does it take a few hundred cycles to save the FP
-> state, you'll then return to user space in between packets, which
-> triggers the slow-path return code and reloads the FP state, which is
-> another few hundred cycles plus.
+On 22.12.2016 00:42, Andy Lutomirski wrote:
+> On Wed, Dec 21, 2016 at 3:02 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+>>  unsigned int get_random_int(void)
+>>  {
+>> -       __u32 *hash;
+>> -       unsigned int ret;
+>> -
+>> -       if (arch_get_random_int(&ret))
+>> -               return ret;
+>> -
+>> -       hash = get_cpu_var(get_random_int_hash);
+>> -
+>> -       hash[0] += current->pid + jiffies + random_get_entropy();
+>> -       md5_transform(hash, random_int_secret);
+>> -       ret = hash[0];
+>> -       put_cpu_var(get_random_int_hash);
+>> -
+>> -       return ret;
+>> +       unsigned int arch_result;
+>> +       u64 result;
+>> +       struct random_int_secret *secret;
+>> +
+>> +       if (arch_get_random_int(&arch_result))
+>> +               return arch_result;
+>> +
+>> +       secret = get_random_int_secret();
+>> +       result = siphash_3u64(secret->chaining, jiffies,
+>> +                             (u64)random_get_entropy() + current->pid,
+>> +                             secret->secret);
+>> +       secret->chaining += result;
+>> +       put_cpu_var(secret);
+>> +       return result;
+>>  }
+>>  EXPORT_SYMBOL(get_random_int);
+> 
+> Hmm.  I haven't tried to prove anything for real.  But here goes (in
+> the random oracle model):
+> 
+> Suppose I'm an attacker and I don't know the secret or the chaining
+> value.  Then, regardless of what the entropy is, I can't predict the
+> numbers.
+> 
+> Now suppose I do know the secret and the chaining value due to some
+> leak.  If I want to deduce prior outputs, I think I'm stuck: I'd need
+> to find a value "result" such that prev_chaining + result = chaining
+> and result = H(prev_chaining, ..., secret);.  I don't think this can
+> be done efficiently in the random oracle model regardless of what the
+> "..." is.
+> 
+> But, if I know the secret and chaining value, I can predict the next
+> output assuming I can guess the entropy.  What's worse is that, even
+> if I can't guess the entropy, if I *observe* the next output then I
+> can calculate the next chaining value.
+> 
+> So this is probably good enough, and making it better is hard.  Changing it to:
+> 
+> u64 entropy = (u64)random_get_entropy() + current->pid;
+> result = siphash(..., entropy, ...);
+> secret->chaining += result + entropy;
+> 
+> would reduce this problem by forcing an attacker to brute-force the
+> entropy on each iteration, which is probably an improvement.
+> 
+> To fully fix it, something like "catastrophic reseeding" would be
+> needed, but that's hard to get right.
 
-Hah, you're thinking that the x86 code works the way that Rik and I
-want it to work, and you just made my day. :)  What actually happens
-is that the state is saved in kernel_fpu_begin() and restored in
-kernel_fpu_end(), and it'll take a few hundred cycles best case.  If
-you do it a bunch of times in a loop, you *might* trigger a CPU
-optimization that notices that the state being saved is the same state
-that was just restored, but you're still going to pay the full restore
-code each round trip no matter what.
+I wonder if Ted's proposal was analyzed further in terms of performance
+if get_random_int should provide cprng alike properties?
 
-The code is much clearer in 4.10 kernels now that I deleted the unused
-"lazy" branches.
+For reference: https://lkml.org/lkml/2016/12/14/351
 
->
-> Similarly, in benchmarks you'll hit the "modern CPU's power on the AVX
-> unit and keep it powered up for a while afterwards", while in real
-> life you would quite easily hit the "oh, AVX is powered down because
-> we were idle, now it powers up at half speed which is another latency
-> hit _and_ the AVX unit won't run full out anyway".
+The proposal made sense to me and would completely solve the above
+mentioned problem on the cost of repeatedly reseeding from the crng.
 
-I *think* that was mostly fixed in Broadwell or thereabouts (in terms
-of latency -- throughput and power consumption still suffers).
+Bye,
+Hannes
