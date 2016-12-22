@@ -1,68 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVn1tWBQx-RCSqCQ2ZcB6hPdioaV52q8vY+Mz1fRKsUXA@mail.gmail.com>
-References: <CALCETrVn1tWBQx-RCSqCQ2ZcB6hPdioaV52q8vY+Mz1fRKsUXA@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 22 Dec 2016 08:09:54 -0800
-Message-ID: <CALCETrUSM7KDNuVqh169241PNumJVOF5hrNQUq=k5Fnet6nSgA@mail.gmail.com>
+In-Reply-To: <20161222155853.beqowf2qfg7igf23@thunk.org>
+References: <20161216030328.11602-1-Jason@zx2c4.com> <20161221230216.25341-1-Jason@zx2c4.com>
+ <20161221230216.25341-4-Jason@zx2c4.com> <CALCETrVttVoZMvCYZcrAqM1c=YQP_nCfdfO1MsrSHjvjTFxH+A@mail.gmail.com>
+ <17bd0c70-d2c1-165b-f5b2-252dfca404e8@stressinduktion.org>
+ <CAHmME9phg=GuhEUaMxxv_=RexffPDqrOEhmaKffy_ZSt7bfC7g@mail.gmail.com>
+ <20161222054125.lzxhd6ctovm3wk4p@thunk.org> <CAHmME9o=yLOLr2w3xYj2up-UW0tXtv=0A5ffiTiVCCHkv6Twxg@mail.gmail.com>
+ <20161222155853.beqowf2qfg7igf23@thunk.org>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Thu, 22 Dec 2016 17:16:47 +0100
+Message-ID: <CAHmME9r3zCE6zLsL9Jrp3a2D3mpH6oYEnz3BBerAGZXyJpr2mQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: George's crazy full state idea (Re: HalfSipHash Acceptable Usage)
-To: Andy Lutomirski <luto@kernel.org>
-Cc: George Spelvin <linux@sciencehorizons.net>, Ted Ts'o <tytso@mit.edu>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, David Laight <David.Laight@aculab.com>, "D. J. Bernstein" <djb@cr.yp.to>, Eric Biggers <ebiggers3@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>, Hannes Frederic Sowa <hannes@stressinduktion.org>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Tom Herbert <tom@herbertland.com>, Linus Torvalds <torvalds@linux-foundation.org>, Vegard Nossum <vegard.nossum@gmail.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v7 3/6] random: use SipHash in
+ place of MD5
+To: Theodore Ts'o <tytso@mit.edu>, "Jason A. Donenfeld" <Jason@zx2c4.com>, kernel-hardening@lists.openwall.com, Hannes Frederic Sowa <hannes@stressinduktion.org>, Andy Lutomirski <luto@amacapital.net>, Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Dec 21, 2016 at 6:07 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> On Wed, Dec 21, 2016 at 5:13 PM, George Spelvin
-> <linux@sciencehorizons.net> wrote:
->> As a separate message, to disentangle the threads, I'd like to
->> talk about get_random_long().
->>
->> After some thinking, I still like the "state-preserving" construct
->> that's equivalent to the current MD5 code.  Yes, we could just do
->> siphash(current_cpu || per_cpu_counter, global_key), but it's nice to
->> preserve a bit more.
->>
->> It requires library support from the SipHash code to return the full
->> SipHash state, but I hope that's a fair thing to ask for.
->
-> I don't even think it needs that.  This is just adding a
-> non-destructive final operation, right?
->
->>
->> Here's my current straw man design for comment.  It's very similar to
->> the current MD5-based design, but feeds all the seed material in the
->> "correct" way, as opposed to Xring directly into the MD5 state.
->>
->> * Each CPU has a (Half)SipHash state vector,
->>   "unsigned long get_random_int_hash[4]".  Unlike the current
->>   MD5 code, we take care to initialize it to an asymmetric state.
->>
->> * There's a global 256-bit random_int_secret (which we could
->>   reseed periodically).
->>
->> To generate a random number:
->> * If get_random_int_hash is all-zero, seed it with fresh a half-sized
->>   SipHash key and the appropriate XOR constants.
->> * Generate three words of random_get_entropy(), jiffies, and current->pid.
->>   (This is arbitary seed material, copied from the current code.)
->> * Crank through that with (Half)SipHash-1-0.
->> * Crank through the random_int_secret with (Half)SipHash-1-0.
->> * Return v1 ^ v3.
->
-> Just to clarify, if we replace SipHash with a black box, I think this
-> effectively means, where "entropy" is random_get_entropy() || jiffies
-> || current->pid:
->
-> The first call returns H(random seed || entropy_0 || secret).  The
-> second call returns H(random seed || entropy_0 || secret || entropy_1
-> || secret).  Etc.
+Hi Ted,
 
-Having slept on this, I like it less.  The problem is that a
-backtracking attacker doesn't just learn H(random seed || entropy_0 ||
-secret || ...) -- they learn the internal state of the hash function
-that generates that value.  This probably breaks any attempt to apply
-security properties of the hash function.  For example, the internal
-state could easily contain a whole bunch of prior outputs it in
-verbatim.
+On Thu, Dec 22, 2016 at 4:58 PM, Theodore Ts'o <tytso@mit.edu> wrote:
+> Can we do this as a separate series, please?  At this point, it's a
+> completely separate change from a logical perspective, and we can take
+> in the change through the random.git tree.
+>
+> Changes that touch files that are normally changed in several
+> different git trees leads to the potential for merge conflicts during
+> the linux-next integration and merge window processes.  Which is why
+> it's generally best to try to isolate changes as much as possible.
 
---Andy
+Sure, I can separate things out.
+
+Could you offer a bit of advice on how to manage dependencies between
+patchsets during merge windows? I'm a bit new to the process.
+
+Specifically, we how have 4 parts:
+1. add siphash, and use it for some networking code. to: david miller's net-next
+2. convert char/random to use siphash. to: ted ts'o's random-next
+3. move lib/md5.c to static function in crypto/md5.c, remove entry
+inside of linux/cryptohash.h. to: ??'s ??-next
+4. move lib/halfmd4.c to static function in fs/ext/hash.c, remove
+entry inside of linux/cryptohash.c. to: td ts'o's ext-next
+
+Problem: 2 depends on 1, 3 depends on 1 & 2. But this can be
+simplified into 3 parts:
+
+1. add siphash, and use it for some networking code. to: david miller's net-next
+2. convert char/random to use siphash, move lib/md5.c to static
+function in crypto/md5.c, remove entry inside of linux/cryptohash.h.
+to: ted ts'o's random-next
+3. move lib/halfmd4.c to static function in fs/ext/hash.c, remove
+entry inside of linux/cryptohash.c. to: td ts'o's ext-next
+
+Problem: 2 depends on 1. Is that okay with you?
+
+Also, would you like me to merge (3) and (2) of the second list into
+one series for you?
+
+Jason
