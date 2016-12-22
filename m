@@ -1,77 +1,71 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 21 Dec 2016 20:13:35 -0500
-Message-ID: <20161222011335.8023.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <20161221222702.h2vboms776zpgpi4@thunk.org>
-Subject: [kernel-hardening] Re: HalfSipHash Acceptable Usage
-To: linux@sciencehorizons.net, tytso@mit.edu
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, hannes@stressinduktion.org, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, luto@amacapital.net, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, vegard.nossum@gmail.com
+Date: Wed, 21 Dec 2016 17:40:26 -0800
+From: Stephen Hemminger <stephen@networkplumber.org>
+Message-ID: <20161221174026.1b25fd80@xeon-e3>
+In-Reply-To: <20161221230216.25341-2-Jason@zx2c4.com>
+References: <20161216030328.11602-1-Jason@zx2c4.com>
+	<20161221230216.25341-1-Jason@zx2c4.com>
+	<20161221230216.25341-2-Jason@zx2c4.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v7 1/6] siphash: add cryptographically secure PRF
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>, linux-crypto@vger.kernel.org, David Laight <David.Laight@aculab.com>, Ted Tso <tytso@mit.edu>, Hannes Frederic Sowa <hannes@stressinduktion.org>, edumazet@google.com, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, ak@linux.intel.com, davem@davemloft.net, luto@amacapital.net, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>, Eric Dumazet <eric.dumazet@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As a separate message, to disentangle the threads, I'd like to
-talk about get_random_long().
+On Thu, 22 Dec 2016 00:02:11 +0100
+"Jason A. Donenfeld" <Jason@zx2c4.com> wrote:
 
-After some thinking, I still like the "state-preserving" construct
-that's equivalent to the current MD5 code.  Yes, we could just do
-siphash(current_cpu || per_cpu_counter, global_key), but it's nice to
-preserve a bit more.
+> SipHash is a 64-bit keyed hash function that is actually a
+> cryptographically secure PRF, like HMAC. Except SipHash is super fast,
+> and is meant to be used as a hashtable keyed lookup function, or as a
+> general PRF for short input use cases, such as sequence numbers or RNG
+> chaining.
+> 
+> For the first usage:
+> 
+> There are a variety of attacks known as "hashtable poisoning" in which an
+> attacker forms some data such that the hash of that data will be the
+> same, and then preceeds to fill up all entries of a hashbucket. This is
+> a realistic and well-known denial-of-service vector. Currently
+> hashtables use jhash, which is fast but not secure, and some kind of
+> rotating key scheme (or none at all, which isn't good). SipHash is meant
+> as a replacement for jhash in these cases.
+> 
+> There are a modicum of places in the kernel that are vulnerable to
+> hashtable poisoning attacks, either via userspace vectors or network
+> vectors, and there's not a reliable mechanism inside the kernel at the
+> moment to fix it. The first step toward fixing these issues is actually
+> getting a secure primitive into the kernel for developers to use. Then
+> we can, bit by bit, port things over to it as deemed appropriate.
+> 
+> While SipHash is extremely fast for a cryptographically secure function,
+> it is likely a bit slower than the insecure jhash, and so replacements
+> will be evaluated on a case-by-case basis based on whether or not the
+> difference in speed is negligible and whether or not the current jhash usage
+> poses a real security risk.
+> 
+> For the second usage:
+> 
+> A few places in the kernel are using MD5 or SHA1 for creating secure
+> sequence numbers, syn cookies, port numbers, or fast random numbers.
+> SipHash is a faster and more fitting, and more secure replacement for MD5
+> in those situations. Replacing MD5 and SHA1 with SipHash for these uses is
+> obvious and straight-forward, and so is submitted along with this patch
+> series. There shouldn't be much of a debate over its efficacy.
+> 
+> Dozens of languages are already using this internally for their hash
+> tables and PRFs. Some of the BSDs already use this in their kernels.
+> SipHash is a widely known high-speed solution to a widely known set of
+> problems, and it's time we catch-up.
+> 
+> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+> Cc: Linus Torvalds <torvalds@linux-foundation.org>
+> Cc: Eric Biggers <ebiggers3@gmail.com>
+> Cc: David Laight <David.Laight@aculab.com>
+> Cc: Eric Dumazet <eric.dumazet@gmail.com>
 
-It requires library support from the SipHash code to return the full
-SipHash state, but I hope that's a fair thing to ask for.
-
-Here's my current straw man design for comment.  It's very similar to
-the current MD5-based design, but feeds all the seed material in the
-"correct" way, as opposed to Xring directly into the MD5 state.
-
-* Each CPU has a (Half)SipHash state vector,
-  "unsigned long get_random_int_hash[4]".  Unlike the current
-  MD5 code, we take care to initialize it to an asymmetric state.
-
-* There's a global 256-bit random_int_secret (which we could
-  reseed periodically).
-
-To generate a random number:
-* If get_random_int_hash is all-zero, seed it with fresh a half-sized
-  SipHash key and the appropriate XOR constants.
-* Generate three words of random_get_entropy(), jiffies, and current->pid.
-  (This is arbitary seed material, copied from the current code.)
-* Crank through that with (Half)SipHash-1-0.
-* Crank through the random_int_secret with (Half)SipHash-1-0.
-* Return v1 ^ v3.
-
-Here are the reasons:
-* The first step is just paranoia, but SipHash's security promise depends
-  on starting with an asymmetric state, we want unique per-CPU states,
-  and it's a one-time cost.
-* When the input words are themselves secret, there's no security
-  advantage, and almost no speed advantage, to doing two rounds for one
-  input word versus two words with one round each.  Thus, SipHash-1.
-* The above is not exactly true, due to the before+after XOR pattern
-  that SipHash uses, but I think it's true anyway.
-* Likewise, there's no benefit to unkeyed finalization rounds over keyed
-  ones.  That's why I just enlarged the global secret.
-* The per-call seed material is hashed first on general principles,
-  because that's the novel part that might have fresh entropy.
-* To the extent the initial state is secret, the rounds processing the
-  global secret are 4 finalization rounds for the initial state and
-  the per-call entropy.
-* The final word(s) of the global secret might be vulnerable to analysis,
-  due to incomplete mixing, but since the global secret is always hashed
-  in the same order, and larger that the desired security level, the
-  initial words should be secure.
-* By carrying forward the full internal state, we ensure that repeated
-  calls return different results, and to the extent that the per-call
-  seed material has entropy, it's preserved.
-* The final return is all that's needed, since the last steps in the 
-  SipRound are "v1 ^= v2" and "v3 ^= v0".  It's no security loss,
-  and a very minor speedup.
-* Also, this avoids directly "exposing" the final XOR with the last
-  word of the global secret (which is made to v0).
-
-If I'm allowed to use full SipHash, some shortcuts can be taken,
-but I believe the above would be secure with HalfSipHash.
-
-If additional performance is required, I'd consider shrinking the
-global secret to 192 bits on 32-bit machines but I want more than
-128 bits of ey material, and enough rounds to be equivalent to 4
-finalization rounds.
+The networking tree (net-next) which is where you are submitting to is technically
+closed right now.
