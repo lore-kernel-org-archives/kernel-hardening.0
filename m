@@ -1,94 +1,138 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: 22 Dec 2016 19:07:16 -0500
-Message-ID: <20161223000716.5768.qmail@ns.sciencehorizons.net>
-From: "George Spelvin" <linux@sciencehorizons.net>
-In-Reply-To: <30d9513a-129b-d246-1461-2326130e118f@stressinduktion.org>
-Subject: [kernel-hardening] Re: George's crazy full state idea (Re: HalfSipHash Acceptable Usage)
-To: hannes@stressinduktion.org, linux@sciencehorizons.net, luto@kernel.org
-Cc: ak@linux.intel.com, davem@davemloft.net, David.Laight@aculab.com, djb@cr.yp.to, ebiggers3@gmail.com, eric.dumazet@gmail.com, Jason@zx2c4.com, jeanphilippe.aumasson@gmail.com, kernel-hardening@lists.openwall.com, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, netdev@vger.kernel.org, tom@herbertland.com, torvalds@linux-foundation.org, tytso@mit.edu, vegard.nossum@gmail.com
+Message-ID: <585CF6A3.1050107@iogearbox.net>
+Date: Fri, 23 Dec 2016 11:04:19 +0100
+From: Daniel Borkmann <daniel@iogearbox.net>
+MIME-Version: 1.0
+References: <CALCETrUATPeaCJTQZN2h=ct6HH-xLt4V8T0PfPHNFGFN2HWtTA@mail.gmail.com> <1482425969.2673.5.camel@stressinduktion.org>
+In-Reply-To: <1482425969.2673.5.camel@stressinduktion.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: BPF hash algo (Re: [kernel-hardening] Re: [PATCH v7 3/6] random:
+ use SipHash in place of MD5)
+To: Hannes Frederic Sowa <hannes@stressinduktion.org>, Andy Lutomirski <luto@amacapital.net>, Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Theodore Ts'o <tytso@mit.edu>, Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, David Laight <David.Laight@aculab.com>, Eric Dumazet <edumazet@google.com>, Linus Torvalds <torvalds@linux-foundation.org>, Eric Biggers <ebiggers3@gmail.com>, Tom Herbert <tom@herbertland.com>, Andi Kleen <ak@linux.intel.com>, "David S. Miller" <davem@davemloft.net>, Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hannes Frederic Sowa wrote:
-> A lockdep test should still be done. ;)
+On 12/22/2016 05:59 PM, Hannes Frederic Sowa wrote:
+> On Thu, 2016-12-22 at 08:07 -0800, Andy Lutomirski wrote:
+>> On Thu, Dec 22, 2016 at 7:51 AM, Hannes Frederic Sowa
+>> <hannes@stressinduktion.org> wrote:
+>>> On Thu, 2016-12-22 at 16:41 +0100, Jason A. Donenfeld wrote:
+>>>> On Thu, Dec 22, 2016 at 4:33 PM, Hannes Frederic Sowa
+>>>> <hannes@stressinduktion.org> wrote:
+>>>>> IPv6 you cannot touch anymore. The hashing algorithm is part of uAPI.
+>>>>> You don't want to give people new IPv6 addresses with the same stable
+>>>>> secret (across reboots) after a kernel upgrade. Maybe they lose
+>>>>> connectivity then and it is extra work?
+>>>>
+>>>> Ahh, too bad. So it goes.
+>>>
+>>> If no other users survive we can put it into the ipv6 module.
+>>>
+>>>>> The bpf hash stuff can be changed during this merge window, as it is
+>>>>> not yet in a released kernel. Albeit I would probably have preferred
+>>>>> something like sha256 here, which can be easily replicated by user
+>>>>> space tools (minus the problem of patching out references to not
+>>>>> hashable data, which must be zeroed).
+>>>>
+>>>> Oh, interesting, so time is of the essence then. Do you want to handle
+>>>> changing the new eBPF code to something not-SHA1 before it's too late,
+>>>> as part of a ne
+>>
+>> w patchset that can fast track itself to David? And
+>>>> then I can preserve my large series for the next merge window.
+>>>
+>>> This algorithm should be a non-seeded algorithm, because the hashes
+>>> should be stable and verifiable by user space tooling. Thus this would
+>>> need a hashing algorithm that is hardened against pre-image
+>>> attacks/collision resistance, which siphash is not. I would prefer some
+>>> higher order SHA algorithm for that actually.
+>>>
+>>
+>> You mean:
+>>
+>> commit 7bd509e311f408f7a5132fcdde2069af65fa05ae
+>> Author: Daniel Borkmann <daniel@iogearbox.net>
+>> Date:   Sun Dec 4 23:19:41 2016 +0100
+>>
+>>      bpf: add prog_digest and expose it via fdinfo/netlink
+>>
+>>
+>> Yes, please!  This actually matters for security -- imagine a
+>> malicious program brute-forcing a collision so that it gets loaded
+>> wrong.  And this is IMO a use case for SHA-256 or SHA-512/256
+>> (preferably the latter).  Speed basically doesn't matter here and
+>> Blake2 is both less stable (didn't they slightly change it recently?)
+>> and much less well studied.
+>
+> We don't prevent ebpf programs being loaded based on the digest but
+> just to uniquely identify loaded programs from user space and match up
+> with their source.
+>
+> There have been talks about signing bpf programs, thus this would
+> probably need another digest algorithm additionally to that one,
+> wasting probably instructions. Probably going somewhere in direction of
+> PKCS#7 might be the thing to do (which leads to the problem to make
+> PKCS#7 attackable by ordinary unpriv users, hmpf).
+>
+>> My inclination would have been to seed them with something that isn't
+>> exposed to userspace for the precise reason that it would prevent user
+>> code from making assumptions about what's in the hash.  But if there's
+>> a use case for why user code needs to be able to calculate the hash on
+>> its own, then that's fine.  But perhaps the actual fdinfo string
+>> should be "sha256:abcd1234..." to give some flexibility down the road.
+>>
+>> Also:
+>>
+>> +       result = (__force __be32 *)fp->digest;
+>> +       for (i = 0; i < SHA_DIGEST_WORDS; i++)
+>> +               result[i] = cpu_to_be32(fp->digest[i]);
+>>
+>> Everyone, please, please, please don't open-code crypto primitives.
+>> Is this and the code above it even correct?  It might be but on a very
+>> brief glance it looks wrong to me.  If you're doing this to avoid
+>> depending on crypto, then fix crypto so you can pull in the algorithm
+>> without pulling in the whole crypto core.
+>
+> The hashing is not a proper sha1 neither, unfortunately. I think that
+> is why it will have a custom implementation in iproute2?
 
-Adding might_lock() annotations will improve coverage a lot.
+Still trying to catch up on this admittedly bit confusing thread. I
+did run automated tests over couple of days comparing the data I got
+from fdinfo with the one from af_alg and found no mismatch on the test
+cases varying from min to max possible program sizes. In the process
+of testing, as you might have seen on netdev, I found couple of other
+bugs in bpf code along the way and fixed them up as well. So my question,
+do you or Andy or anyone participating in claiming this have any
+concrete data or test cases that suggests something different? If yes,
+I'm very curious to hear about it and willing fix it up, of course.
+When I'm back from pto I'll prep and cook up my test suite to be
+included into the selftests/bpf/, should have done this initially,
+sorry about that. I'll also post something to expose the alg, that
+sounds fine to me.
 
-> Yes, that does look nice indeed. Accounting for bits instead of bytes
-> shouldn't be a huge problem either. Maybe it gets a bit more verbose in
-> case you can't satisfy a request with one batched entropy block and have
-> to consume randomness from two.
-
-The bit granularity is also for the callers' convenience, so they don't
-have to mask again.  Whether get_random_bits rounds up to byte boundaries
-internally or not is something else.
-
-When the current batch runs low, I was actually thinking of throwing
-away the remaining bits and computing a new batch of 512.  But it's
-whatever works best at implementation time.
-
->>> It could only mix the output back in every two calls, in which case
->>> you can backtrack up to one call but you need to do 2^128 work to
->>> backtrack farther.  But yes, this is getting excessively complicated.
-> 
->> No, if you're willing to accept limited backtrack, this is a perfectly
->> acceptable solution, and not too complicated.  You could do it phase-less
->> if you like; store the previous output, then after generating the new
->> one, mix in both.  Then overwrite the previous output.  (But doing two
->> rounds of a crypto primtive to avoid one conditional jump is stupid,
->> so forget that.)
-
-> Can you quickly explain why we lose the backtracking capability?
-
-Sure.  An RNG is (state[i], output[i]) = f(state[i-1]).  The goal of
-backtracking is to compute output[i], or better yet state[i-1], given
-state[i].
-
-For example, consider an OFB or CTR mode generator.  The state is a key
-and and IV, and you encrypt the IV with the key to produce output, then
-either replace the IV with the output, or increment it.  Either way,
-since you still have the key, you can invert the transformation and
-recover the previous IV.
-
-The standard way around this is to use the Davies-Meyer construction:
-
-IV[i] = IV[i-1] + E(IV[i-1], key)
-
-This is the standard way to make a non-invertible random function
-out of an invertible random permutation.
-
->From the sum, there's no easy way to find the ciphertext *or* the
-plaintext that was encrypted.  Assuming the encryption is secure,
-the only way to reverse it is brute force: guess IV[i-1] and run the
-operation forward to see if the resultant IV[i] matches.
-
-There are a variety of ways to organize this computation, since the
-guess gives toy both IV[i-1] and E(IV[i-1], key) = IV[i] - IV[i-1], including
-running E forward, backward, or starting from both ends to see if you
-meet in the middle.
-
-The way you add the encryption output to the IV is not very important.
-It can be addition, xor, or some more complex invertible transformation.
-In the case of SipHash, the "encryption" output is smaller than the
-input, so we have to get a bit more creative, but it's still basically
-the same thing.
-
-The problem is that the output which is combined with the IV is too small.
-With only 64 bits, trying all possible values is practical.  (The world's
-Bitcoin miners are collectively computing SHA-256(SHA-256(input)) 1.7 * 2^64
-times per second.)
-
-By basically doing two iterations at once and mixing in 128 bits of
-output, the guessing attack is rendered impractical.  The only downside
-is that you need to remember and store one result between when it's
-computed and last used.  This is part of the state, so an attack can
-find output[i-1], but not anything farther back.
-
-> ChaCha as a block cipher gives a "perfect" permutation from the output
-> of either the CRNG or the CPRNG, which actually itself has backtracking
-> protection.
-
-I'm not quite understanding.  The /dev/random implementation uses some
-of the ChaCha output as a new ChaCha key (that's another way to mix output
-back into the state) to prevent backtracking.  But this slows it down, and
-again if you want to be efficient, you're generating and storing large batches
-of entropy and storing it in the RNG state.
+> I wondered if bpf program loading should have used the module loading
+> infrastructure from the beginning...
+>
+>> At the very least, there should be a separate function that calculates
+>> the hash of a buffer and that function should explicitly run itself
+>> against test vectors of various lengths to make sure that it's
+>> calculating what it claims to be calculating.  And it doesn't look
+>> like the userspace code has landed, so, if this thing isn't
+>> calculating SHA1 correctly, it's plausible that no one has noticed.
+>
+> I hope this was known from the beginning, this is not sha1 unfortunately.
+>
+> But ebpf elf programs also need preprocessing to get rid of some
+> embedded load-depending data, so maybe it was considered to be just
+> enough?
+>
+> Bye,
+> Hannes
+>
+>
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-crypto" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
+>
