@@ -1,10 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Thu, 29 Dec 2016 08:56:06 +0200
-Message-Id: <1482994571-18687-15-git-send-email-elena.reshetova@intel.com>
+Date: Thu, 29 Dec 2016 08:56:07 +0200
+Message-Id: <1482994571-18687-16-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
 References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC PATCH 14/19] tools: convert from atomic_t to refcount_t
+Subject: [kernel-hardening] [RFC PATCH 15/19] block: convert from atomic_t to refcount_t
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, ishkamiel@gmail.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -14,621 +14,347 @@ used instead of atomic_t when the variable is used as
 a reference counter. Convert the cases found.
 
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
+Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
 ---
- tools/perf/util/cgroup.c     |  6 +++---
- tools/perf/util/cgroup.h     |  4 ++--
- tools/perf/util/comm.c       | 10 +++++-----
- tools/perf/util/cpumap.c     | 16 ++++++++--------
- tools/perf/util/cpumap.h     |  4 ++--
- tools/perf/util/dso.c        |  6 +++---
- tools/perf/util/dso.h        |  4 ++--
- tools/perf/util/evlist.c     | 18 +++++++++---------
- tools/perf/util/evlist.h     |  4 ++--
- tools/perf/util/map.c        | 10 +++++-----
- tools/perf/util/map.h        | 10 +++++-----
- tools/perf/util/thread.c     |  6 +++---
- tools/perf/util/thread.h     |  4 ++--
- tools/perf/util/thread_map.c | 20 ++++++++++----------
- tools/perf/util/thread_map.h |  4 ++--
- 15 files changed, 63 insertions(+), 63 deletions(-)
+ block/bio.c                |  6 +++---
+ block/blk-cgroup.c         |  2 +-
+ block/blk-ioc.c            |  4 ++--
+ block/blk-tag.c            |  8 ++++----
+ block/bsg.c                |  9 +++++----
+ block/cfq-iosched.c        |  4 ++--
+ fs/btrfs/volumes.c         |  2 +-
+ include/linux/bio.h        |  4 ++--
+ include/linux/blk-cgroup.h | 11 ++++++-----
+ include/linux/blk_types.h  |  3 ++-
+ include/linux/blkdev.h     |  3 ++-
+ include/linux/iocontext.h  |  7 ++++---
+ 12 files changed, 34 insertions(+), 29 deletions(-)
 
-diff --git a/tools/perf/util/cgroup.c b/tools/perf/util/cgroup.c
-index 8fdee24..87b9659 100644
---- a/tools/perf/util/cgroup.c
-+++ b/tools/perf/util/cgroup.c
-@@ -115,19 +115,19 @@ static int add_cgroup(struct perf_evlist *evlist, char *str)
+diff --git a/block/bio.c b/block/bio.c
+index 2b37502..a8cdd62 100644
+--- a/block/bio.c
++++ b/block/bio.c
+@@ -275,7 +275,7 @@ void bio_init(struct bio *bio, struct bio_vec *table,
+ {
+ 	memset(bio, 0, sizeof(*bio));
+ 	atomic_set(&bio->__bi_remaining, 1);
+-	atomic_set(&bio->__bi_cnt, 1);
++	refcount_set(&bio->__bi_cnt, 1);
+ 
+ 	bio->bi_io_vec = table;
+ 	bio->bi_max_vecs = max_vecs;
+@@ -543,12 +543,12 @@ void bio_put(struct bio *bio)
+ 	if (!bio_flagged(bio, BIO_REFFED))
+ 		bio_free(bio);
+ 	else {
+-		BIO_BUG_ON(!atomic_read(&bio->__bi_cnt));
++		BIO_BUG_ON(!refcount_read(&bio->__bi_cnt));
+ 
+ 		/*
+ 		 * last put frees it
+ 		 */
+-		if (atomic_dec_and_test(&bio->__bi_cnt))
++		if (refcount_dec_and_test(&bio->__bi_cnt))
+ 			bio_free(bio);
+ 	}
+ }
+diff --git a/block/blk-cgroup.c b/block/blk-cgroup.c
+index 8ba0af7..c3f1756 100644
+--- a/block/blk-cgroup.c
++++ b/block/blk-cgroup.c
+@@ -106,7 +106,7 @@ static struct blkcg_gq *blkg_alloc(struct blkcg *blkcg, struct request_queue *q,
+ 	blkg->q = q;
+ 	INIT_LIST_HEAD(&blkg->q_node);
+ 	blkg->blkcg = blkcg;
+-	atomic_set(&blkg->refcnt, 1);
++	refcount_set(&blkg->refcnt, 1);
+ 
+ 	/* root blkg uses @q->root_rl, init rl only for !root blkgs */
+ 	if (blkcg != &blkcg_root) {
+diff --git a/block/blk-ioc.c b/block/blk-ioc.c
+index 381cb50..36e4418 100644
+--- a/block/blk-ioc.c
++++ b/block/blk-ioc.c
+@@ -167,7 +167,7 @@ void put_io_context_active(struct io_context *ioc)
+ 	unsigned long flags;
+ 	struct io_cq *icq;
+ 
+-	if (!atomic_dec_and_test(&ioc->active_ref)) {
++	if (!refcount_dec_and_test(&ioc->active_ref)) {
+ 		put_io_context(ioc);
+ 		return;
+ 	}
+@@ -244,7 +244,7 @@ int create_task_io_context(struct task_struct *task, gfp_t gfp_flags, int node)
+ 	/* initialize */
+ 	atomic_long_set(&ioc->refcount, 1);
+ 	atomic_set(&ioc->nr_tasks, 1);
+-	atomic_set(&ioc->active_ref, 1);
++	refcount_set(&ioc->active_ref, 1);
+ 	spin_lock_init(&ioc->lock);
+ 	INIT_RADIX_TREE(&ioc->icq_tree, GFP_ATOMIC | __GFP_HIGH);
+ 	INIT_HLIST_HEAD(&ioc->icq_list);
+diff --git a/block/blk-tag.c b/block/blk-tag.c
+index bae1dec..95bcd77 100644
+--- a/block/blk-tag.c
++++ b/block/blk-tag.c
+@@ -35,7 +35,7 @@ EXPORT_SYMBOL(blk_queue_find_tag);
+  */
+ void blk_free_tags(struct blk_queue_tag *bqt)
+ {
+-	if (atomic_dec_and_test(&bqt->refcnt)) {
++	if (refcount_dec_and_test(&bqt->refcnt)) {
+ 		BUG_ON(find_first_bit(bqt->tag_map, bqt->max_depth) <
+ 							bqt->max_depth);
+ 
+@@ -130,7 +130,7 @@ static struct blk_queue_tag *__blk_queue_init_tags(struct request_queue *q,
+ 	if (init_tag_map(q, tags, depth))
+ 		goto fail;
+ 
+-	atomic_set(&tags->refcnt, 1);
++	refcount_set(&tags->refcnt, 1);
+ 	tags->alloc_policy = alloc_policy;
+ 	tags->next_tag = 0;
+ 	return tags;
+@@ -180,7 +180,7 @@ int blk_queue_init_tags(struct request_queue *q, int depth,
+ 		queue_flag_set(QUEUE_FLAG_QUEUED, q);
+ 		return 0;
+ 	} else
+-		atomic_inc(&tags->refcnt);
++		refcount_inc(&tags->refcnt);
+ 
+ 	/*
+ 	 * assign it, all done
+@@ -225,7 +225,7 @@ int blk_queue_resize_tags(struct request_queue *q, int new_depth)
+ 	 * Currently cannot replace a shared tag map with a new
+ 	 * one, so error out if this is the case
+ 	 */
+-	if (atomic_read(&bqt->refcnt) != 1)
++	if (refcount_read(&bqt->refcnt) != 1)
+ 		return -EBUSY;
+ 
+ 	/*
+diff --git a/block/bsg.c b/block/bsg.c
+index a57046d..987ac5f 100644
+--- a/block/bsg.c
++++ b/block/bsg.c
+@@ -21,6 +21,7 @@
+ #include <linux/idr.h>
+ #include <linux/bsg.h>
+ #include <linux/slab.h>
++#include <linux/refcount.h>
+ 
+ #include <scsi/scsi.h>
+ #include <scsi/scsi_ioctl.h>
+@@ -38,7 +39,7 @@ struct bsg_device {
+ 	struct list_head busy_list;
+ 	struct list_head done_list;
+ 	struct hlist_node dev_list;
+-	atomic_t ref_count;
++	refcount_t ref_count;
+ 	int queued_cmds;
+ 	int done_cmds;
+ 	wait_queue_head_t wq_done;
+@@ -716,7 +717,7 @@ static int bsg_put_device(struct bsg_device *bd)
+ 
+ 	mutex_lock(&bsg_mutex);
+ 
+-	do_free = atomic_dec_and_test(&bd->ref_count);
++	do_free = refcount_dec_and_test(&bd->ref_count);
+ 	if (!do_free) {
+ 		mutex_unlock(&bsg_mutex);
+ 		goto out;
+@@ -768,7 +769,7 @@ static struct bsg_device *bsg_add_device(struct inode *inode,
+ 
+ 	bsg_set_block(bd, file);
+ 
+-	atomic_set(&bd->ref_count, 1);
++	refcount_set(&bd->ref_count, 1);
+ 	mutex_lock(&bsg_mutex);
+ 	hlist_add_head(&bd->dev_list, bsg_dev_idx_hash(iminor(inode)));
+ 
+@@ -788,7 +789,7 @@ static struct bsg_device *__bsg_get_device(int minor, struct request_queue *q)
+ 
+ 	hlist_for_each_entry(bd, bsg_dev_idx_hash(minor), dev_list) {
+ 		if (bd->queue == q) {
+-			atomic_inc(&bd->ref_count);
++			refcount_inc(&bd->ref_count);
  			goto found;
- 		n++;
+ 		}
  	}
--	if (atomic_read(&cgrp->refcnt) == 0)
-+	if (refcount_read(&cgrp->refcnt) == 0)
- 		free(cgrp);
- 
- 	return -1;
- found:
--	atomic_inc(&cgrp->refcnt);
-+	refcount_inc(&cgrp->refcnt);
- 	counter->cgrp = cgrp;
- 	return 0;
- }
- 
- void close_cgroup(struct cgroup_sel *cgrp)
- {
--	if (cgrp && atomic_dec_and_test(&cgrp->refcnt)) {
-+	if (cgrp && refcount_dec_and_test(&cgrp->refcnt)) {
- 		close(cgrp->fd);
- 		zfree(&cgrp->name);
- 		free(cgrp);
-diff --git a/tools/perf/util/cgroup.h b/tools/perf/util/cgroup.h
-index 31f8dcd..d91966b 100644
---- a/tools/perf/util/cgroup.h
-+++ b/tools/perf/util/cgroup.h
-@@ -1,14 +1,14 @@
- #ifndef __CGROUP_H__
- #define __CGROUP_H__
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- 
- struct option;
- 
- struct cgroup_sel {
- 	char *name;
- 	int fd;
--	atomic_t refcnt;
-+	refcount_t refcnt;
- };
- 
- 
-diff --git a/tools/perf/util/comm.c b/tools/perf/util/comm.c
-index 21b7ff3..ef36402 100644
---- a/tools/perf/util/comm.c
-+++ b/tools/perf/util/comm.c
-@@ -2,12 +2,12 @@
- #include "util.h"
- #include <stdlib.h>
- #include <stdio.h>
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- 
- struct comm_str {
- 	char *str;
- 	struct rb_node rb_node;
--	atomic_t refcnt;
-+	refcount_t refcnt;
- };
- 
- /* Should perhaps be moved to struct machine */
-@@ -16,13 +16,13 @@ static struct rb_root comm_str_root;
- static struct comm_str *comm_str__get(struct comm_str *cs)
- {
- 	if (cs)
--		atomic_inc(&cs->refcnt);
-+		refcount_inc(&cs->refcnt);
- 	return cs;
- }
- 
- static void comm_str__put(struct comm_str *cs)
- {
--	if (cs && atomic_dec_and_test(&cs->refcnt)) {
-+	if (cs && refcount_dec_and_test(&cs->refcnt)) {
- 		rb_erase(&cs->rb_node, &comm_str_root);
- 		zfree(&cs->str);
- 		free(cs);
-@@ -43,7 +43,7 @@ static struct comm_str *comm_str__alloc(const char *str)
- 		return NULL;
- 	}
- 
--	atomic_set(&cs->refcnt, 0);
-+	refcount_set(&cs->refcnt, 0);
- 
- 	return cs;
- }
-diff --git a/tools/perf/util/cpumap.c b/tools/perf/util/cpumap.c
-index 2c0b522..0e21e28 100644
---- a/tools/perf/util/cpumap.c
-+++ b/tools/perf/util/cpumap.c
-@@ -28,7 +28,7 @@ static struct cpu_map *cpu_map__default_new(void)
- 			cpus->map[i] = i;
- 
- 		cpus->nr = nr_cpus;
--		atomic_set(&cpus->refcnt, 1);
-+		refcount_set(&cpus->refcnt, 1);
- 	}
- 
- 	return cpus;
-@@ -42,7 +42,7 @@ static struct cpu_map *cpu_map__trim_new(int nr_cpus, int *tmp_cpus)
- 	if (cpus != NULL) {
- 		cpus->nr = nr_cpus;
- 		memcpy(cpus->map, tmp_cpus, payload_size);
--		atomic_set(&cpus->refcnt, 1);
-+		refcount_set(&cpus->refcnt, 1);
- 	}
- 
- 	return cpus;
-@@ -251,7 +251,7 @@ struct cpu_map *cpu_map__dummy_new(void)
- 	if (cpus != NULL) {
- 		cpus->nr = 1;
- 		cpus->map[0] = -1;
--		atomic_set(&cpus->refcnt, 1);
-+		refcount_set(&cpus->refcnt, 1);
- 	}
- 
- 	return cpus;
-@@ -268,7 +268,7 @@ struct cpu_map *cpu_map__empty_new(int nr)
- 		for (i = 0; i < nr; i++)
- 			cpus->map[i] = -1;
- 
--		atomic_set(&cpus->refcnt, 1);
-+		refcount_set(&cpus->refcnt, 1);
- 	}
- 
- 	return cpus;
-@@ -277,7 +277,7 @@ struct cpu_map *cpu_map__empty_new(int nr)
- static void cpu_map__delete(struct cpu_map *map)
- {
- 	if (map) {
--		WARN_ONCE(atomic_read(&map->refcnt) != 0,
-+		WARN_ONCE(refcount_read(&map->refcnt) != 0,
- 			  "cpu_map refcnt unbalanced\n");
- 		free(map);
- 	}
-@@ -286,13 +286,13 @@ static void cpu_map__delete(struct cpu_map *map)
- struct cpu_map *cpu_map__get(struct cpu_map *map)
- {
- 	if (map)
--		atomic_inc(&map->refcnt);
-+		refcount_inc(&map->refcnt);
- 	return map;
- }
- 
- void cpu_map__put(struct cpu_map *map)
- {
--	if (map && atomic_dec_and_test(&map->refcnt))
-+	if (map && refcount_dec_and_test(&map->refcnt))
- 		cpu_map__delete(map);
- }
- 
-@@ -356,7 +356,7 @@ int cpu_map__build_map(struct cpu_map *cpus, struct cpu_map **res,
- 	/* ensure we process id in increasing order */
- 	qsort(c->map, c->nr, sizeof(int), cmp_ids);
- 
--	atomic_set(&c->refcnt, 1);
-+	refcount_set(&c->refcnt, 1);
- 	*res = c;
- 	return 0;
- }
-diff --git a/tools/perf/util/cpumap.h b/tools/perf/util/cpumap.h
-index 06bd689..4f12a01 100644
---- a/tools/perf/util/cpumap.h
-+++ b/tools/perf/util/cpumap.h
-@@ -3,13 +3,13 @@
- 
- #include <stdio.h>
- #include <stdbool.h>
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- 
- #include "perf.h"
- #include "util/debug.h"
- 
- struct cpu_map {
--	atomic_t refcnt;
-+	refcount_t refcnt;
- 	int nr;
- 	int map[];
- };
-diff --git a/tools/perf/util/dso.c b/tools/perf/util/dso.c
-index d2c6cdd..50f088da 100644
---- a/tools/perf/util/dso.c
-+++ b/tools/perf/util/dso.c
-@@ -1083,7 +1083,7 @@ struct dso *dso__new(const char *name)
- 		INIT_LIST_HEAD(&dso->node);
- 		INIT_LIST_HEAD(&dso->data.open_entry);
- 		pthread_mutex_init(&dso->lock, NULL);
--		atomic_set(&dso->refcnt, 1);
-+		refcount_set(&dso->refcnt, 1);
- 	}
- 
- 	return dso;
-@@ -1121,13 +1121,13 @@ void dso__delete(struct dso *dso)
- struct dso *dso__get(struct dso *dso)
- {
- 	if (dso)
--		atomic_inc(&dso->refcnt);
-+		refcount_inc(&dso->refcnt);
- 	return dso;
- }
- 
- void dso__put(struct dso *dso)
- {
--	if (dso && atomic_dec_and_test(&dso->refcnt))
-+	if (dso && refcount_dec_and_test(&dso->refcnt))
- 		dso__delete(dso);
- }
- 
-diff --git a/tools/perf/util/dso.h b/tools/perf/util/dso.h
-index ecc4bbd..12350b1 100644
---- a/tools/perf/util/dso.h
-+++ b/tools/perf/util/dso.h
-@@ -1,7 +1,7 @@
- #ifndef __PERF_DSO
- #define __PERF_DSO
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <linux/types.h>
- #include <linux/rbtree.h>
- #include <sys/types.h>
-@@ -187,7 +187,7 @@ struct dso {
- 		void	 *priv;
- 		u64	 db_id;
- 	};
--	atomic_t	 refcnt;
-+	refcount_t	 refcnt;
- 	char		 name[0];
- };
- 
-diff --git a/tools/perf/util/evlist.c b/tools/perf/util/evlist.c
-index d92e020..dba424d 100644
---- a/tools/perf/util/evlist.c
-+++ b/tools/perf/util/evlist.c
-@@ -777,7 +777,7 @@ union perf_event *perf_mmap__read_forward(struct perf_mmap *md, bool check_messu
- 	/*
- 	 * Check if event was unmapped due to a POLLHUP/POLLERR.
+diff --git a/block/cfq-iosched.c b/block/cfq-iosched.c
+index c73a6fc..cc3dd60 100644
+--- a/block/cfq-iosched.c
++++ b/block/cfq-iosched.c
+@@ -2957,7 +2957,7 @@ static void cfq_arm_slice_timer(struct cfq_data *cfqd)
+ 	 * task has exited, don't wait
  	 */
--	if (!atomic_read(&md->refcnt))
-+	if (!refcount_read(&md->refcnt))
- 		return NULL;
- 
- 	head = perf_mmap__read_head(md);
-@@ -794,7 +794,7 @@ perf_mmap__read_backward(struct perf_mmap *md)
- 	/*
- 	 * Check if event was unmapped due to a POLLHUP/POLLERR.
- 	 */
--	if (!atomic_read(&md->refcnt))
-+	if (!refcount_read(&md->refcnt))
- 		return NULL;
- 
- 	head = perf_mmap__read_head(md);
-@@ -856,7 +856,7 @@ void perf_mmap__read_catchup(struct perf_mmap *md)
- {
- 	u64 head;
- 
--	if (!atomic_read(&md->refcnt))
-+	if (!refcount_read(&md->refcnt))
+ 	cic = cfqd->active_cic;
+-	if (!cic || !atomic_read(&cic->icq.ioc->active_ref))
++	if (!cic || !refcount_read(&cic->icq.ioc->active_ref))
  		return;
  
- 	head = perf_mmap__read_head(md);
-@@ -875,14 +875,14 @@ static bool perf_mmap__empty(struct perf_mmap *md)
+ 	/*
+@@ -3955,7 +3955,7 @@ cfq_update_idle_window(struct cfq_data *cfqd, struct cfq_queue *cfqq,
  
- static void perf_mmap__get(struct perf_mmap *map)
- {
--	atomic_inc(&map->refcnt);
-+	refcount_inc(&map->refcnt);
- }
+ 	if (cfqq->next_rq && req_noidle(cfqq->next_rq))
+ 		enable_idle = 0;
+-	else if (!atomic_read(&cic->icq.ioc->active_ref) ||
++	else if (!refcount_read(&cic->icq.ioc->active_ref) ||
+ 		 !cfqd->cfq_slice_idle ||
+ 		 (!cfq_cfqq_deep(cfqq) && CFQQ_SEEKY(cfqq)))
+ 		enable_idle = 0;
+diff --git a/fs/btrfs/volumes.c b/fs/btrfs/volumes.c
+index c6b0424..1d0a7f9 100644
+--- a/fs/btrfs/volumes.c
++++ b/fs/btrfs/volumes.c
+@@ -442,7 +442,7 @@ static noinline void run_scheduled_bios(struct btrfs_device *device)
+ 		    waitqueue_active(&fs_info->async_submit_wait))
+ 			wake_up(&fs_info->async_submit_wait);
  
- static void perf_mmap__put(struct perf_mmap *md)
- {
--	BUG_ON(md->base && atomic_read(&md->refcnt) == 0);
-+	BUG_ON(md->base && refcount_read(&md->refcnt) == 0);
+-		BUG_ON(atomic_read(&cur->__bi_cnt) == 0);
++		BUG_ON(refcount_read(&cur->__bi_cnt) == 0);
  
--	if (atomic_dec_and_test(&md->refcnt))
-+	if (refcount_dec_and_test(&md->refcnt))
- 		perf_mmap__munmap(md);
- }
- 
-@@ -894,7 +894,7 @@ void perf_mmap__consume(struct perf_mmap *md, bool overwrite)
- 		perf_mmap__write_tail(md, old);
- 	}
- 
--	if (atomic_read(&md->refcnt) == 1 && perf_mmap__empty(md))
-+	if (refcount_read(&md->refcnt) == 1 && perf_mmap__empty(md))
- 		perf_mmap__put(md);
- }
- 
-@@ -937,7 +937,7 @@ static void perf_mmap__munmap(struct perf_mmap *map)
- 		munmap(map->base, perf_mmap__mmap_len(map));
- 		map->base = NULL;
- 		map->fd = -1;
--		atomic_set(&map->refcnt, 0);
-+		refcount_set(&map->refcnt, 0);
- 	}
- 	auxtrace_mmap__munmap(&map->auxtrace_mmap);
- }
-@@ -1001,7 +1001,7 @@ static int perf_mmap__mmap(struct perf_mmap *map,
- 	 * evlist layer can't just drop it when filtering events in
- 	 * perf_evlist__filter_pollfd().
- 	 */
--	atomic_set(&map->refcnt, 2);
-+	refcount_set(&map->refcnt, 2);
- 	map->prev = 0;
- 	map->mask = mp->mask;
- 	map->base = mmap(NULL, perf_mmap__mmap_len(map), mp->prot,
-diff --git a/tools/perf/util/evlist.h b/tools/perf/util/evlist.h
-index 4fd034f..7e6c558 100644
---- a/tools/perf/util/evlist.h
-+++ b/tools/perf/util/evlist.h
-@@ -1,7 +1,7 @@
- #ifndef __PERF_EVLIST_H
- #define __PERF_EVLIST_H 1
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <linux/list.h>
- #include <api/fd/array.h>
- #include <stdio.h>
-@@ -29,7 +29,7 @@ struct perf_mmap {
- 	void		 *base;
- 	int		 mask;
- 	int		 fd;
--	atomic_t	 refcnt;
-+	refcount_t	 refcnt;
- 	u64		 prev;
- 	struct auxtrace_mmap auxtrace_mmap;
- 	char		 event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
-diff --git a/tools/perf/util/map.c b/tools/perf/util/map.c
-index 4f9a71c..5fa139d 100644
---- a/tools/perf/util/map.c
-+++ b/tools/perf/util/map.c
-@@ -141,7 +141,7 @@ void map__init(struct map *map, enum map_type type,
- 	RB_CLEAR_NODE(&map->rb_node);
- 	map->groups   = NULL;
- 	map->erange_warned = false;
--	atomic_set(&map->refcnt, 1);
-+	refcount_set(&map->refcnt, 1);
- }
- 
- struct map *map__new(struct machine *machine, u64 start, u64 len,
-@@ -255,7 +255,7 @@ void map__delete(struct map *map)
- 
- void map__put(struct map *map)
- {
--	if (map && atomic_dec_and_test(&map->refcnt))
-+	if (map && refcount_dec_and_test(&map->refcnt))
- 		map__delete(map);
- }
- 
-@@ -354,7 +354,7 @@ struct map *map__clone(struct map *from)
- 	struct map *map = memdup(from, sizeof(*map));
- 
- 	if (map != NULL) {
--		atomic_set(&map->refcnt, 1);
-+		refcount_set(&map->refcnt, 1);
- 		RB_CLEAR_NODE(&map->rb_node);
- 		dso__get(map->dso);
- 		map->groups = NULL;
-@@ -485,7 +485,7 @@ void map_groups__init(struct map_groups *mg, struct machine *machine)
- 		maps__init(&mg->maps[i]);
- 	}
- 	mg->machine = machine;
--	atomic_set(&mg->refcnt, 1);
-+	refcount_set(&mg->refcnt, 1);
- }
- 
- static void __maps__purge(struct maps *maps)
-@@ -547,7 +547,7 @@ void map_groups__delete(struct map_groups *mg)
- 
- void map_groups__put(struct map_groups *mg)
- {
--	if (mg && atomic_dec_and_test(&mg->refcnt))
-+	if (mg && refcount_dec_and_test(&mg->refcnt))
- 		map_groups__delete(mg);
- }
- 
-diff --git a/tools/perf/util/map.h b/tools/perf/util/map.h
-index abdacf8..c8a5a64 100644
---- a/tools/perf/util/map.h
-+++ b/tools/perf/util/map.h
-@@ -1,7 +1,7 @@
- #ifndef __PERF_MAP_H
- #define __PERF_MAP_H
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <linux/compiler.h>
- #include <linux/list.h>
- #include <linux/rbtree.h>
-@@ -51,7 +51,7 @@ struct map {
- 
- 	struct dso		*dso;
- 	struct map_groups	*groups;
--	atomic_t		refcnt;
-+	refcount_t		refcnt;
- };
- 
- struct kmap {
-@@ -67,7 +67,7 @@ struct maps {
- struct map_groups {
- 	struct maps	 maps[MAP__NR_TYPES];
- 	struct machine	 *machine;
--	atomic_t	 refcnt;
-+	refcount_t	 refcnt;
- };
- 
- struct map_groups *map_groups__new(struct machine *machine);
-@@ -77,7 +77,7 @@ bool map_groups__empty(struct map_groups *mg);
- static inline struct map_groups *map_groups__get(struct map_groups *mg)
- {
- 	if (mg)
--		atomic_inc(&mg->refcnt);
-+		refcount_inc(&mg->refcnt);
- 	return mg;
- }
- 
-@@ -150,7 +150,7 @@ struct map *map__clone(struct map *map);
- static inline struct map *map__get(struct map *map)
- {
- 	if (map)
--		atomic_inc(&map->refcnt);
-+		refcount_inc(&map->refcnt);
- 	return map;
- }
- 
-diff --git a/tools/perf/util/thread.c b/tools/perf/util/thread.c
-index f5af87f..74e79d2 100644
---- a/tools/perf/util/thread.c
-+++ b/tools/perf/util/thread.c
-@@ -53,7 +53,7 @@ struct thread *thread__new(pid_t pid, pid_t tid)
- 			goto err_thread;
- 
- 		list_add(&comm->list, &thread->comm_list);
--		atomic_set(&thread->refcnt, 1);
-+		refcount_set(&thread->refcnt, 1);
- 		RB_CLEAR_NODE(&thread->rb_node);
- 	}
- 
-@@ -88,13 +88,13 @@ void thread__delete(struct thread *thread)
- struct thread *thread__get(struct thread *thread)
- {
- 	if (thread)
--		atomic_inc(&thread->refcnt);
-+		refcount_inc(&thread->refcnt);
- 	return thread;
- }
- 
- void thread__put(struct thread *thread)
- {
--	if (thread && atomic_dec_and_test(&thread->refcnt)) {
-+	if (thread && refcount_dec_and_test(&thread->refcnt)) {
  		/*
- 		 * Remove it from the dead_threads list, as last reference
- 		 * is gone.
-diff --git a/tools/perf/util/thread.h b/tools/perf/util/thread.h
-index 99263cb..e571885 100644
---- a/tools/perf/util/thread.h
-+++ b/tools/perf/util/thread.h
-@@ -1,7 +1,7 @@
- #ifndef __PERF_THREAD_H
- #define __PERF_THREAD_H
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <linux/rbtree.h>
- #include <linux/list.h>
- #include <unistd.h>
-@@ -23,7 +23,7 @@ struct thread {
- 	pid_t			tid;
- 	pid_t			ppid;
- 	int			cpu;
--	atomic_t		refcnt;
-+	refcount_t		refcnt;
- 	char			shortname[3];
- 	bool			comm_set;
- 	int			comm_len;
-diff --git a/tools/perf/util/thread_map.c b/tools/perf/util/thread_map.c
-index 40585f5..35f14ee 100644
---- a/tools/perf/util/thread_map.c
-+++ b/tools/perf/util/thread_map.c
-@@ -66,7 +66,7 @@ struct thread_map *thread_map__new_by_pid(pid_t pid)
- 		for (i = 0; i < items; i++)
- 			thread_map__set_pid(threads, i, atoi(namelist[i]->d_name));
- 		threads->nr = items;
--		atomic_set(&threads->refcnt, 1);
-+		refcount_set(&threads->refcnt, 1);
- 	}
- 
- 	for (i=0; i<items; i++)
-@@ -83,7 +83,7 @@ struct thread_map *thread_map__new_by_tid(pid_t tid)
- 	if (threads != NULL) {
- 		thread_map__set_pid(threads, 0, tid);
- 		threads->nr = 1;
--		atomic_set(&threads->refcnt, 1);
-+		refcount_set(&threads->refcnt, 1);
- 	}
- 
- 	return threads;
-@@ -105,7 +105,7 @@ struct thread_map *thread_map__new_by_uid(uid_t uid)
- 		goto out_free_threads;
- 
- 	threads->nr = 0;
--	atomic_set(&threads->refcnt, 1);
-+	refcount_set(&threads->refcnt, 1);
- 
- 	while ((dirent = readdir(proc)) != NULL) {
- 		char *end;
-@@ -235,7 +235,7 @@ static struct thread_map *thread_map__new_by_pid_str(const char *pid_str)
- out:
- 	strlist__delete(slist);
- 	if (threads)
--		atomic_set(&threads->refcnt, 1);
-+		refcount_set(&threads->refcnt, 1);
- 	return threads;
- 
- out_free_namelist:
-@@ -255,7 +255,7 @@ struct thread_map *thread_map__new_dummy(void)
- 	if (threads != NULL) {
- 		thread_map__set_pid(threads, 0, -1);
- 		threads->nr = 1;
--		atomic_set(&threads->refcnt, 1);
-+		refcount_set(&threads->refcnt, 1);
- 	}
- 	return threads;
- }
-@@ -300,7 +300,7 @@ struct thread_map *thread_map__new_by_tid_str(const char *tid_str)
- 	}
- out:
- 	if (threads)
--		atomic_set(&threads->refcnt, 1);
-+		refcount_set(&threads->refcnt, 1);
- 	return threads;
- 
- out_free_threads:
-@@ -326,7 +326,7 @@ static void thread_map__delete(struct thread_map *threads)
- 	if (threads) {
- 		int i;
- 
--		WARN_ONCE(atomic_read(&threads->refcnt) != 0,
-+		WARN_ONCE(refcount_read(&threads->refcnt) != 0,
- 			  "thread map refcnt unbalanced\n");
- 		for (i = 0; i < threads->nr; i++)
- 			free(thread_map__comm(threads, i));
-@@ -337,13 +337,13 @@ static void thread_map__delete(struct thread_map *threads)
- struct thread_map *thread_map__get(struct thread_map *map)
+ 		 * if we're doing the sync list, record that our
+diff --git a/include/linux/bio.h b/include/linux/bio.h
+index 7cf8a6c..6f7b865 100644
+--- a/include/linux/bio.h
++++ b/include/linux/bio.h
+@@ -229,7 +229,7 @@ static inline void bio_get(struct bio *bio)
  {
- 	if (map)
--		atomic_inc(&map->refcnt);
-+		refcount_inc(&map->refcnt);
- 	return map;
+ 	bio->bi_flags |= (1 << BIO_REFFED);
+ 	smp_mb__before_atomic();
+-	atomic_inc(&bio->__bi_cnt);
++	refcount_inc(&bio->__bi_cnt);
  }
  
- void thread_map__put(struct thread_map *map)
- {
--	if (map && atomic_dec_and_test(&map->refcnt))
-+	if (map && refcount_dec_and_test(&map->refcnt))
- 		thread_map__delete(map);
- }
- 
-@@ -423,7 +423,7 @@ static void thread_map__copy_event(struct thread_map *threads,
- 		threads->map[i].comm = strndup(event->entries[i].comm, 16);
+ static inline void bio_cnt_set(struct bio *bio, unsigned int count)
+@@ -238,7 +238,7 @@ static inline void bio_cnt_set(struct bio *bio, unsigned int count)
+ 		bio->bi_flags |= (1 << BIO_REFFED);
+ 		smp_mb__before_atomic();
  	}
- 
--	atomic_set(&threads->refcnt, 1);
-+	refcount_set(&threads->refcnt, 1);
+-	atomic_set(&bio->__bi_cnt, count);
++	refcount_set(&bio->__bi_cnt, count);
  }
  
- struct thread_map *thread_map__new_event(struct thread_map_event *event)
-diff --git a/tools/perf/util/thread_map.h b/tools/perf/util/thread_map.h
-index bd3b971..dae46da 100644
---- a/tools/perf/util/thread_map.h
-+++ b/tools/perf/util/thread_map.h
-@@ -3,7 +3,7 @@
- 
- #include <sys/types.h>
- #include <stdio.h>
--#include <linux/atomic.h>
+ static inline bool bio_flagged(struct bio *bio, unsigned int bit)
+diff --git a/include/linux/blk-cgroup.h b/include/linux/blk-cgroup.h
+index 01b62e7..0d3efa9 100644
+--- a/include/linux/blk-cgroup.h
++++ b/include/linux/blk-cgroup.h
+@@ -19,6 +19,7 @@
+ #include <linux/radix-tree.h>
+ #include <linux/blkdev.h>
+ #include <linux/atomic.h>
 +#include <linux/refcount.h>
  
- struct thread_map_data {
- 	pid_t    pid;
-@@ -11,7 +11,7 @@ struct thread_map_data {
- };
+ /* percpu_counter batch for blkg_[rw]stats, per-cpu drift doesn't matter */
+ #define BLKG_STAT_CPU_BATCH	(INT_MAX / 2)
+@@ -122,7 +123,7 @@ struct blkcg_gq {
+ 	struct request_list		rl;
  
- struct thread_map {
--	atomic_t refcnt;
-+	refcount_t refcnt;
- 	int nr;
- 	struct thread_map_data map[];
+ 	/* reference count */
+-	atomic_t			refcnt;
++	refcount_t			refcnt;
+ 
+ 	/* is this blkg online? protected by both blkcg and q locks */
+ 	bool				online;
+@@ -354,8 +355,8 @@ static inline int blkg_path(struct blkcg_gq *blkg, char *buf, int buflen)
+  */
+ static inline void blkg_get(struct blkcg_gq *blkg)
+ {
+-	WARN_ON_ONCE(atomic_read(&blkg->refcnt) <= 0);
+-	atomic_inc(&blkg->refcnt);
++	WARN_ON_ONCE(refcount_read(&blkg->refcnt) == 0);
++	refcount_inc(&blkg->refcnt);
+ }
+ 
+ void __blkg_release_rcu(struct rcu_head *rcu);
+@@ -366,8 +367,8 @@ void __blkg_release_rcu(struct rcu_head *rcu);
+  */
+ static inline void blkg_put(struct blkcg_gq *blkg)
+ {
+-	WARN_ON_ONCE(atomic_read(&blkg->refcnt) <= 0);
+-	if (atomic_dec_and_test(&blkg->refcnt))
++	WARN_ON_ONCE(refcount_read(&blkg->refcnt) == 0);
++	if (refcount_dec_and_test(&blkg->refcnt))
+ 		call_rcu(&blkg->rcu_head, __blkg_release_rcu);
+ }
+ 
+diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+index 519ea2c..baeec02 100644
+--- a/include/linux/blk_types.h
++++ b/include/linux/blk_types.h
+@@ -7,6 +7,7 @@
+ 
+ #include <linux/types.h>
+ #include <linux/bvec.h>
++#include <linux/refcount.h>
+ 
+ struct bio_set;
+ struct bio;
+@@ -73,7 +74,7 @@ struct bio {
+ 
+ 	unsigned short		bi_max_vecs;	/* max bvl_vecs we can hold */
+ 
+-	atomic_t		__bi_cnt;	/* pin count */
++	refcount_t		__bi_cnt;	/* pin count */
+ 
+ 	struct bio_vec		*bi_io_vec;	/* the actual vec list */
+ 
+diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
+index 8369564..c39b0fb 100644
+--- a/include/linux/blkdev.h
++++ b/include/linux/blkdev.h
+@@ -25,6 +25,7 @@
+ #include <linux/percpu-refcount.h>
+ #include <linux/scatterlist.h>
+ #include <linux/blkzoned.h>
++#include <linux/refcount.h>
+ 
+ struct module;
+ struct scsi_ioctl_command;
+@@ -290,7 +291,7 @@ struct blk_queue_tag {
+ 	unsigned long *tag_map;		/* bit map of free/busy tags */
+ 	int max_depth;			/* what we will send to device */
+ 	int real_max_depth;		/* what the array can hold */
+-	atomic_t refcnt;		/* map can be shared */
++	refcount_t refcnt;		/* map can be shared */
+ 	int alloc_policy;		/* tag allocation policy */
+ 	int next_tag;			/* next tag */
  };
+diff --git a/include/linux/iocontext.h b/include/linux/iocontext.h
+index df38db2..a1e28c3 100644
+--- a/include/linux/iocontext.h
++++ b/include/linux/iocontext.h
+@@ -3,6 +3,7 @@
+ 
+ #include <linux/radix-tree.h>
+ #include <linux/rcupdate.h>
++#include <linux/refcount.h>
+ #include <linux/workqueue.h>
+ 
+ enum {
+@@ -96,7 +97,7 @@ struct io_cq {
+  */
+ struct io_context {
+ 	atomic_long_t refcount;
+-	atomic_t active_ref;
++	refcount_t active_ref;
+ 	atomic_t nr_tasks;
+ 
+ 	/* all the fields below are protected by this lock */
+@@ -128,9 +129,9 @@ struct io_context {
+ static inline void get_io_context_active(struct io_context *ioc)
+ {
+ 	WARN_ON_ONCE(atomic_long_read(&ioc->refcount) <= 0);
+-	WARN_ON_ONCE(atomic_read(&ioc->active_ref) <= 0);
++	WARN_ON_ONCE(refcount_read(&ioc->active_ref) == 0);
+ 	atomic_long_inc(&ioc->refcount);
+-	atomic_inc(&ioc->active_ref);
++	refcount_inc(&ioc->active_ref);
+ }
+ 
+ static inline void ioc_task_link(struct io_context *ioc)
 -- 
 2.7.4
