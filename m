@@ -1,34 +1,28 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Thu, 29 Dec 2016 17:41:09 +0100
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20161229164109.GA5891@kroah.com>
+References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
+ <1482994571-18687-2-git-send-email-elena.reshetova@intel.com>
 MIME-Version: 1.0
-From: amitsagar gowda <amitsagargowda@gmail.com>
-Date: Thu, 29 Dec 2016 11:22:57 +0100
-Message-ID: <CAEB-d-7X5mGo+vuF+PO24k795wPNNHES0c9QXcPntXpObUZ4TQ@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=001a1147361c206d260544c97889
-Subject: [kernel-hardening] Security issues on ARM processor
-To: kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1482994571-18687-2-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 01/19] Since we need to change the implementation,
+ stop exposing internals. Provide kref_read() to read the current reference
+ count; typically used for debug messages.
+To: Elena Reshetova <elena.reshetova@intel.com>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, ishkamiel@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---001a1147361c206d260544c97889
-Content-Type: text/plain; charset=UTF-8
+On Thu, Dec 29, 2016 at 08:55:53AM +0200, Elena Reshetova wrote:
+> Kills two anti-patterns:
+> 
+> 	atomic_read(&kref->refcount)
+> 	kref->refcount.counter
+> 
+> Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 
-Hi All,
-      I'm interested to contribute to Linux Kernel Self Protection Project
-i have 12+ year of ARM Linux Kernel development  and hence would like to
-help in fixing some security issues on ARM processors. Could you please me
-find some topics where i could help in this lines.
-
-With Regards,
-Anand
-
---001a1147361c206d260544c97889
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr">Hi All,<div>=C2=A0 =C2=A0 =C2=A0 I&#39;m interested to con=
-tribute to Linux Kernel Self Protection Project i have 12+ year of ARM Linu=
-x Kernel development =C2=A0and hence would like to help in fixing some secu=
-rity issues on ARM processors. Could you please me find some topics where i=
- could help in this lines. =C2=A0 =C2=A0=C2=A0</div><div><br></div><div>Wit=
-h Regards,</div><div>Anand</div></div>
-
---001a1147361c206d260544c97889--
+If you are going to send patches out, do it right, with a correct
+subject, your signed-off-by: added, and the rest.  Otherwise it just
+makes some of us cringe when we have to read these...
