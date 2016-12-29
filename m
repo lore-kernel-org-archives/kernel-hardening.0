@@ -1,10 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Thu, 29 Dec 2016 08:56:04 +0200
-Message-Id: <1482994571-18687-13-git-send-email-elena.reshetova@intel.com>
+Date: Thu, 29 Dec 2016 08:56:05 +0200
+Message-Id: <1482994571-18687-14-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
 References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFC PATCH 12/19] sound: convert from atomic_t to refcount_t
+Subject: [kernel-hardening] [RFC PATCH 13/19] ipc: covert from atomic_t to refcount_t
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, ishkamiel@gmail.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -14,159 +14,156 @@ used instead of atomic_t when the variable is used as
 a reference counter. Convert the cases found.
 
 Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
-Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
 ---
- sound/core/seq/seq_clientmgr.c |  2 +-
- sound/core/seq/seq_ports.c     |  8 ++++----
- sound/core/seq/seq_ports.h     |  3 ++-
- sound/usb/card.c               | 10 +++++-----
- sound/usb/usbaudio.h           |  4 +++-
- 5 files changed, 15 insertions(+), 12 deletions(-)
+ include/linux/ipc_namespace.h | 5 +++--
+ ipc/namespace.c               | 4 ++--
+ ipc/sem.c                     | 8 ++++----
+ ipc/util.c                    | 6 +++---
+ ipc/util.h                    | 3 ++-
+ 5 files changed, 14 insertions(+), 12 deletions(-)
 
-diff --git a/sound/core/seq/seq_clientmgr.c b/sound/core/seq/seq_clientmgr.c
-index 4c93520..3440f76 100644
---- a/sound/core/seq/seq_clientmgr.c
-+++ b/sound/core/seq/seq_clientmgr.c
-@@ -666,7 +666,7 @@ static int deliver_to_subscribers(struct snd_seq_client *client,
- 		down_read(&grp->list_mutex);
- 	list_for_each_entry(subs, &grp->list_head, src_list) {
- 		/* both ports ready? */
--		if (atomic_read(&subs->ref_count) != 2)
-+		if (refcount_read(&subs->ref_count) != 2)
- 			continue;
- 		event->dest = subs->info.dest;
- 		if (subs->info.flags & SNDRV_SEQ_PORT_SUBS_TIMESTAMP)
-diff --git a/sound/core/seq/seq_ports.c b/sound/core/seq/seq_ports.c
-index fe686ee..d9b21a1 100644
---- a/sound/core/seq/seq_ports.c
-+++ b/sound/core/seq/seq_ports.c
-@@ -241,7 +241,7 @@ static void clear_subscriber_list(struct snd_seq_client *client,
- 			 * we decrease the counter, and when both ports are deleted
- 			 * remove the subscriber info
- 			 */
--			if (atomic_dec_and_test(&subs->ref_count))
-+			if (refcount_dec_and_test(&subs->ref_count))
- 				kfree(subs);
- 			continue;
- 		}
-@@ -520,7 +520,7 @@ static int check_and_subscribe_port(struct snd_seq_client *client,
- 	else
- 		list_add_tail(&subs->dest_list, &grp->list_head);
- 	grp->exclusive = exclusive;
--	atomic_inc(&subs->ref_count);
-+	refcount_inc(&subs->ref_count);
- 	write_unlock_irq(&grp->list_lock);
- 	err = 0;
- 
-@@ -570,7 +570,7 @@ int snd_seq_port_connect(struct snd_seq_client *connector,
- 		return -ENOMEM;
- 
- 	subs->info = *info;
--	atomic_set(&subs->ref_count, 0);
-+	refcount_set(&subs->ref_count, 0);
- 	INIT_LIST_HEAD(&subs->src_list);
- 	INIT_LIST_HEAD(&subs->dest_list);
- 
-@@ -613,7 +613,7 @@ int snd_seq_port_disconnect(struct snd_seq_client *connector,
- 	/* look for the connection */
- 	list_for_each_entry(subs, &src->list_head, src_list) {
- 		if (match_subs_info(info, &subs->info)) {
--			atomic_dec(&subs->ref_count); /* mark as not ready */
-+			refcount_dec(&subs->ref_count); /* mark as not ready */
- 			err = 0;
- 			break;
- 		}
-diff --git a/sound/core/seq/seq_ports.h b/sound/core/seq/seq_ports.h
-index 26bd71f..d09e396 100644
---- a/sound/core/seq/seq_ports.h
-+++ b/sound/core/seq/seq_ports.h
-@@ -21,6 +21,7 @@
- #ifndef __SND_SEQ_PORTS_H
- #define __SND_SEQ_PORTS_H
- 
+diff --git a/include/linux/ipc_namespace.h b/include/linux/ipc_namespace.h
+index 848e579..7230638 100644
+--- a/include/linux/ipc_namespace.h
++++ b/include/linux/ipc_namespace.h
+@@ -7,6 +7,7 @@
+ #include <linux/notifier.h>
+ #include <linux/nsproxy.h>
+ #include <linux/ns_common.h>
 +#include <linux/refcount.h>
- #include <sound/seq_kernel.h>
- #include "seq_lock.h"
  
-@@ -44,7 +45,7 @@ struct snd_seq_subscribers {
- 	struct snd_seq_port_subscribe info;	/* additional info */
- 	struct list_head src_list;	/* link of sources */
- 	struct list_head dest_list;	/* link of destinations */
--	atomic_t ref_count;
-+	refcount_t ref_count;
+ struct user_namespace;
+ 
+@@ -19,7 +20,7 @@ struct ipc_ids {
  };
  
- struct snd_seq_port_subs_info {
-diff --git a/sound/usb/card.c b/sound/usb/card.c
-index f36cb06..ff3a1d5 100644
---- a/sound/usb/card.c
-+++ b/sound/usb/card.c
-@@ -378,7 +378,7 @@ static int snd_usb_audio_create(struct usb_interface *intf,
- 	chip->setup = device_setup[idx];
- 	chip->autoclock = autoclock;
- 	atomic_set(&chip->active, 1); /* avoid autopm during probing */
--	atomic_set(&chip->usage_count, 0);
-+	refcount_set(&chip->usage_count, 0);
- 	atomic_set(&chip->shutdown, 0);
+ struct ipc_namespace {
+-	atomic_t	count;
++	refcount_t	count;
+ 	struct ipc_ids	ids[3];
  
- 	chip->usb_id = USB_ID(le16_to_cpu(dev->descriptor.idVendor),
-@@ -657,7 +657,7 @@ static void usb_audio_disconnect(struct usb_interface *intf)
- 		 * they are protected by snd_usb_lock_shutdown()
- 		 */
- 		wait_event(chip->shutdown_wait,
--			   !atomic_read(&chip->usage_count));
-+			   !refcount_read(&chip->usage_count));
- 		snd_card_disconnect(card);
- 		/* release the pcm resources */
- 		list_for_each_entry(as, &chip->pcm_list, list) {
-@@ -692,7 +692,7 @@ int snd_usb_lock_shutdown(struct snd_usb_audio *chip)
+ 	int		sem_ctls[4];
+@@ -118,7 +119,7 @@ extern struct ipc_namespace *copy_ipcs(unsigned long flags,
+ static inline struct ipc_namespace *get_ipc_ns(struct ipc_namespace *ns)
  {
- 	int err;
- 
--	atomic_inc(&chip->usage_count);
-+	refcount_inc(&chip->usage_count);
- 	if (atomic_read(&chip->shutdown)) {
- 		err = -EIO;
- 		goto error;
-@@ -703,7 +703,7 @@ int snd_usb_lock_shutdown(struct snd_usb_audio *chip)
- 	return 0;
- 
-  error:
--	if (atomic_dec_and_test(&chip->usage_count))
-+	if (refcount_dec_and_test(&chip->usage_count))
- 		wake_up(&chip->shutdown_wait);
- 	return err;
- }
-@@ -712,7 +712,7 @@ int snd_usb_lock_shutdown(struct snd_usb_audio *chip)
- void snd_usb_unlock_shutdown(struct snd_usb_audio *chip)
- {
- 	snd_usb_autosuspend(chip);
--	if (atomic_dec_and_test(&chip->usage_count))
-+	if (refcount_dec_and_test(&chip->usage_count))
- 		wake_up(&chip->shutdown_wait);
+ 	if (ns)
+-		atomic_inc(&ns->count);
++		refcount_inc(&ns->count);
+ 	return ns;
  }
  
-diff --git a/sound/usb/usbaudio.h b/sound/usb/usbaudio.h
-index 4d5c89a..74785d0 100644
---- a/sound/usb/usbaudio.h
-+++ b/sound/usb/usbaudio.h
-@@ -26,6 +26,8 @@
- #define USB_ID_VENDOR(id) ((id) >> 16)
- #define USB_ID_PRODUCT(id) ((u16)(id))
+diff --git a/ipc/namespace.c b/ipc/namespace.c
+index 0abdea4..ed10bbc 100644
+--- a/ipc/namespace.c
++++ b/ipc/namespace.c
+@@ -48,7 +48,7 @@ static struct ipc_namespace *create_ipc_ns(struct user_namespace *user_ns,
+ 		goto fail_free;
+ 	ns->ns.ops = &ipcns_operations;
  
-+#include <linux/refcount.h>
-+
- /*
-  *
+-	atomic_set(&ns->count, 1);
++	refcount_set(&ns->count, 1);
+ 	ns->user_ns = get_user_ns(user_ns);
+ 	ns->ucounts = ucounts;
+ 
+@@ -142,7 +142,7 @@ static void free_ipc_ns(struct ipc_namespace *ns)
   */
-@@ -40,7 +42,7 @@ struct snd_usb_audio {
- 	unsigned int autosuspended:1;	
- 	atomic_t active;
- 	atomic_t shutdown;
--	atomic_t usage_count;
-+	refcount_t usage_count;
- 	wait_queue_head_t shutdown_wait;
- 	unsigned int txfr_quirk:1; /* Subframe boundaries on transfers */
- 	unsigned int tx_length_quirk:1; /* Put length specifier in transfers */
+ void put_ipc_ns(struct ipc_namespace *ns)
+ {
+-	if (atomic_dec_and_lock(&ns->count, &mq_lock)) {
++	if (refcount_dec_and_lock(&ns->count, &mq_lock)) {
+ 		mq_clear_sbinfo(ns);
+ 		spin_unlock(&mq_lock);
+ 		mq_put_mnt(ns);
+diff --git a/ipc/sem.c b/ipc/sem.c
+index e08b948..04bab9b 100644
+--- a/ipc/sem.c
++++ b/ipc/sem.c
+@@ -139,7 +139,7 @@ struct sem_undo {
+  * that may be shared among all a CLONE_SYSVSEM task group.
+  */
+ struct sem_undo_list {
+-	atomic_t		refcnt;
++	refcount_t		refcnt;
+ 	spinlock_t		lock;
+ 	struct list_head	list_proc;
+ };
+@@ -1629,7 +1629,7 @@ static inline int get_undo_list(struct sem_undo_list **undo_listp)
+ 		if (undo_list == NULL)
+ 			return -ENOMEM;
+ 		spin_lock_init(&undo_list->lock);
+-		atomic_set(&undo_list->refcnt, 1);
++		refcount_set(&undo_list->refcnt, 1);
+ 		INIT_LIST_HEAD(&undo_list->list_proc);
+ 
+ 		current->sysvsem.undo_list = undo_list;
+@@ -2028,7 +2028,7 @@ int copy_semundo(unsigned long clone_flags, struct task_struct *tsk)
+ 		error = get_undo_list(&undo_list);
+ 		if (error)
+ 			return error;
+-		atomic_inc(&undo_list->refcnt);
++		refcount_inc(&undo_list->refcnt);
+ 		tsk->sysvsem.undo_list = undo_list;
+ 	} else
+ 		tsk->sysvsem.undo_list = NULL;
+@@ -2057,7 +2057,7 @@ void exit_sem(struct task_struct *tsk)
+ 		return;
+ 	tsk->sysvsem.undo_list = NULL;
+ 
+-	if (!atomic_dec_and_test(&ulp->refcnt))
++	if (!refcount_dec_and_test(&ulp->refcnt))
+ 		return;
+ 
+ 	for (;;) {
+diff --git a/ipc/util.c b/ipc/util.c
+index 798cad1..24484a6 100644
+--- a/ipc/util.c
++++ b/ipc/util.c
+@@ -437,7 +437,7 @@ void *ipc_rcu_alloc(int size)
+ 	struct ipc_rcu *out = ipc_alloc(sizeof(struct ipc_rcu) + size);
+ 	if (unlikely(!out))
+ 		return NULL;
+-	atomic_set(&out->refcount, 1);
++	refcount_set(&out->refcount, 1);
+ 	return out + 1;
+ }
+ 
+@@ -445,14 +445,14 @@ int ipc_rcu_getref(void *ptr)
+ {
+ 	struct ipc_rcu *p = ((struct ipc_rcu *)ptr) - 1;
+ 
+-	return atomic_inc_not_zero(&p->refcount);
++	return refcount_inc_not_zero(&p->refcount);
+ }
+ 
+ void ipc_rcu_putref(void *ptr, void (*func)(struct rcu_head *head))
+ {
+ 	struct ipc_rcu *p = ((struct ipc_rcu *)ptr) - 1;
+ 
+-	if (!atomic_dec_and_test(&p->refcount))
++	if (!refcount_dec_and_test(&p->refcount))
+ 		return;
+ 
+ 	call_rcu(&p->rcu, func);
+diff --git a/ipc/util.h b/ipc/util.h
+index 51f7ca5..274ec9b 100644
+--- a/ipc/util.h
++++ b/ipc/util.h
+@@ -12,6 +12,7 @@
+ 
+ #include <linux/unistd.h>
+ #include <linux/err.h>
++#include <linux/refcount.h>
+ 
+ #define SEQ_MULTIPLIER	(IPCMNI)
+ 
+@@ -49,7 +50,7 @@ static inline void shm_exit_ns(struct ipc_namespace *ns) { }
+ 
+ struct ipc_rcu {
+ 	struct rcu_head rcu;
+-	atomic_t refcount;
++	refcount_t refcount;
+ } ____cacheline_aligned_in_smp;
+ 
+ #define ipc_rcu_to_struct(p)  ((void *)(p+1))
 -- 
 2.7.4
