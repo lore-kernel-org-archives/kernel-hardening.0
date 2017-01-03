@@ -1,96 +1,105 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 30 Dec 2016 13:52:13 -0600
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20161230195213.GA9633@zzz>
+Date: Tue, 3 Jan 2017 14:21:36 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20170103132136.GV3107@twins.programming.kicks-ass.net>
 References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
  <1482994571-18687-7-git-send-email-elena.reshetova@intel.com>
  <20161230010627.GA9882@zzz>
- <2236FBA76BA1254E88B949DDB74E612B41C32F34@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C32F34@IRSMSX102.ger.corp.intel.com>
+In-Reply-To: <20161230010627.GA9882@zzz>
 Subject: Re: [kernel-hardening] [RFC PATCH 06/19] Provide refcount_t, an
  atomic_t like primitive built just for refcounting.
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, ishkamiel@gmail.com, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Dec 30, 2016 at 01:17:08PM +0000, Reshetova, Elena wrote:
-> > 
-> > ... and refcount_inc() compiles to over 100 bytes of instructions on x86_64.
-> > This is the wrong approach.  We need a low-overhead solution, otherwise no one
-> > will turn on refcount protection and the feature will be useless.
-> > 
-> > What exactly is wrong with the current solution in PAX/grsecurity?  Looking at
-> > the x86 version they have atomic_inc() do 'lock incl' like usual, then use 'jo'
-> > to, if the counter overflowed, jump to *out-of-line* error handling code, in a
-> > separate section of the kernel image.   Then it raises a software interrupt, and
-> > the interrupt handler sets the overflowed counter to INT_MAX and does the
-> > needed
-> > logging and signal raising.
-> > 
-> > That approach seems very efficient.  It seems the only overhead when someone
-> > isn't actually exploiting a refcount bug is the 'jo' instruction, with the
-> > branch not taken.  There aren't even any other in-line instructions to waste
-> > icache space.
-> > I do see they used to use a slightly different approach that did a decrement
-> > instead of setting the counter to INT_MAX.  And that was clearly racy because
-> > two concurrent increments could circumvent the overflow protection.  But AFAICS
-> > their current solution is not racy in any meaningful way, since the setting to
-> > INT_MAX means an overflow will be detected again on the next increment, even if
-> > there were some concurrent increments in the mean time.  (And if by some stretch
-> > of the imagination, it was possible to execute *another* INT_MAX increments
-> > before the fixup code had a chance to run, the correct solution would be to
-> > simply use 'js' instead of 'jo' to detect overflows.  I'm guessing the only
-> > reason they don't do that is because some atomic_t's are used to store negative
-> > values...)
+On Thu, Dec 29, 2016 at 07:06:27PM -0600, Eric Biggers wrote:
 > 
-> > 
-> > So given that there is an existing solution which AFAICS is efficient and
-> > achieves the desired protection, why has the proposal turned into a monstrous
-> > cmpxchg loop that won't be practical to enable by default?
-> 
-> I guess we can try to benchmark the whole thing to see what is the overhead.
-> Especially now when we have the subsystem parts ready. 
-> 
-> And if you have been following the story since beginning, we also have PaX/grsecurity
-> approach done for linux-next/stable and benchmarks have been previously posted, so
-> would be easy to compare if needed. 
-> 
-> I guess one could in principle think of mixed approach between this one and the one that 
-> PaX/grsecurity had: define refcount_t type and API, but use assembly instructions
-> behind to speed things up. 
+> ... and refcount_inc() compiles to over 100 bytes of instructions on x86_64.
+> This is the wrong approach.  We need a low-overhead solution, otherwise no one
+> will turn on refcount protection and the feature will be useless.
 
-I haven't been following the whole story, sorry.  Are your "PaX/grsecurity
-approach" patches based on their latest version, i.e. without the racy
-decrement?  Also, with regards to benchmarks, there really are two things that
-are important: the performance impact of actually executing all the cmpxchg loop
-stuff instead of a simple 'lock incl', and the icache footprint of all the extra
-inlined instructions (or the overhead of a function call if that is "solved" by
-making refcount_inc() out of line).  The latter is unlikely to be visible in a
-microbenchmark but it's still very important.
+Its not something that can be turned on or off, refcount_t is
+unconditional code. But you raise a good point on the size of the thing.
 
-AFAICS the whole question of refcount_t/atomic_t vs.
-atomic_t/atomic_unchecked_t has nothing to do with the details of how the
-checked refcount operations are actually implemented.  These things need to be
-considered separately.
+I count 116 bytes on x86_64. If I disable all the debug crud that
+reduces to 45 bytes, and that's because GCC-6 is generating particularly
+stupid code (albeit not as stupid as GCC-5 did).
 
-> 
-> > I also think that the "warn when incrementing a 0 refcount" part of the change
-> > shouldn't be there.  It's additional overhead that seems tangential to the main
-> > goal of the feature which is to protect against refcount overflows, not to
-> > protect against random increments in some object which has *already* been freed
-> > and potentially exploited.
-> 
-> Actually having warn for now was useful debugging feature: we got to found out many places which would not work otherwise. 
-> 
+A hand coded one ends up being 29 bytes, of which 6 are the function
+pro- and epilogue, so effectively 23 bytes for inline.
 
-The point of the feature is exploit mitigation, not refcount debugging.  The
-mitigation needs to be practical to turn on in real production systems.  If we
-want to have extra debugging features too, fine but that should be a *debugging*
-feature not a security feature, controllable by a separate config option, e.g.
-CONFIG_DEBUG_REFCOUNT for debugging vs. CONFIG_HARDENED_REFCOUNT for the actual
-mitigation.
+Which we can reduce to 22 if instead of using a literal for UINT_MAX we
+do: xor %[t], %[t]; dec %[t].
 
-- Eric
+0000000000009ee0 <ponies>:
+    9ee0:       55                      push   %rbp
+    9ee1:       48 89 e5                mov    %rsp,%rbp
+    9ee4:       8b 07                   mov    (%rdi),%eax
+    9ee6:       85 c0                   test   %eax,%eax
+    9ee8:       74 10                   je     9efa <ponies+0x1a>
+    9eea:       89 c2                   mov    %eax,%edx
+    9eec:       ff c2                   inc    %edx
+    9eee:       73 04                   jae    9ef4 <ponies+0x14>
+    9ef0:       31 d2                   xor    %edx,%edx
+    9ef2:       ff ca                   dec    %edx
+    9ef4:       f0 0f b1 17             lock cmpxchg %edx,(%rdi)
+    9ef8:       75 ec                   jne    9ee6 <ponies+0x6>
+    9efa:       5d                      pop    %rbp
+    9efb:       c3			retq
+
+(caveat: I wrote this on a post-holidays brain without testing)
+
+Also note that call overhead on an x86_64 (big core) is something like
+1.5 cycles. And afaik Sparc64 is the architecture with the worst call
+overhead, but that already has its atomic functions out of line for
+different reasons.
+
+> What exactly is wrong with the current solution in PAX/grsecurity?  Looking at
+> the x86 version they have atomic_inc() do 'lock incl' like usual, then use 'jo'
+> to, if the counter overflowed, jump to *out-of-line* error handling code, in a
+> separate section of the kernel image.   Then it raises a software interrupt, and
+> the interrupt handler sets the overflowed counter to INT_MAX and does the needed
+> logging and signal raising.
+
+Doing an unconditional INC on INT_MAX gives a temporarily visible
+artifact of INT_MAX+1 (or INT_MIN) in the best case.
+
+This is fundamentally not an atomic operation and therefore does not
+belong in the atomic_* family, full stop.
+
+Not to mention that the whole wrap/unwrap or checked/unchecked split of
+atomic_t is a massive trainwreck. Moving over to refcount_t, which has
+simple and well defined semantics forces us to audit and cleanup all the
+reference counting crud as it gets converted, this is a good thing.
+
+Yes it takes more time and effort, but the end result is better code.
+
+I understand why PaX/grsecurity chose not to do this, but that doesn't
+make it a proper solution for upstream.
+
+
+Now as to why refcount cannot be implemented using that scheme you
+outlined:
+
+	vCPU0			vCPU1
+
+	lock inc %[r]
+	jo
+
+	<vcpu preempt-out>
+
+				for lots
+					refcount_dec_and_test(&obj->ref)
+						/* hooray, we hit 0 */
+						kfree(obj);
+
+	<vcpu preempt-in>
+
+	mov $0xFFFFFFFF, %[r] /* OOPS use-after-free */
+
+
+Is this unlikely, yes, extremely so. Do I want to be the one debugging
+this, heck no.
