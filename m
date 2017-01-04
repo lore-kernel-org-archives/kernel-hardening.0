@@ -1,73 +1,40 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 4 Jan 2017 12:36:01 -0800
-From: Eric Biggers <ebiggers3@gmail.com>
-Message-ID: <20170104203601.GB21696@gmail.com>
-References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
- <1482994571-18687-7-git-send-email-elena.reshetova@intel.com>
- <20161230010627.GA9882@zzz>
- <20170103132136.GV3107@twins.programming.kicks-ass.net>
+Date: Wed, 4 Jan 2017 21:47:04 +0100
+From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Message-ID: <20170104204704.GA17642@kroah.com>
+References: <20170103225831.GA113525@beast>
+ <20170104093236.GB31677@kroah.com>
+ <CAPeXnHudW-YDmoK8NrFzQgAq4WuRDgFNC5-0GaG0+jVkq+3meQ@mail.gmail.com>
+ <CAPeXnHue8hKFiMsddMTN7Hb5RWBGXWUgy2-kpXNLwBfOdf0QVA@mail.gmail.com>
+ <20170104194707.GD25268@kroah.com>
+ <CAPeXnHs1=jCGtSgOO859bp2chMWBX1L6VaKn65RKoLaTbVq_0A@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170103132136.GV3107@twins.programming.kicks-ass.net>
-Subject: Re: [kernel-hardening] [RFC PATCH 06/19] Provide refcount_t, an
- atomic_t like primitive built just for refcounting.
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, ishkamiel@gmail.com, Elena Reshetova <elena.reshetova@intel.com>
+In-Reply-To: <CAPeXnHs1=jCGtSgOO859bp2chMWBX1L6VaKn65RKoLaTbVq_0A@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] Allow userspace control of runtime disabling/enabling of
+ driver probing
+To: Matthew Garrett <mjg59@coreos.com>
+Cc: Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Ulf Hansson <ulf.hansson@linaro.org>, Mauro Carvalho Chehab <mchehab@kernel.org>, Tomeu Vizoso <tomeu.vizoso@collabora.com>, Lukas Wunner <lukas@wunner.de>, Madalin Bucur <madalin.bucur@nxp.com>, Sudip Mukherjee <sudipm.mukherjee@gmail.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Arnd Bergmann <arnd@arndb.de>, Andrew Morton <akpm@linux-foundation.org>, Russell King <rmk+kernel@arm.linux.org.uk>, Petr Tesarik <ptesarik@suse.com>, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 03, 2017 at 02:21:36PM +0100, Peter Zijlstra wrote:
-> On Thu, Dec 29, 2016 at 07:06:27PM -0600, Eric Biggers wrote:
-> > 
-> > ... and refcount_inc() compiles to over 100 bytes of instructions on x86_64.
-> > This is the wrong approach.  We need a low-overhead solution, otherwise no one
-> > will turn on refcount protection and the feature will be useless.
+On Wed, Jan 04, 2017 at 02:01:00PM -0600, Matthew Garrett wrote:
+> On Wed, Jan 4, 2017 at 1:47 PM, Greg Kroah-Hartman
+> <gregkh@linuxfoundation.org> wrote:
+> > You know the device type and vendor/product id before you authorize it,
+> > you should be able to do this type of detection otherwise it seems
+> > pretty pointless :)
 > 
-> Its not something that can be turned on or off, refcount_t is
-> unconditional code. But you raise a good point on the size of the thing.
-...
-> Doing an unconditional INC on INT_MAX gives a temporarily visible
-> artifact of INT_MAX+1 (or INT_MIN) in the best case.
-> 
-> This is fundamentally not an atomic operation and therefore does not
-> belong in the atomic_* family, full stop.
+> You know the vendor and product ID, which doesn't tell you whether one
+> of the endpoints is a network device or a keyboard. You need to know
+> that.
 
-Again I feel this is going down the wrong track.  The point of the PaX feature
-this is based on is to offer protection against *exploits* involving abuse of
-refcount leak bugs.  If the overflow logic triggers then there is a kernel *bug*
-and the rules have already been broken.  The question of whether the exploit
-mitigation is "atomic" is not important unless it allows the mitigation to be
-circumvented.
+Are you sure you don't have the configuration information as well?  That
+should tell you...
 
-And yes this should be a config option just like other hardening options like
-CONFIG_HARDENED_USERCOPY.  Making it unconditional only makes it harder to get
-merged and hurts users who, for whatever reason, don't want/need extra
-protections against kernel exploits.  This is especially true if an
-implementation with significant performance and code size overhead is chosen.
+And for network devices, they are almost all just vendor/product ids,
+not many use the class protocol.
 
-> Now as to why refcount cannot be implemented using that scheme you
-> outlined:
-> 
-> 	vCPU0			vCPU1
-> 
-> 	lock inc %[r]
-> 	jo
-> 
-> 	<vcpu preempt-out>
-> 
-> 				for lots
-> 					refcount_dec_and_test(&obj->ref)
-> 						/* hooray, we hit 0 */
-> 						kfree(obj);
-> 
-> 	<vcpu preempt-in>
-> 
-> 	mov $0xFFFFFFFF, %[r] /* OOPS use-after-free */
+thanks,
 
-This scenario doesn't make sense.  If there's no bug that causes extra refcount
-decrements, then it would be impossible to generate the INT_MAX+1 decrements
-needed to free the object.  Or if there *is* a bug that causes extra refcount
-decrements, then it could already be abused at any time in any of the proposed
-solutions to trivially cause a use-after-free.
-
-Eric
+greg k-h
