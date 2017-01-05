@@ -1,37 +1,59 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <bd1d6468-dfe1-8fbc-521b-4fd2e418a3ef@linux.intel.com>
-References: <20170104221630.831-1-thgarnie@google.com> <CALCETrWk8VdYiJKZ0AdYfvwAd3q=UfGx9ida4U+DWZjLSGGqiA@mail.gmail.com>
- <CAJcbSZEQkq13K8WA6GoFBUHnbRK+ba9QU0B-pXJ7Zt3fnWMAtw@mail.gmail.com> <bd1d6468-dfe1-8fbc-521b-4fd2e418a3ef@linux.intel.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 5 Jan 2017 11:03:14 -0800
-Message-ID: <CAJcbSZEdwhDkoLATb5kJn9W84KfaLr1BJBq+Zp1jpKW7yOSLsg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
+ <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 5 Jan 2017 11:33:56 -0800
+Message-ID: <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC] x86/mm/KASLR: Remap GDTs at fixed location
-To: Arjan van de Ven <arjan@linux.intel.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 5, 2017 at 10:58 AM, Arjan van de Ven <arjan@linux.intel.com> wrote:
-> On 1/5/2017 9:54 AM, Thomas Garnier wrote:
->
+On Thu, Jan 5, 2017 at 1:56 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+>> On Thu, Dec 29, 2016 at 08:56:00AM +0200, Elena Reshetova wrote:
+>> > refcount_t type and corresponding API should be
+>> > used instead of atomic_t when the variable is used as
+>> > a reference counter. Convert the cases found.
+>> > diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
+>> > index 7dd14e8..1d59aca 100644
+>> > --- a/arch/arm/kernel/smp.c
+>> > +++ b/arch/arm/kernel/smp.c
+>> > @@ -371,7 +371,7 @@ asmlinkage void secondary_start_kernel(void)
+>> >      * reference and switch to it.
+>> >      */
+>> >     cpu = smp_processor_id();
+>> > -   atomic_inc(&mm->mm_count);
+>> > +   refcount_inc(&mm->mm_count);
+>> >     current->active_mm = mm;
+>> >     cpumask_set_cpu(cpu, mm_cpumask(mm));
+>> >
 >>
->> That's my goal too. I started by doing a RO remap and got couple
->> problems with hibernation. I can try again for the next iteration or
->> delay it for another patch. I also need to look at KVM GDT usage, I am
->> not familiar with it yet.
+>> If this is the case, arm64 has almost the same code.
 >
+> Thank you! I haven't tried to build on arm64 this yet (as well as on other arches). I am pretty sure there are more cases on other arches that are missed.
+> That's why I was hoping that we can run this series to the automatic build infra.
 >
-> don't we write to the GDT as part of the TLS segment stuff for glibc ?
->
+> @Kees, how did you do it before for previous patches? Who should be contacted to get a build-test on all arches?
 
-Not sure which glibc feature it is.
+Normally the 0day builder should pick it up from the mailing list, but
+if it doesn't (and it may not due to the missing prerequisite
+patches), I can create a branch on kernel.org and it will pick it up
+there.
 
-In this design, you can write to the GDT per-cpu variable that will
-remain read-write. You just need to make the remapping writeable when
-we load task registers (ltr) then the processor use the current GDT
-address. At least that the case I know, I might find more through
-testing.
+Are you able to build a series that includes refcount_t implementation
+(so there is a single series that contains all the prerequisites), and
+base it on v4.10-rc2? That should give 0day no problems in doing a
+merge and test (since -next mutates every day...)
+
+-Kees
 
 -- 
-Thomas
+Kees Cook
+Nexus Security
