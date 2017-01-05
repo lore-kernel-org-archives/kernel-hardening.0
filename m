@@ -1,55 +1,50 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Thu, 5 Jan 2017 09:11:14 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170105081114.GD2098@gmail.com>
-References: <20170104221630.831-1-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170104221630.831-1-thgarnie@google.com>
-Subject: [kernel-hardening] Re: [RFC] x86/mm/KASLR: Remap GDTs at fixed location
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, x86@kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+Sender: tomeu.vizoso@gmail.com
+In-Reply-To: <CAPeXnHt+urPvRJKDmYHEAuLvkTe7mhp+0_yFD5VboQzt_-cRnA@mail.gmail.com>
+References: <20170103225831.GA113525@beast> <20170104093236.GB31677@kroah.com>
+ <CAPeXnHudW-YDmoK8NrFzQgAq4WuRDgFNC5-0GaG0+jVkq+3meQ@mail.gmail.com>
+ <20170104194600.GC25268@kroah.com> <CAPeXnHt+urPvRJKDmYHEAuLvkTe7mhp+0_yFD5VboQzt_-cRnA@mail.gmail.com>
+From: Tomeu Vizoso <tomeu.vizoso@collabora.com>
+Date: Thu, 5 Jan 2017 09:13:00 +0100
+Message-ID: <CAAObsKDuqX+EgNctsXofDV8sXnArvgNMAOphgPDgsuz33wCjzw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] Allow userspace control of runtime disabling/enabling of
+ driver probing
+To: Matthew Garrett <mjg59@coreos.com>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Ulf Hansson <ulf.hansson@linaro.org>, Mauro Carvalho Chehab <mchehab@kernel.org>, Lukas Wunner <lukas@wunner.de>, Madalin Bucur <madalin.bucur@nxp.com>, Sudip Mukherjee <sudipm.mukherjee@gmail.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Arnd Bergmann <arnd@arndb.de>, Andrew Morton <akpm@linux-foundation.org>, Russell King <rmk+kernel@arm.linux.org.uk>, Petr Tesarik <ptesarik@suse.com>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 4 January 2017 at 20:59, Matthew Garrett <mjg59@coreos.com> wrote:
+> On Wed, Jan 4, 2017 at 1:46 PM, Greg Kroah-Hartman
+> <gregkh@linuxfoundation.org> wrote:
+>> On Wed, Jan 04, 2017 at 12:10:04PM -0600, Matthew Garrett wrote:
+>>> On Wed, Jan 4, 2017 at 3:32 AM, Greg Kroah-Hartman
+>>> <gregkh@linuxfoundation.org> wrote:
+>>> > Turning on and off at random times "new devices can not be bound, wait,
+>>> > now they can!" is ripe for loads of issues and is going to be a pain to
+>>> > properly maintain over time.
+>>>
+>>> What kind of issues?
+>>
+>> How are you going to test this to ensure it continues to work properly?
+>
+> It's code that's already used over every suspend and resume. What kind
+> of breakage are you expecting? How do we test any feature to ensure it
+> continues to work properly?
 
-* Thomas Garnier <thgarnie@google.com> wrote:
+In this specific case, we could use the Chamelium board to emulate USB
+devices, automating the plugging of various USB device types at
+different system states:
 
-> Each processor holds a GDT in its per-cpu structure. The sgdt
-> instruction gives the base address of the current GDT. This address can
-> be used to bypass KASLR memory randomization. With another bug, an
-> attacker could target other per-cpu structures or deduce the base of the
-> main memory section (PAGE_OFFSET).
-> 
-> In this change, a space is reserved at the end of the memory range
-> available for KASLR memory randomization. The space is big enough to hold
-> the maximum number of CPUs (as defined by setup_max_cpus). Each GDT is
-> mapped at specific offset based on the target CPU. Note that if there is
-> not enough space available, the GDTs are not remapped.
-> 
-> The document was changed to mention GDT remapping for KASLR. This patch
-> also include dump page tables support.
-> 
-> This patch was tested on multiple hardware configurations and for
-> hibernation support.
+https://www.chromium.org/chromium-os/testing/chamelium
 
->  void kernel_randomize_memory(void);
-> +void kernel_randomize_smp(void);
-> +void* kaslr_get_gdt_remap(int cpu);
+We are currently working on improving LAVA support for helper devices
+such as the Chamelium, mainly for emulating displays in graphics
+tests, but it can be useful for exercising other kernel ABIs such as
+disable_device_probe. The goal is to have the result of these tests
+reported to kernelci.org for spotting regressions early.
 
-Yeah, no fundamental objections from me to the principle, but I get some bad vibes 
-from the naming here: seeing that kernel_randomize_smp() actually makes things 
-less random.
+Regards,
 
-Also, don't we want to do this unconditionally and not allow remapping failures? 
-
-The GDT is fairly small, plus making the SGDT instruction expose fewer kernel 
-internals would be (marginally) useful on non-randomized kernels as well.
-
-It also makes the code more common, more predictable, more debuggable and less 
-complex overall - which is pretty valuable in terms of long term security as well.
-
-Thanks,
-
-	Ingo
+Tomeu
