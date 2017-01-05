@@ -1,64 +1,29 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <4dffd167-9cfd-dfcc-6556-05d7ca8f4595@linux.intel.com>
-References: <20170104221630.831-1-thgarnie@google.com> <20170105081114.GD2098@gmail.com>
- <4dffd167-9cfd-dfcc-6556-05d7ca8f4595@linux.intel.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 5 Jan 2017 08:40:29 -0800
-Message-ID: <CAJcbSZFjurkb7dpN40XpVQLziQVxPWCt9iRfnzbRa+TWYTdq8w@mail.gmail.com>
+In-Reply-To: <20170104221630.831-1-thgarnie@google.com>
+References: <20170104221630.831-1-thgarnie@google.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 5 Jan 2017 09:51:15 -0800
+Message-ID: <CALCETrWk8VdYiJKZ0AdYfvwAd3q=UfGx9ida4U+DWZjLSGGqiA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [RFC] x86/mm/KASLR: Remap GDTs at fixed location
-To: Arjan van de Ven <arjan@linux.intel.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Linus Torvalds <torvalds@linux-foundation.org>, Peter Zijlstra <a.p.zijlstra@chello.nl>
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Andy Lutomirski <luto@kernel.org>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Arjan van de Ven <arjan@linux.intel.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 5, 2017 at 7:08 AM, Arjan van de Ven <arjan@linux.intel.com> wrote:
-> On 1/5/2017 12:11 AM, Ingo Molnar wrote:
->>
->>
->> * Thomas Garnier <thgarnie@google.com> wrote:
->>
->>> Each processor holds a GDT in its per-cpu structure. The sgdt
->>> instruction gives the base address of the current GDT. This address can
->>> be used to bypass KASLR memory randomization. With another bug, an
->>> attacker could target other per-cpu structures or deduce the base of the
->>> main memory section (PAGE_OFFSET).
->>>
->>> In this change, a space is reserved at the end of the memory range
->>> available for KASLR memory randomization. The space is big enough to hold
->>> the maximum number of CPUs (as defined by setup_max_cpus). Each GDT is
->>> mapped at specific offset based on the target CPU. Note that if there is
->>> not enough space available, the GDTs are not remapped.
->>>
->>> The document was changed to mention GDT remapping for KASLR. This patch
->>> also include dump page tables support.
->>>
->>> This patch was tested on multiple hardware configurations and for
->>> hibernation support.
->>
->>
->>>  void kernel_randomize_memory(void);
->>> +void kernel_randomize_smp(void);
->>> +void* kaslr_get_gdt_remap(int cpu);
->>
->>
->> Yeah, no fundamental objections from me to the principle, but I get some
->> bad vibes
->> from the naming here: seeing that kernel_randomize_smp() actually makes
->> things
->> less random.
->>
+On Wed, Jan 4, 2017 at 2:16 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> Each processor holds a GDT in its per-cpu structure. The sgdt
+> instruction gives the base address of the current GDT. This address can
+> be used to bypass KASLR memory randomization. With another bug, an
+> attacker could target other per-cpu structures or deduce the base of the
+> main memory section (PAGE_OFFSET).
 >
-> kernel_unrandomize_smp() ...
->
+> In this change, a space is reserved at the end of the memory range
+> available for KASLR memory randomization. The space is big enough to hold
+> the maximum number of CPUs (as defined by setup_max_cpus). Each GDT is
+> mapped at specific offset based on the target CPU. Note that if there is
+> not enough space available, the GDTs are not remapped.
 
-That seems like a better name.
-
-> one request.. can we make sure this unrandomization is optional?
->
-
-Well, it happens only when KASLR memory randomization is enabled. Do
-you think it should have a separate config option?
-
--- 
-Thomas
+Can we remap it read-only?  I.e. use PAGE_KERNEL_RO instead of
+PAGE_KERNEL.  After all, the ability to modify the GDT is instant
+root.
