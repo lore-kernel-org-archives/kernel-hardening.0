@@ -1,6 +1,6 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAJcbSZFcYuEknFsRxqXDku9k8wVODOWa-AX5LpFmLAU2R=GkJw@mail.gmail.com>
+In-Reply-To: <CALCETrXuTH83fH7HViQkXjLqHKNZAT-TLguAzdD6WA6LvsTrcw@mail.gmail.com>
 References: <20170104221630.831-1-thgarnie@google.com> <CALCETrWk8VdYiJKZ0AdYfvwAd3q=UfGx9ida4U+DWZjLSGGqiA@mail.gmail.com>
  <CAJcbSZEQkq13K8WA6GoFBUHnbRK+ba9QU0B-pXJ7Zt3fnWMAtw@mail.gmail.com>
  <bd1d6468-dfe1-8fbc-521b-4fd2e418a3ef@linux.intel.com> <CAJcbSZEdwhDkoLATb5kJn9W84KfaLr1BJBq+Zp1jpKW7yOSLsg@mail.gmail.com>
@@ -9,80 +9,104 @@ References: <20170104221630.831-1-thgarnie@google.com> <CALCETrWk8VdYiJKZ0AdYfvw
  <CALCETrUpC-Zp-mHCMVE6QdXTnzJDQLyckqaZhW0KJfZeX=oxXg@mail.gmail.com>
  <CAJcbSZETh-A+zABOzsx+VW3p73AXO4xnc=O_TG7iXaVbD=Zz1A@mail.gmail.com>
  <20170106064900.GC28091@gmail.com> <CAJcbSZFcYuEknFsRxqXDku9k8wVODOWa-AX5LpFmLAU2R=GkJw@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 6 Jan 2017 13:59:34 -0800
-Message-ID: <CALCETrXuTH83fH7HViQkXjLqHKNZAT-TLguAzdD6WA6LvsTrcw@mail.gmail.com>
+ <CALCETrXuTH83fH7HViQkXjLqHKNZAT-TLguAzdD6WA6LvsTrcw@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 6 Jan 2017 14:54:18 -0800
+Message-ID: <CAJcbSZEDfL=AWmgxAnbzmnXFMnvF68_Tp_34Dt+X1o7WE9bffw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: quoted-printable
 Subject: [kernel-hardening] Re: [RFC] x86/mm/KASLR: Remap GDTs at fixed location
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Ingo Molnar <mingo@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 6, 2017 at 10:03 AM, Thomas Garnier <thgarnie@google.com> wrote=
-:
-> On Thu, Jan 5, 2017 at 10:49 PM, Ingo Molnar <mingo@kernel.org> wrote:
->>
->> * Thomas Garnier <thgarnie@google.com> wrote:
->>
->>> >> Not sure I fully understood and I don't want to miss an important po=
-int. Do
->>> >> you mean making GDT (remapping and per-cpu) read-only and switch the
->>> >> writeable flag only when we write to the per-cpu entry?
->>> >
->>> > What I mean is: write to the GDT through normal percpu access (or wha=
-tever the
->>> > normal mapping is) but load a read-only alias into the GDT register. =
- As long
->>> > as nothing ever tries to write through the GDTR alias, no page faults=
- will be
->>> > generated.  So we just need to make sure that nothing ever writes to =
-it
->>> > through GDTR.  AFAIK the only reason the CPU ever writes to the addre=
-ss in
->>> > GDTR is to set an accessed bit.
+On Fri, Jan 6, 2017 at 1:59 PM, Andy Lutomirski <luto@kernel.org> wrote:
+> On Fri, Jan 6, 2017 at 10:03 AM, Thomas Garnier <thgarnie@google.com> wro=
+te:
+>> On Thu, Jan 5, 2017 at 10:49 PM, Ingo Molnar <mingo@kernel.org> wrote:
 >>>
->>> A write is made when we use load_TR_desc (ltr). I didn't see any other =
-yet.
+>>> * Thomas Garnier <thgarnie@google.com> wrote:
+>>>
+>>>> >> Not sure I fully understood and I don't want to miss an important p=
+oint. Do
+>>>> >> you mean making GDT (remapping and per-cpu) read-only and switch th=
+e
+>>>> >> writeable flag only when we write to the per-cpu entry?
+>>>> >
+>>>> > What I mean is: write to the GDT through normal percpu access (or wh=
+atever the
+>>>> > normal mapping is) but load a read-only alias into the GDT register.=
+  As long
+>>>> > as nothing ever tries to write through the GDTR alias, no page fault=
+s will be
+>>>> > generated.  So we just need to make sure that nothing ever writes to=
+ it
+>>>> > through GDTR.  AFAIK the only reason the CPU ever writes to the addr=
+ess in
+>>>> > GDTR is to set an accessed bit.
+>>>>
+>>>> A write is made when we use load_TR_desc (ltr). I didn't see any other=
+ yet.
+>>>
+>>> Is this write to the GDT, generated by the LTR instruction, done uncond=
+itionally
+>>> by the hardware?
+>>>
 >>
->> Is this write to the GDT, generated by the LTR instruction, done uncondi=
-tionally
->> by the hardware?
->>
+>> That was my experience. I didn't look into details. Do you think we
+>> could change something so that ltr never writes to the GDT? (just mark
+>> the TSS entry busy).
 >
-> That was my experience. I didn't look into details. Do you think we
-> could change something so that ltr never writes to the GDT? (just mark
-> the TSS entry busy).
+> No, and I had the way this worked on 64-bit wrong.  LTR requires an
+> available TSS and changes it to busy.  So here are my thoughts on how
+> this should work:
+>
+> Let's get rid of any connection between this code and KASLR.  Every
+> time KASLR makes something work differently, a kitten turns all
+> Schr=C3=B6dinger on us.  This is moving the GDT to the fixmap, plain and
+> simple.  For now, make it one page per CPU and don't worry about the
+> GDT limit.
 
-No, and I had the way this worked on 64-bit wrong.  LTR requires an
-available TSS and changes it to busy.  So here are my thoughts on how
-this should work:
+I am all for this change but that's more significant.
 
-Let's get rid of any connection between this code and KASLR.  Every
-time KASLR makes something work differently, a kitten turns all
-Schr=C3=B6dinger on us.  This is moving the GDT to the fixmap, plain and
-simple.  For now, make it one page per CPU and don't worry about the
-GDT limit.
+Ingo: What do you think about that?
 
-On 32-bit, we're going to have to make the fixmap GDT be read-write
-because making it read-only will break double-fault handling.
+>
+> On 32-bit, we're going to have to make the fixmap GDT be read-write
+> because making it read-only will break double-fault handling.
+>
+> On 64-bit, we can use your trick of temporarily mapping the GDT
+> read-write every time we load TR, which should happen very rarely.
+> Alternatively, we can reload the *GDT* every time we reload TR, which
+> should be comparably slow.  This is going to regress performance in
+> the extremely rare case where KVM exits to a process that uses
+> ioperm() (I think), but I doubt anyone cares.  Or maybe we could
+> arrange to never reload TR when GDT points at the fixmap by having KVM
+> set the host GDT to the direct version and letting KVM's code to
+> reload the GDT switch to the fixmap copy.
+>
+> If we need a quirk to keep the fixmap copy read-write, so be it.
+>
+> None of this should depend on KASLR.  IMO it should happen unconditionall=
+y.
+>
 
-On 64-bit, we can use your trick of temporarily mapping the GDT
-read-write every time we load TR, which should happen very rarely.
-Alternatively, we can reload the *GDT* every time we reload TR, which
-should be comparably slow.  This is going to regress performance in
-the extremely rare case where KVM exits to a process that uses
-ioperm() (I think), but I doubt anyone cares.  Or maybe we could
-arrange to never reload TR when GDT points at the fixmap by having KVM
-set the host GDT to the direct version and letting KVM's code to
-reload the GDT switch to the fixmap copy.
+I looked back at the fixmap, and I can see a way it could be done
+(using NR_CPUS) like the other fixmap ranges. It would limit the
+number of cpus to 512 (there is 2M memory left on fixmap on the
+default configuration). That's if we never add any other fixmap on
+x64. I don't know if it is an acceptable number and if the fixmap
+region could be increased. (128 if we do your kvm trick, of course).
 
-If we need a quirk to keep the fixmap copy read-write, so be it.
+Ingo: What do you think?
 
-None of this should depend on KASLR.  IMO it should happen unconditionally.
+> Once all if it works, then we can build on it to allocate four pages
+> per CPU (with the extra three pointing to the zero page) and speeding
+> up KVM.
+>
+> --Andy
 
-Once all if it works, then we can build on it to allocate four pages
-per CPU (with the extra three pointing to the zero page) and speeding
-up KVM.
 
---Andy
+
+--=20
+Thomas
