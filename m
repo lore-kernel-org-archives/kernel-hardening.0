@@ -1,111 +1,85 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAJcbSZEDfL=AWmgxAnbzmnXFMnvF68_Tp_34Dt+X1o7WE9bffw@mail.gmail.com>
-References: <20170104221630.831-1-thgarnie@google.com> <CALCETrWk8VdYiJKZ0AdYfvwAd3q=UfGx9ida4U+DWZjLSGGqiA@mail.gmail.com>
- <CAJcbSZEQkq13K8WA6GoFBUHnbRK+ba9QU0B-pXJ7Zt3fnWMAtw@mail.gmail.com>
- <bd1d6468-dfe1-8fbc-521b-4fd2e418a3ef@linux.intel.com> <CAJcbSZEdwhDkoLATb5kJn9W84KfaLr1BJBq+Zp1jpKW7yOSLsg@mail.gmail.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Sat, 7 Jan 2017 08:35:53 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170107073553.GA13565@gmail.com>
+References: <bd1d6468-dfe1-8fbc-521b-4fd2e418a3ef@linux.intel.com>
+ <CAJcbSZEdwhDkoLATb5kJn9W84KfaLr1BJBq+Zp1jpKW7yOSLsg@mail.gmail.com>
  <CALCETrXymLa1_u90XE6dinhOfiecEJjbUGYn8apXGkiRFuwrZQ@mail.gmail.com>
  <CAJcbSZHAtxbRzhTcZtBSabW0t+Cj7a1z-xJk8d310a2h8pkG=g@mail.gmail.com>
  <CALCETrUpC-Zp-mHCMVE6QdXTnzJDQLyckqaZhW0KJfZeX=oxXg@mail.gmail.com>
  <CAJcbSZETh-A+zABOzsx+VW3p73AXO4xnc=O_TG7iXaVbD=Zz1A@mail.gmail.com>
- <20170106064900.GC28091@gmail.com> <CAJcbSZFcYuEknFsRxqXDku9k8wVODOWa-AX5LpFmLAU2R=GkJw@mail.gmail.com>
- <CALCETrXuTH83fH7HViQkXjLqHKNZAT-TLguAzdD6WA6LvsTrcw@mail.gmail.com> <CAJcbSZEDfL=AWmgxAnbzmnXFMnvF68_Tp_34Dt+X1o7WE9bffw@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 6 Jan 2017 15:39:13 -0800
-Message-ID: <CALCETrXgabhubUXMiTP5AgSASMkkzG+bYFaSoPt52QBZLm-PVg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+ <20170106064900.GC28091@gmail.com>
+ <CAJcbSZFcYuEknFsRxqXDku9k8wVODOWa-AX5LpFmLAU2R=GkJw@mail.gmail.com>
+ <CALCETrXuTH83fH7HViQkXjLqHKNZAT-TLguAzdD6WA6LvsTrcw@mail.gmail.com>
+ <CAJcbSZEDfL=AWmgxAnbzmnXFMnvF68_Tp_34Dt+X1o7WE9bffw@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAJcbSZEDfL=AWmgxAnbzmnXFMnvF68_Tp_34Dt+X1o7WE9bffw@mail.gmail.com>
 Subject: [kernel-hardening] Re: [RFC] x86/mm/KASLR: Remap GDTs at fixed location
 To: Thomas Garnier <thgarnie@google.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Kees Cook <keescook@chromium.org>, Borislav Petkov <bp@alien8.de>, Dave Hansen <dave@sr71.net>, Chen Yucong <slaoub@gmail.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Masahiro Yamada <yamada.masahiro@socionext.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Anna-Maria Gleixner <anna-maria@linutronix.de>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Michael Ellerman <mpe@ellerman.id.au>, Juergen Gross <jgross@suse.com>, Richard Weinberger <richard@nod.at>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 6, 2017 at 2:54 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> On Fri, Jan 6, 2017 at 1:59 PM, Andy Lutomirski <luto@kernel.org> wrote:
->> On Fri, Jan 6, 2017 at 10:03 AM, Thomas Garnier <thgarnie@google.com> wr=
-ote:
->>> On Thu, Jan 5, 2017 at 10:49 PM, Ingo Molnar <mingo@kernel.org> wrote:
->>>>
->>>> * Thomas Garnier <thgarnie@google.com> wrote:
->>>>
->>>>> >> Not sure I fully understood and I don't want to miss an important =
-point. Do
->>>>> >> you mean making GDT (remapping and per-cpu) read-only and switch t=
-he
->>>>> >> writeable flag only when we write to the per-cpu entry?
->>>>> >
->>>>> > What I mean is: write to the GDT through normal percpu access (or w=
-hatever the
->>>>> > normal mapping is) but load a read-only alias into the GDT register=
-.  As long
->>>>> > as nothing ever tries to write through the GDTR alias, no page faul=
-ts will be
->>>>> > generated.  So we just need to make sure that nothing ever writes t=
-o it
->>>>> > through GDTR.  AFAIK the only reason the CPU ever writes to the add=
-ress in
->>>>> > GDTR is to set an accessed bit.
->>>>>
->>>>> A write is made when we use load_TR_desc (ltr). I didn't see any othe=
-r yet.
->>>>
->>>> Is this write to the GDT, generated by the LTR instruction, done uncon=
-ditionally
->>>> by the hardware?
->>>>
->>>
->>> That was my experience. I didn't look into details. Do you think we
->>> could change something so that ltr never writes to the GDT? (just mark
->>> the TSS entry busy).
->>
->> No, and I had the way this worked on 64-bit wrong.  LTR requires an
->> available TSS and changes it to busy.  So here are my thoughts on how
->> this should work:
->>
->> Let's get rid of any connection between this code and KASLR.  Every
->> time KASLR makes something work differently, a kitten turns all
->> Schr=C3=B6dinger on us.  This is moving the GDT to the fixmap, plain and
->> simple.  For now, make it one page per CPU and don't worry about the
->> GDT limit.
->
+
+* Thomas Garnier <thgarnie@google.com> wrote:
+
+> > No, and I had the way this worked on 64-bit wrong.  LTR requires an
+> > available TSS and changes it to busy.  So here are my thoughts on how
+> > this should work:
+> >
+> > Let's get rid of any connection between this code and KASLR.  Every
+> > time KASLR makes something work differently, a kitten turns all
+> > Schrödinger on us.  This is moving the GDT to the fixmap, plain and
+> > simple.  For now, make it one page per CPU and don't worry about the
+> > GDT limit.
+> 
 > I am all for this change but that's more significant.
->
+> 
 > Ingo: What do you think about that?
->
->>
->> On 32-bit, we're going to have to make the fixmap GDT be read-write
->> because making it read-only will break double-fault handling.
->>
->> On 64-bit, we can use your trick of temporarily mapping the GDT
->> read-write every time we load TR, which should happen very rarely.
->> Alternatively, we can reload the *GDT* every time we reload TR, which
->> should be comparably slow.  This is going to regress performance in
->> the extremely rare case where KVM exits to a process that uses
->> ioperm() (I think), but I doubt anyone cares.  Or maybe we could
->> arrange to never reload TR when GDT points at the fixmap by having KVM
->> set the host GDT to the direct version and letting KVM's code to
->> reload the GDT switch to the fixmap copy.
->>
->> If we need a quirk to keep the fixmap copy read-write, so be it.
->>
->> None of this should depend on KASLR.  IMO it should happen unconditional=
-ly.
->>
->
+
+I agree with Andy: as I alluded to earlier as well this should be an unconditional 
+change (tested properly, etc.) that robustifies the GDT mapping for everyone. That 
+KASLR kernels improve too is a happy side effect!
+
+> > On 32-bit, we're going to have to make the fixmap GDT be read-write because 
+> > making it read-only will break double-fault handling.
+> >
+> > On 64-bit, we can use your trick of temporarily mapping the GDT read-write 
+> > every time we load TR, which should happen very rarely. Alternatively, we can 
+> > reload the *GDT* every time we reload TR, which should be comparably slow.  
+> > This is going to regress performance in the extremely rare case where KVM 
+> > exits to a process that uses ioperm() (I think), but I doubt anyone cares.  Or 
+> > maybe we could arrange to never reload TR when GDT points at the fixmap by 
+> > having KVM set the host GDT to the direct version and letting KVM's code to 
+> > reload the GDT switch to the fixmap copy.
+
+Please check whether the LTR write generates a page fault to a RO PTE even if the 
+busy bit is already set. LTR is pretty slow which suggests that it's microcode, 
+and microcode is usually not sloppy about such things: i.e. LTR would only 
+generate an unconditional write if there's a compatibility dependency on it. But I 
+could easily be wrong ...
+
+> > If we need a quirk to keep the fixmap copy read-write, so be it.
+> >
+> > None of this should depend on KASLR.  IMO it should happen unconditionally.
+> 
 > I looked back at the fixmap, and I can see a way it could be done
 > (using NR_CPUS) like the other fixmap ranges. It would limit the
 > number of cpus to 512 (there is 2M memory left on fixmap on the
 > default configuration). That's if we never add any other fixmap on
 > x64. I don't know if it is an acceptable number and if the fixmap
 > region could be increased. (128 if we do your kvm trick, of course).
->
+> 
+> Ingo: What do you think?
 
-IIRC we need 4096 CPUs.  But that 2M limit seems eminently fixable.  I
-just tried sticking 4096 pages of nothing right near the top of the
-fixmap and the only problem I saw was that I had to move MODULES_END
-down a little bit.
+I think we should scale the fixmap size flexibly with NR_CPUs on 64-bit, and we 
+should limit CPUs on 32-bit to a reasonable value.
 
---Andy
+I.e. let's just do it, if we run into problems it's all solvable AFAICS.
 
-P.S. Let's do the move to the fixmap, read/write as a separate patch.
-That will make bisecting much easier.
+Thanks,
+
+	Ingo
