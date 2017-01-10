@@ -1,72 +1,31 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 10 Jan 2017 15:58:29 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20170110145829.GB5680@worktop>
+References: <20161207135241.GI3107@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
+ <20161216140158.GS3107@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C220DD@IRSMSX102.ger.corp.intel.com>
+ <20161219101243.GB3107@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C22713@IRSMSX102.ger.corp.intel.com>
+ <20161220094152.GK3124@twins.programming.kicks-ass.net>
+ <1482231302.28665.56.camel@cs-046.org.aalto.fi>
+ <20161220131345.GM3124@twins.programming.kicks-ass.net>
+ <1482247208.28665.121.camel@cs-046.org.aalto.fi>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+oOJoJ3JFzEpv4jNeCLu95-QVfYQ8mP-M-waqyvoDDRg@mail.gmail.com>
-References: <CAPDLWs8g5CRTDwDuuLuuGh8K30Py_kGkjVfuT++Q09rT6XaQ=A@mail.gmail.com>
- <CAGXu5j+oOJoJ3JFzEpv4jNeCLu95-QVfYQ8mP-M-waqyvoDDRg@mail.gmail.com>
-From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Date: Tue, 10 Jan 2017 18:12:25 +0530
-Message-ID: <CAPDLWs_DwbB7ZJJ55W8Hz6vnNGDPVvbSw__+1qh42jjNrcCQYA@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=089e012285be2deec50545bcd2cd
-Subject: Re: [kernel-hardening] New to KSPP, would like to contribute
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1482247208.28665.121.camel@cs-046.org.aalto.fi>
+Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
+To: Liljestrand Hans <ishkamiel@gmail.com>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
---089e012285be2deec50545bcd2cd
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+On Tue, Dec 20, 2016 at 05:20:08PM +0200, Liljestrand Hans wrote:
+> fs/inode.c:813                  find_inode_fast
+> 
+> This seems to be doing a search for freed up objects that are then
+> reused, maybe. Not sure if we can guarantee the refcount is 0, nor if it
+> would be appropriate to use refcount_set even if we could?
 
-Thanks Kees,
-
->
-> Welcome to the list! If you're familiar with mm areas, I'd say a great
-> place to start would be to help finish up the zero-poisoning work,
-> especially extracting the optimizations that PaX did for slabs to
-> avoid, etc.
-
-=E2=80=8BOk so I really have no idea reg PaX and optimizations done for sla=
-b via
-it.. Could you
-enlighten me pl? Point me to relevant links perhaps..
-
-Yes I did read through your blog article esp the "zero-poison after free"
-section.
-Sorry, not yet clear on how exactly to proceed.
-
-> https://outflux.net/blog/archives/2016/09/30/security-
-> things-in-linux-v4-6/
-
-
-=E2=80=8BTIA!=E2=80=8B
-
---089e012285be2deec50545bcd2cd
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<div dir=3D"ltr"><div class=3D"gmail_default" style=3D"font-size:small">Tha=
-nks Kees,</div><div class=3D"gmail_extra"><div class=3D"gmail_quote"><block=
-quote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1=
-px solid rgb(204,204,204);padding-left:1ex"><br>
-Welcome to the list! If you&#39;re familiar with mm areas, I&#39;d say a gr=
-eat<br>
-place to start would be to help finish up the zero-poisoning work,<br>
-especially extracting the optimizations that PaX did for slabs to<br>
-avoid, etc. </blockquote><div class=3D"gmail_default" style=3D"font-size:sm=
-all">=E2=80=8BOk so I really have no idea reg PaX and optimizations done fo=
-r slab via it.. Could you=C2=A0</div><div class=3D"gmail_default" style=3D"=
-font-size:small">enlighten me pl? Point me to relevant links perhaps..</div=
-><div class=3D"gmail_default" style=3D"font-size:small"><br></div><div clas=
-s=3D"gmail_default" style=3D"font-size:small">Yes I did read through your b=
-log article esp the &quot;zero-poison after free&quot; section.</div><div c=
-lass=3D"gmail_default" style=3D"font-size:small">Sorry, not yet clear on ho=
-w exactly to proceed.</div><blockquote class=3D"gmail_quote" style=3D"margi=
-n:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex=
-">
-<a href=3D"https://outflux.net/blog/archives/2016/09/30/security-things-in-=
-linux-v4-6/" rel=3D"noreferrer" target=3D"_blank">https://outflux.net/blog/=
-<wbr>archives/2016/09/30/security-<wbr>things-in-linux-v4-6/</a></blockquot=
-e><div>=C2=A0</div><div class=3D"gmail_default" style=3D"font-size:small">=
-=E2=80=8BTIA!=E2=80=8B</div><div class=3D"gmail_default" style=3D"font-size=
-:small"><br></div></div></div></div>
-
---089e012285be2deec50545bcd2cd--
+This one is actually quite difficult. I'll try and poke at it some.
