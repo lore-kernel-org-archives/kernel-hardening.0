@@ -1,31 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 10 Jan 2017 15:58:29 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170110145829.GB5680@worktop>
-References: <20161207135241.GI3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C216AE@IRSMSX102.ger.corp.intel.com>
- <20161216140158.GS3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C220DD@IRSMSX102.ger.corp.intel.com>
- <20161219101243.GB3107@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C22713@IRSMSX102.ger.corp.intel.com>
- <20161220094152.GK3124@twins.programming.kicks-ass.net>
- <1482231302.28665.56.camel@cs-046.org.aalto.fi>
- <20161220131345.GM3124@twins.programming.kicks-ass.net>
- <1482247208.28665.121.camel@cs-046.org.aalto.fi>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1482247208.28665.121.camel@cs-046.org.aalto.fi>
-Subject: [kernel-hardening] Re: Conversion from atomic_t to refcount_t: summary of issues
-To: Liljestrand Hans <ishkamiel@gmail.com>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Greg KH <gregkh@linuxfoundation.org>, Kees Cook <keescook@chromium.org>, "will.deacon@arm.com" <will.deacon@arm.com>, Boqun Feng <boqun.feng@gmail.com>, David Windsor <dwindsor@gmail.com>, "aik@ozlabs.ru" <aik@ozlabs.ru>, "david@gibson.dropbear.id.au" <david@gibson.dropbear.id.au>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 10 Jan 2017 18:03:07 +0100
+Message-ID: <CAHmME9pyO9yQ2aBM3CJYFBEyg8-J3whrGEkciJBNnvUNf34Wag@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] [RFC] Use of SipHash and HalfSipHash for Hashtables and PRF
+To: LKML <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Dec 20, 2016 at 05:20:08PM +0200, Liljestrand Hans wrote:
-> fs/inode.c:813                  find_inode_fast
-> 
-> This seems to be doing a search for freed up objects that are then
-> reused, maybe. Not sure if we can guarantee the refcount is 0, nor if it
-> would be appropriate to use refcount_set even if we could?
+Hi all,
 
-This one is actually quite difficult. I'll try and poke at it some.
+In this case, by "RFC" I actually mean "request for commits". No
+comments, please. :)
+
+David Miller's net-next tree now has my SipHash patchset, which adds
+SipHash to the kernel for all sorts of interesting uses. The first two
+uses include syncookies and secure sequence numbers. Future uses
+include hashtable lookup functions and other types of short MAC uses.
+This message is an invitation to start switching certain interfaces
+over to SipHash, if the use improves either performance or security,
+or perhaps both.
+
+So, what's the deal?
+
+SipHash takes two inputs:
+- A randomly generated 16-byte longterm secret key, generated via
+get_random_bytes or get_random_once.
+- Some variable length input.
+SipHash then spits out:
+- A 64-bit psuedo-random number.
+
+Documentation and usage examples are in this document:
+https://git.kernel.org/cgit/linux/kernel/git/davem/net-next.git/plain/Docum=
+entation/siphash.txt
+
+If you have a hashtable that takes input from sources outside the
+kernel, consider using SipHash. If you're generating deterministic
+random bytes based on some key, consider using SipHash. If you're just
+curious, consider using SipHash. I merely say "consider" using it,
+because there are many cases in which SipHash will _not_ make sense,
+so the result of such consideration will be a clear "no thanks". But
+perhaps in other cases will indeed be useful, so your consideration
+may very well be worthwhile. If you have any questions about it, don't
+hesitate to inquire, and if you're at all uncertain about whether or
+not your patch using it is correct, put me in the CC and I'll give my
+2=C2=A2.
+
+Jason
