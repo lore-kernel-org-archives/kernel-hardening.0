@@ -1,82 +1,72 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Tue, 10 Jan 2017 11:57:59 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
-References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
- <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>,<CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
-In-Reply-To: <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
+In-Reply-To: <CAGXu5j+oOJoJ3JFzEpv4jNeCLu95-QVfYQ8mP-M-waqyvoDDRg@mail.gmail.com>
+References: <CAPDLWs8g5CRTDwDuuLuuGh8K30Py_kGkjVfuT++Q09rT6XaQ=A@mail.gmail.com>
+ <CAGXu5j+oOJoJ3JFzEpv4jNeCLu95-QVfYQ8mP-M-waqyvoDDRg@mail.gmail.com>
+From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Date: Tue, 10 Jan 2017 18:12:25 +0530
+Message-ID: <CAPDLWs_DwbB7ZJJ55W8Hz6vnNGDPVvbSw__+1qh42jjNrcCQYA@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=089e012285be2deec50545bcd2cd
+Subject: Re: [kernel-hardening] New to KSPP, would like to contribute
 To: Kees Cook <keescook@chromium.org>
-Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 5, 2017 at 1:56 AM, Reshetova, Elena=0A=
-<elena.reshetova@intel.com> wrote:=0A=
->> On Thu, Dec 29, 2016 at 08:56:00AM +0200, Elena Reshetova wrote:=0A=
->> > refcount_t type and corresponding API should be=0A=
->> > used instead of atomic_t when the variable is used as=0A=
->> > a reference counter. Convert the cases found.=0A=
->> > diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c=0A=
->> > index 7dd14e8..1d59aca 100644=0A=
->> > --- a/arch/arm/kernel/smp.c=0A=
->> > +++ b/arch/arm/kernel/smp.c=0A=
->> > @@ -371,7 +371,7 @@ asmlinkage void secondary_start_kernel(void)=0A=
->> >      * reference and switch to it.=0A=
->> >      */=0A=
->> >     cpu =3D smp_processor_id();=0A=
->> > -   atomic_inc(&mm->mm_count);=0A=
->> > +   refcount_inc(&mm->mm_count);=0A=
->> >     current->active_mm =3D mm;=0A=
->> >     cpumask_set_cpu(cpu, mm_cpumask(mm));=0A=
->> >=0A=
->>=0A=
->> If this is the case, arm64 has almost the same code.=0A=
->=0A=
-> Thank you! I haven't tried to build on arm64 this yet (as well as on othe=
-r arches). I am pretty sure there are more cases on other arches that are m=
-issed.=0A=
-> That's why I was hoping that we can run this series to the automatic buil=
-d infra.=0A=
->=0A=
-> @Kees, how did you do it before for previous patches? Who should be conta=
-cted to get a build-test on all arches?=0A=
-=0A=
->Normally the 0day builder should pick it up from the mailing list, but=0A=
->if it doesn't (and it may not due to the missing prerequisite=0A=
->patches), I can create a branch on kernel.org and it will pick it up=0A=
->there.=0A=
-=0A=
-I don't think it picked up this one, don't know why. All prerequisites shou=
-ld be in place. =0A=
-Is there a way to point it to the repo? We have everything in refcount_t br=
-anch here:=0A=
-https://github.com/ereshetova/linux-stable/tree/refcount_t=0A=
-Just note: the last lustre commit is there just for future work, I won't in=
-clude it in testing since we gave up on trying to get it in shape. It is *w=
-ay* too messy... =0A=
-=0A=
->Are you able to build a series that includes refcount_t implementation=0A=
->(so there is a single series that contains all the prerequisites), and=0A=
->base it on v4.10-rc2? That should give 0day no problems in doing a=0A=
->merge and test (since -next mutates every day...)=0A=
-=0A=
-It was fully buildable at last on x86 and arm (not arm64 as was noted) and =
-was based on linux-next/stable branch. =0A=
-I can also rebase it to 4.10-rc2 if needed. Should be trivial. =0A=
-Should we in general keep it on stable and not on linux-next? Certainly eas=
-ier to test... =0A=
-=0A=
-Best Regards,=0A=
-Elena=0A=
-=0A=
--Kees=0A=
-=0A=
---=0A=
-Kees Cook=0A=
-Nexus Security=0A=
+--089e012285be2deec50545bcd2cd
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Thanks Kees,
+
+>
+> Welcome to the list! If you're familiar with mm areas, I'd say a great
+> place to start would be to help finish up the zero-poisoning work,
+> especially extracting the optimizations that PaX did for slabs to
+> avoid, etc.
+
+=E2=80=8BOk so I really have no idea reg PaX and optimizations done for sla=
+b via
+it.. Could you
+enlighten me pl? Point me to relevant links perhaps..
+
+Yes I did read through your blog article esp the "zero-poison after free"
+section.
+Sorry, not yet clear on how exactly to proceed.
+
+> https://outflux.net/blog/archives/2016/09/30/security-
+> things-in-linux-v4-6/
+
+
+=E2=80=8BTIA!=E2=80=8B
+
+--089e012285be2deec50545bcd2cd
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div class=3D"gmail_default" style=3D"font-size:small">Tha=
+nks Kees,</div><div class=3D"gmail_extra"><div class=3D"gmail_quote"><block=
+quote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1=
+px solid rgb(204,204,204);padding-left:1ex"><br>
+Welcome to the list! If you&#39;re familiar with mm areas, I&#39;d say a gr=
+eat<br>
+place to start would be to help finish up the zero-poisoning work,<br>
+especially extracting the optimizations that PaX did for slabs to<br>
+avoid, etc. </blockquote><div class=3D"gmail_default" style=3D"font-size:sm=
+all">=E2=80=8BOk so I really have no idea reg PaX and optimizations done fo=
+r slab via it.. Could you=C2=A0</div><div class=3D"gmail_default" style=3D"=
+font-size:small">enlighten me pl? Point me to relevant links perhaps..</div=
+><div class=3D"gmail_default" style=3D"font-size:small"><br></div><div clas=
+s=3D"gmail_default" style=3D"font-size:small">Yes I did read through your b=
+log article esp the &quot;zero-poison after free&quot; section.</div><div c=
+lass=3D"gmail_default" style=3D"font-size:small">Sorry, not yet clear on ho=
+w exactly to proceed.</div><blockquote class=3D"gmail_quote" style=3D"margi=
+n:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex=
+">
+<a href=3D"https://outflux.net/blog/archives/2016/09/30/security-things-in-=
+linux-v4-6/" rel=3D"noreferrer" target=3D"_blank">https://outflux.net/blog/=
+<wbr>archives/2016/09/30/security-<wbr>things-in-linux-v4-6/</a></blockquot=
+e><div>=C2=A0</div><div class=3D"gmail_default" style=3D"font-size:small">=
+=E2=80=8BTIA!=E2=80=8B</div><div class=3D"gmail_default" style=3D"font-size=
+:small"><br></div></div></div></div>
+
+--089e012285be2deec50545bcd2cd--
