@@ -1,84 +1,42 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Message-ID: <5876B436.1040308@iogearbox.net>
-Date: Wed, 11 Jan 2017 23:39:50 +0100
-From: Daniel Borkmann <daniel@iogearbox.net>
 MIME-Version: 1.0
-References: <CAHgaXdKW4=y-PviWudtMAThuB=GEW-73RejSHRMYNVzLyxP+iA@mail.gmail.com> <CAGXu5jLA+ri_RwWSOoZwAtv6a6pXL_EzUx6BZ0Mmc-n0+We9vg@mail.gmail.com> <CAHgaXdLPLCiggTrKGcFZzmGiBUmdmNGAt0_nO9BS5aGoP=bVmw@mail.gmail.com> <CAGXu5jJofXU-KsZ+1vxHHKHQFcVv5YSi1wtx3DR0sAZto-NvsQ@mail.gmail.com> <CAHgaXdJ_kTp7u1tEr4VTLyw7nVyz_L5P7WcuO2=WLtpE_CdeKw@mail.gmail.com> <CAGXu5jJEtLuvotLpBFS9yP2nt5rRtxsmFSJO31Jnc==-XFS1ig@mail.gmail.com> <CAHgaXdKrA4ZkK3rWA8eH4PzdvTHb2LeWfDX-PL159OapX1_WDA@mail.gmail.com> <578603BA.3000700@iogearbox.net> <CAHgaXd+WRWZ4gOzdjhGTG29gtsujUEoBQOKYwEc0fKus1AP4Zw@mail.gmail.com> <CAGXu5jKVUJg1QQqTodjg6HLMZdHEV7TqS5kodzS9E7VnWc3uWA@mail.gmail.com> <CAHgaXdLA-mNQh3Tb-m2=uKKL3JYsstAvDsK3dp+d1TifrinioA@mail.gmail.com>
-In-Reply-To: <CAHgaXdLA-mNQh3Tb-m2=uKKL3JYsstAvDsK3dp+d1TifrinioA@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Looking for something to WORK ON
-To: Shubham Bansal <illusionist.neo@gmail.com>, Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
+ <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com> <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 11 Jan 2017 14:55:21 -0800
+Message-ID: <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/11/2017 11:12 PM, Shubham Bansal wrote:
-> Hi Kees,
->
-> I would have already started working on it since we last talked but before
-> that I wanted to check if anybody else is also not working on the same
-> thing. Otherwise it would be waste of time.
->
-> Anyways. I will start working on it. No point in postponing in.
+On Wed, Jan 11, 2017 at 1:42 PM, Kees Cook <keescook@chromium.org> wrote:
+> I can see if it'll cherry-pick cleanly, I assume it will. :)
 
-Very sorry for the late reply, Shubham, seems I missed your earlier email. :/
-Afaik, nobody is working on that, so would be nice to tackle this.
+It cherry-picked cleanly. However, I made several changes:
 
-> On Jan 12, 2017 2:59 AM, "Kees Cook" <keescook@chromium.org> wrote:
->
->> On Wed, Jan 11, 2017 at 4:46 AM, Shubham Bansal
->> <illusionist.neo@gmail.com> wrote:
->>>
->>> On Wed, Jul 13, 2016 at 2:32 PM, Daniel Borkmann <daniel@iogearbox.net>
->>> wrote:
->>>> Feel free to check out slides etc that are mostly located here:
->>>>
->>>>    https://github.com/iovisor/bpf-docs
->>>>
->>>> Also, Documentation/networking/filter.txt in the kernel tree provides
->> some
->>>> info as a starting point, an example of eBPF JIT can be found here
->>>> arch/x86/net/
->>>> in kernel tree.
->>>>
->>>> To give you a basic overview what JITs are still classic BPF (cBPF)
->> ones:
->>>>
->>>> $ git grep -n "select HAVE_CBPF_JIT"
->>>> arch/arm/Kconfig:44:    select HAVE_CBPF_JIT
->>>> arch/mips/Kconfig:18:   select HAVE_CBPF_JIT if !CPU_MICROMIPS
->>>> arch/powerpc/Kconfig:131:       select HAVE_CBPF_JIT if CPU_BIG_ENDIAN
->>>> arch/sparc/Kconfig:35:  select HAVE_CBPF_JIT
->>>>
->>>> ... and which are eBPF (ppc64 one should get merged next window I
->>>> believe):
->>>>
->>>> $ git grep -n "select HAVE_EBPF_JIT"
->>>> arch/arm64/Kconfig:64:  select HAVE_EBPF_JIT
->>>> arch/s390/Kconfig:131:  select HAVE_EBPF_JIT if PACK_STACK &&
->>>> HAVE_MARCH_Z196_FEATURES
->>>> arch/x86/Kconfig:94:    select HAVE_EBPF_JIT                    if
->> X86_64
->>>>
->>>> Cheers,
->>>> Daniel
->>>
->>> Hi Daniel,
->>>
->>> I have read about the EBPF and BFP. I wanted to start contributing. Do
->> you
->>> have any place for me to start with ?
->>> I mailed you regarding the same few months ago but didn't get the reply.
->>
->> Daniel may have more ideas, but I would say taking a CBPF jit and
->> converting it to an EBPF jit would be the best thing to start with.
->>
->> Doing ARM first might be easiest to tackle?
->>
->> -Kees
->>
->> --
->> Kees Cook
->> Nexus Security
->>
->
+- I adjusted Peter's author email (it had extra []s around).
+- I fixed all of the commit subjects (Peter's were missing).
+- I added back "kref: Add KREF_INIT()" since it seems to have been
+lost and mixed into other patches that would break bisection
+
+It's here now, please work from this version:
+
+http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kspp/hardened-atomic
+
+0-day should see it soon. :)
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
