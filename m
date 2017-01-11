@@ -1,124 +1,209 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 11 Jan 2017 09:30:43 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
-References: <1482994571-18687-1-git-send-email-elena.reshetova@intel.com>
- <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>,<CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
-In-Reply-To: <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: Kees Cook <keescook@chromium.org>
-Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+In-Reply-To: <578603BA.3000700@iogearbox.net>
+References: <CAHgaXdKW4=y-PviWudtMAThuB=GEW-73RejSHRMYNVzLyxP+iA@mail.gmail.com>
+ <CAGXu5jLA+ri_RwWSOoZwAtv6a6pXL_EzUx6BZ0Mmc-n0+We9vg@mail.gmail.com>
+ <CAHgaXdLPLCiggTrKGcFZzmGiBUmdmNGAt0_nO9BS5aGoP=bVmw@mail.gmail.com>
+ <CAGXu5jJofXU-KsZ+1vxHHKHQFcVv5YSi1wtx3DR0sAZto-NvsQ@mail.gmail.com>
+ <CAHgaXdJ_kTp7u1tEr4VTLyw7nVyz_L5P7WcuO2=WLtpE_CdeKw@mail.gmail.com>
+ <CAGXu5jJEtLuvotLpBFS9yP2nt5rRtxsmFSJO31Jnc==-XFS1ig@mail.gmail.com>
+ <CAHgaXdKrA4ZkK3rWA8eH4PzdvTHb2LeWfDX-PL159OapX1_WDA@mail.gmail.com> <578603BA.3000700@iogearbox.net>
+From: Shubham Bansal <illusionist.neo@gmail.com>
+Date: Wed, 11 Jan 2017 18:16:00 +0530
+Message-ID: <CAHgaXd+WRWZ4gOzdjhGTG29gtsujUEoBQOKYwEc0fKus1AP4Zw@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=001a114116f29d9dca0545d0fb06
+Subject: Re: [kernel-hardening] Looking for something to WORK ON
+To: Daniel Borkmann <daniel@iogearbox.net>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 10, 2017 at 3:57 AM, Reshetova, Elena=0A=
-<elena.reshetova@intel.com> wrote:=0A=
-> On Thu, Jan 5, 2017 at 1:56 AM, Reshetova, Elena=0A=
-> <elena.reshetova@intel.com> wrote:=0A=
->>> On Thu, Dec 29, 2016 at 08:56:00AM +0200, Elena Reshetova wrote:=0A=
->>> > refcount_t type and corresponding API should be=0A=
->>> > used instead of atomic_t when the variable is used as=0A=
->>> > a reference counter. Convert the cases found.=0A=
->>> > diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c=0A=
->>> > index 7dd14e8..1d59aca 100644=0A=
->>> > --- a/arch/arm/kernel/smp.c=0A=
->>> > +++ b/arch/arm/kernel/smp.c=0A=
->>> > @@ -371,7 +371,7 @@ asmlinkage void secondary_start_kernel(void)=0A=
->>> >      * reference and switch to it.=0A=
->>> >      */=0A=
->>> >     cpu =3D smp_processor_id();=0A=
->>> > -   atomic_inc(&mm->mm_count);=0A=
->>> > +   refcount_inc(&mm->mm_count);=0A=
->>> >     current->active_mm =3D mm;=0A=
->>> >     cpumask_set_cpu(cpu, mm_cpumask(mm));=0A=
->>> >=0A=
->>>=0A=
->>> If this is the case, arm64 has almost the same code.=0A=
->>=0A=
->> Thank you! I haven't tried to build on arm64 this yet (as well as on oth=
-er arches). I am pretty sure there are more cases on other arches that are =
-missed.=0A=
->> That's why I was hoping that we can run this series to the automatic bui=
-ld infra.=0A=
->>=0A=
->> @Kees, how did you do it before for previous patches? Who should be cont=
-acted to get a build-test on all arches?=0A=
->=0A=
->>Normally the 0day builder should pick it up from the mailing list, but=0A=
->>if it doesn't (and it may not due to the missing prerequisite=0A=
->>patches), I can create a branch on kernel.org and it will pick it up=0A=
->>there.=0A=
->=0A=
-> I don't think it picked up this one, don't know why. All prerequisites sh=
-ould be in place.=0A=
-> Is there a way to point it to the repo? We have everything in refcount_t =
-branch here:=0A=
-> https://github.com/ereshetova/linux-stable/tree/refcount_t=0A=
-=0A=
->We could ask Fengguang to explicitly add it, but how about I just put=0A=
->it in my repo on kernel.org.=0A=
-=0A=
-Sure, whatever works. =0A=
-=0A=
-> Just note: the last lustre commit is there just for future work, I won't =
-include it in testing since we gave up on trying to get it in shape. It is =
-*way* too messy...=0A=
->=0A=
->>Are you able to build a series that includes refcount_t implementation=0A=
->>(so there is a single series that contains all the prerequisites), and=0A=
->>base it on v4.10-rc2? That should give 0day no problems in doing a=0A=
->>merge and test (since -next mutates every day...)=0A=
->=0A=
-> It was fully buildable at last on x86 and arm (not arm64 as was noted) an=
-d was based on linux-next/stable branch.=0A=
-> I can also rebase it to 4.10-rc2 if needed. Should be trivial.=0A=
-> Should we in general keep it on stable and not on linux-next? Certainly e=
-asier to test...=0A=
-=0A=
->Yeah, from what I've been able to tell, with large changes, it's=0A=
->easier to carry things as deltas against the -rc2 while Linus's tree=0A=
->is finalizing for a release, and then once it's out, wait for -rc2=0A=
->again, and rebase. That way, if things stabilize in your tree, we can=0A=
->get it added to -next and things should merge "well".=0A=
-=0A=
-Maybe stupid question: but why explicitly -rc2 vs. any other rcX?=0A=
-Now it seems the latest is rc3 and it applies nicely there. I guess I=0A=
-don't understand the release flow yet...=0A=
-=0A=
->Looks at the git tree you've got, it seems that authorship information=0A=
->got mangled. Everything is shown as authored by you, but I'd expect a=0A=
->mix of you, Hans, David, and Peter.=0A=
-=0A=
-The sign-offs on all commits are correct, but first 6 patches from Peter I =
-was planning to keep initially=0A=
-only temporally thinking that Peter will send them himself, so I added it b=
-adly to the tree. =0A=
-Now it is fixed since we decided to carry them as part of this series. The =
-rest is correct. All subsystem patches=0A=
-are made from scratch since we could not use any previous backporting work =
-we did from PaX/grsecurity or any previous commits we had. That's why it to=
-ok so long to have this new series ready... =0A=
-=0A=
->If you can fix that up and rebase to v4.10-rc2, I'll pull it into my =0A=
->repo for 0-day to pick it up for testing.=0A=
-=0A=
-So, things fixed, I also moved lustre stuff away to a separate brunch to av=
-oid issues.=0A=
-It is on top of v4.10-rc3, but if rc2 is important for some reason, I will =
-downgrade it. =0A=
-=0A=
-Best Regards,=0A=
-Elena. =0A=
-=0A=
->-Kees=0A=
-=0A=
---=0A=
-Kees Cook=0A=
-Nexus Security=0A=
+--001a114116f29d9dca0545d0fb06
+Content-Type: text/plain; charset=UTF-8
+
+Hi Daniel,
+
+I have read about the EBPF and BFP. I wanted to start contributing. Do you
+have any place for me to start with ?
+I mailed you regarding the same few months ago but didn't get the reply.
+
+Best,
+Shubham Bansal
+
+On Wed, Jul 13, 2016 at 2:32 PM, Daniel Borkmann <daniel@iogearbox.net>
+wrote:
+
+> Hi Shubham,
+>
+> On 07/13/2016 09:37 AM, Shubham Bansal wrote:
+>
+>> Hi,
+>>
+>> So overall I have 3 options :
+>>>
+>>>>
+>>>> PaX's UDEREF feature - I want to work on this if its needed
+>>>>
+>>>
+>>> This is a large project.
+>>>
+>>> I am happy to do it. Do you have anything where I can start ? I might
+>> need
+>> someone who could guide me through it. It would be great if you could.
+>>
+>>
+>>> PAN emulation on ARMv8.0 - My second preference would be this.
+>>>>
+>>>
+>>> This sounds like it requires more research?
+>>>
+>>> Convert remaining BPF JITs to eBPF JIT (with blinding) - Happy to do it
+>>>>
+>>> if
+>>>
+>>>> need
+>>>>
+>>>
+>>> I think this has value and there are folks that can help direct you
+>>> through this. Since you're new to kernel development, maybe start here
+>>> to get a sense of the amount of work needed, and then go from there?
+>>>
+>>> Okay. I will start here. I will keep the PAX's UDREF feature in the
+>> background and start working on this. I will reach out to Daniel Borkmann
+>> and Elena Reshetova for the starting pointers.
+>>
+>
+> Feel free to check out slides etc that are mostly located here:
+>
+>   https://github.com/iovisor/bpf-docs
+>
+> Also, Documentation/networking/filter.txt in the kernel tree provides some
+> info as a starting point, an example of eBPF JIT can be found here
+> arch/x86/net/
+> in kernel tree.
+>
+> To give you a basic overview what JITs are still classic BPF (cBPF) ones:
+>
+> $ git grep -n "select HAVE_CBPF_JIT"
+> arch/arm/Kconfig:44:    select HAVE_CBPF_JIT
+> arch/mips/Kconfig:18:   select HAVE_CBPF_JIT if !CPU_MICROMIPS
+> arch/powerpc/Kconfig:131:       select HAVE_CBPF_JIT if CPU_BIG_ENDIAN
+> arch/sparc/Kconfig:35:  select HAVE_CBPF_JIT
+>
+> ... and which are eBPF (ppc64 one should get merged next window I believe):
+>
+> $ git grep -n "select HAVE_EBPF_JIT"
+> arch/arm64/Kconfig:64:  select HAVE_EBPF_JIT
+> arch/s390/Kconfig:131:  select HAVE_EBPF_JIT if PACK_STACK &&
+> HAVE_MARCH_Z196_FEATURES
+> arch/x86/Kconfig:94:    select HAVE_EBPF_JIT                    if X86_64
+>
+> Cheers,
+> Daniel
+>
+
+--001a114116f29d9dca0545d0fb06
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Hi Daniel,<div><br></div><div>I have read about the EBPF a=
+nd BFP. I wanted to start contributing. Do you have any place for me to sta=
+rt with ?</div><div>I mailed you regarding the same few months ago but didn=
+&#39;t get the reply.</div><div class=3D"gmail_extra"><br clear=3D"all"><di=
+v><div class=3D"gmail_signature" data-smartmail=3D"gmail_signature"><div di=
+r=3D"ltr"><div>Best,<br></div>Shubham Bansal<br></div></div></div>
+<br><div class=3D"gmail_quote">On Wed, Jul 13, 2016 at 2:32 PM, Daniel Bork=
+mann <span dir=3D"ltr">&lt;<a href=3D"mailto:daniel@iogearbox.net" target=
+=3D"_blank">daniel@iogearbox.net</a>&gt;</span> wrote:<br><blockquote class=
+=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padd=
+ing-left:1ex">Hi Shubham,<span class=3D""><br>
+<br>
+On 07/13/2016 09:37 AM, Shubham Bansal wrote:<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+Hi,<br>
+<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+So overall I have 3 options :<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+<br>
+PaX&#39;s UDEREF feature - I want to work on this if its needed<br>
+</blockquote>
+<br>
+This is a large project.<br>
+<br>
+</blockquote>
+I am happy to do it. Do you have anything where I can start ? I might need<=
+br>
+someone who could guide me through it. It would be great if you could.<br>
+<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+PAN emulation on ARMv8.0 - My second preference would be this.<br>
+</blockquote>
+<br>
+This sounds like it requires more research?<br>
+<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+Convert remaining BPF JITs to eBPF JIT (with blinding) - Happy to do it<br>
+</blockquote>
+if<br>
+<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
+x #ccc solid;padding-left:1ex">
+need<br>
+</blockquote>
+<br>
+I think this has value and there are folks that can help direct you<br>
+through this. Since you&#39;re new to kernel development, maybe start here<=
+br>
+to get a sense of the amount of work needed, and then go from there?<br>
+<br>
+</blockquote>
+Okay. I will start here. I will keep the PAX&#39;s UDREF feature in the<br>
+background and start working on this. I will reach out to Daniel Borkmann<b=
+r>
+and Elena Reshetova for the starting pointers.<br>
+</blockquote>
+<br></span>
+Feel free to check out slides etc that are mostly located here:<br>
+<br>
+=C2=A0 <a href=3D"https://github.com/iovisor/bpf-docs" rel=3D"noreferrer" t=
+arget=3D"_blank">https://github.com/iovisor/bpf<wbr>-docs</a><br>
+<br>
+Also, Documentation/networking/filte<wbr>r.txt in the kernel tree provides =
+some<br>
+info as a starting point, an example of eBPF JIT can be found here arch/x86=
+/net/<br>
+in kernel tree.<br>
+<br>
+To give you a basic overview what JITs are still classic BPF (cBPF) ones:<b=
+r>
+<br>
+$ git grep -n &quot;select HAVE_CBPF_JIT&quot;<br>
+arch/arm/Kconfig:44:=C2=A0 =C2=A0 select HAVE_CBPF_JIT<br>
+arch/mips/Kconfig:18:=C2=A0 =C2=A0select HAVE_CBPF_JIT if !CPU_MICROMIPS<br=
+>
+arch/powerpc/Kconfig:131:=C2=A0 =C2=A0 =C2=A0 =C2=A0select HAVE_CBPF_JIT if=
+ CPU_BIG_ENDIAN<br>
+arch/sparc/Kconfig:35:=C2=A0 select HAVE_CBPF_JIT<br>
+<br>
+... and which are eBPF (ppc64 one should get merged next window I believe):=
+<br>
+<br>
+$ git grep -n &quot;select HAVE_EBPF_JIT&quot;<br>
+arch/arm64/Kconfig:64:=C2=A0 select HAVE_EBPF_JIT<br>
+arch/s390/Kconfig:131:=C2=A0 select HAVE_EBPF_JIT if PACK_STACK &amp;&amp; =
+HAVE_MARCH_Z196_FEATURES<br>
+arch/x86/Kconfig:94:=C2=A0 =C2=A0 select HAVE_EBPF_JIT=C2=A0 =C2=A0 =C2=A0 =
+=C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 =C2=A0 if X86_64<br>
+<br>
+Cheers,<br>
+Daniel<br>
+</blockquote></div><br></div></div>
+
+--001a114116f29d9dca0545d0fb06--
