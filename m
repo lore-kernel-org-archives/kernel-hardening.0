@@ -1,61 +1,130 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 12 Jan 2017 09:57:14 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170112085714.GC3081@twins.programming.kicks-ass.net>
-References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
- <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
- <20170112051114.GG20972@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170112051114.GG20972@linaro.org>
-Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Cc: Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+In-Reply-To: <20170112073746.GA23596@kroah.com>
+References: <CAPDLWs8g5CRTDwDuuLuuGh8K30Py_kGkjVfuT++Q09rT6XaQ=A@mail.gmail.com>
+ <CAGXu5j+oOJoJ3JFzEpv4jNeCLu95-QVfYQ8mP-M-waqyvoDDRg@mail.gmail.com>
+ <CAPDLWs_DwbB7ZJJ55W8Hz6vnNGDPVvbSw__+1qh42jjNrcCQYA@mail.gmail.com>
+ <CAGXu5jJqo99Vheuod5DPobzBpGMz7zw_CHvG4iNuOU87x-REFA@mail.gmail.com>
+ <CAPDLWs8dMyk3CGpt49w0Nyd59ZDDOSMz87vkm5k7NkObAZNzog@mail.gmail.com> <20170112073746.GA23596@kroah.com>
+From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Date: Thu, 12 Jan 2017 15:34:08 +0530
+Message-ID: <CAPDLWs_aUbt3Vdg1avkoSq_Gpr19TQ2hhrhA1G6-THAXUP07jQ@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=94eb2c1b68b2cc5ae90545e2d71b
+Subject: Re: [kernel-hardening] New to KSPP, would like to contribute
+To: kernel-hardening@lists.openwall.com
+Cc: Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 12, 2017 at 02:11:15PM +0900, AKASHI Takahiro wrote:
-> On Wed, Jan 11, 2017 at 02:55:21PM -0800, Kees Cook wrote:
-> > On Wed, Jan 11, 2017 at 1:42 PM, Kees Cook <keescook@chromium.org> wrote:
-> > > I can see if it'll cherry-pick cleanly, I assume it will. :)
-> > 
-> > It cherry-picked cleanly. However, I made several changes:
-> > 
-> > - I adjusted Peter's author email (it had extra []s around).
-> > - I fixed all of the commit subjects (Peter's were missing).
-> > - I added back "kref: Add KREF_INIT()" since it seems to have been
-> > lost and mixed into other patches that would break bisection
-> > 
-> > It's here now, please work from this version:
-> > 
-> > http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kspp/hardened-atomic
-> 
-> I gave it a spin on arm64.
-> It can compile with a change to smp.c that I mentioned before,
-> but the boot failed. I've not dug into it.
-> 
-> ===8<===
-> [    3.578618] refcount_t: increment on 0; use-after-free.
-> [    3.579165] ------------[ cut here ]------------
-> [    3.579254] WARNING: CPU: 0 PID: 1 at /home/akashi/arm/armv8/linaro/linux-aarch64/include/linux/refcount.h:109 unx_create+0x8c/0xc0
+--94eb2c1b68b2cc5ae90545e2d71b
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
-That's dodgy code, someone needs to look at that.
-
-It has an inc in a function called 'create' which seems to suggest its
-objection creation and we should be using refcount_set() instead.
-
-Then again, it looks like you can call this 'create' method multiple
-times, each time returning the same static object, so refcount_set()
-would not be correct.
+Thanks Greg.
+Will do..
 
 
-Using a refcount on a static object is weird of course, so this is bound
-to give trouble.
+Regards,
+Kaiwan.
+
+Kaiwan N Billimoria
+=E2=9C=89 kaiwan@kaiwantech.com
+=E2=9C=89 kaiwan.billimoria@gmail.com
+
+kaiwanTECH
+http://kaiwantech.in
+Do visit our enhanced website.
+
+4931, 11th Floor, Highpoint IV, 45 Palace Road, Bangalore 560 001.
+=E2=98=8E +91.9845016788 (M)
+=E2=98=8E TeleFax: +91.80.22389396 | Alt. Tel: +91.80.64500257
+
+LinkedIn: https://in.linkedin.com/in/kaiwanbillimoria
+
+I blog here:
+Tech : http://kaiwantech.wordpress.com  |
+Running : http://kaiwanbill.blogspot.in/
+
+"Don't be afraid that your life will end,
+be afraid that it will never begin."
+
+On Thu, Jan 12, 2017 at 1:07 PM, Greg KH <gregkh@linuxfoundation.org> wrote=
+:
+
+> On Thu, Jan 12, 2017 at 09:01:05AM +0530, Kaiwan N Billimoria wrote:
+> > Okay, thanks, I see it better now :)
+> >
+> > Forgive my silly qs:
+> > so as I understand it, the objective is to start merging in some of the
+> grsec
+> > code into mainline, yes? So, which kernel do we work on? the latest rc
+> or do I
+> > work on the one where the above patch applies (i.e. 4.8.17)?
+>
+> You can't go back in time and get stuff merged into an old patch, so
+> always work on the latest kernel tree.  Use linux-next so you don't end
+> up duplicating any effort that people have already done.
+>
+> I suggest reading Documentation/development_process/ as a summary of how
+> all of this works.
+>
+> thanks,
+>
+> greg k-h
+>
+>
+
+--94eb2c1b68b2cc5ae90545e2d71b
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div class=3D"gmail_default" style=3D"font-size:small">Tha=
+nks Greg.</div><div class=3D"gmail_default" style=3D"font-size:small">Will =
+do..</div><div class=3D"gmail_default" style=3D"font-size:small"><br></div>=
+</div><div class=3D"gmail_extra"><br clear=3D"all"><div><div class=3D"gmail=
+_signature" data-smartmail=3D"gmail_signature">Regards,<br>Kaiwan.<br><br>K=
+aiwan N Billimoria<br>=E2=9C=89 <a href=3D"mailto:kaiwan@kaiwantech.com" ta=
+rget=3D"_blank">kaiwan@kaiwantech.com</a><br>=E2=9C=89 <a href=3D"mailto:ka=
+iwan.billimoria@gmail.com" target=3D"_blank">kaiwan.billimoria@gmail.com</a=
+><br><br>kaiwanTECH<br><a href=3D"http://kaiwantech.in" target=3D"_blank">h=
+ttp://kaiwantech.in</a> =C2=A0 <br>Do visit our enhanced website.<br><br>49=
+31, 11th Floor, Highpoint IV, 45 Palace Road, Bangalore 560 001.<br>=E2=98=
+=8E +91.9845016788 (M)<br>=E2=98=8E TeleFax: +91.80.22389396 | Alt. Tel: +9=
+1.80.64500257<br><br>LinkedIn: <a href=3D"https://in.linkedin.com/in/kaiwan=
+billimoria" target=3D"_blank">https://in.linkedin.com/in/kaiwanbillimoria</=
+a><br><br>I blog here:<br>Tech : <a href=3D"http://kaiwantech.wordpress.com=
+" target=3D"_blank">http://kaiwantech.wordpress.com</a> =C2=A0| <br>Running=
+ : <a href=3D"http://kaiwanbill.blogspot.in/" target=3D"_blank">http://kaiw=
+anbill.blogspot.in/</a><br><br>&quot;Don&#39;t be afraid that your life wil=
+l end,<br>be afraid that it will never begin.&quot;</div></div>
+<br><div class=3D"gmail_quote">On Thu, Jan 12, 2017 at 1:07 PM, Greg KH <sp=
+an dir=3D"ltr">&lt;<a href=3D"mailto:gregkh@linuxfoundation.org" target=3D"=
+_blank">gregkh@linuxfoundation.org</a>&gt;</span> wrote:<br><blockquote cla=
+ss=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;pa=
+dding-left:1ex"><span class=3D"">On Thu, Jan 12, 2017 at 09:01:05AM +0530, =
+Kaiwan N Billimoria wrote:<br>
+&gt; Okay, thanks, I see it better now :)<br>
+&gt;<br>
+&gt; Forgive my silly qs:=C2=A0<br>
+&gt; so as I understand it, the objective is to start merging in some of th=
+e grsec<br>
+&gt; code into mainline, yes? So, which kernel do we work on? the latest rc=
+ or do I<br>
+&gt; work on the one where the above patch applies (i.e. 4.8.17)?<br>
+<br>
+</span>You can&#39;t go back in time and get stuff merged into an old patch=
+, so<br>
+always work on the latest kernel tree.=C2=A0 Use linux-next so you don&#39;=
+t end<br>
+up duplicating any effort that people have already done.<br>
+<br>
+I suggest reading Documentation/development_<wbr>process/ as a summary of h=
+ow<br>
+all of this works.<br>
+<br>
+thanks,<br>
+<br>
+greg k-h<br>
+<br>
+</blockquote></div><br></div>
+
+--94eb2c1b68b2cc5ae90545e2d71b--
