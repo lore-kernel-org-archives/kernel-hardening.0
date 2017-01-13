@@ -1,31 +1,46 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Fri, 13 Jan 2017 19:51:07 +0100
 MIME-Version: 1.0
-Message-ID: <5879219B.26854.33C60FDB@pageexec.freemail.hu>
-In-reply-to: <CAGXu5jLUCH9S98YFV3Db4q4r1aTsxbF_v0JeivH01pBYWM-Qzg@mail.gmail.com>
-References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>, <20170113082347.GJ20972@linaro.org>, <CAGXu5jLUCH9S98YFV3Db4q4r1aTsxbF_v0JeivH01pBYWM-Qzg@mail.gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
+Sender: keescook@google.com
+In-Reply-To: <5879219B.26854.33C60FDB@pageexec.freemail.hu>
+References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>
+ <20170113082347.GJ20972@linaro.org> <CAGXu5jLUCH9S98YFV3Db4q4r1aTsxbF_v0JeivH01pBYWM-Qzg@mail.gmail.com>
+ <5879219B.26854.33C60FDB@pageexec.freemail.hu>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 13 Jan 2017 11:06:08 -0800
+Message-ID: <CAGXu5jJt7Kc9eH+=a11=ewem1E0GDo4+tu48OWGQ67Tu7fJfLA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Introduction
-To: "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Kees Cook <keescook@chromium.org>
-Cc: Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: PaX Team <pageexec@freemail.hu>
+Cc: "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13 Jan 2017 at 9:54, Kees Cook wrote:
+On Fri, Jan 13, 2017 at 10:51 AM, PaX Team <pageexec@freemail.hu> wrote:
+> On 13 Jan 2017 at 9:54, Kees Cook wrote:
+>
+>> PaX Team, the heuristic for STRUCTLEAK appears to be "does the struct
+>> contain anything marked __user". Is this actually a meaningful
+>> information exposure case? It seems like there are a lot more cases
+>> for exposures where there is nothing marked __user. Is that the
+>> meaning of "much smaller coverage" compared to STACKLEAK in the
+>> Kconfig?
+>
+> STRUCTLEAK was written in response to a particular bug a few years ago
+> where we didn't want to give the bug away but still wanted to fix it
+> during the embargo. the struct in question could be matched by this
+> heuristics, matching everything else (however little of it) is really
+> just a free side effect. could coverage be improved? of course but that
+> would take a whole lot more work (manual markups and/or data flow analysis
+> in LTO mode).
 
-> PaX Team, the heuristic for STRUCTLEAK appears to be "does the struct
-> contain anything marked __user". Is this actually a meaningful
-> information exposure case? It seems like there are a lot more cases
-> for exposures where there is nothing marked __user. Is that the
-> meaning of "much smaller coverage" compared to STACKLEAK in the
-> Kconfig?
+Out of curiosity, do you remember which bug? I'd be curious to compare
+it against others. It seems like adding structleak to upstream still
+has value, even if the coverage isn't as complete as stackleak.
 
-STRUCTLEAK was written in response to a particular bug a few years ago
-where we didn't want to give the bug away but still wanted to fix it
-during the embargo. the struct in question could be matched by this
-heuristics, matching everything else (however little of it) is really
-just a free side effect. could coverage be improved? of course but that
-would take a whole lot more work (manual markups and/or data flow analysis
-in LTO mode).
+I wanted to do some simple performance checks with it too. I imagine
+it wouldn't have much impact given its coverage isn't very wide.
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
