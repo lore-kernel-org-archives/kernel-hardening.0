@@ -1,77 +1,43 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Fri, 13 Jan 2017 14:13:42 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170113221342.GA67566@beast>
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Sat, 14 Jan 2017 00:09:34 +0100
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] gcc-plugins: consolidate on PASS_INFO macro
-To: kernel-hardening@lists.openwall.com
-Cc: PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org
+Message-ID: <58795E2E.429.34B2AE42@pageexec.freemail.hu>
+In-reply-to: <CAGXu5jJog1M5B9O7rO9rk-Rsfd+9avcGuAz=Tmq+CVU3n+5fzA@mail.gmail.com>
+References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>, <CAGXu5jJt7Kc9eH+=a11=ewem1E0GDo4+tu48OWGQ67Tu7fJfLA@mail.gmail.com>, <CAGXu5jJog1M5B9O7rO9rk-Rsfd+9avcGuAz=Tmq+CVU3n+5fzA@mail.gmail.com>
+Content-type: text/plain; charset=UTF-8
+Content-transfer-encoding: Quoted-printable
+Content-description: Mail message body
+Subject: Re: [kernel-hardening] Introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Now that PASS_INFO() exists, use it in the other existing gcc plugins,
-instead of always open coding the same thing.
+On 13 Jan 2017 at 11:26, Kees Cook wrote:
 
-Based on updates to the grsecurity/PaX gcc plugins.
+> I did notice too that it seems like it doesn't notice static initializer=
+s:
+> 
+> security/tomoyo/common.c: In function =E2=80=98tomoyo_load_builtin_polic=
+y=E2=80=99:
+> security/tomoyo/common.c:2745:27: note: userspace variable will be
+> forcibly initialized
+>    struct tomoyo_io_buffer head =3D { };
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- scripts/gcc-plugins/cyc_complexity_plugin.c | 6 +-----
- scripts/gcc-plugins/sancov_plugin.c         | 8 ++------
- 2 files changed, 3 insertions(+), 11 deletions(-)
+in this case the variable (and its initializer) is in a loop scope (not
+the function scope), so it's not matched. as i said, the plugin was writte=
+n
+to match a specific situation, not everything under the sun ;). now it's
+possible to extend the coverage to loops as well, but then you'll have to
+be careful with performance impact as more and more code will match and
+inside a loop the impact can quickly add up...
 
-diff --git a/scripts/gcc-plugins/cyc_complexity_plugin.c b/scripts/gcc-plugins/cyc_complexity_plugin.c
-index 8af7db06122d..1909ec617431 100644
---- a/scripts/gcc-plugins/cyc_complexity_plugin.c
-+++ b/scripts/gcc-plugins/cyc_complexity_plugin.c
-@@ -52,12 +52,8 @@ static unsigned int cyc_complexity_execute(void)
- __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
- {
- 	const char * const plugin_name = plugin_info->base_name;
--	struct register_pass_info cyc_complexity_pass_info;
- 
--	cyc_complexity_pass_info.pass				= make_cyc_complexity_pass();
--	cyc_complexity_pass_info.reference_pass_name		= "ssa";
--	cyc_complexity_pass_info.ref_pass_instance_number	= 1;
--	cyc_complexity_pass_info.pos_op				= PASS_POS_INSERT_AFTER;
-+	PASS_INFO(cyc_complexity, "ssa", 1, PASS_POS_INSERT_AFTER);
- 
- 	if (!plugin_default_version_check(version, &gcc_version)) {
- 		error(G_("incompatible gcc/plugin versions"));
-diff --git a/scripts/gcc-plugins/sancov_plugin.c b/scripts/gcc-plugins/sancov_plugin.c
-index 70f5fe0d590a..9b0b5cbc5b89 100644
---- a/scripts/gcc-plugins/sancov_plugin.c
-+++ b/scripts/gcc-plugins/sancov_plugin.c
-@@ -89,7 +89,6 @@ static void sancov_start_unit(void __unused *gcc_data, void __unused *user_data)
- __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
- {
- 	int i;
--	struct register_pass_info sancov_plugin_pass_info;
- 	const char * const plugin_name = plugin_info->base_name;
- 	const int argc = plugin_info->argc;
- 	const struct plugin_argument * const argv = plugin_info->argv;
-@@ -107,14 +106,11 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
- 	};
- 
- 	/* BBs can be split afterwards?? */
--	sancov_plugin_pass_info.pass				= make_sancov_pass();
- #if BUILDING_GCC_VERSION >= 4009
--	sancov_plugin_pass_info.reference_pass_name		= "asan";
-+	PASS_INFO(sancov, "asan", 0, PASS_POS_INSERT_BEFORE);
- #else
--	sancov_plugin_pass_info.reference_pass_name		= "nrv";
-+	PASS_INFO(sancov, "nrv", 1, PASS_POS_INSERT_BEFORE);
- #endif
--	sancov_plugin_pass_info.ref_pass_instance_number	= 0;
--	sancov_plugin_pass_info.pos_op				= PASS_POS_INSERT_BEFORE;
- 
- 	if (!plugin_default_version_check(version, &gcc_version)) {
- 		error(G_("incompatible gcc/plugin versions"));
--- 
-2.7.4
+> fs/read_write.c: In function =E2=80=98new_sync_write=E2=80=99:
+> fs/read_write.c:490:15: note: userspace variable will be forcibly initia=
+lized
+>   struct iovec iov =3D { .iov_base =3D (void __user *)buf, .iov_len =3D =
+len };
 
-
--- 
-Kees Cook
-Nexus Security
+this is a designated initializer which doesn't match the object constructo=
+r
+the plugin looks for.
