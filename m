@@ -1,60 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1484344621.3381.2.camel@gmail.com>
-References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>
- <20170113082347.GJ20972@linaro.org> <CAGXu5jLUCH9S98YFV3Db4q4r1aTsxbF_v0JeivH01pBYWM-Qzg@mail.gmail.com>
- <5879219B.26854.33C60FDB@pageexec.freemail.hu> <CAGXu5jJt7Kc9eH+=a11=ewem1E0GDo4+tu48OWGQ67Tu7fJfLA@mail.gmail.com>
- <1484344621.3381.2.camel@gmail.com>
+Date: Fri, 13 Jan 2017 14:13:42 -0800
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 13 Jan 2017 14:04:58 -0800
-Message-ID: <CAGXu5jLuo8NrhowJVTxLq-GX0eBrL+c2Tyd4k5TbHP5eEG0oFA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Introduction
-To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: PaX Team <pageexec@freemail.hu>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>
+Message-ID: <20170113221342.GA67566@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] gcc-plugins: consolidate on PASS_INFO macro
+To: kernel-hardening@lists.openwall.com
+Cc: PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 13, 2017 at 1:57 PM, Daniel Micay <danielmicay@gmail.com> wrote:
-> On Fri, 2017-01-13 at 11:06 -0800, Kees Cook wrote:
->> On Fri, Jan 13, 2017 at 10:51 AM, PaX Team <pageexec@freemail.hu>
->> wrote:
->> > On 13 Jan 2017 at 9:54, Kees Cook wrote:
->> >
->> > > PaX Team, the heuristic for STRUCTLEAK appears to be "does the
->> > > struct
->> > > contain anything marked __user". Is this actually a meaningful
->> > > information exposure case? It seems like there are a lot more
->> > > cases
->> > > for exposures where there is nothing marked __user. Is that the
->> > > meaning of "much smaller coverage" compared to STACKLEAK in the
->> > > Kconfig?
->> >
->> > STRUCTLEAK was written in response to a particular bug a few years
->> > ago
->> > where we didn't want to give the bug away but still wanted to fix it
->> > during the embargo. the struct in question could be matched by this
->> > heuristics, matching everything else (however little of it) is
->> > really
->> > just a free side effect. could coverage be improved? of course but
->> > that
->> > would take a whole lot more work (manual markups and/or data flow
->> > analysis
->> > in LTO mode).
->>
->> Out of curiosity, do you remember which bug? I'd be curious to compare
->> it against others. It seems like adding structleak to upstream still
->> has value, even if the coverage isn't as complete as stackleak.
->
-> There's the performance-oblivious approach of zeroing all locals early
-> in the compiler pipeline and relying on compiler optimizations to remove
-> it when it's not required. They're already pretty good at doing it.
+Now that PASS_INFO() exists, use it in the other existing gcc plugins,
+instead of always open coding the same thing.
 
-Yeah, I think that's what happens here. Some initializations are seen
-as constructors still, while others are marked as SSAs already.
-Hopefully the optimization pass will correctly collapse the cases.
+Based on updates to the grsecurity/PaX gcc plugins.
 
--Kees
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ scripts/gcc-plugins/cyc_complexity_plugin.c | 6 +-----
+ scripts/gcc-plugins/sancov_plugin.c         | 8 ++------
+ 2 files changed, 3 insertions(+), 11 deletions(-)
+
+diff --git a/scripts/gcc-plugins/cyc_complexity_plugin.c b/scripts/gcc-plugins/cyc_complexity_plugin.c
+index 8af7db06122d..1909ec617431 100644
+--- a/scripts/gcc-plugins/cyc_complexity_plugin.c
++++ b/scripts/gcc-plugins/cyc_complexity_plugin.c
+@@ -52,12 +52,8 @@ static unsigned int cyc_complexity_execute(void)
+ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
+ {
+ 	const char * const plugin_name = plugin_info->base_name;
+-	struct register_pass_info cyc_complexity_pass_info;
+ 
+-	cyc_complexity_pass_info.pass				= make_cyc_complexity_pass();
+-	cyc_complexity_pass_info.reference_pass_name		= "ssa";
+-	cyc_complexity_pass_info.ref_pass_instance_number	= 1;
+-	cyc_complexity_pass_info.pos_op				= PASS_POS_INSERT_AFTER;
++	PASS_INFO(cyc_complexity, "ssa", 1, PASS_POS_INSERT_AFTER);
+ 
+ 	if (!plugin_default_version_check(version, &gcc_version)) {
+ 		error(G_("incompatible gcc/plugin versions"));
+diff --git a/scripts/gcc-plugins/sancov_plugin.c b/scripts/gcc-plugins/sancov_plugin.c
+index 70f5fe0d590a..9b0b5cbc5b89 100644
+--- a/scripts/gcc-plugins/sancov_plugin.c
++++ b/scripts/gcc-plugins/sancov_plugin.c
+@@ -89,7 +89,6 @@ static void sancov_start_unit(void __unused *gcc_data, void __unused *user_data)
+ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
+ {
+ 	int i;
+-	struct register_pass_info sancov_plugin_pass_info;
+ 	const char * const plugin_name = plugin_info->base_name;
+ 	const int argc = plugin_info->argc;
+ 	const struct plugin_argument * const argv = plugin_info->argv;
+@@ -107,14 +106,11 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
+ 	};
+ 
+ 	/* BBs can be split afterwards?? */
+-	sancov_plugin_pass_info.pass				= make_sancov_pass();
+ #if BUILDING_GCC_VERSION >= 4009
+-	sancov_plugin_pass_info.reference_pass_name		= "asan";
++	PASS_INFO(sancov, "asan", 0, PASS_POS_INSERT_BEFORE);
+ #else
+-	sancov_plugin_pass_info.reference_pass_name		= "nrv";
++	PASS_INFO(sancov, "nrv", 1, PASS_POS_INSERT_BEFORE);
+ #endif
+-	sancov_plugin_pass_info.ref_pass_instance_number	= 0;
+-	sancov_plugin_pass_info.pos_op				= PASS_POS_INSERT_BEFORE;
+ 
+ 	if (!plugin_default_version_check(version, &gcc_version)) {
+ 		error(G_("incompatible gcc/plugin versions"));
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
