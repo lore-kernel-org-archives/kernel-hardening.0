@@ -1,69 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "PaX Team" <pageexec@freemail.hu>
-Date: Sat, 14 Jan 2017 11:03:14 +0100
+Date: Sat, 14 Jan 2017 11:10:08 +0100
 MIME-Version: 1.0
-Message-ID: <5879F762.32059.37092152@pageexec.freemail.hu>
-In-reply-to: <20170113220256.GA57663@beast>
-References: <20170113220256.GA57663@beast>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
+Message-ID: <5879F900.12283.370F7409@pageexec.freemail.hu>
+In-reply-to: <CAGXu5j+yMNRQHRj8haLfNCst1C_7TDPf8axyUBatVWEvWbVmmQ@mail.gmail.com>
+References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>, <58795E2E.429.34B2AE42@pageexec.freemail.hu>, <CAGXu5j+yMNRQHRj8haLfNCst1C_7TDPf8axyUBatVWEvWbVmmQ@mail.gmail.com>
+Content-type: text/plain; charset=UTF-8
+Content-transfer-encoding: Quoted-printable
 Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>
-Cc: Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+Subject: Re: [kernel-hardening] Introduction
+To: Kees Cook <keescook@chromium.org>
+Cc: "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 13 Jan 2017 at 14:02, Kees Cook wrote:
+On 13 Jan 2017 at 15:15, Kees Cook wrote:
 
-> This plugin detects any structures that contain __user attributes and
-> makes sure it is being fulling initialized so that a specific class of
-> information exposure is eliminated. (For example, the exposure of siginfo
-> in CVE-2013-2141 would have been blocked by this plugin.)
+> On Fri, Jan 13, 2017 at 3:09 PM, PaX Team <pageexec@freemail.hu> wrote:
+> >> fs/read_write.c: In function =E2=80=98new_sync_write=E2=80=99:
+> >> fs/read_write.c:490:15: note: userspace variable will be forcibly ini=
+tialized
+> >>   struct iovec iov =3D { .iov_base =3D (void __user *)buf, .iov_len =3D=
+ len };
+> >
+> > this is a designated initializer which doesn't match the object constr=
+uctor
+> > the plugin looks for.
+> 
+> What would an object constructor look like?
 
-why the conditional? the plugin was specifically written to block that bug
-and block it did ;).
+as you can see it in the plugin source, it has a specific TREE_CODE.
 
-> +config GCC_PLUGIN_STRUCTLEAK
-> +	bool "Force initialization of variables containing userspace addresses"
-> +	depends on GCC_PLUGINS
-> +	help
-> +	  This plugin zero-initializes any structures that containing a
-> +	  __user attribute. This can prevent some classes of information
-> +	  exposures.
+> When I had it report the times it skipped forced initialization, the
+> code mostly looked like designated initializers. All I found in the
+> gimple were SSAs. Nothing jumped out at me as being an initializer. 
 
-i see that you completely ditched the description in PaX, is there a reason
-for it? your text isn't correct as is because
+while the gimple dumps are human readable, they omit lots of information
+so it's better to look at the data structures at compile time. that said,
+a constructor should appear as an assignment like this:
 
-- the __user attribute (which is an implementation choice, see below) doesn't
-  apply to structures but pointers only (as it does for sparse IIRC)
+  s1 =3D {};
 
-- a structure is a type, but the plugin initializes variables, not types
-  (the latter makes little sense)
-
-- the plugin doesn't initialize 'any structures' (well, variables), only locals
-  and only at function scope (subject to further evolution as discussed earlier).
-
-> +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
-> +	bool "Report initialized variables"
-> +	depends on GCC_PLUGIN_STRUCTLEAK
-> +	depends on !COMPILE_TEST
-> +	help
-> +	  This option will cause a warning to be printed each time the
-> +	  structleak plugin finds a variable it thinks needs to be
-> +	  initialized. Since not all existing initializers are detected
-> +	  by the plugin, this can produce false positive warnings.
-
-there are no false positives, a variable either has a constructor or it does not ;)
-
-> +/* unused C type flag in all versions 4.5-6 */
-> +#define TYPE_USERSPACE(TYPE) TYPE_LANG_FLAG_5(TYPE)
-
-FYI, this is a sort of abuse/hack of tree flags and should not be implemented this
-way in the upstream kernel as it's a finite resource and needs careful verification
-against all supported gcc versions (these flags are meant for language fronteds, i
-kinda got lucky to have a few of them unusued but it's not a robust future-proof
-approach). instead an attribute should be used to mark these types. whether that
-can/should be __user itself is a good question since that's another hack where the
-plugin 'hijacks' a sparse address space atttribute (for which gcc 4.6+ has its own
-facilities and that the checker gcc plugin makes use of thus it's not compatible
-with structleak as is).
+a designated initializer is modeled as a constructor and per-field assignm=
+ents
+by the compiler (both are subject to optimizations so you won't necessaril=
+y see
+all of them in the dumps of later passes).
