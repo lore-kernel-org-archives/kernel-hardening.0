@@ -1,76 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 16 Jan 2017 12:26:22 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170116122622.GF5908@leverpostej>
-References: <20170113220256.GA57663@beast>
- <20170116115435.GB5908@leverpostej>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170116115435.GB5908@leverpostej>
-Subject: Re: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for
- more stack initialization
-To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, dave.martin@arm.com
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Mon, 16 Jan 2017 14:23:02 +0100
+Message-Id: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+Subject: [kernel-hardening] [PATCH v4 0/2] procfs/tasks: introduce per-task procfs hidepid= field
+To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 16, 2017 at 11:54:35AM +0000, Mark Rutland wrote:
-> Hi,
-> 
-> [adding Dave, so retaining full context below]
-> 
-> On Fri, Jan 13, 2017 at 02:02:56PM -0800, Kees Cook wrote:
-> > This plugin detects any structures that contain __user attributes and
-> > makes sure it is being fulling initialized so that a specific class of
-> 
-> Nit: s/fulling/fully/
-> 
-> > information exposure is eliminated. (For example, the exposure of siginfo
-> > in CVE-2013-2141 would have been blocked by this plugin.)
-> > 
-> > Ported from grsecurity/PaX. This version adds a verbose option to the
-> > plugin and the Kconfig.
-> > 
-> > Signed-off-by: Kees Cook <keescook@chromium.org>
-> > ---
-> >  arch/Kconfig                            |  22 +++
-> >  include/linux/compiler.h                |   6 +-
-> >  scripts/Makefile.gcc-plugins            |   4 +
-> >  scripts/gcc-plugins/structleak_plugin.c | 246 ++++++++++++++++++++++++++++++++
-> >  4 files changed, 277 insertions(+), 1 deletion(-)
-> >  create mode 100644 scripts/gcc-plugins/structleak_plugin.c
-> 
-> I tried giving this a go, but I got the build failure below:
+From: Djalal Harouni <tixxdz@gmail.com>
 
-Looking again, I see that there was another patch to add PASS_INFO() and
-other bits that the patch required. Sorry for the noise there.
+Hi,
 
-In the mean time, I cribbed from the latent entropy plugin, and built
-with the below applied:
+I'm sending this series again based on Lafcadio's previous patches.
+I have also fixed some issues and tested the code.
 
-----
-diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
-index deddb72..1e01763 100644
---- a/scripts/gcc-plugins/structleak_plugin.c
-+++ b/scripts/gcc-plugins/structleak_plugin.c
-@@ -210,8 +210,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
-        const int argc = plugin_info->argc;
-        const struct plugin_argument * const argv = plugin_info->argv;
-        bool enable = true;
--
--       PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE);
-+       struct register_pass_info structleak_pass_info = {
-+               .pass  = make_structleak_pass(),
-+               .reference_pass_name = "early_optimizations",
-+               .ref_pass_instance_number = 1,
-+               .pos_op = PASS_POS_INSERT_BEFORE,
-+       };
- 
-        if (!plugin_default_version_check(version, &gcc_version)) {
-                error(G_("incompatible gcc/plugin versions"));
-----
+This adds a new per-task hidepid= flag that is honored by procfs when
+presenting /proc to the user, in addition to the existing hidepid= mount
+option.
 
-With verbose mode, I see quite a few initializations, mostly in signal
-handling. Something to add to the queue of things to investigate...
+One suggested change to add 'ns_capable(CAP_SYS_ADMIN)||no_new_privs' test
+before setting the hidepid was not included in this series, however I
+can add it. This change was not incorporated since it may be good for
+some setuid or even file capabilities programs to not access /proc, yes this
+may influence setuid programs but I am not sure if this is really a
+problem in this case. As stated I can add it if requested. Thanks!
 
-Mark.
+
+v4 changes:
+Patch 0001 procfs: use an enum for possible hidepid values
+        * Was already acked and proposed to be added to -mm branch.
+
+Patch 0002 procfs/tasks: add a simple per-task procfs hidepid= field
+        * Document HidePid in Documentation/filesystem/proc.txt
+        * Switch to max() as suggested by Kees Cook.
+        * Fix compiler warnings
+        * Check all prctl() arguments and fail if unused ones are set.
+        * Make PR_GET_HIDEPID return the task hidpid value as a result
+          of prctl() syscall.
