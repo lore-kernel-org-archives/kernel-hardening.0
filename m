@@ -1,53 +1,39 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: "PaX Team" <pageexec@freemail.hu>
-Date: Mon, 16 Jan 2017 20:22:24 +0100
+Date: Mon, 16 Jan 2017 20:30:29 +0100
 MIME-Version: 1.0
-Message-ID: <587D1D70.26193.89AFE10@pageexec.freemail.hu>
-In-reply-to: <20170116115435.GB5908@leverpostej>
-References: <20170113220256.GA57663@beast>, <20170116115435.GB5908@leverpostej>
+Message-ID: <587D1F55.2222.8A262A4@pageexec.freemail.hu>
+In-reply-to: <20170116152425.GG5908@leverpostej>
+References: <20170113220256.GA57663@beast>, <5879F762.32059.37092152@pageexec.freemail.hu>, <20170116152425.GG5908@leverpostej>
 Content-type: text/plain; charset=US-ASCII
 Content-transfer-encoding: 7BIT
 Content-description: Mail message body
 Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, dave.martin@arm.com, spender@grsecurity.net
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16 Jan 2017 at 11:54, Mark Rutland wrote:
+On 16 Jan 2017 at 15:24, Mark Rutland wrote:
 
-> > + * Copyright 2013-2017 by PaX Team <pageexec@freemail.hu>
-> > + * Licensed under the GPL v2
-> > + *
-> > + * Note: the choice of the license means that the compilation process is
-> > + *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
-> > + *       but for the kernel it doesn't matter since it doesn't link against
-> > + *       any of the gcc libraries
+> To me, it seems that the __user annotation can only be an indicator of
+> an issue by chance. We have structures with __user pointers in structs
+> that will never be copied to userspace, and conversely we have structs
+> that don't contain a __user field, but will be copied to userspace.
 > 
-> It's my understanding that some architectures do link against libgcc, so we
-> might want some kind of guard to avoid mishaps. e.g.
-> ARCH_CAN_USE_NON_GPLV3_GCC_PLUGINS.
+> Maybe it happens that structs in more complex systems are more likely to
+> contain some __user pointer. Was that part of the rationale?
 
-AFAIK, plugins aren't enabled on any such archs yet and if/when they get
-enabled, the better approach would be to simply reimplement those helper
-routines in the kernel itself like some archs already do.
+it's as i explained in an earlier email: we wanted to pattern match a
+specific bug situation and this was the easiest way (as you can see,
+the plugin's code is very simple, not much effort went into it).
 
-> > +	/* build the initializer expression */
-> > +	initializer = build_constructor(TREE_TYPE(var), NULL);
-> > +
-> > +	/* build the initializer stmt */
-> > +	init_stmt = gimple_build_assign(var, initializer);
-> > +	gsi = gsi_after_labels(single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
-> > +	gsi_insert_before(&gsi, init_stmt, GSI_NEW_STMT);
-> > +	update_stmt(init_stmt);
-> 
-> I assume that this is only guaranteed to initialise fields in a struct,
-> and not padding, is that correct? I ask due to the issue described in:
-> 
-> https://lwn.net/Articles/417989/
+> I wonder if there's any analysis we can do of data passing into
+> copy_to_user() and friends. I guess we can't follow the data flow across
+> compilation units, but we might be able to follow it well enough if we
+> added a new attribute that described whether data was to be copied to
+> userspace.
 
-the 'issue' is that before C11 the standard didn't make it clear that in
-case of a partial initializer list the compiler has to initialize not only
-the remaining fields but also padding as well.
-
-as for what the above code does, it fixes this as well since gcc doesn't
-emit the constructor itself which will then match the pattern.
+there're are all kinds of data flow analyses you can do within and even
+across translation units (summary info a'la size overflow hash tables or
+LTO). i never went into that direction because i think the security goal
+can be achieved without the performance impact of forced initialization.
