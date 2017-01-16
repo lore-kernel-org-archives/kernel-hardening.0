@@ -1,39 +1,47 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Mon, 16 Jan 2017 20:30:29 +0100
+Date: Mon, 16 Jan 2017 16:25:55 -0500
+From: "J. Bruce Fields" <bfields@fieldses.org>
+Message-ID: <20170116212555.GA5201@fieldses.org>
+References: <20170116164944.GA28984@kroah.com>
+ <20170116165031.GB29693@kroah.com>
 MIME-Version: 1.0
-Message-ID: <587D1F55.2222.8A262A4@pageexec.freemail.hu>
-In-reply-to: <20170116152425.GG5908@leverpostej>
-References: <20170113220256.GA57663@beast>, <5879F762.32059.37092152@pageexec.freemail.hu>, <20170116152425.GG5908@leverpostej>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170116165031.GB29693@kroah.com>
+Subject: [kernel-hardening] Re: [PATCH 2/3] Make static usermode helper binaries constant
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, Jeff Layton <jlayton@poochiereds.net>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 16 Jan 2017 at 15:24, Mark Rutland wrote:
-
-> To me, it seems that the __user annotation can only be an indicator of
-> an issue by chance. We have structures with __user pointers in structs
-> that will never be copied to userspace, and conversely we have structs
-> that don't contain a __user field, but will be copied to userspace.
+On Mon, Jan 16, 2017 at 05:50:31PM +0100, Greg KH wrote:
+> From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 > 
-> Maybe it happens that structs in more complex systems are more likely to
-> contain some __user pointer. Was that part of the rationale?
+> There are a number of usermode helper binaries that are "hard coded" in
+> the kernel today, so mark them as "const" to make it harder for someone
+> to change where the variables point to.
+> 
+...
+> --- a/drivers/pnp/pnpbios/core.c
+> +++ b/drivers/pnp/pnpbios/core.c
+> @@ -98,6 +98,7 @@ static struct completion unload_sem;
+>   */
+>  static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+>  {
+> +	static char const sbin_pnpbios[] = "/sbin/pnpbios";
+>  	char *argv[3], **envp, *buf, *scratch;
+>  	int i = 0, value;
+>  
+> @@ -112,7 +113,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+>  	 * integrated into the driver core and use the usual infrastructure
+>  	 * like sysfs and uevents
+>  	 */
+> -	argv[0] = "/sbin/pnpbios";
+> +	argv[0] = (char *)sbin_pnpbios;
 
-it's as i explained in an earlier email: we wanted to pattern match a
-specific bug situation and this was the easiest way (as you can see,
-the plugin's code is very simple, not much effort went into it).
+So here and elsewhere, can attackers write to argv[0] instead of to the
+memory where the string lives?
 
-> I wonder if there's any analysis we can do of data passing into
-> copy_to_user() and friends. I guess we can't follow the data flow across
-> compilation units, but we might be able to follow it well enough if we
-> added a new attribute that described whether data was to be copied to
-> userspace.
+Apologies if I'm rehashing earlier discussion, I did a quick search of
+archives but could easily have missed something.
 
-there're are all kinds of data flow analyses you can do within and even
-across translation units (summary info a'la size overflow hash tables or
-LTO). i never went into that direction because i think the security goal
-can be achieved without the performance impact of forced initialization.
+--b.
