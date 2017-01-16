@@ -1,225 +1,99 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Mon, 16 Jan 2017 14:23:04 +0100
-Message-Id: <1484572984-13388-3-git-send-email-djalal@gmail.com>
-In-Reply-To: <1484572984-13388-1-git-send-email-djalal@gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+Date: Mon, 16 Jan 2017 15:24:25 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170116152425.GG5908@leverpostej>
+References: <20170113220256.GA57663@beast>
+ <5879F762.32059.37092152@pageexec.freemail.hu>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs hidepid= field
-To: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
-Cc: Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>, Djalal Harouni <tixxdz@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <5879F762.32059.37092152@pageexec.freemail.hu>
+Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
+To: PaX Team <pageexec@freemail.hu>
+Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Djalal Harouni <tixxdz@gmail.com>
+Hi,
 
-This adds a new per-task hidepid= flag that is honored by procfs when
-presenting /proc to the user, in addition to the existing hidepid= mount
-option. So far, hidepid= was exclusively a per-pidns setting. Locking
-down a set of processes so that they cannot see other user's processes
-without affecting the rest of the system thus currently requires
-creation of a private PID namespace, with all the complexity it brings,
-including maintaining a stub init process as PID 1 and losing the
-ability to see processes of the same user on the rest of the system.
+On Sat, Jan 14, 2017 at 11:03:14AM +0100, PaX Team wrote:
+> On 13 Jan 2017 at 14:02, Kees Cook wrote:
+> 
+> > +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+> > +	bool "Report initialized variables"
+> > +	depends on GCC_PLUGIN_STRUCTLEAK
+> > +	depends on !COMPILE_TEST
+> > +	help
+> > +	  This option will cause a warning to be printed each time the
+> > +	  structleak plugin finds a variable it thinks needs to be
+> > +	  initialized. Since not all existing initializers are detected
+> > +	  by the plugin, this can produce false positive warnings.
+> 
+> there are no false positives, a variable either has a constructor or it does not ;)
 
-With this patch all acesss and visibility checks in procfs now
-honour two fields:
+... or it has no constructor, but is clobbered by a memset before it is
+possibly copied. ;)
 
-	a) the existing hide_pid field in the PID namespace
-	b) the new hide_pid in struct task_struct
+For example:
 
-Access/visibility is only granted if both fields permit it; the more
-restrictive one wins. By default the new task_struct hide_pid value
-defaults to 0, which means behaviour is not changed from the status quo.
+arch/arm64/kernel/fpsimd.c: In function 'do_fpsimd_exc':
+arch/arm64/kernel/fpsimd.c:106:12: note: userspace variable will be forcibly initialized
+  siginfo_t info;
 
-Setting the per-process hide_pid value is done via a new PR_SET_HIDEPID
-prctl() option which takes the same three supported values as the
-hidepid= mount option. The per-process hide_pid may only be increased,
-never decreased, thus ensuring that once applied, processes can never
-escape such a hide_pid jail.  When a process forks it inherits its
-parent's hide_pid value.
+... where the code looks like:
 
-Suggested usecase: let's say nginx runs as user "www-data". After
-dropping privileges it may now call:
+void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
+{
+	siginfo_t info;
+	unsigned int si_code = 0;
 
-	…
-	prctl(PR_SET_HIDEPID, 2);
-	…
+	if (esr & FPEXC_IOF)
+		si_code = FPE_FLTINV;
+	else if (esr & FPEXC_DZF)
+		si_code = FPE_FLTDIV;
+	else if (esr & FPEXC_OFF)
+		si_code = FPE_FLTOVF;
+	else if (esr & FPEXC_UFF)
+		si_code = FPE_FLTUND;
+	else if (esr & FPEXC_IXF)
+		si_code = FPE_FLTRES;
 
-And from that point on neither nginx itself, nor any of its child
-processes may see processes in /proc anymore that belong to a different
-user than "www-data". Other services running on the same system remain
-unaffected.
+	memset(&info, 0, sizeof(info));
+	info.si_signo = SIGFPE;
+	info.si_code = si_code;
+	info.si_addr = (void __user *)instruction_pointer(regs);
 
-This should permit Linux distributions to more comprehensively lock down
-their services, as it allows an isolated opt-in for hidepid= for
-specific services. Previously hidepid= could only be set system-wide,
-and then specific services had to be excluded by group membership,
-essentially a more complex concept of opt-out.
+	send_sig_info(SIGFPE, &info, current);
+}
 
-A tool to test this is available here:
-https://gist.github.com/tixxdz/4e6d21071463ad2c5a043984e3efb5a1
+... so it's clear to a human that info is initialised prior to use,
+though not by an explicit field initializer.
 
-Original-author: Lafcadio Wluiki <wluikil@gmail.com>
-Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
----
- Documentation/filesystems/proc.txt |  2 ++
- fs/proc/array.c                    |  3 +++
- fs/proc/base.c                     |  8 ++++++--
- include/linux/init_task.h          |  1 +
- include/linux/sched.h              |  1 +
- include/uapi/linux/prctl.h         |  4 ++++
- kernel/fork.c                      |  1 +
- kernel/sys.c                       | 13 +++++++++++++
- 8 files changed, 31 insertions(+), 2 deletions(-)
+> > +/* unused C type flag in all versions 4.5-6 */
+> > +#define TYPE_USERSPACE(TYPE) TYPE_LANG_FLAG_5(TYPE)
+> 
+> FYI, this is a sort of abuse/hack of tree flags and should not be implemented this
+> way in the upstream kernel as it's a finite resource and needs careful verification
+> against all supported gcc versions (these flags are meant for language fronteds, i
+> kinda got lucky to have a few of them unusued but it's not a robust future-proof
+> approach). instead an attribute should be used to mark these types. whether that
+> can/should be __user itself is a good question since that's another hack where the
+> plugin 'hijacks' a sparse address space atttribute (for which gcc 4.6+ has its own
+> facilities and that the checker gcc plugin makes use of thus it's not compatible
+> with structleak as is).
 
-diff --git a/Documentation/filesystems/proc.txt b/Documentation/filesystems/proc.txt
-index 72624a1..fc95261 100644
---- a/Documentation/filesystems/proc.txt
-+++ b/Documentation/filesystems/proc.txt
-@@ -164,6 +164,7 @@ read the file /proc/PID/status:
-   Uid:    501     501     501     501
-   Gid:    100     100     100     100
-   FDSize: 256
-+  HidePid:      0
-   Groups: 100 14 16
-   VmPeak:     5004 kB
-   VmSize:     5004 kB
-@@ -228,6 +229,7 @@ Table 1-2: Contents of the status files (as of 4.1)
-  Gid                         Real, effective, saved set, and  file system GIDs
-  Umask                       file mode creation mask
-  FDSize                      number of file descriptor slots currently allocated
-+ HidePid                     process access mode of /proc/<pid>/
-  Groups                      supplementary group list
-  NStgid                      descendant namespace thread group ID hierarchy
-  NSpid                       descendant namespace process ID hierarchy
-diff --git a/fs/proc/array.c b/fs/proc/array.c
-index 51a4213..e6cd1a1 100644
---- a/fs/proc/array.c
-+++ b/fs/proc/array.c
-@@ -163,6 +163,7 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
- 	const struct cred *cred;
- 	pid_t ppid, tpid = 0, tgid, ngid;
- 	unsigned int max_fds = 0;
-+	int hide_pid;
- 
- 	rcu_read_lock();
- 	ppid = pid_alive(p) ?
-@@ -183,6 +184,7 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
- 	task_lock(p);
- 	if (p->files)
- 		max_fds = files_fdtable(p->files)->max_fds;
-+	hide_pid = p->hide_pid;
- 	task_unlock(p);
- 	rcu_read_unlock();
- 
-@@ -201,6 +203,7 @@ static inline void task_state(struct seq_file *m, struct pid_namespace *ns,
- 	seq_put_decimal_ull(m, "\t", from_kgid_munged(user_ns, cred->egid));
- 	seq_put_decimal_ull(m, "\t", from_kgid_munged(user_ns, cred->sgid));
- 	seq_put_decimal_ull(m, "\t", from_kgid_munged(user_ns, cred->fsgid));
-+	seq_put_decimal_ull(m, "\nHidePid:\t", hide_pid);
- 	seq_put_decimal_ull(m, "\nFDSize:\t", max_fds);
- 
- 	seq_puts(m, "\nGroups:\t");
-diff --git a/fs/proc/base.c b/fs/proc/base.c
-index cd8dd15..596b17f 100644
---- a/fs/proc/base.c
-+++ b/fs/proc/base.c
-@@ -712,7 +712,9 @@ static bool has_pid_permissions(struct pid_namespace *pid,
- 				 struct task_struct *task,
- 				 int hide_pid_min)
- {
--	if (pid->hide_pid < hide_pid_min)
-+	int hide_pid = max(pid->hide_pid, (int) current->hide_pid);
-+
-+	if (hide_pid < hide_pid_min)
- 		return true;
- 	if (in_group_p(pid->pid_gid))
- 		return true;
-@@ -733,7 +735,9 @@ static int proc_pid_permission(struct inode *inode, int mask)
- 	put_task_struct(task);
- 
- 	if (!has_perms) {
--		if (pid->hide_pid == HIDEPID_INVISIBLE) {
-+		int hide_pid = max(pid->hide_pid, (int) current->hide_pid);
-+
-+		if (hide_pid == HIDEPID_INVISIBLE) {
- 			/*
- 			 * Let's make getdents(), stat(), and open()
- 			 * consistent with each other.  If a process
-diff --git a/include/linux/init_task.h b/include/linux/init_task.h
-index 325f649..c87de0e 100644
---- a/include/linux/init_task.h
-+++ b/include/linux/init_task.h
-@@ -250,6 +250,7 @@ extern struct task_group root_task_group;
- 	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
- 	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),	\
- 	.timer_slack_ns = 50000, /* 50 usec default slack */		\
-+	.hide_pid	= 0,						\
- 	.pids = {							\
- 		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
- 		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
-diff --git a/include/linux/sched.h b/include/linux/sched.h
-index ad3ec9e..ba9f1d5 100644
---- a/include/linux/sched.h
-+++ b/include/linux/sched.h
-@@ -1608,6 +1608,7 @@ struct task_struct {
- 	/* unserialized, strictly 'current' */
- 	unsigned in_execve:1; /* bit to tell LSMs we're in execve */
- 	unsigned in_iowait:1;
-+	unsigned hide_pid:2; /* per-process procfs hidepid= */
- #if !defined(TIF_RESTORE_SIGMASK)
- 	unsigned restore_sigmask:1;
- #endif
-diff --git a/include/uapi/linux/prctl.h b/include/uapi/linux/prctl.h
-index a8d0759..ada62b6 100644
---- a/include/uapi/linux/prctl.h
-+++ b/include/uapi/linux/prctl.h
-@@ -197,4 +197,8 @@ struct prctl_mm_map {
- # define PR_CAP_AMBIENT_LOWER		3
- # define PR_CAP_AMBIENT_CLEAR_ALL	4
- 
-+/* Per process, non-revokable procfs hidepid= option */
-+#define PR_SET_HIDEPID 48
-+#define PR_GET_HIDEPID 49
-+
- #endif /* _LINUX_PRCTL_H */
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 11c5c8a..a701a77 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -1574,6 +1574,7 @@ static __latent_entropy struct task_struct *copy_process(
- #endif
- 
- 	p->default_timer_slack_ns = current->timer_slack_ns;
-+	p->hide_pid = current->hide_pid;
- 
- 	task_io_accounting_init(&p->ioac);
- 	acct_clear_integrals(p);
-diff --git a/kernel/sys.c b/kernel/sys.c
-index 842914e..4041ff4 100644
---- a/kernel/sys.c
-+++ b/kernel/sys.c
-@@ -2261,6 +2261,19 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
- 	case PR_GET_FP_MODE:
- 		error = GET_FP_MODE(me);
- 		break;
-+	case PR_SET_HIDEPID:
-+		if (arg2 < HIDEPID_OFF || arg2 > HIDEPID_INVISIBLE ||
-+		    arg3 || arg4 || arg5)
-+			return -EINVAL;
-+		if (arg2 < me->hide_pid)
-+			return -EPERM;
-+		me->hide_pid = arg2;
-+		break;
-+	case PR_GET_HIDEPID:
-+		if (arg2 || arg3 || arg4 || arg5)
-+			return -EINVAL;
-+		error = me->hide_pid;
-+		break;
- 	default:
- 		error = -EINVAL;
- 		break;
--- 
-2.5.5
+To me, it seems that the __user annotation can only be an indicator of
+an issue by chance. We have structures with __user pointers in structs
+that will never be copied to userspace, and conversely we have structs
+that don't contain a __user field, but will be copied to userspace.
+
+Maybe it happens that structs in more complex systems are more likely to
+contain some __user pointer. Was that part of the rationale?
+
+I wonder if there's any analysis we can do of data passing into
+copy_to_user() and friends. I guess we can't follow the data flow across
+compilation units, but we might be able to follow it well enough if we
+added a new attribute that described whether data was to be copied to
+userspace.
+
+Thanks,
+Mark.
