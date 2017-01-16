@@ -1,122 +1,26 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 16 Jan 2017 17:50:44 +0100
+Date: Mon, 16 Jan 2017 17:51:13 +0100
 From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20170116165044.GC29693@kroah.com>
+Message-ID: <20170116165113.GD29693@kroah.com>
 References: <20170116164944.GA28984@kroah.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20170116164944.GA28984@kroah.com>
-Subject: [kernel-hardening] [PATCH 3/3] Introduce STATIC_USERMODEHELPER to mediate
- call_usermodehelper()
+Subject: [kernel-hardening] Re: [PATCH 0/4] make call_usermodehelper a bit more "safe"
 To: kernel-hardening@lists.openwall.com
 Cc: linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, "J. Bruce Fields" <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+On Mon, Jan 16, 2017 at 05:49:44PM +0100, Greg KH wrote:
+> Hi all,
+> 
+> Here's a second cut at my attempt to make call_usermodehelper a bit more
+> "safe".  It includes some patches from my previous series, and one new
+> one.  In all, this is a much smaller patchset, with better functionality
+> in the end.
 
-Some usermode helper applications are defined at kernel build time, while
-others can be changed at runtime.  To provide a sane way to filter these, add a
-new kernel option "STATIC_USERMODEHELPER".  This option routes all
-call_usermodehelper() calls through this binary, no matter what the caller
-wishes to have called.
+And of course, I miscounted the patches, there are only 3 patches in
+this series, yet I said 0/4 in this email, sorry about that.
 
-The new binary (by default set to /sbin/usermode-helper, but can be changed
-through the STATIC_USERMODEHELPER_PATH option) can properly filter the
-requested programs to be run by the kernel by looking at the first argument
-that is passed to it.  All other options should then be passed onto the proper
-program if so desired.
-
-To disable all call_usermodehelper() calls by the kernel, set
-STATIC_USERMODEHELPER_PATH to an empty string.
-
-Thanks to Neil Brown for the idea of this feature.
-
-Cc: NeilBrown <neilb@suse.com>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- kernel/kmod.c    | 14 ++++++++++++++
- security/Kconfig | 35 +++++++++++++++++++++++++++++++++++
- 2 files changed, 49 insertions(+)
-
-diff --git a/kernel/kmod.c b/kernel/kmod.c
-index 426a614e97fe..0c407f905ca4 100644
---- a/kernel/kmod.c
-+++ b/kernel/kmod.c
-@@ -528,7 +528,12 @@ struct subprocess_info *call_usermodehelper_setup(const char *path, char **argv,
- 		goto out;
- 
- 	INIT_WORK(&sub_info->work, call_usermodehelper_exec_work);
-+
-+#ifdef CONFIG_STATIC_USERMODEHELPER
-+	sub_info->path = CONFIG_STATIC_USERMODEHELPER_PATH;
-+#else
- 	sub_info->path = path;
-+#endif
- 	sub_info->argv = argv;
- 	sub_info->envp = envp;
- 
-@@ -566,6 +571,15 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
- 		retval = -EBUSY;
- 		goto out;
- 	}
-+
-+	/*
-+	 * If there is no binary for us to call, then just return and get out of
-+	 * here.  This allows us to set STATIC_USERMODEHELPER_PATH to "" and
-+	 * disable all call_usermodehelper() calls.
-+	 */
-+	if (strlen(sub_info->path) == 0)
-+		goto out;
-+
- 	/*
- 	 * Set the completion pointer only if there is a waiter.
- 	 * This makes it possible to use umh_complete to free
-diff --git a/security/Kconfig b/security/Kconfig
-index 118f4549404e..d900f47eaa68 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -158,6 +158,41 @@ config HARDENED_USERCOPY_PAGESPAN
- 	  been removed. This config is intended to be used only while
- 	  trying to find such users.
- 
-+config STATIC_USERMODEHELPER
-+	bool "Force all usermode helper calls through a single binary"
-+	help
-+	  By default, the kernel can call many different userspace
-+	  binary programs through the "usermode helper" kernel
-+	  interface.  Some of these binaries are statically defined
-+	  either in the kernel code itself, or as a kernel configuration
-+	  option.  However, some of these are dynamically created at
-+	  runtime, or can be modified after the kernel has started up.
-+	  To provide an additional layer of security, route all of these
-+	  calls through a single executable that can not have its name
-+	  changed.
-+
-+	  Note, it is up to this single binary to then call the relevant
-+	  "real" usermode helper binary, based on the first argument
-+	  passed to it.  If desired, this program can filter and pick
-+	  and choose what real programs are called.
-+
-+	  If you wish for all usermode helper programs are to be
-+	  disabled, choose this option and then set
-+	  STATIC_USERMODEHELPER_PATH to an empty string.
-+
-+config STATIC_USERMODEHELPER_PATH
-+	string "Path to the static usermode helper binary"
-+	depends on STATIC_USERMODEHELPER
-+	default "/sbin/usermode-helper"
-+	help
-+	  The binary called by the kernel when any usermode helper
-+	  program is wish to be run.  The "real" application's name will
-+	  be in the first argument passed to this program on the command
-+	  line.
-+
-+	  If you wish for all usermode helper programs to be disabled,
-+	  specify an empty string here (i.e. "").
-+
- source security/selinux/Kconfig
- source security/smack/Kconfig
- source security/tomoyo/Kconfig
--- 
-2.11.0
+greg k-h
