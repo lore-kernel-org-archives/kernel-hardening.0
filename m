@@ -1,99 +1,77 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 16 Jan 2017 15:24:25 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170116152425.GG5908@leverpostej>
-References: <20170113220256.GA57663@beast>
- <5879F762.32059.37092152@pageexec.freemail.hu>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Mon, 16 Jan 2017 16:16:15 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
+References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org>
+ <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+ <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
+ <20170112051114.GG20972@linaro.org>
+ <20170112085714.GC3081@twins.programming.kicks-ass.net>
+In-Reply-To: <20170112085714.GC3081@twins.programming.kicks-ass.net>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <5879F762.32059.37092152@pageexec.freemail.hu>
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: PaX Team <pageexec@freemail.hu>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>
+Cc: Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
+> On Thu, Jan 12, 2017 at 02:11:15PM +0900, AKASHI Takahiro wrote:
+> > On Wed, Jan 11, 2017 at 02:55:21PM -0800, Kees Cook wrote:
+> > > On Wed, Jan 11, 2017 at 1:42 PM, Kees Cook <keescook@chromium.org>
+> wrote:
+> > > > I can see if it'll cherry-pick cleanly, I assume it will. :)
+> > >
+> > > It cherry-picked cleanly. However, I made several changes:
+> > >
+> > > - I adjusted Peter's author email (it had extra []s around).
+> > > - I fixed all of the commit subjects (Peter's were missing).
+> > > - I added back "kref: Add KREF_INIT()" since it seems to have been
+> > > lost and mixed into other patches that would break bisection
+> > >
+> > > It's here now, please work from this version:
+> > >
+> > >
+> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=3Dkspp/=
+hardened-
+> atomic
+> >
+> > I gave it a spin on arm64.
+> > It can compile with a change to smp.c that I mentioned before,
+> > but the boot failed. I've not dug into it.
+> >
+> > =3D=3D=3D8<=3D=3D=3D
+> > [    3.578618] refcount_t: increment on 0; use-after-free.
+> > [    3.579165] ------------[ cut here ]------------
+> > [    3.579254] WARNING: CPU: 0 PID: 1 at /home/akashi/arm/armv8/linaro/=
+linux-
+> aarch64/include/linux/refcount.h:109 unx_create+0x8c/0xc0
+>=20
+> That's dodgy code, someone needs to look at that.
+>=20
+> It has an inc in a function called 'create' which seems to suggest its
+> objection creation and we should be using refcount_set() instead.
+>=20
+> Then again, it looks like you can call this 'create' method multiple
+> times, each time returning the same static object, so refcount_set()
+> would not be correct.
+>=20
+> Using a refcount on a static object is weird of course, so this is bound
+> to give trouble.
 
-On Sat, Jan 14, 2017 at 11:03:14AM +0100, PaX Team wrote:
-> On 13 Jan 2017 at 14:02, Kees Cook wrote:
-> 
-> > +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
-> > +	bool "Report initialized variables"
-> > +	depends on GCC_PLUGIN_STRUCTLEAK
-> > +	depends on !COMPILE_TEST
-> > +	help
-> > +	  This option will cause a warning to be printed each time the
-> > +	  structleak plugin finds a variable it thinks needs to be
-> > +	  initialized. Since not all existing initializers are detected
-> > +	  by the plugin, this can produce false positive warnings.
-> 
-> there are no false positives, a variable either has a constructor or it does not ;)
+I have reverted this one back to atomic and added it to the tracking doc.
+The problem for this one is that it is not always used as static and in oth=
+er cases
+it is even initialized correctly to 1, but this static case seems to be spe=
+cial one giving troubles...
 
-... or it has no constructor, but is clobbered by a memset before it is
-possibly copied. ;)
-
-For example:
-
-arch/arm64/kernel/fpsimd.c: In function 'do_fpsimd_exc':
-arch/arm64/kernel/fpsimd.c:106:12: note: userspace variable will be forcibly initialized
-  siginfo_t info;
-
-... where the code looks like:
-
-void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
-{
-	siginfo_t info;
-	unsigned int si_code = 0;
-
-	if (esr & FPEXC_IOF)
-		si_code = FPE_FLTINV;
-	else if (esr & FPEXC_DZF)
-		si_code = FPE_FLTDIV;
-	else if (esr & FPEXC_OFF)
-		si_code = FPE_FLTOVF;
-	else if (esr & FPEXC_UFF)
-		si_code = FPE_FLTUND;
-	else if (esr & FPEXC_IXF)
-		si_code = FPE_FLTRES;
-
-	memset(&info, 0, sizeof(info));
-	info.si_signo = SIGFPE;
-	info.si_code = si_code;
-	info.si_addr = (void __user *)instruction_pointer(regs);
-
-	send_sig_info(SIGFPE, &info, current);
-}
-
-... so it's clear to a human that info is initialised prior to use,
-though not by an explicit field initializer.
-
-> > +/* unused C type flag in all versions 4.5-6 */
-> > +#define TYPE_USERSPACE(TYPE) TYPE_LANG_FLAG_5(TYPE)
-> 
-> FYI, this is a sort of abuse/hack of tree flags and should not be implemented this
-> way in the upstream kernel as it's a finite resource and needs careful verification
-> against all supported gcc versions (these flags are meant for language fronteds, i
-> kinda got lucky to have a few of them unusued but it's not a robust future-proof
-> approach). instead an attribute should be used to mark these types. whether that
-> can/should be __user itself is a good question since that's another hack where the
-> plugin 'hijacks' a sparse address space atttribute (for which gcc 4.6+ has its own
-> facilities and that the checker gcc plugin makes use of thus it's not compatible
-> with structleak as is).
-
-To me, it seems that the __user annotation can only be an indicator of
-an issue by chance. We have structures with __user pointers in structs
-that will never be copied to userspace, and conversely we have structs
-that don't contain a __user field, but will be copied to userspace.
-
-Maybe it happens that structs in more complex systems are more likely to
-contain some __user pointer. Was that part of the rationale?
-
-I wonder if there's any analysis we can do of data passing into
-copy_to_user() and friends. I guess we can't follow the data flow across
-compilation units, but we might be able to follow it well enough if we
-added a new attribute that described whether data was to be copied to
-userspace.
-
-Thanks,
-Mark.
+Last week I also fixed all the warnings/errors that test infra gave. The qu=
+estion that comes is what next? How do we really test this further apart fr=
+om just booting this up?=20
