@@ -1,420 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Mon, 16 Jan 2017 11:54:35 +0000
+Date: Mon, 16 Jan 2017 12:26:22 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170116115435.GB5908@leverpostej>
+Message-ID: <20170116122622.GF5908@leverpostej>
 References: <20170113220256.GA57663@beast>
+ <20170116115435.GB5908@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20170113220256.GA57663@beast>
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
+In-Reply-To: <20170116115435.GB5908@leverpostej>
+Subject: Re: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for
+ more stack initialization
 To: Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, dave.martin@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi,
-
-[adding Dave, so retaining full context below]
-
-On Fri, Jan 13, 2017 at 02:02:56PM -0800, Kees Cook wrote:
-> This plugin detects any structures that contain __user attributes and
-> makes sure it is being fulling initialized so that a specific class of
-
-Nit: s/fulling/fully/
-
-> information exposure is eliminated. (For example, the exposure of siginfo
-> in CVE-2013-2141 would have been blocked by this plugin.)
+On Mon, Jan 16, 2017 at 11:54:35AM +0000, Mark Rutland wrote:
+> Hi,
 > 
-> Ported from grsecurity/PaX. This version adds a verbose option to the
-> plugin and the Kconfig.
+> [adding Dave, so retaining full context below]
 > 
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  arch/Kconfig                            |  22 +++
->  include/linux/compiler.h                |   6 +-
->  scripts/Makefile.gcc-plugins            |   4 +
->  scripts/gcc-plugins/structleak_plugin.c | 246 ++++++++++++++++++++++++++++++++
->  4 files changed, 277 insertions(+), 1 deletion(-)
->  create mode 100644 scripts/gcc-plugins/structleak_plugin.c
+> On Fri, Jan 13, 2017 at 02:02:56PM -0800, Kees Cook wrote:
+> > This plugin detects any structures that contain __user attributes and
+> > makes sure it is being fulling initialized so that a specific class of
+> 
+> Nit: s/fulling/fully/
+> 
+> > information exposure is eliminated. (For example, the exposure of siginfo
+> > in CVE-2013-2141 would have been blocked by this plugin.)
+> > 
+> > Ported from grsecurity/PaX. This version adds a verbose option to the
+> > plugin and the Kconfig.
+> > 
+> > Signed-off-by: Kees Cook <keescook@chromium.org>
+> > ---
+> >  arch/Kconfig                            |  22 +++
+> >  include/linux/compiler.h                |   6 +-
+> >  scripts/Makefile.gcc-plugins            |   4 +
+> >  scripts/gcc-plugins/structleak_plugin.c | 246 ++++++++++++++++++++++++++++++++
+> >  4 files changed, 277 insertions(+), 1 deletion(-)
+> >  create mode 100644 scripts/gcc-plugins/structleak_plugin.c
+> 
+> I tried giving this a go, but I got the build failure below:
 
-I tried giving this a go, but I got the build failure below:
+Looking again, I see that there was another patch to add PASS_INFO() and
+other bits that the patch required. Sorry for the noise there.
+
+In the mean time, I cribbed from the latent entropy plugin, and built
+with the below applied:
 
 ----
-[mark@leverpostej:~/src/linux]% uselinaro 15.08 make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
-arch/arm64/Makefile:43: Detected assembler with broken .inst; disassembly will be unreliable
-  CHK     include/config/kernel.release
-  CHK     include/generated/uapi/linux/version.h
-  CHK     include/generated/utsrelease.h
-  UPD     include/generated/utsrelease.h
-  HOSTCXX -fPIC scripts/gcc-plugins/structleak_plugin.o
-scripts/gcc-plugins/structleak_plugin.c: In function ‘int plugin_init(plugin_name_args*, plugin_gcc_version*)’:
-scripts/gcc-plugins/structleak_plugin.c:214:12: error: ‘structleak’ was not declared in this scope
-  PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE);
-            ^
-scripts/gcc-plugins/structleak_plugin.c:214:72: error: ‘PASS_INFO’ was not declared in this scope
-  PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE);
-                                                                        ^
-scripts/gcc-plugins/structleak_plugin.c:240:68: error: ‘structleak_pass_info’ was not declared in this scope
-   register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &structleak_pass_info);
-                                                                    ^
-make[1]: *** [scripts/gcc-plugins/structleak_plugin.o] Error 1
-make: *** [gcc-plugins] Error 2
+diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
+index deddb72..1e01763 100644
+--- a/scripts/gcc-plugins/structleak_plugin.c
++++ b/scripts/gcc-plugins/structleak_plugin.c
+@@ -210,8 +210,12 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
+        const int argc = plugin_info->argc;
+        const struct plugin_argument * const argv = plugin_info->argv;
+        bool enable = true;
+-
+-       PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE);
++       struct register_pass_info structleak_pass_info = {
++               .pass  = make_structleak_pass(),
++               .reference_pass_name = "early_optimizations",
++               .ref_pass_instance_number = 1,
++               .pos_op = PASS_POS_INSERT_BEFORE,
++       };
+ 
+        if (!plugin_default_version_check(version, &gcc_version)) {
+                error(G_("incompatible gcc/plugin versions"));
 ----
 
-I'm using the Linaro 15.08 x86_64 aarch64-linux-gnu- cross toolchain. I believe
-that can be found at:
+With verbose mode, I see quite a few initializations, mostly in signal
+handling. Something to add to the queue of things to investigate...
 
-https://releases.linaro.org/components/toolchain/binaries/5.1-2015.08/aarch64-linux-gnu/gcc-linaro-5.1-2015.08-x86_64_aarch64-linux-gnu.tar.xz
-
-Unfortunately, due to that (and lack of a good testcase), I can't give
-much substantial feedback on this.
-
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index 99839c23d453..f1250ba0b06f 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -410,6 +410,28 @@ config GCC_PLUGIN_LATENT_ENTROPY
->  	   * https://grsecurity.net/
->  	   * https://pax.grsecurity.net/
->  
-> +config GCC_PLUGIN_STRUCTLEAK
-> +	bool "Force initialization of variables containing userspace addresses"
-> +	depends on GCC_PLUGINS
-> +	help
-> +	  This plugin zero-initializes any structures that containing a
-> +	  __user attribute. This can prevent some classes of information
-> +	  exposures.
-> +
-> +	  This plugin was ported from grsecurity/PaX. More information at:
-> +	   * https://grsecurity.net/
-> +	   * https://pax.grsecurity.net/
-> +
-> +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
-> +	bool "Report initialized variables"
-
-It might be better to say "Report forcefully initialized variables", to make it
-clear that this is only reporting initialization performed by the plugin.
-
-> +	depends on GCC_PLUGIN_STRUCTLEAK
-> +	depends on !COMPILE_TEST
-> +	help
-> +	  This option will cause a warning to be printed each time the
-> +	  structleak plugin finds a variable it thinks needs to be
-> +	  initialized. Since not all existing initializers are detected
-> +	  by the plugin, this can produce false positive warnings.
-> +
->  config HAVE_CC_STACKPROTECTOR
->  	bool
->  	help
-> diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-> index cf0fa5d86059..91c30cba984e 100644
-> --- a/include/linux/compiler.h
-> +++ b/include/linux/compiler.h
-> @@ -27,7 +27,11 @@ extern void __chk_user_ptr(const volatile void __user *);
->  extern void __chk_io_ptr(const volatile void __iomem *);
->  # define ACCESS_PRIVATE(p, member) (*((typeof((p)->member) __force *) &(p)->member))
->  #else /* __CHECKER__ */
-> -# define __user
-> +# ifdef STRUCTLEAK_PLUGIN
-> +#  define __user __attribute__((user))
-> +# else
-> +#  define __user
-> +# endif
->  # define __kernel
->  # define __safe
->  # define __force
-> diff --git a/scripts/Makefile.gcc-plugins b/scripts/Makefile.gcc-plugins
-> index 060d2cb373db..a084f7a511d8 100644
-> --- a/scripts/Makefile.gcc-plugins
-> +++ b/scripts/Makefile.gcc-plugins
-> @@ -25,6 +25,10 @@ ifdef CONFIG_GCC_PLUGINS
->      endif
->    endif
->  
-> +  gcc-plugin-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= structleak_plugin.so
-> +  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE)	+= -fplugin-arg-structleak_plugin-verbose
-> +  gcc-plugin-cflags-$(CONFIG_GCC_PLUGIN_STRUCTLEAK)	+= -DSTRUCTLEAK_PLUGIN
-> +
->    GCC_PLUGINS_CFLAGS := $(strip $(addprefix -fplugin=$(objtree)/scripts/gcc-plugins/, $(gcc-plugin-y)) $(gcc-plugin-cflags-y))
->  
->    export PLUGINCC GCC_PLUGINS_CFLAGS GCC_PLUGIN GCC_PLUGIN_SUBDIR
-> diff --git a/scripts/gcc-plugins/structleak_plugin.c b/scripts/gcc-plugins/structleak_plugin.c
-> new file mode 100644
-> index 000000000000..deddb7291a26
-> --- /dev/null
-> +++ b/scripts/gcc-plugins/structleak_plugin.c
-> @@ -0,0 +1,246 @@
-> +/*
-> + * Copyright 2013-2017 by PaX Team <pageexec@freemail.hu>
-> + * Licensed under the GPL v2
-> + *
-> + * Note: the choice of the license means that the compilation process is
-> + *       NOT 'eligible' as defined by gcc's library exception to the GPL v3,
-> + *       but for the kernel it doesn't matter since it doesn't link against
-> + *       any of the gcc libraries
-
-It's my understanding that some architectures do link against libgcc, so we
-might want some kind of guard to avoid mishaps. e.g.
-ARCH_CAN_USE_NON_GPLV3_GCC_PLUGINS.
-
-> + *
-> + * gcc plugin to forcibly initialize certain local variables that could
-> + * otherwise leak kernel stack to userland if they aren't properly initialized
-> + * by later code
-> + *
-> + * Homepage: http://pax.grsecurity.net/
-> + *
-> + * Options:
-> + * -fplugin-arg-structleak_plugin-disable
-> + * -fplugin-arg-structleak_plugin-verbose
-> + *
-> + * Usage:
-> + * $ # for 4.5/4.6/C based 4.7
-> + * $ gcc -I`gcc -print-file-name=plugin`/include -I`gcc -print-file-name=plugin`/include/c-family -fPIC -shared -O2 -o structleak_plugin.so structleak_plugin.c
-> + * $ # for C++ based 4.7/4.8+
-> + * $ g++ -I`g++ -print-file-name=plugin`/include -I`g++ -print-file-name=plugin`/include/c-family -fPIC -shared -O2 -o structleak_plugin.so structleak_plugin.c
-> + * $ gcc -fplugin=./structleak_plugin.so test.c -O2
-> + *
-> + * TODO: eliminate redundant initializers
-> + *       increase type coverage
-> + */
-> +
-> +#include "gcc-common.h"
-> +
-> +/* unused C type flag in all versions 4.5-6 */
-> +#define TYPE_USERSPACE(TYPE) TYPE_LANG_FLAG_5(TYPE)
-> +
-> +__visible int plugin_is_GPL_compatible;
-> +
-> +static struct plugin_info structleak_plugin_info = {
-> +	.version	= "201607271510vanilla",
-
-Has this been modified at all in the porting process? Maybe it would be
-good to include KERNELVERSION here?
-
-> +	.help		= "disable\tdo not activate plugin\n"
-> +			   "verbose\tprint all initialized variables\n",
-> +};
-> +
-> +static bool verbose;
-> +
-> +static tree handle_user_attribute(tree *node, tree name, tree args, int flags, bool *no_add_attrs)
-> +{
-> +	*no_add_attrs = true;
-> +
-> +	/* check for types? for now accept everything linux has to offer */
-> +	if (TREE_CODE(*node) != FIELD_DECL)
-> +		return NULL_TREE;
-> +
-> +	*no_add_attrs = false;
-> +	return NULL_TREE;
-> +}
-> +
-> +static struct attribute_spec user_attr = {
-> +	.name			= "user",
-> +	.min_length		= 0,
-> +	.max_length		= 0,
-> +	.decl_required		= false,
-> +	.type_required		= false,
-> +	.function_type_required	= false,
-> +	.handler		= handle_user_attribute,
-> +#if BUILDING_GCC_VERSION >= 4007
-> +	.affects_type_identity	= true
-> +#endif
-> +};
-> +
-> +static void register_attributes(void *event_data, void *data)
-> +{
-> +	register_attribute(&user_attr);
-> +}
-> +
-> +static tree get_field_type(tree field)
-> +{
-> +	return strip_array_types(TREE_TYPE(field));
-> +}
-> +
-> +static bool is_userspace_type(tree type)
-> +{
-> +	tree field;
-> +
-> +	for (field = TYPE_FIELDS(type); field; field = TREE_CHAIN(field)) {
-> +		tree fieldtype = get_field_type(field);
-> +		enum tree_code code = TREE_CODE(fieldtype);
-> +
-> +		if (code == RECORD_TYPE || code == UNION_TYPE)
-> +			if (is_userspace_type(fieldtype))
-> +				return true;
-> +
-> +		if (lookup_attribute("user", DECL_ATTRIBUTES(field)))
-> +			return true;
-> +	}
-> +	return false;
-> +}
-> +
-> +static void finish_type(void *event_data, void *data)
-> +{
-> +	tree type = (tree)event_data;
-> +
-> +	if (type == NULL_TREE || type == error_mark_node)
-> +		return;
-> +
-> +#if BUILDING_GCC_VERSION >= 5000
-> +	if (TREE_CODE(type) == ENUMERAL_TYPE)
-> +		return;
-> +#endif
-> +
-> +	if (TYPE_USERSPACE(type))
-> +		return;
-> +
-> +	if (is_userspace_type(type))
-> +		TYPE_USERSPACE(type) = 1;
-> +}
-> +
-> +static void initialize(tree var)
-> +{
-> +	basic_block bb;
-> +	gimple_stmt_iterator gsi;
-> +	tree initializer;
-> +	gimple init_stmt;
-> +
-> +	/* this is the original entry bb before the forced split */
-> +	bb = single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
-> +
-> +	/* first check if variable is already initialized, warn otherwise */
-> +	for (gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi)) {
-> +		gimple stmt = gsi_stmt(gsi);
-> +		tree rhs1;
-> +
-> +		/* we're looking for an assignment of a single rhs... */
-> +		if (!gimple_assign_single_p(stmt))
-> +			continue;
-> +		rhs1 = gimple_assign_rhs1(stmt);
-> +#if BUILDING_GCC_VERSION >= 4007
-> +		/* ... of a non-clobbering expression... */
-> +		if (TREE_CLOBBER_P(rhs1))
-> +			continue;
-> +#endif
-> +		/* ... to our variable... */
-> +		if (gimple_get_lhs(stmt) != var)
-> +			continue;
-> +		/* if it's an initializer then we're good */
-> +		if (TREE_CODE(rhs1) == CONSTRUCTOR)
-> +			return;
-> +	}
-> +
-> +	/* these aren't the 0days you're looking for */
-> +	if (verbose)
-> +		inform(DECL_SOURCE_LOCATION(var),
-> +			"userspace variable will be forcibly initialized");
-> +
-> +	/* build the initializer expression */
-> +	initializer = build_constructor(TREE_TYPE(var), NULL);
-> +
-> +	/* build the initializer stmt */
-> +	init_stmt = gimple_build_assign(var, initializer);
-> +	gsi = gsi_after_labels(single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
-> +	gsi_insert_before(&gsi, init_stmt, GSI_NEW_STMT);
-> +	update_stmt(init_stmt);
-
-I assume that this is only guaranteed to initialise fields in a struct,
-and not padding, is that correct? I ask due to the issue described in:
-
-https://lwn.net/Articles/417989/
-
-As a further step, it would be interesting to see if we could fix
-padding for __user variables, but that certainly shouldn't hold this
-back.
-
-> +}
-> +
-> +static unsigned int structleak_execute(void)
-> +{
-> +	basic_block bb;
-> +	unsigned int ret = 0;
-> +	tree var;
-> +	unsigned int i;
-> +
-> +	/* split the first bb where we can put the forced initializers */
-> +	gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
-> +	bb = single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
-> +	if (!single_pred_p(bb)) {
-> +		split_edge(single_succ_edge(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
-> +		gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
-> +	}
-> +
-> +	/* enumarate all local variables and forcibly initialize our targets */
-
-Nit: s/enumarate/enumerate/
-
-> +	FOR_EACH_LOCAL_DECL(cfun, i, var) {
-> +		tree type = TREE_TYPE(var);
-> +
-> +		gcc_assert(DECL_P(var));
-> +		if (!auto_var_in_fn_p(var, current_function_decl))
-> +			continue;
-> +
-> +		/* only care about structure types */
-> +		if (TREE_CODE(type) != RECORD_TYPE && TREE_CODE(type) != UNION_TYPE)
-> +			continue;
-> +
-> +		/* if the type is of interest, examine the variable */
-> +		if (TYPE_USERSPACE(type))
-> +			initialize(var);
-> +	}
-> +
-> +	return ret;
-> +}
-> +
-> +#define PASS_NAME structleak
-> +#define NO_GATE
-> +#define PROPERTIES_REQUIRED PROP_cfg
-> +#define TODO_FLAGS_FINISH TODO_verify_il | TODO_verify_ssa | TODO_verify_stmts | TODO_dump_func | TODO_remove_unused_locals | TODO_update_ssa | TODO_ggc_collect | TODO_verify_flow
-> +#include "gcc-generate-gimple-pass.h"
-> +
-> +__visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gcc_version *version)
-> +{
-> +	int i;
-> +	const char * const plugin_name = plugin_info->base_name;
-> +	const int argc = plugin_info->argc;
-> +	const struct plugin_argument * const argv = plugin_info->argv;
-> +	bool enable = true;
-> +
-> +	PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE);
-> +
-> +	if (!plugin_default_version_check(version, &gcc_version)) {
-> +		error(G_("incompatible gcc/plugin versions"));
-> +		return 1;
-> +	}
-> +
-> +	if (strncmp(lang_hooks.name, "GNU C", 5) && !strncmp(lang_hooks.name, "GNU C+", 6)) {
-> +		inform(UNKNOWN_LOCATION, G_("%s supports C only, not %s"), plugin_name, lang_hooks.name);
-> +		enable = false;
-> +	}
-> +
-> +	for (i = 0; i < argc; ++i) {
-> +		if (!strcmp(argv[i].key, "disable")) {
-> +			enable = false;
-> +			continue;
-> +		}
-> +		if (!strcmp(argv[i].key, "verbose")) {
-> +			verbose = true;
-> +			continue;
-> +		}
-> +		error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
-> +	}
-> +
-> +	register_callback(plugin_name, PLUGIN_INFO, NULL, &structleak_plugin_info);
-> +	if (enable) {
-> +		register_callback(plugin_name, PLUGIN_PASS_MANAGER_SETUP, NULL, &structleak_pass_info);
-> +		register_callback(plugin_name, PLUGIN_FINISH_TYPE, finish_type, NULL);
-> +	}
-> +	register_callback(plugin_name, PLUGIN_ATTRIBUTES, register_attributes, NULL);
-> +
-> +	return 0;
-> +}
-> -- 
-> 2.7.4
-
-Thanks,
 Mark.
