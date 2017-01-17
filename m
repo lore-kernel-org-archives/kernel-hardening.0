@@ -1,76 +1,74 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 17 Jan 2017 10:19:11 -0500
-From: "J. Bruce Fields" <bfields@fieldses.org>
-Message-ID: <20170117151911.GA13787@fieldses.org>
+Date: Tue, 17 Jan 2017 16:29:19 +0100
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20170117152919.GA4640@kroah.com>
 References: <20170116164944.GA28984@kroah.com>
  <20170116165031.GB29693@kroah.com>
  <20170116212555.GA5201@fieldses.org>
  <20170117071347.GA7296@kroah.com>
+ <20170117151911.GA13787@fieldses.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170117071347.GA7296@kroah.com>
+In-Reply-To: <20170117151911.GA13787@fieldses.org>
 Subject: [kernel-hardening] Re: [PATCH 2/3] Make static usermode helper binaries constant
-To: Greg KH <gregkh@linuxfoundation.org>
+To: "J. Bruce Fields" <bfields@fieldses.org>
 Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, Jeff Layton <jlayton@poochiereds.net>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 17, 2017 at 08:13:47AM +0100, Greg KH wrote:
-> On Mon, Jan 16, 2017 at 04:25:55PM -0500, J. Bruce Fields wrote:
-> > On Mon, Jan 16, 2017 at 05:50:31PM +0100, Greg KH wrote:
-> > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+On Tue, Jan 17, 2017 at 10:19:11AM -0500, J. Bruce Fields wrote:
+> On Tue, Jan 17, 2017 at 08:13:47AM +0100, Greg KH wrote:
+> > On Mon, Jan 16, 2017 at 04:25:55PM -0500, J. Bruce Fields wrote:
+> > > On Mon, Jan 16, 2017 at 05:50:31PM +0100, Greg KH wrote:
+> > > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> > > > 
+> > > > There are a number of usermode helper binaries that are "hard coded" in
+> > > > the kernel today, so mark them as "const" to make it harder for someone
+> > > > to change where the variables point to.
+> > > > 
+> > > ...
+> > > > --- a/drivers/pnp/pnpbios/core.c
+> > > > +++ b/drivers/pnp/pnpbios/core.c
+> > > > @@ -98,6 +98,7 @@ static struct completion unload_sem;
+> > > >   */
+> > > >  static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > > >  {
+> > > > +	static char const sbin_pnpbios[] = "/sbin/pnpbios";
+> > > >  	char *argv[3], **envp, *buf, *scratch;
+> > > >  	int i = 0, value;
+> > > >  
+> > > > @@ -112,7 +113,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > > >  	 * integrated into the driver core and use the usual infrastructure
+> > > >  	 * like sysfs and uevents
+> > > >  	 */
+> > > > -	argv[0] = "/sbin/pnpbios";
+> > > > +	argv[0] = (char *)sbin_pnpbios;
 > > > 
-> > > There are a number of usermode helper binaries that are "hard coded" in
-> > > the kernel today, so mark them as "const" to make it harder for someone
-> > > to change where the variables point to.
-> > > 
-> > ...
-> > > --- a/drivers/pnp/pnpbios/core.c
-> > > +++ b/drivers/pnp/pnpbios/core.c
-> > > @@ -98,6 +98,7 @@ static struct completion unload_sem;
-> > >   */
-> > >  static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
-> > >  {
-> > > +	static char const sbin_pnpbios[] = "/sbin/pnpbios";
-> > >  	char *argv[3], **envp, *buf, *scratch;
-> > >  	int i = 0, value;
-> > >  
-> > > @@ -112,7 +113,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
-> > >  	 * integrated into the driver core and use the usual infrastructure
-> > >  	 * like sysfs and uevents
-> > >  	 */
-> > > -	argv[0] = "/sbin/pnpbios";
-> > > +	argv[0] = (char *)sbin_pnpbios;
+> > > So here and elsewhere, can attackers write to argv[0] instead of to the
+> > > memory where the string lives?
 > > 
-> > So here and elsewhere, can attackers write to argv[0] instead of to the
-> > memory where the string lives?
+> > Yes, they could, it would be a very "tight" race to do that (have to
+> > write after the assignment and before the call_usermodehelper_exec()
+> > runs).  However, the kernel does not run argv[0], it just passes it to
+> > the binary you specify in path, so for this example, the correct program
+> > would still be run by the kernel.
 > 
-> Yes, they could, it would be a very "tight" race to do that (have to
-> write after the assignment and before the call_usermodehelper_exec()
-> runs).  However, the kernel does not run argv[0], it just passes it to
-> the binary you specify in path, so for this example, the correct program
-> would still be run by the kernel.
+> In this case it's argv[0] that will be passed to call_usermodehelper as
+> path, but.... OK, this argv array and the various function call
+> arguments are all just data on the stack, so I guess it's all about
+> equivalent.
 
-In this case it's argv[0] that will be passed to call_usermodehelper as
-path, but.... OK, this argv array and the various function call
-arguments are all just data on the stack, so I guess it's all about
-equivalent.
+Kind of, nice catch, I'll change the call to usermodehelper to use
+sbin_pnpbios here, as that's the right thing to do.
 
-So we're assuming an attacker that can write to a static location in
-memory but can't write to the right part of the stack at the right time.
-I'm no expert at this kind of thing but it seems plausible that
-assumption could apply in cases that matter.
+> So we're assuming an attacker that can write to a static location in
+> memory but can't write to the right part of the stack at the right time.
+> I'm no expert at this kind of thing but it seems plausible that
+> assumption could apply in cases that matter.
 
-> But, if you do worry about this type of attack, then enable the option I
-> created in patch 3/3 here, which will funnel all calls into a single
-> userspace binary where you can then filter on argv[0] to see if you want
-> to run the binary or not to prevent this type of attack.
-> 
-> > Apologies if I'm rehashing earlier discussion, I did a quick search of
-> > archives but could easily have missed something.
-> 
-> No problem at all, hopefully I've explained it better now.
+And again, if you really are worried about this, just use the new
+kconfig option that allows you to filter all of this in userspace :)
 
-Thanks!
+thanks,
 
---b.
+greg k-h
