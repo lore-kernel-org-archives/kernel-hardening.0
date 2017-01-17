@@ -1,163 +1,232 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Tue, 17 Jan 2017 18:07:47 +0000
+From: Dave P Martin <Dave.Martin@arm.com>
+Message-ID: <20170117180746.GN18838@e103592.cambridge.arm.com>
+References: <20170113220256.GA57663@beast>
+ <587D1D70.26193.89AFE10@pageexec.freemail.hu>
+ <20170117104239.GG18838@e103592.cambridge.arm.com>
+ <587E4FDD.31940.D47F642@pageexec.freemail.hu>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170116115435.GB5908@leverpostej>
-References: <20170113220256.GA57663@beast> <20170116115435.GB5908@leverpostej>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 17 Jan 2017 09:56:24 -0800
-Message-ID: <CAGXu5j+GQ5feC=bL4-PKWV9p3e9CeAKKGMfgdwk1=FfnYLMviw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/plain; charset="us-ascii"
+Content-Disposition: inline
+In-Reply-To: <587E4FDD.31940.D47F642@pageexec.freemail.hu>
 Content-Transfer-Encoding: quoted-printable
 Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Dave Martin <dave.martin@arm.com>
+To: PaX Team <pageexec@freemail.hu>
+Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 16, 2017 at 3:54 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> Hi,
+On Tue, Jan 17, 2017 at 06:09:49PM +0100, PaX Team wrote:
+> On 17 Jan 2017 at 10:42, Dave P Martin wrote:
 >
-> [adding Dave, so retaining full context below]
+> > On Mon, Jan 16, 2017 at 08:22:24PM +0100, PaX Team wrote:
+> > > the 'issue' is that before C11 the standard didn't make it clear that=
+ in
+> > > case of a partial initializer list the compiler has to initialize not=
+ only
+> > > the remaining fields but also padding as well.
+> >
+> > Which version of the C11 spec clarifies this?
+> >
+> > The one I'm looking at (n1570, Apr 12 2011) says:
+> >
+> > "6.7.9 21 If there are fewer initializers in a brace-enclosed list than
+> > there are elements or members of an aggregate, or fewer characters in a
+> > string literal used to initialize an array of known size than there are
+> > elements in the array, the remainder of the aggregate shall be
+> > initialized implicitly the same as objects that have static storage
+> > duration."
+> >
+> > What is meant by "the remainder of the object" is unclear.
 >
-> On Fri, Jan 13, 2017 at 02:02:56PM -0800, Kees Cook wrote:
->> This plugin detects any structures that contain __user attributes and
->> makes sure it is being fulling initialized so that a specific class of
+> it's less unclear if you also take into account the rest of the
+> sentence that says "[initialized] the same as objects that have
+> static storage duration" which in turn is described at 6.7.9p10
+> where it says among others:
 >
-> Nit: s/fulling/fully/
-
-Whoops, thanks, fixed.
-
->> information exposure is eliminated. (For example, the exposure of siginf=
-o
->> in CVE-2013-2141 would have been blocked by this plugin.)
->>
->> Ported from grsecurity/PaX. This version adds a verbose option to the
->> plugin and the Kconfig.
->>
->> Signed-off-by: Kees Cook <keescook@chromium.org>
->> ---
->>  arch/Kconfig                            |  22 +++
->>  include/linux/compiler.h                |   6 +-
->>  scripts/Makefile.gcc-plugins            |   4 +
->>  scripts/gcc-plugins/structleak_plugin.c | 246 +++++++++++++++++++++++++=
-+++++++
->>  4 files changed, 277 insertions(+), 1 deletion(-)
->>  create mode 100644 scripts/gcc-plugins/structleak_plugin.c
+>   "if it is an aggregate, every member is initialized (recursively)
+>    according to these rules, and any padding is initialized to zero bits"
 >
-> I tried giving this a go, but I got the build failure below:
+> the "and any padding is initialized to zero bits" was the addition
+> in C11 (which i'm not sure was meant as a new feature for C11 or
+> just official enshrinement of what had always been meant).
 >
-> ----
-> [mark@leverpostej:~/src/linux]% uselinaro 15.08 make ARCH=3Darm64 CROSS_C=
-OMPILE=3Daarch64-linux-gnu-
-> arch/arm64/Makefile:43: Detected assembler with broken .inst; disassembly=
- will be unreliable
->   CHK     include/config/kernel.release
->   CHK     include/generated/uapi/linux/version.h
->   CHK     include/generated/utsrelease.h
->   UPD     include/generated/utsrelease.h
->   HOSTCXX -fPIC scripts/gcc-plugins/structleak_plugin.o
-> scripts/gcc-plugins/structleak_plugin.c: In function =E2=80=98int plugin_=
-init(plugin_name_args*, plugin_gcc_version*)=E2=80=99:
-> scripts/gcc-plugins/structleak_plugin.c:214:12: error: =E2=80=98structlea=
-k=E2=80=99 was not declared in this scope
->   PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE)=
-;
->             ^
-
-Sorry, yes, this depends on the gcc-plugins changes in -next.
-
-> [...]
->> diff --git a/arch/Kconfig b/arch/Kconfig
->> index 99839c23d453..f1250ba0b06f 100644
->> --- a/arch/Kconfig
->> +++ b/arch/Kconfig
->> @@ -410,6 +410,28 @@ config GCC_PLUGIN_LATENT_ENTROPY
->>          * https://grsecurity.net/
->>          * https://pax.grsecurity.net/
->>
->> +config GCC_PLUGIN_STRUCTLEAK
->> +     bool "Force initialization of variables containing userspace addre=
-sses"
->> +     depends on GCC_PLUGINS
->> +     help
->> +       This plugin zero-initializes any structures that containing a
->> +       __user attribute. This can prevent some classes of information
->> +       exposures.
->> +
->> +       This plugin was ported from grsecurity/PaX. More information at:
->> +        * https://grsecurity.net/
->> +        * https://pax.grsecurity.net/
->> +
->> +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
->> +     bool "Report initialized variables"
+> >  Is this just the tail of the object, or all unitialised members --
+> > which may be sparse in the case of an initialiser with designators? And
+> > is padding (and if so, which padding) considered to be part of (the
+> > remainder of) the object for the purpose of this paragraph?
 >
-> It might be better to say "Report forcefully initialized variables", to m=
-ake it
-> clear that this is only reporting initialization performed by the plugin.
-
-Sounds good, changed.
-
-> [...]
->> +     /* these aren't the 0days you're looking for */
->> +     if (verbose)
->> +             inform(DECL_SOURCE_LOCATION(var),
->> +                     "userspace variable will be forcibly initialized")=
-;
->> +
->> +     /* build the initializer expression */
->> +     initializer =3D build_constructor(TREE_TYPE(var), NULL);
->> +
->> +     /* build the initializer stmt */
->> +     init_stmt =3D gimple_build_assign(var, initializer);
->> +     gsi =3D gsi_after_labels(single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun))=
-);
->> +     gsi_insert_before(&gsi, init_stmt, GSI_NEW_STMT);
->> +     update_stmt(init_stmt);
+> to me the quote about 'any padding' is for all kinds of padding.
+> uninitialized members are described in the same paragraph.
 >
-> I assume that this is only guaranteed to initialise fields in a struct,
-> and not padding, is that correct? I ask due to the issue described in:
+> > This can be read with the interpretation you suggest, but the wording
+> > doesn't seem rock-solid.  For the kernel, I guess it's sufficient if
+> > GCC commits to this interpretation though.
 >
-> https://lwn.net/Articles/417989/
+> note that i'm not a language lawyer, merely an interpreter, so take
+> the above with a grain of salt.
+
+Me neither, but actually I think this interpretation doesn't make sense.
+The implication seems to be that padding initialisation of initialised
+aggregates with automatic storage is guaranteed _only_ if the
+initialiser is incomplete.
+
+
+Paragraph 19 always applies, but that only asserts "all subobjects that
+are not initialized explicitly shall be initialized implicitly the same
+as objects that have static storage duration" -- no statement about
+padding.
+
+Paragraph 21 guarantees initialisation of padding bytes, but applies
+_only_ if the initializer list is incomplete.
+
+
+As a random test, a recent-ish gcc might actually apply this
+interpretation...
+
+
+tst.c
+---8<---
+
+struct foo {
+        long x;
+        char y;
+        long z;
+        int w;
+};
+
+void f(struct foo *);
+
+void g(long *x, char *y, long *z, int *w)
+{
+        struct foo o =3D { .z =3D *z, .y =3D *y, .x =3D *x, .w =3D *w };
+
+        f(&o);
+}
+
+void h(int *y, long *z)
+{
+        struct foo o =3D { .z =3D *z, .y =3D *y };
+
+        f(&o);
+}
+
+--->8---
+
+
+$ gcc (Debian 6.3.0-2) 6.3.0 20161229
+$ gcc -Wall -Wextra -pedantic -O2 -std=3Dc11 -c tst.c
+$ objdump -d tst.o
+
+tst.o:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000000000 <g>:
+   0:   a9bd7bfd        stp     x29, x30, [sp, #-48]!
+   4:   910003fd        mov     x29, sp
+   8:   39400024        ldrb    w4, [x1]
+   c:   f9400005        ldr     x5, [x0]
+  10:   910043a0        add     x0, x29, #0x10
+  14:   b9400061        ldr     w1, [x3]
+  18:   f9400042        ldr     x2, [x2]
+  1c:   390063a4        strb    w4, [x29, #24]
+  20:   f9000ba5        str     x5, [x29, #16]
+  24:   f90013a2        str     x2, [x29, #32]
+  28:   b9002ba1        str     w1, [x29, #40]
+  2c:   94000000        bl      0 <f>
+  30:   a8c37bfd        ldp     x29, x30, [sp], #48
+  34:   d65f03c0        ret
+
+0000000000000038 <h>:
+  38:   a9bd7bfd        stp     x29, x30, [sp, #-48]!
+  3c:   910003fd        mov     x29, sp
+  40:   b9400002        ldr     w2, [x0]
+  44:   910043a0        add     x0, x29, #0x10
+  48:   f9400021        ldr     x1, [x1]
+  4c:   a9017fbf        stp     xzr, xzr, [x29, #16]
+  50:   a9027fbf        stp     xzr, xzr, [x29, #32]
+  54:   390063a2        strb    w2, [x29, #24]
+  58:   f90013a1        str     x1, [x29, #32]
+  5c:   94000000        bl      0 <f>
+  60:   a8c37bfd        ldp     x29, x30, [sp], #48
+  64:   d65f03c0        ret
+
+
+In g(), where the initialiser is complete, the padding in o is
+definitely not zeroed out.  In h(), the padding is all zeroed out,
+including padding around the zeoed members -- whether gcc intentionally
+guarantees this or it's just a coincidence, I don't know.
+
+This may or may not be a bug, and may or may not have been fixed in a
+more recent version.
+
 >
-> As a further step, it would be interesting to see if we could fix
-> padding for __user variables, but that certainly shouldn't hold this
-> back.
-
-This spawned a whole thread. :) For non-C11, yeah, a plugin to do this
-would be nice. That's already on the KSPP TODO list, but from what I
-can tell it either requires walking every variable's structure to
-check for sizes and padding or do explicitly add a constructor for
-every variable and hope that the optimization phase does the right
-thing. ;)
-
->> +}
->> +
->> +static unsigned int structleak_execute(void)
->> +{
->> +     basic_block bb;
->> +     unsigned int ret =3D 0;
->> +     tree var;
->> +     unsigned int i;
->> +
->> +     /* split the first bb where we can put the forced initializers */
->> +     gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
->> +     bb =3D single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
->> +     if (!single_pred_p(bb)) {
->> +             split_edge(single_succ_edge(ENTRY_BLOCK_PTR_FOR_FN(cfun)))=
-;
->> +             gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
->> +     }
->> +
->> +     /* enumarate all local variables and forcibly initialize our targe=
-ts */
+> > A related, perhaps more interesting issue is that C11 still explicitly
+> > states that padding is undefined after assignment:
 >
-> Nit: s/enumarate/enumerate/
+> you probably meant 'unspecified'?
 
-Fixed.
+Indeed.  Sloppy of me...
 
-Thanks for the review!
+> > "6.2.6.1 6 When a value is stored in an object of structure or union
+> > type, including in a member object, the bytes of the object
+> > representation that correspond to any padding bytes take unspecified
+> > values.  51)"
+> >
+> > "51) Thus, for example, structure assignment need not copy any padding
+> > bits."
+> >
+> > which means that in:
+> >
+> > {
+> >         struct foo foo1 =3D FOO1_INTIALIZER;
+> >         struct foo foo2;
+> >
+> >         foo2 =3D foo1;
+> > }
+> >
+> > the contents of padding in foo2 is unspecified.
+> >
+> > Similarly, piecemeal initialisation of an object by assigning to every
+> > member leaves the padding unspecified, e.g.:
+> >
+> > {
+> >         struct timeval tv;
+> >
+> >         tv.tv_sec =3D secs;
+> >         tv.tv_usec =3D usecs;
+> > }
+> >
+> > (On most or all arches struct timeval contains no padding, but relying
+> > implicitly on this is still a bit iffy.)
+> >
+> >
+> > It's highly likely that the kernel passes objects resulting from one of
+> > the above to put_user() and friends.  It would be good if we had a way
+> > to catch at least some of these.
+>
+> both examples would be handled by the plugin if the types involved alread=
+y
+> have a __user annotated field (as neither foo2 nor tv are initialized, on=
+ly
+> assigned to), otherwise it'd need manual annotation and/or more static an=
+alysis.
 
--Kees
+Do you see any false positives here?  I would expect a fair number of
+structures that contain __user pointers but that are never copied
+wholesale to userspace, but I've not reviewed in detail.
 
---=20
-Kees Cook
-Nexus Security
+I would also expect false negatives to be common -- structures that lack
+__user pointers but _are_ copied to userspace.  But again, if this
+plugin is not designed to catch these in the first place, this may be
+best addressed in a different way.
+
+Cheers
+---Dave
+IMPORTANT NOTICE: The contents of this email and any attachments are confid=
+ential and may also be privileged. If you are not the intended recipient, p=
+lease notify the sender immediately and do not disclose the contents to any=
+ other person, use it for any purpose, or store or copy the information in =
+any medium. Thank you.
