@@ -1,65 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Tue, 17 Jan 2017 17:44:07 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
+References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org>
+ <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+ <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
+ <20170112051114.GG20972@linaro.org>
+ <20170112085714.GC3081@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
+In-Reply-To: <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <5879F900.12283.370F7409@pageexec.freemail.hu>
-References: <CAErMHp-W=zcX-D10dbhzRG41-mjfVcKb2_+p4dxdXsnfizZuag@mail.gmail.com>
- <58795E2E.429.34B2AE42@pageexec.freemail.hu> <CAGXu5j+yMNRQHRj8haLfNCst1C_7TDPf8axyUBatVWEvWbVmmQ@mail.gmail.com>
- <5879F900.12283.370F7409@pageexec.freemail.hu>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 17 Jan 2017 09:32:57 -0800
-Message-ID: <CAGXu5j+zTNErMW_karYg8JcEGfzf=y+SdKEMPjsyoLR0o+-s9g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] Introduction
-To: PaX Team <pageexec@freemail.hu>
-Cc: "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: Kees Cook <keescook@chromium.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Jan 14, 2017 at 2:10 AM, PaX Team <pageexec@freemail.hu> wrote:
-> On 13 Jan 2017 at 15:15, Kees Cook wrote:
->
->> On Fri, Jan 13, 2017 at 3:09 PM, PaX Team <pageexec@freemail.hu> wrote:
->> >> fs/read_write.c: In function =E2=80=98new_sync_write=E2=80=99:
->> >> fs/read_write.c:490:15: note: userspace variable will be forcibly ini=
-tialized
->> >>   struct iovec iov =3D { .iov_base =3D (void __user *)buf, .iov_len =
-=3D len };
->> >
->> > this is a designated initializer which doesn't match the object constr=
-uctor
->> > the plugin looks for.
->>
->> What would an object constructor look like?
->
-> as you can see it in the plugin source, it has a specific TREE_CODE.
-
-Right, I meant on the C side. The gimple get produced several ways, it
-seems, and it wasn't clear under which conditions it spat out a
-constructor vs individual assignments.
-
->> When I had it report the times it skipped forced initialization, the
->> code mostly looked like designated initializers. All I found in the
->> gimple were SSAs. Nothing jumped out at me as being an initializer.
->
-> while the gimple dumps are human readable, they omit lots of information
-> so it's better to look at the data structures at compile time. that said,
-> a constructor should appear as an assignment like this:
->
->   s1 =3D {};
-
-Yup, saw that for the constructor that got injected.
-
-> a designated initializer is modeled as a constructor and per-field assign=
-ments
-> by the compiler (both are subject to optimizations so you won't necessari=
-ly see
-> all of them in the dumps of later passes).
-
-It sounds like the plugin would need to walk every field of the target
-variable and check that it got an assignment.
-
--Kees
-
---=20
-Kees Cook
-Nexus Security
+PiBPbiBNb24sIEphbiAxNiwgMjAxNyBhdCA4OjE2IEFNLCBSZXNoZXRvdmEsIEVsZW5hDQo+IDxl
+bGVuYS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPj4gT24gVGh1LCBKYW4gMTIsIDIw
+MTcgYXQgMDI6MTE6MTVQTSArMDkwMCwgQUtBU0hJIFRha2FoaXJvIHdyb3RlOg0KPiA+PiA+IE9u
+IFdlZCwgSmFuIDExLCAyMDE3IGF0IDAyOjU1OjIxUE0gLTA4MDAsIEtlZXMgQ29vayB3cm90ZToN
+Cj4gPj4gPiA+IE9uIFdlZCwgSmFuIDExLCAyMDE3IGF0IDE6NDIgUE0sIEtlZXMgQ29vayA8a2Vl
+c2Nvb2tAY2hyb21pdW0ub3JnPg0KPiA+PiB3cm90ZToNCj4gPj4gPiA+ID4gSSBjYW4gc2VlIGlm
+IGl0J2xsIGNoZXJyeS1waWNrIGNsZWFubHksIEkgYXNzdW1lIGl0IHdpbGwuIDopDQo+ID4+ID4g
+Pg0KPiA+PiA+ID4gSXQgY2hlcnJ5LXBpY2tlZCBjbGVhbmx5LiBIb3dldmVyLCBJIG1hZGUgc2V2
+ZXJhbCBjaGFuZ2VzOg0KPiA+PiA+ID4NCj4gPj4gPiA+IC0gSSBhZGp1c3RlZCBQZXRlcidzIGF1
+dGhvciBlbWFpbCAoaXQgaGFkIGV4dHJhIFtdcyBhcm91bmQpLg0KPiA+PiA+ID4gLSBJIGZpeGVk
+IGFsbCBvZiB0aGUgY29tbWl0IHN1YmplY3RzIChQZXRlcidzIHdlcmUgbWlzc2luZykuDQo+ID4+
+ID4gPiAtIEkgYWRkZWQgYmFjayAia3JlZjogQWRkIEtSRUZfSU5JVCgpIiBzaW5jZSBpdCBzZWVt
+cyB0byBoYXZlIGJlZW4NCj4gPj4gPiA+IGxvc3QgYW5kIG1peGVkIGludG8gb3RoZXIgcGF0Y2hl
+cyB0aGF0IHdvdWxkIGJyZWFrIGJpc2VjdGlvbg0KPiA+PiA+ID4NCj4gPj4gPiA+IEl0J3MgaGVy
+ZSBub3csIHBsZWFzZSB3b3JrIGZyb20gdGhpcyB2ZXJzaW9uOg0KPiA+PiA+ID4NCj4gPj4gPiA+
+DQo+ID4+DQo+IGh0dHA6Ly9naXQua2VybmVsLm9yZy9jZ2l0L2xpbnV4L2tlcm5lbC9naXQva2Vl
+cy9saW51eC5naXQvbG9nLz9oPWtzcHAvaGFyZGVuZWQtDQo+ID4+IGF0b21pYw0KPiA+PiA+DQo+
+ID4+ID4gSSBnYXZlIGl0IGEgc3BpbiBvbiBhcm02NC4NCj4gPj4gPiBJdCBjYW4gY29tcGlsZSB3
+aXRoIGEgY2hhbmdlIHRvIHNtcC5jIHRoYXQgSSBtZW50aW9uZWQgYmVmb3JlLA0KPiA+PiA+IGJ1
+dCB0aGUgYm9vdCBmYWlsZWQuIEkndmUgbm90IGR1ZyBpbnRvIGl0Lg0KPiA+PiA+DQo+ID4+ID4g
+PT09ODw9PT0NCj4gPj4gPiBbICAgIDMuNTc4NjE4XSByZWZjb3VudF90OiBpbmNyZW1lbnQgb24g
+MDsgdXNlLWFmdGVyLWZyZWUuDQo+ID4+ID4gWyAgICAzLjU3OTE2NV0gLS0tLS0tLS0tLS0tWyBj
+dXQgaGVyZSBdLS0tLS0tLS0tLS0tDQo+ID4+ID4gWyAgICAzLjU3OTI1NF0gV0FSTklORzogQ1BV
+OiAwIFBJRDogMSBhdA0KPiAvaG9tZS9ha2FzaGkvYXJtL2FybXY4L2xpbmFyby9saW51eC0NCj4g
+Pj4gYWFyY2g2NC9pbmNsdWRlL2xpbnV4L3JlZmNvdW50Lmg6MTA5IHVueF9jcmVhdGUrMHg4Yy8w
+eGMwDQo+ID4+DQo+ID4+IFRoYXQncyBkb2RneSBjb2RlLCBzb21lb25lIG5lZWRzIHRvIGxvb2sg
+YXQgdGhhdC4NCj4gPj4NCj4gPj4gSXQgaGFzIGFuIGluYyBpbiBhIGZ1bmN0aW9uIGNhbGxlZCAn
+Y3JlYXRlJyB3aGljaCBzZWVtcyB0byBzdWdnZXN0IGl0cw0KPiA+PiBvYmplY3Rpb24gY3JlYXRp
+b24gYW5kIHdlIHNob3VsZCBiZSB1c2luZyByZWZjb3VudF9zZXQoKSBpbnN0ZWFkLg0KPiA+Pg0K
+PiA+PiBUaGVuIGFnYWluLCBpdCBsb29rcyBsaWtlIHlvdSBjYW4gY2FsbCB0aGlzICdjcmVhdGUn
+IG1ldGhvZCBtdWx0aXBsZQ0KPiA+PiB0aW1lcywgZWFjaCB0aW1lIHJldHVybmluZyB0aGUgc2Ft
+ZSBzdGF0aWMgb2JqZWN0LCBzbyByZWZjb3VudF9zZXQoKQ0KPiA+PiB3b3VsZCBub3QgYmUgY29y
+cmVjdC4NCj4gPj4NCj4gPj4gVXNpbmcgYSByZWZjb3VudCBvbiBhIHN0YXRpYyBvYmplY3QgaXMg
+d2VpcmQgb2YgY291cnNlLCBzbyB0aGlzIGlzIGJvdW5kDQo+ID4+IHRvIGdpdmUgdHJvdWJsZS4N
+Cj4gPg0KPiA+IEkgaGF2ZSByZXZlcnRlZCB0aGlzIG9uZSBiYWNrIHRvIGF0b21pYyBhbmQgYWRk
+ZWQgaXQgdG8gdGhlIHRyYWNraW5nIGRvYy4NCj4gPiBUaGUgcHJvYmxlbSBmb3IgdGhpcyBvbmUg
+aXMgdGhhdCBpdCBpcyBub3QgYWx3YXlzIHVzZWQgYXMgc3RhdGljIGFuZCBpbiBvdGhlciBjYXNl
+cw0KPiA+IGl0IGlzIGV2ZW4gaW5pdGlhbGl6ZWQgY29ycmVjdGx5IHRvIDEsIGJ1dCB0aGlzIHN0
+YXRpYyBjYXNlIHNlZW1zIHRvIGJlIHNwZWNpYWwgb25lDQo+IGdpdmluZyB0cm91Ymxlcy4uLg0K
+PiA+DQo+ID4gTGFzdCB3ZWVrIEkgYWxzbyBmaXhlZCBhbGwgdGhlIHdhcm5pbmdzL2Vycm9ycyB0
+aGF0IHRlc3QgaW5mcmEgZ2F2ZS4gVGhlIHF1ZXN0aW9uDQo+IHRoYXQgY29tZXMgaXMgd2hhdCBu
+ZXh0PyBIb3cgZG8gd2UgcmVhbGx5IHRlc3QgdGhpcyBmdXJ0aGVyIGFwYXJ0IGZyb20ganVzdCBi
+b290aW5nDQo+IHRoaXMgdXA/DQo+IA0KPiBXaGljaCB0cmVlIGhhcyBhbGwgdGhlIGZpeGVzPyBJ
+IGNhbiByZWZyZXNoIG15IGtlcm5lbC5vcmcgdHJlZSBhbmQgbGV0DQo+IDBkYXkgZ3JpbmQgb24g
+aXQsIHRoZW4gd2UgY2FuIHN0YXJ0IGdldHRpbmcgYWNrcyBhbmQgSSBjYW4gcHVzaCBpdA0KPiBp
+bnRvIC1uZXh0IHZpYSBteSBLU1BQIHRyZWUuDQoNCkhlcmUgaXMgdGhlIHRyZWU6IGh0dHBzOi8v
+Z2l0aHViLmNvbS9lcmVzaGV0b3ZhL2xpbnV4LXN0YWJsZS9jb21taXRzL3JlZmNvdW50X3QNCg0K
+SSB3b3VsZCByZWFsbHkgbGlrZSB0byBnZXQgbW9yZSBydW50aW1lIHRlc3RpbmcgZG9uZSBmb3Ig
+aXQgYWxzbywgbm90IGp1c3QgYXNrcyA6KQ0K
