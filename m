@@ -1,76 +1,137 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Tue, 17 Jan 2017 17:44:07 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
-References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
- <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
- <20170112051114.GG20972@linaro.org>
- <20170112085714.GC3081@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
-In-Reply-To: <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: Kees Cook <keescook@chromium.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <5879F762.32059.37092152@pageexec.freemail.hu>
+References: <20170113220256.GA57663@beast> <5879F762.32059.37092152@pageexec.freemail.hu>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 17 Jan 2017 09:48:46 -0800
+Message-ID: <CAGXu5jLuw-EgB8gpVsHwyYrVaa6Q3mt0tezMT6MkmWe7WHVeFA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
+To: PaX Team <pageexec@freemail.hu>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, Mark Rutland <mark.rutland@arm.com>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-PiBPbiBNb24sIEphbiAxNiwgMjAxNyBhdCA4OjE2IEFNLCBSZXNoZXRvdmEsIEVsZW5hDQo+IDxl
-bGVuYS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPj4gT24gVGh1LCBKYW4gMTIsIDIw
-MTcgYXQgMDI6MTE6MTVQTSArMDkwMCwgQUtBU0hJIFRha2FoaXJvIHdyb3RlOg0KPiA+PiA+IE9u
-IFdlZCwgSmFuIDExLCAyMDE3IGF0IDAyOjU1OjIxUE0gLTA4MDAsIEtlZXMgQ29vayB3cm90ZToN
-Cj4gPj4gPiA+IE9uIFdlZCwgSmFuIDExLCAyMDE3IGF0IDE6NDIgUE0sIEtlZXMgQ29vayA8a2Vl
-c2Nvb2tAY2hyb21pdW0ub3JnPg0KPiA+PiB3cm90ZToNCj4gPj4gPiA+ID4gSSBjYW4gc2VlIGlm
-IGl0J2xsIGNoZXJyeS1waWNrIGNsZWFubHksIEkgYXNzdW1lIGl0IHdpbGwuIDopDQo+ID4+ID4g
-Pg0KPiA+PiA+ID4gSXQgY2hlcnJ5LXBpY2tlZCBjbGVhbmx5LiBIb3dldmVyLCBJIG1hZGUgc2V2
-ZXJhbCBjaGFuZ2VzOg0KPiA+PiA+ID4NCj4gPj4gPiA+IC0gSSBhZGp1c3RlZCBQZXRlcidzIGF1
-dGhvciBlbWFpbCAoaXQgaGFkIGV4dHJhIFtdcyBhcm91bmQpLg0KPiA+PiA+ID4gLSBJIGZpeGVk
-IGFsbCBvZiB0aGUgY29tbWl0IHN1YmplY3RzIChQZXRlcidzIHdlcmUgbWlzc2luZykuDQo+ID4+
-ID4gPiAtIEkgYWRkZWQgYmFjayAia3JlZjogQWRkIEtSRUZfSU5JVCgpIiBzaW5jZSBpdCBzZWVt
-cyB0byBoYXZlIGJlZW4NCj4gPj4gPiA+IGxvc3QgYW5kIG1peGVkIGludG8gb3RoZXIgcGF0Y2hl
-cyB0aGF0IHdvdWxkIGJyZWFrIGJpc2VjdGlvbg0KPiA+PiA+ID4NCj4gPj4gPiA+IEl0J3MgaGVy
-ZSBub3csIHBsZWFzZSB3b3JrIGZyb20gdGhpcyB2ZXJzaW9uOg0KPiA+PiA+ID4NCj4gPj4gPiA+
-DQo+ID4+DQo+IGh0dHA6Ly9naXQua2VybmVsLm9yZy9jZ2l0L2xpbnV4L2tlcm5lbC9naXQva2Vl
-cy9saW51eC5naXQvbG9nLz9oPWtzcHAvaGFyZGVuZWQtDQo+ID4+IGF0b21pYw0KPiA+PiA+DQo+
-ID4+ID4gSSBnYXZlIGl0IGEgc3BpbiBvbiBhcm02NC4NCj4gPj4gPiBJdCBjYW4gY29tcGlsZSB3
-aXRoIGEgY2hhbmdlIHRvIHNtcC5jIHRoYXQgSSBtZW50aW9uZWQgYmVmb3JlLA0KPiA+PiA+IGJ1
-dCB0aGUgYm9vdCBmYWlsZWQuIEkndmUgbm90IGR1ZyBpbnRvIGl0Lg0KPiA+PiA+DQo+ID4+ID4g
-PT09ODw9PT0NCj4gPj4gPiBbICAgIDMuNTc4NjE4XSByZWZjb3VudF90OiBpbmNyZW1lbnQgb24g
-MDsgdXNlLWFmdGVyLWZyZWUuDQo+ID4+ID4gWyAgICAzLjU3OTE2NV0gLS0tLS0tLS0tLS0tWyBj
-dXQgaGVyZSBdLS0tLS0tLS0tLS0tDQo+ID4+ID4gWyAgICAzLjU3OTI1NF0gV0FSTklORzogQ1BV
-OiAwIFBJRDogMSBhdA0KPiAvaG9tZS9ha2FzaGkvYXJtL2FybXY4L2xpbmFyby9saW51eC0NCj4g
-Pj4gYWFyY2g2NC9pbmNsdWRlL2xpbnV4L3JlZmNvdW50Lmg6MTA5IHVueF9jcmVhdGUrMHg4Yy8w
-eGMwDQo+ID4+DQo+ID4+IFRoYXQncyBkb2RneSBjb2RlLCBzb21lb25lIG5lZWRzIHRvIGxvb2sg
-YXQgdGhhdC4NCj4gPj4NCj4gPj4gSXQgaGFzIGFuIGluYyBpbiBhIGZ1bmN0aW9uIGNhbGxlZCAn
-Y3JlYXRlJyB3aGljaCBzZWVtcyB0byBzdWdnZXN0IGl0cw0KPiA+PiBvYmplY3Rpb24gY3JlYXRp
-b24gYW5kIHdlIHNob3VsZCBiZSB1c2luZyByZWZjb3VudF9zZXQoKSBpbnN0ZWFkLg0KPiA+Pg0K
-PiA+PiBUaGVuIGFnYWluLCBpdCBsb29rcyBsaWtlIHlvdSBjYW4gY2FsbCB0aGlzICdjcmVhdGUn
-IG1ldGhvZCBtdWx0aXBsZQ0KPiA+PiB0aW1lcywgZWFjaCB0aW1lIHJldHVybmluZyB0aGUgc2Ft
-ZSBzdGF0aWMgb2JqZWN0LCBzbyByZWZjb3VudF9zZXQoKQ0KPiA+PiB3b3VsZCBub3QgYmUgY29y
-cmVjdC4NCj4gPj4NCj4gPj4gVXNpbmcgYSByZWZjb3VudCBvbiBhIHN0YXRpYyBvYmplY3QgaXMg
-d2VpcmQgb2YgY291cnNlLCBzbyB0aGlzIGlzIGJvdW5kDQo+ID4+IHRvIGdpdmUgdHJvdWJsZS4N
-Cj4gPg0KPiA+IEkgaGF2ZSByZXZlcnRlZCB0aGlzIG9uZSBiYWNrIHRvIGF0b21pYyBhbmQgYWRk
-ZWQgaXQgdG8gdGhlIHRyYWNraW5nIGRvYy4NCj4gPiBUaGUgcHJvYmxlbSBmb3IgdGhpcyBvbmUg
-aXMgdGhhdCBpdCBpcyBub3QgYWx3YXlzIHVzZWQgYXMgc3RhdGljIGFuZCBpbiBvdGhlciBjYXNl
-cw0KPiA+IGl0IGlzIGV2ZW4gaW5pdGlhbGl6ZWQgY29ycmVjdGx5IHRvIDEsIGJ1dCB0aGlzIHN0
-YXRpYyBjYXNlIHNlZW1zIHRvIGJlIHNwZWNpYWwgb25lDQo+IGdpdmluZyB0cm91Ymxlcy4uLg0K
-PiA+DQo+ID4gTGFzdCB3ZWVrIEkgYWxzbyBmaXhlZCBhbGwgdGhlIHdhcm5pbmdzL2Vycm9ycyB0
-aGF0IHRlc3QgaW5mcmEgZ2F2ZS4gVGhlIHF1ZXN0aW9uDQo+IHRoYXQgY29tZXMgaXMgd2hhdCBu
-ZXh0PyBIb3cgZG8gd2UgcmVhbGx5IHRlc3QgdGhpcyBmdXJ0aGVyIGFwYXJ0IGZyb20ganVzdCBi
-b290aW5nDQo+IHRoaXMgdXA/DQo+IA0KPiBXaGljaCB0cmVlIGhhcyBhbGwgdGhlIGZpeGVzPyBJ
-IGNhbiByZWZyZXNoIG15IGtlcm5lbC5vcmcgdHJlZSBhbmQgbGV0DQo+IDBkYXkgZ3JpbmQgb24g
-aXQsIHRoZW4gd2UgY2FuIHN0YXJ0IGdldHRpbmcgYWNrcyBhbmQgSSBjYW4gcHVzaCBpdA0KPiBp
-bnRvIC1uZXh0IHZpYSBteSBLU1BQIHRyZWUuDQoNCkhlcmUgaXMgdGhlIHRyZWU6IGh0dHBzOi8v
-Z2l0aHViLmNvbS9lcmVzaGV0b3ZhL2xpbnV4LXN0YWJsZS9jb21taXRzL3JlZmNvdW50X3QNCg0K
-SSB3b3VsZCByZWFsbHkgbGlrZSB0byBnZXQgbW9yZSBydW50aW1lIHRlc3RpbmcgZG9uZSBmb3Ig
-aXQgYWxzbywgbm90IGp1c3QgYXNrcyA6KQ0K
+On Sat, Jan 14, 2017 at 2:03 AM, PaX Team <pageexec@freemail.hu> wrote:
+> On 13 Jan 2017 at 14:02, Kees Cook wrote:
+>
+>> This plugin detects any structures that contain __user attributes and
+>> makes sure it is being fulling initialized so that a specific class of
+>> information exposure is eliminated. (For example, the exposure of siginfo
+>> in CVE-2013-2141 would have been blocked by this plugin.)
+>
+> why the conditional? the plugin was specifically written to block that bug
+> and block it did ;).
+
+I can rephrase this. I just wanted to give an example. How about:
+
+ This plugin detects any structures that contain __user attributes and
+ makes sure it is being fulling initialized so that a specific class of
+ information exposure is eliminated. (This plugin was originally
+ designed to block the exposure of siginfo in CVE-2013-2141.)
+
+>> +config GCC_PLUGIN_STRUCTLEAK
+>> +     bool "Force initialization of variables containing userspace addresses"
+>> +     depends on GCC_PLUGINS
+>> +     help
+>> +       This plugin zero-initializes any structures that containing a
+>> +       __user attribute. This can prevent some classes of information
+>> +       exposures.
+>
+> i see that you completely ditched the description in PaX, is there a reason
+> for it?
+
+Yup, details below...
+
+I didn't use the "bool" text because it wasn't accurate:
+
+        bool "Forcibly initialize local variables copied to userland"
+
+This implies "all", but it's not, and it has nothing to do with stuff
+copied to userland. It's just looking a __user, with no examination of
+copy_to_user() calls.
+
+The rest:
+
+          By saying Y here the kernel will zero initialize some local
+          variables that are going to be copied to userland.  This in
+
+Like the bool text, this isn't accurate. I can be specific about the
+"some", but the "copied to userland" just isn't true.
+
+          turn prevents unintended information leakage from the kernel
+          stack should later code forget to explicitly set all parts of
+          the copied variable.
+
+I could reuse this part, sure. I tend to like to use the term
+"exposure" instead of "leak", though, so at this point I just rewrote
+the description of the "why".
+
+          The tradeoff is less performance impact than PAX_MEMORY_STACKLEAK
+          at a much smaller coverage.
+
+I left this out because upstream doesn't have STACKLEAK to compare against yet.
+
+          Note that the implementation requires a gcc with plugin support,
+          i.e., gcc 4.5 or newer.  You may need to install the supporting
+          headers explicitly in addition to the normal gcc package.
+
+I left this out because it's redundant with the description of
+CONFIG_GCC_PLUGINS.
+
+> your text isn't correct as is because
+>
+> - the __user attribute (which is an implementation choice, see below) doesn't
+>   apply to structures but pointers only (as it does for sparse IIRC)
+> - a structure is a type, but the plugin initializes variables, not types
+>   (the latter makes little sense)
+> - the plugin doesn't initialize 'any structures' (well, variables), only locals
+>   and only at function scope (subject to further evolution as discussed earlier).
+
+Including mention of "__user" in Kconfig help text is already a bit
+"too technical", so I was trying to be concise. I could easily expand
+this to "any structure variables with __user pointers in function
+scope", but it seemed like unneeded details. (This level of detail
+isn't present in the PaX Kconfig either...)
+
+>> +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+>> +     bool "Report initialized variables"
+>> +     depends on GCC_PLUGIN_STRUCTLEAK
+>> +     depends on !COMPILE_TEST
+>> +     help
+>> +       This option will cause a warning to be printed each time the
+>> +       structleak plugin finds a variable it thinks needs to be
+>> +       initialized. Since not all existing initializers are detected
+>> +       by the plugin, this can produce false positive warnings.
+>
+> there are no false positives, a variable either has a constructor or it does not ;)
+
+Well, as pointed out, there are plenty of false positives where the
+plug reports the need to initialize the variable when it doesn't. It
+doesn't report that it's missing a constructor. :) This is a pragmatic
+description of what is happening, and since the plugin does sometimes
+needlessly insert initializations where none are needed, that really
+seems like a false positive to me. :)
+
+>> +/* unused C type flag in all versions 4.5-6 */
+>> +#define TYPE_USERSPACE(TYPE) TYPE_LANG_FLAG_5(TYPE)
+>
+> FYI, this is a sort of abuse/hack of tree flags and should not be implemented this
+> way in the upstream kernel as it's a finite resource and needs careful verification
+> against all supported gcc versions (these flags are meant for language fronteds, i
+> kinda got lucky to have a few of them unusued but it's not a robust future-proof
+> approach). instead an attribute should be used to mark these types. whether that
+> can/should be __user itself is a good question since that's another hack where the
+> plugin 'hijacks' a sparse address space atttribute (for which gcc 4.6+ has its own
+> facilities and that the checker gcc plugin makes use of thus it's not compatible
+> with structleak as is).
+
+Yeah, I wasn't too happy about that lang flag usage either. It seems
+reasonable to just build an attribute on the fly. IIRC, initify does
+this already to mark things it has already processed?
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
