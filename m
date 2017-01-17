@@ -1,89 +1,163 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
-References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
- <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
- <20170112051114.GG20972@linaro.org> <20170112085714.GC3081@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Tue, 17 Jan 2017 12:50:13 -0500
-Message-ID: <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170116115435.GB5908@leverpostej>
+References: <20170113220256.GA57663@beast> <20170116115435.GB5908@leverpostej>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 17 Jan 2017 09:56:24 -0800
+Message-ID: <CAGXu5j+GQ5feC=bL4-PKWV9p3e9CeAKKGMfgdwk1=FfnYLMviw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, LKML <linux-kernel@vger.kernel.org>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 17, 2017 at 12:44 PM, Reshetova, Elena
-<elena.reshetova@intel.com> wrote:
->> On Mon, Jan 16, 2017 at 8:16 AM, Reshetova, Elena
->> <elena.reshetova@intel.com> wrote:
->> >> On Thu, Jan 12, 2017 at 02:11:15PM +0900, AKASHI Takahiro wrote:
->> >> > On Wed, Jan 11, 2017 at 02:55:21PM -0800, Kees Cook wrote:
->> >> > > On Wed, Jan 11, 2017 at 1:42 PM, Kees Cook <keescook@chromium.org>
->> >> wrote:
->> >> > > > I can see if it'll cherry-pick cleanly, I assume it will. :)
->> >> > >
->> >> > > It cherry-picked cleanly. However, I made several changes:
->> >> > >
->> >> > > - I adjusted Peter's author email (it had extra []s around).
->> >> > > - I fixed all of the commit subjects (Peter's were missing).
->> >> > > - I added back "kref: Add KREF_INIT()" since it seems to have been
->> >> > > lost and mixed into other patches that would break bisection
->> >> > >
->> >> > > It's here now, please work from this version:
->> >> > >
->> >> > >
->> >>
->> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kspp/hardened-
->> >> atomic
->> >> >
->> >> > I gave it a spin on arm64.
->> >> > It can compile with a change to smp.c that I mentioned before,
->> >> > but the boot failed. I've not dug into it.
->> >> >
->> >> > ===8<===
->> >> > [    3.578618] refcount_t: increment on 0; use-after-free.
->> >> > [    3.579165] ------------[ cut here ]------------
->> >> > [    3.579254] WARNING: CPU: 0 PID: 1 at
->> /home/akashi/arm/armv8/linaro/linux-
->> >> aarch64/include/linux/refcount.h:109 unx_create+0x8c/0xc0
->> >>
->> >> That's dodgy code, someone needs to look at that.
->> >>
->> >> It has an inc in a function called 'create' which seems to suggest its
->> >> objection creation and we should be using refcount_set() instead.
->> >>
->> >> Then again, it looks like you can call this 'create' method multiple
->> >> times, each time returning the same static object, so refcount_set()
->> >> would not be correct.
->> >>
->> >> Using a refcount on a static object is weird of course, so this is bound
->> >> to give trouble.
->> >
->> > I have reverted this one back to atomic and added it to the tracking doc.
->> > The problem for this one is that it is not always used as static and in other cases
->> > it is even initialized correctly to 1, but this static case seems to be special one
->> giving troubles...
->> >
->> > Last week I also fixed all the warnings/errors that test infra gave. The question
->> that comes is what next? How do we really test this further apart from just booting
->> this up?
->>
->> Which tree has all the fixes? I can refresh my kernel.org tree and let
->> 0day grind on it, then we can start getting acks and I can push it
->> into -next via my KSPP tree.
+On Mon, Jan 16, 2017 at 3:54 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> Hi,
 >
-> Here is the tree: https://github.com/ereshetova/linux-stable/commits/refcount_t
+> [adding Dave, so retaining full context below]
 >
-> I would really like to get more runtime testing done for it also, not just asks :)
+> On Fri, Jan 13, 2017 at 02:02:56PM -0800, Kees Cook wrote:
+>> This plugin detects any structures that contain __user attributes and
+>> makes sure it is being fulling initialized so that a specific class of
+>
+> Nit: s/fulling/fully/
 
-Do you have any particular workload that you've been testing these with?
+Whoops, thanks, fixed.
+
+>> information exposure is eliminated. (For example, the exposure of siginf=
+o
+>> in CVE-2013-2141 would have been blocked by this plugin.)
+>>
+>> Ported from grsecurity/PaX. This version adds a verbose option to the
+>> plugin and the Kconfig.
+>>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  arch/Kconfig                            |  22 +++
+>>  include/linux/compiler.h                |   6 +-
+>>  scripts/Makefile.gcc-plugins            |   4 +
+>>  scripts/gcc-plugins/structleak_plugin.c | 246 +++++++++++++++++++++++++=
++++++++
+>>  4 files changed, 277 insertions(+), 1 deletion(-)
+>>  create mode 100644 scripts/gcc-plugins/structleak_plugin.c
+>
+> I tried giving this a go, but I got the build failure below:
+>
+> ----
+> [mark@leverpostej:~/src/linux]% uselinaro 15.08 make ARCH=3Darm64 CROSS_C=
+OMPILE=3Daarch64-linux-gnu-
+> arch/arm64/Makefile:43: Detected assembler with broken .inst; disassembly=
+ will be unreliable
+>   CHK     include/config/kernel.release
+>   CHK     include/generated/uapi/linux/version.h
+>   CHK     include/generated/utsrelease.h
+>   UPD     include/generated/utsrelease.h
+>   HOSTCXX -fPIC scripts/gcc-plugins/structleak_plugin.o
+> scripts/gcc-plugins/structleak_plugin.c: In function =E2=80=98int plugin_=
+init(plugin_name_args*, plugin_gcc_version*)=E2=80=99:
+> scripts/gcc-plugins/structleak_plugin.c:214:12: error: =E2=80=98structlea=
+k=E2=80=99 was not declared in this scope
+>   PASS_INFO(structleak, "early_optimizations", 1, PASS_POS_INSERT_BEFORE)=
+;
+>             ^
+
+Sorry, yes, this depends on the gcc-plugins changes in -next.
+
+> [...]
+>> diff --git a/arch/Kconfig b/arch/Kconfig
+>> index 99839c23d453..f1250ba0b06f 100644
+>> --- a/arch/Kconfig
+>> +++ b/arch/Kconfig
+>> @@ -410,6 +410,28 @@ config GCC_PLUGIN_LATENT_ENTROPY
+>>          * https://grsecurity.net/
+>>          * https://pax.grsecurity.net/
+>>
+>> +config GCC_PLUGIN_STRUCTLEAK
+>> +     bool "Force initialization of variables containing userspace addre=
+sses"
+>> +     depends on GCC_PLUGINS
+>> +     help
+>> +       This plugin zero-initializes any structures that containing a
+>> +       __user attribute. This can prevent some classes of information
+>> +       exposures.
+>> +
+>> +       This plugin was ported from grsecurity/PaX. More information at:
+>> +        * https://grsecurity.net/
+>> +        * https://pax.grsecurity.net/
+>> +
+>> +config GCC_PLUGIN_STRUCTLEAK_VERBOSE
+>> +     bool "Report initialized variables"
+>
+> It might be better to say "Report forcefully initialized variables", to m=
+ake it
+> clear that this is only reporting initialization performed by the plugin.
+
+Sounds good, changed.
+
+> [...]
+>> +     /* these aren't the 0days you're looking for */
+>> +     if (verbose)
+>> +             inform(DECL_SOURCE_LOCATION(var),
+>> +                     "userspace variable will be forcibly initialized")=
+;
+>> +
+>> +     /* build the initializer expression */
+>> +     initializer =3D build_constructor(TREE_TYPE(var), NULL);
+>> +
+>> +     /* build the initializer stmt */
+>> +     init_stmt =3D gimple_build_assign(var, initializer);
+>> +     gsi =3D gsi_after_labels(single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun))=
+);
+>> +     gsi_insert_before(&gsi, init_stmt, GSI_NEW_STMT);
+>> +     update_stmt(init_stmt);
+>
+> I assume that this is only guaranteed to initialise fields in a struct,
+> and not padding, is that correct? I ask due to the issue described in:
+>
+> https://lwn.net/Articles/417989/
+>
+> As a further step, it would be interesting to see if we could fix
+> padding for __user variables, but that certainly shouldn't hold this
+> back.
+
+This spawned a whole thread. :) For non-C11, yeah, a plugin to do this
+would be nice. That's already on the KSPP TODO list, but from what I
+can tell it either requires walking every variable's structure to
+check for sizes and padding or do explicitly add a constructor for
+every variable and hope that the optimization phase does the right
+thing. ;)
+
+>> +}
+>> +
+>> +static unsigned int structleak_execute(void)
+>> +{
+>> +     basic_block bb;
+>> +     unsigned int ret =3D 0;
+>> +     tree var;
+>> +     unsigned int i;
+>> +
+>> +     /* split the first bb where we can put the forced initializers */
+>> +     gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
+>> +     bb =3D single_succ(ENTRY_BLOCK_PTR_FOR_FN(cfun));
+>> +     if (!single_pred_p(bb)) {
+>> +             split_edge(single_succ_edge(ENTRY_BLOCK_PTR_FOR_FN(cfun)))=
+;
+>> +             gcc_assert(single_succ_p(ENTRY_BLOCK_PTR_FOR_FN(cfun)));
+>> +     }
+>> +
+>> +     /* enumarate all local variables and forcibly initialize our targe=
+ts */
+>
+> Nit: s/enumarate/enumerate/
+
+Fixed.
+
+Thanks for the review!
+
+-Kees
+
+--=20
+Kees Cook
+Nexus Security
