@@ -1,103 +1,76 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 17 Jan 2017 10:42:39 +0000
-From: Dave P Martin <Dave.Martin@arm.com>
-Message-ID: <20170117104239.GG18838@e103592.cambridge.arm.com>
-References: <20170113220256.GA57663@beast>
- <20170116115435.GB5908@leverpostej>
- <587D1D70.26193.89AFE10@pageexec.freemail.hu>
+Date: Tue, 17 Jan 2017 10:19:11 -0500
+From: "J. Bruce Fields" <bfields@fieldses.org>
+Message-ID: <20170117151911.GA13787@fieldses.org>
+References: <20170116164944.GA28984@kroah.com>
+ <20170116165031.GB29693@kroah.com>
+ <20170116212555.GA5201@fieldses.org>
+ <20170117071347.GA7296@kroah.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <587D1D70.26193.89AFE10@pageexec.freemail.hu>
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: PaX Team <pageexec@freemail.hu>
-Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+In-Reply-To: <20170117071347.GA7296@kroah.com>
+Subject: [kernel-hardening] Re: [PATCH 2/3] Make static usermode helper binaries constant
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, Jeff Layton <jlayton@poochiereds.net>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 16, 2017 at 08:22:24PM +0100, PaX Team wrote:
-> On 16 Jan 2017 at 11:54, Mark Rutland wrote:
+On Tue, Jan 17, 2017 at 08:13:47AM +0100, Greg KH wrote:
+> On Mon, Jan 16, 2017 at 04:25:55PM -0500, J. Bruce Fields wrote:
+> > On Mon, Jan 16, 2017 at 05:50:31PM +0100, Greg KH wrote:
+> > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> > > 
+> > > There are a number of usermode helper binaries that are "hard coded" in
+> > > the kernel today, so mark them as "const" to make it harder for someone
+> > > to change where the variables point to.
+> > > 
+> > ...
+> > > --- a/drivers/pnp/pnpbios/core.c
+> > > +++ b/drivers/pnp/pnpbios/core.c
+> > > @@ -98,6 +98,7 @@ static struct completion unload_sem;
+> > >   */
+> > >  static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > >  {
+> > > +	static char const sbin_pnpbios[] = "/sbin/pnpbios";
+> > >  	char *argv[3], **envp, *buf, *scratch;
+> > >  	int i = 0, value;
+> > >  
+> > > @@ -112,7 +113,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > >  	 * integrated into the driver core and use the usual infrastructure
+> > >  	 * like sysfs and uevents
+> > >  	 */
+> > > -	argv[0] = "/sbin/pnpbios";
+> > > +	argv[0] = (char *)sbin_pnpbios;
+> > 
+> > So here and elsewhere, can attackers write to argv[0] instead of to the
+> > memory where the string lives?
+> 
+> Yes, they could, it would be a very "tight" race to do that (have to
+> write after the assignment and before the call_usermodehelper_exec()
+> runs).  However, the kernel does not run argv[0], it just passes it to
+> the binary you specify in path, so for this example, the correct program
+> would still be run by the kernel.
 
-[...]
+In this case it's argv[0] that will be passed to call_usermodehelper as
+path, but.... OK, this argv array and the various function call
+arguments are all just data on the stack, so I guess it's all about
+equivalent.
 
-> > I assume that this is only guaranteed to initialise fields in a struct,
-> > and not padding, is that correct? I ask due to the issue described in:
-> >
-> > https://lwn.net/Articles/417989/
->
-> the 'issue' is that before C11 the standard didn't make it clear that in
-> case of a partial initializer list the compiler has to initialize not onl=
-y
-> the remaining fields but also padding as well.
+So we're assuming an attacker that can write to a static location in
+memory but can't write to the right part of the stack at the right time.
+I'm no expert at this kind of thing but it seems plausible that
+assumption could apply in cases that matter.
 
-Which version of the C11 spec clarifies this?
+> But, if you do worry about this type of attack, then enable the option I
+> created in patch 3/3 here, which will funnel all calls into a single
+> userspace binary where you can then filter on argv[0] to see if you want
+> to run the binary or not to prevent this type of attack.
+> 
+> > Apologies if I'm rehashing earlier discussion, I did a quick search of
+> > archives but could easily have missed something.
+> 
+> No problem at all, hopefully I've explained it better now.
 
-The one I'm looking at (n1570, Apr 12 2011) says:
+Thanks!
 
-"6.7.9 21 If there are fewer initializers in a brace-enclosed list than
-there are elements or members of an aggregate, or fewer characters in a
-string literal used to initialize an array of known size than there are
-elements in the array, the remainder of the aggregate shall be
-initialized implicitly the same as objects that have static storage
-duration."
-
-What is meant by "the remainder of the object" is unclear.  Is this
-just the tail of the object, or all unitialised members --
-which may be sparse in the case of an initialiser with designators?
-And is padding (and if so, which padding) considered to be part of (the
-remainder of) the object for the purpose of this paragraph?
-
-This can be read with the interpretation you suggest, but the wording
-doesn't seem rock-solid.  For the kernel, I guess it's sufficient if
-GCC commits to this interpretation though.
-
-
-A related, perhaps more interesting issue is that C11 still explicitly
-states that padding is undefined after assignment:
-
-"6.2.6.1 6 When a value is stored in an object of structure or union
-type, including in a member object, the bytes of the object
-representation that correspond to any padding bytes take unspecified
-values.  51)"
-
-"51) Thus, for example, structure assignment need not copy any padding
-bits."
-
-which means that in:
-
-{
-        struct foo foo1 =3D FOO1_INTIALIZER;
-        struct foo foo2;
-
-        foo2 =3D foo1;
-}
-
-the contents of padding in foo2 is unspecified.
-
-Similarly, piecemeal initialisation of an object by assigning to every
-member leaves the padding unspecified, e.g.:
-
-{
-        struct timeval tv;
-
-        tv.tv_sec =3D secs;
-        tv.tv_usec =3D usecs;
-}
-
-(On most or all arches struct timeval contains no padding, but relying
-implicitly on this is still a bit iffy.)
-
-
-It's highly likely that the kernel passes objects resulting from one of
-the above to put_user() and friends.  It would be good if we had a way
-to catch at least some of these.
-
-(I don't know whether that falls naturally under this plugin.)
-
-Cheers
----Dave
-IMPORTANT NOTICE: The contents of this email and any attachments are confid=
-ential and may also be privileged. If you are not the intended recipient, p=
-lease notify the sender immediately and do not disclose the contents to any=
- other person, use it for any purpose, or store or copy the information in =
-any medium. Thank you.
+--b.
