@@ -1,107 +1,82 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Tue, 17 Jan 2017 18:09:49 +0100
 MIME-Version: 1.0
-Message-ID: <587E4FDD.31940.D47F642@pageexec.freemail.hu>
-In-reply-to: <20170117104239.GG18838@e103592.cambridge.arm.com>
-References: <20170113220256.GA57663@beast>, <587D1D70.26193.89AFE10@pageexec.freemail.hu>, <20170117104239.GG18838@e103592.cambridge.arm.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: Dave P Martin <Dave.Martin@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+Sender: keescook@google.com
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
+References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org> <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+ <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
+ <20170112051114.GG20972@linaro.org> <20170112085714.GC3081@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 17 Jan 2017 09:15:30 -0800
+Message-ID: <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 17 Jan 2017 at 10:42, Dave P Martin wrote:
+On Mon, Jan 16, 2017 at 8:16 AM, Reshetova, Elena
+<elena.reshetova@intel.com> wrote:
+>> On Thu, Jan 12, 2017 at 02:11:15PM +0900, AKASHI Takahiro wrote:
+>> > On Wed, Jan 11, 2017 at 02:55:21PM -0800, Kees Cook wrote:
+>> > > On Wed, Jan 11, 2017 at 1:42 PM, Kees Cook <keescook@chromium.org>
+>> wrote:
+>> > > > I can see if it'll cherry-pick cleanly, I assume it will. :)
+>> > >
+>> > > It cherry-picked cleanly. However, I made several changes:
+>> > >
+>> > > - I adjusted Peter's author email (it had extra []s around).
+>> > > - I fixed all of the commit subjects (Peter's were missing).
+>> > > - I added back "kref: Add KREF_INIT()" since it seems to have been
+>> > > lost and mixed into other patches that would break bisection
+>> > >
+>> > > It's here now, please work from this version:
+>> > >
+>> > >
+>> http://git.kernel.org/cgit/linux/kernel/git/kees/linux.git/log/?h=kspp/hardened-
+>> atomic
+>> >
+>> > I gave it a spin on arm64.
+>> > It can compile with a change to smp.c that I mentioned before,
+>> > but the boot failed. I've not dug into it.
+>> >
+>> > ===8<===
+>> > [    3.578618] refcount_t: increment on 0; use-after-free.
+>> > [    3.579165] ------------[ cut here ]------------
+>> > [    3.579254] WARNING: CPU: 0 PID: 1 at /home/akashi/arm/armv8/linaro/linux-
+>> aarch64/include/linux/refcount.h:109 unx_create+0x8c/0xc0
+>>
+>> That's dodgy code, someone needs to look at that.
+>>
+>> It has an inc in a function called 'create' which seems to suggest its
+>> objection creation and we should be using refcount_set() instead.
+>>
+>> Then again, it looks like you can call this 'create' method multiple
+>> times, each time returning the same static object, so refcount_set()
+>> would not be correct.
+>>
+>> Using a refcount on a static object is weird of course, so this is bound
+>> to give trouble.
+>
+> I have reverted this one back to atomic and added it to the tracking doc.
+> The problem for this one is that it is not always used as static and in other cases
+> it is even initialized correctly to 1, but this static case seems to be special one giving troubles...
+>
+> Last week I also fixed all the warnings/errors that test infra gave. The question that comes is what next? How do we really test this further apart from just booting this up?
 
-> On Mon, Jan 16, 2017 at 08:22:24PM +0100, PaX Team wrote:
-> > the 'issue' is that before C11 the standard didn't make it clear that in
-> > case of a partial initializer list the compiler has to initialize not only
-> > the remaining fields but also padding as well.
-> 
-> Which version of the C11 spec clarifies this?
-> 
-> The one I'm looking at (n1570, Apr 12 2011) says:
-> 
-> "6.7.9 21 If there are fewer initializers in a brace-enclosed list than
-> there are elements or members of an aggregate, or fewer characters in a
-> string literal used to initialize an array of known size than there are
-> elements in the array, the remainder of the aggregate shall be
-> initialized implicitly the same as objects that have static storage
-> duration."
-> 
-> What is meant by "the remainder of the object" is unclear.
+Which tree has all the fixes? I can refresh my kernel.org tree and let
+0day grind on it, then we can start getting acks and I can push it
+into -next via my KSPP tree.
 
-it's less unclear if you also take into account the rest of the
-sentence that says "[initialized] the same as objects that have
-static storage duration" which in turn is described at 6.7.9p10
-where it says among others:
+-Kees
 
-  "if it is an aggregate, every member is initialized (recursively)
-   according to these rules, and any padding is initialized to zero bits"
-
-the "and any padding is initialized to zero bits" was the addition
-in C11 (which i'm not sure was meant as a new feature for C11 or
-just official enshrinement of what had always been meant).
-
->  Is this just the tail of the object, or all unitialised members --
-> which may be sparse in the case of an initialiser with designators? And
-> is padding (and if so, which padding) considered to be part of (the
-> remainder of) the object for the purpose of this paragraph? 
-
-to me the quote about 'any padding' is for all kinds of padding.
-uninitialized members are described in the same paragraph.
-
-> This can be read with the interpretation you suggest, but the wording
-> doesn't seem rock-solid.  For the kernel, I guess it's sufficient if
-> GCC commits to this interpretation though.
-
-note that i'm not a language lawyer, merely an interpreter, so take
-the above with a grain of salt.
-
-> A related, perhaps more interesting issue is that C11 still explicitly
-> states that padding is undefined after assignment:
-
-you probably meant 'unspecified'?
-
-> "6.2.6.1 6 When a value is stored in an object of structure or union
-> type, including in a member object, the bytes of the object
-> representation that correspond to any padding bytes take unspecified
-> values.  51)"
-> 
-> "51) Thus, for example, structure assignment need not copy any padding
-> bits."
-> 
-> which means that in:
-> 
-> {
->         struct foo foo1 = FOO1_INTIALIZER;
->         struct foo foo2;
-> 
->         foo2 = foo1;
-> }
-> 
-> the contents of padding in foo2 is unspecified.
-> 
-> Similarly, piecemeal initialisation of an object by assigning to every
-> member leaves the padding unspecified, e.g.:
-> 
-> {
->         struct timeval tv;
-> 
->         tv.tv_sec = secs;
->         tv.tv_usec = usecs;
-> }
-> 
-> (On most or all arches struct timeval contains no padding, but relying
-> implicitly on this is still a bit iffy.)
-> 
-> 
-> It's highly likely that the kernel passes objects resulting from one of
-> the above to put_user() and friends.  It would be good if we had a way
-> to catch at least some of these.
-
-both examples would be handled by the plugin if the types involved already
-have a __user annotated field (as neither foo2 nor tv are initialized, only
-assigned to), otherwise it'd need manual annotation and/or more static analysis.
+-- 
+Kees Cook
+Nexus Security
