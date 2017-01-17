@@ -1,93 +1,133 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Tue, 17 Jan 2017 17:12:27 +0100
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20170117161227.GA12846@kroah.com>
+Message-ID: <1484670023.2886.10.camel@poochiereds.net>
+From: Jeff Layton <jlayton@poochiereds.net>
+Date: Tue, 17 Jan 2017 11:20:23 -0500
+In-Reply-To: <20170116165044.GC29693@kroah.com>
 References: <20170116164944.GA28984@kroah.com>
- <20170116165031.GB29693@kroah.com>
- <1484667945.2886.4.camel@poochiereds.net>
- <20170117155642.GA29027@kroah.com>
- <1484669260.2886.8.camel@poochiereds.net>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <1484669260.2886.8.camel@poochiereds.net>
-Subject: [kernel-hardening] Re: [PATCH 2/3] Make static usermode helper binaries constant
-To: Jeff Layton <jlayton@poochiereds.net>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, "J. Bruce Fields" <bfields@fieldses.org>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
+	 <20170116165044.GC29693@kroah.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 3/3] Introduce STATIC_USERMODEHELPER to mediate
+ call_usermodehelper()
+To: Greg KH <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, "J. Bruce Fields" <bfields@fieldses.org>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 17, 2017 at 11:07:40AM -0500, Jeff Layton wrote:
-> On Tue, 2017-01-17 at 16:56 +0100, Greg KH wrote:
-> > On Tue, Jan 17, 2017 at 10:45:45AM -0500, Jeff Layton wrote:
-> > > On Mon, 2017-01-16 at 17:50 +0100, Greg KH wrote:
-> > > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> > > > 
-> > > > There are a number of usermode helper binaries that are "hard coded" in
-> > > > the kernel today, so mark them as "const" to make it harder for someone
-> > > > to change where the variables point to.
-> > > > 
-> > > > Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-> > > > Cc: Thomas Sailer <t.sailer@alumni.ethz.ch>
-> > > > Cc: "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>
-> > > > Cc: Johan Hovold <johan@kernel.org>
-> > > > Cc: Alex Elder <elder@kernel.org>
-> > > > Cc: "J. Bruce Fields" <bfields@fieldses.org>
-> > > > Cc: Jeff Layton <jlayton@poochiereds.net>
-> > > > Cc: David Howells <dhowells@redhat.com>
-> > > > Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-> > 
-> > 
-> > 
-> > > > --- a/fs/nfsd/nfs4layouts.c
-> > > > +++ b/fs/nfsd/nfs4layouts.c
-> > > > @@ -613,6 +613,7 @@ nfsd4_cb_layout_fail(struct nfs4_layout_stateid *ls)
-> > > >  {
-> > > >  	struct nfs4_client *clp = ls->ls_stid.sc_client;
-> > > >  	char addr_str[INET6_ADDRSTRLEN];
-> > > > +	static char const nfsd_recall_failed[] = "/sbin/nfsd-recall-failed";
-> > > >  	static char *envp[] = {
-> > > >  		"HOME=/",
-> > > >  		"TERM=linux",
-> > > > @@ -628,12 +629,13 @@ nfsd4_cb_layout_fail(struct nfs4_layout_stateid *ls)
-> > > >  		"nfsd: client %s failed to respond to layout recall. "
-> > > >  		"  Fencing..\n", addr_str);
-> > > >  
-> > > > -	argv[0] = "/sbin/nfsd-recall-failed";
-> > > > +	argv[0] = (char *)nfsd_recall_failed;
-> > > >  	argv[1] = addr_str;
-> > > >  	argv[2] = ls->ls_file->f_path.mnt->mnt_sb->s_id;
-> > > >  	argv[3] = NULL;
-> > > >  
-> > > > -	error = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
-> > > > +	error = call_usermodehelper(nfsd_recall_failed, argv, envp,
-> > > > +				    UMH_WAIT_PROC);
-> > > >  	if (error) {
-> > > >  		printk(KERN_ERR "nfsd: fence failed for client %s: %d!\n",
-> > > >  			addr_str, error);
-> > > 
-> > > Do we need a similar fix in nfsd4_umh_cltrack_upcall?
-> > 
-> > Not that I can tell, as the call_usermodehelper() binary it calls is
-> > dynamically created (it's not a static string).  Unless I'm misreading
-> > the code?
-> > 
+On Mon, 2017-01-16 at 17:50 +0100, Greg KH wrote:
+> From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 > 
-> It's a module_param_string:
+> Some usermode helper applications are defined at kernel build time, while
+> others can be changed at runtime.  To provide a sane way to filter these, add a
+> new kernel option "STATIC_USERMODEHELPER".  This option routes all
+> call_usermodehelper() calls through this binary, no matter what the caller
+> wishes to have called.
 > 
-> static char cltrack_prog[PATH_MAX] = "/sbin/nfsdcltrack";
-> module_param_string(cltrack_prog, cltrack_prog, sizeof(cltrack_prog),
->                         S_IRUGO|S_IWUSR);
-> MODULE_PARM_DESC(cltrack_prog, "Path to the nfsdcltrack upcall
-> program");
+> The new binary (by default set to /sbin/usermode-helper, but can be changed
+> through the STATIC_USERMODEHELPER_PATH option) can properly filter the
+> requested programs to be run by the kernel by looking at the first argument
+> that is passed to it.  All other options should then be passed onto the proper
+> program if so desired.
 > 
-> Maybe we should consider deprecating that module parameter and make it
-> const as well?  I added it when I first developed that code, but I doubt
-> anyone legitimately sets it.
+> To disable all call_usermodehelper() calls by the kernel, set
+> STATIC_USERMODEHELPER_PATH to an empty string.
+> 
+> Thanks to Neil Brown for the idea of this feature.
+> 
+> Cc: NeilBrown <neilb@suse.com>
+> Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> ---
+>  kernel/kmod.c    | 14 ++++++++++++++
+>  security/Kconfig | 35 +++++++++++++++++++++++++++++++++++
+>  2 files changed, 49 insertions(+)
+> 
+> diff --git a/kernel/kmod.c b/kernel/kmod.c
+> index 426a614e97fe..0c407f905ca4 100644
+> --- a/kernel/kmod.c
+> +++ b/kernel/kmod.c
+> @@ -528,7 +528,12 @@ struct subprocess_info *call_usermodehelper_setup(const char *path, char **argv,
+>  		goto out;
+>  
+>  	INIT_WORK(&sub_info->work, call_usermodehelper_exec_work);
+> +
+> +#ifdef CONFIG_STATIC_USERMODEHELPER
+> +	sub_info->path = CONFIG_STATIC_USERMODEHELPER_PATH;
+> +#else
+>  	sub_info->path = path;
+> +#endif
+>  	sub_info->argv = argv;
+>  	sub_info->envp = envp;
+>  
+> @@ -566,6 +571,15 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
+>  		retval = -EBUSY;
+>  		goto out;
+>  	}
+> +
+> +	/*
+> +	 * If there is no binary for us to call, then just return and get out of
+> +	 * here.  This allows us to set STATIC_USERMODEHELPER_PATH to "" and
+> +	 * disable all call_usermodehelper() calls.
+> +	 */
+> +	if (strlen(sub_info->path) == 0)
+> +		goto out;
+> +
+>  	/*
+>  	 * Set the completion pointer only if there is a waiter.
+>  	 * This makes it possible to use umh_complete to free
+> diff --git a/security/Kconfig b/security/Kconfig
+> index 118f4549404e..d900f47eaa68 100644
+> --- a/security/Kconfig
+> +++ b/security/Kconfig
+> @@ -158,6 +158,41 @@ config HARDENED_USERCOPY_PAGESPAN
+>  	  been removed. This config is intended to be used only while
+>  	  trying to find such users.
+>  
+> +config STATIC_USERMODEHELPER
+> +	bool "Force all usermode helper calls through a single binary"
+> +	help
+> +	  By default, the kernel can call many different userspace
+> +	  binary programs through the "usermode helper" kernel
+> +	  interface.  Some of these binaries are statically defined
+> +	  either in the kernel code itself, or as a kernel configuration
+> +	  option.  However, some of these are dynamically created at
+> +	  runtime, or can be modified after the kernel has started up.
+> +	  To provide an additional layer of security, route all of these
+> +	  calls through a single executable that can not have its name
+> +	  changed.
+> +
+> +	  Note, it is up to this single binary to then call the relevant
+> +	  "real" usermode helper binary, based on the first argument
+> +	  passed to it.  If desired, this program can filter and pick
+> +	  and choose what real programs are called.
+> +
+> +	  If you wish for all usermode helper programs are to be
+> +	  disabled, choose this option and then set
+> +	  STATIC_USERMODEHELPER_PATH to an empty string.
+> +
+> +config STATIC_USERMODEHELPER_PATH
+> +	string "Path to the static usermode helper binary"
+> +	depends on STATIC_USERMODEHELPER
+> +	default "/sbin/usermode-helper"
+> +	help
+> +	  The binary called by the kernel when any usermode helper
+> +	  program is wish to be run.  The "real" application's name will
+> +	  be in the first argument passed to this program on the command
+> +	  line.
+> +
+> +	  If you wish for all usermode helper programs to be disabled,
+> +	  specify an empty string here (i.e. "").
+> +
+>  source security/selinux/Kconfig
+>  source security/smack/Kconfig
+>  source security/tomoyo/Kconfig
 
-That's fine with me, but was outside of the scope of this patch, I was
-not trying to change any existing functionality :)
+I like the core of this idea (having a single dispatch binary) a lot. It
+seems like a good way to limit the attack surface. We could even
+consider signing this binary as well, etc...
 
-thanks,
+I'm less excited though about using the binary pathnames in argv[0].
+Would it be better to pass a non-path string of some sort that the
+binary would have to turn into a path to the binary to exec?
 
-greg k-h
+-- 
+Jeff Layton <jlayton@poochiereds.net>
