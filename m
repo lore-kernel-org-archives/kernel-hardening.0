@@ -1,50 +1,186 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 18 Jan 2017 10:48:58 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170118104857.GA3231@leverpostej>
-References: <20170113220256.GA57663@beast>
- <587D1F55.2222.8A262A4@pageexec.freemail.hu>
- <20170117174831.GB367@leverpostej>
- <587E686E.29386.DA7FA27@pageexec.freemail.hu>
+Date: Wed, 18 Jan 2017 22:53:10 +0900
+From: Jinbum Park <jinb.park7@gmail.com>
+Message-ID: <20170118135310.GA4733@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <587E686E.29386.DA7FA27@pageexec.freemail.hu>
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: Add structleak for more stack initialization
-To: PaX Team <pageexec@freemail.hu>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, "AKASHI, Takahiro" <takahiro.akashi@linaro.org>, park jinbum <jinb.park7@gmail.com>, Daniel Micay <danielmicay@gmail.com>, linux-kernel@vger.kernel.org, spender@grsecurity.net
+Subject: [kernel-hardening] [PATCH] ARM: mm: add testcases for RODATA
+To: linux@armlinux.org.uk
+Cc: will.deacon@arm.com, mingo@kernel.org, andy.gross@linaro.org, keescook@chromium.org, vladimir.murzin@arm.com, f.fainelli@gmail.com, pawel.moll@arm.com, jonathan.austin@arm.com, mark.rutland@arm.com, ard.biesheuvel@linaro.org, labbott@redhat.com, arjan@linux.intel.com, paul.gortmaker@windriver.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-janitors@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Jan 17, 2017 at 07:54:38PM +0100, PaX Team wrote:
-> On 17 Jan 2017 at 17:48, Mark Rutland wrote:
-> > That being the case, (and given the relevant bug has now been fixed),
-> > it's not clear to me what the value of this is today. i.e. given the
-> > general case, is this preventing many leaks?
-> 
-> no idea, i stopped looking at the instrumentation log long ago, but everyone
-> can enable the debug output (has a very specific comment on it ;) and look at
-> the results. i keep this plugin around because it costs nothing to maintain
-> it and the alternative (better) solution doesn't exist yet.
+This patch adds testcases for the CONFIG_DEBUG_RODATA option.
+It's similar to x86's testcases.
+It tests read-only mapped data and page-size aligned rodata section.
 
-Fair enough; understood.
+Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
+---
+ arch/arm/Kconfig.debug            |  5 +++
+ arch/arm/include/asm/cacheflush.h | 10 +++++
+ arch/arm/mm/Makefile              |  1 +
+ arch/arm/mm/init.c                |  6 +++
+ arch/arm/mm/test_rodata.c         | 80 +++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 102 insertions(+)
+ create mode 100644 arch/arm/mm/test_rodata.c
 
-> > > i never went into that direction because i think the security goal can
-> > > be achieved without the performance impact of forced initialization.
-> > 
-> > Was there a particular technique you had in mind?
-> 
-> sure, i mentioned it in my SSTIC'12 keynote (page 36):
-> https://pax.grsecurity.net/docs/PaXTeam-SSTIC12-keynote-20-years-of-PaX.pdf
-
-Thanks for the pointer.
-
-I'm probably being very naive here, but IIUC the per-task usercopy stack
-would require roughly the same analysis to identify relevant variables,
-unless all local variables (regardless of initialisation) that fed into
-a usercopy would be on the usercopy stack?
-
-Regardless, I can see the benefit of cleanly separating that data from
-the rest of the kernel data.
-
-Thanks,
-Mark.
+diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
+index d83f7c3..511e5e1 100644
+--- a/arch/arm/Kconfig.debug
++++ b/arch/arm/Kconfig.debug
+@@ -1749,6 +1749,11 @@ config DEBUG_SET_MODULE_RONX
+ 	  against certain classes of kernel exploits.
+ 	  If in doubt, say "N".
+ 
++config DEBUG_RODATA_TEST
++	bool "Testcase for the marking rodata read-only"
++	---help---
++	  This option enables a testcase for the setting rodata read-only.
++
+ source "drivers/hwtracing/coresight/Kconfig"
+ 
+ endmenu
+diff --git a/arch/arm/include/asm/cacheflush.h b/arch/arm/include/asm/cacheflush.h
+index bdd283b..741e2e8 100644
+--- a/arch/arm/include/asm/cacheflush.h
++++ b/arch/arm/include/asm/cacheflush.h
+@@ -498,6 +498,16 @@ static inline void set_kernel_text_rw(void) { }
+ static inline void set_kernel_text_ro(void) { }
+ #endif
+ 
++#ifdef CONFIG_DEBUG_RODATA_TEST
++extern const int rodata_test_data;
++int rodata_test(void);
++#else
++static inline int rodata_test(void)
++{
++	return 0;
++}
++#endif
++
+ void flush_uprobe_xol_access(struct page *page, unsigned long uaddr,
+ 			     void *kaddr, unsigned long len);
+ 
+diff --git a/arch/arm/mm/Makefile b/arch/arm/mm/Makefile
+index b3dea80..dbb76ff 100644
+--- a/arch/arm/mm/Makefile
++++ b/arch/arm/mm/Makefile
+@@ -15,6 +15,7 @@ endif
+ obj-$(CONFIG_ARM_PTDUMP)	+= dump.o
+ obj-$(CONFIG_MODULES)		+= proc-syms.o
+ obj-$(CONFIG_DEBUG_VIRTUAL)	+= physaddr.o
++obj-$(CONFIG_DEBUG_RODATA_TEST)	+= test_rodata.o
+ 
+ obj-$(CONFIG_ALIGNMENT_TRAP)	+= alignment.o
+ obj-$(CONFIG_HIGHMEM)		+= highmem.o
+diff --git a/arch/arm/mm/init.c b/arch/arm/mm/init.c
+index 4127f57..3c15f3b 100644
+--- a/arch/arm/mm/init.c
++++ b/arch/arm/mm/init.c
+@@ -716,6 +716,7 @@ void fix_kernmem_perms(void)
+ int __mark_rodata_ro(void *unused)
+ {
+ 	update_sections_early(ro_perms, ARRAY_SIZE(ro_perms));
++	rodata_test();
+ 	return 0;
+ }
+ 
+@@ -740,6 +741,11 @@ void set_kernel_text_ro(void)
+ static inline void fix_kernmem_perms(void) { }
+ #endif /* CONFIG_DEBUG_RODATA */
+ 
++#ifdef CONFIG_DEBUG_RODATA_TEST
++const int rodata_test_data = 0xC3;
++EXPORT_SYMBOL_GPL(rodata_test_data);
++#endif
++
+ void free_tcmmem(void)
+ {
+ #ifdef CONFIG_HAVE_TCM
+diff --git a/arch/arm/mm/test_rodata.c b/arch/arm/mm/test_rodata.c
+new file mode 100644
+index 0000000..133d092
+--- /dev/null
++++ b/arch/arm/mm/test_rodata.c
+@@ -0,0 +1,79 @@
++/*
++ * test_rodata.c: functional test for mark_rodata_ro function
++ *
++ * (C) Copyright 2017 Jinbum Park <jinb.park7@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; version 2
++ * of the License.
++ */
++#include <asm/cacheflush.h>
++#include <asm/sections.h>
++
++int rodata_test(void)
++{
++	unsigned long result;
++	unsigned long start, end;
++
++	/* test 1: read the value */
++	/* If this test fails, some previous testrun has clobbered the state */
++
++	if (!rodata_test_data) {
++		pr_err("rodata_test: test 1 fails (start data)\n");
++		return -ENODEV;
++	}
++
++	/* test 2: write to the variable; this should fault */
++	/*
++	 * If this test fails, we managed to overwrite the data
++	 *
++	 * This is written in assembly to be able to catch the
++	 * exception that is supposed to happen in the correct
++	 * case
++	*/
++
++	result = 1;
++	asm volatile(
++		"0:	str %[zero], [%[rodata_test]]\n"
++		"	mov %[rslt], %[zero]\n"
++		"1:\n"
++		".pushsection .text.fixup,\"ax\"\n"
++		".align 2\n"
++		"2:\n"
++		"b 1b\n"
++		".popsection\n"
++		".pushsection __ex_table,\"a\"\n"
++		".align 3\n"
++		".long 0b, 2b\n"
++		".popsection\n"
++		: [rslt] "=r" (result)
++		: [zero] "r" (0UL), [rodata_test] "r" (&rodata_test_data)
++	);
++
++	if (!result) {
++		pr_err("rodata_test: test data was not read only\n");
++		return -ENODEV;
++	}
++
++	/* test 3: check the value hasn't changed */
++	/* If this test fails, we managed to overwrite the data */
++	if (!rodata_test_data) {
++		pr_err("rodata_test: Test 3 fails (end data)\n");
++		return -ENODEV;
++	}
++
++	/* test 4: check if the rodata section is 4Kb aligned */
++	start = (unsigned long)__start_rodata;
++	end = (unsigned long)__end_rodata;
++	if (start & (PAGE_SIZE - 1)) {
++		pr_err("rodata_test: .rodata is not 4k aligned\n");
++		return -ENODEV;
++	}
++	if (end & (PAGE_SIZE - 1)) {
++		pr_err("rodata_test: .rodata end is not 4k aligned\n");
++		return -ENODEV;
++	}
++
++	return 0;
++}
+-- 
+1.9.1
