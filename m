@@ -1,215 +1,553 @@
 Reply-To: kernel-hardening@lists.openwall.com
-References: <20170118135310.GA4733@pjb1027-Latitude-E5410>
+References: <20170118095155.5e3bf976@kaiwan-T460>
 From: Laura Abbott <labbott@redhat.com>
-Message-ID: <e5433e24-7a3d-25a4-26a3-9d02644cc3f4@redhat.com>
-Date: Wed, 18 Jan 2017 11:20:54 -0800
+Message-ID: <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
+Date: Wed, 18 Jan 2017 11:44:47 -0800
 MIME-Version: 1.0
-In-Reply-To: <20170118135310.GA4733@pjb1027-Latitude-E5410>
-Content-Type: text/plain; charset=windows-1252
+In-Reply-To: <20170118095155.5e3bf976@kaiwan-T460>
+Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: [PATCH] ARM: mm: add testcases for RODATA
-To: Jinbum Park <jinb.park7@gmail.com>, linux@armlinux.org.uk
-Cc: will.deacon@arm.com, mingo@kernel.org, andy.gross@linaro.org, keescook@chromium.org, vladimir.murzin@arm.com, f.fainelli@gmail.com, pawel.moll@arm.com, jonathan.austin@arm.com, mark.rutland@arm.com, ard.biesheuvel@linaro.org, arjan@linux.intel.com, paul.gortmaker@windriver.com, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, kernel-janitors@vger.kernel.org
+Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
+ to linux-next
+To: kernel-hardening@lists.openwall.com, keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 01/18/2017 05:53 AM, Jinbum Park wrote:
-> This patch adds testcases for the CONFIG_DEBUG_RODATA option.
-> It's similar to x86's testcases.
-> It tests read-only mapped data and page-size aligned rodata section.
+On 01/17/2017 08:21 PM, Kaiwan N Billimoria wrote:
+> Hi Kees,
 > 
-> Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
-> ---
->  arch/arm/Kconfig.debug            |  5 +++
->  arch/arm/include/asm/cacheflush.h | 10 +++++
->  arch/arm/mm/Makefile              |  1 +
->  arch/arm/mm/init.c                |  6 +++
->  arch/arm/mm/test_rodata.c         | 80 +++++++++++++++++++++++++++++++++++++++
->  5 files changed, 102 insertions(+)
->  create mode 100644 arch/arm/mm/test_rodata.c
+> So, following up on the previous discussion, 
+>> I'd like to see the mentioned excluded slab caches also done in the
+>> kernel, along with similar kernel command line options. Additionally,
+>> getting all the upstream stuff behind a single CONFIG (similar to
+>> CONFIG_PAX_MEMORY_SANITIZE) would be great, instead of having to set 3
+>> CONFIGs and 2 kernel parameters. :)
 > 
-> diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
-> index d83f7c3..511e5e1 100644
-> --- a/arch/arm/Kconfig.debug
-> +++ b/arch/arm/Kconfig.debug
-> @@ -1749,6 +1749,11 @@ config DEBUG_SET_MODULE_RONX
->  	  against certain classes of kernel exploits.
->  	  If in doubt, say "N".
->  
-> +config DEBUG_RODATA_TEST
-> +	bool "Testcase for the marking rodata read-only"
-> +	---help---
-> +	  This option enables a testcase for the setting rodata read-only.
-> +
->  source "drivers/hwtracing/coresight/Kconfig"
->  
->  endmenu
-> diff --git a/arch/arm/include/asm/cacheflush.h b/arch/arm/include/asm/cacheflush.h
-> index bdd283b..741e2e8 100644
-> --- a/arch/arm/include/asm/cacheflush.h
-> +++ b/arch/arm/include/asm/cacheflush.h
-> @@ -498,6 +498,16 @@ static inline void set_kernel_text_rw(void) { }
->  static inline void set_kernel_text_ro(void) { }
->  #endif
->  
-> +#ifdef CONFIG_DEBUG_RODATA_TEST
-> +extern const int rodata_test_data;
-> +int rodata_test(void);
-> +#else
-> +static inline int rodata_test(void)
-> +{
-> +	return 0;
-> +}
-> +#endif
-> +
->  void flush_uprobe_xol_access(struct page *page, unsigned long uaddr,
->  			     void *kaddr, unsigned long len);
->  
-> diff --git a/arch/arm/mm/Makefile b/arch/arm/mm/Makefile
-> index b3dea80..dbb76ff 100644
-> --- a/arch/arm/mm/Makefile
-> +++ b/arch/arm/mm/Makefile
-> @@ -15,6 +15,7 @@ endif
->  obj-$(CONFIG_ARM_PTDUMP)	+= dump.o
->  obj-$(CONFIG_MODULES)		+= proc-syms.o
->  obj-$(CONFIG_DEBUG_VIRTUAL)	+= physaddr.o
-> +obj-$(CONFIG_DEBUG_RODATA_TEST)	+= test_rodata.o
->  
->  obj-$(CONFIG_ALIGNMENT_TRAP)	+= alignment.o
->  obj-$(CONFIG_HIGHMEM)		+= highmem.o
-> diff --git a/arch/arm/mm/init.c b/arch/arm/mm/init.c
-> index 4127f57..3c15f3b 100644
-> --- a/arch/arm/mm/init.c
-> +++ b/arch/arm/mm/init.c
-> @@ -716,6 +716,7 @@ void fix_kernmem_perms(void)
->  int __mark_rodata_ro(void *unused)
->  {
->  	update_sections_early(ro_perms, ARRAY_SIZE(ro_perms));
-> +	rodata_test();
-
-We don't do anything with this return value, should we at least
-spit out a warning?
-
->  	return 0;
->  }
->  
-> @@ -740,6 +741,11 @@ void set_kernel_text_ro(void)
->  static inline void fix_kernmem_perms(void) { }
->  #endif /* CONFIG_DEBUG_RODATA */
->  
-> +#ifdef CONFIG_DEBUG_RODATA_TEST
-> +const int rodata_test_data = 0xC3;
-
-This isn't accessed outside of test_rodata.c, it can just
-be moved there.
-
-> +EXPORT_SYMBOL_GPL(rodata_test_data);
-> +#endif
-> +
->  void free_tcmmem(void)
->  {
->  #ifdef CONFIG_HAVE_TCM
-> diff --git a/arch/arm/mm/test_rodata.c b/arch/arm/mm/test_rodata.c
-> new file mode 100644
-> index 0000000..133d092
-> --- /dev/null
-> +++ b/arch/arm/mm/test_rodata.c
-> @@ -0,0 +1,79 @@
-> +/*
-> + * test_rodata.c: functional test for mark_rodata_ro function
-> + *
-> + * (C) Copyright 2017 Jinbum Park <jinb.park7@gmail.com>
-> + *
-> + * This program is free software; you can redistribute it and/or
-> + * modify it under the terms of the GNU General Public License
-> + * as published by the Free Software Foundation; version 2
-> + * of the License.
-> + */
-> +#include <asm/cacheflush.h>
-> +#include <asm/sections.h>
-> +
-> +int rodata_test(void)
-> +{
-> +	unsigned long result;
-> +	unsigned long start, end;
-> +
-> +	/* test 1: read the value */
-> +	/* If this test fails, some previous testrun has clobbered the state */
-> +
-> +	if (!rodata_test_data) {
-> +		pr_err("rodata_test: test 1 fails (start data)\n");
-> +		return -ENODEV;
-> +	}
-> +
-> +	/* test 2: write to the variable; this should fault */
-> +	/*
-> +	 * If this test fails, we managed to overwrite the data
-> +	 *
-> +	 * This is written in assembly to be able to catch the
-> +	 * exception that is supposed to happen in the correct
-> +	 * case
-> +	*/
-> +
-> +	result = 1;
-> +	asm volatile(
-> +		"0:	str %[zero], [%[rodata_test]]\n"
-> +		"	mov %[rslt], %[zero]\n"
-> +		"1:\n"
-> +		".pushsection .text.fixup,\"ax\"\n"
-> +		".align 2\n"
-> +		"2:\n"
-> +		"b 1b\n"
-> +		".popsection\n"
-> +		".pushsection __ex_table,\"a\"\n"
-> +		".align 3\n"
-> +		".long 0b, 2b\n"
-> +		".popsection\n"
-> +		: [rslt] "=r" (result)
-> +		: [zero] "r" (0UL), [rodata_test] "r" (&rodata_test_data)
-> +	);
-> +
-> +	if (!result) {
-> +		pr_err("rodata_test: test data was not read only\n");
-> +		return -ENODEV;
-> +	}
-> +
-> +	/* test 3: check the value hasn't changed */
-> +	/* If this test fails, we managed to overwrite the data */
-> +	if (!rodata_test_data) {
-> +		pr_err("rodata_test: Test 3 fails (end data)\n");
-> +		return -ENODEV;
-> +	}
-
-I'm confused why we are checking this again when we have the result
-check above. Is there a case where we would still have result = 1
-but rodata_test_data overwritten?
-
-> +
-> +	/* test 4: check if the rodata section is 4Kb aligned */
-> +	start = (unsigned long)__start_rodata;
-> +	end = (unsigned long)__end_rodata;
-> +	if (start & (PAGE_SIZE - 1)) {
-> +		pr_err("rodata_test: .rodata is not 4k aligned\n");
-> +		return -ENODEV;
-> +	}
-> +	if (end & (PAGE_SIZE - 1)) {
-> +		pr_err("rodata_test: .rodata end is not 4k aligned\n");
-> +		return -ENODEV;
-> +	}
-
-Why does this need to be page aligned (yes, I know why but this
-test case does not make it clear)
-
-Better yet, this should be a build time assertion not a runtime
-one.
-
-> +
-> +	return 0;
-> +}
+> Basically what I've done so far is:
+> - pulled in the linux-next tree, and setup my own branch
 > 
+> - taken the grsecurity patch (for 4.8.17) and merged those portions of
+> the code encompassing the  CONFIG_PAX_MEMORY_SANITIZE directive
+> 
+> - There were some compile issues, which seem to be there mostly because of other
+> grsec infra that hasn't been merged in (yet). 
+> For now, I've just done small fixups where required:
+> (see code in ptach below):
+> 
+> [1. fs/dcache.c
+>   kmem_cache_create_usercopy() unavailable (for now at least).
+> Probably part of other grsec infrastructure..
+>  So am just adding the SLAB_NO_SANITIZE flag to the usual
+> kmem_cache_create() call.
+> 
+> 2. mm/slab_common.c
+> Compile failure:
+> enum pax_sanitize_mode pax_sanitize_slab __read_only = PAX_SANITIZE_SLAB_FAST;
+> 
+> ?? -above orig statement from the grsec-4.8.17 patch fails compile with:
+> mm/slab_common.c:34:37: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or
+> ‘__attribute__’ before ‘__read_only’
+> 
+> So I've just removed the "__read_only" attribute for now.
+> What's the actual approach?
+> 
+> 3. mm/slub.c
+> Compile failure:
+> #ifdef CONFIG_PAX_MEMORY_SANITIZE
+>  &sanitize_attr.attr,
+>  * ?? -above statement from the grsec-4.8.17 patch fails compile with:
+>  mm/slub.c:5337:3: error: ‘sanitize_attr’ undeclared here (not in a function)
+>   &sanitize_attr.attr,
+> 
+> Just commented this out for now.
+> ]
 
-As Mark mentioned, this is possibly redundant with LKDTM. It
-would be good to explain what benefit this is bringing in addition
-to LKDTM.
+This is roughly the work I did before (http://www.openwall.com/lists/kernel-hardening/2015/12/22/1)
+
+>From that discussion, the conclusion is that we need to
+use the existing slab_debug infrastructure to do sanitization.
+The part in mm/page_alloc.c has been turned into a separate
+Kconfig.
+
+As Kees mentioned, a good task would be to create a new Kconfig
+(CONFIG_MEMORY_SANITIZE for example) that will turn on both
+CONFIG_DEBUG_PAGEALLOC (the equivalent of CONFIG_PAX_MEMORY_SANITIZE)
+and also turn on slab poisoning.
+
+There's other stuff here you can do but hopefully working on
+that will give you a chance to look and explore what's already
+present vs. grsecurity.
 
 Thanks,
 Laura
+
+> 
+> 
+> 
+> ===
+> diff --git a/fs/buffer.c b/fs/buffer.c
+> index 28484b3..b524eda 100644
+> --- a/fs/buffer.c
+> +++ b/fs/buffer.c
+> @@ -3511,7 +3511,7 @@ void __init buffer_init(void)
+>  	bh_cachep = kmem_cache_create("buffer_head",
+>  			sizeof(struct buffer_head), 0,
+>  				(SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|
+> -				SLAB_MEM_SPREAD),
+> +				SLAB_MEM_SPREAD|SLAB_NO_SANITIZE),
+>  				NULL);
+>  
+>  	/*
+> diff --git a/fs/dcache.c b/fs/dcache.c
+> index 95d71ed..95ed43c 100644
+> --- a/fs/dcache.c
+> +++ b/fs/dcache.c
+> @@ -3616,8 +3616,16 @@ void __init vfs_caches_init_early(void)
+>  
+>  void __init vfs_caches_init(void)
+>  {
+> +/**
+> + *	names_cachep = kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
+> + *			SLAB_HWCACHE_ALIGN|SLAB_PANIC| SLAB_NO_SANITIZE,
+> + *			0, PATH_MAX, NULL);
+> + *	kmem_cache_create_usercopy() unavailable for now at least.
+> + *	So just adding the SLAB_NO_SANITIZE flag to the usual call below..
+> + */
+>  	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
+> -			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+> +			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NO_SANITIZE, NULL);
+> +
+>  
+>  	dcache_init();
+>  	inode_init();
+> diff --git a/include/linux/highmem.h b/include/linux/highmem.h
+> index bb3f329..9daed55 100644
+> --- a/include/linux/highmem.h
+> +++ b/include/linux/highmem.h
+> @@ -190,6 +190,18 @@ static inline void clear_highpage(struct page *page)
+>  	kunmap_atomic(kaddr);
+>  }
+>  
+> +static inline void sanitize_highpage(struct page *page)
+> +{
+> +	void *kaddr;
+> +	unsigned long flags;
+> +
+> +	local_irq_save(flags);
+> +	kaddr = kmap_atomic(page);
+> +	clear_page(kaddr);
+> +	kunmap_atomic(kaddr);
+> +	local_irq_restore(flags);
+> +}
+> +
+>  static inline void zero_user_segments(struct page *page,
+>  	unsigned start1, unsigned end1,
+>  	unsigned start2, unsigned end2)
+> diff --git a/include/linux/slab.h b/include/linux/slab.h
+> index 4c53635..334bd89 100644
+> --- a/include/linux/slab.h
+> +++ b/include/linux/slab.h
+> @@ -23,6 +23,13 @@
+>  #define SLAB_CONSISTENCY_CHECKS	0x00000100UL	/* DEBUG: Perform (expensive) checks on alloc/free */
+>  #define SLAB_RED_ZONE		0x00000400UL	/* DEBUG: Red zone objs in a cache */
+>  #define SLAB_POISON		0x00000800UL	/* DEBUG: Poison objects */
+> +
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +#define SLAB_NO_SANITIZE	0x00001000UL	/* PaX: Do not sanitize objs on free */
+> +#else
+> +#define SLAB_NO_SANITIZE	0x00000000UL
+> +#endif
+> +
+>  #define SLAB_HWCACHE_ALIGN	0x00002000UL	/* Align objs on cache lines */
+>  #define SLAB_CACHE_DMA		0x00004000UL	/* Use GFP_DMA memory */
+>  #define SLAB_STORE_USER		0x00010000UL	/* DEBUG: Store the last owner for bug hunting */
+> diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
+> index 4ad2c5a..a30bbd2 100644
+> --- a/include/linux/slab_def.h
+> +++ b/include/linux/slab_def.h
+> @@ -60,6 +60,10 @@ struct kmem_cache {
+>  	atomic_t allocmiss;
+>  	atomic_t freehit;
+>  	atomic_t freemiss;
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	atomic_unchecked_t sanitized;
+> +	atomic_unchecked_t not_sanitized;
+> +#endif
+>  #ifdef CONFIG_DEBUG_SLAB_LEAK
+>  	atomic_t store_user_clean;
+>  #endif
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index 7da33cb..42646d4 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -2098,7 +2098,8 @@ void __init proc_caches_init(void)
+>  			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
+>  			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
+>  			NULL);
+> -	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
+> +	vm_area_cachep = KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT|
+> +			 SLAB_NO_SANITIZE);
+>  	mmap_init();
+>  	nsproxy_cache_init();
+>  }
+> diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
+> index afcc550..ed3f097 100644
+> --- a/mm/Kconfig.debug
+> +++ b/mm/Kconfig.debug
+> @@ -10,6 +10,7 @@ config PAGE_EXTENSION
+>  config DEBUG_PAGEALLOC
+>  	bool "Debug page memory allocations"
+>  	depends on DEBUG_KERNEL
+> +	depends on !PAX_MEMORY_SANITIZE
+>  	depends on !HIBERNATION || ARCH_SUPPORTS_DEBUG_PAGEALLOC && !PPC && !SPARC
+>  	depends on !KMEMCHECK
+>  	select PAGE_EXTENSION
+> diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+> index 21ea508..3e899fa 100644
+> --- a/mm/page_alloc.c
+> +++ b/mm/page_alloc.c
+> @@ -994,6 +994,10 @@ static __always_inline bool free_pages_prepare(struct page *page,
+>  {
+>  	int bad = 0;
+>  
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	unsigned long index = 1UL << order;
+> +#endif
+> +
+>  	VM_BUG_ON_PAGE(PageTail(page), page);
+>  
+>  	trace_mm_page_free(page, order);
+> @@ -1040,6 +1044,12 @@ static __always_inline bool free_pages_prepare(struct page *page,
+>  		debug_check_no_obj_freed(page_address(page),
+>  					   PAGE_SIZE << order);
+>  	}
+> +
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	for (; index; --index)
+> +		sanitize_highpage(page + index - 1);
+> +#endif
+> +
+>  	arch_free_page(page, order);
+>  	kernel_poison_pages(page, 1 << order, 0);
+>  	kernel_map_pages(page, 1 << order, 0);
+> @@ -1696,8 +1706,10 @@ static inline int check_new_page(struct page *page)
+>  
+>  static inline bool free_pages_prezeroed(bool poisoned)
+>  {
+> -	return IS_ENABLED(CONFIG_PAGE_POISONING_ZERO) &&
+> -		page_poisoning_enabled() && poisoned;
+> +	return IS_ENABLED(CONFIG_PAX_MEMORY_SANITIZE) ||
+> +		(IS_ENABLED(CONFIG_PAGE_POISONING_ZERO) &&
+> +		 page_poisoning_enabled() && poisoned);
+> +
+>  }
+>  
+>  #ifdef CONFIG_DEBUG_VM
+> @@ -1753,11 +1765,13 @@ static void prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags
+>  	int i;
+>  	bool poisoned = true;
+>  
+> +#ifndef CONFIG_PAX_MEMORY_SANITIZE
+>  	for (i = 0; i < (1 << order); i++) {
+>  		struct page *p = page + i;
+>  		if (poisoned)
+>  			poisoned &= page_is_poisoned(p);
+>  	}
+> +#endif
+>  
+>  	post_alloc_hook(page, order, gfp_flags);
+>  
+> diff --git a/mm/rmap.c b/mm/rmap.c
+> index 91619fd..e209ff6 100644
+> --- a/mm/rmap.c
+> +++ b/mm/rmap.c
+> @@ -428,10 +428,10 @@ static void anon_vma_ctor(void *data)
+>  void __init anon_vma_init(void)
+>  {
+>  	anon_vma_cachep = kmem_cache_create("anon_vma", sizeof(struct anon_vma),
+> -			0, SLAB_DESTROY_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT,
+> -			anon_vma_ctor);
+> +			0, SLAB_DESTROY_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT|
+> +			SLAB_NO_SANITIZE, anon_vma_ctor);
+>  	anon_vma_chain_cachep = KMEM_CACHE(anon_vma_chain,
+> -			SLAB_PANIC|SLAB_ACCOUNT);
+> +			SLAB_PANIC|SLAB_ACCOUNT|SLAB_NO_SANITIZE);
+>  }
+>  
+>  /*
+> diff --git a/mm/slab.c b/mm/slab.c
+> index 4f2ec6b..6dc9f4a 100644
+> --- a/mm/slab.c
+> +++ b/mm/slab.c
+> @@ -3511,6 +3511,20 @@ void ___cache_free(struct kmem_cache *cachep, void *objp,
+>  	struct array_cache *ac = cpu_cache_get(cachep);
+>  
+>  	check_irq_off();
+> +
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	if (cachep->flags & (SLAB_POISON | SLAB_NO_SANITIZE))
+> +		STATS_INC_NOT_SANITIZED(cachep);
+> +	else {
+> +		memset(objp, PAX_MEMORY_SANITIZE_VALUE, cachep->object_size);
+> +
+> +		if (cachep->ctor)
+> +			cachep->ctor(objp);
+> +
+> +		STATS_INC_SANITIZED(cachep);
+> +	}
+> +#endif
+> +
+>  	kmemleak_free_recursive(objp, cachep->flags);
+>  	objp = cache_free_debugcheck(cachep, objp, caller);
+>  
+> @@ -4157,6 +4171,14 @@ void slabinfo_show_stats(struct seq_file *m, struct kmem_cache *cachep)
+>  		seq_printf(m, " : cpustat %6lu %6lu %6lu %6lu",
+>  			   allochit, allocmiss, freehit, freemiss);
+>  	}
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	{
+> +		unsigned long sanitized = atomic_read_unchecked(&cachep->sanitized);
+> +		unsigned long not_sanitized = atomic_read_unchecked(&cachep->not_sanitized);
+> +
+> +		seq_printf(m, " : pax %6lu %6lu", sanitized, not_sanitized);
+> +	}
+> +#endif
+>  #endif
+>  }
+>  
+> diff --git a/mm/slab.h b/mm/slab.h
+> index de6579d..2965ebe 100644
+> --- a/mm/slab.h
+> +++ b/mm/slab.h
+> @@ -71,6 +71,36 @@ extern struct list_head slab_caches;
+>  /* The slab cache that manages slab cache information */
+>  extern struct kmem_cache *kmem_cache;
+>  
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +#ifdef CONFIG_X86_64
+> +#define PAX_MEMORY_SANITIZE_VALUE	'\xfe'
+> +#else
+> +#define PAX_MEMORY_SANITIZE_VALUE	'\xff'
+> +#endif
+> +enum pax_sanitize_mode {
+> +	PAX_SANITIZE_SLAB_OFF = 0,
+> +	PAX_SANITIZE_SLAB_FAST,
+> +	PAX_SANITIZE_SLAB_FULL,
+> +};
+> +
+> +extern enum pax_sanitize_mode pax_sanitize_slab;
+> +
+> +static inline unsigned long pax_sanitize_slab_flags(unsigned long flags)
+> +{
+> +	if (pax_sanitize_slab == PAX_SANITIZE_SLAB_OFF ||
+> +	    (flags & SLAB_DESTROY_BY_RCU))
+> +		flags |= SLAB_NO_SANITIZE;
+> +	else if (pax_sanitize_slab == PAX_SANITIZE_SLAB_FULL)
+> +		flags &= ~SLAB_NO_SANITIZE;
+> +	return flags;
+> +}
+> +#else
+> +static inline unsigned long pax_sanitize_slab_flags(unsigned long flags)
+> +{
+> +	return flags;
+> +}
+> +#endif
+> +
+>  unsigned long calculate_alignment(unsigned long flags,
+>  		unsigned long align, unsigned long size);
+>  
+> @@ -120,7 +150,8 @@ static inline unsigned long kmem_cache_flags(unsigned long object_size,
+>  
+>  /* Legal flag mask for kmem_cache_create(), for various configurations */
+>  #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | SLAB_PANIC | \
+> -			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS )
+> +			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS | \
+> +			 SLAB_NO_SANITIZE)
+>  
+>  #if defined(CONFIG_DEBUG_SLAB)
+>  #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
+> diff --git a/mm/slab_common.c b/mm/slab_common.c
+> index 1dfc209..0a0851f 100644
+> --- a/mm/slab_common.c
+> +++ b/mm/slab_common.c
+> @@ -30,6 +30,37 @@ LIST_HEAD(slab_caches);
+>  DEFINE_MUTEX(slab_mutex);
+>  struct kmem_cache *kmem_cache;
+>  
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +/**
+> + * enum pax_sanitize_mode pax_sanitize_slab __read_only = PAX_SANITIZE_SLAB_FAST;
+> + *
+> + * ?? -above orig statement from the grsec-4.8.17 patch fails compile with:
+> + * mm/slab_common.c:34:37: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before ‘__read_only’
+> + *  pax_sanitize_mode pax_sanitize_slab __read_only = PAX_SANITIZE_SLAB_FAST;
+> + */
+> +enum pax_sanitize_mode pax_sanitize_slab = PAX_SANITIZE_SLAB_FAST;
+> +static int __init pax_sanitize_slab_setup(char *str)
+> +{
+> +	if (!str)
+> +		return 0;
+> +
+> +	if (!strcmp(str, "0") || !strcmp(str, "off")) {
+> +		pr_info("PaX slab sanitization: %s\n", "disabled");
+> +		pax_sanitize_slab = PAX_SANITIZE_SLAB_OFF;
+> +	} else if (!strcmp(str, "1") || !strcmp(str, "fast")) {
+> +		pr_info("PaX slab sanitization: %s\n", "fast");
+> +		pax_sanitize_slab = PAX_SANITIZE_SLAB_FAST;
+> +	} else if (!strcmp(str, "full")) {
+> +		pr_info("PaX slab sanitization: %s\n", "full");
+> +		pax_sanitize_slab = PAX_SANITIZE_SLAB_FULL;
+> +	} else
+> +		pr_err("PaX slab sanitization: unsupported option '%s'\n", str);
+> +
+> +	return 0;
+> +}
+> +early_param("pax_sanitize_slab", pax_sanitize_slab_setup);
+> +#endif
+> +
+>  /*
+>   * Set of flags that will prevent slab merging
+>   */
+> @@ -1136,6 +1167,9 @@ static void print_slabinfo_header(struct seq_file *m)
+>  #ifdef CONFIG_DEBUG_SLAB
+>  	seq_puts(m, " : globalstat <listallocs> <maxobjs> <grown> <reaped> <error> <maxfreeable> <nodeallocs> <remotefrees> <alienoverflow>");
+>  	seq_puts(m, " : cpustat <allochit> <allocmiss> <freehit> <freemiss>");
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	seq_puts(m, " : pax <sanitized> <not_sanitized>");
+> +#endif
+>  #endif
+>  	seq_putc(m, '\n');
+>  }
+> diff --git a/mm/slob.c b/mm/slob.c
+> index eac04d43..f455845 100644
+> --- a/mm/slob.c
+> +++ b/mm/slob.c
+> @@ -365,6 +365,11 @@ static void slob_free(void *block, int size)
+>  		return;
+>  	}
+>  
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	if (pax_sanitize_slab && !(c && (c->flags & SLAB_NO_SANITIZE)))
+> +		memset(block, PAX_MEMORY_SANITIZE_VALUE, size);
+> +#endif
+> +
+>  	if (!slob_page_free(sp)) {
+>  		/* This slob page is about to become partially free. Easy! */
+>  		sp->units = units;
+> diff --git a/mm/slub.c b/mm/slub.c
+> index 067598a..cead7ee 100644
+> --- a/mm/slub.c
+> +++ b/mm/slub.c
+> @@ -2911,6 +2911,24 @@ static __always_inline void do_slab_free(struct kmem_cache *s,
+>  	void *tail_obj = tail ? : head;
+>  	struct kmem_cache_cpu *c;
+>  	unsigned long tid;
+> +
+> +#ifdef CONFIG_PAX_MEMORY_SANITIZE
+> +	if (!(s->flags & SLAB_NO_SANITIZE)) {
+> +		int offset = s->offset ? 0 : sizeof(void *);
+> +		void *x = head;
+> +
+> +		while (1) {
+> +			memset(x + offset, PAX_MEMORY_SANITIZE_VALUE,
+> +					s->object_size - offset);
+> +			if (s->ctor)
+> +				s->ctor(x);
+> +			if (x == tail_obj)
+> +				break;
+> +			x = get_freepointer(s, x);
+> +		}
+> +	}
+> +#endif
+> +
+>  redo:
+>  	/*
+>  	 * Determine the currently cpus per cpu slab.
+> @@ -5316,6 +5334,15 @@ static struct attribute *slab_attrs[] = {
+>  #ifdef CONFIG_ZONE_DMA
+>  	&cache_dma_attr.attr,
+>  #endif
+> +/**
+> + * #ifdef CONFIG_PAX_MEMORY_SANITIZE
+> + *	&sanitize_attr.attr,
+> + * ?? -above statement from the grsec-4.8.17 patch fails compile with:
+> + * mm/slub.c:5337:3: error: ‘sanitize_attr’ undeclared here (not in a function)
+> + *   &sanitize_attr.attr,
+> + *  ...
+> + * #endif
+> + */
+>  #ifdef CONFIG_NUMA
+>  	&remote_node_defrag_ratio_attr.attr,
+>  #endif
+> diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+> index 7ad67d7..2e60366 100644
+> --- a/net/core/skbuff.c
+> +++ b/net/core/skbuff.c
+> @@ -3453,12 +3453,14 @@ void __init skb_init(void)
+>  	skbuff_head_cache = kmem_cache_create("skbuff_head_cache",
+>  					      sizeof(struct sk_buff),
+>  					      0,
+> -					      SLAB_HWCACHE_ALIGN|SLAB_PANIC,
+> +					      SLAB_HWCACHE_ALIGN | SLAB_PANIC |
+> +					      SLAB_NO_SANITIZE,
+>  					      NULL);
+>  	skbuff_fclone_cache = kmem_cache_create("skbuff_fclone_cache",
+>  						sizeof(struct sk_buff_fclones),
+>  						0,
+> -						SLAB_HWCACHE_ALIGN|SLAB_PANIC,
+> +						SLAB_HWCACHE_ALIGN | SLAB_PANIC |
+> +						SLAB_NO_SANITIZE,
+>  						NULL);
+>  }
+>  
+> diff --git a/security/Kconfig b/security/Kconfig
+> index 118f454..3ad5110 100644
+> --- a/security/Kconfig
+> +++ b/security/Kconfig
+> @@ -4,6 +4,46 @@
+>  
+>  menu "Security options"
+>  
+> +menu "Miscellaneous hardening features"
+> +
+> +config PAX_MEMORY_SANITIZE
+> +	bool "Sanitize all freed memory"
+> +	default y if (GRKERNSEC_CONFIG_AUTO && GRKERNSEC_CONFIG_PRIORITY_SECURITY)
+> +	help
+> +	  By saying Y here the kernel will erase memory pages and slab objects
+> +	  as soon as they are freed.  This in turn reduces the lifetime of data
+> +	  stored in them, making it less likely that sensitive information such
+> +	  as passwords, cryptographic secrets, etc stay in memory for too long.
+> +
+> +	  This is especially useful for programs whose runtime is short, long
+> +	  lived processes and the kernel itself benefit from this as long as
+> +	  they ensure timely freeing of memory that may hold sensitive
+> +	  information.
+> +
+> +	  A nice side effect of the sanitization of slab objects is the
+> +	  reduction of possible info leaks caused by padding bytes within the
+> +	  leaky structures.  Use-after-free bugs for structures containing
+> +	  pointers can also be detected as dereferencing the sanitized pointer
+> +	  will generate an access violation.
+> +
+> +	  The tradeoff is performance impact, on a single CPU system kernel
+> +	  compilation sees a 3% slowdown, other systems and workloads may vary
+> +	  and you are advised to test this feature on your expected workload
+> +	  before deploying it.
+> +
+> +	  The slab sanitization feature excludes a few slab caches per default
+> +	  for performance reasons.  To extend the feature to cover those as
+> +	  well, pass "pax_sanitize_slab=full" as kernel command line parameter.
+> +
+> +	  To reduce the performance penalty by sanitizing pages only, albeit
+> +	  limiting the effectiveness of this feature at the same time, slab
+> +	  sanitization can be disabled with the kernel command line parameter
+> +	  "pax_sanitize_slab=off".
+> +
+> +	  Note that this feature does not protect data stored in live pages,
+> +	  e.g., process memory swapped to disk may stay there for a long time.
+> +endmenu
+> +
+>  source security/keys/Kconfig
+>  
+>  config SECURITY_DMESG_RESTRICT
+> 
