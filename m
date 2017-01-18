@@ -1,777 +1,1274 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Wed, 18 Jan 2017 11:11:29 +0200
-Message-Id: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFCv2 PATCH 00/18] refcount_t API + usage
+Date: Wed, 18 Jan 2017 11:11:31 +0200
+Message-Id: <1484730707-29313-3-git-send-email-elena.reshetova@intel.com>
+In-Reply-To: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] [RFCv2 PATCH 02/18] kref: Add kref_read()
 To: kernel-hardening@lists.openwall.com
-Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, Elena Reshetova <elena.reshetova@intel.com>
+Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Changes since v1:
- - kref INIT fixes are moved to a proper separate commit
- - Peter's commits are now properly integrated into series 
- - various small fixes are incorporated based on testing
-   results and feedback
+From: Peter Zijlstra <peterz@infradead.org>
 
-This patch series is build on top of Peter's Zijlstra patches
-that provide refcount_t type and API definition.
-The rest of patches convert various places of kernel subsystems
-where atomic_t was used for reference counting to new refcount_t type and API.
-By doing this, we make sure that underflows and overflows
-cannot occur in these places and therefore no use-after-free situation
-can be created and misused by an attacker.
+Since we need to change the implementation, stop exposing internals.
 
-The patches still have a number of rough places, where we especially
-would need a feedback. The patches also do not cover absolutely all
-cases where atomic_t is used as refcounter. The more complex places
-are left for the future patch series and their occurences are documented in
-https://docs.google.com/document/d/1Gw-SQoxJ3RAofGrkEm7qEyTC48mst3svVjxnVKXyGPs/edit?usp=sharing
+Provide kref_read() to read the current reference count; typically used
+for debug messages.
 
-The automatic finding of atomic_t variables used as refcounters
-was done using Coccinelle (http://coccinelle.lip6.fr/).
-We thank Julia Lawall for helping us to get started on this!
+Kills two anti-patterns:
 
-Testing and compilation status:
- - Compiles on x86, boots to GUI, no warns in the log
- - Compiles for arm (defconfig, imx_v6_v7_defconfig), but cannot test
+	atomic_read(&kref->refcount)
+	kref->refcount.counter
 
-The patches are on top of linux-4.10-rc2. Patches
-would greatly benefit from compile proof test and runtime tests
-on all arches because of extensive changes.
+Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ drivers/block/drbd/drbd_req.c                |  2 +-
+ drivers/block/rbd.c                          |  8 +++---
+ drivers/block/virtio_blk.c                   |  2 +-
+ drivers/gpu/drm/drm_gem_cma_helper.c         |  2 +-
+ drivers/gpu/drm/drm_info.c                   |  2 +-
+ drivers/gpu/drm/drm_mode_object.c            |  4 +--
+ drivers/gpu/drm/etnaviv/etnaviv_gem.c        |  2 +-
+ drivers/gpu/drm/msm/msm_gem.c                |  3 +--
+ drivers/gpu/drm/nouveau/nouveau_fence.c      |  2 +-
+ drivers/gpu/drm/omapdrm/omap_gem.c           |  2 +-
+ drivers/gpu/drm/ttm/ttm_bo.c                 |  4 +--
+ drivers/gpu/drm/ttm/ttm_object.c             |  2 +-
+ drivers/infiniband/hw/cxgb3/iwch_cm.h        |  6 ++---
+ drivers/infiniband/hw/cxgb3/iwch_qp.c        |  2 +-
+ drivers/infiniband/hw/cxgb4/iw_cxgb4.h       |  6 ++---
+ drivers/infiniband/hw/cxgb4/qp.c             |  2 +-
+ drivers/infiniband/hw/usnic/usnic_ib_sysfs.c |  6 ++---
+ drivers/infiniband/hw/usnic/usnic_ib_verbs.c |  4 +--
+ drivers/misc/genwqe/card_dev.c               |  2 +-
+ drivers/misc/mei/debugfs.c                   |  2 +-
+ drivers/pci/hotplug/pnv_php.c                |  2 +-
+ drivers/pci/slot.c                           |  2 +-
+ drivers/scsi/bnx2fc/bnx2fc_io.c              |  8 +++---
+ drivers/scsi/cxgbi/libcxgbi.h                |  4 +--
+ drivers/scsi/lpfc/lpfc_debugfs.c             |  2 +-
+ drivers/scsi/lpfc/lpfc_els.c                 |  2 +-
+ drivers/scsi/lpfc/lpfc_hbadisc.c             | 40 ++++++++++++++--------------
+ drivers/scsi/lpfc/lpfc_init.c                |  3 +--
+ drivers/scsi/qla2xxx/tcm_qla2xxx.c           |  4 +--
+ drivers/staging/android/ion/ion.c            |  2 +-
+ drivers/staging/comedi/comedi_buf.c          |  2 +-
+ drivers/target/target_core_pr.c              | 10 +++----
+ drivers/target/tcm_fc/tfc_sess.c             |  2 +-
+ drivers/usb/gadget/function/f_fs.c           |  2 +-
+ fs/exofs/sys.c                               |  2 +-
+ fs/ocfs2/cluster/netdebug.c                  |  2 +-
+ fs/ocfs2/cluster/tcp.c                       |  2 +-
+ fs/ocfs2/dlm/dlmdebug.c                      | 12 ++++-----
+ fs/ocfs2/dlm/dlmdomain.c                     |  2 +-
+ fs/ocfs2/dlm/dlmmaster.c                     |  8 +++---
+ fs/ocfs2/dlm/dlmunlock.c                     |  2 +-
+ include/drm/drm_framebuffer.h                |  2 +-
+ include/drm/ttm/ttm_bo_driver.h              |  4 +--
+ include/linux/kref.h                         |  5 ++++
+ include/linux/sunrpc/cache.h                 |  2 +-
+ include/net/bluetooth/hci_core.h             |  4 +--
+ net/bluetooth/6lowpan.c                      |  2 +-
+ net/bluetooth/amp.c                          |  4 +--
+ net/bluetooth/l2cap_core.c                   |  4 +--
+ net/ceph/messenger.c                         |  4 +--
+ net/ceph/osd_client.c                        | 10 +++----
+ net/sunrpc/cache.c                           |  2 +-
+ net/sunrpc/svc_xprt.c                        |  6 ++---
+ net/sunrpc/xprtrdma/svc_rdma_transport.c     |  4 +--
+ 54 files changed, 118 insertions(+), 115 deletions(-)
 
-Elena Reshetova (11):
-  kernel, mm: convert from atomic_t to refcount_t
-  net: convert from atomic_t to refcount_t
-  fs: convert from atomic_t to refcount_t
-  security: convert from atomic_t to refcount_t
-  sound: convert from atomic_t to refcount_t
-  ipc: covert from atomic_t to refcount_t
-  tools: convert from atomic_t to refcount_t
-  block: convert from atomic_t to refcount_t
-  drivers: net convert from atomic_t to refcount_t
-  drivers: misc drivers convert from atomic_t to refcount_t
-  drivers: infiniband convert from atomic_t to refcount_t
-
-Peter Zijlstra (7):
-  kref: Add KREF_INIT()
-  kref: Add kref_read()
-  kref: Kill kref_sub()
-  kref: Use kref_get_unless_zero() more
-  kref: Implement kref_put_lock()
-  kref: Avoid more abuse
-  kref: Implement using refcount_t
-
- arch/alpha/kernel/smp.c                            |   6 +-
- arch/arc/kernel/smp.c                              |   2 +-
- arch/arc/mm/tlb.c                                  |   2 +-
- arch/arm/kernel/smp.c                              |   2 +-
- arch/arm64/kernel/smp.c                            |   2 +-
- arch/blackfin/mach-common/smp.c                    |   4 +-
- arch/frv/mm/mmu-context.c                          |   2 +-
- arch/ia64/include/asm/tlbflush.h                   |   2 +-
- arch/ia64/kernel/smp.c                             |   2 +-
- arch/ia64/sn/kernel/sn2/sn2_smp.c                  |   4 +-
- arch/metag/kernel/smp.c                            |   2 +-
- arch/mips/kernel/process.c                         |   2 +-
- arch/mips/kernel/smp.c                             |   6 +-
- arch/parisc/include/asm/mmu_context.h              |   2 +-
- arch/powerpc/mm/hugetlbpage.c                      |   2 +-
- arch/powerpc/mm/icswx.c                            |   4 +-
- arch/powerpc/platforms/cell/spufs/file.c           |   2 +-
- arch/s390/include/asm/debug.h                      |   3 +-
- arch/s390/kernel/debug.c                           |   6 +-
- arch/sh/kernel/smp.c                               |   8 +-
- arch/sparc/kernel/mdesc.c                          |  17 +-
- arch/sparc/kernel/smp_64.c                         |   6 +-
- arch/sparc/mm/srmmu.c                              |   2 +-
- arch/um/kernel/tlb.c                               |   2 +-
- arch/x86/include/asm/amd_nb.h                      |   3 +-
- arch/x86/kernel/cpu/common.c                       |   4 +-
- arch/x86/kernel/cpu/mcheck/mce_amd.c               |   6 +-
- arch/x86/kernel/tboot.c                            |   4 +-
- arch/xtensa/kernel/smp.c                           |   2 +-
- block/bio.c                                        |   6 +-
- block/blk-cgroup.c                                 |   2 +-
- block/blk-ioc.c                                    |   4 +-
- block/blk-tag.c                                    |   8 +-
- block/bsg.c                                        |   9 +-
- block/cfq-iosched.c                                |   4 +-
- crypto/algif_aead.c                                |   2 +-
- drivers/atm/fore200e.c                             |  13 +-
- drivers/atm/he.c                                   |   2 +-
- drivers/atm/idt77252.c                             |   4 +-
- drivers/block/drbd/drbd_bitmap.c                   |   2 +-
- drivers/block/drbd/drbd_main.c                     |   7 +-
- drivers/block/drbd/drbd_req.c                      |  31 +--
- drivers/block/rbd.c                                |   8 +-
- drivers/block/virtio_blk.c                         |   2 +-
- drivers/block/xen-blkback/common.h                 |   7 +-
- drivers/block/xen-blkback/xenbus.c                 |   2 +-
- drivers/char/mspec.c                               |   9 +-
- drivers/connector/cn_queue.c                       |   4 +-
- drivers/connector/connector.c                      |   2 +-
- drivers/firewire/core-topology.c                   |   2 +-
- drivers/firewire/core.h                            |   8 +-
- drivers/firmware/efi/arm-runtime.c                 |   4 +-
- drivers/gpu/drm/amd/amdkfd/kfd_process.c           |   4 +-
- drivers/gpu/drm/drm_gem_cma_helper.c               |   2 +-
- drivers/gpu/drm/drm_info.c                         |   2 +-
- drivers/gpu/drm/drm_mode_object.c                  |   4 +-
- drivers/gpu/drm/etnaviv/etnaviv_gem.c              |   2 +-
- drivers/gpu/drm/i915/i915_gem_object.h             |   2 +-
- drivers/gpu/drm/i915/i915_gem_userptr.c            |   4 +-
- drivers/gpu/drm/msm/msm_gem.c                      |   3 +-
- drivers/gpu/drm/nouveau/nouveau_fence.c            |   2 +-
- drivers/gpu/drm/omapdrm/omap_gem.c                 |   2 +-
- drivers/gpu/drm/ttm/ttm_bo.c                       |  63 ++---
- drivers/gpu/drm/ttm/ttm_execbuf_util.c             |   4 +-
- drivers/gpu/drm/ttm/ttm_object.c                   |   2 +-
- drivers/infiniband/core/addr.c                     |   8 +-
- drivers/infiniband/core/cm.c                       |  26 +-
- drivers/infiniband/core/cma.c                      |  29 +--
- drivers/infiniband/core/cq.c                       |   4 +-
- drivers/infiniband/core/iwcm.c                     |  10 +-
- drivers/infiniband/core/iwcm.h                     |   4 +-
- drivers/infiniband/core/iwpm_util.c                |   8 +-
- drivers/infiniband/core/iwpm_util.h                |   3 +-
- drivers/infiniband/core/mad.c                      |  36 +--
- drivers/infiniband/core/mad_priv.h                 |   5 +-
- drivers/infiniband/core/mad_rmpp.c                 |  11 +-
- drivers/infiniband/core/multicast.c                |  31 +--
- drivers/infiniband/core/uverbs.h                   |   4 +-
- drivers/infiniband/core/uverbs_cmd.c               |  74 +++---
- drivers/infiniband/core/uverbs_main.c              |  14 +-
- drivers/infiniband/core/verbs.c                    | 102 ++++----
- drivers/infiniband/hw/cxgb3/iwch_cm.h              |   6 +-
- drivers/infiniband/hw/cxgb3/iwch_ev.c              |   8 +-
- drivers/infiniband/hw/cxgb3/iwch_provider.c        |  16 +-
- drivers/infiniband/hw/cxgb3/iwch_provider.h        |   5 +-
- drivers/infiniband/hw/cxgb3/iwch_qp.c              |   6 +-
- drivers/infiniband/hw/cxgb4/cq.c                   |   6 +-
- drivers/infiniband/hw/cxgb4/ev.c                   |   8 +-
- drivers/infiniband/hw/cxgb4/iw_cxgb4.h             |   9 +-
- drivers/infiniband/hw/cxgb4/qp.c                   |   2 +-
- drivers/infiniband/hw/hfi1/file_ops.c              |   2 +-
- drivers/infiniband/hw/hfi1/qp.c                    |   2 +-
- drivers/infiniband/hw/hfi1/user_sdma.c             |  13 +-
- drivers/infiniband/hw/hns/hns_roce_cq.c            |   8 +-
- drivers/infiniband/hw/hns/hns_roce_device.h        |   5 +-
- drivers/infiniband/hw/hns/hns_roce_qp.c            |  10 +-
- drivers/infiniband/hw/i40iw/i40iw.h                |   3 +-
- drivers/infiniband/hw/i40iw/i40iw_cm.c             |  12 +-
- drivers/infiniband/hw/i40iw/i40iw_main.c           |   2 +-
- drivers/infiniband/hw/i40iw/i40iw_puda.h           |   4 +-
- drivers/infiniband/hw/i40iw/i40iw_utils.c          |  12 +-
- drivers/infiniband/hw/i40iw/i40iw_verbs.c          |   2 +-
- drivers/infiniband/hw/i40iw/i40iw_verbs.h          |   4 +-
- drivers/infiniband/hw/mlx4/mcg.c                   |  39 +--
- drivers/infiniband/hw/mlx5/cq.c                    |   2 +-
- drivers/infiniband/hw/mlx5/main.c                  |  20 +-
- drivers/infiniband/hw/nes/nes.c                    |   8 +-
- drivers/infiniband/hw/nes/nes_cm.c                 |  32 +--
- drivers/infiniband/hw/nes/nes_cm.h                 |   6 +-
- drivers/infiniband/hw/nes/nes_hw.c                 |   8 +-
- drivers/infiniband/hw/nes/nes_hw.h                 |   4 +-
- drivers/infiniband/hw/nes/nes_mgt.c                |   6 +-
- drivers/infiniband/hw/nes/nes_utils.c              |   4 +-
- drivers/infiniband/hw/nes/nes_verbs.c              |  44 ++--
- drivers/infiniband/hw/nes/nes_verbs.h              |   6 +-
- drivers/infiniband/hw/qib/qib_keys.c               |   4 +-
- drivers/infiniband/hw/usnic/usnic_ib_sysfs.c       |   6 +-
- drivers/infiniband/hw/usnic/usnic_ib_verbs.c       |   4 +-
- drivers/infiniband/sw/rdmavt/mr.c                  |   6 +-
- drivers/infiniband/sw/rdmavt/qp.c                  |   4 +-
- drivers/infiniband/ulp/ipoib/ipoib.h               |   5 +-
- drivers/infiniband/ulp/ipoib/ipoib_main.c          |   8 +-
- drivers/iommu/intel-svm.c                          |   2 +-
- drivers/isdn/mISDN/socket.c                        |   2 +-
- drivers/md/bcache/alloc.c                          |   2 +-
- drivers/md/bcache/bcache.h                         |   9 +-
- drivers/md/bcache/btree.c                          |   8 +-
- drivers/md/bcache/super.c                          |   6 +-
- drivers/md/bcache/writeback.h                      |   2 +-
- drivers/md/dm-cache-metadata.c                     |   9 +-
- drivers/md/dm-core.h                               |   3 +-
- drivers/md/dm-table.c                              |   6 +-
- drivers/md/dm.c                                    |  19 +-
- drivers/md/dm.h                                    |   3 +-
- drivers/md/md.c                                    |   6 +-
- drivers/md/md.h                                    |   3 +-
- drivers/md/raid5-cache.c                           |   8 +-
- drivers/md/raid5.c                                 |  66 +++---
- drivers/md/raid5.h                                 |   3 +-
- drivers/media/pci/cx88/cx88-cards.c                |   2 +-
- drivers/media/pci/cx88/cx88-core.c                 |   4 +-
- drivers/media/pci/cx88/cx88.h                      |   3 +-
- drivers/media/usb/s2255/s2255drv.c                 |  21 +-
- drivers/media/usb/uvc/uvc_ctrl.c                   |   7 +-
- drivers/media/usb/uvc/uvc_driver.c                 |  12 +-
- drivers/media/usb/uvc/uvcvideo.h                   |   5 +-
- drivers/media/v4l2-core/videobuf2-dma-contig.c     |  11 +-
- drivers/media/v4l2-core/videobuf2-dma-sg.c         |  11 +-
- drivers/media/v4l2-core/videobuf2-memops.c         |   6 +-
- drivers/media/v4l2-core/videobuf2-vmalloc.c        |  11 +-
- drivers/misc/genwqe/card_dev.c                     |   2 +-
- drivers/misc/mei/debugfs.c                         |   2 +-
- drivers/net/ethernet/chelsio/cxgb4/clip_tbl.c      |   8 +-
- drivers/net/ethernet/chelsio/cxgb4/clip_tbl.h      |   4 +-
- drivers/net/ethernet/mediatek/mtk_eth_soc.c        |   6 +-
- drivers/net/ethernet/mediatek/mtk_eth_soc.h        |   4 +-
- drivers/net/ethernet/mellanox/mlx4/cq.c            |  12 +-
- drivers/net/ethernet/mellanox/mlx4/qp.c            |   8 +-
- drivers/net/ethernet/mellanox/mlx4/srq.c           |   8 +-
- drivers/net/ethernet/mellanox/mlx5/core/cq.c       |  16 +-
- drivers/net/ethernet/mellanox/mlx5/core/fs_core.c  |  24 +-
- drivers/net/ethernet/mellanox/mlx5/core/fs_core.h  |   3 +-
- drivers/net/ethernet/mellanox/mlx5/core/qp.c       |   6 +-
- drivers/net/ethernet/mellanox/mlx5/core/srq.c      |  10 +-
- drivers/net/ethernet/sun/niu.c                     |   6 +-
- drivers/net/ethernet/sun/niu.h                     |   4 +-
- drivers/net/hamradio/6pack.c                       |  12 +-
- drivers/net/macsec.c                               |  25 +-
- drivers/net/ppp/ppp_async.c                        |  10 +-
- drivers/net/ppp/ppp_generic.c                      |  17 +-
- drivers/net/ppp/ppp_synctty.c                      |  11 +-
- drivers/net/rionet.c                               |   2 +-
- drivers/net/vxlan.c                                |  10 +-
- drivers/net/wireless/intel/ipw2x00/libipw_rx.c     |   8 +-
- drivers/net/wireless/intel/ipw2x00/libipw_tx.c     |   4 +-
- .../net/wireless/intersil/hostap/hostap_80211_rx.c |   8 +-
- .../net/wireless/intersil/hostap/hostap_80211_tx.c |   4 +-
- drivers/net/wireless/intersil/hostap/hostap_hw.c   |  12 +-
- drivers/net/wireless/intersil/hostap/hostap_wlan.h |   3 +-
- .../net/wireless/intersil/orinoco/orinoco_usb.c    |  15 +-
- drivers/pci/host/pci-hyperv.c                      |   7 +-
- drivers/pci/hotplug/pnv_php.c                      |   2 +-
- drivers/pci/slot.c                                 |   2 +-
- drivers/s390/char/vmur.c                           |   8 +-
- drivers/s390/char/vmur.h                           |   4 +-
- drivers/s390/net/ctcm_main.c                       |  26 +-
- drivers/s390/net/lcs.c                             |  10 +-
- drivers/s390/net/lcs.h                             |   3 +-
- drivers/s390/net/netiucv.c                         |  10 +-
- drivers/s390/net/qeth_core.h                       |   3 +-
- drivers/s390/net/qeth_core_main.c                  |  14 +-
- drivers/scsi/bnx2fc/bnx2fc_io.c                    |   8 +-
- drivers/scsi/cxgbi/libcxgbi.h                      |   6 +-
- drivers/scsi/libfc/fc_exch.c                       |  10 +-
- drivers/scsi/libfc/fc_fcp.c                        |   6 +-
- drivers/scsi/libiscsi.c                            |   8 +-
- drivers/scsi/lpfc/lpfc_debugfs.c                   |   2 +-
- drivers/scsi/lpfc/lpfc_els.c                       |   2 +-
- drivers/scsi/lpfc/lpfc_hbadisc.c                   |  40 ++--
- drivers/scsi/lpfc/lpfc_init.c                      |   3 +-
- drivers/scsi/qedi/qedi_iscsi.c                     |   2 +-
- drivers/scsi/qla2xxx/tcm_qla2xxx.c                 |   4 +-
- drivers/staging/android/ion/ion.c                  |   2 +-
- drivers/staging/comedi/comedi_buf.c                |   2 +-
- drivers/staging/lustre/lustre/llite/llite_lib.c    |   2 +-
- drivers/staging/rtl8192e/rtllib_rx.c               |   8 +-
- drivers/staging/rtl8192e/rtllib_tx.c               |   4 +-
- .../staging/rtl8192u/ieee80211/ieee80211_crypt.c   |   2 +-
- .../staging/rtl8192u/ieee80211/ieee80211_crypt.h   |   3 +-
- drivers/staging/rtl8192u/ieee80211/ieee80211_rx.c  |   8 +-
- drivers/staging/rtl8192u/ieee80211/ieee80211_tx.c  |   4 +-
- drivers/staging/vme/devices/vme_user.c             |  10 +-
- drivers/target/target_core_iblock.c                |  12 +-
- drivers/target/target_core_iblock.h                |   3 +-
- drivers/target/target_core_pr.c                    |  10 +-
- drivers/target/tcm_fc/tfc_sess.c                   |   2 +-
- drivers/tty/serial/dz.c                            |  31 +--
- drivers/tty/serial/sb1250-duart.c                  |  18 +-
- drivers/usb/gadget/function/f_fs.c                 |  10 +-
- drivers/usb/gadget/function/u_fs.h                 |   3 +-
- drivers/usb/gadget/legacy/inode.c                  |  17 +-
- drivers/usb/mon/mon_main.c                         |   2 +-
- drivers/xen/gntdev.c                               |  11 +-
- fs/afs/cell.c                                      |  20 +-
- fs/afs/internal.h                                  |  18 +-
- fs/afs/proc.c                                      |   6 +-
- fs/afs/server.c                                    |  20 +-
- fs/afs/vlocation.c                                 |  16 +-
- fs/afs/volume.c                                    |   6 +-
- fs/btrfs/backref.c                                 |   2 +-
- fs/btrfs/compression.c                             |  18 +-
- fs/btrfs/ctree.c                                   |   2 +-
- fs/btrfs/ctree.h                                   |   7 +-
- fs/btrfs/delayed-inode.c                           |  46 ++--
- fs/btrfs/delayed-inode.h                           |   5 +-
- fs/btrfs/delayed-ref.c                             |   8 +-
- fs/btrfs/delayed-ref.h                             |   8 +-
- fs/btrfs/disk-io.c                                 |  14 +-
- fs/btrfs/disk-io.h                                 |   4 +-
- fs/btrfs/extent-tree.c                             |  28 +--
- fs/btrfs/extent_io.c                               |  91 ++++---
- fs/btrfs/extent_io.h                               |   9 +-
- fs/btrfs/extent_map.c                              |  10 +-
- fs/btrfs/extent_map.h                              |   3 +-
- fs/btrfs/free-space-cache.c                        |   4 +-
- fs/btrfs/ordered-data.c                            |  20 +-
- fs/btrfs/ordered-data.h                            |   2 +-
- fs/btrfs/raid56.c                                  |  19 +-
- fs/btrfs/scrub.c                                   |  42 ++--
- fs/btrfs/transaction.c                             |  20 +-
- fs/btrfs/transaction.h                             |   3 +-
- fs/btrfs/tree-log.c                                |   2 +-
- fs/btrfs/volumes.c                                 |  12 +-
- fs/btrfs/volumes.h                                 |   2 +-
- fs/cachefiles/bind.c                               |   2 +-
- fs/cachefiles/interface.c                          |  18 +-
- fs/cachefiles/internal.h                           |   3 +-
- fs/cachefiles/namei.c                              |   2 +-
- fs/cachefiles/rdwr.c                               |   2 +-
- fs/ceph/caps.c                                     |   4 +-
- fs/ceph/file.c                                     |   7 +-
- fs/ceph/mds_client.c                               |  20 +-
- fs/ceph/mds_client.h                               |   5 +-
- fs/ceph/snap.c                                     |   2 +-
- fs/ceph/super.h                                    |   5 +-
- fs/cifs/cifsfs.c                                   |   2 +-
- fs/cifs/cifsglob.h                                 |   5 +-
- fs/cifs/connect.c                                  |   4 +-
- fs/cifs/inode.c                                    |   2 +-
- fs/coredump.c                                      |   2 +-
- fs/devpts/inode.c                                  |   2 +-
- fs/exec.c                                          |   4 +-
- fs/exofs/sys.c                                     |   2 +-
- fs/f2fs/acl.c                                      |   2 +-
- fs/fscache/cache.c                                 |   8 +-
- fs/fscache/operation.c                             |  38 +--
- fs/fscache/page.c                                  |   2 +-
- fs/fuse/dev.c                                      |  10 +-
- fs/fuse/file.c                                     |   8 +-
- fs/fuse/fuse_i.h                                   |   9 +-
- fs/fuse/inode.c                                    |   6 +-
- fs/gfs2/super.c                                    |   2 +-
- fs/hfs/bnode.c                                     |  14 +-
- fs/hfs/btree.c                                     |   4 +-
- fs/hfs/btree.h                                     |   3 +-
- fs/hfs/inode.c                                     |   4 +-
- fs/hfsplus/bnode.c                                 |  14 +-
- fs/hfsplus/btree.c                                 |   4 +-
- fs/hfsplus/dir.c                                   |   4 +-
- fs/hfsplus/hfsplus_fs.h                            |   5 +-
- fs/hfsplus/inode.c                                 |  10 +-
- fs/hfsplus/super.c                                 |   2 +-
- fs/inode.c                                         |   3 +-
- fs/kernfs/dir.c                                    |  10 +-
- fs/kernfs/mount.c                                  |   2 +-
- fs/lockd/clntproc.c                                |  14 +-
- fs/lockd/host.c                                    |  16 +-
- fs/lockd/mon.c                                     |  14 +-
- fs/lockd/svcproc.c                                 |   2 +-
- fs/mbcache.c                                       |  16 +-
- fs/mount.h                                         |   5 +-
- fs/namespace.c                                     |   8 +-
- fs/ncpfs/sock.c                                    |   9 +-
- fs/nfs/cache_lib.c                                 |   6 +-
- fs/nfs/cache_lib.h                                 |   2 +-
- fs/nfs/client.c                                    |  12 +-
- fs/nfs/dir.c                                       |   8 +-
- fs/nfs/filelayout/filelayout.c                     |  12 +-
- fs/nfs/flexfilelayout/flexfilelayout.c             |  20 +-
- fs/nfs/flexfilelayout/flexfilelayout.h             |   3 +-
- fs/nfs/inode.c                                     |  12 +-
- fs/nfs/nfs4_fs.h                                   |   7 +-
- fs/nfs/nfs4client.c                                |  16 +-
- fs/nfs/nfs4proc.c                                  |  26 +-
- fs/nfs/nfs4state.c                                 |  36 +--
- fs/nfs/pnfs.c                                      |  32 +--
- fs/nfs/pnfs.h                                      |   9 +-
- fs/nfs/pnfs_nfs.c                                  |  10 +-
- fs/nfs/super.c                                     |   4 +-
- fs/nfsd/nfs4layouts.c                              |   4 +-
- fs/nfsd/nfs4state.c                                |  72 +++---
- fs/nfsd/state.h                                    |  15 +-
- fs/nilfs2/the_nilfs.c                              |   8 +-
- fs/nilfs2/the_nilfs.h                              |   5 +-
- fs/notify/group.c                                  |   6 +-
- fs/notify/inotify/inotify_user.c                   |   4 +-
- fs/notify/mark.c                                   |   6 +-
- fs/ntfs/aops.c                                     |   2 +-
- fs/ntfs/inode.c                                    |   6 +-
- fs/ntfs/inode.h                                    |   4 +-
- fs/ntfs/mft.c                                      |  36 +--
- fs/ocfs2/cluster/netdebug.c                        |   2 +-
- fs/ocfs2/cluster/tcp.c                             |   2 +-
- fs/ocfs2/dlm/dlmdebug.c                            |  12 +-
- fs/ocfs2/dlm/dlmdomain.c                           |   2 +-
- fs/ocfs2/dlm/dlmmaster.c                           |   8 +-
- fs/ocfs2/dlm/dlmunlock.c                           |   2 +-
- fs/ocfs2/filecheck.c                               |  17 +-
- fs/posix_acl.c                                     |   6 +-
- fs/proc/base.c                                     |  10 +-
- fs/proc/generic.c                                  |   4 +-
- fs/proc/internal.h                                 |   5 +-
- fs/proc/root.c                                     |   2 +-
- fs/proc/task_mmu.c                                 |   4 +-
- fs/proc/task_nommu.c                               |   2 +-
- fs/super.c                                         |  10 +-
- fs/userfaultfd.c                                   |  11 +-
- fs/xfs/xfs_bmap_item.c                             |   4 +-
- fs/xfs/xfs_bmap_item.h                             |   4 +-
- fs/xfs/xfs_buf.c                                   |  34 +--
- fs/xfs/xfs_buf.h                                   |   7 +-
- fs/xfs/xfs_buf_item.c                              |  16 +-
- fs/xfs/xfs_buf_item.h                              |   4 +-
- fs/xfs/xfs_extfree_item.c                          |   4 +-
- fs/xfs/xfs_extfree_item.h                          |   4 +-
- fs/xfs/xfs_inode.h                                 |   2 +-
- fs/xfs/xfs_log.c                                   |  37 +--
- fs/xfs/xfs_log_priv.h                              |   6 +-
- fs/xfs/xfs_refcount_item.c                         |   4 +-
- fs/xfs/xfs_refcount_item.h                         |   4 +-
- fs/xfs/xfs_rmap_item.c                             |   4 +-
- fs/xfs/xfs_rmap_item.h                             |   4 +-
- fs/xfs/xfs_trace.h                                 |  10 +-
- fs/xfs/xfs_trans_buf.c                             |  32 +--
- include/drm/drm_framebuffer.h                      |   2 +-
- include/drm/ttm/ttm_bo_api.h                       |  15 +-
- include/drm/ttm/ttm_bo_driver.h                    |   4 +-
- include/linux/atmdev.h                             |   9 +-
- include/linux/backing-dev-defs.h                   |   3 +-
- include/linux/backing-dev.h                        |   4 +-
- include/linux/bio.h                                |   4 +-
- include/linux/blk-cgroup.h                         |  11 +-
- include/linux/blk_types.h                          |   3 +-
- include/linux/blkdev.h                             |   3 +-
- include/linux/ceph/libceph.h                       |   3 +-
- include/linux/ceph/osd_client.h                    |   3 +-
- include/linux/ceph/pagelist.h                      |   6 +-
- include/linux/cgroup-defs.h                        |   3 +-
- include/linux/cgroup.h                             |   7 +-
- include/linux/connector.h                          |   4 +-
- include/linux/cred.h                               |  13 +-
- include/linux/filter.h                             |   3 +-
- include/linux/fs.h                                 |   3 +-
- include/linux/fscache-cache.h                      |   7 +-
- include/linux/fsnotify_backend.h                   |   5 +-
- include/linux/igmp.h                               |   3 +-
- include/linux/inetdevice.h                         |  11 +-
- include/linux/init_task.h                          |   7 +-
- include/linux/iocontext.h                          |   7 +-
- include/linux/ipc_namespace.h                      |   5 +-
- include/linux/kernfs.h                             |   3 +-
- include/linux/key.h                                |   5 +-
- include/linux/kref.h                               |  73 +++---
- include/linux/kvm_host.h                           |   3 +-
- include/linux/lockd/lockd.h                        |   9 +-
- include/linux/mbcache.h                            |   6 +-
- include/linux/mlx4/device.h                        |   8 +-
- include/linux/mlx5/cq.h                            |   4 +-
- include/linux/mlx5/driver.h                        |   5 +-
- include/linux/mm_types.h                           |   5 +-
- include/linux/netpoll.h                            |   3 +-
- include/linux/nfs_fs.h                             |   3 +-
- include/linux/nfs_fs_sb.h                          |   5 +-
- include/linux/nsproxy.h                            |   6 +-
- include/linux/perf_event.h                         |   3 +-
- include/linux/posix_acl.h                          |   7 +-
- include/linux/refcount.h                           | 262 +++++++++++++++++++++
- include/linux/rmap.h                               |   7 +-
- include/linux/sched.h                              |  25 +-
- include/linux/skbuff.h                             |  23 +-
- include/linux/sunrpc/auth.h                        |   8 +-
- include/linux/sunrpc/auth_gss.h                    |   3 +-
- include/linux/sunrpc/cache.h                       |   2 +-
- include/media/videobuf2-memops.h                   |   3 +-
- include/net/addrconf.h                             |  14 +-
- include/net/af_unix.h                              |   3 +-
- include/net/arp.h                                  |   2 +-
- include/net/ax25.h                                 |  20 +-
- include/net/bluetooth/hci_core.h                   |  14 +-
- include/net/bluetooth/rfcomm.h                     |   8 +-
- include/net/calipso.h                              |   4 +-
- include/net/cipso_ipv4.h                           |   3 +-
- include/net/dn_fib.h                               |   5 +-
- include/net/fib_rules.h                            |   7 +-
- include/net/if_inet6.h                             |   9 +-
- include/net/inet_frag.h                            |   4 +-
- include/net/inet_hashtables.h                      |   4 +-
- include/net/inetpeer.h                             |   4 +-
- include/net/ip_fib.h                               |   7 +-
- include/net/ip_vs.h                                |  24 +-
- include/net/ipv6.h                                 |   7 +-
- include/net/ipx.h                                  |  13 +-
- include/net/lapb.h                                 |   3 +-
- include/net/lib80211.h                             |   2 +-
- include/net/llc.h                                  |   6 +-
- include/net/lwtunnel.h                             |   7 +-
- include/net/ndisc.h                                |   2 +-
- include/net/neighbour.h                            |  15 +-
- include/net/net_namespace.h                        |   3 +-
- include/net/netfilter/br_netfilter.h               |   2 +-
- include/net/netfilter/nf_conntrack_expect.h        |   4 +-
- include/net/netfilter/nf_conntrack_timeout.h       |   3 +-
- include/net/netlabel.h                             |   8 +-
- include/net/netrom.h                               |  13 +-
- include/net/request_sock.h                         |   9 +-
- include/net/sch_generic.h                          |   3 +-
- include/net/sctp/auth.h                            |   5 +-
- include/net/sctp/structs.h                         |   8 +-
- include/net/sock.h                                 |  25 +-
- include/net/vxlan.h                                |   2 +-
- include/net/x25.h                                  |  15 +-
- include/net/xfrm.h                                 |  21 +-
- include/rdma/ib_addr.h                             |   3 +-
- include/rdma/ib_verbs.h                            |  15 +-
- include/rdma/rdmavt_mr.h                           |   6 +-
- include/rdma/rdmavt_qp.h                           |   6 +-
- include/scsi/libfc.h                               |   5 +-
- include/scsi/libiscsi.h                            |   3 +-
- include/trace/events/bcache.h                      |   2 +-
- include/trace/events/btrfs.h                       |   6 +-
- init/version.c                                     |   4 +-
- ipc/msgutil.c                                      |   2 +-
- ipc/namespace.c                                    |   4 +-
- ipc/sem.c                                          |   8 +-
- ipc/util.c                                         |   6 +-
- ipc/util.h                                         |   3 +-
- kernel/audit_tree.c                                |  10 +-
- kernel/audit_watch.c                               |   8 +-
- kernel/cgroup.c                                    |  23 +-
- kernel/cred.c                                      |  46 ++--
- kernel/events/core.c                               |  16 +-
- kernel/events/internal.h                           |   5 +-
- kernel/events/ring_buffer.c                        |   8 +-
- kernel/events/uprobes.c                            |  13 +-
- kernel/exit.c                                      |   4 +-
- kernel/fork.c                                      |  40 ++--
- kernel/futex.c                                     |  17 +-
- kernel/groups.c                                    |   2 +-
- kernel/kcov.c                                      |   9 +-
- kernel/nsproxy.c                                   |   6 +-
- kernel/pid.c                                       |   4 +-
- kernel/sched/core.c                                |   7 +-
- kernel/sched/fair.c                                |   8 +-
- kernel/user.c                                      |   8 +-
- lib/is_single_threaded.c                           |   2 +-
- mm/backing-dev.c                                   |  11 +-
- mm/debug.c                                         |   4 +-
- mm/huge_memory.c                                   |  16 +-
- mm/init-mm.c                                       |   4 +-
- mm/khugepaged.c                                    |   4 +-
- mm/kmemleak.c                                      |  16 +-
- mm/ksm.c                                           |   4 +-
- mm/memory.c                                        |   2 +-
- mm/mmu_context.c                                   |   2 +-
- mm/mmu_notifier.c                                  |  12 +-
- mm/mprotect.c                                      |   2 +-
- mm/oom_kill.c                                      |   6 +-
- mm/rmap.c                                          |  14 +-
- mm/swapfile.c                                      |  14 +-
- mm/vmacache.c                                      |   2 +-
- mm/zpool.c                                         |   4 +-
- net/atm/br2684.c                                   |   2 +-
- net/atm/clip.c                                     |   8 +-
- net/atm/common.c                                   |  10 +-
- net/atm/lec.c                                      |  11 +-
- net/atm/lec_arpc.h                                 |   2 +-
- net/atm/mpc.c                                      |   4 +-
- net/atm/mpoa_caches.c                              |  26 +-
- net/atm/mpoa_caches.h                              |   5 +-
- net/atm/pppoatm.c                                  |   2 +-
- net/atm/proc.c                                     |   4 +-
- net/atm/raw.c                                      |   2 +-
- net/atm/resources.c                                |   2 +-
- net/atm/signaling.c                                |   2 +-
- net/ax25/af_ax25.c                                 |   2 +-
- net/ax25/ax25_route.c                              |   2 +-
- net/ax25/ax25_uid.c                                |   2 +-
- net/bluetooth/6lowpan.c                            |   2 +-
- net/bluetooth/a2mp.c                               |   4 +-
- net/bluetooth/af_bluetooth.c                       |   2 +-
- net/bluetooth/amp.c                                |   4 +-
- net/bluetooth/hci_conn.c                           |   4 +-
- net/bluetooth/l2cap_core.c                         |   4 +-
- net/bluetooth/rfcomm/core.c                        |   4 +-
- net/bluetooth/rfcomm/sock.c                        |   2 +-
- net/bridge/br_netfilter_hooks.c                    |   4 +-
- net/bridge/br_private.h                            |   3 +-
- net/bridge/br_vlan.c                               |   8 +-
- net/caif/caif_socket.c                             |   2 +-
- net/ceph/messenger.c                               |   4 +-
- net/ceph/osd_client.c                              |  26 +-
- net/ceph/pagelist.c                                |   2 +-
- net/ceph/snapshot.c                                |   6 +-
- net/core/datagram.c                                |  10 +-
- net/core/dev.c                                     |  10 +-
- net/core/dst.c                                     |   7 +-
- net/core/fib_rules.c                               |   4 +-
- net/core/filter.c                                  |   6 +-
- net/core/neighbour.c                               |  22 +-
- net/core/net-sysfs.c                               |   2 +-
- net/core/net_namespace.c                           |   4 +-
- net/core/netpoll.c                                 |  10 +-
- net/core/pktgen.c                                  |  16 +-
- net/core/rtnetlink.c                               |   2 +-
- net/core/skbuff.c                                  |  34 +--
- net/core/sock.c                                    |  30 +--
- net/dccp/ipv6.c                                    |   2 +-
- net/decnet/dn_fib.c                                |   6 +-
- net/decnet/dn_neigh.c                              |   2 +-
- net/ipv4/af_inet.c                                 |   2 +-
- net/ipv4/cipso_ipv4.c                              |  16 +-
- net/ipv4/devinet.c                                 |   2 +-
- net/ipv4/fib_semantics.c                           |   2 +-
- net/ipv4/fib_trie.c                                |   2 +-
- net/ipv4/igmp.c                                    |  10 +-
- net/ipv4/inet_connection_sock.c                    |   2 +-
- net/ipv4/inet_fragment.c                           |  14 +-
- net/ipv4/inet_hashtables.c                         |   4 +-
- net/ipv4/inet_timewait_sock.c                      |   8 +-
- net/ipv4/inetpeer.c                                |  18 +-
- net/ipv4/ip_fragment.c                             |   2 +-
- net/ipv4/ip_output.c                               |   6 +-
- net/ipv4/netfilter/ipt_CLUSTERIP.c                 |  19 +-
- net/ipv4/ping.c                                    |   4 +-
- net/ipv4/raw.c                                     |   2 +-
- net/ipv4/syncookies.c                              |   2 +-
- net/ipv4/tcp.c                                     |   4 +-
- net/ipv4/tcp_fastopen.c                            |   2 +-
- net/ipv4/tcp_ipv4.c                                |   4 +-
- net/ipv4/tcp_offload.c                             |   2 +-
- net/ipv4/tcp_output.c                              |  13 +-
- net/ipv4/udp.c                                     |   6 +-
- net/ipv4/udp_diag.c                                |   4 +-
- net/ipv6/addrconf.c                                |   4 +-
- net/ipv6/addrlabel.c                               |   9 +-
- net/ipv6/anycast.c                                 |   6 +-
- net/ipv6/calipso.c                                 |  16 +-
- net/ipv6/datagram.c                                |   2 +-
- net/ipv6/exthdrs.c                                 |   4 +-
- net/ipv6/inet6_hashtables.c                        |   4 +-
- net/ipv6/ip6_output.c                              |   4 +-
- net/ipv6/ipv6_sockglue.c                           |   2 +-
- net/ipv6/mcast.c                                   |  18 +-
- net/ipv6/syncookies.c                              |   2 +-
- net/ipv6/tcp_ipv6.c                                |   6 +-
- net/ipv6/udp.c                                     |   2 +-
- net/ipv6/xfrm6_input.c                             |   2 +-
- net/ipv6/xfrm6_tunnel.c                            |   8 +-
- net/ipx/af_ipx.c                                   |   6 +-
- net/ipx/ipx_proc.c                                 |   2 +-
- net/ipx/ipx_route.c                                |   2 +-
- net/kcm/kcmproc.c                                  |   2 +-
- net/key/af_key.c                                   |  10 +-
- net/l2tp/l2tp_core.c                               |  12 +-
- net/l2tp/l2tp_core.h                               |  13 +-
- net/l2tp/l2tp_debugfs.c                            |   6 +-
- net/l2tp/l2tp_ppp.c                                |   2 +-
- net/lapb/lapb_iface.c                              |   6 +-
- net/llc/llc_conn.c                                 |   8 +-
- net/llc/llc_core.c                                 |   2 +-
- net/llc/llc_sap.c                                  |   2 +-
- net/netfilter/ipset/ip_set_hash_gen.h              |  19 +-
- net/netfilter/ipvs/ip_vs_conn.c                    |  24 +-
- net/netfilter/ipvs/ip_vs_core.c                    |   4 +-
- net/netfilter/ipvs/ip_vs_ctl.c                     |  24 +-
- net/netfilter/ipvs/ip_vs_dh.c                      |   2 +-
- net/netfilter/ipvs/ip_vs_fo.c                      |   2 +-
- net/netfilter/ipvs/ip_vs_lblc.c                    |   4 +-
- net/netfilter/ipvs/ip_vs_lblcr.c                   |   8 +-
- net/netfilter/ipvs/ip_vs_lc.c                      |   2 +-
- net/netfilter/ipvs/ip_vs_nq.c                      |   4 +-
- net/netfilter/ipvs/ip_vs_ovf.c                     |   2 +-
- net/netfilter/ipvs/ip_vs_pe_sip.c                  |   2 +-
- net/netfilter/ipvs/ip_vs_proto_sctp.c              |   2 +-
- net/netfilter/ipvs/ip_vs_proto_tcp.c               |   2 +-
- net/netfilter/ipvs/ip_vs_rr.c                      |   4 +-
- net/netfilter/ipvs/ip_vs_sed.c                     |   4 +-
- net/netfilter/ipvs/ip_vs_sh.c                      |   2 +-
- net/netfilter/ipvs/ip_vs_wlc.c                     |   4 +-
- net/netfilter/ipvs/ip_vs_wrr.c                     |   4 +-
- net/netfilter/nf_conntrack_core.c                  |  26 +-
- net/netfilter/nf_conntrack_expect.c                |  12 +-
- net/netfilter/nf_conntrack_netlink.c               |  10 +-
- net/netfilter/nf_conntrack_standalone.c            |   4 +-
- net/netfilter/nfnetlink_acct.c                     |  15 +-
- net/netfilter/nfnetlink_cttimeout.c                |  12 +-
- net/netfilter/nfnetlink_log.c                      |  14 +-
- net/netfilter/nft_ct.c                             |   2 +-
- net/netfilter/xt_CT.c                              |   2 +-
- net/netfilter/xt_TPROXY.c                          |   4 +-
- net/netlink/af_netlink.c                           |  14 +-
- net/netrom/nr_route.c                              |   6 +-
- net/packet/af_packet.c                             |  14 +-
- net/packet/internal.h                              |   4 +-
- net/phonet/socket.c                                |   4 +-
- net/rds/ib.c                                       |  12 +-
- net/rds/ib.h                                       |   2 +-
- net/rds/ib_rdma.c                                  |   4 +-
- net/rds/message.c                                  |  12 +-
- net/rds/rdma.c                                     |  10 +-
- net/rds/rds.h                                      |   9 +-
- net/rds/recv.c                                     |  12 +-
- net/rds/tcp_send.c                                 |   2 +-
- net/rxrpc/af_rxrpc.c                               |   6 +-
- net/rxrpc/skbuff.c                                 |  12 +-
- net/sched/em_meta.c                                |   2 +-
- net/sched/sch_api.c                                |   8 +-
- net/sched/sch_atm.c                                |   2 +-
- net/sched/sch_generic.c                            |   8 +-
- net/sctp/associola.c                               |   6 +-
- net/sctp/auth.c                                    |   4 +-
- net/sctp/chunk.c                                   |   6 +-
- net/sctp/endpointola.c                             |   6 +-
- net/sctp/output.c                                  |   2 +-
- net/sctp/outqueue.c                                |   2 +-
- net/sctp/proc.c                                    |   2 +-
- net/sctp/sm_make_chunk.c                           |   6 +-
- net/sctp/socket.c                                  |   6 +-
- net/sctp/transport.c                               |   8 +-
- net/sunrpc/auth.c                                  |  12 +-
- net/sunrpc/auth_gss/auth_gss.c                     |  29 +--
- net/sunrpc/auth_null.c                             |   2 +-
- net/sunrpc/cache.c                                 |   2 +-
- net/sunrpc/svc_xprt.c                              |   6 +-
- net/sunrpc/svcauth.c                               |  15 +-
- net/sunrpc/xprtrdma/svc_rdma_transport.c           |   4 +-
- net/tipc/socket.c                                  |   2 +-
- net/unix/af_unix.c                                 |  16 +-
- net/wireless/lib80211.c                            |   2 +-
- net/x25/x25_link.c                                 |   2 +-
- net/x25/x25_route.c                                |   2 +-
- net/xfrm/xfrm_input.c                              |   4 +-
- net/xfrm/xfrm_policy.c                             |   4 +-
- net/xfrm/xfrm_state.c                              |   4 +-
- security/apparmor/include/apparmor.h               |   6 -
- security/apparmor/include/policy.h                 |   4 +-
- security/keys/gc.c                                 |   2 +-
- security/keys/internal.h                           |   3 +-
- security/keys/key.c                                |  12 +-
- security/keys/keyring.c                            |   8 +-
- security/keys/proc.c                               |   4 +-
- security/keys/process_keys.c                       |   2 +-
- security/keys/request_key_auth.c                   |   2 +-
- security/selinux/hooks.c                           |   9 +-
- security/selinux/include/xfrm.h                    |   5 +-
- security/selinux/xfrm.c                            |  11 +-
- security/tomoyo/common.c                           |  11 +-
- sound/core/seq/seq_clientmgr.c                     |   2 +-
- sound/core/seq/seq_ports.c                         |   8 +-
- sound/core/seq/seq_ports.h                         |   3 +-
- sound/usb/card.c                                   |  10 +-
- sound/usb/usbaudio.h                               |   4 +-
- tools/perf/util/cgroup.c                           |   6 +-
- tools/perf/util/cgroup.h                           |   4 +-
- tools/perf/util/comm.c                             |  10 +-
- tools/perf/util/cpumap.c                           |  16 +-
- tools/perf/util/cpumap.h                           |   4 +-
- tools/perf/util/dso.c                              |   6 +-
- tools/perf/util/dso.h                              |   4 +-
- tools/perf/util/evlist.c                           |  18 +-
- tools/perf/util/evlist.h                           |   4 +-
- tools/perf/util/map.c                              |  10 +-
- tools/perf/util/map.h                              |  10 +-
- tools/perf/util/thread.c                           |   6 +-
- tools/perf/util/thread.h                           |   4 +-
- tools/perf/util/thread_map.c                       |  20 +-
- tools/perf/util/thread_map.h                       |   4 +-
- virt/kvm/async_pf.c                                |   2 +-
- virt/kvm/kvm_main.c                                |  10 +-
- 709 files changed, 3279 insertions(+), 2898 deletions(-)
- create mode 100644 include/linux/refcount.h
-
+diff --git a/drivers/block/drbd/drbd_req.c b/drivers/block/drbd/drbd_req.c
+index de279fe..74306c0 100644
+--- a/drivers/block/drbd/drbd_req.c
++++ b/drivers/block/drbd/drbd_req.c
+@@ -520,7 +520,7 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
+ 		/* Completion does it's own kref_put.  If we are going to
+ 		 * kref_sub below, we need req to be still around then. */
+ 		int at_least = k_put + !!c_put;
+-		int refcount = atomic_read(&req->kref.refcount);
++		int refcount = kref_read(&req->kref);
+ 		if (refcount < at_least)
+ 			drbd_err(device,
+ 				"mod_rq_state: Logic BUG: %x -> %x: refcount = %d, should be >= %d\n",
+diff --git a/drivers/block/rbd.c b/drivers/block/rbd.c
+index 36d2b9f..436baa6 100644
+--- a/drivers/block/rbd.c
++++ b/drivers/block/rbd.c
+@@ -1535,7 +1535,7 @@ static bool obj_request_overlaps_parent(struct rbd_obj_request *obj_request)
+ static void rbd_obj_request_get(struct rbd_obj_request *obj_request)
+ {
+ 	dout("%s: obj %p (was %d)\n", __func__, obj_request,
+-		atomic_read(&obj_request->kref.refcount));
++		kref_read(&obj_request->kref));
+ 	kref_get(&obj_request->kref);
+ }
+ 
+@@ -1544,14 +1544,14 @@ static void rbd_obj_request_put(struct rbd_obj_request *obj_request)
+ {
+ 	rbd_assert(obj_request != NULL);
+ 	dout("%s: obj %p (was %d)\n", __func__, obj_request,
+-		atomic_read(&obj_request->kref.refcount));
++		kref_read(&obj_request->kref));
+ 	kref_put(&obj_request->kref, rbd_obj_request_destroy);
+ }
+ 
+ static void rbd_img_request_get(struct rbd_img_request *img_request)
+ {
+ 	dout("%s: img %p (was %d)\n", __func__, img_request,
+-	     atomic_read(&img_request->kref.refcount));
++	     kref_read(&img_request->kref));
+ 	kref_get(&img_request->kref);
+ }
+ 
+@@ -1562,7 +1562,7 @@ static void rbd_img_request_put(struct rbd_img_request *img_request)
+ {
+ 	rbd_assert(img_request != NULL);
+ 	dout("%s: img %p (was %d)\n", __func__, img_request,
+-		atomic_read(&img_request->kref.refcount));
++		kref_read(&img_request->kref));
+ 	if (img_request_child_test(img_request))
+ 		kref_put(&img_request->kref, rbd_parent_request_destroy);
+ 	else
+diff --git a/drivers/block/virtio_blk.c b/drivers/block/virtio_blk.c
+index 5545a67..79a346c 100644
+--- a/drivers/block/virtio_blk.c
++++ b/drivers/block/virtio_blk.c
+@@ -767,7 +767,7 @@ static void virtblk_remove(struct virtio_device *vdev)
+ 	/* Stop all the virtqueues. */
+ 	vdev->config->reset(vdev);
+ 
+-	refc = atomic_read(&disk_to_dev(vblk->disk)->kobj.kref.refcount);
++	refc = kref_read(&disk_to_dev(vblk->disk)->kobj.kref);
+ 	put_disk(vblk->disk);
+ 	vdev->config->del_vqs(vdev);
+ 	kfree(vblk->vqs);
+diff --git a/drivers/gpu/drm/drm_gem_cma_helper.c b/drivers/gpu/drm/drm_gem_cma_helper.c
+index 1d6c335..33cd516 100644
+--- a/drivers/gpu/drm/drm_gem_cma_helper.c
++++ b/drivers/gpu/drm/drm_gem_cma_helper.c
+@@ -376,7 +376,7 @@ void drm_gem_cma_describe(struct drm_gem_cma_object *cma_obj,
+ 	off = drm_vma_node_start(&obj->vma_node);
+ 
+ 	seq_printf(m, "%2d (%2d) %08llx %pad %p %zu",
+-			obj->name, obj->refcount.refcount.counter,
++			obj->name, kref_read(&obj->refcount),
+ 			off, &cma_obj->paddr, cma_obj->vaddr, obj->size);
+ 
+ 	seq_printf(m, "\n");
+diff --git a/drivers/gpu/drm/drm_info.c b/drivers/gpu/drm/drm_info.c
+index ffb2ab3..6b68e90 100644
+--- a/drivers/gpu/drm/drm_info.c
++++ b/drivers/gpu/drm/drm_info.c
+@@ -118,7 +118,7 @@ static int drm_gem_one_name_info(int id, void *ptr, void *data)
+ 	seq_printf(m, "%6d %8zd %7d %8d\n",
+ 		   obj->name, obj->size,
+ 		   obj->handle_count,
+-		   atomic_read(&obj->refcount.refcount));
++		   kref_read(&obj->refcount));
+ 	return 0;
+ }
+ 
+diff --git a/drivers/gpu/drm/drm_mode_object.c b/drivers/gpu/drm/drm_mode_object.c
+index 9f17085..c6885a4 100644
+--- a/drivers/gpu/drm/drm_mode_object.c
++++ b/drivers/gpu/drm/drm_mode_object.c
+@@ -159,7 +159,7 @@ EXPORT_SYMBOL(drm_mode_object_find);
+ void drm_mode_object_unreference(struct drm_mode_object *obj)
+ {
+ 	if (obj->free_cb) {
+-		DRM_DEBUG("OBJ ID: %d (%d)\n", obj->id, atomic_read(&obj->refcount.refcount));
++		DRM_DEBUG("OBJ ID: %d (%d)\n", obj->id, kref_read(&obj->refcount));
+ 		kref_put(&obj->refcount, obj->free_cb);
+ 	}
+ }
+@@ -176,7 +176,7 @@ EXPORT_SYMBOL(drm_mode_object_unreference);
+ void drm_mode_object_reference(struct drm_mode_object *obj)
+ {
+ 	if (obj->free_cb) {
+-		DRM_DEBUG("OBJ ID: %d (%d)\n", obj->id, atomic_read(&obj->refcount.refcount));
++		DRM_DEBUG("OBJ ID: %d (%d)\n", obj->id, kref_read(&obj->refcount));
+ 		kref_get(&obj->refcount);
+ 	}
+ }
+diff --git a/drivers/gpu/drm/etnaviv/etnaviv_gem.c b/drivers/gpu/drm/etnaviv/etnaviv_gem.c
+index 114dddb..aa6e35d 100644
+--- a/drivers/gpu/drm/etnaviv/etnaviv_gem.c
++++ b/drivers/gpu/drm/etnaviv/etnaviv_gem.c
+@@ -486,7 +486,7 @@ static void etnaviv_gem_describe(struct drm_gem_object *obj, struct seq_file *m)
+ 
+ 	seq_printf(m, "%08x: %c %2d (%2d) %08lx %p %zd\n",
+ 			etnaviv_obj->flags, is_active(etnaviv_obj) ? 'A' : 'I',
+-			obj->name, obj->refcount.refcount.counter,
++			obj->name, kref_read(&obj->refcount),
+ 			off, etnaviv_obj->vaddr, obj->size);
+ 
+ 	rcu_read_lock();
+diff --git a/drivers/gpu/drm/msm/msm_gem.c b/drivers/gpu/drm/msm/msm_gem.c
+index d8bc59c..1228b1e 100644
+--- a/drivers/gpu/drm/msm/msm_gem.c
++++ b/drivers/gpu/drm/msm/msm_gem.c
+@@ -640,14 +640,13 @@ void msm_gem_describe(struct drm_gem_object *obj, struct seq_file *m)
+ 
+ 	seq_printf(m, "%08x: %c %2d (%2d) %08llx %p\t",
+ 			msm_obj->flags, is_active(msm_obj) ? 'A' : 'I',
+-			obj->name, obj->refcount.refcount.counter,
++			obj->name, kref_read(&obj->refcount),
+ 			off, msm_obj->vaddr);
+ 
+ 	for (id = 0; id < priv->num_aspaces; id++)
+ 		seq_printf(m, " %08llx", msm_obj->domain[id].iova);
+ 
+ 	seq_printf(m, " %zu%s\n", obj->size, madv);
+-
+ 	rcu_read_lock();
+ 	fobj = rcu_dereference(robj->fence);
+ 	if (fobj) {
+diff --git a/drivers/gpu/drm/nouveau/nouveau_fence.c b/drivers/gpu/drm/nouveau/nouveau_fence.c
+index a6126c9..88ee60d 100644
+--- a/drivers/gpu/drm/nouveau/nouveau_fence.c
++++ b/drivers/gpu/drm/nouveau/nouveau_fence.c
+@@ -527,7 +527,7 @@ static bool nouveau_fence_no_signaling(struct dma_fence *f)
+ 	 * caller should have a reference on the fence,
+ 	 * else fence could get freed here
+ 	 */
+-	WARN_ON(atomic_read(&fence->base.refcount.refcount) <= 1);
++	WARN_ON(kref_read(&fence->base.refcount) <= 1);
+ 
+ 	/*
+ 	 * This needs uevents to work correctly, but dma_fence_add_callback relies on
+diff --git a/drivers/gpu/drm/omapdrm/omap_gem.c b/drivers/gpu/drm/omapdrm/omap_gem.c
+index 4a90c69..74a9968 100644
+--- a/drivers/gpu/drm/omapdrm/omap_gem.c
++++ b/drivers/gpu/drm/omapdrm/omap_gem.c
+@@ -1033,7 +1033,7 @@ void omap_gem_describe(struct drm_gem_object *obj, struct seq_file *m)
+ 	off = drm_vma_node_start(&obj->vma_node);
+ 
+ 	seq_printf(m, "%08x: %2d (%2d) %08llx %pad (%2d) %p %4d",
+-			omap_obj->flags, obj->name, obj->refcount.refcount.counter,
++			omap_obj->flags, obj->name, kref_read(&obj->refcount),
+ 			off, &omap_obj->paddr, omap_obj->paddr_cnt,
+ 			omap_obj->vaddr, omap_obj->roll);
+ 
+diff --git a/drivers/gpu/drm/ttm/ttm_bo.c b/drivers/gpu/drm/ttm/ttm_bo.c
+index d506361..30aefcc 100644
+--- a/drivers/gpu/drm/ttm/ttm_bo.c
++++ b/drivers/gpu/drm/ttm/ttm_bo.c
+@@ -140,8 +140,8 @@ static void ttm_bo_release_list(struct kref *list_kref)
+ 	struct ttm_bo_device *bdev = bo->bdev;
+ 	size_t acc_size = bo->acc_size;
+ 
+-	BUG_ON(atomic_read(&bo->list_kref.refcount));
+-	BUG_ON(atomic_read(&bo->kref.refcount));
++	BUG_ON(kref_read(&bo->list_kref));
++	BUG_ON(kref_read(&bo->kref));
+ 	BUG_ON(atomic_read(&bo->cpu_writers));
+ 	BUG_ON(bo->mem.mm_node != NULL);
+ 	BUG_ON(!list_empty(&bo->lru));
+diff --git a/drivers/gpu/drm/ttm/ttm_object.c b/drivers/gpu/drm/ttm/ttm_object.c
+index 4f5fa8d..fdb451e 100644
+--- a/drivers/gpu/drm/ttm/ttm_object.c
++++ b/drivers/gpu/drm/ttm/ttm_object.c
+@@ -304,7 +304,7 @@ bool ttm_ref_object_exists(struct ttm_object_file *tfile,
+ 	 * Verify that the ref->obj pointer was actually valid!
+ 	 */
+ 	rmb();
+-	if (unlikely(atomic_read(&ref->kref.refcount) == 0))
++	if (unlikely(kref_read(&ref->kref) == 0))
+ 		goto out_false;
+ 
+ 	rcu_read_unlock();
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_cm.h b/drivers/infiniband/hw/cxgb3/iwch_cm.h
+index b9efadf..e66e759 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_cm.h
++++ b/drivers/infiniband/hw/cxgb3/iwch_cm.h
+@@ -55,14 +55,14 @@
+ 
+ #define put_ep(ep) { \
+ 	PDBG("put_ep (via %s:%u) ep %p refcnt %d\n", __func__, __LINE__,  \
+-	     ep, atomic_read(&((ep)->kref.refcount))); \
+-	WARN_ON(atomic_read(&((ep)->kref.refcount)) < 1); \
++	     ep, kref_read(&((ep)->kref))); \
++	WARN_ON(kref_read(&((ep)->kref)) < 1); \
+ 	kref_put(&((ep)->kref), __free_ep); \
+ }
+ 
+ #define get_ep(ep) { \
+ 	PDBG("get_ep (via %s:%u) ep %p, refcnt %d\n", __func__, __LINE__, \
+-	     ep, atomic_read(&((ep)->kref.refcount))); \
++	     ep, kref_read(&((ep)->kref))); \
+ 	kref_get(&((ep)->kref));  \
+ }
+ 
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_qp.c b/drivers/infiniband/hw/cxgb3/iwch_qp.c
+index d939980..a9194db 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_qp.c
++++ b/drivers/infiniband/hw/cxgb3/iwch_qp.c
+@@ -961,7 +961,7 @@ int iwch_modify_qp(struct iwch_dev *rhp, struct iwch_qp *qhp,
+ 	case IWCH_QP_STATE_RTS:
+ 		switch (attrs->next_state) {
+ 		case IWCH_QP_STATE_CLOSING:
+-			BUG_ON(atomic_read(&qhp->ep->com.kref.refcount) < 2);
++			BUG_ON(kref_read(&qhp->ep->com.kref) < 2);
+ 			qhp->attr.state = IWCH_QP_STATE_CLOSING;
+ 			if (!internal) {
+ 				abort=0;
+diff --git a/drivers/infiniband/hw/cxgb4/iw_cxgb4.h b/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
+index 4788e1a..4dc1415 100644
+--- a/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
++++ b/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
+@@ -654,14 +654,14 @@ enum c4iw_mmid_state {
+ 
+ #define c4iw_put_ep(ep) { \
+ 	PDBG("put_ep (via %s:%u) ep %p refcnt %d\n", __func__, __LINE__,  \
+-	     ep, atomic_read(&((ep)->kref.refcount))); \
+-	WARN_ON(atomic_read(&((ep)->kref.refcount)) < 1); \
++	     ep, kref_read(&((ep)->kref))); \
++	WARN_ON(kref_read(&((ep)->kref)) < 1); \
+ 	kref_put(&((ep)->kref), _c4iw_free_ep); \
+ }
+ 
+ #define c4iw_get_ep(ep) { \
+ 	PDBG("get_ep (via %s:%u) ep %p, refcnt %d\n", __func__, __LINE__, \
+-	     ep, atomic_read(&((ep)->kref.refcount))); \
++	     ep, kref_read(&((ep)->kref))); \
+ 	kref_get(&((ep)->kref));  \
+ }
+ void _c4iw_free_ep(struct kref *kref);
+diff --git a/drivers/infiniband/hw/cxgb4/qp.c b/drivers/infiniband/hw/cxgb4/qp.c
+index cda5542..347b3c9 100644
+--- a/drivers/infiniband/hw/cxgb4/qp.c
++++ b/drivers/infiniband/hw/cxgb4/qp.c
+@@ -1503,7 +1503,7 @@ int c4iw_modify_qp(struct c4iw_dev *rhp, struct c4iw_qp *qhp,
+ 	case C4IW_QP_STATE_RTS:
+ 		switch (attrs->next_state) {
+ 		case C4IW_QP_STATE_CLOSING:
+-			BUG_ON(atomic_read(&qhp->ep->com.kref.refcount) < 2);
++			BUG_ON(kref_read(&qhp->ep->com.kref) < 2);
+ 			t4_set_wq_in_error(&qhp->wq);
+ 			set_state(qhp, C4IW_QP_STATE_CLOSING);
+ 			ep = qhp->ep;
+diff --git a/drivers/infiniband/hw/usnic/usnic_ib_sysfs.c b/drivers/infiniband/hw/usnic/usnic_ib_sysfs.c
+index 80ef3f8..0444324 100644
+--- a/drivers/infiniband/hw/usnic/usnic_ib_sysfs.c
++++ b/drivers/infiniband/hw/usnic/usnic_ib_sysfs.c
+@@ -80,7 +80,7 @@ usnic_ib_show_config(struct device *device, struct device_attribute *attr,
+ 	left = PAGE_SIZE;
+ 
+ 	mutex_lock(&us_ibdev->usdev_lock);
+-	if (atomic_read(&us_ibdev->vf_cnt.refcount) > 0) {
++	if (kref_read(&us_ibdev->vf_cnt) > 0) {
+ 		char *busname;
+ 
+ 		/*
+@@ -99,7 +99,7 @@ usnic_ib_show_config(struct device *device, struct device_attribute *attr,
+ 			PCI_FUNC(us_ibdev->pdev->devfn),
+ 			netdev_name(us_ibdev->netdev),
+ 			us_ibdev->ufdev->mac,
+-			atomic_read(&us_ibdev->vf_cnt.refcount));
++			kref_read(&us_ibdev->vf_cnt));
+ 		UPDATE_PTR_LEFT(n, ptr, left);
+ 
+ 		for (res_type = USNIC_VNIC_RES_TYPE_EOL;
+@@ -147,7 +147,7 @@ usnic_ib_show_max_vf(struct device *device, struct device_attribute *attr,
+ 	us_ibdev = container_of(device, struct usnic_ib_dev, ib_dev.dev);
+ 
+ 	return scnprintf(buf, PAGE_SIZE, "%u\n",
+-			atomic_read(&us_ibdev->vf_cnt.refcount));
++			kref_read(&us_ibdev->vf_cnt));
+ }
+ 
+ static ssize_t
+diff --git a/drivers/infiniband/hw/usnic/usnic_ib_verbs.c b/drivers/infiniband/hw/usnic/usnic_ib_verbs.c
+index 74819a7..69df8e3 100644
+--- a/drivers/infiniband/hw/usnic/usnic_ib_verbs.c
++++ b/drivers/infiniband/hw/usnic/usnic_ib_verbs.c
+@@ -291,11 +291,11 @@ int usnic_ib_query_device(struct ib_device *ibdev,
+ 	qp_per_vf = max(us_ibdev->vf_res_cnt[USNIC_VNIC_RES_TYPE_WQ],
+ 			us_ibdev->vf_res_cnt[USNIC_VNIC_RES_TYPE_RQ]);
+ 	props->max_qp = qp_per_vf *
+-		atomic_read(&us_ibdev->vf_cnt.refcount);
++		kref_read(&us_ibdev->vf_cnt);
+ 	props->device_cap_flags = IB_DEVICE_PORT_ACTIVE_EVENT |
+ 		IB_DEVICE_SYS_IMAGE_GUID | IB_DEVICE_BLOCK_MULTICAST_LOOPBACK;
+ 	props->max_cq = us_ibdev->vf_res_cnt[USNIC_VNIC_RES_TYPE_CQ] *
+-		atomic_read(&us_ibdev->vf_cnt.refcount);
++		kref_read(&us_ibdev->vf_cnt);
+ 	props->max_pd = USNIC_UIOM_MAX_PD_CNT;
+ 	props->max_mr = USNIC_UIOM_MAX_MR_CNT;
+ 	props->local_ca_ack_delay = 0;
+diff --git a/drivers/misc/genwqe/card_dev.c b/drivers/misc/genwqe/card_dev.c
+index 7f1b282..cb290b8 100644
+--- a/drivers/misc/genwqe/card_dev.c
++++ b/drivers/misc/genwqe/card_dev.c
+@@ -1396,7 +1396,7 @@ int genwqe_device_remove(struct genwqe_dev *cd)
+ 	 * application which will decrease this reference from
+ 	 * 1/unused to 0/illegal and not from 2/used 1/empty.
+ 	 */
+-	rc = atomic_read(&cd->cdev_genwqe.kobj.kref.refcount);
++	rc = kref_read(&cd->cdev_genwqe.kobj.kref);
+ 	if (rc != 1) {
+ 		dev_err(&pci_dev->dev,
+ 			"[%s] err: cdev_genwqe...refcount=%d\n", __func__, rc);
+diff --git a/drivers/misc/mei/debugfs.c b/drivers/misc/mei/debugfs.c
+index c6c051b..e32a923 100644
+--- a/drivers/misc/mei/debugfs.c
++++ b/drivers/misc/mei/debugfs.c
+@@ -67,7 +67,7 @@ static ssize_t mei_dbgfs_read_meclients(struct file *fp, char __user *ubuf,
+ 				me_cl->props.max_number_of_connections,
+ 				me_cl->props.max_msg_length,
+ 				me_cl->props.single_recv_buf,
+-				atomic_read(&me_cl->refcnt.refcount));
++				kref_read(&me_cl->refcnt));
+ 
+ 			mei_me_cl_put(me_cl);
+ 		}
+diff --git a/drivers/pci/hotplug/pnv_php.c b/drivers/pci/hotplug/pnv_php.c
+index 56efaf7..d2961ef 100644
+--- a/drivers/pci/hotplug/pnv_php.c
++++ b/drivers/pci/hotplug/pnv_php.c
+@@ -155,7 +155,7 @@ static void pnv_php_detach_device_nodes(struct device_node *parent)
+ 		pnv_php_detach_device_nodes(dn);
+ 
+ 		of_node_put(dn);
+-		refcount = atomic_read(&dn->kobj.kref.refcount);
++		refcount = kref_read(&dn->kobj.kref);
+ 		if (refcount != 1)
+ 			pr_warn("Invalid refcount %d on <%s>\n",
+ 				refcount, of_node_full_name(dn));
+diff --git a/drivers/pci/slot.c b/drivers/pci/slot.c
+index 429d34c..e429095 100644
+--- a/drivers/pci/slot.c
++++ b/drivers/pci/slot.c
+@@ -345,7 +345,7 @@ EXPORT_SYMBOL_GPL(pci_create_slot);
+ void pci_destroy_slot(struct pci_slot *slot)
+ {
+ 	dev_dbg(&slot->bus->dev, "dev %02x, dec refcount to %d\n",
+-		slot->number, atomic_read(&slot->kobj.kref.refcount) - 1);
++		slot->number, kref_read(&slot->kobj.kref) - 1);
+ 
+ 	mutex_lock(&pci_slot_mutex);
+ 	kobject_put(&slot->kobj);
+diff --git a/drivers/scsi/bnx2fc/bnx2fc_io.c b/drivers/scsi/bnx2fc/bnx2fc_io.c
+index f501095..898461b 100644
+--- a/drivers/scsi/bnx2fc/bnx2fc_io.c
++++ b/drivers/scsi/bnx2fc/bnx2fc_io.c
+@@ -74,7 +74,7 @@ static void bnx2fc_cmd_timeout(struct work_struct *work)
+ 				    &io_req->req_flags)) {
+ 			/* Handle internally generated ABTS timeout */
+ 			BNX2FC_IO_DBG(io_req, "ABTS timed out refcnt = %d\n",
+-					io_req->refcount.refcount.counter);
++					kref_read(&io_req->refcount));
+ 			if (!(test_and_set_bit(BNX2FC_FLAG_ABTS_DONE,
+ 					       &io_req->req_flags))) {
+ 				/*
+@@ -1141,7 +1141,7 @@ int bnx2fc_eh_abort(struct scsi_cmnd *sc_cmd)
+ 		return SUCCESS;
+ 	}
+ 	BNX2FC_IO_DBG(io_req, "eh_abort - refcnt = %d\n",
+-		      io_req->refcount.refcount.counter);
++		      kref_read(&io_req->refcount));
+ 
+ 	/* Hold IO request across abort processing */
+ 	kref_get(&io_req->refcount);
+@@ -1299,7 +1299,7 @@ void bnx2fc_process_cleanup_compl(struct bnx2fc_cmd *io_req,
+ {
+ 	BNX2FC_IO_DBG(io_req, "Entered process_cleanup_compl "
+ 			      "refcnt = %d, cmd_type = %d\n",
+-		   io_req->refcount.refcount.counter, io_req->cmd_type);
++		   kref_read(&io_req->refcount), io_req->cmd_type);
+ 	bnx2fc_scsi_done(io_req, DID_ERROR);
+ 	kref_put(&io_req->refcount, bnx2fc_cmd_release);
+ 	if (io_req->wait_for_comp)
+@@ -1318,7 +1318,7 @@ void bnx2fc_process_abts_compl(struct bnx2fc_cmd *io_req,
+ 	BNX2FC_IO_DBG(io_req, "Entered process_abts_compl xid = 0x%x"
+ 			      "refcnt = %d, cmd_type = %d\n",
+ 		   io_req->xid,
+-		   io_req->refcount.refcount.counter, io_req->cmd_type);
++		   kref_read(&io_req->refcount), io_req->cmd_type);
+ 
+ 	if (test_and_set_bit(BNX2FC_FLAG_ABTS_DONE,
+ 				       &io_req->req_flags)) {
+diff --git a/drivers/scsi/cxgbi/libcxgbi.h b/drivers/scsi/cxgbi/libcxgbi.h
+index 95ba990..18e0ea8 100644
+--- a/drivers/scsi/cxgbi/libcxgbi.h
++++ b/drivers/scsi/cxgbi/libcxgbi.h
+@@ -301,7 +301,7 @@ static inline void __cxgbi_sock_put(const char *fn, struct cxgbi_sock *csk)
+ {
+ 	log_debug(1 << CXGBI_DBG_SOCK,
+ 		"%s, put csk 0x%p, ref %u-1.\n",
+-		fn, csk, atomic_read(&csk->refcnt.refcount));
++		fn, csk, kref_read(&csk->refcnt));
+ 	kref_put(&csk->refcnt, cxgbi_sock_free);
+ }
+ #define cxgbi_sock_put(csk)	__cxgbi_sock_put(__func__, csk)
+@@ -310,7 +310,7 @@ static inline void __cxgbi_sock_get(const char *fn, struct cxgbi_sock *csk)
+ {
+ 	log_debug(1 << CXGBI_DBG_SOCK,
+ 		"%s, get csk 0x%p, ref %u+1.\n",
+-		fn, csk, atomic_read(&csk->refcnt.refcount));
++		fn, csk, kref_read(&csk->refcnt));
+ 	kref_get(&csk->refcnt);
+ }
+ #define cxgbi_sock_get(csk)	__cxgbi_sock_get(__func__, csk)
+diff --git a/drivers/scsi/lpfc/lpfc_debugfs.c b/drivers/scsi/lpfc/lpfc_debugfs.c
+index a63542b..caa7a7b 100644
+--- a/drivers/scsi/lpfc/lpfc_debugfs.c
++++ b/drivers/scsi/lpfc/lpfc_debugfs.c
+@@ -607,7 +607,7 @@ lpfc_debugfs_nodelist_data(struct lpfc_vport *vport, char *buf, int size)
+ 		len += snprintf(buf+len, size-len, "usgmap:%x ",
+ 			ndlp->nlp_usg_map);
+ 		len += snprintf(buf+len, size-len, "refcnt:%x",
+-			atomic_read(&ndlp->kref.refcount));
++			kref_read(&ndlp->kref));
+ 		len +=  snprintf(buf+len, size-len, "\n");
+ 	}
+ 	spin_unlock_irq(shost->host_lock);
+diff --git a/drivers/scsi/lpfc/lpfc_els.c b/drivers/scsi/lpfc/lpfc_els.c
+index 236e4e5..7a88295 100644
+--- a/drivers/scsi/lpfc/lpfc_els.c
++++ b/drivers/scsi/lpfc/lpfc_els.c
+@@ -3688,7 +3688,7 @@ lpfc_mbx_cmpl_dflt_rpi(struct lpfc_hba *phba, LPFC_MBOXQ_t *pmb)
+ 		lpfc_printf_vlog(ndlp->vport, KERN_INFO, LOG_NODE,
+ 				 "0006 rpi%x DID:%x flg:%x %d map:%x %p\n",
+ 				 ndlp->nlp_rpi, ndlp->nlp_DID, ndlp->nlp_flag,
+-				 atomic_read(&ndlp->kref.refcount),
++				 kref_read(&ndlp->kref),
+ 				 ndlp->nlp_usg_map, ndlp);
+ 		if (NLP_CHK_NODE_ACT(ndlp)) {
+ 			lpfc_nlp_put(ndlp);
+diff --git a/drivers/scsi/lpfc/lpfc_hbadisc.c b/drivers/scsi/lpfc/lpfc_hbadisc.c
+index ed22393..8204707 100644
+--- a/drivers/scsi/lpfc/lpfc_hbadisc.c
++++ b/drivers/scsi/lpfc/lpfc_hbadisc.c
+@@ -3440,7 +3440,7 @@ lpfc_mbx_cmpl_reg_login(struct lpfc_hba *phba, LPFC_MBOXQ_t *pmb)
+ 	lpfc_printf_vlog(vport, KERN_INFO, LOG_SLI,
+ 			 "0002 rpi:%x DID:%x flg:%x %d map:%x %p\n",
+ 			 ndlp->nlp_rpi, ndlp->nlp_DID, ndlp->nlp_flag,
+-			 atomic_read(&ndlp->kref.refcount),
++			 kref_read(&ndlp->kref),
+ 			 ndlp->nlp_usg_map, ndlp);
+ 	if (ndlp->nlp_flag & NLP_REG_LOGIN_SEND)
+ 		ndlp->nlp_flag &= ~NLP_REG_LOGIN_SEND;
+@@ -3861,7 +3861,7 @@ lpfc_mbx_cmpl_ns_reg_login(struct lpfc_hba *phba, LPFC_MBOXQ_t *pmb)
+ 	lpfc_printf_vlog(vport, KERN_INFO, LOG_SLI,
+ 			 "0003 rpi:%x DID:%x flg:%x %d map%x %p\n",
+ 			 ndlp->nlp_rpi, ndlp->nlp_DID, ndlp->nlp_flag,
+-			 atomic_read(&ndlp->kref.refcount),
++			 kref_read(&ndlp->kref),
+ 			 ndlp->nlp_usg_map, ndlp);
+ 
+ 	if (vport->port_state < LPFC_VPORT_READY) {
+@@ -4238,7 +4238,7 @@ lpfc_enable_node(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp,
+ 				"0277 lpfc_enable_node: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		return NULL;
+ 	}
+ 	/* The ndlp should not already be in active mode */
+@@ -4248,7 +4248,7 @@ lpfc_enable_node(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp,
+ 				"0278 lpfc_enable_node: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		return NULL;
+ 	}
+ 
+@@ -4272,7 +4272,7 @@ lpfc_enable_node(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp,
+ 				 "0008 rpi:%x DID:%x flg:%x refcnt:%d "
+ 				 "map:%x %p\n", ndlp->nlp_rpi, ndlp->nlp_DID,
+ 				 ndlp->nlp_flag,
+-				 atomic_read(&ndlp->kref.refcount),
++				 kref_read(&ndlp->kref),
+ 				 ndlp->nlp_usg_map, ndlp);
+ 	}
+ 
+@@ -4546,7 +4546,7 @@ lpfc_unreg_rpi(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp)
+ 				    (bf_get(lpfc_sli_intf_if_type,
+ 				     &phba->sli4_hba.sli_intf) ==
+ 				      LPFC_SLI_INTF_IF_TYPE_2) &&
+-				    (atomic_read(&ndlp->kref.refcount) > 0)) {
++				    (kref_read(&ndlp->kref) > 0)) {
+ 					mbox->context1 = lpfc_nlp_get(ndlp);
+ 					mbox->mbox_cmpl =
+ 						lpfc_sli4_unreg_rpi_cmpl_clr;
+@@ -4695,14 +4695,14 @@ lpfc_cleanup_node(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp)
+ 				"0280 lpfc_cleanup_node: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		lpfc_dequeue_node(vport, ndlp);
+ 	} else {
+ 		lpfc_printf_vlog(vport, KERN_WARNING, LOG_NODE,
+ 				"0281 lpfc_cleanup_node: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		lpfc_disable_node(vport, ndlp);
+ 	}
+ 
+@@ -4791,7 +4791,7 @@ lpfc_nlp_remove(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp)
+ 		lpfc_printf_vlog(vport, KERN_INFO, LOG_NODE,
+ 				 "0005 rpi:%x DID:%x flg:%x %d map:%x %p\n",
+ 				 ndlp->nlp_rpi, ndlp->nlp_DID, ndlp->nlp_flag,
+-				 atomic_read(&ndlp->kref.refcount),
++				 kref_read(&ndlp->kref),
+ 				 ndlp->nlp_usg_map, ndlp);
+ 		if ((mbox = mempool_alloc(phba->mbox_mem_pool, GFP_KERNEL))
+ 			!= NULL) {
+@@ -5557,7 +5557,7 @@ lpfc_mbx_cmpl_fdmi_reg_login(struct lpfc_hba *phba, LPFC_MBOXQ_t *pmb)
+ 	lpfc_printf_vlog(vport, KERN_INFO, LOG_SLI,
+ 			 "0004 rpi:%x DID:%x flg:%x %d map:%x %p\n",
+ 			 ndlp->nlp_rpi, ndlp->nlp_DID, ndlp->nlp_flag,
+-			 atomic_read(&ndlp->kref.refcount),
++			 kref_read(&ndlp->kref),
+ 			 ndlp->nlp_usg_map, ndlp);
+ 	/*
+ 	 * Start issuing Fabric-Device Management Interface (FDMI) command to
+@@ -5728,7 +5728,7 @@ lpfc_nlp_init(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp,
+ 				 "0007 rpi:%x DID:%x flg:%x refcnt:%d "
+ 				 "map:%x %p\n", ndlp->nlp_rpi, ndlp->nlp_DID,
+ 				 ndlp->nlp_flag,
+-				 atomic_read(&ndlp->kref.refcount),
++				 kref_read(&ndlp->kref),
+ 				 ndlp->nlp_usg_map, ndlp);
+ 
+ 		ndlp->active_rrqs_xri_bitmap =
+@@ -5767,7 +5767,7 @@ lpfc_nlp_release(struct kref *kref)
+ 			"0279 lpfc_nlp_release: ndlp:x%p did %x "
+ 			"usgmap:x%x refcnt:%d rpi:%x\n",
+ 			(void *)ndlp, ndlp->nlp_DID, ndlp->nlp_usg_map,
+-			atomic_read(&ndlp->kref.refcount), ndlp->nlp_rpi);
++			kref_read(&ndlp->kref), ndlp->nlp_rpi);
+ 
+ 	/* remove ndlp from action. */
+ 	lpfc_nlp_remove(ndlp->vport, ndlp);
+@@ -5804,7 +5804,7 @@ lpfc_nlp_get(struct lpfc_nodelist *ndlp)
+ 		lpfc_debugfs_disc_trc(ndlp->vport, LPFC_DISC_TRC_NODE,
+ 			"node get:        did:x%x flg:x%x refcnt:x%x",
+ 			ndlp->nlp_DID, ndlp->nlp_flag,
+-			atomic_read(&ndlp->kref.refcount));
++			kref_read(&ndlp->kref));
+ 		/* The check of ndlp usage to prevent incrementing the
+ 		 * ndlp reference count that is in the process of being
+ 		 * released.
+@@ -5817,7 +5817,7 @@ lpfc_nlp_get(struct lpfc_nodelist *ndlp)
+ 				"0276 lpfc_nlp_get: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 			return NULL;
+ 		} else
+ 			kref_get(&ndlp->kref);
+@@ -5844,7 +5844,7 @@ lpfc_nlp_put(struct lpfc_nodelist *ndlp)
+ 	lpfc_debugfs_disc_trc(ndlp->vport, LPFC_DISC_TRC_NODE,
+ 	"node put:        did:x%x flg:x%x refcnt:x%x",
+ 		ndlp->nlp_DID, ndlp->nlp_flag,
+-		atomic_read(&ndlp->kref.refcount));
++		kref_read(&ndlp->kref));
+ 	phba = ndlp->phba;
+ 	spin_lock_irqsave(&phba->ndlp_lock, flags);
+ 	/* Check the ndlp memory free acknowledge flag to avoid the
+@@ -5857,7 +5857,7 @@ lpfc_nlp_put(struct lpfc_nodelist *ndlp)
+ 				"0274 lpfc_nlp_put: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		return 1;
+ 	}
+ 	/* Check the ndlp inactivate log flag to avoid the possible
+@@ -5870,7 +5870,7 @@ lpfc_nlp_put(struct lpfc_nodelist *ndlp)
+ 				"0275 lpfc_nlp_put: ndlp:x%p "
+ 				"usgmap:x%x refcnt:%d\n",
+ 				(void *)ndlp, ndlp->nlp_usg_map,
+-				atomic_read(&ndlp->kref.refcount));
++				kref_read(&ndlp->kref));
+ 		return 1;
+ 	}
+ 	/* For last put, mark the ndlp usage flags to make sure no
+@@ -5878,7 +5878,7 @@ lpfc_nlp_put(struct lpfc_nodelist *ndlp)
+ 	 * in between the process when the final kref_put has been
+ 	 * invoked on this ndlp.
+ 	 */
+-	if (atomic_read(&ndlp->kref.refcount) == 1) {
++	if (kref_read(&ndlp->kref) == 1) {
+ 		/* Indicate ndlp is put to inactive state. */
+ 		NLP_SET_IACT_REQ(ndlp);
+ 		/* Acknowledge ndlp memory free has been seen. */
+@@ -5906,8 +5906,8 @@ lpfc_nlp_not_used(struct lpfc_nodelist *ndlp)
+ 	lpfc_debugfs_disc_trc(ndlp->vport, LPFC_DISC_TRC_NODE,
+ 		"node not used:   did:x%x flg:x%x refcnt:x%x",
+ 		ndlp->nlp_DID, ndlp->nlp_flag,
+-		atomic_read(&ndlp->kref.refcount));
+-	if (atomic_read(&ndlp->kref.refcount) == 1)
++		kref_read(&ndlp->kref));
++	if (kref_read(&ndlp->kref) == 1)
+ 		if (lpfc_nlp_put(ndlp))
+ 			return 1;
+ 	return 0;
+diff --git a/drivers/scsi/lpfc/lpfc_init.c b/drivers/scsi/lpfc/lpfc_init.c
+index 4776fd8..64717c1 100644
+--- a/drivers/scsi/lpfc/lpfc_init.c
++++ b/drivers/scsi/lpfc/lpfc_init.c
+@@ -2660,8 +2660,7 @@ lpfc_cleanup(struct lpfc_vport *vport)
+ 						"usgmap:x%x refcnt:%d\n",
+ 						ndlp->nlp_DID, (void *)ndlp,
+ 						ndlp->nlp_usg_map,
+-						atomic_read(
+-							&ndlp->kref.refcount));
++						kref_read(&ndlp->kref));
+ 			}
+ 			break;
+ 		}
+diff --git a/drivers/scsi/qla2xxx/tcm_qla2xxx.c b/drivers/scsi/qla2xxx/tcm_qla2xxx.c
+index 6643f6f..dd28c69 100644
+--- a/drivers/scsi/qla2xxx/tcm_qla2xxx.c
++++ b/drivers/scsi/qla2xxx/tcm_qla2xxx.c
+@@ -371,7 +371,7 @@ static int tcm_qla2xxx_write_pending(struct se_cmd *se_cmd)
+ 		 */
+ 		pr_debug("write_pending aborted cmd[%p] refcount %d "
+ 			"transport_state %x, t_state %x, se_cmd_flags %x\n",
+-			cmd,cmd->se_cmd.cmd_kref.refcount.counter,
++			cmd, kref_read(&cmd->se_cmd.cmd_kref),
+ 			cmd->se_cmd.transport_state,
+ 			cmd->se_cmd.t_state,
+ 			cmd->se_cmd.se_cmd_flags);
+@@ -584,7 +584,7 @@ static int tcm_qla2xxx_queue_data_in(struct se_cmd *se_cmd)
+ 		 */
+ 		pr_debug("queue_data_in aborted cmd[%p] refcount %d "
+ 			"transport_state %x, t_state %x, se_cmd_flags %x\n",
+-			cmd,cmd->se_cmd.cmd_kref.refcount.counter,
++			cmd, kref_read(&cmd->se_cmd.cmd_kref),
+ 			cmd->se_cmd.transport_state,
+ 			cmd->se_cmd.t_state,
+ 			cmd->se_cmd.se_cmd_flags);
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index b653451..937c2d5 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -1300,7 +1300,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
+ 			seq_printf(s, "%16s %16u %16zu %d %d\n",
+ 				   buffer->task_comm, buffer->pid,
+ 				   buffer->size, buffer->kmap_cnt,
+-				   atomic_read(&buffer->ref.refcount));
++				   kref_read(&buffer->ref));
+ 			total_orphaned_size += buffer->size;
+ 		}
+ 	}
+diff --git a/drivers/staging/comedi/comedi_buf.c b/drivers/staging/comedi/comedi_buf.c
+index c7d7682..1e1df89 100644
+--- a/drivers/staging/comedi/comedi_buf.c
++++ b/drivers/staging/comedi/comedi_buf.c
+@@ -188,7 +188,7 @@ bool comedi_buf_is_mmapped(struct comedi_subdevice *s)
+ {
+ 	struct comedi_buf_map *bm = s->async->buf_map;
+ 
+-	return bm && (atomic_read(&bm->refcount.refcount) > 1);
++	return bm && (kref_read(&bm->refcount) > 1);
+ }
+ 
+ int comedi_buf_alloc(struct comedi_device *dev, struct comedi_subdevice *s,
+diff --git a/drivers/target/target_core_pr.c b/drivers/target/target_core_pr.c
+index d761025..e180511 100644
+--- a/drivers/target/target_core_pr.c
++++ b/drivers/target/target_core_pr.c
+@@ -788,7 +788,7 @@ static struct t10_pr_registration *__core_scsi3_alloc_registration(
+ 			 * __core_scsi3_add_registration()
+ 			 */
+ 			dest_lun = rcu_dereference_check(deve_tmp->se_lun,
+-				atomic_read(&deve_tmp->pr_kref.refcount) != 0);
++				kref_read(&deve_tmp->pr_kref) != 0);
+ 
+ 			pr_reg_atp = __core_scsi3_do_alloc_registration(dev,
+ 						nacl_tmp, dest_lun, deve_tmp,
+@@ -1463,7 +1463,7 @@ static int core_scsi3_lunacl_depend_item(struct se_dev_entry *se_deve)
+ 	 * For nacl->dynamic_node_acl=1
+ 	 */
+ 	lun_acl = rcu_dereference_check(se_deve->se_lun_acl,
+-				atomic_read(&se_deve->pr_kref.refcount) != 0);
++				kref_read(&se_deve->pr_kref) != 0);
+ 	if (!lun_acl)
+ 		return 0;
+ 
+@@ -1478,7 +1478,7 @@ static void core_scsi3_lunacl_undepend_item(struct se_dev_entry *se_deve)
+ 	 * For nacl->dynamic_node_acl=1
+ 	 */
+ 	lun_acl = rcu_dereference_check(se_deve->se_lun_acl,
+-				atomic_read(&se_deve->pr_kref.refcount) != 0);
++				kref_read(&se_deve->pr_kref) != 0);
+ 	if (!lun_acl) {
+ 		kref_put(&se_deve->pr_kref, target_pr_kref_release);
+ 		return;
+@@ -1759,7 +1759,7 @@ core_scsi3_decode_spec_i_port(
+ 		 * 2nd loop which will never fail.
+ 		 */
+ 		dest_lun = rcu_dereference_check(dest_se_deve->se_lun,
+-				atomic_read(&dest_se_deve->pr_kref.refcount) != 0);
++				kref_read(&dest_se_deve->pr_kref) != 0);
+ 
+ 		dest_pr_reg = __core_scsi3_alloc_registration(cmd->se_dev,
+ 					dest_node_acl, dest_lun, dest_se_deve,
+@@ -3466,7 +3466,7 @@ core_scsi3_emulate_pro_register_and_move(struct se_cmd *cmd, u64 res_key,
+ 					iport_ptr);
+ 	if (!dest_pr_reg) {
+ 		struct se_lun *dest_lun = rcu_dereference_check(dest_se_deve->se_lun,
+-				atomic_read(&dest_se_deve->pr_kref.refcount) != 0);
++				kref_read(&dest_se_deve->pr_kref) != 0);
+ 
+ 		spin_unlock(&dev->dev_reservation_lock);
+ 		if (core_scsi3_alloc_registration(cmd->se_dev, dest_node_acl,
+diff --git a/drivers/target/tcm_fc/tfc_sess.c b/drivers/target/tcm_fc/tfc_sess.c
+index fd5c3de..c91979c 100644
+--- a/drivers/target/tcm_fc/tfc_sess.c
++++ b/drivers/target/tcm_fc/tfc_sess.c
+@@ -454,7 +454,7 @@ static void ft_sess_free(struct kref *kref)
+ 
+ void ft_sess_put(struct ft_sess *sess)
+ {
+-	int sess_held = atomic_read(&sess->kref.refcount);
++	int sess_held = kref_read(&sess->kref);
+ 
+ 	BUG_ON(!sess_held);
+ 	kref_put(&sess->kref, ft_sess_free);
+diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
+index aab3fc1..1eeb319 100644
+--- a/drivers/usb/gadget/function/f_fs.c
++++ b/drivers/usb/gadget/function/f_fs.c
+@@ -3686,7 +3686,7 @@ static void ffs_closed(struct ffs_data *ffs)
+ 		goto done;
+ 
+ 	if (opts->no_configfs || !opts->func_inst.group.cg_item.ci_parent
+-	    || !atomic_read(&opts->func_inst.group.cg_item.ci_kref.refcount))
++	    || !kref_read(&opts->func_inst.group.cg_item.ci_kref))
+ 		goto done;
+ 
+ 	unregister_gadget_item(ffs_obj->opts->
+diff --git a/fs/exofs/sys.c b/fs/exofs/sys.c
+index 5e6a2c0..1f7d5e4 100644
+--- a/fs/exofs/sys.c
++++ b/fs/exofs/sys.c
+@@ -122,7 +122,7 @@ void exofs_sysfs_dbg_print(void)
+ 	list_for_each_entry_safe(k_name, k_tmp, &exofs_kset->list, entry) {
+ 		printk(KERN_INFO "%s: name %s ref %d\n",
+ 			__func__, kobject_name(k_name),
+-			(int)atomic_read(&k_name->kref.refcount));
++			(int)kref_read(&k_name->kref));
+ 	}
+ #endif
+ }
+diff --git a/fs/ocfs2/cluster/netdebug.c b/fs/ocfs2/cluster/netdebug.c
+index 27d1242..564c504 100644
+--- a/fs/ocfs2/cluster/netdebug.c
++++ b/fs/ocfs2/cluster/netdebug.c
+@@ -349,7 +349,7 @@ static void sc_show_sock_container(struct seq_file *seq,
+ 		   "  func key:        0x%08x\n"
+ 		   "  func type:       %u\n",
+ 		   sc,
+-		   atomic_read(&sc->sc_kref.refcount),
++		   kref_read(&sc->sc_kref),
+ 		   &saddr, inet ? ntohs(sport) : 0,
+ 		   &daddr, inet ? ntohs(dport) : 0,
+ 		   sc->sc_node->nd_name,
+diff --git a/fs/ocfs2/cluster/tcp.c b/fs/ocfs2/cluster/tcp.c
+index d4b5c81..ec00057 100644
+--- a/fs/ocfs2/cluster/tcp.c
++++ b/fs/ocfs2/cluster/tcp.c
+@@ -97,7 +97,7 @@
+ 	typeof(sc) __sc = (sc);						\
+ 	mlog(ML_SOCKET, "[sc %p refs %d sock %p node %u page %p "	\
+ 	     "pg_off %zu] " fmt, __sc,					\
+-	     atomic_read(&__sc->sc_kref.refcount), __sc->sc_sock,	\
++	     kref_read(&__sc->sc_kref), __sc->sc_sock,	\
+ 	    __sc->sc_node->nd_num, __sc->sc_page, __sc->sc_page_off ,	\
+ 	    ##args);							\
+ } while (0)
+diff --git a/fs/ocfs2/dlm/dlmdebug.c b/fs/ocfs2/dlm/dlmdebug.c
+index e7b760d..9b984ca 100644
+--- a/fs/ocfs2/dlm/dlmdebug.c
++++ b/fs/ocfs2/dlm/dlmdebug.c
+@@ -81,7 +81,7 @@ static void __dlm_print_lock(struct dlm_lock *lock)
+ 	       lock->ml.type, lock->ml.convert_type, lock->ml.node,
+ 	       dlm_get_lock_cookie_node(be64_to_cpu(lock->ml.cookie)),
+ 	       dlm_get_lock_cookie_seq(be64_to_cpu(lock->ml.cookie)),
+-	       atomic_read(&lock->lock_refs.refcount),
++	       kref_read(&lock->lock_refs),
+ 	       (list_empty(&lock->ast_list) ? 'y' : 'n'),
+ 	       (lock->ast_pending ? 'y' : 'n'),
+ 	       (list_empty(&lock->bast_list) ? 'y' : 'n'),
+@@ -106,7 +106,7 @@ void __dlm_print_one_lock_resource(struct dlm_lock_resource *res)
+ 	printk("lockres: %s, owner=%u, state=%u\n",
+ 	       buf, res->owner, res->state);
+ 	printk("  last used: %lu, refcnt: %u, on purge list: %s\n",
+-	       res->last_used, atomic_read(&res->refs.refcount),
++	       res->last_used, kref_read(&res->refs),
+ 	       list_empty(&res->purge) ? "no" : "yes");
+ 	printk("  on dirty list: %s, on reco list: %s, "
+ 	       "migrating pending: %s\n",
+@@ -298,7 +298,7 @@ static int dump_mle(struct dlm_master_list_entry *mle, char *buf, int len)
+ 			mle_type, mle->master, mle->new_master,
+ 			!list_empty(&mle->hb_events),
+ 			!!mle->inuse,
+-			atomic_read(&mle->mle_refs.refcount));
++			kref_read(&mle->mle_refs));
+ 
+ 	out += snprintf(buf + out, len - out, "Maybe=");
+ 	out += stringify_nodemap(mle->maybe_map, O2NM_MAX_NODES,
+@@ -494,7 +494,7 @@ static int dump_lock(struct dlm_lock *lock, int list_type, char *buf, int len)
+ 		       lock->ast_pending, lock->bast_pending,
+ 		       lock->convert_pending, lock->lock_pending,
+ 		       lock->cancel_pending, lock->unlock_pending,
+-		       atomic_read(&lock->lock_refs.refcount));
++		       kref_read(&lock->lock_refs));
+ 	spin_unlock(&lock->spinlock);
+ 
+ 	return out;
+@@ -521,7 +521,7 @@ static int dump_lockres(struct dlm_lock_resource *res, char *buf, int len)
+ 			!list_empty(&res->recovering),
+ 			res->inflight_locks, res->migration_pending,
+ 			atomic_read(&res->asts_reserved),
+-			atomic_read(&res->refs.refcount));
++			kref_read(&res->refs));
+ 
+ 	/* refmap */
+ 	out += snprintf(buf + out, len - out, "RMAP:");
+@@ -777,7 +777,7 @@ static int debug_state_print(struct dlm_ctxt *dlm, char *buf, int len)
+ 	/* Purge Count: xxx  Refs: xxx */
+ 	out += snprintf(buf + out, len - out,
+ 			"Purge Count: %d  Refs: %d\n", dlm->purge_count,
+-			atomic_read(&dlm->dlm_refs.refcount));
++			kref_read(&dlm->dlm_refs));
+ 
+ 	/* Dead Node: xxx */
+ 	out += snprintf(buf + out, len - out,
+diff --git a/fs/ocfs2/dlm/dlmdomain.c b/fs/ocfs2/dlm/dlmdomain.c
+index 733e4e7..32fd261 100644
+--- a/fs/ocfs2/dlm/dlmdomain.c
++++ b/fs/ocfs2/dlm/dlmdomain.c
+@@ -2072,7 +2072,7 @@ static struct dlm_ctxt *dlm_alloc_ctxt(const char *domain,
+ 	INIT_LIST_HEAD(&dlm->dlm_eviction_callbacks);
+ 
+ 	mlog(0, "context init: refcount %u\n",
+-		  atomic_read(&dlm->dlm_refs.refcount));
++		  kref_read(&dlm->dlm_refs));
+ 
+ leave:
+ 	if (ret < 0 && dlm) {
+diff --git a/fs/ocfs2/dlm/dlmmaster.c b/fs/ocfs2/dlm/dlmmaster.c
+index a464c80..7025d8c 100644
+--- a/fs/ocfs2/dlm/dlmmaster.c
++++ b/fs/ocfs2/dlm/dlmmaster.c
+@@ -233,7 +233,7 @@ static void __dlm_put_mle(struct dlm_master_list_entry *mle)
+ 
+ 	assert_spin_locked(&dlm->spinlock);
+ 	assert_spin_locked(&dlm->master_lock);
+-	if (!atomic_read(&mle->mle_refs.refcount)) {
++	if (!kref_read(&mle->mle_refs)) {
+ 		/* this may or may not crash, but who cares.
+ 		 * it's a BUG. */
+ 		mlog(ML_ERROR, "bad mle: %p\n", mle);
+@@ -1124,9 +1124,9 @@ static int dlm_wait_for_lock_mastery(struct dlm_ctxt *dlm,
+ 		unsigned long timeo = msecs_to_jiffies(DLM_MASTERY_TIMEOUT_MS);
+ 
+ 		/*
+-		if (atomic_read(&mle->mle_refs.refcount) < 2)
++		if (kref_read(&mle->mle_refs) < 2)
+ 			mlog(ML_ERROR, "mle (%p) refs=%d, name=%.*s\n", mle,
+-			atomic_read(&mle->mle_refs.refcount),
++			kref_read(&mle->mle_refs),
+ 			res->lockname.len, res->lockname.name);
+ 		*/
+ 		atomic_set(&mle->woken, 0);
+@@ -1979,7 +1979,7 @@ int dlm_assert_master_handler(struct o2net_msg *msg, u32 len, void *data,
+ 		 * on this mle. */
+ 		spin_lock(&dlm->master_lock);
+ 
+-		rr = atomic_read(&mle->mle_refs.refcount);
++		rr = kref_read(&mle->mle_refs);
+ 		if (mle->inuse > 0) {
+ 			if (extra_ref && rr < 3)
+ 				err = 1;
+diff --git a/fs/ocfs2/dlm/dlmunlock.c b/fs/ocfs2/dlm/dlmunlock.c
+index 1082b2c..63d701c 100644
+--- a/fs/ocfs2/dlm/dlmunlock.c
++++ b/fs/ocfs2/dlm/dlmunlock.c
+@@ -251,7 +251,7 @@ static enum dlm_status dlmunlock_common(struct dlm_ctxt *dlm,
+ 		mlog(0, "lock %u:%llu should be gone now! refs=%d\n",
+ 		     dlm_get_lock_cookie_node(be64_to_cpu(lock->ml.cookie)),
+ 		     dlm_get_lock_cookie_seq(be64_to_cpu(lock->ml.cookie)),
+-		     atomic_read(&lock->lock_refs.refcount)-1);
++		     kref_read(&lock->lock_refs)-1);
+ 		dlm_lock_put(lock);
+ 	}
+ 	if (actions & DLM_UNLOCK_CALL_AST)
+diff --git a/include/drm/drm_framebuffer.h b/include/drm/drm_framebuffer.h
+index 1ddfa29..a232e7f 100644
+--- a/include/drm/drm_framebuffer.h
++++ b/include/drm/drm_framebuffer.h
+@@ -247,7 +247,7 @@ static inline void drm_framebuffer_unreference(struct drm_framebuffer *fb)
+  */
+ static inline uint32_t drm_framebuffer_read_refcount(struct drm_framebuffer *fb)
+ {
+-	return atomic_read(&fb->base.refcount.refcount);
++	return kref_read(&fb->base.refcount);
+ }
+ 
+ /**
+diff --git a/include/drm/ttm/ttm_bo_driver.h b/include/drm/ttm/ttm_bo_driver.h
+index cdbdb40..feecf33 100644
+--- a/include/drm/ttm/ttm_bo_driver.h
++++ b/include/drm/ttm/ttm_bo_driver.h
+@@ -878,7 +878,7 @@ static inline int ttm_bo_reserve(struct ttm_buffer_object *bo,
+ {
+ 	int ret;
+ 
+-	WARN_ON(!atomic_read(&bo->kref.refcount));
++	WARN_ON(!kref_read(&bo->kref));
+ 
+ 	ret = __ttm_bo_reserve(bo, interruptible, no_wait, ticket);
+ 	if (likely(ret == 0))
+@@ -903,7 +903,7 @@ static inline int ttm_bo_reserve_slowpath(struct ttm_buffer_object *bo,
+ {
+ 	int ret = 0;
+ 
+-	WARN_ON(!atomic_read(&bo->kref.refcount));
++	WARN_ON(!kref_read(&bo->kref));
+ 
+ 	if (interruptible)
+ 		ret = ww_mutex_lock_slow_interruptible(&bo->resv->lock,
+diff --git a/include/linux/kref.h b/include/linux/kref.h
+index 9af255a..7c88d86 100644
+--- a/include/linux/kref.h
++++ b/include/linux/kref.h
+@@ -35,6 +35,11 @@ static inline void kref_init(struct kref *kref)
+ 	atomic_set(&kref->refcount, 1);
+ }
+ 
++static inline int kref_read(const struct kref *kref)
++{
++	return atomic_read(&kref->refcount);
++}
++
+ /**
+  * kref_get - increment refcount for object.
+  * @kref: object.
+diff --git a/include/linux/sunrpc/cache.h b/include/linux/sunrpc/cache.h
+index 62a60ee..8a511c0 100644
+--- a/include/linux/sunrpc/cache.h
++++ b/include/linux/sunrpc/cache.h
+@@ -198,7 +198,7 @@ static inline struct cache_head  *cache_get(struct cache_head *h)
+ 
+ static inline void cache_put(struct cache_head *h, struct cache_detail *cd)
+ {
+-	if (atomic_read(&h->ref.refcount) <= 2 &&
++	if (kref_read(&h->ref) <= 2 &&
+ 	    h->expiry_time < cd->nextcheck)
+ 		cd->nextcheck = h->expiry_time;
+ 	kref_put(&h->ref, cd->cache_put);
+diff --git a/include/net/bluetooth/hci_core.h b/include/net/bluetooth/hci_core.h
+index 554671c..90708f6 100644
+--- a/include/net/bluetooth/hci_core.h
++++ b/include/net/bluetooth/hci_core.h
+@@ -987,7 +987,7 @@ static inline void hci_conn_drop(struct hci_conn *conn)
+ static inline void hci_dev_put(struct hci_dev *d)
+ {
+ 	BT_DBG("%s orig refcnt %d", d->name,
+-	       atomic_read(&d->dev.kobj.kref.refcount));
++	       kref_read(&d->dev.kobj.kref));
+ 
+ 	put_device(&d->dev);
+ }
+@@ -995,7 +995,7 @@ static inline void hci_dev_put(struct hci_dev *d)
+ static inline struct hci_dev *hci_dev_hold(struct hci_dev *d)
+ {
+ 	BT_DBG("%s orig refcnt %d", d->name,
+-	       atomic_read(&d->dev.kobj.kref.refcount));
++	       kref_read(&d->dev.kobj.kref));
+ 
+ 	get_device(&d->dev);
+ 	return d;
+diff --git a/net/bluetooth/6lowpan.c b/net/bluetooth/6lowpan.c
+index 1904a93..d491529 100644
+--- a/net/bluetooth/6lowpan.c
++++ b/net/bluetooth/6lowpan.c
+@@ -920,7 +920,7 @@ static void chan_close_cb(struct l2cap_chan *chan)
+ 			BT_DBG("dev %p removing %speer %p", dev,
+ 			       last ? "last " : "1 ", peer);
+ 			BT_DBG("chan %p orig refcnt %d", chan,
+-			       atomic_read(&chan->kref.refcount));
++			       kref_read(&chan->kref));
+ 
+ 			l2cap_chan_put(chan);
+ 			break;
+diff --git a/net/bluetooth/amp.c b/net/bluetooth/amp.c
+index e32f341..02a4ccc 100644
+--- a/net/bluetooth/amp.c
++++ b/net/bluetooth/amp.c
+@@ -24,7 +24,7 @@
+ void amp_ctrl_get(struct amp_ctrl *ctrl)
+ {
+ 	BT_DBG("ctrl %p orig refcnt %d", ctrl,
+-	       atomic_read(&ctrl->kref.refcount));
++	       kref_read(&ctrl->kref));
+ 
+ 	kref_get(&ctrl->kref);
+ }
+@@ -42,7 +42,7 @@ static void amp_ctrl_destroy(struct kref *kref)
+ int amp_ctrl_put(struct amp_ctrl *ctrl)
+ {
+ 	BT_DBG("ctrl %p orig refcnt %d", ctrl,
+-	       atomic_read(&ctrl->kref.refcount));
++	       kref_read(&ctrl->kref));
+ 
+ 	return kref_put(&ctrl->kref, &amp_ctrl_destroy);
+ }
+diff --git a/net/bluetooth/l2cap_core.c b/net/bluetooth/l2cap_core.c
+index ce0b5dd..fc7f321 100644
+--- a/net/bluetooth/l2cap_core.c
++++ b/net/bluetooth/l2cap_core.c
+@@ -481,14 +481,14 @@ static void l2cap_chan_destroy(struct kref *kref)
+ 
+ void l2cap_chan_hold(struct l2cap_chan *c)
+ {
+-	BT_DBG("chan %p orig refcnt %d", c, atomic_read(&c->kref.refcount));
++	BT_DBG("chan %p orig refcnt %d", c, kref_read(&c->kref));
+ 
+ 	kref_get(&c->kref);
+ }
+ 
+ void l2cap_chan_put(struct l2cap_chan *c)
+ {
+-	BT_DBG("chan %p orig refcnt %d", c, atomic_read(&c->kref.refcount));
++	BT_DBG("chan %p orig refcnt %d", c, kref_read(&c->kref));
+ 
+ 	kref_put(&c->kref, l2cap_chan_destroy);
+ }
+diff --git a/net/ceph/messenger.c b/net/ceph/messenger.c
+index 770c527..bad3d4a 100644
+--- a/net/ceph/messenger.c
++++ b/net/ceph/messenger.c
+@@ -3425,7 +3425,7 @@ static void ceph_msg_release(struct kref *kref)
+ struct ceph_msg *ceph_msg_get(struct ceph_msg *msg)
+ {
+ 	dout("%s %p (was %d)\n", __func__, msg,
+-	     atomic_read(&msg->kref.refcount));
++	     kref_read(&msg->kref));
+ 	kref_get(&msg->kref);
+ 	return msg;
+ }
+@@ -3434,7 +3434,7 @@ EXPORT_SYMBOL(ceph_msg_get);
+ void ceph_msg_put(struct ceph_msg *msg)
+ {
+ 	dout("%s %p (was %d)\n", __func__, msg,
+-	     atomic_read(&msg->kref.refcount));
++	     kref_read(&msg->kref));
+ 	kref_put(&msg->kref, ceph_msg_release);
+ }
+ EXPORT_SYMBOL(ceph_msg_put);
+diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
+index 842f049..b490e74 100644
+--- a/net/ceph/osd_client.c
++++ b/net/ceph/osd_client.c
+@@ -438,7 +438,7 @@ static void ceph_osdc_release_request(struct kref *kref)
+ void ceph_osdc_get_request(struct ceph_osd_request *req)
+ {
+ 	dout("%s %p (was %d)\n", __func__, req,
+-	     atomic_read(&req->r_kref.refcount));
++	     kref_read(&req->r_kref));
+ 	kref_get(&req->r_kref);
+ }
+ EXPORT_SYMBOL(ceph_osdc_get_request);
+@@ -447,7 +447,7 @@ void ceph_osdc_put_request(struct ceph_osd_request *req)
+ {
+ 	if (req) {
+ 		dout("%s %p (was %d)\n", __func__, req,
+-		     atomic_read(&req->r_kref.refcount));
++		     kref_read(&req->r_kref));
+ 		kref_put(&req->r_kref, ceph_osdc_release_request);
+ 	}
+ }
+@@ -487,11 +487,11 @@ static void request_reinit(struct ceph_osd_request *req)
+ 	struct ceph_msg *reply_msg = req->r_reply;
+ 
+ 	dout("%s req %p\n", __func__, req);
+-	WARN_ON(atomic_read(&req->r_kref.refcount) != 1);
++	WARN_ON(kref_read(&req->r_kref) != 1);
+ 	request_release_checks(req);
+ 
+-	WARN_ON(atomic_read(&request_msg->kref.refcount) != 1);
+-	WARN_ON(atomic_read(&reply_msg->kref.refcount) != 1);
++	WARN_ON(kref_read(&req->r_kref) != 1);
++	WARN_ON(kref_read(&req->r_kref) != 1);
+ 	target_destroy(&req->r_t);
+ 
+ 	request_init(req);
+diff --git a/net/sunrpc/cache.c b/net/sunrpc/cache.c
+index 8147e8d..f39e3e1 100644
+--- a/net/sunrpc/cache.c
++++ b/net/sunrpc/cache.c
+@@ -1358,7 +1358,7 @@ static int c_show(struct seq_file *m, void *p)
+ 	ifdebug(CACHE)
+ 		seq_printf(m, "# expiry=%ld refcnt=%d flags=%lx\n",
+ 			   convert_to_wallclock(cp->expiry_time),
+-			   atomic_read(&cp->ref.refcount), cp->flags);
++			   kref_read(&cp->ref), cp->flags);
+ 	cache_get(cp);
+ 	if (cache_check(cd, cp, NULL))
+ 		/* cache_check does a cache_put on failure */
+diff --git a/net/sunrpc/svc_xprt.c b/net/sunrpc/svc_xprt.c
+index 3bc1d61..04e7f87 100644
+--- a/net/sunrpc/svc_xprt.c
++++ b/net/sunrpc/svc_xprt.c
+@@ -490,7 +490,7 @@ static struct svc_xprt *svc_xprt_dequeue(struct svc_pool *pool)
+ 		svc_xprt_get(xprt);
+ 
+ 		dprintk("svc: transport %p dequeued, inuse=%d\n",
+-			xprt, atomic_read(&xprt->xpt_ref.refcount));
++			xprt, kref_read(&xprt->xpt_ref));
+ 	}
+ 	spin_unlock_bh(&pool->sp_lock);
+ out:
+@@ -820,7 +820,7 @@ static int svc_handle_xprt(struct svc_rqst *rqstp, struct svc_xprt *xprt)
+ 		/* XPT_DATA|XPT_DEFERRED case: */
+ 		dprintk("svc: server %p, pool %u, transport %p, inuse=%d\n",
+ 			rqstp, rqstp->rq_pool->sp_id, xprt,
+-			atomic_read(&xprt->xpt_ref.refcount));
++			kref_read(&xprt->xpt_ref));
+ 		rqstp->rq_deferred = svc_deferred_dequeue(xprt);
+ 		if (rqstp->rq_deferred)
+ 			len = svc_deferred_recv(rqstp);
+@@ -978,7 +978,7 @@ static void svc_age_temp_xprts(unsigned long closure)
+ 		 * through, close it. */
+ 		if (!test_and_set_bit(XPT_OLD, &xprt->xpt_flags))
+ 			continue;
+-		if (atomic_read(&xprt->xpt_ref.refcount) > 1 ||
++		if (kref_read(&xprt->xpt_ref) > 1 ||
+ 		    test_bit(XPT_BUSY, &xprt->xpt_flags))
+ 			continue;
+ 		list_del_init(le);
+diff --git a/net/sunrpc/xprtrdma/svc_rdma_transport.c b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+index ca2799a..39652d3 100644
+--- a/net/sunrpc/xprtrdma/svc_rdma_transport.c
++++ b/net/sunrpc/xprtrdma/svc_rdma_transport.c
+@@ -1201,9 +1201,9 @@ static void __svc_rdma_free(struct work_struct *work)
+ 		ib_drain_qp(rdma->sc_qp);
+ 
+ 	/* We should only be called from kref_put */
+-	if (atomic_read(&xprt->xpt_ref.refcount) != 0)
++	if (kref_read(&xprt->xpt_ref) != 0)
+ 		pr_err("svcrdma: sc_xprt still in use? (%d)\n",
+-		       atomic_read(&xprt->xpt_ref.refcount));
++		       kref_read(&xprt->xpt_ref));
+ 
+ 	/*
+ 	 * Destroy queued, but not processed read completions. Note
 -- 
 2.7.4
