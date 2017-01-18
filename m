@@ -1,551 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 18 Jan 2017 09:51:55 +0530
-From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Message-ID: <20170118095155.5e3bf976@kaiwan-T460>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Wed, 18 Jan 2017 08:41:17 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
+References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
+ <20170105022535.GA20972@linaro.org>
+ <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
+ <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
+ <20170112051114.GG20972@linaro.org>
+ <20170112085714.GC3081@twins.programming.kicks-ass.net>
+ <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
+ <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
+ <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
+ <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
+In-Reply-To: <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec to
- linux-next
-To: keescook@chromium.org, kernel-hardening@lists.openwall.com
+Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+ atomic_t to refcount_t
+To: David Windsor <dwindsor@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
-
-So, following up on the previous discussion,=20
->I'd like to see the mentioned excluded slab caches also done in the
->kernel, along with similar kernel command line options. Additionally,
->getting all the upstream stuff behind a single CONFIG (similar to
->CONFIG_PAX_MEMORY_SANITIZE) would be great, instead of having to set 3
->CONFIGs and 2 kernel parameters. :)
-
-Basically what I've done so far is:
-- pulled in the linux-next tree, and setup my own branch
-
-- taken the grsecurity patch (for 4.8.17) and merged those portions of
-the code encompassing the  CONFIG_PAX_MEMORY_SANITIZE directive
-
-- There were some compile issues, which seem to be there mostly because of =
-other
-grsec infra that hasn't been merged in (yet).=20
-For now, I've just done small fixups where required:
-(see code in ptach below):
-
-[1. fs/dcache.c
-  kmem_cache_create_usercopy() unavailable (for now at least).
-Probably part of other grsec infrastructure..
- So am just adding the SLAB_NO_SANITIZE flag to the usual
-kmem_cache_create() call.
-
-2. mm/slab_common.c
-Compile failure:
-enum pax_sanitize_mode pax_sanitize_slab __read_only =3D PAX_SANITIZE_SLAB_=
-FAST;
-
-?? -above orig statement from the grsec-4.8.17 patch fails compile with:
-mm/slab_common.c:34:37: error: expected =E2=80=98=3D=E2=80=99, =E2=80=98,=
-=E2=80=99, =E2=80=98;=E2=80=99, =E2=80=98asm=E2=80=99 or
-=E2=80=98__attribute__=E2=80=99 before =E2=80=98__read_only=E2=80=99
-
-So I've just removed the "__read_only" attribute for now.
-What's the actual approach?
-
-3. mm/slub.c
-Compile failure:
-#ifdef CONFIG_PAX_MEMORY_SANITIZE
- &sanitize_attr.attr,
- * ?? -above statement from the grsec-4.8.17 patch fails compile with:
- mm/slub.c:5337:3: error: =E2=80=98sanitize_attr=E2=80=99 undeclared here (=
-not in a function)
-  &sanitize_attr.attr,
-
-Just commented this out for now.
-]
-
-
-
-=3D=3D=3D
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 28484b3..b524eda 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -3511,7 +3511,7 @@ void __init buffer_init(void)
- 	bh_cachep =3D kmem_cache_create("buffer_head",
- 			sizeof(struct buffer_head), 0,
- 				(SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|
--				SLAB_MEM_SPREAD),
-+				SLAB_MEM_SPREAD|SLAB_NO_SANITIZE),
- 				NULL);
-=20
- 	/*
-diff --git a/fs/dcache.c b/fs/dcache.c
-index 95d71ed..95ed43c 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -3616,8 +3616,16 @@ void __init vfs_caches_init_early(void)
-=20
- void __init vfs_caches_init(void)
- {
-+/**
-+ *	names_cachep =3D kmem_cache_create_usercopy("names_cache", PATH_MAX, 0,
-+ *			SLAB_HWCACHE_ALIGN|SLAB_PANIC| SLAB_NO_SANITIZE,
-+ *			0, PATH_MAX, NULL);
-+ *	kmem_cache_create_usercopy() unavailable for now at least.
-+ *	So just adding the SLAB_NO_SANITIZE flag to the usual call below..
-+ */
- 	names_cachep =3D kmem_cache_create("names_cache", PATH_MAX, 0,
--			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
-+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NO_SANITIZE, NULL);
-+
-=20
- 	dcache_init();
- 	inode_init();
-diff --git a/include/linux/highmem.h b/include/linux/highmem.h
-index bb3f329..9daed55 100644
---- a/include/linux/highmem.h
-+++ b/include/linux/highmem.h
-@@ -190,6 +190,18 @@ static inline void clear_highpage(struct page *page)
- 	kunmap_atomic(kaddr);
- }
-=20
-+static inline void sanitize_highpage(struct page *page)
-+{
-+	void *kaddr;
-+	unsigned long flags;
-+
-+	local_irq_save(flags);
-+	kaddr =3D kmap_atomic(page);
-+	clear_page(kaddr);
-+	kunmap_atomic(kaddr);
-+	local_irq_restore(flags);
-+}
-+
- static inline void zero_user_segments(struct page *page,
- 	unsigned start1, unsigned end1,
- 	unsigned start2, unsigned end2)
-diff --git a/include/linux/slab.h b/include/linux/slab.h
-index 4c53635..334bd89 100644
---- a/include/linux/slab.h
-+++ b/include/linux/slab.h
-@@ -23,6 +23,13 @@
- #define SLAB_CONSISTENCY_CHECKS	0x00000100UL	/* DEBUG: Perform (expensive)=
- checks on alloc/free */
- #define SLAB_RED_ZONE		0x00000400UL	/* DEBUG: Red zone objs in a cache */
- #define SLAB_POISON		0x00000800UL	/* DEBUG: Poison objects */
-+
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+#define SLAB_NO_SANITIZE	0x00001000UL	/* PaX: Do not sanitize objs on free=
- */
-+#else
-+#define SLAB_NO_SANITIZE	0x00000000UL
-+#endif
-+
- #define SLAB_HWCACHE_ALIGN	0x00002000UL	/* Align objs on cache lines */
- #define SLAB_CACHE_DMA		0x00004000UL	/* Use GFP_DMA memory */
- #define SLAB_STORE_USER		0x00010000UL	/* DEBUG: Store the last owner for b=
-ug hunting */
-diff --git a/include/linux/slab_def.h b/include/linux/slab_def.h
-index 4ad2c5a..a30bbd2 100644
---- a/include/linux/slab_def.h
-+++ b/include/linux/slab_def.h
-@@ -60,6 +60,10 @@ struct kmem_cache {
- 	atomic_t allocmiss;
- 	atomic_t freehit;
- 	atomic_t freemiss;
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	atomic_unchecked_t sanitized;
-+	atomic_unchecked_t not_sanitized;
-+#endif
- #ifdef CONFIG_DEBUG_SLAB_LEAK
- 	atomic_t store_user_clean;
- #endif
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 7da33cb..42646d4 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -2098,7 +2098,8 @@ void __init proc_caches_init(void)
- 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
- 			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK|SLAB_ACCOUNT,
- 			NULL);
--	vm_area_cachep =3D KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT);
-+	vm_area_cachep =3D KMEM_CACHE(vm_area_struct, SLAB_PANIC|SLAB_ACCOUNT|
-+			 SLAB_NO_SANITIZE);
- 	mmap_init();
- 	nsproxy_cache_init();
- }
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index afcc550..ed3f097 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -10,6 +10,7 @@ config PAGE_EXTENSION
- config DEBUG_PAGEALLOC
- 	bool "Debug page memory allocations"
- 	depends on DEBUG_KERNEL
-+	depends on !PAX_MEMORY_SANITIZE
- 	depends on !HIBERNATION || ARCH_SUPPORTS_DEBUG_PAGEALLOC && !PPC && !SPARC
- 	depends on !KMEMCHECK
- 	select PAGE_EXTENSION
-diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 21ea508..3e899fa 100644
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
-@@ -994,6 +994,10 @@ static __always_inline bool free_pages_prepare(struct =
-page *page,
- {
- 	int bad =3D 0;
-=20
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	unsigned long index =3D 1UL << order;
-+#endif
-+
- 	VM_BUG_ON_PAGE(PageTail(page), page);
-=20
- 	trace_mm_page_free(page, order);
-@@ -1040,6 +1044,12 @@ static __always_inline bool free_pages_prepare(struc=
-t page *page,
- 		debug_check_no_obj_freed(page_address(page),
- 					   PAGE_SIZE << order);
- 	}
-+
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	for (; index; --index)
-+		sanitize_highpage(page + index - 1);
-+#endif
-+
- 	arch_free_page(page, order);
- 	kernel_poison_pages(page, 1 << order, 0);
- 	kernel_map_pages(page, 1 << order, 0);
-@@ -1696,8 +1706,10 @@ static inline int check_new_page(struct page *page)
-=20
- static inline bool free_pages_prezeroed(bool poisoned)
- {
--	return IS_ENABLED(CONFIG_PAGE_POISONING_ZERO) &&
--		page_poisoning_enabled() && poisoned;
-+	return IS_ENABLED(CONFIG_PAX_MEMORY_SANITIZE) ||
-+		(IS_ENABLED(CONFIG_PAGE_POISONING_ZERO) &&
-+		 page_poisoning_enabled() && poisoned);
-+
- }
-=20
- #ifdef CONFIG_DEBUG_VM
-@@ -1753,11 +1765,13 @@ static void prep_new_page(struct page *page, unsign=
-ed int order, gfp_t gfp_flags
- 	int i;
- 	bool poisoned =3D true;
-=20
-+#ifndef CONFIG_PAX_MEMORY_SANITIZE
- 	for (i =3D 0; i < (1 << order); i++) {
- 		struct page *p =3D page + i;
- 		if (poisoned)
- 			poisoned &=3D page_is_poisoned(p);
- 	}
-+#endif
-=20
- 	post_alloc_hook(page, order, gfp_flags);
-=20
-diff --git a/mm/rmap.c b/mm/rmap.c
-index 91619fd..e209ff6 100644
---- a/mm/rmap.c
-+++ b/mm/rmap.c
-@@ -428,10 +428,10 @@ static void anon_vma_ctor(void *data)
- void __init anon_vma_init(void)
- {
- 	anon_vma_cachep =3D kmem_cache_create("anon_vma", sizeof(struct anon_vma),
--			0, SLAB_DESTROY_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT,
--			anon_vma_ctor);
-+			0, SLAB_DESTROY_BY_RCU|SLAB_PANIC|SLAB_ACCOUNT|
-+			SLAB_NO_SANITIZE, anon_vma_ctor);
- 	anon_vma_chain_cachep =3D KMEM_CACHE(anon_vma_chain,
--			SLAB_PANIC|SLAB_ACCOUNT);
-+			SLAB_PANIC|SLAB_ACCOUNT|SLAB_NO_SANITIZE);
- }
-=20
- /*
-diff --git a/mm/slab.c b/mm/slab.c
-index 4f2ec6b..6dc9f4a 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -3511,6 +3511,20 @@ void ___cache_free(struct kmem_cache *cachep, void *=
-objp,
- 	struct array_cache *ac =3D cpu_cache_get(cachep);
-=20
- 	check_irq_off();
-+
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	if (cachep->flags & (SLAB_POISON | SLAB_NO_SANITIZE))
-+		STATS_INC_NOT_SANITIZED(cachep);
-+	else {
-+		memset(objp, PAX_MEMORY_SANITIZE_VALUE, cachep->object_size);
-+
-+		if (cachep->ctor)
-+			cachep->ctor(objp);
-+
-+		STATS_INC_SANITIZED(cachep);
-+	}
-+#endif
-+
- 	kmemleak_free_recursive(objp, cachep->flags);
- 	objp =3D cache_free_debugcheck(cachep, objp, caller);
-=20
-@@ -4157,6 +4171,14 @@ void slabinfo_show_stats(struct seq_file *m, struct =
-kmem_cache *cachep)
- 		seq_printf(m, " : cpustat %6lu %6lu %6lu %6lu",
- 			   allochit, allocmiss, freehit, freemiss);
- 	}
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	{
-+		unsigned long sanitized =3D atomic_read_unchecked(&cachep->sanitized);
-+		unsigned long not_sanitized =3D atomic_read_unchecked(&cachep->not_sanit=
-ized);
-+
-+		seq_printf(m, " : pax %6lu %6lu", sanitized, not_sanitized);
-+	}
-+#endif
- #endif
- }
-=20
-diff --git a/mm/slab.h b/mm/slab.h
-index de6579d..2965ebe 100644
---- a/mm/slab.h
-+++ b/mm/slab.h
-@@ -71,6 +71,36 @@ extern struct list_head slab_caches;
- /* The slab cache that manages slab cache information */
- extern struct kmem_cache *kmem_cache;
-=20
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+#ifdef CONFIG_X86_64
-+#define PAX_MEMORY_SANITIZE_VALUE	'\xfe'
-+#else
-+#define PAX_MEMORY_SANITIZE_VALUE	'\xff'
-+#endif
-+enum pax_sanitize_mode {
-+	PAX_SANITIZE_SLAB_OFF =3D 0,
-+	PAX_SANITIZE_SLAB_FAST,
-+	PAX_SANITIZE_SLAB_FULL,
-+};
-+
-+extern enum pax_sanitize_mode pax_sanitize_slab;
-+
-+static inline unsigned long pax_sanitize_slab_flags(unsigned long flags)
-+{
-+	if (pax_sanitize_slab =3D=3D PAX_SANITIZE_SLAB_OFF ||
-+	    (flags & SLAB_DESTROY_BY_RCU))
-+		flags |=3D SLAB_NO_SANITIZE;
-+	else if (pax_sanitize_slab =3D=3D PAX_SANITIZE_SLAB_FULL)
-+		flags &=3D ~SLAB_NO_SANITIZE;
-+	return flags;
-+}
-+#else
-+static inline unsigned long pax_sanitize_slab_flags(unsigned long flags)
-+{
-+	return flags;
-+}
-+#endif
-+
- unsigned long calculate_alignment(unsigned long flags,
- 		unsigned long align, unsigned long size);
-=20
-@@ -120,7 +150,8 @@ static inline unsigned long kmem_cache_flags(unsigned l=
-ong object_size,
-=20
- /* Legal flag mask for kmem_cache_create(), for various configurations */
- #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | SLAB_PANIC =
-| \
--			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS )
-+			 SLAB_DESTROY_BY_RCU | SLAB_DEBUG_OBJECTS | \
-+			 SLAB_NO_SANITIZE)
-=20
- #if defined(CONFIG_DEBUG_SLAB)
- #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
-diff --git a/mm/slab_common.c b/mm/slab_common.c
-index 1dfc209..0a0851f 100644
---- a/mm/slab_common.c
-+++ b/mm/slab_common.c
-@@ -30,6 +30,37 @@ LIST_HEAD(slab_caches);
- DEFINE_MUTEX(slab_mutex);
- struct kmem_cache *kmem_cache;
-=20
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+/**
-+ * enum pax_sanitize_mode pax_sanitize_slab __read_only =3D PAX_SANITIZE_S=
-LAB_FAST;
-+ *
-+ * ?? -above orig statement from the grsec-4.8.17 patch fails compile with:
-+ * mm/slab_common.c:34:37: error: expected =E2=80=98=3D=E2=80=99, =E2=80=
-=98,=E2=80=99, =E2=80=98;=E2=80=99, =E2=80=98asm=E2=80=99 or =E2=80=98__att=
-ribute__=E2=80=99 before =E2=80=98__read_only=E2=80=99
-+ *  pax_sanitize_mode pax_sanitize_slab __read_only =3D PAX_SANITIZE_SLAB_=
-FAST;
-+ */
-+enum pax_sanitize_mode pax_sanitize_slab =3D PAX_SANITIZE_SLAB_FAST;
-+static int __init pax_sanitize_slab_setup(char *str)
-+{
-+	if (!str)
-+		return 0;
-+
-+	if (!strcmp(str, "0") || !strcmp(str, "off")) {
-+		pr_info("PaX slab sanitization: %s\n", "disabled");
-+		pax_sanitize_slab =3D PAX_SANITIZE_SLAB_OFF;
-+	} else if (!strcmp(str, "1") || !strcmp(str, "fast")) {
-+		pr_info("PaX slab sanitization: %s\n", "fast");
-+		pax_sanitize_slab =3D PAX_SANITIZE_SLAB_FAST;
-+	} else if (!strcmp(str, "full")) {
-+		pr_info("PaX slab sanitization: %s\n", "full");
-+		pax_sanitize_slab =3D PAX_SANITIZE_SLAB_FULL;
-+	} else
-+		pr_err("PaX slab sanitization: unsupported option '%s'\n", str);
-+
-+	return 0;
-+}
-+early_param("pax_sanitize_slab", pax_sanitize_slab_setup);
-+#endif
-+
- /*
-  * Set of flags that will prevent slab merging
-  */
-@@ -1136,6 +1167,9 @@ static void print_slabinfo_header(struct seq_file *m)
- #ifdef CONFIG_DEBUG_SLAB
- 	seq_puts(m, " : globalstat <listallocs> <maxobjs> <grown> <reaped> <error=
-> <maxfreeable> <nodeallocs> <remotefrees> <alienoverflow>");
- 	seq_puts(m, " : cpustat <allochit> <allocmiss> <freehit> <freemiss>");
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	seq_puts(m, " : pax <sanitized> <not_sanitized>");
-+#endif
- #endif
- 	seq_putc(m, '\n');
- }
-diff --git a/mm/slob.c b/mm/slob.c
-index eac04d43..f455845 100644
---- a/mm/slob.c
-+++ b/mm/slob.c
-@@ -365,6 +365,11 @@ static void slob_free(void *block, int size)
- 		return;
- 	}
-=20
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	if (pax_sanitize_slab && !(c && (c->flags & SLAB_NO_SANITIZE)))
-+		memset(block, PAX_MEMORY_SANITIZE_VALUE, size);
-+#endif
-+
- 	if (!slob_page_free(sp)) {
- 		/* This slob page is about to become partially free. Easy! */
- 		sp->units =3D units;
-diff --git a/mm/slub.c b/mm/slub.c
-index 067598a..cead7ee 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -2911,6 +2911,24 @@ static __always_inline void do_slab_free(struct kmem=
-_cache *s,
- 	void *tail_obj =3D tail ? : head;
- 	struct kmem_cache_cpu *c;
- 	unsigned long tid;
-+
-+#ifdef CONFIG_PAX_MEMORY_SANITIZE
-+	if (!(s->flags & SLAB_NO_SANITIZE)) {
-+		int offset =3D s->offset ? 0 : sizeof(void *);
-+		void *x =3D head;
-+
-+		while (1) {
-+			memset(x + offset, PAX_MEMORY_SANITIZE_VALUE,
-+					s->object_size - offset);
-+			if (s->ctor)
-+				s->ctor(x);
-+			if (x =3D=3D tail_obj)
-+				break;
-+			x =3D get_freepointer(s, x);
-+		}
-+	}
-+#endif
-+
- redo:
- 	/*
- 	 * Determine the currently cpus per cpu slab.
-@@ -5316,6 +5334,15 @@ static struct attribute *slab_attrs[] =3D {
- #ifdef CONFIG_ZONE_DMA
- 	&cache_dma_attr.attr,
- #endif
-+/**
-+ * #ifdef CONFIG_PAX_MEMORY_SANITIZE
-+ *	&sanitize_attr.attr,
-+ * ?? -above statement from the grsec-4.8.17 patch fails compile with:
-+ * mm/slub.c:5337:3: error: =E2=80=98sanitize_attr=E2=80=99 undeclared her=
-e (not in a function)
-+ *   &sanitize_attr.attr,
-+ *  ...
-+ * #endif
-+ */
- #ifdef CONFIG_NUMA
- 	&remote_node_defrag_ratio_attr.attr,
- #endif
-diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index 7ad67d7..2e60366 100644
---- a/net/core/skbuff.c
-+++ b/net/core/skbuff.c
-@@ -3453,12 +3453,14 @@ void __init skb_init(void)
- 	skbuff_head_cache =3D kmem_cache_create("skbuff_head_cache",
- 					      sizeof(struct sk_buff),
- 					      0,
--					      SLAB_HWCACHE_ALIGN|SLAB_PANIC,
-+					      SLAB_HWCACHE_ALIGN | SLAB_PANIC |
-+					      SLAB_NO_SANITIZE,
- 					      NULL);
- 	skbuff_fclone_cache =3D kmem_cache_create("skbuff_fclone_cache",
- 						sizeof(struct sk_buff_fclones),
- 						0,
--						SLAB_HWCACHE_ALIGN|SLAB_PANIC,
-+						SLAB_HWCACHE_ALIGN | SLAB_PANIC |
-+						SLAB_NO_SANITIZE,
- 						NULL);
- }
-=20
-diff --git a/security/Kconfig b/security/Kconfig
-index 118f454..3ad5110 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -4,6 +4,46 @@
-=20
- menu "Security options"
-=20
-+menu "Miscellaneous hardening features"
-+
-+config PAX_MEMORY_SANITIZE
-+	bool "Sanitize all freed memory"
-+	default y if (GRKERNSEC_CONFIG_AUTO && GRKERNSEC_CONFIG_PRIORITY_SECURITY)
-+	help
-+	  By saying Y here the kernel will erase memory pages and slab objects
-+	  as soon as they are freed.  This in turn reduces the lifetime of data
-+	  stored in them, making it less likely that sensitive information such
-+	  as passwords, cryptographic secrets, etc stay in memory for too long.
-+
-+	  This is especially useful for programs whose runtime is short, long
-+	  lived processes and the kernel itself benefit from this as long as
-+	  they ensure timely freeing of memory that may hold sensitive
-+	  information.
-+
-+	  A nice side effect of the sanitization of slab objects is the
-+	  reduction of possible info leaks caused by padding bytes within the
-+	  leaky structures.  Use-after-free bugs for structures containing
-+	  pointers can also be detected as dereferencing the sanitized pointer
-+	  will generate an access violation.
-+
-+	  The tradeoff is performance impact, on a single CPU system kernel
-+	  compilation sees a 3% slowdown, other systems and workloads may vary
-+	  and you are advised to test this feature on your expected workload
-+	  before deploying it.
-+
-+	  The slab sanitization feature excludes a few slab caches per default
-+	  for performance reasons.  To extend the feature to cover those as
-+	  well, pass "pax_sanitize_slab=3Dfull" as kernel command line parameter.
-+
-+	  To reduce the performance penalty by sanitizing pages only, albeit
-+	  limiting the effectiveness of this feature at the same time, slab
-+	  sanitization can be disabled with the kernel command line parameter
-+	  "pax_sanitize_slab=3Doff".
-+
-+	  Note that this feature does not protect data stored in live pages,
-+	  e.g., process memory swapped to disk may stay there for a long time.
-+endmenu
-+
- source security/keys/Kconfig
-=20
- config SECURITY_DMESG_RESTRICT
+DQo+IE9uIFR1ZSwgSmFuIDE3LCAyMDE3IGF0IDEyOjQ0IFBNLCBSZXNoZXRvdmEsIEVsZW5hDQo+
+IDxlbGVuYS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPj4gT24gTW9uLCBKYW4gMTYs
+IDIwMTcgYXQgODoxNiBBTSwgUmVzaGV0b3ZhLCBFbGVuYQ0KPiA+PiA8ZWxlbmEucmVzaGV0b3Zh
+QGludGVsLmNvbT4gd3JvdGU6DQo+ID4+ID4+IE9uIFRodSwgSmFuIDEyLCAyMDE3IGF0IDAyOjEx
+OjE1UE0gKzA5MDAsIEFLQVNISSBUYWthaGlybyB3cm90ZToNCj4gPj4gPj4gPiBPbiBXZWQsIEph
+biAxMSwgMjAxNyBhdCAwMjo1NToyMVBNIC0wODAwLCBLZWVzIENvb2sgd3JvdGU6DQo+ID4+ID4+
+ID4gPiBPbiBXZWQsIEphbiAxMSwgMjAxNyBhdCAxOjQyIFBNLCBLZWVzIENvb2sNCj4gPGtlZXNj
+b29rQGNocm9taXVtLm9yZz4NCj4gPj4gPj4gd3JvdGU6DQo+ID4+ID4+ID4gPiA+IEkgY2FuIHNl
+ZSBpZiBpdCdsbCBjaGVycnktcGljayBjbGVhbmx5LCBJIGFzc3VtZSBpdCB3aWxsLiA6KQ0KPiA+
+PiA+PiA+ID4NCj4gPj4gPj4gPiA+IEl0IGNoZXJyeS1waWNrZWQgY2xlYW5seS4gSG93ZXZlciwg
+SSBtYWRlIHNldmVyYWwgY2hhbmdlczoNCj4gPj4gPj4gPiA+DQo+ID4+ID4+ID4gPiAtIEkgYWRq
+dXN0ZWQgUGV0ZXIncyBhdXRob3IgZW1haWwgKGl0IGhhZCBleHRyYSBbXXMgYXJvdW5kKS4NCj4g
+Pj4gPj4gPiA+IC0gSSBmaXhlZCBhbGwgb2YgdGhlIGNvbW1pdCBzdWJqZWN0cyAoUGV0ZXIncyB3
+ZXJlIG1pc3NpbmcpLg0KPiA+PiA+PiA+ID4gLSBJIGFkZGVkIGJhY2sgImtyZWY6IEFkZCBLUkVG
+X0lOSVQoKSIgc2luY2UgaXQgc2VlbXMgdG8gaGF2ZSBiZWVuDQo+ID4+ID4+ID4gPiBsb3N0IGFu
+ZCBtaXhlZCBpbnRvIG90aGVyIHBhdGNoZXMgdGhhdCB3b3VsZCBicmVhayBiaXNlY3Rpb24NCj4g
+Pj4gPj4gPiA+DQo+ID4+ID4+ID4gPiBJdCdzIGhlcmUgbm93LCBwbGVhc2Ugd29yayBmcm9tIHRo
+aXMgdmVyc2lvbjoNCj4gPj4gPj4gPiA+DQo+ID4+ID4+ID4gPg0KPiA+PiA+Pg0KPiA+Pg0KPiBo
+dHRwOi8vZ2l0Lmtlcm5lbC5vcmcvY2dpdC9saW51eC9rZXJuZWwvZ2l0L2tlZXMvbGludXguZ2l0
+L2xvZy8/aD1rc3BwL2hhcmRlbmVkLQ0KPiA+PiA+PiBhdG9taWMNCj4gPj4gPj4gPg0KPiA+PiA+
+PiA+IEkgZ2F2ZSBpdCBhIHNwaW4gb24gYXJtNjQuDQo+ID4+ID4+ID4gSXQgY2FuIGNvbXBpbGUg
+d2l0aCBhIGNoYW5nZSB0byBzbXAuYyB0aGF0IEkgbWVudGlvbmVkIGJlZm9yZSwNCj4gPj4gPj4g
+PiBidXQgdGhlIGJvb3QgZmFpbGVkLiBJJ3ZlIG5vdCBkdWcgaW50byBpdC4NCj4gPj4gPj4gPg0K
+PiA+PiA+PiA+ID09PTg8PT09DQo+ID4+ID4+ID4gWyAgICAzLjU3ODYxOF0gcmVmY291bnRfdDog
+aW5jcmVtZW50IG9uIDA7IHVzZS1hZnRlci1mcmVlLg0KPiA+PiA+PiA+IFsgICAgMy41NzkxNjVd
+IC0tLS0tLS0tLS0tLVsgY3V0IGhlcmUgXS0tLS0tLS0tLS0tLQ0KPiA+PiA+PiA+IFsgICAgMy41
+NzkyNTRdIFdBUk5JTkc6IENQVTogMCBQSUQ6IDEgYXQNCj4gPj4gL2hvbWUvYWthc2hpL2FybS9h
+cm12OC9saW5hcm8vbGludXgtDQo+ID4+ID4+IGFhcmNoNjQvaW5jbHVkZS9saW51eC9yZWZjb3Vu
+dC5oOjEwOSB1bnhfY3JlYXRlKzB4OGMvMHhjMA0KPiA+PiA+Pg0KPiA+PiA+PiBUaGF0J3MgZG9k
+Z3kgY29kZSwgc29tZW9uZSBuZWVkcyB0byBsb29rIGF0IHRoYXQuDQo+ID4+ID4+DQo+ID4+ID4+
+IEl0IGhhcyBhbiBpbmMgaW4gYSBmdW5jdGlvbiBjYWxsZWQgJ2NyZWF0ZScgd2hpY2ggc2VlbXMg
+dG8gc3VnZ2VzdCBpdHMNCj4gPj4gPj4gb2JqZWN0aW9uIGNyZWF0aW9uIGFuZCB3ZSBzaG91bGQg
+YmUgdXNpbmcgcmVmY291bnRfc2V0KCkgaW5zdGVhZC4NCj4gPj4gPj4NCj4gPj4gPj4gVGhlbiBh
+Z2FpbiwgaXQgbG9va3MgbGlrZSB5b3UgY2FuIGNhbGwgdGhpcyAnY3JlYXRlJyBtZXRob2QgbXVs
+dGlwbGUNCj4gPj4gPj4gdGltZXMsIGVhY2ggdGltZSByZXR1cm5pbmcgdGhlIHNhbWUgc3RhdGlj
+IG9iamVjdCwgc28gcmVmY291bnRfc2V0KCkNCj4gPj4gPj4gd291bGQgbm90IGJlIGNvcnJlY3Qu
+DQo+ID4+ID4+DQo+ID4+ID4+IFVzaW5nIGEgcmVmY291bnQgb24gYSBzdGF0aWMgb2JqZWN0IGlz
+IHdlaXJkIG9mIGNvdXJzZSwgc28gdGhpcyBpcyBib3VuZA0KPiA+PiA+PiB0byBnaXZlIHRyb3Vi
+bGUuDQo+ID4+ID4NCj4gPj4gPiBJIGhhdmUgcmV2ZXJ0ZWQgdGhpcyBvbmUgYmFjayB0byBhdG9t
+aWMgYW5kIGFkZGVkIGl0IHRvIHRoZSB0cmFja2luZyBkb2MuDQo+ID4+ID4gVGhlIHByb2JsZW0g
+Zm9yIHRoaXMgb25lIGlzIHRoYXQgaXQgaXMgbm90IGFsd2F5cyB1c2VkIGFzIHN0YXRpYyBhbmQg
+aW4gb3RoZXINCj4gY2FzZXMNCj4gPj4gPiBpdCBpcyBldmVuIGluaXRpYWxpemVkIGNvcnJlY3Rs
+eSB0byAxLCBidXQgdGhpcyBzdGF0aWMgY2FzZSBzZWVtcyB0byBiZSBzcGVjaWFsIG9uZQ0KPiA+
+PiBnaXZpbmcgdHJvdWJsZXMuLi4NCj4gPj4gPg0KPiA+PiA+IExhc3Qgd2VlayBJIGFsc28gZml4
+ZWQgYWxsIHRoZSB3YXJuaW5ncy9lcnJvcnMgdGhhdCB0ZXN0IGluZnJhIGdhdmUuIFRoZQ0KPiBx
+dWVzdGlvbg0KPiA+PiB0aGF0IGNvbWVzIGlzIHdoYXQgbmV4dD8gSG93IGRvIHdlIHJlYWxseSB0
+ZXN0IHRoaXMgZnVydGhlciBhcGFydCBmcm9tIGp1c3QNCj4gYm9vdGluZw0KPiA+PiB0aGlzIHVw
+Pw0KPiA+Pg0KPiA+PiBXaGljaCB0cmVlIGhhcyBhbGwgdGhlIGZpeGVzPyBJIGNhbiByZWZyZXNo
+IG15IGtlcm5lbC5vcmcgdHJlZSBhbmQgbGV0DQo+ID4+IDBkYXkgZ3JpbmQgb24gaXQsIHRoZW4g
+d2UgY2FuIHN0YXJ0IGdldHRpbmcgYWNrcyBhbmQgSSBjYW4gcHVzaCBpdA0KPiA+PiBpbnRvIC1u
+ZXh0IHZpYSBteSBLU1BQIHRyZWUuDQo+ID4NCj4gPiBIZXJlIGlzIHRoZSB0cmVlOiBodHRwczov
+L2dpdGh1Yi5jb20vZXJlc2hldG92YS9saW51eC0NCj4gc3RhYmxlL2NvbW1pdHMvcmVmY291bnRf
+dA0KPiA+DQo+ID4gSSB3b3VsZCByZWFsbHkgbGlrZSB0byBnZXQgbW9yZSBydW50aW1lIHRlc3Rp
+bmcgZG9uZSBmb3IgaXQgYWxzbywgbm90IGp1c3QgYXNrcyA6KQ0KPiANCj4gRG8geW91IGhhdmUg
+YW55IHBhcnRpY3VsYXIgd29ya2xvYWQgdGhhdCB5b3UndmUgYmVlbiB0ZXN0aW5nIHRoZXNlIHdp
+dGg/DQoNCk5vLCB3ZSBvbmx5IHRlc3RlZCB0aGUgZnVsbCBib290LCB0aGF0J3Mgd2h5IEkgd291
+bGQgbGlrZSB0byB1bmRlcnN0YW5kIGhvdyB0byB0ZXN0IG1vcmUuIA0KSSB0aGluayBpdCBpcyBu
+b3Qgc28gbXVjaCBhYm91dCB0aGUgd29ya2xvYWQsIGJ1dCBhYm91dCB0ZXN0aW5nIGRpZmZlcmVu
+dCBjb25maWd1cmF0aW9uLiANCkxpa2UgZm9yIGV4YW1wbGUsIHdoZW4gQUtBU0hJIFRha2FoaXJv
+IHJ1biB0aGUgcGF0Y2hlcyBvbiB0b3Agb24gTkZTIHJvb3RmcywgaXQgaGFzIHNob3duIHRoZSBp
+c3N1ZSB3ZSBoYXZlbid0IHNlZW4gaW4gb3VyIGNhc2UuIA0KWW91IGNhbiBpbWFnaW5lIGhvdyBt
+YW55IG9mIHN1Y2ggY2FzZXMgYXJlIHN0aWxsIGhpZGluZyBnaXZlbiB0aGUgbnVtYmVyIG9mIGNv
+bmZpZ3VyYXRpb25zIGFuZCBkcml2ZXJzIHRoYXQgZ2V0IGFjdGl2ZSBpbiBydW50aW1lLiANCg0K
+QmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
