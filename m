@@ -1,420 +1,64 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Wed, 18 Jan 2017 11:11:32 +0200
-Message-Id: <1484730707-29313-4-git-send-email-elena.reshetova@intel.com>
+Date: Wed, 18 Jan 2017 11:11:33 +0200
+Message-Id: <1484730707-29313-5-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
 References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFCv2 PATCH 03/18] kref: Kill kref_sub()
+Subject: [kernel-hardening] [RFCv2 PATCH 04/18] kref: Use kref_get_unless_zero() more
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Peter Zijlstra <peterz@infradead.org>
 
-By general sentiment kref_sub() is a bad interface, make it go away.
+For some obscure reason apparmor thinks its needs to locally implement
+kref primitives that already exist. Stop doing this.
 
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- drivers/block/drbd/drbd_main.c         |  7 ++--
- drivers/block/drbd/drbd_req.c          | 31 ++++++------------
- drivers/gpu/drm/ttm/ttm_bo.c           | 59 +++++++++-------------------------
- drivers/gpu/drm/ttm/ttm_execbuf_util.c |  4 +--
- include/drm/ttm/ttm_bo_api.h           | 15 +--------
- include/linux/kref.h                   | 32 +++---------------
- 6 files changed, 36 insertions(+), 112 deletions(-)
+ security/apparmor/include/apparmor.h | 6 ------
+ security/apparmor/include/policy.h   | 4 ++--
+ 2 files changed, 2 insertions(+), 8 deletions(-)
 
-diff --git a/drivers/block/drbd/drbd_main.c b/drivers/block/drbd/drbd_main.c
-index 8348272..c3ff60c 100644
---- a/drivers/block/drbd/drbd_main.c
-+++ b/drivers/block/drbd/drbd_main.c
-@@ -2948,7 +2948,6 @@ void drbd_delete_device(struct drbd_device *device)
- 	struct drbd_resource *resource = device->resource;
- 	struct drbd_connection *connection;
- 	struct drbd_peer_device *peer_device;
--	int refs = 3;
- 
- 	/* move to free_peer_device() */
- 	for_each_peer_device(peer_device, device)
-@@ -2956,13 +2955,15 @@ void drbd_delete_device(struct drbd_device *device)
- 	drbd_debugfs_device_cleanup(device);
- 	for_each_connection(connection, resource) {
- 		idr_remove(&connection->peer_devices, device->vnr);
--		refs++;
-+		kref_put(&device->kref, drbd_destroy_device);
- 	}
- 	idr_remove(&resource->devices, device->vnr);
-+	kref_put(&device->kref, drbd_destroy_device);
- 	idr_remove(&drbd_devices, device_to_minor(device));
-+	kref_put(&device->kref, drbd_destroy_device);
- 	del_gendisk(device->vdisk);
- 	synchronize_rcu();
--	kref_sub(&device->kref, refs, drbd_destroy_device);
-+	kref_put(&device->kref, drbd_destroy_device);
+diff --git a/security/apparmor/include/apparmor.h b/security/apparmor/include/apparmor.h
+index 5d721e9..f067be8 100644
+--- a/security/apparmor/include/apparmor.h
++++ b/security/apparmor/include/apparmor.h
+@@ -78,12 +78,6 @@ static inline void *kvzalloc(size_t size)
+ 	return __aa_kvmalloc(size, __GFP_ZERO);
  }
  
- static int __init drbd_init(void)
-diff --git a/drivers/block/drbd/drbd_req.c b/drivers/block/drbd/drbd_req.c
-index 74306c0..b489ac2 100644
---- a/drivers/block/drbd/drbd_req.c
-+++ b/drivers/block/drbd/drbd_req.c
-@@ -421,7 +421,6 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
- 	struct drbd_peer_device *peer_device = first_peer_device(device);
- 	unsigned s = req->rq_state;
- 	int c_put = 0;
--	int k_put = 0;
- 
- 	if (drbd_suspended(device) && !((s | clear) & RQ_COMPLETION_SUSP))
- 		set |= RQ_COMPLETION_SUSP;
-@@ -437,6 +436,8 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
- 
- 	/* intent: get references */
- 
-+	kref_get(&req->kref);
-+
- 	if (!(s & RQ_LOCAL_PENDING) && (set & RQ_LOCAL_PENDING))
- 		atomic_inc(&req->completion_ref);
- 
-@@ -473,15 +474,12 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
- 
- 	if (!(s & RQ_LOCAL_ABORTED) && (set & RQ_LOCAL_ABORTED)) {
- 		D_ASSERT(device, req->rq_state & RQ_LOCAL_PENDING);
--		/* local completion may still come in later,
--		 * we need to keep the req object around. */
--		kref_get(&req->kref);
- 		++c_put;
- 	}
- 
- 	if ((s & RQ_LOCAL_PENDING) && (clear & RQ_LOCAL_PENDING)) {
- 		if (req->rq_state & RQ_LOCAL_ABORTED)
--			++k_put;
-+			kref_put(&req->kref, drbd_req_destroy);
- 		else
- 			++c_put;
- 		list_del_init(&req->req_pending_local);
-@@ -503,7 +501,7 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
- 		if (s & RQ_NET_SENT)
- 			atomic_sub(req->i.size >> 9, &device->ap_in_flight);
- 		if (s & RQ_EXP_BARR_ACK)
--			++k_put;
-+			kref_put(&req->kref, drbd_req_destroy);
- 		req->net_done_jif = jiffies;
- 
- 		/* in ahead/behind mode, or just in case,
-@@ -516,25 +514,16 @@ static void mod_rq_state(struct drbd_request *req, struct bio_and_error *m,
- 
- 	/* potentially complete and destroy */
- 
--	if (k_put || c_put) {
--		/* Completion does it's own kref_put.  If we are going to
--		 * kref_sub below, we need req to be still around then. */
--		int at_least = k_put + !!c_put;
--		int refcount = kref_read(&req->kref);
--		if (refcount < at_least)
--			drbd_err(device,
--				"mod_rq_state: Logic BUG: %x -> %x: refcount = %d, should be >= %d\n",
--				s, req->rq_state, refcount, at_least);
--	}
--
- 	/* If we made progress, retry conflicting peer requests, if any. */
- 	if (req->i.waiting)
- 		wake_up(&device->misc_wait);
- 
--	if (c_put)
--		k_put += drbd_req_put_completion_ref(req, m, c_put);
--	if (k_put)
--		kref_sub(&req->kref, k_put, drbd_req_destroy);
-+	if (c_put) {
-+		if (drbd_req_put_completion_ref(req, m, c_put))
-+			kref_put(&req->kref, drbd_req_destroy);
-+	} else {
-+		kref_put(&req->kref, drbd_req_destroy);
-+	}
- }
- 
- static void drbd_report_io_error(struct drbd_device *device, struct drbd_request *req)
-diff --git a/drivers/gpu/drm/ttm/ttm_bo.c b/drivers/gpu/drm/ttm/ttm_bo.c
-index 30aefcc..ffc6cb5 100644
---- a/drivers/gpu/drm/ttm/ttm_bo.c
-+++ b/drivers/gpu/drm/ttm/ttm_bo.c
-@@ -181,61 +181,46 @@ void ttm_bo_add_to_lru(struct ttm_buffer_object *bo)
- }
- EXPORT_SYMBOL(ttm_bo_add_to_lru);
- 
--int ttm_bo_del_from_lru(struct ttm_buffer_object *bo)
-+static void ttm_bo_ref_bug(struct kref *list_kref)
-+{
-+	BUG();
-+}
-+
-+void ttm_bo_del_from_lru(struct ttm_buffer_object *bo)
- {
- 	struct ttm_bo_device *bdev = bo->bdev;
--	int put_count = 0;
- 
- 	if (bdev->driver->lru_removal)
- 		bdev->driver->lru_removal(bo);
- 
- 	if (!list_empty(&bo->swap)) {
- 		list_del_init(&bo->swap);
--		++put_count;
-+		kref_put(&bo->list_kref, ttm_bo_ref_bug);
- 	}
- 	if (!list_empty(&bo->lru)) {
- 		list_del_init(&bo->lru);
--		++put_count;
-+		kref_put(&bo->list_kref, ttm_bo_ref_bug);
- 	}
--
--	return put_count;
+-/* returns 0 if kref not incremented */
+-static inline int kref_get_not0(struct kref *kref)
+-{
+-	return atomic_inc_not_zero(&kref->refcount);
 -}
 -
--static void ttm_bo_ref_bug(struct kref *list_kref)
--{
--	BUG();
--}
--
--void ttm_bo_list_ref_sub(struct ttm_buffer_object *bo, int count,
--			 bool never_free)
--{
--	kref_sub(&bo->list_kref, count,
--		 (never_free) ? ttm_bo_ref_bug : ttm_bo_release_list);
- }
- 
- void ttm_bo_del_sub_from_lru(struct ttm_buffer_object *bo)
- {
--	int put_count;
--
- 	spin_lock(&bo->glob->lru_lock);
--	put_count = ttm_bo_del_from_lru(bo);
-+	ttm_bo_del_from_lru(bo);
- 	spin_unlock(&bo->glob->lru_lock);
--	ttm_bo_list_ref_sub(bo, put_count, true);
- }
- EXPORT_SYMBOL(ttm_bo_del_sub_from_lru);
- 
- void ttm_bo_move_to_lru_tail(struct ttm_buffer_object *bo)
- {
- 	struct ttm_bo_device *bdev = bo->bdev;
--	int put_count = 0;
- 
- 	lockdep_assert_held(&bo->resv->lock.base);
- 
- 	if (bdev->driver->lru_removal)
- 		bdev->driver->lru_removal(bo);
- 
--	put_count = ttm_bo_del_from_lru(bo);
--	ttm_bo_list_ref_sub(bo, put_count, true);
-+	ttm_bo_del_from_lru(bo);
- 	ttm_bo_add_to_lru(bo);
- }
- EXPORT_SYMBOL(ttm_bo_move_to_lru_tail);
-@@ -447,7 +432,6 @@ static void ttm_bo_cleanup_refs_or_queue(struct ttm_buffer_object *bo)
- {
- 	struct ttm_bo_device *bdev = bo->bdev;
- 	struct ttm_bo_global *glob = bo->glob;
--	int put_count;
- 	int ret;
- 
- 	spin_lock(&glob->lru_lock);
-@@ -455,13 +439,10 @@ static void ttm_bo_cleanup_refs_or_queue(struct ttm_buffer_object *bo)
- 
- 	if (!ret) {
- 		if (!ttm_bo_wait(bo, false, true)) {
--			put_count = ttm_bo_del_from_lru(bo);
--
-+			ttm_bo_del_from_lru(bo);
- 			spin_unlock(&glob->lru_lock);
- 			ttm_bo_cleanup_memtype_use(bo);
- 
--			ttm_bo_list_ref_sub(bo, put_count, true);
--
- 			return;
- 		} else
- 			ttm_bo_flush_all_fences(bo);
-@@ -504,7 +485,6 @@ static int ttm_bo_cleanup_refs_and_unlock(struct ttm_buffer_object *bo,
- 					  bool no_wait_gpu)
- {
- 	struct ttm_bo_global *glob = bo->glob;
--	int put_count;
- 	int ret;
- 
- 	ret = ttm_bo_wait(bo, false, true);
-@@ -554,15 +534,13 @@ static int ttm_bo_cleanup_refs_and_unlock(struct ttm_buffer_object *bo,
- 		return ret;
- 	}
- 
--	put_count = ttm_bo_del_from_lru(bo);
-+	ttm_bo_del_from_lru(bo);
- 	list_del_init(&bo->ddestroy);
--	++put_count;
-+	kref_put(&bo->list_kref, ttm_bo_ref_bug);
- 
- 	spin_unlock(&glob->lru_lock);
- 	ttm_bo_cleanup_memtype_use(bo);
- 
--	ttm_bo_list_ref_sub(bo, put_count, true);
--
- 	return 0;
- }
- 
-@@ -740,7 +718,7 @@ static int ttm_mem_evict_first(struct ttm_bo_device *bdev,
- 	struct ttm_bo_global *glob = bdev->glob;
- 	struct ttm_mem_type_manager *man = &bdev->man[mem_type];
- 	struct ttm_buffer_object *bo;
--	int ret = -EBUSY, put_count;
-+	int ret = -EBUSY;
- 
- 	spin_lock(&glob->lru_lock);
- 	list_for_each_entry(bo, &man->lru, lru) {
-@@ -771,13 +749,11 @@ static int ttm_mem_evict_first(struct ttm_bo_device *bdev,
- 		return ret;
- 	}
- 
--	put_count = ttm_bo_del_from_lru(bo);
-+	ttm_bo_del_from_lru(bo);
- 	spin_unlock(&glob->lru_lock);
- 
- 	BUG_ON(ret != 0);
- 
--	ttm_bo_list_ref_sub(bo, put_count, true);
--
- 	ret = ttm_bo_evict(bo, interruptible, no_wait_gpu);
- 	ttm_bo_unreserve(bo);
- 
-@@ -1669,7 +1645,6 @@ static int ttm_bo_swapout(struct ttm_mem_shrink *shrink)
- 	    container_of(shrink, struct ttm_bo_global, shrink);
- 	struct ttm_buffer_object *bo;
- 	int ret = -EBUSY;
--	int put_count;
- 	uint32_t swap_placement = (TTM_PL_FLAG_CACHED | TTM_PL_FLAG_SYSTEM);
- 
- 	spin_lock(&glob->lru_lock);
-@@ -1692,11 +1667,9 @@ static int ttm_bo_swapout(struct ttm_mem_shrink *shrink)
- 		return ret;
- 	}
- 
--	put_count = ttm_bo_del_from_lru(bo);
-+	ttm_bo_del_from_lru(bo);
- 	spin_unlock(&glob->lru_lock);
- 
--	ttm_bo_list_ref_sub(bo, put_count, true);
--
- 	/**
- 	 * Move to system cached
- 	 */
-diff --git a/drivers/gpu/drm/ttm/ttm_execbuf_util.c b/drivers/gpu/drm/ttm/ttm_execbuf_util.c
-index d35bc49..5e1bcab 100644
---- a/drivers/gpu/drm/ttm/ttm_execbuf_util.c
-+++ b/drivers/gpu/drm/ttm/ttm_execbuf_util.c
-@@ -48,9 +48,7 @@ static void ttm_eu_del_from_lru_locked(struct list_head *list)
- 
- 	list_for_each_entry(entry, list, head) {
- 		struct ttm_buffer_object *bo = entry->bo;
--		unsigned put_count = ttm_bo_del_from_lru(bo);
--
--		ttm_bo_list_ref_sub(bo, put_count, true);
-+		ttm_bo_del_from_lru(bo);
- 	}
- }
- 
-diff --git a/include/drm/ttm/ttm_bo_api.h b/include/drm/ttm/ttm_bo_api.h
-index 652e45b..9a46531 100644
---- a/include/drm/ttm/ttm_bo_api.h
-+++ b/include/drm/ttm/ttm_bo_api.h
-@@ -332,19 +332,6 @@ extern int ttm_bo_validate(struct ttm_buffer_object *bo,
-  */
- extern void ttm_bo_unref(struct ttm_buffer_object **bo);
- 
--
--/**
-- * ttm_bo_list_ref_sub
-- *
-- * @bo: The buffer object.
-- * @count: The number of references with which to decrease @bo::list_kref;
-- * @never_free: The refcount should not reach zero with this operation.
-- *
-- * Release @count lru list references to this buffer object.
-- */
--extern void ttm_bo_list_ref_sub(struct ttm_buffer_object *bo, int count,
--				bool never_free);
--
  /**
-  * ttm_bo_add_to_lru
-  *
-@@ -367,7 +354,7 @@ extern void ttm_bo_add_to_lru(struct ttm_buffer_object *bo);
-  * and is usually called just immediately after the bo has been reserved to
-  * avoid recursive reservation from lru lists.
+  * aa_strneq - compare null terminated @str to a non null terminated substring
+  * @str: a null terminated string
+diff --git a/security/apparmor/include/policy.h b/security/apparmor/include/policy.h
+index 52275f0..46467aa 100644
+--- a/security/apparmor/include/policy.h
++++ b/security/apparmor/include/policy.h
+@@ -287,7 +287,7 @@ static inline struct aa_profile *aa_get_profile(struct aa_profile *p)
   */
--extern int ttm_bo_del_from_lru(struct ttm_buffer_object *bo);
-+extern void ttm_bo_del_from_lru(struct ttm_buffer_object *bo);
- 
- /**
-  * ttm_bo_move_to_lru_tail
-diff --git a/include/linux/kref.h b/include/linux/kref.h
-index 7c88d86..31c49a6 100644
---- a/include/linux/kref.h
-+++ b/include/linux/kref.h
-@@ -54,9 +54,8 @@ static inline void kref_get(struct kref *kref)
- }
- 
- /**
-- * kref_sub - subtract a number of refcounts for object.
-+ * kref_put - decrement refcount for object.
-  * @kref: object.
-- * @count: Number of recounts to subtract.
-  * @release: pointer to the function that will clean up the object when the
-  *	     last reference to the object is released.
-  *	     This pointer is required, and it is not acceptable to pass kfree
-@@ -65,46 +64,23 @@ static inline void kref_get(struct kref *kref)
-  *	     maintainer, and anyone else who happens to notice it.  You have
-  *	     been warned.
-  *
-- * Subtract @count from the refcount, and if 0, call release().
-+ * Decrement the refcount, and if 0, call release().
-  * Return 1 if the object was removed, otherwise return 0.  Beware, if this
-  * function returns 0, you still can not count on the kref from remaining in
-  * memory.  Only use the return value if you want to see if the kref is now
-  * gone, not present.
-  */
--static inline int kref_sub(struct kref *kref, unsigned int count,
--	     void (*release)(struct kref *kref))
-+static inline int kref_put(struct kref *kref, void (*release)(struct kref *kref))
+ static inline struct aa_profile *aa_get_profile_not0(struct aa_profile *p)
  {
- 	WARN_ON(release == NULL);
+-	if (p && kref_get_not0(&p->count))
++	if (p && kref_get_unless_zero(&p->count))
+ 		return p;
  
--	if (atomic_sub_and_test((int) count, &kref->refcount)) {
-+	if (atomic_dec_and_test(&kref->refcount)) {
- 		release(kref);
- 		return 1;
- 	}
- 	return 0;
- }
+ 	return NULL;
+@@ -307,7 +307,7 @@ static inline struct aa_profile *aa_get_profile_rcu(struct aa_profile __rcu **p)
+ 	rcu_read_lock();
+ 	do {
+ 		c = rcu_dereference(*p);
+-	} while (c && !kref_get_not0(&c->count));
++	} while (c && !kref_get_unless_zero(&c->count));
+ 	rcu_read_unlock();
  
--/**
-- * kref_put - decrement refcount for object.
-- * @kref: object.
-- * @release: pointer to the function that will clean up the object when the
-- *	     last reference to the object is released.
-- *	     This pointer is required, and it is not acceptable to pass kfree
-- *	     in as this function.  If the caller does pass kfree to this
-- *	     function, you will be publicly mocked mercilessly by the kref
-- *	     maintainer, and anyone else who happens to notice it.  You have
-- *	     been warned.
-- *
-- * Decrement the refcount, and if 0, call release().
-- * Return 1 if the object was removed, otherwise return 0.  Beware, if this
-- * function returns 0, you still can not count on the kref from remaining in
-- * memory.  Only use the return value if you want to see if the kref is now
-- * gone, not present.
-- */
--static inline int kref_put(struct kref *kref, void (*release)(struct kref *kref))
--{
--	return kref_sub(kref, 1, release);
--}
--
- static inline int kref_put_mutex(struct kref *kref,
- 				 void (*release)(struct kref *kref),
- 				 struct mutex *lock)
+ 	return c;
 -- 
 2.7.4
