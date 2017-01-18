@@ -1,45 +1,58 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 18 Jan 2017 09:14:00 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3E7A8@IRSMSX102.ger.corp.intel.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
- <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
- <20170112051114.GG20972@linaro.org>
- <20170112085714.GC3081@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
- <20170118090340.GB2043@kroah.com>
-In-Reply-To: <20170118090340.GB2043@kroah.com>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+Date: Wed, 18 Jan 2017 11:30:31 +0100
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20170118103031.GB15169@kroah.com>
+References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
-Cc: David Windsor <dwindsor@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] Re: [RFCv2 PATCH 00/18] refcount_t API + usage
+To: Elena Reshetova <elena.reshetova@intel.com>
+Cc: kernel-hardening@lists.openwall.com, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> On Wed, Jan 18, 2017 at 08:41:17AM +0000, Reshetova, Elena wrote:
-> > > Do you have any particular workload that you've been testing these wi=
-th?
-> >
-> > No, we only tested the full boot, that's why I would like to understand=
- how to
-> test more.
-> > I think it is not so much about the workload, but about testing
-> > different configuration.  Like for example, when AKASHI Takahiro run
-> > the patches on top on NFS rootfs, it has shown the issue we haven't
-> > seen in our case.  You can imagine how many of such cases are still
-> > hiding given the number of configurations and drivers that get active
-> > in runtime.
->=20
-> That is why you need to post the patches so that the subsystem
-> maintainers can review them!  They are the ones that know the code the
-> best, why you all don't want to let them at least review the changes is
-> beyond me...
->=20
-I was just in process of posting them... Now done.=20
+On Wed, Jan 18, 2017 at 11:11:29AM +0200, Elena Reshetova wrote:
+> Changes since v1:
+>  - kref INIT fixes are moved to a proper separate commit
+>  - Peter's commits are now properly integrated into series 
+>  - various small fixes are incorporated based on testing
+>    results and feedback
+> 
+> This patch series is build on top of Peter's Zijlstra patches
+> that provide refcount_t type and API definition.
+> The rest of patches convert various places of kernel subsystems
+> where atomic_t was used for reference counting to new refcount_t type and API.
+> By doing this, we make sure that underflows and overflows
+> cannot occur in these places and therefore no use-after-free situation
+> can be created and misused by an attacker.
+
+Your first 7 patches are fine, and most of them are already in the tip
+tree and getting use in linux-next now.  I'd recommend submitting the
+remaining one(s?) that are not there yet to be included, that will get
+refcount_t into 4.11-rc1.
+
+Then comes the real work :)
+
+You will need to break up the remaining patches into "one-per-type" and
+start submitting them to the various submaintainers for inclusion.  You
+can do that once 4.11-rc1 is out.  That's going to be a lot of different
+patches, and your patch-maintaince skills are going to be tested here...
+
+With those submissions, lots of them will start to trickly into
+linux-next and start to show up in 4.12-rc1.  You'll then need to
+refresh your patchset, drop the ones that were accepted, and do it all
+over again.  If some maintainers are just ignoring you, you'll have to
+go through some other tree for them (I can take the driver ones through
+my driver tree.)
+
+It's going to be work, but is totally doable.  I recommend setting up a
+separate git or quilt tree that can get included into linux-next and
+kbuild for testing and refreshing as the patches start to flow upstream.
+
+Kernel development isn't always a lot of coding, it's primarily dealing
+with stuff like this, welcome to the club :)
+
+hope this helps,
+
+greg k-h
