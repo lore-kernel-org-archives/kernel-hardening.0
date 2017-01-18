@@ -1,41 +1,777 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Wed, 18 Jan 2017 10:03:40 +0100
-From: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
-Message-ID: <20170118090340.GB2043@kroah.com>
-References: <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
- <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
- <20170112051114.GG20972@linaro.org>
- <20170112085714.GC3081@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C3DB77@IRSMSX102.ger.corp.intel.com>
- <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
- <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
- atomic_t to refcount_t
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: David Windsor <dwindsor@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+From: Elena Reshetova <elena.reshetova@intel.com>
+Date: Wed, 18 Jan 2017 11:11:29 +0200
+Message-Id: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+Subject: [kernel-hardening] [RFCv2 PATCH 00/18] refcount_t API + usage
+To: kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, Elena Reshetova <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 18, 2017 at 08:41:17AM +0000, Reshetova, Elena wrote:
-> > Do you have any particular workload that you've been testing these with?
-> 
-> No, we only tested the full boot, that's why I would like to understand how to test more. 
-> I think it is not so much about the workload, but about testing
-> different configuration.  Like for example, when AKASHI Takahiro run
-> the patches on top on NFS rootfs, it has shown the issue we haven't
-> seen in our case.  You can imagine how many of such cases are still
-> hiding given the number of configurations and drivers that get active
-> in runtime. 
+Changes since v1:
+ - kref INIT fixes are moved to a proper separate commit
+ - Peter's commits are now properly integrated into series 
+ - various small fixes are incorporated based on testing
+   results and feedback
 
-That is why you need to post the patches so that the subsystem
-maintainers can review them!  They are the ones that know the code the
-best, why you all don't want to let them at least review the changes is
-beyond me...
+This patch series is build on top of Peter's Zijlstra patches
+that provide refcount_t type and API definition.
+The rest of patches convert various places of kernel subsystems
+where atomic_t was used for reference counting to new refcount_t type and API.
+By doing this, we make sure that underflows and overflows
+cannot occur in these places and therefore no use-after-free situation
+can be created and misused by an attacker.
 
-greg k-h
+The patches still have a number of rough places, where we especially
+would need a feedback. The patches also do not cover absolutely all
+cases where atomic_t is used as refcounter. The more complex places
+are left for the future patch series and their occurences are documented in
+https://docs.google.com/document/d/1Gw-SQoxJ3RAofGrkEm7qEyTC48mst3svVjxnVKXyGPs/edit?usp=sharing
+
+The automatic finding of atomic_t variables used as refcounters
+was done using Coccinelle (http://coccinelle.lip6.fr/).
+We thank Julia Lawall for helping us to get started on this!
+
+Testing and compilation status:
+ - Compiles on x86, boots to GUI, no warns in the log
+ - Compiles for arm (defconfig, imx_v6_v7_defconfig), but cannot test
+
+The patches are on top of linux-4.10-rc2. Patches
+would greatly benefit from compile proof test and runtime tests
+on all arches because of extensive changes.
+
+Elena Reshetova (11):
+  kernel, mm: convert from atomic_t to refcount_t
+  net: convert from atomic_t to refcount_t
+  fs: convert from atomic_t to refcount_t
+  security: convert from atomic_t to refcount_t
+  sound: convert from atomic_t to refcount_t
+  ipc: covert from atomic_t to refcount_t
+  tools: convert from atomic_t to refcount_t
+  block: convert from atomic_t to refcount_t
+  drivers: net convert from atomic_t to refcount_t
+  drivers: misc drivers convert from atomic_t to refcount_t
+  drivers: infiniband convert from atomic_t to refcount_t
+
+Peter Zijlstra (7):
+  kref: Add KREF_INIT()
+  kref: Add kref_read()
+  kref: Kill kref_sub()
+  kref: Use kref_get_unless_zero() more
+  kref: Implement kref_put_lock()
+  kref: Avoid more abuse
+  kref: Implement using refcount_t
+
+ arch/alpha/kernel/smp.c                            |   6 +-
+ arch/arc/kernel/smp.c                              |   2 +-
+ arch/arc/mm/tlb.c                                  |   2 +-
+ arch/arm/kernel/smp.c                              |   2 +-
+ arch/arm64/kernel/smp.c                            |   2 +-
+ arch/blackfin/mach-common/smp.c                    |   4 +-
+ arch/frv/mm/mmu-context.c                          |   2 +-
+ arch/ia64/include/asm/tlbflush.h                   |   2 +-
+ arch/ia64/kernel/smp.c                             |   2 +-
+ arch/ia64/sn/kernel/sn2/sn2_smp.c                  |   4 +-
+ arch/metag/kernel/smp.c                            |   2 +-
+ arch/mips/kernel/process.c                         |   2 +-
+ arch/mips/kernel/smp.c                             |   6 +-
+ arch/parisc/include/asm/mmu_context.h              |   2 +-
+ arch/powerpc/mm/hugetlbpage.c                      |   2 +-
+ arch/powerpc/mm/icswx.c                            |   4 +-
+ arch/powerpc/platforms/cell/spufs/file.c           |   2 +-
+ arch/s390/include/asm/debug.h                      |   3 +-
+ arch/s390/kernel/debug.c                           |   6 +-
+ arch/sh/kernel/smp.c                               |   8 +-
+ arch/sparc/kernel/mdesc.c                          |  17 +-
+ arch/sparc/kernel/smp_64.c                         |   6 +-
+ arch/sparc/mm/srmmu.c                              |   2 +-
+ arch/um/kernel/tlb.c                               |   2 +-
+ arch/x86/include/asm/amd_nb.h                      |   3 +-
+ arch/x86/kernel/cpu/common.c                       |   4 +-
+ arch/x86/kernel/cpu/mcheck/mce_amd.c               |   6 +-
+ arch/x86/kernel/tboot.c                            |   4 +-
+ arch/xtensa/kernel/smp.c                           |   2 +-
+ block/bio.c                                        |   6 +-
+ block/blk-cgroup.c                                 |   2 +-
+ block/blk-ioc.c                                    |   4 +-
+ block/blk-tag.c                                    |   8 +-
+ block/bsg.c                                        |   9 +-
+ block/cfq-iosched.c                                |   4 +-
+ crypto/algif_aead.c                                |   2 +-
+ drivers/atm/fore200e.c                             |  13 +-
+ drivers/atm/he.c                                   |   2 +-
+ drivers/atm/idt77252.c                             |   4 +-
+ drivers/block/drbd/drbd_bitmap.c                   |   2 +-
+ drivers/block/drbd/drbd_main.c                     |   7 +-
+ drivers/block/drbd/drbd_req.c                      |  31 +--
+ drivers/block/rbd.c                                |   8 +-
+ drivers/block/virtio_blk.c                         |   2 +-
+ drivers/block/xen-blkback/common.h                 |   7 +-
+ drivers/block/xen-blkback/xenbus.c                 |   2 +-
+ drivers/char/mspec.c                               |   9 +-
+ drivers/connector/cn_queue.c                       |   4 +-
+ drivers/connector/connector.c                      |   2 +-
+ drivers/firewire/core-topology.c                   |   2 +-
+ drivers/firewire/core.h                            |   8 +-
+ drivers/firmware/efi/arm-runtime.c                 |   4 +-
+ drivers/gpu/drm/amd/amdkfd/kfd_process.c           |   4 +-
+ drivers/gpu/drm/drm_gem_cma_helper.c               |   2 +-
+ drivers/gpu/drm/drm_info.c                         |   2 +-
+ drivers/gpu/drm/drm_mode_object.c                  |   4 +-
+ drivers/gpu/drm/etnaviv/etnaviv_gem.c              |   2 +-
+ drivers/gpu/drm/i915/i915_gem_object.h             |   2 +-
+ drivers/gpu/drm/i915/i915_gem_userptr.c            |   4 +-
+ drivers/gpu/drm/msm/msm_gem.c                      |   3 +-
+ drivers/gpu/drm/nouveau/nouveau_fence.c            |   2 +-
+ drivers/gpu/drm/omapdrm/omap_gem.c                 |   2 +-
+ drivers/gpu/drm/ttm/ttm_bo.c                       |  63 ++---
+ drivers/gpu/drm/ttm/ttm_execbuf_util.c             |   4 +-
+ drivers/gpu/drm/ttm/ttm_object.c                   |   2 +-
+ drivers/infiniband/core/addr.c                     |   8 +-
+ drivers/infiniband/core/cm.c                       |  26 +-
+ drivers/infiniband/core/cma.c                      |  29 +--
+ drivers/infiniband/core/cq.c                       |   4 +-
+ drivers/infiniband/core/iwcm.c                     |  10 +-
+ drivers/infiniband/core/iwcm.h                     |   4 +-
+ drivers/infiniband/core/iwpm_util.c                |   8 +-
+ drivers/infiniband/core/iwpm_util.h                |   3 +-
+ drivers/infiniband/core/mad.c                      |  36 +--
+ drivers/infiniband/core/mad_priv.h                 |   5 +-
+ drivers/infiniband/core/mad_rmpp.c                 |  11 +-
+ drivers/infiniband/core/multicast.c                |  31 +--
+ drivers/infiniband/core/uverbs.h                   |   4 +-
+ drivers/infiniband/core/uverbs_cmd.c               |  74 +++---
+ drivers/infiniband/core/uverbs_main.c              |  14 +-
+ drivers/infiniband/core/verbs.c                    | 102 ++++----
+ drivers/infiniband/hw/cxgb3/iwch_cm.h              |   6 +-
+ drivers/infiniband/hw/cxgb3/iwch_ev.c              |   8 +-
+ drivers/infiniband/hw/cxgb3/iwch_provider.c        |  16 +-
+ drivers/infiniband/hw/cxgb3/iwch_provider.h        |   5 +-
+ drivers/infiniband/hw/cxgb3/iwch_qp.c              |   6 +-
+ drivers/infiniband/hw/cxgb4/cq.c                   |   6 +-
+ drivers/infiniband/hw/cxgb4/ev.c                   |   8 +-
+ drivers/infiniband/hw/cxgb4/iw_cxgb4.h             |   9 +-
+ drivers/infiniband/hw/cxgb4/qp.c                   |   2 +-
+ drivers/infiniband/hw/hfi1/file_ops.c              |   2 +-
+ drivers/infiniband/hw/hfi1/qp.c                    |   2 +-
+ drivers/infiniband/hw/hfi1/user_sdma.c             |  13 +-
+ drivers/infiniband/hw/hns/hns_roce_cq.c            |   8 +-
+ drivers/infiniband/hw/hns/hns_roce_device.h        |   5 +-
+ drivers/infiniband/hw/hns/hns_roce_qp.c            |  10 +-
+ drivers/infiniband/hw/i40iw/i40iw.h                |   3 +-
+ drivers/infiniband/hw/i40iw/i40iw_cm.c             |  12 +-
+ drivers/infiniband/hw/i40iw/i40iw_main.c           |   2 +-
+ drivers/infiniband/hw/i40iw/i40iw_puda.h           |   4 +-
+ drivers/infiniband/hw/i40iw/i40iw_utils.c          |  12 +-
+ drivers/infiniband/hw/i40iw/i40iw_verbs.c          |   2 +-
+ drivers/infiniband/hw/i40iw/i40iw_verbs.h          |   4 +-
+ drivers/infiniband/hw/mlx4/mcg.c                   |  39 +--
+ drivers/infiniband/hw/mlx5/cq.c                    |   2 +-
+ drivers/infiniband/hw/mlx5/main.c                  |  20 +-
+ drivers/infiniband/hw/nes/nes.c                    |   8 +-
+ drivers/infiniband/hw/nes/nes_cm.c                 |  32 +--
+ drivers/infiniband/hw/nes/nes_cm.h                 |   6 +-
+ drivers/infiniband/hw/nes/nes_hw.c                 |   8 +-
+ drivers/infiniband/hw/nes/nes_hw.h                 |   4 +-
+ drivers/infiniband/hw/nes/nes_mgt.c                |   6 +-
+ drivers/infiniband/hw/nes/nes_utils.c              |   4 +-
+ drivers/infiniband/hw/nes/nes_verbs.c              |  44 ++--
+ drivers/infiniband/hw/nes/nes_verbs.h              |   6 +-
+ drivers/infiniband/hw/qib/qib_keys.c               |   4 +-
+ drivers/infiniband/hw/usnic/usnic_ib_sysfs.c       |   6 +-
+ drivers/infiniband/hw/usnic/usnic_ib_verbs.c       |   4 +-
+ drivers/infiniband/sw/rdmavt/mr.c                  |   6 +-
+ drivers/infiniband/sw/rdmavt/qp.c                  |   4 +-
+ drivers/infiniband/ulp/ipoib/ipoib.h               |   5 +-
+ drivers/infiniband/ulp/ipoib/ipoib_main.c          |   8 +-
+ drivers/iommu/intel-svm.c                          |   2 +-
+ drivers/isdn/mISDN/socket.c                        |   2 +-
+ drivers/md/bcache/alloc.c                          |   2 +-
+ drivers/md/bcache/bcache.h                         |   9 +-
+ drivers/md/bcache/btree.c                          |   8 +-
+ drivers/md/bcache/super.c                          |   6 +-
+ drivers/md/bcache/writeback.h                      |   2 +-
+ drivers/md/dm-cache-metadata.c                     |   9 +-
+ drivers/md/dm-core.h                               |   3 +-
+ drivers/md/dm-table.c                              |   6 +-
+ drivers/md/dm.c                                    |  19 +-
+ drivers/md/dm.h                                    |   3 +-
+ drivers/md/md.c                                    |   6 +-
+ drivers/md/md.h                                    |   3 +-
+ drivers/md/raid5-cache.c                           |   8 +-
+ drivers/md/raid5.c                                 |  66 +++---
+ drivers/md/raid5.h                                 |   3 +-
+ drivers/media/pci/cx88/cx88-cards.c                |   2 +-
+ drivers/media/pci/cx88/cx88-core.c                 |   4 +-
+ drivers/media/pci/cx88/cx88.h                      |   3 +-
+ drivers/media/usb/s2255/s2255drv.c                 |  21 +-
+ drivers/media/usb/uvc/uvc_ctrl.c                   |   7 +-
+ drivers/media/usb/uvc/uvc_driver.c                 |  12 +-
+ drivers/media/usb/uvc/uvcvideo.h                   |   5 +-
+ drivers/media/v4l2-core/videobuf2-dma-contig.c     |  11 +-
+ drivers/media/v4l2-core/videobuf2-dma-sg.c         |  11 +-
+ drivers/media/v4l2-core/videobuf2-memops.c         |   6 +-
+ drivers/media/v4l2-core/videobuf2-vmalloc.c        |  11 +-
+ drivers/misc/genwqe/card_dev.c                     |   2 +-
+ drivers/misc/mei/debugfs.c                         |   2 +-
+ drivers/net/ethernet/chelsio/cxgb4/clip_tbl.c      |   8 +-
+ drivers/net/ethernet/chelsio/cxgb4/clip_tbl.h      |   4 +-
+ drivers/net/ethernet/mediatek/mtk_eth_soc.c        |   6 +-
+ drivers/net/ethernet/mediatek/mtk_eth_soc.h        |   4 +-
+ drivers/net/ethernet/mellanox/mlx4/cq.c            |  12 +-
+ drivers/net/ethernet/mellanox/mlx4/qp.c            |   8 +-
+ drivers/net/ethernet/mellanox/mlx4/srq.c           |   8 +-
+ drivers/net/ethernet/mellanox/mlx5/core/cq.c       |  16 +-
+ drivers/net/ethernet/mellanox/mlx5/core/fs_core.c  |  24 +-
+ drivers/net/ethernet/mellanox/mlx5/core/fs_core.h  |   3 +-
+ drivers/net/ethernet/mellanox/mlx5/core/qp.c       |   6 +-
+ drivers/net/ethernet/mellanox/mlx5/core/srq.c      |  10 +-
+ drivers/net/ethernet/sun/niu.c                     |   6 +-
+ drivers/net/ethernet/sun/niu.h                     |   4 +-
+ drivers/net/hamradio/6pack.c                       |  12 +-
+ drivers/net/macsec.c                               |  25 +-
+ drivers/net/ppp/ppp_async.c                        |  10 +-
+ drivers/net/ppp/ppp_generic.c                      |  17 +-
+ drivers/net/ppp/ppp_synctty.c                      |  11 +-
+ drivers/net/rionet.c                               |   2 +-
+ drivers/net/vxlan.c                                |  10 +-
+ drivers/net/wireless/intel/ipw2x00/libipw_rx.c     |   8 +-
+ drivers/net/wireless/intel/ipw2x00/libipw_tx.c     |   4 +-
+ .../net/wireless/intersil/hostap/hostap_80211_rx.c |   8 +-
+ .../net/wireless/intersil/hostap/hostap_80211_tx.c |   4 +-
+ drivers/net/wireless/intersil/hostap/hostap_hw.c   |  12 +-
+ drivers/net/wireless/intersil/hostap/hostap_wlan.h |   3 +-
+ .../net/wireless/intersil/orinoco/orinoco_usb.c    |  15 +-
+ drivers/pci/host/pci-hyperv.c                      |   7 +-
+ drivers/pci/hotplug/pnv_php.c                      |   2 +-
+ drivers/pci/slot.c                                 |   2 +-
+ drivers/s390/char/vmur.c                           |   8 +-
+ drivers/s390/char/vmur.h                           |   4 +-
+ drivers/s390/net/ctcm_main.c                       |  26 +-
+ drivers/s390/net/lcs.c                             |  10 +-
+ drivers/s390/net/lcs.h                             |   3 +-
+ drivers/s390/net/netiucv.c                         |  10 +-
+ drivers/s390/net/qeth_core.h                       |   3 +-
+ drivers/s390/net/qeth_core_main.c                  |  14 +-
+ drivers/scsi/bnx2fc/bnx2fc_io.c                    |   8 +-
+ drivers/scsi/cxgbi/libcxgbi.h                      |   6 +-
+ drivers/scsi/libfc/fc_exch.c                       |  10 +-
+ drivers/scsi/libfc/fc_fcp.c                        |   6 +-
+ drivers/scsi/libiscsi.c                            |   8 +-
+ drivers/scsi/lpfc/lpfc_debugfs.c                   |   2 +-
+ drivers/scsi/lpfc/lpfc_els.c                       |   2 +-
+ drivers/scsi/lpfc/lpfc_hbadisc.c                   |  40 ++--
+ drivers/scsi/lpfc/lpfc_init.c                      |   3 +-
+ drivers/scsi/qedi/qedi_iscsi.c                     |   2 +-
+ drivers/scsi/qla2xxx/tcm_qla2xxx.c                 |   4 +-
+ drivers/staging/android/ion/ion.c                  |   2 +-
+ drivers/staging/comedi/comedi_buf.c                |   2 +-
+ drivers/staging/lustre/lustre/llite/llite_lib.c    |   2 +-
+ drivers/staging/rtl8192e/rtllib_rx.c               |   8 +-
+ drivers/staging/rtl8192e/rtllib_tx.c               |   4 +-
+ .../staging/rtl8192u/ieee80211/ieee80211_crypt.c   |   2 +-
+ .../staging/rtl8192u/ieee80211/ieee80211_crypt.h   |   3 +-
+ drivers/staging/rtl8192u/ieee80211/ieee80211_rx.c  |   8 +-
+ drivers/staging/rtl8192u/ieee80211/ieee80211_tx.c  |   4 +-
+ drivers/staging/vme/devices/vme_user.c             |  10 +-
+ drivers/target/target_core_iblock.c                |  12 +-
+ drivers/target/target_core_iblock.h                |   3 +-
+ drivers/target/target_core_pr.c                    |  10 +-
+ drivers/target/tcm_fc/tfc_sess.c                   |   2 +-
+ drivers/tty/serial/dz.c                            |  31 +--
+ drivers/tty/serial/sb1250-duart.c                  |  18 +-
+ drivers/usb/gadget/function/f_fs.c                 |  10 +-
+ drivers/usb/gadget/function/u_fs.h                 |   3 +-
+ drivers/usb/gadget/legacy/inode.c                  |  17 +-
+ drivers/usb/mon/mon_main.c                         |   2 +-
+ drivers/xen/gntdev.c                               |  11 +-
+ fs/afs/cell.c                                      |  20 +-
+ fs/afs/internal.h                                  |  18 +-
+ fs/afs/proc.c                                      |   6 +-
+ fs/afs/server.c                                    |  20 +-
+ fs/afs/vlocation.c                                 |  16 +-
+ fs/afs/volume.c                                    |   6 +-
+ fs/btrfs/backref.c                                 |   2 +-
+ fs/btrfs/compression.c                             |  18 +-
+ fs/btrfs/ctree.c                                   |   2 +-
+ fs/btrfs/ctree.h                                   |   7 +-
+ fs/btrfs/delayed-inode.c                           |  46 ++--
+ fs/btrfs/delayed-inode.h                           |   5 +-
+ fs/btrfs/delayed-ref.c                             |   8 +-
+ fs/btrfs/delayed-ref.h                             |   8 +-
+ fs/btrfs/disk-io.c                                 |  14 +-
+ fs/btrfs/disk-io.h                                 |   4 +-
+ fs/btrfs/extent-tree.c                             |  28 +--
+ fs/btrfs/extent_io.c                               |  91 ++++---
+ fs/btrfs/extent_io.h                               |   9 +-
+ fs/btrfs/extent_map.c                              |  10 +-
+ fs/btrfs/extent_map.h                              |   3 +-
+ fs/btrfs/free-space-cache.c                        |   4 +-
+ fs/btrfs/ordered-data.c                            |  20 +-
+ fs/btrfs/ordered-data.h                            |   2 +-
+ fs/btrfs/raid56.c                                  |  19 +-
+ fs/btrfs/scrub.c                                   |  42 ++--
+ fs/btrfs/transaction.c                             |  20 +-
+ fs/btrfs/transaction.h                             |   3 +-
+ fs/btrfs/tree-log.c                                |   2 +-
+ fs/btrfs/volumes.c                                 |  12 +-
+ fs/btrfs/volumes.h                                 |   2 +-
+ fs/cachefiles/bind.c                               |   2 +-
+ fs/cachefiles/interface.c                          |  18 +-
+ fs/cachefiles/internal.h                           |   3 +-
+ fs/cachefiles/namei.c                              |   2 +-
+ fs/cachefiles/rdwr.c                               |   2 +-
+ fs/ceph/caps.c                                     |   4 +-
+ fs/ceph/file.c                                     |   7 +-
+ fs/ceph/mds_client.c                               |  20 +-
+ fs/ceph/mds_client.h                               |   5 +-
+ fs/ceph/snap.c                                     |   2 +-
+ fs/ceph/super.h                                    |   5 +-
+ fs/cifs/cifsfs.c                                   |   2 +-
+ fs/cifs/cifsglob.h                                 |   5 +-
+ fs/cifs/connect.c                                  |   4 +-
+ fs/cifs/inode.c                                    |   2 +-
+ fs/coredump.c                                      |   2 +-
+ fs/devpts/inode.c                                  |   2 +-
+ fs/exec.c                                          |   4 +-
+ fs/exofs/sys.c                                     |   2 +-
+ fs/f2fs/acl.c                                      |   2 +-
+ fs/fscache/cache.c                                 |   8 +-
+ fs/fscache/operation.c                             |  38 +--
+ fs/fscache/page.c                                  |   2 +-
+ fs/fuse/dev.c                                      |  10 +-
+ fs/fuse/file.c                                     |   8 +-
+ fs/fuse/fuse_i.h                                   |   9 +-
+ fs/fuse/inode.c                                    |   6 +-
+ fs/gfs2/super.c                                    |   2 +-
+ fs/hfs/bnode.c                                     |  14 +-
+ fs/hfs/btree.c                                     |   4 +-
+ fs/hfs/btree.h                                     |   3 +-
+ fs/hfs/inode.c                                     |   4 +-
+ fs/hfsplus/bnode.c                                 |  14 +-
+ fs/hfsplus/btree.c                                 |   4 +-
+ fs/hfsplus/dir.c                                   |   4 +-
+ fs/hfsplus/hfsplus_fs.h                            |   5 +-
+ fs/hfsplus/inode.c                                 |  10 +-
+ fs/hfsplus/super.c                                 |   2 +-
+ fs/inode.c                                         |   3 +-
+ fs/kernfs/dir.c                                    |  10 +-
+ fs/kernfs/mount.c                                  |   2 +-
+ fs/lockd/clntproc.c                                |  14 +-
+ fs/lockd/host.c                                    |  16 +-
+ fs/lockd/mon.c                                     |  14 +-
+ fs/lockd/svcproc.c                                 |   2 +-
+ fs/mbcache.c                                       |  16 +-
+ fs/mount.h                                         |   5 +-
+ fs/namespace.c                                     |   8 +-
+ fs/ncpfs/sock.c                                    |   9 +-
+ fs/nfs/cache_lib.c                                 |   6 +-
+ fs/nfs/cache_lib.h                                 |   2 +-
+ fs/nfs/client.c                                    |  12 +-
+ fs/nfs/dir.c                                       |   8 +-
+ fs/nfs/filelayout/filelayout.c                     |  12 +-
+ fs/nfs/flexfilelayout/flexfilelayout.c             |  20 +-
+ fs/nfs/flexfilelayout/flexfilelayout.h             |   3 +-
+ fs/nfs/inode.c                                     |  12 +-
+ fs/nfs/nfs4_fs.h                                   |   7 +-
+ fs/nfs/nfs4client.c                                |  16 +-
+ fs/nfs/nfs4proc.c                                  |  26 +-
+ fs/nfs/nfs4state.c                                 |  36 +--
+ fs/nfs/pnfs.c                                      |  32 +--
+ fs/nfs/pnfs.h                                      |   9 +-
+ fs/nfs/pnfs_nfs.c                                  |  10 +-
+ fs/nfs/super.c                                     |   4 +-
+ fs/nfsd/nfs4layouts.c                              |   4 +-
+ fs/nfsd/nfs4state.c                                |  72 +++---
+ fs/nfsd/state.h                                    |  15 +-
+ fs/nilfs2/the_nilfs.c                              |   8 +-
+ fs/nilfs2/the_nilfs.h                              |   5 +-
+ fs/notify/group.c                                  |   6 +-
+ fs/notify/inotify/inotify_user.c                   |   4 +-
+ fs/notify/mark.c                                   |   6 +-
+ fs/ntfs/aops.c                                     |   2 +-
+ fs/ntfs/inode.c                                    |   6 +-
+ fs/ntfs/inode.h                                    |   4 +-
+ fs/ntfs/mft.c                                      |  36 +--
+ fs/ocfs2/cluster/netdebug.c                        |   2 +-
+ fs/ocfs2/cluster/tcp.c                             |   2 +-
+ fs/ocfs2/dlm/dlmdebug.c                            |  12 +-
+ fs/ocfs2/dlm/dlmdomain.c                           |   2 +-
+ fs/ocfs2/dlm/dlmmaster.c                           |   8 +-
+ fs/ocfs2/dlm/dlmunlock.c                           |   2 +-
+ fs/ocfs2/filecheck.c                               |  17 +-
+ fs/posix_acl.c                                     |   6 +-
+ fs/proc/base.c                                     |  10 +-
+ fs/proc/generic.c                                  |   4 +-
+ fs/proc/internal.h                                 |   5 +-
+ fs/proc/root.c                                     |   2 +-
+ fs/proc/task_mmu.c                                 |   4 +-
+ fs/proc/task_nommu.c                               |   2 +-
+ fs/super.c                                         |  10 +-
+ fs/userfaultfd.c                                   |  11 +-
+ fs/xfs/xfs_bmap_item.c                             |   4 +-
+ fs/xfs/xfs_bmap_item.h                             |   4 +-
+ fs/xfs/xfs_buf.c                                   |  34 +--
+ fs/xfs/xfs_buf.h                                   |   7 +-
+ fs/xfs/xfs_buf_item.c                              |  16 +-
+ fs/xfs/xfs_buf_item.h                              |   4 +-
+ fs/xfs/xfs_extfree_item.c                          |   4 +-
+ fs/xfs/xfs_extfree_item.h                          |   4 +-
+ fs/xfs/xfs_inode.h                                 |   2 +-
+ fs/xfs/xfs_log.c                                   |  37 +--
+ fs/xfs/xfs_log_priv.h                              |   6 +-
+ fs/xfs/xfs_refcount_item.c                         |   4 +-
+ fs/xfs/xfs_refcount_item.h                         |   4 +-
+ fs/xfs/xfs_rmap_item.c                             |   4 +-
+ fs/xfs/xfs_rmap_item.h                             |   4 +-
+ fs/xfs/xfs_trace.h                                 |  10 +-
+ fs/xfs/xfs_trans_buf.c                             |  32 +--
+ include/drm/drm_framebuffer.h                      |   2 +-
+ include/drm/ttm/ttm_bo_api.h                       |  15 +-
+ include/drm/ttm/ttm_bo_driver.h                    |   4 +-
+ include/linux/atmdev.h                             |   9 +-
+ include/linux/backing-dev-defs.h                   |   3 +-
+ include/linux/backing-dev.h                        |   4 +-
+ include/linux/bio.h                                |   4 +-
+ include/linux/blk-cgroup.h                         |  11 +-
+ include/linux/blk_types.h                          |   3 +-
+ include/linux/blkdev.h                             |   3 +-
+ include/linux/ceph/libceph.h                       |   3 +-
+ include/linux/ceph/osd_client.h                    |   3 +-
+ include/linux/ceph/pagelist.h                      |   6 +-
+ include/linux/cgroup-defs.h                        |   3 +-
+ include/linux/cgroup.h                             |   7 +-
+ include/linux/connector.h                          |   4 +-
+ include/linux/cred.h                               |  13 +-
+ include/linux/filter.h                             |   3 +-
+ include/linux/fs.h                                 |   3 +-
+ include/linux/fscache-cache.h                      |   7 +-
+ include/linux/fsnotify_backend.h                   |   5 +-
+ include/linux/igmp.h                               |   3 +-
+ include/linux/inetdevice.h                         |  11 +-
+ include/linux/init_task.h                          |   7 +-
+ include/linux/iocontext.h                          |   7 +-
+ include/linux/ipc_namespace.h                      |   5 +-
+ include/linux/kernfs.h                             |   3 +-
+ include/linux/key.h                                |   5 +-
+ include/linux/kref.h                               |  73 +++---
+ include/linux/kvm_host.h                           |   3 +-
+ include/linux/lockd/lockd.h                        |   9 +-
+ include/linux/mbcache.h                            |   6 +-
+ include/linux/mlx4/device.h                        |   8 +-
+ include/linux/mlx5/cq.h                            |   4 +-
+ include/linux/mlx5/driver.h                        |   5 +-
+ include/linux/mm_types.h                           |   5 +-
+ include/linux/netpoll.h                            |   3 +-
+ include/linux/nfs_fs.h                             |   3 +-
+ include/linux/nfs_fs_sb.h                          |   5 +-
+ include/linux/nsproxy.h                            |   6 +-
+ include/linux/perf_event.h                         |   3 +-
+ include/linux/posix_acl.h                          |   7 +-
+ include/linux/refcount.h                           | 262 +++++++++++++++++++++
+ include/linux/rmap.h                               |   7 +-
+ include/linux/sched.h                              |  25 +-
+ include/linux/skbuff.h                             |  23 +-
+ include/linux/sunrpc/auth.h                        |   8 +-
+ include/linux/sunrpc/auth_gss.h                    |   3 +-
+ include/linux/sunrpc/cache.h                       |   2 +-
+ include/media/videobuf2-memops.h                   |   3 +-
+ include/net/addrconf.h                             |  14 +-
+ include/net/af_unix.h                              |   3 +-
+ include/net/arp.h                                  |   2 +-
+ include/net/ax25.h                                 |  20 +-
+ include/net/bluetooth/hci_core.h                   |  14 +-
+ include/net/bluetooth/rfcomm.h                     |   8 +-
+ include/net/calipso.h                              |   4 +-
+ include/net/cipso_ipv4.h                           |   3 +-
+ include/net/dn_fib.h                               |   5 +-
+ include/net/fib_rules.h                            |   7 +-
+ include/net/if_inet6.h                             |   9 +-
+ include/net/inet_frag.h                            |   4 +-
+ include/net/inet_hashtables.h                      |   4 +-
+ include/net/inetpeer.h                             |   4 +-
+ include/net/ip_fib.h                               |   7 +-
+ include/net/ip_vs.h                                |  24 +-
+ include/net/ipv6.h                                 |   7 +-
+ include/net/ipx.h                                  |  13 +-
+ include/net/lapb.h                                 |   3 +-
+ include/net/lib80211.h                             |   2 +-
+ include/net/llc.h                                  |   6 +-
+ include/net/lwtunnel.h                             |   7 +-
+ include/net/ndisc.h                                |   2 +-
+ include/net/neighbour.h                            |  15 +-
+ include/net/net_namespace.h                        |   3 +-
+ include/net/netfilter/br_netfilter.h               |   2 +-
+ include/net/netfilter/nf_conntrack_expect.h        |   4 +-
+ include/net/netfilter/nf_conntrack_timeout.h       |   3 +-
+ include/net/netlabel.h                             |   8 +-
+ include/net/netrom.h                               |  13 +-
+ include/net/request_sock.h                         |   9 +-
+ include/net/sch_generic.h                          |   3 +-
+ include/net/sctp/auth.h                            |   5 +-
+ include/net/sctp/structs.h                         |   8 +-
+ include/net/sock.h                                 |  25 +-
+ include/net/vxlan.h                                |   2 +-
+ include/net/x25.h                                  |  15 +-
+ include/net/xfrm.h                                 |  21 +-
+ include/rdma/ib_addr.h                             |   3 +-
+ include/rdma/ib_verbs.h                            |  15 +-
+ include/rdma/rdmavt_mr.h                           |   6 +-
+ include/rdma/rdmavt_qp.h                           |   6 +-
+ include/scsi/libfc.h                               |   5 +-
+ include/scsi/libiscsi.h                            |   3 +-
+ include/trace/events/bcache.h                      |   2 +-
+ include/trace/events/btrfs.h                       |   6 +-
+ init/version.c                                     |   4 +-
+ ipc/msgutil.c                                      |   2 +-
+ ipc/namespace.c                                    |   4 +-
+ ipc/sem.c                                          |   8 +-
+ ipc/util.c                                         |   6 +-
+ ipc/util.h                                         |   3 +-
+ kernel/audit_tree.c                                |  10 +-
+ kernel/audit_watch.c                               |   8 +-
+ kernel/cgroup.c                                    |  23 +-
+ kernel/cred.c                                      |  46 ++--
+ kernel/events/core.c                               |  16 +-
+ kernel/events/internal.h                           |   5 +-
+ kernel/events/ring_buffer.c                        |   8 +-
+ kernel/events/uprobes.c                            |  13 +-
+ kernel/exit.c                                      |   4 +-
+ kernel/fork.c                                      |  40 ++--
+ kernel/futex.c                                     |  17 +-
+ kernel/groups.c                                    |   2 +-
+ kernel/kcov.c                                      |   9 +-
+ kernel/nsproxy.c                                   |   6 +-
+ kernel/pid.c                                       |   4 +-
+ kernel/sched/core.c                                |   7 +-
+ kernel/sched/fair.c                                |   8 +-
+ kernel/user.c                                      |   8 +-
+ lib/is_single_threaded.c                           |   2 +-
+ mm/backing-dev.c                                   |  11 +-
+ mm/debug.c                                         |   4 +-
+ mm/huge_memory.c                                   |  16 +-
+ mm/init-mm.c                                       |   4 +-
+ mm/khugepaged.c                                    |   4 +-
+ mm/kmemleak.c                                      |  16 +-
+ mm/ksm.c                                           |   4 +-
+ mm/memory.c                                        |   2 +-
+ mm/mmu_context.c                                   |   2 +-
+ mm/mmu_notifier.c                                  |  12 +-
+ mm/mprotect.c                                      |   2 +-
+ mm/oom_kill.c                                      |   6 +-
+ mm/rmap.c                                          |  14 +-
+ mm/swapfile.c                                      |  14 +-
+ mm/vmacache.c                                      |   2 +-
+ mm/zpool.c                                         |   4 +-
+ net/atm/br2684.c                                   |   2 +-
+ net/atm/clip.c                                     |   8 +-
+ net/atm/common.c                                   |  10 +-
+ net/atm/lec.c                                      |  11 +-
+ net/atm/lec_arpc.h                                 |   2 +-
+ net/atm/mpc.c                                      |   4 +-
+ net/atm/mpoa_caches.c                              |  26 +-
+ net/atm/mpoa_caches.h                              |   5 +-
+ net/atm/pppoatm.c                                  |   2 +-
+ net/atm/proc.c                                     |   4 +-
+ net/atm/raw.c                                      |   2 +-
+ net/atm/resources.c                                |   2 +-
+ net/atm/signaling.c                                |   2 +-
+ net/ax25/af_ax25.c                                 |   2 +-
+ net/ax25/ax25_route.c                              |   2 +-
+ net/ax25/ax25_uid.c                                |   2 +-
+ net/bluetooth/6lowpan.c                            |   2 +-
+ net/bluetooth/a2mp.c                               |   4 +-
+ net/bluetooth/af_bluetooth.c                       |   2 +-
+ net/bluetooth/amp.c                                |   4 +-
+ net/bluetooth/hci_conn.c                           |   4 +-
+ net/bluetooth/l2cap_core.c                         |   4 +-
+ net/bluetooth/rfcomm/core.c                        |   4 +-
+ net/bluetooth/rfcomm/sock.c                        |   2 +-
+ net/bridge/br_netfilter_hooks.c                    |   4 +-
+ net/bridge/br_private.h                            |   3 +-
+ net/bridge/br_vlan.c                               |   8 +-
+ net/caif/caif_socket.c                             |   2 +-
+ net/ceph/messenger.c                               |   4 +-
+ net/ceph/osd_client.c                              |  26 +-
+ net/ceph/pagelist.c                                |   2 +-
+ net/ceph/snapshot.c                                |   6 +-
+ net/core/datagram.c                                |  10 +-
+ net/core/dev.c                                     |  10 +-
+ net/core/dst.c                                     |   7 +-
+ net/core/fib_rules.c                               |   4 +-
+ net/core/filter.c                                  |   6 +-
+ net/core/neighbour.c                               |  22 +-
+ net/core/net-sysfs.c                               |   2 +-
+ net/core/net_namespace.c                           |   4 +-
+ net/core/netpoll.c                                 |  10 +-
+ net/core/pktgen.c                                  |  16 +-
+ net/core/rtnetlink.c                               |   2 +-
+ net/core/skbuff.c                                  |  34 +--
+ net/core/sock.c                                    |  30 +--
+ net/dccp/ipv6.c                                    |   2 +-
+ net/decnet/dn_fib.c                                |   6 +-
+ net/decnet/dn_neigh.c                              |   2 +-
+ net/ipv4/af_inet.c                                 |   2 +-
+ net/ipv4/cipso_ipv4.c                              |  16 +-
+ net/ipv4/devinet.c                                 |   2 +-
+ net/ipv4/fib_semantics.c                           |   2 +-
+ net/ipv4/fib_trie.c                                |   2 +-
+ net/ipv4/igmp.c                                    |  10 +-
+ net/ipv4/inet_connection_sock.c                    |   2 +-
+ net/ipv4/inet_fragment.c                           |  14 +-
+ net/ipv4/inet_hashtables.c                         |   4 +-
+ net/ipv4/inet_timewait_sock.c                      |   8 +-
+ net/ipv4/inetpeer.c                                |  18 +-
+ net/ipv4/ip_fragment.c                             |   2 +-
+ net/ipv4/ip_output.c                               |   6 +-
+ net/ipv4/netfilter/ipt_CLUSTERIP.c                 |  19 +-
+ net/ipv4/ping.c                                    |   4 +-
+ net/ipv4/raw.c                                     |   2 +-
+ net/ipv4/syncookies.c                              |   2 +-
+ net/ipv4/tcp.c                                     |   4 +-
+ net/ipv4/tcp_fastopen.c                            |   2 +-
+ net/ipv4/tcp_ipv4.c                                |   4 +-
+ net/ipv4/tcp_offload.c                             |   2 +-
+ net/ipv4/tcp_output.c                              |  13 +-
+ net/ipv4/udp.c                                     |   6 +-
+ net/ipv4/udp_diag.c                                |   4 +-
+ net/ipv6/addrconf.c                                |   4 +-
+ net/ipv6/addrlabel.c                               |   9 +-
+ net/ipv6/anycast.c                                 |   6 +-
+ net/ipv6/calipso.c                                 |  16 +-
+ net/ipv6/datagram.c                                |   2 +-
+ net/ipv6/exthdrs.c                                 |   4 +-
+ net/ipv6/inet6_hashtables.c                        |   4 +-
+ net/ipv6/ip6_output.c                              |   4 +-
+ net/ipv6/ipv6_sockglue.c                           |   2 +-
+ net/ipv6/mcast.c                                   |  18 +-
+ net/ipv6/syncookies.c                              |   2 +-
+ net/ipv6/tcp_ipv6.c                                |   6 +-
+ net/ipv6/udp.c                                     |   2 +-
+ net/ipv6/xfrm6_input.c                             |   2 +-
+ net/ipv6/xfrm6_tunnel.c                            |   8 +-
+ net/ipx/af_ipx.c                                   |   6 +-
+ net/ipx/ipx_proc.c                                 |   2 +-
+ net/ipx/ipx_route.c                                |   2 +-
+ net/kcm/kcmproc.c                                  |   2 +-
+ net/key/af_key.c                                   |  10 +-
+ net/l2tp/l2tp_core.c                               |  12 +-
+ net/l2tp/l2tp_core.h                               |  13 +-
+ net/l2tp/l2tp_debugfs.c                            |   6 +-
+ net/l2tp/l2tp_ppp.c                                |   2 +-
+ net/lapb/lapb_iface.c                              |   6 +-
+ net/llc/llc_conn.c                                 |   8 +-
+ net/llc/llc_core.c                                 |   2 +-
+ net/llc/llc_sap.c                                  |   2 +-
+ net/netfilter/ipset/ip_set_hash_gen.h              |  19 +-
+ net/netfilter/ipvs/ip_vs_conn.c                    |  24 +-
+ net/netfilter/ipvs/ip_vs_core.c                    |   4 +-
+ net/netfilter/ipvs/ip_vs_ctl.c                     |  24 +-
+ net/netfilter/ipvs/ip_vs_dh.c                      |   2 +-
+ net/netfilter/ipvs/ip_vs_fo.c                      |   2 +-
+ net/netfilter/ipvs/ip_vs_lblc.c                    |   4 +-
+ net/netfilter/ipvs/ip_vs_lblcr.c                   |   8 +-
+ net/netfilter/ipvs/ip_vs_lc.c                      |   2 +-
+ net/netfilter/ipvs/ip_vs_nq.c                      |   4 +-
+ net/netfilter/ipvs/ip_vs_ovf.c                     |   2 +-
+ net/netfilter/ipvs/ip_vs_pe_sip.c                  |   2 +-
+ net/netfilter/ipvs/ip_vs_proto_sctp.c              |   2 +-
+ net/netfilter/ipvs/ip_vs_proto_tcp.c               |   2 +-
+ net/netfilter/ipvs/ip_vs_rr.c                      |   4 +-
+ net/netfilter/ipvs/ip_vs_sed.c                     |   4 +-
+ net/netfilter/ipvs/ip_vs_sh.c                      |   2 +-
+ net/netfilter/ipvs/ip_vs_wlc.c                     |   4 +-
+ net/netfilter/ipvs/ip_vs_wrr.c                     |   4 +-
+ net/netfilter/nf_conntrack_core.c                  |  26 +-
+ net/netfilter/nf_conntrack_expect.c                |  12 +-
+ net/netfilter/nf_conntrack_netlink.c               |  10 +-
+ net/netfilter/nf_conntrack_standalone.c            |   4 +-
+ net/netfilter/nfnetlink_acct.c                     |  15 +-
+ net/netfilter/nfnetlink_cttimeout.c                |  12 +-
+ net/netfilter/nfnetlink_log.c                      |  14 +-
+ net/netfilter/nft_ct.c                             |   2 +-
+ net/netfilter/xt_CT.c                              |   2 +-
+ net/netfilter/xt_TPROXY.c                          |   4 +-
+ net/netlink/af_netlink.c                           |  14 +-
+ net/netrom/nr_route.c                              |   6 +-
+ net/packet/af_packet.c                             |  14 +-
+ net/packet/internal.h                              |   4 +-
+ net/phonet/socket.c                                |   4 +-
+ net/rds/ib.c                                       |  12 +-
+ net/rds/ib.h                                       |   2 +-
+ net/rds/ib_rdma.c                                  |   4 +-
+ net/rds/message.c                                  |  12 +-
+ net/rds/rdma.c                                     |  10 +-
+ net/rds/rds.h                                      |   9 +-
+ net/rds/recv.c                                     |  12 +-
+ net/rds/tcp_send.c                                 |   2 +-
+ net/rxrpc/af_rxrpc.c                               |   6 +-
+ net/rxrpc/skbuff.c                                 |  12 +-
+ net/sched/em_meta.c                                |   2 +-
+ net/sched/sch_api.c                                |   8 +-
+ net/sched/sch_atm.c                                |   2 +-
+ net/sched/sch_generic.c                            |   8 +-
+ net/sctp/associola.c                               |   6 +-
+ net/sctp/auth.c                                    |   4 +-
+ net/sctp/chunk.c                                   |   6 +-
+ net/sctp/endpointola.c                             |   6 +-
+ net/sctp/output.c                                  |   2 +-
+ net/sctp/outqueue.c                                |   2 +-
+ net/sctp/proc.c                                    |   2 +-
+ net/sctp/sm_make_chunk.c                           |   6 +-
+ net/sctp/socket.c                                  |   6 +-
+ net/sctp/transport.c                               |   8 +-
+ net/sunrpc/auth.c                                  |  12 +-
+ net/sunrpc/auth_gss/auth_gss.c                     |  29 +--
+ net/sunrpc/auth_null.c                             |   2 +-
+ net/sunrpc/cache.c                                 |   2 +-
+ net/sunrpc/svc_xprt.c                              |   6 +-
+ net/sunrpc/svcauth.c                               |  15 +-
+ net/sunrpc/xprtrdma/svc_rdma_transport.c           |   4 +-
+ net/tipc/socket.c                                  |   2 +-
+ net/unix/af_unix.c                                 |  16 +-
+ net/wireless/lib80211.c                            |   2 +-
+ net/x25/x25_link.c                                 |   2 +-
+ net/x25/x25_route.c                                |   2 +-
+ net/xfrm/xfrm_input.c                              |   4 +-
+ net/xfrm/xfrm_policy.c                             |   4 +-
+ net/xfrm/xfrm_state.c                              |   4 +-
+ security/apparmor/include/apparmor.h               |   6 -
+ security/apparmor/include/policy.h                 |   4 +-
+ security/keys/gc.c                                 |   2 +-
+ security/keys/internal.h                           |   3 +-
+ security/keys/key.c                                |  12 +-
+ security/keys/keyring.c                            |   8 +-
+ security/keys/proc.c                               |   4 +-
+ security/keys/process_keys.c                       |   2 +-
+ security/keys/request_key_auth.c                   |   2 +-
+ security/selinux/hooks.c                           |   9 +-
+ security/selinux/include/xfrm.h                    |   5 +-
+ security/selinux/xfrm.c                            |  11 +-
+ security/tomoyo/common.c                           |  11 +-
+ sound/core/seq/seq_clientmgr.c                     |   2 +-
+ sound/core/seq/seq_ports.c                         |   8 +-
+ sound/core/seq/seq_ports.h                         |   3 +-
+ sound/usb/card.c                                   |  10 +-
+ sound/usb/usbaudio.h                               |   4 +-
+ tools/perf/util/cgroup.c                           |   6 +-
+ tools/perf/util/cgroup.h                           |   4 +-
+ tools/perf/util/comm.c                             |  10 +-
+ tools/perf/util/cpumap.c                           |  16 +-
+ tools/perf/util/cpumap.h                           |   4 +-
+ tools/perf/util/dso.c                              |   6 +-
+ tools/perf/util/dso.h                              |   4 +-
+ tools/perf/util/evlist.c                           |  18 +-
+ tools/perf/util/evlist.h                           |   4 +-
+ tools/perf/util/map.c                              |  10 +-
+ tools/perf/util/map.h                              |  10 +-
+ tools/perf/util/thread.c                           |   6 +-
+ tools/perf/util/thread.h                           |   4 +-
+ tools/perf/util/thread_map.c                       |  20 +-
+ tools/perf/util/thread_map.h                       |   4 +-
+ virt/kvm/async_pf.c                                |   2 +-
+ virt/kvm/kvm_main.c                                |  10 +-
+ 709 files changed, 3279 insertions(+), 2898 deletions(-)
+ create mode 100644 include/linux/refcount.h
+
+-- 
+2.7.4
