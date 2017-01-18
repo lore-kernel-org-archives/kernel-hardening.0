@@ -1,10 +1,10 @@
 Reply-To: kernel-hardening@lists.openwall.com
 From: Elena Reshetova <elena.reshetova@intel.com>
-Date: Wed, 18 Jan 2017 11:11:46 +0200
-Message-Id: <1484730707-29313-18-git-send-email-elena.reshetova@intel.com>
+Date: Wed, 18 Jan 2017 11:11:47 +0200
+Message-Id: <1484730707-29313-19-git-send-email-elena.reshetova@intel.com>
 In-Reply-To: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
 References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
-Subject: [kernel-hardening] [RFCv2 PATCH 17/18] drivers: misc drivers convert from atomic_t to refcount_t
+Subject: [kernel-hardening] [RFCv2 PATCH 18/18] drivers: infiniband convert from atomic_t to refcount_t
 To: kernel-hardening@lists.openwall.com
 Cc: keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@redhat.com, h.peter.anvin@intel.com, peterz@infradead.org, will.deacon@arm.com, dwindsor@gmail.com, gregkh@linuxfoundation.org, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
@@ -17,2409 +17,3326 @@ Signed-off-by: Elena Reshetova <elena.reshetova@intel.com>
 Signed-off-by: Hans Liljestrand <ishkamiel@gmail.com>
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- drivers/block/xen-blkback/common.h             |  7 +--
- drivers/block/xen-blkback/xenbus.c             |  2 +-
- drivers/char/mspec.c                           |  9 ++--
- drivers/connector/cn_queue.c                   |  4 +-
- drivers/connector/connector.c                  |  2 +-
- drivers/firewire/core-topology.c               |  2 +-
- drivers/firewire/core.h                        |  8 ++--
- drivers/gpu/drm/amd/amdkfd/kfd_process.c       |  4 +-
- drivers/gpu/drm/i915/i915_gem_object.h         |  2 +-
- drivers/md/bcache/alloc.c                      |  2 +-
- drivers/md/bcache/bcache.h                     |  9 ++--
- drivers/md/bcache/btree.c                      |  8 ++--
- drivers/md/bcache/super.c                      |  6 +--
- drivers/md/bcache/writeback.h                  |  2 +-
- drivers/md/dm-cache-metadata.c                 |  9 ++--
- drivers/md/dm-core.h                           |  3 +-
- drivers/md/dm-table.c                          |  6 +--
- drivers/md/dm.c                                | 19 ++++----
- drivers/md/dm.h                                |  3 +-
- drivers/md/md.c                                |  6 +--
- drivers/md/md.h                                |  3 +-
- drivers/md/raid5-cache.c                       |  8 ++--
- drivers/md/raid5.c                             | 66 +++++++++++++-------------
- drivers/md/raid5.h                             |  3 +-
- drivers/media/pci/cx88/cx88-cards.c            |  2 +-
- drivers/media/pci/cx88/cx88-core.c             |  4 +-
- drivers/media/pci/cx88/cx88.h                  |  3 +-
- drivers/media/usb/s2255/s2255drv.c             | 21 ++++----
- drivers/media/usb/uvc/uvc_ctrl.c               |  7 +--
- drivers/media/usb/uvc/uvc_driver.c             | 12 ++---
- drivers/media/usb/uvc/uvcvideo.h               |  5 +-
- drivers/media/v4l2-core/videobuf2-dma-contig.c | 11 +++--
- drivers/media/v4l2-core/videobuf2-dma-sg.c     | 11 +++--
- drivers/media/v4l2-core/videobuf2-memops.c     |  6 +--
- drivers/media/v4l2-core/videobuf2-vmalloc.c    | 11 +++--
- drivers/pci/host/pci-hyperv.c                  |  7 +--
- drivers/s390/char/vmur.c                       |  8 ++--
- drivers/s390/char/vmur.h                       |  4 +-
- drivers/s390/net/lcs.c                         | 10 ++--
- drivers/s390/net/lcs.h                         |  3 +-
- drivers/s390/net/qeth_core.h                   |  3 +-
- drivers/s390/net/qeth_core_main.c              | 10 ++--
- drivers/scsi/libfc/fc_exch.c                   | 10 ++--
- drivers/scsi/libfc/fc_fcp.c                    |  6 +--
- drivers/scsi/libiscsi.c                        |  8 ++--
- drivers/scsi/qedi/qedi_iscsi.c                 |  2 +-
- drivers/staging/vme/devices/vme_user.c         | 10 ++--
- drivers/target/target_core_iblock.c            | 12 ++---
- drivers/target/target_core_iblock.h            |  3 +-
- drivers/tty/serial/dz.c                        | 31 +++++-------
- drivers/tty/serial/sb1250-duart.c              | 18 +++----
- drivers/usb/gadget/function/f_fs.c             |  8 ++--
- drivers/usb/gadget/function/u_fs.h             |  3 +-
- drivers/usb/gadget/legacy/inode.c              | 17 +++----
- drivers/xen/gntdev.c                           | 11 +++--
- include/linux/connector.h                      |  4 +-
- include/media/videobuf2-memops.h               |  3 +-
- include/scsi/libfc.h                           |  5 +-
- include/scsi/libiscsi.h                        |  3 +-
- include/trace/events/bcache.h                  |  2 +-
- 60 files changed, 252 insertions(+), 235 deletions(-)
+ drivers/infiniband/core/addr.c              |   8 +--
+ drivers/infiniband/core/cm.c                |  26 +++----
+ drivers/infiniband/core/cma.c               |  29 ++++----
+ drivers/infiniband/core/cq.c                |   4 +-
+ drivers/infiniband/core/iwcm.c              |  10 +--
+ drivers/infiniband/core/iwcm.h              |   4 +-
+ drivers/infiniband/core/iwpm_util.c         |   8 +--
+ drivers/infiniband/core/iwpm_util.h         |   3 +-
+ drivers/infiniband/core/mad.c               |  36 +++++-----
+ drivers/infiniband/core/mad_priv.h          |   5 +-
+ drivers/infiniband/core/mad_rmpp.c          |  11 +--
+ drivers/infiniband/core/multicast.c         |  31 +++++----
+ drivers/infiniband/core/uverbs.h            |   4 +-
+ drivers/infiniband/core/uverbs_cmd.c        |  74 ++++++++++----------
+ drivers/infiniband/core/uverbs_main.c       |  14 ++--
+ drivers/infiniband/core/verbs.c             | 102 ++++++++++++++--------------
+ drivers/infiniband/hw/cxgb3/iwch_ev.c       |   8 +--
+ drivers/infiniband/hw/cxgb3/iwch_provider.c |  16 ++---
+ drivers/infiniband/hw/cxgb3/iwch_provider.h |   5 +-
+ drivers/infiniband/hw/cxgb3/iwch_qp.c       |   4 +-
+ drivers/infiniband/hw/cxgb4/cq.c            |   6 +-
+ drivers/infiniband/hw/cxgb4/ev.c            |   8 +--
+ drivers/infiniband/hw/cxgb4/iw_cxgb4.h      |   3 +-
+ drivers/infiniband/hw/hfi1/file_ops.c       |   2 +-
+ drivers/infiniband/hw/hfi1/qp.c             |   2 +-
+ drivers/infiniband/hw/hfi1/user_sdma.c      |  13 ++--
+ drivers/infiniband/hw/hns/hns_roce_cq.c     |   8 +--
+ drivers/infiniband/hw/hns/hns_roce_device.h |   5 +-
+ drivers/infiniband/hw/hns/hns_roce_qp.c     |  10 +--
+ drivers/infiniband/hw/i40iw/i40iw.h         |   3 +-
+ drivers/infiniband/hw/i40iw/i40iw_cm.c      |  12 ++--
+ drivers/infiniband/hw/i40iw/i40iw_main.c    |   2 +-
+ drivers/infiniband/hw/i40iw/i40iw_puda.h    |   4 +-
+ drivers/infiniband/hw/i40iw/i40iw_utils.c   |  12 ++--
+ drivers/infiniband/hw/i40iw/i40iw_verbs.c   |   2 +-
+ drivers/infiniband/hw/i40iw/i40iw_verbs.h   |   4 +-
+ drivers/infiniband/hw/mlx4/mcg.c            |  39 +++++------
+ drivers/infiniband/hw/mlx5/cq.c             |   2 +-
+ drivers/infiniband/hw/mlx5/main.c           |  20 +++---
+ drivers/infiniband/hw/nes/nes.c             |   8 +--
+ drivers/infiniband/hw/nes/nes_cm.c          |  28 ++++----
+ drivers/infiniband/hw/nes/nes_cm.h          |   6 +-
+ drivers/infiniband/hw/nes/nes_hw.c          |   8 +--
+ drivers/infiniband/hw/nes/nes_hw.h          |   4 +-
+ drivers/infiniband/hw/nes/nes_mgt.c         |   6 +-
+ drivers/infiniband/hw/nes/nes_utils.c       |   4 +-
+ drivers/infiniband/hw/nes/nes_verbs.c       |  44 ++++++------
+ drivers/infiniband/hw/nes/nes_verbs.h       |   6 +-
+ drivers/infiniband/hw/qib/qib_keys.c        |   4 +-
+ drivers/infiniband/sw/rdmavt/mr.c           |   6 +-
+ drivers/infiniband/sw/rdmavt/qp.c           |   4 +-
+ drivers/infiniband/ulp/ipoib/ipoib.h        |   5 +-
+ drivers/infiniband/ulp/ipoib/ipoib_main.c   |   8 +--
+ include/linux/mlx5/driver.h                 |   5 +-
+ include/rdma/ib_addr.h                      |   3 +-
+ include/rdma/ib_verbs.h                     |  15 ++--
+ include/rdma/rdmavt_mr.h                    |   6 +-
+ include/rdma/rdmavt_qp.h                    |   6 +-
+ 58 files changed, 382 insertions(+), 353 deletions(-)
 
-diff --git a/drivers/block/xen-blkback/common.h b/drivers/block/xen-blkback/common.h
-index dea61f6..2ccfd62 100644
---- a/drivers/block/xen-blkback/common.h
-+++ b/drivers/block/xen-blkback/common.h
-@@ -35,6 +35,7 @@
- #include <linux/wait.h>
- #include <linux/io.h>
- #include <linux/rbtree.h>
-+#include <linux/refcount.h>
- #include <asm/setup.h>
- #include <asm/pgalloc.h>
- #include <asm/hypervisor.h>
-@@ -333,7 +334,7 @@ struct xen_blkif {
- 	struct xen_vbd		vbd;
- 	/* Back pointer to the backend_info. */
- 	struct backend_info	*be;
--	atomic_t		refcnt;
-+	refcount_t		refcnt;
- 	/* for barrier (drain) requests */
- 	struct completion	drain_complete;
- 	atomic_t		drain;
-@@ -386,10 +387,10 @@ struct pending_req {
- 			 (_v)->bdev->bd_part->nr_sects : \
- 			  get_capacity((_v)->bdev->bd_disk))
+diff --git a/drivers/infiniband/core/addr.c b/drivers/infiniband/core/addr.c
+index 0f58f46..10cf06d 100644
+--- a/drivers/infiniband/core/addr.c
++++ b/drivers/infiniband/core/addr.c
+@@ -213,14 +213,14 @@ static struct rdma_addr_client self;
  
--#define xen_blkif_get(_b) (atomic_inc(&(_b)->refcnt))
-+#define xen_blkif_get(_b) (refcount_inc(&(_b)->refcnt))
- #define xen_blkif_put(_b)				\
- 	do {						\
--		if (atomic_dec_and_test(&(_b)->refcnt))	\
-+		if (refcount_dec_and_test(&(_b)->refcnt))	\
- 			schedule_work(&(_b)->free_work);\
- 	} while (0)
+ void rdma_addr_register_client(struct rdma_addr_client *client)
+ {
+-	atomic_set(&client->refcount, 1);
++	refcount_set(&client->refcount, 1);
+ 	init_completion(&client->comp);
+ }
+ EXPORT_SYMBOL(rdma_addr_register_client);
  
-diff --git a/drivers/block/xen-blkback/xenbus.c b/drivers/block/xen-blkback/xenbus.c
-index 415e79b..4b22e47 100644
---- a/drivers/block/xen-blkback/xenbus.c
-+++ b/drivers/block/xen-blkback/xenbus.c
-@@ -176,7 +176,7 @@ static struct xen_blkif *xen_blkif_alloc(domid_t domid)
- 		return ERR_PTR(-ENOMEM);
- 
- 	blkif->domid = domid;
--	atomic_set(&blkif->refcnt, 1);
-+	refcount_set(&blkif->refcnt, 1);
- 	init_completion(&blkif->drain_complete);
- 	INIT_WORK(&blkif->free_work, xen_blkif_deferred_free);
- 
-diff --git a/drivers/char/mspec.c b/drivers/char/mspec.c
-index a697ca0..6c164cc 100644
---- a/drivers/char/mspec.c
-+++ b/drivers/char/mspec.c
-@@ -43,6 +43,7 @@
- #include <linux/string.h>
- #include <linux/slab.h>
- #include <linux/numa.h>
-+#include <linux/refcount.h>
- #include <asm/page.h>
- #include <asm/pgtable.h>
- #include <linux/atomic.h>
-@@ -89,7 +90,7 @@ static int is_sn2;
-  * protect in fork case where multiple tasks share the vma_data.
-  */
- struct vma_data {
--	atomic_t refcnt;	/* Number of vmas sharing the data. */
-+	refcount_t refcnt;	/* Number of vmas sharing the data. */
- 	spinlock_t lock;	/* Serialize access to this structure. */
- 	int count;		/* Number of pages allocated. */
- 	enum mspec_page_type type; /* Type of pages allocated. */
-@@ -144,7 +145,7 @@ mspec_open(struct vm_area_struct *vma)
- 	struct vma_data *vdata;
- 
- 	vdata = vma->vm_private_data;
--	atomic_inc(&vdata->refcnt);
-+	refcount_inc(&vdata->refcnt);
+ static inline void put_client(struct rdma_addr_client *client)
+ {
+-	if (atomic_dec_and_test(&client->refcount))
++	if (refcount_dec_and_test(&client->refcount))
+ 		complete(&client->comp);
  }
  
- /*
-@@ -162,7 +163,7 @@ mspec_close(struct vm_area_struct *vma)
+@@ -633,7 +633,7 @@ int rdma_resolve_ip(struct rdma_addr_client *client,
+ 	req->callback = callback;
+ 	req->context = context;
+ 	req->client = client;
+-	atomic_inc(&client->refcount);
++	refcount_inc(&client->refcount);
+ 	req->seq = (u32)atomic_inc_return(&ib_nl_addr_request_seq);
  
- 	vdata = vma->vm_private_data;
- 
--	if (!atomic_dec_and_test(&vdata->refcnt))
-+	if (!refcount_dec_and_test(&vdata->refcnt))
- 		return;
- 
- 	last_index = (vdata->vm_end - vdata->vm_start) >> PAGE_SHIFT;
-@@ -274,7 +275,7 @@ mspec_mmap(struct file *file, struct vm_area_struct *vma,
- 	vdata->vm_end = vma->vm_end;
- 	vdata->type = type;
- 	spin_lock_init(&vdata->lock);
--	atomic_set(&vdata->refcnt, 1);
-+	refcount_set(&vdata->refcnt, 1);
- 	vma->vm_private_data = vdata;
- 
- 	vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
-diff --git a/drivers/connector/cn_queue.c b/drivers/connector/cn_queue.c
-index 1f8bf05..9c54fdf 100644
---- a/drivers/connector/cn_queue.c
-+++ b/drivers/connector/cn_queue.c
-@@ -45,7 +45,7 @@ cn_queue_alloc_callback_entry(struct cn_queue_dev *dev, const char *name,
- 		return NULL;
+ 	req->status = addr_resolve(src_in, dst_in, addr, true, req->seq);
+@@ -648,7 +648,7 @@ int rdma_resolve_ip(struct rdma_addr_client *client,
+ 		break;
+ 	default:
+ 		ret = req->status;
+-		atomic_dec(&client->refcount);
++		refcount_dec(&client->refcount);
+ 		goto err;
  	}
- 
--	atomic_set(&cbq->refcnt, 1);
-+	refcount_set(&cbq->refcnt, 1);
- 
- 	atomic_inc(&dev->refcnt);
- 	cbq->pdev = dev;
-@@ -58,7 +58,7 @@ cn_queue_alloc_callback_entry(struct cn_queue_dev *dev, const char *name,
- 
- void cn_queue_release_callback(struct cn_callback_entry *cbq)
- {
--	if (!atomic_dec_and_test(&cbq->refcnt))
-+	if (!refcount_dec_and_test(&cbq->refcnt))
- 		return;
- 
- 	atomic_dec(&cbq->pdev->refcnt);
-diff --git a/drivers/connector/connector.c b/drivers/connector/connector.c
-index 25693b0..8615594b 100644
---- a/drivers/connector/connector.c
-+++ b/drivers/connector/connector.c
-@@ -157,7 +157,7 @@ static int cn_call_callback(struct sk_buff *skb)
- 	spin_lock_bh(&dev->cbdev->queue_lock);
- 	list_for_each_entry(i, &dev->cbdev->queue_list, callback_entry) {
- 		if (cn_cb_equal(&i->id.id, &msg->id)) {
--			atomic_inc(&i->refcnt);
-+			refcount_inc(&i->refcnt);
- 			cbq = i;
- 			break;
- 		}
-diff --git a/drivers/firewire/core-topology.c b/drivers/firewire/core-topology.c
-index 0de8350..939d259 100644
---- a/drivers/firewire/core-topology.c
-+++ b/drivers/firewire/core-topology.c
-@@ -124,7 +124,7 @@ static struct fw_node *fw_node_create(u32 sid, int port_count, int color)
- 	node->initiated_reset = SELF_ID_PHY_INITIATOR(sid);
- 	node->port_count = port_count;
- 
--	atomic_set(&node->ref_count, 1);
-+	refcount_set(&node->ref_count, 1);
- 	INIT_LIST_HEAD(&node->link);
- 
- 	return node;
-diff --git a/drivers/firewire/core.h b/drivers/firewire/core.h
-index e1480ff6..c07962e 100644
---- a/drivers/firewire/core.h
-+++ b/drivers/firewire/core.h
-@@ -12,7 +12,7 @@
- #include <linux/slab.h>
- #include <linux/types.h>
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- 
- struct device;
- struct fw_card;
-@@ -184,7 +184,7 @@ struct fw_node {
- 			 * local node to this node. */
- 	u8 max_depth:4;	/* Maximum depth to any leaf node */
- 	u8 max_hops:4;	/* Max hops in this sub tree */
--	atomic_t ref_count;
-+	refcount_t ref_count;
- 
- 	/* For serializing node topology into a list. */
- 	struct list_head link;
-@@ -197,14 +197,14 @@ struct fw_node {
- 
- static inline struct fw_node *fw_node_get(struct fw_node *node)
- {
--	atomic_inc(&node->ref_count);
-+	refcount_inc(&node->ref_count);
- 
- 	return node;
- }
- 
- static inline void fw_node_put(struct fw_node *node)
- {
--	if (atomic_dec_and_test(&node->ref_count))
-+	if (refcount_dec_and_test(&node->ref_count))
- 		kfree(node);
- }
- 
-diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process.c b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
-index ef7c8de..04115fc 100644
---- a/drivers/gpu/drm/amd/amdkfd/kfd_process.c
-+++ b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
-@@ -204,7 +204,7 @@ static void kfd_process_destroy_delayed(struct rcu_head *rcu)
- 	BUG_ON(!kfd_process_wq);
- 
- 	p = container_of(rcu, struct kfd_process, rcu);
--	BUG_ON(atomic_read(&p->mm->mm_count) <= 0);
-+	BUG_ON(refcount_read(&p->mm->mm_count) == 0);
- 
- 	mmdrop(p->mm);
- 
-@@ -262,7 +262,7 @@ static void kfd_process_notifier_release(struct mmu_notifier *mn,
- 	 * and because the mmu_notifier_unregister function also drop
- 	 * mm_count we need to take an extra count here.
- 	 */
--	atomic_inc(&p->mm->mm_count);
-+	refcount_inc(&p->mm->mm_count);
- 	mmu_notifier_unregister_no_release(&p->mmu_notifier, p->mm);
- 	mmu_notifier_call_srcu(&p->rcu, &kfd_process_destroy_delayed);
- }
-diff --git a/drivers/gpu/drm/i915/i915_gem_object.h b/drivers/gpu/drm/i915/i915_gem_object.h
-index 6a368de..ecfefb9 100644
---- a/drivers/gpu/drm/i915/i915_gem_object.h
-+++ b/drivers/gpu/drm/i915/i915_gem_object.h
-@@ -256,7 +256,7 @@ extern void drm_gem_object_unreference_unlocked(struct drm_gem_object *);
- static inline bool
- i915_gem_object_is_dead(const struct drm_i915_gem_object *obj)
- {
--	return atomic_read(&obj->base.refcount.refcount) == 0;
-+	return kref_read(&obj->base.refcount) == 0;
- }
- 
- static inline bool
-diff --git a/drivers/md/bcache/alloc.c b/drivers/md/bcache/alloc.c
-index ca4abe1..705933a 100644
---- a/drivers/md/bcache/alloc.c
-+++ b/drivers/md/bcache/alloc.c
-@@ -353,7 +353,7 @@ static int bch_allocator_thread(void *arg)
- 		 * Now, we write their new gens to disk so we can start writing
- 		 * new stuff to them:
- 		 */
--		allocator_wait(ca, !atomic_read(&ca->set->prio_blocked));
-+		allocator_wait(ca, !refcount_read(&ca->set->prio_blocked));
- 		if (CACHE_SYNC(&ca->set->sb)) {
- 			/*
- 			 * This could deadlock if an allocation with a btree
-diff --git a/drivers/md/bcache/bcache.h b/drivers/md/bcache/bcache.h
-index c3ea03c..031c03e 100644
---- a/drivers/md/bcache/bcache.h
-+++ b/drivers/md/bcache/bcache.h
-@@ -184,6 +184,7 @@
- #include <linux/mutex.h>
- #include <linux/rbtree.h>
- #include <linux/rwsem.h>
-+#include <linux/refcount.h>
- #include <linux/types.h>
+ 	return ret;
+diff --git a/drivers/infiniband/core/cm.c b/drivers/infiniband/core/cm.c
+index cf1edfa..cc9c3af 100644
+--- a/drivers/infiniband/core/cm.c
++++ b/drivers/infiniband/core/cm.c
+@@ -48,6 +48,7 @@
  #include <linux/workqueue.h>
- 
-@@ -299,7 +300,7 @@ struct cached_dev {
- 	struct semaphore	sb_write_mutex;
- 
- 	/* Refcount on the cache set. Always nonzero when we're caching. */
--	atomic_t		count;
-+	refcount_t		count;
- 	struct work_struct	detach;
- 
- 	/*
-@@ -557,7 +558,7 @@ struct cache_set {
- 	 * This is a refcount that blocks prio_write() until the new keys are
- 	 * written.
- 	 */
--	atomic_t		prio_blocked;
-+	refcount_t		prio_blocked;
- 	wait_queue_head_t	bucket_wait;
- 
- 	/*
-@@ -805,13 +806,13 @@ do {									\
- 
- static inline void cached_dev_put(struct cached_dev *dc)
- {
--	if (atomic_dec_and_test(&dc->count))
-+	if (refcount_dec_and_test(&dc->count))
- 		schedule_work(&dc->detach);
- }
- 
- static inline bool cached_dev_get(struct cached_dev *dc)
- {
--	if (!atomic_inc_not_zero(&dc->count))
-+	if (!refcount_inc_not_zero(&dc->count))
- 		return false;
- 
- 	/* Paired with the mb in cached_dev_attach */
-diff --git a/drivers/md/bcache/btree.c b/drivers/md/bcache/btree.c
-index a43eedd..7ee76f3 100644
---- a/drivers/md/bcache/btree.c
-+++ b/drivers/md/bcache/btree.c
-@@ -324,8 +324,8 @@ static void bch_btree_node_read(struct btree *b)
- static void btree_complete_write(struct btree *b, struct btree_write *w)
- {
- 	if (w->prio_blocked &&
--	    !atomic_sub_return(w->prio_blocked, &b->c->prio_blocked))
--		wake_up_allocators(b->c);
-+		refcount_sub_and_test(w->prio_blocked, &b->c->prio_blocked))
-+				wake_up_allocators(b->c);
- 
- 	if (w->journal) {
- 		atomic_dec_bug(w->journal);
-@@ -1126,7 +1126,7 @@ static void make_btree_freeing_key(struct btree *b, struct bkey *k)
- 
- 	mutex_lock(&b->c->bucket_lock);
- 
--	atomic_inc(&b->c->prio_blocked);
-+	refcount_inc(&b->c->prio_blocked);
- 
- 	bkey_copy(k, &b->key);
- 	bkey_copy_key(k, &ZERO_KEY);
-@@ -1446,7 +1446,7 @@ static int btree_gc_coalesce(struct btree *b, struct btree_op *op,
- 
- 	while ((k = bch_keylist_pop(&keylist)))
- 		if (!bkey_cmp(k, &ZERO_KEY))
--			atomic_dec(&b->c->prio_blocked);
-+			refcount_dec(&b->c->prio_blocked);
- 
- 	for (i = 0; i < nodes; i++)
- 		if (!IS_ERR_OR_NULL(new_nodes[i])) {
-diff --git a/drivers/md/bcache/super.c b/drivers/md/bcache/super.c
-index 3a19cbc..e04621f 100644
---- a/drivers/md/bcache/super.c
-+++ b/drivers/md/bcache/super.c
-@@ -891,7 +891,7 @@ static void cached_dev_detach_finish(struct work_struct *w)
- 	closure_init_stack(&cl);
- 
- 	BUG_ON(!test_bit(BCACHE_DEV_DETACHING, &dc->disk.flags));
--	BUG_ON(atomic_read(&dc->count));
-+	BUG_ON(refcount_read(&dc->count));
- 
- 	mutex_lock(&bch_register_lock);
- 
-@@ -1018,7 +1018,7 @@ int bch_cached_dev_attach(struct cached_dev *dc, struct cache_set *c)
- 	 * dc->c must be set before dc->count != 0 - paired with the mb in
- 	 * cached_dev_get()
- 	 */
--	atomic_set(&dc->count, 1);
-+	refcount_set(&dc->count, 1);
- 
- 	/* Block writeback thread, but spawn it */
- 	down_write(&dc->writeback_lock);
-@@ -1030,7 +1030,7 @@ int bch_cached_dev_attach(struct cached_dev *dc, struct cache_set *c)
- 	if (BDEV_STATE(&dc->sb) == BDEV_STATE_DIRTY) {
- 		bch_sectors_dirty_init(dc);
- 		atomic_set(&dc->has_dirty, 1);
--		atomic_inc(&dc->count);
-+		refcount_inc(&dc->count);
- 		bch_writeback_queue(dc);
- 	}
- 
-diff --git a/drivers/md/bcache/writeback.h b/drivers/md/bcache/writeback.h
-index 629bd1a..5bac1b0 100644
---- a/drivers/md/bcache/writeback.h
-+++ b/drivers/md/bcache/writeback.h
-@@ -70,7 +70,7 @@ static inline void bch_writeback_add(struct cached_dev *dc)
- {
- 	if (!atomic_read(&dc->has_dirty) &&
- 	    !atomic_xchg(&dc->has_dirty, 1)) {
--		atomic_inc(&dc->count);
-+		refcount_inc(&dc->count);
- 
- 		if (BDEV_STATE(&dc->sb) != BDEV_STATE_DIRTY) {
- 			SET_BDEV_STATE(&dc->sb, BDEV_STATE_DIRTY);
-diff --git a/drivers/md/dm-cache-metadata.c b/drivers/md/dm-cache-metadata.c
-index 624fe43..d20cc79 100644
---- a/drivers/md/dm-cache-metadata.c
-+++ b/drivers/md/dm-cache-metadata.c
-@@ -13,6 +13,7 @@
- #include "persistent-data/dm-transaction-manager.h"
- 
- #include <linux/device-mapper.h>
-+#include <linux/refcount.h>
- 
- /*----------------------------------------------------------------*/
- 
-@@ -96,7 +97,7 @@ struct cache_disk_superblock {
- } __packed;
- 
- struct dm_cache_metadata {
--	atomic_t ref_count;
-+	refcount_t ref_count;
- 	struct list_head list;
- 
- 	struct block_device *bdev;
-@@ -709,7 +710,7 @@ static struct dm_cache_metadata *metadata_open(struct block_device *bdev,
- 		return ERR_PTR(-ENOMEM);
- 	}
- 
--	atomic_set(&cmd->ref_count, 1);
-+	refcount_set(&cmd->ref_count, 1);
- 	init_rwsem(&cmd->root_lock);
- 	cmd->bdev = bdev;
- 	cmd->data_block_size = data_block_size;
-@@ -747,7 +748,7 @@ static struct dm_cache_metadata *lookup(struct block_device *bdev)
- 
- 	list_for_each_entry(cmd, &table, list)
- 		if (cmd->bdev == bdev) {
--			atomic_inc(&cmd->ref_count);
-+			refcount_inc(&cmd->ref_count);
- 			return cmd;
- 		}
- 
-@@ -815,7 +816,7 @@ struct dm_cache_metadata *dm_cache_metadata_open(struct block_device *bdev,
- 
- void dm_cache_metadata_close(struct dm_cache_metadata *cmd)
- {
--	if (atomic_dec_and_test(&cmd->ref_count)) {
-+	if (refcount_dec_and_test(&cmd->ref_count)) {
- 		mutex_lock(&table_lock);
- 		list_del(&cmd->list);
- 		mutex_unlock(&table_lock);
-diff --git a/drivers/md/dm-core.h b/drivers/md/dm-core.h
-index 40ceba1..3fa0ac9 100644
---- a/drivers/md/dm-core.h
-+++ b/drivers/md/dm-core.h
-@@ -12,6 +12,7 @@
- #include <linux/kthread.h>
- #include <linux/ktime.h>
- #include <linux/blk-mq.h>
-+#include <linux/refcount.h>
- 
- #include <trace/events/block.h>
- 
-@@ -52,7 +53,7 @@ struct mapped_device {
- 	struct mutex type_lock;
- 
- 	atomic_t holders;
--	atomic_t open_count;
-+	refcount_t open_count;
- 
- 	struct dm_target *immutable_target;
- 	struct target_type *immutable_target_type;
-diff --git a/drivers/md/dm-table.c b/drivers/md/dm-table.c
-index 0a427de..d2ba05a 100644
---- a/drivers/md/dm-table.c
-+++ b/drivers/md/dm-table.c
-@@ -416,7 +416,7 @@ int dm_get_device(struct dm_target *ti, const char *path, fmode_t mode,
- 			return r;
- 		}
- 
--		atomic_set(&dd->count, 0);
-+		refcount_set(&dd->count, 0);
- 		list_add(&dd->list, &t->devices);
- 
- 	} else if (dd->dm_dev->mode != (mode | dd->dm_dev->mode)) {
-@@ -424,7 +424,7 @@ int dm_get_device(struct dm_target *ti, const char *path, fmode_t mode,
- 		if (r)
- 			return r;
- 	}
--	atomic_inc(&dd->count);
-+	refcount_inc(&dd->count);
- 
- 	*result = dd->dm_dev;
- 	return 0;
-@@ -478,7 +478,7 @@ void dm_put_device(struct dm_target *ti, struct dm_dev *d)
- 		       dm_device_name(ti->table->md), d->name);
- 		return;
- 	}
--	if (atomic_dec_and_test(&dd->count)) {
-+	if (refcount_dec_and_test(&dd->count)) {
- 		dm_put_table_device(ti->table->md, d);
- 		list_del(&dd->list);
- 		kfree(dd);
-diff --git a/drivers/md/dm.c b/drivers/md/dm.c
-index 3086da5..6c891e4 100644
---- a/drivers/md/dm.c
-+++ b/drivers/md/dm.c
-@@ -21,6 +21,7 @@
- #include <linux/delay.h>
- #include <linux/wait.h>
- #include <linux/pr.h>
-+#include <linux/refcount.h>
- 
- #define DM_MSG_PREFIX "core"
- 
-@@ -97,7 +98,7 @@ struct dm_md_mempools {
- 
- struct table_device {
- 	struct list_head list;
--	atomic_t count;
-+	refcount_t count;
- 	struct dm_dev dm_dev;
- };
- 
-@@ -313,7 +314,7 @@ static int dm_blk_open(struct block_device *bdev, fmode_t mode)
- 	}
- 
- 	dm_get(md);
--	atomic_inc(&md->open_count);
-+	refcount_inc(&md->open_count);
- out:
- 	spin_unlock(&_minor_lock);
- 
-@@ -330,7 +331,7 @@ static void dm_blk_close(struct gendisk *disk, fmode_t mode)
- 	if (WARN_ON(!md))
- 		goto out;
- 
--	if (atomic_dec_and_test(&md->open_count) &&
-+	if (refcount_dec_and_test(&md->open_count) &&
- 	    (test_bit(DMF_DEFERRED_REMOVE, &md->flags)))
- 		queue_work(deferred_remove_workqueue, &deferred_remove_work);
- 
-@@ -341,7 +342,7 @@ static void dm_blk_close(struct gendisk *disk, fmode_t mode)
- 
- int dm_open_count(struct mapped_device *md)
- {
--	return atomic_read(&md->open_count);
-+	return refcount_read(&md->open_count);
- }
- 
- /*
-@@ -678,10 +679,10 @@ int dm_get_table_device(struct mapped_device *md, dev_t dev, fmode_t mode,
- 
- 		format_dev_t(td->dm_dev.name, dev);
- 
--		atomic_set(&td->count, 0);
-+		refcount_set(&td->count, 0);
- 		list_add(&td->list, &md->table_devices);
- 	}
--	atomic_inc(&td->count);
-+	refcount_inc(&td->count);
- 	mutex_unlock(&md->table_devices_lock);
- 
- 	*result = &td->dm_dev;
-@@ -694,7 +695,7 @@ void dm_put_table_device(struct mapped_device *md, struct dm_dev *d)
- 	struct table_device *td = container_of(d, struct table_device, dm_dev);
- 
- 	mutex_lock(&md->table_devices_lock);
--	if (atomic_dec_and_test(&td->count)) {
-+	if (refcount_dec_and_test(&td->count)) {
- 		close_table_device(td, md);
- 		list_del(&td->list);
- 		kfree(td);
-@@ -711,7 +712,7 @@ static void free_table_devices(struct list_head *devices)
- 		struct table_device *td = list_entry(tmp, struct table_device, list);
- 
- 		DMWARN("dm_destroy: %s still exists with %d references",
--		       td->dm_dev.name, atomic_read(&td->count));
-+		       td->dm_dev.name, refcount_read(&td->count));
- 		kfree(td);
- 	}
- }
-@@ -1483,7 +1484,7 @@ static struct mapped_device *alloc_dev(int minor)
- 	mutex_init(&md->table_devices_lock);
- 	spin_lock_init(&md->deferred_lock);
- 	atomic_set(&md->holders, 1);
--	atomic_set(&md->open_count, 0);
-+	refcount_set(&md->open_count, 0);
- 	atomic_set(&md->event_nr, 0);
- 	atomic_set(&md->uevent_seq, 0);
- 	INIT_LIST_HEAD(&md->uevent_list);
-diff --git a/drivers/md/dm.h b/drivers/md/dm.h
-index f0aad08..26e560a 100644
---- a/drivers/md/dm.h
-+++ b/drivers/md/dm.h
-@@ -19,6 +19,7 @@
- #include <linux/hdreg.h>
- #include <linux/completion.h>
- #include <linux/kobject.h>
-+#include <linux/refcount.h>
- 
- #include "dm-stats.h"
- 
-@@ -38,7 +39,7 @@
-  */
- struct dm_dev_internal {
- 	struct list_head list;
--	atomic_t count;
-+	refcount_t count;
- 	struct dm_dev *dm_dev;
- };
- 
-diff --git a/drivers/md/md.c b/drivers/md/md.c
-index 82821ee..6c9b9ff 100644
---- a/drivers/md/md.c
-+++ b/drivers/md/md.c
-@@ -459,7 +459,7 @@ EXPORT_SYMBOL(md_unplug);
- 
- static inline struct mddev *mddev_get(struct mddev *mddev)
- {
--	atomic_inc(&mddev->active);
-+	refcount_inc(&mddev->active);
- 	return mddev;
- }
- 
-@@ -469,7 +469,7 @@ static void mddev_put(struct mddev *mddev)
- {
- 	struct bio_set *bs = NULL;
- 
--	if (!atomic_dec_and_lock(&mddev->active, &all_mddevs_lock))
-+	if (!refcount_dec_and_lock(&mddev->active, &all_mddevs_lock))
- 		return;
- 	if (!mddev->raid_disks && list_empty(&mddev->disks) &&
- 	    mddev->ctime == 0 && !mddev->hold_active) {
-@@ -505,7 +505,7 @@ void mddev_init(struct mddev *mddev)
- 	INIT_LIST_HEAD(&mddev->all_mddevs);
- 	setup_timer(&mddev->safemode_timer, md_safemode_timeout,
- 		    (unsigned long) mddev);
--	atomic_set(&mddev->active, 1);
-+	refcount_set(&mddev->active, 1);
- 	atomic_set(&mddev->openers, 0);
- 	atomic_set(&mddev->active_io, 0);
- 	spin_lock_init(&mddev->lock);
-diff --git a/drivers/md/md.h b/drivers/md/md.h
-index e38936d..0c1ec5f 100644
---- a/drivers/md/md.h
-+++ b/drivers/md/md.h
-@@ -22,6 +22,7 @@
- #include <linux/list.h>
- #include <linux/mm.h>
- #include <linux/mutex.h>
-+#include <linux/refcount.h>
- #include <linux/timer.h>
- #include <linux/wait.h>
- #include <linux/workqueue.h>
-@@ -359,7 +360,7 @@ struct mddev {
- 	 */
- 	struct mutex			open_mutex;
- 	struct mutex			reconfig_mutex;
--	atomic_t			active;		/* general refcount */
-+	refcount_t			active;		/* general refcount */
- 	atomic_t			openers;	/* number of active opens */
- 
- 	int				changed;	/* True if we might need to
-diff --git a/drivers/md/raid5-cache.c b/drivers/md/raid5-cache.c
-index d7bfb6f..a647d4b 100644
---- a/drivers/md/raid5-cache.c
-+++ b/drivers/md/raid5-cache.c
-@@ -906,7 +906,7 @@ int r5l_write_stripe(struct r5l_log *log, struct stripe_head *sh)
- 	 * don't delay.
- 	 */
- 	clear_bit(STRIPE_DELAYED, &sh->state);
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	mutex_lock(&log->io_mutex);
- 	/* meta + data */
-@@ -1248,7 +1248,7 @@ static void r5c_flush_stripe(struct r5conf *conf, struct stripe_head *sh)
- 	assert_spin_locked(&conf->device_lock);
- 
- 	list_del_init(&sh->lru);
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	set_bit(STRIPE_HANDLE, &sh->state);
- 	atomic_inc(&conf->active_stripes);
-@@ -1343,7 +1343,7 @@ static void r5c_do_reclaim(struct r5conf *conf)
- 			 */
- 			if (!list_empty(&sh->lru) &&
- 			    !test_bit(STRIPE_HANDLE, &sh->state) &&
--			    atomic_read(&sh->count) == 0) {
-+			    refcount_read(&sh->count) == 0) {
- 				r5c_flush_stripe(conf, sh);
- 			}
- 			if (count++ >= R5C_RECLAIM_STRIPE_GROUP)
-@@ -2459,7 +2459,7 @@ r5c_cache_data(struct r5l_log *log, struct stripe_head *sh,
- 	 * don't delay.
- 	 */
- 	clear_bit(STRIPE_DELAYED, &sh->state);
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	mutex_lock(&log->io_mutex);
- 	/* meta + data */
-diff --git a/drivers/md/raid5.c b/drivers/md/raid5.c
-index 06d7279..f14fe3d 100644
---- a/drivers/md/raid5.c
-+++ b/drivers/md/raid5.c
-@@ -294,7 +294,7 @@ static void do_release_stripe(struct r5conf *conf, struct stripe_head *sh,
- static void __release_stripe(struct r5conf *conf, struct stripe_head *sh,
- 			     struct list_head *temp_inactive_list)
- {
--	if (atomic_dec_and_test(&sh->count))
-+	if (refcount_dec_and_test(&sh->count))
- 		do_release_stripe(conf, sh, temp_inactive_list);
- }
- 
-@@ -388,7 +388,7 @@ void raid5_release_stripe(struct stripe_head *sh)
- 
- 	/* Avoid release_list until the last reference.
- 	 */
--	if (atomic_add_unless(&sh->count, -1, 1))
-+	if (refcount_dec_not_one(&sh->count))
- 		return;
- 
- 	if (unlikely(!conf->mddev->thread) ||
-@@ -401,7 +401,7 @@ void raid5_release_stripe(struct stripe_head *sh)
- slow_path:
- 	local_irq_save(flags);
- 	/* we are ok here if STRIPE_ON_RELEASE_LIST is set or not */
--	if (atomic_dec_and_lock(&sh->count, &conf->device_lock)) {
-+	if (refcount_dec_and_lock(&sh->count, &conf->device_lock)) {
- 		INIT_LIST_HEAD(&list);
- 		hash = sh->hash_lock_index;
- 		do_release_stripe(conf, sh, &list);
-@@ -491,7 +491,7 @@ static void init_stripe(struct stripe_head *sh, sector_t sector, int previous)
- 	struct r5conf *conf = sh->raid_conf;
- 	int i, seq;
- 
--	BUG_ON(atomic_read(&sh->count) != 0);
-+	BUG_ON(refcount_read(&sh->count) != 0);
- 	BUG_ON(test_bit(STRIPE_HANDLE, &sh->state));
- 	BUG_ON(stripe_operations_active(sh));
- 	BUG_ON(sh->batch_head);
-@@ -668,11 +668,11 @@ raid5_get_active_stripe(struct r5conf *conf, sector_t sector,
- 					  &conf->cache_state);
- 			} else {
- 				init_stripe(sh, sector, previous);
--				atomic_inc(&sh->count);
-+				refcount_inc(&sh->count);
- 			}
--		} else if (!atomic_inc_not_zero(&sh->count)) {
-+		} else if (!refcount_inc_not_zero(&sh->count)) {
- 			spin_lock(&conf->device_lock);
--			if (!atomic_read(&sh->count)) {
-+			if (!refcount_read(&sh->count)) {
- 				if (!test_bit(STRIPE_HANDLE, &sh->state))
- 					atomic_inc(&conf->active_stripes);
- 				BUG_ON(list_empty(&sh->lru) &&
-@@ -688,7 +688,7 @@ raid5_get_active_stripe(struct r5conf *conf, sector_t sector,
- 					sh->group = NULL;
- 				}
- 			}
--			atomic_inc(&sh->count);
-+			refcount_inc(&sh->count);
- 			spin_unlock(&conf->device_lock);
- 		}
- 	} while (sh == NULL);
-@@ -752,9 +752,9 @@ static void stripe_add_to_batch_list(struct r5conf *conf, struct stripe_head *sh
- 	hash = stripe_hash_locks_hash(head_sector);
- 	spin_lock_irq(conf->hash_locks + hash);
- 	head = __find_stripe(conf, head_sector, conf->generation);
--	if (head && !atomic_inc_not_zero(&head->count)) {
-+	if (head && !refcount_inc_not_zero(&head->count)) {
- 		spin_lock(&conf->device_lock);
--		if (!atomic_read(&head->count)) {
-+		if (!refcount_read(&head->count)) {
- 			if (!test_bit(STRIPE_HANDLE, &head->state))
- 				atomic_inc(&conf->active_stripes);
- 			BUG_ON(list_empty(&head->lru) &&
-@@ -770,7 +770,7 @@ static void stripe_add_to_batch_list(struct r5conf *conf, struct stripe_head *sh
- 				head->group = NULL;
- 			}
- 		}
--		atomic_inc(&head->count);
-+		refcount_inc(&head->count);
- 		spin_unlock(&conf->device_lock);
- 	}
- 	spin_unlock_irq(conf->hash_locks + hash);
-@@ -833,7 +833,7 @@ static void stripe_add_to_batch_list(struct r5conf *conf, struct stripe_head *sh
- 		sh->batch_head->bm_seq = seq;
- 	}
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- unlock_out:
- 	unlock_two_stripes(head, sh);
- out:
-@@ -999,9 +999,9 @@ static void ops_run_io(struct stripe_head *sh, struct stripe_head_state *s)
- 			pr_debug("%s: for %llu schedule op %d on disc %d\n",
- 				__func__, (unsigned long long)sh->sector,
- 				bi->bi_opf, i);
--			atomic_inc(&sh->count);
-+			refcount_inc(&sh->count);
- 			if (sh != head_sh)
--				atomic_inc(&head_sh->count);
-+				refcount_inc(&head_sh->count);
- 			if (use_new_offset(conf, sh))
- 				bi->bi_iter.bi_sector = (sh->sector
- 						 + rdev->new_data_offset);
-@@ -1050,9 +1050,9 @@ static void ops_run_io(struct stripe_head *sh, struct stripe_head_state *s)
- 				 "replacement disc %d\n",
- 				__func__, (unsigned long long)sh->sector,
- 				rbi->bi_opf, i);
--			atomic_inc(&sh->count);
-+			refcount_inc(&sh->count);
- 			if (sh != head_sh)
--				atomic_inc(&head_sh->count);
-+				refcount_inc(&head_sh->count);
- 			if (use_new_offset(conf, sh))
- 				rbi->bi_iter.bi_sector = (sh->sector
- 						  + rrdev->new_data_offset);
-@@ -1228,7 +1228,7 @@ static void ops_run_biofill(struct stripe_head *sh)
- 		}
- 	}
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 	init_async_submit(&submit, ASYNC_TX_ACK, tx, ops_complete_biofill, sh, NULL);
- 	async_trigger_callback(&submit);
- }
-@@ -1306,7 +1306,7 @@ ops_run_compute5(struct stripe_head *sh, struct raid5_percpu *percpu)
- 		if (i != target)
- 			xor_srcs[count++] = sh->dev[i].page;
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	init_async_submit(&submit, ASYNC_TX_FENCE|ASYNC_TX_XOR_ZERO_DST, NULL,
- 			  ops_complete_compute, sh, to_addr_conv(sh, percpu, 0));
-@@ -1394,7 +1394,7 @@ ops_run_compute6_1(struct stripe_head *sh, struct raid5_percpu *percpu)
- 	BUG_ON(!test_bit(R5_Wantcompute, &tgt->flags));
- 	dest = tgt->page;
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	if (target == qd_idx) {
- 		count = set_syndrome_sources(blocks, sh, SYNDROME_SRC_ALL);
-@@ -1469,7 +1469,7 @@ ops_run_compute6_2(struct stripe_head *sh, struct raid5_percpu *percpu)
- 	pr_debug("%s: stripe: %llu faila: %d failb: %d\n",
- 		 __func__, (unsigned long long)sh->sector, faila, failb);
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 
- 	if (failb == syndrome_disks+1) {
- 		/* Q disk is one of the missing disks */
-@@ -1737,7 +1737,7 @@ ops_run_reconstruct5(struct stripe_head *sh, struct raid5_percpu *percpu,
- 			break;
- 	}
- 	if (i >= sh->disks) {
--		atomic_inc(&sh->count);
-+		refcount_inc(&sh->count);
- 		set_bit(R5_Discard, &sh->dev[pd_idx].flags);
- 		ops_complete_reconstruct(sh);
- 		return;
-@@ -1778,7 +1778,7 @@ ops_run_reconstruct5(struct stripe_head *sh, struct raid5_percpu *percpu,
- 		flags = ASYNC_TX_ACK |
- 			(prexor ? ASYNC_TX_XOR_DROP_DST : ASYNC_TX_XOR_ZERO_DST);
- 
--		atomic_inc(&head_sh->count);
-+		refcount_inc(&head_sh->count);
- 		init_async_submit(&submit, flags, tx, ops_complete_reconstruct, head_sh,
- 				  to_addr_conv(sh, percpu, j));
- 	} else {
-@@ -1820,7 +1820,7 @@ ops_run_reconstruct6(struct stripe_head *sh, struct raid5_percpu *percpu,
- 			break;
- 	}
- 	if (i >= sh->disks) {
--		atomic_inc(&sh->count);
-+		refcount_inc(&sh->count);
- 		set_bit(R5_Discard, &sh->dev[sh->pd_idx].flags);
- 		set_bit(R5_Discard, &sh->dev[sh->qd_idx].flags);
- 		ops_complete_reconstruct(sh);
-@@ -1844,7 +1844,7 @@ ops_run_reconstruct6(struct stripe_head *sh, struct raid5_percpu *percpu,
- 				 struct stripe_head, batch_list) == head_sh;
- 
- 	if (last_stripe) {
--		atomic_inc(&head_sh->count);
-+		refcount_inc(&head_sh->count);
- 		init_async_submit(&submit, txflags, tx, ops_complete_reconstruct,
- 				  head_sh, to_addr_conv(sh, percpu, j));
- 	} else
-@@ -1901,7 +1901,7 @@ static void ops_run_check_p(struct stripe_head *sh, struct raid5_percpu *percpu)
- 	tx = async_xor_val(xor_dest, xor_srcs, 0, count, STRIPE_SIZE,
- 			   &sh->ops.zero_sum_result, &submit);
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 	init_async_submit(&submit, ASYNC_TX_ACK, tx, ops_complete_check, sh, NULL);
- 	tx = async_trigger_callback(&submit);
- }
-@@ -1920,7 +1920,7 @@ static void ops_run_check_pq(struct stripe_head *sh, struct raid5_percpu *percpu
- 	if (!checkp)
- 		srcs[count] = NULL;
- 
--	atomic_inc(&sh->count);
-+	refcount_inc(&sh->count);
- 	init_async_submit(&submit, ASYNC_TX_ACK, NULL, ops_complete_check,
- 			  sh, to_addr_conv(sh, percpu, 0));
- 	async_syndrome_val(srcs, 0, count+2, STRIPE_SIZE,
-@@ -2010,7 +2010,7 @@ static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
- 		INIT_LIST_HEAD(&sh->lru);
- 		INIT_LIST_HEAD(&sh->r5c);
- 		INIT_LIST_HEAD(&sh->log_list);
--		atomic_set(&sh->count, 1);
-+		refcount_set(&sh->count, 1);
- 		sh->log_start = MaxSector;
- 		for (i = 0; i < disks; i++) {
- 			struct r5dev *dev = &sh->dev[i];
-@@ -2307,7 +2307,7 @@ static int drop_one_stripe(struct r5conf *conf)
- 	spin_unlock_irq(conf->hash_locks + hash);
- 	if (!sh)
- 		return 0;
--	BUG_ON(atomic_read(&sh->count));
-+	BUG_ON(refcount_read(&sh->count));
- 	shrink_buffers(sh);
- 	kmem_cache_free(conf->slab_cache, sh);
- 	atomic_dec(&conf->active_stripes);
-@@ -2339,7 +2339,7 @@ static void raid5_end_read_request(struct bio * bi)
- 			break;
- 
- 	pr_debug("end_read_request %llu/%d, count: %d, error %d.\n",
--		(unsigned long long)sh->sector, i, atomic_read(&sh->count),
-+		(unsigned long long)sh->sector, i, refcount_read(&sh->count),
- 		bi->bi_error);
- 	if (i == disks) {
- 		bio_reset(bi);
-@@ -2469,7 +2469,7 @@ static void raid5_end_write_request(struct bio *bi)
- 		}
- 	}
- 	pr_debug("end_write_request %llu/%d, count %d, error: %d.\n",
--		(unsigned long long)sh->sector, i, atomic_read(&sh->count),
-+		(unsigned long long)sh->sector, i, refcount_read(&sh->count),
- 		bi->bi_error);
- 	if (i == disks) {
- 		bio_reset(bi);
-@@ -4417,7 +4417,7 @@ static void handle_stripe(struct stripe_head *sh)
- 	pr_debug("handling stripe %llu, state=%#lx cnt=%d, "
- 		"pd_idx=%d, qd_idx=%d\n, check:%d, reconstruct:%d\n",
- 	       (unsigned long long)sh->sector, sh->state,
--	       atomic_read(&sh->count), sh->pd_idx, sh->qd_idx,
-+	       refcount_read(&sh->count), sh->pd_idx, sh->qd_idx,
- 	       sh->check_state, sh->reconstruct_state);
- 
- 	analyse_stripe(sh, &s);
-@@ -4796,7 +4796,7 @@ static void activate_bit_delay(struct r5conf *conf,
- 		struct stripe_head *sh = list_entry(head.next, struct stripe_head, lru);
- 		int hash;
- 		list_del_init(&sh->lru);
--		atomic_inc(&sh->count);
-+		refcount_inc(&sh->count);
- 		hash = sh->hash_lock_index;
- 		__release_stripe(conf, sh, &temp_inactive_list[hash]);
- 	}
-@@ -5105,7 +5105,7 @@ static struct stripe_head *__get_priority_stripe(struct r5conf *conf, int group)
- 		sh->group = NULL;
- 	}
- 	list_del_init(&sh->lru);
--	BUG_ON(atomic_inc_return(&sh->count) != 1);
-+	BUG_ON(refcount_inc_not_zero(&sh->count));
- 	return sh;
- }
- 
-diff --git a/drivers/md/raid5.h b/drivers/md/raid5.h
-index ed8e136..178f842 100644
---- a/drivers/md/raid5.h
-+++ b/drivers/md/raid5.h
-@@ -3,6 +3,7 @@
- 
- #include <linux/raid/xor.h>
- #include <linux/dmaengine.h>
-+#include <linux/refcount.h>
- 
- /*
-  *
-@@ -207,7 +208,7 @@ struct stripe_head {
- 	short			ddf_layout;/* use DDF ordering to calculate Q */
- 	short			hash_lock_index;
- 	unsigned long		state;		/* state flags */
--	atomic_t		count;	      /* nr of active thread/requests */
-+	refcount_t		count;	      /* nr of active thread/requests */
- 	int			bm_seq;	/* sequence number for bitmap flushes */
- 	int			disks;		/* disks in stripe */
- 	int			overwrite_disks; /* total overwrite disks in stripe,
-diff --git a/drivers/media/pci/cx88/cx88-cards.c b/drivers/media/pci/cx88/cx88-cards.c
-index cdfbde2..7537dc4 100644
---- a/drivers/media/pci/cx88/cx88-cards.c
-+++ b/drivers/media/pci/cx88/cx88-cards.c
-@@ -3670,7 +3670,7 @@ struct cx88_core *cx88_core_create(struct pci_dev *pci, int nr)
- 	if (!core)
- 		return NULL;
- 
--	atomic_inc(&core->refcount);
-+	refcount_inc(&core->refcount);
- 	core->pci_bus  = pci->bus->number;
- 	core->pci_slot = PCI_SLOT(pci->devfn);
- 	core->pci_irqmask = PCI_INT_RISC_RD_BERRINT | PCI_INT_RISC_WR_BERRINT |
-diff --git a/drivers/media/pci/cx88/cx88-core.c b/drivers/media/pci/cx88/cx88-core.c
-index 973a9cd4..8bfa5b7 100644
---- a/drivers/media/pci/cx88/cx88-core.c
-+++ b/drivers/media/pci/cx88/cx88-core.c
-@@ -1052,7 +1052,7 @@ struct cx88_core *cx88_core_get(struct pci_dev *pci)
- 			mutex_unlock(&devlist);
- 			return NULL;
- 		}
--		atomic_inc(&core->refcount);
-+		refcount_inc(&core->refcount);
- 		mutex_unlock(&devlist);
- 		return core;
- 	}
-@@ -1073,7 +1073,7 @@ void cx88_core_put(struct cx88_core *core, struct pci_dev *pci)
- 	release_mem_region(pci_resource_start(pci, 0),
- 			   pci_resource_len(pci, 0));
- 
--	if (!atomic_dec_and_test(&core->refcount))
-+	if (!refcount_dec_and_test(&core->refcount))
- 		return;
- 
- 	mutex_lock(&devlist);
-diff --git a/drivers/media/pci/cx88/cx88.h b/drivers/media/pci/cx88/cx88.h
-index 115414c..16c1313 100644
---- a/drivers/media/pci/cx88/cx88.h
-+++ b/drivers/media/pci/cx88/cx88.h
-@@ -24,6 +24,7 @@
- #include <linux/i2c-algo-bit.h>
- #include <linux/videodev2.h>
  #include <linux/kdev_t.h>
+ #include <linux/etherdevice.h>
 +#include <linux/refcount.h>
  
- #include <media/v4l2-device.h>
- #include <media/v4l2-fh.h>
-@@ -339,7 +340,7 @@ struct cx8802_dev;
+ #include <rdma/ib_cache.h>
+ #include <rdma/ib_cm.h>
+@@ -262,7 +263,7 @@ struct cm_id_private {
+ 	struct rb_node sidr_id_node;
+ 	spinlock_t lock;	/* Do not acquire inside cm.lock */
+ 	struct completion comp;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	/* Number of clients sharing this ib_cm_id. Only valid for listeners.
+ 	 * Protected by the cm.lock spinlock. */
+ 	int listen_sharecount;
+@@ -307,7 +308,7 @@ static void cm_work_handler(struct work_struct *work);
  
- struct cx88_core {
- 	struct list_head           devlist;
--	atomic_t                   refcount;
-+	refcount_t                   refcount;
- 
- 	/* board name */
- 	int                        nr;
-diff --git a/drivers/media/usb/s2255/s2255drv.c b/drivers/media/usb/s2255/s2255drv.c
-index f7bb78c..d682fb4b 100644
---- a/drivers/media/usb/s2255/s2255drv.c
-+++ b/drivers/media/usb/s2255/s2255drv.c
-@@ -40,6 +40,7 @@
- #include <linux/firmware.h>
- #include <linux/kernel.h>
- #include <linux/mutex.h>
-+#include <linux/refcount.h>
- #include <linux/slab.h>
- #include <linux/videodev2.h>
- #include <linux/mm.h>
-@@ -260,7 +261,7 @@ struct s2255_vc {
- struct s2255_dev {
- 	struct s2255_vc         vc[MAX_CHANNELS];
- 	struct v4l2_device      v4l2_dev;
--	atomic_t                num_channels;
-+	refcount_t                num_channels;
- 	int			frames;
- 	struct mutex		lock;	/* channels[].vdev.lock */
- 	struct mutex		cmdlock; /* protects cmdbuf */
-@@ -1585,11 +1586,11 @@ static void s2255_video_device_release(struct video_device *vdev)
- 		container_of(vdev, struct s2255_vc, vdev);
- 
- 	dprintk(dev, 4, "%s, chnls: %d\n", __func__,
--		atomic_read(&dev->num_channels));
-+		refcount_read(&dev->num_channels));
- 
- 	v4l2_ctrl_handler_free(&vc->hdl);
- 
--	if (atomic_dec_and_test(&dev->num_channels))
-+	if (refcount_dec_and_test(&dev->num_channels))
- 		s2255_destroy(dev);
- 	return;
- }
-@@ -1692,7 +1693,7 @@ static int s2255_probe_v4l(struct s2255_dev *dev)
- 				"failed to register video device!\n");
- 			break;
- 		}
--		atomic_inc(&dev->num_channels);
-+		refcount_inc(&dev->num_channels);
- 		v4l2_info(&dev->v4l2_dev, "V4L2 device registered as %s\n",
- 			  video_device_node_name(&vc->vdev));
- 
-@@ -1700,11 +1701,11 @@ static int s2255_probe_v4l(struct s2255_dev *dev)
- 	pr_info("Sensoray 2255 V4L driver Revision: %s\n",
- 		S2255_VERSION);
- 	/* if no channels registered, return error and probe will fail*/
--	if (atomic_read(&dev->num_channels) == 0) {
-+	if (refcount_read(&dev->num_channels) == 0) {
- 		v4l2_device_unregister(&dev->v4l2_dev);
- 		return ret;
- 	}
--	if (atomic_read(&dev->num_channels) != MAX_CHANNELS)
-+	if (refcount_read(&dev->num_channels) != MAX_CHANNELS)
- 		pr_warn("s2255: Not all channels available.\n");
- 	return 0;
- }
-@@ -2252,7 +2253,7 @@ static int s2255_probe(struct usb_interface *interface,
- 		goto errorFWDATA1;
- 	}
- 
--	atomic_set(&dev->num_channels, 0);
-+	refcount_set(&dev->num_channels, 0);
- 	dev->pid = id->idProduct;
- 	dev->fw_data = kzalloc(sizeof(struct s2255_fw), GFP_KERNEL);
- 	if (!dev->fw_data)
-@@ -2372,12 +2373,12 @@ static void s2255_disconnect(struct usb_interface *interface)
+ static inline void cm_deref_id(struct cm_id_private *cm_id_priv)
  {
- 	struct s2255_dev *dev = to_s2255_dev(usb_get_intfdata(interface));
- 	int i;
--	int channels = atomic_read(&dev->num_channels);
-+	int channels = refcount_read(&dev->num_channels);
- 	mutex_lock(&dev->lock);
- 	v4l2_device_disconnect(&dev->v4l2_dev);
- 	mutex_unlock(&dev->lock);
- 	/*see comments in the uvc_driver.c usb disconnect function */
--	atomic_inc(&dev->num_channels);
-+	refcount_inc(&dev->num_channels);
- 	/* unregister each video device. */
- 	for (i = 0; i < channels; i++)
- 		video_unregister_device(&dev->vc[i].vdev);
-@@ -2390,7 +2391,7 @@ static void s2255_disconnect(struct usb_interface *interface)
- 		dev->vc[i].vidstatus_ready = 1;
- 		wake_up(&dev->vc[i].wait_vidstatus);
- 	}
--	if (atomic_dec_and_test(&dev->num_channels))
-+	if (refcount_dec_and_test(&dev->num_channels))
- 		s2255_destroy(dev);
- 	dev_info(&interface->dev, "%s\n", __func__);
+-	if (atomic_dec_and_test(&cm_id_priv->refcount))
++	if (refcount_dec_and_test(&cm_id_priv->refcount))
+ 		complete(&cm_id_priv->comp);
  }
-diff --git a/drivers/media/usb/uvc/uvc_ctrl.c b/drivers/media/usb/uvc/uvc_ctrl.c
-index c2ee6e3..b96d8c1 100644
---- a/drivers/media/usb/uvc/uvc_ctrl.c
-+++ b/drivers/media/usb/uvc/uvc_ctrl.c
-@@ -2012,9 +2012,10 @@ int uvc_ctrl_add_mapping(struct uvc_video_chain *chain,
+ 
+@@ -364,7 +365,7 @@ static int cm_alloc_msg(struct cm_id_private *cm_id_priv,
+ 	m->ah = ah;
+ 	m->retries = cm_id_priv->max_cm_retries;
+ 
+-	atomic_inc(&cm_id_priv->refcount);
++	refcount_inc(&cm_id_priv->refcount);
+ 	m->context[0] = cm_id_priv;
+ 	*msg = m;
+ 
+@@ -522,7 +523,7 @@ static struct cm_id_private * cm_get_id(__be32 local_id, __be32 remote_id)
+ 			      (__force int) (local_id ^ cm.random_id_operand));
+ 	if (cm_id_priv) {
+ 		if (cm_id_priv->id.remote_id == remote_id)
+-			atomic_inc(&cm_id_priv->refcount);
++			refcount_inc(&cm_id_priv->refcount);
+ 		else
+ 			cm_id_priv = NULL;
+ 	}
+@@ -779,7 +780,7 @@ struct ib_cm_id *ib_create_cm_id(struct ib_device *device,
+ 	INIT_LIST_HEAD(&cm_id_priv->prim_list);
+ 	INIT_LIST_HEAD(&cm_id_priv->altr_list);
+ 	atomic_set(&cm_id_priv->work_count, -1);
+-	atomic_set(&cm_id_priv->refcount, 1);
++	refcount_set(&cm_id_priv->refcount, 1);
+ 	return &cm_id_priv->id;
+ 
+ error:
+@@ -1123,7 +1124,7 @@ struct ib_cm_id *ib_cm_insert_listen(struct ib_device *device,
+ 			spin_unlock_irqrestore(&cm.lock, flags);
+ 			return ERR_PTR(-EINVAL);
  		}
+-		atomic_inc(&cm_id_priv->refcount);
++		refcount_inc(&cm_id_priv->refcount);
+ 		++cm_id_priv->listen_sharecount;
+ 		spin_unlock_irqrestore(&cm.lock, flags);
+ 
+@@ -1678,8 +1679,8 @@ static struct cm_id_private * cm_match_req(struct cm_work *work,
+ 			     NULL, 0);
+ 		goto out;
  	}
- 
-+	refcount_inc(&dev->nmappings);
- 	/* Prevent excess memory consumption */
--	if (atomic_inc_return(&dev->nmappings) > UVC_MAX_CONTROL_MAPPINGS) {
--		atomic_dec(&dev->nmappings);
-+	if (refcount_read(&dev->nmappings) > UVC_MAX_CONTROL_MAPPINGS) {
-+		refcount_dec(&dev->nmappings);
- 		uvc_trace(UVC_TRACE_CONTROL, "Can't add mapping '%s', maximum "
- 			"mappings count (%u) exceeded.\n", mapping->name,
- 			UVC_MAX_CONTROL_MAPPINGS);
-@@ -2024,7 +2025,7 @@ int uvc_ctrl_add_mapping(struct uvc_video_chain *chain,
- 
- 	ret = __uvc_ctrl_add_mapping(dev, ctrl, mapping);
- 	if (ret < 0)
--		atomic_dec(&dev->nmappings);
-+		refcount_dec(&dev->nmappings);
- 
- done:
- 	mutex_unlock(&chain->ctrl_mutex);
-diff --git a/drivers/media/usb/uvc/uvc_driver.c b/drivers/media/usb/uvc/uvc_driver.c
-index 04bf350..9d6258e 100644
---- a/drivers/media/usb/uvc/uvc_driver.c
-+++ b/drivers/media/usb/uvc/uvc_driver.c
-@@ -1842,7 +1842,7 @@ static void uvc_release(struct video_device *vdev)
- 	/* Decrement the registered streams count and delete the device when it
- 	 * reaches zero.
- 	 */
--	if (atomic_dec_and_test(&dev->nstreams))
-+	if (refcount_dec_and_test(&dev->nstreams))
- 		uvc_delete(dev);
- }
- 
-@@ -1858,7 +1858,7 @@ static void uvc_unregister_video(struct uvc_device *dev)
- 	 * that, increment the stream count before iterating over the streams
- 	 * and decrement it when done.
- 	 */
--	atomic_inc(&dev->nstreams);
-+	refcount_inc(&dev->nstreams);
- 
- 	list_for_each_entry(stream, &dev->streams, list) {
- 		if (!video_is_registered(&stream->vdev))
-@@ -1872,7 +1872,7 @@ static void uvc_unregister_video(struct uvc_device *dev)
- 	/* Decrement the stream count and call uvc_delete explicitly if there
- 	 * are no stream left.
- 	 */
--	if (atomic_dec_and_test(&dev->nstreams))
-+	if (refcount_dec_and_test(&dev->nstreams))
- 		uvc_delete(dev);
- }
- 
-@@ -1931,7 +1931,7 @@ static int uvc_register_video(struct uvc_device *dev,
- 	else
- 		stream->chain->caps |= V4L2_CAP_VIDEO_OUTPUT;
- 
--	atomic_inc(&dev->nstreams);
-+	refcount_inc(&dev->nstreams);
+-	atomic_inc(&listen_cm_id_priv->refcount);
+-	atomic_inc(&cm_id_priv->refcount);
++	refcount_inc(&listen_cm_id_priv->refcount);
++	refcount_inc(&cm_id_priv->refcount);
+ 	cm_id_priv->id.state = IB_CM_REQ_RCVD;
+ 	atomic_inc(&cm_id_priv->work_count);
+ 	spin_unlock_irq(&cm.lock);
+@@ -1822,7 +1823,8 @@ static int cm_req_handler(struct cm_work *work)
  	return 0;
- }
  
-@@ -2015,8 +2015,8 @@ static int uvc_probe(struct usb_interface *intf,
- 	INIT_LIST_HEAD(&dev->entities);
- 	INIT_LIST_HEAD(&dev->chains);
- 	INIT_LIST_HEAD(&dev->streams);
--	atomic_set(&dev->nstreams, 0);
--	atomic_set(&dev->nmappings, 0);
-+	refcount_set(&dev->nstreams, 0);
-+	refcount_set(&dev->nmappings, 0);
- 	mutex_init(&dev->lock);
+ rejected:
+-	atomic_dec(&cm_id_priv->refcount);
++	/* FIXME: make sure we're expecting non-zero! */
++	refcount_dec(&cm_id_priv->refcount);
+ 	cm_deref_id(listen_cm_id_priv);
+ destroy:
+ 	ib_destroy_cm_id(cm_id);
+@@ -2565,7 +2567,7 @@ static struct cm_id_private * cm_acquire_rejected_id(struct cm_rej_msg *rej_msg)
+ 				       cm.random_id_operand));
+ 		if (cm_id_priv) {
+ 			if (cm_id_priv->id.remote_id == remote_id)
+-				atomic_inc(&cm_id_priv->refcount);
++				refcount_inc(&cm_id_priv->refcount);
+ 			else
+ 				cm_id_priv = NULL;
+ 		}
+@@ -3262,8 +3264,8 @@ static int cm_sidr_req_handler(struct cm_work *work)
+ 		cm_reject_sidr_req(cm_id_priv, IB_SIDR_UNSUPPORTED);
+ 		goto out; /* No match. */
+ 	}
+-	atomic_inc(&cur_cm_id_priv->refcount);
+-	atomic_inc(&cm_id_priv->refcount);
++	refcount_inc(&cur_cm_id_priv->refcount);
++	refcount_inc(&cm_id_priv->refcount);
+ 	spin_unlock_irq(&cm.lock);
  
- 	dev->udev = usb_get_dev(udev);
-diff --git a/drivers/media/usb/uvc/uvcvideo.h b/drivers/media/usb/uvc/uvcvideo.h
-index 3d6cc62..289321e 100644
---- a/drivers/media/usb/uvc/uvcvideo.h
-+++ b/drivers/media/usb/uvc/uvcvideo.h
-@@ -7,6 +7,7 @@
- 
- #include <linux/kernel.h>
- #include <linux/poll.h>
-+#include <linux/refcount.h>
- #include <linux/usb.h>
- #include <linux/usb/video.h>
- #include <linux/uvcvideo.h>
-@@ -551,7 +552,7 @@ struct uvc_device {
- 
- 	struct mutex lock;		/* Protects users */
- 	unsigned int users;
--	atomic_t nmappings;
-+	refcount_t nmappings;
- 
- 	/* Video control interface */
- #ifdef CONFIG_MEDIA_CONTROLLER
-@@ -566,7 +567,7 @@ struct uvc_device {
- 
- 	/* Video Streaming interfaces */
- 	struct list_head streams;
--	atomic_t nstreams;
-+	refcount_t nstreams;
- 
- 	/* Status Interrupt Endpoint */
- 	struct usb_host_endpoint *int_ep;
-diff --git a/drivers/media/v4l2-core/videobuf2-dma-contig.c b/drivers/media/v4l2-core/videobuf2-dma-contig.c
-index fb6a177..ed2176e 100644
---- a/drivers/media/v4l2-core/videobuf2-dma-contig.c
-+++ b/drivers/media/v4l2-core/videobuf2-dma-contig.c
-@@ -12,6 +12,7 @@
- 
- #include <linux/dma-buf.h>
+ 	cm_id_priv->id.cm_handler = cur_cm_id_priv->id.cm_handler;
+diff --git a/drivers/infiniband/core/cma.c b/drivers/infiniband/core/cma.c
+index e7dcfac..4672265 100644
+--- a/drivers/infiniband/core/cma.c
++++ b/drivers/infiniband/core/cma.c
+@@ -43,6 +43,7 @@
+ #include <linux/inetdevice.h>
+ #include <linux/slab.h>
  #include <linux/module.h>
 +#include <linux/refcount.h>
- #include <linux/scatterlist.h>
- #include <linux/sched.h>
- #include <linux/slab.h>
-@@ -34,7 +35,7 @@ struct vb2_dc_buf {
+ #include <net/route.h>
  
- 	/* MMAP related */
- 	struct vb2_vmarea_handler	handler;
--	atomic_t			refcount;
-+	refcount_t			refcount;
- 	struct sg_table			*sgt_base;
+ #include <net/net_namespace.h>
+@@ -195,7 +196,7 @@ struct cma_device {
+ 	struct list_head	list;
+ 	struct ib_device	*device;
+ 	struct completion	comp;
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct list_head	id_list;
+ 	enum ib_gid_type	*default_gid_type;
+ };
+@@ -243,7 +244,7 @@ enum {
  
- 	/* DMABUF related */
-@@ -86,7 +87,7 @@ static unsigned int vb2_dc_num_users(void *buf_priv)
+ void cma_ref_dev(struct cma_device *cma_dev)
  {
- 	struct vb2_dc_buf *buf = buf_priv;
- 
--	return atomic_read(&buf->refcount);
-+	return refcount_read(&buf->refcount);
+-	atomic_inc(&cma_dev->refcount);
++	refcount_inc(&cma_dev->refcount);
  }
  
- static void vb2_dc_prepare(void *buf_priv)
-@@ -122,7 +123,7 @@ static void vb2_dc_put(void *buf_priv)
- {
- 	struct vb2_dc_buf *buf = buf_priv;
+ struct cma_device *cma_enum_devices_by_ibdev(cma_device_filter	filter,
+@@ -324,7 +325,7 @@ struct rdma_id_private {
+ 	struct mutex		qp_mutex;
  
--	if (!atomic_dec_and_test(&buf->refcount))
-+	if (!refcount_dec_and_test(&buf->refcount))
+ 	struct completion	comp;
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct mutex		handler_mutex;
+ 
+ 	int			backlog;
+@@ -498,7 +499,7 @@ static void cma_attach_to_dev(struct rdma_id_private *id_priv,
+ 
+ void cma_deref_dev(struct cma_device *cma_dev)
+ {
+-	if (atomic_dec_and_test(&cma_dev->refcount))
++	if (refcount_dec_and_test(&cma_dev->refcount))
+ 		complete(&cma_dev->comp);
+ }
+ 
+@@ -757,7 +758,7 @@ static int cma_resolve_ib_dev(struct rdma_id_private *id_priv)
+ 
+ static void cma_deref_id(struct rdma_id_private *id_priv)
+ {
+-	if (atomic_dec_and_test(&id_priv->refcount))
++	if (refcount_dec_and_test(&id_priv->refcount))
+ 		complete(&id_priv->comp);
+ }
+ 
+@@ -781,7 +782,7 @@ struct rdma_cm_id *rdma_create_id(struct net *net,
+ 	spin_lock_init(&id_priv->lock);
+ 	mutex_init(&id_priv->qp_mutex);
+ 	init_completion(&id_priv->comp);
+-	atomic_set(&id_priv->refcount, 1);
++	refcount_set(&id_priv->refcount, 1);
+ 	mutex_init(&id_priv->handler_mutex);
+ 	INIT_LIST_HEAD(&id_priv->listen_list);
+ 	INIT_LIST_HEAD(&id_priv->mc_list);
+@@ -1966,7 +1967,7 @@ static int cma_req_handler(struct ib_cm_id *cm_id, struct ib_cm_event *ib_event)
+ 	 * Protect against the user destroying conn_id from another thread
+ 	 * until we're done accessing it.
+ 	 */
+-	atomic_inc(&conn_id->refcount);
++	refcount_inc(&conn_id->refcount);
+ 	ret = conn_id->id.event_handler(&conn_id->id, &event);
+ 	if (ret)
+ 		goto err3;
+@@ -2142,7 +2143,7 @@ static int iw_conn_req_handler(struct iw_cm_id *cm_id,
+ 	 * Protect against the user destroying conn_id from another thread
+ 	 * until we're done accessing it.
+ 	 */
+-	atomic_inc(&conn_id->refcount);
++	refcount_inc(&conn_id->refcount);
+ 	ret = conn_id->id.event_handler(&conn_id->id, &event);
+ 	if (ret) {
+ 		/* User wants to destroy the CM ID */
+@@ -2239,7 +2240,7 @@ static void cma_listen_on_dev(struct rdma_id_private *id_priv,
+ 
+ 	_cma_attach_to_dev(dev_id_priv, cma_dev);
+ 	list_add_tail(&dev_id_priv->listen_list, &id_priv->listen_list);
+-	atomic_inc(&id_priv->refcount);
++	refcount_inc(&id_priv->refcount);
+ 	dev_id_priv->internal_id = 1;
+ 	dev_id_priv->afonly = id_priv->afonly;
+ 
+@@ -2611,7 +2612,7 @@ int rdma_resolve_route(struct rdma_cm_id *id, int timeout_ms)
+ 	if (!cma_comp_exch(id_priv, RDMA_CM_ADDR_RESOLVED, RDMA_CM_ROUTE_QUERY))
+ 		return -EINVAL;
+ 
+-	atomic_inc(&id_priv->refcount);
++	refcount_inc(&id_priv->refcount);
+ 	if (rdma_cap_ib_sa(id->device, id->port_num))
+ 		ret = cma_resolve_ib_route(id_priv, timeout_ms);
+ 	else if (rdma_protocol_roce(id->device, id->port_num))
+@@ -2844,7 +2845,7 @@ int rdma_resolve_addr(struct rdma_cm_id *id, struct sockaddr *src_addr,
+ 	if (!cma_comp_exch(id_priv, RDMA_CM_ADDR_BOUND, RDMA_CM_ADDR_QUERY))
+ 		return -EINVAL;
+ 
+-	atomic_inc(&id_priv->refcount);
++	refcount_inc(&id_priv->refcount);
+ 	memcpy(cma_dst_addr(id_priv), dst_addr, rdma_addr_size(dst_addr));
+ 	if (cma_any_addr(dst_addr)) {
+ 		ret = cma_resolve_loopback(id_priv);
+@@ -4175,7 +4176,7 @@ static int cma_netdev_change(struct net_device *ndev, struct rdma_id_private *id
+ 		INIT_WORK(&work->work, cma_ndev_work_handler);
+ 		work->id = id_priv;
+ 		work->event.event = RDMA_CM_EVENT_ADDR_CHANGE;
+-		atomic_inc(&id_priv->refcount);
++		refcount_inc(&id_priv->refcount);
+ 		queue_work(cma_wq, &work->work);
+ 	}
+ 
+@@ -4240,7 +4241,7 @@ static void cma_add_one(struct ib_device *device)
+ 	}
+ 
+ 	init_completion(&cma_dev->comp);
+-	atomic_set(&cma_dev->refcount, 1);
++	refcount_set(&cma_dev->refcount, 1);
+ 	INIT_LIST_HEAD(&cma_dev->id_list);
+ 	ib_set_client_data(device, &cma_client, cma_dev);
+ 
+@@ -4289,7 +4290,7 @@ static void cma_process_remove(struct cma_device *cma_dev)
+ 
+ 		list_del(&id_priv->listen_list);
+ 		list_del_init(&id_priv->list);
+-		atomic_inc(&id_priv->refcount);
++		refcount_inc(&id_priv->refcount);
+ 		mutex_unlock(&lock);
+ 
+ 		ret = id_priv->internal_id ? 1 : cma_remove_id_dev(id_priv);
+diff --git a/drivers/infiniband/core/cq.c b/drivers/infiniband/core/cq.c
+index a754fc7..22a48ae 100644
+--- a/drivers/infiniband/core/cq.c
++++ b/drivers/infiniband/core/cq.c
+@@ -142,7 +142,7 @@ struct ib_cq *ib_alloc_cq(struct ib_device *dev, void *private,
+ 	cq->event_handler = NULL;
+ 	cq->cq_context = private;
+ 	cq->poll_ctx = poll_ctx;
+-	atomic_set(&cq->usecnt, 0);
++	refcount_set(&cq->usecnt, 0);
+ 
+ 	cq->wc = kmalloc_array(IB_POLL_BATCH, sizeof(*cq->wc), GFP_KERNEL);
+ 	if (!cq->wc)
+@@ -186,7 +186,7 @@ void ib_free_cq(struct ib_cq *cq)
+ {
+ 	int ret;
+ 
+-	if (WARN_ON_ONCE(atomic_read(&cq->usecnt)))
++	if (WARN_ON_ONCE(refcount_read(&cq->usecnt)))
  		return;
  
- 	if (buf->sgt_base) {
-@@ -170,7 +171,7 @@ static void *vb2_dc_alloc(struct device *dev, unsigned long attrs,
- 	buf->handler.put = vb2_dc_put;
- 	buf->handler.arg = buf;
- 
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 
- 	return buf;
- }
-@@ -407,7 +408,7 @@ static struct dma_buf *vb2_dc_get_dmabuf(void *buf_priv, unsigned long flags)
- 		return NULL;
- 
- 	/* dmabuf keeps reference to vb2 buffer */
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 
- 	return dbuf;
- }
-diff --git a/drivers/media/v4l2-core/videobuf2-dma-sg.c b/drivers/media/v4l2-core/videobuf2-dma-sg.c
-index ecff8f4..f5ab6c2 100644
---- a/drivers/media/v4l2-core/videobuf2-dma-sg.c
-+++ b/drivers/media/v4l2-core/videobuf2-dma-sg.c
-@@ -12,6 +12,7 @@
- 
- #include <linux/module.h>
- #include <linux/mm.h>
-+#include <linux/refcount.h>
- #include <linux/scatterlist.h>
- #include <linux/sched.h>
- #include <linux/slab.h>
-@@ -46,7 +47,7 @@ struct vb2_dma_sg_buf {
- 	struct sg_table			*dma_sgt;
- 	size_t				size;
- 	unsigned int			num_pages;
--	atomic_t			refcount;
-+	refcount_t			refcount;
- 	struct vb2_vmarea_handler	handler;
- 
- 	struct dma_buf_attachment	*db_attach;
-@@ -150,7 +151,7 @@ static void *vb2_dma_sg_alloc(struct device *dev, unsigned long dma_attrs,
- 	buf->handler.put = vb2_dma_sg_put;
- 	buf->handler.arg = buf;
- 
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 
- 	dprintk(1, "%s: Allocated buffer of %d pages\n",
- 		__func__, buf->num_pages);
-@@ -176,7 +177,7 @@ static void vb2_dma_sg_put(void *buf_priv)
- 	struct sg_table *sgt = &buf->sg_table;
- 	int i = buf->num_pages;
- 
--	if (atomic_dec_and_test(&buf->refcount)) {
-+	if (refcount_dec_and_test(&buf->refcount)) {
- 		dprintk(1, "%s: Freeing buffer of %d pages\n", __func__,
- 			buf->num_pages);
- 		dma_unmap_sg_attrs(buf->dev, sgt->sgl, sgt->orig_nents,
-@@ -320,7 +321,7 @@ static unsigned int vb2_dma_sg_num_users(void *buf_priv)
+ 	switch (cq->poll_ctx) {
+diff --git a/drivers/infiniband/core/iwcm.c b/drivers/infiniband/core/iwcm.c
+index 31661b5..5c49a7a 100644
+--- a/drivers/infiniband/core/iwcm.c
++++ b/drivers/infiniband/core/iwcm.c
+@@ -208,8 +208,8 @@ static void free_cm_id(struct iwcm_id_private *cm_id_priv)
+  */
+ static int iwcm_deref_id(struct iwcm_id_private *cm_id_priv)
  {
- 	struct vb2_dma_sg_buf *buf = buf_priv;
- 
--	return atomic_read(&buf->refcount);
-+	return refcount_read(&buf->refcount);
+-	BUG_ON(atomic_read(&cm_id_priv->refcount)==0);
+-	if (atomic_dec_and_test(&cm_id_priv->refcount)) {
++	BUG_ON(refcount_read(&cm_id_priv->refcount)==0);
++	if (refcount_dec_and_test(&cm_id_priv->refcount)) {
+ 		BUG_ON(!list_empty(&cm_id_priv->work_list));
+ 		free_cm_id(cm_id_priv);
+ 		return 1;
+@@ -222,7 +222,7 @@ static void add_ref(struct iw_cm_id *cm_id)
+ {
+ 	struct iwcm_id_private *cm_id_priv;
+ 	cm_id_priv = container_of(cm_id, struct iwcm_id_private, id);
+-	atomic_inc(&cm_id_priv->refcount);
++	refcount_inc(&cm_id_priv->refcount);
  }
  
- static int vb2_dma_sg_mmap(void *buf_priv, struct vm_area_struct *vma)
-@@ -530,7 +531,7 @@ static struct dma_buf *vb2_dma_sg_get_dmabuf(void *buf_priv, unsigned long flags
- 		return NULL;
- 
- 	/* dmabuf keeps reference to vb2 buffer */
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 
- 	return dbuf;
- }
-diff --git a/drivers/media/v4l2-core/videobuf2-memops.c b/drivers/media/v4l2-core/videobuf2-memops.c
-index 1cd322e..4bb8424 100644
---- a/drivers/media/v4l2-core/videobuf2-memops.c
-+++ b/drivers/media/v4l2-core/videobuf2-memops.c
-@@ -96,10 +96,10 @@ static void vb2_common_vm_open(struct vm_area_struct *vma)
- 	struct vb2_vmarea_handler *h = vma->vm_private_data;
- 
- 	pr_debug("%s: %p, refcount: %d, vma: %08lx-%08lx\n",
--	       __func__, h, atomic_read(h->refcount), vma->vm_start,
-+	       __func__, h, refcount_read(h->refcount), vma->vm_start,
- 	       vma->vm_end);
- 
--	atomic_inc(h->refcount);
-+	refcount_inc(h->refcount);
- }
- 
- /**
-@@ -114,7 +114,7 @@ static void vb2_common_vm_close(struct vm_area_struct *vma)
- 	struct vb2_vmarea_handler *h = vma->vm_private_data;
- 
- 	pr_debug("%s: %p, refcount: %d, vma: %08lx-%08lx\n",
--	       __func__, h, atomic_read(h->refcount), vma->vm_start,
-+	       __func__, h, refcount_read(h->refcount), vma->vm_start,
- 	       vma->vm_end);
- 
- 	h->put(h->arg);
-diff --git a/drivers/media/v4l2-core/videobuf2-vmalloc.c b/drivers/media/v4l2-core/videobuf2-vmalloc.c
-index 3f77814..b00eea4 100644
---- a/drivers/media/v4l2-core/videobuf2-vmalloc.c
-+++ b/drivers/media/v4l2-core/videobuf2-vmalloc.c
-@@ -13,6 +13,7 @@
- #include <linux/io.h>
- #include <linux/module.h>
- #include <linux/mm.h>
-+#include <linux/refcount.h>
- #include <linux/sched.h>
- #include <linux/slab.h>
- #include <linux/vmalloc.h>
-@@ -26,7 +27,7 @@ struct vb2_vmalloc_buf {
- 	struct frame_vector		*vec;
- 	enum dma_data_direction		dma_dir;
- 	unsigned long			size;
--	atomic_t			refcount;
-+	refcount_t			refcount;
- 	struct vb2_vmarea_handler	handler;
- 	struct dma_buf			*dbuf;
- };
-@@ -56,7 +57,7 @@ static void *vb2_vmalloc_alloc(struct device *dev, unsigned long attrs,
- 		return ERR_PTR(-ENOMEM);
+ static void rem_ref(struct iw_cm_id *cm_id)
+@@ -254,7 +254,7 @@ struct iw_cm_id *iw_create_cm_id(struct ib_device *device,
+ 	cm_id_priv->id.add_ref = add_ref;
+ 	cm_id_priv->id.rem_ref = rem_ref;
+ 	spin_lock_init(&cm_id_priv->lock);
+-	atomic_set(&cm_id_priv->refcount, 1);
++	refcount_set(&cm_id_priv->refcount, 1);
+ 	init_waitqueue_head(&cm_id_priv->connect_wait);
+ 	init_completion(&cm_id_priv->destroy_comp);
+ 	INIT_LIST_HEAD(&cm_id_priv->work_list);
+@@ -1081,7 +1081,7 @@ static int cm_event_handler(struct iw_cm_id *cm_id,
+ 		}
  	}
  
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 	return buf;
- }
- 
-@@ -64,7 +65,7 @@ static void vb2_vmalloc_put(void *buf_priv)
- {
- 	struct vb2_vmalloc_buf *buf = buf_priv;
- 
--	if (atomic_dec_and_test(&buf->refcount)) {
-+	if (refcount_dec_and_test(&buf->refcount)) {
- 		vfree(buf->vaddr);
- 		kfree(buf);
- 	}
-@@ -161,7 +162,7 @@ static void *vb2_vmalloc_vaddr(void *buf_priv)
- static unsigned int vb2_vmalloc_num_users(void *buf_priv)
- {
- 	struct vb2_vmalloc_buf *buf = buf_priv;
--	return atomic_read(&buf->refcount);
-+	return refcount_read(&buf->refcount);
- }
- 
- static int vb2_vmalloc_mmap(void *buf_priv, struct vm_area_struct *vma)
-@@ -368,7 +369,7 @@ static struct dma_buf *vb2_vmalloc_get_dmabuf(void *buf_priv, unsigned long flag
- 		return NULL;
- 
- 	/* dmabuf keeps reference to vb2 buffer */
--	atomic_inc(&buf->refcount);
-+	refcount_inc(&buf->refcount);
- 
- 	return dbuf;
- }
-diff --git a/drivers/pci/host/pci-hyperv.c b/drivers/pci/host/pci-hyperv.c
-index 3efcc7b..3a3ed2b 100644
---- a/drivers/pci/host/pci-hyperv.c
-+++ b/drivers/pci/host/pci-hyperv.c
-@@ -56,6 +56,7 @@
- #include <asm/apic.h>
- #include <linux/msi.h>
- #include <linux/hyperv.h>
-+#include <linux/refcount.h>
- #include <asm/mshyperv.h>
- 
- /*
-@@ -420,7 +421,7 @@ enum hv_pcidev_ref_reason {
- struct hv_pci_dev {
- 	/* List protected by pci_rescan_remove_lock */
- 	struct list_head list_entry;
--	atomic_t refs;
-+	refcount_t refs;
- 	enum hv_pcichild_state state;
- 	struct pci_function_description desc;
- 	bool reported_missing;
-@@ -1252,13 +1253,13 @@ static void q_resource_requirements(void *context, struct pci_response *resp,
- static void get_pcichild(struct hv_pci_dev *hpdev,
- 			    enum hv_pcidev_ref_reason reason)
- {
--	atomic_inc(&hpdev->refs);
-+	refcount_inc(&hpdev->refs);
- }
- 
- static void put_pcichild(struct hv_pci_dev *hpdev,
- 			    enum hv_pcidev_ref_reason reason)
- {
--	if (atomic_dec_and_test(&hpdev->refs))
-+	if (refcount_dec_and_test(&hpdev->refs))
- 		kfree(hpdev);
- }
- 
-diff --git a/drivers/s390/char/vmur.c b/drivers/s390/char/vmur.c
-index 04aceb6..ced8151 100644
---- a/drivers/s390/char/vmur.c
-+++ b/drivers/s390/char/vmur.c
-@@ -110,7 +110,7 @@ static struct urdev *urdev_alloc(struct ccw_device *cdev)
- 	mutex_init(&urd->io_mutex);
- 	init_waitqueue_head(&urd->wait);
- 	spin_lock_init(&urd->open_lock);
--	atomic_set(&urd->ref_count,  1);
-+	refcount_set(&urd->ref_count,  1);
- 	urd->cdev = cdev;
- 	get_device(&cdev->dev);
- 	return urd;
-@@ -126,7 +126,7 @@ static void urdev_free(struct urdev *urd)
- 
- static void urdev_get(struct urdev *urd)
- {
--	atomic_inc(&urd->ref_count);
-+	refcount_inc(&urd->ref_count);
- }
- 
- static struct urdev *urdev_get_from_cdev(struct ccw_device *cdev)
-@@ -159,7 +159,7 @@ static struct urdev *urdev_get_from_devno(u16 devno)
- 
- static void urdev_put(struct urdev *urd)
- {
--	if (atomic_dec_and_test(&urd->ref_count))
-+	if (refcount_dec_and_test(&urd->ref_count))
- 		urdev_free(urd);
- }
- 
-@@ -946,7 +946,7 @@ static int ur_set_offline_force(struct ccw_device *cdev, int force)
- 		rc = -EBUSY;
- 		goto fail_urdev_put;
- 	}
--	if (!force && (atomic_read(&urd->ref_count) > 2)) {
-+	if (!force && (refcount_read(&urd->ref_count) > 2)) {
- 		/* There is still a user of urd (e.g. ur_open) */
- 		TRACE("ur_set_offline: BUSY\n");
- 		rc = -EBUSY;
-diff --git a/drivers/s390/char/vmur.h b/drivers/s390/char/vmur.h
-index fa320ad..35ea9d1 100644
---- a/drivers/s390/char/vmur.h
-+++ b/drivers/s390/char/vmur.h
-@@ -11,6 +11,8 @@
- #ifndef _VMUR_H_
- #define _VMUR_H_
+-	atomic_inc(&cm_id_priv->refcount);
++	refcount_inc(&cm_id_priv->refcount);
+ 	if (list_empty(&cm_id_priv->work_list)) {
+ 		list_add_tail(&work->list, &cm_id_priv->work_list);
+ 		queue_work(iwcm_wq, &work->work);
+diff --git a/drivers/infiniband/core/iwcm.h b/drivers/infiniband/core/iwcm.h
+index 82c2cd1..12fe7da 100644
+--- a/drivers/infiniband/core/iwcm.h
++++ b/drivers/infiniband/core/iwcm.h
+@@ -33,6 +33,8 @@
+ #ifndef IWCM_H
+ #define IWCM_H
  
 +#include <linux/refcount.h>
 +
- #define DEV_CLASS_UR_I 0x20 /* diag210 unit record input device class */
- #define DEV_CLASS_UR_O 0x10 /* diag210 unit record output device class */
- /*
-@@ -69,7 +71,7 @@ struct urdev {
- 	size_t reclen;			/* Record length for *write* CCWs */
- 	int class;			/* VM device class */
- 	int io_request_rc;		/* return code from I/O request */
--	atomic_t ref_count;		/* reference counter */
-+	refcount_t ref_count;		/* reference counter */
- 	wait_queue_head_t wait;		/* wait queue to serialize open */
- 	int open_flag;			/* "urdev is open" flag */
- 	spinlock_t open_lock;		/* serialize critical sections */
-diff --git a/drivers/s390/net/lcs.c b/drivers/s390/net/lcs.c
-index 211b31d..fd68f67 100644
---- a/drivers/s390/net/lcs.c
-+++ b/drivers/s390/net/lcs.c
-@@ -774,15 +774,15 @@ lcs_get_lancmd(struct lcs_card *card, int count)
- static void
- lcs_get_reply(struct lcs_reply *reply)
- {
--	WARN_ON(atomic_read(&reply->refcnt) <= 0);
--	atomic_inc(&reply->refcnt);
-+	WARN_ON(refcount_read(&reply->refcnt) == 0);
-+	refcount_inc(&reply->refcnt);
- }
- 
- static void
- lcs_put_reply(struct lcs_reply *reply)
- {
--        WARN_ON(atomic_read(&reply->refcnt) <= 0);
--        if (atomic_dec_and_test(&reply->refcnt)) {
-+        WARN_ON(refcount_read(&reply->refcnt) == 0);
-+        if (refcount_dec_and_test(&reply->refcnt)) {
- 		kfree(reply);
- 	}
- 
-@@ -798,7 +798,7 @@ lcs_alloc_reply(struct lcs_cmd *cmd)
- 	reply = kzalloc(sizeof(struct lcs_reply), GFP_ATOMIC);
- 	if (!reply)
- 		return NULL;
--	atomic_set(&reply->refcnt,1);
-+	refcount_set(&reply->refcnt,1);
- 	reply->sequence_no = cmd->sequence_no;
- 	reply->received = 0;
- 	reply->rc = 0;
-diff --git a/drivers/s390/net/lcs.h b/drivers/s390/net/lcs.h
-index 150fcb4..3802f4f 100644
---- a/drivers/s390/net/lcs.h
-+++ b/drivers/s390/net/lcs.h
-@@ -4,6 +4,7 @@
- #include <linux/netdevice.h>
- #include <linux/skbuff.h>
- #include <linux/workqueue.h>
-+#include <linux/refcount.h>
- #include <asm/ccwdev.h>
- 
- #define LCS_DBF_TEXT(level, name, text) \
-@@ -270,7 +271,7 @@ struct lcs_buffer {
- struct lcs_reply {
- 	struct list_head list;
- 	__u16 sequence_no;
--	atomic_t refcnt;
-+	refcount_t refcnt;
- 	/* Callback for completion notification. */
- 	void (*callback)(struct lcs_card *, struct lcs_cmd *);
- 	wait_queue_head_t wait_q;
-diff --git a/drivers/s390/net/qeth_core.h b/drivers/s390/net/qeth_core.h
-index 6d4b68c4..99cdcfc 100644
---- a/drivers/s390/net/qeth_core.h
-+++ b/drivers/s390/net/qeth_core.h
-@@ -20,6 +20,7 @@
- #include <linux/ethtool.h>
- #include <linux/hashtable.h>
- #include <linux/ip.h>
-+#include <linux/refcount.h>
- 
- #include <net/ipv6.h>
- #include <net/if_inet6.h>
-@@ -643,7 +644,7 @@ struct qeth_reply {
- 	int rc;
- 	void *param;
- 	struct qeth_card *card;
--	atomic_t refcnt;
-+	refcount_t refcnt;
+ enum iw_cm_state {
+ 	IW_CM_STATE_IDLE,             /* unbound, inactive */
+ 	IW_CM_STATE_LISTEN,           /* listen waiting for connect */
+@@ -52,7 +54,7 @@ struct iwcm_id_private {
+ 	wait_queue_head_t connect_wait;
+ 	struct list_head work_list;
+ 	spinlock_t lock;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct list_head work_free_list;
  };
  
- 
-diff --git a/drivers/s390/net/qeth_core_main.c b/drivers/s390/net/qeth_core_main.c
-index e6ebcd7..efd92fb 100644
---- a/drivers/s390/net/qeth_core_main.c
-+++ b/drivers/s390/net/qeth_core_main.c
-@@ -555,7 +555,7 @@ static struct qeth_reply *qeth_alloc_reply(struct qeth_card *card)
- 
- 	reply = kzalloc(sizeof(struct qeth_reply), GFP_ATOMIC);
- 	if (reply) {
--		atomic_set(&reply->refcnt, 1);
-+		refcount_set(&reply->refcnt, 1);
- 		atomic_set(&reply->received, 0);
- 		reply->card = card;
- 	}
-@@ -564,14 +564,14 @@ static struct qeth_reply *qeth_alloc_reply(struct qeth_card *card)
- 
- static void qeth_get_reply(struct qeth_reply *reply)
- {
--	WARN_ON(atomic_read(&reply->refcnt) <= 0);
--	atomic_inc(&reply->refcnt);
-+	WARN_ON(refcount_read(&reply->refcnt) == 0);
-+	refcount_inc(&reply->refcnt);
- }
- 
- static void qeth_put_reply(struct qeth_reply *reply)
- {
--	WARN_ON(atomic_read(&reply->refcnt) <= 0);
--	if (atomic_dec_and_test(&reply->refcnt))
-+	WARN_ON(refcount_read(&reply->refcnt) == 0);
-+	if (refcount_dec_and_test(&reply->refcnt))
- 		kfree(reply);
- }
- 
-diff --git a/drivers/scsi/libfc/fc_exch.c b/drivers/scsi/libfc/fc_exch.c
-index 42bcf7f..cff268b 100644
---- a/drivers/scsi/libfc/fc_exch.c
-+++ b/drivers/scsi/libfc/fc_exch.c
-@@ -257,7 +257,7 @@ static const char *fc_exch_rctl_name(unsigned int op)
-  */
- static inline void fc_exch_hold(struct fc_exch *ep)
- {
--	atomic_inc(&ep->ex_refcnt);
-+	refcount_inc(&ep->ex_refcnt);
- }
- 
- /**
-@@ -323,7 +323,7 @@ static void fc_exch_release(struct fc_exch *ep)
- {
- 	struct fc_exch_mgr *mp;
- 
--	if (atomic_dec_and_test(&ep->ex_refcnt)) {
-+	if (refcount_dec_and_test(&ep->ex_refcnt)) {
- 		mp = ep->em;
- 		if (ep->destructor)
- 			ep->destructor(&ep->seq, ep->arg);
-@@ -340,7 +340,7 @@ static inline void fc_exch_timer_cancel(struct fc_exch *ep)
- {
- 	if (cancel_delayed_work(&ep->timeout_work)) {
- 		FC_EXCH_DBG(ep, "Exchange timer canceled\n");
--		atomic_dec(&ep->ex_refcnt); /* drop hold for timer */
-+		refcount_dec(&ep->ex_refcnt); /* drop hold for timer */
- 	}
- }
- 
-@@ -1899,7 +1899,7 @@ static void fc_exch_reset(struct fc_exch *ep)
- 	ep->state |= FC_EX_RST_CLEANUP;
- 	fc_exch_timer_cancel(ep);
- 	if (ep->esb_stat & ESB_ST_REC_QUAL)
--		atomic_dec(&ep->ex_refcnt);	/* drop hold for rec_qual */
-+		refcount_dec(&ep->ex_refcnt);	/* drop hold for rec_qual */
- 	ep->esb_stat &= ~ESB_ST_REC_QUAL;
- 	sp = &ep->seq;
- 	rc = fc_exch_done_locked(ep);
-@@ -2328,7 +2328,7 @@ static void fc_exch_els_rrq(struct fc_frame *fp)
- 	 */
- 	if (ep->esb_stat & ESB_ST_REC_QUAL) {
- 		ep->esb_stat &= ~ESB_ST_REC_QUAL;
--		atomic_dec(&ep->ex_refcnt);	/* drop hold for rec qual */
-+		refcount_dec(&ep->ex_refcnt);	/* drop hold for rec qual */
- 	}
- 	if (ep->esb_stat & ESB_ST_COMPLETE)
- 		fc_exch_timer_cancel(ep);
-diff --git a/drivers/scsi/libfc/fc_fcp.c b/drivers/scsi/libfc/fc_fcp.c
-index 0e67621..a808e8e 100644
---- a/drivers/scsi/libfc/fc_fcp.c
-+++ b/drivers/scsi/libfc/fc_fcp.c
-@@ -154,7 +154,7 @@ static struct fc_fcp_pkt *fc_fcp_pkt_alloc(struct fc_lport *lport, gfp_t gfp)
- 		memset(fsp, 0, sizeof(*fsp));
- 		fsp->lp = lport;
- 		fsp->xfer_ddp = FC_XID_UNKNOWN;
--		atomic_set(&fsp->ref_cnt, 1);
-+		refcount_set(&fsp->ref_cnt, 1);
- 		init_timer(&fsp->timer);
- 		fsp->timer.data = (unsigned long)fsp;
- 		INIT_LIST_HEAD(&fsp->list);
-@@ -175,7 +175,7 @@ static struct fc_fcp_pkt *fc_fcp_pkt_alloc(struct fc_lport *lport, gfp_t gfp)
-  */
- static void fc_fcp_pkt_release(struct fc_fcp_pkt *fsp)
- {
--	if (atomic_dec_and_test(&fsp->ref_cnt)) {
-+	if (refcount_dec_and_test(&fsp->ref_cnt)) {
- 		struct fc_fcp_internal *si = fc_get_scsi_internal(fsp->lp);
- 
- 		mempool_free(fsp, si->scsi_pkt_pool);
-@@ -188,7 +188,7 @@ static void fc_fcp_pkt_release(struct fc_fcp_pkt *fsp)
-  */
- static void fc_fcp_pkt_hold(struct fc_fcp_pkt *fsp)
- {
--	atomic_inc(&fsp->ref_cnt);
-+	refcount_inc(&fsp->ref_cnt);
- }
- 
- /**
-diff --git a/drivers/scsi/libiscsi.c b/drivers/scsi/libiscsi.c
-index f9b6fba..400b978 100644
---- a/drivers/scsi/libiscsi.c
-+++ b/drivers/scsi/libiscsi.c
-@@ -516,13 +516,13 @@ static void iscsi_free_task(struct iscsi_task *task)
- 
- void __iscsi_get_task(struct iscsi_task *task)
- {
--	atomic_inc(&task->refcount);
-+	refcount_inc(&task->refcount);
- }
- EXPORT_SYMBOL_GPL(__iscsi_get_task);
- 
- void __iscsi_put_task(struct iscsi_task *task)
- {
--	if (atomic_dec_and_test(&task->refcount))
-+	if (refcount_dec_and_test(&task->refcount))
- 		iscsi_free_task(task);
- }
- EXPORT_SYMBOL_GPL(__iscsi_put_task);
-@@ -744,7 +744,7 @@ __iscsi_conn_send_pdu(struct iscsi_conn *conn, struct iscsi_hdr *hdr,
- 	 * released by the lld when it has transmitted the task for
- 	 * pdus we do not expect a response for.
- 	 */
--	atomic_set(&task->refcount, 1);
-+	refcount_set(&task->refcount, 1);
- 	task->conn = conn;
- 	task->sc = NULL;
- 	INIT_LIST_HEAD(&task->running);
-@@ -1616,7 +1616,7 @@ static inline struct iscsi_task *iscsi_alloc_task(struct iscsi_conn *conn,
- 	sc->SCp.phase = conn->session->age;
- 	sc->SCp.ptr = (char *) task;
- 
--	atomic_set(&task->refcount, 1);
-+	refcount_set(&task->refcount, 1);
- 	task->state = ISCSI_TASK_PENDING;
- 	task->conn = conn;
- 	task->sc = sc;
-diff --git a/drivers/scsi/qedi/qedi_iscsi.c b/drivers/scsi/qedi/qedi_iscsi.c
-index d6a2054..68517c4 100644
---- a/drivers/scsi/qedi/qedi_iscsi.c
-+++ b/drivers/scsi/qedi/qedi_iscsi.c
-@@ -1375,7 +1375,7 @@ static void qedi_cleanup_task(struct iscsi_task *task)
- {
- 	if (!task->sc || task->state == ISCSI_TASK_PENDING) {
- 		QEDI_INFO(NULL, QEDI_LOG_IO, "Returning ref_cnt=%d\n",
--			  atomic_read(&task->refcount));
-+			  refcount_read(&task->refcount));
- 		return;
- 	}
- 
-diff --git a/drivers/staging/vme/devices/vme_user.c b/drivers/staging/vme/devices/vme_user.c
-index 87aa517..f2a3c17 100644
---- a/drivers/staging/vme/devices/vme_user.c
-+++ b/drivers/staging/vme/devices/vme_user.c
-@@ -17,7 +17,7 @@
- 
- #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <linux/cdev.h>
- #include <linux/delay.h>
- #include <linux/device.h>
-@@ -117,7 +117,7 @@ static const int type[VME_DEVS] = {	MASTER_MINOR,	MASTER_MINOR,
- 
- struct vme_user_vma_priv {
- 	unsigned int minor;
--	atomic_t refcnt;
-+	refcount_t refcnt;
- };
- 
- static ssize_t resource_to_user(int minor, char __user *buf, size_t count,
-@@ -429,7 +429,7 @@ static void vme_user_vm_open(struct vm_area_struct *vma)
- {
- 	struct vme_user_vma_priv *vma_priv = vma->vm_private_data;
- 
--	atomic_inc(&vma_priv->refcnt);
-+	refcount_inc(&vma_priv->refcnt);
- }
- 
- static void vme_user_vm_close(struct vm_area_struct *vma)
-@@ -437,7 +437,7 @@ static void vme_user_vm_close(struct vm_area_struct *vma)
- 	struct vme_user_vma_priv *vma_priv = vma->vm_private_data;
- 	unsigned int minor = vma_priv->minor;
- 
--	if (!atomic_dec_and_test(&vma_priv->refcnt))
-+	if (!refcount_dec_and_test(&vma_priv->refcnt))
- 		return;
- 
- 	mutex_lock(&image[minor].mutex);
-@@ -472,7 +472,7 @@ static int vme_user_master_mmap(unsigned int minor, struct vm_area_struct *vma)
- 	}
- 
- 	vma_priv->minor = minor;
--	atomic_set(&vma_priv->refcnt, 1);
-+	refcount_set(&vma_priv->refcnt, 1);
- 	vma->vm_ops = &vme_user_vm_ops;
- 	vma->vm_private_data = vma_priv;
- 
-diff --git a/drivers/target/target_core_iblock.c b/drivers/target/target_core_iblock.c
-index d316ed5..bb069eb 100644
---- a/drivers/target/target_core_iblock.c
-+++ b/drivers/target/target_core_iblock.c
-@@ -279,7 +279,7 @@ static void iblock_complete_cmd(struct se_cmd *cmd)
- 	struct iblock_req *ibr = cmd->priv;
- 	u8 status;
- 
--	if (!atomic_dec_and_test(&ibr->pending))
-+	if (!refcount_dec_and_test(&ibr->pending))
- 		return;
- 
- 	if (atomic_read(&ibr->ib_bio_err_cnt))
-@@ -487,7 +487,7 @@ iblock_execute_write_same(struct se_cmd *cmd)
- 	bio_list_init(&list);
- 	bio_list_add(&list, bio);
- 
--	atomic_set(&ibr->pending, 1);
-+	refcount_set(&ibr->pending, 1);
- 
- 	while (sectors) {
- 		while (bio_add_page(bio, sg_page(sg), sg->length, sg->offset)
-@@ -498,7 +498,7 @@ iblock_execute_write_same(struct se_cmd *cmd)
- 			if (!bio)
- 				goto fail_put_bios;
- 
--			atomic_inc(&ibr->pending);
-+			refcount_inc(&ibr->pending);
- 			bio_list_add(&list, bio);
+diff --git a/drivers/infiniband/core/iwpm_util.c b/drivers/infiniband/core/iwpm_util.c
+index 3ef51a9..4961909 100644
+--- a/drivers/infiniband/core/iwpm_util.c
++++ b/drivers/infiniband/core/iwpm_util.c
+@@ -57,7 +57,7 @@ int iwpm_init(u8 nl_client)
+ 	if (iwpm_valid_client(nl_client))
+ 		return -EINVAL;
+ 	mutex_lock(&iwpm_admin_lock);
+-	if (atomic_read(&iwpm_admin.refcount) == 0) {
++	if (refcount_read(&iwpm_admin.refcount) == 0) {
+ 		iwpm_hash_bucket = kzalloc(IWPM_MAPINFO_HASH_SIZE *
+ 					sizeof(struct hlist_head), GFP_KERNEL);
+ 		if (!iwpm_hash_bucket) {
+@@ -72,7 +72,7 @@ int iwpm_init(u8 nl_client)
+ 			goto init_exit;
  		}
- 
-@@ -706,7 +706,7 @@ iblock_execute_rw(struct se_cmd *cmd, struct scatterlist *sgl, u32 sgl_nents,
- 	cmd->priv = ibr;
- 
- 	if (!sgl_nents) {
--		atomic_set(&ibr->pending, 1);
-+		refcount_set(&ibr->pending, 1);
- 		iblock_complete_cmd(cmd);
- 		return 0;
  	}
-@@ -719,7 +719,7 @@ iblock_execute_rw(struct se_cmd *cmd, struct scatterlist *sgl, u32 sgl_nents,
- 	bio_list_init(&list);
- 	bio_list_add(&list, bio);
- 
--	atomic_set(&ibr->pending, 2);
-+	refcount_set(&ibr->pending, 2);
- 	bio_cnt = 1;
- 
- 	for_each_sg(sgl, sg, sgl_nents, i) {
-@@ -740,7 +740,7 @@ iblock_execute_rw(struct se_cmd *cmd, struct scatterlist *sgl, u32 sgl_nents,
- 			if (!bio)
- 				goto fail_put_bios;
- 
--			atomic_inc(&ibr->pending);
-+			refcount_inc(&ibr->pending);
- 			bio_list_add(&list, bio);
- 			bio_cnt++;
- 		}
-diff --git a/drivers/target/target_core_iblock.h b/drivers/target/target_core_iblock.h
-index 718d3fc..f2a5797 100644
---- a/drivers/target/target_core_iblock.h
-+++ b/drivers/target/target_core_iblock.h
-@@ -2,6 +2,7 @@
- #define TARGET_CORE_IBLOCK_H
- 
- #include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <target/target_core_base.h>
- 
- #define IBLOCK_VERSION		"4.0"
-@@ -10,7 +11,7 @@
- #define IBLOCK_LBA_SHIFT	9
- 
- struct iblock_req {
--	atomic_t pending;
-+	refcount_t pending;
- 	atomic_t ib_bio_err_cnt;
- } ____cacheline_aligned;
- 
-diff --git a/drivers/tty/serial/dz.c b/drivers/tty/serial/dz.c
-index c121f16..5b5358f 100644
---- a/drivers/tty/serial/dz.c
-+++ b/drivers/tty/serial/dz.c
-@@ -49,7 +49,7 @@
- #include <linux/tty.h>
- #include <linux/tty_flip.h>
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <asm/bootinfo.h>
- #include <asm/io.h>
- 
-@@ -78,8 +78,8 @@ struct dz_port {
- 
- struct dz_mux {
- 	struct dz_port		dport[DZ_NB_PORT];
--	atomic_t		map_guard;
--	atomic_t		irq_guard;
-+	refcount_t		map_guard;
-+	refcount_t		irq_guard;
- 	int			initialised;
- };
- 
-@@ -403,18 +403,17 @@ static int dz_startup(struct uart_port *uport)
- 	struct dz_port *dport = to_dport(uport);
- 	struct dz_mux *mux = dport->mux;
- 	unsigned long flags;
--	int irq_guard;
- 	int ret;
- 	u16 tmp;
- 
--	irq_guard = atomic_add_return(1, &mux->irq_guard);
--	if (irq_guard != 1)
-+	refcount_inc(&mux->irq_guard);
-+	if (refcount_read(&mux->irq_guard) != 1)
- 		return 0;
- 
- 	ret = request_irq(dport->port.irq, dz_interrupt,
- 			  IRQF_SHARED, "dz", mux);
- 	if (ret) {
--		atomic_add(-1, &mux->irq_guard);
-+		refcount_dec(&mux->irq_guard);
- 		printk(KERN_ERR "dz: Cannot get IRQ %d!\n", dport->port.irq);
- 		return ret;
- 	}
-@@ -444,15 +443,13 @@ static void dz_shutdown(struct uart_port *uport)
- 	struct dz_port *dport = to_dport(uport);
- 	struct dz_mux *mux = dport->mux;
- 	unsigned long flags;
--	int irq_guard;
- 	u16 tmp;
- 
- 	spin_lock_irqsave(&dport->port.lock, flags);
- 	dz_stop_tx(&dport->port);
- 	spin_unlock_irqrestore(&dport->port.lock, flags);
- 
--	irq_guard = atomic_add_return(-1, &mux->irq_guard);
--	if (!irq_guard) {
-+	if (refcount_dec_and_test(&mux->irq_guard)) {
- 		/* Disable interrupts.  */
- 		tmp = dz_in(dport, DZ_CSR);
- 		tmp &= ~(DZ_RIE | DZ_TIE);
-@@ -663,13 +660,11 @@ static const char *dz_type(struct uart_port *uport)
- static void dz_release_port(struct uart_port *uport)
- {
- 	struct dz_mux *mux = to_dport(uport)->mux;
--	int map_guard;
- 
- 	iounmap(uport->membase);
- 	uport->membase = NULL;
- 
--	map_guard = atomic_add_return(-1, &mux->map_guard);
--	if (!map_guard)
-+	if (refcount_dec_and_test(&mux->map_guard))
- 		release_mem_region(uport->mapbase, dec_kn_slot_size);
- }
- 
-@@ -688,14 +683,13 @@ static int dz_map_port(struct uart_port *uport)
- static int dz_request_port(struct uart_port *uport)
- {
- 	struct dz_mux *mux = to_dport(uport)->mux;
--	int map_guard;
- 	int ret;
- 
--	map_guard = atomic_add_return(1, &mux->map_guard);
--	if (map_guard == 1) {
-+	refcount_inc(&mux->map_guard);
-+	if (refcount_read(&mux->map_guard) == 1) {
- 		if (!request_mem_region(uport->mapbase, dec_kn_slot_size,
- 					"dz")) {
--			atomic_add(-1, &mux->map_guard);
-+			refcount_dec(&mux->map_guard);
- 			printk(KERN_ERR
- 			       "dz: Unable to reserve MMIO resource\n");
- 			return -EBUSY;
-@@ -703,8 +697,7 @@ static int dz_request_port(struct uart_port *uport)
- 	}
- 	ret = dz_map_port(uport);
- 	if (ret) {
--		map_guard = atomic_add_return(-1, &mux->map_guard);
--		if (!map_guard)
-+		if (refcount_dec_and_test(&mux->map_guard))
- 			release_mem_region(uport->mapbase, dec_kn_slot_size);
- 		return ret;
- 	}
-diff --git a/drivers/tty/serial/sb1250-duart.c b/drivers/tty/serial/sb1250-duart.c
-index 771f361..041625c 100644
---- a/drivers/tty/serial/sb1250-duart.c
-+++ b/drivers/tty/serial/sb1250-duart.c
-@@ -41,7 +41,7 @@
- #include <linux/tty_flip.h>
- #include <linux/types.h>
- 
--#include <linux/atomic.h>
-+#include <linux/refcount.h>
- #include <asm/io.h>
- #include <asm/war.h>
- 
-@@ -103,7 +103,7 @@ struct sbd_port {
- struct sbd_duart {
- 	struct sbd_port		sport[2];
- 	unsigned long		mapctrl;
--	atomic_t		map_guard;
-+	refcount_t		map_guard;
- };
- 
- #define to_sport(uport) container_of(uport, struct sbd_port, port)
-@@ -654,15 +654,13 @@ static void sbd_release_port(struct uart_port *uport)
- {
- 	struct sbd_port *sport = to_sport(uport);
- 	struct sbd_duart *duart = sport->duart;
--	int map_guard;
- 
- 	iounmap(sport->memctrl);
- 	sport->memctrl = NULL;
- 	iounmap(uport->membase);
- 	uport->membase = NULL;
- 
--	map_guard = atomic_add_return(-1, &duart->map_guard);
--	if (!map_guard)
-+	if(refcount_dec_and_test(&duart->map_guard))
- 		release_mem_region(duart->mapctrl, DUART_CHANREG_SPACING);
- 	release_mem_region(uport->mapbase, DUART_CHANREG_SPACING);
- }
-@@ -698,7 +696,6 @@ static int sbd_request_port(struct uart_port *uport)
- {
- 	const char *err = KERN_ERR "sbd: Unable to reserve MMIO resource\n";
- 	struct sbd_duart *duart = to_sport(uport)->duart;
--	int map_guard;
- 	int ret = 0;
- 
- 	if (!request_mem_region(uport->mapbase, DUART_CHANREG_SPACING,
-@@ -706,11 +703,11 @@ static int sbd_request_port(struct uart_port *uport)
- 		printk(err);
- 		return -EBUSY;
- 	}
--	map_guard = atomic_add_return(1, &duart->map_guard);
--	if (map_guard == 1) {
-+	refcount_inc(&duart->map_guard);
-+	if (refcount_read(&duart->map_guard) == 1) {
- 		if (!request_mem_region(duart->mapctrl, DUART_CHANREG_SPACING,
- 					"sb1250-duart")) {
--			atomic_add(-1, &duart->map_guard);
-+			refcount_dec(&duart->map_guard);
- 			printk(err);
- 			ret = -EBUSY;
- 		}
-@@ -718,8 +715,7 @@ static int sbd_request_port(struct uart_port *uport)
+-	atomic_inc(&iwpm_admin.refcount);
++	refcount_inc(&iwpm_admin.refcount);
+ init_exit:
+ 	mutex_unlock(&iwpm_admin_lock);
  	if (!ret) {
- 		ret = sbd_map_port(uport);
- 		if (ret) {
--			map_guard = atomic_add_return(-1, &duart->map_guard);
--			if (!map_guard)
-+			if (refcount_dec_and_test(&duart->map_guard))
- 				release_mem_region(duart->mapctrl,
- 						   DUART_CHANREG_SPACING);
- 		}
-diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index 1eeb319..485d6b1 100644
---- a/drivers/usb/gadget/function/f_fs.c
-+++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1570,14 +1570,14 @@ static void ffs_data_get(struct ffs_data *ffs)
- {
- 	ENTER();
- 
--	atomic_inc(&ffs->ref);
-+	refcount_inc(&ffs->ref);
- }
- 
- static void ffs_data_opened(struct ffs_data *ffs)
- {
- 	ENTER();
- 
--	atomic_inc(&ffs->ref);
-+	refcount_inc(&ffs->ref);
- 	if (atomic_add_return(1, &ffs->opened) == 1 &&
- 			ffs->state == FFS_DEACTIVATED) {
- 		ffs->state = FFS_CLOSING;
-@@ -1589,7 +1589,7 @@ static void ffs_data_put(struct ffs_data *ffs)
- {
- 	ENTER();
- 
--	if (unlikely(atomic_dec_and_test(&ffs->ref))) {
-+	if (unlikely(refcount_dec_and_test(&ffs->ref))) {
- 		pr_info("%s(): freeing\n", __func__);
- 		ffs_data_clear(ffs);
- 		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
-@@ -1634,7 +1634,7 @@ static struct ffs_data *ffs_data_new(void)
- 
- 	ENTER();
- 
--	atomic_set(&ffs->ref, 1);
-+	refcount_set(&ffs->ref, 1);
- 	atomic_set(&ffs->opened, 0);
- 	ffs->state = FFS_READ_DESCRIPTORS;
- 	mutex_init(&ffs->mutex);
-diff --git a/drivers/usb/gadget/function/u_fs.h b/drivers/usb/gadget/function/u_fs.h
-index 6013985..7b690a2 100644
---- a/drivers/usb/gadget/function/u_fs.h
-+++ b/drivers/usb/gadget/function/u_fs.h
-@@ -20,6 +20,7 @@
- #include <linux/list.h>
+@@ -94,12 +94,12 @@ int iwpm_exit(u8 nl_client)
+ 	if (!iwpm_valid_client(nl_client))
+ 		return -EINVAL;
+ 	mutex_lock(&iwpm_admin_lock);
+-	if (atomic_read(&iwpm_admin.refcount) == 0) {
++	if (refcount_read(&iwpm_admin.refcount) == 0) {
+ 		mutex_unlock(&iwpm_admin_lock);
+ 		pr_err("%s Incorrect usage - negative refcount\n", __func__);
+ 		return -EINVAL;
+ 	}
+-	if (atomic_dec_and_test(&iwpm_admin.refcount)) {
++	if (refcount_dec_and_test(&iwpm_admin.refcount)) {
+ 		free_hash_bucket();
+ 		free_reminfo_bucket();
+ 		pr_debug("%s: Resources are destroyed\n", __func__);
+diff --git a/drivers/infiniband/core/iwpm_util.h b/drivers/infiniband/core/iwpm_util.h
+index af1fc14..d7b4ae9 100644
+--- a/drivers/infiniband/core/iwpm_util.h
++++ b/drivers/infiniband/core/iwpm_util.h
+@@ -45,6 +45,7 @@
  #include <linux/mutex.h>
- #include <linux/workqueue.h>
+ #include <linux/jhash.h>
+ #include <linux/kref.h>
 +#include <linux/refcount.h>
+ #include <net/netlink.h>
+ #include <linux/errno.h>
+ #include <rdma/iw_portmap.h>
+@@ -89,7 +90,7 @@ struct iwpm_remote_info {
+ };
  
- #ifdef VERBOSE_DEBUG
- #ifndef pr_vdebug
-@@ -177,7 +178,7 @@ struct ffs_data {
- 	struct completion		ep0req_completion;	/* P: mutex */
+ struct iwpm_admin_data {
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	atomic_t nlmsg_seq;
+ 	int      client_list[RDMA_NL_NUM_CLIENTS];
+ 	u32      reg_list[RDMA_NL_NUM_CLIENTS];
+diff --git a/drivers/infiniband/core/mad.c b/drivers/infiniband/core/mad.c
+index a009f71..7c34b8e 100644
+--- a/drivers/infiniband/core/mad.c
++++ b/drivers/infiniband/core/mad.c
+@@ -364,7 +364,7 @@ struct ib_mad_agent *ib_register_mad_agent(struct ib_device *device,
+ 	INIT_DELAYED_WORK(&mad_agent_priv->timed_work, timeout_sends);
+ 	INIT_LIST_HEAD(&mad_agent_priv->local_list);
+ 	INIT_WORK(&mad_agent_priv->local_work, local_completions);
+-	atomic_set(&mad_agent_priv->refcount, 1);
++	refcount_set(&mad_agent_priv->refcount, 1);
+ 	init_completion(&mad_agent_priv->comp);
  
- 	/* reference counter */
--	atomic_t			ref;
-+	refcount_t			ref;
- 	/* how many files are opened (EP0 and others) */
- 	atomic_t			opened;
- 
-diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode.c
-index e8f4102..9e46373 100644
---- a/drivers/usb/gadget/legacy/inode.c
-+++ b/drivers/usb/gadget/legacy/inode.c
-@@ -27,6 +27,7 @@
- #include <linux/mmu_context.h>
- #include <linux/aio.h>
- #include <linux/uio.h>
-+#include <linux/refcount.h>
- 
- #include <linux/device.h>
- #include <linux/moduleparam.h>
-@@ -115,7 +116,7 @@ enum ep0_state {
- 
- struct dev_data {
- 	spinlock_t			lock;
--	atomic_t			count;
-+	refcount_t			count;
- 	enum ep0_state			state;		/* P: lock */
- 	struct usb_gadgetfs_event	event [N_EVENT];
- 	unsigned			ev_next;
-@@ -151,12 +152,12 @@ struct dev_data {
- 
- static inline void get_dev (struct dev_data *data)
- {
--	atomic_inc (&data->count);
-+	refcount_inc (&data->count);
- }
- 
- static void put_dev (struct dev_data *data)
- {
--	if (likely (!atomic_dec_and_test (&data->count)))
-+	if (likely (!refcount_dec_and_test (&data->count)))
- 		return;
- 	/* needs no more cleanup */
- 	BUG_ON (waitqueue_active (&data->wait));
-@@ -171,7 +172,7 @@ static struct dev_data *dev_new (void)
- 	if (!dev)
- 		return NULL;
- 	dev->state = STATE_DEV_DISABLED;
--	atomic_set (&dev->count, 1);
-+	refcount_set (&dev->count, 1);
- 	spin_lock_init (&dev->lock);
- 	INIT_LIST_HEAD (&dev->epfiles);
- 	init_waitqueue_head (&dev->wait);
-@@ -191,7 +192,7 @@ enum ep_state {
- struct ep_data {
- 	struct mutex			lock;
- 	enum ep_state			state;
--	atomic_t			count;
-+	refcount_t			count;
- 	struct dev_data			*dev;
- 	/* must hold dev->lock before accessing ep or req */
- 	struct usb_ep			*ep;
-@@ -206,12 +207,12 @@ struct ep_data {
- 
- static inline void get_ep (struct ep_data *data)
- {
--	atomic_inc (&data->count);
-+	refcount_inc (&data->count);
- }
- 
- static void put_ep (struct ep_data *data)
- {
--	if (likely (!atomic_dec_and_test (&data->count)))
-+	if (likely (!refcount_dec_and_test (&data->count)))
- 		return;
- 	put_dev (data->dev);
- 	/* needs no more cleanup */
-@@ -1562,7 +1563,7 @@ static int activate_ep_files (struct dev_data *dev)
- 		init_waitqueue_head (&data->wait);
- 
- 		strncpy (data->name, ep->name, sizeof (data->name) - 1);
--		atomic_set (&data->count, 1);
-+		refcount_set (&data->count, 1);
- 		data->dev = dev;
- 		get_dev (dev);
- 
-diff --git a/drivers/xen/gntdev.c b/drivers/xen/gntdev.c
-index 2ef2b61..b183cb2 100644
---- a/drivers/xen/gntdev.c
-+++ b/drivers/xen/gntdev.c
-@@ -35,6 +35,7 @@
- #include <linux/spinlock.h>
- #include <linux/slab.h>
- #include <linux/highmem.h>
-+#include <linux/refcount.h>
- 
- #include <xen/xen.h>
- #include <xen/grant_table.h>
-@@ -85,7 +86,7 @@ struct grant_map {
- 	int index;
- 	int count;
- 	int flags;
--	atomic_t users;
-+	refcount_t users;
- 	struct unmap_notify notify;
- 	struct ioctl_gntdev_grant_ref *grants;
- 	struct gnttab_map_grant_ref   *map_ops;
-@@ -165,7 +166,7 @@ static struct grant_map *gntdev_alloc_map(struct gntdev_priv *priv, int count)
- 
- 	add->index = 0;
- 	add->count = count;
--	atomic_set(&add->users, 1);
-+	refcount_set(&add->users, 1);
- 
- 	return add;
- 
-@@ -211,7 +212,7 @@ static void gntdev_put_map(struct gntdev_priv *priv, struct grant_map *map)
- 	if (!map)
- 		return;
- 
--	if (!atomic_dec_and_test(&map->users))
-+	if (!refcount_dec_and_test(&map->users))
- 		return;
- 
- 	atomic_sub(map->count, &pages_mapped);
-@@ -399,7 +400,7 @@ static void gntdev_vma_open(struct vm_area_struct *vma)
- 	struct grant_map *map = vma->vm_private_data;
- 
- 	pr_debug("gntdev_vma_open %p\n", vma);
--	atomic_inc(&map->users);
-+	refcount_inc(&map->users);
- }
- 
- static void gntdev_vma_close(struct vm_area_struct *vma)
-@@ -1003,7 +1004,7 @@ static int gntdev_mmap(struct file *flip, struct vm_area_struct *vma)
- 		goto unlock_out;
+ 	spin_lock_irqsave(&port_priv->reg_lock, flags);
+@@ -531,7 +531,7 @@ struct ib_mad_agent *ib_register_mad_snoop(struct ib_device *device,
+ 		goto error2;
  	}
  
--	atomic_inc(&map->users);
-+	refcount_inc(&map->users);
+-	atomic_set(&mad_snoop_priv->refcount, 1);
++	refcount_set(&mad_snoop_priv->refcount, 1);
+ 	return &mad_snoop_priv->agent;
  
- 	vma->vm_ops = &gntdev_vmops;
+ error2:
+@@ -543,13 +543,13 @@ EXPORT_SYMBOL(ib_register_mad_snoop);
  
-diff --git a/include/linux/connector.h b/include/linux/connector.h
-index f8fe863..032102b 100644
---- a/include/linux/connector.h
-+++ b/include/linux/connector.h
-@@ -22,7 +22,7 @@
- #define __CONNECTOR_H
+ static inline void deref_mad_agent(struct ib_mad_agent_private *mad_agent_priv)
+ {
+-	if (atomic_dec_and_test(&mad_agent_priv->refcount))
++	if (refcount_dec_and_test(&mad_agent_priv->refcount))
+ 		complete(&mad_agent_priv->comp);
+ }
  
+ static inline void deref_snoop_agent(struct ib_mad_snoop_private *mad_snoop_priv)
+ {
+-	if (atomic_dec_and_test(&mad_snoop_priv->refcount))
++	if (refcount_dec_and_test(&mad_snoop_priv->refcount))
+ 		complete(&mad_snoop_priv->comp);
+ }
  
--#include <linux/atomic.h>
+@@ -653,7 +653,7 @@ static void snoop_send(struct ib_mad_qp_info *qp_info,
+ 		    !(mad_snoop_priv->mad_snoop_flags & mad_snoop_flags))
+ 			continue;
+ 
+-		atomic_inc(&mad_snoop_priv->refcount);
++		refcount_inc(&mad_snoop_priv->refcount);
+ 		spin_unlock_irqrestore(&qp_info->snoop_lock, flags);
+ 		mad_snoop_priv->agent.snoop_handler(&mad_snoop_priv->agent,
+ 						    send_buf, mad_send_wc);
+@@ -678,7 +678,7 @@ static void snoop_recv(struct ib_mad_qp_info *qp_info,
+ 		    !(mad_snoop_priv->mad_snoop_flags & mad_snoop_flags))
+ 			continue;
+ 
+-		atomic_inc(&mad_snoop_priv->refcount);
++		refcount_inc(&mad_snoop_priv->refcount);
+ 		spin_unlock_irqrestore(&qp_info->snoop_lock, flags);
+ 		mad_snoop_priv->agent.recv_handler(&mad_snoop_priv->agent, NULL,
+ 						   mad_recv_wc);
+@@ -854,7 +854,7 @@ static int handle_outgoing_dr_smp(struct ib_mad_agent_private *mad_agent_priv,
+ 			 * Reference MAD agent until receive
+ 			 * side of local completion handled
+ 			 */
+-			atomic_inc(&mad_agent_priv->refcount);
++			refcount_inc(&mad_agent_priv->refcount);
+ 		} else
+ 			kfree(mad_priv);
+ 		break;
+@@ -894,7 +894,7 @@ static int handle_outgoing_dr_smp(struct ib_mad_agent_private *mad_agent_priv,
+ 		local->return_wc_byte_len = mad_size;
+ 	}
+ 	/* Reference MAD agent until send side of local completion handled */
+-	atomic_inc(&mad_agent_priv->refcount);
++	refcount_inc(&mad_agent_priv->refcount);
+ 	/* Queue local completion to local list */
+ 	spin_lock_irqsave(&mad_agent_priv->lock, flags);
+ 	list_add_tail(&local->completion_list, &mad_agent_priv->local_list);
+@@ -1052,7 +1052,7 @@ struct ib_mad_send_buf * ib_create_send_mad(struct ib_mad_agent *mad_agent,
+ 	}
+ 
+ 	mad_send_wr->send_buf.mad_agent = mad_agent;
+-	atomic_inc(&mad_agent_priv->refcount);
++	refcount_inc(&mad_agent_priv->refcount);
+ 	return &mad_send_wr->send_buf;
+ }
+ EXPORT_SYMBOL(ib_create_send_mad);
+@@ -1263,7 +1263,7 @@ int ib_post_send_mad(struct ib_mad_send_buf *send_buf,
+ 		mad_send_wr->status = IB_WC_SUCCESS;
+ 
+ 		/* Reference MAD agent until send completes */
+-		atomic_inc(&mad_agent_priv->refcount);
++		refcount_inc(&mad_agent_priv->refcount);
+ 		spin_lock_irqsave(&mad_agent_priv->lock, flags);
+ 		list_add_tail(&mad_send_wr->agent_list,
+ 			      &mad_agent_priv->send_list);
+@@ -1280,7 +1280,7 @@ int ib_post_send_mad(struct ib_mad_send_buf *send_buf,
+ 			spin_lock_irqsave(&mad_agent_priv->lock, flags);
+ 			list_del(&mad_send_wr->agent_list);
+ 			spin_unlock_irqrestore(&mad_agent_priv->lock, flags);
+-			atomic_dec(&mad_agent_priv->refcount);
++			refcount_dec(&mad_agent_priv->refcount);
+ 			goto error;
+ 		}
+ 	}
+@@ -1759,7 +1759,7 @@ find_mad_agent(struct ib_mad_port_private *port_priv,
+ 
+ 	if (mad_agent) {
+ 		if (mad_agent->agent.recv_handler)
+-			atomic_inc(&mad_agent->refcount);
++			refcount_inc(&mad_agent->refcount);
+ 		else {
+ 			dev_notice(&port_priv->device->dev,
+ 				   "No receive handler for client %p on port %d\n",
+@@ -1968,7 +1968,7 @@ static void ib_mad_complete_recv(struct ib_mad_agent_private *mad_agent_priv,
+ 				mad_agent_priv->agent.recv_handler(
+ 						&mad_agent_priv->agent, NULL,
+ 						mad_recv_wc);
+-				atomic_dec(&mad_agent_priv->refcount);
++				refcount_dec(&mad_agent_priv->refcount);
+ 			} else {
+ 				/* not user rmpp, revert to normal behavior and
+ 				 * drop the mad */
+@@ -1985,7 +1985,7 @@ static void ib_mad_complete_recv(struct ib_mad_agent_private *mad_agent_priv,
+ 					&mad_agent_priv->agent,
+ 					&mad_send_wr->send_buf,
+ 					mad_recv_wc);
+-			atomic_dec(&mad_agent_priv->refcount);
++			refcount_dec(&mad_agent_priv->refcount);
+ 
+ 			mad_send_wc.status = IB_WC_SUCCESS;
+ 			mad_send_wc.vendor_err = 0;
+@@ -2571,7 +2571,7 @@ static void cancel_mads(struct ib_mad_agent_private *mad_agent_priv)
+ 		list_del(&mad_send_wr->agent_list);
+ 		mad_agent_priv->agent.send_handler(&mad_agent_priv->agent,
+ 						   &mad_send_wc);
+-		atomic_dec(&mad_agent_priv->refcount);
++		refcount_dec(&mad_agent_priv->refcount);
+ 	}
+ }
+ 
+@@ -2709,7 +2709,7 @@ static void local_completions(struct work_struct *work)
+ 						&local->mad_send_wr->send_buf,
+ 						&local->mad_priv->header.recv_wc);
+ 			spin_lock_irqsave(&recv_mad_agent->lock, flags);
+-			atomic_dec(&recv_mad_agent->refcount);
++			refcount_dec(&recv_mad_agent->refcount);
+ 			spin_unlock_irqrestore(&recv_mad_agent->lock, flags);
+ 		}
+ 
+@@ -2726,7 +2726,7 @@ static void local_completions(struct work_struct *work)
+ 						   &mad_send_wc);
+ 
+ 		spin_lock_irqsave(&mad_agent_priv->lock, flags);
+-		atomic_dec(&mad_agent_priv->refcount);
++		refcount_dec(&mad_agent_priv->refcount);
+ 		if (free_mad)
+ 			kfree(local->mad_priv);
+ 		kfree(local);
+@@ -2812,7 +2812,7 @@ static void timeout_sends(struct work_struct *work)
+ 		mad_agent_priv->agent.send_handler(&mad_agent_priv->agent,
+ 						   &mad_send_wc);
+ 
+-		atomic_dec(&mad_agent_priv->refcount);
++		refcount_dec(&mad_agent_priv->refcount);
+ 		spin_lock_irqsave(&mad_agent_priv->lock, flags);
+ 	}
+ 	spin_unlock_irqrestore(&mad_agent_priv->lock, flags);
+diff --git a/drivers/infiniband/core/mad_priv.h b/drivers/infiniband/core/mad_priv.h
+index 28669f6..f4e75ab 100644
+--- a/drivers/infiniband/core/mad_priv.h
++++ b/drivers/infiniband/core/mad_priv.h
+@@ -38,6 +38,7 @@
+ 
+ #include <linux/completion.h>
+ #include <linux/err.h>
 +#include <linux/refcount.h>
- 
- #include <linux/list.h>
  #include <linux/workqueue.h>
-@@ -49,7 +49,7 @@ struct cn_callback_id {
+ #include <rdma/ib_mad.h>
+ #include <rdma/ib_smi.h>
+@@ -104,7 +105,7 @@ struct ib_mad_agent_private {
+ 	struct work_struct local_work;
+ 	struct list_head rmpp_list;
  
- struct cn_callback_entry {
- 	struct list_head callback_entry;
--	atomic_t refcnt;
-+	refcount_t refcnt;
- 	struct cn_queue_dev *pdev;
- 
- 	struct cn_callback_id id;
-diff --git a/include/media/videobuf2-memops.h b/include/media/videobuf2-memops.h
-index 36565c7a..a6ed091 100644
---- a/include/media/videobuf2-memops.h
-+++ b/include/media/videobuf2-memops.h
-@@ -16,6 +16,7 @@
- 
- #include <media/videobuf2-v4l2.h>
- #include <linux/mm.h>
-+#include <linux/refcount.h>
- 
- /**
-  * struct vb2_vmarea_handler - common vma refcount tracking handler
-@@ -25,7 +26,7 @@
-  * @arg:	argument for @put callback
-  */
- struct vb2_vmarea_handler {
--	atomic_t		*refcount;
-+	refcount_t		*refcount;
- 	void			(*put)(void *arg);
- 	void			*arg;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct completion comp;
  };
-diff --git a/include/scsi/libfc.h b/include/scsi/libfc.h
-index 96dd0b3..53d2747 100644
---- a/include/scsi/libfc.h
-+++ b/include/scsi/libfc.h
-@@ -23,6 +23,7 @@
- #include <linux/timer.h>
- #include <linux/if.h>
- #include <linux/percpu.h>
+ 
+@@ -113,7 +114,7 @@ struct ib_mad_snoop_private {
+ 	struct ib_mad_qp_info *qp_info;
+ 	int snoop_index;
+ 	int mad_snoop_flags;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct completion comp;
+ };
+ 
+diff --git a/drivers/infiniband/core/mad_rmpp.c b/drivers/infiniband/core/mad_rmpp.c
+index 382941b..db96133 100644
+--- a/drivers/infiniband/core/mad_rmpp.c
++++ b/drivers/infiniband/core/mad_rmpp.c
+@@ -33,6 +33,7 @@
+  */
+ 
+ #include <linux/slab.h>
 +#include <linux/refcount.h>
  
- #include <scsi/scsi_transport.h>
- #include <scsi/scsi_transport_fc.h>
-@@ -321,7 +322,7 @@ struct fc_seq_els_data {
-  */
- struct fc_fcp_pkt {
- 	spinlock_t	  scsi_pkt_lock;
--	atomic_t	  ref_cnt;
-+	refcount_t	  ref_cnt;
+ #include "mad_priv.h"
+ #include "mad_rmpp.h"
+@@ -52,7 +53,7 @@ struct mad_rmpp_recv {
+ 	struct completion comp;
+ 	enum rmpp_state state;
+ 	spinlock_t lock;
+-	atomic_t refcount;
++	refcount_t refcount;
  
- 	/* SCSI command and data transfer information */
- 	u32		  data_len;
-@@ -434,7 +435,7 @@ struct fc_seq {
-  */
- struct fc_exch {
- 	spinlock_t	    ex_lock;
--	atomic_t	    ex_refcnt;
-+	refcount_t	    ex_refcnt;
- 	enum fc_class	    class;
- 	struct fc_exch_mgr  *em;
- 	struct fc_exch_pool *pool;
-diff --git a/include/scsi/libiscsi.h b/include/scsi/libiscsi.h
-index 4d1c46a..854ee17 100644
---- a/include/scsi/libiscsi.h
-+++ b/include/scsi/libiscsi.h
-@@ -29,6 +29,7 @@
- #include <linux/timer.h>
- #include <linux/workqueue.h>
- #include <linux/kfifo.h>
+ 	struct ib_ah *ah;
+ 	struct ib_mad_recv_wc *rmpp_wc;
+@@ -73,7 +74,7 @@ struct mad_rmpp_recv {
+ 
+ static inline void deref_rmpp_recv(struct mad_rmpp_recv *rmpp_recv)
+ {
+-	if (atomic_dec_and_test(&rmpp_recv->refcount))
++	if (refcount_dec_and_test(&rmpp_recv->refcount))
+ 		complete(&rmpp_recv->comp);
+ }
+ 
+@@ -304,7 +305,7 @@ create_rmpp_recv(struct ib_mad_agent_private *agent,
+ 	INIT_DELAYED_WORK(&rmpp_recv->cleanup_work, recv_cleanup_handler);
+ 	spin_lock_init(&rmpp_recv->lock);
+ 	rmpp_recv->state = RMPP_STATE_ACTIVE;
+-	atomic_set(&rmpp_recv->refcount, 1);
++	refcount_set(&rmpp_recv->refcount, 1);
+ 
+ 	rmpp_recv->rmpp_wc = mad_recv_wc;
+ 	rmpp_recv->cur_seg_buf = &mad_recv_wc->recv_buf;
+@@ -356,7 +357,7 @@ acquire_rmpp_recv(struct ib_mad_agent_private *agent,
+ 	spin_lock_irqsave(&agent->lock, flags);
+ 	rmpp_recv = find_rmpp_recv(agent, mad_recv_wc);
+ 	if (rmpp_recv)
+-		atomic_inc(&rmpp_recv->refcount);
++		refcount_inc(&rmpp_recv->refcount);
+ 	spin_unlock_irqrestore(&agent->lock, flags);
+ 	return rmpp_recv;
+ }
+@@ -552,7 +553,7 @@ start_rmpp(struct ib_mad_agent_private *agent,
+ 		destroy_rmpp_recv(rmpp_recv);
+ 		return continue_rmpp(agent, mad_recv_wc);
+ 	}
+-	atomic_inc(&rmpp_recv->refcount);
++	refcount_inc(&rmpp_recv->refcount);
+ 
+ 	if (get_last_flag(&mad_recv_wc->recv_buf)) {
+ 		rmpp_recv->state = RMPP_STATE_COMPLETE;
+diff --git a/drivers/infiniband/core/multicast.c b/drivers/infiniband/core/multicast.c
+index 322cb67..9096ace 100644
+--- a/drivers/infiniband/core/multicast.c
++++ b/drivers/infiniband/core/multicast.c
+@@ -38,6 +38,7 @@
+ #include <linux/slab.h>
+ #include <linux/bitops.h>
+ #include <linux/random.h>
 +#include <linux/refcount.h>
- #include <scsi/iscsi_proto.h>
- #include <scsi/iscsi_if.h>
- #include <scsi/scsi_transport_iscsi.h>
-@@ -139,7 +140,7 @@ struct iscsi_task {
  
- 	/* state set/tested under session->lock */
- 	int			state;
+ #include <rdma/ib_cache.h>
+ #include "sa.h"
+@@ -61,7 +62,7 @@ struct mcast_port {
+ 	struct mcast_device	*dev;
+ 	spinlock_t		lock;
+ 	struct rb_root		table;
 -	atomic_t		refcount;
 +	refcount_t		refcount;
- 	struct list_head	running;	/* running cmd list */
- 	void			*dd_data;	/* driver/transport data */
+ 	struct completion	comp;
+ 	u8			port_num;
  };
-diff --git a/include/trace/events/bcache.h b/include/trace/events/bcache.h
-index df3e9ae..3c664ff 100644
---- a/include/trace/events/bcache.h
-+++ b/include/trace/events/bcache.h
-@@ -456,7 +456,7 @@ TRACE_EVENT(bcache_alloc_fail,
- 		__entry->dev		= ca->bdev->bd_dev;
- 		__entry->free		= fifo_used(&ca->free[reserve]);
- 		__entry->free_inc	= fifo_used(&ca->free_inc);
--		__entry->blocked	= atomic_read(&ca->set->prio_blocked);
-+		__entry->blocked	= refcount_read(&ca->set->prio_blocked);
- 	),
+@@ -103,7 +104,7 @@ struct mcast_group {
+ 	struct list_head	active_list;
+ 	struct mcast_member	*last_join;
+ 	int			members[NUM_JOIN_MEMBERSHIP_TYPES];
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	enum mcast_group_state	state;
+ 	struct ib_sa_query	*query;
+ 	u16			pkey_index;
+@@ -117,7 +118,7 @@ struct mcast_member {
+ 	struct mcast_group	*group;
+ 	struct list_head	list;
+ 	enum mcast_state	state;
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct completion	comp;
+ };
  
- 	TP_printk("alloc fail %d,%d free %u free_inc %u blocked %u",
+@@ -178,7 +179,7 @@ static struct mcast_group *mcast_insert(struct mcast_port *port,
+ 
+ static void deref_port(struct mcast_port *port)
+ {
+-	if (atomic_dec_and_test(&port->refcount))
++	if (refcount_dec_and_test(&port->refcount))
+ 		complete(&port->comp);
+ }
+ 
+@@ -188,7 +189,7 @@ static void release_group(struct mcast_group *group)
+ 	unsigned long flags;
+ 
+ 	spin_lock_irqsave(&port->lock, flags);
+-	if (atomic_dec_and_test(&group->refcount)) {
++	if (refcount_dec_and_test(&group->refcount)) {
+ 		rb_erase(&group->node, &port->table);
+ 		spin_unlock_irqrestore(&port->lock, flags);
+ 		kfree(group);
+@@ -199,7 +200,7 @@ static void release_group(struct mcast_group *group)
+ 
+ static void deref_member(struct mcast_member *member)
+ {
+-	if (atomic_dec_and_test(&member->refcount))
++	if (refcount_dec_and_test(&member->refcount))
+ 		complete(&member->comp);
+ }
+ 
+@@ -212,7 +213,7 @@ static void queue_join(struct mcast_member *member)
+ 	list_add_tail(&member->list, &group->pending_list);
+ 	if (group->state == MCAST_IDLE) {
+ 		group->state = MCAST_BUSY;
+-		atomic_inc(&group->refcount);
++		refcount_inc(&group->refcount);
+ 		queue_work(mcast_wq, &group->work);
+ 	}
+ 	spin_unlock_irqrestore(&group->lock, flags);
+@@ -401,7 +402,7 @@ static void process_group_error(struct mcast_group *group)
+ 	while (!list_empty(&group->active_list)) {
+ 		member = list_entry(group->active_list.next,
+ 				    struct mcast_member, list);
+-		atomic_inc(&member->refcount);
++		refcount_inc(&member->refcount);
+ 		list_del_init(&member->list);
+ 		adjust_membership(group, member->multicast.rec.join_state, -1);
+ 		member->state = MCAST_ERROR;
+@@ -445,7 +446,7 @@ static void mcast_work_handler(struct work_struct *work)
+ 				    struct mcast_member, list);
+ 		multicast = &member->multicast;
+ 		join_state = multicast->rec.join_state;
+-		atomic_inc(&member->refcount);
++		refcount_inc(&member->refcount);
+ 
+ 		if (join_state == (group->rec.join_state & join_state)) {
+ 			status = cmp_rec(&group->rec, &multicast->rec,
+@@ -497,7 +498,7 @@ static void process_join_error(struct mcast_group *group, int status)
+ 	member = list_entry(group->pending_list.next,
+ 			    struct mcast_member, list);
+ 	if (group->last_join == member) {
+-		atomic_inc(&member->refcount);
++		refcount_inc(&member->refcount);
+ 		list_del_init(&member->list);
+ 		spin_unlock_irq(&group->lock);
+ 		ret = member->multicast.callback(status, &member->multicast);
+@@ -589,9 +590,9 @@ static struct mcast_group *acquire_group(struct mcast_port *port,
+ 		kfree(group);
+ 		group = cur_group;
+ 	} else
+-		atomic_inc(&port->refcount);
++		refcount_inc(&port->refcount);
+ found:
+-	atomic_inc(&group->refcount);
++	refcount_inc(&group->refcount);
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 	return group;
+ }
+@@ -632,7 +633,7 @@ ib_sa_join_multicast(struct ib_sa_client *client,
+ 	member->multicast.callback = callback;
+ 	member->multicast.context = context;
+ 	init_completion(&member->comp);
+-	atomic_set(&member->refcount, 1);
++	refcount_set(&member->refcount, 1);
+ 	member->state = MCAST_JOINING;
+ 
+ 	member->group = acquire_group(&dev->port[port_num - dev->start_port],
+@@ -772,7 +773,7 @@ static void mcast_groups_event(struct mcast_port *port,
+ 		group = rb_entry(node, struct mcast_group, node);
+ 		spin_lock(&group->lock);
+ 		if (group->state == MCAST_IDLE) {
+-			atomic_inc(&group->refcount);
++			refcount_inc(&group->refcount);
+ 			queue_work(mcast_wq, &group->work);
+ 		}
+ 		if (group->state != MCAST_GROUP_ERROR)
+@@ -833,7 +834,7 @@ static void mcast_add_one(struct ib_device *device)
+ 		spin_lock_init(&port->lock);
+ 		port->table = RB_ROOT;
+ 		init_completion(&port->comp);
+-		atomic_set(&port->refcount, 1);
++		refcount_set(&port->refcount, 1);
+ 		++count;
+ 	}
+ 
+diff --git a/drivers/infiniband/core/uverbs.h b/drivers/infiniband/core/uverbs.h
+index 455034a..19dc476 100644
+--- a/drivers/infiniband/core/uverbs.h
++++ b/drivers/infiniband/core/uverbs.h
+@@ -85,7 +85,7 @@
+  */
+ 
+ struct ib_uverbs_device {
+-	atomic_t				refcount;
++	refcount_t				refcount;
+ 	int					num_comp_vectors;
+ 	struct completion			comp;
+ 	struct device			       *dev;
+@@ -149,7 +149,7 @@ struct ib_uevent_object {
+ 
+ struct ib_uxrcd_object {
+ 	struct ib_uobject	uobject;
+-	atomic_t		refcnt;
++	refcount_t		refcnt;
+ };
+ 
+ struct ib_usrq_object {
+diff --git a/drivers/infiniband/core/uverbs_cmd.c b/drivers/infiniband/core/uverbs_cmd.c
+index 7007822..f088fb4 100644
+--- a/drivers/infiniband/core/uverbs_cmd.c
++++ b/drivers/infiniband/core/uverbs_cmd.c
+@@ -572,7 +572,7 @@ ssize_t ib_uverbs_alloc_pd(struct ib_uverbs_file *file,
+ 	pd->device  = ib_dev;
+ 	pd->uobject = uobj;
+ 	pd->__internal_mr = NULL;
+-	atomic_set(&pd->usecnt, 0);
++	refcount_set(&pd->usecnt, 0);
+ 
+ 	uobj->object = pd;
+ 	ret = idr_add_uobj(&ib_uverbs_pd_idr, uobj);
+@@ -627,7 +627,7 @@ ssize_t ib_uverbs_dealloc_pd(struct ib_uverbs_file *file,
+ 		return -EINVAL;
+ 	pd = uobj->object;
+ 
+-	if (atomic_read(&pd->usecnt)) {
++	if (refcount_read(&pd->usecnt)) {
+ 		ret = -EBUSY;
+ 		goto err_put;
+ 	}
+@@ -808,13 +808,13 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
+ 
+ 		xrcd->inode   = inode;
+ 		xrcd->device  = ib_dev;
+-		atomic_set(&xrcd->usecnt, 0);
++		refcount_set(&xrcd->usecnt, 0);
+ 		mutex_init(&xrcd->tgt_qp_mutex);
+ 		INIT_LIST_HEAD(&xrcd->tgt_qp_list);
+ 		new_xrcd = 1;
+ 	}
+ 
+-	atomic_set(&obj->refcnt, 0);
++	refcount_set(&obj->refcnt, 0);
+ 	obj->uobject.object = xrcd;
+ 	ret = idr_add_uobj(&ib_uverbs_xrcd_idr, &obj->uobject);
+ 	if (ret)
+@@ -830,7 +830,7 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
+ 			if (ret)
+ 				goto err_insert_xrcd;
+ 		}
+-		atomic_inc(&xrcd->usecnt);
++		refcount_inc(&xrcd->usecnt);
+ 	}
+ 
+ 	if (copy_to_user((void __user *) (unsigned long) cmd.response,
+@@ -856,7 +856,7 @@ ssize_t ib_uverbs_open_xrcd(struct ib_uverbs_file *file,
+ 	if (inode) {
+ 		if (new_xrcd)
+ 			xrcd_table_delete(file->device, inode);
+-		atomic_dec(&xrcd->usecnt);
++		refcount_dec(&xrcd->usecnt);
+ 	}
+ 
+ err_insert_xrcd:
+@@ -903,13 +903,13 @@ ssize_t ib_uverbs_close_xrcd(struct ib_uverbs_file *file,
+ 	xrcd  = uobj->object;
+ 	inode = xrcd->inode;
+ 	obj   = container_of(uobj, struct ib_uxrcd_object, uobject);
+-	if (atomic_read(&obj->refcnt)) {
++	if (refcount_read(&obj->refcnt)) {
+ 		put_uobj_write(uobj);
+ 		ret = -EBUSY;
+ 		goto out;
+ 	}
+ 
+-	if (!inode || atomic_dec_and_test(&xrcd->usecnt)) {
++	if (!inode || refcount_dec_and_test(&xrcd->usecnt)) {
+ 		ret = ib_dealloc_xrcd(uobj->object);
+ 		if (!ret)
+ 			uobj->live = 0;
+@@ -917,7 +917,7 @@ ssize_t ib_uverbs_close_xrcd(struct ib_uverbs_file *file,
+ 
+ 	live = uobj->live;
+ 	if (inode && ret)
+-		atomic_inc(&xrcd->usecnt);
++		refcount_inc(&xrcd->usecnt);
+ 
+ 	put_uobj_write(uobj);
+ 
+@@ -946,7 +946,7 @@ void ib_uverbs_dealloc_xrcd(struct ib_uverbs_device *dev,
+ 	struct inode *inode;
+ 
+ 	inode = xrcd->inode;
+-	if (inode && !atomic_dec_and_test(&xrcd->usecnt))
++	if (inode && !refcount_dec_and_test(&xrcd->usecnt))
+ 		return;
+ 
+ 	ib_dealloc_xrcd(xrcd);
+@@ -1017,7 +1017,7 @@ ssize_t ib_uverbs_reg_mr(struct ib_uverbs_file *file,
+ 	mr->device  = pd->device;
+ 	mr->pd      = pd;
+ 	mr->uobject = uobj;
+-	atomic_inc(&pd->usecnt);
++	refcount_inc(&pd->usecnt);
+ 
+ 	uobj->object = mr;
+ 	ret = idr_add_uobj(&ib_uverbs_mr_idr, uobj);
+@@ -1121,9 +1121,9 @@ ssize_t ib_uverbs_rereg_mr(struct ib_uverbs_file *file,
+ 					cmd.access_flags, pd, &udata);
+ 	if (!ret) {
+ 		if (cmd.flags & IB_MR_REREG_PD) {
+-			atomic_inc(&pd->usecnt);
++			refcount_inc(&pd->usecnt);
+ 			mr->pd = pd;
+-			atomic_dec(&old_pd->usecnt);
++			refcount_dec(&old_pd->usecnt);
+ 		}
+ 	} else {
+ 		goto put_uobj_pd;
+@@ -1235,7 +1235,7 @@ ssize_t ib_uverbs_alloc_mw(struct ib_uverbs_file *file,
+ 	mw->device  = pd->device;
+ 	mw->pd      = pd;
+ 	mw->uobject = uobj;
+-	atomic_inc(&pd->usecnt);
++	refcount_inc(&pd->usecnt);
+ 
+ 	uobj->object = mw;
+ 	ret = idr_add_uobj(&ib_uverbs_mw_idr, uobj);
+@@ -1417,7 +1417,7 @@ static struct ib_ucq_object *create_cq(struct ib_uverbs_file *file,
+ 	cq->comp_handler  = ib_uverbs_comp_handler;
+ 	cq->event_handler = ib_uverbs_cq_event_handler;
+ 	cq->cq_context    = ev_file;
+-	atomic_set(&cq->usecnt, 0);
++	refcount_set(&cq->usecnt, 0);
+ 
+ 	obj->uobject.object = cq;
+ 	ret = idr_add_uobj(&ib_uverbs_cq_idr, &obj->uobject);
+@@ -1925,16 +1925,16 @@ static int create_qp(struct ib_uverbs_file *file,
+ 		qp->event_handler = attr.event_handler;
+ 		qp->qp_context	  = attr.qp_context;
+ 		qp->qp_type	  = attr.qp_type;
+-		atomic_set(&qp->usecnt, 0);
+-		atomic_inc(&pd->usecnt);
++		refcount_set(&qp->usecnt, 0);
++		refcount_inc(&pd->usecnt);
+ 		if (attr.send_cq)
+-			atomic_inc(&attr.send_cq->usecnt);
++			refcount_inc(&attr.send_cq->usecnt);
+ 		if (attr.recv_cq)
+-			atomic_inc(&attr.recv_cq->usecnt);
++			refcount_inc(&attr.recv_cq->usecnt);
+ 		if (attr.srq)
+-			atomic_inc(&attr.srq->usecnt);
++			refcount_inc(&attr.srq->usecnt);
+ 		if (ind_tbl)
+-			atomic_inc(&ind_tbl->usecnt);
++			refcount_inc(&ind_tbl->usecnt);
+ 	}
+ 	qp->uobject = &obj->uevent.uobject;
+ 
+@@ -1962,7 +1962,7 @@ static int create_qp(struct ib_uverbs_file *file,
+ 	if (xrcd) {
+ 		obj->uxrcd = container_of(xrcd_uobj, struct ib_uxrcd_object,
+ 					  uobject);
+-		atomic_inc(&obj->uxrcd->refcnt);
++		refcount_inc(&obj->uxrcd->refcnt);
+ 		put_xrcd_read(xrcd_uobj);
+ 	}
+ 
+@@ -2188,7 +2188,7 @@ ssize_t ib_uverbs_open_qp(struct ib_uverbs_file *file,
+ 	}
+ 
+ 	obj->uxrcd = container_of(xrcd_uobj, struct ib_uxrcd_object, uobject);
+-	atomic_inc(&obj->uxrcd->refcnt);
++	refcount_inc(&obj->uxrcd->refcnt);
+ 	put_xrcd_read(xrcd_uobj);
+ 
+ 	mutex_lock(&file->mutex);
+@@ -2519,7 +2519,7 @@ ssize_t ib_uverbs_destroy_qp(struct ib_uverbs_file *file,
+ 		return ret;
+ 
+ 	if (obj->uxrcd)
+-		atomic_dec(&obj->uxrcd->refcnt);
++		refcount_dec(&obj->uxrcd->refcnt);
+ 
+ 	idr_remove_uobj(&ib_uverbs_qp_idr, uobj);
+ 
+@@ -2978,7 +2978,7 @@ ssize_t ib_uverbs_create_ah(struct ib_uverbs_file *file,
+ 
+ 	ah->device  = pd->device;
+ 	ah->pd      = pd;
+-	atomic_inc(&pd->usecnt);
++	refcount_inc(&pd->usecnt);
+ 	ah->uobject  = uobj;
+ 	uobj->object = ah;
+ 
+@@ -3340,9 +3340,9 @@ int ib_uverbs_ex_create_wq(struct ib_uverbs_file *file,
+ 	wq->pd = pd;
+ 	wq->device = pd->device;
+ 	wq->wq_context = wq_init_attr.wq_context;
+-	atomic_set(&wq->usecnt, 0);
+-	atomic_inc(&pd->usecnt);
+-	atomic_inc(&cq->usecnt);
++	refcount_set(&wq->usecnt, 0);
++	refcount_inc(&pd->usecnt);
++	refcount_inc(&cq->usecnt);
+ 	wq->uobject = &obj->uevent.uobject;
+ 	obj->uevent.uobject.object = wq;
+ 	err = idr_add_uobj(&ib_uverbs_wq_idr, &obj->uevent.uobject);
+@@ -3599,10 +3599,10 @@ int ib_uverbs_ex_create_rwq_ind_table(struct ib_uverbs_file *file,
+ 	rwq_ind_tbl->uobject = uobj;
+ 	uobj->object = rwq_ind_tbl;
+ 	rwq_ind_tbl->device = ib_dev;
+-	atomic_set(&rwq_ind_tbl->usecnt, 0);
++	refcount_set(&rwq_ind_tbl->usecnt, 0);
+ 
+ 	for (i = 0; i < num_wq_handles; i++)
+-		atomic_inc(&wqs[i]->usecnt);
++		refcount_inc(&wqs[i]->usecnt);
+ 
+ 	err = idr_add_uobj(&ib_uverbs_rwq_ind_tbl_idr, uobj);
+ 	if (err)
+@@ -3941,7 +3941,7 @@ static int __uverbs_create_xsrq(struct ib_uverbs_file *file,
+ 		}
+ 
+ 		obj->uxrcd = container_of(xrcd_uobj, struct ib_uxrcd_object, uobject);
+-		atomic_inc(&obj->uxrcd->refcnt);
++		refcount_inc(&obj->uxrcd->refcnt);
+ 
+ 		attr.ext.xrc.cq  = idr_read_cq(cmd->cq_handle, file->ucontext, 0);
+ 		if (!attr.ext.xrc.cq) {
+@@ -3982,12 +3982,12 @@ static int __uverbs_create_xsrq(struct ib_uverbs_file *file,
+ 	if (cmd->srq_type == IB_SRQT_XRC) {
+ 		srq->ext.xrc.cq   = attr.ext.xrc.cq;
+ 		srq->ext.xrc.xrcd = attr.ext.xrc.xrcd;
+-		atomic_inc(&attr.ext.xrc.cq->usecnt);
+-		atomic_inc(&attr.ext.xrc.xrcd->usecnt);
++		refcount_inc(&attr.ext.xrc.cq->usecnt);
++		refcount_inc(&attr.ext.xrc.xrcd->usecnt);
+ 	}
+ 
+-	atomic_inc(&pd->usecnt);
+-	atomic_set(&srq->usecnt, 0);
++	refcount_inc(&pd->usecnt);
++	refcount_set(&srq->usecnt, 0);
+ 
+ 	obj->uevent.uobject.object = srq;
+ 	ret = idr_add_uobj(&ib_uverbs_srq_idr, &obj->uevent.uobject);
+@@ -4038,7 +4038,7 @@ static int __uverbs_create_xsrq(struct ib_uverbs_file *file,
+ 
+ err_put_xrcd:
+ 	if (cmd->srq_type == IB_SRQT_XRC) {
+-		atomic_dec(&obj->uxrcd->refcnt);
++		refcount_dec(&obj->uxrcd->refcnt);
+ 		put_uobj_read(xrcd_uobj);
+ 	}
+ 
+@@ -4218,7 +4218,7 @@ ssize_t ib_uverbs_destroy_srq(struct ib_uverbs_file *file,
+ 
+ 	if (srq_type == IB_SRQT_XRC) {
+ 		us = container_of(obj, struct ib_usrq_object, uevent);
+-		atomic_dec(&us->uxrcd->refcnt);
++		refcount_dec(&us->uxrcd->refcnt);
+ 	}
+ 
+ 	idr_remove_uobj(&ib_uverbs_srq_idr, uobj);
+diff --git a/drivers/infiniband/core/uverbs_main.c b/drivers/infiniband/core/uverbs_main.c
+index b3f95d4..1863eab 100644
+--- a/drivers/infiniband/core/uverbs_main.c
++++ b/drivers/infiniband/core/uverbs_main.c
+@@ -150,7 +150,7 @@ int uverbs_dealloc_mw(struct ib_mw *mw)
+ 
+ 	ret = mw->device->dealloc_mw(mw);
+ 	if (!ret)
+-		atomic_dec(&pd->usecnt);
++		refcount_dec(&pd->usecnt);
+ 	return ret;
+ }
+ 
+@@ -366,7 +366,7 @@ static void ib_uverbs_release_file(struct kref *ref)
+ 		module_put(ib_dev->owner);
+ 	srcu_read_unlock(&file->device->disassociate_srcu, srcu_key);
+ 
+-	if (atomic_dec_and_test(&file->device->refcount))
++	if (refcount_dec_and_test(&file->device->refcount))
+ 		ib_uverbs_comp_dev(file->device);
+ 
+ 	kfree(file);
+@@ -932,7 +932,7 @@ static int ib_uverbs_open(struct inode *inode, struct file *filp)
+ 	int srcu_key;
+ 
+ 	dev = container_of(inode->i_cdev, struct ib_uverbs_device, cdev);
+-	if (!atomic_inc_not_zero(&dev->refcount))
++	if (!refcount_inc_not_zero(&dev->refcount))
+ 		return -ENXIO;
+ 
+ 	srcu_key = srcu_read_lock(&dev->disassociate_srcu);
+@@ -986,7 +986,7 @@ static int ib_uverbs_open(struct inode *inode, struct file *filp)
+ err:
+ 	mutex_unlock(&dev->lists_mutex);
+ 	srcu_read_unlock(&dev->disassociate_srcu, srcu_key);
+-	if (atomic_dec_and_test(&dev->refcount))
++	if (refcount_dec_and_test(&dev->refcount))
+ 		ib_uverbs_comp_dev(dev);
+ 
+ 	return ret;
+@@ -1135,7 +1135,7 @@ static void ib_uverbs_add_one(struct ib_device *device)
+ 		return;
+ 	}
+ 
+-	atomic_set(&uverbs_dev->refcount, 1);
++	refcount_set(&uverbs_dev->refcount, 1);
+ 	init_completion(&uverbs_dev->comp);
+ 	uverbs_dev->xrcd_tree = RB_ROOT;
+ 	mutex_init(&uverbs_dev->xrcd_tree_mutex);
+@@ -1200,7 +1200,7 @@ static void ib_uverbs_add_one(struct ib_device *device)
+ 		clear_bit(devnum, overflow_map);
+ 
+ err:
+-	if (atomic_dec_and_test(&uverbs_dev->refcount))
++	if (refcount_dec_and_test(&uverbs_dev->refcount))
+ 		ib_uverbs_comp_dev(uverbs_dev);
+ 	wait_for_completion(&uverbs_dev->comp);
+ 	kobject_put(&uverbs_dev->kobj);
+@@ -1311,7 +1311,7 @@ static void ib_uverbs_remove_one(struct ib_device *device, void *client_data)
+ 		wait_clients = 0;
+ 	}
+ 
+-	if (atomic_dec_and_test(&uverbs_dev->refcount))
++	if (refcount_dec_and_test(&uverbs_dev->refcount))
+ 		ib_uverbs_comp_dev(uverbs_dev);
+ 	if (wait_clients)
+ 		wait_for_completion(&uverbs_dev->comp);
+diff --git a/drivers/infiniband/core/verbs.c b/drivers/infiniband/core/verbs.c
+index 71580cc..11e0cf0 100644
+--- a/drivers/infiniband/core/verbs.c
++++ b/drivers/infiniband/core/verbs.c
+@@ -240,7 +240,7 @@ struct ib_pd *__ib_alloc_pd(struct ib_device *device, unsigned int flags,
+ 	pd->device = device;
+ 	pd->uobject = NULL;
+ 	pd->__internal_mr = NULL;
+-	atomic_set(&pd->usecnt, 0);
++	refcount_set(&pd->usecnt, 0);
+ 	pd->flags = flags;
+ 
+ 	if (device->attrs.device_cap_flags & IB_DEVICE_LOCAL_DMA_LKEY)
+@@ -300,7 +300,7 @@ void ib_dealloc_pd(struct ib_pd *pd)
+ 
+ 	/* uverbs manipulates usecnt with proper locking, while the kabi
+ 	   requires the caller to guarantee we can't race here. */
+-	WARN_ON(atomic_read(&pd->usecnt));
++	WARN_ON(refcount_read(&pd->usecnt));
+ 
+ 	/* Making delalloc_pd a void return is a WIP, no driver should return
+ 	   an error here. */
+@@ -321,7 +321,7 @@ struct ib_ah *ib_create_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr)
+ 		ah->device  = pd->device;
+ 		ah->pd      = pd;
+ 		ah->uobject = NULL;
+-		atomic_inc(&pd->usecnt);
++		refcount_inc(&pd->usecnt);
+ 	}
+ 
+ 	return ah;
+@@ -595,7 +595,7 @@ int ib_destroy_ah(struct ib_ah *ah)
+ 	pd = ah->pd;
+ 	ret = ah->device->destroy_ah(ah);
+ 	if (!ret)
+-		atomic_dec(&pd->usecnt);
++		refcount_dec(&pd->usecnt);
+ 
+ 	return ret;
+ }
+@@ -623,11 +623,11 @@ struct ib_srq *ib_create_srq(struct ib_pd *pd,
+ 		if (srq->srq_type == IB_SRQT_XRC) {
+ 			srq->ext.xrc.xrcd = srq_init_attr->ext.xrc.xrcd;
+ 			srq->ext.xrc.cq   = srq_init_attr->ext.xrc.cq;
+-			atomic_inc(&srq->ext.xrc.xrcd->usecnt);
+-			atomic_inc(&srq->ext.xrc.cq->usecnt);
++			refcount_inc(&srq->ext.xrc.xrcd->usecnt);
++			refcount_inc(&srq->ext.xrc.cq->usecnt);
+ 		}
+-		atomic_inc(&pd->usecnt);
+-		atomic_set(&srq->usecnt, 0);
++		refcount_inc(&pd->usecnt);
++		refcount_set(&srq->usecnt, 0);
+ 	}
+ 
+ 	return srq;
+@@ -660,7 +660,7 @@ int ib_destroy_srq(struct ib_srq *srq)
+ 	struct ib_cq *uninitialized_var(cq);
+ 	int ret;
+ 
+-	if (atomic_read(&srq->usecnt))
++	if (refcount_read(&srq->usecnt))
+ 		return -EBUSY;
+ 
+ 	pd = srq->pd;
+@@ -672,10 +672,10 @@ int ib_destroy_srq(struct ib_srq *srq)
+ 
+ 	ret = srq->device->destroy_srq(srq);
+ 	if (!ret) {
+-		atomic_dec(&pd->usecnt);
++		refcount_dec(&pd->usecnt);
+ 		if (srq_type == IB_SRQT_XRC) {
+-			atomic_dec(&xrcd->usecnt);
+-			atomic_dec(&cq->usecnt);
++			refcount_dec(&xrcd->usecnt);
++			refcount_dec(&cq->usecnt);
+ 		}
+ 	}
+ 
+@@ -716,7 +716,7 @@ static struct ib_qp *__ib_open_qp(struct ib_qp *real_qp,
+ 		return ERR_PTR(-ENOMEM);
+ 
+ 	qp->real_qp = real_qp;
+-	atomic_inc(&real_qp->usecnt);
++	refcount_inc(&real_qp->usecnt);
+ 	qp->device = real_qp->device;
+ 	qp->event_handler = event_handler;
+ 	qp->qp_context = qp_context;
+@@ -763,7 +763,7 @@ static struct ib_qp *ib_create_xrc_qp(struct ib_qp *qp,
+ 	qp->send_cq = qp->recv_cq = NULL;
+ 	qp->srq = NULL;
+ 	qp->xrcd = qp_init_attr->xrcd;
+-	atomic_inc(&qp_init_attr->xrcd->usecnt);
++	refcount_inc(&qp_init_attr->xrcd->usecnt);
+ 	INIT_LIST_HEAD(&qp->open_list);
+ 
+ 	qp = __ib_open_qp(real_qp, qp_init_attr->event_handler,
+@@ -807,7 +807,7 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
+ 	qp->qp_type    = qp_init_attr->qp_type;
+ 	qp->rwq_ind_tbl = qp_init_attr->rwq_ind_tbl;
+ 
+-	atomic_set(&qp->usecnt, 0);
++	refcount_set(&qp->usecnt, 0);
+ 	qp->mrs_used = 0;
+ 	spin_lock_init(&qp->mr_lock);
+ 	INIT_LIST_HEAD(&qp->rdma_mrs);
+@@ -824,21 +824,21 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
+ 	} else {
+ 		qp->recv_cq = qp_init_attr->recv_cq;
+ 		if (qp_init_attr->recv_cq)
+-			atomic_inc(&qp_init_attr->recv_cq->usecnt);
++			refcount_inc(&qp_init_attr->recv_cq->usecnt);
+ 		qp->srq = qp_init_attr->srq;
+ 		if (qp->srq)
+-			atomic_inc(&qp_init_attr->srq->usecnt);
++			refcount_inc(&qp_init_attr->srq->usecnt);
+ 	}
+ 
+ 	qp->pd	    = pd;
+ 	qp->send_cq = qp_init_attr->send_cq;
+ 	qp->xrcd    = NULL;
+ 
+-	atomic_inc(&pd->usecnt);
++	refcount_inc(&pd->usecnt);
+ 	if (qp_init_attr->send_cq)
+-		atomic_inc(&qp_init_attr->send_cq->usecnt);
++		refcount_inc(&qp_init_attr->send_cq->usecnt);
+ 	if (qp_init_attr->rwq_ind_tbl)
+-		atomic_inc(&qp->rwq_ind_tbl->usecnt);
++		refcount_inc(&qp->rwq_ind_tbl->usecnt);
+ 
+ 	if (qp_init_attr->cap.max_rdma_ctxs) {
+ 		ret = rdma_rw_init_mrs(qp, qp_init_attr);
+@@ -1289,7 +1289,7 @@ int ib_close_qp(struct ib_qp *qp)
+ 	list_del(&qp->open_list);
+ 	spin_unlock_irqrestore(&real_qp->device->event_handler_lock, flags);
+ 
+-	atomic_dec(&real_qp->usecnt);
++	refcount_dec(&real_qp->usecnt);
+ 	kfree(qp);
+ 
+ 	return 0;
+@@ -1307,7 +1307,7 @@ static int __ib_destroy_shared_qp(struct ib_qp *qp)
+ 
+ 	mutex_lock(&xrcd->tgt_qp_mutex);
+ 	ib_close_qp(qp);
+-	if (atomic_read(&real_qp->usecnt) == 0)
++	if (refcount_read(&real_qp->usecnt) == 0)
+ 		list_del(&real_qp->xrcd_list);
+ 	else
+ 		real_qp = NULL;
+@@ -1316,7 +1316,7 @@ static int __ib_destroy_shared_qp(struct ib_qp *qp)
+ 	if (real_qp) {
+ 		ret = ib_destroy_qp(real_qp);
+ 		if (!ret)
+-			atomic_dec(&xrcd->usecnt);
++			refcount_dec(&xrcd->usecnt);
+ 		else
+ 			__ib_insert_xrcd_qp(xrcd, real_qp);
+ 	}
+@@ -1334,7 +1334,7 @@ int ib_destroy_qp(struct ib_qp *qp)
+ 
+ 	WARN_ON_ONCE(qp->mrs_used > 0);
+ 
+-	if (atomic_read(&qp->usecnt))
++	if (refcount_read(&qp->usecnt))
+ 		return -EBUSY;
+ 
+ 	if (qp->real_qp != qp)
+@@ -1352,15 +1352,15 @@ int ib_destroy_qp(struct ib_qp *qp)
+ 	ret = qp->device->destroy_qp(qp);
+ 	if (!ret) {
+ 		if (pd)
+-			atomic_dec(&pd->usecnt);
++			refcount_dec(&pd->usecnt);
+ 		if (scq)
+-			atomic_dec(&scq->usecnt);
++			refcount_dec(&scq->usecnt);
+ 		if (rcq)
+-			atomic_dec(&rcq->usecnt);
++			refcount_dec(&rcq->usecnt);
+ 		if (srq)
+-			atomic_dec(&srq->usecnt);
++			refcount_dec(&srq->usecnt);
+ 		if (ind_tbl)
+-			atomic_dec(&ind_tbl->usecnt);
++			refcount_dec(&ind_tbl->usecnt);
+ 	}
+ 
+ 	return ret;
+@@ -1385,7 +1385,7 @@ struct ib_cq *ib_create_cq(struct ib_device *device,
+ 		cq->comp_handler  = comp_handler;
+ 		cq->event_handler = event_handler;
+ 		cq->cq_context    = cq_context;
+-		atomic_set(&cq->usecnt, 0);
++		refcount_set(&cq->usecnt, 0);
+ 	}
+ 
+ 	return cq;
+@@ -1401,7 +1401,7 @@ EXPORT_SYMBOL(ib_modify_cq);
+ 
+ int ib_destroy_cq(struct ib_cq *cq)
+ {
+-	if (atomic_read(&cq->usecnt))
++	if (refcount_read(&cq->usecnt))
+ 		return -EBUSY;
+ 
+ 	return cq->device->destroy_cq(cq);
+@@ -1424,7 +1424,7 @@ int ib_dereg_mr(struct ib_mr *mr)
+ 
+ 	ret = mr->device->dereg_mr(mr);
+ 	if (!ret)
+-		atomic_dec(&pd->usecnt);
++		refcount_dec(&pd->usecnt);
+ 
+ 	return ret;
+ }
+@@ -1456,7 +1456,7 @@ struct ib_mr *ib_alloc_mr(struct ib_pd *pd,
+ 		mr->device  = pd->device;
+ 		mr->pd      = pd;
+ 		mr->uobject = NULL;
+-		atomic_inc(&pd->usecnt);
++		refcount_inc(&pd->usecnt);
+ 		mr->need_inval = false;
+ 	}
+ 
+@@ -1479,7 +1479,7 @@ struct ib_fmr *ib_alloc_fmr(struct ib_pd *pd,
+ 	if (!IS_ERR(fmr)) {
+ 		fmr->device = pd->device;
+ 		fmr->pd     = pd;
+-		atomic_inc(&pd->usecnt);
++		refcount_inc(&pd->usecnt);
+ 	}
+ 
+ 	return fmr;
+@@ -1506,7 +1506,7 @@ int ib_dealloc_fmr(struct ib_fmr *fmr)
+ 	pd = fmr->pd;
+ 	ret = fmr->device->dealloc_fmr(fmr);
+ 	if (!ret)
+-		atomic_dec(&pd->usecnt);
++		refcount_dec(&pd->usecnt);
+ 
+ 	return ret;
+ }
+@@ -1525,7 +1525,7 @@ int ib_attach_mcast(struct ib_qp *qp, union ib_gid *gid, u16 lid)
+ 
+ 	ret = qp->device->attach_mcast(qp, gid, lid);
+ 	if (!ret)
+-		atomic_inc(&qp->usecnt);
++		refcount_inc(&qp->usecnt);
+ 	return ret;
+ }
+ EXPORT_SYMBOL(ib_attach_mcast);
+@@ -1541,7 +1541,7 @@ int ib_detach_mcast(struct ib_qp *qp, union ib_gid *gid, u16 lid)
+ 
+ 	ret = qp->device->detach_mcast(qp, gid, lid);
+ 	if (!ret)
+-		atomic_dec(&qp->usecnt);
++		refcount_dec(&qp->usecnt);
+ 	return ret;
+ }
+ EXPORT_SYMBOL(ib_detach_mcast);
+@@ -1557,7 +1557,7 @@ struct ib_xrcd *ib_alloc_xrcd(struct ib_device *device)
+ 	if (!IS_ERR(xrcd)) {
+ 		xrcd->device = device;
+ 		xrcd->inode = NULL;
+-		atomic_set(&xrcd->usecnt, 0);
++		refcount_set(&xrcd->usecnt, 0);
+ 		mutex_init(&xrcd->tgt_qp_mutex);
+ 		INIT_LIST_HEAD(&xrcd->tgt_qp_list);
+ 	}
+@@ -1571,7 +1571,7 @@ int ib_dealloc_xrcd(struct ib_xrcd *xrcd)
+ 	struct ib_qp *qp;
+ 	int ret;
+ 
+-	if (atomic_read(&xrcd->usecnt))
++	if (refcount_read(&xrcd->usecnt))
+ 		return -EBUSY;
+ 
+ 	while (!list_empty(&xrcd->tgt_qp_list)) {
+@@ -1616,9 +1616,9 @@ struct ib_wq *ib_create_wq(struct ib_pd *pd,
+ 		wq->device = pd->device;
+ 		wq->pd = pd;
+ 		wq->uobject = NULL;
+-		atomic_inc(&pd->usecnt);
+-		atomic_inc(&wq_attr->cq->usecnt);
+-		atomic_set(&wq->usecnt, 0);
++		refcount_inc(&pd->usecnt);
++		refcount_inc(&wq_attr->cq->usecnt);
++		refcount_set(&wq->usecnt, 0);
+ 	}
+ 	return wq;
+ }
+@@ -1634,13 +1634,13 @@ int ib_destroy_wq(struct ib_wq *wq)
+ 	struct ib_cq *cq = wq->cq;
+ 	struct ib_pd *pd = wq->pd;
+ 
+-	if (atomic_read(&wq->usecnt))
++	if (refcount_read(&wq->usecnt))
+ 		return -EBUSY;
+ 
+ 	err = wq->device->destroy_wq(wq);
+ 	if (!err) {
+-		atomic_dec(&pd->usecnt);
+-		atomic_dec(&cq->usecnt);
++		refcount_dec(&pd->usecnt);
++		refcount_dec(&cq->usecnt);
+ 	}
+ 	return err;
+ }
+@@ -1697,10 +1697,10 @@ struct ib_rwq_ind_table *ib_create_rwq_ind_table(struct ib_device *device,
+ 	rwq_ind_table->log_ind_tbl_size = init_attr->log_ind_tbl_size;
+ 	rwq_ind_table->device = device;
+ 	rwq_ind_table->uobject = NULL;
+-	atomic_set(&rwq_ind_table->usecnt, 0);
++	refcount_set(&rwq_ind_table->usecnt, 0);
+ 
+ 	for (i = 0; i < table_size; i++)
+-		atomic_inc(&rwq_ind_table->ind_tbl[i]->usecnt);
++		refcount_inc(&rwq_ind_table->ind_tbl[i]->usecnt);
+ 
+ 	return rwq_ind_table;
+ }
+@@ -1716,13 +1716,13 @@ int ib_destroy_rwq_ind_table(struct ib_rwq_ind_table *rwq_ind_table)
+ 	u32 table_size = (1 << rwq_ind_table->log_ind_tbl_size);
+ 	struct ib_wq **ind_tbl = rwq_ind_table->ind_tbl;
+ 
+-	if (atomic_read(&rwq_ind_table->usecnt))
++	if (refcount_read(&rwq_ind_table->usecnt))
+ 		return -EBUSY;
+ 
+ 	err = rwq_ind_table->device->destroy_rwq_ind_table(rwq_ind_table);
+ 	if (!err) {
+ 		for (i = 0; i < table_size; i++)
+-			atomic_dec(&ind_tbl[i]->usecnt);
++			refcount_dec(&ind_tbl[i]->usecnt);
+ 	}
+ 
+ 	return err;
+@@ -1739,7 +1739,7 @@ struct ib_flow *ib_create_flow(struct ib_qp *qp,
+ 
+ 	flow_id = qp->device->create_flow(qp, flow_attr, domain);
+ 	if (!IS_ERR(flow_id)) {
+-		atomic_inc(&qp->usecnt);
++		refcount_inc(&qp->usecnt);
+ 		flow_id->qp = qp;
+ 	}
+ 	return flow_id;
+@@ -1753,7 +1753,7 @@ int ib_destroy_flow(struct ib_flow *flow_id)
+ 
+ 	err = qp->device->destroy_flow(flow_id);
+ 	if (!err)
+-		atomic_dec(&qp->usecnt);
++		refcount_dec(&qp->usecnt);
+ 	return err;
+ }
+ EXPORT_SYMBOL(ib_destroy_flow);
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_ev.c b/drivers/infiniband/hw/cxgb3/iwch_ev.c
+index abcc9e7..3196a36 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_ev.c
++++ b/drivers/infiniband/hw/cxgb3/iwch_ev.c
+@@ -74,7 +74,7 @@ static void post_qp_event(struct iwch_dev *rnicp, struct iwch_cq *chp,
+ 	       CQE_STATUS(rsp_msg->cqe), CQE_TYPE(rsp_msg->cqe),
+ 	       CQE_WRID_HI(rsp_msg->cqe), CQE_WRID_LOW(rsp_msg->cqe));
+ 
+-	atomic_inc(&qhp->refcnt);
++	refcount_inc(&qhp->refcnt);
+ 	spin_unlock(&rnicp->lock);
+ 
+ 	if (qhp->attr.state == IWCH_QP_STATE_RTS) {
+@@ -99,7 +99,7 @@ static void post_qp_event(struct iwch_dev *rnicp, struct iwch_cq *chp,
+ 	(*chp->ibcq.comp_handler)(&chp->ibcq, chp->ibcq.cq_context);
+ 	spin_unlock_irqrestore(&chp->comp_handler_lock, flag);
+ 
+-	if (atomic_dec_and_test(&qhp->refcnt))
++	if (refcount_dec_and_test(&qhp->refcnt))
+ 		wake_up(&qhp->wait);
+ }
+ 
+@@ -127,7 +127,7 @@ void iwch_ev_dispatch(struct cxio_rdev *rdev_p, struct sk_buff *skb)
+ 		goto out;
+ 	}
+ 	iwch_qp_add_ref(&qhp->ibqp);
+-	atomic_inc(&chp->refcnt);
++	refcount_inc(&chp->refcnt);
+ 	spin_unlock(&rnicp->lock);
+ 
+ 	/*
+@@ -224,7 +224,7 @@ void iwch_ev_dispatch(struct cxio_rdev *rdev_p, struct sk_buff *skb)
+ 		break;
+ 	}
+ done:
+-	if (atomic_dec_and_test(&chp->refcnt))
++	if (refcount_dec_and_test(&chp->refcnt))
+ 	        wake_up(&chp->wait);
+ 	iwch_qp_rem_ref(&qhp->ibqp);
+ out:
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_provider.c b/drivers/infiniband/hw/cxgb3/iwch_provider.c
+index 9d5fe18..041963a 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_provider.c
++++ b/drivers/infiniband/hw/cxgb3/iwch_provider.c
+@@ -135,8 +135,8 @@ static int iwch_destroy_cq(struct ib_cq *ib_cq)
+ 	chp = to_iwch_cq(ib_cq);
+ 
+ 	remove_handle(chp->rhp, &chp->rhp->cqidr, chp->cq.cqid);
+-	atomic_dec(&chp->refcnt);
+-	wait_event(chp->wait, !atomic_read(&chp->refcnt));
++	refcount_dec(&chp->refcnt);
++	wait_event(chp->wait, !refcount_read(&chp->refcnt));
+ 
+ 	cxio_destroy_cq(&chp->rhp->rdev, &chp->cq);
+ 	kfree(chp);
+@@ -201,7 +201,7 @@ static struct ib_cq *iwch_create_cq(struct ib_device *ibdev,
+ 	chp->ibcq.cqe = 1 << chp->cq.size_log2;
+ 	spin_lock_init(&chp->lock);
+ 	spin_lock_init(&chp->comp_handler_lock);
+-	atomic_set(&chp->refcnt, 1);
++	refcount_set(&chp->refcnt, 1);
+ 	init_waitqueue_head(&chp->wait);
+ 	if (insert_handle(rhp, &rhp->cqidr, chp, chp->cq.cqid)) {
+ 		cxio_destroy_cq(&chp->rhp->rdev, &chp->cq);
+@@ -810,8 +810,8 @@ static int iwch_destroy_qp(struct ib_qp *ib_qp)
+ 
+ 	remove_handle(rhp, &rhp->qpidr, qhp->wq.qpid);
+ 
+-	atomic_dec(&qhp->refcnt);
+-	wait_event(qhp->wait, !atomic_read(&qhp->refcnt));
++	refcount_dec(&qhp->refcnt);
++	wait_event(qhp->wait, !refcount_read(&qhp->refcnt));
+ 
+ 	ucontext = ib_qp->uobject ? to_iwch_ucontext(ib_qp->uobject->context)
+ 				  : NULL;
+@@ -921,7 +921,7 @@ static struct ib_qp *iwch_create_qp(struct ib_pd *pd,
+ 
+ 	spin_lock_init(&qhp->lock);
+ 	init_waitqueue_head(&qhp->wait);
+-	atomic_set(&qhp->refcnt, 1);
++	refcount_set(&qhp->refcnt, 1);
+ 
+ 	if (insert_handle(rhp, &rhp->qpidr, qhp, qhp->wq.qpid)) {
+ 		cxio_destroy_qp(&rhp->rdev, &qhp->wq,
+@@ -1024,13 +1024,13 @@ static int iwch_ib_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ void iwch_qp_add_ref(struct ib_qp *qp)
+ {
+ 	PDBG("%s ib_qp %p\n", __func__, qp);
+-	atomic_inc(&(to_iwch_qp(qp)->refcnt));
++	refcount_inc(&(to_iwch_qp(qp)->refcnt));
+ }
+ 
+ void iwch_qp_rem_ref(struct ib_qp *qp)
+ {
+ 	PDBG("%s ib_qp %p\n", __func__, qp);
+-	if (atomic_dec_and_test(&(to_iwch_qp(qp)->refcnt)))
++	if (refcount_dec_and_test(&(to_iwch_qp(qp)->refcnt)))
+ 	        wake_up(&(to_iwch_qp(qp)->wait));
+ }
+ 
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_provider.h b/drivers/infiniband/hw/cxgb3/iwch_provider.h
+index 252c464..f70ba41 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_provider.h
++++ b/drivers/infiniband/hw/cxgb3/iwch_provider.h
+@@ -34,6 +34,7 @@
+ 
+ #include <linux/list.h>
+ #include <linux/spinlock.h>
++#include <linux/refcount.h>
+ #include <rdma/ib_verbs.h>
+ #include <asm/types.h>
+ #include "t3cdev.h"
+@@ -106,7 +107,7 @@ struct iwch_cq {
+ 	struct t3_cq cq;
+ 	spinlock_t lock;
+ 	spinlock_t comp_handler_lock;
+-	atomic_t refcnt;
++	refcount_t refcnt;
+ 	wait_queue_head_t wait;
+ 	u32 __user *user_rptr_addr;
+ };
+@@ -165,7 +166,7 @@ struct iwch_qp {
+ 	struct iwch_qp_attributes attr;
+ 	struct t3_wq wq;
+ 	spinlock_t lock;
+-	atomic_t refcnt;
++	refcount_t refcnt;
+ 	wait_queue_head_t wait;
+ 	enum IWCH_QP_FLAGS flags;
+ 	struct timer_list timer;
+diff --git a/drivers/infiniband/hw/cxgb3/iwch_qp.c b/drivers/infiniband/hw/cxgb3/iwch_qp.c
+index a9194db..17f94a0 100644
+--- a/drivers/infiniband/hw/cxgb3/iwch_qp.c
++++ b/drivers/infiniband/hw/cxgb3/iwch_qp.c
+@@ -731,7 +731,7 @@ static void __flush_qp(struct iwch_qp *qhp, struct iwch_cq *rchp,
+ 
+ 	PDBG("%s qhp %p rchp %p schp %p\n", __func__, qhp, rchp, schp);
+ 	/* take a ref on the qhp since we must release the lock */
+-	atomic_inc(&qhp->refcnt);
++	refcount_inc(&qhp->refcnt);
+ 	spin_unlock(&qhp->lock);
+ 
+ 	/* locking hierarchy: cq lock first, then qp lock. */
+@@ -763,7 +763,7 @@ static void __flush_qp(struct iwch_qp *qhp, struct iwch_cq *rchp,
+ 	}
+ 
+ 	/* deref */
+-	if (atomic_dec_and_test(&qhp->refcnt))
++	if (refcount_dec_and_test(&qhp->refcnt))
+ 	        wake_up(&qhp->wait);
+ 
+ 	spin_lock(&qhp->lock);
+diff --git a/drivers/infiniband/hw/cxgb4/cq.c b/drivers/infiniband/hw/cxgb4/cq.c
+index 19c6477..cab3df3 100644
+--- a/drivers/infiniband/hw/cxgb4/cq.c
++++ b/drivers/infiniband/hw/cxgb4/cq.c
+@@ -859,8 +859,8 @@ int c4iw_destroy_cq(struct ib_cq *ib_cq)
+ 	chp = to_c4iw_cq(ib_cq);
+ 
+ 	remove_handle(chp->rhp, &chp->rhp->cqidr, chp->cq.cqid);
+-	atomic_dec(&chp->refcnt);
+-	wait_event(chp->wait, !atomic_read(&chp->refcnt));
++	refcount_dec(&chp->refcnt);
++	wait_event(chp->wait, !refcount_read(&chp->refcnt));
+ 
+ 	ucontext = ib_cq->uobject ? to_c4iw_ucontext(ib_cq->uobject->context)
+ 				  : NULL;
+@@ -954,7 +954,7 @@ struct ib_cq *c4iw_create_cq(struct ib_device *ibdev,
+ 	chp->ibcq.cqe = entries - 2;
+ 	spin_lock_init(&chp->lock);
+ 	spin_lock_init(&chp->comp_handler_lock);
+-	atomic_set(&chp->refcnt, 1);
++	refcount_set(&chp->refcnt, 1);
+ 	init_waitqueue_head(&chp->wait);
+ 	ret = insert_handle(rhp, &rhp->cqidr, chp, chp->cq.cqid);
+ 	if (ret)
+diff --git a/drivers/infiniband/hw/cxgb4/ev.c b/drivers/infiniband/hw/cxgb4/ev.c
+index bdfac2c..e95609d 100644
+--- a/drivers/infiniband/hw/cxgb4/ev.c
++++ b/drivers/infiniband/hw/cxgb4/ev.c
+@@ -151,7 +151,7 @@ void c4iw_ev_dispatch(struct c4iw_dev *dev, struct t4_cqe *err_cqe)
+ 	}
+ 
+ 	c4iw_qp_add_ref(&qhp->ibqp);
+-	atomic_inc(&chp->refcnt);
++	refcount_inc(&chp->refcnt);
+ 	spin_unlock_irq(&dev->lock);
+ 
+ 	/* Bad incoming write */
+@@ -213,7 +213,7 @@ void c4iw_ev_dispatch(struct c4iw_dev *dev, struct t4_cqe *err_cqe)
+ 		break;
+ 	}
+ done:
+-	if (atomic_dec_and_test(&chp->refcnt))
++	if (refcount_dec_and_test(&chp->refcnt))
+ 		wake_up(&chp->wait);
+ 	c4iw_qp_rem_ref(&qhp->ibqp);
+ out:
+@@ -228,13 +228,13 @@ int c4iw_ev_handler(struct c4iw_dev *dev, u32 qid)
+ 	spin_lock_irqsave(&dev->lock, flag);
+ 	chp = get_chp(dev, qid);
+ 	if (chp) {
+-		atomic_inc(&chp->refcnt);
++		refcount_inc(&chp->refcnt);
+ 		spin_unlock_irqrestore(&dev->lock, flag);
+ 		t4_clear_cq_armed(&chp->cq);
+ 		spin_lock_irqsave(&chp->comp_handler_lock, flag);
+ 		(*chp->ibcq.comp_handler)(&chp->ibcq, chp->ibcq.cq_context);
+ 		spin_unlock_irqrestore(&chp->comp_handler_lock, flag);
+-		if (atomic_dec_and_test(&chp->refcnt))
++		if (refcount_dec_and_test(&chp->refcnt))
+ 			wake_up(&chp->wait);
+ 	} else {
+ 		PDBG("%s unknown cqid 0x%x\n", __func__, qid);
+diff --git a/drivers/infiniband/hw/cxgb4/iw_cxgb4.h b/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
+index 4dc1415..a236a90 100644
+--- a/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
++++ b/drivers/infiniband/hw/cxgb4/iw_cxgb4.h
+@@ -45,6 +45,7 @@
+ #include <linux/kref.h>
+ #include <linux/timer.h>
+ #include <linux/io.h>
++#include <linux/refcount.h>
+ 
+ #include <asm/byteorder.h>
+ 
+@@ -419,7 +420,7 @@ struct c4iw_cq {
+ 	struct t4_cq cq;
+ 	spinlock_t lock;
+ 	spinlock_t comp_handler_lock;
+-	atomic_t refcnt;
++	refcount_t refcnt;
+ 	wait_queue_head_t wait;
+ };
+ 
+diff --git a/drivers/infiniband/hw/hfi1/file_ops.c b/drivers/infiniband/hw/hfi1/file_ops.c
+index bd786b7..ef05549 100644
+--- a/drivers/infiniband/hw/hfi1/file_ops.c
++++ b/drivers/infiniband/hw/hfi1/file_ops.c
+@@ -185,7 +185,7 @@ static int hfi1_file_open(struct inode *inode, struct file *fp)
+ 	if (fd) {
+ 		fd->rec_cpu_num = -1; /* no cpu affinity by default */
+ 		fd->mm = current->mm;
+-		atomic_inc(&fd->mm->mm_count);
++		refcount_inc(&fd->mm->mm_count);
+ 		fp->private_data = fd;
+ 	} else {
+ 		fp->private_data = NULL;
+diff --git a/drivers/infiniband/hw/hfi1/qp.c b/drivers/infiniband/hw/hfi1/qp.c
+index d752d67..b8bc0e6 100644
+--- a/drivers/infiniband/hw/hfi1/qp.c
++++ b/drivers/infiniband/hw/hfi1/qp.c
+@@ -748,7 +748,7 @@ void qp_iter_print(struct seq_file *s, struct qp_iter *iter)
+ 		   iter->n,
+ 		   qp_idle(qp) ? "I" : "B",
+ 		   qp->ibqp.qp_num,
+-		   atomic_read(&qp->refcount),
++		   refcount_read(&qp->refcount),
+ 		   qp_type_str[qp->ibqp.qp_type],
+ 		   qp->state,
+ 		   wqe ? wqe->wr.opcode : 0,
+diff --git a/drivers/infiniband/hw/hfi1/user_sdma.c b/drivers/infiniband/hw/hfi1/user_sdma.c
+index 7d22f8e..fa5e5c9 100644
+--- a/drivers/infiniband/hw/hfi1/user_sdma.c
++++ b/drivers/infiniband/hw/hfi1/user_sdma.c
+@@ -60,6 +60,7 @@
+ #include <linux/mmu_context.h>
+ #include <linux/module.h>
+ #include <linux/vmalloc.h>
++#include <linux/refcount.h>
+ 
+ #include "hfi.h"
+ #include "sdma.h"
+@@ -190,7 +191,7 @@ struct user_sdma_iovec {
+ struct sdma_mmu_node {
+ 	struct mmu_rb_node rb;
+ 	struct hfi1_user_sdma_pkt_q *pq;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct page **pages;
+ 	unsigned npages;
+ };
+@@ -1178,7 +1179,7 @@ static int pin_vector_pages(struct user_sdma_request *req,
+ 
+ 		node->rb.addr = (unsigned long)iovec->iov.iov_base;
+ 		node->pq = pq;
+-		atomic_set(&node->refcount, 0);
++		refcount_set(&node->refcount, 0);
+ 	}
+ 
+ 	npages = num_user_pages(&iovec->iov);
+@@ -1602,7 +1603,7 @@ static void user_sdma_free_request(struct user_sdma_request *req, bool unpin)
+ 				hfi1_mmu_rb_remove(req->pq->handler,
+ 						   &node->rb);
+ 			else
+-				atomic_dec(&node->refcount);
++				refcount_dec(&node->refcount);
+ 		}
+ 	}
+ 	kfree(req->tids);
+@@ -1634,7 +1635,7 @@ static int sdma_rb_insert(void *arg, struct mmu_rb_node *mnode)
+ 	struct sdma_mmu_node *node =
+ 		container_of(mnode, struct sdma_mmu_node, rb);
+ 
+-	atomic_inc(&node->refcount);
++	refcount_inc(&node->refcount);
+ 	return 0;
+ }
+ 
+@@ -1651,7 +1652,7 @@ static int sdma_rb_evict(void *arg, struct mmu_rb_node *mnode,
+ 	struct evict_data *evict_data = evict_arg;
+ 
+ 	/* is this node still being used? */
+-	if (atomic_read(&node->refcount))
++	if (refcount_read(&node->refcount))
+ 		return 0; /* keep this node */
+ 
+ 	/* this node will be evicted, add its pages to our count */
+@@ -1681,7 +1682,7 @@ static int sdma_rb_invalidate(void *arg, struct mmu_rb_node *mnode)
+ 	struct sdma_mmu_node *node =
+ 		container_of(mnode, struct sdma_mmu_node, rb);
+ 
+-	if (!atomic_read(&node->refcount))
++	if (!refcount_read(&node->refcount))
+ 		return 1;
+ 	return 0;
+ }
+diff --git a/drivers/infiniband/hw/hns/hns_roce_cq.c b/drivers/infiniband/hw/hns/hns_roce_cq.c
+index 589496c..3605adb 100644
+--- a/drivers/infiniband/hw/hns/hns_roce_cq.c
++++ b/drivers/infiniband/hw/hns/hns_roce_cq.c
+@@ -152,7 +152,7 @@ static int hns_roce_cq_alloc(struct hns_roce_dev *hr_dev, int nent,
+ 	hr_cq->cons_index = 0;
+ 	hr_cq->uar = hr_uar;
+ 
+-	atomic_set(&hr_cq->refcount, 1);
++	refcount_set(&hr_cq->refcount, 1);
+ 	init_completion(&hr_cq->free);
+ 
+ 	return 0;
+@@ -194,7 +194,7 @@ void hns_roce_free_cq(struct hns_roce_dev *hr_dev, struct hns_roce_cq *hr_cq)
+ 	synchronize_irq(hr_dev->eq_table.eq[hr_cq->vector].irq);
+ 
+ 	/* wait for all interrupt processed */
+-	if (atomic_dec_and_test(&hr_cq->refcount))
++	if (refcount_dec_and_test(&hr_cq->refcount))
+ 		complete(&hr_cq->free);
+ 	wait_for_completion(&hr_cq->free);
+ 
+@@ -436,7 +436,7 @@ void hns_roce_cq_event(struct hns_roce_dev *hr_dev, u32 cqn, int event_type)
+ 	cq = radix_tree_lookup(&cq_table->tree,
+ 			       cqn & (hr_dev->caps.num_cqs - 1));
+ 	if (cq)
+-		atomic_inc(&cq->refcount);
++		refcount_inc(&cq->refcount);
+ 
+ 	if (!cq) {
+ 		dev_warn(dev, "Async event for bogus CQ %08x\n", cqn);
+@@ -445,7 +445,7 @@ void hns_roce_cq_event(struct hns_roce_dev *hr_dev, u32 cqn, int event_type)
+ 
+ 	cq->event(cq, (enum hns_roce_event)event_type);
+ 
+-	if (atomic_dec_and_test(&cq->refcount))
++	if (refcount_dec_and_test(&cq->refcount))
+ 		complete(&cq->free);
+ }
+ 
+diff --git a/drivers/infiniband/hw/hns/hns_roce_device.h b/drivers/infiniband/hw/hns/hns_roce_device.h
+index 1a6cb5d..23aebb6 100644
+--- a/drivers/infiniband/hw/hns/hns_roce_device.h
++++ b/drivers/infiniband/hw/hns/hns_roce_device.h
+@@ -33,6 +33,7 @@
+ #ifndef _HNS_ROCE_DEVICE_H
+ #define _HNS_ROCE_DEVICE_H
+ 
++#include <linux/refcount.h>
+ #include <rdma/ib_verbs.h>
+ 
+ #define DRV_NAME "hns_roce"
+@@ -310,7 +311,7 @@ struct hns_roce_cq {
+ 	u16				*tptr_addr;
+ 	unsigned long			cqn;
+ 	u32				vector;
+-	atomic_t			refcount;
++	refcount_t			refcount;
+ 	struct completion		free;
+ };
+ 
+@@ -427,7 +428,7 @@ struct hns_roce_qp {
+ 					 enum hns_roce_event);
+ 	unsigned long		qpn;
+ 
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct completion	free;
+ };
+ 
+diff --git a/drivers/infiniband/hw/hns/hns_roce_qp.c b/drivers/infiniband/hw/hns/hns_roce_qp.c
+index f036f32..83bcf40 100644
+--- a/drivers/infiniband/hw/hns/hns_roce_qp.c
++++ b/drivers/infiniband/hw/hns/hns_roce_qp.c
+@@ -51,7 +51,7 @@ void hns_roce_qp_event(struct hns_roce_dev *hr_dev, u32 qpn, int event_type)
+ 
+ 	qp = __hns_roce_qp_lookup(hr_dev, qpn);
+ 	if (qp)
+-		atomic_inc(&qp->refcount);
++		refcount_inc(&qp->refcount);
+ 
+ 	spin_unlock(&qp_table->lock);
+ 
+@@ -62,7 +62,7 @@ void hns_roce_qp_event(struct hns_roce_dev *hr_dev, u32 qpn, int event_type)
+ 
+ 	qp->event(qp, (enum hns_roce_event)event_type);
+ 
+-	if (atomic_dec_and_test(&qp->refcount))
++	if (refcount_dec_and_test(&qp->refcount))
+ 		complete(&qp->free);
+ }
+ 
+@@ -157,7 +157,7 @@ static int hns_roce_gsi_qp_alloc(struct hns_roce_dev *hr_dev, unsigned long qpn,
+ 		goto err_put_irrl;
+ 	}
+ 
+-	atomic_set(&hr_qp->refcount, 1);
++	refcount_set(&hr_qp->refcount, 1);
+ 	init_completion(&hr_qp->free);
+ 
+ 	return 0;
+@@ -202,7 +202,7 @@ static int hns_roce_qp_alloc(struct hns_roce_dev *hr_dev, unsigned long qpn,
+ 		goto err_put_irrl;
+ 	}
+ 
+-	atomic_set(&hr_qp->refcount, 1);
++	refcount_set(&hr_qp->refcount, 1);
+ 	init_completion(&hr_qp->free);
+ 
+ 	return 0;
+@@ -232,7 +232,7 @@ void hns_roce_qp_free(struct hns_roce_dev *hr_dev, struct hns_roce_qp *hr_qp)
+ {
+ 	struct hns_roce_qp_table *qp_table = &hr_dev->qp_table;
+ 
+-	if (atomic_dec_and_test(&hr_qp->refcount))
++	if (refcount_dec_and_test(&hr_qp->refcount))
+ 		complete(&hr_qp->free);
+ 	wait_for_completion(&hr_qp->free);
+ 
+diff --git a/drivers/infiniband/hw/i40iw/i40iw.h b/drivers/infiniband/hw/i40iw/i40iw.h
+index da2eb5a..0be1b50 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw.h
++++ b/drivers/infiniband/hw/i40iw/i40iw.h
+@@ -45,6 +45,7 @@
+ #include <linux/slab.h>
+ #include <linux/io.h>
+ #include <linux/crc32c.h>
++#include <linux/refcount.h>
+ #include <rdma/ib_smi.h>
+ #include <rdma/ib_verbs.h>
+ #include <rdma/ib_pack.h>
+@@ -140,7 +141,7 @@ struct i40iw_cqp_request {
+ 	struct cqp_commands_info info;
+ 	wait_queue_head_t waitq;
+ 	struct list_head list;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	void (*callback_fcn)(struct i40iw_cqp_request*, u32);
+ 	void *param;
+ 	struct i40iw_cqp_compl_info compl_info;
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_cm.c b/drivers/infiniband/hw/i40iw/i40iw_cm.c
+index 95a0586..6839ee6 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_cm.c
++++ b/drivers/infiniband/hw/i40iw/i40iw_cm.c
+@@ -76,7 +76,7 @@ void i40iw_free_sqbuf(struct i40iw_sc_vsi *vsi, void *bufp)
+ 	struct i40iw_puda_buf *buf = (struct i40iw_puda_buf *)bufp;
+ 	struct i40iw_puda_rsrc *ilq = vsi->ilq;
+ 
+-	if (!atomic_dec_return(&buf->refcount))
++	if (refcount_dec_and_test(&buf->refcount))
+ 		i40iw_puda_ret_bufpool(ilq, buf);
+ }
+ 
+@@ -532,7 +532,7 @@ static struct i40iw_puda_buf *i40iw_form_cm_frame(struct i40iw_cm_node *cm_node,
+ 	if (pdata && pdata->addr)
+ 		memcpy(buf, pdata->addr, pdata->size);
+ 
+-	atomic_set(&sqbuf->refcount, 1);
++	refcount_set(&sqbuf->refcount, 1);
+ 
+ 	return sqbuf;
+ }
+@@ -1097,7 +1097,7 @@ int i40iw_schedule_cm_timer(struct i40iw_cm_node *cm_node,
+ 		spin_unlock_irqrestore(&cm_node->retrans_list_lock, flags);
+ 		new_send->timetosend = jiffies + I40IW_RETRY_TIMEOUT;
+ 
+-		atomic_inc(&sqbuf->refcount);
++		refcount_inc(&sqbuf->refcount);
+ 		i40iw_puda_send_buf(vsi->ilq, sqbuf);
+ 		if (!send_retrans) {
+ 			i40iw_cleanup_retrans_entry(cm_node);
+@@ -1273,7 +1273,7 @@ static void i40iw_cm_timer_tick(unsigned long pass)
+ 
+ 		vsi = &cm_node->iwdev->vsi;
+ 		dev = cm_node->dev;
+-		atomic_inc(&send_entry->sqbuf->refcount);
++		refcount_inc(&send_entry->sqbuf->refcount);
+ 		i40iw_puda_send_buf(vsi->ilq, send_entry->sqbuf);
+ 		spin_lock_irqsave(&cm_node->retrans_list_lock, flags);
+ 		if (send_entry->send_retrans) {
+@@ -1868,7 +1868,7 @@ static int i40iw_dec_refcnt_listen(struct i40iw_cm_core *cm_core,
+ 		}
+ 	}
+ 
+-	if (!atomic_dec_return(&listener->ref_count)) {
++	if (atomic_dec_and_test(&listener->ref_count)) {
+ 		spin_lock_irqsave(&cm_core->listen_list_lock, flags);
+ 		list_del(&listener->list);
+ 		spin_unlock_irqrestore(&cm_core->listen_list_lock, flags);
+@@ -2236,7 +2236,7 @@ static void i40iw_rem_ref_cm_node(struct i40iw_cm_node *cm_node)
+ 	unsigned long flags;
+ 
+ 	spin_lock_irqsave(&cm_node->cm_core->ht_lock, flags);
+-	if (atomic_dec_return(&cm_node->ref_count)) {
++	if (!atomic_dec_and_test(&cm_node->ref_count)) {
+ 		spin_unlock_irqrestore(&cm_node->cm_core->ht_lock, flags);
+ 		return;
+ 	}
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_main.c b/drivers/infiniband/hw/i40iw/i40iw_main.c
+index 2728af3..53549b4 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_main.c
++++ b/drivers/infiniband/hw/i40iw/i40iw_main.c
+@@ -1113,7 +1113,7 @@ static enum i40iw_status_code i40iw_alloc_local_mac_ipaddr_entry(struct i40iw_de
+ 	}
+ 
+ 	/* increment refcount, because we need the cqp request ret value */
+-	atomic_inc(&cqp_request->refcount);
++	refcount_inc(&cqp_request->refcount);
+ 
+ 	cqp_info = &cqp_request->info;
+ 	cqp_info->cqp_cmd = OP_ALLOC_LOCAL_MAC_IPADDR_ENTRY;
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_puda.h b/drivers/infiniband/hw/i40iw/i40iw_puda.h
+index dba05ce..0f8f06a 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_puda.h
++++ b/drivers/infiniband/hw/i40iw/i40iw_puda.h
+@@ -35,6 +35,8 @@
+ #ifndef I40IW_PUDA_H
+ #define I40IW_PUDA_H
+ 
++#include <linux/refcount.h>
++
+ #define I40IW_IEQ_MPA_FRAMING 6
+ 
+ struct i40iw_sc_dev;
+@@ -90,7 +92,7 @@ struct i40iw_puda_buf {
+ 	u8 tcphlen;		/* tcp length in bytes */
+ 	u8 maclen;		/* mac length in bytes */
+ 	u32 totallen;		/* machlen+iphlen+tcphlen+datalen */
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	u8 hdrlen;
+ 	bool ipv4;
+ 	u32 seqnum;
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_utils.c b/drivers/infiniband/hw/i40iw/i40iw_utils.c
+index 0f5d43d..7155f17 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_utils.c
++++ b/drivers/infiniband/hw/i40iw/i40iw_utils.c
+@@ -314,10 +314,10 @@ struct i40iw_cqp_request *i40iw_get_cqp_request(struct i40iw_cqp *cqp, bool wait
+ 	}
+ 
+ 	if (wait) {
+-		atomic_set(&cqp_request->refcount, 2);
++		refcount_set(&cqp_request->refcount, 2);
+ 		cqp_request->waiting = true;
+ 	} else {
+-		atomic_set(&cqp_request->refcount, 1);
++		refcount_set(&cqp_request->refcount, 1);
+ 	}
+ 	return cqp_request;
+ }
+@@ -352,7 +352,7 @@ void i40iw_free_cqp_request(struct i40iw_cqp *cqp, struct i40iw_cqp_request *cqp
+ void i40iw_put_cqp_request(struct i40iw_cqp *cqp,
+ 			   struct i40iw_cqp_request *cqp_request)
+ {
+-	if (atomic_dec_and_test(&cqp_request->refcount))
++	if (refcount_dec_and_test(&cqp_request->refcount))
+ 		i40iw_free_cqp_request(cqp, cqp_request);
+ }
+ 
+@@ -497,7 +497,7 @@ void i40iw_add_ref(struct ib_qp *ibqp)
+ {
+ 	struct i40iw_qp *iwqp = (struct i40iw_qp *)ibqp;
+ 
+-	atomic_inc(&iwqp->refcount);
++	refcount_inc(&iwqp->refcount);
+ }
+ 
+ /**
+@@ -517,7 +517,7 @@ void i40iw_rem_ref(struct ib_qp *ibqp)
+ 	iwqp = to_iwqp(ibqp);
+ 	iwdev = iwqp->iwdev;
+ 	spin_lock_irqsave(&iwdev->qptable_lock, flags);
+-	if (!atomic_dec_and_test(&iwqp->refcount)) {
++	if (!refcount_dec_and_test(&iwqp->refcount)) {
+ 		spin_unlock_irqrestore(&iwdev->qptable_lock, flags);
+ 		return;
+ 	}
+@@ -931,7 +931,7 @@ static void i40iw_cqp_manage_hmc_fcn_callback(struct i40iw_cqp_request *cqp_requ
+ 
+ 	if (hmcfcninfo && hmcfcninfo->callback_fcn) {
+ 		i40iw_debug(&iwdev->sc_dev, I40IW_DEBUG_HMC, "%s1\n", __func__);
+-		atomic_inc(&cqp_request->refcount);
++		refcount_inc(&cqp_request->refcount);
+ 		work = &iwdev->virtchnl_w[hmcfcninfo->iw_vf_idx];
+ 		work->cqp_request = cqp_request;
+ 		INIT_WORK(&work->work, i40iw_cqp_manage_hmc_fcn_worker);
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_verbs.c b/drivers/infiniband/hw/i40iw/i40iw_verbs.c
+index 29e97df..fd1073a 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_verbs.c
++++ b/drivers/infiniband/hw/i40iw/i40iw_verbs.c
+@@ -264,7 +264,7 @@ static void i40iw_alloc_push_page(struct i40iw_device *iwdev, struct i40iw_sc_qp
+ 	if (!cqp_request)
+ 		return;
+ 
+-	atomic_inc(&cqp_request->refcount);
++	refcount_inc(&cqp_request->refcount);
+ 
+ 	cqp_info = &cqp_request->info;
+ 	cqp_info->cqp_cmd = OP_MANAGE_PUSH_PAGE;
+diff --git a/drivers/infiniband/hw/i40iw/i40iw_verbs.h b/drivers/infiniband/hw/i40iw/i40iw_verbs.h
+index 07c3fec..14f70c3 100644
+--- a/drivers/infiniband/hw/i40iw/i40iw_verbs.h
++++ b/drivers/infiniband/hw/i40iw/i40iw_verbs.h
+@@ -35,6 +35,8 @@
+ #ifndef I40IW_VERBS_H
+ #define I40IW_VERBS_H
+ 
++#include <linux/refcount.h>
++
+ struct i40iw_ucontext {
+ 	struct ib_ucontext ibucontext;
+ 	struct i40iw_device *iwdev;
+@@ -140,7 +142,7 @@ struct i40iw_qp {
+ 	struct i40iw_qp_host_ctx_info ctx_info;
+ 	struct i40iwarp_offload_info iwarp_info;
+ 	void *allocated_buffer;
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct iw_cm_id *cm_id;
+ 	void *cm_node;
+ 	struct ib_mr *lsmm_mr;
+diff --git a/drivers/infiniband/hw/mlx4/mcg.c b/drivers/infiniband/hw/mlx4/mcg.c
+index e010fe4..82c866d 100644
+--- a/drivers/infiniband/hw/mlx4/mcg.c
++++ b/drivers/infiniband/hw/mlx4/mcg.c
+@@ -38,6 +38,7 @@
+ #include <linux/mlx4/cmd.h>
+ #include <linux/rbtree.h>
+ #include <linux/delay.h>
++#include <linux/refcount.h>
+ 
+ #include "mlx4_ib.h"
+ 
+@@ -121,7 +122,7 @@ struct mcast_group {
+ 	   2. Each invocation of the worker thread
+ 	   3. Membership of the port at the SA
+ 	*/
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 
+ 	/* delayed work to clean pending SM request */
+ 	struct delayed_work	timeout_work;
+@@ -138,9 +139,9 @@ struct mcast_req {
+ };
+ 
+ 
+-#define safe_atomic_dec(ref) \
++#define safe_refcount_dec(ref) \
+ 	do {\
+-		if (atomic_dec_and_test(ref)) \
++		if (refcount_dec_and_test(ref)) \
+ 			mcg_warn_group(group, "did not expect to reach zero\n"); \
+ 	} while (0)
+ 
+@@ -441,11 +442,11 @@ static int release_group(struct mcast_group *group, int from_timeout_handler)
+ 
+ 	mutex_lock(&ctx->mcg_table_lock);
+ 	mutex_lock(&group->lock);
+-	if (atomic_dec_and_test(&group->refcount)) {
++	if (refcount_dec_and_test(&group->refcount)) {
+ 		if (!from_timeout_handler) {
+ 			if (group->state != MCAST_IDLE &&
+ 			    !cancel_delayed_work(&group->timeout_work)) {
+-				atomic_inc(&group->refcount);
++				refcount_inc(&group->refcount);
+ 				mutex_unlock(&group->lock);
+ 				mutex_unlock(&ctx->mcg_table_lock);
+ 				return 0;
+@@ -574,9 +575,9 @@ static void mlx4_ib_mcg_timeout_handler(struct work_struct *work)
+ 	} else
+ 		mcg_warn_group(group, "invalid state %s\n", get_state_string(group->state));
+ 	group->state = MCAST_IDLE;
+-	atomic_inc(&group->refcount);
++	refcount_inc(&group->refcount);
+ 	if (!queue_work(group->demux->mcg_wq, &group->work))
+-		safe_atomic_dec(&group->refcount);
++		safe_refcount_dec(&group->refcount);
+ 
+ 	mutex_unlock(&group->lock);
+ }
+@@ -775,7 +776,7 @@ static struct mcast_group *search_relocate_mgid0_group(struct mlx4_ib_demux_ctx
+ 					return NULL;
+ 				}
+ 
+-				atomic_inc(&group->refcount);
++				refcount_inc(&group->refcount);
+ 				add_sysfs_port_mcg_attr(ctx->dev, ctx->port, &group->dentry.attr);
+ 				mutex_unlock(&group->lock);
+ 				mutex_unlock(&ctx->mcg_table_lock);
+@@ -863,7 +864,7 @@ static struct mcast_group *acquire_group(struct mlx4_ib_demux_ctx *ctx,
+ 	add_sysfs_port_mcg_attr(ctx->dev, ctx->port, &group->dentry.attr);
+ 
+ found:
+-	atomic_inc(&group->refcount);
++	refcount_inc(&group->refcount);
+ 	return group;
+ }
+ 
+@@ -871,13 +872,13 @@ static void queue_req(struct mcast_req *req)
+ {
+ 	struct mcast_group *group = req->group;
+ 
+-	atomic_inc(&group->refcount); /* for the request */
+-	atomic_inc(&group->refcount); /* for scheduling the work */
++	refcount_inc(&group->refcount); /* for the request */
++	refcount_inc(&group->refcount); /* for scheduling the work */
+ 	list_add_tail(&req->group_list, &group->pending_list);
+ 	list_add_tail(&req->func_list, &group->func[req->func].pending);
+ 	/* calls mlx4_ib_mcg_work_handler */
+ 	if (!queue_work(group->demux->mcg_wq, &group->work))
+-		safe_atomic_dec(&group->refcount);
++		safe_refcount_dec(&group->refcount);
+ }
+ 
+ int mlx4_ib_mcg_demux_handler(struct ib_device *ibdev, int port, int slave,
+@@ -911,9 +912,9 @@ int mlx4_ib_mcg_demux_handler(struct ib_device *ibdev, int port, int slave,
+ 		group->prev_state = group->state;
+ 		group->state = MCAST_RESP_READY;
+ 		/* calls mlx4_ib_mcg_work_handler */
+-		atomic_inc(&group->refcount);
++		refcount_inc(&group->refcount);
+ 		if (!queue_work(ctx->mcg_wq, &group->work))
+-			safe_atomic_dec(&group->refcount);
++			safe_refcount_dec(&group->refcount);
+ 		mutex_unlock(&group->lock);
+ 		release_group(group, 0);
+ 		return 1; /* consumed */
+@@ -1014,7 +1015,7 @@ static ssize_t sysfs_show_group(struct device *dev,
+ 	len += sprintf(buf + len, "%1d [%02d,%02d,%02d] %4d %4s %5s     ",
+ 			group->rec.scope_join_state & 0xf,
+ 			group->members[2], group->members[1], group->members[0],
+-			atomic_read(&group->refcount),
++			refcount_read(&group->refcount),
+ 			pending_str,
+ 			state_str);
+ 	for (f = 0; f < MAX_VFS; ++f)
+@@ -1101,8 +1102,8 @@ static void _mlx4_ib_mcg_port_cleanup(struct mlx4_ib_demux_ctx *ctx, int destroy
+ 	mutex_lock(&ctx->mcg_table_lock);
+ 	while ((p = rb_first(&ctx->mcg_table)) != NULL) {
+ 		group = rb_entry(p, struct mcast_group, node);
+-		if (atomic_read(&group->refcount))
+-			mcg_warn_group(group, "group refcount %d!!! (pointer %p)\n", atomic_read(&group->refcount), group);
++		if (refcount_read(&group->refcount))
++			mcg_warn_group(group, "group refcount %d!!! (pointer %p)\n", refcount_read(&group->refcount), group);
+ 
+ 		force_clean_group(group);
+ 	}
+@@ -1182,7 +1183,7 @@ static void clear_pending_reqs(struct mcast_group *group, int vf)
+ 			list_del(&req->group_list);
+ 			list_del(&req->func_list);
+ 			kfree(req);
+-			atomic_dec(&group->refcount);
++			refcount_dec(&group->refcount);
+ 		}
+ 	}
+ 
+@@ -1230,7 +1231,7 @@ void clean_vf_mcast(struct mlx4_ib_demux_ctx *ctx, int slave)
+ 	for (p = rb_first(&ctx->mcg_table); p; p = rb_next(p)) {
+ 		group = rb_entry(p, struct mcast_group, node);
+ 		mutex_lock(&group->lock);
+-		if (atomic_read(&group->refcount)) {
++		if (refcount_read(&group->refcount)) {
+ 			/* clear pending requests of this VF */
+ 			clear_pending_reqs(group, slave);
+ 			push_deleteing_req(group, slave);
+diff --git a/drivers/infiniband/hw/mlx5/cq.c b/drivers/infiniband/hw/mlx5/cq.c
+index b3ef47c..5c45cea 100644
+--- a/drivers/infiniband/hw/mlx5/cq.c
++++ b/drivers/infiniband/hw/mlx5/cq.c
+@@ -188,7 +188,7 @@ static void handle_responder(struct ib_wc *wc, struct mlx5_cqe64 *cqe,
+ 			wqe_ctr = be16_to_cpu(cqe->wqe_counter);
+ 			wc->wr_id = srq->wrid[wqe_ctr];
+ 			mlx5_ib_free_srq_wqe(srq, wqe_ctr);
+-			if (msrq && atomic_dec_and_test(&msrq->refcount))
++			if (msrq && refcount_dec_and_test(&msrq->refcount))
+ 				complete(&msrq->free);
+ 		}
+ 	} else {
+diff --git a/drivers/infiniband/hw/mlx5/main.c b/drivers/infiniband/hw/mlx5/main.c
+index d566f67..c938dda 100644
+--- a/drivers/infiniband/hw/mlx5/main.c
++++ b/drivers/infiniband/hw/mlx5/main.c
+@@ -2645,7 +2645,7 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	}
+ 	devr->p0->device  = &dev->ib_dev;
+ 	devr->p0->uobject = NULL;
+-	atomic_set(&devr->p0->usecnt, 0);
++	refcount_set(&devr->p0->usecnt, 0);
+ 
+ 	devr->c0 = mlx5_ib_create_cq(&dev->ib_dev, &cq_attr, NULL, NULL);
+ 	if (IS_ERR(devr->c0)) {
+@@ -2657,7 +2657,7 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	devr->c0->comp_handler  = NULL;
+ 	devr->c0->event_handler = NULL;
+ 	devr->c0->cq_context    = NULL;
+-	atomic_set(&devr->c0->usecnt, 0);
++	refcount_set(&devr->c0->usecnt, 0);
+ 
+ 	devr->x0 = mlx5_ib_alloc_xrcd(&dev->ib_dev, NULL, NULL);
+ 	if (IS_ERR(devr->x0)) {
+@@ -2666,7 +2666,7 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	}
+ 	devr->x0->device = &dev->ib_dev;
+ 	devr->x0->inode = NULL;
+-	atomic_set(&devr->x0->usecnt, 0);
++	refcount_set(&devr->x0->usecnt, 0);
+ 	mutex_init(&devr->x0->tgt_qp_mutex);
+ 	INIT_LIST_HEAD(&devr->x0->tgt_qp_list);
+ 
+@@ -2677,7 +2677,7 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	}
+ 	devr->x1->device = &dev->ib_dev;
+ 	devr->x1->inode = NULL;
+-	atomic_set(&devr->x1->usecnt, 0);
++	refcount_set(&devr->x1->usecnt, 0);
+ 	mutex_init(&devr->x1->tgt_qp_mutex);
+ 	INIT_LIST_HEAD(&devr->x1->tgt_qp_list);
+ 
+@@ -2701,10 +2701,10 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	devr->s0->srq_type      = IB_SRQT_XRC;
+ 	devr->s0->ext.xrc.xrcd	= devr->x0;
+ 	devr->s0->ext.xrc.cq	= devr->c0;
+-	atomic_inc(&devr->s0->ext.xrc.xrcd->usecnt);
+-	atomic_inc(&devr->s0->ext.xrc.cq->usecnt);
+-	atomic_inc(&devr->p0->usecnt);
+-	atomic_set(&devr->s0->usecnt, 0);
++	refcount_inc(&devr->s0->ext.xrc.xrcd->usecnt);
++	refcount_inc(&devr->s0->ext.xrc.cq->usecnt);
++	refcount_inc(&devr->p0->usecnt);
++	refcount_set(&devr->s0->usecnt, 0);
+ 
+ 	memset(&attr, 0, sizeof(attr));
+ 	attr.attr.max_sge = 1;
+@@ -2722,8 +2722,8 @@ static int create_dev_resources(struct mlx5_ib_resources *devr)
+ 	devr->s1->srq_context   = NULL;
+ 	devr->s1->srq_type      = IB_SRQT_BASIC;
+ 	devr->s1->ext.xrc.cq	= devr->c0;
+-	atomic_inc(&devr->p0->usecnt);
+-	atomic_set(&devr->s0->usecnt, 0);
++	refcount_inc(&devr->p0->usecnt);
++	refcount_set(&devr->s0->usecnt, 0);
+ 
+ 	for (port = 0; port < ARRAY_SIZE(devr->ports); ++port) {
+ 		INIT_WORK(&devr->ports[port].pkey_change_work,
+diff --git a/drivers/infiniband/hw/nes/nes.c b/drivers/infiniband/hw/nes/nes.c
+index 5b96010..ebeeac9 100644
+--- a/drivers/infiniband/hw/nes/nes.c
++++ b/drivers/infiniband/hw/nes/nes.c
+@@ -257,8 +257,8 @@ void nes_add_ref(struct ib_qp *ibqp)
+ 
+ 	nesqp = to_nesqp(ibqp);
+ 	nes_debug(NES_DBG_QP, "Bumping refcount for QP%u.  Pre-inc value = %u\n",
+-			ibqp->qp_num, atomic_read(&nesqp->refcount));
+-	atomic_inc(&nesqp->refcount);
++			ibqp->qp_num, refcount_read(&nesqp->refcount));
++	refcount_inc(&nesqp->refcount);
+ }
+ 
+ static void nes_cqp_rem_ref_callback(struct nes_device *nesdev, struct nes_cqp_request *cqp_request)
+@@ -306,13 +306,13 @@ void nes_rem_ref(struct ib_qp *ibqp)
+ 
+ 	nesqp = to_nesqp(ibqp);
+ 
+-	if (atomic_read(&nesqp->refcount) == 0) {
++	if (refcount_read(&nesqp->refcount) == 0) {
+ 		printk(KERN_INFO PFX "%s: Reference count already 0 for QP%d, last aeq = 0x%04X.\n",
+ 				__func__, ibqp->qp_num, nesqp->last_aeq);
+ 		BUG();
+ 	}
+ 
+-	if (atomic_dec_and_test(&nesqp->refcount)) {
++	if (refcount_dec_and_test(&nesqp->refcount)) {
+ 		if (nesqp->pau_mode)
+ 			nes_destroy_pau_qp(nesdev, nesqp);
+ 
+diff --git a/drivers/infiniband/hw/nes/nes_cm.c b/drivers/infiniband/hw/nes/nes_cm.c
+index 53eb47b..906d3c0 100644
+--- a/drivers/infiniband/hw/nes/nes_cm.c
++++ b/drivers/infiniband/hw/nes/nes_cm.c
+@@ -814,7 +814,7 @@ static void handle_recv_entry(struct nes_cm_node *cm_node, u32 rem_node)
+ 				  "refcount = %d: HIT A "
+ 				  "NES_TIMER_TYPE_CLOSE with something "
+ 				  "to do!!!\n", nesqp->hwqp.qp_id, cm_id,
+-				  atomic_read(&nesqp->refcount));
++				  refcount_read(&nesqp->refcount));
+ 			nesqp->hw_tcp_state = NES_AEQE_TCP_STATE_CLOSED;
+ 			nesqp->last_aeq = NES_AEQE_AEID_RESET_SENT;
+ 			nesqp->ibqp_state = IB_QPS_ERR;
+@@ -826,7 +826,7 @@ static void handle_recv_entry(struct nes_cm_node *cm_node, u32 rem_node)
+ 				  "refcount = %d: HIT A "
+ 				  "NES_TIMER_TYPE_CLOSE with nothing "
+ 				  "to do!!!\n", nesqp->hwqp.qp_id, cm_id,
+-				  atomic_read(&nesqp->refcount));
++				  refcount_read(&nesqp->refcount));
+ 		}
+ 	} else if (rem_node) {
+ 		/* TIME_WAIT state */
+@@ -1186,7 +1186,7 @@ static struct nes_cm_listener *find_listener(struct nes_cm_core *cm_core,
+ 		     listen_addr == 0x00000000) &&
+ 		    (listen_port == dst_port) &&
+ 		    (listener_state & listen_node->listener_state)) {
+-			atomic_inc(&listen_node->ref_count);
++			refcount_inc(&listen_node->ref_count);
+ 			spin_unlock_irqrestore(&cm_core->listen_list_lock, flags);
+ 			return listen_node;
+ 		}
+@@ -1240,7 +1240,7 @@ static int mini_cm_dec_refcnt_listen(struct nes_cm_core *cm_core,
+ 
+ 	nes_debug(NES_DBG_CM, "attempting listener= %p free_nodes= %d, "
+ 		  "refcnt=%d\n", listener, free_hanging_nodes,
+-		  atomic_read(&listener->ref_count));
++		  refcount_read(&listener->ref_count));
+ 	/* free non-accelerated child nodes for this listener */
+ 	INIT_LIST_HEAD(&reset_list);
+ 	if (free_hanging_nodes) {
+@@ -1309,7 +1309,7 @@ static int mini_cm_dec_refcnt_listen(struct nes_cm_core *cm_core,
+ 	}
+ 
+ 	spin_lock_irqsave(&cm_core->listen_list_lock, flags);
+-	if (!atomic_dec_return(&listener->ref_count)) {
++	if (refcount_dec_and_test(&listener->ref_count)) {
+ 		list_del(&listener->list);
+ 
+ 		/* decrement our listen node count */
+@@ -1496,7 +1496,7 @@ static struct nes_cm_node *make_cm_node(struct nes_cm_core *cm_core,
+ 	spin_lock_init(&cm_node->retrans_list_lock);
+ 
+ 	cm_node->loopbackpartner = NULL;
+-	atomic_set(&cm_node->ref_count, 1);
++	refcount_set(&cm_node->ref_count, 1);
+ 	/* associate our parent CM core */
+ 	cm_node->cm_core = cm_core;
+ 	cm_node->tcp_cntxt.loc_id = NES_CM_DEF_LOCAL_ID;
+@@ -1548,7 +1548,7 @@ static struct nes_cm_node *make_cm_node(struct nes_cm_core *cm_core,
+  */
+ static int add_ref_cm_node(struct nes_cm_node *cm_node)
+ {
+-	atomic_inc(&cm_node->ref_count);
++	refcount_inc(&cm_node->ref_count);
+ 	return 0;
+ }
+ 
+@@ -1566,7 +1566,7 @@ static int rem_ref_cm_node(struct nes_cm_core *cm_core,
+ 		return -EINVAL;
+ 
+ 	spin_lock_irqsave(&cm_node->cm_core->ht_lock, flags);
+-	if (atomic_dec_return(&cm_node->ref_count)) {
++	if (!refcount_dec_and_test(&cm_node->ref_count)) {
+ 		spin_unlock_irqrestore(&cm_node->cm_core->ht_lock, flags);
+ 		return 0;
+ 	}
+@@ -1668,7 +1668,7 @@ static void handle_fin_pkt(struct nes_cm_node *cm_node)
+ {
+ 	nes_debug(NES_DBG_CM, "Received FIN, cm_node = %p, state = %u. "
+ 		  "refcnt=%d\n", cm_node, cm_node->state,
+-		  atomic_read(&cm_node->ref_count));
++		  refcount_read(&cm_node->ref_count));
+ 	switch (cm_node->state) {
+ 	case NES_CM_STATE_SYN_RCVD:
+ 	case NES_CM_STATE_SYN_SENT:
+@@ -1726,7 +1726,7 @@ static void handle_rst_pkt(struct nes_cm_node *cm_node, struct sk_buff *skb,
+ 	atomic_inc(&cm_resets_recvd);
+ 	nes_debug(NES_DBG_CM, "Received Reset, cm_node = %p, state = %u."
+ 			" refcnt=%d\n", cm_node, cm_node->state,
+-			atomic_read(&cm_node->ref_count));
++			refcount_read(&cm_node->ref_count));
+ 	cleanup_retrans_entry(cm_node);
+ 	switch (cm_node->state) {
+ 	case NES_CM_STATE_SYN_SENT:
+@@ -2274,7 +2274,7 @@ static struct nes_cm_listener *mini_cm_listen(struct nes_cm_core *cm_core,
+ 
+ 	if (listener && listener->listener_state == NES_CM_LISTENER_ACTIVE_STATE) {
+ 		/* find automatically incs ref count ??? */
+-		atomic_dec(&listener->ref_count);
++		refcount_dec(&listener->ref_count);
+ 		nes_debug(NES_DBG_CM, "Not creating listener since it already exists\n");
+ 		return NULL;
+ 	}
+@@ -2289,7 +2289,7 @@ static struct nes_cm_listener *mini_cm_listen(struct nes_cm_core *cm_core,
+ 		listener->loc_port = cm_info->loc_port;
+ 		listener->reused_node = 0;
+ 
+-		atomic_set(&listener->ref_count, 1);
++		refcount_set(&listener->ref_count, 1);
+ 	}
+ 	/* pasive case */
+ 	/* find already inc'ed the ref count */
+@@ -2624,7 +2624,7 @@ static int mini_cm_recv_pkt(struct nes_cm_core *cm_core,
+ 				nes_debug(NES_DBG_CM, "Unable to allocate "
+ 					  "node\n");
+ 				cm_packets_dropped++;
+-				atomic_dec(&listener->ref_count);
++				refcount_dec(&listener->ref_count);
+ 				dev_kfree_skb_any(skb);
+ 				break;
+ 			}
+@@ -2976,7 +2976,7 @@ static int nes_cm_disconn_true(struct nes_qp *nesqp)
+ 				  "cm_id = %p, refcount = %u.\n",
+ 				  nesqp->hwqp.qp_id, nesqp->hwqp.sq_head,
+ 				  nesqp->hwqp.sq_tail, cm_id,
+-				  atomic_read(&nesqp->refcount));
++				  refcount_read(&nesqp->refcount));
+ 
+ 			ret = cm_id->event_handler(cm_id, &cm_event);
+ 			if (ret)
+diff --git a/drivers/infiniband/hw/nes/nes_cm.h b/drivers/infiniband/hw/nes/nes_cm.h
+index d827d03..4a5812e 100644
+--- a/drivers/infiniband/hw/nes/nes_cm.h
++++ b/drivers/infiniband/hw/nes/nes_cm.h
+@@ -34,6 +34,8 @@
+ #ifndef NES_CM_H
+ #define NES_CM_H
+ 
++#include <linux/refcount.h>
++
+ #define QUEUE_EVENTS
+ 
+ #define NES_MANAGE_APBVT_DEL 0
+@@ -297,7 +299,7 @@ struct nes_cm_listener {
+ 	u16                        loc_port;
+ 	struct iw_cm_id            *cm_id;
+ 	enum nes_cm_conn_type      conn_type;
+-	atomic_t                   ref_count;
++	refcount_t                   ref_count;
+ 	struct nes_vnic            *nesvnic;
+ 	atomic_t                   pend_accepts_cnt;
+ 	int                        backlog;
+@@ -318,7 +320,7 @@ struct nes_cm_node {
+ 	struct nes_cm_tcp_context tcp_cntxt;
+ 	struct nes_cm_core        *cm_core;
+ 	struct sk_buff_head       resend_list;
+-	atomic_t                  ref_count;
++	refcount_t                  ref_count;
+ 	struct net_device         *netdev;
+ 
+ 	struct nes_cm_node        *loopbackpartner;
+diff --git a/drivers/infiniband/hw/nes/nes_hw.c b/drivers/infiniband/hw/nes/nes_hw.c
+index 19acd13..e6c04cc 100644
+--- a/drivers/infiniband/hw/nes/nes_hw.c
++++ b/drivers/infiniband/hw/nes/nes_hw.c
+@@ -3563,7 +3563,7 @@ static void nes_process_iwarp_aeqe(struct nes_device *nesdev,
+ 				nes_debug(NES_DBG_AEQ, "QP%u Not decrementing QP refcount (%d),"
+ 						" need ae to finish up, original_last_aeq = 0x%04X."
+ 						" last_aeq = 0x%04X, scheduling timer. TCP state = %d\n",
+-						nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++						nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 						async_event_id, nesqp->last_aeq, tcp_state);
+ 			}
+ 			break;
+@@ -3756,7 +3756,7 @@ int nes_manage_apbvt(struct nes_vnic *nesvnic, u32 accel_local_port,
+ 
+ 	nes_debug(NES_DBG_QP, "Waiting for CQP completion for APBVT.\n");
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	if (add_port == NES_MANAGE_APBVT_ADD)
+@@ -3826,7 +3826,7 @@ void nes_manage_arp_cache(struct net_device *netdev, unsigned char *mac_addr,
+ 	nes_debug(NES_DBG_NETDEV, "Not waiting for CQP, cqp.sq_head=%u, cqp.sq_tail=%u\n",
+ 			nesdev->cqp.sq_head, nesdev->cqp.sq_tail);
+ 
+-	atomic_set(&cqp_request->refcount, 1);
++	refcount_set(&cqp_request->refcount, 1);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ }
+ 
+@@ -3850,7 +3850,7 @@ void flush_wqes(struct nes_device *nesdev, struct nes_qp *nesqp,
+ 	}
+ 	if (wait_completion) {
+ 		cqp_request->waiting = 1;
+-		atomic_set(&cqp_request->refcount, 2);
++		refcount_set(&cqp_request->refcount, 2);
+ 	} else {
+ 		cqp_request->waiting = 0;
+ 	}
+diff --git a/drivers/infiniband/hw/nes/nes_hw.h b/drivers/infiniband/hw/nes/nes_hw.h
+index 1b66ef1..0579488 100644
+--- a/drivers/infiniband/hw/nes/nes_hw.h
++++ b/drivers/infiniband/hw/nes/nes_hw.h
+@@ -33,6 +33,8 @@
+ #ifndef __NES_HW_H
+ #define __NES_HW_H
+ 
++#include <linux/refcount.h>
++
+ #define NES_PHY_TYPE_CX4       1
+ #define NES_PHY_TYPE_1G        2
+ #define NES_PHY_TYPE_ARGUS     4
+@@ -880,7 +882,7 @@ struct nes_cqp_request {
+ 	wait_queue_head_t     waitq;
+ 	struct nes_hw_cqp_wqe cqp_wqe;
+ 	struct list_head      list;
+-	atomic_t              refcount;
++	refcount_t              refcount;
+ 	void (*cqp_callback)(struct nes_device *nesdev, struct nes_cqp_request *cqp_request);
+ 	u16                   major_code;
+ 	u16                   minor_code;
+diff --git a/drivers/infiniband/hw/nes/nes_mgt.c b/drivers/infiniband/hw/nes/nes_mgt.c
+index 33624f1..2051ac4 100644
+--- a/drivers/infiniband/hw/nes/nes_mgt.c
++++ b/drivers/infiniband/hw/nes/nes_mgt.c
+@@ -471,7 +471,7 @@ static int forward_fpdus(struct nes_vnic *nesvnic, struct nes_qp *nesqp)
+ 		cqp_request->callback = 1;
+ 		cqp_request->cqp_callback = nes_download_callback;
+ 
+-		atomic_set(&cqp_request->refcount, 1);
++		refcount_set(&cqp_request->refcount, 1);
+ 		nes_post_cqp_request(nesdev, cqp_request);
+ 		spin_unlock_irqrestore(&nesqp->pau_lock, flags);
+ 	}
+@@ -695,7 +695,7 @@ static void nes_chg_qh_handler(struct nes_device *nesdev, struct nes_cqp_request
+ 		new_request->cqp_callback_pointer = qh_chg;
+ 		new_request->callback = 1;
+ 		new_request->cqp_callback = nes_chg_qh_handler;
+-		atomic_set(&new_request->refcount, 1);
++		refcount_set(&new_request->refcount, 1);
+ 		nes_post_cqp_request(nesdev, new_request);
+ 		break;
+ 
+@@ -751,7 +751,7 @@ static int nes_change_quad_hash(struct nes_device *nesdev,
+ 	cqp_request->cqp_callback_pointer = qh_chg;
+ 	cqp_request->callback = 1;
+ 	cqp_request->cqp_callback = nes_chg_qh_handler;
+-	atomic_set(&cqp_request->refcount, 1);
++	refcount_set(&cqp_request->refcount, 1);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	return ret;
+diff --git a/drivers/infiniband/hw/nes/nes_utils.c b/drivers/infiniband/hw/nes/nes_utils.c
+index 37331e2..60ad51c 100644
+--- a/drivers/infiniband/hw/nes/nes_utils.c
++++ b/drivers/infiniband/hw/nes/nes_utils.c
+@@ -617,7 +617,7 @@ void nes_free_cqp_request(struct nes_device *nesdev,
+ void nes_put_cqp_request(struct nes_device *nesdev,
+ 			 struct nes_cqp_request *cqp_request)
+ {
+-	if (atomic_dec_and_test(&cqp_request->refcount))
++	if (refcount_dec_and_test(&cqp_request->refcount))
+ 		nes_free_cqp_request(nesdev, cqp_request);
+ }
+ 
+@@ -656,7 +656,7 @@ void nes_post_cqp_request(struct nes_device *nesdev,
+ 			opcode & NES_CQP_OPCODE_MASK,
+ 			le32_to_cpu(cqp_wqe->wqe_words[NES_CQP_WQE_ID_IDX]), cqp_request,
+ 			nesdev->cqp.sq_head, nesdev->cqp.sq_tail, nesdev->cqp.sq_size,
+-			cqp_request->waiting, atomic_read(&cqp_request->refcount));
++			cqp_request->waiting, refcount_read(&cqp_request->refcount));
+ 
+ 		barrier();
+ 
+diff --git a/drivers/infiniband/hw/nes/nes_verbs.c b/drivers/infiniband/hw/nes/nes_verbs.c
+index aff9fb1..4ee9dc8 100644
+--- a/drivers/infiniband/hw/nes/nes_verbs.c
++++ b/drivers/infiniband/hw/nes/nes_verbs.c
+@@ -124,7 +124,7 @@ static struct ib_mw *nes_alloc_mw(struct ib_pd *ibpd, enum ib_mw_type type,
+ 	set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_STAG_WQE_LEN_HIGH_PD_IDX, (nespd->pd_id & 0x00007fff));
+ 	set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_STAG_WQE_STAG_IDX, stag);
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -181,7 +181,7 @@ static int nes_dealloc_mw(struct ib_mw *ibmw)
+ 	set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_WQE_OPCODE_IDX, NES_CQP_DEALLOCATE_STAG);
+ 	set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_STAG_WQE_STAG_IDX, ibmw->rkey);
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -274,7 +274,7 @@ static int alloc_fast_reg_mr(struct nes_device *nesdev, struct nes_pd *nespd,
+ 	cqp_wqe->wqe_words[NES_CQP_WQE_OPCODE_IDX] |= cpu_to_le32(NES_CQP_STAG_PBL_BLK_SIZE);
+ 	barrier();
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -592,7 +592,7 @@ static struct ib_ucontext *nes_alloc_ucontext(struct ib_device *ibdev,
+ 
+ 	INIT_LIST_HEAD(&nes_ucontext->cq_reg_mem_list);
+ 	INIT_LIST_HEAD(&nes_ucontext->qp_reg_mem_list);
+-	atomic_set(&nes_ucontext->usecnt, 1);
++	refcount_set(&nes_ucontext->usecnt, 1);
+ 	return &nes_ucontext->ibucontext;
+ }
+ 
+@@ -606,7 +606,7 @@ static int nes_dealloc_ucontext(struct ib_ucontext *context)
+ 	/* struct nes_device *nesdev = nesvnic->nesdev; */
+ 	struct nes_ucontext *nes_ucontext = to_nesucontext(context);
+ 
+-	if (!atomic_dec_and_test(&nes_ucontext->usecnt))
++	if (!refcount_dec_and_test(&nes_ucontext->usecnt))
+ 	  return 0;
+ 	kfree(nes_ucontext);
+ 	return 0;
+@@ -1263,7 +1263,7 @@ static struct ib_qp *nes_create_qp(struct ib_pd *ibpd,
+ 			u64temp = (u64)nesqp->nesqp_context_pbase;
+ 			set_wqe_64bit_value(cqp_wqe->wqe_words, NES_CQP_QP_WQE_CONTEXT_LOW_IDX, u64temp);
+ 
+-			atomic_set(&cqp_request->refcount, 2);
++			refcount_set(&cqp_request->refcount, 2);
+ 			nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 			/* Wait for CQP */
+@@ -1398,7 +1398,7 @@ static int nes_destroy_qp(struct ib_qp *ibqp)
+ 
+ 		nes_debug(NES_DBG_QP, "Generating a CM Timeout Event for "
+ 				"QP%u. cm_id = %p, refcount = %u. \n",
+-				nesqp->hwqp.qp_id, cm_id, atomic_read(&nesqp->refcount));
++				nesqp->hwqp.qp_id, cm_id, refcount_read(&nesqp->refcount));
+ 
+ 		cm_id->rem_ref(cm_id);
+ 		ret = cm_id->event_handler(cm_id, &cm_event);
+@@ -1647,7 +1647,7 @@ static struct ib_cq *nes_create_cq(struct ib_device *ibdev,
+ 	cqp_wqe->wqe_words[NES_CQP_CQ_WQE_CQ_CONTEXT_HIGH_IDX] =
+ 			cpu_to_le32(((u32)((u64temp) >> 33)) & 0x7FFFFFFF);
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -1751,7 +1751,7 @@ static int nes_destroy_cq(struct ib_cq *ib_cq)
+ 	if (!nescq->mcrqf)
+ 		nes_free_resource(nesadapter, nesadapter->allocated_cqs, nescq->hw_cq.cq_number);
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -1963,7 +1963,7 @@ static int nes_reg_mr(struct nes_device *nesdev, struct nes_pd *nespd,
+ 	}
+ 	barrier();
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -2531,7 +2531,7 @@ static int nes_dereg_mr(struct ib_mr *ib_mr)
+ 			NES_CQP_STAG_DEALLOC_PBLS | NES_CQP_STAG_MR);
+ 	set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_STAG_WQE_STAG_IDX, ib_mr->rkey);
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -2679,7 +2679,7 @@ int nes_hw_modify_qp(struct nes_device *nesdev, struct nes_qp *nesqp,
+ 	u16 major_code;
+ 
+ 	nes_debug(NES_DBG_MOD_QP, "QP%u, refcount=%d\n",
+-			nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount));
++			nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount));
+ 
+ 	cqp_request = nes_get_cqp_request(nesdev);
+ 	if (cqp_request == NULL) {
+@@ -2708,7 +2708,7 @@ int nes_hw_modify_qp(struct nes_device *nesdev, struct nes_qp *nesqp,
+ 		set_wqe_32bit_value(cqp_wqe->wqe_words, NES_CQP_QP_WQE_NEW_MSS_IDX, termlen);
+ 	}
+ 
+-	atomic_set(&cqp_request->refcount, 2);
++	refcount_set(&cqp_request->refcount, 2);
+ 	nes_post_cqp_request(nesdev, cqp_request);
+ 
+ 	/* Wait for CQP */
+@@ -2764,7 +2764,7 @@ int nes_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ 	nes_debug(NES_DBG_MOD_QP, "QP%u: QP State=%u, cur QP State=%u,"
+ 			" iwarp_state=0x%X, refcount=%d\n",
+ 			nesqp->hwqp.qp_id, attr->qp_state, nesqp->ibqp_state,
+-			nesqp->iwarp_state, atomic_read(&nesqp->refcount));
++			nesqp->iwarp_state, refcount_read(&nesqp->refcount));
+ 
+ 	spin_lock_irqsave(&nesqp->lock, qplockflags);
+ 
+@@ -2956,14 +2956,14 @@ int nes_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ 	if ((issue_modify_qp) && (nesqp->ibqp_state > IB_QPS_RTS)) {
+ 		nes_debug(NES_DBG_MOD_QP, "QP%u Issued ModifyQP refcount (%d),"
+ 				" original_last_aeq = 0x%04X. last_aeq = 0x%04X.\n",
+-				nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++				nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 				original_last_aeq, nesqp->last_aeq);
+ 		if (!ret || original_last_aeq != NES_AEQE_AEID_RDMAP_ROE_BAD_LLP_CLOSE) {
+ 			if (dont_wait) {
+ 				if (nesqp->cm_id && nesqp->hw_tcp_state != 0) {
+ 					nes_debug(NES_DBG_MOD_QP, "QP%u Queuing fake disconnect for QP refcount (%d),"
+ 							" original_last_aeq = 0x%04X. last_aeq = 0x%04X.\n",
+-							nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++							nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 							original_last_aeq, nesqp->last_aeq);
+ 					/* this one is for the cm_disconnect thread */
+ 					spin_lock_irqsave(&nesqp->lock, qplockflags);
+@@ -2973,7 +2973,7 @@ int nes_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ 					nes_cm_disconn(nesqp);
+ 				} else {
+ 					nes_debug(NES_DBG_MOD_QP, "QP%u No fake disconnect, QP refcount=%d\n",
+-							nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount));
++							nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount));
+ 				}
+ 			} else {
+ 				spin_lock_irqsave(&nesqp->lock, qplockflags);
+@@ -2984,7 +2984,7 @@ int nes_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ 						nes_debug(NES_DBG_MOD_QP, "QP%u Not decrementing QP refcount (%d),"
+ 								" need ae to finish up, original_last_aeq = 0x%04X."
+ 								" last_aeq = 0x%04X, scheduling timer.\n",
+-								nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++								nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 								original_last_aeq, nesqp->last_aeq);
+ 						schedule_nes_timer(nesqp->cm_node, (struct sk_buff *) nesqp, NES_TIMER_TYPE_CLOSE, 1, 0);
+ 					}
+@@ -2994,27 +2994,27 @@ int nes_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr,
+ 					nes_debug(NES_DBG_MOD_QP, "QP%u Not decrementing QP refcount (%d),"
+ 							" need ae to finish up, original_last_aeq = 0x%04X."
+ 							" last_aeq = 0x%04X.\n",
+-							nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++							nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 							original_last_aeq, nesqp->last_aeq);
+ 				}
+ 			}
+ 		} else {
+ 			nes_debug(NES_DBG_MOD_QP, "QP%u Decrementing QP refcount (%d), No ae to finish up,"
+ 					" original_last_aeq = 0x%04X. last_aeq = 0x%04X.\n",
+-					nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++					nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 					original_last_aeq, nesqp->last_aeq);
+ 		}
+ 	} else {
+ 		nes_debug(NES_DBG_MOD_QP, "QP%u Decrementing QP refcount (%d), No ae to finish up,"
+ 				" original_last_aeq = 0x%04X. last_aeq = 0x%04X.\n",
+-				nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount),
++				nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount),
+ 				original_last_aeq, nesqp->last_aeq);
+ 	}
+ 
+ 	err = 0;
+ 
+ 	nes_debug(NES_DBG_MOD_QP, "QP%u Leaving, refcount=%d\n",
+-			nesqp->hwqp.qp_id, atomic_read(&nesqp->refcount));
++			nesqp->hwqp.qp_id, refcount_read(&nesqp->refcount));
+ 
+ 	return err;
+ }
+diff --git a/drivers/infiniband/hw/nes/nes_verbs.h b/drivers/infiniband/hw/nes/nes_verbs.h
+index e02a566..570095b 100644
+--- a/drivers/infiniband/hw/nes/nes_verbs.h
++++ b/drivers/infiniband/hw/nes/nes_verbs.h
+@@ -35,6 +35,8 @@
+ #ifndef NES_VERBS_H
+ #define NES_VERBS_H
+ 
++#include <linux/refcount.h>
++
+ struct nes_device;
+ 
+ #define NES_MAX_USER_DB_REGIONS  4096
+@@ -59,7 +61,7 @@ struct nes_ucontext {
+ 	struct list_head   cq_reg_mem_list;
+ 	struct list_head   qp_reg_mem_list;
+ 	u32                mcrqf;
+-	atomic_t	   usecnt;
++	refcount_t	   usecnt;
+ };
+ 
+ struct nes_pd {
+@@ -154,7 +156,7 @@ struct nes_qp {
+ 	u32                   hte_index;
+ 	u32                   last_aeq;
+ 	u32                   qp_mem_size;
+-	atomic_t              refcount;
++	refcount_t              refcount;
+ 	atomic_t              close_timer_started;
+ 	u32                   mmap_sq_db_index;
+ 	u32                   mmap_rq_db_index;
+diff --git a/drivers/infiniband/hw/qib/qib_keys.c b/drivers/infiniband/hw/qib/qib_keys.c
+index 2c3c935..3c65ce6 100644
+--- a/drivers/infiniband/hw/qib/qib_keys.c
++++ b/drivers/infiniband/hw/qib/qib_keys.c
+@@ -172,7 +172,7 @@ int qib_rkey_ok(struct rvt_qp *qp, struct rvt_sge *sge,
+ 		mr = rcu_dereference(dev->dma_mr);
+ 		if (!mr)
+ 			goto bail;
+-		if (unlikely(!atomic_inc_not_zero(&mr->refcount)))
++		if (unlikely(!refcount_inc_not_zero(&mr->refcount)))
+ 			goto bail;
+ 		rcu_read_unlock();
+ 
+@@ -194,7 +194,7 @@ int qib_rkey_ok(struct rvt_qp *qp, struct rvt_sge *sge,
+ 	if (unlikely(vaddr < mr->iova || off + len > mr->length ||
+ 		     (mr->access_flags & acc) == 0))
+ 		goto bail;
+-	if (unlikely(!atomic_inc_not_zero(&mr->refcount)))
++	if (unlikely(!refcount_inc_not_zero(&mr->refcount)))
+ 		goto bail;
+ 	rcu_read_unlock();
+ 
+diff --git a/drivers/infiniband/sw/rdmavt/mr.c b/drivers/infiniband/sw/rdmavt/mr.c
+index 52fd152..5ffb63a 100644
+--- a/drivers/infiniband/sw/rdmavt/mr.c
++++ b/drivers/infiniband/sw/rdmavt/mr.c
+@@ -141,7 +141,7 @@ static int rvt_init_mregion(struct rvt_mregion *mr, struct ib_pd *pd,
+ 	}
+ 	init_completion(&mr->comp);
+ 	/* count returning the ptr to user */
+-	atomic_set(&mr->refcount, 1);
++	refcount_set(&mr->refcount, 1);
+ 	atomic_set(&mr->lkey_invalid, 0);
+ 	mr->pd = pd;
+ 	mr->max_segs = count;
+@@ -446,7 +446,7 @@ int rvt_dereg_mr(struct ib_mr *ibmr)
+ 	if (!timeout) {
+ 		rvt_pr_err(rdi,
+ 			   "rvt_dereg_mr timeout mr %p pd %p refcount %u\n",
+-			   mr, mr->mr.pd, atomic_read(&mr->mr.refcount));
++			   mr, mr->mr.pd, refcount_read(&mr->mr.refcount));
+ 		rvt_get_mr(&mr->mr);
+ 		ret = -EBUSY;
+ 		goto out;
+@@ -678,7 +678,7 @@ int rvt_map_phys_fmr(struct ib_fmr *ibfmr, u64 *page_list,
+ 	u32 ps;
+ 	struct rvt_dev_info *rdi = ib_to_rvt(ibfmr->device);
+ 
+-	i = atomic_read(&fmr->mr.refcount);
++	i = refcount_read(&fmr->mr.refcount);
+ 	if (i > 2)
+ 		return -EBUSY;
+ 
+diff --git a/drivers/infiniband/sw/rdmavt/qp.c b/drivers/infiniband/sw/rdmavt/qp.c
+index 2a13ac6..d009389 100644
+--- a/drivers/infiniband/sw/rdmavt/qp.c
++++ b/drivers/infiniband/sw/rdmavt/qp.c
+@@ -600,7 +600,7 @@ static void rvt_reset_qp(struct rvt_dev_info *rdi, struct rvt_qp *qp,
+ 
+ 		/* take qp out the hash and wait for it to be unused */
+ 		rvt_remove_qp(rdi, qp);
+-		wait_event(qp->wait, !atomic_read(&qp->refcount));
++		wait_event(qp->wait, !refcount_read(&qp->refcount));
+ 
+ 		/* grab the lock b/c it was locked at call time */
+ 		spin_lock_irq(&qp->r_lock);
+@@ -777,7 +777,7 @@ struct ib_qp *rvt_create_qp(struct ib_pd *ibpd,
+ 		spin_lock_init(&qp->s_hlock);
+ 		spin_lock_init(&qp->s_lock);
+ 		spin_lock_init(&qp->r_rq.lock);
+-		atomic_set(&qp->refcount, 0);
++		refcount_set(&qp->refcount, 0);
+ 		atomic_set(&qp->local_ops_pending, 0);
+ 		init_waitqueue_head(&qp->wait);
+ 		init_timer(&qp->s_timer);
+diff --git a/drivers/infiniband/ulp/ipoib/ipoib.h b/drivers/infiniband/ulp/ipoib/ipoib.h
+index da12717..b302167 100644
+--- a/drivers/infiniband/ulp/ipoib/ipoib.h
++++ b/drivers/infiniband/ulp/ipoib/ipoib.h
+@@ -42,6 +42,7 @@
+ #include <linux/kref.h>
+ #include <linux/if_infiniband.h>
+ #include <linux/mutex.h>
++#include <linux/refcount.h>
+ 
+ #include <net/neighbour.h>
+ #include <net/sch_generic.h>
+@@ -444,7 +445,7 @@ struct ipoib_neigh {
+ 	struct list_head    list;
+ 	struct ipoib_neigh __rcu *hnext;
+ 	struct rcu_head     rcu;
+-	atomic_t	    refcnt;
++	refcount_t	    refcnt;
+ 	unsigned long       alive;
+ };
+ 
+@@ -454,7 +455,7 @@ struct ipoib_neigh {
+ void ipoib_neigh_dtor(struct ipoib_neigh *neigh);
+ static inline void ipoib_neigh_put(struct ipoib_neigh *neigh)
+ {
+-	if (atomic_dec_and_test(&neigh->refcnt))
++	if (refcount_dec_and_test(&neigh->refcnt))
+ 		ipoib_neigh_dtor(neigh);
+ }
+ struct ipoib_neigh *ipoib_neigh_get(struct net_device *dev, u8 *daddr);
+diff --git a/drivers/infiniband/ulp/ipoib/ipoib_main.c b/drivers/infiniband/ulp/ipoib/ipoib_main.c
+index 3ce0765..2568f5b 100644
+--- a/drivers/infiniband/ulp/ipoib/ipoib_main.c
++++ b/drivers/infiniband/ulp/ipoib/ipoib_main.c
+@@ -1226,7 +1226,7 @@ struct ipoib_neigh *ipoib_neigh_get(struct net_device *dev, u8 *daddr)
+ 	     neigh = rcu_dereference_bh(neigh->hnext)) {
+ 		if (memcmp(daddr, neigh->daddr, INFINIBAND_ALEN) == 0) {
+ 			/* found, take one ref on behalf of the caller */
+-			if (!atomic_inc_not_zero(&neigh->refcnt)) {
++			if (!refcount_inc_not_zero(&neigh->refcnt)) {
+ 				/* deleted */
+ 				neigh = NULL;
+ 				goto out_unlock;
+@@ -1328,7 +1328,7 @@ static struct ipoib_neigh *ipoib_neigh_ctor(u8 *daddr,
+ 	INIT_LIST_HEAD(&neigh->list);
+ 	ipoib_cm_set(neigh, NULL);
+ 	/* one ref on behalf of the caller */
+-	atomic_set(&neigh->refcnt, 1);
++	refcount_set(&neigh->refcnt, 1);
+ 
+ 	return neigh;
+ }
+@@ -1360,7 +1360,7 @@ struct ipoib_neigh *ipoib_neigh_alloc(u8 *daddr,
+ 					       lockdep_is_held(&priv->lock))) {
+ 		if (memcmp(daddr, neigh->daddr, INFINIBAND_ALEN) == 0) {
+ 			/* found, take one ref on behalf of the caller */
+-			if (!atomic_inc_not_zero(&neigh->refcnt)) {
++			if (!refcount_inc_not_zero(&neigh->refcnt)) {
+ 				/* deleted */
+ 				neigh = NULL;
+ 				break;
+@@ -1375,7 +1375,7 @@ struct ipoib_neigh *ipoib_neigh_alloc(u8 *daddr,
+ 		goto out_unlock;
+ 
+ 	/* one ref on behalf of the hash table */
+-	atomic_inc(&neigh->refcnt);
++	refcount_inc(&neigh->refcnt);
+ 	neigh->alive = jiffies;
+ 	/* put in hash */
+ 	rcu_assign_pointer(neigh->hnext,
+diff --git a/include/linux/mlx5/driver.h b/include/linux/mlx5/driver.h
+index 0ae5536..446a353 100644
+--- a/include/linux/mlx5/driver.h
++++ b/include/linux/mlx5/driver.h
+@@ -43,6 +43,7 @@
+ #include <linux/radix-tree.h>
+ #include <linux/workqueue.h>
+ #include <linux/interrupt.h>
++#include <linux/refcount.h>
+ 
+ #include <linux/mlx5/device.h>
+ #include <linux/mlx5/doorbell.h>
+@@ -387,7 +388,7 @@ enum mlx5_res_type {
+ 
+ struct mlx5_core_rsc_common {
+ 	enum mlx5_res_type	res;
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct completion	free;
+ };
+ 
+@@ -400,7 +401,7 @@ struct mlx5_core_srq {
+ 	int		wqe_shift;
+ 	void (*event)	(struct mlx5_core_srq *, enum mlx5_event);
+ 
+-	atomic_t		refcount;
++	refcount_t		refcount;
+ 	struct completion	free;
+ };
+ 
+diff --git a/include/rdma/ib_addr.h b/include/rdma/ib_addr.h
+index 1beab55..14e8628 100644
+--- a/include/rdma/ib_addr.h
++++ b/include/rdma/ib_addr.h
+@@ -41,6 +41,7 @@
+ #include <linux/inetdevice.h>
+ #include <linux/socket.h>
+ #include <linux/if_vlan.h>
++#include <linux/refcount.h>
+ #include <net/ipv6.h>
+ #include <net/if_inet6.h>
+ #include <net/ip.h>
+@@ -50,7 +51,7 @@
+ #include <net/net_namespace.h>
+ 
+ struct rdma_addr_client {
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct completion comp;
+ };
+ 
+diff --git a/include/rdma/ib_verbs.h b/include/rdma/ib_verbs.h
+index 958a24d..5eae1a0 100644
+--- a/include/rdma/ib_verbs.h
++++ b/include/rdma/ib_verbs.h
+@@ -58,6 +58,7 @@
+ 
+ #include <linux/if_link.h>
+ #include <linux/atomic.h>
++#include <linux/refcount.h>
+ #include <linux/mmu_notifier.h>
+ #include <linux/uaccess.h>
+ 
+@@ -1389,7 +1390,7 @@ struct ib_pd {
+ 	u32			flags;
+ 	struct ib_device       *device;
+ 	struct ib_uobject      *uobject;
+-	atomic_t          	usecnt; /* count all resources */
++	refcount_t          	usecnt; /* count all resources */
+ 
+ 	u32			unsafe_global_rkey;
+ 
+@@ -1401,7 +1402,7 @@ struct ib_pd {
+ 
+ struct ib_xrcd {
+ 	struct ib_device       *device;
+-	atomic_t		usecnt; /* count all exposed resources */
++	refcount_t		usecnt; /* count all exposed resources */
+ 	struct inode	       *inode;
+ 
+ 	struct mutex		tgt_qp_mutex;
+@@ -1429,7 +1430,7 @@ struct ib_cq {
+ 	void                  (*event_handler)(struct ib_event *, void *);
+ 	void                   *cq_context;
+ 	int               	cqe;
+-	atomic_t          	usecnt; /* count number of work queues */
++	refcount_t          	usecnt; /* count number of work queues */
+ 	enum ib_poll_context	poll_ctx;
+ 	struct ib_wc		*wc;
+ 	union {
+@@ -1445,7 +1446,7 @@ struct ib_srq {
+ 	void		      (*event_handler)(struct ib_event *, void *);
+ 	void		       *srq_context;
+ 	enum ib_srq_type	srq_type;
+-	atomic_t		usecnt;
++	refcount_t		usecnt;
+ 
+ 	union {
+ 		struct {
+@@ -1476,7 +1477,7 @@ struct ib_wq {
+ 	u32		wq_num;
+ 	enum ib_wq_state       state;
+ 	enum ib_wq_type	wq_type;
+-	atomic_t		usecnt;
++	refcount_t		usecnt;
+ };
+ 
+ struct ib_wq_init_attr {
+@@ -1501,7 +1502,7 @@ struct ib_wq_attr {
+ struct ib_rwq_ind_table {
+ 	struct ib_device	*device;
+ 	struct ib_uobject      *uobject;
+-	atomic_t		usecnt;
++	refcount_t		usecnt;
+ 	u32		ind_tbl_num;
+ 	u32		log_ind_tbl_size;
+ 	struct ib_wq	**ind_tbl;
+@@ -1531,7 +1532,7 @@ struct ib_qp {
+ 	struct list_head	xrcd_list;
+ 
+ 	/* count times opened, mcast attaches, flow attaches */
+-	atomic_t		usecnt;
++	refcount_t		usecnt;
+ 	struct list_head	open_list;
+ 	struct ib_qp           *real_qp;
+ 	struct ib_uobject      *uobject;
+diff --git a/include/rdma/rdmavt_mr.h b/include/rdma/rdmavt_mr.h
+index de59de2..f6aa67b 100644
+--- a/include/rdma/rdmavt_mr.h
++++ b/include/rdma/rdmavt_mr.h
+@@ -83,7 +83,7 @@ struct rvt_mregion {
+ 	u8  lkey_published;     /* in global table */
+ 	atomic_t lkey_invalid;	/* true if current lkey is invalid */
+ 	struct completion comp; /* complete when refcount goes to zero */
+-	atomic_t refcount;
++	refcount_t refcount;
+ 	struct rvt_segarray *map[0];    /* the segments */
+ };
+ 
+@@ -123,13 +123,13 @@ struct rvt_sge_state {
+ 
+ static inline void rvt_put_mr(struct rvt_mregion *mr)
+ {
+-	if (unlikely(atomic_dec_and_test(&mr->refcount)))
++	if (unlikely(refcount_dec_and_test(&mr->refcount)))
+ 		complete(&mr->comp);
+ }
+ 
+ static inline void rvt_get_mr(struct rvt_mregion *mr)
+ {
+-	atomic_inc(&mr->refcount);
++	refcount_inc(&mr->refcount);
+ }
+ 
+ static inline void rvt_put_ss(struct rvt_sge_state *ss)
+diff --git a/include/rdma/rdmavt_qp.h b/include/rdma/rdmavt_qp.h
+index f3dbd15..1c0b021f 100644
+--- a/include/rdma/rdmavt_qp.h
++++ b/include/rdma/rdmavt_qp.h
+@@ -304,7 +304,7 @@ struct rvt_qp {
+ 	u8 s_draining;
+ 
+ 	/* start of read/write fields */
+-	atomic_t refcount ____cacheline_aligned_in_smp;
++	refcount_t refcount ____cacheline_aligned_in_smp;
+ 	wait_queue_head_t wait;
+ 
+ 	struct rvt_ack_entry *s_ack_queue;
+@@ -472,7 +472,7 @@ static inline struct rvt_rwqe *rvt_get_rwqe_ptr(struct rvt_rq *rq, unsigned n)
+  */
+ static inline void rvt_get_qp(struct rvt_qp *qp)
+ {
+-	atomic_inc(&qp->refcount);
++	refcount_inc(&qp->refcount);
+ }
+ 
+ /**
+@@ -481,7 +481,7 @@ static inline void rvt_get_qp(struct rvt_qp *qp)
+  */
+ static inline void rvt_put_qp(struct rvt_qp *qp)
+ {
+-	if (qp && atomic_dec_and_test(&qp->refcount))
++	if (qp && refcount_dec_and_test(&qp->refcount))
+ 		wake_up(&qp->wait);
+ }
+ 
 -- 
 2.7.4
