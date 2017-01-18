@@ -1,14 +1,8 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Wed, 18 Jan 2017 08:41:17 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
-References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
- <20170105022535.GA20972@linaro.org>
- <2236FBA76BA1254E88B949DDB74E612B41C380E4@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKYN8WS-mkAfBNOyJ2+Zpy=0ErxS8Ow6K0hAWgkyb9Bpw@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3A6D8@IRSMSX102.ger.corp.intel.com>
- <CAGXu5jKDYE7AHrXchNDLmvNMbvGytZDks6W1=i6+fyFX9ZGoNA@mail.gmail.com>
- <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
+Date: Wed, 18 Jan 2017 10:03:40 +0100
+From: "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
+Message-ID: <20170118090340.GB2043@kroah.com>
+References: <2236FBA76BA1254E88B949DDB74E612B41C3BD08@IRSMSX102.ger.corp.intel.com>
  <CAGXu5jJe0F_z5unvTg7y1myka+AP7Qn5mShEw9DS2M+c=NqpBA@mail.gmail.com>
  <CAGXu5jLC-drraZ3D5bj3_rO4LEFiUhutHHw7U8AfDyAEHg+xtg@mail.gmail.com>
  <20170112051114.GG20972@linaro.org>
@@ -17,77 +11,31 @@ References: <1482994571-18687-9-git-send-email-elena.reshetova@intel.com>
  <CAGXu5j+g1L5Cpphy0Sgr6+KGmaAT6PPcP3ujkuQ9eHmDbreWEA@mail.gmail.com>
  <2236FBA76BA1254E88B949DDB74E612B41C3E295@IRSMSX102.ger.corp.intel.com>
  <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
-In-Reply-To: <CAEXv5_gNAF17wAtppEcDsfscK484G4R6WoMTd-jyFneRvDo9RQ@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+ <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3E725@IRSMSX102.ger.corp.intel.com>
+Subject: Re: [kernel-hardening] [RFC PATCH 08/19] kernel, mm: convert from
  atomic_t to refcount_t
-To: David Windsor <dwindsor@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
+To: "Reshetova, Elena" <elena.reshetova@intel.com>
+Cc: David Windsor <dwindsor@gmail.com>, Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, AKASHI Takahiro <takahiro.akashi@linaro.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "ishkamiel@gmail.com" <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQo+IE9uIFR1ZSwgSmFuIDE3LCAyMDE3IGF0IDEyOjQ0IFBNLCBSZXNoZXRvdmEsIEVsZW5hDQo+
-IDxlbGVuYS5yZXNoZXRvdmFAaW50ZWwuY29tPiB3cm90ZToNCj4gPj4gT24gTW9uLCBKYW4gMTYs
-IDIwMTcgYXQgODoxNiBBTSwgUmVzaGV0b3ZhLCBFbGVuYQ0KPiA+PiA8ZWxlbmEucmVzaGV0b3Zh
-QGludGVsLmNvbT4gd3JvdGU6DQo+ID4+ID4+IE9uIFRodSwgSmFuIDEyLCAyMDE3IGF0IDAyOjEx
-OjE1UE0gKzA5MDAsIEFLQVNISSBUYWthaGlybyB3cm90ZToNCj4gPj4gPj4gPiBPbiBXZWQsIEph
-biAxMSwgMjAxNyBhdCAwMjo1NToyMVBNIC0wODAwLCBLZWVzIENvb2sgd3JvdGU6DQo+ID4+ID4+
-ID4gPiBPbiBXZWQsIEphbiAxMSwgMjAxNyBhdCAxOjQyIFBNLCBLZWVzIENvb2sNCj4gPGtlZXNj
-b29rQGNocm9taXVtLm9yZz4NCj4gPj4gPj4gd3JvdGU6DQo+ID4+ID4+ID4gPiA+IEkgY2FuIHNl
-ZSBpZiBpdCdsbCBjaGVycnktcGljayBjbGVhbmx5LCBJIGFzc3VtZSBpdCB3aWxsLiA6KQ0KPiA+
-PiA+PiA+ID4NCj4gPj4gPj4gPiA+IEl0IGNoZXJyeS1waWNrZWQgY2xlYW5seS4gSG93ZXZlciwg
-SSBtYWRlIHNldmVyYWwgY2hhbmdlczoNCj4gPj4gPj4gPiA+DQo+ID4+ID4+ID4gPiAtIEkgYWRq
-dXN0ZWQgUGV0ZXIncyBhdXRob3IgZW1haWwgKGl0IGhhZCBleHRyYSBbXXMgYXJvdW5kKS4NCj4g
-Pj4gPj4gPiA+IC0gSSBmaXhlZCBhbGwgb2YgdGhlIGNvbW1pdCBzdWJqZWN0cyAoUGV0ZXIncyB3
-ZXJlIG1pc3NpbmcpLg0KPiA+PiA+PiA+ID4gLSBJIGFkZGVkIGJhY2sgImtyZWY6IEFkZCBLUkVG
-X0lOSVQoKSIgc2luY2UgaXQgc2VlbXMgdG8gaGF2ZSBiZWVuDQo+ID4+ID4+ID4gPiBsb3N0IGFu
-ZCBtaXhlZCBpbnRvIG90aGVyIHBhdGNoZXMgdGhhdCB3b3VsZCBicmVhayBiaXNlY3Rpb24NCj4g
-Pj4gPj4gPiA+DQo+ID4+ID4+ID4gPiBJdCdzIGhlcmUgbm93LCBwbGVhc2Ugd29yayBmcm9tIHRo
-aXMgdmVyc2lvbjoNCj4gPj4gPj4gPiA+DQo+ID4+ID4+ID4gPg0KPiA+PiA+Pg0KPiA+Pg0KPiBo
-dHRwOi8vZ2l0Lmtlcm5lbC5vcmcvY2dpdC9saW51eC9rZXJuZWwvZ2l0L2tlZXMvbGludXguZ2l0
-L2xvZy8/aD1rc3BwL2hhcmRlbmVkLQ0KPiA+PiA+PiBhdG9taWMNCj4gPj4gPj4gPg0KPiA+PiA+
-PiA+IEkgZ2F2ZSBpdCBhIHNwaW4gb24gYXJtNjQuDQo+ID4+ID4+ID4gSXQgY2FuIGNvbXBpbGUg
-d2l0aCBhIGNoYW5nZSB0byBzbXAuYyB0aGF0IEkgbWVudGlvbmVkIGJlZm9yZSwNCj4gPj4gPj4g
-PiBidXQgdGhlIGJvb3QgZmFpbGVkLiBJJ3ZlIG5vdCBkdWcgaW50byBpdC4NCj4gPj4gPj4gPg0K
-PiA+PiA+PiA+ID09PTg8PT09DQo+ID4+ID4+ID4gWyAgICAzLjU3ODYxOF0gcmVmY291bnRfdDog
-aW5jcmVtZW50IG9uIDA7IHVzZS1hZnRlci1mcmVlLg0KPiA+PiA+PiA+IFsgICAgMy41NzkxNjVd
-IC0tLS0tLS0tLS0tLVsgY3V0IGhlcmUgXS0tLS0tLS0tLS0tLQ0KPiA+PiA+PiA+IFsgICAgMy41
-NzkyNTRdIFdBUk5JTkc6IENQVTogMCBQSUQ6IDEgYXQNCj4gPj4gL2hvbWUvYWthc2hpL2FybS9h
-cm12OC9saW5hcm8vbGludXgtDQo+ID4+ID4+IGFhcmNoNjQvaW5jbHVkZS9saW51eC9yZWZjb3Vu
-dC5oOjEwOSB1bnhfY3JlYXRlKzB4OGMvMHhjMA0KPiA+PiA+Pg0KPiA+PiA+PiBUaGF0J3MgZG9k
-Z3kgY29kZSwgc29tZW9uZSBuZWVkcyB0byBsb29rIGF0IHRoYXQuDQo+ID4+ID4+DQo+ID4+ID4+
-IEl0IGhhcyBhbiBpbmMgaW4gYSBmdW5jdGlvbiBjYWxsZWQgJ2NyZWF0ZScgd2hpY2ggc2VlbXMg
-dG8gc3VnZ2VzdCBpdHMNCj4gPj4gPj4gb2JqZWN0aW9uIGNyZWF0aW9uIGFuZCB3ZSBzaG91bGQg
-YmUgdXNpbmcgcmVmY291bnRfc2V0KCkgaW5zdGVhZC4NCj4gPj4gPj4NCj4gPj4gPj4gVGhlbiBh
-Z2FpbiwgaXQgbG9va3MgbGlrZSB5b3UgY2FuIGNhbGwgdGhpcyAnY3JlYXRlJyBtZXRob2QgbXVs
-dGlwbGUNCj4gPj4gPj4gdGltZXMsIGVhY2ggdGltZSByZXR1cm5pbmcgdGhlIHNhbWUgc3RhdGlj
-IG9iamVjdCwgc28gcmVmY291bnRfc2V0KCkNCj4gPj4gPj4gd291bGQgbm90IGJlIGNvcnJlY3Qu
-DQo+ID4+ID4+DQo+ID4+ID4+IFVzaW5nIGEgcmVmY291bnQgb24gYSBzdGF0aWMgb2JqZWN0IGlz
-IHdlaXJkIG9mIGNvdXJzZSwgc28gdGhpcyBpcyBib3VuZA0KPiA+PiA+PiB0byBnaXZlIHRyb3Vi
-bGUuDQo+ID4+ID4NCj4gPj4gPiBJIGhhdmUgcmV2ZXJ0ZWQgdGhpcyBvbmUgYmFjayB0byBhdG9t
-aWMgYW5kIGFkZGVkIGl0IHRvIHRoZSB0cmFja2luZyBkb2MuDQo+ID4+ID4gVGhlIHByb2JsZW0g
-Zm9yIHRoaXMgb25lIGlzIHRoYXQgaXQgaXMgbm90IGFsd2F5cyB1c2VkIGFzIHN0YXRpYyBhbmQg
-aW4gb3RoZXINCj4gY2FzZXMNCj4gPj4gPiBpdCBpcyBldmVuIGluaXRpYWxpemVkIGNvcnJlY3Rs
-eSB0byAxLCBidXQgdGhpcyBzdGF0aWMgY2FzZSBzZWVtcyB0byBiZSBzcGVjaWFsIG9uZQ0KPiA+
-PiBnaXZpbmcgdHJvdWJsZXMuLi4NCj4gPj4gPg0KPiA+PiA+IExhc3Qgd2VlayBJIGFsc28gZml4
-ZWQgYWxsIHRoZSB3YXJuaW5ncy9lcnJvcnMgdGhhdCB0ZXN0IGluZnJhIGdhdmUuIFRoZQ0KPiBx
-dWVzdGlvbg0KPiA+PiB0aGF0IGNvbWVzIGlzIHdoYXQgbmV4dD8gSG93IGRvIHdlIHJlYWxseSB0
-ZXN0IHRoaXMgZnVydGhlciBhcGFydCBmcm9tIGp1c3QNCj4gYm9vdGluZw0KPiA+PiB0aGlzIHVw
-Pw0KPiA+Pg0KPiA+PiBXaGljaCB0cmVlIGhhcyBhbGwgdGhlIGZpeGVzPyBJIGNhbiByZWZyZXNo
-IG15IGtlcm5lbC5vcmcgdHJlZSBhbmQgbGV0DQo+ID4+IDBkYXkgZ3JpbmQgb24gaXQsIHRoZW4g
-d2UgY2FuIHN0YXJ0IGdldHRpbmcgYWNrcyBhbmQgSSBjYW4gcHVzaCBpdA0KPiA+PiBpbnRvIC1u
-ZXh0IHZpYSBteSBLU1BQIHRyZWUuDQo+ID4NCj4gPiBIZXJlIGlzIHRoZSB0cmVlOiBodHRwczov
-L2dpdGh1Yi5jb20vZXJlc2hldG92YS9saW51eC0NCj4gc3RhYmxlL2NvbW1pdHMvcmVmY291bnRf
-dA0KPiA+DQo+ID4gSSB3b3VsZCByZWFsbHkgbGlrZSB0byBnZXQgbW9yZSBydW50aW1lIHRlc3Rp
-bmcgZG9uZSBmb3IgaXQgYWxzbywgbm90IGp1c3QgYXNrcyA6KQ0KPiANCj4gRG8geW91IGhhdmUg
-YW55IHBhcnRpY3VsYXIgd29ya2xvYWQgdGhhdCB5b3UndmUgYmVlbiB0ZXN0aW5nIHRoZXNlIHdp
-dGg/DQoNCk5vLCB3ZSBvbmx5IHRlc3RlZCB0aGUgZnVsbCBib290LCB0aGF0J3Mgd2h5IEkgd291
-bGQgbGlrZSB0byB1bmRlcnN0YW5kIGhvdyB0byB0ZXN0IG1vcmUuIA0KSSB0aGluayBpdCBpcyBu
-b3Qgc28gbXVjaCBhYm91dCB0aGUgd29ya2xvYWQsIGJ1dCBhYm91dCB0ZXN0aW5nIGRpZmZlcmVu
-dCBjb25maWd1cmF0aW9uLiANCkxpa2UgZm9yIGV4YW1wbGUsIHdoZW4gQUtBU0hJIFRha2FoaXJv
-IHJ1biB0aGUgcGF0Y2hlcyBvbiB0b3Agb24gTkZTIHJvb3RmcywgaXQgaGFzIHNob3duIHRoZSBp
-c3N1ZSB3ZSBoYXZlbid0IHNlZW4gaW4gb3VyIGNhc2UuIA0KWW91IGNhbiBpbWFnaW5lIGhvdyBt
-YW55IG9mIHN1Y2ggY2FzZXMgYXJlIHN0aWxsIGhpZGluZyBnaXZlbiB0aGUgbnVtYmVyIG9mIGNv
-bmZpZ3VyYXRpb25zIGFuZCBkcml2ZXJzIHRoYXQgZ2V0IGFjdGl2ZSBpbiBydW50aW1lLiANCg0K
-QmVzdCBSZWdhcmRzLA0KRWxlbmEuDQo=
+On Wed, Jan 18, 2017 at 08:41:17AM +0000, Reshetova, Elena wrote:
+> > Do you have any particular workload that you've been testing these with?
+> 
+> No, we only tested the full boot, that's why I would like to understand how to test more. 
+> I think it is not so much about the workload, but about testing
+> different configuration.  Like for example, when AKASHI Takahiro run
+> the patches on top on NFS rootfs, it has shown the issue we haven't
+> seen in our case.  You can imagine how many of such cases are still
+> hiding given the number of configurations and drivers that get active
+> in runtime. 
+
+That is why you need to post the patches so that the subsystem
+maintainers can review them!  They are the ones that know the code the
+best, why you all don't want to let them at least review the changes is
+beyond me...
+
+greg k-h
