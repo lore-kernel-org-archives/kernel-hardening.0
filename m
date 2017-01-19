@@ -1,60 +1,103 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-In-Reply-To: <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
- <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
- <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com>
- <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com> <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 19 Jan 2017 11:52:54 -0800
-Message-ID: <CALCETrUp9CBWykRUQoJOXeLg9u45H+2VWyQ_BKAhwc9OpBYn+g@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1484789346-21012-2-git-send-email-labbott@redhat.com>
+References: <1484789346-21012-1-git-send-email-labbott@redhat.com> <1484789346-21012-2-git-send-email-labbott@redhat.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 19 Jan 2017 13:57:52 -0800
+Message-ID: <CAGXu5jJxDAZJZtVCHX+RmLUHz8s4ZxBPvYadpswmZwjvCmjFEw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
- hidepid= field
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 1/2] security: Change name of CONFIG_DEBUG_RODATA
+To: Laura Abbott <labbott@redhat.com>
+Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 19, 2017 at 5:53 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> On Thu, Jan 19, 2017 at 12:35 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Wed, Jan 18, 2017 at 2:50 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
->>>> Also, this one-way thing seems wrong to me.  I think it should roughly
->>>> follow the no_new_privs rules instead.  IOW, if you unshare your
->>>> pidns, it gets cleared.  Also, maybe you shouldn't be able to set it
->>>
->>> Andy I don't follow here, no_new_privs is never cleared right ? I
->>> can't see the corresponding clear bit code for it.
->>
->> I believe that unsharing userns clears no_new_privs.
-> No, it is not cleared, and I can't see the clear bit for it. Maybe due
-> to userns+filesystems limitations it was not noticed.
-
-Hmm, maybe I remembered wrong.
-
->> I feel like this feature (per-task hidepid) is subtle and complex
->> enough that it should have a very clear purpose and use case before
->> it's merged and that we should make sure that there isn't a better way
->> to accomplish what you're trying to do.
+On Wed, Jan 18, 2017 at 5:29 PM, Laura Abbott <labbott@redhat.com> wrote:
 >
-> Sure, the hidepid mount option is old enough, and this per-task
-> hidepid is clearly defined only for procfs and per task, we can't add
-> another switch that's relate to both a filesystem and pid namespaces,
-> it will be a bit complicated and not really useful for cases that are
-> in *same* pidns where *each* one have to mount its procfs, it will
-> propagate. Also as noted by Lafcadio, the gid thing is a bit hard to
-> use now.
+> Despite the word 'debug' in CONFIG_DEBUG_RODATA, this kernel option
+> provides key security features that are to be expected on a modern
+> system. Change the name to CONFIG_HARDENED_PAGE_MAPPINGS which more
+> accurately describes what this option is intended to do.
 
-What I'm trying to say is that I want to understand a complete,
-real-world use case.  Adding a security-related per-task flag is can
-be quite messy and requires a lot of careful thought to get right, and
-I'd rather avoid it if at all possible.
+Oh thank you. Yes, this is badly needed. I might prefer to see this as
+two patches, though:
 
-I'm imaging something like a new RestrictPidVisisbility= option in
-systemd.  I agree that this is currently a mess to do.  But maybe a
-simpler solution would be to add a new mount option local_hidepid to
-procfs.  If you set that option, then it overrides hidepid for that
-instance.  Most of these semi-sandboxed daemon processes already have
-their own mount namespace, so the overhead should be minimal.
+Move DEBUG_RODATA to top-level arch/Kconfig, (and add ARCH_HAS_[bikeshed]).
+Rename DEBUG_RODATA to [bikeshed]
 
---Andy
+(We should do a similar renaming for DEBUG_SET_MODULE_RONX too.)
+
+Another thing that might be even cleaner would be to entirely invert
+the logic. Something like CONFIG_ARCH_MISSING_[bikeshed]?
+
+> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> index 186c4c2..09aff28 100644
+> --- a/arch/arm/Kconfig
+> +++ b/arch/arm/Kconfig
+> @@ -7,6 +7,7 @@ config ARM
+>         select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
+>         select ARCH_HAVE_CUSTOM_GPIO_H
+>         select ARCH_HAS_GCOV_PROFILE_ALL
+> +       select ARCH_HAS_HARDENED_MAPPINGS if MMU && !XIP_KERNEL
+>         select ARCH_MIGHT_HAVE_PC_PARPORT
+>         select ARCH_SUPPORTS_ATOMIC_RMW
+>         select ARCH_USE_BUILTIN_BSWAP
+> diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+> index f68e8ec..e770dc9 100644
+> --- a/arch/arm/mm/Kconfig
+> +++ b/arch/arm/mm/Kconfig
+> @@ -1051,21 +1051,9 @@ config ARCH_SUPPORTS_BIG_ENDIAN
+>           This option specifies the architecture can support big endian
+>           operation.
+>
+> -config DEBUG_RODATA
+> -       bool "Make kernel text and rodata read-only"
+> -       depends on MMU && !XIP_KERNEL
+> -       default y if CPU_V7
+
+These changes aren't correctly representing the ARM state. I think the
+ARCH_HAS is correct, but I'm not sure the best way to include the
+"default y if CPU_V7".
+
+> --- a/security/Kconfig
+> +++ b/security/Kconfig
+> @@ -158,6 +158,22 @@ config HARDENED_USERCOPY_PAGESPAN
+>           been removed. This config is intended to be used only while
+>           trying to find such users.
+>
+> +config ARCH_HAS_HARDENED_MAPPINGS
+> +       def_bool n
+> +
+> +config HARDENED_PAGE_MAPPINGS
+> +       bool "Mark kernel mappings with stricter permissions (RO/W^X)"
+> +       default y
+> +       depends on ARCH_HAS_HARDENED_MAPPINGS
+> +       help
+> +          If this is set, kernel text and rodata memory will be made read-only,
+> +         and non-text memory will be made non-executable. This provides
+> +         protection against certain security attacks (e.g. executing the heap
+> +         or modifying text).
+> +
+> +         Unless your system has known restrictions or performance issues, it
+> +         is recommended to say Y here.
+> +
+>  source security/selinux/Kconfig
+>  source security/smack/Kconfig
+>  source security/tomoyo/Kconfig
+
+Should this go in arch/Kconfig or security/Kconfig? I'm starting to
+think we need a top-level kernel security Kconfig (the gcc plugins are
+starting to pile up in arch/Kconfig, for example). I think since this
+is arch specific, maybe arch/Kconfig? (Arguably, HARDENED_USERCOPY
+shouldn't be in security/Kconfig either, since security/Kconfig is
+mostly LSM or userspace-facing stuff? I dunno.)
+
+As for the bikeshed on the naming, I like "KERNEL_RWX", and it likely
+doesn't need "STRICT", IMO. CONFIG_KERNEL_RWX ? I don't have a strong
+opinion beyond removing "DEBUG" from the name. :)
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
