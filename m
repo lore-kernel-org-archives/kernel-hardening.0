@@ -1,121 +1,192 @@
 Reply-To: kernel-hardening@lists.openwall.com
+References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
+ <1484789346-21012-3-git-send-email-labbott@redhat.com>
+From: Robin Murphy <robin.murphy@arm.com>
+Message-ID: <5005f110-2279-9ac7-c9c5-1894b8f6387d@arm.com>
+Date: Thu, 19 Jan 2017 11:43:25 +0000
 MIME-Version: 1.0
-In-Reply-To: <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
- <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
- <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com> <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Thu, 19 Jan 2017 14:53:32 +0100
-Message-ID: <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
- hidepid= field
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>
+In-Reply-To: <1484789346-21012-3-git-send-email-labbott@redhat.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 2/2] security: Change name of CONFIG_DEBUG_SET_MODULE_RONX
+To: Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, linux-doc@vger.kernel.org, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Pavel Machek <pavel@ucw.cz>, "H. Peter Anvin" <hpa@zytor.com>, kernel-hardening@lists.openwall.com, Rob Herring <robh@kernel.org>, Jessica Yu <jeyu@redhat.com>, Jonathan Corbet <corbet@lwn.net>, Helge Deller <deller@gmx.de>, x86@kernel.org, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Len Brown <len.brown@intel.com>, linux-s390@vger.kernel.org, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-pm@vger.kernel.org, "Rafael J. Wysocki" <rjw@rjwysocki.net>, linux-kernel@vger.kernel.org, Jason Wessel <jason.wessel@windriver.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 19, 2017 at 12:35 AM, Andy Lutomirski <luto@amacapital.net> wro=
-te:
-> On Wed, Jan 18, 2017 at 2:50 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+Hi Laura,
+
+On 19/01/17 01:29, Laura Abbott wrote:
+> 
+> Despite the word 'debug' in CONFIG_DEBUG_SET_MODULE_RONX, this kernel
+> option provides key security features that are to be expected on a
+> modern system. Change the name to CONFIG_HARDENED_MODULE_MAPPINGS which
+> more accurately describes what this option is intended to do.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
+> ---
+
 [...]
->>>>>
->>>>>         =E2=80=A6
->>>>>         prctl(PR_SET_HIDEPID, 2);
->>>>>         =E2=80=A6
->>>>>
->>>>> And from that point on neither nginx itself, nor any of its child
->>>>> processes may see processes in /proc anymore that belong to a differe=
-nt
->>>>> user than "www-data". Other services running on the same system remai=
-n
->>>>> unaffected.
->>>
->>> What affect, if any, does this have on ptrace() permissions?
->>
->> This should not affect ptrace() permissions or other system calls that
->> work directly on pids, the test in procfs is related to inodes before
->> the ptrace check, hmm what do you have in mind ?
->>
->
-> I'm wondering what problem you're trying to solve, then.  hidepid
-> helps lock down procfs, but ISTM you might still want to lock down
-> other PID-based APIs.
 
-Yes but they are already locked based on uid checks. procfs was not
-and this patch is specifically to align it, and to reduce the ability
-to peek data from other processes.
+> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> index 09aff28..ef852e4 100644
+> --- a/arch/arm/Kconfig
+> +++ b/arch/arm/Kconfig
+> @@ -8,6 +8,7 @@ config ARM
+>  	select ARCH_HAVE_CUSTOM_GPIO_H
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_HAS_HARDENED_MAPPINGS if MMU && !XIP_KERNEL
+> +	select ARCH_HAS_HARDENED_MODULE_MAPPINGS if MMU
+>  	select ARCH_MIGHT_HAVE_PC_PARPORT
+>  	select ARCH_SUPPORTS_ATOMIC_RMW
+>  	select ARCH_USE_BUILTIN_BSWAP
+> diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
+> index d83f7c3..426d271 100644
+> --- a/arch/arm/Kconfig.debug
+> +++ b/arch/arm/Kconfig.debug
+> @@ -1738,17 +1738,6 @@ config PID_IN_CONTEXTIDR
+>  	  additional instructions during context switch. Say Y here only if you
+>  	  are planning to use hardware trace tools with this kernel.
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES && MMU
+> -	---help---
+> -	  This option helps catch unintended modifications to loadable
+> -	  kernel module's text and read-only data. It also prevents execution
+> -	  of module data. Such protection may interfere with run-time code
+> -	  patching and dynamic kernel tracing - and they might also protect
+> -	  against certain classes of kernel exploits.
+> -	  If in doubt, say "N".
+> -
+>  source "drivers/hwtracing/coresight/Kconfig"
+>  
+>  endmenu
 
->>
->>> Also, this one-way thing seems wrong to me.  I think it should roughly
->>> follow the no_new_privs rules instead.  IOW, if you unshare your
->>> pidns, it gets cleared.  Also, maybe you shouldn't be able to set it
->>
->> Andy I don't follow here, no_new_privs is never cleared right ? I
->> can't see the corresponding clear bit code for it.
->
-> I believe that unsharing userns clears no_new_privs.
-No, it is not cleared, and I can't see the clear bit for it. Maybe due
-to userns+filesystems limitations it was not noticed.
+[...]
 
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -12,6 +12,7 @@ config ARM64
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_HAS_GIGANTIC_PAGE
+>  	select ARCH_HAS_HARDENED_MAPPINGS
+> +	select ARCH_HAS_HARDENED_MODULE_MAPPINGS
+>  	select ARCH_HAS_KCOV
+>  	select ARCH_HAS_SG_CHAIN
+>  	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
+> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
+> index a26d27f..1eebe1f 100644
+> --- a/arch/arm64/Kconfig.debug
+> +++ b/arch/arm64/Kconfig.debug
+> @@ -71,17 +71,6 @@ config DEBUG_WX
+>  
+>  	  If in doubt, say "Y".
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES
+> -	default y
+> -	help
+> -	  Is this is set, kernel module text and rodata will be made read-only.
+> -	  This is to help catch accidental or malicious attempts to change the
+> -	  kernel's executable code.
+> -
+> -	  If in doubt, say Y.
+> -
+>  config DEBUG_ALIGN_RODATA
+>  	depends on ARCH_HAS_HARDENED_MAPPINGS
+>  	bool "Align linker sections up to SECTION_SIZE"
 
->>
->> For this one I want it to act like no_new_privs. Also pidns can be
->> created with userns which means it can be revoked. For my use case I
->> want it to be part of *one* single operation where it is set with the
->> other sandbox operations that are all preserved... instead of setting
->> it *again* each time where it can already be late.
->>
->
-> I don't see the problem as long as this gets implemented carefully
-> enough.  If you unshare your userns and your pidns, then you should be
-> able to see all tasks in the new pidns, even if you mount a fresh
-> procfs pointing at that pidns -- after all, you are privileged in that
-> namespace.
+[...]
 
-That's already the case, if you are privileged you can see all tasks,
-the code is written that the per-task hidepid does not overwrite
-capabilities.
+> --- a/arch/s390/Kconfig
+> +++ b/arch/s390/Kconfig
+> @@ -69,6 +69,7 @@ config S390
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_HAS_GIGANTIC_PAGE
+>  	select ARCH_HAS_HARDENED_MAPPINGS
+> +	select ARCH_HAS_HARDENED_MODULE_MAPPINGS
+>  	select ARCH_HAS_KCOV
+>  	select ARCH_HAS_SG_CHAIN
+>  	select ARCH_HAS_UBSAN_SANITIZE_ALL
+> diff --git a/arch/s390/Kconfig.debug b/arch/s390/Kconfig.debug
+> index 26c5d5be..57f8ea9 100644
+> --- a/arch/s390/Kconfig.debug
+> +++ b/arch/s390/Kconfig.debug
+> @@ -17,7 +17,4 @@ config S390_PTDUMP
+>  	  kernel.
+>  	  If in doubt, say "N"
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	def_bool y
+> -	depends on MODULES
+>  endmenu
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index 9d80cd8..38ce850 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -51,6 +51,7 @@ config X86
+>  	select ARCH_HAS_FAST_MULTIPLIER
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_HAS_HARDENED_MAPPINGS
+> +	select ARCH_HAS_HARDENED_MODULE_MAPPINGS
+>  	select ARCH_HAS_KCOV			if X86_64
+>  	select ARCH_HAS_MMIO_FLUSH
+>  	select ARCH_HAS_PMEM_API		if X86_64
+> diff --git a/arch/x86/Kconfig.debug b/arch/x86/Kconfig.debug
+> index 67eec55..69cdd0b 100644
+> --- a/arch/x86/Kconfig.debug
+> +++ b/arch/x86/Kconfig.debug
+> @@ -109,17 +109,6 @@ config DEBUG_WX
+>  
+>  	  If in doubt, say "Y".
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES
+> -	---help---
+> -	  This option helps catch unintended modifications to loadable
+> -	  kernel module's text and read-only data. It also prevents execution
+> -	  of module data. Such protection may interfere with run-time code
+> -	  patching and dynamic kernel tracing - and they might also protect
+> -	  against certain classes of kernel exploits.
+> -	  If in doubt, say "N".
+> -
+>  config DEBUG_NX_TEST
+>  	tristate "Testcase for the NX non-executable stack feature"
+>  	depends on DEBUG_KERNEL && m
 
+[...]
 
->>
->>> without either having CAP_SYS_ADMIN over your userns or having
->>> no_new_privs set.
->>
->> For this one I can add it sure. Historically that logic was added to
->> make seccomp more usable, for this patch the values can't be relaxed,
->> they are always increased never decreased. However one minor advantage
->> if you require no_new_privs is that this option hidepid will also
->> assert that you can't setuid to access some procfs inodes... though
->> you can also just set 'no_new_privs + hidepid' both of them in any
->> order. Also it allows unprivileged without userns to setup a minimal
->> jail while performing some operations that can be blocked by
->> no_new_privs.
->>
->> Andy, Kees any other comments please on it ? I'm not sure if overusing
->> no_new_privs in this case is a good idea. Seems to me that seccomp +
->> no_new_privs is different than this hidepid feature that overlaps
->> nicely with no_new_privs.
->>
->> If there are no responses for this question, then I will just add the
->> "CAP_SYS_ADMIN || no_new_privs" test in the next iteration.
->
-> I feel like this feature (per-task hidepid) is subtle and complex
-> enough that it should have a very clear purpose and use case before
-> it's merged and that we should make sure that there isn't a better way
-> to accomplish what you're trying to do.
+> --- a/security/Kconfig
+> +++ b/security/Kconfig
+> @@ -174,6 +174,22 @@ config HARDENED_PAGE_MAPPINGS
+>  	  Unless your system has known restrictions or performance issues, it
+>  	  is recommended to say Y here.
+>  
+> +config ARCH_HAS_HARDENED_MODULE_MAPPINGS
+> +	def_bool n
+> +
+> +config HARDENED_MODULE_MAPPINGS
+> +	bool "Mark module mappings with stricter permissions (RO/W^X)"
+> +	default y
+> +	depends on ARCH_HAS_HARDENED_MODULE_MAPPINGS
 
-Sure, the hidepid mount option is old enough, and this per-task
-hidepid is clearly defined only for procfs and per task, we can't add
-another switch that's relate to both a filesystem and pid namespaces,
-it will be a bit complicated and not really useful for cases that are
-in *same* pidns where *each* one have to mount its procfs, it will
-propagate. Also as noted by Lafcadio, the gid thing is a bit hard to
-use now.
+It would seem that this ends up losing the previous dependency on
+MODULES - is that intentional?
 
-Thanks!
+Robin.
 
---=20
-tixxdz
-http://opendz.org
+> +	help
+> +	  If this is set, module text and rodata memory will be made read-only,
+> +	  and non-text memory will be made non-executable. This provides
+> +	  protection against certain security vulnerabilities (e.g. modifying
+> +	  code)
+> +
+> +	  Unless your system has known restrictions or performance issues, it
+> +	  is recommended to say Y here.
+> +
+>  source security/selinux/Kconfig
+>  source security/smack/Kconfig
+>  source security/tomoyo/Kconfig
+> 
