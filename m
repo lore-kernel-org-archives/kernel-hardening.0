@@ -1,48 +1,49 @@
 Reply-To: kernel-hardening@lists.openwall.com
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+QnAuRGKpH7tqc7LGfQ_JvTDPW8XrrCdkjizt-z0=vvw@mail.gmail.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Thu, 19 Jan 2017 07:48:39 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3EFCD@IRSMSX102.ger.corp.intel.com>
 References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
  <1484730707-29313-10-git-send-email-elena.reshetova@intel.com>
- <CAEXv5_gP0bp+NbVVEgMo=sgY5FxG1aKCCdhmF2_2vsXDzQwFOQ@mail.gmail.com> <CAGXu5j+QnAuRGKpH7tqc7LGfQ_JvTDPW8XrrCdkjizt-z0=vvw@mail.gmail.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Wed, 18 Jan 2017 22:29:10 -0500
-Message-ID: <CAEXv5_gBx2pgej_7RQD3o+OfSY2RSkDRq_vmOLtLOq66io9BQA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFCv2 PATCH 09/18] net: convert from atomic_t to refcount_t
-To: Kees Cook <keescook@chromium.org>
-Cc: Elena Reshetova <elena.reshetova@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, Hans Liljestrand <ishkamiel@gmail.com>
+ <CAEXv5_gP0bp+NbVVEgMo=sgY5FxG1aKCCdhmF2_2vsXDzQwFOQ@mail.gmail.com>
+ <CAGXu5j+QnAuRGKpH7tqc7LGfQ_JvTDPW8XrrCdkjizt-z0=vvw@mail.gmail.com>
+ <CAEXv5_gBx2pgej_7RQD3o+OfSY2RSkDRq_vmOLtLOq66io9BQA@mail.gmail.com>
+In-Reply-To: <CAEXv5_gBx2pgej_7RQD3o+OfSY2RSkDRq_vmOLtLOq66io9BQA@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+MIME-Version: 1.0
+Subject: RE: [kernel-hardening] Re: [RFCv2 PATCH 09/18] net: convert from
+ atomic_t to refcount_t
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 18, 2017 at 8:11 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Jan 18, 2017 at 10:39 AM, David Windsor <dwindsor@gmail.com> wrote:
->> The relevant part of the patch has been cut off, but it appears that
->> you've fixed some of the issues we identified earlier as corner cases
->> as to reference counting in net/.  In particular, inetpeer.c has its
->> own garbage collection system in place which frees shared objects when
->> their reference count became -1 (rather than 0).  The proposed
->> solution was to do a global +1 on this refcounting scheme, then
->> replace unsupported atomic_*() functions with appropriate refcount_*()
->> calls.
->>
->> When submitting this to netdev, it may make sense to separate out
->> these changes: first, do a global +1 (while still using atomic_t),
->> then convert to refcount_t.  I'm already working on this now, but I
->> didn't know if you wanted to follow this approach or not.
->
-> David, if you've got the global +1 patches ready, let's start feeding
-> those to netdev ASAP. We can convert them to refcount_t more easily
-> after that.
->
-
-Alright, let me get them in order and I'll submit them to netdev.  I
-just wanted to make sure that an alternate approach hadn't been
-decided upon.
-
-Thanks,
-David
-
-> -Kees
->
-> --
-> Kees Cook
-> Nexus Security
+PiBPbiBXZWQsIEphbiAxOCwgMjAxNyBhdCA4OjExIFBNLCBLZWVzIENvb2sgPGtlZXNjb29rQGNo
+cm9taXVtLm9yZz4gd3JvdGU6DQo+ID4gT24gV2VkLCBKYW4gMTgsIDIwMTcgYXQgMTA6MzkgQU0s
+IERhdmlkIFdpbmRzb3IgPGR3aW5kc29yQGdtYWlsLmNvbT4NCj4gd3JvdGU6DQo+ID4+IFRoZSBy
+ZWxldmFudCBwYXJ0IG9mIHRoZSBwYXRjaCBoYXMgYmVlbiBjdXQgb2ZmLCBidXQgaXQgYXBwZWFy
+cyB0aGF0DQo+ID4+IHlvdSd2ZSBmaXhlZCBzb21lIG9mIHRoZSBpc3N1ZXMgd2UgaWRlbnRpZmll
+ZCBlYXJsaWVyIGFzIGNvcm5lciBjYXNlcw0KPiA+PiBhcyB0byByZWZlcmVuY2UgY291bnRpbmcg
+aW4gbmV0Ly4gIEluIHBhcnRpY3VsYXIsIGluZXRwZWVyLmMgaGFzIGl0cw0KPiA+PiBvd24gZ2Fy
+YmFnZSBjb2xsZWN0aW9uIHN5c3RlbSBpbiBwbGFjZSB3aGljaCBmcmVlcyBzaGFyZWQgb2JqZWN0
+cyB3aGVuDQo+ID4+IHRoZWlyIHJlZmVyZW5jZSBjb3VudCBiZWNhbWUgLTEgKHJhdGhlciB0aGFu
+IDApLiAgVGhlIHByb3Bvc2VkDQo+ID4+IHNvbHV0aW9uIHdhcyB0byBkbyBhIGdsb2JhbCArMSBv
+biB0aGlzIHJlZmNvdW50aW5nIHNjaGVtZSwgdGhlbg0KPiA+PiByZXBsYWNlIHVuc3VwcG9ydGVk
+IGF0b21pY18qKCkgZnVuY3Rpb25zIHdpdGggYXBwcm9wcmlhdGUgcmVmY291bnRfKigpDQo+ID4+
+IGNhbGxzLg0KPiA+Pg0KPiA+PiBXaGVuIHN1Ym1pdHRpbmcgdGhpcyB0byBuZXRkZXYsIGl0IG1h
+eSBtYWtlIHNlbnNlIHRvIHNlcGFyYXRlIG91dA0KPiA+PiB0aGVzZSBjaGFuZ2VzOiBmaXJzdCwg
+ZG8gYSBnbG9iYWwgKzEgKHdoaWxlIHN0aWxsIHVzaW5nIGF0b21pY190KSwNCj4gPj4gdGhlbiBj
+b252ZXJ0IHRvIHJlZmNvdW50X3QuICBJJ20gYWxyZWFkeSB3b3JraW5nIG9uIHRoaXMgbm93LCBi
+dXQgSQ0KPiA+PiBkaWRuJ3Qga25vdyBpZiB5b3Ugd2FudGVkIHRvIGZvbGxvdyB0aGlzIGFwcHJv
+YWNoIG9yIG5vdC4NCj4gPg0KPiA+IERhdmlkLCBpZiB5b3UndmUgZ290IHRoZSBnbG9iYWwgKzEg
+cGF0Y2hlcyByZWFkeSwgbGV0J3Mgc3RhcnQgZmVlZGluZw0KPiA+IHRob3NlIHRvIG5ldGRldiBB
+U0FQLiBXZSBjYW4gY29udmVydCB0aGVtIHRvIHJlZmNvdW50X3QgbW9yZSBlYXNpbHkNCj4gPiBh
+ZnRlciB0aGF0Lg0KPiA+DQo+IA0KPiBBbHJpZ2h0LCBsZXQgbWUgZ2V0IHRoZW0gaW4gb3JkZXIg
+YW5kIEknbGwgc3VibWl0IHRoZW0gdG8gbmV0ZGV2LiAgSQ0KPiBqdXN0IHdhbnRlZCB0byBtYWtl
+IHN1cmUgdGhhdCBhbiBhbHRlcm5hdGUgYXBwcm9hY2ggaGFkbid0IGJlZW4NCj4gZGVjaWRlZCB1
+cG9uLg0KPiANCg0KTm8sIHdlIGhhdmVuJ3QgZGVjaWRlZCBvbiB0aGF0LiANCldlIGhhZCBvbmx5
+IHNvbWUgKzFzLCBidXQgbm90IGZvciBhbGwgb2YgaXQsIHNvIGlmIHlvdSBoYXZlIGEgZ2xvYmFs
+ICsxLCB0aGVuIGl0IGlzIGV2ZW4gYmV0dGVyIQ0KVGhlbiB3ZSBjYW4gZHJvcCArMSBwYXJ0cy4g
+DQoNCkFuZCB3aGF0IGRvIHlvdSBtZWFuIGJ5ICIgVGhlIHJlbGV2YW50IHBhcnQgb2YgdGhlIHBh
+dGNoIGhhcyBiZWVuIGN1dCBvZmYgIiA/IEl0IGlzIG9uZSBodWdlDQpwYXRjaCBidXQgSSBnb3Qg
+aXQgaW4gZnVsbCBtYWlsZWQgdmlhIGxpc3QuIERvIHlvdSBzZWUgaXQgY29ycnVwdGVkIG9yPyAN
+Cg0KQmVzdCBSZWdhcmRzLA0KRWxlbmENCg==
