@@ -1,343 +1,103 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 Jan 2017 23:51:14 +0900
-From: Jinbum Park <jinb.park7@gmail.com>
-Message-ID: <20170119145114.GA19772@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] mm: add arch-independent testcases for RODATA
-To: tglx@linutronix.de
-Cc: mingo@redhat.com, hpa@zytor.com, x86@kernel.org, keescook@chromium.org, arjan@linux.intel.com, akpm@linuxfoundation.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@redhat.com, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, kernel-janitors@vger.kernel.org, linux@armlinux.org.uk
+In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3EFCD@IRSMSX102.ger.corp.intel.com>
+References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+ <1484730707-29313-10-git-send-email-elena.reshetova@intel.com>
+ <CAEXv5_gP0bp+NbVVEgMo=sgY5FxG1aKCCdhmF2_2vsXDzQwFOQ@mail.gmail.com>
+ <CAGXu5j+QnAuRGKpH7tqc7LGfQ_JvTDPW8XrrCdkjizt-z0=vvw@mail.gmail.com>
+ <CAEXv5_gBx2pgej_7RQD3o+OfSY2RSkDRq_vmOLtLOq66io9BQA@mail.gmail.com> <2236FBA76BA1254E88B949DDB74E612B41C3EFCD@IRSMSX102.ger.corp.intel.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Thu, 19 Jan 2017 10:08:25 -0500
+Message-ID: <CAEXv5_i4wSg_1c_0_Dv-3Eir3Y2U=ziY8jF3yieSmRJgKMgbPQ@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=001a11440f02b7ce9d054673e74e
+Subject: [kernel-hardening] Re: [RFCv2 PATCH 09/18] net: convert from atomic_t to refcount_t
+To: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, Peter Zijlstra <peterz@infradead.org>, Will Deacon <will.deacon@arm.com>, Greg KH <gregkh@linuxfoundation.org>, Hans Liljestrand <ishkamiel@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This patch adds arch-independent testcases for RODATA.
-Both x86 and x86_64 already have testcases for RODATA,
-But they are arch-specific because using inline assembly directly.
+--001a11440f02b7ce9d054673e74e
+Content-Type: text/plain; charset=UTF-8
 
-and cacheflush.h is not suitable location for rodata-test related things.
-Since they were in cacheflush.h,
-If someone change the state of CONFIG_DEBUG_RODATA_TEST,
-It cause overhead of kernel build.
+It might be my mail client: Gmail won't display the entire patch inline.
 
-To solve above issue,
-write arch-independent testcases and move it to shared location. (main.c)
+On Thursday, January 19, 2017, Reshetova, Elena <elena.reshetova@intel.com>
+wrote:
+>> On Wed, Jan 18, 2017 at 8:11 PM, Kees Cook <keescook@chromium.org> wrote:
+>> > On Wed, Jan 18, 2017 at 10:39 AM, David Windsor <dwindsor@gmail.com>
+>> wrote:
+>> >> The relevant part of the patch has been cut off, but it appears that
+>> >> you've fixed some of the issues we identified earlier as corner cases
+>> >> as to reference counting in net/.  In particular, inetpeer.c has its
+>> >> own garbage collection system in place which frees shared objects when
+>> >> their reference count became -1 (rather than 0).  The proposed
+>> >> solution was to do a global +1 on this refcounting scheme, then
+>> >> replace unsupported atomic_*() functions with appropriate refcount_*()
+>> >> calls.
+>> >>
+>> >> When submitting this to netdev, it may make sense to separate out
+>> >> these changes: first, do a global +1 (while still using atomic_t),
+>> >> then convert to refcount_t.  I'm already working on this now, but I
+>> >> didn't know if you wanted to follow this approach or not.
+>> >
+>> > David, if you've got the global +1 patches ready, let's start feeding
+>> > those to netdev ASAP. We can convert them to refcount_t more easily
+>> > after that.
+>> >
+>>
+>> Alright, let me get them in order and I'll submit them to netdev.  I
+>> just wanted to make sure that an alternate approach hadn't been
+>> decided upon.
+>>
+>
+> No, we haven't decided on that.
+> We had only some +1s, but not for all of it, so if you have a global +1,
+then it is even better!
+> Then we can drop +1 parts.
+>
+> And what do you mean by " The relevant part of the patch has been cut off
+" ? It is one huge
+> patch but I got it in full mailed via list. Do you see it corrupted or?
+>
+> Best Regards,
+> Elena
+>
 
-Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
----
- arch/x86/Kconfig.debug            |  8 -----
- arch/x86/include/asm/cacheflush.h | 10 ------
- arch/x86/kernel/Makefile          |  1 -
- arch/x86/kernel/test_rodata.c     | 75 ---------------------------------------
- arch/x86/mm/init_32.c             |  4 ---
- arch/x86/mm/init_64.c             |  5 ---
- init/main.c                       | 10 +++++-
- mm/Kconfig.debug                  |  6 ++++
- mm/Makefile                       |  1 +
- mm/rodata_test.c                  | 63 ++++++++++++++++++++++++++++++++
- 10 files changed, 79 insertions(+), 104 deletions(-)
- delete mode 100644 arch/x86/kernel/test_rodata.c
- create mode 100644 mm/rodata_test.c
+--001a11440f02b7ce9d054673e74e
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
-diff --git a/arch/x86/Kconfig.debug b/arch/x86/Kconfig.debug
-index 67eec55..5df54a8 100644
---- a/arch/x86/Kconfig.debug
-+++ b/arch/x86/Kconfig.debug
-@@ -74,14 +74,6 @@ config EFI_PGT_DUMP
- 	  issues with the mapping of the EFI runtime regions into that
- 	  table.
- 
--config DEBUG_RODATA_TEST
--	bool "Testcase for the marking rodata read-only"
--	default y
--	---help---
--	  This option enables a testcase for the setting rodata read-only
--	  as well as for the change_page_attr() infrastructure.
--	  If in doubt, say "N"
--
- config DEBUG_WX
- 	bool "Warn on W+X mappings at boot"
- 	select X86_PTDUMP_CORE
-diff --git a/arch/x86/include/asm/cacheflush.h b/arch/x86/include/asm/cacheflush.h
-index 872877d..e7e1942e 100644
---- a/arch/x86/include/asm/cacheflush.h
-+++ b/arch/x86/include/asm/cacheflush.h
-@@ -90,18 +90,8 @@
- 
- #define mmio_flush_range(addr, size) clflush_cache_range(addr, size)
- 
--extern const int rodata_test_data;
- extern int kernel_set_to_readonly;
- void set_kernel_text_rw(void);
- void set_kernel_text_ro(void);
- 
--#ifdef CONFIG_DEBUG_RODATA_TEST
--int rodata_test(void);
--#else
--static inline int rodata_test(void)
--{
--	return 0;
--}
--#endif
--
- #endif /* _ASM_X86_CACHEFLUSH_H */
-diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
-index 581386c..f6caf82 100644
---- a/arch/x86/kernel/Makefile
-+++ b/arch/x86/kernel/Makefile
-@@ -100,7 +100,6 @@ obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
- obj-$(CONFIG_APB_TIMER)		+= apb_timer.o
- 
- obj-$(CONFIG_AMD_NB)		+= amd_nb.o
--obj-$(CONFIG_DEBUG_RODATA_TEST)	+= test_rodata.o
- obj-$(CONFIG_DEBUG_NX_TEST)	+= test_nx.o
- obj-$(CONFIG_DEBUG_NMI_SELFTEST) += nmi_selftest.o
- 
-diff --git a/arch/x86/kernel/test_rodata.c b/arch/x86/kernel/test_rodata.c
-deleted file mode 100644
-index 222e84e..0000000
---- a/arch/x86/kernel/test_rodata.c
-+++ /dev/null
-@@ -1,75 +0,0 @@
--/*
-- * test_rodata.c: functional test for mark_rodata_ro function
-- *
-- * (C) Copyright 2008 Intel Corporation
-- * Author: Arjan van de Ven <arjan@linux.intel.com>
-- *
-- * This program is free software; you can redistribute it and/or
-- * modify it under the terms of the GNU General Public License
-- * as published by the Free Software Foundation; version 2
-- * of the License.
-- */
--#include <asm/cacheflush.h>
--#include <asm/sections.h>
--#include <asm/asm.h>
--
--int rodata_test(void)
--{
--	unsigned long result;
--	unsigned long start, end;
--
--	/* test 1: read the value */
--	/* If this test fails, some previous testrun has clobbered the state */
--	if (!rodata_test_data) {
--		printk(KERN_ERR "rodata_test: test 1 fails (start data)\n");
--		return -ENODEV;
--	}
--
--	/* test 2: write to the variable; this should fault */
--	/*
--	 * If this test fails, we managed to overwrite the data
--	 *
--	 * This is written in assembly to be able to catch the
--	 * exception that is supposed to happen in the correct
--	 * case
--	 */
--
--	result = 1;
--	asm volatile(
--		"0:	mov %[zero],(%[rodata_test])\n"
--		"	mov %[zero], %[rslt]\n"
--		"1:\n"
--		".section .fixup,\"ax\"\n"
--		"2:	jmp 1b\n"
--		".previous\n"
--		_ASM_EXTABLE(0b,2b)
--		: [rslt] "=r" (result)
--		: [rodata_test] "r" (&rodata_test_data), [zero] "r" (0UL)
--	);
--
--
--	if (!result) {
--		printk(KERN_ERR "rodata_test: test data was not read only\n");
--		return -ENODEV;
--	}
--
--	/* test 3: check the value hasn't changed */
--	/* If this test fails, we managed to overwrite the data */
--	if (!rodata_test_data) {
--		printk(KERN_ERR "rodata_test: Test 3 fails (end data)\n");
--		return -ENODEV;
--	}
--	/* test 4: check if the rodata section is 4Kb aligned */
--	start = (unsigned long)__start_rodata;
--	end = (unsigned long)__end_rodata;
--	if (start & (PAGE_SIZE - 1)) {
--		printk(KERN_ERR "rodata_test: .rodata is not 4k aligned\n");
--		return -ENODEV;
--	}
--	if (end & (PAGE_SIZE - 1)) {
--		printk(KERN_ERR "rodata_test: .rodata end is not 4k aligned\n");
--		return -ENODEV;
--	}
--
--	return 0;
--}
-diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
-index 928d657..2b4b53e 100644
---- a/arch/x86/mm/init_32.c
-+++ b/arch/x86/mm/init_32.c
-@@ -864,9 +864,6 @@ static noinline int do_test_wp_bit(void)
- 	return flag;
- }
- 
--const int rodata_test_data = 0xC3;
--EXPORT_SYMBOL_GPL(rodata_test_data);
--
- int kernel_set_to_readonly __read_mostly;
- 
- void set_kernel_text_rw(void)
-@@ -939,7 +936,6 @@ void mark_rodata_ro(void)
- 	set_pages_ro(virt_to_page(start), size >> PAGE_SHIFT);
- 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
- 		size >> 10);
--	rodata_test();
- 
- #ifdef CONFIG_CPA_DEBUG
- 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, start + size);
-diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
-index 97346f9..15173d3 100644
---- a/arch/x86/mm/init_64.c
-+++ b/arch/x86/mm/init_64.c
-@@ -1000,9 +1000,6 @@ void __init mem_init(void)
- 	mem_init_print_info(NULL);
- }
- 
--const int rodata_test_data = 0xC3;
--EXPORT_SYMBOL_GPL(rodata_test_data);
--
- int kernel_set_to_readonly;
- 
- void set_kernel_text_rw(void)
-@@ -1071,8 +1068,6 @@ void mark_rodata_ro(void)
- 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
- 	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
- 
--	rodata_test();
--
- #ifdef CONFIG_CPA_DEBUG
- 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, end);
- 	set_memory_rw(start, (end-start) >> PAGE_SHIFT);
-diff --git a/init/main.c b/init/main.c
-index e47373d..15b42bf 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -932,11 +932,19 @@ static int __init set_debug_rodata(char *str)
- __setup("rodata=", set_debug_rodata);
- #endif
- 
-+#ifdef CONFIG_DEBUG_RODATA_TEST
-+void rodata_test(void);
-+#else
-+static inline void rodata_test(void) {}
-+#endif
-+
- #ifdef CONFIG_DEBUG_RODATA
- static void mark_readonly(void)
- {
--	if (rodata_enabled)
-+	if (rodata_enabled) {
- 		mark_rodata_ro();
-+		rodata_test();
-+	}
- 	else
- 		pr_info("Kernel memory protection disabled.\n");
- }
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index afcc550..e4f22ce 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -90,3 +90,9 @@ config DEBUG_PAGE_REF
- 	  careful when enabling this feature because it adds about 30 KB to the
- 	  kernel code.  However the runtime performance overhead is virtually
- 	  nil until the tracepoints are actually enabled.
-+
-+config DEBUG_RODATA_TEST
-+	bool "Testcase for the marking rodata read-only"
-+	depends on DEBUG_RODATA
-+	---help---
-+	  This option enables a testcase for the setting rodata read-only.
-\ No newline at end of file
-diff --git a/mm/Makefile b/mm/Makefile
-index 433eaf9..d6199d4 100644
---- a/mm/Makefile
-+++ b/mm/Makefile
-@@ -83,6 +83,7 @@ obj-$(CONFIG_MEMORY_FAILURE) += memory-failure.o
- obj-$(CONFIG_HWPOISON_INJECT) += hwpoison-inject.o
- obj-$(CONFIG_DEBUG_KMEMLEAK) += kmemleak.o
- obj-$(CONFIG_DEBUG_KMEMLEAK_TEST) += kmemleak-test.o
-+obj-$(CONFIG_DEBUG_RODATA_TEST) += rodata_test.o
- obj-$(CONFIG_PAGE_OWNER) += page_owner.o
- obj-$(CONFIG_CLEANCACHE) += cleancache.o
- obj-$(CONFIG_MEMORY_ISOLATION) += page_isolation.o
-diff --git a/mm/rodata_test.c b/mm/rodata_test.c
-new file mode 100644
-index 0000000..d5b0504
---- /dev/null
-+++ b/mm/rodata_test.c
-@@ -0,0 +1,63 @@
-+/*
-+ * rodata_test.c: functional test for mark_rodata_ro function
-+ *
-+ * (C) Copyright 2017 Jinbum Park <jinb.park7@gmail.com>
-+ *
-+ * This program is free software; you can redistribute it and/or
-+ * modify it under the terms of the GNU General Public License
-+ * as published by the Free Software Foundation; version 2
-+ * of the License.
-+ */
-+#include <asm/uaccess.h>
-+#include <asm/sections.h>
-+
-+const int rodata_test_data = 0xC3;
-+EXPORT_SYMBOL_GPL(rodata_test_data);
-+
-+void rodata_test(void)
-+{
-+	unsigned long start, end, rodata_addr;
-+	int zero = 0;
-+
-+	/* prepare test */
-+	rodata_addr = ((unsigned long)&rodata_test_data);
-+
-+	/* test 1: read the value */
-+	/* If this test fails, some previous testrun has clobbered the state */
-+	if (!rodata_test_data) {
-+		pr_err("rodata_test: test 1 fails (start data)\n");
-+		return;
-+	}
-+
-+	/* test 2: write to the variable; this should fault */
-+	/*
-+	 * This must be written in assembly to be able to catch the
-+	 * exception that is supposed to happen in the correct case.
-+	 *
-+	 * So that put_user macro is used to write arch-independent assembly.
-+	 */
-+	if (!put_user(zero, (int *)rodata_addr)) {
-+		pr_err("rodata_test: test data was not read only\n");
-+		return;
-+	}
-+
-+	/* test 3: check the value hasn't changed */
-+	if (rodata_test_data == zero) {
-+		pr_err("rodata_test: test data was changed\n");
-+		return;
-+	}
-+
-+	/* test 4: check if the rodata section is PAGE_SIZE aligned */
-+	start = (unsigned long)__start_rodata;
-+	end = (unsigned long)__end_rodata;
-+	if (start & (PAGE_SIZE - 1)) {
-+		pr_err("rodata_test: start of .rodata is not page size aligned\n");
-+		return;
-+	}
-+	if (end & (PAGE_SIZE - 1)) {
-+		pr_err("rodata_test: end of .rodata is not page size aligned\n");
-+		return;
-+	}
-+
-+	pr_info("rodata_test: all tests were successful\n");
-+}
--- 
-1.9.1
+It might be my mail client: Gmail won&#39;t display the entire patch inline=
+.<br><br>On Thursday, January 19, 2017, Reshetova, Elena &lt;<a href=3D"mai=
+lto:elena.reshetova@intel.com">elena.reshetova@intel.com</a>&gt; wrote:<br>=
+&gt;&gt; On Wed, Jan 18, 2017 at 8:11 PM, Kees Cook &lt;<a href=3D"mailto:k=
+eescook@chromium.org">keescook@chromium.org</a>&gt; wrote:<br>&gt;&gt; &gt;=
+ On Wed, Jan 18, 2017 at 10:39 AM, David Windsor &lt;<a href=3D"mailto:dwin=
+dsor@gmail.com">dwindsor@gmail.com</a>&gt;<br>&gt;&gt; wrote:<br>&gt;&gt; &=
+gt;&gt; The relevant part of the patch has been cut off, but it appears tha=
+t<br>&gt;&gt; &gt;&gt; you&#39;ve fixed some of the issues we identified ea=
+rlier as corner cases<br>&gt;&gt; &gt;&gt; as to reference counting in net/=
+.=C2=A0 In particular, inetpeer.c has its<br>&gt;&gt; &gt;&gt; own garbage =
+collection system in place which frees shared objects when<br>&gt;&gt; &gt;=
+&gt; their reference count became -1 (rather than 0).=C2=A0 The proposed<br=
+>&gt;&gt; &gt;&gt; solution was to do a global +1 on this refcounting schem=
+e, then<br>&gt;&gt; &gt;&gt; replace unsupported atomic_*() functions with =
+appropriate refcount_*()<br>&gt;&gt; &gt;&gt; calls.<br>&gt;&gt; &gt;&gt;<b=
+r>&gt;&gt; &gt;&gt; When submitting this to netdev, it may make sense to se=
+parate out<br>&gt;&gt; &gt;&gt; these changes: first, do a global +1 (while=
+ still using atomic_t),<br>&gt;&gt; &gt;&gt; then convert to refcount_t.=C2=
+=A0 I&#39;m already working on this now, but I<br>&gt;&gt; &gt;&gt; didn&#3=
+9;t know if you wanted to follow this approach or not.<br>&gt;&gt; &gt;<br>=
+&gt;&gt; &gt; David, if you&#39;ve got the global +1 patches ready, let&#39=
+;s start feeding<br>&gt;&gt; &gt; those to netdev ASAP. We can convert them=
+ to refcount_t more easily<br>&gt;&gt; &gt; after that.<br>&gt;&gt; &gt;<br=
+>&gt;&gt;<br>&gt;&gt; Alright, let me get them in order and I&#39;ll submit=
+ them to netdev.=C2=A0 I<br>&gt;&gt; just wanted to make sure that an alter=
+nate approach hadn&#39;t been<br>&gt;&gt; decided upon.<br>&gt;&gt;<br>&gt;=
+<br>&gt; No, we haven&#39;t decided on that.<br>&gt; We had only some +1s, =
+but not for all of it, so if you have a global +1, then it is even better!<=
+br>&gt; Then we can drop +1 parts.<br>&gt;<br>&gt; And what do you mean by =
+&quot; The relevant part of the patch has been cut off &quot; ? It is one h=
+uge<br>&gt; patch but I got it in full mailed via list. Do you see it corru=
+pted or?<br>&gt;<br>&gt; Best Regards,<br>&gt; Elena<br>&gt;
+
+--001a11440f02b7ce9d054673e74e--
