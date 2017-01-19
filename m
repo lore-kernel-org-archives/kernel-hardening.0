@@ -1,40 +1,121 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 Jan 2017 13:52:47 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170119125247.GK6485@twins.programming.kicks-ass.net>
-References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
- <20170118215247.GA129388@gmail.com>
- <20170119091952.GH6485@twins.programming.kicks-ass.net>
- <2236FBA76BA1254E88B949DDB74E612B41C3F0FD@IRSMSX102.ger.corp.intel.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3F0FD@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFCv2 PATCH 00/18] refcount_t API + usage
-To: "Reshetova, Elena" <elena.reshetova@intel.com>
-Cc: Eric Biggers <ebiggers3@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
+In-Reply-To: <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
+References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+ <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
+ <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
+ <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com> <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Thu, 19 Jan 2017 14:53:32 +0100
+Message-ID: <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
+ hidepid= field
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 19, 2017 at 10:22:28AM +0000, Reshetova, Elena wrote:
-> > You again failed to reply to my last email on the subject. The initial
-> > PaX thing was broken as heck, only later did you mention it got fixed. I
-> > told you we could change to that for x86 if it could be proven to be
-> > equivalent.
-> 
-> I am confused on what is referred here as a fix.. 
+On Thu, Jan 19, 2017 at 12:35 AM, Andy Lutomirski <luto@amacapital.net> wro=
+te:
+> On Wed, Jan 18, 2017 at 2:50 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+[...]
+>>>>>
+>>>>>         =E2=80=A6
+>>>>>         prctl(PR_SET_HIDEPID, 2);
+>>>>>         =E2=80=A6
+>>>>>
+>>>>> And from that point on neither nginx itself, nor any of its child
+>>>>> processes may see processes in /proc anymore that belong to a differe=
+nt
+>>>>> user than "www-data". Other services running on the same system remai=
+n
+>>>>> unaffected.
+>>>
+>>> What affect, if any, does this have on ptrace() permissions?
+>>
+>> This should not affect ptrace() permissions or other system calls that
+>> work directly on pids, the test in procfs is related to inodes before
+>> the ptrace check, hmm what do you have in mind ?
+>>
+>
+> I'm wondering what problem you're trying to solve, then.  hidepid
+> helps lock down procfs, but ISTM you might still want to lock down
+> other PID-based APIs.
 
->From http://lkml.kernel.org/r/20161230010627.GA9882@zzz where Eric said:
+Yes but they are already locked based on uid checks. procfs was not
+and this patch is specifically to align it, and to reduce the ability
+to peek data from other processes.
 
-"I do see they used to use a slightly different approach that did a decrement
-instead of setting the counter to INT_MAX.  And that was clearly racy because
-two concurrent increments could circumvent the overflow protection."
+>>
+>>> Also, this one-way thing seems wrong to me.  I think it should roughly
+>>> follow the no_new_privs rules instead.  IOW, if you unshare your
+>>> pidns, it gets cleared.  Also, maybe you shouldn't be able to set it
+>>
+>> Andy I don't follow here, no_new_privs is never cleared right ? I
+>> can't see the corresponding clear bit code for it.
+>
+> I believe that unsharing userns clears no_new_privs.
+No, it is not cleared, and I can't see the clear bit for it. Maybe due
+to userns+filesystems limitations it was not noticed.
 
-> This had numbers on addl vs. cmpxchg:
-> http://www.openwall.com/lists/kernel-hardening/2016/10/04/10
 
-http://lkml.kernel.org/r/20161111102913.GE3117@twins.programming.kicks-ass.net
+>>
+>> For this one I want it to act like no_new_privs. Also pidns can be
+>> created with userns which means it can be revoked. For my use case I
+>> want it to be part of *one* single operation where it is set with the
+>> other sandbox operations that are all preserved... instead of setting
+>> it *again* each time where it can already be late.
+>>
+>
+> I don't see the problem as long as this gets implemented carefully
+> enough.  If you unshare your userns and your pidns, then you should be
+> able to see all tasks in the new pidns, even if you mount a fresh
+> procfs pointing at that pidns -- after all, you are privileged in that
+> namespace.
 
-does too, sure cmpxchg is a bit slower uncontended, but I'm not sure we
-should worry about that much. And refcounts really should not be heavily
-contended, if they are there's design level issues that ought to be
-looked at.
+That's already the case, if you are privileged you can see all tasks,
+the code is written that the per-task hidepid does not overwrite
+capabilities.
+
+
+>>
+>>> without either having CAP_SYS_ADMIN over your userns or having
+>>> no_new_privs set.
+>>
+>> For this one I can add it sure. Historically that logic was added to
+>> make seccomp more usable, for this patch the values can't be relaxed,
+>> they are always increased never decreased. However one minor advantage
+>> if you require no_new_privs is that this option hidepid will also
+>> assert that you can't setuid to access some procfs inodes... though
+>> you can also just set 'no_new_privs + hidepid' both of them in any
+>> order. Also it allows unprivileged without userns to setup a minimal
+>> jail while performing some operations that can be blocked by
+>> no_new_privs.
+>>
+>> Andy, Kees any other comments please on it ? I'm not sure if overusing
+>> no_new_privs in this case is a good idea. Seems to me that seccomp +
+>> no_new_privs is different than this hidepid feature that overlaps
+>> nicely with no_new_privs.
+>>
+>> If there are no responses for this question, then I will just add the
+>> "CAP_SYS_ADMIN || no_new_privs" test in the next iteration.
+>
+> I feel like this feature (per-task hidepid) is subtle and complex
+> enough that it should have a very clear purpose and use case before
+> it's merged and that we should make sure that there isn't a better way
+> to accomplish what you're trying to do.
+
+Sure, the hidepid mount option is old enough, and this per-task
+hidepid is clearly defined only for procfs and per task, we can't add
+another switch that's relate to both a filesystem and pid namespaces,
+it will be a bit complicated and not really useful for cases that are
+in *same* pidns where *each* one have to mount its procfs, it will
+propagate. Also as noted by Lafcadio, the gid thing is a bit hard to
+use now.
+
+Thanks!
+
+--=20
+tixxdz
+http://opendz.org
