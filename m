@@ -1,185 +1,346 @@
 Reply-To: kernel-hardening@lists.openwall.com
+Date: Fri, 20 Jan 2017 00:39:20 +0900
+From: Jinbum Park <jinb.park7@gmail.com>
+Message-ID: <20170119153920.GA20363@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-In-Reply-To: <20170119091952.GH6485@twins.programming.kicks-ass.net>
-References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
- <20170118215247.GA129388@gmail.com> <20170119091952.GH6485@twins.programming.kicks-ass.net>
-From: David Windsor <dwindsor@gmail.com>
-Date: Thu, 19 Jan 2017 10:20:41 -0500
-Message-ID: <CAEXv5_hXQxr=n_CPVKiqVjVwXU5FdHNhNfMDeygFOb30BcuWGw@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=f403045f8b3892e9250546741329
-Subject: [kernel-hardening] Re: [RFCv2 PATCH 00/18] refcount_t API + usage
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: Eric Biggers <ebiggers3@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "h.peter.anvin@intel.com" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>, Elena Reshetova <elena.reshetova@intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] mm: add arch-independent testcases for RODATA
+To: tglx@linutronix.de
+Cc: mingo@redhat.com, hpa@zytor.com, x86@kernel.org, keescook@chromium.org, arjan@linux.intel.com, akpm@linuxfoundation.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@redhat.com, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, kernel-janitors@vger.kernel.org, linux@armlinux.org.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
---f403045f8b3892e9250546741329
-Content-Type: text/plain; charset=UTF-8
+This patch adds arch-independent testcases for RODATA.
+Both x86 and x86_64 already have testcases for RODATA,
+But they are arch-specific because using inline assembly directly.
 
-On Thursday, January 19, 2017, Peter Zijlstra <peterz@infradead.org> wrote:
-> On Wed, Jan 18, 2017 at 01:52:47PM -0800, Eric Biggers wrote:
->> There seems to be a lot of focus on converting things to use refcount_t
-but much
->> less focus on providing a refcount_t implementation that actually meets
-the
->> performance and security goals of the feature.
->
-> And here you go again... :-(
->
-> The refcount_t implementation does meet the security goals afaict, it
-> has full saturation semantics, which means an overflow bug gets turned
-> into a resource leak.
->
-> That covers the entirely of the security goal. If there is more, you'll
-> need to spell it out.
->
-> As for performance, you didn't reply to my earlier email on the subject.
->
->> Notably, the proposed patchset
->> provides no information about why the proposed implementation was chosen
-over
->> the PaX implementation (note that I'm talking about the actual
-implementation of
->> safe reference counts, not the atomic_t/atomic_unchecked_t division)
-which as
->> I've already mentioned is much more efficient (less bloated and faster)
-while
->> still meeting the security goal.
->
-> You again failed to reply to my last email on the subject. The initial
-> PaX thing was broken as heck, only later did you mention it got fixed. I
-> told you we could change to that for x86 if it could be proven to be
-> equivalent.
->
-> If you want to expedite matters, provide said proof.
->
-> The scheme does not make sense for LL/SC based architectures though, so
-> its not something that belongs in generic code.
->
->> I'm especially worried that people will be put
->> in a position where they need to take performance concerns into account
-when
->> deciding whether to use refcount_t or not.
->
-> First show a place where refcounting is performance critical, then we
-> can see how much effort is required.
->
->> And the patch even still includes
->> the "don't allow incrementing a zero refcount" check which AFAICS is
-bogus from
->> a security perspective.
->
-> Because use-after-free isn't a security problem, right? Reference
-> counting semantics are fairly clear that 0 means it is, or is going to
-> be, free()'ed. How does allowing to increment at that point make any
-> sense?
->
->> Even if you and Peter disagree with the comments that I and also PaX
-Team have
->> made, the patch must at least explain the design decisions made.
->
-> It was constructed as a generic atomic with saturation semantics because
-> what was said PaX had was broken as hell (note, I have myself never
-> looked at PaX code and have only seen what was sent me as derived code).
-> If that later got fixed, or the derived code was buggy or whatever, your
-> earlier email was the first I heard of that, and that was well after I
-> wrote refcount_t.
->
-> So the design decision was broken vs not-broken.
->
-> Also, refcount_t is written using generic primitives (not arch
-> specific), to avoid arch dependencies and provide a common
-> implementation to determine semantics. That does not mean architectures
-> cannot implement their own later on (matching semantics).
->
+and cacheflush.h is not suitable location for rodata-test related things.
+Since they were in cacheflush.h,
+If someone change the state of CONFIG_DEBUG_RODATA_TEST,
+It cause overhead of kernel build.
 
-I think it's important to emphasize this: the generic refcount_t
-implementation you provided is the default, arch-independent
-implementation. The original PaX code had a similar system in which
-default, arch-independent implementations were provided (defined in
-include/asm-generic/atomic*.h, if memory serves). Individual architectures
-overrode those definitions with their own, possibly optimized, versions.
+To solve above issue,
+write arch-independent testcases and move it to shared location. (main.c)
 
-Note that figuring out how this system of overridden implementations works
-was pretty difficult, so we may want to investigate whether or not there's
-an easier way to do what we want, or at least document where/how these
-types' definitions are resolved. I have notes on this, and I bet Elena and
-Hans do as well.
+Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
+---
+v2: Restore original credit of mm/rodata_test.c
 
-> Also, I agree GCC does a very poor job generating code from it. But
-> again, I've not had a report where refcounting is performance critical.
-> I've also been very busy with other work and haven't spend much if any
-> time on this since your last email.
->
-> If you want something done, contribute.
->
+ arch/x86/Kconfig.debug            |  8 -----
+ arch/x86/include/asm/cacheflush.h | 10 ------
+ arch/x86/kernel/Makefile          |  1 -
+ arch/x86/kernel/test_rodata.c     | 75 ---------------------------------------
+ arch/x86/mm/init_32.c             |  4 ---
+ arch/x86/mm/init_64.c             |  5 ---
+ init/main.c                       | 10 +++++-
+ mm/Kconfig.debug                  |  6 ++++
+ mm/Makefile                       |  1 +
+ mm/rodata_test.c                  | 64 +++++++++++++++++++++++++++++++++
+ 10 files changed, 80 insertions(+), 104 deletions(-)
+ delete mode 100644 arch/x86/kernel/test_rodata.c
+ create mode 100644 mm/rodata_test.c
 
---f403045f8b3892e9250546741329
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<br><br>On Thursday, January 19, 2017, Peter Zijlstra &lt;<a href=3D"mailto=
-:peterz@infradead.org">peterz@infradead.org</a>&gt; wrote:<br>&gt; On Wed, =
-Jan 18, 2017 at 01:52:47PM -0800, Eric Biggers wrote:<br>&gt;&gt; There see=
-ms to be a lot of focus on converting things to use refcount_t but much<br>=
-&gt;&gt; less focus on providing a refcount_t implementation that actually =
-meets the<br>&gt;&gt; performance and security goals of the feature.<br>&gt=
-;<br>&gt; And here you go again... :-(<br>&gt;<br>&gt; The refcount_t imple=
-mentation does meet the security goals afaict, it<br>&gt; has full saturati=
-on semantics, which means an overflow bug gets turned<br>&gt; into a resour=
-ce leak.<br>&gt;<br>&gt; That covers the entirely of the security goal. If =
-there is more, you&#39;ll<br>&gt; need to spell it out.<br>&gt;<br>&gt; As =
-for performance, you didn&#39;t reply to my earlier email on the subject.<b=
-r>&gt;<br>&gt;&gt; Notably, the proposed patchset<br>&gt;&gt; provides no i=
-nformation about why the proposed implementation was chosen over<br>&gt;&gt=
-; the PaX implementation (note that I&#39;m talking about the actual implem=
-entation of<br>&gt;&gt; safe reference counts, not the atomic_t/atomic_unch=
-ecked_t division) which as<br>&gt;&gt; I&#39;ve already mentioned is much m=
-ore efficient (less bloated and faster) while<br>&gt;&gt; still meeting the=
- security goal.<br>&gt;<br>&gt; You again failed to reply to my last email =
-on the subject. The initial<br>&gt; PaX thing was broken as heck, only late=
-r did you mention it got fixed. I<br>&gt; told you we could change to that =
-for x86 if it could be proven to be<br>&gt; equivalent.<br>&gt;<br>&gt; If =
-you want to expedite matters, provide said proof.<br>&gt;<br>&gt; The schem=
-e does not make sense for LL/SC based architectures though, so<br>&gt; its =
-not something that belongs in generic code.<br>&gt;<br>&gt;&gt; I&#39;m esp=
-ecially worried that people will be put<br>&gt;&gt; in a position where the=
-y need to take performance concerns into account when<br>&gt;&gt; deciding =
-whether to use refcount_t or not.<br>&gt;<br>&gt; First show a place where =
-refcounting is performance critical, then we<br>&gt; can see how much effor=
-t is required.<br>&gt;<br>&gt;&gt; And the patch even still includes<br>&gt=
-;&gt; the &quot;don&#39;t allow incrementing a zero refcount&quot; check wh=
-ich AFAICS is bogus from<br>&gt;&gt; a security perspective.<br>&gt;<br>&gt=
-; Because use-after-free isn&#39;t a security problem, right? Reference<br>=
-&gt; counting semantics are fairly clear that 0 means it is, or is going to=
-<br>&gt; be, free()&#39;ed. How does allowing to increment at that point ma=
-ke any<br>&gt; sense?<br>&gt;<br>&gt;&gt; Even if you and Peter disagree wi=
-th the comments that I and also PaX Team have<br>&gt;&gt; made, the patch m=
-ust at least explain the design decisions made.<br>&gt;<br>&gt; It was cons=
-tructed as a generic atomic with saturation semantics because<br>&gt; what =
-was said PaX had was broken as hell (note, I have myself never<br>&gt; look=
-ed at PaX code and have only seen what was sent me as derived code).<br>&gt=
-; If that later got fixed, or the derived code was buggy or whatever, your<=
-br>&gt; earlier email was the first I heard of that, and that was well afte=
-r I<br>&gt; wrote refcount_t.<br>&gt;<br>&gt; So the design decision was br=
-oken vs not-broken.<br>&gt;<br>&gt; Also, refcount_t is written using gener=
-ic primitives (not arch<br>&gt; specific), to avoid arch dependencies and p=
-rovide a common<br>&gt; implementation to determine semantics. That does no=
-t mean architectures<br>&gt; cannot implement their own later on (matching =
-semantics).<br>&gt;<br><br>I think it&#39;s important to emphasize this: th=
-e generic refcount_t implementation you provided is the default, arch-indep=
-endent implementation. The original PaX code had a similar system in which =
-default, arch-independent implementations were provided (defined in include=
-/asm-generic/atomic*.h, if memory serves). Individual architectures overrod=
-e those definitions with their own, possibly optimized, versions. =C2=A0<br=
-><br>Note that figuring out how this system of overridden implementations w=
-orks was pretty difficult, so we may want to investigate whether or not the=
-re&#39;s an easier way to do what we want, or at least document where/how t=
-hese types&#39; definitions are resolved. I have notes on this, and I bet E=
-lena and Hans do as well.<br><br>&gt; Also, I agree GCC does a very poor jo=
-b generating code from it. But<br>&gt; again, I&#39;ve not had a report whe=
-re refcounting is performance critical.<br>&gt; I&#39;ve also been very bus=
-y with other work and haven&#39;t spend much if any<br>&gt; time on this si=
-nce your last email.<br>&gt;<br>&gt; If you want something done, contribute=
-.<br>&gt;
-
---f403045f8b3892e9250546741329--
+diff --git a/arch/x86/Kconfig.debug b/arch/x86/Kconfig.debug
+index 67eec55..5df54a8 100644
+--- a/arch/x86/Kconfig.debug
++++ b/arch/x86/Kconfig.debug
+@@ -74,14 +74,6 @@ config EFI_PGT_DUMP
+ 	  issues with the mapping of the EFI runtime regions into that
+ 	  table.
+ 
+-config DEBUG_RODATA_TEST
+-	bool "Testcase for the marking rodata read-only"
+-	default y
+-	---help---
+-	  This option enables a testcase for the setting rodata read-only
+-	  as well as for the change_page_attr() infrastructure.
+-	  If in doubt, say "N"
+-
+ config DEBUG_WX
+ 	bool "Warn on W+X mappings at boot"
+ 	select X86_PTDUMP_CORE
+diff --git a/arch/x86/include/asm/cacheflush.h b/arch/x86/include/asm/cacheflush.h
+index 872877d..e7e1942e 100644
+--- a/arch/x86/include/asm/cacheflush.h
++++ b/arch/x86/include/asm/cacheflush.h
+@@ -90,18 +90,8 @@
+ 
+ #define mmio_flush_range(addr, size) clflush_cache_range(addr, size)
+ 
+-extern const int rodata_test_data;
+ extern int kernel_set_to_readonly;
+ void set_kernel_text_rw(void);
+ void set_kernel_text_ro(void);
+ 
+-#ifdef CONFIG_DEBUG_RODATA_TEST
+-int rodata_test(void);
+-#else
+-static inline int rodata_test(void)
+-{
+-	return 0;
+-}
+-#endif
+-
+ #endif /* _ASM_X86_CACHEFLUSH_H */
+diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
+index 581386c..f6caf82 100644
+--- a/arch/x86/kernel/Makefile
++++ b/arch/x86/kernel/Makefile
+@@ -100,7 +100,6 @@ obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
+ obj-$(CONFIG_APB_TIMER)		+= apb_timer.o
+ 
+ obj-$(CONFIG_AMD_NB)		+= amd_nb.o
+-obj-$(CONFIG_DEBUG_RODATA_TEST)	+= test_rodata.o
+ obj-$(CONFIG_DEBUG_NX_TEST)	+= test_nx.o
+ obj-$(CONFIG_DEBUG_NMI_SELFTEST) += nmi_selftest.o
+ 
+diff --git a/arch/x86/kernel/test_rodata.c b/arch/x86/kernel/test_rodata.c
+deleted file mode 100644
+index 222e84e..0000000
+--- a/arch/x86/kernel/test_rodata.c
++++ /dev/null
+@@ -1,75 +0,0 @@
+-/*
+- * test_rodata.c: functional test for mark_rodata_ro function
+- *
+- * (C) Copyright 2008 Intel Corporation
+- * Author: Arjan van de Ven <arjan@linux.intel.com>
+- *
+- * This program is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU General Public License
+- * as published by the Free Software Foundation; version 2
+- * of the License.
+- */
+-#include <asm/cacheflush.h>
+-#include <asm/sections.h>
+-#include <asm/asm.h>
+-
+-int rodata_test(void)
+-{
+-	unsigned long result;
+-	unsigned long start, end;
+-
+-	/* test 1: read the value */
+-	/* If this test fails, some previous testrun has clobbered the state */
+-	if (!rodata_test_data) {
+-		printk(KERN_ERR "rodata_test: test 1 fails (start data)\n");
+-		return -ENODEV;
+-	}
+-
+-	/* test 2: write to the variable; this should fault */
+-	/*
+-	 * If this test fails, we managed to overwrite the data
+-	 *
+-	 * This is written in assembly to be able to catch the
+-	 * exception that is supposed to happen in the correct
+-	 * case
+-	 */
+-
+-	result = 1;
+-	asm volatile(
+-		"0:	mov %[zero],(%[rodata_test])\n"
+-		"	mov %[zero], %[rslt]\n"
+-		"1:\n"
+-		".section .fixup,\"ax\"\n"
+-		"2:	jmp 1b\n"
+-		".previous\n"
+-		_ASM_EXTABLE(0b,2b)
+-		: [rslt] "=r" (result)
+-		: [rodata_test] "r" (&rodata_test_data), [zero] "r" (0UL)
+-	);
+-
+-
+-	if (!result) {
+-		printk(KERN_ERR "rodata_test: test data was not read only\n");
+-		return -ENODEV;
+-	}
+-
+-	/* test 3: check the value hasn't changed */
+-	/* If this test fails, we managed to overwrite the data */
+-	if (!rodata_test_data) {
+-		printk(KERN_ERR "rodata_test: Test 3 fails (end data)\n");
+-		return -ENODEV;
+-	}
+-	/* test 4: check if the rodata section is 4Kb aligned */
+-	start = (unsigned long)__start_rodata;
+-	end = (unsigned long)__end_rodata;
+-	if (start & (PAGE_SIZE - 1)) {
+-		printk(KERN_ERR "rodata_test: .rodata is not 4k aligned\n");
+-		return -ENODEV;
+-	}
+-	if (end & (PAGE_SIZE - 1)) {
+-		printk(KERN_ERR "rodata_test: .rodata end is not 4k aligned\n");
+-		return -ENODEV;
+-	}
+-
+-	return 0;
+-}
+diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
+index 928d657..2b4b53e 100644
+--- a/arch/x86/mm/init_32.c
++++ b/arch/x86/mm/init_32.c
+@@ -864,9 +864,6 @@ static noinline int do_test_wp_bit(void)
+ 	return flag;
+ }
+ 
+-const int rodata_test_data = 0xC3;
+-EXPORT_SYMBOL_GPL(rodata_test_data);
+-
+ int kernel_set_to_readonly __read_mostly;
+ 
+ void set_kernel_text_rw(void)
+@@ -939,7 +936,6 @@ void mark_rodata_ro(void)
+ 	set_pages_ro(virt_to_page(start), size >> PAGE_SHIFT);
+ 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
+ 		size >> 10);
+-	rodata_test();
+ 
+ #ifdef CONFIG_CPA_DEBUG
+ 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, start + size);
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index 97346f9..15173d3 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -1000,9 +1000,6 @@ void __init mem_init(void)
+ 	mem_init_print_info(NULL);
+ }
+ 
+-const int rodata_test_data = 0xC3;
+-EXPORT_SYMBOL_GPL(rodata_test_data);
+-
+ int kernel_set_to_readonly;
+ 
+ void set_kernel_text_rw(void)
+@@ -1071,8 +1068,6 @@ void mark_rodata_ro(void)
+ 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
+ 	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
+ 
+-	rodata_test();
+-
+ #ifdef CONFIG_CPA_DEBUG
+ 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, end);
+ 	set_memory_rw(start, (end-start) >> PAGE_SHIFT);
+diff --git a/init/main.c b/init/main.c
+index e47373d..15b42bf 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -932,11 +932,19 @@ static int __init set_debug_rodata(char *str)
+ __setup("rodata=", set_debug_rodata);
+ #endif
+ 
++#ifdef CONFIG_DEBUG_RODATA_TEST
++void rodata_test(void);
++#else
++static inline void rodata_test(void) {}
++#endif
++
+ #ifdef CONFIG_DEBUG_RODATA
+ static void mark_readonly(void)
+ {
+-	if (rodata_enabled)
++	if (rodata_enabled) {
+ 		mark_rodata_ro();
++		rodata_test();
++	}
+ 	else
+ 		pr_info("Kernel memory protection disabled.\n");
+ }
+diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
+index afcc550..e4f22ce 100644
+--- a/mm/Kconfig.debug
++++ b/mm/Kconfig.debug
+@@ -90,3 +90,9 @@ config DEBUG_PAGE_REF
+ 	  careful when enabling this feature because it adds about 30 KB to the
+ 	  kernel code.  However the runtime performance overhead is virtually
+ 	  nil until the tracepoints are actually enabled.
++
++config DEBUG_RODATA_TEST
++	bool "Testcase for the marking rodata read-only"
++	depends on DEBUG_RODATA
++	---help---
++	  This option enables a testcase for the setting rodata read-only.
+\ No newline at end of file
+diff --git a/mm/Makefile b/mm/Makefile
+index 433eaf9..d6199d4 100644
+--- a/mm/Makefile
++++ b/mm/Makefile
+@@ -83,6 +83,7 @@ obj-$(CONFIG_MEMORY_FAILURE) += memory-failure.o
+ obj-$(CONFIG_HWPOISON_INJECT) += hwpoison-inject.o
+ obj-$(CONFIG_DEBUG_KMEMLEAK) += kmemleak.o
+ obj-$(CONFIG_DEBUG_KMEMLEAK_TEST) += kmemleak-test.o
++obj-$(CONFIG_DEBUG_RODATA_TEST) += rodata_test.o
+ obj-$(CONFIG_PAGE_OWNER) += page_owner.o
+ obj-$(CONFIG_CLEANCACHE) += cleancache.o
+ obj-$(CONFIG_MEMORY_ISOLATION) += page_isolation.o
+diff --git a/mm/rodata_test.c b/mm/rodata_test.c
+new file mode 100644
+index 0000000..fb953c0
+--- /dev/null
++++ b/mm/rodata_test.c
+@@ -0,0 +1,64 @@
++/*
++ * rodata_test.c: functional test for mark_rodata_ro function
++ *
++ * (C) Copyright 2008 Intel Corporation
++ * Author: Arjan van de Ven <arjan@linux.intel.com>
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; version 2
++ * of the License.
++ */
++#include <asm/uaccess.h>
++#include <asm/sections.h>
++
++const int rodata_test_data = 0xC3;
++EXPORT_SYMBOL_GPL(rodata_test_data);
++
++void rodata_test(void)
++{
++	unsigned long start, end, rodata_addr;
++	int zero = 0;
++
++	/* prepare test */
++	rodata_addr = ((unsigned long)&rodata_test_data);
++
++	/* test 1: read the value */
++	/* If this test fails, some previous testrun has clobbered the state */
++	if (!rodata_test_data) {
++		pr_err("rodata_test: test 1 fails (start data)\n");
++		return;
++	}
++
++	/* test 2: write to the variable; this should fault */
++	/*
++	 * This must be written in assembly to be able to catch the
++	 * exception that is supposed to happen in the correct case.
++	 *
++	 * So that put_user macro is used to write arch-independent assembly.
++	 */
++	if (!put_user(zero, (int *)rodata_addr)) {
++		pr_err("rodata_test: test data was not read only\n");
++		return;
++	}
++
++	/* test 3: check the value hasn't changed */
++	if (rodata_test_data == zero) {
++		pr_err("rodata_test: test data was changed\n");
++		return;
++	}
++
++	/* test 4: check if the rodata section is PAGE_SIZE aligned */
++	start = (unsigned long)__start_rodata;
++	end = (unsigned long)__end_rodata;
++	if (start & (PAGE_SIZE - 1)) {
++		pr_err("rodata_test: start of .rodata is not page size aligned\n");
++		return;
++	}
++	if (end & (PAGE_SIZE - 1)) {
++		pr_err("rodata_test: end of .rodata is not page size aligned\n");
++		return;
++	}
++
++	pr_info("rodata_test: all tests were successful\n");
++}
+-- 
+1.9.1
