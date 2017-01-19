@@ -1,91 +1,93 @@
 Reply-To: kernel-hardening@lists.openwall.com
-From: "Reshetova, Elena" <elena.reshetova@intel.com>
-Date: Thu, 19 Jan 2017 16:00:13 +0000
-Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3F3D8@IRSMSX102.ger.corp.intel.com>
-References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
- <20170118215247.GA129388@gmail.com>
- <20170119091952.GH6485@twins.programming.kicks-ass.net>
- <CAEXv5_hXQxr=n_CPVKiqVjVwXU5FdHNhNfMDeygFOb30BcuWGw@mail.gmail.com>
-In-Reply-To: <CAEXv5_hXQxr=n_CPVKiqVjVwXU5FdHNhNfMDeygFOb30BcuWGw@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
+Date: Thu, 19 Jan 2017 11:27:02 -0500
+From: "J. Bruce Fields" <bfields@fieldses.org>
+Message-ID: <20170119162702.GE17183@fieldses.org>
+References: <20170116164944.GA28984@kroah.com>
+ <20170116165031.GB29693@kroah.com>
+ <20170116212555.GA5201@fieldses.org>
+ <20170117071347.GA7296@kroah.com>
+ <20170117151911.GA13787@fieldses.org>
+ <20170117152919.GA4640@kroah.com>
+ <20170119120321.GA3396@kroah.com>
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [RFCv2 PATCH 00/18] refcount_t API + usage
-To: David Windsor <dwindsor@gmail.com>, Peter Zijlstra <peterz@infradead.org>
-Cc: Eric Biggers <ebiggers3@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "will.deacon@arm.com" <will.deacon@arm.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170119120321.GA3396@kroah.com>
+Subject: Re: [kernel-hardening] Re: [PATCH 2/3] Make static usermode helper
+ binaries constant
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Thomas Sailer <t.sailer@alumni.ethz.ch>, "Rafael J. Wysocki" <rafael.j.wysocki@intel.com>, Johan Hovold <johan@kernel.org>, Alex Elder <elder@kernel.org>, Jeff Layton <jlayton@poochiereds.net>, David Howells <dhowells@redhat.com>, NeilBrown <neilb@suse.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-T24gVGh1cnNkYXksIEphbnVhcnkgMTksIDIwMTcsIFBldGVyIFppamxzdHJhIDxwZXRlcnpAaW5m
-cmFkZWFkLm9yZz4gd3JvdGU6DQo+IE9uIFdlZCwgSmFuIDE4LCAyMDE3IGF0IDAxOjUyOjQ3UE0g
-LTA4MDAsIEVyaWMgQmlnZ2VycyB3cm90ZToNCj4+IFRoZXJlIHNlZW1zIHRvIGJlIGEgbG90IG9m
-IGZvY3VzIG9uIGNvbnZlcnRpbmcgdGhpbmdzIHRvIHVzZSByZWZjb3VudF90IGJ1dCBtdWNoDQo+
-PiBsZXNzIGZvY3VzIG9uIHByb3ZpZGluZyBhIHJlZmNvdW50X3QgaW1wbGVtZW50YXRpb24gdGhh
-dCBhY3R1YWxseSBtZWV0cyB0aGUNCj4+IHBlcmZvcm1hbmNlIGFuZCBzZWN1cml0eSBnb2FscyBv
-ZiB0aGUgZmVhdHVyZS4NCj4NCj4gQW5kIGhlcmUgeW91IGdvIGFnYWluLi4uIDotKA0KPg0KPiBU
-aGUgcmVmY291bnRfdCBpbXBsZW1lbnRhdGlvbiBkb2VzIG1lZXQgdGhlIHNlY3VyaXR5IGdvYWxz
-IGFmYWljdCwgaXQNCj4gaGFzIGZ1bGwgc2F0dXJhdGlvbiBzZW1hbnRpY3MsIHdoaWNoIG1lYW5z
-IGFuIG92ZXJmbG93IGJ1ZyBnZXRzIHR1cm5lZA0KPiBpbnRvIGEgcmVzb3VyY2UgbGVhay4NCj4N
-Cj4gVGhhdCBjb3ZlcnMgdGhlIGVudGlyZWx5IG9mIHRoZSBzZWN1cml0eSBnb2FsLiBJZiB0aGVy
-ZSBpcyBtb3JlLCB5b3UnbGwNCj4gbmVlZCB0byBzcGVsbCBpdCBvdXQuDQo+DQo+IEFzIGZvciBw
-ZXJmb3JtYW5jZSwgeW91IGRpZG4ndCByZXBseSB0byBteSBlYXJsaWVyIGVtYWlsIG9uIHRoZSBz
-dWJqZWN0Lg0KPg0KPj4gTm90YWJseSwgdGhlIHByb3Bvc2VkIHBhdGNoc2V0DQo+PiBwcm92aWRl
-cyBubyBpbmZvcm1hdGlvbiBhYm91dCB3aHkgdGhlIHByb3Bvc2VkIGltcGxlbWVudGF0aW9uIHdh
-cyBjaG9zZW4gb3Zlcg0KPj4gdGhlIFBhWCBpbXBsZW1lbnRhdGlvbiAobm90ZSB0aGF0IEknbSB0
-YWxraW5nIGFib3V0IHRoZSBhY3R1YWwgaW1wbGVtZW50YXRpb24gb2YNCj4+IHNhZmUgcmVmZXJl
-bmNlIGNvdW50cywgbm90IHRoZSBhdG9taWNfdC9hdG9taWNfdW5jaGVja2VkX3QgZGl2aXNpb24p
-IHdoaWNoIGFzDQo+PiBJJ3ZlIGFscmVhZHkgbWVudGlvbmVkIGlzIG11Y2ggbW9yZSBlZmZpY2ll
-bnQgKGxlc3MgYmxvYXRlZCBhbmQgZmFzdGVyKSB3aGlsZQ0KPj4gc3RpbGwgbWVldGluZyB0aGUg
-c2VjdXJpdHkgZ29hbC4NCj4NCj4gWW91IGFnYWluIGZhaWxlZCB0byByZXBseSB0byBteSBsYXN0
-IGVtYWlsIG9uIHRoZSBzdWJqZWN0LiBUaGUgaW5pdGlhbA0KPiBQYVggdGhpbmcgd2FzIGJyb2tl
-biBhcyBoZWNrLCBvbmx5IGxhdGVyIGRpZCB5b3UgbWVudGlvbiBpdCBnb3QgZml4ZWQuIEkNCj4g
-dG9sZCB5b3Ugd2UgY291bGQgY2hhbmdlIHRvIHRoYXQgZm9yIHg4NiBpZiBpdCBjb3VsZCBiZSBw
-cm92ZW4gdG8gYmUNCj4gZXF1aXZhbGVudC4NCj4NCj4gSWYgeW91IHdhbnQgdG8gZXhwZWRpdGUg
-bWF0dGVycywgcHJvdmlkZSBzYWlkIHByb29mLg0KPg0KPiBUaGUgc2NoZW1lIGRvZXMgbm90IG1h
-a2Ugc2Vuc2UgZm9yIExML1NDIGJhc2VkIGFyY2hpdGVjdHVyZXMgdGhvdWdoLCBzbw0KPiBpdHMg
-bm90IHNvbWV0aGluZyB0aGF0IGJlbG9uZ3MgaW4gZ2VuZXJpYyBjb2RlLg0KPg0KPj4gSSdtIGVz
-cGVjaWFsbHkgd29ycmllZCB0aGF0IHBlb3BsZSB3aWxsIGJlIHB1dA0KPj4gaW4gYSBwb3NpdGlv
-biB3aGVyZSB0aGV5IG5lZWQgdG8gdGFrZSBwZXJmb3JtYW5jZSBjb25jZXJucyBpbnRvIGFjY291
-bnQgd2hlbg0KPj4gZGVjaWRpbmcgd2hldGhlciB0byB1c2UgcmVmY291bnRfdCBvciBub3QuDQo+
-DQo+IEZpcnN0IHNob3cgYSBwbGFjZSB3aGVyZSByZWZjb3VudGluZyBpcyBwZXJmb3JtYW5jZSBj
-cml0aWNhbCwgdGhlbiB3ZQ0KPiBjYW4gc2VlIGhvdyBtdWNoIGVmZm9ydCBpcyByZXF1aXJlZC4N
-Cj4NCj4+IEFuZCB0aGUgcGF0Y2ggZXZlbiBzdGlsbCBpbmNsdWRlcw0KPj4gdGhlICJkb24ndCBh
-bGxvdyBpbmNyZW1lbnRpbmcgYSB6ZXJvIHJlZmNvdW50IiBjaGVjayB3aGljaCBBRkFJQ1MgaXMg
-Ym9ndXMgZnJvbQ0KPj4gYSBzZWN1cml0eSBwZXJzcGVjdGl2ZS4NCj4NCj4gQmVjYXVzZSB1c2Ut
-YWZ0ZXItZnJlZSBpc24ndCBhIHNlY3VyaXR5IHByb2JsZW0sIHJpZ2h0PyBSZWZlcmVuY2UNCj4g
-Y291bnRpbmcgc2VtYW50aWNzIGFyZSBmYWlybHkgY2xlYXIgdGhhdCAwIG1lYW5zIGl0IGlzLCBv
-ciBpcyBnb2luZyB0bw0KPiBiZSwgZnJlZSgpJ2VkLiBIb3cgZG9lcyBhbGxvd2luZyB0byBpbmNy
-ZW1lbnQgYXQgdGhhdCBwb2ludCBtYWtlIGFueQ0KPiBzZW5zZT8NCj4NCj4+IEV2ZW4gaWYgeW91
-IGFuZCBQZXRlciBkaXNhZ3JlZSB3aXRoIHRoZSBjb21tZW50cyB0aGF0IEkgYW5kIGFsc28gUGFY
-IFRlYW0gaGF2ZQ0KPj4gbWFkZSwgdGhlIHBhdGNoIG11c3QgYXQgbGVhc3QgZXhwbGFpbiB0aGUg
-ZGVzaWduIGRlY2lzaW9ucyBtYWRlLg0KPg0KPiBJdCB3YXMgY29uc3RydWN0ZWQgYXMgYSBnZW5l
-cmljIGF0b21pYyB3aXRoIHNhdHVyYXRpb24gc2VtYW50aWNzIGJlY2F1c2UNCj4gd2hhdCB3YXMg
-c2FpZCBQYVggaGFkIHdhcyBicm9rZW4gYXMgaGVsbCAobm90ZSwgSSBoYXZlIG15c2VsZiBuZXZl
-cg0KPiBsb29rZWQgYXQgUGFYIGNvZGUgYW5kIGhhdmUgb25seSBzZWVuIHdoYXQgd2FzIHNlbnQg
-bWUgYXMgZGVyaXZlZCBjb2RlKS4NCj4gSWYgdGhhdCBsYXRlciBnb3QgZml4ZWQsIG9yIHRoZSBk
-ZXJpdmVkIGNvZGUgd2FzIGJ1Z2d5IG9yIHdoYXRldmVyLCB5b3VyDQo+IGVhcmxpZXIgZW1haWwg
-d2FzIHRoZSBmaXJzdCBJIGhlYXJkIG9mIHRoYXQsIGFuZCB0aGF0IHdhcyB3ZWxsIGFmdGVyIEkN
-Cj4gd3JvdGUgcmVmY291bnRfdC4NCj4NCj4gU28gdGhlIGRlc2lnbiBkZWNpc2lvbiB3YXMgYnJv
-a2VuIHZzIG5vdC1icm9rZW4uDQo+DQo+IEFsc28sIHJlZmNvdW50X3QgaXMgd3JpdHRlbiB1c2lu
-ZyBnZW5lcmljIHByaW1pdGl2ZXMgKG5vdCBhcmNoDQo+IHNwZWNpZmljKSwgdG8gYXZvaWQgYXJj
-aCBkZXBlbmRlbmNpZXMgYW5kIHByb3ZpZGUgYSBjb21tb24NCj4gaW1wbGVtZW50YXRpb24gdG8g
-ZGV0ZXJtaW5lIHNlbWFudGljcy4gVGhhdCBkb2VzIG5vdCBtZWFuIGFyY2hpdGVjdHVyZXMNCj4g
-Y2Fubm90IGltcGxlbWVudCB0aGVpciBvd24gbGF0ZXIgb24gKG1hdGNoaW5nIHNlbWFudGljcyku
-DQo+DQoNCj5JIHRoaW5rIGl0J3MgaW1wb3J0YW50IHRvIGVtcGhhc2l6ZSB0aGlzOiB0aGUgZ2Vu
-ZXJpYyByZWZjb3VudF90IGltcGxlbWVudGF0aW9uIHlvdSBwcm92aWRlZCBpcyB0aGUgZGVmYXVs
-dCwgYXJjaC1pbmRlcGVuZGVudCBpbXBsZW1lbnRhdGlvbi4gVGhlIG9yaWdpbmFsIFBhWCBjb2Rl
-IGhhZCBhIHNpbWlsYXIgc3lzdGVtIGluIHdoaWNoIGRlZmF1bHQsIGFyY2gtaW5kZXBlbmRlbnQg
-aW1wbGVtZW50YXRpb25zIHdlcmUgcHJvdmlkZWQgPihkZWZpbmVkIGluIGluY2x1ZGUvYXNtLWdl
-bmVyaWMvYXRvbWljKi5oLCBpZiBtZW1vcnkgc2VydmVzKS4gSW5kaXZpZHVhbCBhcmNoaXRlY3R1
-cmVzIG92ZXJyb2RlIHRob3NlIGRlZmluaXRpb25zIHdpdGggdGhlaXIgb3duLCBwb3NzaWJseSBv
-cHRpbWl6ZWQsIHZlcnNpb25zLiDCoA0KDQo+Tm90ZSB0aGF0IGZpZ3VyaW5nIG91dCBob3cgdGhp
-cyBzeXN0ZW0gb2Ygb3ZlcnJpZGRlbiBpbXBsZW1lbnRhdGlvbnMgd29ya3Mgd2FzIHByZXR0eSBk
-aWZmaWN1bHQsIHNvIHdlIG1heSB3YW50IHRvIGludmVzdGlnYXRlIHdoZXRoZXIgb3Igbm90IHRo
-ZXJlJ3MgYW4gZWFzaWVyIHdheSB0byBkbyB3aGF0IHdlIHdhbnQsIG9yIGF0IGxlYXN0IGRvY3Vt
-ZW50IHdoZXJlL2hvdyB0aGVzZSB0eXBlcycgZGVmaW5pdGlvbnMgYXJlID5yZXNvbHZlZC4gSSBo
-YXZlIG5vdGVzIG9uIHRoaXMsIGFuZCBJIGJldCBFbGVuYSBhbmQgSGFucyBkbyBhcyB3ZWxsLg0K
-DQpJZiB3ZSBnbyB0aGlzIHBhdGgsIEkgdGhpbmsgaXQgd291bGQgYmUgZWFzaWVyIHRoYW4gYmVm
-b3JlIHNpbmNlIHdlIG5lZWQgdG8gcHJvdmlkZSBvbmx5IGEgc21hbGwgc3Vic2V0IG9mIGZ1bmN0
-aW9ucy4gDQpBbHNvLCB0aGUgYmlnZ2VzdCBoZWFkYWNoZXMgd2VyZSBhY3R1YWxseSBhdG9taWM2
-NF90IGFuZCBsb2NhbF90IGJ1dCBzaW5jZSB3ZSBoYXZlbid0IGZvdW5kIGFueSB1c2UgY2FzZXMg
-Zm9yIHRoZW0gZm9yIHJlZmNvdW50X3QsDQppdCBpcyByZWFsbHkgbXVjaCBlYXNpZXIgd2l0aG91
-dC4gIA0K
+On Thu, Jan 19, 2017 at 01:03:21PM +0100, Greg KH wrote:
+> On Tue, Jan 17, 2017 at 04:29:19PM +0100, Greg KH wrote:
+> > On Tue, Jan 17, 2017 at 10:19:11AM -0500, J. Bruce Fields wrote:
+> > > On Tue, Jan 17, 2017 at 08:13:47AM +0100, Greg KH wrote:
+> > > > On Mon, Jan 16, 2017 at 04:25:55PM -0500, J. Bruce Fields wrote:
+> > > > > On Mon, Jan 16, 2017 at 05:50:31PM +0100, Greg KH wrote:
+> > > > > > From: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+> > > > > > 
+> > > > > > There are a number of usermode helper binaries that are "hard coded" in
+> > > > > > the kernel today, so mark them as "const" to make it harder for someone
+> > > > > > to change where the variables point to.
+> > > > > > 
+> > > > > ...
+> > > > > > --- a/drivers/pnp/pnpbios/core.c
+> > > > > > +++ b/drivers/pnp/pnpbios/core.c
+> > > > > > @@ -98,6 +98,7 @@ static struct completion unload_sem;
+> > > > > >   */
+> > > > > >  static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > > > > >  {
+> > > > > > +	static char const sbin_pnpbios[] = "/sbin/pnpbios";
+> > > > > >  	char *argv[3], **envp, *buf, *scratch;
+> > > > > >  	int i = 0, value;
+> > > > > >  
+> > > > > > @@ -112,7 +113,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+> > > > > >  	 * integrated into the driver core and use the usual infrastructure
+> > > > > >  	 * like sysfs and uevents
+> > > > > >  	 */
+> > > > > > -	argv[0] = "/sbin/pnpbios";
+> > > > > > +	argv[0] = (char *)sbin_pnpbios;
+> > > > > 
+> > > > > So here and elsewhere, can attackers write to argv[0] instead of to the
+> > > > > memory where the string lives?
+> > > > 
+> > > > Yes, they could, it would be a very "tight" race to do that (have to
+> > > > write after the assignment and before the call_usermodehelper_exec()
+> > > > runs).  However, the kernel does not run argv[0], it just passes it to
+> > > > the binary you specify in path, so for this example, the correct program
+> > > > would still be run by the kernel.
+> > > 
+> > > In this case it's argv[0] that will be passed to call_usermodehelper as
+> > > path, but.... OK, this argv array and the various function call
+> > > arguments are all just data on the stack, so I guess it's all about
+> > > equivalent.
+> > 
+> > Kind of, nice catch, I'll change the call to usermodehelper to use
+> > sbin_pnpbios here, as that's the right thing to do.
+> 
+> Oops, no, the patch was doing the right thing here, you missed the next
+> chunk of the patch:
+
+Oh, got it, thanks.
+
+--b.
+
+> 
+> 
+> @@ -139,7 +140,7 @@ static int pnp_dock_event(int dock, struct pnp_docking_station_info *info)
+>                            info->location_id, info->serial, info->capabilities);
+>         envp[i] = NULL;
+> 
+> -       value = call_usermodehelper(argv [0], argv, envp, UMH_WAIT_EXEC);
+> +       value = call_usermodehelper(sbin_pnpbios, argv, envp, UMH_WAIT_EXEC);
+>         kfree(buf);
+>         kfree(envp);
+>         return 0;
+> 
+> 
+> So it's ok.
+> 
+> thanks,
+> 
+> greg k-h
