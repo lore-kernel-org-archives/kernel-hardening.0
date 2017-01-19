@@ -1,600 +1,117 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 Jan 2017 08:53:41 +0100
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20170119075341.GA14530@amd>
-References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
- <1484789346-21012-2-git-send-email-labbott@redhat.com>
+From: "Reshetova, Elena" <elena.reshetova@intel.com>
+Date: Thu, 19 Jan 2017 08:31:58 +0000
+Message-ID: <2236FBA76BA1254E88B949DDB74E612B41C3F028@IRSMSX102.ger.corp.intel.com>
+References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com>
+ <20170118215247.GA129388@gmail.com>
+In-Reply-To: <20170118215247.GA129388@gmail.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="EeQfGwPcQSOJBaQU"
-Content-Disposition: inline
-In-Reply-To: <1484789346-21012-2-git-send-email-labbott@redhat.com>
-Subject: [kernel-hardening] Re: [PATCH 1/2] security: Change name of CONFIG_DEBUG_RODATA
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-s390@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: RE: [kernel-hardening] [RFCv2 PATCH 00/18] refcount_t API + usage
+To: Eric Biggers <ebiggers3@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "arnd@arndb.de" <arnd@arndb.de>, "tglx@linutronix.de" <tglx@linutronix.de>, "mingo@redhat.com" <mingo@redhat.com>, "Anvin, H Peter" <h.peter.anvin@intel.com>, "peterz@infradead.org" <peterz@infradead.org>, "will.deacon@arm.com" <will.deacon@arm.com>, "dwindsor@gmail.com" <dwindsor@gmail.com>, "gregkh@linuxfoundation.org" <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-
---EeQfGwPcQSOJBaQU
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
-
-On Wed 2017-01-18 17:29:05, Laura Abbott wrote:
+> On Wed, Jan 18, 2017 at 11:11:29AM +0200, Elena Reshetova wrote:
+> > Changes since v1:
+> >  - kref INIT fixes are moved to a proper separate commit
+> >  - Peter's commits are now properly integrated into series
+> >  - various small fixes are incorporated based on testing
+> >    results and feedback
+> >
+> > This patch series is build on top of Peter's Zijlstra patches
+> > that provide refcount_t type and API definition.
 >=20
-> Despite the word 'debug' in CONFIG_DEBUG_RODATA, this kernel option
-> provides key security features that are to be expected on a modern
-> system. Change the name to CONFIG_HARDENED_PAGE_MAPPINGS which more
-> accurately describes what this option is intended to do.
+> Hi Elena,
 
-I think this is bad change. CONFIG_DEBUG_RODATA is describing what it
-does, CONFIG_HARDENED_PAGE_MAPPINGS is advertising.
+Hi Erik,
 
-We don't do advertising, and we don't force people to re-answer the
-config questions without good reason.
+To be honest this is all tricky and I will have to explain at least some of=
+ our reasoning below.
+I guess some of us (me included) would prefer the PaX/grsecurity implementa=
+tion for the main reason that=20
+it was providing security by default to atomic_t type. That's why we first =
+took PaX patches and did the porting
+and etc. However, that approach was strongly objected and it seemed that we=
+ need to change the approach
+if we want at least to start somewhere. I guess it is classical example of =
+"disagree and commit" principle in action :)
+We all afterall want a better kernel security, so small steps better than n=
+o steps.=20
+As for this and earlier discussions I think some of your questions with reg=
+ards to the initial 7 patches in the series should be answered by Peter.
 
-CONFIG_HARDENED_RODATA might fix the first problem, but not the second
-one.
+> There seems to be a lot of focus on converting things to use refcount_t b=
+ut much
+> less focus on providing a refcount_t implementation that actually meets t=
+he
+> performance and security goals of the feature. =20
 
-								Pavel
-							=09
+Together with Hans we spent a lot of time working on conversions and lookin=
+g on what code needs API-wise.
+We haven't really put our attention to the insides of interface since Peter=
+ was behind that work and he simply
+has more knowledge on the subsystem.=20
 
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
->  Documentation/DocBook/kgdb.tmpl            |  8 ++++----
->  Documentation/security/self-protection.txt |  2 +-
->  arch/arm/Kconfig                           |  1 +
->  arch/arm/configs/aspeed_g4_defconfig       |  2 +-
->  arch/arm/configs/aspeed_g5_defconfig       |  2 +-
->  arch/arm/include/asm/cacheflush.h          |  2 +-
->  arch/arm/kernel/patch.c                    |  2 +-
->  arch/arm/kernel/vmlinux.lds.S              |  8 ++++----
->  arch/arm/mm/Kconfig                        | 14 +-------------
->  arch/arm/mm/init.c                         |  4 ++--
->  arch/arm64/Kconfig                         |  4 +---
->  arch/arm64/Kconfig.debug                   |  2 +-
->  arch/parisc/Kconfig                        |  1 +
->  arch/parisc/Kconfig.debug                  | 11 -----------
->  arch/parisc/configs/712_defconfig          |  2 +-
->  arch/parisc/configs/c3000_defconfig        |  2 +-
->  arch/parisc/mm/init.c                      |  2 +-
->  arch/s390/Kconfig                          |  4 +---
->  arch/x86/Kconfig                           |  4 +---
->  include/linux/init.h                       |  4 ++--
->  init/main.c                                |  4 ++--
->  kernel/configs/android-recommended.config  |  2 +-
->  kernel/power/hibernate.c                   |  2 +-
->  kernel/power/power.h                       |  4 ++--
->  kernel/power/snapshot.c                    |  4 ++--
->  security/Kconfig                           | 16 ++++++++++++++++
->  26 files changed, 51 insertions(+), 62 deletions(-)
+Notably, the proposed patchset
+> provides no information about why the proposed implementation was chosen =
+over
+> the PaX implementation (note that I'm talking about the actual implementa=
+tion of
+> safe reference counts, not the atomic_t/atomic_unchecked_t division) whic=
+h as
+> I've already mentioned is much more efficient (less bloated and faster) w=
+hile
+> still meeting the security goal.  I'm especially worried that people will=
+ be put
+> in a position where they need to take performance concerns into account w=
+hen
+> deciding whether to use refcount_t or not. =20
+
+We were initially thinking that these are just RFCs that we keep testing an=
+d polishing, so I=20
+think maybe that's why Peter had a very short description on it. However, i=
+t does seem that it is already in linux-next now...
+I guess maybe now it should be added to the documentation section? I agree =
+that it is important to explain these things
+Otherwise people either get it wrong or simply don't use refcount_t at all.=
+=20
+
+And the patch even still includes
+> the "don't allow incrementing a zero refcount" check which AFAICS is bogu=
+s from
+> a security perspective.
+
+Again, we mentioned this before and I am especially worried about this part=
+ also from
+practical point of view: it is such a big change that kernel might not be r=
+eady for and it=20
+would keep coming with bugs after.=20
+
 >=20
-> diff --git a/Documentation/DocBook/kgdb.tmpl b/Documentation/DocBook/kgdb=
-=2Etmpl
-> index f3abca7..a79b638 100644
-> --- a/Documentation/DocBook/kgdb.tmpl
-> +++ b/Documentation/DocBook/kgdb.tmpl
-> @@ -115,12 +115,12 @@
->      </para>
->      <para>
->      If the architecture that you are using supports the kernel option
-> -    CONFIG_DEBUG_RODATA, you should consider turning it off.  This
-> +    CONFIG_HARDENED_PAGE_MAPPINGS, you should consider turning it off.  =
-This
->      option will prevent the use of software breakpoints because it
->      marks certain regions of the kernel's memory space as read-only.
->      If kgdb supports it for the architecture you are using, you can
->      use hardware breakpoints if you desire to run with the
-> -    CONFIG_DEBUG_RODATA option turned on, else you need to turn off
-> +    CONFIG_HARDENED_PAGE_MAPPINGS option turned on, else you need to tur=
-n off
->      this option.
->      </para>
->      <para>
-> @@ -135,7 +135,7 @@
->      <para>Here is an example set of .config symbols to enable or
->      disable for kgdb:
->      <itemizedlist>
-> -    <listitem><para># CONFIG_DEBUG_RODATA is not set</para></listitem>
-> +    <listitem><para># CONFIG_HARDENED_PAGE_MAPPINGS is not set</para></l=
-istitem>
->      <listitem><para>CONFIG_FRAME_POINTER=3Dy</para></listitem>
->      <listitem><para>CONFIG_KGDB=3Dy</para></listitem>
->      <listitem><para>CONFIG_KGDB_SERIAL_CONSOLE=3Dy</para></listitem>
-> @@ -166,7 +166,7 @@
->      </para>
->      <para>Here is an example set of .config symbols to enable/disable kd=
-b:
->      <itemizedlist>
-> -    <listitem><para># CONFIG_DEBUG_RODATA is not set</para></listitem>
-> +    <listitem><para># CONFIG_HARDENED_PAGE_MAPPINGS is not set</para></l=
-istitem>
->      <listitem><para>CONFIG_FRAME_POINTER=3Dy</para></listitem>
->      <listitem><para>CONFIG_KGDB=3Dy</para></listitem>
->      <listitem><para>CONFIG_KGDB_SERIAL_CONSOLE=3Dy</para></listitem>
-> diff --git a/Documentation/security/self-protection.txt b/Documentation/s=
-ecurity/self-protection.txt
-> index 3010576..da8cb36 100644
-> --- a/Documentation/security/self-protection.txt
-> +++ b/Documentation/security/self-protection.txt
-> @@ -51,7 +51,7 @@ kernel, they are implemented in a way where the memory =
-is temporarily
->  made writable during the update, and then returned to the original
->  permissions.)
-> =20
-> -In support of this are (the poorly named) CONFIG_DEBUG_RODATA and
-> +In support of this are CONFIG_HARDENED_PAGE_MAPPINGS and
->  CONFIG_DEBUG_SET_MODULE_RONX, which seek to make sure that code is not
->  writable, data is not executable, and read-only data is neither writable
->  nor executable.
-> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-> index 186c4c2..09aff28 100644
-> --- a/arch/arm/Kconfig
-> +++ b/arch/arm/Kconfig
-> @@ -7,6 +7,7 @@ config ARM
->  	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
->  	select ARCH_HAVE_CUSTOM_GPIO_H
->  	select ARCH_HAS_GCOV_PROFILE_ALL
-> +	select ARCH_HAS_HARDENED_MAPPINGS if MMU && !XIP_KERNEL
->  	select ARCH_MIGHT_HAVE_PC_PARPORT
->  	select ARCH_SUPPORTS_ATOMIC_RMW
->  	select ARCH_USE_BUILTIN_BSWAP
-> diff --git a/arch/arm/configs/aspeed_g4_defconfig b/arch/arm/configs/aspe=
-ed_g4_defconfig
-> index ca39c04..8ccc216 100644
-> --- a/arch/arm/configs/aspeed_g4_defconfig
-> +++ b/arch/arm/configs/aspeed_g4_defconfig
-> @@ -25,7 +25,7 @@ CONFIG_MODULE_UNLOAD=3Dy
->  # CONFIG_ARCH_MULTI_V7 is not set
->  CONFIG_ARCH_ASPEED=3Dy
->  CONFIG_MACH_ASPEED_G4=3Dy
-> -CONFIG_DEBUG_RODATA=3Dy
-> +CONFIG_HARDENED_PAGE_MAPPINGS=3Dy
->  CONFIG_AEABI=3Dy
->  CONFIG_UACCESS_WITH_MEMCPY=3Dy
->  CONFIG_SECCOMP=3Dy
-> diff --git a/arch/arm/configs/aspeed_g5_defconfig b/arch/arm/configs/aspe=
-ed_g5_defconfig
-> index 4f366b0..90c5ce4 100644
-> --- a/arch/arm/configs/aspeed_g5_defconfig
-> +++ b/arch/arm/configs/aspeed_g5_defconfig
-> @@ -26,7 +26,7 @@ CONFIG_ARCH_MULTI_V6=3Dy
->  # CONFIG_ARCH_MULTI_V7 is not set
->  CONFIG_ARCH_ASPEED=3Dy
->  CONFIG_MACH_ASPEED_G5=3Dy
-> -CONFIG_DEBUG_RODATA=3Dy
-> +CONFIG_HARDENED_PAGE_MAPPINGS=3Dy
->  CONFIG_AEABI=3Dy
->  CONFIG_UACCESS_WITH_MEMCPY=3Dy
->  CONFIG_SECCOMP=3Dy
-> diff --git a/arch/arm/include/asm/cacheflush.h b/arch/arm/include/asm/cac=
-heflush.h
-> index bdd283b..c3a7a72 100644
-> --- a/arch/arm/include/asm/cacheflush.h
-> +++ b/arch/arm/include/asm/cacheflush.h
-> @@ -490,7 +490,7 @@ static inline int set_memory_x(unsigned long addr, in=
-t numpages) { return 0; }
->  static inline int set_memory_nx(unsigned long addr, int numpages) { retu=
-rn 0; }
->  #endif
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  void set_kernel_text_rw(void);
->  void set_kernel_text_ro(void);
->  #else
-> diff --git a/arch/arm/kernel/patch.c b/arch/arm/kernel/patch.c
-> index 69bda1a..9da1bf5 100644
-> --- a/arch/arm/kernel/patch.c
-> +++ b/arch/arm/kernel/patch.c
-> @@ -26,7 +26,7 @@ static void __kprobes *patch_map(void *addr, int fixmap=
-, unsigned long *flags)
-> =20
->  	if (module && IS_ENABLED(CONFIG_DEBUG_SET_MODULE_RONX))
->  		page =3D vmalloc_to_page(addr);
-> -	else if (!module && IS_ENABLED(CONFIG_DEBUG_RODATA))
-> +	else if (!module && IS_ENABLED(CONFIG_HARDENED_PAGE_MAPPINGS))
->  		page =3D virt_to_page(addr);
->  	else
->  		return addr;
-> diff --git a/arch/arm/kernel/vmlinux.lds.S b/arch/arm/kernel/vmlinux.lds.S
-> index f7f55df..5c6a2e8 100644
-> --- a/arch/arm/kernel/vmlinux.lds.S
-> +++ b/arch/arm/kernel/vmlinux.lds.S
-> @@ -97,7 +97,7 @@ SECTIONS
->  		HEAD_TEXT
->  	}
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  	. =3D ALIGN(1<<SECTION_SHIFT);
->  #endif
-> =20
-> @@ -158,7 +158,7 @@ SECTIONS
-> =20
->  	NOTES
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  	. =3D ALIGN(1<<SECTION_SHIFT);
->  #else
->  	. =3D ALIGN(PAGE_SIZE);
-> @@ -230,7 +230,7 @@ SECTIONS
->  	PERCPU_SECTION(L1_CACHE_BYTES)
->  #endif
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  	. =3D ALIGN(1<<SECTION_SHIFT);
->  #else
->  	. =3D ALIGN(THREAD_SIZE);
-> @@ -325,7 +325,7 @@ SECTIONS
->  	STABS_DEBUG
->  }
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  /*
->   * Without CONFIG_DEBUG_ALIGN_RODATA, __start_rodata_section_aligned will
->   * be the first section-aligned location after __start_rodata. Otherwise,
-> diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
-> index f68e8ec..e770dc9 100644
-> --- a/arch/arm/mm/Kconfig
-> +++ b/arch/arm/mm/Kconfig
-> @@ -1051,21 +1051,9 @@ config ARCH_SUPPORTS_BIG_ENDIAN
->  	  This option specifies the architecture can support big endian
->  	  operation.
-> =20
-> -config DEBUG_RODATA
-> -	bool "Make kernel text and rodata read-only"
-> -	depends on MMU && !XIP_KERNEL
-> -	default y if CPU_V7
-> -	help
-> -	  If this is set, kernel text and rodata memory will be made
-> -	  read-only, and non-text kernel memory will be made non-executable.
-> -	  The tradeoff is that each region is padded to section-size (1MiB)
-> -	  boundaries (because their permissions are different and splitting
-> -	  the 1M pages into 4K ones causes TLB performance problems), which
-> -	  can waste memory.
-> -
->  config DEBUG_ALIGN_RODATA
->  	bool "Make rodata strictly non-executable"
-> -	depends on DEBUG_RODATA
-> +	depends on HARDENED_PAGE_MAPPINGS
->  	default y
->  	help
->  	  If this is set, rodata will be made explicitly non-executable. This
-> diff --git a/arch/arm/mm/init.c b/arch/arm/mm/init.c
-> index 370581a..303bee4 100644
-> --- a/arch/arm/mm/init.c
-> +++ b/arch/arm/mm/init.c
-> @@ -572,7 +572,7 @@ void __init mem_init(void)
->  	}
->  }
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  struct section_perm {
->  	const char *name;
->  	unsigned long start;
-> @@ -741,7 +741,7 @@ void set_kernel_text_ro(void)
-> =20
->  #else
->  static inline void fix_kernmem_perms(void) { }
-> -#endif /* CONFIG_DEBUG_RODATA */
-> +#endif /* CONFIG_HARDENED_PAGE_MAPPINGS */
-> =20
->  void free_tcmmem(void)
->  {
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index 1117421..06fed56 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -11,6 +11,7 @@ config ARM64
->  	select ARCH_HAS_ELF_RANDOMIZE
->  	select ARCH_HAS_GCOV_PROFILE_ALL
->  	select ARCH_HAS_GIGANTIC_PAGE
-> +	select ARCH_HAS_HARDENED_MAPPINGS
->  	select ARCH_HAS_KCOV
->  	select ARCH_HAS_SG_CHAIN
->  	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
-> @@ -123,9 +124,6 @@ config ARCH_PHYS_ADDR_T_64BIT
->  config MMU
->  	def_bool y
-> =20
-> -config DEBUG_RODATA
-> -	def_bool y
-> -
->  config ARM64_PAGE_SHIFT
->  	int
->  	default 16 if ARM64_64K_PAGES
-> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
-> index d1ebd46..a26d27f 100644
-> --- a/arch/arm64/Kconfig.debug
-> +++ b/arch/arm64/Kconfig.debug
-> @@ -83,7 +83,7 @@ config DEBUG_SET_MODULE_RONX
->  	  If in doubt, say Y.
-> =20
->  config DEBUG_ALIGN_RODATA
-> -	depends on DEBUG_RODATA
-> +	depends on ARCH_HAS_HARDENED_MAPPINGS
->  	bool "Align linker sections up to SECTION_SIZE"
->  	help
->  	  If this option is enabled, sections that may potentially be marked as
-> diff --git a/arch/parisc/Kconfig b/arch/parisc/Kconfig
-> index 3a71f38..7c73eaa 100644
-> --- a/arch/parisc/Kconfig
-> +++ b/arch/parisc/Kconfig
-> @@ -8,6 +8,7 @@ config PARISC
->  	select HAVE_SYSCALL_TRACEPOINTS
->  	select ARCH_WANT_FRAME_POINTERS
->  	select ARCH_HAS_ELF_RANDOMIZE
-> +	select ARCH_HAS_HARDENED_MAPPINGS
->  	select RTC_CLASS
->  	select RTC_DRV_GENERIC
->  	select INIT_ALL_POSSIBLE
-> diff --git a/arch/parisc/Kconfig.debug b/arch/parisc/Kconfig.debug
-> index 68b7cbd..0d856b9 100644
-> --- a/arch/parisc/Kconfig.debug
-> +++ b/arch/parisc/Kconfig.debug
-> @@ -5,15 +5,4 @@ source "lib/Kconfig.debug"
->  config TRACE_IRQFLAGS_SUPPORT
->  	def_bool y
-> =20
-> -config DEBUG_RODATA
-> -       bool "Write protect kernel read-only data structures"
-> -       depends on DEBUG_KERNEL
-> -       default y
-> -       help
-> -         Mark the kernel read-only data as write-protected in the pageta=
-bles,
-> -         in order to catch accidental (and incorrect) writes to such con=
-st
-> -         data. This option may have a slight performance impact because a
-> -         portion of the kernel code won't be covered by a TLB anymore.
-> -         If in doubt, say "N".
-> -
->  endmenu
-> diff --git a/arch/parisc/configs/712_defconfig b/arch/parisc/configs/712_=
-defconfig
-> index db8f56b..f1a4732 100644
-> --- a/arch/parisc/configs/712_defconfig
-> +++ b/arch/parisc/configs/712_defconfig
-> @@ -182,7 +182,7 @@ CONFIG_DEBUG_FS=3Dy
->  CONFIG_DEBUG_KERNEL=3Dy
->  CONFIG_DEBUG_MUTEXES=3Dy
->  # CONFIG_RCU_CPU_STALL_DETECTOR is not set
-> -CONFIG_DEBUG_RODATA=3Dy
-> +CONFIG_HARDENED_PAGE_MAPPINGS=3Dy
->  CONFIG_CRYPTO_NULL=3Dm
->  CONFIG_CRYPTO_TEST=3Dm
->  CONFIG_CRYPTO_HMAC=3Dy
-> diff --git a/arch/parisc/configs/c3000_defconfig b/arch/parisc/configs/c3=
-000_defconfig
-> index fb92b89..03e88e2 100644
-> --- a/arch/parisc/configs/c3000_defconfig
-> +++ b/arch/parisc/configs/c3000_defconfig
-> @@ -166,7 +166,7 @@ CONFIG_DEBUG_KERNEL=3Dy
->  CONFIG_DEBUG_MUTEXES=3Dy
->  # CONFIG_DEBUG_BUGVERBOSE is not set
->  # CONFIG_RCU_CPU_STALL_DETECTOR is not set
-> -CONFIG_DEBUG_RODATA=3Dy
-> +CONFIG_HARDENED_PAGE_MAPPINGS=3Dy
->  CONFIG_CRYPTO_NULL=3Dm
->  CONFIG_CRYPTO_TEST=3Dm
->  CONFIG_CRYPTO_MD5=3Dm
-> diff --git a/arch/parisc/mm/init.c b/arch/parisc/mm/init.c
-> index e02ada3..f76f8ad 100644
-> --- a/arch/parisc/mm/init.c
-> +++ b/arch/parisc/mm/init.c
-> @@ -545,7 +545,7 @@ void free_initmem(void)
->  }
-> =20
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  void mark_rodata_ro(void)
->  {
->  	/* rodata memory was already mapped with KERNEL_RO access rights by
-> diff --git a/arch/s390/Kconfig b/arch/s390/Kconfig
-> index c6722112..8e70ae5 100644
-> --- a/arch/s390/Kconfig
-> +++ b/arch/s390/Kconfig
-> @@ -62,15 +62,13 @@ config PCI_QUIRKS
->  config ARCH_SUPPORTS_UPROBES
->  	def_bool y
-> =20
-> -config DEBUG_RODATA
-> -	def_bool y
-> -
->  config S390
->  	def_bool y
->  	select ARCH_HAS_DEVMEM_IS_ALLOWED
->  	select ARCH_HAS_ELF_RANDOMIZE
->  	select ARCH_HAS_GCOV_PROFILE_ALL
->  	select ARCH_HAS_GIGANTIC_PAGE
-> +	select ARCH_HAS_HARDENED_MAPPINGS
->  	select ARCH_HAS_KCOV
->  	select ARCH_HAS_SG_CHAIN
->  	select ARCH_HAS_UBSAN_SANITIZE_ALL
-> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-> index e487493..9d80cd8 100644
-> --- a/arch/x86/Kconfig
-> +++ b/arch/x86/Kconfig
-> @@ -50,6 +50,7 @@ config X86
->  	select ARCH_HAS_ELF_RANDOMIZE
->  	select ARCH_HAS_FAST_MULTIPLIER
->  	select ARCH_HAS_GCOV_PROFILE_ALL
-> +	select ARCH_HAS_HARDENED_MAPPINGS
->  	select ARCH_HAS_KCOV			if X86_64
->  	select ARCH_HAS_MMIO_FLUSH
->  	select ARCH_HAS_PMEM_API		if X86_64
-> @@ -309,9 +310,6 @@ config ARCH_SUPPORTS_UPROBES
->  config FIX_EARLYCON_MEM
->  	def_bool y
-> =20
-> -config DEBUG_RODATA
-> -	def_bool y
-> -
->  config PGTABLE_LEVELS
->  	int
->  	default 4 if X86_64
-> diff --git a/include/linux/init.h b/include/linux/init.h
-> index 885c3e6..9967bc9 100644
-> --- a/include/linux/init.h
-> +++ b/include/linux/init.h
-> @@ -126,10 +126,10 @@ void prepare_namespace(void);
->  void __init load_default_modules(void);
->  int __init init_rootfs(void);
-> =20
-> -#if defined(CONFIG_DEBUG_RODATA) || defined(CONFIG_DEBUG_SET_MODULE_RONX)
-> +#if defined(CONFIG_HARDENED_PAGE_MAPPINGS) || defined(CONFIG_DEBUG_SET_M=
-ODULE_RONX)
->  extern bool rodata_enabled;
->  #endif
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  void mark_rodata_ro(void);
->  #endif
-> =20
-> diff --git a/init/main.c b/init/main.c
-> index b0c9d6f..4b3bcc4 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -925,7 +925,7 @@ static int try_to_run_init_process(const char *init_f=
-ilename)
-> =20
->  static noinline void __init kernel_init_freeable(void);
-> =20
-> -#if defined(CONFIG_DEBUG_RODATA) || defined(CONFIG_DEBUG_SET_MODULE_RONX)
-> +#if defined(CONFIG_HARDENED_PAGE_MAPPINGS) || defined(CONFIG_DEBUG_SET_M=
-ODULE_RONX)
->  bool rodata_enabled __ro_after_init =3D true;
->  static int __init set_debug_rodata(char *str)
->  {
-> @@ -934,7 +934,7 @@ static int __init set_debug_rodata(char *str)
->  __setup("rodata=3D", set_debug_rodata);
->  #endif
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  static void mark_readonly(void)
->  {
->  	if (rodata_enabled)
-> diff --git a/kernel/configs/android-recommended.config b/kernel/configs/a=
-ndroid-recommended.config
-> index 297756b..b796bc8 100644
-> --- a/kernel/configs/android-recommended.config
-> +++ b/kernel/configs/android-recommended.config
-> @@ -11,7 +11,7 @@ CONFIG_BLK_DEV_LOOP=3Dy
->  CONFIG_BLK_DEV_RAM=3Dy
->  CONFIG_BLK_DEV_RAM_SIZE=3D8192
->  CONFIG_COMPACTION=3Dy
-> -CONFIG_DEBUG_RODATA=3Dy
-> +CONFIG_HARDENED_PAGE_MAPPINGS=3Dy
->  CONFIG_DM_CRYPT=3Dy
->  CONFIG_DM_UEVENT=3Dy
->  CONFIG_DM_VERITY=3Dy
-> diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
-> index b26dbc4..f7a3ea3 100644
-> --- a/kernel/power/hibernate.c
-> +++ b/kernel/power/hibernate.c
-> @@ -1156,7 +1156,7 @@ static int __init hibernate_setup(char *str)
->  	} else if (!strncmp(str, "no", 2)) {
->  		noresume =3D 1;
->  		nohibernate =3D 1;
-> -	} else if (IS_ENABLED(CONFIG_DEBUG_RODATA)
-> +	} else if (IS_ENABLED(CONFIG_HARDENED_PAGE_MAPPINGS)
->  		   && !strncmp(str, "protect_image", 13)) {
->  		enable_restore_image_protection();
->  	}
-> diff --git a/kernel/power/power.h b/kernel/power/power.h
-> index 1dfa0da..dc2c7b8 100644
-> --- a/kernel/power/power.h
-> +++ b/kernel/power/power.h
-> @@ -61,12 +61,12 @@ extern int hibernation_snapshot(int platform_mode);
->  extern int hibernation_restore(int platform_mode);
->  extern int hibernation_platform_enter(void);
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  /* kernel/power/snapshot.c */
->  extern void enable_restore_image_protection(void);
->  #else
->  static inline void enable_restore_image_protection(void) {}
-> -#endif /* CONFIG_DEBUG_RODATA */
-> +#endif /* CONFIG_HARDENED_PAGE_MAPPINGS */
-> =20
->  #else /* !CONFIG_HIBERNATION */
-> =20
-> diff --git a/kernel/power/snapshot.c b/kernel/power/snapshot.c
-> index 2d8e2b2..a7c793e 100644
-> --- a/kernel/power/snapshot.c
-> +++ b/kernel/power/snapshot.c
-> @@ -38,7 +38,7 @@
-> =20
->  #include "power.h"
-> =20
-> -#ifdef CONFIG_DEBUG_RODATA
-> +#ifdef CONFIG_HARDENED_PAGE_MAPPINGS
->  static bool hibernate_restore_protection;
->  static bool hibernate_restore_protection_active;
-> =20
-> @@ -73,7 +73,7 @@ static inline void hibernate_restore_protection_begin(v=
-oid) {}
->  static inline void hibernate_restore_protection_end(void) {}
->  static inline void hibernate_restore_protect_page(void *page_address) {}
->  static inline void hibernate_restore_unprotect_page(void *page_address) =
-{}
-> -#endif /* CONFIG_DEBUG_RODATA */
-> +#endif /* CONFIG_HARDENED_PAGE_MAPPINGS */
-> =20
->  static int swsusp_page_is_free(struct page *);
->  static void swsusp_set_page_forbidden(struct page *);
-> diff --git a/security/Kconfig b/security/Kconfig
-> index 118f454..ad6ce82 100644
-> --- a/security/Kconfig
-> +++ b/security/Kconfig
-> @@ -158,6 +158,22 @@ config HARDENED_USERCOPY_PAGESPAN
->  	  been removed. This config is intended to be used only while
->  	  trying to find such users.
-> =20
-> +config ARCH_HAS_HARDENED_MAPPINGS
-> +	def_bool n
-> +
-> +config HARDENED_PAGE_MAPPINGS
-> +	bool "Mark kernel mappings with stricter permissions (RO/W^X)"
-> +	default y
-> +	depends on ARCH_HAS_HARDENED_MAPPINGS
-> +	help
-> +          If this is set, kernel text and rodata memory will be made rea=
-d-only,
-> +	  and non-text memory will be made non-executable. This provides
-> +	  protection against certain security attacks (e.g. executing the heap
-> +	  or modifying text).
-> +
-> +	  Unless your system has known restrictions or performance issues, it
-> +	  is recommended to say Y here.
-> +
->  source security/selinux/Kconfig
->  source security/smack/Kconfig
->  source security/tomoyo/Kconfig
+> Even if you and Peter disagree with the comments that I and also PaX Team=
+ have
+> made, the patch must at least explain the design decisions made.
 
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
+I personally don't disagree with some comments, but you are right we need m=
+ore documentation provided.=20
 
---EeQfGwPcQSOJBaQU
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
+Peter given that your patches are already in linux-next, where should docum=
+entation/reasoning land?=20
+Including it to the subsystem patches doesn't seem to make any sense to me.=
+..
 
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
+Best Regards,
+Elena.
 
-iEYEARECAAYFAliAcIUACgkQMOfwapXb+vILYgCfTXvp5ULnrylJz2wZbZ1JsImf
-j04An1FN+Y0eV8+7uQQhz42jgY5AvThx
-=AFWa
------END PGP SIGNATURE-----
-
---EeQfGwPcQSOJBaQU--
+>=20
+> I also find it strange that the actual refcount_t implementation is hidde=
+n in
+> patch 7/18 in the series and has subject "kref: ...", when in fact it's a=
+ctually
+> the most important patch and will affect much more than kref.
+>=20
+> Thanks,
+>=20
+> Eric
