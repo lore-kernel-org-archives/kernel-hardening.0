@@ -1,53 +1,101 @@
 Reply-To: kernel-hardening@lists.openwall.com
-Date: Thu, 19 Jan 2017 12:33:05 +0100
-From: Heiko Carstens <heiko.carstens@de.ibm.com>
-References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
- <1484789346-21012-2-git-send-email-labbott@redhat.com>
- <20170119105646.GA11176@leverpostej>
+Date: Thu, 19 Jan 2017 15:46:58 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170119154658.GD27312@n2100.armlinux.org.uk>
+References: <20170119153920.GA20363@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170119105646.GA11176@leverpostej>
-Message-Id: <20170119113305.GB5110@osiris>
-Subject: [kernel-hardening] Re: [PATCH 1/2] security: Change name of CONFIG_DEBUG_RODATA
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Laura Abbott <labbott@redhat.com>, Kees Cook <keescook@chromium.org>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jessica Yu <jeyu@redhat.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-s390@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170119153920.GA20363@pjb1027-Latitude-E5410>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCH v2] mm: add arch-independent testcases for RODATA
+To: Jinbum Park <jinb.park7@gmail.com>
+Cc: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, keescook@chromium.org, arjan@linux.intel.com, akpm@linuxfoundation.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@redhat.com, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, kernel-janitors@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 19, 2017 at 10:56:46AM +0000, Mark Rutland wrote:
-> > +config HARDENED_PAGE_MAPPINGS
-> > +	bool "Mark kernel mappings with stricter permissions (RO/W^X)"
-> > +	default y
-> > +	depends on ARCH_HAS_HARDENED_MAPPINGS
-> > +	help
-> > +          If this is set, kernel text and rodata memory will be made read-only,
-> > +	  and non-text memory will be made non-executable. This provides
-> > +	  protection against certain security attacks (e.g. executing the heap
-> > +	  or modifying text).
-> > +
-> > +	  Unless your system has known restrictions or performance issues, it
-> > +	  is recommended to say Y here.
-> 
-> It's somewhat unfortunate that this means the feature is no longer
-> mandatory on arm64 (and s390+x86). We have a boot-time switch to turn
-> the protections off, so I was hoping we could make this mandatory on all
-> architectures with support.
-> 
-> It would be good to see if we could make this mandatory for arm and
-> parisc, or if it really needs to be optional for either of those.
+On Fri, Jan 20, 2017 at 12:39:20AM +0900, Jinbum Park wrote:
+> diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
+> index afcc550..e4f22ce 100644
+> --- a/mm/Kconfig.debug
+> +++ b/mm/Kconfig.debug
+> @@ -90,3 +90,9 @@ config DEBUG_PAGE_REF
+>  	  careful when enabling this feature because it adds about 30 KB to the
+>  	  kernel code.  However the runtime performance overhead is virtually
+>  	  nil until the tracepoints are actually enabled.
+> +
+> +config DEBUG_RODATA_TEST
+> +	bool "Testcase for the marking rodata read-only"
+> +	depends on DEBUG_RODATA
+> +	---help---
+> +	  This option enables a testcase for the setting rodata read-only.
+> \ No newline at end of file
 
-Looks like the config option is a no-op on parisc just like it is on
-s390. Irrelavant of the config option at least on s390 the page tables for
-kernel text and rodata will be read-only anyway.
+It's worth reviewing your own patches before sending them out for
+things like this (please ensure that all files are not left without
+a newline at the end.)
 
-This works since ages and I don't see a reason why this should be
-changed. Also trying to disable this with the "rodata=" command line option
-does not work at least on s390, and I guess this is true for parisc as
-well.
+> diff --git a/mm/rodata_test.c b/mm/rodata_test.c
+> new file mode 100644
+> index 0000000..fb953c0
+> --- /dev/null
+> +++ b/mm/rodata_test.c
+> @@ -0,0 +1,64 @@
+> +/*
+> + * rodata_test.c: functional test for mark_rodata_ro function
+> + *
+> + * (C) Copyright 2008 Intel Corporation
+> + * Author: Arjan van de Ven <arjan@linux.intel.com>
+> + *
+> + * This program is free software; you can redistribute it and/or
+> + * modify it under the terms of the GNU General Public License
+> + * as published by the Free Software Foundation; version 2
+> + * of the License.
+> + */
+> +#include <asm/uaccess.h>
+> +#include <asm/sections.h>
+> +
+> +const int rodata_test_data = 0xC3;
+> +EXPORT_SYMBOL_GPL(rodata_test_data);
+> +
+> +void rodata_test(void)
+> +{
+> +	unsigned long start, end, rodata_addr;
+> +	int zero = 0;
+> +
+> +	/* prepare test */
+> +	rodata_addr = ((unsigned long)&rodata_test_data);
+> +
+> +	/* test 1: read the value */
+> +	/* If this test fails, some previous testrun has clobbered the state */
+> +	if (!rodata_test_data) {
+> +		pr_err("rodata_test: test 1 fails (start data)\n");
+> +		return;
+> +	}
+> +
+> +	/* test 2: write to the variable; this should fault */
+> +	/*
+> +	 * This must be written in assembly to be able to catch the
+> +	 * exception that is supposed to happen in the correct case.
+> +	 *
+> +	 * So that put_user macro is used to write arch-independent assembly.
+> +	 */
+> +	if (!put_user(zero, (int *)rodata_addr)) {
+> +		pr_err("rodata_test: test data was not read only\n");
+> +		return;
+> +	}
 
-The only thing implemented with CONFIG_DEBUG_RODATA on both architectures
-is to emit a message that states memory has been protected
-(mark_rodata_ro).
-This just avoids a wrong "Kernel memory protection disabled." message.
+I don't think this is going to do what you think - at least not on sane
+architectures.  put_user() to kernel space is denied, even if the
+location is writable to normal accesses within the kernel.
 
-So yes, I'd really like to keep this option mandatory.
+put_user() and get_user() are for accessing user supplied pointers,
+which means it has built-in security to prevent userspace passing in
+kernel-space pointers and using that as a way to read or modify kernel
+space.
+
+I think you want to use probe_kernel_write() here.
+
+-- 
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
