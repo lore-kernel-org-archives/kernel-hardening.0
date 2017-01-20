@@ -1,43 +1,26 @@
-Date: Fri, 20 Jan 2017 11:44:30 +0100
-From: Solar Designer <solar@openwall.com>
-Message-ID: <20170120104429.GA19223@openwall.com>
-References: <1484730707-29313-1-git-send-email-elena.reshetova@intel.com> <20170118215247.GA129388@gmail.com> <20170119091952.GH6485@twins.programming.kicks-ass.net> <20170119191828.GA104949@gmail.com> <20170120083649.GP6485@twins.programming.kicks-ass.net> <2236FBA76BA1254E88B949DDB74E612B41C3FAAC@IRSMSX102.ger.corp.intel.com>
-Mime-Version: 1.0
+Date: Fri, 20 Jan 2017 11:17:47 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170120111747.GB18576@leverpostej>
+References: <20170119145114.GA19772@pjb1027-Latitude-E5410>
+ <20170119155701.GA24654@leverpostej>
+ <CAErMHp-L-B_9pWVRpqRSpH8LL4VEmHHrFDUbkvNZbXC=uWCzng@mail.gmail.com>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <2236FBA76BA1254E88B949DDB74E612B41C3FAAC@IRSMSX102.ger.corp.intel.com>
-Subject: Re: [kernel-hardening] [RFCv2 PATCH 00/18] refcount_t API + usage
-To: kernel-hardening@lists.openwall.com
+In-Reply-To: <CAErMHp-L-B_9pWVRpqRSpH8LL4VEmHHrFDUbkvNZbXC=uWCzng@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] mm: add arch-independent testcases for RODATA
+To: park jinbum <jinb.park7@gmail.com>
+Cc: hpa@zytor.com, x86@kernel.org, akpm@linuxfoundation.org, keescook@chromium.org, linux-mm@kvack.org, arjan@linux.intel.com, mingo@redhat.com, tglx@linutronix.de, linux@armlinux.org.uk, kernel-janitors@vger.kernel.org, kernel-hardening@lists.openwall.com, labbott@redhat.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I dropped all CC's since this sub-thread is only relevant to those
-receiving this via the kernel-hardening mailing list.
-
-On Fri, Jan 20, 2017 at 09:20:08AM +0000, Reshetova, Elena wrote:
-> Really wonder how it happened that Peter was dropped out of that thread and all other mails were correct.
-> Anyway, here was the mail:
+On Fri, Jan 20, 2017 at 03:49:46PM +0900, park jinbum wrote:
+> Where is the best place for common test file in general??
 > 
-> http://www.openwall.com/lists/kernel-hardening/2017/01/05/19
+>  kernel/rodata_test.c
+>  include/rodata_test.h => Is it fine??
 
-I'm afraid the kernel-hardening mailing list setup may be at fault.
-On this list, as well as on most others at Openwall, we introduce the
-Reply-To header pointing to the list.  This is meant to keep discussions
-on the list, avoiding inadvertent off-list responses.  However, this has
-a well-known unfortunate side-effect: many MUAs will then only use this
-Reply-To address and not the previous message's From address when doing
-a reply-to-all.  This will keep everyone from the previous message's CC,
-but the From person may be missing from the reply.  In Mutt, after
-pressing "g" for group-reply, to keep the From person on the reply one
-has to answer "n" to the "Reply to kernel-hardening@lists.openwall.com?
-([yes]/no)" question, in which case the reply is also sent to the list,
-but via a CC.  This is counter-intuitive.
+I had assumed you would use mm/rodata_test.c, as you do in this patch
+(i.e. a *new* common file). That seems fine to me.
 
-With this list's practice (inherited from LKML) to CC lots of people and
-other relevant lists on almost every posting, and with many people
-actively participating in discussions not being subscriber to this very
-list, perhaps we should reconsider and drop the forced Reply-To header.
-
-In fact, I've just made this change.  Please let me know if you think I
-shouldn't have - that is, that we should reintroduce the forced Reply-To.
-
-Alexander
+Thanks,
+Mark.
