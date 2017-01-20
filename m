@@ -1,48 +1,51 @@
 Reply-To: kernel-hardening@lists.openwall.com
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1484789346-21012-1-git-send-email-labbott@redhat.com>
-References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 19 Jan 2017 14:08:12 -0800
-Message-ID: <CAGXu5j+KA_+OxBo_fFO+YoZDyNYTCttRh06868o5-DAz53D30Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC][PATCH 0/2] Better hardening names
-To: Laura Abbott <labbott@redhat.com>
-Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170119155701.GA24654@leverpostej>
+References: <20170119145114.GA19772@pjb1027-Latitude-E5410> <20170119155701.GA24654@leverpostej>
+From: park jinbum <jinb.park7@gmail.com>
+Date: Fri, 20 Jan 2017 09:16:26 +0900
+Message-ID: <CAErMHp_YFRnfruLKWnzyg9ZcfYdbLy9xU905GoWYGFRO32T_Wg@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=001a113f1416918aeb05467b8fdd
+Subject: [kernel-hardening] Re: [PATCH] mm: add arch-independent testcases for RODATA
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: hpa@zytor.com, x86@kernel.org, akpm@linuxfoundation.org, keescook@chromium.org, linux-mm@kvack.org, arjan@linux.intel.com, mingo@redhat.com, tglx@linutronix.de, linux@armlinux.org.uk, kernel-janitors@vger.kernel.org, kernel-hardening@lists.openwall.com, labbott@redhat.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 18, 2017 at 5:29 PM, Laura Abbott <labbott@redhat.com> wrote:
-> Hi,
->
-> It's come up previously that CONFIG_DEBUG_SET_MODULE_RONX and
-> CONFIG_DEBUG_RODATA are not accurate names, mostly they should not have the
-> word 'debug' in them. This series attempts to change the names to something
-> a bit more descriptive and indicative of what they are actually used for these
-> days.
->
-> I marked this RFC for
-> - Bike shedding purposes.
-> - A discussion of what defaults should be. The way I did the refactoring, both
->   options are default y. I'd appreciate comments if there is a better approach.
-> - Approach to split this up into more sub patches to make review/merging easier?
->   Or maybe it's fine.
->
-> Quickly tested on arm/arm64/x86.
->
-> Thanks,
-> Laura
->
-> Laura Abbott (2):
->   security: Change name of CONFIG_DEBUG_RODATA
->   security: Change name of CONFIG_DEBUG_SET_MODULE_RONX
+--001a113f1416918aeb05467b8fdd
+Content-Type: text/plain; charset=UTF-8
 
-Some day I'll quit reading my email backwards. :) I see you've got
-MODULE_RONX renamed too here, please ignore my comment about needing
-it "too". :)
+1) make the test use put_user()
+2) move the rodata_test() call and the prototype to a common location
+3) move the test out to mm/ (with no changes to file itself)
 
--Kees
 
--- 
-Kees Cook
-Nexus Security
+Where is the best place for common test file in general??
+
+ kernel/rodata_test.c
+ include/rodata_test.h => Is it fine??
+
+I can't see common file about rodata.
+So I'm confused where the best place is.
+
+--001a113f1416918aeb05467b8fdd
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto"><div><div class=3D"gmail_extra"><div class=3D"gmail_quote=
+"><br></div></div></div><div dir=3D"auto"><br></div><div dir=3D"auto"><div =
+class=3D"gmail_extra"><div class=3D"gmail_quote"><blockquote class=3D"m_-10=
+59893792884121468m_649618024736465831quote" style=3D"margin:0 0 0 .8ex;bord=
+er-left:1px #ccc solid;padding-left:1ex">
+1) make the test use put_user()<br>
+2) move the rodata_test() call and the prototype to a common location<br>
+3) move the test out to mm/ (with no changes to file itself)</blockquote></=
+div></div></div><div dir=3D"auto"><br></div><div dir=3D"auto">Where is the =
+best place for common test file in general??</div><div dir=3D"auto"><br></d=
+iv><div dir=3D"auto"></div><div dir=3D"auto">=C2=A0kernel/rodata_test.c=C2=
+=A0</div><div dir=3D"auto">=C2=A0include/rodata_test.h =3D&gt; Is it fine??=
+</div><div dir=3D"auto"><br></div><div dir=3D"auto">I can&#39;t see common =
+file about rodata.</div><div dir=3D"auto">So I&#39;m confused where the bes=
+t place is.</div><div dir=3D"auto"><br></div><div dir=3D"auto"><br></div><d=
+iv dir=3D"auto"><br></div><div dir=3D"auto"></div></div>
+
+--001a113f1416918aeb05467b8fdd--
