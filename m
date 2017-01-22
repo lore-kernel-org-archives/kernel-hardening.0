@@ -1,73 +1,57 @@
-Message-ID: <1485097837.3733.1.camel@corsac.net>
-From: Yves-Alexis Perez <corsac@corsac.net>
-Date: Sun, 22 Jan 2017 16:10:37 +0100
-In-Reply-To: <20170121234105.GA22967@openwall.com>
-References: <20170121234105.GA22967@openwall.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-NBeHyQeQaADth+nU4XXY"
+Date: Sun, 22 Jan 2017 21:31:58 +0100
+From: Solar Designer <solar@openwall.com>
+Message-ID: <20170122203158.GB25345@openwall.com>
+References: <20170121234105.GA22967@openwall.com> <CA+rthh-bH-A2Ya1CMfBMZm0fJ4+mnacHn58jaZrURTT9tu0PRA@mail.gmail.com>
 Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Disable and lock Silicon Debug feature on
- modern Intel CPUs
-To: Solar Designer <solar@openwall.com>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CA+rthh-bH-A2Ya1CMfBMZm0fJ4+mnacHn58jaZrURTT9tu0PRA@mail.gmail.com>
+Subject: Re: [kernel-hardening] Disable and lock Silicon Debug feature on modern Intel CPUs
+To: Mathias Krause <minipli@googlemail.com>
+Cc: kernel-hardening@lists.openwall.com, Mike Belopuhov <mikeb@openbsd.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Sun, Jan 22, 2017 at 05:30:11PM +0100, Mathias Krause wrote:
+> On 22 January 2017 at 00:41, Solar Designer <solar@openwall.com> wrote:
+> > OpenBSD just got this a week ago:
+> >
+> > https://freshbsd.org/commit/openbsd/f16aad7b540921691f7841ef8ccbb7e7ca22dfd1
+> >
+> > "Disable and lock Silicon Debug feature on modern Intel CPUs
+> >
+> > This implements one of the countermeasures against using Direct
+> > Connect Interface (DCI) to debug CPUs via USB3 mentioned in the
+> > "Tapping into the core" talk at the 33c3: identify and disable
+> > the Silicon Debug feature found in Haswell and newer CPUs."
+> 
+> This patch makes no sense whatsoever as the precondition -- the lock
+> bit still being 0 -- cannot be true on any effected system. That's
+> because *every* firmware theses days (EFI/UEFI/coreboot/...) installs
+> a SMI handler and tries to protect the SMRAM from long know attacks by
+> relocating it from its default location to ASEG/TSEG/you-name-it (see,
+> e.g., SDM chapter 34.11 SMBASE Relocation). That, however, requires
+> generating a SMI as the registers for relocation (SMBASE resp.
+> IA32_SMRR_PHYSBASE and IA32_SMRR_PHYSMASK,
+> MSR_SMM_FEATURE_CONTROL,...) are only accessible/writable while in
+> SMM. So, getting back to the patch, that early "relocation SMI" will,
+> as documented, implicitly set the lock bit of the IA32_DEBUG_INTERFACE
+> MSR which makes any attempt to disable SDBG later on useless. So, for
+> me, this patch is just snake oil.
+> 
+> The only thing that MSR can be made use of is reporting; to tell the
+> user if SBDG was used by testing the "Debug Occurred" bit. That's the
+> reason why I just added the CPUID flag in
+> http://lists.openwall.net/linux-kernel/2015/07/19/228 and no follow-up
+> patch to disable SDBG.
 
---=-NBeHyQeQaADth+nU4XXY
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Thanks for explaining this, Mathias.  When I saw your name on the 2015
+LKML posting above, I thought there could be a reason behind not doing
+anything else about this; I should have worded my posting accordingly.
 
-On Sun, 2017-01-22 at 00:41 +0100, Solar Designer wrote:
-> Silicon Debug should probably be disabled and locked by default, but
-> there should be a kernel parameter to avoid this.
+I am now CC'ing Mike who made the OpenBSD commit, just to make sure he's
+aware of this reasoning and so that he can possibly weigh in, if he has
+anything to add - e.g., was OpenBSD's change tested on any laptop and
+shown to make a difference?  Meanwhile, I withdraw my earlier suggestion
+for Linux to do anything else about this issue.
 
-Hi, I intended to take a look but (un)fortunately it seems that my laptop
-(ThinkPad X250) has it locked disabled (I guess by Lenovo BIOS).
-
-I can still work on a patch but it'll be untested. Does one know of unlocke=
-d
-platforms?
-
-For reference, here's how to determine your situation:
-
-cpuid tools (version20161201) doesn't support the SDBG bit but you can disp=
-lay
-the raw value:
-
-cpuid -r -1 -l 1=C2=A0=C2=A0| awk '/ecx=3D/ { print $5 }'
-ecx=3D0x7ffafbbf
-
-SDBG is bit 11, set here (Broadwell).
-
-Looking at the IA32_DEBUG_INTERFACE (0xc80) MSR reveals its status:
-
-rdmsr 0xc80
-40000000
-
-with:
-
-IA32_DEBUG_INTERFACE_ENABLE	0x00000001
-IA32_DEBUG_INTERFACE_LOCK	0x40000000
-IA32_DEBUG_INTERFACE_MASK	0x80000000
-
-So in my case it's not enabled, and it's locked.
-
-Regards,
---=20
-Yves-Alexis
---=-NBeHyQeQaADth+nU4XXY
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAABCAAdFiEEl0WwInMjgf6efq/1bdtT8qZ1wKUFAliEy20ACgkQbdtT8qZ1
-wKUVIQf8Cw89rO2tEq9DT3K25lZNstAsfTtvjMNdPh/q8qSrFdMABAH9Cz5pYp3k
-8eBxOnm3JwdiNETXttwiGr3iiVsBXGP/ZyNBQCjvVhbbs0D0HOxbY1/4sA4YYWQZ
-59pKJCZvMQdsYmCIANsQSCkrd5uKMvzGykvG6F1/XEZ5oWq76bbuOh0B5dOzyomc
-7KD8Q0wX1oEBMdNYqU9rgSGI4VEVvZJYTsOG2YQ1/tZculao3g1YkunzoxMJr040
-eFlDeCFsnrOcHzU155GtpNDQ3VgdLejFLSIlHzkZPJkILTcL/PhxwNcyqyxMBiES
-TU6mxq+XptOBggSEfVQyoIw1oPsEBA==
-=MqVn
------END PGP SIGNATURE-----
-
---=-NBeHyQeQaADth+nU4XXY--
+Alexander
