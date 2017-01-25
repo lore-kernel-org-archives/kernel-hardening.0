@@ -1,39 +1,48 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CAEk6tExvL7NCB8P-YP7MwT6Ysi8S08H+RgsvBfRXp336noTfxg@mail.gmail.com>
-References: <CAEk6tExvL7NCB8P-YP7MwT6Ysi8S08H+RgsvBfRXp336noTfxg@mail.gmail.com>
+In-Reply-To: <CABeRdtq0BY8Hi=9hHCx7YAfc=wTfVds3feN3p0BdLySjnwc1ng@mail.gmail.com>
+References: <CABeRdtq0BY8Hi=9hHCx7YAfc=wTfVds3feN3p0BdLySjnwc1ng@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 25 Jan 2017 11:37:13 -0800
-Message-ID: <CAGXu5j+KYYRvWC1MmMyn3w1N5DsXeAnHR3wZvjpUfUaqd3L2Rw@mail.gmail.com>
+Date: Wed, 25 Jan 2017 11:41:13 -0800
+Message-ID: <CAGXu5jJf_Vi=O7SLpiMRjdjgAzhkPF+bfjddoBsgSkLz+yw+Yg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Introduction
-To: Jessica Frazelle <me@jessfraz.com>
+Subject: Re: [kernel-hardening] I'd like to contribute to this project.
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
 Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 23, 2017 at 4:06 PM, Jessica Frazelle <me@jessfraz.com> wrote:
-> I've been lurking on this mailing list for over a year now, so I think
-> I understand the gist of how it works. I am looking for some ways to
-> help out in my free time.
+On Wed, Jan 25, 2017 at 6:01 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> Hi. I'm Hoeun Ryu.
 
-Greetings! Thanks for saying "hi". :)
+Hi! Nice to meet you!
 
-> The subsystems I know the most about are cgroups and namespaces. I
-> previously was a maintainer of Docker (I added the seccomp integration
-> and maintained the AppArmor bits) and now I work on kubernetes.
->
-> Let me know if you think there is a good place to start!
+> I've been reading arm/arm64 and mm/fs kernel code for the last few years.
+> I stumbled upon the wiki page for this project and found this project seems
+> very interesting.
+> I think I can start to contibute to this project from porting small parts of
+> PAX/GRSEC features that you guys haven't worked on yet.
 
-I've mostly been trying to keep track of kernel self-protection TODO
-items, so I haven't been keeping too up to date on userspace-support
-things that the kernel provides. I know Solar has a list of things
-he'd like to see, and I know there was an earlier attempt at building
-an LSM to provide a more hardened chroot implementation (that Elena
-sent a version of last year).
+Sure, that would be very welcome. Are there features you're especially
+interested in?
 
-Are there any gaps in existing cgroups/namespaces stuff that you'd
-like to see fixed? Or are there any areas of self-protection work that
-you find interesting and would want to learn more about?
+> I'd like to start from something trivial so I can do it in my free time.
+> It's also ok to work with someone who are working on a big patch series if
+> you need help.
+
+Just looking through the list of things on the wiki, how about this?
+- add zeroing of copy_from_user on failure test to test_usercopy.c
+
+The issue here is that when a copy_from_user() call fails (for
+whatever reason), the kernel is supposed to clear the destination
+buffer with zeros to make sure nothing is accidentally exposed later
+(if, say, it is copied back to userspace at a later time). We saw a
+few instances where this protective copying wasn't happening, but
+there was no regression test for it.
+
+Adding a test to lib/test_usercopy.c for the zeroing would be nice to
+have, and should be a relatively small change.
+
+Let me know if that sounds good to you, and thanks!
 
 -Kees
 
