@@ -1,97 +1,24 @@
+Date: Wed, 25 Jan 2017 06:41:49 -0800
+From: Matthew Wilcox <willy@infradead.org>
+Message-ID: <20170125144149.GA970@bombadil.infradead.org>
+References: <20170125141833.GA27658@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-In-Reply-To: <20170125135410.GF27026@arm.com>
-References: <1485351983-13873-1-git-send-email-kpark3469@gmail.com> <20170125135410.GF27026@arm.com>
-From: Keun-O Park <kpark3469@gmail.com>
-Date: Wed, 25 Jan 2017 18:44:44 +0400
-Message-ID: <CA+KhAHY-2+nWBYwgBvu0v_yVBb8sizkYyGOPiW3DxX+EJi7sBg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] arm64: usercopy: Implement stack frame object validation
-To: Will Deacon <will.deacon@arm.com>
-Cc: kernel-hardening@lists.openwall.com, catalin.marinas@arm.com, Kees Cook <keescook@chromium.org>, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae, takahiro.akashi@linaro.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170125141833.GA27658@pjb1027-Latitude-E5410>
+Subject: [kernel-hardening] Re: [PATCH v4] mm: add arch-independent testcases for RODATA
+To: Jinbum Park <jinb.park7@gmail.com>
+Cc: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, keescook@chromium.org, arjan@linux.intel.com, akpm@linuxfoundation.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@redhat.com, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, kernel-janitors@vger.kernel.org, linux@armlinux.org.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 25, 2017 at 5:54 PM, Will Deacon <will.deacon@arm.com> wrote:
-> [Adding Akashi, since he'a had fun and games with arm64 stack unwinding
->  and I bet he can find a problem with this patch!]
->
-> On Wed, Jan 25, 2017 at 05:46:23PM +0400, kpark3469@gmail.com wrote:
->> From: Sahara <keun-o.park@darkmatter.ae>
->>
->> This implements arch_within_stack_frames() for arm64 that should
->> validate if a given object is contained by a kernel stack frame.
->>
->> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
->> ---
->>  arch/arm64/Kconfig                   |  1 +
->>  arch/arm64/include/asm/thread_info.h | 55 ++++++++++++++++++++++++++++++++++++
->>  2 files changed, 56 insertions(+)
->>
->> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
->> index 1117421..8bf70b4 100644
->> --- a/arch/arm64/Kconfig
->> +++ b/arch/arm64/Kconfig
->> @@ -97,6 +97,7 @@ config ARM64
->>       select HAVE_SYSCALL_TRACEPOINTS
->>       select HAVE_KPROBES
->>       select HAVE_KRETPROBES if HAVE_KPROBES
->> +     select HAVE_ARCH_WITHIN_STACK_FRAMES
->>       select IOMMU_DMA if IOMMU_SUPPORT
->>       select IRQ_DOMAIN
->>       select IRQ_FORCED_THREADING
->> diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
->> index 46c3b93..f610c44 100644
->> --- a/arch/arm64/include/asm/thread_info.h
->> +++ b/arch/arm64/include/asm/thread_info.h
->> @@ -68,7 +68,62 @@ struct thread_info {
->>  #define thread_saved_fp(tsk) \
->>       ((unsigned long)(tsk->thread.cpu_context.fp))
->>
->> +/*
->> + * Walks up the stack frames to make sure that the specified object is
->> + * entirely contained by a single stack frame.
->> + *
->> + * Returns:
->> + *            1 if within a frame
->> + *           -1 if placed across a frame boundary (or outside stack)
->> + *            0 unable to determine (no frame pointers, etc)
->> + */
->> +static inline int arch_within_stack_frames(const void * const stack,
->> +                                        const void * const stackend,
->> +                                        const void *obj, unsigned long len)
->> +{
->> +#if defined(CONFIG_FRAME_POINTER)
->> +     const void *oldframe;
->> +     const void *callee_fp = NULL;
->> +     const void *caller_fp = NULL;
->> +
->> +     oldframe = __builtin_frame_address(1);
->> +     if (oldframe) {
->> +             callee_fp = __builtin_frame_address(2);
->> +             if (callee_fp)
->> +                     caller_fp = __builtin_frame_address(3);
->> +     }
->> +     /*
->> +      * low ----------------------------------------------> high
->> +      * [callee_fp][lr][args][local vars][caller_fp'][lr']
->> +      *                ^----------------^
->> +      *               allow copies only within here
->> +      */
->
-> Which compilers have you tested this with? The GCC folks don't guarantee a
-> frame layout, and they have changed it in the past, so I suspect this is
-> pretty fragile. In particularly, if __builtin_frame_address just points
-> at the frame record, then I don't think you can make assumptions about the
-> placement of local variables and arguments with respect to that.
->
-> Will
+On Wed, Jan 25, 2017 at 11:18:33PM +0900, Jinbum Park wrote:
+> +	/* test 2: write to the variable; this should fault */
+> +	/*
+> +	 * This must be written in assembly to be able to catch the
+> +	 * exception that is supposed to happen in the correct case.
+> +	 *
+> +	 * So that probe_kernel_write is used to write
+> +	 * arch-independent assembly.
+> +	 */
 
-$ aarch64-linux-android-gcc --version
-aarch64-linux-android-gcc (GCC) 4.9 20150123 (prerelease)
-
-I tested this with aosp 7.1 android toolchain on Pixel.
-Maybe I need a suggestion to make this robust.
-
-Thanks.
-
-BR
-Sahara
+This comment makes no sense.  Better to just delete the comment.
