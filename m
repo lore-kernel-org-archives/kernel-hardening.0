@@ -1,24 +1,42 @@
-Date: Wed, 25 Jan 2017 06:41:49 -0800
-From: Matthew Wilcox <willy@infradead.org>
-Message-ID: <20170125144149.GA970@bombadil.infradead.org>
-References: <20170125141833.GA27658@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170125141833.GA27658@pjb1027-Latitude-E5410>
-Subject: [kernel-hardening] Re: [PATCH v4] mm: add arch-independent testcases for RODATA
-To: Jinbum Park <jinb.park7@gmail.com>
-Cc: tglx@linutronix.de, mingo@redhat.com, hpa@zytor.com, x86@kernel.org, keescook@chromium.org, arjan@linux.intel.com, akpm@linuxfoundation.org, linux-kernel@vger.kernel.org, linux-mm@kvack.org, labbott@redhat.com, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, kernel-janitors@vger.kernel.org, linux@armlinux.org.uk
+Sender: keescook@google.com
+In-Reply-To: <CAEk6tExvL7NCB8P-YP7MwT6Ysi8S08H+RgsvBfRXp336noTfxg@mail.gmail.com>
+References: <CAEk6tExvL7NCB8P-YP7MwT6Ysi8S08H+RgsvBfRXp336noTfxg@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 25 Jan 2017 11:37:13 -0800
+Message-ID: <CAGXu5j+KYYRvWC1MmMyn3w1N5DsXeAnHR3wZvjpUfUaqd3L2Rw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Introduction
+To: Jessica Frazelle <me@jessfraz.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 25, 2017 at 11:18:33PM +0900, Jinbum Park wrote:
-> +	/* test 2: write to the variable; this should fault */
-> +	/*
-> +	 * This must be written in assembly to be able to catch the
-> +	 * exception that is supposed to happen in the correct case.
-> +	 *
-> +	 * So that probe_kernel_write is used to write
-> +	 * arch-independent assembly.
-> +	 */
+On Mon, Jan 23, 2017 at 4:06 PM, Jessica Frazelle <me@jessfraz.com> wrote:
+> I've been lurking on this mailing list for over a year now, so I think
+> I understand the gist of how it works. I am looking for some ways to
+> help out in my free time.
 
-This comment makes no sense.  Better to just delete the comment.
+Greetings! Thanks for saying "hi". :)
+
+> The subsystems I know the most about are cgroups and namespaces. I
+> previously was a maintainer of Docker (I added the seccomp integration
+> and maintained the AppArmor bits) and now I work on kubernetes.
+>
+> Let me know if you think there is a good place to start!
+
+I've mostly been trying to keep track of kernel self-protection TODO
+items, so I haven't been keeping too up to date on userspace-support
+things that the kernel provides. I know Solar has a list of things
+he'd like to see, and I know there was an earlier attempt at building
+an LSM to provide a more hardened chroot implementation (that Elena
+sent a version of last year).
+
+Are there any gaps in existing cgroups/namespaces stuff that you'd
+like to see fixed? Or are there any areas of self-protection work that
+you find interesting and would want to learn more about?
+
+-Kees
+
+-- 
+Kees Cook
+Nexus Security
