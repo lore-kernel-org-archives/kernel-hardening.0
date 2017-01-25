@@ -1,82 +1,86 @@
-Date: Wed, 25 Jan 2017 14:51:24 +0100
-From: Pavel Machek <pavel@ucw.cz>
-Message-ID: <20170125135124.GA20896@amd>
-References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
- <1484789346-21012-2-git-send-email-labbott@redhat.com>
- <20170119075341.GA14530@amd>
- <fca01775-9640-8783-a657-a9e6cf0c3e0a@redhat.com>
+Date: Wed, 25 Jan 2017 13:54:10 +0000
+From: Will Deacon <will.deacon@arm.com>
+Message-ID: <20170125135410.GF27026@arm.com>
+References: <1485351983-13873-1-git-send-email-kpark3469@gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha1;
-	protocol="application/pgp-signature"; boundary="CE+1k2dSO48ffgeK"
-Content-Disposition: inline
-In-Reply-To: <fca01775-9640-8783-a657-a9e6cf0c3e0a@redhat.com>
-Subject: [kernel-hardening] Re: [PATCH 1/2] security: Change name of CONFIG_DEBUG_RODATA
-To: Laura Abbott <labbott@redhat.com>
-Cc: Kees Cook <keescook@chromium.org>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-s390@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
-List-ID: <kernel-hardening.lists.openwall.com>
-
-
---CE+1k2dSO48ffgeK
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Content-Transfer-Encoding: quoted-printable
+In-Reply-To: <1485351983-13873-1-git-send-email-kpark3469@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] arm64: usercopy: Implement stack frame object validation
+To: kpark3469@gmail.com
+Cc: kernel-hardening@lists.openwall.com, catalin.marinas@arm.com, keescook@chromium.org, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae, takahiro.akashi@linaro.org
+List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed 2017-01-25 12:21:05, Laura Abbott wrote:
-> On 01/19/2017 08:53 AM, Pavel Machek wrote:
-> >On Wed 2017-01-18 17:29:05, Laura Abbott wrote:
-> >>
-> >>Despite the word 'debug' in CONFIG_DEBUG_RODATA, this kernel option
-> >>provides key security features that are to be expected on a modern
-> >>system. Change the name to CONFIG_HARDENED_PAGE_MAPPINGS which more
-> >>accurately describes what this option is intended to do.
-> >
-> >I think this is bad change. CONFIG_DEBUG_RODATA is describing what it
-> >does, CONFIG_HARDENED_PAGE_MAPPINGS is advertising.
-> >
-> >We don't do advertising, and we don't force people to re-answer the
-> >config questions without good reason.
-> >
-> >CONFIG_HARDENED_RODATA might fix the first problem, but not the second
-> >one.
-> >
-> >								Pavel
-> >							=09
->=20
-> (Apologies, my SMTP was set up incorrectly so my response didn't
-> actually get sent out)
->=20
-> CONFIG_DEBUG_RODATA isn't describing what it does though. It misses
-> that this config may handle much more than just rodata. I think
-> Mark Rutland's suggestion of STRICT_KERNEL_RWX might be more
-> descriptive.
+[Adding Akashi, since he'a had fun and games with arm64 stack unwinding
+ and I bet he can find a problem with this patch!]
 
-CONFIG_BUG=3Dy
-CONFIG_LBDAF=3Dy
-CONFIG_PM_OPP=3Dy
+On Wed, Jan 25, 2017 at 05:46:23PM +0400, kpark3469@gmail.com wrote:
+> From: Sahara <keun-o.park@darkmatter.ae>
+> 
+> This implements arch_within_stack_frames() for arm64 that should
+> validate if a given object is contained by a kernel stack frame.
+> 
+> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+> ---
+>  arch/arm64/Kconfig                   |  1 +
+>  arch/arm64/include/asm/thread_info.h | 55 ++++++++++++++++++++++++++++++++++++
+>  2 files changed, 56 insertions(+)
+> 
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index 1117421..8bf70b4 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -97,6 +97,7 @@ config ARM64
+>  	select HAVE_SYSCALL_TRACEPOINTS
+>  	select HAVE_KPROBES
+>  	select HAVE_KRETPROBES if HAVE_KPROBES
+> +	select HAVE_ARCH_WITHIN_STACK_FRAMES
+>  	select IOMMU_DMA if IOMMU_SUPPORT
+>  	select IRQ_DOMAIN
+>  	select IRQ_FORCED_THREADING
+> diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+> index 46c3b93..f610c44 100644
+> --- a/arch/arm64/include/asm/thread_info.h
+> +++ b/arch/arm64/include/asm/thread_info.h
+> @@ -68,7 +68,62 @@ struct thread_info {
+>  #define thread_saved_fp(tsk)	\
+>  	((unsigned long)(tsk->thread.cpu_context.fp))
+>  
+> +/*
+> + * Walks up the stack frames to make sure that the specified object is
+> + * entirely contained by a single stack frame.
+> + *
+> + * Returns:
+> + *		 1 if within a frame
+> + *		-1 if placed across a frame boundary (or outside stack)
+> + *		 0 unable to determine (no frame pointers, etc)
+> + */
+> +static inline int arch_within_stack_frames(const void * const stack,
+> +					   const void * const stackend,
+> +					   const void *obj, unsigned long len)
+> +{
+> +#if defined(CONFIG_FRAME_POINTER)
+> +	const void *oldframe;
+> +	const void *callee_fp = NULL;
+> +	const void *caller_fp = NULL;
+> +
+> +	oldframe = __builtin_frame_address(1);
+> +	if (oldframe) {
+> +		callee_fp = __builtin_frame_address(2);
+> +		if (callee_fp)
+> +			caller_fp = __builtin_frame_address(3);
+> +	}
+> +	/*
+> +	 * low ----------------------------------------------> high
+> +	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
+> +	 *                ^----------------^
+> +	 *               allow copies only within here
+> +	 */
 
-=2E.it is config option. It is not description of the feature. People
-are living with that config option for a while. I'd keep it.
+Which compilers have you tested this with? The GCC folks don't guarantee a
+frame layout, and they have changed it in the past, so I suspect this is
+pretty fragile. In particularly, if __builtin_frame_address just points
+at the frame record, then I don't think you can make assumptions about the
+placement of local variables and arguments with respect to that.
 
-Maybe you can go from CONFIG_DEBUG_RODATA to CONFIG_RODATA... (but
-you'll still have people re-answer config option.)
-
-
-								Pavel
---=20
-(english) http://www.livejournal.com/~pavelmachek
-(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
-g.html
-
---CE+1k2dSO48ffgeK
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: Digital signature
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG v1
-
-iEYEARECAAYFAliIrVwACgkQMOfwapXb+vKDIQCeObwXTavXbjg0vV7fo6GrI6mz
-+TEAn3KekWFvtsx4J9UCa0MsjGe1ktv4
-=Av9j
------END PGP SIGNATURE-----
-
---CE+1k2dSO48ffgeK--
+Will
