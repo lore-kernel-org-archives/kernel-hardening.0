@@ -1,6 +1,6 @@
-Date: Wed, 25 Jan 2017 23:18:33 +0900
+Date: Wed, 25 Jan 2017 23:27:25 +0900
 From: Jinbum Park <jinb.park7@gmail.com>
-Message-ID: <20170125141833.GA27658@pjb1027-Latitude-E5410>
+Message-ID: <20170125142725.GA27764@pjb1027-Latitude-E5410>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
@@ -23,6 +23,8 @@ write arch-independent testcases and move it to shared location.
 
 Signed-off-by: Jinbum Park <jinb.park7@gmail.com>
 ---
+(Sorry, Previous patch-v4 doesn't have any changes..my mistake. Please see this patch)
+	
 v4: Move the rodata_test() call out into mark_readonly()
 
 v3: Use probe_kernel_write() instead of put_user()
@@ -35,13 +37,14 @@ v2: Restore original credit of mm/rodata_test.c
  arch/x86/include/asm/cacheflush.h | 10 ------
  arch/x86/kernel/Makefile          |  1 -
  arch/x86/kernel/test_rodata.c     | 75 ---------------------------------------
- arch/x86/mm/init_32.c             |  4 +--
- arch/x86/mm/init_64.c             |  4 +--
+ arch/x86/mm/init_32.c             |  4 ---
+ arch/x86/mm/init_64.c             |  5 ---
  include/linux/rodata_test.h       | 24 +++++++++++++
+ init/main.c                       |  6 ++--
  mm/Kconfig.debug                  |  7 ++++
  mm/Makefile                       |  1 +
  mm/rodata_test.c                  | 63 ++++++++++++++++++++++++++++++++
- 10 files changed, 98 insertions(+), 101 deletions(-)
+ 11 files changed, 100 insertions(+), 106 deletions(-)
  delete mode 100644 arch/x86/kernel/test_rodata.c
  create mode 100644 include/linux/rodata_test.h
  create mode 100644 mm/rodata_test.c
@@ -191,18 +194,10 @@ index 222e84e..0000000
 -	return 0;
 -}
 diff --git a/arch/x86/mm/init_32.c b/arch/x86/mm/init_32.c
-index 928d657..874b57c 100644
+index 928d657..2b4b53e 100644
 --- a/arch/x86/mm/init_32.c
 +++ b/arch/x86/mm/init_32.c
-@@ -51,6 +51,7 @@
- #include <asm/cacheflush.h>
- #include <asm/page_types.h>
- #include <asm/init.h>
-+#include <linux/rodata_test.h>
- 
- #include "mm_internal.h"
- 
-@@ -864,9 +865,6 @@ static noinline int do_test_wp_bit(void)
+@@ -864,9 +864,6 @@ static noinline int do_test_wp_bit(void)
  	return flag;
  }
  
@@ -212,19 +207,19 @@ index 928d657..874b57c 100644
  int kernel_set_to_readonly __read_mostly;
  
  void set_kernel_text_rw(void)
+@@ -939,7 +936,6 @@ void mark_rodata_ro(void)
+ 	set_pages_ro(virt_to_page(start), size >> PAGE_SHIFT);
+ 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
+ 		size >> 10);
+-	rodata_test();
+ 
+ #ifdef CONFIG_CPA_DEBUG
+ 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, start + size);
 diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
-index 5fff913..663d475 100644
+index 5fff913..a4880d8 100644
 --- a/arch/x86/mm/init_64.c
 +++ b/arch/x86/mm/init_64.c
-@@ -54,6 +54,7 @@
- #include <asm/init.h>
- #include <asm/uv/uv.h>
- #include <asm/setup.h>
-+#include <linux/rodata_test.h>
- 
- #include "mm_internal.h"
- 
-@@ -1011,9 +1012,6 @@ void __init mem_init(void)
+@@ -1011,9 +1011,6 @@ void __init mem_init(void)
  	mem_init_print_info(NULL);
  }
  
@@ -234,6 +229,15 @@ index 5fff913..663d475 100644
  int kernel_set_to_readonly;
  
  void set_kernel_text_rw(void)
+@@ -1082,8 +1079,6 @@ void mark_rodata_ro(void)
+ 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
+ 	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
+ 
+-	rodata_test();
+-
+ #ifdef CONFIG_CPA_DEBUG
+ 	printk(KERN_INFO "Testing CPA: undo %lx-%lx\n", start, end);
+ 	set_memory_rw(start, (end-start) >> PAGE_SHIFT);
 diff --git a/include/linux/rodata_test.h b/include/linux/rodata_test.h
 new file mode 100644
 index 0000000..562537f
@@ -264,6 +268,31 @@ index 0000000..562537f
 +
 +#endif /* _RODATA_TEST_H */
 +
+diff --git a/init/main.c b/init/main.c
+index e47373d..1e417bb 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -82,6 +82,7 @@
+ #include <linux/proc_ns.h>
+ #include <linux/io.h>
+ #include <linux/cache.h>
++#include <linux/rodata_test.h>
+ 
+ #include <asm/io.h>
+ #include <asm/bugs.h>
+@@ -935,9 +936,10 @@ static int __init set_debug_rodata(char *str)
+ #ifdef CONFIG_DEBUG_RODATA
+ static void mark_readonly(void)
+ {
+-	if (rodata_enabled)
++	if (rodata_enabled) {
+ 		mark_rodata_ro();
+-	else
++		rodata_test();
++	} else
+ 		pr_info("Kernel memory protection disabled.\n");
+ }
+ #else
 diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
 index afcc550..3e5eada 100644
 --- a/mm/Kconfig.debug
