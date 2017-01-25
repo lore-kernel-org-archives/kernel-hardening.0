@@ -1,77 +1,45 @@
-Date: Tue, 24 Jan 2017 23:14:29 +0200 (EET)
-From: Julian Anastasov <ja@ssi.bg>
-In-Reply-To: <1485262100-12366-1-git-send-email-dwindsor@gmail.com>
-Message-ID: <alpine.LFD.2.11.1701242255570.2743@ja.home.ssi.bg>
-References: <1485262100-12366-1-git-send-email-dwindsor@gmail.com>
+References: <1484789346-21012-1-git-send-email-labbott@redhat.com>
+ <1484789346-21012-2-git-send-email-labbott@redhat.com>
+ <20170119075341.GA14530@amd>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <fca01775-9640-8783-a657-a9e6cf0c3e0a@redhat.com>
+Date: Wed, 25 Jan 2017 12:21:05 +0100
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH net] net: free ip_vs_dest structs when refcnt=0
-To: David Windsor <dwindsor@gmail.com>
-Cc: netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, keescook@chromium.org, elena.reshetova@intel.com, ishkamiel@gmail.com
+In-Reply-To: <20170119075341.GA14530@amd>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH 1/2] security: Change name of CONFIG_DEBUG_RODATA
+To: Pavel Machek <pavel@ucw.cz>
+Cc: Kees Cook <keescook@chromium.org>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-s390@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 01/19/2017 08:53 AM, Pavel Machek wrote:
+> On Wed 2017-01-18 17:29:05, Laura Abbott wrote:
+>>
+>> Despite the word 'debug' in CONFIG_DEBUG_RODATA, this kernel option
+>> provides key security features that are to be expected on a modern
+>> system. Change the name to CONFIG_HARDENED_PAGE_MAPPINGS which more
+>> accurately describes what this option is intended to do.
+>
+> I think this is bad change. CONFIG_DEBUG_RODATA is describing what it
+> does, CONFIG_HARDENED_PAGE_MAPPINGS is advertising.
+>
+> We don't do advertising, and we don't force people to re-answer the
+> config questions without good reason.
+>
+> CONFIG_HARDENED_RODATA might fix the first problem, but not the second
+> one.
+>
+> 								Pavel
+> 								
 
-	Hello,
+(Apologies, my SMTP was set up incorrectly so my response didn't
+actually get sent out)
 
-On Tue, 24 Jan 2017, David Windsor wrote:
+CONFIG_DEBUG_RODATA isn't describing what it does though. It misses
+that this config may handle much more than just rodata. I think
+Mark Rutland's suggestion of STRICT_KERNEL_RWX might be more
+descriptive.
 
-> Currently, the ip_vs_dest cache frees ip_vs_dest objects when their reference
-> count becomes < 0.  Aside from not being semantically sound, this is problematic
-> for the new type refcount_t, which will be introduced shortly in a separate patch.
-> refcount_t is the new kernel type for holding reference counts, and provides
-> overflow protection and a constrained interface relative to atomic_t (the type
-> currently being used for kernel reference counts).
-> 
-> Per Juilan Anastasov: "The problem is that dest_trash currently holds deleted
-
-	Julian
-
-> dests (unlinked from RCU lists) with refcnt=0."  Changing dest_trash to hold
-> dest with refcnt=1 will allow us to free ip_vs_dest structs when their refcnt=0,
-> in ip_vs_dest_put_and_free().
-
-	Too long lines, should be up to 75 columns as per
-Documentation/process/submitting-patches.rst
-
-	Check with: scripts/checkpatch.pl --strict /tmp/file.patch
-
-> Signed-off-by: David Windsor <dwindsor@gmail.com>
-> ---
->  include/net/ip_vs.h            | 2 +-
->  net/netfilter/ipvs/ip_vs_ctl.c | 4 +---
->  2 files changed, 2 insertions(+), 4 deletions(-)
-> 
-
-> diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
-> index 55e0169..6b5492e 100644
-> --- a/net/netfilter/ipvs/ip_vs_ctl.c
-> +++ b/net/netfilter/ipvs/ip_vs_ctl.c
-> @@ -711,7 +711,6 @@ ip_vs_trash_get_dest(struct ip_vs_service *svc, int dest_af,
->  		      dest->vport == svc->port))) {
->  			/* HIT */
->  			list_del(&dest->t_list);
-> -			ip_vs_dest_hold(dest);
->  			goto out;
->  		}
->  	}
-
-	The changes look ok to me but as this is a net-next
-material I also prefer some comments in the code to be updated:
-
-- "be 0, so we simply release them here" before ip_vs_trash_cleanup
-should become "be 1, so we simply release them here".
-
-- "dest lives in trash with[out] reference" in __ip_vs_del_dest
-
-	When sending v2 for net-next please also CC:
-
-Simon Horman <horms@verge.net.au>
-Pablo Neira Ayuso <pablo@netfilter.org>
-lvs-devel@vger.kernel.org
-
-	I'll ack the next version after some tests...
-
-Regards
-
---
-Julian Anastasov <ja@ssi.bg>
+Thanks,
+Laura
