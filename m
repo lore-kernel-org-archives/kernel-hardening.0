@@ -1,45 +1,108 @@
+Date: Thu, 26 Jan 2017 22:49:10 +0200 (EET)
+From: Julian Anastasov <ja@ssi.bg>
+In-Reply-To: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
+Message-ID: <alpine.LFD.2.11.1701262241280.3892@ja.home.ssi.bg>
+References: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CALCETrVCM5Ex2HWh64Lc8=jEyTCA4h9JiB0pMuZdZBEkjbChUw@mail.gmail.com>
-References: <20170126165940.30799-1-thgarnie@google.com> <20170126165940.30799-2-thgarnie@google.com>
- <CALCETrVCM5Ex2HWh64Lc8=jEyTCA4h9JiB0pMuZdZBEkjbChUw@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 26 Jan 2017 11:10:23 -0800
-Message-ID: <CAJcbSZE7jnzdDSjOb7MsZZrO9UYRrhmUxwvNknhBkWiPBnvTDw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 2/3] x86: Remap GDT tables in the Fixmap section
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Christian Borntraeger <borntraeger@de.ibm.com>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Adam Buchbinder <adam.buchbinder@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Chen Yucong <slaoub@gmail.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, David Vrabel <david.vrabel@citrix.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Prarit Bhargava <prarit@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v2 net] net: free ip_vs_dest structs when refcnt=0
+To: David Windsor <dwindsor@gmail.com>
+Cc: netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, netfilter-devel@vger.kernel.org, lvs-devel@vger.kernel.org, wensong@linux-vs.org, horms@verge.net.au, pablo@netfilter.org, keescook@chromium.org, elena.reshetova@intel.com, ishkamiel@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Jan 26, 2017 at 10:52 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Thu, Jan 26, 2017 at 8:59 AM, Thomas Garnier <thgarnie@google.com> wrote:
->> Each processor holds a GDT in its per-cpu structure. The sgdt
->> instruction gives the base address of the current GDT. This address can
->> be used to bypass KASLR memory randomization. With another bug, an
->> attacker could target other per-cpu structures or deduce the base of
->> the main memory section (PAGE_OFFSET).
->>
->> This patch relocates the GDT table for each processor inside the
->> Fixmap section. The space is reserved based on number of supported
->> processors.
->>
->> For consistency, the remapping is done by default on 32 and 64 bit.
->>
->> Each processor switches to its remapped GDT at the end of
->> initialization. For hibernation, the main processor returns with the
->> original GDT and switches back to the remapping at completion.
->>
->> This patch was tested on both architectures. Hibernation and KVM were
->> both tested specially for their usage of the GDT.
->
-> I like this version much better.  Thanks!
 
-Thanks for the feedback! I like this version better too.
+	Hello,
 
->
-> --Andy
+On Mon, 23 Jan 2017, David Windsor wrote:
 
+> Currently, the ip_vs_dest cache frees ip_vs_dest objects when their
+> reference count becomes < 0.  Aside from not being semantically sound,
+> this is problematic for the new type refcount_t, which will be introduced
+> shortly in a separate patch. refcount_t is the new kernel type for
+> holding reference counts, and provides overflow protection and a
+> constrained interface relative to atomic_t (the type currently being
+> used for kernel reference counts).
+> 
+> Per Julian Anastasov: "The problem is that dest_trash currently holds
+> deleted dests (unlinked from RCU lists) with refcnt=0."  Changing
+> dest_trash to hold dest with refcnt=1 will allow us to free ip_vs_dest
+> structs when their refcnt=0, in ip_vs_dest_put_and_free().
+> 
+> Signed-off-by: David Windsor <dwindsor@gmail.com>
 
+	Thanks! I tested the first version and this one
+just adds the needed changes in comments, so
 
--- 
-Thomas
+Signed-off-by: Julian Anastasov <ja@ssi.bg>
+
+	Simon and Pablo, this is more appropriate for
+ipvs-next/nf-next. Please apply!
+
+> ---
+>  include/net/ip_vs.h            | 2 +-
+>  net/netfilter/ipvs/ip_vs_ctl.c | 8 +++-----
+>  2 files changed, 4 insertions(+), 6 deletions(-)
+> 
+> diff --git a/include/net/ip_vs.h b/include/net/ip_vs.h
+> index cd6018a..a3e78ad 100644
+> --- a/include/net/ip_vs.h
+> +++ b/include/net/ip_vs.h
+> @@ -1421,7 +1421,7 @@ static inline void ip_vs_dest_put(struct ip_vs_dest *dest)
+>  
+>  static inline void ip_vs_dest_put_and_free(struct ip_vs_dest *dest)
+>  {
+> -	if (atomic_dec_return(&dest->refcnt) < 0)
+> +	if (atomic_dec_and_test(&dest->refcnt))
+>  		kfree(dest);
+>  }
+>  
+> diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
+> index 55e0169..5fc4836 100644
+> --- a/net/netfilter/ipvs/ip_vs_ctl.c
+> +++ b/net/netfilter/ipvs/ip_vs_ctl.c
+> @@ -711,7 +711,6 @@ ip_vs_trash_get_dest(struct ip_vs_service *svc, int dest_af,
+>  		      dest->vport == svc->port))) {
+>  			/* HIT */
+>  			list_del(&dest->t_list);
+> -			ip_vs_dest_hold(dest);
+>  			goto out;
+>  		}
+>  	}
+> @@ -741,7 +740,7 @@ static void ip_vs_dest_free(struct ip_vs_dest *dest)
+>   *  When the ip_vs_control_clearup is activated by ipvs module exit,
+>   *  the service tables must have been flushed and all the connections
+>   *  are expired, and the refcnt of each destination in the trash must
+> - *  be 0, so we simply release them here.
+> + *  be 1, so we simply release them here.
+>   */
+>  static void ip_vs_trash_cleanup(struct netns_ipvs *ipvs)
+>  {
+> @@ -1080,11 +1079,10 @@ static void __ip_vs_del_dest(struct netns_ipvs *ipvs, struct ip_vs_dest *dest,
+>  	if (list_empty(&ipvs->dest_trash) && !cleanup)
+>  		mod_timer(&ipvs->dest_trash_timer,
+>  			  jiffies + (IP_VS_DEST_TRASH_PERIOD >> 1));
+> -	/* dest lives in trash without reference */
+> +	/* dest lives in trash with reference */
+>  	list_add(&dest->t_list, &ipvs->dest_trash);
+>  	dest->idle_start = 0;
+>  	spin_unlock_bh(&ipvs->dest_trash_lock);
+> -	ip_vs_dest_put(dest);
+>  }
+>  
+>  
+> @@ -1160,7 +1158,7 @@ static void ip_vs_dest_trash_expire(unsigned long data)
+>  
+>  	spin_lock(&ipvs->dest_trash_lock);
+>  	list_for_each_entry_safe(dest, next, &ipvs->dest_trash, t_list) {
+> -		if (atomic_read(&dest->refcnt) > 0)
+> +		if (atomic_read(&dest->refcnt) > 1)
+>  			continue;
+>  		if (dest->idle_start) {
+>  			if (time_before(now, dest->idle_start +
+> -- 
+> 2.7.4
+
+Regards
+
+--
+Julian Anastasov <ja@ssi.bg>
