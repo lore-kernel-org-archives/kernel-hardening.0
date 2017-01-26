@@ -1,108 +1,77 @@
-Date: Thu, 26 Jan 2017 22:49:10 +0200 (EET)
-From: Julian Anastasov <ja@ssi.bg>
-In-Reply-To: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
-Message-ID: <alpine.LFD.2.11.1701262241280.3892@ja.home.ssi.bg>
-References: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
 MIME-Version: 1.0
-Content-Type: TEXT/PLAIN; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2 net] net: free ip_vs_dest structs when refcnt=0
-To: David Windsor <dwindsor@gmail.com>
-Cc: netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, netfilter-devel@vger.kernel.org, lvs-devel@vger.kernel.org, wensong@linux-vs.org, horms@verge.net.au, pablo@netfilter.org, keescook@chromium.org, elena.reshetova@intel.com, ishkamiel@gmail.com
+Sender: keescook@google.com
+In-Reply-To: <CABeRdtobtD7C3AeY01RTe6ChJnOMYLyWRrubWD0mwGQYANzfpQ@mail.gmail.com>
+References: <CABeRdtq0BY8Hi=9hHCx7YAfc=wTfVds3feN3p0BdLySjnwc1ng@mail.gmail.com>
+ <CAGXu5jJf_Vi=O7SLpiMRjdjgAzhkPF+bfjddoBsgSkLz+yw+Yg@mail.gmail.com> <CABeRdtobtD7C3AeY01RTe6ChJnOMYLyWRrubWD0mwGQYANzfpQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 26 Jan 2017 13:36:19 -0800
+Message-ID: <CAGXu5jL1rSp1xVEa4aD=vzOb9Me5BEUoxO=c5f40jSYuxDSUPw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] I'd like to contribute to this project.
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Richard Weinberger <richard@nod.at>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Thu, Jan 26, 2017 at 6:49 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> On Thu, Jan 26, 2017 at 4:41 AM, Kees Cook <keescook@chromium.org> wrote:
+>> On Wed, Jan 25, 2017 at 6:01 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>>> Hi. I'm Hoeun Ryu.
+>>
+>> Hi! Nice to meet you!
+>>
+>>> I've been reading arm/arm64 and mm/fs kernel code for the last few years.
+>>> I stumbled upon the wiki page for this project and found this project seems
+>>> very interesting.
+>>> I think I can start to contibute to this project from porting small parts of
+>>> PAX/GRSEC features that you guys haven't worked on yet.
+>>
+>> Sure, that would be very welcome. Are there features you're especially
+>> interested in?
+>>
+>
+> I tried to find out what features PAX/GRKERNSEC provides reading
+> grsecurity wiki pages and the patch file today.
+> It might take a week or two to find adequate features for me to tackle.
+> But my guess after few hours of a brief investigation is `Deter
+> exploit bruteforcing (GRKERNSEC_BRUTE)`
+> Do you think the feature is worth it to you guys ? If not, please
+> recommend others.
 
-	Hello,
+I'd really like to see this, yes. There have been attempts in the past
+that got derailed. I strongly think it should be part of the kernel
+(and not glibc, as got proposed):
 
-On Mon, 23 Jan 2017, David Windsor wrote:
+https://lkml.org/lkml/2014/12/24/306
 
-> Currently, the ip_vs_dest cache frees ip_vs_dest objects when their
-> reference count becomes < 0.  Aside from not being semantically sound,
-> this is problematic for the new type refcount_t, which will be introduced
-> shortly in a separate patch. refcount_t is the new kernel type for
-> holding reference counts, and provides overflow protection and a
-> constrained interface relative to atomic_t (the type currently being
-> used for kernel reference counts).
-> 
-> Per Julian Anastasov: "The problem is that dest_trash currently holds
-> deleted dests (unlinked from RCU lists) with refcnt=0."  Changing
-> dest_trash to hold dest with refcnt=1 will allow us to free ip_vs_dest
-> structs when their refcnt=0, in ip_vs_dest_put_and_free().
-> 
-> Signed-off-by: David Windsor <dwindsor@gmail.com>
+I think it's worth trying it again.
 
-	Thanks! I tested the first version and this one
-just adds the needed changes in comments, so
+>>> I'd like to start from something trivial so I can do it in my free time.
+>>> It's also ok to work with someone who are working on a big patch series if
+>>> you need help.
+>>
+>> Just looking through the list of things on the wiki, how about this?
+>> - add zeroing of copy_from_user on failure test to test_usercopy.c
+>>
+>> The issue here is that when a copy_from_user() call fails (for
+>> whatever reason), the kernel is supposed to clear the destination
+>> buffer with zeros to make sure nothing is accidentally exposed later
+>> (if, say, it is copied back to userspace at a later time). We saw a
+>> few instances where this protective copying wasn't happening, but
+>> there was no regression test for it.
+>>
+>> Adding a test to lib/test_usercopy.c for the zeroing would be nice to
+>> have, and should be a relatively small change.
+>>
+>> Let me know if that sounds good to you, and thanks!
+>>
+>
+> It sounds good, of course. I can work on it.
+> Your help during my struggle for it will be appreciated.
 
-Signed-off-by: Julian Anastasov <ja@ssi.bg>
+Cool, let us know how we can help. :)
 
-	Simon and Pablo, this is more appropriate for
-ipvs-next/nf-next. Please apply!
+-Kees
 
-> ---
->  include/net/ip_vs.h            | 2 +-
->  net/netfilter/ipvs/ip_vs_ctl.c | 8 +++-----
->  2 files changed, 4 insertions(+), 6 deletions(-)
-> 
-> diff --git a/include/net/ip_vs.h b/include/net/ip_vs.h
-> index cd6018a..a3e78ad 100644
-> --- a/include/net/ip_vs.h
-> +++ b/include/net/ip_vs.h
-> @@ -1421,7 +1421,7 @@ static inline void ip_vs_dest_put(struct ip_vs_dest *dest)
->  
->  static inline void ip_vs_dest_put_and_free(struct ip_vs_dest *dest)
->  {
-> -	if (atomic_dec_return(&dest->refcnt) < 0)
-> +	if (atomic_dec_and_test(&dest->refcnt))
->  		kfree(dest);
->  }
->  
-> diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
-> index 55e0169..5fc4836 100644
-> --- a/net/netfilter/ipvs/ip_vs_ctl.c
-> +++ b/net/netfilter/ipvs/ip_vs_ctl.c
-> @@ -711,7 +711,6 @@ ip_vs_trash_get_dest(struct ip_vs_service *svc, int dest_af,
->  		      dest->vport == svc->port))) {
->  			/* HIT */
->  			list_del(&dest->t_list);
-> -			ip_vs_dest_hold(dest);
->  			goto out;
->  		}
->  	}
-> @@ -741,7 +740,7 @@ static void ip_vs_dest_free(struct ip_vs_dest *dest)
->   *  When the ip_vs_control_clearup is activated by ipvs module exit,
->   *  the service tables must have been flushed and all the connections
->   *  are expired, and the refcnt of each destination in the trash must
-> - *  be 0, so we simply release them here.
-> + *  be 1, so we simply release them here.
->   */
->  static void ip_vs_trash_cleanup(struct netns_ipvs *ipvs)
->  {
-> @@ -1080,11 +1079,10 @@ static void __ip_vs_del_dest(struct netns_ipvs *ipvs, struct ip_vs_dest *dest,
->  	if (list_empty(&ipvs->dest_trash) && !cleanup)
->  		mod_timer(&ipvs->dest_trash_timer,
->  			  jiffies + (IP_VS_DEST_TRASH_PERIOD >> 1));
-> -	/* dest lives in trash without reference */
-> +	/* dest lives in trash with reference */
->  	list_add(&dest->t_list, &ipvs->dest_trash);
->  	dest->idle_start = 0;
->  	spin_unlock_bh(&ipvs->dest_trash_lock);
-> -	ip_vs_dest_put(dest);
->  }
->  
->  
-> @@ -1160,7 +1158,7 @@ static void ip_vs_dest_trash_expire(unsigned long data)
->  
->  	spin_lock(&ipvs->dest_trash_lock);
->  	list_for_each_entry_safe(dest, next, &ipvs->dest_trash, t_list) {
-> -		if (atomic_read(&dest->refcnt) > 0)
-> +		if (atomic_read(&dest->refcnt) > 1)
->  			continue;
->  		if (dest->idle_start) {
->  			if (time_before(now, dest->idle_start +
-> -- 
-> 2.7.4
-
-Regards
-
---
-Julian Anastasov <ja@ssi.bg>
+-- 
+Kees Cook
+Nexus Security
