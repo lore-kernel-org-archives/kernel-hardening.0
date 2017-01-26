@@ -1,161 +1,96 @@
-Date: Thu, 26 Jan 2017 16:10:12 +0900
-From: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Message-ID: <20170126071010.GE23406@linaro.org>
-References: <1485351983-13873-1-git-send-email-kpark3469@gmail.com>
- <20170125135410.GF27026@arm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170125135410.GF27026@arm.com>
-Subject: [kernel-hardening] Re: [PATCH] arm64: usercopy: Implement stack frame object validation
-To: Will Deacon <will.deacon@arm.com>
-Cc: kpark3469@gmail.com, kernel-hardening@lists.openwall.com, catalin.marinas@arm.com, keescook@chromium.org, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
+In-Reply-To: <CALCETrWa5kdm2kk_PmD5grgdO+geLvR2BacAZ7NhcHH-VeQh3w@mail.gmail.com>
+References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+ <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
+ <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
+ <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com>
+ <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
+ <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
+ <CALCETrUp9CBWykRUQoJOXeLg9u45H+2VWyQ_BKAhwc9OpBYn+g@mail.gmail.com>
+ <CAEiveUdOdMr=gJZsi=Fx-CNeC8jkyi8XxC+qSG-LXWj3o2t=_A@mail.gmail.com>
+ <CALCETrX_K7XdyCRo1RSLySRu-2uySaR2+3J7qcw4O+JOepTwag@mail.gmail.com>
+ <CAEiveUe87HZK45Vs1VsTKcPMpLAav53JZb9_5-3Bc--FCGDf3A@mail.gmail.com> <CALCETrWa5kdm2kk_PmD5grgdO+geLvR2BacAZ7NhcHH-VeQh3w@mail.gmail.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Thu, 26 Jan 2017 14:20:12 +0100
+Message-ID: <CAEiveUex3aT7T_t8G_s9+W27Q61DmBiQrR526woRPVFLhusnvQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
+ hidepid= field
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 25, 2017 at 01:54:10PM +0000, Will Deacon wrote:
-> [Adding Akashi, since he'a had fun and games with arm64 stack unwinding
->  and I bet he can find a problem with this patch!]
+On Mon, Jan 23, 2017 at 9:07 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Mon, Jan 23, 2017 at 3:46 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> On Sat, Jan 21, 2017 at 1:53 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+>>> I agree that the kernel change to do it per task is very simple.  But
+>>> this is an unfortunate slippery slope.  What if you want to block off
+>>> everything in /proc that isn't associated with a PID?  What if you
+>>> want to suppress /sys access?  What if you want ot block *all*
+>>> non-current PIDs from being revealed in /proc?  What if you want to
+>>> hide /proc/PID/cmdline?
+>>
+>> For /sys we mount an inaccessible directory on top, we even do that
+>> for some static /sys and /proc inodes, of course that doesn't scale
+>> but we try... please see below.
+>
+> So you do have a private fs namespace.
 
-I have had hard time to play with that :)
+Yes for some cases and they are cheap, however I don't see the relation here ?
 
-> On Wed, Jan 25, 2017 at 05:46:23PM +0400, kpark3469@gmail.com wrote:
-> > From: Sahara <keun-o.park@darkmatter.ae>
-> > 
-> > This implements arch_within_stack_frames() for arm64 that should
-> > validate if a given object is contained by a kernel stack frame.
-> > 
-> > Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-> > ---
-> >  arch/arm64/Kconfig                   |  1 +
-> >  arch/arm64/include/asm/thread_info.h | 55 ++++++++++++++++++++++++++++++++++++
-> >  2 files changed, 56 insertions(+)
-> > 
-> > diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> > index 1117421..8bf70b4 100644
-> > --- a/arch/arm64/Kconfig
-> > +++ b/arch/arm64/Kconfig
-> > @@ -97,6 +97,7 @@ config ARM64
-> >  	select HAVE_SYSCALL_TRACEPOINTS
-> >  	select HAVE_KPROBES
-> >  	select HAVE_KRETPROBES if HAVE_KPROBES
-> > +	select HAVE_ARCH_WITHIN_STACK_FRAMES
-> >  	select IOMMU_DMA if IOMMU_SUPPORT
-> >  	select IRQ_DOMAIN
-> >  	select IRQ_FORCED_THREADING
-> > diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
-> > index 46c3b93..f610c44 100644
-> > --- a/arch/arm64/include/asm/thread_info.h
-> > +++ b/arch/arm64/include/asm/thread_info.h
-> > @@ -68,7 +68,62 @@ struct thread_info {
-> >  #define thread_saved_fp(tsk)	\
-> >  	((unsigned long)(tsk->thread.cpu_context.fp))
-> >  
-> > +/*
-> > + * Walks up the stack frames to make sure that the specified object is
-> > + * entirely contained by a single stack frame.
-> > + *
-> > + * Returns:
-> > + *		 1 if within a frame
-> > + *		-1 if placed across a frame boundary (or outside stack)
-> > + *		 0 unable to determine (no frame pointers, etc)
-> > + */
-> > +static inline int arch_within_stack_frames(const void * const stack,
-> > +					   const void * const stackend,
-> > +					   const void *obj, unsigned long len)
-> > +{
-> > +#if defined(CONFIG_FRAME_POINTER)
 
-nitpick: s/#if defined()/#ifdef/, or just remove this guard?
+>>
+>>> I think that the right solution here is to fix procfs to understand
+>>> per-superblock mount options.
+>>
+>> Unfortunately and as also noted by Lafcadio and you this is too
+>> complex.
+>> ... but lets please stay focused here, fixing procfs is a bit out of the
+>> scope for this *specific* use case and patch, we don't have the
+>> resources to explore something new...
+>
+> I'm not the final authority on this (that's probably Eric), but NAK.
 
-> > +	const void *oldframe;
-> > +	const void *callee_fp = NULL;
-> > +	const void *caller_fp = NULL;
-> > +
-> > +	oldframe = __builtin_frame_address(1);
-> > +	if (oldframe) {
-> > +		callee_fp = __builtin_frame_address(2);
-> > +		if (callee_fp)
-> > +			caller_fp = __builtin_frame_address(3);
-> > +	}
-> > +	/*
-> > +	 * low ----------------------------------------------> high
-> > +	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
-> > +	 *                ^----------------^
-> > +	 *               allow copies only within here
-> > +	 */
-> 
-> Which compilers have you tested this with? The GCC folks don't guarantee a
-> frame layout, and they have changed it in the past,
+(I don't know the final authority. The *only* thing I know is that we
+have technical problems here that are *not* fixed, and we try to fix
+them).
 
-I don't know whether any changes have been made before or not, but
 
-> so I suspect this is
-> pretty fragile. In particularly, if __builtin_frame_address just points
-> at the frame record, then I don't think you can make assumptions about the
-> placement of local variables and arguments with respect to that.
-> 
-> Will
+> For upstream Linux, you can't say "doing it right is too hard so we're
+> going to introduce a hackish ABI with questionable security
+> properties".
 
-Yes and no.
+No one said this.
 
-AAPCS64 says,
-- The stack implementation is full-descending (5.2.2)
-- A process may only access (for reading or writing) the closed interval
-  of the entire stack delimited by [SP, stack-base - 1]. (5.2.2.1)
-- The location of the frame record within a stack frame is not specified
-  (5.2.3)
+Maybe you think that procfs is the right way, but I certainly can't
+predict how much damage any fundamental change on procfs will make.
+procfs is a special fs that has its own rules and hacks... everyone
+would like to avoid major changes on it...
 
-To my best knowledge, dynamically allocated object (local variable) may be
-allocated below the current frame pointer, decrementing the stack pointer.
-Take a look at a simple example:
+Could you please explain in clear words what are the benefits to use
+mount, retain or regain CAP_SYS_ADMIN for something that we can set
+without any privileges ?
 
-===8<===
-#include <stdio.h>
-#include <stdlib.h>
 
-int main(int ac, char **av) {
-	int array_size;
-	register unsigned long sp asm("sp");
+> The right solution is IMO quite clearly to fix /proc.  This isn't even
+> particularly hard -- there are only 17 instances of s_fs_info in
+> fs/proc/.
 
-	if (ac < 2) {
-		printf("No argument\n");
-		return 1;
-	}
-	array_size = atoi(av[1]);
-	printf("frame pointer: %lx\n", __builtin_frame_address(0));
-	printf("Before dynamic alloc: %lx\n", sp);
-	{
-		long array[array_size];
+pid namespaces are tied to procfs to the heart, any change on procfs
+has also to count on pid namespaces, flush cached entries of a task
+from each /proc... ? pid namespaces have then to be made smarter.
+Forward port vulnerability and bug fixes that have been stacked in
+procfs ? or at least do not break them. "procfs has always been a
+special fs" by git logs. Also cases of some specific directories
+/proc/fs/nfs and maybe devices id  ?
+persistent of mount options and other userspace information -
+https://lkml.org/lkml/2012/3/26/486
 
-		printf("After dynamic alloc: %lx\n", sp);
-	}
+These prevent me from asserting that's the best way... where in a
+previous thread you said that we should go with the easiest way to fix
+the problem.
 
-	return 0;
-}
-===>8===
 
-and the result (with gcc 5.3) is:
-  frame pointer:        ffffe32bacd0
-  Before dynamic alloc: ffffe32bacd0
-  After dynamic alloc:  ffffe32bac70
-
-Given this fact,
-
-> > +	/*
-> > +	 * low ----------------------------------------------> high
-> > +	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
-> > +	 *                ^----------------^
-> > +	 *               allow copies only within here
-> > +	 */
-
-this picture may not always be precise in that "local variables" are
-local to the callee, OR possibly local to the *caller*.
-However, the range check is done here in a while loop that walks through
-the whole callstack chain, and so I assume that it would work in most cases
-except the case that a callee function hits that usage.
-
-I think there are a few (not many) places of such code in the kernel,
-(around net IIRC, but don' know they call usercopy functions or not).
-
-Thanks,
--Takahiro AKASHI
+-- 
+tixxdz
+http://opendz.org
