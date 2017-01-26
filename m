@@ -1,66 +1,161 @@
+Date: Thu, 26 Jan 2017 16:10:12 +0900
+From: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Message-ID: <20170126071010.GE23406@linaro.org>
+References: <1485351983-13873-1-git-send-email-kpark3469@gmail.com>
+ <20170125135410.GF27026@arm.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+KYYRvWC1MmMyn3w1N5DsXeAnHR3wZvjpUfUaqd3L2Rw@mail.gmail.com>
-References: <CAEk6tExvL7NCB8P-YP7MwT6Ysi8S08H+RgsvBfRXp336noTfxg@mail.gmail.com>
- <CAGXu5j+KYYRvWC1MmMyn3w1N5DsXeAnHR3wZvjpUfUaqd3L2Rw@mail.gmail.com>
-From: Jessica Frazelle <me@jessfraz.com>
-Date: Wed, 25 Jan 2017 20:12:41 -0800
-Message-ID: <CAEk6tEyquWE2HS=Nrtzx4RS_GXRMNBBXVtac1dFP2Py17cN_MQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Introduction
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170125135410.GF27026@arm.com>
+Subject: [kernel-hardening] Re: [PATCH] arm64: usercopy: Implement stack frame object validation
+To: Will Deacon <will.deacon@arm.com>
+Cc: kpark3469@gmail.com, kernel-hardening@lists.openwall.com, catalin.marinas@arm.com, keescook@chromium.org, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Jan 25, 2017, 11:37 Kees Cook <keescook@chromium.org> wrote:
->
-> On Mon, Jan 23, 2017 at 4:06 PM, Jessica Frazelle <me@jessfraz.com> wrote:
-> > I've been lurking on this mailing list for over a year now, so I think
-> > I understand the gist of how it works. I am looking for some ways to
-> > help out in my free time.
->
-> Greetings! Thanks for saying "hi". :)
->
-> > The subsystems I know the most about are cgroups and namespaces. I
-> > previously was a maintainer of Docker (I added the seccomp integration
-> > and maintained the AppArmor bits) and now I work on kubernetes.
-> >
-> > Let me know if you think there is a good place to start!
->
-> I've mostly been trying to keep track of kernel self-protection TODO
-> items, so I haven't been keeping too up to date on userspace-support
-> things that the kernel provides. I know Solar has a list of things
-> he'd like to see, and I know there was an earlier attempt at building
-> an LSM to provide a more hardened chroot implementation (that Elena
-> sent a version of last year).
->
+On Wed, Jan 25, 2017 at 01:54:10PM +0000, Will Deacon wrote:
+> [Adding Akashi, since he'a had fun and games with arm64 stack unwinding
+>  and I bet he can find a problem with this patch!]
 
-I am familiar with the chroot LSM from GRSEC, I'm not sure if this
-would help containers much mostly because we use pivot_root and a lot
-of that functionality can be reproduced by either capabilities
-dropping or seccomp. I'm guessing it has a use outside containers but
-I'm not really sure what that may be other than ease of use of not
-having to drop caps etc. I am more than willing to help make sure it
-gets done in a way everyone wants if that's the case.
+I have had hard time to play with that :)
 
->
-> Are there any gaps in existing cgroups/namespaces stuff that you'd
-> like to see fixed? Or are there any areas of self-protection work that
-> you find interesting and would want to learn more about?
->
-> -Kees
->
-> --
-> Kees Cook
-> Nexus Security
+> On Wed, Jan 25, 2017 at 05:46:23PM +0400, kpark3469@gmail.com wrote:
+> > From: Sahara <keun-o.park@darkmatter.ae>
+> > 
+> > This implements arch_within_stack_frames() for arm64 that should
+> > validate if a given object is contained by a kernel stack frame.
+> > 
+> > Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+> > ---
+> >  arch/arm64/Kconfig                   |  1 +
+> >  arch/arm64/include/asm/thread_info.h | 55 ++++++++++++++++++++++++++++++++++++
+> >  2 files changed, 56 insertions(+)
+> > 
+> > diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> > index 1117421..8bf70b4 100644
+> > --- a/arch/arm64/Kconfig
+> > +++ b/arch/arm64/Kconfig
+> > @@ -97,6 +97,7 @@ config ARM64
+> >  	select HAVE_SYSCALL_TRACEPOINTS
+> >  	select HAVE_KPROBES
+> >  	select HAVE_KRETPROBES if HAVE_KPROBES
+> > +	select HAVE_ARCH_WITHIN_STACK_FRAMES
+> >  	select IOMMU_DMA if IOMMU_SUPPORT
+> >  	select IRQ_DOMAIN
+> >  	select IRQ_FORCED_THREADING
+> > diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+> > index 46c3b93..f610c44 100644
+> > --- a/arch/arm64/include/asm/thread_info.h
+> > +++ b/arch/arm64/include/asm/thread_info.h
+> > @@ -68,7 +68,62 @@ struct thread_info {
+> >  #define thread_saved_fp(tsk)	\
+> >  	((unsigned long)(tsk->thread.cpu_context.fp))
+> >  
+> > +/*
+> > + * Walks up the stack frames to make sure that the specified object is
+> > + * entirely contained by a single stack frame.
+> > + *
+> > + * Returns:
+> > + *		 1 if within a frame
+> > + *		-1 if placed across a frame boundary (or outside stack)
+> > + *		 0 unable to determine (no frame pointers, etc)
+> > + */
+> > +static inline int arch_within_stack_frames(const void * const stack,
+> > +					   const void * const stackend,
+> > +					   const void *obj, unsigned long len)
+> > +{
+> > +#if defined(CONFIG_FRAME_POINTER)
 
-I would definitely like to help with some mechanisms that containers
-and others could integrate to become more secure and I have some ideas
-for this, but they are kind of a larger scale feature.
+nitpick: s/#if defined()/#ifdef/, or just remove this guard?
 
-For now, I would love to help with whatever low hanging fruit no one
-else wants to do but that might benefit some people. Then maybe once
-I've been around the block enough times see if you all are interested
-in something I have briefly thought of that maybe we could make
-awesome together.
+> > +	const void *oldframe;
+> > +	const void *callee_fp = NULL;
+> > +	const void *caller_fp = NULL;
+> > +
+> > +	oldframe = __builtin_frame_address(1);
+> > +	if (oldframe) {
+> > +		callee_fp = __builtin_frame_address(2);
+> > +		if (callee_fp)
+> > +			caller_fp = __builtin_frame_address(3);
+> > +	}
+> > +	/*
+> > +	 * low ----------------------------------------------> high
+> > +	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
+> > +	 *                ^----------------^
+> > +	 *               allow copies only within here
+> > +	 */
+> 
+> Which compilers have you tested this with? The GCC folks don't guarantee a
+> frame layout, and they have changed it in the past,
 
-Honestly I'm open to working on whatever no one else wants too :)
+I don't know whether any changes have been made before or not, but
+
+> so I suspect this is
+> pretty fragile. In particularly, if __builtin_frame_address just points
+> at the frame record, then I don't think you can make assumptions about the
+> placement of local variables and arguments with respect to that.
+> 
+> Will
+
+Yes and no.
+
+AAPCS64 says,
+- The stack implementation is full-descending (5.2.2)
+- A process may only access (for reading or writing) the closed interval
+  of the entire stack delimited by [SP, stack-base - 1]. (5.2.2.1)
+- The location of the frame record within a stack frame is not specified
+  (5.2.3)
+
+To my best knowledge, dynamically allocated object (local variable) may be
+allocated below the current frame pointer, decrementing the stack pointer.
+Take a look at a simple example:
+
+===8<===
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int ac, char **av) {
+	int array_size;
+	register unsigned long sp asm("sp");
+
+	if (ac < 2) {
+		printf("No argument\n");
+		return 1;
+	}
+	array_size = atoi(av[1]);
+	printf("frame pointer: %lx\n", __builtin_frame_address(0));
+	printf("Before dynamic alloc: %lx\n", sp);
+	{
+		long array[array_size];
+
+		printf("After dynamic alloc: %lx\n", sp);
+	}
+
+	return 0;
+}
+===>8===
+
+and the result (with gcc 5.3) is:
+  frame pointer:        ffffe32bacd0
+  Before dynamic alloc: ffffe32bacd0
+  After dynamic alloc:  ffffe32bac70
+
+Given this fact,
+
+> > +	/*
+> > +	 * low ----------------------------------------------> high
+> > +	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
+> > +	 *                ^----------------^
+> > +	 *               allow copies only within here
+> > +	 */
+
+this picture may not always be precise in that "local variables" are
+local to the callee, OR possibly local to the *caller*.
+However, the range check is done here in a while loop that walks through
+the whole callstack chain, and so I assume that it would work in most cases
+except the case that a callee function hits that usage.
+
+I think there are a few (not many) places of such code in the kernel,
+(around net IIRC, but don' know they call usercopy functions or not).
+
+Thanks,
+-Takahiro AKASHI
