@@ -1,96 +1,65 @@
 MIME-Version: 1.0
-In-Reply-To: <CALCETrWa5kdm2kk_PmD5grgdO+geLvR2BacAZ7NhcHH-VeQh3w@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
- <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
- <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com>
- <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
- <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
- <CALCETrUp9CBWykRUQoJOXeLg9u45H+2VWyQ_BKAhwc9OpBYn+g@mail.gmail.com>
- <CAEiveUdOdMr=gJZsi=Fx-CNeC8jkyi8XxC+qSG-LXWj3o2t=_A@mail.gmail.com>
- <CALCETrX_K7XdyCRo1RSLySRu-2uySaR2+3J7qcw4O+JOepTwag@mail.gmail.com>
- <CAEiveUe87HZK45Vs1VsTKcPMpLAav53JZb9_5-3Bc--FCGDf3A@mail.gmail.com> <CALCETrWa5kdm2kk_PmD5grgdO+geLvR2BacAZ7NhcHH-VeQh3w@mail.gmail.com>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Thu, 26 Jan 2017 14:20:12 +0100
-Message-ID: <CAEiveUex3aT7T_t8G_s9+W27Q61DmBiQrR526woRPVFLhusnvQ@mail.gmail.com>
+In-Reply-To: <CAGXu5jJf_Vi=O7SLpiMRjdjgAzhkPF+bfjddoBsgSkLz+yw+Yg@mail.gmail.com>
+References: <CABeRdtq0BY8Hi=9hHCx7YAfc=wTfVds3feN3p0BdLySjnwc1ng@mail.gmail.com>
+ <CAGXu5jJf_Vi=O7SLpiMRjdjgAzhkPF+bfjddoBsgSkLz+yw+Yg@mail.gmail.com>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Thu, 26 Jan 2017 23:49:00 +0900
+Message-ID: <CABeRdtobtD7C3AeY01RTe6ChJnOMYLyWRrubWD0mwGQYANzfpQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
- hidepid= field
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Lafcadio Wluiki <wluikil@gmail.com>
+Subject: Re: [kernel-hardening] I'd like to contribute to this project.
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 23, 2017 at 9:07 PM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Mon, Jan 23, 2017 at 3:46 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> On Sat, Jan 21, 2017 at 1:53 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->>> I agree that the kernel change to do it per task is very simple.  But
->>> this is an unfortunate slippery slope.  What if you want to block off
->>> everything in /proc that isn't associated with a PID?  What if you
->>> want to suppress /sys access?  What if you want ot block *all*
->>> non-current PIDs from being revealed in /proc?  What if you want to
->>> hide /proc/PID/cmdline?
->>
->> For /sys we mount an inaccessible directory on top, we even do that
->> for some static /sys and /proc inodes, of course that doesn't scale
->> but we try... please see below.
+On Thu, Jan 26, 2017 at 4:41 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Jan 25, 2017 at 6:01 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> Hi. I'm Hoeun Ryu.
 >
-> So you do have a private fs namespace.
-
-Yes for some cases and they are cheap, however I don't see the relation here ?
-
-
->>
->>> I think that the right solution here is to fix procfs to understand
->>> per-superblock mount options.
->>
->> Unfortunately and as also noted by Lafcadio and you this is too
->> complex.
->> ... but lets please stay focused here, fixing procfs is a bit out of the
->> scope for this *specific* use case and patch, we don't have the
->> resources to explore something new...
+> Hi! Nice to meet you!
 >
-> I'm not the final authority on this (that's probably Eric), but NAK.
+>> I've been reading arm/arm64 and mm/fs kernel code for the last few years.
+>> I stumbled upon the wiki page for this project and found this project seems
+>> very interesting.
+>> I think I can start to contibute to this project from porting small parts of
+>> PAX/GRSEC features that you guys haven't worked on yet.
+>
+> Sure, that would be very welcome. Are there features you're especially
+> interested in?
+>
 
-(I don't know the final authority. The *only* thing I know is that we
-have technical problems here that are *not* fixed, and we try to fix
-them).
+I tried to find out what features PAX/GRKERNSEC provides reading
+grsecurity wiki pages and the patch file today.
+It might take a week or two to find adequate features for me to tackle.
+But my guess after few hours of a brief investigation is `Deter
+exploit bruteforcing (GRKERNSEC_BRUTE)`
+Do you think the feature is worth it to you guys ? If not, please
+recommend others.
 
+>> I'd like to start from something trivial so I can do it in my free time.
+>> It's also ok to work with someone who are working on a big patch series if
+>> you need help.
+>
+> Just looking through the list of things on the wiki, how about this?
+> - add zeroing of copy_from_user on failure test to test_usercopy.c
+>
+> The issue here is that when a copy_from_user() call fails (for
+> whatever reason), the kernel is supposed to clear the destination
+> buffer with zeros to make sure nothing is accidentally exposed later
+> (if, say, it is copied back to userspace at a later time). We saw a
+> few instances where this protective copying wasn't happening, but
+> there was no regression test for it.
+>
+> Adding a test to lib/test_usercopy.c for the zeroing would be nice to
+> have, and should be a relatively small change.
+>
+> Let me know if that sounds good to you, and thanks!
+>
 
-> For upstream Linux, you can't say "doing it right is too hard so we're
-> going to introduce a hackish ABI with questionable security
-> properties".
+It sounds good, of course. I can work on it.
+Your help during my struggle for it will be appreciated.
 
-No one said this.
-
-Maybe you think that procfs is the right way, but I certainly can't
-predict how much damage any fundamental change on procfs will make.
-procfs is a special fs that has its own rules and hacks... everyone
-would like to avoid major changes on it...
-
-Could you please explain in clear words what are the benefits to use
-mount, retain or regain CAP_SYS_ADMIN for something that we can set
-without any privileges ?
-
-
-> The right solution is IMO quite clearly to fix /proc.  This isn't even
-> particularly hard -- there are only 17 instances of s_fs_info in
-> fs/proc/.
-
-pid namespaces are tied to procfs to the heart, any change on procfs
-has also to count on pid namespaces, flush cached entries of a task
-from each /proc... ? pid namespaces have then to be made smarter.
-Forward port vulnerability and bug fixes that have been stacked in
-procfs ? or at least do not break them. "procfs has always been a
-special fs" by git logs. Also cases of some specific directories
-/proc/fs/nfs and maybe devices id  ?
-persistent of mount options and other userspace information -
-https://lkml.org/lkml/2012/3/26/486
-
-These prevent me from asserting that's the best way... where in a
-previous thread you said that we should go with the easiest way to fix
-the problem.
-
-
--- 
-tixxdz
-http://opendz.org
+> -Kees
+>
+> --
+> Kees Cook
+> Nexus Security
