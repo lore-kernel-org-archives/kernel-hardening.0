@@ -1,26 +1,117 @@
-References: <20161206062800.21800-1-andrew.donnellan@au1.ibm.com>
- <CAGXu5jKrU5GR3KDb9M-vtSpY+aRm2B0vGpahVYLtFTWs=g7Big@mail.gmail.com>
- <f5ea8825-532c-93bd-d51d-6ec1e541fae6@au1.ibm.com>
- <584A8E9E.22035.590FC72@pageexec.freemail.hu>
- <25e3a510-1652-5be9-cc26-24d35f9ac95e@au1.ibm.com>
-From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Date: Fri, 27 Jan 2017 16:55:37 +1100
+Date: Fri, 27 Jan 2017 09:07:38 +0100
+From: Simon Horman <horms@verge.net.au>
+Message-ID: <20170127080738.GD21195@verge.net.au>
+References: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
+ <alpine.LFD.2.11.1701262241280.3892@ja.home.ssi.bg>
 MIME-Version: 1.0
-In-Reply-To: <25e3a510-1652-5be9-cc26-24d35f9ac95e@au1.ibm.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Message-Id: <abbe5484-b546-6987-de5f-c0070657efba@au1.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH 3/3] powerpc: enable support for GCC plugins
-To: pageexec@freemail.hu, Kees Cook <keescook@chromium.org>
-Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Emese Revfy <re.emese@gmail.com>, LKML <linux-kernel@vger.kernel.org>, linux-kbuild <linux-kbuild@vger.kernel.org>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.LFD.2.11.1701262241280.3892@ja.home.ssi.bg>
+Subject: [kernel-hardening] Re: [PATCH v2 net] net: free ip_vs_dest structs when refcnt=0
+To: Julian Anastasov <ja@ssi.bg>, Pablo Neira Ayuso <pablo@netfilter.org>
+Cc: David Windsor <dwindsor@gmail.com>, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, netfilter-devel@vger.kernel.org, lvs-devel@vger.kernel.org, wensong@linux-vs.org, keescook@chromium.org, elena.reshetova@intel.com, ishkamiel@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 27/01/17 16:52, Andrew Donnellan wrote:
-> basic-block.h includes tm.h, and I don't believe we can remove that. I'm
-> not convinced there's a way around this.
+On Thu, Jan 26, 2017 at 10:49:10PM +0200, Julian Anastasov wrote:
+> 
+> 	Hello,
+> 
+> On Mon, 23 Jan 2017, David Windsor wrote:
+> 
+> > Currently, the ip_vs_dest cache frees ip_vs_dest objects when their
+> > reference count becomes < 0.  Aside from not being semantically sound,
+> > this is problematic for the new type refcount_t, which will be introduced
+> > shortly in a separate patch. refcount_t is the new kernel type for
+> > holding reference counts, and provides overflow protection and a
+> > constrained interface relative to atomic_t (the type currently being
+> > used for kernel reference counts).
+> > 
+> > Per Julian Anastasov: "The problem is that dest_trash currently holds
+> > deleted dests (unlinked from RCU lists) with refcnt=0."  Changing
+> > dest_trash to hold dest with refcnt=1 will allow us to free ip_vs_dest
+> > structs when their refcnt=0, in ip_vs_dest_put_and_free().
+> > 
+> > Signed-off-by: David Windsor <dwindsor@gmail.com>
+> 
+> 	Thanks! I tested the first version and this one
+> just adds the needed changes in comments, so
+> 
+> Signed-off-by: Julian Anastasov <ja@ssi.bg>
+> 
+> 	Simon and Pablo, this is more appropriate for
+> ipvs-next/nf-next. Please apply!
 
-Includes via function.h, I should say.
+Pablo, would you mind taking this one directly into nf-next?
 
--- 
-Andrew Donnellan              OzLabs, ADL Canberra
-andrew.donnellan@au1.ibm.com  IBM Australia Limited
+Signed-off-by: Simon Horman <horms@verge.net.au>
+
+> 
+> > ---
+> >  include/net/ip_vs.h            | 2 +-
+> >  net/netfilter/ipvs/ip_vs_ctl.c | 8 +++-----
+> >  2 files changed, 4 insertions(+), 6 deletions(-)
+> > 
+> > diff --git a/include/net/ip_vs.h b/include/net/ip_vs.h
+> > index cd6018a..a3e78ad 100644
+> > --- a/include/net/ip_vs.h
+> > +++ b/include/net/ip_vs.h
+> > @@ -1421,7 +1421,7 @@ static inline void ip_vs_dest_put(struct ip_vs_dest *dest)
+> >  
+> >  static inline void ip_vs_dest_put_and_free(struct ip_vs_dest *dest)
+> >  {
+> > -	if (atomic_dec_return(&dest->refcnt) < 0)
+> > +	if (atomic_dec_and_test(&dest->refcnt))
+> >  		kfree(dest);
+> >  }
+> >  
+> > diff --git a/net/netfilter/ipvs/ip_vs_ctl.c b/net/netfilter/ipvs/ip_vs_ctl.c
+> > index 55e0169..5fc4836 100644
+> > --- a/net/netfilter/ipvs/ip_vs_ctl.c
+> > +++ b/net/netfilter/ipvs/ip_vs_ctl.c
+> > @@ -711,7 +711,6 @@ ip_vs_trash_get_dest(struct ip_vs_service *svc, int dest_af,
+> >  		      dest->vport == svc->port))) {
+> >  			/* HIT */
+> >  			list_del(&dest->t_list);
+> > -			ip_vs_dest_hold(dest);
+> >  			goto out;
+> >  		}
+> >  	}
+> > @@ -741,7 +740,7 @@ static void ip_vs_dest_free(struct ip_vs_dest *dest)
+> >   *  When the ip_vs_control_clearup is activated by ipvs module exit,
+> >   *  the service tables must have been flushed and all the connections
+> >   *  are expired, and the refcnt of each destination in the trash must
+> > - *  be 0, so we simply release them here.
+> > + *  be 1, so we simply release them here.
+> >   */
+> >  static void ip_vs_trash_cleanup(struct netns_ipvs *ipvs)
+> >  {
+> > @@ -1080,11 +1079,10 @@ static void __ip_vs_del_dest(struct netns_ipvs *ipvs, struct ip_vs_dest *dest,
+> >  	if (list_empty(&ipvs->dest_trash) && !cleanup)
+> >  		mod_timer(&ipvs->dest_trash_timer,
+> >  			  jiffies + (IP_VS_DEST_TRASH_PERIOD >> 1));
+> > -	/* dest lives in trash without reference */
+> > +	/* dest lives in trash with reference */
+> >  	list_add(&dest->t_list, &ipvs->dest_trash);
+> >  	dest->idle_start = 0;
+> >  	spin_unlock_bh(&ipvs->dest_trash_lock);
+> > -	ip_vs_dest_put(dest);
+> >  }
+> >  
+> >  
+> > @@ -1160,7 +1158,7 @@ static void ip_vs_dest_trash_expire(unsigned long data)
+> >  
+> >  	spin_lock(&ipvs->dest_trash_lock);
+> >  	list_for_each_entry_safe(dest, next, &ipvs->dest_trash, t_list) {
+> > -		if (atomic_read(&dest->refcnt) > 0)
+> > +		if (atomic_read(&dest->refcnt) > 1)
+> >  			continue;
+> >  		if (dest->idle_start) {
+> >  			if (time_before(now, dest->idle_start +
+> > -- 
+> > 2.7.4
+> 
+> Regards
+> 
+> --
+> Julian Anastasov <ja@ssi.bg>
+> 
