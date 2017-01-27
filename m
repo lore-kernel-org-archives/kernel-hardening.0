@@ -1,54 +1,98 @@
-Date: Fri, 27 Jan 2017 19:37:47 +0100
-From: Simon Horman <horms@verge.net.au>
-Message-ID: <20170127183746.GC13402@verge.net.au>
-References: <1485228269-21758-1-git-send-email-dwindsor@gmail.com>
- <alpine.LFD.2.11.1701262241280.3892@ja.home.ssi.bg>
- <20170127080738.GD21195@verge.net.au>
- <20170127122111.GA2495@salvia>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170127122111.GA2495@salvia>
-Subject: [kernel-hardening] Re: [PATCH v2 net] net: free ip_vs_dest structs when refcnt=0
-To: Pablo Neira Ayuso <pablo@netfilter.org>
-Cc: Julian Anastasov <ja@ssi.bg>, David Windsor <dwindsor@gmail.com>, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, netfilter-devel@vger.kernel.org, lvs-devel@vger.kernel.org, wensong@linux-vs.org, keescook@chromium.org, elena.reshetova@intel.com, ishkamiel@gmail.com
+In-Reply-To: <CAGXu5jL1rSp1xVEa4aD=vzOb9Me5BEUoxO=c5f40jSYuxDSUPw@mail.gmail.com>
+References: <CABeRdtq0BY8Hi=9hHCx7YAfc=wTfVds3feN3p0BdLySjnwc1ng@mail.gmail.com>
+ <CAGXu5jJf_Vi=O7SLpiMRjdjgAzhkPF+bfjddoBsgSkLz+yw+Yg@mail.gmail.com>
+ <CABeRdtobtD7C3AeY01RTe6ChJnOMYLyWRrubWD0mwGQYANzfpQ@mail.gmail.com> <CAGXu5jL1rSp1xVEa4aD=vzOb9Me5BEUoxO=c5f40jSYuxDSUPw@mail.gmail.com>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sat, 28 Jan 2017 04:03:01 +0900
+Message-ID: <CABeRdto9-vPTXT59waFZDHUfeCjhjqecdVhL04zbm6kD4LP=0g@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] I'd like to contribute to this project.
+To: Kees Cook <keescook@chromium.org>
+Cc: Richard Weinberger <richard@nod.at>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Jan 27, 2017 at 01:21:11PM +0100, Pablo Neira Ayuso wrote:
-> On Fri, Jan 27, 2017 at 09:07:38AM +0100, Simon Horman wrote:
-> > On Thu, Jan 26, 2017 at 10:49:10PM +0200, Julian Anastasov wrote:
-> > > 
-> > > 	Hello,
-> > > 
-> > > On Mon, 23 Jan 2017, David Windsor wrote:
-> > > 
-> > > > Currently, the ip_vs_dest cache frees ip_vs_dest objects when their
-> > > > reference count becomes < 0.  Aside from not being semantically sound,
-> > > > this is problematic for the new type refcount_t, which will be introduced
-> > > > shortly in a separate patch. refcount_t is the new kernel type for
-> > > > holding reference counts, and provides overflow protection and a
-> > > > constrained interface relative to atomic_t (the type currently being
-> > > > used for kernel reference counts).
-> > > > 
-> > > > Per Julian Anastasov: "The problem is that dest_trash currently holds
-> > > > deleted dests (unlinked from RCU lists) with refcnt=0."  Changing
-> > > > dest_trash to hold dest with refcnt=1 will allow us to free ip_vs_dest
-> > > > structs when their refcnt=0, in ip_vs_dest_put_and_free().
-> > > > 
-> > > > Signed-off-by: David Windsor <dwindsor@gmail.com>
-> > > 
-> > > 	Thanks! I tested the first version and this one
-> > > just adds the needed changes in comments, so
-> > > 
-> > > Signed-off-by: Julian Anastasov <ja@ssi.bg>
-> > > 
-> > > 	Simon and Pablo, this is more appropriate for
-> > > ipvs-next/nf-next. Please apply!
-> > 
-> > Pablo, would you mind taking this one directly into nf-next?
-> > 
-> > Signed-off-by: Simon Horman <horms@verge.net.au>
-> 
-> Sure, no problem. I'll take it. Thanks!
+On Fri, Jan 27, 2017 at 6:36 AM Kees Cook <keescook@chromium.org> wrote:
+>
+> On Thu, Jan 26, 2017 at 6:49 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> > On Thu, Jan 26, 2017 at 4:41 AM, Kees Cook <keescook@chromium.org> wrote:
+> >> On Wed, Jan 25, 2017 at 6:01 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> >>> Hi. I'm Hoeun Ryu.
+> >>
+> >> Hi! Nice to meet you!
+> >>
+> >>> I've been reading arm/arm64 and mm/fs kernel code for the last few years.
+> >>> I stumbled upon the wiki page for this project and found this project seems
+> >>> very interesting.
+> >>> I think I can start to contibute to this project from porting small parts of
+> >>> PAX/GRSEC features that you guys haven't worked on yet.
+> >>
+> >> Sure, that would be very welcome. Are there features you're especially
+> >> interested in?
+> >>
+> >
+> > I tried to find out what features PAX/GRKERNSEC provides reading
+> > grsecurity wiki pages and the patch file today.
+> > It might take a week or two to find adequate features for me to tackle.
+> > But my guess after few hours of a brief investigation is `Deter
+> > exploit bruteforcing (GRKERNSEC_BRUTE)`
+> > Do you think the feature is worth it to you guys ? If not, please
+> > recommend others.
+>
+> I'd really like to see this, yes. There have been attempts in the past
+> that got derailed. I strongly think it should be part of the kernel
+> (and not glibc, as got proposed):
+>
+> https://lkml.org/lkml/2014/12/24/306
+>
+> I think it's worth trying it again.
 
-Thanks!
+Ok. I will start to investigate the history of Richard's try for the
+feature and GRKERNSEC_BRUTE itself and how I can narrow the gap
+between the opinions.
+
+>
+> >>> I'd like to start from something trivial so I can do it in my free time.
+> >>> It's also ok to work with someone who are working on a big patch series if
+> >>> you need help.
+> >>
+> >> Just looking through the list of things on the wiki, how about this?
+> >> - add zeroing of copy_from_user on failure test to test_usercopy.c
+> >>
+> >> The issue here is that when a copy_from_user() call fails (for
+> >> whatever reason), the kernel is supposed to clear the destination
+> >> buffer with zeros to make sure nothing is accidentally exposed later
+> >> (if, say, it is copied back to userspace at a later time). We saw a
+> >> few instances where this protective copying wasn't happening, but
+>
+> >> there was no regression test for it.
+> >>
+
+What are the few instances? Invaild sized accesses ?
+You mean that the regression is performance degradation ?
+
+> >> Adding a test to lib/test_usercopy.c for the zeroing would be nice to
+> >> have, and should be a relatively small change.
+> >>
+
+What can be the test cases ?
+Performing copy_to/from_user against different kind of src/dst like
+stack, slab and simple kmalloc()ed pages and checking
+if the results are what they should be ?
+Or just checking if zeroing is done by comparing the content of memory to 0 ?
+
+>
+> >> Let me know if that sounds good to you, and thanks!
+> >>
+> >
+> > It sounds good, of course. I can work on it.
+> > Your help during my struggle for it will be appreciated.
+>
+> Cool, let us know how we can help. :)
+>
+>
+> -Kees
+>
+> --
+> Kees Cook
+> Nexus Security
