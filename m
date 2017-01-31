@@ -1,55 +1,40 @@
+Date: Tue, 31 Jan 2017 07:19:35 +0530
+From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Message-ID: <20170131071935.3e34cdd6@kaiwan-T460>
+In-Reply-To: <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
+References: <20170118095155.5e3bf976@kaiwan-T460>
+	<90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+KhAHbdYEdwqo5EspmkEPnvyucS2jStR_rhCe9H497T9jJ9aA@mail.gmail.com>
-References: <1485351983-13873-1-git-send-email-kpark3469@gmail.com>
- <20170125135410.GF27026@arm.com> <20170126071010.GE23406@linaro.org> <CA+KhAHbdYEdwqo5EspmkEPnvyucS2jStR_rhCe9H497T9jJ9aA@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 30 Jan 2017 14:19:07 -0800
-Message-ID: <CAGXu5j+PjVG-KQJwMke4X3=Vmr1ECjU0s2v-S0d3a+BotOrC_Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] arm64: usercopy: Implement stack frame object validation
-To: Keun-O Park <kpark3469@gmail.com>
-Cc: AKASHI Takahiro <takahiro.akashi@linaro.org>, Will Deacon <will.deacon@arm.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
+ to linux-next
+To: Laura Abbott <labbott@redhat.com>, kernel-hardening@lists.openwall.com
+Cc: keescook@chromium.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Jan 30, 2017 at 4:42 AM, Keun-O Park <kpark3469@gmail.com> wrote:
-> Thanks so much for the example code. Basically I totally missed this case.
-> I modified do_usercopy_stack() slightly following your code snippet.
-> Like your comment, I could see the similar result.
-> ....
->         array_size = get_random_int() & 0x0F;
->         if (to_user) {
->                 unsigned char array[array_size];
-> ....
->                 pr_info("attempting bad copy_to_user of distant stack 2\n");
->                 if (copy_to_user((void __user *)user_addr, array,
->                                  unconst + sizeof(array))) {
->                         pr_warn("copy_to_user failed, but lacked Oops\n");
->                         goto free_user;
->                 }
-> ....
-> # echo USERCOPY_STACK_FRAME_TO > DIRECT
-> [ 1999.832209] Before dynamic alloc: ffffffc079013d40
-> [ 1999.832309] After dynamic alloc: ffffffc079013d40
-> [ 1999.832370] lkdtm: attempting good copy_to_user of local stack
-> [ 1999.832476] lkdtm: attempting bad copy_to_user of distant stack
-> [ 1999.832562] usercopy: kernel memory exposure attempt detected from
-> ffffffc079013d20 (<process stack>) (32 bytes)
-> [ 1999.832636] usercopy: BUG()!!!
-> [ 1999.832693] lkdtm: attempting bad copy_to_user of distant stack 2
-> [ 1999.832779] usercopy: kernel memory exposure attempt detected from
-> ffffffc079013d30 (<process stack>) (6 bytes)
-> [ 1999.832853] usercopy: BUG()!!!
->
-> This is output of GCC 4.9, so maybe the sp value is not expected one.
-> Anyway it looks to me that the object should be scanned from oldframe.
+Apologies for the delayed response!
 
-Am I correct in understanding that your code worked correctly? I.e.
-Access to "array" worked, but stepping beyond it failed? (Does
-sizeof() work with dynamic stack allocations?)
+>On Wed, 18 Jan 2017 11:44:47 -0800
+>Laura Abbott <labbott@redhat.com> wrote:
+> This is roughly the work I did before
+> (http://www.openwall.com/lists/kernel-hardening/2015/12/22/1)
 
--Kees
+=E2=80=8BYes Laura, indeed it _is_ your code that I merged into linux-next,=
+ just
+attempting to move forward. Thanks :)
+=E2=80=8B
+> From that discussion, the conclusion is that we need to
+> use the existing slab_debug infrastructure to do sanitization.
+> The part in mm/page_alloc.c has been turned into a separate
+> Kconfig.
 
--- 
-Kees Cook
-Pixel Security
+Ok, so, I'll attempt working on going down this path, also taking into
+account what you mentioned Kees.. will take it a step at a time though!=E2=
+=80=8B
+=20
+> As Kees mentioned, a good task would be to create a new Kconfig
+> (CONFIG_MEMORY_SANITIZE for example) that will turn on both
+> CONFIG_DEBUG_PAGEALLOC (the equivalent of CONFIG_PAX_MEMORY_SANITIZE)
+> and also turn on slab poisoning.
+>=20
