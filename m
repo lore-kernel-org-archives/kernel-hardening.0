@@ -1,103 +1,60 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 31 Jan 2017 12:24:18 -0800
-Message-Id: <1485894263-91051-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH v5 0/4] Introduce the initify gcc plugin
+Date: Tue, 31 Jan 2017 12:24:20 -0800
+Message-Id: <1485894263-91051-3-git-send-email-keescook@chromium.org>
+In-Reply-To: <1485894263-91051-1-git-send-email-keescook@chromium.org>
+References: <1485894263-91051-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v5 2/4] util: Move type casts into is_kernel_rodata
 To: linux-kernel@vger.kernel.org
 Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, pageexec@freemail.hu, yamada.masahiro@socionext.com, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, sam@ravnborg.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a continuation of Emese Revfy's initify plugin upstreaming,
-updated with various fixes from her github tree. Additionally, I split off
-the printf attribute fixes and sent those separately.
+From: Emese Revfy <re.emese@gmail.com>
 
-This is the initify gcc plugin. The kernel already has a mechanism to
-free up code and data memory that is only used during kernel or module
-initialization.  This plugin will teach the compiler to find more such
-code and data that can be freed after initialization. It reduces memory
-usage at run-time, so the initify gcc plugin can be useful for embedded
-systems.
+This moves type casts into the is_kernel_rodata() function itself so that
+parameters can be marked as "nocapture" in the coming initify gcc plugin.
 
-Originally it was a CII project supported by the Linux Foundation.
+Signed-off-by: Emese Revfy <re.emese@gmail.com>
+[kees: expanded commit message]
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ mm/util.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
-This plugin is the part of grsecurity/PaX. You can find out more here:
-https://github.com/ephox-gcc-plugins/initify
-
-Section and header size changes for v4.10-rc2:
-
-defconfig (x86_64, gcc 5.4.0)
-* 2171 initified strings
-*   17 initified functions
-
-section     size (before)  size (with initify)  change
-----------  -------------  -------------------  ------
-.rodata      3362592        3333920             -28672
-.init.data    577208         661432             +84224
-.exit.data         0            672               +672
-.text       10633407       10629247              -4160
-.init.text    444371         446839              +2468
-.exit.text      8427           8427                  0
-
-header  FileSiz (before)  FileSiz (with initify)  change
-------  ----------------  ----------------------  ------
-00      16347136          16318464                -28672
-03       1118208           1204224                +86016
-
-00     .text .notes __ex_table .rodata __bug_table .pci_fixup .builtin_fw
-       .tracedata __ksymtab __ksymtab_gpl __ksymtab_strings __param __modver
-
-03     .init.text .altinstr_aux .init.data .x86_cpu_dev.init .altinstructions
-       .altinstr_replacement .iommu_table .apicdrivers .exit.text .exit.data
-       .smp_locks .data_nosave .bss .brk
-
-
-Changed from v4:
- * Refresh from Emese's latest version.
- * Updated build statistics
-
-Changed from v3:
- * Refresh from Emese's latest version.
-
-Changed from v2:
- * Check all uses when walking a use-def chain.
- * Check all uses of initialized local variables and initify them if they
-   have only nocapture uses. Previously only uses in call arguments
-   determined whether the initializer value could be initified.
- * Handle the format gcc attribute from the plugin too.
- * Verify nocapture parameters of calls. Track uses of these parameters
-   and verify that all uses are not captured. Verify only the nocapture
-   attribute (The format attribute should be verified too.).
- * Fixed wrong indexing of function arguments.
- * Fixed decl comparison. When comparing two decls the tree codes must be
-   the same.
- * Search capture uses of the return value. Use negative nocapture
-   attribute parameter on a function argument to verify that the return
-   value is not captured.
- * Stop the search for capture uses if there is a cast to integer type.
- * Removed unnecessary duplication hook.
- * Handle cloned functions with a changed argument list.
- * Check visited tree nodes to avoid an infinite loop.
- * Add a new initify plugin option: enable_init_to_exit_moves. Move a
-   function to the exit section if it is called by __init and __exit
-   functions too.
- * Added plugin option to disable the search of capture uses in nocapture
-   functions. We must be able to disable verification of nocapture
-   functions because there is a lot of asm code in the str* and mem*
-   functions on i386.
- * Added some more nocapture attributes.
- * Added some more printf attributes.
- * Added some unverified_nocapture attributes.
- * Make is_kernel_rodata() nocapture.
- * Added comment for the nocapture attribute from Kees.
-
-Changes from v1:
- * Removed unnecessary nocapture attributes from boot code
-   (Reported-by: PaX Team <pageexec@freemail.hu>)
- * Removed nocapture attributes from functions that return
-   the marked parameter
-   (Reported-by: Rasmus Villemoes <linux@rasmusvillemoes.dk>)
- * Added nocapture attribute to strlen()
- * Updated gcc-common.h from PaX
- * Don't forcibly constify initified string types
-   this caused the size reduction of the .data section
-   (initify_plugin.c)
- * Added the section mismatch problem in the commit message
+diff --git a/mm/util.c b/mm/util.c
+index 3cb2164f4099..a700e3fb1587 100644
+--- a/mm/util.c
++++ b/mm/util.c
+@@ -17,10 +17,10 @@
+ 
+ #include "internal.h"
+ 
+-static inline int is_kernel_rodata(unsigned long addr)
++static inline int is_kernel_rodata(const void *addr)
+ {
+-	return addr >= (unsigned long)__start_rodata &&
+-		addr < (unsigned long)__end_rodata;
++	return (unsigned long)addr >= (unsigned long)__start_rodata &&
++		(unsigned long)addr < (unsigned long)__end_rodata;
+ }
+ 
+ /**
+@@ -31,7 +31,7 @@ static inline int is_kernel_rodata(unsigned long addr)
+  */
+ void kfree_const(const void *x)
+ {
+-	if (!is_kernel_rodata((unsigned long)x))
++	if (!is_kernel_rodata(x))
+ 		kfree(x);
+ }
+ EXPORT_SYMBOL(kfree_const);
+@@ -68,7 +68,7 @@ EXPORT_SYMBOL(kstrdup);
+  */
+ const char *kstrdup_const(const char *s, gfp_t gfp)
+ {
+-	if (is_kernel_rodata((unsigned long)s))
++	if (is_kernel_rodata(s))
+ 		return s;
+ 
+ 	return kstrdup(s, gfp);
+-- 
+2.7.4
