@@ -1,15 +1,18 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com>
+In-Reply-To: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
 References: <20170130103853.GA34633@in3o.xyz> <CAGXu5j+7+D=N8U9Zpq1Uq526B4C4g=gQZtQ1iCMt3juDFgfgJA@mail.gmail.com>
- <CAHgaXd+nj69n-Xf46N=4M-j-0hKHVrrLfsvRZCG=2CCAtVF6ZA@mail.gmail.com> <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com>
+ <CAHgaXd+nj69n-Xf46N=4M-j-0hKHVrrLfsvRZCG=2CCAtVF6ZA@mail.gmail.com>
+ <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com> <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
 From: Shubham Bansal <illusionist.neo@gmail.com>
-Date: Wed, 1 Feb 2017 18:31:19 +0530
-Message-ID: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
+Date: Wed, 1 Feb 2017 18:36:38 +0530
+Message-ID: <CAHgaXd+S24BX1N1-F54fS9FKJr+1wNsau6rEQTSjWL-7EWL4Kg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
+Subject: [kernel-hardening] Fwd: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
 To: Kees Cook <keescook@chromium.org>
 Cc: Daniel Borkmann <daniel@iogearbox.net>, Mircea Gherzan <mgherzan@gmail.com>, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
+
+Resending because of Formatting problems.
 
 Hi Kees & Daniel,
 
@@ -29,6 +32,7 @@ On Tue, Jan 31, 2017 at 09:44:56AM -0800, Kees Cook wrote:
 > > errors.
 >
 > Yeah, that does seem to make it much more difficult.
+
 I was thinking of first implementing only instructions with 32 bit
 register operands. It will hugely decrease the surface area of eBPF
 instructions that I have to cover for the first patch.
@@ -36,24 +40,24 @@ instructions that I have to cover for the first patch.
 So, What I am thinking is something like this :
 
 - bpf_mov r0(64),r1(64) will be JITed like this :
-- ar1(32) <- r1(64). Convert/Mask 64 bit ebpf register(r1) value into 32
-bit and store it in arm register(ar1).
-- Do MOV ar0(32),ar1(32) as an ARM instruction.
-- ar0(32) -> r0(64). Zero Extend the ar0 32 bit register value
-and store it in 64 bit ebpf register r0.
+      - ar1(32) <- r1(64). Convert/Mask 64 bit ebpf register(r1) value into 32
+        bit and store it in arm register(ar1).
+      - Do MOV ar0(32),ar1(32) as an ARM instruction.
+      - ar0(32) -> r0(64). Zero Extend the ar0 32 bit register value
+        and store it in 64 bit ebpf register r0.
 
 - Similarly, For all BPF_ALU class instructions.
-- For BPF_ADD, I will mask the addition result to 32 bit only.
- I am not sure, Overflow might be a problem.
-- For BPF_SUB, I will mask the subtraction result to 32 bit only.
- I am not sure, Underflow might be problem.
-- For BPF_MUL, similar to BPF_ADD. Overflow Problem ?
-- For BPF_DIV, 32 bit masking should be fine, I guess.
-- For BPF_OR, BPF_AND, BPF_XOR, BPF_LSH, BPF_RSH, BPF_MOD 32 bit
- masking should be fine.
-- For BPF_NEG and BPF_ARSH, might be a problem because of the sign bit.
-- For BPF_END, 32 bit masking should work fine.
- Let me know if any of the above point is wrong or need your suggestion.
+      - For BPF_ADD, I will mask the addition result to 32 bit only.
+        I am not sure, Overflow might be a problem.
+      - For BPF_SUB, I will mask the subtraction result to 32 bit only.
+        I am not sure, Underflow might be problem.
+      - For BPF_MUL, similar to BPF_ADD. Overflow Problem ?
+      - For BPF_DIV, 32 bit masking should be fine, I guess.
+      - For BPF_OR, BPF_AND, BPF_XOR, BPF_LSH, BPF_RSH, BPF_MOD 32 bit
+        masking should be fine.
+      - For BPF_NEG and BPF_ARSH, might be a problem because of the sign bit.
+      - For BPF_END, 32 bit masking should work fine.
+        Let me know if any of the above point is wrong or need your suggestion.
 
 - Although, for ALU instructions, there is a big problem of register
   flag manipulations. Generally, architecture's ABI takes care of this
