@@ -1,35 +1,103 @@
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Wed, 01 Feb 2017 17:07:49 +0100
+Date: Wed, 1 Feb 2017 12:05:11 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170201200511.GA25426@beast>
 MIME-Version: 1.0
-Message-ID: <589207D5.4002.F3B42D0@pageexec.freemail.hu>
-In-reply-to: <2760877.KV1ZkH9Fsg@wuerfel>
-References: <1993222.Sl7urNjWky@wuerfel>, <5891FA4B.32537.F0660DA@pageexec.freemail.hu>, <2760877.KV1ZkH9Fsg@wuerfel>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: [kernel-hardening] Re: initify plugin crashes on arm allmodconfig
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, linux-kernel@vger.kernel.org, Josh Triplett <josh@joshtriplett.org>, yamada.masahiro@socionext.com, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, sam@ravnborg.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH] randstruct: deal with char array casts
+To: Brad Spengler <spender@grsecurity.net>
+Cc: PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 1 Feb 2017 at 16:26, Arnd Bergmann wrote:
-> arm-linux-gnueabi-gcc-4.9.3: internal compiler error: Segmentation fault (program cc1)
-> 0x40c0c6 execute
->  /home/arnd/git/gcc/gcc/gcc.c:2854
-> 0x40c464 do_spec_1
->  /home/arnd/git/gcc/gcc/gcc.c:4658
-> 0x40edc0 process_brace_body
->  /home/arnd/git/gcc/gcc/gcc.c:5941
-> 0x40edc0 handle_braces
->  /home/arnd/git/gcc/gcc/gcc.c:5855
-> 0x40d16e do_spec_1
+In continuing to poke at upstreaming randstruct, I noticed build warnings
+that exist even under a normal grsecurity build:
 
-considering the repeating pattern, it may be some infinite recursion, perhaps
-run with -dH and look at the backtrace in the coredump. also this code seems to
-be the language frontend (the specfile parser in particular) that the initify
-plugin doesn't affect, perhaps you have some changes there?
+fs/nfs/namespace.c: In function ‘nfs_do_submount’:
+fs/nfs/namespace.c:261:6: note: found mismatched struct pointer types: ‘struct vfsmount’ and ‘char’
 
-> If you can't reproduce with the version below, I'll dig in further.
+  mnt = (struct vfsmount *)devname;
+      ^
 
-no dice, both 5.4 and 6.3 worked fine (save for a few -Wunused-but-set-variable
-warnings).
+devname is a char *:
+
+        devname = nfs_devname(dentry, page, PAGE_SIZE);
+        mnt = (struct vfsmount *)devname;
+
+net/unix/af_unix.c: In function ‘unix_skb_scm_eq’:
+net/unix/af_unix.c:1634:31: note: found mismatched struct pointer types: ‘struct unix_skb_parms’ and ‘char’
+
+  const struct unix_skb_parms *u = &UNIXCB(skb);
+                               ^
+
+UNIXCB is:
+
+#define UNIXCB(skb)     (*(struct unix_skb_parms *)&((skb)->cb))
+
+And ->cb is:
+
+        char                    cb[48] __aligned(8);
+
+Both of these are kind of crazy casts, but it looks like they'd always be
+"safe" under randomized structure layout (in that it's being cast out of a
+character array). This silences the specific case and updates the warnings
+to be more specific.
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ scripts/gcc-plugins/randomize_layout_plugin.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
+index 71911c828aae..1f62fabc1141 100644
+--- a/scripts/gcc-plugins/randomize_layout_plugin.c
++++ b/scripts/gcc-plugins/randomize_layout_plugin.c
+@@ -664,7 +664,7 @@ static void check_bad_casts_in_constructor(tree var, tree init)
+ 
+ 		if (!lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(val_type)))
+ 			continue;
+-		inform(DECL_SOURCE_LOCATION(var), "found mismatched struct pointer types: %qT and %qT\n", TYPE_MAIN_VARIANT(field_type), TYPE_MAIN_VARIANT(val_type));
++		inform(DECL_SOURCE_LOCATION(var), "found mismatched constructor struct pointer types: %qT and %qT\n", TYPE_MAIN_VARIANT(field_type), TYPE_MAIN_VARIANT(val_type));
+ 	}
+ }
+ 
+@@ -830,10 +830,13 @@ static unsigned int find_bad_casts_execute(void)
+ 				continue;
+ 
+ 			if (TREE_CODE(ptr_rhs_type) != RECORD_TYPE) {
++				/* Ignore casts from char arrays. */
++				if (ptr_rhs_type == char_type_node)
++					continue;
+ #ifndef __DEBUG_PLUGIN
+ 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(ptr_lhs_type)))
+ #endif
+-				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
++				inform(gimple_location(stmt), "found mismatched rhs struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
+ 				continue;
+ 			}
+ 
+@@ -856,7 +859,7 @@ static unsigned int find_bad_casts_execute(void)
+ #ifndef __DEBUG_PLUGIN
+ 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(op0_type)))
+ #endif
+-				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, op0_type);
++				inform(gimple_location(stmt), "found mismatched op0 struct pointer types: %qT and %qT\n", ptr_lhs_type, op0_type);
+ 			} else {
+ 				const_tree ssa_name_var = SSA_NAME_VAR(rhs1);
+ 				/* skip bogus type casts introduced by container_of */
+@@ -866,7 +869,7 @@ static unsigned int find_bad_casts_execute(void)
+ #ifndef __DEBUG_PLUGIN
+ 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(ptr_rhs_type)))
+ #endif
+-				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
++				inform(gimple_location(stmt), "found mismatched ssa struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
+ 			}
+ 
+ 		}
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
