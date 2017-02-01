@@ -1,112 +1,110 @@
-Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
-Date: Wed, 1 Feb 2017 10:15:34 +0100
-From: Ingo Molnar <mingo@kernel.org>
-Message-ID: <20170201091534.GA25025@gmail.com>
-References: <20170126165940.30799-1-thgarnie@google.com>
- <20170126165940.30799-3-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170126165940.30799-3-thgarnie@google.com>
-Subject: [kernel-hardening] Re: [PATCH v2 3/3] x86: Make the GDT remapping read-only on 64 bit
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Arjan van de Ven <arjan@linux.intel.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Borislav Petkov <bp@suse.de>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Christian Borntraeger <borntraeger@de.ibm.com>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Adam Buchbinder <adam.buchbinder@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Chen Yucong <slaoub@gmail.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, David Vrabel <david.vrabel@citrix.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Prarit Bhargava <prarit@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org, kasan-dev@googlegroups.com, linux-pm@vger.kernel.org, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com>
+References: <20170130103853.GA34633@in3o.xyz> <CAGXu5j+7+D=N8U9Zpq1Uq526B4C4g=gQZtQ1iCMt3juDFgfgJA@mail.gmail.com>
+ <CAHgaXd+nj69n-Xf46N=4M-j-0hKHVrrLfsvRZCG=2CCAtVF6ZA@mail.gmail.com> <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com>
+From: Shubham Bansal <illusionist.neo@gmail.com>
+Date: Wed, 1 Feb 2017 18:31:19 +0530
+Message-ID: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>, Mircea Gherzan <mgherzan@gmail.com>, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Hi Kees & Daniel,
 
-* Thomas Garnier <thgarnie@google.com> wrote:
+On Tue, Jan 31, 2017 at 09:44:56AM -0800, Kees Cook wrote:
+> >> > 1.) Currently, as eBPF uses 64 bit registers, I am mapping 64 bit eBPF
+> >> > registers with 32 bit arm registers which looks wrong to me. Do anybody
+> >> > have some idea about how to map eBPF->arm 32 bit registers ?
+> >>
+> >> I was going to say "look at the x86 32-bit implementation." ... But
+> >> there isn't one. :( I'm going to guess that there isn't a very good
+> >> answer here. I assume you'll have to build some kind of stack scratch
+> >> space to load/save.
+> >
+> >
+> > Now I see why nobody has implemented eBPF JIT for the 32 bit systems. I
+> > think its very difficult to implement it without any complications and
+> > errors.
+>
+> Yeah, that does seem to make it much more difficult.
+I was thinking of first implementing only instructions with 32 bit
+register operands. It will hugely decrease the surface area of eBPF
+instructions that I have to cover for the first patch.
 
-> This patch makes the GDT remapped pages read-only to prevent corruption.
-> This change is done only on 64 bit.
+So, What I am thinking is something like this :
 
-Please spell '64-bit' consistently through the series. I've seen two variants:
+- bpf_mov r0(64),r1(64) will be JITed like this :
+- ar1(32) <- r1(64). Convert/Mask 64 bit ebpf register(r1) value into 32
+bit and store it in arm register(ar1).
+- Do MOV ar0(32),ar1(32) as an ARM instruction.
+- ar0(32) -> r0(64). Zero Extend the ar0 32 bit register value
+and store it in 64 bit ebpf register r0.
 
-  64 bit
-  64bit
+- Similarly, For all BPF_ALU class instructions.
+- For BPF_ADD, I will mask the addition result to 32 bit only.
+ I am not sure, Overflow might be a problem.
+- For BPF_SUB, I will mask the subtraction result to 32 bit only.
+ I am not sure, Underflow might be problem.
+- For BPF_MUL, similar to BPF_ADD. Overflow Problem ?
+- For BPF_DIV, 32 bit masking should be fine, I guess.
+- For BPF_OR, BPF_AND, BPF_XOR, BPF_LSH, BPF_RSH, BPF_MOD 32 bit
+ masking should be fine.
+- For BPF_NEG and BPF_ARSH, might be a problem because of the sign bit.
+- For BPF_END, 32 bit masking should work fine.
+ Let me know if any of the above point is wrong or need your suggestion.
 
-> +/*
-> + * The LTR instruction marks the TSS GDT entry as busy. In 64bit, the GDT is
-> + * a read-only remapping. To prevent a page fault, the GDT is switched to the
-> + * original writeable version when needed.
+- Although, for ALU instructions, there is a big problem of register
+  flag manipulations. Generally, architecture's ABI takes care of this
+  part but as we are doing 64 bit Instructions emulation(kind of) on 32
+  bit machine, it needs to be done manually. Does that sound correct ?
 
-s/In 64bit,
- /On 64-bit kernels,
+- I am not JITing BPF_ALU64 class instructions as of now. As we have to
+  take care of atomic instructions and race conditions with these
+  instruction which looks complicated to me as of now. Will try to figure out
+  this part and implement it later. Currently, I will just let it be
+  interpreted by the ebpf interpreter.
 
-> + */
-> +#ifdef CONFIG_X86_64
-> +static inline void native_load_tr_desc(void)
-> +{
-> +	struct desc_ptr gdt;
-> +	int cpu = raw_smp_processor_id();
-> +	bool restore = false;
-> +	struct desc_struct *fixmap_gdt;
-> +
-> +	native_store_gdt(&gdt);
-> +	fixmap_gdt = get_cpu_fixmap_gdt(cpu);
-> +
-> +	/*
-> +	 * If the current GDT is the read-only fixmap, swap to the original
-> +	 * writeable version. Swap back at the end.
-> +	 */
-> +	if (gdt.address == (unsigned long)fixmap_gdt) {
-> +		load_direct_gdt(cpu);
-> +		restore = true;
-> +	}
-> +	asm volatile("ltr %w0"::"q" (GDT_ENTRY_TSS*8));
-> +	if (restore)
-> +		load_fixmap_gdt(cpu);
+- For BPF_JMP class, I am assuming that, although eBPF is 64 bit ABI,
+  the address pointers on 32 bit arch like arm will be of 32 bit only.
+  So, for BPF_JMP, masking the 64 bit destination address to 32 bit
+  should do the trick and no address will be corrupted in this way. Am I
+  correct to assume this ?
+  Also, I need to check for address getting out of the allowed memory
+  range.
 
-Please use bool plus 0/1, it's more readable (to me) than the true/false notation.
+- For BPF_LD, BPF_LDX, BPF_ST and BPF_STX class instructions, I am
+  assuming the same thing as above - All addresses and pointers are 32
+  bit - which can be taken care just by maksing the eBPF register
+  values. Does that sound correct ?
+  Also, I need to check for the address overflow, address getting out
+  of the allowed memory range and things like that.
 
->  extern void switch_to_new_gdt(int);
-> +extern void load_direct_gdt(int);
->  extern void load_fixmap_gdt(int);
+> > Do you have any code references for me to take a look? Otherwise, I think
+> > its not possible for me to implement it without using any reference.
+>
+> I don't know anything else, no.
 
-> +/* Load the original GDT from the per-cpu structure */
-> +void load_direct_gdt(int cpu)
-> +{
-> +	struct desc_ptr gdt_descr;
-> +
-> +	gdt_descr.address = (long)get_cpu_direct_gdt(cpu);
+I think, I will give it a try. Otherwise, my last 1 month which I used
+to read about eBPF, eBPF linux code and arm32 ABI would be a complete
+waste.
 
-Please name the functions in an easier to understand way, such as:
+> >>
+> >>
+> >> > 2.) Also, is my current mapping good enough to make the JIT fast enough
+> >> > ?
+> >> > because as you might know, eBPF JIT mostly depends on 1-to-1 mapping of
+> >> > its instructions with native instructions.
+> >>
+> >> I don't know -- it might be tricky with needing to deal with 64-bit
+> >> registers. But if you can make it faster than the non-JIT, it should
+> >> be a win. :) Yay assembly.
 
-	get_cpu_gdt_rw()
-	get_cpu_gdt_ro()
+Well, As I mentioned above about my thinking towards the implementation,
+I am not sure it would be faster than non-JIT or even correct for that matter.
+It might be but I don't think I have enough knowledge to benchmark the
+implementation as of now.
 
-that the GDT is in the direct mappings is less important than the fact the the 
-address is writable ...
 
-> +}
-> +EXPORT_SYMBOL(load_direct_gdt);
-
-EXPORT_SYMBOL_GPL(), or no export at all.
-
-> +EXPORT_SYMBOL(load_fixmap_gdt);
-
-ditto.
-
->  	 * VT restores TR but not its size.  Useless.
->  	 */
-> -	struct desc_ptr *gdt = this_cpu_ptr(&host_gdt);
->  	struct desc_struct *descs;
->  
-> -	descs = (void *)gdt->address;
-> +	descs = (void *)get_current_direct_gdt();
-
-Couldn't the type cast be dropped?
-
->  
-> -	table_base = gdt->address;
-> +	table_base = (unsigned long)get_current_direct_gdt();
-
-Instead of spreading these type casts far and wide please introduce another 
-accessor the returns 'unsigned long':
-
-	get_cpu_gdt_rw_vaddr()
-
-or such.
-
-Thanks,
-
-	Ingo
+-Shubham Bansal
