@@ -1,126 +1,134 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1486014168-1279-2-git-send-email-bhsharma@redhat.com>
-References: <1486014168-1279-1-git-send-email-bhsharma@redhat.com> <1486014168-1279-2-git-send-email-bhsharma@redhat.com>
+In-Reply-To: <1486039824-8470-1-git-send-email-kpark3469@gmail.com>
+References: <1486039824-8470-1-git-send-email-kpark3469@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 2 Feb 2017 06:25:22 -0800
-Message-ID: <CAGXu5j+rO=1vOZ+L7DkJc=Ad3YTMFZvOeWQiW14inHRP=rN9fg@mail.gmail.com>
+Date: Thu, 2 Feb 2017 08:23:31 -0800
+Message-ID: <CAGXu5jLuBbERBK+-FrBSQQCj-+QE5Qw4GADxa-waLJaKe+SQZA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 1/2] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: Bhupesh Sharma <bhsharma@redhat.com>
-Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Cashman <dcashman@google.com>, Michael Ellerman <mpe@ellerman.id.au>, bhupesh.linux@gmail.com, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
+Subject: [kernel-hardening] Re: [PATCH v2 1/3] usercopy: create usercopy.h and move enum stack_type
+To: Keun-O Park <kpark3469@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 1, 2017 at 9:42 PM, Bhupesh Sharma <bhsharma@redhat.com> wrote:
-> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT) for
-> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
-> for the mmap base address.
+On Thu, Feb 2, 2017 at 4:50 AM,  <kpark3469@gmail.com> wrote:
+> From: Sahara <keun-o.park@darkmatter.ae>
 >
-> This value represents a compromise between increased
-> ASLR effectiveness and avoiding address-space fragmentation.
-> Replace it with a Kconfig option, which is sensibly bounded, so that
-> platform developers may choose where to place this compromise.
-> Keep default values as new minimums.
->
-> This patch makes sure that now powerpc mmap arch_mmap_rnd() approach
-> is similar to other ARCHs like x86, arm64 and arm.
->
-> Cc: Alexander Graf <agraf@suse.com>
-> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-> Cc: Paul Mackerras <paulus@samba.org>
-> Cc: Michael Ellerman <mpe@ellerman.id.au>
-> Cc: Anatolij Gustschin <agust@denx.de>
-> Cc: Alistair Popple <alistair@popple.id.au>
-> Cc: Matt Porter <mporter@kernel.crashing.org>
-> Cc: Vitaly Bordug <vitb@kernel.crashing.org>
-> Cc: Scott Wood <oss@buserror.net>
-> Cc: Kumar Gala <galak@kernel.crashing.org>
-> Cc: Daniel Cashman <dcashman@android.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+> This patch creates linux/usercopy.h and moves the enum which is
+> only used in usercopy.c so as to make it usable to x86 and other
+> architecture's thread_info.h, which may have arch_within_stack_frames().
+
+Yeah, I had meant to do this; thanks! See my nit below...
+
+> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+> Suggested-by: James Morse <james.morse@arm.com>
 > ---
->  arch/powerpc/Kconfig   | 34 ++++++++++++++++++++++++++++++++++
->  arch/powerpc/mm/mmap.c |  7 ++++---
->  2 files changed, 38 insertions(+), 3 deletions(-)
+>  arch/x86/include/asm/thread_info.h | 20 +++++++++++---------
+>  include/linux/usercopy.h           | 11 +++++++++++
+>  mm/usercopy.c                      |  8 +-------
+>  3 files changed, 23 insertions(+), 16 deletions(-)
+>  create mode 100644 include/linux/usercopy.h
 >
-> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-> index a8ee573fe610..b4a843f68705 100644
-> --- a/arch/powerpc/Kconfig
-> +++ b/arch/powerpc/Kconfig
-> @@ -22,6 +22,38 @@ config MMU
->         bool
->         default y
+> diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+> index ad6f5eb0..c991126 100644
+> --- a/arch/x86/include/asm/thread_info.h
+> +++ b/arch/x86/include/asm/thread_info.h
+> @@ -51,6 +51,7 @@
+>  struct task_struct;
+>  #include <asm/cpufeature.h>
+>  #include <linux/atomic.h>
+> +#include <linux/usercopy.h>
 >
-> +config ARCH_MMAP_RND_BITS_MIN
-> +       default 5 if PPC_256K_PAGES && 32BIT
-> +       default 12 if PPC_256K_PAGES && 64BIT
-> +       default 7 if PPC_64K_PAGES && 32BIT
-> +       default 14 if PPC_64K_PAGES && 64BIT
-> +       default 9 if PPC_16K_PAGES && 32BIT
-> +       default 16 if PPC_16K_PAGES && 64BIT
-> +       default 11 if PPC_4K_PAGES && 32BIT
-> +       default 18 if PPC_4K_PAGES && 64BIT
-> +
-> +# max bits determined by the following formula:
-> +#  VA_BITS - PAGE_SHIFT - 4
-> +#  for e.g for 64K page and 64BIT = 48 - 16 - 4 = 28
-> +config ARCH_MMAP_RND_BITS_MAX
-> +       default 10 if PPC_256K_PAGES && 32BIT
-> +       default 26 if PPC_256K_PAGES && 64BIT
-> +       default 12 if PPC_64K_PAGES && 32BIT
-> +       default 28 if PPC_64K_PAGES && 64BIT
-> +       default 14 if PPC_16K_PAGES && 32BIT
-> +       default 30 if PPC_16K_PAGES && 64BIT
-> +       default 16 if PPC_4K_PAGES && 32BIT
-> +       default 32 if PPC_4K_PAGES && 64BIT
-> +
-> +config ARCH_MMAP_RND_COMPAT_BITS_MIN
-> +       default 5 if PPC_256K_PAGES
-> +       default 7 if PPC_64K_PAGES
-> +       default 9 if PPC_16K_PAGES
-> +       default 11
-> +
-> +config ARCH_MMAP_RND_COMPAT_BITS_MAX
-> +       default 16
-> +
->  config HAVE_SETUP_PER_CPU_AREA
->         def_bool PPC64
->
-> @@ -100,6 +132,8 @@ config PPC
->         select HAVE_EFFICIENT_UNALIGNED_ACCESS if !(CPU_LITTLE_ENDIAN && POWER7_CPU)
->         select HAVE_KPROBES
->         select HAVE_ARCH_KGDB
-> +       select HAVE_ARCH_MMAP_RND_BITS
-> +       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
->         select HAVE_KRETPROBES
->         select HAVE_ARCH_TRACEHOOK
->         select HAVE_MEMBLOCK
-> diff --git a/arch/powerpc/mm/mmap.c b/arch/powerpc/mm/mmap.c
-> index 2f1e44362198..babf59faab3b 100644
-> --- a/arch/powerpc/mm/mmap.c
-> +++ b/arch/powerpc/mm/mmap.c
-> @@ -60,11 +60,12 @@ unsigned long arch_mmap_rnd(void)
+>  struct thread_info {
+>         unsigned long           flags;          /* low level flags */
+> @@ -168,13 +169,13 @@ static inline unsigned long current_stack_pointer(void)
+>   * entirely contained by a single stack frame.
+>   *
+>   * Returns:
+> - *              1 if within a frame
+> - *             -1 if placed across a frame boundary (or outside stack)
+> - *              0 unable to determine (no frame pointers, etc)
+> + *     GOOD_FRAME      if within a frame
+> + *     BAD_STACK       if placed across a frame boundary (or outside stack)
+> + *     NOT_STACK       unable to determine (no frame pointers, etc)
+>   */
+> -static inline int arch_within_stack_frames(const void * const stack,
+> -                                          const void * const stackend,
+> -                                          const void *obj, unsigned long len)
+> +static inline enum stack_type arch_within_stack_frames(const void * const stack,
+> +                                       const void * const stackend,
+> +                                       const void *obj, unsigned long len)
 >  {
->         unsigned long rnd;
->
-> -       /* 8MB for 32bit, 1GB for 64bit */
-> +#ifdef CONFIG_COMPAT
->         if (is_32bit_task())
-> -               rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
-> +               rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
->         else
-> -               rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
-> +#endif
-> +               rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
->
->         return rnd << PAGE_SHIFT;
+>  #if defined(CONFIG_FRAME_POINTER)
+>         const void *frame = NULL;
+> @@ -197,13 +198,14 @@ static inline int arch_within_stack_frames(const void * const stack,
+>                  * the copy as invalid.
+>                  */
+>                 if (obj + len <= frame)
+> -                       return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
+> +                       return obj >= oldframe + 2 * sizeof(void *) ?
+> +                               GOOD_FRAME : BAD_STACK;
+>                 oldframe = frame;
+>                 frame = *(const void * const *)frame;
+>         }
+> -       return -1;
+> +       return BAD_STACK;
+>  #else
+> -       return 0;
+> +       return NOT_STACK;
+>  #endif
 >  }
+>
+> diff --git a/include/linux/usercopy.h b/include/linux/usercopy.h
+> new file mode 100644
+> index 0000000..974859e
+> --- /dev/null
+> +++ b/include/linux/usercopy.h
+> @@ -0,0 +1,11 @@
+> +#ifndef __LINUX_USERCOPY_H
+> +#define __LINUX_USERCOPY_H
+> +
+> +enum stack_type {
+> +       BAD_STACK = -1,
+> +       NOT_STACK = 0,
+> +       GOOD_FRAME,
+> +       GOOD_STACK,
+> +};
+> +
+> +#endif
 
-Awesome! This looks good to me based on my earlier analysis.
-
-Reviewed-by: Kees Cook <keescook@chromium.org>
+I think this should live with the declaration of
+arch_within_stack_frames in include/linux/thread_info.h instead of
+creating a new usercopy.h.
 
 -Kees
+
+> diff --git a/mm/usercopy.c b/mm/usercopy.c
+> index 3c8da0a..ee7bced 100644
+> --- a/mm/usercopy.c
+> +++ b/mm/usercopy.c
+> @@ -16,15 +16,9 @@
+>
+>  #include <linux/mm.h>
+>  #include <linux/slab.h>
+> +#include <linux/usercopy.h>
+>  #include <asm/sections.h>
+>
+> -enum {
+> -       BAD_STACK = -1,
+> -       NOT_STACK = 0,
+> -       GOOD_FRAME,
+> -       GOOD_STACK,
+> -};
+> -
+>  /*
+>   * Checks if a given pointer and length is contained by the current
+>   * stack frame (if possible).
+> --
+> 2.7.4
+>
+
+
 
 -- 
 Kees Cook
