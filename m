@@ -1,53 +1,150 @@
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5j+4_XGHAhdmfmpESguEe8iqh8MpWHvtgnSUu149rcxs=w@mail.gmail.com>
+References: <CACi5LpOkWV2t1MyYLjDckbkoBSx6QxOw7OVayx-GqWjhVHV1tQ@mail.gmail.com>
+ <CAGXu5j+4_XGHAhdmfmpESguEe8iqh8MpWHvtgnSUu149rcxs=w@mail.gmail.com>
 From: Bhupesh Sharma <bhsharma@redhat.com>
-Date: Thu,  2 Feb 2017 11:12:48 +0530
-Message-Id: <1486014168-1279-3-git-send-email-bhsharma@redhat.com>
-In-Reply-To: <1486014168-1279-1-git-send-email-bhsharma@redhat.com>
-References: <1486014168-1279-1-git-send-email-bhsharma@redhat.com>
-Subject: [kernel-hardening] [PATCH 2/2] powerpc: Redefine ELF_ET_DYN_BASE
-To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com
-Cc: dcashman@google.com, mpe@ellerman.id.au, bhupesh.linux@gmail.com, keescook@chromium.org, Bhupesh Sharma <bhsharma@redhat.com>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
+Date: Thu, 2 Feb 2017 11:16:41 +0530
+Message-ID: <CACi5LpM82L2DGKhvq6HyifQoWXakWBp=9EuwxDQWE2Pa1K5-mw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: Query regarding randomization bits for a ASLR elf on PPC64
+To: Kees Cook <keescook@chromium.org>
+Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, Daniel Cashman <dcashman@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michael Ellerman <mpe@ellerman.id.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Currently the powerpc arch uses a ELF_ET_DYN_BASE value of 0x20000000
-which ends up pushing an elf to a load address which is 32-bit.
+Hi Kees,
 
-On 64-bit platforms, this might be too less especially when one is
-trying to increase the randomness of the load address of the ASLR elfs
-on such platforms.
+On Thu, Jan 26, 2017 at 7:08 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Sun, Jan 22, 2017 at 9:34 PM, Bhupesh Sharma <bhsharma@redhat.com> wrote:
+>> I was recently looking at ways to extend the randomization range for a
+>> ASLR elf on a PPC64LE system.
+>>
+>> I basically have been using 28-bits of randomization on x86_64 for an
+>> ASLR elf using appropriate ARCH_MMAP_RND_BITS_MIN and
+>> ARCH_MMAP_RND_BITS_MAX values:
+>>
+>> http://lxr.free-electrons.com/source/arch/x86/Kconfig#L192
+>>
+>> And I understand from looking at the PPC64 code base that both
+>> ARCH_MMAP_RND_BITS_MIN and ARCH_MMAP_RND_BITS_MAX are not used in the
+>> current upstream code.
+>
+> Yeah, looks like PPC could use it. If you've got hardware to test
+> with, please add it. :)
+>
+>> I am looking at ways to randomize the mmap, stack and brk ranges for a
+>> ALSR elf on PPC64LE. Currently I am using a PAGE SIZE of 64K in my
+>> config file and hence the randomization usually translates to
+>> something like this for me:
+>
+> Just to be clear: 64K pages will lose you 4 bits of entropy when
+> compared to 4K on x86_64. (Assuming I'm doing the math right...)
+>
+>> mmap:
+>> -------
+>> http://lxr.free-electrons.com/source/arch/powerpc/mm/mmap.c#L67
+>>
+>> rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
+>>
+>> Since PAGE_SHIFT is 16 for 64K page size, this computation reduces to:
+>> rnd = get_random_long() % (1UL<<(14));
+>>
+>> If I compare this to x86_64, I see there:
+>>
+>> http://lxr.free-electrons.com/source/arch/x86/mm/mmap.c#L79
+>>
+>> rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+>>
+>> So, if mmap_rnd_bits = 28, this equates to:
+>> rnd = get_random_long() & ((1UL << 28) - 1);
+>>
+>> Observations and Queries:
+>> --------------------------------------
+>>
+>> - So, x86_64 gives approx twice number of random bits for a ASLR elf
+>> running on it as compared to PPC64 although both use a 48-bit VA.
+>>
+>> - I also see this comment for PPC at various places, regarding 1GB
+>> randomness spread for PPC64. Is this restricted by the hardware or the
+>> kernel usage?:
+>>
+>> /* 8MB for 32bit, 1GB for 64bit */
+>>  64         if (is_32bit_task())
+>>  65                 rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
+>>  66         else
+>>  67                 rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
+>
+> Yeah, I'm not sure about this. The comments above the MIN_GAP* macros
+> seem to talk about making sure there is the 1GB stack gap, but that
+> shouldn't limit mmap.
+>
+> Stack base is randomized in fs/binfmt_elf.c randomize_stack_top()
+> which uses STACK_RND_MASK (and PAGE_SHIFT).
+>
+> x86:
+> /* 1GB for 64bit, 8MB for 32bit */
+> #define STACK_RND_MASK (test_thread_flag(TIF_ADDR32) ? 0x7ff : 0x3fffff)
+>
+> powerpc:
+> /* 1GB for 64bit, 8MB for 32bit */
+> #define STACK_RND_MASK (is_32bit_task() ? \
+>         (0x7ff >> (PAGE_SHIFT - 12)) : \
+>         (0x3ffff >> (PAGE_SHIFT - 12)))
+>
+> So, in the 64k page case, stack randomization entropy is reduced, but
+> otherwise identical to x86.
+>
+> x86 and powerpc both use arch_mmap_rnd() for both mmap and ET_DYN
+> (with different bases).
+>
+> x86 uses ELF_ET_DYN_BASE as TASK_SIZE / 3 * 2 (which the ELF loader
+> pushes back up the nearest PAGE_SIZE alignment: 0x555555555000),
+> though powerpc uses 0x20000000, so it should have significantly more
+> space for mmap and ET_DYN ASLR than x86.
+>
+>> - I tried to increase the randomness to 28 bits for PPC as well by
+>> making the PPC mmap, brk code equivalent to x86_64 and it works fine
+>> for my use case.
+>
+> The PPC brk randomization on powerpc doesn't use the more common
+> randomize_page() way other archs do it...
+>
+>         /* 8MB for 32bit, 1GB for 64bit */
+>         if (is_32bit_task())
+>                 rnd = (get_random_long() % (1UL<<(23-PAGE_SHIFT)));
+>         else
+>                 rnd = (get_random_long() % (1UL<<(30-PAGE_SHIFT)));
+>
+>         return rnd << PAGE_SHIFT;
+>
+> x86 uses 0x02000000 (via randomize_page()), which, if I'm doing the
+> math right is 14 bits, regardless of 32/64-bit. arm64 uses 0x40000000
+> (20 bits) on 64-bit processes and the same as x86 (14) for 32-bit
+> processes. Looks like powerpc uses either 13 or 20 for 4k pages, which
+> is close to the same.
+>
+>> - But, I am not sure this is the right thing to do and whether the
+>> PPC64 also supports the MIN and MAX ranges for randomization.
+>
+> It can support it once you implement the Kconfigs for it. :)
+>
+>> - If it does I would like to understand, test and push a patch to
+>> implement the same for PPC64 in upstream.
+>>
+>> Sorry for the long mail, but would really appreciate if someone can
+>> help me understand the details here.
+>
+> Hopefully this helped a bit. I would literally draw out the memory
+> map, and double-check nothing can collide at your max values.
+>
 
-This patch makes the powerpc platforms mimic the x86 ones, by ensuring
-that the ELF_ET_DYN_BASE is calculated on basis of the current task's
-TASK_SIZE.
+Many thanks for your pointers.
+I have prepared and shared a RFC patchset to introduce
+ARCH_MMAP_RND_BITS in the powerpc ARCH.
 
-Cc: Alexander Graf <agraf@suse.com>
-Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-Cc: Paul Mackerras <paulus@samba.org>
-Cc: Michael Ellerman <mpe@ellerman.id.au>
-Cc: Anatolij Gustschin <agust@denx.de>
-Cc: Alistair Popple <alistair@popple.id.au>
-Cc: Matt Porter <mporter@kernel.crashing.org>
-Cc: Vitaly Bordug <vitb@kernel.crashing.org>
-Cc: Scott Wood <oss@buserror.net>
-Cc: Kumar Gala <galak@kernel.crashing.org>
-Cc: Daniel Cashman <dcashman@android.com>
-Cc: Kees Cook <keescook@chromium.org>
-Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
----
- arch/powerpc/include/asm/elf.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+I have tested it on PPC64 and PPC64LE Fedora/RHEL setups and
+it seems to work well.
 
-diff --git a/arch/powerpc/include/asm/elf.h b/arch/powerpc/include/asm/elf.h
-index ee46ffef608e..dd035f6dd782 100644
---- a/arch/powerpc/include/asm/elf.h
-+++ b/arch/powerpc/include/asm/elf.h
-@@ -28,7 +28,7 @@
-    the loader.  We need to make sure that it is out of the way of the program
-    that it will "exec", and that there is sufficient room for the brk.  */
- 
--#define ELF_ET_DYN_BASE	0x20000000
-+#define ELF_ET_DYN_BASE	(TASK_SIZE - PAGE_SIZE)
- 
- #define ELF_CORE_EFLAGS (is_elf2_task() ? 2 : 0)
- 
--- 
-2.7.4
+Please review the patchset and share your inputs.
+
+Thanks,
+Bhupesh
