@@ -1,101 +1,107 @@
-MIME-Version: 1.0
-Sender: arndbergmann@gmail.com
-In-Reply-To: <CAK8P3a18Vd1ege8U1TC26zHJN6om6PogNSFZyuapg5UJhvmuQQ@mail.gmail.com>
-References: <1993222.Sl7urNjWky@wuerfel> <5891FA4B.32537.F0660DA@pageexec.freemail.hu>
- <2760877.KV1ZkH9Fsg@wuerfel> <589207D5.4002.F3B42D0@pageexec.freemail.hu> <CAK8P3a18Vd1ege8U1TC26zHJN6om6PogNSFZyuapg5UJhvmuQQ@mail.gmail.com>
-From: Arnd Bergmann <arnd@arndb.de>
-Date: Wed, 1 Feb 2017 22:47:57 +0100
-Message-ID: <CAK8P3a0CX4Aqv16dOAqw1YiY0exBGuxshiejGmXwSvPzgKzxww@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: initify plugin crashes on arm allmodconfig
-To: pageexec@freemail.hu
-Cc: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Josh Triplett <josh@joshtriplett.org>, yamada.masahiro@socionext.com, minipli@ld-linux.so, Russell King - ARM Linux <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, linux@rasmusvillemoes.dk, david.brown@linaro.org, Benjamin Herrenschmidt <benh@kernel.crashing.org>, tglx@linutronix.de, Andrew Morton <akpm@linux-foundation.org>, jlayton@poochiereds.net, sam@ravnborg.org, kernel-hardening@lists.openwall.com
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Thu,  2 Feb 2017 11:12:46 +0530
+Message-Id: <1486014168-1279-1-git-send-email-bhsharma@redhat.com>
+Subject: [kernel-hardening] [PATCH 0/2] RFC: Adjust powerpc ASLR elf randomness
+To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com
+Cc: dcashman@google.com, mpe@ellerman.id.au, bhupesh.linux@gmail.com, keescook@chromium.org, Bhupesh Sharma <bhsharma@redhat.com>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-I ran into three more problems now that I haven't analysed yet:
+This RFC patchset tries to make the powerpc ASLR elf randomness
+implementation similar to other ARCHs (like x86).
 
+The 1st patch introduces the support of ARCH_MMAP_RND_BITS in powerpc
+mmap implementation to allow a sane balance between increased randomness
+in the mmap address of ASLR elfs and increased address space
+fragmentation.
 
-1. I suspect this one is from a string that got deduplicated but is
-used from both __init and non-__init functions now. Same tree,
-randconfig output at http://pastebin.com/dl/XA3fXTtp
+The 2nd patch increases the ELF_ET_DYN_BASE value from the current
+hardcoded value of 0x2000_0000 to something more practical,
+i.e. TASK_SIZE - PAGE_SHIFT (which makes sense especially for
+64-bit platforms which would like to utilize more randomization
+in the load address of a PIE elf).
 
-==> build/x86/0x27D13D98_defconfig/log <==
-WARNING: drivers/clk/built-in.o(.text+0x9324): Section mismatch in
-reference from the function clk_gate() to the variable
-.init.rodata.str:__func__.27925
-The function clk_gate() references
-the variable __initconst __func__.27925.
-This is often because clk_gate lacks a __initconst
-annotation or the annotation of __func__.27925 is wrong.
+I have tested this patchset on 64-bit Fedora and RHEL7 machines/VMs.
+Here are the test results and details of the test environment:
 
-WARNING: drivers/clk/built-in.o(.text+0x9365): Section mismatch in
-reference from the function clk_gate() to the variable
-.init.rodata.str:__func__.27929
-The function clk_gate() references
-the variable __initconst __func__.27929.
-This is often because clk_gate lacks a __initconst
-annotation or the annotation of __func__.27929 is wrong.
+1. Create a test PIE program which shows its own memory map:
 
-WARNING: drivers/clk/built-in.o(.text+0x95d6): Section mismatch in
-reference from the function kona_peri_clk_set_parent() to the variable
-.init.rodata.str:__func__.27925
-The function kona_peri_clk_set_parent() references
-the variable __initconst __func__.27925.
-This is often because kona_peri_clk_set_parent lacks a __initconst
-annotation or the annotation of __func__.27925 is wrong.
+$ cat show_mmap_pie.c
+#include <stdlib.h>
+#include <stdio.h>
 
-WARNING: drivers/clk/built-in.o(.text+0x961d): Section mismatch in
-reference from the function kona_peri_clk_set_parent() to the variable
-.init.rodata.str:__func__.27929
-The function kona_peri_clk_set_parent() references
-the variable __initconst __func__.27929.
-This is often because kona_peri_clk_set_parent lacks a __initconst
-annotation or the annotation of __func__.27929 is wrong.
+int main(void){
+    char command[1024];
+    sprintf(command,"cat /proc/%d/maps",getpid());
+    system(command);
+    return 0;
+}
 
-2. futher incorrect nocapture annotations, same tree, randconfig file
-at http://pastebin.com/dl/xZrAHAfU
-/git/arm-soc/mm/util.c: In function 'kstrdup':
-/git/arm-soc/mm/util.c:44:7: error: 'kstrdup' captures its 1 ('s')
-parameter, please remove it from the nocapture attribute. [-Werror]
- char *kstrdup(const char *s, gfp_t gfp)
-       ^~~~~~~
-/git/arm-soc/mm/util.c: In function 'kmemdup':
-/git/arm-soc/mm/util.c:109:7: error: 'kmemdup' captures its 1 ('src')
-parameter, please remove it from the nocapture attribute. [-Werror]
- void *kmemdup(const void *src, size_t len, gfp_t gfp)
-       ^~~~~~~
-/git/arm-soc/mm/util.c: In function 'kstrndup':
-/git/arm-soc/mm/util.c:84:7: error: 'kstrndup' captures its 1 ('s')
-parameter, please remove it from the nocapture attribute. [-Werror]
- char *kstrndup(const char *s, size_t max, gfp_t gfp)
-       ^~~~~~~~
-/git/arm-soc/lib/string.c: In function 'strlcpy':
-/git/arm-soc/lib/string.c:139:8: error: 'strlcpy' captures its 2
-('src') parameter, please remove it from the nocapture attribute.
-[-Werror]
- size_t strlcpy(char *dest, const char *src, size_t size)
-        ^~~~~~~
-/git/arm-soc/lib/string.c: In function 'strlcat':
-/git/arm-soc/lib/string.c:294:8: error: 'strlcat' captures its 2
-('src') parameter, please remove it from the nocapture attribute.
-[-Werror]
- size_t strlcat(char *dest, const char *src, size_t count)
-        ^~~~~~~
-cc1: all warnings being treated as errors
-/git/arm-soc/scripts/Makefile.build:307: recipe for target 'lib/string.o' failed
-make[3]: *** [lib/string.o] Error 1
-/git/arm-soc/lib/vsprintf.c: In function 'bstr_printf':
-/git/arm-soc/lib/vsprintf.c:2406:5: error: 'bstr_printf' captures its
-3 ('fmt') parameter, please remove it from the nocapture attribute.
-[-Werror]
- int bstr_printf(char *buf, size_t size, const char *fmt, const u32 *bin_buf)
-     ^~~~~~~~~~~
-cc1: all warnings being treated as errors
+2. Compile it as a PIE:
 
-3. some configurations seem to take very long to build, over 10
-minutes instead of the usual 3. Haven't done any concrete measurements
-yet to confirm that it's the initify plugin causing this.
+$ gcc -o show_mmap_pie -fpie -pie show_mmap_pie.c
 
-I'll turn off the plugin for my build testing now.
+3. Before this patchset (on a Fedora-25 PPC64 POWER7 machine):
 
-     Arnd
+# ./show_mmap_pie
+33dd0000-33de0000 r-xp 00000000 fd:00 1724816                            /root/git/linux/show_mmap_pie
+33de0000-33df0000 r--p 00000000 fd:00 1724816                            /root/git/linux/show_mmap_pie
+33df0000-33e00000 rw-p 00010000 fd:00 1724816                            /root/git/linux/show_mmap_pie
+3fff9d750000-3fff9d940000 r-xp 00000000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fff9d940000-3fff9d950000 ---p 001f0000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fff9d950000-3fff9d960000 r--p 001f0000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fff9d960000-3fff9d970000 rw-p 00200000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fff9d980000-3fff9d9a0000 r-xp 00000000 00:00 0                          [vdso]
+3fff9d9a0000-3fff9d9e0000 r-xp 00000000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3fff9d9e0000-3fff9d9f0000 r--p 00030000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3fff9d9f0000-3fff9da00000 rw-p 00040000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3ffff5280000-3ffff52b0000 rw-p 00000000 00:00 0                          [stack]
+
+As one can notice, the load address even for a 64-bit binary
+(show_mmap_pie), is within the 32-bit range.
+
+4. After this patchset (on a Fedora-25 PPC64 POWER7 machine):
+
+# ./show_mmap_pie
+3fffad250000-3fffad440000 r-xp 00000000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fffad440000-3fffad450000 ---p 001f0000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fffad450000-3fffad460000 r--p 001f0000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fffad460000-3fffad470000 rw-p 00200000 fd:00 2753176                    /usr/lib64/power7/libc-2.23.so
+3fffad480000-3fffad4a0000 r-xp 00000000 00:00 0                          [vdso]
+3fffad4a0000-3fffad4e0000 r-xp 00000000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3fffad4e0000-3fffad4f0000 r--p 00030000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3fffad4f0000-3fffad500000 rw-p 00040000 fd:00 2625136                    /usr/lib64/ld-2.23.so
+3fffad500000-3fffad510000 r-xp 00000000 fd:00 1724816                    /root/git/linux/show_mmap_pie
+3fffad510000-3fffad520000 r--p 00000000 fd:00 1724816                    /root/git/linux/show_mmap_pie
+3fffad520000-3fffad530000 rw-p 00010000 fd:00 1724816                    /root/git/linux/show_mmap_pie
+3fffe3110000-3fffe3140000 rw-p 00000000 00:00 0                          [stack]
+
+The load address of the elf is now pushed to be in a 64-bit range.
+
+As I have access to limited number of powerpc machines, request folks
+having powerpc platforms to try this patchset and share their
+test results/issues as well.
+
+Cc: Alexander Graf <agraf@suse.com>
+Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Paul Mackerras <paulus@samba.org>
+Cc: Michael Ellerman <mpe@ellerman.id.au>
+Cc: Anatolij Gustschin <agust@denx.de>
+Cc: Alistair Popple <alistair@popple.id.au>
+Cc: Matt Porter <mporter@kernel.crashing.org>
+Cc: Vitaly Bordug <vitb@kernel.crashing.org>
+Cc: Scott Wood <oss@buserror.net>
+Cc: Kumar Gala <galak@kernel.crashing.org>
+Cc: Daniel Cashman <dcashman@android.com>
+Cc: Kees Cook <keescook@chromium.org>
+
+Bhupesh Sharma (2):
+  powerpc: mm: support ARCH_MMAP_RND_BITS
+  powerpc: Redefine ELF_ET_DYN_BASE
+
+ arch/powerpc/Kconfig           | 34 ++++++++++++++++++++++++++++++++++
+ arch/powerpc/include/asm/elf.h |  2 +-
+ arch/powerpc/mm/mmap.c         |  7 ++++---
+ 3 files changed, 39 insertions(+), 4 deletions(-)
+
+-- 
+2.7.4
