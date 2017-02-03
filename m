@@ -1,37 +1,45 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170203132737.263327330@infradead.org>
-References: <20170203132558.474916683@infradead.org> <20170203132737.263327330@infradead.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 3 Feb 2017 15:37:35 -0800
-Message-ID: <CAGXu5jKuhQE7wX9cMt0ZkUdswCGhJc9sm-6CiXg+ysx=aebV8A@mail.gmail.com>
+In-Reply-To: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com>
+References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com>
+From: Kees Cook <keescook@google.com>
+Date: Fri, 3 Feb 2017 15:44:28 -0800
+Message-ID: <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 1/5] refcount_t: A special purpose refcount type
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated processes
+To: Xing Gao <xgao01@email.wm.edu>
+Cc: LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 3, 2017 at 5:25 AM, Peter Zijlstra <peterz@infradead.org> wrote:
-> Provide refcount_t, an atomic_t like primitive built just for
-> refcounting.
+On Fri, Feb 3, 2017 at 2:29 PM, Xing Gao <xgao01@email.wm.edu> wrote:
+> Dear Thomas and Kees,
 >
-> It provides saturation semantics such that overflow becomes impossible
-> and thereby 'spurious' use-after-free is avoided.
+> I posted a bug report on bugzilla, and John asked me to send it the lkml.
 >
-> Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
-> ---
->  include/linux/refcount.h |  294 +++++++++++++++++++++++++++++++++++++++++++++++
->  lib/Kconfig.debug        |   13 ++
->  2 files changed, 307 insertions(+)
+> Here is the link, https://bugzilla.kernel.org/show_bug.cgi?id=193921
 >
-> --- /dev/null
-> +++ b/include/linux/refcount.h
-> @@ -0,0 +1,294 @@
-> [...]
-> +#if CONFIG_DEBUG_REFCOUNT
+> Please cc to me when you reply this email.
+>
+> And please check the information below.
+>
+> The pseudo file /proc/timer_list leaks the real pids of the associated
+> processes.
+>
+> The function print_timer(kernel/time/timer_list.c) displays
+> timer->start_pid, which is set inside the function
+> __timer_stats_timer_set_start_info (kernel/time/timer.c). This is the real
+> pid, rather than the pid in the pid namespace. If the user within a
+> container retrieves the content of /proc/timer_list, this file will leak the
+> real pid of the associated process.
 
-Oh, and I just hit this too, it should be "#ifdef" ... I didn't notice
-until after I sent my improvement series. Whoops. :P Yay Friday.
+I feel like this has been pointed out before, but I can't find the
+email about it. Regardless, yeah, this looks true:
+
+        SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
+
+ #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
+
+Seems like this should be made namespace aware... (and why is this
+file needed at all? Seems like it should live in debugfs not proc).
 
 -Kees
 
