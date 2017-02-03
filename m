@@ -1,142 +1,173 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Fri,  3 Feb 2017 15:26:52 -0800
-Message-Id: <1486164412-7338-5-git-send-email-keescook@chromium.org>
+Date: Fri,  3 Feb 2017 15:26:50 -0800
+Message-Id: <1486164412-7338-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1486164412-7338-1-git-send-email-keescook@chromium.org>
 References: <1486164412-7338-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 4/4] refcount: Report failures through CHECK_DATA_CORRUPTION
+Subject: [kernel-hardening] [PATCH 2/4] lkdtm: convert to refcount_t testing
 To: Peter Zijlstra <peterz@infradead.org>
 Cc: Kees Cook <keescook@chromium.org>, elena.reshetova@intel.com, gregkh@linuxfoundation.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, Hans Liljestrand <ishkamiel@gmail.com>, dhowells@redhat.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This converts from WARN_ON() to CHECK_DATA_CORRUPTION() in the
-CONFIG_DEBUG_REFCOUNT case. Additionally moves refcount_t sanity check
-conditionals into regular function flow. Since CHECK_DATA_CORRUPTION()
-is marked __much_check, we override few cases where the failure has
-already been handled but we want to explicitly report it.
+Since we'll be using refcount_t instead of atomic_t for refcounting,
+change the LKDTM tests to reflect the new interface and test conditions.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/refcount.h | 35 ++++++++++++++++++++++-------------
- lib/Kconfig.debug        |  2 ++
- 2 files changed, 24 insertions(+), 13 deletions(-)
+ drivers/misc/lkdtm.h      |  8 +++--
+ drivers/misc/lkdtm_bugs.c | 87 +++++++++++++++++++++++++++++++++++++++--------
+ drivers/misc/lkdtm_core.c |  8 +++--
+ 3 files changed, 85 insertions(+), 18 deletions(-)
 
-diff --git a/include/linux/refcount.h b/include/linux/refcount.h
-index 5b89cad62237..ef32910c7dd8 100644
---- a/include/linux/refcount.h
-+++ b/include/linux/refcount.h
-@@ -43,10 +43,10 @@
- #include <linux/spinlock.h>
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index cfa1039c62e7..67d27be60405 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -19,8 +19,12 @@ void lkdtm_SOFTLOCKUP(void);
+ void lkdtm_HARDLOCKUP(void);
+ void lkdtm_SPINLOCKUP(void);
+ void lkdtm_HUNG_TASK(void);
+-void lkdtm_ATOMIC_UNDERFLOW(void);
+-void lkdtm_ATOMIC_OVERFLOW(void);
++void lkdtm_REFCOUNT_SATURATE_INC(void);
++void lkdtm_REFCOUNT_SATURATE_ADD(void);
++void lkdtm_REFCOUNT_ZERO_DEC(void);
++void lkdtm_REFCOUNT_ZERO_INC(void);
++void lkdtm_REFCOUNT_ZERO_SUB(void);
++void lkdtm_REFCOUNT_ZERO_ADD(void);
+ void lkdtm_CORRUPT_LIST_ADD(void);
+ void lkdtm_CORRUPT_LIST_DEL(void);
  
- #if CONFIG_DEBUG_REFCOUNT
--#define REFCOUNT_WARN(cond, str) WARN_ON(cond)
-+#define REFCOUNT_CHECK(cond, str) CHECK_DATA_CORRUPTION(cond, str)
- #define __refcount_check	__must_check
- #else
--#define REFCOUNT_WARN(cond, str) (void)(cond)
-+#define REFCOUNT_CHECK(cond, str) (!!(cond))
- #define __refcount_check
- #endif
- 
-@@ -86,14 +86,18 @@ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
- 			break;
- 	}
- 
--	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-+	val = REFCOUNT_CHECK(new == UINT_MAX,
-+			     "refcount_t: add saturated; leaking memory.\n");
- 
- 	return true;
- }
- 
- static inline void refcount_add(unsigned int i, refcount_t *r)
- {
--	REFCOUNT_WARN(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
-+	bool __always_unused b;
-+
-+	b = REFCOUNT_CHECK(!refcount_add_not_zero(i, r),
-+			   "refcount_t: addition on 0; use-after-free.\n");
- }
- 
- /*
-@@ -121,7 +125,8 @@ bool refcount_inc_not_zero(refcount_t *r)
- 			break;
- 	}
- 
--	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-+	val = REFCOUNT_CHECK(new == UINT_MAX,
-+			     "refcount_t: inc saturated; leaking memory.\n");
- 
- 	return true;
- }
-@@ -134,7 +139,10 @@ bool refcount_inc_not_zero(refcount_t *r)
+diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+index bb3bb8ef5f44..e3f4cd8876b5 100644
+--- a/drivers/misc/lkdtm_bugs.c
++++ b/drivers/misc/lkdtm_bugs.c
+@@ -6,6 +6,7 @@
   */
- static inline void refcount_inc(refcount_t *r)
- {
--	REFCOUNT_WARN(!refcount_inc_not_zero(r), "refcount_t: increment on 0; use-after-free.\n");
-+	bool __always_unused b;
-+
-+	b = REFCOUNT_CHECK(!refcount_inc_not_zero(r),
-+			   "refcount_t: increment on 0; use-after-free.\n");
+ #include "lkdtm.h"
+ #include <linux/list.h>
++#include <linux/refcount.h>
+ #include <linux/sched.h>
+ 
+ struct lkdtm_list {
+@@ -134,28 +135,86 @@ void lkdtm_HUNG_TASK(void)
+ 	schedule();
  }
  
- /*
-@@ -155,10 +163,9 @@ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
- 			return false;
- 
- 		new = val - i;
--		if (new > val) {
--			REFCOUNT_WARN(new > val, "refcount_t: underflow; use-after-free.\n");
-+		if (REFCOUNT_CHECK(new > val,
-+				"refcount_t: sub underflow; use-after-free.\n"))
- 			return false;
--		}
- 
- 		if (atomic_try_cmpxchg_release(&r->refs, &val, new))
- 			break;
-@@ -183,7 +190,10 @@ bool refcount_dec_and_test(refcount_t *r)
- static inline
- void refcount_dec(refcount_t *r)
+-void lkdtm_ATOMIC_UNDERFLOW(void)
++void lkdtm_REFCOUNT_SATURATE_INC(void)
  {
--	REFCOUNT_WARN(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
-+	bool __always_unused b;
+-	atomic_t under = ATOMIC_INIT(INT_MIN);
++	refcount_t over = REFCOUNT_INIT(UINT_MAX - 1);
+ 
+-	pr_info("attempting good atomic increment\n");
+-	atomic_inc(&under);
+-	atomic_dec(&under);
++	pr_info("attempting good refcount decrement\n");
++	refcount_dec(&over);
++	refcount_inc(&over);
+ 
+-	pr_info("attempting bad atomic underflow\n");
+-	atomic_dec(&under);
++	pr_info("attempting bad refcount inc overflow\n");
++	refcount_inc(&over);
++	refcount_inc(&over);
++	if (refcount_read(&over) == UINT_MAX)
++		pr_err("Correctly stayed saturated, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount wrapped\n");
++}
 +
-+	b = REFCOUNT_CHECK(refcount_dec_and_test(r),
-+			   "refcount_t: decrement hit 0; leaking memory.\n");
++void lkdtm_REFCOUNT_SATURATE_ADD(void)
++{
++	refcount_t over = REFCOUNT_INIT(UINT_MAX - 1);
++
++	pr_info("attempting good refcount decrement\n");
++	refcount_dec(&over);
++	refcount_inc(&over);
++
++	pr_info("attempting bad refcount add overflow\n");
++	refcount_add(2, &over);
++	if (refcount_read(&over) == UINT_MAX)
++		pr_err("Correctly stayed saturated, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount wrapped\n");
++}
++
++void lkdtm_REFCOUNT_ZERO_DEC(void)
++{
++	refcount_t zero = REFCOUNT_INIT(1);
++
++	pr_info("attempting bad refcount decrement to zero\n");
++	refcount_dec(&zero);
++	if (refcount_read(&zero) == 0)
++		pr_err("Stayed at zero, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount went crazy\n");
  }
  
- /*
-@@ -224,10 +234,9 @@ bool refcount_dec_not_one(refcount_t *r)
- 			return false;
+-void lkdtm_ATOMIC_OVERFLOW(void)
++void lkdtm_REFCOUNT_ZERO_SUB(void)
+ {
+-	atomic_t over = ATOMIC_INIT(INT_MAX);
++	refcount_t zero = REFCOUNT_INIT(1);
++
++	pr_info("attempting bad refcount subtract past zero\n");
++	if (!refcount_sub_and_test(2, &zero))
++		pr_info("wrap attempt was noticed\n");
++	if (refcount_read(&zero) == 1)
++		pr_err("Correctly stayed above 0, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount wrapped\n");
++}
  
- 		new = val - 1;
--		if (new > val) {
--			REFCOUNT_WARN(new > val, "refcount_t: underflow; use-after-free.\n");
-+		if (REFCOUNT_CHECK(new > val,
-+				"refcount_t: dec underflow; use-after-free.\n"))
- 			return true;
--		}
+-	pr_info("attempting good atomic decrement\n");
+-	atomic_dec(&over);
+-	atomic_inc(&over);
++void lkdtm_REFCOUNT_ZERO_INC(void)
++{
++	refcount_t zero = REFCOUNT_INIT(0);
  
- 		if (atomic_try_cmpxchg_release(&r->refs, &val, new))
- 			break;
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index 20fde8d4523a..01e7aa578456 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -731,6 +731,7 @@ source "lib/Kconfig.kasan"
+-	pr_info("attempting bad atomic overflow\n");
+-	atomic_inc(&over);
++	pr_info("attempting bad refcount increment from zero\n");
++	refcount_inc(&zero);
++	if (refcount_read(&zero) == 0)
++		pr_err("Stayed at zero, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount went past zero\n");
++}
++
++void lkdtm_REFCOUNT_ZERO_ADD(void)
++{
++	refcount_t zero = REFCOUNT_INIT(0);
++
++	pr_info("attempting bad refcount addition from zero\n");
++	refcount_add(2, &zero);
++	if (refcount_read(&zero) == 0)
++		pr_err("Stayed at zero, but no BUG?!\n");
++	else
++		pr_err("Fail: refcount went past zero\n");
+ }
  
- config DEBUG_REFCOUNT
- 	bool "Verbose refcount checks"
-+	depends on DEBUG_KERNEL || BUG_ON_DATA_CORRUPTION
- 	help
- 	  Say Y here if you want reference counters (refcount_t and kref) to
- 	  generate WARNs on dubious usage. Without this refcount_t will still
-@@ -2011,6 +2012,7 @@ config TEST_STATIC_KEYS
- config BUG_ON_DATA_CORRUPTION
- 	bool "Trigger a BUG when data corruption is detected"
- 	select DEBUG_LIST
-+	select DEBUG_REFCOUNT
- 	help
- 	  Select this option if the kernel should BUG when it encounters
- 	  data corruption in kernel memory structures when they get checked
+ void lkdtm_CORRUPT_LIST_ADD(void)
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index 4d44084071d8..b9a4cd4a9b68 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -220,8 +220,12 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(WRITE_RO),
+ 	CRASHTYPE(WRITE_RO_AFTER_INIT),
+ 	CRASHTYPE(WRITE_KERN),
+-	CRASHTYPE(ATOMIC_UNDERFLOW),
+-	CRASHTYPE(ATOMIC_OVERFLOW),
++	CRASHTYPE(REFCOUNT_SATURATE_INC),
++	CRASHTYPE(REFCOUNT_SATURATE_ADD),
++	CRASHTYPE(REFCOUNT_ZERO_DEC),
++	CRASHTYPE(REFCOUNT_ZERO_INC),
++	CRASHTYPE(REFCOUNT_ZERO_SUB),
++	CRASHTYPE(REFCOUNT_ZERO_ADD),
+ 	CRASHTYPE(USERCOPY_HEAP_SIZE_TO),
+ 	CRASHTYPE(USERCOPY_HEAP_SIZE_FROM),
+ 	CRASHTYPE(USERCOPY_HEAP_FLAG_TO),
 -- 
 2.7.4
