@@ -1,50 +1,94 @@
+Date: Fri, 3 Feb 2017 20:29:19 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170203202919.GE27312@n2100.armlinux.org.uk>
+References: <1486144343-24998-1-git-send-email-labbott@redhat.com>
+ <1486144343-24998-2-git-send-email-labbott@redhat.com>
+ <CAGXu5jK6_y=dWHUDBto7ykN_sSOQ6Gx+sZs_gQ1Hoh5DjP-fTw@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1486144343-24998-3-git-send-email-labbott@redhat.com>
-References: <1486144343-24998-1-git-send-email-labbott@redhat.com> <1486144343-24998-3-git-send-email-labbott@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 3 Feb 2017 12:03:16 -0800
-Message-ID: <CAGXu5j+BX_+ymWQztqtOQE-A8yFuR5sdL++46wOvi-iBGLEK-A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] arch: Rename CONFIG_DEBUG_RODATA and CONFIG_DEBUG_MODULE_RONX
-To: Laura Abbott <labbott@redhat.com>
-Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Robin Murphy <robin.murphy@arm.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jK6_y=dWHUDBto7ykN_sSOQ6Gx+sZs_gQ1Hoh5DjP-fTw@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [PATCHv2 1/2] arch: Move CONFIG_DEBUG_RODATA and
+ CONFIG_SET_MODULE_RONX to be common
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 3, 2017 at 9:52 AM, Laura Abbott <labbott@redhat.com> wrote:
->
-> Both of these options are poorly named. The features they provide are
-> necessary for system security and should not be considered debug only.
-> Change the name to something that accurately describes what these
-> options do.
+On Fri, Feb 03, 2017 at 11:45:56AM -0800, Kees Cook wrote:
+> On Fri, Feb 3, 2017 at 9:52 AM, Laura Abbott <labbott@redhat.com> wrote:
+> > diff --git a/arch/Kconfig b/arch/Kconfig
+> > index 99839c2..22ee01e 100644
+> > --- a/arch/Kconfig
+> > +++ b/arch/Kconfig
+> > @@ -781,4 +781,32 @@ config VMAP_STACK
+> >           the stack to map directly to the KASAN shadow map using a formula
+> >           that is incorrect if the stack is in vmalloc space.
+> >
+> > +config ARCH_NO_STRICT_RWX_DEFAULTS
+> > +       def_bool n
+> > +
+> > +config ARCH_HAS_STRICT_KERNEL_RWX
+> > +       def_bool n
+> > +
+> > +config DEBUG_RODATA
+> > +       def_bool y if !ARCH_NO_STRICT_RWX_DEFAULTS
+> > +       prompt "Make kernel text and rodata read-only" if ARCH_NO_STRICT_RWX_DEFAULTS
+> 
+> Ah! Yes, perfect. I totally forgot about using conditional "prompt"
+> lines. Nice!
 
-It may help to explicitly call out the name change from/to in the
-commit message.
+It's no different from the more usual:
 
->
-> Signed-off-by: Laura Abbott <labbott@redhat.com>
-> ---
-> [...]
-> diff --git a/arch/arm/configs/aspeed_g4_defconfig b/arch/arm/configs/aspeed_g4_defconfig
-> index ca39c04..beea2cc 100644
-> --- a/arch/arm/configs/aspeed_g4_defconfig
-> +++ b/arch/arm/configs/aspeed_g4_defconfig
-> @@ -25,7 +25,6 @@ CONFIG_MODULE_UNLOAD=y
->  # CONFIG_ARCH_MULTI_V7 is not set
->  CONFIG_ARCH_ASPEED=y
->  CONFIG_MACH_ASPEED_G4=y
-> -CONFIG_DEBUG_RODATA=y
->  CONFIG_AEABI=y
->  CONFIG_UACCESS_WITH_MEMCPY=y
->  CONFIG_SECCOMP=y
+	bool "Make kernel text and rodata read-only" if ARCH_NO_STRICT_RWX_DEFAULTS
+	default y if !ARCH_NO_STRICT_RWX_DEFAULTS
+	depends on ARCH_HAS_STRICT_KERNEL_RWX
 
-Are these defconfig cases correct (dropping DEBUG_RODATA without
-adding STRICT_KERNEL_RWX)?
+But... I really don't like this - way too many negations and negatives
+which make it difficult to figure out what's going on here.
 
-Who should carry this series, btw?
+The situation we have today is:
 
--Kees
+-config DEBUG_RODATA
+-       bool "Make kernel text and rodata read-only"
+-       depends on MMU && !XIP_KERNEL
+-       default y if CPU_V7
+
+which is "allow the user to select DEBUG_RODATA if building a MMU non-XIP
+kernel", suggesting that the user turns it on for ARMv7 CPUs.
+
+That changes with this and the above:
+
++       select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
++       select ARCH_HAS_STRICT_MODULE_RWX if MMU
++       select ARCH_NO_STRICT_RWX_DEFAULTS if !CPU_V7
+
+This means that ARCH_HAS_STRICT_KERNEL_RWX is set for a MMU non-XIP
+kernel, which carries the same pre-condition for DEBUG_RODATA - no
+problem there.
+
+However, ARCH_NO_STRICT_RWX_DEFAULTS is set for non-ARMv7 CPUs, which
+means the "Make kernel text and rodata read-only" prompt _is_ provided
+for those.  However, for all ARMv7 systems, we go from "suggesting that
+the user enables the option" to "you don't have a choice, you get this
+whether you want it or not."
+
+I'd prefer to keep it off for my development systems, where I don't
+care about kernel security.  If we don't wish to do that as a general
+rule, can we make it dependent on EMBEDDED?
+
+Given that on ARM it can add up to 4MB to the kernel image - there
+_will_ be about 1MB before the .text section, the padding on between
+__modver and __ex_table which for me is around 626k, the padding
+between .notes and the init sections start with .vectors (the space
+between __ex_table and end of .notes is only 4124, which gets padded
+up to 1MB) and lastly the padding between the .init section and the
+data section (for me around 593k).  This all adds up to an increase
+in kernel image size of 3.2MB on 14.2MB - an increase of 22%.
+
+So no, I'm really not happy with that.
 
 -- 
-Kees Cook
-Pixel Security
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
