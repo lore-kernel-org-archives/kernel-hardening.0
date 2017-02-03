@@ -1,107 +1,166 @@
-Message-Id: <20170203132737.365388918@infradead.org>
-Date: Fri, 03 Feb 2017 14:26:00 +0100
+Message-Id: <20170203132737.566324209@infradead.org>
+Date: Fri, 03 Feb 2017 14:26:02 +0100
 From: Peter Zijlstra <peterz@infradead.org>
 References: <20170203132558.474916683@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline; filename=peterz-ref-5a.patch
-Subject: [kernel-hardening] [PATCH 2/5] kref: Implement using refcount_t
+Content-Disposition: inline; filename=peterz-try_atomic.patch
+Subject: [kernel-hardening] [PATCH 4/5] atomic: Introduce atomic_try_cmpxchg()
 To: elena.reshetova@intel.com, gregkh@linuxfoundation.org, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, dhowells@redhat.com, peterz@infradead.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Use the refcount_t 'atomic' type to implement kref, this makes kref
-more robust by bringing saturation semantics.
+Add a new cmpxchg interface:
+
+  bool try_cmpxchg(u{8,16,32,64} *ptr, u{8,16,32,64} *val, u{8,16,32,64} new);
+
+Where the boolean returns the result of the compare; and thus if the
+exchange happened; and in case of failure, the new value of *ptr is
+returned in *val.
+
+This allows simplification/improvement of loops like:
+
+	for (;;) {
+		new = val $op $imm;
+		old = cmpxchg(ptr, val, new);
+		if (old == val)
+			break;
+		val = old;
+	}
+
+into:
+
+	for (;;) {
+		new = val $op $imm;
+		if (try_cmpxchg(ptr, &val, new))
+			break;
+	}
+
+while also generating better code (GCC6 and onwards).
 
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 ---
- include/linux/kref.h |   29 +++++++++++------------------
- 1 file changed, 11 insertions(+), 18 deletions(-)
-
---- a/include/linux/kref.h
-+++ b/include/linux/kref.h
-@@ -15,17 +15,14 @@
- #ifndef _KREF_H_
- #define _KREF_H_
- 
--#include <linux/bug.h>
--#include <linux/atomic.h>
--#include <linux/kernel.h>
--#include <linux/mutex.h>
- #include <linux/spinlock.h>
-+#include <linux/refcount.h>
- 
- struct kref {
--	atomic_t refcount;
-+	refcount_t refcount;
- };
- 
--#define KREF_INIT(n)	{ .refcount = ATOMIC_INIT(n), }
-+#define KREF_INIT(n)	{ .refcount = REFCOUNT_INIT(n), }
- 
- /**
-  * kref_init - initialize object.
-@@ -33,12 +30,12 @@ struct kref {
-  */
- static inline void kref_init(struct kref *kref)
- {
--	atomic_set(&kref->refcount, 1);
-+	refcount_set(&kref->refcount, 1);
+--- a/arch/x86/include/asm/atomic.h
++++ b/arch/x86/include/asm/atomic.h
+@@ -186,6 +186,12 @@ static __always_inline int atomic_cmpxch
+ 	return cmpxchg(&v->counter, old, new);
  }
  
--static inline int kref_read(const struct kref *kref)
-+static inline unsigned int kref_read(const struct kref *kref)
++#define atomic_try_cmpxchg atomic_try_cmpxchg
++static __always_inline bool atomic_try_cmpxchg(atomic_t *v, int *old, int new)
++{
++	return try_cmpxchg(&v->counter, old, new);
++}
++
+ static inline int atomic_xchg(atomic_t *v, int new)
  {
--	return atomic_read(&kref->refcount);
-+	return refcount_read(&kref->refcount);
- }
+ 	return xchg(&v->counter, new);
+--- a/arch/x86/include/asm/cmpxchg.h
++++ b/arch/x86/include/asm/cmpxchg.h
+@@ -153,6 +153,75 @@ extern void __add_wrong_size(void)
+ #define cmpxchg_local(ptr, old, new)					\
+ 	__cmpxchg_local(ptr, old, new, sizeof(*(ptr)))
  
- /**
-@@ -47,11 +44,7 @@ static inline int kref_read(const struct
-  */
- static inline void kref_get(struct kref *kref)
- {
--	/* If refcount was 0 before incrementing then we have a race
--	 * condition when this kref is freeing by some other thread right now.
--	 * In this case one should use kref_get_unless_zero()
--	 */
--	WARN_ON_ONCE(atomic_inc_return(&kref->refcount) < 2);
-+	refcount_inc(&kref->refcount);
- }
++
++#define __raw_try_cmpxchg(_ptr, _pold, _new, size, lock)		\
++({									\
++	bool success;							\
++	__typeof__(_ptr) _old = (_pold);				\
++	__typeof__(*(_ptr)) __old = *_old;				\
++	__typeof__(*(_ptr)) __new = (_new);				\
++	switch (size) {							\
++	case __X86_CASE_B:						\
++	{								\
++		volatile u8 *__ptr = (volatile u8 *)(_ptr);		\
++		asm volatile(lock "cmpxchgb %[new], %[ptr]"		\
++			     CC_SET(z)					\
++			     : CC_OUT(z) (success),			\
++			       [ptr] "+m" (*__ptr),			\
++			       [old] "+a" (__old)			\
++			     : [new] "q" (__new)			\
++			     : "memory");				\
++		break;							\
++	}								\
++	case __X86_CASE_W:						\
++	{								\
++		volatile u16 *__ptr = (volatile u16 *)(_ptr);		\
++		asm volatile(lock "cmpxchgw %[new], %[ptr]"		\
++			     CC_SET(z)					\
++			     : CC_OUT(z) (success),			\
++			       [ptr] "+m" (*__ptr),			\
++			       [old] "+a" (__old)			\
++			     : [new] "r" (__new)			\
++			     : "memory");				\
++		break;							\
++	}								\
++	case __X86_CASE_L:						\
++	{								\
++		volatile u32 *__ptr = (volatile u32 *)(_ptr);		\
++		asm volatile(lock "cmpxchgl %[new], %[ptr]"		\
++			     CC_SET(z)					\
++			     : CC_OUT(z) (success),			\
++			       [ptr] "+m" (*__ptr),			\
++			       [old] "+a" (__old)			\
++			     : [new] "r" (__new)			\
++			     : "memory");				\
++		break;							\
++	}								\
++	case __X86_CASE_Q:						\
++	{								\
++		volatile u64 *__ptr = (volatile u64 *)(_ptr);		\
++		asm volatile(lock "cmpxchgq %[new], %[ptr]"		\
++			     CC_SET(z)					\
++			     : CC_OUT(z) (success),			\
++			       [ptr] "+m" (*__ptr),			\
++			       [old] "+a" (__old)			\
++			     : [new] "r" (__new)			\
++			     : "memory");				\
++		break;							\
++	}								\
++	default:							\
++		__cmpxchg_wrong_size();					\
++	}								\
++	*_old = __old;							\
++	success;							\
++})
++
++#define __try_cmpxchg(ptr, pold, new, size)				\
++	__raw_try_cmpxchg((ptr), (pold), (new), (size), LOCK_PREFIX)
++
++#define try_cmpxchg(ptr, pold, new)					\
++	__try_cmpxchg((ptr), (pold), (new), sizeof(*(ptr)))
++
+ /*
+  * xadd() adds "inc" to "*ptr" and atomically returns the previous
+  * value of "*ptr".
+--- a/include/linux/atomic.h
++++ b/include/linux/atomic.h
+@@ -423,6 +423,28 @@
+ #endif
+ #endif /* atomic_cmpxchg_relaxed */
  
- /**
-@@ -75,7 +68,7 @@ static inline int kref_put(struct kref *
- {
- 	WARN_ON(release == NULL);
- 
--	if (atomic_dec_and_test(&kref->refcount)) {
-+	if (refcount_dec_and_test(&kref->refcount)) {
- 		release(kref);
- 		return 1;
- 	}
-@@ -88,7 +81,7 @@ static inline int kref_put_mutex(struct
- {
- 	WARN_ON(release == NULL);
- 
--	if (atomic_dec_and_mutex_lock(&kref->refcount, lock)) {
-+	if (refcount_dec_and_mutex_lock(&kref->refcount, lock)) {
- 		release(kref);
- 		return 1;
- 	}
-@@ -101,7 +94,7 @@ static inline int kref_put_lock(struct k
- {
- 	WARN_ON(release == NULL);
- 
--	if (atomic_dec_and_lock(&kref->refcount, lock)) {
-+	if (refcount_dec_and_lock(&kref->refcount, lock)) {
- 		release(kref);
- 		return 1;
- 	}
-@@ -126,6 +119,6 @@ static inline int kref_put_lock(struct k
-  */
- static inline int __must_check kref_get_unless_zero(struct kref *kref)
- {
--	return atomic_add_unless(&kref->refcount, 1, 0);
-+	return refcount_inc_not_zero(&kref->refcount);
- }
- #endif /* _KREF_H_ */
++#ifndef atomic_try_cmpxchg
++
++#define __atomic_try_cmpxchg(type, _p, _po, _n)				\
++({									\
++	typeof(_po) __po = (_po);					\
++	typeof(*(_po)) __o = *__po;					\
++	bool success = (atomic_cmpxchg##type((_p), __o, (_n)) == __o);	\
++	*__po = __o;							\
++	success;							\
++})
++
++#define atomic_try_cmpxchg(_p, _po, _n)		__atomic_try_cmpxchg(, _p, _po, _n)
++#define atomic_try_cmpxchg_relaxed(_p, _po, _n)	__atomic_try_cmpxchg(_relaxed, _p, _po, _n)
++#define atomic_try_cmpxchg_acquire(_p, _po, _n)	__atomic_try_cmpxchg(_acquire, _p, _po, _n)
++#define atomic_try_cmpxchg_release(_p, _po, _n)	__atomic_try_cmpxchg(_release, _p, _po, _n)
++
++#else /* atomic_try_cmpxchg */
++#define atomic_try_cmpxchg_relaxed	atomic_try_cmpxchg
++#define atomic_try_cmpxchg_acquire	atomic_try_cmpxchg
++#define atomic_try_cmpxchg_release	atomic_try_cmpxchg
++#endif /* atomic_try_cmpxchg */
++
+ /* cmpxchg_relaxed */
+ #ifndef cmpxchg_relaxed
+ #define  cmpxchg_relaxed		cmpxchg
