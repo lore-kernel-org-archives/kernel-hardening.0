@@ -1,343 +1,215 @@
-Message-Id: <20170203132737.263327330@infradead.org>
-Date: Fri, 03 Feb 2017 14:25:59 +0100
+Message-Id: <20170203132737.468315344@infradead.org>
+Date: Fri, 03 Feb 2017 14:26:01 +0100
 From: Peter Zijlstra <peterz@infradead.org>
 References: <20170203132558.474916683@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline; filename=peterz-ref-5.patch
-Subject: [kernel-hardening] [PATCH 1/5] refcount_t: A special purpose refcount type
+Content-Disposition: inline; filename=peterz-x86-warn-ud2.patch
+Subject: [kernel-hardening] [PATCH 3/5] x86: Implement __WARN using UD2
 To: elena.reshetova@intel.com, gregkh@linuxfoundation.org, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, dhowells@redhat.com, peterz@infradead.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide refcount_t, an atomic_t like primitive built just for
-refcounting.
+By using "UD2" for WARNs we remove the function call and its possible
+__FILE__ and __LINE__ immediate arguments from the instruction stream.
 
-It provides saturation semantics such that overflow becomes impossible
-and thereby 'spurious' use-after-free is avoided.
+Total image size will not change much, what we win in the instrucion
+stream we'll loose because of the __bug_table entries. Still, saves on
+I$ footprint and the total image size does go down a bit.
+
+  text            data     bss    dec              hex    filename                     size
+  10475740        4428992  974848 15879580         f24d9c defconfig-build/vmlinux.pre  25215824
+  10451804        4428992  974848 15855644         f1f01c defconfig-build/vmlinux.post 25211288
+
+In particular this makes:
+
+0000000000001490 <ihold>:
+    1490:       55                      push   %rbp
+    1491:       8b 87 48 01 00 00       mov    0x148(%rdi),%eax
+    1497:       48 89 e5                mov    %rsp,%rbp
+    149a:       eb 0a                   jmp    14a6 <ihold+0x16>
+    149c:       f0 0f b1 97 48 01 00    lock cmpxchg %edx,0x148(%rdi)
+    14a3:       00 
+    14a4:       74 20                   je     14c6 <ihold+0x36>
+    14a6:       85 c0                   test   %eax,%eax
+    14a8:       8d 50 01                lea    0x1(%rax),%edx
+    14ab:       74 06                   je     14b3 <ihold+0x23>
+    14ad:       85 d2                   test   %edx,%edx
+    14af:       75 eb                   jne    149c <ihold+0xc>
+    14b1:       5d                      pop    %rbp
+    14b2:       c3                      retq   
+    14b3:       be 8d 00 00 00          mov    $0x8d,%esi
+    14b8:       48 c7 c7 00 00 00 00    mov    $0x0,%rdi
+                        14bb: R_X86_64_32S      .rodata.str1.1+0x35
+    14bf:       e8 00 00 00 00          callq  14c4 <ihold+0x34>
+                        14c0: R_X86_64_PC32     warn_slowpath_null-0x4
+    14c4:       5d                      pop    %rbp
+    14c5:       c3                      retq   
+    14c6:       83 fa ff                cmp    $0xffffffff,%edx
+    14c9:       75 e6                   jne    14b1 <ihold+0x21>
+    14cb:       be 80 00 00 00          mov    $0x80,%esi
+    14d0:       48 c7 c7 00 00 00 00    mov    $0x0,%rdi
+                        14d3: R_X86_64_32S      .rodata.str1.1+0x35
+    14d7:       e8 00 00 00 00          callq  14dc <ihold+0x4c>
+                        14d8: R_X86_64_PC32     warn_slowpath_null-0x4
+    14dc:       5d                      pop    %rbp
+    14dd:       c3                      retq   
+    14de:       66 90                   xchg   %ax,%ax
+
+Look like:
+
+0000000000001400 <ihold>:
+    1400:       55                      push   %rbp
+    1401:       8b 87 48 01 00 00       mov    0x148(%rdi),%eax
+    1407:       48 89 e5                mov    %rsp,%rbp
+    140a:       eb 0a                   jmp    1416 <ihold+0x16>
+    140c:       f0 0f b1 97 48 01 00    lock cmpxchg %edx,0x148(%rdi)
+    1413:       00 
+    1414:       74 11                   je     1427 <ihold+0x27>
+    1416:       85 c0                   test   %eax,%eax
+    1418:       8d 50 01                lea    0x1(%rax),%edx
+    141b:       74 06                   je     1423 <ihold+0x23>
+    141d:       85 d2                   test   %edx,%edx
+    141f:       75 eb                   jne    140c <ihold+0xc>
+    1421:       5d                      pop    %rbp
+    1422:       c3                      retq   
+    1423:       0f 0b                   ud2    
+    1425:       5d                      pop    %rbp
+    1426:       c3                      retq   
+    1427:       83 fa ff                cmp    $0xffffffff,%edx
+    142a:       75 f5                   jne    1421 <ihold+0x21>
+    142c:       0f 0b                   ud2    
+    142e:       5d                      pop    %rbp
+    142f:       c3                      retq  
+
+Note that custom x86 code could do better using the exception table
+with a custom exception handler looking at the regs->ax value to
+determine which of the failure cases was hit, removing a bunch of
+compares from the actual code path.
 
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 ---
- include/linux/refcount.h |  294 +++++++++++++++++++++++++++++++++++++++++++++++
- lib/Kconfig.debug        |   13 ++
- 2 files changed, 307 insertions(+)
+ arch/x86/include/asm/bug.h  |   36 +++++++++++++++++++++++++++++-------
+ arch/x86/kernel/dumpstack.c |    3 ---
+ arch/x86/kernel/traps.c     |   33 +++++++++++++++++++++++++++------
+ 3 files changed, 56 insertions(+), 16 deletions(-)
 
---- /dev/null
-+++ b/include/linux/refcount.h
-@@ -0,0 +1,294 @@
-+#ifndef _LINUX_REFCOUNT_H
-+#define _LINUX_REFCOUNT_H
+--- a/arch/x86/include/asm/bug.h
++++ b/arch/x86/include/asm/bug.h
+@@ -11,26 +11,48 @@
+ # define __BUG_C0	"2:\t.long 1b - 2b, %c0 - 2b\n"
+ #endif
+ 
+-#define BUG()							\
++#define _BUG_FLAGS(flags)					\
+ do {								\
+ 	asm volatile("1:\tud2\n"				\
+ 		     ".pushsection __bug_table,\"a\"\n"		\
+ 		     __BUG_C0					\
+-		     "\t.word %c1, 0\n"				\
+-		     "\t.org 2b+%c2\n"				\
++		     "\t.word %c1, %c2\n"			\
++		     "\t.org 2b+%c3\n"				\
+ 		     ".popsection"				\
+ 		     : : "i" (__FILE__), "i" (__LINE__),	\
+-		     "i" (sizeof(struct bug_entry)));		\
+-	unreachable();						\
++			 "i" (flags),				\
++			 "i" (sizeof(struct bug_entry)));	\
+ } while (0)
+ 
+ #else
 +
-+/*
-+ * Variant of atomic_t specialized for reference counts.
-+ *
-+ * The interface matches the atomic_t interface (to aid in porting) but only
-+ * provides the few functions one should use for reference counting.
-+ *
-+ * It differs in that the counter saturates at UINT_MAX and will not move once
-+ * there. This avoids wrapping the counter and causing 'spurious'
-+ * use-after-free issues.
-+ *
-+ * Memory ordering rules are slightly relaxed wrt regular atomic_t functions
-+ * and provide only what is strictly required for refcounts.
-+ *
-+ * The increments are fully relaxed; these will not provide ordering. The
-+ * rationale is that whatever is used to obtain the object we're increasing the
-+ * reference count on will provide the ordering. For locked data structures,
-+ * its the lock acquire, for RCU/lockless data structures its the dependent
-+ * load.
-+ *
-+ * Do note that inc_not_zero() provides a control dependency which will order
-+ * future stores against the inc, this ensures we'll never modify the object
-+ * if we did not in fact acquire a reference.
-+ *
-+ * The decrements will provide release order, such that all the prior loads and
-+ * stores will be issued before, it also provides a control dependency, which
-+ * will order us against the subsequent free().
-+ *
-+ * The control dependency is against the load of the cmpxchg (ll/sc) that
-+ * succeeded. This means the stores aren't fully ordered, but this is fine
-+ * because the 1->0 transition indicates no concurrency.
-+ *
-+ * Note that the allocator is responsible for ordering things between free()
-+ * and alloc().
-+ *
-+ */
-+
-+#include <linux/atomic.h>
-+#include <linux/bug.h>
-+#include <linux/mutex.h>
-+#include <linux/spinlock.h>
-+
-+#if CONFIG_DEBUG_REFCOUNT
-+#define REFCOUNT_WARN(cond, str) WARN_ON(cond)
-+#define __refcount_check	__must_check
++#ifdef CONFIG_X86_32
++# define __BUG_C0	"2:\t.long 1b\n"
 +#else
-+#define REFCOUNT_WARN(cond, str) (void)(cond)
-+#define __refcount_check
++# define __BUG_C0	"2:\t.long 1b - 2b\n"
 +#endif
 +
-+typedef struct refcount_struct {
-+	atomic_t refs;
-+} refcount_t;
++#define _BUG_FLAGS(flags)					\
++do {								\
++	asm volatile("1:\tud2\n"				\
++		     ".pushsection __bug_table,\"a\"\n"		\
++		     __BUG_C0					\
++		     "\t.word %c0\n"				\
++		     "\t.org 2b+%c1\n"				\
++		     ".popsection"				\
++		     : : "i" (flags),				\
++			 "i" (sizeof(struct bug_entry)));	\
++} while (0)
 +
-+#define REFCOUNT_INIT(n)	{ .refs = ATOMIC_INIT(n), }
++#endif
 +
-+static inline void refcount_set(refcount_t *r, unsigned int n)
-+{
-+	atomic_set(&r->refs, n);
-+}
+ #define BUG()							\
+ do {								\
+-	asm volatile("ud2");					\
++	_BUG_FLAGS(0);						\
+ 	unreachable();						\
+ } while (0)
+-#endif
 +
-+static inline unsigned int refcount_read(const refcount_t *r)
-+{
-+	return atomic_read(&r->refs);
-+}
-+
-+static inline __refcount_check
-+bool refcount_add_not_zero(unsigned int i, refcount_t *r)
-+{
-+	unsigned int old, new, val = atomic_read(&r->refs);
-+
-+	for (;;) {
-+		if (!val)
-+			return false;
-+
-+		if (unlikely(val == UINT_MAX))
-+			return true;
-+
-+		new = val + i;
-+		if (new < val)
-+			new = UINT_MAX;
-+		old = atomic_cmpxchg_relaxed(&r->refs, val, new);
-+		if (old == val)
-+			break;
-+
-+		val = old;
-+	}
-+
-+	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-+
-+	return true;
-+}
-+
-+static inline void refcount_add(unsigned int i, refcount_t *r)
-+{
-+	REFCOUNT_WARN(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
-+}
-+
-+/*
-+ * Similar to atomic_inc_not_zero(), will saturate at UINT_MAX and WARN.
-+ *
-+ * Provides no memory ordering, it is assumed the caller has guaranteed the
-+ * object memory to be stable (RCU, etc.). It does provide a control dependency
-+ * and thereby orders future stores. See the comment on top.
-+ */
-+static inline __refcount_check
-+bool refcount_inc_not_zero(refcount_t *r)
-+{
-+	unsigned int old, new, val = atomic_read(&r->refs);
-+
-+	for (;;) {
-+		new = val + 1;
-+
-+		if (!val)
-+			return false;
-+
-+		if (unlikely(!new))
-+			return true;
-+
-+		old = atomic_cmpxchg_relaxed(&r->refs, val, new);
-+		if (old == val)
-+			break;
-+
-+		val = old;
-+	}
-+
-+	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-+
-+	return true;
-+}
-+
-+/*
-+ * Similar to atomic_inc(), will saturate at UINT_MAX and WARN.
-+ *
-+ * Provides no memory ordering, it is assumed the caller already has a
-+ * reference on the object, will WARN when this is not so.
-+ */
-+static inline void refcount_inc(refcount_t *r)
-+{
-+	REFCOUNT_WARN(!refcount_inc_not_zero(r), "refcount_t: increment on 0; use-after-free.\n");
-+}
-+
-+/*
-+ * Similar to atomic_dec_and_test(), it will WARN on underflow and fail to
-+ * decrement when saturated at UINT_MAX.
-+ *
-+ * Provides release memory ordering, such that prior loads and stores are done
-+ * before, and provides a control dependency such that free() must come after.
-+ * See the comment on top.
-+ */
-+static inline __refcount_check
-+bool refcount_sub_and_test(unsigned int i, refcount_t *r)
-+{
-+	unsigned int old, new, val = atomic_read(&r->refs);
-+
-+	for (;;) {
-+		if (unlikely(val == UINT_MAX))
-+			return false;
-+
-+		new = val - i;
-+		if (new > val) {
-+			REFCOUNT_WARN(new > val, "refcount_t: underflow; use-after-free.\n");
-+			return false;
-+		}
-+
-+		old = atomic_cmpxchg_release(&r->refs, val, new);
-+		if (old == val)
-+			break;
-+
-+		val = old;
-+	}
-+
-+	return !new;
-+}
-+
-+static inline __refcount_check
-+bool refcount_dec_and_test(refcount_t *r)
-+{
-+	return refcount_sub_and_test(1, r);
-+}
-+
-+/*
-+ * Similar to atomic_dec(), it will WARN on underflow and fail to decrement
-+ * when saturated at UINT_MAX.
-+ *
-+ * Provides release memory ordering, such that prior loads and stores are done
-+ * before.
-+ */
-+static inline
-+void refcount_dec(refcount_t *r)
-+{
-+	REFCOUNT_WARN(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
-+}
-+
-+/*
-+ * No atomic_t counterpart, it attempts a 1 -> 0 transition and returns the
-+ * success thereof.
-+ *
-+ * Like all decrement operations, it provides release memory order and provides
-+ * a control dependency.
-+ *
-+ * It can be used like a try-delete operator; this explicit case is provided
-+ * and not cmpxchg in generic, because that would allow implementing unsafe
-+ * operations.
-+ */
-+static inline __refcount_check
-+bool refcount_dec_if_one(refcount_t *r)
-+{
-+	return atomic_cmpxchg_release(&r->refs, 1, 0) == 1;
-+}
-+
-+/*
-+ * No atomic_t counterpart, it decrements unless the value is 1, in which case
-+ * it will return false.
-+ *
-+ * Was often done like: atomic_add_unless(&var, -1, 1)
-+ */
-+static inline __refcount_check
-+bool refcount_dec_not_one(refcount_t *r)
-+{
-+	unsigned int old, new, val = atomic_read(&r->refs);
-+
-+	for (;;) {
-+		if (unlikely(val == UINT_MAX))
-+			return true;
-+
-+		if (val == 1)
-+			return false;
-+
-+		new = val - 1;
-+		if (new > val) {
-+			REFCOUNT_WARN(new > val, "refcount_t: underflow; use-after-free.\n");
-+			return true;
-+		}
-+
-+		old = atomic_cmpxchg_release(&r->refs, val, new);
-+		if (old == val)
-+			break;
-+
-+		val = old;
-+	}
-+
-+	return true;
-+}
-+
-+/*
-+ * Similar to atomic_dec_and_mutex_lock(), it will WARN on underflow and fail
-+ * to decrement when saturated at UINT_MAX.
-+ *
-+ * Provides release memory ordering, such that prior loads and stores are done
-+ * before, and provides a control dependency such that free() must come after.
-+ * See the comment on top.
-+ */
-+static inline __refcount_check
-+bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
-+{
-+	if (refcount_dec_not_one(r))
-+		return false;
-+
-+	mutex_lock(lock);
-+	if (!refcount_dec_and_test(r)) {
-+		mutex_unlock(lock);
-+		return false;
-+	}
-+
-+	return true;
-+}
-+
-+/*
-+ * Similar to atomic_dec_and_lock(), it will WARN on underflow and fail to
-+ * decrement when saturated at UINT_MAX.
-+ *
-+ * Provides release memory ordering, such that prior loads and stores are done
-+ * before, and provides a control dependency such that free() must come after.
-+ * See the comment on top.
-+ */
-+static inline __refcount_check
-+bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
-+{
-+	if (refcount_dec_not_one(r))
-+		return false;
-+
-+	spin_lock(lock);
-+	if (!refcount_dec_and_test(r)) {
-+		spin_unlock(lock);
-+		return false;
-+	}
-+
-+	return true;
-+}
-+
-+#endif /* _LINUX_REFCOUNT_H */
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -716,6 +716,19 @@ source "lib/Kconfig.kmemcheck"
++#define __WARN_TAINT(taint)	_BUG_FLAGS(BUGFLAG_TAINT(taint))
  
- source "lib/Kconfig.kasan"
+ #include <asm-generic/bug.h>
  
-+config DEBUG_REFCOUNT
-+	bool "Verbose refcount checks"
-+	--help--
-+	  Say Y here if you want reference counters (refcount_t and kref) to
-+	  generate WARNs on dubious usage. Without this refcount_t will still
-+	  be a saturating counter and avoid Use-After-Free by turning it into
-+	  a resource leak Denial-Of-Service.
-+
-+	  Use of this option will increase kernel text size but will alert the
-+	  admin of potential abuse.
-+
-+	  If in doubt, say "N".
-+
- endmenu # "Memory Debugging"
+--- a/arch/x86/kernel/dumpstack.c
++++ b/arch/x86/kernel/dumpstack.c
+@@ -287,9 +287,6 @@ void die(const char *str, struct pt_regs
+ 	unsigned long flags = oops_begin();
+ 	int sig = SIGSEGV;
  
- config ARCH_HAS_KCOV
+-	if (!user_mode(regs))
+-		report_bug(regs->ip, regs);
+-
+ 	if (__die(str, regs, err))
+ 		sig = 0;
+ 	oops_end(flags, regs, sig);
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -168,6 +168,24 @@ void ist_end_non_atomic(void)
+ 	preempt_disable();
+ }
+ 
++static int fixup_bug(struct pt_regs *regs, int trapnr)
++{
++	if (trapnr != X86_TRAP_UD)
++		return 0;
++
++	switch (report_bug(regs->ip, regs)) {
++	case BUG_TRAP_TYPE_NONE:
++	case BUG_TRAP_TYPE_BUG:
++		break;
++
++	case BUG_TRAP_TYPE_WARN:
++		regs->ip += 2;
++		return 1;
++	}
++
++	return 0;
++}
++
+ static nokprobe_inline int
+ do_trap_no_signal(struct task_struct *tsk, int trapnr, char *str,
+ 		  struct pt_regs *regs,	long error_code)
+@@ -186,12 +204,15 @@ do_trap_no_signal(struct task_struct *ts
+ 	}
+ 
+ 	if (!user_mode(regs)) {
+-		if (!fixup_exception(regs, trapnr)) {
+-			tsk->thread.error_code = error_code;
+-			tsk->thread.trap_nr = trapnr;
+-			die(str, regs, error_code);
+-		}
+-		return 0;
++		if (fixup_exception(regs, trapnr))
++			return 0;
++
++		if (fixup_bug(regs, trapnr))
++			return 0;
++
++		tsk->thread.error_code = error_code;
++		tsk->thread.trap_nr = trapnr;
++		die(str, regs, error_code);
+ 	}
+ 
+ 	return -1;
