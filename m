@@ -1,48 +1,71 @@
-Date: Fri, 3 Feb 2017 12:02:55 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <1486055094-4532-3-git-send-email-djalal@gmail.com>
-Message-ID: <alpine.LRH.2.20.1702031159120.3285@namei.org>
-References: <1486055094-4532-1-git-send-email-djalal@gmail.com> <1486055094-4532-3-git-send-email-djalal@gmail.com>
+Date: Thu, 2 Feb 2017 20:11:51 -0700
+From: Eddie Kovsky <ewk@edkovsky.org>
+Message-ID: <20170203031151.GA15897@athena>
+References: <20170129184316.GA31184@athena>
+ <2d6c7a51-3de3-1d95-37aa-c53c2caa9968@oracle.com>
+ <CAGXu5j+Ynmp3Z29_Zw6BG33P2RVi0eRtOiZR0incfoZBWF=7hg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [RFC/PATCH 2/3] security: Add the Timgad module
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Lafcadio Wluiki <wluikil@gmail.com>, Dongsu Park <dongsu@endocode.com>, Andy Lutomirski <luto@kernel.org>, James Morris <james.l.morris@oracle.com>, serge@hallyn.com, Al Viro <viro@zeniv.linux.org.uk>, Daniel Mack <daniel@zonque.org>, Jann Horn <jann@thejh.net>, Elena Reshetova <elena.reshetova@intel.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+Ynmp3Z29_Zw6BG33P2RVi0eRtOiZR0incfoZBWF=7hg@mail.gmail.com>
+Subject: Re: [kernel-hardening] Getting started
+To: Kees Cook <keescook@chromium.org>
+Cc: Vaishali Thakkar <vaishali.thakkar@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2 Feb 2017, Djalal Harouni wrote:
+On 01/30/17, Kees Cook wrote:
+> On Mon, Jan 30, 2017 at 5:41 AM, Vaishali Thakkar
+> <vaishali.thakkar@oracle.com> wrote:
+> > On Monday 30 January 2017 12:13 AM, Eddie Kovsky wrote:
+> >
+> >> I'm interested in helping out with this project.
+> >>
+> >> I have a few small patches in the kernel. I just finished the Eudyptula
+> >> Challenge and I'm looking for places where I can continue to contribute.
+> 
+> Hi! Welcome to the list. :)
+> 
+> >> I've been reading the list for several months now. I think I have a
+> >> general
+> >> understanding of the development process. Is there a specific TODO item I
+> >> could start off with?
+> 
+> What areas of the kernel are you the most familiar with, and/or what
+> things are you interested in working on? That could help me tailor
+> some suggestions.
+> 
+> > Here, is one TODO list:
+> >
+> > https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
+> >
+> > Although I think few people are already working on some of these things.
+> > May be you can also check the archives of a mailing list.
+> 
+> The list is a bit terse (it's mostly been a brain dump as things come
+> up), but yeah, if you see something there and want to know more, just
+> ask. I'm happy to expand on any of them.
+> 
 
-> *) The per-process prctl() settings are:
->     prctl(PR_TIMGAD_OPTS, PR_TIGMAD_SET_MOD_RESTRICT, value, 0, 0)
-> 
->     Where value means:
-> 
-> 0 - Classic module load and unload permissions, nothing changes.
-> 
-> 1 - The current process must have CAP_SYS_MODULE to be able to load and
->     unload modules. CAP_NET_ADMIN should allow the current process to
->     load and unload only netdev aliased modules, not implemented
-> 
-> 2 - Current process can not loaded nor unloaded modules.
-> 
-> *) sysctl interface supports the followin values:
-> 
-> 0 - Classic module load and unload permissions, nothing changes.
-> 
-> 1 - Only privileged processes with CAP_SYS_MODULE should be able to load and
->     unload modules.
-> 
->     To be added: processes with CAP_NET_ADMIN should be able to
->     load and unload only netdev aliased modules, this is currently not
->     supported. Other checks for real root without CAP_SYS_MODULE ? ...
-> 
->     (This should be improved)
-> 
-> 2 - Modules can not be loaded nor unloaded. Once set, this sysctl value
->     cannot be changed.
+I noticed there's been some activity recently with HARDENED_USERCOPY.
+And I looked over how mm/usercopy.c was merged in from the grsecurity
+patch. I'm curious about this TODO item:
 
-How is this different to just using CAP_SYS_MODULE?
+     Identify and extend HARDENED_USERCOPY to other usercopy functions
+     (e.g. maybe csum_partial_copy_from_user, csum_and_copy_from_user,
+     csum_and_copy_to_user, csum_partial_copy_nocheck?)
 
--- 
-James Morris
-<jmorris@namei.org>
+It doesn't look like anyone is working on this task right now. But it's not
+obvious (to me) what needs to happen to make progress with this. Would this
+be a good task to start off with?
+
+Thanks
+
+Eddie
+
+> Thanks!
+> 
+> -Kees
+> 
+> -- 
+> Kees Cook
+> Pixel Security
