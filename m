@@ -1,154 +1,107 @@
-Message-Id: <20170203132737.666333770@infradead.org>
-Date: Fri, 03 Feb 2017 14:26:03 +0100
+Message-Id: <20170203132737.365388918@infradead.org>
+Date: Fri, 03 Feb 2017 14:26:00 +0100
 From: Peter Zijlstra <peterz@infradead.org>
 References: <20170203132558.474916683@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
-Content-Disposition: inline; filename=peterz-ref-6.patch
-Subject: [kernel-hardening] [PATCH 5/5] refcount: Use atomic_try_cmpxchg()
+Content-Disposition: inline; filename=peterz-ref-5a.patch
+Subject: [kernel-hardening] [PATCH 2/5] kref: Implement using refcount_t
 To: elena.reshetova@intel.com, gregkh@linuxfoundation.org, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, dhowells@redhat.com, peterz@infradead.org
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Generates better code (GCC-6.2.1):
-
-0000000000000420 <ihold>:
-     420:       55                      push   %rbp
-     421:       8b 97 48 01 00 00       mov    0x148(%rdi),%edx
-     427:       48 89 e5                mov    %rsp,%rbp
-     42a:       eb 10                   jmp    43c <ihold+0x1c>
-     42c:       89 d0                   mov    %edx,%eax
-     42e:       f0 0f b1 8f 48 01 00    lock cmpxchg %ecx,0x148(%rdi)
-     435:       00 
-     436:       39 c2                   cmp    %eax,%edx
-     438:       74 0d                   je     447 <ihold+0x27>
-     43a:       89 c2                   mov    %eax,%edx
-     43c:       8d 42 ff                lea    -0x1(%rdx),%eax
-     43f:       8d 4a 01                lea    0x1(%rdx),%ecx
-     442:       83 f8 fd                cmp    $0xfffffffd,%eax
-     445:       76 e5                   jbe    42c <ihold+0xc>
-     447:       5d                      pop    %rbp
-     448:       c3                      retq   
-
-0000000000001490 <ihold>:
-    1490:       55                      push   %rbp
-    1491:       8b 87 48 01 00 00       mov    0x148(%rdi),%eax
-    1497:       48 89 e5                mov    %rsp,%rbp
-    149a:       eb 0a                   jmp    14a6 <ihold+0x16>
-    149c:       f0 0f b1 97 48 01 00    lock cmpxchg %edx,0x148(%rdi)
-    14a3:       00 
-    14a4:       74 0b                   je     14b1 <ihold+0x21>
-    14a6:       8d 48 ff                lea    -0x1(%rax),%ecx
-    14a9:       8d 50 01                lea    0x1(%rax),%edx
-    14ac:       83 f9 fd                cmp    $0xfffffffd,%ecx
-    14af:       76 eb                   jbe    149c <ihold+0xc>
-    14b1:       5d                      pop    %rbp
-    14b2:       c3                      retq   
+Use the refcount_t 'atomic' type to implement kref, this makes kref
+more robust by bringing saturation semantics.
 
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 ---
- include/linux/refcount.h |   33 ++++++++++++---------------------
- 1 file changed, 12 insertions(+), 21 deletions(-)
+ include/linux/kref.h |   29 +++++++++++------------------
+ 1 file changed, 11 insertions(+), 18 deletions(-)
 
---- a/include/linux/refcount.h
-+++ b/include/linux/refcount.h
-@@ -69,7 +69,7 @@ static inline unsigned int refcount_read
- static inline __refcount_check
- bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+--- a/include/linux/kref.h
++++ b/include/linux/kref.h
+@@ -15,17 +15,14 @@
+ #ifndef _KREF_H_
+ #define _KREF_H_
+ 
+-#include <linux/bug.h>
+-#include <linux/atomic.h>
+-#include <linux/kernel.h>
+-#include <linux/mutex.h>
+ #include <linux/spinlock.h>
++#include <linux/refcount.h>
+ 
+ struct kref {
+-	atomic_t refcount;
++	refcount_t refcount;
+ };
+ 
+-#define KREF_INIT(n)	{ .refcount = ATOMIC_INIT(n), }
++#define KREF_INIT(n)	{ .refcount = REFCOUNT_INIT(n), }
+ 
+ /**
+  * kref_init - initialize object.
+@@ -33,12 +30,12 @@ struct kref {
+  */
+ static inline void kref_init(struct kref *kref)
  {
--	unsigned int old, new, val = atomic_read(&r->refs);
-+	unsigned int new, val = atomic_read(&r->refs);
- 
- 	for (;;) {
- 		if (!val)
-@@ -81,11 +81,9 @@ bool refcount_add_not_zero(unsigned int
- 		new = val + i;
- 		if (new < val)
- 			new = UINT_MAX;
--		old = atomic_cmpxchg_relaxed(&r->refs, val, new);
--		if (old == val)
--			break;
- 
--		val = old;
-+		if (atomic_try_cmpxchg_relaxed(&r->refs, &val, new))
-+			break;
- 	}
- 
- 	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-@@ -108,7 +106,7 @@ static inline void refcount_add(unsigned
- static inline __refcount_check
- bool refcount_inc_not_zero(refcount_t *r)
- {
--	unsigned int old, new, val = atomic_read(&r->refs);
-+	unsigned int new, val = atomic_read(&r->refs);
- 
- 	for (;;) {
- 		new = val + 1;
-@@ -119,11 +117,8 @@ bool refcount_inc_not_zero(refcount_t *r
- 		if (unlikely(!new))
- 			return true;
- 
--		old = atomic_cmpxchg_relaxed(&r->refs, val, new);
--		if (old == val)
-+		if (atomic_try_cmpxchg_relaxed(&r->refs, &val, new))
- 			break;
--
--		val = old;
- 	}
- 
- 	REFCOUNT_WARN(new == UINT_MAX, "refcount_t: saturated; leaking memory.\n");
-@@ -153,7 +148,7 @@ static inline void refcount_inc(refcount
- static inline __refcount_check
- bool refcount_sub_and_test(unsigned int i, refcount_t *r)
- {
--	unsigned int old, new, val = atomic_read(&r->refs);
-+	unsigned int new, val = atomic_read(&r->refs);
- 
- 	for (;;) {
- 		if (unlikely(val == UINT_MAX))
-@@ -165,11 +160,8 @@ bool refcount_sub_and_test(unsigned int
- 			return false;
- 		}
- 
--		old = atomic_cmpxchg_release(&r->refs, val, new);
--		if (old == val)
-+		if (atomic_try_cmpxchg_release(&r->refs, &val, new))
- 			break;
--
--		val = old;
- 	}
- 
- 	return !new;
-@@ -208,7 +200,9 @@ void refcount_dec(refcount_t *r)
- static inline __refcount_check
- bool refcount_dec_if_one(refcount_t *r)
- {
--	return atomic_cmpxchg_release(&r->refs, 1, 0) == 1;
-+	int val = 1;
-+
-+	return atomic_try_cmpxchg_release(&r->refs, &val, 0);
+-	atomic_set(&kref->refcount, 1);
++	refcount_set(&kref->refcount, 1);
  }
  
- /*
-@@ -220,7 +214,7 @@ bool refcount_dec_if_one(refcount_t *r)
- static inline __refcount_check
- bool refcount_dec_not_one(refcount_t *r)
+-static inline int kref_read(const struct kref *kref)
++static inline unsigned int kref_read(const struct kref *kref)
  {
--	unsigned int old, new, val = atomic_read(&r->refs);
-+	unsigned int new, val = atomic_read(&r->refs);
+-	return atomic_read(&kref->refcount);
++	return refcount_read(&kref->refcount);
+ }
  
- 	for (;;) {
- 		if (unlikely(val == UINT_MAX))
-@@ -235,11 +229,8 @@ bool refcount_dec_not_one(refcount_t *r)
- 			return true;
- 		}
+ /**
+@@ -47,11 +44,7 @@ static inline int kref_read(const struct
+  */
+ static inline void kref_get(struct kref *kref)
+ {
+-	/* If refcount was 0 before incrementing then we have a race
+-	 * condition when this kref is freeing by some other thread right now.
+-	 * In this case one should use kref_get_unless_zero()
+-	 */
+-	WARN_ON_ONCE(atomic_inc_return(&kref->refcount) < 2);
++	refcount_inc(&kref->refcount);
+ }
  
--		old = atomic_cmpxchg_release(&r->refs, val, new);
--		if (old == val)
-+		if (atomic_try_cmpxchg_release(&r->refs, &val, new))
- 			break;
--
--		val = old;
+ /**
+@@ -75,7 +68,7 @@ static inline int kref_put(struct kref *
+ {
+ 	WARN_ON(release == NULL);
+ 
+-	if (atomic_dec_and_test(&kref->refcount)) {
++	if (refcount_dec_and_test(&kref->refcount)) {
+ 		release(kref);
+ 		return 1;
  	}
+@@ -88,7 +81,7 @@ static inline int kref_put_mutex(struct
+ {
+ 	WARN_ON(release == NULL);
  
- 	return true;
+-	if (atomic_dec_and_mutex_lock(&kref->refcount, lock)) {
++	if (refcount_dec_and_mutex_lock(&kref->refcount, lock)) {
+ 		release(kref);
+ 		return 1;
+ 	}
+@@ -101,7 +94,7 @@ static inline int kref_put_lock(struct k
+ {
+ 	WARN_ON(release == NULL);
+ 
+-	if (atomic_dec_and_lock(&kref->refcount, lock)) {
++	if (refcount_dec_and_lock(&kref->refcount, lock)) {
+ 		release(kref);
+ 		return 1;
+ 	}
+@@ -126,6 +119,6 @@ static inline int kref_put_lock(struct k
+  */
+ static inline int __must_check kref_get_unless_zero(struct kref *kref)
+ {
+-	return atomic_add_unless(&kref->refcount, 1, 0);
++	return refcount_inc_not_zero(&kref->refcount);
+ }
+ #endif /* _KREF_H_ */
