@@ -1,61 +1,307 @@
+Date: Fri, 3 Feb 2017 18:16:07 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170203181607.GA26578@leverpostej>
+References: <1486144343-24998-1-git-send-email-labbott@redhat.com>
+ <1486144343-24998-2-git-send-email-labbott@redhat.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170203132737.263327330@infradead.org>
-References: <20170203132558.474916683@infradead.org> <20170203132737.263327330@infradead.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 3 Feb 2017 10:09:18 -0800
-Message-ID: <CAGXu5jL3fW+8_NMMw--Q2v3ZT_nXX=RyKVQ=9_HnBadkL+HNfw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 1/5] refcount_t: A special purpose refcount type
-To: Peter Zijlstra <peterz@infradead.org>
-Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1486144343-24998-2-git-send-email-labbott@redhat.com>
+Subject: [kernel-hardening] Re: [PATCHv2 1/2] arch: Move CONFIG_DEBUG_RODATA and
+ CONFIG_SET_MODULE_RONX to be common
+To: Laura Abbott <labbott@redhat.com>
+Cc: Kees Cook <keescook@chromium.org>, Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, x86@kernel.org, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jessica Yu <jeyu@redhat.com>, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-parisc@vger.kernel.org, linux-s390@vger.kernel.org, linux-pm@vger.kernel.org, kernel-hardening@lists.openwall.com, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 3, 2017 at 5:25 AM, Peter Zijlstra <peterz@infradead.org> wrote:
-> Provide refcount_t, an atomic_t like primitive built just for
-> refcounting.
->
-> It provides saturation semantics such that overflow becomes impossible
-> and thereby 'spurious' use-after-free is avoided.
+On Fri, Feb 03, 2017 at 09:52:21AM -0800, Laura Abbott wrote:
+> There are multiple architectures that support CONFIG_DEBUG_RODATA and
+> CONFIG_SET_MODULE_RONX. These options also now have the ability to be
+> turned off at runtime. Move these to an architecture independent
+> location and make these options def_bool y for almost all of those
+> arches.
+> 
+> Signed-off-by: Laura Abbott <labbott@redhat.com>
 
-Wheee :) Thanks for working on this
+>From my POV this looks good. FWIW:
 
->
-> Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Acked-by: Mark Rutland <mark.rutland@arm.com>
+
+Mark.
+
 > ---
-> [...]
-> --- a/lib/Kconfig.debug
-> +++ b/lib/Kconfig.debug
-> @@ -716,6 +716,19 @@ source "lib/Kconfig.kmemcheck"
->
->  source "lib/Kconfig.kasan"
->
-> +config DEBUG_REFCOUNT
-> +       bool "Verbose refcount checks"
-> +       --help--
-
-Quick feedback as I start playing with this: this isn't valid Kconfig
-syntax (build breaks). It should either be "---help---" or just
-"help", latter preferred.
-
-> +         Say Y here if you want reference counters (refcount_t and kref) to
-> +         generate WARNs on dubious usage. Without this refcount_t will still
-> +         be a saturating counter and avoid Use-After-Free by turning it into
-> +         a resource leak Denial-Of-Service.
+> v2: This patch is now doing just the refactor of the existing config options.
+> ---
+>  arch/Kconfig              | 28 ++++++++++++++++++++++++++++
+>  arch/arm/Kconfig          |  3 +++
+>  arch/arm/Kconfig.debug    | 11 -----------
+>  arch/arm/mm/Kconfig       | 12 ------------
+>  arch/arm64/Kconfig        |  5 ++---
+>  arch/arm64/Kconfig.debug  | 11 -----------
+>  arch/parisc/Kconfig       |  1 +
+>  arch/parisc/Kconfig.debug | 11 -----------
+>  arch/s390/Kconfig         |  5 ++---
+>  arch/s390/Kconfig.debug   |  3 ---
+>  arch/x86/Kconfig          |  5 ++---
+>  arch/x86/Kconfig.debug    | 11 -----------
+>  12 files changed, 38 insertions(+), 68 deletions(-)
+> 
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 99839c2..22ee01e 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -781,4 +781,32 @@ config VMAP_STACK
+>  	  the stack to map directly to the KASAN shadow map using a formula
+>  	  that is incorrect if the stack is in vmalloc space.
+>  
+> +config ARCH_NO_STRICT_RWX_DEFAULTS
+> +	def_bool n
 > +
-> +         Use of this option will increase kernel text size but will alert the
-> +         admin of potential abuse.
+> +config ARCH_HAS_STRICT_KERNEL_RWX
+> +	def_bool n
 > +
-> +         If in doubt, say "N".
+> +config DEBUG_RODATA
+> +	def_bool y if !ARCH_NO_STRICT_RWX_DEFAULTS
+> +	prompt "Make kernel text and rodata read-only" if ARCH_NO_STRICT_RWX_DEFAULTS
+> +	depends on ARCH_HAS_STRICT_KERNEL_RWX
+> +	help
+> +	  If this is set, kernel text and rodata memory will be made read-only,
+> +	  and non-text memory will be made non-executable. This provides
+> +	  protection against certain security exploits (e.g. executing the heap
+> +	  or modifying text)
 > +
->  endmenu # "Memory Debugging"
->
->  config ARCH_HAS_KCOV
->
->
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+> +config ARCH_HAS_STRICT_MODULE_RWX
+> +	def_bool n
+> +
+> +config DEBUG_SET_MODULE_RONX
+> +	def_bool y if !ARCH_NO_STRICT_RWX_DEFAULTS
+> +	prompt "Set loadable kenrel module data as NX and text as RO" if ARCH_NO_STRICT_RWX_DEFAULTS
+> +	depends on ARCH_HAS_STRICT_MODULE_RWX && MODULES
+> +	help
+> +	  If this is set, module text and rodata memory will be made read-only,
+> +	  and non-text memory will be made non-executable. This provides
+> +	  protection against certain security exploits (e.g. writing to text)
+> +
+>  source "kernel/gcov/Kconfig"
+> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+> index 186c4c2..aa73ca8 100644
+> --- a/arch/arm/Kconfig
+> +++ b/arch/arm/Kconfig
+> @@ -4,10 +4,13 @@ config ARM
+>  	select ARCH_CLOCKSOURCE_DATA
+>  	select ARCH_HAS_DEVMEM_IS_ALLOWED
+>  	select ARCH_HAS_ELF_RANDOMIZE
+> +	select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
+> +	select ARCH_HAS_STRICT_MODULE_RWX if MMU
+>  	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
+>  	select ARCH_HAVE_CUSTOM_GPIO_H
+>  	select ARCH_HAS_GCOV_PROFILE_ALL
+>  	select ARCH_MIGHT_HAVE_PC_PARPORT
+> +	select ARCH_NO_STRICT_RWX_DEFAULTS if !CPU_V7
+>  	select ARCH_SUPPORTS_ATOMIC_RMW
+>  	select ARCH_USE_BUILTIN_BSWAP
+>  	select ARCH_USE_CMPXCHG_LOCKREF
+> diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
+> index d83f7c3..426d271 100644
+> --- a/arch/arm/Kconfig.debug
+> +++ b/arch/arm/Kconfig.debug
+> @@ -1738,17 +1738,6 @@ config PID_IN_CONTEXTIDR
+>  	  additional instructions during context switch. Say Y here only if you
+>  	  are planning to use hardware trace tools with this kernel.
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES && MMU
+> -	---help---
+> -	  This option helps catch unintended modifications to loadable
+> -	  kernel module's text and read-only data. It also prevents execution
+> -	  of module data. Such protection may interfere with run-time code
+> -	  patching and dynamic kernel tracing - and they might also protect
+> -	  against certain classes of kernel exploits.
+> -	  If in doubt, say "N".
+> -
+>  source "drivers/hwtracing/coresight/Kconfig"
+>  
+>  endmenu
+> diff --git a/arch/arm/mm/Kconfig b/arch/arm/mm/Kconfig
+> index f68e8ec..419a035 100644
+> --- a/arch/arm/mm/Kconfig
+> +++ b/arch/arm/mm/Kconfig
+> @@ -1051,18 +1051,6 @@ config ARCH_SUPPORTS_BIG_ENDIAN
+>  	  This option specifies the architecture can support big endian
+>  	  operation.
+>  
+> -config DEBUG_RODATA
+> -	bool "Make kernel text and rodata read-only"
+> -	depends on MMU && !XIP_KERNEL
+> -	default y if CPU_V7
+> -	help
+> -	  If this is set, kernel text and rodata memory will be made
+> -	  read-only, and non-text kernel memory will be made non-executable.
+> -	  The tradeoff is that each region is padded to section-size (1MiB)
+> -	  boundaries (because their permissions are different and splitting
+> -	  the 1M pages into 4K ones causes TLB performance problems), which
+> -	  can waste memory.
+> -
+>  config DEBUG_ALIGN_RODATA
+>  	bool "Make rodata strictly non-executable"
+>  	depends on DEBUG_RODATA
+> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+> index 1117421..e1efbcc 100644
+> --- a/arch/arm64/Kconfig
+> +++ b/arch/arm64/Kconfig
+> @@ -13,6 +13,8 @@ config ARM64
+>  	select ARCH_HAS_GIGANTIC_PAGE
+>  	select ARCH_HAS_KCOV
+>  	select ARCH_HAS_SG_CHAIN
+> +	select ARCH_HAS_STRICT_KERNEL_RWX
+> +	select ARCH_HAS_STRICT_MODULE_RWX
+>  	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
+>  	select ARCH_USE_CMPXCHG_LOCKREF
+>  	select ARCH_SUPPORTS_ATOMIC_RMW
+> @@ -123,9 +125,6 @@ config ARCH_PHYS_ADDR_T_64BIT
+>  config MMU
+>  	def_bool y
+>  
+> -config DEBUG_RODATA
+> -	def_bool y
+> -
+>  config ARM64_PAGE_SHIFT
+>  	int
+>  	default 16 if ARM64_64K_PAGES
+> diff --git a/arch/arm64/Kconfig.debug b/arch/arm64/Kconfig.debug
+> index d1ebd46..939815e 100644
+> --- a/arch/arm64/Kconfig.debug
+> +++ b/arch/arm64/Kconfig.debug
+> @@ -71,17 +71,6 @@ config DEBUG_WX
+>  
+>  	  If in doubt, say "Y".
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES
+> -	default y
+> -	help
+> -	  Is this is set, kernel module text and rodata will be made read-only.
+> -	  This is to help catch accidental or malicious attempts to change the
+> -	  kernel's executable code.
+> -
+> -	  If in doubt, say Y.
+> -
+>  config DEBUG_ALIGN_RODATA
+>  	depends on DEBUG_RODATA
+>  	bool "Align linker sections up to SECTION_SIZE"
+> diff --git a/arch/parisc/Kconfig b/arch/parisc/Kconfig
+> index 3a71f38..ad294b3 100644
+> --- a/arch/parisc/Kconfig
+> +++ b/arch/parisc/Kconfig
+> @@ -8,6 +8,7 @@ config PARISC
+>  	select HAVE_SYSCALL_TRACEPOINTS
+>  	select ARCH_WANT_FRAME_POINTERS
+>  	select ARCH_HAS_ELF_RANDOMIZE
+> +	select ARCH_HAS_STRICT_KERNEL_RWX
+>  	select RTC_CLASS
+>  	select RTC_DRV_GENERIC
+>  	select INIT_ALL_POSSIBLE
+> diff --git a/arch/parisc/Kconfig.debug b/arch/parisc/Kconfig.debug
+> index 68b7cbd..0d856b9 100644
+> --- a/arch/parisc/Kconfig.debug
+> +++ b/arch/parisc/Kconfig.debug
+> @@ -5,15 +5,4 @@ source "lib/Kconfig.debug"
+>  config TRACE_IRQFLAGS_SUPPORT
+>  	def_bool y
+>  
+> -config DEBUG_RODATA
+> -       bool "Write protect kernel read-only data structures"
+> -       depends on DEBUG_KERNEL
+> -       default y
+> -       help
+> -         Mark the kernel read-only data as write-protected in the pagetables,
+> -         in order to catch accidental (and incorrect) writes to such const
+> -         data. This option may have a slight performance impact because a
+> -         portion of the kernel code won't be covered by a TLB anymore.
+> -         If in doubt, say "N".
+> -
+>  endmenu
+> diff --git a/arch/s390/Kconfig b/arch/s390/Kconfig
+> index c6722112..53bb0e3 100644
+> --- a/arch/s390/Kconfig
+> +++ b/arch/s390/Kconfig
+> @@ -62,9 +62,6 @@ config PCI_QUIRKS
+>  config ARCH_SUPPORTS_UPROBES
+>  	def_bool y
+>  
+> -config DEBUG_RODATA
+> -	def_bool y
+> -
+>  config S390
+>  	def_bool y
+>  	select ARCH_HAS_DEVMEM_IS_ALLOWED
+> @@ -73,6 +70,8 @@ config S390
+>  	select ARCH_HAS_GIGANTIC_PAGE
+>  	select ARCH_HAS_KCOV
+>  	select ARCH_HAS_SG_CHAIN
+> +	select ARCH_HAS_STRICT_KERNEL_RWX
+> +	select ARCH_HAS_STRICT_MODULE_RWX
+>  	select ARCH_HAS_UBSAN_SANITIZE_ALL
+>  	select ARCH_HAVE_NMI_SAFE_CMPXCHG
+>  	select ARCH_INLINE_READ_LOCK
+> diff --git a/arch/s390/Kconfig.debug b/arch/s390/Kconfig.debug
+> index 26c5d5be..57f8ea9 100644
+> --- a/arch/s390/Kconfig.debug
+> +++ b/arch/s390/Kconfig.debug
+> @@ -17,7 +17,4 @@ config S390_PTDUMP
+>  	  kernel.
+>  	  If in doubt, say "N"
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	def_bool y
+> -	depends on MODULES
+>  endmenu
+> diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+> index e487493..13e1bf4 100644
+> --- a/arch/x86/Kconfig
+> +++ b/arch/x86/Kconfig
+> @@ -54,6 +54,8 @@ config X86
+>  	select ARCH_HAS_MMIO_FLUSH
+>  	select ARCH_HAS_PMEM_API		if X86_64
+>  	select ARCH_HAS_SG_CHAIN
+> +	select ARCH_HAS_STRICT_KERNEL_RWX
+> +	select ARCH_HAS_STRICT_MODULE_RWX
+>  	select ARCH_HAS_UBSAN_SANITIZE_ALL
+>  	select ARCH_HAVE_NMI_SAFE_CMPXCHG
+>  	select ARCH_MIGHT_HAVE_ACPI_PDC		if ACPI
+> @@ -309,9 +311,6 @@ config ARCH_SUPPORTS_UPROBES
+>  config FIX_EARLYCON_MEM
+>  	def_bool y
+>  
+> -config DEBUG_RODATA
+> -	def_bool y
+> -
+>  config PGTABLE_LEVELS
+>  	int
+>  	default 4 if X86_64
+> diff --git a/arch/x86/Kconfig.debug b/arch/x86/Kconfig.debug
+> index 67eec55..69cdd0b 100644
+> --- a/arch/x86/Kconfig.debug
+> +++ b/arch/x86/Kconfig.debug
+> @@ -109,17 +109,6 @@ config DEBUG_WX
+>  
+>  	  If in doubt, say "Y".
+>  
+> -config DEBUG_SET_MODULE_RONX
+> -	bool "Set loadable kernel module data as NX and text as RO"
+> -	depends on MODULES
+> -	---help---
+> -	  This option helps catch unintended modifications to loadable
+> -	  kernel module's text and read-only data. It also prevents execution
+> -	  of module data. Such protection may interfere with run-time code
+> -	  patching and dynamic kernel tracing - and they might also protect
+> -	  against certain classes of kernel exploits.
+> -	  If in doubt, say "N".
+> -
+>  config DEBUG_NX_TEST
+>  	tristate "Testcase for the NX non-executable stack feature"
+>  	depends on DEBUG_KERNEL && m
+> -- 
+> 2.7.4
+> 
