@@ -1,48 +1,47 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1486098682-30395-1-git-send-email-bhsharma@redhat.com>
-References: <1486098682-30395-1-git-send-email-bhsharma@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 3 Feb 2017 16:43:51 -0800
-Message-ID: <CAGXu5jJQMVJVAVQOk1zS+jRLy641fwE0NKnAme2mGbm6Y1_xeA@mail.gmail.com>
+In-Reply-To: <CALCETrXruGdh3Z_kTnp8fUBr6J3a4bosumQu38ygM37SSD5EfQ@mail.gmail.com>
+References: <1486135892-27249-1-git-send-email-hoeun.ryu@gmail.com>
+ <20170203153914.GI19325@dhcp22.suse.cz> <CABeRdtp9ERutdeKLpztyLpV=8VOqiJPnES_3c_V4aLS_dZ_-jg@mail.gmail.com>
+ <CALCETrXruGdh3Z_kTnp8fUBr6J3a4bosumQu38ygM37SSD5EfQ@mail.gmail.com>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sat, 4 Feb 2017 11:01:32 +0900
+Message-ID: <CABeRdtqfAR+RSxs+2Lr7LZjhKqLfU3QHVN+RULchSbyrVS1qEQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 1/1] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: Bhupesh Sharma <bhsharma@redhat.com>
-Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Cashman <dcashman@google.com>, Michael Ellerman <mpe@ellerman.id.au>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
+Subject: [kernel-hardening] Re: [PATCH 1/3] fork: dynamically allocate cache array for vmapped
+ stacks using cpuhp
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Michal Hocko <mhocko@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 2, 2017 at 9:11 PM, Bhupesh Sharma <bhsharma@redhat.com> wrote:
-> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT) for
-> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
-> for the mmap base address.
+On Sat, Feb 4, 2017 at 2:52 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Fri, Feb 3, 2017 at 8:42 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> On Sat, Feb 4, 2017 at 12:39 AM, Michal Hocko <mhocko@kernel.org> wrote:
+>>> On Sat 04-02-17 00:30:05, Hoeun Ryu wrote:
+>>>>  Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+>>>> In the current implementation, two stacks per cpu can be cached when
+>>>> tasks are freed and the cached stacks are used again in task duplications.
+>>>> but the array for the cached stacks is statically allocated by per-cpu api.
+>>>>  In this new implementation, the array for the cached stacks are dynamically
+>>>> allocted and freed by cpu hotplug callbacks and the cached stacks are freed
+>>>> when cpu is down. setup for cpu hotplug is established in fork_init().
+>>>
+>>> Why do we want this? I can see that the follow up patch makes the number
+>>> configurable but the changelog doesn't describe the motivation for that.
+>>> Which workload would benefit from a higher value?
+>>>
+>>
+>> The key difference of this implementation, the cached stacks for a cpu
+>> is freed when a cpu is down.
+>> so the cached stacks are no longer wasted.
+>> In the current implementation, the cached stacks for a cpu still
+>> remain on the system when a cpu is down.
+>> I think we could imagine what if a machine has many cpus and someone
+>> wants to have bigger size of stack caches.
 >
-> This value represents a compromise between increased
-> ASLR effectiveness and avoiding address-space fragmentation.
-> Replace it with a Kconfig option, which is sensibly bounded, so that
-> platform developers may choose where to place this compromise.
-> Keep default values as new minimums.
+> Then how about just registering a simple hotplug hook to free the
+> stacks without worrying about freeing the tiny array as well?
 >
-> This patch makes sure that now powerpc mmap arch_mmap_rnd() approach
-> is similar to other ARCHs like x86, arm64 and arm.
->
-> Cc: Alexander Graf <agraf@suse.com>
-> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
-> Cc: Paul Mackerras <paulus@samba.org>
-> Cc: Michael Ellerman <mpe@ellerman.id.au>
-> Cc: Anatolij Gustschin <agust@denx.de>
-> Cc: Alistair Popple <alistair@popple.id.au>
-> Cc: Matt Porter <mporter@kernel.crashing.org>
-> Cc: Vitaly Bordug <vitb@kernel.crashing.org>
-> Cc: Scott Wood <oss@buserror.net>
-> Cc: Kumar Gala <galak@kernel.crashing.org>
-> Cc: Daniel Cashman <dcashman@android.com>
-> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
-> Reviewed-by: Kees Cook <keescook at chromium.org>
 
-This " at " should be "@", but otherwise, yay v2! :)
+Michal, What do you think about it. it sounds fair enough.
 
--Kees
-
--- 
-Kees Cook
-Pixel Security
+> --Andy
