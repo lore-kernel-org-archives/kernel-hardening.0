@@ -1,45 +1,101 @@
 MIME-Version: 1.0
-In-Reply-To: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com>
-References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com>
-From: Kees Cook <keescook@google.com>
-Date: Fri, 3 Feb 2017 15:44:28 -0800
-Message-ID: <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <a329157c-2fd3-3eba-1d97-19c456e90cde@oracle.com>
+References: <20170129184316.GA31184@athena> <2d6c7a51-3de3-1d95-37aa-c53c2caa9968@oracle.com>
+ <CAGXu5j+Ynmp3Z29_Zw6BG33P2RVi0eRtOiZR0incfoZBWF=7hg@mail.gmail.com>
+ <20170203031151.GA15897@athena> <a329157c-2fd3-3eba-1d97-19c456e90cde@oracle.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 3 Feb 2017 16:13:39 -0800
+Message-ID: <CAGXu5j+wOFT0rOghTZWvXCacxoT_DkqyifEgXncjPVB--xBmwg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated processes
-To: Xing Gao <xgao01@email.wm.edu>
-Cc: LKML <linux-kernel@vger.kernel.org>, Thomas Gleixner <tglx@linutronix.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Subject: Re: [kernel-hardening] Getting started
+To: Vaishali Thakkar <vaishali.thakkar@oracle.com>
+Cc: Eddie Kovsky <ewk@edkovsky.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 3, 2017 at 2:29 PM, Xing Gao <xgao01@email.wm.edu> wrote:
-> Dear Thomas and Kees,
+On Thu, Feb 2, 2017 at 8:28 PM, Vaishali Thakkar
+<vaishali.thakkar@oracle.com> wrote:
+> On Friday 03 February 2017 08:41 AM, Eddie Kovsky wrote:
+>>
+>> On 01/30/17, Kees Cook wrote:
+>>>
+>>> On Mon, Jan 30, 2017 at 5:41 AM, Vaishali Thakkar
+>>> <vaishali.thakkar@oracle.com> wrote:
+>>>>
+>>>> On Monday 30 January 2017 12:13 AM, Eddie Kovsky wrote:
+>>>>
+>>>>> I'm interested in helping out with this project.
+>>>>>
+>>>>> I have a few small patches in the kernel. I just finished the Eudyptula
+>>>>> Challenge and I'm looking for places where I can continue to
+>>>>> contribute.
+>>>
+>>>
+>>> Hi! Welcome to the list. :)
+>>>
+>>>>> I've been reading the list for several months now. I think I have a
+>>>>> general
+>>>>> understanding of the development process. Is there a specific TODO item
+>>>>> I
+>>>>> could start off with?
+>>>
+>>>
+>>> What areas of the kernel are you the most familiar with, and/or what
+>>> things are you interested in working on? That could help me tailor
+>>> some suggestions.
+>>>
+>>>> Here, is one TODO list:
+>>>>
+>>>> https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
+>>>>
+>>>> Although I think few people are already working on some of these things.
+>>>> May be you can also check the archives of a mailing list.
+>>>
+>>>
+>>> The list is a bit terse (it's mostly been a brain dump as things come
+>>> up), but yeah, if you see something there and want to know more, just
+>>> ask. I'm happy to expand on any of them.
+>>>
+>>
+>> I noticed there's been some activity recently with HARDENED_USERCOPY.
+>> And I looked over how mm/usercopy.c was merged in from the grsecurity
+>> patch. I'm curious about this TODO item:
+>>
+>>      Identify and extend HARDENED_USERCOPY to other usercopy functions
+>>      (e.g. maybe csum_partial_copy_from_user, csum_and_copy_from_user,
+>>      csum_and_copy_to_user, csum_partial_copy_nocheck?)
+>>
+>> It doesn't look like anyone is working on this task right now. But it's
+>> not
+>> obvious (to me) what needs to happen to make progress with this. Would
+>> this
+>> be a good task to start off with?
 >
-> I posted a bug report on bugzilla, and John asked me to send it the lkml.
 >
-> Here is the link, https://bugzilla.kernel.org/show_bug.cgi?id=193921
+> Hi,
 >
-> Please cc to me when you reply this email.
+> You may want to read this thread:
+> https://patchwork.kernel.org/patch/9409557/
 >
-> And please check the information below.
->
-> The pseudo file /proc/timer_list leaks the real pids of the associated
-> processes.
->
-> The function print_timer(kernel/time/timer_list.c) displays
-> timer->start_pid, which is set inside the function
-> __timer_stats_timer_set_start_info (kernel/time/timer.c). This is the real
-> pid, rather than the pid in the pid namespace. If the user within a
-> container retrieves the content of /proc/timer_list, this file will leak the
-> real pid of the associated process.
+> Kees, may be we should remove this item from the TODO list?
 
-I feel like this has been pointed out before, but I can't find the
-email about it. Regardless, yeah, this looks true:
+Hm, yeah, or rename it to "find any other APIs that look like
+copy_to/from_user()". I think Mark already looked through these. Were
+there any remaining?
 
-        SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
+As for a thing to work about how about this:
+- provide mechanism to check for ro_after_init memory areas, and
+reject structures not marked ro_after_init in vmbus_register()
 
- #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
+The idea here would be to provide a mechanism functions can call to
+verify that their arguments are const or ro_after_init. I think it'd
+look a lot like the stuff in kernel/extable.c like
+kernel_text_address(), but it'd need to ask "is this variable in the
+rodata section? (Which is complicated by dealing with module rodata
+sections.)
 
-Seems like this should be made namespace aware... (and why is this
-file needed at all? Seems like it should live in debugfs not proc).
+Then vmbus_register() could be modified to require that its arguments
+are const or ro_after_init.
 
 -Kees
 
