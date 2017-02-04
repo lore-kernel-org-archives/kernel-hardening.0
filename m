@@ -1,101 +1,81 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <a329157c-2fd3-3eba-1d97-19c456e90cde@oracle.com>
-References: <20170129184316.GA31184@athena> <2d6c7a51-3de3-1d95-37aa-c53c2caa9968@oracle.com>
- <CAGXu5j+Ynmp3Z29_Zw6BG33P2RVi0eRtOiZR0incfoZBWF=7hg@mail.gmail.com>
- <20170203031151.GA15897@athena> <a329157c-2fd3-3eba-1d97-19c456e90cde@oracle.com>
+In-Reply-To: <20170203101949.4c6908be@kaiwan-T460>
+References: <20170118095155.5e3bf976@kaiwan-T460> <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
+ <20170203101949.4c6908be@kaiwan-T460>
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 3 Feb 2017 16:13:39 -0800
-Message-ID: <CAGXu5j+wOFT0rOghTZWvXCacxoT_DkqyifEgXncjPVB--xBmwg@mail.gmail.com>
+Date: Fri, 3 Feb 2017 16:23:32 -0800
+Message-ID: <CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Getting started
-To: Vaishali Thakkar <vaishali.thakkar@oracle.com>
-Cc: Eddie Kovsky <ewk@edkovsky.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
+ to linux-next
+To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 2, 2017 at 8:28 PM, Vaishali Thakkar
-<vaishali.thakkar@oracle.com> wrote:
-> On Friday 03 February 2017 08:41 AM, Eddie Kovsky wrote:
->>
->> On 01/30/17, Kees Cook wrote:
->>>
->>> On Mon, Jan 30, 2017 at 5:41 AM, Vaishali Thakkar
->>> <vaishali.thakkar@oracle.com> wrote:
->>>>
->>>> On Monday 30 January 2017 12:13 AM, Eddie Kovsky wrote:
->>>>
->>>>> I'm interested in helping out with this project.
->>>>>
->>>>> I have a few small patches in the kernel. I just finished the Eudyptula
->>>>> Challenge and I'm looking for places where I can continue to
->>>>> contribute.
->>>
->>>
->>> Hi! Welcome to the list. :)
->>>
->>>>> I've been reading the list for several months now. I think I have a
->>>>> general
->>>>> understanding of the development process. Is there a specific TODO item
->>>>> I
->>>>> could start off with?
->>>
->>>
->>> What areas of the kernel are you the most familiar with, and/or what
->>> things are you interested in working on? That could help me tailor
->>> some suggestions.
->>>
->>>> Here, is one TODO list:
->>>>
->>>> https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
->>>>
->>>> Although I think few people are already working on some of these things.
->>>> May be you can also check the archives of a mailing list.
->>>
->>>
->>> The list is a bit terse (it's mostly been a brain dump as things come
->>> up), but yeah, if you see something there and want to know more, just
->>> ask. I'm happy to expand on any of them.
->>>
->>
->> I noticed there's been some activity recently with HARDENED_USERCOPY.
->> And I looked over how mm/usercopy.c was merged in from the grsecurity
->> patch. I'm curious about this TODO item:
->>
->>      Identify and extend HARDENED_USERCOPY to other usercopy functions
->>      (e.g. maybe csum_partial_copy_from_user, csum_and_copy_from_user,
->>      csum_and_copy_to_user, csum_partial_copy_nocheck?)
->>
->> It doesn't look like anyone is working on this task right now. But it's
->> not
->> obvious (to me) what needs to happen to make progress with this. Would
->> this
->> be a good task to start off with?
->
->
-> Hi,
->
-> You may want to read this thread:
-> https://patchwork.kernel.org/patch/9409557/
->
-> Kees, may be we should remove this item from the TODO list?
+On Thu, Feb 2, 2017 at 8:49 PM, Kaiwan N Billimoria
+<kaiwan@kaiwantech.com> wrote:
+> Pl bear with me, am trying to understand this correctly.
 
-Hm, yeah, or rename it to "find any other APIs that look like
-copy_to/from_user()". I think Mark already looked through these. Were
-there any remaining?
+No problem at all. Thanks for continuing to poke at this. :)
 
-As for a thing to work about how about this:
-- provide mechanism to check for ro_after_init memory areas, and
-reject structures not marked ro_after_init in vmbus_register()
+> From what I gather, we look to create a new config directive, say,
+> CONFIG_MEMORY_SANITIZE .
+>
+> It will turn ON :
+>  CONFIG_DEBUG_PAGEALLOC
+>    (which internally turns ON CONFIG_PAGE_EXTENSION), and
+>  CONFIG_PAGE_POISONING
+>    (similar internal turn-ons :).
 
-The idea here would be to provide a mechanism functions can call to
-verify that their arguments are const or ro_after_init. I think it'd
-look a lot like the stuff in kernel/extable.c like
-kernel_text_address(), but it'd need to ask "is this variable in the
-rodata section? (Which is complicated by dealing with module rodata
-sections.)
+I think CONFIG_MEMORY_SANITIZE would enable:
 
-Then vmbus_register() could be modified to require that its arguments
-are const or ro_after_init.
+CONFIG_SLUB_DEBUG=y
+CONFIG_PAGE_POISONING=y
+CONFIG_PAGE_POISONING_NO_SANITY=y
+
+but it would _also_ need to set these kernel command-line variables as
+if they had been set:
+
+page_poison=1
+slub_debug=P
+
+> The new config now enables the CONFIG_PAX_MEMORY_SANITIZE code (my prev
+> email patch), correct? (leaving out the stuff we cannot get without the
+> full grsec implementation).
+
+No, the first step would be for the config to only provide the above changes.
+
+Then, we'd want to add the poison value defaults as you mention:
+
+> -Would include the 'new' poison / sanitize values of 0xfe and 0xff for slab
+> (64 and 32-bit resp), etc etc.
+
+And then finally add the exceptions for the "frequently freed" slub
+caches, as identified by PaX already. This would need the flag
+defined, the poisoning logic adjusted to check the flag, and for the
+new kernel command-line options for changing the whether or not the
+flag is respected (like PaX's "pax_sanitize_slab").
+
+> Even if this is (somewhat) correct, my thinking is - correct me I'm totally
+> wrong here - that the whole purpose of the exercise is to improve _security_;
+> hence, tying this code into the "debug features" of the kernel isn't really
+> what we want, yes?
+
+In the discussions Laura had with the mm folks, the only realistic
+path to landing this in the upstream kernel is through these debug
+features.
+
+> Most folks would only use debug during development, if at all - given all the
+> concerns regarding performance. Here, the objective is to enable a powerful
+> security feature set. Hence, the config directives should come under the
+> 'Security Options' menu.
+
+We're not close to having a "Kernel Security" menu, so for now, I've
+wanted to focus on getting the features, and then making the Kconfig
+menus pretty later.
+
+Hopefully that all makes sense! :)
 
 -Kees
 
