@@ -1,56 +1,41 @@
+Date: Sun, 5 Feb 2017 16:40:46 +0100
+From: Peter Zijlstra <peterz@infradead.org>
+Message-ID: <20170205154046.GF6515@twins.programming.kicks-ass.net>
+References: <1486164412-7338-1-git-send-email-keescook@chromium.org>
+ <1486164412-7338-5-git-send-email-keescook@chromium.org>
 MIME-Version: 1.0
-In-Reply-To: <20170205101844.GE22713@dhcp22.suse.cz>
-References: <1486135892-27249-1-git-send-email-hoeun.ryu@gmail.com>
- <20170203153914.GI19325@dhcp22.suse.cz> <CABeRdtp9ERutdeKLpztyLpV=8VOqiJPnES_3c_V4aLS_dZ_-jg@mail.gmail.com>
- <CALCETrXruGdh3Z_kTnp8fUBr6J3a4bosumQu38ygM37SSD5EfQ@mail.gmail.com>
- <CABeRdtqfAR+RSxs+2Lr7LZjhKqLfU3QHVN+RULchSbyrVS1qEQ@mail.gmail.com> <20170205101844.GE22713@dhcp22.suse.cz>
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Sun, 5 Feb 2017 22:23:06 +0900
-Message-ID: <CABeRdtriaf0XMzi4xAkZqONbcZMj662MT-T9EMrnPAUZR-miNg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 1/3] fork: dynamically allocate cache array for vmapped
- stacks using cpuhp
-To: Michal Hocko <mhocko@kernel.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1486164412-7338-5-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures through
+ CHECK_DATA_CORRUPTION
+To: Kees Cook <keescook@chromium.org>
+Cc: elena.reshetova@intel.com, gregkh@linuxfoundation.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, Hans Liljestrand <ishkamiel@gmail.com>, dhowells@redhat.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 5, 2017 at 7:18 PM, Michal Hocko <mhocko@kernel.org> wrote:
-> On Sat 04-02-17 11:01:32, Hoeun Ryu wrote:
->> On Sat, Feb 4, 2017 at 2:52 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->> > On Fri, Feb 3, 2017 at 8:42 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->> >> On Sat, Feb 4, 2017 at 12:39 AM, Michal Hocko <mhocko@kernel.org> wrote:
->> >>> On Sat 04-02-17 00:30:05, Hoeun Ryu wrote:
->> >>>>  Using virtually mapped stack, kernel stacks are allocated via vmalloc.
->> >>>> In the current implementation, two stacks per cpu can be cached when
->> >>>> tasks are freed and the cached stacks are used again in task duplications.
->> >>>> but the array for the cached stacks is statically allocated by per-cpu api.
->> >>>>  In this new implementation, the array for the cached stacks are dynamically
->> >>>> allocted and freed by cpu hotplug callbacks and the cached stacks are freed
->> >>>> when cpu is down. setup for cpu hotplug is established in fork_init().
->> >>>
->> >>> Why do we want this? I can see that the follow up patch makes the number
->> >>> configurable but the changelog doesn't describe the motivation for that.
->> >>> Which workload would benefit from a higher value?
->> >>>
->> >>
->> >> The key difference of this implementation, the cached stacks for a cpu
->> >> is freed when a cpu is down.
->> >> so the cached stacks are no longer wasted.
->> >> In the current implementation, the cached stacks for a cpu still
->> >> remain on the system when a cpu is down.
->> >> I think we could imagine what if a machine has many cpus and someone
->> >> wants to have bigger size of stack caches.
->> >
->> > Then how about just registering a simple hotplug hook to free the
->> > stacks without worrying about freeing the tiny array as well?
->> >
->>
->> Michal, What do you think about it. it sounds fair enough.
->
-> This is what I've tried to suggest in the other reply.
+On Fri, Feb 03, 2017 at 03:26:52PM -0800, Kees Cook wrote:
+> This converts from WARN_ON() to CHECK_DATA_CORRUPTION() in the
+> CONFIG_DEBUG_REFCOUNT case. Additionally moves refcount_t sanity check
+> conditionals into regular function flow. Since CHECK_DATA_CORRUPTION()
+> is marked __much_check, we override few cases where the failure has
+> already been handled but we want to explicitly report it.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  include/linux/refcount.h | 35 ++++++++++++++++++++++-------------
+>  lib/Kconfig.debug        |  2 ++
+>  2 files changed, 24 insertions(+), 13 deletions(-)
+> 
+> diff --git a/include/linux/refcount.h b/include/linux/refcount.h
+> index 5b89cad62237..ef32910c7dd8 100644
+> --- a/include/linux/refcount.h
+> +++ b/include/linux/refcount.h
+> @@ -43,10 +43,10 @@
+>  #include <linux/spinlock.h>
+>  
+>  #if CONFIG_DEBUG_REFCOUNT
+> -#define REFCOUNT_WARN(cond, str) WARN_ON(cond)
+> +#define REFCOUNT_CHECK(cond, str) CHECK_DATA_CORRUPTION(cond, str)
 
-OK, I'll work on patch1/2 again and drop patch3.
-
-> --
-> Michal Hocko
-> SUSE Labs
+OK, so that goes back to a full WARN() which will make the generated
+code gigantic due to the whole printk() trainwreck :/
