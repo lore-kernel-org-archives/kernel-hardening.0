@@ -1,108 +1,56 @@
-From: kpark3469@gmail.com
-Date: Sun,  5 Feb 2017 16:14:10 +0400
-Message-Id: <1486296850-16045-3-git-send-email-kpark3469@gmail.com>
-In-Reply-To: <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
-References: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
- <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 3/3] lkdtm: add tests for dynamic array in local stack
-To: kernel-hardening@lists.openwall.com
-Cc: catalin.marinas@arm.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
+MIME-Version: 1.0
+In-Reply-To: <20170205101844.GE22713@dhcp22.suse.cz>
+References: <1486135892-27249-1-git-send-email-hoeun.ryu@gmail.com>
+ <20170203153914.GI19325@dhcp22.suse.cz> <CABeRdtp9ERutdeKLpztyLpV=8VOqiJPnES_3c_V4aLS_dZ_-jg@mail.gmail.com>
+ <CALCETrXruGdh3Z_kTnp8fUBr6J3a4bosumQu38ygM37SSD5EfQ@mail.gmail.com>
+ <CABeRdtqfAR+RSxs+2Lr7LZjhKqLfU3QHVN+RULchSbyrVS1qEQ@mail.gmail.com> <20170205101844.GE22713@dhcp22.suse.cz>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sun, 5 Feb 2017 22:23:06 +0900
+Message-ID: <CABeRdtriaf0XMzi4xAkZqONbcZMj662MT-T9EMrnPAUZR-miNg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 1/3] fork: dynamically allocate cache array for vmapped
+ stacks using cpuhp
+To: Michal Hocko <mhocko@kernel.org>
+Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Sahara <keun-o.park@darkmatter.ae>
+On Sun, Feb 5, 2017 at 7:18 PM, Michal Hocko <mhocko@kernel.org> wrote:
+> On Sat 04-02-17 11:01:32, Hoeun Ryu wrote:
+>> On Sat, Feb 4, 2017 at 2:52 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+>> > On Fri, Feb 3, 2017 at 8:42 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> >> On Sat, Feb 4, 2017 at 12:39 AM, Michal Hocko <mhocko@kernel.org> wrote:
+>> >>> On Sat 04-02-17 00:30:05, Hoeun Ryu wrote:
+>> >>>>  Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+>> >>>> In the current implementation, two stacks per cpu can be cached when
+>> >>>> tasks are freed and the cached stacks are used again in task duplications.
+>> >>>> but the array for the cached stacks is statically allocated by per-cpu api.
+>> >>>>  In this new implementation, the array for the cached stacks are dynamically
+>> >>>> allocted and freed by cpu hotplug callbacks and the cached stacks are freed
+>> >>>> when cpu is down. setup for cpu hotplug is established in fork_init().
+>> >>>
+>> >>> Why do we want this? I can see that the follow up patch makes the number
+>> >>> configurable but the changelog doesn't describe the motivation for that.
+>> >>> Which workload would benefit from a higher value?
+>> >>>
+>> >>
+>> >> The key difference of this implementation, the cached stacks for a cpu
+>> >> is freed when a cpu is down.
+>> >> so the cached stacks are no longer wasted.
+>> >> In the current implementation, the cached stacks for a cpu still
+>> >> remain on the system when a cpu is down.
+>> >> I think we could imagine what if a machine has many cpus and someone
+>> >> wants to have bigger size of stack caches.
+>> >
+>> > Then how about just registering a simple hotplug hook to free the
+>> > stacks without worrying about freeing the tiny array as well?
+>> >
+>>
+>> Michal, What do you think about it. it sounds fair enough.
+>
+> This is what I've tried to suggest in the other reply.
 
-This seems an unusual case in kernel. But, when an array is
-dynamically created, this variable can be placed ahead of
-current frame pointer. This patch tests this dynamic array case.
+OK, I'll work on patch1/2 again and drop patch3.
 
-Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-Reported-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
-Suggested-by: Kees Cook <keescook@chromium.org>
----
- drivers/misc/lkdtm_usercopy.c | 28 +++++++++++++++++++++++++++-
- 1 file changed, 27 insertions(+), 1 deletion(-)
-
-diff --git a/drivers/misc/lkdtm_usercopy.c b/drivers/misc/lkdtm_usercopy.c
-index 1dd6114..898a323 100644
---- a/drivers/misc/lkdtm_usercopy.c
-+++ b/drivers/misc/lkdtm_usercopy.c
-@@ -7,6 +7,7 @@
- #include <linux/vmalloc.h>
- #include <linux/mman.h>
- #include <linux/uaccess.h>
-+#include <linux/random.h>
- #include <asm/cacheflush.h>
- 
- /*
-@@ -33,7 +34,14 @@ static noinline unsigned char *trick_compiler(unsigned char *stack)
- 
- static noinline unsigned char *do_usercopy_stack_callee(int value)
- {
--	unsigned char buf[32];
-+	/*
-+	 * buf[128] is big enough to put it in the position ahead of
-+	 * check_stack_object()'s frame pointer. Because dynamically allocated
-+	 * array can be placed between check_stack_object()'s frame pointer and
-+	 * do_usercopy_stack()'s frame pointer, we need an object which exists
-+	 * ahead of check_stack_object()'s frame pointer.
-+	 */
-+	unsigned char buf[128];
- 	int i;
- 
- 	/* Exercise stack to avoid everything living in registers. */
-@@ -49,6 +57,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
- 	unsigned long user_addr;
- 	unsigned char good_stack[32];
- 	unsigned char *bad_stack;
-+	unsigned int array_size;
- 	int i;
- 
- 	/* Exercise stack to avoid everything living in registers. */
-@@ -72,7 +81,9 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
- 		return;
- 	}
- 
-+	array_size = get_random_int() & 0x0f;
- 	if (to_user) {
-+		unsigned char array[array_size];
- 		pr_info("attempting good copy_to_user of local stack\n");
- 		if (copy_to_user((void __user *)user_addr, good_stack,
- 				 unconst + sizeof(good_stack))) {
-@@ -80,6 +91,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
- 			goto free_user;
- 		}
- 
-+		pr_info("attempting good copy_to_user of callee stack\n");
-+		if (copy_to_user((void __user *)user_addr, array,
-+				 unconst + sizeof(array))) {
-+			pr_warn("copy_to_user failed unexpectedly?!\n");
-+			goto free_user;
-+		}
-+
- 		pr_info("attempting bad copy_to_user of distant stack\n");
- 		if (copy_to_user((void __user *)user_addr, bad_stack,
- 				 unconst + sizeof(good_stack))) {
-@@ -87,6 +105,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
- 			goto free_user;
- 		}
- 	} else {
-+		unsigned char array[array_size];
- 		/*
- 		 * There isn't a safe way to not be protected by usercopy
- 		 * if we're going to write to another thread's stack.
-@@ -101,6 +120,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
- 			goto free_user;
- 		}
- 
-+		pr_info("attempting good copy_from_user of callee stack\n");
-+		if (copy_from_user(array, (void __user *)user_addr,
-+				   unconst + sizeof(array))) {
-+			pr_warn("copy_from_user failed unexpectedly?!\n");
-+			goto free_user;
-+		}
-+
- 		pr_info("attempting bad copy_from_user of distant stack\n");
- 		if (copy_from_user(bad_stack, (void __user *)user_addr,
- 				   unconst + sizeof(good_stack))) {
--- 
-2.7.4
+> --
+> Michal Hocko
+> SUSE Labs
