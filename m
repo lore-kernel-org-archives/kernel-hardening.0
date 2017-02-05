@@ -1,112 +1,108 @@
 From: kpark3469@gmail.com
-Date: Sun,  5 Feb 2017 16:14:09 +0400
-Message-Id: <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
-In-Reply-To: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
+Date: Sun,  5 Feb 2017 16:14:10 +0400
+Message-Id: <1486296850-16045-3-git-send-email-kpark3469@gmail.com>
+In-Reply-To: <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
 References: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 2/3] arm64: usercopy: Implement stack frame object validation
+ <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
+Subject: [kernel-hardening] [PATCH v3 3/3] lkdtm: add tests for dynamic array in local stack
 To: kernel-hardening@lists.openwall.com
 Cc: catalin.marinas@arm.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Sahara <keun-o.park@darkmatter.ae>
 
-This implements arch_within_stack_frames() for arm64 that should
-validate if a given object is contained by a kernel stack frame.
+This seems an unusual case in kernel. But, when an array is
+dynamically created, this variable can be placed ahead of
+current frame pointer. This patch tests this dynamic array case.
 
 Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-Reviewed-by: James Morse <james.morse@arm.com>
+Reported-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+Suggested-by: Kees Cook <keescook@chromium.org>
 ---
- arch/arm64/Kconfig                   |  1 +
- arch/arm64/include/asm/thread_info.h | 64 ++++++++++++++++++++++++++++++++++++
- 2 files changed, 65 insertions(+)
+ drivers/misc/lkdtm_usercopy.c | 28 +++++++++++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 1117421..8bf70b4 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -97,6 +97,7 @@ config ARM64
- 	select HAVE_SYSCALL_TRACEPOINTS
- 	select HAVE_KPROBES
- 	select HAVE_KRETPROBES if HAVE_KPROBES
-+	select HAVE_ARCH_WITHIN_STACK_FRAMES
- 	select IOMMU_DMA if IOMMU_SUPPORT
- 	select IRQ_DOMAIN
- 	select IRQ_FORCED_THREADING
-diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
-index 46c3b93..70baad3 100644
---- a/arch/arm64/include/asm/thread_info.h
-+++ b/arch/arm64/include/asm/thread_info.h
-@@ -68,7 +68,71 @@ struct thread_info {
- #define thread_saved_fp(tsk)	\
- 	((unsigned long)(tsk->thread.cpu_context.fp))
- 
-+#define get_stack_start(fp) (fp + 2 * sizeof(void *))
-+
-+/*
-+ * Walks up the stack frames to make sure that the specified object is
-+ * entirely contained by a single stack frame.
-+ *
-+ * Returns:
-+ *	GOOD_FRAME	if within a frame
-+ *	BAD_STACK	if placed across a frame boundary (or outside stack)
-+ *	NOT_STACK	unable to determine (no frame pointers, etc)
-+ */
-+
-+static inline enum stack_type arch_within_stack_frames(const void * const stack,
-+					const void * const stackend,
-+					const void *obj, unsigned long len)
-+{
-+#ifdef CONFIG_FRAME_POINTER
-+	const void *callee_fp = NULL;
-+	const void *caller_fp = NULL;
-+
-+	callee_fp = __builtin_frame_address(1);
-+	if (callee_fp)
-+		caller_fp = *(const void * const *)callee_fp;
-+	/*
-+	 * Case #1:
-+	 * low ----------------------------------------------> high
-+	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
-+	 *                ^----------------^
-+	 *               allow copies only within here
-+	 *
-+	 * Case #2:
-+	 * low ----------------------------------------------> high
-+	 * [check_object_size_fp][lr][args][local vars][callee_fp][lr]
-+	 *                           ^----------------^
-+	 *                     dynamically allocated stack variable of
-+	 *                     callee frame copies are allowed within here
-+	 *
-+	 * < example code snippet for Case#2 >
-+	 * array_size = get_random_int() & 0x0f;
-+	 * if (to_user) {
-+	 *         unsigned char array[array_size];
-+	 *         if (copy_to_user((void __user *)user_addr, array,
-+	 *                          unconst + sizeof(array))) {
-+	 */
-+	while (stack <= callee_fp && callee_fp < stackend &&
-+			!((unsigned long)caller_fp & 0xf)) {
-+		/*
-+		 * If obj + len extends past the caller frame, this
-+		 * check won't pass and the next frame will be 0,
-+		 * causing us to bail out and correctly report
-+		 * the copy as invalid.
-+		 */
-+		if (!caller_fp || (obj + len <= caller_fp))
-+			return (obj >= get_stack_start(callee_fp)) ?
-+				GOOD_FRAME : BAD_STACK;
-+		callee_fp = caller_fp;
-+		caller_fp = *(const void * const *)caller_fp;
-+	}
-+	return BAD_STACK;
-+#else
-+	return NOT_STACK;
- #endif
-+}
-+
-+#endif /* !__ASSEMBLY__ */
+diff --git a/drivers/misc/lkdtm_usercopy.c b/drivers/misc/lkdtm_usercopy.c
+index 1dd6114..898a323 100644
+--- a/drivers/misc/lkdtm_usercopy.c
++++ b/drivers/misc/lkdtm_usercopy.c
+@@ -7,6 +7,7 @@
+ #include <linux/vmalloc.h>
+ #include <linux/mman.h>
+ #include <linux/uaccess.h>
++#include <linux/random.h>
+ #include <asm/cacheflush.h>
  
  /*
-  * thread information flags:
+@@ -33,7 +34,14 @@ static noinline unsigned char *trick_compiler(unsigned char *stack)
+ 
+ static noinline unsigned char *do_usercopy_stack_callee(int value)
+ {
+-	unsigned char buf[32];
++	/*
++	 * buf[128] is big enough to put it in the position ahead of
++	 * check_stack_object()'s frame pointer. Because dynamically allocated
++	 * array can be placed between check_stack_object()'s frame pointer and
++	 * do_usercopy_stack()'s frame pointer, we need an object which exists
++	 * ahead of check_stack_object()'s frame pointer.
++	 */
++	unsigned char buf[128];
+ 	int i;
+ 
+ 	/* Exercise stack to avoid everything living in registers. */
+@@ -49,6 +57,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+ 	unsigned long user_addr;
+ 	unsigned char good_stack[32];
+ 	unsigned char *bad_stack;
++	unsigned int array_size;
+ 	int i;
+ 
+ 	/* Exercise stack to avoid everything living in registers. */
+@@ -72,7 +81,9 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+ 		return;
+ 	}
+ 
++	array_size = get_random_int() & 0x0f;
+ 	if (to_user) {
++		unsigned char array[array_size];
+ 		pr_info("attempting good copy_to_user of local stack\n");
+ 		if (copy_to_user((void __user *)user_addr, good_stack,
+ 				 unconst + sizeof(good_stack))) {
+@@ -80,6 +91,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+ 			goto free_user;
+ 		}
+ 
++		pr_info("attempting good copy_to_user of callee stack\n");
++		if (copy_to_user((void __user *)user_addr, array,
++				 unconst + sizeof(array))) {
++			pr_warn("copy_to_user failed unexpectedly?!\n");
++			goto free_user;
++		}
++
+ 		pr_info("attempting bad copy_to_user of distant stack\n");
+ 		if (copy_to_user((void __user *)user_addr, bad_stack,
+ 				 unconst + sizeof(good_stack))) {
+@@ -87,6 +105,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+ 			goto free_user;
+ 		}
+ 	} else {
++		unsigned char array[array_size];
+ 		/*
+ 		 * There isn't a safe way to not be protected by usercopy
+ 		 * if we're going to write to another thread's stack.
+@@ -101,6 +120,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+ 			goto free_user;
+ 		}
+ 
++		pr_info("attempting good copy_from_user of callee stack\n");
++		if (copy_from_user(array, (void __user *)user_addr,
++				   unconst + sizeof(array))) {
++			pr_warn("copy_from_user failed unexpectedly?!\n");
++			goto free_user;
++		}
++
+ 		pr_info("attempting bad copy_from_user of distant stack\n");
+ 		if (copy_from_user(bad_stack, (void __user *)user_addr,
+ 				   unconst + sizeof(good_stack))) {
 -- 
 2.7.4
