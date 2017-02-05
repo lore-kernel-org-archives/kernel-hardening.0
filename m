@@ -1,119 +1,112 @@
 From: kpark3469@gmail.com
-Date: Sun,  5 Feb 2017 16:14:08 +0400
-Message-Id: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
-Subject: [kernel-hardening] [PATCH v3 1/3] usercopy: create enum stack_type
+Date: Sun,  5 Feb 2017 16:14:09 +0400
+Message-Id: <1486296850-16045-2-git-send-email-kpark3469@gmail.com>
+In-Reply-To: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
+References: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
+Subject: [kernel-hardening] [PATCH v3 2/3] arm64: usercopy: Implement stack frame object validation
 To: kernel-hardening@lists.openwall.com
 Cc: catalin.marinas@arm.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
 From: Sahara <keun-o.park@darkmatter.ae>
 
-This patch creates enum stack_type which is only used in usercopy.c
-for now. This enum type can be used for x86 and other architecture's
-thread_info.h, which may have arch_within_stack_frames().
+This implements arch_within_stack_frames() for arm64 that should
+validate if a given object is contained by a kernel stack frame.
 
 Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-Suggested-by: James Morse <james.morse@arm.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: James Morse <james.morse@arm.com>
 ---
- arch/x86/include/asm/thread_info.h | 19 ++++++++++---------
- include/linux/thread_info.h        | 13 ++++++++++---
- mm/usercopy.c                      |  8 +-------
- 3 files changed, 21 insertions(+), 19 deletions(-)
+ arch/arm64/Kconfig                   |  1 +
+ arch/arm64/include/asm/thread_info.h | 64 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 65 insertions(+)
 
-diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-index ad6f5eb0..7af4b8b 100644
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -168,13 +168,13 @@ static inline unsigned long current_stack_pointer(void)
-  * entirely contained by a single stack frame.
-  *
-  * Returns:
-- *		 1 if within a frame
-- *		-1 if placed across a frame boundary (or outside stack)
-- *		 0 unable to determine (no frame pointers, etc)
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 1117421..8bf70b4 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -97,6 +97,7 @@ config ARM64
+ 	select HAVE_SYSCALL_TRACEPOINTS
+ 	select HAVE_KPROBES
+ 	select HAVE_KRETPROBES if HAVE_KPROBES
++	select HAVE_ARCH_WITHIN_STACK_FRAMES
+ 	select IOMMU_DMA if IOMMU_SUPPORT
+ 	select IRQ_DOMAIN
+ 	select IRQ_FORCED_THREADING
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index 46c3b93..70baad3 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -68,7 +68,71 @@ struct thread_info {
+ #define thread_saved_fp(tsk)	\
+ 	((unsigned long)(tsk->thread.cpu_context.fp))
+ 
++#define get_stack_start(fp) (fp + 2 * sizeof(void *))
++
++/*
++ * Walks up the stack frames to make sure that the specified object is
++ * entirely contained by a single stack frame.
++ *
++ * Returns:
 + *	GOOD_FRAME	if within a frame
 + *	BAD_STACK	if placed across a frame boundary (or outside stack)
 + *	NOT_STACK	unable to determine (no frame pointers, etc)
-  */
--static inline int arch_within_stack_frames(const void * const stack,
--					   const void * const stackend,
--					   const void *obj, unsigned long len)
++ */
++
 +static inline enum stack_type arch_within_stack_frames(const void * const stack,
 +					const void * const stackend,
 +					const void *obj, unsigned long len)
- {
- #if defined(CONFIG_FRAME_POINTER)
- 	const void *frame = NULL;
-@@ -197,13 +197,14 @@ static inline int arch_within_stack_frames(const void * const stack,
- 		 * the copy as invalid.
- 		 */
- 		if (obj + len <= frame)
--			return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
-+			return obj >= oldframe + 2 * sizeof(void *) ?
++{
++#ifdef CONFIG_FRAME_POINTER
++	const void *callee_fp = NULL;
++	const void *caller_fp = NULL;
++
++	callee_fp = __builtin_frame_address(1);
++	if (callee_fp)
++		caller_fp = *(const void * const *)callee_fp;
++	/*
++	 * Case #1:
++	 * low ----------------------------------------------> high
++	 * [callee_fp][lr][args][local vars][caller_fp'][lr']
++	 *                ^----------------^
++	 *               allow copies only within here
++	 *
++	 * Case #2:
++	 * low ----------------------------------------------> high
++	 * [check_object_size_fp][lr][args][local vars][callee_fp][lr]
++	 *                           ^----------------^
++	 *                     dynamically allocated stack variable of
++	 *                     callee frame copies are allowed within here
++	 *
++	 * < example code snippet for Case#2 >
++	 * array_size = get_random_int() & 0x0f;
++	 * if (to_user) {
++	 *         unsigned char array[array_size];
++	 *         if (copy_to_user((void __user *)user_addr, array,
++	 *                          unconst + sizeof(array))) {
++	 */
++	while (stack <= callee_fp && callee_fp < stackend &&
++			!((unsigned long)caller_fp & 0xf)) {
++		/*
++		 * If obj + len extends past the caller frame, this
++		 * check won't pass and the next frame will be 0,
++		 * causing us to bail out and correctly report
++		 * the copy as invalid.
++		 */
++		if (!caller_fp || (obj + len <= caller_fp))
++			return (obj >= get_stack_start(callee_fp)) ?
 +				GOOD_FRAME : BAD_STACK;
- 		oldframe = frame;
- 		frame = *(const void * const *)frame;
- 	}
--	return -1;
++		callee_fp = caller_fp;
++		caller_fp = *(const void * const *)caller_fp;
++	}
 +	return BAD_STACK;
- #else
--	return 0;
++#else
 +	return NOT_STACK;
  #endif
- }
- 
-diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-index 5837387..a38b3be 100644
---- a/include/linux/thread_info.h
-+++ b/include/linux/thread_info.h
-@@ -22,6 +22,13 @@
- #endif
- 
- #include <linux/bitops.h>
++}
 +
-+enum stack_type {
-+	BAD_STACK = -1,
-+	NOT_STACK = 0,
-+	GOOD_FRAME,
-+	GOOD_STACK,
-+};
- #include <asm/thread_info.h>
++#endif /* !__ASSEMBLY__ */
  
- #ifdef __KERNEL__
-@@ -77,9 +84,9 @@ static inline int test_ti_thread_flag(struct thread_info *ti, int flag)
- #define tif_need_resched() test_thread_flag(TIF_NEED_RESCHED)
- 
- #ifndef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
--static inline int arch_within_stack_frames(const void * const stack,
--					   const void * const stackend,
--					   const void *obj, unsigned long len)
-+static inline enum stack_type arch_within_stack_frames(const void * const stack,
-+					const void * const stackend,
-+					const void *obj, unsigned long len)
- {
- 	return 0;
- }
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-index 3c8da0a..3531ae7 100644
---- a/mm/usercopy.c
-+++ b/mm/usercopy.c
-@@ -16,15 +16,9 @@
- 
- #include <linux/mm.h>
- #include <linux/slab.h>
-+#include <linux/thread_info.h>
- #include <asm/sections.h>
- 
--enum {
--	BAD_STACK = -1,
--	NOT_STACK = 0,
--	GOOD_FRAME,
--	GOOD_STACK,
--};
--
  /*
-  * Checks if a given pointer and length is contained by the current
-  * stack frame (if possible).
+  * thread information flags:
 -- 
 2.7.4
