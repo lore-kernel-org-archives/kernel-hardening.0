@@ -1,54 +1,119 @@
-Date: Sun, 5 Feb 2017 11:18:45 +0100
-From: Michal Hocko <mhocko@kernel.org>
-Message-ID: <20170205101844.GE22713@dhcp22.suse.cz>
-References: <1486135892-27249-1-git-send-email-hoeun.ryu@gmail.com>
- <20170203153914.GI19325@dhcp22.suse.cz>
- <CABeRdtp9ERutdeKLpztyLpV=8VOqiJPnES_3c_V4aLS_dZ_-jg@mail.gmail.com>
- <CALCETrXruGdh3Z_kTnp8fUBr6J3a4bosumQu38ygM37SSD5EfQ@mail.gmail.com>
- <CABeRdtqfAR+RSxs+2Lr7LZjhKqLfU3QHVN+RULchSbyrVS1qEQ@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CABeRdtqfAR+RSxs+2Lr7LZjhKqLfU3QHVN+RULchSbyrVS1qEQ@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 1/3] fork: dynamically allocate cache array for vmapped
- stacks using cpuhp
-To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: kpark3469@gmail.com
+Date: Sun,  5 Feb 2017 16:14:08 +0400
+Message-Id: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
+Subject: [kernel-hardening] [PATCH v3 1/3] usercopy: create enum stack_type
+To: kernel-hardening@lists.openwall.com
+Cc: catalin.marinas@arm.com, keescook@chromium.org, will.deacon@arm.com, mark.rutland@arm.com, james.morse@arm.com, panand@redhat.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat 04-02-17 11:01:32, Hoeun Ryu wrote:
-> On Sat, Feb 4, 2017 at 2:52 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> > On Fri, Feb 3, 2017 at 8:42 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
-> >> On Sat, Feb 4, 2017 at 12:39 AM, Michal Hocko <mhocko@kernel.org> wrote:
-> >>> On Sat 04-02-17 00:30:05, Hoeun Ryu wrote:
-> >>>>  Using virtually mapped stack, kernel stacks are allocated via vmalloc.
-> >>>> In the current implementation, two stacks per cpu can be cached when
-> >>>> tasks are freed and the cached stacks are used again in task duplications.
-> >>>> but the array for the cached stacks is statically allocated by per-cpu api.
-> >>>>  In this new implementation, the array for the cached stacks are dynamically
-> >>>> allocted and freed by cpu hotplug callbacks and the cached stacks are freed
-> >>>> when cpu is down. setup for cpu hotplug is established in fork_init().
-> >>>
-> >>> Why do we want this? I can see that the follow up patch makes the number
-> >>> configurable but the changelog doesn't describe the motivation for that.
-> >>> Which workload would benefit from a higher value?
-> >>>
-> >>
-> >> The key difference of this implementation, the cached stacks for a cpu
-> >> is freed when a cpu is down.
-> >> so the cached stacks are no longer wasted.
-> >> In the current implementation, the cached stacks for a cpu still
-> >> remain on the system when a cpu is down.
-> >> I think we could imagine what if a machine has many cpus and someone
-> >> wants to have bigger size of stack caches.
-> >
-> > Then how about just registering a simple hotplug hook to free the
-> > stacks without worrying about freeing the tiny array as well?
-> >
-> 
-> Michal, What do you think about it. it sounds fair enough.
+From: Sahara <keun-o.park@darkmatter.ae>
 
-This is what I've tried to suggest in the other reply.
+This patch creates enum stack_type which is only used in usercopy.c
+for now. This enum type can be used for x86 and other architecture's
+thread_info.h, which may have arch_within_stack_frames().
+
+Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+Suggested-by: James Morse <james.morse@arm.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/include/asm/thread_info.h | 19 ++++++++++---------
+ include/linux/thread_info.h        | 13 ++++++++++---
+ mm/usercopy.c                      |  8 +-------
+ 3 files changed, 21 insertions(+), 19 deletions(-)
+
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index ad6f5eb0..7af4b8b 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -168,13 +168,13 @@ static inline unsigned long current_stack_pointer(void)
+  * entirely contained by a single stack frame.
+  *
+  * Returns:
+- *		 1 if within a frame
+- *		-1 if placed across a frame boundary (or outside stack)
+- *		 0 unable to determine (no frame pointers, etc)
++ *	GOOD_FRAME	if within a frame
++ *	BAD_STACK	if placed across a frame boundary (or outside stack)
++ *	NOT_STACK	unable to determine (no frame pointers, etc)
+  */
+-static inline int arch_within_stack_frames(const void * const stack,
+-					   const void * const stackend,
+-					   const void *obj, unsigned long len)
++static inline enum stack_type arch_within_stack_frames(const void * const stack,
++					const void * const stackend,
++					const void *obj, unsigned long len)
+ {
+ #if defined(CONFIG_FRAME_POINTER)
+ 	const void *frame = NULL;
+@@ -197,13 +197,14 @@ static inline int arch_within_stack_frames(const void * const stack,
+ 		 * the copy as invalid.
+ 		 */
+ 		if (obj + len <= frame)
+-			return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
++			return obj >= oldframe + 2 * sizeof(void *) ?
++				GOOD_FRAME : BAD_STACK;
+ 		oldframe = frame;
+ 		frame = *(const void * const *)frame;
+ 	}
+-	return -1;
++	return BAD_STACK;
+ #else
+-	return 0;
++	return NOT_STACK;
+ #endif
+ }
+ 
+diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
+index 5837387..a38b3be 100644
+--- a/include/linux/thread_info.h
++++ b/include/linux/thread_info.h
+@@ -22,6 +22,13 @@
+ #endif
+ 
+ #include <linux/bitops.h>
++
++enum stack_type {
++	BAD_STACK = -1,
++	NOT_STACK = 0,
++	GOOD_FRAME,
++	GOOD_STACK,
++};
+ #include <asm/thread_info.h>
+ 
+ #ifdef __KERNEL__
+@@ -77,9 +84,9 @@ static inline int test_ti_thread_flag(struct thread_info *ti, int flag)
+ #define tif_need_resched() test_thread_flag(TIF_NEED_RESCHED)
+ 
+ #ifndef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
+-static inline int arch_within_stack_frames(const void * const stack,
+-					   const void * const stackend,
+-					   const void *obj, unsigned long len)
++static inline enum stack_type arch_within_stack_frames(const void * const stack,
++					const void * const stackend,
++					const void *obj, unsigned long len)
+ {
+ 	return 0;
+ }
+diff --git a/mm/usercopy.c b/mm/usercopy.c
+index 3c8da0a..3531ae7 100644
+--- a/mm/usercopy.c
++++ b/mm/usercopy.c
+@@ -16,15 +16,9 @@
+ 
+ #include <linux/mm.h>
+ #include <linux/slab.h>
++#include <linux/thread_info.h>
+ #include <asm/sections.h>
+ 
+-enum {
+-	BAD_STACK = -1,
+-	NOT_STACK = 0,
+-	GOOD_FRAME,
+-	GOOD_STACK,
+-};
+-
+ /*
+  * Checks if a given pointer and length is contained by the current
+  * stack frame (if possible).
 -- 
-Michal Hocko
-SUSE Labs
+2.7.4
