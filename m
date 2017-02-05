@@ -1,111 +1,49 @@
-References: <20170129184316.GA31184@athena>
- <2d6c7a51-3de3-1d95-37aa-c53c2caa9968@oracle.com>
- <CAGXu5j+Ynmp3Z29_Zw6BG33P2RVi0eRtOiZR0incfoZBWF=7hg@mail.gmail.com>
- <20170203031151.GA15897@athena>
- <a329157c-2fd3-3eba-1d97-19c456e90cde@oracle.com>
- <CAGXu5j+wOFT0rOghTZWvXCacxoT_DkqyifEgXncjPVB--xBmwg@mail.gmail.com>
-From: Vaishali Thakkar <vaishali.thakkar@oracle.com>
-Message-ID: <4aad105d-3d8a-3704-6e23-dd569745b78b@oracle.com>
-Date: Sun, 5 Feb 2017 22:53:05 +0530
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+wOFT0rOghTZWvXCacxoT_DkqyifEgXncjPVB--xBmwg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Getting started
-To: Kees Cook <keescook@chromium.org>
-Cc: Eddie Kovsky <ewk@edkovsky.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <20170205154046.GF6515@twins.programming.kicks-ass.net>
+References: <1486164412-7338-1-git-send-email-keescook@chromium.org>
+ <1486164412-7338-5-git-send-email-keescook@chromium.org> <20170205154046.GF6515@twins.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Sun, 5 Feb 2017 15:33:36 -0800
+Message-ID: <CAGXu5jLvpq6B80aN44JCOfHrov5LKX1_9r4aWb7LNM7pAW_SEQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures through CHECK_DATA_CORRUPTION
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Saturday 04 February 2017 05:43 AM, Kees Cook wrote:
-> On Thu, Feb 2, 2017 at 8:28 PM, Vaishali Thakkar
-> <vaishali.thakkar@oracle.com> wrote:
->> On Friday 03 February 2017 08:41 AM, Eddie Kovsky wrote:
->>>
->>> On 01/30/17, Kees Cook wrote:
->>>>
->>>> On Mon, Jan 30, 2017 at 5:41 AM, Vaishali Thakkar
->>>> <vaishali.thakkar@oracle.com> wrote:
->>>>>
->>>>> On Monday 30 January 2017 12:13 AM, Eddie Kovsky wrote:
->>>>>
->>>>>> I'm interested in helping out with this project.
->>>>>>
->>>>>> I have a few small patches in the kernel. I just finished the Eudyptula
->>>>>> Challenge and I'm looking for places where I can continue to
->>>>>> contribute.
->>>>
->>>>
->>>> Hi! Welcome to the list. :)
->>>>
->>>>>> I've been reading the list for several months now. I think I have a
->>>>>> general
->>>>>> understanding of the development process. Is there a specific TODO item
->>>>>> I
->>>>>> could start off with?
->>>>
->>>>
->>>> What areas of the kernel are you the most familiar with, and/or what
->>>> things are you interested in working on? That could help me tailor
->>>> some suggestions.
->>>>
->>>>> Here, is one TODO list:
->>>>>
->>>>> https://kernsec.org/wiki/index.php/Kernel_Self_Protection_Project
->>>>>
->>>>> Although I think few people are already working on some of these things.
->>>>> May be you can also check the archives of a mailing list.
->>>>
->>>>
->>>> The list is a bit terse (it's mostly been a brain dump as things come
->>>> up), but yeah, if you see something there and want to know more, just
->>>> ask. I'm happy to expand on any of them.
->>>>
->>>
->>> I noticed there's been some activity recently with HARDENED_USERCOPY.
->>> And I looked over how mm/usercopy.c was merged in from the grsecurity
->>> patch. I'm curious about this TODO item:
->>>
->>>      Identify and extend HARDENED_USERCOPY to other usercopy functions
->>>      (e.g. maybe csum_partial_copy_from_user, csum_and_copy_from_user,
->>>      csum_and_copy_to_user, csum_partial_copy_nocheck?)
->>>
->>> It doesn't look like anyone is working on this task right now. But it's
->>> not
->>> obvious (to me) what needs to happen to make progress with this. Would
->>> this
->>> be a good task to start off with?
+On Sun, Feb 5, 2017 at 7:40 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Fri, Feb 03, 2017 at 03:26:52PM -0800, Kees Cook wrote:
+>> This converts from WARN_ON() to CHECK_DATA_CORRUPTION() in the
+>> CONFIG_DEBUG_REFCOUNT case. Additionally moves refcount_t sanity check
+>> conditionals into regular function flow. Since CHECK_DATA_CORRUPTION()
+>> is marked __much_check, we override few cases where the failure has
+>> already been handled but we want to explicitly report it.
 >>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  include/linux/refcount.h | 35 ++++++++++++++++++++++-------------
+>>  lib/Kconfig.debug        |  2 ++
+>>  2 files changed, 24 insertions(+), 13 deletions(-)
 >>
->> Hi,
+>> diff --git a/include/linux/refcount.h b/include/linux/refcount.h
+>> index 5b89cad62237..ef32910c7dd8 100644
+>> --- a/include/linux/refcount.h
+>> +++ b/include/linux/refcount.h
+>> @@ -43,10 +43,10 @@
+>>  #include <linux/spinlock.h>
 >>
->> You may want to read this thread:
->> https://patchwork.kernel.org/patch/9409557/
->>
->> Kees, may be we should remove this item from the TODO list?
+>>  #if CONFIG_DEBUG_REFCOUNT
+>> -#define REFCOUNT_WARN(cond, str) WARN_ON(cond)
+>> +#define REFCOUNT_CHECK(cond, str) CHECK_DATA_CORRUPTION(cond, str)
 >
-> Hm, yeah, or rename it to "find any other APIs that look like
-> copy_to/from_user()". I think Mark already looked through these. Were
-> there any remaining?
+> OK, so that goes back to a full WARN() which will make the generated
+> code gigantic due to the whole printk() trainwreck :/
 
-AFAIK, no. May be get_user, put_user. But I guess it makes sense to
-change them after uaccess unification work.
+Hrm, perhaps we need three levels? WARN_ON, WARN, and BUG?
 
-Previously I found few API functions but they were eventually calling
-copy_from_user.
+-Kees
 
-> As for a thing to work about how about this:
-> - provide mechanism to check for ro_after_init memory areas, and
-> reject structures not marked ro_after_init in vmbus_register()
->
-> The idea here would be to provide a mechanism functions can call to
-> verify that their arguments are const or ro_after_init. I think it'd
-> look a lot like the stuff in kernel/extable.c like
-> kernel_text_address(), but it'd need to ask "is this variable in the
-> rodata section? (Which is complicated by dealing with module rodata
-> sections.)
->
-> Then vmbus_register() could be modified to require that its arguments
-> are const or ro_after_init.
->
-> -Kees
->
+-- 
+Kees Cook
+Pixel Security
