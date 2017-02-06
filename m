@@ -1,53 +1,78 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon,  6 Feb 2017 16:24:32 +0000
-Message-Id: <1486398275-3966-5-git-send-email-ard.biesheuvel@linaro.org>
+Date: Mon,  6 Feb 2017 16:24:33 +0000
+Message-Id: <1486398275-3966-6-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1486398275-3966-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1486398275-3966-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH 4/7] arm64: efi: ensure that the PE/COFF header pointer appears at offset 0x3c
+Subject: [kernel-hardening] [PATCH 5/7] arm64: efi: remove pointless dummy .reloc section
 To: linux-arm-kernel@lists.infradead.org, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com
 Cc: labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, leif.lindholm@linaro.org, pjones@redhat.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Use a .org directive to ensure that the PE/COFF header pointer appears
-at offset 0x3c. Since the EFI header is now emitted using a macro, this
-helps ensure that the invocation of the macro remains at the correct
-offset.
+The kernel's EFI PE/COFF header contains a dummy .reloc section, and
+an explanatory comment that claims that this is required for the EFI
+application loader to accept the Image as a relocatable image (i.e.,
+one that can be loaded at any offset and fixed up in place)
 
-At the same time, collapse two adjacent #ifdef CONFIG_EFI blocks into one,
-and replace .word with .long (which are equivalent, but the former is
-never used elsewhere)
+This was inherited from the x86 implementation, which has elaborate host
+tooling to mangle the PE/COFF header post-link time, and which populates
+the .reloc section with a single dummy base relocation. On ARM, no such
+tooling exists, and the .reloc section remains empty, and is never even
+exposed via the BaseRelocationTable directory entry, which is where the
+PE/COFF loader looks for it.
+
+The PE/COFF spec is unclear about relocatable images that do not require
+any fixups, but the EDK2 implementation, which is the de facto reference
+for PE/COFF in the UEFI space, clearly does not care, and explicitly
+mentions (in a comment) that relocatable images with no base relocations
+are perfectly fine, as long as they don't have the RELOCS_STRIPPED
+attribute set (which is not the case for our PE/COFF image)
+
+So simply remove the .reloc section altogether.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/kernel/efi-header.S | 14 ++++++++------
- 1 file changed, 8 insertions(+), 6 deletions(-)
+ arch/arm64/kernel/efi-header.S | 22 +-------------------
+ 1 file changed, 1 insertion(+), 21 deletions(-)
 
 diff --git a/arch/arm64/kernel/efi-header.S b/arch/arm64/kernel/efi-header.S
-index 8c8cd0a8192b..74a25c09a1b8 100644
+index 74a25c09a1b8..35b11654ecc5 100644
 --- a/arch/arm64/kernel/efi-header.S
 +++ b/arch/arm64/kernel/efi-header.S
-@@ -22,14 +22,16 @@
- 	.endm
- 
- 	.macro	__EFI_HEADER
--#ifdef CONFIG_EFI
--	.long	pe_header - _head		// Offset to the PE header.
-+#ifndef CONFIG_EFI
-+	.long	0				// reserved
- #else
--	.word	0				// reserved
--#endif
-+	/*
-+	 * PE/COFF requires the offset to the PE header
-+	 * to be stored at offset 0x3c into the file.
-+	 */
-+	.org	_head + 0x3c
-+	.long	pe_header - _head		// Offset to the PE header.
- 
--#ifdef CONFIG_EFI
--	.align 3
- pe_header:
- 	.ascii	"PE"
+@@ -37,7 +37,7 @@ pe_header:
  	.short 	0
+ coff_header:
+ 	.short	0xaa64					// AArch64
+-	.short	2					// nr_sections
++	.short	1					// nr_sections
+ 	.long	0 					// TimeDateStamp
+ 	.long	0					// PointerToSymbolTable
+ 	.long	1					// NumberOfSymbols
+@@ -96,26 +96,6 @@ extra_header_fields:
+ 
+ 	// Section table
+ section_table:
+-
+-	/*
+-	 * The EFI application loader requires a relocation section
+-	 * because EFI applications must be relocatable.  This is a
+-	 * dummy section as far as we are concerned.
+-	 */
+-	.ascii	".reloc"
+-	.byte	0
+-	.byte	0					// end of 0 padding of section name
+-	.long	0
+-	.long	0
+-	.long	0					// SizeOfRawData
+-	.long	0					// PointerToRawData
+-	.long	0					// PointerToRelocations
+-	.long	0					// PointerToLineNumbers
+-	.short	0					// NumberOfRelocations
+-	.short	0					// NumberOfLineNumbers
+-	.long	0x42100040				// Characteristics (section flags)
+-
+-
+ 	.ascii	".text"
+ 	.byte	0
+ 	.byte	0
 -- 
 2.7.4
