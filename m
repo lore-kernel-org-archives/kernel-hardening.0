@@ -1,64 +1,50 @@
-References: <1486144343-24998-1-git-send-email-labbott@redhat.com>
- <1486144343-24998-3-git-send-email-labbott@redhat.com>
- <CAGXu5j+BX_+ymWQztqtOQE-A8yFuR5sdL++46wOvi-iBGLEK-A@mail.gmail.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <e9b6bcba-8488-9502-aebf-f260396671d5@redhat.com>
-Date: Mon, 6 Feb 2017 10:49:44 -0800
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+BX_+ymWQztqtOQE-A8yFuR5sdL++46wOvi-iBGLEK-A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCHv2 2/2] arch: Rename CONFIG_DEBUG_RODATA and
- CONFIG_DEBUG_MODULE_RONX
-To: Kees Cook <keescook@chromium.org>
-Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Robin Murphy <robin.murphy@arm.com>
+Sender: keescook@google.com
+In-Reply-To: <20170206160945.GB4190@leverpostej>
+References: <CAEXv5_ivEPDJSaJwmx+oLiUYRZsAa9ZPWH6oWZy-Rkoa3ZHRZg@mail.gmail.com>
+ <20170206151341.GA13383@kroah.com> <CAEXv5_g4zLSJCrfPWUe85UdyOo1WDGdw2LLXOkcjbf5kf4VnTw@mail.gmail.com>
+ <20170206153047.GA14434@kroah.com> <CAEXv5_iD0k-mxqOgT9W_mf1_Xo46qePFXvTX2wd32xG0gPzSUw@mail.gmail.com>
+ <20170206160945.GB4190@leverpostej>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 6 Feb 2017 12:08:32 -0800
+Message-ID: <CAGXu5jKA-J0WcpMGbxVBC9nC5JK7oCRopQs7rYftv5f=BzQriQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: HARDENED_ATOMIC documentation
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: David Windsor <dwindsor@gmail.com>, Greg KH <gregkh@linuxfoundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/03/2017 12:03 PM, Kees Cook wrote:
-> On Fri, Feb 3, 2017 at 9:52 AM, Laura Abbott <labbott@redhat.com> wrote:
+On Mon, Feb 6, 2017 at 8:09 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Mon, Feb 06, 2017 at 11:02:56AM -0500, David Windsor wrote:
+>> > Why not put the documentation right into the kernel tree?  That way it
+>> > is always up to date with the code (well, hopefully), it will get built
+>> > and hosted all over the internet at different sites (including
+>> > kernel.org) and is much easier to search and people can modify easier.
+>> >
 >>
->> Both of these options are poorly named. The features they provide are
->> necessary for system security and should not be considered debug only.
->> Change the name to something that accurately describes what these
->> options do.
-> 
-> It may help to explicitly call out the name change from/to in the
-> commit message.
-> 
->>
->> Signed-off-by: Laura Abbott <labbott@redhat.com>
->> ---
->> [...]
->> diff --git a/arch/arm/configs/aspeed_g4_defconfig b/arch/arm/configs/aspeed_g4_defconfig
->> index ca39c04..beea2cc 100644
->> --- a/arch/arm/configs/aspeed_g4_defconfig
->> +++ b/arch/arm/configs/aspeed_g4_defconfig
->> @@ -25,7 +25,6 @@ CONFIG_MODULE_UNLOAD=y
->>  # CONFIG_ARCH_MULTI_V7 is not set
->>  CONFIG_ARCH_ASPEED=y
->>  CONFIG_MACH_ASPEED_G4=y
->> -CONFIG_DEBUG_RODATA=y
->>  CONFIG_AEABI=y
->>  CONFIG_UACCESS_WITH_MEMCPY=y
->>  CONFIG_SECCOMP=y
-> 
-> Are these defconfig cases correct (dropping DEBUG_RODATA without
-> adding STRICT_KERNEL_RWX)?
+>> Fair enough, I'll re-submit as a patch against something in
+>> Documentation/.  It doesn't appear that there's currently a good
+>> landing spot for this, as Documentation/security/self-protection.txt
+>> already looks fairly crowded.  Individual KSPP sub-project details
+>> would impossibly complicate this file.  Maybe a kspp/ or
+>> self-protection/ sub-directory with files for individual KSPP
+>> features?
 >
+> It would be better to mirror our documentation of atomics; i.e. place
+> this in Documentation/core-api/refcount_ops.rst.
 
-Yes, I think these need to be updated to the new config option since
-these are not CPUv7
+Yeah, this is likely the best place. (And since it's not strictly
+"hardened atomic" any more: it's just "safe refcounting".)
 
+> Developers don't care if this is part of KSPP, they care about the API.
 
-> Who should carry this series, btw?
-> 
+Right. I think changes could be made to
+Documentation/security/self-protection.txt to point to the
+refcount_ops.rst file, though, since security folks would like
+pointers from that doc to the refcount API.
 
-An excellent question :)
+-Kees
 
-Would you be willing to carry it with Acks?
-
-> -Kees
-> 
-
-Thanks,
-Laura
+-- 
+Kees Cook
+Pixel Security
