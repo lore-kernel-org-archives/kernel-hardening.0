@@ -1,156 +1,138 @@
-Date: Mon, 6 Feb 2017 17:13:12 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170206171312.GG4190@leverpostej>
-References: <1486398275-3966-1-git-send-email-ard.biesheuvel@linaro.org>
- <1486398275-3966-7-git-send-email-ard.biesheuvel@linaro.org>
+References: <1486144343-24998-1-git-send-email-labbott@redhat.com>
+ <1486144343-24998-2-git-send-email-labbott@redhat.com>
+ <CAGXu5jK6_y=dWHUDBto7ykN_sSOQ6Gx+sZs_gQ1Hoh5DjP-fTw@mail.gmail.com>
+ <20170203202919.GE27312@n2100.armlinux.org.uk>
+ <CAGXu5j+HOTHRrFJFMsMaAvqcTAUoEBuphzrYAr7VAjJQU9_RYA@mail.gmail.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <f88765d3-4c45-542e-892b-33a6c3c3c4d2@redhat.com>
+Date: Mon, 6 Feb 2017 10:47:45 -0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1486398275-3966-7-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH 6/7] arm64: efi: replace open coded constants with
- symbolic ones
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, will.deacon@arm.com, catalin.marinas@arm.com, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, leif.lindholm@linaro.org, pjones@redhat.com
+In-Reply-To: <CAGXu5j+HOTHRrFJFMsMaAvqcTAUoEBuphzrYAr7VAjJQU9_RYA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [PATCHv2 1/2] arch: Move CONFIG_DEBUG_RODATA and
+ CONFIG_SET_MODULE_RONX to be common
+To: Kees Cook <keescook@chromium.org>, Russell King - ARM Linux <linux@armlinux.org.uk>
+Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 06, 2017 at 04:24:34PM +0000, Ard Biesheuvel wrote:
-> Replace open coded constants with symbolic ones throughout the
-> Image and the EFI headers. Note that in two cases, this removes
-> a value that the PE/COFF spec does not allow:
-> - NumberOfSymbols in the PE header should be 0
-> - PE/COFF executable sections (as opposed to sections in object files)
->   should not use the section alignment flags
+On 02/03/2017 01:08 PM, Kees Cook wrote:
+> On Fri, Feb 3, 2017 at 12:29 PM, Russell King - ARM Linux
+> <linux@armlinux.org.uk> wrote:
+>> On Fri, Feb 03, 2017 at 11:45:56AM -0800, Kees Cook wrote:
+>>> On Fri, Feb 3, 2017 at 9:52 AM, Laura Abbott <labbott@redhat.com> wrote:
+>>>> diff --git a/arch/Kconfig b/arch/Kconfig
+>>>> index 99839c2..22ee01e 100644
+>>>> --- a/arch/Kconfig
+>>>> +++ b/arch/Kconfig
+>>>> @@ -781,4 +781,32 @@ config VMAP_STACK
+>>>>           the stack to map directly to the KASAN shadow map using a formula
+>>>>           that is incorrect if the stack is in vmalloc space.
+>>>>
+>>>> +config ARCH_NO_STRICT_RWX_DEFAULTS
+>>>> +       def_bool n
+>>>> +
+>>>> +config ARCH_HAS_STRICT_KERNEL_RWX
+>>>> +       def_bool n
+>>>> +
+>>>> +config DEBUG_RODATA
+>>>> +       def_bool y if !ARCH_NO_STRICT_RWX_DEFAULTS
+>>>> +       prompt "Make kernel text and rodata read-only" if ARCH_NO_STRICT_RWX_DEFAULTS
+>>>
+>>> Ah! Yes, perfect. I totally forgot about using conditional "prompt"
+>>> lines. Nice!
+>>
+>> It's no different from the more usual:
+>>
+>>         bool "Make kernel text and rodata read-only" if ARCH_NO_STRICT_RWX_DEFAULTS
+>>         default y if !ARCH_NO_STRICT_RWX_DEFAULTS
+>>         depends on ARCH_HAS_STRICT_KERNEL_RWX
+>>
+>> But... I really don't like this - way too many negations and negatives
+>> which make it difficult to figure out what's going on here.
+>>
+>> The situation we have today is:
+>>
+>> -config DEBUG_RODATA
+>> -       bool "Make kernel text and rodata read-only"
+>> -       depends on MMU && !XIP_KERNEL
+>> -       default y if CPU_V7
+>>
+>> which is "allow the user to select DEBUG_RODATA if building a MMU non-XIP
+>> kernel", suggesting that the user turns it on for ARMv7 CPUs.
+>>
+>> That changes with this and the above:
+>>
+>> +       select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
+>> +       select ARCH_HAS_STRICT_MODULE_RWX if MMU
+>> +       select ARCH_NO_STRICT_RWX_DEFAULTS if !CPU_V7
+>>
+>> This means that ARCH_HAS_STRICT_KERNEL_RWX is set for a MMU non-XIP
+>> kernel, which carries the same pre-condition for DEBUG_RODATA - no
+>> problem there.
+>>
+>> However, ARCH_NO_STRICT_RWX_DEFAULTS is set for non-ARMv7 CPUs, which
+>> means the "Make kernel text and rodata read-only" prompt _is_ provided
+>> for those.  However, for all ARMv7 systems, we go from "suggesting that
+>> the user enables the option" to "you don't have a choice, you get this
+>> whether you want it or not."
+>>
+>> I'd prefer to keep it off for my development systems, where I don't
+>> care about kernel security.  If we don't wish to do that as a general
+>> rule, can we make it dependent on EMBEDDED?
+>>
+>> Given that on ARM it can add up to 4MB to the kernel image - there
+>> _will_ be about 1MB before the .text section, the padding on between
+>> __modver and __ex_table which for me is around 626k, the padding
+>> between .notes and the init sections start with .vectors (the space
+>> between __ex_table and end of .notes is only 4124, which gets padded
+>> up to 1MB) and lastly the padding between the .init section and the
+>> data section (for me around 593k).  This all adds up to an increase
+>> in kernel image size of 3.2MB on 14.2MB - an increase of 22%.
+>>
+>> So no, I'm really not happy with that.
+> 
+> Ah yeah, good point. We have three cases: unsupported, mandatory,
+> optional, but we have the case of setting the default for the optional
+> case. Maybe something like this?
+> 
+> config STRICT_KERNEL_RWX
+>   bool "Make kernel text and rodata read-only" if ARCH_OPTIONAL_KERNEL_RWX
+>   depends on ARCH_HAS_STRICT_KERNEL_RWX
+>   default ARCH_OPTIONAL_KERNEL_RWX_DEFAULT
+> 
+> unsupported:
+> !ARCH_HAS_STRICT_KERNEL_RWX
+> 
+> mandatory:
+> ARCH_HAS_STRICT_KERNEL_RWX
+> !ARCH_OPTIONAL_KERNEL_RWX
+> 
+> optional:
+> ARCH_HAS_STRICT_KERNEL_RWX
+> ARCH_OPTIONAL_KERNEL_RWX
+> with default controlled by ARCH_OPTIONAL_KERNEL_RWX_DEFAULT
+> 
+> Then arm is:
+>   select ARCH_HAS_STRICT_KERNEL_RWX if MMU && !XIP_KERNEL
+>   select ARCH_HAS_STRICT_MODULE_RWX if MMU
+>   select ARCH_OPTIONAL_KERNEL_RWX if ARCH_HAS_STRICT_KERNEL_RWX
+>   select ARCH_OPTIONAL_KERNEL_RWX_DEFAULT if CPU_V7
+> 
+> x86 and arm64 are:
+>   select ARCH_HAS_STRICT_KERNEL_RWX
+>   select ARCH_HAS_STRICT_MODULE_RWX
+> 
+> ?
+> 
+> -Kees
+> 
 
-I take it that EDK2 doesn't care about either of these, but perhaps we
-should fix those in a preparatory patch, at the start of the series, to
-separate fixes from rework.
-
-That also makes it easier to binary-diff an Image after this patch, to
-ensure that the mnemonicisation is correct. ;)
-
-Otherwise, this generally looks fine.
+Yes, that looks good. I wanted it to be mandatory to avoid the
+mindset of "optional means we don't need it" but I see there
+are some cases where it's better to turn it off. I'll see if
+I can emphasize this properly in the help text ("Say Y here
+unless you love security exploits running in production")
 
 Thanks,
-Mark.
-
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/kernel/efi-header.S | 37 ++++++++++----------
->  arch/arm64/kernel/head.S       |  5 +--
->  2 files changed, 20 insertions(+), 22 deletions(-)
-> 
-> diff --git a/arch/arm64/kernel/efi-header.S b/arch/arm64/kernel/efi-header.S
-> index 35b11654ecc5..c87c23336c86 100644
-> --- a/arch/arm64/kernel/efi-header.S
-> +++ b/arch/arm64/kernel/efi-header.S
-> @@ -7,6 +7,8 @@
->   * published by the Free Software Foundation.
->   */
->  
-> +#include <linux/pe.h>
-> +
->  	.macro	__jmp, target
->  #ifdef CONFIG_EFI
->  	/*
-> @@ -33,21 +35,20 @@
->  	.long	pe_header - _head		// Offset to the PE header.
->  
->  pe_header:
-> -	.ascii	"PE"
-> -	.short 	0
-> +	.long	PE_MAGIC
->  coff_header:
-> -	.short	0xaa64					// AArch64
-> -	.short	1					// nr_sections
-> +	.short	IMAGE_FILE_MACHINE_ARM64		// Machine
-> +	.short	1					// NumberOfSections
->  	.long	0 					// TimeDateStamp
->  	.long	0					// PointerToSymbolTable
-> -	.long	1					// NumberOfSymbols
-> +	.long	0					// NumberOfSymbols
->  	.short	section_table - optional_header		// SizeOfOptionalHeader
-> -	.short	0x206					// Characteristics.
-> -							// IMAGE_FILE_DEBUG_STRIPPED |
-> -							// IMAGE_FILE_EXECUTABLE_IMAGE |
-> -							// IMAGE_FILE_LINE_NUMS_STRIPPED
-> +	.short	IMAGE_FILE_DEBUG_STRIPPED | \
-> +		IMAGE_FILE_EXECUTABLE_IMAGE | \
-> +		IMAGE_FILE_LINE_NUMS_STRIPPED		// Characteristics
-> +
->  optional_header:
-> -	.short	0x20b					// PE32+ format
-> +	.short	PE_OPT_MAGIC_PE32PLUS			// PE32+ format
->  	.byte	0x02					// MajorLinkerVersion
->  	.byte	0x14					// MinorLinkerVersion
->  	.long	_end - efi_header_end			// SizeOfCode
-> @@ -58,7 +59,7 @@ optional_header:
->  
->  extra_header_fields:
->  	.quad	0					// ImageBase
-> -	.long	0x1000					// SectionAlignment
-> +	.long	SZ_4K					// SectionAlignment
->  	.long	PECOFF_FILE_ALIGNMENT			// FileAlignment
->  	.short	0					// MajorOperatingSystemVersion
->  	.short	0					// MinorOperatingSystemVersion
-> @@ -73,7 +74,7 @@ extra_header_fields:
->  	// Everything before the kernel image is considered part of the header
->  	.long	efi_header_end - _head			// SizeOfHeaders
->  	.long	0					// CheckSum
-> -	.short	0xa					// Subsystem (EFI application)
-> +	.short	IMAGE_SUBSYSTEM_EFI_APPLICATION		// Subsystem
->  	.short	0					// DllCharacteristics
->  	.quad	0					// SizeOfStackReserve
->  	.quad	0					// SizeOfStackCommit
-> @@ -96,10 +97,7 @@ extra_header_fields:
->  
->  	// Section table
->  section_table:
-> -	.ascii	".text"
-> -	.byte	0
-> -	.byte	0
-> -	.byte	0        				// end of 0 padding of section name
-> +	.ascii	".text\0\0\0"
->  	.long	_end - efi_header_end			// VirtualSize
->  	.long	efi_header_end - _head			// VirtualAddress
->  	.long	_edata - efi_header_end			// SizeOfRawData
-> @@ -109,7 +107,10 @@ section_table:
->  	.long	0					// PointerToLineNumbers
->  	.short	0					// NumberOfRelocations
->  	.short	0					// NumberOfLineNumbers
-> -	.long	0xe0500020				// Characteristics
-> +	.long	IMAGE_SCN_CNT_CODE | \
-> +		IMAGE_SCN_MEM_EXECUTE | \
-> +		IMAGE_SCN_MEM_READ | \
-> +		IMAGE_SCN_MEM_WRITE			// Characteristics
->  
->  #ifdef CONFIG_DEBUG_EFI
->  	/*
-> @@ -131,7 +132,7 @@ efi_debug_table:
->  	.long	0					// TimeDateStamp
->  	.short	0					// MajorVersion
->  	.short	0					// MinorVersion
-> -	.long	2					// Type == EFI_IMAGE_DEBUG_TYPE_CODEVIEW
-> +	.long	IMAGE_DEBUG_TYPE_CODEVIEW		// Type
->  	.long	efi_debug_entry_size			// SizeOfData
->  	.long	0					// RVA
->  	.long	efi_debug_entry - _head			// FileOffset
-> diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
-> index aca9b184035a..055735ba3600 100644
-> --- a/arch/arm64/kernel/head.S
-> +++ b/arch/arm64/kernel/head.S
-> @@ -81,10 +81,7 @@ _head:
->  	.quad	0				// reserved
->  	.quad	0				// reserved
->  	.quad	0				// reserved
-> -	.byte	0x41				// Magic number, "ARM\x64"
-> -	.byte	0x52
-> -	.byte	0x4d
-> -	.byte	0x64
-> +	.ascii	"ARM\x64"			// Magic number
->  
->  	__EFI_HEADER
->  
-> -- 
-> 2.7.4
-> 
+Laura
