@@ -1,39 +1,41 @@
-Date: Mon, 6 Feb 2017 16:09:45 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170206160945.GB4190@leverpostej>
-References: <CAEXv5_ivEPDJSaJwmx+oLiUYRZsAa9ZPWH6oWZy-Rkoa3ZHRZg@mail.gmail.com>
- <20170206151341.GA13383@kroah.com>
- <CAEXv5_g4zLSJCrfPWUe85UdyOo1WDGdw2LLXOkcjbf5kf4VnTw@mail.gmail.com>
- <20170206153047.GA14434@kroah.com>
- <CAEXv5_iD0k-mxqOgT9W_mf1_Xo46qePFXvTX2wd32xG0gPzSUw@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAEXv5_iD0k-mxqOgT9W_mf1_Xo46qePFXvTX2wd32xG0gPzSUw@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: HARDENED_ATOMIC documentation
-To: David Windsor <dwindsor@gmail.com>
-Cc: Greg KH <gregkh@linuxfoundation.org>, kernel-hardening@lists.openwall.com, "Reshetova, Elena" <elena.reshetova@intel.com>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, Peter Zijlstra <peterz@infradead.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Mon,  6 Feb 2017 16:24:28 +0000
+Message-Id: <1486398275-3966-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH 0/7] arm64: efi: PE/COFF cleanup/hardening
+To: linux-arm-kernel@lists.infradead.org, will.deacon@arm.com, catalin.marinas@arm.com, mark.rutland@arm.com
+Cc: labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, leif.lindholm@linaro.org, pjones@redhat.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 06, 2017 at 11:02:56AM -0500, David Windsor wrote:
-> > Why not put the documentation right into the kernel tree?  That way it
-> > is always up to date with the code (well, hopefully), it will get built
-> > and hosted all over the internet at different sites (including
-> > kernel.org) and is much easier to search and people can modify easier.
-> >
-> 
-> Fair enough, I'll re-submit as a patch against something in
-> Documentation/.  It doesn't appear that there's currently a good
-> landing spot for this, as Documentation/security/self-protection.txt
-> already looks fairly crowded.  Individual KSPP sub-project details
-> would impossibly complicate this file.  Maybe a kspp/ or
-> self-protection/ sub-directory with files for individual KSPP
-> features?
+This cleans up the PE/COFF EFI header, by taking some of Mark's patches
+and use them to replace open coded constants with symbolic ones, and
+remove incorrect values or unused sections.
 
-It would be better to mirror our documentation of atomics; i.e. place
-this in Documentation/core-api/refcount_ops.rst.
+Finally, it updates the section layout so that the kernel Image can be
+mapped in a way that does not require setting RWX permissions anywhere.
+Note that this is currently not a huge win, given that most current UEFI
+implementations map all of RAM RWX by default, but this is finally gaining
+some attention, and work is underway to make the PE/COFF loader in EDK2
+adhere to the section permissions, which would also allow the RAM mapping
+to default to non-executable. Work in progress nonetheless...
 
-Developers don't care if this is part of KSPP, they care about the API.
+Ard Biesheuvel (5):
+  arm64: efi: move EFI header and related data to a separate .S file
+  arm64: efi: ensure that the PE/COFF header pointer appears at offset
+    0x3c
+  arm64: efi: remove pointless dummy .reloc section
+  arm64: efi: replace open coded constants with symbolic ones
+  arm64: efi: split Image code and data into separate PE/COFF sections
 
-Thanks,
-Mark.
+Mark Rutland (2):
+  include: pe.h: allow for use in assembly
+  include: pe.h: add some missing definitions
+
+ arch/arm64/kernel/efi-header.S  | 178 ++++++++++++++++++++
+ arch/arm64/kernel/head.S        | 176 +------------------
+ arch/arm64/kernel/vmlinux.lds.S |   5 +
+ include/linux/pe.h              | 177 +++++++++----------
+ 4 files changed, 280 insertions(+), 256 deletions(-)
+ create mode 100644 arch/arm64/kernel/efi-header.S
+
+-- 
+2.7.4
