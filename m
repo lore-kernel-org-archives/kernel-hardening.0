@@ -1,57 +1,89 @@
-Date: Mon, 6 Feb 2017 09:12:37 +0100
+Date: Mon, 6 Feb 2017 09:57:39 +0100
 From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170206081237.GG6515@twins.programming.kicks-ass.net>
-References: <20170203132558.474916683@infradead.org>
- <20170203132737.566324209@infradead.org>
- <20170206042428.GA17028@tardis.cn.ibm.com>
+Message-ID: <20170206085739.GH6515@twins.programming.kicks-ass.net>
+References: <1486164412-7338-1-git-send-email-keescook@chromium.org>
+ <1486164412-7338-5-git-send-email-keescook@chromium.org>
+ <20170205154046.GF6515@twins.programming.kicks-ass.net>
+ <CAGXu5jLvpq6B80aN44JCOfHrov5LKX1_9r4aWb7LNM7pAW_SEQ@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170206042428.GA17028@tardis.cn.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH 4/5] atomic: Introduce atomic_try_cmpxchg()
-To: Boqun Feng <boqun.feng@gmail.com>
-Cc: elena.reshetova@intel.com, gregkh@linuxfoundation.org, keescook@chromium.org, arnd@arndb.de, tglx@linutronix.de, mingo@kernel.org, h.peter.anvin@intel.com, will.deacon@arm.com, dwindsor@gmail.com, dhowells@redhat.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <CAGXu5jLvpq6B80aN44JCOfHrov5LKX1_9r4aWb7LNM7pAW_SEQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures through
+ CHECK_DATA_CORRUPTION
+To: Kees Cook <keescook@chromium.org>
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 06, 2017 at 12:24:28PM +0800, Boqun Feng wrote:
-> On Fri, Feb 03, 2017 at 02:26:02PM +0100, Peter Zijlstra wrote:
+On Sun, Feb 05, 2017 at 03:33:36PM -0800, Kees Cook wrote:
+> On Sun, Feb 5, 2017 at 7:40 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> > On Fri, Feb 03, 2017 at 03:26:52PM -0800, Kees Cook wrote:
+> >> This converts from WARN_ON() to CHECK_DATA_CORRUPTION() in the
+> >> CONFIG_DEBUG_REFCOUNT case. Additionally moves refcount_t sanity check
+> >> conditionals into regular function flow. Since CHECK_DATA_CORRUPTION()
+> >> is marked __much_check, we override few cases where the failure has
+> >> already been handled but we want to explicitly report it.
+> >>
+> >> Signed-off-by: Kees Cook <keescook@chromium.org>
+> >> ---
+> >>  include/linux/refcount.h | 35 ++++++++++++++++++++++-------------
+> >>  lib/Kconfig.debug        |  2 ++
+> >>  2 files changed, 24 insertions(+), 13 deletions(-)
+> >>
+> >> diff --git a/include/linux/refcount.h b/include/linux/refcount.h
+> >> index 5b89cad62237..ef32910c7dd8 100644
+> >> --- a/include/linux/refcount.h
+> >> +++ b/include/linux/refcount.h
+> >> @@ -43,10 +43,10 @@
+> >>  #include <linux/spinlock.h>
+> >>
+> >>  #if CONFIG_DEBUG_REFCOUNT
+> >> -#define REFCOUNT_WARN(cond, str) WARN_ON(cond)
+> >> +#define REFCOUNT_CHECK(cond, str) CHECK_DATA_CORRUPTION(cond, str)
+> >
+> > OK, so that goes back to a full WARN() which will make the generated
+> > code gigantic due to the whole printk() trainwreck :/
+> 
+> Hrm, perhaps we need three levels? WARN_ON, WARN, and BUG?
 
-> > 
-> > 	for (;;) {
-> > 		new = val $op $imm;
-> > 		if (try_cmpxchg(ptr, &val, new))
-> > 			break;
-> > 	}
-> > 
-> > while also generating better code (GCC6 and onwards).
-> > 
-> 
-> But switching to try_cmpxchg() will make @val a memory location, which
-> could not be put in a register. And this will generate unnecessary
-> memory accesses on archs having enough registers(PPC, e.g.).
+Did consider that, didn't really know if that made sense.
 
-GCC was perfectly capable of making @val a register in the code I was
-looking at.
+Like I wrote, ideally we'd end up using something like the x86 exception
+table with a custom handler. Just no idea how to pull that off without
+doing a full blown arch specific implementation, so I didn't go there
+quite yet.
 
-> > +#ifndef atomic_try_cmpxchg
-> > +
-> > +#define __atomic_try_cmpxchg(type, _p, _po, _n)				\
-> > +({									\
-> > +	typeof(_po) __po = (_po);					\
-> > +	typeof(*(_po)) __o = *__po;					\
-> > +	bool success = (atomic_cmpxchg##type((_p), __o, (_n)) == __o);	\
-> > +	*__po = __o;							\
-> 
-> Besides, is this part correct? atomic_cmpxchg_*() wouldn't change the
-> value of __o, so *__po wouldn't be changed.. IOW, in case of failure,
-> *ptr wouldn't be updated to a new value.
-> 
-> Maybe this should be:
-> 
-> 	bool success;
-> 	*__po = atomic_cmpxchg##type((_p), __o, (_n));
-> 	sucess = (*__po == _o);
-> 
-> , right?
 
-Yes, botched that. Don't think I even compiled it to be honest :/
+That way refcount_inc() would end up being inlined to something like:
+
+        mov    0x148(%rdi),%eax
+        jmp    2f
+  1:    lock cmpxchg %edx,0x148(%rdi)
+        je     4f
+  2:    lea    -0x1(%rax),%ecx
+        lea    0x1(%rax),%edx
+        cmp    $0xfffffffd,%ecx
+        jbe    1b
+  3:    ud2
+  4:
+
+	_ASM_EXTABLE_HANDLE(3b, 4b, ex_handler_refcount_inc)
+
+
+where:
+
+bool ex_handler_refcount_inc(const struct exception_table_entry *fixup,
+			     struct pt_regs *regs, int trapnr)
+{
+	regs->ip = ex_fixup_addr(fixup);
+
+	if (!regs->ax)
+		WARN(1, "refcount_t: increment on 0; use-after-free.\n");
+	else
+		WARN(1, "refcount_t: saturated; leaking memory.\n");
+
+	return true;
+}
+
+and the handler is shared between all instances and can be as big and
+fancy as we'd like.
