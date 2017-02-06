@@ -1,108 +1,145 @@
 MIME-Version: 1.0
-In-Reply-To: <CALCETrU=KY7QgdLWm43LA=_jpu_oXJgGLqv0yUVr4vR7ROYh0Q@mail.gmail.com>
-References: <20170126165940.30799-1-thgarnie@google.com> <20170126165940.30799-3-thgarnie@google.com>
- <CALCETrU=KY7QgdLWm43LA=_jpu_oXJgGLqv0yUVr4vR7ROYh0Q@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Mon, 6 Feb 2017 14:10:36 -0800
-Message-ID: <CAJcbSZHiL3OmswxAJ9gVkC9a4O01qdiy7yjsb5dvofhOn8s+8Q@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1486296850-16045-3-git-send-email-kpark3469@gmail.com>
+References: <1486296850-16045-1-git-send-email-kpark3469@gmail.com>
+ <1486296850-16045-2-git-send-email-kpark3469@gmail.com> <1486296850-16045-3-git-send-email-kpark3469@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 6 Feb 2017 14:22:15 -0800
+Message-ID: <CAGXu5jLqsPR35kiH2r+DNWpiDayaN21FL6stsQu_kBZJEYcg+w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v2 3/3] x86: Make the GDT remapping read-only on 64 bit
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Arjan van de Ven <arjan@linux.intel.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Borislav Petkov <bp@suse.de>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Christian Borntraeger <borntraeger@de.ibm.com>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Adam Buchbinder <adam.buchbinder@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Chen Yucong <slaoub@gmail.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, David Vrabel <david.vrabel@citrix.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Prarit Bhargava <prarit@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v3 3/3] lkdtm: add tests for dynamic array in local stack
+To: Keun-O Park <kpark3469@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 1, 2017 at 9:14 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> On Thu, Jan 26, 2017 at 8:59 AM, Thomas Garnier <thgarnie@google.com> wro=
-te:
->> This patch makes the GDT remapped pages read-only to prevent corruption.
->> This change is done only on 64 bit.
->>
->> The native_load_tr_desc function was adapted to correctly handle a
->> read-only GDT. The LTR instruction always writes to the GDT TSS entry.
->> This generates a page fault if the GDT is read-only. This change checks
->> if the current GDT is a remap and swap GDTs as needed. This function was
->> tested by booting multiple machines and checking hibernation works
->> properly.
->>
->> KVM SVM and VMX were adapted to use the writeable GDT. On VMX, the
->> per-cpu variable was removed for functions to fetch the original GDT.
->> Instead of reloading the previous GDT, VMX will reload the fixmap GDT as
->> expected. For testing, VMs were started and restored on multiple
->> configurations.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->> Based on next-20170125
->> ---
->>  arch/x86/include/asm/desc.h      | 46 +++++++++++++++++++++++++++++++++=
-++-----
->>  arch/x86/include/asm/processor.h |  1 +
->>  arch/x86/kernel/cpu/common.c     | 28 ++++++++++++++++++------
->>  arch/x86/kvm/svm.c               |  4 +---
->>  arch/x86/kvm/vmx.c               | 15 +++++--------
->>  5 files changed, 70 insertions(+), 24 deletions(-)
->>
->> diff --git a/arch/x86/include/asm/desc.h b/arch/x86/include/asm/desc.h
->> index 4cc176f57b78..ca7b2224fcb4 100644
->> --- a/arch/x86/include/asm/desc.h
->> +++ b/arch/x86/include/asm/desc.h
->> @@ -52,6 +52,12 @@ static inline struct desc_struct *get_cpu_direct_gdt(=
-unsigned int cpu)
->>         return per_cpu(gdt_page, cpu).gdt;
->>  }
->>
->> +/* Provide the current original GDT */
->> +static inline struct desc_struct *get_current_direct_gdt(void)
->> +{
->> +       return this_cpu_ptr(&gdt_page)->gdt;
->> +}
+On Sun, Feb 5, 2017 at 4:14 AM,  <kpark3469@gmail.com> wrote:
+> From: Sahara <keun-o.park@darkmatter.ae>
 >
-> I'm assuming that the reason that this isn't part of patch 2 and used
-> instead of the version that takes cpu as a parameter is that TLS
-> doesn't work until the GDT is set up.  If so, perhaps that's worthy of
-> a comment in patch 2.
+> This seems an unusual case in kernel. But, when an array is
+> dynamically created, this variable can be placed ahead of
+> current frame pointer. This patch tests this dynamic array case.
 >
-> But give this_cpu_read(gdt_page.gdt) a try, please.
+> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+> Reported-by: AKASHI Takahiro <takahiro.akashi@linaro.org>
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> ---
+>  drivers/misc/lkdtm_usercopy.c | 28 +++++++++++++++++++++++++++-
+>  1 file changed, 27 insertions(+), 1 deletion(-)
+>
+> diff --git a/drivers/misc/lkdtm_usercopy.c b/drivers/misc/lkdtm_usercopy.c
+> index 1dd6114..898a323 100644
+> --- a/drivers/misc/lkdtm_usercopy.c
+> +++ b/drivers/misc/lkdtm_usercopy.c
+> @@ -7,6 +7,7 @@
+>  #include <linux/vmalloc.h>
+>  #include <linux/mman.h>
+>  #include <linux/uaccess.h>
+> +#include <linux/random.h>
+>  #include <asm/cacheflush.h>
+>
+>  /*
+> @@ -33,7 +34,14 @@ static noinline unsigned char *trick_compiler(unsigned char *stack)
+>
+>  static noinline unsigned char *do_usercopy_stack_callee(int value)
+>  {
+> -       unsigned char buf[32];
+> +       /*
+> +        * buf[128] is big enough to put it in the position ahead of
+> +        * check_stack_object()'s frame pointer. Because dynamically allocated
+> +        * array can be placed between check_stack_object()'s frame pointer and
+> +        * do_usercopy_stack()'s frame pointer, we need an object which exists
+> +        * ahead of check_stack_object()'s frame pointer.
+> +        */
+> +       unsigned char buf[128];
+
+I don't understand this change. Why does 32 -> 128 do anything when
+it's the address of "buf" that is returned (i.e. the beginning of the
+stack buffer).
+
+When check_stack_object() walks the stack, I would expect to see:
+
+[fp][lr][args][local vars][dynamic stack][fp][lr][args][local
+vars][dynamic stack]...
+
+Why is a special case needed?
+
+e.g. x86 appears to pass this test correctly already. Maybe I'm not
+understanding something about the arm64 stack layout?
+
+>         int i;
+>
+>         /* Exercise stack to avoid everything living in registers. */
+> @@ -49,6 +57,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+>         unsigned long user_addr;
+>         unsigned char good_stack[32];
+>         unsigned char *bad_stack;
+> +       unsigned int array_size;
+>         int i;
+>
+>         /* Exercise stack to avoid everything living in registers. */
+> @@ -72,7 +81,9 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+>                 return;
+>         }
+>
+> +       array_size = get_random_int() & 0x0f;
+
+This can likely just be "array_size = unconst + 8;"
+
+>         if (to_user) {
+> +               unsigned char array[array_size];
+
+This needs a blank line after it.
+
+>                 pr_info("attempting good copy_to_user of local stack\n");
+>                 if (copy_to_user((void __user *)user_addr, good_stack,
+>                                  unconst + sizeof(good_stack))) {
+> @@ -80,6 +91,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+>                         goto free_user;
+>                 }
+>
+> +               pr_info("attempting good copy_to_user of callee stack\n");
+> +               if (copy_to_user((void __user *)user_addr, array,
+> +                                unconst + sizeof(array))) {
+> +                       pr_warn("copy_to_user failed unexpectedly?!\n");
+> +                       goto free_user;
+> +               }
+> +
+>                 pr_info("attempting bad copy_to_user of distant stack\n");
+>                 if (copy_to_user((void __user *)user_addr, bad_stack,
+>                                  unconst + sizeof(good_stack))) {
+> @@ -87,6 +105,7 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+>                         goto free_user;
+>                 }
+>         } else {
+> +               unsigned char array[array_size];
+
+Same needs-blank-line nit.
+
+>                 /*
+>                  * There isn't a safe way to not be protected by usercopy
+>                  * if we're going to write to another thread's stack.
+> @@ -101,6 +120,13 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
+>                         goto free_user;
+>                 }
+>
+> +               pr_info("attempting good copy_from_user of callee stack\n");
+> +               if (copy_from_user(array, (void __user *)user_addr,
+> +                                  unconst + sizeof(array))) {
+> +                       pr_warn("copy_from_user failed unexpectedly?!\n");
+> +                       goto free_user;
+> +               }
+> +
+>                 pr_info("attempting bad copy_from_user of distant stack\n");
+>                 if (copy_from_user(bad_stack, (void __user *)user_addr,
+>                                    unconst + sizeof(good_stack))) {
+> --
+> 2.7.4
 >
 
-I tried but I can't get it working properly because the gdt field is
-an array, not a pointer. For example with this_cpu_read(gdt_page.gdt),
-I get:
+Thanks for working on this!
 
-./arch/x86/include/asm/desc.h: In function =E2=80=98get_current_gdt_rw=E2=
-=80=99:
-./include/linux/percpu-defs.h:308:21: error: incompatible types when
-assigning to type =E2=80=98struct desc_struct[16]=E2=80=99 from type =E2=80=
-=98struct
-desc_struct *=E2=80=99
-  case 1: pscr_ret__ =3D stem##1(variable); break;   \
-                     ^
-I tried different variants without success. What do you think?
+-Kees
 
->> +/*
->> + * The LTR instruction marks the TSS GDT entry as busy. In 64bit, the G=
-DT is
->> + * a read-only remapping. To prevent a page fault, the GDT is switched =
-to the
->> + * original writeable version when needed.
->> + */
->> +#ifdef CONFIG_X86_64
->> +static inline void native_load_tr_desc(void)
->> +{
->> +       struct desc_ptr gdt;
->> +       int cpu =3D raw_smp_processor_id();
->> +       bool restore =3D false;
->> +       struct desc_struct *fixmap_gdt;
->> +
->> +       native_store_gdt(&gdt);
->
-> Off the top of my head, this is something like 10 cycles.  IMO that's
-> fast enough not to worry about the regression this will cause to KVM
-> exits.  In any event, we'll get that back and *much* more when we do
-> the optimizations that this series enables.
-
-
-
---=20
-Thomas
+-- 
+Kees Cook
+Pixel Security
