@@ -1,62 +1,50 @@
 MIME-Version: 1.0
-In-Reply-To: <CAEk6tEzs9_UMVQJrvQtXgVhLMVo0Hb9QEB3_dX2JtpRsu0hM0g@mail.gmail.com>
-References: <CAEk6tEzVh3=6QbvcjOUz6ESdA8JzFD4dagTFiKdguegtoquJXg@mail.gmail.com>
- <CAJcbSZHRo-sGVcMVBkXJRdRJHyv9_8g9RHYuy8wfo8m2gRhnDw@mail.gmail.com>
- <CAEk6tEz5XqKOytCSCYj3TfpXZDKSBS6aam-O1Aqp0Oz7-_RgNw@mail.gmail.com>
- <871svfytb0.fsf@xmission.com> <CAEk6tEw5-19rZFHL2+-uw+sibegb1KAQj24jk8YZz3m_KE7TKw@mail.gmail.com>
- <20170203204842.GF7330@bananaboat.hashbangbash.com> <CAEk6tEzs9_UMVQJrvQtXgVhLMVo0Hb9QEB3_dX2JtpRsu0hM0g@mail.gmail.com>
-From: Jessica Frazelle <me@jessfraz.com>
-Date: Mon, 6 Feb 2017 05:51:04 -0800
-Message-ID: <CAEk6tEwNv359zqiMwSVvJbe0KGE4fTLyXz6R99i1Kh+6qUFFMg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Container Hardening
-To: Vincent Batts <vbatts@hashbangbash.com>
-Cc: Thomas Garnier <thgarnie@google.com>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Mon, 6 Feb 2017 09:55:41 -0500
+Message-ID: <CAEXv5_ivEPDJSaJwmx+oLiUYRZsAa9ZPWH6oWZy-Rkoa3ZHRZg@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=94eb2c07b01c4d6f8f0547ddd31b
+Subject: [kernel-hardening] HARDENED_ATOMIC documentation
+To: kernel-hardening@lists.openwall.com
+Cc: "Reshetova, Elena" <elena.reshetova@intel.com>, Kees Cook <keescook@chromium.org>, Hans Liljestrand <ishkamiel@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Greg KH <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As far as a list of CVEs I forgot I had already made one[1]. A lot of
-those are considered "non-events" due to the fact the default seccomp
-profile for docker containers blocks them. It outlines as far as the
-mitigation.
+--94eb2c07b01c4d6f8f0547ddd31b
+Content-Type: text/plain; charset=UTF-8
 
-Another that should probably be added there, that was not blocked by
-the default seccomp profile was Dirty cow.
+Hi,
 
+I've put together some preliminary documentation for HARDENED_ATOMIC.  This
+will be in addition to the in-tree documentation earlier submitted for
+review.  This documentation contains only an API definition and examples.
+Justification and background info for HARDENED_ATOMIC are included in the
+in-tree documentation, so I didn't recreate this info in the kernsec.org
+documentation.  Thoughts about this?
 
-[1] https://github.com/jessfraz/docker/blob/6837cfc13cba842186a7261aa9bbd3a8755fd11e/docs/security/non-events.md
+You can find this documentation at
+http://kernsec.org/wiki/index.php/Kernel_Protections/HARDENED_ATOMIC.
 
-On Fri, Feb 3, 2017 at 1:13 PM, Jessica Frazelle <me@jessfraz.com> wrote:
-> Thanks, I'll check it out.
->
-> On Fri, Feb 3, 2017 at 12:48 PM Vincent Batts <vbatts@hashbangbash.com>
-> wrote:
->>
->> Jess,
->>
->> In the vein of your proposal
->> (https://gist.github.com/jessfraz/3a84023ff85471696ee33a20031b9e7b),
->> there was recently a systemtap (http://sourceware.org/systemtap/) script
->> written to output some of this data that is not generally accessible
->> from userspace.
->>
->> Will Cohen was nice enough to upload this and a quick write-up on it's
->> usage.
->>
->> https://github.com/wcohen/linux-instrumentation/blob/master/container_check.md
->>
->> Where this can show when a "badcap" is encountered, or just to see the
->> profile of capabilities and syscalls used.
->>
->> vb
->>
->>
->
+Please take a look and let me know your comments.
 
+Thanks,
+David Windsor
 
+--94eb2c07b01c4d6f8f0547ddd31b
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
--- 
+<div dir=3D"ltr"><div><div><div><div>Hi,<br><br></div>I&#39;ve put together=
+ some preliminary=20
+documentation for HARDENED_ATOMIC.=C2=A0 This will be in addition to the=20
+in-tree documentation earlier submitted for review.=C2=A0 This documentatio=
+n=20
+contains only an API definition and examples.=C2=A0 Justification and=20
+background info for HARDENED_ATOMIC are included in the in-tree=20
+documentation, so I didn&#39;t recreate this info in the <a href=3D"http://=
+kernsec.org">kernsec.org</a>=20
+documentation.=C2=A0 Thoughts about this?<br><br></div>You can find this do=
+cumentation at <a href=3D"http://kernsec.org/wiki/index.php/Kernel_Protecti=
+ons/HARDENED_ATOMIC">http://kernsec.org/wiki/index.php/Kernel_Protections/H=
+ARDENED_ATOMIC</a>.=C2=A0 <br><br>Please take a look and let me know your c=
+omments.<br><br></div>Thanks,<br></div>David Windsor</div>
 
-
-Jessie Frazelle
-4096R / D4C4 DD60 0D66 F65A 8EFC  511E 18F3 685C 0022 BFF3
-pgp.mit.edu
+--94eb2c07b01c4d6f8f0547ddd31b--
