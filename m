@@ -1,85 +1,56 @@
+Date: Tue, 7 Feb 2017 23:48:45 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.1702072344520.8117@nanos>
+References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com> <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1486427518-14819-1-git-send-email-labbott@redhat.com>
-References: <1486427518-14819-1-git-send-email-labbott@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 7 Feb 2017 13:06:22 -0800
-Message-ID: <CAGXu5jKrUOhpvBye6TeZ38Rw28iZtXRNWuBd7DVBKUHYvq5H_Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCHv3 0/2] Hardening configs refactor/rename
-To: Laura Abbott <labbott@redhat.com>
-Cc: Jason Wessel <jason.wessel@windriver.com>, Jonathan Corbet <corbet@lwn.net>, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, Helge Deller <deller@gmx.de>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "x86@kernel.org" <x86@kernel.org>, Rob Herring <robh@kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Mark Rutland <mark.rutland@arm.com>, Jessica Yu <jeyu@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Robin Murphy <robin.murphy@arm.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated
+ processes
+To: Kees Cook <keescook@google.com>
+Cc: Xing Gao <xgao01@email.wm.edu>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 6, 2017 at 4:31 PM, Laura Abbott <labbott@redhat.com> wrote:
-> Hi,
->
-> This is v3 of my series to rename/refactor CONFIG_DEBUG_RODATA
-> and CONFIG_DEBUG_SET_MODULE_RONX. Among other objections, there shouldn't
-> be 'debug' in the name since these provide necessary kernel protection.
->
-> v3 mostly focuses on changing how the Kconfig dependencies work for the
-> refactor. Russell King requested that these options be deselectable for arm.
-> I also threw in some documentation on this under kernel hardening in case other
-> arches decide to follow suit.
->
-> The plan is for this to go through the KSPP tree so if people are okay with
-> this, please give Acks. I didn't take Mark Rutland's ack from before since
-> there's been a bit of refactoring.
+On Fri, 3 Feb 2017, Kees Cook wrote:
 
-Thanks! I've added this to my KSPP -next tree. It should appear shortly...
+> On Fri, Feb 3, 2017 at 2:29 PM, Xing Gao <xgao01@email.wm.edu> wrote:
+> > Dear Thomas and Kees,
+> >
+> > I posted a bug report on bugzilla, and John asked me to send it the lkml.
+> >
+> > Here is the link, https://bugzilla.kernel.org/show_bug.cgi?id=193921
+> >
+> > Please cc to me when you reply this email.
+> >
+> > And please check the information below.
+> >
+> > The pseudo file /proc/timer_list leaks the real pids of the associated
+> > processes.
+> >
+> > The function print_timer(kernel/time/timer_list.c) displays
+> > timer->start_pid, which is set inside the function
+> > __timer_stats_timer_set_start_info (kernel/time/timer.c). This is the real
+> > pid, rather than the pid in the pid namespace. If the user within a
+> > container retrieves the content of /proc/timer_list, this file will leak the
+> > real pid of the associated process.
+> 
+> I feel like this has been pointed out before, but I can't find the
+> email about it. Regardless, yeah, this looks true:
+> 
+>         SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
+> 
+>  #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
+> 
+> Seems like this should be made namespace aware... (and why is this
+> file needed at all? Seems like it should live in debugfs not proc).
 
--Kees
+I'm fine with that.
 
->
-> Thanks,
-> Laura
->
-> Laura Abbott (2):
->   arch: Move CONFIG_DEBUG_RODATA and CONFIG_SET_MODULE_RONX to be common
->   arch: Rename CONFIG_DEBUG_RODATA and CONFIG_DEBUG_MODULE_RONX
->
->  Documentation/DocBook/kgdb.tmpl            |  8 +++----
->  Documentation/security/self-protection.txt | 10 +++++++--
->  arch/Kconfig                               | 34 ++++++++++++++++++++++++++++++
->  arch/arm/Kconfig                           |  4 ++++
->  arch/arm/Kconfig.debug                     | 11 ----------
->  arch/arm/configs/aspeed_g4_defconfig       |  4 ++--
->  arch/arm/configs/aspeed_g5_defconfig       |  4 ++--
->  arch/arm/include/asm/cacheflush.h          |  2 +-
->  arch/arm/kernel/patch.c                    |  4 ++--
->  arch/arm/kernel/vmlinux.lds.S              |  8 +++----
->  arch/arm/mm/Kconfig                        | 14 +-----------
->  arch/arm/mm/init.c                         |  4 ++--
->  arch/arm64/Kconfig                         |  5 ++---
->  arch/arm64/Kconfig.debug                   | 13 +-----------
->  arch/arm64/kernel/insn.c                   |  2 +-
->  arch/parisc/Kconfig                        |  1 +
->  arch/parisc/Kconfig.debug                  | 11 ----------
->  arch/parisc/configs/712_defconfig          |  1 -
->  arch/parisc/configs/c3000_defconfig        |  1 -
->  arch/parisc/mm/init.c                      |  2 +-
->  arch/s390/Kconfig                          |  5 ++---
->  arch/s390/Kconfig.debug                    |  3 ---
->  arch/x86/Kconfig                           |  5 ++---
->  arch/x86/Kconfig.debug                     | 11 ----------
->  include/linux/filter.h                     |  4 ++--
->  include/linux/init.h                       |  4 ++--
->  include/linux/module.h                     |  2 +-
->  init/main.c                                |  4 ++--
->  kernel/configs/android-recommended.config  |  2 +-
->  kernel/module.c                            |  6 +++---
->  kernel/power/hibernate.c                   |  2 +-
->  kernel/power/power.h                       |  4 ++--
->  kernel/power/snapshot.c                    |  4 ++--
->  33 files changed, 90 insertions(+), 109 deletions(-)
->
-> --
-> 2.7.4
->
+The TIMER_STATS stuff should go away completely. If people are interested
+in that information they can use the tracer which gives way better
+data than that file.
 
+Thanks,
 
-
--- 
-Kees Cook
-Pixel Security
+	tglx
+.
