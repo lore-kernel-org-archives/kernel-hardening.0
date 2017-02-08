@@ -1,108 +1,111 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed,  8 Feb 2017 11:55:41 +0000
-Message-Id: <1486554947-3964-9-git-send-email-ard.biesheuvel@linaro.org>
+Date: Wed,  8 Feb 2017 11:55:40 +0000
+Message-Id: <1486554947-3964-8-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 08/14] arm64: efi: split Image code and data into separate PE/COFF sections
+Subject: [kernel-hardening] [PATCH v2 07/14] arm64: efi: replace open coded constants with symbolic ones
 To: linux-efi@vger.kernel.org, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, leif.lindholm@linaro.org
 Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To prevent unintended modifications to the kernel text (malicious or
-otherwise) while running the EFI stub, describe the kernel image as
-two separate sections: a .text section with read-execute permissions,
-covering .text, .rodata and .init.text, and a .data section with
-read-write permissions, covering .init.data, .data and .bss.
-
-This relies on the firmware to actually take the section permission
-flags into account, but this is something that is currently being
-implemented in EDK2, which means we will likely start seeing it in
-the wild between one and two years from now.
+Replace open coded constants with symbolic ones throughout the
+Image and the EFI headers. No binary level changes are intended.
 
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/kernel/efi-header.S  | 23 +++++++++++++++-----
- arch/arm64/kernel/vmlinux.lds.S |  5 +++++
- 2 files changed, 23 insertions(+), 5 deletions(-)
+ arch/arm64/kernel/efi-header.S | 38 +++++++++++---------
+ 1 file changed, 21 insertions(+), 17 deletions(-)
 
 diff --git a/arch/arm64/kernel/efi-header.S b/arch/arm64/kernel/efi-header.S
-index 7637226ea9ca..5870bd611498 100644
+index 8786d58af2df..7637226ea9ca 100644
 --- a/arch/arm64/kernel/efi-header.S
 +++ b/arch/arm64/kernel/efi-header.S
-@@ -27,8 +27,8 @@ optional_header:
- 	.short	PE_OPT_MAGIC_PE32PLUS			// PE32+ format
+@@ -7,22 +7,24 @@
+  * published by the Free Software Foundation.
+  */
+ 
++#include <linux/pe.h>
++#include <linux/sizes.h>
++
+ 	.macro	__EFI_PE_HEADER
+-	.ascii	"PE"
+-	.short 	0
++	.long	PE_MAGIC
+ coff_header:
+-	.short	0xaa64					// AArch64
+-	.short	1					// nr_sections
++	.short	IMAGE_FILE_MACHINE_ARM64		// Machine
++	.short	section_count				// NumberOfSections
+ 	.long	0 					// TimeDateStamp
+ 	.long	0					// PointerToSymbolTable
+ 	.long	0					// NumberOfSymbols
+ 	.short	section_table - optional_header		// SizeOfOptionalHeader
+-	.short	0x206					// Characteristics.
+-							// IMAGE_FILE_DEBUG_STRIPPED |
+-							// IMAGE_FILE_EXECUTABLE_IMAGE |
+-							// IMAGE_FILE_LINE_NUMS_STRIPPED
++	.short	IMAGE_FILE_DEBUG_STRIPPED | \
++		IMAGE_FILE_EXECUTABLE_IMAGE | \
++		IMAGE_FILE_LINE_NUMS_STRIPPED		// Characteristics
++
+ optional_header:
+-	.short	0x20b					// PE32+ format
++	.short	PE_OPT_MAGIC_PE32PLUS			// PE32+ format
  	.byte	0x02					// MajorLinkerVersion
  	.byte	0x14					// MinorLinkerVersion
--	.long	_end - efi_header_end			// SizeOfCode
--	.long	0					// SizeOfInitializedData
-+	.long	__pecoff_data_start - efi_header_end	// SizeOfCode
-+	.long	__pecoff_data_size			// SizeOfInitializedData
- 	.long	0					// SizeOfUninitializedData
- 	.long	__efistub_entry - _head			// AddressOfEntryPoint
- 	.long	efi_header_end - _head			// BaseOfCode
-@@ -74,9 +74,9 @@ extra_header_fields:
+ 	.long	_end - efi_header_end			// SizeOfCode
+@@ -33,7 +35,7 @@ optional_header:
+ 
+ extra_header_fields:
+ 	.quad	0					// ImageBase
+-	.long	0x1000					// SectionAlignment
++	.long	SZ_4K					// SectionAlignment
+ 	.long	PECOFF_FILE_ALIGNMENT			// FileAlignment
+ 	.short	0					// MajorOperatingSystemVersion
+ 	.short	0					// MinorOperatingSystemVersion
+@@ -48,7 +50,7 @@ extra_header_fields:
+ 	// Everything before the kernel image is considered part of the header
+ 	.long	efi_header_end - _head			// SizeOfHeaders
+ 	.long	0					// CheckSum
+-	.short	0xa					// Subsystem (EFI application)
++	.short	IMAGE_SUBSYSTEM_EFI_APPLICATION		// Subsystem
+ 	.short	0					// DllCharacteristics
+ 	.quad	0					// SizeOfStackReserve
+ 	.quad	0					// SizeOfStackCommit
+@@ -71,10 +73,7 @@ extra_header_fields:
+ 
  	// Section table
  section_table:
- 	.ascii	".text\0\0\0"
--	.long	_end - efi_header_end			// VirtualSize
-+	.long	__pecoff_data_start - efi_header_end	// VirtualSize
+-	.ascii	".text"
+-	.byte	0
+-	.byte	0
+-	.byte	0        				// end of 0 padding of section name
++	.ascii	".text\0\0\0"
+ 	.long	_end - efi_header_end			// VirtualSize
  	.long	efi_header_end - _head			// VirtualAddress
--	.long	_edata - efi_header_end			// SizeOfRawData
-+	.long	__pecoff_data_start - efi_header_end	// SizeOfRawData
- 	.long	efi_header_end - _head			// PointerToRawData
- 
- 	.long	0					// PointerToRelocations
-@@ -84,7 +84,20 @@ section_table:
+ 	.long	_edata - efi_header_end			// SizeOfRawData
+@@ -84,7 +83,12 @@ section_table:
+ 	.long	0					// PointerToLineNumbers
  	.short	0					// NumberOfRelocations
  	.short	0					// NumberOfLineNumbers
- 	.long	IMAGE_SCN_CNT_CODE | \
--		IMAGE_SCN_MEM_EXECUTE | \
+-	.long	0xe0000020				// Characteristics
++	.long	IMAGE_SCN_CNT_CODE | \
++		IMAGE_SCN_MEM_EXECUTE | \
 +		IMAGE_SCN_MEM_READ | \
-+		IMAGE_SCN_MEM_EXECUTE			// Characteristics
++		IMAGE_SCN_MEM_WRITE			// Characteristics
 +
-+	.ascii	".data\0\0\0"
-+	.long	__pecoff_data_size			// VirtualSize
-+	.long	__pecoff_data_start - _head		// VirtualAddress
-+	.long	__pecoff_data_rawsize			// SizeOfRawData
-+	.long	__pecoff_data_start - _head		// PointerToRawData
-+
-+	.long	0					// PointerToRelocations
-+	.long	0					// PointerToLineNumbers
-+	.short	0					// NumberOfRelocations
-+	.short	0					// NumberOfLineNumbers
-+	.long	IMAGE_SCN_CNT_INITIALIZED_DATA | \
- 		IMAGE_SCN_MEM_READ | \
- 		IMAGE_SCN_MEM_WRITE			// Characteristics
++	.set	section_count, (. - section_table) / 40
  
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index b8deffa9e1bf..a93cc2b6f50b 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -149,6 +149,9 @@ SECTIONS
- 		ARM_EXIT_KEEP(EXIT_TEXT)
- 	}
- 
-+	. = ALIGN(SZ_4K);
-+	__pecoff_data_start = .;
-+
- 	.init.data : {
- 		INIT_DATA
- 		INIT_SETUP(16)
-@@ -206,6 +209,7 @@ SECTIONS
- 	}
- 
- 	PECOFF_EDATA_PADDING
-+	__pecoff_data_rawsize = ABSOLUTE(. - __pecoff_data_start);
- 	_edata = .;
- 
- 	BSS_SECTION(0, 0, 0)
-@@ -221,6 +225,7 @@ SECTIONS
- 	. += RESERVED_TTBR0_SIZE;
- #endif
- 
-+	__pecoff_data_size = ABSOLUTE(. - __pecoff_data_start);
- 	_end = .;
- 
- 	STABS_DEBUG
+ #ifdef CONFIG_DEBUG_EFI
+ 	/*
+@@ -106,7 +110,7 @@ efi_debug_table:
+ 	.long	0					// TimeDateStamp
+ 	.short	0					// MajorVersion
+ 	.short	0					// MinorVersion
+-	.long	2					// Type == EFI_IMAGE_DEBUG_TYPE_CODEVIEW
++	.long	IMAGE_DEBUG_TYPE_CODEVIEW		// Type
+ 	.long	efi_debug_entry_size			// SizeOfData
+ 	.long	0					// RVA
+ 	.long	efi_debug_entry - _head			// FileOffset
 -- 
 2.7.4
