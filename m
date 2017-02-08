@@ -1,31 +1,44 @@
-Date: Wed, 8 Feb 2017 10:47:23 +0100 (CET)
+Date: Wed, 8 Feb 2017 11:24:01 +0100 (CET)
 From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <CAEk6tEyzgCV5YWppu5OwxjFz6royvXmJM-Qs_mKTUSsqeR7wZw@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.1702081045440.3536@nanos>
-References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com> <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com> <alpine.DEB.2.20.1702072344520.8117@nanos>
- <CAEk6tEyzgCV5YWppu5OwxjFz6royvXmJM-Qs_mKTUSsqeR7wZw@mail.gmail.com>
+In-Reply-To: <CALAqxLW6FowGNWgtnSh6S9B4S_C=GW29mq7uLvk=_KMceOfHSw@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.1702081122190.3536@nanos>
+References: <20170207234031.GA27933@beast> <CALAqxLW6FowGNWgtnSh6S9B4S_C=GW29mq7uLvk=_KMceOfHSw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated
- processes
-To: Jessica Frazelle <me@jessfraz.com>
-Cc: Kees Cook <keescook@google.com>, Xing Gao <xgao01@email.wm.edu>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Subject: [kernel-hardening] Re: [PATCH] time: Remove CONFIG_TIMER_STATS
+To: John Stultz <john.stultz@linaro.org>
+Cc: Kees Cook <keescook@chromium.org>, Xing Gao <xgao01@email.wm.edu>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Jonathan Corbet <corbet@lwn.net>, Tejun Heo <tj@kernel.org>, Lai Jiangshan <jiangshanlai@gmail.com>, Petr Mladek <pmladek@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>, Nicolas Iooss <nicolas.iooss_linux@m4x.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Richard Cochran <richardcochran@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Michal Marek <mmarek@suse.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Olof Johansson <olof@lixom.net>, Shuah Khan <shuah@kernel.org>, linux-doc@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 7 Feb 2017, Jessica Frazelle wrote:
+On Tue, 7 Feb 2017, John Stultz wrote:
+> On Tue, Feb 7, 2017 at 3:40 PM, Kees Cook <keescook@chromium.org> wrote:
+> > Currently CONFIG_TIMER_STATS exposes process information across namespaces:
+> >
+> > kernel/time/timer_list.c print_timer():
+> >
+> >         SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
+> >
+> > /proc/timer_list:
+> >
+> >  #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
+> >
+> > Given that the tracer can give the same information, this patch entirely
+> > removes CONFIG_TIMER_STATS.
+> >
+> > Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+> > Signed-off-by: Kees Cook <keescook@chromium.org>
+> 
+> I don't have an issue with this, but I worry this would break some
+> tooling out there. Should it be marked as deprecated first?
+> 
+> Or maybe just pulling the band-aid off is the best way?
 
-> So I used to use this "feature" as a hack to see if something was
-> running in a k8s cluster or not because fluentd gives a lot of things
-> away.
+I think we should just kill it.
 
-That file does not tell you at all whether something is running or not. It
-merily tells you that there are timers queued.
-
-> Runc basically decided to mask this file so it stopped happening
-> though. But I think namespace aware is the right decision.
-
-Unless you can come up with a real good argument why this is usefull beyond
-debugging and crystal ball hackery, it's going to go away.
+No tools can really rely on the behaviour of that file because it depends
+on CONFIG_TIMER_STATS and the information available there is just a random
+snapshot of queued timers at a given point of time, which is in no way
+usefull.
 
 Thanks,
 
