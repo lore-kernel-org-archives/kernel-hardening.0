@@ -1,81 +1,47 @@
 MIME-Version: 1.0
-References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com>
- <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com>
- <alpine.DEB.2.20.1702072344520.8117@nanos> <CAEk6tEyzgCV5YWppu5OwxjFz6royvXmJM-Qs_mKTUSsqeR7wZw@mail.gmail.com>
- <alpine.DEB.2.20.1702081045440.3536@nanos>
-In-Reply-To: <alpine.DEB.2.20.1702081045440.3536@nanos>
-From: Jessica Frazelle <me@jessfraz.com>
-Date: Wed, 08 Feb 2017 14:23:41 +0000
-Message-ID: <CAEk6tEyQ1D=omQPLUL0+dAJFd_vRY2+UVER9VVZKaAu5L0Vn4w@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=94eb2c1cdab62556ac0548059dc9
-Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated processes
+In-Reply-To: <alpine.DEB.2.20.1702081122190.3536@nanos>
+References: <20170207234031.GA27933@beast> <CALAqxLW6FowGNWgtnSh6S9B4S_C=GW29mq7uLvk=_KMceOfHSw@mail.gmail.com>
+ <alpine.DEB.2.20.1702081122190.3536@nanos>
+From: John Stultz <john.stultz@linaro.org>
+Date: Wed, 8 Feb 2017 10:09:39 -0800
+Message-ID: <CALAqxLU2OTBk1gmiZgoQ2ZzF6eOuOyCGEUNqXXuq+koZ1mYceA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] time: Remove CONFIG_TIMER_STATS
 To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Kees Cook <keescook@google.com>, Xing Gao <xgao01@email.wm.edu>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Kees Cook <keescook@chromium.org>, Xing Gao <xgao01@email.wm.edu>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Jonathan Corbet <corbet@lwn.net>, Tejun Heo <tj@kernel.org>, Lai Jiangshan <jiangshanlai@gmail.com>, Petr Mladek <pmladek@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>, Nicolas Iooss <nicolas.iooss_linux@m4x.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Richard Cochran <richardcochran@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Michal Marek <mmarek@suse.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Olof Johansson <olof@lixom.net>, Shuah Khan <shuah@kernel.org>, linux-doc@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---94eb2c1cdab62556ac0548059dc9
-Content-Type: text/plain; charset=UTF-8
+On Wed, Feb 8, 2017 at 2:24 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
+> On Tue, 7 Feb 2017, John Stultz wrote:
+>> On Tue, Feb 7, 2017 at 3:40 PM, Kees Cook <keescook@chromium.org> wrote:
+>> > Currently CONFIG_TIMER_STATS exposes process information across namespaces:
+>> >
+>> > kernel/time/timer_list.c print_timer():
+>> >
+>> >         SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
+>> >
+>> > /proc/timer_list:
+>> >
+>> >  #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
+>> >
+>> > Given that the tracer can give the same information, this patch entirely
+>> > removes CONFIG_TIMER_STATS.
+>> >
+>> > Suggested-by: Thomas Gleixner <tglx@linutronix.de>
+>> > Signed-off-by: Kees Cook <keescook@chromium.org>
+>>
+>> I don't have an issue with this, but I worry this would break some
+>> tooling out there. Should it be marked as deprecated first?
+>>
+>> Or maybe just pulling the band-aid off is the best way?
+>
+> I think we should just kill it.
+>
+> No tools can really rely on the behaviour of that file because it depends
+> on CONFIG_TIMER_STATS and the information available there is just a random
+> snapshot of queued timers at a given point of time, which is in no way
+> usefull.
 
-Don't worry I wasn't saying it was useful.
-It's unnecessary.
+Fair enough.
 
-On Wed, Feb 8, 2017, 01:47 Thomas Gleixner <tglx@linutronix.de> wrote:
-
-> On Tue, 7 Feb 2017, Jessica Frazelle wrote:
->
-> > So I used to use this "feature" as a hack to see if something was
-> > running in a k8s cluster or not because fluentd gives a lot of things
-> > away.
->
-> That file does not tell you at all whether something is running or not. It
-> merily tells you that there are timers queued.
->
-> > Runc basically decided to mask this file so it stopped happening
-> > though. But I think namespace aware is the right decision.
->
-> Unless you can come up with a real good argument why this is usefull beyond
-> debugging and crystal ball hackery, it's going to go away.
->
-> Thanks,
->
->         tglx
->
-
---94eb2c1cdab62556ac0548059dc9
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-<p dir=3D"ltr">Don&#39;t worry I wasn&#39;t saying it was useful. <br>
-It&#39;s unnecessary.</p>
-<br><div class=3D"gmail_quote"><div dir=3D"ltr">On Wed, Feb 8, 2017, 01:47 =
-Thomas Gleixner &lt;<a href=3D"mailto:tglx@linutronix.de">tglx@linutronix.d=
-e</a>&gt; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margin=
-:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex">On Tue, 7 Feb 2017=
-, Jessica Frazelle wrote:<br class=3D"gmail_msg">
-<br class=3D"gmail_msg">
-&gt; So I used to use this &quot;feature&quot; as a hack to see if somethin=
-g was<br class=3D"gmail_msg">
-&gt; running in a k8s cluster or not because fluentd gives a lot of things<=
-br class=3D"gmail_msg">
-&gt; away.<br class=3D"gmail_msg">
-<br class=3D"gmail_msg">
-That file does not tell you at all whether something is running or not. It<=
-br class=3D"gmail_msg">
-merily tells you that there are timers queued.<br class=3D"gmail_msg">
-<br class=3D"gmail_msg">
-&gt; Runc basically decided to mask this file so it stopped happening<br cl=
-ass=3D"gmail_msg">
-&gt; though. But I think namespace aware is the right decision.<br class=3D=
-"gmail_msg">
-<br class=3D"gmail_msg">
-Unless you can come up with a real good argument why this is usefull beyond=
-<br class=3D"gmail_msg">
-debugging and crystal ball hackery, it&#39;s going to go away.<br class=3D"=
-gmail_msg">
-<br class=3D"gmail_msg">
-Thanks,<br class=3D"gmail_msg">
-<br class=3D"gmail_msg">
-=C2=A0 =C2=A0 =C2=A0 =C2=A0 tglx<br class=3D"gmail_msg">
-</blockquote></div>
-
---94eb2c1cdab62556ac0548059dc9--
+Acked-by: John Stultz <john.stultz@linaro.org>
