@@ -1,111 +1,100 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed,  8 Feb 2017 11:55:40 +0000
-Message-Id: <1486554947-3964-8-git-send-email-ard.biesheuvel@linaro.org>
+Date: Wed,  8 Feb 2017 11:55:42 +0000
+Message-Id: <1486554947-3964-10-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 07/14] arm64: efi: replace open coded constants with symbolic ones
+Subject: [kernel-hardening] [PATCH v2 09/14] arm: compressed: put zImage header and EFI header in dedicated section
 To: linux-efi@vger.kernel.org, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, leif.lindholm@linaro.org
-Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Dave Martin <dave.martin@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Replace open coded constants with symbolic ones throughout the
-Image and the EFI headers. No binary level changes are intended.
+To align the PE/COFF and the ELF headers of the decompressor binary, put
+the zImage header and the EFI header in a separate .head.text section,
+and emit it at the start of the Image. This change is necessary for UEFI
+based debug tooling to be able to use the vmlinux ELF binary, since it
+gets confused if the PE/COFF .text section and the ELF .text section live
+at different offsets.
 
+This requires a tweak of the initial jump, because (b)adr does not reach
+across a section boundary. Other than that, and a few bytes of padding at
+the beginning of .start, this change does not affect the binary image.
+
+Cc: Dave Martin <dave.martin@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/kernel/efi-header.S | 38 +++++++++++---------
- 1 file changed, 21 insertions(+), 17 deletions(-)
+ arch/arm/boot/compressed/efi-header.S  |  2 --
+ arch/arm/boot/compressed/head.S        | 14 +++++++++-----
+ arch/arm/boot/compressed/vmlinux.lds.S |  5 ++++-
+ 3 files changed, 13 insertions(+), 8 deletions(-)
 
-diff --git a/arch/arm64/kernel/efi-header.S b/arch/arm64/kernel/efi-header.S
-index 8786d58af2df..7637226ea9ca 100644
---- a/arch/arm64/kernel/efi-header.S
-+++ b/arch/arm64/kernel/efi-header.S
-@@ -7,22 +7,24 @@
-  * published by the Free Software Foundation.
+diff --git a/arch/arm/boot/compressed/efi-header.S b/arch/arm/boot/compressed/efi-header.S
+index 9d5dc4fda3c1..1d26a9d0a9e8 100644
+--- a/arch/arm/boot/compressed/efi-header.S
++++ b/arch/arm/boot/compressed/efi-header.S
+@@ -23,8 +23,6 @@
+ 
+ 		.macro	__EFI_HEADER
+ #ifdef CONFIG_EFI_STUB
+-		b	__efi_start
+-
+ 		.set	start_offset, __efi_start - start
+ 		.org	start + 0x3c
+ 		@
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index fc6d541549a2..42ba2f557791 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -114,7 +114,7 @@
+ #endif
+ 		.endm
+ 
+-		.section ".start", #alloc, #execinstr
++		.section ".head.text", #alloc, #execinstr
+ /*
+  * sort out different calling conventions
   */
+@@ -132,17 +132,21 @@ start:
+ 		.endr
+    ARM(		mov	r0, r0		)
+    ARM(		b	1f		)
+- THUMB(		badr	r12, 1f		)
+- THUMB(		bx	r12		)
++AR_CLASS(THUMB(	sub	pc, pc, #3	))	@ A/R: switch to Thumb2 mode
++ M_CLASS(	nop.w			)	@ M: already in Thumb2 mode
++   THUMB(	.thumb			)
++   THUMB(	b.w	1f		)
  
-+#include <linux/pe.h>
-+#include <linux/sizes.h>
-+
- 	.macro	__EFI_PE_HEADER
--	.ascii	"PE"
--	.short 	0
-+	.long	PE_MAGIC
- coff_header:
--	.short	0xaa64					// AArch64
--	.short	1					// nr_sections
-+	.short	IMAGE_FILE_MACHINE_ARM64		// Machine
-+	.short	section_count				// NumberOfSections
- 	.long	0 					// TimeDateStamp
- 	.long	0					// PointerToSymbolTable
- 	.long	0					// NumberOfSymbols
- 	.short	section_table - optional_header		// SizeOfOptionalHeader
--	.short	0x206					// Characteristics.
--							// IMAGE_FILE_DEBUG_STRIPPED |
--							// IMAGE_FILE_EXECUTABLE_IMAGE |
--							// IMAGE_FILE_LINE_NUMS_STRIPPED
-+	.short	IMAGE_FILE_DEBUG_STRIPPED | \
-+		IMAGE_FILE_EXECUTABLE_IMAGE | \
-+		IMAGE_FILE_LINE_NUMS_STRIPPED		// Characteristics
-+
- optional_header:
--	.short	0x20b					// PE32+ format
-+	.short	PE_OPT_MAGIC_PE32PLUS			// PE32+ format
- 	.byte	0x02					// MajorLinkerVersion
- 	.byte	0x14					// MinorLinkerVersion
- 	.long	_end - efi_header_end			// SizeOfCode
-@@ -33,7 +35,7 @@ optional_header:
+ 		.word	_magic_sig	@ Magic numbers to help the loader
+ 		.word	_magic_start	@ absolute load/run zImage address
+ 		.word	_magic_end	@ zImage end address
+ 		.word	0x04030201	@ endianness flag
  
- extra_header_fields:
- 	.quad	0					// ImageBase
--	.long	0x1000					// SectionAlignment
-+	.long	SZ_4K					// SectionAlignment
- 	.long	PECOFF_FILE_ALIGNMENT			// FileAlignment
- 	.short	0					// MajorOperatingSystemVersion
- 	.short	0					// MinorOperatingSystemVersion
-@@ -48,7 +50,7 @@ extra_header_fields:
- 	// Everything before the kernel image is considered part of the header
- 	.long	efi_header_end - _head			// SizeOfHeaders
- 	.long	0					// CheckSum
--	.short	0xa					// Subsystem (EFI application)
-+	.short	IMAGE_SUBSYSTEM_EFI_APPLICATION		// Subsystem
- 	.short	0					// DllCharacteristics
- 	.quad	0					// SizeOfStackReserve
- 	.quad	0					// SizeOfStackCommit
-@@ -71,10 +73,7 @@ extra_header_fields:
+- THUMB(		.thumb			)
+-1:		__EFI_HEADER
++		__EFI_HEADER
  
- 	// Section table
- section_table:
--	.ascii	".text"
--	.byte	0
--	.byte	0
--	.byte	0        				// end of 0 padding of section name
-+	.ascii	".text\0\0\0"
- 	.long	_end - efi_header_end			// VirtualSize
- 	.long	efi_header_end - _head			// VirtualAddress
- 	.long	_edata - efi_header_end			// SizeOfRawData
-@@ -84,7 +83,12 @@ section_table:
- 	.long	0					// PointerToLineNumbers
- 	.short	0					// NumberOfRelocations
- 	.short	0					// NumberOfLineNumbers
--	.long	0xe0000020				// Characteristics
-+	.long	IMAGE_SCN_CNT_CODE | \
-+		IMAGE_SCN_MEM_EXECUTE | \
-+		IMAGE_SCN_MEM_READ | \
-+		IMAGE_SCN_MEM_WRITE			// Characteristics
-+
-+	.set	section_count, (. - section_table) / 40
++		.section ".start", #alloc, #execinstr
++		.align
++1:
+  ARM_BE8(	setend	be		)	@ go BE8 if compiled for BE8
+  AR_CLASS(	mrs	r9, cpsr	)
+ #ifdef CONFIG_ARM_VIRT_EXT
+diff --git a/arch/arm/boot/compressed/vmlinux.lds.S b/arch/arm/boot/compressed/vmlinux.lds.S
+index 81c493156ce8..5d50daea466a 100644
+--- a/arch/arm/boot/compressed/vmlinux.lds.S
++++ b/arch/arm/boot/compressed/vmlinux.lds.S
+@@ -34,8 +34,11 @@ SECTIONS
+   . = TEXT_START;
+   _text = .;
  
- #ifdef CONFIG_DEBUG_EFI
- 	/*
-@@ -106,7 +110,7 @@ efi_debug_table:
- 	.long	0					// TimeDateStamp
- 	.short	0					// MajorVersion
- 	.short	0					// MinorVersion
--	.long	2					// Type == EFI_IMAGE_DEBUG_TYPE_CODEVIEW
-+	.long	IMAGE_DEBUG_TYPE_CODEVIEW		// Type
- 	.long	efi_debug_entry_size			// SizeOfData
- 	.long	0					// RVA
- 	.long	efi_debug_entry - _head			// FileOffset
+-  .text : {
++  .head.text : {
+     _start = .;
++    *(.head.text)
++  }
++  .text : {
+     *(.start)
+     *(.text)
+     *(.text.*)
 -- 
 2.7.4
