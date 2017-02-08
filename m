@@ -1,80 +1,32 @@
-Date: Wed, 8 Feb 2017 10:43:13 +0100
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170208094313.GI6536@twins.programming.kicks-ass.net>
-References: <CAGXu5j+VrKBrU7op8wD1Ry4nzR0cN7Vvke8W6_KOzp3wsoEF1g@mail.gmail.com>
- <20170207083405.GV6500@twins.programming.kicks-ass.net>
- <20170207111011.GB28790@leverpostej>
- <20170207123630.GR6515@twins.programming.kicks-ass.net>
- <20170207135020.GA26173@leverpostej>
- <20170207150737.GM25813@worktop.programming.kicks-ass.net>
- <20170207160300.GB26173@leverpostej>
- <20170207173036.GS6515@twins.programming.kicks-ass.net>
- <20170207175542.GC26173@leverpostej>
- <20170208091250.GT6515@twins.programming.kicks-ass.net>
+Date: Wed, 8 Feb 2017 10:47:23 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <CAEk6tEyzgCV5YWppu5OwxjFz6royvXmJM-Qs_mKTUSsqeR7wZw@mail.gmail.com>
+Message-ID: <alpine.DEB.2.20.1702081045440.3536@nanos>
+References: <CAJwLwmYQt2ae_Y-TDXhPGsX5im29ATwwKmg3FtUC=6HjrzH4HA@mail.gmail.com> <CAGXu5j+qgNMP1jt1-cssuY5qNkSPDde5MzH9YQUcuLepbHX0jg@mail.gmail.com> <alpine.DEB.2.20.1702072344520.8117@nanos>
+ <CAEk6tEyzgCV5YWppu5OwxjFz6royvXmJM-Qs_mKTUSsqeR7wZw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170208091250.GT6515@twins.programming.kicks-ass.net>
-Subject: Re: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures
- through CHECK_DATA_CORRUPTION
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: /proc/timer_list leaks the real pids of the associated
+ processes
+To: Jessica Frazelle <me@jessfraz.com>
+Cc: Kees Cook <keescook@google.com>, Xing Gao <xgao01@email.wm.edu>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "Eric W. Biederman" <ebiederm@xmission.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 08, 2017 at 10:12:50AM +0100, Peter Zijlstra wrote:
-> Something like:
-> 
-> #define EX_REG_HANDLER(_reg)					\
-> bool ex_handler_value_##_reg(const struct exception_table_entry *fixup, \
-> 			    struct pt_regs *regs, int trapnr)	\
-> {								\
-> 	void (*handler)(unsigned long) =			\
-> 		(void *)((unsigned long)&fixup->to + fixup->to); \
-> 								\
-> 	if (trapnr != X86_TRAP_UD)				\
-> 		return false;					\
-> 								\
-> 	regs->ip += 2; /* size of UD2 instruction */		\
-> 	handler(regs->_reg);					\
-> 	return true;						\
-> }
-> 
-> EX_REG_HANDLER(bx);
-> EX_REG_HANDLER(cx);
-> ...
-> EX_REG_HANDLER(ss);
-> 
-> 
-> asm (
-> " .macro reg_to_handler	r\n"
-> " .irp rs,bx,cx,...,ss\n"
-> " .ifc \\r, %\\rs\n"
-> " ex_handler_value_\\rs\n"
-> " .endif\n"
-  " .ifc \\r, %e\\rs\n"
-  " ex_handler_value_\\rs\n"
-  " .endif\n"
-  " .ifc \\r, %r\\rs\n"
-  " ex_handler_value_\\rs\n"
-  " .endif\n"
-> " .endr\n"
-> " .endm\n"
-> );
+On Tue, 7 Feb 2017, Jessica Frazelle wrote:
 
-to match the 16, 32 and 64 bit names of the same registers. The byte
-registers will need additional magic :/
+> So I used to use this "feature" as a hack to see if something was
+> running in a k8s cluster or not because fluentd gives a lot of things
+> away.
 
+That file does not tell you at all whether something is running or not. It
+merily tells you that there are timers queued.
 
-> #define EXCEPTION_VALUE(val, handler)			\
-> 	asm volatile ("1: ud2"				\
-> 		      _ASM_EXTABLE_HANDLE(1b, handler,	\
-> 				     reg_to_handler %0) \
-> 		      : : "r" (val))
-> 
-> 
-> Where the generic version can simply be:
-> 
-> #define EXCEPTION_VALUE(val, handler)	handler((unsigned long)val)
-> 
-> 
-> Makes sense?
+> Runc basically decided to mask this file so it stopped happening
+> though. But I think namespace aware is the right decision.
+
+Unless you can come up with a real good argument why this is usefull beyond
+debugging and crystal ball hackery, it's going to go away.
+
+Thanks,
+
+	tglx
