@@ -1,97 +1,48 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed,  8 Feb 2017 11:55:47 +0000
-Message-Id: <1486554947-3964-15-git-send-email-ard.biesheuvel@linaro.org>
-In-Reply-To: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
-References: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 14/14] arm: efi: add PE/COFF debug table to EFI header
-To: linux-efi@vger.kernel.org, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, leif.lindholm@linaro.org
-Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jJQMVJVAVQOk1zS+jRLy641fwE0NKnAme2mGbm6Y1_xeA@mail.gmail.com>
+References: <1486098682-30395-1-git-send-email-bhsharma@redhat.com> <CAGXu5jJQMVJVAVQOk1zS+jRLy641fwE0NKnAme2mGbm6Y1_xeA@mail.gmail.com>
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Wed, 8 Feb 2017 18:14:42 +0530
+Message-ID: <CACi5LpOv7fJE_xcPZsB1es0FtfxCGDw0Av3TK0Q5rC3nLmiTEg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 1/1] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: Kees Cook <keescook@chromium.org>
+Cc: "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Daniel Cashman <dcashman@google.com>, Michael Ellerman <mpe@ellerman.id.au>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This updates the PE/COFF header to emit the absolute path to the
-decompressor vmlinux ELF file into a so-called NB10 Codeview entry.
-This is hugely helpful when debugging the firmware->stub handover.
+On Sat, Feb 4, 2017 at 6:13 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Thu, Feb 2, 2017 at 9:11 PM, Bhupesh Sharma <bhsharma@redhat.com> wrote:
+>> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT) for
+>> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
+>> for the mmap base address.
+>>
+>> This value represents a compromise between increased
+>> ASLR effectiveness and avoiding address-space fragmentation.
+>> Replace it with a Kconfig option, which is sensibly bounded, so that
+>> platform developers may choose where to place this compromise.
+>> Keep default values as new minimums.
+>>
+>> This patch makes sure that now powerpc mmap arch_mmap_rnd() approach
+>> is similar to other ARCHs like x86, arm64 and arm.
+>>
+>> Cc: Alexander Graf <agraf@suse.com>
+>> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+>> Cc: Paul Mackerras <paulus@samba.org>
+>> Cc: Michael Ellerman <mpe@ellerman.id.au>
+>> Cc: Anatolij Gustschin <agust@denx.de>
+>> Cc: Alistair Popple <alistair@popple.id.au>
+>> Cc: Matt Porter <mporter@kernel.crashing.org>
+>> Cc: Vitaly Bordug <vitb@kernel.crashing.org>
+>> Cc: Scott Wood <oss@buserror.net>
+>> Cc: Kumar Gala <galak@kernel.crashing.org>
+>> Cc: Daniel Cashman <dcashman@android.com>
+>> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+>> Reviewed-by: Kees Cook <keescook at chromium.org>
+>
+> This " at " should be "@", but otherwise, yay v2! :)
+>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm/boot/compressed/Makefile     |  4 ++
- arch/arm/boot/compressed/efi-header.S | 45 ++++++++++++++++++++
- 2 files changed, 49 insertions(+)
+Noted. Sorry for the typo :(
 
-diff --git a/arch/arm/boot/compressed/Makefile b/arch/arm/boot/compressed/Makefile
-index d50430c40045..6b978bdbac3e 100644
---- a/arch/arm/boot/compressed/Makefile
-+++ b/arch/arm/boot/compressed/Makefile
-@@ -196,3 +196,7 @@ AFLAGS_hyp-stub.o := -Wa,-march=armv7-a
- 
- $(obj)/hyp-stub.S: $(srctree)/arch/$(SRCARCH)/kernel/hyp-stub.S
- 	$(call cmd,shipped)
-+
-+ifeq ($(CONFIG_EFI)$(CONFIG_DEBUG_INFO),yy)
-+AFLAGS_head.o += -DVMLINUX_PATH="\"$(realpath $(obj)/vmlinux)\""
-+endif
-diff --git a/arch/arm/boot/compressed/efi-header.S b/arch/arm/boot/compressed/efi-header.S
-index 3cf09f7efced..dff3c72c7c5a 100644
---- a/arch/arm/boot/compressed/efi-header.S
-+++ b/arch/arm/boot/compressed/efi-header.S
-@@ -95,6 +95,11 @@ extra_header_fields:
- 	.quad	0					@ CertificationTable
- 	.quad	0					@ BaseRelocationTable
- 
-+#ifdef CONFIG_DEBUG_INFO
-+	.long	efi_debug_table - start			@ DebugTable
-+	.long	efi_debug_table_size
-+#endif
-+
- section_table:
- 	.ascii	".text\0\0\0"
- 	.long	__pecoff_data_start - __efi_start	@ VirtualSize
-@@ -124,6 +129,46 @@ section_table:
- 
- 	.set	section_count, (. - section_table) / 40
- 
-+#ifdef CONFIG_DEBUG_INFO
-+	/*
-+	 * The debug table is referenced via its Relative Virtual Address (RVA),
-+	 * which is only defined for those parts of the image that are covered
-+	 * by a section declaration. Since this header is not covered by any
-+	 * section, the debug table must be emitted elsewhere. So stick it in
-+	 * the .init.rodata section instead.
-+	 *
-+	 * Note that the EFI debug entry itself may legally have a zero RVA,
-+	 * which means we can simply put it right after the section headers.
-+	 */
-+	.section	".rodata", #alloc
-+
-+	.align	2
-+efi_debug_table:
-+	// EFI_IMAGE_DEBUG_DIRECTORY_ENTRY
-+	.long	0					@ Characteristics
-+	.long	0					@ TimeDateStamp
-+	.short	0					@ MajorVersion
-+	.short	0					@ MinorVersion
-+	.long	IMAGE_DEBUG_TYPE_CODEVIEW		@ Type
-+	.long	efi_debug_entry_size			@ SizeOfData
-+	.long	0					@ RVA
-+	.long	efi_debug_entry - start			@ FileOffset
-+
-+	.set	efi_debug_table_size, . - efi_debug_table
-+	.previous
-+
-+efi_debug_entry:
-+	// EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY
-+	.ascii	"NB10"					@ Signature
-+	.long	0					@ Unknown
-+	.long	0					@ Unknown2
-+	.long	0					@ Unknown3
-+
-+	.asciz	VMLINUX_PATH
-+
-+	.set	efi_debug_entry_size, . - efi_debug_entry
-+#endif
-+
- 	.align	12
- __efi_start:
- #endif
--- 
-2.7.4
+Regards,
+Bhupesh
