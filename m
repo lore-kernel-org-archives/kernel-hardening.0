@@ -1,36 +1,98 @@
+Date: Wed, 8 Feb 2017 14:10:58 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170208141058.GG15459@leverpostej>
+References: <CAGXu5j+VrKBrU7op8wD1Ry4nzR0cN7Vvke8W6_KOzp3wsoEF1g@mail.gmail.com>
+ <20170207083405.GV6500@twins.programming.kicks-ass.net>
+ <20170207111011.GB28790@leverpostej>
+ <20170207123630.GR6515@twins.programming.kicks-ass.net>
+ <20170207135020.GA26173@leverpostej>
+ <20170207150737.GM25813@worktop.programming.kicks-ass.net>
+ <20170207160300.GB26173@leverpostej>
+ <20170207173036.GS6515@twins.programming.kicks-ass.net>
+ <20170207175542.GC26173@leverpostej>
+ <20170208091250.GT6515@twins.programming.kicks-ass.net>
 MIME-Version: 1.0
-In-Reply-To: <20170207234031.GA27933@beast>
-References: <20170207234031.GA27933@beast>
-From: John Stultz <john.stultz@linaro.org>
-Date: Tue, 7 Feb 2017 20:29:31 -0800
-Message-ID: <CALAqxLW6FowGNWgtnSh6S9B4S_C=GW29mq7uLvk=_KMceOfHSw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] time: Remove CONFIG_TIMER_STATS
-To: Kees Cook <keescook@chromium.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Xing Gao <xgao01@email.wm.edu>, Jessica Frazelle <me@jessfraz.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Jonathan Corbet <corbet@lwn.net>, Tejun Heo <tj@kernel.org>, Lai Jiangshan <jiangshanlai@gmail.com>, Petr Mladek <pmladek@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>, Nicolas Iooss <nicolas.iooss_linux@m4x.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Richard Cochran <richardcochran@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Michal Marek <mmarek@suse.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Olof Johansson <olof@lixom.net>, Shuah Khan <shuah@kernel.org>, linux-doc@vger.kernel.org, lkml <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170208091250.GT6515@twins.programming.kicks-ass.net>
+Subject: Re: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures
+ through CHECK_DATA_CORRUPTION
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 7, 2017 at 3:40 PM, Kees Cook <keescook@chromium.org> wrote:
-> Currently CONFIG_TIMER_STATS exposes process information across namespaces:
->
-> kernel/time/timer_list.c print_timer():
->
->         SEQ_printf(m, ", %s/%d", tmp, timer->start_pid);
->
-> /proc/timer_list:
->
->  #11: <0000000000000000>, hrtimer_wakeup, S:01, do_nanosleep, cron/2570
->
-> Given that the tracer can give the same information, this patch entirely
-> removes CONFIG_TIMER_STATS.
->
-> Suggested-by: Thomas Gleixner <tglx@linutronix.de>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
+On Wed, Feb 08, 2017 at 10:12:50AM +0100, Peter Zijlstra wrote:
+> On x86 have have __ex_table and __bug_table. The former is used for all
+> sorts of things, including fixing up faults.
+> 
+> Now, our struct exception_table_entry has a third field used to specify
+> a handler, see commit:
+> 
+>  548acf19234d ("x86/mm: Expand the exception table logic to allow new handling options")
 
-I don't have an issue with this, but I worry this would break some
-tooling out there. Should it be marked as deprecated first?
+Ah; neat!
 
-Or maybe just pulling the band-aid off is the best way?
+> Still, if we want to allow a generic implementation that does a function
+> call, the handler prototype should probably look like:
+> 
+> 	void exception_value(unsigned long value);
+> 
+> Which means the arch bits need a trampoline and we also need to encode
+> that. The best I've come up with is having nr_regs trampolines and
+> stuffing the trampoline function in the ->handler field and then using
+> the ->to field to encode the actual handler.
+> 
+> Something like:
+> 
+> #define EX_REG_HANDLER(_reg)					\
+> bool ex_handler_value_##_reg(const struct exception_table_entry *fixup, \
+> 			    struct pt_regs *regs, int trapnr)	\
+> {								\
+> 	void (*handler)(unsigned long) =			\
+> 		(void *)((unsigned long)&fixup->to + fixup->to); \
+> 								\
+> 	if (trapnr != X86_TRAP_UD)				\
+> 		return false;					\
+> 								\
+> 	regs->ip += 2; /* size of UD2 instruction */		\
+> 	handler(regs->_reg);					\
+> 	return true;						\
+> }
+> 
+> EX_REG_HANDLER(bx);
+> EX_REG_HANDLER(cx);
+> ...
+> EX_REG_HANDLER(ss);
+> 
+> 
+> asm (
+> " .macro reg_to_handler	r\n"
+> " .irp rs,bx,cx,...,ss\n"
+> " .ifc \\r, %\\rs\n"
+> " ex_handler_value_\\rs\n"
+> " .endif\n"
+> " .endr\n"
+> " .endm\n"
+> );
+> 
+> #define EXCEPTION_VALUE(val, handler)			\
+> 	asm volatile ("1: ud2"				\
+> 		      _ASM_EXTABLE_HANDLE(1b, handler,	\
+> 				     reg_to_handler %0) \
+> 		      : : "r" (val))
+> 
+> 
+> Where the generic version can simply be:
+> 
+> #define EXCEPTION_VALUE(val, handler)	handler((unsigned long)val)
+> 
+> Makes sense?
 
-thanks
--john
+That all makes sense to me.
+
+I'll take a look at putting together an arm64 equivalent to the x86
+extable patch, along with cleanup to our SW breakpoint code (which we
+use in lieu for x86's UD2).
+
+Thanks,
+Mark.
