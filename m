@@ -1,92 +1,59 @@
-Message-ID: <589AFE24.8030706@arm.com>
-Date: Wed, 08 Feb 2017 11:16:52 +0000
-From: James Morse <james.morse@arm.com>
-MIME-Version: 1.0
-References: <1486296850-16045-1-git-send-email-kpark3469@gmail.com> <1486296850-16045-2-git-send-email-kpark3469@gmail.com> <58999F15.3090807@arm.com> <5899FDDD.3080605@arm.com> <CAGXu5jKghXnA8mNQY6wxr-CGLD-fVVmci6Txqzev8akzNGad6A@mail.gmail.com>
-In-Reply-To: <CAGXu5jKghXnA8mNQY6wxr-CGLD-fVVmci6Txqzev8akzNGad6A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 2/3] arm64: usercopy: Implement stack frame object
- validation
-To: Kees Cook <keescook@chromium.org>
-Cc: Keun-O Park <kpark3469@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed,  8 Feb 2017 11:55:33 +0000
+Message-Id: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v2 00/14] arm64+ARM: efi: PE/COFF cleanup/hardening
+To: linux-efi@vger.kernel.org, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, leif.lindholm@linaro.org
+Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Kees,
+This cleans up the PE/COFF EFI header, by taking some of Mark's patches
+and use them to replace open coded constants with symbolic ones, and
+remove incorrect values or unused sections.
 
-On 07/02/17 18:13, Kees Cook wrote:
-> On Tue, Feb 7, 2017 at 9:03 AM, James Morse <james.morse@arm.com> wrote:
->> On 07/02/17 10:19, James Morse wrote:
->> The reason turns out to be because LKDTM isn't testing whether we are
->> overlapping stack frames.
->> Instead it wants us to tell it whether the original caller somewhere down the
->> stack pointed into a stack frame that hadn't yet been written. This requires
->> this function to know how it will be called and unwind some number of frames.
->> Annoyingly we have to maintain start/end boundaries for each frame in case the
->> object was neatly contained in a frame that wasn't written at the time.
-> 
-> "hadn't yet been written"? This doesn't make sense.
+Finally, it updates the section layout so that the kernel Image can be
+mapped in a way that does not require setting RWX permissions anywhere.
+Note that this is currently not a huge win, given that most current UEFI
+implementations map all of RAM RWX by default, but this is finally gaining
+some attention, and work is underway to make the PE/COFF loader in EDK2
+adhere to the section permissions, which would also allow the RAM mapping
+to default to non-executable. Work in progress nonetheless...
 
-Sorry, "wasn't contained by a frame at the time copy_to_user() was called, even
-if it is now...".
+Changes since v1:
+- added missing secondary SOB on Mark's patches
+- leave Image header as before, only move the PE header to a separate file
+- put PE header fixes in a separate patch
+- add acks from Mark and Peter (#6)
+- give ARM the same treatment as arm64 (#10 - #13)
+- add NB10 PE debuglink entry to ARM PE/COFF header as well (#9, #14)
 
+Ard Biesheuvel (12):
+  arm64: efi: move EFI header and related data to a separate .S file
+  arm64: efi: clean up Image header after PE header has been split off
+  arm64: efi: remove forbidden values from the PE/COFF header
+  arm64: efi: remove pointless dummy .reloc section
+  arm64: efi: replace open coded constants with symbolic ones
+  arm64: efi: split Image code and data into separate PE/COFF sections
+  arm: compressed: put zImage header and EFI header in dedicated section
+  arm: efi: remove forbidden values from the PE/COFF header
+  arm: efi: remove pointless dummy .reloc section
+  arm: efi: replace open coded constants with symbolic ones
+  arm: efi: split zImage code and data into separate PE/COFF sections
+  arm: efi: add PE/COFF debug table to EFI header
 
-> The hardened
-> usercopy stack frame check (which is what LKDTM is exercising) wants
-> to simply walk from the current frame up, making sure that the object
-> in question is entirely contained by any single stack frame. Any
-> dynamic stack allocations should already be covered since it would be
-> within the caller's frame.
+Mark Rutland (2):
+  include: pe.h: allow for use in assembly
+  include: pe.h: add some missing definitions
 
-Sure, maybe I'm looking at the wrong lkdtm test then. I see this happening:
+ arch/arm/boot/compressed/Makefile      |   4 +
+ arch/arm/boot/compressed/efi-header.S  | 253 ++++++++++++--------
+ arch/arm/boot/compressed/head.S        |  14 +-
+ arch/arm/boot/compressed/vmlinux.lds.S |  32 ++-
+ arch/arm64/kernel/efi-header.S         | 155 ++++++++++++
+ arch/arm64/kernel/head.S               | 167 +------------
+ arch/arm64/kernel/vmlinux.lds.S        |   5 +
+ include/linux/pe.h                     | 177 +++++++-------
+ 8 files changed, 449 insertions(+), 358 deletions(-)
+ create mode 100644 arch/arm64/kernel/efi-header.S
 
-do_usercopy_stack_callee() returns its own stack value (while trying to confuse
-the compiler). We know this value must be after do_usercopy_stack()s frame.
-do_usercopy_stack() then passes this value to copy_{to,from}_user(), the test
-expects this to to be rejected.
-
-copy_{to,from}_user() then inline a call to __check_object_size(), which in turn
-calls check_stack_object() (which is marked noinline). These calls will generate
-stack frames, which will overlap the value do_usercopy_stack_callee() returned.
-
-By the time arch_within_stack_frames() is called, the value returned by
-do_usercopy_stack_callee() is within a stack frame. It just wasn't within a
-stack frame at the time copy_to_user() was called.
-
-Does this make sense, or have I gone off the rails?
-
-
-One way to fix this is to make the size given to copy_to_user() so large that it
-must overlap multiple stack frames. 32 bytes is too small given arm64 kernel
-stacks have to be 16 byte aligned.
-
-A better trick would be to inline the 'not after our stack frame' check into
-do_usercopy_stack(), but that means exposing the report_usercopy() and maybe
-some more. (I will give it a go).
-
-
-> This doesn't seem to sanity-check that the frame is still within the
-> process stack. We'd want to make sure it can't walk off into la-la
-> land. :) (We could just add "stack" and "stack_end" to the
-> check_frame_arg struct along with checks?)
-
-The arch unwind_frame() machinery does this for us, in particular the cryptic:
->	if (fp < low || fp > high || fp & 0xf)
->		return -EINVAL;
-
-Is testing that the freshly read 'fp' is between the 'top' of this frame and the
-'bottom' of the stack.
-
-The only corner case would be if you called this and object wasn't on the stack
-at all to begin with, but core code already checks this. Before calling
-arch_within_stack_frames(),
-mm/usercopy.c:check_stack_object():
->	/* Object is not on the stack at all. */
->	if (obj + len <= stack || stackend <= obj)
->		return NOT_STACK;
-
-
-
-Thanks,
-
-James
+-- 
+2.7.4
