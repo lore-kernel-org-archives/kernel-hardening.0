@@ -1,80 +1,108 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed,  8 Feb 2017 11:55:39 +0000
-Message-Id: <1486554947-3964-7-git-send-email-ard.biesheuvel@linaro.org>
+Date: Wed,  8 Feb 2017 11:55:41 +0000
+Message-Id: <1486554947-3964-9-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1486554947-3964-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 06/14] arm64: efi: remove pointless dummy .reloc section
+Subject: [kernel-hardening] [PATCH v2 08/14] arm64: efi: split Image code and data into separate PE/COFF sections
 To: linux-efi@vger.kernel.org, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, leif.lindholm@linaro.org
 Cc: catalin.marinas@arm.com, linux@armlinux.org.uk, kernel-hardening@lists.openwall.com, labbott@fedoraproject.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The kernel's EFI PE/COFF header contains a dummy .reloc section, and
-an explanatory comment that claims that this is required for the EFI
-application loader to accept the Image as a relocatable image (i.e.,
-one that can be loaded at any offset and fixed up in place)
+To prevent unintended modifications to the kernel text (malicious or
+otherwise) while running the EFI stub, describe the kernel image as
+two separate sections: a .text section with read-execute permissions,
+covering .text, .rodata and .init.text, and a .data section with
+read-write permissions, covering .init.data, .data and .bss.
 
-This was inherited from the x86 implementation, which has elaborate host
-tooling to mangle the PE/COFF header post-link time, and which populates
-the .reloc section with a single dummy base relocation. On ARM, no such
-tooling exists, and the .reloc section remains empty, and is never even
-exposed via the BaseRelocationTable directory entry, which is where the
-PE/COFF loader looks for it.
+This relies on the firmware to actually take the section permission
+flags into account, but this is something that is currently being
+implemented in EDK2, which means we will likely start seeing it in
+the wild between one and two years from now.
 
-The PE/COFF spec is unclear about relocatable images that do not require
-any fixups, but the EDK2 implementation, which is the de facto reference
-for PE/COFF in the UEFI space, clearly does not care, and explicitly
-mentions (in a comment) that relocatable images with no base relocations
-are perfectly fine, as long as they don't have the RELOCS_STRIPPED
-attribute set (which is not the case for our PE/COFF image)
-
-So simply remove the .reloc section altogether.
-
-Acked-by: Mark Rutland <mark.rutland@arm.com>
-Acked-by: Peter Jones <pjones@redhat.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/kernel/efi-header.S | 22 +-------------------
- 1 file changed, 1 insertion(+), 21 deletions(-)
+ arch/arm64/kernel/efi-header.S  | 23 +++++++++++++++-----
+ arch/arm64/kernel/vmlinux.lds.S |  5 +++++
+ 2 files changed, 23 insertions(+), 5 deletions(-)
 
 diff --git a/arch/arm64/kernel/efi-header.S b/arch/arm64/kernel/efi-header.S
-index 515624bbfcd0..8786d58af2df 100644
+index 7637226ea9ca..5870bd611498 100644
 --- a/arch/arm64/kernel/efi-header.S
 +++ b/arch/arm64/kernel/efi-header.S
-@@ -12,7 +12,7 @@
- 	.short 	0
- coff_header:
- 	.short	0xaa64					// AArch64
--	.short	2					// nr_sections
-+	.short	1					// nr_sections
- 	.long	0 					// TimeDateStamp
- 	.long	0					// PointerToSymbolTable
- 	.long	0					// NumberOfSymbols
-@@ -71,26 +71,6 @@ extra_header_fields:
- 
+@@ -27,8 +27,8 @@ optional_header:
+ 	.short	PE_OPT_MAGIC_PE32PLUS			// PE32+ format
+ 	.byte	0x02					// MajorLinkerVersion
+ 	.byte	0x14					// MinorLinkerVersion
+-	.long	_end - efi_header_end			// SizeOfCode
+-	.long	0					// SizeOfInitializedData
++	.long	__pecoff_data_start - efi_header_end	// SizeOfCode
++	.long	__pecoff_data_size			// SizeOfInitializedData
+ 	.long	0					// SizeOfUninitializedData
+ 	.long	__efistub_entry - _head			// AddressOfEntryPoint
+ 	.long	efi_header_end - _head			// BaseOfCode
+@@ -74,9 +74,9 @@ extra_header_fields:
  	// Section table
  section_table:
--
--	/*
--	 * The EFI application loader requires a relocation section
--	 * because EFI applications must be relocatable.  This is a
--	 * dummy section as far as we are concerned.
--	 */
--	.ascii	".reloc"
--	.byte	0
--	.byte	0					// end of 0 padding of section name
--	.long	0
--	.long	0
--	.long	0					// SizeOfRawData
--	.long	0					// PointerToRawData
--	.long	0					// PointerToRelocations
--	.long	0					// PointerToLineNumbers
--	.short	0					// NumberOfRelocations
--	.short	0					// NumberOfLineNumbers
--	.long	0x42000040				// Characteristics (section flags)
--
--
- 	.ascii	".text"
- 	.byte	0
- 	.byte	0
+ 	.ascii	".text\0\0\0"
+-	.long	_end - efi_header_end			// VirtualSize
++	.long	__pecoff_data_start - efi_header_end	// VirtualSize
+ 	.long	efi_header_end - _head			// VirtualAddress
+-	.long	_edata - efi_header_end			// SizeOfRawData
++	.long	__pecoff_data_start - efi_header_end	// SizeOfRawData
+ 	.long	efi_header_end - _head			// PointerToRawData
+ 
+ 	.long	0					// PointerToRelocations
+@@ -84,7 +84,20 @@ section_table:
+ 	.short	0					// NumberOfRelocations
+ 	.short	0					// NumberOfLineNumbers
+ 	.long	IMAGE_SCN_CNT_CODE | \
+-		IMAGE_SCN_MEM_EXECUTE | \
++		IMAGE_SCN_MEM_READ | \
++		IMAGE_SCN_MEM_EXECUTE			// Characteristics
++
++	.ascii	".data\0\0\0"
++	.long	__pecoff_data_size			// VirtualSize
++	.long	__pecoff_data_start - _head		// VirtualAddress
++	.long	__pecoff_data_rawsize			// SizeOfRawData
++	.long	__pecoff_data_start - _head		// PointerToRawData
++
++	.long	0					// PointerToRelocations
++	.long	0					// PointerToLineNumbers
++	.short	0					// NumberOfRelocations
++	.short	0					// NumberOfLineNumbers
++	.long	IMAGE_SCN_CNT_INITIALIZED_DATA | \
+ 		IMAGE_SCN_MEM_READ | \
+ 		IMAGE_SCN_MEM_WRITE			// Characteristics
+ 
+diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
+index b8deffa9e1bf..a93cc2b6f50b 100644
+--- a/arch/arm64/kernel/vmlinux.lds.S
++++ b/arch/arm64/kernel/vmlinux.lds.S
+@@ -149,6 +149,9 @@ SECTIONS
+ 		ARM_EXIT_KEEP(EXIT_TEXT)
+ 	}
+ 
++	. = ALIGN(SZ_4K);
++	__pecoff_data_start = .;
++
+ 	.init.data : {
+ 		INIT_DATA
+ 		INIT_SETUP(16)
+@@ -206,6 +209,7 @@ SECTIONS
+ 	}
+ 
+ 	PECOFF_EDATA_PADDING
++	__pecoff_data_rawsize = ABSOLUTE(. - __pecoff_data_start);
+ 	_edata = .;
+ 
+ 	BSS_SECTION(0, 0, 0)
+@@ -221,6 +225,7 @@ SECTIONS
+ 	. += RESERVED_TTBR0_SIZE;
+ #endif
+ 
++	__pecoff_data_size = ABSOLUTE(. - __pecoff_data_start);
+ 	_end = .;
+ 
+ 	STABS_DEBUG
 -- 
 2.7.4
