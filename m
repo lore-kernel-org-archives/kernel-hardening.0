@@ -1,121 +1,94 @@
-MIME-Version: 1.0
-In-Reply-To: <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net>
-References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
- <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com> <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net>
-From: Jidong Xiao <jidong.xiao@gmail.com>
-Date: Fri, 10 Feb 2017 20:43:32 -0700
-Message-ID: <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
-Content-Type: multipart/alternative; boundary=f403045fbcdab44f840548390449
-Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using virtualization".
-To: Matthew Giassa <matthew@giassa.net>
-Cc: kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>, Rik van Riel <riel@redhat.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Thu,  9 Feb 2017 02:38:21 -0500
+Message-Id: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
+Subject: [kernel-hardening] [RFC][PATCH] nfsd: add +1 to reference counting scheme for struct nfsd4_session
+To: linux-nfs@vger.kernel.org, netdev@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, bfields@fieldses.org, jlayton@poochiereds.net, keescook@chromium.org, elena.reshetova@intel.com, dwindsor@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
---f403045fbcdab44f840548390449
-Content-Type: text/plain; charset=UTF-8
+In furtherance of the KSPP effort to add overflow protection to kernel
+reference counters, a new type (refcount_t) and API have been created.
+Part of the refcount_t API is refcount_inc(), which will not increment a
+refcount_t variable if its value is 0 (as this would indicate a possible
+use-after-free condition). 
 
-Thanks Matthew. So if I understand correctly, even though many people have
-proposed similar solutions, none of them have actually contributed their
-code (of their solution) into Qemu/KVM. To make it "real" (i.e., as a part
-of Qemu/KVM code) is your goal, right? That sounds interesting!
+In auditing the kernel for refcounting corner cases, we've come across the
+case of struct nfsd4_session.  
 
--Jidong
+>From fs/nfsd/state.h:
 
-On Fri, Feb 10, 2017 at 8:21 PM, Matthew Giassa <matthew@giassa.net> wrote:
+/*
+ * Representation of a v4.1+ session. These are refcounted in a similar 
+ * fashion to the nfs4_client. References are only taken when the server
+ * is actively working on the object (primarily during the processing of
+ * compounds).
+ */
+struct nfsd4_session {
+    atomic_t se_ref;
+    ...
+};
 
-> On 2017-02-10 03:18 PM, Jidong Xiao wrote:
->
->> Sorry, I have to resend this again, as the original two emails were
->> blocked because of the url.
->>
->> "Rootkit detection using virtualization" has been widely studied for a
->> decade. Is the approach you are going to use different from all of these
->> existing ones:
->>
->> "Survey: Virtual Machine Introspection Based System Monitoring and
->> Malware Detection Techniques" - by Haofu Liao at University of Rochester.
->>
->> -Jidong
->>
->
-> On 2017-02-10 05:37 PM, Rik van Riel wrote:
-> >
-> > One of the things that Matthew can do is build on
-> > the read-only memory protections in the kernel, and
-> > have the hypervisor enforce that the memory the kernel
-> > marks as read-only is never written from inside the
-> > virtual machine, until the next reboot.
-> >
-> > That seems like it might be a useful place to start,
-> > since it would immediately make the other read-only
-> > protections that people are working on much harder to
-> > get around, at least inside virtual machines.
-> >
->
->
-> My initial plan was to start with what Rik proposed, and focus on
-> additional memory protections. With respect to long-term plans, a lot of my
-> work/research so far has been focused on implementing a system similar to
-> that presented by Payne et al (ie: Lares).
->
-> -Matthew Giassa
->
 
---f403045fbcdab44f840548390449
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
+>From fs/nfsd/nfs4state.c:
 
-<div dir=3D"ltr">Thanks Matthew. So if I understand correctly, even though =
-many people have proposed similar solutions, none of them have actually con=
-tributed their code (of their solution) into Qemu/KVM. To make it &quot;rea=
-l&quot; (i.e., as a part of Qemu/KVM code) is your goal, right? That sounds=
- interesting!<div><br></div><div>-Jidong</div></div><div class=3D"gmail_ext=
-ra"><br><div class=3D"gmail_quote">On Fri, Feb 10, 2017 at 8:21 PM, Matthew=
- Giassa <span dir=3D"ltr">&lt;<a href=3D"mailto:matthew@giassa.net" target=
-=3D"_blank">matthew@giassa.net</a>&gt;</span> wrote:<br><blockquote class=
-=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padd=
-ing-left:1ex"><span class=3D"">On 2017-02-10 03:18 PM, Jidong Xiao wrote:<b=
-r>
-<blockquote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1p=
-x #ccc solid;padding-left:1ex">
-Sorry, I have to resend this again, as the original two emails were<br>
-blocked because of the url.<br>
-<br>
-&quot;Rootkit detection using virtualization&quot; has been widely studied =
-for a<br>
-decade. Is the approach you are going to use different from all of these<br=
->
-existing ones:<br>
-<br>
-&quot;Survey: Virtual Machine Introspection Based System Monitoring and<br>
-Malware Detection Techniques&quot; - by Haofu Liao at University of Rochest=
-er.<br>
-<br>
--Jidong<br>
-</blockquote>
-<br></span><span class=3D"">
-On 2017-02-10 05:37 PM, Rik van Riel wrote:<br>
-&gt;<br>
-&gt; One of the things that Matthew can do is build on<br>
-&gt; the read-only memory protections in the kernel, and<br>
-&gt; have the hypervisor enforce that the memory the kernel<br>
-&gt; marks as read-only is never written from inside the<br>
-&gt; virtual machine, until the next reboot.<br>
-&gt;<br>
-&gt; That seems like it might be a useful place to start,<br>
-&gt; since it would immediately make the other read-only<br>
-&gt; protections that people are working on much harder to<br>
-&gt; get around, at least inside virtual machines.<br>
-&gt;<br>
-<br>
-<br></span>
-My initial plan was to start with what Rik proposed, and focus on additiona=
-l memory protections. With respect to long-term plans, a lot of my work/res=
-earch so far has been focused on implementing a system similar to that pres=
-ented by Payne et al (ie: Lares).<span class=3D"HOEnZb"><font color=3D"#888=
-888"><br>
-<br>
--Matthew Giassa<br>
-</font></span></blockquote></div><br></div>
+static void init_session(..., struct nfsd4_session *new, ...)
+{
+    ...
+    atomic_set(&new->se_ref, 0);
+    ...
+}
+ 
+Since nfsd4_session objects are initialized with refcount = 0, subsequent
+increments will fail using the new refcount_t API.
 
---f403045fbcdab44f840548390449--
+Being largely unfamiliar with this subsystem's garbage collection
+mechanism, I'm unsure how to best fix this.  Attached is a patch that
+performs a logical +1 on struct nfsd4_session's reference counting
+scheme.
+
+If this is the correct route to take, I will resubmit this patch with
+updated comments for how struct nfsd4_session is refcounted (see the above
+comment from fs/nsfd/state.h).  This is in preparation for the previously
+mentioned refcount_t API series.
+
+Thanks,
+David Windsor
+
+Signed-off-by: David Windsor <dwindsor@gmail.com>
+---
+ fs/nfsd/nfs4state.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
+index a0dee8a..b0f3010 100644
+--- a/fs/nfsd/nfs4state.c
++++ b/fs/nfsd/nfs4state.c
+@@ -196,7 +196,7 @@ static void nfsd4_put_session_locked(struct nfsd4_session *ses)
+ 
+ 	lockdep_assert_held(&nn->client_lock);
+ 
+-	if (atomic_dec_and_test(&ses->se_ref) && is_session_dead(ses))
++	if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_des(ses))
+ 		free_session(ses);
+ 	put_client_renew_locked(clp);
+ }
+@@ -1645,7 +1645,7 @@ static void init_session(struct svc_rqst *rqstp, struct nfsd4_session *new, stru
+ 	new->se_flags = cses->flags;
+ 	new->se_cb_prog = cses->callback_prog;
+ 	new->se_cb_sec = cses->cb_sec;
+-	atomic_set(&new->se_ref, 0);
++	atomic_set(&new->se_ref, 1);
+ 	idx = hash_sessionid(&new->se_sessionid);
+ 	list_add(&new->se_hash, &nn->sessionid_hashtbl[idx]);
+ 	spin_lock(&clp->cl_lock);
+@@ -1792,7 +1792,7 @@ free_client(struct nfs4_client *clp)
+ 		ses = list_entry(clp->cl_sessions.next, struct nfsd4_session,
+ 				se_perclnt);
+ 		list_del(&ses->se_perclnt);
+-		WARN_ON_ONCE(atomic_read(&ses->se_ref));
++		WARN_ON_ONCE((atomic_read(&ses->se_ref) > 1));
+ 		free_session(ses);
+ 	}
+ 	rpc_destroy_wait_queue(&clp->cl_cb_waitq);
+-- 
+2.7.4
