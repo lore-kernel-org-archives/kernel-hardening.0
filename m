@@ -1,42 +1,41 @@
-Date: Thu, 9 Feb 2017 14:41:43 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <20170208203027.r6v4apovtyi6nuu3@codemonkey.org.uk>
-Message-ID: <alpine.DEB.2.20.1702091415140.3604@nanos>
-References: <20170208192659.GA32582@beast> <CA+55aFzz25AxbG7vJNNKAOEpAJFYnd=D0wJrL-tEN-SREk6kSQ@mail.gmail.com> <20170208203027.r6v4apovtyi6nuu3@codemonkey.org.uk>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2] time: Remove CONFIG_TIMER_STATS
-To: Dave Jones <davej@codemonkey.org.uk>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, Kees Cook <keescook@chromium.org>, Xing Gao <xgao01@email.wm.edu>, Jessica Frazelle <me@jessfraz.com>, John Stultz <john.stultz@linaro.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Jonathan Corbet <corbet@lwn.net>, Tejun Heo <tj@kernel.org>, Lai Jiangshan <jiangshanlai@gmail.com>, Petr Mladek <pmladek@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Oleg Nesterov <oleg@redhat.com>, Nicolas Iooss <nicolas.iooss_linux@m4x.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Richard Cochran <richardcochran@gmail.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Michal Marek <mmarek@suse.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Dmitry Vyukov <dvyukov@google.com>, Olof Johansson <olof@lixom.net>, Shuah Khan <shuah@kernel.org>, "open list:DOCUMENTATION" <linux-doc@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Arjan van de Ven <arjan@linux.intel.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu,  9 Feb 2017 10:33:58 -0800
+Message-Id: <20170209183358.103094-1-thgarnie@google.com>
+Subject: [kernel-hardening] [RFC] syscalls: Restore address limit after a syscall
+To: Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Stephen Bates <stephen.bates@pmcs.com>, Jeff Moyer <jmoyer@redhat.com>, Milosz Tanski <milosz@adfin.com>, Thomas Garnier <thgarnie@google.com>
+Cc: linux-api@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 8 Feb 2017, Dave Jones wrote:
+This patch prevents a syscall to modify the address limit of the
+caller. The address limit is kept by the syscall wrapper and restored
+just after the syscall ends.
 
-> On Wed, Feb 08, 2017 at 11:54:30AM -0800, Linus Torvalds wrote:
->  > On Wed, Feb 8, 2017 at 11:26 AM, Kees Cook <keescook@chromium.org> wrote:
->  > >
->  > > Given that the tracer can give the same information, this patch entirely
->  > > removes CONFIG_TIMER_STATS.
->  > >
->  > > Suggested-by: Thomas Gleixner <tglx@linutronix.de>
->  > > Signed-off-by: Kees Cook <keescook@chromium.org>
->  > > Acked-by: John Stultz <john.stultz@linaro.org>
->  > 
->  > Looks good to me. Let's wait for the 4.11 merge window though. I'm
->  > assuming I'll get this through the tip timer tree..
-> 
-> >From a quick look at the source, powertop uses this file, and appears to
-> handle it gracefully if it fails to open, but it will lose functionality
-> to determine if a timer is deferred.
+For example, it would mitigation this bug:
 
-The lookup happens when evaluating a timer_expire_entry tracing event.
+- https://bugs.chromium.org/p/project-zero/issues/detail?id=990
 
-With current kernels the same information can be retrieved from the
-timer_start tracing event (flags field). And that's way more sensible than
-scanning timer_stats because when the trace is evaluated there is no
-guarantee at all that the timer is still queued and exposed there. That
-should be trivial to fix in powertop.
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20170209
+---
+ include/linux/syscalls.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
-Thanks,
-
-	tglx
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index 91a740f6b884..a1b6a62a9849 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -198,7 +198,10 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))	\
+ 	{								\
+-		long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		long ret;						\
++		mm_segment_t fs = get_fs();				\
++		ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		set_fs(fs);						\
+ 		__MAP(x,__SC_TEST,__VA_ARGS__);				\
+ 		__PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));	\
+ 		return ret;						\
+-- 
+2.11.0.483.g087da7b7c-goog
