@@ -1,64 +1,54 @@
 From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Thu,  9 Feb 2017 13:03:46 +0900
-Message-Id: <1486613040-30555-1-git-send-email-hoeun.ryu@gmail.com>
-Subject: [kernel-hardening] [PATCH v2 1/2] fork: free vmapped stacks in cache when cpus are offline
-To: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>
+Date: Thu,  9 Feb 2017 13:03:47 +0900
+Message-Id: <1486613040-30555-2-git-send-email-hoeun.ryu@gmail.com>
+In-Reply-To: <1486613040-30555-1-git-send-email-hoeun.ryu@gmail.com>
+References: <1486613040-30555-1-git-send-email-hoeun.ryu@gmail.com>
+Subject: [kernel-hardening] [PATCH v2 2/2] fork: make number of cached stacks (vmapped) configurable using Kbuild
+To: Kees Cook <keescook@chromium.org>, Michal Marek <mmarek@suse.com>, Andrew Morton <akpm@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, Ingo Molnar <mingo@kernel.org>, =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Nicholas Piggin <npiggin@gmail.com>, Andy Lutomirski <luto@kernel.org>, Michal Hocko <mhocko@suse.com>, "Eric W. Biederman" <ebiederm@xmission.com>, Mateusz Guzik <mguzik@redhat.com>
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Hoeun Ryu <hoeun.ryu@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
- Using virtually mapped stack, kernel stacks are allocated via vmalloc.
-In the current implementation, two stacks per cpu can be cached when
-tasks are freed and the cached stacks are used again in task duplications.
-but the cached stacks may remain unfreed even when cpu are offline.
- By adding a cpu hotplug callback to free the cached stacks when a cpu
-goes offline, the pages of the cached stacks are not wasted.
+Introducing NR_VMAP_STACK_CACHE, the number of cached stacks for virtually
+mapped kernel stack can be configurable using Kbuild system.
+default value is 2.
 
 Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
 ---
-Changes in v2:
- remove cpuhp callback for `starup`, only `teardown` callback is installed.
+ arch/Kconfig  | 8 ++++++++
+ kernel/fork.c | 2 +-
+ 2 files changed, 9 insertions(+), 1 deletion(-)
 
- kernel/fork.c | 21 +++++++++++++++++++++
- 1 file changed, 21 insertions(+)
-
+diff --git a/arch/Kconfig b/arch/Kconfig
+index d49a8e6..066d111 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -849,6 +849,14 @@ config VMAP_STACK
+ 	  the stack to map directly to the KASAN shadow map using a formula
+ 	  that is incorrect if the stack is in vmalloc space.
+ 
++config NR_VMAP_STACK_CACHE
++	int "Number of cached stacks"
++	default "2"
++	depends on VMAP_STACK
++	help
++	  This determines how many stacks can be cached for virtually
++	  mapped kernel stacks.
++
+ config ARCH_WANT_RELAX_ORDER
+ 	bool
+ 
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 61284d8..7911ed2 100644
+index 7911ed2..73ba1da 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -170,6 +170,22 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+@@ -166,7 +166,7 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+  * vmalloc() is a bit slow, and calling vfree() enough times will force a TLB
+  * flush.  Try to minimize the number of calls by caching stacks.
+  */
+-#define NR_CACHED_STACKS 2
++#define NR_CACHED_STACKS CONFIG_NR_VMAP_STACK_CACHE
  static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
  #endif
  
-+static int free_vm_stack_cache(unsigned int cpu)
-+{
-+	int i;
-+
-+	for (i = 0; i < NR_CACHED_STACKS; i++) {
-+		struct vm_struct *vm_stack = this_cpu_read(cached_stacks[i]);
-+		if (!vm_stack)
-+			continue;
-+
-+		vfree(vm_stack->addr);
-+		this_cpu_write(cached_stacks[i], NULL);
-+	}
-+
-+	return 0;
-+}
-+
- static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
- {
- #ifdef CONFIG_VMAP_STACK
-@@ -456,6 +472,11 @@ void __init fork_init(void)
- 	for (i = 0; i < UCOUNT_COUNTS; i++) {
- 		init_user_ns.ucount_max[i] = max_threads/2;
- 	}
-+
-+#ifdef CONFIG_VMAP_STACK
-+	cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "vm_stack_cache",
-+			  NULL, free_vm_stack_cache);
-+#endif
- }
- 
- int __weak arch_dup_task_struct(struct task_struct *dst,
 -- 
 2.7.4
