@@ -1,126 +1,61 @@
 MIME-Version: 1.0
-In-Reply-To: <CAJcbSZHv7w5jYQ2AZ-g4Kc0mX0jRRbHCKwFKx1EFuOAby1yxXA@mail.gmail.com>
-References: <20170209183358.103094-1-thgarnie@google.com> <CAGXu5j+hyXxpyU1R+BeL9RwPhT6HSNE0c_b7MP_V0rYSAepYFw@mail.gmail.com>
- <CALCETrWrbDnka=aqzQ5+7WN2N6RwFsQb7smcnjQMsjov+y=dTQ@mail.gmail.com> <CAJcbSZHv7w5jYQ2AZ-g4Kc0mX0jRRbHCKwFKx1EFuOAby1yxXA@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 9 Feb 2017 18:42:34 -0800
-Message-ID: <CALCETrVS6J2_GPWBoxUFUhjdyce0TBdroA+FjfdNywr9_k6hew@mail.gmail.com>
+In-Reply-To: <87efzag2fs.fsf@concordia.ellerman.id.au>
+References: <1486098682-30395-1-git-send-email-bhsharma@redhat.com> <87efzag2fs.fsf@concordia.ellerman.id.au>
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Fri, 10 Feb 2017 13:15:13 +0530
+Message-ID: <CACi5LpOD5VCCmn4CdTZy+MA=4w9Vw+jiB7C435OfLCJ7_mW69Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC] syscalls: Restore address limit after a syscall
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Kees Cook <keescook@chromium.org>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Stephen Bates <stephen.bates@pmcs.com>, Jeff Moyer <jmoyer@redhat.com>, Milosz Tanski <milosz@adfin.com>, Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Will Deacon <will.deacon@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>
+Subject: Re: [kernel-hardening] [PATCH v2 1/1] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: Michael Ellerman <mpe@ellerman.id.au>
+Cc: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, Daniel Cashman <dcashman@google.com>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 9, 2017 at 3:41 PM, Thomas Garnier <thgarnie@google.com> wrote:
-> On Thu, Feb 9, 2017 at 3:05 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Thu, Feb 9, 2017 at 11:31 AM, Kees Cook <keescook@chromium.org> wrote:
->>> On Thu, Feb 9, 2017 at 10:33 AM, Thomas Garnier <thgarnie@google.com> wrote:
->>>> This patch prevents a syscall to modify the address limit of the
->>>> caller. The address limit is kept by the syscall wrapper and restored
->>>> just after the syscall ends.
->>>>
->>>> For example, it would mitigation this bug:
->>>>
->>>> - https://bugs.chromium.org/p/project-zero/issues/detail?id=990
->>>>
->>>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->>>> ---
->>>> Based on next-20170209
->>>> ---
->>>>  include/linux/syscalls.h | 5 ++++-
->>>>  1 file changed, 4 insertions(+), 1 deletion(-)
->>>>
->>>> diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
->>>> index 91a740f6b884..a1b6a62a9849 100644
->>>> --- a/include/linux/syscalls.h
->>>> +++ b/include/linux/syscalls.h
->>>> @@ -198,7 +198,10 @@ extern struct trace_event_functions exit_syscall_print_funcs;
->>>>         asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));      \
->>>>         asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))       \
->>>>         {                                                               \
->>>> -               long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));  \
->>>> +               long ret;                                               \
->>>> +               mm_segment_t fs = get_fs();                             \
->>>> +               ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));       \
->>>> +               set_fs(fs);                                             \
->>>>                 __MAP(x,__SC_TEST,__VA_ARGS__);                         \
->>>>                 __PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));       \
->>>>                 return ret;                                             \
->>>> --
->>>> 2.11.0.483.g087da7b7c-goog
->>>>
->>>
->>> I have a memory of Andy looking at this before, and there was some
->>> problem with how a bunch of compat code would set fs and then re-call
->>> the syscall... but I can't quite find the conversation. Andy, do you
->>> remember the details?
->>>
->>> This seems like an entirely reasonable thing to enforce for syscalls,
->>> though I'm sure there's a gotcha somewhere. :)
->>
->> This sounds vaguely familiar, but that's about all.
->>
->> Anyway, it seems reasonable that the SyS_foobar wrappers are genuinely
->> only used for syscalls and not for other things, so the code should
->> *work*.  That being said, I think there's room for several
->> improvements.
->>
->> 1. Why save the old "fs" value?  For that matter, why restore it?
->> IOW, I'd rather see BUG_ON(get_fs() != USER_DS) at the end.
->>
->
-> I guess that make sense in the wrapper.
->
->> 2. I'd rather see the mechanism be more general.  If we had, effectively:
->>
->> asmlinkage long SyS_foo(...) {
->>   sys_foo();
->>   verify_pre_usermode_state();
->> }
->>
->> and let verify_pre_usermode_state() potentially do more things, we'd
->> get a more flexible mechanism.  On arches like x86_32, we could save a
->> decent amount of code size by moving verify_pre_usermode_state() into
->> prepare_exit_to_usermode(), but that would have to be a per-arch
->> opt-in.  x86_64 probably would *not* select this due to the fast path
->> (or it would do it in asm.  hmm.).
->>
->
-> I will look into that. I like this design better.
->
->> 3. If this thing gets factored out, then arch code can call it for
->> non-syscall entries, too.
->>
->
-> Yes, it makes sense.
->
->> 4. Can we make this configurable?
->>
->>
->> For x86, a nice implementation might be:
->>
->> select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
->>
->> ... in prepare_exit_to_usermode():
->>
->> verify_pre_usermode_state();  // right at the beginning
->>
->> ... in the asm syscall fast path:
->>
->> #ifdef CONFIG_VERIFY_PRE_USERMODE_STATE
->> call verify_pre_usermode_staet
->> #endif
->>
->> (or just inline the interesting bit)
->>
->
-> So by default it is in the wrapper. If selected, an architecture can
-> disable the wrapper put it in the best places. Understood correctly?
+Hi Michael,
 
-Sounds good to me.
+On Tue, Feb 7, 2017 at 7:57 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+> Bhupesh Sharma <bhsharma@redhat.com> writes:
+>
+>> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT) for
+>> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
+>> for the mmap base address.
+>>
+>> This value represents a compromise between increased
+>> ASLR effectiveness and avoiding address-space fragmentation.
+>> Replace it with a Kconfig option, which is sensibly bounded, so that
+>> platform developers may choose where to place this compromise.
+>> Keep default values as new minimums.
+>>
+>> This patch makes sure that now powerpc mmap arch_mmap_rnd() approach
+>> is similar to other ARCHs like x86, arm64 and arm.
+>>
+>> Cc: Alexander Graf <agraf@suse.com>
+>> Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+>> Cc: Paul Mackerras <paulus@samba.org>
+>> Cc: Michael Ellerman <mpe@ellerman.id.au>
+>> Cc: Anatolij Gustschin <agust@denx.de>
+>> Cc: Alistair Popple <alistair@popple.id.au>
+>> Cc: Matt Porter <mporter@kernel.crashing.org>
+>> Cc: Vitaly Bordug <vitb@kernel.crashing.org>
+>> Cc: Scott Wood <oss@buserror.net>
+>> Cc: Kumar Gala <galak@kernel.crashing.org>
+>> Cc: Daniel Cashman <dcashman@android.com>
+>> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+>> Reviewed-by: Kees Cook <keescook at chromium.org>
+>> ---
+>> Changes since v1:
+>> v1 can be seen here (https://lists.ozlabs.org/pipermail/linuxppc-dev/2017-February/153594.html)
+>>     - No functional change in this patch.
+>>     - Added R-B from Kees.
+>>     - Dropped PATCH 2/2 from v1 as recommended by Kees Cook.
+>
+> Thanks for v2.
+>
+> But I replied to your v1 with some comments, did you see them?
+>
 
-Presumably the result should go through -mm.  Want to cc: akpm and
-linux-arch@ on the next version?
+I have replied to your comments on the original thread.
+Please share your views and if possible share your test results on the
+PPC setups you might have at your end.
 
-I've also cc'd arm and s390 folks -- those are the other arches that
-try to be on top of hardening.
+Thanks,
+Bhupesh
