@@ -1,72 +1,32 @@
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Sat, 11 Feb 2017 08:40:38 +0900
-Message-Id: <1486770080-25007-1-git-send-email-hoeun.ryu@gmail.com>
-Subject: [kernel-hardening] [PATCH v4] fork: free vmapped stacks in cache when cpus are offline
-To: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Hoeun Ryu <hoeun.ryu@gmail.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
+References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+ <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
+ <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
+ <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com> <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 10 Feb 2017 15:44:50 -0800
+Message-ID: <CAGXu5jKz5vo3NwKb_JmNyWDCP0izK=sxTL6Dx_KmYX=1NK+icA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
+ hidepid= field
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Lafcadio Wluiki <wluikil@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
- Using virtually mapped stack, kernel stacks are allocated via vmalloc.
-In the current implementation, two stacks per cpu can be cached when
-tasks are freed and the cached stacks are used again in task duplications.
-but the cached stacks may remain unfreed even when cpu are offline.
- By adding a cpu hotplug callback to free the cached stacks when a cpu
-goes offline, the pages of the cached stacks are not wasted.
+On Wed, Jan 18, 2017 at 3:35 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Wed, Jan 18, 2017 at 2:50 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> Andy I don't follow here, no_new_privs is never cleared right ? I
+>> can't see the corresponding clear bit code for it.
+>
+> I believe that unsharing userns clears no_new_privs.
 
-Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
----
-v4:
- use CPUHP_BP_PREPARE_DYN state for cpuhp setup
- fix minor coding style
-v3:
- fix misuse of per-cpu api
- fix location of function definition within CONFIG_VMAP_STACK
-v2:
- remove cpuhp callback for `startup`, only `teardown` callback is installed.
+Seriously? That's kind of ... weird. I mean, I guess you're
+priv-confined in a way, but that seems fragile.
 
- kernel/fork.c | 23 +++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+-Kees
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 937ba59..61634d7 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -168,6 +168,24 @@ void __weak arch_release_thread_stack(unsigned long *stack)
-  */
- #define NR_CACHED_STACKS 2
- static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
-+
-+static int free_vm_stack_cache(unsigned int cpu)
-+{
-+	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
-+	int i;
-+
-+	for (i = 0; i < NR_CACHED_STACKS; i++) {
-+		struct vm_struct *vm_stack = cached_vm_stacks[i];
-+
-+		if (!vm_stack)
-+			continue;
-+
-+		vfree(vm_stack->addr);
-+		cached_vm_stacks[i] = NULL;
-+	}
-+
-+	return 0;
-+}
- #endif
- 
- static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
-@@ -456,6 +474,11 @@ void __init fork_init(void)
- 	for (i = 0; i < UCOUNT_COUNTS; i++) {
- 		init_user_ns.ucount_max[i] = max_threads/2;
- 	}
-+
-+#ifdef CONFIG_VMAP_STACK
-+	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vmstack_cache",
-+			  NULL, free_vm_stack_cache);
-+#endif
- }
- 
- int __weak arch_dup_task_struct(struct task_struct *dst,
 -- 
-2.7.4
+Kees Cook
+Pixel Security
