@@ -1,44 +1,52 @@
-Message-ID: <1486770571.2192.36.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Fri, 10 Feb 2017 15:49:31 -0800
-In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC562305DB22@ORSMSX103.amr.corp.intel.com>
-References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-	 <1486757549.2192.20.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
-	 <1486766996.2192.30.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305DB22@ORSMSX103.amr.corp.intel.com>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: "Roberts, William C" <william.c.roberts@intel.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>, Andew Morton <akpm@linux-foundation.org>
-Cc: "keescook@chromium.org" <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Julia Lawall <julia.lawall@lip6.fr>, Emese Revfy <re.emese@gmail.com>
+From: william.c.roberts@intel.com
+Date: Fri, 10 Feb 2017 15:49:56 -0800
+Message-Id: <1486770596-15526-1-git-send-email-william.c.roberts@intel.com>
+Subject: [kernel-hardening] [PATCH v3] checkpatch: add warning on invalid %p extensions
+To: linux-kernel@vger.kernel.org, joe@perches.com, apw@canonical.com
+Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, William Roberts <william.c.roberts@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-(adding Emese Revfy and Julia Lawall)
+From: William Roberts <william.c.roberts@intel.com>
 
-On Fri, 2017-02-10 at 23:31 +0000, Roberts, William C wrote:
-> The problem starts to get hairy when we think of how often folks roll their own logging macros (see some small sampling at the end).
-> 
-> I think we would want to add DEBUG DBG and sn?printf and maybe consider dropping the \b on the regex so it's a bit more matchy but still shouldn't
-> end up matching on any ASM as you pointed out in the V2 nack.
-> 
-> Ill break this down into:
-> 1. the patch as I know you'll take it, as you wrote it :-P
-> 2. Adding to the logging macros
-> 3. exploring making it less matchy
+The kernel supports %p extensions as documented in
+Documentation/printk-formats.txt. Warn on possibly
+improper use of non-extension characters.
 
-checkpatch is a line-oriented bunch of regexes
-and doesn't know what is a __printf format.
+One issue would be the usage of %pk when %pK should have
+been used. This has a side-effect of appearing to work
+alright, but does not respect the kptr_restrict setting
+as %pK does.
 
-It won't ever be "perfect" for this sort of
-format verification checking.
+Sample output:
+WARNING: Invalid vsprintf pointer extension '%pk'
++			printk(KERN_INFO "Could not allocate IRQ %d for PCI Applicom device. %pk\n", dev->irq, pci_get_class); // NOT OK
 
-Another way to do this is to write a gcc compiler
-plugin that verifies the %p<foo> format types and
-emits a warning/error.
+improved-by: joe@perches.com
 
-That's probably the "best" solution.
+Signed-off-by: William Roberts <william.c.roberts@intel.com>
+---
+ scripts/checkpatch.pl | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
-Maybe coccinelle could help too.
+diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
+index 982c52c..dfc1c11 100755
+--- a/scripts/checkpatch.pl
++++ b/scripts/checkpatch.pl
+@@ -6096,6 +6096,15 @@ sub process {
+ 			      "recursive locking is bad, do not use this ever.\n" . $herecurr);
+ 		}
+ 
++	# check for vsprintf extension %p<foo> misuses
++	if ($line =~ /\b$logFunctions\s*\(.*$String/) {
++		my $format = get_quoted_string($line, $rawline);
++		if ($format =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGN]).)/) {
++			WARN("VSPRINTF_POINTER_EXTENSION",
++			     "Invalid vsprintf pointer extension '$1'\n" . $herecurr);
++		}
++	}
++
+ # check for lockdep_set_novalidate_class
+ 		if ($line =~ /^.\s*lockdep_set_novalidate_class\s*\(/ ||
+ 		    $line =~ /__lockdep_no_validate__\s*\)/ ) {
+-- 
+2.7.4
