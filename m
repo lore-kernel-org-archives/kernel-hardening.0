@@ -1,43 +1,49 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKVsT19LuN4qbs-x2oJjV=A7Z65p9K-4-PzMxPRrPWngg@mail.gmail.com>
-References: <1486511794-14490-1-git-send-email-dwindsor@gmail.com> <CAGXu5jKVsT19LuN4qbs-x2oJjV=A7Z65p9K-4-PzMxPRrPWngg@mail.gmail.com>
-From: David Windsor <dwindsor@gmail.com>
-Date: Fri, 10 Feb 2017 09:44:04 -0500
-Message-ID: <CAEXv5_jma18vzjjkW4DXV852BXXu9hipDXi4B3yYaB=684ox0w@mail.gmail.com>
+In-Reply-To: <20170210144130.GP10893@dhcp22.suse.cz>
+References: <1486715554-12772-1-git-send-email-hoeun.ryu@gmail.com>
+ <20170210120524.GI10893@dhcp22.suse.cz> <CABeRdtrqpmJtEnqawruAo-hW1yZG_wB6TGL95=knP0cBmDKZ+Q@mail.gmail.com>
+ <20170210144130.GP10893@dhcp22.suse.cz>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sat, 11 Feb 2017 00:00:00 +0900
+Message-ID: <CABeRdtrHSr-QhLPO-6wVmNMZ2KQQkvs1YXoOtkewK=+zUz3_ig@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] refcount: add refcount_t API kernel-doc comments
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v3] fork: free vmapped stacks in cache when cpus are offline
+To: Michal Hocko <mhocko@kernel.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 7, 2017 at 7:49 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, Feb 7, 2017 at 3:56 PM, David Windsor <dwindsor@gmail.com> wrote:
->> This adds kernel-doc comments for the new refcount_t API.  Additional feature documentation can go in
->> Documentation/security, if needed.
+On Fri, Feb 10, 2017 at 11:41 PM, Michal Hocko <mhocko@kernel.org> wrote:
+> On Fri 10-02-17 23:31:41, Hoeun Ryu wrote:
+>> On Fri, Feb 10, 2017 at 9:05 PM, Michal Hocko <mhocko@kernel.org> wrote:
+>> > On Fri 10-02-17 17:32:07, Hoeun Ryu wrote:
+> [...]
+>> >>  static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+>> >> @@ -456,6 +474,11 @@ void __init fork_init(void)
+>> >>       for (i = 0; i < UCOUNT_COUNTS; i++) {
+>> >>               init_user_ns.ucount_max[i] = max_threads/2;
+>> >>       }
+>> >> +
+>> >> +#ifdef CONFIG_VMAP_STACK
+>> >> +     cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "vm_stack_cache",
+>> >> +                       NULL, free_vm_stack_cache);
+>> >> +#endif
+>> >
+>> > I am not familiar the new hotplug infrastructure so I might be missing
+>> > something. CPUHP_AP_ONLINE_DYN will allocate a state which is has only
+>> > 30 slots available. The name also suggests this will be called on an
+>> > online event. Why doesn't this have its own state like other users. The
+>> > name should also reflect offline event CPUHP_STACK_CACHE_DEAD or
+>> > something like that.
+>>
+>> I'll define CPUHP_VMSTACK_CACHE_DEAD before CPUHP_BP_PREPARE_DYN in
+>> cpuhotplug.h.
+>> Do you think the change is made in a separate patch or not ?
 >
-> Very cool. This may need to get rebased to Peter's lastest series
-> (which uses REFCOUNT_WARN rather than WARN).
->
-> Please add a "Signed-off-by:" line as well.
->
-> I think it'd also be valuable to have some documentation describing
-> how to actually use these, similar to your Examples section on the
-> wiki.
->
+> I think it should be in a single patch. I am not sure what are the rules
+> to define a new state though. Let's CC Thomas.
 
-I just submitted v2 of this documentation patchset, which adds
-refcount_t API kernel-doc comments to include/linux/refcount.h.
+OK, I will.
 
-I'll add some language to Documentation/security/self-protection.txt,
-documenting the feature's justification, typical usage examples, etc.
-This location was decided upon in an earlier discussion on this
-mailing list.
-
-Thanks,
-David
-
-> -Kees
->
 > --
-> Kees Cook
-> Pixel Security
+> Michal Hocko
+> SUSE Labs
