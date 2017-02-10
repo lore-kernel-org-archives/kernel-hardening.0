@@ -1,44 +1,114 @@
-References: <1486747005-15973-1-git-send-email-ard.biesheuvel@linaro.org>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <07ca7d55-2f5a-057c-c5bf-f3348091f1a9@redhat.com>
-Date: Fri, 10 Feb 2017 13:42:24 -0800
+Date: Fri, 10 Feb 2017 21:49:54 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170210214954.GO27312@n2100.armlinux.org.uk>
+References: <20170209183358.103094-1-thgarnie@google.com>
+ <CAGXu5j+hyXxpyU1R+BeL9RwPhT6HSNE0c_b7MP_V0rYSAepYFw@mail.gmail.com>
+ <CALCETrWrbDnka=aqzQ5+7WN2N6RwFsQb7smcnjQMsjov+y=dTQ@mail.gmail.com>
+ <CAJcbSZHv7w5jYQ2AZ-g4Kc0mX0jRRbHCKwFKx1EFuOAby1yxXA@mail.gmail.com>
+ <CALCETrVS6J2_GPWBoxUFUhjdyce0TBdroA+FjfdNywr9_k6hew@mail.gmail.com>
+ <20170210192242.GM27312@n2100.armlinux.org.uk>
+ <CAGXu5jJf5z5f0O=T4awfF98OR7+kaQaFFJu3kXXa402vq-Mj2Q@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1486747005-15973-1-git-send-email-ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 0/4] arm64: mmu: avoid writeable-executable mappings
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, will.deacon@arm.com, catalin.marinas@arm.com, keescook@chromium.org, labbott@fedoraproject.org, james.morse@arm.com
-Cc: kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, christoffer.dall@linaro.org, kernel-hardening@lists.openwall.com, andre.przywara@arm.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJf5z5f0O=T4awfF98OR7+kaQaFFJu3kXXa402vq-Mj2Q@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [RFC] syscalls: Restore address limit after a syscall
+To: Kees Cook <keescook@chromium.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, Stephen Bates <stephen.bates@pmcs.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, Will Deacon <will.deacon@arm.com>, LKML <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@amacapital.net>, Dave Hansen <dave.hansen@intel.com>, Jeff Moyer <jmoyer@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Milosz Tanski <milosz@adfin.com>, Thomas Garnier <thgarnie@google.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/10/2017 09:16 AM, Ard Biesheuvel wrote:
-> Having memory that is writable and executable at the same time is a
-> security hazard, and so we tend to avoid those when we can. However,
-> at boot time, we keep .text mapped writable during the entire init
-> phase, and the init region itself is mapped rwx as well.
+On Fri, Feb 10, 2017 at 12:49:34PM -0800, Kees Cook wrote:
+> On Fri, Feb 10, 2017 at 11:22 AM, Russell King - ARM Linux
+> <linux@armlinux.org.uk> wrote:
+> > On Thu, Feb 09, 2017 at 06:42:34PM -0800, Andy Lutomirski wrote:
+> >> On Thu, Feb 9, 2017 at 3:41 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> >> > So by default it is in the wrapper. If selected, an architecture can
+> >> > disable the wrapper put it in the best places. Understood correctly?
+> >>
+> >> Sounds good to me.
+> >>
+> >> Presumably the result should go through -mm.  Want to cc: akpm and
+> >> linux-arch@ on the next version?
+> >>
+> >> I've also cc'd arm and s390 folks -- those are the other arches that
+> >> try to be on top of hardening.
+> >
+> > The best place for this on ARM is in the assembly code, rather than in
+> > the hundreds of system calls - having it in one place is surely better
+> > for reducing the cache impact.
+> >
+> > This (untested) patch should be sufficient for ARM - there's two choices
+> > which I think make sense to do this:
+> > 1. Immediately after returning the syscall
+> > 2. Immediately before any returning to userspace
+> >
+> > (1) has the advantage that the address limit will be forced for the
+> > exit-path works that we do, preventing those making accesses to kernel
+> > space.
+> >
+> > (2) has the advantage that we'd guarantee that the address limit will
+> > be forced while userspace is running for the next entry into kernel
+> > space.
+> >
+> > There's actually a third option as well:
+> >
+> > (3) forcing the address limit on entry to the kernel from userspace.
+> >
+> > This patch implements option 1.
+> >
+> >  arch/arm/kernel/entry-common.S | 6 ++++++
+> >  1 files changed, 6 insertions(+)
+> >
+> > diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
+> > index eb5cd77bf1d8..6a717a2ccb88 100644
+> > --- a/arch/arm/kernel/entry-common.S
+> > +++ b/arch/arm/kernel/entry-common.S
+> > @@ -39,6 +39,8 @@
+> >  ret_fast_syscall:
+> >   UNWIND(.fnstart       )
+> >   UNWIND(.cantunwind    )
+> > +       mov     r1, #TASK_SIZE
+> > +       str     r1, [tsk, #TI_ADDR_LIMIT]
+> >         disable_irq_notrace                     @ disable interrupts
+> >         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+> >         tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
+> > @@ -64,6 +66,8 @@ ENDPROC(ret_fast_syscall)
+> >  ret_fast_syscall:
+> >   UNWIND(.fnstart       )
+> >   UNWIND(.cantunwind    )
+> > +       mov     r1, #TASK_SIZE
+> > +       str     r1, [tsk, #TI_ADDR_LIMIT]
+> >         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
+> >         disable_irq_notrace                     @ disable interrupts
+> >         ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
+> > @@ -262,6 +266,8 @@ ENDPROC(vector_swi)
+> >         b       ret_slow_syscall
+> >
+> >  __sys_trace_return:
+> > +       mov     r1, #TASK_SIZE
+> > +       str     r1, [tsk, #TI_ADDR_LIMIT]
+> >         str     r0, [sp, #S_R0 + S_OFF]!        @ save returned r0
+> >         mov     r0, sp
+> >         bl      syscall_trace_exit
+> >
 > 
-> Let's improve the situation by:
-> - making the alternatives patching use the linear mapping
-> - splitting the init region into separate text and data regions
-> 
-> This removes all RWX mappings except the really early one created
-> in head.S (which we could perhaps fix in the future as well)
-> 
-> Ard Biesheuvel (4):
->   arm: kvm: move kvm_vgic_global_state out of .text section
->   arm64: alternatives: apply boot time fixups via the linear mapping
->   arm64: mmu: map .text as read-only from the outset
->   arm64: mmu: apply strict permissions to .init.text and .init.data
-> 
->  arch/arm64/include/asm/mmu.h      |  1 +
->  arch/arm64/include/asm/sections.h |  3 +-
->  arch/arm64/kernel/alternative.c   |  6 +--
->  arch/arm64/kernel/smp.c           |  1 +
->  arch/arm64/kernel/vmlinux.lds.S   | 32 ++++++++++-----
->  arch/arm64/mm/init.c              |  3 +-
->  arch/arm64/mm/mmu.c               | 42 ++++++++++++++------
->  virt/kvm/arm/vgic/vgic.c          |  4 +-
->  8 files changed, 64 insertions(+), 28 deletions(-)
-> 
+> That looks pretty great! If I'm reading the macros correctly, this'll
+> only happen on _actual_ syscall exit, right? So all the crazy OABI
+> stuff won't suddenly break? e.g.:
 
-Reviewed-by: Laura Abbott <labbott@redhat.com>
+Correct.
+
+> Is there a similarly good place to do this for arm64?
+
+I'd imagine similar places exist in arm64:
+
+ret_fast_syscall
+ret_to_user
+
+maybe?
+
+-- 
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
