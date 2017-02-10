@@ -1,35 +1,72 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC562305B2AC@ORSMSX103.amr.corp.intel.com>
-References: <476DC76E7D1DF2438D32BFADF679FC562305B2AC@ORSMSX103.amr.corp.intel.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 10 Feb 2017 15:41:40 -0800
-Message-ID: <CAGXu5jJ4AAHP66WMGdy4A_Jm6uW_FQxMBRypv-hCy3xTEcVcVQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: %pK continuation
-To: "Roberts, William C" <william.c.roberts@intel.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sat, 11 Feb 2017 08:40:38 +0900
+Message-Id: <1486770080-25007-1-git-send-email-hoeun.ryu@gmail.com>
+Subject: [kernel-hardening] [PATCH v4] fork: free vmapped stacks in cache when cpus are offline
+To: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>, Hoeun Ryu <hoeun.ryu@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2017 at 11:02 AM, Roberts, William C
-<william.c.roberts@intel.com> wrote:
-> I haven't had time to really work on the continuation of:
-> http://www.openwall.com/lists/kernel-hardening/2016/10/07/1
->
-> I think the simple approach of killing %p based on kptr_restrict remains the simplest, IMHO best way to achieve a better level of
-> preventing leaks of kernel addresses. In example of %pK going wrong can be found here:
->  https://googleprojectzero.blogspot.com/2017/02/lifting-hyper-visor-bypassing-samsungs.html.
+ Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+In the current implementation, two stacks per cpu can be cached when
+tasks are freed and the cached stacks are used again in task duplications.
+but the cached stacks may remain unfreed even when cpu are offline.
+ By adding a cpu hotplug callback to free the cached stacks when a cpu
+goes offline, the pages of the cached stacks are not wasted.
 
-There's been some experimentation in Android kernels recently based on
-your original version, though it's not quite ready for prime-time. I'm
-hoping to see it posted to this list soon...
+Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+---
+v4:
+ use CPUHP_BP_PREPARE_DYN state for cpuhp setup
+ fix minor coding style
+v3:
+ fix misuse of per-cpu api
+ fix location of function definition within CONFIG_VMAP_STACK
+v2:
+ remove cpuhp callback for `startup`, only `teardown` callback is installed.
 
-> Granted, the exploit author would have found another way to defeat KASL, I'd like to force their hand.
+ kernel/fork.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
 
-Always true, but better to keep raising the bar, I think. :)
-
--Kees
-
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 937ba59..61634d7 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -168,6 +168,24 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+  */
+ #define NR_CACHED_STACKS 2
+ static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
++
++static int free_vm_stack_cache(unsigned int cpu)
++{
++	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
++	int i;
++
++	for (i = 0; i < NR_CACHED_STACKS; i++) {
++		struct vm_struct *vm_stack = cached_vm_stacks[i];
++
++		if (!vm_stack)
++			continue;
++
++		vfree(vm_stack->addr);
++		cached_vm_stacks[i] = NULL;
++	}
++
++	return 0;
++}
+ #endif
+ 
+ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+@@ -456,6 +474,11 @@ void __init fork_init(void)
+ 	for (i = 0; i < UCOUNT_COUNTS; i++) {
+ 		init_user_ns.ucount_max[i] = max_threads/2;
+ 	}
++
++#ifdef CONFIG_VMAP_STACK
++	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vmstack_cache",
++			  NULL, free_vm_stack_cache);
++#endif
+ }
+ 
+ int __weak arch_dup_task_struct(struct task_struct *dst,
 -- 
-Kees Cook
-Pixel Security
+2.7.4
