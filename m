@@ -1,112 +1,85 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAEk6tEw5VbSzzfQDZ_TO4piGGfKa5M4uza8m3x=tm4N1v2seiw@mail.gmail.com>
-References: <20170210100902.11765-1-me@jessfraz.com> <20170210100902.11765-2-me@jessfraz.com>
- <CAGXu5jKnf7NebFQp-w9gka9nR2V4Jc3aSfNK2yvvrYa=UUEh-g@mail.gmail.com> <CAEk6tEw5VbSzzfQDZ_TO4piGGfKa5M4uza8m3x=tm4N1v2seiw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 10 Feb 2017 15:15:24 -0800
-Message-ID: <CAGXu5j+hDp1goe+4yKjTrmNaVpOFff_GZSre-qUFbydGHV1P=A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 1/4] irq: set {msi_domain,syscore}_ops
- as __ro_after_init
-To: Jessica Frazelle <me@jessfraz.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+From: Jidong Xiao <jidong.xiao@gmail.com>
+Date: Fri, 10 Feb 2017 16:14:12 -0700
+Message-ID: <CAG4AFWbdvaOMUt-HtZYBTC5Oim+Vpe0_MFAaq2Z3P853Z-wZVg@mail.gmail.com>
+Content-Type: multipart/alternative; boundary=001a11411c767cb56305483541ac
+Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using virtualization".
+To: Matthew Giassa <matthew@giassa.net>
+Cc: kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2017 at 2:02 PM, Jessica Frazelle <me@jessfraz.com> wrote:
-> On Fri, Feb 10, 2017 at 1:55 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Fri, Feb 10, 2017 at 2:08 AM, Jess Frazelle <me@jessfraz.com> wrote:
->>> Marked msi_domain_ops structs as __ro_after_init when called only during init.
->>> Marked syscore_ops structs as __ro_after_init when register_syscore_ops was
->>> called only during init. Most of the caller functions were already annotated as
->>> __init.
->>> This protects the data structure from accidental corruption.
->>>
->>> Suggested-by: Kees Cook <keescook@chromium.org>
->>> Signed-off-by: Jess Frazelle <me@jessfraz.com>
->>> ---
->>>  drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c | 2 +-
->>>  kernel/irq/generic-chip.c                              | 2 +-
->>>  kernel/irq/msi.c                                       | 2 +-
->>>  kernel/irq/pm.c                                        | 2 +-
->>>  4 files changed, 4 insertions(+), 4 deletions(-)
->>>
->>> diff --git a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
->>> index 6b1cd574644f..0e2c1b5e13b7 100644
->>> --- a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
->>> +++ b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
->>> @@ -51,7 +51,7 @@ static int its_fsl_mc_msi_prepare(struct irq_domain *msi_domain,
->>>         return msi_info->ops->msi_prepare(msi_domain->parent, dev, nvec, info);
->>>  }
->>>
->>> -static struct msi_domain_ops its_fsl_mc_msi_ops = {
->>> +static struct msi_domain_ops its_fsl_mc_msi_ops __ro_after_init = {
->>>         .msi_prepare = its_fsl_mc_msi_prepare,
->>>  };
->>>
->>> diff --git a/kernel/irq/generic-chip.c b/kernel/irq/generic-chip.c
->>> index ee32870079c9..cca63dbaabea 100644
->>> --- a/kernel/irq/generic-chip.c
->>> +++ b/kernel/irq/generic-chip.c
->>> @@ -623,7 +623,7 @@ static void irq_gc_shutdown(void)
->>>         }
->>>  }
->>>
->>> -static struct syscore_ops irq_gc_syscore_ops = {
->>> +static struct syscore_ops irq_gc_syscore_ops __ro_after_init = {
->>>         .suspend = irq_gc_suspend,
->>>         .resume = irq_gc_resume,
->>>         .shutdown = irq_gc_shutdown,
->>> diff --git a/kernel/irq/msi.c b/kernel/irq/msi.c
->>> index ee230063f033..0e5b723f710f 100644
->>> --- a/kernel/irq/msi.c
->>> +++ b/kernel/irq/msi.c
->>> @@ -217,7 +217,7 @@ static int msi_domain_ops_check(struct irq_domain *domain,
->>>         return 0;
->>>  }
->>>
->>> -static struct msi_domain_ops msi_domain_ops_default = {
->>> +static struct msi_domain_ops msi_domain_ops_default __ro_after_init = {
->>>         .get_hwirq      = msi_domain_ops_get_hwirq,
->>>         .msi_init       = msi_domain_ops_init,
->>>         .msi_check      = msi_domain_ops_check,
->>> diff --git a/kernel/irq/pm.c b/kernel/irq/pm.c
->>> index cea1de0161f1..d6b889bed323 100644
->>> --- a/kernel/irq/pm.c
->>> +++ b/kernel/irq/pm.c
->>> @@ -185,7 +185,7 @@ static void irq_pm_syscore_resume(void)
->>>         resume_irqs(true);
->>>  }
->>>
->>> -static struct syscore_ops irq_pm_syscore_ops = {
->>> +static struct syscore_ops irq_pm_syscore_ops __ro_after_init = {
->>>         .resume         = irq_pm_syscore_resume,
->>>  };
->>
->> Cool! How'd you end up choosing these? Did you just go looking for
->> one-sided initializations? (i.e. register_syscore_ops() without
->> unregister_syscore_ops() call?)
+--001a11411c767cb56305483541ac
+Content-Type: text/plain; charset=UTF-8
+
+Hi, Matthew,
+
+"Rootkit detection using virtualization" has been widely studied for a
+decade. Is the approach you are going to use different from all of these
+existing ones?
+
+https://www.cs.rochester.edu/u/hliao6/projects/other/os_survey.pdf
+
+-Jidong
+
+On Fri, Feb 10, 2017 at 3:00 PM, Matthew Giassa <matthew@giassa.net> wrote:
+
+> Good day,
 >
-> I first made the mistake of making them all __ro_after_init and I
-> broke the kvm module, so I had to track down how that happened since I
-> didn't touch that code path... I ended up digging a bit into the call
-> stack that ultimately leads to these and this is my initial "safe
-> set". I am still digging into the others. But almost all the functions
-> that call `syscore_ops` structs were already marked as __init.
-
-Right, the danger is if something outside of __init tries to change
-the structure, but none of these seem to ever have an UNregister call
-made against them. :)
-
->> (It may help the commit message to explicitly state that
->> unregister_syscore_ops() is never called on these ops.)
+> I am a volunteer developer taking up a project originally proposed by
+> Rik van Riel, "rootkit detection using virtualization", and am
+> planning to contribute regularly to this project over the coming
+> months. I was advised to contact these mailing lists to introduce
+> myself, and I also wanted to inquire about any existing projects that
+> coincide with this work. My initial work will involved diving into KVM
+> + qemu source and deciding how best to approach the problem. While I
+> have the attention of list members, are there any specific
+> individuals/groups I should contact directly with respect to this type
+> of project?
 >
-> Will fix!
+> Thank you.
+>
+> --
+> ============================================================
+> Matthew Giassa
+>
 
-Awesome. :)
+--001a11411c767cb56305483541ac
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
 
--Kees
+<div dir=3D"ltr">Hi, Matthew,<div><br></div><div>&quot;Rootkit detection us=
+ing virtualization&quot; has been widely studied for a decade. Is the appro=
+ach you are going to use different from all of these existing ones?</div><d=
+iv><br></div><div><a href=3D"https://www.cs.rochester.edu/u/hliao6/projects=
+/other/os_survey.pdf">https://www.cs.rochester.edu/u/hliao6/projects/other/=
+os_survey.pdf</a><br></div><div><br></div><div>-Jidong</div></div><div clas=
+s=3D"gmail_extra"><br><div class=3D"gmail_quote">On Fri, Feb 10, 2017 at 3:=
+00 PM, Matthew Giassa <span dir=3D"ltr">&lt;<a href=3D"mailto:matthew@giass=
+a.net" target=3D"_blank">matthew@giassa.net</a>&gt;</span> wrote:<br><block=
+quote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc=
+ solid;padding-left:1ex">Good day,<br>
+<br>
+I am a volunteer developer taking up a project originally proposed by<br>
+Rik van Riel, &quot;rootkit detection using virtualization&quot;, and am<br=
+>
+planning to contribute regularly to this project over the coming<br>
+months. I was advised to contact these mailing lists to introduce<br>
+myself, and I also wanted to inquire about any existing projects that<br>
+coincide with this work. My initial work will involved diving into KVM<br>
++ qemu source and deciding how best to approach the problem. While I<br>
+have the attention of list members, are there any specific<br>
+individuals/groups I should contact directly with respect to this type<br>
+of project?<br>
+<br>
+Thank you.<br>
+<span class=3D"HOEnZb"><font color=3D"#888888"><br>
+--<br>
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D<wbr>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D<br>
+Matthew Giassa<br>
+</font></span></blockquote></div><br></div>
 
--- 
-Kees Cook
-Pixel Security
+--001a11411c767cb56305483541ac--
