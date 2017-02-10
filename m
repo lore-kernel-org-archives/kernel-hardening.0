@@ -1,83 +1,55 @@
 MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1702101847450.4036@nanos>
-References: <1486715554-12772-1-git-send-email-hoeun.ryu@gmail.com>
- <20170210120524.GI10893@dhcp22.suse.cz> <CABeRdtrqpmJtEnqawruAo-hW1yZG_wB6TGL95=knP0cBmDKZ+Q@mail.gmail.com>
- <20170210144130.GP10893@dhcp22.suse.cz> <alpine.DEB.2.20.1702101629091.4036@nanos>
- <CABeRdtrq14y-vYZLVgumsZHqXfaNEux51=coYGkfLUrhyapnVQ@mail.gmail.com> <alpine.DEB.2.20.1702101847450.4036@nanos>
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Sat, 11 Feb 2017 08:33:35 +0900
-Message-ID: <CABeRdto-WhR3umOHz=_sERqbJct1XrBmN6XJ9CkHbKtxejuo7Q@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170209102703.GB6500@twins.programming.kicks-ass.net>
+References: <20170207083405.GV6500@twins.programming.kicks-ass.net>
+ <20170207111011.GB28790@leverpostej> <20170207123630.GR6515@twins.programming.kicks-ass.net>
+ <20170207135020.GA26173@leverpostej> <20170207150737.GM25813@worktop.programming.kicks-ass.net>
+ <20170207160300.GB26173@leverpostej> <20170207173036.GS6515@twins.programming.kicks-ass.net>
+ <20170207175542.GC26173@leverpostej> <20170208091250.GT6515@twins.programming.kicks-ass.net>
+ <CAGXu5j+vSECyQgF2a5UWe1-FOMNFyZTLkM0o30Z7KOm=-EKuGQ@mail.gmail.com> <20170209102703.GB6500@twins.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 10 Feb 2017 15:39:19 -0800
+Message-ID: <CAGXu5jKdxqOOEixhgUrzLDZ7GHF0gQQLShwXkjvC_VJUCXHp0A@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3] fork: free vmapped stacks in cache when cpus are offline
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Michal Hocko <mhocko@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: Re: [kernel-hardening] Re: [PATCH 4/4] refcount: Report failures
+ through CHECK_DATA_CORRUPTION
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: Mark Rutland <mark.rutland@arm.com>, "Reshetova, Elena" <elena.reshetova@intel.com>, Greg KH <gregkh@linuxfoundation.org>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@kernel.org>, "H. Peter Anvin" <h.peter.anvin@intel.com>, Will Deacon <will.deacon@arm.com>, David Windsor <dwindsor@gmail.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Howells <dhowells@redhat.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Feb 11, 2017 at 2:51 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
-> On Sat, 11 Feb 2017, Hoeun Ryu wrote:
->> On Sat, Feb 11, 2017 at 12:32 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
->> > On Fri, 10 Feb 2017, Michal Hocko wrote:
->> >> On Fri 10-02-17 23:31:41, Hoeun Ryu wrote:
->> >> > On Fri, Feb 10, 2017 at 9:05 PM, Michal Hocko <mhocko@kernel.org> wrote:
->> >> > > On Fri 10-02-17 17:32:07, Hoeun Ryu wrote:
->> >> [...]
->> >> > >>  static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
->> >> > >> @@ -456,6 +474,11 @@ void __init fork_init(void)
->> >> > >>       for (i = 0; i < UCOUNT_COUNTS; i++) {
->> >> > >>               init_user_ns.ucount_max[i] = max_threads/2;
->> >> > >>       }
->> >> > >> +
->> >> > >> +#ifdef CONFIG_VMAP_STACK
->> >> > >> +     cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "vm_stack_cache",
->> >> > >> +                       NULL, free_vm_stack_cache);
->> >> > >> +#endif
->> >> > >
->> >> > > I am not familiar the new hotplug infrastructure so I might be missing
->> >> > > something. CPUHP_AP_ONLINE_DYN will allocate a state which is has only
->> >> > > 30 slots available. The name also suggests this will be called on an
->> >> > > online event. Why doesn't this have its own state like other users. The
->> >> > > name should also reflect offline event CPUHP_STACK_CACHE_DEAD or
->> >> > > something like that.
->> >> >
->> >> > I'll define CPUHP_VMSTACK_CACHE_DEAD before CPUHP_BP_PREPARE_DYN in
->> >> > cpuhotplug.h.
->> >> > Do you think the change is made in a separate patch or not ?
->> >>
->> >> I think it should be in a single patch. I am not sure what are the rules
->> >> to define a new state though. Let's CC Thomas.
->> >
->> > So the first question is where do you want that to be called? i.e. in which
->> > section:
->> >
->> > CPU up          CPU down
->> >
->> > PREPARE         DEAD            <- called on some other CPU
->> > ONLINE          DOWN            <- called on the hotplugged CPU
->> >
->>
->> It doesn't matter whether the callback is called on the hotplugged CPU
->> or other CPUs.
->>
->> > And then the next question is whether you have ordering constraints,
->> > i.e. it must be called before or after some other callback. Only in that
->> > case you want to have an explicit state. If not, just use a dynamically
->> > allocated one.
->>
->> The cache is for virtually mapped kernel stacks. so I think the
->> callback should be called after all tasks are migrated to other CPUs.
->> It must reside before CPUHP_AP_SCHED_STARTING or CPUHP_BRINGUP_CPU.
+On Thu, Feb 9, 2017 at 2:27 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Wed, Feb 08, 2017 at 01:20:26PM -0800, Kees Cook wrote:
 >
-> Between AP_OFFLINE and AP_SCHED_STARTING does not work because those states
-> path are called on the hotplugged CPU with interrupts disabled and after
-> the CPU has been taken out from the scheduler.
+>> Ooooh, that is intense. And the trampolines (EX_REG_HANDLERs) are all
+>> just there to catch whatever register gcc decides to stuff the value
+>> into? *cover face* Sure, okay. :)
 >
-> So the proper place is the dynamic states CPUHP_BP_PREPARE_DYN. You do not
-> have a prepare callback, but then it's called on an still online CPU
-> _AFTER_ the hotplugged CPU vanished from the system.
+> Right, they shouldn't be big functions, but barring whole program LTO
+> there's just no knowing which are unused.
 >
+>> I wonder how many existing WARN callsites could be repurposed to use this?
+>
+> At the very least all WARN/BUG instances with trivial @format argument
+> that are inlined I think. For example, things like:
+>
+> static inline some_function()
+> {
+>         /* ... */
+>         WARN(cond, "blah blah blah\n");
+>         /* ... */
+> }
+>
+> where the format has no arguments. Here we can out-of-line the printk()
+> stuff, which, as is the purpose here, shrinks the size of the inline.
 
-OK, I agree.
+Unless there is some other unholy macros trick, I think we'd need a
+separate "WARN_CONST" or something macro to do this (i.e.
+WARN_CONST(const, const_str) instead of WARN(cond, fmt, ...)), since
+detecting a single-item vararg in a macro is very weird/impossible to
+do. Hrmm.
 
-> Thanks,
->
->         tglx
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
