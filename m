@@ -1,52 +1,92 @@
-Message-ID: <1486757549.2192.20.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Fri, 10 Feb 2017 12:12:29 -0800
-In-Reply-To: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: william.c.roberts@intel.com, linux-kernel@vger.kernel.org, apw@canonical.com, Andew Morton <akpm@linux-foundation.org>
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com
+References: <20170210100902.11765-1-me@jessfraz.com>
+ <20170210100902.11765-2-me@jessfraz.com>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <5a2ae82a-afc8-5607-820a-fc521fad677e@redhat.com>
+Date: Fri, 10 Feb 2017 12:26:27 -0800
+MIME-Version: 1.0
+In-Reply-To: <20170210100902.11765-2-me@jessfraz.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH 1/4] irq: set {msi_domain,syscore}_ops
+ as __ro_after_init
+To: Jess Frazelle <me@jessfraz.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-02-10 at 11:37 -0800, william.c.roberts@intel.com wrote:
-> From: William Roberts <william.c.roberts@intel.com>
+On 02/10/2017 02:08 AM, Jess Frazelle wrote:
+> Marked msi_domain_ops structs as __ro_after_init when called only during init.
+> Marked syscore_ops structs as __ro_after_init when register_syscore_ops was
+> called only during init. Most of the caller functions were already annotated as
+> __init.
+> This protects the data structure from accidental corruption.
 > 
-> Sample output:
-> WARNING: %pk is close to %pK, did you mean %pK?.
-> \#20: FILE: drivers/char/applicom.c:230:
-> +			printk(KERN_INFO "Could not allocate IRQ %d for PCI Applicom device. %pk\n", dev->irq, pci_get_class);
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Jess Frazelle <me@jessfraz.com>
+> ---
+>  drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c | 2 +-
+>  kernel/irq/generic-chip.c                              | 2 +-
+>  kernel/irq/msi.c                                       | 2 +-
+>  kernel/irq/pm.c                                        | 2 +-
+>  4 files changed, 4 insertions(+), 4 deletions(-)
+> 
+> diff --git a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
+> index 6b1cd574644f..0e2c1b5e13b7 100644
+> --- a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
+> +++ b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
+> @@ -51,7 +51,7 @@ static int its_fsl_mc_msi_prepare(struct irq_domain *msi_domain,
+>  	return msi_info->ops->msi_prepare(msi_domain->parent, dev, nvec, info);
+>  }
+> 
+> -static struct msi_domain_ops its_fsl_mc_msi_ops = {
+> +static struct msi_domain_ops its_fsl_mc_msi_ops __ro_after_init = {
+>  	.msi_prepare = its_fsl_mc_msi_prepare,
+>  };
+> 
 
-There isn't a single instance of this in the kernel tree.
+The staging change is probably better suited to its own patch
+since staging drivers tend to get handled differently.
 
-Maybe if this is really useful, then all the %p<foo> extensions
-should be enumerated and all unknown uses should have warnings.
+Thanks,
+Laura
 
-Something like:
-
----
- scripts/checkpatch.pl | 9 +++++++++
- 1 file changed, 9 insertions(+)
-
-diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-index ad5ea5c545b2..8a90b457e8b5 100755
---- a/scripts/checkpatch.pl
-+++ b/scripts/checkpatch.pl
-@@ -5305,6 +5305,15 @@ sub process {
- 			}
- 		}
- 
-+# check for vsprintf extension %p<foo> misuses
-+		if ($line =~ /\b$logFunctions\s*\(.*$String/) {
-+			my $format = get_quoted_string($line, $rawline);
-+			if ($format =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGN]).)/) {
-+				WARN("VSPRINTF_POINTER_EXTENSION",
-+				     "Invalid vsprintf pointer extension '$1'\n" . $herecurr);
-+			}
-+		}
-+
- # check for logging continuations
- 		if ($line =~ /\bprintk\s*\(\s*KERN_CONT\b|\bpr_cont\s*\(/) {
- 			WARN("LOGGING_CONTINUATION",
+> diff --git a/kernel/irq/generic-chip.c b/kernel/irq/generic-chip.c
+> index ee32870079c9..cca63dbaabea 100644
+> --- a/kernel/irq/generic-chip.c
+> +++ b/kernel/irq/generic-chip.c
+> @@ -623,7 +623,7 @@ static void irq_gc_shutdown(void)
+>  	}
+>  }
+> 
+> -static struct syscore_ops irq_gc_syscore_ops = {
+> +static struct syscore_ops irq_gc_syscore_ops __ro_after_init = {
+>  	.suspend = irq_gc_suspend,
+>  	.resume = irq_gc_resume,
+>  	.shutdown = irq_gc_shutdown,
+> diff --git a/kernel/irq/msi.c b/kernel/irq/msi.c
+> index ee230063f033..0e5b723f710f 100644
+> --- a/kernel/irq/msi.c
+> +++ b/kernel/irq/msi.c
+> @@ -217,7 +217,7 @@ static int msi_domain_ops_check(struct irq_domain *domain,
+>  	return 0;
+>  }
+> 
+> -static struct msi_domain_ops msi_domain_ops_default = {
+> +static struct msi_domain_ops msi_domain_ops_default __ro_after_init = {
+>  	.get_hwirq	= msi_domain_ops_get_hwirq,
+>  	.msi_init	= msi_domain_ops_init,
+>  	.msi_check	= msi_domain_ops_check,
+> diff --git a/kernel/irq/pm.c b/kernel/irq/pm.c
+> index cea1de0161f1..d6b889bed323 100644
+> --- a/kernel/irq/pm.c
+> +++ b/kernel/irq/pm.c
+> @@ -185,7 +185,7 @@ static void irq_pm_syscore_resume(void)
+>  	resume_irqs(true);
+>  }
+> 
+> -static struct syscore_ops irq_pm_syscore_ops = {
+> +static struct syscore_ops irq_pm_syscore_ops __ro_after_init = {
+>  	.resume		= irq_pm_syscore_resume,
+>  };
+> 
+> --
+> 2.11.0
+> 
