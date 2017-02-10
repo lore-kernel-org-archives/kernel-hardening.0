@@ -1,39 +1,34 @@
-From: william.c.roberts@intel.com
-Date: Fri, 10 Feb 2017 11:37:49 -0800
-Message-Id: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-Subject: [kernel-hardening] [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: linux-kernel@vger.kernel.org, joe@perches.com, apw@canonical.com
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com, William Roberts <william.c.roberts@intel.com>
+Date: Fri, 10 Feb 2017 20:52:40 +0100
+From: Greg KH <gregkh@linuxfoundation.org>
+Message-ID: <20170210195240.GA2243@kroah.com>
+References: <476DC76E7D1DF2438D32BFADF679FC562305B2AC@ORSMSX103.amr.corp.intel.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC562305B2AC@ORSMSX103.amr.corp.intel.com>
+Subject: Re: [kernel-hardening] %pK continuation
+To: "Roberts, William C" <william.c.roberts@intel.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Kees Cook <keescook@chromium.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: William Roberts <william.c.roberts@intel.com>
+On Fri, Feb 10, 2017 at 07:02:42PM +0000, Roberts, William C wrote:
+> I haven't had time to really work on the continuation of:
+> http://www.openwall.com/lists/kernel-hardening/2016/10/07/1
+> 
+> I think the simple approach of killing %p based on kptr_restrict remains the simplest, IMHO best way to achieve a better level of
+> preventing leaks of kernel addresses. In example of %pK going wrong can be found here:
+>  https://googleprojectzero.blogspot.com/2017/02/lifting-hyper-visor-bypassing-samsungs.html.
+> 
+> Granted, the exploit author would have found another way to defeat KASL, I'd like to force their hand.
+> 
+> In a nut shell, the driver use %pk instead of %pK (capitalization of K matters).  This would actually be a
+> good checkpatch.pl check. I grep'd the kernel for %pk (lower case k) and found no usages!
 
-Sample output:
-WARNING: %pk is close to %pK, did you mean %pK?.
-\#20: FILE: drivers/char/applicom.c:230:
-+			printk(KERN_INFO "Could not allocate IRQ %d for PCI Applicom device. %pk\n", dev->irq, pci_get_class);
+%pk is not a valid kernel printk() modifier at all, so I sure hope you
+%would not find any usages :)
 
-Signed-off-by: William Roberts <william.c.roberts@intel.com>
----
- scripts/checkpatch.pl | 6 ++++++
- 1 file changed, 6 insertions(+)
+Documentation/printk-formats.txt is a good thing to check.
 
-diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-index 982c52c..f20f5c5 100755
---- a/scripts/checkpatch.pl
-+++ b/scripts/checkpatch.pl
-@@ -6096,6 +6096,12 @@ sub process {
- 			      "recursive locking is bad, do not use this ever.\n" . $herecurr);
- 		}
- 
-+# check for bad %pK usage
-+		if ($rawline =~ /\%pk/) {
-+			WARN("FORMAT SPECIFIER",
-+			      "%pk is close to %pK, did you mean %pK?.\n" . $herecurr);
-+		}
-+
- # check for lockdep_set_novalidate_class
- 		if ($line =~ /^.\s*lockdep_set_novalidate_class\s*\(/ ||
- 		    $line =~ /__lockdep_no_validate__\s*\)/ ) {
--- 
-2.7.4
+thanks,
+
+greg k-h
