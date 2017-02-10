@@ -1,50 +1,124 @@
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Fri, 10 Feb 2017 23:31:35 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC562305DB22@ORSMSX103.amr.corp.intel.com>
+References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
+	 <1486757549.2192.20.camel@perches.com>
+	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
+	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
+ <1486766996.2192.30.camel@perches.com>
+In-Reply-To: <1486766996.2192.30.camel@perches.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAGXu5jJXqY=KGHtrCQ3yLGVFd7K6Akk6B8VbWyZHGfRerYeV0A@mail.gmail.com>
-References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
- <CAGXu5jJXqY=KGHtrCQ3yLGVFd7K6Akk6B8VbWyZHGfRerYeV0A@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 10 Feb 2017 15:31:11 -0800
-Message-ID: <CAGXu5jJ3wwpuf_WwA9JJ1up1RLMmJRcZrSW1CAVkwMUrTtmJ+g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Introduction + new project: "rootkit detection
- using virtualization".
-To: Matthew Giassa <matthew@giassa.net>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, KVM <kvm@vger.kernel.org>, Matthew Garrett <matthewgarrett@google.com>
+Subject: [kernel-hardening] RE: [PATCH] checkpatch: add warning on %pk instead of %pK usage
+To: Joe Perches <joe@perches.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>, Andew Morton <akpm@linux-foundation.org>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2017 at 3:27 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Fri, Feb 10, 2017 at 2:00 PM, Matthew Giassa <matthew@giassa.net> wrote:
->> Good day,
->>
->> I am a volunteer developer taking up a project originally proposed by
->> Rik van Riel, "rootkit detection using virtualization", and am
->> planning to contribute regularly to this project over the coming
->> months. I was advised to contact these mailing lists to introduce
->> myself, and I also wanted to inquire about any existing projects that
->> coincide with this work. My initial work will involved diving into KVM
->> + qemu source and deciding how best to approach the problem. While I
->> have the attention of list members, are there any specific
->> individuals/groups I should contact directly with respect to this type
->> of project?
->>
->> Thank you.
->
-> Hi! Welcome to the list(s)!
->
-> I think this is an interesting area of research, though it may be a
-> tricky cat/mouse game. Some of this kind of
-> hypervisor-protects-the-kernel work has been done on some Android
-> phones in small areas (see the cred protection near the end):
->
-> http://keenlab.tencent.com/en/2016/06/01/Emerging-Defense-in-Android-Kernel/
 
-And some privilege monitoring work done by Matthew Garrett:
 
-https://github.com/mjg59/rkt/commits/privilege
+> -----Original Message-----
+> From: Joe Perches [mailto:joe@perches.com]
+> Sent: Friday, February 10, 2017 2:50 PM
+> To: Roberts, William C <william.c.roberts@intel.com>; linux-
+> kernel@vger.kernel.org; apw@canonical.com; Andew Morton <akpm@linux-
+> foundation.org>
+> Cc: keescook@chromium.org; kernel-hardening@lists.openwall.com
+> Subject: Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
+>=20
+> On Fri, 2017-02-10 at 22:26 +0000, Roberts, William C wrote:
+> > <snip>
+> >
+> > > >
+> > > > On Fri, 2017-02-10 at 11:37 -0800, william.c.roberts@intel.com wrot=
+e:
+> > > > > From: William Roberts <william.c.roberts@intel.com>
+> > > > >
+> > > > > Sample output:
+> > > > > WARNING: %pk is close to %pK, did you mean %pK?.
+> > > > > \#20: FILE: drivers/char/applicom.c:230:
+> > > > > +			printk(KERN_INFO "Could not allocate IRQ %d for
+> PCI
+> > > >
+> > > > Applicom
+> > > > > +device. %pk\n", dev->irq, pci_get_class);
+> > > >
+> > > > There isn't a single instance of this in the kernel tree.
+> > > >
+> > > > Maybe if this is really useful, then all the %p<foo> extensions
+> > > > should be enumerated and all unknown uses should have warnings.
+> > >
+> > > I was thinking of doing that, but I figured I would start with the
+> > > bare minimum patch.
+> > >
+> > > >
+> > > > Something like:
+> > > >
+> > > > ---
+> > > >  scripts/checkpatch.pl | 9 +++++++++
+> > > >  1 file changed, 9 insertions(+)
+> > > >
+> > > > diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl index
+> > > > ad5ea5c545b2..8a90b457e8b5 100755
+> > > > --- a/scripts/checkpatch.pl
+> > > > +++ b/scripts/checkpatch.pl
+> > > > @@ -5305,6 +5305,15 @@ sub process {
+> > > >  			}
+> > > >  		}
+> > > >
+> > > > +# check for vsprintf extension %p<foo> misuses
+> > > > +		if ($line =3D~ /\b$logFunctions\s*\(.*$String/) {
+> >
+> > I don't see the normal string formatting routines in that list... I thi=
+nk this is too
+> restrictive.
+>=20
+> I don't.  There are no "normal" string formatting routines.
 
--Kees
+By "normal" I'm referring to things that call into pointer(), just casually=
+ looking
+I see bstr_printf vsnprintf kvasprintf, which would be easy enough to add
 
--- 
-Kees Cook
-Pixel Security
+> What do you think is missing?  sn?printf ? That's easy to add.
+
+The problem starts to get hairy when we think of how often folks roll their=
+ own logging macros (see some small sampling at the end).
+
+I think we would want to add DEBUG DBG and sn?printf and maybe consider dro=
+pping the \b on the regex so it's a bit more matchy but still shouldn't
+end up matching on any ASM as you pointed out in the V2 nack.
+
+Ill break this down into:
+1. the patch as I know you'll take it, as you wrote it :-P
+2. Adding to the logging macros
+3. exploring making it less matchy
+
+Data:
+arch/alpha/kernel/pci_iommu.c:25:# define DBGA(args...)		printk(KERN_DEBUG =
+args)
+arch/alpha/kernel/pci_iommu.c:30:# define DBGA2(args...)		printk(KERN_DEBUG=
+ args)
+arch/alpha/kernel/core_tsunami.c:50:# define DBG_CFG(args)	printk args
+arch/alpha/kernel/core_titan.c:50:# define DBG_CFG(args)	printk args
+arch/alpha/kernel/ptrace.c:34:#define DBG(fac,args)	{if ((fac) & DEBUG) pri=
+ntk args;}
+arch/alpha/kernel/core_apecs.c:42:# define DBGC(args)	printk args
+arch/alpha/kernel/core_irongate.c:38:# define DBG_CFG(args)	printk args
+arch/alpha/kernel/core_wildfire.c:30:# define DBG_CFG(args)	printk args
+arch/alpha/kernel/smc37c93x.c:18:# define DBG_DEVS(args)         printk arg=
+s
+arch/alpha/boot/misc.c:27:#define puts		srm_printk
+arch/alpha/mm/numa.c:27:#define DBGDCONT(args...) printk(args)
+arch/powerpc/sysdev/tsi108_pci.c:43:#define DBG(x...) printk(x)
+arch/powerpc/sysdev/ge/ge_pic.c:31:#define DBG(fmt...) do { printk(KERN_DEB=
+UG "gef_pic: " fmt); } while (0)
+arch/powerpc/sysdev/tsi108_dev.c:34:#define DBG(fmt...) do { printk(fmt); }=
+ while(0)
+arch/powerpc/sysdev/mpic.c:45:#define DBG(fmt...) printk(fmt)
+arch/powerpc/kernel/process.c:69:#define TM_DEBUG(x...) printk(KERN_INFO x)
+arch/powerpc/kernel/vdso.c:42:#define DBG(fmt...) printk(fmt)
+arch/powerpc/kernel/legacy_serial.c:21:#define DBG(fmt...) do { printk(fmt)=
+; } while(0)
+arch/powerpc/kernel/traps.c:89:#define TM_DEBUG(x...) printk(KERN_INFO x)
+arch/powerpc/kernel/prom.c:65:#define DBG(fmt...) printk(KERN_ERR fmt)
+arch/powerpc/kvm/book3s_paired_singles.c:33:#define dprintk printk
