@@ -1,59 +1,61 @@
-Message-ID: <1486766950.2192.29.camel@perches.com>
+Message-ID: <1486766996.2192.30.camel@perches.com>
 From: Joe Perches <joe@perches.com>
-Date: Fri, 10 Feb 2017 14:49:10 -0800
-In-Reply-To: <1486766608-8791-1-git-send-email-william.c.roberts@intel.com>
-References: <1486766608-8791-1-git-send-email-william.c.roberts@intel.com>
+Date: Fri, 10 Feb 2017 14:49:56 -0800
+In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
+References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
+	 <1486757549.2192.20.camel@perches.com>
+	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
+	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
 Content-Type: text/plain; charset="ISO-8859-1"
 Mime-Version: 1.0
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2] checkpatch: add warning on invalid %p extensions
-To: william.c.roberts@intel.com, linux-kernel@vger.kernel.org, apw@canonical.com
-Cc: keescook@chromium.org, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
+To: "Roberts, William C" <william.c.roberts@intel.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>, Andew Morton <akpm@linux-foundation.org>
+Cc: "keescook@chromium.org" <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-02-10 at 14:43 -0800, william.c.roberts@intel.com wrote:
-> From: William Roberts <william.c.roberts@intel.com>
+On Fri, 2017-02-10 at 22:26 +0000, Roberts, William C wrote:
+> <snip>
 > 
-> The kernel supports %p extensions as documented in
-> Documentation/printk-formats.txt. Warn on possibly
-> improper use of non-extension characters.
+> > > 
+> > > On Fri, 2017-02-10 at 11:37 -0800, william.c.roberts@intel.com wrote:
+> > > > From: William Roberts <william.c.roberts@intel.com>
+> > > > 
+> > > > Sample output:
+> > > > WARNING: %pk is close to %pK, did you mean %pK?.
+> > > > \#20: FILE: drivers/char/applicom.c:230:
+> > > > +			printk(KERN_INFO "Could not allocate IRQ %d for PCI
+> > > 
+> > > Applicom
+> > > > +device. %pk\n", dev->irq, pci_get_class);
+> > > 
+> > > There isn't a single instance of this in the kernel tree.
+> > > 
+> > > Maybe if this is really useful, then all the %p<foo> extensions should
+> > > be enumerated and all unknown uses should have warnings.
+> > 
+> > I was thinking of doing that, but I figured I would start with the bare minimum
+> > patch.
+> > 
+> > > 
+> > > Something like:
+> > > 
+> > > ---
+> > >  scripts/checkpatch.pl | 9 +++++++++
+> > >  1 file changed, 9 insertions(+)
+> > > 
+> > > diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl index
+> > > ad5ea5c545b2..8a90b457e8b5 100755
+> > > --- a/scripts/checkpatch.pl
+> > > +++ b/scripts/checkpatch.pl
+> > > @@ -5305,6 +5305,15 @@ sub process {
+> > >  			}
+> > >  		}
+> > > 
+> > > +# check for vsprintf extension %p<foo> misuses
+> > > +		if ($line =~ /\b$logFunctions\s*\(.*$String/) {
 > 
-> One issue would be the usage of %pk when %pK should have
-> been used. This has a side-effect of appearing to work
-> alright, but does not respect the kptr_restrict setting
-> as %pK does.
-> 
-> Sample output:
-> WARNING: Invalid vsprintf pointer extension '%pk'
-> +			printk(KERN_INFO "Could not allocate IRQ %d for PCI Applicom device. %pk\n", dev->irq, pci_get_class); // NOT OK
-> 
-> WARNING: Invalid vsprintf pointer extension '%pn'
-> +			sprintf(buf, "%pn", x); // NOT OK
-> 
-> Signed-off-by: William Roberts <william.c.roberts@intel.com>
-> ---
->  scripts/checkpatch.pl | 6 ++++++
->  1 file changed, 6 insertions(+)
-> 
-> diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-> index 982c52c..fa22751 100755
-> --- a/scripts/checkpatch.pl
-> +++ b/scripts/checkpatch.pl
-> @@ -6096,6 +6096,12 @@ sub process {
->  			      "recursive locking is bad, do not use this ever.\n" . $herecurr);
->  		}
->  
-> +# check for vsprintf extension %p<foo> misuses
-> +		if (get_quoted_string($line, $rawline) =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGN]).)/) {
-> +			WARN("VSPRINTF_POINTER_EXTENSION",
-> +			     "Invalid vsprintf pointer extension '$1'\n" . $herecurr);
-> +		}
-> +
+> I don't see the normal string formatting routines in that list... I think this is too restrictive.
 
-nack.
-
-You can't just use get_quoted_string.
-
-You have to verify that the thing being scanned is
-actually a format.  There are many quoted uses of
-%p like %%pil and %%pstate used by inline assembly.
+I don't.  There are no "normal" string formatting routines.
+What do you think is missing?  sn?printf ? That's easy to add.
