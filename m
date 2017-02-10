@@ -1,84 +1,70 @@
 MIME-Version: 1.0
-In-Reply-To: <CAOWbf6f-3Ha3dkNuTfar0-u1SdSu=gDt0tK3Wq9+f9LZqB4gMQ@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
- <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
- <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com>
- <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
- <CAEiveUevjijnmr7oWzQexi52nJm-BjVwAkb3fJinAbet=QvzxQ@mail.gmail.com>
- <CALCETrUp9CBWykRUQoJOXeLg9u45H+2VWyQ_BKAhwc9OpBYn+g@mail.gmail.com>
- <CAEiveUdOdMr=gJZsi=Fx-CNeC8jkyi8XxC+qSG-LXWj3o2t=_A@mail.gmail.com>
- <CALCETrX_K7XdyCRo1RSLySRu-2uySaR2+3J7qcw4O+JOepTwag@mail.gmail.com> <CAOWbf6f-3Ha3dkNuTfar0-u1SdSu=gDt0tK3Wq9+f9LZqB4gMQ@mail.gmail.com>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Fri, 10 Feb 2017 08:18:11 -0800
-Message-ID: <CALCETrVpOczwpVRFd8yoSZGcYEG=qHuRmTND8L7V_oZRu1sbCA@mail.gmail.com>
+In-Reply-To: <alpine.DEB.2.20.1702101629091.4036@nanos>
+References: <1486715554-12772-1-git-send-email-hoeun.ryu@gmail.com>
+ <20170210120524.GI10893@dhcp22.suse.cz> <CABeRdtrqpmJtEnqawruAo-hW1yZG_wB6TGL95=knP0cBmDKZ+Q@mail.gmail.com>
+ <20170210144130.GP10893@dhcp22.suse.cz> <alpine.DEB.2.20.1702101629091.4036@nanos>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sat, 11 Feb 2017 01:42:42 +0900
+Message-ID: <CABeRdtrq14y-vYZLVgumsZHqXfaNEux51=coYGkfLUrhyapnVQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
- hidepid= field
-To: Lafcadio Wluiki <wluikil@gmail.com>
-Cc: Djalal Harouni <tixxdz@gmail.com>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>
+Subject: [kernel-hardening] Re: [PATCH v3] fork: free vmapped stacks in cache when cpus are offline
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Michal Hocko <mhocko@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 10, 2017 at 6:40 AM, Lafcadio Wluiki <wluikil@gmail.com> wrote:
-> On Sat, Jan 21, 2017 at 1:53 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+On Sat, Feb 11, 2017 at 12:32 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
+> On Fri, 10 Feb 2017, Michal Hocko wrote:
+>> On Fri 10-02-17 23:31:41, Hoeun Ryu wrote:
+>> > On Fri, Feb 10, 2017 at 9:05 PM, Michal Hocko <mhocko@kernel.org> wrote:
+>> > > On Fri 10-02-17 17:32:07, Hoeun Ryu wrote:
+>> [...]
+>> > >>  static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+>> > >> @@ -456,6 +474,11 @@ void __init fork_init(void)
+>> > >>       for (i = 0; i < UCOUNT_COUNTS; i++) {
+>> > >>               init_user_ns.ucount_max[i] = max_threads/2;
+>> > >>       }
+>> > >> +
+>> > >> +#ifdef CONFIG_VMAP_STACK
+>> > >> +     cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "vm_stack_cache",
+>> > >> +                       NULL, free_vm_stack_cache);
+>> > >> +#endif
+>> > >
+>> > > I am not familiar the new hotplug infrastructure so I might be missing
+>> > > something. CPUHP_AP_ONLINE_DYN will allocate a state which is has only
+>> > > 30 slots available. The name also suggests this will be called on an
+>> > > online event. Why doesn't this have its own state like other users. The
+>> > > name should also reflect offline event CPUHP_STACK_CACHE_DEAD or
+>> > > something like that.
+>> >
+>> > I'll define CPUHP_VMSTACK_CACHE_DEAD before CPUHP_BP_PREPARE_DYN in
+>> > cpuhotplug.h.
+>> > Do you think the change is made in a separate patch or not ?
+>>
+>> I think it should be in a single patch. I am not sure what are the rules
+>> to define a new state though. Let's CC Thomas.
 >
->> I agree that the kernel change to do it per task is very simple.  But
->> this is an unfortunate slippery slope.  What if you want to block off
->> everything in /proc that isn't associated with a PID?  What if you
->> want to suppress /sys access?  What if you want ot block *all*
->> non-current PIDs from being revealed in /proc?  What if you want to
->> hide /proc/PID/cmdline?
+> So the first question is where do you want that to be called? i.e. in which
+> section:
 >
-> These are all what-ifs that noone was interested in so far. I have a
-> very specific itch I want to scratch, and I found a reasonably generic
-> concept of exposing it. But now you are trying to lead this all down
-> onto a paths asking for features noone is actually really interested
-> in.
-
-If you have an itch and want to scratch it by adding a new API, the
-API has to be right, full stop.
-
+> CPU up          CPU down
 >
->> I think that the right solution here is to fix procfs to understand
->> per-superblock mount options.
+> PREPARE         DEAD            <- called on some other CPU
+> ONLINE          DOWN            <- called on the hotplugged CPU
 >
-> Andy, this is really not helpful. Doing that is far from easy, that's
-> a major undertaking: asking us to rework procfs in such a major way I
-> only can understand as an indirect way for you to say "go away" to
-> us... Expecting newcomers to kernel work to basically clean up an
-> entire kernel subsystem, dealing with all the politics involved is
-> just not going to work.
 
-Once upon a time, a newbish kernel hacker named Andy wrote some code
-to change the way the vDSO worked.  The maintainers told me that it
-was a nice thought and that it was too messy and wasn't acceptable in
-its present form.  So the patchset got quite a bit longer, I learned
-more about the mess that was the vDSO, and I fixed it.  The
-maintainers were right.
+It doesn't matter whether the callback is called on the hotplugged CPU
+or other CPUs.
 
-It's just not the case that a newcomer gets to add fields to
-task_struct that a more experienced developer wouldn't get to add.
-Sorry.
+> And then the next question is whether you have ordering constraints,
+> i.e. it must be called before or after some other callback. Only in that
+> case you want to have an explicit state. If not, just use a dynamically
+> allocated one.
 
->
-> And again: I am very sure the proposed prctl() based solution is
-> actually much much nicer than any procfs superblock based one, since
-> it works naturally, and easily for unprivileged processes too!
-> Anything that requires mount options means privileges are required in
-> some form or another. Yes userns would open that up, but that comes
-> with a huge amount of additional problems.
-
-If you want to design a generic mechanism by which a task can change
-the way that pseudo filesystems look for itself and its children
-without using mount options, and you come up with something that is
-sane, safe, generic, and reasonable clean, you're welcome to do so.
-This sounds like a considerably more challenging undertaking than just
-fixing procfs.
+The cache is for virtually mapped kernel stacks. so I think the
+callback should be called after all tasks are migrated to other CPUs.
+It must reside before CPUHP_AP_SCHED_STARTING or CPUHP_BRINGUP_CPU.
 
 >
-> Anyway, I understand it is your intention to derail this. I can accept
-> that. It's a pity though.
-
-I have no intention of derailing improvements to hidepid.  In fact,
-I'd love to see improvements here.  I'm just saying that the current
-proposal isn't the way to do it.
+> Thanks,
+>
+>         tglx
