@@ -1,72 +1,76 @@
-MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1702111222340.3734@nanos>
-References: <20170211013758.3288-1-me@jessfraz.com> <alpine.DEB.2.20.1702110948030.3734@nanos>
- <DF37E0AB-7310-4D1C-A710-7A7EA60498E7@jessfraz.com> <alpine.DEB.2.20.1702111222340.3734@nanos>
-From: Jessica Frazelle <me@jessfraz.com>
-Date: Sat, 11 Feb 2017 04:17:39 -0800
-Message-ID: <CAEk6tEyCrMHY9kwxMKupRAhvpV52J_JC5WHGW2fegqHuomGXOg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 1/5] irq: set {msi_domain,syscore}_ops as __ro_after_init
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Marc Zyngier <marc.zyngier@arm.com>, "open list:IRQ SUBSYSTEM" <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Message-ID: <1486816302.4233.29.camel@poochiereds.net>
+From: Jeff Layton <jlayton@poochiereds.net>
+Date: Sat, 11 Feb 2017 07:31:42 -0500
+In-Reply-To: <CAEXv5_jUa8Av4JABoKSAueiLHSLzibMvaE-8DrVcxZHFceckMg@mail.gmail.com>
+References: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
+	 <CAEXv5_jUa8Av4JABoKSAueiLHSLzibMvaE-8DrVcxZHFceckMg@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [RFC][PATCH] nfsd: add +1 to reference counting scheme for
+ struct nfsd4_session
+To: David Windsor <dwindsor@gmail.com>, linux-nfs@vger.kernel.org, netdev@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com, Bruce Fields <bfields@fieldses.org>, Kees Cook <keescook@chromium.org>, "Reshetova,
+ Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Thanks, I'll check them out.
+On Sat, 2017-02-11 at 01:42 -0500, David Windsor wrote:
+> <snip>
+> 
+> > Signed-off-by: David Windsor <dwindsor@gmail.com>
+> > ---
+> >  fs/nfsd/nfs4state.c | 6 +++---
+> >  1 file changed, 3 insertions(+), 3 deletions(-)
+> > 
+> > diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
+> > index a0dee8a..b0f3010 100644
+> > --- a/fs/nfsd/nfs4state.c
+> > +++ b/fs/nfsd/nfs4state.c
+> > @@ -196,7 +196,7 @@ static void nfsd4_put_session_locked(struct nfsd4_session *ses)
+> > 
+> >         lockdep_assert_held(&nn->client_lock);
+> > 
+> > -       if (atomic_dec_and_test(&ses->se_ref) && is_session_dead(ses))
+> > +       if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_des(ses))
+> 
+> This should read:
+> if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_dead(ses))
+> 
+> >                 free_session(ses);
+> >         put_client_renew_locked(clp);
+> >  }
+> > @@ -1645,7 +1645,7 @@ static void init_session(struct svc_rqst *rqstp, struct nfsd4_session *new, stru
+> >         new->se_flags = cses->flags;
+> >         new->se_cb_prog = cses->callback_prog;
+> >         new->se_cb_sec = cses->cb_sec;
+> > -       atomic_set(&new->se_ref, 0);
+> > +       atomic_set(&new->se_ref, 1);
+> >         idx = hash_sessionid(&new->se_sessionid);
+> >         list_add(&new->se_hash, &nn->sessionid_hashtbl[idx]);
+> >         spin_lock(&clp->cl_lock);
+> > @@ -1792,7 +1792,7 @@ free_client(struct nfs4_client *clp)
+> >                 ses = list_entry(clp->cl_sessions.next, struct nfsd4_session,
+> >                                 se_perclnt);
+> >                 list_del(&ses->se_perclnt);
+> > -               WARN_ON_ONCE(atomic_read(&ses->se_ref));
+> > +               WARN_ON_ONCE((atomic_read(&ses->se_ref) > 1));
+> >                 free_session(ses);
+> >         }
+> >         rpc_destroy_wait_queue(&clp->cl_cb_waitq);
+> > --
+> > 2.7.4
+> > 
 
-On Sat, Feb 11, 2017 at 4:00 AM Thomas Gleixner <tglx@linutronix.de> wrote:
->
-> On Sat, 11 Feb 2017, Jess Frazelle wrote:
-> > On February 11, 2017 1:14:52 AM PST, Thomas Gleixner <tglx@linutronix.de> wrote:
-> > >The same is true for cpuhotunplug operations.
-> >
-> > This makes sense. Will remove.
->
-> That's true for all other patches touching sysops as well. But instead of
-> giving up I'd recommend to look into the following:
->
-> Go through all callsites which use un/register_syscore_ops() and figure out
-> how many of them are possibly called post init. From a quick grep I can
-> only find the KVM module, but there might be more.
->
-> Lets assume it's KVM only. So you could do the following:
->
-> Put something like this into virt/kvm/kvm_main.c, which is a builtin file
->
-> static struct syscore_ops ops __ro_after_init = {
->        ....
-> };
->
-> int __init foo()
-> {
->     register_ops(&ops);
-> }
->
-> and because we know that kvm is single instance you can just have:
->
-> static struct syscore_ops *kvm_ops;
->
-> void kvm_set_sysop(*vmx_ops)
-> {
->         kvm_ops = ops;
-> }
->
-> and then have the kvm_syscore callbacks:
->
-> static callback()
-> {
->         if (kvm_ops)
->            kvm_ops->callback()
-> }
->
-> Sanity checks and serialization omitted. Then switch kvm_exit/init over to
-> it.
->
-> After that you can make all syscore_ops __ro_after_init, remove the export
-> from (un)register_syscore_ops() and make that __init.
->
-> Not much of an effort and probably worth the trouble.
->
-> Thanks,
->
->         tglx
->
+The basic idea here is that nfsv4 sessions have a "resting state" of 0.
+We want to keep them around, but if they go "dead" then we we'll tear
+them down if they aren't actively in use at the time. So, we still free
+the thing when the refcount goes to zero, but we have an extra condition
+before we free it on the put -- that the session is also "dead" (meaning
+that the client asked us to destroy it).
+
+Your patch doesn't look like it'll break anything, but I personally find
+ it harder to follow that way. The freeable reference state will be 1
+instead of the normal 0.
+
+--
+Jeff Layton <jlayton@poochiereds.net>
