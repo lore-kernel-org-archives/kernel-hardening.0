@@ -1,52 +1,28 @@
-From: Jess Frazelle <me@jessfraz.com>
-Date: Fri, 10 Feb 2017 17:37:58 -0800
-Message-Id: <20170211013758.3288-5-me@jessfraz.com>
-In-Reply-To: <20170211013758.3288-1-me@jessfraz.com>
-References: <20170211013758.3288-1-me@jessfraz.com>
-Subject: [kernel-hardening] [PATCH v2 5/5] x86: set msi_domain_ops as __ro_after_init
-To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H. Peter Anvin" <hpa@zytor.com>, "maintainer:X86 ARCHITECTURE 32-BIT AND 64-BIT" <x86@kernel.org>, Jess Frazelle <me@jessfraz.com>, Kees Cook <keescook@chromium.org>, "open list:X86 ARCHITECTURE 32-BIT AND 64-BIT" <linux-kernel@vger.kernel.org>
-Cc: kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <20170211013758.3288-2-me@jessfraz.com>
+References: <20170211013758.3288-1-me@jessfraz.com> <20170211013758.3288-2-me@jessfraz.com>
+From: John Stultz <john.stultz@linaro.org>
+Date: Fri, 10 Feb 2017 18:12:31 -0800
+Message-ID: <CALAqxLWMP7MFNRPTU3Ar3m=D1hFdS=d7_tbhkyrEadUQrRe7qw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 2/5] time: mark syscore_ops as __ro_after_init
+To: Jess Frazelle <me@jessfraz.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Rik van Riel <riel@redhat.com>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Marked msi_domain_ops structs as __ro_after_init when called only during init.
-This protects the data structure from accidental corruption.
+On Fri, Feb 10, 2017 at 5:37 PM, Jess Frazelle <me@jessfraz.com> wrote:
+> Marked syscore_ops structs as __ro_after_init when register_syscore_ops was
+> called only during init. Most of the caller functions were already annotated as
+> __init.
+> unregister_syscore_ops() was never called on these ops.
+> This protects the data structure from accidental corruption.
+>
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Jess Frazelle <me@jessfraz.com>
+> Acked-by: Rik van Riel <riel@redhat.com>
 
-Suggested-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Jess Frazelle <me@jessfraz.com>
----
- arch/x86/kernel/apic/msi.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+Thanks for sending this out. Looks reasonable to me. I'll queue it for
+testing, targeting for 4.12.
 
-diff --git a/arch/x86/kernel/apic/msi.c b/arch/x86/kernel/apic/msi.c
-index 015bbf30e3e3..27783a1e7166 100644
---- a/arch/x86/kernel/apic/msi.c
-+++ b/arch/x86/kernel/apic/msi.c
-@@ -121,7 +121,7 @@ void pci_msi_set_desc(msi_alloc_info_t *arg, struct msi_desc *desc)
- }
- EXPORT_SYMBOL_GPL(pci_msi_set_desc);
-
--static struct msi_domain_ops pci_msi_domain_ops = {
-+static struct msi_domain_ops pci_msi_domain_ops __ro_after_init = {
- 	.get_hwirq	= pci_msi_get_hwirq,
- 	.msi_prepare	= pci_msi_prepare,
- 	.set_desc	= pci_msi_set_desc,
-@@ -207,7 +207,7 @@ static int dmar_msi_init(struct irq_domain *domain,
- 	return 0;
- }
-
--static struct msi_domain_ops dmar_msi_domain_ops = {
-+static struct msi_domain_ops dmar_msi_domain_ops __ro_after_init = {
- 	.get_hwirq	= dmar_msi_get_hwirq,
- 	.msi_init	= dmar_msi_init,
- };
-@@ -304,7 +304,7 @@ static void hpet_msi_free(struct irq_domain *domain,
- 	irq_clear_status_flags(virq, IRQ_MOVE_PCNTXT);
- }
-
--static struct msi_domain_ops hpet_msi_domain_ops = {
-+static struct msi_domain_ops hpet_msi_domain_ops __ro_after_init = {
- 	.get_hwirq	= hpet_msi_get_hwirq,
- 	.msi_init	= hpet_msi_init,
- 	.msi_free	= hpet_msi_free,
---
-2.11.0
+thanks
+-john
