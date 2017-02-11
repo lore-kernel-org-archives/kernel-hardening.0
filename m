@@ -1,11 +1,11 @@
 From: Jess Frazelle <me@jessfraz.com>
-Date: Fri, 10 Feb 2017 17:37:56 -0800
-Message-Id: <20170211013758.3288-3-me@jessfraz.com>
+Date: Fri, 10 Feb 2017 17:37:57 -0800
+Message-Id: <20170211013758.3288-4-me@jessfraz.com>
 In-Reply-To: <20170211013758.3288-1-me@jessfraz.com>
 References: <20170211013758.3288-1-me@jessfraz.com>
-Subject: [kernel-hardening] [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
-To: "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>
-Cc: kernel-hardening@lists.openwall.com, Jess Frazelle <me@jessfraz.com>
+Subject: [kernel-hardening] [PATCH v2 4/5] staging: set msi_domain_ops as __ro_after_init
+To: Stuart Yoder <stuart.yoder@nxp.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Bharat Bhushan <bharat.bhushan@nxp.com>, Bhaktipriya Shridhar <bhaktipriya96@gmail.com>, Nipun Gupta <nipun.gupta@nxp.com>, Jess Frazelle <me@jessfraz.com>, "open list:QORIQ DPAA2 FSL-MC BUS DRIVER" <linux-kernel@vger.kernel.org>, "open list:STAGING SUBSYSTEM" <devel@driverdev.osuosl.org>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Marked msi_domain_ops structs as __ro_after_init when called only during init.
@@ -14,49 +14,21 @@ This protects the data structure from accidental corruption.
 Suggested-by: Kees Cook <keescook@chromium.org>
 Signed-off-by: Jess Frazelle <me@jessfraz.com>
 ---
- drivers/pci/host/pci-hyperv.c | 2 +-
- drivers/pci/host/vmd.c        | 2 +-
- drivers/pci/msi.c             | 2 +-
- 3 files changed, 3 insertions(+), 3 deletions(-)
+ drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/pci/host/pci-hyperv.c b/drivers/pci/host/pci-hyperv.c
-index 3efcc7bdc5fb..f05b93689d8f 100644
---- a/drivers/pci/host/pci-hyperv.c
-+++ b/drivers/pci/host/pci-hyperv.c
-@@ -958,7 +958,7 @@ static irq_hw_number_t hv_msi_domain_ops_get_hwirq(struct msi_domain_info *info,
- 	return arg->msi_hwirq;
+diff --git a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
+index 6b1cd574644f..0e2c1b5e13b7 100644
+--- a/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
++++ b/drivers/staging/fsl-mc/bus/irq-gic-v3-its-fsl-mc-msi.c
+@@ -51,7 +51,7 @@ static int its_fsl_mc_msi_prepare(struct irq_domain *msi_domain,
+ 	return msi_info->ops->msi_prepare(msi_domain->parent, dev, nvec, info);
  }
 
--static struct msi_domain_ops hv_msi_ops = {
-+static struct msi_domain_ops hv_msi_ops __ro_after_init = {
- 	.get_hwirq	= hv_msi_domain_ops_get_hwirq,
- 	.msi_prepare	= pci_msi_prepare,
- 	.set_desc	= pci_msi_set_desc,
-diff --git a/drivers/pci/host/vmd.c b/drivers/pci/host/vmd.c
-index 18ef1a93c10a..152c461538e4 100644
---- a/drivers/pci/host/vmd.c
-+++ b/drivers/pci/host/vmd.c
-@@ -253,7 +253,7 @@ static void vmd_set_desc(msi_alloc_info_t *arg, struct msi_desc *desc)
- 	arg->desc = desc;
- }
+-static struct msi_domain_ops its_fsl_mc_msi_ops = {
++static struct msi_domain_ops its_fsl_mc_msi_ops __ro_after_init = {
+ 	.msi_prepare = its_fsl_mc_msi_prepare,
+ };
 
--static struct msi_domain_ops vmd_msi_domain_ops = {
-+static struct msi_domain_ops vmd_msi_domain_ops __ro_after_init = {
- 	.get_hwirq	= vmd_get_hwirq,
- 	.msi_init	= vmd_msi_init,
- 	.msi_free	= vmd_msi_free,
-diff --git a/drivers/pci/msi.c b/drivers/pci/msi.c
-index 50c5003295ca..93141d5e2d1c 100644
---- a/drivers/pci/msi.c
-+++ b/drivers/pci/msi.c
-@@ -1413,7 +1413,7 @@ static void pci_msi_domain_set_desc(msi_alloc_info_t *arg,
- #define pci_msi_domain_set_desc		NULL
- #endif
-
--static struct msi_domain_ops pci_msi_domain_ops_default = {
-+static struct msi_domain_ops pci_msi_domain_ops_default __ro_after_init = {
- 	.set_desc	= pci_msi_domain_set_desc,
- 	.msi_check	= pci_msi_domain_check_cap,
- 	.handle_error	= pci_msi_domain_handle_error,
 --
 2.11.0
