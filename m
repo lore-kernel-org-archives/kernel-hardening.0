@@ -1,44 +1,59 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Sat, 11 Feb 2017 01:32:39 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC562305DC7B@ORSMSX103.amr.corp.intel.com>
-References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-	 <1486757549.2192.20.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
- <1486766996.2192.30.camel@perches.com>  
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
-MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: Joe Perches <joe@perches.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1486777021.2096.36.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Fri, 10 Feb 2017 20:37:01 -0500
+In-Reply-To: <CAGXu5jJXqY=KGHtrCQ3yLGVFd7K6Akk6B8VbWyZHGfRerYeV0A@mail.gmail.com>
+References: 
+	<CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+	 <CAGXu5jJXqY=KGHtrCQ3yLGVFd7K6Akk6B8VbWyZHGfRerYeV0A@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Introduction + new project: "rootkit
+ detection using virtualization".
+To: Kees Cook <keescook@chromium.org>, Matthew Giassa <matthew@giassa.net>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, KVM <kvm@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-<snip>
-> > By "normal" I'm referring to things that call into pointer(), just
-> > casually looking I see bstr_printf vsnprintf kvasprintf, which would
-> > be easy enough to add
-> >
-> > > What do you think is missing?  sn?printf ? That's easy to add.
-> >
-> > The problem starts to get hairy when we think of how often folks roll
-> > their own logging macros (see some small sampling at the end).
-> >
-> > I think we would want to add DEBUG DBG and sn?printf and maybe
-> > consider dropping the \b on the regex so it's a bit more matchy but
-> > still shouldn't end up matching on any ASM as you pointed out in the V2=
- nack.
-> >
-> > Ill break this down into:
-> > 1. the patch as I know you'll take it, as you wrote it :-P 2. Adding
-> > to the logging macros 3. exploring making it less matchy
+On Fri, 2017-02-10 at 15:27 -0800, Kees Cook wrote:
+> On Fri, Feb 10, 2017 at 2:00 PM, Matthew Giassa <matthew@giassa.net>
+> wrote:
+> > Good day,
+> > 
+> > I am a volunteer developer taking up a project originally proposed
+> > by
+> > Rik van Riel, "rootkit detection using virtualization", and am
+> > planning to contribute regularly to this project over the coming
+> > months. I was advised to contact these mailing lists to introduce
+> > myself, and I also wanted to inquire about any existing projects
+> > that
+> > coincide with this work. My initial work will involved diving into
+> > KVM
+> > + qemu source and deciding how best to approach the problem. While
+> > I
+> > have the attention of list members, are there any specific
+> > individuals/groups I should contact directly with respect to this
+> > type
+> > of project?
+> > 
+> > Thank you.
+> 
+> Hi! Welcome to the list(s)!
+> 
+> I think this is an interesting area of research, though it may be a
+> tricky cat/mouse game. Some of this kind of
+> hypervisor-protects-the-kernel work has been done on some Android
+> phones in small areas (see the cred protection near the end):
+> 
+> http://keenlab.tencent.com/en/2016/06/01/Emerging-Defense-in-Android-
+> Kernel/
 
--Kees and Andrew they likely don't care about the rest of this...
+One of the things that Matthew can do is build on
+the read-only memory protections in the kernel, and
+have the hypervisor enforce that the memory the kernel
+marks as read-only is never written from inside the
+virtual machine, until the next reboot.
 
-I have been working up a regex (I suck at these) to match C functions that =
-have an invalid
-%p format string and take arguments:
-http://www.regexr.com/3f92k
-
-This could be a way to get better coverage in a more generic approach, thou=
-ghts?
+That seems like it might be a useful place to start,
+since it would immediately make the other read-only
+protections that people are working on much harder to
+get around, at least inside virtual machines.
