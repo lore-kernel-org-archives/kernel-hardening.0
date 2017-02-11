@@ -1,94 +1,87 @@
-From: David Windsor <dwindsor@gmail.com>
-Date: Thu,  9 Feb 2017 02:38:21 -0500
-Message-Id: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
-Subject: [kernel-hardening] [RFC][PATCH] nfsd: add +1 to reference counting scheme for struct nfsd4_session
-To: linux-nfs@vger.kernel.org, netdev@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, bfields@fieldses.org, jlayton@poochiereds.net, keescook@chromium.org, elena.reshetova@intel.com, dwindsor@gmail.com
+Date: Sat, 11 Feb 2017 07:34:45 +0100
+From: Michal Hocko <mhocko@kernel.org>
+Message-ID: <20170211063445.GB30713@dhcp22.suse.cz>
+References: <1486770080-25007-1-git-send-email-hoeun.ryu@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1486770080-25007-1-git-send-email-hoeun.ryu@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v4] fork: free vmapped stacks in cache when cpus are
+ offline
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Thomas Gleixner <tglx@linutronix.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In furtherance of the KSPP effort to add overflow protection to kernel
-reference counters, a new type (refcount_t) and API have been created.
-Part of the refcount_t API is refcount_inc(), which will not increment a
-refcount_t variable if its value is 0 (as this would indicate a possible
-use-after-free condition). 
+On Sat 11-02-17 08:40:38, Hoeun Ryu wrote:
+>  Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+> In the current implementation, two stacks per cpu can be cached when
+> tasks are freed and the cached stacks are used again in task duplications.
+> but the cached stacks may remain unfreed even when cpu are offline.
+>  By adding a cpu hotplug callback to free the cached stacks when a cpu
+> goes offline, the pages of the cached stacks are not wasted.
+> 
+> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
 
-In auditing the kernel for refcounting corner cases, we've come across the
-case of struct nfsd4_session.  
+Acked-by: Michal Hocko <mhocko@suse.com>
 
->From fs/nfsd/state.h:
+> ---
+> v4:
+>  use CPUHP_BP_PREPARE_DYN state for cpuhp setup
+>  fix minor coding style
+> v3:
+>  fix misuse of per-cpu api
+>  fix location of function definition within CONFIG_VMAP_STACK
+> v2:
+>  remove cpuhp callback for `startup`, only `teardown` callback is installed.
+> 
+>  kernel/fork.c | 23 +++++++++++++++++++++++
+>  1 file changed, 23 insertions(+)
+> 
+> diff --git a/kernel/fork.c b/kernel/fork.c
+> index 937ba59..61634d7 100644
+> --- a/kernel/fork.c
+> +++ b/kernel/fork.c
+> @@ -168,6 +168,24 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+>   */
+>  #define NR_CACHED_STACKS 2
+>  static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
+> +
+> +static int free_vm_stack_cache(unsigned int cpu)
+> +{
+> +	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
+> +	int i;
+> +
+> +	for (i = 0; i < NR_CACHED_STACKS; i++) {
+> +		struct vm_struct *vm_stack = cached_vm_stacks[i];
+> +
+> +		if (!vm_stack)
+> +			continue;
+> +
+> +		vfree(vm_stack->addr);
+> +		cached_vm_stacks[i] = NULL;
+> +	}
+> +
+> +	return 0;
+> +}
+>  #endif
+>  
+>  static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+> @@ -456,6 +474,11 @@ void __init fork_init(void)
+>  	for (i = 0; i < UCOUNT_COUNTS; i++) {
+>  		init_user_ns.ucount_max[i] = max_threads/2;
+>  	}
+> +
+> +#ifdef CONFIG_VMAP_STACK
+> +	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vmstack_cache",
+> +			  NULL, free_vm_stack_cache);
+> +#endif
+>  }
+>  
+>  int __weak arch_dup_task_struct(struct task_struct *dst,
+> -- 
+> 2.7.4
+> 
 
-/*
- * Representation of a v4.1+ session. These are refcounted in a similar 
- * fashion to the nfs4_client. References are only taken when the server
- * is actively working on the object (primarily during the processing of
- * compounds).
- */
-struct nfsd4_session {
-    atomic_t se_ref;
-    ...
-};
-
-
->From fs/nfsd/nfs4state.c:
-
-static void init_session(..., struct nfsd4_session *new, ...)
-{
-    ...
-    atomic_set(&new->se_ref, 0);
-    ...
-}
- 
-Since nfsd4_session objects are initialized with refcount = 0, subsequent
-increments will fail using the new refcount_t API.
-
-Being largely unfamiliar with this subsystem's garbage collection
-mechanism, I'm unsure how to best fix this.  Attached is a patch that
-performs a logical +1 on struct nfsd4_session's reference counting
-scheme.
-
-If this is the correct route to take, I will resubmit this patch with
-updated comments for how struct nfsd4_session is refcounted (see the above
-comment from fs/nsfd/state.h).  This is in preparation for the previously
-mentioned refcount_t API series.
-
-Thanks,
-David Windsor
-
-Signed-off-by: David Windsor <dwindsor@gmail.com>
----
- fs/nfsd/nfs4state.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
-
-diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
-index a0dee8a..b0f3010 100644
---- a/fs/nfsd/nfs4state.c
-+++ b/fs/nfsd/nfs4state.c
-@@ -196,7 +196,7 @@ static void nfsd4_put_session_locked(struct nfsd4_session *ses)
- 
- 	lockdep_assert_held(&nn->client_lock);
- 
--	if (atomic_dec_and_test(&ses->se_ref) && is_session_dead(ses))
-+	if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_des(ses))
- 		free_session(ses);
- 	put_client_renew_locked(clp);
- }
-@@ -1645,7 +1645,7 @@ static void init_session(struct svc_rqst *rqstp, struct nfsd4_session *new, stru
- 	new->se_flags = cses->flags;
- 	new->se_cb_prog = cses->callback_prog;
- 	new->se_cb_sec = cses->cb_sec;
--	atomic_set(&new->se_ref, 0);
-+	atomic_set(&new->se_ref, 1);
- 	idx = hash_sessionid(&new->se_sessionid);
- 	list_add(&new->se_hash, &nn->sessionid_hashtbl[idx]);
- 	spin_lock(&clp->cl_lock);
-@@ -1792,7 +1792,7 @@ free_client(struct nfs4_client *clp)
- 		ses = list_entry(clp->cl_sessions.next, struct nfsd4_session,
- 				se_perclnt);
- 		list_del(&ses->se_perclnt);
--		WARN_ON_ONCE(atomic_read(&ses->se_ref));
-+		WARN_ON_ONCE((atomic_read(&ses->se_ref) > 1));
- 		free_session(ses);
- 	}
- 	rpc_destroy_wait_queue(&clp->cl_cb_waitq);
 -- 
-2.7.4
+Michal Hocko
+SUSE Labs
