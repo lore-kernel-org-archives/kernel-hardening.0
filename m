@@ -1,63 +1,81 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (1.0)
 From: Hoeun Ryu <hoeun.ryu@gmail.com>
-In-Reply-To: <alpine.DEB.2.20.1702110928390.3734@nanos>
-Date: Sat, 11 Feb 2017 18:56:41 +0900
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <A2A3D2E8-EAC9-441B-A2DF-C2500174E7BC@gmail.com>
-References: <1486770080-25007-1-git-send-email-hoeun.ryu@gmail.com> <alpine.DEB.2.20.1702110928390.3734@nanos>
-Subject: [kernel-hardening] Re: [PATCH v4] fork: free vmapped stacks in cache when cpus are offline
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Sat, 11 Feb 2017 19:26:48 +0900
+Message-Id: <1486808828-8854-1-git-send-email-hoeun.ryu@gmail.com>
+Subject: [kernel-hardening] [PATCH v5] fork: free vmapped stacks in cache when cpus are offline
+To: Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Hoeun Ryu <hoeun.ryu@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+ Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+In the current implementation, two stacks per cpu can be cached when
+tasks are freed and the cached stacks are used again in task duplications.
+but the cached stacks may remain unfreed even when cpus are offline.
+ By adding a cpu hotplug callback to free the cached stacks when a cpu
+goes offline, the pages of the cached stacks are not wasted.
 
-> On Feb 11, 2017, at 5:31 PM, Thomas Gleixner <tglx@linutronix.de> wrote:
->=20
->> On Sat, 11 Feb 2017, Hoeun Ryu wrote:
->> #define NR_CACHED_STACKS 2
->> static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]=
-);
->> +
->> +static int free_vm_stack_cache(unsigned int cpu)
->> +{
->> +    struct vm_struct **cached_vm_stacks =3D per_cpu_ptr(cached_stacks, c=
-pu);
->> +    int i;
->> +
->> +    for (i =3D 0; i < NR_CACHED_STACKS; i++) {
->> +        struct vm_struct *vm_stack =3D cached_vm_stacks[i];
->> +
->> +        if (!vm_stack)
->> +            continue;
->> +
->> +        vfree(vm_stack->addr);
->> +        cached_vm_stacks[i] =3D NULL;
->> +    }
->> +
->> +    return 0;
->> +}
->> #endif
->>=20
->> static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, in=
-t node)
->> @@ -456,6 +474,11 @@ void __init fork_init(void)
->>    for (i =3D 0; i < UCOUNT_COUNTS; i++) {
->>        init_user_ns.ucount_max[i] =3D max_threads/2;
->>    }
->> +
->> +#ifdef CONFIG_VMAP_STACK
->> +    cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vmstack_cache",
->> +              NULL, free_vm_stack_cache);
->> +#endif
->=20
-> If you wrap that in vm_stack_cache_init() and have a stub for !VMAP_STACK
-> (add an #else to the #ifdef VMAP_STACK section above) then you spare the
-> ugly ifdef in fork_init()
+Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+---
+v5:
+ - wrap cpuhp_setup_state() in a new function, vm_stack_cache_init() which
+   actually do nothing when !CONFIG_VMAP_STACK
+ - add __may_unused to free_vm_stack_cache()
+v4:
+ - use CPUHP_BP_PREPARE_DYN state for cpuhp setup
+ - fix minor coding style
+v3:
+ - fix misuse of per-cpu api
+ - fix location of function definition within CONFIG_VMAP_STACK
+v2:
+ - remove cpuhp callback for `startup`, only `teardown` callback is installed.
 
-OK. I will.
+ kernel/fork.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
 
-> Thanks,
->=20
->    tglx
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 937ba59..86a1110 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -168,6 +168,32 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+  */
+ #define NR_CACHED_STACKS 2
+ static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
++
++static int __maybe_unused free_vm_stack_cache(unsigned int cpu)
++{
++	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
++	int i;
++
++	for (i = 0; i < NR_CACHED_STACKS; i++) {
++		struct vm_struct *vm_stack = cached_vm_stacks[i];
++
++		if (!vm_stack)
++			continue;
++
++		vfree(vm_stack->addr);
++		cached_vm_stacks[i] = NULL;
++	}
++
++	return 0;
++}
++
++static inline int vm_stack_cache_init(void)
++{
++	return cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vm_stack_cache",
++				 NULL, free_vm_stack_cache);
++}
++#else
++static __always_inline int vm_stack_cache_init(void) { return 0; }
+ #endif
+ 
+ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+@@ -456,6 +482,8 @@ void __init fork_init(void)
+ 	for (i = 0; i < UCOUNT_COUNTS; i++) {
+ 		init_user_ns.ucount_max[i] = max_threads/2;
+ 	}
++
++	vm_stack_cache_init();
+ }
+ 
+ int __weak arch_dup_task_struct(struct task_struct *dst,
+-- 
+2.7.4
