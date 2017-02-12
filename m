@@ -1,126 +1,39 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sat, 11 Feb 2017 20:23:06 +0000
-Message-Id: <1486844586-26135-6-git-send-email-ard.biesheuvel@linaro.org>
-In-Reply-To: <1486844586-26135-1-git-send-email-ard.biesheuvel@linaro.org>
-References: <1486844586-26135-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v2 5/5] arm64: mmu: apply strict permissions to .init.text and .init.data
-To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, catalin.marinas@arm.com, will.deacon@arm.com, labbott@fedoraproject.org
-Cc: kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, andre.przywara@arm.com, Suzuki.Poulose@arm.com, james.morse@arm.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Sat, 11 Feb 2017 20:15:21 -0500
+From: Bruce Fields <bfields@fieldses.org>
+Message-ID: <20170212011521.GD2768@fieldses.org>
+References: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
+ <CAEXv5_jUa8Av4JABoKSAueiLHSLzibMvaE-8DrVcxZHFceckMg@mail.gmail.com>
+ <1486816302.4233.29.camel@poochiereds.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1486816302.4233.29.camel@poochiereds.net>
+Subject: [kernel-hardening] Re: [RFC][PATCH] nfsd: add +1 to reference counting scheme for
+ struct nfsd4_session
+To: Jeff Layton <jlayton@poochiereds.net>
+Cc: David Windsor <dwindsor@gmail.com>, linux-nfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To avoid having mappings that are writable and executable at the same
-time, split the init region into a .init.text region that is mapped
-read-only, and a .init.data region that is mapped non-executable.
+On Sat, Feb 11, 2017 at 07:31:42AM -0500, Jeff Layton wrote:
+> The basic idea here is that nfsv4 sessions have a "resting state" of 0.
+> We want to keep them around, but if they go "dead" then we we'll tear
+> them down if they aren't actively in use at the time. So, we still free
+> the thing when the refcount goes to zero, but we have an extra condition
+> before we free it on the put -- that the session is also "dead" (meaning
+> that the client asked us to destroy it).
+> 
+> Your patch doesn't look like it'll break anything, but I personally find
+>  it harder to follow that way. The freeable reference state will be 1
+> instead of the normal 0.
 
-This is possible now that the alternative patching occurs via the linear
-mapping, and the linear alias of the init region is always mapped writable
-(but never executable).
+Alas, I don't have any examples in mind, but doesn't this pattern happen
+all over?
 
-Since the alternatives descriptions themselves are read-only data, move
-those into the .init.text region.
+You have objects that live in some data structure.  They're freed only
+when they're removed from the data structure.  You want removal to fail
+whenever they're in use.
 
-Reviewed-by: Laura Abbott <labbott@redhat.com>
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/include/asm/sections.h |  3 ++-
- arch/arm64/kernel/vmlinux.lds.S   | 25 +++++++++++++-------
- arch/arm64/mm/mmu.c               | 12 ++++++----
- 3 files changed, 26 insertions(+), 14 deletions(-)
+So it's natural to use an atomic counter to track the number of external
+users and some other lock to serialize lookup and destruction.
 
-diff --git a/arch/arm64/include/asm/sections.h b/arch/arm64/include/asm/sections.h
-index 4e7e7067afdb..22582819b2e5 100644
---- a/arch/arm64/include/asm/sections.h
-+++ b/arch/arm64/include/asm/sections.h
-@@ -24,7 +24,8 @@ extern char __hibernate_exit_text_start[], __hibernate_exit_text_end[];
- extern char __hyp_idmap_text_start[], __hyp_idmap_text_end[];
- extern char __hyp_text_start[], __hyp_text_end[];
- extern char __idmap_text_start[], __idmap_text_end[];
-+extern char __initdata_begin[], __initdata_end[];
-+extern char __inittext_begin[], __inittext_end[];
- extern char __irqentry_text_start[], __irqentry_text_end[];
- extern char __mmuoff_data_start[], __mmuoff_data_end[];
--
- #endif /* __ASM_SECTIONS_H */
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index b8deffa9e1bf..2c93d259046c 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -143,12 +143,27 @@ SECTIONS
- 
- 	. = ALIGN(SEGMENT_ALIGN);
- 	__init_begin = .;
-+	__inittext_begin = .;
- 
- 	INIT_TEXT_SECTION(8)
- 	.exit.text : {
- 		ARM_EXIT_KEEP(EXIT_TEXT)
- 	}
- 
-+	. = ALIGN(4);
-+	.altinstructions : {
-+		__alt_instructions = .;
-+		*(.altinstructions)
-+		__alt_instructions_end = .;
-+	}
-+	.altinstr_replacement : {
-+		*(.altinstr_replacement)
-+	}
-+
-+	. = ALIGN(PAGE_SIZE);
-+	__inittext_end = .;
-+	__initdata_begin = .;
-+
- 	.init.data : {
- 		INIT_DATA
- 		INIT_SETUP(16)
-@@ -164,15 +179,6 @@ SECTIONS
- 
- 	PERCPU_SECTION(L1_CACHE_BYTES)
- 
--	. = ALIGN(4);
--	.altinstructions : {
--		__alt_instructions = .;
--		*(.altinstructions)
--		__alt_instructions_end = .;
--	}
--	.altinstr_replacement : {
--		*(.altinstr_replacement)
--	}
- 	.rela : ALIGN(8) {
- 		*(.rela .rela*)
- 	}
-@@ -181,6 +187,7 @@ SECTIONS
- 	__rela_size	= SIZEOF(.rela);
- 
- 	. = ALIGN(SEGMENT_ALIGN);
-+	__initdata_end = .;
- 	__init_end = .;
- 
- 	_data = .;
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index e97f1ce967ec..c53c43b4ed3f 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -479,12 +479,16 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
-  */
- static void __init map_kernel(pgd_t *pgd)
- {
--	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_init, vmlinux_data;
-+	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
-+				vmlinux_initdata, vmlinux_data;
- 
- 	map_kernel_segment(pgd, _text, _etext, PAGE_KERNEL_ROX, &vmlinux_text);
--	map_kernel_segment(pgd, __start_rodata, __init_begin, PAGE_KERNEL, &vmlinux_rodata);
--	map_kernel_segment(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC,
--			   &vmlinux_init);
-+	map_kernel_segment(pgd, __start_rodata, __inittext_begin, PAGE_KERNEL,
-+			   &vmlinux_rodata);
-+	map_kernel_segment(pgd, __inittext_begin, __inittext_end, PAGE_KERNEL_ROX,
-+			   &vmlinux_inittext);
-+	map_kernel_segment(pgd, __initdata_begin, __initdata_end, PAGE_KERNEL,
-+			   &vmlinux_initdata);
- 	map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
- 
- 	if (!pgd_val(*pgd_offset_raw(pgd, FIXADDR_START))) {
--- 
-2.7.4
+--b.
