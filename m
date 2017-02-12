@@ -1,79 +1,93 @@
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Sun, 12 Feb 2017 22:05:53 +0900
-Message-Id: <1486904770-30653-1-git-send-email-hoeun.ryu@gmail.com>
-Subject: [kernel-hardening] [PATCH v6] fork: free vmapped stacks in cache when cpus are offline
-To: Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Hoeun Ryu <hoeun.ryu@gmail.com>
+From: KY Srinivasan <kys@microsoft.com>
+Date: Sun, 12 Feb 2017 04:08:24 +0000
+Message-ID: <DM5PR03MB2490F0970E353CACB9D201F5A0460@DM5PR03MB2490.namprd03.prod.outlook.com>
+References: <20170211013758.3288-1-me@jessfraz.com>
+ <20170211013758.3288-3-me@jessfraz.com>
+In-Reply-To: <20170211013758.3288-3-me@jessfraz.com>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+Subject: [kernel-hardening] RE: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
+To: Jess Frazelle <me@jessfraz.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open
+ list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI
+ SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
- Using virtually mapped stack, kernel stacks are allocated via vmalloc.
-In the current implementation, two stacks per cpu can be cached when
-tasks are freed and the cached stacks are used again in task duplications.
-but the cached stacks may remain unfreed even when cpu are offline.
- By adding a cpu hotplug callback to free the cached stacks when a cpu
-goes offline, the pages of the cached stacks are not wasted.
 
-Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
-Acked-by: Michal Hocko <mhocko@suse.com>
----
-v6:
- - rollback to v4, completely identical.
-v5:
- - wrap cpuhp_setup_state() in a new function, vm_stack_cache_init() which
-   actually do nothing when !CONFIG_VMAP_STACK
- - add __may_unused to free_vm_stack_cache()
-v4:
- - use CPUHP_BP_PREPARE_DYN state for cpuhp setup
- - fix minor coding style
-v3:
- - fix misuse of per-cpu api
- - fix location of function definition within CONFIG_VMAP_STACK
-v2:
- - remove cpuhp callback for `startup`, only `teardown` callback is installed.
 
- kernel/fork.c | 23 +++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+> -----Original Message-----
+> From: Jess Frazelle [mailto:me@jessfraz.com]
+> Sent: Friday, February 10, 2017 5:38 PM
+> To: KY Srinivasan <kys@microsoft.com>; Haiyang Zhang
+> <haiyangz@microsoft.com>; Stephen Hemminger
+> <sthemmin@microsoft.com>; Bjorn Helgaas <bhelgaas@google.com>; Keith
+> Busch <keith.busch@intel.com>; open list:Hyper-V CORE AND DRIVERS
+> <devel@linuxdriverproject.org>; open list:PCI SUBSYSTEM <linux-
+> pci@vger.kernel.org>; open list <linux-kernel@vger.kernel.org>
+> Cc: kernel-hardening@lists.openwall.com; Jess Frazelle <me@jessfraz.com>
+> Subject: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
+>=20
+> Marked msi_domain_ops structs as __ro_after_init when called only during
+> init.
+> This protects the data structure from accidental corruption.
+>=20
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Jess Frazelle <me@jessfraz.com>
 
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 937ba59..3ad0274 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -168,6 +168,24 @@ void __weak arch_release_thread_stack(unsigned long *stack)
-  */
- #define NR_CACHED_STACKS 2
- static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
-+
-+static int free_vm_stack_cache(unsigned int cpu)
-+{
-+	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
-+	int i;
-+
-+	for (i = 0; i < NR_CACHED_STACKS; i++) {
-+		struct vm_struct *vm_stack = cached_vm_stacks[i];
-+
-+		if (!vm_stack)
-+			continue;
-+
-+		vfree(vm_stack->addr);
-+		cached_vm_stacks[i] = NULL;
-+	}
-+
-+	return 0;
-+}
- #endif
- 
- static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
-@@ -456,6 +474,11 @@ void __init fork_init(void)
- 	for (i = 0; i < UCOUNT_COUNTS; i++) {
- 		init_user_ns.ucount_max[i] = max_threads/2;
- 	}
-+
-+#ifdef CONFIG_VMAP_STACK
-+	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vm_stack_cache",
-+			  NULL, free_vm_stack_cache);
-+#endif
- }
- 
- int __weak arch_dup_task_struct(struct task_struct *dst,
--- 
-2.7.4
+Acked-by: K. Y. Srinivasan <kys@microsoft.com>
+
+K. Y
+
+> ---
+>  drivers/pci/host/pci-hyperv.c | 2 +-
+>  drivers/pci/host/vmd.c        | 2 +-
+>  drivers/pci/msi.c             | 2 +-
+>  3 files changed, 3 insertions(+), 3 deletions(-)
+>=20
+> diff --git a/drivers/pci/host/pci-hyperv.c b/drivers/pci/host/pci-hyperv.=
+c
+> index 3efcc7bdc5fb..f05b93689d8f 100644
+> --- a/drivers/pci/host/pci-hyperv.c
+> +++ b/drivers/pci/host/pci-hyperv.c
+> @@ -958,7 +958,7 @@ static irq_hw_number_t
+> hv_msi_domain_ops_get_hwirq(struct msi_domain_info *info,
+>  	return arg->msi_hwirq;
+>  }
+>=20
+> -static struct msi_domain_ops hv_msi_ops =3D {
+> +static struct msi_domain_ops hv_msi_ops __ro_after_init =3D {
+>  	.get_hwirq	=3D hv_msi_domain_ops_get_hwirq,
+>  	.msi_prepare	=3D pci_msi_prepare,
+>  	.set_desc	=3D pci_msi_set_desc,
+> diff --git a/drivers/pci/host/vmd.c b/drivers/pci/host/vmd.c
+> index 18ef1a93c10a..152c461538e4 100644
+> --- a/drivers/pci/host/vmd.c
+> +++ b/drivers/pci/host/vmd.c
+> @@ -253,7 +253,7 @@ static void vmd_set_desc(msi_alloc_info_t *arg,
+> struct msi_desc *desc)
+>  	arg->desc =3D desc;
+>  }
+>=20
+> -static struct msi_domain_ops vmd_msi_domain_ops =3D {
+> +static struct msi_domain_ops vmd_msi_domain_ops __ro_after_init =3D {
+>  	.get_hwirq	=3D vmd_get_hwirq,
+>  	.msi_init	=3D vmd_msi_init,
+>  	.msi_free	=3D vmd_msi_free,
+> diff --git a/drivers/pci/msi.c b/drivers/pci/msi.c
+> index 50c5003295ca..93141d5e2d1c 100644
+> --- a/drivers/pci/msi.c
+> +++ b/drivers/pci/msi.c
+> @@ -1413,7 +1413,7 @@ static void
+> pci_msi_domain_set_desc(msi_alloc_info_t *arg,
+>  #define pci_msi_domain_set_desc		NULL
+>  #endif
+>=20
+> -static struct msi_domain_ops pci_msi_domain_ops_default =3D {
+> +static struct msi_domain_ops pci_msi_domain_ops_default __ro_after_init
+> =3D {
+>  	.set_desc	=3D pci_msi_domain_set_desc,
+>  	.msi_check	=3D pci_msi_domain_check_cap,
+>  	.handle_error	=3D pci_msi_domain_handle_error,
+> --
+> 2.11.0
