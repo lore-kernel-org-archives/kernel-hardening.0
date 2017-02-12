@@ -1,80 +1,51 @@
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-Date: Sun, 12 Feb 2017 15:13:33 +0900
-Message-Id: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com>
-Subject: [kernel-hardening] [PATCH] usercopy: add testcases to check zeroing on failure of usercopy
-To: Kees Cook <keescook@chromium.org>
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sun, 12 Feb 2017 13:19:43 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <176AF453-1CEF-4AF3-8A5F-B8AFE16A16CD@gmail.com>
+Message-ID: <alpine.DEB.2.20.1702121319230.3734@nanos>
+References: <201702111956.gS0EVcvY%fengguang.wu@intel.com> <alpine.DEB.2.20.1702112118120.3734@nanos> <176AF453-1CEF-4AF3-8A5F-B8AFE16A16CD@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v5] fork: free vmapped stacks in cache when cpus are
+ offline
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In the hardend usercopy, the destination buffer will be zeroed if
-copy_from_user/get_user fails. This patch adds testcases for it.
-The destination buffer is set with non-zero value before illegal
-copy_from_user/get_user is executed and the buffer is compared to
-zero after usercopy is done.
+On Sun, 12 Feb 2017, Hoeun Ryu wrote:
+> 
+> > On Feb 12, 2017, at 5:19 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
+> > 
+> >> On Sat, 11 Feb 2017, kbuild test robot wrote:
+> >> 
+> >> Hi Hoeun,
+> >> 
+> >> [auto build test ERROR on linus/master]
+> >> [also build test ERROR on v4.10-rc7 next-20170210]
+> >> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+> >> 
+> >> url:    https://github.com/0day-ci/linux/commits/Hoeun-Ryu/fork-free-vmapped-stacks-in-cache-when-cpus-are-offline/20170211-183401
+> >> config: ia64-allmodconfig (attached as .config)
+> >> compiler: ia64-linux-gcc (GCC) 6.2.0
+> >> reproduce:
+> >>        wget https://git.kernel.org/cgit/linux/kernel/git/wfg/lkp-tests.git/plain/sbin/make.cross -O ~/bin/make.cross
+> >>        chmod +x ~/bin/make.cross
+> >>        # save the attached .config to linux build tree
+> >>        make.cross ARCH=ia64 
+> >> 
+> >> All errors (new ones prefixed by >>):
+> >> 
+> >>   kernel/fork.c: In function 'fork_init':
+> >>>> kernel/fork.c:483:2: error: implicit declaration of function 'vm_stack_cache_init' [-Werror=implicit-function-declaration]
+> >>     vm_stack_cache_init();
+> >>     ^~~~~~~~~~~~~~~~~~~
+> > 
+> > Right. This needs to move to a different place as that part is nested inside
+> > 
+> > #ifndef CONFIG_ARCH_THREAD_STACK_ALLOCATOR
+> > 
+> > That's an horrible ifdef maze in that file.
+> > 
+> 
+> I think we should rollback to v4. Do you agree?
 
-Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
----
- lib/test_user_copy.c | 17 +++++++++++++++++
- 1 file changed, 17 insertions(+)
-
-diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
-index 0ecef3e..54bd898 100644
---- a/lib/test_user_copy.c
-+++ b/lib/test_user_copy.c
-@@ -41,11 +41,18 @@ static int __init test_user_copy_init(void)
- 	char *bad_usermem;
- 	unsigned long user_addr;
- 	unsigned long value = 0x5A;
-+	char *zerokmem;
- 
- 	kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
- 	if (!kmem)
- 		return -ENOMEM;
- 
-+	zerokmem = kzalloc(PAGE_SIZE * 2, GFP_KERNEL);
-+	if (!zerokmem) {
-+		kfree(kmem);
-+		return -ENOMEM;
-+	}
-+
- 	user_addr = vm_mmap(NULL, 0, PAGE_SIZE * 2,
- 			    PROT_READ | PROT_WRITE | PROT_EXEC,
- 			    MAP_ANONYMOUS | MAP_PRIVATE, 0);
-@@ -69,25 +76,35 @@ static int __init test_user_copy_init(void)
- 		    "legitimate put_user failed");
- 
- 	/* Invalid usage: none of these should succeed. */
-+	memset(kmem, 0x5A, PAGE_SIZE);
- 	ret |= test(!copy_from_user(kmem, (char __user *)(kmem + PAGE_SIZE),
- 				    PAGE_SIZE),
- 		    "illegal all-kernel copy_from_user passed");
-+	ret |= test(memcmp(zerokmem, kmem, PAGE_SIZE),
-+		    "zeroing failure for illegal all-kernel copy_from_user");
-+	memset(bad_usermem, 0x5A, PAGE_SIZE);
- 	ret |= test(!copy_from_user(bad_usermem, (char __user *)kmem,
- 				    PAGE_SIZE),
- 		    "illegal reversed copy_from_user passed");
-+	ret |= test(memcmp(zerokmem, bad_usermem, PAGE_SIZE),
-+		    "zeroing failure for illegal reversed copy_from_user");
- 	ret |= test(!copy_to_user((char __user *)kmem, kmem + PAGE_SIZE,
- 				  PAGE_SIZE),
- 		    "illegal all-kernel copy_to_user passed");
- 	ret |= test(!copy_to_user((char __user *)kmem, bad_usermem,
- 				  PAGE_SIZE),
- 		    "illegal reversed copy_to_user passed");
-+	memset(kmem, 0x5A, PAGE_SIZE);
- 	ret |= test(!get_user(value, (unsigned long __user *)kmem),
- 		    "illegal get_user passed");
-+	ret |= test(memcmp(zerokmem, kmem, sizeof(value)),
-+		    "zeroing failure for illegal get_user");
- 	ret |= test(!put_user(value, (unsigned long __user *)kmem),
- 		    "illegal put_user passed");
- 
- 	vm_munmap(user_addr, PAGE_SIZE * 2);
- 	kfree(kmem);
-+	kfree(zerokmem);
- 
- 	if (ret == 0) {
- 		pr_info("tests passed.\n");
--- 
-2.7.4
+Sigh. Yes.
