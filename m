@@ -1,51 +1,79 @@
-Date: Sun, 12 Feb 2017 13:19:43 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <176AF453-1CEF-4AF3-8A5F-B8AFE16A16CD@gmail.com>
-Message-ID: <alpine.DEB.2.20.1702121319230.3734@nanos>
-References: <201702111956.gS0EVcvY%fengguang.wu@intel.com> <alpine.DEB.2.20.1702112118120.3734@nanos> <176AF453-1CEF-4AF3-8A5F-B8AFE16A16CD@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v5] fork: free vmapped stacks in cache when cpus are
- offline
-To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Sun, 12 Feb 2017 22:05:53 +0900
+Message-Id: <1486904770-30653-1-git-send-email-hoeun.ryu@gmail.com>
+Subject: [kernel-hardening] [PATCH v6] fork: free vmapped stacks in cache when cpus are offline
+To: Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, Ingo Molnar <mingo@kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Mateusz Guzik <mguzik@redhat.com>
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Hoeun Ryu <hoeun.ryu@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, 12 Feb 2017, Hoeun Ryu wrote:
-> 
-> > On Feb 12, 2017, at 5:19 AM, Thomas Gleixner <tglx@linutronix.de> wrote:
-> > 
-> >> On Sat, 11 Feb 2017, kbuild test robot wrote:
-> >> 
-> >> Hi Hoeun,
-> >> 
-> >> [auto build test ERROR on linus/master]
-> >> [also build test ERROR on v4.10-rc7 next-20170210]
-> >> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
-> >> 
-> >> url:    https://github.com/0day-ci/linux/commits/Hoeun-Ryu/fork-free-vmapped-stacks-in-cache-when-cpus-are-offline/20170211-183401
-> >> config: ia64-allmodconfig (attached as .config)
-> >> compiler: ia64-linux-gcc (GCC) 6.2.0
-> >> reproduce:
-> >>        wget https://git.kernel.org/cgit/linux/kernel/git/wfg/lkp-tests.git/plain/sbin/make.cross -O ~/bin/make.cross
-> >>        chmod +x ~/bin/make.cross
-> >>        # save the attached .config to linux build tree
-> >>        make.cross ARCH=ia64 
-> >> 
-> >> All errors (new ones prefixed by >>):
-> >> 
-> >>   kernel/fork.c: In function 'fork_init':
-> >>>> kernel/fork.c:483:2: error: implicit declaration of function 'vm_stack_cache_init' [-Werror=implicit-function-declaration]
-> >>     vm_stack_cache_init();
-> >>     ^~~~~~~~~~~~~~~~~~~
-> > 
-> > Right. This needs to move to a different place as that part is nested inside
-> > 
-> > #ifndef CONFIG_ARCH_THREAD_STACK_ALLOCATOR
-> > 
-> > That's an horrible ifdef maze in that file.
-> > 
-> 
-> I think we should rollback to v4. Do you agree?
+ Using virtually mapped stack, kernel stacks are allocated via vmalloc.
+In the current implementation, two stacks per cpu can be cached when
+tasks are freed and the cached stacks are used again in task duplications.
+but the cached stacks may remain unfreed even when cpu are offline.
+ By adding a cpu hotplug callback to free the cached stacks when a cpu
+goes offline, the pages of the cached stacks are not wasted.
 
-Sigh. Yes.
+Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+Acked-by: Michal Hocko <mhocko@suse.com>
+---
+v6:
+ - rollback to v4, completely identical.
+v5:
+ - wrap cpuhp_setup_state() in a new function, vm_stack_cache_init() which
+   actually do nothing when !CONFIG_VMAP_STACK
+ - add __may_unused to free_vm_stack_cache()
+v4:
+ - use CPUHP_BP_PREPARE_DYN state for cpuhp setup
+ - fix minor coding style
+v3:
+ - fix misuse of per-cpu api
+ - fix location of function definition within CONFIG_VMAP_STACK
+v2:
+ - remove cpuhp callback for `startup`, only `teardown` callback is installed.
+
+ kernel/fork.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 937ba59..3ad0274 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -168,6 +168,24 @@ void __weak arch_release_thread_stack(unsigned long *stack)
+  */
+ #define NR_CACHED_STACKS 2
+ static DEFINE_PER_CPU(struct vm_struct *, cached_stacks[NR_CACHED_STACKS]);
++
++static int free_vm_stack_cache(unsigned int cpu)
++{
++	struct vm_struct **cached_vm_stacks = per_cpu_ptr(cached_stacks, cpu);
++	int i;
++
++	for (i = 0; i < NR_CACHED_STACKS; i++) {
++		struct vm_struct *vm_stack = cached_vm_stacks[i];
++
++		if (!vm_stack)
++			continue;
++
++		vfree(vm_stack->addr);
++		cached_vm_stacks[i] = NULL;
++	}
++
++	return 0;
++}
+ #endif
+ 
+ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk, int node)
+@@ -456,6 +474,11 @@ void __init fork_init(void)
+ 	for (i = 0; i < UCOUNT_COUNTS; i++) {
+ 		init_user_ns.ucount_max[i] = max_threads/2;
+ 	}
++
++#ifdef CONFIG_VMAP_STACK
++	cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "fork:vm_stack_cache",
++			  NULL, free_vm_stack_cache);
++#endif
+ }
+ 
+ int __weak arch_dup_task_struct(struct task_struct *dst,
+-- 
+2.7.4
