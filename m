@@ -1,61 +1,69 @@
-Date: Mon, 13 Feb 2017 16:34:35 +1100 (AEDT)
+Date: Mon, 13 Feb 2017 16:35:24 +1100 (AEDT)
 From: James Morris <jmorris@namei.org>
-Message-ID: <alpine.LRH.2.20.1702131634000.8914@namei.org>
+Message-ID: <alpine.LRH.2.20.1702131634430.8914@namei.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] [RFC PATCH 3/4] integrity: mark default IMA rules as
- __ro_after_init
+Subject: [kernel-hardening] [RFC PATCH 4/4] selinux: constify nlmsg permission tables
 To: linux-security-module@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com, Mimi Zohar <zohar@linux.vnet.ibm.com>
+Cc: kernel-hardening@lists.openwall.com, Paul Moore <paul@paul-moore.com>, Stephen Smalley <sds@tycho.nsa.gov>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The default IMA rules are loaded during init and then do not
-change, so mark them as __ro_after_init.
+Constify nlmsg permission tables, which are initialized once
+and then do not change.
 
 Signed-off-by: James Morris <james.l.morris@oracle.com>
 ---
- security/integrity/ima/ima_policy.c |    8 ++++----
- 1 files changed, 4 insertions(+), 4 deletions(-)
+ security/selinux/nlmsgtab.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
 
-diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
-index aed47b7..e8498a3 100644
---- a/security/integrity/ima/ima_policy.c
-+++ b/security/integrity/ima/ima_policy.c
-@@ -83,7 +83,7 @@ struct ima_rule_entry {
-  * normal users can easily run the machine out of memory simply building
-  * and running executables.
-  */
--static struct ima_rule_entry dont_measure_rules[] = {
-+static struct ima_rule_entry dont_measure_rules[] __ro_after_init = {
- 	{.action = DONT_MEASURE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
- 	{.action = DONT_MEASURE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
- 	{.action = DONT_MEASURE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
-@@ -97,7 +97,7 @@ struct ima_rule_entry {
- 	{.action = DONT_MEASURE, .fsmagic = NSFS_MAGIC, .flags = IMA_FSMAGIC}
+diff --git a/security/selinux/nlmsgtab.c b/security/selinux/nlmsgtab.c
+index 2ca9cde..57e2596 100644
+--- a/security/selinux/nlmsgtab.c
++++ b/security/selinux/nlmsgtab.c
+@@ -28,7 +28,7 @@ struct nlmsg_perm {
+ 	u32	perm;
  };
  
--static struct ima_rule_entry original_measurement_rules[] = {
-+static struct ima_rule_entry original_measurement_rules[] __ro_after_init = {
- 	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
- 	 .flags = IMA_FUNC | IMA_MASK},
- 	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
-@@ -108,7 +108,7 @@ struct ima_rule_entry {
- 	{.action = MEASURE, .func = FIRMWARE_CHECK, .flags = IMA_FUNC},
+-static struct nlmsg_perm nlmsg_route_perms[] =
++static const struct nlmsg_perm nlmsg_route_perms[] =
+ {
+ 	{ RTM_NEWLINK,		NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
+ 	{ RTM_DELLINK,		NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
+@@ -80,7 +80,7 @@ struct nlmsg_perm {
+ 	{ RTM_GETSTATS,		NETLINK_ROUTE_SOCKET__NLMSG_READ  },
  };
  
--static struct ima_rule_entry default_measurement_rules[] = {
-+static struct ima_rule_entry default_measurement_rules[] __ro_after_init = {
- 	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
- 	 .flags = IMA_FUNC | IMA_MASK},
- 	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
-@@ -122,7 +122,7 @@ struct ima_rule_entry {
- 	{.action = MEASURE, .func = POLICY_CHECK, .flags = IMA_FUNC},
+-static struct nlmsg_perm nlmsg_tcpdiag_perms[] =
++static const struct nlmsg_perm nlmsg_tcpdiag_perms[] =
+ {
+ 	{ TCPDIAG_GETSOCK,	NETLINK_TCPDIAG_SOCKET__NLMSG_READ },
+ 	{ DCCPDIAG_GETSOCK,	NETLINK_TCPDIAG_SOCKET__NLMSG_READ },
+@@ -88,7 +88,7 @@ struct nlmsg_perm {
+ 	{ SOCK_DESTROY,		NETLINK_TCPDIAG_SOCKET__NLMSG_WRITE },
  };
  
--static struct ima_rule_entry default_appraise_rules[] = {
-+static struct ima_rule_entry default_appraise_rules[] __ro_after_init = {
- 	{.action = DONT_APPRAISE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
- 	{.action = DONT_APPRAISE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
- 	{.action = DONT_APPRAISE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
+-static struct nlmsg_perm nlmsg_xfrm_perms[] =
++static const struct nlmsg_perm nlmsg_xfrm_perms[] =
+ {
+ 	{ XFRM_MSG_NEWSA,	NETLINK_XFRM_SOCKET__NLMSG_WRITE },
+ 	{ XFRM_MSG_DELSA,	NETLINK_XFRM_SOCKET__NLMSG_WRITE },
+@@ -115,7 +115,7 @@ struct nlmsg_perm {
+ 	{ XFRM_MSG_MAPPING,	NETLINK_XFRM_SOCKET__NLMSG_READ  },
+ };
+ 
+-static struct nlmsg_perm nlmsg_audit_perms[] =
++static const struct nlmsg_perm nlmsg_audit_perms[] =
+ {
+ 	{ AUDIT_GET,		NETLINK_AUDIT_SOCKET__NLMSG_READ     },
+ 	{ AUDIT_SET,		NETLINK_AUDIT_SOCKET__NLMSG_WRITE    },
+@@ -136,7 +136,7 @@ struct nlmsg_perm {
+ };
+ 
+ 
+-static int nlmsg_perm(u16 nlmsg_type, u32 *perm, struct nlmsg_perm *tab, size_t tabsize)
++static int nlmsg_perm(u16 nlmsg_type, u32 *perm, const struct nlmsg_perm *tab, size_t tabsize)
+ {
+ 	int i, err = -EINVAL;
+ 
 -- 
 1.7.1
