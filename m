@@ -1,74 +1,49 @@
-From: Eddie Kovsky <ewk@edkovsky.org>
-Date: Sun, 12 Feb 2017 16:31:40 -0700
-Message-Id: <20170212233140.10606-3-ewk@edkovsky.org>
-In-Reply-To: <20170212233140.10606-1-ewk@edkovsky.org>
-References: <20170212233140.10606-1-ewk@edkovsky.org>
-Subject: [kernel-hardening] [RFC] [PATCH 2/2] extable: verify address is read-only
-To: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org
-Cc: kernel-hardening@lists.openwall.com, Eddie Kovsky <ewk@edkovsky.org>
+Date: Mon, 13 Feb 2017 16:31:40 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Message-ID: <alpine.LRH.2.20.1702131625430.8914@namei.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] [RFC PATCH 0/4] ro hardening for the security subsystem
+To: linux-security-module@vger.kernel.org
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide a mechanism to check if the address of a variable is
-const or ro_after_init. It mimics the existing functions that test if an
-address is inside the kernel's text section.
+Hi Folks,
 
-Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
+Please review/test these patches which add some read-only hardening to the 
+security subsystem.
+
+In this series, the following are marked as __ro_after_init:
+
+- LSM hooks
+- Netfilter hooks used by security/
+- the default IMA rules
+
+I've also constified the SELinux Netlink permission tables, which will 
+ensure they're located in an RO section.
+
 ---
- include/linux/kernel.h |  2 ++
- kernel/extable.c       | 31 +++++++++++++++++++++++++++++++
- 2 files changed, 33 insertions(+)
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 4c26dc3a8295..51beea39e6c4 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
- extern int __kernel_text_address(unsigned long addr);
- extern int kernel_text_address(unsigned long addr);
- extern int func_ptr_is_kernel_text(void *ptr);
-+extern int core_kernel_ro_data(unsigned long addr);
-+extern int kernel_ro_address(unsigned long addr);
+James Morris (4):
+  security: mark LSM hooks as __ro_after_init
+  security: mark nf ops in SELinux and Smack as __ro_after_init
+  integrity: mark default IMA rules as __ro_after_init
+  selinux: constify nlmsg permission tables
 
- unsigned long int_sqrt(unsigned long);
+ security/apparmor/lsm.c             |    2 +-
+ security/commoncap.c                |    2 +-
+ security/integrity/ima/ima_policy.c |    8 ++++----
+ security/loadpin/loadpin.c          |    2 +-
+ security/security.c                 |    2 +-
+ security/selinux/hooks.c            |    4 ++--
+ security/selinux/nlmsgtab.c         |   10 +++++-----
+ security/smack/smack_lsm.c          |    2 +-
+ security/smack/smack_netfilter.c    |    2 +-
+ security/tomoyo/tomoyo.c            |    2 +-
+ security/yama/yama_lsm.c            |    2 +-
+ 11 files changed, 19 insertions(+), 19 deletions(-)
 
-diff --git a/kernel/extable.c b/kernel/extable.c
-index 6b0d09051efb..f5a29c4ae391 100644
---- a/kernel/extable.c
-+++ b/kernel/extable.c
-@@ -149,3 +149,34 @@ int func_ptr_is_kernel_text(void *ptr)
- 		return 1;
- 	return is_module_text_address(addr);
- }
-+
-+/**
-+ * core_kernel_ro_data - Verify address points to read-only section
-+ * @addr: address to test
-+ *
-+ */
-+int core_kernel_ro_data(unsigned long addr)
-+{
-+	if (addr >= (unsigned long)__start_rodata &&
-+	    addr < (unsigned long)__end_rodata)
-+		return 1;
-+
-+	if (addr >= (unsigned long)__start_data_ro_after_init &&
-+	    addr < (unsigned long)__end_data_ro_after_init)
-+		return 1;
-+
-+	return 0;
-+}
-+
-+/* Verify that address is const or ro_after_init. */
-+int kernel_ro_address(unsigned long addr)
-+{
-+	if (core_kernel_ro_data(addr))
-+		return 1;
-+	if (is_module_ro_address(addr))
-+		return 1;
-+	if (is_ftrace_trampoline(addr))
-+		return 1;
-+
-+	return 0;
-+}
---
-2.11.1
+
+-- 
+James Morris
+<jmorris@namei.org>
