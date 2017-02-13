@@ -1,39 +1,52 @@
+Date: Mon, 13 Feb 2017 17:57:30 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170213175730.GA16636@leverpostej>
+References: <alpine.LRH.2.20.1702131631490.8914@namei.org>
+ <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp>
+ <CAGXu5jK6Y3i+zoHhF1PyehmxURTVdmEcMPio0HGu=+sTiOz8Mg@mail.gmail.com>
+ <9a8a38e0-d502-d6fc-5ea6-77f45539eba6@redhat.com>
+ <CAGXu5jKg=5XrAEeRWXAjV8GdLdL6zhiMChQDya0uzWrLiZ5Fsg@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.LRH.2.20.1702131625430.8914@namei.org>
-References: <alpine.LRH.2.20.1702131625430.8914@namei.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 13 Feb 2017 09:51:28 -0800
-Message-ID: <CAGXu5jL418kOXVhoYg8DoMdVDZm4e93rH16cOS_feMjkxrpD2g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC PATCH 0/4] ro hardening for the security subsystem
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKg=5XrAEeRWXAjV8GdLdL6zhiMChQDya0uzWrLiZ5Fsg@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/4] security: mark LSM hooks
+ as __ro_after_init
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, James Morris <jmorris@namei.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 12, 2017 at 9:31 PM, James Morris <jmorris@namei.org> wrote:
-> Hi Folks,
->
-> Please review/test these patches which add some read-only hardening to the
-> security subsystem.
->
-> In this series, the following are marked as __ro_after_init:
->
-> - LSM hooks
-> - Netfilter hooks used by security/
-> - the default IMA rules
->
-> I've also constified the SELinux Netlink permission tables, which will
-> ensure they're located in an RO section.
+Hi,
 
-A lot of the security subsystem is targeted during kernel write
-exploits, so I think this is very nice change to have. Thanks for
-doing this!
+On Mon, Feb 13, 2017 at 09:34:32AM -0800, Kees Cook wrote:
+> On Mon, Feb 13, 2017 at 8:26 AM, Laura Abbott <labbott@redhat.com> wrote:
+> > On 02/13/2017 06:59 AM, Kees Cook wrote:
+> >> On Mon, Feb 13, 2017 at 2:33 AM, Tetsuo Handa
+> >> <penguin-kernel@i-love.sakura.ne.jp> wrote:
+> >>> James Morris wrote:
+> >>>> As the regsitration of LSMs is performed during init and then does
+> >>>> not change, we can mark all of the regsitration hooks as __ro_after_init.
+> >>>>
+> >>>> Signed-off-by: James Morris <james.l.morris@oracle.com>
+> >>>
+> >>> This patch makes LKM based LSMs (e.g. AKARI) impossible.
+> >>> I'm not happy with this patch.
+> >>
+> >> LKM based LSMs don't exist yet, and when they do, we may also have the
+> >> "write rarely" infrastructure done, which LKM based LSMs can use to
+> >> update the structures.
+> >
+> > Is someone actually working on the write rarely patches? If a version
+> > has been sent out, I don't recall seeing it.
+> 
+> Still mostly just discussion. I've been toying with the PaX-style of
+> it on x86, and I think Mark Rutland had some ideas for arm64, but I
+> don't know if he's actually written code.
 
-Acked-by: Kees Cook <keescook@chromium.org>
+While I had a rough idea [1] of what that could look like, I haven't
+written any code.
 
--Kees
+Thanks,
+Mark.
 
--- 
-Kees Cook
-Pixel Security
+[1] http://www.openwall.com/lists/kernel-hardening/2016/11/18/3
