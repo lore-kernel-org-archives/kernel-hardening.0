@@ -1,37 +1,31 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170212233140.10606-1-ewk@edkovsky.org>
-References: <20170212233140.10606-1-ewk@edkovsky.org>
+In-Reply-To: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com>
+References: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 13 Feb 2017 10:16:14 -0800
-Message-ID: <CAGXu5j+fkuY3VaGSXT3f9AygLzVzKdDSKjJsFvQrh=vF7wmWfA@mail.gmail.com>
+Date: Mon, 13 Feb 2017 10:21:13 -0800
+Message-ID: <CAGXu5j+iJ2nGoqok7deER_QnedPFjZ5Qb+ja4VnkPqnNL=vTcg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC] [PATCH 0/2] provide check for ro_after_init memory sections
-To: Eddie Kovsky <ewk@edkovsky.org>
-Cc: Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH] usercopy: add testcases to check zeroing on failure of usercopy
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 12, 2017 at 3:31 PM, Eddie Kovsky <ewk@edkovsky.org> wrote:
-> Provide a mechansim for other functions to verify that their arguments
-> are read-only. This implements the first half of a suggestion made by
-> Kees Cook for the Kernel Self Protection Project:
+On Sat, Feb 11, 2017 at 10:13 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> In the hardend usercopy, the destination buffer will be zeroed if
+> copy_from_user/get_user fails. This patch adds testcases for it.
+> The destination buffer is set with non-zero value before illegal
+> copy_from_user/get_user is executed and the buffer is compared to
+> zero after usercopy is done.
 >
->    * provide mechanism to check for ro_after_init memory areas, and
->      reject structures not marked ro_after_init in vmbus_register()
->
->      http://www.openwall.com/lists/kernel-hardening/2017/02/04/1
+> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
 
-Awesome! I'd add the third patch too (to have vmbus_register() do the
-check), just to have an example in the series.
+This looks great!
 
-> I have succesfully compiled this series on next-20170206 for x86. I am
-> not sure how to go about testing these changes (perhpas with LKDTM?).
+I'll adjust the commit slightly (the zeroing always happens,
+regardless of hardened usercopy) and add it to my usercopy tree.
 
-Hmm. LKDTM doesn't seem quite right since it's expecting to trip a
-kernel self-protection check of some kind (and already has an
-ro_after_init check). I think just adding users of this is a
-sufficient test (i.e. vmbus_register()), since the ro_after_init
-infrastructure is already being tested.
+Thanks!
 
 -Kees
 
