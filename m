@@ -1,33 +1,49 @@
-References: <alpine.LRH.2.20.1702131631490.8914@namei.org>
- <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp>
-From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <4e6e79af-a37f-c48e-5932-9b29270ac034@schaufler-ca.com>
-Date: Mon, 13 Feb 2017 12:44:41 -0800
-MIME-Version: 1.0
-In-Reply-To: <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [RFC PATCH 1/4] security: mark LSM hooks as __ro_after_init
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, jmorris@namei.org, linux-security-module@vger.kernel.org
-Cc: kernel-hardening@lists.openwall.com
+Message-ID: <1487019833.9569.66.camel@tycho.nsa.gov>
+From: Stephen Smalley <sds@tycho.nsa.gov>
+Date: Mon, 13 Feb 2017 16:03:53 -0500
+In-Reply-To: <CAGXu5jJDeFUKeSSxDEf4-HG4zfJFgU3ahs83TQtV1iPTrKY40Q@mail.gmail.com>
+References: <alpine.LRH.2.20.1702131632340.8914@namei.org>
+	 <201702132029.HJD35443.HFQFVOJOFLtOMS@I-love.SAKURA.ne.jp>
+	 <CAGXu5jJDeFUKeSSxDEf4-HG4zfJFgU3ahs83TQtV1iPTrKY40Q@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/4] security: mark nf ops in
+ SELinux and Smack as __ro_after_init
+To: Kees Cook <keescook@chromium.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
+Cc: James Morris <jmorris@namei.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Paul Moore <paul@paul-moore.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2/13/2017 2:33 AM, Tetsuo Handa wrote:
-> James Morris wrote:
->> As the regsitration of LSMs is performed during init and then does
->> not change, we can mark all of the regsitration hooks as __ro_after_init.
->>
->> Signed-off-by: James Morris <james.l.morris@oracle.com>
-> This patch makes LKM based LSMs (e.g. AKARI) impossible.
+On Mon, 2017-02-13 at 09:29 -0800, Kees Cook wrote:
+> On Mon, Feb 13, 2017 at 3:29 AM, Tetsuo Handa
+> <penguin-kernel@i-love.sakura.ne.jp> wrote:
+> > 
+> > James Morris wrote:
+> > > 
+> > > Both SELinux and Smack register Netfilter operations during init,
+> > > which then don't change.  Mark these ops as __ro_after_init.
+> > > 
+> > > Signed-off-by: James Morris <james.l.morris@oracle.com>
+> > 
+> > This patch breaks CONFIG_SECURITY_SELINUX_DISABLE=y +
+> > SELINUX=disabled in /etc/selinux/config case,
+> > doesn't it? Although I heard that SELinux is planning to remove
+> > CONFIG_SECURITY_SELINUX_DISABLE,
+> > CONFIG_SECURITY_SELINUX_DISABLE is valid as of current linux-
+> > security.git#next .
+> 
+> We could fold that removal into this series?
 
-When a mechanism to do LKM based modules work is proposed
-it could include ifdef's around the __ro_after_init. I'm
-assuming that enabling LKM modules is something we'd want to
-make optional.
+I'm personally in favor of removing it, but that support was originally
+requested by the Fedora distro folks on the grounds that it is too
+painful to manage kernel boot parameters on some platforms, and
+therefore they needed an alternative to booting with selinux=0 on the
+kernel command line.  The documented way to disable SELinux on such
+distros is through the use of /etc/selinux/config SELINUX=disabled,
+which relies on this mechanism.  So you'd have to work through removal
+with the distro folks.
 
-> I'm not happy with this patch.
-> --
-> To unsubscribe from this list: send the line "unsubscribe linux-security-module" in
-> the body of a message to majordomo@vger.kernel.org
-> More majordomo info at  http://vger.kernel.org/majordomo-info.html
->
+Maybe in the interim we could just wrap the ro-after-init markings
+under a conditional dependent on !CONFIG_SECURITY_SELINUX_DISABLE so
+that systems (e.g. Android) that do not rely on this feature could
+benefit.
