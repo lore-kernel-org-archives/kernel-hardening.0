@@ -1,91 +1,34 @@
 MIME-Version: 1.0
-In-Reply-To: <20170213105422.snaw65btejr3vsdi@ishxps>
-References: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
- <CAEXv5_jUa8Av4JABoKSAueiLHSLzibMvaE-8DrVcxZHFceckMg@mail.gmail.com> <20170213105422.snaw65btejr3vsdi@ishxps>
-From: David Windsor <dwindsor@gmail.com>
-Date: Mon, 13 Feb 2017 06:46:19 -0500
-Message-ID: <CAEXv5_hP39k7HSLP-G_khx7MMQHnk=8Z5caa+U5n3bYvUTE1gQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp>
+References: <alpine.LRH.2.20.1702131631490.8914@namei.org> <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 13 Feb 2017 06:59:04 -0800
+Message-ID: <CAGXu5jK6Y3i+zoHhF1PyehmxURTVdmEcMPio0HGu=+sTiOz8Mg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC][PATCH] nfsd: add +1 to reference
- counting scheme for struct nfsd4_session
-To: Hans Liljestrand <ishkamiel@gmail.com>
-Cc: linux-nfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, Bruce Fields <bfields@fieldses.org>, Jeff Layton <jlayton@poochiereds.net>, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/4] security: mark LSM hooks
+ as __ro_after_init
+To: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>
+Cc: James Morris <jmorris@namei.org>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 13, 2017 at 5:54 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
-> On Sat, Feb 11, 2017 at 01:42:53AM -0500, David Windsor wrote:
+On Mon, Feb 13, 2017 at 2:33 AM, Tetsuo Handa
+<penguin-kernel@i-love.sakura.ne.jp> wrote:
+> James Morris wrote:
+>> As the regsitration of LSMs is performed during init and then does
+>> not change, we can mark all of the regsitration hooks as __ro_after_init.
 >>
->> <snip>
->>
->>> Signed-off-by: David Windsor <dwindsor@gmail.com>
->>> ---
->>>  fs/nfsd/nfs4state.c | 6 +++---
->>>  1 file changed, 3 insertions(+), 3 deletions(-)
->>>
->>> diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
->>> index a0dee8a..b0f3010 100644
->>> --- a/fs/nfsd/nfs4state.c
->>> +++ b/fs/nfsd/nfs4state.c
->>> @@ -196,7 +196,7 @@ static void nfsd4_put_session_locked(struct
->>> nfsd4_session *ses)
->>>
->>>         lockdep_assert_held(&nn->client_lock);
->>>
->>> -       if (atomic_dec_and_test(&ses->se_ref) && is_session_dead(ses))
->>> +       if (!atomic_add_unless(&ses->se_ref, -1, 1) &&
->>> is_session_des(ses))
->>
->>
->> This should read:
->> if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_dead(ses))
->>
->>>                 free_session(ses);
+>> Signed-off-by: James Morris <james.l.morris@oracle.com>
 >
->
-> Hi,
-> I'm not sure if I have this correctly; But both before and after the patch
-> free_session gets called when se_ref count was 1, shouldn't this have
-> changed with the +1 scheme?
->
-> Also, since the !atomic_add_unless doesn't actually decrement when at 1,
-> doesn't this leave the se_ref as 1 when it's destroyed? The function seems
-> to always be locked, so perhaps this doesn't matter, but still seems a bit
-> risky.
->
+> This patch makes LKM based LSMs (e.g. AKARI) impossible.
+> I'm not happy with this patch.
 
-Yes; I forgot the additional call to atomic_dec_and_test() before
-free_session().  Thanks!
+LKM based LSMs don't exist yet, and when they do, we may also have the
+"write rarely" infrastructure done, which LKM based LSMs can use to
+update the structures.
 
-I'll resubmit this after seeing how the rest of this discussion goes.
-We may end up abandoning this refcounting case.
+-Kees
 
-> Thanks,
-> -hans
->
->
->>>         put_client_renew_locked(clp);
->>>  }
->>> @@ -1645,7 +1645,7 @@ static void init_session(struct svc_rqst *rqstp,
->>> struct nfsd4_session *new, stru
->>>         new->se_flags = cses->flags;
->>>         new->se_cb_prog = cses->callback_prog;
->>>         new->se_cb_sec = cses->cb_sec;
->>> -       atomic_set(&new->se_ref, 0);
->>> +       atomic_set(&new->se_ref, 1);
->>>         idx = hash_sessionid(&new->se_sessionid);
->>>         list_add(&new->se_hash, &nn->sessionid_hashtbl[idx]);
->>>         spin_lock(&clp->cl_lock);
->>> @@ -1792,7 +1792,7 @@ free_client(struct nfs4_client *clp)
->>>                 ses = list_entry(clp->cl_sessions.next, struct
->>> nfsd4_session,
->>>                                 se_perclnt);
->>>                 list_del(&ses->se_perclnt);
->>> -               WARN_ON_ONCE(atomic_read(&ses->se_ref));
->>> +               WARN_ON_ONCE((atomic_read(&ses->se_ref) > 1));
->>>                 free_session(ses);
->>>         }
->>>         rpc_destroy_wait_queue(&clp->cl_cb_waitq);
->>> --
->>> 2.7.4
->>>
->
+-- 
+Kees Cook
+Pixel Security
