@@ -1,37 +1,26 @@
-Date: Tue, 14 Feb 2017 09:23:45 +1100 (AEDT)
+Date: Tue, 14 Feb 2017 09:26:57 +1100 (AEDT)
 From: James Morris <jmorris@namei.org>
-In-Reply-To: <CAGXu5jK6Y3i+zoHhF1PyehmxURTVdmEcMPio0HGu=+sTiOz8Mg@mail.gmail.com>
-Message-ID: <alpine.LRH.2.20.1702140921150.19475@namei.org>
-References: <alpine.LRH.2.20.1702131631490.8914@namei.org> <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp> <CAGXu5jK6Y3i+zoHhF1PyehmxURTVdmEcMPio0HGu=+sTiOz8Mg@mail.gmail.com>
+In-Reply-To: <aa5204ef-8d02-efda-1edb-167cbf8d2e4a@schaufler-ca.com>
+Message-ID: <alpine.LRH.2.20.1702140926070.19475@namei.org>
+References: <alpine.LRH.2.20.1702131632340.8914@namei.org> <201702132029.HJD35443.HFQFVOJOFLtOMS@I-love.SAKURA.ne.jp> <CAGXu5jJDeFUKeSSxDEf4-HG4zfJFgU3ahs83TQtV1iPTrKY40Q@mail.gmail.com> <1487019833.9569.66.camel@tycho.nsa.gov>
+ <aa5204ef-8d02-efda-1edb-167cbf8d2e4a@schaufler-ca.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/4] security: mark LSM hooks
- as __ro_after_init
-To: Kees Cook <keescook@chromium.org>
-Cc: Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Re: [RFC PATCH 2/4] security: mark nf ops in
+ SELinux and Smack as __ro_after_init
+To: Casey Schaufler <casey@schaufler-ca.com>
+Cc: Stephen Smalley <sds@tycho.nsa.gov>, Kees Cook <keescook@chromium.org>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, linux-security-module <linux-security-module@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Paul Moore <paul@paul-moore.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 13 Feb 2017, Kees Cook wrote:
+On Mon, 13 Feb 2017, Casey Schaufler wrote:
 
-> On Mon, Feb 13, 2017 at 2:33 AM, Tetsuo Handa
-> <penguin-kernel@i-love.sakura.ne.jp> wrote:
-> > James Morris wrote:
-> >> As the regsitration of LSMs is performed during init and then does
-> >> not change, we can mark all of the regsitration hooks as __ro_after_init.
-> >>
-> >> Signed-off-by: James Morris <james.l.morris@oracle.com>
-> >
-> > This patch makes LKM based LSMs (e.g. AKARI) impossible.
-> > I'm not happy with this patch.
-> 
-> LKM based LSMs don't exist yet, and when they do, we may also have the
-> "write rarely" infrastructure done, which LKM based LSMs can use to
-> update the structures.
+> If we changed CONFIG_SECURITY_SELINUX_DISABLE to
+> CONFIG_SECURITY_DYNAMIC_MODULES and put the __ro_after_init
+> under !CONFIG_SECURITY_DYNAMIC_MODULES we solve both the
+> current and potential future issues.
 
-I think it would be a backwards step security-wise to allow dynamically 
-loadable security modules.  The security risks of security code in the 
-kernel should be aggressively minimized.
-
+We don't need to solve issues which don't exist and ideally will not 
+exist.
 
 -- 
 James Morris
