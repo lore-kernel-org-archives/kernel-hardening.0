@@ -1,45 +1,104 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <CALCETrWNY9Ea=3dKksFJjizoH5eZbVOFWFnWoJrCRwP0R1QWHg@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
- <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com>
- <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com>
- <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com>
- <CAGXu5jKz5vo3NwKb_JmNyWDCP0izK=sxTL6Dx_KmYX=1NK+icA@mail.gmail.com> <CALCETrWNY9Ea=3dKksFJjizoH5eZbVOFWFnWoJrCRwP0R1QWHg@mail.gmail.com>
+In-Reply-To: <CAGXu5j+ogVnxxu1VuUep6ObAdyJbvxMyN25J+PF+exOJqk2VVg@mail.gmail.com>
+References: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com> <CAGXu5j+ogVnxxu1VuUep6ObAdyJbvxMyN25J+PF+exOJqk2VVg@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 13 Feb 2017 11:15:03 -0800
-Message-ID: <CAGXu5jKJYYkStLM6YhcB_NxfGqx=kVQ-d8QWB2GCBHAksx31MQ@mail.gmail.com>
+Date: Mon, 13 Feb 2017 11:24:25 -0800
+Message-ID: <CAGXu5jLfpq=vn0V_41NbLPyxkPQzGVwvo33tnErkmtcx8TOf4g@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs
- hidepid= field
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Djalal Harouni <tixxdz@gmail.com>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Lafcadio Wluiki <wluikil@gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] usercopy: add testcases to check zeroing on failure of usercopy
+To: Hoeun Ryu <hoeun.ryu@gmail.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 13, 2017 at 11:01 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Fri, Feb 10, 2017 at 3:44 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Wed, Jan 18, 2017 at 3:35 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->>> On Wed, Jan 18, 2017 at 2:50 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
->>>> Andy I don't follow here, no_new_privs is never cleared right ? I
->>>> can't see the corresponding clear bit code for it.
->>>
->>> I believe that unsharing userns clears no_new_privs.
+On Mon, Feb 13, 2017 at 10:33 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Sat, Feb 11, 2017 at 10:13 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> In the hardend usercopy, the destination buffer will be zeroed if
+>> copy_from_user/get_user fails. This patch adds testcases for it.
+>> The destination buffer is set with non-zero value before illegal
+>> copy_from_user/get_user is executed and the buffer is compared to
+>> zero after usercopy is done.
 >>
->> Seriously? That's kind of ... weird. I mean, I guess you're
->> priv-confined in a way, but that seems fragile.
+>> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+>> ---
+>>  lib/test_user_copy.c | 17 +++++++++++++++++
+>>  1 file changed, 17 insertions(+)
+>>
+>> diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
+>> index 0ecef3e..54bd898 100644
+>> --- a/lib/test_user_copy.c
+>> +++ b/lib/test_user_copy.c
+>> @@ -41,11 +41,18 @@ static int __init test_user_copy_init(void)
+>>         char *bad_usermem;
+>>         unsigned long user_addr;
+>>         unsigned long value = 0x5A;
+>> +       char *zerokmem;
+>>
+>>         kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
+>>         if (!kmem)
+>>                 return -ENOMEM;
+>>
+>> +       zerokmem = kzalloc(PAGE_SIZE * 2, GFP_KERNEL);
+>> +       if (!zerokmem) {
+>> +               kfree(kmem);
+>> +               return -ENOMEM;
+>> +       }
+>> +
+>>         user_addr = vm_mmap(NULL, 0, PAGE_SIZE * 2,
+>>                             PROT_READ | PROT_WRITE | PROT_EXEC,
+>>                             MAP_ANONYMOUS | MAP_PRIVATE, 0);
+>> @@ -69,25 +76,35 @@ static int __init test_user_copy_init(void)
+>>                     "legitimate put_user failed");
+>>
+>>         /* Invalid usage: none of these should succeed. */
+>> +       memset(kmem, 0x5A, PAGE_SIZE);
+>>         ret |= test(!copy_from_user(kmem, (char __user *)(kmem + PAGE_SIZE),
+>>                                     PAGE_SIZE),
+>>                     "illegal all-kernel copy_from_user passed");
+>> +       ret |= test(memcmp(zerokmem, kmem, PAGE_SIZE),
+>> +                   "zeroing failure for illegal all-kernel copy_from_user");
+>> +       memset(bad_usermem, 0x5A, PAGE_SIZE);
+>
+> Oh, actually, ha-ha: this isn't legal: it's a direct copy from kernel
+> to userspace. :) This needs a copy_to_user()... (and same for the
+> memcmp...)
+>
+>>         ret |= test(!copy_from_user(bad_usermem, (char __user *)kmem,
+>>                                     PAGE_SIZE),
+>>                     "illegal reversed copy_from_user passed");
+>> +       ret |= test(memcmp(zerokmem, bad_usermem, PAGE_SIZE),
+>> +                   "zeroing failure for illegal reversed copy_from_user");
+>>         ret |= test(!copy_to_user((char __user *)kmem, kmem + PAGE_SIZE,
+>>                                   PAGE_SIZE),
+>>                     "illegal all-kernel copy_to_user passed");
+>>         ret |= test(!copy_to_user((char __user *)kmem, bad_usermem,
+>>                                   PAGE_SIZE),
+>>                     "illegal reversed copy_to_user passed");
+>> +       memset(kmem, 0x5A, PAGE_SIZE);
+>>         ret |= test(!get_user(value, (unsigned long __user *)kmem),
+>>                     "illegal get_user passed");
+>> +       ret |= test(memcmp(zerokmem, kmem, sizeof(value)),
+>> +                   "zeroing failure for illegal get_user");
+>>         ret |= test(!put_user(value, (unsigned long __user *)kmem),
+>>                     "illegal put_user passed");
+>>
+>>         vm_munmap(user_addr, PAGE_SIZE * 2);
+>>         kfree(kmem);
+>> +       kfree(zerokmem);
+>>
+>>         if (ret == 0) {
+>>                 pr_info("tests passed.\n");
+>> --
+>> 2.7.4
 >>
 >
-> I appear to have made this up.  Either I genuinely pulled it out of
-> thin air or it was discussed and not done.
->
-> $ setpriv --nnp unshare -Ur cat /proc/self/status |grep NoNewPrivs
-> NoNewPrivs:    1
->
-> If it were to be done, it ought to be quite safe except for possible LSM issues.
+> Can you respin this?
 
-Okay, cool. Thanks. (Also, where does "setpriv" live? I must need a
-new set of util-linux or something?)
+On second thought, don't worry about a respin, I had to adjust the bad
+copy_from_user() that was already in there (which fails under SMAP/PAN
+anyway). I'll clean this up and add it to the tree.
+
+Thanks!
 
 -Kees
 
