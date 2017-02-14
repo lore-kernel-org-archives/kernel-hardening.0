@@ -1,68 +1,46 @@
-From: Mimi Zohar <zohar@linux.vnet.ibm.com>
-Date: Mon, 13 Feb 2017 20:45:28 -0500
-In-Reply-To: <alpine.LRH.2.20.1702131634000.8914@namei.org>
-References: <alpine.LRH.2.20.1702131634000.8914@namei.org>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Message-Id: <1487036728.15297.1.camel@linux.vnet.ibm.com>
-Subject: [kernel-hardening] Re: [RFC PATCH 3/4] integrity: mark default IMA rules as
- __ro_after_init
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
+References: <20170118095155.5e3bf976@kaiwan-T460> <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
+ <20170203101949.4c6908be@kaiwan-T460> <CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
+ <20170209090714.63ce6333@kaiwan-T460> <CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
+From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Date: Tue, 14 Feb 2017 13:34:38 +0530
+Message-ID: <CAPDLWs8iS_xU0uQHKU1h6HmqP-oqAfK1qAxDpis_JyPSGVGLug@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
+ to linux-next
+To: Kees Cook <keescook@chromium.org>
+Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 2017-02-13 at 16:34 +1100, James Morris wrote:
-> The default IMA rules are loaded during init and then do not
-> change, so mark them as __ro_after_init.
-> 
-> Signed-off-by: James Morris <james.l.morris@oracle.com>
+>> diff --git a/mm/page_poison.c b/mm/page_poison.c
+>> index 2e647c6..b45bc0a 100644
+>> --- a/mm/page_poison.c
+>> +++ b/mm/page_poison.c
+>> @@ -49,6 +49,19 @@ struct page_ext_operations page_poisoning_ops = {
+>>          .init = init_page_poisoning,
+>>  };
+>>
+>> +#ifdef CONFIG_MEMORY_SANITIZE
+>> +static int __init memory_sanitize_init(void)
+>> +{
+>> +    /* With 'memory sanitize' On, page poisoning Must be turned on */
+>> +    if (IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
+>> +        want_page_poisoning = true;
+>> +        __page_poisoning_enabled = true;
+>> +    }
+>> +    return 0;
+>> +}
+>> +early_initcall(memory_sanitize_init);
+>> +#endif
+>
+> The ifdef and the IS_ENABLED seem redundant to me. I'd drop the ifdef.
 
-Thanks!
+An academic question perhaps- am not clear as to why the IS_ENABLED()
+is preferable to an #ifdef. I thought eliminating a runtime 'if'
+condition (by using an ifdef) is more optimal than the "if
+IS_ENABLED(foo)"? Or (probably) does the compiler optimize it out
+regardless (assuming that CONFIG_MEMORY_SANITIZE is not selected of
+course)?
 
-Mimi
-
-> ---
->  security/integrity/ima/ima_policy.c |    8 ++++----
->  1 files changed, 4 insertions(+), 4 deletions(-)
-> 
-> diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
-> index aed47b7..e8498a3 100644
-> --- a/security/integrity/ima/ima_policy.c
-> +++ b/security/integrity/ima/ima_policy.c
-> @@ -83,7 +83,7 @@ struct ima_rule_entry {
->   * normal users can easily run the machine out of memory simply building
->   * and running executables.
->   */
-> -static struct ima_rule_entry dont_measure_rules[] = {
-> +static struct ima_rule_entry dont_measure_rules[] __ro_after_init = {
->  	{.action = DONT_MEASURE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
->  	{.action = DONT_MEASURE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
->  	{.action = DONT_MEASURE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
-> @@ -97,7 +97,7 @@ struct ima_rule_entry {
->  	{.action = DONT_MEASURE, .fsmagic = NSFS_MAGIC, .flags = IMA_FSMAGIC}
->  };
-> 
-> -static struct ima_rule_entry original_measurement_rules[] = {
-> +static struct ima_rule_entry original_measurement_rules[] __ro_after_init = {
->  	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
->  	 .flags = IMA_FUNC | IMA_MASK},
->  	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
-> @@ -108,7 +108,7 @@ struct ima_rule_entry {
->  	{.action = MEASURE, .func = FIRMWARE_CHECK, .flags = IMA_FUNC},
->  };
-> 
-> -static struct ima_rule_entry default_measurement_rules[] = {
-> +static struct ima_rule_entry default_measurement_rules[] __ro_after_init = {
->  	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
->  	 .flags = IMA_FUNC | IMA_MASK},
->  	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
-> @@ -122,7 +122,7 @@ struct ima_rule_entry {
->  	{.action = MEASURE, .func = POLICY_CHECK, .flags = IMA_FUNC},
->  };
-> 
-> -static struct ima_rule_entry default_appraise_rules[] = {
-> +static struct ima_rule_entry default_appraise_rules[] __ro_after_init = {
->  	{.action = DONT_APPRAISE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
->  	{.action = DONT_APPRAISE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
->  	{.action = DONT_APPRAISE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
+-Thanks, kaiwan.
