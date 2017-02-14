@@ -1,6 +1,6 @@
-Date: Wed, 15 Feb 2017 00:18:51 +1100 (AEDT)
+Date: Wed, 15 Feb 2017 00:24:19 +1100 (AEDT)
 From: James Morris <jmorris@namei.org>
-Message-ID: <alpine.LRH.2.20.1702150017290.32759@namei.org>
+Message-ID: <alpine.LRH.2.20.1702150023070.768@namei.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Subject: [kernel-hardening] [RFC v2 PATCH 2/2] security: mark LSM hooks as __ro_after_init
@@ -8,8 +8,7 @@ To: linux-security-module@vger.kernel.org
 Cc: selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Mark all of the registration hooks as __ro_after_init (via the 
-__lsm_ro_after_init macro).
+Mark LSM hooks as __ro_after_init (via the __lsm_ro_after_init macro).
 
 Signed-off-by: James Morris <james.l.morris@oracle.com>
 ---
