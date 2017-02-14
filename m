@@ -1,31 +1,68 @@
-Date: Mon, 13 Feb 2017 20:11:24 -0800 (PST)
-From: Christian Kujau <lists@nerdbynature.de>
-In-Reply-To: <CAGXu5jKJYYkStLM6YhcB_NxfGqx=kVQ-d8QWB2GCBHAksx31MQ@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.999.1702132009160.3270@trent.utfs.org>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com> <1484572984-13388-3-git-send-email-djalal@gmail.com> <CAEiveUfDvSoW9Hy2Y_uxU2YQ+vR8OvXMqRhxAANTGG7QaQbJeg@mail.gmail.com> <CALCETrWEGLhEHO_6sTXreVyWFVsEeYmZSrLNNXx-ma5gd+nTQQ@mail.gmail.com>
- <CAEiveUcrSKS9PHAMpiDRChHHK5QDTPh6G63a0p3iXyYP8Wa27w@mail.gmail.com> <CALCETrWn-DpyR5JCGG0H2_yFxU3UHPHZHByXMc5uAxHgQDtnjA@mail.gmail.com> <CAGXu5jKz5vo3NwKb_JmNyWDCP0izK=sxTL6Dx_KmYX=1NK+icA@mail.gmail.com> <CALCETrWNY9Ea=3dKksFJjizoH5eZbVOFWFnWoJrCRwP0R1QWHg@mail.gmail.com>
- <CAGXu5jKJYYkStLM6YhcB_NxfGqx=kVQ-d8QWB2GCBHAksx31MQ@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] procfs/tasks: add a simple per-task procfs hidepid=
- field
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, Djalal Harouni <tixxdz@gmail.com>, Linux API <linux-api@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Lafcadio Wluiki <wluikil@gmail.com>
+From: Mimi Zohar <zohar@linux.vnet.ibm.com>
+Date: Mon, 13 Feb 2017 20:45:28 -0500
+In-Reply-To: <alpine.LRH.2.20.1702131634000.8914@namei.org>
+References: <alpine.LRH.2.20.1702131634000.8914@namei.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Message-Id: <1487036728.15297.1.camel@linux.vnet.ibm.com>
+Subject: [kernel-hardening] Re: [RFC PATCH 3/4] integrity: mark default IMA rules as
+ __ro_after_init
+To: James Morris <jmorris@namei.org>
+Cc: linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 13 Feb 2017, Kees Cook wrote:
-> Okay, cool. Thanks. (Also, where does "setpriv" live? I must need a
-> new set of util-linux or something?)
+On Mon, 2017-02-13 at 16:34 +1100, James Morris wrote:
+> The default IMA rules are loaded during init and then do not
+> change, so mark them as __ro_after_init.
+> 
+> Signed-off-by: James Morris <james.l.morris@oracle.com>
 
-Indeed, a newer version of util-linux[0] should do, although 
-Debian/testing appears to have an extra package just for "setpriv":
+Thanks!
 
-  https://packages.debian.org/stretch/setpriv
+Mimi
 
-C.
-
-[0] https://git.kernel.org/cgit/utils/util-linux/util-linux.git/commit/?id=5600c40
--- 
-BOFH excuse #65:
-
-system needs to be rebooted
+> ---
+>  security/integrity/ima/ima_policy.c |    8 ++++----
+>  1 files changed, 4 insertions(+), 4 deletions(-)
+> 
+> diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
+> index aed47b7..e8498a3 100644
+> --- a/security/integrity/ima/ima_policy.c
+> +++ b/security/integrity/ima/ima_policy.c
+> @@ -83,7 +83,7 @@ struct ima_rule_entry {
+>   * normal users can easily run the machine out of memory simply building
+>   * and running executables.
+>   */
+> -static struct ima_rule_entry dont_measure_rules[] = {
+> +static struct ima_rule_entry dont_measure_rules[] __ro_after_init = {
+>  	{.action = DONT_MEASURE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
+>  	{.action = DONT_MEASURE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
+>  	{.action = DONT_MEASURE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
+> @@ -97,7 +97,7 @@ struct ima_rule_entry {
+>  	{.action = DONT_MEASURE, .fsmagic = NSFS_MAGIC, .flags = IMA_FSMAGIC}
+>  };
+> 
+> -static struct ima_rule_entry original_measurement_rules[] = {
+> +static struct ima_rule_entry original_measurement_rules[] __ro_after_init = {
+>  	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
+>  	 .flags = IMA_FUNC | IMA_MASK},
+>  	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
+> @@ -108,7 +108,7 @@ struct ima_rule_entry {
+>  	{.action = MEASURE, .func = FIRMWARE_CHECK, .flags = IMA_FUNC},
+>  };
+> 
+> -static struct ima_rule_entry default_measurement_rules[] = {
+> +static struct ima_rule_entry default_measurement_rules[] __ro_after_init = {
+>  	{.action = MEASURE, .func = MMAP_CHECK, .mask = MAY_EXEC,
+>  	 .flags = IMA_FUNC | IMA_MASK},
+>  	{.action = MEASURE, .func = BPRM_CHECK, .mask = MAY_EXEC,
+> @@ -122,7 +122,7 @@ struct ima_rule_entry {
+>  	{.action = MEASURE, .func = POLICY_CHECK, .flags = IMA_FUNC},
+>  };
+> 
+> -static struct ima_rule_entry default_appraise_rules[] = {
+> +static struct ima_rule_entry default_appraise_rules[] __ro_after_init = {
+>  	{.action = DONT_APPRAISE, .fsmagic = PROC_SUPER_MAGIC, .flags = IMA_FSMAGIC},
+>  	{.action = DONT_APPRAISE, .fsmagic = SYSFS_MAGIC, .flags = IMA_FSMAGIC},
+>  	{.action = DONT_APPRAISE, .fsmagic = DEBUGFS_MAGIC, .flags = IMA_FSMAGIC},
