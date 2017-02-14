@@ -1,45 +1,99 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <a5e688c4-94b8-b0aa-4425-fc687d3aeeca@redhat.com>
-References: <a5e688c4-94b8-b0aa-4425-fc687d3aeeca@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 14 Feb 2017 11:07:39 -0800
-Message-ID: <CAGXu5jLre9QdOWi+-GxcGi=rxp=Emwnaz=MBxDtdd_ZD=VRc2w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Format string gcc-plugin?
-To: Laura Abbott <labbott@redhat.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Tue, 14 Feb 2017 11:42:56 -0800
+Message-Id: <20170214194259.75960-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v3 1/4] x86/mm: Adapt MODULES_END based on Fixmap section size
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Thomas Garnier <thgarnie@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kasan-dev@googlegroups.com, linux-pm@vger.kernel.org, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 14, 2017 at 10:01 AM, Laura Abbott <labbott@redhat.com> wrote:
-> Hi,
->
-> The recent discussions about %pk led me to start playing around
-> with writing a gcc plugin (notes about writing a gcc plugin are
-> forthcoming). My idea was to expand checking of the kernel's additional
-> formats (%pK, %pR etc.) or possibly even change the format
-> strings. The big issue is that most of vsprintf.c would end up
-> in the plugin which would be ugly to maintain. This concept could
-> be used for some of the problems with kernel pointer leaks
-> https://kernsec.org/wiki/index.php/Bug_Classes/Kernel_pointer_leak
-> but I'm interested if anyone else has thoughts or ideas about
-> how better to do this (or even not to do this).
+This patch aligns MODULES_END to the beginning of the Fixmap section.
+It optimizes the space available for both sections. The address is
+pre-computed based on the number of pages required by the Fixmap
+section.
 
-If we can leverage common code between the plugin and vsprintf.c, it
-should be doable. I haven't looked at processing format strings at
-all, though I assume the plugin would need to check the
-__printf-generated attributes.
+It will allow GDT remapping in the Fixmap section. The current
+MODULES_END static address does not provide enough space for the kernel
+to support a large number of processors.
 
-In my related notes was a hint that looking at how gcc does it
-normally is gcc/c-family/c-format.c:
-http://stackoverflow.com/a/16336175
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20170213
+---
+ arch/x86/include/asm/fixmap.h           | 8 ++++++++
+ arch/x86/include/asm/pgtable_64_types.h | 3 ---
+ arch/x86/kernel/module.c                | 1 +
+ arch/x86/mm/dump_pagetables.c           | 1 +
+ arch/x86/mm/kasan_init_64.c             | 1 +
+ 5 files changed, 11 insertions(+), 3 deletions(-)
 
-And while not strictly part of format type checking, I talked a bit
-about dealing with const strings here:
-http://www.openwall.com/lists/kernel-hardening/2016/12/07/16
-
--Kees
-
+diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixmap.h
+index 8554f960e21b..20231189e0e3 100644
+--- a/arch/x86/include/asm/fixmap.h
++++ b/arch/x86/include/asm/fixmap.h
+@@ -132,6 +132,14 @@ enum fixed_addresses {
+ 
+ extern void reserve_top_address(unsigned long reserve);
+ 
++/* On 64-bit, the module sections ends with the start of the fixmap */
++#ifdef CONFIG_X86_64
++#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
++#define MODULES_END   __fix_to_virt(__end_of_fixed_addresses + 1)
++#define MODULES_LEN   (MODULES_END - MODULES_VADDR)
++#endif /* CONFIG_X86_64 */
++
++
+ #define FIXADDR_SIZE	(__end_of_permanent_fixed_addresses << PAGE_SHIFT)
+ #define FIXADDR_START		(FIXADDR_TOP - FIXADDR_SIZE)
+ 
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index 3a264200c62f..de8bace10200 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -66,9 +66,6 @@ typedef struct { pteval_t pte; } pte_t;
+ #define VMEMMAP_START	__VMEMMAP_BASE
+ #endif /* CONFIG_RANDOMIZE_MEMORY */
+ #define VMALLOC_END	(VMALLOC_START + _AC((VMALLOC_SIZE_TB << 40) - 1, UL))
+-#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+-#define MODULES_END      _AC(0xffffffffff000000, UL)
+-#define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+ #define ESPFIX_PGD_ENTRY _AC(-2, UL)
+ #define ESPFIX_BASE_ADDR (ESPFIX_PGD_ENTRY << PGDIR_SHIFT)
+ #define EFI_VA_START	 ( -4 * (_AC(1, UL) << 30))
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index 477ae806c2fa..fad61caac75e 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -35,6 +35,7 @@
+ #include <asm/page.h>
+ #include <asm/pgtable.h>
+ #include <asm/setup.h>
++#include <asm/fixmap.h>
+ 
+ #if 0
+ #define DEBUGP(fmt, ...)				\
+diff --git a/arch/x86/mm/dump_pagetables.c b/arch/x86/mm/dump_pagetables.c
+index 8aa6bea1cd6c..90170415f08a 100644
+--- a/arch/x86/mm/dump_pagetables.c
++++ b/arch/x86/mm/dump_pagetables.c
+@@ -19,6 +19,7 @@
+ #include <linux/seq_file.h>
+ 
+ #include <asm/pgtable.h>
++#include <asm/fixmap.h>
+ 
+ /*
+  * The dumper groups pagetable entries of the same type into one, and for
+diff --git a/arch/x86/mm/kasan_init_64.c b/arch/x86/mm/kasan_init_64.c
+index 0493c17b8a51..34f167cf3316 100644
+--- a/arch/x86/mm/kasan_init_64.c
++++ b/arch/x86/mm/kasan_init_64.c
+@@ -8,6 +8,7 @@
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/sections.h>
++#include <asm/fixmap.h>
+ 
+ extern pgd_t early_level4_pgt[PTRS_PER_PGD];
+ extern struct range pfn_mapped[E820_X_MAX];
 -- 
-Kees Cook
-Pixel Security
+2.11.0.483.g087da7b7c-goog
