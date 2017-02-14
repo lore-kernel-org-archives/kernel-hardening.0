@@ -1,97 +1,56 @@
-Date: Tue, 14 Feb 2017 12:40:39 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170214204039.GA125586@beast>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [PATCH] usercopy: Add tests for all get_user() sizes
-To: linux-kernel@vger.kernel.org
-Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, kernel-hardening@lists.openwall.com
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 14 Feb 2017 20:52:33 +0000
+Message-Id: <1487105558-21897-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v3 0/5] arm64: mmu: avoid writeable-executable mappings
+To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, catalin.marinas@arm.com, will.deacon@arm.com, labbott@fedoraproject.org
+Cc: kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, andre.przywara@arm.com, suzuki.poulose@arm.com, james.morse@arm.com, keescook@chromium.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The existing test was only exercising native unsigned long size
-get_user(). For completeness, we should check all sizes.
+Having memory that is writable and executable at the same time is a
+security hazard, and so we tend to avoid those when we can. However,
+at boot time, we keep .text mapped writable during the entire init
+phase, and the init region itself is mapped rwx as well.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- lib/test_user_copy.c | 45 ++++++++++++++++++++++++++++++++++-----------
- 1 file changed, 34 insertions(+), 11 deletions(-)
+Let's improve the situation by:
+- making the alternatives patching use the linear mapping
+- splitting the init region into separate text and data regions
 
-diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
-index ac3a60ba9331..49569125b7c5 100644
---- a/lib/test_user_copy.c
-+++ b/lib/test_user_copy.c
-@@ -40,8 +40,11 @@ static int __init test_user_copy_init(void)
- 	char __user *usermem;
- 	char *bad_usermem;
- 	unsigned long user_addr;
--	unsigned long value = 0x5A;
- 	char *zerokmem;
-+	u8 val_u8;
-+	u16 val_u16;
-+	u32 val_u32;
-+	u64 val_u64;
- 
- 	kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
- 	if (!kmem)
-@@ -72,10 +75,20 @@ static int __init test_user_copy_init(void)
- 		    "legitimate copy_from_user failed");
- 	ret |= test(copy_to_user(usermem, kmem, PAGE_SIZE),
- 		    "legitimate copy_to_user failed");
--	ret |= test(get_user(value, (unsigned long __user *)usermem),
--		    "legitimate get_user failed");
--	ret |= test(put_user(value, (unsigned long __user *)usermem),
--		    "legitimate put_user failed");
-+
-+#define test_legit(size)						  \
-+	do {								  \
-+		ret |= test(get_user(val_##size, (size __user *)usermem), \
-+		    "legitimate get_user (" #size ") failed");		  \
-+		ret |= test(put_user(val_##size, (size __user *)usermem), \
-+		    "legitimate put_user (" #size ") failed");		  \
-+	} while (0)
-+
-+	test_legit(u8);
-+	test_legit(u16);
-+	test_legit(u32);
-+	test_legit(u64);
-+#undef test_legit
- 
- 	/*
- 	 * Invalid usage: none of these copies should succeed.
-@@ -112,12 +125,22 @@ static int __init test_user_copy_init(void)
- 				  PAGE_SIZE),
- 		    "illegal reversed copy_to_user passed");
- 
--	value = 0x5A;
--	ret |= test(!get_user(value, (unsigned long __user *)kmem),
--		    "illegal get_user passed");
--	ret |= test(value != 0, "zeroing failure for illegal get_user");
--	ret |= test(!put_user(value, (unsigned long __user *)kmem),
--		    "illegal put_user passed");
-+#define test_illegal(size, check)					    \
-+	do {								    \
-+		val_##size = (check);					    \
-+		ret |= test(!get_user(val_##size, (size __user *)kmem),	    \
-+		    "illegal get_user (" #size ") passed");		    \
-+		ret |= test(val_##size != (size)0,			    \
-+		    "zeroing failure for illegal get_user (" #size ")");    \
-+		ret |= test(!put_user(val_##size, (size __user *)kmem),	    \
-+		    "illegal put_user (" #size ") passed");		    \
-+	} while (0)
-+
-+	test_illegal(u8,  0x5a);
-+	test_illegal(u16, 0x5a5b);
-+	test_illegal(u32, 0x5a5b5c5d);
-+	test_illegal(u64, 0x5a5b5c5d6a6b6c6d);
-+#undef test_illegal
- 
- 	vm_munmap(user_addr, PAGE_SIZE * 2);
- out_zerokmem:
+This removes all RWX mappings except the really early one created
+in head.S (which we could perhaps fix in the future as well)
+
+Changes since v2:
+  - ensure that text mappings remain writable under rodata=off
+  - rename create_mapping_late() to update_mapping_prot()
+  - clarify commit log of #2
+  - add acks
+
+Changes since v1:
+- add patch to move TLB maintenance into create_mapping_late() and remove it
+  from its callers (#2)
+- use the true address not the linear alias when patching branch instructions,
+  spotted by Suzuki (#3)
+- mark mark_linear_text_alias_ro() __init (#3)
+- move the .rela section back into __initdata: as it turns out, leaving a hole
+  between the segments results in a peculiar situation where other unrelated
+  allocations end up right in the middle of the kernel Image, which is
+  probably a bad idea (#5). See below for an example.
+- add acks
+
+Ard Biesheuvel (5):
+  arm: kvm: move kvm_vgic_global_state out of .text section
+  arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+  arm64: alternatives: apply boot time fixups via the linear mapping
+  arm64: mmu: map .text as read-only from the outset
+  arm64: mmu: apply strict permissions to .init.text and .init.data
+
+ arch/arm64/include/asm/mmu.h      |  1 +
+ arch/arm64/include/asm/sections.h |  3 +-
+ arch/arm64/kernel/alternative.c   |  2 +-
+ arch/arm64/kernel/smp.c           |  1 +
+ arch/arm64/kernel/vmlinux.lds.S   | 25 +++++---
+ arch/arm64/mm/mmu.c               | 61 +++++++++++++-------
+ virt/kvm/arm/vgic/vgic.c          |  4 +-
+ 7 files changed, 65 insertions(+), 32 deletions(-)
+
 -- 
 2.7.4
-
-
--- 
-Kees Cook
-Pixel Security
