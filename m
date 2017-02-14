@@ -1,82 +1,46 @@
+Date: Wed, 15 Feb 2017 09:55:25 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+In-Reply-To: <201702142324.IFB95862.MOSJLOVFQFtFHO@I-love.SAKURA.ne.jp>
+Message-ID: <alpine.LRH.2.20.1702150952360.6813@namei.org>
+References: <alpine.LRH.2.20.1702150016220.32759@namei.org> <201702142324.IFB95862.MOSJLOVFQFtFHO@I-love.SAKURA.ne.jp>
 MIME-Version: 1.0
-In-Reply-To: <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
-References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
- <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com>
- <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net> <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
- <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
-From: Steve Rutherford <srutherford@google.com>
-Date: Tue, 14 Feb 2017 13:25:03 -0800
-Message-ID: <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using virtualization".
-To: Matthew Giassa <matthew@giassa.net>
-Cc: Jidong Xiao <jidong.xiao@gmail.com>, kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>, Rik van Riel <riel@redhat.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [RFC v2 PATCH 1/2] security: introduce
+ CONFIG_SECURITY_WRITABLE_HOOKS
+To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
+Cc: linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 14, 2017 at 10:06 AM, Matthew Giassa <matthew@giassa.net> wrote:
-> Hi Jidong,
->
-> You are correct on all the points noted above:My goal is to develop a
-> production-ready, non-academic implementation of such a tool. I'm in
-> it for the long haul.
-Is your goal for this to work on all architectures, or are you
-planning to focus on Intel-x86 (or AMD-x86, or ARM, or...)?
->
-> On Fri, Feb 10, 2017 at 7:43 PM, Jidong Xiao <jidong.xiao@gmail.com> wrote:
->> Thanks Matthew. So if I understand correctly, even though many people have
->> proposed similar solutions, none of them have actually contributed their
->> code (of their solution) into Qemu/KVM. To make it "real" (i.e., as a part
->> of Qemu/KVM code) is your goal, right? That sounds interesting!
->>
->> -Jidong
->>
->> On Fri, Feb 10, 2017 at 8:21 PM, Matthew Giassa <matthew@giassa.net> wrote:
->>>
->>> On 2017-02-10 03:18 PM, Jidong Xiao wrote:
->>>>
->>>> Sorry, I have to resend this again, as the original two emails were
->>>> blocked because of the url.
->>>>
->>>> "Rootkit detection using virtualization" has been widely studied for a
->>>> decade. Is the approach you are going to use different from all of these
->>>> existing ones:
->>>>
->>>> "Survey: Virtual Machine Introspection Based System Monitoring and
->>>> Malware Detection Techniques" - by Haofu Liao at University of Rochester.
->>>>
->>>> -Jidong
->>>
->>>
->>> On 2017-02-10 05:37 PM, Rik van Riel wrote:
->>> >
->>> > One of the things that Matthew can do is build on
->>> > the read-only memory protections in the kernel, and
->>> > have the hypervisor enforce that the memory the kernel
->>> > marks as read-only is never written from inside the
->>> > virtual machine, until the next reboot.
->>> >
->>> > That seems like it might be a useful place to start,
->>> > since it would immediately make the other read-only
->>> > protections that people are working on much harder to
->>> > get around, at least inside virtual machines.
->>> >
->>>
->>>
->>> My initial plan was to start with what Rik proposed, and focus on
->>> additional memory protections. With respect to long-term plans, a lot of my
->>> work/research so far has been focused on implementing a system similar to
->>> that presented by Payne et al (ie: Lares).
->>>
->>> -Matthew Giassa
->>
->>
->
->
->
-> --
-> ============================================================
-> Matthew Giassa, MASc, BASc, EIT
-> Principal Developer; Security and Embedded Systems Specialist
-> linkedin: https://ca.linkedin.com/in/giassa
-> e-mail:   matthew@giassa.net
-> website:  www.giassa.net
+On Tue, 14 Feb 2017, Tetsuo Handa wrote:
+
+> > diff --git a/security/Kconfig b/security/Kconfig
+> > index 118f454..f6f90c4 100644
+> > --- a/security/Kconfig
+> > +++ b/security/Kconfig
+> > @@ -31,6 +31,11 @@ config SECURITY
+> >  
+> >  	  If you are unsure how to answer this question, answer N.
+> >  
+> > +config SECURITY_WRITABLE_HOOKS
+> > +	depends on SECURITY
+> > +	bool
+> > +	default n
+> > +
+> 
+> This configuration option must not be set to N without big fat explanation
+> about implications of setting this option to N.
+
+It's not visible in the config menu, it's only there to support SELinux 
+runtime disablement, otherwise it wouldn't even be an option.
+
+> 
+> Honestly, I still don't like this option, regardless of whether SELinux
+> needs this option or not.
+> 
+
+I agree, it would be better to just enable RO hardening without an option 
+to disable it.
+
+-- 
+James Morris
+<jmorris@namei.org>
