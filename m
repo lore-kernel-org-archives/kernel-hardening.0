@@ -1,128 +1,82 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 14 Feb 2017 20:52:38 +0000
-Message-Id: <1487105558-21897-6-git-send-email-ard.biesheuvel@linaro.org>
-In-Reply-To: <1487105558-21897-1-git-send-email-ard.biesheuvel@linaro.org>
-References: <1487105558-21897-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v3 5/5] arm64: mmu: apply strict permissions to .init.text and .init.data
-To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, catalin.marinas@arm.com, will.deacon@arm.com, labbott@fedoraproject.org
-Cc: kernel-hardening@lists.openwall.com, kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, andre.przywara@arm.com, suzuki.poulose@arm.com, james.morse@arm.com, keescook@chromium.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+MIME-Version: 1.0
+In-Reply-To: <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
+References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+ <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com>
+ <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net> <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
+ <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
+From: Steve Rutherford <srutherford@google.com>
+Date: Tue, 14 Feb 2017 13:25:03 -0800
+Message-ID: <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using virtualization".
+To: Matthew Giassa <matthew@giassa.net>
+Cc: Jidong Xiao <jidong.xiao@gmail.com>, kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>, Rik van Riel <riel@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-To avoid having mappings that are writable and executable at the same
-time, split the init region into a .init.text region that is mapped
-read-only, and a .init.data region that is mapped non-executable.
-
-This is possible now that the alternative patching occurs via the linear
-mapping, and the linear alias of the init region is always mapped writable
-(but never executable).
-
-Since the alternatives descriptions themselves are read-only data, move
-those into the .init.text region.
-
-Reviewed-by: Laura Abbott <labbott@redhat.com>
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/include/asm/sections.h |  3 ++-
- arch/arm64/kernel/vmlinux.lds.S   | 25 +++++++++++++-------
- arch/arm64/mm/mmu.c               | 12 ++++++----
- 3 files changed, 26 insertions(+), 14 deletions(-)
-
-diff --git a/arch/arm64/include/asm/sections.h b/arch/arm64/include/asm/sections.h
-index 4e7e7067afdb..22582819b2e5 100644
---- a/arch/arm64/include/asm/sections.h
-+++ b/arch/arm64/include/asm/sections.h
-@@ -24,7 +24,8 @@ extern char __hibernate_exit_text_start[], __hibernate_exit_text_end[];
- extern char __hyp_idmap_text_start[], __hyp_idmap_text_end[];
- extern char __hyp_text_start[], __hyp_text_end[];
- extern char __idmap_text_start[], __idmap_text_end[];
-+extern char __initdata_begin[], __initdata_end[];
-+extern char __inittext_begin[], __inittext_end[];
- extern char __irqentry_text_start[], __irqentry_text_end[];
- extern char __mmuoff_data_start[], __mmuoff_data_end[];
--
- #endif /* __ASM_SECTIONS_H */
-diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
-index b8deffa9e1bf..2c93d259046c 100644
---- a/arch/arm64/kernel/vmlinux.lds.S
-+++ b/arch/arm64/kernel/vmlinux.lds.S
-@@ -143,12 +143,27 @@ SECTIONS
- 
- 	. = ALIGN(SEGMENT_ALIGN);
- 	__init_begin = .;
-+	__inittext_begin = .;
- 
- 	INIT_TEXT_SECTION(8)
- 	.exit.text : {
- 		ARM_EXIT_KEEP(EXIT_TEXT)
- 	}
- 
-+	. = ALIGN(4);
-+	.altinstructions : {
-+		__alt_instructions = .;
-+		*(.altinstructions)
-+		__alt_instructions_end = .;
-+	}
-+	.altinstr_replacement : {
-+		*(.altinstr_replacement)
-+	}
-+
-+	. = ALIGN(PAGE_SIZE);
-+	__inittext_end = .;
-+	__initdata_begin = .;
-+
- 	.init.data : {
- 		INIT_DATA
- 		INIT_SETUP(16)
-@@ -164,15 +179,6 @@ SECTIONS
- 
- 	PERCPU_SECTION(L1_CACHE_BYTES)
- 
--	. = ALIGN(4);
--	.altinstructions : {
--		__alt_instructions = .;
--		*(.altinstructions)
--		__alt_instructions_end = .;
--	}
--	.altinstr_replacement : {
--		*(.altinstr_replacement)
--	}
- 	.rela : ALIGN(8) {
- 		*(.rela .rela*)
- 	}
-@@ -181,6 +187,7 @@ SECTIONS
- 	__rela_size	= SIZEOF(.rela);
- 
- 	. = ALIGN(SEGMENT_ALIGN);
-+	__initdata_end = .;
- 	__init_end = .;
- 
- 	_data = .;
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 70a492b36fe7..cb9f2716c4b6 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -485,14 +485,18 @@ early_param("rodata", parse_rodata);
-  */
- static void __init map_kernel(pgd_t *pgd)
- {
--	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_init, vmlinux_data;
-+	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
-+				vmlinux_initdata, vmlinux_data;
- 
- 	pgprot_t text_prot = rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
- 
- 	map_kernel_segment(pgd, _text, _etext, text_prot, &vmlinux_text);
--	map_kernel_segment(pgd, __start_rodata, __init_begin, PAGE_KERNEL, &vmlinux_rodata);
--	map_kernel_segment(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC,
--			   &vmlinux_init);
-+	map_kernel_segment(pgd, __start_rodata, __inittext_begin, PAGE_KERNEL,
-+			   &vmlinux_rodata);
-+	map_kernel_segment(pgd, __inittext_begin, __inittext_end, text_prot,
-+			   &vmlinux_inittext);
-+	map_kernel_segment(pgd, __initdata_begin, __initdata_end, PAGE_KERNEL,
-+			   &vmlinux_initdata);
- 	map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
- 
- 	if (!pgd_val(*pgd_offset_raw(pgd, FIXADDR_START))) {
--- 
-2.7.4
+On Tue, Feb 14, 2017 at 10:06 AM, Matthew Giassa <matthew@giassa.net> wrote:
+> Hi Jidong,
+>
+> You are correct on all the points noted above:My goal is to develop a
+> production-ready, non-academic implementation of such a tool. I'm in
+> it for the long haul.
+Is your goal for this to work on all architectures, or are you
+planning to focus on Intel-x86 (or AMD-x86, or ARM, or...)?
+>
+> On Fri, Feb 10, 2017 at 7:43 PM, Jidong Xiao <jidong.xiao@gmail.com> wrote:
+>> Thanks Matthew. So if I understand correctly, even though many people have
+>> proposed similar solutions, none of them have actually contributed their
+>> code (of their solution) into Qemu/KVM. To make it "real" (i.e., as a part
+>> of Qemu/KVM code) is your goal, right? That sounds interesting!
+>>
+>> -Jidong
+>>
+>> On Fri, Feb 10, 2017 at 8:21 PM, Matthew Giassa <matthew@giassa.net> wrote:
+>>>
+>>> On 2017-02-10 03:18 PM, Jidong Xiao wrote:
+>>>>
+>>>> Sorry, I have to resend this again, as the original two emails were
+>>>> blocked because of the url.
+>>>>
+>>>> "Rootkit detection using virtualization" has been widely studied for a
+>>>> decade. Is the approach you are going to use different from all of these
+>>>> existing ones:
+>>>>
+>>>> "Survey: Virtual Machine Introspection Based System Monitoring and
+>>>> Malware Detection Techniques" - by Haofu Liao at University of Rochester.
+>>>>
+>>>> -Jidong
+>>>
+>>>
+>>> On 2017-02-10 05:37 PM, Rik van Riel wrote:
+>>> >
+>>> > One of the things that Matthew can do is build on
+>>> > the read-only memory protections in the kernel, and
+>>> > have the hypervisor enforce that the memory the kernel
+>>> > marks as read-only is never written from inside the
+>>> > virtual machine, until the next reboot.
+>>> >
+>>> > That seems like it might be a useful place to start,
+>>> > since it would immediately make the other read-only
+>>> > protections that people are working on much harder to
+>>> > get around, at least inside virtual machines.
+>>> >
+>>>
+>>>
+>>> My initial plan was to start with what Rik proposed, and focus on
+>>> additional memory protections. With respect to long-term plans, a lot of my
+>>> work/research so far has been focused on implementing a system similar to
+>>> that presented by Payne et al (ie: Lares).
+>>>
+>>> -Matthew Giassa
+>>
+>>
+>
+>
+>
+> --
+> ============================================================
+> Matthew Giassa, MASc, BASc, EIT
+> Principal Developer; Security and Embedded Systems Specialist
+> linkedin: https://ca.linkedin.com/in/giassa
+> e-mail:   matthew@giassa.net
+> website:  www.giassa.net
