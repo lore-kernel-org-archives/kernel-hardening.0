@@ -1,39 +1,41 @@
-Date: Tue, 14 Feb 2017 23:59:34 +1100 (AEDT)
+Date: Wed, 15 Feb 2017 00:15:32 +1100 (AEDT)
 From: James Morris <jmorris@namei.org>
-In-Reply-To: <201702142150.BEF81226.tOOFQVFJOHFMSL@I-love.SAKURA.ne.jp>
-Message-ID: <alpine.LRH.2.20.1702142357560.29914@namei.org>
-References: <201702131933.GAF69296.FHQOOJSLOFVtFM@I-love.SAKURA.ne.jp> <CAGXu5jK6Y3i+zoHhF1PyehmxURTVdmEcMPio0HGu=+sTiOz8Mg@mail.gmail.com> <alpine.LRH.2.20.1702140921150.19475@namei.org> <201702141937.IAD69742.SVtHOQFLJOFFMO@I-love.SAKURA.ne.jp>
- <alpine.LRH.2.20.1702142142480.20182@namei.org> <201702142150.BEF81226.tOOFQVFJOHFMSL@I-love.SAKURA.ne.jp>
+Message-ID: <alpine.LRH.2.20.1702150003580.29914@namei.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC PATCH 1/4] security: mark LSM hooks
- as __ro_after_init
-To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-Cc: keescook@chromium.org, linux-security-module@vger.kernel.org, kernel-hardening@lists.openwall.com
+Subject: [kernel-hardening] [RFC v2 PATCH 0/2] security: mark LSM hooks with __ro_after_init
+To: linux-security-module@vger.kernel.org
+Cc: selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 14 Feb 2017, Tetsuo Handa wrote:
+Updated and simplified down to two patches.
 
-> James Morris wrote:
-> > > Disallowing dynamically loadable security modules is as silly idea as
-> > > getting rid of LSM framework ( https://lwn.net/Articles/138042/ 
-> > > http://lkml.kernel.org/r/alpine.LFD.0.999.0710010854120.3579@woody.linux-foundation.org )
-> > > unless we accept whatever out-of-tree LSM modules and maintain them as in-tree
-> > > modules and enable them in distributor's kernels. But such things won't happen.
-> > > If we legally allow LKM based LSMs, we don't need to make security/ directory
-> > > look like /dev/random .
-> > 
-> > Dynamically loadable LSMs are legally allowed, we just don't cater to them 
-> > in mainline.
-> > 
-> I'm saying that this patch will make dynamically loadable LSMs illegal, for
-> not allowing updating struct list_head prevents dynamically loadable LSMs from
-> registering.
+Following feedback from the list, I've added a new config option to handle 
+the case where SELinux still needs to disable its hooks at runtime (and 
+thus the hooks must be writable in that case).
 
-The next patch set will include an option to allow writable hooks (for 
-SELinux runtime disable).
+I've dropped the Netfilter hooks patch as I realized that the hook ops 
+list structures could be modified after init by the core NF code.
 
+The SELinux Netlink message patch has been merged, and Mimi is reviewing 
+the IMA default policy patch (it's not affected by LSM hook requirements 
+and can be merged separately).
 
--- 
-James Morris
-<jmorris@namei.org>
+---
+
+James Morris (2):
+  security: introduce CONFIG_SECURITY_WRITABLE_HOOKS
+  security: mark LSM hooks as __ro_after_init
+
+ include/linux/lsm_hooks.h  |    7 +++++++
+ security/Kconfig           |    5 +++++
+ security/apparmor/lsm.c    |    2 +-
+ security/commoncap.c       |    2 +-
+ security/loadpin/loadpin.c |    2 +-
+ security/security.c        |    2 +-
+ security/selinux/Kconfig   |    6 ++++++
+ security/selinux/hooks.c   |    2 +-
+ security/smack/smack_lsm.c |    2 +-
+ security/tomoyo/tomoyo.c   |    2 +-
+ security/yama/yama_lsm.c   |    2 +-
+ 11 files changed, 26 insertions(+), 8 deletions(-)
