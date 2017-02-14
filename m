@@ -1,43 +1,24 @@
+References: <20170214002526.GA124769@beast>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <d82598ae-122b-4a80-4aec-e0f47e274e5b@kernel.dk>
+Date: Tue, 14 Feb 2017 08:30:25 -0700
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <alpine.LRH.2.20.1702150003580.29914@namei.org>
-References: <alpine.LRH.2.20.1702150003580.29914@namei.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 14 Feb 2017 09:21:23 -0800
-Message-ID: <CAGXu5jLHzvL_ryFYZJjLJ8qVEWS+yLHW-nK+SKFt2GwNorvjeA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC v2 PATCH 0/2] security: mark LSM hooks
- with __ro_after_init
-To: James Morris <jmorris@namei.org>
-Cc: linux-security-module <linux-security-module@vger.kernel.org>, SE Linux <selinux@tycho.nsa.gov>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170214002526.GA124769@beast>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] cdrom: Make device operations read-only
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Jonathan Corbet <corbet@lwn.net>, Tim Waugh <tim@cyberelk.net>, Borislav Petkov <bp@alien8.de>, "David S. Miller" <davem@davemloft.net>, "James E.J. Bottomley" <jejb@linux.vnet.ibm.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, linux-doc@vger.kernel.org, linux-ide@vger.kernel.org, linux-scsi@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 14, 2017 at 5:15 AM, James Morris <jmorris@namei.org> wrote:
-> Updated and simplified down to two patches.
->
-> Following feedback from the list, I've added a new config option to handle
-> the case where SELinux still needs to disable its hooks at runtime (and
-> thus the hooks must be writable in that case).
->
-> I've dropped the Netfilter hooks patch as I realized that the hook ops
-> list structures could be modified after init by the core NF code.
->
-> The SELinux Netlink message patch has been merged, and Mimi is reviewing
-> the IMA default policy patch (it's not affected by LSM hook requirements
-> and can be merged separately).
->
-> ---
->
-> James Morris (2):
->   security: introduce CONFIG_SECURITY_WRITABLE_HOOKS
->   security: mark LSM hooks as __ro_after_init
+On 02/13/2017 05:25 PM, Kees Cook wrote:
+> Since function tables are a common target for attackers, it's best to keep
+> them in read-only memory. As such, this makes the CDROM device ops tables
+> const. This drops additionally n_minors, since it isn't used meaningfully,
+> and sets the only user of cdrom_dummy_generic_packet explicitly so the
+> variables can all be const.
 
-Please consider these both:
-
-Acked-by: Kees Cook <keescook@chromium.org>
-
--Kees
+Agree, it's a good change. Applied for 4.11.
 
 -- 
-Kees Cook
-Pixel Security
+Jens Axboe
