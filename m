@@ -1,75 +1,83 @@
-Date: Wed, 15 Feb 2017 11:45:05 -0500
-From: Bruce Fields <bfields@fieldses.org>
-Message-ID: <20170215164505.GA14912@fieldses.org>
-References: <1486625901-10094-1-git-send-email-dwindsor@gmail.com>
- <CAEXv5_jUa8Av4JABoKSAueiLHSLzibMvaE-8DrVcxZHFceckMg@mail.gmail.com>
- <20170213105422.snaw65btejr3vsdi@ishxps>
- <CAEXv5_hP39k7HSLP-G_khx7MMQHnk=8Z5caa+U5n3bYvUTE1gQ@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAEXv5_hP39k7HSLP-G_khx7MMQHnk=8Z5caa+U5n3bYvUTE1gQ@mail.gmail.com>
-Subject: Re: [kernel-hardening] Re: [RFC][PATCH] nfsd: add +1 to reference
- counting scheme for struct nfsd4_session
-To: David Windsor <dwindsor@gmail.com>
-Cc: Hans Liljestrand <ishkamiel@gmail.com>, linux-nfs@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, Jeff Layton <jlayton@poochiereds.net>, Kees Cook <keescook@chromium.org>, "Reshetova, Elena" <elena.reshetova@intel.com>
+Sender: keescook@google.com
+In-Reply-To: <CAMuHMdWEH0OiBOJJrJLr27sZHo20sa2Qz5Acq9SZWBGav2FXdw@mail.gmail.com>
+References: <20170214204039.GA125586@beast> <CAMuHMdWEH0OiBOJJrJLr27sZHo20sa2Qz5Acq9SZWBGav2FXdw@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 15 Feb 2017 09:06:25 -0800
+Message-ID: <CAGXu5j+MtxHxiPbSG3+6Tuw3EkBPixO73GYn692Nfoi1AwPWZw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] usercopy: Add tests for all get_user() sizes
+To: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 13, 2017 at 06:46:19AM -0500, David Windsor wrote:
-> On Mon, Feb 13, 2017 at 5:54 AM, Hans Liljestrand <ishkamiel@gmail.com> wrote:
-> > On Sat, Feb 11, 2017 at 01:42:53AM -0500, David Windsor wrote:
-> >>
-> >> <snip>
-> >>
-> >>> Signed-off-by: David Windsor <dwindsor@gmail.com>
-> >>> ---
-> >>>  fs/nfsd/nfs4state.c | 6 +++---
-> >>>  1 file changed, 3 insertions(+), 3 deletions(-)
-> >>>
-> >>> diff --git a/fs/nfsd/nfs4state.c b/fs/nfsd/nfs4state.c
-> >>> index a0dee8a..b0f3010 100644
-> >>> --- a/fs/nfsd/nfs4state.c
-> >>> +++ b/fs/nfsd/nfs4state.c
-> >>> @@ -196,7 +196,7 @@ static void nfsd4_put_session_locked(struct
-> >>> nfsd4_session *ses)
-> >>>
-> >>>         lockdep_assert_held(&nn->client_lock);
-> >>>
-> >>> -       if (atomic_dec_and_test(&ses->se_ref) && is_session_dead(ses))
-> >>> +       if (!atomic_add_unless(&ses->se_ref, -1, 1) &&
-> >>> is_session_des(ses))
-> >>
-> >>
-> >> This should read:
-> >> if (!atomic_add_unless(&ses->se_ref, -1, 1) && is_session_dead(ses))
-> >>
-> >>>                 free_session(ses);
-> >
-> >
-> > Hi,
-> > I'm not sure if I have this correctly; But both before and after the patch
-> > free_session gets called when se_ref count was 1, shouldn't this have
-> > changed with the +1 scheme?
-> >
-> > Also, since the !atomic_add_unless doesn't actually decrement when at 1,
-> > doesn't this leave the se_ref as 1 when it's destroyed? The function seems
-> > to always be locked, so perhaps this doesn't matter, but still seems a bit
-> > risky.
-> >
-> 
-> Yes; I forgot the additional call to atomic_dec_and_test() before
-> free_session().  Thanks!
-> 
-> I'll resubmit this after seeing how the rest of this discussion goes.
-> We may end up abandoning this refcounting case.
+On Wed, Feb 15, 2017 at 12:50 AM, Geert Uytterhoeven
+<geert@linux-m68k.org> wrote:
+> On Tue, Feb 14, 2017 at 9:40 PM, Kees Cook <keescook@chromium.org> wrote:
+>> The existing test was only exercising native unsigned long size
+>> get_user(). For completeness, we should check all sizes.
+>>
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  lib/test_user_copy.c | 45 ++++++++++++++++++++++++++++++++++-----------
+>>  1 file changed, 34 insertions(+), 11 deletions(-)
+>>
+>> diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
+>> index ac3a60ba9331..49569125b7c5 100644
+>> --- a/lib/test_user_copy.c
+>> +++ b/lib/test_user_copy.c
+>> @@ -40,8 +40,11 @@ static int __init test_user_copy_init(void)
+>>         char __user *usermem;
+>>         char *bad_usermem;
+>>         unsigned long user_addr;
+>> -       unsigned long value = 0x5A;
+>>         char *zerokmem;
+>> +       u8 val_u8;
+>> +       u16 val_u16;
+>> +       u32 val_u32;
+>> +       u64 val_u64;
+>>
+>>         kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
+>>         if (!kmem)
+>> @@ -72,10 +75,20 @@ static int __init test_user_copy_init(void)
+>>                     "legitimate copy_from_user failed");
+>>         ret |= test(copy_to_user(usermem, kmem, PAGE_SIZE),
+>>                     "legitimate copy_to_user failed");
+>> -       ret |= test(get_user(value, (unsigned long __user *)usermem),
+>> -                   "legitimate get_user failed");
+>> -       ret |= test(put_user(value, (unsigned long __user *)usermem),
+>> -                   "legitimate put_user failed");
+>> +
+>> +#define test_legit(size)                                                 \
+>> +       do {                                                              \
+>> +               ret |= test(get_user(val_##size, (size __user *)usermem), \
+>> +                   "legitimate get_user (" #size ") failed");            \
+>> +               ret |= test(put_user(val_##size, (size __user *)usermem), \
+>> +                   "legitimate put_user (" #size ") failed");            \
+>> +       } while (0)
+>> +
+>> +       test_legit(u8);
+>> +       test_legit(u16);
+>> +       test_legit(u32);
+>> +       test_legit(u64);
+>> +#undef test_legit
+>
+> ERROR: "__get_user_bad" [lib/test_user_copy.ko] undefined!
+>
+> http://kisskb.ellerman.id.au/kisskb/buildresult/12936728/
+>
+> So 64-bit get_user() support is mandatory now?
 
-I could live with it.
+That's not my intention. :) In my sampling of architectures, I missed
+a couple 32-bit archs that don't support 64-bit getuser(). I'm not
+sure how to correctly write these tests, though, since it seems rather
+ad-hoc. e.g. m68k has 64-bit getuser() commented out due to an old gcc
+bug...
 
-My knee jerk reaction is like Jeff's--it just seems more natural to me
-for reference count 0 to mean "not in use, OK to free" in cases like
-this--but maybe I just need to get used to the idea.
+Should I just universally skip 64-bit getuser on 32-bit archs?
 
-It'd be interesting to see what the final result looks like after
-conversion to refcount_t.
+-Kees
 
---b.
+-- 
+Kees Cook
+Pixel Security
