@@ -1,92 +1,44 @@
-References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
- <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com>
- <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net>
- <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
- <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
- <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
-From: Matthew Giassa <matthew@giassa.net>
-Message-ID: <70a9cb32-471e-9827-fae6-cd46a40c87b1@giassa.net>
-Date: Tue, 14 Feb 2017 19:31:57 -0800
 MIME-Version: 1.0
-In-Reply-To: <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using
- virtualization".
-To: Steve Rutherford <srutherford@google.com>
-Cc: Jidong Xiao <jidong.xiao@gmail.com>, kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>, Rik van Riel <riel@redhat.com>
+In-Reply-To: <20170214194259.75960-4-thgarnie@google.com>
+References: <20170214194259.75960-1-thgarnie@google.com> <20170214194259.75960-4-thgarnie@google.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Tue, 14 Feb 2017 19:57:21 -0800
+Message-ID: <CALCETrXDQaWyo02b2q7JN3W1frR0QAOy1Wj_ft5YpPbEbZEfPw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 4/4] KVM: VMX: Simplify segment_base
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Paul Gortmaker <paul.gortmaker@windriver.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 2017-02-14 01:25 PM, Steve Rutherford wrote:
-> On Tue, Feb 14, 2017 at 10:06 AM, Matthew Giassa <matthew@giassa.net> wrote:
->> Hi Jidong,
->>
->> You are correct on all the points noted above:My goal is to develop a
->> production-ready, non-academic implementation of such a tool. I'm in
->> it for the long haul.
-> Is your goal for this to work on all architectures, or are you
-> planning to focus on Intel-x86 (or AMD-x86, or ARM, or...)?
->>
->> On Fri, Feb 10, 2017 at 7:43 PM, Jidong Xiao <jidong.xiao@gmail.com> wrote:
->>> Thanks Matthew. So if I understand correctly, even though many people have
->>> proposed similar solutions, none of them have actually contributed their
->>> code (of their solution) into Qemu/KVM. To make it "real" (i.e., as a part
->>> of Qemu/KVM code) is your goal, right? That sounds interesting!
->>>
->>> -Jidong
->>>
->>> On Fri, Feb 10, 2017 at 8:21 PM, Matthew Giassa <matthew@giassa.net> wrote:
->>>>
->>>> On 2017-02-10 03:18 PM, Jidong Xiao wrote:
->>>>>
->>>>> Sorry, I have to resend this again, as the original two emails were
->>>>> blocked because of the url.
->>>>>
->>>>> "Rootkit detection using virtualization" has been widely studied for a
->>>>> decade. Is the approach you are going to use different from all of these
->>>>> existing ones:
->>>>>
->>>>> "Survey: Virtual Machine Introspection Based System Monitoring and
->>>>> Malware Detection Techniques" - by Haofu Liao at University of Rochester.
->>>>>
->>>>> -Jidong
->>>>
->>>>
->>>> On 2017-02-10 05:37 PM, Rik van Riel wrote:
->>>>>
->>>>> One of the things that Matthew can do is build on
->>>>> the read-only memory protections in the kernel, and
->>>>> have the hypervisor enforce that the memory the kernel
->>>>> marks as read-only is never written from inside the
->>>>> virtual machine, until the next reboot.
->>>>>
->>>>> That seems like it might be a useful place to start,
->>>>> since it would immediately make the other read-only
->>>>> protections that people are working on much harder to
->>>>> get around, at least inside virtual machines.
->>>>>
->>>>
->>>>
->>>> My initial plan was to start with what Rik proposed, and focus on
->>>> additional memory protections. With respect to long-term plans, a lot of my
->>>> work/research so far has been focused on implementing a system similar to
->>>> that presented by Payne et al (ie: Lares).
->>>>
->>>> -Matthew Giassa
->>>
->>>
->>
->>
->>
->> --
->> ============================================================
->> Matthew Giassa, MASc, BASc, EIT
->> Principal Developer; Security and Embedded Systems Specialist
->> linkedin: https://ca.linkedin.com/in/giassa
->> e-mail:   matthew@giassa.net
->> website:  www.giassa.net
+On Tue, Feb 14, 2017 at 11:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> The KVM segment_base function is confusing. This patch replaces integers
+> with appropriate flags, simplify constructs and add comments.
 
-My initial aim is x86/x64 targets, unless there are additional resources 
-I can tap into for expanding to ARM. If I can get a working prototype up 
-and running and into "staging", then expanding to ARM architecture would 
-be viable.
+It could pay to put this first in the series, but last is probably fine, too.
+
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> ---
+> Based on next-20170213
+> ---
+>  arch/x86/kvm/vmx.c | 26 ++++++++++++++++++--------
+>  1 file changed, 18 insertions(+), 8 deletions(-)
+>
+> diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
+> index 99167f20bc34..edb8326108dd 100644
+> --- a/arch/x86/kvm/vmx.c
+> +++ b/arch/x86/kvm/vmx.c
+> @@ -2062,25 +2062,35 @@ static unsigned long segment_base(u16 selector)
+>         struct desc_struct *d;
+>         unsigned long table_base;
+
+This should go away IMO.  It should be struct desc_struct *table;
+
+> +               table_base = get_current_gdt_rw_vaddr();
+
+Then this can go away, too, and you can stop having the silly
+get_current_gdt_rw_vaddr() function at all.
+
+> +       d = (struct desc_struct *)table_base + (selector >> 3);
+
+And this cast goes away too.
