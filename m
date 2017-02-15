@@ -1,36 +1,45 @@
-Date: Wed, 15 Feb 2017 01:23:19 +0100
-From: Emese Revfy <re.emese@gmail.com>
-Message-Id: <20170215012319.c7720609f415b2abf725e88f@gmail.com>
-In-Reply-To: <CAGXu5jJ_9Gbre2J1HYrY-gwnsStL8P+MKmKQwCBtY4-7m53RLA@mail.gmail.com>
-References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
-	<CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
-	<20161219121046.646e5ef425178fce8c2cb555@gmail.com>
-	<CAGXu5jKiDUsncxEOCta3fEgh0OQ0oqpi3gzkPWvpu2oPLq2g4g@mail.gmail.com>
-	<20170111012459.c0a0c615c99a389e4d89c8b5@gmail.com>
-	<CAGXu5jJRNuLR+Ekt26fxkg5wCkEv5fv-4B7=rt78OfRHN_w1Jw@mail.gmail.com>
-	<20170112224116.680debbf6f5c288ba51a46c0@gmail.com>
-	<CAGXu5jLB_ZxPcJDsBK0h-HTfb8G-GdC+BnD-1rTL5ePUvcwuzA@mail.gmail.com>
-	<CAGXu5jJ_9Gbre2J1HYrY-gwnsStL8P+MKmKQwCBtY4-7m53RLA@mail.gmail.com>
+Date: Tue, 14 Feb 2017 16:34:06 -0800
+From: Andrew Morton <akpm@linux-foundation.org>
+Message-Id: <20170214163406.1ed8e7d707510d14137f1dd6@linux-foundation.org>
+In-Reply-To: <CAGXu5jLKqKso-FGDfr=2_xu+k15Lz-T9CgT_4ZvEEeZ9G1+LzA@mail.gmail.com>
+References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
+	<1484572984-13388-2-git-send-email-djalal@gmail.com>
+	<CAGXu5jLKqKso-FGDfr=2_xu+k15Lz-T9CgT_4ZvEEeZ9G1+LzA@mail.gmail.com>
 Mime-Version: 1.0
 Content-Type: text/plain; charset=US-ASCII
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the initify gcc plugin
+Subject: [kernel-hardening] Re: [PATCH v4 1/2] procfs: use an enum for possible hidepid values
 To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Lafcadio Wluiki <wluikil@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 12 Jan 2017 15:40:41 -0800
-Kees Cook <keescook@chromium.org> wrote:
+On Mon, 13 Feb 2017 14:16:30 -0800 Kees Cook <keescook@chromium.org> wrote:
 
-> WARNING: drivers/clk/bcm/built-in.o(.text+0xec2): Section mismatch in
-> reference from the function clk_gate() to the variable
-> .init.rodata.str:__func__.29708
-> The function clk_gate() references
-> the variable __initconst __func__.29708.
-> This is often because clk_gate lacks a __initconst
-> annotation or the annotation of __func__.29708 is wrong.
+> On Mon, Jan 16, 2017 at 5:23 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> > From: Lafcadio Wluiki <wluikil@gmail.com>
+> >
+> > Previously, the hidepid parameter was checked by comparing literal
+> > integers 0, 1, 2. Let's add a proper enum for this, to make the checking
+> > more expressive:
+> >
+> >         0 ___ HIDEPID_OFF
+> >         1 ___ HIDEPID_NO_ACCESS
+> >         2 ___ HIDEPID_INVISIBLE
+> >
+> > This changes the internal labelling only, the userspace-facing interface
+> > remains unmodified, and still works with literal integers 0, 1, 2.
+> >
+> > No functional changes.
+> >
+> > Acked-by: Kees Cook <keescook@chromium.org>
+> > Acked-by: Djalal Harouni <tixxdz@gmail.com>
+> > Signed-off-by: Lafcadio Wluiki <wluikil@gmail.com>
+> 
+> Andrew, can you take this? It's a sensible cleanup to drop literals in
+> favor of defines.
 
-Thanks for the report, it will be fixed in the next grsec patch.
+Sure.
 
--- 
-Emese
+Djalal, I converted your acked-by into a signed-off-by, as described in
+Documentation/SubmittingPatches (soon to become
+Documentation/process/submitting-patches.rst).
