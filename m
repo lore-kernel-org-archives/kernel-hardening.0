@@ -1,83 +1,50 @@
+From: "Roberts, William C" <william.c.roberts@intel.com>
+Date: Wed, 15 Feb 2017 17:31:27 +0000
+Message-ID: <476DC76E7D1DF2438D32BFADF679FC5623063C51@ORSMSX103.amr.corp.intel.com>
+References: <a5e688c4-94b8-b0aa-4425-fc687d3aeeca@redhat.com>
+ <CAGXu5jLre9QdOWi+-GxcGi=rxp=Emwnaz=MBxDtdd_ZD=VRc2w@mail.gmail.com>
+In-Reply-To: <CAGXu5jLre9QdOWi+-GxcGi=rxp=Emwnaz=MBxDtdd_ZD=VRc2w@mail.gmail.com>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAMuHMdWEH0OiBOJJrJLr27sZHo20sa2Qz5Acq9SZWBGav2FXdw@mail.gmail.com>
-References: <20170214204039.GA125586@beast> <CAMuHMdWEH0OiBOJJrJLr27sZHo20sa2Qz5Acq9SZWBGav2FXdw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 15 Feb 2017 09:06:25 -0800
-Message-ID: <CAGXu5j+MtxHxiPbSG3+6Tuw3EkBPixO73GYn692Nfoi1AwPWZw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] usercopy: Add tests for all get_user() sizes
-To: Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: RE: [kernel-hardening] Format string gcc-plugin?
+To: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "nicolas.iooss_linux@m4x.org" <nicolas.iooss_linux@m4x.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 15, 2017 at 12:50 AM, Geert Uytterhoeven
-<geert@linux-m68k.org> wrote:
-> On Tue, Feb 14, 2017 at 9:40 PM, Kees Cook <keescook@chromium.org> wrote:
->> The existing test was only exercising native unsigned long size
->> get_user(). For completeness, we should check all sizes.
->>
->> Signed-off-by: Kees Cook <keescook@chromium.org>
->> ---
->>  lib/test_user_copy.c | 45 ++++++++++++++++++++++++++++++++++-----------
->>  1 file changed, 34 insertions(+), 11 deletions(-)
->>
->> diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
->> index ac3a60ba9331..49569125b7c5 100644
->> --- a/lib/test_user_copy.c
->> +++ b/lib/test_user_copy.c
->> @@ -40,8 +40,11 @@ static int __init test_user_copy_init(void)
->>         char __user *usermem;
->>         char *bad_usermem;
->>         unsigned long user_addr;
->> -       unsigned long value = 0x5A;
->>         char *zerokmem;
->> +       u8 val_u8;
->> +       u16 val_u16;
->> +       u32 val_u32;
->> +       u64 val_u64;
->>
->>         kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
->>         if (!kmem)
->> @@ -72,10 +75,20 @@ static int __init test_user_copy_init(void)
->>                     "legitimate copy_from_user failed");
->>         ret |= test(copy_to_user(usermem, kmem, PAGE_SIZE),
->>                     "legitimate copy_to_user failed");
->> -       ret |= test(get_user(value, (unsigned long __user *)usermem),
->> -                   "legitimate get_user failed");
->> -       ret |= test(put_user(value, (unsigned long __user *)usermem),
->> -                   "legitimate put_user failed");
->> +
->> +#define test_legit(size)                                                 \
->> +       do {                                                              \
->> +               ret |= test(get_user(val_##size, (size __user *)usermem), \
->> +                   "legitimate get_user (" #size ") failed");            \
->> +               ret |= test(put_user(val_##size, (size __user *)usermem), \
->> +                   "legitimate put_user (" #size ") failed");            \
->> +       } while (0)
->> +
->> +       test_legit(u8);
->> +       test_legit(u16);
->> +       test_legit(u32);
->> +       test_legit(u64);
->> +#undef test_legit
->
-> ERROR: "__get_user_bad" [lib/test_user_copy.ko] undefined!
->
-> http://kisskb.ellerman.id.au/kisskb/buildresult/12936728/
->
-> So 64-bit get_user() support is mandatory now?
-
-That's not my intention. :) In my sampling of architectures, I missed
-a couple 32-bit archs that don't support 64-bit getuser(). I'm not
-sure how to correctly write these tests, though, since it seems rather
-ad-hoc. e.g. m68k has 64-bit getuser() commented out due to an old gcc
-bug...
-
-Should I just universally skip 64-bit getuser on 32-bit archs?
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
+LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
+b2sNCj4gU2VudDogVHVlc2RheSwgRmVicnVhcnkgMTQsIDIwMTcgMTE6MDggQU0NCj4gVG86IExh
+dXJhIEFiYm90dCA8bGFiYm90dEByZWRoYXQuY29tPg0KPiBDYzoga2VybmVsLWhhcmRlbmluZ0Bs
+aXN0cy5vcGVud2FsbC5jb20NCj4gU3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVuaW5nXSBGb3Jt
+YXQgc3RyaW5nIGdjYy1wbHVnaW4/DQo+IA0KPiBPbiBUdWUsIEZlYiAxNCwgMjAxNyBhdCAxMDow
+MSBBTSwgTGF1cmEgQWJib3R0IDxsYWJib3R0QHJlZGhhdC5jb20+IHdyb3RlOg0KPiA+IEhpLA0K
+PiA+DQo+ID4gVGhlIHJlY2VudCBkaXNjdXNzaW9ucyBhYm91dCAlcGsgbGVkIG1lIHRvIHN0YXJ0
+IHBsYXlpbmcgYXJvdW5kIHdpdGgNCj4gPiB3cml0aW5nIGEgZ2NjIHBsdWdpbiAobm90ZXMgYWJv
+dXQgd3JpdGluZyBhIGdjYyBwbHVnaW4gYXJlDQo+ID4gZm9ydGhjb21pbmcpLiBNeSBpZGVhIHdh
+cyB0byBleHBhbmQgY2hlY2tpbmcgb2YgdGhlIGtlcm5lbCdzDQo+ID4gYWRkaXRpb25hbCBmb3Jt
+YXRzICglcEssICVwUiBldGMuKSBvciBwb3NzaWJseSBldmVuIGNoYW5nZSB0aGUgZm9ybWF0DQo+
+ID4gc3RyaW5ncy4gVGhlIGJpZyBpc3N1ZSBpcyB0aGF0IG1vc3Qgb2YgdnNwcmludGYuYyB3b3Vs
+ZCBlbmQgdXAgaW4gdGhlDQo+ID4gcGx1Z2luIHdoaWNoIHdvdWxkIGJlIHVnbHkgdG8gbWFpbnRh
+aW4uIFRoaXMgY29uY2VwdCBjb3VsZCBiZSB1c2VkIGZvcg0KPiA+IHNvbWUgb2YgdGhlIHByb2Js
+ZW1zIHdpdGgga2VybmVsIHBvaW50ZXIgbGVha3MNCj4gPiBodHRwczovL2tlcm5zZWMub3JnL3dp
+a2kvaW5kZXgucGhwL0J1Z19DbGFzc2VzL0tlcm5lbF9wb2ludGVyX2xlYWsNCj4gPiBidXQgSSdt
+IGludGVyZXN0ZWQgaWYgYW55b25lIGVsc2UgaGFzIHRob3VnaHRzIG9yIGlkZWFzIGFib3V0IGhv
+dw0KPiA+IGJldHRlciB0byBkbyB0aGlzIChvciBldmVuIG5vdCB0byBkbyB0aGlzKS4NCj4gDQo+
+IElmIHdlIGNhbiBsZXZlcmFnZSBjb21tb24gY29kZSBiZXR3ZWVuIHRoZSBwbHVnaW4gYW5kIHZz
+cHJpbnRmLmMsIGl0IHNob3VsZCBiZQ0KPiBkb2FibGUuIEkgaGF2ZW4ndCBsb29rZWQgYXQgcHJv
+Y2Vzc2luZyBmb3JtYXQgc3RyaW5ncyBhdCBhbGwsIHRob3VnaCBJIGFzc3VtZSB0aGUNCj4gcGx1
+Z2luIHdvdWxkIG5lZWQgdG8gY2hlY2sgdGhlIF9fcHJpbnRmLWdlbmVyYXRlZCBhdHRyaWJ1dGVz
+Lg0KPiANCj4gSW4gbXkgcmVsYXRlZCBub3RlcyB3YXMgYSBoaW50IHRoYXQgbG9va2luZyBhdCBo
+b3cgZ2NjIGRvZXMgaXQgbm9ybWFsbHkgaXMgZ2NjL2MtDQo+IGZhbWlseS9jLWZvcm1hdC5jOg0K
+PiBodHRwOi8vc3RhY2tvdmVyZmxvdy5jb20vYS8xNjMzNjE3NQ0KPiANCj4gQW5kIHdoaWxlIG5v
+dCBzdHJpY3RseSBwYXJ0IG9mIGZvcm1hdCB0eXBlIGNoZWNraW5nLCBJIHRhbGtlZCBhIGJpdCBh
+Ym91dCBkZWFsaW5nDQo+IHdpdGggY29uc3Qgc3RyaW5ncyBoZXJlOg0KPiBodHRwOi8vd3d3Lm9w
+ZW53YWxsLmNvbS9saXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTYvMTIvMDcvMTYNCj4gDQo+IC1L
+ZWVzDQo+IA0KPiAtLQ0KPiBLZWVzIENvb2sNCj4gUGl4ZWwgU2VjdXJpdHkNCg0KZ2NjIHdvdWxk
+IGJlIG5pY2Ugc2luY2UgaXQncyB0aGUgY29tcGlsZXIgbW9zdCBvZnRlbiB1c2VkIGZvciBidWls
+ZGluZyBsaW51eCBrZXJuZWwgKGRvZXMgY2xhbmcgd29yayBmdWxseSB5ZXQ/KQ0KDQpOaWNvbGFz
+IElvb3NzIHdhcyBhYmxlIHRvIHVzZSBVQlNhbiB0byBmaW5kIG9uZToNCg0KY29tbWl0IDkwMWQ4
+MDVjMzNmYzRjMDI5ZmM2YjJkOTRlZTVmYjdkMzAyNzgwNDUNCkF1dGhvcjogTmljb2xhcyBJb29z
+cyA8bmljb2xhcy5pb29zc19saW51eEBtNHgub3JnPg0KRGF0ZTogICBUdWUgQXVnIDIgMTQ6MDM6
+MTAgMjAxNiAtMDcwMA0KDQogICAgVUJTQU46IGZpeCB0eXBvIGluIGZvcm1hdCBzdHJpbmcNCg0K
