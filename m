@@ -1,37 +1,77 @@
-Date: Wed, 15 Feb 2017 22:08:58 +0100
-From: Borislav Petkov <bp@suse.de>
-Message-ID: <20170215210858.e3sfhliay7bck5qx@pd.tnic>
-References: <20170214194259.75960-1-thgarnie@google.com>
- <20170215135824.tflwuf3esu2npwwo@pd.tnic>
- <CAJcbSZEsCzBQEFELm1wbc4DP2=dZTCFYfsb-eX0ifoCKF4EQUw@mail.gmail.com>
- <20170215154921.5xgrifrg54ssq7lr@pd.tnic>
+Date: Wed, 15 Feb 2017 22:16:32 +0100 (CET)
+From: Thomas Gleixner <tglx@linutronix.de>
+In-Reply-To: <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com>
+Message-ID: <alpine.DEB.2.20.1702152143520.3805@nanos>
+References: <20170211013758.3288-1-me@jessfraz.com> <20170211013758.3288-3-me@jessfraz.com> <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20170215154921.5xgrifrg54ssq7lr@pd.tnic>
-Subject: [kernel-hardening] Re: [PATCH v3 1/4] x86/mm: Adapt MODULES_END based on Fixmap section
- size
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux PM list <linux-pm@vger.kernel.org>, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=US-ASCII
+Subject: [kernel-hardening] Re: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
+To: Bjorn Helgaas <helgaas@kernel.org>
+Cc: Jess Frazelle <me@jessfraz.com>, "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Marc Zyngier <marc.zyngier@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 15, 2017 at 04:49:21PM +0100, Borislav Petkov wrote:
-> On Wed, Feb 15, 2017 at 07:40:51AM -0800, Thomas Garnier wrote:
-> > Why do you think they rely on it being static? The VSYSCALL address is
-> > not changed for example.
+On Wed, 15 Feb 2017, Bjorn Helgaas wrote:
+> We know at build-time what all the function pointers will be, so in
+> principle we should be able to make the struct const, which would be
+> even better than __ro_after_init.
+
+Not everywhere unfortunately. In some instances it's a runtime decision, but
+yes, they could be fixed. But there is a downside in doing this. See below.
+
+> For example, we could require that callers set every function pointer
+> before calling pci_msi_create_irq_domain(), using the default ones
+> (pci_msi_domain_set_desc, pci_msi_domain_check_cap,
+> pci_msi_domain_handle_error) if it doesn't need to override them,
+> e.g.,
 > 
-> I don't know, that's why I'm asking first. Userspace is known to pick
-> different aspects of the kernel and deciding to use them for whatever.
-> And once it relies on that, there's no changing it.
+>   static struct msi_domain_ops vmd_msi_domain_ops = {
+>     .get_hwirq = vmd_get_hwirq,
+>     .msi_check = pci_msi_domain_check_cap,
+>   };
+> 
+> Or we could leave NULL pointers in the structure and have the code
+> that calls through the function pointers check for NULL and call the
+> default itself, e.g.,
+> 
+>   if (ops->msi_check)
+>     ops->msi_check(...)
+>   else
+>     pci_msi_domain_check_cap(...)
+> 
+> It looks like the "USE_DEF_OPS" framework was added by Jiang Liu with
+> the commits below.  I would CC: him for his thoughts, but I don't
+> have a current email address.
 
-Ok, so we should be fine here because those addresses are internal to
-the kernel, I'm being told, so anything using them will break and gets
-to keep the pieces even.
+Me neither :(
 
--- 
-Regards/Gruss,
-    Boris.
+I think I suggested to Jiang to do that 'update with default functions' to
 
-SUSE Linux GmbH, GF: Felix Imendörffer, Jane Smithard, Graham Norton, HRB 21284 (AG Nürnberg)
--- 
+- avoid exporting the world and some more
+
+- have the flexibility to add new functions to the ops w/o updating a
+  gazillion of existing usage sites, which has saved us lots of chaising in
+  the last years
+
+- avoid the if (ops->ptr) ops->ptr(); else default_fn(); constructs all
+  over the place.
+
+I admit I did not think about the fact that this makes the structs non
+const.
+
+Mopping that up by exporting the default functions and setting all the
+function pointers is tedious and requires a full tree sweep when we add new
+stuff. There's also code shared between PCI/platform/DT based stuff, so
+that becomes interesting.
+
+Doing the if (ops->ptr) ops->ptr() else default_fn(); dance should be
+simpler to pull off. There are not that many sites to look at, but then we
+have some of the GICv3 code using the domain ops out of core.
+
+For now doing the __ro_after_init is definitely the simplest and fastest
+solution to tighten these statically allocated structures.
+
+I have a look with Marc, what can be done in the long run.
+
+Thanks,
+
+	tglx
