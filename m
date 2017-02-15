@@ -1,45 +1,92 @@
-Date: Tue, 14 Feb 2017 16:34:06 -0800
-From: Andrew Morton <akpm@linux-foundation.org>
-Message-Id: <20170214163406.1ed8e7d707510d14137f1dd6@linux-foundation.org>
-In-Reply-To: <CAGXu5jLKqKso-FGDfr=2_xu+k15Lz-T9CgT_4ZvEEeZ9G1+LzA@mail.gmail.com>
-References: <1484572984-13388-1-git-send-email-djalal@gmail.com>
-	<1484572984-13388-2-git-send-email-djalal@gmail.com>
-	<CAGXu5jLKqKso-FGDfr=2_xu+k15Lz-T9CgT_4ZvEEeZ9G1+LzA@mail.gmail.com>
-Mime-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+ <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com>
+ <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net>
+ <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
+ <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
+ <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
+From: Matthew Giassa <matthew@giassa.net>
+Message-ID: <70a9cb32-471e-9827-fae6-cd46a40c87b1@giassa.net>
+Date: Tue, 14 Feb 2017 19:31:57 -0800
+MIME-Version: 1.0
+In-Reply-To: <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 1/2] procfs: use an enum for possible hidepid values
-To: Kees Cook <keescook@chromium.org>
-Cc: Djalal Harouni <tixxdz@gmail.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Lafcadio Wluiki <wluikil@gmail.com>
+Subject: [kernel-hardening] Re: Introduction + new project: "rootkit detection using
+ virtualization".
+To: Steve Rutherford <srutherford@google.com>
+Cc: Jidong Xiao <jidong.xiao@gmail.com>, kernel-hardening@lists.openwall.com, KVM <kvm@vger.kernel.org>, Rik van Riel <riel@redhat.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 13 Feb 2017 14:16:30 -0800 Kees Cook <keescook@chromium.org> wrote:
+On 2017-02-14 01:25 PM, Steve Rutherford wrote:
+> On Tue, Feb 14, 2017 at 10:06 AM, Matthew Giassa <matthew@giassa.net> wrote:
+>> Hi Jidong,
+>>
+>> You are correct on all the points noted above:My goal is to develop a
+>> production-ready, non-academic implementation of such a tool. I'm in
+>> it for the long haul.
+> Is your goal for this to work on all architectures, or are you
+> planning to focus on Intel-x86 (or AMD-x86, or ARM, or...)?
+>>
+>> On Fri, Feb 10, 2017 at 7:43 PM, Jidong Xiao <jidong.xiao@gmail.com> wrote:
+>>> Thanks Matthew. So if I understand correctly, even though many people have
+>>> proposed similar solutions, none of them have actually contributed their
+>>> code (of their solution) into Qemu/KVM. To make it "real" (i.e., as a part
+>>> of Qemu/KVM code) is your goal, right? That sounds interesting!
+>>>
+>>> -Jidong
+>>>
+>>> On Fri, Feb 10, 2017 at 8:21 PM, Matthew Giassa <matthew@giassa.net> wrote:
+>>>>
+>>>> On 2017-02-10 03:18 PM, Jidong Xiao wrote:
+>>>>>
+>>>>> Sorry, I have to resend this again, as the original two emails were
+>>>>> blocked because of the url.
+>>>>>
+>>>>> "Rootkit detection using virtualization" has been widely studied for a
+>>>>> decade. Is the approach you are going to use different from all of these
+>>>>> existing ones:
+>>>>>
+>>>>> "Survey: Virtual Machine Introspection Based System Monitoring and
+>>>>> Malware Detection Techniques" - by Haofu Liao at University of Rochester.
+>>>>>
+>>>>> -Jidong
+>>>>
+>>>>
+>>>> On 2017-02-10 05:37 PM, Rik van Riel wrote:
+>>>>>
+>>>>> One of the things that Matthew can do is build on
+>>>>> the read-only memory protections in the kernel, and
+>>>>> have the hypervisor enforce that the memory the kernel
+>>>>> marks as read-only is never written from inside the
+>>>>> virtual machine, until the next reboot.
+>>>>>
+>>>>> That seems like it might be a useful place to start,
+>>>>> since it would immediately make the other read-only
+>>>>> protections that people are working on much harder to
+>>>>> get around, at least inside virtual machines.
+>>>>>
+>>>>
+>>>>
+>>>> My initial plan was to start with what Rik proposed, and focus on
+>>>> additional memory protections. With respect to long-term plans, a lot of my
+>>>> work/research so far has been focused on implementing a system similar to
+>>>> that presented by Payne et al (ie: Lares).
+>>>>
+>>>> -Matthew Giassa
+>>>
+>>>
+>>
+>>
+>>
+>> --
+>> ============================================================
+>> Matthew Giassa, MASc, BASc, EIT
+>> Principal Developer; Security and Embedded Systems Specialist
+>> linkedin: https://ca.linkedin.com/in/giassa
+>> e-mail:   matthew@giassa.net
+>> website:  www.giassa.net
 
-> On Mon, Jan 16, 2017 at 5:23 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> > From: Lafcadio Wluiki <wluikil@gmail.com>
-> >
-> > Previously, the hidepid parameter was checked by comparing literal
-> > integers 0, 1, 2. Let's add a proper enum for this, to make the checking
-> > more expressive:
-> >
-> >         0 ___ HIDEPID_OFF
-> >         1 ___ HIDEPID_NO_ACCESS
-> >         2 ___ HIDEPID_INVISIBLE
-> >
-> > This changes the internal labelling only, the userspace-facing interface
-> > remains unmodified, and still works with literal integers 0, 1, 2.
-> >
-> > No functional changes.
-> >
-> > Acked-by: Kees Cook <keescook@chromium.org>
-> > Acked-by: Djalal Harouni <tixxdz@gmail.com>
-> > Signed-off-by: Lafcadio Wluiki <wluikil@gmail.com>
-> 
-> Andrew, can you take this? It's a sensible cleanup to drop literals in
-> favor of defines.
-
-Sure.
-
-Djalal, I converted your acked-by into a signed-off-by, as described in
-Documentation/SubmittingPatches (soon to become
-Documentation/process/submitting-patches.rst).
+My initial aim is x86/x64 targets, unless there are additional resources 
+I can tap into for expanding to ARM. If I can get a working prototype up 
+and running and into "staging", then expanding to ARM architecture would 
+be viable.
