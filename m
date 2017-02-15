@@ -1,116 +1,133 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 15 Feb 2017 15:38:01 +0000
-Message-Id: <1487173081-13425-4-git-send-email-ard.biesheuvel@linaro.org>
-In-Reply-To: <1487173081-13425-1-git-send-email-ard.biesheuvel@linaro.org>
-References: <1487173081-13425-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [RFC PATCH 3/3] arm64: efi: use effective text offset when allocating Image
-To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, will.deacon@arm.com, catalin.marinas@arm.com, keescook@chromium.org, labbott@fedoraproject.org, james.morse@arm.com
-Cc: kernel-hardening@lists.openwall.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+MIME-Version: 1.0
+In-Reply-To: <20170215135824.tflwuf3esu2npwwo@pd.tnic>
+References: <20170214194259.75960-1-thgarnie@google.com> <20170215135824.tflwuf3esu2npwwo@pd.tnic>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Wed, 15 Feb 2017 07:40:51 -0800
+Message-ID: <CAJcbSZEsCzBQEFELm1wbc4DP2=dZTCFYfsb-eX0ifoCKF4EQUw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v3 1/4] x86/mm: Adapt MODULES_END based on Fixmap section size
+To: Borislav Petkov <bp@suse.de>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux PM list <linux-pm@vger.kernel.org>, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Update the image allocation logic in the EFI stub so that the effective
-text offset is always honoured on 4 KB pagesize kernels. This ensures
-that the __init segment can be mapped without resorting to early RWX
-mappings.
+On Wed, Feb 15, 2017 at 5:58 AM, Borislav Petkov <bp@suse.de> wrote:
+>
+> On Tue, Feb 14, 2017 at 11:42:56AM -0800, Thomas Garnier wrote:
+> > This patch aligns MODULES_END to the beginning of the Fixmap section.
+> > It optimizes the space available for both sections. The address is
+> > pre-computed based on the number of pages required by the Fixmap
+> > section.
+> >
+> > It will allow GDT remapping in the Fixmap section. The current
+> > MODULES_END static address does not provide enough space for the kernel
+> > to support a large number of processors.
+> >
+> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> > ---
+> > Based on next-20170213
+> > ---
+> >  arch/x86/include/asm/fixmap.h           | 8 ++++++++
+> >  arch/x86/include/asm/pgtable_64_types.h | 3 ---
+> >  arch/x86/kernel/module.c                | 1 +
+> >  arch/x86/mm/dump_pagetables.c           | 1 +
+> >  arch/x86/mm/kasan_init_64.c             | 1 +
+> >  5 files changed, 11 insertions(+), 3 deletions(-)
+> >
+> > diff --git a/arch/x86/include/asm/fixmap.h b/arch/x86/include/asm/fixma=
+p.h
+> > index 8554f960e21b..20231189e0e3 100644
+> > --- a/arch/x86/include/asm/fixmap.h
+> > +++ b/arch/x86/include/asm/fixmap.h
+> > @@ -132,6 +132,14 @@ enum fixed_addresses {
+> >
+> >  extern void reserve_top_address(unsigned long reserve);
+> >
+> > +/* On 64-bit, the module sections ends with the start of the fixmap */
+> > +#ifdef CONFIG_X86_64
+> > +#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+> > +#define MODULES_END   __fix_to_virt(__end_of_fixed_addresses + 1)
+> > +#define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+> > +#endif /* CONFIG_X86_64 */
+>
+> JFYI: so there's another patchset which adds KERNEL_MAPPING_SIZE:
+>
+> https://lkml.kernel.org/r/1486040077-3719-1-git-send-email-bhe@redhat.com
+>
+> and makes it a 1G, i.e., the KASLR default. I guess the above will have
+> to be KERNEL_MAPPING_SIZE then.
+>
+> And why are you moving those to fixmap.h? What's wrong with
+> including fixmap.h into pgtable_64_types.h so that you can get
+> __end_of_fixed_addresses?
+>
+> FWIW, I didn't even have to add any includes with my .config, i.e., that =
+builds:
+>
 
-Note that this sacrifices 5 bits of KASLR randomization on such kernels.
+I tried to add fixmap.h and I thought I tried without too but maybe
+not, I will try to adapt it on v4.
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/kernel/efi-entry.S             |  5 +++++
- arch/arm64/kernel/image.h                 |  1 +
- drivers/firmware/efi/libstub/Makefile     |  1 -
- drivers/firmware/efi/libstub/arm64-stub.c | 13 ++++++++-----
- 4 files changed, 14 insertions(+), 6 deletions(-)
+> ---
+> diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/a=
+sm/pgtable_64_types.h
+> index 3a264200c62f..eda7fa856fa9 100644
+> --- a/arch/x86/include/asm/pgtable_64_types.h
+> +++ b/arch/x86/include/asm/pgtable_64_types.h
+> @@ -67,7 +67,7 @@ typedef struct { pteval_t pte; } pte_t;
+>  #endif /* CONFIG_RANDOMIZE_MEMORY */
+>  #define VMALLOC_END    (VMALLOC_START + _AC((VMALLOC_SIZE_TB << 40) - 1,=
+ UL))
+>  #define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+> -#define MODULES_END      _AC(0xffffffffff000000, UL)
+> +#define MODULES_END   __fix_to_virt(__end_of_fixed_addresses + 1)
+>  #define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+>  #define ESPFIX_PGD_ENTRY _AC(-2, UL)
+>  #define ESPFIX_BASE_ADDR (ESPFIX_PGD_ENTRY << PGDIR_SHIFT)
+> ---
+>
+> but I wouldn't be surprised if some strange configuration would need it.
+>
+> >  #define FIXADDR_SIZE (__end_of_permanent_fixed_addresses << PAGE_SHIFT=
+)
+> >  #define FIXADDR_START                (FIXADDR_TOP - FIXADDR_SIZE)
+> >
+> > diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include=
+/asm/pgtable_64_types.h
+> > index 3a264200c62f..de8bace10200 100644
+> > --- a/arch/x86/include/asm/pgtable_64_types.h
+> > +++ b/arch/x86/include/asm/pgtable_64_types.h
+> > @@ -66,9 +66,6 @@ typedef struct { pteval_t pte; } pte_t;
+> >  #define VMEMMAP_START        __VMEMMAP_BASE
+> >  #endif /* CONFIG_RANDOMIZE_MEMORY */
+> >  #define VMALLOC_END  (VMALLOC_START + _AC((VMALLOC_SIZE_TB << 40) - 1,=
+ UL))
+> > -#define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+> > -#define MODULES_END      _AC(0xffffffffff000000, UL)
+>
+> How much of an ABI breakage would that be? See
+> Documentation/x86/x86_64/mm.txt.
+>
+> With my .config MODULES_END becomes 0xffffffffff1fe000 and it'll remain
+> dynamic depending on .config. No idea how much in userspace relies on
+> MODULES_END being static 0xffffffffff000000...
+>
+> Hmm.
+>
 
-diff --git a/arch/arm64/kernel/efi-entry.S b/arch/arm64/kernel/efi-entry.S
-index 4e6ad355bd05..4e1cbec3c842 100644
---- a/arch/arm64/kernel/efi-entry.S
-+++ b/arch/arm64/kernel/efi-entry.S
-@@ -120,3 +120,8 @@ efi_load_fail:
- 
- entry_end:
- ENDPROC(entry)
-+
-+	__INITRODATA
-+	.align	2
-+ENTRY(effective_text_offset)
-+	.long	__eff_text_offset
-diff --git a/arch/arm64/kernel/image.h b/arch/arm64/kernel/image.h
-index 98e191cd97b1..f137856f50bf 100644
---- a/arch/arm64/kernel/image.h
-+++ b/arch/arm64/kernel/image.h
-@@ -132,6 +132,7 @@ __efistub__text			= KALLSYMS_HIDE(_text);
- __efistub__end			= KALLSYMS_HIDE(_end);
- __efistub__edata		= KALLSYMS_HIDE(_edata);
- __efistub_screen_info		= KALLSYMS_HIDE(screen_info);
-+__efistub___eff_text_offset	= KALLSYMS_HIDE(__eff_text_offset);
- 
- #endif
- 
-diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-index d564d25df8ab..c929e787f5b3 100644
---- a/drivers/firmware/efi/libstub/Makefile
-+++ b/drivers/firmware/efi/libstub/Makefile
-@@ -41,7 +41,6 @@ lib-$(CONFIG_EFI_ARMSTUB)	+= arm-stub.o fdt.o string.o random.o \
- 
- lib-$(CONFIG_ARM)		+= arm32-stub.o
- lib-$(CONFIG_ARM64)		+= arm64-stub.o
--CFLAGS_arm64-stub.o 		:= -DTEXT_OFFSET=$(TEXT_OFFSET)
- 
- #
- # arm64 puts the stub in the kernel proper, which will unnecessarily retain all
-diff --git a/drivers/firmware/efi/libstub/arm64-stub.c b/drivers/firmware/efi/libstub/arm64-stub.c
-index eae693eb3e91..b335d0483b65 100644
---- a/drivers/firmware/efi/libstub/arm64-stub.c
-+++ b/drivers/firmware/efi/libstub/arm64-stub.c
-@@ -17,6 +17,7 @@
- #include "efistub.h"
- 
- extern bool __nokaslr;
-+extern const u32 effective_text_offset;
- 
- efi_status_t check_platform_features(efi_system_table_t *sys_table_arg)
- {
-@@ -72,7 +73,8 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
- 	 * a 2 MB aligned base, which itself may be lower than dram_base, as
- 	 * long as the resulting offset equals or exceeds it.
- 	 */
--	preferred_offset = round_down(dram_base, MIN_KIMG_ALIGN) + TEXT_OFFSET;
-+	preferred_offset = round_down(dram_base, MIN_KIMG_ALIGN) +
-+			   effective_text_offset;
- 	if (preferred_offset < dram_base)
- 		preferred_offset += MIN_KIMG_ALIGN;
- 
-@@ -86,8 +88,9 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
- 		 * is a multiple of the minimal segment alignment (SZ_64K)
- 		 */
- 		u32 mask = (MIN_KIMG_ALIGN - 1) & ~(SZ_64K - 1);
--		u32 offset = !IS_ENABLED(CONFIG_DEBUG_ALIGN_RODATA) ?
--			     (phys_seed >> 32) & mask : TEXT_OFFSET;
-+		u32 offset = (!IS_ENABLED(CONFIG_DEBUG_ALIGN_RODATA) &&
-+			      PAGE_SIZE > SZ_4K) ? (phys_seed >> 32) & mask :
-+			      effective_text_offset;
- 
- 		/*
- 		 * If KASLR is enabled, and we have some randomness available,
-@@ -124,7 +127,7 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
- 	}
- 
- 	if (status != EFI_SUCCESS) {
--		*reserve_size = kernel_memsize + TEXT_OFFSET;
-+		*reserve_size = kernel_memsize + effective_text_offset;
- 		status = efi_low_alloc(sys_table_arg, *reserve_size,
- 				       MIN_KIMG_ALIGN, reserve_addr);
- 
-@@ -133,7 +136,7 @@ efi_status_t handle_kernel_image(efi_system_table_t *sys_table_arg,
- 			*reserve_size = 0;
- 			return status;
- 		}
--		*image_addr = *reserve_addr + TEXT_OFFSET;
-+		*image_addr = *reserve_addr + effective_text_offset;
- 	}
- 	memcpy((void *)*image_addr, old_image_addr, kernel_size);
- 
--- 
-2.7.4
+Why do you think they rely on it being static? The VSYSCALL address is
+not changed for example.
+
+> --
+> Regards/Gruss,
+>     Boris.
+>
+> SUSE Linux GmbH, GF: Felix Imend=C3=B6rffer, Jane Smithard, Graham Norton=
+, HRB 21284 (AG N=C3=BCrnberg)
+> --
+
+Thanks for the feedback.
+
+
+--=20
+Thomas
