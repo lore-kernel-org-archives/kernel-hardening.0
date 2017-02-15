@@ -1,38 +1,125 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170215012319.c7720609f415b2abf725e88f@gmail.com>
-References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
- <CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
- <20161219121046.646e5ef425178fce8c2cb555@gmail.com> <CAGXu5jKiDUsncxEOCta3fEgh0OQ0oqpi3gzkPWvpu2oPLq2g4g@mail.gmail.com>
- <20170111012459.c0a0c615c99a389e4d89c8b5@gmail.com> <CAGXu5jJRNuLR+Ekt26fxkg5wCkEv5fv-4B7=rt78OfRHN_w1Jw@mail.gmail.com>
- <20170112224116.680debbf6f5c288ba51a46c0@gmail.com> <CAGXu5jLB_ZxPcJDsBK0h-HTfb8G-GdC+BnD-1rTL5ePUvcwuzA@mail.gmail.com>
- <CAGXu5jJ_9Gbre2J1HYrY-gwnsStL8P+MKmKQwCBtY4-7m53RLA@mail.gmail.com> <20170215012319.c7720609f415b2abf725e88f@gmail.com>
+Date: Wed, 15 Feb 2017 12:05:57 -0800
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 15 Feb 2017 11:27:06 -0800
-Message-ID: <CAGXu5jKWGANHjA5opm4V9AzCVA27_iZqmypPvBLfzJ0MKNZDvg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the initify gcc plugin
-To: Emese Revfy <re.emese@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>
+Message-ID: <20170215200557.GA37325@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] ARM: uaccess: consistently check object sizes
+To: Russell King <linux@armlinux.org.uk>
+Cc: Mark Rutland <mark.rutland@arm.com>, Al Viro <viro@zeniv.linux.org.uk>, Robin Murphy <robin.murphy@arm.com>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 14, 2017 at 4:23 PM, Emese Revfy <re.emese@gmail.com> wrote:
-> On Thu, 12 Jan 2017 15:40:41 -0800
-> Kees Cook <keescook@chromium.org> wrote:
->
->> WARNING: drivers/clk/bcm/built-in.o(.text+0xec2): Section mismatch in
->> reference from the function clk_gate() to the variable
->> .init.rodata.str:__func__.29708
->> The function clk_gate() references
->> the variable __initconst __func__.29708.
->> This is often because clk_gate lacks a __initconst
->> annotation or the annotation of __func__.29708 is wrong.
->
-> Thanks for the report, it will be fixed in the next grsec patch.
+In commit 76624175dcae ("arm64: uaccess: consistently check object sizes"),
+the object size checks are moved outside the access_ok() so that bad
+destinations are detected before hitting the "memset(dest, 0, size)" in the
+copy_from_user() failure path.
 
-Very cool, thanks! What did the problem turn out to be?
+This makes the same change for arm, with attention given to possibly
+extracting the uaccess routines into a common header file for all
+architectures in the future.
 
--Kees
+Suggested-by: Mark Rutland <mark.rutland@arm.com>
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/arm/include/asm/uaccess.h | 44 ++++++++++++++++++++++++++++++------------
+ 1 file changed, 32 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/include/asm/uaccess.h b/arch/arm/include/asm/uaccess.h
+index 1f59ea051bab..b7e0125c0bbf 100644
+--- a/arch/arm/include/asm/uaccess.h
++++ b/arch/arm/include/asm/uaccess.h
+@@ -478,11 +478,10 @@ extern unsigned long __must_check
+ arm_copy_from_user(void *to, const void __user *from, unsigned long n);
+ 
+ static inline unsigned long __must_check
+-__copy_from_user(void *to, const void __user *from, unsigned long n)
++__arch_copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+ 	unsigned int __ua_flags;
+ 
+-	check_object_size(to, n, false);
+ 	__ua_flags = uaccess_save_and_enable();
+ 	n = arm_copy_from_user(to, from, n);
+ 	uaccess_restore(__ua_flags);
+@@ -495,18 +494,15 @@ extern unsigned long __must_check
+ __copy_to_user_std(void __user *to, const void *from, unsigned long n);
+ 
+ static inline unsigned long __must_check
+-__copy_to_user(void __user *to, const void *from, unsigned long n)
++__arch_copy_to_user(void __user *to, const void *from, unsigned long n)
+ {
+ #ifndef CONFIG_UACCESS_WITH_MEMCPY
+ 	unsigned int __ua_flags;
+-
+-	check_object_size(from, n, true);
+ 	__ua_flags = uaccess_save_and_enable();
+ 	n = arm_copy_to_user(to, from, n);
+ 	uaccess_restore(__ua_flags);
+ 	return n;
+ #else
+-	check_object_size(from, n, true);
+ 	return arm_copy_to_user(to, from, n);
+ #endif
+ }
+@@ -526,25 +522,49 @@ __clear_user(void __user *addr, unsigned long n)
+ }
+ 
+ #else
+-#define __copy_from_user(to, from, n)	(memcpy(to, (void __force *)from, n), 0)
+-#define __copy_to_user(to, from, n)	(memcpy((void __force *)to, from, n), 0)
++#define __arch_copy_from_user(to, from, n)	\
++					(memcpy(to, (void __force *)from, n), 0)
++#define __arch_copy_to_user(to, from, n)	\
++					(memcpy((void __force *)to, from, n), 0)
+ #define __clear_user(addr, n)		(memset((void __force *)addr, 0, n), 0)
+ #endif
+ 
+-static inline unsigned long __must_check copy_from_user(void *to, const void __user *from, unsigned long n)
++static inline unsigned long __must_check
++__copy_from_user(void *to, const void __user *from, unsigned long n)
++{
++	check_object_size(to, n, false);
++	return __arch_copy_from_user(to, from, n);
++}
++
++static inline unsigned long __must_check
++copy_from_user(void *to, const void __user *from, unsigned long n)
+ {
+ 	unsigned long res = n;
++
++	check_object_size(to, n, false);
++
+ 	if (likely(access_ok(VERIFY_READ, from, n)))
+-		res = __copy_from_user(to, from, n);
++		res = __arch_copy_from_user(to, from, n);
+ 	if (unlikely(res))
+ 		memset(to + (n - res), 0, res);
+ 	return res;
+ }
+ 
+-static inline unsigned long __must_check copy_to_user(void __user *to, const void *from, unsigned long n)
++static inline unsigned long __must_check
++__copy_to_user(void __user *to, const void *from, unsigned long n)
+ {
++	check_object_size(from, n, true);
++
++	return __arch_copy_to_user(to, from, n);
++}
++
++static inline unsigned long __must_check
++copy_to_user(void __user *to, const void *from, unsigned long n)
++{
++	check_object_size(from, n, true);
++
+ 	if (access_ok(VERIFY_WRITE, to, n))
+-		n = __copy_to_user(to, from, n);
++		n = __arch_copy_to_user(to, from, n);
+ 	return n;
+ }
+ 
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
