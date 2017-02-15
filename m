@@ -1,96 +1,121 @@
-Date: Tue, 14 Feb 2017 22:54:19 -0700
+Date: Tue, 14 Feb 2017 22:56:26 -0700
 From: Eddie Kovsky <ewk@edkovsky.org>
-Message-ID: <20170215055419.GB32572@athena>
+Message-ID: <20170215055626.GC32572@athena>
 References: <20170212233140.10606-1-ewk@edkovsky.org>
- <20170212233140.10606-3-ewk@edkovsky.org>
- <CAGXu5jJhD4RX5kiZOggSDKjyb7jbcgNrf-6eSDAc0Uq1wSvqiw@mail.gmail.com>
+ <20170212233140.10606-2-ewk@edkovsky.org>
+ <CAGXu5jLt3W9_KFeb7VSz4z-XAqWFDMM2i=3YGRFKmAfu0RGvng@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jJhD4RX5kiZOggSDKjyb7jbcgNrf-6eSDAc0Uq1wSvqiw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC] [PATCH 2/2] extable: verify address is read-only
+In-Reply-To: <CAGXu5jLt3W9_KFeb7VSz4z-XAqWFDMM2i=3YGRFKmAfu0RGvng@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC] [PATCH 1/2] module: verify address is read-only
 To: Kees Cook <keescook@chromium.org>
 Cc: Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 02/13/17, Kees Cook wrote:
 > On Sun, Feb 12, 2017 at 3:31 PM, Eddie Kovsky <ewk@edkovsky.org> wrote:
-> > Provide a mechanism to check if the address of a variable is
-> > const or ro_after_init. It mimics the existing functions that test if an
-> > address is inside the kernel's text section.
+> > Implement a mechanism to check if a module's address is in
+> > the rodata or ro_after_init sections. It mimics the exsiting functions
+> > that test if an address is inside a module's text section.
 > >
 > > Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
 > > ---
-> >  include/linux/kernel.h |  2 ++
-> >  kernel/extable.c       | 31 +++++++++++++++++++++++++++++++
-> >  2 files changed, 33 insertions(+)
+> >  include/linux/module.h |  2 ++
+> >  kernel/module.c        | 44 ++++++++++++++++++++++++++++++++++++++++++++
+> >  2 files changed, 46 insertions(+)
 > >
-> > diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-> > index 4c26dc3a8295..51beea39e6c4 100644
-> > --- a/include/linux/kernel.h
-> > +++ b/include/linux/kernel.h
-> > @@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
-> >  extern int __kernel_text_address(unsigned long addr);
-> >  extern int kernel_text_address(unsigned long addr);
-> >  extern int func_ptr_is_kernel_text(void *ptr);
-> > +extern int core_kernel_ro_data(unsigned long addr);
-> > +extern int kernel_ro_address(unsigned long addr);
+> > diff --git a/include/linux/module.h b/include/linux/module.h
+> > index 0297c5cd7cdf..2848416f7715 100644
+> > --- a/include/linux/module.h
+> > +++ b/include/linux/module.h
+> > @@ -492,7 +492,9 @@ static inline int module_is_live(struct module *mod)
 > >
-> >  unsigned long int_sqrt(unsigned long);
+> >  struct module *__module_text_address(unsigned long addr);
+> >  struct module *__module_address(unsigned long addr);
+> > +struct module *__module_ro_address(unsigned long addr);
+> >  bool is_module_address(unsigned long addr);
+> > +bool is_module_ro_address(unsigned long addr);
+> >  bool is_module_percpu_address(unsigned long addr);
+> >  bool is_module_text_address(unsigned long addr);
+>
+> This will need the !CONFIG_MODULES stubs added as well (see
+> __module_address()). e.g.:
+>
+> ...
+> #else /* !CONFIG_MODULES... */
+> ...
+> static incline struct module *__module_ro_address(unsigned long addr)
+> {
+>        return NULL;
+> }
+> ...
+> #endif
+>
 > >
-> > diff --git a/kernel/extable.c b/kernel/extable.c
-> > index 6b0d09051efb..f5a29c4ae391 100644
-> > --- a/kernel/extable.c
-> > +++ b/kernel/extable.c
-> > @@ -149,3 +149,34 @@ int func_ptr_is_kernel_text(void *ptr)
-> >                 return 1;
-> >         return is_module_text_address(addr);
+> > diff --git a/kernel/module.c b/kernel/module.c
+> > index 8168eb738f4d..e7eb329c585d 100644
+> > --- a/kernel/module.c
+> > +++ b/kernel/module.c
+> > @@ -4270,6 +4270,50 @@ struct module *__module_text_address(unsigned long addr)
 > >  }
-> > +
+> >  EXPORT_SYMBOL_GPL(__module_text_address);
+> >
 > > +/**
-> > + * core_kernel_ro_data - Verify address points to read-only section
-> > + * @addr: address to test
+> > + * is_module_text_ro_address - is this address inside read-only module code?
+> > + * @addr: the address to check.
 > > + *
 > > + */
-> > +int core_kernel_ro_data(unsigned long addr)
+> > +bool is_module_ro_address(unsigned long addr)
 > > +{
-> > +       if (addr >= (unsigned long)__start_rodata &&
-> > +           addr < (unsigned long)__end_rodata)
-> > +               return 1;
+> > +       bool ret;
 > > +
-> > +       if (addr >= (unsigned long)__start_data_ro_after_init &&
-> > +           addr < (unsigned long)__end_data_ro_after_init)
-> > +               return 1;
+> > +       preempt_disable();
+> > +       ret = __module_ro_address(addr) != NULL;
+> > +       preempt_enable();
 > > +
-> > +       return 0;
+> > +       return ret;
 > > +}
 > > +
-> > +/* Verify that address is const or ro_after_init. */
-> > +int kernel_ro_address(unsigned long addr)
+> > +/*
+> > + * __module_ro_address - get the module whose code contains a read-only address.
+> > + * @addr: the address.
+> > + *
+> > + * Must be called with preempt disabled or module mutex held so that
+> > + * module doesn't get freed during this.
+> > + */
+> > +struct module *__module_ro_address(unsigned long addr)
 > > +{
-> > +       if (core_kernel_ro_data(addr))
-> > +               return 1;
-> > +       if (is_module_ro_address(addr))
-> > +               return 1;
-> > +       if (is_ftrace_trampoline(addr))
-> > +               return 1;
-> 
-> Why the trampoline test here?
-> 
-
-I wasn't certain if we needed to keep that as a fall through. I'll take
-it out when I send version 2.
-
+> > +       struct module *mod = __module_address(addr);
 > > +
-> > +       return 0;
+> > +       if (mod) {
+> > +               /* Make sure it's within the read-only section. */
+> > +               if (!within(addr, mod->init_layout.base,
+> > +                           mod->init_layout.ro_size)
+> > +                   && !within(addr, mod->core_layout.base,
+> > +                              mod->core_layout.ro_size))
+> > +                       mod = NULL;
+> > +               if (!within(addr, mod->init_layout.base,
+> > +                           mod->init_layout.ro_after_init_size)
+> > +                   && !within(addr, mod->core_layout.base,
+> > +                              mod->core_layout.ro_after_init_size))
+> > +                       mod = NULL;
+> > +       }
+> > +       return mod;
 > > +}
-> > --
-> > 2.11.1
-> 
-> Otherwise looks exactly like what I had in mind; nice!
-> 
+> > +EXPORT_SYMBOL_GPL(__module_ro_address);
+>
+> This follows what is_module_address() does, so that seems sensible to
+> me. I defer to Jessica and Rusty, though. :)
+>
 > -Kees
-> 
-> -- 
+>
+> --
 > Kees Cook
 > Pixel Security
+
+I'll fix this up and add the vmbus_register() patch for the next series.
+
+Thanks
+
+Eddie
