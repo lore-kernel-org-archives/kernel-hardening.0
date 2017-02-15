@@ -1,153 +1,146 @@
+Date: Wed, 15 Feb 2017 14:33:47 -0600
+From: Bjorn Helgaas <helgaas@kernel.org>
+Message-ID: <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com>
+References: <20170211013758.3288-1-me@jessfraz.com>
+ <20170211013758.3288-3-me@jessfraz.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170215125735.17920d58@kaiwan-T460>
-References: <20170118095155.5e3bf976@kaiwan-T460> <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
- <20170203101949.4c6908be@kaiwan-T460> <CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
- <20170209090714.63ce6333@kaiwan-T460> <CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
- <CAPDLWs_75A08esqUGkkCBpfGDKaVH8LEtvqcM4fNZ-Ue2beZeA@mail.gmail.com>
- <CAGXu5jLPrxc5dcB3HYF+D7WceQEJA8BrSn5py-o1NDzsRJR9ZQ@mail.gmail.com> <20170215125735.17920d58@kaiwan-T460>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 15 Feb 2017 12:30:52 -0800
-Message-ID: <CAGXu5jLRyDQ9M209JyNQRm3M+4ZtzdE9W0=7S7aXqSMavFZi1A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
- to linux-next
-To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>, Christoph Lameter <cl@linux.com>
-Cc: Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170211013758.3288-3-me@jessfraz.com>
+Subject: [kernel-hardening] Re: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
+To: Jess Frazelle <me@jessfraz.com>
+Cc: "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Thomas Gleixner <tglx@linutronix.de>, Marc Zyngier <marc.zyngier@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 14, 2017 at 11:27 PM, Kaiwan N Billimoria
-<kaiwan@kaiwantech.com> wrote:
-> Okay, I've incorporated your suggestions.
-> Of course, the printk's are temporary.
->
-> Pl see:
-> - the updated patch, and
-> - a 'truth table' enumerating some basic testing with these configs,
-> below:
->
+[+cc Kees, Thomas, Marc]
+
+Hi Jess,
+
+Thanks for the patch!
+
+On Fri, Feb 10, 2017 at 05:37:56PM -0800, Jess Frazelle wrote:
+> Marked msi_domain_ops structs as __ro_after_init when called only during init.
+> This protects the data structure from accidental corruption.
+> 
+> Suggested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Jess Frazelle <me@jessfraz.com>
 > ---
-> diff --git a/init/main.c b/init/main.c
-> index ef47035..ba44574 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -1028,6 +1028,11 @@ static noinline void __init kernel_init_freeable(void)
->
->         do_basic_setup();
->
-> +#ifdef CONFIG_MEMORY_SANITIZE
-> +       pr_debug("[CONFIG_MEMORY_SANITIZE]: page_poisoning_enabled? %s\n",
-> +               page_poisoning_enabled() ? "yes" : "no");
-> +#endif
-> +
->         /* Open the /dev/console on the rootfs, this should never fail */
->         if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
->                 pr_err("Warning: unable to open an initial console.\n");
-> diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-> index 3e5eada..fbb4290 100644
-> --- a/mm/Kconfig.debug
-> +++ b/mm/Kconfig.debug
-> @@ -97,3 +97,24 @@ config DEBUG_RODATA_TEST
->      ---help---
->        This option enables a testcase for the setting rodata read-only.
->
-> +config MEMORY_SANITIZE
-> +    bool "Enable memory sanitization features"
-> +    select SLUB_DEBUG
-> +    select PAGE_POISONING
-> +    select PAGE_POISONING_NO_SANITY
-> +    ---help---
-> +       This option enables memory sanitization features. Particularly,
-> +       when you turn on this option, it auto-enables:
-> +       - SLUB debug
-> +       - page poisoning
-> +       - page poisoning no sanity.
-> +
-> +       Implication: turning this option on _will_ implicitly enable:
-> +       - the SLUB_DEBUG switch to the equivalent of the kernel command-line
-> +         'slub_debug=p' ; (where p=PAGE_POISON),
-> +       - page poisoning, equivalent to passing the kernel command-line option
-> +         'page_poison=on',
-> +       irrespective of whether the options are explicitly passed or not.
+>  drivers/pci/host/pci-hyperv.c | 2 +-
+>  drivers/pci/host/vmd.c        | 2 +-
+>  drivers/pci/msi.c             | 2 +-
 
-Hm, we don't want to force this on against other command line
-settings, so how about what I suggest below...
+I understand the value of __ro_after_init, but I'm not certain about
+sprinkling it around in seemingly random places because it's hard to
+know where to put it and whether we put it in all the right places.
 
-> +
-> +       If unsure, say N.
-> +
-> diff --git a/mm/page_poison.c b/mm/page_poison.c
-> index 2e647c6..8d1e883 100644
-> --- a/mm/page_poison.c
-> +++ b/mm/page_poison.c
-> @@ -49,6 +49,17 @@ struct page_ext_operations page_poisoning_ops = {
->         .init = init_page_poisoning,
->  };
->
-> +static int __init memory_sanitize_pagepoison_init(void)
-> +{
-> +       /* With 'memory sanitize' On, page poisoning Must be turned on */
-> +       if (IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
-> +               want_page_poisoning = true;
-> +               __page_poisoning_enabled = true;
-> +       }
-> +       return 0;
-> +}
-> +early_initcall(memory_sanitize_pagepoison_init);
+How did you choose these three files to change?  There are other
+instances of struct msi_domain_ops that use MSI_FLAG_USE_DEF_DOM_OPS.
+Should they be changed, too?  If not, is there a rule to figure out
+which ones should be made __ro_after_init?
 
-Can this be changed to interact better with the command line
-arguments, in case someone selects CONFIG_MEMORY_SANITIZE, but boots
-with page_poison=off?
+I wonder if adding __ro_after_init is really the best solution.  I
+looked at VMD to see how vmd_msi_domain_ops is updated.  Here are the
+definitions:
 
-e.g. instead of your init code, do this:
+  static struct msi_domain_ops vmd_msi_domain_ops = {
+    .get_hwirq = vmd_get_hwirq,
+    .msi_init  = vmd_msi_init,
+    ...
+  };
 
-static bool want_page_poisoning __read_mostly =
-IS_ENABLED(CONFIG_MEMORY_SANITIZE);
+  static struct msi_domain_info vmd_msi_domain_info = {
+    .flags = MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS |
+             MSI_FLAG_PCI_MSIX,
+    .ops = &vmd_msi_domain_ops,
+    ...
+  };
 
-That way the logic for __page_poisoning_enabled is retained, etc.
+Both vmd_msi_domain_ops and vmd_msi_domain_info are statically
+initialized, but not completely.  Then we pass a pointer to
+pci_msi_create_irq_domain(), which fills in defaults for some of the
+function pointers that weren't statically initialized:
 
-> +
->  static inline void set_page_poison(struct page *page)
->  {
->         struct page_ext *page_ext;
-> diff --git a/mm/slub.c b/mm/slub.c
-> index d24e1ce..62de543 100644
-> --- a/mm/slub.c
-> +++ b/mm/slub.c
-> @@ -457,6 +457,17 @@ static int slub_debug;
->  static char *slub_debug_slabs;
->  static int disable_higher_order_debug;
->
-> +static int __init memory_sanitize_slubdebug_init(void)
-> +{
-> +/* With 'memory sanitize' On, slub_debug Must be set to 'p' */
-> +       if (IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
-> +            IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
-> +               slub_debug |= SLAB_POISON;
-> +       }
-> +       return 0;
-> +}
-> +early_initcall(memory_sanitize_slubdebug_init);
+  vmd_enable_domain()
+    pci_msi_create_irq_domain(NULL, &vmd_msi_domain_info, ...)
+      if (info->flags & MSI_FLAG_USE_DEF_DOM_OPS)
+        pci_msi_domain_update_dom_ops(info)
+	  if (ops->set_desc == NULL)
+	    ops->msi_check = pci_msi_domain_check_cap
 
-And instead of this, use:
+We know at build-time what all the function pointers will be, so in
+principle we should be able to make the struct const, which would be
+even better than __ro_after_init.
 
-#if defined(CONFIG_SLUB_DEBUG_ON)
-# define SLUB_DEBUG_INITIAL_FLAGS       DEBUG_DEFAULT_FLAGS
-#elif defined(CONFIG_MEMORY_SANITIZE)
-# define SLUB_DEBUG_INITIAL_FLAGS       SLAB_POISON
-#else
-# define SLUB_DEBUG_INITIAL_FLAGS       0
-#endif
+For example, we could require that callers set every function pointer
+before calling pci_msi_create_irq_domain(), using the default ones
+(pci_msi_domain_set_desc, pci_msi_domain_check_cap,
+pci_msi_domain_handle_error) if it doesn't need to override them,
+e.g.,
 
-static int slub_debug = SLUB_DEBUG_INITIAL_FLAGS;
+  static struct msi_domain_ops vmd_msi_domain_ops = {
+    .get_hwirq = vmd_get_hwirq,
+    .msi_check = pci_msi_domain_check_cap,
+  };
 
-That way we're just setting the boot-time defaults and it'll safely
-interact with everything else.
+Or we could leave NULL pointers in the structure and have the code
+that calls through the function pointers check for NULL and call the
+default itself, e.g.,
 
-(I've added Christoph to CC to see what he thinks of this.)
+  if (ops->msi_check)
+    ops->msi_check(...)
+  else
+    pci_msi_domain_check_cap(...)
 
--Kees
+It looks like the "USE_DEF_OPS" framework was added by Jiang Liu with
+the commits below.  I would CC: him for his thoughts, but I don't
+have a current email address.
 
--- 
-Kees Cook
-Pixel Security
+  aeeb59657c35 ("genirq: Provide default callbacks for msi_domain_ops")
+  3878eaefb89a ("PCI/MSI: Enhance core to support hierarchy irqdomain")
+
+Bjorn
+
+>  3 files changed, 3 insertions(+), 3 deletions(-)
+> 
+> diff --git a/drivers/pci/host/pci-hyperv.c b/drivers/pci/host/pci-hyperv.c
+> index 3efcc7bdc5fb..f05b93689d8f 100644
+> --- a/drivers/pci/host/pci-hyperv.c
+> +++ b/drivers/pci/host/pci-hyperv.c
+> @@ -958,7 +958,7 @@ static irq_hw_number_t hv_msi_domain_ops_get_hwirq(struct msi_domain_info *info,
+>  	return arg->msi_hwirq;
+>  }
+> 
+> -static struct msi_domain_ops hv_msi_ops = {
+> +static struct msi_domain_ops hv_msi_ops __ro_after_init = {
+>  	.get_hwirq	= hv_msi_domain_ops_get_hwirq,
+>  	.msi_prepare	= pci_msi_prepare,
+>  	.set_desc	= pci_msi_set_desc,
+> diff --git a/drivers/pci/host/vmd.c b/drivers/pci/host/vmd.c
+> index 18ef1a93c10a..152c461538e4 100644
+> --- a/drivers/pci/host/vmd.c
+> +++ b/drivers/pci/host/vmd.c
+> @@ -253,7 +253,7 @@ static void vmd_set_desc(msi_alloc_info_t *arg, struct msi_desc *desc)
+>  	arg->desc = desc;
+>  }
+> 
+> -static struct msi_domain_ops vmd_msi_domain_ops = {
+> +static struct msi_domain_ops vmd_msi_domain_ops __ro_after_init = {
+>  	.get_hwirq	= vmd_get_hwirq,
+>  	.msi_init	= vmd_msi_init,
+>  	.msi_free	= vmd_msi_free,
+> diff --git a/drivers/pci/msi.c b/drivers/pci/msi.c
+> index 50c5003295ca..93141d5e2d1c 100644
+> --- a/drivers/pci/msi.c
+> +++ b/drivers/pci/msi.c
+> @@ -1413,7 +1413,7 @@ static void pci_msi_domain_set_desc(msi_alloc_info_t *arg,
+>  #define pci_msi_domain_set_desc		NULL
+>  #endif
+> 
+> -static struct msi_domain_ops pci_msi_domain_ops_default = {
+> +static struct msi_domain_ops pci_msi_domain_ops_default __ro_after_init = {
+>  	.set_desc	= pci_msi_domain_set_desc,
+>  	.msi_check	= pci_msi_domain_check_cap,
+>  	.handle_error	= pci_msi_domain_handle_error,
+> --
+> 2.11.0
+> 
