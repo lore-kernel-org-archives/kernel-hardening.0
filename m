@@ -1,50 +1,74 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Wed, 15 Feb 2017 17:31:27 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC5623063C51@ORSMSX103.amr.corp.intel.com>
-References: <a5e688c4-94b8-b0aa-4425-fc687d3aeeca@redhat.com>
- <CAGXu5jLre9QdOWi+-GxcGi=rxp=Emwnaz=MBxDtdd_ZD=VRc2w@mail.gmail.com>
-In-Reply-To: <CAGXu5jLre9QdOWi+-GxcGi=rxp=Emwnaz=MBxDtdd_ZD=VRc2w@mail.gmail.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Subject: RE: [kernel-hardening] Format string gcc-plugin?
-To: Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@redhat.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "nicolas.iooss_linux@m4x.org" <nicolas.iooss_linux@m4x.org>
+Sender: keescook@google.com
+In-Reply-To: <20170215104503.GA31733@leverpostej>
+References: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com>
+ <CAGXu5j+ogVnxxu1VuUep6ObAdyJbvxMyN25J+PF+exOJqk2VVg@mail.gmail.com>
+ <CAGXu5jLfpq=vn0V_41NbLPyxkPQzGVwvo33tnErkmtcx8TOf4g@mail.gmail.com>
+ <2C0135CD-ACCF-462F-B7C6-E8554C6C99BF@gmail.com> <CAGXu5jLhqFx5gZWB7GFdz_zfphJbnUgwrjHNSxHEFBt8ujtPPg@mail.gmail.com>
+ <20170215104503.GA31733@leverpostej>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 15 Feb 2017 11:18:23 -0800
+Message-ID: <CAGXu5j+-ad5AwJ3sQbud3LsrpB_4-duvfF5kUGKjpY+5gmzJtw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH] usercopy: add testcases to check zeroing on failure of usercopy
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-DQoNCj4gLS0tLS1PcmlnaW5hbCBNZXNzYWdlLS0tLS0NCj4gRnJvbToga2Vlc2Nvb2tAZ29vZ2xl
-LmNvbSBbbWFpbHRvOmtlZXNjb29rQGdvb2dsZS5jb21dIE9uIEJlaGFsZiBPZiBLZWVzDQo+IENv
-b2sNCj4gU2VudDogVHVlc2RheSwgRmVicnVhcnkgMTQsIDIwMTcgMTE6MDggQU0NCj4gVG86IExh
-dXJhIEFiYm90dCA8bGFiYm90dEByZWRoYXQuY29tPg0KPiBDYzoga2VybmVsLWhhcmRlbmluZ0Bs
-aXN0cy5vcGVud2FsbC5jb20NCj4gU3ViamVjdDogUmU6IFtrZXJuZWwtaGFyZGVuaW5nXSBGb3Jt
-YXQgc3RyaW5nIGdjYy1wbHVnaW4/DQo+IA0KPiBPbiBUdWUsIEZlYiAxNCwgMjAxNyBhdCAxMDow
-MSBBTSwgTGF1cmEgQWJib3R0IDxsYWJib3R0QHJlZGhhdC5jb20+IHdyb3RlOg0KPiA+IEhpLA0K
-PiA+DQo+ID4gVGhlIHJlY2VudCBkaXNjdXNzaW9ucyBhYm91dCAlcGsgbGVkIG1lIHRvIHN0YXJ0
-IHBsYXlpbmcgYXJvdW5kIHdpdGgNCj4gPiB3cml0aW5nIGEgZ2NjIHBsdWdpbiAobm90ZXMgYWJv
-dXQgd3JpdGluZyBhIGdjYyBwbHVnaW4gYXJlDQo+ID4gZm9ydGhjb21pbmcpLiBNeSBpZGVhIHdh
-cyB0byBleHBhbmQgY2hlY2tpbmcgb2YgdGhlIGtlcm5lbCdzDQo+ID4gYWRkaXRpb25hbCBmb3Jt
-YXRzICglcEssICVwUiBldGMuKSBvciBwb3NzaWJseSBldmVuIGNoYW5nZSB0aGUgZm9ybWF0DQo+
-ID4gc3RyaW5ncy4gVGhlIGJpZyBpc3N1ZSBpcyB0aGF0IG1vc3Qgb2YgdnNwcmludGYuYyB3b3Vs
-ZCBlbmQgdXAgaW4gdGhlDQo+ID4gcGx1Z2luIHdoaWNoIHdvdWxkIGJlIHVnbHkgdG8gbWFpbnRh
-aW4uIFRoaXMgY29uY2VwdCBjb3VsZCBiZSB1c2VkIGZvcg0KPiA+IHNvbWUgb2YgdGhlIHByb2Js
-ZW1zIHdpdGgga2VybmVsIHBvaW50ZXIgbGVha3MNCj4gPiBodHRwczovL2tlcm5zZWMub3JnL3dp
-a2kvaW5kZXgucGhwL0J1Z19DbGFzc2VzL0tlcm5lbF9wb2ludGVyX2xlYWsNCj4gPiBidXQgSSdt
-IGludGVyZXN0ZWQgaWYgYW55b25lIGVsc2UgaGFzIHRob3VnaHRzIG9yIGlkZWFzIGFib3V0IGhv
-dw0KPiA+IGJldHRlciB0byBkbyB0aGlzIChvciBldmVuIG5vdCB0byBkbyB0aGlzKS4NCj4gDQo+
-IElmIHdlIGNhbiBsZXZlcmFnZSBjb21tb24gY29kZSBiZXR3ZWVuIHRoZSBwbHVnaW4gYW5kIHZz
-cHJpbnRmLmMsIGl0IHNob3VsZCBiZQ0KPiBkb2FibGUuIEkgaGF2ZW4ndCBsb29rZWQgYXQgcHJv
-Y2Vzc2luZyBmb3JtYXQgc3RyaW5ncyBhdCBhbGwsIHRob3VnaCBJIGFzc3VtZSB0aGUNCj4gcGx1
-Z2luIHdvdWxkIG5lZWQgdG8gY2hlY2sgdGhlIF9fcHJpbnRmLWdlbmVyYXRlZCBhdHRyaWJ1dGVz
-Lg0KPiANCj4gSW4gbXkgcmVsYXRlZCBub3RlcyB3YXMgYSBoaW50IHRoYXQgbG9va2luZyBhdCBo
-b3cgZ2NjIGRvZXMgaXQgbm9ybWFsbHkgaXMgZ2NjL2MtDQo+IGZhbWlseS9jLWZvcm1hdC5jOg0K
-PiBodHRwOi8vc3RhY2tvdmVyZmxvdy5jb20vYS8xNjMzNjE3NQ0KPiANCj4gQW5kIHdoaWxlIG5v
-dCBzdHJpY3RseSBwYXJ0IG9mIGZvcm1hdCB0eXBlIGNoZWNraW5nLCBJIHRhbGtlZCBhIGJpdCBh
-Ym91dCBkZWFsaW5nDQo+IHdpdGggY29uc3Qgc3RyaW5ncyBoZXJlOg0KPiBodHRwOi8vd3d3Lm9w
-ZW53YWxsLmNvbS9saXN0cy9rZXJuZWwtaGFyZGVuaW5nLzIwMTYvMTIvMDcvMTYNCj4gDQo+IC1L
-ZWVzDQo+IA0KPiAtLQ0KPiBLZWVzIENvb2sNCj4gUGl4ZWwgU2VjdXJpdHkNCg0KZ2NjIHdvdWxk
-IGJlIG5pY2Ugc2luY2UgaXQncyB0aGUgY29tcGlsZXIgbW9zdCBvZnRlbiB1c2VkIGZvciBidWls
-ZGluZyBsaW51eCBrZXJuZWwgKGRvZXMgY2xhbmcgd29yayBmdWxseSB5ZXQ/KQ0KDQpOaWNvbGFz
-IElvb3NzIHdhcyBhYmxlIHRvIHVzZSBVQlNhbiB0byBmaW5kIG9uZToNCg0KY29tbWl0IDkwMWQ4
-MDVjMzNmYzRjMDI5ZmM2YjJkOTRlZTVmYjdkMzAyNzgwNDUNCkF1dGhvcjogTmljb2xhcyBJb29z
-cyA8bmljb2xhcy5pb29zc19saW51eEBtNHgub3JnPg0KRGF0ZTogICBUdWUgQXVnIDIgMTQ6MDM6
-MTAgMjAxNiAtMDcwMA0KDQogICAgVUJTQU46IGZpeCB0eXBvIGluIGZvcm1hdCBzdHJpbmcNCg0K
+On Wed, Feb 15, 2017 at 2:45 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Tue, Feb 14, 2017 at 12:36:48PM -0800, Kees Cook wrote:
+>> On Mon, Feb 13, 2017 at 5:44 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> >> On Feb 14, 2017, at 4:24 AM, Kees Cook <keescook@chromium.org> wrote:
+>> >>> On Mon, Feb 13, 2017 at 10:33 AM, Kees Cook <keescook@chromium.org> wrote:
+>> >>>> On Sat, Feb 11, 2017 at 10:13 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>
+>> >>>> @@ -69,25 +76,35 @@ static int __init test_user_copy_init(void)
+>> >>>>                    "legitimate put_user failed");
+>> >>>>
+>> >>>>        /* Invalid usage: none of these should succeed. */
+>> >>>> +       memset(kmem, 0x5A, PAGE_SIZE);
+>> >>>>        ret |= test(!copy_from_user(kmem, (char __user *)(kmem + PAGE_SIZE),
+>> >>>>                                    PAGE_SIZE),
+>> >>>>                    "illegal all-kernel copy_from_user passed");
+>> >>>> +       ret |= test(memcmp(zerokmem, kmem, PAGE_SIZE),
+>> >>>> +                   "zeroing failure for illegal all-kernel copy_from_user");
+>> >>>> +       memset(bad_usermem, 0x5A, PAGE_SIZE);
+>> >>>
+>> >>> Oh, actually, ha-ha: this isn't legal: it's a direct copy from kernel
+>> >>> to userspace. :) This needs a copy_to_user()... (and same for the
+>> >>> memcmp...)
+>> >
+>> > I just came up with that usercopy doesn't check the buffer is valid
+>> > when zeroing happens. I mean if the buffer is wrong address pointing
+>> > other kernel objects or user space address, is it possible for
+>> > zeroing to overwrite the address ?
+>>
+>> The overwrite happening even when the address is "wrong" seems like a
+>> bug to me, but it's sort of already too late (a bad kernel address
+>> would have already been a target for a userspace copy), but if
+>> something has gone really wrong (i.e. attacker doesn't have control
+>> over the source buffer) this does give a "write 0" primitive.
+>>
+>> Mark Rutland noticed some order-of-operations issues here too, and his
+>> solution is pretty straight forward: move the checks outside the
+>> failure path. If the kernel target is demonstrably bad, then the
+>> process will be killed before the write 0 happens. (In the non-const
+>> case at least...)
+>>
+>> (Oh, btw, I just noticed that x86's copy_from_user() already does the
+>> check before _copy_from_user() can do the memset, so x86 is already
+>> "ok" in this regard.)
+>
+> FWIW, the patch making arm64 do the check first is queued [1], and
+> should be in v4.11.
+>
+> Doing the same for other architectures would be good.
+
+It looks like x86 is already ok (kind of by accident). ARM needs
+fixing. I think it'd be best to model it after arm64's approach.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
