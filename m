@@ -1,71 +1,36 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170215104503.GA31733@leverpostej>
-References: <1486880019-8201-1-git-send-email-hoeun.ryu@gmail.com>
- <CAGXu5j+ogVnxxu1VuUep6ObAdyJbvxMyN25J+PF+exOJqk2VVg@mail.gmail.com>
- <CAGXu5jLfpq=vn0V_41NbLPyxkPQzGVwvo33tnErkmtcx8TOf4g@mail.gmail.com>
- <2C0135CD-ACCF-462F-B7C6-E8554C6C99BF@gmail.com> <CAGXu5jLhqFx5gZWB7GFdz_zfphJbnUgwrjHNSxHEFBt8ujtPPg@mail.gmail.com>
- <20170215104503.GA31733@leverpostej>
+In-Reply-To: <20170215012319.c7720609f415b2abf725e88f@gmail.com>
+References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
+ <CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
+ <20161219121046.646e5ef425178fce8c2cb555@gmail.com> <CAGXu5jKiDUsncxEOCta3fEgh0OQ0oqpi3gzkPWvpu2oPLq2g4g@mail.gmail.com>
+ <20170111012459.c0a0c615c99a389e4d89c8b5@gmail.com> <CAGXu5jJRNuLR+Ekt26fxkg5wCkEv5fv-4B7=rt78OfRHN_w1Jw@mail.gmail.com>
+ <20170112224116.680debbf6f5c288ba51a46c0@gmail.com> <CAGXu5jLB_ZxPcJDsBK0h-HTfb8G-GdC+BnD-1rTL5ePUvcwuzA@mail.gmail.com>
+ <CAGXu5jJ_9Gbre2J1HYrY-gwnsStL8P+MKmKQwCBtY4-7m53RLA@mail.gmail.com> <20170215012319.c7720609f415b2abf725e88f@gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 15 Feb 2017 11:18:23 -0800
-Message-ID: <CAGXu5j+-ad5AwJ3sQbud3LsrpB_4-duvfF5kUGKjpY+5gmzJtw@mail.gmail.com>
+Date: Wed, 15 Feb 2017 11:27:06 -0800
+Message-ID: <CAGXu5jKWGANHjA5opm4V9AzCVA27_iZqmypPvBLfzJ0MKNZDvg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] usercopy: add testcases to check zeroing on failure of usercopy
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the initify gcc plugin
+To: Emese Revfy <re.emese@gmail.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 15, 2017 at 2:45 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Tue, Feb 14, 2017 at 12:36:48PM -0800, Kees Cook wrote:
->> On Mon, Feb 13, 2017 at 5:44 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->> >> On Feb 14, 2017, at 4:24 AM, Kees Cook <keescook@chromium.org> wrote:
->> >>> On Mon, Feb 13, 2017 at 10:33 AM, Kees Cook <keescook@chromium.org> wrote:
->> >>>> On Sat, Feb 11, 2017 at 10:13 PM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+On Tue, Feb 14, 2017 at 4:23 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> On Thu, 12 Jan 2017 15:40:41 -0800
+> Kees Cook <keescook@chromium.org> wrote:
 >
->> >>>> @@ -69,25 +76,35 @@ static int __init test_user_copy_init(void)
->> >>>>                    "legitimate put_user failed");
->> >>>>
->> >>>>        /* Invalid usage: none of these should succeed. */
->> >>>> +       memset(kmem, 0x5A, PAGE_SIZE);
->> >>>>        ret |= test(!copy_from_user(kmem, (char __user *)(kmem + PAGE_SIZE),
->> >>>>                                    PAGE_SIZE),
->> >>>>                    "illegal all-kernel copy_from_user passed");
->> >>>> +       ret |= test(memcmp(zerokmem, kmem, PAGE_SIZE),
->> >>>> +                   "zeroing failure for illegal all-kernel copy_from_user");
->> >>>> +       memset(bad_usermem, 0x5A, PAGE_SIZE);
->> >>>
->> >>> Oh, actually, ha-ha: this isn't legal: it's a direct copy from kernel
->> >>> to userspace. :) This needs a copy_to_user()... (and same for the
->> >>> memcmp...)
->> >
->> > I just came up with that usercopy doesn't check the buffer is valid
->> > when zeroing happens. I mean if the buffer is wrong address pointing
->> > other kernel objects or user space address, is it possible for
->> > zeroing to overwrite the address ?
->>
->> The overwrite happening even when the address is "wrong" seems like a
->> bug to me, but it's sort of already too late (a bad kernel address
->> would have already been a target for a userspace copy), but if
->> something has gone really wrong (i.e. attacker doesn't have control
->> over the source buffer) this does give a "write 0" primitive.
->>
->> Mark Rutland noticed some order-of-operations issues here too, and his
->> solution is pretty straight forward: move the checks outside the
->> failure path. If the kernel target is demonstrably bad, then the
->> process will be killed before the write 0 happens. (In the non-const
->> case at least...)
->>
->> (Oh, btw, I just noticed that x86's copy_from_user() already does the
->> check before _copy_from_user() can do the memset, so x86 is already
->> "ok" in this regard.)
+>> WARNING: drivers/clk/bcm/built-in.o(.text+0xec2): Section mismatch in
+>> reference from the function clk_gate() to the variable
+>> .init.rodata.str:__func__.29708
+>> The function clk_gate() references
+>> the variable __initconst __func__.29708.
+>> This is often because clk_gate lacks a __initconst
+>> annotation or the annotation of __func__.29708 is wrong.
 >
-> FWIW, the patch making arm64 do the check first is queued [1], and
-> should be in v4.11.
->
-> Doing the same for other architectures would be good.
+> Thanks for the report, it will be fixed in the next grsec patch.
 
-It looks like x86 is already ok (kind of by accident). ARM needs
-fixing. I think it'd be best to model it after arm64's approach.
+Very cool, thanks! What did the problem turn out to be?
 
 -Kees
 
