@@ -1,122 +1,135 @@
 From: James Morse <james.morse@arm.com>
-Date: Thu, 16 Feb 2017 18:29:15 +0000
-Message-Id: <20170216182917.19637-2-james.morse@arm.com>
+Date: Thu, 16 Feb 2017 18:29:16 +0000
+Message-Id: <20170216182917.19637-3-james.morse@arm.com>
 In-Reply-To: <20170216182917.19637-1-james.morse@arm.com>
 References: <20170216182917.19637-1-james.morse@arm.com>
-Subject: [kernel-hardening] [PATCH v4 1/3] usercopy: create enum stack_type
+Subject: [kernel-hardening] [PATCH v4 2/3] arm64: Add arch_within_stack_frames() for hardened usercopy
 To: kernel-hardening@lists.openwall.com
 Cc: linux-arm-kernel@lists.infradead.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, keescook@chromium.org, Mark Rutland <mark.rutland@arm.com>, panand@redhat.com, keun-o.park@darkmatter.ae
 List-ID: <kernel-hardening.lists.openwall.com>
 
-From: Sahara <keun-o.park@darkmatter.ae>
+Hardened usercopy tests that an object being copied to/from userspace
+doesn't overlap multiple stack frames.
 
-This patch creates enum stack_type which is only used in usercopy.c
-for now. This enum type can be used for x86 and other architecture's
-thread_info.h, which may have arch_within_stack_frames().
+Add arch_within_stack_frames() to do this using arm64's stackwalker. The
+callback looks for 'fp' appearing with the range occupied by the object.
 
-Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
+(This isn't enough to trip the lkdtm tests on arm64)
+
+CC: Sahara <keun-o.park@darkmatter.ae>
+Based-on-a-patch-from: Sahara <keun-o.park@darkmatter.ae>
 Signed-off-by: James Morse <james.morse@arm.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
-Acked-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/include/asm/thread_info.h | 19 ++++++++++---------
- include/linux/thread_info.h        | 13 ++++++++++---
- mm/usercopy.c                      |  8 +-------
- 3 files changed, 21 insertions(+), 19 deletions(-)
+ arch/arm64/Kconfig                   |  1 +
+ arch/arm64/include/asm/thread_info.h |  7 ++++-
+ arch/arm64/kernel/stacktrace.c       | 54 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 58 insertions(+), 4 deletions(-)
 
-diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-index ad6f5eb07a95..7af4b8b23b8b 100644
---- a/arch/x86/include/asm/thread_info.h
-+++ b/arch/x86/include/asm/thread_info.h
-@@ -168,13 +168,13 @@ static inline unsigned long current_stack_pointer(void)
-  * entirely contained by a single stack frame.
-  *
-  * Returns:
-- *		 1 if within a frame
-- *		-1 if placed across a frame boundary (or outside stack)
-- *		 0 unable to determine (no frame pointers, etc)
-+ *	GOOD_FRAME	if within a frame
-+ *	BAD_STACK	if placed across a frame boundary (or outside stack)
-+ *	NOT_STACK	unable to determine (no frame pointers, etc)
-  */
--static inline int arch_within_stack_frames(const void * const stack,
--					   const void * const stackend,
--					   const void *obj, unsigned long len)
-+static inline enum stack_type arch_within_stack_frames(const void * const stack,
-+					const void * const stackend,
-+					const void *obj, unsigned long len)
- {
- #if defined(CONFIG_FRAME_POINTER)
- 	const void *frame = NULL;
-@@ -197,13 +197,14 @@ static inline int arch_within_stack_frames(const void * const stack,
- 		 * the copy as invalid.
- 		 */
- 		if (obj + len <= frame)
--			return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
-+			return obj >= oldframe + 2 * sizeof(void *) ?
-+				GOOD_FRAME : BAD_STACK;
- 		oldframe = frame;
- 		frame = *(const void * const *)frame;
- 	}
--	return -1;
-+	return BAD_STACK;
- #else
--	return 0;
-+	return NOT_STACK;
- #endif
- }
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 111742126897..378caa9c0563 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -67,6 +67,7 @@ config ARM64
+ 	select HAVE_ARCH_TRACEHOOK
+ 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
+ 	select HAVE_ARM_SMCCC
++	select HAVE_ARCH_WITHIN_STACK_FRAMES
+ 	select HAVE_EBPF_JIT
+ 	select HAVE_C_RECORDMCOUNT
+ 	select HAVE_CC_STACKPROTECTOR
+diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
+index 46c3b93cf865..3540c46027fc 100644
+--- a/arch/arm64/include/asm/thread_info.h
++++ b/arch/arm64/include/asm/thread_info.h
+@@ -68,7 +68,12 @@ struct thread_info {
+ #define thread_saved_fp(tsk)	\
+ 	((unsigned long)(tsk->thread.cpu_context.fp))
  
-diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-index 58373875e8ee..a38b3be347df 100644
---- a/include/linux/thread_info.h
-+++ b/include/linux/thread_info.h
-@@ -22,6 +22,13 @@
- #endif
- 
- #include <linux/bitops.h>
+-#endif
 +
-+enum stack_type {
-+	BAD_STACK = -1,
-+	NOT_STACK = 0,
-+	GOOD_FRAME,
-+	GOOD_STACK,
-+};
- #include <asm/thread_info.h>
++extern enum stack_type arch_within_stack_frames(const void * const stack,
++						const void * const stackend,
++						const void *obj,
++						unsigned long len);
++#endif /* !__ASSEMBLY__ */
  
- #ifdef __KERNEL__
-@@ -77,9 +84,9 @@ static inline int test_ti_thread_flag(struct thread_info *ti, int flag)
- #define tif_need_resched() test_thread_flag(TIF_NEED_RESCHED)
- 
- #ifndef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
--static inline int arch_within_stack_frames(const void * const stack,
--					   const void * const stackend,
--					   const void *obj, unsigned long len)
-+static inline enum stack_type arch_within_stack_frames(const void * const stack,
-+					const void * const stackend,
-+					const void *obj, unsigned long len)
- {
- 	return 0;
- }
-diff --git a/mm/usercopy.c b/mm/usercopy.c
-index 3c8da0af9695..3531ae735d87 100644
---- a/mm/usercopy.c
-+++ b/mm/usercopy.c
-@@ -16,15 +16,9 @@
- 
- #include <linux/mm.h>
- #include <linux/slab.h>
-+#include <linux/thread_info.h>
- #include <asm/sections.h>
- 
--enum {
--	BAD_STACK = -1,
--	NOT_STACK = 0,
--	GOOD_FRAME,
--	GOOD_STACK,
--};
--
  /*
-  * Checks if a given pointer and length is contained by the current
-  * stack frame (if possible).
+  * thread information flags:
+diff --git a/arch/arm64/kernel/stacktrace.c b/arch/arm64/kernel/stacktrace.c
+index 8a552a33c6ef..5591f325729e 100644
+--- a/arch/arm64/kernel/stacktrace.c
++++ b/arch/arm64/kernel/stacktrace.c
+@@ -25,6 +25,12 @@
+ #include <asm/stack_pointer.h>
+ #include <asm/stacktrace.h>
+ 
++#define FAKE_FRAME(frame, my_func) do {			\
++	frame.fp = (unsigned long)__builtin_frame_address(0);	\
++	frame.sp = current_stack_pointer;		\
++	frame.pc = (unsigned long)my_func;		\
++} while (0)
++
+ /*
+  * AArch64 PCS assigns the frame pointer to x29.
+  *
+@@ -194,9 +200,7 @@ void save_stack_trace_tsk(struct task_struct *tsk, struct stack_trace *trace)
+ 		frame.pc = thread_saved_pc(tsk);
+ 	} else {
+ 		data.no_sched_functions = 0;
+-		frame.fp = (unsigned long)__builtin_frame_address(0);
+-		frame.sp = current_stack_pointer;
+-		frame.pc = (unsigned long)save_stack_trace_tsk;
++		FAKE_FRAME(frame, save_stack_trace_tsk);
+ 	}
+ #ifdef CONFIG_FUNCTION_GRAPH_TRACER
+ 	frame.graph = tsk->curr_ret_stack;
+@@ -215,3 +219,47 @@ void save_stack_trace(struct stack_trace *trace)
+ }
+ EXPORT_SYMBOL_GPL(save_stack_trace);
+ #endif
++
++struct check_frame_arg {
++	unsigned long obj_start;
++	unsigned long obj_end;
++	int err;
++};
++
++static int check_frame(struct stackframe *frame, void *d)
++{
++	struct check_frame_arg *arg = d;
++
++	/* object overlaps multiple frames */
++	if (arg->obj_start < (frame->fp + 0x10) && frame->fp < arg->obj_end) {
++		arg->err = BAD_STACK;
++		return 1;
++	}
++
++	/* walked past the object */
++	if (arg->obj_end < frame->fp)
++		return 1;
++
++	return 0;
++}
++
++/* Check obj doesn't overlap a stack frame record */
++enum stack_type arch_within_stack_frames(const void *stack,
++					 const void *stack_end,
++					 const void *obj, unsigned long obj_len)
++{
++	struct stackframe frame;
++	struct check_frame_arg arg;
++
++	if (!IS_ENABLED(CONFIG_FRAME_POINTER))
++		return NOT_STACK;
++
++	arg.err = GOOD_FRAME;
++	arg.obj_start = (unsigned long)obj;
++	arg.obj_end = arg.obj_start + obj_len;
++
++	FAKE_FRAME(frame, arch_within_stack_frames);
++	walk_stackframe(current, &frame, check_frame, &arg);
++
++	return arg.err;
++}
 -- 
 2.10.1
