@@ -1,39 +1,40 @@
-Message-ID: <1487204389.6214.68.camel@perches.com>
-From: Joe Perches <joe@perches.com>
-Date: Wed, 15 Feb 2017 16:19:49 -0800
-In-Reply-To: <476DC76E7D1DF2438D32BFADF679FC5623064D3F@ORSMSX103.amr.corp.intel.com>
-References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-	 <1486757549.2192.20.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
-	 <1486766996.2192.30.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305DC7B@ORSMSX103.amr.corp.intel.com>
-	 <1486783428.2192.44.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305F372@ORSMSX103.amr.corp.intel.com>
-	 <1487016251.6214.6.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305F62F@ORSMSX103.amr.corp.intel.com>
-	 <1487024441.6214.12.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC5623064D3F@ORSMSX103.amr.corp.intel.com>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: "Roberts, William C" <william.c.roberts@intel.com>, Andrew Morton <akpm@linux-foundation.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Wed, 15 Feb 2017 16:36:19 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170216003619.GA142955@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH] ARM: uaccess: fix zeroing of 64-bit get_user()
+To: Russell King <linux@armlinux.org.uk>
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, Al Viro <viro@zeniv.linux.org.uk>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, 2017-02-15 at 23:49 +0000, Roberts, William C wrote:
-> > 
-> > This means _all_ the $stat checks aren't being done on patches that add just a
-> > single multi-line statement.
-> > 
-> > Andrew?  Any thoughts on how to enable $stat appropriately for patch contexts
-> > with a single multi-line statement?
-> 
-> I'm for merging your patch as is, and then take up the fact that $stat is not working correctly
-> as a separate change, does that seem reasonable?
+The 64-bit get_user() wasn't clearing the high word due to a typo in the
+error handler. The exception handler entry was already correct, though.
+Noticed during recent usercopy test additions in lib/test_user_copy.c.
 
-Sure, Andrew Morton is the typical upstream path for checkpatch.
-(cc'd)
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/arm/lib/getuser.S | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-Andy Whitcroft?  Any chance to look at this?
+diff --git a/arch/arm/lib/getuser.S b/arch/arm/lib/getuser.S
+index 8ecfd15c3a02..df73914e81c8 100644
+--- a/arch/arm/lib/getuser.S
++++ b/arch/arm/lib/getuser.S
+@@ -67,7 +67,7 @@ ENTRY(__get_user_4)
+ ENDPROC(__get_user_4)
+ 
+ ENTRY(__get_user_8)
+-	check_uaccess r0, 8, r1, r2, __get_user_bad
++	check_uaccess r0, 8, r1, r2, __get_user_bad8
+ #ifdef CONFIG_THUMB2_KERNEL
+ 5: TUSER(ldr)	r2, [r0]
+ 6: TUSER(ldr)	r3, [r0, #4]
+-- 
+2.7.4
+
+
+-- 
+Kees Cook
+Pixel Security
