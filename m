@@ -1,144 +1,65 @@
-Date: Thu, 16 Feb 2017 12:32:53 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170216123253.GB588@leverpostej>
-References: <20170215200557.GA37325@beast>
+Date: Thu, 16 Feb 2017 08:35:10 -0600
+From: Bjorn Helgaas <helgaas@kernel.org>
+Message-ID: <20170216143509.GA22820@bhelgaas-glaptop.roam.corp.google.com>
+References: <20170211013758.3288-1-me@jessfraz.com>
+ <20170211013758.3288-3-me@jessfraz.com>
+ <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com>
+ <alpine.DEB.2.20.1702152143520.3805@nanos>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170215200557.GA37325@beast>
-Subject: [kernel-hardening] Re: [PATCH] ARM: uaccess: consistently check object sizes
-To: Kees Cook <keescook@chromium.org>
-Cc: Russell King <linux@armlinux.org.uk>, Al Viro <viro@zeniv.linux.org.uk>, Robin Murphy <robin.murphy@arm.com>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <alpine.DEB.2.20.1702152143520.3805@nanos>
+Subject: [kernel-hardening] Re: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
+To: Thomas Gleixner <tglx@linutronix.de>
+Cc: Jess Frazelle <me@jessfraz.com>, "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Marc Zyngier <marc.zyngier@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Feb 15, 2017 at 12:05:57PM -0800, Kees Cook wrote:
-> In commit 76624175dcae ("arm64: uaccess: consistently check object sizes"),
-> the object size checks are moved outside the access_ok() so that bad
-> destinations are detected before hitting the "memset(dest, 0, size)" in the
-> copy_from_user() failure path.
+On Wed, Feb 15, 2017 at 10:16:32PM +0100, Thomas Gleixner wrote:
+
+> I think I suggested to Jiang to do that 'update with default functions' to
 > 
-> This makes the same change for arm, with attention given to possibly
-> extracting the uaccess routines into a common header file for all
-> architectures in the future.
-
-I take it here you're referring to aligning on the __arch_* naming for
-primitives manging arch-specific state and performing the copies. It
-might be worth calling that out explicitly, since it likely isn't
-obvious to others.
-
-It may also be worth calling out that this also means we can now do the
-checks for !MMU, which we couldn't do before.
-
-The patch itself looks sane to me, so FWIW:
-
-Acked-by: Mark Rutland <mark.rutland@arm.com>
-
-Thanks,
-Mark.
-
-> Suggested-by: Mark Rutland <mark.rutland@arm.com>
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
->  arch/arm/include/asm/uaccess.h | 44 ++++++++++++++++++++++++++++++------------
->  1 file changed, 32 insertions(+), 12 deletions(-)
+> - avoid exporting the world and some more
 > 
-> diff --git a/arch/arm/include/asm/uaccess.h b/arch/arm/include/asm/uaccess.h
-> index 1f59ea051bab..b7e0125c0bbf 100644
-> --- a/arch/arm/include/asm/uaccess.h
-> +++ b/arch/arm/include/asm/uaccess.h
-> @@ -478,11 +478,10 @@ extern unsigned long __must_check
->  arm_copy_from_user(void *to, const void __user *from, unsigned long n);
->  
->  static inline unsigned long __must_check
-> -__copy_from_user(void *to, const void __user *from, unsigned long n)
-> +__arch_copy_from_user(void *to, const void __user *from, unsigned long n)
->  {
->  	unsigned int __ua_flags;
->  
-> -	check_object_size(to, n, false);
->  	__ua_flags = uaccess_save_and_enable();
->  	n = arm_copy_from_user(to, from, n);
->  	uaccess_restore(__ua_flags);
-> @@ -495,18 +494,15 @@ extern unsigned long __must_check
->  __copy_to_user_std(void __user *to, const void *from, unsigned long n);
->  
->  static inline unsigned long __must_check
-> -__copy_to_user(void __user *to, const void *from, unsigned long n)
-> +__arch_copy_to_user(void __user *to, const void *from, unsigned long n)
->  {
->  #ifndef CONFIG_UACCESS_WITH_MEMCPY
->  	unsigned int __ua_flags;
-> -
-> -	check_object_size(from, n, true);
->  	__ua_flags = uaccess_save_and_enable();
->  	n = arm_copy_to_user(to, from, n);
->  	uaccess_restore(__ua_flags);
->  	return n;
->  #else
-> -	check_object_size(from, n, true);
->  	return arm_copy_to_user(to, from, n);
->  #endif
->  }
-> @@ -526,25 +522,49 @@ __clear_user(void __user *addr, unsigned long n)
->  }
->  
->  #else
-> -#define __copy_from_user(to, from, n)	(memcpy(to, (void __force *)from, n), 0)
-> -#define __copy_to_user(to, from, n)	(memcpy((void __force *)to, from, n), 0)
-> +#define __arch_copy_from_user(to, from, n)	\
-> +					(memcpy(to, (void __force *)from, n), 0)
-> +#define __arch_copy_to_user(to, from, n)	\
-> +					(memcpy((void __force *)to, from, n), 0)
->  #define __clear_user(addr, n)		(memset((void __force *)addr, 0, n), 0)
->  #endif
->  
-> -static inline unsigned long __must_check copy_from_user(void *to, const void __user *from, unsigned long n)
-> +static inline unsigned long __must_check
-> +__copy_from_user(void *to, const void __user *from, unsigned long n)
-> +{
-> +	check_object_size(to, n, false);
-> +	return __arch_copy_from_user(to, from, n);
-> +}
-> +
-> +static inline unsigned long __must_check
-> +copy_from_user(void *to, const void __user *from, unsigned long n)
->  {
->  	unsigned long res = n;
-> +
-> +	check_object_size(to, n, false);
-> +
->  	if (likely(access_ok(VERIFY_READ, from, n)))
-> -		res = __copy_from_user(to, from, n);
-> +		res = __arch_copy_from_user(to, from, n);
->  	if (unlikely(res))
->  		memset(to + (n - res), 0, res);
->  	return res;
->  }
->  
-> -static inline unsigned long __must_check copy_to_user(void __user *to, const void *from, unsigned long n)
-> +static inline unsigned long __must_check
-> +__copy_to_user(void __user *to, const void *from, unsigned long n)
->  {
-> +	check_object_size(from, n, true);
-> +
-> +	return __arch_copy_to_user(to, from, n);
-> +}
-> +
-> +static inline unsigned long __must_check
-> +copy_to_user(void __user *to, const void *from, unsigned long n)
-> +{
-> +	check_object_size(from, n, true);
-> +
->  	if (access_ok(VERIFY_WRITE, to, n))
-> -		n = __copy_to_user(to, from, n);
-> +		n = __arch_copy_to_user(to, from, n);
->  	return n;
->  }
->  
-> -- 
-> 2.7.4
+> - have the flexibility to add new functions to the ops w/o updating a
+>   gazillion of existing usage sites, which has saved us lots of chaising in
+>   the last years
 > 
+> - avoid the if (ops->ptr) ops->ptr(); else default_fn(); constructs all
+>   over the place.
 > 
-> -- 
-> Kees Cook
-> Pixel Security
+> I admit I did not think about the fact that this makes the structs non
+> const.
+> 
+> Mopping that up by exporting the default functions and setting all the
+> function pointers is tedious and requires a full tree sweep when we add new
+> stuff. There's also code shared between PCI/platform/DT based stuff, so
+> that becomes interesting.
+
+It's legal to initialize a field multiple times, and the last one
+takes precedence, so doing this might at least avoid the full tree
+sweeps:
+
+  static struct msi_domain_ops vmd_msi_domain_ops = {
+    MSI_DOMAIN_DEFAULT_OPS,
+    .get_hwirq = vmd_get_hwirq,
+  };
+
+The functions referenced by MSI_DOMAIN_DEFAULT_OPS would still have to
+be exported, though.
+
+> Doing the if (ops->ptr) ops->ptr() else default_fn(); dance should be
+> simpler to pull off. There are not that many sites to look at, but then we
+> have some of the GICv3 code using the domain ops out of core.
+> 
+> For now doing the __ro_after_init is definitely the simplest and fastest
+> solution to tighten these statically allocated structures.
+
+I'm OK with __ro_after_init, at least as an interim solution.
+
+I do think it would be good to audit all the uses of
+MSI_FLAG_USE_DEF_DOM_OPS and MSI_FLAG_USE_DEF_CHIP_OPS, since they
+seem to be the primary indicator of when the struct might be modified.
+I suspect we could add __ro_after_init to more than just pci-hyperv.c,
+vmd.c, and msi.c
+
+Bjorn
