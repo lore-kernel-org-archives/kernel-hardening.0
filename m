@@ -1,61 +1,144 @@
-From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
-References: <alpine.LRH.2.20.1702150016220.32759@namei.org>
-	<201702142324.IFB95862.MOSJLOVFQFtFHO@I-love.SAKURA.ne.jp>
-	<alpine.LRH.2.20.1702150952360.6813@namei.org>
-	<201702152342.GBH04183.FOFJFHQOLMOtVS@I-love.SAKURA.ne.jp>
-	<a5022e72-287b-e0d1-aa54-888eb569ac1f@schaufler-ca.com>
-In-Reply-To: <a5022e72-287b-e0d1-aa54-888eb569ac1f@schaufler-ca.com>
-Message-Id: <201702162000.EAC43726.FOSVQtJFHMFOLO@I-love.SAKURA.ne.jp>
-Date: Thu, 16 Feb 2017 20:00:31 +0900
-Mime-Version: 1.0
+Date: Thu, 16 Feb 2017 12:32:53 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170216123253.GB588@leverpostej>
+References: <20170215200557.GA37325@beast>
+MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
-Subject: [kernel-hardening] Re: [RFC v2 PATCH 1/2] security: introduce CONFIG_SECURITY_WRITABLE_HOOKS
-To: casey@schaufler-ca.com, jmorris@namei.org
-Cc: linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
+Content-Disposition: inline
+In-Reply-To: <20170215200557.GA37325@beast>
+Subject: [kernel-hardening] Re: [PATCH] ARM: uaccess: consistently check object sizes
+To: Kees Cook <keescook@chromium.org>
+Cc: Russell King <linux@armlinux.org.uk>, Al Viro <viro@zeniv.linux.org.uk>, Robin Murphy <robin.murphy@arm.com>, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Casey Schaufler wrote:
-> I can't say that I'm buying the value of the additional
-> complexity here. Sure, you're protecting part of the data
-> all the time, but you're exposing part all the time, too.
+On Wed, Feb 15, 2017 at 12:05:57PM -0800, Kees Cook wrote:
+> In commit 76624175dcae ("arm64: uaccess: consistently check object sizes"),
+> the object size checks are moved outside the access_ok() so that bad
+> destinations are detected before hitting the "memset(dest, 0, size)" in the
+> copy_from_user() failure path.
+> 
+> This makes the same change for arm, with attention given to possibly
+> extracting the uaccess routines into a common header file for all
+> architectures in the future.
 
-Will you explain it in detail? As far as I know, __ro_after_init
-annotation makes the kernel to call set_memory_ro() after __init
-functions are completed, by gathering such variables into a section
-so that set_memory_ro() can change page flags for a memory region
-where it is PAGE_ALIGNED and the size is multiple of PAGE_SIZE bytes.
+I take it here you're referring to aligning on the __arch_* naming for
+primitives manging arch-specific state and performing the copies. It
+might be worth calling that out explicitly, since it likely isn't
+obvious to others.
 
-This "struct lsm_entry" is for gathering only LSM related variables which
-would have been marked as __ro_after_init if CONFIG_SECURITY_WRITABLE_HOOKS=n
-into a list of memory regions where they are PAGE_ALIGNED and the size is
-multiple of PAGE_SIZE bytes, so that the kernel can call set_memory_ro() on
-these memory regions even if CONFIG_SECURITY_SELINUX_DISABLE=y or allowing
-LKM based LSMs.
+It may also be worth calling out that this also means we can now do the
+checks for !MMU, which we couldn't do before.
 
-> For now I think that the solution James proposes makes the
-> most sense. In the hypothetical loadable modules case I
-> don't see real value in hardening bits of the data while
-> explicitly making the most important parts dynamic.
+The patch itself looks sane to me, so FWIW:
 
-Best solution for environments where it is known to enforce only one specific
-LSM module and no user choices and no LKM based LSMs (including antivirus or
-alike) is to directly embed that LSM module into security/security.c .
+Acked-by: Mark Rutland <mark.rutland@arm.com>
 
-CONFIG_SECURITY_WRITABLE_HOOKS=n depends on CONFIG_SECURITY_SELINUX_DISABLE=n
-but many of distributor's kernels enable multiple LSM modules including
-CONFIG_SECURITY_SELINUX_DISABLE=y. Also, people are using antivirus software
-on distributor's kernels. At least one antivirus software (which allows
-anonymous download of LKM source code) is using LSM hooks since Linux 2.6.32
-instead of rewriting syscall tables. We are already allowing multiple concurrent
-LSM modules (up to one fully armored module which uses "struct cred"->security
-field or exclusive hooks like security_xfrm_state_pol_flow_match(), plus
-unlimited number of lightweight modules which do not use "struct cred"->security
-nor exclusive hooks) as long as they are built into the kernel. There is no
-reason to keep LKM based LSM modules from antivirus software or alike away.
-For such kernels, this "struct lsm_entry" allows calling set_memory_ro() on LSM
-related variables which would have been marked as __ro_after_init if
-CONFIG_SECURITY_WRITABLE_HOOKS=n.
+Thanks,
+Mark.
 
-If you are not happy with using kmalloc() for copying "struct security_hook_list"
-in each LSM module, can we agree with padding "struct security_hook_list" in each
-LSM module PAGE_ALIGNED and the size being multiple of PAGE_SIZE bytes?
+> Suggested-by: Mark Rutland <mark.rutland@arm.com>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+>  arch/arm/include/asm/uaccess.h | 44 ++++++++++++++++++++++++++++++------------
+>  1 file changed, 32 insertions(+), 12 deletions(-)
+> 
+> diff --git a/arch/arm/include/asm/uaccess.h b/arch/arm/include/asm/uaccess.h
+> index 1f59ea051bab..b7e0125c0bbf 100644
+> --- a/arch/arm/include/asm/uaccess.h
+> +++ b/arch/arm/include/asm/uaccess.h
+> @@ -478,11 +478,10 @@ extern unsigned long __must_check
+>  arm_copy_from_user(void *to, const void __user *from, unsigned long n);
+>  
+>  static inline unsigned long __must_check
+> -__copy_from_user(void *to, const void __user *from, unsigned long n)
+> +__arch_copy_from_user(void *to, const void __user *from, unsigned long n)
+>  {
+>  	unsigned int __ua_flags;
+>  
+> -	check_object_size(to, n, false);
+>  	__ua_flags = uaccess_save_and_enable();
+>  	n = arm_copy_from_user(to, from, n);
+>  	uaccess_restore(__ua_flags);
+> @@ -495,18 +494,15 @@ extern unsigned long __must_check
+>  __copy_to_user_std(void __user *to, const void *from, unsigned long n);
+>  
+>  static inline unsigned long __must_check
+> -__copy_to_user(void __user *to, const void *from, unsigned long n)
+> +__arch_copy_to_user(void __user *to, const void *from, unsigned long n)
+>  {
+>  #ifndef CONFIG_UACCESS_WITH_MEMCPY
+>  	unsigned int __ua_flags;
+> -
+> -	check_object_size(from, n, true);
+>  	__ua_flags = uaccess_save_and_enable();
+>  	n = arm_copy_to_user(to, from, n);
+>  	uaccess_restore(__ua_flags);
+>  	return n;
+>  #else
+> -	check_object_size(from, n, true);
+>  	return arm_copy_to_user(to, from, n);
+>  #endif
+>  }
+> @@ -526,25 +522,49 @@ __clear_user(void __user *addr, unsigned long n)
+>  }
+>  
+>  #else
+> -#define __copy_from_user(to, from, n)	(memcpy(to, (void __force *)from, n), 0)
+> -#define __copy_to_user(to, from, n)	(memcpy((void __force *)to, from, n), 0)
+> +#define __arch_copy_from_user(to, from, n)	\
+> +					(memcpy(to, (void __force *)from, n), 0)
+> +#define __arch_copy_to_user(to, from, n)	\
+> +					(memcpy((void __force *)to, from, n), 0)
+>  #define __clear_user(addr, n)		(memset((void __force *)addr, 0, n), 0)
+>  #endif
+>  
+> -static inline unsigned long __must_check copy_from_user(void *to, const void __user *from, unsigned long n)
+> +static inline unsigned long __must_check
+> +__copy_from_user(void *to, const void __user *from, unsigned long n)
+> +{
+> +	check_object_size(to, n, false);
+> +	return __arch_copy_from_user(to, from, n);
+> +}
+> +
+> +static inline unsigned long __must_check
+> +copy_from_user(void *to, const void __user *from, unsigned long n)
+>  {
+>  	unsigned long res = n;
+> +
+> +	check_object_size(to, n, false);
+> +
+>  	if (likely(access_ok(VERIFY_READ, from, n)))
+> -		res = __copy_from_user(to, from, n);
+> +		res = __arch_copy_from_user(to, from, n);
+>  	if (unlikely(res))
+>  		memset(to + (n - res), 0, res);
+>  	return res;
+>  }
+>  
+> -static inline unsigned long __must_check copy_to_user(void __user *to, const void *from, unsigned long n)
+> +static inline unsigned long __must_check
+> +__copy_to_user(void __user *to, const void *from, unsigned long n)
+>  {
+> +	check_object_size(from, n, true);
+> +
+> +	return __arch_copy_to_user(to, from, n);
+> +}
+> +
+> +static inline unsigned long __must_check
+> +copy_to_user(void __user *to, const void *from, unsigned long n)
+> +{
+> +	check_object_size(from, n, true);
+> +
+>  	if (access_ok(VERIFY_WRITE, to, n))
+> -		n = __copy_to_user(to, from, n);
+> +		n = __arch_copy_to_user(to, from, n);
+>  	return n;
+>  }
+>  
+> -- 
+> 2.7.4
+> 
+> 
+> -- 
+> Kees Cook
+> Pixel Security
