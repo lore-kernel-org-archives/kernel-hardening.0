@@ -1,71 +1,97 @@
-Date: Thu, 16 Feb 2017 15:38:05 +0100 (CET)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <20170216143509.GA22820@bhelgaas-glaptop.roam.corp.google.com>
-Message-ID: <alpine.DEB.2.20.1702161536150.3543@nanos>
-References: <20170211013758.3288-1-me@jessfraz.com> <20170211013758.3288-3-me@jessfraz.com> <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com> <alpine.DEB.2.20.1702152143520.3805@nanos>
- <20170216143509.GA22820@bhelgaas-glaptop.roam.corp.google.com>
+From: "Grandhi, Sainath" <sainath.grandhi@intel.com>
+Date: Thu, 16 Feb 2017 06:31:35 +0000
+Message-ID: <2C5142675EC1274EAB6230F72F8DC95F414F4217@ORSMSX116.amr.corp.intel.com>
+References: <CANEHqc0zV9Ppj3Ny2GrV=f2grA5XiPOtxEmkZ9XaMxJmDvk-tw@mail.gmail.com>
+ <CAG4AFWbVm+6a2GO0iPa6r84bP1jNfL6Rph4a1HDj6cDt-8y2Fw@mail.gmail.com>
+ <a43631c9-e170-ebfe-8b3a-f6d98f469f99@giassa.net>
+ <CAG4AFWagW_dzVRd8qsmUOaCOLBmjDNr=5DX7dFA0yFJ2pOjERw@mail.gmail.com>
+ <CANEHqc0bi6wnPOLWx_fDd9xDXN=8xEw7ZF4Be=SnKtoLbBizkg@mail.gmail.com>
+ <CABayD+eeq+8yzdTQ9GsUkMuUagWNQqaKqdVJikHAnPorobDjzQ@mail.gmail.com>
+ <70a9cb32-471e-9827-fae6-cd46a40c87b1@giassa.net>
+In-Reply-To: <70a9cb32-471e-9827-fae6-cd46a40c87b1@giassa.net>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: [kernel-hardening] Re: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
-To: Bjorn Helgaas <helgaas@kernel.org>
-Cc: Jess Frazelle <me@jessfraz.com>, "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Marc Zyngier <marc.zyngier@arm.com>
+Subject: [kernel-hardening] RE: Introduction + new project: "rootkit detection using
+ virtualization".
+To: Matthew Giassa <matthew@giassa.net>, Steve Rutherford <srutherford@google.com>
+Cc: Jidong Xiao <jidong.xiao@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, KVM <kvm@vger.kernel.org>, Rik van
+ Riel <riel@redhat.com>, "Nakajima, Jun" <jun.nakajima@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 16 Feb 2017, Bjorn Helgaas wrote:
-> On Wed, Feb 15, 2017 at 10:16:32PM +0100, Thomas Gleixner wrote:
-> 
-> > I think I suggested to Jiang to do that 'update with default functions' to
-> > 
-> > - avoid exporting the world and some more
-> > 
-> > - have the flexibility to add new functions to the ops w/o updating a
-> >   gazillion of existing usage sites, which has saved us lots of chaising in
-> >   the last years
-> > 
-> > - avoid the if (ops->ptr) ops->ptr(); else default_fn(); constructs all
-> >   over the place.
-> > 
-> > I admit I did not think about the fact that this makes the structs non
-> > const.
-> > 
-> > Mopping that up by exporting the default functions and setting all the
-> > function pointers is tedious and requires a full tree sweep when we add new
-> > stuff. There's also code shared between PCI/platform/DT based stuff, so
-> > that becomes interesting.
-> 
-> It's legal to initialize a field multiple times, and the last one
-> takes precedence, so doing this might at least avoid the full tree
-> sweeps:
-> 
->   static struct msi_domain_ops vmd_msi_domain_ops = {
->     MSI_DOMAIN_DEFAULT_OPS,
->     .get_hwirq = vmd_get_hwirq,
->   };
-> 
-> The functions referenced by MSI_DOMAIN_DEFAULT_OPS would still have to
-> be exported, though.
-
-Hmm, that'd work. Though it will fall apart for those pieces where we share
-code across backends. But I did not yet go through all the places and check
-them.
-
-> > Doing the if (ops->ptr) ops->ptr() else default_fn(); dance should be
-> > simpler to pull off. There are not that many sites to look at, but then we
-> > have some of the GICv3 code using the domain ops out of core.
-> > 
-> > For now doing the __ro_after_init is definitely the simplest and fastest
-> > solution to tighten these statically allocated structures.
-> 
-> I'm OK with __ro_after_init, at least as an interim solution.
-> 
-> I do think it would be good to audit all the uses of
-> MSI_FLAG_USE_DEF_DOM_OPS and MSI_FLAG_USE_DEF_CHIP_OPS, since they
-> seem to be the primary indicator of when the struct might be modified.
-> I suspect we could add __ro_after_init to more than just pci-hyperv.c,
-> vmd.c, and msi.c
-
-Agreed. I have it on my radar.
-
-Thanks,
-
-	tglx
+SGkgTWF0dGhldywNCldlIGhhdmUgYmVlbiB3b3JraW5nIG9uIGEgS2VybmVsIEhhcmRlbmluZyBw
+cm9qZWN0LiBQbGVhc2UgZmluZCBzbGlkZXMgYXQgaHR0cDovL2V2ZW50cy5saW51eGZvdW5kYXRp
+b24ub3JnL3NpdGVzL2V2ZW50cy9maWxlcy9zbGlkZXMvS2VybmVsJTIwUHJvdGVjdGlvbi1OYWth
+amltYS5wZGYgLiBXZSBwcmVzZW50ZWQgdGhpcyBpZGVhIGluIEtWTSBGb3J1bSAyMDE2LiBUaGUg
+aWRlYSBpcyB0byBwcm90ZWN0IENQVS9wbGF0Zm9ybSByZXNvdXJjZXMgYW5kIGtlcm5lbCBtYW5h
+Z2VkIHJlc291cmNlcyAoSURULCBrZXJuZWwgcGFnZSB0YWJsZXMgZXRjLikgZHVyaW5nIGV4ZWN1
+dGlvbiBvZiBhIFZNLiBUaGlzIGFwcHJvYWNoIGlzIGV4dGVuZGVkIHRvIGJhcmVtZXRhbC9ob3N0
+IE9TIGJ5IHN3aXRjaGluZyB0aGUgZXhlY3V0aW9uIG9mIGhvc3QgT1MgaW50byBndWVzdCBtb2Rl
+IGFuZCBtb25pdG9yaW5nIHRoZSBob3N0IE9TIHdpdGggYSB2ZXJ5IHRoaW4gaHlwZXJ2aXNvciwg
+cHJvYmFibHkga3ZtIG1vZHVsZSBleHRlbnNpb24uIEN1cnJlbnRseSB3ZSBoYXZlIGEgUG9DLCBj
+b250YWluZWQgaW4ga3ZtIG1vZHVsZSwgZm9yIHN3aXRjaGluZyB0aGUgaG9zdCBPUyBpbnRvIGd1
+ZXN0IG1vZGUuIFdlIGFyZSBvcGVuIGZvciBjb2xsYWJvcmF0aW9uIGFuZCBmZWVkYmFjay4NCg0K
+VGhhbmtzDQotU2FpbmF0aA0KPiAtLS0tLU9yaWdpbmFsIE1lc3NhZ2UtLS0tLQ0KPiBGcm9tOiBr
+dm0tb3duZXJAdmdlci5rZXJuZWwub3JnIFttYWlsdG86a3ZtLW93bmVyQHZnZXIua2VybmVsLm9y
+Z10gT24NCj4gQmVoYWxmIE9mIE1hdHRoZXcgR2lhc3NhDQo+IFNlbnQ6IFR1ZXNkYXksIEZlYnJ1
+YXJ5IDE0LCAyMDE3IDc6MzIgUE0NCj4gVG86IFN0ZXZlIFJ1dGhlcmZvcmQgPHNydXRoZXJmb3Jk
+QGdvb2dsZS5jb20+DQo+IENjOiBKaWRvbmcgWGlhbyA8amlkb25nLnhpYW9AZ21haWwuY29tPjsg
+a2VybmVsLQ0KPiBoYXJkZW5pbmdAbGlzdHMub3BlbndhbGwuY29tOyBLVk0gPGt2bUB2Z2VyLmtl
+cm5lbC5vcmc+OyBSaWsgdmFuIFJpZWwNCj4gPHJpZWxAcmVkaGF0LmNvbT4NCj4gU3ViamVjdDog
+UmU6IEludHJvZHVjdGlvbiArIG5ldyBwcm9qZWN0OiAicm9vdGtpdCBkZXRlY3Rpb24gdXNpbmcN
+Cj4gdmlydHVhbGl6YXRpb24iLg0KPiANCj4gT24gMjAxNy0wMi0xNCAwMToyNSBQTSwgU3RldmUg
+UnV0aGVyZm9yZCB3cm90ZToNCj4gPiBPbiBUdWUsIEZlYiAxNCwgMjAxNyBhdCAxMDowNiBBTSwg
+TWF0dGhldyBHaWFzc2EgPG1hdHRoZXdAZ2lhc3NhLm5ldD4NCj4gd3JvdGU6DQo+ID4+IEhpIEpp
+ZG9uZywNCj4gPj4NCj4gPj4gWW91IGFyZSBjb3JyZWN0IG9uIGFsbCB0aGUgcG9pbnRzIG5vdGVk
+IGFib3ZlOk15IGdvYWwgaXMgdG8gZGV2ZWxvcCBhDQo+ID4+IHByb2R1Y3Rpb24tcmVhZHksIG5v
+bi1hY2FkZW1pYyBpbXBsZW1lbnRhdGlvbiBvZiBzdWNoIGEgdG9vbC4gSSdtIGluDQo+ID4+IGl0
+IGZvciB0aGUgbG9uZyBoYXVsLg0KPiA+IElzIHlvdXIgZ29hbCBmb3IgdGhpcyB0byB3b3JrIG9u
+IGFsbCBhcmNoaXRlY3R1cmVzLCBvciBhcmUgeW91DQo+ID4gcGxhbm5pbmcgdG8gZm9jdXMgb24g
+SW50ZWwteDg2IChvciBBTUQteDg2LCBvciBBUk0sIG9yLi4uKT8NCj4gPj4NCj4gPj4gT24gRnJp
+LCBGZWIgMTAsIDIwMTcgYXQgNzo0MyBQTSwgSmlkb25nIFhpYW8gPGppZG9uZy54aWFvQGdtYWls
+LmNvbT4NCj4gd3JvdGU6DQo+ID4+PiBUaGFua3MgTWF0dGhldy4gU28gaWYgSSB1bmRlcnN0YW5k
+IGNvcnJlY3RseSwgZXZlbiB0aG91Z2ggbWFueQ0KPiA+Pj4gcGVvcGxlIGhhdmUgcHJvcG9zZWQg
+c2ltaWxhciBzb2x1dGlvbnMsIG5vbmUgb2YgdGhlbSBoYXZlIGFjdHVhbGx5DQo+ID4+PiBjb250
+cmlidXRlZCB0aGVpciBjb2RlIChvZiB0aGVpciBzb2x1dGlvbikgaW50byBRZW11L0tWTS4gVG8g
+bWFrZSBpdA0KPiA+Pj4gInJlYWwiIChpLmUuLCBhcyBhIHBhcnQgb2YgUWVtdS9LVk0gY29kZSkg
+aXMgeW91ciBnb2FsLCByaWdodD8gVGhhdCBzb3VuZHMNCj4gaW50ZXJlc3RpbmchDQo+ID4+Pg0K
+PiA+Pj4gLUppZG9uZw0KPiA+Pj4NCj4gPj4+IE9uIEZyaSwgRmViIDEwLCAyMDE3IGF0IDg6MjEg
+UE0sIE1hdHRoZXcgR2lhc3NhIDxtYXR0aGV3QGdpYXNzYS5uZXQ+DQo+IHdyb3RlOg0KPiA+Pj4+
+DQo+ID4+Pj4gT24gMjAxNy0wMi0xMCAwMzoxOCBQTSwgSmlkb25nIFhpYW8gd3JvdGU6DQo+ID4+
+Pj4+DQo+ID4+Pj4+IFNvcnJ5LCBJIGhhdmUgdG8gcmVzZW5kIHRoaXMgYWdhaW4sIGFzIHRoZSBv
+cmlnaW5hbCB0d28gZW1haWxzDQo+ID4+Pj4+IHdlcmUgYmxvY2tlZCBiZWNhdXNlIG9mIHRoZSB1
+cmwuDQo+ID4+Pj4+DQo+ID4+Pj4+ICJSb290a2l0IGRldGVjdGlvbiB1c2luZyB2aXJ0dWFsaXph
+dGlvbiIgaGFzIGJlZW4gd2lkZWx5IHN0dWRpZWQNCj4gPj4+Pj4gZm9yIGEgZGVjYWRlLiBJcyB0
+aGUgYXBwcm9hY2ggeW91IGFyZSBnb2luZyB0byB1c2UgZGlmZmVyZW50IGZyb20NCj4gPj4+Pj4g
+YWxsIG9mIHRoZXNlIGV4aXN0aW5nIG9uZXM6DQo+ID4+Pj4+DQo+ID4+Pj4+ICJTdXJ2ZXk6IFZp
+cnR1YWwgTWFjaGluZSBJbnRyb3NwZWN0aW9uIEJhc2VkIFN5c3RlbSBNb25pdG9yaW5nIGFuZA0K
+PiA+Pj4+PiBNYWx3YXJlIERldGVjdGlvbiBUZWNobmlxdWVzIiAtIGJ5IEhhb2Z1IExpYW8gYXQg
+VW5pdmVyc2l0eSBvZg0KPiBSb2NoZXN0ZXIuDQo+ID4+Pj4+DQo+ID4+Pj4+IC1KaWRvbmcNCj4g
+Pj4+Pg0KPiA+Pj4+DQo+ID4+Pj4gT24gMjAxNy0wMi0xMCAwNTozNyBQTSwgUmlrIHZhbiBSaWVs
+IHdyb3RlOg0KPiA+Pj4+Pg0KPiA+Pj4+PiBPbmUgb2YgdGhlIHRoaW5ncyB0aGF0IE1hdHRoZXcg
+Y2FuIGRvIGlzIGJ1aWxkIG9uIHRoZSByZWFkLW9ubHkNCj4gPj4+Pj4gbWVtb3J5IHByb3RlY3Rp
+b25zIGluIHRoZSBrZXJuZWwsIGFuZCBoYXZlIHRoZSBoeXBlcnZpc29yIGVuZm9yY2UNCj4gPj4+
+Pj4gdGhhdCB0aGUgbWVtb3J5IHRoZSBrZXJuZWwgbWFya3MgYXMgcmVhZC1vbmx5IGlzIG5ldmVy
+IHdyaXR0ZW4NCj4gPj4+Pj4gZnJvbSBpbnNpZGUgdGhlIHZpcnR1YWwgbWFjaGluZSwgdW50aWwg
+dGhlIG5leHQgcmVib290Lg0KPiA+Pj4+Pg0KPiA+Pj4+PiBUaGF0IHNlZW1zIGxpa2UgaXQgbWln
+aHQgYmUgYSB1c2VmdWwgcGxhY2UgdG8gc3RhcnQsIHNpbmNlIGl0DQo+ID4+Pj4+IHdvdWxkIGlt
+bWVkaWF0ZWx5IG1ha2UgdGhlIG90aGVyIHJlYWQtb25seSBwcm90ZWN0aW9ucyB0aGF0IHBlb3Bs
+ZQ0KPiA+Pj4+PiBhcmUgd29ya2luZyBvbiBtdWNoIGhhcmRlciB0byBnZXQgYXJvdW5kLCBhdCBs
+ZWFzdCBpbnNpZGUgdmlydHVhbA0KPiA+Pj4+PiBtYWNoaW5lcy4NCj4gPj4+Pj4NCj4gPj4+Pg0K
+PiA+Pj4+DQo+ID4+Pj4gTXkgaW5pdGlhbCBwbGFuIHdhcyB0byBzdGFydCB3aXRoIHdoYXQgUmlr
+IHByb3Bvc2VkLCBhbmQgZm9jdXMgb24NCj4gPj4+PiBhZGRpdGlvbmFsIG1lbW9yeSBwcm90ZWN0
+aW9ucy4gV2l0aCByZXNwZWN0IHRvIGxvbmctdGVybSBwbGFucywgYQ0KPiA+Pj4+IGxvdCBvZiBt
+eSB3b3JrL3Jlc2VhcmNoIHNvIGZhciBoYXMgYmVlbiBmb2N1c2VkIG9uIGltcGxlbWVudGluZyBh
+DQo+ID4+Pj4gc3lzdGVtIHNpbWlsYXIgdG8gdGhhdCBwcmVzZW50ZWQgYnkgUGF5bmUgZXQgYWwg
+KGllOiBMYXJlcykuDQo+ID4+Pj4NCj4gPj4+PiAtTWF0dGhldyBHaWFzc2ENCj4gPj4+DQo+ID4+
+Pg0KPiA+Pg0KPiA+Pg0KPiA+Pg0KPiA+PiAtLQ0KPiA+Pg0KPiA9PT09PT09PT09PT09PT09PT09
+PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCj4gPj4gTWF0dGhldyBH
+aWFzc2EsIE1BU2MsIEJBU2MsIEVJVA0KPiA+PiBQcmluY2lwYWwgRGV2ZWxvcGVyOyBTZWN1cml0
+eSBhbmQgRW1iZWRkZWQgU3lzdGVtcyBTcGVjaWFsaXN0DQo+ID4+IGxpbmtlZGluOiBodHRwczov
+L2NhLmxpbmtlZGluLmNvbS9pbi9naWFzc2ENCj4gPj4gZS1tYWlsOiAgIG1hdHRoZXdAZ2lhc3Nh
+Lm5ldA0KPiA+PiB3ZWJzaXRlOiAgd3d3LmdpYXNzYS5uZXQNCj4gDQo+IE15IGluaXRpYWwgYWlt
+IGlzIHg4Ni94NjQgdGFyZ2V0cywgdW5sZXNzIHRoZXJlIGFyZSBhZGRpdGlvbmFsIHJlc291cmNl
+cyBJIGNhbg0KPiB0YXAgaW50byBmb3IgZXhwYW5kaW5nIHRvIEFSTS4gSWYgSSBjYW4gZ2V0IGEg
+d29ya2luZyBwcm90b3R5cGUgdXAgYW5kIHJ1bm5pbmcNCj4gYW5kIGludG8gInN0YWdpbmciLCB0
+aGVuIGV4cGFuZGluZyB0byBBUk0gYXJjaGl0ZWN0dXJlIHdvdWxkIGJlIHZpYWJsZS4NCj4gDQoN
+Cg==
