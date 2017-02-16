@@ -1,121 +1,150 @@
-From: "Roberts, William C" <william.c.roberts@intel.com>
-Date: Wed, 15 Feb 2017 23:49:04 +0000
-Message-ID: <476DC76E7D1DF2438D32BFADF679FC5623064D3F@ORSMSX103.amr.corp.intel.com>
-References: <1486755469-21573-1-git-send-email-william.c.roberts@intel.com>
-	 <1486757549.2192.20.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C559@ORSMSX103.amr.corp.intel.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305C5BA@ORSMSX103.amr.corp.intel.com>
-	 <1486766996.2192.30.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305DC7B@ORSMSX103.amr.corp.intel.com>
-	 <1486783428.2192.44.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305F372@ORSMSX103.amr.corp.intel.com>
-	 <1487016251.6214.6.camel@perches.com>
-	 <476DC76E7D1DF2438D32BFADF679FC562305F62F@ORSMSX103.amr.corp.intel.com>
- <1487024441.6214.12.camel@perches.com>
-In-Reply-To: <1487024441.6214.12.camel@perches.com>
-Content-Type: text/plain; charset="iso-8859-1"
-Content-Transfer-Encoding: quoted-printable
+Date: Wed, 15 Feb 2017 16:07:50 -0800
+From: Kees Cook <keescook@chromium.org>
+Message-ID: <20170216000750.GA124760@beast>
 MIME-Version: 1.0
-Subject: [kernel-hardening] RE: [PATCH] checkpatch: add warning on %pk instead of %pK usage
-To: Joe Perches <joe@perches.com>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "apw@canonical.com" <apw@canonical.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] usercopy: Add tests for all get_user() sizes
+To: linux-kernel@vger.kernel.org
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, Geert Uytterhoeven <geert@linux-m68k.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+The existing test was only exercising native unsigned long size
+get_user(). For completeness, we should check all sizes. But we
+must skip some 32-bit architectures that don't implement a 64-bit
+get_user().
+
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ lib/test_user_copy.c | 88 ++++++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 75 insertions(+), 13 deletions(-)
+
+diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
+index 73ff7a628e3a..4a79f2c1cd6e 100644
+--- a/lib/test_user_copy.c
++++ b/lib/test_user_copy.c
+@@ -25,6 +25,22 @@
+ #include <linux/uaccess.h>
+ #include <linux/vmalloc.h>
+ 
++/*
++ * Several 32-bit architectures support 64-bit {get,put}_user() calls.
++ * As there doesn't appear to be anything that can safely determine
++ * their capability at compile-time, we just have to opt-out certain archs.
++ */
++#if BITS_PER_LONG == 64 || (!defined(CONFIG_AVR32)  &&		\
++			    !defined(CONFIG_BLACKFIN) &&	\
++			    !defined(CONFIG_M32R) &&		\
++			    !defined(CONFIG_M68K) &&		\
++			    !defined(CONFIG_MICROBLAZE) &&	\
++			    !defined(CONFIG_MN10300) &&		\
++			    !defined(CONFIG_NIOS2) &&		\
++			    !defined(CONFIG_SUPERH))
++# define TEST_U64
++#endif
++
+ #define test(condition, msg)		\
+ ({					\
+ 	int cond = (condition);		\
+@@ -40,7 +56,12 @@ static int __init test_user_copy_init(void)
+ 	char __user *usermem;
+ 	char *bad_usermem;
+ 	unsigned long user_addr;
+-	unsigned long value = 0x5A;
++	u8 val_u8;
++	u16 val_u16;
++	u32 val_u32;
++#ifdef TEST_U64
++	u64 val_u64;
++#endif
+ 
+ 	kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
+ 	if (!kmem)
+@@ -61,14 +82,39 @@ static int __init test_user_copy_init(void)
+ 	/*
+ 	 * Legitimate usage: none of these copies should fail.
+ 	 */
+-	ret |= test(copy_from_user(kmem, usermem, PAGE_SIZE),
+-		    "legitimate copy_from_user failed");
++	memset(kmem, 0x3a, PAGE_SIZE * 2);
+ 	ret |= test(copy_to_user(usermem, kmem, PAGE_SIZE),
+ 		    "legitimate copy_to_user failed");
+-	ret |= test(get_user(value, (unsigned long __user *)usermem),
+-		    "legitimate get_user failed");
+-	ret |= test(put_user(value, (unsigned long __user *)usermem),
+-		    "legitimate put_user failed");
++	memset(kmem, 0x0, PAGE_SIZE);
++	ret |= test(copy_from_user(kmem, usermem, PAGE_SIZE),
++		    "legitimate copy_from_user failed");
++	ret |= test(memcmp(kmem, kmem + PAGE_SIZE, PAGE_SIZE),
++		    "legitimate usercopy failed to copy data");
++
++#define test_legit(size, check)						  \
++	do {								  \
++		val_##size = check;					  \
++		ret |= test(put_user(val_##size, (size __user *)usermem), \
++		    "legitimate put_user (" #size ") failed");		  \
++		val_##size = 0;						  \
++		ret |= test(get_user(val_##size, (size __user *)usermem), \
++		    "legitimate get_user (" #size ") failed");		  \
++		ret |= test(val_##size != check,			  \
++		    "legitimate get_user (" #size ") failed to do copy"); \
++		if (val_##size != check) {				  \
++			pr_info("0x%llx != 0x%llx\n",			  \
++				(unsigned long long)val_##size,		  \
++				(unsigned long long)check);		  \
++		}							  \
++	} while (0)
++
++	test_legit(u8,  0x5a);
++	test_legit(u16, 0x5a5b);
++	test_legit(u32, 0x5a5b5c5d);
++#ifdef TEST_U64
++	test_legit(u64, 0x5a5b5c5d6a6b6c6d);
++#endif
++#undef test_legit
+ 
+ 	/*
+ 	 * Invalid usage: none of these copies should succeed.
+@@ -105,12 +151,28 @@ static int __init test_user_copy_init(void)
+ 				  PAGE_SIZE),
+ 		    "illegal reversed copy_to_user passed");
+ 
+-	value = 0x5a;
+-	ret |= test(!get_user(value, (unsigned long __user *)kmem),
+-		    "illegal get_user passed");
+-	ret |= test(value != 0, "zeroing failure for illegal get_user");
+-	ret |= test(!put_user(value, (unsigned long __user *)kmem),
+-		    "illegal put_user passed");
++#define test_illegal(size, check)					    \
++	do {								    \
++		val_##size = (check);					    \
++		ret |= test(!get_user(val_##size, (size __user *)kmem),	    \
++		    "illegal get_user (" #size ") passed");		    \
++		ret |= test(val_##size != (size)0,			    \
++		    "zeroing failure for illegal get_user (" #size ")");    \
++		if (val_##size != (size)0) {				    \
++			pr_info("0x%llx != 0\n",			    \
++				(unsigned long long)val_##size);	    \
++		}							    \
++		ret |= test(!put_user(val_##size, (size __user *)kmem),	    \
++		    "illegal put_user (" #size ") passed");		    \
++	} while (0)
++
++	test_illegal(u8,  0x5a);
++	test_illegal(u16, 0x5a5b);
++	test_illegal(u32, 0x5a5b5c5d);
++#ifdef TEST_U64
++	test_illegal(u64, 0x5a5b5c5d6a6b6c6d);
++#endif
++#undef test_illegal
+ 
+ 	vm_munmap(user_addr, PAGE_SIZE * 2);
+ 	kfree(kmem);
+-- 
+2.7.4
 
 
-> -----Original Message-----
-> From: Joe Perches [mailto:joe@perches.com]
-> Sent: Monday, February 13, 2017 2:21 PM
-> To: Roberts, William C <william.c.roberts@intel.com>
-> Cc: linux-kernel@vger.kernel.org; apw@canonical.com; kernel-
-> hardening@lists.openwall.com
-> Subject: Re: [PATCH] checkpatch: add warning on %pk instead of %pK usage
->=20
-> (Adding back the cc's)
->=20
-> On Mon, 2017-02-13 at 21:28 +0000, Roberts, William C wrote:
-> > <snip>
-> > > No worries.
-> > > No idea why it doesn't work for you.
-> > > Maybe the hand applying was somehow
-> > > faulty?
-> > >
-> > > The attached is on top of -next so it does have offsets on Linus'
-> > > tree, but it seems to work.
-> > >
-> > > (on -linux)
-> > >
-> > > $ patch -p1 < cp_vsp.diff
-> > > patching file scripts/checkpatch.pl
-> > > Hunk #1 succeeded at 5634 (offset -36 lines).
-> > >
-> > > $ cat t_block.c
-> > > {
-> > > 	MY_DEBUG(drv->foo,
-> > > 		=A0"%pk",
-> > > 		=A0foo->boo);
-> > > }
-> > > $ ./scripts/checkpatch.pl -f t_block.c
-> > > WARNING: Invalid vsprintf pointer extension '%pk'
-> > > #2: FILE: t_block.c:2:
-> > > +	MY_DEBUG(drv->foo,
-> > > +		=A0"%pk",
-> > > +		=A0foo->boo);
-> > >
-> > > total: 0 errors, 1 warnings, 5 lines checked
-> > >
-> > > NOTE: For some of the reported defects, checkpatch may be able to
-> > > =A0=A0=A0=A0=A0=A0mechanically convert to the typical style using --f=
-ix or --fix-inplace.
-> > >
-> > > t_block.c has style problems, please review.
-> > >
-> > > NOTE: If any of the errors are false positives, please report
-> > > =A0=A0=A0=A0=A0=A0them to the maintainer, see CHECKPATCH in MAINTAINE=
-RS.
-> >
-> >
-> > Applied. It works fine with your example (see attached
-> > 0001-tblock.patch) but it doesn't provide Output for me with
-> > 0002-drv-hack.patch (attached as well)
-> >
-> > $ ./scripts/checkpatch.pl 0002-drv-hack.patch
-> > total: 0 errors, 0 warnings, 10 lines checked
-> >
-> > 0002-drv-hack.patch has no obvious style problems and is ready for subm=
-ission.
-> >
-> > ./scripts/checkpatch.pl 0001-tblock.patch
-> > WARNING: added, moved or deleted file(s), does MAINTAINERS need
-> updating?
-> > #13:
-> > new file mode 100644
-> >
-> > WARNING: Invalid vsprintf pointer extension '%pk'
-> > #19: FILE: t_block.c:2:
-> > +	MY_DEBUG(drv->foo,
-> > +		"%pk",
-> > +		 foo->boo);
-> >
-> > total: 0 errors, 2 warnings, 6 lines checked
-> >
-> > NOTE: For some of the reported defects, checkpatch may be able to
-> >       mechanically convert to the typical style using --fix or --fix-in=
-place.
-> >
-> > 0001-tblock.patch has style problems, please review.
-> >
-> > NOTE: If any of the errors are false positives, please report
-> >       them to the maintainer, see CHECKPATCH in MAINTAINERS.
->=20
-> This means _all_ the $stat checks aren't being done on patches that add j=
-ust a
-> single multi-line statement.
->=20
-> Andrew?  Any thoughts on how to enable $stat appropriately for patch cont=
-exts
-> with a single multi-line statement?
-
-I'm for merging your patch as is, and then take up the fact that $stat is n=
-ot working correctly
-as a separate change, does that seem reasonable?
+-- 
+Kees Cook
+Pixel Security
