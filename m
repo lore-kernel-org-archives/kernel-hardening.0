@@ -1,79 +1,64 @@
-Message-ID: <1487275371.9667.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Thu, 16 Feb 2017 15:02:51 -0500
-In-Reply-To: <63b8eab1-4384-688a-33cd-b648c99497a8@schaufler-ca.com>
-References: <alpine.LRH.2.20.1702150016220.32759@namei.org>
-	 <201702142324.IFB95862.MOSJLOVFQFtFHO@I-love.SAKURA.ne.jp>
-	 <alpine.LRH.2.20.1702150952360.6813@namei.org>
-	 <201702152342.GBH04183.FOFJFHQOLMOtVS@I-love.SAKURA.ne.jp>
-	 <a5022e72-287b-e0d1-aa54-888eb569ac1f@schaufler-ca.com>
-	 <201702162000.EAC43726.FOSVQtJFHMFOLO@I-love.SAKURA.ne.jp>
-	 <63b8eab1-4384-688a-33cd-b648c99497a8@schaufler-ca.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-FZfOg9QKKnK4L3n6XYNy"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] Re: [RFC v2 PATCH 1/2] security: introduce
- CONFIG_SECURITY_WRITABLE_HOOKS
-To: Casey Schaufler <casey@schaufler-ca.com>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, jmorris@namei.org
-Cc: linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 16 Feb 2017 13:54:35 -0800
+Message-Id: <20170216215438.126111-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v4 1/4] x86/mm: Adapt MODULES_END based on Fixmap section size
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Jonathan Corbet <corbet@lwn.net>, Thomas Garnier <thgarnie@google.com>, Kees Cook <keescook@chromium.org>, Lorenzo Stoakes <lstoakes@gmail.com>, Juergen Gross <jgross@suse.com>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rusty Russell <rusty@rustcorp.com.au>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, Brian Gerst <brgerst@gmail.com>, He Chen <he.chen@linux.intel.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Paul Gortmaker <paul.gortmaker@windriver.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>, Andy Lutomirski <luto@kernel.org>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, linux-pm@vger.kernel.org, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+This patch aligns MODULES_END to the beginning of the Fixmap section.
+It optimizes the space available for both sections. The address is
+pre-computed based on the number of pages required by the Fixmap
+section.
 
---=-FZfOg9QKKnK4L3n6XYNy
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+It will allow GDT remapping in the Fixmap section. The current
+MODULES_END static address does not provide enough space for the kernel
+to support a large number of processors.
 
-> > =C2=A0At least one antivirus software (which allows
-> > anonymous download of LKM source code) is using LSM hooks since
-> > Linux 2.6.32
-> > instead of rewriting syscall tables. We are already allowing
-> > multiple concurrent
-> > LSM modules (up to one fully armored module which uses "struct
-> > cred"->security
-> > field or exclusive hooks like security_xfrm_state_pol_flow_match(),
-> > plus
-> > unlimited number of lightweight modules which do not use "struct
-> > cred"->security
-> > nor exclusive hooks) as long as they are built into the kernel.
-> > There is no
-> > reason to keep LKM based LSM modules from antivirus software or
-> > alike away.
->=20
-> We're not to the point where in-kernel modules are stacking fully.
-> Not everyone is on board for that, but hope springs eternal. Part
-> of the design criteria I'm working under is that it shouldn't
-> preclude loadable modules, and I still think that's doable. The
-> patch James proposed is completely compatible with this philosophy.
-> You can argue that it requires a loadable module configuration be
-> less "hardened", but the opponents of loadable modules say that is
-> inherent to loadable modules.
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20170213
+---
+ Documentation/x86/x86_64/mm.txt         | 5 ++++-
+ arch/x86/include/asm/pgtable_64_types.h | 3 ++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
 
-FWIW, the full infrastructure for read-only data from PaX includes a way
-to make data temporary writable for a kernel thread. In PaX,
-__ro_after_init was/is called __read_only and pax_open_kernel /
-pax_close_kernel make it usable for rarely written data. That could
-easily land before loadable LSMs.
---=-FZfOg9QKKnK4L3n6XYNy
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
-
------BEGIN PGP SIGNATURE-----
-
-iQJKBAABCAA0FiEEZe7+AiEI4rcIy/z3+ecS5Zr18ioFAlimBWsWHGRhbmllbG1p
-Y2F5QGdtYWlsLmNvbQAKCRD55xLlmvXyKhmnD/9Vy+Sh1MErIqJVpgQNyDVsZV0k
-lahm3Qjpv2O6LMl6EVc4jtkZ6lPLkE1oM39k3VIE0t/p6bh/iJVS9gU9/P5HxZZu
-cec9YUY5DyPjT0PBRsOMalFAFOwIF/b8BQpKqz+kGm9cs4S0MyT0pW04TQcHGE1n
-tKrWKUKT7yKA4RcslcmJ9VeHpzLx18IM24JIoOpybvxmn6czxdQV86ld/SN2etob
-XK3TFNQtSTu9f/B58XoB1iWd2leZiEJ+rE4ymorX+JQq6smZunSr4ORu8qJlpV7+
-9q7aYLGICXvWGZaPJgmT6OkG/+E3fzXRinYehef38ePxP19QUWqtAI04n6UCaxJ+
-TRXOL0O1Oql41PRCeCoi0FmeZ9zuL4ovTpZ2WZc4mntRPUYk90UxFJEDq4onyE9U
-Pb4tMvJCZwxv68hIuX/T4boW00SL7NS9TjbNalyt0yeiqSxniU7iHu6IfQsDpgkd
-IVJM/XwrYRib4bJe6DpCL/xK88sSntISpJBZ/vvgertqgsn1mp0A6bkIHROS2yv8
-bTSJM8oMytCt7rK7Hazc4TrRj6SOc53Sjt1/NIhq5nMl6CuhObetYF1ISCzO0uid
-einFo5Hte7jYLpiO5AecIJoVPGsjpmT0cGTnEVplzsEt5MLNYDwrVFrPsHayJC3k
-vn2X+wNbkZ0nK82YNg==
-=iSro
------END PGP SIGNATURE-----
-
---=-FZfOg9QKKnK4L3n6XYNy--
+diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
+index 5724092db811..ee3f9c30957c 100644
+--- a/Documentation/x86/x86_64/mm.txt
++++ b/Documentation/x86/x86_64/mm.txt
+@@ -19,7 +19,7 @@ ffffff0000000000 - ffffff7fffffffff (=39 bits) %esp fixup stacks
+ ffffffef00000000 - fffffffeffffffff (=64 GB) EFI region mapping space
+ ... unused hole ...
+ ffffffff80000000 - ffffffff9fffffff (=512 MB)  kernel text mapping, from phys 0
+-ffffffffa0000000 - ffffffffff5fffff (=1526 MB) module mapping space
++ffffffffa0000000 - ffffffffff5fffff (=1526 MB) module mapping space (variable)
+ ffffffffff600000 - ffffffffffdfffff (=8 MB) vsyscalls
+ ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
+ 
+@@ -39,6 +39,9 @@ memory window (this size is arbitrary, it can be raised later if needed).
+ The mappings are not part of any other kernel PGD and are only available
+ during EFI runtime calls.
+ 
++The module mapping space size changes based on the CONFIG requirements for the
++following fixmap section.
++
+ Note that if CONFIG_RANDOMIZE_MEMORY is enabled, the direct mapping of all
+ physical memory, vmalloc/ioremap space and virtual memory map are randomized.
+ Their order is preserved but their base will be offset early at boot time.
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index 3a264200c62f..bb05e21cf3c7 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -67,7 +67,8 @@ typedef struct { pteval_t pte; } pte_t;
+ #endif /* CONFIG_RANDOMIZE_MEMORY */
+ #define VMALLOC_END	(VMALLOC_START + _AC((VMALLOC_SIZE_TB << 40) - 1, UL))
+ #define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+-#define MODULES_END      _AC(0xffffffffff000000, UL)
++/* The module sections ends with the start of the fixmap */
++#define MODULES_END   __fix_to_virt(__end_of_fixed_addresses + 1)
+ #define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+ #define ESPFIX_PGD_ENTRY _AC(-2, UL)
+ #define ESPFIX_BASE_ADDR (ESPFIX_PGD_ENTRY << PGDIR_SHIFT)
+-- 
+2.11.0.483.g087da7b7c-goog
