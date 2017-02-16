@@ -1,89 +1,88 @@
-From: James Morse <james.morse@arm.com>
-Date: Thu, 16 Feb 2017 18:29:17 +0000
-Message-Id: <20170216182917.19637-4-james.morse@arm.com>
-In-Reply-To: <20170216182917.19637-1-james.morse@arm.com>
-References: <20170216182917.19637-1-james.morse@arm.com>
-Subject: [kernel-hardening] [PATCH v4 3/3] arm64/uaccess: Add hardened usercopy check for bad stack accesses
-To: kernel-hardening@lists.openwall.com
-Cc: linux-arm-kernel@lists.infradead.org, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, keescook@chromium.org, Mark Rutland <mark.rutland@arm.com>, panand@redhat.com, keun-o.park@darkmatter.ae
+References: <alpine.LRH.2.20.1702150016220.32759@namei.org>
+ <201702142324.IFB95862.MOSJLOVFQFtFHO@I-love.SAKURA.ne.jp>
+ <alpine.LRH.2.20.1702150952360.6813@namei.org>
+ <201702152342.GBH04183.FOFJFHQOLMOtVS@I-love.SAKURA.ne.jp>
+ <a5022e72-287b-e0d1-aa54-888eb569ac1f@schaufler-ca.com>
+ <201702162000.EAC43726.FOSVQtJFHMFOLO@I-love.SAKURA.ne.jp>
+From: Casey Schaufler <casey@schaufler-ca.com>
+Message-ID: <63b8eab1-4384-688a-33cd-b648c99497a8@schaufler-ca.com>
+Date: Thu, 16 Feb 2017 11:49:15 -0800
+MIME-Version: 1.0
+In-Reply-To: <201702162000.EAC43726.FOSVQtJFHMFOLO@I-love.SAKURA.ne.jp>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] Re: [RFC v2 PATCH 1/2] security: introduce
+ CONFIG_SECURITY_WRITABLE_HOOKS
+To: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, jmorris@namei.org
+Cc: linux-security-module@vger.kernel.org, selinux@tycho.nsa.gov, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-lkdtm tests copy_{to,from}_user() by trying to copy an address range
-on the stack that isn't yet part of a stack frame.
+On 2/16/2017 3:00 AM, Tetsuo Handa wrote:
+> Casey Schaufler wrote:
+>> I can't say that I'm buying the value of the additional
+>> complexity here. Sure, you're protecting part of the data
+>> all the time, but you're exposing part all the time, too.
+> Will you explain it in detail? As far as I know, __ro_after_init
+> annotation makes the kernel to call set_memory_ro() after __init
+> functions are completed, by gathering such variables into a section
+> so that set_memory_ro() can change page flags for a memory region
+> where it is PAGE_ALIGNED and the size is multiple of PAGE_SIZE bytes.
+>
+> This "struct lsm_entry" is for gathering only LSM related variables which
+> would have been marked as __ro_after_init if CONFIG_SECURITY_WRITABLE_HOOKS=n
+> into a list of memory regions where they are PAGE_ALIGNED and the size is
+> multiple of PAGE_SIZE bytes, so that the kernel can call set_memory_ro() on
+> these memory regions even if CONFIG_SECURITY_SELINUX_DISABLE=y or allowing
+> LKM based LSMs.
 
-By the time the stack walker is invoked to check that the object being
-copied doesn't overlap stack frame, the invalid range is part of a valid
-stack frame. Discarding a constant number of frames is fragile as different
-compiler versions may make different inline choices.
+All I'm saying is that it's simpler to mark the entire
+structure than it is to mark parts.
 
-Instead, add a check that the object isn't between the current stack
-pointer and the end of the stack. Add this early enough that it should
-be inlined into the caller.
+>> For now I think that the solution James proposes makes the
+>> most sense. In the hypothetical loadable modules case I
+>> don't see real value in hardening bits of the data while
+>> explicitly making the most important parts dynamic.
+> Best solution for environments where it is known to enforce only one specific
+> LSM module and no user choices and no LKM based LSMs (including antivirus or
+> alike) is to directly embed that LSM module into security/security.c .
 
-CC: Sahara <keun-o.park@darkmatter.ae>
-Signed-off-by: James Morse <james.morse@arm.com>
----
- arch/arm64/include/asm/uaccess.h | 20 ++++++++++++++++++++
- 1 file changed, 20 insertions(+)
+There are too few beers on the table in front of me
+to start that discussion. :)
 
-diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
-index 46da3ea638bb..d3494840a61c 100644
---- a/arch/arm64/include/asm/uaccess.h
-+++ b/arch/arm64/include/asm/uaccess.h
-@@ -356,6 +356,22 @@ do {									\
- 		-EFAULT;						\
- })
- 
-+static inline void check_obj_in_unused_stack(const void *obj, unsigned long len)
-+{
-+	unsigned long stack = (unsigned long)task_stack_page(current);
-+
-+	if (__builtin_constant_p(len) || !IS_ENABLED(CONFIG_HARDENED_USERCOPY) || !len)
-+		return;
-+
-+	/*
-+	 * If current_stack_pointer is on the task stack, obj must not lie
-+	 * between current_stack_pointer and the last stack address.
-+	 */
-+	if ((current_stack_pointer & ~(THREAD_SIZE-1)) == stack)
-+		BUG_ON(stack <= (unsigned long)obj &&
-+		       (unsigned long)obj < current_stack_pointer);
-+}
-+
- extern unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n);
- extern unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n);
- extern unsigned long __must_check __copy_in_user(void __user *to, const void __user *from, unsigned long n);
-@@ -364,6 +380,7 @@ extern unsigned long __must_check __clear_user(void __user *addr, unsigned long
- static inline unsigned long __must_check __copy_from_user(void *to, const void __user *from, unsigned long n)
- {
- 	kasan_check_write(to, n);
-+	check_obj_in_unused_stack(to, n);
- 	check_object_size(to, n, false);
- 	return __arch_copy_from_user(to, from, n);
- }
-@@ -371,6 +388,7 @@ static inline unsigned long __must_check __copy_from_user(void *to, const void _
- static inline unsigned long __must_check __copy_to_user(void __user *to, const void *from, unsigned long n)
- {
- 	kasan_check_read(from, n);
-+	check_obj_in_unused_stack(from, n);
- 	check_object_size(from, n, true);
- 	return __arch_copy_to_user(to, from, n);
- }
-@@ -381,6 +399,7 @@ static inline unsigned long __must_check copy_from_user(void *to, const void __u
- 	kasan_check_write(to, n);
- 
- 	if (access_ok(VERIFY_READ, from, n)) {
-+		check_obj_in_unused_stack(to, n);
- 		check_object_size(to, n, false);
- 		res = __arch_copy_from_user(to, from, n);
- 	}
-@@ -394,6 +413,7 @@ static inline unsigned long __must_check copy_to_user(void __user *to, const voi
- 	kasan_check_read(from, n);
- 
- 	if (access_ok(VERIFY_WRITE, to, n)) {
-+		check_obj_in_unused_stack(from, n);
- 		check_object_size(from, n, true);
- 		n = __arch_copy_to_user(to, from, n);
- 	}
--- 
-2.10.1
+> CONFIG_SECURITY_WRITABLE_HOOKS=n depends on CONFIG_SECURITY_SELINUX_DISABLE=n
+> but many of distributor's kernels enable multiple LSM modules including
+> CONFIG_SECURITY_SELINUX_DISABLE=y. Also, people are using antivirus software
+> on distributor's kernels.
+
+I have to limit my comment on that to pointing out
+that we can't make decisions based on code that has
+never been proposed for the mainline.
+
+>  At least one antivirus software (which allows
+> anonymous download of LKM source code) is using LSM hooks since Linux 2.6.32
+> instead of rewriting syscall tables. We are already allowing multiple concurrent
+> LSM modules (up to one fully armored module which uses "struct cred"->security
+> field or exclusive hooks like security_xfrm_state_pol_flow_match(), plus
+> unlimited number of lightweight modules which do not use "struct cred"->security
+> nor exclusive hooks) as long as they are built into the kernel. There is no
+> reason to keep LKM based LSM modules from antivirus software or alike away.
+
+We're not to the point where in-kernel modules are stacking fully.
+Not everyone is on board for that, but hope springs eternal. Part
+of the design criteria I'm working under is that it shouldn't
+preclude loadable modules, and I still think that's doable. The
+patch James proposed is completely compatible with this philosophy.
+You can argue that it requires a loadable module configuration be
+less "hardened", but the opponents of loadable modules say that is
+inherent to loadable modules.
+
+> For such kernels, this "struct lsm_entry" allows calling set_memory_ro() on LSM
+> related variables which would have been marked as __ro_after_init if
+> CONFIG_SECURITY_WRITABLE_HOOKS=n.
+>
+> If you are not happy with using kmalloc() for copying "struct security_hook_list"
+> in each LSM module, can we agree with padding "struct security_hook_list" in each
+> LSM module PAGE_ALIGNED and the size being multiple of PAGE_SIZE bytes?
+
+I don't understand what that would help without
+the rest of your changes.
