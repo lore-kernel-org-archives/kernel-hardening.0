@@ -1,53 +1,52 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170216182917.19637-1-james.morse@arm.com>
-References: <20170216182917.19637-1-james.morse@arm.com>
+In-Reply-To: <20170216222529.GA7531@amd>
+References: <1486427518-14819-1-git-send-email-labbott@redhat.com>
+ <1486427518-14819-3-git-send-email-labbott@redhat.com> <20170216222529.GA7531@amd>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 16 Feb 2017 16:54:21 -0800
-Message-ID: <CAGXu5jJ9xis_X9qd-GxCM=oDDoynMrW=GZbfeOKKt_FpAuK83Q@mail.gmail.com>
+Date: Thu, 16 Feb 2017 17:08:20 -0800
+Message-ID: <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 0/3] arm64: usercopy: Implement stack frame object validation
-To: James Morse <james.morse@arm.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
+Subject: [kernel-hardening] Re: [PATCHv3 2/2] arch: Rename CONFIG_DEBUG_RODATA and CONFIG_DEBUG_MODULE_RONX
+To: Pavel Machek <pavel@ucw.cz>
+Cc: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, "H. Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rob Herring <robh@kernel.org>, Jessica Yu <jeyu@redhat.com>, Jonathan Corbet <corbet@lwn.net>, Helge Deller <deller@gmx.de>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Len Brown <len.brown@intel.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, LKML <linux-kernel@vger.kernel.org>, Jason Wessel <jason.wessel@windriver.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2017 at 10:29 AM, James Morse <james.morse@arm.com> wrote:
-> Hi all,
+On Thu, Feb 16, 2017 at 2:25 PM, Pavel Machek <pavel@ucw.cz> wrote:
+> Hi!
 >
-> This version of Sahara's arch_within_stack_frames() series replaces the
-> open-coded stack walker with a call to arm64's existing walker.
+>>
+>> -config DEBUG_RODATA
+>> +config STRICT_KERNEL_RWX
+>>       bool "Make kernel text and rodata read-only" if ARCH_OPTIONAL_KERNEL_RWX
+>>       depends on ARCH_HAS_STRICT_KERNEL_RWX
+>>       default !ARCH_OPTIONAL_KERNEL_RWX ||
 >
-> Patch 2 can be tested independently with this change[0].
->
-> lkdtm's use of unallocated stack regions is a separate problem, patch 3
-> tries to address this.
->
-> Sahara, it would be good to get your review of this!
-> I'm afraid I omitted your patch-3 as it stopped the lkdtm test from working,
-> I suspect its not tricking the compiler, but I haven't investigated.
->
->
-> Thanks,
->
-> James
->
-> [0] Change to lkdtm to generate accesses that overlap stack frames.
-> --------------%<--------------
-> diff --git a/drivers/misc/lkdtm_usercopy.c b/drivers/misc/lkdtm_usercopy.c
-> index 1dd611423d8b..fcbba3a14387 100644
-> --- a/drivers/misc/lkdtm_usercopy.c
-> +++ b/drivers/misc/lkdtm_usercopy.c
-> @@ -57,7 +57,8 @@ static noinline void do_usercopy_stack(bool to_user, bool bad_frame)
->
->         /* This is a pointer to outside our current stack frame. */
->         if (bad_frame) {
-> -               bad_stack = do_usercopy_stack_callee((uintptr_t)&bad_stack);
-> +               bad_stack = __builtin_frame_address(0);
-> +               bad_stack -= sizeof(good_stack)/2;
+> Debug features are expected to have runtime cost, so kconfig help is
+> silent about those. But there are runtime costs, right? It would be
+> nice to mention them in the help text...
 
-Ah, sneaky, yeah, that'll work nicely.
+It depends on the architecture. The prior help text for arm said:
 
-(Though it should likely get wrapped in a CONFIG_STACK_GROWSUP/DOWN test...)
+         The tradeoff is that each region is padded to section-size (1MiB)
+         boundaries (because their permissions are different and splitting
+         the 1M pages into 4K ones causes TLB performance problems), which
+         can waste memory.
+
+parisc (somewhat inaccurately) said:
+
+         This option may have a slight performance impact because a
+         portion of the kernel code won't be covered by a TLB anymore.
+
+IIUC, arm64 does what parisc is hinting at: mappings at the end are
+broken down to PAGE_SIZE. On x86, IIUC, there's actually no change to
+TLB performance due to how the mappings are already set up.
+
+I'm not sure the best way to express this in the new help text. Do you
+have some suggestions on wording? Personally, I don't really think
+it's worth mentioning this in Kconfig help, which, in theory, is
+supposed to limit how technical it gets. And I think the performance
+impact is almost entirely negligible compared to the risks addressed.
 
 -Kees
 
