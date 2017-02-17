@@ -1,109 +1,67 @@
+References: <1486427518-14819-1-git-send-email-labbott@redhat.com>
+ <1486427518-14819-3-git-send-email-labbott@redhat.com>
+ <20170216222529.GA7531@amd>
+ <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
+From: Helge Deller <deller@gmx.de>
+Message-ID: <fe5a4a8c-6f5d-126d-abd9-025e9ff97351@gmx.de>
+Date: Fri, 17 Feb 2017 09:22:44 +0100
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jLRyDQ9M209JyNQRm3M+4ZtzdE9W0=7S7aXqSMavFZi1A@mail.gmail.com>
-References: <20170118095155.5e3bf976@kaiwan-T460> <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
- <20170203101949.4c6908be@kaiwan-T460> <CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
- <20170209090714.63ce6333@kaiwan-T460> <CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
- <CAPDLWs_75A08esqUGkkCBpfGDKaVH8LEtvqcM4fNZ-Ue2beZeA@mail.gmail.com>
- <CAGXu5jLPrxc5dcB3HYF+D7WceQEJA8BrSn5py-o1NDzsRJR9ZQ@mail.gmail.com>
- <20170215125735.17920d58@kaiwan-T460> <CAGXu5jLRyDQ9M209JyNQRm3M+4ZtzdE9W0=7S7aXqSMavFZi1A@mail.gmail.com>
-From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Date: Fri, 17 Feb 2017 08:48:52 +0530
-Message-ID: <CAPDLWs_aEURmQ2Drz_AWsPXC-Xi2Q36HG4p-ZTVmx5+ZX4bdHA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
- to linux-next
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoph Lameter <cl@linux.com>, Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCHv3 2/2] arch: Rename CONFIG_DEBUG_RODATA and
+ CONFIG_DEBUG_MODULE_RONX
+To: Kees Cook <keescook@chromium.org>, Pavel Machek <pavel@ucw.cz>
+Cc: Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, "H. Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rob Herring <robh@kernel.org>, Jessica Yu <jeyu@redhat.com>, Jonathan Corbet <corbet@lwn.net>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Len Brown <len.brown@intel.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, LKML <linux-kernel@vger.kernel.org>, Jason Wessel <jason.wessel@windriver.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
->
-> Hm, we don't want to force this on against other command line
-> settings, so how about what I suggest below...
->
-
-Ok, can see the logic in that..
-
->
-> Can this be changed to interact better with the command line
-> arguments, in case someone selects CONFIG_MEMORY_SANITIZE, but boots
-> with page_poison=off?
->
-> e.g. instead of your init code, do this:
->
-> static bool want_page_poisoning __read_mostly =
-> IS_ENABLED(CONFIG_MEMORY_SANITIZE);
->
-> That way the logic for __page_poisoning_enabled is retained, etc.
->
->> +
->>  static inline void set_page_poison(struct page *page)
->>  {
->>         struct page_ext *page_ext;
->> diff --git a/mm/slub.c b/mm/slub.c
->> index d24e1ce..62de543 100644
->> --- a/mm/slub.c
->> +++ b/mm/slub.c
->> @@ -457,6 +457,17 @@ static int slub_debug;
->>  static char *slub_debug_slabs;
->>  static int disable_higher_order_debug;
+On 17.02.2017 02:08, Kees Cook wrote:
+> On Thu, Feb 16, 2017 at 2:25 PM, Pavel Machek <pavel@ucw.cz> wrote:
+>> Hi!
 >>
->> +static int __init memory_sanitize_slubdebug_init(void)
->> +{
->> +/* With 'memory sanitize' On, slub_debug Must be set to 'p' */
->> +       if (IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
->> +            IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
->> +               slub_debug |= SLAB_POISON;
->> +       }
->> +       return 0;
->> +}
->> +early_initcall(memory_sanitize_slubdebug_init);
->
-> And instead of this, use:
->
-> #if defined(CONFIG_SLUB_DEBUG_ON)
-> # define SLUB_DEBUG_INITIAL_FLAGS       DEBUG_DEFAULT_FLAGS
-> #elif defined(CONFIG_MEMORY_SANITIZE)
-> # define SLUB_DEBUG_INITIAL_FLAGS       SLAB_POISON
-> #else
-> # define SLUB_DEBUG_INITIAL_FLAGS       0
-> #endif
->
-> static int slub_debug = SLUB_DEBUG_INITIAL_FLAGS;
->
-> That way we're just setting the boot-time defaults and it'll safely
-> interact with everything else.
->
-> (I've added Christoph to CC to see what he thinks of this.)
->
+>>>
+>>> -config DEBUG_RODATA
+>>> +config STRICT_KERNEL_RWX
+>>>       bool "Make kernel text and rodata read-only" if ARCH_OPTIONAL_KERNEL_RWX
+>>>       depends on ARCH_HAS_STRICT_KERNEL_RWX
+>>>       default !ARCH_OPTIONAL_KERNEL_RWX ||
+>>
+>> Debug features are expected to have runtime cost, so kconfig help is
+>> silent about those. But there are runtime costs, right? It would be
+>> nice to mention them in the help text...
+> 
+> It depends on the architecture. The prior help text for arm said:
+> 
+>          The tradeoff is that each region is padded to section-size (1MiB)
+>          boundaries (because their permissions are different and splitting
+>          the 1M pages into 4K ones causes TLB performance problems), which
+>          can waste memory.
+> 
+> parisc (somewhat inaccurately) said:
+> 
+>          This option may have a slight performance impact because a
+>          portion of the kernel code won't be covered by a TLB anymore.
 
-What about a kernel command-line param - called 'mem_sanitize'?
-If set to 'on', it will enforce the forced behaviour (as per the curr
-implementation).
+The logic on parisc is actually:
+If huge page support is enabled, we map 1MB pages (and behave like arm wrt alignments).
+If huge page support is disabled we stay at 4k/PAGE_SIZE pages (without 1M alignment).
+ 
+> IIUC, arm64 does what parisc is hinting at: mappings at the end are
+> broken down to PAGE_SIZE. 
 
-I can think of this (but...):
---------------------+--------------------------+---------------------------
-mem_sanitize   |   page_poisoning   |    slub_debug
---------------------+--------------------------+---------------------------
-      strict           |            on                |    |= SLAB_POISON
-      normal       |                      <current default>
-      off              |              off               |            off
---------------------+--------------------------+---------------------------
+On parisc we never implemented that.
 
-But... if you think about it, I guess only the "strict" option is useful in any
-meaningful way.
-'normal' is what we'll get when I re-implement the code
-as you suggested above.
-Do we even want an 'off' case? As again, we'd be poking into the page_poisoning
-and slub_debug values.
+> On x86, IIUC, there's actually no change to
+> TLB performance due to how the mappings are already set up.
+> 
+> I'm not sure the best way to express this in the new help text. Do you
+> have some suggestions on wording? Personally, I don't really think
+> it's worth mentioning this in Kconfig help,
 
-Of course we can (and will) document all this...
-Thoughts?
+I agree on this.
 
--Kaiwan.
+> which, in theory, is
+> supposed to limit how technical it gets. And I think the performance
+> impact is almost entirely negligible compared to the risks addressed.
 
-> -Kees
->
-> --
-> Kees Cook
-> Pixel Security
->
+Helge
