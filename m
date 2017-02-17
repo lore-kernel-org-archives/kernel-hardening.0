@@ -1,68 +1,94 @@
-Date: Fri, 17 Feb 2017 18:23:13 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170217182313.GB25876@leverpostej>
-References: <1486427518-14819-1-git-send-email-labbott@redhat.com>
- <1486427518-14819-3-git-send-email-labbott@redhat.com>
- <20170216222529.GA7531@amd>
- <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCHv3 2/2] arch: Rename CONFIG_DEBUG_RODATA and
- CONFIG_DEBUG_MODULE_RONX
-To: Kees Cook <keescook@chromium.org>
-Cc: Pavel Machek <pavel@ucw.cz>, Laura Abbott <labbott@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, "H. Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rob Herring <robh@kernel.org>, Jessica Yu <jeyu@redhat.com>, Jonathan Corbet <corbet@lwn.net>, Helge Deller <deller@gmx.de>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Len Brown <len.brown@intel.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, LKML <linux-kernel@vger.kernel.org>, Jason Wessel <jason.wessel@windriver.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Robin Murphy <robin.murphy@arm.com>
+In-Reply-To: <CALMp9eT_G_Mhsk1k7Xc8L+bnpFwTUoC=ae4LhB1ppqKynKEQ9g@mail.gmail.com>
+References: <20170214194259.75960-1-thgarnie@google.com> <20170214194259.75960-4-thgarnie@google.com>
+ <CALMp9eT_G_Mhsk1k7Xc8L+bnpFwTUoC=ae4LhB1ppqKynKEQ9g@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 17 Feb 2017 12:11:00 -0800
+Message-ID: <CAJcbSZESdSQncHeKNVzHO90W7UJUKxKGy-h+rM82OhBc-Nh=cg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 4/4] KVM: VMX: Simplify segment_base
+To: Jim Mattson <jmattson@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux PM list <linux-pm@vger.kernel.org>, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2017 at 05:08:20PM -0800, Kees Cook wrote:
-> On Thu, Feb 16, 2017 at 2:25 PM, Pavel Machek <pavel@ucw.cz> wrote:
-> > Hi!
+On Fri, Feb 17, 2017 at 9:49 AM, Jim Mattson <jmattson@google.com> wrote:
+>
+> Can we use the read-only GDT here? When expanding the virtual address
+> for 64-bit system descriptors, isn't it sufficient to check (d->s == 0
+> && d->type != 0)?
+
+We can use the readonly GDT but I think doesn't matter one or the
+other here. We have to check specific types for LDT or TSS, other
+values describe other entries (cf Intel volume 3, 3.5) (for example 14
+& 15 on 64-bits are for trap & interrupt gates).
+
+>
+>
+> On Tue, Feb 14, 2017 at 11:42 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> > The KVM segment_base function is confusing. This patch replaces integers
+> > with appropriate flags, simplify constructs and add comments.
 > >
-> >>
-> >> -config DEBUG_RODATA
-> >> +config STRICT_KERNEL_RWX
-> >>       bool "Make kernel text and rodata read-only" if ARCH_OPTIONAL_KERNEL_RWX
-> >>       depends on ARCH_HAS_STRICT_KERNEL_RWX
-> >>       default !ARCH_OPTIONAL_KERNEL_RWX ||
+> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> > ---
+> > Based on next-20170213
+> > ---
+> >  arch/x86/kvm/vmx.c | 26 ++++++++++++++++++--------
+> >  1 file changed, 18 insertions(+), 8 deletions(-)
 > >
-> > Debug features are expected to have runtime cost, so kconfig help is
-> > silent about those. But there are runtime costs, right? It would be
-> > nice to mention them in the help text...
-> 
-> It depends on the architecture. The prior help text for arm said:
-> 
->          The tradeoff is that each region is padded to section-size (1MiB)
->          boundaries (because their permissions are different and splitting
->          the 1M pages into 4K ones causes TLB performance problems), which
->          can waste memory.
-> 
-> parisc (somewhat inaccurately) said:
-> 
->          This option may have a slight performance impact because a
->          portion of the kernel code won't be covered by a TLB anymore.
-> 
-> IIUC, arm64 does what parisc is hinting at: mappings at the end are
-> broken down to PAGE_SIZE. On x86, IIUC, there's actually no change to
-> TLB performance due to how the mappings are already set up.
+> > diff --git a/arch/x86/kvm/vmx.c b/arch/x86/kvm/vmx.c
+> > index 99167f20bc34..edb8326108dd 100644
+> > --- a/arch/x86/kvm/vmx.c
+> > +++ b/arch/x86/kvm/vmx.c
+> > @@ -2062,25 +2062,35 @@ static unsigned long segment_base(u16 selector)
+> >         struct desc_struct *d;
+> >         unsigned long table_base;
+> >         unsigned long v;
+> > +       u32 high32;
+> >
+> > -       if (!(selector & ~3))
+> > +       if (!(selector & ~SEGMENT_RPL_MASK))
+> >                 return 0;
+> >
+> > -       table_base = get_current_gdt_rw_vaddr();
+> > -
+> > -       if (selector & 4) {           /* from ldt */
+> > +       /* LDT selector */
+> > +       if ((selector & SEGMENT_TI_MASK) == SEGMENT_LDT) {
+> >                 u16 ldt_selector = kvm_read_ldt();
+> >
+> > -               if (!(ldt_selector & ~3))
+> > +               if (!(ldt_selector & ~SEGMENT_RPL_MASK))
+> >                         return 0;
+> >
+> >                 table_base = segment_base(ldt_selector);
+> > +       } else {
+> > +               table_base = get_current_gdt_rw_vaddr();
+> >         }
+> > -       d = (struct desc_struct *)(table_base + (selector & ~7));
+> > +
+> > +       d = (struct desc_struct *)table_base + (selector >> 3);
+> >         v = get_desc_base(d);
+> >  #ifdef CONFIG_X86_64
+> > -       if (d->s == 0 && (d->type == 2 || d->type == 9 || d->type == 11))
+> > -               v |= ((unsigned long)((struct ldttss_desc64 *)d)->base3) << 32;
+> > +       /*
+> > +        * Extend the virtual address if we have a system descriptor entry for
+> > +        * LDT or TSS (available or busy).
+> > +        */
+> > +       if (d->s == 0 && (d->type == DESC_LDT || d->type == DESC_TSS ||
+> > +                         d->type == 11/*Busy TSS */)) {
+> > +               high32 = ((struct ldttss_desc64 *)d)->base3;
+> > +               v |= (u64)high32 << 32;
+> > +       }
+> >  #endif
+> >         return v;
+> >  }
+> > --
+> > 2.11.0.483.g087da7b7c-goog
+> >
 
-On arm64, we split down to page granularity if needed, but use the
-largest possible mapping we can (e.g. if we can use a 2M block, we do).
 
-Because of the way we freed the init area, we already couldn't use
-larger mappings anyway. Applying the strict permissions didn't come at a
-measureable overhead in any real testing.
 
-> I'm not sure the best way to express this in the new help text. Do you
-> have some suggestions on wording? Personally, I don't really think
-> it's worth mentioning this in Kconfig help, which, in theory, is
-> supposed to limit how technical it gets. And I think the performance
-> impact is almost entirely negligible compared to the risks addressed.
 
-I also don't see much point in describing some hypothetical architecture
-specific overhead here. In most cases this can't be turned off (so there
-isn't anything to comapre it to, and hence no cost). Where people want
-to turn it off, they already know why they wish to do so.
-
-Thanks,
-Mark.
+-- 
+Thomas
