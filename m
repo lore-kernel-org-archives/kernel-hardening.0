@@ -1,71 +1,35 @@
-Date: Sat, 18 Feb 2017 16:45:11 -0700
-From: Eddie Kovsky <ewk@edkovsky.org>
-Message-ID: <20170218234511.GB13214@athena>
-References: <alpine.DEB.2.20.1702181431020.3112@hadrien>
+From: Colin King <colin.king@canonical.com>
+Date: Sat, 18 Feb 2017 23:50:01 +0000
+Message-Id: <20170218235001.20276-1-colin.king@canonical.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <alpine.DEB.2.20.1702181431020.3112@hadrien>
-Subject: [kernel-hardening] Re: [PATCH v2 3/3] Make vmbus register arguments read-only (fwd)
-To: Julia Lawall <julia.lawall@lip6.fr>
-Cc: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org, kys@microsoft.com, haiyangz@microsoft.com, sthemmin@microsoft.com, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH] gcc-plugins: fix spelling mistake: "unkown" -> "unknown"
+To: Kees Cook <keescook@chromium.org>, Emese Revfy <re.emese@gmail.com>, kernel-hardening@lists.openwall.com
+Cc: linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 02/18/17, Julia Lawall wrote:
-> It looks like brace are missing on the if on lines 1057-1059.
-> 
-> julia
-> 
-> 
-Well that is embarrassing. I should have caught that on my own test
-build before submitting this. But I do think I've found the error in my
-build script.
+From: Colin Ian King <colin.king@canonical.com>
 
-Sorry for all the noise.
+trivial fix to spelling mistake in error message
 
-Eddie
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+---
+ scripts/gcc-plugins/initify_plugin.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-> 
-> ---------- Forwarded message ----------
-> Date: Sat, 18 Feb 2017 15:46:30 +0800
-> From: kbuild test robot <fengguang.wu@intel.com>
-> To: kbuild@01.org
-> Cc: Julia Lawall <julia.lawall@lip6.fr>
-> Subject: Re: [PATCH v2 3/3] Make vmbus register arguments read-only
-> 
-> CC: kbuild-all@01.org
-> In-Reply-To: <20170218055844.1457-4-ewk@edkovsky.org>
-> 
-> Hi Eddie,
-> 
-> [auto build test WARNING on linus/master]
-> [also build test WARNING on v4.10-rc8 next-20170217]
-> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
-> 
-> url:    https://github.com/0day-ci/linux/commits/Eddie-Kovsky/provide-check-for-ro_after_init-memory-sections/20170218-141040
-> :::::: branch date: 2 hours ago
-> :::::: commit date: 2 hours ago
-> 
-> >> drivers/hv/vmbus_drv.c:1058:2-45: code aligned with following code on line 1059
->    drivers/hv/vmbus_drv.c:1129:2-45: code aligned with following code on line 1130
-> 
-> git remote add linux-review https://github.com/0day-ci/linux
-> git remote update linux-review
-> git checkout 1fed72d7adca008d13119f00c095e1e379f319a1
-> vim +1058 drivers/hv/vmbus_drv.c
-> 
-> cf6a2eac drivers/hv/vmbus_drv.c         K. Y. Srinivasan   2011-12-01  1052  	ret = vmbus_exists();
-> cf6a2eac drivers/hv/vmbus_drv.c         K. Y. Srinivasan   2011-12-01  1053  	if (ret < 0)
-> cf6a2eac drivers/hv/vmbus_drv.c         K. Y. Srinivasan   2011-12-01  1054  		return ret;
-> cf6a2eac drivers/hv/vmbus_drv.c         K. Y. Srinivasan   2011-12-01  1055
-> 1fed72d7 drivers/hv/vmbus_drv.c         Eddie Kovsky       2017-02-17  1056  	ret = kernel_ro_address(&hv_driver);
-> 1fed72d7 drivers/hv/vmbus_drv.c         Eddie Kovsky       2017-02-17  1057  	if (ret < 1)
-> 1fed72d7 drivers/hv/vmbus_drv.c         Eddie Kovsky       2017-02-17 @1058  		pr_err("Module address is not read-only.");
-> 1fed72d7 drivers/hv/vmbus_drv.c         Eddie Kovsky       2017-02-17 @1059  		return ret;
-> 1fed72d7 drivers/hv/vmbus_drv.c         Eddie Kovsky       2017-02-17  1060
-> 768fa219 drivers/staging/hv/vmbus_drv.c Greg Kroah-Hartman 2011-08-25  1061  	hv_driver->driver.name = hv_driver->name;
-> 768fa219 drivers/staging/hv/vmbus_drv.c Greg Kroah-Hartman 2011-08-25  1062  	hv_driver->driver.owner = owner;
-> 
-> ---
-> 0-DAY kernel test infrastructure                Open Source Technology Center
-> https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
+diff --git a/scripts/gcc-plugins/initify_plugin.c b/scripts/gcc-plugins/initify_plugin.c
+index 56ed878..2ed998a 100644
+--- a/scripts/gcc-plugins/initify_plugin.c
++++ b/scripts/gcc-plugins/initify_plugin.c
+@@ -1846,7 +1846,7 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
+ 			continue;
+ 		}
+ 
+-		error(G_("unkown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
++		error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
+ 	}
+ 
+ 	register_callback(plugin_name, PLUGIN_INFO, NULL, &initify_plugin_info);
+-- 
+2.10.2
