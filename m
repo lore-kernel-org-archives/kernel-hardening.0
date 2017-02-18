@@ -1,103 +1,72 @@
 From: Eddie Kovsky <ewk@edkovsky.org>
-Date: Fri, 17 Feb 2017 22:58:42 -0700
-Message-Id: <20170218055844.1457-2-ewk@edkovsky.org>
+Date: Fri, 17 Feb 2017 22:58:43 -0700
+Message-Id: <20170218055844.1457-3-ewk@edkovsky.org>
 In-Reply-To: <20170218055844.1457-1-ewk@edkovsky.org>
 References: <20170218055844.1457-1-ewk@edkovsky.org>
-Subject: [kernel-hardening] [PATCH v2 1/3] module: verify address is read-only
+Subject: [kernel-hardening] [PATCH v2 2/3] extable: verify address is read-only
 To: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org, kys@microsoft.com, haiyangz@microsoft.com, sthemmin@microsoft.com
 Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Implement a mechanism to check if a module's address is in
-the rodata or ro_after_init sections. It mimics the exsiting functions
-that test if an address is inside a module's text section.
+Provide a mechanism to check if the address of a variable is
+const or ro_after_init. It mimics the existing functions that test if an
+address is inside the kernel's text section.
 
 Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
 ---
- include/linux/module.h |  7 +++++++
- kernel/module.c        | 44 ++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 51 insertions(+)
+ include/linux/kernel.h |  2 ++
+ kernel/extable.c       | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 31 insertions(+)
 
-diff --git a/include/linux/module.h b/include/linux/module.h
-index 0297c5cd7cdf..1608d3570ee2 100644
---- a/include/linux/module.h
-+++ b/include/linux/module.h
-@@ -492,7 +492,9 @@ static inline int module_is_live(struct module *mod)
+diff --git a/include/linux/kernel.h b/include/linux/kernel.h
+index 4c26dc3a8295..51beea39e6c4 100644
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
+ extern int __kernel_text_address(unsigned long addr);
+ extern int kernel_text_address(unsigned long addr);
+ extern int func_ptr_is_kernel_text(void *ptr);
++extern int core_kernel_ro_data(unsigned long addr);
++extern int kernel_ro_address(unsigned long addr);
 
- struct module *__module_text_address(unsigned long addr);
- struct module *__module_address(unsigned long addr);
-+struct module *__module_ro_address(unsigned long addr);
- bool is_module_address(unsigned long addr);
-+bool is_module_ro_address(unsigned long addr);
- bool is_module_percpu_address(unsigned long addr);
- bool is_module_text_address(unsigned long addr);
+ unsigned long int_sqrt(unsigned long);
 
-@@ -645,6 +647,11 @@ static inline struct module *__module_address(unsigned long addr)
- 	return NULL;
+diff --git a/kernel/extable.c b/kernel/extable.c
+index 6b0d09051efb..e9608f129730 100644
+--- a/kernel/extable.c
++++ b/kernel/extable.c
+@@ -149,3 +149,32 @@ int func_ptr_is_kernel_text(void *ptr)
+ 		return 1;
+ 	return is_module_text_address(addr);
  }
-
-+static inline struct module *__module_ro_address(unsigned long addr)
-+{
-+	return NULL;
-+}
 +
- static inline struct module *__module_text_address(unsigned long addr)
- {
- 	return NULL;
-diff --git a/kernel/module.c b/kernel/module.c
-index 7eba6dea4f41..298cfe4645b1 100644
---- a/kernel/module.c
-+++ b/kernel/module.c
-@@ -4275,6 +4275,50 @@ struct module *__module_text_address(unsigned long addr)
- }
- EXPORT_SYMBOL_GPL(__module_text_address);
-
 +/**
-+ * is_module_text_ro_address - is this address inside read-only module code?
-+ * @addr: the address to check.
++ * core_kernel_ro_data - Verify address points to read-only section
++ * @addr: address to test
 + *
 + */
-+bool is_module_ro_address(unsigned long addr)
++int core_kernel_ro_data(unsigned long addr)
 +{
-+	bool ret;
++	if (addr >= (unsigned long)__start_rodata &&
++	    addr < (unsigned long)__end_rodata)
++		return 1;
 +
-+	preempt_disable();
-+	ret = __module_ro_address(addr) != NULL;
-+	preempt_enable();
++	if (addr >= (unsigned long)__start_data_ro_after_init &&
++	    addr < (unsigned long)__end_data_ro_after_init)
++		return 1;
 +
-+	return ret;
++	return 0;
 +}
 +
-+/*
-+ * __module_ro_address - get the module whose code contains a read-only address.
-+ * @addr: the address.
-+ *
-+ * Must be called with preempt disabled or module mutex held so that
-+ * module doesn't get freed during this.
-+ */
-+struct module *__module_ro_address(unsigned long addr)
++/* Verify that address is const or ro_after_init. */
++int kernel_ro_address(unsigned long addr)
 +{
-+	struct module *mod = __module_address(addr);
++	if (core_kernel_ro_data(addr))
++		return 1;
++	if (is_module_ro_address(addr))
++		return 1;
 +
-+	if (mod) {
-+		/* Make sure it's within the read-only section. */
-+		if (!within(addr, mod->init_layout.base,
-+			    mod->init_layout.ro_size)
-+		    && !within(addr, mod->core_layout.base,
-+			       mod->core_layout.ro_size))
-+			mod = NULL;
-+		if (!within(addr, mod->init_layout.base,
-+			    mod->init_layout.ro_after_init_size)
-+		    && !within(addr, mod->core_layout.base,
-+			       mod->core_layout.ro_after_init_size))
-+			mod = NULL;
-+	}
-+	return mod;
++	return 0;
 +}
-+EXPORT_SYMBOL_GPL(__module_ro_address);
-+
- /* Don't grab lock, we're oopsing. */
- void print_modules(void)
- {
 --
 2.11.1
