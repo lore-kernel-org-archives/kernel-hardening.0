@@ -1,82 +1,29 @@
 From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <CAGXu5j+MtxHxiPbSG3+6Tuw3EkBPixO73GYn692Nfoi1AwPWZw@mail.gmail.com>
-References: <20170214204039.GA125586@beast> <CAMuHMdWEH0OiBOJJrJLr27sZHo20sa2Qz5Acq9SZWBGav2FXdw@mail.gmail.com> <CAGXu5j+MtxHxiPbSG3+6Tuw3EkBPixO73GYn692Nfoi1AwPWZw@mail.gmail.com>
-Date: Sat, 18 Feb 2017 20:32:52 +1100
-Message-ID: <878tp3j12z.fsf@concordia.ellerman.id.au>
-MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] Re: [PATCH] usercopy: Add tests for all get_user() sizes
-To: Kees Cook <keescook@chromium.org>, Geert Uytterhoeven <geert@linux-m68k.org>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Date: Sat, 18 Feb 2017 20:33:20 +1100
+Message-Id: <1487410400-28313-1-git-send-email-mpe@ellerman.id.au>
+Subject: [kernel-hardening] [PATCH] usercopy: Don't test 64-bit get/put_user() on 32-bit powerpc
+To: keescook@chromium.org
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, geert@linux-m68k.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
+Add PPC32 to the opt-out list, otherwise it breaks the build.
 
-> On Wed, Feb 15, 2017 at 12:50 AM, Geert Uytterhoeven
-> <geert@linux-m68k.org> wrote:
->> On Tue, Feb 14, 2017 at 9:40 PM, Kees Cook <keescook@chromium.org> wrote:
->>> The existing test was only exercising native unsigned long size
->>> get_user(). For completeness, we should check all sizes.
->>>
->>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>> ---
->>>  lib/test_user_copy.c | 45 ++++++++++++++++++++++++++++++++++-----------
->>>  1 file changed, 34 insertions(+), 11 deletions(-)
->>>
->>> diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
->>> index ac3a60ba9331..49569125b7c5 100644
->>> --- a/lib/test_user_copy.c
->>> +++ b/lib/test_user_copy.c
->>> @@ -40,8 +40,11 @@ static int __init test_user_copy_init(void)
->>>         char __user *usermem;
->>>         char *bad_usermem;
->>>         unsigned long user_addr;
->>> -       unsigned long value = 0x5A;
->>>         char *zerokmem;
->>> +       u8 val_u8;
->>> +       u16 val_u16;
->>> +       u32 val_u32;
->>> +       u64 val_u64;
->>>
->>>         kmem = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
->>>         if (!kmem)
->>> @@ -72,10 +75,20 @@ static int __init test_user_copy_init(void)
->>>                     "legitimate copy_from_user failed");
->>>         ret |= test(copy_to_user(usermem, kmem, PAGE_SIZE),
->>>                     "legitimate copy_to_user failed");
->>> -       ret |= test(get_user(value, (unsigned long __user *)usermem),
->>> -                   "legitimate get_user failed");
->>> -       ret |= test(put_user(value, (unsigned long __user *)usermem),
->>> -                   "legitimate put_user failed");
->>> +
->>> +#define test_legit(size)                                                 \
->>> +       do {                                                              \
->>> +               ret |= test(get_user(val_##size, (size __user *)usermem), \
->>> +                   "legitimate get_user (" #size ") failed");            \
->>> +               ret |= test(put_user(val_##size, (size __user *)usermem), \
->>> +                   "legitimate put_user (" #size ") failed");            \
->>> +       } while (0)
->>> +
->>> +       test_legit(u8);
->>> +       test_legit(u16);
->>> +       test_legit(u32);
->>> +       test_legit(u64);
->>> +#undef test_legit
->>
->> ERROR: "__get_user_bad" [lib/test_user_copy.ko] undefined!
->>
->> http://kisskb.ellerman.id.au/kisskb/buildresult/12936728/
->>
->> So 64-bit get_user() support is mandatory now?
->
-> That's not my intention. :) In my sampling of architectures, I missed
-> a couple 32-bit archs that don't support 64-bit getuser(). I'm not
-> sure how to correctly write these tests, though, since it seems rather
-> ad-hoc. e.g. m68k has 64-bit getuser() commented out due to an old gcc
-> bug...
->
-> Should I just universally skip 64-bit getuser on 32-bit archs?
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+---
+ lib/test_user_copy.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-I think you should just make it opt-in for 32-bit arches.
-
-cheers
+diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
+index 4a79f2c1cd6e..6f335a3d4ae2 100644
+--- a/lib/test_user_copy.c
++++ b/lib/test_user_copy.c
+@@ -37,6 +37,7 @@
+ 			    !defined(CONFIG_MICROBLAZE) &&	\
+ 			    !defined(CONFIG_MN10300) &&		\
+ 			    !defined(CONFIG_NIOS2) &&		\
++			    !defined(CONFIG_PPC32) &&		\
+ 			    !defined(CONFIG_SUPERH))
+ # define TEST_U64
+ #endif
+-- 
+2.7.4
