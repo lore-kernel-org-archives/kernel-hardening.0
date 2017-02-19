@@ -1,67 +1,74 @@
 MIME-Version: 1.0
-In-Reply-To: <1487498618-16528-1-git-send-email-hoeun.ryu@gmail.com>
-References: <1487498618-16528-1-git-send-email-hoeun.ryu@gmail.com>
+In-Reply-To: <1487498660-16600-6-git-send-email-hoeun.ryu@gmail.com>
+References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com> <1487498660-16600-6-git-send-email-hoeun.ryu@gmail.com>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 19 Feb 2017 11:14:18 +0000
-Message-ID: <CAKv+Gu8SR7ksDi7_xa76zm6bjgpqZ0h5=BC+kC=GfW_4nuzv=A@mail.gmail.com>
+Date: Sun, 19 Feb 2017 11:21:18 +0000
+Message-ID: <CAKv+Gu-10eLtEa-=LChCL1q=4awARp3y8pqVdhVZfmmBFs6VzA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 0/7] introduce __ro_mostly_after_init
- section marker
+Subject: [kernel-hardening] Re: [RFC 6/7] arm64: add __map_kernel_segment to accept additional vm flags
 To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jeremy Linton <jeremy.linton@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Hoeun,
+On 19 February 2017 at 10:04, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>  Memory attribute for `__ro_mostly_after_init` section should be changed
+> via set_memory_rw/ro that doesn't work against vm areas which don't have
+> VM_ALLOC.
 
-On 19 February 2017 at 10:03, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->  After `__ro_after_init` marker is included in kernel, many kernel data
-> objects can be read-only-after-init. But there are many other places that
-> would be good to read-only-after-init but `__ro_after_init` can not be simply
-> applicable to them because they should be writable at some points, which are
-> during module_init/exit or dynamic de/registration for a specific subsystem.
+This is for a good reason: VMALLOC regions are guaranteed to be mapped
+down to pages, which is the only thing set_memory_rX() supports. On
+arm64, kernel segments may be mapped using contiguous page mappings or
+block mappings, which cannot be modified like this.
 
-The argument sounds reasonable, but it would really help if you could
-describe some use cases in more detail.
+> Add this function to map `__ro_mostly_after_init` section with
+> VM_ALLOC flag set in map_kernel.
+>
 
->  `__ro_mostly_after_init` is basically the same to `__ro_after_init`. The
-> section is mapped as read-only after kernel init. The different thing is
-> this section is temporarily mapped as read-write during module_init/exit and
-> de/registration of a subsystem using set_ro_mostly_after_init_rw/ro pair.
+If we add this functionality, I'd rather we have a special handler for
+the __ro_mostly_after_init section and not use set_memory_rX().
+
+> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+> ---
+>  arch/arm64/mm/mmu.c | 14 +++++++++++---
+>  1 file changed, 11 insertions(+), 3 deletions(-)
 >
-> - Tested only on arm64.
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index b805c01..91271b1 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -444,8 +444,10 @@ void mark_rodata_ro(void)
+>         debug_checkwx();
+>  }
 >
-> Description:
->   0001 patch is `__ro_mostly_after_init` itself.
->   0002 patch is to add set_ro_mostly_after_init_rw/ro pair using
->     set_memory_rw/ro.
->   0003 patch is to make the section read-write in module_init/exit.
->   0004 patch is an example for dynamic init/deinit of a subsystem.
->   0005 patch is an example for __ro_mostly_after_init section modified during
->     module_init/exit.
->   0006/0007 patches are fixes for arm64 kernel mapping.
+> -static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+> -                                     pgprot_t prot, struct vm_struct *vma)
+> +static void __init __map_kernel_segment(pgd_t *pgd,
+> +                                       void *va_start, void *va_end,
+> +                                       pgprot_t prot, struct vm_struct *vma,
+> +                                       unsigned long flags)
+>  {
+>         phys_addr_t pa_start = __pa_symbol(va_start);
+>         unsigned long size = va_end - va_start;
+> @@ -459,12 +461,18 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+>         vma->addr       = va_start;
+>         vma->phys_addr  = pa_start;
+>         vma->size       = size;
+> -       vma->flags      = VM_MAP;
+> +       vma->flags      = flags;
+>         vma->caller     = __builtin_return_address(0);
 >
-> Hoeun Ryu (7):
->   arch: add __ro_mostly_after_init section marker
->   init: add set_ro_mostly_after_init_rw/ro function
->   module: modify memory attrs for __ro_mostly_after_init during
->     module_init/exit
->   selinux: mark __ro_mostly_after_init for selinux_hooks/selinux_nf_ops
->   cpu: mark ro_mostly_after_init for cpuhp_ap/bp_states
->   arm64: add __map_kernel_segment to accept additional vm flags
->   arm64: map seperately rodata sections for __ro_mostly_after_init
->     section
+>         vm_area_add_early(vma);
+>  }
 >
->  arch/arm64/mm/mmu.c               | 44 ++++++++++++++++++++++++++++++++-------
->  include/asm-generic/sections.h    |  1 +
->  include/asm-generic/vmlinux.lds.h | 10 +++++++++
->  include/linux/cache.h             | 11 ++++++++++
->  include/linux/init.h              |  6 ++++++
->  init/main.c                       | 24 +++++++++++++++++++++
->  kernel/cpu.c                      |  4 ++--
->  kernel/module.c                   | 10 +++++++--
->  security/selinux/hooks.c          |  8 +++++--
->  9 files changed, 105 insertions(+), 13 deletions(-)
->
+> +static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+> +                                     pgprot_t prot, struct vm_struct *vma)
+> +{
+> +       return __map_kernel_segment(pgd, va_start, va_end, prot, vma, VM_MAP);
+> +}
+> +
+>  /*
+>   * Create fine-grained mappings for the kernel.
+>   */
 > --
 > 2.7.4
 >
