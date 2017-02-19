@@ -1,74 +1,109 @@
 MIME-Version: 1.0
-In-Reply-To: <1487498660-16600-6-git-send-email-hoeun.ryu@gmail.com>
-References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com> <1487498660-16600-6-git-send-email-hoeun.ryu@gmail.com>
+In-Reply-To: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
+References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 19 Feb 2017 11:21:18 +0000
-Message-ID: <CAKv+Gu-10eLtEa-=LChCL1q=4awARp3y8pqVdhVZfmmBFs6VzA@mail.gmail.com>
+Date: Sun, 19 Feb 2017 11:24:08 +0000
+Message-ID: <CAKv+Gu8J03Hr1xZ3Q7+z9RV1o4bZOZ83hTTeX=QdQN0rXrMYSQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC 6/7] arm64: add __map_kernel_segment to accept additional vm flags
+Subject: Re: [kernel-hardening] [RFC 1/7] arch: add __ro_mostly_after_init
+ section marker
 To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jeremy Linton <jeremy.linton@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 19 February 2017 at 10:04, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->  Memory attribute for `__ro_mostly_after_init` section should be changed
-> via set_memory_rw/ro that doesn't work against vm areas which don't have
-> VM_ALLOC.
-
-This is for a good reason: VMALLOC regions are guaranteed to be mapped
-down to pages, which is the only thing set_memory_rX() supports. On
-arm64, kernel segments may be mapped using contiguous page mappings or
-block mappings, which cannot be modified like this.
-
-> Add this function to map `__ro_mostly_after_init` section with
-> VM_ALLOC flag set in map_kernel.
+>  After `__ro_after_init` marker is included in kernel, many kernel data
+> objects can be read-only-after-init. But there are many other places that
+> would be good to read-only-after-init but `__ro_after_init` can not be simply
+> applicable to them because they should be writable at some points, which are
+> during module_init/exit or dynamic de/registration for a specific subsystem.
+>  `__ro_mostly_after_init` is basically the same to `__ro_after_init`. The
+> section is mapped as read-only after kernel init. The different thing is
+> this section is temporarily mapped as read-write during module_init/exit and
+> de/registration of a subsystem using set_ro_mostly_after_init_rw/ro pair.
+>  Use `__ro_mostly_after_init` as a way to mark such memory instead when
+> `__ro_after_init` is not applicable because the memory should be writable
+> at the described points of time. They are read-only right after kernel init
+> and writable temporarily only during module_init/exit and dynamic
+> de/registration for a subsystem.
 >
-
-If we add this functionality, I'd rather we have a special handler for
-the __ro_mostly_after_init section and not use set_memory_rX().
-
 > Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
 > ---
->  arch/arm64/mm/mmu.c | 14 +++++++++++---
->  1 file changed, 11 insertions(+), 3 deletions(-)
+>  include/asm-generic/sections.h    |  1 +
+>  include/asm-generic/vmlinux.lds.h | 10 ++++++++++
+>  include/linux/cache.h             | 11 +++++++++++
+>  3 files changed, 22 insertions(+)
 >
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index b805c01..91271b1 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -444,8 +444,10 @@ void mark_rodata_ro(void)
->         debug_checkwx();
->  }
+> diff --git a/include/asm-generic/sections.h b/include/asm-generic/sections.h
+> index 4df64a1..16a6f21 100644
+> --- a/include/asm-generic/sections.h
+> +++ b/include/asm-generic/sections.h
+> @@ -34,6 +34,7 @@ extern char __bss_start[], __bss_stop[];
+>  extern char __init_begin[], __init_end[];
+>  extern char _sinittext[], _einittext[];
+>  extern char __start_data_ro_after_init[], __end_data_ro_after_init[];
+> +extern char __start_data_ro_mostly_after_init[], __end_data_ro_mostly_after_init[];
+>  extern char _end[];
+>  extern char __per_cpu_load[], __per_cpu_start[], __per_cpu_end[];
+>  extern char __kprobes_text_start[], __kprobes_text_end[];
+> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+> index 4e09b28..cc5f44e 100644
+> --- a/include/asm-generic/vmlinux.lds.h
+> +++ b/include/asm-generic/vmlinux.lds.h
+> @@ -265,6 +265,15 @@
+>         __end_data_ro_after_init = .;
+>  #endif
 >
-> -static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
-> -                                     pgprot_t prot, struct vm_struct *vma)
-> +static void __init __map_kernel_segment(pgd_t *pgd,
-> +                                       void *va_start, void *va_end,
-> +                                       pgprot_t prot, struct vm_struct *vma,
-> +                                       unsigned long flags)
->  {
->         phys_addr_t pa_start = __pa_symbol(va_start);
->         unsigned long size = va_end - va_start;
-> @@ -459,12 +461,18 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
->         vma->addr       = va_start;
->         vma->phys_addr  = pa_start;
->         vma->size       = size;
-> -       vma->flags      = VM_MAP;
-> +       vma->flags      = flags;
->         vma->caller     = __builtin_return_address(0);
->
->         vm_area_add_early(vma);
->  }
->
-> +static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
-> +                                     pgprot_t prot, struct vm_struct *vma)
-> +{
-> +       return __map_kernel_segment(pgd, va_start, va_end, prot, vma, VM_MAP);
-> +}
+> +#ifndef RO_MOSTLY_AFTER_INIT_DATA
+> +#define RO_MOSTLY_AFTER_INIT_DATA(align)                               \
+> +       . = ALIGN(align);                                               \
+> +       VMLINUX_SYMBOL(__start_data_ro_mostly_after_init) = .;          \
+> +       *(.data..ro_mostly_after_init)                                  \
+> +       . = ALIGN(align);                                               \
+> +       VMLINUX_SYMBOL(__end_data_ro_mostly_after_init) = .;
+> +#endif
 > +
 >  /*
->   * Create fine-grained mappings for the kernel.
+>   * Read only Data
 >   */
+> @@ -275,6 +284,7 @@
+>                 *(.rodata) *(.rodata.*)                                 \
+>                 RO_AFTER_INIT_DATA      /* Read only after init */      \
+>                 KEEP(*(__vermagic))     /* Kernel version magic */      \
+> +               RO_MOSTLY_AFTER_INIT_DATA(align)                        \
+
+You can't really drop this in the middle of a section like this. On
+arm64, we try very hard to use a minimal segment alignment of 64 KB
+(of 2 MB if DEBUG_ALIGN_RODATA=y), to ensure that the TLB footprint of
+the kernel image is minimized.
+
+So this should be a separate section in the arm64 linker script.
+
+>                 . = ALIGN(8);                                           \
+>                 VMLINUX_SYMBOL(__start___tracepoints_ptrs) = .;         \
+>                 KEEP(*(__tracepoints_ptrs)) /* Tracepoints: pointer array */ \
+> diff --git a/include/linux/cache.h b/include/linux/cache.h
+> index 1be04f8..fd1cb9b 100644
+> --- a/include/linux/cache.h
+> +++ b/include/linux/cache.h
+> @@ -30,6 +30,17 @@
+>  #define __ro_after_init __attribute__((__section__(".data..ro_after_init")))
+>  #endif
+>
+> +/*
+> + * __ro_mostly_after_init is almost like __ro_after_init.
+> + * but __ro_mostly_after_init section is temporarily writable only during
+> + * module_init/exit or dynamic de/registeration of a subsystem using
+> + * set_ro_mostly_after_init_rw/ro pair.
+> + */
+> +#ifndef __ro_mostly_after_init
+> +#define __ro_mostly_after_init \
+> +       __attribute__((__section__(".data..ro_mostly_after_init")))
+> +#endif
+> +
+>  #ifndef ____cacheline_aligned
+>  #define ____cacheline_aligned __attribute__((__aligned__(SMP_CACHE_BYTES)))
+>  #endif
 > --
 > 2.7.4
 >
