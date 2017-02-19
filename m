@@ -1,109 +1,90 @@
 MIME-Version: 1.0
-In-Reply-To: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
-References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
+In-Reply-To: <1487498660-16600-7-git-send-email-hoeun.ryu@gmail.com>
+References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com> <1487498660-16600-7-git-send-email-hoeun.ryu@gmail.com>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 19 Feb 2017 11:24:08 +0000
-Message-ID: <CAKv+Gu8J03Hr1xZ3Q7+z9RV1o4bZOZ83hTTeX=QdQN0rXrMYSQ@mail.gmail.com>
+Date: Sun, 19 Feb 2017 11:35:51 +0000
+Message-ID: <CAKv+Gu9umycZm_UP99ZUifLUBb8MuOZHXgU9nB6XioVMa4eeVw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC 1/7] arch: add __ro_mostly_after_init
- section marker
-To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>, "linux-arch@vger.kernel.org" <linux-arch@vger.kernel.org>
+Subject: [kernel-hardening] Re: [RFC 7/7] arm64: map seperately rodata sections for
+ __ro_mostly_after_init section
+To: Hoeun Ryu <hoeun.ryu@gmail.com>, Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jeremy Linton <jeremy.linton@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 19 February 2017 at 10:04, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->  After `__ro_after_init` marker is included in kernel, many kernel data
-> objects can be read-only-after-init. But there are many other places that
-> would be good to read-only-after-init but `__ro_after_init` can not be simply
-> applicable to them because they should be writable at some points, which are
-> during module_init/exit or dynamic de/registration for a specific subsystem.
->  `__ro_mostly_after_init` is basically the same to `__ro_after_init`. The
-> section is mapped as read-only after kernel init. The different thing is
-> this section is temporarily mapped as read-write during module_init/exit and
-> de/registration of a subsystem using set_ro_mostly_after_init_rw/ro pair.
->  Use `__ro_mostly_after_init` as a way to mark such memory instead when
-> `__ro_after_init` is not applicable because the memory should be writable
-> at the described points of time. They are read-only right after kernel init
-> and writable temporarily only during module_init/exit and dynamic
-> de/registration for a subsystem.
+> Map rodata sections seperately for the new __ro_mostly_after_init section.
+> Attribute of memory for __ro_mostly_after_init section can be changed later
+> so we need a dedicated vmalloced region for set_memory_rw/ro api.
 >
 > Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
 > ---
->  include/asm-generic/sections.h    |  1 +
->  include/asm-generic/vmlinux.lds.h | 10 ++++++++++
->  include/linux/cache.h             | 11 +++++++++++
->  3 files changed, 22 insertions(+)
+>  arch/arm64/mm/mmu.c | 30 ++++++++++++++++++++++++++----
+>  1 file changed, 26 insertions(+), 4 deletions(-)
 >
-> diff --git a/include/asm-generic/sections.h b/include/asm-generic/sections.h
-> index 4df64a1..16a6f21 100644
-> --- a/include/asm-generic/sections.h
-> +++ b/include/asm-generic/sections.h
-> @@ -34,6 +34,7 @@ extern char __bss_start[], __bss_stop[];
->  extern char __init_begin[], __init_end[];
->  extern char _sinittext[], _einittext[];
->  extern char __start_data_ro_after_init[], __end_data_ro_after_init[];
-> +extern char __start_data_ro_mostly_after_init[], __end_data_ro_mostly_after_init[];
->  extern char _end[];
->  extern char __per_cpu_load[], __per_cpu_start[], __per_cpu_end[];
->  extern char __kprobes_text_start[], __kprobes_text_end[];
-> diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
-> index 4e09b28..cc5f44e 100644
-> --- a/include/asm-generic/vmlinux.lds.h
-> +++ b/include/asm-generic/vmlinux.lds.h
-> @@ -265,6 +265,15 @@
->         __end_data_ro_after_init = .;
->  #endif
->
-> +#ifndef RO_MOSTLY_AFTER_INIT_DATA
-> +#define RO_MOSTLY_AFTER_INIT_DATA(align)                               \
-> +       . = ALIGN(align);                                               \
-> +       VMLINUX_SYMBOL(__start_data_ro_mostly_after_init) = .;          \
-> +       *(.data..ro_mostly_after_init)                                  \
-> +       . = ALIGN(align);                                               \
-> +       VMLINUX_SYMBOL(__end_data_ro_mostly_after_init) = .;
-> +#endif
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index 91271b1..4a89a2e 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -434,8 +434,22 @@ void mark_rodata_ro(void)
+>          * mark .rodata as read only. Use __init_begin rather than __end_rodata
+>          * to cover NOTES and EXCEPTION_TABLE.
+>          */
+> -       section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
+> -       create_mapping_late(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
+> +       section_size = (unsigned long)__start_data_ro_mostly_after_init -
+> +               (unsigned long)__start_rodata;
+> +       create_mapping_late(__pa_symbol(__start_rodata),
+> +                           (unsigned long)__start_rodata,
+> +                           section_size, PAGE_KERNEL_RO);
 > +
->  /*
->   * Read only Data
+> +       section_size = (unsigned long)__end_data_ro_mostly_after_init -
+> +               (unsigned long)__start_data_ro_mostly_after_init;
+> +       create_mapping_late(__pa_symbol(__start_data_ro_mostly_after_init),
+> +                           (unsigned long)__start_data_ro_mostly_after_init,
+> +                           section_size, PAGE_KERNEL_RO);
+> +
+> +       section_size = (unsigned long)__init_begin -
+> +               (unsigned long)__end_data_ro_mostly_after_init;
+> +       create_mapping_late(__pa_symbol(__end_data_ro_mostly_after_init),
+> +                           (unsigned long)__end_data_ro_mostly_after_init,
+>                             section_size, PAGE_KERNEL_RO);
+>
+>         /* flush the TLBs after updating live kernel mappings */
+> @@ -478,10 +492,18 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
 >   */
-> @@ -275,6 +284,7 @@
->                 *(.rodata) *(.rodata.*)                                 \
->                 RO_AFTER_INIT_DATA      /* Read only after init */      \
->                 KEEP(*(__vermagic))     /* Kernel version magic */      \
-> +               RO_MOSTLY_AFTER_INIT_DATA(align)                        \
-
-You can't really drop this in the middle of a section like this. On
-arm64, we try very hard to use a minimal segment alignment of 64 KB
-(of 2 MB if DEBUG_ALIGN_RODATA=y), to ensure that the TLB footprint of
-the kernel image is minimized.
-
-So this should be a separate section in the arm64 linker script.
-
->                 . = ALIGN(8);                                           \
->                 VMLINUX_SYMBOL(__start___tracepoints_ptrs) = .;         \
->                 KEEP(*(__tracepoints_ptrs)) /* Tracepoints: pointer array */ \
-> diff --git a/include/linux/cache.h b/include/linux/cache.h
-> index 1be04f8..fd1cb9b 100644
-> --- a/include/linux/cache.h
-> +++ b/include/linux/cache.h
-> @@ -30,6 +30,17 @@
->  #define __ro_after_init __attribute__((__section__(".data..ro_after_init")))
->  #endif
+>  static void __init map_kernel(pgd_t *pgd)
+>  {
+> -       static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_init, vmlinux_data;
+> +       static struct vm_struct vmlinux_text, vmlinux_rodata1, vmlinux_rodata2, vmlinux_ro_mostly_after_init, vmlinux_init, vmlinux_data;
 >
-> +/*
-> + * __ro_mostly_after_init is almost like __ro_after_init.
-> + * but __ro_mostly_after_init section is temporarily writable only during
-> + * module_init/exit or dynamic de/registeration of a subsystem using
-> + * set_ro_mostly_after_init_rw/ro pair.
-> + */
-> +#ifndef __ro_mostly_after_init
-> +#define __ro_mostly_after_init \
-> +       __attribute__((__section__(".data..ro_mostly_after_init")))
-> +#endif
+>         map_kernel_segment(pgd, _text, _etext, PAGE_KERNEL_EXEC, &vmlinux_text);
+> -       map_kernel_segment(pgd, __start_rodata, __init_begin, PAGE_KERNEL, &vmlinux_rodata);
+> +       map_kernel_segment(pgd, __start_rodata, __start_data_ro_mostly_after_init, PAGE_KERNEL, &vmlinux_rodata1);
+> +       __map_kernel_segment(pgd,
+> +                            __start_data_ro_mostly_after_init,
+> +                            __end_data_ro_mostly_after_init,
+> +                            PAGE_KERNEL,
+> +                            &vmlinux_ro_mostly_after_init,
+> +                            VM_MAP | VM_ALLOC);
+> +       map_kernel_segment(pgd, __end_data_ro_mostly_after_init, __init_begin, PAGE_KERNEL, &vmlinux_rodata2);
 > +
->  #ifndef ____cacheline_aligned
->  #define ____cacheline_aligned __attribute__((__aligned__(SMP_CACHE_BYTES)))
->  #endif
+>         map_kernel_segment(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC,
+>                            &vmlinux_init);
+>         map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
 > --
 > 2.7.4
 >
+
+While it is correct that you are splitting this into three separate
+segments (otherwise we would not be able to change the permissions
+later without risking splitting to occur), I think this leads to
+unnecessary fragmentation.
+
+If there is demand for this feature (but you still need to make the
+argument for that), I wonder if it wouldn't be sufficient, and much
+more straightforward, to redefine the __ro_after_init semantics to
+include the kind of subsystem registration and module init context you
+are targeting, and implement some hooks to temporarily lift the
+__ro_after_init r/o permission restrictions in a controlled manner.
+
+Kees: any thoughts?
