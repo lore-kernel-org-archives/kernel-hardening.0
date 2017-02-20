@@ -1,83 +1,47 @@
-MIME-Version: 1.0
-In-Reply-To: <CAJcbSZHh+q-hSk9XHZuEfE9VWUTdNZHFEbf68=Qk4uPhB2jhoQ@mail.gmail.com>
-References: <20170214194259.75960-1-thgarnie@google.com> <20170214194259.75960-4-thgarnie@google.com>
- <CALMp9eT_G_Mhsk1k7Xc8L+bnpFwTUoC=ae4LhB1ppqKynKEQ9g@mail.gmail.com>
- <CAJcbSZESdSQncHeKNVzHO90W7UJUKxKGy-h+rM82OhBc-Nh=cg@mail.gmail.com>
- <CALMp9eQAZchjpgmqP1=qj-FXka8+Xbwqiu3xDz9KoLQ60nh-UQ@mail.gmail.com>
- <CAJcbSZEkqFPVNzygmAjkyxNssZxnJTYBYuMbvjms+3ZGcCY_sQ@mail.gmail.com>
- <CALCETrV4JqVfHQhz4EuFKfHXK=zABsmwZpgz4ijz89O8v4GdfA@mail.gmail.com> <CAJcbSZHh+q-hSk9XHZuEfE9VWUTdNZHFEbf68=Qk4uPhB2jhoQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Mon, 20 Feb 2017 09:39:21 -0800
-Message-ID: <CAJcbSZEPHBK5FfbU5uorQVkpVbENG0ZBdiA=acJ10rqtLn+TwQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v3 4/4] KVM: VMX: Simplify segment_base
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Jim Mattson <jmattson@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Paul Gortmaker <paul.gortmaker@windriver.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux PM list <linux-pm@vger.kernel.org>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Date: Mon, 20 Feb 2017 22:42:17 +0100
+From: Emese Revfy <re.emese@gmail.com>
+Message-Id: <20170220224217.f5bfec20447978b28e3b4ef7@gmail.com>
+In-Reply-To: <CAGXu5jKWGANHjA5opm4V9AzCVA27_iZqmypPvBLfzJ0MKNZDvg@mail.gmail.com>
+References: <1481925984-98605-1-git-send-email-keescook@chromium.org>
+	<CAGXu5jKfwBqEot+30z6Wh6Cow2gv25ojKxmoTS1Vb_LhwFiSnA@mail.gmail.com>
+	<20161219121046.646e5ef425178fce8c2cb555@gmail.com>
+	<CAGXu5jKiDUsncxEOCta3fEgh0OQ0oqpi3gzkPWvpu2oPLq2g4g@mail.gmail.com>
+	<20170111012459.c0a0c615c99a389e4d89c8b5@gmail.com>
+	<CAGXu5jJRNuLR+Ekt26fxkg5wCkEv5fv-4B7=rt78OfRHN_w1Jw@mail.gmail.com>
+	<20170112224116.680debbf6f5c288ba51a46c0@gmail.com>
+	<CAGXu5jLB_ZxPcJDsBK0h-HTfb8G-GdC+BnD-1rTL5ePUvcwuzA@mail.gmail.com>
+	<CAGXu5jJ_9Gbre2J1HYrY-gwnsStL8P+MKmKQwCBtY4-7m53RLA@mail.gmail.com>
+	<20170215012319.c7720609f415b2abf725e88f@gmail.com>
+	<CAGXu5jKWGANHjA5opm4V9AzCVA27_iZqmypPvBLfzJ0MKNZDvg@mail.gmail.com>
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v4 0/4] Introduce the initify gcc plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Brad Spengler <spender@grsecurity.net>, Michal Marek <mmarek@suse.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, linux-kbuild <linux-kbuild@vger.kernel.org>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 20, 2017 at 9:28 AM, Thomas Garnier <thgarnie@google.com> wrote=
-:
-> On Mon, Feb 20, 2017 at 8:56 AM, Andy Lutomirski <luto@amacapital.net> wr=
-ote:
->> On Fri, Feb 17, 2017 at 2:01 PM, Thomas Garnier <thgarnie@google.com> wr=
-ote:
->>> On Fri, Feb 17, 2017 at 1:00 PM, Jim Mattson <jmattson@google.com> wrot=
-e:
->>>> On Fri, Feb 17, 2017 at 12:11 PM, Thomas Garnier <thgarnie@google.com>=
- wrote:
->>>>> On Fri, Feb 17, 2017 at 9:49 AM, Jim Mattson <jmattson@google.com> wr=
-ote:
->>>>>>
->>>>>> Can we use the read-only GDT here? When expanding the virtual addres=
-s
->>>>>> for 64-bit system descriptors, isn't it sufficient to check (d->s =
-=3D=3D 0
->>>>>> && d->type !=3D 0)?
->>>>>
->>>>> We can use the readonly GDT but I think doesn't matter one or the
->>>>> other here. We have to check specific types for LDT or TSS, other
->>>>> values describe other entries (cf Intel volume 3, 3.5) (for example 1=
-4
->>>>> & 15 on 64-bits are for trap & interrupt gates).
->>>>
->>>> According to volume 3 of the SDM, section 3.5.2:
->>>>
->>>> The following system descriptors expand to 16 bytes:
->>>> =E2=80=94 Call gate descriptors (see Section 5.8.3.1, =E2=80=9CIA-32e =
-Mode Call Gates=E2=80=9D)
->>>> =E2=80=94 IDT gate descriptors (see Section 6.14.1, =E2=80=9C64-Bit Mo=
-de IDT=E2=80=9D)
->>>> =E2=80=94 LDT and TSS descriptors (see Section 7.2.3, =E2=80=9CTSS Des=
-criptor in 64-bit mode=E2=80=9D).
->>>>
->>>> All legal system descriptor types (except for 0: Upper 8 bytes of an 1=
-6-byte
->>>> descriptor) should get the high 32 bits of the base address from the n=
-ext 8-byte
->>>> descriptor.
->>>>
->>>
->>> Ok, then I will test an updated version next week.
->>>
->>
->> I'm going to send out some preliminary patches that just get rid of
->> this problem entirely.
->
-> Okay, I guess I will have to wait for it to be integrated to
-> linux-next then. Or would you rather to it after this patch set is
-> added?
->
+On Wed, 15 Feb 2017 11:27:06 -0800
+Kees Cook <keescook@chromium.org> wrote:
 
-Read your summary for the patchset of KVM cleanup, I will wait for it
-to reach linux-next to rebase and send the new iteration.
+> On Tue, Feb 14, 2017 at 4:23 PM, Emese Revfy <re.emese@gmail.com> wrote:
+> > On Thu, 12 Jan 2017 15:40:41 -0800
+> > Kees Cook <keescook@chromium.org> wrote:
+> >
+> >> WARNING: drivers/clk/bcm/built-in.o(.text+0xec2): Section mismatch in
+> >> reference from the function clk_gate() to the variable
+> >> .init.rodata.str:__func__.29708
+> >> The function clk_gate() references
+> >> the variable __initconst __func__.29708.
+> >> This is often because clk_gate lacks a __initconst
+> >> annotation or the annotation of __func__.29708 is wrong.
+> >
+> > Thanks for the report, it will be fixed in the next grsec patch.
+> 
+> Very cool, thanks! What did the problem turn out to be?
 
-Thanks for working on the clean-up.
+You can find it here:
+https://github.com/ephox-gcc-plugins/initify/commit/73e857aa47bde7cc78ed865a008d1519893c0f54
 
-> --
-> Thomas
-
-
-
---=20
-Thomas
+-- 
+Emese
