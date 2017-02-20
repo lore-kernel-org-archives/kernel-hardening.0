@@ -1,94 +1,72 @@
-Date: Mon, 20 Feb 2017 10:22:26 +0000
+Date: Mon, 20 Feb 2017 10:30:08 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170220102226.GB9003@leverpostej>
+Message-ID: <20170220103008.GC9003@leverpostej>
 References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
- <1487498660-16600-2-git-send-email-hoeun.ryu@gmail.com>
+ <1487498660-16600-3-git-send-email-hoeun.ryu@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1487498660-16600-2-git-send-email-hoeun.ryu@gmail.com>
-Subject: Re: [kernel-hardening] [RFC 2/7] init: add
- set_ro_mostly_after_init_rw/ro function
+In-Reply-To: <1487498660-16600-3-git-send-email-hoeun.ryu@gmail.com>
+Subject: Re: [kernel-hardening] [RFC 3/7] module: modify memory attrs for
+ __ro_mostly_after_init during module_init/exit
 To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Kees Cook <keescook@chromium.org>, Jessica Yu <jeyu@redhat.com>, Ingo Molnar <mingo@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, Emese Revfy <re.emese@gmail.com>, AKASHI Takahiro <takahiro.akashi@linaro.org>, Fabian Frederick <fabf@skynet.be>, Helge Deller <deller@gmx.de>, Laura Abbott <labbott@redhat.com>, Nicholas Piggin <npiggin@gmail.com>, Thomas Gleixner <tglx@linutronix.de>, Petr Mladek <pmladek@suse.com>, Yang Shi <yang.shi@linaro.org>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, Tejun Heo <tj@kernel.org>, Prarit Bhargava <prarit@redhat.com>, Lokesh Vutla <lokeshvutla@ti.com>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 19, 2017 at 07:04:05PM +0900, Hoeun Ryu wrote:
->  Add set_ro_mostly_after_init_rw/ro pair to modify memory attributes for
-> memory marked as `ro_mostly_after_init`.
+On Sun, Feb 19, 2017 at 07:04:06PM +0900, Hoeun Ryu wrote:
+>  `__ro_mostly_after_init` is almost like `__ro_after_init`. The section is
+> read-only as same as `__ro_after_init` after kernel init. This patch makes
+> `__ro_mostly_after_init` section read-write temporarily only during
+> module_init/module_exit.
 > 
->  I am doubtful that this is the right place where these functions reside and
-> these functions are suitable for all architectures for memory attributes
-> modification. Please comment.
+> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+> ---
+>  kernel/module.c | 10 ++++++++--
+>  1 file changed, 8 insertions(+), 2 deletions(-)
+> 
+> diff --git a/kernel/module.c b/kernel/module.c
+> index 7eba6de..3b25e0e 100644
+> --- a/kernel/module.c
+> +++ b/kernel/module.c
+> @@ -987,8 +987,11 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
+>  
+>  	mutex_unlock(&module_mutex);
+>  	/* Final destruction now no one is using it. */
+> -	if (mod->exit != NULL)
+> +	if (mod->exit != NULL) {
+> +		set_ro_mostly_after_init_rw();
+>  		mod->exit();
+> +		set_ro_mostly_after_init_ro();
+> +	}
+>  	blocking_notifier_call_chain(&module_notify_list,
+>  				     MODULE_STATE_GOING, mod);
+>  	klp_module_going(mod);
+> @@ -3396,8 +3399,11 @@ static noinline int do_init_module(struct module *mod)
+>  
+>  	do_mod_ctors(mod);
+>  	/* Start the module */
+> -	if (mod->init != NULL)
+> +	if (mod->init != NULL) {
+> +		set_ro_mostly_after_init_rw();
+>  		ret = do_one_initcall(mod->init);
+> +		set_ro_mostly_after_init_ro();
+> +	}
 
-These won't work for arm64, since set_memory_* only work on
-page-granular mappings in the vmalloc area.
+This looks very much like the pax_{open,close}_kernel() approach for
+write-rarely data.
 
-The "real" kernel mappings can use larger block mappings, and would need
-to be split (which cannot be done at runtime) before permissions could
-be changed at page granularity.
+I think it would be better to implement a first class write-rarely
+mechanism rather than trying to extend __ro_after_init to cover this
+case.
+
+As mentioned previously, I *think* we can have a generic implementation
+that uses an mm to temporarily map a (thread/cpu-local) RW alias of the
+data in question in what would otherwise be the user half of the address
+space. Regardless, we can have a generic interface [1] that can cater
+for that style of approach and/or something like ARM's domains or x86's
+pkeys.
 
 Thanks,
 Mark.
 
-> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
-> ---
->  include/linux/init.h |  6 ++++++
->  init/main.c          | 24 ++++++++++++++++++++++++
->  2 files changed, 30 insertions(+)
-> 
-> diff --git a/include/linux/init.h b/include/linux/init.h
-> index 79af096..d68e4f7 100644
-> --- a/include/linux/init.h
-> +++ b/include/linux/init.h
-> @@ -131,6 +131,12 @@ extern bool rodata_enabled;
->  #endif
->  #ifdef CONFIG_STRICT_KERNEL_RWX
->  void mark_rodata_ro(void);
-> +
-> +void set_ro_mostly_after_init_rw(void);
-> +void set_ro_mostly_after_init_ro(void);
-> +#else
-> +static inline void set_ro_mostly_after_init_rw(void) { }
-> +static inline void set_ro_mostly_after_init_ro(void) { }
->  #endif
->  
->  extern void (*late_time_init)(void);
-> diff --git a/init/main.c b/init/main.c
-> index 4719abf..a5d4873 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -941,6 +941,30 @@ static void mark_readonly(void)
->  	} else
->  		pr_info("Kernel memory protection disabled.\n");
->  }
-> +
-> +void set_ro_mostly_after_init_rw(void)
-> +{
-> +	unsigned long start = PFN_ALIGN(__start_data_ro_mostly_after_init);
-> +	unsigned long end = PFN_ALIGN(&__end_data_ro_mostly_after_init);
-> +	unsigned long nr_pages = (end - start) >> PAGE_SHIFT;
-> +
-> +	if (!rodata_enabled)
-> +		return;
-> +
-> +	set_memory_rw(start, nr_pages);
-> +}
-> +
-> +void set_ro_mostly_after_init_ro(void)
-> +{
-> +	unsigned long start = PFN_ALIGN(__start_data_ro_mostly_after_init);
-> +	unsigned long end = PFN_ALIGN(&__end_data_ro_mostly_after_init);
-> +	unsigned long nr_pages = (end - start) >> PAGE_SHIFT;
-> +
-> +	if (!rodata_enabled)
-> +		return;
-> +
-> +	set_memory_ro(start, nr_pages);
-> +}
->  #else
->  static inline void mark_readonly(void)
->  {
-> -- 
-> 2.7.4
-> 
+[1] http://www.openwall.com/lists/kernel-hardening/2016/11/18/3
