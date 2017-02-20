@@ -1,90 +1,59 @@
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Mon, 20 Feb 2017 08:21:30 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170220072130.GB8974@gmail.com>
+References: <1486427518-14819-1-git-send-email-labbott@redhat.com>
+ <1486427518-14819-3-git-send-email-labbott@redhat.com>
+ <20170216222529.GA7531@amd>
+ <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <1487498660-16600-7-git-send-email-hoeun.ryu@gmail.com>
-References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com> <1487498660-16600-7-git-send-email-hoeun.ryu@gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 19 Feb 2017 11:35:51 +0000
-Message-ID: <CAKv+Gu9umycZm_UP99ZUifLUBb8MuOZHXgU9nB6XioVMa4eeVw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC 7/7] arm64: map seperately rodata sections for
- __ro_mostly_after_init section
-To: Hoeun Ryu <hoeun.ryu@gmail.com>, Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, Laura Abbott <labbott@redhat.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jeremy Linton <jeremy.linton@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJ4FD=6HLK_21T079JrO569DwWBTeiD18x3WRrYBsaAqw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCHv3 2/2] arch: Rename CONFIG_DEBUG_RODATA and
+ CONFIG_DEBUG_MODULE_RONX
+To: Kees Cook <keescook@chromium.org>
+Cc: Pavel Machek <pavel@ucw.cz>, Laura Abbott <labbott@redhat.com>, Mark Rutland <mark.rutland@arm.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, "James E.J. Bottomley" <jejb@parisc-linux.org>, "H. Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Rob Herring <robh@kernel.org>, Jessica Yu <jeyu@redhat.com>, Jonathan Corbet <corbet@lwn.net>, Helge Deller <deller@gmx.de>, "x86@kernel.org" <x86@kernel.org>, Russell King <linux@armlinux.org.uk>, Ingo Molnar <mingo@redhat.com>, Len Brown <len.brown@intel.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, Will Deacon <will.deacon@arm.com>, Thomas Gleixner <tglx@linutronix.de>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, linux-parisc <linux-parisc@vger.kernel.org>, Linux PM list <linux-pm@vger.kernel.org>, "Rafael J. Wysocki" <rjw@rjwysocki.net>, LKML <linux-kernel@vger.kernel.org>, Jason Wessel <jason.wessel@windriver.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Robin Murphy <robin.murphy@arm.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 19 February 2017 at 10:04, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
-> Map rodata sections seperately for the new __ro_mostly_after_init section.
-> Attribute of memory for __ro_mostly_after_init section can be changed later
-> so we need a dedicated vmalloced region for set_memory_rw/ro api.
->
-> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
-> ---
->  arch/arm64/mm/mmu.c | 30 ++++++++++++++++++++++++++----
->  1 file changed, 26 insertions(+), 4 deletions(-)
->
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index 91271b1..4a89a2e 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -434,8 +434,22 @@ void mark_rodata_ro(void)
->          * mark .rodata as read only. Use __init_begin rather than __end_rodata
->          * to cover NOTES and EXCEPTION_TABLE.
->          */
-> -       section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
-> -       create_mapping_late(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
-> +       section_size = (unsigned long)__start_data_ro_mostly_after_init -
-> +               (unsigned long)__start_rodata;
-> +       create_mapping_late(__pa_symbol(__start_rodata),
-> +                           (unsigned long)__start_rodata,
-> +                           section_size, PAGE_KERNEL_RO);
-> +
-> +       section_size = (unsigned long)__end_data_ro_mostly_after_init -
-> +               (unsigned long)__start_data_ro_mostly_after_init;
-> +       create_mapping_late(__pa_symbol(__start_data_ro_mostly_after_init),
-> +                           (unsigned long)__start_data_ro_mostly_after_init,
-> +                           section_size, PAGE_KERNEL_RO);
-> +
-> +       section_size = (unsigned long)__init_begin -
-> +               (unsigned long)__end_data_ro_mostly_after_init;
-> +       create_mapping_late(__pa_symbol(__end_data_ro_mostly_after_init),
-> +                           (unsigned long)__end_data_ro_mostly_after_init,
->                             section_size, PAGE_KERNEL_RO);
->
->         /* flush the TLBs after updating live kernel mappings */
-> @@ -478,10 +492,18 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
->   */
->  static void __init map_kernel(pgd_t *pgd)
->  {
-> -       static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_init, vmlinux_data;
-> +       static struct vm_struct vmlinux_text, vmlinux_rodata1, vmlinux_rodata2, vmlinux_ro_mostly_after_init, vmlinux_init, vmlinux_data;
->
->         map_kernel_segment(pgd, _text, _etext, PAGE_KERNEL_EXEC, &vmlinux_text);
-> -       map_kernel_segment(pgd, __start_rodata, __init_begin, PAGE_KERNEL, &vmlinux_rodata);
-> +       map_kernel_segment(pgd, __start_rodata, __start_data_ro_mostly_after_init, PAGE_KERNEL, &vmlinux_rodata1);
-> +       __map_kernel_segment(pgd,
-> +                            __start_data_ro_mostly_after_init,
-> +                            __end_data_ro_mostly_after_init,
-> +                            PAGE_KERNEL,
-> +                            &vmlinux_ro_mostly_after_init,
-> +                            VM_MAP | VM_ALLOC);
-> +       map_kernel_segment(pgd, __end_data_ro_mostly_after_init, __init_begin, PAGE_KERNEL, &vmlinux_rodata2);
-> +
->         map_kernel_segment(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC,
->                            &vmlinux_init);
->         map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
-> --
-> 2.7.4
->
 
-While it is correct that you are splitting this into three separate
-segments (otherwise we would not be able to change the permissions
-later without risking splitting to occur), I think this leads to
-unnecessary fragmentation.
+* Kees Cook <keescook@chromium.org> wrote:
 
-If there is demand for this feature (but you still need to make the
-argument for that), I wonder if it wouldn't be sufficient, and much
-more straightforward, to redefine the __ro_after_init semantics to
-include the kind of subsystem registration and module init context you
-are targeting, and implement some hooks to temporarily lift the
-__ro_after_init r/o permission restrictions in a controlled manner.
+> On Thu, Feb 16, 2017 at 2:25 PM, Pavel Machek <pavel@ucw.cz> wrote:
+> > Hi!
+> >
+> >>
+> >> -config DEBUG_RODATA
+> >> +config STRICT_KERNEL_RWX
+> >>       bool "Make kernel text and rodata read-only" if ARCH_OPTIONAL_KERNEL_RWX
+> >>       depends on ARCH_HAS_STRICT_KERNEL_RWX
+> >>       default !ARCH_OPTIONAL_KERNEL_RWX ||
+> >
+> > Debug features are expected to have runtime cost, so kconfig help is
+> > silent about those. But there are runtime costs, right? It would be
+> > nice to mention them in the help text...
+> 
+> It depends on the architecture. The prior help text for arm said:
+> 
+>          The tradeoff is that each region is padded to section-size (1MiB)
+>          boundaries (because their permissions are different and splitting
+>          the 1M pages into 4K ones causes TLB performance problems), which
+>          can waste memory.
+> 
+> parisc (somewhat inaccurately) said:
+> 
+>          This option may have a slight performance impact because a
+>          portion of the kernel code won't be covered by a TLB anymore.
+> 
+> IIUC, arm64 does what parisc is hinting at: mappings at the end are
+> broken down to PAGE_SIZE. On x86, IIUC, there's actually no change to
+> TLB performance due to how the mappings are already set up.
 
-Kees: any thoughts?
+BTW., a good strategy with RAM sizes above say 4GB would be to just round up to 
+the next large-TLB boundary (2MB) and waste 0-2MB of RAM - which is only 0.05% of 
+4GB of RAM. On most workloads, especially with SSDs it's probably a positive RAM 
+vs. performance trade-off.
+
+Thanks,
+
+	Ingo
