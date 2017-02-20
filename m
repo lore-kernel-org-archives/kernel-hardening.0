@@ -1,70 +1,45 @@
-Date: Mon, 20 Feb 2017 10:30:08 +0000
+Date: Mon, 20 Feb 2017 12:45:32 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170220103008.GC9003@leverpostej>
+Message-ID: <20170220124531.GH9003@leverpostej>
 References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com>
- <1487498660-16600-3-git-send-email-hoeun.ryu@gmail.com>
+ <1487498660-16600-7-git-send-email-hoeun.ryu@gmail.com>
+ <CAKv+Gu9umycZm_UP99ZUifLUBb8MuOZHXgU9nB6XioVMa4eeVw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1487498660-16600-3-git-send-email-hoeun.ryu@gmail.com>
-Subject: Re: [kernel-hardening] [RFC 3/7] module: modify memory attrs for
- __ro_mostly_after_init during module_init/exit
-To: Hoeun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>
+In-Reply-To: <CAKv+Gu9umycZm_UP99ZUifLUBb8MuOZHXgU9nB6XioVMa4eeVw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC 7/7] arm64: map seperately rodata sections for
+ __ro_mostly_after_init section
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Laura Abbott <labbott@redhat.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, Jeremy Linton <jeremy.linton@arm.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sun, Feb 19, 2017 at 07:04:06PM +0900, Hoeun Ryu wrote:
->  `__ro_mostly_after_init` is almost like `__ro_after_init`. The section is
-> read-only as same as `__ro_after_init` after kernel init. This patch makes
-> `__ro_mostly_after_init` section read-write temporarily only during
-> module_init/module_exit.
+On Sun, Feb 19, 2017 at 11:35:51AM +0000, Ard Biesheuvel wrote:
+> On 19 February 2017 at 10:04, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> > Map rodata sections seperately for the new __ro_mostly_after_init section.
+> > Attribute of memory for __ro_mostly_after_init section can be changed later
+> > so we need a dedicated vmalloced region for set_memory_rw/ro api.
+
+> While it is correct that you are splitting this into three separate
+> segments (otherwise we would not be able to change the permissions
+> later without risking splitting to occur), I think this leads to
+> unnecessary fragmentation.
 > 
-> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
-> ---
->  kernel/module.c | 10 ++++++++--
->  1 file changed, 8 insertions(+), 2 deletions(-)
-> 
-> diff --git a/kernel/module.c b/kernel/module.c
-> index 7eba6de..3b25e0e 100644
-> --- a/kernel/module.c
-> +++ b/kernel/module.c
-> @@ -987,8 +987,11 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
->  
->  	mutex_unlock(&module_mutex);
->  	/* Final destruction now no one is using it. */
-> -	if (mod->exit != NULL)
-> +	if (mod->exit != NULL) {
-> +		set_ro_mostly_after_init_rw();
->  		mod->exit();
-> +		set_ro_mostly_after_init_ro();
-> +	}
->  	blocking_notifier_call_chain(&module_notify_list,
->  				     MODULE_STATE_GOING, mod);
->  	klp_module_going(mod);
-> @@ -3396,8 +3399,11 @@ static noinline int do_init_module(struct module *mod)
->  
->  	do_mod_ctors(mod);
->  	/* Start the module */
-> -	if (mod->init != NULL)
-> +	if (mod->init != NULL) {
-> +		set_ro_mostly_after_init_rw();
->  		ret = do_one_initcall(mod->init);
-> +		set_ro_mostly_after_init_ro();
-> +	}
+> If there is demand for this feature (but you still need to make the
+> argument for that), I wonder if it wouldn't be sufficient, and much
+> more straightforward, to redefine the __ro_after_init semantics to
+> include the kind of subsystem registration and module init context you
+> are targeting, and implement some hooks to temporarily lift the
+> __ro_after_init r/o permission restrictions in a controlled manner.
 
-This looks very much like the pax_{open,close}_kernel() approach for
-write-rarely data.
+>From a look over the series, I think this is just __write_rarely in
+disguise. I personally think that we should keep __write_rarely and
+__ro_after_init separate, the later being a strictly one-shot affair.
 
-I think it would be better to implement a first class write-rarely
-mechanism rather than trying to extend __ro_after_init to cover this
-case.
-
-As mentioned previously, I *think* we can have a generic implementation
-that uses an mm to temporarily map a (thread/cpu-local) RW alias of the
-data in question in what would otherwise be the user half of the address
-space. Regardless, we can have a generic interface [1] that can cater
-for that style of approach and/or something like ARM's domains or x86's
-pkeys.
+I had some ideas [1] as to how we could implement __write_rarely without
+carving up the kernel mapping further (and keeping the RW permissions
+local to the thread needing it), but I have not had the time to look
+into that further.
 
 Thanks,
 Mark.
