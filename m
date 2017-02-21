@@ -1,27 +1,66 @@
-Date: Tue, 21 Feb 2017 05:28:18 -0500 (EST)
-From: Paolo Bonzini <pbonzini@redhat.com>
-Message-ID: <211929849.24027362.1487672898147.JavaMail.zimbra@redhat.com>
-In-Reply-To: <20170221080332.GB3125@gmail.com>
-References: <20170214194259.75960-1-thgarnie@google.com> <CAJcbSZESdSQncHeKNVzHO90W7UJUKxKGy-h+rM82OhBc-Nh=cg@mail.gmail.com> <CALMp9eQAZchjpgmqP1=qj-FXka8+Xbwqiu3xDz9KoLQ60nh-UQ@mail.gmail.com> <CAJcbSZEkqFPVNzygmAjkyxNssZxnJTYBYuMbvjms+3ZGcCY_sQ@mail.gmail.com> <CALCETrV4JqVfHQhz4EuFKfHXK=zABsmwZpgz4ijz89O8v4GdfA@mail.gmail.com> <CAJcbSZHh+q-hSk9XHZuEfE9VWUTdNZHFEbf68=Qk4uPhB2jhoQ@mail.gmail.com> <CAJcbSZEPHBK5FfbU5uorQVkpVbENG0ZBdiA=acJ10rqtLn+TwQ@mail.gmail.com> <20170221080332.GB3125@gmail.com>
+Date: Tue, 21 Feb 2017 10:54:46 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170221105446.GA8605@leverpostej>
+References: <1487498618-16528-1-git-send-email-hoeun.ryu@gmail.com>
+ <20170220100213.GA9003@leverpostej>
+ <FAEFA506-D7DB-4D92-A773-3A6EA966FE4A@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v3 4/4] KVM: VMX: Simplify segment_base
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Garnier <thgarnie@google.com>, Andy Lutomirski <luto@amacapital.net>, Jim Mattson <jmattson@google.com>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Borislav Petkov <bp@suse.de>, Paul Gortmaker <paul.gortmaker@windriver.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Juergen Gross <jgross@suse.com>, Rusty Russell <rusty@rustcorp.com.au>, Peter Zijlstra <peterz@infradead.org>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Adam Buchbinder <adam.buchbinder@gmail.com>, Dave Hansen <dave.hansen@intel.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Rik van Riel <riel@redhat.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux PM list <linux-pm@vger.kernel.org>, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <FAEFA506-D7DB-4D92-A773-3A6EA966FE4A@gmail.com>
+Subject: Re: [kernel-hardening] [PATCH 0/7] introduce __ro_mostly_after_init
+ section marker
+To: Ho-Eun Ryu <hoeun.ryu@gmail.com>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Tue, Feb 21, 2017 at 03:10:45PM +0900, Ho-Eun Ryu wrote:
+> > On 20 Feb 2017, at 7:02 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+> > On Sun, Feb 19, 2017 at 07:03:38PM +0900, Hoeun Ryu wrote:
+> >> After `__ro_after_init` marker is included in kernel, many kernel data
+> >> objects can be read-only-after-init. But there are many other places that
+> >> would be good to read-only-after-init but `__ro_after_init` can not be simply
+> >> applicable to them because they should be writable at some points, which are
+> >> during module_init/exit or dynamic de/registration for a specific subsystem.
+> > 
+> > Could you elaborate on this?
+> > 
+> > For modules, I assume that the __ro_after_init data structures are part
+> > of the module, and not part of the "real" kernel image. Is that the case?
+> 
+> __ro_mostly_after_init is for kernel builtin core subsystems, not for
+> modules themselves.  The section can be writable only during kernel
+> init and module_init/exit.  Some hooks (or array of hooks) of a core
+> subsystem can be marked as __ro_mostly_after_init similar to that way
+> of __ro_after_init. After that some modules that may write to those
+> hooks of the subsystem to register/deregister something to the
+> subsystem can safely access those section.  Please see RFC 3/7 that
+> makes this section writable.
+> 
+> In addition, some subsystems may use this marker for their (array of)
+> hooks and make them writable only at some point of time via
+> set_ro_mostly_after_init_rw/ro pair.  please read RFC 4/7 for selinux.
 
-> Paolo, how stable, non-rebasing are the KVM tree commits?
+Ok.
 
-Whatever ends in linux-next is stable.  I have a separate rebasing branch,
-but it's not part of linux-next by design.
+This sounds like a limited case of __write_rarely, where we only expect
+to perform writes in specific time windows.
 
-> Or should we keep Andy's KVM patches together with the GDT patches? Either
-> workflow works for me - it's your call as these are predominantly KVM
-> changes.
+I'd prefer if we could attack __write_rarely, and use the appraoch to
+cater for this case, but I am not necessarily opposed to this approach
+if other architectures are happy with it.
 
-I'll delay my pull request to Linus a couple days so that I can test
-Andy's 6 patches. Then you can just base your branch on Linus's tree.
+> > Which specific subsystems whish to modify data structures that are
+> > __ro_after_init?
+> 
+> I’m not intending to make writable __ro_after_init section but
+> introducing new section marker that works mostly like __ro_after_init
+> but can be written to at some points.  please see RFC 5/7 for
+> cpuhotplug.
 
-Paolo
+Ah. I clearly had not read this sufficiently thoroughly; sorry about
+that.
+
+Thanks,
+Mark.
