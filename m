@@ -1,22 +1,25 @@
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Mime-Version: 1.0 (Mac OS X Mail 10.1 \(3251\))
 From: Ho-Eun Ryu <hoeun.ryu@gmail.com>
-In-Reply-To: <20170220100213.GA9003@leverpostej>
-Date: Tue, 21 Feb 2017 15:10:45 +0900
+In-Reply-To: <CAKv+Gu8SR7ksDi7_xa76zm6bjgpqZ0h5=BC+kC=GfW_4nuzv=A@mail.gmail.com>
+Date: Tue, 21 Feb 2017 15:21:51 +0900
 Content-Transfer-Encoding: quoted-printable
-Message-Id: <FAEFA506-D7DB-4D92-A773-3A6EA966FE4A@gmail.com>
+Message-Id: <BAB6E3DA-D1D2-4016-AFE3-03E49F0BF672@gmail.com>
 References: <1487498618-16528-1-git-send-email-hoeun.ryu@gmail.com>
- <20170220100213.GA9003@leverpostej>
+ <CAKv+Gu8SR7ksDi7_xa76zm6bjgpqZ0h5=BC+kC=GfW_4nuzv=A@mail.gmail.com>
 Subject: Re: [kernel-hardening] [PATCH 0/7] introduce __ro_mostly_after_init
  section marker
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: kernel-hardening@lists.openwall.com, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
-> On 20 Feb 2017, at 7:02 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+> On 19 Feb 2017, at 8:14 PM, Ard Biesheuvel <ard.biesheuvel@linaro.org> =
+wrote:
 >=20
-> On Sun, Feb 19, 2017 at 07:03:38PM +0900, Hoeun Ryu wrote:
+> Hi Hoeun,
+>=20
+> On 19 February 2017 at 10:03, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
 >> After `__ro_after_init` marker is included in kernel, many kernel =
 data
 >> objects can be read-only-after-init. But there are many other places =
@@ -28,46 +31,27 @@ which are
 >> during module_init/exit or dynamic de/registration for a specific =
 subsystem.
 >=20
-> Could you elaborate on this?
->=20
-> For modules, I assume that the __ro_after_init data structures are =
-part
-> of the module, and not part of the "real" kernel image. Is that the =
-case?
->=20
+> The argument sounds reasonable, but it would really help if you could
+> describe some use cases in more detail.
 
-__ro_mostly_after_init is for kernel builtin core subsystems, not for =
-modules themselves.
-The section can be writable only during kernel init and =
+Please see RFC 4/7 [1] and RFC 5/7 [2].
+
+RFC 4 shows that cpu_ap/bp_states are marked as __ro_mostly_after_init.
+cpu_ap/bp_states can not be marked as __ro_after_init because some =
+modules
+can write to those objects using cpuhp_setup/remove_state api during =
 module_init/exit.
-Some hooks (or array of hooks) of a core subsystem can be marked as =
-__ro_mostly_after_init
-similar to that way of __ro_after_init. After that some modules that may =
-write to those hooks of
-the subsystem to register/deregister something to the subsystem can =
-safely access those section.
-Please see RFC 3/7 that makes this section writable.
 
-In addition, some subsystems may use this marker for their (array of) =
-hooks and make them writable
-only at some point of time via set_ro_mostly_after_init_rw/ro pair.
-please read RFC 4/7 for selinux.
+RFC 5 shows that selinux_hooks and selinux_nf_hooks are marked as =
+__ro_mostly_after_init.
+those hooks can not be marked as __ro_after_init because =
+selinux_disable() function.
+Those hooks should be writable during selinux_disable to deregister the =
+hooks.
 
-> Which specific subsystems whish to modify data structures that are
-> __ro_after_init?
+[1] https://lkml.org/lkml/2017/2/19/37
+[2] https://lkml.org/lkml/2017/2/19/35
 
-I=E2=80=99m not intending to make writable __ro_after_init section but =
-introducing new section marker
-that works mostly like __ro_after_init but can be written to at some =
-points.
-please see RFC 5/7 for cpuhotplug.
-
->=20
-> This sounds like the proposed mostly-ro/rarely-rw stuff would be a
-> better fit for that case.
->=20
-> Thanks,
-> Mark.
 >=20
 >> `__ro_mostly_after_init` is basically the same to `__ro_after_init`. =
 The
@@ -115,6 +99,6 @@ selinux_hooks/selinux_nf_ops
 >> security/selinux/hooks.c          |  8 +++++--
 >> 9 files changed, 105 insertions(+), 13 deletions(-)
 >>=20
->> --=20
+>> --
 >> 2.7.4
 >>=20
