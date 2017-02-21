@@ -1,50 +1,38 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170218235001.20276-1-colin.king@canonical.com>
-References: <20170218235001.20276-1-colin.king@canonical.com>
+In-Reply-To: <20170220091417.14b21484@xeon-e3>
+References: <20170218055844.1457-1-ewk@edkovsky.org> <20170218055844.1457-2-ewk@edkovsky.org>
+ <20170220091417.14b21484@xeon-e3>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 21 Feb 2017 11:15:03 -0800
-Message-ID: <CAGXu5j+xuXwOYKJ=S+9zxAZAGOxo2bFz9+CT21xLRjQHK6onRw@mail.gmail.com>
+Date: Tue, 21 Feb 2017 12:32:16 -0800
+Message-ID: <CAGXu5jKMqPFktwOk_iodie=2J+sT2pHBbTzeuKfDMEYq=dE8Ww@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: fix spelling mistake: "unkown" -> "unknown"
-To: Colin King <colin.king@canonical.com>
-Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v2 1/3] module: verify address is read-only
+To: Stephen Hemminger <stephen@networkplumber.org>
+Cc: Eddie Kovsky <ewk@edkovsky.org>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, KY Srinivasan <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Feb 18, 2017 at 3:50 PM, Colin King <colin.king@canonical.com> wrote:
-> From: Colin Ian King <colin.king@canonical.com>
+On Mon, Feb 20, 2017 at 9:14 AM, Stephen Hemminger
+<stephen@networkplumber.org> wrote:
+> On Fri, 17 Feb 2017 21:58:42 -0800
+> "Eddie Kovsky" <ewk@edkovsky.org> wrote:
 >
-> trivial fix to spelling mistake in error message
+>> Implement a mechanism to check if a module's address is in
+>> the rodata or ro_after_init sections. It mimics the exsiting functions
+>> that test if an address is inside a module's text section.
+>>
+>> Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
+>
+> I don't see the point of this for many of the hyper-v functions.
+> They are only called from a small number of places, and this can be validated
+> by code inspection. Adding this seems just seems to be code bloat to me.
 
-Thanks! I've already got this updated. I noticed the same thing a
-couple weeks ago. :)
+I think it has value in that it effectively blocks any way for
+non-ro_after_init structures from being passed into these functions.
+Since there are so few callers now, it's the perfect place to add
+this.
 
 -Kees
-
->
-> Signed-off-by: Colin Ian King <colin.king@canonical.com>
-> ---
->  scripts/gcc-plugins/initify_plugin.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
->
-> diff --git a/scripts/gcc-plugins/initify_plugin.c b/scripts/gcc-plugins/initify_plugin.c
-> index 56ed878..2ed998a 100644
-> --- a/scripts/gcc-plugins/initify_plugin.c
-> +++ b/scripts/gcc-plugins/initify_plugin.c
-> @@ -1846,7 +1846,7 @@ __visible int plugin_init(struct plugin_name_args *plugin_info, struct plugin_gc
->                         continue;
->                 }
->
-> -               error(G_("unkown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
-> +               error(G_("unknown option '-fplugin-arg-%s-%s'"), plugin_name, argv[i].key);
->         }
->
->         register_callback(plugin_name, PLUGIN_INFO, NULL, &initify_plugin_info);
-> --
-> 2.10.2
->
-
-
 
 -- 
 Kees Cook
