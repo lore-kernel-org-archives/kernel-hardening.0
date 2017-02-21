@@ -1,43 +1,114 @@
-Date: Tue, 21 Feb 2017 12:51:23 -0800
-From: Stephen Hemminger <stephen@networkplumber.org>
-Message-ID: <20170221125123.076be7e9@xeon-e3>
-In-Reply-To: <CAGXu5jKMqPFktwOk_iodie=2J+sT2pHBbTzeuKfDMEYq=dE8Ww@mail.gmail.com>
-References: <20170218055844.1457-1-ewk@edkovsky.org>
-	<20170218055844.1457-2-ewk@edkovsky.org>
-	<20170220091417.14b21484@xeon-e3>
-	<CAGXu5jKMqPFktwOk_iodie=2J+sT2pHBbTzeuKfDMEYq=dE8Ww@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2 1/3] module: verify address is read-only
-To: Kees Cook <keescook@chromium.org>
-Cc: Eddie Kovsky <ewk@edkovsky.org>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, KY Srinivasan <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Sender: keescook@google.com
+In-Reply-To: <CAPDLWs_aEURmQ2Drz_AWsPXC-Xi2Q36HG4p-ZTVmx5+ZX4bdHA@mail.gmail.com>
+References: <20170118095155.5e3bf976@kaiwan-T460> <90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
+ <20170203101949.4c6908be@kaiwan-T460> <CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
+ <20170209090714.63ce6333@kaiwan-T460> <CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
+ <CAPDLWs_75A08esqUGkkCBpfGDKaVH8LEtvqcM4fNZ-Ue2beZeA@mail.gmail.com>
+ <CAGXu5jLPrxc5dcB3HYF+D7WceQEJA8BrSn5py-o1NDzsRJR9ZQ@mail.gmail.com>
+ <20170215125735.17920d58@kaiwan-T460> <CAGXu5jLRyDQ9M209JyNQRm3M+4ZtzdE9W0=7S7aXqSMavFZi1A@mail.gmail.com>
+ <CAPDLWs_aEURmQ2Drz_AWsPXC-Xi2Q36HG4p-ZTVmx5+ZX4bdHA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 21 Feb 2017 15:26:03 -0800
+Message-ID: <CAGXu5jKTkN82UKY8HQKoKTCvqztksOraX43MKm=JXPKgpM1Bcw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
+ to linux-next
+To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Cc: Christoph Lameter <cl@linux.com>, Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 21 Feb 2017 12:32:16 -0800
-Kees Cook <keescook@chromium.org> wrote:
+On Thu, Feb 16, 2017 at 7:18 PM, Kaiwan N Billimoria
+<kaiwan@kaiwantech.com> wrote:
+>> Hm, we don't want to force this on against other command line
+>> settings, so how about what I suggest below...
+>>
+>
+> Ok, can see the logic in that..
+>
+>>
+>> Can this be changed to interact better with the command line
+>> arguments, in case someone selects CONFIG_MEMORY_SANITIZE, but boots
+>> with page_poison=off?
+>>
+>> e.g. instead of your init code, do this:
+>>
+>> static bool want_page_poisoning __read_mostly =
+>> IS_ENABLED(CONFIG_MEMORY_SANITIZE);
+>>
+>> That way the logic for __page_poisoning_enabled is retained, etc.
+>>
+>>> +
+>>>  static inline void set_page_poison(struct page *page)
+>>>  {
+>>>         struct page_ext *page_ext;
+>>> diff --git a/mm/slub.c b/mm/slub.c
+>>> index d24e1ce..62de543 100644
+>>> --- a/mm/slub.c
+>>> +++ b/mm/slub.c
+>>> @@ -457,6 +457,17 @@ static int slub_debug;
+>>>  static char *slub_debug_slabs;
+>>>  static int disable_higher_order_debug;
+>>>
+>>> +static int __init memory_sanitize_slubdebug_init(void)
+>>> +{
+>>> +/* With 'memory sanitize' On, slub_debug Must be set to 'p' */
+>>> +       if (IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
+>>> +            IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
+>>> +               slub_debug |= SLAB_POISON;
+>>> +       }
+>>> +       return 0;
+>>> +}
+>>> +early_initcall(memory_sanitize_slubdebug_init);
+>>
+>> And instead of this, use:
+>>
+>> #if defined(CONFIG_SLUB_DEBUG_ON)
+>> # define SLUB_DEBUG_INITIAL_FLAGS       DEBUG_DEFAULT_FLAGS
+>> #elif defined(CONFIG_MEMORY_SANITIZE)
+>> # define SLUB_DEBUG_INITIAL_FLAGS       SLAB_POISON
+>> #else
+>> # define SLUB_DEBUG_INITIAL_FLAGS       0
+>> #endif
+>>
+>> static int slub_debug = SLUB_DEBUG_INITIAL_FLAGS;
+>>
+>> That way we're just setting the boot-time defaults and it'll safely
+>> interact with everything else.
+>>
+>> (I've added Christoph to CC to see what he thinks of this.)
+>>
+>
+> What about a kernel command-line param - called 'mem_sanitize'?
+> If set to 'on', it will enforce the forced behaviour (as per the curr
+> implementation).
+>
+> I can think of this (but...):
+> --------------------+--------------------------+---------------------------
+> mem_sanitize   |   page_poisoning   |    slub_debug
+> --------------------+--------------------------+---------------------------
+>       strict           |            on                |    |= SLAB_POISON
+>       normal       |                      <current default>
+>       off              |              off               |            off
+> --------------------+--------------------------+---------------------------
+>
+> But... if you think about it, I guess only the "strict" option is useful in any
+> meaningful way.
+> 'normal' is what we'll get when I re-implement the code
+> as you suggested above.
+> Do we even want an 'off' case? As again, we'd be poking into the page_poisoning
+> and slub_debug values.
+>
+> Of course we can (and will) document all this...
+> Thoughts?
 
-> On Mon, Feb 20, 2017 at 9:14 AM, Stephen Hemminger
-> <stephen@networkplumber.org> wrote:
-> > On Fri, 17 Feb 2017 21:58:42 -0800
-> > "Eddie Kovsky" <ewk@edkovsky.org> wrote:
-> >  
-> >> Implement a mechanism to check if a module's address is in
-> >> the rodata or ro_after_init sections. It mimics the exsiting functions
-> >> that test if an address is inside a module's text section.
-> >>
-> >> Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>  
-> >
-> > I don't see the point of this for many of the hyper-v functions.
-> > They are only called from a small number of places, and this can be validated
-> > by code inspection. Adding this seems just seems to be code bloat to me.  
-> 
-> I think it has value in that it effectively blocks any way for
-> non-ro_after_init structures from being passed into these functions.
-> Since there are so few callers now, it's the perfect place to add
-> this.
-> 
-> -Kees
-> 
+I think mem_sanitize should likely follow the logic used by
+pax_sanitize_slab. i.e CONFIG_MEMORIZE_SANITIZE as suggested above,
+then a mem_sanitize= option for "off" and "full". (i.e.
+CONFIG_MEMORIZE_SANITIZE implies "on")
 
-Maybe for a more used API, but for such a corner case it is code bloat.
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
