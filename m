@@ -1,116 +1,57 @@
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 22 Feb 2017 02:26:27 +0100
-Message-Id: <20170222012632.4196-6-mic@digikod.net>
+Date: Wed, 22 Feb 2017 02:26:30 +0100
+Message-Id: <20170222012632.4196-9-mic@digikod.net>
 In-Reply-To: <20170222012632.4196-1-mic@digikod.net>
 References: <20170222012632.4196-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v5 05/10] seccomp: Split put_seccomp_filter() with put_seccomp()
+Subject: [kernel-hardening] [PATCH v5 08/10] seccomp: Enhance test_harness with an assert step mechanism
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The semantic is unchanged. This will be useful for the Landlock
-integration with seccomp (next commit).
+This is useful to return an information about the error without being
+able to write to TH_LOG_STREAM.
+
+Helpers from test_harness.h may be useful outside of the seccomp
+directory.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Kees Cook <keescook@chromium.org>
 Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
+Cc: Kees Cook <keescook@chromium.org>
+Cc: Shuah Khan <shuah@kernel.org>
 Cc: Will Drewry <wad@chromium.org>
 ---
- include/linux/seccomp.h |  4 ++--
- kernel/fork.c           |  2 +-
- kernel/seccomp.c        | 18 +++++++++++++-----
- 3 files changed, 16 insertions(+), 8 deletions(-)
+ tools/testing/selftests/seccomp/test_harness.h | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
-diff --git a/include/linux/seccomp.h b/include/linux/seccomp.h
-index ecc296c137cd..e25aee2cdfc0 100644
---- a/include/linux/seccomp.h
-+++ b/include/linux/seccomp.h
-@@ -77,10 +77,10 @@ static inline int seccomp_mode(struct seccomp *s)
- #endif /* CONFIG_SECCOMP */
- 
- #ifdef CONFIG_SECCOMP_FILTER
--extern void put_seccomp_filter(struct task_struct *tsk);
-+extern void put_seccomp(struct task_struct *tsk);
- extern void get_seccomp_filter(struct task_struct *tsk);
- #else  /* CONFIG_SECCOMP_FILTER */
--static inline void put_seccomp_filter(struct task_struct *tsk)
-+static inline void put_seccomp(struct task_struct *tsk)
- {
- 	return;
- }
-diff --git a/kernel/fork.c b/kernel/fork.c
-index 11c5c8ab827c..a4f0d0e8aeb2 100644
---- a/kernel/fork.c
-+++ b/kernel/fork.c
-@@ -352,7 +352,7 @@ void free_task(struct task_struct *tsk)
- #endif
- 	rt_mutex_debug_task_free(tsk);
- 	ftrace_graph_exit_task(tsk);
--	put_seccomp_filter(tsk);
-+	put_seccomp(tsk);
- 	arch_release_task_struct(tsk);
- 	if (tsk->flags & PF_KTHREAD)
- 		free_kthread_struct(tsk);
-diff --git a/kernel/seccomp.c b/kernel/seccomp.c
-index f7ce79a46050..06f2f3ee454c 100644
---- a/kernel/seccomp.c
-+++ b/kernel/seccomp.c
-@@ -62,6 +62,8 @@ struct seccomp_filter {
- /* Limit any path through the tree to 256KB worth of instructions. */
- #define MAX_INSNS_PER_PATH ((1 << 18) / sizeof(struct sock_filter))
- 
-+static void put_seccomp_filter(struct seccomp_filter *filter);
-+
- /*
-  * Endianness is explicitly ignored and left for BPF program authors to manage
-  * as per the specific architecture.
-@@ -312,7 +314,7 @@ static inline void seccomp_sync_threads(void)
- 		 * current's path will hold a reference.  (This also
- 		 * allows a put before the assignment.)
- 		 */
--		put_seccomp_filter(thread);
-+		put_seccomp_filter(thread->seccomp.filter);
- 		smp_store_release(&thread->seccomp.filter,
- 				  caller->seccomp.filter);
- 
-@@ -474,10 +476,11 @@ static inline void seccomp_filter_free(struct seccomp_filter *filter)
- 	}
- }
- 
--/* put_seccomp_filter - decrements the ref count of tsk->seccomp.filter */
--void put_seccomp_filter(struct task_struct *tsk)
-+/* put_seccomp_filter - decrements the ref count of a filter */
-+static void put_seccomp_filter(struct seccomp_filter *filter)
- {
--	struct seccomp_filter *orig = tsk->seccomp.filter;
-+	struct seccomp_filter *orig = filter;
-+
- 	/* Clean up single-reference branches iteratively. */
- 	while (orig && atomic_dec_and_test(&orig->usage)) {
- 		struct seccomp_filter *freeme = orig;
-@@ -486,6 +489,11 @@ void put_seccomp_filter(struct task_struct *tsk)
- 	}
- }
- 
-+void put_seccomp(struct task_struct *tsk)
-+{
-+	put_seccomp_filter(tsk->seccomp.filter);
-+}
-+
- /**
-  * seccomp_send_sigsys - signals the task to allow in-process syscall emulation
-  * @syscall: syscall number to send to userland
-@@ -897,7 +905,7 @@ long seccomp_get_filter(struct task_struct *task, unsigned long filter_off,
- 	if (copy_to_user(data, fprog->filter, bpf_classic_proglen(fprog)))
- 		ret = -EFAULT;
- 
--	put_seccomp_filter(task);
-+	put_seccomp_filter(task->seccomp.filter);
- 	return ret;
- 
- out:
+diff --git a/tools/testing/selftests/seccomp/test_harness.h b/tools/testing/selftests/seccomp/test_harness.h
+index a786c69c7584..77e407663e06 100644
+--- a/tools/testing/selftests/seccomp/test_harness.h
++++ b/tools/testing/selftests/seccomp/test_harness.h
+@@ -397,7 +397,7 @@ struct __test_metadata {
+ 	const char *name;
+ 	void (*fn)(struct __test_metadata *);
+ 	int termsig;
+-	int passed;
++	__s8 passed;
+ 	int trigger; /* extra handler after the evaluation */
+ 	struct __test_metadata *prev, *next;
+ };
+@@ -476,6 +476,12 @@ void __run_test(struct __test_metadata *t)
+ 					"instead of by signal (code: %d)\n",
+ 					t->name,
+ 					WEXITSTATUS(status));
++			} else if (t->passed < 0) {
++				fprintf(TH_LOG_STREAM,
++					"%s: Failed at step #%d\n",
++					t->name,
++					t->passed * -1);
++				t->passed = 0;
+ 			}
+ 		} else if (WIFSIGNALED(status)) {
+ 			t->passed = 0;
 -- 
 2.11.0
