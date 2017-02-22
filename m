@@ -1,45 +1,17 @@
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 22 Feb 2017 02:26:29 +0100
-Message-Id: <20170222012632.4196-8-mic@digikod.net>
+Date: Wed, 22 Feb 2017 02:26:31 +0100
+Message-Id: <20170222012632.4196-10-mic@digikod.net>
 In-Reply-To: <20170222012632.4196-1-mic@digikod.net>
 References: <20170222012632.4196-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v5 07/10] bpf: Add a Landlock sandbox example
+Subject: [kernel-hardening] [PATCH v5 09/10] bpf,landlock: Add tests for Landlock
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Add a basic sandbox tool to create a process isolated from some part of
-the system. This sandbox create a read-only environment. It is only
-allowed to write to a character device such as a TTY:
-
-  # :> X
-  # echo $?
-  0
-  # ./samples/bpf/landlock1 /bin/sh -i
-  Launching a new sandboxed process.
-  # :> Y
-  cannot create Y: Operation not permitted
-
-Changes since v4:
-* write Landlock rule in C and compiled it with LLVM
-* remove cgroup handling
-* remove path handling: only handle a read-only environment
-* remove errno return codes
-
-Changes since v3:
-* remove seccomp and origin field: completely free from seccomp programs
-* handle more FS-related hooks
-* handle inode hooks and directory traversal
-* add faked but consistent view thanks to ENOENT
-* add /lib64 in the example
-* fix spelling
-* rename some types and definitions (e.g. SECCOMP_ADD_LANDLOCK_RULE)
-
-Changes since v2:
-* use BPF_PROG_ATTACH for cgroup handling
+Test basic context access and filesystem event with multiple cases.
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
@@ -49,214 +21,265 @@ Cc: David S. Miller <davem@davemloft.net>
 Cc: James Morris <james.l.morris@oracle.com>
 Cc: Kees Cook <keescook@chromium.org>
 Cc: Serge E. Hallyn <serge@hallyn.com>
+Cc: Shuah Khan <shuah@kernel.org>
+Cc: Will Drewry <wad@chromium.org>
 ---
- samples/bpf/.gitignore       |  32 ++++++++++++++
- samples/bpf/Makefile         |   4 ++
- samples/bpf/bpf_load.c       |  26 +++++++++--
- samples/bpf/landlock1_kern.c |  46 +++++++++++++++++++
- samples/bpf/landlock1_user.c | 102 +++++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 206 insertions(+), 4 deletions(-)
- create mode 100644 samples/bpf/.gitignore
- create mode 100644 samples/bpf/landlock1_kern.c
- create mode 100644 samples/bpf/landlock1_user.c
+ tools/testing/selftests/Makefile                   |   1 +
+ tools/testing/selftests/bpf/test_verifier.c        |  54 +++-
+ tools/testing/selftests/landlock/.gitignore        |   2 +
+ tools/testing/selftests/landlock/Makefile          |  47 +++
+ tools/testing/selftests/landlock/rules/Makefile    |  52 +++
+ tools/testing/selftests/landlock/rules/README.rst  |   1 +
+ .../testing/selftests/landlock/rules/bpf_helpers.h |   1 +
+ tools/testing/selftests/landlock/rules/fs1.c       |  31 ++
+ tools/testing/selftests/landlock/rules/fs2.c       |  31 ++
+ tools/testing/selftests/landlock/test_fs.c         | 347 +++++++++++++++++++++
+ 10 files changed, 566 insertions(+), 1 deletion(-)
+ create mode 100644 tools/testing/selftests/landlock/.gitignore
+ create mode 100644 tools/testing/selftests/landlock/Makefile
+ create mode 100644 tools/testing/selftests/landlock/rules/Makefile
+ create mode 120000 tools/testing/selftests/landlock/rules/README.rst
+ create mode 120000 tools/testing/selftests/landlock/rules/bpf_helpers.h
+ create mode 100644 tools/testing/selftests/landlock/rules/fs1.c
+ create mode 100644 tools/testing/selftests/landlock/rules/fs2.c
+ create mode 100644 tools/testing/selftests/landlock/test_fs.c
 
-diff --git a/samples/bpf/.gitignore b/samples/bpf/.gitignore
-new file mode 100644
-index 000000000000..a7562a5ef4c2
---- /dev/null
-+++ b/samples/bpf/.gitignore
-@@ -0,0 +1,32 @@
-+fds_example
-+lathist
-+lwt_len_hist
-+map_perf_test
-+offwaketime
-+sampleip
-+sockex1
-+sockex2
-+sockex3
-+sock_example
-+spintest
-+tc_l2_redirect
-+test_cgrp2_array_pin
-+test_cgrp2_attach
-+test_cgrp2_attach2
-+test_cgrp2_sock
-+test_cgrp2_sock2
-+test_current_task_under_cgroup
-+test_lru_dist
-+test_overhead
-+test_probe_write_user
-+trace_event
-+trace_output
-+tracex1
-+tracex2
-+tracex3
-+tracex4
-+tracex5
-+tracex6
-+xdp1
-+xdp2
-+xdp_tx_iptunnel
-diff --git a/samples/bpf/Makefile b/samples/bpf/Makefile
-index 09e9d535bd74..3d3afd709635 100644
---- a/samples/bpf/Makefile
-+++ b/samples/bpf/Makefile
-@@ -34,6 +34,7 @@ hostprogs-y += sampleip
- hostprogs-y += tc_l2_redirect
- hostprogs-y += lwt_len_hist
- hostprogs-y += xdp_tx_iptunnel
-+hostprogs-y += landlock1
- 
- # Libbpf dependencies
- LIBBPF := ../../tools/lib/bpf/bpf.o
-@@ -72,6 +73,7 @@ sampleip-objs := bpf_load.o $(LIBBPF) sampleip_user.o
- tc_l2_redirect-objs := bpf_load.o $(LIBBPF) tc_l2_redirect_user.o
- lwt_len_hist-objs := bpf_load.o $(LIBBPF) lwt_len_hist_user.o
- xdp_tx_iptunnel-objs := bpf_load.o $(LIBBPF) xdp_tx_iptunnel_user.o
-+landlock1-objs := bpf_load.o $(LIBBPF) landlock1_user.o
- 
- # Tell kbuild to always build the programs
- always := $(hostprogs-y)
-@@ -105,6 +107,7 @@ always += trace_event_kern.o
- always += sampleip_kern.o
- always += lwt_len_hist_kern.o
- always += xdp_tx_iptunnel_kern.o
-+always += landlock1_kern.o
- 
- HOSTCFLAGS += -I$(objtree)/usr/include
- HOSTCFLAGS += -I$(srctree)/tools/lib/
-@@ -139,6 +142,7 @@ HOSTLOADLIBES_sampleip += -lelf
- HOSTLOADLIBES_tc_l2_redirect += -l elf
- HOSTLOADLIBES_lwt_len_hist += -l elf
- HOSTLOADLIBES_xdp_tx_iptunnel += -lelf
-+HOSTLOADLIBES_landlock1 += -lelf
- 
- # Allows pointing LLC/CLANG to a LLVM backend with bpf support, redefine on cmdline:
- #  make samples/bpf/ LLC=~/git/llvm/build/bin/llc CLANG=~/git/llvm/build/bin/clang
-diff --git a/samples/bpf/bpf_load.c b/samples/bpf/bpf_load.c
-index d23dc13ab0f2..78df39cf8b2f 100644
---- a/samples/bpf/bpf_load.c
-+++ b/samples/bpf/bpf_load.c
-@@ -68,6 +68,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
- 	bool is_perf_event = strncmp(event, "perf_event", 10) == 0;
- 	bool is_cgroup_skb = strncmp(event, "cgroup/skb", 10) == 0;
- 	bool is_cgroup_sk = strncmp(event, "cgroup/sock", 11) == 0;
-+	bool is_landlock = strncmp(event, "landlock", 8) == 0;
- 	size_t insns_cnt = size / sizeof(struct bpf_insn);
- 	enum bpf_prog_type prog_type;
- 	char buf[256];
-@@ -93,6 +94,12 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
- 		prog_type = BPF_PROG_TYPE_CGROUP_SKB;
- 	} else if (is_cgroup_sk) {
- 		prog_type = BPF_PROG_TYPE_CGROUP_SOCK;
-+	} else if (is_landlock) {
-+		prog_type = BPF_PROG_TYPE_LANDLOCK;
-+		if (!subtype.landlock_rule.event) {
-+			printf("No subtype\n");
-+			return -1;
-+		}
- 	} else {
- 		printf("Unknown event '%s'\n", event);
- 		return -1;
-@@ -107,7 +114,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
- 
- 	prog_fd[prog_cnt++] = fd;
- 
--	if (is_xdp || is_perf_event || is_cgroup_skb || is_cgroup_sk)
-+	if (is_xdp || is_perf_event || is_cgroup_skb || is_cgroup_sk || is_landlock)
- 		return 0;
- 
- 	if (is_socket) {
-@@ -278,6 +285,8 @@ int load_bpf_file(char *path)
- 	Elf_Data *data, *data_prog, *symbols = NULL;
- 	char *shname, *shname_prog;
- 
-+	subtype.landlock_rule.event = 0;
-+
- 	if (elf_version(EV_CURRENT) == EV_NONE)
- 		return 1;
- 
-@@ -322,6 +331,14 @@ int load_bpf_file(char *path)
- 			processed_sec[i] = true;
- 			if (load_maps(data->d_buf, data->d_size))
- 				return 1;
-+		} else if (strcmp(shname, "subtype") == 0) {
-+			processed_sec[i] = true;
-+			if (data->d_size != sizeof(union bpf_prog_subtype)) {
-+				printf("invalid size of subtype section %zd\n",
-+				       data->d_size);
-+				return 1;
+diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
+index 831022b12848..a8dadcfa4c01 100644
+--- a/tools/testing/selftests/Makefile
++++ b/tools/testing/selftests/Makefile
+@@ -10,6 +10,7 @@ TARGETS += futex
+ TARGETS += gpio
+ TARGETS += ipc
+ TARGETS += kcmp
++TARGETS += landlock
+ TARGETS += lib
+ TARGETS += membarrier
+ TARGETS += memfd
+diff --git a/tools/testing/selftests/bpf/test_verifier.c b/tools/testing/selftests/bpf/test_verifier.c
+index 15eeb79104fe..ee1d439e48e4 100644
+--- a/tools/testing/selftests/bpf/test_verifier.c
++++ b/tools/testing/selftests/bpf/test_verifier.c
+@@ -4451,7 +4451,59 @@ static struct bpf_test tests[] = {
+ 		.errstr = "R0 min value is negative, either use unsigned index or do a if (index >=0) check.",
+ 		.result = REJECT,
+ 		.result_unpriv = REJECT,
+-	}
++	},
++	{
++		"landlock/fs: always accept",
++		.insns = {
++			BPF_MOV32_IMM(BPF_REG_0, 0),
++			BPF_EXIT_INSN(),
++		},
++		.result = ACCEPT,
++		.prog_type = BPF_PROG_TYPE_LANDLOCK,
++		.prog_subtype = {
++			.landlock_rule = {
++				.version = 1,
++				.event = LANDLOCK_SUBTYPE_EVENT_FS,
 +			}
-+			memcpy(&subtype, data->d_buf, sizeof(union bpf_prog_subtype));
- 		} else if (shdr.sh_type == SHT_SYMTAB) {
- 			symbols = data;
- 		}
-@@ -357,14 +374,14 @@ int load_bpf_file(char *path)
- 			    memcmp(shname_prog, "xdp", 3) == 0 ||
- 			    memcmp(shname_prog, "perf_event", 10) == 0 ||
- 			    memcmp(shname_prog, "socket", 6) == 0 ||
--			    memcmp(shname_prog, "cgroup/", 7) == 0)
-+			    memcmp(shname_prog, "cgroup/", 7) == 0 ||
-+			    memcmp(shname_prog, "landlock", 8) == 0)
- 				load_and_attach(shname_prog, insns, data_prog->d_size);
- 		}
- 	}
++		},
++	},
++	{
++		"landlock/fs: read context",
++		.insns = {
++			BPF_MOV64_REG(BPF_REG_6, BPF_REG_1),
++			BPF_LDX_MEM(BPF_DW, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, status)),
++			/* test operations on raw values */
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, arch)),
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, syscall_nr)),
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, syscall_cmd)),
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, event)),
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_LDX_MEM(BPF_DW, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, arg1)),
++			BPF_LDX_MEM(BPF_DW, BPF_REG_7, BPF_REG_6,
++				offsetof(struct landlock_context, arg2)),
++			BPF_ALU64_IMM(BPF_ADD, BPF_REG_7, 1),
++			BPF_MOV32_IMM(BPF_REG_0, 0),
++			BPF_EXIT_INSN(),
++		},
++		.result = ACCEPT,
++		.prog_type = BPF_PROG_TYPE_LANDLOCK,
++		.prog_subtype = {
++			.landlock_rule = {
++				.version = 1,
++				.event = LANDLOCK_SUBTYPE_EVENT_FS,
++			}
++		},
++	},
+ };
  
- 	/* load programs that don't use maps */
- 	for (i = 1; i < ehdr.e_shnum; i++) {
--
- 		if (processed_sec[i])
- 			continue;
- 
-@@ -377,7 +394,8 @@ int load_bpf_file(char *path)
- 		    memcmp(shname, "xdp", 3) == 0 ||
- 		    memcmp(shname, "perf_event", 10) == 0 ||
- 		    memcmp(shname, "socket", 6) == 0 ||
--		    memcmp(shname, "cgroup/", 7) == 0)
-+		    memcmp(shname, "cgroup/", 7) == 0 ||
-+		    memcmp(shname, "landlock", 8) == 0)
- 			load_and_attach(shname, data->d_buf, data->d_size);
- 	}
- 
-diff --git a/samples/bpf/landlock1_kern.c b/samples/bpf/landlock1_kern.c
+ static int probe_filter_length(const struct bpf_insn *fp)
+diff --git a/tools/testing/selftests/landlock/.gitignore b/tools/testing/selftests/landlock/.gitignore
 new file mode 100644
-index 000000000000..ff23061e6324
+index 000000000000..e5ade9fc5633
 --- /dev/null
-+++ b/samples/bpf/landlock1_kern.c
-@@ -0,0 +1,46 @@
++++ b/tools/testing/selftests/landlock/.gitignore
+@@ -0,0 +1,2 @@
++/test_fs
++/tmp_*
+diff --git a/tools/testing/selftests/landlock/Makefile b/tools/testing/selftests/landlock/Makefile
+new file mode 100644
+index 000000000000..9a52c82d64fa
+--- /dev/null
++++ b/tools/testing/selftests/landlock/Makefile
+@@ -0,0 +1,47 @@
++LIBDIR := ../../../lib
++BPFOBJ := $(LIBDIR)/bpf/bpf.o
++LOADOBJ := ../../../../samples/bpf/bpf_load.o
++
++CFLAGS += -Wl,-no-as-needed -Wall -O2 -I../../../include/uapi -I$(LIBDIR)
++LDFLAGS += -lelf
++
++test_src = $(wildcard test_*.c)
++rule_src = $(wildcard rules/*.c)
++
++test_objs := $(test_src:.c=)
++rule_objs := $(rule_src:.c=.o)
++
++TEST_PROGS := $(test_objs)
++
++.PHONY: all clean clean_tmp force
++
++all: $(test_objs) $(rule_objs)
++
++# force a rebuild of BPFOBJ when its dependencies are updated
++force:
++
++$(BPFOBJ): force
++	$(MAKE) -C $(dir $(BPFOBJ))
++
++$(LOADOBJ):
++	$(MAKE) -C $(dir $(LOADOBJ))
++
++# minimize builds
++rules/modules.order: $(rule_src)
++	$(MAKE) -C rules
++	@touch $@
++
++$(rule_objs): rules/modules.order
++	@
++
++$(test_objs): $(BPFOBJ) $(LOADOBJ)
++
++include ../lib.mk
++
++clean_tmp:
++	$(RM) -r tmp_*
++
++clean: clean_tmp
++	$(MAKE) -C rules clean
++	$(RM) $(test_objs)
++
+diff --git a/tools/testing/selftests/landlock/rules/Makefile b/tools/testing/selftests/landlock/rules/Makefile
+new file mode 100644
+index 000000000000..bf33b67a9fc2
+--- /dev/null
++++ b/tools/testing/selftests/landlock/rules/Makefile
+@@ -0,0 +1,52 @@
++# kbuild trick to avoid linker error. Can be omitted if a module is built.
++obj- := dummy.o
++
++# Tell kbuild to always build the programs
++always := fs1.o
++always += fs2.o
++
++EXTRA_CFLAGS = -Wall -Wextra
++
++# Allows pointing LLC/CLANG to a LLVM backend with bpf support, redefine on cmdline:
++#  make samples/bpf/ LLC=~/git/llvm/build/bin/llc CLANG=~/git/llvm/build/bin/clang
++LLC ?= llc
++CLANG ?= clang
++
++# Verify LLVM compiler tools are available and bpf target is supported by llc
++.PHONY: all clean verify_cmds verify_target_bpf $(CLANG) $(LLC)
++
++# Trick to allow make to be run from this directory
++all:
++	$(MAKE) -C ../../../../../ $(CURDIR)/
++
++clean:
++	$(MAKE) -C ../../../../../ M=$(CURDIR) clean
++
++verify_cmds: $(CLANG) $(LLC)
++	@for TOOL in $^ ; do \
++		if ! (which -- "$${TOOL}" > /dev/null 2>&1); then \
++			echo "*** ERROR: Cannot find LLVM tool $${TOOL}" ;\
++			exit 1; \
++		else true; fi; \
++	done
++
++verify_target_bpf: verify_cmds
++	@if ! (${LLC} -march=bpf -mattr=help > /dev/null 2>&1); then \
++		echo "*** ERROR: LLVM (${LLC}) does not support 'bpf' target" ;\
++		echo "   NOTICE: LLVM version >= 3.7.1 required" ;\
++		exit 2; \
++	else true; fi
++
++%_kern.c: verify_target_bpf
++
++# asm/sysreg.h - inline assembly used by it is incompatible with llvm.
++# But, there is no easy way to fix it, so just exclude it since it is
++# useless for BPF samples.
++$(obj)/%.o: $(src)/%.c
++	$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(EXTRA_CFLAGS) \
++		-D__KERNEL__ -D__ASM_SYSREG_H -Wno-unused-value -Wno-pointer-sign \
++		-Wno-compare-distinct-pointer-types \
++		-Wno-gnu-variable-sized-type-not-at-end \
++		-Wno-tautological-compare \
++		-O2 -emit-llvm -c $< -o -| $(LLC) -march=bpf -filetype=obj -o $@
++
+diff --git a/tools/testing/selftests/landlock/rules/README.rst b/tools/testing/selftests/landlock/rules/README.rst
+new file mode 120000
+index 000000000000..605f48aa6f72
+--- /dev/null
++++ b/tools/testing/selftests/landlock/rules/README.rst
+@@ -0,0 +1 @@
++../../../../../samples/bpf/README.rst
+\ No newline at end of file
+diff --git a/tools/testing/selftests/landlock/rules/bpf_helpers.h b/tools/testing/selftests/landlock/rules/bpf_helpers.h
+new file mode 120000
+index 000000000000..0aa1a521b39a
+--- /dev/null
++++ b/tools/testing/selftests/landlock/rules/bpf_helpers.h
+@@ -0,0 +1 @@
++../../../../../samples/bpf/bpf_helpers.h
+\ No newline at end of file
+diff --git a/tools/testing/selftests/landlock/rules/fs1.c b/tools/testing/selftests/landlock/rules/fs1.c
+new file mode 100644
+index 000000000000..fb3cab7a3116
+--- /dev/null
++++ b/tools/testing/selftests/landlock/rules/fs1.c
+@@ -0,0 +1,31 @@
 +/*
-+ * Landlock LSM - Sample 1 (BPF program)
-+ *
 + * Copyright © 2017 Mickaël Salaün <mic@digikod.net>
 + *
 + * This program is free software; you can redistribute it and/or modify
 + * it under the terms of the GNU General Public License version 2, as
 + * published by the Free Software Foundation.
++ *
++ * Landlock test - Read-only filesystem
 + */
 +
-+#define KBUILD_MODNAME "foo"
 +#include <uapi/linux/bpf.h>
-+#include <uapi/linux/stat.h> /* S_ISCHR() */
 +#include "bpf_helpers.h"
 +
 +SEC("landlock1")
 +static int landlock_fs_prog1(struct landlock_context *ctx)
 +{
-+	char fmt_error[] = "landlock1: error: get_mode:%lld\n";
-+	char fmt_name[] = "landlock1: syscall:%d\n";
-+	long long ret;
-+
 +	if (!(ctx->arg2 & LANDLOCK_ACTION_FS_WRITE))
 +		return 0;
-+	ret = bpf_handle_fs_get_mode((void *)ctx->arg1);
-+	if (ret < 0) {
-+		bpf_trace_printk(fmt_error, sizeof(fmt_error), ret);
-+		return 1;
-+	}
-+	if (S_ISCHR(ret))
-+		return 0;
-+	bpf_trace_printk(fmt_name, sizeof(fmt_name), ctx->syscall_nr);
 +	return 1;
 +}
 +
@@ -265,45 +288,87 @@ index 000000000000..ff23061e6324
 +	.landlock_rule = {
 +		.version = 1,
 +		.event = LANDLOCK_SUBTYPE_EVENT_FS,
-+		.ability = LANDLOCK_SUBTYPE_ABILITY_DEBUG,
 +	}
 +};
 +
 +SEC("license")
 +static char _license[] = "GPL";
-diff --git a/samples/bpf/landlock1_user.c b/samples/bpf/landlock1_user.c
+diff --git a/tools/testing/selftests/landlock/rules/fs2.c b/tools/testing/selftests/landlock/rules/fs2.c
 new file mode 100644
-index 000000000000..5feb660caed4
+index 000000000000..d5cb6b9e8c26
 --- /dev/null
-+++ b/samples/bpf/landlock1_user.c
-@@ -0,0 +1,102 @@
++++ b/tools/testing/selftests/landlock/rules/fs2.c
+@@ -0,0 +1,31 @@
 +/*
-+ * Landlock LSM - Sample 1 (userland)
-+ *
 + * Copyright © 2017 Mickaël Salaün <mic@digikod.net>
 + *
 + * This program is free software; you can redistribute it and/or modify
 + * it under the terms of the GNU General Public License version 2, as
 + * published by the Free Software Foundation.
++ *
++ * Landlock test - No-open filesystem
 + */
 +
-+#include "bpf_load.h"
-+#include "libbpf.h"
++#include <uapi/linux/bpf.h>
++#include "bpf_helpers.h"
++
++SEC("landlock1")
++static int landlock_fs_prog1(struct landlock_context *ctx)
++{
++	if (!(ctx->arg2 & LANDLOCK_ACTION_FS_GET))
++		return 0;
++	return 1;
++}
++
++SEC("subtype")
++static union bpf_prog_subtype _subtype = {
++	.landlock_rule = {
++		.version = 1,
++		.event = LANDLOCK_SUBTYPE_EVENT_FS,
++	}
++};
++
++SEC("license")
++static char _license[] = "GPL";
+diff --git a/tools/testing/selftests/landlock/test_fs.c b/tools/testing/selftests/landlock/test_fs.c
+new file mode 100644
+index 000000000000..3dcc0294324c
+--- /dev/null
++++ b/tools/testing/selftests/landlock/test_fs.c
+@@ -0,0 +1,347 @@
++/*
++ * Copyright © 2017 Mickaël Salaün <mic@digikod.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2, as
++ * published by the Free Software Foundation.
++ *
++ * Tests code for Landlock
++ */
 +
 +#define _GNU_SOURCE
 +#include <errno.h>
-+#include <fcntl.h> /* open() */
 +#include <linux/bpf.h>
 +#include <linux/filter.h>
-+#include <linux/prctl.h>
 +#include <linux/seccomp.h>
 +#include <stddef.h>
-+#include <stdio.h>
-+#include <stdlib.h>
 +#include <string.h>
 +#include <sys/prctl.h>
 +#include <sys/syscall.h>
-+#include <unistd.h>
++
++#include <fcntl.h> /* open() */
++#include <sys/mount.h>
++#include <sys/stat.h> /* mkdir() */
++#include <sys/mman.h> /* mmap() */
++
++#include "../seccomp/test_harness.h"
++#include "../../../../samples/bpf/bpf_load.h"
++
++#define TMP_PREFIX "tmp_"
++
++#ifndef SECCOMP_ADD_LANDLOCK_RULE
++#define SECCOMP_ADD_LANDLOCK_RULE	2
++#endif
 +
 +#ifndef seccomp
 +static int seccomp(unsigned int op, unsigned int flags, void *args)
@@ -313,71 +378,310 @@ index 000000000000..5feb660caed4
 +}
 +#endif
 +
-+#define ARRAY_SIZE(a)	(sizeof(a) / sizeof(a[0]))
-+#define MAX_ERRNO	4095
++static unsigned int __step_count = 0;
 +
++#define ASSERT_STEP(cond) \
++	{ \
++		step--; \
++		if (!(cond)) \
++			_exit(step); \
++	}
 +
-+struct landlock_rule {
-+	enum landlock_subtype_event event;
-+	struct bpf_insn *bpf;
-+	size_t size;
++TEST(seccomp_landlock)
++{
++	int ret;
++
++	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, NULL, 0, 0);
++	ASSERT_EQ(0, ret) {
++		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS");
++	}
++	ret = seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, NULL);
++	EXPECT_EQ(-1, ret);
++	EXPECT_EQ(EFAULT, errno) {
++		TH_LOG("Kernel does not support CONFIG_SECURITY_LANDLOCK");
++	}
++}
++
++struct layout1 {
++	int file_ro;
++	int file_rw;
++	int file_wo;
 +};
 +
-+static int apply_sandbox(int prog_fd)
++static void setup_layout1(struct __test_metadata *_metadata,
++		struct layout1 *l1)
 +{
-+	int ret = 0;
++	int fd;
++	char buf[] = "fs1";
 +
-+	/* set up the test sandbox */
-+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-+		perror("prctl(no_new_priv)");
-+		return 1;
-+	}
-+	if (seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &prog_fd)) {
-+		perror("seccomp(set_hook)");
-+		ret = 1;
-+	}
-+	close(prog_fd);
++	l1->file_ro = -1;
++	l1->file_rw = -1;
++	l1->file_wo = -1;
 +
-+	return ret;
++	fd = open(TMP_PREFIX "file_created",
++			O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_GE(fd, 0);
++	ASSERT_EQ(sizeof(buf), write(fd, buf, sizeof(buf)));
++	ASSERT_EQ(0, close(fd));
++
++	fd = mkdir(TMP_PREFIX "dir_created", S_IRUSR | S_IWUSR);
++	ASSERT_GE(fd, 0);
++	ASSERT_EQ(0, close(fd));
++
++	l1->file_ro = open(TMP_PREFIX "file_ro",
++			O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_LE(0, l1->file_ro);
++	ASSERT_EQ(sizeof(buf), write(l1->file_ro, buf, sizeof(buf)));
++	ASSERT_EQ(0, close(l1->file_ro));
++	l1->file_ro = open(TMP_PREFIX "file_ro",
++			O_RDONLY | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_LE(0, l1->file_ro);
++
++	l1->file_rw = open(TMP_PREFIX "file_rw",
++			O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_LE(0, l1->file_rw);
++	ASSERT_EQ(sizeof(buf), write(l1->file_rw, buf, sizeof(buf)));
++	ASSERT_EQ(0, lseek(l1->file_rw, 0, SEEK_SET));
++
++	l1->file_wo = open(TMP_PREFIX "file_wo",
++			O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_LE(0, l1->file_wo);
++	ASSERT_EQ(sizeof(buf), write(l1->file_wo, buf, sizeof(buf)));
++	ASSERT_EQ(0, lseek(l1->file_wo, 0, SEEK_SET));
 +}
 +
-+int main(int argc, char * const argv[], char * const *envp)
++static void cleanup_layout1(void)
 +{
-+	char filename[256];
-+	char *cmd_path;
-+	char * const *cmd_argv;
-+
-+	if (argc < 2) {
-+		fprintf(stderr, "usage: %s <cmd> [args]...\n\n", argv[0]);
-+		fprintf(stderr, "Launch a command in a read-only environment "
-+				"(except for character devices).\n");
-+		fprintf(stderr, "Display debug with: "
-+				"cat /sys/kernel/debug/tracing/trace_pipe &\n");
-+		return 1;
-+	}
-+
-+	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
-+	if (load_bpf_file(filename)) {
-+		printf("%s", bpf_log_buf);
-+		return 1;
-+	}
-+	if (!prog_fd[0]) {
-+		if (errno) {
-+			printf("load_bpf_file: %s\n", strerror(errno));
-+		} else {
-+			printf("load_bpf_file: Error\n");
-+		}
-+		return 1;
-+	}
-+
-+	if (apply_sandbox(prog_fd[0]))
-+		return 1;
-+	cmd_path = argv[1];
-+	cmd_argv = argv + 1;
-+	fprintf(stderr, "Launching a new sandboxed process.\n");
-+	execve(cmd_path, cmd_argv, envp);
-+	perror("execve");
-+	return 1;
++	unlink(TMP_PREFIX "file_created");
++	unlink(TMP_PREFIX "file_ro");
++	unlink(TMP_PREFIX "file_rw");
++	unlink(TMP_PREFIX "file_wo");
++	unlink(TMP_PREFIX "should_not_exist");
++	rmdir(TMP_PREFIX "dir_created");
 +}
++
++FIXTURE(rule_fs1) {
++	struct layout1 l1;
++	int prog;
++};
++
++FIXTURE_SETUP(rule_fs1)
++{
++	cleanup_layout1();
++	setup_layout1(_metadata, &self->l1);
++
++	ASSERT_EQ(0, load_bpf_file("rules/fs1.o")) {
++		TH_LOG("%s", bpf_log_buf);
++	}
++	self->prog = prog_fd[0];
++	ASSERT_EQ(0, prctl(PR_SET_NO_NEW_PRIVS, 1, NULL, 0, 0)) {
++		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS");
++	}
++}
++
++FIXTURE_TEARDOWN(rule_fs1)
++{
++	EXPECT_EQ(0, close(self->prog));
++	/* cleanup_layout1() would be denied here */
++}
++
++TEST_F(rule_fs1, load_prog) {}
++
++TEST_F(rule_fs1, read_only_file)
++{
++	int fd;
++	int step = 0;
++	char buf_write[] = "should not be written";
++	char buf_read[2];
++
++	ASSERT_EQ(-1, write(self->l1.file_ro, buf_write, sizeof(buf_write)));
++	ASSERT_EQ(EBADF, errno);
++
++	ASSERT_EQ(-1, read(self->l1.file_wo, buf_read, sizeof(buf_read)));
++	ASSERT_EQ(EBADF, errno);
++
++	ASSERT_EQ(0, seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &self->prog)) {
++		TH_LOG("Failed to apply rule fs1: %s", strerror(errno));
++	}
++
++	fd = open(".",
++			O_TMPFILE | O_EXCL | O_RDWR | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_STEP(fd == -1);
++	ASSERT_STEP(errno != EOPNOTSUPP)
++	ASSERT_STEP(errno == EPERM);
++
++	fd = open(TMP_PREFIX "file_created",
++			O_RDONLY | O_CLOEXEC);
++	ASSERT_STEP(fd >= 0);
++	ASSERT_STEP(!close(fd));
++
++	fd = open(TMP_PREFIX "file_created",
++			O_RDWR | O_CLOEXEC);
++	ASSERT_STEP(fd == -1);
++	ASSERT_STEP(errno == EPERM);
++
++	fd = open(TMP_PREFIX "file_created",
++			O_WRONLY | O_CLOEXEC);
++	ASSERT_STEP(fd == -1);
++	ASSERT_STEP(errno == EPERM);
++
++	fd = open(TMP_PREFIX "should_not_exist",
++			O_CREAT | O_EXCL | O_CLOEXEC,
++			S_IRUSR | S_IWUSR);
++	ASSERT_STEP(fd == -1);
++	ASSERT_STEP(errno == EPERM);
++
++	ASSERT_STEP(-1 ==
++			write(self->l1.file_ro, buf_write, sizeof(buf_write)));
++	ASSERT_STEP(errno == EBADF);
++	ASSERT_STEP(sizeof(buf_read) ==
++			read(self->l1.file_ro, buf_read, sizeof(buf_read)));
++
++	ASSERT_STEP(-1 ==
++			write(self->l1.file_rw, buf_write, sizeof(buf_write)));
++	ASSERT_STEP(errno == EPERM);
++	ASSERT_STEP(sizeof(buf_read) ==
++			read(self->l1.file_rw, buf_read, sizeof(buf_read)));
++
++	ASSERT_STEP(-1 == write(self->l1.file_wo, buf_write, sizeof(buf_write)));
++	ASSERT_STEP(errno == EPERM);
++	ASSERT_STEP(-1 == read(self->l1.file_wo, buf_read, sizeof(buf_read)));
++	ASSERT_STEP(errno == EBADF);
++
++	ASSERT_STEP(-1 == unlink(TMP_PREFIX "file_created"));
++	ASSERT_STEP(errno == EPERM);
++	ASSERT_STEP(-1 == rmdir(TMP_PREFIX "dir_created"));
++	ASSERT_STEP(errno == EPERM);
++
++	ASSERT_STEP(0 == close(self->l1.file_ro));
++	ASSERT_STEP(0 == close(self->l1.file_rw));
++	ASSERT_STEP(0 == close(self->l1.file_wo));
++}
++
++TEST_F(rule_fs1, read_only_mount)
++{
++	int step = 0;
++
++	ASSERT_EQ(0, mount(".", TMP_PREFIX "dir_created",
++				NULL, MS_BIND, NULL));
++	ASSERT_EQ(0, umount2(TMP_PREFIX "dir_created", MNT_FORCE));
++
++	ASSERT_EQ(0, seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &self->prog)) {
++		TH_LOG("Failed to apply rule fs1: %s", strerror(errno));
++	}
++
++	ASSERT_STEP(-1 == mount(".", TMP_PREFIX "dir_created",
++				NULL, MS_BIND, NULL));
++	ASSERT_STEP(errno == EPERM);
++	ASSERT_STEP(-1 == umount("/"));
++	ASSERT_STEP(errno == EPERM);
++}
++
++TEST_F(rule_fs1, read_only_mem)
++{
++	int step = 0;
++	void *addr;
++
++	addr = mmap(NULL, 1, PROT_READ | PROT_WRITE,
++			MAP_SHARED, self->l1.file_rw, 0);
++	ASSERT_NE(NULL, addr);
++	ASSERT_EQ(0, munmap(addr, 1));
++
++	ASSERT_EQ(0, seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &self->prog)) {
++		TH_LOG("Failed to apply rule fs1: %s", strerror(errno));
++	}
++
++	addr = mmap(NULL, 1, PROT_READ, MAP_SHARED,
++			self->l1.file_rw, 0);
++	ASSERT_STEP(addr != NULL);
++	ASSERT_STEP(-1 == mprotect(addr, 1, PROT_WRITE));
++	ASSERT_STEP(errno == EPERM);
++	ASSERT_STEP(0 == munmap(addr, 1));
++
++	addr = mmap(NULL, 1, PROT_READ | PROT_WRITE, MAP_SHARED,
++			self->l1.file_rw, 0);
++	ASSERT_STEP(addr != NULL);
++	ASSERT_STEP(errno == EPERM);
++
++	addr = mmap(NULL, 1, PROT_READ | PROT_WRITE, MAP_PRIVATE,
++			self->l1.file_rw, 0);
++	ASSERT_STEP(addr != NULL);
++	ASSERT_STEP(0 == munmap(addr, 1));
++}
++
++FIXTURE(rule_fs2) {
++	struct layout1 l1;
++	int prog;
++};
++
++FIXTURE_SETUP(rule_fs2)
++{
++	cleanup_layout1();
++	setup_layout1(_metadata, &self->l1);
++
++	ASSERT_EQ(0, load_bpf_file("rules/fs2.o")) {
++		TH_LOG("%s", bpf_log_buf);
++	}
++	self->prog = prog_fd[0];
++	ASSERT_EQ(0, prctl(PR_SET_NO_NEW_PRIVS, 1, NULL, 0, 0)) {
++		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS");
++	}
++}
++
++FIXTURE_TEARDOWN(rule_fs2)
++{
++	EXPECT_EQ(0, close(self->prog));
++	cleanup_layout1();
++}
++
++static void landlocked_deny_open(struct __test_metadata *_metadata,
++		struct layout1 *l1)
++{
++	int fd;
++	void *addr;
++
++	fd = open(".", O_DIRECTORY | O_CLOEXEC);
++	ASSERT_EQ(-1, fd);
++	ASSERT_EQ(EPERM, errno);
++
++	addr = mmap(NULL, 1, PROT_READ | PROT_WRITE,
++			MAP_SHARED, l1->file_rw, 0);
++	ASSERT_NE(NULL, addr);
++	ASSERT_EQ(0, munmap(addr, 1));
++}
++
++TEST_F(rule_fs2, deny_open_for_hierarchy) {
++	int fd;
++	int status;
++	pid_t child;
++
++	fd = open(".", O_DIRECTORY | O_CLOEXEC);
++	ASSERT_LE(0, fd);
++	ASSERT_EQ(0, close(fd));
++
++	ASSERT_EQ(0, seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &self->prog)) {
++		TH_LOG("Failed to apply rule fs2: %s", strerror(errno));
++	}
++
++	landlocked_deny_open(_metadata, &self->l1);
++
++	child = fork();
++	ASSERT_LE(0, child);
++	if (!child) {
++		landlocked_deny_open(_metadata, &self->l1);
++		_exit(1);
++	}
++	ASSERT_EQ(child, waitpid(child, &status, 0));
++	ASSERT_TRUE(WIFEXITED(status));
++	_exit(WEXITSTATUS(status));
++}
++
++TEST_HARNESS_MAIN
 -- 
 2.11.0
