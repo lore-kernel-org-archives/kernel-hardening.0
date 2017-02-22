@@ -1,112 +1,169 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <CAGXu5jLTTcyGyY2KtuCX3tCThvGH0mCnFWyLaznyng=nTss6Dw@mail.gmail.com>
-References: <1487410400-28313-1-git-send-email-mpe@ellerman.id.au> <CAGXu5jLTTcyGyY2KtuCX3tCThvGH0mCnFWyLaznyng=nTss6Dw@mail.gmail.com>
-Date: Wed, 22 Feb 2017 13:44:55 +1100
-Message-ID: <87d1eblza0.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: [kernel-hardening] Re: [PATCH] usercopy: Don't test 64-bit get/put_user() on 32-bit powerpc
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>, Geert Uytterhoeven <geert@linux-m68k.org>, linuxppc-dev@lists.ozlabs.orglinuxppc-dev@lists.ozlabs.org
+In-Reply-To: <20170222012632.4196-11-mic@digikod.net>
+References: <20170222012632.4196-1-mic@digikod.net> <20170222012632.4196-11-mic@digikod.net>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Tue, 21 Feb 2017 21:21:21 -0800
+Message-ID: <CALCETrXzL0VH_=QYHGXk1Y5P_yLyXdyTD-JVHVKTFf8F-AhYnw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Subject: [kernel-hardening] Re: [PATCH v5 10/10] landlock: Add user and kernel documentation for Landlock
+To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
+Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
-
-> On Sat, Feb 18, 2017 at 1:33 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
->> Add PPC32 to the opt-out list, otherwise it breaks the build.
->>
->> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
->> ---
->>  lib/test_user_copy.c | 1 +
->>  1 file changed, 1 insertion(+)
->>
->> diff --git a/lib/test_user_copy.c b/lib/test_user_copy.c
->> index 4a79f2c1cd6e..6f335a3d4ae2 100644
->> --- a/lib/test_user_copy.c
->> +++ b/lib/test_user_copy.c
->> @@ -37,6 +37,7 @@
->>                             !defined(CONFIG_MICROBLAZE) &&      \
->>                             !defined(CONFIG_MN10300) &&         \
->>                             !defined(CONFIG_NIOS2) &&           \
->> +                           !defined(CONFIG_PPC32) &&           \
->>                             !defined(CONFIG_SUPERH))
->>  # define TEST_U64
->>  #endif
+On Tue, Feb 21, 2017 at 5:26 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>=
+ wrote:
+> This documentation can be built with the Sphinx framework.
 >
-> I'm fine to add this, but I'm curious why it fails? ppc uaccess.h has:
->
-> #define get_user(x, ptr) \
->         __get_user_check((x), (ptr), sizeof(*(ptr)))
->
-> #define __get_user_check(x, ptr, size)                                  \
-> ({                                                                      \
-> ...
->                 __get_user_size(__gu_val, __gu_addr, (size), __gu_err); \
->
-> #define __get_user_size(x, ptr, size, retval)                   \
-> do {                                                            \
-> ...
->         case 8: __get_user_asm2(x, ptr, retval);  break;        \
->
-> #ifdef __powerpc64__
-> #define __get_user_asm2(x, addr, err)                   \
->         __get_user_asm(x, addr, err, "ld")
-> #else /* __powerpc64__ */
-> #define __get_user_asm2(x, addr, err)                   \
->         __asm__ __volatile__(                           \
-> ...
->
-> It looks like __get_user_asm2() was explicitly designed for handling
-> 64-bit get_user()?
-
-Hmm, quite.
-
-It's definitely failing:
-
-  ERROR: "__get_user_bad" [lib/test_user_copy.ko] undefined!
+> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
+> Cc: Alexei Starovoitov <ast@kernel.org>
+> Cc: Andy Lutomirski <luto@amacapital.net>
+> Cc: Daniel Borkmann <daniel@iogearbox.net>
+> Cc: David S. Miller <davem@davemloft.net>
+> Cc: James Morris <james.l.morris@oracle.com>
+> Cc: Jonathan Corbet <corbet@lwn.net>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Serge E. Hallyn <serge@hallyn.com>
 
 
-I suspect it's because get_user() goes via __get_user_check(), which
-uses an unsigned long as a temporary:
+> +
+> +Writing a rule
+> +--------------
+> +
+> +To enforce a security policy, a thread first needs to create a Landlock =
+rule.
+> +The easiest way to write an eBPF program depicting a security rule is to=
+ write
+> +it in the C language.  As described in *samples/bpf/README.rst*, LLVM ca=
+n
+> +compile such programs.  Files *samples/bpf/landlock1_kern.c* and those i=
+n
+> +*tools/testing/selftests/landlock/rules/* can be used as examples.  The
+> +following example is a simple rule to forbid file creation, whatever sys=
+call
+> +may be used (e.g. open, mkdir, link...).
+> +
+> +.. code-block:: c
+> +
+> +    static int deny_file_creation(struct landlock_context *ctx)
+> +    {
+> +        if (ctx->arg2 & LANDLOCK_ACTION_FS_NEW)
+> +            return 1;
+> +        return 0;
+> +    }
+> +
 
-  #define __get_user_check(x, ptr, size)					\
-  ({									\
-  	long __gu_err = -EFAULT;					\
-  	unsigned long  __gu_val = 0;					\
-  	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);		\
-  	might_fault();							\
-  	if (access_ok(VERIFY_READ, __gu_addr, (size)))			\
-  		__get_user_size(__gu_val, __gu_addr, (size), __gu_err);	\
-  	(x) = (__force __typeof__(*(ptr)))__gu_val;				\
-  	__gu_err;							\
-  })
+Would it make sense to define landlock_context (or at least a prefix
+thereof) in here?  Also, can't "arg2" have a better name?
 
+Can you specify what the return value means?  Are 0 and 1 the only
+choices?  Would "KILL" be useful?  How about "COREDUMP"?
 
-And that trips the check in __get_user_size():
+> +File system action types
+> +------------------------
+> +
+> +Flags are used to express actions.  This makes it possible to compose ac=
+tions
+> +and leaves room for future improvements to add more fine-grained action =
+types.
+> +
+> +.. kernel-doc:: include/uapi/linux/bpf.h
+> +    :doc: landlock_action_fs
+> +
+> +.. flat-table:: FS action types availability
+> +
+> +    * - flags
+> +      - since
+> +
+> +    * - LANDLOCK_ACTION_FS_EXEC
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_WRITE
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_READ
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_NEW
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_GET
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_REMOVE
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_IOCTL
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_LOCK
+> +      - v1
+> +
+> +    * - LANDLOCK_ACTION_FS_FCNTL
+> +      - v1
 
-  #define __get_user_size(x, ptr, size, retval)			\
-  do {								\
-  	retval = 0;						\
-  	__chk_user_ptr(ptr);					\
-  	if (size > sizeof(x))					\
-  		(x) = __get_user_bad();				\
+What happens if you run an old program on a new kernel?  Can you get
+unexpected action types?
 
+> +
+> +
+> +Ability types
+> +-------------
+> +
+> +The ability of a Landlock rule describes the available features (i.e. co=
+ntext
+> +fields and helpers).  This is useful to abstract user-space privileges f=
+or
+> +Landlock rules, which may not need all abilities (e.g. debug).  Only the
+> +minimal set of abilities should be used (e.g. disable debug once in
+> +production).
+> +
+> +
+> +.. kernel-doc:: include/uapi/linux/bpf.h
+> +    :doc: landlock_subtype_ability
+> +
+> +.. flat-table:: Ability types availability
+> +
+> +    * - flags
+> +      - since
+> +      - capability
+> +
+> +    * - LANDLOCK_SUBTYPE_ABILITY_WRITE
+> +      - v1
+> +      - CAP_SYS_ADMIN
+> +
+> +    * - LANDLOCK_SUBTYPE_ABILITY_DEBUG
+> +      - v1
+> +      - CAP_SYS_ADMIN
+> +
 
+What do "WRITE" and "DEBUG" mean in this context?  I'm totally lost.
 
-Which I can confirm just by changing that case to call
-__get_user_bad_target() instead of __get_user_bad_size():
+Hmm.  Reading below, "WRITE" seems to mean "modify state".  Would that
+be accurate?
 
-  ERROR: "__get_user_bad_target" [lib/test_user_copy.ko] undefined!
+> +
+> +Helper functions
+> +----------------
+> +
+> +See *include/uapi/linux/bpf.h* for functions documentation.
+> +
+> +.. flat-table:: Generic functions availability
+> +
 
+> +
+> +    * - bpf_get_current_comm
+> +      - v1
+> +      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
 
-So despite having __get_user_asm2() defined for 32-bit it doesn't
-actually work unless you call __get_user_size() directly.
+What would this be used for?
 
+> +    * - bpf_get_trace_printk
+> +      - v1
+> +      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
+> +
 
-For now if you don't mind merging this that would be good, so the build
-stops breaking.
+This is different from the other DEBUG stuff in that it has side
+effects.  I wonder if it should have a different flag.
 
-Then we can think about whether we fix it for ppc32 or just rip it out
-entirely.
-
-cheers
+--Andy
