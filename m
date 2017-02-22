@@ -1,258 +1,158 @@
-References: <20170222012632.4196-1-mic@digikod.net>
- <20170222012632.4196-11-mic@digikod.net>
- <CALCETrXzL0VH_=QYHGXk1Y5P_yLyXdyTD-JVHVKTFf8F-AhYnw@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <b56c6abf-c8a5-d926-dcf7-0f0a6aa1334f@digikod.net>
-Date: Wed, 22 Feb 2017 08:43:36 +0100
-MIME-Version: 1.0
-In-Reply-To: <CALCETrXzL0VH_=QYHGXk1Y5P_yLyXdyTD-JVHVKTFf8F-AhYnw@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="tGg3IcwomGUQT68VU3TAp9B5Bf8VJvS4N"
-Subject: [kernel-hardening] Re: [PATCH v5 10/10] landlock: Add user and kernel documentation for
- Landlock
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
+Content-Type: text/plain;
+	charset=euc-kr
+Mime-Version: 1.0 (1.0)
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+In-Reply-To: <20170221135807.GC8605@leverpostej>
+Date: Wed, 22 Feb 2017 22:45:43 +0900
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <B05432A7-6A22-4F46-8B22-D5643D7C5822@gmail.com>
+References: <1487498660-16600-1-git-send-email-hoeun.ryu@gmail.com> <1487498660-16600-3-git-send-email-hoeun.ryu@gmail.com> <20170220103008.GC9003@leverpostej> <BD3E52DE-98B0-4DC0-8DCB-540599FC876C@gmail.com> <20170221135807.GC8605@leverpostej>
+Subject: Re: [kernel-hardening] [RFC 3/7] module: modify memory attrs for __ro_mostly_after_init during module_init/exit
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---tGg3IcwomGUQT68VU3TAp9B5Bf8VJvS4N
-Content-Type: multipart/mixed; boundary="cbPRXjXcN2xSAm0RUJKAOWc89xl1aH6LG";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
- Alexei Starovoitov <ast@kernel.org>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Network Development <netdev@vger.kernel.org>
-Message-ID: <b56c6abf-c8a5-d926-dcf7-0f0a6aa1334f@digikod.net>
-Subject: Re: [PATCH v5 10/10] landlock: Add user and kernel documentation for
- Landlock
-References: <20170222012632.4196-1-mic@digikod.net>
- <20170222012632.4196-11-mic@digikod.net>
- <CALCETrXzL0VH_=QYHGXk1Y5P_yLyXdyTD-JVHVKTFf8F-AhYnw@mail.gmail.com>
-In-Reply-To: <CALCETrXzL0VH_=QYHGXk1Y5P_yLyXdyTD-JVHVKTFf8F-AhYnw@mail.gmail.com>
-
---cbPRXjXcN2xSAm0RUJKAOWc89xl1aH6LG
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+Thank you for your detailed explanation. It helped a lot for understandings.=
 
 
-On 22/02/2017 06:21, Andy Lutomirski wrote:
-> On Tue, Feb 21, 2017 at 5:26 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
-net> wrote:
->> This documentation can be built with the Sphinx framework.
->>
->> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
->> Cc: Alexei Starovoitov <ast@kernel.org>
->> Cc: Andy Lutomirski <luto@amacapital.net>
->> Cc: Daniel Borkmann <daniel@iogearbox.net>
->> Cc: David S. Miller <davem@davemloft.net>
->> Cc: James Morris <james.l.morris@oracle.com>
->> Cc: Jonathan Corbet <corbet@lwn.net>
->> Cc: Kees Cook <keescook@chromium.org>
->> Cc: Serge E. Hallyn <serge@hallyn.com>
+> On Feb 21, 2017, at 10:58 PM, Mark Rutland <mark.rutland@arm.com> wrote:
 >=20
+> On Tue, Feb 21, 2017 at 10:36:05PM +0900, Ho-Eun Ryu wrote:
+>>> On 20 Feb 2017, at 7:30 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+>>> On Sun, Feb 19, 2017 at 07:04:06PM +0900, Hoeun Ryu wrote:
 >=20
->> +
->> +Writing a rule
->> +--------------
->> +
->> +To enforce a security policy, a thread first needs to create a Landlo=
-ck rule.
->> +The easiest way to write an eBPF program depicting a security rule is=
- to write
->> +it in the C language.  As described in *samples/bpf/README.rst*, LLVM=
- can
->> +compile such programs.  Files *samples/bpf/landlock1_kern.c* and thos=
-e in
->> +*tools/testing/selftests/landlock/rules/* can be used as examples.  T=
-he
->> +following example is a simple rule to forbid file creation, whatever =
-syscall
->> +may be used (e.g. open, mkdir, link...).
->> +
->> +.. code-block:: c
->> +
->> +    static int deny_file_creation(struct landlock_context *ctx)
->> +    {
->> +        if (ctx->arg2 & LANDLOCK_ACTION_FS_NEW)
->> +            return 1;
->> +        return 0;
->> +    }
->> +
->=20
-> Would it make sense to define landlock_context (or at least a prefix
-> thereof) in here?  Also, can't "arg2" have a better name?
+>>>> @@ -3396,8 +3399,11 @@ static noinline int do_init_module(struct module=
+ *mod)
+>>>>=20
+>>>>   do_mod_ctors(mod);
+>>>>   /* Start the module */
+>>>> -    if (mod->init !=3D NULL)
+>>>> +    if (mod->init !=3D NULL) {
+>>>> +        set_ro_mostly_after_init_rw();
+>>>>       ret =3D do_one_initcall(mod->init);
+>>>> +        set_ro_mostly_after_init_ro();
+>>>> +    }
+>>>=20
+>>> This looks very much like the pax_{open,close}_kernel() approach for
+>>> write-rarely data.
+>>=20
+>> I read the discussion [1] and I agree that __ro_mostly_after_init marker
+>> looks very similar to __write_rarely.=20
+>>=20
+>>> I think it would be better to implement a first class write-rarely
+>>> mechanism rather than trying to extend __ro_after_init to cover this
+>>> case.
+>>=20
+>> I=A1=AFm not extending __ro_after_init. __ro_mostly_after_init resides in=
 
-arg2 is a generic name. Its meaning depends on the Landlock event, here
-it is an action bitfield (FS event).
+>> the same section of rodata though.
+>=20
+> Sorry; I was confused when I wrote that email. I now understand that
+> you're adding a separate annotation.
+>=20
+>>> As mentioned previously, I *think* we can have a generic implementation
+>>> that uses an mm to temporarily map a (thread/cpu-local) RW alias of the
+>>> data in question in what would otherwise be the user half of the address=
+
+>>> space. Regardless, we can have a generic interface [1] that can cater
+>>> for that style of approach and/or something like ARM's domains or x86's
+>>> pkeys.
+>>=20
+>> I=A1=AFm still learning cpu/kernel architectures, It would be very thankf=
+ul if you tell me more about the detail of the implementation itself.
+>>=20
+>> The mm that maps temporary RW alias is like
+>>   * special mm like idmap/init_mm which have its own page tables?
+>>   * the page tables have the same content of page tables of
+>>     init_mm=A1=AFs swapper_pg_dir except for RW permissions for a
+>>     specific section (let=A1=AFs say __write_rarely)
+>=20
+> This would be a special mm, like a user mm, that only mapped the
+> relevant VA(s).
+
+we need a separate mm/pgd for ttbr0_el1 in kernel image section as idmap and=
+ swapper_pg_dir currently do and we make VA alias mapping for RO section wit=
+h RW permission under TASK_SIZE during kernel init. And then we can switch t=
+o the mm by setting the pgd to ttbr0_el1. Right ?
+
+It came to my mind that how about the relationship with SW_TTBR0_PAN .
+What if copy_from_user tries to do something against RW alias ?
+
+val_rw =3D __rw_ptr(&val);
+__rw_map();
+copy_from_user(&val_rw, user_ptr);
+__re_unmap();
+
+__rw_map() will install rw_mm->gpd to ttbr0_el1 but uaccess_enable() will im=
+mediately reinstall thread_info->pgd to ttbr0_el1 and we loose RW alias.
+Am I something wrong or confused ?
 
 >=20
-> Can you specify what the return value means?  Are 0 and 1 the only
-> choices?  Would "KILL" be useful?  How about "COREDUMP"?
+> That might map the relevant variable on-demand, or the mapping could
+> cover the whole write_rarely area.
+>=20
+>>   * then use switch_mm(special_rw_mm) to change the address space
+>>     before the access happens to the section
+>>   * then use switch_mm(current->mm) to change the address space to
+>>     original after the access is done
+>=20
+> Yes.
+>=20
+>> And the interface itself. rare_write(__val, __val), is it a single
+>> value access interface.
+>> I=A1=AFm intending to make data in __ro_mostly_after_init section RW duri=
+ng
+>> multiple accesses like during module_init/exit.
+>> and __rare_rw_map()/unmap() used in rare_write() seems to work like
+>> open/close api.
+>=20
+> The __rare_rw_{map,unmap}() functions would map in the RW alias, but do
+> not necessarily change the RO alias to RW. This is why __rare_rw_ptr()
+> would be necessary, and is the major difference to the open/close API.
+>=20
+> We could certainly allow several writes between a map/unmap. The key
+> requirement is that each write is instrumented so that it goes via the
+> RW alias.
+>=20
+>> How could __rare_rw_ptr() be implemented and what happens when
+>> `__rw_var =3D __rare_rw_ptr(&(__var))` is done ?
+>=20
+> __rare_rw_ptr() would take a pointer to the usual RO alias, and derive
+> its RW alias. What exactly this should do depends on how the RW alias is
+> implemented.
+>=20
+> On a system using an RW mm, let's assume we place all __write_rarely
+> variables in a region bounded by __rare_write_begin/__rare_write_end,
+> and when the mm is installed place, we have an RW alias of this region
+> beginning at __rw_alias_start. In this case, it'd look something like:
+>=20
+> #define __rare_rw_ptr(ptr) ({                \
+>   unsigned long __ptr =3D (unsigned long)(ptr);    \
+>   __ptr -=3D __rare_write_start;            \
+>   __ptr +=3D __rw_alias_start;            \
+>   (typeof(ptr))__ptr;                \
+> })
+>=20
+> ... does that make sense?
 
-This is explained thereafter and in the kernel Q&A section. I need to
-briefly introduce that here.
+Yes. Cool.
 
 >=20
->> +File system action types
->> +------------------------
->> +
->> +Flags are used to express actions.  This makes it possible to compose=
- actions
->> +and leaves room for future improvements to add more fine-grained acti=
-on types.
->> +
->> +.. kernel-doc:: include/uapi/linux/bpf.h
->> +    :doc: landlock_action_fs
->> +
->> +.. flat-table:: FS action types availability
->> +
->> +    * - flags
->> +      - since
->> +
->> +    * - LANDLOCK_ACTION_FS_EXEC
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_WRITE
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_READ
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_NEW
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_GET
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_REMOVE
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_IOCTL
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_LOCK
->> +      - v1
->> +
->> +    * - LANDLOCK_ACTION_FS_FCNTL
->> +      - v1
+> For systems where you can freely/easily alter (local) permissions (e.g.
+> using ARM's domains), that can be done within __rare_rw_{map,unmap}(),
+> and __rare_rw_ptr can just return the original pointer.
 >=20
-> What happens if you run an old program on a new kernel?  Can you get
-> unexpected action types?
-
-The old flags will still make sense, the new ones should be ignored by
-the rule.
-
+>> However the interface will look like, Do we still need a special data
+>> section that is mapped RO in general but RW in some cases ?
 >=20
->> +
->> +
->> +Ability types
->> +-------------
->> +
->> +The ability of a Landlock rule describes the available features (i.e.=
- context
->> +fields and helpers).  This is useful to abstract user-space privilege=
-s for
->> +Landlock rules, which may not need all abilities (e.g. debug).  Only =
-the
->> +minimal set of abilities should be used (e.g. disable debug once in
->> +production).
->> +
->> +
->> +.. kernel-doc:: include/uapi/linux/bpf.h
->> +    :doc: landlock_subtype_ability
->> +
->> +.. flat-table:: Ability types availability
->> +
->> +    * - flags
->> +      - since
->> +      - capability
->> +
->> +    * - LANDLOCK_SUBTYPE_ABILITY_WRITE
->> +      - v1
->> +      - CAP_SYS_ADMIN
->> +
->> +    * - LANDLOCK_SUBTYPE_ABILITY_DEBUG
->> +      - v1
->> +      - CAP_SYS_ADMIN
->> +
+> With the above, I think the usual mapping can always be RO.
 >=20
-> What do "WRITE" and "DEBUG" mean in this context?  I'm totally lost.
+>> if then, doesn=A1=AFt __ro_mostly_after_init marker itself make sense and=
+
+>> we still need it ?
 >=20
-> Hmm.  Reading below, "WRITE" seems to mean "modify state".  Would that
-> be accurate?
-
-That is correct, but handling a state in a safe way imply more than only
-the ability to "write" outside bpfland (e.g. sequential execution).
-
+> We may need a marker to bound the set of variables we wish to map in
+> this way.
 >=20
->> +
->> +Helper functions
->> +----------------
->> +
->> +See *include/uapi/linux/bpf.h* for functions documentation.
->> +
->> +.. flat-table:: Generic functions availability
->> +
->=20
->> +
->> +    * - bpf_get_current_comm
->> +      - v1
->> +      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
->=20
-> What would this be used for?
-
-To get more information about the process which trigger an action?
-
->=20
->> +    * - bpf_get_trace_printk
->> +      - v1
->> +      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
->> +
->=20
-> This is different from the other DEBUG stuff in that it has side
-> effects.  I wonder if it should have a different flag.
-
-I think the debug flag is a clear warning to not ship a rule using this
-ability. Maybe a sub-flag LANDLOCK_SUBTYPE_ABILITY_DEBUG_PRINT would fit
-here?
-
- Micka=C3=ABl
-
-
---cbPRXjXcN2xSAm0RUJKAOWc89xl1aH6LG--
-
---tGg3IcwomGUQT68VU3TAp9B5Bf8VJvS4N
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAlitQSgACgkQIt7+33O9
-apWB7wgAjt9ZF2ZevHebsNpQegk6/vk/QVtydPq0smik9ZQaNc1Wea8yjxQ8CLfH
-MdQc33U0JWPVC3b7i6+UDHTqHUj+LE07NOKkSO19PovaSGK3D4u5+KBe7kxcS2mi
-NNuBxoNgQRzwTFaUqE2kAol7ZzR2kZYTWNLuQSTqDEVX8QwKyLF7Ap0J2iWzD6XN
-entPzOhhbV/T3iwaTbNftc/OAz3wrwOaMwdL5/JJFvCPC0nEb1PBZdvudvpnDqYC
-5sjn7oLXBjDSWnJJ3VwhStSbyGlWl73uqNJ2lg8t/t7BQItdPkKnnBSXC+PceeLQ
-GsTOIDScGNdVkDtyhkCwLI5bUAoLmA==
-=55lD
------END PGP SIGNATURE-----
-
---tGg3IcwomGUQT68VU3TAp9B5Bf8VJvS4N--
+> Thanks,
+> Mark.
