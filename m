@@ -1,512 +1,633 @@
 From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 22 Feb 2017 02:26:32 +0100
-Message-Id: <20170222012632.4196-11-mic@digikod.net>
+Date: Wed, 22 Feb 2017 02:26:23 +0100
+Message-Id: <20170222012632.4196-2-mic@digikod.net>
 In-Reply-To: <20170222012632.4196-1-mic@digikod.net>
 References: <20170222012632.4196-1-mic@digikod.net>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH v5 10/10] landlock: Add user and kernel documentation for Landlock
+Subject: [kernel-hardening] [PATCH v5 01/10] bpf: Add eBPF program subtype and is_valid_subtype() verifier
 To: linux-kernel@vger.kernel.org
 Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This documentation can be built with the Sphinx framework.
+The goal of the program subtype is to be able to have different static
+fine-grained verifications for a unique program type.
+
+The struct bpf_verifier_ops gets a new optional function:
+is_valid_subtype(). This new verifier is called at the beginning of the
+eBPF program verification to check if the (optional) program subtype is
+valid.
+
+For now, only Landlock eBPF programs are using a program subtype (see
+next commit) but this could be used by other program types in the future.
+
+Changes since v4:
+* replace the "status" field with "version" (more generic)
+* replace the "access" field with "ability" (less confusing)
+
+Changes since v3:
+* remove the "origin" field
+* add an "option" field
+* cleanup comments
 
 Signed-off-by: Mickaël Salaün <mic@digikod.net>
 Cc: Alexei Starovoitov <ast@kernel.org>
-Cc: Andy Lutomirski <luto@amacapital.net>
+Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
 Cc: Daniel Borkmann <daniel@iogearbox.net>
 Cc: David S. Miller <davem@davemloft.net>
-Cc: James Morris <james.l.morris@oracle.com>
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Serge E. Hallyn <serge@hallyn.com>
+Link: https://lkml.kernel.org/r/20160827205559.GA43880@ast-mbp.thefacebook.com
 ---
- Documentation/security/index.rst           |   1 +
- Documentation/security/landlock/index.rst  |  19 ++
- Documentation/security/landlock/kernel.rst | 132 +++++++++++++
- Documentation/security/landlock/user.rst   | 298 +++++++++++++++++++++++++++++
- 4 files changed, 450 insertions(+)
- create mode 100644 Documentation/security/landlock/index.rst
- create mode 100644 Documentation/security/landlock/kernel.rst
- create mode 100644 Documentation/security/landlock/user.rst
+ include/linux/bpf.h                         |  7 +++--
+ include/linux/filter.h                      |  1 +
+ include/uapi/linux/bpf.h                    | 10 ++++++
+ kernel/bpf/syscall.c                        |  5 +--
+ kernel/bpf/verifier.c                       | 10 ++++--
+ kernel/trace/bpf_trace.c                    | 15 ++++++---
+ net/core/filter.c                           | 48 ++++++++++++++++++-----------
+ samples/bpf/bpf_load.c                      |  3 +-
+ samples/bpf/fds_example.c                   |  2 +-
+ samples/bpf/sock_example.c                  |  2 +-
+ samples/bpf/test_cgrp2_attach.c             |  2 +-
+ samples/bpf/test_cgrp2_attach2.c            |  2 +-
+ samples/bpf/test_cgrp2_sock.c               |  2 +-
+ tools/include/uapi/linux/bpf.h              | 10 ++++++
+ tools/lib/bpf/bpf.c                         |  5 ++-
+ tools/lib/bpf/bpf.h                         |  2 +-
+ tools/lib/bpf/libbpf.c                      |  4 +--
+ tools/perf/tests/bpf.c                      |  2 +-
+ tools/testing/selftests/bpf/test_tag.c      |  2 +-
+ tools/testing/selftests/bpf/test_verifier.c |  3 +-
+ 20 files changed, 95 insertions(+), 42 deletions(-)
 
-diff --git a/Documentation/security/index.rst b/Documentation/security/index.rst
-index 9bae6bb20e7f..21a5a6b6e666 100644
---- a/Documentation/security/index.rst
-+++ b/Documentation/security/index.rst
-@@ -5,3 +5,4 @@ Security documentation
- .. toctree::
+diff --git a/include/linux/bpf.h b/include/linux/bpf.h
+index 909fc033173a..dd954048aa19 100644
+--- a/include/linux/bpf.h
++++ b/include/linux/bpf.h
+@@ -154,19 +154,22 @@ struct bpf_prog;
  
-    tpm/index
-+   landlock/index
-diff --git a/Documentation/security/landlock/index.rst b/Documentation/security/landlock/index.rst
-new file mode 100644
-index 000000000000..012bb9c2e2cb
---- /dev/null
-+++ b/Documentation/security/landlock/index.rst
-@@ -0,0 +1,19 @@
-+============
-+Landlock LSM
-+============
-+
-+Landlock is a stackable Linux Security Module (LSM) that makes it possible to
-+create security sandboxes.  This kind of sandbox is expected to help mitigate
-+the security impact of bugs or unexpected/malicious behaviors in user-space
-+applications.  The current version allows only a process with the global
-+CAP_SYS_ADMIN capability to create such sandboxes but the ultimate goal of
-+Landlock is to empower any process, including unprivileged ones, to securely
-+restrict themselves.  Landlock is inspired by seccomp-bpf but instead of
-+filtering syscalls and their raw arguments, a Landlock rule can inspect the use
-+of kernel objects like files and hence make a decision according to the kernel
-+semantic.
-+
-+.. toctree::
-+
-+    user
-+    kernel
-diff --git a/Documentation/security/landlock/kernel.rst b/Documentation/security/landlock/kernel.rst
-new file mode 100644
-index 000000000000..d31a7d6574af
---- /dev/null
-+++ b/Documentation/security/landlock/kernel.rst
-@@ -0,0 +1,132 @@
-+==============================
-+Landlock: kernel documentation
-+==============================
-+
-+eBPF properties
-+===============
-+
-+To get an expressive language while still being safe and small, Landlock is
-+based on eBPF. Landlock should be usable by untrusted processes and must
-+therefore expose a minimal attack surface. The eBPF bytecode is minimal,
-+powerful, widely used and designed to be used by untrusted applications. Thus,
-+reusing the eBPF support in the kernel enables a generic approach while
-+minimizing new code.
-+
-+An eBPF program has access to an eBPF context containing some fields including
-+event arguments (i.e. arg1 and arg2). These arguments can be used directly or
-+passed to helper functions according to their types. It is then possible to do
-+complex access checks without race conditions or inconsistent evaluation (i.e.
-+`incorrect mirroring of the OS code and state
-+<https://www.internetsociety.org/doc/traps-and-pitfalls-practical-problems-system-call-interposition-based-security-tools>`_).
-+
-+A Landlock event describes a particular access type.  For now, there is only
-+one event type dedicated to filesystem related operations:
-+LANDLOCK_SUBTYPE_EVENT_FS.  A Landlock rule is tied to one event type.  This
-+makes it possible to statically check context accesses, potentially performed
-+by such rule, and hence prevents kernel address leaks and ensure the right use
-+of event arguments with eBPF functions.  Any user can add multiple Landlock
-+rules per Landlock event.  They are stacked and evaluated one after the other,
-+starting from the most recent rule, as seccomp-bpf does with its filters.
-+Underneath, an event is an abstraction over a set of LSM hooks.
-+
-+
-+Guiding principles
-+==================
-+
-+Unprivileged use
-+----------------
-+
-+* Everything potentially security sensitive which is exposed to a Landlock
-+  rule, through functions or context, shall have an associated ability flag to
-+  specify which kind of privilege a process must have to load such a rule.
-+* Every ability flag expresses a semantic goal (e.g. debug, process
-+  introspection, process modification) potentially tied to a set of
-+  capabilities.
-+* Landlock helpers and context should be usable by any unprivileged and
-+  untrusted rule while following the system security policy enforced by other
-+  access control mechanisms (e.g. DAC, LSM).
-+
-+
-+Landlock event and context
-+--------------------------
-+
-+* A Landlock event shall be focused on access control on kernel objects instead
-+  of syscall filtering (i.e. syscall arguments), which is the purpose of
-+  seccomp-bpf.
-+* A Landlock context provided by an event shall express the minimal interface
-+  to control an access for a kernel object. This can be achieved by wrapping
-+  this raw object (e.g. file, inode, path, dentry) with an abstract
-+  representation (i.e. handle) for userland/bpfland.
-+* An evolution of a context's field (e.g. new flags in the status field) shall
-+  only be activated for a rule if the version specified by the loading thread
-+  imply this behavior.  This makes it possible to ensure that the rule code
-+  make sense (e.g.  only watch flags which may be activated).
-+* An event type shall guaranty that all the BPF function calls from a rule are
-+  safe.  Thus, the related Landlock context arguments shall always be of the
-+  same type for a particular event type.  For example, a network event could
-+  share helpers with a file event because of UNIX socket.  However, the same
-+  helpers may not be compatible for a FS handle and a net handle.
-+* Multiple event types may use the same context interface.
-+
-+
-+Landlock helpers
-+----------------
-+
-+* Landlock helpers shall be as generic as possible (i.e. using handles) while
-+  at the same time being as simple as possible and following the syscall
-+  creation principles (cf.  *Documentation/adding-syscalls.txt*).
-+* The only behavior change allowed on a helper is to fix a (logical) bug to
-+  match the initial semantic.
-+* Helpers shall be reentrant, i.e. only take inputs from arguments (e.g. from
-+  the BPF context) or from the current thread, to allow an event type to use a
-+  cache.  Future rule options might change this cache behavior (e.g. invalidate
-+  cache after some time).
-+* It is quite easy to add new helpers to extend Landlock.  The main concern
-+  should be about the possibility to leak information from a landlocked process
-+  to another (e.g. through maps) to not reproduce the same security sensitive
-+  behavior as ptrace(2).
-+
-+
-+Rule addition and propagation
-+=============================
-+
-+See :ref:`Documentation/security/landlock/user <inherited_rules>` for the
-+intended goal of rule propagation.
-+
-+Structure definitions
-+---------------------
-+
-+.. kernel-doc:: include/linux/landlock.h
-+
-+
-+Functions for rule addition
-+---------------------------
-+
-+.. kernel-doc:: security/landlock/manager.c
-+
-+
-+Questions and answers
-+=====================
-+
-+Why not create a custom event type for each kind of action?
-+-----------------------------------------------------------
-+
-+Landlock rules can handle these checks.  Adding more exceptions to the kernel
-+code would lead to more code complexity.  A decision to ignore a kind of action
-+can and should be done at the beginning of a Landlock rule.
-+
-+
-+Why a rule does not return an errno code?
-+-----------------------------------------
-+
-+seccomp filters can return multiple kind of code, including an errno value,
-+which may be convenient for access control.  Those return codes are hardwired
-+in the userland ABI.  Instead, Landlock approach is to return a boolean to
-+allow or deny an action, which is much simpler and more generic.  Moreover, we
-+do not really have a choice because, unlike to seccomp, Landlock rules are not
-+enforced at the syscall entry point but may be executed at any point in the
-+kernel (through LSM hooks) where an errno return code may not make sense.
-+However, with this simple ABI and with the ability to call helpers, Landlock
-+may gain features similar to seccomp-bpf in the future while being compatible
-+with previous rules.
-+
-diff --git a/Documentation/security/landlock/user.rst b/Documentation/security/landlock/user.rst
-new file mode 100644
-index 000000000000..3219aa1ed3a0
---- /dev/null
-+++ b/Documentation/security/landlock/user.rst
-@@ -0,0 +1,298 @@
-+================================
-+Landlock: userland documentation
-+================================
-+
-+Landlock rules
-+==============
-+
-+eBPF programs are used to create security rules.  They are contained and can
-+call only a whitelist of dedicated functions. Moreover, they cannot loop, which
-+protects from denial of service.  More information on BPF can be found in
-+*Documentation/networking/filter.txt*.
-+
-+
-+Writing a rule
-+--------------
-+
-+To enforce a security policy, a thread first needs to create a Landlock rule.
-+The easiest way to write an eBPF program depicting a security rule is to write
-+it in the C language.  As described in *samples/bpf/README.rst*, LLVM can
-+compile such programs.  Files *samples/bpf/landlock1_kern.c* and those in
-+*tools/testing/selftests/landlock/rules/* can be used as examples.  The
-+following example is a simple rule to forbid file creation, whatever syscall
-+may be used (e.g. open, mkdir, link...).
-+
-+.. code-block:: c
-+
-+    static int deny_file_creation(struct landlock_context *ctx)
-+    {
-+        if (ctx->arg2 & LANDLOCK_ACTION_FS_NEW)
-+            return 1;
-+        return 0;
-+    }
-+
-+Once the eBPF program is created, the next step is to create the metadata
-+describing the Landlock rule.  This metadata includes a subtype which contains
-+the version of Landlock, the event to which the rule is tied, and optional
-+Landlock rule abilities.
-+
-+.. code-block:: c
-+
-+    static union bpf_prog_subtype subtype = {
-+        .landlock_rule = {
-+            .version = 1,
-+            .event = LANDLOCK_SUBTYPE_EVENT_FS,
-+        }
-+    };
-+
-+The Landlock version is important to inform the kernel which features or
-+behavior the rule can handle.  The user-space thread should set the lowest
-+possible version to be as compatible as possible with older kernels.  For the
-+list of features provided by version, see :ref:`features`.
-+
-+A Landlock event describes the kind of kernel object for which a rule will be
-+triggered to allow or deny an action.  For example, the event
-+LANDLOCK_SUBTYPE_EVENT_FS is triggered every time a landlocked thread performs
-+an action related to the filesystem (e.g. open, read, write, mount...).
-+
-+The Landlock rule abilities should only be used if the rule needs a specific
-+feature such as debugging.  This should be avoided if not strictly necessary.
-+
-+The next step is to fill a :c:type:`union bpf_attr <bpf_attr>` with
-+BPF_PROG_TYPE_LANDLOCK, the previously created subtype and other BPF program
-+metadata.  This bpf_attr must then be passed to the bpf(2) syscall alongside
-+the BPF_PROG_LOAD command.  If everything is deemed correct by the kernel, the
-+thread gets a file descriptor referring to this rule.
-+
-+In the following code, the *insn* variable is an array of BPF instructions
-+which can be extracted from an ELF file as is done in bpf_load_file() from
-+*samples/bpf/bpf_load.c*.
-+
-+.. code-block:: c
-+
-+    union bpf_attr attr = {
-+        .prog_type = BPF_PROG_TYPE_LANDLOCK,
-+        .insn_cnt = sizeof(insn) / sizeof(struct bpf_insn),
-+        .insns = (__u64) (unsigned long) insn,
-+        .license = (__u64) (unsigned long) "GPL",
-+        .prog_subtype = &subtype,
-+    };
-+    int rule = bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
-+    if (rule == -1)
-+        exit(1);
-+
-+
-+Enforcing a rule
-+----------------
-+
-+Once the Landlock rule has been created or received (e.g. through a UNIX
-+socket), the thread willing to sandbox itself (and its future children) needs
-+to perform two steps to properly enforce a rule.
-+
-+The thread must first request to never be allowed to get new privileges with a
-+call to prctl(2) and the PR_SET_NO_NEW_PRIVS option.  More information can be
-+found in *Documentation/prctl/no_new_privs.txt*.
-+
-+.. code-block:: c
-+
-+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, NULL, 0, 0))
-+        exit(1);
-+
-+A thread can apply a rule to itself by using the seccomp(2) syscall.  The
-+operation is SECCOMP_ADD_LANDLOCK_RULE, the flags must be empty and the *args*
-+argument must point to a valid Landlock rule file descriptor.
-+
-+.. code-block:: c
-+
-+    if (seccomp(SECCOMP_ADD_LANDLOCK_RULE, 0, &rule))
-+        exit(1);
-+
-+If the syscall succeeds, the rule is now enforced on the calling thread and
-+will be enforced on all its subsequently created children of the thread as
-+well.  Once a thread is landlocked, there is no way to remove this security
-+policy, only stacking more restrictions is allowed.
-+
-+
-+.. _inherited_rules:
-+
-+Inherited rules
-+---------------
-+
-+Every new thread resulting from a clone(2) inherits Landlock rule restrictions
-+from its parent.  This is comparable to the seccomp inheritance as described in
-+*Documentation/prctl/seccomp_filter.txt*, but differs for rules addition.
-+
-+If a thread adds a rule for a particular event, then all its future children
-+and their progeny will inherit all the rules from the same event, whether any
-+of those rules were added before or after the fork.  This allows a thread to
-+share its security policy with its children and further restrict them over
-+time.  If a thread wants its future rules to be propagated, it must then create
-+at least one rule tied to the same event before any fork.
-+
-+
-+.. _features:
-+
-+Landlock features
-+=================
-+
-+In order to support new features over time without changing a rule behavior,
-+every context field, flag or helpers has a minimal Landlock version in which
-+they are available.  A thread needs to specify this minimal version number in
-+the subtype :c:type:`struct landlock_rule <landlock_rule>` defined in
-+*include/uapi/linux/bpf.h*.
-+
-+
-+Context
-+-------
-+
-+The arch and syscall_nr fields may be useful to tighten an access control, but
-+care must be taken to avoid pitfalls as explain in
-+*Documentation/prctl/seccomp_filter.txt*.
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :functions: landlock_context
-+
-+
-+Landlock event types
-+--------------------
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :functions: landlock_subtype_event
-+
-+.. flat-table:: Event types availability
-+
-+    * - flags
-+      - since
-+
-+    * - LANDLOCK_SUBTYPE_EVENT_FS
-+      - v1
-+
-+
-+File system access request
-+--------------------------
-+
-+Optional arguments from :c:type:`struct landlock_context <landlock_context>`:
-+
-+* arg1: filesystem handle
-+* arg2: action type
-+
-+
-+File system action types
-+------------------------
-+
-+Flags are used to express actions.  This makes it possible to compose actions
-+and leaves room for future improvements to add more fine-grained action types.
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :doc: landlock_action_fs
-+
-+.. flat-table:: FS action types availability
-+
-+    * - flags
-+      - since
-+
-+    * - LANDLOCK_ACTION_FS_EXEC
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_WRITE
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_READ
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_NEW
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_GET
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_REMOVE
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_IOCTL
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_LOCK
-+      - v1
-+
-+    * - LANDLOCK_ACTION_FS_FCNTL
-+      - v1
-+
-+
-+Ability types
-+-------------
-+
-+The ability of a Landlock rule describes the available features (i.e. context
-+fields and helpers).  This is useful to abstract user-space privileges for
-+Landlock rules, which may not need all abilities (e.g. debug).  Only the
-+minimal set of abilities should be used (e.g. disable debug once in
-+production).
-+
-+
-+.. kernel-doc:: include/uapi/linux/bpf.h
-+    :doc: landlock_subtype_ability
-+
-+.. flat-table:: Ability types availability
-+
-+    * - flags
-+      - since
-+      - capability
-+
-+    * - LANDLOCK_SUBTYPE_ABILITY_WRITE
-+      - v1
-+      - CAP_SYS_ADMIN
-+
-+    * - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+      - v1
-+      - CAP_SYS_ADMIN
-+
-+
-+Helper functions
-+----------------
-+
-+See *include/uapi/linux/bpf.h* for functions documentation.
-+
-+.. flat-table:: Generic functions availability
-+
-+    * - helper
-+      - since
-+      - ability
-+
-+    * - bpf_map_lookup_elem
-+      - v1
-+      - (none)
-+
-+    * - bpf_map_delete_elem
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_WRITE
-+
-+    * - bpf_map_update_elem
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_WRITE
-+
-+    * - bpf_get_current_comm
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_current_pid_tgid
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_current_uid_gid
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+    * - bpf_get_trace_printk
-+      - v1
-+      - LANDLOCK_SUBTYPE_ABILITY_DEBUG
-+
-+.. flat-table:: File system functions availability
-+
-+    * - helper
-+      - since
-+      - ability
-+
-+    * - bpf_handle_fs_get_mode
-+      - v1
-+      - (none)
-+
+ struct bpf_verifier_ops {
+ 	/* return eBPF function prototype for verification */
+-	const struct bpf_func_proto *(*get_func_proto)(enum bpf_func_id func_id);
++	const struct bpf_func_proto *(*get_func_proto)(enum bpf_func_id func_id,
++				      union bpf_prog_subtype *prog_subtype);
+ 
+ 	/* return true if 'size' wide access at offset 'off' within bpf_context
+ 	 * with 'type' (read or write) is allowed
+ 	 */
+ 	bool (*is_valid_access)(int off, int size, enum bpf_access_type type,
+-				enum bpf_reg_type *reg_type);
++				enum bpf_reg_type *reg_type,
++				union bpf_prog_subtype *prog_subtype);
+ 	int (*gen_prologue)(struct bpf_insn *insn, bool direct_write,
+ 			    const struct bpf_prog *prog);
+ 	u32 (*convert_ctx_access)(enum bpf_access_type type,
+ 				  const struct bpf_insn *src,
+ 				  struct bpf_insn *dst,
+ 				  struct bpf_prog *prog);
++	bool (*is_valid_subtype)(union bpf_prog_subtype *prog_subtype);
+ };
+ 
+ struct bpf_prog_type_list {
+diff --git a/include/linux/filter.h b/include/linux/filter.h
+index 0c167fdee5f7..1f49b19a87c1 100644
+--- a/include/linux/filter.h
++++ b/include/linux/filter.h
+@@ -417,6 +417,7 @@ struct bpf_prog {
+ 	enum bpf_prog_type	type;		/* Type of BPF program */
+ 	u32			len;		/* Number of filter blocks */
+ 	u8			tag[BPF_TAG_SIZE];
++	union bpf_prog_subtype	subtype;	/* For fine-grained verifications */
+ 	struct bpf_prog_aux	*aux;		/* Auxiliary fields */
+ 	struct sock_fprog_kern	*orig_prog;	/* Original BPF program */
+ 	unsigned int		(*bpf_func)(const void *ctx,
+diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
+index 0539a0ceef38..240c76f09d0d 100644
+--- a/include/uapi/linux/bpf.h
++++ b/include/uapi/linux/bpf.h
+@@ -145,6 +145,15 @@ enum bpf_attach_type {
+  */
+ #define BPF_F_NO_COMMON_LRU	(1U << 1)
+ 
++union bpf_prog_subtype {
++	struct {
++		__u32		version; /* cf. documentation */
++		__u32		event; /* enum landlock_subtype_event */
++		__aligned_u64	ability; /* LANDLOCK_SUBTYPE_ABILITY_* */
++		__aligned_u64	option; /* LANDLOCK_SUBTYPE_OPTION_* */
++	} landlock_rule;
++} __attribute__((aligned(8)));
++
+ union bpf_attr {
+ 	struct { /* anonymous struct used by BPF_MAP_CREATE command */
+ 		__u32	map_type;	/* one of enum bpf_map_type */
+@@ -173,6 +182,7 @@ union bpf_attr {
+ 		__u32		log_size;	/* size of user buffer */
+ 		__aligned_u64	log_buf;	/* user supplied buffer */
+ 		__u32		kern_version;	/* checked when prog_type=kprobe */
++		union bpf_prog_subtype prog_subtype;
+ 	};
+ 
+ 	struct { /* anonymous struct used by BPF_OBJ_* commands */
+diff --git a/kernel/bpf/syscall.c b/kernel/bpf/syscall.c
+index 461eb1e66a0f..23f7ca14e898 100644
+--- a/kernel/bpf/syscall.c
++++ b/kernel/bpf/syscall.c
+@@ -628,7 +628,7 @@ static void fixup_bpf_calls(struct bpf_prog *prog)
+ 				continue;
+ 			}
+ 
+-			fn = prog->aux->ops->get_func_proto(insn->imm);
++			fn = prog->aux->ops->get_func_proto(insn->imm, &prog->subtype);
+ 			/* all functions that have prototype and verifier allowed
+ 			 * programs to call them, must be real in-kernel functions
+ 			 */
+@@ -827,7 +827,7 @@ struct bpf_prog *bpf_prog_get_type(u32 ufd, enum bpf_prog_type type)
+ EXPORT_SYMBOL_GPL(bpf_prog_get_type);
+ 
+ /* last field in 'union bpf_attr' used by this command */
+-#define	BPF_PROG_LOAD_LAST_FIELD kern_version
++#define	BPF_PROG_LOAD_LAST_FIELD prog_subtype
+ 
+ static int bpf_prog_load(union bpf_attr *attr)
+ {
+@@ -885,6 +885,7 @@ static int bpf_prog_load(union bpf_attr *attr)
+ 	err = find_prog_type(type, prog);
+ 	if (err < 0)
+ 		goto free_prog;
++	prog->subtype = attr->prog_subtype;
+ 
+ 	/* run eBPF verifier */
+ 	err = bpf_check(&prog, attr);
+diff --git a/kernel/bpf/verifier.c b/kernel/bpf/verifier.c
+index d2bded2b250c..fe26ec007a9a 100644
+--- a/kernel/bpf/verifier.c
++++ b/kernel/bpf/verifier.c
+@@ -740,7 +740,8 @@ static int check_ctx_access(struct bpf_verifier_env *env, int off, int size,
+ 		return 0;
+ 
+ 	if (env->prog->aux->ops->is_valid_access &&
+-	    env->prog->aux->ops->is_valid_access(off, size, t, reg_type)) {
++	    env->prog->aux->ops->is_valid_access(off, size, t, reg_type,
++					         &env->prog->subtype)) {
+ 		/* remember the offset of last byte accessed in ctx */
+ 		if (env->prog->aux->max_ctx_offset < off + size)
+ 			env->prog->aux->max_ctx_offset = off + size;
+@@ -1290,7 +1291,8 @@ static int check_call(struct bpf_verifier_env *env, int func_id)
+ 	}
+ 
+ 	if (env->prog->aux->ops->get_func_proto)
+-		fn = env->prog->aux->ops->get_func_proto(func_id);
++		fn = env->prog->aux->ops->get_func_proto(func_id,
++							 &env->prog->subtype);
+ 
+ 	if (!fn) {
+ 		verbose("unknown func %s#%d\n", func_id_name(func_id), func_id);
+@@ -3261,6 +3263,10 @@ int bpf_check(struct bpf_prog **prog, union bpf_attr *attr)
+ 	struct bpf_verifier_env *env;
+ 	int ret = -EINVAL;
+ 
++	if ((*prog)->aux->ops->is_valid_subtype &&
++	    !(*prog)->aux->ops->is_valid_subtype(&(*prog)->subtype))
++		return -EINVAL;
++
+ 	/* 'struct bpf_verifier_env' can be global, but since it's not small,
+ 	 * allocate/free it every time bpf_check() is called
+ 	 */
+diff --git a/kernel/trace/bpf_trace.c b/kernel/trace/bpf_trace.c
+index cee9802cf3e0..e71ee1bb7abf 100644
+--- a/kernel/trace/bpf_trace.c
++++ b/kernel/trace/bpf_trace.c
+@@ -469,7 +469,8 @@ static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
+ 	}
+ }
+ 
+-static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func_id)
++static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func_id,
++		union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_perf_event_output:
+@@ -483,7 +484,8 @@ static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func
+ 
+ /* bpf+kprobe programs can access fields of 'struct pt_regs' */
+ static bool kprobe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
+-					enum bpf_reg_type *reg_type)
++					enum bpf_reg_type *reg_type,
++					union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (off < 0 || off >= sizeof(struct pt_regs))
+ 		return false;
+@@ -558,7 +560,8 @@ static const struct bpf_func_proto bpf_get_stackid_proto_tp = {
+ 	.arg3_type	= ARG_ANYTHING,
+ };
+ 
+-static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id)
++static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id,
++		union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_perf_event_output:
+@@ -571,7 +574,8 @@ static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id)
+ }
+ 
+ static bool tp_prog_is_valid_access(int off, int size, enum bpf_access_type type,
+-				    enum bpf_reg_type *reg_type)
++				    enum bpf_reg_type *reg_type,
++				    union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (off < sizeof(void *) || off >= PERF_MAX_TRACE_SIZE)
+ 		return false;
+@@ -595,7 +599,8 @@ static struct bpf_prog_type_list tracepoint_tl __ro_after_init = {
+ };
+ 
+ static bool pe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
+-				    enum bpf_reg_type *reg_type)
++				    enum bpf_reg_type *reg_type,
++				    union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (off < 0 || off >= sizeof(struct bpf_perf_event_data))
+ 		return false;
+diff --git a/net/core/filter.c b/net/core/filter.c
+index e466e0040137..ac25920b5eae 100644
+--- a/net/core/filter.c
++++ b/net/core/filter.c
+@@ -2600,7 +2600,8 @@ static const struct bpf_func_proto bpf_xdp_event_output_proto = {
+ };
+ 
+ static const struct bpf_func_proto *
+-bpf_base_func_proto(enum bpf_func_id func_id)
++bpf_base_func_proto(enum bpf_func_id func_id,
++		    union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_map_lookup_elem:
+@@ -2628,18 +2629,20 @@ bpf_base_func_proto(enum bpf_func_id func_id)
+ }
+ 
+ static const struct bpf_func_proto *
+-sk_filter_func_proto(enum bpf_func_id func_id)
++sk_filter_func_proto(enum bpf_func_id func_id,
++		     union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_skb_load_bytes:
+ 		return &bpf_skb_load_bytes_proto;
+ 	default:
+-		return bpf_base_func_proto(func_id);
++		return bpf_base_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+ static const struct bpf_func_proto *
+-tc_cls_act_func_proto(enum bpf_func_id func_id)
++tc_cls_act_func_proto(enum bpf_func_id func_id,
++		      union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_skb_store_bytes:
+@@ -2693,12 +2696,13 @@ tc_cls_act_func_proto(enum bpf_func_id func_id)
+ 	case BPF_FUNC_skb_under_cgroup:
+ 		return &bpf_skb_under_cgroup_proto;
+ 	default:
+-		return bpf_base_func_proto(func_id);
++		return bpf_base_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+ static const struct bpf_func_proto *
+-xdp_func_proto(enum bpf_func_id func_id)
++xdp_func_proto(enum bpf_func_id func_id,
++	       union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_perf_event_output:
+@@ -2708,23 +2712,25 @@ xdp_func_proto(enum bpf_func_id func_id)
+ 	case BPF_FUNC_xdp_adjust_head:
+ 		return &bpf_xdp_adjust_head_proto;
+ 	default:
+-		return bpf_base_func_proto(func_id);
++		return bpf_base_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+ static const struct bpf_func_proto *
+-cg_skb_func_proto(enum bpf_func_id func_id)
++cg_skb_func_proto(enum bpf_func_id func_id,
++		  union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_skb_load_bytes:
+ 		return &bpf_skb_load_bytes_proto;
+ 	default:
+-		return bpf_base_func_proto(func_id);
++		return bpf_base_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+ static const struct bpf_func_proto *
+-lwt_inout_func_proto(enum bpf_func_id func_id)
++lwt_inout_func_proto(enum bpf_func_id func_id,
++		     union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_skb_load_bytes:
+@@ -2746,12 +2752,13 @@ lwt_inout_func_proto(enum bpf_func_id func_id)
+ 	case BPF_FUNC_skb_under_cgroup:
+ 		return &bpf_skb_under_cgroup_proto;
+ 	default:
+-		return bpf_base_func_proto(func_id);
++		return bpf_base_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+ static const struct bpf_func_proto *
+-lwt_xmit_func_proto(enum bpf_func_id func_id)
++lwt_xmit_func_proto(enum bpf_func_id func_id,
++		    union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (func_id) {
+ 	case BPF_FUNC_skb_get_tunnel_key:
+@@ -2781,7 +2788,7 @@ lwt_xmit_func_proto(enum bpf_func_id func_id)
+ 	case BPF_FUNC_set_hash_invalid:
+ 		return &bpf_set_hash_invalid_proto;
+ 	default:
+-		return lwt_inout_func_proto(func_id);
++		return lwt_inout_func_proto(func_id, prog_subtype);
+ 	}
+ }
+ 
+@@ -2811,7 +2818,8 @@ static bool __is_valid_access(int off, int size)
+ 
+ static bool sk_filter_is_valid_access(int off, int size,
+ 				      enum bpf_access_type type,
+-				      enum bpf_reg_type *reg_type)
++				      enum bpf_reg_type *reg_type,
++				      union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (off) {
+ 	case offsetof(struct __sk_buff, tc_classid):
+@@ -2835,7 +2843,8 @@ static bool sk_filter_is_valid_access(int off, int size,
+ 
+ static bool lwt_is_valid_access(int off, int size,
+ 				enum bpf_access_type type,
+-				enum bpf_reg_type *reg_type)
++				enum bpf_reg_type *reg_type,
++				union bpf_prog_subtype *prog_subtype)
+ {
+ 	switch (off) {
+ 	case offsetof(struct __sk_buff, tc_classid):
+@@ -2868,7 +2877,8 @@ static bool lwt_is_valid_access(int off, int size,
+ 
+ static bool sock_filter_is_valid_access(int off, int size,
+ 					enum bpf_access_type type,
+-					enum bpf_reg_type *reg_type)
++					enum bpf_reg_type *reg_type,
++					union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (type == BPF_WRITE) {
+ 		switch (off) {
+@@ -2931,7 +2941,8 @@ static int tc_cls_act_prologue(struct bpf_insn *insn_buf, bool direct_write,
+ 
+ static bool tc_cls_act_is_valid_access(int off, int size,
+ 				       enum bpf_access_type type,
+-				       enum bpf_reg_type *reg_type)
++				       enum bpf_reg_type *reg_type,
++				       union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (type == BPF_WRITE) {
+ 		switch (off) {
+@@ -2973,7 +2984,8 @@ static bool __is_valid_xdp_access(int off, int size)
+ 
+ static bool xdp_is_valid_access(int off, int size,
+ 				enum bpf_access_type type,
+-				enum bpf_reg_type *reg_type)
++				enum bpf_reg_type *reg_type,
++				union bpf_prog_subtype *prog_subtype)
+ {
+ 	if (type == BPF_WRITE)
+ 		return false;
+diff --git a/samples/bpf/bpf_load.c b/samples/bpf/bpf_load.c
+index 396e204888b3..d23dc13ab0f2 100644
+--- a/samples/bpf/bpf_load.c
++++ b/samples/bpf/bpf_load.c
+@@ -29,6 +29,7 @@
+ 
+ static char license[128];
+ static int kern_version;
++static union bpf_prog_subtype subtype = {};
+ static bool processed_sec[128];
+ char bpf_log_buf[BPF_LOG_BUF_SIZE];
+ int map_fd[MAX_MAPS];
+@@ -98,7 +99,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
+ 	}
+ 
+ 	fd = bpf_load_program(prog_type, prog, insns_cnt, license, kern_version,
+-			      bpf_log_buf, BPF_LOG_BUF_SIZE);
++			      bpf_log_buf, BPF_LOG_BUF_SIZE, &subtype);
+ 	if (fd < 0) {
+ 		printf("bpf_load_program() err=%d\n%s", errno, bpf_log_buf);
+ 		return -1;
+diff --git a/samples/bpf/fds_example.c b/samples/bpf/fds_example.c
+index e29bd52ff9e8..0f4f5f6a9f9f 100644
+--- a/samples/bpf/fds_example.c
++++ b/samples/bpf/fds_example.c
+@@ -62,7 +62,7 @@ static int bpf_prog_create(const char *object)
+ 	} else {
+ 		return bpf_load_program(BPF_PROG_TYPE_SOCKET_FILTER,
+ 					insns, insns_cnt, "GPL", 0,
+-					bpf_log_buf, BPF_LOG_BUF_SIZE);
++					bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
+ 	}
+ }
+ 
+diff --git a/samples/bpf/sock_example.c b/samples/bpf/sock_example.c
+index 6fc6e193ef1b..615f4d8c29dc 100644
+--- a/samples/bpf/sock_example.c
++++ b/samples/bpf/sock_example.c
+@@ -60,7 +60,7 @@ static int test_sock(void)
+ 	size_t insns_cnt = sizeof(prog) / sizeof(struct bpf_insn);
+ 
+ 	prog_fd = bpf_load_program(BPF_PROG_TYPE_SOCKET_FILTER, prog, insns_cnt,
+-				   "GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE);
++				   "GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
+ 	if (prog_fd < 0) {
+ 		printf("failed to load prog '%s'\n", strerror(errno));
+ 		goto cleanup;
+diff --git a/samples/bpf/test_cgrp2_attach.c b/samples/bpf/test_cgrp2_attach.c
+index 4bfcaf93fcf3..f8a91d2b7896 100644
+--- a/samples/bpf/test_cgrp2_attach.c
++++ b/samples/bpf/test_cgrp2_attach.c
+@@ -72,7 +72,7 @@ static int prog_load(int map_fd, int verdict)
+ 
+ 	return bpf_load_program(BPF_PROG_TYPE_CGROUP_SKB,
+ 				prog, insns_cnt, "GPL", 0,
+-				bpf_log_buf, BPF_LOG_BUF_SIZE);
++				bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
+ }
+ 
+ static int usage(const char *argv0)
+diff --git a/samples/bpf/test_cgrp2_attach2.c b/samples/bpf/test_cgrp2_attach2.c
+index 3049b1f26267..31a0f4bd665f 100644
+--- a/samples/bpf/test_cgrp2_attach2.c
++++ b/samples/bpf/test_cgrp2_attach2.c
+@@ -45,7 +45,7 @@ static int prog_load(int verdict)
+ 
+ 	ret = bpf_load_program(BPF_PROG_TYPE_CGROUP_SKB,
+ 			       prog, insns_cnt, "GPL", 0,
+-			       bpf_log_buf, BPF_LOG_BUF_SIZE);
++			       bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
+ 
+ 	if (ret < 0) {
+ 		log_err("Loading program");
+diff --git a/samples/bpf/test_cgrp2_sock.c b/samples/bpf/test_cgrp2_sock.c
+index c3cfb23e23b5..697f2db30e6a 100644
+--- a/samples/bpf/test_cgrp2_sock.c
++++ b/samples/bpf/test_cgrp2_sock.c
+@@ -38,7 +38,7 @@ static int prog_load(int idx)
+ 	size_t insns_cnt = sizeof(prog) / sizeof(struct bpf_insn);
+ 
+ 	return bpf_load_program(BPF_PROG_TYPE_CGROUP_SOCK, prog, insns_cnt,
+-				"GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE);
++				"GPL", 0, bpf_log_buf, BPF_LOG_BUF_SIZE, NULL);
+ }
+ 
+ static int usage(const char *argv0)
+diff --git a/tools/include/uapi/linux/bpf.h b/tools/include/uapi/linux/bpf.h
+index 0539a0ceef38..240c76f09d0d 100644
+--- a/tools/include/uapi/linux/bpf.h
++++ b/tools/include/uapi/linux/bpf.h
+@@ -145,6 +145,15 @@ enum bpf_attach_type {
+  */
+ #define BPF_F_NO_COMMON_LRU	(1U << 1)
+ 
++union bpf_prog_subtype {
++	struct {
++		__u32		version; /* cf. documentation */
++		__u32		event; /* enum landlock_subtype_event */
++		__aligned_u64	ability; /* LANDLOCK_SUBTYPE_ABILITY_* */
++		__aligned_u64	option; /* LANDLOCK_SUBTYPE_OPTION_* */
++	} landlock_rule;
++} __attribute__((aligned(8)));
++
+ union bpf_attr {
+ 	struct { /* anonymous struct used by BPF_MAP_CREATE command */
+ 		__u32	map_type;	/* one of enum bpf_map_type */
+@@ -173,6 +182,7 @@ union bpf_attr {
+ 		__u32		log_size;	/* size of user buffer */
+ 		__aligned_u64	log_buf;	/* user supplied buffer */
+ 		__u32		kern_version;	/* checked when prog_type=kprobe */
++		union bpf_prog_subtype prog_subtype;
+ 	};
+ 
+ 	struct { /* anonymous struct used by BPF_OBJ_* commands */
+diff --git a/tools/lib/bpf/bpf.c b/tools/lib/bpf/bpf.c
+index d48b70ceb25a..eb423a28e974 100644
+--- a/tools/lib/bpf/bpf.c
++++ b/tools/lib/bpf/bpf.c
+@@ -71,10 +71,12 @@ int bpf_create_map(enum bpf_map_type map_type, int key_size,
+ 
+ int bpf_load_program(enum bpf_prog_type type, const struct bpf_insn *insns,
+ 		     size_t insns_cnt, const char *license,
+-		     __u32 kern_version, char *log_buf, size_t log_buf_sz)
++		     __u32 kern_version, char *log_buf, size_t log_buf_sz,
++		     union bpf_prog_subtype *subtype)
+ {
+ 	int fd;
+ 	union bpf_attr attr;
++	union bpf_prog_subtype st_none = {};
+ 
+ 	bzero(&attr, sizeof(attr));
+ 	attr.prog_type = type;
+@@ -85,6 +87,7 @@ int bpf_load_program(enum bpf_prog_type type, const struct bpf_insn *insns,
+ 	attr.log_size = 0;
+ 	attr.log_level = 0;
+ 	attr.kern_version = kern_version;
++	attr.prog_subtype = subtype ? *subtype : st_none;
+ 
+ 	fd = sys_bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
+ 	if (fd >= 0 || !log_buf || !log_buf_sz)
+diff --git a/tools/lib/bpf/bpf.h b/tools/lib/bpf/bpf.h
+index 09c3dcac0496..c2ddecfbbbba 100644
+--- a/tools/lib/bpf/bpf.h
++++ b/tools/lib/bpf/bpf.h
+@@ -32,7 +32,7 @@ int bpf_create_map(enum bpf_map_type map_type, int key_size, int value_size,
+ int bpf_load_program(enum bpf_prog_type type, const struct bpf_insn *insns,
+ 		     size_t insns_cnt, const char *license,
+ 		     __u32 kern_version, char *log_buf,
+-		     size_t log_buf_sz);
++		     size_t log_buf_sz, union bpf_prog_subtype *subtype);
+ 
+ int bpf_map_update_elem(int fd, const void *key, const void *value,
+ 			__u64 flags);
+diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
+index 84e6b35da4bd..c9a680faead2 100644
+--- a/tools/lib/bpf/libbpf.c
++++ b/tools/lib/bpf/libbpf.c
+@@ -975,7 +975,7 @@ load_program(enum bpf_prog_type type, struct bpf_insn *insns,
+ 		pr_warning("Alloc log buffer for bpf loader error, continue without log\n");
+ 
+ 	ret = bpf_load_program(type, insns, insns_cnt, license,
+-			       kern_version, log_buf, BPF_LOG_BUF_SIZE);
++			       kern_version, log_buf, BPF_LOG_BUF_SIZE, NULL);
+ 
+ 	if (ret >= 0) {
+ 		*pfd = ret;
+@@ -1002,7 +1002,7 @@ load_program(enum bpf_prog_type type, struct bpf_insn *insns,
+ 
+ 			fd = bpf_load_program(BPF_PROG_TYPE_KPROBE, insns,
+ 					      insns_cnt, license, kern_version,
+-					      NULL, 0);
++					      NULL, 0, NULL);
+ 			if (fd >= 0) {
+ 				close(fd);
+ 				ret = -LIBBPF_ERRNO__PROGTYPE;
+diff --git a/tools/perf/tests/bpf.c b/tools/perf/tests/bpf.c
+index 92343f43e44a..1b67c7c39127 100644
+--- a/tools/perf/tests/bpf.c
++++ b/tools/perf/tests/bpf.c
+@@ -266,7 +266,7 @@ static int check_env(void)
+ 
+ 	err = bpf_load_program(BPF_PROG_TYPE_KPROBE, insns,
+ 			       sizeof(insns) / sizeof(insns[0]),
+-			       license, kver_int, NULL, 0);
++			       license, kver_int, NULL, 0, NULL);
+ 	if (err < 0) {
+ 		pr_err("Missing basic BPF support, skip this test: %s\n",
+ 		       strerror(errno));
+diff --git a/tools/testing/selftests/bpf/test_tag.c b/tools/testing/selftests/bpf/test_tag.c
+index de409fc50c35..cf7892c87b5a 100644
+--- a/tools/testing/selftests/bpf/test_tag.c
++++ b/tools/testing/selftests/bpf/test_tag.c
+@@ -57,7 +57,7 @@ static int bpf_try_load_prog(int insns, int fd_map,
+ 
+ 	bpf_filler(insns, fd_map);
+ 	fd_prog = bpf_load_program(BPF_PROG_TYPE_SCHED_CLS, prog, insns, "", 0,
+-				   NULL, 0);
++				   NULL, 0, NULL);
+ 	assert(fd_prog > 0);
+ 	if (fd_map > 0)
+ 		bpf_filler(insns, 0);
+diff --git a/tools/testing/selftests/bpf/test_verifier.c b/tools/testing/selftests/bpf/test_verifier.c
+index e1f5b9eea1e8..15eeb79104fe 100644
+--- a/tools/testing/selftests/bpf/test_verifier.c
++++ b/tools/testing/selftests/bpf/test_verifier.c
+@@ -51,6 +51,7 @@ struct bpf_test {
+ 		REJECT
+ 	} result, result_unpriv;
+ 	enum bpf_prog_type prog_type;
++	union bpf_prog_subtype prog_subtype;
+ };
+ 
+ /* Note we want this to be 64 bit aligned so that the end of our array is
+@@ -4539,7 +4540,7 @@ static void do_test_single(struct bpf_test *test, bool unpriv,
+ 
+ 	fd_prog = bpf_load_program(prog_type ? : BPF_PROG_TYPE_SOCKET_FILTER,
+ 				   prog, prog_len, "GPL", 0, bpf_vlog,
+-				   sizeof(bpf_vlog));
++				   sizeof(bpf_vlog), &test->prog_subtype);
+ 
+ 	expected_ret = unpriv && test->result_unpriv != UNDEF ?
+ 		       test->result_unpriv : test->result;
 -- 
 2.11.0
