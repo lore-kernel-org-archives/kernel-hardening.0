@@ -1,197 +1,68 @@
-Date: Fri, 24 Feb 2017 20:53:30 +1100
-In-Reply-To: <CACi5LpM1ZjLgPUFaYy5xnC+Or-ENNzGSMaAqMo9rE3zVEy0PkA@mail.gmail.com>
-References: <1486014168-1279-1-git-send-email-bhsharma@redhat.com> <1486014168-1279-2-git-send-email-bhsharma@redhat.com> <87mve4c2my.fsf@concordia.ellerman.id.au> <CACi5LpOkkSFOJm07BGZFOmFpZpx7qsQiNywEmAjCEmcQG6kGEg@mail.gmail.com> <87mvduz4wi.fsf@concordia.ellerman.id.au> <CACi5LpOddY6WOz7S-fNEwSDLOoYFga-NKUOkCHtNLJ0puiNMOQ@mail.gmail.com> <CACi5LpMdoo4xFCO4w+FAF=UQMDF_Lx95UoN-B4UrtCX_27B8wg@mail.gmail.com> <CACi5LpM1ZjLgPUFaYy5xnC+Or-ENNzGSMaAqMo9rE3zVEy0PkA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain;
- charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-From: Michael Ellerman <michael@ellerman.id.au>
-Message-ID: <2FB3FE28-C762-4EC4-AFCE-FAD77CB7B9A5@ellerman.id.au>
-Subject: Re: [kernel-hardening] Re: [PATCH 1/2] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: Bhupesh Sharma <bhsharma@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>
-Cc: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, Daniel Cashman <dcashman@google.com>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
+From: David Windsor <dwindsor@gmail.com>
+Date: Fri, 24 Feb 2017 08:41:59 -0500
+Message-ID: <CAEXv5_gSLFzYnQO8FdYxNDTwpNCi1umJKmR3RC-748iamafi9w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] USERCOPY slab cache whitelisting
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Hi Kees,
+
+I've started looking at your proposed solution for slab cache
+whitelisting [1][2], as it applies to HARDENED_USERCOPY.  I have a few
+questions.
+
+Generally, the problem to be solved here is that there are slabs not
+marked for USERCOPY whitelisting (i.e. no SLAB_USERCOPY in the slab's
+flags) that need to have some of their memory copied to userspace.
+
+IIUC, the original PaX solution is to first copy this non-whitelisted
+slab memory to the stack, which _is_ whitelisted, before copying to
+userspace via copy_to_user().  The USERCOPY checks will then occur in
+copy_to_user().
+
+After considering the merits of this solution, you identified some
+issues inherent to the PaX solution.  Relevant to this discussion are
+(lifted from [2], listed here for convenience):
+
+- non-whitelist-workarounds are open-coded
+- non-whitelist-workarounds require a double-copy
+- non-whitelist-workarounds have explicit size maximums (e.g.
+AT_VECTOR_SIZE, sizeof(sigset_t))
+- non-whitelist-workarounds _bypass_ HARDENED_USERCOPY object address checking
+
+To address these issues, you suggest creating something like this:
+
+copy_to_user_n(user, kernel, dynamic-size, const-max-size)
 
 
-On 24 February 2017 6:32:13 pm AEDT, Bhupesh Sharma <bhsharma@redhat=2Ecom=
-> wrote:
->Hi Michael,
->
->On Thu, Feb 16, 2017 at 10:19 AM, Bhupesh Sharma <bhsharma@redhat=2Ecom>
->wrote:
->> Hi Michael,
->>
->> On Fri, Feb 10, 2017 at 4:41 PM, Bhupesh Sharma <bhsharma@redhat=2Ecom>
->wrote:
->>> On Fri, Feb 10, 2017 at 4:31 PM, Michael Ellerman
-><mpe@ellerman=2Eid=2Eau> wrote:
->>>> Bhupesh Sharma <bhsharma@redhat=2Ecom> writes:
->>>>
->>>>> HI Michael,
->>>>>
->>>>> On Thu, Feb 2, 2017 at 3:53 PM, Michael Ellerman
-><mpe@ellerman=2Eid=2Eau> wrote:
->>>>>> Bhupesh Sharma <bhsharma@redhat=2Ecom> writes:
->>>>>>
->>>>>>> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT)
->for
->>>>>>> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random
->offset
->>>>>>> for the mmap base address=2E
->>>>>>>
->>>>>>> This value represents a compromise between increased
->>>>>>> ASLR effectiveness and avoiding address-space fragmentation=2E
->>>>>>> Replace it with a Kconfig option, which is sensibly bounded, so
->that
->>>>>>> platform developers may choose where to place this compromise=2E
->>>>>>> Keep default values as new minimums=2E
->>>>>>>
->>>>>>> This patch makes sure that now powerpc mmap arch_mmap_rnd()
->approach
->>>>>>> is similar to other ARCHs like x86, arm64 and arm=2E
->>>>>>
->>>>>> Thanks for looking at this, it's been on my TODO for a while=2E
->>>>>>
->>>>>> I have a half completed version locally, but never got around to
->testing
->>>>>> it thoroughly=2E
->>>>>
->>>>> Sure :)
->>>>>
->>>>>>> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
->>>>>>> index a8ee573fe610=2E=2Eb4a843f68705 100644
->>>>>>> --- a/arch/powerpc/Kconfig
->>>>>>> +++ b/arch/powerpc/Kconfig
->>>>>>> @@ -22,6 +22,38 @@ config MMU
->>>>>>>       bool
->>>>>>>       default y
->>>>>>>
->>>>>>> +config ARCH_MMAP_RND_BITS_MIN
->>>>>>> +       default 5 if PPC_256K_PAGES && 32BIT
->>>>>>> +       default 12 if PPC_256K_PAGES && 64BIT
->>>>>>> +       default 7 if PPC_64K_PAGES && 32BIT
->>>>>>> +       default 14 if PPC_64K_PAGES && 64BIT
->>>>>>> +       default 9 if PPC_16K_PAGES && 32BIT
->>>>>>> +       default 16 if PPC_16K_PAGES && 64BIT
->>>>>>> +       default 11 if PPC_4K_PAGES && 32BIT
->>>>>>> +       default 18 if PPC_4K_PAGES && 64BIT
->>>>>>> +
->>>>>>> +# max bits determined by the following formula:
->>>>>>> +#  VA_BITS - PAGE_SHIFT - 4
->>>>>>> +#  for e=2Eg for 64K page and 64BIT =3D 48 - 16 - 4 =3D 28
->>>>>>> +config ARCH_MMAP_RND_BITS_MAX
->>>>>>> +       default 10 if PPC_256K_PAGES && 32BIT
->>>>>>> +       default 26 if PPC_256K_PAGES && 64BIT
->>>>>>> +       default 12 if PPC_64K_PAGES && 32BIT
->>>>>>> +       default 28 if PPC_64K_PAGES && 64BIT
->>>>>>> +       default 14 if PPC_16K_PAGES && 32BIT
->>>>>>> +       default 30 if PPC_16K_PAGES && 64BIT
->>>>>>> +       default 16 if PPC_4K_PAGES && 32BIT
->>>>>>> +       default 32 if PPC_4K_PAGES && 64BIT
->>>>>>> +
->>>>>>> +config ARCH_MMAP_RND_COMPAT_BITS_MIN
->>>>>>> +       default 5 if PPC_256K_PAGES
->>>>>>> +       default 7 if PPC_64K_PAGES
->>>>>>> +       default 9 if PPC_16K_PAGES
->>>>>>> +       default 11
->>>>>>> +
->>>>>>> +config ARCH_MMAP_RND_COMPAT_BITS_MAX
->>>>>>> +       default 16
->>>>>>> +
->>>>>>
->>>>>> This is what I have below, which is a bit neater I think because
->each
->>>>>> value is only there once (by defaulting to the COMPAT value)=2E
->>>>>>
->>>>>> My max values are different to yours, I don't really remember why
->I
->>>>>> chose those values, so we can argue about which is right=2E
->>>>>
->>>>> I am not sure how you derived these values, but I am not sure
->there
->>>>> should be differences between 64-BIT x86/ARM64 and PPC values for
->the
->>>>> MAX values=2E
->>>>
->>>> But your values *are* different to x86 and arm64=2E
->>>>
->>>> And why would they be the same anyway? x86 has a 47 bit address
->space,
->>>> 64-bit powerpc is 46 bits, and arm64 is configurable from 36 to 48
->bits=2E
->>>>
->>>> So your calculations above using VA_BITS =3D 48 should be using 46
->bits=2E
->>>>
->>>> But if you fixed that, your formula basically gives 1/16th of the
->>>> address space as the maximum range=2E Why is that the right amount?
->>>>
->>>> x86 uses 1/8th, and arm64 uses a mixture of 1/8th and 1/32nd
->(though
->>>> those might be bugs)=2E
->>>>
->>>> My values were more liberal, giving up to half the address space
->for 32
->>>> & 64-bit=2E Maybe that's too generous, but my rationale was it's up
->to the
->>>> sysadmin to tweak the values and they get to keep the pieces if it
->>>> breaks=2E
->>>
->>> I am not sure why would one want to use more than the practical
->limits
->>> of 1/8th used by x86 - this causes additional burden of address
->space
->>> fragmentation=2E
->>>
->>> So we need to balance between the randomness increase and the
->address
->>> space fragmentation=2E
->>>
->>>>>> +config ARCH_MMAP_RND_BITS_MAX
->>>>>> +       # On 64-bit up to 32T of address space (2^45)
->>>>>> +       default 27 if 64BIT && PPC_256K_PAGES   # 256K (2^18), =3D
->45 - 18 =3D 27
->>>>>> +       default 29 if 64BIT && PPC_64K_PAGES    # 64K  (2^16), =3D
->45 - 16 =3D 29
->>>>>> +       default 31 if 64BIT && PPC_16K_PAGES    # 16K  (2^14), =3D
->45 - 14 =3D 31
->>>>>> +       default 33 if 64BIT                     # 4K   (2^12), =3D
->45 - 12 =3D 33
->>>>>> +       default ARCH_MMAP_RND_COMPAT_BITS_MAX
->>>>
->>>> I played with my values a bit and allowing 32T is a little bit
->nuts=2E It
->>>> means you can actually end up with the adjusted ET_DYN_BASE *above*
->32T,
->>>> followed by the heap growing up, and the mmap base *below* 32T,
->growing
->>>> down=2E Which is kinda fun, but definitely breaks a lot of
->assumptions=2E
->>>>
->>>> So limiting it to a max of 16T is probably more sensible=2E
->>>>
->>>> Anyway late here, will think about it some more over the weekend=2E
->>>
->>> A user is always free to tweak the maximum values via specific
->Kconfig
->>> + defconfig combinations for their platforms, but why have such
->large
->>> max values as default for say a embedded PPC64 board which only
->>> supports say 16GB of DDR=2E
->>>
->>> A default max of 33bits for such platforms might be an overkill,
->while
->>> it might be fine for servers which might have greater DDR
->>> availability=2E
->>
->> Ping=2E
->>
->
->Any updates on this?
+My questions:
 
-It missed 4=2E11, we'll get something in for 4=2E12=2E
+1.  Which HARDENED_USERCOPY checks are applied in copy_to_user_n()?
+All of them?
 
-Cheers
---=20
-Sent from my Android phone with K-9 Mail=2E Please excuse my brevity=2E
+2.  In a previous discussion, you mentioned the following:
+
+Easy cases are to just switch to put_user() which can handle up to an
+8-byte exception. Things like the namei.c exception are used to detect
+embedded dir names, so copy_to_user_n(buffer, link, len, 64) where if
+len < 64, it skips whitelist checking, otherwise a normal
+copy_to_user() with whitelist checks. I think the sigset solution may
+be the best already.
+
+
+I'm not quite sure what you meant by put_user()'s 8-byte exception.
+Does this mean that if there's a size mismatch discrepancy of lte 8
+bytes, put_user() will allow the copy to proceed?  This seems
+unlikely, which is why I ask.
+
+Thanks in advance for what I'm sure will be a good explanation.
+
+Thanks,
+David
+
+
+[1] Slab whitelisting: https://patchwork.kernel.org/patch/9165709/
+[2] Exceptions to slab whitelisting: https://patchwork.kernel.org/patch/9165699/
