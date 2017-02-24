@@ -1,175 +1,197 @@
-Date: Fri, 24 Feb 2017 15:08:24 +0530
-From: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Message-ID: <20170224150824.7a05de6d@kaiwan-T460>
-In-Reply-To: <CAGXu5jKTkN82UKY8HQKoKTCvqztksOraX43MKm=JXPKgpM1Bcw@mail.gmail.com>
-References: <20170118095155.5e3bf976@kaiwan-T460>
-	<90224a2d-2bfc-8c1e-1f2c-ca5bfbdb4879@redhat.com>
-	<20170203101949.4c6908be@kaiwan-T460>
-	<CAGXu5jLUdxDkjZ8Qndui1=5LC-_eavCpsgAqRa7RbdBUVdSsEg@mail.gmail.com>
-	<20170209090714.63ce6333@kaiwan-T460>
-	<CAGXu5jLDnsaJ-PXZB6fwGEvi8pt9rehk76VWeVsq9m66pnrrVQ@mail.gmail.com>
-	<CAPDLWs_75A08esqUGkkCBpfGDKaVH8LEtvqcM4fNZ-Ue2beZeA@mail.gmail.com>
-	<CAGXu5jLPrxc5dcB3HYF+D7WceQEJA8BrSn5py-o1NDzsRJR9ZQ@mail.gmail.com>
-	<20170215125735.17920d58@kaiwan-T460>
-	<CAGXu5jLRyDQ9M209JyNQRm3M+4ZtzdE9W0=7S7aXqSMavFZi1A@mail.gmail.com>
-	<CAPDLWs_aEURmQ2Drz_AWsPXC-Xi2Q36HG4p-ZTVmx5+ZX4bdHA@mail.gmail.com>
-	<CAGXu5jKTkN82UKY8HQKoKTCvqztksOraX43MKm=JXPKgpM1Bcw@mail.gmail.com>
+Date: Fri, 24 Feb 2017 20:53:30 +1100
+In-Reply-To: <CACi5LpM1ZjLgPUFaYy5xnC+Or-ENNzGSMaAqMo9rE3zVEy0PkA@mail.gmail.com>
+References: <1486014168-1279-1-git-send-email-bhsharma@redhat.com> <1486014168-1279-2-git-send-email-bhsharma@redhat.com> <87mve4c2my.fsf@concordia.ellerman.id.au> <CACi5LpOkkSFOJm07BGZFOmFpZpx7qsQiNywEmAjCEmcQG6kGEg@mail.gmail.com> <87mvduz4wi.fsf@concordia.ellerman.id.au> <CACi5LpOddY6WOz7S-fNEwSDLOoYFga-NKUOkCHtNLJ0puiNMOQ@mail.gmail.com> <CACi5LpMdoo4xFCO4w+FAF=UQMDF_Lx95UoN-B4UrtCX_27B8wg@mail.gmail.com> <CACi5LpM1ZjLgPUFaYy5xnC+Or-ENNzGSMaAqMo9rE3zVEy0PkA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] Merge in PAX_MEMORY_SANITIZE work from grsec
- to linux-next
-To: Kees Cook <keescook@chromium.org>
-Cc: Christoph Lameter <cl@linux.com>, Laura Abbott <labbott@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain;
+ charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+From: Michael Ellerman <michael@ellerman.id.au>
+Message-ID: <2FB3FE28-C762-4EC4-AFCE-FAD77CB7B9A5@ellerman.id.au>
+Subject: Re: [kernel-hardening] Re: [PATCH 1/2] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: Bhupesh Sharma <bhsharma@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>
+Cc: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, Daniel Cashman <dcashman@google.com>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Kees Cook <keescook@chromium.org>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, 21 Feb 2017 15:26:03 -0800
-Kees Cook <keescook@chromium.org> wrote:
-
-> I think mem_sanitize should likely follow the logic used by
-> pax_sanitize_slab. i.e CONFIG_MEMORIZE_SANITIZE as suggested above,
-> then a mem_sanitize= option for "off" and "full". (i.e.
-> CONFIG_MEMORIZE_SANITIZE implies "on")
-> 
-> -Kees
-> 
-
-Okay. So, while I found that the (pseudo)code you quickly mentioned did not 
-exactly work out, I have (hopefully) implemented the idea. 
-
-A qs: currently, the slub_debug option gets set to 'p' as long as MEMORY_SANITIZE 
-is enabled, even if the user passes 'slub_debug=-' on the command line. Is this ok?
-
-Pl review the patch below:
-
-diff --git a/init/main.c b/init/main.c
-index 63d640e..4397a11 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -1027,6 +1027,11 @@ static noinline void __init kernel_init_freeable(void)
- 
-	 do_basic_setup();
- 
-+#ifdef CONFIG_MEMORY_SANITIZE
-+    pr_debug("[CONFIG_MEMORY_SANITIZE]: page_poisoning_enabled? %s\n",
-+   	 page_poisoning_enabled() ? "yes" : "no");
-+#endif
-+
-	 /* Open the /dev/console on the rootfs, this should never fail */
-	 if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
-		 pr_err("Warning: unable to open an initial console.\n");
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index 3c88b7e..e8aa61d 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -97,3 +97,25 @@ config DEBUG_RODATA_TEST
- 	---help---
-   	This option enables a testcase for the setting rodata read-only.
- 
-+config MEMORY_SANITIZE
-+	bool "Enable memory sanitization features"
-+	select SLUB_DEBUG
-+	select PAGE_POISONING
-+	select PAGE_POISONING_NO_SANITY
-+	---help---
-+   	This option enables memory sanitization features. Particularly,
-+   	when you turn on this option, it auto-enables:
-+   	- SLUB debug
-+   	- page poisoning
-+   	- page poisoning no sanity.
-+
-+   	Implication: turning this option on _will_ implicitly enable:
-+   	- the SLUB_DEBUG switch to the equivalent of the kernel command-line
-+     	'slub_debug=p' ; (where p=SLAB_POISON),
-+   	- page poisoning, equivalent to passing the kernel command-line option
-+     	'page_poison=on'.
-+    Of course, kernel command-line options 'page_poison' and 'slub_debug'
-+    are still honoured (except that slub-debug will always have the 'p' set).
-+
-+   	If unsure, say N.
-+
-diff --git a/mm/page_poison.c b/mm/page_poison.c
-index 2e647c6..0ca3bc5 100644
---- a/mm/page_poison.c
-+++ b/mm/page_poison.c
-@@ -7,7 +7,8 @@
- #include <linux/ratelimit.h>
- 
- static bool __page_poisoning_enabled __read_mostly;
--static bool want_page_poisoning __read_mostly;
-+static bool want_page_poisoning __read_mostly =
-+   	 IS_ENABLED(CONFIG_MEMORY_SANITIZE);
- 
- static int early_page_poison_param(char *buf)
- {
-@@ -49,6 +50,17 @@ struct page_ext_operations page_poisoning_ops = {
-	 .init = init_page_poisoning,
- };
- 
-+static int __init memory_sanitize_pagepoison_init(void)
-+{
-+     */
-+    if (IS_ENABLED(CONFIG_MEMORY_SANITIZE) && !want_page_poisoning)
-+   	 __page_poisoning_enabled = false;
-+    return 0;
-+}
-+early_initcall(memory_sanitize_pagepoison_init);
-+
- static inline void set_page_poison(struct page *page)
- {
-	 struct page_ext *page_ext;
-diff --git a/mm/slub.c b/mm/slub.c
-index 7f4bc70..76abcec 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -450,15 +450,30 @@ static inline void *restore_red_left(struct kmem_cache *s, void *p)
- /*
-  * Debug settings:
-  */
--#if defined(CONFIG_SLUB_DEBUG_ON)
--static int slub_debug = DEBUG_DEFAULT_FLAGS;
--#else
- static int slub_debug;
--#endif
- 
- static char *slub_debug_slabs;
- static int disable_higher_order_debug;
- 
-+static int __init memory_sanitize_slubdebug_init(void)
-+{
-+/* With MEMORY_SANITIZE On, slub_debug Must be set to 'p' */
-+    if (IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
-+     	IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
-+   	 slub_debug |= SLAB_POISON;
-+    } else if (!IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
-+     	IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
-+   	 slub_debug = SLAB_POISON;
-+    } else if (IS_ENABLED(CONFIG_SLUB_DEBUG_ON) &&
-+     	!IS_ENABLED(CONFIG_MEMORY_SANITIZE)) {
-+   	 slub_debug = DEBUG_DEFAULT_FLAGS;
-+    } else { /* both disabled */
-+   	 slub_debug = 0;
-+    }
-+    return 0;
-+}
-+early_initcall(memory_sanitize_slubdebug_init);
-+
- /*
-  * slub is about to manipulate internal object metadata.  This memory lies
-  * outside the range of the allocated object, so accessing it would normally
-@@ -5755,6 +5770,11 @@ static int __init slab_sysfs_init(void)
-	 struct kmem_cache *s;
-	 int err;
- 
-+#ifdef CONFIG_MEMORY_SANITIZE
-+    pr_info("[CONFIG_MEMORY_SANITIZE]: slub_debug = P? %s [0x%x]\n",
-+   	 slub_debug & SLAB_POISON ? "yes" : "no", slub_debug);
-+#endif
-+
-	 mutex_lock(&slab_mutex);
- 
-	 slab_kset = kset_create_and_add("slab", &slab_uevent_ops, kernel_kobj);
 
 
-Thanks,
-Kaiwan.
+On 24 February 2017 6:32:13 pm AEDT, Bhupesh Sharma <bhsharma@redhat=2Ecom=
+> wrote:
+>Hi Michael,
+>
+>On Thu, Feb 16, 2017 at 10:19 AM, Bhupesh Sharma <bhsharma@redhat=2Ecom>
+>wrote:
+>> Hi Michael,
+>>
+>> On Fri, Feb 10, 2017 at 4:41 PM, Bhupesh Sharma <bhsharma@redhat=2Ecom>
+>wrote:
+>>> On Fri, Feb 10, 2017 at 4:31 PM, Michael Ellerman
+><mpe@ellerman=2Eid=2Eau> wrote:
+>>>> Bhupesh Sharma <bhsharma@redhat=2Ecom> writes:
+>>>>
+>>>>> HI Michael,
+>>>>>
+>>>>> On Thu, Feb 2, 2017 at 3:53 PM, Michael Ellerman
+><mpe@ellerman=2Eid=2Eau> wrote:
+>>>>>> Bhupesh Sharma <bhsharma@redhat=2Ecom> writes:
+>>>>>>
+>>>>>>> powerpc: arch_mmap_rnd() uses hard-coded values, (23-PAGE_SHIFT)
+>for
+>>>>>>> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random
+>offset
+>>>>>>> for the mmap base address=2E
+>>>>>>>
+>>>>>>> This value represents a compromise between increased
+>>>>>>> ASLR effectiveness and avoiding address-space fragmentation=2E
+>>>>>>> Replace it with a Kconfig option, which is sensibly bounded, so
+>that
+>>>>>>> platform developers may choose where to place this compromise=2E
+>>>>>>> Keep default values as new minimums=2E
+>>>>>>>
+>>>>>>> This patch makes sure that now powerpc mmap arch_mmap_rnd()
+>approach
+>>>>>>> is similar to other ARCHs like x86, arm64 and arm=2E
+>>>>>>
+>>>>>> Thanks for looking at this, it's been on my TODO for a while=2E
+>>>>>>
+>>>>>> I have a half completed version locally, but never got around to
+>testing
+>>>>>> it thoroughly=2E
+>>>>>
+>>>>> Sure :)
+>>>>>
+>>>>>>> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+>>>>>>> index a8ee573fe610=2E=2Eb4a843f68705 100644
+>>>>>>> --- a/arch/powerpc/Kconfig
+>>>>>>> +++ b/arch/powerpc/Kconfig
+>>>>>>> @@ -22,6 +22,38 @@ config MMU
+>>>>>>>       bool
+>>>>>>>       default y
+>>>>>>>
+>>>>>>> +config ARCH_MMAP_RND_BITS_MIN
+>>>>>>> +       default 5 if PPC_256K_PAGES && 32BIT
+>>>>>>> +       default 12 if PPC_256K_PAGES && 64BIT
+>>>>>>> +       default 7 if PPC_64K_PAGES && 32BIT
+>>>>>>> +       default 14 if PPC_64K_PAGES && 64BIT
+>>>>>>> +       default 9 if PPC_16K_PAGES && 32BIT
+>>>>>>> +       default 16 if PPC_16K_PAGES && 64BIT
+>>>>>>> +       default 11 if PPC_4K_PAGES && 32BIT
+>>>>>>> +       default 18 if PPC_4K_PAGES && 64BIT
+>>>>>>> +
+>>>>>>> +# max bits determined by the following formula:
+>>>>>>> +#  VA_BITS - PAGE_SHIFT - 4
+>>>>>>> +#  for e=2Eg for 64K page and 64BIT =3D 48 - 16 - 4 =3D 28
+>>>>>>> +config ARCH_MMAP_RND_BITS_MAX
+>>>>>>> +       default 10 if PPC_256K_PAGES && 32BIT
+>>>>>>> +       default 26 if PPC_256K_PAGES && 64BIT
+>>>>>>> +       default 12 if PPC_64K_PAGES && 32BIT
+>>>>>>> +       default 28 if PPC_64K_PAGES && 64BIT
+>>>>>>> +       default 14 if PPC_16K_PAGES && 32BIT
+>>>>>>> +       default 30 if PPC_16K_PAGES && 64BIT
+>>>>>>> +       default 16 if PPC_4K_PAGES && 32BIT
+>>>>>>> +       default 32 if PPC_4K_PAGES && 64BIT
+>>>>>>> +
+>>>>>>> +config ARCH_MMAP_RND_COMPAT_BITS_MIN
+>>>>>>> +       default 5 if PPC_256K_PAGES
+>>>>>>> +       default 7 if PPC_64K_PAGES
+>>>>>>> +       default 9 if PPC_16K_PAGES
+>>>>>>> +       default 11
+>>>>>>> +
+>>>>>>> +config ARCH_MMAP_RND_COMPAT_BITS_MAX
+>>>>>>> +       default 16
+>>>>>>> +
+>>>>>>
+>>>>>> This is what I have below, which is a bit neater I think because
+>each
+>>>>>> value is only there once (by defaulting to the COMPAT value)=2E
+>>>>>>
+>>>>>> My max values are different to yours, I don't really remember why
+>I
+>>>>>> chose those values, so we can argue about which is right=2E
+>>>>>
+>>>>> I am not sure how you derived these values, but I am not sure
+>there
+>>>>> should be differences between 64-BIT x86/ARM64 and PPC values for
+>the
+>>>>> MAX values=2E
+>>>>
+>>>> But your values *are* different to x86 and arm64=2E
+>>>>
+>>>> And why would they be the same anyway? x86 has a 47 bit address
+>space,
+>>>> 64-bit powerpc is 46 bits, and arm64 is configurable from 36 to 48
+>bits=2E
+>>>>
+>>>> So your calculations above using VA_BITS =3D 48 should be using 46
+>bits=2E
+>>>>
+>>>> But if you fixed that, your formula basically gives 1/16th of the
+>>>> address space as the maximum range=2E Why is that the right amount?
+>>>>
+>>>> x86 uses 1/8th, and arm64 uses a mixture of 1/8th and 1/32nd
+>(though
+>>>> those might be bugs)=2E
+>>>>
+>>>> My values were more liberal, giving up to half the address space
+>for 32
+>>>> & 64-bit=2E Maybe that's too generous, but my rationale was it's up
+>to the
+>>>> sysadmin to tweak the values and they get to keep the pieces if it
+>>>> breaks=2E
+>>>
+>>> I am not sure why would one want to use more than the practical
+>limits
+>>> of 1/8th used by x86 - this causes additional burden of address
+>space
+>>> fragmentation=2E
+>>>
+>>> So we need to balance between the randomness increase and the
+>address
+>>> space fragmentation=2E
+>>>
+>>>>>> +config ARCH_MMAP_RND_BITS_MAX
+>>>>>> +       # On 64-bit up to 32T of address space (2^45)
+>>>>>> +       default 27 if 64BIT && PPC_256K_PAGES   # 256K (2^18), =3D
+>45 - 18 =3D 27
+>>>>>> +       default 29 if 64BIT && PPC_64K_PAGES    # 64K  (2^16), =3D
+>45 - 16 =3D 29
+>>>>>> +       default 31 if 64BIT && PPC_16K_PAGES    # 16K  (2^14), =3D
+>45 - 14 =3D 31
+>>>>>> +       default 33 if 64BIT                     # 4K   (2^12), =3D
+>45 - 12 =3D 33
+>>>>>> +       default ARCH_MMAP_RND_COMPAT_BITS_MAX
+>>>>
+>>>> I played with my values a bit and allowing 32T is a little bit
+>nuts=2E It
+>>>> means you can actually end up with the adjusted ET_DYN_BASE *above*
+>32T,
+>>>> followed by the heap growing up, and the mmap base *below* 32T,
+>growing
+>>>> down=2E Which is kinda fun, but definitely breaks a lot of
+>assumptions=2E
+>>>>
+>>>> So limiting it to a max of 16T is probably more sensible=2E
+>>>>
+>>>> Anyway late here, will think about it some more over the weekend=2E
+>>>
+>>> A user is always free to tweak the maximum values via specific
+>Kconfig
+>>> + defconfig combinations for their platforms, but why have such
+>large
+>>> max values as default for say a embedded PPC64 board which only
+>>> supports say 16GB of DDR=2E
+>>>
+>>> A default max of 33bits for such platforms might be an overkill,
+>while
+>>> it might be fine for servers which might have greater DDR
+>>> availability=2E
+>>
+>> Ping=2E
+>>
+>
+>Any updates on this?
+
+It missed 4=2E11, we'll get something in for 4=2E12=2E
+
+Cheers
+--=20
+Sent from my Android phone with K-9 Mail=2E Please excuse my brevity=2E
