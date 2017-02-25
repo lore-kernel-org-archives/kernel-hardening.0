@@ -1,141 +1,85 @@
-Date: Fri, 24 Feb 2017 16:32:32 -0800
-From: Kees Cook <keescook@chromium.org>
-Message-ID: <20170225003232.GA123380@beast>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Subject: [kernel-hardening] [RFC] mm: enable sanitizing via CONFIG
-To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
+Message-ID: <1488011791.1141.1.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Sat, 25 Feb 2017 03:36:31 -0500
+In-Reply-To: <20170225003232.GA123380@beast>
+References: <20170225003232.GA123380@beast>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-N5L6yYW8Ym77WTG1Mzcg"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] [RFC] mm: enable sanitizing via CONFIG
+To: Kees Cook <keescook@chromium.org>, Kaiwan N Billimoria <kaiwan@kaiwantech.com>
 Cc: kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This enables page and slab poisoning by default under CONFIG_MEMORY_SANITIZE.
-Based on work by Kaiwan N Billimoria.
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
-This is more what I had in mind. This is based on the latest patch, but
-handles slab and slub. I tested slub with lkdtm's READ_AFTER_FREE and
-READ_BUDDY_AFTER_FREE which both trip the poisoning tests.
+--=-N5L6yYW8Ym77WTG1Mzcg
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
-While doing this, I noticed one major issue with slub/slab poisoning:
-it performs poisoning both on alloc and free, which is a rather large
-performance hit, so the next step is likely to find a way to split the
-poisoning into alloc and free halves so that CONFIG_MEMORY_SANITIZE
-poisoning will only happen on the free.
----
- init/main.c      |  5 +++++
- mm/Kconfig.debug | 23 +++++++++++++++++++++++
- mm/page_poison.c |  3 ++-
- mm/slab.c        |  4 ++++
- mm/slub.c        |  7 +++++++
- 5 files changed, 41 insertions(+), 1 deletion(-)
+On Fri, 2017-02-24 at 16:32 -0800, Kees Cook wrote:
+> This enables page and slab poisoning by default under
+> CONFIG_MEMORY_SANITIZE.
+> Based on work by Kaiwan N Billimoria.
+>=20
+> Signed-off-by: Kees Cook <keescook@chromium.org>
+> ---
+> This is more what I had in mind. This is based on the latest patch,
+> but
+> handles slab and slub. I tested slub with lkdtm's READ_AFTER_FREE and
+> READ_BUDDY_AFTER_FREE which both trip the poisoning tests.
+>=20
+> While doing this, I noticed one major issue with slub/slab poisoning:
+> it performs poisoning both on alloc and free, which is a rather large
+> performance hit, so the next step is likely to find a way to split the
+> poisoning into alloc and free halves so that CONFIG_MEMORY_SANITIZE
+> poisoning will only happen on the free.
 
-diff --git a/init/main.c b/init/main.c
-index 24ea48745061..e5f571bfe56f 100644
---- a/init/main.c
-+++ b/init/main.c
-@@ -1030,6 +1030,11 @@ static noinline void __init kernel_init_freeable(void)
- 
- 	do_basic_setup();
- 
-+#ifdef CONFIG_MEMORY_SANITIZE
-+	pr_debug("[CONFIG_MEMORY_SANITIZE]: page_poisoning_enabled? %s\n",
-+		 page_poisoning_enabled() ? "yes" : "no");
-+#endif
-+
- 	/* Open the /dev/console on the rootfs, this should never fail */
- 	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
- 		pr_err("Warning: unable to open an initial console.\n");
-diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-index afcc550877ff..910a7a359b96 100644
---- a/mm/Kconfig.debug
-+++ b/mm/Kconfig.debug
-@@ -90,3 +90,26 @@ config DEBUG_PAGE_REF
- 	  careful when enabling this feature because it adds about 30 KB to the
- 	  kernel code.  However the runtime performance overhead is virtually
- 	  nil until the tracepoints are actually enabled.
-+
-+config MEMORY_SANITIZE
-+	bool "Enable memory sanitization features"
-+	depends on SLUB || SLAB
-+	select SLUB_DEBUG if SLUB
-+	select PAGE_POISONING
-+	select PAGE_POISONING_NO_SANITY
-+	help
-+	  This option enables memory sanitization features. Particularly,
-+	  when you turn on this option, it auto-enables:
-+	  - page poisoning (without sanity checking)
-+	  - kmem_cache poisoning
-+
-+	  Implication: turning this option on will implicitly enable:
-+	  - the SLUB_DEBUG switch to the equivalent of the kernel command-line
-+	    'slub_debug=p' (where p=SLAB_POISON).
-+	  - page poisoning, equivalent to passing the kernel command-line
-+	    option 'page_poison=on'.
-+
-+	  Of course, kernel command-line options 'page_poison' and 'slub_debug'
-+	  are still honored.
-+
-+	  If unsure, say N.
-diff --git a/mm/page_poison.c b/mm/page_poison.c
-index 2e647c65916b..6f7e37c8ac2f 100644
---- a/mm/page_poison.c
-+++ b/mm/page_poison.c
-@@ -7,7 +7,8 @@
- #include <linux/ratelimit.h>
- 
- static bool __page_poisoning_enabled __read_mostly;
--static bool want_page_poisoning __read_mostly;
-+static bool want_page_poisoning __read_mostly =
-+					IS_ENABLED(CONFIG_MEMORY_SANITIZE);
- 
- static int early_page_poison_param(char *buf)
- {
-diff --git a/mm/slab.c b/mm/slab.c
-index bd63450a9b16..1462b0b8b0a0 100644
---- a/mm/slab.c
-+++ b/mm/slab.c
-@@ -1894,6 +1894,10 @@ unsigned long kmem_cache_flags(unsigned long object_size,
- 	unsigned long flags, const char *name,
- 	void (*ctor)(void *))
- {
-+#ifdef CONFIG_MEMORY_SANITIZE
-+	flags |= SLAB_POISON;
-+#endif
-+
- 	return flags;
- }
- 
-diff --git a/mm/slub.c b/mm/slub.c
-index 7f4bc7027ed5..5041f42c942b 100644
---- a/mm/slub.c
-+++ b/mm/slub.c
-@@ -452,6 +452,8 @@ static inline void *restore_red_left(struct kmem_cache *s, void *p)
-  */
- #if defined(CONFIG_SLUB_DEBUG_ON)
- static int slub_debug = DEBUG_DEFAULT_FLAGS;
-+#elif defined(CONFIG_MEMORY_SANITIZE)
-+static int slub_debug = SLAB_POISON;
- #else
- static int slub_debug;
- #endif
-@@ -5755,6 +5757,11 @@ static int __init slab_sysfs_init(void)
- 	struct kmem_cache *s;
- 	int err;
- 
-+#ifdef CONFIG_MEMORY_SANITIZE
-+	pr_info("[CONFIG_MEMORY_SANITIZE]: slub_debug = P? %s [0x%x]\n",
-+		slub_debug & SLAB_POISON ? "yes" : "no", slub_debug);
-+#endif
-+
- 	mutex_lock(&slab_mutex);
- 
- 	slab_kset = kset_create_and_add("slab", &slab_uevent_ops, kernel_kobj);
--- 
-2.7.4
+It also still fills with a value that will make pointers point to
+userspace, right? Rather than a better value or zeroing (and relying on
+mmap_min_addr, although that's pretty small and easy to index past).
 
+It also verifies the poisoning is still there, which can be wanted but
+is more expensive. It increases allocations by the size of a pointer
+which PaX doesn't do anymore, and there's the whole losing the fast path
+which seems to mean losing CPU caching too since it's just hitting the
+global stuff. The debug infrastructure could also be a risk, that would
+not be present in normal builds up to this point.
 
--- 
-Kees Cook
-Pixel Security
+I would like to be able to use upstream features but I think case it
+seems that anyone not willing to unnecessarily lose performance and
+security properties will need to keep carrying ~15 line of code out of
+tree or using the PaX features.
+
+Is there a path to doing it properly from here? I really don't see the
+point in it being upstreaming if it's such a hack. It's frustrating...
+
+Not to mention that real allocator hardening like not having inline free
+lists and being able to reliably detect double-free would be nice. Maybe
+there should just be a security-oriented slab allocator, freeing it from
+needing to avoid stepping on other people's toes. It just needs to pick
+a performance target and then the design can shift away from the current
+one within that target over time. *shrug*
+--=-N5L6yYW8Ym77WTG1Mzcg
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
+
+-----BEGIN PGP SIGNATURE-----
+
+iQJKBAABCAA0FiEEZe7+AiEI4rcIy/z3+ecS5Zr18ioFAlixQg8WHGRhbmllbG1p
+Y2F5QGdtYWlsLmNvbQAKCRD55xLlmvXyKvptD/9p+fWsbuF+DG5QaBtNDPwPJ0YO
+HTSdAdHhrtF6+N95Psk0KauWXUzxg/Vl0ZilOWsFvh1icjzPZ9qdsOOejCoJtU6P
+CyoJMswfJeu6L20F+u7/zcqvvgzXBqAidUDozfcdcwabMfADUFbNyVcqHW9izrnZ
+62sHqKrqXWpcleGIpUYaeAQS7U1yBaRM8sYUrewOkJOGbs5jEjKuTbRymIGzHcwP
+mcWW/BYkqeRtAuPXcOuvcFcAdANVlu4vLjMuEDEq/SFLJfKXyfe8kf+n4VVUHSI6
+6vucNFlP654qo6DnG+R7yMLWSU7eVK3PUhdLZ9Tn04FcMbehwQxy6bSNYwgOEj+h
+gAWuYzM+gp1io81s5efnmlwD/h8zd6gX8UkNDIGA5Do06hpR79iPDG2sj4pM+SYO
+uvGVgZuFEH5VF5L2UQlKBcT0J8gqSUhNHfo64XBXN8fP0fylX70jZF0ApnQbZEio
+14eJmrSxN/zg6uvUqUe1CR0/GWKpNZpHNsuK1/glxDGKK0rNBjghJwb1iVBWxSfc
+JX6hYkESTmWZq7f0UEj5O0VLN9cEyo/uZPc0aeERPgeddnz+87cJzC+8budJIvL+
+E7jwZ5P+s6yyXUcfUz1e08zzUohvSR3fHv1XUwFZpstczZxCkXoKae+hlvF0Hxm0
+HFRizGi1QM0L8e57zQ==
+=pyAh
+-----END PGP SIGNATURE-----
+
+--=-N5L6yYW8Ym77WTG1Mzcg--
