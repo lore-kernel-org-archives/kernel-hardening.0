@@ -1,130 +1,132 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Feb 2017 12:43:06 -0800
-Message-Id: <1488228186-110679-9-git-send-email-keescook@chromium.org>
+Date: Mon, 27 Feb 2017 12:42:59 -0800
+Message-Id: <1488228186-110679-2-git-send-email-keescook@chromium.org>
 In-Reply-To: <1488228186-110679-1-git-send-email-keescook@chromium.org>
 References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [RFC][PATCH 8/8] cgroups: force all struct cftype const
+Subject: [kernel-hardening] [RFC][PATCH 1/8] Introduce rare_write() infrastructure
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-As found in PaX, mark struct cftype with __do_const and add helpers
-to deal with rare writes. This is a more complex example of a write-rarely
-structure, which needs to use list helpers and blocks of enable/disable
-pairs to perform the needed updates.
+Several types of data storage exist in the kernel: read-write data (.data,
+.bss), read-only data (.rodata), and RO-after-init. This introduces the
+infrastructure for another type: write-rarely, which intended for data
+that is either only rarely modified or especially security-sensitive. The
+intent is to further reduce the internal attack surface of the kernel by
+making this storage read-only when "at rest". This makes it much harder
+to be subverted by attackers who have a kernel-write flaw, since they
+cannot directly change the memory contents.
+
+Variables declared __wr_rare will be made const when an architecture
+supports HAVE_ARCH_WRITE_RARE. To change these variables, either the
+rare_write() macro can be used, or multiple uses of __rare_write(),
+wrapped in rare_write_enable()/rare_write_disable() macros. These macros
+are handled by the arch-specific functions that perform the actions needed
+to write to otherwise read-only memory.
+
+The arch-specific helpers must be not allow non-current CPUs to write
+the memory area, run non-preemptible to avoid accidentally leaving
+memory writable, and defined as inline to avoid making them desirable
+ROP targets for attackers.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- include/linux/cgroup-defs.h |  2 +-
- kernel/cgroup.c             | 35 +++++++++++++++++++++++------------
- 2 files changed, 24 insertions(+), 13 deletions(-)
+ arch/Kconfig             | 15 +++++++++++++++
+ include/linux/compiler.h | 38 ++++++++++++++++++++++++++++++++++++++
+ include/linux/preempt.h  |  6 ++++--
+ 3 files changed, 57 insertions(+), 2 deletions(-)
 
-diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
-index 861b4677fc5b..aa15b3132bce 100644
---- a/include/linux/cgroup-defs.h
-+++ b/include/linux/cgroup-defs.h
-@@ -431,7 +431,7 @@ struct cftype {
- #ifdef CONFIG_DEBUG_LOCK_ALLOC
- 	struct lock_class_key	lockdep_key;
- #endif
--};
-+} __do_const;
+diff --git a/arch/Kconfig b/arch/Kconfig
+index 99839c23d453..2446de19f66d 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -781,4 +781,19 @@ config VMAP_STACK
+ 	  the stack to map directly to the KASAN shadow map using a formula
+ 	  that is incorrect if the stack is in vmalloc space.
  
- /*
-  * Control Group subsystem type.
-diff --git a/kernel/cgroup.c b/kernel/cgroup.c
-index b794bcadefa4..19a8e1baeb6b 100644
---- a/kernel/cgroup.c
-+++ b/kernel/cgroup.c
-@@ -3653,11 +3653,11 @@ static int cgroup_add_file(struct cgroup_subsys_state *css, struct cgroup *cgrp,
- 	int ret;
- 
- #ifdef CONFIG_DEBUG_LOCK_ALLOC
--	key = &cft->lockdep_key;
-+	key = (struct lock_class_key *)&cft->lockdep_key;
- #endif
- 	kn = __kernfs_create_file(cgrp->kn, cgroup_file_name(cgrp, cft, name),
--				  cgroup_file_mode(cft), 0, cft->kf_ops, cft,
--				  NULL, key);
-+				  cgroup_file_mode(cft), 0, cft->kf_ops,
-+				  (void *)cft, NULL, key);
- 	if (IS_ERR(kn))
- 		return PTR_ERR(kn);
- 
-@@ -3760,11 +3760,16 @@ static void cgroup_exit_cftypes(struct cftype *cfts)
- 		/* free copy for custom atomic_write_len, see init_cftypes() */
- 		if (cft->max_write_len && cft->max_write_len != PAGE_SIZE)
- 			kfree(cft->kf_ops);
--		cft->kf_ops = NULL;
--		cft->ss = NULL;
++config HAVE_ARCH_RARE_WRITE
++	def_bool n
++	help
++	  An arch should select this option if it has defined the functions
++	  __arch_rare_write_map() and __arch_rare_write_unmap() to
++	  respectively enable and disable writing to read-only memory.The
++	  routines must meet the following requirements:
++	  - read-only memory writing must only be available on the current
++	    CPU (to make sure other CPUs can't race to make changes too).
++	  - the routines must be declared inline (to discourage ROP use).
++	  - the routines must not be preemptible (likely they will call
++	    preempt_disable() and preempt_enable_no_resched() respectively).
++	  - the routines must validate expected state (e.g. when enabling
++	    writes, BUG() if writes are already be enabled).
 +
-+		rare_write_enable();
-+		__rare_write(cft->kf_ops, NULL);
-+		__rare_write(cft->ss, NULL);
+ source "kernel/gcov/Kconfig"
+diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+index cf0fa5d86059..f95603a8ee72 100644
+--- a/include/linux/compiler.h
++++ b/include/linux/compiler.h
+@@ -325,6 +325,44 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
+ 	__u.__val;					\
+ })
  
- 		/* revert flags set by cgroup core while adding @cfts */
--		cft->flags &= ~(__CFTYPE_ONLY_ON_DFL | __CFTYPE_NOT_ON_DFL);
-+		__rare_write(cft->flags,
-+			     cft->flags & ~(__CFTYPE_ONLY_ON_DFL |
-+					    __CFTYPE_NOT_ON_DFL));
-+		rare_write_disable();
- 	}
- }
++/*
++ * Build "write rarely" infrastructure for flipping memory r/w
++ * on a per-CPU basis.
++ */
++#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
++# define __wr_rare
++# define __wr_rare_type
++# define __rare_write_type(v)	typeof(v)
++# define __rare_write_ptr(v)	(&(v))
++# define __rare_write(__var, __val)	({		\
++	__var = __val;					\
++	__var;						\
++})
++# define rare_write_enable()	do { } while (0)
++# define rare_write_disable()	do { } while (0)
++#else
++# define __wr_rare		__ro_after_init
++# define __wr_rare_type		const
++# define __rare_write_type(v)	typeof((typeof(v))0)
++# define __rare_write_ptr(v)	((__rare_write_type(v) *)&(v))
++# define __rare_write(__var, __val) ({			\
++	__rare_write_type(__var) *__rw_var;		\
++							\
++	__rw_var = __rare_write_ptr(__var);		\
++	*__rw_var = (__val);				\
++	__var;						\
++})
++# define rare_write_enable()	__arch_rare_write_map()
++# define rare_write_disable()	__arch_rare_write_unmap()
++#endif
++
++#define rare_write(__var, __val) ({			\
++	rare_write_enable();				\
++	__rare_write(__var, __val);			\
++	rare_write_disable();				\
++	__var;						\
++})
++
+ #endif /* __KERNEL__ */
  
-@@ -3795,8 +3800,10 @@ static int cgroup_init_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
- 			kf_ops->atomic_write_len = cft->max_write_len;
- 		}
+ #endif /* __ASSEMBLY__ */
+diff --git a/include/linux/preempt.h b/include/linux/preempt.h
+index 7eeceac52dea..183c1d7a8594 100644
+--- a/include/linux/preempt.h
++++ b/include/linux/preempt.h
+@@ -237,10 +237,12 @@ do { \
+ /*
+  * Modules have no business playing preemption tricks.
+  */
+-#undef sched_preempt_enable_no_resched
+-#undef preempt_enable_no_resched
+ #undef preempt_enable_no_resched_notrace
+ #undef preempt_check_resched
++#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
++#undef sched_preempt_enable_no_resched
++#undef preempt_enable_no_resched
++#endif
+ #endif
  
--		cft->kf_ops = kf_ops;
--		cft->ss = ss;
-+		rare_write_enable();
-+		__rare_write(cft->kf_ops, kf_ops);
-+		__rare_write(cft->ss, ss);
-+		rare_write_disable();
- 	}
- 
- 	return 0;
-@@ -3809,7 +3816,7 @@ static int cgroup_rm_cftypes_locked(struct cftype *cfts)
- 	if (!cfts || !cfts[0].ss)
- 		return -ENOENT;
- 
--	list_del(&cfts->node);
-+	rare_list_del(&cfts->node);
- 	cgroup_apply_cftypes(cfts, false);
- 	cgroup_exit_cftypes(cfts);
- 	return 0;
-@@ -3866,7 +3873,7 @@ static int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
- 
- 	mutex_lock(&cgroup_mutex);
- 
--	list_add_tail(&cfts->node, &ss->cfts);
-+	rare_list_add_tail(&cfts->node, &ss->cfts);
- 	ret = cgroup_apply_cftypes(cfts, true);
- 	if (ret)
- 		cgroup_rm_cftypes_locked(cfts);
-@@ -3887,8 +3894,10 @@ int cgroup_add_dfl_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
- {
- 	struct cftype *cft;
- 
-+	rare_write_enable();
- 	for (cft = cfts; cft && cft->name[0] != '\0'; cft++)
--		cft->flags |= __CFTYPE_ONLY_ON_DFL;
-+		__rare_write(cft->flags, cft->flags | __CFTYPE_ONLY_ON_DFL);
-+	rare_write_disable();
- 	return cgroup_add_cftypes(ss, cfts);
- }
- 
-@@ -3904,8 +3913,10 @@ int cgroup_add_legacy_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
- {
- 	struct cftype *cft;
- 
-+	rare_write_enable();
- 	for (cft = cfts; cft && cft->name[0] != '\0'; cft++)
--		cft->flags |= __CFTYPE_NOT_ON_DFL;
-+		__rare_write(cft->flags, cft->flags | __CFTYPE_NOT_ON_DFL);
-+	rare_write_disable();
- 	return cgroup_add_cftypes(ss, cfts);
- }
- 
+ #define preempt_set_need_resched() \
 -- 
 2.7.4
