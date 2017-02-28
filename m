@@ -1,86 +1,165 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <163a690510e636a23187c0dc9caa09ddac6d4cde.1488228427.git.joe@perches.com>
-References: <476DC76E7D1DF2438D32BFADF679FC562307BAE6@ORSMSX103.amr.corp.intel.com>
- <163a690510e636a23187c0dc9caa09ddac6d4cde.1488228427.git.joe@perches.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Feb 2017 13:18:14 -0800
-Message-ID: <CAGXu5jL7yxWQ=0uG6SwDnXAxFytkso1kDKGAGN81FBnyd2qSXg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH] checkpatch: Add ability to find bad
- uses of vsprintf %p<foo> extensions
-To: Joe Perches <joe@perches.com>
-Cc: Andrew Morton <akpm@linux-foundation.org>, Andy Whitcroft <apw@canonical.com>, "Roberts, William C" <william.c.roberts@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LKML <linux-kernel@vger.kernel.org>
+Message-ID: <1488270174.1747.11.camel@gmail.com>
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+Date: Tue, 28 Feb 2017 17:22:54 +0900
+In-Reply-To: <1488228186-110679-2-git-send-email-keescook@chromium.org>
+References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
+	 <1488228186-110679-2-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
+To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, x86@kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Feb 27, 2017 at 12:54 PM, Joe Perches <joe@perches.com> wrote:
-> %pK was at least once misused at %pk in an out-of-tree module.
-> This lead to some security concerns.  Add the ability to track
-> single and multiple line statements for misuses of %p<foo>.
->
-> Signed-off-by: Joe Perches <joe@perches.com>
-
-Acked-by: Kees Cook <keescook@chromium.org>
-
--Kees
-
+On Mon, 2017-02-27 at 12:42 -0800, Kees Cook wrote:
+> Several types of data storage exist in the kernel: read-write data
+> (.data,
+> .bss), read-only data (.rodata), and RO-after-init. This introduces
+> the
+> infrastructure for another type: write-rarely, which intended for
+> data
+> that is either only rarely modified or especially security-sensitive. 
+> The
+> intent is to further reduce the internal attack surface of the kernel
+> by
+> making this storage read-only when "at rest". This makes it much
+> harder
+> to be subverted by attackers who have a kernel-write flaw, since they
+> cannot directly change the memory contents.
+> 
+> Variables declared __wr_rare will be made const when an architecture
+> supports HAVE_ARCH_WRITE_RARE. To change these variables, either the
+> rare_write() macro can be used, or multiple uses of __rare_write(),
+> wrapped in rare_write_enable()/rare_write_disable() macros. These
+> macros
+> are handled by the arch-specific functions that perform the actions
+> needed
+> to write to otherwise read-only memory.
+> 
+> The arch-specific helpers must be not allow non-current CPUs to write
+> the memory area, run non-preemptible to avoid accidentally leaving
+> memory writable, and defined as inline to avoid making them desirable
+> ROP targets for attackers.
+> 
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 > ---
->
-> Andrew, this has gone back and forth a few times.
->
-> It's imperfect as a patch context with just a single
-> function addition can be missed, but that's not new
-> with $stat tests and just this patch.  Perhaps one day
-> the $stat identification mechanism can be improved.
->
-> Until then, can you please apply this?  Thanks.
->
->  scripts/checkpatch.pl | 26 ++++++++++++++++++++++++++
->  1 file changed, 26 insertions(+)
->
-> diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
-> index ad5ea5c545b2..9293b8a1c121 100755
-> --- a/scripts/checkpatch.pl
-> +++ b/scripts/checkpatch.pl
-> @@ -5676,6 +5676,32 @@ sub process {
->                         }
->                 }
->
-> +               # check for vsprintf extension %p<foo> misuses
-> +               if ($^V && $^V ge 5.10.0 &&
-> +                   defined $stat &&
-> +                   $stat =~ /^\+(?![^\{]*\{\s*).*\b(\w+)\s*\(.*$String\s*,/s &&
-> +                   $1 !~ /^_*volatile_*$/) {
-> +                       my $bad_extension = "";
-> +                       my $lc = $stat =~ tr@\n@@;
-> +                       $lc = $lc + $linenr;
-> +                       for (my $count = $linenr; $count <= $lc; $count++) {
-> +                               my $fmt = get_quoted_string($lines[$count - 1], raw_line($count, 0));
-> +                               $fmt =~ s/%%//g;
-> +                               if ($fmt =~ /(\%[\*\d\.]*p(?![\WFfSsBKRraEhMmIiUDdgVCbGN]).)/) {
-> +                                       $bad_extension = $1;
-> +                                       last;
-> +                               }
-> +                       }
-> +                       if ($bad_extension ne "") {
-> +                               my $stat_real = raw_line($linenr, 0);
-> +                               for (my $count = $linenr + 1; $count <= $lc; $count++) {
-> +                                       $stat_real = $stat_real . "\n" . raw_line($count, 0);
-> +                               }
-> +                               WARN("VSPRINTF_POINTER_EXTENSION",
-> +                                    "Invalid vsprintf pointer extension '$bad_extension'\n" . "$here\n$stat_real\n");
-> +                       }
-> +               }
+>  arch/Kconfig             | 15 +++++++++++++++
+>  include/linux/compiler.h | 38 ++++++++++++++++++++++++++++++++++++++
+>  include/linux/preempt.h  |  6 ++++--
+>  3 files changed, 57 insertions(+), 2 deletions(-)
+> 
+> diff --git a/arch/Kconfig b/arch/Kconfig
+> index 99839c23d453..2446de19f66d 100644
+> --- a/arch/Kconfig
+> +++ b/arch/Kconfig
+> @@ -781,4 +781,19 @@ config VMAP_STACK
+>  	  the stack to map directly to the KASAN shadow map using a
+> formula
+>  	  that is incorrect if the stack is in vmalloc space.
+>  
+> +config HAVE_ARCH_RARE_WRITE
+> +	def_bool n
+> +	help
+> +	  An arch should select this option if it has defined the
+> functions
+> +	  __arch_rare_write_map() and __arch_rare_write_unmap() to
+> +	  respectively enable and disable writing to read-only
+> memory.The
+> +	  routines must meet the following requirements:
+> +	  - read-only memory writing must only be available on the
+> current
+> +	    CPU (to make sure other CPUs can't race to make changes
+> too).
+> +	  - the routines must be declared inline (to discourage ROP
+> use).
+> +	  - the routines must not be preemptible (likely they will
+> call
+> +	    preempt_disable() and preempt_enable_no_resched()
+> respectively).
+> +	  - the routines must validate expected state (e.g. when
+> enabling
+> +	    writes, BUG() if writes are already be enabled).
 > +
->  # Check for misused memsets
->                 if ($^V && $^V ge 5.10.0 &&
->                     defined $stat &&
-> --
-> 2.10.0.rc2.1.g053435c
->
+>  source "kernel/gcov/Kconfig"
+> diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+> index cf0fa5d86059..f95603a8ee72 100644
+> --- a/include/linux/compiler.h
+> +++ b/include/linux/compiler.h
+> @@ -325,6 +325,44 @@ static __always_inline void
+> __write_once_size(volatile void *p, void *res, int s
+>  	__u.__val;					\
+>  })
+>  
+> +/*
+> + * Build "write rarely" infrastructure for flipping memory r/w
+> + * on a per-CPU basis.
+> + */
+> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
+> +# define __wr_rare
+> +# define __wr_rare_type
+> +# define __rare_write_type(v)	typeof(v)
+> +# define __rare_write_ptr(v)	(&(v))
+> +# define __rare_write(__var, __val)	({		\
+> +	__var = __val;					\
+> +	__var;						\
+> +})
+> +# define rare_write_enable()	do { } while (0)
+> +# define rare_write_disable()	do { } while (0)
+> +#else
+> +# define __wr_rare		__ro_after_init
+> +# define __wr_rare_type		const
+> +# define __rare_write_type(v)	typeof((typeof(v))0)
+> +# define __rare_write_ptr(v)	((__rare_write_type(v) *)&(v))
 
+Should we make __rare_write_ptr arch-specific so architectures can
+convert the pointer to rw alias from ro address like this ? [1]
 
+#ifndef __arch_rare_write_ptr
+# define __rare_write_ptr(v)	((__rare_write_type(v) *)&(v))
+#else
+# define __rate_write_ptr(v)	__arch_rare_write_ptr
+#endif
 
--- 
-Kees Cook
-Pixel Security
+[1] https://lkml.org/lkml/2017/2/22/254
+
+> +# define __rare_write(__var, __val) ({			\
+> +	__rare_write_type(__var) *__rw_var;		\
+> +							\
+> +	__rw_var = __rare_write_ptr(__var);		\
+> +	*__rw_var = (__val);				\
+> +	__var;						\
+> +})
+> +# define rare_write_enable()	__arch_rare_write_map()
+> +# define rare_write_disable()	__arch_rare_write_unmap()
+> +#endif
+> +
+> +#define rare_write(__var, __val) ({			\
+> +	rare_write_enable();				\
+> +	__rare_write(__var, __val);			\
+> +	rare_write_disable();				\
+> +	__var;						\
+> +})
+> +
+>  #endif /* __KERNEL__ */
+>  
+>  #endif /* __ASSEMBLY__ */
+> diff --git a/include/linux/preempt.h b/include/linux/preempt.h
+> index 7eeceac52dea..183c1d7a8594 100644
+> --- a/include/linux/preempt.h
+> +++ b/include/linux/preempt.h
+> @@ -237,10 +237,12 @@ do { \
+>  /*
+>   * Modules have no business playing preemption tricks.
+>   */
+> -#undef sched_preempt_enable_no_resched
+> -#undef preempt_enable_no_resched
+>  #undef preempt_enable_no_resched_notrace
+>  #undef preempt_check_resched
+> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
+> +#undef sched_preempt_enable_no_resched
+> +#undef preempt_enable_no_resched
+> +#endif
+>  #endif
+>  
+>  #define preempt_set_need_resched() \
