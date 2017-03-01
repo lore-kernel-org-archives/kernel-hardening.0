@@ -1,51 +1,88 @@
-Date: Wed, 1 Mar 2017 20:32:27 +1100 (AEDT)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <20170222012632.4196-4-mic@digikod.net>
-Message-ID: <alpine.LRH.2.20.1703012028110.9253@namei.org>
-References: <20170222012632.4196-1-mic@digikod.net> <20170222012632.4196-4-mic@digikod.net>
+Date: Wed, 1 Mar 2017 10:43:38 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170301104337.GA28874@leverpostej>
+References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
+ <1488228186-110679-2-git-send-email-keescook@chromium.org>
+ <1488270174.1747.11.camel@gmail.com>
+ <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; BOUNDARY="1665246916-612674400-1488360751=:9253"
-Subject: [kernel-hardening] Re: [PATCH v5 03/10] bpf: Define handle_fs and add a new helper
- bpf_handle_fs_get_mode()
-To: =?ISO-8859-15?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
+To: Kees Cook <keescook@chromium.org>
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-  This message is in MIME format.  The first part should be readable text,
-  while the remaining parts are likely unreadable without MIME-aware tools.
+Hi,
 
---1665246916-612674400-1488360751=:9253
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8BIT
+On Tue, Feb 28, 2017 at 07:05:32AM -0800, Kees Cook wrote:
+> On Tue, Feb 28, 2017 at 12:22 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+> > On Mon, 2017-02-27 at 12:42 -0800, Kees Cook wrote:
 
-On Wed, 22 Feb 2017, Mickaël Salaün wrote:
-
-> Add an eBPF function bpf_handle_fs_get_mode(handle_fs) to get the mode
-> of a an abstract object wrapping either a file, a dentry, a path, or an
-> inode.
+> >> +/*
+> >> + * Build "write rarely" infrastructure for flipping memory r/w
+> >> + * on a per-CPU basis.
+> >> + */
+> >> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
+> >> +# define __wr_rare
+> >> +# define __wr_rare_type
+> >> +# define __rare_write_type(v)        typeof(v)
+> >> +# define __rare_write_ptr(v) (&(v))
+> >> +# define __rare_write(__var, __val)  ({              \
+> >> +     __var = __val;                                  \
+> >> +     __var;                                          \
+> >> +})
+> >> +# define rare_write_enable() do { } while (0)
+> >> +# define rare_write_disable()        do { } while (0)
+> >> +#else
+> >> +# define __wr_rare           __ro_after_init
+> >> +# define __wr_rare_type              const
+> >> +# define __rare_write_type(v)        typeof((typeof(v))0)
+> >> +# define __rare_write_ptr(v) ((__rare_write_type(v) *)&(v))
+> >
+> > Should we make __rare_write_ptr arch-specific so architectures can
+> > convert the pointer to rw alias from ro address like this ? [1]
+> >
+> > #ifndef __arch_rare_write_ptr
+> > # define __rare_write_ptr(v)    ((__rare_write_type(v) *)&(v))
+> > #else
+> > # define __rate_write_ptr(v)    __arch_rare_write_ptr
+> > #endif
 > 
-> Changes since v4:
-> * use a file abstraction (handle) to wrap inode, dentry, path and file
->   structs
+> I think that was Mark's idea too, but I'm not sure to handle the
+> complex cases of doing multiple updates at once (e.g. linked list
+> updates, etc). 
 
-Good to see these abstractions.  As discussed at LPC, we need to ensure 
-that we don't couple the Landlock API too closely with the LSM API, as the 
-former is an ABI exposed to userland -- we don't want to lose the ability 
-to change LSM internally due to breaking Landlock policies.
+Assuming there aren't that many places with complex updates, we could
+allow code to explicitly do the map/unmap and use __rare_write_ptr
+directly. That does mean that the list code has to be specialised for
+__wr_rare, which is less than ideal.
 
-> @@ -82,6 +87,8 @@ enum bpf_arg_type {
->  
->  	ARG_PTR_TO_CTX,		/* pointer to context */
->  	ARG_ANYTHING,		/* any (initialized) argument is ok */
-> +
-> +	ARG_CONST_PTR_TO_HANDLE_FS,	/* pointer to an abstract FS struct */
->  };
+That would also depend on what is __rw_rare in those cases, too.  i.e.
+is it just the list_head for the list itself, the list_head of all
+elements, or only some of them?
 
-Extraneous whitespace?
+For the latter mixed case, the __rare_write_ptr() approach probably
+doesn't work, and that rules out the mm-based approach, too, I guess. :/
 
+> I think we're better doing a full disabling of RO protection, but
+> there had been objections to this idea in the past, which is why I
+> included the "complex" example, so I don't see a way around it.
 
--- 
-James Morris
-<jmorris@namei.org>
+My objection to that was that we can't implement CPU-local full
+disabling of RO protection for the kernel page tables on some
+architectures and configurations, e.g. arm64, or 32-bit arm with LPAE.
 
---1665246916-612674400-1488360751=:9253--
+The RW alias write_write(var, val) approach only relies on what arches
+already have to implement for userspace to work, so if we can figure out
+how to make that work API-wise, we can probably implement that
+generically with switch_mm() and {get,put}_user().
+
+The only other way I can think to make this work would be to make a copy
+of the whole swapper page tables, with the write-rarely data marked RW.
+For arm64 at least, that'll be incredibly painful to keep in-sync with
+the usual tables, in addition to being very expensive to switch to/from.
+
+Thanks,
+Mark.
