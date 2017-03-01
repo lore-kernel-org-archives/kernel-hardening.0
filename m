@@ -1,137 +1,111 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170301104337.GA28874@leverpostej>
+In-Reply-To: <20170301112436.GC28874@leverpostej>
 References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
- <1488228186-110679-2-git-send-email-keescook@chromium.org>
- <1488270174.1747.11.camel@gmail.com> <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
- <20170301104337.GA28874@leverpostej>
+ <1488228186-110679-5-git-send-email-keescook@chromium.org>
+ <CALCETrUruKRCnHAEVg6pXe+43WQx7K6LCOHg5zVEjLfzw8nQUA@mail.gmail.com>
+ <CAGXu5jK2ppnFGA3SG76BPkmGGeZcK3-5k9XaHihkmWkwPvomgw@mail.gmail.com>
+ <CALCETrV=HmBxUK9rp1JiJZuX78XWmmt8-mXFohEAUXyS4z6+oQ@mail.gmail.com>
+ <CAGXu5jLWL8cUV5nTqCB5ganimuFfvNwaAW9STBvwU-UM9pgbEg@mail.gmail.com> <20170301112436.GC28874@leverpostej>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 1 Mar 2017 12:13:57 -0800
-Message-ID: <CAGXu5jKTunStRbQ0FpuZpE5bXkmbv0wPmHYqJB2HNxnOzUTvXw@mail.gmail.com>
+Date: Wed, 1 Mar 2017 12:25:11 -0800
+Message-ID: <CAGXu5jKVANfBQVf66c=bJO7kRPhc7Q++L6pQk5m+6TLWm_gw8g@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
+Subject: [kernel-hardening] Re: [RFC][PATCH 4/8] x86: Implement __arch_rare_write_map/unmap()
 To: Mark Rutland <mark.rutland@arm.com>
-Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>
+Cc: Andy Lutomirski <luto@amacapital.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 1, 2017 at 2:43 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> Hi,
->
-> On Tue, Feb 28, 2017 at 07:05:32AM -0800, Kees Cook wrote:
->> On Tue, Feb 28, 2017 at 12:22 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->> > On Mon, 2017-02-27 at 12:42 -0800, Kees Cook wrote:
->
->> >> +/*
->> >> + * Build "write rarely" infrastructure for flipping memory r/w
->> >> + * on a per-CPU basis.
->> >> + */
->> >> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
->> >> +# define __wr_rare
->> >> +# define __wr_rare_type
->> >> +# define __rare_write_type(v)        typeof(v)
->> >> +# define __rare_write_ptr(v) (&(v))
->> >> +# define __rare_write(__var, __val)  ({              \
->> >> +     __var = __val;                                  \
->> >> +     __var;                                          \
->> >> +})
->> >> +# define rare_write_enable() do { } while (0)
->> >> +# define rare_write_disable()        do { } while (0)
->> >> +#else
->> >> +# define __wr_rare           __ro_after_init
->> >> +# define __wr_rare_type              const
->> >> +# define __rare_write_type(v)        typeof((typeof(v))0)
->> >> +# define __rare_write_ptr(v) ((__rare_write_type(v) *)&(v))
+On Wed, Mar 1, 2017 at 3:24 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> On Tue, Feb 28, 2017 at 03:52:26PM -0800, Kees Cook wrote:
+>> On Tue, Feb 28, 2017 at 2:54 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>> > On Tue, Feb 28, 2017 at 1:35 PM, Kees Cook <keescook@chromium.org> wrote:
+>> >>> Can't we at least make this:
+>> >>>
+>> >>> struct rare_write_mapping {
+>> >>>   void *addr;
+>> >>>   struct arch_rare_write_state arch_state;
+>> >>> };
+>> >>>
+>> >>> static inline struct rare_write_mapping __arch_rare_write_map(void
+>> >>> *addr, size_t len);
+>> >>> static inline void __arch_rare_write_unmap(struct rare_write_mapping mapping);
+>> >>
+>> >> How do you envision this working with the more complex things I
+>> >> included in the latter patches of the series, namely doing linked list
+>> >> updates across multiple structure instances, etc?
+>> >>
+>> >> ie, poor list manipulation pseudo-code:
+>> >>
+>> >> turn off read-only;
+>> >> struct_one->next = struct_tree->node;
+>> >> struct_three->prev = struct_one->node;
+>> >> struct_two->prev = struct_two->next = NULL;
+>> >> turn on read-only;
+>> >>
+>> >> That's three separate memory areas involved...
 >> >
->> > Should we make __rare_write_ptr arch-specific so architectures can
->> > convert the pointer to rw alias from ro address like this ? [1]
->> >
->> > #ifndef __arch_rare_write_ptr
->> > # define __rare_write_ptr(v)    ((__rare_write_type(v) *)&(v))
->> > #else
->> > # define __rate_write_ptr(v)    __arch_rare_write_ptr
->> > #endif
+>> > Fair enough.  That being said, how is this supposed to work on
+>> > architectures that don't have a global "disable write protection" bit?
+>> > Surely these architectures exist.
 >>
->> I think that was Mark's idea too, but I'm not sure to handle the
->> complex cases of doing multiple updates at once (e.g. linked list
->> updates, etc).
+>> I don't know. :) That's part of the reason for putting up this series:
+>> looking to see what's possible on other architectures. It's not clear
+>> to me what arm64 can do, for example.
 >
-> Assuming there aren't that many places with complex updates, we could
-> allow code to explicitly do the map/unmap and use __rare_write_ptr
-> directly. That does mean that the list code has to be specialised for
-> __wr_rare, which is less than ideal.
-
-Here's some sed output: http://paste.ubuntu.com/24092015/
-
-grsecurity currently has 314 instances of using
-pax_open/close_kernel(). The number of lines of code between them is
-about half a single line, but there is a lot of variation on how it's
-used:
-
-count  lines-of-code
-    164 1
-     72 2
-     21 3
-     20 4
-      2 5
-      8 6
-      3 7
-      2 8
-      1 9
-     18 10+
-
-The obvious helpers are in the list code (for double, rcu, and single
-lists), with most header file uses are operating on page tables.
-
-The list code is already specialized (see the rare_list_add()/del()
-function), and could be made even more explicit if needed.
-
-> That would also depend on what is __rw_rare in those cases, too.  i.e.
-> is it just the list_head for the list itself, the list_head of all
-> elements, or only some of them?
-
-lib/list_debug.c:EXPORT_SYMBOL(__pax_list_add);
-lib/list_debug.c:EXPORT_SYMBOL(pax_list_del);
-lib/list_debug.c:EXPORT_SYMBOL(pax_list_del_init);
-lib/list_debug.c:EXPORT_SYMBOL(__pax_list_add_rcu);
-lib/list_debug.c:EXPORT_SYMBOL(pax_list_del_rcu);
-lib/llist.c:EXPORT_SYMBOL_GPL(pax_llist_add_batch);
-
-I haven't exhaustively checked, but I assume it could touch any of the
-list pieces? I suspect there are mixtures of read-only and
-non-read-only elements, but I haven't dug that far yet. From what I
-can see in the cgroup case I showed, all the struct cftype variables
-were in .data (static struct cftype foo[] = { ... }) so no kmalloc nor
-vmalloc ones are mixed in. But I doubt we can entirely depend on
-that...
-
-> For the latter mixed case, the __rare_write_ptr() approach probably
-> doesn't work, and that rules out the mm-based approach, too, I guess. :/
+> There is no global override of this sort on arm64. Just having map/unap,
+> open/close, shed/unshed, etc, won't work.
 >
->> I think we're better doing a full disabling of RO protection, but
->> there had been objections to this idea in the past, which is why I
->> included the "complex" example, so I don't see a way around it.
+> The options I can think of for arm64 are:
 >
-> My objection to that was that we can't implement CPU-local full
-> disabling of RO protection for the kernel page tables on some
-> architectures and configurations, e.g. arm64, or 32-bit arm with LPAE.
+> * Have a separate RW alias of just the write_rarely data, that we
+>   temporarily map-in on a given CPU (using TTBR0) to perform the write.
+>   The RW alias is at a different VA to the usual RO alias, so we have to
+>   convert each pointer to its RW alias to perform the write. That's why
+>   we need __rare_write_ptr() to hide this, and can't have uninstrumented
+>   writes.
 
-The CPU-local is a pretty important requirement... Hrmm
+I think only the list code isn't instrumented, and that's just because
+it discards casts outside the function. There's no reason it couldn't
+be instrumented. All the other places I can see are using the
+const_cast() explicitly because otherwise gcc freaks out (since the
+constify plugin forces the variables const). There are a few places
+where things aren't explicitly const_cast() (like in the modules).
 
-> The RW alias write_write(var, val) approach only relies on what arches
-> already have to implement for userspace to work, so if we can figure out
-> how to make that work API-wise, we can probably implement that
-> generically with switch_mm() and {get,put}_user().
+Oh hey, I just found a bug in the open/close stuff, that's why there
+was a giant routine misdetected by scripts... just changes one of the
+outiers though. I'll send a separate email with the correction...
 
-With a third mm? I maybe misunderstood what you meant about userspace...
+>   Since this would *only* map the write_rarely data, it's simple to set
+>   up, and we don't need to modify the tables at runtime.
+>
+>   I also think we can implement this generically using switch_mm() and
+>   {get,put}_user(), or specialised variants thereof.
+>
+>   Assuming we can figure out how to handle those complex cases, this is
+>   my preferred solution. :)
 
-> The only other way I can think to make this work would be to make a copy
-> of the whole swapper page tables, with the write-rarely data marked RW.
-> For arm64 at least, that'll be incredibly painful to keep in-sync with
-> the usual tables, in addition to being very expensive to switch to/from.
+Would this alias be CPU-local? (I assume yes, given the "give up on on
+being per-cpu" option below..)
 
-Well, I think sync shouldn't be hard since it'd just be a mirror of
-the .rodata section, which is configured once. (Well, and for
-modules... oof.)
+> * Have a copy of the entire swapper page tables, which differs only in
+>   the write_rarely data being RW. We then switch TTBR1 over to this for
+>   the duration of the rare_write_map() .. write_write_unmap() sequence.
+>
+>   While this sounds conceptually simple, it's far more complex in
+>   practice. Keeping the not-quite-clone of the swapper in-sync is going
+>   to be very painful and ripe for error.
+>
+>   Additionally, the TTBR1 switch will be very expensive, far more so
+>   than the TTBR0 switch due to TLB maintenance and other work (including
+>   switching TTBR0 twice per TTBR1 switch, itself requiring synchronised
+>   TLB maintenance and other work).
+>
+>   I am not fond of this approach.
+>
+> * Give up on this being per-cpu. Either change the permissions in place,
+>   or fixmap an RW alias as required. In either case, all CPUs will have
+>   RW access.
 
 -Kees
 
