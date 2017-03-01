@@ -1,78 +1,137 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <1488011791.1141.1.camel@gmail.com>
-References: <20170225003232.GA123380@beast> <1488011791.1141.1.camel@gmail.com>
+In-Reply-To: <20170301104337.GA28874@leverpostej>
+References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
+ <1488228186-110679-2-git-send-email-keescook@chromium.org>
+ <1488270174.1747.11.camel@gmail.com> <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
+ <20170301104337.GA28874@leverpostej>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 1 Mar 2017 11:16:12 -0800
-Message-ID: <CAGXu5jKbZZJxu0U_cy_UzxG9NtkEtTw2va7X=8AuwzQwAvkbjw@mail.gmail.com>
+Date: Wed, 1 Mar 2017 12:13:57 -0800
+Message-ID: <CAGXu5jKTunStRbQ0FpuZpE5bXkmbv0wPmHYqJB2HNxnOzUTvXw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [RFC] mm: enable sanitizing via CONFIG
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Kaiwan N Billimoria <kaiwan@kaiwantech.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Feb 25, 2017 at 12:36 AM, Daniel Micay <danielmicay@gmail.com> wrote:
-> On Fri, 2017-02-24 at 16:32 -0800, Kees Cook wrote:
->> This enables page and slab poisoning by default under
->> CONFIG_MEMORY_SANITIZE.
->> Based on work by Kaiwan N Billimoria.
->>
->> Signed-off-by: Kees Cook <keescook@chromium.org>
->> ---
->> This is more what I had in mind. This is based on the latest patch,
->> but
->> handles slab and slub. I tested slub with lkdtm's READ_AFTER_FREE and
->> READ_BUDDY_AFTER_FREE which both trip the poisoning tests.
->>
->> While doing this, I noticed one major issue with slub/slab poisoning:
->> it performs poisoning both on alloc and free, which is a rather large
->> performance hit, so the next step is likely to find a way to split the
->> poisoning into alloc and free halves so that CONFIG_MEMORY_SANITIZE
->> poisoning will only happen on the free.
+On Wed, Mar 1, 2017 at 2:43 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> Hi,
 >
-> It also still fills with a value that will make pointers point to
-> userspace, right? Rather than a better value or zeroing (and relying on
-> mmap_min_addr, although that's pretty small and easy to index past).
-
-Correct. We have to get there in pieces, though I continue to think it
-would still be easier to make the sanitization feature separate from
-debugging.
-
-In PaX, the poison value on x86_64 is 0xfe (to make addresses aim into
-the noncanonical range), otherwise 0xff (to point at the top of
-memory).
-
-> It also verifies the poisoning is still there, which can be wanted but
-> is more expensive. It increases allocations by the size of a pointer
-> which PaX doesn't do anymore, and there's the whole losing the fast path
-> which seems to mean losing CPU caching too since it's just hitting the
-> global stuff. The debug infrastructure could also be a risk, that would
-> not be present in normal builds up to this point.
-
-Gathering the reasons against this being part of the debug path would
-be a nice thing to collect; it might be convincing to the allocator
-maintainers.
-
-> I would like to be able to use upstream features but I think case it
-> seems that anyone not willing to unnecessarily lose performance and
-> security properties will need to keep carrying ~15 line of code out of
-> tree or using the PaX features.
-
-The simple form (without the SLAB_NO_SANITIZE) is alarmingly small. :)
-
-> Is there a path to doing it properly from here? I really don't see the
-> point in it being upstreaming if it's such a hack. It's frustrating...
+> On Tue, Feb 28, 2017 at 07:05:32AM -0800, Kees Cook wrote:
+>> On Tue, Feb 28, 2017 at 12:22 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> > On Mon, 2017-02-27 at 12:42 -0800, Kees Cook wrote:
 >
-> Not to mention that real allocator hardening like not having inline free
-> lists and being able to reliably detect double-free would be nice. Maybe
-> there should just be a security-oriented slab allocator, freeing it from
-> needing to avoid stepping on other people's toes. It just needs to pick
-> a performance target and then the design can shift away from the current
-> one within that target over time. *shrug*
+>> >> +/*
+>> >> + * Build "write rarely" infrastructure for flipping memory r/w
+>> >> + * on a per-CPU basis.
+>> >> + */
+>> >> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
+>> >> +# define __wr_rare
+>> >> +# define __wr_rare_type
+>> >> +# define __rare_write_type(v)        typeof(v)
+>> >> +# define __rare_write_ptr(v) (&(v))
+>> >> +# define __rare_write(__var, __val)  ({              \
+>> >> +     __var = __val;                                  \
+>> >> +     __var;                                          \
+>> >> +})
+>> >> +# define rare_write_enable() do { } while (0)
+>> >> +# define rare_write_disable()        do { } while (0)
+>> >> +#else
+>> >> +# define __wr_rare           __ro_after_init
+>> >> +# define __wr_rare_type              const
+>> >> +# define __rare_write_type(v)        typeof((typeof(v))0)
+>> >> +# define __rare_write_ptr(v) ((__rare_write_type(v) *)&(v))
+>> >
+>> > Should we make __rare_write_ptr arch-specific so architectures can
+>> > convert the pointer to rw alias from ro address like this ? [1]
+>> >
+>> > #ifndef __arch_rare_write_ptr
+>> > # define __rare_write_ptr(v)    ((__rare_write_type(v) *)&(v))
+>> > #else
+>> > # define __rate_write_ptr(v)    __arch_rare_write_ptr
+>> > #endif
+>>
+>> I think that was Mark's idea too, but I'm not sure to handle the
+>> complex cases of doing multiple updates at once (e.g. linked list
+>> updates, etc).
+>
+> Assuming there aren't that many places with complex updates, we could
+> allow code to explicitly do the map/unmap and use __rare_write_ptr
+> directly. That does mean that the list code has to be specialised for
+> __wr_rare, which is less than ideal.
 
-I'd love to see someone step up and create this for upstream. I think
-it'd make a lot of sense instead of trying to shoe-horn things into
-SLUB...
+Here's some sed output: http://paste.ubuntu.com/24092015/
+
+grsecurity currently has 314 instances of using
+pax_open/close_kernel(). The number of lines of code between them is
+about half a single line, but there is a lot of variation on how it's
+used:
+
+count  lines-of-code
+    164 1
+     72 2
+     21 3
+     20 4
+      2 5
+      8 6
+      3 7
+      2 8
+      1 9
+     18 10+
+
+The obvious helpers are in the list code (for double, rcu, and single
+lists), with most header file uses are operating on page tables.
+
+The list code is already specialized (see the rare_list_add()/del()
+function), and could be made even more explicit if needed.
+
+> That would also depend on what is __rw_rare in those cases, too.  i.e.
+> is it just the list_head for the list itself, the list_head of all
+> elements, or only some of them?
+
+lib/list_debug.c:EXPORT_SYMBOL(__pax_list_add);
+lib/list_debug.c:EXPORT_SYMBOL(pax_list_del);
+lib/list_debug.c:EXPORT_SYMBOL(pax_list_del_init);
+lib/list_debug.c:EXPORT_SYMBOL(__pax_list_add_rcu);
+lib/list_debug.c:EXPORT_SYMBOL(pax_list_del_rcu);
+lib/llist.c:EXPORT_SYMBOL_GPL(pax_llist_add_batch);
+
+I haven't exhaustively checked, but I assume it could touch any of the
+list pieces? I suspect there are mixtures of read-only and
+non-read-only elements, but I haven't dug that far yet. From what I
+can see in the cgroup case I showed, all the struct cftype variables
+were in .data (static struct cftype foo[] = { ... }) so no kmalloc nor
+vmalloc ones are mixed in. But I doubt we can entirely depend on
+that...
+
+> For the latter mixed case, the __rare_write_ptr() approach probably
+> doesn't work, and that rules out the mm-based approach, too, I guess. :/
+>
+>> I think we're better doing a full disabling of RO protection, but
+>> there had been objections to this idea in the past, which is why I
+>> included the "complex" example, so I don't see a way around it.
+>
+> My objection to that was that we can't implement CPU-local full
+> disabling of RO protection for the kernel page tables on some
+> architectures and configurations, e.g. arm64, or 32-bit arm with LPAE.
+
+The CPU-local is a pretty important requirement... Hrmm
+
+> The RW alias write_write(var, val) approach only relies on what arches
+> already have to implement for userspace to work, so if we can figure out
+> how to make that work API-wise, we can probably implement that
+> generically with switch_mm() and {get,put}_user().
+
+With a third mm? I maybe misunderstood what you meant about userspace...
+
+> The only other way I can think to make this work would be to make a copy
+> of the whole swapper page tables, with the write-rarely data marked RW.
+> For arm64 at least, that'll be incredibly painful to keep in-sync with
+> the usual tables, in addition to being very expensive to switch to/from.
+
+Well, I think sync shouldn't be hard since it'd just be a mirror of
+the .rodata section, which is configured once. (Well, and for
+modules... oof.)
 
 -Kees
 
