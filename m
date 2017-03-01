@@ -1,96 +1,117 @@
-Date: Wed, 1 Mar 2017 11:24:37 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170301112436.GC28874@leverpostej>
+Date: Wed, 1 Mar 2017 11:30:26 +0000
+From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Message-ID: <20170301113026.GI21222@n2100.armlinux.org.uk>
 References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
- <1488228186-110679-5-git-send-email-keescook@chromium.org>
- <CALCETrUruKRCnHAEVg6pXe+43WQx7K6LCOHg5zVEjLfzw8nQUA@mail.gmail.com>
- <CAGXu5jK2ppnFGA3SG76BPkmGGeZcK3-5k9XaHihkmWkwPvomgw@mail.gmail.com>
- <CALCETrV=HmBxUK9rp1JiJZuX78XWmmt8-mXFohEAUXyS4z6+oQ@mail.gmail.com>
- <CAGXu5jLWL8cUV5nTqCB5ganimuFfvNwaAW9STBvwU-UM9pgbEg@mail.gmail.com>
+ <1488228186-110679-6-git-send-email-keescook@chromium.org>
+ <20170301010408.GH21222@n2100.armlinux.org.uk>
+ <CAGXu5jKq5NYrgYbcP+5rsVzLDfMRwLX027xDfO9_r90zDhJA-w@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5jLWL8cUV5nTqCB5ganimuFfvNwaAW9STBvwU-UM9pgbEg@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC][PATCH 4/8] x86: Implement __arch_rare_write_map/unmap()
+In-Reply-To: <CAGXu5jKq5NYrgYbcP+5rsVzLDfMRwLX027xDfO9_r90zDhJA-w@mail.gmail.com>
+Sender: Russell King - ARM Linux <linux@armlinux.org.uk>
+Subject: [kernel-hardening] Re: [RFC][PATCH 5/8] ARM: Implement __arch_rare_write_map/unmap()
 To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@amacapital.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, "x86@kernel.org" <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Feb 28, 2017 at 03:52:26PM -0800, Kees Cook wrote:
-> On Tue, Feb 28, 2017 at 2:54 PM, Andy Lutomirski <luto@amacapital.net> wrote:
-> > On Tue, Feb 28, 2017 at 1:35 PM, Kees Cook <keescook@chromium.org> wrote:
-> >>> Can't we at least make this:
-> >>>
-> >>> struct rare_write_mapping {
-> >>>   void *addr;
-> >>>   struct arch_rare_write_state arch_state;
-> >>> };
-> >>>
-> >>> static inline struct rare_write_mapping __arch_rare_write_map(void
-> >>> *addr, size_t len);
-> >>> static inline void __arch_rare_write_unmap(struct rare_write_mapping mapping);
-> >>
-> >> How do you envision this working with the more complex things I
-> >> included in the latter patches of the series, namely doing linked list
-> >> updates across multiple structure instances, etc?
-> >>
-> >> ie, poor list manipulation pseudo-code:
-> >>
-> >> turn off read-only;
-> >> struct_one->next = struct_tree->node;
-> >> struct_three->prev = struct_one->node;
-> >> struct_two->prev = struct_two->next = NULL;
-> >> turn on read-only;
-> >>
-> >> That's three separate memory areas involved...
+On Tue, Feb 28, 2017 at 09:41:07PM -0800, Kees Cook wrote:
+> On Tue, Feb 28, 2017 at 5:04 PM, Russell King - ARM Linux
+> <linux@armlinux.org.uk> wrote:
+> > On Mon, Feb 27, 2017 at 12:43:03PM -0800, Kees Cook wrote:
+> >> Based on grsecurity's ARM pax_{open,close}_kernel() implementation, this
+> >> allows HAVE_ARCH_RARE_WRITE to work on ARM.
 > >
-> > Fair enough.  That being said, how is this supposed to work on
-> > architectures that don't have a global "disable write protection" bit?
-> > Surely these architectures exist.
+> > This has the effect that any memory mapped with DOMAIN_KERNEL will
+> > loose it's NX status, and may end up being read into the I-cache.
 > 
-> I don't know. :) That's part of the reason for putting up this series:
-> looking to see what's possible on other architectures. It's not clear
-> to me what arm64 can do, for example.
+> Arbitrarily so, or only memory accessed/pre-fetched by the CPU when in
+> this state? i.e. since this is non-preempt, only touches the needed
+> memory, and has the original domain state restored within a few
+> instructions, does this avoid the problem? It seems like the chance
+> for a speculative prefetch from device memory under these conditions
+> should be approaching zero.
 
-There is no global override of this sort on arm64. Just having map/unap,
-open/close, shed/unshed, etc, won't work.
+"The software that defines a translation table must mark any region of
+ memory that is read-sensitive as execute-never, to avoid the possibility
+ of a speculative fetch accessing the memory region. For example, it must
+ mark any memory region that corresponds to a read-sensitive peripheral
+ as Execute-never."
 
-The options I can think of for arm64 are:
+Also see:
 
-* Have a separate RW alias of just the write_rarely data, that we
-  temporarily map-in on a given CPU (using TTBR0) to perform the write.
-  The RW alias is at a different VA to the usual RO alias, so we have to
-  convert each pointer to its RW alias to perform the write. That's why
-  we need __rare_write_ptr() to hide this, and can't have uninstrumented
-  writes.
-  
-  Since this would *only* map the write_rarely data, it's simple to set
-  up, and we don't need to modify the tables at runtime.
-  
-  I also think we can implement this generically using switch_mm() and
-  {get,put}_user(), or specialised variants thereof.
+commit 247055aa21ffef1c49dd64710d5e94c2aee19b58
+Author: Catalin Marinas <catalin.marinas@arm.com>
+Date:   Mon Sep 13 16:03:21 2010 +0100
 
-  Assuming we can figure out how to handle those complex cases, this is
-  my preferred solution. :)
-  
-* Have a copy of the entire swapper page tables, which differs only in
-  the write_rarely data being RW. We then switch TTBR1 over to this for
-  the duration of the rare_write_map() .. write_write_unmap() sequence.
+    ARM: 6384/1: Remove the domain switching on ARMv6k/v7 CPUs
 
-  While this sounds conceptually simple, it's far more complex in
-  practice. Keeping the not-quite-clone of the swapper in-sync is going
-  to be very painful and ripe for error.
+which removed the domain switching I referred to previously.
 
-  Additionally, the TTBR1 switch will be very expensive, far more so
-  than the TTBR0 switch due to TLB maintenance and other work (including
-  switching TTBR0 twice per TTBR1 switch, itself requiring synchronised
-  TLB maintenance and other work).
+The way the ARM ARM looks at instruction speculative prefetch is that it
+can happen to any location that is not explicitly marked as Execute-never.
+(This is because the ARM ARM doesn't define an implementation.)  So, we
+have to assume that any location that is not marked XN may be speculatively
+prefetched by the processor.
 
-  I am not fond of this approach.
+Device memory can be read-sensitive - eg, reading an interrupt status
+register can clear the ending interrupt bits.
 
-* Give up on this being per-cpu. Either change the permissions in place,
-  or fixmap an RW alias as required. In either case, all CPUs will have
-  RW access.
+A speculative prefetch is a read as far as a device is concerned, so
+bypassing the XN permission by switching the domain to manager mode has
+the effect that the processor can then _legally_ speculatively prefetch
+from a device, and if it happens to hit a device that contains a read
+sensitive location, the side effects of reading that location will
+happen, even though the program did not perform an explicit read.
 
-Thanks,
-Mark.
+> Just to make sure I understand: it was only speculative prefetch vs
+> icache, right? Would an icache flush restore the correct permissions?
+
+It's not about permissions, it's about the side effects at the device
+of a read created by the speculative prefetch.
+
+> I'm just pondering alternatives. Also, is there a maximum distance the
+> prefetching spans? i.e. could device memory be guaranteed to be
+> vmapped far enough away from kernel memory to avoid prefetches?
+
+The root cause of this problem is the way we lump both vmalloc() and
+ioremap() mappings into the same memory space (vmalloc region) without
+caring about the domain.
+
+If all device memory was guaranteed to be placed under a different
+domain, then this problem would not exist.  In order to achieve that,
+there's several ways I can think of doing it:
+
+1) Have separate virtual memory regions for ioremap() and vmalloc()
+   We would need to choose an arbitary limit on the size of these
+   memory pools, which may not suit everyone.
+
+2) Have vmalloc() grow up as a heap, ioremap() grow down as a stack
+   and a dynamic boundary (aligned to 1 or 2MB) between the two, no
+   mixing allowed.  This avoids the problem with (1) but still results
+   in the required separation.
+
+3) Align vmalloc region allocations to 2MB, but this would be very
+   wasteful.
+
+4) Only permit same type (ioremap/vmalloc) of mapping within a 2MB block
+   of vmalloc space.  In other words, a primary allocator of 2MB blocks
+   and a sub-allocator of page-sized blocks (think of the way our
+   page allocator vs slab works.)  Probably going to be subject to
+   fragmentation problems.
+
+5) Place all vmalloc() and ioremap() mappings under a separate domain,
+   so that all these mappings would be unaffected by the change of
+   domain settings (the resulting permissions would never change.)
+   In other words, DOMAIN_IO becomes DOMAIN_VMALLOC and is used for all
+   mappings in vmalloc space.
+
+The problem with (2) and (5) is teaching pte_alloc_kernel() down to
+pmd_populate_kernel() about the differences - currently, this only ever
+sets up DOMAIN_KERNEL mappings because there's no way for it to know
+what kind of mapping is required.
+
+-- 
+RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
+FTTC broadband for 0.8mile line: currently at 9.6Mbps down 400kbps up
+according to speedtest.net.
