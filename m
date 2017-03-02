@@ -1,101 +1,44 @@
 MIME-Version: 1.0
-In-Reply-To: <db8cbaea-d4e5-3123-0b14-857737b753bc@digikod.net>
-References: <20170222012632.4196-1-mic@digikod.net> <20170222012632.4196-7-mic@digikod.net>
- <CALCETrWExjKHccdj-cYxPtis1NtXTPEYfReNLh065J1hHKvFiA@mail.gmail.com>
- <e6c917cb-d4a6-4147-9d6e-9c9fc906621d@digikod.net> <CALCETrWpXnFs3=tWjJSi6-E=XgbZVnq1p-Ty3BtPvXZawriHMw@mail.gmail.com>
- <db8cbaea-d4e5-3123-0b14-857737b753bc@digikod.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 2 Mar 2017 08:36:27 -0800
-Message-ID: <CALCETrXpaz3Sw8Q28PKi2LGB956bZ0mfhoNg59Pe5EY+kTmqZg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CALCETrW5-BzBnfStyPQScdkwkCUWDHNmTwiP083G=Yaq-YiWdA@mail.gmail.com>
+References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
+ <1488228186-110679-2-git-send-email-keescook@chromium.org>
+ <1488270174.1747.11.camel@gmail.com> <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
+ <20170301104337.GA28874@leverpostej> <CAGXu5jKTunStRbQ0FpuZpE5bXkmbv0wPmHYqJB2HNxnOzUTvXw@mail.gmail.com>
+ <CALCETrW21Hx1NiMSo7wu8o3c0TH4WUN_pMx20ZPH_AgwxKJRJw@mail.gmail.com>
+ <20170302111920.GB19632@leverpostej> <CALCETrW5-BzBnfStyPQScdkwkCUWDHNmTwiP083G=Yaq-YiWdA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 2 Mar 2017 11:48:39 -0800
+Message-ID: <CAGXu5jK99nC42iea9Uq_Z_0zTkrzz0CnwAjokVr+aNE6f9xBGw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v5 06/10] seccomp,landlock: Handle Landlock events per
- process hierarchy
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
+Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 1, 2017 at 3:28 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
-wrote:
->
->
-> On 01/03/2017 23:20, Andy Lutomirski wrote:
->> On Wed, Mar 1, 2017 at 2:14 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.ne=
-t> wrote:
->>>
->>> On 28/02/2017 21:01, Andy Lutomirski wrote:
->>>> On Tue, Feb 21, 2017 at 5:26 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod=
-.net> wrote:
->>> This design makes it possible for a process to add more constraints to
->>> its children on the fly. I think it is a good feature to have and a
->>> safer default inheritance mechanism, but it could be guarded by an
->>> option flag if we want both mechanism to be available. The same design
->>> could be used by seccomp filter too.
->>>
+On Thu, Mar 2, 2017 at 8:33 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Thu, Mar 2, 2017 at 3:19 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+>> On Wed, Mar 01, 2017 at 01:00:05PM -0800, Andy Lutomirski wrote:
+>>> On Wed, Mar 1, 2017 at 12:13 PM, Kees Cook <keescook@chromium.org> wrote:
+>>> > On Wed, Mar 1, 2017 at 2:43 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+>>> Now a generic implementation could work by allocating a percpu
+>>> mm_struct that contains a single giant VMA.  __arch_rare_write_begin()
+>>> switches to that mm.  __arch_rare_write pokes some PTEs into the mm
+>>> and calls copy_to_user().  __arch_rare_write_end() switches back to
+>>> the original mm.  An x86 implementation could just fiddle with CR0.WP.
 >>
->> Then let's do it right.
+>> I'd expected that we'd know where the write_rarely data was up-front, so
+>> we could set up the mapping statically, and just map it in at map/begin,
+>> but otherwise this sounds like what I had in mind.
 >>
->> Currently each task has an array of seccomp filter layers.  When a
->> task forks, the child inherits the layers.  All the layers are
->> presently immutable.  With Landlock, a layer can logically be a
->> syscall fitler layer or a Landlock layer.  This fits in to the
->> existing model just fine.
->>
->> If we want to have an interface to allow modification of an existing
->> layer, let's make it so that, when a layer is added, you have to
->> specify a flag to make the layer modifiable (by current, presumably,
->> although I can imagine other policies down the road).  Then have a
->> separate API that modifies a layer.
->>
->> IOW, I think your patch is bad for three reasons, all fixable:
->>
->> 1. The default is wrong.  A layer should be immutable to avoid an easy
->> attack in which you try to sandbox *yourself* and then you just modify
->> the layer to weaken it.
 >
-> This is not possible, there is only an operation for now:
-> SECCOMP_ADD_LANDLOCK_RULE. You can only add more rules to the list (as
-> for seccomp filter). There is no way to weaken a sandbox. The question
-> is: how do we want to handle the rules *tree* (from the kernel point of
-> view)?
->
+> Duh.  That works too and would be considerably simpler :)
 
-Fair enough.  But I still think that immutability (like regular
-seccomp) should be the default.  For security, simplicity is
-important.  I guess there could be two ways to relax immutability:
-allowing making the layer stricter and allowing any change at all.
+It may be slightly complicated by needing to track the module .rodata
+areas, but ultimately, yeah, it seems like that could work.
 
-As a default, though, programs should be able to expect that:
+-Kees
 
-seccomp(SECCOMP_ADD_WHATEVER, ...);
-fork();
-
-[parent gets compromised]
-[in parent]seccomp(anything whatsoever);
-
-will not affect the child,  If the parent wants to relax that, that's
-fine, but I think it should be explicit.
-
->>
->> 2. The API that adds a layer should be different from the API that
->> modifies a layer.
->
-> Right, but it doesn't apply now because we can only add rules.
-
-That's not what the code appears to do, though.  Sometimes it makes a
-new layer without modifying tasks that share the layer and sometimes
-it modifies the layer.
-
-Both operations are probably okay, but they're not the same operation
-and they shouldn't pretend to be.
-
-
->
->>
->> 3. The whole modification mechanism should be a separate patch to be
->> reviewed on its own merits.
->
-> For a rule *replacement*, sure!
-
-And for modification of policy for non-current tasks.  That's a big
-departure from normal seccomp and should be reviewed as such.
+-- 
+Kees Cook
+Pixel Security
