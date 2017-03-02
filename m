@@ -1,67 +1,57 @@
-Date: Thu, 2 Mar 2017 11:19:21 +0000
+Date: Thu, 2 Mar 2017 11:20:32 +0000
 From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170302111920.GB19632@leverpostej>
+Message-ID: <20170302112032.GC19632@leverpostej>
 References: <1488228186-110679-1-git-send-email-keescook@chromium.org>
- <1488228186-110679-2-git-send-email-keescook@chromium.org>
- <1488270174.1747.11.camel@gmail.com>
- <CAGXu5jKvY1VRxBk_F9omixEBhaSTE18tfRWNcPUKhFk303v6iw@mail.gmail.com>
- <20170301104337.GA28874@leverpostej>
- <CAGXu5jKTunStRbQ0FpuZpE5bXkmbv0wPmHYqJB2HNxnOzUTvXw@mail.gmail.com>
- <CALCETrW21Hx1NiMSo7wu8o3c0TH4WUN_pMx20ZPH_AgwxKJRJw@mail.gmail.com>
+ <1488228186-110679-5-git-send-email-keescook@chromium.org>
+ <CALCETrUruKRCnHAEVg6pXe+43WQx7K6LCOHg5zVEjLfzw8nQUA@mail.gmail.com>
+ <CAGXu5jK2ppnFGA3SG76BPkmGGeZcK3-5k9XaHihkmWkwPvomgw@mail.gmail.com>
+ <CALCETrV=HmBxUK9rp1JiJZuX78XWmmt8-mXFohEAUXyS4z6+oQ@mail.gmail.com>
+ <CAGXu5jLWL8cUV5nTqCB5ganimuFfvNwaAW9STBvwU-UM9pgbEg@mail.gmail.com>
+ <20170301112436.GC28874@leverpostej>
+ <CAGXu5jKVANfBQVf66c=bJO7kRPhc7Q++L6pQk5m+6TLWm_gw8g@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CALCETrW21Hx1NiMSo7wu8o3c0TH4WUN_pMx20ZPH_AgwxKJRJw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC][PATCH 1/8] Introduce rare_write() infrastructure
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Kees Cook <keescook@chromium.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>
+In-Reply-To: <CAGXu5jKVANfBQVf66c=bJO7kRPhc7Q++L6pQk5m+6TLWm_gw8g@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFC][PATCH 4/8] x86: Implement __arch_rare_write_map/unmap()
+To: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@amacapital.net>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 01, 2017 at 01:00:05PM -0800, Andy Lutomirski wrote:
-> On Wed, Mar 1, 2017 at 12:13 PM, Kees Cook <keescook@chromium.org> wrote:
-> > On Wed, Mar 1, 2017 at 2:43 AM, Mark Rutland <mark.rutland@arm.com> wrote:
-> >> The RW alias write_write(var, val) approach only relies on what arches
-> >> already have to implement for userspace to work, so if we can figure out
-> >> how to make that work API-wise, we can probably implement that
-> >> generically with switch_mm() and {get,put}_user().
+On Wed, Mar 01, 2017 at 12:25:11PM -0800, Kees Cook wrote:
+> On Wed, Mar 1, 2017 at 3:24 AM, Mark Rutland <mark.rutland@arm.com> wrote:
+> > There is no global override of this sort on arm64. Just having map/unap,
+> > open/close, shed/unshed, etc, won't work.
 > >
-> > With a third mm? I maybe misunderstood what you meant about userspace...
+> > The options I can think of for arm64 are:
+> >
+> > * Have a separate RW alias of just the write_rarely data, that we
+> >   temporarily map-in on a given CPU (using TTBR0) to perform the write.
+> >   The RW alias is at a different VA to the usual RO alias, so we have to
+> >   convert each pointer to its RW alias to perform the write. That's why
+> >   we need __rare_write_ptr() to hide this, and can't have uninstrumented
+> >   writes.
 > 
-> I think I'd like this series a lot better if the arch hooks were
-> designed in such a way that a generic implementation could be backed
-> by kmap, use_mm, or similar.  This would *require* that the arch hooks
-> be able to return a different address.  Also, I see no reason that the
-> list manipulation needs to be particularly special.  If the arch hook
-> sets up an alias, couldn't the generic code just call it twice.
+> I think only the list code isn't instrumented, and that's just because
+> it discards casts outside the function. There's no reason it couldn't
+> be instrumented. 
 
-I completely agree.
+Ok, it sounds like we could make this work, then.
 
-There's some fun to be had with switch_mm/use_mm (e.g. with arm64's
-TTBR0_SW_PAN), but I think we can solve that generically.
+> >   Since this would *only* map the write_rarely data, it's simple to set
+> >   up, and we don't need to modify the tables at runtime.
+> >
+> >   I also think we can implement this generically using switch_mm() and
+> >   {get,put}_user(), or specialised variants thereof.
+> >
+> >   Assuming we can figure out how to handle those complex cases, this is
+> >   my preferred solution. :)
+> 
+> Would this alias be CPU-local? (I assume yes, given the "give up on on
+> being per-cpu" option below..)
 
-> So here's a new proposal for how the hooks could look:
-
-> void __arch_rare_write_begin(void);
-> void __arch_rare_write(void *dest, const void *source, size_t len);
-> void __arch_rare_write_end(void);
-
-I think we're on the same page, API-wise.
-
-Modulo naming, and the len argument to the write function, this is
-exactly the same as my original proposal.
-
-I had assumed that we could derive the len argument implicitly from the
-object being assigned to, but it doesn't really matter either way.
-
-> Now a generic implementation could work by allocating a percpu
-> mm_struct that contains a single giant VMA.  __arch_rare_write_begin()
-> switches to that mm.  __arch_rare_write pokes some PTEs into the mm
-> and calls copy_to_user().  __arch_rare_write_end() switches back to
-> the original mm.  An x86 implementation could just fiddle with CR0.WP.
-
-I'd expected that we'd know where the write_rarely data was up-front, so
-we could set up the mapping statically, and just map it in at map/begin,
-but otherwise this sounds like what I had in mind.
+Yes, this would be CPU-local. It would be like mapping the idmap, or
+userspace.
 
 Thanks,
 Mark.
