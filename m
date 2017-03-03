@@ -1,154 +1,276 @@
-MIME-Version: 1.0
-In-Reply-To: <0efca89a-7e8b-a6f8-987b-95df61223a22@digikod.net>
-References: <20170222012632.4196-1-mic@digikod.net> <20170222012632.4196-7-mic@digikod.net>
- <CALCETrWExjKHccdj-cYxPtis1NtXTPEYfReNLh065J1hHKvFiA@mail.gmail.com>
- <e6c917cb-d4a6-4147-9d6e-9c9fc906621d@digikod.net> <CALCETrWpXnFs3=tWjJSi6-E=XgbZVnq1p-Ty3BtPvXZawriHMw@mail.gmail.com>
- <db8cbaea-d4e5-3123-0b14-857737b753bc@digikod.net> <CALCETrXpaz3Sw8Q28PKi2LGB956bZ0mfhoNg59Pe5EY+kTmqZg@mail.gmail.com>
- <0efca89a-7e8b-a6f8-987b-95df61223a22@digikod.net>
-From: Andy Lutomirski <luto@amacapital.net>
-Date: Thu, 2 Mar 2017 16:55:21 -0800
-Message-ID: <CALCETrW8Pmap7CgdtE+XL39fPR1tOM4d8BBA=S4jot-ocAcw3g@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH v5 06/10] seccomp,landlock: Handle Landlock events per
- process hierarchy
-To: =?UTF-8?B?TWlja2HDq2wgU2FsYcO8bg==?= <mic@digikod.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
+Content-Type: multipart/alternative;
+	boundary=Apple-Mail-FEFC33F2-B80A-4F16-A97E-8686D76B7034
+Mime-Version: 1.0 (1.0)
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+In-Reply-To: <20170301112436.GC28874@leverpostej>
+Date: Fri, 3 Mar 2017 09:59:15 +0900
+Content-Transfer-Encoding: 7bit
+Message-Id: <A521BCC5-BFAA-47A8-A795-433EBA297F9A@gmail.com>
+References: <1488228186-110679-1-git-send-email-keescook@chromium.org> <1488228186-110679-5-git-send-email-keescook@chromium.org> <CALCETrUruKRCnHAEVg6pXe+43WQx7K6LCOHg5zVEjLfzw8nQUA@mail.gmail.com> <CAGXu5jK2ppnFGA3SG76BPkmGGeZcK3-5k9XaHihkmWkwPvomgw@mail.gmail.com> <CALCETrV=HmBxUK9rp1JiJZuX78XWmmt8-mXFohEAUXyS4z6+oQ@mail.gmail.com> <CAGXu5jLWL8cUV5nTqCB5ganimuFfvNwaAW9STBvwU-UM9pgbEg@mail.gmail.com> <20170301112436.GC28874@leverpostej>
+Subject: [kernel-hardening] Re: [RFC][PATCH 4/8] x86: Implement __arch_rare_write_map/unmap()
+To: Mark Rutland <mark.rutland@arm.com>, Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 2, 2017 at 4:48 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.net> =
-wrote:
->
-> On 02/03/2017 17:36, Andy Lutomirski wrote:
->> On Wed, Mar 1, 2017 at 3:28 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.ne=
-t> wrote:
->>>
->>>
->>> On 01/03/2017 23:20, Andy Lutomirski wrote:
->>>> On Wed, Mar 1, 2017 at 2:14 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.=
-net> wrote:
->>>>>
->>>>> On 28/02/2017 21:01, Andy Lutomirski wrote:
->>>>>> On Tue, Feb 21, 2017 at 5:26 PM, Micka=C3=ABl Sala=C3=BCn <mic@digik=
-od.net> wrote:
->>>>> This design makes it possible for a process to add more constraints t=
-o
->>>>> its children on the fly. I think it is a good feature to have and a
->>>>> safer default inheritance mechanism, but it could be guarded by an
->>>>> option flag if we want both mechanism to be available. The same desig=
-n
->>>>> could be used by seccomp filter too.
->>>>>
->>>>
->>>> Then let's do it right.
->>>>
->>>> Currently each task has an array of seccomp filter layers.  When a
->>>> task forks, the child inherits the layers.  All the layers are
->>>> presently immutable.  With Landlock, a layer can logically be a
->>>> syscall fitler layer or a Landlock layer.  This fits in to the
->>>> existing model just fine.
->>>>
->>>> If we want to have an interface to allow modification of an existing
->>>> layer, let's make it so that, when a layer is added, you have to
->>>> specify a flag to make the layer modifiable (by current, presumably,
->>>> although I can imagine other policies down the road).  Then have a
->>>> separate API that modifies a layer.
->>>>
->>>> IOW, I think your patch is bad for three reasons, all fixable:
->>>>
->>>> 1. The default is wrong.  A layer should be immutable to avoid an easy
->>>> attack in which you try to sandbox *yourself* and then you just modify
->>>> the layer to weaken it.
->>>
->>> This is not possible, there is only an operation for now:
->>> SECCOMP_ADD_LANDLOCK_RULE. You can only add more rules to the list (as
->>> for seccomp filter). There is no way to weaken a sandbox. The question
->>> is: how do we want to handle the rules *tree* (from the kernel point of
->>> view)?
->>>
->>
->> Fair enough.  But I still think that immutability (like regular
->> seccomp) should be the default.  For security, simplicity is
->> important.  I guess there could be two ways to relax immutability:
->> allowing making the layer stricter and allowing any change at all.
->>
->> As a default, though, programs should be able to expect that:
->>
->> seccomp(SECCOMP_ADD_WHATEVER, ...);
->> fork();
->>
->> [parent gets compromised]
->> [in parent]seccomp(anything whatsoever);
->>
->> will not affect the child,  If the parent wants to relax that, that's
->> fine, but I think it should be explicit.
->
-> Good point. However the term "immutability" doesn't fit right because
-> the process is still allowed to add more rules to itself (as for
-> seccomp). The difference lays in the way a rule may be "appended" (by
-> the current process) or "inserted" (by a parent process).
->
-> I think three or four kind of operations (through the seccomp syscall)
-> make sense:
-> * append a rule (for the current process and its future children)
 
-Sure, but this operation should *never* affect existing children,
-existing seccomp layers, existing nodes, etc.  It should affect
-current and future children only.  Or it could simply not exist for
-Landlock and instead you'd have to add a layer (see below) and then
-program that layer.
+--Apple-Mail-FEFC33F2-B80A-4F16-A97E-8686D76B7034
+Content-Type: text/plain;
+	charset=us-ascii
+Content-Transfer-Encoding: quoted-printable
 
-> * add a node (insert point), from which the inserted rules will be tied
-> * insert a rule in the node, which will be inherited by futures children
 
-I would advocate calling this a "seccomp layer" and making creation
-and manipulation of them generic.
+>> On Mar 1, 2017, at 8:24 PM, Mark Rutland <mark.rutland@arm.com> wrote:
+>>=20
+>>> On Tue, Feb 28, 2017 at 03:52:26PM -0800, Kees Cook wrote:
+>>> On Tue, Feb 28, 2017 at 2:54 PM, Andy Lutomirski <luto@amacapital.net> w=
+rote:
+>>> On Tue, Feb 28, 2017 at 1:35 PM, Kees Cook <keescook@chromium.org> wrote=
+:
+>>>>> Can't we at least make this:
+>>>>>=20
+>>>>> struct rare_write_mapping {
+>>>>> void *addr;
+>>>>> struct arch_rare_write_state arch_state;
+>>>>> };
+>>>>>=20
+>>>>> static inline struct rare_write_mapping __arch_rare_write_map(void
+>>>>> *addr, size_t len);
+>>>>> static inline void __arch_rare_write_unmap(struct rare_write_mapping m=
+apping);
+>>>>=20
+>>>> How do you envision this working with the more complex things I
+>>>> included in the latter patches of the series, namely doing linked list
+>>>> updates across multiple structure instances, etc?
+>>>>=20
+>>>> ie, poor list manipulation pseudo-code:
+>>>>=20
+>>>> turn off read-only;
+>>>> struct_one->next =3D struct_tree->node;
+>>>> struct_three->prev =3D struct_one->node;
+>>>> struct_two->prev =3D struct_two->next =3D NULL;
+>>>> turn on read-only;
+>>>>=20
+>>>> That's three separate memory areas involved...
+>>>=20
+>>> Fair enough.  That being said, how is this supposed to work on
+>>> architectures that don't have a global "disable write protection" bit?
+>>> Surely these architectures exist.
+>>=20
+>> I don't know. :) That's part of the reason for putting up this series:
+>> looking to see what's possible on other architectures. It's not clear
+>> to me what arm64 can do, for example.
+>=20
+> There is no global override of this sort on arm64. Just having map/unap,
+> open/close, shed/unshed, etc, won't work.
+>=20
+> The options I can think of for arm64 are:
+>=20
+> * Have a separate RW alias of just the write_rarely data, that we
+> temporarily map-in on a given CPU (using TTBR0) to perform the write.
+> The RW alias is at a different VA to the usual RO alias, so we have to
+> convert each pointer to its RW alias to perform the write. That's why
+> we need __rare_write_ptr() to hide this, and can't have uninstrumented
+> writes.
+>=20
+> Since this would *only* map the write_rarely data, it's simple to set
+> up, and we don't need to modify the tables at runtime.
+>=20
+> I also think we can implement this generically using switch_mm() and
+> {get,put}_user(), or specialised variants thereof.
+>=20
+> Assuming we can figure out how to handle those complex cases, this is
+> my preferred solution. :)
 
-> * (maybe a "lock" command to make a layer immutable for the current
-> process and its children)
+I implemented RFC version of the option #1 .
+It would be appreciated if you could review the code [1].
 
-Hmm, maybe.
+[1] http://www.openwall.com/lists/kernel-hardening/2017/03/02/5
 
->
-> Doing so, a process is only allowed to insert a rule if a node was
-> previously added. To forbid itself to insert new rules to one of its
-> children, a process just need to not add a node before forking. Like
-> this, there is no need for special rule flags nor default behavior,
-> everything is explicit.
+>=20
+> * Have a copy of the entire swapper page tables, which differs only in
+> the write_rarely data being RW. We then switch TTBR1 over to this for
+> the duration of the rare_write_map() .. write_write_unmap() sequence.
+>=20
+> While this sounds conceptually simple, it's far more complex in
+> practice. Keeping the not-quite-clone of the swapper in-sync is going
+> to be very painful and ripe for error.
+>=20
+> Additionally, the TTBR1 switch will be very expensive, far more so
+> than the TTBR0 switch due to TLB maintenance and other work (including
+> switching TTBR0 twice per TTBR1 switch, itself requiring synchronised
+> TLB maintenance and other work).
+>=20
+> I am not fond of this approach.
+>=20
+> * Give up on this being per-cpu. Either change the permissions in place,
+> or fixmap an RW alias as required. In either case, all CPUs will have
+> RW access.
+>=20
+> Thanks,
+> Mark.
 
-This is still slightly too complicated.  If you really want an
-operation that adds a layer (please don't call it a node in the ABI)
-and adds a rule to that layer in a single operation, it should be a
-separate operation.  Please make everything explicit.
+--Apple-Mail-FEFC33F2-B80A-4F16-A97E-8686D76B7034
+Content-Type: text/html;
+	charset=utf-8
+Content-Transfer-Encoding: quoted-printable
 
-(I don't like exposing the word "node" to userspace because it means
-nothing.  Having more than one layer of filter makes sense to me,
-which is why I like "layer".  I'm sure that other good choices exist.)
+<html><head><meta http-equiv=3D"content-type" content=3D"text/html; charset=3D=
+utf-8"></head><body dir=3D"auto"><div><span></span></div><div><span></span><=
+br><div></div><blockquote type=3D"cite"><span>On Mar 1, 2017, at 8:24 PM, Ma=
+rk Rutland &lt;<a href=3D"mailto:mark.rutland@arm.com">mark.rutland@arm.com<=
+/a>&gt; wrote:</span><br></blockquote><blockquote type=3D"cite"><span></span=
+><br></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><span>=
+On Tue, Feb 28, 2017 at 03:52:26PM -0800, Kees Cook wrote:</span><br></block=
+quote></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><bloc=
+kquote type=3D"cite"><span>On Tue, Feb 28, 2017 at 2:54 PM, Andy Lutomirski &=
+lt;<a href=3D"mailto:luto@amacapital.net">luto@amacapital.net</a>&gt; wrote:=
+</span><br></blockquote></blockquote></blockquote><blockquote type=3D"cite">=
+<blockquote type=3D"cite"><blockquote type=3D"cite"><span>On Tue, Feb 28, 20=
+17 at 1:35 PM, Kees Cook &lt;<a href=3D"mailto:keescook@chromium.org">keesco=
+ok@chromium.org</a>&gt; wrote:</span><br></blockquote></blockquote></blockqu=
+ote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"=
+cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span>Can't we at l=
+east make this:</span><br></blockquote></blockquote></blockquote></blockquot=
+e></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquo=
+te type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span><=
+/span><br></blockquote></blockquote></blockquote></blockquote></blockquote><=
+blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"=
+><blockquote type=3D"cite"><blockquote type=3D"cite"><span>struct rare_write=
+_mapping {</span><br></blockquote></blockquote></blockquote></blockquote></b=
+lockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote ty=
+pe=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span> void *=
+addr;</span><br></blockquote></blockquote></blockquote></blockquote></blockq=
+uote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D=
+"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span> struct arc=
+h_rare_write_state arch_state;</span><br></blockquote></blockquote></blockqu=
+ote></blockquote></blockquote><blockquote type=3D"cite"><blockquote type=3D"=
+cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D=
+"cite"><span>};</span><br></blockquote></blockquote></blockquote></blockquot=
+e></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquo=
+te type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span><=
+/span><br></blockquote></blockquote></blockquote></blockquote></blockquote><=
+blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"=
+><blockquote type=3D"cite"><blockquote type=3D"cite"><span>static inline str=
+uct rare_write_mapping __arch_rare_write_map(void</span><br></blockquote></b=
+lockquote></blockquote></blockquote></blockquote><blockquote type=3D"cite"><=
+blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"=
+><blockquote type=3D"cite"><span>*addr, size_t len);</span><br></blockquote>=
+</blockquote></blockquote></blockquote></blockquote><blockquote type=3D"cite=
+"><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"ci=
+te"><blockquote type=3D"cite"><span>static inline void __arch_rare_write_unm=
+ap(struct rare_write_mapping mapping);</span><br></blockquote></blockquote><=
+/blockquote></blockquote></blockquote><blockquote type=3D"cite"><blockquote t=
+ype=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span></spa=
+n><br></blockquote></blockquote></blockquote></blockquote><blockquote type=3D=
+"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D=
+"cite"><span>How do you envision this working with the more complex things I=
+</span><br></blockquote></blockquote></blockquote></blockquote><blockquote t=
+ype=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote=
+ type=3D"cite"><span>included in the latter patches of the series, namely do=
+ing linked list</span><br></blockquote></blockquote></blockquote></blockquot=
+e><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"ci=
+te"><blockquote type=3D"cite"><span>updates across multiple structure instan=
+ces, etc?</span><br></blockquote></blockquote></blockquote></blockquote><blo=
+ckquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><b=
+lockquote type=3D"cite"><span></span><br></blockquote></blockquote></blockqu=
+ote></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockq=
+uote type=3D"cite"><blockquote type=3D"cite"><span>ie, poor list manipulatio=
+n pseudo-code:</span><br></blockquote></blockquote></blockquote></blockquote=
+><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cit=
+e"><blockquote type=3D"cite"><span></span><br></blockquote></blockquote></bl=
+ockquote></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><b=
+lockquote type=3D"cite"><blockquote type=3D"cite"><span>turn off read-only;<=
+/span><br></blockquote></blockquote></blockquote></blockquote><blockquote ty=
+pe=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote t=
+ype=3D"cite"><span>struct_one-&gt;next =3D struct_tree-&gt;node;</span><br><=
+/blockquote></blockquote></blockquote></blockquote><blockquote type=3D"cite"=
+><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cit=
+e"><span>struct_three-&gt;prev =3D struct_one-&gt;node;</span><br></blockquo=
+te></blockquote></blockquote></blockquote><blockquote type=3D"cite"><blockqu=
+ote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span>=
+struct_two-&gt;prev =3D struct_two-&gt;next =3D NULL;</span><br></blockquote=
+></blockquote></blockquote></blockquote><blockquote type=3D"cite"><blockquot=
+e type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><span>tu=
+rn on read-only;</span><br></blockquote></blockquote></blockquote></blockquo=
+te><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"c=
+ite"><blockquote type=3D"cite"><span></span><br></blockquote></blockquote></=
+blockquote></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite">=
+<blockquote type=3D"cite"><blockquote type=3D"cite"><span>That's three separ=
+ate memory areas involved...</span><br></blockquote></blockquote></blockquot=
+e></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><blockquo=
+te type=3D"cite"><span></span><br></blockquote></blockquote></blockquote><bl=
+ockquote type=3D"cite"><blockquote type=3D"cite"><blockquote type=3D"cite"><=
+span>Fair enough. &nbsp;That being said, how is this supposed to work on</sp=
+an><br></blockquote></blockquote></blockquote><blockquote type=3D"cite"><blo=
+ckquote type=3D"cite"><blockquote type=3D"cite"><span>architectures that don=
+'t have a global "disable write protection" bit?</span><br></blockquote></bl=
+ockquote></blockquote><blockquote type=3D"cite"><blockquote type=3D"cite"><b=
+lockquote type=3D"cite"><span>Surely these architectures exist.</span><br></=
+blockquote></blockquote></blockquote><blockquote type=3D"cite"><blockquote t=
+ype=3D"cite"><span></span><br></blockquote></blockquote><blockquote type=3D"=
+cite"><blockquote type=3D"cite"><span>I don't know. :) That's part of the re=
+ason for putting up this series:</span><br></blockquote></blockquote><blockq=
+uote type=3D"cite"><blockquote type=3D"cite"><span>looking to see what's pos=
+sible on other architectures. It's not clear</span><br></blockquote></blockq=
+uote><blockquote type=3D"cite"><blockquote type=3D"cite"><span>to me what ar=
+m64 can do, for example.</span><br></blockquote></blockquote><blockquote typ=
+e=3D"cite"><span></span><br></blockquote><blockquote type=3D"cite"><span>The=
+re is no global override of this sort on arm64. Just having map/unap,</span>=
+<br></blockquote><blockquote type=3D"cite"><span>open/close, shed/unshed, et=
+c, won't work.</span><br></blockquote><blockquote type=3D"cite"><span></span=
+><br></blockquote><blockquote type=3D"cite"><span>The options I can think of=
+ for arm64 are:</span><br></blockquote><blockquote type=3D"cite"><span></spa=
+n><br></blockquote><blockquote type=3D"cite"><span>* Have a separate RW alia=
+s of just the write_rarely data, that we</span><br></blockquote><blockquote t=
+ype=3D"cite"><span> temporarily map-in on a given CPU (using TTBR0) to perfo=
+rm the write.</span><br></blockquote><blockquote type=3D"cite"><span> The RW=
+ alias is at a different VA to the usual RO alias, so we have to</span><br><=
+/blockquote><blockquote type=3D"cite"><span> convert each pointer to its RW a=
+lias to perform the write. That's why</span><br></blockquote><blockquote typ=
+e=3D"cite"><span> we need __rare_write_ptr() to hide this, and can't have un=
+instrumented</span><br></blockquote><blockquote type=3D"cite"><span> writes.=
+</span><br></blockquote><blockquote type=3D"cite"><span></span><br></blockqu=
+ote><blockquote type=3D"cite"><span> Since this would *only* map the write_r=
+arely data, it's simple to set</span><br></blockquote><blockquote type=3D"ci=
+te"><span> up, and we don't need to modify the tables at runtime.</span><br>=
+</blockquote><blockquote type=3D"cite"><span></span><br></blockquote><blockq=
+uote type=3D"cite"><span> I also think we can implement this generically usi=
+ng switch_mm() and</span><br></blockquote><blockquote type=3D"cite"><span> {=
+get,put}_user(), or specialised variants thereof.</span><br></blockquote><bl=
+ockquote type=3D"cite"><span></span><br></blockquote><blockquote type=3D"cit=
+e"><span> Assuming we can figure out how to handle those complex cases, this=
+ is</span><br></blockquote><blockquote type=3D"cite"><span> my preferred sol=
+ution. :)</span><br></blockquote><span></span><br><span>I implemented RFC ve=
+rsion of the option #1 .</span><br><span>It would be appreciated if you coul=
+d review the code [1].</span><br><br>[1]&nbsp;<a href=3D"http://www.openwall=
+.com/lists/kernel-hardening/2017/03/02/5">http://www.openwall.com/lists/kern=
+el-hardening/2017/03/02/5</a></div><div><br><blockquote type=3D"cite"><span>=
+</span><br></blockquote><blockquote type=3D"cite"><span>* Have a copy of the=
+ entire swapper page tables, which differs only in</span><br></blockquote><b=
+lockquote type=3D"cite"><span> the write_rarely data being RW. We then switc=
+h TTBR1 over to this for</span><br></blockquote><blockquote type=3D"cite"><s=
+pan> the duration of the rare_write_map() .. write_write_unmap() sequence.</=
+span><br></blockquote><blockquote type=3D"cite"><span></span><br></blockquot=
+e><blockquote type=3D"cite"><span> While this sounds conceptually simple, it=
+'s far more complex in</span><br></blockquote><blockquote type=3D"cite"><spa=
+n> practice. Keeping the not-quite-clone of the swapper in-sync is going</sp=
+an><br></blockquote><blockquote type=3D"cite"><span> to be very painful and r=
+ipe for error.</span><br></blockquote><blockquote type=3D"cite"><span></span=
+><br></blockquote><blockquote type=3D"cite"><span> Additionally, the TTBR1 s=
+witch will be very expensive, far more so</span><br></blockquote><blockquote=
+ type=3D"cite"><span> than the TTBR0 switch due to TLB maintenance and other=
+ work (including</span><br></blockquote><blockquote type=3D"cite"><span> swi=
+tching TTBR0 twice per TTBR1 switch, itself requiring synchronised</span><br=
+></blockquote><blockquote type=3D"cite"><span> TLB maintenance and other wor=
+k).</span><br></blockquote><blockquote type=3D"cite"><span></span><br></bloc=
+kquote><blockquote type=3D"cite"><span> I am not fond of this approach.</spa=
+n><br></blockquote><blockquote type=3D"cite"><span></span><br></blockquote><=
+blockquote type=3D"cite"><span>* Give up on this being per-cpu. Either chang=
+e the permissions in place,</span><br></blockquote><blockquote type=3D"cite"=
+><span> or fixmap an RW alias as required. In either case, all CPUs will hav=
+e</span><br></blockquote><blockquote type=3D"cite"><span> RW access.</span><=
+br></blockquote><blockquote type=3D"cite"><span></span><br></blockquote><blo=
+ckquote type=3D"cite"><span>Thanks,</span><br></blockquote><blockquote type=3D=
+"cite"><span>Mark.</span><br></blockquote></div></body></html>=
 
->
-> For this series, I will stick to the same behavior as seccomp filter:
-> only append rules to the current process (and its future children).
->
->
->>>> 2. The API that adds a layer should be different from the API that
->>>> modifies a layer.
->>>
->>> Right, but it doesn't apply now because we can only add rules.
->>
->> That's not what the code appears to do, though.  Sometimes it makes a
->> new layer without modifying tasks that share the layer and sometimes
->> it modifies the layer.
->>
->> Both operations are probably okay, but they're not the same operation
->> and they shouldn't pretend to be.
->
-> It should be OK with my previous proposal. The other details could be
-> discussed in a separate future patch series.
->
-
-NAK, or at least NAK pending better docs and justification.  The
-operations of "add a layer and put a rule in it" and "add a rule to an
-existing layer" are logically different and should not be the same
-SECCOMP operation.  "Do what I mean" is a nice paradigm for a language
-like Perl, but for security (and for kernel interfaces in general),
-"do what I say and error out if I said nonsense" is much safer.
+--Apple-Mail-FEFC33F2-B80A-4F16-A97E-8686D76B7034--
