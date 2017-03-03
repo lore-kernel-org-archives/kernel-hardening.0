@@ -1,253 +1,261 @@
-References: <20170222012632.4196-1-mic@digikod.net>
- <20170222012632.4196-7-mic@digikod.net>
- <CALCETrWExjKHccdj-cYxPtis1NtXTPEYfReNLh065J1hHKvFiA@mail.gmail.com>
- <e6c917cb-d4a6-4147-9d6e-9c9fc906621d@digikod.net>
- <CALCETrWpXnFs3=tWjJSi6-E=XgbZVnq1p-Ty3BtPvXZawriHMw@mail.gmail.com>
- <db8cbaea-d4e5-3123-0b14-857737b753bc@digikod.net>
- <CALCETrXpaz3Sw8Q28PKi2LGB956bZ0mfhoNg59Pe5EY+kTmqZg@mail.gmail.com>
- <0efca89a-7e8b-a6f8-987b-95df61223a22@digikod.net>
- <CALCETrW8Pmap7CgdtE+XL39fPR1tOM4d8BBA=S4jot-ocAcw3g@mail.gmail.com>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <c10a503d-5e35-7785-2f3d-25ed8dd63fab@digikod.net>
-Date: Fri, 3 Mar 2017 02:05:00 +0100
-MIME-Version: 1.0
-In-Reply-To: <CALCETrW8Pmap7CgdtE+XL39fPR1tOM4d8BBA=S4jot-ocAcw3g@mail.gmail.com>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="h1o6JetnJJHplkmfCR84jD73o1MbWETmq"
-Subject: [kernel-hardening] Re: [PATCH v5 06/10] seccomp,landlock: Handle Landlock events per
- process hierarchy
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, LSM List <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>
+From: David Windsor <dwindsor@gmail.com>
+Date: Thu,  2 Mar 2017 20:55:59 -0500
+Message-Id: <1488506159-3506-1-git-send-email-dwindsor@gmail.com>
+Subject: [kernel-hardening] [PATCH] refcount: add refcount_t API kernel-doc comments
+To: peterz@infradead.org, mingo@kernel.org, elena.reshetova@intel.com, dwindsor@gmail.com
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---h1o6JetnJJHplkmfCR84jD73o1MbWETmq
-Content-Type: multipart/mixed; boundary="VeqrusUxPal7oWw0XahOVKqKvuigDfvKr";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
- Alexei Starovoitov <ast@kernel.org>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>,
- "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>,
- Linux API <linux-api@vger.kernel.org>,
- LSM List <linux-security-module@vger.kernel.org>,
- Network Development <netdev@vger.kernel.org>,
- Andrew Morton <akpm@linux-foundation.org>
-Message-ID: <c10a503d-5e35-7785-2f3d-25ed8dd63fab@digikod.net>
-Subject: Re: [PATCH v5 06/10] seccomp,landlock: Handle Landlock events per
- process hierarchy
-References: <20170222012632.4196-1-mic@digikod.net>
- <20170222012632.4196-7-mic@digikod.net>
- <CALCETrWExjKHccdj-cYxPtis1NtXTPEYfReNLh065J1hHKvFiA@mail.gmail.com>
- <e6c917cb-d4a6-4147-9d6e-9c9fc906621d@digikod.net>
- <CALCETrWpXnFs3=tWjJSi6-E=XgbZVnq1p-Ty3BtPvXZawriHMw@mail.gmail.com>
- <db8cbaea-d4e5-3123-0b14-857737b753bc@digikod.net>
- <CALCETrXpaz3Sw8Q28PKi2LGB956bZ0mfhoNg59Pe5EY+kTmqZg@mail.gmail.com>
- <0efca89a-7e8b-a6f8-987b-95df61223a22@digikod.net>
- <CALCETrW8Pmap7CgdtE+XL39fPR1tOM4d8BBA=S4jot-ocAcw3g@mail.gmail.com>
-In-Reply-To: <CALCETrW8Pmap7CgdtE+XL39fPR1tOM4d8BBA=S4jot-ocAcw3g@mail.gmail.com>
+This adds kernel-doc comments for the new refcount_t API.
 
---VeqrusUxPal7oWw0XahOVKqKvuigDfvKr
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
+v2: incorporate fixes from Peter Zijlstra and Ingo Molnar
 
+Signed-off-by: David Windsor <dwindsor@gmail.com>
+---
+ lib/refcount.c | 122 +++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 110 insertions(+), 12 deletions(-)
 
-
-On 03/03/2017 01:55, Andy Lutomirski wrote:
-> On Thu, Mar 2, 2017 at 4:48 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod.n=
-et> wrote:
->>
->> On 02/03/2017 17:36, Andy Lutomirski wrote:
->>> On Wed, Mar 1, 2017 at 3:28 PM, Micka=C3=ABl Sala=C3=BCn <mic@digikod=
-=2Enet> wrote:
->>>>
->>>>
->>>> On 01/03/2017 23:20, Andy Lutomirski wrote:
->>>>> On Wed, Mar 1, 2017 at 2:14 PM, Micka=C3=ABl Sala=C3=BCn <mic@digik=
-od.net> wrote:
->>>>>>
->>>>>> On 28/02/2017 21:01, Andy Lutomirski wrote:
->>>>>>> On Tue, Feb 21, 2017 at 5:26 PM, Micka=C3=ABl Sala=C3=BCn <mic@di=
-gikod.net> wrote:
->>>>>> This design makes it possible for a process to add more constraint=
-s to
->>>>>> its children on the fly. I think it is a good feature to have and =
-a
->>>>>> safer default inheritance mechanism, but it could be guarded by an=
-
->>>>>> option flag if we want both mechanism to be available. The same de=
-sign
->>>>>> could be used by seccomp filter too.
->>>>>>
->>>>>
->>>>> Then let's do it right.
->>>>>
->>>>> Currently each task has an array of seccomp filter layers.  When a
->>>>> task forks, the child inherits the layers.  All the layers are
->>>>> presently immutable.  With Landlock, a layer can logically be a
->>>>> syscall fitler layer or a Landlock layer.  This fits in to the
->>>>> existing model just fine.
->>>>>
->>>>> If we want to have an interface to allow modification of an existin=
-g
->>>>> layer, let's make it so that, when a layer is added, you have to
->>>>> specify a flag to make the layer modifiable (by current, presumably=
-,
->>>>> although I can imagine other policies down the road).  Then have a
->>>>> separate API that modifies a layer.
->>>>>
->>>>> IOW, I think your patch is bad for three reasons, all fixable:
->>>>>
->>>>> 1. The default is wrong.  A layer should be immutable to avoid an e=
-asy
->>>>> attack in which you try to sandbox *yourself* and then you just mod=
-ify
->>>>> the layer to weaken it.
->>>>
->>>> This is not possible, there is only an operation for now:
->>>> SECCOMP_ADD_LANDLOCK_RULE. You can only add more rules to the list (=
-as
->>>> for seccomp filter). There is no way to weaken a sandbox. The questi=
-on
->>>> is: how do we want to handle the rules *tree* (from the kernel point=
- of
->>>> view)?
->>>>
->>>
->>> Fair enough.  But I still think that immutability (like regular
->>> seccomp) should be the default.  For security, simplicity is
->>> important.  I guess there could be two ways to relax immutability:
->>> allowing making the layer stricter and allowing any change at all.
->>>
->>> As a default, though, programs should be able to expect that:
->>>
->>> seccomp(SECCOMP_ADD_WHATEVER, ...);
->>> fork();
->>>
->>> [parent gets compromised]
->>> [in parent]seccomp(anything whatsoever);
->>>
->>> will not affect the child,  If the parent wants to relax that, that's=
-
->>> fine, but I think it should be explicit.
->>
->> Good point. However the term "immutability" doesn't fit right because
->> the process is still allowed to add more rules to itself (as for
->> seccomp). The difference lays in the way a rule may be "appended" (by
->> the current process) or "inserted" (by a parent process).
->>
->> I think three or four kind of operations (through the seccomp syscall)=
-
->> make sense:
->> * append a rule (for the current process and its future children)
->=20
-> Sure, but this operation should *never* affect existing children,
-> existing seccomp layers, existing nodes, etc.  It should affect
-> current and future children only.  Or it could simply not exist for
-> Landlock and instead you'd have to add a layer (see below) and then
-> program that layer.
->=20
->> * add a node (insert point), from which the inserted rules will be tie=
-d
->> * insert a rule in the node, which will be inherited by futures childr=
-en
->=20
-> I would advocate calling this a "seccomp layer" and making creation
-> and manipulation of them generic.
->=20
->> * (maybe a "lock" command to make a layer immutable for the current
->> process and its children)
->=20
-> Hmm, maybe.
->=20
->>
->> Doing so, a process is only allowed to insert a rule if a node was
->> previously added. To forbid itself to insert new rules to one of its
->> children, a process just need to not add a node before forking. Like
->> this, there is no need for special rule flags nor default behavior,
->> everything is explicit.
->=20
-> This is still slightly too complicated.  If you really want an
-> operation that adds a layer (please don't call it a node in the ABI)
-> and adds a rule to that layer in a single operation, it should be a
-> separate operation.  Please make everything explicit.
->=20
-> (I don't like exposing the word "node" to userspace because it means
-> nothing.  Having more than one layer of filter makes sense to me,
-> which is why I like "layer".  I'm sure that other good choices exist.)
-
-I keep that for a future discussion, I'm now convinced the simple
-inheritance (seccomp-like) doesn't block future extension.
-
->=20
->>
->> For this series, I will stick to the same behavior as seccomp filter:
->> only append rules to the current process (and its future children).
->>
->>
->>>>> 2. The API that adds a layer should be different from the API that
->>>>> modifies a layer.
->>>>
->>>> Right, but it doesn't apply now because we can only add rules.
->>>
->>> That's not what the code appears to do, though.  Sometimes it makes a=
-
->>> new layer without modifying tasks that share the layer and sometimes
->>> it modifies the layer.
->>>
->>> Both operations are probably okay, but they're not the same operation=
-
->>> and they shouldn't pretend to be.
->>
->> It should be OK with my previous proposal. The other details could be
->> discussed in a separate future patch series.
->>
->=20
-> NAK, or at least NAK pending better docs and justification.  The
-> operations of "add a layer and put a rule in it" and "add a rule to an
-> existing layer" are logically different and should not be the same
-> SECCOMP operation.
-
-We are agree.
-
-> "Do what I mean" is a nice paradigm for a language
-> like Perl, but for security (and for kernel interfaces in general),
-> "do what I say and error out if I said nonsense" is much safer.
->=20
-
-Totally agree.
-
-
---VeqrusUxPal7oWw0XahOVKqKvuigDfvKr--
-
---h1o6JetnJJHplkmfCR84jD73o1MbWETmq
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAli4wTwACgkQIt7+33O9
-apV7xAf/VO80owTk0i08SKR2cfIEagE79se2A0rDo/hZ7JDa1IPfR0Hv962v6qVw
-MqaU8TXH/ErGe0frLjiHyx7lIkncheToq9cLj18tbtKZHpvYIZOE+nChEkgs4PDb
-4FAMBCGpZoho43V/CTEBDxd1Uj7Ai/Oyx7+DdH+qsPipvLlH3EsoeZlDIl71i8uT
-X89YPRGNkNSTDkyd/sxmPQK+6cIMOOpNPChv0QB3QGF/gwEIW0fZp4PU1ksL4fK3
-hxQpGfEKPFG2GbzrtqoH13kUcEI3YFGWTrEH6wKeMi1ue4P4vUAz1yxO9L7eCJy1
-A7n40YpB08ha99ObaXNZnVYpNcVlig==
-=d6AG
------END PGP SIGNATURE-----
-
---h1o6JetnJJHplkmfCR84jD73o1MbWETmq--
+diff --git a/lib/refcount.c b/lib/refcount.c
+index 1d33366..d6e317a 100644
+--- a/lib/refcount.c
++++ b/lib/refcount.c
+@@ -37,6 +37,24 @@
+ #include <linux/refcount.h>
+ #include <linux/bug.h>
+ 
++/**
++ * refcount_add_not_zero - add a value to a refcount unless it is 0
++ * @i: the value to add to the refcount
++ * @r: the refcount
++ *
++ * Will saturate at UINT_MAX and WARN.
++ *
++ * Provides no memory ordering, it is assumed the caller has guaranteed the
++ * object memory to be stable (RCU, etc.). It does provide a control dependency
++ * and thereby orders future stores. See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_inc(), or one of its variants, should instead be used to
++ * increment a reference count.
++ *
++ * Return: false if the passed refcount is 0, true otherwise
++ */
+ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+ {
+ 	unsigned int old, new, val = atomic_read(&r->refs);
+@@ -64,18 +82,39 @@ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_add_not_zero);
+ 
++/**
++ * refcount_add - add a value to a refcount
++ * @i: the value to add to the refcount
++ * @r: the refcount
++ *
++ * Similar to atomic_add(), but will saturate at UINT_MAX and WARN.
++ *
++ * Provides no memory ordering, it is assumed the caller has guaranteed the
++ * object memory to be stable (RCU, etc.). It does provide a control dependency
++ * and thereby orders future stores. See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_inc(), or one of its variants, should instead be used to
++ * increment a reference count.
++ */
+ void refcount_add(unsigned int i, refcount_t *r)
+ {
+ 	WARN(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
+ }
+ EXPORT_SYMBOL_GPL(refcount_add);
+ 
+-/*
+- * Similar to atomic_inc_not_zero(), will saturate at UINT_MAX and WARN.
++/**
++ * refcount_inc_not_zero - increment a refcount unless it is 0
++ * @r: the refcount to increment
++ *
++ * Similar to atomic_inc_not_zero(), but will saturate at UINT_MAX and WARN.
+  *
+  * Provides no memory ordering, it is assumed the caller has guaranteed the
+  * object memory to be stable (RCU, etc.). It does provide a control dependency
+  * and thereby orders future stores. See the comment on top.
++ *
++ * Return: true if the increment was successful, false otherwise
+  */
+ bool refcount_inc_not_zero(refcount_t *r)
+ {
+@@ -103,11 +142,17 @@ bool refcount_inc_not_zero(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_inc_not_zero);
+ 
+-/*
+- * Similar to atomic_inc(), will saturate at UINT_MAX and WARN.
++/**
++ * refcount_inc - increment a refcount
++ * @r: the refcount to increment
++ *
++ * Similar to atomic_inc(), but will saturate at UINT_MAX and WARN.
+  *
+  * Provides no memory ordering, it is assumed the caller already has a
+- * reference on the object, will WARN when this is not so.
++ * reference on the object.
++ *
++ * Will WARN if the refcount is 0, as this represents a possible use-after-free
++ * condition.
+  */
+ void refcount_inc(refcount_t *r)
+ {
+@@ -115,6 +160,26 @@ void refcount_inc(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_inc);
+ 
++/**
++ * refcount_sub_and_test - subtract from a refcount and test if it is 0
++ * @i: amount to subtract from the refcount
++ * @r: the refcount
++ *
++ * Similar to atomic_dec_and_test(), but it will WARN, return false and
++ * ultimately leak on underflow and will fail to decrement when saturated
++ * at UINT_MAX.
++ *
++ * Provides release memory ordering, such that prior loads and stores are done
++ * before, and provides a control dependency such that free() must come after.
++ * See the comment on top.
++ *
++ * Use of this function is not recommended for the normal reference counting
++ * use case in which references are taken and released one at a time.  In these
++ * cases, refcount_dec(), or one of its variants, should instead be used to
++ * decrement a reference count.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
++ */
+ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+ {
+ 	unsigned int old, new, val = atomic_read(&r->refs);
+@@ -140,13 +205,18 @@ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_sub_and_test);
+ 
+-/*
++/**
++ * refcount_dec_and_test - decrement a refcount and test if it is 0
++ * @r: the refcount
++ *
+  * Similar to atomic_dec_and_test(), it will WARN on underflow and fail to
+  * decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
+  */
+ bool refcount_dec_and_test(refcount_t *r)
+ {
+@@ -154,21 +224,26 @@ bool refcount_dec_and_test(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_and_test);
+ 
+-/*
++/**
++ * refcount_dec - decrement a refcount
++ * @r: the refcount
++ *
+  * Similar to atomic_dec(), it will WARN on underflow and fail to decrement
+  * when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before.
+  */
+-
+ void refcount_dec(refcount_t *r)
+ {
+ 	WARN(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec);
+ 
+-/*
++/**
++ * refcount_dec_if_one - decrement a refcount if it is 1
++ * @r: the refcount
++ *
+  * No atomic_t counterpart, it attempts a 1 -> 0 transition and returns the
+  * success thereof.
+  *
+@@ -178,6 +253,8 @@ EXPORT_SYMBOL_GPL(refcount_dec);
+  * It can be used like a try-delete operator; this explicit case is provided
+  * and not cmpxchg in generic, because that would allow implementing unsafe
+  * operations.
++ *
++ * Return: true if the resulting refcount is 0, false otherwise
+  */
+ bool refcount_dec_if_one(refcount_t *r)
+ {
+@@ -185,11 +262,16 @@ bool refcount_dec_if_one(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_if_one);
+ 
+-/*
++/**
++ * refcount_dec_not_one - decrement a refcount if it is not 1
++ * @r: the refcount
++ *
+  * No atomic_t counterpart, it decrements unless the value is 1, in which case
+  * it will return false.
+  *
+  * Was often done like: atomic_add_unless(&var, -1, 1)
++ *
++ * Return: true if the decrement operation was successful, false otherwise
+  */
+ bool refcount_dec_not_one(refcount_t *r)
+ {
+@@ -219,13 +301,21 @@ bool refcount_dec_not_one(refcount_t *r)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_not_one);
+ 
+-/*
++/**
++ * refcount_dec_and_mutex_lock - return holding mutex if able to decrement
++ *                               refcount to 0
++ * @r: the refcount
++ * @lock: the mutex to be locked
++ *
+  * Similar to atomic_dec_and_mutex_lock(), it will WARN on underflow and fail
+  * to decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true and hold mutex if able to decrement refcount to 0, false
++ *         otherwise
+  */
+ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+ {
+@@ -242,13 +332,21 @@ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+ }
+ EXPORT_SYMBOL_GPL(refcount_dec_and_mutex_lock);
+ 
+-/*
++/**
++ * refcount_dec_and_lock - return holding spinlock if able to decrement
++ *                         refcount to 0
++ * @r: the refcount
++ * @lock: the spinlock to be locked
++ *
+  * Similar to atomic_dec_and_lock(), it will WARN on underflow and fail to
+  * decrement when saturated at UINT_MAX.
+  *
+  * Provides release memory ordering, such that prior loads and stores are done
+  * before, and provides a control dependency such that free() must come after.
+  * See the comment on top.
++ *
++ * Return: true and hold spinlock if able to decrement refcount to 0, false
++ *         otherwise
+  */
+ bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
+ {
+-- 
+2.7.4
