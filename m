@@ -1,80 +1,144 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sat,  4 Mar 2017 14:30:44 +0000
-Message-Id: <1488637848-13588-3-git-send-email-ard.biesheuvel@linaro.org>
+Date: Sat,  4 Mar 2017 14:30:45 +0000
+Message-Id: <1488637848-13588-4-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1488637848-13588-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1488637848-13588-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v4 2/6] arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+Subject: [kernel-hardening] [PATCH v4 3/6] arm64: alternatives: apply boot time fixups via the linear mapping
 To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, catalin.marinas@arm.com, will.deacon@arm.com, labbott@fedoraproject.org
 Cc: kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, keescook@chromium.org, andre.przywara@arm.com, james.morse@arm.com, suzuki.poulose@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-In preparation of refactoring the kernel mapping logic so that text regions
-are never mapped writable, which would require adding explicit TLB
-maintenance to new call sites of create_mapping_late() (which is currently
-invoked twice from the same function), move the TLB maintenance from the
-call site into create_mapping_late() itself, and change it from a full
-TLB flush into a flush by VA, which is more appropriate here.
+One important rule of thumb when desiging a secure software system is
+that memory should never be writable and executable at the same time.
+We mostly adhere to this rule in the kernel, except at boot time, when
+regions may be mapped RWX until after we are done applying alternatives
+or making other one-off changes.
 
-Also, given that create_mapping_late() has evolved into a routine that only
-updates protection bits on existing mappings, rename it to
-update_mapping_prot()
+For the alternative patching, we can improve the situation by applying
+the fixups via the linear mapping, which is never mapped with executable
+permissions. So map the linear alias of .text with RW- permissions
+initially, and remove the write permissions as soon as alternative
+patching has completed.
 
+Reviewed-by: Laura Abbott <labbott@redhat.com>
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 Tested-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/mm/mmu.c | 16 ++++++++--------
- 1 file changed, 8 insertions(+), 8 deletions(-)
+ arch/arm64/include/asm/mmu.h    |  1 +
+ arch/arm64/kernel/alternative.c | 11 +++++-----
+ arch/arm64/kernel/smp.c         |  1 +
+ arch/arm64/mm/mmu.c             | 22 +++++++++++++++-----
+ 4 files changed, 25 insertions(+), 10 deletions(-)
 
+diff --git a/arch/arm64/include/asm/mmu.h b/arch/arm64/include/asm/mmu.h
+index 47619411f0ff..5468c834b072 100644
+--- a/arch/arm64/include/asm/mmu.h
++++ b/arch/arm64/include/asm/mmu.h
+@@ -37,5 +37,6 @@ extern void create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
+ 			       unsigned long virt, phys_addr_t size,
+ 			       pgprot_t prot, bool page_mappings_only);
+ extern void *fixmap_remap_fdt(phys_addr_t dt_phys);
++extern void mark_linear_text_alias_ro(void);
+ 
+ #endif
+diff --git a/arch/arm64/kernel/alternative.c b/arch/arm64/kernel/alternative.c
+index 06d650f61da7..8840c109c5d6 100644
+--- a/arch/arm64/kernel/alternative.c
++++ b/arch/arm64/kernel/alternative.c
+@@ -105,11 +105,11 @@ static u32 get_alt_insn(struct alt_instr *alt, u32 *insnptr, u32 *altinsnptr)
+ 	return insn;
+ }
+ 
+-static void __apply_alternatives(void *alt_region)
++static void __apply_alternatives(void *alt_region, bool use_linear_alias)
+ {
+ 	struct alt_instr *alt;
+ 	struct alt_region *region = alt_region;
+-	u32 *origptr, *replptr;
++	u32 *origptr, *replptr, *updptr;
+ 
+ 	for (alt = region->begin; alt < region->end; alt++) {
+ 		u32 insn;
+@@ -124,11 +124,12 @@ static void __apply_alternatives(void *alt_region)
+ 
+ 		origptr = ALT_ORIG_PTR(alt);
+ 		replptr = ALT_REPL_PTR(alt);
++		updptr = use_linear_alias ? (u32 *)lm_alias(origptr) : origptr;
+ 		nr_inst = alt->alt_len / sizeof(insn);
+ 
+ 		for (i = 0; i < nr_inst; i++) {
+ 			insn = get_alt_insn(alt, origptr + i, replptr + i);
+-			*(origptr + i) = cpu_to_le32(insn);
++			updptr[i] = cpu_to_le32(insn);
+ 		}
+ 
+ 		flush_icache_range((uintptr_t)origptr,
+@@ -155,7 +156,7 @@ static int __apply_alternatives_multi_stop(void *unused)
+ 		isb();
+ 	} else {
+ 		BUG_ON(patched);
+-		__apply_alternatives(&region);
++		__apply_alternatives(&region, true);
+ 		/* Barriers provided by the cache flushing */
+ 		WRITE_ONCE(patched, 1);
+ 	}
+@@ -176,5 +177,5 @@ void apply_alternatives(void *start, size_t length)
+ 		.end	= start + length,
+ 	};
+ 
+-	__apply_alternatives(&region);
++	__apply_alternatives(&region, false);
+ }
+diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
+index 827d52d78b67..691831c0ba74 100644
+--- a/arch/arm64/kernel/smp.c
++++ b/arch/arm64/kernel/smp.c
+@@ -432,6 +432,7 @@ void __init smp_cpus_done(unsigned int max_cpus)
+ 	setup_cpu_features();
+ 	hyp_mode_check();
+ 	apply_alternatives_all();
++	mark_linear_text_alias_ro();
+ }
+ 
+ void __init smp_prepare_boot_cpu(void)
 diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index d28dbcf596b6..6cafd8723d1a 100644
+index 6cafd8723d1a..df377fbe464e 100644
 --- a/arch/arm64/mm/mmu.c
 +++ b/arch/arm64/mm/mmu.c
-@@ -319,17 +319,20 @@ void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
- 			     pgd_pgtable_alloc, page_mappings_only);
- }
+@@ -372,16 +372,28 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
+ 				     debug_pagealloc_enabled());
  
--static void create_mapping_late(phys_addr_t phys, unsigned long virt,
--				  phys_addr_t size, pgprot_t prot)
-+static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
-+				phys_addr_t size, pgprot_t prot)
- {
- 	if (virt < VMALLOC_START) {
--		pr_warn("BUG: not creating mapping for %pa at 0x%016lx - outside kernel range\n",
-+		pr_warn("BUG: not updating mapping for %pa at 0x%016lx - outside kernel range\n",
- 			&phys, virt);
- 		return;
- 	}
- 
- 	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot,
- 			     NULL, debug_pagealloc_enabled());
-+
-+	/* flush the TLBs after updating live kernel mappings */
-+	flush_tlb_kernel_range(virt, virt + size);
- }
- 
- static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end)
-@@ -402,19 +405,16 @@ void mark_rodata_ro(void)
- 	unsigned long section_size;
- 
- 	section_size = (unsigned long)_etext - (unsigned long)_text;
--	create_mapping_late(__pa_symbol(_text), (unsigned long)_text,
-+	update_mapping_prot(__pa_symbol(_text), (unsigned long)_text,
- 			    section_size, PAGE_KERNEL_ROX);
  	/*
- 	 * mark .rodata as read only. Use __init_begin rather than __end_rodata
- 	 * to cover NOTES and EXCEPTION_TABLE.
+-	 * Map the linear alias of the [_text, __init_begin) interval as
+-	 * read-only/non-executable. This makes the contents of the
+-	 * region accessible to subsystems such as hibernate, but
+-	 * protects it from inadvertent modification or execution.
++	 * Map the linear alias of the [_text, __init_begin) interval
++	 * as non-executable now, and remove the write permission in
++	 * mark_linear_text_alias_ro() below (which will be called after
++	 * alternative patching has completed). This makes the contents
++	 * of the region accessible to subsystems such as hibernate,
++	 * but protects it from inadvertent modification or execution.
  	 */
- 	section_size = (unsigned long)__init_begin - (unsigned long)__start_rodata;
--	create_mapping_late(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
-+	update_mapping_prot(__pa_symbol(__start_rodata), (unsigned long)__start_rodata,
- 			    section_size, PAGE_KERNEL_RO);
- 
--	/* flush the TLBs after updating live kernel mappings */
--	flush_tlb_all();
--
- 	debug_checkwx();
+ 	__create_pgd_mapping(pgd, kernel_start, __phys_to_virt(kernel_start),
+-			     kernel_end - kernel_start, PAGE_KERNEL_RO,
++			     kernel_end - kernel_start, PAGE_KERNEL,
+ 			     early_pgtable_alloc, debug_pagealloc_enabled());
  }
  
++void __init mark_linear_text_alias_ro(void)
++{
++	/*
++	 * Remove the write permissions from the linear alias of .text/.rodata
++	 */
++	update_mapping_prot(__pa_symbol(_text), (unsigned long)lm_alias(_text),
++			    (unsigned long)__init_begin - (unsigned long)_text,
++			    PAGE_KERNEL_RO);
++}
++
+ static void __init map_mem(pgd_t *pgd)
+ {
+ 	struct memblock_region *reg;
 -- 
 2.7.4
