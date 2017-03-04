@@ -1,66 +1,65 @@
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (1.0)
-From: Hoeun Ryu <hoeun.ryu@gmail.com>
-In-Reply-To: <CALCETrVNRbswNWeoVLdntdNXmb4ur3a-xiVNqALajHNG-bLJgw@mail.gmail.com>
-Date: Sat, 4 Mar 2017 14:56:44 +0900
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <E951BDD3-A4C9-436B-B886-2E6BF0A16246@gmail.com>
-References: <1488466831-13918-1-git-send-email-hoeun.ryu@gmail.com> <CALCETrVNRbswNWeoVLdntdNXmb4ur3a-xiVNqALajHNG-bLJgw@mail.gmail.com>
-Subject: [kernel-hardening] Re: [RFC] arm64: support HAVE_ARCH_RARE_WRITE
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, PaX Team <pageexec@freemail.hu>, X86 ML <x86@kernel.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Sat,  4 Mar 2017 14:30:42 +0000
+Message-Id: <1488637848-13588-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v4 0/6] arm64: mmu: avoid W+X mappings and re-enable PTE_CONT for kernel
+To: linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com, mark.rutland@arm.com, catalin.marinas@arm.com, will.deacon@arm.com, labbott@fedoraproject.org
+Cc: kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, keescook@chromium.org, andre.przywara@arm.com, james.morse@arm.com, suzuki.poulose@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+Having memory that is writable and executable at the same time is a
+security hazard, and so we tend to avoid those when we can. However,
+at boot time, we keep .text mapped writable during the entire init
+phase, and the init region itself is mapped rwx as well.
 
-> On Mar 4, 2017, at 5:50 AM, Andy Lutomirski <luto@amacapital.net> wrote:
->=20
->> On Thu, Mar 2, 2017 at 7:00 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->> +unsigned long __rare_write_rw_alias_start =3D TASK_SIZE_64 / 4;
->> +
->> +__always_inline unsigned long __arch_rare_write_map(void)
->> +{
->> +       struct mm_struct *mm =3D &rare_write_mm;
->> +
->> +       preempt_disable();
->> +
->> +       __switch_mm(mm);
->=20
-> ...
->=20
->> +__always_inline unsigned long __arch_rare_write_unmap(void)
->> +{
->> +       struct mm_struct *mm =3D current->active_mm;
->> +
->> +       __switch_mm(mm);
->> +
->=20
-> This reminds me: this code imposes constraints on the context in which
-> it's called.  I'd advise making it very explicit, asserting
-> correctness, and putting the onus on the caller to set things up.  For
-> example:
->=20
-> DEBUG_LOCKS_WARN_ON(preemptible() || in_interrupt() || in_nmi());
->=20
+Let's improve the situation by:
+- making the alternatives patching use the linear mapping
+- splitting the init region into separate text and data regions
 
-OK. I will add some onus in the next version.
+This removes all RWX mappings except the really early one created
+in head.S (which we could perhaps fix in the future as well)
 
-> in both the map and unmap functions, along with getting rid of the
-> preempt_disable().  I don't think we want the preempt-disabledness to
-> depend on the arch.  The generic non-arch rare_write helpers can do
-> the preempt_disable().
->=20
+Changes since v3:
+- use linear alias only when patching the core kernel, and not for modules
+- add patch to reintroduce the use of PTE_CONT for kernel mappings, except
+  for regions that are remapped read-only later on (i.e, .rodata and the
+  linear alias of .text+.rodata)
 
-I think I can fix this in the next version when Kees send the next version o=
-f RFC.
+Changes since v2:
+  - ensure that text mappings remain writable under rodata=off
+  - rename create_mapping_late() to update_mapping_prot()
+  - clarify commit log of #2
+  - add acks
 
-> This code also won't work if the mm is wacky when called.  On x86, we coul=
-d do:
->=20
-> DEBUG_LOCKS_WARN_ON(read_cr3() !=3D current->active_mm->pgd);
->=20
-> or similar (since that surely doesn't compile as is).
->=20
-> --Andy
+Changes since v1:
+- add patch to move TLB maintenance into create_mapping_late() and remove it
+  from its callers (#2)
+- use the true address not the linear alias when patching branch instructions,
+  spotted by Suzuki (#3)
+- mark mark_linear_text_alias_ro() __init (#3)
+- move the .rela section back into __initdata: as it turns out, leaving a hole
+  between the segments results in a peculiar situation where other unrelated
+  allocations end up right in the middle of the kernel Image, which is
+  probably a bad idea (#5). See below for an example.
+- add acks
 
-Thank you for the review.
+
+Ard Biesheuvel (6):
+  arm: kvm: move kvm_vgic_global_state out of .text section
+  arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+  arm64: alternatives: apply boot time fixups via the linear mapping
+  arm64: mmu: map .text as read-only from the outset
+  arm64: mmu: apply strict permissions to .init.text and .init.data
+  arm64: mm: set the contiguous bit for kernel mappings where
+    appropriate
+
+ arch/arm64/include/asm/mmu.h      |   1 +
+ arch/arm64/include/asm/sections.h |   3 +-
+ arch/arm64/kernel/alternative.c   |  11 +-
+ arch/arm64/kernel/smp.c           |   1 +
+ arch/arm64/kernel/vmlinux.lds.S   |  25 ++--
+ arch/arm64/mm/mmu.c               | 139 ++++++++++++++------
+ virt/kvm/arm/vgic/vgic.c          |   4 +-
+ 7 files changed, 129 insertions(+), 55 deletions(-)
+
+-- 
+2.7.4
