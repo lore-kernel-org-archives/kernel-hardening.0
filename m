@@ -1,38 +1,43 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Mon,  6 Mar 2017 11:09:41 -0800
-Message-Id: <1488827386-87193-2-git-send-email-keescook@chromium.org>
+Date: Mon,  6 Mar 2017 11:09:42 -0800
+Message-Id: <1488827386-87193-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1488827386-87193-1-git-send-email-keescook@chromium.org>
 References: <1488827386-87193-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 1/6] bug: Clarify help text for BUG_ON_DATA_CORRUPTION
+Subject: [kernel-hardening] [PATCH 2/6] bug: Improve unlikely() in data corruption check
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Viresh Kumar <viresh.kumar@linaro.org>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Dmitry Vyukov <dvyukov@google.com>, Olof Johansson <olof@lixom.net>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This expands on the Kconfig help text for CONFIG_BUG_ON_DATA_CORRUPTION.
+This improves the compiler branch-hinting used in CHECK_DATA_CORRUPTION(),
+similar to how it is done in WARN_ON() and friends.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- lib/Kconfig.debug | 8 +++++---
- 1 file changed, 5 insertions(+), 3 deletions(-)
+ include/linux/bug.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index 97d62c2da6c2..4a73d46711fb 100644
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -1995,9 +1995,11 @@ config BUG_ON_DATA_CORRUPTION
- 	bool "Trigger a BUG when data corruption is detected"
- 	select DEBUG_LIST
- 	help
--	  Select this option if the kernel should BUG when it encounters
--	  data corruption in kernel memory structures when they get checked
--	  for validity.
-+	  This option enables several inexpensive data corruption checks.
-+	  Most of these checks normally just WARN and try to further avoid
-+	  the corruption. Selecting this option upgrades these to BUGs, so
-+	  that a system owner can furhter configure the system for immediate
-+	  reboots or crash dumps.
+diff --git a/include/linux/bug.h b/include/linux/bug.h
+index 5828489309bb..5ef65dc2ed8b 100644
+--- a/include/linux/bug.h
++++ b/include/linux/bug.h
+@@ -129,15 +129,15 @@ static inline enum bug_trap_type report_bug(unsigned long bug_addr,
+ static inline __must_check bool check_data_corruption(bool v) { return v; }
+ #define CHECK_DATA_CORRUPTION(condition, fmt, ...)			 \
+ 	check_data_corruption(({					 \
+-		bool corruption = unlikely(condition);			 \
+-		if (corruption) {					 \
++		bool corruption = !!(condition);			 \
++		if (unlikely(corruption)) {				 \
+ 			if (IS_ENABLED(CONFIG_BUG_ON_DATA_CORRUPTION)) { \
+ 				pr_err(fmt, ##__VA_ARGS__);		 \
+ 				BUG();					 \
+ 			} else						 \
+ 				WARN(1, fmt, ##__VA_ARGS__);		 \
+ 		}							 \
+-		corruption;						 \
++		unlikely(corruption);					 \
+ 	}))
  
- 	  If unsure, say N.
- 
+ #endif	/* _LINUX_BUG_H */
 -- 
 2.7.4
