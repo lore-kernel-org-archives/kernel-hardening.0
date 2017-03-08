@@ -1,63 +1,53 @@
 From: Thomas Garnier <thgarnie@google.com>
-Date: Wed,  8 Mar 2017 13:38:43 -0800
-Message-Id: <20170308213844.131877-3-thgarnie@google.com>
+Date: Wed,  8 Mar 2017 13:38:44 -0800
+Message-Id: <20170308213844.131877-4-thgarnie@google.com>
 In-Reply-To: <20170308213844.131877-1-thgarnie@google.com>
 References: <20170308213844.131877-1-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v1 3/4] arm/syscalls: Specific usage of verify_pre_usermode_state
+Subject: [kernel-hardening] [PATCH v1 4/4] arm64/syscalls: Specific usage of verify_pre_usermode_state
 To: Arnd Bergmann <arnd@arndb.de>, David Howells <dhowells@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Thomas Garnier <thgarnie@google.com>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Petr Mladek <pmladek@suse.com>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Frederic Weisbecker <fweisbec@gmail.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Alexander Potapenko <glider@google.com>, Jan Beulich <JBeulich@suse.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Laura Abbott <labbott@redhat.com>, Andre Przywara <andre.przywara@arm.com>
 Cc: linux-api@vger.kernel.org, linux-kernel@vger.kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Implement specific usage of verify_pre_usermode_state for user-mode
-returns for arm.
+returns for arm64.
 ---
 Based on next-20170308
 ---
- arch/arm/Kconfig               | 1 +
- arch/arm/kernel/entry-common.S | 5 +++++
- 2 files changed, 6 insertions(+)
+ arch/arm64/Kconfig        | 1 +
+ arch/arm64/kernel/entry.S | 2 ++
+ 2 files changed, 3 insertions(+)
 
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 0d4e71b42c77..704fd8f197fa 100644
---- a/arch/arm/Kconfig
-+++ b/arch/arm/Kconfig
-@@ -12,6 +12,7 @@ config ARM
- 	select ARCH_HAVE_CUSTOM_GPIO_H
- 	select ARCH_HAS_GCOV_PROFILE_ALL
- 	select ARCH_MIGHT_HAVE_PC_PARPORT
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 896eba61e5ed..da54774838d8 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -24,6 +24,7 @@ config ARM64
+ 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
+ 	select ARCH_WANT_FRAME_POINTERS
+ 	select ARCH_HAS_UBSAN_SANITIZE_ALL
 +	select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
- 	select ARCH_OPTIONAL_KERNEL_RWX if ARCH_HAS_STRICT_KERNEL_RWX
- 	select ARCH_OPTIONAL_KERNEL_RWX_DEFAULT if CPU_V7
- 	select ARCH_SUPPORTS_ATOMIC_RMW
-diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
-index eb5cd77bf1d8..80cfdc7fabde 100644
---- a/arch/arm/kernel/entry-common.S
-+++ b/arch/arm/kernel/entry-common.S
-@@ -39,6 +39,9 @@
+ 	select ARM_AMBA
+ 	select ARM_ARCH_TIMER
+ 	select ARM_GIC
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 43512d4d7df2..b3d1d9e5c7c1 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -744,6 +744,7 @@ ENDPROC(cpu_switch_to)
  ret_fast_syscall:
-  UNWIND(.fnstart	)
-  UNWIND(.cantunwind	)
-+	push	{r0}				@ save returned r0
-+	bl	verify_pre_usermode_state
-+	pop	{r0}				@ restore r0
- 	disable_irq_notrace			@ disable interrupts
- 	ldr	r1, [tsk, #TI_FLAGS]		@ re-check for syscall tracing
- 	tst	r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-@@ -65,6 +68,7 @@ ret_fast_syscall:
-  UNWIND(.fnstart	)
-  UNWIND(.cantunwind	)
- 	str	r0, [sp, #S_R0 + S_OFF]!	@ save returned r0
-+	bl	verify_pre_usermode_state
- 	disable_irq_notrace			@ disable interrupts
- 	ldr	r1, [tsk, #TI_FLAGS]		@ re-check for syscall tracing
- 	tst	r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
-@@ -263,6 +267,7 @@ __sys_trace:
- 
- __sys_trace_return:
- 	str	r0, [sp, #S_R0 + S_OFF]!	@ save returned r0
-+	bl	verify_pre_usermode_state
- 	mov	r0, sp
- 	bl	syscall_trace_exit
- 	b	ret_slow_syscall
+ 	disable_irq				// disable interrupts
+ 	str	x0, [sp, #S_X0]			// returned x0
++	bl 	verify_pre_usermode_state
+ 	ldr	x1, [tsk, #TSK_TI_FLAGS]	// re-check for syscall tracing
+ 	and	x2, x1, #_TIF_SYSCALL_WORK
+ 	cbnz	x2, ret_fast_syscall_trace
+@@ -771,6 +772,7 @@ work_pending:
+  */
+ ret_to_user:
+ 	disable_irq				// disable interrupts
++	bl 	verify_pre_usermode_state
+ 	ldr	x1, [tsk, #TSK_TI_FLAGS]
+ 	and	x2, x1, #_TIF_WORK_MASK
+ 	cbnz	x2, work_pending
 -- 
 2.12.0.246.ga2ecc84866-goog
