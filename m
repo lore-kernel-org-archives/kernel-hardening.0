@@ -1,72 +1,49 @@
 MIME-Version: 1.0
-In-Reply-To: <alpine.LFD.2.20.1703082256480.23532@knanqh.ubzr>
-References: <20170308213844.131877-1-thgarnie@google.com> <20170308213844.131877-3-thgarnie@google.com>
- <alpine.LFD.2.20.1703082256480.23532@knanqh.ubzr>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed, 8 Mar 2017 14:33:47 -0800
-Message-ID: <CAJcbSZFCKVVQAXu2WGojnjHmJp05sRCQQpv=dCSTYjezE+aeeQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
+References: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 8 Mar 2017 15:17:55 -0800
+Message-ID: <CAGXu5jKNhZtoP-8DxG+_NsTVCMo-ZLV8E1xPMWgEn=71kTJ4rw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v1 3/4] arm/syscalls: Specific usage of verify_pre_usermode_state
-To: Nicolas Pitre <nicolas.pitre@linaro.org>
-Cc: Arnd Bergmann <arnd@arndb.de>, David Howells <dhowells@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Petr Mladek <pmladek@suse.com>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Frederic Weisbecker <fweisbec@gmail.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Alexander Potapenko <glider@google.com>, Jan Beulich <JBeulich@suse.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Laura Abbott <labbott@redhat.com>, Andre Przywara <andre.przywara@arm.com>, Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Ahoy!
+To: Tycho Andersen <tycho@docker.com>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Make sense, as discussed on patch number one, I will write custom
-assembly for each architecture when BUG_ON is not required. I will try
-to use macros to make it easier to read.
+On Tue, Mar 7, 2017 at 3:37 PM, Tycho Andersen <tycho@docker.com> wrote:
+> I'm a new engineer at Docker, and I've been given some time to work on
+> kernel security, so I figured I'd introduce myself here. I'm currently
+> trying to figure out what a good first small-ish project that matches up
+> with the company's interests (containers, infrastructure that is used for
+> security primitives like eBPF).
+>
+> Thoughts about areas to poke at are much appreciated!
 
-On Wed, Mar 8, 2017 at 2:05 PM, Nicolas Pitre <nicolas.pitre@linaro.org> wrote:
-> On Wed, 8 Mar 2017, Thomas Garnier wrote:
->
->> Implement specific usage of verify_pre_usermode_state for user-mode
->> returns for arm.
->> ---
->> Based on next-20170308
->> ---
->>  arch/arm/Kconfig               | 1 +
->>  arch/arm/kernel/entry-common.S | 5 +++++
->>  2 files changed, 6 insertions(+)
->>
->> diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
->> index 0d4e71b42c77..704fd8f197fa 100644
->> --- a/arch/arm/Kconfig
->> +++ b/arch/arm/Kconfig
->> @@ -12,6 +12,7 @@ config ARM
->>       select ARCH_HAVE_CUSTOM_GPIO_H
->>       select ARCH_HAS_GCOV_PROFILE_ALL
->>       select ARCH_MIGHT_HAVE_PC_PARPORT
->> +     select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
->>       select ARCH_OPTIONAL_KERNEL_RWX if ARCH_HAS_STRICT_KERNEL_RWX
->>       select ARCH_OPTIONAL_KERNEL_RWX_DEFAULT if CPU_V7
->>       select ARCH_SUPPORTS_ATOMIC_RMW
->> diff --git a/arch/arm/kernel/entry-common.S b/arch/arm/kernel/entry-common.S
->> index eb5cd77bf1d8..80cfdc7fabde 100644
->> --- a/arch/arm/kernel/entry-common.S
->> +++ b/arch/arm/kernel/entry-common.S
->> @@ -39,6 +39,9 @@
->>  ret_fast_syscall:
->>   UNWIND(.fnstart     )
->>   UNWIND(.cantunwind  )
->> +     push    {r0}                            @ save returned r0
->> +     bl      verify_pre_usermode_state
->> +     pop     {r0}                            @ restore r0
->>       disable_irq_notrace                     @ disable interrupts
->>       ldr     r1, [tsk, #TI_FLAGS]            @ re-check for syscall tracing
->>       tst     r1, #_TIF_SYSCALL_WORK | _TIF_WORK_MASK
->
-> This feature is configurable, right?
->
-> Here the branch overhead is imposed even if the feature is configured
-> out. You should consider conditionally defining a macro like some other
-> features do.
->
-> Furthermore I think we still support old toolchains that don't know what
-> push and pop mean. You should use the legacy syntax instead.
->
->
-> Nicolas
+Hi! Welcome to the fun!
 
+As I understand it (for our earlier chat), Docker is mainly x86, which
+somewhat limits choices from the existing KSPP TODO list which has a
+lot of arm and arm64 stuff on it. :)
 
+So, here's one that isn't protection exactly, but rather a requested
+arrangement of Kconfig logic: it would be nice if HARDENED_USERCOPY
+depended on !DEVKMEM and STRICT_DEVMEM=y, but this isn't quite trivial
+since STRICT_DEVMEM doesn't exist for all architectures, but maybe it
+should be looking at ARCH_HAS_DEVMEM_IS_ALLOWED... (it seems Dan
+Williams cleaned this up a lot already in commit 21266be9ed542)
+
+Regardless, no one has snagged this to make sure that hardened
+usercopy isn't bypassed by things like DEVKMEM or DEVMEM and the lack
+of STRICT_DEVMEM. I'd like to have that off the list, and mostly I
+think it just requires staring at the Kconfigs for a bit to figure out
+the right combination so that people wanting hardened usercopy don't
+accidentally undermine themselves.
+
+So, that's the first thing that pops out at me. What do you think? :)
+
+-Kees
 
 -- 
-Thomas
+Kees Cook
+Pixel Security
