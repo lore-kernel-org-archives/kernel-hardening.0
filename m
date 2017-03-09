@@ -1,49 +1,149 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
-References: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 8 Mar 2017 15:17:55 -0800
-Message-ID: <CAGXu5jKNhZtoP-8DxG+_NsTVCMo-ZLV8E1xPMWgEn=71kTJ4rw@mail.gmail.com>
+In-Reply-To: <CAGXu5jJw2XW30NUnoNOMunZMhZ5V-3K9rspOFTOnyt5bxnkA+A@mail.gmail.com>
+References: <20170308213844.131877-1-thgarnie@google.com> <CAGXu5jJw2XW30NUnoNOMunZMhZ5V-3K9rspOFTOnyt5bxnkA+A@mail.gmail.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Wed, 8 Mar 2017 17:13:41 -0800
+Message-ID: <CAJcbSZF5Ya6jhh+bweL1r5o7ajK70VRUyRB0U7WjnbSxN_kEsQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Ahoy!
-To: Tycho Andersen <tycho@docker.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v1 1/4] syscalls: Restore address limit after a syscall
+To: Kees Cook <keescook@chromium.org>
+Cc: Arnd Bergmann <arnd@arndb.de>, David Howells <dhowells@redhat.com>, Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Petr Mladek <pmladek@suse.com>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Frederic Weisbecker <fweisbec@gmail.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Alexander Potapenko <glider@google.com>, Jan Beulich <JBeulich@suse.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Laura Abbott <labbott@redhat.com>, Andre Przywara <andre.przywara@arm.com>, Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 7, 2017 at 3:37 PM, Tycho Andersen <tycho@docker.com> wrote:
-> I'm a new engineer at Docker, and I've been given some time to work on
-> kernel security, so I figured I'd introduce myself here. I'm currently
-> trying to figure out what a good first small-ish project that matches up
-> with the company's interests (containers, infrastructure that is used for
-> security primitives like eBPF).
+On Wed, Mar 8, 2017 at 1:57 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Mar 8, 2017 at 1:38 PM, Thomas Garnier <thgarnie@google.com> wrote:
+>> This patch prevents a syscall to modify the address limit of the
+>> caller. The address limit is kept by the syscall wrapper and restored
+>> just after the syscall ends.
+>>
+>> For example, it would mitigation this bug:
+>>
+>> - https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+>>
+>> By default, this change warns if the segment is incorrect while
+>> returning to user-mode and fix it. The
+>> CONFIG_VERIFY_PRE_USERMODE_STATE_BUG option can be enabled to halt
+>> instead if needed.
 >
-> Thoughts about areas to poke at are much appreciated!
+> Instead of this new config, please reuse the CHECK_DATA_CORRUPTION
+> test instead, which already controls very similar WARN vs BUG
+> behavior. Example below...
+>
+>>
+>> The CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE option is also
+>> added so each architecture can optimize how the
+>> verify_pre_usermode_state function is called.
+>>
+>> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+>> ---
+>> Based on next-20170308
+>> ---
+>>  include/linux/syscalls.h | 19 +++++++++++++++++++
+>>  init/Kconfig             | 16 ++++++++++++++++
+>>  kernel/sys.c             | 11 +++++++++++
+>>  3 files changed, 46 insertions(+)
+>>
+>> diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+>> index 980c3c9b06f8..78a2268ecd6e 100644
+>> --- a/include/linux/syscalls.h
+>> +++ b/include/linux/syscalls.h
+>> @@ -191,6 +191,22 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+>>         SYSCALL_METADATA(sname, x, __VA_ARGS__)                 \
+>>         __SYSCALL_DEFINEx(x, sname, __VA_ARGS__)
+>>
+>> +asmlinkage void verify_pre_usermode_state(void);
+>> +
+>> +#ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
+>> +static inline bool has_user_ds(void) {
+>> +       bool ret = segment_eq(get_fs(), USER_DS);
+>> +       // Prevent re-ordering the call
+>> +       barrier();
+>> +       return ret;
+>> +}
+>> +#else
+>> +static inline bool has_user_ds(void) {
+>> +       return false;
+>> +}
+>> +#endif
+>> +
+>> +
+>>  #define __PROTECT(...) asmlinkage_protect(__VA_ARGS__)
+>>  #define __SYSCALL_DEFINEx(x, name, ...)                                        \
+>>         asmlinkage long sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))       \
+>> @@ -199,7 +215,10 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+>>         asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));      \
+>>         asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))       \
+>>         {                                                               \
+>> +               bool user_caller = has_user_ds();                       \
+>>                 long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));  \
+>> +               if (user_caller)                                        \
+>> +                       verify_pre_usermode_state();                    \
+>>                 __MAP(x,__SC_TEST,__VA_ARGS__);                         \
+>>                 __PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));       \
+>>                 return ret;                                             \
+>> diff --git a/init/Kconfig b/init/Kconfig
+>> index c859c993c26f..ab958b59063f 100644
+>> --- a/init/Kconfig
+>> +++ b/init/Kconfig
+>> @@ -1929,6 +1929,22 @@ config PROFILING
+>>  config TRACEPOINTS
+>>         bool
+>>
+>> +#
+>> +# Set by each architecture that want to optimize how verify_pre_usermode_state
+>> +# is called.
+>> +#
+>> +config ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
+>> +       bool
+>> +
+>> +config VERIFY_PRE_USERMODE_STATE_BUG
+>> +       bool "Halt on incorrect state on returning to user-mode"
+>> +       default n
+>> +       help
+>> +         By default a warning is logged and the state is fixed. This option
+>> +         crashes the kernel instead.
+>> +
+>> +         If unsure, say Y.
+>> +
+>>  source "arch/Kconfig"
+>>
+>>  endmenu                # General setup
+>> diff --git a/kernel/sys.c b/kernel/sys.c
+>> index 196c7134bee6..cc2ebf7fae55 100644
+>> --- a/kernel/sys.c
+>> +++ b/kernel/sys.c
+>> @@ -2459,3 +2459,14 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
+>>         return 0;
+>>  }
+>>  #endif /* CONFIG_COMPAT */
+>> +
+>> +/* Called before coming back to user-mode */
+>> +asmlinkage void verify_pre_usermode_state(void)
+>> +{
+>> +#ifdef CONFIG_VERIFY_PRE_USERMODE_STATE_BUG
+>> +       BUG_ON(!segment_eq(get_fs(), USER_DS));
+>> +#else
+>> +       if (WARN_ON(!segment_eq(get_fs(), USER_DS)))
+>> +               set_fs(USER_DS);
+>> +#endif
+>
+> I would just make this:
+>
+> if (CHECK_DATA_CORRUPTION(!segment_eq(get_fs(), USER_DS))
+>     set_fs(USER_DS);
+>
 
-Hi! Welcome to the fun!
+Make sense, I will remove my custom CONFIG and use that one instead
+(still doing inline assembly if not set).
 
-As I understand it (for our earlier chat), Docker is mainly x86, which
-somewhat limits choices from the existing KSPP TODO list which has a
-lot of arm and arm64 stuff on it. :)
+> -Kees
+>
+>
+> --
+> Kees Cook
+> Pixel Security
 
-So, here's one that isn't protection exactly, but rather a requested
-arrangement of Kconfig logic: it would be nice if HARDENED_USERCOPY
-depended on !DEVKMEM and STRICT_DEVMEM=y, but this isn't quite trivial
-since STRICT_DEVMEM doesn't exist for all architectures, but maybe it
-should be looking at ARCH_HAS_DEVMEM_IS_ALLOWED... (it seems Dan
-Williams cleaned this up a lot already in commit 21266be9ed542)
 
-Regardless, no one has snagged this to make sure that hardened
-usercopy isn't bypassed by things like DEVKMEM or DEVMEM and the lack
-of STRICT_DEVMEM. I'd like to have that off the list, and mostly I
-think it just requires staring at the Kconfigs for a bit to figure out
-the right combination so that people wanting hardened usercopy don't
-accidentally undermine themselves.
-
-So, that's the first thing that pops out at me. What do you think? :)
-
--Kees
 
 -- 
-Kees Cook
-Pixel Security
+Thomas
