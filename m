@@ -1,62 +1,60 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  9 Mar 2017 21:52:04 +0100
-Message-Id: <1489092729-16871-7-git-send-email-ard.biesheuvel@linaro.org>
+Date: Thu,  9 Mar 2017 21:52:05 +0100
+Message-Id: <1489092729-16871-8-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v6 06/11] arm64/mmu: align alloc_init_pte prototype with pmd/pud versions
+Subject: [kernel-hardening] [PATCH v6 07/11] arm64/mmu: ignore debug_pagealloc for kernel segments
 To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org
 Cc: kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Align the function prototype of alloc_init_pte() with its pmd and pud
-counterparts by replacing the pfn parameter with the equivalent physical
-address.
+The debug_pagealloc facility manipulates kernel mappings in the linear
+region at page granularity to detect out of bounds or use-after-free
+accesses. Since the kernel segments are not allocated dynamically,
+there is no point in taking the debug_pagealloc_enabled flag into
+account for them, and we can use block mappings unconditionally.
+
+Note that this applies equally to the linear alias of text/rodata:
+we will never have dynamic allocations there given that the same
+memory is statically in use by the kernel image.
 
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/mm/mmu.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ arch/arm64/mm/mmu.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 75e21c33caff..bb9179084217 100644
+index bb9179084217..ec23aec6433f 100644
 --- a/arch/arm64/mm/mmu.c
 +++ b/arch/arm64/mm/mmu.c
-@@ -107,7 +107,7 @@ static bool pgattr_change_is_safe(u64 old, u64 new)
+@@ -328,8 +328,7 @@ static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
+ 		return;
+ 	}
+ 
+-	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot,
+-			     NULL, debug_pagealloc_enabled());
++	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, false);
+ 
+ 	/* flush the TLBs after updating live kernel mappings */
+ 	flush_tlb_kernel_range(virt, virt + size);
+@@ -381,7 +380,7 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
+ 	 */
+ 	__create_pgd_mapping(pgd, kernel_start, __phys_to_virt(kernel_start),
+ 			     kernel_end - kernel_start, PAGE_KERNEL,
+-			     early_pgtable_alloc, debug_pagealloc_enabled());
++			     early_pgtable_alloc, false);
  }
  
- static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
--				  unsigned long end, unsigned long pfn,
-+				  unsigned long end, phys_addr_t phys,
- 				  pgprot_t prot,
- 				  phys_addr_t (*pgtable_alloc)(void))
- {
-@@ -128,8 +128,7 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
- 	do {
- 		pte_t old_pte = *pte;
+ void __init mark_linear_text_alias_ro(void)
+@@ -437,7 +436,7 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+ 	BUG_ON(!PAGE_ALIGNED(size));
  
--		set_pte(pte, pfn_pte(pfn, prot));
--		pfn++;
-+		set_pte(pte, pfn_pte(__phys_to_pfn(phys), prot));
+ 	__create_pgd_mapping(pgd, pa_start, (unsigned long)va_start, size, prot,
+-			     early_pgtable_alloc, debug_pagealloc_enabled());
++			     early_pgtable_alloc, false);
  
- 		/*
- 		 * After the PTE entry has been populated once, we
-@@ -137,6 +136,7 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
- 		 */
- 		BUG_ON(!pgattr_change_is_safe(pte_val(old_pte), pte_val(*pte)));
- 
-+		phys += PAGE_SIZE;
- 	} while (pte++, addr += PAGE_SIZE, addr != end);
- 
- 	pte_clear_fixmap();
-@@ -182,7 +182,7 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
- 			BUG_ON(!pgattr_change_is_safe(pmd_val(old_pmd),
- 						      pmd_val(*pmd)));
- 		} else {
--			alloc_init_pte(pmd, addr, next, __phys_to_pfn(phys),
-+			alloc_init_pte(pmd, addr, next, phys,
- 				       prot, pgtable_alloc);
- 
- 			BUG_ON(pmd_val(old_pmd) != 0 &&
+ 	vma->addr	= va_start;
+ 	vma->phys_addr	= pa_start;
 -- 
 2.7.4
