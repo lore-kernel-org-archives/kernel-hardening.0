@@ -1,144 +1,131 @@
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  9 Mar 2017 21:52:01 +0100
-Message-Id: <1489092729-16871-4-git-send-email-ard.biesheuvel@linaro.org>
+Date: Thu,  9 Mar 2017 21:52:03 +0100
+Message-Id: <1489092729-16871-6-git-send-email-ard.biesheuvel@linaro.org>
 In-Reply-To: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
 References: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v6 03/11] arm64: alternatives: apply boot time fixups via the linear mapping
+Subject: [kernel-hardening] [PATCH v6 05/11] arm64: mmu: apply strict permissions to .init.text and .init.data
 To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org
 Cc: kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-One important rule of thumb when desiging a secure software system is
-that memory should never be writable and executable at the same time.
-We mostly adhere to this rule in the kernel, except at boot time, when
-regions may be mapped RWX until after we are done applying alternatives
-or making other one-off changes.
+To avoid having mappings that are writable and executable at the same
+time, split the init region into a .init.text region that is mapped
+read-only, and a .init.data region that is mapped non-executable.
 
-For the alternative patching, we can improve the situation by applying
-the fixups via the linear mapping, which is never mapped with executable
-permissions. So map the linear alias of .text with RW- permissions
-initially, and remove the write permissions as soon as alternative
-patching has completed.
+This is possible now that the alternative patching occurs via the linear
+mapping, and the linear alias of the init region is always mapped writable
+(but never executable).
+
+Since the alternatives descriptions themselves are read-only data, move
+those into the .init.text region.
 
 Reviewed-by: Laura Abbott <labbott@redhat.com>
 Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-Tested-by: Mark Rutland <mark.rutland@arm.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/include/asm/mmu.h    |  1 +
- arch/arm64/kernel/alternative.c | 11 +++++-----
- arch/arm64/kernel/smp.c         |  1 +
- arch/arm64/mm/mmu.c             | 22 +++++++++++++++-----
- 4 files changed, 25 insertions(+), 10 deletions(-)
+ arch/arm64/include/asm/sections.h |  2 ++
+ arch/arm64/kernel/vmlinux.lds.S   | 25 +++++++++++++-------
+ arch/arm64/mm/mmu.c               | 12 ++++++----
+ 3 files changed, 26 insertions(+), 13 deletions(-)
 
-diff --git a/arch/arm64/include/asm/mmu.h b/arch/arm64/include/asm/mmu.h
-index 47619411f0ff..5468c834b072 100644
---- a/arch/arm64/include/asm/mmu.h
-+++ b/arch/arm64/include/asm/mmu.h
-@@ -37,5 +37,6 @@ extern void create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
- 			       unsigned long virt, phys_addr_t size,
- 			       pgprot_t prot, bool page_mappings_only);
- extern void *fixmap_remap_fdt(phys_addr_t dt_phys);
-+extern void mark_linear_text_alias_ro(void);
+diff --git a/arch/arm64/include/asm/sections.h b/arch/arm64/include/asm/sections.h
+index 4e7e7067afdb..941267caa39c 100644
+--- a/arch/arm64/include/asm/sections.h
++++ b/arch/arm64/include/asm/sections.h
+@@ -24,6 +24,8 @@ extern char __hibernate_exit_text_start[], __hibernate_exit_text_end[];
+ extern char __hyp_idmap_text_start[], __hyp_idmap_text_end[];
+ extern char __hyp_text_start[], __hyp_text_end[];
+ extern char __idmap_text_start[], __idmap_text_end[];
++extern char __initdata_begin[], __initdata_end[];
++extern char __inittext_begin[], __inittext_end[];
+ extern char __irqentry_text_start[], __irqentry_text_end[];
+ extern char __mmuoff_data_start[], __mmuoff_data_end[];
  
- #endif
-diff --git a/arch/arm64/kernel/alternative.c b/arch/arm64/kernel/alternative.c
-index 06d650f61da7..8840c109c5d6 100644
---- a/arch/arm64/kernel/alternative.c
-+++ b/arch/arm64/kernel/alternative.c
-@@ -105,11 +105,11 @@ static u32 get_alt_insn(struct alt_instr *alt, u32 *insnptr, u32 *altinsnptr)
- 	return insn;
- }
+diff --git a/arch/arm64/kernel/vmlinux.lds.S b/arch/arm64/kernel/vmlinux.lds.S
+index b8deffa9e1bf..2c93d259046c 100644
+--- a/arch/arm64/kernel/vmlinux.lds.S
++++ b/arch/arm64/kernel/vmlinux.lds.S
+@@ -143,12 +143,27 @@ SECTIONS
  
--static void __apply_alternatives(void *alt_region)
-+static void __apply_alternatives(void *alt_region, bool use_linear_alias)
- {
- 	struct alt_instr *alt;
- 	struct alt_region *region = alt_region;
--	u32 *origptr, *replptr;
-+	u32 *origptr, *replptr, *updptr;
+ 	. = ALIGN(SEGMENT_ALIGN);
+ 	__init_begin = .;
++	__inittext_begin = .;
  
- 	for (alt = region->begin; alt < region->end; alt++) {
- 		u32 insn;
-@@ -124,11 +124,12 @@ static void __apply_alternatives(void *alt_region)
- 
- 		origptr = ALT_ORIG_PTR(alt);
- 		replptr = ALT_REPL_PTR(alt);
-+		updptr = use_linear_alias ? (u32 *)lm_alias(origptr) : origptr;
- 		nr_inst = alt->alt_len / sizeof(insn);
- 
- 		for (i = 0; i < nr_inst; i++) {
- 			insn = get_alt_insn(alt, origptr + i, replptr + i);
--			*(origptr + i) = cpu_to_le32(insn);
-+			updptr[i] = cpu_to_le32(insn);
- 		}
- 
- 		flush_icache_range((uintptr_t)origptr,
-@@ -155,7 +156,7 @@ static int __apply_alternatives_multi_stop(void *unused)
- 		isb();
- 	} else {
- 		BUG_ON(patched);
--		__apply_alternatives(&region);
-+		__apply_alternatives(&region, true);
- 		/* Barriers provided by the cache flushing */
- 		WRITE_ONCE(patched, 1);
+ 	INIT_TEXT_SECTION(8)
+ 	.exit.text : {
+ 		ARM_EXIT_KEEP(EXIT_TEXT)
  	}
-@@ -176,5 +177,5 @@ void apply_alternatives(void *start, size_t length)
- 		.end	= start + length,
- 	};
  
--	__apply_alternatives(&region);
-+	__apply_alternatives(&region, false);
- }
-diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
-index ef1caae02110..d4739552da28 100644
---- a/arch/arm64/kernel/smp.c
-+++ b/arch/arm64/kernel/smp.c
-@@ -434,6 +434,7 @@ void __init smp_cpus_done(unsigned int max_cpus)
- 	setup_cpu_features();
- 	hyp_mode_check();
- 	apply_alternatives_all();
-+	mark_linear_text_alias_ro();
- }
++	. = ALIGN(4);
++	.altinstructions : {
++		__alt_instructions = .;
++		*(.altinstructions)
++		__alt_instructions_end = .;
++	}
++	.altinstr_replacement : {
++		*(.altinstr_replacement)
++	}
++
++	. = ALIGN(PAGE_SIZE);
++	__inittext_end = .;
++	__initdata_begin = .;
++
+ 	.init.data : {
+ 		INIT_DATA
+ 		INIT_SETUP(16)
+@@ -164,15 +179,6 @@ SECTIONS
  
- void __init smp_prepare_boot_cpu(void)
+ 	PERCPU_SECTION(L1_CACHE_BYTES)
+ 
+-	. = ALIGN(4);
+-	.altinstructions : {
+-		__alt_instructions = .;
+-		*(.altinstructions)
+-		__alt_instructions_end = .;
+-	}
+-	.altinstr_replacement : {
+-		*(.altinstr_replacement)
+-	}
+ 	.rela : ALIGN(8) {
+ 		*(.rela .rela*)
+ 	}
+@@ -181,6 +187,7 @@ SECTIONS
+ 	__rela_size	= SIZEOF(.rela);
+ 
+ 	. = ALIGN(SEGMENT_ALIGN);
++	__initdata_end = .;
+ 	__init_end = .;
+ 
+ 	_data = .;
 diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 6cafd8723d1a..df377fbe464e 100644
+index 300e98e8cd63..75e21c33caff 100644
 --- a/arch/arm64/mm/mmu.c
 +++ b/arch/arm64/mm/mmu.c
-@@ -372,16 +372,28 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
- 				     debug_pagealloc_enabled());
+@@ -459,7 +459,8 @@ early_param("rodata", parse_rodata);
+  */
+ static void __init map_kernel(pgd_t *pgd)
+ {
+-	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_init, vmlinux_data;
++	static struct vm_struct vmlinux_text, vmlinux_rodata, vmlinux_inittext,
++				vmlinux_initdata, vmlinux_data;
  
  	/*
--	 * Map the linear alias of the [_text, __init_begin) interval as
--	 * read-only/non-executable. This makes the contents of the
--	 * region accessible to subsystems such as hibernate, but
--	 * protects it from inadvertent modification or execution.
-+	 * Map the linear alias of the [_text, __init_begin) interval
-+	 * as non-executable now, and remove the write permission in
-+	 * mark_linear_text_alias_ro() below (which will be called after
-+	 * alternative patching has completed). This makes the contents
-+	 * of the region accessible to subsystems such as hibernate,
-+	 * but protects it from inadvertent modification or execution.
- 	 */
- 	__create_pgd_mapping(pgd, kernel_start, __phys_to_virt(kernel_start),
--			     kernel_end - kernel_start, PAGE_KERNEL_RO,
-+			     kernel_end - kernel_start, PAGE_KERNEL,
- 			     early_pgtable_alloc, debug_pagealloc_enabled());
- }
+ 	 * External debuggers may need to write directly to the text
+@@ -469,9 +470,12 @@ static void __init map_kernel(pgd_t *pgd)
+ 	pgprot_t text_prot = rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
  
-+void __init mark_linear_text_alias_ro(void)
-+{
-+	/*
-+	 * Remove the write permissions from the linear alias of .text/.rodata
-+	 */
-+	update_mapping_prot(__pa_symbol(_text), (unsigned long)lm_alias(_text),
-+			    (unsigned long)__init_begin - (unsigned long)_text,
-+			    PAGE_KERNEL_RO);
-+}
-+
- static void __init map_mem(pgd_t *pgd)
- {
- 	struct memblock_region *reg;
+ 	map_kernel_segment(pgd, _text, _etext, text_prot, &vmlinux_text);
+-	map_kernel_segment(pgd, __start_rodata, __init_begin, PAGE_KERNEL, &vmlinux_rodata);
+-	map_kernel_segment(pgd, __init_begin, __init_end, PAGE_KERNEL_EXEC,
+-			   &vmlinux_init);
++	map_kernel_segment(pgd, __start_rodata, __inittext_begin, PAGE_KERNEL,
++			   &vmlinux_rodata);
++	map_kernel_segment(pgd, __inittext_begin, __inittext_end, text_prot,
++			   &vmlinux_inittext);
++	map_kernel_segment(pgd, __initdata_begin, __initdata_end, PAGE_KERNEL,
++			   &vmlinux_initdata);
+ 	map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
+ 
+ 	if (!pgd_val(*pgd_offset_raw(pgd, FIXADDR_START))) {
 -- 
 2.7.4
