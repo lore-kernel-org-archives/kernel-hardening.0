@@ -1,179 +1,77 @@
-MIME-Version: 1.0
-In-Reply-To: <20170309193343.GG11966@leverpostej>
-References: <1489047912-642-1-git-send-email-ard.biesheuvel@linaro.org>
- <1489047912-642-11-git-send-email-ard.biesheuvel@linaro.org> <20170309193343.GG11966@leverpostej>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 9 Mar 2017 20:40:55 +0100
-Message-ID: <CAKv+Gu8DJvs7=hR_bnJct3=P_1utZ31rxuVKUrjVnD1MWveHHw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 10/10] arm64: mm: set the contiguous bit for kernel
- mappings where appropriate
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kees Cook <keescook@chromium.org>, Laura Abbott <labbott@fedoraproject.org>, kernel-hardening@lists.openwall.com, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, "kvmarm@lists.cs.columbia.edu" <kvmarm@lists.cs.columbia.edu>, Marc Zyngier <marc.zyngier@arm.com>
+Date: Thu,  9 Mar 2017 21:51:58 +0100
+Message-Id: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v6 00/11] arm64: mmu: avoid W+X mappings and re-enable PTE_CONT for kernel
+To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org
+Cc: kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 9 March 2017 at 20:33, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Thu, Mar 09, 2017 at 09:25:12AM +0100, Ard Biesheuvel wrote:
->> +static inline u64 pte_cont_addr_end(u64 addr, u64 end)
->> +{
->> +     return min((addr + CONT_PTE_SIZE) & CONT_PTE_MASK, end);
->> +}
->> +
->> +static inline u64 pmd_cont_addr_end(u64 addr, u64 end)
->> +{
->> +     return min((addr + CONT_PMD_SIZE) & CONT_PMD_MASK, end);
->> +}
->
-> These differ structurally from the usual p??_addr_end() macros defined
-> in include/asm-generic/pgtable.h. I agree the asm-generic macros aren't
-> pretty, but it would be nice to be consistent.
->
-> I don't think the above handle a partial contiguous span at the end of
-> the address space (e.g. where end is initial PAGE_SIZE away from 2^64),
-> whereas the asm-generic form does, AFAICT.
->
-> Can we please use:
->
-> #define pte_cont_addr_end(addr, end)                                            \
-> ({      unsigned long __boundary = ((addr) + CONT_PTE_SIZE) & CONT_PTE_MASK;    \
->         (__boundary - 1 < (end) - 1)? __boundary: (end);                        \
-> })
->
-> #define pmd_cont_addr_end(addr, end)                                            \
-> ({      unsigned long __boundary = ((addr) + CONT_PMD_SIZE) & CONT_PMD_MASK;    \
->         (__boundary - 1 < (end) - 1)? __boundary: (end);                        \
-> })
->
-> ... instead?
->
+Having memory that is writable and executable at the same time is a
+security hazard, and so we tend to avoid those when we can. However,
+at boot time, we keep .text mapped writable during the entire init
+phase, and the init region itself is mapped rwx as well.
 
-OK, so that's what the -1 is for. Either version is fine by me.
+Let's improve the situation by:
+- making the alternatives patching use the linear mapping
+- splitting the init region into separate text and data regions
 
-> [...]
->
->> +static void init_pte(pte_t *pte, unsigned long addr, unsigned long end,
->> +                  phys_addr_t phys, pgprot_t prot)
->>  {
->> +     do {
->> +             pte_t old_pte = *pte;
->> +
->> +             set_pte(pte, pfn_pte(__phys_to_pfn(phys), prot));
->> +
->> +             /*
->> +              * After the PTE entry has been populated once, we
->> +              * only allow updates to the permission attributes.
->> +              */
->> +             BUG_ON(!pgattr_change_is_safe(pte_val(old_pte), pte_val(*pte)));
->> +
->> +     } while (pte++, addr += PAGE_SIZE, phys += PAGE_SIZE, addr != end);
->> +}
->> +
->> +static void alloc_init_cont_pte(pmd_t *pmd, unsigned long addr,
->> +                             unsigned long end, phys_addr_t phys,
->> +                             pgprot_t prot,
->> +                             phys_addr_t (*pgtable_alloc)(void),
->> +                             int flags)
->> +{
->> +     unsigned long next;
->>       pte_t *pte;
->>
->>       BUG_ON(pmd_sect(*pmd));
->> @@ -136,45 +156,30 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
->>
->>       pte = pte_set_fixmap_offset(pmd, addr);
->>       do {
->> -             pte_t old_pte = *pte;
->> +             pgprot_t __prot = prot;
->>
->> -             set_pte(pte, pfn_pte(__phys_to_pfn(phys), prot));
->> -             phys += PAGE_SIZE;
->> +             next = pte_cont_addr_end(addr, end);
->>
->> -             /*
->> -              * After the PTE entry has been populated once, we
->> -              * only allow updates to the permission attributes.
->> -              */
->> -             BUG_ON(!pgattr_change_is_safe(pte_val(old_pte), pte_val(*pte)));
->> +             /* use a contiguous mapping if the range is suitably aligned */
->> +             if ((((addr | next | phys) & ~CONT_PTE_MASK) == 0) &&
->> +                 (flags & NO_CONT_MAPPINGS) == 0)
->> +                     __prot = __pgprot(pgprot_val(prot) | PTE_CONT);
->>
->> -     } while (pte++, addr += PAGE_SIZE, addr != end);
->> +             init_pte(pte, addr, next, phys, __prot);
->> +
->> +             phys += next - addr;
->> +             pte += (next - addr) / PAGE_SIZE;
->> +     } while (addr = next, addr != end);
->>
->>       pte_clear_fixmap();
->>  }
->
-> I think it would be preferable to pass the pmd down into
-> alloc_init_pte(), so that we don't have to mess with the pte in both
-> alloc_init_cont_pte() and alloc_init_pte().
->
-> Likewise for alloc_init_cont_pmd() and alloc_init_pmd(), regarding the
-> pmd.
->
-> I realise we'll redundantly map/unmap the PTE for each contiguous span,
-> but I doubt there's a case it has a noticeable impact.
->
+This removes all RWX mappings except the really early one created
+in head.S (which we could perhaps fix in the future as well). Due to
+these changes, it is also possible to make another attempt at re-enabling
+the use of contiguous mappings at the PMD and PTE levels.
 
-OK
+Changes since v5:
+- add patch to remove pointless mapping/unmapping of translation table pages
+  when the higher level table entry pointing to it is created
+- fix unitialized flags var in #9
+- allow contiguous ranges for mappings created via create_pgd_mapping (ie., EFI)
+- refactor pud/pmd/pte recursion logic so we don't iterate over pmds and ptes
+  at two separate levels concurrently (ie., cont and non-cont)
+- use macros rather than static inlines for pmd_/pte_cont_addr_end()
+- add Mark's R-b to #6 - #9
 
-> With lots of memory we'll use blocks at a higher level, and for
-> debug_pagealloc we'll pass the whole pte down to init_pte() as we
-> currently do.
->
-> [...]
->
->> +     if (pud_none(*pud)) {
->> +             phys_addr_t pmd_phys;
->> +             BUG_ON(!pgtable_alloc);
->> +             pmd_phys = pgtable_alloc();
->> +             pmd = pmd_set_fixmap(pmd_phys);
->> +             __pud_populate(pud, pmd_phys, PUD_TYPE_TABLE);
->> +             pmd_clear_fixmap();
->> +     }
->
-> It looks like when the splitting logic was removed, we forgot to remove
-> the fixmapping here (and for the pmd_none() case). The __p?d_populate
-> functions don't touch the next level table, so there's no reason to
-> fixmap it.
->
-> Would you mind spinning a patch to rip those out?
->
+Changes since v4:
+- the PTE_CONT patch has now spawned four more preparatory patches that clean
+  up some of the page table creation code before reintroducing the contiguous
+  attribute management
+- add Mark's R-b to #4 and #5
 
-Ah right, pmd is not even referenced in the __pud_populate invocation.
-Yes, I will add a patch before this one to remove that.
+Changes since v3:
+- use linear alias only when patching the core kernel, and not for modules
+- add patch to reintroduce the use of PTE_CONT for kernel mappings, except
+  for regions that are remapped read-only later on (i.e, .rodata and the
+  linear alias of .text+.rodata)
 
-> [...]
->
->>  void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
->>                              unsigned long virt, phys_addr_t size,
->>                              pgprot_t prot, bool page_mappings_only)
->>  {
->> -     int flags;
->> +     int flags = NO_CONT_MAPPINGS;
->>
->>       BUG_ON(mm == &init_mm);
->>
->>       if (page_mappings_only)
->> -             flags = NO_BLOCK_MAPPINGS;
->> +             flags |= NO_BLOCK_MAPPINGS;
->
-> Why is it never safe to use cont mappings here?
->
-> EFI's the only caller of this, and the only case I can see that we need
-> to avoid contiguous entries for are the runtime services data/code, due
-> to efi_set_mapping_permissions(). We map those with page_mappings_only
-> set.
->
-> I couldn't spot why we'd need to avoid cont entries otherwise.
->
-> What am I missing?
->
+Changes since v2:
+  - ensure that text mappings remain writable under rodata=off
+  - rename create_mapping_late() to update_mapping_prot()
+  - clarify commit log of #2
+  - add acks
 
-Nothing. It is erring on the side of caution, really, since there is
-no performance concern here.
+Ard Biesheuvel (11):
+  arm: kvm: move kvm_vgic_global_state out of .text section
+  arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+  arm64: alternatives: apply boot time fixups via the linear mapping
+  arm64: mmu: map .text as read-only from the outset
+  arm64: mmu: apply strict permissions to .init.text and .init.data
+  arm64/mmu: align alloc_init_pte prototype with pmd/pud versions
+  arm64/mmu: ignore debug_pagealloc for kernel segments
+  arm64/mmu: add contiguous bit to sanity bug check
+  arm64/mmu: replace 'page_mappings_only' parameter with flags argument
+  arm64/mm: remove pointless map/unmap sequences when creating page
+    tables
+  arm64: mm: set the contiguous bit for kernel mappings where
+    appropriate
+
+ arch/arm64/include/asm/mmu.h      |   1 +
+ arch/arm64/include/asm/pgtable.h  |  10 +
+ arch/arm64/include/asm/sections.h |   2 +
+ arch/arm64/kernel/alternative.c   |  11 +-
+ arch/arm64/kernel/smp.c           |   1 +
+ arch/arm64/kernel/vmlinux.lds.S   |  25 +-
+ arch/arm64/mm/mmu.c               | 246 ++++++++++++++------
+ virt/kvm/arm/vgic/vgic.c          |   4 +-
+ 8 files changed, 208 insertions(+), 92 deletions(-)
+
+-- 
+2.7.4
