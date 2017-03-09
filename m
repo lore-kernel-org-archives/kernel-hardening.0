@@ -1,71 +1,29 @@
-Date: Thu, 9 Mar 2017 15:53:21 +0000
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170309155321.GB11966@leverpostej>
-References: <1489047912-642-1-git-send-email-ard.biesheuvel@linaro.org>
- <1489047912-642-7-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1489047912-642-7-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] Re: [PATCH v5 06/10] arm64/mmu: align alloc_init_pte prototype with
- pmd/pud versions
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-arm-kernel@lists.infradead.org, keescook@chromium.org, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com
+In-Reply-To: <c10289bb-e72b-b7b5-f02b-d8cab49f372c@de.ibm.com>
+References: <20170309012456.5631-1-thgarnie@google.com> <c10289bb-e72b-b7b5-f02b-d8cab49f372c@de.ibm.com>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 9 Mar 2017 07:53:54 -0800
+Message-ID: <CAJcbSZH7xoBGsD7A4odpYrWopziWrc8sifAUiUgQmVnYkxwo4w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 1/4] syscalls: Restore address limit after a syscall
+To: Christian Borntraeger <borntraeger@de.ibm.com>
+Cc: David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Al Viro <viro@zeniv.linux.org.uk>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "David S . Miller" <davem@davemloft.net>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Petr Mladek <pmladek@suse.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stephen Smalley <sds@tycho.nsa.gov>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Jan Beulich <JBeulich@suse.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, Vladimir Murzin <vladimir.murzin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andre Przywara <andre.przywara@arm.com>, Linux API <linux-api@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, linux-s390 <linux-s390@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 09, 2017 at 09:25:08AM +0100, Ard Biesheuvel wrote:
-> Align the function prototype of alloc_init_pte() with its pmd and pud
-> counterparts by replacing the pfn parameter with the equivalent physical
-> address.
-> 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> ---
->  arch/arm64/mm/mmu.c | 8 ++++----
->  1 file changed, 4 insertions(+), 4 deletions(-)
-> 
-> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-> index 75e21c33caff..c3963c592ec3 100644
-> --- a/arch/arm64/mm/mmu.c
-> +++ b/arch/arm64/mm/mmu.c
-> @@ -107,7 +107,7 @@ static bool pgattr_change_is_safe(u64 old, u64 new)
->  }
->  
->  static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
-> -				  unsigned long end, unsigned long pfn,
-> +				  unsigned long end, phys_addr_t phys,
->  				  pgprot_t prot,
->  				  phys_addr_t (*pgtable_alloc)(void))
->  {
-> @@ -128,8 +128,8 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
->  	do {
->  		pte_t old_pte = *pte;
->  
-> -		set_pte(pte, pfn_pte(pfn, prot));
-> -		pfn++;
-> +		set_pte(pte, pfn_pte(__phys_to_pfn(phys), prot));
-> +		phys += PAGE_SIZE;
+> On Thu, Mar 9, 2017 at 4:32 AM, Christian Borntraeger <borntraeger@de.ibm.com> wrote:
+> Can you please disable that for s390?  (e.g. by setting
+> CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE for s390)
+> We have a separate address space for kernel/user so the logic will
+> be slightly different and is already handled in
+>
+> commit b5a882fcf146c87cb6b67c6df353e1c042b8773d
+> Author: Heiko Carstens <heiko.carstens@de.ibm.com>
+> Date:   Fri Feb 17 08:13:28 2017 +0100
+>
+>     s390: restore address space when returning to user space
+>
 
-Minor nit: so as to align the strucutre of the loop with the other
-functions, it'd be nice to have this on the final line of the loop body.
+No problem, I will add it on the next iteration of this change.
 
-Either way:
-
-Reviewed-by: Mark Rutland <mark.rutland@arm.com>
-
-Mark.
-
->  
->  		/*
->  		 * After the PTE entry has been populated once, we
-> @@ -182,7 +182,7 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
->  			BUG_ON(!pgattr_change_is_safe(pmd_val(old_pmd),
->  						      pmd_val(*pmd)));
->  		} else {
-> -			alloc_init_pte(pmd, addr, next, __phys_to_pfn(phys),
-> +			alloc_init_pte(pmd, addr, next, phys,
->  				       prot, pgtable_alloc);
->  
->  			BUG_ON(pmd_val(old_pmd) != 0 &&
-> -- 
-> 2.7.4
-> 
+-- 
+Thomas
