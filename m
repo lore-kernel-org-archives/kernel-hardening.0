@@ -1,321 +1,85 @@
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  9 Mar 2017 21:52:09 +0100
-Message-Id: <1489092729-16871-12-git-send-email-ard.biesheuvel@linaro.org>
-In-Reply-To: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
-References: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
-Subject: [kernel-hardening] [PATCH v6 11/11] arm64: mm: set the contiguous bit for kernel mappings where appropriate
-To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org
-Cc: kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+MIME-Version: 1.0
+In-Reply-To: <20170306220348.79702-2-thgarnie@google.com>
+References: <20170306220348.79702-1-thgarnie@google.com> <20170306220348.79702-2-thgarnie@google.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 9 Mar 2017 13:32:03 -0800
+Message-ID: <CALCETrVXHc-EAhBtdhL9FXSW1G2VbohRY4UJuOtpRG1K0Q-Ogg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 2/3] x86: Remap GDT tables in the Fixmap section
+To: Thomas Garnier <thgarnie@google.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Juergen Gross <jgross@suse.com>, Lorenzo Stoakes <lstoakes@gmail.com>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, zijun_hu <zijun_hu@htc.com>, Chris Wilson <chris@chris-wilson.co.uk>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Rusty Russell <rusty@rustcorp.com.au>, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stanislaw Gruszka <sgruszka@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@intel.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, David Vrabel <david.vrabel@citrix.com>, Tim Chen <tim.c.chen@linux.intel.com>, Andi Kleen <ak@linux.intel.com>, Jiri Olsa <jolsa@redhat.com>, Prarit Bhargava <prarit@redhat.com>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, "linux-mm@kvack.org" <linux-mm@kvack.org>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, lguest@lists.ozlabs.org, kvm list <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is the third attempt at enabling the use of contiguous hints for
-kernel mappings. The most recent attempt 0bfc445dec9d was reverted after
-it turned out that updating permission attributes on live contiguous ranges
-may result in TLB conflicts. So this time, the contiguous hint is not set
-for .rodata or for the linear alias of .text/.rodata, both of which are
-mapped read-write initially, and remapped read-only at a later stage.
-(Note that the latter region could also be unmapped and remapped again
-with updated permission attributes, given that the region, while live, is
-only mapped for the convenience of the hibernation code, but that also
-means the TLB footprint is negligible anyway, so why bother)
+On Mon, Mar 6, 2017 at 2:03 PM, Thomas Garnier <thgarnie@google.com> wrote:
+> Each processor holds a GDT in its per-cpu structure. The sgdt
+> instruction gives the base address of the current GDT. This address can
+> be used to bypass KASLR memory randomization. With another bug, an
+> attacker could target other per-cpu structures or deduce the base of
+> the main memory section (PAGE_OFFSET).
+>
+> This patch relocates the GDT table for each processor inside the
+> Fixmap section. The space is reserved based on number of supported
+> processors.
+>
+> For consistency, the remapping is done by default on 32 and 64-bit.
+>
+> Each processor switches to its remapped GDT at the end of
+> initialization. For hibernation, the main processor returns with the
+> original GDT and switches back to the remapping at completion.
+>
+> This patch was tested on both architectures. Hibernation and KVM were
+> both tested specially for their usage of the GDT.
 
-This enables the following contiguous range sizes for the virtual mapping
-of the kernel image, and for the linear mapping:
+Looks good with minor nitpicks.  Also, have you tested on Xen PV?
 
-          granule size |  cont PTE  |  cont PMD  |
-          -------------+------------+------------+
-               4 KB    |    64 KB   |   32 MB    |
-              16 KB    |     2 MB   |    1 GB*   |
-              64 KB    |     2 MB   |   16 GB*   |
+(If you aren't set up for it, virtme can do this test quite easily.  I
+could run it for you if you like, too.)
 
-* Only when built for 3 or more levels of translation. This is due to the
-  fact that a 2 level configuration only consists of PGDs and PTEs, and the
-  added complexity of dealing with folded PMDs is not justified considering
-  that 16 GB contiguous ranges are likely to be ignored by the hardware (and
-  16k/2 levels is a niche configuration)
+> +static inline unsigned long get_current_gdt_rw_vaddr(void)
+> +{
+> +       return (unsigned long)get_current_gdt_rw();
+> +}
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/include/asm/pgtable.h |  10 ++
- arch/arm64/mm/mmu.c              | 140 ++++++++++++++------
- 2 files changed, 107 insertions(+), 43 deletions(-)
+This has no callers, so let's remove it.
 
-diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
-index 0eef6064bf3b..c213fdbd056c 100644
---- a/arch/arm64/include/asm/pgtable.h
-+++ b/arch/arm64/include/asm/pgtable.h
-@@ -74,6 +74,16 @@ extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
- #define pte_user_exec(pte)	(!(pte_val(pte) & PTE_UXN))
- #define pte_cont(pte)		(!!(pte_val(pte) & PTE_CONT))
- 
-+#define pte_cont_addr_end(addr, end)						\
-+({	unsigned long __boundary = ((addr) + CONT_PTE_SIZE) & CONT_PTE_MASK;	\
-+	(__boundary - 1 < (end) - 1) ? __boundary : (end);			\
-+})
-+
-+#define pmd_cont_addr_end(addr, end)						\
-+({	unsigned long __boundary = ((addr) + CONT_PMD_SIZE) & CONT_PMD_MASK;	\
-+	(__boundary - 1 < (end) - 1) ? __boundary : (end);			\
-+})
-+
- #ifdef CONFIG_ARM64_HW_AFDBM
- #define pte_hw_dirty(pte)	(pte_write(pte) && !(pte_val(pte) & PTE_RDONLY))
- #else
-diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
-index 85ab82f5a0bc..91502e36e6d9 100644
---- a/arch/arm64/mm/mmu.c
-+++ b/arch/arm64/mm/mmu.c
-@@ -44,6 +44,7 @@
- #include <asm/ptdump.h>
- 
- #define NO_BLOCK_MAPPINGS	BIT(0)
-+#define NO_CONT_MAPPINGS	BIT(1)
- 
- u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
- 
-@@ -116,22 +117,11 @@ static bool pgattr_change_is_safe(u64 old, u64 new)
- 	return ((old ^ new) & ~mask) == 0;
- }
- 
--static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
--				  unsigned long end, phys_addr_t phys,
--				  pgprot_t prot,
--				  phys_addr_t (*pgtable_alloc)(void))
-+static void init_pte(pmd_t *pmd, unsigned long addr, unsigned long end,
-+		     phys_addr_t phys, pgprot_t prot)
- {
- 	pte_t *pte;
- 
--	BUG_ON(pmd_sect(*pmd));
--	if (pmd_none(*pmd)) {
--		phys_addr_t pte_phys;
--		BUG_ON(!pgtable_alloc);
--		pte_phys = pgtable_alloc();
--		__pmd_populate(pmd, pte_phys, PMD_TYPE_TABLE);
--	}
--	BUG_ON(pmd_bad(*pmd));
--
- 	pte = pte_set_fixmap_offset(pmd, addr);
- 	do {
- 		pte_t old_pte = *pte;
-@@ -150,25 +140,45 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
- 	pte_clear_fixmap();
- }
- 
--static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
--				  phys_addr_t phys, pgprot_t prot,
--				  phys_addr_t (*pgtable_alloc)(void),
--				  int flags)
-+static void alloc_init_cont_pte(pmd_t *pmd, unsigned long addr,
-+				unsigned long end, phys_addr_t phys,
-+				pgprot_t prot,
-+				phys_addr_t (*pgtable_alloc)(void),
-+				int flags)
- {
--	pmd_t *pmd;
- 	unsigned long next;
- 
--	/*
--	 * Check for initial section mappings in the pgd/pud and remove them.
--	 */
--	BUG_ON(pud_sect(*pud));
--	if (pud_none(*pud)) {
--		phys_addr_t pmd_phys;
-+	BUG_ON(pmd_sect(*pmd));
-+	if (pmd_none(*pmd)) {
-+		phys_addr_t pte_phys;
- 		BUG_ON(!pgtable_alloc);
--		pmd_phys = pgtable_alloc();
--		__pud_populate(pud, pmd_phys, PUD_TYPE_TABLE);
-+		pte_phys = pgtable_alloc();
-+		__pmd_populate(pmd, pte_phys, PMD_TYPE_TABLE);
- 	}
--	BUG_ON(pud_bad(*pud));
-+	BUG_ON(pmd_bad(*pmd));
-+
-+	do {
-+		pgprot_t __prot = prot;
-+
-+		next = pte_cont_addr_end(addr, end);
-+
-+		/* use a contiguous mapping if the range is suitably aligned */
-+		if ((((addr | next | phys) & ~CONT_PTE_MASK) == 0) &&
-+		    (flags & NO_CONT_MAPPINGS) == 0)
-+			__prot = __pgprot(pgprot_val(prot) | PTE_CONT);
-+
-+		init_pte(pmd, addr, next, phys, __prot);
-+
-+		phys += next - addr;
-+	} while (addr = next, addr != end);
-+}
-+
-+static void init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
-+		     phys_addr_t phys, pgprot_t prot,
-+		     phys_addr_t (*pgtable_alloc)(void), int flags)
-+{
-+	unsigned long next;
-+	pmd_t *pmd;
- 
- 	pmd = pmd_set_fixmap_offset(pud, addr);
- 	do {
-@@ -188,8 +198,8 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
- 			BUG_ON(!pgattr_change_is_safe(pmd_val(old_pmd),
- 						      pmd_val(*pmd)));
- 		} else {
--			alloc_init_pte(pmd, addr, next, phys,
--				       prot, pgtable_alloc);
-+			alloc_init_cont_pte(pmd, addr, next, phys, prot,
-+					    pgtable_alloc, flags);
- 
- 			BUG_ON(pmd_val(old_pmd) != 0 &&
- 			       pmd_val(old_pmd) != pmd_val(*pmd));
-@@ -200,6 +210,41 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
- 	pmd_clear_fixmap();
- }
- 
-+static void alloc_init_cont_pmd(pud_t *pud, unsigned long addr,
-+				unsigned long end, phys_addr_t phys,
-+				pgprot_t prot,
-+				phys_addr_t (*pgtable_alloc)(void), int flags)
-+{
-+	unsigned long next;
-+
-+	/*
-+	 * Check for initial section mappings in the pgd/pud.
-+	 */
-+	BUG_ON(pud_sect(*pud));
-+	if (pud_none(*pud)) {
-+		phys_addr_t pmd_phys;
-+		BUG_ON(!pgtable_alloc);
-+		pmd_phys = pgtable_alloc();
-+		__pud_populate(pud, pmd_phys, PUD_TYPE_TABLE);
-+	}
-+	BUG_ON(pud_bad(*pud));
-+
-+	do {
-+		pgprot_t __prot = prot;
-+
-+		next = pmd_cont_addr_end(addr, end);
-+
-+		/* use a contiguous mapping if the range is suitably aligned */
-+		if ((((addr | next | phys) & ~CONT_PMD_MASK) == 0) &&
-+		    (flags & NO_CONT_MAPPINGS) == 0)
-+			__prot = __pgprot(pgprot_val(prot) | PTE_CONT);
-+
-+		init_pmd(pud, addr, next, phys, __prot, pgtable_alloc, flags);
-+
-+		phys += next - addr;
-+	} while (addr = next, addr != end);
-+}
-+
- static inline bool use_1G_block(unsigned long addr, unsigned long next,
- 			unsigned long phys)
- {
-@@ -248,8 +293,8 @@ static void alloc_init_pud(pgd_t *pgd, unsigned long addr, unsigned long end,
- 			BUG_ON(!pgattr_change_is_safe(pud_val(old_pud),
- 						      pud_val(*pud)));
- 		} else {
--			alloc_init_pmd(pud, addr, next, phys, prot,
--				       pgtable_alloc, flags);
-+			alloc_init_cont_pmd(pud, addr, next, phys, prot,
-+					    pgtable_alloc, flags);
- 
- 			BUG_ON(pud_val(old_pud) != 0 &&
- 			       pud_val(old_pud) != pud_val(*pud));
-@@ -313,7 +358,8 @@ static void __init create_mapping_noalloc(phys_addr_t phys, unsigned long virt,
- 			&phys, virt);
- 		return;
- 	}
--	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, 0);
-+	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL,
-+			     NO_CONT_MAPPINGS);
- }
- 
- void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
-@@ -325,7 +371,7 @@ void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,
- 	BUG_ON(mm == &init_mm);
- 
- 	if (page_mappings_only)
--		flags = NO_BLOCK_MAPPINGS;
-+		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
- 
- 	__create_pgd_mapping(mm->pgd, phys, virt, size, prot,
- 			     pgd_pgtable_alloc, flags);
-@@ -340,7 +386,8 @@ static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
- 		return;
- 	}
- 
--	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, 0);
-+	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL,
-+			     NO_CONT_MAPPINGS);
- 
- 	/* flush the TLBs after updating live kernel mappings */
- 	flush_tlb_kernel_range(virt, virt + size);
-@@ -353,7 +400,7 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
- 	int flags = 0;
- 
- 	if (debug_pagealloc_enabled())
--		flags = NO_BLOCK_MAPPINGS;
-+		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
- 
- 	/*
- 	 * Take care not to create a writable alias for the
-@@ -390,10 +437,12 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
- 	 * alternative patching has completed). This makes the contents
- 	 * of the region accessible to subsystems such as hibernate,
- 	 * but protects it from inadvertent modification or execution.
-+	 * Note that contiguous mappings cannot be remapped in this way,
-+	 * so we should avoid them here.
- 	 */
- 	__create_pgd_mapping(pgd, kernel_start, __phys_to_virt(kernel_start),
- 			     kernel_end - kernel_start, PAGE_KERNEL,
--			     early_pgtable_alloc, 0);
-+			     early_pgtable_alloc, NO_CONT_MAPPINGS);
- }
- 
- void __init mark_linear_text_alias_ro(void)
-@@ -440,7 +489,8 @@ void mark_rodata_ro(void)
- }
- 
- static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
--				      pgprot_t prot, struct vm_struct *vma)
-+				      pgprot_t prot, struct vm_struct *vma,
-+				      int flags)
- {
- 	phys_addr_t pa_start = __pa_symbol(va_start);
- 	unsigned long size = va_end - va_start;
-@@ -449,7 +499,7 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
- 	BUG_ON(!PAGE_ALIGNED(size));
- 
- 	__create_pgd_mapping(pgd, pa_start, (unsigned long)va_start, size, prot,
--			     early_pgtable_alloc, 0);
-+			     early_pgtable_alloc, flags);
- 
- 	vma->addr	= va_start;
- 	vma->phys_addr	= pa_start;
-@@ -481,14 +531,18 @@ static void __init map_kernel(pgd_t *pgd)
- 	 */
- 	pgprot_t text_prot = rodata_enabled ? PAGE_KERNEL_ROX : PAGE_KERNEL_EXEC;
- 
--	map_kernel_segment(pgd, _text, _etext, text_prot, &vmlinux_text);
-+	/*
-+	 * Only rodata will be remapped with different permissions later on,
-+	 * all other segments are allowed to use contiguous mappings.
-+	 */
-+	map_kernel_segment(pgd, _text, _etext, text_prot, &vmlinux_text, 0);
- 	map_kernel_segment(pgd, __start_rodata, __inittext_begin, PAGE_KERNEL,
--			   &vmlinux_rodata);
-+			   &vmlinux_rodata, NO_CONT_MAPPINGS);
- 	map_kernel_segment(pgd, __inittext_begin, __inittext_end, text_prot,
--			   &vmlinux_inittext);
-+			   &vmlinux_inittext, 0);
- 	map_kernel_segment(pgd, __initdata_begin, __initdata_end, PAGE_KERNEL,
--			   &vmlinux_initdata);
--	map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data);
-+			   &vmlinux_initdata, 0);
-+	map_kernel_segment(pgd, _data, _end, PAGE_KERNEL, &vmlinux_data, 0);
- 
- 	if (!pgd_val(*pgd_offset_raw(pgd, FIXADDR_START))) {
- 		/*
--- 
-2.7.4
+> +static inline unsigned long get_cpu_gdt_ro_vaddr(int cpu)
+> +{
+> +       return (unsigned long)get_cpu_gdt_ro(cpu);
+> +}
+
+Ditto.
+
+> +static inline unsigned long get_current_gdt_ro_vaddr(void)
+> +{
+> +       return (unsigned long)get_current_gdt_ro();
+> +}
+
+Ditto.
+
+> --- a/arch/x86/xen/enlighten.c
+> +++ b/arch/x86/xen/enlighten.c
+> @@ -710,7 +710,7 @@ static void load_TLS_descriptor(struct thread_struct *t,
+>
+>         *shadow = t->tls_array[i];
+>
+> -       gdt = get_cpu_gdt_table(cpu);
+> +       gdt = get_cpu_gdt_rw(cpu);
+>         maddr = arbitrary_virt_to_machine(&gdt[GDT_ENTRY_TLS_MIN+i]);
+>         mc = __xen_mc_entry(0);
+
+Boris, is this right?  I don't see why it wouldn't be, but Xen is special.
+
+> @@ -504,7 +504,7 @@ void __init lguest_arch_host_init(void)
+>                  * byte, not the size, hence the "-1").
+>                  */
+>                 state->host_gdt_desc.size = GDT_SIZE-1;
+> -               state->host_gdt_desc.address = (long)get_cpu_gdt_table(i);
+> +               state->host_gdt_desc.address = (long)get_cpu_gdt_rw(i);
+
+I suspect this should be get_cpu_gdt_ro(), but I don't know too much
+about lguest.  Hmm, maybe the right thing to do is to give lguest a
+nice farewell and retire it.  The last time I tried to test it, I gave
+up.
+
+
+--Andy
