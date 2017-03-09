@@ -1,96 +1,63 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170309024229.GA6638@hopstrocity>
-References: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
- <CAGXu5jKNhZtoP-8DxG+_NsTVCMo-ZLV8E1xPMWgEn=71kTJ4rw@mail.gmail.com> <20170309024229.GA6638@hopstrocity>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 8 Mar 2017 22:01:38 -0800
-Message-ID: <CAGXu5jKGQ+UDu8LZDou1FfOs_ExuRKTo1M86mEA9EV33QNDEtw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Ahoy!
-To: Tycho Andersen <tycho@docker.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu,  9 Mar 2017 09:25:02 +0100
+Message-Id: <1489047912-642-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] [PATCH v5 00/10] arm64: mmu: avoid W+X mappings and re-enable PTE_CONT for kernel
+To: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org
+Cc: kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 8, 2017 at 6:42 PM, Tycho Andersen <tycho@docker.com> wrote:
-> Hey Kees,
->
-> On Wed, Mar 08, 2017 at 03:17:55PM -0800, Kees Cook wrote:
->> On Tue, Mar 7, 2017 at 3:37 PM, Tycho Andersen <tycho@docker.com> wrote:
->> > I'm a new engineer at Docker, and I've been given some time to work on
->> > kernel security, so I figured I'd introduce myself here. I'm currently
->> > trying to figure out what a good first small-ish project that matches up
->> > with the company's interests (containers, infrastructure that is used for
->> > security primitives like eBPF).
->> >
->> > Thoughts about areas to poke at are much appreciated!
->>
->> Hi! Welcome to the fun!
->>
->> As I understand it (for our earlier chat), Docker is mainly x86, which
->> somewhat limits choices from the existing KSPP TODO list which has a
->> lot of arm and arm64 stuff on it. :)
->
-> Yes, unfortunately :(.
->
->> So, here's one that isn't protection exactly, but rather a requested
->> arrangement of Kconfig logic: it would be nice if HARDENED_USERCOPY
->> depended on !DEVKMEM and STRICT_DEVMEM=y, but this isn't quite trivial
->> since STRICT_DEVMEM doesn't exist for all architectures, but maybe it
->> should be looking at ARCH_HAS_DEVMEM_IS_ALLOWED... (it seems Dan
->> Williams cleaned this up a lot already in commit 21266be9ed542)
->>
->> Regardless, no one has snagged this to make sure that hardened
->> usercopy isn't bypassed by things like DEVKMEM or DEVMEM and the lack
->> of STRICT_DEVMEM. I'd like to have that off the list, and mostly I
->> think it just requires staring at the Kconfigs for a bit to figure out
->> the right combination so that people wanting hardened usercopy don't
->> accidentally undermine themselves.
->
-> Yeah, I think it is fairly simple. Does the attached patch look like
-> what you had in mind? I can send out a real version to the right
-> people if it looks reasonable.
+Having memory that is writable and executable at the same time is a
+security hazard, and so we tend to avoid those when we can. However,
+at boot time, we keep .text mapped writable during the entire init
+phase, and the init region itself is mapped rwx as well.
 
-Ah, I found the original thread.. https://lkml.org/lkml/2016/9/7/589
+Let's improve the situation by:
+- making the alternatives patching use the linear mapping
+- splitting the init region into separate text and data regions
 
-Can you add the !MMU case, and then I think it'll be good.
+This removes all RWX mappings except the really early one created
+in head.S (which we could perhaps fix in the future as well)
 
->> So, that's the first thing that pops out at me. What do you think? :)
->
-> I was curious about PAX_MEMORY_STACKLEAK, actually. I noticed in the
-> initial KSPP announcement email you mentioned it, and it's not clear
-> to me that anything actually got merged for it.
+Changes since v4:
+- the PTE_CONT patch has now spawned four more preparatory patches that clean
+  up some of the page table creation code before reintroducing the contiguous
+  attribute management
+- add Mark's R-b to #4 and #5
 
-That was an example of one of the many plugins in grsecurity, but no
-one has looked at upstreaming it yet. Since we've got the gcc
-infrastructure in place now, yeah, please take a look; I'd love to add
-it.
+Changes since v3:
+- use linear alias only when patching the core kernel, and not for modules
+- add patch to reintroduce the use of PTE_CONT for kernel mappings, except
+  for regions that are remapped read-only later on (i.e, .rodata and the
+  linear alias of .text+.rodata)
 
-> I understand in principle what needs to happen, but I'm not sure I
-> understand why a gcc plugin is required.
+Changes since v2:
+  - ensure that text mappings remain writable under rodata=off
+  - rename create_mapping_late() to update_mapping_prot()
+  - clarify commit log of #2
+  - add acks
 
-IIUC, the plugin is used to instrument the call depth so that it's an
-efficient clearing.
+Ard Biesheuvel (10):
+  arm: kvm: move kvm_vgic_global_state out of .text section
+  arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+  arm64: alternatives: apply boot time fixups via the linear mapping
+  arm64: mmu: map .text as read-only from the outset
+  arm64: mmu: apply strict permissions to .init.text and .init.data
+  arm64/mmu: align alloc_init_pte prototype with pmd/pud versions
+  arm64/mmu: ignore debug_pagealloc for kernel segments
+  arm64/mmu: add contiguous bit to sanity bug check
+  arm64/mmu: replace 'page_mappings_only' parameter with flags argument
+  arm64: mm: set the contiguous bit for kernel mappings where
+    appropriate
 
-> Anyway, it seems like a
-> small-ish change (that could be hid behind a sysctl or a compiler
-> flag) that is reasonable enough to start with. Thoughts?
-
-Nothing is ever simple. :) See the #ifdef CONFIG_PAX_MEMORY_STACKLEAK
-sections in the x86 entry code, fs/exec.c, etc. And it looks like
-additional changes (that lack the config ifdef in processor.h) for
-adding the new field to track depth, etc.
-
-(It'd be nice to expand this feature beyond x86 too, but that can be
-the next step.)
-
-As far as how to enable id, I would follow the existing Kconfig style
-(see how the structleak plugin was added for upstream).
-
-I think it'd be a great addition!
-
--Kees
+ arch/arm64/include/asm/mmu.h      |   1 +
+ arch/arm64/include/asm/pgtable.h  |  10 +
+ arch/arm64/include/asm/sections.h |   2 +
+ arch/arm64/kernel/alternative.c   |  11 +-
+ arch/arm64/kernel/smp.c           |   1 +
+ arch/arm64/kernel/vmlinux.lds.S   |  25 +-
+ arch/arm64/mm/mmu.c               | 250 ++++++++++++++------
+ virt/kvm/arm/vgic/vgic.c          |   4 +-
+ 8 files changed, 212 insertions(+), 92 deletions(-)
 
 -- 
-Kees Cook
-Pixel Security
+2.7.4
