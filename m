@@ -1,74 +1,79 @@
+Date: Thu, 9 Mar 2017 17:51:17 +0000
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170309175116.GD11966@leverpostej>
+References: <1489047912-642-1-git-send-email-ard.biesheuvel@linaro.org>
+ <1489047912-642-8-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-In-Reply-To: <CALCETrWE5KzrAC6Os3y0f9CJMnM6znQQSSaexin8CC8JB9q1bQ@mail.gmail.com>
-References: <20170309012456.5631-1-thgarnie@google.com> <20170309084208.ims3ehcnieo7uqew@pd.tnic>
- <CALCETrWE5KzrAC6Os3y0f9CJMnM6znQQSSaexin8CC8JB9q1bQ@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 9 Mar 2017 09:41:14 -0800
-Message-ID: <CAJcbSZG1WR5QktwEsfe0MCyRW+1gKJg3axM29QkF-=J4qe6uYg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 1/4] syscalls: Restore address limit after a syscall
-To: Andy Lutomirski <luto@amacapital.net>
-Cc: Borislav Petkov <bp@alien8.de>, David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Al Viro <viro@zeniv.linux.org.uk>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "David S . Miller" <davem@davemloft.net>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Petr Mladek <pmladek@suse.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stephen Smalley <sds@tycho.nsa.gov>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Jan Beulich <JBeulich@suse.com>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, Vladimir Murzin <vladimir.murzin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andre Przywara <andre.przywara@arm.com>, Linux API <linux-api@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, X86 ML <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1489047912-642-8-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v5 07/10] arm64/mmu: ignore debug_pagealloc for kernel
+ segments
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, keescook@chromium.org, labbott@fedoraproject.org, kernel-hardening@lists.openwall.com, will.deacon@arm.com, catalin.marinas@arm.com, kvmarm@lists.cs.columbia.edu, marc.zyngier@arm.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 9, 2017 at 9:27 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> On Thu, Mar 9, 2017 at 12:42 AM, Borislav Petkov <bp@alien8.de> wrote:
->> On Wed, Mar 08, 2017 at 05:24:53PM -0800, Thomas Garnier wrote:
->>> @@ -191,6 +191,22 @@ extern struct trace_event_functions exit_syscall_print_funcs;
->>>       SYSCALL_METADATA(sname, x, __VA_ARGS__)                 \
->>>       __SYSCALL_DEFINEx(x, sname, __VA_ARGS__)
->>>
->>> +asmlinkage void verify_pre_usermode_state(void);
->>> +
->>> +#ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
->>> +static inline bool has_user_ds(void) {
->>> +     bool ret = segment_eq(get_fs(), USER_DS);
->>> +     // Prevent re-ordering the call
->>
->> This is not the kernel comments style. Use /* */ instead.
->>
->>> +     barrier();
->>> +     return ret;
->>> +}
->>> +#else
->>> +static inline bool has_user_ds(void) {
->>> +     return false;
->>> +}
->>> +#endif
->>
->> ... and then you could slim down the ifdeffery a bit:
->>
->> static inline bool has_user_ds(void) {
->>         bool ret = false;
->>
->> #ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
->>         ret = segment_eq(get_fs(), USER_DS);
->>         /* Prevent re-ordering the call. */
->>         barrier();
->> #endif
->>
->>         return ret;
->> }
->
-> I don't like having any kernel configuration in which has_user_ds()
-> unconditionally returns false.  Can we put the ifdeffery in the caller
-> instead?
+On Thu, Mar 09, 2017 at 09:25:09AM +0100, Ard Biesheuvel wrote:
+> The debug_pagealloc facility manipulates kernel mappings in the linear
+> region at page granularity to detect out of bounds or use-after-free
+> accesses. Since the kernel segments are not allocated dynamically,
+> there is no point in taking the debug_pagealloc_enabled flag into
+> account for them, and we can use block mappings unconditionally.
+> 
+> Note that this applies equally to the linear alias of text/rodata:
+> we will never have dynamic allocations there given that the same
+> memory is statically in use by the kernel image.
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-I don't like it either to be honest. We could have something like:
+This makes sense to me, and I haven't found anything this breaks.
 
-#ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
-#define CHECK_USER_CALLER(_x) bool _x = segment_eq(get_fs(), USER_DS)
-#else
-#define CHECK_USER_CALLER(_x) bool _x = false
-#endif
+It may be worth noting that a similar reasoning already applies the the
+FDT mapping, where we use create_mapping_noalloc(), and never mandate
+page mappings.
 
-// In the syscall macro:
-CHECK_CALLED_BY_USER(user_caller);
+Regardless:
 
->
-> --Andy
+Reviewed-by: Mark Rutland <mark.rutland@arm.com>
 
+Mark.
 
-
--- 
-Thomas
+> ---
+>  arch/arm64/mm/mmu.c | 7 +++----
+>  1 file changed, 3 insertions(+), 4 deletions(-)
+> 
+> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+> index c3963c592ec3..d3fecd20a136 100644
+> --- a/arch/arm64/mm/mmu.c
+> +++ b/arch/arm64/mm/mmu.c
+> @@ -328,8 +328,7 @@ static void update_mapping_prot(phys_addr_t phys, unsigned long virt,
+>  		return;
+>  	}
+>  
+> -	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot,
+> -			     NULL, debug_pagealloc_enabled());
+> +	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, false);
+>  
+>  	/* flush the TLBs after updating live kernel mappings */
+>  	flush_tlb_kernel_range(virt, virt + size);
+> @@ -381,7 +380,7 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
+>  	 */
+>  	__create_pgd_mapping(pgd, kernel_start, __phys_to_virt(kernel_start),
+>  			     kernel_end - kernel_start, PAGE_KERNEL,
+> -			     early_pgtable_alloc, debug_pagealloc_enabled());
+> +			     early_pgtable_alloc, false);
+>  }
+>  
+>  void __init mark_linear_text_alias_ro(void)
+> @@ -437,7 +436,7 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
+>  	BUG_ON(!PAGE_ALIGNED(size));
+>  
+>  	__create_pgd_mapping(pgd, pa_start, (unsigned long)va_start, size, prot,
+> -			     early_pgtable_alloc, debug_pagealloc_enabled());
+> +			     early_pgtable_alloc, false);
+>  
+>  	vma->addr	= va_start;
+>  	vma->phys_addr	= pa_start;
+> -- 
+> 2.7.4
+> 
