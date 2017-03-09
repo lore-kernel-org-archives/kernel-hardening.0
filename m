@@ -1,63 +1,287 @@
 MIME-Version: 1.0
-In-Reply-To: <51c23e92-d1f0-427f-e069-c92fc4ed6226@oracle.com>
-References: <20170306220348.79702-1-thgarnie@google.com> <20170306220348.79702-2-thgarnie@google.com>
- <CALCETrVXHc-EAhBtdhL9FXSW1G2VbohRY4UJuOtpRG1K0Q-Ogg@mail.gmail.com>
- <17ffcc5b-1c9a-51b6-272a-5eaecf1bc0c4@citrix.com> <CALCETrWv-u7OdjWDY+5eF7p-ngPun-yYf0QegMzYc6MGVQd-4w@mail.gmail.com>
- <CAJcbSZExVWA0jvAoxLLc+58Ag9cHchifrHP=fFfzU_onHo2PyA@mail.gmail.com>
- <5cf31779-45c5-d37f-86bc-d5afb3fb7ab6@oracle.com> <51c23e92-d1f0-427f-e069-c92fc4ed6226@oracle.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 9 Mar 2017 14:31:49 -0800
-Message-ID: <CAJcbSZEnUBfLHjf+bHqY0JQhQXD9urX45BXrQjx=1=A5gPpp_w@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1488506159-3506-1-git-send-email-dwindsor@gmail.com>
+References: <1488506159-3506-1-git-send-email-dwindsor@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 9 Mar 2017 14:58:23 -0800
+Message-ID: <CAGXu5j+f2hc4EGh-gDuuV6E4x1uiqME2nncSsJJDPJHp5jV4mw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [Xen-devel] [PATCH v5 2/3] x86: Remap GDT tables in the Fixmap section
-To: Boris Ostrovsky <boris.ostrovsky@oracle.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Andrew Cooper <andrew.cooper3@citrix.com>, Michal Hocko <mhocko@suse.com>, Stanislaw Gruszka <sgruszka@redhat.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, kvm list <kvm@vger.kernel.org>, Fenghua Yu <fenghua.yu@intel.com>, Matt Fleming <matt@codeblueprint.co.uk>, Frederic Weisbecker <fweisbec@gmail.com>, X86 ML <x86@kernel.org>, Chris Wilson <chris@chris-wilson.co.uk>, "linux-mm@kvack.org" <linux-mm@kvack.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, Alexander Potapenko <glider@google.com>, Pavel Machek <pavel@ucw.cz>, "H . Peter Anvin" <hpa@zytor.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Jiri Olsa <jolsa@redhat.com>, zijun_hu <zijun_hu@htc.com>, Dave Hansen <dave.hansen@intel.com>, Andi Kleen <ak@linux.intel.com>, "xen-devel@lists.xenproject.org" <xen-devel@lists.xenproject.org>, Jonathan Corbet <corbet@lwn.net>, Michael Ellerman <mpe@ellerman.id.au>, Joerg Roedel <joro@8bytes.org>, Prarit Bhargava <prarit@redhat.com>, kasan-dev <kasan-dev@googlegroups.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Ingo Molnar <mingo@redhat.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Borislav Petkov <bp@suse.de>, Len Brown <len.brown@intel.com>, Rusty Russell <rusty@rustcorp.com.au>, Kees Cook <keescook@chromium.org>, Arnd Bergmann <arnd@arndb.de>, He Chen <he.chen@linux.intel.com>, Brian Gerst <brgerst@gmail.com>, Jiri Kosina <jikos@kernel.org>, lguest@lists.ozlabs.org, Andy Lutomirski <luto@kernel.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Dmitry Vyukov <dvyukov@google.com>, Juergen Gross <jgross@suse.com>, Peter Zijlstra <peterz@infradead.org>, Lorenzo Stoakes <lstoakes@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, "linux-pm@vger.kernel.org" <linux-pm@vger.kernel.org>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Joonsoo Kim <iamjoonsoo.kim@lge.com>, Tim Chen <tim.c.chen@linux.intel.com>
+Subject: Re: [kernel-hardening] [PATCH] refcount: add refcount_t API
+ kernel-doc comments
+To: David Windsor <dwindsor@gmail.com>
+Cc: Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@kernel.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 9, 2017 at 2:13 PM, Boris Ostrovsky
-<boris.ostrovsky@oracle.com> wrote:
+On Thu, Mar 2, 2017 at 5:55 PM, David Windsor <dwindsor@gmail.com> wrote:
+> This adds kernel-doc comments for the new refcount_t API.
 >
->>> I don't have any experience with Xen so it would be great if virtme can=
- test it.
->>
->> I am pretty sure I tested this series at some point but I'll test it aga=
-in.
->>
->
->
-> Fails 32-bit build:
->
->
-> /home/build/linux-boris/arch/x86/kvm/vmx.c: In function =E2=80=98segment_=
-base=E2=80=99:
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: error: =E2=80=98host_gdt=
-=E2=80=99
-> undeclared (first use in this function)
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: error: (Each undeclared
-> identifier is reported only once
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: error: for each
-> function it appears in.)
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: error: type defaults to
-> =E2=80=98int=E2=80=99 in declaration of =E2=80=98type name=E2=80=99
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: error: type defaults to
-> =E2=80=98int=E2=80=99 in declaration of =E2=80=98type name=E2=80=99
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: warning: initialization
-> from incompatible pointer type
-> /home/build/linux-boris/arch/x86/kvm/vmx.c:2054: warning: unused
-> variable =E2=80=98gdt=E2=80=99
->
->
-> -boris
+> v2: incorporate fixes from Peter Zijlstra and Ingo Molnar
 
-It seems that I forgot to remove line 2054 on the rebase. My 32-bit
-build comes clean but I assume it is not good enough compare to the
-full version I build for 64-bit KVM testing.
+Thanks for the update!
 
-Remove just this line and it should build fine, I will fix this on the
-next iteration.
+>
+> Signed-off-by: David Windsor <dwindsor@gmail.com>
 
-Thanks for testing,
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
---=20
-Thomas
+Can this go via the tip locking tree, or should I take it in my kspp tree?
+
+Thanks,
+
+-Kees
+
+> ---
+>  lib/refcount.c | 122 +++++++++++++++++++++++++++++++++++++++++++++++++++------
+>  1 file changed, 110 insertions(+), 12 deletions(-)
+>
+> diff --git a/lib/refcount.c b/lib/refcount.c
+> index 1d33366..d6e317a 100644
+> --- a/lib/refcount.c
+> +++ b/lib/refcount.c
+> @@ -37,6 +37,24 @@
+>  #include <linux/refcount.h>
+>  #include <linux/bug.h>
+>
+> +/**
+> + * refcount_add_not_zero - add a value to a refcount unless it is 0
+> + * @i: the value to add to the refcount
+> + * @r: the refcount
+> + *
+> + * Will saturate at UINT_MAX and WARN.
+> + *
+> + * Provides no memory ordering, it is assumed the caller has guaranteed the
+> + * object memory to be stable (RCU, etc.). It does provide a control dependency
+> + * and thereby orders future stores. See the comment on top.
+> + *
+> + * Use of this function is not recommended for the normal reference counting
+> + * use case in which references are taken and released one at a time.  In these
+> + * cases, refcount_inc(), or one of its variants, should instead be used to
+> + * increment a reference count.
+> + *
+> + * Return: false if the passed refcount is 0, true otherwise
+> + */
+>  bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+>  {
+>         unsigned int old, new, val = atomic_read(&r->refs);
+> @@ -64,18 +82,39 @@ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_add_not_zero);
+>
+> +/**
+> + * refcount_add - add a value to a refcount
+> + * @i: the value to add to the refcount
+> + * @r: the refcount
+> + *
+> + * Similar to atomic_add(), but will saturate at UINT_MAX and WARN.
+> + *
+> + * Provides no memory ordering, it is assumed the caller has guaranteed the
+> + * object memory to be stable (RCU, etc.). It does provide a control dependency
+> + * and thereby orders future stores. See the comment on top.
+> + *
+> + * Use of this function is not recommended for the normal reference counting
+> + * use case in which references are taken and released one at a time.  In these
+> + * cases, refcount_inc(), or one of its variants, should instead be used to
+> + * increment a reference count.
+> + */
+>  void refcount_add(unsigned int i, refcount_t *r)
+>  {
+>         WARN(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_add);
+>
+> -/*
+> - * Similar to atomic_inc_not_zero(), will saturate at UINT_MAX and WARN.
+> +/**
+> + * refcount_inc_not_zero - increment a refcount unless it is 0
+> + * @r: the refcount to increment
+> + *
+> + * Similar to atomic_inc_not_zero(), but will saturate at UINT_MAX and WARN.
+>   *
+>   * Provides no memory ordering, it is assumed the caller has guaranteed the
+>   * object memory to be stable (RCU, etc.). It does provide a control dependency
+>   * and thereby orders future stores. See the comment on top.
+> + *
+> + * Return: true if the increment was successful, false otherwise
+>   */
+>  bool refcount_inc_not_zero(refcount_t *r)
+>  {
+> @@ -103,11 +142,17 @@ bool refcount_inc_not_zero(refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_inc_not_zero);
+>
+> -/*
+> - * Similar to atomic_inc(), will saturate at UINT_MAX and WARN.
+> +/**
+> + * refcount_inc - increment a refcount
+> + * @r: the refcount to increment
+> + *
+> + * Similar to atomic_inc(), but will saturate at UINT_MAX and WARN.
+>   *
+>   * Provides no memory ordering, it is assumed the caller already has a
+> - * reference on the object, will WARN when this is not so.
+> + * reference on the object.
+> + *
+> + * Will WARN if the refcount is 0, as this represents a possible use-after-free
+> + * condition.
+>   */
+>  void refcount_inc(refcount_t *r)
+>  {
+> @@ -115,6 +160,26 @@ void refcount_inc(refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_inc);
+>
+> +/**
+> + * refcount_sub_and_test - subtract from a refcount and test if it is 0
+> + * @i: amount to subtract from the refcount
+> + * @r: the refcount
+> + *
+> + * Similar to atomic_dec_and_test(), but it will WARN, return false and
+> + * ultimately leak on underflow and will fail to decrement when saturated
+> + * at UINT_MAX.
+> + *
+> + * Provides release memory ordering, such that prior loads and stores are done
+> + * before, and provides a control dependency such that free() must come after.
+> + * See the comment on top.
+> + *
+> + * Use of this function is not recommended for the normal reference counting
+> + * use case in which references are taken and released one at a time.  In these
+> + * cases, refcount_dec(), or one of its variants, should instead be used to
+> + * decrement a reference count.
+> + *
+> + * Return: true if the resulting refcount is 0, false otherwise
+> + */
+>  bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+>  {
+>         unsigned int old, new, val = atomic_read(&r->refs);
+> @@ -140,13 +205,18 @@ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_sub_and_test);
+>
+> -/*
+> +/**
+> + * refcount_dec_and_test - decrement a refcount and test if it is 0
+> + * @r: the refcount
+> + *
+>   * Similar to atomic_dec_and_test(), it will WARN on underflow and fail to
+>   * decrement when saturated at UINT_MAX.
+>   *
+>   * Provides release memory ordering, such that prior loads and stores are done
+>   * before, and provides a control dependency such that free() must come after.
+>   * See the comment on top.
+> + *
+> + * Return: true if the resulting refcount is 0, false otherwise
+>   */
+>  bool refcount_dec_and_test(refcount_t *r)
+>  {
+> @@ -154,21 +224,26 @@ bool refcount_dec_and_test(refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_dec_and_test);
+>
+> -/*
+> +/**
+> + * refcount_dec - decrement a refcount
+> + * @r: the refcount
+> + *
+>   * Similar to atomic_dec(), it will WARN on underflow and fail to decrement
+>   * when saturated at UINT_MAX.
+>   *
+>   * Provides release memory ordering, such that prior loads and stores are done
+>   * before.
+>   */
+> -
+>  void refcount_dec(refcount_t *r)
+>  {
+>         WARN(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_dec);
+>
+> -/*
+> +/**
+> + * refcount_dec_if_one - decrement a refcount if it is 1
+> + * @r: the refcount
+> + *
+>   * No atomic_t counterpart, it attempts a 1 -> 0 transition and returns the
+>   * success thereof.
+>   *
+> @@ -178,6 +253,8 @@ EXPORT_SYMBOL_GPL(refcount_dec);
+>   * It can be used like a try-delete operator; this explicit case is provided
+>   * and not cmpxchg in generic, because that would allow implementing unsafe
+>   * operations.
+> + *
+> + * Return: true if the resulting refcount is 0, false otherwise
+>   */
+>  bool refcount_dec_if_one(refcount_t *r)
+>  {
+> @@ -185,11 +262,16 @@ bool refcount_dec_if_one(refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_dec_if_one);
+>
+> -/*
+> +/**
+> + * refcount_dec_not_one - decrement a refcount if it is not 1
+> + * @r: the refcount
+> + *
+>   * No atomic_t counterpart, it decrements unless the value is 1, in which case
+>   * it will return false.
+>   *
+>   * Was often done like: atomic_add_unless(&var, -1, 1)
+> + *
+> + * Return: true if the decrement operation was successful, false otherwise
+>   */
+>  bool refcount_dec_not_one(refcount_t *r)
+>  {
+> @@ -219,13 +301,21 @@ bool refcount_dec_not_one(refcount_t *r)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_dec_not_one);
+>
+> -/*
+> +/**
+> + * refcount_dec_and_mutex_lock - return holding mutex if able to decrement
+> + *                               refcount to 0
+> + * @r: the refcount
+> + * @lock: the mutex to be locked
+> + *
+>   * Similar to atomic_dec_and_mutex_lock(), it will WARN on underflow and fail
+>   * to decrement when saturated at UINT_MAX.
+>   *
+>   * Provides release memory ordering, such that prior loads and stores are done
+>   * before, and provides a control dependency such that free() must come after.
+>   * See the comment on top.
+> + *
+> + * Return: true and hold mutex if able to decrement refcount to 0, false
+> + *         otherwise
+>   */
+>  bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+>  {
+> @@ -242,13 +332,21 @@ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
+>  }
+>  EXPORT_SYMBOL_GPL(refcount_dec_and_mutex_lock);
+>
+> -/*
+> +/**
+> + * refcount_dec_and_lock - return holding spinlock if able to decrement
+> + *                         refcount to 0
+> + * @r: the refcount
+> + * @lock: the spinlock to be locked
+> + *
+>   * Similar to atomic_dec_and_lock(), it will WARN on underflow and fail to
+>   * decrement when saturated at UINT_MAX.
+>   *
+>   * Provides release memory ordering, such that prior loads and stores are done
+>   * before, and provides a control dependency such that free() must come after.
+>   * See the comment on top.
+> + *
+> + * Return: true and hold spinlock if able to decrement refcount to 0, false
+> + *         otherwise
+>   */
+>  bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
+>  {
+> --
+> 2.7.4
+>
+
+
+
+-- 
+Kees Cook
+Pixel Security
