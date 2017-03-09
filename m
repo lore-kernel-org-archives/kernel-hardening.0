@@ -1,73 +1,106 @@
-From: Thomas Garnier <thgarnie@google.com>
-Date: Wed,  8 Mar 2017 17:24:56 -0800
-Message-Id: <20170309012456.5631-4-thgarnie@google.com>
-In-Reply-To: <20170309012456.5631-1-thgarnie@google.com>
-References: <20170309012456.5631-1-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v2 4/4] arm64/syscalls: Specific usage of verify_pre_usermode_state
-To: David Howells <dhowells@redhat.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Al Viro <viro@zeniv.linux.org.uk>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, "David S . Miller" <davem@davemloft.net>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Petr Mladek <pmladek@suse.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stephen Smalley <sds@tycho.nsa.gov>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Jan Beulich <JBeulich@suse.com>, Christian Borntraeger <borntraeger@de.ibm.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, He Chen <he.chen@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, Pratyush Anand <panand@redhat.com>, Vladimir Murzin <vladimir.murzin@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, Andre Przywara <andre.przywara@arm.com>
-Cc: linux-api@vger.kernel.org, linux-kernel@vger.kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
+Date: Wed, 8 Mar 2017 18:42:29 -0800
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20170309024229.GA6638@hopstrocity>
+References: <CAL_7pOJU751gDD9xHqP4Vs=BCBoa9xqLHUrTZEWxF4nkDra86Q@mail.gmail.com>
+ <CAGXu5jKNhZtoP-8DxG+_NsTVCMo-ZLV8E1xPMWgEn=71kTJ4rw@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="Qxx1br4bt0+wmkIi"
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jKNhZtoP-8DxG+_NsTVCMo-ZLV8E1xPMWgEn=71kTJ4rw@mail.gmail.com>
+Subject: Re: [kernel-hardening] Ahoy!
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Implement specific usage of verify_pre_usermode_state for user-mode
-returns for arm64.
----
-Based on next-20170308
----
- arch/arm64/Kconfig        |  1 +
- arch/arm64/kernel/entry.S | 15 +++++++++++++++
- 2 files changed, 16 insertions(+)
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 896eba61e5ed..da54774838d8 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -24,6 +24,7 @@ config ARM64
- 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
- 	select ARCH_WANT_FRAME_POINTERS
- 	select ARCH_HAS_UBSAN_SANITIZE_ALL
-+	select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
- 	select ARM_AMBA
- 	select ARM_ARCH_TIMER
- 	select ARM_GIC
-diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 43512d4d7df2..eca392ae63e9 100644
---- a/arch/arm64/kernel/entry.S
-+++ b/arch/arm64/kernel/entry.S
-@@ -737,6 +737,19 @@ ENTRY(cpu_switch_to)
- 	ret
- ENDPROC(cpu_switch_to)
- 
-+#ifdef CONFIG_BUG_ON_DATA_CORRUPTION
-+.macro VERIFY_PRE_USERMODE_STATE
-+	bl	verify_pre_usermode_state
-+.endm
-+#else
-+/* Similar to set_fs(USER_DS) in verify_pre_usermode_state without a warning. */
-+.macro VERIFY_PRE_USERMODE_STATE
-+	mov	x1, #TASK_SIZE_64
-+	str	x1, [tsk, #TSK_TI_ADDR_LIMIT]
-+.endm
-+#endif
-+
-+
- /*
-  * This is the fast syscall return path.  We do as little as possible here,
-  * and this includes saving x0 back into the kernel stack.
-@@ -744,6 +757,7 @@ ENDPROC(cpu_switch_to)
- ret_fast_syscall:
- 	disable_irq				// disable interrupts
- 	str	x0, [sp, #S_X0]			// returned x0
-+	VERIFY_PRE_USERMODE_STATE
- 	ldr	x1, [tsk, #TSK_TI_FLAGS]	// re-check for syscall tracing
- 	and	x2, x1, #_TIF_SYSCALL_WORK
- 	cbnz	x2, ret_fast_syscall_trace
-@@ -771,6 +785,7 @@ work_pending:
-  */
- ret_to_user:
- 	disable_irq				// disable interrupts
-+	VERIFY_PRE_USERMODE_STATE
- 	ldr	x1, [tsk, #TSK_TI_FLAGS]
- 	and	x2, x1, #_TIF_WORK_MASK
- 	cbnz	x2, work_pending
+--Qxx1br4bt0+wmkIi
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+
+Hey Kees,
+
+On Wed, Mar 08, 2017 at 03:17:55PM -0800, Kees Cook wrote:
+> On Tue, Mar 7, 2017 at 3:37 PM, Tycho Andersen <tycho@docker.com> wrote:
+> > I'm a new engineer at Docker, and I've been given some time to work on
+> > kernel security, so I figured I'd introduce myself here. I'm currently
+> > trying to figure out what a good first small-ish project that matches up
+> > with the company's interests (containers, infrastructure that is used for
+> > security primitives like eBPF).
+> >
+> > Thoughts about areas to poke at are much appreciated!
+> 
+> Hi! Welcome to the fun!
+> 
+> As I understand it (for our earlier chat), Docker is mainly x86, which
+> somewhat limits choices from the existing KSPP TODO list which has a
+> lot of arm and arm64 stuff on it. :)
+
+Yes, unfortunately :(.
+
+> So, here's one that isn't protection exactly, but rather a requested
+> arrangement of Kconfig logic: it would be nice if HARDENED_USERCOPY
+> depended on !DEVKMEM and STRICT_DEVMEM=y, but this isn't quite trivial
+> since STRICT_DEVMEM doesn't exist for all architectures, but maybe it
+> should be looking at ARCH_HAS_DEVMEM_IS_ALLOWED... (it seems Dan
+> Williams cleaned this up a lot already in commit 21266be9ed542)
+> 
+> Regardless, no one has snagged this to make sure that hardened
+> usercopy isn't bypassed by things like DEVKMEM or DEVMEM and the lack
+> of STRICT_DEVMEM. I'd like to have that off the list, and mostly I
+> think it just requires staring at the Kconfigs for a bit to figure out
+> the right combination so that people wanting hardened usercopy don't
+> accidentally undermine themselves.
+
+Yeah, I think it is fairly simple. Does the attached patch look like
+what you had in mind? I can send out a real version to the right
+people if it looks reasonable.
+
+> So, that's the first thing that pops out at me. What do you think? :)
+
+I was curious about PAX_MEMORY_STACKLEAK, actually. I noticed in the
+initial KSPP announcement email you mentioned it, and it's not clear
+to me that anything actually got merged for it.
+
+I understand in principle what needs to happen, but I'm not sure I
+understand why a gcc plugin is required. Anyway, it seems like a
+small-ish change (that could be hid behind a sysctl or a compiler
+flag) that is reasonable enough to start with. Thoughts?
+
+Thanks,
+
+Tycho
+
+--Qxx1br4bt0+wmkIi
+Content-Type: text/x-diff; charset=us-ascii
+Content-Disposition: attachment; filename="0001-security-Kconfig-further-restrict-HARDENED_USERCOPY.patch"
+
+>From 96f0e3764bb3c764cd103b2829ab10176cf5b8c7 Mon Sep 17 00:00:00 2001
+From: Tycho Andersen <tycho@docker.com>
+Date: Wed, 8 Mar 2017 16:19:26 -0800
+Subject: [PATCH] security/Kconfig: further restrict HARDENED_USERCOPY
+
+It doesn't make sense to have HARDENED_USERCOPY when either /dev/kmem is
+enabled or /dev/mem can be used to read kernel memory.
+
+Signed-off-by: Tycho Andersen <tycho@docker.com>
+---
+ security/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/security/Kconfig b/security/Kconfig
+index d900f47..8ff32d3 100644
+--- a/security/Kconfig
++++ b/security/Kconfig
+@@ -137,6 +137,7 @@ config HARDENED_USERCOPY
+ 	bool "Harden memory copies between kernel and userspace"
+ 	depends on HAVE_ARCH_HARDENED_USERCOPY
+ 	depends on HAVE_HARDENED_USERCOPY_ALLOCATOR
++	depends on !DEVKMEM && (!ARCH_HAS_DEVMEM_IS_ALLOWED || STRICT_DEVMEM)
+ 	select BUG
+ 	help
+ 	  This option checks for obviously wrong memory regions when
 -- 
-2.12.0.246.ga2ecc84866-goog
+2.7.4
+
+
+--Qxx1br4bt0+wmkIi--
