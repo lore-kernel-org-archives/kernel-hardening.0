@@ -1,304 +1,116 @@
-From: David Windsor <dwindsor@gmail.com>
-Date: Fri, 10 Mar 2017 10:34:12 -0500
-Message-Id: <1489160052-20293-1-git-send-email-dwindsor@gmail.com>
-Subject: [kernel-hardening] [PATCH v3] refcount: add refcount_t API kernel-doc comments
-To: peterz@infradead.org, mingo@kernel.org, elena.reshetova@intel.com, dwindsor@gmail.com
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Thomas Garnier <thgarnie@google.com>
+Date: Fri, 10 Mar 2017 16:04:58 -0800
+Message-Id: <20170311000501.46607-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v3 1/4] syscalls: Restore address limit after a syscall
+To: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, Thomas Garnier <thgarnie@google.com>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Petr Mladek <pmladek@suse.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, Ingo Molnar <mingo@kernel.org>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Paolo Bonzini <pbonzini@redhat.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Jan Beulich <JBeulich@suse.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Vladimir Murzin <vladimir.murzin@arm.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "David A . Long" <dave.long@linaro.org>, Pratyush Anand <panand@redhat.com>, Laura Abbott <labbott@redhat.com>, Andre Przywara <andre.przywara@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>
+Cc: linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-api@vger.kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-v3: rebase against latest Linus tree; re-add include/linux/refcount.h
-missing from v2 series
+This patch ensures a syscall does not return to user-mode with a kernel
+address limit. If that happened, a process can corrupt kernel-mode
+memory and elevate privileges.
 
-Signed-off-by: David Windsor <dwindsor@gmail.com>
+For example, it would mitigation this bug:
+
+- https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+
+If the CONFIG_BUG_ON_DATA_CORRUPTION option is enabled, an incorrect
+state will result in a BUG_ON.
+
+The CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE option is also
+added so each architecture can optimize this change.
+
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
 ---
- include/linux/refcount.h |  19 ++++++++
- lib/refcount.c           | 124 ++++++++++++++++++++++++++++++++++++++++++-----
- 2 files changed, 130 insertions(+), 13 deletions(-)
+Based on next-20170308
+---
+ arch/s390/Kconfig        |  1 +
+ include/linux/syscalls.h | 18 +++++++++++++++++-
+ init/Kconfig             |  7 +++++++
+ kernel/sys.c             |  8 ++++++++
+ 4 files changed, 33 insertions(+), 1 deletion(-)
 
-diff --git a/include/linux/refcount.h b/include/linux/refcount.h
-index 0023fee..b34aa64 100644
---- a/include/linux/refcount.h
-+++ b/include/linux/refcount.h
-@@ -6,17 +6,36 @@
- #include <linux/spinlock.h>
- #include <linux/kernel.h>
+diff --git a/arch/s390/Kconfig b/arch/s390/Kconfig
+index a2dcef0aacc7..b73f5b87bc99 100644
+--- a/arch/s390/Kconfig
++++ b/arch/s390/Kconfig
+@@ -103,6 +103,7 @@ config S390
+ 	select ARCH_INLINE_WRITE_UNLOCK_BH
+ 	select ARCH_INLINE_WRITE_UNLOCK_IRQ
+ 	select ARCH_INLINE_WRITE_UNLOCK_IRQRESTORE
++	select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
+ 	select ARCH_SAVE_PAGE_KEYS if HIBERNATION
+ 	select ARCH_SUPPORTS_ATOMIC_RMW
+ 	select ARCH_SUPPORTS_NUMA_BALANCING
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index 980c3c9b06f8..e659076adf6c 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -191,6 +191,19 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+ 	SYSCALL_METADATA(sname, x, __VA_ARGS__)			\
+ 	__SYSCALL_DEFINEx(x, sname, __VA_ARGS__)
  
-+/**
-+ * refcount_t - variant of atomic_t specialized for reference counts
-+ * @refs: atomic_t counter field
-+ *
-+ * The counter saturates at UINT_MAX and will not move once
-+ * there. This avoids wrapping the counter and causing 'spurious'
-+ * use-after-free bugs.
-+ */
- typedef struct refcount_struct {
- 	atomic_t refs;
- } refcount_t;
++asmlinkage void verify_pre_usermode_state(void);
++
++#ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
++#define __CHECK_USER_CALLER() \
++	bool user_caller = segment_eq(get_fs(), USER_DS)
++#define __VERIFY_PRE_USERMODE_STATE() \
++	if (user_caller) verify_pre_usermode_state()
++#else
++#define __CHECK_USER_CALLER()
++#define __VERIFY_PRE_USERMODE_STATE()
++#endif
++
++
+ #define __PROTECT(...) asmlinkage_protect(__VA_ARGS__)
+ #define __SYSCALL_DEFINEx(x, name, ...)					\
+ 	asmlinkage long sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))	\
+@@ -199,7 +212,10 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))	\
+ 	{								\
+-		long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		long ret;						\
++		__CHECK_USER_CALLER();					\
++		ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		__VERIFY_PRE_USERMODE_STATE();				\
+ 		__MAP(x,__SC_TEST,__VA_ARGS__);				\
+ 		__PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));	\
+ 		return ret;						\
+diff --git a/init/Kconfig b/init/Kconfig
+index c859c993c26f..c4efc3a95e4a 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1929,6 +1929,13 @@ config PROFILING
+ config TRACEPOINTS
+ 	bool
  
- #define REFCOUNT_INIT(n)	{ .refs = ATOMIC_INIT(n), }
++#
++# Set by each architecture that want to optimize how verify_pre_usermode_state
++# is called.
++#
++config ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
++	bool
++
+ source "arch/Kconfig"
  
-+/**
-+ * refcount_set - set a refcount's value
-+ * @r: the refcount
-+ * @n: value to which the refcount will be set
-+ */
- static inline void refcount_set(refcount_t *r, unsigned int n)
- {
- 	atomic_set(&r->refs, n);
+ endmenu		# General setup
+diff --git a/kernel/sys.c b/kernel/sys.c
+index 196c7134bee6..411163ac9dc3 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -2459,3 +2459,11 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
+ 	return 0;
  }
- 
-+/**
-+ * refcount_read - get a refcount's value
-+ * @r: the refcount
-+ *
-+ * Return: the refcount's value
-+ */
- static inline unsigned int refcount_read(const refcount_t *r)
- {
- 	return atomic_read(&r->refs);
-diff --git a/lib/refcount.c b/lib/refcount.c
-index aa09ad3..8d5d680 100644
---- a/lib/refcount.c
-+++ b/lib/refcount.c
-@@ -37,6 +37,24 @@
- #include <linux/refcount.h>
- #include <linux/bug.h>
- 
-+/**
-+ * refcount_add_not_zero - add a value to a refcount unless it is 0
-+ * @i: the value to add to the refcount
-+ * @r: the refcount
-+ *
-+ * Will saturate at UINT_MAX and WARN.
-+ *
-+ * Provides no memory ordering, it is assumed the caller has guaranteed the
-+ * object memory to be stable (RCU, etc.). It does provide a control dependency
-+ * and thereby orders future stores. See the comment on top.
-+ *
-+ * Use of this function is not recommended for the normal reference counting
-+ * use case in which references are taken and released one at a time.  In these
-+ * cases, refcount_inc(), or one of its variants, should instead be used to
-+ * increment a reference count.
-+ *
-+ * Return: false if the passed refcount is 0, true otherwise
-+ */
- bool refcount_add_not_zero(unsigned int i, refcount_t *r)
- {
- 	unsigned int old, new, val = atomic_read(&r->refs);
-@@ -64,19 +82,40 @@ bool refcount_add_not_zero(unsigned int i, refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_add_not_zero);
- 
-+/**
-+ * refcount_add - add a value to a refcount
-+ * @i: the value to add to the refcount
-+ * @r: the refcount
-+ *
-+ * Similar to atomic_add(), but will saturate at UINT_MAX and WARN.
-+ *
-+ * Provides no memory ordering, it is assumed the caller has guaranteed the
-+ * object memory to be stable (RCU, etc.). It does provide a control dependency
-+ * and thereby orders future stores. See the comment on top.
-+ *
-+ * Use of this function is not recommended for the normal reference counting
-+ * use case in which references are taken and released one at a time.  In these
-+ * cases, refcount_inc(), or one of its variants, should instead be used to
-+ * increment a reference count.
-+ */
- void refcount_add(unsigned int i, refcount_t *r)
- {
- 	WARN_ONCE(!refcount_add_not_zero(i, r), "refcount_t: addition on 0; use-after-free.\n");
- }
- EXPORT_SYMBOL_GPL(refcount_add);
- 
--/*
-- * Similar to atomic_inc_not_zero(), will saturate at UINT_MAX and WARN.
-+/**
-+ * refcount_inc_not_zero - increment a refcount unless it is 0
-+ * @r: the refcount to increment
-+ *
-+ * Similar to atomic_inc_not_zero(), but will saturate at UINT_MAX and WARN.
-  *
-  * Provides no memory ordering, it is assumed the caller has guaranteed the
-  * object memory to be stable (RCU, etc.). It does provide a control dependency
-  * and thereby orders future stores. See the comment on top.
-- */
-+ *
-+ * Return: true if the increment was successful, false otherwise
-+ */
- bool refcount_inc_not_zero(refcount_t *r)
- {
- 	unsigned int old, new, val = atomic_read(&r->refs);
-@@ -103,11 +142,17 @@ bool refcount_inc_not_zero(refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_inc_not_zero);
- 
--/*
-- * Similar to atomic_inc(), will saturate at UINT_MAX and WARN.
-+/**
-+ * refcount_inc - increment a refcount
-+ * @r: the refcount to increment
-+ *
-+ * Similar to atomic_inc(), but will saturate at UINT_MAX and WARN.
-  *
-  * Provides no memory ordering, it is assumed the caller already has a
-- * reference on the object, will WARN when this is not so.
-+ * reference on the object.
-+ *
-+ * Will WARN if the refcount is 0, as this represents a possible use-after-free
-+ * condition.
-  */
- void refcount_inc(refcount_t *r)
- {
-@@ -115,6 +160,26 @@ void refcount_inc(refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_inc);
- 
-+/**
-+ * refcount_sub_and_test - subtract from a refcount and test if it is 0
-+ * @i: amount to subtract from the refcount
-+ * @r: the refcount
-+ *
-+ * Similar to atomic_dec_and_test(), but it will WARN, return false and
-+ * ultimately leak on underflow and will fail to decrement when saturated
-+ * at UINT_MAX.
-+ *
-+ * Provides release memory ordering, such that prior loads and stores are done
-+ * before, and provides a control dependency such that free() must come after.
-+ * See the comment on top.
-+ *
-+ * Use of this function is not recommended for the normal reference counting
-+ * use case in which references are taken and released one at a time.  In these
-+ * cases, refcount_dec(), or one of its variants, should instead be used to
-+ * decrement a reference count.
-+ *
-+ * Return: true if the resulting refcount is 0, false otherwise
-+ */
- bool refcount_sub_and_test(unsigned int i, refcount_t *r)
- {
- 	unsigned int old, new, val = atomic_read(&r->refs);
-@@ -140,13 +205,18 @@ bool refcount_sub_and_test(unsigned int i, refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_sub_and_test);
- 
--/*
-+/**
-+ * refcount_dec_and_test - decrement a refcount and test if it is 0
-+ * @r: the refcount
-+ *
-  * Similar to atomic_dec_and_test(), it will WARN on underflow and fail to
-  * decrement when saturated at UINT_MAX.
-  *
-  * Provides release memory ordering, such that prior loads and stores are done
-  * before, and provides a control dependency such that free() must come after.
-  * See the comment on top.
-+ *
-+ * Return: true if the resulting refcount is 0, false otherwise
-  */
- bool refcount_dec_and_test(refcount_t *r)
- {
-@@ -154,21 +224,26 @@ bool refcount_dec_and_test(refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_dec_and_test);
- 
--/*
-+/**
-+ * refcount_dec - decrement a refcount
-+ * @r: the refcount
-+ *
-  * Similar to atomic_dec(), it will WARN on underflow and fail to decrement
-  * when saturated at UINT_MAX.
-  *
-  * Provides release memory ordering, such that prior loads and stores are done
-  * before.
-  */
--
- void refcount_dec(refcount_t *r)
- {
- 	WARN_ONCE(refcount_dec_and_test(r), "refcount_t: decrement hit 0; leaking memory.\n");
- }
- EXPORT_SYMBOL_GPL(refcount_dec);
- 
--/*
-+/**
-+ * refcount_dec_if_one - decrement a refcount if it is 1
-+ * @r: the refcount
-+ *
-  * No atomic_t counterpart, it attempts a 1 -> 0 transition and returns the
-  * success thereof.
-  *
-@@ -178,6 +253,8 @@ EXPORT_SYMBOL_GPL(refcount_dec);
-  * It can be used like a try-delete operator; this explicit case is provided
-  * and not cmpxchg in generic, because that would allow implementing unsafe
-  * operations.
-+ *
-+ * Return: true if the resulting refcount is 0, false otherwise
-  */
- bool refcount_dec_if_one(refcount_t *r)
- {
-@@ -185,11 +262,16 @@ bool refcount_dec_if_one(refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_dec_if_one);
- 
--/*
-+/**
-+ * refcount_dec_not_one - decrement a refcount if it is not 1
-+ * @r: the refcount
-+ *
-  * No atomic_t counterpart, it decrements unless the value is 1, in which case
-  * it will return false.
-  *
-  * Was often done like: atomic_add_unless(&var, -1, 1)
-+ *
-+ * Return: true if the decrement operation was successful, false otherwise
-  */
- bool refcount_dec_not_one(refcount_t *r)
- {
-@@ -219,13 +301,21 @@ bool refcount_dec_not_one(refcount_t *r)
- }
- EXPORT_SYMBOL_GPL(refcount_dec_not_one);
- 
--/*
-+/**
-+ * refcount_dec_and_mutex_lock - return holding mutex if able to decrement
-+ *                               refcount to 0
-+ * @r: the refcount
-+ * @lock: the mutex to be locked
-+ *
-  * Similar to atomic_dec_and_mutex_lock(), it will WARN on underflow and fail
-  * to decrement when saturated at UINT_MAX.
-  *
-  * Provides release memory ordering, such that prior loads and stores are done
-  * before, and provides a control dependency such that free() must come after.
-  * See the comment on top.
-+ *
-+ * Return: true and hold mutex if able to decrement refcount to 0, false
-+ *         otherwise
-  */
- bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
- {
-@@ -242,13 +332,21 @@ bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock)
- }
- EXPORT_SYMBOL_GPL(refcount_dec_and_mutex_lock);
- 
--/*
-+/**
-+ * refcount_dec_and_lock - return holding spinlock if able to decrement
-+ *                         refcount to 0
-+ * @r: the refcount
-+ * @lock: the spinlock to be locked
-+ *
-  * Similar to atomic_dec_and_lock(), it will WARN on underflow and fail to
-  * decrement when saturated at UINT_MAX.
-  *
-  * Provides release memory ordering, such that prior loads and stores are done
-  * before, and provides a control dependency such that free() must come after.
-  * See the comment on top.
-+ *
-+ * Return: true and hold spinlock if able to decrement refcount to 0, false
-+ *         otherwise
-  */
- bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock)
- {
+ #endif /* CONFIG_COMPAT */
++
++/* Called before coming back to user-mode */
++asmlinkage void verify_pre_usermode_state(void)
++{
++	if (CHECK_DATA_CORRUPTION(!segment_eq(get_fs(), USER_DS),
++				  "incorrect get_fs() on user-mode return"))
++		set_fs(USER_DS);
++}
 -- 
-2.7.4
+2.12.0.246.ga2ecc84866-goog
