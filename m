@@ -1,92 +1,116 @@
-MIME-Version: 1.0
-In-Reply-To: <7389c6e7-87dc-ea0d-5b2a-7925b8c8d33e@zytor.com>
-References: <20170311000501.46607-1-thgarnie@google.com> <20170311000501.46607-2-thgarnie@google.com>
- <20170311094200.GA27700@gmail.com> <733ed189-6c01-2975-a81a-6fbfe4b7b593@zytor.com>
- <2d9aad2a-a677-40d2-c179-379fb6e9f194@zytor.com> <CAJcbSZG6F3DsiBMjizTbzaccvU5_RKdspU06wQ8yi+JT+EW2Jw@mail.gmail.com>
- <CALCETrVVo4aQosdjfUPBf=JWyVWE_cHavbBKX5Swv_HbV__RNw@mail.gmail.com>
- <CAJcbSZEFWzPVfxVzOF5r1yywkgMObxOt8W+1efuTUsv+82FBpg@mail.gmail.com> <7389c6e7-87dc-ea0d-5b2a-7925b8c8d33e@zytor.com>
 From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 14 Mar 2017 09:51:55 -0700
-Message-ID: <CAJcbSZGjos1K9qvQWPTpr4COEcnW6Sn_jo7hCezGbh-BhPAH7w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 2/4] x86/syscalls: Specific usage of verify_pre_usermode_state
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Ingo Molnar <mingo@kernel.org>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Al Viro <viro@zeniv.linux.org.uk>, Dave Hansen <dave.hansen@intel.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, Kees Cook <keescook@chromium.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Andy Lutomirski <luto@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Nicolas Pitre <nicolas.pitre@linaro.org>, Petr Mladek <pmladek@suse.com>, Sebastian Andrzej Siewior <bigeasy@linutronix.de>, Sergey Senozhatsky <sergey.senozhatsky@gmail.com>, Helge Deller <deller@gmx.de>, Rik van Riel <riel@redhat.com>, John Stultz <john.stultz@linaro.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Frederic Weisbecker <fweisbec@gmail.com>, Stanislav Kinsburskiy <skinsbursky@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, Paolo Bonzini <pbonzini@redhat.com>, Dmitry Safonov <dsafonov@virtuozzo.com>, Borislav Petkov <bp@alien8.de>, Josh Poimboeuf <jpoimboe@redhat.com>, Brian Gerst <brgerst@gmail.com>, Jan Beulich <JBeulich@suse.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Fenghua Yu <fenghua.yu@intel.com>, He Chen <he.chen@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Vladimir Murzin <vladimir.murzin@arm.com>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "David A . Long" <dave.long@linaro.org>, Pratyush Anand <panand@redhat.com>, Laura Abbott <labbott@redhat.com>, Andre Przywara <andre.przywara@arm.com>, Chris Metcalf <cmetcalf@mellanox.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Date: Tue, 14 Mar 2017 10:05:06 -0700
+Message-Id: <20170314170508.100882-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v7 1/3] x86/mm: Adapt MODULES_END based on Fixmap section size
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Thomas Garnier <thgarnie@google.com>, Lorenzo Stoakes <lstoakes@gmail.com>, Kees Cook <keescook@chromium.org>, Juergen Gross <jgross@suse.com>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, zijun_hu <zijun_hu@htc.com>, Chris Wilson <chris@chris-wilson.co.uk>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Pavel Machek <pavel@ucw.cz>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rusty Russell <rusty@rustcorp.com.au>, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, Frederic Weisbecker <fweisbec@gmail.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Stanislaw Gruszka <sgruszka@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Joerg Roedel <joro@8bytes.org>, =?UTF-8?q?Radim=20Kr=C4=8Dm=C3=A1=C5=99?= <rkrcmar@redhat.com>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, kasan-dev@googlegroups.com, linux-mm@kvack.org, linux-pm@vger.kernel.org, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 14, 2017 at 9:44 AM, H. Peter Anvin <hpa@zytor.com> wrote:
-> On 03/14/17 09:29, Thomas Garnier wrote:
->>
->> We want to enforce the address limit by default, not only when
->> CONFIG_BUG_ON_DATA_CORRUPTION is enabled. I tested this one:
->>
->> /* Check user-mode state on fast path return. */
->> movq PER_CPU_VAR(current_task), %rax
->> btq $63, TASK_addr_limit(%rax)
->> jnc 1f
->> #ifdef CONFIG_BUG_ON_DATA_CORRUPTION
->> call syscall_return_slowpath
->> jmp return_from_SYSCALL_64
->> #else
->> movq $TASK_SIZE_MAX, %rcx
->> movq %rcx, TASK_addr_limit(%rax)
->> #endif
->> 1:
->>
->> I saw that syscall_return_slowpath is supposed to be called not jumped
->> to. I could just call verify_pre_usermode_state that would be about
->> the same.
->
-> I wanted to comment on that thing: why on earth isn't
-> verify_pre_usermode_state() an inline?  Making it an out-of-line
-> function adds pointless extra overhead to the C code when we are talking
-> about a few instructions.
+This patch aligns MODULES_END to the beginning of the Fixmap section.
+It optimizes the space available for both sections. The address is
+pre-computed based on the number of pages required by the Fixmap
+section.
 
-Because outside of arch specific implementation it is called by each
-syscall handler. it will increase the code size a lot.
+It will allow GDT remapping in the Fixmap section. The current
+MODULES_END static address does not provide enough space for the kernel
+to support a large number of processors.
 
->
-> Second, you never do a branch-around to handle an exceptional condition
-> on the fast path: you jump *out of line* to handle the special
-> condition; a forward branch is preferred since it is slightly more
-> likely to be predicted not taken.
->
-> Now, I finally had a chance to actually look at the full file (I was
-> preoccupied yesterday), and am a bit disappointed, to say the least.
->
-> First of all, the jump target you need is only a handful of instructions
-> further down the code path; you need to do *exactly* that is done when
-> the test of _TIF_ALLWORK_MASK right above is tested!  Not only that, but
-> you already have PER_CPU_VAR(current_task) in %r11 just ready to be
-> used!  This was all in the three instructions immediately prior to the
-> code you modified...
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+Based on next-20170308
+---
+ Documentation/x86/x86_64/mm.txt         | 5 ++++-
+ arch/x86/include/asm/pgtable_64_types.h | 3 ++-
+ arch/x86/kernel/module.c                | 1 +
+ arch/x86/mm/dump_pagetables.c           | 1 +
+ arch/x86/mm/kasan_init_64.c             | 1 +
+ mm/vmalloc.c                            | 1 +
+ 6 files changed, 10 insertions(+), 2 deletions(-)
 
-Correct.
-
->
-> So, all you'd need would be:
->
->         movq $TASK_SIZE_MAX, %rcx
->         cmpq %rcx, TASK_addr_limit(%r11)
->         jne 1f
->
-> We even get a short jump instruction!
->
-> (Using bt saves one more instruction, but see previous caveats about it.)
-
-Okay that seems fair to me. Andy what do you think? (Given you
-suggested the bt). Ingo?
-
-Thanks for the feedback.
-
->
->         -hpa
->
->
->
->
-
-
-
+diff --git a/Documentation/x86/x86_64/mm.txt b/Documentation/x86/x86_64/mm.txt
+index 5724092db811..ee3f9c30957c 100644
+--- a/Documentation/x86/x86_64/mm.txt
++++ b/Documentation/x86/x86_64/mm.txt
+@@ -19,7 +19,7 @@ ffffff0000000000 - ffffff7fffffffff (=39 bits) %esp fixup stacks
+ ffffffef00000000 - fffffffeffffffff (=64 GB) EFI region mapping space
+ ... unused hole ...
+ ffffffff80000000 - ffffffff9fffffff (=512 MB)  kernel text mapping, from phys 0
+-ffffffffa0000000 - ffffffffff5fffff (=1526 MB) module mapping space
++ffffffffa0000000 - ffffffffff5fffff (=1526 MB) module mapping space (variable)
+ ffffffffff600000 - ffffffffffdfffff (=8 MB) vsyscalls
+ ffffffffffe00000 - ffffffffffffffff (=2 MB) unused hole
+ 
+@@ -39,6 +39,9 @@ memory window (this size is arbitrary, it can be raised later if needed).
+ The mappings are not part of any other kernel PGD and are only available
+ during EFI runtime calls.
+ 
++The module mapping space size changes based on the CONFIG requirements for the
++following fixmap section.
++
+ Note that if CONFIG_RANDOMIZE_MEMORY is enabled, the direct mapping of all
+ physical memory, vmalloc/ioremap space and virtual memory map are randomized.
+ Their order is preserved but their base will be offset early at boot time.
+diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+index 3a264200c62f..bb05e21cf3c7 100644
+--- a/arch/x86/include/asm/pgtable_64_types.h
++++ b/arch/x86/include/asm/pgtable_64_types.h
+@@ -67,7 +67,8 @@ typedef struct { pteval_t pte; } pte_t;
+ #endif /* CONFIG_RANDOMIZE_MEMORY */
+ #define VMALLOC_END	(VMALLOC_START + _AC((VMALLOC_SIZE_TB << 40) - 1, UL))
+ #define MODULES_VADDR    (__START_KERNEL_map + KERNEL_IMAGE_SIZE)
+-#define MODULES_END      _AC(0xffffffffff000000, UL)
++/* The module sections ends with the start of the fixmap */
++#define MODULES_END   __fix_to_virt(__end_of_fixed_addresses + 1)
+ #define MODULES_LEN   (MODULES_END - MODULES_VADDR)
+ #define ESPFIX_PGD_ENTRY _AC(-2, UL)
+ #define ESPFIX_BASE_ADDR (ESPFIX_PGD_ENTRY << PGDIR_SHIFT)
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index 477ae806c2fa..fad61caac75e 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -35,6 +35,7 @@
+ #include <asm/page.h>
+ #include <asm/pgtable.h>
+ #include <asm/setup.h>
++#include <asm/fixmap.h>
+ 
+ #if 0
+ #define DEBUGP(fmt, ...)				\
+diff --git a/arch/x86/mm/dump_pagetables.c b/arch/x86/mm/dump_pagetables.c
+index 58b5bee7ea27..75efeecc85eb 100644
+--- a/arch/x86/mm/dump_pagetables.c
++++ b/arch/x86/mm/dump_pagetables.c
+@@ -20,6 +20,7 @@
+ 
+ #include <asm/kasan.h>
+ #include <asm/pgtable.h>
++#include <asm/fixmap.h>
+ 
+ /*
+  * The dumper groups pagetable entries of the same type into one, and for
+diff --git a/arch/x86/mm/kasan_init_64.c b/arch/x86/mm/kasan_init_64.c
+index 8d63d7a104c3..1bde19ef86bd 100644
+--- a/arch/x86/mm/kasan_init_64.c
++++ b/arch/x86/mm/kasan_init_64.c
+@@ -9,6 +9,7 @@
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/sections.h>
++#include <asm/fixmap.h>
+ 
+ extern pgd_t early_level4_pgt[PTRS_PER_PGD];
+ extern struct range pfn_mapped[E820_X_MAX];
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index 32979d945766..1fc9598ed019 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -35,6 +35,7 @@
+ #include <linux/uaccess.h>
+ #include <asm/tlbflush.h>
+ #include <asm/shmparam.h>
++#include <asm/fixmap.h>
+ 
+ #include "internal.h"
+ 
 -- 
-Thomas
+2.12.0.367.g23dc2f6d3c-goog
