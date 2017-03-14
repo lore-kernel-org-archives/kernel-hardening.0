@@ -1,27 +1,62 @@
-Date: Tue, 14 Mar 2017 14:24:19 -0500
-From: Bjorn Helgaas <helgaas@kernel.org>
-Message-ID: <20170314192419.GB26264@bhelgaas-glaptop.roam.corp.google.com>
-References: <20170211013758.3288-1-me@jessfraz.com>
- <20170211013758.3288-3-me@jessfraz.com>
- <20170215203347.GA6981@bhelgaas-glaptop.roam.corp.google.com>
- <alpine.DEB.2.20.1702152143520.3805@nanos>
- <20170216143509.GA22820@bhelgaas-glaptop.roam.corp.google.com>
- <alpine.DEB.2.20.1702161536150.3543@nanos>
- <20170307190731.GD21358@bhelgaas-glaptop.roam.corp.google.com>
- <CAEk6tEwk6sjPSAVWQ3-4FBaTZB=2sqV_z960THe6yr4SMy3VkA@mail.gmail.com>
+Date: Tue, 14 Mar 2017 22:04:24 +0100
+From: Pavel Machek <pavel@ucw.cz>
+Message-ID: <20170314210424.GA5023@amd>
+References: <20170314170508.100882-1-thgarnie@google.com>
+ <20170314170508.100882-3-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="xHFwDpU9dbj6ez1V"
 Content-Disposition: inline
-In-Reply-To: <CAEk6tEwk6sjPSAVWQ3-4FBaTZB=2sqV_z960THe6yr4SMy3VkA@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 3/5] pci: set msi_domain_ops as __ro_after_init
-To: Jessica Frazelle <me@jessfraz.com>
-Cc: Thomas Gleixner <tglx@linutronix.de>, "K. Y. Srinivasan" <kys@microsoft.com>, Haiyang Zhang <haiyangz@microsoft.com>, Stephen Hemminger <sthemmin@microsoft.com>, Bjorn Helgaas <bhelgaas@google.com>, Keith Busch <keith.busch@intel.com>, "open list:Hyper-V CORE AND DRIVERS" <devel@linuxdriverproject.org>, "open list:PCI SUBSYSTEM" <linux-pci@vger.kernel.org>, open list <linux-kernel@vger.kernel.org>, kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Marc Zyngier <marc.zyngier@arm.com>
+In-Reply-To: <20170314170508.100882-3-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v7 3/3] x86: Make the GDT remapping read-only on 64-bit
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Jonathan Corbet <corbet@lwn.net>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Lorenzo Stoakes <lstoakes@gmail.com>, Kees Cook <keescook@chromium.org>, Juergen Gross <jgross@suse.com>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Andrew Morton <akpm@linux-foundation.org>, Michal Hocko <mhocko@suse.com>, zijun_hu <zijun_hu@htc.com>, Chris Wilson <chris@chris-wilson.co.uk>, Andy Lutomirski <luto@amacapital.net>, "Rafael J . Wysocki" <rjw@rjwysocki.net>, Len Brown <len.brown@intel.com>, Jiri Kosina <jikos@kernel.org>, Matt Fleming <matt@codeblueprint.co.uk>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Rusty Russell <rusty@rustcorp.com.au>, Paolo Bonzini <pbonzini@redhat.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, Frederic Weisbecker <fweisbec@gmail.com>, "Luis R . Rodriguez" <mcgrof@kernel.org>, Stanislaw Gruszka <sgruszka@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Vitaly Kuznetsov <vkuznets@redhat.com>, Tim Chen <tim.c.chen@linux.intel.com>, Joerg Roedel <joro@8bytes.org>, Radim =?utf-8?B?S3LEjW3DocWZ?= <rkrcmar@redhat.com>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, kasan-dev@googlegroups.com, linux-mm@kvack.org, linux-pm@vger.kernel.org, linux-efi@vger.kernel.org, xen-devel@lists.xenproject.org, lguest@lists.ozlabs.org, kvm@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 14, 2017 at 11:50:50AM -0700, Jessica Frazelle wrote:
-> I can update the patch series, sorry haven't had much time to devote
-> to this the past few weeks, but will update in the next day.
 
-Thanks, Jessica!  No problem, I know the feeling :)
+--xHFwDpU9dbj6ez1V
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
 
-Bjorn
+On Tue 2017-03-14 10:05:08, Thomas Garnier wrote:
+> This patch makes the GDT remapped pages read-only to prevent corruption.
+> This change is done only on 64-bit.
+>=20
+> The native_load_tr_desc function was adapted to correctly handle a
+> read-only GDT. The LTR instruction always writes to the GDT TSS entry.
+> This generates a page fault if the GDT is read-only. This change checks
+> if the current GDT is a remap and swap GDTs as needed. This function was
+> tested by booting multiple machines and checking hibernation works
+> properly.
+>=20
+> KVM SVM and VMX were adapted to use the writeable GDT. On VMX, the
+> per-cpu variable was removed for functions to fetch the original GDT.
+> Instead of reloading the previous GDT, VMX will reload the fixmap GDT as
+> expected. For testing, VMs were started and restored on multiple
+> configurations.
+>=20
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+
+Can we get the same change for 32-bit, too? Growing differences
+between 32 and 64 bit are a bit of a problem...
+								Pavel
+							=09
+--=20
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blo=
+g.html
+
+--xHFwDpU9dbj6ez1V
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iEYEARECAAYFAljIWtgACgkQMOfwapXb+vIlbQCgw3SF2oZqnpnzX74DsEZIUg8l
+i4AAn0LNA1S1APtp1QrB07wudB48v9VL
+=mc0C
+-----END PGP SIGNATURE-----
+
+--xHFwDpU9dbj6ez1V--
