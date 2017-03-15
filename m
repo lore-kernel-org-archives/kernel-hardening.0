@@ -1,76 +1,87 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170313211422.cxtmes35ozkwaisu@docker>
-References: <20170313211422.cxtmes35ozkwaisu@docker>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 14 Mar 2017 15:43:53 -0600
-Message-ID: <CAGXu5j+T65E6AybgH=B2Fcu-kSdybUfNC+Px32txZqEVzZivtw@mail.gmail.com>
+In-Reply-To: <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com>
+References: <20170130103853.GA34633@in3o.xyz> <CAGXu5j+7+D=N8U9Zpq1Uq526B4C4g=gQZtQ1iCMt3juDFgfgJA@mail.gmail.com>
+ <CAHgaXd+nj69n-Xf46N=4M-j-0hKHVrrLfsvRZCG=2CCAtVF6ZA@mail.gmail.com>
+ <CAGXu5j+NSLomuSgD40kys+pWc+J9aB6Bbk_gSP9Lp_ScimQn_w@mail.gmail.com>
+ <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com> <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com>
+From: Shubham Bansal <illusionist.neo@gmail.com>
+Date: Wed, 15 Mar 2017 17:43:44 +0530
+Message-ID: <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: stackleak plugin port to upstream kernel
-To: Tycho Andersen <tycho@docker.com>
-Cc: PaX Team <pageexec@freemail.hu>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
+To: Kees Cook <keescook@chromium.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Yay more plugins! :)
+Hi kees,
 
-In the future please include patches in-line... it's hard to comment
-on them if they're attachments. More comments below...
+> It seems like you're suggesting truncating the 64-bit register values?
+> I think your best solution is going to be to use a memory scratch
+> space and build 64-bit operations using 32-bit registers and memory
+> operations.
 
-On Mon, Mar 13, 2017 at 3:14 PM, Tycho Andersen <tycho@docker.com> wrote:
-> The problem seems to be in the erase_kstack routine in
-> arch/x86/entry/entry_64.S, it seems to be looking for a series of 0xBEEFs,
-> which aren't found. I'm struggling to figure out where these 0xBEEFs come from:
-> are they part of the mainline kernel stack initialization and something has
-> gone totally haywire, or is this some PaX thing that I've overlooked?
+Yes. I was suggesting the truncating of 64-bit register values, but
+for 32 bit operands only. So when I am truncating the BPF register, I
+am getting rid of non-useful bytes only.
 
-It looks like the Kconfig renaming wasn't complete, and your build
-isn't building/running the plugin at all:
+ Can you explain how to use memory scratch space and build 64-bit
+operations using 32-bit registers and memory operations ? A small
+example would help a lot.
 
-> +config GCC_PLUGIN_STACKLEAK
-> +       bool "Zero the kernel stack after syscalls"
-> [...]
-> +  gcc-plugin-$(CONFIG_PAX_MEMORY_STACKLEAK)            += stackleak_plugin.so$
-> +  gcc-plugin-cflags-$(CONFIG_PAX_MEMORY_STACKLEAK)     += -DSTACKLEAK_PLUGIN -fplugin-arg-stackleak_plugin-track-lowest-sp=100$
+>> - Similarly, For all BPF_ALU class instructions.
+>> - For BPF_ADD, I will mask the addition result to 32 bit only.
+>>  I am not sure, Overflow might be a problem.
+>> - For BPF_SUB, I will mask the subtraction result to 32 bit only.
+>>  I am not sure, Underflow might be problem.
+>> - For BPF_MUL, similar to BPF_ADD. Overflow Problem ?
+>> - For BPF_DIV, 32 bit masking should be fine, I guess.
+>> - For BPF_OR, BPF_AND, BPF_XOR, BPF_LSH, BPF_RSH, BPF_MOD 32 bit
+>>  masking should be fine.
+>> - For BPF_NEG and BPF_ARSH, might be a problem because of the sign bit.
+>> - For BPF_END, 32 bit masking should work fine.
+>>  Let me know if any of the above point is wrong or need your suggestion.
+>>
+>> - Although, for ALU instructions, there is a big problem of register
+>>   flag manipulations. Generally, architecture's ABI takes care of this
+>>   part but as we are doing 64 bit Instructions emulation(kind of) on 32
+>>   bit machine, it needs to be done manually. Does that sound correct ?
+>
+> You can't truncate, but you'll have to build 64-bit ops using 32-bit registers.
 
-(CONFIG_GCC_PLUGIN_STACKLEAK vs CONFIG_PAX_MEMORY_STACKLEAK)
+A small example would help a lot.
+>
+>>
+>> - I am not JITing BPF_ALU64 class instructions as of now. As we have to
+>>   take care of atomic instructions and race conditions with these
+>>   instruction which looks complicated to me as of now. Will try to figure out
+>>   this part and implement it later. Currently, I will just let it be
+>>   interpreted by the ebpf interpreter.
+>>
+>> - For BPF_JMP class, I am assuming that, although eBPF is 64 bit ABI,
+>>   the address pointers on 32 bit arch like arm will be of 32 bit only.
+>>   So, for BPF_JMP, masking the 64 bit destination address to 32 bit
+>>   should do the trick and no address will be corrupted in this way. Am I
+>>   correct to assume this ?
+>>   Also, I need to check for address getting out of the allowed memory
+>>   range.
+>
+> That's probably true, but the JIT should likely detect a truncation
+> here, if you're going to depend on it, and reject the BPF.
 
-Also, becareful of #ifdef CONFIG_GCC_PLUGIN_STACKLEAK vs #ifdef
-STACKLEAK_PLUGIN. That has gotten confused with some other plugin
-ports too.
+Okay. So I guess I have to use memory for this as well ?
+An example would be great.
 
-Otherwise, this looks good for an initial extraction. For the next
-version there should probably be more comments on the new functions
-for what they do, and detailing for the ARCH_HAS Kconfig for what an
-architecture needs to do to correctly implement it (see examples for
-seccomp, hardened usercopy, etc), and an attempt made to reduce the
-number of #ifdef blocks. For example, instead of:
+>
+>> - For BPF_LD, BPF_LDX, BPF_ST and BPF_STX class instructions, I am
+>>   assuming the same thing as above - All addresses and pointers are 32
+>>   bit - which can be taken care just by maksing the eBPF register
+>>   values. Does that sound correct ?
+>>   Also, I need to check for the address overflow, address getting out
+>>   of the allowed memory range and things like that.
+>
+> I'd say, get something working and send a patch -- that's likely the
+> best way to get more detailed feedback. :)
+I would love to but I have to understand what to implement first.
 
-#ifdef THE_THING
-     do_the_thing();
-#endif
 
-Build the definition of do_the_thing() with the #ifdef in one place.
-In C, this would be:
-
-#ifdef THE_THING
-void do_the_thing();
-#else
-static inline void do_the_thing() { }
-#endif
-
-Then do_the_thing() can be included everywhere without the #ifdef
-block. (I haven't spent much time looking at what's needed in .S files
-to make this happen, but I'm sure there is a similar pattern.)
-
-Oh, and we should probably build a test for this, though lkdtm doesn't
-seem like the right place since it's expecting a Bug-style protection.
-Maybe something more like lib/test_user_copy.c that just exercises
-stuff to see if it's correctly behaving?
-
-Thanks for working on this and sending this for people to look at!
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+-Shubham
