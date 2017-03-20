@@ -1,42 +1,100 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <87var44a0b.fsf@concordia.ellerman.id.au>
-References: <20170320065522.14839-1-andrew.donnellan@au1.ibm.com> <87var44a0b.fsf@concordia.ellerman.id.au>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 20 Mar 2017 10:01:15 -0700
-Message-ID: <CAGXu5jK=GGQeGQrv-9Z__caRxu7u333boJFXRNjcqBXOspYeQw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] gcc-plugins: update architecture list in documentation
-To: Michael Ellerman <mpe@ellerman.id.au>, Jonathan Corbet <corbet@lwn.net>, Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Cc: Emese Revfy <re.emese@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linuxppc-dev@lists.ozlabs.org" <linuxppc-dev@lists.ozlabs.org>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Mon, 20 Mar 2017 12:40:24 -0700
+Message-Id: <20170320194024.60749-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH tip v2] x86/mm: Correct fixmap header usage on adaptable MODULES_END
+To: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Thomas Garnier <thgarnie@google.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dave Hansen <dave.hansen@linux.intel.com>, Borislav Petkov <bp@suse.de>, Hugh Dickins <hughd@google.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Matthew Wilcox <willy@linux.intel.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Michal Hocko <mhocko@suse.com>, zijun_hu <zijun_hu@htc.com>, Chris Wilson <chris@chris-wilson.co.uk>
+Cc: x86@kernel.org, linux-kernel@vger.kernel.org, kasan-dev@googlegroups.com, linux-mm@kvack.org, kernel-hardening@lists.openwall.com, richard.weiyang@gmail.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 20, 2017 at 1:39 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
-> Andrew Donnellan <andrew.donnellan@au1.ibm.com> writes:
->
->> Commit 65c059bcaa73 ("powerpc: Enable support for GCC plugins") enabled GCC
->> plugins on powerpc, but neglected to update the architecture list in the
->> docs. Rectify this.
->>
->> Fixes: 65c059bcaa73 ("powerpc: Enable support for GCC plugins")
->> Signed-off-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
->> ---
->>  Documentation/gcc-plugins.txt | 4 ++--
->>  1 file changed, 2 insertions(+), 2 deletions(-)
->
-> It would be nice to merge this for v4.11, so the docs are up to do date
-> with the code for the release.
->
-> I'm not sure who owns it though, should it go via Jon as docs
-> maintainer (added to CC), or via Kees tree or mine?
+This patch removes fixmap headers on non-x86 code introduced by the
+adaptable MODULE_END change. It is also removed in the 32-bit pgtable
+header. Instead, it is added  by default in the pgtable generic header
+for both architectures.
 
-If you have other changes queued for v4.11, please take it via your
-tree. Otherwise, perhaps the docs tree or mine? (I don't currently
-have any fixes queued; I'm just trying to minimize pull requests going
-to Linus...)
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+---
+ arch/x86/include/asm/pgtable.h    | 1 +
+ arch/x86/include/asm/pgtable_32.h | 1 -
+ arch/x86/kernel/module.c          | 1 -
+ arch/x86/mm/dump_pagetables.c     | 1 -
+ arch/x86/mm/kasan_init_64.c       | 1 -
+ mm/vmalloc.c                      | 4 ----
+ 6 files changed, 1 insertion(+), 8 deletions(-)
 
--Kees
-
+diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
+index 6f6f351e0a81..78d1fc32e947 100644
+--- a/arch/x86/include/asm/pgtable.h
++++ b/arch/x86/include/asm/pgtable.h
+@@ -598,6 +598,7 @@ pte_t *populate_extra_pte(unsigned long vaddr);
+ #include <linux/mm_types.h>
+ #include <linux/mmdebug.h>
+ #include <linux/log2.h>
++#include <asm/fixmap.h>
+ 
+ static inline int pte_none(pte_t pte)
+ {
+diff --git a/arch/x86/include/asm/pgtable_32.h b/arch/x86/include/asm/pgtable_32.h
+index fbc73360aea0..bfab55675c16 100644
+--- a/arch/x86/include/asm/pgtable_32.h
++++ b/arch/x86/include/asm/pgtable_32.h
+@@ -14,7 +14,6 @@
+  */
+ #ifndef __ASSEMBLY__
+ #include <asm/processor.h>
+-#include <asm/fixmap.h>
+ #include <linux/threads.h>
+ #include <asm/paravirt.h>
+ 
+diff --git a/arch/x86/kernel/module.c b/arch/x86/kernel/module.c
+index fad61caac75e..477ae806c2fa 100644
+--- a/arch/x86/kernel/module.c
++++ b/arch/x86/kernel/module.c
+@@ -35,7 +35,6 @@
+ #include <asm/page.h>
+ #include <asm/pgtable.h>
+ #include <asm/setup.h>
+-#include <asm/fixmap.h>
+ 
+ #if 0
+ #define DEBUGP(fmt, ...)				\
+diff --git a/arch/x86/mm/dump_pagetables.c b/arch/x86/mm/dump_pagetables.c
+index 75efeecc85eb..58b5bee7ea27 100644
+--- a/arch/x86/mm/dump_pagetables.c
++++ b/arch/x86/mm/dump_pagetables.c
+@@ -20,7 +20,6 @@
+ 
+ #include <asm/kasan.h>
+ #include <asm/pgtable.h>
+-#include <asm/fixmap.h>
+ 
+ /*
+  * The dumper groups pagetable entries of the same type into one, and for
+diff --git a/arch/x86/mm/kasan_init_64.c b/arch/x86/mm/kasan_init_64.c
+index 1bde19ef86bd..8d63d7a104c3 100644
+--- a/arch/x86/mm/kasan_init_64.c
++++ b/arch/x86/mm/kasan_init_64.c
+@@ -9,7 +9,6 @@
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/sections.h>
+-#include <asm/fixmap.h>
+ 
+ extern pgd_t early_level4_pgt[PTRS_PER_PGD];
+ extern struct range pfn_mapped[E820_X_MAX];
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index b7d2a23349f4..0dd80222b20b 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -36,10 +36,6 @@
+ #include <asm/tlbflush.h>
+ #include <asm/shmparam.h>
+ 
+-#ifdef CONFIG_X86
+-# include <asm/fixmap.h>
+-#endif
+-
+ #include "internal.h"
+ 
+ struct vfree_deferred {
 -- 
-Kees Cook
-Pixel Security
+2.12.0.367.g23dc2f6d3c-goog
