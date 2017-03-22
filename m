@@ -1,94 +1,22 @@
-MIME-Version: 1.0
-In-Reply-To: <20170321071725.GA15782@gmail.com>
-References: <20170320194024.60749-1-thgarnie@google.com> <20170321071725.GA15782@gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 21 Mar 2017 09:01:42 -0700
-Message-ID: <CAJcbSZEgRZ+BVyWHmQ8mVxXmmBNYf7XRHTEByCEvO2TJ8THgpg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH tip v2] x86/mm: Correct fixmap header usage on adaptable MODULES_END
-To: Ingo Molnar <mingo@kernel.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andrey Ryabinin <aryabinin@virtuozzo.com>, Alexander Potapenko <glider@google.com>, Dmitry Vyukov <dvyukov@google.com>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Dave Hansen <dave.hansen@linux.intel.com>, Borislav Petkov <bp@suse.de>, Hugh Dickins <hughd@google.com>, Xiao Guangrong <guangrong.xiao@linux.intel.com>, Matthew Wilcox <willy@linux.intel.com>, Boris Ostrovsky <boris.ostrovsky@oracle.com>, Andy Lutomirski <luto@kernel.org>, Paul Gortmaker <paul.gortmaker@windriver.com>, Michal Hocko <mhocko@suse.com>, zijun_hu <zijun_hu@htc.com>, Chris Wilson <chris@chris-wilson.co.uk>, the arch/x86 maintainers <x86@kernel.org>, LKML <linux-kernel@vger.kernel.org>, kasan-dev <kasan-dev@googlegroups.com>, Linux-MM <linux-mm@kvack.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, Wei Yang <richard.weiyang@gmail.com>
+In-Reply-To: <20170320065522.14839-1-andrew.donnellan@au1.ibm.com>
+From: Michael Ellerman <patch-notifications@ellerman.id.au>
+Message-Id: <3vp7b938Gbz9s7j@ozlabs.org>
+Date: Wed, 22 Mar 2017 23:02:13 +1100 (AEDT)
+Subject: [kernel-hardening] Re: gcc-plugins: update architecture list in documentation
+To: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, keescook@chromium.org, re.emese@gmail.com, kernel-hardening@lists.openwall.com
+Cc: linuxppc-dev@lists.ozlabs.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 21, 2017 at 12:17 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> * Thomas Garnier <thgarnie@google.com> wrote:
->
->> This patch removes fixmap headers on non-x86 code introduced by the
->> adaptable MODULE_END change. It is also removed in the 32-bit pgtable
->> header. Instead, it is added  by default in the pgtable generic header
->> for both architectures.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
->> ---
->>  arch/x86/include/asm/pgtable.h    | 1 +
->>  arch/x86/include/asm/pgtable_32.h | 1 -
->>  arch/x86/kernel/module.c          | 1 -
->>  arch/x86/mm/dump_pagetables.c     | 1 -
->>  arch/x86/mm/kasan_init_64.c       | 1 -
->>  mm/vmalloc.c                      | 4 ----
->>  6 files changed, 1 insertion(+), 8 deletions(-)
->
-> So I already have v1 and there's no explanation about the changes from v1 to v2.
->
-> The interdiff between v1 and v2 is below, it only affects x86, presumably it's
-> done to simplify the header usage slightly: instead of including fixmap.h in both
-> pgtable_32/64.h it's only included in the common pgtable.h file.
->
+On Mon, 2017-03-20 at 06:55:22 UTC, Andrew Donnellan wrote:
+> Commit 65c059bcaa73 ("powerpc: Enable support for GCC plugins") enabled GCC
+> plugins on powerpc, but neglected to update the architecture list in the
+> docs. Rectify this.
+> 
+> Fixes: 65c059bcaa73 ("powerpc: Enable support for GCC plugins")
+> Signed-off-by: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
 
-Correct, simplify the header and explains better.
+Applied to powerpc fixes, thanks.
 
-> That's a sensible cleanup of the original patch and I'd rather not rebase it (as
-> tip:x86/mm has other changes as well), so could I've applied the delta cleanup on
-> top of the existing changes, with its own changelog.
+https://git.kernel.org/powerpc/c/cc638a488a5205713b51eabd047be6
 
-I understand. Thanks for merging a clean-up version of this patch.
-
->
-> Thanks,
->
->         Ingo
->
-> ============>
-> diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
-> index 84f6ec4d47ec..9f6809545269 100644
-> --- a/arch/x86/include/asm/pgtable.h
-> +++ b/arch/x86/include/asm/pgtable.h
-> @@ -601,6 +601,7 @@ pte_t *populate_extra_pte(unsigned long vaddr);
->  #include <linux/mm_types.h>
->  #include <linux/mmdebug.h>
->  #include <linux/log2.h>
-> +#include <asm/fixmap.h>
->
->  static inline int pte_none(pte_t pte)
->  {
-> diff --git a/arch/x86/include/asm/pgtable_32.h b/arch/x86/include/asm/pgtable_32.h
-> index fbc73360aea0..bfab55675c16 100644
-> --- a/arch/x86/include/asm/pgtable_32.h
-> +++ b/arch/x86/include/asm/pgtable_32.h
-> @@ -14,7 +14,6 @@
->   */
->  #ifndef __ASSEMBLY__
->  #include <asm/processor.h>
-> -#include <asm/fixmap.h>
->  #include <linux/threads.h>
->  #include <asm/paravirt.h>
->
-> diff --git a/arch/x86/include/asm/pgtable_64.h b/arch/x86/include/asm/pgtable_64.h
-> index 13709cf74ab6..1a4bc71534d4 100644
-> --- a/arch/x86/include/asm/pgtable_64.h
-> +++ b/arch/x86/include/asm/pgtable_64.h
-> @@ -13,7 +13,6 @@
->  #include <asm/processor.h>
->  #include <linux/bitops.h>
->  #include <linux/threads.h>
-> -#include <asm/fixmap.h>
->
->  extern pud_t level3_kernel_pgt[512];
->  extern pud_t level3_ident_pgt[512];
->
-
-
-
--- 
-Thomas
+cheers
