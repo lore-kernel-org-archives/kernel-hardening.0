@@ -1,49 +1,34 @@
+Date: Thu, 23 Mar 2017 14:12:03 +0000
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20170323141203.GD14290@e104818-lin.cambridge.arm.com>
+References: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170323074001.GB14258@gmail.com>
-References: <1489160052-20293-1-git-send-email-dwindsor@gmail.com>
- <CAGXu5jJuzpSeosAQxkewWB3804+pUrJ9HiU3p-8SOo2hTwFwbQ@mail.gmail.com> <20170323074001.GB14258@gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 23 Mar 2017 07:06:55 -0700
-Message-ID: <CAGXu5jLfDdq1E0vXda4tqrHSqSGhk76Biemh6axaycOB+E-zfQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3] refcount: add refcount_t API kernel-doc comments
-To: Ingo Molnar <mingo@kernel.org>
-Cc: David Windsor <dwindsor@gmail.com>, Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1489092729-16871-1-git-send-email-ard.biesheuvel@linaro.org>
+Subject: [kernel-hardening] Re: [PATCH v6 00/11] arm64: mmu: avoid W+X mappings and re-enable
+ PTE_CONT for kernel
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-arm-kernel@lists.infradead.org, mark.rutland@arm.com, keescook@chromium.org, labbott@fedoraproject.org, will.deacon@arm.com, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 23, 2017 at 12:40 AM, Ingo Molnar <mingo@kernel.org> wrote:
->
-> * Kees Cook <keescook@chromium.org> wrote:
->
->> On Fri, Mar 10, 2017 at 7:34 AM, David Windsor <dwindsor@gmail.com> wrote:
->> > v3: rebase against latest Linus tree; re-add include/linux/refcount.h
->> > missing from v2 series
->> >
->> > Signed-off-by: David Windsor <dwindsor@gmail.com>
->>
->> Reviewed-by: Kees Cook <keescook@chromium.org>
->>
->> Ingo, can you pull this into tip? I like having more documentation here. :)
->
-> So I hopped into my time machine and applied it to tip:locking/core as of March
-> 13th:
->
->   commit bd174169c7a12a37b3b4aa2221f084ade010b182
->   Author:     David Windsor <dwindsor@gmail.com>
->   AuthorDate: Fri Mar 10 10:34:12 2017 -0500
->   Commit:     Ingo Molnar <mingo@kernel.org>
->   CommitDate: Mon Mar 13 07:41:08 2017 +0100
->
-> You are welcome! ;-)
+On Thu, Mar 09, 2017 at 09:51:58PM +0100, Ard Biesheuvel wrote:
+> Ard Biesheuvel (11):
+>   arm: kvm: move kvm_vgic_global_state out of .text section
+>   arm64: mmu: move TLB maintenance from callers to create_mapping_late()
+>   arm64: alternatives: apply boot time fixups via the linear mapping
+>   arm64: mmu: map .text as read-only from the outset
+>   arm64: mmu: apply strict permissions to .init.text and .init.data
+>   arm64/mmu: align alloc_init_pte prototype with pmd/pud versions
+>   arm64/mmu: ignore debug_pagealloc for kernel segments
+>   arm64/mmu: add contiguous bit to sanity bug check
+>   arm64/mmu: replace 'page_mappings_only' parameter with flags argument
+>   arm64/mm: remove pointless map/unmap sequences when creating page
+>     tables
+>   arm64: mm: set the contiguous bit for kernel mappings where
+>     appropriate
 
-I love time-travelling maintainers! They are very tolerant of people
-who don't double-check -next first. :)
-
-Thanks!
-
--Kees
+Queued for 4.12. Thanks.
 
 -- 
-Kees Cook
-Pixel Security
+Catalin
