@@ -1,21 +1,150 @@
 MIME-Version: 1.0
-In-Reply-To: <20170323172515.27950-3-thgarnie@google.com>
-References: <20170323172515.27950-1-thgarnie@google.com> <20170323172515.27950-3-thgarnie@google.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 23 Mar 2017 13:38:12 -0700
-Message-ID: <CAJcbSZGaaKExJfucv9AVtnJufAg-XLvzZtGqupQ_P7oKr33Ocw@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170323025549.19588-2-ewk@edkovsky.org>
+References: <20170323025549.19588-1-ewk@edkovsky.org> <20170323025549.19588-2-ewk@edkovsky.org>
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 23 Mar 2017 14:13:43 -0700
+Message-ID: <CAGXu5j+iwUYhU13D0pWA_LHdBX9z48fO4aK-9sSdJ=TZaMSsrQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 3/4] arm/syscalls: Specific usage of verify_pre_usermode_state
-To: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>
-Cc: linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v3 1/2] module: verify address is read-only
+To: Eddie Kovsky <ewk@edkovsky.org>, Jessica Yu <jeyu@redhat.com>
+Cc: Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 23, 2017 at 10:25 AM, Thomas Garnier <thgarnie@google.com> wrote:
-> Implement specific usage of verify_pre_usermode_state for user-mode
-> returns for arm.
+On Wed, Mar 22, 2017 at 7:55 PM, Eddie Kovsky <ewk@edkovsky.org> wrote:
+> Implement a mechanism to check if a module's address is in
+> the rodata or ro_after_init sections. It mimics the exsiting functions
+> that test if an address is inside a module's text section.
+>
+> Functions that take a module as an argument will be able to
+> verify that the module is in a read-only section.
+>
+> Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
 
-Signed-off-by: Thomas Garnier <thgarnie@google.com>
+Awesome! I'll be glad to have these.
 
-Not sure why it was not there anymore.
+Reviewed-by: Kees Cook <keescook@chromium.org>
+
+Jessica, if this looks good to you, should this go via modules or via
+my tree? If mine, can I have your Ack?
+
+Thanks!
+
+-Kees
+
+> ---
+> Changes in v3:
+>  - Change function name is_module_ro_address() to
+> is_module_rodata_address().
+>  - Improve comments on is_module_rodata_address().
+>  - Add a !CONFIG_MODULES stub for is_module_rodata_address.
+>  - Correct and simplify the check for the read-only memory regions in
+> the module address.
+>
+>  include/linux/module.h | 12 ++++++++++++
+>  kernel/module.c        | 53 ++++++++++++++++++++++++++++++++++++++++++++++++++
+>  2 files changed, 65 insertions(+)
+>
+> diff --git a/include/linux/module.h b/include/linux/module.h
+> index 9ad68561d8c2..66b7fd321334 100644
+> --- a/include/linux/module.h
+> +++ b/include/linux/module.h
+> @@ -492,7 +492,9 @@ static inline int module_is_live(struct module *mod)
+>
+>  struct module *__module_text_address(unsigned long addr);
+>  struct module *__module_address(unsigned long addr);
+> +struct module *__module_ro_address(unsigned long addr);
+>  bool is_module_address(unsigned long addr);
+> +bool is_module_rodata_address(unsigned long addr);
+>  bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr);
+>  bool is_module_percpu_address(unsigned long addr);
+>  bool is_module_text_address(unsigned long addr);
+> @@ -646,6 +648,16 @@ static inline struct module *__module_address(unsigned long addr)
+>         return NULL;
+>  }
+>
+> +static inline struct module *__module_ro_address(unsigned long addr)
+> +{
+> +       return NULL;
+> +}
+> +
+> +static inline bool is_module_rodata_address(unsigned long addr)
+> +{
+> +       return false;
+> +}
+> +
+>  static inline struct module *__module_text_address(unsigned long addr)
+>  {
+>         return NULL;
+> diff --git a/kernel/module.c b/kernel/module.c
+> index 8ffcd29a4245..99ada1257aaa 100644
+> --- a/kernel/module.c
+> +++ b/kernel/module.c
+> @@ -4292,6 +4292,59 @@ struct module *__module_text_address(unsigned long addr)
+>  }
+>  EXPORT_SYMBOL_GPL(__module_text_address);
+>
+> +/**
+> + * is_module_rodata_address - is this address inside read-only module code?
+> + * @addr: the address to check.
+> + *
+> + */
+> +bool is_module_rodata_address(unsigned long addr)
+> +{
+> +       bool ret;
+> +
+> +       preempt_disable();
+> +       ret = __module_ro_address(addr) != NULL;
+> +       preempt_enable();
+> +
+> +       return ret;
+> +}
+> +
+> +/*
+> + * __module_ro_address - get the module whose rodata/ro_after_init sections
+> + * contain the given address.
+> + * @addr: the address.
+> + *
+> + * Must be called with preempt disabled or module mutex held so that
+> + * module doesn't get freed during this.
+> + */
+> +struct module *__module_ro_address(unsigned long addr)
+> +{
+> +       struct module *mod = __module_address(addr);
+> +
+> +       void *init_base = mod->init_layout.base;
+> +       unsigned int init_text_size = mod->init_layout.text_size;
+> +       unsigned int init_ro_after_init_size = mod->init_layout.ro_after_init_size;
+> +
+> +       void *core_base = mod->core_layout.base;
+> +       unsigned int core_text_size = mod->core_layout.text_size;
+> +       unsigned int core_ro_after_init_size = mod->core_layout.ro_after_init_size;
+> +
+> +       /*
+> +        * Make sure module is within the read-only section.
+> +        * range(base + text_size, base + ro_after_init_size)
+> +        * encompasses both the rodata and ro_after_init regions.
+> +        * See comment above frob_text() for the layout diagram.
+> +        */
+> +       if (mod) {
+> +               if (!within(addr, init_base + init_text_size,
+> +                           init_ro_after_init_size - init_text_size)
+> +                   && !within(addr, core_base + core_text_size,
+> +                              core_ro_after_init_size - core_text_size))
+> +                       mod = NULL;
+> +       }
+> +       return mod;
+> +}
+> +EXPORT_SYMBOL_GPL(__module_ro_address);
+> +
+>  /* Don't grab lock, we're oopsing. */
+>  void print_modules(void)
+>  {
+> --
+> 2.12.0
+
+
+
 -- 
-Thomas
+Kees Cook
+Pixel Security
