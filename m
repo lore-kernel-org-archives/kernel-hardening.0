@@ -1,78 +1,42 @@
-From: Eddie Kovsky <ewk@edkovsky.org>
-Date: Wed, 22 Mar 2017 20:55:49 -0600
-Message-Id: <20170323025549.19588-3-ewk@edkovsky.org>
-In-Reply-To: <20170323025549.19588-1-ewk@edkovsky.org>
-References: <20170323025549.19588-1-ewk@edkovsky.org>
-Subject: [kernel-hardening] [PATCH v3 2/2] extable: verify address is read-only
-To: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Thu, 23 Mar 2017 08:40:01 +0100
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170323074001.GB14258@gmail.com>
+References: <1489160052-20293-1-git-send-email-dwindsor@gmail.com>
+ <CAGXu5jJuzpSeosAQxkewWB3804+pUrJ9HiU3p-8SOo2hTwFwbQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jJuzpSeosAQxkewWB3804+pUrJ9HiU3p-8SOo2hTwFwbQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v3] refcount: add refcount_t API kernel-doc comments
+To: Kees Cook <keescook@chromium.org>
+Cc: David Windsor <dwindsor@gmail.com>, Peter Zijlstra <peterz@infradead.org>, "Reshetova, Elena" <elena.reshetova@intel.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide a mechanism to check if the address of a variable is
-const or ro_after_init. It mimics the existing functions that test if an
-address is inside the kernel's text section.
 
-Other functions inside the kernel could then use this capability to
-verify that their arguments are read-only.
+* Kees Cook <keescook@chromium.org> wrote:
 
-Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
----
-Changes in v3:
- - Fix missing declaration of is_module_rodata_address()
+> On Fri, Mar 10, 2017 at 7:34 AM, David Windsor <dwindsor@gmail.com> wrote:
+> > v3: rebase against latest Linus tree; re-add include/linux/refcount.h
+> > missing from v2 series
+> >
+> > Signed-off-by: David Windsor <dwindsor@gmail.com>
+> 
+> Reviewed-by: Kees Cook <keescook@chromium.org>
+> 
+> Ingo, can you pull this into tip? I like having more documentation here. :)
 
- include/linux/kernel.h |  2 ++
- kernel/extable.c       | 29 +++++++++++++++++++++++++++++
- 2 files changed, 31 insertions(+)
+So I hopped into my time machine and applied it to tip:locking/core as of March 
+13th:
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 4c26dc3a8295..51beea39e6c4 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
- extern int __kernel_text_address(unsigned long addr);
- extern int kernel_text_address(unsigned long addr);
- extern int func_ptr_is_kernel_text(void *ptr);
-+extern int core_kernel_ro_data(unsigned long addr);
-+extern int kernel_ro_address(unsigned long addr);
+  commit bd174169c7a12a37b3b4aa2221f084ade010b182
+  Author:     David Windsor <dwindsor@gmail.com>
+  AuthorDate: Fri Mar 10 10:34:12 2017 -0500
+  Commit:     Ingo Molnar <mingo@kernel.org>
+  CommitDate: Mon Mar 13 07:41:08 2017 +0100
 
- unsigned long int_sqrt(unsigned long);
+You are welcome! ;-)
 
-diff --git a/kernel/extable.c b/kernel/extable.c
-index 2676d7f8baf6..3c3a9f4e6250 100644
---- a/kernel/extable.c
-+++ b/kernel/extable.c
-@@ -154,3 +154,32 @@ int func_ptr_is_kernel_text(void *ptr)
- 		return 1;
- 	return is_module_text_address(addr);
- }
-+
-+/**
-+ * core_kernel_ro_data - Verify address points to read-only section
-+ * @addr: address to test
-+ *
-+ */
-+int core_kernel_ro_data(unsigned long addr)
-+{
-+	if (addr >= (unsigned long)__start_rodata &&
-+	    addr < (unsigned long)__end_rodata)
-+		return 1;
-+
-+	if (addr >= (unsigned long)__start_data_ro_after_init &&
-+	    addr < (unsigned long)__end_data_ro_after_init)
-+		return 1;
-+
-+	return 0;
-+}
-+
-+/* Verify that address is const or ro_after_init. */
-+int kernel_ro_address(unsigned long addr)
-+{
-+	if (core_kernel_ro_data(addr))
-+		return 1;
-+	if (is_module_rodata_address(addr))
-+		return 1;
-+
-+	return 0;
-+}
---
-2.12.0
+Thanks,
+
+	Ingo
