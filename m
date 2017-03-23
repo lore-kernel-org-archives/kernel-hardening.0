@@ -1,73 +1,42 @@
-From: Thomas Garnier <thgarnie@google.com>
-Date: Thu, 23 Mar 2017 10:25:15 -0700
-Message-Id: <20170323172515.27950-4-thgarnie@google.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
 In-Reply-To: <20170323172515.27950-1-thgarnie@google.com>
 References: <20170323172515.27950-1-thgarnie@google.com>
-Subject: [kernel-hardening] [PATCH v5 4/4] arm64/syscalls: Specific usage of verify_pre_usermode_state
-To: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Kees Cook <keescook@chromium.org>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>
-Cc: linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-api@vger.kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
+From: Kees Cook <keescook@chromium.org>
+Date: Thu, 23 Mar 2017 13:15:08 -0700
+Message-ID: <CAGXu5jKbqOvb2TtfpXhjPQFxEShaBu=RbBQORtqhcF1bD3As6w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 1/4] syscalls: Restore address limit after a syscall
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Implement specific usage of verify_pre_usermode_state for user-mode
-returns for arm64.
----
-Based on next-20170322
----
- arch/arm64/Kconfig        |  1 +
- arch/arm64/kernel/entry.S | 15 +++++++++++++++
- 2 files changed, 16 insertions(+)
+On Thu, Mar 23, 2017 at 10:25 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> This patch ensures a syscall does not return to user-mode with a kernel
+> address limit. If that happened, a process can corrupt kernel-mode
+> memory and elevate privileges.
+>
+> For example, it would mitigation this bug:
+>
+> - https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+>
+> The CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE option is also
+> added so each architecture can optimize this change.
+>
+> Signed-off-by: Thomas Garnier <thgarnie@google.com>
 
-diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index f2b0b528037d..0e86d87259f4 100644
---- a/arch/arm64/Kconfig
-+++ b/arch/arm64/Kconfig
-@@ -24,6 +24,7 @@ config ARM64
- 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
- 	select ARCH_WANT_FRAME_POINTERS
- 	select ARCH_HAS_UBSAN_SANITIZE_ALL
-+	select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
- 	select ARM_AMBA
- 	select ARM_ARCH_TIMER
- 	select ARM_GIC
-diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 43512d4d7df2..6d598e7051c3 100644
---- a/arch/arm64/kernel/entry.S
-+++ b/arch/arm64/kernel/entry.S
-@@ -744,6 +744,10 @@ ENDPROC(cpu_switch_to)
- ret_fast_syscall:
- 	disable_irq				// disable interrupts
- 	str	x0, [sp, #S_X0]			// returned x0
-+	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
-+	mov	x1, #TASK_SIZE_64
-+	cmp	x2, x1
-+	b.ne	addr_limit_fail
- 	ldr	x1, [tsk, #TSK_TI_FLAGS]	// re-check for syscall tracing
- 	and	x2, x1, #_TIF_SYSCALL_WORK
- 	cbnz	x2, ret_fast_syscall_trace
-@@ -771,6 +775,11 @@ work_pending:
-  */
- ret_to_user:
- 	disable_irq				// disable interrupts
-+	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
-+	mov	x1, #TASK_SIZE_64
-+	cmp	x2, x1
-+	b.ne	addr_limit_fail
-+
- 	ldr	x1, [tsk, #TSK_TI_FLAGS]
- 	and	x2, x1, #_TIF_WORK_MASK
- 	cbnz	x2, work_pending
-@@ -779,6 +788,12 @@ finish_ret_to_user:
- 	kernel_exit 0
- ENDPROC(ret_to_user)
- 
-+addr_limit_fail:
-+	stp	x0, lr, [sp,#-16]!
-+	bl	asm_verify_pre_usermode_state
-+	ldp	x0, lr, [sp],#16
-+	ret	lr
-+
- /*
-  * This is how we return from a fork.
-  */
+Awesome. :) I've tested this on x86 and arm with the LKDTM patch I'll
+post in a moment.
+
+[   46.977823] lkdtm: Performing direct entry CORRUPT_USER_DS
+[   46.978966] lkdtm: setting bad task size limit
+[   46.980302] ------------[ cut here ]------------
+[   46.981219] kernel BUG at ./include/linux/syscalls.h:200!
+
+Tested-by: Kees Cook <keescook@chromium.org>
+
+(Also note, your Signed-off-by lines are missing in patches 2-4)
+
 -- 
-2.12.1.500.gab5fba24ee-goog
+Kees Cook
+Pixel Security
