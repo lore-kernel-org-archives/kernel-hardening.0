@@ -1,70 +1,83 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <a1ab8afa-5462-dc24-2106-0a6b43773c5b@de.ibm.com>
-References: <20170323203419.GA62859@beast> <20170324081450.GA5891@osiris>
- <CAJcbSZHJ1WFcE7QY6qLM9RMUJbGXxTpp3WsCNJBX4h1U-4HEjA@mail.gmail.com> <a1ab8afa-5462-dc24-2106-0a6b43773c5b@de.ibm.com>
+Date: Fri, 24 Mar 2017 10:51:25 -0700
 From: Kees Cook <keescook@chromium.org>
-Date: Fri, 24 Mar 2017 10:46:41 -0700
-Message-ID: <CAGXu5jJxNjdz3x1M3t9nhy590Bk67xwGxidYqJWytETb_PFgKQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] lkdtm: add bad USER_DS test
-To: Christian Borntraeger <borntraeger@de.ibm.com>
-Cc: Thomas Garnier <thgarnie@google.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <20170324175125.GA108985@beast>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Subject: [kernel-hardening] [PATCH v2] lkdtm: add bad USER_DS test
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Heiko Carstens <heiko.carstens@de.ibm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Mar 24, 2017 at 8:24 AM, Christian Borntraeger
-<borntraeger@de.ibm.com> wrote:
-> On 03/24/2017 04:17 PM, Thomas Garnier wrote:
->> On Fri, Mar 24, 2017 at 1:14 AM, Heiko Carstens
->> <heiko.carstens@de.ibm.com> wrote:
->>> On Thu, Mar 23, 2017 at 01:34:19PM -0700, Kees Cook wrote:
->>>> This adds CORRUPT_USER_DS to check that the get_fs() test on syscall return
->>>> still sees USER_DS during the new VERIFY_PRE_USERMODE_STATE checks.
->>>>
->>>> Signed-off-by: Kees Cook <keescook@chromium.org>
->>>
->>> ...
->>>
->>>> +void lkdtm_CORRUPT_USER_DS(void)
->>>> +{
->>>> +     /*
->>>> +      * Test that USER_DS has been set correctly on exiting a syscall.
->>>> +      * Since setting this higher than USER_DS (TASK_SIZE) would introduce
->>>> +      * an exploitable condition, we lower it instead, since that should
->>>> +      * not create as large a problem on an unprotected system.
->>>> +      */
->>>> +     mm_segment_t lowfs;
->>>> +#ifdef MAKE_MM_SEG
->>>> +     lowfs = MAKE_MM_SEG(TASK_SIZE - PAGE_SIZE);
->>>> +#else
->>>> +     lowfs = TASK_SIZE - PAGE_SIZE;
->>>> +#endif
->>>> +
->>>> +     pr_info("setting bad task size limit\n");
->>>> +     set_fs(lowfs);
->>>> +}
->>>
->>> This won't work on architectures where the set_fs() argument does not
->>> contain an address but an address space identifier. This is true e.g. for
->>> s390 and as far as I know also for sparc.
->>> On s390 we have complete distinct address spaces for kernel and user space
->>> that each start at address zero.
->>>
->>
->> The patch that enforce USER_DS is disabled on s390 anyway. I guess, we
->> can just do a set_fs(KERNEL_DS) for the others.
->
-> that would enable the test, but it would also mean that lkdtm can be used by
-> a program to escalate its rights. I think that is the reason why Kees did this
-> lowfs things.
+This adds CORRUPT_USER_DS to check that the get_fs() test on syscall
+return (via __VERIFY_PRE_USERMODE_STATE) still sees USER_DS. Since
+trying to deal with values other than USER_DS and KERNEL_DS across all
+architectures in a safe way is not sensible, this sets KERNEL_DS, but
+since that could be extremely dangerous if the protection is not present,
+it also raises SIGKILL for current, so that no matter what, the process
+will die. A successful test will be visible with a BUG(), like all the
+other LKDTM tests.
 
-Yeah, but it seems like getting this right for all architectures isn't
-sane. I'm going to change it to use KERNEL_DS but also post a SIGKILL
-to the process. That way it'll still trigger the syscall return
-checking, but will be unable to continue running with a potentially
-uncaught KERNEL_DS.
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ drivers/misc/lkdtm.h      |  1 +
+ drivers/misc/lkdtm_bugs.c | 11 +++++++++++
+ drivers/misc/lkdtm_core.c |  1 +
+ 3 files changed, 13 insertions(+)
 
--Kees
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index 67d27be60405..3b4976396ec4 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -27,6 +27,7 @@ void lkdtm_REFCOUNT_ZERO_SUB(void);
+ void lkdtm_REFCOUNT_ZERO_ADD(void);
+ void lkdtm_CORRUPT_LIST_ADD(void);
+ void lkdtm_CORRUPT_LIST_DEL(void);
++void lkdtm_CORRUPT_USER_DS(void);
+ 
+ /* lkdtm_heap.c */
+ void lkdtm_OVERWRITE_ALLOCATION(void);
+diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+index e3f4cd8876b5..ed4f4c56c796 100644
+--- a/drivers/misc/lkdtm_bugs.c
++++ b/drivers/misc/lkdtm_bugs.c
+@@ -8,6 +8,8 @@
+ #include <linux/list.h>
+ #include <linux/refcount.h>
+ #include <linux/sched.h>
++#include <linux/sched/signal.h>
++#include <linux/uaccess.h>
+ 
+ struct lkdtm_list {
+ 	struct list_head node;
+@@ -279,3 +281,12 @@ void lkdtm_CORRUPT_LIST_DEL(void)
+ 	else
+ 		pr_err("list_del() corruption not detected!\n");
+ }
++
++void lkdtm_CORRUPT_USER_DS(void)
++{
++	pr_info("setting bad task size limit\n");
++	set_fs(KERNEL_DS);
++
++	/* Make sure we do not keep running with a KERNEL_DS! */
++	force_sig(SIGKILL, current);
++}
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index b9a4cd4a9b68..42d2b8e31e6b 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -199,6 +199,7 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(OVERFLOW),
+ 	CRASHTYPE(CORRUPT_LIST_ADD),
+ 	CRASHTYPE(CORRUPT_LIST_DEL),
++	CRASHTYPE(CORRUPT_USER_DS),
+ 	CRASHTYPE(CORRUPT_STACK),
+ 	CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
+ 	CRASHTYPE(OVERWRITE_ALLOCATION),
+-- 
+2.7.4
+
 
 -- 
 Kees Cook
