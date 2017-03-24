@@ -1,95 +1,116 @@
+Date: Fri, 24 Mar 2017 12:26:43 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Message-ID: <alpine.LRH.2.20.1703241217250.10825@namei.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170323025549.19588-3-ewk@edkovsky.org>
-References: <20170323025549.19588-1-ewk@edkovsky.org> <20170323025549.19588-3-ewk@edkovsky.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 23 Mar 2017 14:14:20 -0700
-Message-ID: <CAGXu5j+yJ6_-vBbHRqqtwyjMgVEYzSM+TrAQZzrvvsAO8cbdyw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] extable: verify address is read-only
-To: Eddie Kovsky <ewk@edkovsky.org>
-Cc: Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: multipart/mixed; BOUNDARY="1665246916-1864586338-1490318299=:10825"
+Content-ID: <alpine.LRH.2.20.1703241220400.10825@namei.org>
+Subject: [kernel-hardening] [ANNOUNCE] Linux Security Summit 2017 - CFP
+To: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Cc: lwn@lwn.net, fedora-selinux-list@redhat.com, selinux@tycho.nsa.gov, Linux Security Summit Program Committee <lss-pc@lists.linuxfoundation.org>, ubuntu-hardened@lists.ubuntu.com, netfilter-devel@vger.kernel.org, linux-crypto@vger.kernel.org, Audit-ML <linux-audit@redhat.com>, gentoo-hardened@gentoo.org, keyrings@linux-nfs.org, tpmdd-devel@lists.sourceforge.net, kernel-hardening@lists.openwall.com, oss-security@lists.openwall.com, openxt@googlegroups.com, tee-dev@lists.linaro.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 22, 2017 at 7:55 PM, Eddie Kovsky <ewk@edkovsky.org> wrote:
-> Provide a mechanism to check if the address of a variable is
-> const or ro_after_init. It mimics the existing functions that test if an
-> address is inside the kernel's text section.
->
-> Other functions inside the kernel could then use this capability to
-> verify that their arguments are read-only.
->
-> Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
+  This message is in MIME format.  The first part should be readable text,
+  while the remaining parts are likely unreadable without MIME-aware tools.
 
-Looks great!
-
-Acked-by: Kees Cook <keescook@chromium.org>
-
--Kees
-
-> ---
-> Changes in v3:
->  - Fix missing declaration of is_module_rodata_address()
->
->  include/linux/kernel.h |  2 ++
->  kernel/extable.c       | 29 +++++++++++++++++++++++++++++
->  2 files changed, 31 insertions(+)
->
-> diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-> index 4c26dc3a8295..51beea39e6c4 100644
-> --- a/include/linux/kernel.h
-> +++ b/include/linux/kernel.h
-> @@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
->  extern int __kernel_text_address(unsigned long addr);
->  extern int kernel_text_address(unsigned long addr);
->  extern int func_ptr_is_kernel_text(void *ptr);
-> +extern int core_kernel_ro_data(unsigned long addr);
-> +extern int kernel_ro_address(unsigned long addr);
->
->  unsigned long int_sqrt(unsigned long);
->
-> diff --git a/kernel/extable.c b/kernel/extable.c
-> index 2676d7f8baf6..3c3a9f4e6250 100644
-> --- a/kernel/extable.c
-> +++ b/kernel/extable.c
-> @@ -154,3 +154,32 @@ int func_ptr_is_kernel_text(void *ptr)
->                 return 1;
->         return is_module_text_address(addr);
->  }
-> +
-> +/**
-> + * core_kernel_ro_data - Verify address points to read-only section
-> + * @addr: address to test
-> + *
-> + */
-> +int core_kernel_ro_data(unsigned long addr)
-> +{
-> +       if (addr >= (unsigned long)__start_rodata &&
-> +           addr < (unsigned long)__end_rodata)
-> +               return 1;
-> +
-> +       if (addr >= (unsigned long)__start_data_ro_after_init &&
-> +           addr < (unsigned long)__end_data_ro_after_init)
-> +               return 1;
-> +
-> +       return 0;
-> +}
-> +
-> +/* Verify that address is const or ro_after_init. */
-> +int kernel_ro_address(unsigned long addr)
-> +{
-> +       if (core_kernel_ro_data(addr))
-> +               return 1;
-> +       if (is_module_rodata_address(addr))
-> +               return 1;
-> +
-> +       return 0;
-> +}
-> --
-> 2.12.0
+--1665246916-1864586338-1490318299=:10825
+Content-Type: text/plain; CHARSET=ISO-8859-7
+Content-Transfer-Encoding: 8BIT
+Content-ID: <alpine.LRH.2.20.1703241220401.10825@namei.org>
 
 
+==============================================================================
+		   ANNOUNCEMENT AND CALL FOR PARTICIPATION
 
--- 
-Kees Cook
-Pixel Security
+			  LINUX SECURITY SUMMIT 2017
+                         
+			       14-15 September
+			       LOS ANGELES, USA
+==============================================================================
+
+
+DESCRIPTION
+
+  The Linux Security Summit (LSS) is a technical forum for collaboration
+  between Linux developers, researchers, and end users. Its primary aim is to
+  foster community efforts in analyzing and solving Linux security challenges.
+
+  LSS this year will be co-located with the Open Source Summit and the Linux
+  Plumbers Conference.
+
+  The program committee currently seeks proposals for:
+
+    * Refereed Presentations:
+      45 minutes in length, including at least 10 minutes of discussion.
+
+    * Discussion Topics:
+      30 minutes in length.
+
+  Topic areas include, but are not limited to:
+
+    * Kernel self-protection
+    * Access control
+    * Cryptography and key management
+    * Integrity control
+    * Hardware Security
+    * Iot and embedded security
+    * Virtualization and containers
+    * System-specific system hardening
+    * Case studies
+    * Security tools
+    * Security UX
+    * Emerging technologies, threats & techniques 
+
+  Proposals should be submitted via:
+    http://events.linuxfoundation.org/events/linux-security-summit/program/cfp
+
+
+DATES
+
+  * CFP Close: June 5, 2017
+  * CFP Notifications: June 12, 2017
+  * Schedule Announced: June 19, 2017
+  * Slide Submission: August 31, 2017
+
+
+WHO SHOULD ATTEND
+
+  We're seeking a diverse range of attendees, and welcome participation by
+  people involved in Linux security development, operations, and research.
+
+  The LSS is a unique global event which provides the opportunity to present
+  and discuss your work or research with key Linux security community members
+  and maintainers.  It¢s also useful for those who wish to keep up with the
+  latest in Linux security development, and to provide input to the
+  development process.
+
+
+WEB SITE
+
+  http://events.linuxfoundation.org/events/linux-security-summit
+
+
+TWITTER
+
+  For event updates and announcements, follow:
+
+    https://twitter.com/LinuxSecSummit
+  
+
+PROGRAM COMMITTEE
+
+  The program committee for LSS 2017 is:
+
+    * James Morris, Oracle
+    * Serge Hallyn, Canonical
+    * Paul Moore, Red Hat
+    * Stephen Smalley, NSA
+    * Elena Reshetova, Intel
+    * John Johansen, Canonical
+    * Kees Cook, Google
+    * Casey Schaufler, Intel
+    * Mimi Zohar, IBM
+    * David A. Wheeler, Institute for Defense Analyses
+
+  The program committee may be contacted as a group via email:
+    lss-pc () lists.linuxfoundation.org
+--1665246916-1864586338-1490318299=:10825--
