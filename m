@@ -1,88 +1,44 @@
-From: Eddie Kovsky <ewk@edkovsky.org>
-Date: Sun, 26 Mar 2017 15:08:25 -0600
-Message-Id: <20170326210825.23255-3-ewk@edkovsky.org>
-In-Reply-To: <20170326210825.23255-1-ewk@edkovsky.org>
-References: <20170326210825.23255-1-ewk@edkovsky.org>
-Subject: [kernel-hardening] [PATCH v4 2/2] extable: verify address is read-only
-To: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org
-Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+From: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
+References: <1485894263-91051-1-git-send-email-keescook@chromium.org>
+ <1485894263-91051-2-git-send-email-keescook@chromium.org>
+Date: Mon, 27 Mar 2017 18:38:20 +1100
+MIME-Version: 1.0
+In-Reply-To: <1485894263-91051-2-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Message-Id: <851a0c99-db08-c3a8-f5c6-2e567971e2eb@au1.ibm.com>
+Subject: Re: [kernel-hardening] [PATCH v5 1/4] gcc-plugins: Add the initify
+ gcc plugin
+To: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org
+Cc: Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, pageexec@freemail.hu, yamada.masahiro@socionext.com, minipli@ld-linux.so, linux@armlinux.org.uk, catalin.marinas@arm.com, linux@rasmusvillemoes.dk, david.brown@linaro.org, benh@kernel.crashing.org, tglx@linutronix.de, akpm@linux-foundation.org, jlayton@poochiereds.net, sam@ravnborg.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Provide a mechanism to check if the address of a variable is
-const or ro_after_init. It mimics the existing functions that test if an
-address is inside the kernel's text section.
+On 01/02/17 07:24, Kees Cook wrote:
+> From: Emese Revfy <re.emese@gmail.com>
+>
+> The kernel already has a mechanism to free up code and data memory that
+> is only used during kernel or module initialization.  This plugin will
+> teach the compiler to find more such code and data that can be freed
+> after initialization.
 
-The idea is to prevent structures that are not read-only from being
-passed to functions. Other functions inside the kernel could then use
-this capability to verify that their arguments are read-only.
+Currently checking whether we can wire this up for powerpc without too 
+many problems...
 
-This implements the first half of a suggestion made by Kees Cook for
-the Kernel Self Protection Project:
+> diff --git a/arch/x86/lib/Makefile b/arch/x86/lib/Makefile
+> index 34a74131a12c..b98b8fdb7aaf 100644
+> --- a/arch/x86/lib/Makefile
+> +++ b/arch/x86/lib/Makefile
+> @@ -29,6 +29,10 @@ lib-$(CONFIG_RANDOMIZE_BASE) += kaslr.o
+>  obj-y += msr.o msr-reg.o msr-reg-export.o hweight.o
+>
+>  ifeq ($(CONFIG_X86_32),y)
+> +        CFLAGS_strstr_32.o += $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
+> +        CFLAGS_string_32.o += $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
+> +        CFLAGS_memcpy_32.o += $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
 
-	- provide mechanism to check for ro_after_init memory areas, and
-	reject structures not marked ro_after_init in vmbus_register()
+s/VERIFIY/VERIFY/g here + Makefile.gcc-plugins?
 
-Suggested-by: Kees Cook <keescook@chromium.org>
-Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
----
-Changes in v4:
- - Rename function core_kernel_ro_data() to core_kernel_rodata().
-Changes in v3:
- - Fix missing declaration of is_module_rodata_address()
----
- include/linux/kernel.h |  2 ++
- kernel/extable.c       | 29 +++++++++++++++++++++++++++++
- 2 files changed, 31 insertions(+)
 
-diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 4c26dc3a8295..5748784ca209 100644
---- a/include/linux/kernel.h
-+++ b/include/linux/kernel.h
-@@ -444,6 +444,8 @@ extern int core_kernel_data(unsigned long addr);
- extern int __kernel_text_address(unsigned long addr);
- extern int kernel_text_address(unsigned long addr);
- extern int func_ptr_is_kernel_text(void *ptr);
-+extern int core_kernel_rodata(unsigned long addr);
-+extern int kernel_ro_address(unsigned long addr);
- 
- unsigned long int_sqrt(unsigned long);
- 
-diff --git a/kernel/extable.c b/kernel/extable.c
-index 2676d7f8baf6..22562cfc6ac3 100644
---- a/kernel/extable.c
-+++ b/kernel/extable.c
-@@ -154,3 +154,32 @@ int func_ptr_is_kernel_text(void *ptr)
- 		return 1;
- 	return is_module_text_address(addr);
- }
-+
-+/**
-+ * core_kernel_rodata - Verify address points to read-only section
-+ * @addr: address to test
-+ *
-+ */
-+int core_kernel_rodata(unsigned long addr)
-+{
-+	if (addr >= (unsigned long)__start_rodata &&
-+	    addr < (unsigned long)__end_rodata)
-+		return 1;
-+
-+	if (addr >= (unsigned long)__start_data_ro_after_init &&
-+	    addr < (unsigned long)__end_data_ro_after_init)
-+		return 1;
-+
-+	return 0;
-+}
-+
-+/* Verify that address is const or ro_after_init. */
-+int kernel_ro_address(unsigned long addr)
-+{
-+	if (core_kernel_rodata(addr))
-+		return 1;
-+	if (is_module_rodata_address(addr))
-+		return 1;
-+
-+	return 0;
-+}
 -- 
-2.12.1
+Andrew Donnellan              OzLabs, ADL Canberra
+andrew.donnellan@au1.ibm.com  IBM Australia Limited
