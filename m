@@ -1,59 +1,99 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <851a0c99-db08-c3a8-f5c6-2e567971e2eb@au1.ibm.com>
-References: <1485894263-91051-1-git-send-email-keescook@chromium.org>
- <1485894263-91051-2-git-send-email-keescook@chromium.org> <851a0c99-db08-c3a8-f5c6-2e567971e2eb@au1.ibm.com>
+In-Reply-To: <201703271633.xbYHmB37%fengguang.wu@intel.com>
+References: <20170326210825.23255-3-ewk@edkovsky.org> <201703271633.xbYHmB37%fengguang.wu@intel.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 27 Mar 2017 09:14:36 -0700
-Message-ID: <CAGXu5j+cd8iXAVko_fOFkPLD2Q=1=S0jvCYGAhKjnTunJ=86Zg@mail.gmail.com>
+Date: Mon, 27 Mar 2017 11:42:57 -0700
+Message-ID: <CAGXu5jKFPwDTaRq8eiszOoqdm-nQD13UrF_bj+m6FWWCzEnO9g@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v5 1/4] gcc-plugins: Add the initify
- gcc plugin
-To: Andrew Donnellan <andrew.donnellan@au1.ibm.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Arnd Bergmann <arnd@arndb.de>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Masahiro Yamada <yamada.masahiro@socionext.com>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] extable: verify address is read-only
+To: Jakub Kicinski <jakub.kicinski@netronome.com>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Eddie Kovsky <ewk@edkovsky.org>
+Cc: kbuild-all@01.org, kbuild test robot <lkp@intel.com>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Mar 27, 2017 at 12:38 AM, Andrew Donnellan
-<andrew.donnellan@au1.ibm.com> wrote:
-> On 01/02/17 07:24, Kees Cook wrote:
->>
->> From: Emese Revfy <re.emese@gmail.com>
->>
->> The kernel already has a mechanism to free up code and data memory that
->> is only used during kernel or module initialization.  This plugin will
->> teach the compiler to find more such code and data that can be freed
->> after initialization.
+On Mon, Mar 27, 2017 at 1:43 AM, kbuild test robot <lkp@intel.com> wrote:
+> Hi Eddie,
 >
+> [auto build test ERROR on next-20170323]
+> [cannot apply to linus/master linux/master jeyu/modules-next v4.9-rc8 v4.9-rc7 v4.9-rc6 v4.11-rc4]
+> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
 >
-> Currently checking whether we can wire this up for powerpc without too many
-> problems...
+> url:    https://github.com/0day-ci/linux/commits/Eddie-Kovsky/module-verify-address-is-read-only/20170327-142922
+> config: blackfin-BF561-EZKIT-SMP_defconfig (attached as .config)
+> compiler: bfin-uclinux-gcc (GCC) 6.2.0
+> reproduce:
+>         wget https://raw.githubusercontent.com/01org/lkp-tests/master/sbin/make.cross -O ~/bin/make.cross
+>         chmod +x ~/bin/make.cross
+>         # save the attached .config to linux build tree
+>         make.cross ARCH=blackfin
+>
+> All errors (new ones prefixed by >>):
+>
+>    kernel/built-in.o: In function `core_kernel_rodata':
+>>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
 
-Cool, thanks. FWIW, note that this plugin is a bit back-burnered at
-the moment. I've got this in my -next tree still, but it needs some
-rather large changes to how it does its annotations before Linus will
-accept it.
+Hm, I'm confused about this. blackfin includes
+include/asm-generic-vmlinux.lds.h and uses the RO_DATA macro (which
+resolves to RO_DATA_SECTION to RO_AFTER_INIT_DATA which defines
+__[start|end]_data_ro_after_init.
 
->> diff --git a/arch/x86/lib/Makefile b/arch/x86/lib/Makefile
->> index 34a74131a12c..b98b8fdb7aaf 100644
->> --- a/arch/x86/lib/Makefile
->> +++ b/arch/x86/lib/Makefile
->> @@ -29,6 +29,10 @@ lib-$(CONFIG_RANDOMIZE_BASE) += kaslr.o
->>  obj-y += msr.o msr-reg.o msr-reg-export.o hweight.o
->>
->>  ifeq ($(CONFIG_X86_32),y)
->> +        CFLAGS_strstr_32.o +=
->> $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
->> +        CFLAGS_string_32.o +=
->> $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
->> +        CFLAGS_memcpy_32.o +=
->> $(INITIFY_DISABLE_VERIFIY_NOCAPTURE_FUNCTIONS)
->
->
-> s/VERIFIY/VERIFY/g here + Makefile.gcc-plugins?
+Also, it seems that commit d7c19b066dcf4bd19c4385e8065558d4e74f9e73
+("mm: kmemleak: scan .data.ro_after_init") added a potentially
+redundant section name (s390 already calls this
+__[start|end]_ro_after_init). I'd like to get this cleaned up, since
+having multiple names for the same thing is confusing:
 
-Ah, thanks for catching that! I'll get that fixed.
+diff --git a/arch/s390/kernel/vmlinux.lds.S b/arch/s390/kernel/vmlinux.lds.S
+index 000e6e91f6a0..3667d20e997f 100644
+--- a/arch/s390/kernel/vmlinux.lds.S
++++ b/arch/s390/kernel/vmlinux.lds.S
+@@ -62,9 +62,11 @@ SECTIONS
+
+        . = ALIGN(PAGE_SIZE);
+        __start_ro_after_init = .;
++       __start_data_ro_after_init = .;
+        .data..ro_after_init : {
+                 *(.data..ro_after_init)
+        }
++       __end_data_ro_after_init = .;
+        EXCEPTION_TABLE(16)
+        . = ALIGN(PAGE_SIZE);
+        __end_ro_after_init = .;
+
+And it seems that this hunk is wrong (__end_ro_after_init includes
+s390's exception table, etc). I think we should remove the
+..._data_... name and use s390's name.
+
+I'll send an adjustment patch, but we'll still need to deal with blackfin.
 
 -Kees
+
+>
+> vim +169 kernel/extable.c
+>
+>    163  int core_kernel_rodata(unsigned long addr)
+>    164  {
+>    165          if (addr >= (unsigned long)__start_rodata &&
+>    166              addr < (unsigned long)__end_rodata)
+>    167                  return 1;
+>    168
+>  > 169          if (addr >= (unsigned long)__start_data_ro_after_init &&
+>    170              addr < (unsigned long)__end_data_ro_after_init)
+>    171                  return 1;
+>    172
+>
+> ---
+> 0-DAY kernel test infrastructure                Open Source Technology Center
+> https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
+
+
 
 -- 
 Kees Cook
