@@ -1,127 +1,118 @@
-From: Bhupesh Sharma <bhsharma@redhat.com>
-Date: Wed, 29 Mar 2017 01:15:47 +0530
-Message-Id: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
-Subject: [kernel-hardening] [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
-Cc: dcashman@google.com, mpe@ellerman.id.au, bhupesh.linux@gmail.com, keescook@chromium.org, bhsharma@redhat.com, agraf@suse.com, benh@kernel.crashing.org, paulus@samba.org, agust@denx.de, alistair@popple.id.au, mporter@kernel.crashing.org, vitb@kernel.crashing.org, oss@buserror.net, galak@kernel.crashing.org, dcashman@android.com
+MIME-Version: 1.0
+Sender: arndbergmann@gmail.com
+In-Reply-To: <CAGXu5jKNkBr=6uS58e08pimNb2v7Xf-YVGJ7aaHNV3pM859p5Q@mail.gmail.com>
+References: <1485894263-91051-1-git-send-email-keescook@chromium.org>
+ <1485894263-91051-2-git-send-email-keescook@chromium.org> <851a0c99-db08-c3a8-f5c6-2e567971e2eb@au1.ibm.com>
+ <CAGXu5j+cd8iXAVko_fOFkPLD2Q=1=S0jvCYGAhKjnTunJ=86Zg@mail.gmail.com>
+ <CAK8P3a2Xh3O3j6uAskVj8YHOK=sMNBGvR_o_jSN53RdQp7NyZg@mail.gmail.com> <CAGXu5jKNkBr=6uS58e08pimNb2v7Xf-YVGJ7aaHNV3pM859p5Q@mail.gmail.com>
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Tue, 28 Mar 2017 22:31:09 +0200
+Message-ID: <CAK8P3a0OAOM-4C5Qh+CGacz0XEN2L0EDbTQT5ch+Q_+RMc8xSw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [PATCH v5 1/4] gcc-plugins: Add the initify
+ gcc plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, LKML <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Masahiro Yamada <yamada.masahiro@socionext.com>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-powerpc arch_mmap_rnd() currently uses hard-coded values - (23-PAGE_SHIFT) for
-32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
-for the mmap base address for a ASLR ELF.
+On Tue, Mar 28, 2017 at 9:03 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Tue, Mar 28, 2017 at 12:49 AM, Arnd Bergmann <arnd@arndb.de> wrote:
+>> On Mon, Mar 27, 2017 at 6:14 PM, Kees Cook <keescook@chromium.org> wrote:
+>>> On Mon, Mar 27, 2017 at 12:38 AM, Andrew Donnellan
+>>> <andrew.donnellan@au1.ibm.com> wrote:
+>>>> On 01/02/17 07:24, Kees Cook wrote:
+>>>>>
+>>>>> From: Emese Revfy <re.emese@gmail.com>
+>>>>>
+>>>>> The kernel already has a mechanism to free up code and data memory that
+>>>>> is only used during kernel or module initialization.  This plugin will
+>>>>> teach the compiler to find more such code and data that can be freed
+>>>>> after initialization.
+>>>>
+>>>>
+>>>> Currently checking whether we can wire this up for powerpc without too many
+>>>> problems...
+>>>
+>>> Cool, thanks. FWIW, note that this plugin is a bit back-burnered at
+>>> the moment. I've got this in my -next tree still, but it needs some
+>>> rather large changes to how it does its annotations before Linus will
+>>> accept it.
+>>
+>> I've tried turning it on again a few days ago and still got too many build
+>> problems with my randconfig tree, so I've turned it off again. I think I've
+>> already reported most of what I found now, so I did not send out new
+>> reports.
+>
+> Hrm, with what's in -next? That's too bad. I thought everything you
+> reported had been fixed. Dang. :(
 
-This patch makes sure that powerpc mmap arch_mmap_rnd() implementation
-is similar to other ARCHs (like x86, arm64) and uses mmap_rnd_bits
-and helpers to generate the mmap address randomization.
+Here are the ones I'm still getting with around 50 randconfig builds:
 
-The maximum and minimum randomization range values represent
-a compromise between increased ASLR effectiveness and avoiding
-address-space fragmentation.
+0xA1433C1D Tue Mar 28 21:43:01 CEST 2017 failed
+/git/arm-soc/drivers/acpi/acpica/utdebug.c: In function 'acpi_debug_print':
+/git/arm-soc/drivers/acpi/acpica/utdebug.c:158:1: error:
+'acpi_debug_print' captures its 3 ('function_name') parameter, please
+remove it from the nocapture attribute. [-Werror]
 
-Using the Kconfig option and suitable /proc tunable, platform
-developers may choose where to place this compromise.
+0x46D10F38 Tue Mar 28 21:48:11 CEST 2017 failed
+/git/arm-soc/lib/string.c: In function 'check_bytes8':
+/git/arm-soc/lib/string.c:900:7: error: 'check_bytes8' captures its 1
+('start') parameter, please remove it from the nocapture attribute.
+[-Werror]
+ void *check_bytes8(const u8 *start, u8 value, unsigned int bytes)
+       ^~~~~~~~~~~~
+0xDC65C29E Tue Mar 28 22:20:43 CEST 2017 success
+0xCF5F679E Tue Mar 28 22:21:02 CEST 2017 failed
+/git/arm-soc/lib/string.c: In function 'strnstr':
+/git/arm-soc/lib/string.c:858:7: error: 'strnstr' captures its 1
+('s1') parameter, please remove it from the nocapture attribute.
+[-Werror]
 
-Also this patch keeps the default values as new minimums.
+I also got this a few days ago:
 
-Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
-Reviewed-by: Kees Cook <keescook@chromium.org>
----
-* Changes since v2:
-v2 can be seen here (https://patchwork.kernel.org/patch/9551509/)
-    - Changed a few minimum and maximum randomization ranges as per Michael's suggestion.
-    - Corrected Kees's email address in the Reviewed-by line.
-    - Added further comments in kconfig to explain how the address ranges were worked out.
+*** WARNING *** there are active plugins, do not report this as a bug
+unless you can reproduce it without enabling any plugins.
+Event                            | Plugins
+PLUGIN_ATTRIBUTES                | initify_plugin
+PLUGIN_START_UNIT                | initify_plugin
+/git/arm-soc/arch/arm/mach-mv78xx0/common.c: In function 'mv78xx0_init':
+/git/arm-soc/arch/arm/mach-mv78xx0/common.c:384:13: internal compiler
+error: in search_constant_strings, at
+git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1375
+ void __init mv78xx0_init(void)
+             ^~~~~~~~~~~~
+0x2b0538381b9d search_constant_strings
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1375
+0x2b0538381950 search_constant_strings
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1335
+0x2b0538381950 search_constant_strings
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1367
+0x2b0538382abe search_constant_strings
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1506
+0x2b0538382abe search_var_param
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1419
+0x2b0538382abe search_const_strs
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1471
+0x2b0538382abe initify_function_transform
+/git/arm-soc/scripts/gcc-plugins/initify_plugin.c:1519
+0xc679a3 execute_one_ipa_transform_pass
+/home/arnd/git/gcc/gcc/passes.c:2207
+0xc67b2d execute_all_ipa_transforms()
+/home/arnd/git/gcc/gcc/passes.c:2249
+0x8d5a46 cgraph_node::expand()
+/home/arnd/git/gcc/gcc/cgraphunit.c:2029
+0x8d5f1c expand_all_functions
+/home/arnd/git/gcc/gcc/cgraphunit.c:2172
+0x8d69ec symbol_table::compile()
+/home/arnd/git/gcc/gcc/cgraphunit.c:2529
+0x8d6c2c symbol_table::finalize_compilation_unit()
+/home/arnd/git/gcc/gcc/cgraphunit.c:2619
+Please submit a full bug report,
+with preprocessed source if appropriate.
+Please include the complete backtrace with any bug report.
+See <http://gcc.gnu.org/bugs.html> for instructions.
+/git/arm-soc/scripts/Makefile.build:308: recipe for target
+'arch/arm/mach-mv78xx0/common.o' failed
 
-* Changes since v1:
-v1 can be seen here (https://lists.ozlabs.org/pipermail/linuxppc-dev/2017-February/153594.html)
-    - No functional change in this patch.
-    - Dropped PATCH 2/2 from v1 as recommended by Kees Cook.
 
- arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
- arch/powerpc/mm/mmap.c |  7 ++++---
- 2 files changed, 48 insertions(+), 3 deletions(-)
-
-diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-index 97a8bc8..84aae67 100644
---- a/arch/powerpc/Kconfig
-+++ b/arch/powerpc/Kconfig
-@@ -22,6 +22,48 @@ config MMU
- 	bool
- 	default y
- 
-+# min bits determined by the following formula:
-+# VA_BITS - PAGE_SHIFT - CONSTANT
-+# where,
-+# 	VA_BITS = 46 bits for 64BIT and 4GB - 1 Page = 31 bits for 32BIT
-+# 	CONSTANT = 16 for 64BIT and 8 for 32BIT
-+config ARCH_MMAP_RND_BITS_MIN
-+       default 5 if PPC_256K_PAGES && 32BIT  # 31 - 18 - 8 = 5
-+       default 7 if PPC_64K_PAGES && 32BIT   # 31 - 16 - 8 = 7
-+       default 9 if PPC_16K_PAGES && 32BIT   # 31 - 14 - 8 = 9
-+       default 11 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 8 = 11
-+       default 12 if PPC_256K_PAGES && 64BIT # 46 - 18 - 16 = 12
-+       default 14 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 16 = 14
-+       default 16 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 16 = 16
-+       default 18 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 16 = 18
-+
-+# max bits determined by the following formula:
-+# VA_BITS - PAGE_SHIFT - CONSTANT
-+# where, 
-+# 	VA_BITS = 46 bits for 64BIT, and 4GB - 1 Page = 31 bits for 32BIT
-+# 	CONSTANT = 2, both for 64BIT and 32BIT
-+config ARCH_MMAP_RND_BITS_MAX
-+       default 11 if PPC_256K_PAGES && 32BIT # 31 - 18 - 2 = 11
-+       default 13 if PPC_64K_PAGES && 32BIT  # 31 - 16 - 2 = 13
-+       default 15 if PPC_16K_PAGES && 32BIT  # 31 - 14 - 2 = 15
-+       default 17 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 2 = 17
-+       default 26 if PPC_256K_PAGES && 64BIT # 46 - 18 - 2 = 26
-+       default 28 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 2 = 28
-+       default 30 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 2 = 30
-+       default 32 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 2 = 32
-+
-+config ARCH_MMAP_RND_COMPAT_BITS_MIN
-+       default 5 if PPC_256K_PAGES
-+       default 7 if PPC_64K_PAGES
-+       default 9 if PPC_16K_PAGES
-+       default 11
-+
-+config ARCH_MMAP_RND_COMPAT_BITS_MAX
-+       default 11 if PPC_256K_PAGES
-+       default 13 if PPC_64K_PAGES
-+       default 15 if PPC_16K_PAGES 
-+       default 17
-+
- config HAVE_SETUP_PER_CPU_AREA
- 	def_bool PPC64
- 
-@@ -142,6 +184,8 @@ config PPC
- 	select HAVE_IRQ_EXIT_ON_IRQ_STACK
- 	select HAVE_KERNEL_GZIP
- 	select HAVE_KPROBES
-+	select HAVE_ARCH_MMAP_RND_BITS
-+	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
- 	select HAVE_KRETPROBES
- 	select HAVE_LIVEPATCH			if HAVE_DYNAMIC_FTRACE_WITH_REGS
- 	select HAVE_MEMBLOCK
-diff --git a/arch/powerpc/mm/mmap.c b/arch/powerpc/mm/mmap.c
-index a5d9ef5..92a9355 100644
---- a/arch/powerpc/mm/mmap.c
-+++ b/arch/powerpc/mm/mmap.c
-@@ -61,11 +61,12 @@ unsigned long arch_mmap_rnd(void)
- {
- 	unsigned long rnd;
- 
--	/* 8MB for 32bit, 1GB for 64bit */
-+#ifdef CONFIG_COMPAT
- 	if (is_32bit_task())
--		rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
-+		rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
- 	else
--		rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
-+#endif
-+		rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
- 
- 	return rnd << PAGE_SHIFT;
- }
--- 
-2.7.4
+     Arnd
