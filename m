@@ -1,51 +1,127 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAK8P3a2Xh3O3j6uAskVj8YHOK=sMNBGvR_o_jSN53RdQp7NyZg@mail.gmail.com>
-References: <1485894263-91051-1-git-send-email-keescook@chromium.org>
- <1485894263-91051-2-git-send-email-keescook@chromium.org> <851a0c99-db08-c3a8-f5c6-2e567971e2eb@au1.ibm.com>
- <CAGXu5j+cd8iXAVko_fOFkPLD2Q=1=S0jvCYGAhKjnTunJ=86Zg@mail.gmail.com> <CAK8P3a2Xh3O3j6uAskVj8YHOK=sMNBGvR_o_jSN53RdQp7NyZg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 28 Mar 2017 12:03:07 -0700
-Message-ID: <CAGXu5jKNkBr=6uS58e08pimNb2v7Xf-YVGJ7aaHNV3pM859p5Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v5 1/4] gcc-plugins: Add the initify
- gcc plugin
-To: Arnd Bergmann <arnd@arndb.de>
-Cc: Andrew Donnellan <andrew.donnellan@au1.ibm.com>, LKML <linux-kernel@vger.kernel.org>, Emese Revfy <re.emese@gmail.com>, Josh Triplett <josh@joshtriplett.org>, PaX Team <pageexec@freemail.hu>, Masahiro Yamada <yamada.masahiro@socionext.com>, minipli@ld-linux.so, Russell King <linux@armlinux.org.uk>, Catalin Marinas <catalin.marinas@arm.com>, Rasmus Villemoes <linux@rasmusvillemoes.dk>, David Brown <david.brown@linaro.org>, "benh@kernel.crashing.org" <benh@kernel.crashing.org>, Thomas Gleixner <tglx@linutronix.de>, Andrew Morton <akpm@linux-foundation.org>, Jeff Layton <jlayton@poochiereds.net>, Sam Ravnborg <sam@ravnborg.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Wed, 29 Mar 2017 01:15:47 +0530
+Message-Id: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
+Subject: [kernel-hardening] [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org
+Cc: dcashman@google.com, mpe@ellerman.id.au, bhupesh.linux@gmail.com, keescook@chromium.org, bhsharma@redhat.com, agraf@suse.com, benh@kernel.crashing.org, paulus@samba.org, agust@denx.de, alistair@popple.id.au, mporter@kernel.crashing.org, vitb@kernel.crashing.org, oss@buserror.net, galak@kernel.crashing.org, dcashman@android.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Mar 28, 2017 at 12:49 AM, Arnd Bergmann <arnd@arndb.de> wrote:
-> On Mon, Mar 27, 2017 at 6:14 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Mon, Mar 27, 2017 at 12:38 AM, Andrew Donnellan
->> <andrew.donnellan@au1.ibm.com> wrote:
->>> On 01/02/17 07:24, Kees Cook wrote:
->>>>
->>>> From: Emese Revfy <re.emese@gmail.com>
->>>>
->>>> The kernel already has a mechanism to free up code and data memory that
->>>> is only used during kernel or module initialization.  This plugin will
->>>> teach the compiler to find more such code and data that can be freed
->>>> after initialization.
->>>
->>>
->>> Currently checking whether we can wire this up for powerpc without too many
->>> problems...
->>
->> Cool, thanks. FWIW, note that this plugin is a bit back-burnered at
->> the moment. I've got this in my -next tree still, but it needs some
->> rather large changes to how it does its annotations before Linus will
->> accept it.
->
-> I've tried turning it on again a few days ago and still got too many build
-> problems with my randconfig tree, so I've turned it off again. I think I've
-> already reported most of what I found now, so I did not send out new
-> reports.
+powerpc arch_mmap_rnd() currently uses hard-coded values - (23-PAGE_SHIFT) for
+32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
+for the mmap base address for a ASLR ELF.
 
-Hrm, with what's in -next? That's too bad. I thought everything you
-reported had been fixed. Dang. :(
+This patch makes sure that powerpc mmap arch_mmap_rnd() implementation
+is similar to other ARCHs (like x86, arm64) and uses mmap_rnd_bits
+and helpers to generate the mmap address randomization.
 
--Kees
+The maximum and minimum randomization range values represent
+a compromise between increased ASLR effectiveness and avoiding
+address-space fragmentation.
 
+Using the Kconfig option and suitable /proc tunable, platform
+developers may choose where to place this compromise.
+
+Also this patch keeps the default values as new minimums.
+
+Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+---
+* Changes since v2:
+v2 can be seen here (https://patchwork.kernel.org/patch/9551509/)
+    - Changed a few minimum and maximum randomization ranges as per Michael's suggestion.
+    - Corrected Kees's email address in the Reviewed-by line.
+    - Added further comments in kconfig to explain how the address ranges were worked out.
+
+* Changes since v1:
+v1 can be seen here (https://lists.ozlabs.org/pipermail/linuxppc-dev/2017-February/153594.html)
+    - No functional change in this patch.
+    - Dropped PATCH 2/2 from v1 as recommended by Kees Cook.
+
+ arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ arch/powerpc/mm/mmap.c |  7 ++++---
+ 2 files changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+index 97a8bc8..84aae67 100644
+--- a/arch/powerpc/Kconfig
++++ b/arch/powerpc/Kconfig
+@@ -22,6 +22,48 @@ config MMU
+ 	bool
+ 	default y
+ 
++# min bits determined by the following formula:
++# VA_BITS - PAGE_SHIFT - CONSTANT
++# where,
++# 	VA_BITS = 46 bits for 64BIT and 4GB - 1 Page = 31 bits for 32BIT
++# 	CONSTANT = 16 for 64BIT and 8 for 32BIT
++config ARCH_MMAP_RND_BITS_MIN
++       default 5 if PPC_256K_PAGES && 32BIT  # 31 - 18 - 8 = 5
++       default 7 if PPC_64K_PAGES && 32BIT   # 31 - 16 - 8 = 7
++       default 9 if PPC_16K_PAGES && 32BIT   # 31 - 14 - 8 = 9
++       default 11 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 8 = 11
++       default 12 if PPC_256K_PAGES && 64BIT # 46 - 18 - 16 = 12
++       default 14 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 16 = 14
++       default 16 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 16 = 16
++       default 18 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 16 = 18
++
++# max bits determined by the following formula:
++# VA_BITS - PAGE_SHIFT - CONSTANT
++# where, 
++# 	VA_BITS = 46 bits for 64BIT, and 4GB - 1 Page = 31 bits for 32BIT
++# 	CONSTANT = 2, both for 64BIT and 32BIT
++config ARCH_MMAP_RND_BITS_MAX
++       default 11 if PPC_256K_PAGES && 32BIT # 31 - 18 - 2 = 11
++       default 13 if PPC_64K_PAGES && 32BIT  # 31 - 16 - 2 = 13
++       default 15 if PPC_16K_PAGES && 32BIT  # 31 - 14 - 2 = 15
++       default 17 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 2 = 17
++       default 26 if PPC_256K_PAGES && 64BIT # 46 - 18 - 2 = 26
++       default 28 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 2 = 28
++       default 30 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 2 = 30
++       default 32 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 2 = 32
++
++config ARCH_MMAP_RND_COMPAT_BITS_MIN
++       default 5 if PPC_256K_PAGES
++       default 7 if PPC_64K_PAGES
++       default 9 if PPC_16K_PAGES
++       default 11
++
++config ARCH_MMAP_RND_COMPAT_BITS_MAX
++       default 11 if PPC_256K_PAGES
++       default 13 if PPC_64K_PAGES
++       default 15 if PPC_16K_PAGES 
++       default 17
++
+ config HAVE_SETUP_PER_CPU_AREA
+ 	def_bool PPC64
+ 
+@@ -142,6 +184,8 @@ config PPC
+ 	select HAVE_IRQ_EXIT_ON_IRQ_STACK
+ 	select HAVE_KERNEL_GZIP
+ 	select HAVE_KPROBES
++	select HAVE_ARCH_MMAP_RND_BITS
++	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+ 	select HAVE_KRETPROBES
+ 	select HAVE_LIVEPATCH			if HAVE_DYNAMIC_FTRACE_WITH_REGS
+ 	select HAVE_MEMBLOCK
+diff --git a/arch/powerpc/mm/mmap.c b/arch/powerpc/mm/mmap.c
+index a5d9ef5..92a9355 100644
+--- a/arch/powerpc/mm/mmap.c
++++ b/arch/powerpc/mm/mmap.c
+@@ -61,11 +61,12 @@ unsigned long arch_mmap_rnd(void)
+ {
+ 	unsigned long rnd;
+ 
+-	/* 8MB for 32bit, 1GB for 64bit */
++#ifdef CONFIG_COMPAT
+ 	if (is_32bit_task())
+-		rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
++		rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
+ 	else
+-		rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
++#endif
++		rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+ 
+ 	return rnd << PAGE_SHIFT;
+ }
 -- 
-Kees Cook
-Pixel Security
+2.7.4
