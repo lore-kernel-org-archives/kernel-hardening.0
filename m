@@ -1,82 +1,88 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 29 Mar 2017 11:15:56 -0700
-Message-Id: <1490811363-93944-5-git-send-email-keescook@chromium.org>
+Date: Wed, 29 Mar 2017 11:15:54 -0700
+Message-Id: <1490811363-93944-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1490811363-93944-1-git-send-email-keescook@chromium.org>
 References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+Subject: [kernel-hardening] [RFC v2][PATCH 02/11] lkdtm: add test for rare_write() infrastructure
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Based on PaX's x86 pax_{open,close}_kernel() implementation, this
-allows HAVE_ARCH_RARE_WRITE to work on x86.
-
-There is missing work to sort out some header file issues where preempt.h
-is missing, though it can't be included in pg_table.h unconditionally...
-some other solution will be needed, perhaps an entirely separate header
-file for rare_write()-related defines...
-
-This patch is also missing paravirt support.
+This adds the WRITE_RARE_WRITE test to validate variables marked with
+__wr_rare.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/x86/Kconfig               |  1 +
- arch/x86/include/asm/pgtable.h | 31 +++++++++++++++++++++++++++++++
- 2 files changed, 32 insertions(+)
+ drivers/misc/lkdtm.h       |  1 +
+ drivers/misc/lkdtm_core.c  |  1 +
+ drivers/misc/lkdtm_perms.c | 19 ++++++++++++++++++-
+ 3 files changed, 20 insertions(+), 1 deletion(-)
 
-diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index cc98d5a294ee..2d1d707aa036 100644
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -106,6 +106,7 @@ config X86
- 	select HAVE_ARCH_KMEMCHECK
- 	select HAVE_ARCH_MMAP_RND_BITS		if MMU
- 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS	if MMU && COMPAT
-+	select HAVE_ARCH_RARE_WRITE
- 	select HAVE_ARCH_SECCOMP_FILTER
- 	select HAVE_ARCH_TRACEHOOK
- 	select HAVE_ARCH_TRANSPARENT_HUGEPAGE
-diff --git a/arch/x86/include/asm/pgtable.h b/arch/x86/include/asm/pgtable.h
-index 1cfb36b8c024..2e6bf661bb84 100644
---- a/arch/x86/include/asm/pgtable.h
-+++ b/arch/x86/include/asm/pgtable.h
-@@ -91,6 +91,37 @@ extern struct mm_struct *pgd_page_get_mm(struct page *page);
+diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+index 67d27be60405..d1fd5aefa235 100644
+--- a/drivers/misc/lkdtm.h
++++ b/drivers/misc/lkdtm.h
+@@ -39,6 +39,7 @@ void lkdtm_READ_BUDDY_AFTER_FREE(void);
+ void __init lkdtm_perms_init(void);
+ void lkdtm_WRITE_RO(void);
+ void lkdtm_WRITE_RO_AFTER_INIT(void);
++void lkdtm_WRITE_RARE_WRITE(void);
+ void lkdtm_WRITE_KERN(void);
+ void lkdtm_EXEC_DATA(void);
+ void lkdtm_EXEC_STACK(void);
+diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+index b9a4cd4a9b68..ac8a55947189 100644
+--- a/drivers/misc/lkdtm_core.c
++++ b/drivers/misc/lkdtm_core.c
+@@ -219,6 +219,7 @@ struct crashtype crashtypes[] = {
+ 	CRASHTYPE(ACCESS_USERSPACE),
+ 	CRASHTYPE(WRITE_RO),
+ 	CRASHTYPE(WRITE_RO_AFTER_INIT),
++	CRASHTYPE(WRITE_RARE_WRITE),
+ 	CRASHTYPE(WRITE_KERN),
+ 	CRASHTYPE(REFCOUNT_SATURATE_INC),
+ 	CRASHTYPE(REFCOUNT_SATURATE_ADD),
+diff --git a/drivers/misc/lkdtm_perms.c b/drivers/misc/lkdtm_perms.c
+index c7635a79341f..8fbadfa4cc34 100644
+--- a/drivers/misc/lkdtm_perms.c
++++ b/drivers/misc/lkdtm_perms.c
+@@ -20,12 +20,15 @@
+ /* This is non-const, so it will end up in the .data section. */
+ static u8 data_area[EXEC_SIZE];
  
- #endif	/* CONFIG_PARAVIRT */
+-/* This is cost, so it will end up in the .rodata section. */
++/* This is const, so it will end up in the .rodata section. */
+ static const unsigned long rodata = 0xAA55AA55;
  
-+/* TODO: Bad hack to deal with preempt macros being missing sometimes. */
-+#ifndef preempt_disable
-+#include <linux/preempt.h>
-+#endif
-+
-+static __always_inline unsigned long __arch_rare_write_begin(void)
-+{
-+	unsigned long cr0;
-+
-+	preempt_disable();
-+	barrier();
-+	cr0 = read_cr0() ^ X86_CR0_WP;
-+	BUG_ON(cr0 & X86_CR0_WP);
-+	write_cr0(cr0);
-+	barrier();
-+	return cr0 ^ X86_CR0_WP;
-+}
-+
-+static __always_inline unsigned long __arch_rare_write_end(void)
-+{
-+	unsigned long cr0;
-+
-+	barrier();
-+	cr0 = read_cr0() ^ X86_CR0_WP;
-+	BUG_ON(!(cr0 & X86_CR0_WP));
-+	write_cr0(cr0);
-+	barrier();
-+	preempt_enable_no_resched();
-+	return cr0 ^ X86_CR0_WP;
-+}
+ /* This is marked __ro_after_init, so it should ultimately be .rodata. */
+ static unsigned long ro_after_init __ro_after_init = 0x55AA5500;
+ 
++/* This is marked __wr_rare, so it should ultimately be .rodata. */
++static unsigned long wr_rare __wr_rare = 0xAA66AA66;
 +
  /*
-  * The following only work if pte_present() is true.
-  * Undefined behaviour if not..
+  * This just returns to the caller. It is designed to be copied into
+  * non-executable memory regions.
+@@ -103,6 +106,20 @@ void lkdtm_WRITE_RO_AFTER_INIT(void)
+ 	*ptr ^= 0xabcd1234;
+ }
+ 
++void lkdtm_WRITE_RARE_WRITE(void)
++{
++	/* Explicitly cast away "const" for the test. */
++	unsigned long *ptr = (unsigned long *)&wr_rare;
++
++	pr_info("attempting good rare write at %p\n", ptr);
++	rare_write(*ptr, 0x11335577);
++	if (wr_rare != 0x11335577)
++		pr_warn("Yikes: wr_rare did not actually change!\n");
++
++	pr_info("attempting bad rare write at %p\n", ptr);
++	*ptr ^= 0xbcd12345;
++}
++
+ void lkdtm_WRITE_KERN(void)
+ {
+ 	size_t size;
 -- 
 2.7.4
