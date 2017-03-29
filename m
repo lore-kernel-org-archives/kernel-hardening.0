@@ -1,51 +1,51 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 29 Mar 2017 11:15:55 -0700
-Message-Id: <1490811363-93944-4-git-send-email-keescook@chromium.org>
+Date: Wed, 29 Mar 2017 11:15:58 -0700
+Message-Id: <1490811363-93944-7-git-send-email-keescook@chromium.org>
 In-Reply-To: <1490811363-93944-1-git-send-email-keescook@chromium.org>
 References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [RFC v2][PATCH 03/11] net: switch sock_diag handlers to rare_write()
+Subject: [kernel-hardening] [RFC v2][PATCH 06/11] ARM: domains: Extract common USER domain init
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is a simple example a register/unregister case for __wr_rare markings,
-which only needs a simple rare_write() call to make updates.
+Everything but the USER domain is the same with CONFIG_CPU_SW_DOMAIN_PAN
+or not. This extracts the differences for a common DACR_INIT macro so it
+is easier to make future changes (like adding the WR_RARE domain).
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- net/core/sock_diag.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ arch/arm/include/asm/domain.h | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
 
-diff --git a/net/core/sock_diag.c b/net/core/sock_diag.c
-index 6b10573cc9fa..67253026106f 100644
---- a/net/core/sock_diag.c
-+++ b/net/core/sock_diag.c
-@@ -14,7 +14,7 @@
- #include <linux/inet_diag.h>
- #include <linux/sock_diag.h>
+diff --git a/arch/arm/include/asm/domain.h b/arch/arm/include/asm/domain.h
+index 99d9f630d6b6..8b33bd7f6bf9 100644
+--- a/arch/arm/include/asm/domain.h
++++ b/arch/arm/include/asm/domain.h
+@@ -59,18 +59,18 @@
+ #define domain_val(dom,type)	((type) << (2 * (dom)))
  
--static const struct sock_diag_handler *sock_diag_handlers[AF_MAX];
-+static const struct sock_diag_handler *sock_diag_handlers[AF_MAX] __wr_rare;
- static int (*inet_rcv_compat)(struct sk_buff *skb, struct nlmsghdr *nlh);
- static DEFINE_MUTEX(sock_diag_table_mutex);
- static struct workqueue_struct *broadcast_wq;
-@@ -194,7 +194,7 @@ int sock_diag_register(const struct sock_diag_handler *hndl)
- 	if (sock_diag_handlers[hndl->family])
- 		err = -EBUSY;
- 	else
--		sock_diag_handlers[hndl->family] = hndl;
-+		rare_write(sock_diag_handlers[hndl->family], hndl);
- 	mutex_unlock(&sock_diag_table_mutex);
+ #ifdef CONFIG_CPU_SW_DOMAIN_PAN
+-#define DACR_INIT \
+-	(domain_val(DOMAIN_USER, DOMAIN_NOACCESS) | \
+-	 domain_val(DOMAIN_KERNEL, DOMAIN_MANAGER) | \
+-	 domain_val(DOMAIN_IO, DOMAIN_CLIENT) | \
+-	 domain_val(DOMAIN_VECTORS, DOMAIN_CLIENT))
++#define __DACR_INIT_USER \
++	domain_val(DOMAIN_USER, DOMAIN_NOACCESS)
+ #else
++#define __DACR_INIT_USER \
++	domain_val(DOMAIN_USER, DOMAIN_CLIENT)
++#endif
++
+ #define DACR_INIT \
+-	(domain_val(DOMAIN_USER, DOMAIN_CLIENT) | \
++	(__DACR_INIT_USER | \
+ 	 domain_val(DOMAIN_KERNEL, DOMAIN_MANAGER) | \
+ 	 domain_val(DOMAIN_IO, DOMAIN_CLIENT) | \
+ 	 domain_val(DOMAIN_VECTORS, DOMAIN_CLIENT))
+-#endif
  
- 	return err;
-@@ -210,7 +210,7 @@ void sock_diag_unregister(const struct sock_diag_handler *hnld)
- 
- 	mutex_lock(&sock_diag_table_mutex);
- 	BUG_ON(sock_diag_handlers[family] != hnld);
--	sock_diag_handlers[family] = NULL;
-+	rare_write(sock_diag_handlers[family], NULL);
- 	mutex_unlock(&sock_diag_table_mutex);
- }
- EXPORT_SYMBOL_GPL(sock_diag_unregister);
+ #define __DACR_DEFAULT \
+ 	domain_val(DOMAIN_KERNEL, DOMAIN_CLIENT) | \
 -- 
 2.7.4
