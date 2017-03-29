@@ -1,57 +1,32 @@
-From: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
-Date: Wed, 29 Mar 2017 01:46:48 +0200
-Message-Id: <20170328234650.19695-10-mic@digikod.net>
-In-Reply-To: <20170328234650.19695-1-mic@digikod.net>
-References: <20170328234650.19695-1-mic@digikod.net>
+Message-ID: <58DAF908.8010404@iogearbox.net>
+Date: Wed, 29 Mar 2017 02:00:08 +0200
+From: Daniel Borkmann <daniel@iogearbox.net>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] [PATCH net-next v6 09/11] seccomp: Enhance test_harness with an assert step mechanism
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+References: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com> <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com> <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com> <20170315.145512.1542025976162251828.davem@davemloft.net> <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com>
+In-Reply-To: <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
+To: Shubham Bansal <illusionist.neo@gmail.com>
+Cc: David Miller <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, ast@fb.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is useful to return an information about the error without being
-able to write to TH_LOG_STREAM.
+Hi Shubham,
 
-Helpers from test_harness.h may be useful outside of the seccomp
-directory.
+On 03/28/2017 10:49 PM, Shubham Bansal wrote:
+[...]
+> Do you have any document to understand the working of tail calls? I
+> looked at your presentations but it seemed confusing to me. Anything
+> simple would be great, just about the tail calls. I don't think I need
+> examples, I can get them from your presentations. I just need a very
+> general idea. May be you know the code in kernel where it is
+> implemented.
 
-Signed-off-by: Mickaël Salaün <mic@digikod.net>
-Cc: Andy Lutomirski <luto@amacapital.net>
-Cc: Arnaldo Carvalho de Melo <acme@kernel.org>
-Cc: Kees Cook <keescook@chromium.org>
-Cc: Shuah Khan <shuah@kernel.org>
-Cc: Will Drewry <wad@chromium.org>
----
- tools/testing/selftests/seccomp/test_harness.h | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+Sure, it's in __bpf_prog_run(), see the JMP_TAIL_CALL (kernel/bpf/core.c +1019).
+That's effectively what JITs implement. [1] page 3 has a high-level description
+as well, hope that helps.
 
-diff --git a/tools/testing/selftests/seccomp/test_harness.h b/tools/testing/selftests/seccomp/test_harness.h
-index a786c69c7584..77e407663e06 100644
---- a/tools/testing/selftests/seccomp/test_harness.h
-+++ b/tools/testing/selftests/seccomp/test_harness.h
-@@ -397,7 +397,7 @@ struct __test_metadata {
- 	const char *name;
- 	void (*fn)(struct __test_metadata *);
- 	int termsig;
--	int passed;
-+	__s8 passed;
- 	int trigger; /* extra handler after the evaluation */
- 	struct __test_metadata *prev, *next;
- };
-@@ -476,6 +476,12 @@ void __run_test(struct __test_metadata *t)
- 					"instead of by signal (code: %d)\n",
- 					t->name,
- 					WEXITSTATUS(status));
-+			} else if (t->passed < 0) {
-+				fprintf(TH_LOG_STREAM,
-+					"%s: Failed at step #%d\n",
-+					t->name,
-+					t->passed * -1);
-+				t->passed = 0;
- 			}
- 		} else if (WIFSIGNALED(status)) {
- 			t->passed = 0;
--- 
-2.11.0
+Thanks,
+Daniel
+
+   [1] http://www.netdevconf.org/1.1/proceedings/papers/On-getting-tc-classifier-fully-programmable-with-cls-bpf.pdf
