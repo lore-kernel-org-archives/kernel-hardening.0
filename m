@@ -1,100 +1,120 @@
+Date: Wed, 29 Mar 2017 20:27:53 -0700
+From: Jessica Yu <jeyu@redhat.com>
+Message-ID: <20170330032752.kjh2fml4itgrkrnm@jeyu>
+References: <20170326210825.23255-3-ewk@edkovsky.org>
+ <201703271633.xbYHmB37%fengguang.wu@intel.com>
+ <CAGXu5jKFPwDTaRq8eiszOoqdm-nQD13UrF_bj+m6FWWCzEnO9g@mail.gmail.com>
+ <20170329032825.GA1325@athena>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CA+55aFx508viAhC_JqNnN0KvvoFDWrDZX3TXutDQRpdzWpegNw@mail.gmail.com>
-References: <20170329203908.GA39222@beast> <ea0a7663-7318-6086-1cb8-25fd9a252f83@zytor.com>
- <CAGXu5jLQfS6gK2MyetWPjyJDOg8NdACXsPXLt7OasQE03VUwPg@mail.gmail.com>
- <CA+55aFxGEQroSYmSgEQefNUhJfmvMRg8XAy3TrtYoiLwUQNwKA@mail.gmail.com>
- <CALCETrVudF5-buAHqGd3y1g8X3mnf6tmB5Av50k9WFL-yrbZmQ@mail.gmail.com>
- <CA+55aFyVxvzyHxAx4Wik=FtKLJLFxa12kbuS+3KatLU+ysM7Cg@mail.gmail.com>
- <94D018AF-07C3-47BE-9C62-4B2923D3E39B@zytor.com> <CA+55aFx508viAhC_JqNnN0KvvoFDWrDZX3TXutDQRpdzWpegNw@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 29 Mar 2017 18:50:29 -0700
-Message-ID: <CAGXu5jKVeVWOfOhstt=xFc9U3WWRGnifbS246ZgdYQ5qwk2=8w@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] x86/fpu: move FPU state into separate cache
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Peter Anvin <hpa@zytor.com>, Andy Lutomirski <luto@amacapital.net>, LKML <linux-kernel@vger.kernel.org>, Rik van Riel <riel@redhat.com>, Andy Lutomirski <luto@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, "x86@kernel.org" <x86@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, =?UTF-8?B?UmFkaW0gS3LEjW3DocWZ?= <rkrcmar@redhat.com>, Peter Zijlstra <peterz@infradead.org>, Dave Hansen <dave.hansen@linux.intel.com>, Yu-cheng Yu <yu-cheng.yu@intel.com>, Masahiro Yamada <yamada.masahiro@socionext.com>, Borislav Petkov <bp@suse.de>, Christian Borntraeger <borntraeger@de.ibm.com>, Thomas Garnier <thgarnie@google.com>, Brian Gerst <brgerst@gmail.com>, He Chen <he.chen@linux.intel.com>, Mathias Krause <minipli@googlemail.com>, Fenghua Yu <fenghua.yu@intel.com>, Piotr Luc <piotr.luc@intel.com>, Kyle Huey <me@kylehuey.com>, Len Brown <len.brown@intel.com>, KVM <kvm@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <20170329032825.GA1325@athena>
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] extable: verify address is read-only
+To: Kees Cook <keescook@chromium.org>, Jakub Kicinski <jakub.kicinski@netronome.com>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, kbuild-all@01.org, kbuild test robot <lkp@intel.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 29, 2017 at 4:56 PM, Linus Torvalds
-<torvalds@linux-foundation.org> wrote:
-> On Wed, Mar 29, 2017 at 3:28 PM,  <hpa@zytor.com> wrote:
->> On March 29, 2017 2:41:00 PM PDT, Linus Torvalds <torvalds@linux-foundation.org> wrote:
++++ Eddie Kovsky [28/03/17 21:28 -0600]:
+>On 03/27/17, Kees Cook wrote:
+>> On Mon, Mar 27, 2017 at 1:43 AM, kbuild test robot <lkp@intel.com> wrote:
+>> > Hi Eddie,
+>> >
+>> > [auto build test ERROR on next-20170323]
+>> > [cannot apply to linus/master linux/master jeyu/modules-next v4.9-rc8 v4.9-rc7 v4.9-rc6 v4.11-rc4]
+>> > [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+>> >
+>> > url:    https://github.com/0day-ci/linux/commits/Eddie-Kovsky/module-verify-address-is-read-only/20170327-142922
+>> > config: blackfin-BF561-EZKIT-SMP_defconfig (attached as .config)
+>> > compiler: bfin-uclinux-gcc (GCC) 6.2.0
+>> > reproduce:
+>> >         wget https://raw.githubusercontent.com/01org/lkp-tests/master/sbin/make.cross -O ~/bin/make.cross
+>> >         chmod +x ~/bin/make.cross
+>> >         # save the attached .config to linux build tree
+>> >         make.cross ARCH=blackfin
+>> >
+>> > All errors (new ones prefixed by >>):
+>> >
+>> >    kernel/built-in.o: In function `core_kernel_rodata':
+>> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
+>> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
 >>
->> An alternative is to wrap the randomized structure inside a nonrandomized wrapper structure.
+>> Hm, I'm confused about this. blackfin includes
+>> include/asm-generic-vmlinux.lds.h and uses the RO_DATA macro (which
+>> resolves to RO_DATA_SECTION to RO_AFTER_INIT_DATA which defines
+>> __[start|end]_data_ro_after_init.
+>>
+>> Also, it seems that commit d7c19b066dcf4bd19c4385e8065558d4e74f9e73
+>> ("mm: kmemleak: scan .data.ro_after_init") added a potentially
+>> redundant section name (s390 already calls this
+>> __[start|end]_ro_after_init). I'd like to get this cleaned up, since
+>> having multiple names for the same thing is confusing:
+>>
+>> diff --git a/arch/s390/kernel/vmlinux.lds.S b/arch/s390/kernel/vmlinux.lds.S
+>> index 000e6e91f6a0..3667d20e997f 100644
+>> --- a/arch/s390/kernel/vmlinux.lds.S
+>> +++ b/arch/s390/kernel/vmlinux.lds.S
+>> @@ -62,9 +62,11 @@ SECTIONS
+>>
+>>         . = ALIGN(PAGE_SIZE);
+>>         __start_ro_after_init = .;
+>> +       __start_data_ro_after_init = .;
+>>         .data..ro_after_init : {
+>>                  *(.data..ro_after_init)
+>>         }
+>> +       __end_data_ro_after_init = .;
+>>         EXCEPTION_TABLE(16)
+>>         . = ALIGN(PAGE_SIZE);
+>>         __end_ro_after_init = .;
+>>
+>> And it seems that this hunk is wrong (__end_ro_after_init includes
+>> s390's exception table, etc). I think we should remove the
+>> ..._data_... name and use s390's name.
+>>
+>> I'll send an adjustment patch, but we'll still need to deal with blackfin.
+>>
+>> -Kees
+>>
 >
-> That's probably a reasonable alternative. Making "struct task_struct"
-> be something that contains a fixed beginning and end, and just have an
-> unnamed randomized part in the middle might be the way to go.
-
-That could work. I'll play around with it.
-
-(And to answer from earlier in the thread: yes the plugin handles
-trailing "char foo[]" stuff, etc.)
-
-> Something like
+>Kees
 >
->     struct task_struct {
->         struct thread_info thread_info;
+>I applied your patch (mm: fix section name for .data..ro_after_init) and
+>changed the new function in extable.c to use __[start|end]_ro_after_init
+>instead. The new version still builds without errors on x86, which isn't
+>surprising.
 >
->         /* Critical scheduling state goes here */
->         /* .. keep it all in one cacheline */
->
->        struct randomized_task_struct {
->             this is where the "I don't care" stuff goes..
->        };
->
->         /* CPU-specific state of this task: */
->         struct thread_struct            thread;
->
->         /*
->          * WARNING: on x86, 'thread_struct' contains a variable-sized
->          * structure.  It *MUST* be at the end of 'task_struct'.
->          *
->          * Do not put anything below here!
->          */
->     };
->
-> would randomize the bulk of it but leave some core stuff at fixed places.
->
-> Note that the whole concept of randomized structure member ordering is
-> largely security theater. It makes different distributions have
-> different offsets, but practically speaking
+>I've cross compiled this for blackfin and I'm able to reproduce the
+>build error. I'm still not sure why. As you pointed out, blackfin does
+>appear to use 'include/asm-generic/vmlinux.lds.h'.
 
-Distros, yes, it's just another factor the attack has to look up. For
-internally/locally built kernels, though, it becomes an interesting
-problem for an attack.
+This appears to be because blackfin is one of the 2 arches that
+prepends an underscore '_' to all symbols defined in C. I noticed that
+__{start,end}_data_ro_after_init in vmlinux.lds.h are not wrapped with
+VMLINUX_SYMBOL() which adds the necessary prefix for arches that have
+HAVE_UNDERSCORE_SYMBOL_PREFIX, hence the undefined reference.
 
->  (a) you'll be able to match up offsets with "uname -r", so it's a
-> slight inconvenience and mostly useless for big distros that would be
-> common targets (or common IoT targets or whatever)
->
->  (b) any distro that supports some binary modules (which includes a
-> lot of Android stuff, for example) will have serious problems and
-> likely turn it off
+The below patch fixed the build error for me, if it works for you then
+I can send a formal patch.
 
-Ironically, solving "b" for the distro makes solving "a" for the
-attacker easier: the random seed is already part of the build output,
-so third-party modules can be built against it with the plugin too.
-(FWIW, very few Android devices use modular kernels.)
+diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
+index 4e09b28..7b262f7 100644
+--- a/include/asm-generic/vmlinux.lds.h
++++ b/include/asm-generic/vmlinux.lds.h
+@@ -260,9 +260,9 @@
+  */
+ #ifndef RO_AFTER_INIT_DATA
+ #define RO_AFTER_INIT_DATA						\
+-	__start_data_ro_after_init = .;					\
++	VMLINUX_SYMBOL(__start_data_ro_after_init) = .;			\
+ 	*(.data..ro_after_init)						\
+-	__end_data_ro_after_init = .;
++	VMLINUX_SYMBOL(__end_data_ro_after_init) = .;
+ #endif
+ 
+ /*
 
-> so it's imnsho a pretty questionable security thing. It's likely most
-> useful for one-off "special secure installations" than mass
-> productions.
-
-Well, Facebook and Google don't publish their kernel builds. :)
-
-> So I seriously believe that it's useful mainly *only* if it's really
-> simple and convenient (for both distributions and developers), and
-> once we have to play games to work around it, I think that's a strong
-> signal that we shouldn't bother.
-
-Agreed: that's why I'm trying to see what's actually reasonable to do
-here. I think randomizing task_struct is still possible. (There are a
-few tricky structs, but for most stuff It Just Works.)
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Jessica
