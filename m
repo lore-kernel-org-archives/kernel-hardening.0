@@ -1,120 +1,159 @@
-Date: Wed, 29 Mar 2017 20:27:53 -0700
+Date: Wed, 29 Mar 2017 20:31:30 -0700
 From: Jessica Yu <jeyu@redhat.com>
-Message-ID: <20170330032752.kjh2fml4itgrkrnm@jeyu>
-References: <20170326210825.23255-3-ewk@edkovsky.org>
- <201703271633.xbYHmB37%fengguang.wu@intel.com>
- <CAGXu5jKFPwDTaRq8eiszOoqdm-nQD13UrF_bj+m6FWWCzEnO9g@mail.gmail.com>
- <20170329032825.GA1325@athena>
+Message-ID: <20170330033130.hzhmmqxziscfvohz@jeyu>
+References: <20170326210825.23255-1-ewk@edkovsky.org>
+ <20170326210825.23255-2-ewk@edkovsky.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii; format=flowed
 Content-Disposition: inline
-In-Reply-To: <20170329032825.GA1325@athena>
-Subject: [kernel-hardening] Re: [PATCH v4 2/2] extable: verify address is read-only
-To: Kees Cook <keescook@chromium.org>, Jakub Kicinski <jakub.kicinski@netronome.com>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, kbuild-all@01.org, kbuild test robot <lkp@intel.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170326210825.23255-2-ewk@edkovsky.org>
+Subject: [kernel-hardening] Re: [PATCH v4 1/2] module: verify address is read-only
+To: Eddie Kovsky <ewk@edkovsky.org>
+Cc: rusty@rustcorp.com.au, keescook@chromium.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+++ Eddie Kovsky [28/03/17 21:28 -0600]:
->On 03/27/17, Kees Cook wrote:
->> On Mon, Mar 27, 2017 at 1:43 AM, kbuild test robot <lkp@intel.com> wrote:
->> > Hi Eddie,
->> >
->> > [auto build test ERROR on next-20170323]
->> > [cannot apply to linus/master linux/master jeyu/modules-next v4.9-rc8 v4.9-rc7 v4.9-rc6 v4.11-rc4]
->> > [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
->> >
->> > url:    https://github.com/0day-ci/linux/commits/Eddie-Kovsky/module-verify-address-is-read-only/20170327-142922
->> > config: blackfin-BF561-EZKIT-SMP_defconfig (attached as .config)
->> > compiler: bfin-uclinux-gcc (GCC) 6.2.0
->> > reproduce:
->> >         wget https://raw.githubusercontent.com/01org/lkp-tests/master/sbin/make.cross -O ~/bin/make.cross
->> >         chmod +x ~/bin/make.cross
->> >         # save the attached .config to linux build tree
->> >         make.cross ARCH=blackfin
->> >
->> > All errors (new ones prefixed by >>):
->> >
->> >    kernel/built-in.o: In function `core_kernel_rodata':
->> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__start_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
->> >>> kernel/extable.c:169: undefined reference to `__end_data_ro_after_init'
->>
->> Hm, I'm confused about this. blackfin includes
->> include/asm-generic-vmlinux.lds.h and uses the RO_DATA macro (which
->> resolves to RO_DATA_SECTION to RO_AFTER_INIT_DATA which defines
->> __[start|end]_data_ro_after_init.
->>
->> Also, it seems that commit d7c19b066dcf4bd19c4385e8065558d4e74f9e73
->> ("mm: kmemleak: scan .data.ro_after_init") added a potentially
->> redundant section name (s390 already calls this
->> __[start|end]_ro_after_init). I'd like to get this cleaned up, since
->> having multiple names for the same thing is confusing:
->>
->> diff --git a/arch/s390/kernel/vmlinux.lds.S b/arch/s390/kernel/vmlinux.lds.S
->> index 000e6e91f6a0..3667d20e997f 100644
->> --- a/arch/s390/kernel/vmlinux.lds.S
->> +++ b/arch/s390/kernel/vmlinux.lds.S
->> @@ -62,9 +62,11 @@ SECTIONS
->>
->>         . = ALIGN(PAGE_SIZE);
->>         __start_ro_after_init = .;
->> +       __start_data_ro_after_init = .;
->>         .data..ro_after_init : {
->>                  *(.data..ro_after_init)
->>         }
->> +       __end_data_ro_after_init = .;
->>         EXCEPTION_TABLE(16)
->>         . = ALIGN(PAGE_SIZE);
->>         __end_ro_after_init = .;
->>
->> And it seems that this hunk is wrong (__end_ro_after_init includes
->> s390's exception table, etc). I think we should remove the
->> ..._data_... name and use s390's name.
->>
->> I'll send an adjustment patch, but we'll still need to deal with blackfin.
->>
->> -Kees
->>
++++ Eddie Kovsky [26/03/17 15:08 -0600]:
+>Implement a mechanism to check if a module's address is in
+>the rodata or ro_after_init sections. It mimics the existing functions
+>that test if an address is inside a module's text section.
 >
->Kees
+>Functions that take a module as an argument will be able to verify that the
+>module address is in a read-only section. The idea is to prevent structures
+>(including modules) that are not read-only from being passed to functions.
 >
->I applied your patch (mm: fix section name for .data..ro_after_init) and
->changed the new function in extable.c to use __[start|end]_ro_after_init
->instead. The new version still builds without errors on x86, which isn't
->surprising.
+>This implements the first half of a suggestion made by Kees Cook for
+>the Kernel Self Protection Project:
 >
->I've cross compiled this for blackfin and I'm able to reproduce the
->build error. I'm still not sure why. As you pointed out, blackfin does
->appear to use 'include/asm-generic/vmlinux.lds.h'.
+>    - provide mechanism to check for ro_after_init memory areas, and
+>      reject structures not marked ro_after_init in vmbus_register()
+>
+>Suggested-by: Kees Cook <keescook@chromium.org>
+>Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
 
-This appears to be because blackfin is one of the 2 arches that
-prepends an underscore '_' to all symbols defined in C. I noticed that
-__{start,end}_data_ro_after_init in vmlinux.lds.h are not wrapped with
-VMLINUX_SYMBOL() which adds the necessary prefix for arches that have
-HAVE_UNDERSCORE_SYMBOL_PREFIX, hence the undefined reference.
+Thanks for the respin, this looks much better.
 
-The below patch fixed the build error for me, if it works for you then
-I can send a formal patch.
+Acked-by: Jessica Yu <jeyu@redhat.com>
 
-diff --git a/include/asm-generic/vmlinux.lds.h b/include/asm-generic/vmlinux.lds.h
-index 4e09b28..7b262f7 100644
---- a/include/asm-generic/vmlinux.lds.h
-+++ b/include/asm-generic/vmlinux.lds.h
-@@ -260,9 +260,9 @@
-  */
- #ifndef RO_AFTER_INIT_DATA
- #define RO_AFTER_INIT_DATA						\
--	__start_data_ro_after_init = .;					\
-+	VMLINUX_SYMBOL(__start_data_ro_after_init) = .;			\
- 	*(.data..ro_after_init)						\
--	__end_data_ro_after_init = .;
-+	VMLINUX_SYMBOL(__end_data_ro_after_init) = .;
- #endif
- 
- /*
-
-Jessica
+>---
+>Changes in v4:
+> - Rename function __module_ro_address() to __module_rodata_address()
+> - Move module_rodata_address() stub below is_module_address()
+> - Minor comment fixes
+> - Verify that mod is not NULL before setting up layout variables
+>Changes in v3:
+> - Change function name is_module_ro_address() to
+>is_module_rodata_address().
+> - Improve comments on is_module_rodata_address().
+> - Add a !CONFIG_MODULES stub for is_module_rodata_address.
+> - Correct and simplify the check for the read-only memory regions in
+>the module address.
+>---
+> include/linux/module.h | 12 ++++++++++++
+> kernel/module.c        | 53 ++++++++++++++++++++++++++++++++++++++++++++++++++
+> 2 files changed, 65 insertions(+)
+>
+>diff --git a/include/linux/module.h b/include/linux/module.h
+>index 9ad68561d8c2..a3d17b081de3 100644
+>--- a/include/linux/module.h
+>+++ b/include/linux/module.h
+>@@ -492,7 +492,9 @@ static inline int module_is_live(struct module *mod)
+>
+> struct module *__module_text_address(unsigned long addr);
+> struct module *__module_address(unsigned long addr);
+>+struct module *__module_rodata_address(unsigned long addr);
+> bool is_module_address(unsigned long addr);
+>+bool is_module_rodata_address(unsigned long addr);
+> bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr);
+> bool is_module_percpu_address(unsigned long addr);
+> bool is_module_text_address(unsigned long addr);
+>@@ -646,6 +648,11 @@ static inline struct module *__module_address(unsigned long addr)
+> 	return NULL;
+> }
+>
+>+static inline struct module *__module_rodata_address(unsigned long addr)
+>+{
+>+	return NULL;
+>+}
+>+
+> static inline struct module *__module_text_address(unsigned long addr)
+> {
+> 	return NULL;
+>@@ -656,6 +663,11 @@ static inline bool is_module_address(unsigned long addr)
+> 	return false;
+> }
+>
+>+static inline bool is_module_rodata_address(unsigned long addr)
+>+{
+>+	return false;
+>+}
+>+
+> static inline bool is_module_percpu_address(unsigned long addr)
+> {
+> 	return false;
+>diff --git a/kernel/module.c b/kernel/module.c
+>index 8ffcd29a4245..26bd62c61d87 100644
+>--- a/kernel/module.c
+>+++ b/kernel/module.c
+>@@ -4292,6 +4292,59 @@ struct module *__module_text_address(unsigned long addr)
+> }
+> EXPORT_SYMBOL_GPL(__module_text_address);
+>
+>+/**
+>+ * is_module_rodata_address - is this address inside read-only module data?
+>+ * @addr: the address to check.
+>+ *
+>+ */
+>+bool is_module_rodata_address(unsigned long addr)
+>+{
+>+	bool ret;
+>+
+>+	preempt_disable();
+>+	ret = __module_rodata_address(addr) != NULL;
+>+	preempt_enable();
+>+
+>+	return ret;
+>+}
+>+
+>+/*
+>+ * __module_rodata_address - get the module whose rodata/ro_after_init sections
+>+ * contain the given address.
+>+ * @addr: the address.
+>+ *
+>+ * Must be called with preempt disabled or module mutex held so that
+>+ * module doesn't get freed during this.
+>+ */
+>+struct module *__module_rodata_address(unsigned long addr)
+>+{
+>+	struct module *mod = __module_address(addr);
+>+
+>+	/*
+>+	 * Make sure module is within the read-only section.
+>+	 * range(base + text_size, base + ro_after_init_size)
+>+	 * encompasses both the rodata and ro_after_init regions.
+>+	 * See comment above frob_text() for the layout diagram.
+>+	 */
+>+	if (mod) {
+>+		void *init_base = mod->init_layout.base;
+>+		unsigned int init_text_size = mod->init_layout.text_size;
+>+		unsigned int init_ro_after_init_size = mod->init_layout.ro_after_init_size;
+>+
+>+		void *core_base = mod->core_layout.base;
+>+		unsigned int core_text_size = mod->core_layout.text_size;
+>+		unsigned int core_ro_after_init_size = mod->core_layout.ro_after_init_size;
+>+
+>+		if (!within(addr, init_base + init_text_size,
+>+			    init_ro_after_init_size - init_text_size)
+>+		    && !within(addr, core_base + core_text_size,
+>+			       core_ro_after_init_size - core_text_size))
+>+			mod = NULL;
+>+	}
+>+	return mod;
+>+}
+>+EXPORT_SYMBOL_GPL(__module_rodata_address);
+>+
+> /* Don't grab lock, we're oopsing. */
+> void print_modules(void)
+> {
+>-- 
+>2.12.1
+>
