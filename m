@@ -1,8 +1,8 @@
-Date: Fri, 31 Mar 2017 12:59:04 +0800
+Date: Fri, 31 Mar 2017 13:57:10 +0800
 From: kbuild test robot <lkp@intel.com>
-Message-ID: <201703311229.2A8sv4Z2%fengguang.wu@intel.com>
+Message-ID: <201703311331.U3AX8Y1u%fengguang.wu@intel.com>
 MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="KsGdsel6WgEHnImy"
+Content-Type: multipart/mixed; boundary="tThc/1wpZn/ma/RB"
 Content-Disposition: inline
 In-Reply-To: <20170329203908.GA39222@beast>
 Subject: [kernel-hardening] Re: [PATCH] x86/fpu: move FPU state into separate cache
@@ -11,7 +11,7 @@ Cc: kbuild-all@01.org, linux-kernel@vger.kernel.org, Rik van Riel <riel@redhat.c
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---KsGdsel6WgEHnImy
+--tThc/1wpZn/ma/RB
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 
@@ -24,906 +24,918 @@ Hi Kees,
 
 url:    https://github.com/0day-ci/linux/commits/Kees-Cook/x86-fpu-move-FPU-state-into-separate-cache/20170331-110507
 base:   https://git.kernel.org/pub/scm/virt/kvm/kvm.git linux-next
-config: i386-randconfig-r0-201713 (attached as .config)
-compiler: gcc-5 (Debian 5.4.1-2) 5.4.1 20160904
+config: i386-randconfig-s0-201713 (attached as .config)
+compiler: gcc-6 (Debian 6.2.0-3) 6.2.0 20160901
 reproduce:
         # save the attached .config to linux build tree
         make ARCH=i386 
 
 All error/warnings (new ones prefixed by >>):
 
-   arch/x86/math-emu/fpu_entry.c: In function 'valid_prefix':
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
+   In file included from arch/x86/include/asm/cpufeature.h:4:0,
+                    from arch/x86/include/asm/thread_info.h:52,
+                    from include/linux/thread_info.h:25,
+                    from arch/x86/include/asm/preempt.h:6,
+                    from include/linux/preempt.h:80,
+                    from include/linux/spinlock.h:50,
+                    from include/linux/rcupdate.h:38,
+                    from include/linux/init_task.h:4,
+                    from init/init_task.c:1:
+>> arch/x86/include/asm/processor.h:805:17: error: 'init_fpregs_state' undeclared here (not in a function)
+     .fpu.state  = &init_fpregs_state,     \
+                    ^
+>> include/linux/init_task.h:255:13: note: in expansion of macro 'INIT_THREAD'
+     .thread  = INIT_THREAD,     \
+                ^~~~~~~~~~~
+>> init/init_task.c:19:32: note: in expansion of macro 'INIT_TASK'
+    struct task_struct init_task = INIT_TASK(init_task);
+                                   ^~~~~~~~~
+--
+   In file included from arch/x86/math-emu/fpu_entry.c:35:0:
+   arch/x86/math-emu/status_w.h: In function 'setcc':
+>> arch/x86/math-emu/fpu_system.h:71:30: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define partial_status  (I387->soft.swd)
+                                 ^
+     ->
+>> arch/x86/math-emu/status_w.h:53:2: note: in expansion of macro 'partial_status'
+     partial_status &= ~(SW_C0 | SW_C1 | SW_C2 | SW_C3);
+     ^~~~~~~~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:71:30: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define partial_status  (I387->soft.swd)
+                                 ^
+     ->
+   arch/x86/math-emu/status_w.h:54:2: note: in expansion of macro 'partial_status'
+     partial_status |= (cc) & (SW_C0 | SW_C1 | SW_C2 | SW_C3);
+     ^~~~~~~~~~~~~~
+   arch/x86/math-emu/fpu_entry.c: In function 'math_emulate':
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
     #define FPU_info  (I387->soft.info)
                            ^
-   include/linux/compiler.h:178:40: note: in definition of macro 'likely'
-    # define likely(x) __builtin_expect(!!(x), 1)
-                                           ^
-   arch/x86/include/asm/uaccess.h:100:10: note: in expansion of macro '__range_not_ok'
-     likely(!__range_not_ok(addr, size, user_addr_max()));  \
-             ^
-   arch/x86/math-emu/fpu_system.h:80:36: note: in expansion of macro 'access_ok'
-    #define FPU_access_ok(x,y,z) if ( !access_ok(x,y,z) ) \
-                                       ^
-   arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
-    #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                  ^
+     ->
+>> arch/x86/math-emu/fpu_entry.c:126:2: note: in expansion of macro 'FPU_info'
+     FPU_info = info;
+     ^~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+     ->
+>> arch/x86/math-emu/fpu_system.h:58:24: note: in expansion of macro 'FPU_info'
+    #define FPU_ORIG_EIP  (FPU_info->___orig_eip)
+                           ^~~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:128:2: note: in expansion of macro 'FPU_ORIG_EIP'
+     FPU_ORIG_EIP = FPU_EIP;
+     ^~~~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                    ->
    arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
     #define FPU_EIP   (FPU_info->regs->ip)
-                       ^
-   arch/x86/math-emu/fpu_system.h:95:72: note: in expansion of macro 'FPU_EIP'
-    #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                                                           ^
-   arch/x86/math-emu/fpu_entry.c:558:2: note: in expansion of macro 'FPU_code_access_ok'
-     FPU_code_access_ok(1);
-     ^
-   In file included from arch/x86/math-emu/fpu_entry.c:35:0:
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
+                       ^~~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:128:17: note: in expansion of macro 'FPU_EIP'
+     FPU_ORIG_EIP = FPU_EIP;
+                    ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
     #define FPU_info  (I387->soft.info)
                            ^
-   arch/x86/math-emu/fpu_system.h:81:16: note: in expansion of macro 'FPU_info'
-        math_abort(FPU_info,SIGSEGV)
-                   ^
-   arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
-    #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                  ^
-   arch/x86/math-emu/fpu_entry.c:558:2: note: in expansion of macro 'FPU_code_access_ok'
-     FPU_code_access_ok(1);
-     ^
+          ->
+   arch/x86/math-emu/fpu_system.h:56:22: note: in expansion of macro 'FPU_info'
+    #define FPU_EFLAGS  (FPU_info->regs->flags)
+                         ^~~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:130:7: note: in expansion of macro 'FPU_EFLAGS'
+     if ((FPU_EFLAGS & 0x00020000) != 0) {
+          ^~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+      ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:133:3: note: in expansion of macro 'FPU_EIP'
+      FPU_EIP += code_base = FPU_CS << 4;
+      ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                             ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:133:26: note: in expansion of macro 'FPU_CS'
+      FPU_EIP += code_base = FPU_CS << 4;
+                             ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:135:13: note: in expansion of macro 'FPU_CS'
+     } else if (FPU_CS == __USER_CS && FPU_DS == __USER_DS) {
+                ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                                       ->
+   arch/x86/math-emu/fpu_system.h:54:41: note: in expansion of macro 'FPU_info'
+    #define FPU_DS   (*(unsigned short *) &(FPU_info->regs->ds))
+                                            ^~~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:135:36: note: in expansion of macro 'FPU_DS'
+     } else if (FPU_CS == __USER_CS && FPU_DS == __USER_DS) {
+                                       ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:137:13: note: in expansion of macro 'FPU_CS'
+     } else if (FPU_CS == __KERNEL_CS) {
+                ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                                           ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:138:40: note: in expansion of macro 'FPU_CS'
+      printk("math_emulate: %04x:%08lx\n", FPU_CS, FPU_EIP);
+                                           ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                                                   ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:138:48: note: in expansion of macro 'FPU_EIP'
+      printk("math_emulate: %04x:%08lx\n", FPU_CS, FPU_EIP);
+                                                   ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+           ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:142:8: note: in expansion of macro 'FPU_CS'
+      if ((FPU_CS & 4) != 4) { /* Must be in the LDT */
+           ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                  ->
+   arch/x86/math-emu/fpu_entry.c:146:15: note: in expansion of macro 'FPU_info'
+       math_abort(FPU_info, SIGILL);
+                  ^~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                                               ->
+   arch/x86/math-emu/fpu_system.h:52:41: note: in expansion of macro 'FPU_info'
+    #define FPU_CS   (*(unsigned short *) &(FPU_info->regs->cs))
+                                            ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:149:44: note: in expansion of macro 'FPU_CS'
+      code_descriptor = FPU_get_ldt_descriptor(FPU_CS);
+                                               ^~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+      ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:158:3: note: in expansion of macro 'FPU_EIP'
+      FPU_EIP += code_base = SEG_BASE_ADDR(code_descriptor);
+      ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:60:38: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_lookahead           (I387->soft.lookahead)
+                                         ^
+     ->
+>> arch/x86/math-emu/fpu_entry.c:167:2: note: in expansion of macro 'FPU_lookahead'
+     FPU_lookahead = !(FPU_EFLAGS & X86_EFLAGS_TF);
+     ^~~~~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                       ->
+   arch/x86/math-emu/fpu_system.h:56:22: note: in expansion of macro 'FPU_info'
+    #define FPU_EFLAGS  (FPU_info->regs->flags)
+                         ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:167:20: note: in expansion of macro 'FPU_EFLAGS'
+     FPU_lookahead = !(FPU_EFLAGS & X86_EFLAGS_TF);
+                       ^~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                                                    ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:169:49: note: in expansion of macro 'FPU_EIP'
+     if (!valid_prefix(&byte1, (u_char __user **) & FPU_EIP,
+                                                    ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                 ->
+   arch/x86/math-emu/fpu_entry.c:178:14: note: in expansion of macro 'FPU_info'
+      math_abort(FPU_info, SIGILL);
+                 ^~~~~~~~
+   arch/x86/math-emu/fpu_system.h:64:41: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define no_ip_update  (*(u_char *)&(I387->soft.no_update))
+                                            ^
+     ->
+>> arch/x86/math-emu/fpu_entry.c:183:2: note: in expansion of macro 'no_ip_update'
+     no_ip_update = 0;
+     ^~~~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+     ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:185:2: note: in expansion of macro 'FPU_EIP'
+     FPU_EIP++;  /* We have fetched the prefix and first code bytes. */
+     ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+          ->
+   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
+    #define FPU_EIP   (FPU_info->regs->ip)
+                       ^~~~~~~~
+   arch/x86/math-emu/fpu_entry.c:190:7: note: in expansion of macro 'FPU_EIP'
+      if (FPU_EIP > code_limit)
+          ^~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                  ->
+   arch/x86/math-emu/fpu_entry.c:191:15: note: in expansion of macro 'FPU_info'
+       math_abort(FPU_info, SIGSEGV);
+                  ^~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:71:30: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define partial_status  (I387->soft.swd)
+                                 ^
+           ->
+>> arch/x86/math-emu/fpu_entry.c:196:8: note: in expansion of macro 'partial_status'
+       if (partial_status & SW_Summary)
+           ^~~~~~~~~~~~~~
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
+    #define FPU_info  (I387->soft.info)
+                           ^
+                 ->
+   arch/x86/math-emu/fpu_entry.c:203:14: note: in expansion of macro 'FPU_info'
+      math_abort(FPU_info, SIGILL);
+                 ^~~~~~~~
    In file included from include/asm-generic/bug.h:4:0,
                     from arch/x86/include/asm/bug.h:35,
                     from include/linux/bug.h:4,
                     from include/linux/signal.h:4,
                     from arch/x86/math-emu/fpu_entry.c:27:
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
     #define FPU_info  (I387->soft.info)
                            ^
+     ->
    include/linux/compiler.h:178:40: note: in definition of macro 'likely'
     # define likely(x) __builtin_expect(!!(x), 1)
                                            ^
-   arch/x86/include/asm/uaccess.h:100:10: note: in expansion of macro '__range_not_ok'
+>> arch/x86/include/asm/uaccess.h:100:10: note: in expansion of macro '__range_not_ok'
      likely(!__range_not_ok(addr, size, user_addr_max()));  \
-             ^
-   arch/x86/math-emu/fpu_system.h:80:36: note: in expansion of macro 'access_ok'
+             ^~~~~~~~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:80:36: note: in expansion of macro 'access_ok'
     #define FPU_access_ok(x,y,z) if ( !access_ok(x,y,z) ) \
-                                       ^
-   arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
+                                       ^~~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
     #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                  ^
+                                  ^~~~~~~~~~~~~
    arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
     #define FPU_EIP   (FPU_info->regs->ip)
-                       ^
-   arch/x86/math-emu/fpu_system.h:95:72: note: in expansion of macro 'FPU_EIP'
+                       ^~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:95:72: note: in expansion of macro 'FPU_EIP'
     #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                                                           ^
-   arch/x86/math-emu/fpu_entry.c:602:4: note: in expansion of macro 'FPU_code_access_ok'
-       FPU_code_access_ok(1);
-       ^
+                                                                           ^~~~~~~
+>> arch/x86/math-emu/fpu_entry.c:208:2: note: in expansion of macro 'FPU_code_access_ok'
+     FPU_code_access_ok(1);
+     ^~~~~~~~~~~~~~~~~~
    In file included from arch/x86/math-emu/fpu_entry.c:35:0:
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
+   arch/x86/math-emu/fpu_system.h:50:24: error: 'get_current()->thread.fpu.state' is a pointer; did you mean to use '->'?
     #define FPU_info  (I387->soft.info)
                            ^
+     ->
    arch/x86/math-emu/fpu_system.h:81:16: note: in expansion of macro 'FPU_info'
         math_abort(FPU_info,SIGSEGV)
-                   ^
-   arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
+                   ^~~~~~~~
+>> arch/x86/math-emu/fpu_system.h:95:31: note: in expansion of macro 'FPU_access_ok'
     #define FPU_code_access_ok(z) FPU_access_ok(VERIFY_READ,(void __user *)FPU_EIP,z)
-                                  ^
-   arch/x86/math-emu/fpu_entry.c:602:4: note: in expansion of macro 'FPU_code_access_ok'
-       FPU_code_access_ok(1);
-       ^
-   arch/x86/math-emu/fpu_entry.c: In function 'math_abort':
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
-    #define FPU_info  (I387->soft.info)
-                           ^
-   arch/x86/math-emu/fpu_system.h:57:20: note: in expansion of macro 'FPU_info'
-    #define FPU_EIP   (FPU_info->regs->ip)
-                       ^
-   arch/x86/math-emu/fpu_entry.c:626:2: note: in expansion of macro 'FPU_EIP'
-     FPU_EIP = FPU_ORIG_EIP;
-     ^
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
-    #define FPU_info  (I387->soft.info)
-                           ^
-   arch/x86/math-emu/fpu_system.h:58:24: note: in expansion of macro 'FPU_info'
-    #define FPU_ORIG_EIP  (FPU_info->___orig_eip)
-                           ^
-   arch/x86/math-emu/fpu_entry.c:626:12: note: in expansion of macro 'FPU_ORIG_EIP'
-     FPU_EIP = FPU_ORIG_EIP;
-               ^
-   arch/x86/math-emu/fpu_entry.c: In function 'fpregs_soft_set':
->> arch/x86/math-emu/fpu_entry.c:646:55: error: request for member 'soft' in something not a structure or union
-     struct swregs_state *s387 = &target->thread.fpu.state.soft;
-                                                          ^
-   arch/x86/math-emu/fpu_entry.c: In function 'fpregs_soft_get':
-   arch/x86/math-emu/fpu_entry.c:698:55: error: request for member 'soft' in something not a structure or union
-     struct swregs_state *s387 = &target->thread.fpu.state.soft;
-                                                          ^
---
-      ^
-   arch/x86/math-emu/errors.c: In function 'set_precision_flag_down':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:553:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Precision) { /* The masked response */
-         ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/errors.c:554:3: note: in expansion of macro 'partial_status'
-      partial_status &= ~SW_C1;
-      ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/errors.c:555:3: note: in expansion of macro 'partial_status'
-      partial_status |= SW_Precision;
-      ^
-   arch/x86/math-emu/errors.c: In function 'denormal_operand':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:562:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Denormal) { /* The masked response */
-         ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/errors.c:563:3: note: in expansion of macro 'partial_status'
-      partial_status |= SW_Denorm_Op;
-      ^
-   arch/x86/math-emu/errors.c: In function 'arith_overflow':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:575:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Overflow) {
-         ^
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:586:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Overflow) {
-         ^
-   arch/x86/math-emu/errors.c: In function 'arith_underflow':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:603:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Underflow) {
-         ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/errors.c:607:4: note: in expansion of macro 'partial_status'
-       partial_status &= ~SW_C1; /* Round down. */
-       ^
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:618:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Underflow) {
-         ^
-   arch/x86/math-emu/errors.c: In function 'FPU_stack_overflow':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:631:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Invalid) {
-         ^
-   arch/x86/math-emu/fpu_system.h:75:20: error: request for member 'soft' in something not a structure or union
-    #define top   (I387->soft.ftop)
-                       ^
-   arch/x86/math-emu/errors.c:633:3: note: in expansion of macro 'top'
-      top--;
-      ^
-   arch/x86/math-emu/errors.c: In function 'FPU_stack_underflow':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:646:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Invalid) {
-         ^
-   arch/x86/math-emu/errors.c: In function 'FPU_stack_underflow_i':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:660:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Invalid) {
-         ^
-   arch/x86/math-emu/errors.c: In function 'FPU_stack_underflow_pop':
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/errors.c:674:6: note: in expansion of macro 'control_word'
-     if (control_word & CW_Invalid) {
-         ^
-   arch/x86/math-emu/errors.c: In function 'real_1op_NaN':
->> arch/x86/math-emu/errors.c:407:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
-   arch/x86/math-emu/errors.c: In function 'real_2op_NaN':
-   arch/x86/math-emu/errors.c:491:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
-   arch/x86/math-emu/errors.c: In function 'arith_invalid':
-   arch/x86/math-emu/errors.c:507:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
-   arch/x86/math-emu/errors.c: In function 'FPU_divide_by_zero':
-   arch/x86/math-emu/errors.c:526:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
-   arch/x86/math-emu/errors.c: In function 'set_precision_flag':
-   arch/x86/math-emu/errors.c:539:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
-   arch/x86/math-emu/errors.c: In function 'denormal_operand':
-   arch/x86/math-emu/errors.c:569:1: warning: control reaches end of non-void function [-Wreturn-type]
-    }
-    ^
---
-   In file included from arch/x86/math-emu/fpu_aux.c:13:0:
-   arch/x86/math-emu/status_w.h: In function 'setcc':
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/status_w.h:53:2: note: in expansion of macro 'partial_status'
-     partial_status &= ~(SW_C0 | SW_C1 | SW_C2 | SW_C3);
-     ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/status_w.h:54:2: note: in expansion of macro 'partial_status'
-     partial_status |= (cc) & (SW_C0 | SW_C1 | SW_C2 | SW_C3);
-     ^
-   arch/x86/math-emu/fpu_aux.c: In function 'fclex':
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/fpu_aux.c:25:2: note: in expansion of macro 'partial_status'
-     partial_status &=
-     ^
-   arch/x86/math-emu/fpu_system.h:64:41: error: request for member 'soft' in something not a structure or union
-    #define no_ip_update  (*(u_char *)&(I387->soft.no_update))
-                                            ^
-   arch/x86/math-emu/fpu_aux.c:29:2: note: in expansion of macro 'no_ip_update'
-     no_ip_update = 1;
-     ^
-   arch/x86/math-emu/fpu_aux.c: In function 'finit':
->> arch/x86/math-emu/fpu_aux.c:55:46: error: request for member 'soft' in something not a structure or union
-     fpstate_init_soft(&current->thread.fpu.state.soft);
-                                                 ^
-   In file included from arch/x86/math-emu/fpu_aux.c:13:0:
-   arch/x86/math-emu/fpu_aux.c: In function 'finit_':
-   arch/x86/math-emu/fpu_system.h:65:36: error: request for member 'soft' in something not a structure or union
-    #define FPU_rm   (*(u_char *)&(I387->soft.rm))
-                                       ^
-   arch/x86/math-emu/fpu_aux.c:72:15: note: in expansion of macro 'FPU_rm'
-     (finit_table[FPU_rm]) ();
-                  ^
-   arch/x86/math-emu/fpu_aux.c: In function 'fstsw_ax':
-   arch/x86/math-emu/fpu_system.h:50:24: error: request for member 'soft' in something not a structure or union
-    #define FPU_info  (I387->soft.info)
-                           ^
-   arch/x86/math-emu/fpu_system.h:55:20: note: in expansion of macro 'FPU_info'
-    #define FPU_EAX   (FPU_info->regs->ax)
-                       ^
-   arch/x86/math-emu/fpu_aux.c:77:13: note: in expansion of macro 'FPU_EAX'
-     *(short *)&FPU_EAX = status_word();
-                ^
-   arch/x86/math-emu/fpu_system.h:71:30: error: request for member 'soft' in something not a structure or union
-    #define partial_status  (I387->soft.swd)
-                                 ^
-   arch/x86/math-emu/status_w.h:50:5: note: in expansion of macro 'partial_status'
-      ((partial_status & ~SW_Top & 0xffff) | ((top << SW_Top_Shift) & SW_Top))
-        ^
-   arch/x86/math-emu/fpu_aux.c:77:23: note: in expansion of macro 'status_word'
-     *(short *)&FPU_EAX = status_word();
-                          ^
-   arch/x86/math-emu/fpu_system.h:75:20: error: request for member 'soft' in something not a structure or union
-    #define top   (I387->soft.ftop)
-                       ^
-   arch/x86/math-emu/status_w.h:50:44: note: in expansion of macro 'top'
-      ((partial_status & ~SW_Top & 0xffff) | ((top << SW_Top_Shift) & SW_Top))
-                                               ^
-   arch/x86/math-emu/fpu_aux.c:77:23: note: in expansion of macro 'status_word'
-     *(short *)&FPU_EAX = status_word();
-                          ^
-   arch/x86/math-emu/fpu_system.h:64:41: error: request for member 'soft' in something not a structure or union
-    #define no_ip_update  (*(u_char *)&(I387->soft.no_update))
-                                            ^
-   arch/x86/math-emu/fpu_aux.c:78:2: note: in expansion of macro 'no_ip_update'
-     no_ip_update = 1;
-     ^
-   arch/x86/math-emu/fpu_aux.c: In function 'fstsw_':
-   arch/x86/math-emu/fpu_system.h:65:36: error: request for member 'soft' in something not a structure or union
-    #define FPU_rm   (*(u_char *)&(I387->soft.rm))
-                                       ^
-   arch/x86/math-emu/fpu_aux.c:88:15: note: in expansion of macro 'FPU_rm'
-     (fstsw_table[FPU_rm]) ();
-                  ^
-   arch/x86/math-emu/fpu_aux.c: In function 'fp_nop':
-   arch/x86/math-emu/fpu_system.h:65:36: error: request for member 'soft' in something not a structure or union
-    #define FPU_rm   (*(u_char *)&(I387->soft.rm))
-                                       ^
-   arch/x86/math-emu/fpu_aux.c:98:16: note: in expansion of macro 'FPU_rm'
-     (fp_nop_table[FPU_rm]) ();
-                   ^
-   arch/x86/math-emu/fpu_aux.c: In function 'fld_i_':
-   arch/x86/math-emu/fpu_system.h:65:36: error: request for member 'soft' in something not a structure or union
-    #define FPU_rm   (*(u_char *)&(I387->soft.rm))
-                                       ^
-   arch/x86/math-emu/fpu_aux.c:113:6: note: in expansion of macro 'FPU_rm'
-     i = FPU_rm;
-         ^
-   arch/x86/math-emu/fpu_system.h:74:25: error: request for member 'soft' in something not a structure or union
-    #define registers  (I387->soft.st_space)
-                            ^
-   arch/x86/math-emu/fpu_emu.h:144:35: note: in expansion of macro 'registers'
-    #define register_base ((u_char *) registers )
-                                      ^
-   arch/x86/math-emu/fpu_emu.h:146:38: note: in expansion of macro 'register_base'
-    #define st(x)      ( * ((FPU_REG *)( register_base + 10 * ((top+x) & 7) )) )
-                                         ^
-   arch/x86/math-emu/fpu_aux.c:115:13: note: in expansion of macro 'st'
-      reg_copy(&st(i), st_new_ptr);
-                ^
-   arch/x86/math-emu/fpu_system.h:75:20: error: request for member 'soft' in something not a structure or union
-    #define top   (I387->soft.ftop)
-                       ^
-   arch/x86/math-emu/fpu_emu.h:146:61: note: in expansion of macro 'top'
-    #define st(x)      ( * ((FPU_REG *)( register_base + 10 * ((top+x) & 7) )) )
-                                                                ^
-   arch/x86/math-emu/fpu_aux.c:115:13: note: in expansion of macro 'st'
-      reg_copy(&st(i), st_new_ptr);
-                ^
-   arch/x86/math-emu/fpu_system.h:75:20: error: request for member 'soft' in something not a structure or union
-    #define top   (I387->soft.ftop)
-                       ^
-   arch/x86/math-emu/fpu_emu.h:156:18: note: in expansion of macro 'top'
-    #define push() { top--; }
-                     ^
-   arch/x86/math-emu/fpu_aux.c:117:3: note: in expansion of macro 'push'
-      push();
-      ^
-   arch/x86/math-emu/fpu_system.h:72:28: error: request for member 'soft' in something not a structure or union
-    #define control_word  (I387->soft.cwd)
-                               ^
-   arch/x86/math-emu/fpu_aux.c:120:7: note: in expansion of macro 'control_word'
-      if (control_word & CW_Invalid) {
+                                  ^~~~~~~~~~~~~
 ..
 
-vim +/soft +646 arch/x86/math-emu/fpu_entry.c
+vim +/init_fpregs_state +805 arch/x86/include/asm/processor.h
 
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  620  		}
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  621  	}
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  622  }
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  623  
-ae6af41f arch/x86/math-emu/fpu_entry.c  Tejun Heo         2009-02-09  624  void math_abort(struct math_emu_info *info, unsigned int signal)
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  625  {
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16 @626  	FPU_EIP = FPU_ORIG_EIP;
-51e7dc70 arch/x86/math-emu/fpu_entry.c  Srikar Dronamraju 2012-03-12  627  	current->thread.trap_nr = X86_TRAP_MF;
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  628  	current->thread.error_code = 0;
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  629  	send_sig(signal, current, 1);
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  630  	RE_ENTRANT_CHECK_OFF;
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  631        __asm__("movl %0,%%esp ; ret": :"g"(((long)info) - 4));
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  632  #ifdef PARANOID
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  633  	printk("ERROR: wm-FPU-emu math_abort failed!\n");
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  634  #endif /* PARANOID */
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  635  }
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  636  
-c47ada30 arch/x86/math-emu/fpu_entry.c  Ingo Molnar       2015-04-30  637  #define S387 ((struct swregs_state *)s387)
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  638  #define sstatus_word() \
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  639    ((S387->swd & ~SW_Top & 0xffff) | ((S387->ftop << SW_Top_Shift) & SW_Top))
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  640  
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  641  int fpregs_soft_set(struct task_struct *target,
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  642  		    const struct user_regset *regset,
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  643  		    unsigned int pos, unsigned int count,
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  644  		    const void *kbuf, const void __user *ubuf)
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  645  {
-c47ada30 arch/x86/math-emu/fpu_entry.c  Ingo Molnar       2015-04-30 @646  	struct swregs_state *s387 = &target->thread.fpu.state.soft;
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  647  	void *space = s387->st_space;
-ff0ebb23 arch/x86/math-emu/fpu_entry.c  Roland McGrath    2008-01-30  648  	int ret;
-^1da177e arch/i386/math-emu/fpu_entry.c Linus Torvalds    2005-04-16  649  	int offset, other, i, tags, regnr, tag, newtop;
-
-:::::: The code at line 646 was first introduced by commit
-:::::: c47ada305de3803517ae64aa50686f644c5456fa x86/fpu: Harmonize FPU register state types
-
-:::::: TO: Ingo Molnar <mingo@kernel.org>
-:::::: CC: Ingo Molnar <mingo@kernel.org>
+   799	
+   800	#define INIT_THREAD  {							  \
+   801		.sp0			= TOP_OF_INIT_STACK,			  \
+   802		.sysenter_cs		= __KERNEL_CS,				  \
+   803		.io_bitmap_ptr		= NULL,					  \
+   804		.addr_limit		= KERNEL_DS,				  \
+ > 805		.fpu.state		= &init_fpregs_state,			  \
+   806	}
+   807	
+   808	/*
 
 ---
 0-DAY kernel test infrastructure                Open Source Technology Center
 https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
 
---KsGdsel6WgEHnImy
+--tThc/1wpZn/ma/RB
 Content-Type: application/gzip
 Content-Disposition: attachment; filename=".config.gz"
 Content-Transfer-Encoding: base64
 
-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
+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
 
---KsGdsel6WgEHnImy--
+--tThc/1wpZn/ma/RB--
