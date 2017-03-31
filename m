@@ -1,44 +1,93 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKbqOvb2TtfpXhjPQFxEShaBu=RbBQORtqhcF1bD3As6w@mail.gmail.com>
-References: <20170323172515.27950-1-thgarnie@google.com> <CAGXu5jKbqOvb2TtfpXhjPQFxEShaBu=RbBQORtqhcF1bD3As6w@mail.gmail.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Fri, 31 Mar 2017 08:34:14 -0700
-Message-ID: <CAJcbSZFv3CBSR--LP=A=Yrc3NmdAZb+eYbwLR4+3PFSVXdiAHQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170324175125.GA108985@beast>
+References: <20170324175125.GA108985@beast>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 31 Mar 2017 09:35:25 -0700
+Message-ID: <CAGXu5jJH7KCONQfkV_ZZE6Q2N9AMix7CnXu3sY++fxweiWJD=g@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 1/4] syscalls: Restore address limit after a syscall
-To: Kees Cook <keescook@chromium.org>
-Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, David Howells <dhowells@redhat.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Al Viro <viro@zeniv.linux.org.uk>, Thomas Gleixner <tglx@linutronix.de>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Stephen Smalley <sds@tycho.nsa.gov>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH v2] lkdtm: add bad USER_DS test
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Christian Borntraeger <borntraeger@de.ibm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Mar 23, 2017 at 1:15 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Thu, Mar 23, 2017 at 10:25 AM, Thomas Garnier <thgarnie@google.com> wrote:
->> This patch ensures a syscall does not return to user-mode with a kernel
->> address limit. If that happened, a process can corrupt kernel-mode
->> memory and elevate privileges.
->>
->> For example, it would mitigation this bug:
->>
->> - https://bugs.chromium.org/p/project-zero/issues/detail?id=990
->>
->> The CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE option is also
->> added so each architecture can optimize this change.
->>
->> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+On Fri, Mar 24, 2017 at 10:51 AM, Kees Cook <keescook@chromium.org> wrote:
+> This adds CORRUPT_USER_DS to check that the get_fs() test on syscall
+> return (via __VERIFY_PRE_USERMODE_STATE) still sees USER_DS. Since
+> trying to deal with values other than USER_DS and KERNEL_DS across all
+> architectures in a safe way is not sensible, this sets KERNEL_DS, but
+> since that could be extremely dangerous if the protection is not present,
+> it also raises SIGKILL for current, so that no matter what, the process
+> will die. A successful test will be visible with a BUG(), like all the
+> other LKDTM tests.
 >
-> Awesome. :) I've tested this on x86 and arm with the LKDTM patch I'll
-> post in a moment.
->
-> [   46.977823] lkdtm: Performing direct entry CORRUPT_USER_DS
-> [   46.978966] lkdtm: setting bad task size limit
-> [   46.980302] ------------[ cut here ]------------
-> [   46.981219] kernel BUG at ./include/linux/syscalls.h:200!
->
-> Tested-by: Kees Cook <keescook@chromium.org>
+> Signed-off-by: Kees Cook <keescook@chromium.org>
 
-Thanks Kees. Any additional feedback? Andy?
+Greg, can you add this to the drivers/misc tree when you get a moment?
 
+Thanks!
+
+-Kees
+
+> ---
+>  drivers/misc/lkdtm.h      |  1 +
+>  drivers/misc/lkdtm_bugs.c | 11 +++++++++++
+>  drivers/misc/lkdtm_core.c |  1 +
+>  3 files changed, 13 insertions(+)
 >
-> (Also note, your Signed-off-by lines are missing in patches 2-4)
+> diff --git a/drivers/misc/lkdtm.h b/drivers/misc/lkdtm.h
+> index 67d27be60405..3b4976396ec4 100644
+> --- a/drivers/misc/lkdtm.h
+> +++ b/drivers/misc/lkdtm.h
+> @@ -27,6 +27,7 @@ void lkdtm_REFCOUNT_ZERO_SUB(void);
+>  void lkdtm_REFCOUNT_ZERO_ADD(void);
+>  void lkdtm_CORRUPT_LIST_ADD(void);
+>  void lkdtm_CORRUPT_LIST_DEL(void);
+> +void lkdtm_CORRUPT_USER_DS(void);
+>
+>  /* lkdtm_heap.c */
+>  void lkdtm_OVERWRITE_ALLOCATION(void);
+> diff --git a/drivers/misc/lkdtm_bugs.c b/drivers/misc/lkdtm_bugs.c
+> index e3f4cd8876b5..ed4f4c56c796 100644
+> --- a/drivers/misc/lkdtm_bugs.c
+> +++ b/drivers/misc/lkdtm_bugs.c
+> @@ -8,6 +8,8 @@
+>  #include <linux/list.h>
+>  #include <linux/refcount.h>
+>  #include <linux/sched.h>
+> +#include <linux/sched/signal.h>
+> +#include <linux/uaccess.h>
+>
+>  struct lkdtm_list {
+>         struct list_head node;
+> @@ -279,3 +281,12 @@ void lkdtm_CORRUPT_LIST_DEL(void)
+>         else
+>                 pr_err("list_del() corruption not detected!\n");
+>  }
+> +
+> +void lkdtm_CORRUPT_USER_DS(void)
+> +{
+> +       pr_info("setting bad task size limit\n");
+> +       set_fs(KERNEL_DS);
+> +
+> +       /* Make sure we do not keep running with a KERNEL_DS! */
+> +       force_sig(SIGKILL, current);
+> +}
+> diff --git a/drivers/misc/lkdtm_core.c b/drivers/misc/lkdtm_core.c
+> index b9a4cd4a9b68..42d2b8e31e6b 100644
+> --- a/drivers/misc/lkdtm_core.c
+> +++ b/drivers/misc/lkdtm_core.c
+> @@ -199,6 +199,7 @@ struct crashtype crashtypes[] = {
+>         CRASHTYPE(OVERFLOW),
+>         CRASHTYPE(CORRUPT_LIST_ADD),
+>         CRASHTYPE(CORRUPT_LIST_DEL),
+> +       CRASHTYPE(CORRUPT_USER_DS),
+>         CRASHTYPE(CORRUPT_STACK),
+>         CRASHTYPE(UNALIGNED_LOAD_STORE_WRITE),
+>         CRASHTYPE(OVERWRITE_ALLOCATION),
+> --
+> 2.7.4
+>
 >
 > --
 > Kees Cook
@@ -47,4 +96,5 @@ Thanks Kees. Any additional feedback? Andy?
 
 
 -- 
-Thomas
+Kees Cook
+Pixel Security
