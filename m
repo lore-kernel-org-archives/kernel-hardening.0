@@ -1,146 +1,234 @@
-References: <alpine.DEB.2.20.1703291712590.2989@hadrien>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <b1d77fbd-6a1d-4016-a823-ec986995012b@digikod.net>
-Date: Fri, 31 Mar 2017 23:19:35 +0200
-MIME-Version: 1.0
-In-Reply-To: <alpine.DEB.2.20.1703291712590.2989@hadrien>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="0tVLXNEI92e7PvWIT4vxfaEBh0tcpdoSv"
-Subject: [kernel-hardening] Re: [PATCH net-next v6 01/11] bpf: Add eBPF program subtype and
- is_valid_subtype() verifier (fwd)
-To: Julia Lawall <julia.lawall@lip6.fr>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org, kbuild-all@01.org
+Content-Type: text/plain;
+	charset=us-ascii
+Mime-Version: 1.0 (1.0)
+From: Hoeun Ryu <hoeun.ryu@gmail.com>
+In-Reply-To: <CAGXu5jLFDGO5OfOGa7B9H6pw8ivnL9MUsPZ=fQns-fbA6R-Ljw@mail.gmail.com>
+Date: Mon, 3 Apr 2017 12:19:38 +0900
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <0A044FD1-41C0-4ABB-9BFF-17D21006EE2E@gmail.com>
+References: <1490884982-5066-1-git-send-email-hoeun.ryu@gmail.com> <CAGXu5jLFDGO5OfOGa7B9H6pw8ivnL9MUsPZ=fQns-fbA6R-Ljw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [RFCv2] arm64: support HAVE_ARCH_RARE_WRITE and HAVE_ARCH_RARE_WRITE_MEMCPY
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Christoffer Dall <christoffer.dall@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Suzuki K Poulose <suzuki.poulose@arm.com>, Laura Abbott <labbott@redhat.com>, Hugh Dickins <hughd@google.com>, Steve Capper <steve.capper@arm.com>, Ganapatrao Kulkarni <gkulkarni@caviumnetworks.com>, James Morse <james.morse@arm.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---0tVLXNEI92e7PvWIT4vxfaEBh0tcpdoSv
-Content-Type: multipart/mixed; boundary="p3fru9CKxWkAjcsTLnO5d6N5aad6JIRJt";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: Julia Lawall <julia.lawall@lip6.fr>
-Cc: linux-kernel@vger.kernel.org, Alexei Starovoitov <ast@kernel.org>,
- Andy Lutomirski <luto@amacapital.net>,
- Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
- netdev@vger.kernel.org, kbuild-all@01.org
-Message-ID: <b1d77fbd-6a1d-4016-a823-ec986995012b@digikod.net>
-Subject: Re: [PATCH net-next v6 01/11] bpf: Add eBPF program subtype and
- is_valid_subtype() verifier (fwd)
-References: <alpine.DEB.2.20.1703291712590.2989@hadrien>
-In-Reply-To: <alpine.DEB.2.20.1703291712590.2989@hadrien>
 
---p3fru9CKxWkAjcsTLnO5d6N5aad6JIRJt
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: quoted-printable
-
-Good catch, thanks again Julia!
-
- Micka=EBl
-
-On 29/03/2017 17:14, Julia Lawall wrote:
-> Size is unsigned, so not negative.
+> On Mar 31, 2017, at 4:38 AM, Kees Cook <keescook@chromium.org> wrote:
 >=20
-> julia
+>> On Thu, Mar 30, 2017 at 7:39 AM, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
+>> This patch might be a part of Kees Cook's rare_write infrastructure serie=
+s
+>> for [1] for arm64 architecture.
+>>=20
+>> This implementation is based on Mark Rutland's suggestions [2], which is
+>> that a special userspace mm that maps only __start/end_rodata as RW permi=
+-
+>> ssion is prepared during early boot time (paging_init) and __arch_rare_-
+>> write_begin() switches to the mm [2].
+>>=20
+>> rare_write_mm address space is added for the special purpose and a page
+>> global directory is also prepared for it. The mm remaps __start_rodata ~
+>> __end_rodata to rodata_rw_alias_start which starts from TASK_SIZE_64 / 4
+>> + kaslr_offset().
+>>=20
+>> It passes LKDTM's rare write test.
 >=20
-> ---------- Forwarded message ----------
-> Date: Wed, 29 Mar 2017 23:06:01 +0800
-> From: kbuild test robot <fengguang.wu@intel.com>
-> To: kbuild@01.org
-> Cc: Julia Lawall <julia.lawall@lip6.fr>
-> Subject: Re: [PATCH net-next v6 01/11] bpf: Add eBPF program subtype an=
-d
->     is_valid_subtype() verifier
->=20
-> In-Reply-To: <20170328234650.19695-2-mic@digikod.net>
-> TO: "Micka=EBl Sala=FCn" <mic@digikod.net>
->=20
-> Hi Micka=EBl,
->=20
-> [auto build test WARNING on net-next/master]
->=20
-> url:    https://github.com/0day-ci/linux/commits/Micka-l-Sala-n/Landloc=
-k-LSM-Toward-unprivileged-sandboxing/20170329-211258
-> :::::: branch date: 2 hours ago
-> :::::: commit date: 2 hours ago
->=20
->>> kernel/bpf/syscall.c:1041:5-9: WARNING: Unsigned expression compared =
-with zero: size < 0
->=20
-> git remote add linux-review https://github.com/0day-ci/linux
-> git remote update linux-review
-> git checkout 07d282aef4f60235407284c0be81d01e352e040b
-> vim +1041 kernel/bpf/syscall.c
->=20
-> f4324551 Daniel Mack        2016-11-23  1025  		return -EINVAL;
-> f4324551 Daniel Mack        2016-11-23  1026  	}
-> f4324551 Daniel Mack        2016-11-23  1027
-> 7f677633 Alexei Starovoitov 2017-02-10  1028  	return ret;
-> f4324551 Daniel Mack        2016-11-23  1029  }
-> f4324551 Daniel Mack        2016-11-23  1030  #endif /* CONFIG_CGROUP_B=
-PF */
-> f4324551 Daniel Mack        2016-11-23  1031
-> 99c55f7d Alexei Starovoitov 2014-09-26  1032  SYSCALL_DEFINE3(bpf, int,=
- cmd, union bpf_attr __user *, uattr, unsigned int, size)
-> 99c55f7d Alexei Starovoitov 2014-09-26  1033  {
-> 99c55f7d Alexei Starovoitov 2014-09-26  1034  	union bpf_attr attr =3D =
-{};
-> 99c55f7d Alexei Starovoitov 2014-09-26  1035  	int err;
-> 99c55f7d Alexei Starovoitov 2014-09-26  1036
-> 1be7f75d Alexei Starovoitov 2015-10-07  1037  	if (!capable(CAP_SYS_ADM=
-IN) && sysctl_unprivileged_bpf_disabled)
-> 99c55f7d Alexei Starovoitov 2014-09-26  1038  		return -EPERM;
-> 99c55f7d Alexei Starovoitov 2014-09-26  1039
-> 07d282ae Micka=EBl Sala=FCn     2017-03-29  1040  	size =3D check_user_=
-buf((void __user *)uattr, size, sizeof(attr));
-> 07d282ae Micka=EBl Sala=FCn     2017-03-29 @1041  	if (size < 0)
-> 07d282ae Micka=EBl Sala=FCn     2017-03-29  1042  		return size;
-> 99c55f7d Alexei Starovoitov 2014-09-26  1043
-> 99c55f7d Alexei Starovoitov 2014-09-26  1044  	/* copy attributes from =
-user space, may be less than sizeof(bpf_attr) */
-> 99c55f7d Alexei Starovoitov 2014-09-26  1045  	if (copy_from_user(&attr=
-, uattr, size) !=3D 0)
-> 99c55f7d Alexei Starovoitov 2014-09-26  1046  		return -EFAULT;
-> 99c55f7d Alexei Starovoitov 2014-09-26  1047
-> 99c55f7d Alexei Starovoitov 2014-09-26  1048  	switch (cmd) {
-> 99c55f7d Alexei Starovoitov 2014-09-26  1049  	case BPF_MAP_CREATE:
->=20
-> ---
-> 0-DAY kernel test infrastructure                Open Source Technology =
-Center
-> https://lists.01.org/pipermail/kbuild-all                   Intel Corpo=
-ration
+> Great work! I think this will need some further changes, though, since
+> it doesn't look to me like this would pass LKDTM's tests if it was
+> built as a module. (This is missing from my ARM attempt too... I
+> haven't figured out how to set the domain on the kernel modules...)
 >=20
 
+ah.. I understand..
+so we need to additional rw mappings for modules, right ?
 
---p3fru9CKxWkAjcsTLnO5d6N5aad6JIRJt--
+>>=20
+>> [1] : http://www.openwall.com/lists/kernel-hardening/2017/02/27/5
+>> [2] : https://lkml.org/lkml/2017/3/29/704
+>>=20
+>> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
+>> ---
+>> arch/arm64/Kconfig               |   2 +
+>> arch/arm64/include/asm/pgtable.h |   4 ++
+>> arch/arm64/mm/mmu.c              | 101 ++++++++++++++++++++++++++++++++++=
++++++
+>> 3 files changed, 107 insertions(+)
+>>=20
+>> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+>> index f2b0b52..6e2c592 100644
+>> --- a/arch/arm64/Kconfig
+>> +++ b/arch/arm64/Kconfig
+>> @@ -102,6 +102,8 @@ config ARM64
+>>        select HAVE_SYSCALL_TRACEPOINTS
+>>        select HAVE_KPROBES
+>>        select HAVE_KRETPROBES
+>> +       select HAVE_ARCH_RARE_WRITE
+>> +       select HAVE_ARCH_RARE_WRITE_MEMCPY
+>>        select IOMMU_DMA if IOMMU_SUPPORT
+>>        select IRQ_DOMAIN
+>>        select IRQ_FORCED_THREADING
+>> diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pg=
+table.h
+>> index c213fdbd0..1514933 100644
+>> --- a/arch/arm64/include/asm/pgtable.h
+>> +++ b/arch/arm64/include/asm/pgtable.h
+>> @@ -741,6 +741,10 @@ static inline void update_mmu_cache(struct vm_area_s=
+truct *vma,
+>> #define kc_vaddr_to_offset(v)  ((v) & ~VA_START)
+>> #define kc_offset_to_vaddr(o)  ((o) | VA_START)
+>>=20
+>> +unsigned long __arch_rare_write_begin(void);
+>> +unsigned long __arch_rare_write_end(void);
+>> +void __arch_rare_write_memcpy(void *dst, const void *src, __kernel_size_=
+t len);
+>> +
+>> #endif /* !__ASSEMBLY__ */
+>>=20
+>> #endif /* __ASM_PGTABLE_H */
+>> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
+>> index 91502e3..86b25c9 100644
+>> --- a/arch/arm64/mm/mmu.c
+>> +++ b/arch/arm64/mm/mmu.c
+>> @@ -570,6 +570,105 @@ static void __init map_kernel(pgd_t *pgd)
+>>        kasan_copy_shadow(pgd);
+>> }
+>>=20
+>> +struct mm_struct rare_write_mm =3D {
+>> +       .mm_rb          =3D RB_ROOT,
+>> +       .mm_users       =3D ATOMIC_INIT(2),
+>> +       .mm_count       =3D ATOMIC_INIT(1),
+>> +       .mmap_sem       =3D __RWSEM_INITIALIZER(rare_write_mm.mmap_sem),
+>> +       .page_table_lock=3D __SPIN_LOCK_UNLOCKED(rare_write_mm.page_table=
+_lock),
+>> +       .mmlist         =3D LIST_HEAD_INIT(rare_write_mm.mmlist),
+>> +};
+>> +
+>> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
+>> +#include <asm/ptdump.h>
+>> +
+>> +static struct ptdump_info rare_write_ptdump_info =3D {
+>> +       .mm             =3D &rare_write_mm,
+>> +       .markers        =3D (struct addr_marker[]){
+>> +               { 0,            "rare-write start" },
+>> +               { TASK_SIZE_64, "rare-write end" }
+>> +       },
+>> +       .base_addr      =3D 0,
+>> +};
+>> +
+>> +static int __init ptdump_init(void)
+>> +{
+>> +       return ptdump_debugfs_register(&rare_write_ptdump_info,
+>> +                                      "rare_write_page_tables");
+>> +}
+>> +device_initcall(ptdump_init);
+>> +
+>> +#endif
+>> +
+>> +__always_inline unsigned long __arch_rare_write_begin(void)
+>> +{
+>> +       struct mm_struct *mm =3D &rare_write_mm;
+>> +
+>> +       preempt_disable();
+>> +
+>> +       __switch_mm(mm);
+>=20
+> Can you include a BUG_ON check here that rare_write_mm is not already acti=
+ve?
+>=20
 
---0tVLXNEI92e7PvWIT4vxfaEBh0tcpdoSv
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
+OK, I will find the way to do so.
 
------BEGIN PGP SIGNATURE-----
+>> +
+>> +       if (system_uses_ttbr0_pan()) {
+>> +               update_saved_ttbr0(current, mm);
+>> +               cpu_switch_mm(mm->pgd, mm);
+>> +       }
+>> +
+>> +       return 0;
+>> +}
+>> +
+>> +__always_inline unsigned long __arch_rare_write_end(void)
+>> +{
+>> +       struct mm_struct *mm =3D current->active_mm;
+>> +
+>> +       __switch_mm(mm);
+>=20
+> And same here (though the reverse test)?
+>=20
+>> +
+>> +       if (system_uses_ttbr0_pan()) {
+>> +               cpu_set_reserved_ttbr0();
+>> +               if (mm !=3D &init_mm)
+>> +                       update_saved_ttbr0(current, mm);
+>> +       }
+>> +
+>> +       preempt_enable_no_resched();
+>> +
+>> +       return 0;
+>> +}
+>> +
+>> +static unsigned long rodata_rw_alias_start __ro_after_init =3D TASK_SIZE=
+_64 / 4;
+>> +
+>> +__always_inline void __arch_rare_write_memcpy(void *dst, const void *src=
+,
+>> +                                             __kernel_size_t len)
+>> +{
+>> +       unsigned long __dst =3D (unsigned long)dst;
+>> +
+>> +       __dst -=3D (unsigned long)__start_rodata;
+>> +       __dst +=3D rodata_rw_alias_start;
+>> +
+>> +       memcpy((void *)__dst, src, len);
+>> +}
+>> +
+>> +void __init rare_write_init(void)
+>> +{
+>> +       phys_addr_t pgd_phys =3D early_pgtable_alloc();
+>> +       pgd_t *pgd =3D (pgd_t *)__phys_to_virt(pgd_phys);
+>> +       phys_addr_t pa_start =3D __pa_symbol(__start_rodata);
+>> +       unsigned long size =3D __end_rodata - __start_rodata;
+>> +
+>> +       BUG_ON(!PAGE_ALIGNED(pa_start));
+>> +       BUG_ON(!PAGE_ALIGNED(size));
+>> +
+>> +       rodata_rw_alias_start +=3D kaslr_offset();
+>> +
+>> +       BUG_ON(rodata_rw_alias_start + size > TASK_SIZE_64);
+>> +
+>> +       rare_write_mm.pgd =3D pgd;
+>> +       init_new_context(NULL, &rare_write_mm);
+>> +
+>> +       __create_pgd_mapping(pgd,
+>> +                            pa_start, rodata_rw_alias_start, size,
+>> +                            __pgprot(pgprot_val(PAGE_KERNEL) | PTE_NG),
+>> +                            early_pgtable_alloc, debug_pagealloc_enabled=
+());
+>> +}
+>> +
+>> /*
+>>  * paging_init() sets up the page tables, initialises the zone memory
+>>  * maps and sets up the zero page.
+>> @@ -603,6 +702,8 @@ void __init paging_init(void)
+>>         */
+>>        memblock_free(__pa_symbol(swapper_pg_dir) + PAGE_SIZE,
+>>                      SWAPPER_DIR_SIZE - PAGE_SIZE);
+>> +
+>> +       rare_write_init();
+>> }
+>>=20
+>> /*
+>> --
+>> 2.7.4
+>>=20
+>=20
 
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAljex+cACgkQIt7+33O9
-apVZqggAgu5ylEt22VgNP+4RCV3v3jXAGvFvXBtzIMaUJ/rYxE1lewcayS6pNrnP
-kKHLfWDe/Kam6fmhNNZAnMxt+PRhzAsSOfcQ8L3ztCE2OhS7Ep0suBf9yKC8imSD
-O1VVRm7zdn4zVdebs0akpylTdi16f0PfGDXXNrTCpp+ZKiTOjJKh0aYe59ZDUGPL
-PDeMQuG7Vjparqcnz3ksUBeveTNaB1B++LuBitRGo4KBWootW/++TBwV0vjScxSa
-RBMZnFnzi9U8M5gKsv6NSiYDSaRlPiiEtallJsWztOacJTHTXDaPXc002wnncwMM
-D/JTROnn18BPJRk394VGcEV9VNwLfw==
-=MoLR
------END PGP SIGNATURE-----
+Thank you for the review !
 
---0tVLXNEI92e7PvWIT4vxfaEBh0tcpdoSv--
+> Thanks!
+>=20
+> -Kees
+>=20
+> --=20
+> Kees Cook
+> Pixel Security
