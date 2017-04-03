@@ -1,270 +1,150 @@
 MIME-Version: 1.0
-In-Reply-To: <3C26172F-9A1D-44E3-BDE7-139521B66AC2@gmail.com>
-References: <1490884982-5066-1-git-send-email-hoeun.ryu@gmail.com>
- <CAKv+Gu_752QP5HGKopic=T3MA9=Vo0wHcRWXe4mN8+jTuxbB1A@mail.gmail.com> <3C26172F-9A1D-44E3-BDE7-139521B66AC2@gmail.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 3 Apr 2017 08:11:10 +0100
-Message-ID: <CAKv+Gu9abcOxHOf4zzeFqXbvLqTAxgEpSgidr+nPH1=+9G+HHg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170330032752.kjh2fml4itgrkrnm@jeyu>
+References: <20170326210825.23255-3-ewk@edkovsky.org> <201703271633.xbYHmB37%fengguang.wu@intel.com>
+ <CAGXu5jKFPwDTaRq8eiszOoqdm-nQD13UrF_bj+m6FWWCzEnO9g@mail.gmail.com>
+ <20170329032825.GA1325@athena> <20170330032752.kjh2fml4itgrkrnm@jeyu>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 3 Apr 2017 15:10:32 -0700
+Message-ID: <CAGXu5j+OWmznqMio57Bp0hD3Hrfppa4=SmxsjPfvUjhJ9GW9Sw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFCv2] arm64: support HAVE_ARCH_RARE_WRITE and HAVE_ARCH_RARE_WRITE_MEMCPY
-To: Ho-Eun Ryu <hoeun.ryu@gmail.com>
-Cc: kernel-hardening@lists.openwall.com, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, "x86@kernel.org" <x86@kernel.org>, Catalin Marinas <catalin.marinas@arm.com>, Will Deacon <will.deacon@arm.com>, Christoffer Dall <christoffer.dall@linaro.org>, Mark Rutland <mark.rutland@arm.com>, Suzuki K Poulose <suzuki.poulose@arm.com>, Laura Abbott <labbott@redhat.com>, Hugh Dickins <hughd@google.com>, Steve Capper <steve.capper@arm.com>, Ganapatrao Kulkarni <gkulkarni@caviumnetworks.com>, James Morse <james.morse@arm.com>, Kefeng Wang <wangkefeng.wang@huawei.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v4 2/2] extable: verify address is read-only
+To: Jessica Yu <jeyu@redhat.com>
+Cc: Jakub Kicinski <jakub.kicinski@netronome.com>, Catalin Marinas <catalin.marinas@arm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, kbuild-all@01.org, kbuild test robot <lkp@intel.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 3 April 2017 at 05:17, Ho-Eun Ryu <hoeun.ryu@gmail.com> wrote:
+On Wed, Mar 29, 2017 at 8:27 PM, Jessica Yu <jeyu@redhat.com> wrote:
+> +++ Eddie Kovsky [28/03/17 21:28 -0600]:
 >
->> On 31 Mar 2017, at 6:25 PM, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+>> On 03/27/17, Kees Cook wrote:
+>>>
+>>> On Mon, Mar 27, 2017 at 1:43 AM, kbuild test robot <lkp@intel.com> wrote:
+>>> > Hi Eddie,
+>>> >
+>>> > [auto build test ERROR on next-20170323]
+>>> > [cannot apply to linus/master linux/master jeyu/modules-next v4.9-rc8
+>>> > v4.9-rc7 v4.9-rc6 v4.11-rc4]
+>>> > [if your patch is applied to the wrong git tree, please drop us a note
+>>> > to help improve the system]
+>>> >
+>>> > url:
+>>> > https://github.com/0day-ci/linux/commits/Eddie-Kovsky/module-verify-address-is-read-only/20170327-142922
+>>> > config: blackfin-BF561-EZKIT-SMP_defconfig (attached as .config)
+>>> > compiler: bfin-uclinux-gcc (GCC) 6.2.0
+>>> > reproduce:
+>>> >         wget
+>>> > https://raw.githubusercontent.com/01org/lkp-tests/master/sbin/make.cross -O
+>>> > ~/bin/make.cross
+>>> >         chmod +x ~/bin/make.cross
+>>> >         # save the attached .config to linux build tree
+>>> >         make.cross ARCH=blackfin
+>>> >
+>>> > All errors (new ones prefixed by >>):
+>>> >
+>>> >    kernel/built-in.o: In function `core_kernel_rodata':
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__start_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__start_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__end_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__end_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__start_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__start_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__end_data_ro_after_init'
+>>> >>> kernel/extable.c:169: undefined reference to
+>>> >>> `__end_data_ro_after_init'
+>>>
+>>> Hm, I'm confused about this. blackfin includes
+>>> include/asm-generic-vmlinux.lds.h and uses the RO_DATA macro (which
+>>> resolves to RO_DATA_SECTION to RO_AFTER_INIT_DATA which defines
+>>> __[start|end]_data_ro_after_init.
+>>>
+>>> Also, it seems that commit d7c19b066dcf4bd19c4385e8065558d4e74f9e73
+>>> ("mm: kmemleak: scan .data.ro_after_init") added a potentially
+>>> redundant section name (s390 already calls this
+>>> __[start|end]_ro_after_init). I'd like to get this cleaned up, since
+>>> having multiple names for the same thing is confusing:
+>>>
+>>> diff --git a/arch/s390/kernel/vmlinux.lds.S
+>>> b/arch/s390/kernel/vmlinux.lds.S
+>>> index 000e6e91f6a0..3667d20e997f 100644
+>>> --- a/arch/s390/kernel/vmlinux.lds.S
+>>> +++ b/arch/s390/kernel/vmlinux.lds.S
+>>> @@ -62,9 +62,11 @@ SECTIONS
+>>>
+>>>         . = ALIGN(PAGE_SIZE);
+>>>         __start_ro_after_init = .;
+>>> +       __start_data_ro_after_init = .;
+>>>         .data..ro_after_init : {
+>>>                  *(.data..ro_after_init)
+>>>         }
+>>> +       __end_data_ro_after_init = .;
+>>>         EXCEPTION_TABLE(16)
+>>>         . = ALIGN(PAGE_SIZE);
+>>>         __end_ro_after_init = .;
+>>>
+>>> And it seems that this hunk is wrong (__end_ro_after_init includes
+>>> s390's exception table, etc). I think we should remove the
+>>> ..._data_... name and use s390's name.
+>>>
+>>> I'll send an adjustment patch, but we'll still need to deal with
+>>> blackfin.
+>>>
+>>> -Kees
+>>>
 >>
->> On 30 March 2017 at 15:39, Hoeun Ryu <hoeun.ryu@gmail.com> wrote:
->>> This patch might be a part of Kees Cook's rare_write infrastructure series
->>> for [1] for arm64 architecture.
->>>
->>> This implementation is based on Mark Rutland's suggestions [2], which is
->>> that a special userspace mm that maps only __start/end_rodata as RW permi-
->>> ssion is prepared during early boot time (paging_init) and __arch_rare_-
->>> write_begin() switches to the mm [2].
->>>
->>> rare_write_mm address space is added for the special purpose and a page
->>> global directory is also prepared for it. The mm remaps __start_rodata ~
->>> __end_rodata to rodata_rw_alias_start which starts from TASK_SIZE_64 / 4
->>> + kaslr_offset().
->>>
->>> It passes LKDTM's rare write test.
->>>
->>> [1] : http://www.openwall.com/lists/kernel-hardening/2017/02/27/5
->>> [2] : https://lkml.org/lkml/2017/3/29/704
->>>
->>> Signed-off-by: Hoeun Ryu <hoeun.ryu@gmail.com>
->>> ---
->>> arch/arm64/Kconfig               |   2 +
->>> arch/arm64/include/asm/pgtable.h |   4 ++
->>> arch/arm64/mm/mmu.c              | 101 +++++++++++++++++++++++++++++++++++++++
->>> 3 files changed, 107 insertions(+)
->>>
->>> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
->>> index f2b0b52..6e2c592 100644
->>> --- a/arch/arm64/Kconfig
->>> +++ b/arch/arm64/Kconfig
->>> @@ -102,6 +102,8 @@ config ARM64
->>>        select HAVE_SYSCALL_TRACEPOINTS
->>>        select HAVE_KPROBES
->>>        select HAVE_KRETPROBES
->>> +       select HAVE_ARCH_RARE_WRITE
->>> +       select HAVE_ARCH_RARE_WRITE_MEMCPY
->>>        select IOMMU_DMA if IOMMU_SUPPORT
->>>        select IRQ_DOMAIN
->>>        select IRQ_FORCED_THREADING
->>> diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
->>> index c213fdbd0..1514933 100644
->>> --- a/arch/arm64/include/asm/pgtable.h
->>> +++ b/arch/arm64/include/asm/pgtable.h
->>> @@ -741,6 +741,10 @@ static inline void update_mmu_cache(struct vm_area_struct *vma,
->>> #define kc_vaddr_to_offset(v)  ((v) & ~VA_START)
->>> #define kc_offset_to_vaddr(o)  ((o) | VA_START)
->>>
->>> +unsigned long __arch_rare_write_begin(void);
->>> +unsigned long __arch_rare_write_end(void);
->>> +void __arch_rare_write_memcpy(void *dst, const void *src, __kernel_size_t len);
->>> +
+>> Kees
 >>
->> If these hook into a generic framework, shouldn't these already be
->> declared in a generic header file?
->
-> the generic header file doesn't declare arch-specific version of api.
->
+>> I applied your patch (mm: fix section name for .data..ro_after_init) and
+>> changed the new function in extable.c to use __[start|end]_ro_after_init
+>> instead. The new version still builds without errors on x86, which isn't
+>> surprising.
 >>
->>> #endif /* !__ASSEMBLY__ */
->>>
->>> #endif /* __ASM_PGTABLE_H */
->>> diff --git a/arch/arm64/mm/mmu.c b/arch/arm64/mm/mmu.c
->>> index 91502e3..86b25c9 100644
->>> --- a/arch/arm64/mm/mmu.c
->>> +++ b/arch/arm64/mm/mmu.c
->>> @@ -570,6 +570,105 @@ static void __init map_kernel(pgd_t *pgd)
->>>        kasan_copy_shadow(pgd);
->>> }
->>>
->>> +struct mm_struct rare_write_mm = {
->>
->> static please
+>> I've cross compiled this for blackfin and I'm able to reproduce the
+>> build error. I'm still not sure why. As you pointed out, blackfin does
+>> appear to use 'include/asm-generic/vmlinux.lds.h'.
 >
-> OK, add static.
 >
->>
->>> +       .mm_rb          = RB_ROOT,
->>> +       .mm_users       = ATOMIC_INIT(2),
->>> +       .mm_count       = ATOMIC_INIT(1),
->>> +       .mmap_sem       = __RWSEM_INITIALIZER(rare_write_mm.mmap_sem),
->>> +       .page_table_lock= __SPIN_LOCK_UNLOCKED(rare_write_mm.page_table_lock),
->>> +       .mmlist         = LIST_HEAD_INIT(rare_write_mm.mmlist),
->>> +};
->>> +
->>> +#ifdef CONFIG_ARM64_PTDUMP_DEBUGFS
->>> +#include <asm/ptdump.h>
->>> +
->>> +static struct ptdump_info rare_write_ptdump_info = {
->>> +       .mm             = &rare_write_mm,
->>> +       .markers        = (struct addr_marker[]){
->>> +               { 0,            "rare-write start" },
->>> +               { TASK_SIZE_64, "rare-write end" }
->>> +       },
->>> +       .base_addr      = 0,
->>> +};
->>> +
->>> +static int __init ptdump_init(void)
->>> +{
->>> +       return ptdump_debugfs_register(&rare_write_ptdump_info,
->>> +                                      "rare_write_page_tables");
->>> +}
->>> +device_initcall(ptdump_init);
->>> +
->>> +#endif
->>> +
->>> +__always_inline unsigned long __arch_rare_write_begin(void)
->>
->> These functions are not called from the same compilation unit, so what
->> do you think __always_inline buys you here?
+> This appears to be because blackfin is one of the 2 arches that
+> prepends an underscore '_' to all symbols defined in C. I noticed that
+> __{start,end}_data_ro_after_init in vmlinux.lds.h are not wrapped with
+> VMLINUX_SYMBOL() which adds the necessary prefix for arches that have
+> HAVE_UNDERSCORE_SYMBOL_PREFIX, hence the undefined reference.
 >
-> The first patch of Kee's series ([PATCH 01/11] Introduce rare_write() infrastructure) [1] says some requirements and one of these is the arch-specific helpers should be inline to avoid making them ROP targets.
+> The below patch fixed the build error for me, if it works for you then
+> I can send a formal patch.
 >
-> So I'd make sure the helpers are inline.
+> diff --git a/include/asm-generic/vmlinux.lds.h
+> b/include/asm-generic/vmlinux.lds.h
+> index 4e09b28..7b262f7 100644
+> --- a/include/asm-generic/vmlinux.lds.h
+> +++ b/include/asm-generic/vmlinux.lds.h
+> @@ -260,9 +260,9 @@
+>  */
+> #ifndef RO_AFTER_INIT_DATA
+> #define RO_AFTER_INIT_DATA                                              \
+> -       __start_data_ro_after_init = .;                                 \
+> +       VMLINUX_SYMBOL(__start_data_ro_after_init) = .;                 \
+>         *(.data..ro_after_init)                                         \
+> -       __end_data_ro_after_init = .;
+> +       VMLINUX_SYMBOL(__end_data_ro_after_init) = .;
+> #endif
 >
-> [1] : http://www.openwall.com/lists/kernel-hardening/2017/03/29/16
+> /*
 >
+> Jessica
 
-OK, that explains a number of issues with this patch.
+Do you have a moment to send this? I'd like to get it in for v4.11 (my
+renaming has landed, so you'll have to rebase). If not, I can do it.
+:)
 
-Please understand that marking a function inline has *no* effect
-whatsoever if the C definition is not visible to the caller. This is
-why the C declarations in the header file are not made generic: these
-functions are supposed to be *defined* as static inline in header
-files.
+-Kees
 
-So please move these implementations into the header files, and mark
-them static inline. This means the rare_write_mm structure should
-*not* be made static either.
-
-
->>
->>> +{
->>> +       struct mm_struct *mm = &rare_write_mm;
->>> +
->>> +       preempt_disable();
->>> +
->>> +       __switch_mm(mm);
->>> +
->>> +       if (system_uses_ttbr0_pan()) {
->>> +               update_saved_ttbr0(current, mm);
->>> +               cpu_switch_mm(mm->pgd, mm);
->>> +       }
->>> +
->>> +       return 0;
->>> +}
->>> +
->>> +__always_inline unsigned long __arch_rare_write_end(void)
->>> +{
->>> +       struct mm_struct *mm = current->active_mm;
->>> +
->>> +       __switch_mm(mm);
->>> +
->>> +       if (system_uses_ttbr0_pan()) {
->>> +               cpu_set_reserved_ttbr0();
->>> +               if (mm != &init_mm)
->>> +                       update_saved_ttbr0(current, mm);
->>> +       }
->>> +
->>> +       preempt_enable_no_resched();
->>> +
->>> +       return 0;
->>> +}
->>> +
->>> +static unsigned long rodata_rw_alias_start __ro_after_init = TASK_SIZE_64 / 4;
->>> +
->>> +__always_inline void __arch_rare_write_memcpy(void *dst, const void *src,
->>> +                                             __kernel_size_t len)
->>> +{
->>> +       unsigned long __dst = (unsigned long)dst;
->>> +
->>> +       __dst -= (unsigned long)__start_rodata;
->>> +       __dst += rodata_rw_alias_start;
->>> +
->>> +       memcpy((void *)__dst, src, len);
->>> +}
->>> +
->>> +void __init rare_write_init(void)
->>
->> static please
->
-> OK, add static.
->
->>
->>> +{
->>> +       phys_addr_t pgd_phys = early_pgtable_alloc();
->>> +       pgd_t *pgd = (pgd_t *)__phys_to_virt(pgd_phys);
->>> +       phys_addr_t pa_start = __pa_symbol(__start_rodata);
->>> +       unsigned long size = __end_rodata - __start_rodata;
->>> +
->>> +       BUG_ON(!PAGE_ALIGNED(pa_start));
->>> +       BUG_ON(!PAGE_ALIGNED(size));
->>> +
->>> +       rodata_rw_alias_start += kaslr_offset();
->>> +
->>
->> This places the rodata alias at a fixed offset from the original,
->> right, even under KASLR? Given that they are completely independent, I
->> think you can use a random offset here rather than the same offset we
->> use for vmlinux.
->
-> What I did here is just to randomize the base of rw alias mapping when kaslr is enabled.
-> You're right it's completely independent from kaslr though, I would like to add randomization for rw alias base address by using simple solution in early boot stage.
->
-> I' ll think again to achieve randomization or just remove it.
->
->>
->>
->>> +       BUG_ON(rodata_rw_alias_start + size > TASK_SIZE_64);
->>> +
->>> +       rare_write_mm.pgd = pgd;
->>
->> For correctness, you should add a call to mm_init_cpumask() here,
->> although it doesn't matter in practice on arm64.
->
-> OK, I'll fix this.
->
->>
->>> +       init_new_context(NULL, &rare_write_mm);
->>> +
->>> +       __create_pgd_mapping(pgd,
->>> +                            pa_start, rodata_rw_alias_start, size,
->>> +                            __pgprot(pgprot_val(PAGE_KERNEL) | PTE_NG),
->>> +                            early_pgtable_alloc, debug_pagealloc_enabled());
->>
->> This needs to be updated after the changes that are now queued in the
->> arm64 tree for v4.12
->>
->> BTW you can allow page/cont mappings in all cases, no need for the
->> debug_pagealloc_enabled() check
->
-> I will rebase this onto the version you mentioned later.
->
->>
->>> +}
->>> +
->>> /*
->>>  * paging_init() sets up the page tables, initialises the zone memory
->>>  * maps and sets up the zero page.
->>> @@ -603,6 +702,8 @@ void __init paging_init(void)
->>>         */
->>>        memblock_free(__pa_symbol(swapper_pg_dir) + PAGE_SIZE,
->>>                      SWAPPER_DIR_SIZE - PAGE_SIZE);
->>> +
->>> +       rare_write_init();
->>> }
->>>
->>> /*
->>> --
->>> 2.7.4
->>>
->
-> Thank you very much for the review
->
+-- 
+Kees Cook
+Pixel Security
