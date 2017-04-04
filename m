@@ -1,8 +1,8 @@
 References: <20170404174727.35478-1-thgarnie@google.com>
  <20170404174727.35478-2-thgarnie@google.com>
 From: "H. Peter Anvin" <hpa@zytor.com>
-Message-ID: <b2b1b4fe-18ea-7643-09c0-312fd8f4b4d8@zytor.com>
-Date: Tue, 4 Apr 2017 11:11:03 -0700
+Message-ID: <05d9c4a7-8acb-5997-1dd6-d534398e6f54@zytor.com>
+Date: Tue, 4 Apr 2017 11:27:07 -0700
 MIME-Version: 1.0
 In-Reply-To: <20170404174727.35478-2-thgarnie@google.com>
 Content-Type: text/plain; charset=windows-1252
@@ -14,22 +14,58 @@ Cc: linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-api@vger.ker
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On 04/04/17 10:47, Thomas Garnier wrote:
-> Implement specific usage of verify_pre_usermode_state for user-mode
-> returns for x86.
-> 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
+> index 516593e66bd6..12fa851c7fa8 100644
+> --- a/arch/x86/include/asm/pgtable_64_types.h
+> +++ b/arch/x86/include/asm/pgtable_64_types.h
+> @@ -78,4 +78,15 @@ typedef struct { pteval_t pte; } pte_t;
 >  
-> +	/*
-> +	 * If address limit is not based on user-mode, jump to slow path for
-> +	 * additional security checks.
-> +	 */
-> +	movq	$TASK_SIZE_MAX, %rcx
-> +	cmp	%rcx, TASK_addr_limit(%r11)
-> +	jnz	1f
+>  #define EARLY_DYNAMIC_PAGE_TABLES	64
+>  
+> +/*
+> + * User space process size. 47bits minus one guard page.  The guard
+> + * page is necessary on Intel CPUs: if a SYSCALL instruction is at
+> + * the highest possible canonical userspace address, then that
+> + * syscall will enter the kernel with a non-canonical return
+> + * address, and SYSRET will explode dangerously.  We avoid this
+> + * particular problem by preventing anything from being mapped
+> + * at the maximum canonical address.
+> + */
+> +#define TASK_SIZE_MAX	((_AC(1, UL) << 47) - PAGE_SIZE)
 > +
->  	LOCKDEP_SYS_EXIT
+>  #endif /* _ASM_X86_PGTABLE_64_DEFS_H */
+> diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+> index 3cada998a402..e80822582d3e 100644
+> --- a/arch/x86/include/asm/processor.h
+> +++ b/arch/x86/include/asm/processor.h
+> @@ -825,17 +825,6 @@ static inline void spin_lock_prefetch(const void *x)
+>  #define KSTK_ESP(task)		(task_pt_regs(task)->sp)
+>  
+>  #else
+> -/*
+> - * User space process size. 47bits minus one guard page.  The guard
+> - * page is necessary on Intel CPUs: if a SYSCALL instruction is at
+> - * the highest possible canonical userspace address, then that
+> - * syscall will enter the kernel with a non-canonical return
+> - * address, and SYSRET will explode dangerously.  We avoid this
+> - * particular problem by preventing anything from being mapped
+> - * at the maximum canonical address.
+> - */
+> -#define TASK_SIZE_MAX	((1UL << 47) - PAGE_SIZE)
+> -
+>  /* This decides where the kernel will search for a free chunk of vm
+>   * space during mmap's.
+>   */
+> 
 
-Nitpick: use jne not jnz when comparing for equality.  Same instruction
-but more readable.
+This should be an entirely separate patch; if nothing else you need to
+explain it in the comments.
+
+Also, you say this is for "x86", but I still don't see any code for i386
+whatsoever.  Have you verified *all* the i386 and i386-compat paths to
+make sure they go via prepare_exit_to_usermode()?  [Cc: Andy]
+
+Finally, I can't really believe I'm the only person for whom "Specific
+usage of verity_pre_usermode_state" is completely opaque.
 
 	-hpa
