@@ -1,86 +1,319 @@
+From: Tycho Andersen <tycho@docker.com>
+Date: Tue,  4 Apr 2017 16:08:10 -0600
+Message-Id: <20170404220810.14250-1-tycho@docker.com>
 MIME-Version: 1.0
-In-Reply-To: <05d9c4a7-8acb-5997-1dd6-d534398e6f54@zytor.com>
-References: <20170404174727.35478-1-thgarnie@google.com> <20170404174727.35478-2-thgarnie@google.com>
- <05d9c4a7-8acb-5997-1dd6-d534398e6f54@zytor.com>
-From: Thomas Garnier <thgarnie@google.com>
-Date: Tue, 4 Apr 2017 12:21:48 -0700
-Message-ID: <CAJcbSZGWX23QTWmM4a_07ui-8Xyz4H2NLj1LXFFbZvnv9tc_XQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v6 2/4] x86/syscalls: Specific usage of verify_pre_usermode_state
-To: "H. Peter Anvin" <hpa@zytor.com>
-Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, David Howells <dhowells@redhat.com>, =?UTF-8?Q?Ren=C3=A9_Nyffenegger?= <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: 8bit
+Subject: [kernel-hardening] [PATCH] ebpf: verify the output of the JIT
+To: Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, Kees Cook <keescook@chromium.org>
+Cc: linux-kernel@vger.kernel.org, netdev@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@docker.com>, =?UTF-8?q?Micka=C3=ABl=20Sala=C3=BCn?= <mic@digikod.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 4, 2017 at 11:27 AM, H. Peter Anvin <hpa@zytor.com> wrote:
-> On 04/04/17 10:47, Thomas Garnier wrote:
->> diff --git a/arch/x86/include/asm/pgtable_64_types.h b/arch/x86/include/asm/pgtable_64_types.h
->> index 516593e66bd6..12fa851c7fa8 100644
->> --- a/arch/x86/include/asm/pgtable_64_types.h
->> +++ b/arch/x86/include/asm/pgtable_64_types.h
->> @@ -78,4 +78,15 @@ typedef struct { pteval_t pte; } pte_t;
->>
->>  #define EARLY_DYNAMIC_PAGE_TABLES    64
->>
->> +/*
->> + * User space process size. 47bits minus one guard page.  The guard
->> + * page is necessary on Intel CPUs: if a SYSCALL instruction is at
->> + * the highest possible canonical userspace address, then that
->> + * syscall will enter the kernel with a non-canonical return
->> + * address, and SYSRET will explode dangerously.  We avoid this
->> + * particular problem by preventing anything from being mapped
->> + * at the maximum canonical address.
->> + */
->> +#define TASK_SIZE_MAX        ((_AC(1, UL) << 47) - PAGE_SIZE)
->> +
->>  #endif /* _ASM_X86_PGTABLE_64_DEFS_H */
->> diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
->> index 3cada998a402..e80822582d3e 100644
->> --- a/arch/x86/include/asm/processor.h
->> +++ b/arch/x86/include/asm/processor.h
->> @@ -825,17 +825,6 @@ static inline void spin_lock_prefetch(const void *x)
->>  #define KSTK_ESP(task)               (task_pt_regs(task)->sp)
->>
->>  #else
->> -/*
->> - * User space process size. 47bits minus one guard page.  The guard
->> - * page is necessary on Intel CPUs: if a SYSCALL instruction is at
->> - * the highest possible canonical userspace address, then that
->> - * syscall will enter the kernel with a non-canonical return
->> - * address, and SYSRET will explode dangerously.  We avoid this
->> - * particular problem by preventing anything from being mapped
->> - * at the maximum canonical address.
->> - */
->> -#define TASK_SIZE_MAX        ((1UL << 47) - PAGE_SIZE)
->> -
->>  /* This decides where the kernel will search for a free chunk of vm
->>   * space during mmap's.
->>   */
->>
->
-> This should be an entirely separate patch; if nothing else you need to
-> explain it in the comments.
+The goal of this patch is to protect the JIT against an attacker with a
+write-in-memory primitive. The JIT allocates a buffer which will eventually
+be marked +x, so we need to make sure that what was written to this buffer
+is what was intended.
 
-I will explain it in the commit message, it should be easier than a
-separate patch.
+We acheive this by building a hash of the instruction buffer as
+instructions are emittted and then comparing that to a hash at the end of
+the JIT compile after the buffer has been marked read-only.
 
->
-> Also, you say this is for "x86", but I still don't see any code for i386
-> whatsoever.  Have you verified *all* the i386 and i386-compat paths to
-> make sure they go via prepare_exit_to_usermode()?  [Cc: Andy]
+Signed-off-by: Tycho Andersen <tycho@docker.com>
+CC: Daniel Borkmann <daniel@iogearbox.net>
+CC: Alexei Starovoitov <ast@kernel.org>
+CC: Kees Cook <keescook@chromium.org>
+CC: Mickaël Salaün <mic@digikod.net>
+---
+ arch/x86/Kconfig            |  11 ++++
+ arch/x86/net/bpf_jit_comp.c | 147 ++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 147 insertions(+), 11 deletions(-)
 
-I did but I will do it again for the next iteration.
-
->
-> Finally, I can't really believe I'm the only person for whom "Specific
-> usage of verity_pre_usermode_state" is completely opaque.
-
-I agree, I will improve it.
-
->
->         -hpa
->
-
-
-
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index cc98d5a..7b2db2c 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -2789,6 +2789,17 @@ config X86_DMA_REMAP
+ 
+ source "net/Kconfig"
+ 
++config EBPF_JIT_HASH_OUTPUT
++	def_bool y
++	depends on HAVE_EBPF_JIT
++	depends on BPF_JIT
++	select CRYPTO_SHA256
++	---help---
++	  Enables a double check of the JIT's output after it is marked read-only to
++	  ensure that it matches what the JIT generated.
++
++	  Note, only applies when /proc/sys/net/core/bpf_jit_harden > 0.
++
+ source "drivers/Kconfig"
+ 
+ source "drivers/firmware/Kconfig"
+diff --git a/arch/x86/net/bpf_jit_comp.c b/arch/x86/net/bpf_jit_comp.c
+index 32322ce..be1271e 100644
+--- a/arch/x86/net/bpf_jit_comp.c
++++ b/arch/x86/net/bpf_jit_comp.c
+@@ -13,9 +13,15 @@
+ #include <linux/if_vlan.h>
+ #include <asm/cacheflush.h>
+ #include <linux/bpf.h>
++#include <linux/crypto.h>
++#include <crypto/hash.h>
+ 
+ int bpf_jit_enable __read_mostly;
+ 
++#ifdef CONFIG_EBPF_JIT_HASH_OUTPUT
++struct crypto_shash *tfm __read_mostly;
++#endif
++
+ /*
+  * assembly code in arch/x86/net/bpf_jit.S
+  */
+@@ -25,7 +31,8 @@ extern u8 sk_load_byte_positive_offset[];
+ extern u8 sk_load_word_negative_offset[], sk_load_half_negative_offset[];
+ extern u8 sk_load_byte_negative_offset[];
+ 
+-static u8 *emit_code(u8 *ptr, u32 bytes, unsigned int len)
++static u8 *emit_code(u8 *ptr, u32 bytes, unsigned int len,
++		     struct shash_desc *hash)
+ {
+ 	if (len == 1)
+ 		*ptr = bytes;
+@@ -35,11 +42,15 @@ static u8 *emit_code(u8 *ptr, u32 bytes, unsigned int len)
+ 		*(u32 *)ptr = bytes;
+ 		barrier();
+ 	}
++
++	if (IS_ENABLED(CONFIG_EBPF_JIT_HASH_OUTPUT) && hash)
++		crypto_shash_update(hash, (u8 *) &bytes, len);
++
+ 	return ptr + len;
+ }
+ 
+ #define EMIT(bytes, len) \
+-	do { prog = emit_code(prog, bytes, len); cnt += len; } while (0)
++	do { prog = emit_code(prog, bytes, len, hash); cnt += len; } while (0)
+ 
+ #define EMIT1(b1)		EMIT(b1, 1)
+ #define EMIT2(b1, b2)		EMIT((b1) + ((b2) << 8), 2)
+@@ -206,7 +217,7 @@ struct jit_context {
+ /* emit x64 prologue code for BPF program and check it's size.
+  * bpf_tail_call helper will skip it while jumping into another program
+  */
+-static void emit_prologue(u8 **pprog)
++static void emit_prologue(u8 **pprog, struct shash_desc *hash)
+ {
+ 	u8 *prog = *pprog;
+ 	int cnt = 0;
+@@ -264,7 +275,7 @@ static void emit_prologue(u8 **pprog)
+  *   goto *(prog->bpf_func + prologue_size);
+  * out:
+  */
+-static void emit_bpf_tail_call(u8 **pprog)
++static void emit_bpf_tail_call(u8 **pprog, struct shash_desc *hash)
+ {
+ 	u8 *prog = *pprog;
+ 	int label1, label2, label3;
+@@ -328,7 +339,7 @@ static void emit_bpf_tail_call(u8 **pprog)
+ }
+ 
+ 
+-static void emit_load_skb_data_hlen(u8 **pprog)
++static void emit_load_skb_data_hlen(u8 **pprog, struct shash_desc *hash)
+ {
+ 	u8 *prog = *pprog;
+ 	int cnt = 0;
+@@ -348,7 +359,8 @@ static void emit_load_skb_data_hlen(u8 **pprog)
+ }
+ 
+ static int do_jit(struct bpf_prog *bpf_prog, int *addrs, u8 *image,
+-		  int oldproglen, struct jit_context *ctx)
++		  int oldproglen, struct jit_context *ctx,
++		  struct shash_desc *hash)
+ {
+ 	struct bpf_insn *insn = bpf_prog->insnsi;
+ 	int insn_cnt = bpf_prog->len;
+@@ -360,10 +372,10 @@ static int do_jit(struct bpf_prog *bpf_prog, int *addrs, u8 *image,
+ 	int proglen = 0;
+ 	u8 *prog = temp;
+ 
+-	emit_prologue(&prog);
++	emit_prologue(&prog, hash);
+ 
+ 	if (seen_ld_abs)
+-		emit_load_skb_data_hlen(&prog);
++		emit_load_skb_data_hlen(&prog, hash);
+ 
+ 	for (i = 0; i < insn_cnt; i++, insn++) {
+ 		const s32 imm32 = insn->imm;
+@@ -875,7 +887,7 @@ xadd:			if (is_imm8(insn->off))
+ 			if (seen_ld_abs) {
+ 				if (reload_skb_data) {
+ 					EMIT1(0x5F); /* pop %rdi */
+-					emit_load_skb_data_hlen(&prog);
++					emit_load_skb_data_hlen(&prog, hash);
+ 				} else {
+ 					EMIT2(0x41, 0x59); /* pop %r9 */
+ 					EMIT2(0x41, 0x5A); /* pop %r10 */
+@@ -884,7 +896,7 @@ xadd:			if (is_imm8(insn->off))
+ 			break;
+ 
+ 		case BPF_JMP | BPF_CALL | BPF_X:
+-			emit_bpf_tail_call(&prog);
++			emit_bpf_tail_call(&prog, hash);
+ 			break;
+ 
+ 			/* cond jump */
+@@ -1085,6 +1097,106 @@ xadd:			if (is_imm8(insn->off))
+ 	return proglen;
+ }
+ 
++#ifdef CONFIG_EBPF_JIT_HASH_OUTPUT
++static struct shash_desc *bpf_alloc_hash_desc(void)
++{
++	struct shash_desc *hash;
++	int sz = sizeof(struct shash_desc) + crypto_shash_descsize(tfm);
++
++	hash = kzalloc(sz, GFP_KERNEL);
++	if (hash)
++		hash->tfm = tfm;
++	return hash;
++}
++
++static int init_hash(struct shash_desc **hash, u32 *nonce)
++{
++	if (!bpf_jit_harden)
++		return 0;
++
++	*nonce = get_random_int();
++
++	if (!tfm) {
++		tfm = crypto_alloc_shash("sha256", 0, 0);
++		if (IS_ERR(tfm))
++			return PTR_ERR(tfm);
++	}
++
++	if (!*hash) {
++		*hash = bpf_alloc_hash_desc();
++		if (!*hash)
++			return -ENOMEM;
++	}
++
++	if (crypto_shash_init(*hash) < 0)
++		return -1;
++
++	return crypto_shash_update(*hash, (u8 *) nonce, sizeof(*nonce));
++}
++
++static bool check_jit_hash(u8 *buf, u32 len, struct shash_desc *out_d,
++			   u32 nonce)
++{
++	struct shash_desc *check_d;
++	void *out, *check;
++	unsigned int sz;
++	bool match = false;
++
++	if (!out_d)
++		return 0;
++
++	BUG_ON(out_d->tfm != tfm);
++
++	sz = crypto_shash_digestsize(out_d->tfm);
++	out = kzalloc(2 * sz, GFP_KERNEL);
++	if (!out)
++		return false;
++
++	if (crypto_shash_final(out_d, out) < 0) {
++		kfree(out);
++		return false;
++	}
++
++	check_d = bpf_alloc_hash_desc();
++	if (!check_d) {
++		kfree(out);
++		return false;
++	}
++
++	if (crypto_shash_init(check_d) < 0)
++		goto out;
++
++	if (crypto_shash_update(check_d, (u8 *) &nonce, sizeof(nonce)) < 0)
++		goto out;
++
++	if (crypto_shash_update(check_d, buf, len) < 0)
++		goto out;
++
++	check = out + sz;
++	if (crypto_shash_final(check_d, check) < 0)
++		goto out;
++
++	if (!memcmp(out, check, sz))
++		match = true;
++
++out:
++	kfree(out);
++	kfree(check_d);
++	return match;
++}
++#else
++static int init_hash(struct shash_desc **hash, u32 *nonce)
++{
++	return 0;
++}
++
++static bool check_jit_hash(u8 *buf, u32 len, struct shash_desc *out_d,
++			   u32 nonce)
++{
++	return true;
++}
++#endif
++
+ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
+ {
+ 	struct bpf_binary_header *header = NULL;
+@@ -1096,6 +1208,8 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
+ 	int *addrs;
+ 	int pass;
+ 	int i;
++	struct shash_desc *hash = NULL;
++	u32 nonce;
+ 
+ 	if (!bpf_jit_enable)
+ 		return orig_prog;
+@@ -1132,7 +1246,15 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
+ 	 * pass to emit the final image
+ 	 */
+ 	for (pass = 0; pass < 10 || image; pass++) {
+-		proglen = do_jit(prog, addrs, image, oldproglen, &ctx);
++		if (init_hash(&hash, &nonce) < 0) {
++			image = NULL;
++			if (header)
++				bpf_jit_binary_free(header);
++			prog = orig_prog;
++			goto out_addrs;
++		}
++
++		proglen = do_jit(prog, addrs, image, oldproglen, &ctx, hash);
+ 		if (proglen <= 0) {
+ 			image = NULL;
+ 			if (header)
+@@ -1166,6 +1288,8 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
+ 	if (image) {
+ 		bpf_flush_icache(header, image + proglen);
+ 		bpf_jit_binary_lock_ro(header);
++		if (!check_jit_hash(image, proglen, hash, nonce))
++			BUG();
+ 		prog->bpf_func = (void *)image;
+ 		prog->jited = 1;
+ 	} else {
+@@ -1174,6 +1298,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
+ 
+ out_addrs:
+ 	kfree(addrs);
++	kfree(hash);
+ out:
+ 	if (tmp_blinded)
+ 		bpf_jit_prog_release_other(prog, prog == orig_prog ?
 -- 
-Thomas
+2.9.3
