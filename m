@@ -1,55 +1,47 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1491371241.22446.11.camel@hellion.org.uk>
-References: <1491343938-75336-1-git-send-email-keescook@chromium.org>
- <1491343938-75336-2-git-send-email-keescook@chromium.org> <1491371241.22446.11.camel@hellion.org.uk>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Apr 2017 12:32:26 -0700
-Message-ID: <CAGXu5j+ZQbfc8AMmkuNJxyMtQX5oJYN6Cs52_8vvGLJQqSpkkA@mail.gmail.com>
+In-Reply-To: <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
+ <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Wed, 5 Apr 2017 16:57:35 -0700
+Message-ID: <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH v2 1/7] bug: Clarify help text for BUG_ON_DATA_CORRUPTION
-To: Ian Campbell <ijc@hellion.org.uk>
-Cc: Ingo Molnar <mingo@kernel.org>, Peter Zijlstra <peterz@infradead.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Kalle Valo <kvalo@codeaurora.org>, Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Viresh Kumar <viresh.kumar@linaro.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Geert Uytterhoeven <geert@linux-m68k.org>, Olof Johansson <olof@lixom.net>, Chris Wilson <chris@chris-wilson.co.uk>, George Spelvin <linux@sciencehorizons.net>, Thomas Gleixner <tglx@linutronix.de>, Josh Poimboeuf <jpoimboe@redhat.com>, David Windsor <dwindsor@gmail.com>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Kees Cook <keescook@chromium.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 4, 2017 at 10:47 PM, Ian Campbell <ijc@hellion.org.uk> wrote:
->> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
->> index 77fadface4f9..5ac4d1148385 100644
->> --- a/lib/Kconfig.debug
->> +++ b/lib/Kconfig.debug
->> @@ -1998,9 +1998,12 @@ config BUG_ON_DATA_CORRUPTION
->> >     bool "Trigger a BUG when data corruption is detected"
->> >     select DEBUG_LIST
->> >     help
->> > -     Select this option if the kernel should BUG when it encounters
->> > -     data corruption in kernel memory structures when they get checked
->> > -     for validity.
->> > +     This option enables several inexpensive data corruption checks.
->> > +     Most of these checks normally just WARN and try to further avoid
->> +       the corruption. Selecting this option upgrades these to BUGs so
->
-> First it says it enables some checks, but here it says it upgrades them
-> to BUGs which seems inconsistent.
-
-Right, it does both. It uses Kconfig "select" to enable checks, and
-raises checks from WARN to BUG.
-
->
->> +       that the offending process is killed. Additionally, the system
->> +       owner can furhter configure the system for immediate reboots
->
->                    "further"
-
-Ah, thanks!
-
->
->> +       (via panic_on_oops sysctl) or crash dumps.
+On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
+>>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
+>>> allows HAVE_ARCH_RARE_WRITE to work on x86.
+>>>
 >>
->> >       If unsure, say N.
+>>> +
+>>> +static __always_inline unsigned long __arch_rare_write_begin(void)
+>>> +{
+>>> +       unsigned long cr0;
+>>> +
+>>> +       preempt_disable();
 >>
+>> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
+>> as would local_irq_disable().  There's no way that just disabling
+>> preemption is enough.
+>>
+>> (Also, how does this interact with perf nmis?)
+>
+> Do you mean preempt_disable() isn't strong enough here? I'm open to
+> suggestions. The goal would be to make sure nothing between _begin and
+> _end would get executed without interruption...
+>
 
--Kees
+Sorry for the very slow response.
 
--- 
-Kees Cook
-Pixel Security
+preempt_disable() isn't strong enough to prevent interrupts, and an
+interrupt here would run with WP off, causing unknown havoc.  I tend
+to think that the caller should be responsible for turning off
+interrupts.
+
+--Andy
