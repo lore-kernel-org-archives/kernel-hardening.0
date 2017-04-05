@@ -1,138 +1,43 @@
+Date: Tue, 4 Apr 2017 21:45:36 -0600
+From: Tycho Andersen <tycho@docker.com>
+Message-ID: <20170405034536.oulhc3ylhlrfgqeg@docker>
+References: <20170404220810.14250-1-tycho@docker.com>
+ <CAGXu5jLAXDk1+kYTC60-sJ_SOa5s4+HZ26A0bj67335yAXYhvg@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170216182917.19637-2-james.morse@arm.com>
-References: <20170216182917.19637-1-james.morse@arm.com> <20170216182917.19637-2-james.morse@arm.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 4 Apr 2017 15:19:34 -0700
-Message-ID: <CAGXu5jLN81EhTdXT9mc=G0Ci-ib3PRc7jw=3DxOvEHzo-QaNgA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v4 1/3] usercopy: create enum stack_type
-To: James Morse <james.morse@arm.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, Pratyush Anand <panand@redhat.com>, keun-o.park@darkmatter.ae
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <CAGXu5jLAXDk1+kYTC60-sJ_SOa5s4+HZ26A0bj67335yAXYhvg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH] ebpf: verify the output of the JIT
+To: Kees Cook <keescook@chromium.org>
+Cc: Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Feb 16, 2017 at 10:29 AM, James Morse <james.morse@arm.com> wrote:
-> From: Sahara <keun-o.park@darkmatter.ae>
->
-> This patch creates enum stack_type which is only used in usercopy.c
-> for now. This enum type can be used for x86 and other architecture's
-> thread_info.h, which may have arch_within_stack_frames().
->
-> Signed-off-by: Sahara <keun-o.park@darkmatter.ae>
-> Signed-off-by: James Morse <james.morse@arm.com>
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-> Acked-by: Kees Cook <keescook@chromium.org>
+Hi Kees,
 
-I've adjusted this slightly and added it to my usercopy tree for -next.
+On Tue, Apr 04, 2017 at 03:17:57PM -0700, Kees Cook wrote:
+> On Tue, Apr 4, 2017 at 3:08 PM, Tycho Andersen <tycho@docker.com> wrote:
+> > The goal of this patch is to protect the JIT against an attacker with a
+> > write-in-memory primitive. The JIT allocates a buffer which will eventually
+> > be marked +x, so we need to make sure that what was written to this buffer
+> > is what was intended.
+> >
+> > We acheive this by building a hash of the instruction buffer as
+> > instructions are emittted and then comparing that to a hash at the end of
+> > the JIT compile after the buffer has been marked read-only.
+> >
+> > Signed-off-by: Tycho Andersen <tycho@docker.com>
+> > CC: Daniel Borkmann <daniel@iogearbox.net>
+> > CC: Alexei Starovoitov <ast@kernel.org>
+> > CC: Kees Cook <keescook@chromium.org>
+> > CC: Mickaël Salaün <mic@digikod.net>
+> 
+> Cool! This closes the race condition on producing the JIT vs going
+> read-only. I wonder if it might be possible to make this a more
+> generic interface to the BPF which would be allocate the hash, provide
+> the update callback during emit, and then do the hash check itself at
+> the end of bpf_jit_binary_lock_ro()?
 
--Kees
+Yes, probably so. I can look into that for the next version.
 
-> ---
->  arch/x86/include/asm/thread_info.h | 19 ++++++++++---------
->  include/linux/thread_info.h        | 13 ++++++++++---
->  mm/usercopy.c                      |  8 +-------
->  3 files changed, 21 insertions(+), 19 deletions(-)
->
-> diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-> index ad6f5eb07a95..7af4b8b23b8b 100644
-> --- a/arch/x86/include/asm/thread_info.h
-> +++ b/arch/x86/include/asm/thread_info.h
-> @@ -168,13 +168,13 @@ static inline unsigned long current_stack_pointer(void)
->   * entirely contained by a single stack frame.
->   *
->   * Returns:
-> - *              1 if within a frame
-> - *             -1 if placed across a frame boundary (or outside stack)
-> - *              0 unable to determine (no frame pointers, etc)
-> + *     GOOD_FRAME      if within a frame
-> + *     BAD_STACK       if placed across a frame boundary (or outside stack)
-> + *     NOT_STACK       unable to determine (no frame pointers, etc)
->   */
-> -static inline int arch_within_stack_frames(const void * const stack,
-> -                                          const void * const stackend,
-> -                                          const void *obj, unsigned long len)
-> +static inline enum stack_type arch_within_stack_frames(const void * const stack,
-> +                                       const void * const stackend,
-> +                                       const void *obj, unsigned long len)
->  {
->  #if defined(CONFIG_FRAME_POINTER)
->         const void *frame = NULL;
-> @@ -197,13 +197,14 @@ static inline int arch_within_stack_frames(const void * const stack,
->                  * the copy as invalid.
->                  */
->                 if (obj + len <= frame)
-> -                       return obj >= oldframe + 2 * sizeof(void *) ? 1 : -1;
-> +                       return obj >= oldframe + 2 * sizeof(void *) ?
-> +                               GOOD_FRAME : BAD_STACK;
->                 oldframe = frame;
->                 frame = *(const void * const *)frame;
->         }
-> -       return -1;
-> +       return BAD_STACK;
->  #else
-> -       return 0;
-> +       return NOT_STACK;
->  #endif
->  }
->
-> diff --git a/include/linux/thread_info.h b/include/linux/thread_info.h
-> index 58373875e8ee..a38b3be347df 100644
-> --- a/include/linux/thread_info.h
-> +++ b/include/linux/thread_info.h
-> @@ -22,6 +22,13 @@
->  #endif
->
->  #include <linux/bitops.h>
-> +
-> +enum stack_type {
-> +       BAD_STACK = -1,
-> +       NOT_STACK = 0,
-> +       GOOD_FRAME,
-> +       GOOD_STACK,
-> +};
->  #include <asm/thread_info.h>
->
->  #ifdef __KERNEL__
-> @@ -77,9 +84,9 @@ static inline int test_ti_thread_flag(struct thread_info *ti, int flag)
->  #define tif_need_resched() test_thread_flag(TIF_NEED_RESCHED)
->
->  #ifndef CONFIG_HAVE_ARCH_WITHIN_STACK_FRAMES
-> -static inline int arch_within_stack_frames(const void * const stack,
-> -                                          const void * const stackend,
-> -                                          const void *obj, unsigned long len)
-> +static inline enum stack_type arch_within_stack_frames(const void * const stack,
-> +                                       const void * const stackend,
-> +                                       const void *obj, unsigned long len)
->  {
->         return 0;
->  }
-> diff --git a/mm/usercopy.c b/mm/usercopy.c
-> index 3c8da0af9695..3531ae735d87 100644
-> --- a/mm/usercopy.c
-> +++ b/mm/usercopy.c
-> @@ -16,15 +16,9 @@
->
->  #include <linux/mm.h>
->  #include <linux/slab.h>
-> +#include <linux/thread_info.h>
->  #include <asm/sections.h>
->
-> -enum {
-> -       BAD_STACK = -1,
-> -       NOT_STACK = 0,
-> -       GOOD_FRAME,
-> -       GOOD_STACK,
-> -};
-> -
->  /*
->   * Checks if a given pointer and length is contained by the current
->   * stack frame (if possible).
-> --
-> 2.10.1
->
-
-
-
--- 
-Kees Cook
-Pixel Security
+Tycho
