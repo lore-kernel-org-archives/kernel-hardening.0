@@ -1,42 +1,69 @@
-Message-ID: <1491371241.22446.11.camel@hellion.org.uk>
-From: Ian Campbell <ijc@hellion.org.uk>
-Date: Wed, 05 Apr 2017 06:47:21 +0100
-In-Reply-To: <1491343938-75336-2-git-send-email-keescook@chromium.org>
-References: <1491343938-75336-1-git-send-email-keescook@chromium.org>
-	 <1491343938-75336-2-git-send-email-keescook@chromium.org>
-Content-Type: text/plain; charset="ISO-8859-1"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [PATCH v2 1/7] bug: Clarify help text for
- BUG_ON_DATA_CORRUPTION
-To: Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@kernel.org>
-Cc: Peter Zijlstra <peterz@infradead.org>, "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>, Kalle Valo <kvalo@codeaurora.org>, Andrew Morton <akpm@linux-foundation.org>, Rik van Riel <riel@redhat.com>, Jakub Kicinski <jakub.kicinski@netronome.com>, Viresh Kumar <viresh.kumar@linaro.org>, Andy Shevchenko <andriy.shevchenko@linux.intel.com>, Geert Uytterhoeven <geert@linux-m68k.org>, Olof Johansson <olof@lixom.net>, Chris Wilson <chris@chris-wilson.co.uk>, George Spelvin <linux@sciencehorizons.net>, Thomas Gleixner <tglx@linutronix.de>, Josh Poimboeuf <jpoimboe@redhat.com>, David Windsor <dwindsor@gmail.com>, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
+Date: Wed, 5 Apr 2017 15:22:25 +0100
+From: Catalin Marinas <catalin.marinas@arm.com>
+Message-ID: <20170405142225.GA9072@e104818-lin.cambridge.arm.com>
+References: <20170404174727.35478-1-thgarnie@google.com>
+ <20170404174727.35478-4-thgarnie@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170404174727.35478-4-thgarnie@google.com>
+Subject: [kernel-hardening] Re: [PATCH v6 4/4] arm64/syscalls: Specific usage of
+ verify_pre_usermode_state
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, Thomas Gleixner <tglx@linutronix.de>, Al Viro <viro@zeniv.linux.org.uk>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-> index 77fadface4f9..5ac4d1148385 100644
-> --- a/lib/Kconfig.debug
-> +++ b/lib/Kconfig.debug
-> @@ -1998,9 +1998,12 @@ config BUG_ON_DATA_CORRUPTION
-> >  	bool "Trigger a BUG when data corruption is detected"
-> >  	select DEBUG_LIST
-> >  	help
-> > -	  Select this option if the kernel should BUG when it encounters
-> > -	  data corruption in kernel memory structures when they get checked
-> > -	  for validity.
-> > +	  This option enables several inexpensive data corruption checks.
-> > +	  Most of these checks normally just WARN and try to further avoid
-> +	  the corruption. Selecting this option upgrades these to BUGs so
+On Tue, Apr 04, 2017 at 10:47:27AM -0700, Thomas Garnier wrote:
+> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+> index 43512d4d7df2..6d598e7051c3 100644
+> --- a/arch/arm64/kernel/entry.S
+> +++ b/arch/arm64/kernel/entry.S
+> @@ -744,6 +744,10 @@ ENDPROC(cpu_switch_to)
+>  ret_fast_syscall:
+>  	disable_irq				// disable interrupts
+>  	str	x0, [sp, #S_X0]			// returned x0
+> +	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
+> +	mov	x1, #TASK_SIZE_64
+> +	cmp	x2, x1
+> +	b.ne	addr_limit_fail
 
-First it says it enables some checks, but here it says it upgrades them
-to BUGs which seems inconsistent.
+KERNEL_DS is set to the maximum address (-1UL), so it would be easier to
+check against this here and avoid a "mov". Even simpler if you'd check
+against bit 63 of the address for KERNEL_DS:
 
-> +	  that the offending process is killed. Additionally, the system
-> +	  owner can furhter configure the system for immediate reboots
+	ldr	x1, [tsk, TSK_TI_ADDR_LIMIT]	// check addr limit change
+	tbnz	x1, #63, addr_limit_fail	// KERNEL_DS is -1UL
 
-                   "further"
+>  	ldr	x1, [tsk, #TSK_TI_FLAGS]	// re-check for syscall tracing
+>  	and	x2, x1, #_TIF_SYSCALL_WORK
+>  	cbnz	x2, ret_fast_syscall_trace
+> @@ -771,6 +775,11 @@ work_pending:
+>   */
+>  ret_to_user:
+>  	disable_irq				// disable interrupts
+> +	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
+> +	mov	x1, #TASK_SIZE_64
+> +	cmp	x2, x1
+> +	b.ne	addr_limit_fail
 
-> +	  (via panic_on_oops sysctl) or crash dumps.
->  
-> >  	  If unsure, say N.
->  
+Same here.
+
+> +
+>  	ldr	x1, [tsk, #TSK_TI_FLAGS]
+>  	and	x2, x1, #_TIF_WORK_MASK
+>  	cbnz	x2, work_pending
+> @@ -779,6 +788,12 @@ finish_ret_to_user:
+>  	kernel_exit 0
+>  ENDPROC(ret_to_user)
+>  
+> +addr_limit_fail:
+> +	stp	x0, lr, [sp,#-16]!
+> +	bl	asm_verify_pre_usermode_state
+> +	ldp	x0, lr, [sp],#16
+> +	ret	lr
+
+Where is this supposed to return? What is the value of lr when branching
+to addr_limit_fail?
+
+-- 
+Catalin
