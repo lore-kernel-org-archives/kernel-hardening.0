@@ -1,60 +1,59 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  6 Apr 2017 14:18:19 -0700
-Message-Id: <1491513513-84351-5-git-send-email-keescook@chromium.org>
+Date: Thu,  6 Apr 2017 14:18:17 -0700
+Message-Id: <1491513513-84351-3-git-send-email-keescook@chromium.org>
 In-Reply-To: <1491513513-84351-1-git-send-email-keescook@chromium.org>
 References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 04/18] randstruct: Differentiate bad cast warnings
+Subject: [kernel-hardening] [PATCH 02/18] compiler: Add __designated_init annotation
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Michael Leibowitz <michael.leibowitz@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This updates the bad cast warnings to be more specific about which kind
-of comparison failed.
+This allows structure annotations for requiring designated initialization
+in GCC 5.1.0 and later:
+https://gcc.gnu.org/onlinedocs/gcc/Designated-Inits.html
+
+The structure randomization layout plugin will be using this to help
+identify structures that need this form of initialization.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- scripts/gcc-plugins/randomize_layout_plugin.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ include/linux/compiler-gcc.h | 8 ++++++++
+ include/linux/compiler.h     | 4 ++++
+ 2 files changed, 12 insertions(+)
 
-diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-index 6e5dccc4f221..dc03a6beb06b 100644
---- a/scripts/gcc-plugins/randomize_layout_plugin.c
-+++ b/scripts/gcc-plugins/randomize_layout_plugin.c
-@@ -668,7 +668,7 @@ static void check_bad_casts_in_constructor(tree var, tree init)
- 
- 		if (!lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(val_type)))
- 			continue;
--		inform(DECL_SOURCE_LOCATION(var), "found mismatched struct pointer types: %qT and %qT\n", TYPE_MAIN_VARIANT(field_type), TYPE_MAIN_VARIANT(val_type));
-+		inform(DECL_SOURCE_LOCATION(var), "found mismatched constructor struct pointer types: %qT and %qT\n", TYPE_MAIN_VARIANT(field_type), TYPE_MAIN_VARIANT(val_type));
- 	}
- }
- 
-@@ -837,7 +837,7 @@ static unsigned int find_bad_casts_execute(void)
- #ifndef __DEBUG_PLUGIN
- 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(ptr_lhs_type)))
+diff --git a/include/linux/compiler-gcc.h b/include/linux/compiler-gcc.h
+index 5f4d8f8b75da..cf541e49841e 100644
+--- a/include/linux/compiler-gcc.h
++++ b/include/linux/compiler-gcc.h
+@@ -321,6 +321,14 @@
+ #define __no_sanitize_address __attribute__((no_sanitize_address))
  #endif
--				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
-+				inform(gimple_location(stmt), "found mismatched rhs struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
- 				continue;
- 			}
  
-@@ -860,7 +860,7 @@ static unsigned int find_bad_casts_execute(void)
- #ifndef __DEBUG_PLUGIN
- 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(op0_type)))
- #endif
--				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, op0_type);
-+				inform(gimple_location(stmt), "found mismatched op0 struct pointer types: %qT and %qT\n", ptr_lhs_type, op0_type);
- 			} else {
- 				const_tree ssa_name_var = SSA_NAME_VAR(rhs1);
- 				/* skip bogus type casts introduced by container_of */
-@@ -870,7 +870,7 @@ static unsigned int find_bad_casts_execute(void)
- #ifndef __DEBUG_PLUGIN
- 				if (lookup_attribute("randomize_performed", TYPE_ATTRIBUTES(ptr_rhs_type)))
- #endif
--				inform(gimple_location(stmt), "found mismatched struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
-+				inform(gimple_location(stmt), "found mismatched ssa struct pointer types: %qT and %qT\n", ptr_lhs_type, ptr_rhs_type);
- 			}
++#if GCC_VERSION >= 50100
++/*
++ * Mark structures as requiring designated initializers.
++ * https://gcc.gnu.org/onlinedocs/gcc/Designated-Inits.html
++ */
++#define __designated_init __attribute__((designated_init))
++#endif
++
+ #endif	/* gcc version >= 40000 specific checks */
  
- 		}
+ #if !defined(__noclone)
+diff --git a/include/linux/compiler.h b/include/linux/compiler.h
+index b8642a3a1f4f..40e584448605 100644
+--- a/include/linux/compiler.h
++++ b/include/linux/compiler.h
+@@ -440,6 +440,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
+ # define __attribute_const__	/* unimplemented */
+ #endif
+ 
++#ifndef __designated_init
++# define __designated_init
++#endif
++
+ #ifndef __latent_entropy
+ # define __latent_entropy
+ #endif
 -- 
 2.7.4
