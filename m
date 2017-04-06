@@ -1,27 +1,33 @@
-Date: Fri, 7 Apr 2017 07:54:17 +1000 (AEST)
-From: James Morris <jmorris@namei.org>
-In-Reply-To: <1491513513-84351-1-git-send-email-keescook@chromium.org>
-Message-ID: <alpine.LRH.2.20.1704070749440.27111@namei.org>
+Message-ID: <1491517947.8850.162.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Thu, 06 Apr 2017 18:32:27 -0400
+In-Reply-To: <alpine.LRH.2.20.1704070749440.27111@namei.org>
 References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
+	 <alpine.LRH.2.20.1704070749440.27111@namei.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
 Subject: Re: [kernel-hardening] [PATCH 00/18] Introduce struct layout
  randomization plugin
-To: Kees Cook <keescook@chromium.org>
+To: James Morris <jmorris@namei.org>, Kees Cook <keescook@chromium.org>
 Cc: kernel-hardening@lists.openwall.com, Michael Leibowitz <michael.leibowitz@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 6 Apr 2017, Kees Cook wrote:
+On Fri, 2017-04-07 at 07:54 +1000, James Morris wrote:
+> On Thu, 6 Apr 2017, Kees Cook wrote:
+> 
+> > third party kernel module builds), it still has some value there
+> > since
+> > now all kernel builds would need to be tracked by an attacker.
+> 
+> I don't see this case as providing any value.  Tracking a bunch of
+> known 
+> seed values seems like a pretty low bar for an attacker.
 
-> third party kernel module builds), it still has some value there since
-> now all kernel builds would need to be tracked by an attacker.
+I agree this is not likely to provide much value for users
+of distribution kernels.
 
-I don't see this case as providing any value.  Tracking a bunch of known 
-seed values seems like a pretty low bar for an attacker.
-
-
-
-- James
--- 
-James Morris
-<jmorris@namei.org>
+One possible exception might be if Google started distributing
+dozens, or hundreds, of kernel variants randomly to users of
+Nexus devices, and nobody knew which variant each device was
+running.
