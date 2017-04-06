@@ -1,125 +1,121 @@
 From: Kees Cook <keescook@chromium.org>
-Date: Thu,  6 Apr 2017 14:18:28 -0700
-Message-Id: <1491513513-84351-14-git-send-email-keescook@chromium.org>
+Date: Thu,  6 Apr 2017 14:18:32 -0700
+Message-Id: <1491513513-84351-18-git-send-email-keescook@chromium.org>
 In-Reply-To: <1491513513-84351-1-git-send-email-keescook@chromium.org>
 References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 13/18] randstruct: opt-out externally exposed function pointer structs
+Subject: [kernel-hardening] [PATCH 17/18] sgi-xp: Use designated initializers
 To: kernel-hardening@lists.openwall.com
 Cc: Kees Cook <keescook@chromium.org>, Michael Leibowitz <michael.leibowitz@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Some function pointer structures are used externally to the kernel, like
-the paravirt structures. These should never be randomized, so mark them as
-such. This set was extracted from grsecurity.
+Prepare to mark sensitive kernel structures for randomization by making
+sure they're using designated initializers. These were identified during
+allyesconfig builds of x86, arm, and arm64, with most initializer fixes
+extracted from grsecurity.
 
-One difference from grsecurity is the opting out of sgi-xp, until
-maintainers can decide if randomization is actually safe there.
+To avoid casting, this implements dummy functions with full function
+prototypes.
 
 Signed-off-by: Kees Cook <keescook@chromium.org>
 ---
- arch/arm/include/asm/cacheflush.h     |  2 +-
- arch/x86/include/asm/paravirt_types.h | 16 ++++++++--------
- drivers/misc/sgi-xp/xp.h              |  2 +-
- 3 files changed, 10 insertions(+), 10 deletions(-)
+ drivers/misc/sgi-xp/xp.h      |  2 +-
+ drivers/misc/sgi-xp/xp_main.c | 59 ++++++++++++++++++++++++++++---------------
+ 2 files changed, 40 insertions(+), 21 deletions(-)
 
-diff --git a/arch/arm/include/asm/cacheflush.h b/arch/arm/include/asm/cacheflush.h
-index d69bebf697e7..74504b154256 100644
---- a/arch/arm/include/asm/cacheflush.h
-+++ b/arch/arm/include/asm/cacheflush.h
-@@ -116,7 +116,7 @@ struct cpu_cache_fns {
- 	void (*dma_unmap_area)(const void *, size_t, int);
- 
- 	void (*dma_flush_range)(const void *, const void *);
--};
-+} __no_randomize_layout;
- 
- /*
-  * Select the calling method
-diff --git a/arch/x86/include/asm/paravirt_types.h b/arch/x86/include/asm/paravirt_types.h
-index 93c49cf09b63..82f7d92b9232 100644
---- a/arch/x86/include/asm/paravirt_types.h
-+++ b/arch/x86/include/asm/paravirt_types.h
-@@ -83,7 +83,7 @@ struct pv_init_ops {
- 	 */
- 	unsigned (*patch)(u8 type, u16 clobber, void *insnbuf,
- 			  unsigned long addr, unsigned len);
--};
-+} __no_randomize_layout;
- 
- 
- struct pv_lazy_ops {
-@@ -91,12 +91,12 @@ struct pv_lazy_ops {
- 	void (*enter)(void);
- 	void (*leave)(void);
- 	void (*flush)(void);
--};
-+} __no_randomize_layout;
- 
- struct pv_time_ops {
- 	unsigned long long (*sched_clock)(void);
- 	unsigned long long (*steal_clock)(int cpu);
--};
-+} __no_randomize_layout;
- 
- struct pv_cpu_ops {
- 	/* hooks for various privileged instructions */
-@@ -175,7 +175,7 @@ struct pv_cpu_ops {
- 
- 	void (*start_context_switch)(struct task_struct *prev);
- 	void (*end_context_switch)(struct task_struct *next);
--};
-+} __no_randomize_layout;
- 
- struct pv_irq_ops {
- 	/*
-@@ -198,7 +198,7 @@ struct pv_irq_ops {
- #ifdef CONFIG_X86_64
- 	void (*adjust_exception_frame)(void);
- #endif
--};
-+} __no_randomize_layout;
- 
- struct pv_mmu_ops {
- 	unsigned long (*read_cr2)(void);
-@@ -301,7 +301,7 @@ struct pv_mmu_ops {
- 	   an mfn.  We can tell which is which from the index. */
- 	void (*set_fixmap)(unsigned /* enum fixed_addresses */ idx,
- 			   phys_addr_t phys, pgprot_t flags);
--};
-+} __no_randomize_layout;
- 
- struct arch_spinlock;
- #ifdef CONFIG_SMP
-@@ -318,7 +318,7 @@ struct pv_lock_ops {
- 	void (*kick)(int cpu);
- 
- 	struct paravirt_callee_save vcpu_is_preempted;
--};
-+} __no_randomize_layout;
- 
- /* This contains all the paravirt structures: we get a convenient
-  * number for each function using the offset which we use to indicate
-@@ -330,7 +330,7 @@ struct paravirt_patch_template {
- 	struct pv_irq_ops pv_irq_ops;
- 	struct pv_mmu_ops pv_mmu_ops;
- 	struct pv_lock_ops pv_lock_ops;
--};
-+} __no_randomize_layout;
- 
- extern struct pv_info pv_info;
- extern struct pv_init_ops pv_init_ops;
 diff --git a/drivers/misc/sgi-xp/xp.h b/drivers/misc/sgi-xp/xp.h
-index c862cd4583cc..a23a373d8707 100644
+index a23a373d8707..c862cd4583cc 100644
 --- a/drivers/misc/sgi-xp/xp.h
 +++ b/drivers/misc/sgi-xp/xp.h
 @@ -288,7 +288,7 @@ struct xpc_interface {
  					xpc_notify_func, void *);
  	void (*received) (short, int, void *);
  	enum xp_retval (*partid_to_nasids) (short, void *);
--};
-+} __no_randomize_layout;
+-} __no_randomize_layout;
++};
  
  extern struct xpc_interface xpc_interface;
+ 
+diff --git a/drivers/misc/sgi-xp/xp_main.c b/drivers/misc/sgi-xp/xp_main.c
+index 01be66d02ca8..bb47f9d9b68a 100644
+--- a/drivers/misc/sgi-xp/xp_main.c
++++ b/drivers/misc/sgi-xp/xp_main.c
+@@ -71,20 +71,44 @@ EXPORT_SYMBOL_GPL(xpc_registrations);
+ /*
+  * Initialize the XPC interface to indicate that XPC isn't loaded.
+  */
+-static enum xp_retval
+-xpc_notloaded(void)
++static void xpc_notloaded_connect(int ch_number)
++{ }
++
++static void xpc_notloaded_disconnect(int ch_number)
++{ }
++
++static enum xp_retval xpc_notloaded_send(short partid, int ch_number,
++					 u32 flags, void *payload,
++					 u16 payload_size)
++{
++	return xpNotLoaded;
++}
++
++static enum xp_retval xpc_notloaded_send_notify(short partid, int ch_number,
++						u32 flags, void *payload,
++						u16 payload_size,
++						xpc_notify_func func,
++						void *key)
++{
++	return xpNotLoaded;
++}
++
++static void xpc_notloaded_received(short partid, int ch_number, void *payload)
++{ }
++
++static enum xp_retval xpc_notloaded_partid_to_nasids(short partid,
++						     void *nasid_mask)
+ {
+ 	return xpNotLoaded;
+ }
+ 
+ struct xpc_interface xpc_interface = {
+-	(void (*)(int))xpc_notloaded,
+-	(void (*)(int))xpc_notloaded,
+-	(enum xp_retval(*)(short, int, u32, void *, u16))xpc_notloaded,
+-	(enum xp_retval(*)(short, int, u32, void *, u16, xpc_notify_func,
+-			   void *))xpc_notloaded,
+-	(void (*)(short, int, void *))xpc_notloaded,
+-	(enum xp_retval(*)(short, void *))xpc_notloaded
++	.connect = xpc_notloaded_connect,
++	.disconnect = xpc_notloaded_disconnect,
++	.send = xpc_notloaded_send,
++	.send_notify = xpc_notloaded_send_notify,
++	.received = xpc_notloaded_received,
++	.partid_to_nasids = xpc_notloaded_partid_to_nasids
+ };
+ EXPORT_SYMBOL_GPL(xpc_interface);
+ 
+@@ -115,17 +139,12 @@ EXPORT_SYMBOL_GPL(xpc_set_interface);
+ void
+ xpc_clear_interface(void)
+ {
+-	xpc_interface.connect = (void (*)(int))xpc_notloaded;
+-	xpc_interface.disconnect = (void (*)(int))xpc_notloaded;
+-	xpc_interface.send = (enum xp_retval(*)(short, int, u32, void *, u16))
+-	    xpc_notloaded;
+-	xpc_interface.send_notify = (enum xp_retval(*)(short, int, u32, void *,
+-						       u16, xpc_notify_func,
+-						       void *))xpc_notloaded;
+-	xpc_interface.received = (void (*)(short, int, void *))
+-	    xpc_notloaded;
+-	xpc_interface.partid_to_nasids = (enum xp_retval(*)(short, void *))
+-	    xpc_notloaded;
++	xpc_interface.connect = xpc_notloaded_connect;
++	xpc_interface.disconnect = xpc_notloaded_disconnect;
++	xpc_interface.send = xpc_notloaded_send;
++	xpc_interface.send_notify = xpc_notloaded_send_notify;
++	xpc_interface.received = xpc_notloaded_received;
++	xpc_interface.partid_to_nasids = xpc_notloaded_partid_to_nasids;
+ }
+ EXPORT_SYMBOL_GPL(xpc_clear_interface);
  
 -- 
 2.7.4
