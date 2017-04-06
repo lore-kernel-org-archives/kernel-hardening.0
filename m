@@ -1,58 +1,29 @@
+Message-ID: <58E639E0.1010700@iogearbox.net>
+Date: Thu, 06 Apr 2017 14:51:44 +0200
+From: Daniel Borkmann <daniel@iogearbox.net>
 MIME-Version: 1.0
-In-Reply-To: <CAHgaXdKfbob3WHMho32JSh_dmfp2A=cjcePqk+NfajVpShPE6Q@mail.gmail.com>
-References: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com>
- <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com>
- <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com>
- <20170315.145512.1542025976162251828.davem@davemloft.net> <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com>
- <58DAF908.8010404@iogearbox.net> <CAHgaXdKfbob3WHMho32JSh_dmfp2A=cjcePqk+NfajVpShPE6Q@mail.gmail.com>
-From: Shubham Bansal <illusionist.neo@gmail.com>
-Date: Thu, 6 Apr 2017 16:35:17 +0530
-Message-ID: <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
+References: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com> <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com> <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com> <20170315.145512.1542025976162251828.davem@davemloft.net> <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com> <58DAF908.8010404@iogearbox.net> <CAHgaXdKfbob3WHMho32JSh_dmfp2A=cjcePqk+NfajVpShPE6Q@mail.gmail.com> <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
+In-Reply-To: <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
 Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Daniel Borkmann <daniel@iogearbox.net>
+To: Shubham Bansal <illusionist.neo@gmail.com>
 Cc: David Miller <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, ast@fb.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Gentle Reminder.
+On 04/06/2017 01:05 PM, Shubham Bansal wrote:
+> Gentle Reminder.
 
-Anybody can tell me how to test the JIT compiler ?
-Best,
-Shubham Bansal
+Sorry for late reply.
 
+> Anybody can tell me how to test the JIT compiler ?
 
-On Thu, Mar 30, 2017 at 7:34 PM, Shubham Bansal
-<illusionist.neo@gmail.com> wrote:
-> Thanks Daniel.
->
-> Can you tell me how to test the eBPF JIT compiler? It would be great
-> if you could tell me starting from compiling to proper testing.
-> Best,
-> Shubham Bansal
->
->
-> On Wed, Mar 29, 2017 at 5:30 AM, Daniel Borkmann <daniel@iogearbox.net> wrote:
->> Hi Shubham,
->>
->> On 03/28/2017 10:49 PM, Shubham Bansal wrote:
->> [...]
->>>
->>> Do you have any document to understand the working of tail calls? I
->>> looked at your presentations but it seemed confusing to me. Anything
->>> simple would be great, just about the tail calls. I don't think I need
->>> examples, I can get them from your presentations. I just need a very
->>> general idea. May be you know the code in kernel where it is
->>> implemented.
->>
->>
->> Sure, it's in __bpf_prog_run(), see the JMP_TAIL_CALL (kernel/bpf/core.c
->> +1019).
->> That's effectively what JITs implement. [1] page 3 has a high-level
->> description
->> as well, hope that helps.
->>
->> Thanks,
->> Daniel
->>
->>   [1]
->> http://www.netdevconf.org/1.1/proceedings/papers/On-getting-tc-classifier-fully-programmable-with-cls-bpf.pdf
+There's lib/test_bpf.c, see Documentation/networking/filter.txt +1349
+for some more information. It basically contains various test cases that
+have the purpose to test the JIT with corner cases. If you see a useful
+test missing, please send a patch for it, so all other JITs can benefit
+from this as well. For extracting disassembly from a generated test case,
+check out bpf_jit_disasm (Documentation/networking/filter.txt +486).
+
+Thanks,
+Daniel
