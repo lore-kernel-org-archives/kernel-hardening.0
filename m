@@ -1,99 +1,51 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
- <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
- <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com> <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 5 Apr 2017 17:14:09 -0700
-Message-ID: <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: Andy Lutomirski <luto@kernel.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+From: Eddie Kovsky <ewk@edkovsky.org>
+Date: Wed,  5 Apr 2017 21:35:48 -0600
+Message-Id: <20170406033550.32525-1-ewk@edkovsky.org>
+Subject: [kernel-hardening] [PATCH v5 0/2] provide check for ro_after_init memory sections
+To: jeyu@redhat.com, rusty@rustcorp.com.au, keescook@chromium.org
+Cc: linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 5, 2017 at 4:57 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
->> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->>> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
->>>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
->>>> allows HAVE_ARCH_RARE_WRITE to work on x86.
->>>>
->>>
->>>> +
->>>> +static __always_inline unsigned long __arch_rare_write_begin(void)
->>>> +{
->>>> +       unsigned long cr0;
->>>> +
->>>> +       preempt_disable();
->>>
->>> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
->>> as would local_irq_disable().  There's no way that just disabling
->>> preemption is enough.
->>>
->>> (Also, how does this interact with perf nmis?)
->>
->> Do you mean preempt_disable() isn't strong enough here? I'm open to
->> suggestions. The goal would be to make sure nothing between _begin and
->> _end would get executed without interruption...
->>
->
-> Sorry for the very slow response.
->
-> preempt_disable() isn't strong enough to prevent interrupts, and an
-> interrupt here would run with WP off, causing unknown havoc.  I tend
-> to think that the caller should be responsible for turning off
-> interrupts.
+Provide a mechanism for other functions to verify that their arguments
+are read-only.
 
-So, something like:
+This implements the first half of a suggestion made by Kees Cook for
+the Kernel Self Protection Project:
 
-Top-level functions:
+    - provide mechanism to check for ro_after_init memory areas, and
+      reject structures not marked ro_after_init in vmbus_register()
 
-static __always_inline rare_write_begin(void)
-{
-    preempt_disable();
-    local_irq_disable();
-    barrier();
-    __arch_rare_write_begin();
-    barrier();
-}
+      http://www.openwall.com/lists/kernel-hardening/2017/02/04/1
 
-static __always_inline rare_write_end(void)
-{
-    barrier();
-    __arch_rare_write_end();
-    barrier();
-    local_irq_enable();
-    preempt_enable_no_resched();
-}
+The idea is to prevent structures (including modules) that are not
+read-only from being passed to functions. It builds upon the functions
+in kernel/extable.c that test if an address is in the text section.
 
-x86-specific helpers:
+A build failure on the Blackfin architecture led to the discovery of
+an incomplete definition of the RO_DATA macro used in this series. The
+fixes are in linux-next:
 
-static __always_inline unsigned long __arch_rare_write_begin(void)
-{
-       unsigned long cr0;
+	commit 906f2a51c941 ("mm: fix section name for .data..ro_after_init")
 
-       cr0 = read_cr0() ^ X86_CR0_WP;
-       BUG_ON(cr0 & X86_CR0_WP);
-       write_cr0(cr0);
-       return cr0 ^ X86_CR0_WP;
-}
+	commit 939897e2d736 ("vmlinux.lds: add missing VMLINUX_SYMBOL macros")
 
-static __always_inline unsigned long __arch_rare_write_end(void)
-{
-       unsigned long cr0;
+The latest version of this series uses new symbols provided in these
+fixes. The series now cross compiles on Blackfin without errors. I have
+also test compiled this series on next-20170405 for x86.
 
-       cr0 = read_cr0() ^ X86_CR0_WP;
-       BUG_ON(!(cr0 & X86_CR0_WP));
-       write_cr0(cr0);
-       return cr0 ^ X86_CR0_WP;
-}
+I have dropped the third patch that uses these features to check the
+arguments to vmbus_register() because the maintainers have not been
+receptive to using it. My goal right now is to get the API right.
 
-I can give it a spin...
+Eddie Kovsky (2):
+  module: verify address is read-only
+  extable: verify address is read-only
 
--Kees
+ include/linux/kernel.h |  2 ++
+ include/linux/module.h | 12 ++++++++++++
+ kernel/extable.c       | 29 +++++++++++++++++++++++++++
+ kernel/module.c        | 53 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 96 insertions(+)
 
 -- 
-Kees Cook
-Pixel Security
+2.12.2
