@@ -1,47 +1,99 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
 References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
  <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
- <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 5 Apr 2017 16:57:35 -0700
-Message-ID: <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com> <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 5 Apr 2017 17:14:09 -0700
+Message-ID: <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: Kees Cook <keescook@chromium.org>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+To: Andy Lutomirski <luto@kernel.org>
+Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
->> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
->>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
->>> allows HAVE_ARCH_RARE_WRITE to work on x86.
+On Wed, Apr 5, 2017 at 4:57 PM, Andy Lutomirski <luto@kernel.org> wrote:
+> On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>>> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
+>>>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
+>>>> allows HAVE_ARCH_RARE_WRITE to work on x86.
+>>>>
 >>>
+>>>> +
+>>>> +static __always_inline unsigned long __arch_rare_write_begin(void)
+>>>> +{
+>>>> +       unsigned long cr0;
+>>>> +
+>>>> +       preempt_disable();
+>>>
+>>> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
+>>> as would local_irq_disable().  There's no way that just disabling
+>>> preemption is enough.
+>>>
+>>> (Also, how does this interact with perf nmis?)
 >>
->>> +
->>> +static __always_inline unsigned long __arch_rare_write_begin(void)
->>> +{
->>> +       unsigned long cr0;
->>> +
->>> +       preempt_disable();
+>> Do you mean preempt_disable() isn't strong enough here? I'm open to
+>> suggestions. The goal would be to make sure nothing between _begin and
+>> _end would get executed without interruption...
 >>
->> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
->> as would local_irq_disable().  There's no way that just disabling
->> preemption is enough.
->>
->> (Also, how does this interact with perf nmis?)
 >
-> Do you mean preempt_disable() isn't strong enough here? I'm open to
-> suggestions. The goal would be to make sure nothing between _begin and
-> _end would get executed without interruption...
+> Sorry for the very slow response.
 >
+> preempt_disable() isn't strong enough to prevent interrupts, and an
+> interrupt here would run with WP off, causing unknown havoc.  I tend
+> to think that the caller should be responsible for turning off
+> interrupts.
 
-Sorry for the very slow response.
+So, something like:
 
-preempt_disable() isn't strong enough to prevent interrupts, and an
-interrupt here would run with WP off, causing unknown havoc.  I tend
-to think that the caller should be responsible for turning off
-interrupts.
+Top-level functions:
 
---Andy
+static __always_inline rare_write_begin(void)
+{
+    preempt_disable();
+    local_irq_disable();
+    barrier();
+    __arch_rare_write_begin();
+    barrier();
+}
+
+static __always_inline rare_write_end(void)
+{
+    barrier();
+    __arch_rare_write_end();
+    barrier();
+    local_irq_enable();
+    preempt_enable_no_resched();
+}
+
+x86-specific helpers:
+
+static __always_inline unsigned long __arch_rare_write_begin(void)
+{
+       unsigned long cr0;
+
+       cr0 = read_cr0() ^ X86_CR0_WP;
+       BUG_ON(cr0 & X86_CR0_WP);
+       write_cr0(cr0);
+       return cr0 ^ X86_CR0_WP;
+}
+
+static __always_inline unsigned long __arch_rare_write_end(void)
+{
+       unsigned long cr0;
+
+       cr0 = read_cr0() ^ X86_CR0_WP;
+       BUG_ON(!(cr0 & X86_CR0_WP));
+       write_cr0(cr0);
+       return cr0 ^ X86_CR0_WP;
+}
+
+I can give it a spin...
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
