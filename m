@@ -1,29 +1,50 @@
-Message-ID: <58E639E0.1010700@iogearbox.net>
-Date: Thu, 06 Apr 2017 14:51:44 +0200
-From: Daniel Borkmann <daniel@iogearbox.net>
+Date: Thu, 6 Apr 2017 08:55:14 -0400
+From: Alexei Starovoitov <alexei.starovoitov@gmail.com>
+Message-ID: <20170406125513.GA56553@ast-mbp.thefacebook.com>
+References: <20170404220810.14250-1-tycho@docker.com>
+ <CAGXu5jLAXDk1+kYTC60-sJ_SOa5s4+HZ26A0bj67335yAXYhvg@mail.gmail.com>
+ <20170405034536.oulhc3ylhlrfgqeg@docker>
 MIME-Version: 1.0
-References: <CAHgaXd+EKJ0FWaaPojsNJtgY_YpdQXu6eMEp97uOpTFAWs4qTQ@mail.gmail.com> <CAGXu5jLo8UvpNSQZBHjWZoO959ha6KFQxFzmg7SK44wz=R_QSg@mail.gmail.com> <CAHgaXdJL92XRjHae2Nb9j9SerSe65=N=ErDHTQf23sdBxwthzw@mail.gmail.com> <20170315.145512.1542025976162251828.davem@davemloft.net> <CAHgaXd+4QkFxnt-_iCqH8AyCN_Y8gXwr+y=iugz38NKSWspsbA@mail.gmail.com> <58DAF908.8010404@iogearbox.net> <CAHgaXdKfbob3WHMho32JSh_dmfp2A=cjcePqk+NfajVpShPE6Q@mail.gmail.com> <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
-In-Reply-To: <CAHgaXdJ1M4W3p9=B2hJmtxByPsA5-XHae8U6YtDH_2r_XMaR5A@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: arch: arm: bpf: Converting cBPF to eBPF for arm 32 bit
-To: Shubham Bansal <illusionist.neo@gmail.com>
-Cc: David Miller <davem@davemloft.net>, Kees Cook <keescook@chromium.org>, Mircea Gherzan <mgherzan@gmail.com>, Network Development <netdev@vger.kernel.org>, kernel-hardening@lists.openwall.com, linux-arm-kernel@lists.infradead.org, ast@fb.com
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20170405034536.oulhc3ylhlrfgqeg@docker>
+Subject: [kernel-hardening] Re: [PATCH] ebpf: verify the output of the JIT
+To: Tycho Andersen <tycho@docker.com>
+Cc: Kees Cook <keescook@chromium.org>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/06/2017 01:05 PM, Shubham Bansal wrote:
-> Gentle Reminder.
+On Tue, Apr 04, 2017 at 09:45:36PM -0600, Tycho Andersen wrote:
+> Hi Kees,
+> 
+> On Tue, Apr 04, 2017 at 03:17:57PM -0700, Kees Cook wrote:
+> > On Tue, Apr 4, 2017 at 3:08 PM, Tycho Andersen <tycho@docker.com> wrote:
+> > > The goal of this patch is to protect the JIT against an attacker with a
+> > > write-in-memory primitive. The JIT allocates a buffer which will eventually
+> > > be marked +x, so we need to make sure that what was written to this buffer
+> > > is what was intended.
+> > >
+> > > We acheive this by building a hash of the instruction buffer as
+> > > instructions are emittted and then comparing that to a hash at the end of
+> > > the JIT compile after the buffer has been marked read-only.
+> > >
+> > > Signed-off-by: Tycho Andersen <tycho@docker.com>
+> > > CC: Daniel Borkmann <daniel@iogearbox.net>
+> > > CC: Alexei Starovoitov <ast@kernel.org>
+> > > CC: Kees Cook <keescook@chromium.org>
+> > > CC: Mickaël Salaün <mic@digikod.net>
+> > 
+> > Cool! This closes the race condition on producing the JIT vs going
+> > read-only. I wonder if it might be possible to make this a more
+> > generic interface to the BPF which would be allocate the hash, provide
+> > the update callback during emit, and then do the hash check itself at
+> > the end of bpf_jit_binary_lock_ro()?
+> 
+> Yes, probably so. I can look into that for the next version.
 
-Sorry for late reply.
+Nack.
 
-> Anybody can tell me how to test the JIT compiler ?
-
-There's lib/test_bpf.c, see Documentation/networking/filter.txt +1349
-for some more information. It basically contains various test cases that
-have the purpose to test the JIT with corner cases. If you see a useful
-test missing, please send a patch for it, so all other JITs can benefit
-from this as well. For extracting disassembly from a generated test case,
-check out bpf_jit_disasm (Documentation/networking/filter.txt +486).
-
-Thanks,
-Daniel
+Please stop wasting yours and our time with buggy code that pretends
+to fix a problem that doesn't exist.
+This security paranoia around JIT must stop.
+Make sure that CONFIG_BPF_JIT is off in your system.
