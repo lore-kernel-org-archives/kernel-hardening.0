@@ -1,37 +1,27 @@
-From: Kees Cook <keescook@chromium.org>
-Date: Thu,  6 Apr 2017 14:18:29 -0700
-Message-Id: <1491513513-84351-15-git-send-email-keescook@chromium.org>
+Date: Fri, 7 Apr 2017 07:54:17 +1000 (AEST)
+From: James Morris <jmorris@namei.org>
 In-Reply-To: <1491513513-84351-1-git-send-email-keescook@chromium.org>
+Message-ID: <alpine.LRH.2.20.1704070749440.27111@namei.org>
 References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] [PATCH 14/18] randstruct: Disable randomization of ACPICA structs
-To: kernel-hardening@lists.openwall.com
-Cc: Kees Cook <keescook@chromium.org>, Michael Leibowitz <michael.leibowitz@intel.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Subject: Re: [kernel-hardening] [PATCH 00/18] Introduce struct layout
+ randomization plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: kernel-hardening@lists.openwall.com, Michael Leibowitz <michael.leibowitz@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Since the ACPICA source is maintained externally to the kernel, we can
-neither switch it to designated initializers nor mark it
-__no_randomize_layout. Until ACPICA-upstream changes land to handle the
-designated initialization, explicitly skip it in the plugin.
+On Thu, 6 Apr 2017, Kees Cook wrote:
 
-Signed-off-by: Kees Cook <keescook@chromium.org>
----
- scripts/gcc-plugins/randomize_layout_plugin.c | 4 ++++
- 1 file changed, 4 insertions(+)
+> third party kernel module builds), it still has some value there since
+> now all kernel builds would need to be tracked by an attacker.
 
-diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
-index a2d7e933c33f..cbde695e392a 100644
---- a/scripts/gcc-plugins/randomize_layout_plugin.c
-+++ b/scripts/gcc-plugins/randomize_layout_plugin.c
-@@ -329,6 +329,10 @@ static int relayout_struct(tree type)
- 	    !strcmp((const char *)ORIG_TYPE_NAME(type), "RAWPCIFACTORY"))
- 		return 0;
- 
-+	/* Skip ACPICA structs until refreshed with designated_init. */
-+	if (!strcmp((const char *)ORIG_TYPE_NAME(type), "acpi_sleep_functions"))
-+		return 0;
-+
- 	/* throw out any structs in uapi */
- 	xloc = expand_location(DECL_SOURCE_LOCATION(TYPE_FIELDS(type)));
- 
+I don't see this case as providing any value.  Tracking a bunch of known 
+seed values seems like a pretty low bar for an attacker.
+
+
+
+- James
 -- 
-2.7.4
+James Morris
+<jmorris@namei.org>
