@@ -1,50 +1,68 @@
-Date: Thu, 6 Apr 2017 08:55:14 -0400
-From: Alexei Starovoitov <alexei.starovoitov@gmail.com>
-Message-ID: <20170406125513.GA56553@ast-mbp.thefacebook.com>
-References: <20170404220810.14250-1-tycho@docker.com>
- <CAGXu5jLAXDk1+kYTC60-sJ_SOa5s4+HZ26A0bj67335yAXYhvg@mail.gmail.com>
- <20170405034536.oulhc3ylhlrfgqeg@docker>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <20170405034536.oulhc3ylhlrfgqeg@docker>
-Subject: [kernel-hardening] Re: [PATCH] ebpf: verify the output of the JIT
-To: Tycho Andersen <tycho@docker.com>
-Cc: Kees Cook <keescook@chromium.org>, Daniel Borkmann <daniel@iogearbox.net>, Alexei Starovoitov <ast@kernel.org>, LKML <linux-kernel@vger.kernel.org>, Network Development <netdev@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, =?iso-8859-1?Q?Micka=EBl_Sala=FCn?= <mic@digikod.net>
+In-Reply-To: <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
+ <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+ <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com> <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
+From: Andy Lutomirski <luto@amacapital.net>
+Date: Thu, 6 Apr 2017 08:59:00 -0700
+Message-ID: <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 04, 2017 at 09:45:36PM -0600, Tycho Andersen wrote:
-> Hi Kees,
-> 
-> On Tue, Apr 04, 2017 at 03:17:57PM -0700, Kees Cook wrote:
-> > On Tue, Apr 4, 2017 at 3:08 PM, Tycho Andersen <tycho@docker.com> wrote:
-> > > The goal of this patch is to protect the JIT against an attacker with a
-> > > write-in-memory primitive. The JIT allocates a buffer which will eventually
-> > > be marked +x, so we need to make sure that what was written to this buffer
-> > > is what was intended.
-> > >
-> > > We acheive this by building a hash of the instruction buffer as
-> > > instructions are emittted and then comparing that to a hash at the end of
-> > > the JIT compile after the buffer has been marked read-only.
-> > >
-> > > Signed-off-by: Tycho Andersen <tycho@docker.com>
-> > > CC: Daniel Borkmann <daniel@iogearbox.net>
-> > > CC: Alexei Starovoitov <ast@kernel.org>
-> > > CC: Kees Cook <keescook@chromium.org>
-> > > CC: Mickaël Salaün <mic@digikod.net>
-> > 
-> > Cool! This closes the race condition on producing the JIT vs going
-> > read-only. I wonder if it might be possible to make this a more
-> > generic interface to the BPF which would be allocate the hash, provide
-> > the update callback during emit, and then do the hash check itself at
-> > the end of bpf_jit_binary_lock_ro()?
-> 
-> Yes, probably so. I can look into that for the next version.
+On Wed, Apr 5, 2017 at 5:14 PM, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Apr 5, 2017 at 4:57 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>> On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
+>>> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>>>> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
+>>>>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
+>>>>> allows HAVE_ARCH_RARE_WRITE to work on x86.
+>>>>>
+>>>>
+>>>>> +
+>>>>> +static __always_inline unsigned long __arch_rare_write_begin(void)
+>>>>> +{
+>>>>> +       unsigned long cr0;
+>>>>> +
+>>>>> +       preempt_disable();
+>>>>
+>>>> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
+>>>> as would local_irq_disable().  There's no way that just disabling
+>>>> preemption is enough.
+>>>>
+>>>> (Also, how does this interact with perf nmis?)
+>>>
+>>> Do you mean preempt_disable() isn't strong enough here? I'm open to
+>>> suggestions. The goal would be to make sure nothing between _begin and
+>>> _end would get executed without interruption...
+>>>
+>>
+>> Sorry for the very slow response.
+>>
+>> preempt_disable() isn't strong enough to prevent interrupts, and an
+>> interrupt here would run with WP off, causing unknown havoc.  I tend
+>> to think that the caller should be responsible for turning off
+>> interrupts.
+>
+> So, something like:
+>
+> Top-level functions:
+>
+> static __always_inline rare_write_begin(void)
+> {
+>     preempt_disable();
+>     local_irq_disable();
+>     barrier();
+>     __arch_rare_write_begin();
+>     barrier();
+> }
 
-Nack.
+Looks good, except you don't need preempt_disable().
+local_irq_disable() also disables preemption.  You might need to use
+local_irq_save(), though, depending on whether any callers already
+have IRQs off.
 
-Please stop wasting yours and our time with buggy code that pretends
-to fix a problem that doesn't exist.
-This security paranoia around JIT must stop.
-Make sure that CONFIG_BPF_JIT is off in your system.
+--Andy
