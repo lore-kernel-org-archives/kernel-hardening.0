@@ -1,43 +1,33 @@
+Date: Thu, 6 Apr 2017 18:58:19 -0700
+From: Jessica Yu <jeyu@redhat.com>
+Message-ID: <20170407015819.djxqzd2e5i3dd2dt@jeyu>
+References: <20170406033550.32525-1-ewk@edkovsky.org>
+ <20170406033550.32525-2-ewk@edkovsky.org>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <1491517947.8850.162.camel@redhat.com>
-References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
- <alpine.LRH.2.20.1704070749440.27111@namei.org> <1491517947.8850.162.camel@redhat.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Thu, 6 Apr 2017 15:51:30 -0700
-Message-ID: <CAGXu5jKgK0MHbGekyCEXHJvZjgHh2oB+TABmeuH-1MH9fdCWFg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] [PATCH 00/18] Introduce struct layout
- randomization plugin
-To: Rik van Riel <riel@redhat.com>
-Cc: James Morris <jmorris@namei.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Michael Leibowitz <michael.leibowitz@intel.com>
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <20170406033550.32525-2-ewk@edkovsky.org>
+Subject: [kernel-hardening] Re: [PATCH v5 1/2] module: verify address is read-only
+To: Eddie Kovsky <ewk@edkovsky.org>
+Cc: rusty@rustcorp.com.au, keescook@chromium.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 6, 2017 at 3:32 PM, Rik van Riel <riel@redhat.com> wrote:
-> On Fri, 2017-04-07 at 07:54 +1000, James Morris wrote:
->> On Thu, 6 Apr 2017, Kees Cook wrote:
->>
->> > third party kernel module builds), it still has some value there
->> > since
->> > now all kernel builds would need to be tracked by an attacker.
->>
->> I don't see this case as providing any value.  Tracking a bunch of
->> known
->> seed values seems like a pretty low bar for an attacker.
++++ Eddie Kovsky [05/04/17 21:35 -0600]:
+>Implement a mechanism to check if a module's address is in
+>the rodata or ro_after_init sections. It mimics the existing functions
+>that test if an address is inside a module's text section.
 >
-> I agree this is not likely to provide much value for users
-> of distribution kernels.
+>Functions that take a module as an argument will be able to verify that the
+>module address is in a read-only section. The idea is to prevent structures
+>(including modules) that are not read-only from being passed to functions.
 >
-> One possible exception might be if Google started distributing
-> dozens, or hundreds, of kernel variants randomly to users of
-> Nexus devices, and nobody knew which variant each device was
-> running.
+>This implements the first half of a suggestion made by Kees Cook for
+>the Kernel Self Protection Project:
+>
+>    - provide mechanism to check for ro_after_init memory areas, and
+>      reject structures not marked ro_after_init in vmbus_register()
+>
+>Suggested-by: Kees Cook <keescook@chromium.org>
+>Signed-off-by: Eddie Kovsky <ewk@edkovsky.org>
 
-Right, or in the distribution case, rebuilding distro kernels instead
-of using the binary packages.
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
+Acked-by: Jessica Yu <jeyu@redhat.com>
