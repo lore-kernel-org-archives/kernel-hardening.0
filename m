@@ -1,55 +1,74 @@
-Date: Fri, 7 Apr 2017 22:44:39 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
-Message-ID: <alpine.DEB.2.20.1704072125460.1958@nanos>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org> <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com> <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
- <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com> <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com> <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com> <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
- <alpine.DEB.2.20.1704071048360.1716@nanos> <CA+rthh9-EJBBO6nYYY6noP0ybcvk+xJ+S5h6BCNPtidjMCv8VQ@mail.gmail.com> <alpine.DEB.2.20.1704071426300.1716@nanos> <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
- <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement
- __arch_rare_write_begin/unmap()
-To: Andy Lutomirski <luto@kernel.org>
-Cc: Mathias Krause <minipli@googlemail.com>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+Sender: keescook@google.com
+In-Reply-To: <20170407192930.GA1526@athena>
+References: <20170406033550.32525-3-ewk@edkovsky.org> <201704070155.EM9TWkdW%fengguang.wu@intel.com>
+ <20170407192930.GA1526@athena>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 7 Apr 2017 13:45:24 -0700
+Message-ID: <CAGXu5j+TTp2RKsadApvVPhEGNuqfURGPXVnT_R0uKm9gZinnjQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 2/2] extable: verify address is read-only
+To: Eddie Kovsky <ewk@edkovsky.org>
+Cc: kbuild test robot <lkp@intel.com>, kbuild-all@01.org, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 7 Apr 2017, Andy Lutomirski wrote:
-> On Fri, Apr 7, 2017 at 6:30 AM, Mathias Krause <minipli@googlemail.com> wrote:
-> > On 7 April 2017 at 15:14, Thomas Gleixner <tglx@linutronix.de> wrote:
-> >> I really do not care whether PaX wants to chase and verify that over and
-> >> over. I certainly don't want to take the chance to leak CR0.WP ever and I
-> >> very much care about extra stuff to check in the entry/exit path.
-> >
-> > Fair enough. However, placing a BUG_ON(!(read_cr0() & X86_CR0_WP))
-> > somewhere sensible should make those "leaks" visible fast -- and their
-> > exploitation impossible, i.e. fail hard.
-> 
-> The leaks surely exist and now we'll just add an exploitable BUG.
+On Fri, Apr 7, 2017 at 12:29 PM, Eddie Kovsky <ewk@edkovsky.org> wrote:
+> On 04/07/17, kbuild test robot wrote:
+>> Hi Eddie,
+>>
+>> [auto build test ERROR on next-20170330]
+>> [cannot apply to linus/master linux/master jeyu/modules-next v4.9-rc8 v4.9-rc7 v4.9-rc6 v4.11-rc5]
+>> [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
+>>
+>> url:    https://github.com/0day-ci/linux/commits/Eddie-Kovsky/module-verify-address-is-read-only/20170407-004322
+>> config: i386-randconfig-x010-201714 (attached as .config)
+>> compiler: gcc-6 (Debian 6.2.0-3) 6.2.0 20160901
+>> reproduce:
+>>         # save the attached .config to linux build tree
+>>         make ARCH=i386
+>>
+>> All errors (new ones prefixed by >>):
+>>
+>>    kernel/extable.c: In function 'core_kernel_rodata':
+>> >> kernel/extable.c:169:29: error: '__start_ro_after_init' undeclared (first use in this function)
+>>      if (addr >= (unsigned long)__start_ro_after_init &&
+>>                                 ^~~~~~~~~~~~~~~~~~~~~
+>>    kernel/extable.c:169:29: note: each undeclared identifier is reported only once for each function it appears in
+>> >> kernel/extable.c:170:28: error: '__end_ro_after_init' undeclared (first use in this function)
+>>          addr < (unsigned long)__end_ro_after_init)
+>>                                ^~~~~~~~~~~~~~~~~~~
+>>
+>> vim +/__start_ro_after_init +169 kernel/extable.c
+>>
+>>    163        int core_kernel_rodata(unsigned long addr)
+>>    164        {
+>>    165                if (addr >= (unsigned long)__start_rodata &&
+>>    166                    addr < (unsigned long)__end_rodata)
+>>    167                        return 1;
+>>    168
+>>  > 169                if (addr >= (unsigned long)__start_ro_after_init &&
+>>  > 170                    addr < (unsigned long)__end_ro_after_init)
+>>    171                        return 1;
+>>    172
+>>    173                return 0;
+>>
+>> ---
+>> 0-DAY kernel test infrastructure                Open Source Technology Center
+>> https://lists.01.org/pipermail/kbuild-all                   Intel Corporation
+>
+>
+> This looks like a false alarm.
+>
+> The test build is based on next-20170330. Kees' patch for the section
+> names [start|end]_ro_after_init didn't appear in next until 20170403.
+>
+> I cannot reproduce the build error using this config on recent versions
+> of next. Am I missing something here?
 
-:)
+I agree, this was built without the renaming from the latest -next trees.
 
-> I think we're approaching this all wrong, actually.  The fact that x86
-> has this CR0.WP thing is arguably a historical accident, and the fact
-> that PaX uses it doesn't mean that PaX is doing it the best way for
-> upstream Linux.
+-Kees
 
-As I said before. It should be fused to 1.
-
-> Why don't we start at the other end and do a generic non-arch-specific
-> implementation: set up an mm_struct that contains an RW alias of the
-> relevant parts of rodata and use use_mm to access it.  (That is,
-> get_fs() to back up the old fs, set_fs(USER_DS),
-> use_mm(&rare_write_mm), do the write using copy_to_user, undo
-> everything.)
-
-That works too, though I'm not sure that it's more efficient than
-temporarily creating and undoing a single cpu local alias mapping similar
-to the kmap_atomic mechanism in the highmem case.
-
-Aside of that the alias mapping requires a full PGDIR entry unless you want
-to get into the mess of keeping yet another identity mapping up to date.
-
-Thanks,
-
-	tglx
+-- 
+Kees Cook
+Pixel Security
