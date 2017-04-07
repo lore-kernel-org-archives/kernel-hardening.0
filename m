@@ -1,52 +1,76 @@
-Message-ID: <58E7BA48.70903@arm.com>
-Date: Fri, 07 Apr 2017 17:11:52 +0100
-From: James Morse <james.morse@arm.com>
 MIME-Version: 1.0
-References: <20170324132410.16628-1-ard.biesheuvel@linaro.org> <20170324132410.16628-5-ard.biesheuvel@linaro.org> <58E7B478.6010305@arm.com> <CAKv+Gu9CpCWHT=3KboPTtuZVDundtGheKawS=iV_P756RFbaDg@mail.gmail.com>
-In-Reply-To: <CAKv+Gu9CpCWHT=3KboPTtuZVDundtGheKawS=iV_P756RFbaDg@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 4/4] ef/libstub: arm/arm64: randomize the base of the
- UEFI rt services region
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, Mark Rutland <mark.rutland@arm.com>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, Leif Lindholm <leif.lindholm@linaro.org>, Borislav Petkov <bp@alien8.de>, Roy Franz <rfranz@cavium.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Catalin Marinas <catalin.marinas@arm.com>
+In-Reply-To: <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
+ <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+ <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
+ <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
+ <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
+ <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
+ <alpine.DEB.2.20.1704071048360.1716@nanos> <CA+rthh9-EJBBO6nYYY6noP0ybcvk+xJ+S5h6BCNPtidjMCv8VQ@mail.gmail.com>
+ <alpine.DEB.2.20.1704071426300.1716@nanos> <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Fri, 7 Apr 2017 09:14:29 -0700
+Message-ID: <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Mathias Krause <minipli@googlemail.com>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Ard,
+On Fri, Apr 7, 2017 at 6:30 AM, Mathias Krause <minipli@googlemail.com> wrote:
+> On 7 April 2017 at 15:14, Thomas Gleixner <tglx@linutronix.de> wrote:
+>> On Fri, 7 Apr 2017, Mathias Krause wrote:
+>>> On 7 April 2017 at 11:46, Thomas Gleixner <tglx@linutronix.de> wrote:
+>>> > Whether protected by preempt_disable or local_irq_disable, to make that
+>>> > work it needs CR0 handling in the exception entry/exit at the lowest
+>>> > level. And that's just a nightmare maintainence wise as it's prone to be
+>>> > broken over time.
+>>>
+>>> It seems to be working fine for more than a decade now in PaX. So it
+>>> can't be such a big maintenance nightmare ;)
+>>
+>> I really do not care whether PaX wants to chase and verify that over and
+>> over. I certainly don't want to take the chance to leak CR0.WP ever and I
+>> very much care about extra stuff to check in the entry/exit path.
+>
+> Fair enough. However, placing a BUG_ON(!(read_cr0() & X86_CR0_WP))
+> somewhere sensible should make those "leaks" visible fast -- and their
+> exploitation impossible, i.e. fail hard.
 
-On 07/04/17 16:51, Ard Biesheuvel wrote:
-> That is quite interesting, to be honest, because that patch should
-> effectively be a NOP on systems that do not implement
-> EFI_RNG_PROTOCOL.
-> 
-> Could you run this from the UEFI shell please?
-> 
-> http://people.linaro.org/~ard.biesheuvel/RngTest.efi
+The leaks surely exist and now we'll just add an exploitable BUG.
 
-As you predicted:
+>>> > It's valid (at least on x86) to have a shadow map with the same page
+>>> > attributes but write enabled. That does not require any fixups of CR0 and
+>>> > just works.
+>>>
+>>> "Just works", sure -- but it's not as tightly focused as the PaX
+>>> solution which is CPU local, while your proposed solution is globally
+>>> visible.
+>>
+>> Making the world and some more writeable hardly qualifies as tightly
+>> focussed. Making the mapping concept CPU local is not rocket science
+>> either. The question is whethers it's worth the trouble.
+>
+> No, the question is if the value of the concept is well understood and
+> if people can see what could be done with such a strong primitive.
+> Apparently not...
 
-Shell> RngTest.efi
-UEFI RNG Protocol Testing :
-----------------------------
- -- Locate UEFI RNG Protocol : [Fail - Status = Not Found]
-Error reported: Not Found
+I think we're approaching this all wrong, actually.  The fact that x86
+has this CR0.WP thing is arguably a historical accident, and the fact
+that PaX uses it doesn't mean that PaX is doing it the best way for
+upstream Linux.
 
+Why don't we start at the other end and do a generic non-arch-specific
+implementation: set up an mm_struct that contains an RW alias of the
+relevant parts of rodata and use use_mm to access it.  (That is,
+get_fs() to back up the old fs, set_fs(USER_DS),
+use_mm(&rare_write_mm), do the write using copy_to_user, undo
+everything.)
 
-> I would expect it to report that it has no EFI_RNG_PROTOCOL
-> implementation. Could you also check whether the working kernel still
-> works /after/ having executed that utility?
+Then someone who cares about performance can benchmark the CR0.WP
+approach against it and try to argue that it's a good idea.  This
+benchmark should wait until I'm done with my PCID work, because PCID
+is going to make use_mm() a whole heck of a lot faster.
 
-The broken kernel remains broken after running that test. reboot. The working
-kernel continues to work after running that test.
-
-(On Monday) I will try with just these efi changes on v4.11-rc. to try and
-eliminate everything else in linux-next.
-
-This is one of those firmware versions that prints lots of
-> efi: [Firmware Bug]: IRQ flags corrupted (0x00000140=>0x00000100) by EFI
-get_variable
-
-
-Thanks,
-
-James
+--Andy
