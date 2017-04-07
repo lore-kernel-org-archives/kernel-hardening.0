@@ -1,225 +1,76 @@
-Content-Type: text/plain; charset=utf-8
-Mime-Version: 1.0 (Mac OS X Mail 10.3 \(3273\))
-From: Ho-Eun Ryu <hoeun.ryu@gmail.com>
-In-Reply-To: <1490811363-93944-2-git-send-email-keescook@chromium.org>
-Date: Fri, 7 Apr 2017 17:09:18 +0900
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <FDCFFA43-5B6D-42CB-A65C-5FA485B64C7A@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
 References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
- <1490811363-93944-2-git-send-email-keescook@chromium.org>
-Subject: [kernel-hardening] Re: [RFC v2][PATCH 01/11] Introduce rare_write() infrastructure
-To: Kees Cook <keescook@chromium.org>
-Cc: kernel-hardening@lists.openwall.com, Mark Rutland <mark.rutland@arm.com>, Andy Lutomirski <luto@kernel.org>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
+ <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+ <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
+ <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com> <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Fri, 7 Apr 2017 10:34:32 +0200
+Message-ID: <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>
+Cc: Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 6 April 2017 at 17:59, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Wed, Apr 5, 2017 at 5:14 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Wed, Apr 5, 2017 at 4:57 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>>> On Wed, Mar 29, 2017 at 6:41 PM, Kees Cook <keescook@chromium.org> wrote:
+>>>> On Wed, Mar 29, 2017 at 3:38 PM, Andy Lutomirski <luto@amacapital.net> wrote:
+>>>>> On Wed, Mar 29, 2017 at 11:15 AM, Kees Cook <keescook@chromium.org> wrote:
+>>>>>> Based on PaX's x86 pax_{open,close}_kernel() implementation, this
+>>>>>> allows HAVE_ARCH_RARE_WRITE to work on x86.
+>>>>>>
+>>>>>> +
+>>>>>> +static __always_inline unsigned long __arch_rare_write_begin(void)
+>>>>>> +{
+>>>>>> +       unsigned long cr0;
+>>>>>> +
+>>>>>> +       preempt_disable();
+>>>>>
+>>>>> This looks wrong.  DEBUG_LOCKS_WARN_ON(!irqs_disabled()) would work,
+>>>>> as would local_irq_disable().  There's no way that just disabling
+>>>>> preemption is enough.
+>>>>>
+>>>>> (Also, how does this interact with perf nmis?)
+>>>>
+>>>> Do you mean preempt_disable() isn't strong enough here? I'm open to
+>>>> suggestions. The goal would be to make sure nothing between _begin and
+>>>> _end would get executed without interruption...
+>>>>
+>>>
+>>> Sorry for the very slow response.
+>>>
+>>> preempt_disable() isn't strong enough to prevent interrupts, and an
+>>> interrupt here would run with WP off, causing unknown havoc.  I tend
+>>> to think that the caller should be responsible for turning off
+>>> interrupts.
+>>
+>> So, something like:
+>>
+>> Top-level functions:
+>>
+>> static __always_inline rare_write_begin(void)
+>> {
+>>     preempt_disable();
+>>     local_irq_disable();
+>>     barrier();
+>>     __arch_rare_write_begin();
+>>     barrier();
+>> }
+>
+> Looks good, except you don't need preempt_disable().
+> local_irq_disable() also disables preemption.  You might need to use
+> local_irq_save(), though, depending on whether any callers already
+> have IRQs off.
 
-> On 30 Mar 2017, at 3:15 AM, Kees Cook <keescook@chromium.org> wrote:
->=20
-> Several types of data storage exist in the kernel: read-write data =
-(.data,
-> .bss), read-only data (.rodata), and RO-after-init. This introduces =
-the
-> infrastructure for another type: write-rarely, which is intended for =
-data
-> that is either only rarely modified or especially security-sensitive. =
-The
-> goal is to further reduce the internal attack surface of the kernel by
-> making this storage read-only when "at rest". This makes it much =
-harder
-> to be subverted by attackers who have a kernel-write flaw, since they
-> cannot directly change these memory contents.
->=20
-> This work is heavily based on PaX and grsecurity's =
-pax_{open,close}_kernel
-> API, its __read_only annotations, its constify plugin, and the work =
-done
-> to identify sensitive structures that should be moved from .data into
-> .rodata. This builds the initial infrastructure to support these kinds
-> of changes, though the API and naming has been adjusted in places for
-> clarity and maintainability.
->=20
-> Variables declared with the __wr_rare annotation will be moved to the
-> .rodata section if an architecture supports =
-CONFIG_HAVE_ARCH_WRITE_RARE.
-> To change these variables, either a single rare_write() macro can be =
-used,
-> or multiple uses of __rare_write(), wrapped in a matching pair of
-> rare_write_begin() and rare_write_end() macros can be used. These =
-macros
-> are expanded into the arch-specific functions that perform the actions
-> needed to write to otherwise read-only memory.
->=20
-> As detailed in the Kconfig help, the arch-specific helpers have =
-several
-> requirements to make them sensible/safe for use by the kernel: they =
-must
-> not allow non-current CPUs to write the memory area, they must run
-> non-preemptible to avoid accidentally leaving memory writable, and =
-must
-> be inline to avoid making them desirable ROP targets for attackers.
->=20
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
-> arch/Kconfig             | 25 +++++++++++++++++++++++++
-> include/linux/compiler.h | 32 ++++++++++++++++++++++++++++++++
-> include/linux/preempt.h  |  6 ++++--
-> 3 files changed, 61 insertions(+), 2 deletions(-)
->=20
-> diff --git a/arch/Kconfig b/arch/Kconfig
-> index cd211a14a88f..5ebf62500b99 100644
-> --- a/arch/Kconfig
-> +++ b/arch/Kconfig
-> @@ -847,4 +847,29 @@ config STRICT_MODULE_RWX
-> config ARCH_WANT_RELAX_ORDER
-> 	bool
->=20
-> +config HAVE_ARCH_RARE_WRITE
-> +	def_bool n
-> +	help
-> +	  An arch should select this option if it has defined the =
-functions
-> +	  __arch_rare_write_begin() and __arch_rare_write_end() to
-> +	  respectively enable and disable writing to read-only memory. =
-The
-> +	  routines must meet the following requirements:
-> +	  - read-only memory writing must only be available on the =
-current
-> +	    CPU (to make sure other CPUs can't race to make changes =
-too).
-> +	  - the routines must be declared inline (to discourage ROP =
-use).
-> +	  - the routines must not be preemptible (likely they will call
-> +	    preempt_disable() and preempt_enable_no_resched() =
-respectively).
-> +	  - the routines must validate expected state (e.g. when =
-enabling
-> +	    writes, BUG() if writes are already be enabled).
-> +
-> +config HAVE_ARCH_RARE_WRITE_MEMCPY
-> +	def_bool n
-> +	depends on HAVE_ARCH_RARE_WRITE
-> +	help
-> +	  An arch should select this option if a special accessor is =
-needed
-> +	  to write to otherwise read-only memory, defined by the =
-function
-> +	  __arch_rare_write_memcpy(). Without this, the write-rarely
-> +	  infrastructure will just attempt to write directly to the =
-memory
-> +	  using a const-ignoring assignment.
-> +
-> source "kernel/gcov/Kconfig"
-> diff --git a/include/linux/compiler.h b/include/linux/compiler.h
-> index f8110051188f..274bd03cfe9e 100644
-> --- a/include/linux/compiler.h
-> +++ b/include/linux/compiler.h
-> @@ -336,6 +336,38 @@ static __always_inline void =
-__write_once_size(volatile void *p, void *res, int s
-> 	__u.__val;					\
-> })
->=20
-> +/*
-> + * Build "write rarely" infrastructure for flipping memory r/w
-> + * on a per-CPU basis.
-> + */
-> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
-> +# define __wr_rare
-> +# define __wr_rare_type
-> +# define __rare_write(__var, __val)	(__var =3D (__val))
-> +# define rare_write_begin()		do { } while (0)
-> +# define rare_write_end()		do { } while (0)
-> +#else
-> +# define __wr_rare			__ro_after_init
-> +# define __wr_rare_type			const
-> +# ifdef CONFIG_HAVE_ARCH_RARE_WRITE_MEMCPY
-> +#  define __rare_write_n(dst, src, len)	({			=
-\
-> +		BUILD_BUG(!builtin_const(len));			\
-> +		__arch_rare_write_memcpy((dst), (src), (len));	\
-> +	})
-> +#  define __rare_write(var, val)  __rare_write_n(&(var), &(val), =
-sizeof(var))
-> +# else
-> +#  define __rare_write(var, val)  ((*(typeof((typeof(var))0) =
-*)&(var)) =3D (val))
-> +# endif
-> +# define rare_write_begin()	__arch_rare_write_begin()
-> +# define rare_write_end()	__arch_rare_write_end()
-> +#endif
-> +#define rare_write(__var, __val) ({			\
-> +	rare_write_begin();				\
-> +	__rare_write(__var, __val);			\
-> +	rare_write_end();				\
-> +	__var;						\
-> +})
-> +
+Well, doesn't look good to me. NMIs will still be able to interrupt
+this code and will run with CR0.WP = 0.
 
-How about we have a separate header file splitting section annotations =
-and the actual APIs.
+Shouldn't you instead question yourself why PaX can do it "just" with
+preempt_disable() instead?!
 
-include/linux/compiler.h:
-    __wr_rare
-    __wr_rare_type
-
-include/linux/rare_write.h:
-    __rare_write_n()
-    __rare_write()
-    rare_write_begin()
-    rare_write_end()
-
-OR moving all of them to include/linux/rare_write.h.
-
-I=E2=80=99m writing the arm64 port for rare_write feature and I=E2=80=99ve=
- stucked in some header problems for the next version of the patch.
-I need some other mmu related APIs (mostly defined in =
-`arch/arm64/include/asm/mmu_context.h`) to implement those helpers.
-but I cannot include the header in `include/linux/compiler.h` prior to =
-definition of rare_write macros (huge compilation errors).
-You know that `linux/compiler.h` header is mostly base of other headers =
-not a user.
-
-I have to define `__arch_rare_write_[begin/end/memcpy]()` functions as =
-`static inline` in a header file somewhere in `arch/arm64/include/asm/`
-to avoid making them ROP targets and the helpers need other mmu related =
-APIs.
-And the helpers and the mmu related APIs cannot be defined prior to =
-definition of rare_write macros in `linux/compile.h`.
-
-And I think I'll need `include/linux/module.h` for module related APIs =
-like `is_module_address()` to support module address conversion
-in `__arch_rare_write_memcpy()` and it=E2=80=99ll make the situation =
-worse.
-
-* make `include/linux/rare_write.h`
-* the header defines rare_write APIs
-* the header includes `include/asm/rare_write.h` for arch-specific =
-helpers
-* users using rare_write feature should include `linux/rare_write.h`
-
-OR suggest other solutions please.
-
-> #endif /* __KERNEL__ */
->=20
-> #endif /* __ASSEMBLY__ */
-> diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-> index cae461224948..4fc97aaa22ea 100644
-> --- a/include/linux/preempt.h
-> +++ b/include/linux/preempt.h
-> @@ -258,10 +258,12 @@ do { \
-> /*
->  * Modules have no business playing preemption tricks.
->  */
-> -#undef sched_preempt_enable_no_resched
-> -#undef preempt_enable_no_resched
-> #undef preempt_enable_no_resched_notrace
-> #undef preempt_check_resched
-> +#ifndef CONFIG_HAVE_ARCH_RARE_WRITE
-> +#undef sched_preempt_enable_no_resched
-> +#undef preempt_enable_no_resched
-> +#endif
-> #endif
->=20
-> #define preempt_set_need_resched() \
-> --=20
-> 2.7.4
->=20
+Cheers,
+Mathias
