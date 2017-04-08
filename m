@@ -1,58 +1,46 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170407152319.f37c877c79c19cb52daf9ba1@linux-foundation.org>
-References: <20170406033550.32525-1-ewk@edkovsky.org> <CAGXu5jJ49PZx9T=hTNcFK8sjxLCdp_KBpiFzKLCt1jwj2Q7+3Q@mail.gmail.com>
- <20170407151249.b1d45218ad2f71bdc2c8f992@linux-foundation.org>
- <CAGXu5jJNPbcyYt3=WyM0pceoGpaUc=Nti7aD76uvjmAKwHZ58w@mail.gmail.com> <20170407152319.f37c877c79c19cb52daf9ba1@linux-foundation.org>
-From: Kees Cook <keescook@chromium.org>
-Date: Fri, 7 Apr 2017 15:47:27 -0700
-Message-ID: <CAGXu5jLTzSh2m49cLz+5HC-OpyydX5yQ9tQdjjV6kf7+OB=9jw@mail.gmail.com>
+In-Reply-To: <CAGXu5jLXB4J_ZGCKF0WD2SNTGyam8-tP5K1iYChW8wZEtAVM2A@mail.gmail.com>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
+ <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
+ <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
+ <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
+ <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
+ <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
+ <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
+ <alpine.DEB.2.20.1704071048360.1716@nanos> <CA+rthh9-EJBBO6nYYY6noP0ybcvk+xJ+S5h6BCNPtidjMCv8VQ@mail.gmail.com>
+ <alpine.DEB.2.20.1704071426300.1716@nanos> <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
+ <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
+ <alpine.DEB.2.20.1704072125460.1958@nanos> <CAGXu5jLXB4J_ZGCKF0WD2SNTGyam8-tP5K1iYChW8wZEtAVM2A@mail.gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Sat, 8 Apr 2017 00:12:53 -0400
+Message-ID: <CA+DvKQKTHBdyQ0_Kn0dpZzAo1g3yBt-OGK309K+UN6upq-5FAQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] provide check for ro_after_init memory sections
-To: Andrew Morton <akpm@linux-foundation.org>
-Cc: Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, LKML <linux-kernel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Eddie Kovsky <ewk@edkovsky.org>
+Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>, Andy Lutomirski <luto@kernel.org>, Mathias Krause <minipli@googlemail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 7, 2017 at 3:23 PM, Andrew Morton <akpm@linux-foundation.org> wrote:
-> On Fri, 7 Apr 2017 15:15:36 -0700 Kees Cook <keescook@chromium.org> wrote:
->
->> On Fri, Apr 7, 2017 at 3:12 PM, Andrew Morton <akpm@linux-foundation.org> wrote:
->> > On Fri, 7 Apr 2017 14:53:23 -0700 Kees Cook <keescook@chromium.org> wrote:
->> >
->> >> > Eddie Kovsky (2):
->> >> >   module: verify address is read-only
->> >> >   extable: verify address is read-only
->> >> >
->> >> >  include/linux/kernel.h |  2 ++
->> >> >  include/linux/module.h | 12 ++++++++++++
->> >> >  kernel/extable.c       | 29 +++++++++++++++++++++++++++
->> >> >  kernel/module.c        | 53 ++++++++++++++++++++++++++++++++++++++++++++++++++
->> >> >  4 files changed, 96 insertions(+)
->> >>
->> >> Andrew, do you have these in your mailbox (it went to lkml), or should
->> >> I resend them directly to you? Since they depend on the
->> >> __start_ro_after_init naming fixes in -mm, it seemed like it'd be best
->> >> to carry these two patches there. If so, please consider them both:
->> >>
->> >> Acked-by: Kees Cook <keescook@chromium.org>
->> >>
->> >> (And, from the thread on the module patch, Jessica has Acked that one too.)
->> >
->> > Well I grabbed them, but the patches don't actually do anything - they
->> > add interfaces with no users.  What's the plan here?
->>
->> I'd like to have a way for interfaces (especially the various
->> *_register()) to be able to check that a structure is either const or
->> __ro_after_init. My expectation is to add those and similar
->> sanity-checks now that we can do so.
->
-> OK.  But I'd rather sit on the patches until we have working, tested,
-> reviewed callers which are agreed to be useful.
+> I probably chose the wrong name for this feature (write rarely).
+> That's _usually_ true, but "sensitive_write()" was getting rather
+> long. The things that we need to protect with this are certainly stuff
+> that doesn't get much writing, but some things are just plain
+> sensitive (like page tables) and we should still try to be as fast as
+> possible with them.
 
-That sounds fine to me. Thanks!
+Not too late to rename it. Scoped write? I think it makes change to
+use a different API than PaX for portability too, but not a different
+x86 implementation. It's quite important to limit the writes to the
+calling thread and it needs to perform well to be introduced widely.
 
--Kees
+> I'm all for a general case for the infrastructure (as Andy and Mark
+> has mentioned), but I don't want to get into the situation where
+> people start refusing to use it because it's "too slow" (for example,
+> see refcount_t vs net-dev right now).
 
--- 
-Kees Cook
-Pixel Security
+Meanwhile, the PaX implementation has improved to avoid the issues
+that were brought up while only introducing a single always-predicted
+(due to code placement) branch on the overflow flag. That seems to
+have gone unnoticed upstream, where there's now a much slower
+implementation that's not more secure, and is blocked from
+introduction in areas where it's most needed based on the performance.
+Not to mention that it's opt-in... which is never going to work.
