@@ -1,59 +1,147 @@
-MIME-Version: 1.0
-In-Reply-To: <CA+DvKQKQzMk==8Z4sF1pCeDDwE4+m_2Kgtztamaf2BWYm5ENUA@mail.gmail.com>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
- <1490811363-93944-5-git-send-email-keescook@chromium.org> <CALCETrWkrpuJkcgiwMdc61Vv5U2u39FiWgzWfA_85nziK0pZsg@mail.gmail.com>
- <CAGXu5jKif5UUMBbQBpB7Ha7w0L+su8dSXDU3nbccO3EBnv7bTw@mail.gmail.com>
- <CALCETrW7nN8Ja=r9k4ANpekKovC_wsYrGrge1WNoGsAjZZvqHQ@mail.gmail.com>
- <CAGXu5jLENkemQiL6bcL5=qsesi-2M=1jYhS7SGBpBG64ER2CsA@mail.gmail.com>
- <CALCETrVErxE5P=V4LD=kFCBtnp2YYEGRsbxhTG0SXJjrw6Yk1A@mail.gmail.com>
- <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
- <alpine.DEB.2.20.1704071048360.1716@nanos> <CA+rthh9-EJBBO6nYYY6noP0ybcvk+xJ+S5h6BCNPtidjMCv8VQ@mail.gmail.com>
- <alpine.DEB.2.20.1704071426300.1716@nanos> <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
- <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
- <CA+DvKQKc8uq=1O5d41GRU6u=GkOvuCJzkbPPBcp2ohHLU7A25g@mail.gmail.com>
- <CALCETrUk7k3SFKiu2kykwPM=AQ9q2rczetL4j5XyoOxX_gjCGw@mail.gmail.com> <CA+DvKQKQzMk==8Z4sF1pCeDDwE4+m_2Kgtztamaf2BWYm5ENUA@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Sat, 8 Apr 2017 08:20:03 -0700
-Message-ID: <CALCETrXQaRcNz7EQW9DHF-LMr5SkooLq=1HKsdOfXH-kY4fcBw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Sun,  9 Apr 2017 12:42:07 +0200
+Message-Id: <1491734530-25002-1-git-send-email-tixxdz@gmail.com>
+Subject: [kernel-hardening] [PATCH RFC v2 0/3] security: Add ModAutoRestrict LSM
+To: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org
+Cc: Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, serge@hallyn.com, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Djalal Harouni <tixxdz@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Sat, Apr 8, 2017 at 12:33 AM, Daniel Micay <danielmicay@gmail.com> wrote:
-> The
-> submitted code is aimed at rare writes to globals, but this feature is
-> more than that and design decisions shouldn't be based on just the
-> short term.
+Hi List,
 
-Then, if you disagree with a proposed design, *explain why* in a
-standalone manner.  Say what future uses a different design would
-have.
+This is RFC v2 of the Module auto-loading restriction feature. The
+module has been renamed ModAutoRestrict LSM.
 
-> I actually care a lot more about 64-bit ARM support than I do x86, but
-> using a portable API for pax_open_kernel (for the simple uses at
-> least) is separate from choosing the underlying implementation. There
-> might not be a great way to do it on the architectures I care about
-> but that doesn't need to hinder x86. It's really not that much code...
-> A weaker/slower implementation for x86 also encourages the same
-> elsewhere.
+This RFC is a work in progress update.
 
-No one has explained how CR0.WP is weaker or slower than my proposal.
-Here's what I'm proposing:
+There are still minor things to fix which are listed in the TODO
+section. Also I used Tetsuo approach of stacking task->security, since
+now that the task_security_alloc() hook is in linux-security/next I took
+advantage of it and switched to use that hook and applied Tetsuo
+task->security per LSM blob on top of it. I can also switch to Casey
+approach. However, since these are internal implementation details which
+are not exposed, I do not think that this is a big issue. Thanks for the
+work now it is clear that we are able to easily stack new LSMs.
 
-At boot, choose a random address A.  Create an mm_struct that has a
-single VMA starting at A that represents the kernel's rarely-written
-section.  Compute O = (A - VA of rarely-written section).  To do a
-rare write, use_mm() the mm, write to (VA + O), then unuse_mm().
+Patches are against linux-security/next HEAD 622f6e3265707eb
 
-This should work on any arch that has an MMU that allows this type of
-aliasing and that doesn't have PA-based protections on the
-rarely-written section.
+==============
 
-It'll be considerably slower than CR0.WP on a current x86 kernel, but,
-with PCID landed, it shouldn't be much slower.  It has the added
-benefit that writes to non-rare-write data using the rare-write
-primitive will fail.
+ModAutoRestrict is a Linux Security Module that applies restrictions on
+automatic module loading operations. This is selectable at build-time
+with CONFIG_SECURITY_MODAUTORESTRICT, and can be controlled at run-time
+through sysctls in /proc/sys/kernel/modautorestrict/autoload or as a
+per-process setting via a prctl() interface.
 
---Andy
+A userspace request to use a kernel feature that is implemented by modules
+that are not loaded may trigger the module auto-load feature to load
+these modules in order to satisfy userspace. However as today's Linux use
+cases cover embedded systems to containers where applications are running
+in their own separate environments, reducing or preventing operations
+that may affect external environments is an important constraint.
+Therefore, we need a way to control if automatic module loading is
+allowed or which applications are allowed to trigger the module
+auto-load feature.
+
+The ModAutoRestrict LSM allows system administrators or sandbox
+mechanisms to control the module auto-load feature and prevent loading
+unneeded modules or abuse the interface.
+
+The settings can be applied globally using a sysctl interface which
+completes the core kernel interface "modules_disable".
+
+The feature is also available as a prctl() interface. This allows to
+apply restrictions when sandboxing processes. On embedded Linux systems,
+or containers where only some containers/processes should have the
+right privileges to load modules, this allows to restrict those
+processes from inserting modules. Only privileged processes can be
+allowed to perform so. A more restrictive access can be applied where
+the module autoload feature is completely disabled.
+In this schema the access rules are per-process and inherited by
+children created by fork(2) and clone(2), and preserved across execve(2).
+
+Interface:
+
+*) The per-process prctl() settings are:
+
+ prctl(PR_MOD_AUTO_RESTRICT_OPTS, PR_SET_MOD_AUTO_RESTRICT, value, 0, 0)
+
+ Where value means:
+
+ 0 - Classic module auto-load permissions, nothing changes.
+
+ 1 - The current process must have CAP_SYS_MODULE to be able to
+     auto-load modules. CAP_NET_ADMIN should allow to auto-load
+     modules with a 'netdev-%s' alias.
+
+ 2 - Current process can not auto-load modules. Once set, this prctl
+     value can not be changed.
+
+ The per-process value may only be increased, never decreased, thus ensuring
+ that once applied, processes can never relaxe their setting.
+
+*) The global sysctl setting can be set by writting an integer value to
+   '/proc/sys/kernel/modautorestrict/autoload'
+
+ The valid values are:
+
+ 0 - Classic module auto-load permissions, nothing changes.
+
+ 1 - Processes must have CAP_SYS_MODULE to be able to auto-load modules.
+     CAP_NET_ADMIN should allow to auto-load modules with a 'netdev-%s'
+     alias.
+
+ 2 - Processes can not auto-load modules. Once set, this sysctl value
+     can not be changed.
+
+*) Access rules:
+   First the prctl() settings are checked, if the access is not denied
+   then the global sysctl settings are checked.
+
+The original idea and inspiration is from grsecurity 'GRKERNSEC_MODHARDEN'.
+
+
+The sample code here can be used to test the feature:
+https://gist.githubusercontent.com/tixxdz/39a583358f04d40b4d3e5571f95c075b/raw/7fb416285412891e2637fba149da930fe0898356/modautorestrict_test.c
+
+# TODO list:
+*) Confirm the struct task_struct->security stacking mechanism. 
+*) Add a logging mechanism.
+*) Remove the use of security_kernel_read_file hook. Use only
+   security_kernel_module_request and make sure that we cover all cases.
+*) Convert documentation to .rst
+
+
+# Changes since v1:
+*) Renamed module to ModAutoRestrict
+*) Improved documentation to explicity refer to module autoloading.
+*) Switched to use the new task_security_alloc() hook.
+*) Switched from rhash tables to use task->security since it is in
+   linux-security/next branch now.
+*) Check all parameters passed to prctl() syscall.
+*) Many other bug fixes and documentation improvements.
+
+All Kees Cook comments handled, except for the removing of
+security_kernel_read_file which I will do in next iteration when
+I make sure that I did not miss something. Thank you!
+
+
+Tetsuo Handa (1):
+        LSM: Allow per LSM module per "struct task_struct" blob
+
+Djalal Harouni (2):
+        security: add the ModAutoRestrict Linux Security Module
+        Documentation: add ModAutoRestrict LSM documentation
+
+
+ Documentation/security/00-INDEX            |   2 +
+ Documentation/security/ModAutoRestrict.txt |  77 ++++++
+ MAINTAINERS                                |   7 +
+ include/linux/lsm_hooks.h                  |  41 +++-
+ include/uapi/linux/prctl.h                 |   5 +
+ security/Kconfig                           |   1 +
+ security/Makefile                          |  16 +-
+ security/modautorestrict/Kconfig           |  15 ++
+ security/modautorestrict/Makefile          |   3 +
+ security/modautorestrict/modauto_lsm.c     | 372 +++++++++++++++++++++++++++++
+ security/security.c                        |  38 ++-
+ 11 files changed, 568 insertions(+), 9 deletions(-)
