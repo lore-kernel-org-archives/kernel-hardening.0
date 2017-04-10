@@ -1,124 +1,67 @@
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Sun, 09 Apr 2017 22:24:47 +0200
 MIME-Version: 1.0
-Message-ID: <58EA988F.29293.6C80F08B@pageexec.freemail.hu>
-In-reply-to: <CALCETrUk7k3SFKiu2kykwPM=AQ9q2rczetL4j5XyoOxX_gjCGw@mail.gmail.com>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>, <CA+DvKQKc8uq=1O5d41GRU6u=GkOvuCJzkbPPBcp2ohHLU7A25g@mail.gmail.com>, <CALCETrUk7k3SFKiu2kykwPM=AQ9q2rczetL4j5XyoOxX_gjCGw@mail.gmail.com>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
+In-Reply-To: <58EA2D58.17782.6ADE22BD@pageexec.freemail.hu>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
+ <58E7EF70.30766.621C4F44@pageexec.freemail.hu> <CALCETrXd9MgAk2p72UMbOOoL2W1fP0UT_pc2bfG8r0t=qJotwg@mail.gmail.com>
+ <58EA2D58.17782.6ADE22BD@pageexec.freemail.hu>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Sun, 9 Apr 2017 17:10:16 -0700
+Message-ID: <CALCETrWvGLtObdk3V0k_Esa_L=EOf+Whe=6DpcJ7H_W8Z-5Btw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
 Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: Daniel Micay <danielmicay@gmail.com>, Andy Lutomirski <luto@kernel.org>
-Cc: Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+To: PaX Team <pageexec@freemail.hu>
+Cc: Andy Lutomirski <luto@kernel.org>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 7 Apr 2017 at 22:07, Andy Lutomirski wrote:
-> grsecurity and PaX are great projects.  They have a lot of good ideas,
-> and they're put together quite nicely.  The upstream kernel should
-> *not* do things differently from they way they are in grsecurity/PaX
-> just because it wants to be different.  Conversely, the upstream
-> kernel should not do things the same way as PaX just to be more like
-> PaX.
+On Sun, Apr 9, 2017 at 5:47 AM, PaX Team <pageexec@freemail.hu> wrote:
+> On 7 Apr 2017 at 21:58, Andy Lutomirski wrote:
+>
+>> On Fri, Apr 7, 2017 at 12:58 PM, PaX Team <pageexec@freemail.hu> wrote:
+>> > On 7 Apr 2017 at 9:14, Andy Lutomirski wrote:
+>> >> Then someone who cares about performance can benchmark the CR0.WP
+>> >> approach against it and try to argue that it's a good idea.  This
+>> >> benchmark should wait until I'm done with my PCID work, because PCID
+>> >> is going to make use_mm() a whole heck of a lot faster.
+>> >
+>> > in my measurements switching PCID is hovers around 230 cycles for snb-ivb
+>> > and 200-220 for hsw-skl whereas cr0 writes are around 230-240 cycles. there's
+>> > of course a whole lot more impact for switching address spaces so it'll never
+>> > be fast enough to beat cr0.wp.
+>> >
+>>
+>> If I'm reading this right, you're saying that a non-flushing CR3 write
+>> is about the same cost as a CR0.WP write.  If so, then why should CR0
+>> be preferred over the (arch-neutral) CR3 approach?
+>
+> cr3 (page table switching) isn't arch neutral at all ;). you probably meant
+> the higher level primitives except they're not enough to implement the scheme
+> as discussed before since the enter/exit paths are very much arch dependent.
 
-so weit so gut.
+Yes.
 
-> Keep in mind that the upstream kernel and grsecurity/PaX operate under
-> different constraints.  The upstream kernel tries to keep itself clean
+>
+> on x86 the cost of the pax_open/close_kernel primitives comes from the cr0
+> writes and nothing else, use_mm suffers not only from the cr3 writes but
+> also locking/atomic ops and cr4 writes on its path and the inevitable TLB
+> entry costs. and if cpu vendors cared enough, they could make toggling cr0.wp
+> a fast path in the microcode and reduce its overhead by an order of magnitude.
+>
 
-so do we.
+If the CR4 writes happen in for this use case, that's a bug.
 
-> and to make tree-wide updates rather that keeping compatibility stuff
-> around.
+>>  And why would switching address spaces obviously be much slower?
+>> There'll be a very small number of TLB fills needed for the actual
+>> protected access.
+>
+> you'll be duplicating TLB entries in the alternative PCID for both code
+> and data, where they will accumulate (=take room away from the normal PCID
+> and expose unwanted memory for access) unless you also flush them when
+> switching back (which then will cost even more cycles). also i'm not sure
+> that processors implement all the 12 PCID bits so depending on how many PCIDs
+> you plan to use, you could be causing even more unnecessary TLB replacements.
+>
 
-so do we (e.g., fptr fixes for RAP, non-refcount atomic users, etc).
+Unless the CPU is rather dumber than I expect, the only duplicated
+entries should be for the writable aliases of pages that are written.
+The rest of the pages are global and should be shared for all PCIDs.
 
->  PaX and grsecurity presumably want to retain some degree of
-> simplicity when porting to newer upstream versions.
-
-s/simplicity/minimality/ as the code itself can be complex but that'll be
-of the minimal complexity we can come up with.
-
-> In the context of virtually mapped stacks / KSTACKOVERFLOW, this
-> naturally leads to different solutions.  The upstream kernel had a
-> bunch of buggy drivers that played badly with virtually mapped stacks.
-> grsecurity sensibly went for the approach where the buggy drivers kept
-> working.  The upstream kernel went for the approach of fixing the
-> drivers rather than keeping a compatibility workaround.  Different
-> constraints, different solutions.
-
-except that's not what happened at all. spender's first version did just
-a vmalloc for the kstack like the totally NIH'd version upstream does
-now. while we always anticipated buggy dma users and thus had code that
-would detect them so that we could fix them, we quickly figured that the
-upstream kernel wasn't quite up to snuff as we had assumed and faced with
-the amount of buggy code, we went for the current vmap approach which
-kept users' systems working instead of breaking them.
-
-you're trying to imply that upstream fixed the drivers but as the facts
-show, that's not true. you simply unleashed your code on the world and
-hoped(?) that enough suckers would try it out during the -rc window. as
-we all know several releases and almost a year later, that was a losing
-bet as you still keep fixing those drivers (and something tells me that
-we haven't seen the end of it). this is simply irresponsible engineering
-for no technical reason.
-
-> In the case of rare writes or pax_open_kernel [1] or whatever we want
-> to call it, CR3 would work without arch-specific code, and CR0 would
-> not.  That's an argument for CR3 that would need to be countered by
-> something.  (Sure, avoiding leaks either way might need arch changes.
-> OTOH, a *randomized* CR3-based approach might not have as much of a
-> leak issue to begin with.)
-
-i have yet to see anyone explain what they mean by 'leak' here but if it
-is what i think it is then the arch specific entry/exit changes are not
-optional but mandatory. see below for randomization.
-
-[merging in your other mail as it's the same topic]
-
-> No one has explained how CR0.WP is weaker or slower than my proposal.
-
-you misunderstood, Daniel was talking about your use_mm approach.
-
-> Here's what I'm proposing:
-> 
-> At boot, choose a random address A.
-
-what is the threat that a random address defends against?
-
->  Create an mm_struct that has a
-> single VMA starting at A that represents the kernel's rarely-written
-> section.  Compute O = (A - VA of rarely-written section).  To do a
-> rare write, use_mm() the mm, write to (VA + O), then unuse_mm().
-
-the problem is that the amount of __read_only data extends beyond vmlinux,
-i.e., this approach won't scale. another problem is that it can't be used
-inside use_mm and switch_mm themselves (no read-only task structs or percpu
-pgd for you ;) and probably several other contexts.
-
-last but not least, use_mm says this about itself:
-
-    (Note: this routine is intended to be called only
-    from a kernel thread context)
-
-so using it will need some engineering (or the comment be fixed).
-
-> This should work on any arch that has an MMU that allows this type of
-> aliasing and that doesn't have PA-based protections on the rarely-written
-> section.
-
-you didn't address the arch-specific changes needed in the enter/exit paths.
-
-> It'll be considerably slower than CR0.WP on a current x86 kernel, but,
-> with PCID landed, it shouldn't be much slower.
-
-based on my experience with UDEREF on amd64, unfortunately PCID isn't all
-it's cracked up to be (IIRC, it maybe halved the UDEREF overhead instead of
-basically eliminating it as i had anticipated, and that was on snb, ivb and
-later do even worse).
-
-> It has the added benefit that writes to non-rare-write data using the
-> rare-write primitive will fail.
-
-what is the threat model you're assuming for this feature? based on what i
-have for PaX (arbitrary read/write access exploited for data-only attacks),
-the above makes no sense to me...
+--Andy
