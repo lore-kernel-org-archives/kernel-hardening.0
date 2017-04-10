@@ -1,93 +1,83 @@
-Date: Mon, 10 Apr 2017 10:26:56 +0200 (CEST)
-From: Thomas Gleixner <tglx@linutronix.de>
-In-Reply-To: <58E7EE04.29218.6216C107@pageexec.freemail.hu>
-Message-ID: <alpine.DEB.2.20.1704100913520.1810@nanos>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>, <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>, <alpine.DEB.2.20.1704071048360.1716@nanos> <58E7EE04.29218.6216C107@pageexec.freemail.hu>
+Date: Mon, 10 Apr 2017 10:41:42 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170410094124.GA9450@leverpostej>
+References: <20170324132410.16628-1-ard.biesheuvel@linaro.org>
+ <20170324132410.16628-5-ard.biesheuvel@linaro.org>
+ <58E7B478.6010305@arm.com>
+ <CAKv+Gu9CpCWHT=3KboPTtuZVDundtGheKawS=iV_P756RFbaDg@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement
- __arch_rare_write_begin/unmap()
-To: PaX Team <pageexec@freemail.hu>
-Cc: Mathias Krause <minipli@googlemail.com>, Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu9CpCWHT=3KboPTtuZVDundtGheKawS=iV_P756RFbaDg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 4/4] ef/libstub: arm/arm64: randomize the base of the
+ UEFI rt services region
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, James Morse <james.morse@arm.com>
+Cc: "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, Leif Lindholm <leif.lindholm@linaro.org>, Borislav Petkov <bp@alien8.de>, Roy Franz <rfranz@cavium.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 7 Apr 2017, PaX Team wrote:
-> On 7 Apr 2017 at 11:46, Thomas Gleixner wrote:
-> 
-> > On Fri, 7 Apr 2017, Mathias Krause wrote:
-> > > Well, doesn't look good to me. NMIs will still be able to interrupt
-> > > this code and will run with CR0.WP = 0.
-> > > 
-> > > Shouldn't you instead question yourself why PaX can do it "just" with
-> > > preempt_disable() instead?!
-> > 
-> > That's silly. Just because PaX does it, doesn't mean it's correct.
-> 
-> is that FUD or do you have actionable information to share?
+On Fri, Apr 07, 2017 at 04:51:16PM +0100, Ard Biesheuvel wrote:
+> On 7 April 2017 at 16:47, James Morse <james.morse@arm.com> wrote:
+> > On 24/03/17 13:24, Ard Biesheuvel wrote:
+> >> Update the allocation logic for the virtual mapping of the UEFI runtime
+> >> services to start from a randomized base address if KASLR is in effect,
+> >> and if the UEFI firmware exposes an implementation of EFI_RNG_PROTOCOL.
+> >>
+> >> This makes it more difficult to predict the location of exploitable
+> >> data structures in the runtime UEFI firmware, which increases robustness
+> >> against attacks. Note that these regions are only mapped during the
+> >> time a runtime service call is in progress, and only on a single CPU
+> >> at a time, bit give the lack of a downside, let's enable it nonetheless.
+> >
+> > With next-20170407 on Seattle Overdrive, I get an SError[0] on boot:
 
-That has absolutely nothing to do with FUD. I'm merily not accepting
-argumentations which say: PaX can do it "just"....
+> > * Revert "ef/libstub/arm/arm64: Randomize the base of the UEFI rt services region"
+> >
+> > At which point the machine start booting to a prompt again, (its noisier than
+> > usual but looks like double-printing).
 
-That has exactly zero technical merit and it's not asked too much to
-provide precise technical arguments why one implementation is better than
-some other.
+> That is quite interesting, to be honest, because that patch should
+> effectively be a NOP on systems that do not implement
+> EFI_RNG_PROTOCOL.
 
-> > To be honest, playing games with the CR0.WP bit is outright stupid to begin with.
-> 
-> why is that? cr0.wp exists since the i486 and its behaviour fits my
-> purposes quite well, it's the best security/performance i know of.
+FWIW, I'm also seeing a crash as a result of this patch, on a Juno R1
+with an EFI_RNG_PROTOCOL implementation, with next-20170410 defconfig.
+I'm using the Linaro 15.08 toolchain.
 
-Works for me has never be a good engineering principle.
+----
+EFI stub: Booting Linux Kernel...
+EFI stub: Using DTB from configuration table
 
-> > Whether protected by preempt_disable or local_irq_disable, to make that
-> > work it needs CR0 handling in the exception entry/exit at the lowest
-> > level.
-> 
-> correct.
-> 
-> > And that's just a nightmare maintainence wise as it's prone to be
-> > broken over time.
-> 
-> i've got 14 years of experience of maintaining it and i never saw it break.
 
-It's a difference whether you maintain a special purpose patch set out of
-tree for a subset of architectures - I certainly know what I'm talking
-about - or keeping stuff sane in the upstream kernel.
+WARNING: this system is using an unsafe pseudo-random implementation of
+RngLib!
 
-> > I certainly don't want to take the chance to leak CR0.WP ever
->
-> why and where would cr0.wp leak?
 
-It's bound to happen due to some subtle mistake and up to the point where
-you catch it (in the scheduler or entry/exit path) the world is
-writeable. And that will be some almost never executed error path which can
-be triggered by a carefully crafted attack. A very restricted writeable
-region is definitely preferred over full world writeable then, right?
 
-> > Why the heck should we care about rare writes being performant?
-> 
-> because you've been misled by the NIH crowd here that the PaX feature they
-> tried to (badly) extract from has anything to do with frequency of writes.
+Synchronous Exception at 0x00000000F80FC7E8
+----
 
-It would be apprectiated if you could keep your feud out of this. It's
-enough to tell me that 'rare write' is a misleading term and why.
+If I replace the !nokaslr() in efi_entry() with false, my kernel boots.
 
-> > Making the world and some more writeable hardly qualifies as tightly
-> > focused.
-> 
-> you forgot to add 'for a window of a few insns' and that the map/unmap
+If I replace !nokaslr() with true, it fails to boot, even with the call
+to efi_get_random_bytes() replaced with status = EFI_ERROR.
 
-If it'd be guaranteed to be a few instructions, then I wouldn't be that
-worried. The availability of make_world_writeable() as an unrestricted
-usable function makes me nervous as hell. We've had long standing issues
-where kmap_atomic() got leaked through a hard to spot almost never executed
-error handling path. And the same is bound to happen with this, just with a
-way worse outcome.
+The problem appears to be the use of TASK_SIZE, since on arm64 that's:
 
-> approach does the same under an attacker controlled ptr.
+#define TASK_SIZE               (test_thread_flag(TIF_32BIT) ? \
+                                TASK_SIZE_32 : TASK_SIZE_64)
 
-Which attacker controlled pointer?
+... which would mean that the stub would be trying to dereference whatever it
+found in sp_el0. Looking at objdump:
+
+0000000000000160 <efi_entry>:
+ ...
+ 4b4:   94000000        bl      0 <nokaslr>
+ 4b8:   35000280        cbnz    w0, 508 <efi_entry+0x3a8>
+ 4bc:   d5384100        mrs     x0, sp_el0
+ 4c0:   f9400004        ldr     x4, [x0]
+...
+
+So I think we should revert this for now.
 
 Thanks,
-
-	tglx
+Mark.
