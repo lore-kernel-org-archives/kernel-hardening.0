@@ -1,88 +1,140 @@
-Date: Mon, 10 Apr 2017 18:12:40 +0100
-From: Catalin Marinas <catalin.marinas@arm.com>
-Message-ID: <20170410171240.GE30647@e104818-lin.cambridge.arm.com>
-References: <20170410164420.64003-1-thgarnie@google.com>
- <20170410164420.64003-4-thgarnie@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170410164420.64003-4-thgarnie@google.com>
-Subject: [kernel-hardening] Re: [PATCH v7 4/4] arm64/syscalls: Architecture specific
- pre-usermode check
-To: Thomas Garnier <thgarnie@google.com>
-Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Andrew Morton <akpm@linux-foundation.org>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390@vger.kernel.org, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, x86@kernel.org, linux-kernel@vger.kernel.org, linux-arm-kernel@lists.infradead.org
+In-Reply-To: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
+References: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Mon, 10 Apr 2017 22:50:26 +0530
+Message-ID: <CACi5LpMwX5iQaOT=0nnm+6bMuob2PLHW6sTj_sW+SPwQn6hVxQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Steve Best <sbest@redhat.com>, "Gustavo Luiz Duarte (IBM)" <gduarte@redhat.com>
+Cc: Daniel Cashman <dcashman@google.com>, Michael Ellerman <mpe@ellerman.id.au>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Kees Cook <keescook@chromium.org>, Bhupesh Sharma <bhsharma@redhat.com>, Alexander Graf <agraf@suse.com>, Benjamin Herrenschmidt <benh@kernel.crashing.org>, Paul Mackerras <paulus@samba.org>, Anatolij Gustschin <agust@denx.de>, Alistair Popple <alistair@popple.id.au>, Matt Porter <mporter@kernel.crashing.org>, Vitaly Bordug <vitb@kernel.crashing.org>, Scott Wood <oss@buserror.net>, Kumar Gala <galak@kernel.crashing.org>, Daniel Cashman <dcashman@android.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 10, 2017 at 09:44:20AM -0700, Thomas Garnier wrote:
-> Disable the generic pre-usermode check in favor of an optimized
-> implementation. This patch adds specific checks on user-mode return path
-> to make it faster and smaller.
-> 
-> The address limit is checked on each syscall return path to user-mode.
-> If it was changed, a generic handler is called to stop the kernel on an
-> explicit check.
-> 
-> Signed-off-by: Thomas Garnier <thgarnie@google.com>
+Hi Michael,
+
+On Wed, Mar 29, 2017 at 1:15 AM, Bhupesh Sharma <bhsharma@redhat.com> wrote:
+> powerpc arch_mmap_rnd() currently uses hard-coded values - (23-PAGE_SHIFT) for
+> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
+> for the mmap base address for a ASLR ELF.
+>
+> This patch makes sure that powerpc mmap arch_mmap_rnd() implementation
+> is similar to other ARCHs (like x86, arm64) and uses mmap_rnd_bits
+> and helpers to generate the mmap address randomization.
+>
+> The maximum and minimum randomization range values represent
+> a compromise between increased ASLR effectiveness and avoiding
+> address-space fragmentation.
+>
+> Using the Kconfig option and suitable /proc tunable, platform
+> developers may choose where to place this compromise.
+>
+> Also this patch keeps the default values as new minimums.
+>
+> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+> Reviewed-by: Kees Cook <keescook@chromium.org>
 > ---
-> Based on next-20170410
-> ---
->  arch/arm64/Kconfig        |  1 +
->  arch/arm64/kernel/entry.S | 13 +++++++++++++
->  2 files changed, 14 insertions(+)
-> 
-> diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-> index 9b8fcab7da56..3f9e8e7d9376 100644
-> --- a/arch/arm64/Kconfig
-> +++ b/arch/arm64/Kconfig
-> @@ -24,6 +24,7 @@ config ARM64
->  	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
->  	select ARCH_WANT_FRAME_POINTERS
->  	select ARCH_HAS_UBSAN_SANITIZE_ALL
-> +	select ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
->  	select ARM_AMBA
->  	select ARM_ARCH_TIMER
->  	select ARM_GIC
-> diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-> index 43512d4d7df2..bdd094c7837a 100644
-> --- a/arch/arm64/kernel/entry.S
-> +++ b/arch/arm64/kernel/entry.S
-> @@ -744,6 +744,8 @@ ENDPROC(cpu_switch_to)
->  ret_fast_syscall:
->  	disable_irq				// disable interrupts
->  	str	x0, [sp, #S_X0]			// returned x0
-> +	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
-> +	tbnz	x2, #63, addr_limit_fail
->  	ldr	x1, [tsk, #TSK_TI_FLAGS]	// re-check for syscall tracing
->  	and	x2, x1, #_TIF_SYSCALL_WORK
->  	cbnz	x2, ret_fast_syscall_trace
-> @@ -771,6 +773,9 @@ work_pending:
->   */
->  ret_to_user:
->  	disable_irq				// disable interrupts
-> +	ldr	x2, [tsk, #TSK_TI_ADDR_LIMIT]	// check addr limit change
-> +	tbnz	x2, #63, addr_limit_fail
+> * Changes since v2:
+> v2 can be seen here (https://patchwork.kernel.org/patch/9551509/)
+>     - Changed a few minimum and maximum randomization ranges as per Michael's suggestion.
+>     - Corrected Kees's email address in the Reviewed-by line.
+>     - Added further comments in kconfig to explain how the address ranges were worked out.
+>
+> * Changes since v1:
+> v1 can be seen here (https://lists.ozlabs.org/pipermail/linuxppc-dev/2017-February/153594.html)
+>     - No functional change in this patch.
+>     - Dropped PATCH 2/2 from v1 as recommended by Kees Cook.
+>
+>  arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
+>  arch/powerpc/mm/mmap.c |  7 ++++---
+>  2 files changed, 48 insertions(+), 3 deletions(-)
+>
+> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
+> index 97a8bc8..84aae67 100644
+> --- a/arch/powerpc/Kconfig
+> +++ b/arch/powerpc/Kconfig
+> @@ -22,6 +22,48 @@ config MMU
+>         bool
+>         default y
+>
+> +# min bits determined by the following formula:
+> +# VA_BITS - PAGE_SHIFT - CONSTANT
+> +# where,
+> +#      VA_BITS = 46 bits for 64BIT and 4GB - 1 Page = 31 bits for 32BIT
+> +#      CONSTANT = 16 for 64BIT and 8 for 32BIT
+> +config ARCH_MMAP_RND_BITS_MIN
+> +       default 5 if PPC_256K_PAGES && 32BIT  # 31 - 18 - 8 = 5
+> +       default 7 if PPC_64K_PAGES && 32BIT   # 31 - 16 - 8 = 7
+> +       default 9 if PPC_16K_PAGES && 32BIT   # 31 - 14 - 8 = 9
+> +       default 11 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 8 = 11
+> +       default 12 if PPC_256K_PAGES && 64BIT # 46 - 18 - 16 = 12
+> +       default 14 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 16 = 14
+> +       default 16 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 16 = 16
+> +       default 18 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 16 = 18
 > +
+> +# max bits determined by the following formula:
+> +# VA_BITS - PAGE_SHIFT - CONSTANT
+> +# where,
+> +#      VA_BITS = 46 bits for 64BIT, and 4GB - 1 Page = 31 bits for 32BIT
+> +#      CONSTANT = 2, both for 64BIT and 32BIT
+> +config ARCH_MMAP_RND_BITS_MAX
+> +       default 11 if PPC_256K_PAGES && 32BIT # 31 - 18 - 2 = 11
+> +       default 13 if PPC_64K_PAGES && 32BIT  # 31 - 16 - 2 = 13
+> +       default 15 if PPC_16K_PAGES && 32BIT  # 31 - 14 - 2 = 15
+> +       default 17 if PPC_4K_PAGES && 32BIT   # 31 - 12 - 2 = 17
+> +       default 26 if PPC_256K_PAGES && 64BIT # 46 - 18 - 2 = 26
+> +       default 28 if PPC_64K_PAGES && 64BIT  # 46 - 16 - 2 = 28
+> +       default 30 if PPC_16K_PAGES && 64BIT  # 46 - 14 - 2 = 30
+> +       default 32 if PPC_4K_PAGES && 64BIT   # 46 - 12 - 2 = 32
+> +
+> +config ARCH_MMAP_RND_COMPAT_BITS_MIN
+> +       default 5 if PPC_256K_PAGES
+> +       default 7 if PPC_64K_PAGES
+> +       default 9 if PPC_16K_PAGES
+> +       default 11
+> +
+> +config ARCH_MMAP_RND_COMPAT_BITS_MAX
+> +       default 11 if PPC_256K_PAGES
+> +       default 13 if PPC_64K_PAGES
+> +       default 15 if PPC_16K_PAGES
+> +       default 17
+> +
+>  config HAVE_SETUP_PER_CPU_AREA
+>         def_bool PPC64
+>
+> @@ -142,6 +184,8 @@ config PPC
+>         select HAVE_IRQ_EXIT_ON_IRQ_STACK
+>         select HAVE_KERNEL_GZIP
+>         select HAVE_KPROBES
+> +       select HAVE_ARCH_MMAP_RND_BITS
+> +       select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
+>         select HAVE_KRETPROBES
+>         select HAVE_LIVEPATCH                   if HAVE_DYNAMIC_FTRACE_WITH_REGS
+>         select HAVE_MEMBLOCK
+> diff --git a/arch/powerpc/mm/mmap.c b/arch/powerpc/mm/mmap.c
+> index a5d9ef5..92a9355 100644
+> --- a/arch/powerpc/mm/mmap.c
+> +++ b/arch/powerpc/mm/mmap.c
+> @@ -61,11 +61,12 @@ unsigned long arch_mmap_rnd(void)
+>  {
+>         unsigned long rnd;
+>
+> -       /* 8MB for 32bit, 1GB for 64bit */
+> +#ifdef CONFIG_COMPAT
+>         if (is_32bit_task())
+> -               rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
+> +               rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
+>         else
+> -               rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
+> +#endif
+> +               rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+>
+>         return rnd << PAGE_SHIFT;
+>  }
+> --
+> 2.7.4
+>
 
-Nitpick: unnecessary empty line added.
+Ping. Any comments on this one?
 
->  	ldr	x1, [tsk, #TSK_TI_FLAGS]
->  	and	x2, x1, #_TIF_WORK_MASK
->  	cbnz	x2, work_pending
-> @@ -780,6 +785,14 @@ finish_ret_to_user:
->  ENDPROC(ret_to_user)
->  
->  /*
-> + * Address limit was incorrect before returning in user-mode which could be
-> + * used to elevate privileges. Call the generic handler to stop the kernel on
-> + * the appropriate check. This function does not return.
-> + */
-> +addr_limit_fail:
-> +	bl address_limit_check_failed
-
-You could do a "b address_limit_check_failed" rather than "bl" since we
-don't care about returning here (and a nitpick: insert tab between "b"
-and "address_limit_check_failed").
-
-With the above:
-
-Reviewed-by: Catalin Marinas <catalin.marinas@arm.com>
+Regards,
+Bhupesh
