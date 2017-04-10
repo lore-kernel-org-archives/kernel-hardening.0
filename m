@@ -1,82 +1,61 @@
+Date: Mon, 10 Apr 2017 11:22:59 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170410102244.GA13899@leverpostej>
+References: <CA+rthh95rW95woiWvyeCcoJT-qRM18KCDGHGtH=bDHZdExmVmg@mail.gmail.com>
+ <alpine.DEB.2.20.1704071048360.1716@nanos>
+ <CA+rthh9-EJBBO6nYYY6noP0ybcvk+xJ+S5h6BCNPtidjMCv8VQ@mail.gmail.com>
+ <alpine.DEB.2.20.1704071426300.1716@nanos>
+ <CA+rthh8TbqU-4tY4Y8trnyMDBe6dRLhVrAnk-COJCZCOyHqSog@mail.gmail.com>
+ <CALCETrWuZPDjAuE1jnhJNKiZOOEdbus-O6GY8++0UO56Q84PZw@mail.gmail.com>
+ <CA+DvKQKc8uq=1O5d41GRU6u=GkOvuCJzkbPPBcp2ohHLU7A25g@mail.gmail.com>
+ <CALCETrUk7k3SFKiu2kykwPM=AQ9q2rczetL4j5XyoOxX_gjCGw@mail.gmail.com>
+ <CA+DvKQKQzMk==8Z4sF1pCeDDwE4+m_2Kgtztamaf2BWYm5ENUA@mail.gmail.com>
+ <CALCETrXQaRcNz7EQW9DHF-LMr5SkooLq=1HKsdOfXH-kY4fcBw@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20170410094124.GA9450@leverpostej>
-References: <20170324132410.16628-1-ard.biesheuvel@linaro.org>
- <20170324132410.16628-5-ard.biesheuvel@linaro.org> <58E7B478.6010305@arm.com>
- <CAKv+Gu9CpCWHT=3KboPTtuZVDundtGheKawS=iV_P756RFbaDg@mail.gmail.com> <20170410094124.GA9450@leverpostej>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 10 Apr 2017 10:44:39 +0100
-Message-ID: <CAKv+Gu9YfALdyL-28X20X=T=XyyjDUxmtHy3_ZDDq-PF8RMxUA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH 4/4] ef/libstub: arm/arm64: randomize the base of the UEFI
- rt services region
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: James Morse <james.morse@arm.com>, "linux-efi@vger.kernel.org" <linux-efi@vger.kernel.org>, kernel-hardening@lists.openwall.com, Matt Fleming <matt@codeblueprint.co.uk>, Leif Lindholm <leif.lindholm@linaro.org>, Borislav Petkov <bp@alien8.de>, Roy Franz <rfranz@cavium.com>, Ingo Molnar <mingo@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CALCETrXQaRcNz7EQW9DHF-LMr5SkooLq=1HKsdOfXH-kY4fcBw@mail.gmail.com>
+Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement
+ __arch_rare_write_begin/unmap()
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Daniel Micay <danielmicay@gmail.com>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, PaX Team <pageexec@freemail.hu>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10 April 2017 at 10:41, Mark Rutland <mark.rutland@arm.com> wrote:
-> On Fri, Apr 07, 2017 at 04:51:16PM +0100, Ard Biesheuvel wrote:
->> On 7 April 2017 at 16:47, James Morse <james.morse@arm.com> wrote:
->> > On 24/03/17 13:24, Ard Biesheuvel wrote:
->> >> Update the allocation logic for the virtual mapping of the UEFI runtime
->> >> services to start from a randomized base address if KASLR is in effect,
->> >> and if the UEFI firmware exposes an implementation of EFI_RNG_PROTOCOL.
->> >>
->> >> This makes it more difficult to predict the location of exploitable
->> >> data structures in the runtime UEFI firmware, which increases robustness
->> >> against attacks. Note that these regions are only mapped during the
->> >> time a runtime service call is in progress, and only on a single CPU
->> >> at a time, bit give the lack of a downside, let's enable it nonetheless.
->> >
->> > With next-20170407 on Seattle Overdrive, I get an SError[0] on boot:
->
->> > * Revert "ef/libstub/arm/arm64: Randomize the base of the UEFI rt services region"
->> >
->> > At which point the machine start booting to a prompt again, (its noisier than
->> > usual but looks like double-printing).
->
->> That is quite interesting, to be honest, because that patch should
->> effectively be a NOP on systems that do not implement
->> EFI_RNG_PROTOCOL.
->
-> FWIW, I'm also seeing a crash as a result of this patch, on a Juno R1
-> with an EFI_RNG_PROTOCOL implementation, with next-20170410 defconfig.
-> I'm using the Linaro 15.08 toolchain.
->
-> ----
-> EFI stub: Booting Linux Kernel...
-> EFI stub: Using DTB from configuration table
->
->
-> WARNING: this system is using an unsafe pseudo-random implementation of
-> RngLib!
->
->
->
-> Synchronous Exception at 0x00000000F80FC7E8
-> ----
->
-> If I replace the !nokaslr() in efi_entry() with false, my kernel boots.
->
-> If I replace !nokaslr() with true, it fails to boot, even with the call
-> to efi_get_random_bytes() replaced with status = EFI_ERROR.
->
-> The problem appears to be the use of TASK_SIZE, since on arm64 that's:
->
-> #define TASK_SIZE               (test_thread_flag(TIF_32BIT) ? \
->                                 TASK_SIZE_32 : TASK_SIZE_64)
->
-> ... which would mean that the stub would be trying to dereference whatever it
-> found in sp_el0. Looking at objdump:
->
-> 0000000000000160 <efi_entry>:
->  ...
->  4b4:   94000000        bl      0 <nokaslr>
->  4b8:   35000280        cbnz    w0, 508 <efi_entry+0x3a8>
->  4bc:   d5384100        mrs     x0, sp_el0
->  4c0:   f9400004        ldr     x4, [x0]
-> ...
->
-> So I think we should revert this for now.
->
+On Sat, Apr 08, 2017 at 08:20:03AM -0700, Andy Lutomirski wrote:
+> On Sat, Apr 8, 2017 at 12:33 AM, Daniel Micay <danielmicay@gmail.com> wrote:
+> > The
+> > submitted code is aimed at rare writes to globals, but this feature is
+> > more than that and design decisions shouldn't be based on just the
+> > short term.
+> 
+> Then, if you disagree with a proposed design, *explain why* in a
+> standalone manner.  Say what future uses a different design would
+> have.
+> 
+> > I actually care a lot more about 64-bit ARM support than I do x86, but
+> > using a portable API for pax_open_kernel (for the simple uses at
+> > least) is separate from choosing the underlying implementation. There
+> > might not be a great way to do it on the architectures I care about
+> > but that doesn't need to hinder x86. It's really not that much code...
+> > A weaker/slower implementation for x86 also encourages the same
+> > elsewhere.
+> 
+> No one has explained how CR0.WP is weaker or slower than my proposal.
+> Here's what I'm proposing:
+> 
+> At boot, choose a random address A.  Create an mm_struct that has a
+> single VMA starting at A that represents the kernel's rarely-written
+> section.  Compute O = (A - VA of rarely-written section).  To do a
+> rare write, use_mm() the mm, write to (VA + O), then unuse_mm().
+> 
+> This should work on any arch that has an MMU that allows this type of
+> aliasing and that doesn't have PA-based protections on the
+> rarely-written section.
 
-Thanks for debugging this! I will get a fixed version out asap
+Modulo randomization, that sounds exactly like what I had envisaged [1],
+so that makes sense to me.
+
+Thanks,
+Mark.
+
+[1] http://www.openwall.com/lists/kernel-hardening/2016/11/18/3
