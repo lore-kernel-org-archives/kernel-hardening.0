@@ -1,126 +1,113 @@
-From: "PaX Team" <pageexec@freemail.hu>
-Date: Mon, 10 Apr 2017 21:55:45 +0200
 MIME-Version: 1.0
-Message-ID: <58EBE341.4772.718CC141@pageexec.freemail.hu>
-In-reply-to: <alpine.DEB.2.20.1704100913520.1810@nanos>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>, <58E7EE04.29218.6216C107@pageexec.freemail.hu>, <alpine.DEB.2.20.1704100913520.1810@nanos>
-Content-type: text/plain; charset=US-ASCII
-Content-transfer-encoding: 7BIT
-Content-description: Mail message body
-Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: Thomas Gleixner <tglx@linutronix.de>
-Cc: Mathias Krause <minipli@googlemail.com>, Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+In-Reply-To: <2698e97b-397e-0fc0-84a1-dc9a4226117a@schaufler-ca.com>
+References: <1491734530-25002-1-git-send-email-tixxdz@gmail.com>
+ <1491734530-25002-2-git-send-email-tixxdz@gmail.com> <f25edeb6-35e1-2f8c-8fd6-fd051c4e79ce@schaufler-ca.com>
+ <CAEiveUeHedQAsjbS5Jj9imq28af0OuKAjMTudMJm7GqObRNMfQ@mail.gmail.com> <2698e97b-397e-0fc0-84a1-dc9a4226117a@schaufler-ca.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Mon, 10 Apr 2017 22:00:00 +0200
+Message-ID: <CAEiveUd4Obc+YsCiO7dp3-jypbJ4vMmsBOU=Ax8yF7+6dLes0w@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH RFC v2 1/3] LSM: Allow per LSM module per "struct
+ task_struct" blob.
+To: Casey Schaufler <casey@schaufler-ca.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 10 Apr 2017 at 10:26, Thomas Gleixner wrote:
+On Mon, Apr 10, 2017 at 9:26 PM, Casey Schaufler <casey@schaufler-ca.com> wrote:
+> On 4/10/2017 11:30 AM, Djalal Harouni wrote:
+>> On Mon, Apr 10, 2017 at 5:50 PM, Casey Schaufler <casey@schaufler-ca.com> wrote:
+>>> On 4/9/2017 3:42 AM, Djalal Harouni wrote:
+>>>> From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
+[...]
 
-> On Fri, 7 Apr 2017, PaX Team wrote:
-> > On 7 Apr 2017 at 11:46, Thomas Gleixner wrote:
-> > > That's silly. Just because PaX does it, doesn't mean it's correct.
-> > 
-> > is that FUD or do you have actionable information to share?
-> 
-> That has absolutely nothing to do with FUD. I'm merily not accepting
-> argumentations which say: PaX can do it "just"....
+>>> While I appreciate your enthusiasm, I would really like
+>>> to see a mechanism for managing all of the blobs as being
+>>> potentially shared rather than just the task blob. With
+>>> infrastructure blob management being the general case we
+>>> could stack any set of existing modules that does not
+>>> include both SELinux and Smack. (AppArmor is threatening
+>>> to join that set, but we're still waiting on that) I
+>> Yes! most of the other kernel maintainers I discussed the feature with
+>> did not even believe or knew that LSM stacking is possible! Some other
+>> kernel frameworks are being replaced with new ones (I'm not sure if
+>> the old ones were perfect!)... but what I'm trying to say is that we
+>> should make it easy for dynamic LSM plugins model so they can explore
+>> the interface, and maybe after some time the whole framework will even
+>> be replaced with a better one...
+>
+> I'm not committing to dynamic modules, but I am working
+> to make sure I don't do anything to prevent someone else
+> from doing it in the future. There are a good number of
+> people who find the notion of dynamic security policy
+> disturbing.
 
-you implied that what PaX does may not be correct. if you can't back that
-up with facts and technical arguments then it is FUD. your turn.
+I understand, though that with today's container recycling use cases
+some of it may make sense. Anyway you are doing the real work, you
+know better.
 
-> That has exactly zero technical merit and it's not asked too much to
-> provide precise technical arguments why one implementation is better than
-> some other.
 
-exactly. start with explaining what is not correct in PaX with "precise
-technical arguments".
+>> Thanks to your effort and others we may achieve it, but I don't think
+>> that delaying features for a perfect implementation is the best way.
+>> During linuxcon 2016 Europe you said that there should be a new kind
+>> of LSMs, that's why I think we should make it easy for that to happen.
+>
+> I agree that it's better to use a work-around today then to
+> let the shortcomings of the existing infrastructure stop you
+> from getting your job done.
 
-> > > To be honest, playing games with the CR0.WP bit is outright stupid to begin with.
-> > 
-> > why is that? cr0.wp exists since the i486 and its behaviour fits my
-> > purposes quite well, it's the best security/performance i know of.
-> 
-> Works for me has never be a good engineering principle.
+Indeed!
 
-good thing i didn't say that. on the other hand you failed to provide "precise
-technical arguments" for why "playing games with the CR0.WP bit is outright
-stupid to begin with". do you have any to share and discuss?
 
-> > > And that's just a nightmare maintainence wise as it's prone to be
-> > > broken over time.
-> > 
-> > i've got 14 years of experience of maintaining it and i never saw it break.
-> 
-> It's a difference whether you maintain a special purpose patch set out of
-> tree for a subset of architectures - I certainly know what I'm talking
-> about - or keeping stuff sane in the upstream kernel.
+>>
+>>> think it's a bad idea to go ahead with one implementation
+>>> for task blobs without taking care of the others.
+>> Ok. Sorry if I missed this, but could you please point me why this
+>> could be a bad idea ?
+>
+> It's a whole lot easier to maintain one sort of blob
+> management then a different kind for each blob. It would
+> be lots cleaner to have a single call that tells the
+> infrastructure how much space you need for all your blobs
+> than a separate interface for each.
 
-there's no difference to me, i keep my stuff sane regardless. of course what
-you do with your out-of-tree code is your business but don't extrapolate it
-to mine. now besides argumentum ad verecundiam do you have "precise technical
-arguments" as to why maintaining a cr0.wp based approach would be "a nightmare
-maintainence wise as it's prone to be broken over time."?
+I perfectly agree here. With Tetsuo patch it was easy to add a
+stackable LSM, with a consistent approach that would be even better.
+But as you note that should not be a blocker to upstream new stackable
+LSMs.
 
-> > > I certainly don't want to take the chance to leak CR0.WP ever
-> >
-> > why and where would cr0.wp leak?
-> 
-> It's bound to happen due to some subtle mistake
 
-i don't see what subtle mistake you're thinking of here. can you give me
-an example?
+>> As I understand it, these are internal details that could be replaced.
+>> My first implementation used resizable concurrent hashtables that are
+>> heavily used in the networking code and it worked, and I easily
+>> converted the module to use Tetsuo's approach since I didn't see any
+>> objection for it, and it continued to work. Maybe the point should be
+>> *which* LSM should use the task->security and how ? The
+>> ModAutoRestrict module is a simple LSM which could easily work with
+>> any provided solution.
+>
+> So I see.
+>
+>> That being said, I could convert the module back and stick with
+>> rhashtables for now since it does not conflict with any module and it
+>> works well. I would like to avoid same history where Apparmor, Smack
+>> and TOMOYO all suffered to get mainlined, even Yama due to some
+>> requests...  Then I can convert the module back to use the same LSM
+>> infrastructure if you maintainers think that how it should go, that's
+>> totally fine by me. Yama internally could use the same task blob but
+>> it is avoiding conflicts by using lists to manage its internal data,
+>> that's the same design with ModAutoRestrict and rhashtables.
+>
+> I think that would be the prudent approach. There is still
+> the possibility that blob sharing (or full stacking, if you
+> prefer) won't be accepted any time soon.
 
-> and up to the point where you catch it (in the scheduler or entry/exit path)
-> the world is writeable.
+Ok Casey! I will wait for more feedback, and if other maintainers do
+not object, I will convert it back to rhashtables in next iterations
+making sure that it should be simple to convert later to a blob
+sharing mechanism.
 
-where such a leak is caught depends on what subtle mistake you're talking
-about, so let's get back to this point once you answered that question.
+Thanks again for the comments!
 
-> And that will be some almost never executed error path which can
-> be triggered by a carefully crafted attack.
 
-open/close calls have nothing to do with error paths or even conditional
-execution, they're always executed as a sequence so this situation cannot
-occur.
-
-> A very restricted writeable region is definitely preferred over full
-> world writeable then, right? 
-
-it doesn't matter when the attacker has an arbitrary read/write primitive
-which he can just use to modify that 'very restricted writeable region'
-to whatever he needs to cover first. now if all the data managing this
-region were also protected then it'd matter but that's never going to
-happen in the upstream kernel.
-
-> > > Making the world and some more writeable hardly qualifies as tightly
-> > > focused.
-> > 
-> > you forgot to add 'for a window of a few insns' and that the map/unmap
-> 
-> If it'd be guaranteed to be a few instructions, then I wouldn't be that
-> worried.
-
-it is, by definition assignments to otherwise __read_only data are (have to
-be) bracketed with open/close instrumentation.
-
-> The availability of make_world_writeable() as an unrestricted
-> usable function makes me nervous as hell.
-
-i can't imagine the nightmares you must have lived through for the two decades
-during which the kernel was all wide open... spass beiseite, we can address
-these fears of yours once you explain just what kind of error situations you
-have in mind and why they don't also apply to say text_poke().
-
-> We've had long standing issues where kmap_atomic() got leaked through a
-> hard to spot almost never executed error handling path. And the same is
-> bound to happen with this, just with a way worse outcome. 
-
-the lifetime and use of kmaps is very different so you'll have to explain
-in more detail why the problems they had apply here as well.
-
-> > approach does the same under an attacker controlled ptr.
-> 
-> Which attacker controlled pointer?
-
-i meant the one passed to the map/unmap code, attacker control over it means
-the whole world is effectively writable again (Andy's vma approach would restrict
-this to just the interesting read-only data except the whole thing is irrelevant
-until all participating data (vma, page tables, etc) are also protected).
+-- 
+tixxdz
