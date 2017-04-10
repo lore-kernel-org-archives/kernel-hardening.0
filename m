@@ -1,114 +1,108 @@
-References: <1491734530-25002-1-git-send-email-tixxdz@gmail.com>
- <1491734530-25002-2-git-send-email-tixxdz@gmail.com>
- <f25edeb6-35e1-2f8c-8fd6-fd051c4e79ce@schaufler-ca.com>
- <CAEiveUeHedQAsjbS5Jj9imq28af0OuKAjMTudMJm7GqObRNMfQ@mail.gmail.com>
-From: Casey Schaufler <casey@schaufler-ca.com>
-Message-ID: <2698e97b-397e-0fc0-84a1-dc9a4226117a@schaufler-ca.com>
-Date: Mon, 10 Apr 2017 12:26:12 -0700
+From: "PaX Team" <pageexec@freemail.hu>
+Date: Mon, 10 Apr 2017 21:47:31 +0200
 MIME-Version: 1.0
-In-Reply-To: <CAEiveUeHedQAsjbS5Jj9imq28af0OuKAjMTudMJm7GqObRNMfQ@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH RFC v2 1/3] LSM: Allow per LSM module per "struct
- task_struct" blob.
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Message-ID: <58EBE153.31145.71853724@pageexec.freemail.hu>
+In-reply-to: <CALCETrX+iQVjupq9NU5kOPypBBOSRziuvdGdnzCxTUXQkcFJcQ@mail.gmail.com>
+References: <1490811363-93944-1-git-send-email-keescook@chromium.org>, <58EA988F.29293.6C80F08B@pageexec.freemail.hu>, <CALCETrX+iQVjupq9NU5kOPypBBOSRziuvdGdnzCxTUXQkcFJcQ@mail.gmail.com>
+Content-type: text/plain; charset=US-ASCII
+Content-transfer-encoding: 7BIT
+Content-description: Mail message body
+Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Daniel Micay <danielmicay@gmail.com>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 4/10/2017 11:30 AM, Djalal Harouni wrote:
-> On Mon, Apr 10, 2017 at 5:50 PM, Casey Schaufler <casey@schaufler-ca.com> wrote:
->> On 4/9/2017 3:42 AM, Djalal Harouni wrote:
->>> From: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
->>>
->>> Since several modules are planning to use per "struct task_struct" blob,
->>> we need a layer for isolating it. Therefore, this patch introduces per LSM
->>> module per "struct task_struct" blob.
->>>
->>> It would be possible to remember location in security_hook_heads.task_alloc
->>> list and undo up to the corresponding security_hook_heads.task_free list
->>> when task_alloc hook failed. But this patch calls all task_free hooks
->>> without checking whether the corresponding task_alloc hook was called
->>> since most modules should be able to handle this correctly.
->>>
->>> How to calculate amount of needed bytes and allocate memory for initial
->>> task is a chicken-or-egg syndrome. We need to know how many bytes needs
->>> to be allocated for initial task's security blobs before security_init()
->>> is called. But security_reserve_task_blob_index() which calculates amount
->>> of needed bytes is called from security_init(). We will need to split
->>> module registration into three steps. The first step is call
->>> security_reserve_task_blob_index() on all modules which should be
->>> activated. The second step is allocate memory for the initial task's
->>> security blob. The third step is actually activate all modules which
->>> should be activated.
->>>
->>> Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
->>> Signed-off-by: Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp>
->> While I appreciate your enthusiasm, I would really like
->> to see a mechanism for managing all of the blobs as being
->> potentially shared rather than just the task blob. With
->> infrastructure blob management being the general case we
->> could stack any set of existing modules that does not
->> include both SELinux and Smack. (AppArmor is threatening
->> to join that set, but we're still waiting on that) I
-> Yes! most of the other kernel maintainers I discussed the feature with
-> did not even believe or knew that LSM stacking is possible! Some other
-> kernel frameworks are being replaced with new ones (I'm not sure if
-> the old ones were perfect!)... but what I'm trying to say is that we
-> should make it easy for dynamic LSM plugins model so they can explore
-> the interface, and maybe after some time the whole framework will even
-> be replaced with a better one...
+On 9 Apr 2017 at 17:31, Andy Lutomirski wrote:
 
-I'm not committing to dynamic modules, but I am working
-to make sure I don't do anything to prevent someone else
-from doing it in the future. There are a good number of
-people who find the notion of dynamic security policy
-disturbing.
+> On Sun, Apr 9, 2017 at 1:24 PM, PaX Team <pageexec@freemail.hu> wrote:
+> >
+> I consider breaking buggy drivers (in a way that they either generally
+> work okay
 
-> Thanks to your effort and others we may achieve it, but I don't think
-> that delaying features for a perfect implementation is the best way.
-> During linuxcon 2016 Europe you said that there should be a new kind
-> of LSMs, that's why I think we should make it easy for that to happen.
+do they work okay when the dma transfer goes to a buffer that crosses
+physically non-contiguous page boundaries?
 
-I agree that it's better to use a work-around today then to
-let the shortcomings of the existing infrastructure stop you
-from getting your job done.
+> or that they break with a nice OOPS depending on config) to
+> be better than having a special case in what's supposed to be a fast
+> path to keep them working.  I did consider forcing the relevant debug
+> options on for a while just to help shake these bugs out the woodwork
+> faster.
 
->
->> think it's a bad idea to go ahead with one implementation
->> for task blobs without taking care of the others.
-> Ok. Sorry if I missed this, but could you please point me why this
-> could be a bad idea ?
+that's a false dichotomy, discovering buggy drivers is orthogonal to (not)
+breaking users' systems as grsec shows. and how did you expect to 'shake
+these bugs out' when your own suggestion at the time was for distros to
+not enable this feature 'for a while'?
 
-It's a whole lot easier to maintain one sort of blob
-management then a different kind for each blob. It would
-be lots cleaner to have a single call that tells the
-infrastructure how much space you need for all your blobs
-than a separate interface for each.
+> > i have yet to see anyone explain what they mean by 'leak' here but if it
+> > is what i think it is then the arch specific entry/exit changes are not
+> > optional but mandatory. see below for randomization.
+> 
+> By "leak" I mean that a bug or exploit causes unintended code to run
+> with CR0.WP or a special CR3 or a special PTE or whatever loaded.
 
-> As I understand it, these are internal details that could be replaced.
-> My first implementation used resizable concurrent hashtables that are
-> heavily used in the networking code and it worked, and I easily
-> converted the module to use Tetsuo's approach since I didn't see any
-> objection for it, and it continued to work. Maybe the point should be
-> *which* LSM should use the task->security and how ? The
-> ModAutoRestrict module is a simple LSM which could easily work with
-> any provided solution.
+how can a bug/exploit cause something like this?
 
-So I see.
+>  PaX hooks the entry code to avoid leaks. 
 
-> That being said, I could convert the module back and stick with
-> rhashtables for now since it does not conflict with any module and it
-> works well. I would like to avoid same history where Apparmor, Smack
-> and TOMOYO all suffered to get mainlined, even Yama due to some
-> requests...  Then I can convert the module back to use the same LSM
-> infrastructure if you maintainers think that how it should go, that's
-> totally fine by me. Yama internally could use the same task blob but
-> it is avoiding conflicts by using lists to manage its internal data,
-> that's the same design with ModAutoRestrict and rhashtables.
+PaX doesn't instrument enter/exit paths to prevent state leaks into interrupt
+context (it's a useful sideeffect though), rather it's needed for correctness
+if the kernel can be interrupted at all while it's open (address space switching
+will need to handle this too but you have yet to address it).
 
-I think that would be the prudent approach. There is still
-the possibility that blob sharing (or full stacking, if you
-prefer) won't be accepted any time soon.
+> >> At boot, choose a random address A.
+> >
+> > what is the threat that a random address defends against?
+> 
+> Makes it harder to exploit a case where the CR3 setting leaks.
 
-> Thank you for the comment!
->
+if an attacker has the ability to cause this leak (details of which are subject
+to the question i asked above) then why wouldn't he simply also make use of the
+primitives to modify his target via the writable vma without ever having to know
+the randomized address? i also wonder what exploit power you assume for this
+attack and whether that is already enough to simply go after page tables, etc
+instead of figuring out the alternative address space.
+
+> > the problem is that the amount of __read_only data extends beyond vmlinux,
+> > i.e., this approach won't scale. another problem is that it can't be used
+> > inside use_mm and switch_mm themselves (no read-only task structs or percpu
+> > pgd for you ;) and probably several other contexts.
+> 
+> Can you clarify these uses that extend beyond vmlinux?
+
+one obvious candidate is modules. how do you want to handle them? then there's
+a whole bunch of dynamically allocated data that is a candidate for __read_only
+treatment.
+
+> > what is the threat model you're assuming for this feature? based on what i
+> > have for PaX (arbitrary read/write access exploited for data-only attacks),
+> > the above makes no sense to me...
+> 
+> If I use the primitive to try to write a value to the wrong section
+> (write to kernel text, for example), IMO it would be nice to OOPS
+> instead of succeeding.
+
+this doesn't tell me what power you're assuming the attacker has. is it
+my generic arbitrary read-write ability or something more restricted and
+thus less realistic? i.e., how does the attacker get to 'use the primitive'
+and (presumably) also control the ptr/data?
+
+as for your specific example, kernel text isn't 'non-rare-write data' that
+you spoke of before, but that aside, what prevents an attacker from computing
+his target ptr so that after your accessor rebases it, it'd point back to his
+intended target instead? will you range-check (find_vma eventually?) each time?
+how will you make all this code safe from races from another task? the more
+checks you make, the more likely that something sensitive will spill to memory
+and be a target itself in order to hijack the sensitive write.
+
+> Please keep in mind that, unlike PaX, uses of a pax_open_kernel()-like
+> function will may be carefully audited by a friendly security expert
+> such as yourself.  It would be nice to harden the primitive to a
+> reasonable extent against minor misuses such as putting it in a
+> context where the compiler will emit mov-a-reg-with-WP-set-to-CR0;
+> ret.
+
+i don't understand what's there to audit. if you want to treat a given piece
+of data as __read_only then you have no choice but to allow writes to it via
+the open/close mechanism and the compiler can tell you just where those
+writes are (and even do the instrumentation when you get tired of doing it
+by hand).
