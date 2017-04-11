@@ -1,160 +1,192 @@
 MIME-Version: 1.0
-In-Reply-To: <58EBE153.31145.71853724@pageexec.freemail.hu>
-References: <1490811363-93944-1-git-send-email-keescook@chromium.org>
- <58EA988F.29293.6C80F08B@pageexec.freemail.hu> <CALCETrX+iQVjupq9NU5kOPypBBOSRziuvdGdnzCxTUXQkcFJcQ@mail.gmail.com>
- <58EBE153.31145.71853724@pageexec.freemail.hu>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Mon, 10 Apr 2017 13:27:47 -0700
-Message-ID: <CALCETrVrbCxQraJ7ZWxn_S0CV_Vmz=e4hWr2503+Ha9Fva5xNQ@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <1491734530-25002-1-git-send-email-tixxdz@gmail.com>
+References: <1491734530-25002-1-git-send-email-tixxdz@gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 10 Apr 2017 21:23:39 -0700
+Message-ID: <CAGXu5jLjd8ttpa_S16dadr=k6-mZGkSa3G6RBu9NUe6g5M399w@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] Re: [RFC v2][PATCH 04/11] x86: Implement __arch_rare_write_begin/unmap()
-To: PaX Team <pageexec@freemail.hu>
-Cc: Andy Lutomirski <luto@kernel.org>, Daniel Micay <danielmicay@gmail.com>, Mathias Krause <minipli@googlemail.com>, Thomas Gleixner <tglx@linutronix.de>, Kees Cook <keescook@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Mark Rutland <mark.rutland@arm.com>, Hoeun Ryu <hoeun.ryu@gmail.com>, Emese Revfy <re.emese@gmail.com>, Russell King <linux@armlinux.org.uk>, X86 ML <x86@kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, Peter Zijlstra <peterz@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH RFC v2 0/3] security: Add ModAutoRestrict LSM
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 10, 2017 at 12:47 PM, PaX Team <pageexec@freemail.hu> wrote:
-> On 9 Apr 2017 at 17:31, Andy Lutomirski wrote:
+On Sun, Apr 9, 2017 at 3:42 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> Hi List,
 >
->> On Sun, Apr 9, 2017 at 1:24 PM, PaX Team <pageexec@freemail.hu> wrote:
->> >
->> I consider breaking buggy drivers (in a way that they either generally
->> work okay
+> This is RFC v2 of the Module auto-loading restriction feature. The
+> module has been renamed ModAutoRestrict LSM.
 >
-> do they work okay when the dma transfer goes to a buffer that crosses
-> physically non-contiguous page boundaries?
-
-Nope.  Like I said, i considered making the debugging mandatory.  I
-may still send patches to do that.
-
->> By "leak" I mean that a bug or exploit causes unintended code to run
->> with CR0.WP or a special CR3 or a special PTE or whatever loaded.
+> This RFC is a work in progress update.
 >
-> how can a bug/exploit cause something like this?
-
-For example: a bug in entry logic, a bug in perf NMI handling, or even
-a bug in *nested* perf NMI handling (egads!).  Or maybe some super
-nasty interaction with suspend/resume.  These are all fairly unlikely
-(except the nested perf case), but still.
-
-As a concrete example, back before my big NMI improvement series, it
-was possible for an NMI return to invoke espfix and/or take an IRET
-fault.  This *shouldn't* happen on return to a context with CR0.WP
-set, but it would be incredibly nasty if it did.  The code is
-separated out now, so it should be okay...
-
+> There are still minor things to fix which are listed in the TODO
+> section. Also I used Tetsuo approach of stacking task->security, since
+> now that the task_security_alloc() hook is in linux-security/next I took
+> advantage of it and switched to use that hook and applied Tetsuo
+> task->security per LSM blob on top of it. I can also switch to Casey
+> approach. However, since these are internal implementation details which
+> are not exposed, I do not think that this is a big issue. Thanks for the
+> work now it is clear that we are able to easily stack new LSMs.
 >
->>  PaX hooks the entry code to avoid leaks.
+> Patches are against linux-security/next HEAD 622f6e3265707eb
 >
-> PaX doesn't instrument enter/exit paths to prevent state leaks into interrupt
-> context (it's a useful sideeffect though), rather it's needed for correctness
-> if the kernel can be interrupted at all while it's open (address space switching
-> will need to handle this too but you have yet to address it).
-
-I don't think we disagree here.  A leak would be a case of incorrectness.
-
+> ==============
 >
->> >> At boot, choose a random address A.
->> >
->> > what is the threat that a random address defends against?
->>
->> Makes it harder to exploit a case where the CR3 setting leaks.
+> ModAutoRestrict is a Linux Security Module that applies restrictions on
+> automatic module loading operations. This is selectable at build-time
+> with CONFIG_SECURITY_MODAUTORESTRICT, and can be controlled at run-time
+> through sysctls in /proc/sys/kernel/modautorestrict/autoload or as a
+> per-process setting via a prctl() interface.
 >
-> if an attacker has the ability to cause this leak (details of which are subject
-> to the question i asked above) then why wouldn't he simply also make use of the
-> primitives to modify his target via the writable vma without ever having to know
-> the randomized address? i also wonder what exploit power you assume for this
-> attack and whether that is already enough to simply go after page tables, etc
-> instead of figuring out the alternative address space.
+> A userspace request to use a kernel feature that is implemented by modules
+> that are not loaded may trigger the module auto-load feature to load
+> these modules in order to satisfy userspace. However as today's Linux use
+> cases cover embedded systems to containers where applications are running
+> in their own separate environments, reducing or preventing operations
+> that may affect external environments is an important constraint.
+> Therefore, we need a way to control if automatic module loading is
+> allowed or which applications are allowed to trigger the module
+> auto-load feature.
 
-I'm imagining the power to (a) cause some code path to execute while
-the kernel is "open" and (b) the ability to use the buggy code path in
-question to write a a fully- or partially-controlled address.  With
-CR0.WP clear, this can write shellcode directly.  With CR3 pointing to
-a page table that maps some parts of the kernel (but not text!) at a
-randomized offset, you need to figure out the offset and find some
-other target in the mapping that gets your exploit farther along.  You
-can't write shellcode directly.
+It might be worth looking through the last several years of kernel
+CVEs to find all the ones that would have been stopped with a feature
+like this. There are many examples lately: both DCCP (CVE-2017-6074)
+and n_hldc (CVE-2017-2636) come to mind this year alone.
+
+> The ModAutoRestrict LSM allows system administrators or sandbox
+> mechanisms to control the module auto-load feature and prevent loading
+> unneeded modules or abuse the interface.
+>
+> The settings can be applied globally using a sysctl interface which
+> completes the core kernel interface "modules_disable".
+
+Typo: complements
+
+Perhaps mention why this is a complement (i.e. modules_disable is ALL
+modules, and modautorestrict is just auto-loaded, not explicitly
+loaded).
 
 >
->> > the problem is that the amount of __read_only data extends beyond vmlinux,
->> > i.e., this approach won't scale. another problem is that it can't be used
->> > inside use_mm and switch_mm themselves (no read-only task structs or percpu
->> > pgd for you ;) and probably several other contexts.
->>
->> Can you clarify these uses that extend beyond vmlinux?
+> The feature is also available as a prctl() interface. This allows to
+> apply restrictions when sandboxing processes. On embedded Linux systems,
+> or containers where only some containers/processes should have the
+> right privileges to load modules, this allows to restrict those
+> processes from inserting modules. Only privileged processes can be
+> allowed to perform so. A more restrictive access can be applied where
+> the module autoload feature is completely disabled.
+> In this schema the access rules are per-process and inherited by
+> children created by fork(2) and clone(2), and preserved across execve(2).
 >
-> one obvious candidate is modules. how do you want to handle them? then there's
-> a whole bunch of dynamically allocated data that is a candidate for __read_only
-> treatment.
-
-Exactly the same way.  Map those regions at the same offset, maybe
-even in the same VMA.  There's no reason that an artificial VMA used
-for this purpose can't be many gigabytes long and have vm_ops that
-only allow access to certain things.  But multiple VMAs would work,
-too.
-
+> Interface:
 >
->> > what is the threat model you're assuming for this feature? based on what i
->> > have for PaX (arbitrary read/write access exploited for data-only attacks),
->> > the above makes no sense to me...
->>
->> If I use the primitive to try to write a value to the wrong section
->> (write to kernel text, for example), IMO it would be nice to OOPS
->> instead of succeeding.
+> *) The per-process prctl() settings are:
 >
-> this doesn't tell me what power you're assuming the attacker has. is it
-> my generic arbitrary read-write ability or something more restricted and
-> thus less realistic? i.e., how does the attacker get to 'use the primitive'
-> and (presumably) also control the ptr/data?
+>  prctl(PR_MOD_AUTO_RESTRICT_OPTS, PR_SET_MOD_AUTO_RESTRICT, value, 0, 0)
 >
-> as for your specific example, kernel text isn't 'non-rare-write data' that
-> you spoke of before, but that aside, what prevents an attacker from computing
-> his target ptr so that after your accessor rebases it, it'd point back to his
-> intended target instead?
-
-It's a restriction on what targets can be hit.  With CR0.WP, you can
-hit anything that has a VA.  With CR3, you can hit only that which is
-mapped.
-
-> will you range-check (find_vma eventually?) each time?
-> how will you make all this code safe from races from another task? the more
-> checks you make, the more likely that something sensitive will spill to memory
-> and be a target itself in order to hijack the sensitive write.
-
-There's no code here making the checks at write time.  It's just page
-table / VMA setup.
-
+>  Where value means:
 >
->> Please keep in mind that, unlike PaX, uses of a pax_open_kernel()-like
->> function will may be carefully audited by a friendly security expert
->> such as yourself.  It would be nice to harden the primitive to a
->> reasonable extent against minor misuses such as putting it in a
->> context where the compiler will emit mov-a-reg-with-WP-set-to-CR0;
->> ret.
+>  0 - Classic module auto-load permissions, nothing changes.
 >
-> i don't understand what's there to audit. if you want to treat a given piece
-> of data as __read_only then you have no choice but to allow writes to it via
-> the open/close mechanism and the compiler can tell you just where those
-> writes are (and even do the instrumentation when you get tired of doing it
-> by hand).
+>  1 - The current process must have CAP_SYS_MODULE to be able to
+>      auto-load modules. CAP_NET_ADMIN should allow to auto-load
+>      modules with a 'netdev-%s' alias.
 >
+>  2 - Current process can not auto-load modules. Once set, this prctl
+>      value can not be changed.
+>
+>  The per-process value may only be increased, never decreased, thus ensuring
+>  that once applied, processes can never relaxe their setting.
 
-I mean auditing all uses of pax_open_kernel() or any other function
-that opens the kernel.  That function is, as used in PaX, terrifying.
-PaX probably gets every user right, but I don't trust driver writers
-with a function like pax_open_kernel() that's as powerful as PaX's.
+Typo: relax
 
-Suppose you get driver code like this:
+> *) The global sysctl setting can be set by writting an integer value to
+>    '/proc/sys/kernel/modautorestrict/autoload'
 
-void foo(int (*func)()) {
-  pax_open_kernel();
-  *thingy = func();
-  pax_close_kernel();
-}
+I wonder if this should just be named
+/proc/sys/kernel/modules_autoload (to look more like
+modules_disabled)?
 
-That would be a very, very juicy target for a ROP-like attack.  Just
-get the kernel to call this function with func pointing to something
-that does a memcpy or similar into executable space.  Boom, shellcode
-execution.
+>  The valid values are:
+>
+>  0 - Classic module auto-load permissions, nothing changes.
+>
+>  1 - Processes must have CAP_SYS_MODULE to be able to auto-load modules.
+>      CAP_NET_ADMIN should allow to auto-load modules with a 'netdev-%s'
+>      alias.
+>
+>  2 - Processes can not auto-load modules. Once set, this sysctl value
+>      can not be changed.
+>
+> *) Access rules:
+>    First the prctl() settings are checked, if the access is not denied
+>    then the global sysctl settings are checked.
+>
+> The original idea and inspiration is from grsecurity 'GRKERNSEC_MODHARDEN'.
+>
+>
+> The sample code here can be used to test the feature:
+> https://gist.githubusercontent.com/tixxdz/39a583358f04d40b4d3e5571f95c075b/raw/7fb416285412891e2637fba149da930fe0898356/modautorestrict_test.c
+>
+> # TODO list:
+> *) Confirm the struct task_struct->security stacking mechanism.
 
-If CR3 is used instead, exploiting this is considerably more complicated.
+If we can't settle on a way to do this, perhaps this LSM should just
+live in the core kernel, similar to modules_disabled? We do already
+have the hooks to implement it with an LSM, but I'd hate to block this
+feature just because we can't solve task_struct sharing.
+
+Maybe add a new bit like no_new_privs? (Though I guess you'd need 2
+bits, so maybe a full field like no_new_privs used to be.)
+
+> *) Add a logging mechanism.
+> *) Remove the use of security_kernel_read_file hook. Use only
+>    security_kernel_module_request and make sure that we cover all cases.
+> *) Convert documentation to .rst
+
+Another TODO item could be to add output to /proc/$pid/status as done
+for seccomp and no_new_privs? Though perhaps only if this is a core
+kernel change...
+
+> # Changes since v1:
+> *) Renamed module to ModAutoRestrict
+> *) Improved documentation to explicity refer to module autoloading.
+> *) Switched to use the new task_security_alloc() hook.
+> *) Switched from rhash tables to use task->security since it is in
+>    linux-security/next branch now.
+> *) Check all parameters passed to prctl() syscall.
+> *) Many other bug fixes and documentation improvements.
+>
+> All Kees Cook comments handled, except for the removing of
+> security_kernel_read_file which I will do in next iteration when
+> I make sure that I did not miss something. Thank you!
+>
+>
+> Tetsuo Handa (1):
+>         LSM: Allow per LSM module per "struct task_struct" blob
+>
+> Djalal Harouni (2):
+>         security: add the ModAutoRestrict Linux Security Module
+>         Documentation: add ModAutoRestrict LSM documentation
+>
+>
+>  Documentation/security/00-INDEX            |   2 +
+>  Documentation/security/ModAutoRestrict.txt |  77 ++++++
+>  MAINTAINERS                                |   7 +
+>  include/linux/lsm_hooks.h                  |  41 +++-
+>  include/uapi/linux/prctl.h                 |   5 +
+>  security/Kconfig                           |   1 +
+>  security/Makefile                          |  16 +-
+>  security/modautorestrict/Kconfig           |  15 ++
+>  security/modautorestrict/Makefile          |   3 +
+>  security/modautorestrict/modauto_lsm.c     | 372 +++++++++++++++++++++++++++++
+>  security/security.c                        |  38 ++-
+>  11 files changed, 568 insertions(+), 9 deletions(-)
+
+I'd love to see this restriction added; I'm sick of adding stuff to
+modprobe.d blacklist files after-the-fact...
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
