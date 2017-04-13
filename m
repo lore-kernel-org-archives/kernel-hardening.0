@@ -1,82 +1,147 @@
-References: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
- <87shlcq0es.fsf@skywalker.in.ibm.com>
- <CACi5LpP5jC7obg57zj2jZUQCoh_Et2rbdQMtthXy3Ksb2Qc4ow@mail.gmail.com>
-From: "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>
-Date: Thu, 13 Apr 2017 12:28:42 +0530
+References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
+From: Laura Abbott <labbott@redhat.com>
+Message-ID: <eeba7607-f920-2c34-1906-6517a00cd2a5@redhat.com>
+Date: Thu, 13 Apr 2017 16:39:07 -0700
 MIME-Version: 1.0
-In-Reply-To: <CACi5LpP5jC7obg57zj2jZUQCoh_Et2rbdQMtthXy3Ksb2Qc4ow@mail.gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
+In-Reply-To: <1491513513-84351-1-git-send-email-keescook@chromium.org>
+Content-Type: text/plain; charset=windows-1252
 Content-Transfer-Encoding: 7bit
-Message-Id: <03284709-498c-1e52-40f0-b19d20e56b8e@linux.vnet.ibm.com>
-Subject: [kernel-hardening] Re: [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: Bhupesh Sharma <bhsharma@redhat.com>
-Cc: linuxppc-dev@lists.ozlabs.org, kernel-hardening@lists.openwall.com, linux-kernel@vger.kernel.org, Alistair Popple <alistair@popple.id.au>, Anatolij Gustschin <agust@denx.de>, Kees Cook <keescook@chromium.org>, Daniel Cashman <dcashman@android.com>, Scott Wood <oss@buserror.net>, Paul Mackerras <paulus@samba.org>, Daniel Cashman <dcashman@google.com>, Bhupesh SHARMA <bhupesh.linux@gmail.com>, Alexander Graf <agraf@suse.com>
+Subject: Re: [kernel-hardening] [PATCH 00/18] Introduce struct layout
+ randomization plugin
+To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: Michael Leibowitz <michael.leibowitz@intel.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On 04/06/2017 02:18 PM, Kees Cook wrote:
+> This series brings grsecurity's structure layout randomization plugin
+> to upstream. The plugin randomizes the layout of selected structures at
+> compile time, as a probabilistic defense against attacks that need to
+> know the layout of structures within the kernel. While less useful for
+> distribution kernels (where the randomization seed must be exposed for
+> third party kernel module builds), it still has some value there since
+> now all kernel builds would need to be tracked by an attacker. It is
+> most useful to "in-house" kernel builds where the randomization seed
+> is not available to an attacker.
+>     
+> One requirement of the plugin is that randomized structures must use
+> designated initializers. Many of these have been landing already as
+> I've been sending them over the past couple months, but there are
+> still some stragglers, which are included here.
+> 
+> Another area to address are places where randomized structures are
+> cast to other structures, since there may be implicit positional
+> details that need to be addressed. Luckily, there are only a few
+> of these false positives, and they have been worked around either
+> by adjusting the source or whitelisting them in the plugin.
+> 
+> The plugin selects structures in two ways: manually marked with the
+> new __randomize_layout annotation, or automatically when a structure
+> is found to consist entirely of function pointers (which can be opted
+> out of with the new __no_randomize_layout annotation).
+> 
+> A structure that is especially sensitive and regularly abused in
+> exploits is task_struct, but randomizing it requires some special
+> handling due to some fields needing to be at the start and end. To
+> deal with this, an internal anonymous struct is used to mark the
+> portion that will be randomized. I'd love feedback on whether I
+> should bite the bullet and perform indenting or violate indenting
+> rules to avoid a massive white-space change.
+> 
+> As mentioned, the bulk of this feature is ported over from grsecurity.
+> The implementation is almost entirely identical to the original code
+> written by Brad Spengler and the PaX Team and Brad Spengler. The
+> changes are addition of improved designated initializer markings,
+> a whitelisting mechanism, and a different approach to handling the
+> task_struct randomization.
+> 
+> I've been doing boot tests with instrumentation showing successfully
+> changing offsets within the task_struct, which ran overnight without
+> problems. So far, the 0day builder hasn't alerted on anything, but
+> it's probably still a bit early.
+> 
+> This series is based on next-20170404.
+> 
+> Patches are:
+> 
+> [PATCH 01/18] gcc-plugins: Add the randstruct plugin
+> 	The plugin itself, with struct auto-detection disabled.
+> 
+> [PATCH 02/18] compiler: Add __designated_init annotation
+> [PATCH 03/18] randstruct: Set designated_init attribute
+> 	Adds marking of structures needing designated initialization.
+> 	
+> [PATCH 04/18] randstruct: Differentiate bad cast warnings
+> 	Minor clarifications to bad cast warning output.
+> 
+> [PATCH 05/18] af_unix: Use designated initializers
+> 	Designated initializer fix for af_unix (taken for -next already)
+> 	https://lkml.org/lkml/2017/4/6/846
+> 
+> [PATCH 06/18] NFS: Avoid cross-structure casting
+> 	Avoids a false positive in casting (waiting for feedback)
+> 	https://lkml.org/lkml/2017/4/5/530
+> 
+> [PATCH 07/18] randstruct: Whitelist struct security_hook_heads cast
+> [PATCH 08/18] randstruct: Whitelist UNIXCB cast
+> 	Whitelist two more false positive cases where source-level
+> 	fixes aren't obvious/possible.
+> 
+> [PATCH 09/18] randstruct: Mark various structs for randomization
+> 	Adds the manual annotation for structures to randomize.
+> 
+> [PATCH 10/18] scsi/bfa: use designated initializers
+> [PATCH 11/18] scsi: qedi,qedf: Use designated initializers
+> [PATCH 12/18] ovl: Use designated initializers
+> 	The remaining designated initializer fixes for automatic
+> 	struct randomization.
+> 
+> [PATCH 13/18] randstruct: opt-out externally exposed function pointer
+> 	Opt out of some externally-exposed structs that would be
+> 	otherwise automatically randomized.
+> 
+> [PATCH 14/18] randstruct: Disable randomization of ACPICA structs
+> 	Temporary disabling of automatic randomization of ACPICA struct.
+> 	
+> [PATCH 15/18] randstruct: Enable function pointer struct detection
+> 	Enables automatic struct randomization.
+> 
+> [PATCH 16/18] task_struct: Allow randomized layout
+> 	Adds selected portion of task_struct to be randomized.
+> 
+> [PATCH 17/18] sgi-xp: Use designated initializers
+> 	Enable randomization of sgi-xp struct, pending feedback.
+> 	https://lkml.org/lkml/2017/3/29/808
+> 
+> [PATCH 18/18] ACPICA: Use designated initializers
+> 	Enable randomization of ACPICA struct, pending feedback.
+> 	https://github.com/acpica/acpica/pull/248/
+> 
+> Testing/feedback appreciated!
+> 
+> -Kees
+> 
 
+I gave this a quick spin on my aarch64 Rawhide machine. I needed to
+change the following to work with gcc7
 
-On Thursday 13 April 2017 12:22 PM, Bhupesh Sharma wrote:
-> Hi Aneesh,
->
-> On Thu, Apr 13, 2017 at 12:06 PM, Aneesh Kumar K.V
-> <aneesh.kumar@linux.vnet.ibm.com> wrote:
->> Bhupesh Sharma <bhsharma@redhat.com> writes:
->>
->>> powerpc arch_mmap_rnd() currently uses hard-coded values - (23-PAGE_SHIFT) for
->>> 32-bit and (30-PAGE_SHIFT) for 64-bit, to generate the random offset
->>> for the mmap base address for a ASLR ELF.
->>>
->>> This patch makes sure that powerpc mmap arch_mmap_rnd() implementation
->>> is similar to other ARCHs (like x86, arm64) and uses mmap_rnd_bits
->>> and helpers to generate the mmap address randomization.
->>>
->>> The maximum and minimum randomization range values represent
->>> a compromise between increased ASLR effectiveness and avoiding
->>> address-space fragmentation.
->>>
->>> Using the Kconfig option and suitable /proc tunable, platform
->>> developers may choose where to place this compromise.
->>>
->>> Also this patch keeps the default values as new minimums.
->>>
->>> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
->>> Reviewed-by: Kees Cook <keescook@chromium.org>
->>> ---
->>> * Changes since v2:
->>> v2 can be seen here (https://patchwork.kernel.org/patch/9551509/)
->>>     - Changed a few minimum and maximum randomization ranges as per Michael's suggestion.
->>>     - Corrected Kees's email address in the Reviewed-by line.
->>>     - Added further comments in kconfig to explain how the address ranges were worked out.
->>>
->>> * Changes since v1:
->>> v1 can be seen here (https://lists.ozlabs.org/pipermail/linuxppc-dev/2017-February/153594.html)
->>>     - No functional change in this patch.
->>>     - Dropped PATCH 2/2 from v1 as recommended by Kees Cook.
->>>
->>>  arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
->>>  arch/powerpc/mm/mmap.c |  7 ++++---
->>>  2 files changed, 48 insertions(+), 3 deletions(-)
->>>
->>> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
->>> index 97a8bc8..84aae67 100644
->>> --- a/arch/powerpc/Kconfig
->>> +++ b/arch/powerpc/Kconfig
->>> @@ -22,6 +22,48 @@ config MMU
->>>       bool
->>>       default y
->>>
->>> +# min bits determined by the following formula:
->>> +# VA_BITS - PAGE_SHIFT - CONSTANT
->>> +# where,
->>> +#    VA_BITS = 46 bits for 64BIT and 4GB - 1 Page = 31 bits for 32BIT
->>
->>
->> Where did we derive that 46 bits from ? is that based on TASK_SIZE ?
->
-> Yes. It was derived from TASK_SIZE :
-> http://lxr.free-electrons.com/source/arch/powerpc/include/asm/processor.h#L105
->
+diff --git a/scripts/gcc-plugins/randomize_layout_plugin.c b/scripts/gcc-plugins/randomize_layout_plugin.c
+index a2d7e933c33f..8dd5134f161a 100644
+--- a/scripts/gcc-plugins/randomize_layout_plugin.c
++++ b/scripts/gcc-plugins/randomize_layout_plugin.c
+@@ -529,8 +529,8 @@ static void randomize_layout_finish_decl(void *event_data, void *data)
+ 
+        DECL_SIZE(decl) = 0;
+        DECL_SIZE_UNIT(decl) = 0;
+-       DECL_ALIGN(decl) = 0;
+-       DECL_MODE (decl) = VOIDmode;
++       SET_DECL_ALIGN(decl, 0);
++       SET_DECL_MODE(decl, VOIDmode);
+        SET_DECL_RTL(decl, 0);
+        update_decl_size(decl);
+        layout_decl(decl, 0);
 
-That is getting update to 128TB by default and conditionally to 512TB
+It boots but dies with a bunch of kernel faults somewhere after reaching
+userspace. I'll pick up the debugging next week.
 
--aneesh
+Thanks,
+Laura
