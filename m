@@ -1,162 +1,44 @@
-Date: Sun, 16 Apr 2017 22:30:52 -0700
-From: Jessica Yu <jeyu@redhat.com>
-Message-ID: <20170417053052.dz276h26jxwdfhsr@jeyu>
-References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
- <1491513513-84351-2-git-send-email-keescook@chromium.org>
- <CAGXu5jL6XvC0gSFhtpOKRJ3nR2ZQjz4aaaMyak8PAvuHF2Ee1Q@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii; format=flowed
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jL6XvC0gSFhtpOKRJ3nR2ZQjz4aaaMyak8PAvuHF2Ee1Q@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH 01/18] gcc-plugins: Add the randstruct plugin
-To: Kees Cook <keescook@chromium.org>
-Cc: Michael Leibowitz <michael.leibowitz@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <CAKTCnzmin1TgTd5w6es=bekLF+pSjBgVU9ch+Z9r=_voD6U5Zw@mail.gmail.com>
+References: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
+ <87shlcq0es.fsf@skywalker.in.ibm.com> <CACi5LpP5jC7obg57zj2jZUQCoh_Et2rbdQMtthXy3Ksb2Qc4ow@mail.gmail.com>
+ <03284709-498c-1e52-40f0-b19d20e56b8e@linux.vnet.ibm.com> <CAKTCnzmin1TgTd5w6es=bekLF+pSjBgVU9ch+Z9r=_voD6U5Zw@mail.gmail.com>
+From: Bhupesh SHARMA <bhupesh.linux@gmail.com>
+Date: Mon, 17 Apr 2017 10:18:09 +0530
+Message-ID: <CAFTCetT5NcYNop_+X8rnC=pVarBQ=0AGoon7KH-NJq3v3qL8yA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
+To: Balbir Singh <bsingharora@gmail.com>
+Cc: "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Bhupesh Sharma <bhsharma@redhat.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Alistair Popple <alistair@popple.id.au>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Scott Wood <oss@buserror.net>, Paul Mackerras <paulus@samba.org>, Alexander Graf <agraf@suse.com>, Daniel Cashman <dcashman@android.com>, Anatolij Gustschin <agust@denx.de>, "open list:LINUX FOR POWERPC (32-BIT AND 64-BIT)" <linuxppc-dev@lists.ozlabs.org>, Daniel Cashman <dcashman@google.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-+++ Kees Cook [12/04/17 15:12 -0700]:
->On Thu, Apr 6, 2017 at 2:18 PM, Kees Cook <keescook@chromium.org> wrote:
->> From: Michael Leibowitz <michael.leibowitz@intel.com>
+On Thu, Apr 13, 2017 at 12:39 PM, Balbir Singh <bsingharora@gmail.com> wrote:
+>>>
+>>> Yes. It was derived from TASK_SIZE :
+>>>
+>>> http://lxr.free-electrons.com/source/arch/powerpc/include/asm/processor.h#L105
+>>>
 >>
->> This plugin randomizes the layout of selected structures at compile
->> time. This is a probabilistic defense against attacks that need to
->> know the layout of structures within the kernel. While less useful for
->> distribution kernels (where the randomization seed must be exposed for
->> third party kernel module builds), it still has some value there since
->> now all kernel builds would need to be tracked by an attacker.
->>
->> This introduces two defines __randomize_layout and __no_randomize_layout.
->> Which, in turn, tell the compiler to either randomize or not to randomize
->> the struct in question. Follow-on patches enable the auto-detection
->> logic for selecting structures that contain only function pointers.
->>
->> This feature is ported over from grsecurity.  The implementation is
->> almost entirely identical to the original code written by the PaX Team
->> and Brad Spengler. To make integration simpler, this version has the
->> auto-detection logic temporarily disabled. Structures that are to be
->> randomized are required to use the C99 designated initializer form,
->> which will be in follow-on patches.
->>
->> Signed-off-by: Michael Leibowitz <michael.leibowitz@intel.com>
->> [kees: refreshed plugin, disabled all-fptr-struct detection, update commit log]
->> Signed-off-by: Kees Cook <keescook@chromium.org>
->> ---
->>  Documentation/dontdiff                        |   2 +
->>  arch/Kconfig                                  |  38 ++
->>  include/linux/compiler-gcc.h                  |   5 +
->>  include/linux/compiler.h                      |   8 +
->>  include/linux/vermagic.h                      |   9 +-
->>  kernel/module.c                               |  27 +-
->>  scripts/Makefile.gcc-plugins                  |   5 +
->>  scripts/gcc-plugins/.gitignore                |   1 +
->>  scripts/gcc-plugins/Makefile                  |   8 +
->>  scripts/gcc-plugins/gen-random-seed.sh        |   8 +
->>  scripts/gcc-plugins/randomize_layout_plugin.c | 943 ++++++++++++++++++++++++++
->>  11 files changed, 1052 insertions(+), 2 deletions(-)
->>  create mode 100644 scripts/gcc-plugins/.gitignore
->>  create mode 100644 scripts/gcc-plugins/gen-random-seed.sh
->>  create mode 100644 scripts/gcc-plugins/randomize_layout_plugin.c
->>
->> [...]
->> diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
->> index 6f8fbcf10dfb..af6c03f7f986 100644
->> --- a/include/linux/vermagic.h
->> +++ b/include/linux/vermagic.h
->> @@ -24,10 +24,17 @@
->>  #ifndef MODULE_ARCH_VERMAGIC
->>  #define MODULE_ARCH_VERMAGIC ""
->>  #endif
->> +#ifdef RANDSTRUCT_PLUGIN
->> +#include <generated/randomize_layout_hash.h>
->> +#define MODULE_RANDSTRUCT_PLUGIN "RANDSTRUCT_PLUGIN_" RANDSTRUCT_HASHED_SEED
->> +#else
->> +#define MODULE_RANDSTRUCT_PLUGIN
->> +#endif
->>
->>  #define VERMAGIC_STRING                                                \
->>         UTS_RELEASE " "                                                 \
->>         MODULE_VERMAGIC_SMP MODULE_VERMAGIC_PREEMPT                     \
->>         MODULE_VERMAGIC_MODULE_UNLOAD MODULE_VERMAGIC_MODVERSIONS       \
->> -       MODULE_ARCH_VERMAGIC
->> +       MODULE_ARCH_VERMAGIC                                            \
->> +       MODULE_RANDSTRUCT_PLUGIN
->>
->> diff --git a/kernel/module.c b/kernel/module.c
->> index f953df992a11..2887660b0e9c 100644
->> --- a/kernel/module.c
->> +++ b/kernel/module.c
->> @@ -1316,13 +1316,30 @@ static int check_version(Elf_Shdr *sechdrs,
->>                 goto bad_version;
->>         }
->>
->> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
->> +       /*
->> +        * avoid potentially printing jibberish on attempted load
->> +        * of a module randomized with a different seed
->> +        */
->> +       pr_warn("no symbol version for %s\n", symname);
->> +#else
->>         /* Broken toolchain. Warn once, then let it go.. */
->>         pr_warn_once("%s: no symbol version for %s\n", mod->name, symname);
->> +#endif
->>         return 1;
->>
->>  bad_version:
->> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
->> +       /*
->> +        * avoid potentially printing jibberish on attempted load
->> +        * of a module randomized with a different seed
->> +        */
->> +       pr_warn("attempted module disagrees about version of symbol %s\n",
->> +              symname);
->> +#else
->>         pr_warn("%s: disagrees about version of symbol %s\n",
->>                mod->name, symname);
->> +#endif
->>         return 0;
->>  }
->>
->> @@ -2964,7 +2981,15 @@ static struct module *setup_load_info(struct load_info *info, int flags)
->>         mod = (void *)info->sechdrs[info->index.mod].sh_addr;
->>
->>         if (info->index.sym == 0) {
->> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
->> +               /*
->> +                * avoid potentially printing jibberish on attempted load
->> +                * of a module randomized with a different seed
->> +                */
->> +               pr_warn("module has no symbols (stripped?)\n");
->> +#else
->>                 pr_warn("%s: module has no symbols (stripped?)\n", mod->name);
->> +#endif
->>                 return ERR_PTR(-ENOEXEC);
->>         }
+>> That is getting update to 128TB by default and conditionally to 512TB
 >>
 >
->Hi Jessica,
+> Since this is compile time, we should probably keep the scope to 128TB
+> for now and see if we want to change things at run time later, since
+> the expansion is based on a hint. Suggestions?
 >
->I was curious to get your input on these module-related changes that
->are needed to support structure layout randomization. In the face of a
->vermagic failure on a kernel built with randstruct, the module errors
->can't dereference the from-disk module structure name field since it
->may not be in the place it's expected.
->
->I was thinking, instead of these explicit #ifdef chunks, maybe making
->a helper macro/function would be better?
 
-Hi Kees,
+I think this makes sense. If the conditional expansion to 512TB is
+protected by a kconfig symbol, we can use the same to have separate
+ranges for 128TB and 512TB using the kconfig symbol as the
+differentiating factor.
 
-Yes, that would be preferable to using the repeated #ifdef blocks.
-IMO your other patchset which adds name to .modinfo is a cleaner
-solution.
+Also please let me know which branch/tree to use where we are done
+with the change making the default to 128TB. My v2 was based on
+git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+(mater branch), where the TASK_SIZE is set to 46-bits inside
+'arch/powerpc/include/asm/processor.h'.
 
-(PS, I'm still on PTO, but I'll be able to give that a proper look
-after Tues.)
-
->Also, can we get the module filename from somewhere, and use that
->instead of the name field?
-
-AFAIK, we don't store or keep track of that anywhere in-kernel.
+So that I can spin the v3 accordingly.
 
 Thanks,
-
-Jessica
+Bhupesh
