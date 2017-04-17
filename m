@@ -1,249 +1,162 @@
-References: <20170328234650.19695-1-mic@digikod.net>
- <20170328234650.19695-3-mic@digikod.net>
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-Message-ID: <2fbc99a6-f190-f335-bd14-04bdeed35571@digikod.net>
-Date: Sun, 16 Apr 2017 23:57:11 +0200
+Date: Sun, 16 Apr 2017 22:30:52 -0700
+From: Jessica Yu <jeyu@redhat.com>
+Message-ID: <20170417053052.dz276h26jxwdfhsr@jeyu>
+References: <1491513513-84351-1-git-send-email-keescook@chromium.org>
+ <1491513513-84351-2-git-send-email-keescook@chromium.org>
+ <CAGXu5jL6XvC0gSFhtpOKRJ3nR2ZQjz4aaaMyak8PAvuHF2Ee1Q@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20170328234650.19695-3-mic@digikod.net>
-Content-Type: multipart/signed; micalg=pgp-sha512;
- protocol="application/pgp-signature";
- boundary="l4RSHgsE1ljw0TLilDEeg9dMx0cUfaoVg"
-Subject: [kernel-hardening] Re: [PATCH net-next v6 02/11] bpf,landlock: Define an eBPF program
- type for Landlock
-To: linux-kernel@vger.kernel.org
-Cc: Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Casey Schaufler <casey@schaufler-ca.com>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com, linux-api@vger.kernel.org, linux-security-module@vger.kernel.org, netdev@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii; format=flowed
+Content-Disposition: inline
+In-Reply-To: <CAGXu5jL6XvC0gSFhtpOKRJ3nR2ZQjz4aaaMyak8PAvuHF2Ee1Q@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH 01/18] gcc-plugins: Add the randstruct plugin
+To: Kees Cook <keescook@chromium.org>
+Cc: Michael Leibowitz <michael.leibowitz@intel.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
---l4RSHgsE1ljw0TLilDEeg9dMx0cUfaoVg
-Content-Type: multipart/mixed; boundary="Sl2U4hicOOk1NDqHQfKwkPJnOl5lBP9hd";
- protected-headers="v1"
-From: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>
-To: linux-kernel@vger.kernel.org
-Cc: Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski
- <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>,
- Casey Schaufler <casey@schaufler-ca.com>,
- Daniel Borkmann <daniel@iogearbox.net>, David Drysdale
- <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>,
- "Eric W . Biederman" <ebiederm@xmission.com>,
- James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>,
- Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>,
- Michael Kerrisk <mtk.manpages@gmail.com>, Kees Cook <keescook@chromium.org>,
- Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>,
- "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>,
- Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>,
- Will Drewry <wad@chromium.org>, kernel-hardening@lists.openwall.com,
- linux-api@vger.kernel.org, linux-security-module@vger.kernel.org,
- netdev@vger.kernel.org
-Message-ID: <2fbc99a6-f190-f335-bd14-04bdeed35571@digikod.net>
-Subject: Re: [PATCH net-next v6 02/11] bpf,landlock: Define an eBPF program
- type for Landlock
-References: <20170328234650.19695-1-mic@digikod.net>
- <20170328234650.19695-3-mic@digikod.net>
-In-Reply-To: <20170328234650.19695-3-mic@digikod.net>
-
---Sl2U4hicOOk1NDqHQfKwkPJnOl5lBP9hd
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-
-
-On 29/03/2017 01:46, Micka=C3=ABl Sala=C3=BCn wrote:
-> Add a new type of eBPF program used by Landlock rules.
->=20
-> This new BPF program type will be registered with the Landlock LSM
-> initialization.
->=20
-> Add an initial Landlock Kconfig.
->=20
-> Changes since v5:
-> * rename file hooks.c to init.c
-> * fix spelling
->=20
-> Changes since v4:
-> * merge a minimal (not enabled) LSM code and Kconfig in this commit
->=20
-> Changes since v3:
-> * split commit
-> * revamp the landlock_context:
->   * add arch, syscall_nr and syscall_cmd (ioctl, fcntl=E2=80=A6) to be =
-able to
->     cross-check action with the event type
->   * replace args array with dedicated fields to ease the addition of ne=
-w
->     fields
->=20
-> Signed-off-by: Micka=C3=ABl Sala=C3=BCn <mic@digikod.net>
-> Cc: Alexei Starovoitov <ast@kernel.org>
-> Cc: Andy Lutomirski <luto@amacapital.net>
-> Cc: Daniel Borkmann <daniel@iogearbox.net>
-> Cc: David S. Miller <davem@davemloft.net>
-> Cc: James Morris <james.l.morris@oracle.com>
-> Cc: Kees Cook <keescook@chromium.org>
-> Cc: Serge E. Hallyn <serge@hallyn.com>
-> ---
->  include/linux/landlock.h       |  23 ++++++++
->  include/uapi/linux/bpf.h       | 105 +++++++++++++++++++++++++++++++++=
-++
->  security/Kconfig               |   1 +
->  security/Makefile              |   2 +
->  security/landlock/Kconfig      |  18 ++++++
->  security/landlock/Makefile     |   3 +
->  security/landlock/common.h     |  25 +++++++++
->  security/landlock/init.c       | 123 +++++++++++++++++++++++++++++++++=
-++++++++
->  tools/include/uapi/linux/bpf.h | 105 +++++++++++++++++++++++++++++++++=
-++
->  9 files changed, 405 insertions(+)
->  create mode 100644 include/linux/landlock.h
->  create mode 100644 security/landlock/Kconfig
->  create mode 100644 security/landlock/Makefile
->  create mode 100644 security/landlock/common.h
->  create mode 100644 security/landlock/init.c
++++ Kees Cook [12/04/17 15:12 -0700]:
+>On Thu, Apr 6, 2017 at 2:18 PM, Kees Cook <keescook@chromium.org> wrote:
+>> From: Michael Leibowitz <michael.leibowitz@intel.com>
+>>
+>> This plugin randomizes the layout of selected structures at compile
+>> time. This is a probabilistic defense against attacks that need to
+>> know the layout of structures within the kernel. While less useful for
+>> distribution kernels (where the randomization seed must be exposed for
+>> third party kernel module builds), it still has some value there since
+>> now all kernel builds would need to be tracked by an attacker.
+>>
+>> This introduces two defines __randomize_layout and __no_randomize_layout.
+>> Which, in turn, tell the compiler to either randomize or not to randomize
+>> the struct in question. Follow-on patches enable the auto-detection
+>> logic for selecting structures that contain only function pointers.
+>>
+>> This feature is ported over from grsecurity.  The implementation is
+>> almost entirely identical to the original code written by the PaX Team
+>> and Brad Spengler. To make integration simpler, this version has the
+>> auto-detection logic temporarily disabled. Structures that are to be
+>> randomized are required to use the C99 designated initializer form,
+>> which will be in follow-on patches.
+>>
+>> Signed-off-by: Michael Leibowitz <michael.leibowitz@intel.com>
+>> [kees: refreshed plugin, disabled all-fptr-struct detection, update commit log]
+>> Signed-off-by: Kees Cook <keescook@chromium.org>
+>> ---
+>>  Documentation/dontdiff                        |   2 +
+>>  arch/Kconfig                                  |  38 ++
+>>  include/linux/compiler-gcc.h                  |   5 +
+>>  include/linux/compiler.h                      |   8 +
+>>  include/linux/vermagic.h                      |   9 +-
+>>  kernel/module.c                               |  27 +-
+>>  scripts/Makefile.gcc-plugins                  |   5 +
+>>  scripts/gcc-plugins/.gitignore                |   1 +
+>>  scripts/gcc-plugins/Makefile                  |   8 +
+>>  scripts/gcc-plugins/gen-random-seed.sh        |   8 +
+>>  scripts/gcc-plugins/randomize_layout_plugin.c | 943 ++++++++++++++++++++++++++
+>>  11 files changed, 1052 insertions(+), 2 deletions(-)
+>>  create mode 100644 scripts/gcc-plugins/.gitignore
+>>  create mode 100644 scripts/gcc-plugins/gen-random-seed.sh
+>>  create mode 100644 scripts/gcc-plugins/randomize_layout_plugin.c
+>>
+>> [...]
+>> diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
+>> index 6f8fbcf10dfb..af6c03f7f986 100644
+>> --- a/include/linux/vermagic.h
+>> +++ b/include/linux/vermagic.h
+>> @@ -24,10 +24,17 @@
+>>  #ifndef MODULE_ARCH_VERMAGIC
+>>  #define MODULE_ARCH_VERMAGIC ""
+>>  #endif
+>> +#ifdef RANDSTRUCT_PLUGIN
+>> +#include <generated/randomize_layout_hash.h>
+>> +#define MODULE_RANDSTRUCT_PLUGIN "RANDSTRUCT_PLUGIN_" RANDSTRUCT_HASHED_SEED
+>> +#else
+>> +#define MODULE_RANDSTRUCT_PLUGIN
+>> +#endif
+>>
+>>  #define VERMAGIC_STRING                                                \
+>>         UTS_RELEASE " "                                                 \
+>>         MODULE_VERMAGIC_SMP MODULE_VERMAGIC_PREEMPT                     \
+>>         MODULE_VERMAGIC_MODULE_UNLOAD MODULE_VERMAGIC_MODVERSIONS       \
+>> -       MODULE_ARCH_VERMAGIC
+>> +       MODULE_ARCH_VERMAGIC                                            \
+>> +       MODULE_RANDSTRUCT_PLUGIN
+>>
+>> diff --git a/kernel/module.c b/kernel/module.c
+>> index f953df992a11..2887660b0e9c 100644
+>> --- a/kernel/module.c
+>> +++ b/kernel/module.c
+>> @@ -1316,13 +1316,30 @@ static int check_version(Elf_Shdr *sechdrs,
+>>                 goto bad_version;
+>>         }
+>>
+>> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
+>> +       /*
+>> +        * avoid potentially printing jibberish on attempted load
+>> +        * of a module randomized with a different seed
+>> +        */
+>> +       pr_warn("no symbol version for %s\n", symname);
+>> +#else
+>>         /* Broken toolchain. Warn once, then let it go.. */
+>>         pr_warn_once("%s: no symbol version for %s\n", mod->name, symname);
+>> +#endif
+>>         return 1;
+>>
+>>  bad_version:
+>> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
+>> +       /*
+>> +        * avoid potentially printing jibberish on attempted load
+>> +        * of a module randomized with a different seed
+>> +        */
+>> +       pr_warn("attempted module disagrees about version of symbol %s\n",
+>> +              symname);
+>> +#else
+>>         pr_warn("%s: disagrees about version of symbol %s\n",
+>>                mod->name, symname);
+>> +#endif
+>>         return 0;
+>>  }
+>>
+>> @@ -2964,7 +2981,15 @@ static struct module *setup_load_info(struct load_info *info, int flags)
+>>         mod = (void *)info->sechdrs[info->index.mod].sh_addr;
+>>
+>>         if (info->index.sym == 0) {
+>> +#ifdef CONFIG_GCC_PLUGIN_RANDSTRUCT
+>> +               /*
+>> +                * avoid potentially printing jibberish on attempted load
+>> +                * of a module randomized with a different seed
+>> +                */
+>> +               pr_warn("module has no symbols (stripped?)\n");
+>> +#else
+>>                 pr_warn("%s: module has no symbols (stripped?)\n", mod->name);
+>> +#endif
+>>                 return ERR_PTR(-ENOEXEC);
+>>         }
+>>
 >
-[...]
-> diff --git a/include/uapi/linux/bpf.h b/include/uapi/linux/bpf.h
-> index 0eb71ab9b4fd..619b1f8707cc 100644
-> --- a/include/uapi/linux/bpf.h
-> +++ b/include/uapi/linux/bpf.h
-> @@ -114,6 +114,7 @@ enum bpf_prog_type {
->  	BPF_PROG_TYPE_LWT_IN,
->  	BPF_PROG_TYPE_LWT_OUT,
->  	BPF_PROG_TYPE_LWT_XMIT,
-> +	BPF_PROG_TYPE_LANDLOCK,
->  };
-> =20
->  enum bpf_attach_type {
-> @@ -661,4 +662,108 @@ struct xdp_md {
->  	__u32 data_end;
->  };
-> =20
-> +/**
-> + * enum landlock_subtype_event - event occurring when an action is per=
-formed on
-> + * a particular kernel object
-> + *
-> + * An event is a policy decision point which exposes the same context =
-type
-> + * (especially the same arg[0-9] field types) for each rule execution.=
+>Hi Jessica,
+>
+>I was curious to get your input on these module-related changes that
+>are needed to support structure layout randomization. In the face of a
+>vermagic failure on a kernel built with randstruct, the module errors
+>can't dereference the from-disk module structure name field since it
+>may not be in the place it's expected.
+>
+>I was thinking, instead of these explicit #ifdef chunks, maybe making
+>a helper macro/function would be better?
 
-> + *
-> + * @LANDLOCK_SUBTYPE_EVENT_UNSPEC: invalid value
-> + * @LANDLOCK_SUBTYPE_EVENT_FS: generic filesystem event
-> + */
-> +enum landlock_subtype_event {
-> +	LANDLOCK_SUBTYPE_EVENT_UNSPEC,
-> +	LANDLOCK_SUBTYPE_EVENT_FS,
-> +};
-> +#define _LANDLOCK_SUBTYPE_EVENT_LAST LANDLOCK_SUBTYPE_EVENT_FS
-[...]
-> +/**
-> + * DOC: landlock_action_fs
-> + *
-> + * - %LANDLOCK_ACTION_FS_EXEC: execute a file or walk through a direct=
-ory
-> + * - %LANDLOCK_ACTION_FS_WRITE: modify a file or a directory view (whi=
-ch
-> + *   include mount actions)
-> + * - %LANDLOCK_ACTION_FS_READ: read a file or a directory
-> + * - %LANDLOCK_ACTION_FS_NEW: create a file or a directory
-> + * - %LANDLOCK_ACTION_FS_GET: open or receive a file
-> + * - %LANDLOCK_ACTION_FS_REMOVE: unlink a file or remove a directory
-> + *
-> + * Each of the following actions are specific to syscall multiplexers.=
- They
-> + * fill the syscall_cmd field from &struct landlock_context with their=
- custom
-> + * command.
-> + *
-> + * - %LANDLOCK_ACTION_FS_IOCTL: ioctl command
-> + * - %LANDLOCK_ACTION_FS_LOCK: flock or fcntl lock command
-> + * - %LANDLOCK_ACTION_FS_FCNTL: fcntl command
-> + */
-> +#define LANDLOCK_ACTION_FS_EXEC			(1ULL << 0)
-> +#define LANDLOCK_ACTION_FS_WRITE		(1ULL << 1)
-> +#define LANDLOCK_ACTION_FS_READ			(1ULL << 2)
-> +#define LANDLOCK_ACTION_FS_NEW			(1ULL << 3)
-> +#define LANDLOCK_ACTION_FS_GET			(1ULL << 4)
-> +#define LANDLOCK_ACTION_FS_REMOVE		(1ULL << 5)
-> +#define LANDLOCK_ACTION_FS_IOCTL		(1ULL << 6)
-> +#define LANDLOCK_ACTION_FS_LOCK			(1ULL << 7)
-> +#define LANDLOCK_ACTION_FS_FCNTL		(1ULL << 8)
-> +#define _LANDLOCK_ACTION_FS_NB			9
-> +#define _LANDLOCK_ACTION_FS_MASK		((1ULL << _LANDLOCK_ACTION_FS_NB) - =
-1)
-> +
-> +
-> +/**
-> + * struct landlock_context - context accessible to a Landlock rule
-> + *
-> + * @status: bitfield for future use (LANDLOCK_SUBTYPE_STATUS_*)
-> + * @arch: indicates system call convention as an AUDIT_ARCH_* value
-> + *        as defined in <linux/audit.h>
-> + * @syscall_nr: the system call number called by the current process (=
-may be
-> + *              useful to debug: find out from which syscall this requ=
-est came
-> + *              from)
-> + * @syscall_cmd: contains the command used by a multiplexer syscall (e=
-=2Eg.
-> + *               ioctl, fcntl, flock)
-> + * @event: event type (&enum landlock_subtype_event)
-> + * @arg1: event's first optional argument
-> + * @arg2: event's second optional argument
-> + */
-> +struct landlock_context {
-> +	__u64 status;
-> +	__u32 arch;
-> +	__u32 syscall_nr;
-> +	__u32 syscall_cmd;
-> +	__u32 event;
-> +	__u64 arg1;
-> +	__u64 arg2;
-> +};
+Hi Kees,
 
-I plan to simplify and make the FS event more generic for the IOCTL,
-LOCK or FCNTL actions. The action flags for the
-LANDLOCK_SUBTYPE_EVENT_FS event will remain the same but the syscall_cmd
-field will be removed from struct landlock_context. Instead, one of
-three dedicated events will be triggered in addition to one of this
-three multiplexed actions.
+Yes, that would be preferable to using the repeated #ifdef blocks.
+IMO your other patchset which adds name to .modinfo is a cleaner
+solution.
 
-The aim is to trigger the LANDLOCK_SUBTYPE_EVENT_FS for all file system
-events (still including IOCTL/LOCK/FCNTL actions). This should avoid a
-developer/user to forget such actions. However, when this kind of action
-is triggered, a LANDLOCK_SUBTYPE_EVENT_FS_{IOCTL,LOCK,FCNTL} event will
-follow. This enable to simplify the struct landlock_context while still
-having it as generic as possible. The difference will be that the arg2
-field for one of the LANDLOCK_SUBTYPE_EVENT_FS_{IOCTL,LOCK,FCNTL} events
-will contain a custom IOCTL, LOCK or FCNTL command (currently in the
-syscall_cmd field) instead of a LANDLOCK_ACTION_FS_* value. The same
-logic could be used to tighten other actions in the future.
+(PS, I'm still on PTO, but I'll be able to give that a proper look
+after Tues.)
 
-The HOOK_NEW_FS_CMD(...) from [04/11]:security/landlock/hooks_fs.c will
-be replaced with dedicated calls.
+>Also, can we get the module filename from somewhere, and use that
+>instead of the name field?
 
+AFAIK, we don't store or keep track of that anywhere in-kernel.
 
-I also plan to remove the arch and syscall_nr fields. This will make
-struct landlock_context even more simple and arch-independent.
+Thanks,
 
-
---Sl2U4hicOOk1NDqHQfKwkPJnOl5lBP9hd--
-
---l4RSHgsE1ljw0TLilDEeg9dMx0cUfaoVg
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: OpenPGP digital signature
-Content-Disposition: attachment; filename="signature.asc"
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCgAdFiEEUysCyY8er9Axt7hqIt7+33O9apUFAljz6LcACgkQIt7+33O9
-apV4rgf9GrOHBGGnLyS1yXyU6/4tSMLEhAw2DssyNtGgfyUtxNUVzK6xyj8hhWLV
-W1iCJ+molIfZiK9Ja0pw8ZaF9ewtv8Tn4VoyTvc4xzeuWOb5xBcdzTCl230STXV1
-ZxAbGZyn45mM5f9hsHM3p2U/9YPWd2mcG5hYMrWbVaTbJmTneBqsCfS6ipBuVJV7
-TwyV/xYc9b5GLsW5PXCVZRjkIvppntQf67z6j1/H7YI/QRD+jWroPZnO+GBtpNAR
-iOA1qHD2yx6/LzvjQyUzXBixP1l71MeWVHDSQb6kOa/LB0RH3f1V8eh/C9xoLyK4
-43m+dUXTn8EwwwjfAddXfkHWf8qx5Q==
-=oSq4
------END PGP SIGNATURE-----
-
---l4RSHgsE1ljw0TLilDEeg9dMx0cUfaoVg--
+Jessica
