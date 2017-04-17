@@ -1,44 +1,22 @@
-MIME-Version: 1.0
-In-Reply-To: <CAKTCnzmin1TgTd5w6es=bekLF+pSjBgVU9ch+Z9r=_voD6U5Zw@mail.gmail.com>
-References: <1490730347-5165-1-git-send-email-bhsharma@redhat.com>
- <87shlcq0es.fsf@skywalker.in.ibm.com> <CACi5LpP5jC7obg57zj2jZUQCoh_Et2rbdQMtthXy3Ksb2Qc4ow@mail.gmail.com>
- <03284709-498c-1e52-40f0-b19d20e56b8e@linux.vnet.ibm.com> <CAKTCnzmin1TgTd5w6es=bekLF+pSjBgVU9ch+Z9r=_voD6U5Zw@mail.gmail.com>
-From: Bhupesh SHARMA <bhupesh.linux@gmail.com>
-Date: Mon, 17 Apr 2017 10:18:09 +0530
-Message-ID: <CAFTCetT5NcYNop_+X8rnC=pVarBQ=0AGoon7KH-NJq3v3qL8yA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3] powerpc: mm: support ARCH_MMAP_RND_BITS
-To: Balbir Singh <bsingharora@gmail.com>
-Cc: "Aneesh Kumar K.V" <aneesh.kumar@linux.vnet.ibm.com>, Bhupesh Sharma <bhsharma@redhat.com>, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, Alistair Popple <alistair@popple.id.au>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, Scott Wood <oss@buserror.net>, Paul Mackerras <paulus@samba.org>, Alexander Graf <agraf@suse.com>, Daniel Cashman <dcashman@android.com>, Anatolij Gustschin <agust@denx.de>, "open list:LINUX FOR POWERPC (32-BIT AND 64-BIT)" <linuxppc-dev@lists.ozlabs.org>, Daniel Cashman <dcashman@google.com>
+From: Matt Brown <matt@nmatt.com>
+Date: Mon, 17 Apr 2017 02:07:02 -0400
+Message-Id: <20170417060706.28674-1-matt@nmatt.com>
+Subject: [kernel-hardening] Patchset to Restrict Unprivileged TIOCSTI TTY Command Injection
+To: jmorris@namei.org, gregkh@linuxfoundation.org, akpm@linux-foundation.org
+Cc: linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, Apr 13, 2017 at 12:39 PM, Balbir Singh <bsingharora@gmail.com> wrote:
->>>
->>> Yes. It was derived from TASK_SIZE :
->>>
->>> http://lxr.free-electrons.com/source/arch/powerpc/include/asm/processor.h#L105
->>>
->>
->> That is getting update to 128TB by default and conditionally to 512TB
->>
->
-> Since this is compile time, we should probably keep the scope to 128TB
-> for now and see if we want to change things at run time later, since
-> the expansion is based on a hint. Suggestions?
->
+The following patchset reproduces GRKERNSEC_HARDEN_TTY functionality from the grsecurity project in-kernel. The purpose of this feature is to restrict unprivileged users from injecting commands into other processes in the same tty session by using the TIOCSTI ioctl.
 
-I think this makes sense. If the conditional expansion to 512TB is
-protected by a kconfig symbol, we can use the same to have separate
-ranges for 128TB and 512TB using the kconfig symbol as the
-differentiating factor.
+It creates the kernel config SECURITY_TIOCSTI_RESTRICT and the sysctl kernel.tiocsti_restrict to control this feature. I modeled most of the code style and naming conventions off of SECURITY_DMESG_RESTRICT.
 
-Also please let me know which branch/tree to use where we are done
-with the change making the default to 128TB. My v2 was based on
-git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-(mater branch), where the TASK_SIZE is set to 46-bits inside
-'arch/powerpc/include/asm/processor.h'.
+ drivers/tty/tty_io.c |  4 ++++
+ include/linux/tty.h  |  2 ++
+ kernel/sysctl.c      | 12 ++++++++++++
+ security/Kconfig     | 12 ++++++++++++
+ 4 files changed, 30 insertions(+)
 
-So that I can spin the v3 accordingly.
-
-Thanks,
-Bhupesh
+[PATCH 1/4] added SECURITY_TIOCSTI_RESTRICT kernel config
+[PATCH 2/4] add tiocsti_restrict variable
+[PATCH 3/4] restrict unprivileged TIOCSTI tty ioctl
+[PATCH 4/4] added kernel.tiocsti_restrict sysctl
