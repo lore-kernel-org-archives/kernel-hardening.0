@@ -1,177 +1,70 @@
-Date: Wed, 19 Apr 2017 18:53:42 -0500
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20170419235342.GA2305@mail.hallyn.com>
-References: <20170419034526.18565-1-matt@nmatt.com>
- <20170419045813.GA17990@mail.hallyn.com>
- <a6b8f9ab-d5f8-51fb-0481-89907c43289f@nmatt.com>
+References: <20170328234650.19695-1-mic@digikod.net>
+ <20170328234650.19695-5-mic@digikod.net>
+ <CAGXu5jJKNp8R5kZ1U=K7KwgnV=NvH5aoAbftA-05a_Sa4pOg1Q@mail.gmail.com>
+ <9a69055a-b4cf-00b0-da5e-2e45ff88059c@digikod.net>
+ <c122415d-c2be-d013-efb4-833ba87d144d@schaufler-ca.com>
+ <CAGXu5jKCr1qPqJ8YWAjK1Lj-fThAhMnrxFW8twFcj6C9ODBpsA@mail.gmail.com>
+ <35272f2b-ec5f-d032-ae2e-9fc0b4c0e2e3@digikod.net>
+From: Casey Schaufler <casey@schaufler-ca.com>
+Message-ID: <ccad825b-7a58-e499-e51b-bd7c98581afe@schaufler-ca.com>
+Date: Wed, 19 Apr 2017 16:58:17 -0700
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <a6b8f9ab-d5f8-51fb-0481-89907c43289f@nmatt.com>
-Subject: [kernel-hardening] Re: [PATCH] make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: Matt Brown <matt@nmatt.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+In-Reply-To: <35272f2b-ec5f-d032-ae2e-9fc0b4c0e2e3@digikod.net>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] Re: [PATCH net-next v6 04/11] landlock: Add
+ LSM hooks related to filesystem
+To: =?UTF-8?Q?Micka=c3=abl_Sala=c3=bcn?= <mic@digikod.net>, Kees Cook <keescook@chromium.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Alexei Starovoitov <ast@kernel.org>, Andy Lutomirski <luto@amacapital.net>, Arnaldo Carvalho de Melo <acme@kernel.org>, Daniel Borkmann <daniel@iogearbox.net>, David Drysdale <drysdale@google.com>, "David S . Miller" <davem@davemloft.net>, "Eric W . Biederman" <ebiederm@xmission.com>, James Morris <james.l.morris@oracle.com>, Jann Horn <jann@thejh.net>, Jonathan Corbet <corbet@lwn.net>, Matthew Garrett <mjg59@srcf.ucam.org>, Michael Kerrisk <mtk.manpages@gmail.com>, Paul Moore <paul@paul-moore.com>, Sargun Dhillon <sargun@sargun.me>, "Serge E . Hallyn" <serge@hallyn.com>, Shuah Khan <shuah@kernel.org>, Tejun Heo <tj@kernel.org>, Thomas Graf <tgraf@suug.ch>, Will Drewry <wad@chromium.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, Linux API <linux-api@vger.kernel.org>, linux-security-module <linux-security-module@vger.kernel.org>, Network Development <netdev@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Quoting Matt Brown (matt@nmatt.com):
-> On 04/19/2017 12:58 AM, Serge E. Hallyn wrote:
-> >On Tue, Apr 18, 2017 at 11:45:26PM -0400, Matt Brown wrote:
-> >>This patch reproduces GRKERNSEC_HARDEN_TTY functionality from the grsecurity
-> >>project in-kernel.
-> >>
-> >>This will create the Kconfig SECURITY_TIOCSTI_RESTRICT and the corresponding
-> >>sysctl kernel.tiocsti_restrict that, when activated, restrict all TIOCSTI
-> >>ioctl calls from non CAP_SYS_ADMIN users.
-> >>
-> >>Possible effects on userland:
-> >>
-> >>There could be a few user programs that would be effected by this
-> >>change.
-> >>See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
-> >>notable programs are: agetty, csh, xemacs and tcsh
-> >>
-> >>However, I still believe that this change is worth it given that the
-> >>Kconfig defaults to n. This will be a feature that is turned on for the
-> >
-> >It's not worthless, but note that for instance before this was fixed
-> >in lxc, this patch would not have helped with escapes from privileged
-> >containers.
-> >
-> 
-> I assume you are talking about this CVE:
-> https://bugzilla.redhat.com/show_bug.cgi?id=1411256
-> 
-> In retrospect, is there any way that an escape from a privileged
-> container with the this bug could have been prevented?
+On 4/19/2017 3:03 PM, Mickaël Salaün wrote:
+> On 19/04/2017 01:40, Kees Cook wrote:
+>> On Tue, Apr 18, 2017 at 4:16 PM, Casey Schaufler <casey@schaufler-ca.com> wrote:
+>>> On 4/18/2017 3:44 PM, Mickaël Salaün wrote:
+>>>> On 19/04/2017 00:17, Kees Cook wrote:
+>>>>> On Tue, Mar 28, 2017 at 4:46 PM, Mickaël Salaün <mic@digikod.net> wrote:
+>>>>>> +void __init landlock_add_hooks(void)
+>>>>>> +{
+>>>>>> +       pr_info("landlock: Version %u", LANDLOCK_VERSION);
+>>>>>> +       landlock_add_hooks_fs();
+>>>>>> +       security_add_hooks(NULL, 0, "landlock");
+>>>>>> +       bpf_register_prog_type(&bpf_landlock_type);
+>>>>> I'm confused by the separation of hook registration here. The call to
+>>>>> security_add_hooks is with count=0 is especially weird. Why isn't this
+>>>>> just a single call with security_add_hooks(landlock_hooks,
+>>>>> ARRAY_SIZE(landlock_hooks), "landlock")?
+>>>> Yes, this is ugly with the new security_add_hooks() with three arguments
+>>>> but I wanted to split the hooks definition in multiple files.
+>>> Why? I'll buy a good argument, but there are dangers in
+>>> allowing multiple calls to security_add_hooks().
+> I prefer to have one file per hook "family" (e.g. filesystem, network,
+> ptrace…). This reduce the mess with all the included files (needed for
+> LSM hook argument types) and make the files easier to read, understand
+> and maintain.
 
-I don't know, that's what I was probing for.  Detecting that the pgrp
-or session - heck, the pid namespace - has changed would seem like a
-good indicator that it shouldn't be able to push.
+Yeah, there's that tradeoff and it really is a matter
+of taste I suppose.
 
-> >>same reason that people activate it when using grsecurity. Users of this
-> >>opt-in feature will realize that they are choosing security over some OS
-> >>features like unprivileged TIOCSTI ioctls, as should be clear in the
-> >>Kconfig help message.
-> >>
-> >>Threat Model/Patch Rational:
-> >>
-> >>>From grsecurity's config for GRKERNSEC_HARDEN_TTY.
-> >>
-> >> | There are very few legitimate uses for this functionality and it
-> >> | has made vulnerabilities in several 'su'-like programs possible in
-> >> | the past.  Even without these vulnerabilities, it provides an
-> >> | attacker with an easy mechanism to move laterally among other
-> >> | processes within the same user's compromised session.
-> >>
-> >>So if one process within a tty session becomes compromised it can follow
-> >>that additional processes, that are thought to be in different security
-> >>boundaries, can be compromised as a result. When using a program like su
-> >>or sudo, these additional processes could be in a tty session where TTY file
-> >>descriptors are indeed shared over privilege boundaries.
-> >>
-> >>This is also an excellent writeup about the issue:
-> >><http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
-> >>
-> >>Signed-off-by: Matt Brown <matt@nmatt.com>
-> >>---
-> >> drivers/tty/tty_io.c |  4 ++++
-> >> include/linux/tty.h  |  2 ++
-> >> kernel/sysctl.c      | 12 ++++++++++++
-> >> security/Kconfig     | 13 +++++++++++++
-> >> 4 files changed, 31 insertions(+)
-> >>
-> >>diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-> >>index e6d1a65..31894e8 100644
-> >>--- a/drivers/tty/tty_io.c
-> >>+++ b/drivers/tty/tty_io.c
-> >>@@ -2296,11 +2296,15 @@ static int tty_fasync(int fd, struct file *filp, int on)
-> >>  *	FIXME: may race normal receive processing
-> >>  */
-> >>
-> >>+int tiocsti_restrict = IS_ENABLED(CONFIG_SECURITY_TIOCSTI_RESTRICT);
-> >>+
-> >> static int tiocsti(struct tty_struct *tty, char __user *p)
-> >> {
-> >> 	char ch, mbz = 0;
-> >> 	struct tty_ldisc *ld;
-> >>
-> >>+	if (tiocsti_restrict && !capable(CAP_SYS_ADMIN))
-> >>+		return -EPERM;
-> >> 	if ((current->signal->tty != tty) && !capable(CAP_SYS_ADMIN))
-> >> 		return -EPERM;
-> >> 	if (get_user(ch, p))
-> >>diff --git a/include/linux/tty.h b/include/linux/tty.h
-> >>index 1017e904..7011102 100644
-> >>--- a/include/linux/tty.h
-> >>+++ b/include/linux/tty.h
-> >>@@ -342,6 +342,8 @@ struct tty_file_private {
-> >> 	struct list_head list;
-> >> };
-> >>
-> >>+extern int tiocsti_restrict;
-> >>+
-> >> /* tty magic number */
-> >> #define TTY_MAGIC		0x5401
-> >>
-> >>diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-> >>index acf0a5a..68d1363 100644
-> >>--- a/kernel/sysctl.c
-> >>+++ b/kernel/sysctl.c
-> >>@@ -67,6 +67,7 @@
-> >> #include <linux/kexec.h>
-> >> #include <linux/bpf.h>
-> >> #include <linux/mount.h>
-> >>+#include <linux/tty.h>
-> >>
-> >> #include <linux/uaccess.h>
-> >> #include <asm/processor.h>
-> >>@@ -833,6 +834,17 @@ static struct ctl_table kern_table[] = {
-> >> 		.extra2		= &two,
-> >> 	},
-> >> #endif
-> >>+#if defined CONFIG_TTY
-> >>+	{
-> >>+		.procname	= "tiocsti_restrict",
-> >>+		.data		= &tiocsti_restrict,
-> >>+		.maxlen		= sizeof(int),
-> >>+		.mode		= 0644,
-> >>+		.proc_handler	= proc_dointvec_minmax_sysadmin,
-> >>+		.extra1		= &zero,
-> >>+		.extra2		= &one,
-> >>+	},
-> >>+#endif
-> >> 	{
-> >> 		.procname	= "ngroups_max",
-> >> 		.data		= &ngroups_max,
-> >>diff --git a/security/Kconfig b/security/Kconfig
-> >>index 3ff1bf9..7d13331 100644
-> >>--- a/security/Kconfig
-> >>+++ b/security/Kconfig
-> >>@@ -18,6 +18,19 @@ config SECURITY_DMESG_RESTRICT
-> >>
-> >> 	  If you are unsure how to answer this question, answer N.
-> >>
-> >>+config SECURITY_TIOCSTI_RESTRICT
-> >
-> >This is an odd way to name this.  Shouldn't the name reflect that it
-> >is setting the default, rather than enabling the feature?
-> >
-> >Besides that, I'm ok with the patch.
-> >
-> >>+	bool "Restrict unprivileged use of tiocsti command injection"
-> >>+	default n
-> >>+	help
-> >>+	  This enforces restrictions on unprivileged users injecting commands
-> >>+	  into other processes which share a tty session using the TIOCSTI
-> >>+	  ioctl. This option makes TIOCSTI use require CAP_SYS_ADMIN.
-> >>+
-> >>+	  If this option is not selected, no restrictions will be enforced
-> >>+	  unless the tiocsti_restrict sysctl is explicitly set to (1).
-> >>+
-> >>+	  If you are unsure how to answer this question, answer N.
-> >>+
-> >> config SECURITY
-> >> 	bool "Enable different security models"
-> >> 	depends on SYSFS
-> >>--
-> >>2.10.2
+>>>> The current security_add_hooks() use lsm_append(lsm, &lsm_names) which
+>>>> is not exported. Unfortunately, calling multiple security_add_hooks()
+>>>> with the same LSM name would register multiple names for the same LSM…
+>>>> Is it OK if I modify this function to not add duplicated entries?
+>>> It may seem absurd, but it's conceivable that a module might
+>>> have two hooks it wants called. My example is a module that
+>>> counts the number of times SELinux denies a process access to
+>>> things (which needs to be called before and after SELinux in
+>>> order to detect denials) and takes "appropriate action" if
+>>> too many denials occur. It would be weird, wonky and hackish,
+>>> but that never stopped anybody before.
+> Right, but now, with the new lsm_append(), module names are concatenated
+> ("%s,%s") in the lsm_names variable. It would be nice to not pollute
+> this string with multiple time the same module name.
+
+All it would take is a check that the module name
+isn't already on the list. It's a trivial change.
+
+>> If ends up being sane and clear, I'm fine with allowing multiple calls.
+>>
+>> -Kees
+>>
