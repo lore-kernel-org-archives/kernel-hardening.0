@@ -1,23 +1,171 @@
+References: <20170419034526.18565-1-matt@nmatt.com>
+ <20170419045813.GA17990@mail.hallyn.com>
+From: Matt Brown <matt@nmatt.com>
+Message-ID: <a6b8f9ab-d5f8-51fb-0481-89907c43289f@nmatt.com>
+Date: Wed, 19 Apr 2017 19:21:51 -0400
 MIME-Version: 1.0
-In-Reply-To: <1492640420-27345-2-git-send-email-tixxdz@gmail.com>
-References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com> <1492640420-27345-2-git-send-email-tixxdz@gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Wed, 19 Apr 2017 16:16:22 -0700
-Message-ID: <CALCETrWzjCWGJ2-ghQBie1AXLgFqGe-B9DALUASm43gDO5RRcw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 1/2] modules:capabilities: automatic module loading restriction
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, zendyani@gmail.com, Peter Zijlstra <peterz@infradead.org>
+In-Reply-To: <20170419045813.GA17990@mail.hallyn.com>
+Content-Type: text/plain; charset=windows-1252; format=flowed
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH] make TIOCSTI ioctl require CAP_SYS_ADMIN
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 19, 2017 at 3:20 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> Currently, an explicit call to load or unload kernel modules require
-> CAP_SYS_MODULE capability. However unprivileged users have always been
-> able to load some modules using the implicit auto-load operation. An
-> automatic module loading happens when programs request a kernel feature
-> from a module that is not loaded. In order to satisfy userspace, the
-> kernel then automatically load all these required modules.
+On 04/19/2017 12:58 AM, Serge E. Hallyn wrote:
+> On Tue, Apr 18, 2017 at 11:45:26PM -0400, Matt Brown wrote:
+>> This patch reproduces GRKERNSEC_HARDEN_TTY functionality from the grsecurity
+>> project in-kernel.
+>>
+>> This will create the Kconfig SECURITY_TIOCSTI_RESTRICT and the corresponding
+>> sysctl kernel.tiocsti_restrict that, when activated, restrict all TIOCSTI
+>> ioctl calls from non CAP_SYS_ADMIN users.
+>>
+>> Possible effects on userland:
+>>
+>> There could be a few user programs that would be effected by this
+>> change.
+>> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
+>> notable programs are: agetty, csh, xemacs and tcsh
+>>
+>> However, I still believe that this change is worth it given that the
+>> Kconfig defaults to n. This will be a feature that is turned on for the
+>
+> It's not worthless, but note that for instance before this was fixed
+> in lxc, this patch would not have helped with escapes from privileged
+> containers.
+>
 
-I like this feature.
+I assume you are talking about this CVE:
+https://bugzilla.redhat.com/show_bug.cgi?id=1411256
 
---Andy
+In retrospect, is there any way that an escape from a privileged
+container with the this bug could have been prevented?
+
+>> same reason that people activate it when using grsecurity. Users of this
+>> opt-in feature will realize that they are choosing security over some OS
+>> features like unprivileged TIOCSTI ioctls, as should be clear in the
+>> Kconfig help message.
+>>
+>> Threat Model/Patch Rational:
+>>
+>> >From grsecurity's config for GRKERNSEC_HARDEN_TTY.
+>>
+>>  | There are very few legitimate uses for this functionality and it
+>>  | has made vulnerabilities in several 'su'-like programs possible in
+>>  | the past.  Even without these vulnerabilities, it provides an
+>>  | attacker with an easy mechanism to move laterally among other
+>>  | processes within the same user's compromised session.
+>>
+>> So if one process within a tty session becomes compromised it can follow
+>> that additional processes, that are thought to be in different security
+>> boundaries, can be compromised as a result. When using a program like su
+>> or sudo, these additional processes could be in a tty session where TTY file
+>> descriptors are indeed shared over privilege boundaries.
+>>
+>> This is also an excellent writeup about the issue:
+>> <http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
+>>
+>> Signed-off-by: Matt Brown <matt@nmatt.com>
+>> ---
+>>  drivers/tty/tty_io.c |  4 ++++
+>>  include/linux/tty.h  |  2 ++
+>>  kernel/sysctl.c      | 12 ++++++++++++
+>>  security/Kconfig     | 13 +++++++++++++
+>>  4 files changed, 31 insertions(+)
+>>
+>> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+>> index e6d1a65..31894e8 100644
+>> --- a/drivers/tty/tty_io.c
+>> +++ b/drivers/tty/tty_io.c
+>> @@ -2296,11 +2296,15 @@ static int tty_fasync(int fd, struct file *filp, int on)
+>>   *	FIXME: may race normal receive processing
+>>   */
+>>
+>> +int tiocsti_restrict = IS_ENABLED(CONFIG_SECURITY_TIOCSTI_RESTRICT);
+>> +
+>>  static int tiocsti(struct tty_struct *tty, char __user *p)
+>>  {
+>>  	char ch, mbz = 0;
+>>  	struct tty_ldisc *ld;
+>>
+>> +	if (tiocsti_restrict && !capable(CAP_SYS_ADMIN))
+>> +		return -EPERM;
+>>  	if ((current->signal->tty != tty) && !capable(CAP_SYS_ADMIN))
+>>  		return -EPERM;
+>>  	if (get_user(ch, p))
+>> diff --git a/include/linux/tty.h b/include/linux/tty.h
+>> index 1017e904..7011102 100644
+>> --- a/include/linux/tty.h
+>> +++ b/include/linux/tty.h
+>> @@ -342,6 +342,8 @@ struct tty_file_private {
+>>  	struct list_head list;
+>>  };
+>>
+>> +extern int tiocsti_restrict;
+>> +
+>>  /* tty magic number */
+>>  #define TTY_MAGIC		0x5401
+>>
+>> diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+>> index acf0a5a..68d1363 100644
+>> --- a/kernel/sysctl.c
+>> +++ b/kernel/sysctl.c
+>> @@ -67,6 +67,7 @@
+>>  #include <linux/kexec.h>
+>>  #include <linux/bpf.h>
+>>  #include <linux/mount.h>
+>> +#include <linux/tty.h>
+>>
+>>  #include <linux/uaccess.h>
+>>  #include <asm/processor.h>
+>> @@ -833,6 +834,17 @@ static struct ctl_table kern_table[] = {
+>>  		.extra2		= &two,
+>>  	},
+>>  #endif
+>> +#if defined CONFIG_TTY
+>> +	{
+>> +		.procname	= "tiocsti_restrict",
+>> +		.data		= &tiocsti_restrict,
+>> +		.maxlen		= sizeof(int),
+>> +		.mode		= 0644,
+>> +		.proc_handler	= proc_dointvec_minmax_sysadmin,
+>> +		.extra1		= &zero,
+>> +		.extra2		= &one,
+>> +	},
+>> +#endif
+>>  	{
+>>  		.procname	= "ngroups_max",
+>>  		.data		= &ngroups_max,
+>> diff --git a/security/Kconfig b/security/Kconfig
+>> index 3ff1bf9..7d13331 100644
+>> --- a/security/Kconfig
+>> +++ b/security/Kconfig
+>> @@ -18,6 +18,19 @@ config SECURITY_DMESG_RESTRICT
+>>
+>>  	  If you are unsure how to answer this question, answer N.
+>>
+>> +config SECURITY_TIOCSTI_RESTRICT
+>
+> This is an odd way to name this.  Shouldn't the name reflect that it
+> is setting the default, rather than enabling the feature?
+>
+> Besides that, I'm ok with the patch.
+>
+>> +	bool "Restrict unprivileged use of tiocsti command injection"
+>> +	default n
+>> +	help
+>> +	  This enforces restrictions on unprivileged users injecting commands
+>> +	  into other processes which share a tty session using the TIOCSTI
+>> +	  ioctl. This option makes TIOCSTI use require CAP_SYS_ADMIN.
+>> +
+>> +	  If this option is not selected, no restrictions will be enforced
+>> +	  unless the tiocsti_restrict sysctl is explicitly set to (1).
+>> +
+>> +	  If you are unsure how to answer this question, answer N.
+>> +
+>>  config SECURITY
+>>  	bool "Enable different security models"
+>>  	depends on SYSFS
+>> --
+>> 2.10.2
