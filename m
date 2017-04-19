@@ -1,17 +1,18 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
 In-Reply-To: <1492612181-8484-1-git-send-email-mpe@ellerman.id.au>
 References: <1492612181-8484-1-git-send-email-mpe@ellerman.id.au>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 19 Apr 2017 10:42:08 -0700
-Message-ID: <CAGXu5jKAoukvBtH7i0K17MywkLEpizECCfMGJ+XKWWfPQHdQBw@mail.gmail.com>
+From: Bhupesh Sharma <bhsharma@redhat.com>
+Date: Thu, 20 Apr 2017 00:05:38 +0530
+Message-ID: <CACi5LpNepcyCgWj-bYnSWqNRDtE97wVJ6=shM2mRP3i0ROx+qg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH] powerpc/mm: Add support for runtime configuration of ASLR limits
 To: Michael Ellerman <mpe@ellerman.id.au>
-Cc: "linuxppc-dev@ozlabs.org" <linuxppc-dev@ozlabs.org>, Bhupesh Sharma <bhsharma@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: linuxppc-dev@ozlabs.org, Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 19, 2017 at 7:29 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
+Hi Michael,
+
+On Wed, Apr 19, 2017 at 7:59 PM, Michael Ellerman <mpe@ellerman.id.au> wrote:
 > Add powerpc support for mmap_rnd_bits and mmap_rnd_compat_bits, which are two
 > sysctls that allow a user to configure the number of bits of randomness used for
 > ASLR.
@@ -32,12 +33,39 @@ On Wed, Apr 19, 2017 at 7:29 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
 > 32-bit vs 64-bit, but also the configured PAGE_SIZE. Furthermore now that we
 > have 128TB address space support on Book3S, we also have to take that into
 > account.
->
+
+Thanks for the patch. I have a couple of comments:
+
+(A) As Aneesh noted in the review of my v2 patch (see [1]), we need to
+handle the configurable 512TB case as well. Right?
+
 > Finally we can wire up the value in arch_mmap_rnd().
 >
 > Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
 
-Maybe add a Suggested-by: for the earlier patches?
+(b) I am wondering if I missed your comments on my v2 on the same
+subject - may be you missed my reminder message (see [2]).
+
+I am just starting off on PPC related enhancements that we find useful
+while working on Redhat/Fedora PPC systems (I have mainly been
+associated with ARM and peripheral driver development in the past),
+and would have been motivated further if I could get responses to my
+queries which I had raised earlier on the list (see [3]) - especially
+the branch to base newer version of patches on.
+
+Also I am not sure how the PPC subsystem handles S-O-Bs of earlier
+contributions on the same subject (as it varies from one
+maintainer/subsystem to the other), so I leave it up to you.
+
+That being said, I will try to improve any new patches I plan to send
+out on PPC mailing list in future.
+
+[1] https://lkml.org/lkml/2017/4/13/57
+[2] https://lkml.org/lkml/2017/4/10/796
+[3] https://lkml.org/lkml/2017/4/17/3
+
+Thanks,
+Bhupesh
 
 > ---
 >  arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
@@ -75,9 +103,6 @@ Maybe add a Suggested-by: for the earlier patches?
 > +       #
 > +       # For 32-bit, use the compat values, as they're the same.
 > +       default ARCH_MMAP_RND_COMPAT_BITS_MIN
-
-Shouldn't the default case be ..._MAX?
-
 > +
 > +config ARCH_MMAP_RND_BITS_MIN
 > +       # Allow randomisation to consume up to 1GB of address space (2^30).
@@ -142,11 +167,3 @@ Shouldn't the default case be ..._MAX?
 > --
 > 2.7.4
 >
-
-Yay! Ever closer to being able to extract arch_mmap_rnd() out of arch/ ;)
-
--Kees
-
--- 
-Kees Cook
-Pixel Security
