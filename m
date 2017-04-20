@@ -1,157 +1,43 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170225003232.GA123380@beast>
-References: <20170225003232.GA123380@beast>
+In-Reply-To: <CAEiveUdFL53XyQpacmN6f8F28M0bLQDcetpRXJjrJ10vDmQi8Q@mail.gmail.com>
+References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
+ <1492640420-27345-2-git-send-email-tixxdz@gmail.com> <1492654942.31767.21.camel@decadent.org.uk>
+ <CAEiveUdS=GbyxDVeNFrjTmhvQB-a6UgrJXcGY=BYJLu+3z0x_Q@mail.gmail.com>
+ <1492700543.31767.23.camel@decadent.org.uk> <CAEiveUdFL53XyQpacmN6f8F28M0bLQDcetpRXJjrJ10vDmQi8Q@mail.gmail.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Thu, 20 Apr 2017 14:02:16 -0700
-Message-ID: <CAGXu5jLfrNp=8Mr=DbY35egC8q_iA0tpiQRteK3_+vc3LZGbmw@mail.gmail.com>
+Date: Thu, 20 Apr 2017 14:28:59 -0700
+Message-ID: <CAGXu5j+L9=tGH2xCKJ53NDYRM8PVVYyC2R8w7uahBO88cftZNg@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [RFC] mm: enable sanitizing via CONFIG
-To: Kaiwan N Billimoria <kaiwan@kaiwantech.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: Re: [kernel-hardening] Re: [PATCH v3 1/2] modules:capabilities:
+ automatic module loading restriction
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: Ben Hutchings <ben@decadent.org.uk>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, Zendyani <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Feb 24, 2017 at 4:32 PM, Kees Cook <keescook@chromium.org> wrote:
-> This enables page and slab poisoning by default under CONFIG_MEMORY_SANITIZE.
-> Based on work by Kaiwan N Billimoria.
+On Thu, Apr 20, 2017 at 1:39 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> On Thu, Apr 20, 2017 at 5:02 PM, Ben Hutchings <ben@decadent.org.uk> wrote:
+>> On Thu, 2017-04-20 at 14:44 +0200, Djalal Harouni wrote:
+>>> > On Thu, Apr 20, 2017 at 4:22 AM, Ben Hutchings <ben@decadent.org.uk> wrote:
+>>> > On Thu, 2017-04-20 at 00:20 +0200, Djalal Harouni wrote:
+>>> > [...]
+> [...]
+>>> modules_disabled is too restrictive and once set it can't be changed,
+>>> maybe that's why not all users use it.
+>>>
+>>> With modules_disabled=0 and modules_autoload=2
+>> [...]
+>>
+>> Hmm, OK.  How about naming this modules_autoload_mode, then, so that
+>> it's obviously not a boolean?
 >
-> Signed-off-by: Kees Cook <keescook@chromium.org>
-> ---
-> This is more what I had in mind. This is based on the latest patch, but
-> handles slab and slub. I tested slub with lkdtm's READ_AFTER_FREE and
-> READ_BUDDY_AFTER_FREE which both trip the poisoning tests.
->
-> While doing this, I noticed one major issue with slub/slab poisoning:
-> it performs poisoning both on alloc and free, which is a rather large
-> performance hit, so the next step is likely to find a way to split the
-> poisoning into alloc and free halves so that CONFIG_MEMORY_SANITIZE
-> poisoning will only happen on the free.
+> Yes that's fine by me, kees already suggested to rename it to
+> "modules_autoload" I can change it to that if it's the best
+> suggestion!
 
-While this has performance flaws (to say the least), what do people
-think of this general approach to dealing with having a single CONFIG
-to control this at least? Should I (or someone) see what the slab
-cache maintainers think of this?
+That's fine by me.
 
 -Kees
-
-> ---
->  init/main.c      |  5 +++++
->  mm/Kconfig.debug | 23 +++++++++++++++++++++++
->  mm/page_poison.c |  3 ++-
->  mm/slab.c        |  4 ++++
->  mm/slub.c        |  7 +++++++
->  5 files changed, 41 insertions(+), 1 deletion(-)
->
-> diff --git a/init/main.c b/init/main.c
-> index 24ea48745061..e5f571bfe56f 100644
-> --- a/init/main.c
-> +++ b/init/main.c
-> @@ -1030,6 +1030,11 @@ static noinline void __init kernel_init_freeable(void)
->
->         do_basic_setup();
->
-> +#ifdef CONFIG_MEMORY_SANITIZE
-> +       pr_debug("[CONFIG_MEMORY_SANITIZE]: page_poisoning_enabled? %s\n",
-> +                page_poisoning_enabled() ? "yes" : "no");
-> +#endif
-> +
->         /* Open the /dev/console on the rootfs, this should never fail */
->         if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
->                 pr_err("Warning: unable to open an initial console.\n");
-> diff --git a/mm/Kconfig.debug b/mm/Kconfig.debug
-> index afcc550877ff..910a7a359b96 100644
-> --- a/mm/Kconfig.debug
-> +++ b/mm/Kconfig.debug
-> @@ -90,3 +90,26 @@ config DEBUG_PAGE_REF
->           careful when enabling this feature because it adds about 30 KB to the
->           kernel code.  However the runtime performance overhead is virtually
->           nil until the tracepoints are actually enabled.
-> +
-> +config MEMORY_SANITIZE
-> +       bool "Enable memory sanitization features"
-> +       depends on SLUB || SLAB
-> +       select SLUB_DEBUG if SLUB
-> +       select PAGE_POISONING
-> +       select PAGE_POISONING_NO_SANITY
-> +       help
-> +         This option enables memory sanitization features. Particularly,
-> +         when you turn on this option, it auto-enables:
-> +         - page poisoning (without sanity checking)
-> +         - kmem_cache poisoning
-> +
-> +         Implication: turning this option on will implicitly enable:
-> +         - the SLUB_DEBUG switch to the equivalent of the kernel command-line
-> +           'slub_debug=p' (where p=SLAB_POISON).
-> +         - page poisoning, equivalent to passing the kernel command-line
-> +           option 'page_poison=on'.
-> +
-> +         Of course, kernel command-line options 'page_poison' and 'slub_debug'
-> +         are still honored.
-> +
-> +         If unsure, say N.
-> diff --git a/mm/page_poison.c b/mm/page_poison.c
-> index 2e647c65916b..6f7e37c8ac2f 100644
-> --- a/mm/page_poison.c
-> +++ b/mm/page_poison.c
-> @@ -7,7 +7,8 @@
->  #include <linux/ratelimit.h>
->
->  static bool __page_poisoning_enabled __read_mostly;
-> -static bool want_page_poisoning __read_mostly;
-> +static bool want_page_poisoning __read_mostly =
-> +                                       IS_ENABLED(CONFIG_MEMORY_SANITIZE);
->
->  static int early_page_poison_param(char *buf)
->  {
-> diff --git a/mm/slab.c b/mm/slab.c
-> index bd63450a9b16..1462b0b8b0a0 100644
-> --- a/mm/slab.c
-> +++ b/mm/slab.c
-> @@ -1894,6 +1894,10 @@ unsigned long kmem_cache_flags(unsigned long object_size,
->         unsigned long flags, const char *name,
->         void (*ctor)(void *))
->  {
-> +#ifdef CONFIG_MEMORY_SANITIZE
-> +       flags |= SLAB_POISON;
-> +#endif
-> +
->         return flags;
->  }
->
-> diff --git a/mm/slub.c b/mm/slub.c
-> index 7f4bc7027ed5..5041f42c942b 100644
-> --- a/mm/slub.c
-> +++ b/mm/slub.c
-> @@ -452,6 +452,8 @@ static inline void *restore_red_left(struct kmem_cache *s, void *p)
->   */
->  #if defined(CONFIG_SLUB_DEBUG_ON)
->  static int slub_debug = DEBUG_DEFAULT_FLAGS;
-> +#elif defined(CONFIG_MEMORY_SANITIZE)
-> +static int slub_debug = SLAB_POISON;
->  #else
->  static int slub_debug;
->  #endif
-> @@ -5755,6 +5757,11 @@ static int __init slab_sysfs_init(void)
->         struct kmem_cache *s;
->         int err;
->
-> +#ifdef CONFIG_MEMORY_SANITIZE
-> +       pr_info("[CONFIG_MEMORY_SANITIZE]: slub_debug = P? %s [0x%x]\n",
-> +               slub_debug & SLAB_POISON ? "yes" : "no", slub_debug);
-> +#endif
-> +
->         mutex_lock(&slab_mutex);
->
->         slab_kset = kset_create_and_add("slab", &slab_uevent_ops, kernel_kobj);
-> --
-> 2.7.4
->
->
-> --
-> Kees Cook
-> Pixel Security
-
-
 
 -- 
 Kees Cook
