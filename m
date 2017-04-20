@@ -1,79 +1,91 @@
-From: Michael Ellerman <mpe@ellerman.id.au>
-In-Reply-To: <CAGXu5jKAoukvBtH7i0K17MywkLEpizECCfMGJ+XKWWfPQHdQBw@mail.gmail.com>
-References: <1492612181-8484-1-git-send-email-mpe@ellerman.id.au> <CAGXu5jKAoukvBtH7i0K17MywkLEpizECCfMGJ+XKWWfPQHdQBw@mail.gmail.com>
-Date: Thu, 20 Apr 2017 21:22:22 +1000
-Message-ID: <87bmrr493l.fsf@concordia.ellerman.id.au>
 MIME-Version: 1.0
-Content-Type: text/plain
-Subject: Re: [kernel-hardening] Re: [PATCH] powerpc/mm: Add support for runtime configuration of ASLR limits
-To: Kees Cook <keescook@chromium.org>
-Cc: "linuxppc-dev@ozlabs.org" <linuxppc-dev@ozlabs.org>, Bhupesh Sharma <bhsharma@redhat.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <1492654942.31767.21.camel@decadent.org.uk>
+References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
+ <1492640420-27345-2-git-send-email-tixxdz@gmail.com> <1492654942.31767.21.camel@decadent.org.uk>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Thu, 20 Apr 2017 14:44:53 +0200
+Message-ID: <CAEiveUdS=GbyxDVeNFrjTmhvQB-a6UgrJXcGY=BYJLu+3z0x_Q@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] Re: [PATCH v3 1/2] modules:capabilities:
+ automatic module loading restriction
+To: Ben Hutchings <ben@decadent.org.uk>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, Zendyani <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Kees Cook <keescook@chromium.org> writes:
-
-> On Wed, Apr 19, 2017 at 7:29 AM, Michael Ellerman <mpe@ellerman.id.au> wrote:
->> Add powerpc support for mmap_rnd_bits and mmap_rnd_compat_bits, which are two
->> sysctls that allow a user to configure the number of bits of randomness used for
->> ASLR.
->>
->> Because of the way the Kconfig for ARCH_MMAP_RND_BITS is defined, we have to
->> construct at least the MIN value in Kconfig, vs in a header which would be more
->> natural. Given that we just go ahead and do it all in Kconfig.
->>
->> At least according to the code (the documentation makes no mention of it), the
->> value is defined as the number of bits of randomisation *of the page*, not the
->> address. This makes some sense, with larger page sizes more of the low bits are
->> forced to zero, which would reduce the randomisation if we didn't take the
->> PAGE_SIZE into account. However it does mean the min/max values have to change
->> depending on the PAGE_SIZE in order to actually limit the amount of address
->> space consumed by the randomisation.
->>
->> The result of that is that we have to define the default values based on both
->> 32-bit vs 64-bit, but also the configured PAGE_SIZE. Furthermore now that we
->> have 128TB address space support on Book3S, we also have to take that into
->> account.
->>
->> Finally we can wire up the value in arch_mmap_rnd().
->>
->> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+On Thu, Apr 20, 2017 at 4:22 AM, Ben Hutchings <ben@decadent.org.uk> wrote:
+> On Thu, 2017-04-20 at 00:20 +0200, Djalal Harouni wrote:
+> [...]
+>> +modules_autoload:
+>> +
+>> +A sysctl to control if modules auto-load feature is allowed or not.
+>> +This sysctl complements "modules_disabled" which is for all module
+>> +operations where this flag applies only to automatic module loading.
+>> +Automatic module loading happens when programs request a kernel feature
+>> +that is implemented by an unloaded module, the kernel automatically
+>> +runs the program pointed by "modprobe" sysctl in order to load the
+>> +corresponding module.
+>> +
+>> +When modules_autoload is set to (0), the default, there are no
+>> +restrictions.
+>> +
+>> +When modules_autoload is set to (1), processes must have CAP_SYS_MODULE
+>> +to be able to trigger a module auto-load operation, or CAP_NET_ADMIN
+>> +for modules with a 'netdev-%s' alias.
+>> +
+>> +When modules_autoload is set to (2), automatic module loading is
+>> +disabled for all. Once set, this value can not be changed.
 >
-> Maybe add a Suggested-by: for the earlier patches?
-
-Sure.
-
->> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
->> index 97a8bc8a095c..608ee0b7b79f 100644
->> --- a/arch/powerpc/Kconfig
->> +++ b/arch/powerpc/Kconfig
->> @@ -22,6 +22,48 @@ config MMU
->>         bool
->>         default y
->>
->> +config ARCH_MMAP_RND_BITS_MAX
->> +       # On Book3S 64, the default virtual address space for 64-bit processes
->> +       # is 2^47 (128TB). As a maximum, allow randomisation to consume up to
->> +       # 32T of address space (2^45), which should ensure a reasonable gap
->> +       # between bottom-up and top-down allocations for applications that
->> +       # consume "normal" amounts of address space. Book3S 64 only supports 64K
->> +       # and 4K page sizes.
->> +       default 29 if PPC_BOOK3S_64 && PPC_64K_PAGES # 29 = 45 (32T) - 16 (64K)
->> +       default 33 if PPC_BOOK3S_64                  # 33 = 45 (32T) - 12 (4K)
->> +       #
->> +       # On all other 64-bit platforms (currently only Book3E), the virtual
->> +       # address space is 2^46 (64TB). Allow randomisation to consume up to 16T
->> +       # of address space (2^44). Only 4K page sizes are supported.
->> +       default 32 if 64BIT     # 32 = 44 (16T) - 12 (4K)
->> +       #
->> +       # For 32-bit, use the compat values, as they're the same.
->> +       default ARCH_MMAP_RND_COMPAT_BITS_MIN
+> I would expect a parameter 'modules_autoload' to be a boolean, so this
+> behaviour would be surprising.
 >
-> Shouldn't the default case be ..._MAX?
+> What is the point of mode 2?  Why would someone want to set
+> modules_disabled=0 and modules_autoload=2?
 
-Yes, ooops! Thanks for the review.
+modules_disabled is too restrictive and once set it can't be changed,
+maybe that's why not all users use it.
 
-> Yay! Ever closer to being able to extract arch_mmap_rnd() out of arch/ ;)
+With modules_disabled=0 and modules_autoload=2
 
-Hah, you are an optimist :)
+* The functionality of the system can still be made available.
+* You only disable automatic module loading
+* Explicit module load/unload can still happen. Administrators or
+privileged programs can still explicitly load modules provide a
+feature without rebooting.
+* You are able to restrict some applications from inserting new
+modules at all by also applying a seccomp filter and removing their
+CAP_SYS_MODULE, where explicit load/unload is still available to
+others.
+* You are able to unload an old bad version of the module without
+rebooting, and maybe load the new version.
 
-cheers
+
+> [...]
+>> --- a/kernel/module.c
+>> +++ b/kernel/module.c
+> [...]
+>> +static int modules_autoload_privileged_access(const char *name)
+>> +{
+>> +     if (capable(CAP_SYS_MODULE))
+>> +             return 0;
+>> +     else if (name && strstr(name, "netdev-") && capable(CAP_NET_ADMIN))
+> [...]
+>
+> We want a prefix match, so use strncmp() not strstr().
+
+Indeed, will fix it.
+
+Thanks!
+
+
+> Ben.
+>
+> --
+> Ben Hutchings
+> It is easier to change the specification to fit the program than vice
+> versa.
+>
+
+
+
+-- 
+tixxdz
