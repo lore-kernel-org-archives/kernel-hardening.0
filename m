@@ -1,126 +1,98 @@
-References: <20170419034526.18565-1-matt@nmatt.com>
- <20170419045813.GA17990@mail.hallyn.com>
- <a6b8f9ab-d5f8-51fb-0481-89907c43289f@nmatt.com>
- <20170419235342.GA2305@mail.hallyn.com>
- <59d67e42-3532-6001-91cb-067bff1eec64@nmatt.com>
- <20170420151928.GA14559@mail.hallyn.com>
- <0b6cec15f206329fc523983534baaf0d@nmatt.com>
- <20170420174100.GA16822@mail.hallyn.com>
- <8e755f85-6947-cb52-003d-11f1d9a886da@nmatt.com>
- <20170421052428.GA24939@mail.hallyn.com>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <c1977923-f68d-6ea9-2fd1-d2939848eec6@nmatt.com>
-Date: Sat, 22 Apr 2017 13:09:42 -0400
 MIME-Version: 1.0
-In-Reply-To: <20170421052428.GA24939@mail.hallyn.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: "Serge E. Hallyn" <serge@hallyn.com>
-Cc: jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, akpm@linux-foundation.org, jannh@google.com, keescook@chromium.org, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org
+Sender: keescook@google.com
+In-Reply-To: <CALCETrUT73CcPQx2T=1zWbOUhw9r-c_YqXw5-KTwxgWPgXuTwA@mail.gmail.com>
+References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
+ <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
+ <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
+ <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
+ <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
+ <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
+ <CAGXu5jJTdL7To2JsQUXyg6B7Xbb0kow6sXH-L+teVi88=gm7MQ@mail.gmail.com>
+ <CALCETrXzZwz4a9uhQfdHb4L2afApTvVLPwVx640vvV-fzbCR0w@mail.gmail.com>
+ <CAEiveUcx8fwQgXdLPeMNsTjX2KPhQKH__a-XzcHko_1aCmh4sg@mail.gmail.com> <CALCETrUT73CcPQx2T=1zWbOUhw9r-c_YqXw5-KTwxgWPgXuTwA@mail.gmail.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Sat, 22 Apr 2017 12:29:37 -0700
+Message-ID: <CAGXu5jLV+WZyj+xnxVFkFEgEthNt6eXdcSgHT-=85mJ1ECZ1Rw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
+ autoload restriction
+To: Andy Lutomirski <luto@kernel.org>
+Cc: Djalal Harouni <tixxdz@gmail.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/21/2017 01:24 AM, Serge E. Hallyn wrote:
-> On Fri, Apr 21, 2017 at 01:09:59AM -0400, Matt Brown wrote:
->> On 04/20/2017 01:41 PM, Serge E. Hallyn wrote:
->>> Quoting matt@nmatt.com (matt@nmatt.com):
->>>> On 2017-04-20 11:19, Serge E. Hallyn wrote:
->>>>> Quoting Matt Brown (matt@nmatt.com):
->>>>>> On 04/19/2017 07:53 PM, Serge E. Hallyn wrote:
->>>>>>> Quoting Matt Brown (matt@nmatt.com):
->>>>>>>> On 04/19/2017 12:58 AM, Serge E. Hallyn wrote:
->>>>>>>>> On Tue, Apr 18, 2017 at 11:45:26PM -0400, Matt Brown wrote:
->>>>>>>>>> This patch reproduces GRKERNSEC_HARDEN_TTY functionality from the grsecurity
->>>>>>>>>> project in-kernel.
->>>>>>>>>>
->>>>>>>>>> This will create the Kconfig SECURITY_TIOCSTI_RESTRICT and the corresponding
->>>>>>>>>> sysctl kernel.tiocsti_restrict that, when activated, restrict all TIOCSTI
->>>>>>>>>> ioctl calls from non CAP_SYS_ADMIN users.
->>>>>>>>>>
->>>>>>>>>> Possible effects on userland:
->>>>>>>>>>
->>>>>>>>>> There could be a few user programs that would be effected by this
->>>>>>>>>> change.
->>>>>>>>>> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
->>>>>>>>>> notable programs are: agetty, csh, xemacs and tcsh
->>>>>>>>>>
->>>>>>>>>> However, I still believe that this change is worth it given that the
->>>>>>>>>> Kconfig defaults to n. This will be a feature that is turned on for the
->>>>>>>>>
->>>>>>>>> It's not worthless, but note that for instance before this was fixed
->>>>>>>>> in lxc, this patch would not have helped with escapes from privileged
->>>>>>>>> containers.
->>>>>>>>>
->>>>>>>>
->>>>>>>> I assume you are talking about this CVE:
->>>>>>>> https://bugzilla.redhat.com/show_bug.cgi?id=1411256
->>>>>>>>
->>>>>>>> In retrospect, is there any way that an escape from a privileged
->>>>>>>> container with the this bug could have been prevented?
->>>>>>>
->>>>>>> I don't know, that's what I was probing for.  Detecting that the pgrp
->>>>>>> or session - heck, the pid namespace - has changed would seem like a
->>>>>>> good indicator that it shouldn't be able to push.
->>>>>>>
->>>>>>
->>>>>> pgrp and session won't do because in the case we are discussing
->>>>>> current->signal->tty is the same as tty.
->>>>>>
->>>>>> This is the current check that is already in place:
->>>>>> | if ((current->signal->tty != tty) && !capable(CAP_SYS_ADMIN))
->>>>>> | 	return -EPERM;
->>>>>
->>>>> Yeah...
->>>>>
->>>>>> The only thing I could find to detect the tty message coming from a
->>>>>> container is as follows:
->>>>>> | task_active_pid_ns(current)->level
->>>>>>
->>>>>> This will be zero when run on the host, but 1 when run inside a
->>>>>> container. However this is very much a hack and could probably break
->>>>>> some userland stuff where there are multiple levels of namespaces.
->>>>>
->>>>> Yes.  This is also however why I don't like the current patch, because
->>>>> capable() will never be true in a container, so nested containers
->>>>> break.
->>>>>
+On Fri, Apr 21, 2017 at 11:51 PM, Andy Lutomirski <luto@kernel.org> wrote:
+> On Fri, Apr 21, 2017 at 5:12 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> On Sat, Apr 22, 2017 at 1:51 AM, Andy Lutomirski <luto@kernel.org> wrote:
+>> [...]
+>>>>> I personally like my implicit_rights idea, and it might be interesting
+>>>>> to prototype it.
 >>>>
->>>> What do you mean by "capable() will never be true in a container"?
->>>> My understanding
->>>> is that if a container is given CAP_SYS_ADMIN then
->>>> capable(CAP_SYS_ADMIN) will return
->>>> true?
+>>>> I don't like blocking a needed feature behind a large super-feature
+>>>> that doesn't exist yet. We'd be able to refactor this code into using
+>>>> such a thing in the future, so I'd prefer to move ahead with this
+>>>> since it would stop actual exploits.
 >>>
->>> No, capable(X) checks for X with respect to the initial user namespace.
->>> So for root-owned containers it will be true, but containers running in
->>> non-initial user namespaces cannot pass that check.
->>>
->>> To check for privilege with respect to another user namespace, you need
->>> to use ns_capable.  But for that you need a user_ns to target.
->>>
+>>> I don't think the super-feature is so hard, and I think we should not
+>>> add the per-task thing the way it's done in this patch.  Let's not add
+>>> per-task things where the best argument for their security is "not
+>>> sure how it would be exploited".
 >>
->> How about: ns_capable(current_user_ns(),CAP_SYS_ADMIN) ?
+>> Actually the XFRM framework CVE-2017-7184 [1] is one real example, of
+>> course there are others. The exploit was used on a generic distro
+>> during a security contest that distro is Ubuntu. That distro will
+>> never provide a module autoloading restriction by default to not harm
+>> it's users. Consumers or containers/sandboxes then can run their
+>> confined apps using such facilities.
 >>
->> current_user_ns() was found in include/linux/cred.h
+>> These bugs will stay in embedded devices that use these generic
+>> distros for ever.
+>>
+>>> Anyway, I think the sysctl is really the important bit.  The per-task
+>>> setting is icing on the cake IMO.  One upon a time autoload was more
+>>> important, but these days modaliases are supposed to do most of the
+>>> work.  I bet that modern distros don't need unprivileged autoload at
+>>> all.
+>>
+>> Actually I think they do and we can't just change that. Users may
+>> depend on it, it is a well established facility.
+>>
+>> Now the other problem is CAP_NET_ADMIN which does lot of things, it is
+>> more like the CAP_SYS_ADMIN.
+>>
+>> This is a quick list that I got from only the past months, I'm pretty
+>> sure there are more:
+>>
+>> * DCCP use after free CVE-2017-6074
+>> * n_hldc CVE-2017-2636
+>> * XFRM framework CVE-2017-7184
+>> * L2TPv3 CVE-2016-10200
+>>
+>> Most of these need CAP_NET_ADMIN to be autoloaded, however we also
+>> need CAP_NET_ADMIN for other things... therefore it is better to have
+>> an extra facility that could coexist with CAP_NET_ADMIN and other
+>> sandbox features.
+>>
 >
-> Any user can create a new user namespace and pass the above check.  What we
-> want is to find the user namespace which opened the tty.
+> I agree that the feature is important, but I think your implementation
+> is needlessly dangerous.  I imagine that the main uses that you care
+> about involve containers.  How about doing it in a safer way that
+> works for containers?  I can think of a few.  For example:
 >
+> 1. A sysctl that, if set, prevents autoloading outside the root
+> userns.  This isn't very flexible at all, but it might work.
+>
+> 2. Your patch, but require privilege within the calling namespace to
+> set the prctl.
 
-I believe I have a working solution that I can show in the next version
-of the patch later today, but I just want to run the logic by you first.
+How about CAP_SYS_ADMIN || no_new_privs?
 
-I added: "struct user_namespace *owner_user_ns;" as a field in
-tty_struct (include/linux/tty.h) Note: I am totally open to suggestions
-for a better name.
+-Kees
 
-Then I added "tty->owner_user_ns = current_user_ns();" to the
-alloc_tty_struct function. (drivers/tty/tty_io.c)
+>
+> 3. A per-user-ns sysctl.
 
-When testing with a docker container, running in a different user
-namespace, I printed out current_user_ns()->level, which returned 1,
-and tty->owner_user_ns->level, which returned 0. This seems to prove
-that I am correctly storing the user namespace which opened the tty.
 
-Please let me know if there are any edge cases that I am missing with
-this approach.
+
+-- 
+Kees Cook
+Pixel Security
