@@ -1,84 +1,119 @@
 MIME-Version: 1.0
-In-Reply-To: <CAEiveUcx8fwQgXdLPeMNsTjX2KPhQKH__a-XzcHko_1aCmh4sg@mail.gmail.com>
+In-Reply-To: <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
 References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
  <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
  <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
  <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
- <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
- <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
- <CAGXu5jJTdL7To2JsQUXyg6B7Xbb0kow6sXH-L+teVi88=gm7MQ@mail.gmail.com>
- <CALCETrXzZwz4a9uhQfdHb4L2afApTvVLPwVx640vvV-fzbCR0w@mail.gmail.com> <CAEiveUcx8fwQgXdLPeMNsTjX2KPhQKH__a-XzcHko_1aCmh4sg@mail.gmail.com>
-From: Andy Lutomirski <luto@kernel.org>
-Date: Fri, 21 Apr 2017 23:51:44 -0700
-Message-ID: <CALCETrUT73CcPQx2T=1zWbOUhw9r-c_YqXw5-KTwxgWPgXuTwA@mail.gmail.com>
+ <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com> <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Sat, 22 Apr 2017 14:17:42 +0200
+Message-ID: <CAEiveUdbQcfn1xC5xWMv91vL_uR1MGTvARqw-E4GDTMUZ6t=bA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
  autoload restriction
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
+To: Andy Lutomirski <luto@amacapital.net>
+Cc: Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, Apr 21, 2017 at 5:12 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> On Sat, Apr 22, 2017 at 1:51 AM, Andy Lutomirski <luto@kernel.org> wrote:
-> [...]
->>>> I personally like my implicit_rights idea, and it might be interesting
->>>> to prototype it.
+On Sat, Apr 22, 2017 at 1:28 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+> On Fri, Apr 21, 2017 at 4:19 PM, Kees Cook <keescook@chromium.org> wrote:
+>> On Wed, Apr 19, 2017 at 7:41 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>>> On Wed, Apr 19, 2017 at 4:43 PM, Kees Cook <keescook@chromium.org> wrote:
+>>>> On Wed, Apr 19, 2017 at 4:15 PM, Andy Lutomirski <luto@kernel.org> wrote:
+>>>>> On Wed, Apr 19, 2017 at 3:20 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>>>>>> +/* Sets task's modules_autoload */
+>>>>>> +static inline int task_set_modules_autoload(struct task_struct *task,
+>>>>>> +                                           unsigned long value)
+>>>>>> +{
+>>>>>> +       if (value > MODULES_AUTOLOAD_DISABLED)
+>>>>>> +               return -EINVAL;
+>>>>>> +       else if (task->modules_autoload > value)
+>>>>>> +               return -EPERM;
+>>>>>> +       else if (task->modules_autoload < value)
+>>>>>> +               task->modules_autoload = value;
+>>>>>> +
+>>>>>> +       return 0;
+>>>>>> +}
+>>>>>
+>>>>> This needs to be more locked down.  Otherwise someone could set this
+>>>>> and then run a setuid program.  Admittedly, it would be quite odd if
+>>>>> this particular thing causes a problem, but the issue exists
+>>>>> nonetheless.
+>>>>
+>>>> Eeeh, I don't agree this needs to be changed. APIs provided by modules
+>>>> are different than the existing privilege-manipulation syscalls this
+>>>> concern stems from. Applications are already forced to deal with
+>>>> things being missing like this in the face of it simply not being
+>>>> built into the kernel.
+>>>>
+>>>> Having to hide this behind nnp seems like it'd reduce its utility...
+>>>>
 >>>
->>> I don't like blocking a needed feature behind a large super-feature
->>> that doesn't exist yet. We'd be able to refactor this code into using
->>> such a thing in the future, so I'd prefer to move ahead with this
->>> since it would stop actual exploits.
+>>> I think that adding an inherited boolean to task_struct that can be
+>>> set by unprivileged tasks and passed to privileged tasks is a terrible
+>>> precedent.  Ideally someone would try to find all the existing things
+>>> like this and kill them off.
 >>
->> I don't think the super-feature is so hard, and I think we should not
->> add the per-task thing the way it's done in this patch.  Let's not add
->> per-task things where the best argument for their security is "not
->> sure how it would be exploited".
+>> (Tristate, not boolean, but yeah.)
+>>
+>> I see two others besides seccomp and nnp:
+>>
+>> PR_MCE_KILL
 >
-> Actually the XFRM framework CVE-2017-7184 [1] is one real example, of
-> course there are others. The exploit was used on a generic distro
-> during a security contest that distro is Ubuntu. That distro will
-> never provide a module autoloading restriction by default to not harm
-> it's users. Consumers or containers/sandboxes then can run their
-> confined apps using such facilities.
+> Well, that's interesting.  That should presumably be reset on setuid
+> exec or something.
 >
-> These bugs will stay in embedded devices that use these generic
-> distros for ever.
+>> PR_SET_THP_DISABLE
 >
->> Anyway, I think the sysctl is really the important bit.  The per-task
->> setting is icing on the cake IMO.  One upon a time autoload was more
->> important, but these days modaliases are supposed to do most of the
->> work.  I bet that modern distros don't need unprivileged autoload at
->> all.
+> Um.  At least that's just a performance issue.
 >
-> Actually I think they do and we can't just change that. Users may
-> depend on it, it is a well established facility.
+>>
+>> I really don't think this needs nnp protection.
+>>
+>>> I agree that I don't see how one would exploit this particular
+>>> feature, but I still think I dislike the approach.  This is a slippery
+>>> slope to adding a boolean for perf_event_open(), unshare(), etc, and
+>>> we should solve these for real rather than half-arsing them IMO.
+>>
+>> I disagree (obviously); this would be protecting the entire module
+>> autoload attack surface. That's hardly a specific control, and it's a
+>> demonstrably needed flag.
+>>
 >
-> Now the other problem is CAP_NET_ADMIN which does lot of things, it is
-> more like the CAP_SYS_ADMIN.
+> The list is just going to get longer.  We should probably have controls for:
 >
-> This is a quick list that I got from only the past months, I'm pretty
-> sure there are more:
+>  - Use of perf.  Unclear how fine grained they should be.
 >
-> * DCCP use after free CVE-2017-6074
-> * n_hldc CVE-2017-2636
-> * XFRM framework CVE-2017-7184
-> * L2TPv3 CVE-2016-10200
+>  - Creation of new user namespaces.  Possibly also use of things like
+> iptables without global privilege.
 >
-> Most of these need CAP_NET_ADMIN to be autoloaded, however we also
-> need CAP_NET_ADMIN for other things... therefore it is better to have
-> an extra facility that could coexist with CAP_NET_ADMIN and other
-> sandbox features.
+>  - Ability to look up tasks owned by different uids (or maybe other
+> tasks *at all*) by pid/tid.  Conceptually, this is easy.  The API is
+> the only hard part, I think.
 >
+>  - Ability to bind ports, maybe?
+>
+> My point is that all of these need some way to handle configuration
+> and inheritance, and I don't think that a bunch of per-task prctls is
+> the right way.  As just an example, saying that interactive users can
+> autoload modules but other users can't, or that certain systemd
+> services can, etc, might be nice.  Linus already complained that he
+> (i.e. user "torvalds" or whatever) should be able to profile the
+> kernel but that other uids should not be able to.
 
-I agree that the feature is important, but I think your implementation
-is needlessly dangerous.  I imagine that the main uses that you care
-about involve containers.  How about doing it in a safer way that
-works for containers?  I can think of a few.  For example:
+Neat, maybe this could already be achieved with this interface and
+systemd-logind,  "ModulesAutoloadUsers=andy" in logind.conf where
+"andy" is the only logged-in user able to trigger and autoload kernel
+modules. However maybe we should not restrict too much other bits or
+functionality of the other users, please let me will follow up later
+on it.
 
-1. A sysctl that, if set, prevents autoloading outside the root
-userns.  This isn't very flexible at all, but it might work.
+> I personally like my implicit_rights idea, and it might be interesting
+> to prototype it.
 
-2. Your patch, but require privilege within the calling namespace to
-set the prctl.
+Yes I would use that if it is available, in mean time there was
+several bugs and 2 public exploits last months.. and we should use
+available features.
 
-3. A per-user-ns sysctl.
+-- 
+tixxdz
