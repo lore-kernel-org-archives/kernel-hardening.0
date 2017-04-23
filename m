@@ -1,43 +1,44 @@
-In-Reply-To: <1492698980-19510-1-git-send-email-mpe@ellerman.id.au>
-From: Michael Ellerman <patch-notifications@ellerman.id.au>
-Message-Id: <3w9nt9601Wz9s2P@ozlabs.org>
-Date: Sun, 23 Apr 2017 21:53:21 +1000 (AEST)
-Subject: [kernel-hardening] Re: [v2] powerpc/mm: Add support for runtime configuration of ASLR limits
-To: Michael Ellerman <mpe@ellerman.id.au>, linuxppc-dev@ozlabs.org
-Cc: bhsharma@redhat.com, keescook@chromium.org, kernel-hardening@lists.openwall.com
+MIME-Version: 1.0
+In-Reply-To: <20170423072457.27120-1-matt@nmatt.com>
+References: <20170423072457.27120-1-matt@nmatt.com>
+From: Jann Horn <jannh@google.com>
+Date: Sun, 23 Apr 2017 19:02:24 +0200
+Message-ID: <CAG48ez2jc8NT1mtQrGjJkY-LMyYPzUf50zEh3UNDzs+NtCe2fA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v2 1/2] tiocsti-restrict : Add owner user namespace to tty_struct
+To: Matt Brown <matt@nmatt.com>
+Cc: serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, corbet@lwn.net, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2017-04-20 at 14:36:20 UTC, Michael Ellerman wrote:
-> Add powerpc support for mmap_rnd_bits and mmap_rnd_compat_bits, which are two
-> sysctls that allow a user to configure the number of bits of randomness used for
-> ASLR.
-> 
-> Because of the way the Kconfig for ARCH_MMAP_RND_BITS is defined, we have to
-> construct at least the MIN value in Kconfig, vs in a header which would be more
-> natural. Given that we just go ahead and do it all in Kconfig.
-> 
-> At least according to the code (the documentation makes no mention of it), the
-> value is defined as the number of bits of randomisation *of the page*, not the
-> address. This makes some sense, with larger page sizes more of the low bits are
-> forced to zero, which would reduce the randomisation if we didn't take the
-> PAGE_SIZE into account. However it does mean the min/max values have to change
-> depending on the PAGE_SIZE in order to actually limit the amount of address
-> space consumed by the randomisation.
-> 
-> The result of that is that we have to define the default values based on both
-> 32-bit vs 64-bit, but also the configured PAGE_SIZE. Furthermore now that we
-> have 128TB address space support on Book3S, we also have to take that into
-> account.
-> 
-> Finally we can wire up the value in arch_mmap_rnd().
-> 
-> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
-> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
-> Reviewed-by: Kees Cook <keescook@chromium.org>
-> Reviewed-by: Aneesh Kumar K.V <aneesh.kumar@linux.vnet.ibm.com>
+On Sun, Apr 23, 2017 at 9:24 AM, Matt Brown <matt@nmatt.com> wrote:
+> This patch adds struct user_namespace *owner_user_ns to the tty_struct.
+> Then it is set to current_user_ns() in the alloc_tty_struct function.
+>
+> This is done to facilitate capability checks against the original user
+> namespace that allocated the tty.
+>
+> E.g. ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)
+>
+> This combined with the use of user namespace's will allow hardening
+> protections to be built to mitigate container escapes that utilize TTY
+> ioctls such as TIOCSTI.
+>
+> See: https://bugzilla.redhat.com/show_bug.cgi?id=1411256
+>
+> Signed-off-by: Matt Brown <matt@nmatt.com>
+> ---
+>  drivers/tty/tty_io.c | 1 +
+>  include/linux/tty.h  | 2 ++
+>  2 files changed, 3 insertions(+)
+>
+> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+> index e6d1a65..e774385 100644
+> --- a/drivers/tty/tty_io.c
+> +++ b/drivers/tty/tty_io.c
+> @@ -3191,6 +3191,7 @@ struct tty_struct *alloc_tty_struct(struct tty_driver *driver, int idx)
+>         tty->index = idx;
+>         tty_line_name(driver, idx, tty->name);
+>         tty->dev = tty_get_device(tty);
+> +       tty->owner_user_ns = current_user_ns();
 
-Applied to powerpc next.
-
-https://git.kernel.org/powerpc/c/9fea59bd7ca541e5d0851f0b6dbca8
-
-cheers
+Why are you not taking a reference to the userns?
