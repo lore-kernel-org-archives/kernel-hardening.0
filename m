@@ -1,145 +1,94 @@
-Message-ID: <1492995750.2418.4.camel@gmail.com>
-From: Balbir Singh <bsingharora@gmail.com>
-Date: Mon, 24 Apr 2017 11:02:30 +1000
-In-Reply-To: <1492698980-19510-1-git-send-email-mpe@ellerman.id.au>
-References: <1492698980-19510-1-git-send-email-mpe@ellerman.id.au>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v2] powerpc/mm: Add support for runtime configuration of
- ASLR limits
-To: Michael Ellerman <mpe@ellerman.id.au>, linuxppc-dev@ozlabs.org
-Cc: bhsharma@redhat.com, keescook@chromium.org, kernel-hardening@lists.openwall.com
+Date: Sun, 23 Apr 2017 20:09:41 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20170424010941.GA32715@mail.hallyn.com>
+References: <20170423235417.12809-1-matt@nmatt.com>
+ <20170423235417.12809-2-matt@nmatt.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170423235417.12809-2-matt@nmatt.com>
+Subject: [kernel-hardening] Re: [PATCH v3 1/2] tiocsti-restrict : Add owner user namespace to
+ tty_struct
+To: Matt Brown <matt@nmatt.com>
+Cc: serge@hallyn.com, jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, corbet@lwn.net, keescook@chromium.org, akpm@linux-foundation.org, jannh@google.com, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-04-21 at 00:36 +1000, Michael Ellerman wrote:
-> Add powerpc support for mmap_rnd_bits and mmap_rnd_compat_bits, which are two
-> sysctls that allow a user to configure the number of bits of randomness used for
-> ASLR.
+Quoting Matt Brown (matt@nmatt.com):
+> This patch adds struct user_namespace *owner_user_ns to the tty_struct.
+> Then it is set to current_user_ns() in the alloc_tty_struct function.
 > 
-> Because of the way the Kconfig for ARCH_MMAP_RND_BITS is defined, we have to
-> construct at least the MIN value in Kconfig, vs in a header which would be more
-> natural. Given that we just go ahead and do it all in Kconfig.
+> This is done to facilitate capability checks against the original user
+> namespace that allocated the tty.
 > 
-> At least according to the code (the documentation makes no mention of it), the
-> value is defined as the number of bits of randomisation *of the page*, not the
-> address. This makes some sense, with larger page sizes more of the low bits are
-> forced to zero, which would reduce the randomisation if we didn't take the
-> PAGE_SIZE into account. However it does mean the min/max values have to change
-> depending on the PAGE_SIZE in order to actually limit the amount of address
-> space consumed by the randomisation.
+> E.g. ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)
 > 
-> The result of that is that we have to define the default values based on both
-> 32-bit vs 64-bit, but also the configured PAGE_SIZE. Furthermore now that we
-> have 128TB address space support on Book3S, we also have to take that into
-> account.
-
-Could we please suggest that this should not be sent to stable or back-ported
-as the 128T default is new?
-
+> This combined with the use of user namespace's will allow hardening
+> protections to be built to mitigate container escapes that utilize TTY
+> ioctls such as TIOCSTI.
 > 
-> Finally we can wire up the value in arch_mmap_rnd().
+> See: https://bugzilla.redhat.com/show_bug.cgi?id=1411256
 > 
-> Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
-> Signed-off-by: Bhupesh Sharma <bhsharma@redhat.com>
+> Signed-off-by: Matt Brown <matt@nmatt.com>
 > ---
->  arch/powerpc/Kconfig   | 44 ++++++++++++++++++++++++++++++++++++++++++++
->  arch/powerpc/mm/mmap.c | 11 ++++++-----
->  2 files changed, 50 insertions(+), 5 deletions(-)
+>  drivers/tty/tty_io.c | 4 ++++
+>  include/linux/tty.h  | 2 ++
+>  2 files changed, 6 insertions(+)
 > 
-> v2: Fix the 32-bit MAX value incorrectly using MIN as spotted by Kees.
-> 
-> Kees/Bhupesh, would love a Review/Ack/Tested-by from you, I'll plan to merge
-> this later today (Friday) my time.
-> 
-> diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-> index 97a8bc8a095c..6f0503951e94 100644
-> --- a/arch/powerpc/Kconfig
-> +++ b/arch/powerpc/Kconfig
-> @@ -22,6 +22,48 @@ config MMU
->  	bool
->  	default y
->  
-> +config ARCH_MMAP_RND_BITS_MAX
-> +	# On Book3S 64, the default virtual address space for 64-bit processes
-> +	# is 2^47 (128TB). As a maximum, allow randomisation to consume up to
-> +	# 32T of address space (2^45), which should ensure a reasonable gap
-> +	# between bottom-up and top-down allocations for applications that
-> +	# consume "normal" amounts of address space. Book3S 64 only supports 64K
-> +	# and 4K page sizes.
-> +	default 29 if PPC_BOOK3S_64 && PPC_64K_PAGES # 29 = 45 (32T) - 16 (64K)
-> +	default 33 if PPC_BOOK3S_64		     # 33 = 45 (32T) - 12 (4K)
-> +	#
-> +	# On all other 64-bit platforms (currently only Book3E), the virtual
-> +	# address space is 2^46 (64TB). Allow randomisation to consume up to 16T
-> +	# of address space (2^44). Only 4K page sizes are supported.
-> +	default 32 if 64BIT	# 32 = 44 (16T) - 12 (4K)
-> +	#
-> +	# For 32-bit, use the compat values, as they're the same.
-> +	default ARCH_MMAP_RND_COMPAT_BITS_MAX
-> +
-> +config ARCH_MMAP_RND_BITS_MIN
-> +	# Allow randomisation to consume up to 1GB of address space (2^30).
-> +	default 14 if 64BIT && PPC_64K_PAGES	# 14 = 30 (1GB) - 16 (64K)
-> +	default 18 if 64BIT			# 18 = 30 (1GB) - 12 (4K)
-> +	#
-> +	# For 32-bit, use the compat values, as they're the same.
-> +	default ARCH_MMAP_RND_COMPAT_BITS_MIN
-> +
-> +config ARCH_MMAP_RND_COMPAT_BITS_MAX
-> +	# Total virtual address space for 32-bit processes is 2^31 (2GB).
-> +	# Allow randomisation to consume up to 512MB of address space (2^29).
-> +	default 11 if PPC_256K_PAGES	# 11 = 29 (512MB) - 18 (256K)
-> +	default 13 if PPC_64K_PAGES	# 13 = 29 (512MB) - 16 (64K)
-> +	default 15 if PPC_16K_PAGES 	# 15 = 29 (512MB) - 14 (16K)
-> +	default 17			# 17 = 29 (512MB) - 12 (4K)
-> +
-> +config ARCH_MMAP_RND_COMPAT_BITS_MIN
-> +	# Total virtual address space for 32-bit processes is 2^31 (2GB).
-> +	# Allow randomisation to consume up to 8MB of address space (2^23).
-> +	default 5 if PPC_256K_PAGES	#  5 = 23 (8MB) - 18 (256K)
-> +	default 7 if PPC_64K_PAGES	#  7 = 23 (8MB) - 16 (64K)
-> +	default 9 if PPC_16K_PAGES	#  9 = 23 (8MB) - 14 (16K)
-> +	default 11			# 11 = 23 (8MB) - 12 (4K)
-> +
->  config HAVE_SETUP_PER_CPU_AREA
->  	def_bool PPC64
->  
-> @@ -120,6 +162,8 @@ config PPC
->  	select HAVE_ARCH_HARDENED_USERCOPY
->  	select HAVE_ARCH_JUMP_LABEL
->  	select HAVE_ARCH_KGDB
-> +	select HAVE_ARCH_MMAP_RND_BITS
-> +	select HAVE_ARCH_MMAP_RND_COMPAT_BITS	if COMPAT
->  	select HAVE_ARCH_SECCOMP_FILTER
->  	select HAVE_ARCH_TRACEHOOK
->  	select HAVE_CBPF_JIT			if !PPC64
-> diff --git a/arch/powerpc/mm/mmap.c b/arch/powerpc/mm/mmap.c
-> index a5d9ef59debe..6141cfff634e 100644
-> --- a/arch/powerpc/mm/mmap.c
-> +++ b/arch/powerpc/mm/mmap.c
-> @@ -59,13 +59,14 @@ static inline int mmap_is_legacy(void)
->  
->  unsigned long arch_mmap_rnd(void)
->  {
-> -	unsigned long rnd;
-> +	unsigned long shift, rnd;
->  
-> -	/* 8MB for 32bit, 1GB for 64bit */
-> +	shift = mmap_rnd_bits;
-> +#ifdef CONFIG_COMPAT
->  	if (is_32bit_task())
-> -		rnd = get_random_long() % (1<<(23-PAGE_SHIFT));
-> -	else
-> -		rnd = get_random_long() % (1UL<<(30-PAGE_SHIFT));
-> +		shift = mmap_rnd_compat_bits;
-> +#endif
-> +	rnd = get_random_long() % (1 << shift);
->
-
-Nitpick, 1 should be 1UL?
-  
->  	return rnd << PAGE_SHIFT;
+> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+> index e6d1a65..03d5ea2 100644
+> --- a/drivers/tty/tty_io.c
+> +++ b/drivers/tty/tty_io.c
+> @@ -161,6 +161,7 @@ static void release_tty(struct tty_struct *tty, int idx);
+>   *	@tty: tty struct to free
+>   *
+>   *	Free the write buffers, tty queue and tty memory itself.
+> + *	Decrement the owner_user_ns count.
+>   *
+>   *	Locking: none. Must be called after tty is definitely unused
+>   */
+> @@ -171,6 +172,7 @@ static void free_tty_struct(struct tty_struct *tty)
+>  	put_device(tty->dev);
+>  	kfree(tty->write_buf);
+>  	tty->magic = 0xDEADDEAD;
+> +	atomic_dec(&tty->owner_user_ns->count);
+>  	kfree(tty);
 >  }
+>  
+> @@ -3191,6 +3193,8 @@ struct tty_struct *alloc_tty_struct(struct tty_driver *driver, int idx)
+>  	tty->index = idx;
+>  	tty_line_name(driver, idx, tty->name);
+>  	tty->dev = tty_get_device(tty);
+> +	tty->owner_user_ns = current_user_ns();
+> +	atomic_inc(&tty->owner_user_ns->count);
 
-Acked-by: Balbir Singh <bsingharora@gmail.com>
+Hi,
+
+CONFIG_USER_NS is an option, so unfortunately you need to do
+
+	tty->owner_user_ns = get_user_ns(current_user_ns());
+
+>  
+>  	return tty;
+>  }
+> diff --git a/include/linux/tty.h b/include/linux/tty.h
+> index 1017e904..d902d42 100644
+> --- a/include/linux/tty.h
+> +++ b/include/linux/tty.h
+> @@ -12,6 +12,7 @@
+>  #include <uapi/linux/tty.h>
+>  #include <linux/rwsem.h>
+>  #include <linux/llist.h>
+> +#include <linux/user_namespace.h>
+>  
+>  
+>  /*
+> @@ -333,6 +334,7 @@ struct tty_struct {
+>  	/* If the tty has a pending do_SAK, queue it here - akpm */
+>  	struct work_struct SAK_work;
+>  	struct tty_port *port;
+> +	struct user_namespace *owner_user_ns;
+>  };
+>  
+>  /* Each of a tty's open files has private_data pointing to tty_file_private */
+> -- 
+> 2.10.2
