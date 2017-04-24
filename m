@@ -1,80 +1,43 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jL_-cxidy_O4ORaN0iX9o7=hsi3DYTRvQs5w5363Z+MVg@mail.gmail.com>
-References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
- <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
- <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
- <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
- <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
- <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
- <CAGXu5jJTdL7To2JsQUXyg6B7Xbb0kow6sXH-L+teVi88=gm7MQ@mail.gmail.com>
- <CALCETrXzZwz4a9uhQfdHb4L2afApTvVLPwVx640vvV-fzbCR0w@mail.gmail.com>
- <CAEiveUcx8fwQgXdLPeMNsTjX2KPhQKH__a-XzcHko_1aCmh4sg@mail.gmail.com>
- <CALCETrUT73CcPQx2T=1zWbOUhw9r-c_YqXw5-KTwxgWPgXuTwA@mail.gmail.com>
- <CAGXu5jLV+WZyj+xnxVFkFEgEthNt6eXdcSgHT-=85mJ1ECZ1Rw@mail.gmail.com>
- <CAEiveUdQYbx8d9B68n2M12fhu3s8web3zCvkc-C9FWtNnbELuA@mail.gmail.com> <CAGXu5jL_-cxidy_O4ORaN0iX9o7=hsi3DYTRvQs5w5363Z+MVg@mail.gmail.com>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Mon, 24 Apr 2017 20:35:06 +0200
-Message-ID: <CAEiveUevKr4FR49PnvKU2f3YzUF2SUvcxjq8Gpsj=Qf1ty+AGg@mail.gmail.com>
+Sender: keescook@google.com
+In-Reply-To: <20170424083250.h2wv2exbi4ytigac@hirez.programming.kicks-ass.net>
+References: <20170421220939.GA65363@beast> <20170424083250.h2wv2exbi4ytigac@hirez.programming.kicks-ass.net>
+From: Kees Cook <keescook@chromium.org>
+Date: Mon, 24 Apr 2017 13:16:24 -0700
+Message-ID: <CAGXu5jLY0DpTWhL-CXOF15BvFvQ_4+_pg+vMbuvKqLu9tU_jQw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
- autoload restriction
-To: Kees Cook <keescook@chromium.org>
-Cc: Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
+Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
+To: Peter Zijlstra <peterz@infradead.org>
+Cc: LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 24, 2017 at 8:02 PM, Kees Cook <keescook@chromium.org> wrote:
-> On Mon, Apr 24, 2017 at 7:25 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> On Sat, Apr 22, 2017 at 9:29 PM, Kees Cook <keescook@chromium.org> wrote:
->>> On Fri, Apr 21, 2017 at 11:51 PM, Andy Lutomirski <luto@kernel.org> wrote:
->>>> On Fri, Apr 21, 2017 at 5:12 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
->>>>> On Sat, Apr 22, 2017 at 1:51 AM, Andy Lutomirski <luto@kernel.org> wrote:
->>>>>
->> [...]
->>>>> * DCCP use after free CVE-2017-6074
->>>>> * n_hldc CVE-2017-2636
->>>>> * XFRM framework CVE-2017-7184
->>>>> * L2TPv3 CVE-2016-10200
->>>>>
->>>>> Most of these need CAP_NET_ADMIN to be autoloaded, however we also
->>>>> need CAP_NET_ADMIN for other things... therefore it is better to have
->>>>> an extra facility that could coexist with CAP_NET_ADMIN and other
->>>>> sandbox features.
->>>>>
->>>>
->>>> I agree that the feature is important, but I think your implementation
->>>> is needlessly dangerous.  I imagine that the main uses that you care
->>>> about involve containers.  How about doing it in a safer way that
->>>> works for containers?  I can think of a few.  For example:
->>>>
->>>> 1. A sysctl that, if set, prevents autoloading outside the root
->>>> userns.  This isn't very flexible at all, but it might work.
->>>>
->>>> 2. Your patch, but require privilege within the calling namespace to
->>>> set the prctl.
->>>
->>> How about CAP_SYS_ADMIN || no_new_privs?
->>>
->>> -Kees
->>>
->>
->> Yes I can update as per Andy suggestion to require privileges inside
->> the calling namespace to set prctl. Other options that are not prctl
->> based have more variants, that make them hard to use.
->>
->> So I would got with CAP_SYS_ADMIN in the calling userns ||
->> no_new_privs , I would have said CAP_SYS_MODULE in the userns but it
->> seems better to standardize on CAP_SYS_ADMIN to set the prctl.
+On Mon, Apr 24, 2017 at 1:32 AM, Peter Zijlstra <peterz@infradead.org> wrote:
+> On Fri, Apr 21, 2017 at 03:09:39PM -0700, Kees Cook wrote:
+>> This patch ports the x86-specific atomic overflow handling from PaX's
+>> PAX_REFCOUNT to the upstream refcount_t API. This is an updated version
+>> from PaX that eliminates the saturation race condition by resetting the
+>> atomic counter back to the INT_MAX saturation value on both overflow and
+>> underflow. To win a race, a system would have to have INT_MAX threads
+>> simultaneously overflow before the saturation handler runs.
 >
-> Andy's concern is that it would provide an escalation from SYS_MODULE
-> to SYS_ADMIN through some privileged process being tricked through a
-> missing API provided by modules, so we have to use either SYS_ADMIN ||
-> nnp.
+> And is this impossible? Highly unlikely I'll grant you, but absolutely
+> impossible?
 
-Yes, I would say that programs expect that maybe such functionality is
-not provided, but we don't know. I will update.
+I'll adjust the language. "Highly unlikely" is still better than
+"trivially doable with a single thread". :)
 
-Thanks!
+> Also, you forgot nr_cpus in your bound. Afaict the worst case here is
+> O(nr_tasks + 3*nr_cpus).
+>
+> Because PaX does it, is not a correctness argument. And this really
+> wants one.
 
+Sure, I didn't mean to imply anything other than a demonstration of
+what PaX is doing (and that it's better than not having it). If we can
+improve it, that's great.
+
+-Kees
 
 -- 
-tixxdz
+Kees Cook
+Pixel Security
