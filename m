@@ -1,70 +1,81 @@
-Date: Mon, 24 Apr 2017 15:33:23 +0200
-From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170424133323.cf3xyd3mmwp6ixaz@hirez.programming.kicks-ass.net>
-References: <20170421220939.GA65363@beast>
- <58FDDAC2.11341.175B5A99@pageexec.freemail.hu>
- <20170424111553.p3kbyir4ztsldc56@hirez.programming.kicks-ass.net>
- <58FDF8C4.5120.17D092B7@pageexec.freemail.hu>
+Date: Mon, 24 Apr 2017 08:57:51 -0500
+From: "Serge E. Hallyn" <serge@hallyn.com>
+Message-ID: <20170424135751.GA9030@mail.hallyn.com>
+References: <20170424051512.20420-1-matt@nmatt.com>
+ <20170424051512.20420-2-matt@nmatt.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <58FDF8C4.5120.17D092B7@pageexec.freemail.hu>
-Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
-To: PaX Team <pageexec@freemail.hu>
-Cc: Kees Cook <keescook@chromium.org>, linux-kernel@vger.kernel.org, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, x86@kernel.org, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, davem@davemloft.net, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com
+In-Reply-To: <20170424051512.20420-2-matt@nmatt.com>
+Subject: [kernel-hardening] Re: [PATCH v4 1/2] tiocsti-restrict : Add owner user namespace to
+ tty_struct
+To: Matt Brown <matt@nmatt.com>
+Cc: serge@hallyn.com, jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, corbet@lwn.net, keescook@chromium.org, akpm@linux-foundation.org, jannh@google.com, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 24, 2017 at 03:08:20PM +0200, PaX Team wrote:
-> On 24 Apr 2017 at 13:15, Peter Zijlstra wrote:
+Quoting Matt Brown (matt@nmatt.com):
+> This patch adds struct user_namespace *owner_user_ns to the tty_struct.
+> Then it is set to current_user_ns() in the alloc_tty_struct function.
 > 
-> > On Mon, Apr 24, 2017 at 01:00:18PM +0200, PaX Team wrote:
-> > > On 24 Apr 2017 at 10:32, Peter Zijlstra wrote:
-> > 
-> > > > Also, you forgot nr_cpus in your bound. Afaict the worst case here is
-> > > > O(nr_tasks + 3*nr_cpus).
-> > > 
-> > > what does nr_cpus have to do with winning the race?
-> > 
-> > The CPUs could each run nested softirq/hardirq/nmi context poking at the
-> > refcount, irrespective of the (preempted) task context.
+> This is done to facilitate capability checks against the original user
+> namespace that allocated the tty.
 > 
-> that's fine but are you also assuming that the code executed in each of
-> those contexts leaks the same refcount? otherwise whatever they do to the
-> refcount is no more relevant than a non-leaking preemptible path that runs
-> to completion in a bounded amount of time (i.e., you get temporary bumps
-> and thus need to win yet another set of races to get their effects at once).
+> E.g. ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)
+> 
+> This combined with the use of user namespace's will allow hardening
+> protections to be built to mitigate container escapes that utilize TTY
+> ioctls such as TIOCSTI.
+> 
+> See: https://bugzilla.redhat.com/show_bug.cgi?id=1411256
+> 
+> Signed-off-by: Matt Brown <matt@nmatt.com>
 
-For worst case analysis we have to assume it does, unless we can proof
-it doesn't. And that proof is very very hard, and would need to be
-redone every time the kernel changes.
+Acked-by: Serge Hallyn <serge@hallyn.com>
 
-> that was exactly my point: all this applies to you as well. so let me ask
-> the 3rd time: what is your "argument for correctness" for a 0 refcount
-> value check? how does it prevent exploitation?
-
-What 0 count check are you talking about, the one that triggers when we
-want to increment 0 ?
-
-I think I've explained that before; per reference count rules 0 means
-freed (or about to be freed when we talk RCU).
-
-The whole pattern:
-
-	if (dec_and_test(&obj->ref))
-		kfree(obj);
-
-expresses this etc.. Other reference counts also do this. No references
-means its getting freed.
-
-Can you agree with this?
-
-
-If so; any attempt to increase the reference count while its (being)
-freed() is a use-after-free.
-
-Therefore we disallow 0 increment.
-
-
-Yes, this is an annoyance when you consider usage-counts, where 0 means
-something else. But then, we were talking about reference counts, not
-something else.
+> ---
+>  drivers/tty/tty_io.c | 2 ++
+>  include/linux/tty.h  | 2 ++
+>  2 files changed, 4 insertions(+)
+> 
+> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+> index e6d1a65..c276814 100644
+> --- a/drivers/tty/tty_io.c
+> +++ b/drivers/tty/tty_io.c
+> @@ -171,6 +171,7 @@ static void free_tty_struct(struct tty_struct *tty)
+>  	put_device(tty->dev);
+>  	kfree(tty->write_buf);
+>  	tty->magic = 0xDEADDEAD;
+> +	put_user_ns(tty->owner_user_ns);
+>  	kfree(tty);
+>  }
+>  
+> @@ -3191,6 +3192,7 @@ struct tty_struct *alloc_tty_struct(struct tty_driver *driver, int idx)
+>  	tty->index = idx;
+>  	tty_line_name(driver, idx, tty->name);
+>  	tty->dev = tty_get_device(tty);
+> +	tty->owner_user_ns = get_user_ns(current_user_ns());
+>  
+>  	return tty;
+>  }
+> diff --git a/include/linux/tty.h b/include/linux/tty.h
+> index 1017e904..d902d42 100644
+> --- a/include/linux/tty.h
+> +++ b/include/linux/tty.h
+> @@ -12,6 +12,7 @@
+>  #include <uapi/linux/tty.h>
+>  #include <linux/rwsem.h>
+>  #include <linux/llist.h>
+> +#include <linux/user_namespace.h>
+>  
+>  
+>  /*
+> @@ -333,6 +334,7 @@ struct tty_struct {
+>  	/* If the tty has a pending do_SAK, queue it here - akpm */
+>  	struct work_struct SAK_work;
+>  	struct tty_port *port;
+> +	struct user_namespace *owner_user_ns;
+>  };
+>  
+>  /* Each of a tty's open files has private_data pointing to tty_file_private */
+> -- 
+> 2.10.2
