@@ -1,49 +1,203 @@
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Tue, 25 Apr 2017 17:52:14 +0200
-Message-Id: <20170425155215.4835-4-Jason@zx2c4.com>
+Date: Tue, 25 Apr 2017 17:52:12 +0200
+Message-Id: <20170425155215.4835-2-Jason@zx2c4.com>
 In-Reply-To: <20170425155215.4835-1-Jason@zx2c4.com>
 References: <20170425.111717.1973239615715123840.davem@davemloft.net>
  <20170425155215.4835-1-Jason@zx2c4.com>
-Subject: [kernel-hardening] [PATCH v5 4/5] macsec: check return value of skb_to_sgvec always
+Subject: [kernel-hardening] [PATCH v5 2/5] ipsec: check return value of skb_to_sgvec always
 To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, David.Laight@aculab.com, kernel-hardening@lists.openwall.com, davem@davemloft.net
 Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
 ---
- drivers/net/macsec.c | 13 +++++++++++--
- 1 file changed, 11 insertions(+), 2 deletions(-)
+ net/ipv4/ah4.c  |  8 ++++++--
+ net/ipv4/esp4.c | 30 ++++++++++++++++++++----------
+ net/ipv6/ah6.c  |  8 ++++++--
+ net/ipv6/esp6.c | 31 +++++++++++++++++++++----------
+ 4 files changed, 53 insertions(+), 24 deletions(-)
 
-diff --git a/drivers/net/macsec.c b/drivers/net/macsec.c
-index dbab05afcdbe..d846f42b99ec 100644
---- a/drivers/net/macsec.c
-+++ b/drivers/net/macsec.c
-@@ -733,7 +733,12 @@ static struct sk_buff *macsec_encrypt(struct sk_buff *skb,
- 	macsec_fill_iv(iv, secy->sci, pn);
+diff --git a/net/ipv4/ah4.c b/net/ipv4/ah4.c
+index 22377c8ff14b..e8f862358518 100644
+--- a/net/ipv4/ah4.c
++++ b/net/ipv4/ah4.c
+@@ -220,7 +220,9 @@ static int ah_output(struct xfrm_state *x, struct sk_buff *skb)
+ 	ah->seq_no = htonl(XFRM_SKB_CB(skb)->seq.output.low);
  
- 	sg_init_table(sg, MAX_SKB_FRAGS + 1);
+ 	sg_init_table(sg, nfrags + sglists);
+-	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	if (unlikely(err < 0))
++		goto out_free;
+ 
+ 	if (x->props.flags & XFRM_STATE_ESN) {
+ 		/* Attach seqhi sg right after packet payload */
+@@ -393,7 +395,9 @@ static int ah_input(struct xfrm_state *x, struct sk_buff *skb)
+ 	skb_push(skb, ihl);
+ 
+ 	sg_init_table(sg, nfrags + sglists);
+-	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	if (unlikely(err < 0))
++		goto out_free;
+ 
+ 	if (x->props.flags & XFRM_STATE_ESN) {
+ 		/* Attach seqhi sg right after packet payload */
+diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+index b1e24446e297..42cb09cc8533 100644
+--- a/net/ipv4/esp4.c
++++ b/net/ipv4/esp4.c
+@@ -360,9 +360,13 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+ 			esph = esp_output_set_extra(skb, esph, extra);
+ 
+ 			sg_init_table(sg, nfrags);
+-			skb_to_sgvec(skb, sg,
+-				     (unsigned char *)esph - skb->data,
+-				     assoclen + ivlen + clen + alen);
++			err = skb_to_sgvec(skb, sg,
++				           (unsigned char *)esph - skb->data,
++				           assoclen + ivlen + clen + alen);
++			if (unlikely(err < 0)) {
++				spin_unlock_bh(&x->lock);
++				goto error;
++			}
+ 
+ 			allocsize = ALIGN(skb->data_len, L1_CACHE_BYTES);
+ 
+@@ -381,11 +385,13 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+ 			pfrag->offset = pfrag->offset + allocsize;
+ 
+ 			sg_init_table(dsg, skb_shinfo(skb)->nr_frags + 1);
+-			skb_to_sgvec(skb, dsg,
+-				     (unsigned char *)esph - skb->data,
+-				     assoclen + ivlen + clen + alen);
++			err = skb_to_sgvec(skb, dsg,
++				           (unsigned char *)esph - skb->data,
++				           assoclen + ivlen + clen + alen);
+ 
+ 			spin_unlock_bh(&x->lock);
++			if (unlikely(err < 0))
++				goto error;
+ 
+ 			goto skip_cow2;
+ 		}
+@@ -422,9 +428,11 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
+ 	esph = esp_output_set_extra(skb, esph, extra);
+ 
+ 	sg_init_table(sg, nfrags);
+-	skb_to_sgvec(skb, sg,
+-		     (unsigned char *)esph - skb->data,
+-		     assoclen + ivlen + clen + alen);
++	err = skb_to_sgvec(skb, sg,
++		           (unsigned char *)esph - skb->data,
++		           assoclen + ivlen + clen + alen);
++	if (unlikely(err < 0))
++		goto error;
+ 
+ skip_cow2:
+ 	if ((x->props.flags & XFRM_STATE_ESN))
+@@ -658,7 +666,9 @@ static int esp_input(struct xfrm_state *x, struct sk_buff *skb)
+ 	esp_input_set_header(skb, seqhi);
+ 
+ 	sg_init_table(sg, nfrags);
+-	skb_to_sgvec(skb, sg, 0, skb->len);
++	err = skb_to_sgvec(skb, sg, 0, skb->len);
++	if (unlikely(err < 0))
++		goto out;
+ 
+ 	skb->ip_summed = CHECKSUM_NONE;
+ 
+diff --git a/net/ipv6/ah6.c b/net/ipv6/ah6.c
+index dda6035e3b84..755f38271dd5 100644
+--- a/net/ipv6/ah6.c
++++ b/net/ipv6/ah6.c
+@@ -423,7 +423,9 @@ static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
+ 	ah->seq_no = htonl(XFRM_SKB_CB(skb)->seq.output.low);
+ 
+ 	sg_init_table(sg, nfrags + sglists);
+-	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	if (unlikely(err < 0))
++		goto out_free;
+ 
+ 	if (x->props.flags & XFRM_STATE_ESN) {
+ 		/* Attach seqhi sg right after packet payload */
+@@ -606,7 +608,9 @@ static int ah6_input(struct xfrm_state *x, struct sk_buff *skb)
+ 	ip6h->hop_limit   = 0;
+ 
+ 	sg_init_table(sg, nfrags + sglists);
+-	skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	err = skb_to_sgvec_nomark(skb, sg, 0, skb->len);
++	if (unlikely(err < 0))
++		goto out_free;
+ 
+ 	if (x->props.flags & XFRM_STATE_ESN) {
+ 		/* Attach seqhi sg right after packet payload */
+diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
+index ff54faa75631..017e2c2d36e1 100644
+--- a/net/ipv6/esp6.c
++++ b/net/ipv6/esp6.c
+@@ -339,9 +339,13 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+ 			esph = esp_output_set_esn(skb, esph, seqhi);
+ 
+ 			sg_init_table(sg, nfrags);
+-			skb_to_sgvec(skb, sg,
+-				     (unsigned char *)esph - skb->data,
+-				     assoclen + ivlen + clen + alen);
++			err = skb_to_sgvec(skb, sg,
++				           (unsigned char *)esph - skb->data,
++				           assoclen + ivlen + clen + alen);
++			if (unlikely(err < 0)) {
++				spin_unlock_bh(&x->lock);
++				goto error;
++			}
+ 
+ 			allocsize = ALIGN(skb->data_len, L1_CACHE_BYTES);
+ 
+@@ -360,12 +364,15 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+ 			pfrag->offset = pfrag->offset + allocsize;
+ 
+ 			sg_init_table(dsg, skb_shinfo(skb)->nr_frags + 1);
+-			skb_to_sgvec(skb, dsg,
+-				     (unsigned char *)esph - skb->data,
+-				     assoclen + ivlen + clen + alen);
++			err = skb_to_sgvec(skb, dsg,
++				           (unsigned char *)esph - skb->data,
++				           assoclen + ivlen + clen + alen);
+ 
+ 			spin_unlock_bh(&x->lock);
+ 
++			if (unlikely(err < 0))
++				goto error;
++
+ 			goto skip_cow2;
+ 		}
+ 	}
+@@ -403,9 +410,11 @@ static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
+ 	esph = esp_output_set_esn(skb, esph, seqhi);
+ 
+ 	sg_init_table(sg, nfrags);
+-	skb_to_sgvec(skb, sg,
+-		     (unsigned char *)esph - skb->data,
+-		     assoclen + ivlen + clen + alen);
++	err = skb_to_sgvec(skb, sg,
++		           (unsigned char *)esph - skb->data,
++		           assoclen + ivlen + clen + alen);
++	if (unlikely(err < 0))
++		goto error;
+ 
+ skip_cow2:
+ 	if ((x->props.flags & XFRM_STATE_ESN))
+@@ -600,7 +609,9 @@ static int esp6_input(struct xfrm_state *x, struct sk_buff *skb)
+ 	esp_input_set_header(skb, seqhi);
+ 
+ 	sg_init_table(sg, nfrags);
 -	skb_to_sgvec(skb, sg, 0, skb->len);
 +	ret = skb_to_sgvec(skb, sg, 0, skb->len);
-+	if (unlikely(ret < 0)) {
-+		macsec_txsa_put(tx_sa);
-+		kfree_skb(skb);
-+		return ERR_PTR(ret);
-+	}
++	if (unlikely(ret < 0))
++		goto out;
  
- 	if (tx_sc->encrypt) {
- 		int len = skb->len - macsec_hdr_len(sci_present) -
-@@ -937,7 +942,11 @@ static struct sk_buff *macsec_decrypt(struct sk_buff *skb,
- 	macsec_fill_iv(iv, sci, ntohl(hdr->packet_number));
+ 	skb->ip_summed = CHECKSUM_NONE;
  
- 	sg_init_table(sg, MAX_SKB_FRAGS + 1);
--	skb_to_sgvec(skb, sg, 0, skb->len);
-+	ret = skb_to_sgvec(skb, sg, 0, skb->len);
-+	if (unlikely(ret < 0)) {
-+		kfree_skb(skb);
-+		return ERR_PTR(ret);
-+	}
- 
- 	if (hdr->tci_an & MACSEC_TCI_E) {
- 		/* confidentiality: ethernet + macsec header
 -- 
 2.12.2
