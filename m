@@ -1,35 +1,53 @@
-MIME-Version: 1.0
-In-Reply-To: <20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
-References: <20170425041512.13189-1-matt@nmatt.com> <20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 25 Apr 2017 15:56:32 +0200
-Message-ID: <CAG48ez0uYkAg65iBZ8cKLxzFyEK=Axt=NP7jnmQkFp4rN=0GzA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Cc: Matt Brown <matt@nmatt.com>, serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 25 Apr 2017 16:08:05 +0200
+Message-Id: <20170425140809.23881-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, David.Laight@aculab.com, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 25, 2017 at 3:47 PM, Alan Cox <gnomes@lxorguk.ukuu.org.uk> wrote:
->> There could be a few user programs that would be effected by this
->> change.
->> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
->> notable programs are: agetty, csh, xemacs and tcsh
->>
->> However, I still believe that this change is worth it given that the
->> Kconfig defaults to n. This will be a feature that is turned on for the
->> same reason that people activate it when using grsecurity. Users of this
->> opt-in feature will realize that they are choosing security over some OS
->> features
->
-> Only in this case they are not.
->
-> If I am at the point I have the ability to send you TIOCSTI you already
-> lost because I can just open /dev/tty to get access to my controlling tty
-> and use write().
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab0d77f4d8e9d9c73d1e63f6fe8fee.
 
-In terms of PTYs, this patch does not try to prevent writes to a slave
-device (which afaik is what /dev/tty will give you). It tries to prevent the
-equivalent of writes to the master device. As far as I know, there is no
-way to go from a slave to the corresponding master without having
-access to the master in some other way already.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+ net/core/skbuff.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index f86bf69cfb8d..3c2a7f323722 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3489,7 +3489,9 @@ void __init skb_init(void)
+  *	@len: Length of buffer space to be mapped
+  *
+  *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
+  */
+ static int
+ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+@@ -3512,6 +3514,9 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+ 		int end;
+ 
++		if (elt && sg_is_last(&sg[elt - 1]))
++			return -EMSGSIZE;
++
+ 		WARN_ON(start > offset + len);
+ 
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+@@ -3535,6 +3540,9 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 
+ 		WARN_ON(start > offset + len);
+ 
++		if (elt && sg_is_last(&sg[elt - 1]))
++			return -EMSGSIZE;
++
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
+ 			if (copy > len)
+-- 
+2.12.2
