@@ -1,72 +1,79 @@
-MIME-Version: 1.0
-In-Reply-To: <20170425222135.2859b1a8@lxorguk.ukuu.org.uk>
-References: <20170425041512.13189-1-matt@nmatt.com> <20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
- <CAG48ez0uYkAg65iBZ8cKLxzFyEK=Axt=NP7jnmQkFp4rN=0GzA@mail.gmail.com>
- <20170425203015.1ae62057@lxorguk.ukuu.org.uk> <CAG48ez2u8Op1ej9Z3z+PNaeEqh2f3LKnUqQku+g6asGc3K6q9g@mail.gmail.com>
- <20170425222135.2859b1a8@lxorguk.ukuu.org.uk>
-From: Jann Horn <jannh@google.com>
-Date: Tue, 25 Apr 2017 23:44:50 +0200
-Message-ID: <CAG48ez31W30Qqmf5ZZ1_eVQC0uobBrva3_zgRdzejztFLzKoPg@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
-Cc: Matt Brown <matt@nmatt.com>, serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
+From: Kees Cook <keescook@chromium.org>
+Date: Tue, 25 Apr 2017 15:56:36 -0700
+Message-Id: <1493160997-126108-2-git-send-email-keescook@chromium.org>
+In-Reply-To: <1493160997-126108-1-git-send-email-keescook@chromium.org>
+References: <1493160997-126108-1-git-send-email-keescook@chromium.org>
+Subject: [kernel-hardening] [PATCH v2 1/2] x86, asm: Add suffix macro for GEN_*_RMWcc()
+To: linux-kernel@vger.kernel.org
+Cc: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 25, 2017 at 11:21 PM, One Thousand Gnomes
-<gnomes@lxorguk.ukuu.org.uk> wrote:
->> Really? By "pty", are you referring to the master? If so, as far as I know,
->> to go from the slave to the master, you need one of:
->>
->>  - ptrace access to a process that already has an FD to the master, via
->>    ptrace() or so (/proc/$pid/fd/$fd won't work)
->>  - for a BSD PTY (which AFAIK isn't used much anymore), access to
->>    /dev/ptyXX
->
-> fstat() and then open *assuming* I have permissions.
+The coming x86 refcount protection needs to be able to add trailing
+instructions to the GEN_*_RMWcc() operations. This extracts the
+difference between the goto/non-goto cases so the helper macros
+can be defined outside the #ifdef cases. Additionally adds argument
+naming to the resulting asm for referencing from suffixed
+instructions.
 
-open() what? As far as I know, for System-V PTYs, there is no path you can
-open() that will give you the PTY master. Am I missing something?
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ arch/x86/include/asm/rmwcc.h | 22 ++++++++++++++--------
+ 1 file changed, 14 insertions(+), 8 deletions(-)
 
->> > If I want to do the equvalent of the TIOCSTI attack then I fork a process
->> > and exit the parent. The child can now use ptrace to reprogram your shell
->> > to do whatever interesting things it likes (eg running child processes
->> > called "su" via a second pty/tty pair). Not exactly rocket science.
->>
->> Why would the child be able to ptrace the shell? AFAICS, in the most
->> relevant scenarios, the child can't ptrace the shell because the
->> shell has a different UID (in the case of e.g. su or sudo). In other
->
-> If I am the attacker wanting to type something into your su when you go
-> and su from my account, or where the user account is trojanned I do the
-> following
->
-> fork
-> exit parent
-> child ptraces the shell (same uid as it's not setuid)
->
-> You type "su" return
-> The modified shell opens a new pty/tty pair and runs su over it
-> My ptrace hooks watch the pty/tty traffic until you go to the loo
-> My ptrace hooks switch the console
-> My ptrace hooks type lots of stuff and hack your machine while eating the
-> output
->
-> and you come back, do stuff and then exit
->
-> And if you are in X it's even easier and I don't even need to care about
-> sessions or anything. X has no mechanism to sanely fix the problem, but
-> Wayland does.
-
-I think the "When using a program like su or sudo" in the patch description
-refers to the usecase where you go from a more privileged context (e.g. a
-root shell) to a less privileged one (e.g. a shell as a service-specific
-account used to run a daemon), not the other way around.
-
-[However, I do think that it's a nice side effect of this patch that it will
-prevent a malicious program from directly injecting something like an
-SSH command into my shell in a sufficiently hardened environment
-(with LSM restrictions that prevent the malicious program from opening
-SSH keyfiles or executing another program that can do that). Although
-you could argue that in such a case, the LSM should be taking care of
-blocking TIOCSTI.]
+diff --git a/arch/x86/include/asm/rmwcc.h b/arch/x86/include/asm/rmwcc.h
+index 661dd305694a..3e96f9a56b6d 100644
+--- a/arch/x86/include/asm/rmwcc.h
++++ b/arch/x86/include/asm/rmwcc.h
+@@ -8,18 +8,15 @@
+ #define __GEN_RMWcc(fullop, var, cc, ...)				\
+ do {									\
+ 	asm_volatile_goto (fullop "; j" #cc " %l[cc_label]"		\
+-			: : "m" (var), ## __VA_ARGS__ 			\
++			: : [counter] "m" (var), ## __VA_ARGS__		\
+ 			: "memory" : cc_label);				\
+ 	return 0;							\
+ cc_label:								\
+ 	return 1;							\
+ } while (0)
+ 
+-#define GEN_UNARY_RMWcc(op, var, arg0, cc) 				\
+-	__GEN_RMWcc(op " " arg0, var, cc)
++#define __BINARY_RMWcc_ARG	" %1, "
+ 
+-#define GEN_BINARY_RMWcc(op, var, vcon, val, arg0, cc)			\
+-	__GEN_RMWcc(op " %1, " arg0, var, cc, vcon (val))
+ 
+ #else /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
+ 
+@@ -29,17 +26,26 @@ cc_label:								\
+ do {									\
+ 	bool c;								\
+ 	asm volatile (fullop ";" CC_SET(cc)				\
+-			: "+m" (var), CC_OUT(cc) (c)			\
++			: [counter] "+m" (var), CC_OUT(cc) (c)		\
+ 			: __VA_ARGS__ : "memory");			\
+ 	return c;							\
+ } while (0)
+ 
++#define __BINARY_RMWcc_ARG	" %2, "
++
++#endif /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
++
+ #define GEN_UNARY_RMWcc(op, var, arg0, cc)				\
+ 	__GEN_RMWcc(op " " arg0, var, cc)
+ 
++#define GEN_UNARY_SUFFIXED_RMWcc(op, suffix, var, arg0, cc)		\
++	__GEN_RMWcc(op " " arg0 "\n\t" suffix, var, cc)
++
+ #define GEN_BINARY_RMWcc(op, var, vcon, val, arg0, cc)			\
+-	__GEN_RMWcc(op " %2, " arg0, var, cc, vcon (val))
++	__GEN_RMWcc(op __BINARY_RMWcc_ARG arg0, var, cc, vcon (val))
+ 
+-#endif /* defined(__GCC_ASM_FLAG_OUTPUTS__) || !defined(CC_HAVE_ASM_GOTO) */
++#define GEN_BINARY_SUFFIXED_RMWcc(op, suffix, var, vcon, val, arg0, cc)	\
++	__GEN_RMWcc(op __BINARY_RMWcc_ARG arg0 "\n\t" suffix, var, cc,	\
++		    vcon (val))
+ 
+ #endif /* _ASM_X86_RMWcc */
+-- 
+2.7.4
