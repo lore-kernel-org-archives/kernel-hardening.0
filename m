@@ -1,33 +1,66 @@
-Date: Tue, 25 Apr 2017 15:55:21 +0100
-From: Alan Cox <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20170425155521.03b393de@lxorguk.ukuu.org.uk>
-In-Reply-To: <20170424051512.20420-2-matt@nmatt.com>
-References: <20170424051512.20420-1-matt@nmatt.com>
-	<20170424051512.20420-2-matt@nmatt.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v4 1/2] tiocsti-restrict : Add owner user namespace to
- tty_struct
-To: Matt Brown <matt@nmatt.com>
-Cc: serge@hallyn.com, jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, corbet@lwn.net, keescook@chromium.org, akpm@linux-foundation.org, jannh@google.com, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 25 Apr 2017 17:04:19 +0200
+Message-Id: <20170425150419.2060-1-Jason@zx2c4.com>
+In-Reply-To: <20170425.104731.631398016575024152.davem@davemloft.net>
+References: <20170425.104731.631398016575024152.davem@davemloft.net>
+Subject: [kernel-hardening] [PATCH v4 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, David.Laight@aculab.com, kernel-hardening@lists.openwall.com
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, 24 Apr 2017 01:15:11 -0400
-Matt Brown <matt@nmatt.com> wrote:
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab ("macsec: avoid heap overflow in skb_to_sgvec")
 
-> This patch adds struct user_namespace *owner_user_ns to the tty_struct.
-> Then it is set to current_user_ns() in the alloc_tty_struct function.
-> 
-> This is done to facilitate capability checks against the original user
-> namespace that allocated the tty.
-> 
-> E.g. ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)
-> 
-> This combined with the use of user namespace's will allow hardening
-> protections to be built to mitigate container escapes that utilize TTY
-> ioctls such as TIOCSTI.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+v4 fixes the commit message and moves the check into the inner-most if.
 
-Regardles of the TIOCSTI usefulness this makes complete sense.
+ net/core/skbuff.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
 
-Alan
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index f86bf69cfb8d..e75640006d78 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3489,7 +3489,9 @@ void __init skb_init(void)
+  *	@len: Length of buffer space to be mapped
+  *
+  *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
+  */
+ static int
+ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+@@ -3517,6 +3519,8 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+ 		if ((copy = end - offset) > 0) {
+ 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++			if (elt && sg_is_last(&sg[elt - 1]))
++				return -EMSGSIZE;
+ 
+ 			if (copy > len)
+ 				copy = len;
+@@ -3537,6 +3541,9 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
++			if (elt && sg_is_last(&sg[elt - 1]))
++				return -EMSGSIZE;
++
+ 			if (copy > len)
+ 				copy = len;
+ 			elt += __skb_to_sgvec(frag_iter, sg+elt, offset - start,
+@@ -3581,6 +3588,9 @@ int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int le
+ {
+ 	int nsg = __skb_to_sgvec(skb, sg, offset, len);
+ 
++	if (nsg <= 0)
++		return nsg;
++
+ 	sg_mark_end(&sg[nsg - 1]);
+ 
+ 	return nsg;
+-- 
+2.12.2
