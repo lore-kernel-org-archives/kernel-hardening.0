@@ -1,63 +1,55 @@
 From: "PaX Team" <pageexec@freemail.hu>
 Date: Tue, 25 Apr 2017 13:26:43 +0200
 MIME-Version: 1.0
-Message-ID: <58FF3273.2718.1C99E5A3@pageexec.freemail.hu>
-In-reply-to: <20170424220128.j7nnhuohqdqbiki7@hirez.programming.kicks-ass.net>
-References: <20170421220939.GA65363@beast>, <CAGXu5jK5s0KBAfwHPhobiSCn6b0QA4Wb=w=eJG4KyukwbdHTzg@mail.gmail.com>, <20170424220128.j7nnhuohqdqbiki7@hirez.programming.kicks-ass.net>
+Message-ID: <58FF3273.8060.1C99E526@pageexec.freemail.hu>
+In-reply-to: <CAGXu5jLDybHn_K=vpXOhrsBE_-EtPA+jbXCqHmm3tUgbK24BOw@mail.gmail.com>
+References: <20170421220939.GA65363@beast>, <58FDDAC2.11341.175B5A99@pageexec.freemail.hu>, <CAGXu5jLDybHn_K=vpXOhrsBE_-EtPA+jbXCqHmm3tUgbK24BOw@mail.gmail.com>
 Content-type: text/plain; charset=US-ASCII
 Content-transfer-encoding: 7BIT
 Content-description: Mail message body
 Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
-To: Kees Cook <keescook@chromium.org>, Peter Zijlstra <peterz@infradead.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Kees Cook <keescook@chromium.org>
+Cc: Peter Zijlstra <peterz@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 25 Apr 2017 at 0:01, Peter Zijlstra wrote:
+On 24 Apr 2017 at 13:33, Kees Cook wrote:
 
-> On Mon, Apr 24, 2017 at 01:40:56PM -0700, Kees Cook wrote:
-> > I think we're way off in the weeds here. The "cannot inc from 0" check
-> > is about general sanity checks on refcounts.
+> On Mon, Apr 24, 2017 at 4:00 AM, PaX Team <pageexec@freemail.hu> wrote:
+> > On 24 Apr 2017 at 10:32, Peter Zijlstra wrote:
+> >
+> >> On Fri, Apr 21, 2017 at 03:09:39PM -0700, Kees Cook wrote:
+> >> > This patch ports the x86-specific atomic overflow handling from PaX's
+> >> > PAX_REFCOUNT to the upstream refcount_t API. This is an updated version
+> >> > from PaX that eliminates the saturation race condition by resetting the
+> >> > atomic counter back to the INT_MAX saturation value on both overflow and
+> >> > underflow. To win a race, a system would have to have INT_MAX threads
+> >> > simultaneously overflow before the saturation handler runs.
+> >
+> > note that the above is wrong (and even contradicting itself and the code).
 > 
-> I disagree, although sanity check are good too.
+> True, this changelog could be more accurate (it resets to INT_MAX on
+> overflow and INT_MIN on underflow). I think I'm right in saying that a
+> system would need INT_MAX threads running a refcount_inc() (and a
+> refcount_dec_and_test() at exactly the right moment) before the reset
+> handler got scheduled, though, yes?
 
-exactly, an attacker doesn't care how a premature free occurs due
-to reaching a 0 refcount, afterwards it's memory corruption time for
-both old and new references regardless.
+there's no uniform answer to this as there're several conditions
+that can affect the effectiveness of the refcount protection.
 
-> > However, what the refcount hardening protection is trying to do is
-> > protect again the exploitable condition: overflow.
-> 
-> Sure..
+e.g., how many independent leaking paths can the attacker exercise
+(typically one), are these paths under some kind of locks (would
+already prevent unbounded leaks/increments should the overflow
+detecting thread be preempted), are negative refcounts allowed and
+checked for or only signed overflow, etc.
 
-underflow is also exploitable, it's just much harder to defend against
-(there're no known practical solutions).
-
-> > Inc-from-0 isn't an exploitable condition since in theory
-> > the memory suddenly becomes correctly managed again.
-> 
-> It does not. It just got free'ed. Nothing will stop the free from
-> happening (or already having happened).
-
-now hold this thought...
-
-> How is the below not useful fodder for an exploit? It might be a less
-> common bug, and perhaps a bit more fiddly to make work, but afaict its
-> still a full use-after-free and therefore useful.
-> 
-> ---
-> 
-> Thread-A                                        Thread-B
-> 
-> if(dec_and_test(&obj->ref)) { // true, ref==0
-> 
->                                                 inc(&obj->ref) // ref: 0->1
-> 
->         kfree(obj);
-> }
-
-... and tell me why an attacker would let Thread-B do that increment
-(that you're trying to detect) *before* the underlying memory gets
-reused and thus the 0 changed to something else? hint: he'll do everything
-in his power to prevent that, either by winning the race or if there's
-no race (no refcount users outside his control), he'll win every time.
-IOW, checking for 0 is pointless and you kinda proved it yourself now.
+INT_MAX threads would be needed when the leaking path is locked so
+that it can only be exercised once and you'll need to get normal
+(balanced) paths preempted just after the increment. if the leaking
+path is lockless (can be exercised in parallel without bounds) then
+2 threads are enough where the one triggering the signed overflow
+would have to be preempted while the other one does INT_MAX increments
+and trigger the UAF. this is where the other mechanisms i talked about
+in the past become relevant: preemption or interrupts can be disabled
+or negative refcount values can be detected and acted upon (your blind
+copy-pasting effort passed upon this latter opportunity by not
+specializing the 'jo' into 'js' for the refcount case).
