@@ -1,41 +1,110 @@
-MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <58FF3273.8060.1C99E526@pageexec.freemail.hu>
-References: <20170421220939.GA65363@beast> <58FDDAC2.11341.175B5A99@pageexec.freemail.hu>
- <CAGXu5jLDybHn_K=vpXOhrsBE_-EtPA+jbXCqHmm3tUgbK24BOw@mail.gmail.com> <58FF3273.8060.1C99E526@pageexec.freemail.hu>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Apr 2017 09:39:52 -0700
-Message-ID: <CAGXu5jJF0g7Yw+2PDw_woyv0GsCOrX61noMu00p-hSO4Thi65Q@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
-To: PaX Team <pageexec@freemail.hu>
-Cc: Peter Zijlstra <peterz@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 25 Apr 2017 20:47:30 +0200
+Message-Id: <20170425184734.26563-1-Jason@zx2c4.com>
+In-Reply-To: <20170425155215.4835-1-Jason@zx2c4.com>
+References: <20170425155215.4835-1-Jason@zx2c4.com>
+Subject: [kernel-hardening] [PATCH v6 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, David.Laight@aculab.com, kernel-hardening@lists.openwall.com, davem@davemloft.net
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 25, 2017 at 4:26 AM, PaX Team <pageexec@freemail.hu> wrote:
-> INT_MAX threads would be needed when the leaking path is locked so
-> that it can only be exercised once and you'll need to get normal
-> (balanced) paths preempted just after the increment. if the leaking
-> path is lockless (can be exercised in parallel without bounds) then
-> 2 threads are enough where the one triggering the signed overflow
-> would have to be preempted while the other one does INT_MAX increments
-> and trigger the UAF. this is where the other mechanisms i talked about
-> in the past become relevant: preemption or interrupts can be disabled
-> or negative refcount values can be detected and acted upon (your blind
-> copy-pasting effort passed upon this latter opportunity by not
-> specializing the 'jo' into 'js' for the refcount case).
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab ("macsec: avoid heap overflow in skb_to_sgvec"). While
+we're at it, we also limit the amount of recursion this function is
+allowed to do. Not actually providing a bounded base case is a future
+diaster that we can easily avoid here.
 
-Well, it's not "blind" -- I'm trying to bring the code as-is to
-upstream for discussion/examination with as little functional
-differences as possible so it's easier to compare apples to apples.
-(Which already resulted in more eyes looking at the code to find a bug
--- thanks Jann!) But yes, jo -> js hugely increases the coverage. I'll
-make that change for v2.
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+Changes v5->v6:
+  * Use unlikely() for the rare overflow conditions.
+  * Also bound recursion, since this is a potential disaster we can avert.
 
-Thanks!
+ net/core/skbuff.c | 31 ++++++++++++++++++++++++-------
+ 1 file changed, 24 insertions(+), 7 deletions(-)
 
--Kees
-
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index f86bf69cfb8d..24fb53f8534e 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3489,16 +3489,22 @@ void __init skb_init(void)
+  *	@len: Length of buffer space to be mapped
+  *
+  *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
+  */
+ static int
+-__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
++__skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len,
++	       unsigned int recursion_level)
+ {
+ 	int start = skb_headlen(skb);
+ 	int i, copy = start - offset;
+ 	struct sk_buff *frag_iter;
+ 	int elt = 0;
+ 
++	if (unlikely(recursion_level >= 32))
++		return -EMSGSIZE;
++
+ 	if (copy > 0) {
+ 		if (copy > len)
+ 			copy = len;
+@@ -3517,6 +3523,8 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+ 		if ((copy = end - offset) > 0) {
+ 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
+ 
+ 			if (copy > len)
+ 				copy = len;
+@@ -3531,16 +3539,22 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 	}
+ 
+ 	skb_walk_frags(skb, frag_iter) {
+-		int end;
++		int end, ret;
+ 
+ 		WARN_ON(start > offset + len);
+ 
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
++			if (unlikely(elt && sg_is_last(&sg[elt - 1])))
++				return -EMSGSIZE;
++
+ 			if (copy > len)
+ 				copy = len;
+-			elt += __skb_to_sgvec(frag_iter, sg+elt, offset - start,
+-					      copy);
++			ret = __skb_to_sgvec(frag_iter, sg+elt, offset - start,
++					      copy, recursion_level + 1);
++			if (unlikely(ret < 0))
++				return ret;
++			elt += ret;
+ 			if ((len -= copy) == 0)
+ 				return elt;
+ 			offset += copy;
+@@ -3573,13 +3587,16 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ int skb_to_sgvec_nomark(struct sk_buff *skb, struct scatterlist *sg,
+ 			int offset, int len)
+ {
+-	return __skb_to_sgvec(skb, sg, offset, len);
++	return __skb_to_sgvec(skb, sg, offset, len, 0);
+ }
+ EXPORT_SYMBOL_GPL(skb_to_sgvec_nomark);
+ 
+ int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ {
+-	int nsg = __skb_to_sgvec(skb, sg, offset, len);
++	int nsg = __skb_to_sgvec(skb, sg, offset, len, 0);
++
++	if (nsg <= 0)
++		return nsg;
+ 
+ 	sg_mark_end(&sg[nsg - 1]);
+ 
 -- 
-Kees Cook
-Pixel Security
+2.12.2
