@@ -1,11 +1,11 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <58FF3273.2718.1C99E5A3@pageexec.freemail.hu>
-References: <20170421220939.GA65363@beast> <CAGXu5jK5s0KBAfwHPhobiSCn6b0QA4Wb=w=eJG4KyukwbdHTzg@mail.gmail.com>
- <20170424220128.j7nnhuohqdqbiki7@hirez.programming.kicks-ass.net> <58FF3273.2718.1C99E5A3@pageexec.freemail.hu>
+In-Reply-To: <58FF3273.8060.1C99E526@pageexec.freemail.hu>
+References: <20170421220939.GA65363@beast> <58FDDAC2.11341.175B5A99@pageexec.freemail.hu>
+ <CAGXu5jLDybHn_K=vpXOhrsBE_-EtPA+jbXCqHmm3tUgbK24BOw@mail.gmail.com> <58FF3273.8060.1C99E526@pageexec.freemail.hu>
 From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Apr 2017 09:36:17 -0700
-Message-ID: <CAGXu5j+PrB73FW9eYAaK4v0QBN01-_WLzq+oX2nUB2uuA4jXPw@mail.gmail.com>
+Date: Tue, 25 Apr 2017 09:39:52 -0700
+Message-ID: <CAGXu5jJF0g7Yw+2PDw_woyv0GsCOrX61noMu00p-hSO4Thi65Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
 To: PaX Team <pageexec@freemail.hu>
@@ -13,36 +13,26 @@ Cc: Peter Zijlstra <peterz@infradead.org>, LKML <linux-kernel@vger.kernel.org>, 
 List-ID: <kernel-hardening.lists.openwall.com>
 
 On Tue, Apr 25, 2017 at 4:26 AM, PaX Team <pageexec@freemail.hu> wrote:
-> On 25 Apr 2017 at 0:01, Peter Zijlstra wrote:
->> How is the below not useful fodder for an exploit? It might be a less
->> common bug, and perhaps a bit more fiddly to make work, but afaict its
->> still a full use-after-free and therefore useful.
->>
->> ---
->>
->> Thread-A                                        Thread-B
->>
->> if(dec_and_test(&obj->ref)) { // true, ref==0
->>
->>                                                 inc(&obj->ref) // ref: 0->1
->>
->>         kfree(obj);
->> }
->
-> ... and tell me why an attacker would let Thread-B do that increment
-> (that you're trying to detect) *before* the underlying memory gets
-> reused and thus the 0 changed to something else? hint: he'll do everything
-> in his power to prevent that, either by winning the race or if there's
-> no race (no refcount users outside his control), he'll win every time.
-> IOW, checking for 0 is pointless and you kinda proved it yourself now.
+> INT_MAX threads would be needed when the leaking path is locked so
+> that it can only be exercised once and you'll need to get normal
+> (balanced) paths preempted just after the increment. if the leaking
+> path is lockless (can be exercised in parallel without bounds) then
+> 2 threads are enough where the one triggering the signed overflow
+> would have to be preempted while the other one does INT_MAX increments
+> and trigger the UAF. this is where the other mechanisms i talked about
+> in the past become relevant: preemption or interrupts can be disabled
+> or negative refcount values can be detected and acted upon (your blind
+> copy-pasting effort passed upon this latter opportunity by not
+> specializing the 'jo' into 'js' for the refcount case).
 
-Right, having a deterministic protection (checking for overflow) is
-best since it stops all exploits using that path. Hoping that an
-attacker is unlucky and hits a notification after they've already
-landed their corruption is not a very useful defense. It certainly has
-a non-zero value, but stopping overflow 100% is better. Especially
-when we can do it with no meaningful change in performance which lets
-us actually do the atomic_t -> refcount_t conversion everywhere.
+Well, it's not "blind" -- I'm trying to bring the code as-is to
+upstream for discussion/examination with as little functional
+differences as possible so it's easier to compare apples to apples.
+(Which already resulted in more eyes looking at the code to find a bug
+-- thanks Jann!) But yes, jo -> js hugely increases the coverage. I'll
+make that change for v2.
+
+Thanks!
 
 -Kees
 
