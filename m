@@ -1,34 +1,88 @@
-Date: Tue, 25 Apr 2017 11:05:58 +0200
+Date: Tue, 25 Apr 2017 12:23:37 +0200
 From: Peter Zijlstra <peterz@infradead.org>
-Message-ID: <20170425090558.vi4ihaqedlmph7va@hirez.programming.kicks-ass.net>
+Message-ID: <20170425102337.ocdi2v7ivue7x7cc@hirez.programming.kicks-ass.net>
 References: <20170421220939.GA65363@beast>
- <58FDF8C4.5120.17D092B7@pageexec.freemail.hu>
- <20170424133323.cf3xyd3mmwp6ixaz@hirez.programming.kicks-ass.net>
- <58FE1687.5511.1844D4FC@pageexec.freemail.hu>
- <CAGXu5jK5s0KBAfwHPhobiSCn6b0QA4Wb=w=eJG4KyukwbdHTzg@mail.gmail.com>
- <20170424220128.j7nnhuohqdqbiki7@hirez.programming.kicks-ass.net>
- <CAGXu5j+tbPr04Jiv4yjJJO3h89fDxy-iWAeuoDZ2N+XDY58umw@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <CAGXu5j+tbPr04Jiv4yjJJO3h89fDxy-iWAeuoDZ2N+XDY58umw@mail.gmail.com>
+In-Reply-To: <20170421220939.GA65363@beast>
 Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
 To: Kees Cook <keescook@chromium.org>
-Cc: PaX Team <pageexec@freemail.hu>, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: linux-kernel@vger.kernel.org, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, x86@kernel.org, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, davem@davemloft.net, linux-arch@vger.kernel.org, kernel-hardening@lists.openwall.com, PaX Team <pageexec@freemail.hu>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 24, 2017 at 03:37:32PM -0700, Kees Cook wrote:
-> On Mon, Apr 24, 2017 at 3:01 PM, Peter Zijlstra <peterz@infradead.org> wrote:
+On Fri, Apr 21, 2017 at 03:09:39PM -0700, Kees Cook wrote:
+> +static __always_inline void refcount_inc(refcount_t *r)
+> +{
+> +	asm volatile(LOCK_PREFIX "incl %0\n\t"
+> +		REFCOUNT_CHECK_OVERFLOW(4)
+> +		: [counter] "+m" (r->refs.counter)
+> +		: : "cc", "cx");
+> +}
+> +
+> +static __always_inline void refcount_dec(refcount_t *r)
+> +{
+> +	asm volatile(LOCK_PREFIX "decl %0\n\t"
+> +		REFCOUNT_CHECK_UNDERFLOW(4)
+> +		: [counter] "+m" (r->refs.counter)
+> +		: : "cc", "cx");
+> +}
 
-> > It does not. It just got free'ed. Nothing will stop the free from
-> > happening (or already having happened).
-> 
-> Well, yes, but that's kind of my point. Detecting inc-from-0 is "too
-> late" to offer a protection. It offers notification of a bug, rather
-> than stopping an exploit from happening.
+> +dotraplinkage void do_refcount_error(struct pt_regs *regs, long error_code)
+> +{
+> +	const char *str = NULL;
+> +
+> +	BUG_ON(!(regs->flags & X86_EFLAGS_OF));
+> +
+> +#define range_check(size, direction, type, value) \
+> +	if ((unsigned long)__##size##_##direction##_start <= regs->ip && \
+> +	    regs->ip < (unsigned long)__##size##_##direction##_end) { \
+> +		*(type *)regs->cx = value; \
+> +		str = #size " " #direction; \
+> +	}
+> +
+> +	range_check(refcount,   overflow,  int, INT_MAX)
+> +	range_check(refcount,   underflow, int, INT_MIN)
+> +
+> +#undef range_check
+> +
+> +	BUG_ON(!str);
+> +	do_error_trap(regs, error_code, (char *)str, X86_REFCOUNT_VECTOR,
+> +		      SIGILL);
+> +}
+> +#endif
 
-Well, your setup (panic_on_warn et al) would have it panic the box. That
-will effectively stop the exploit by virtue of stopping everything.
 
-And warn/bug/panic etc.. are I think a better option that silently
-letting it happen.
+So what avoids this:
+
+	CPU0				CPU1
+
+
+	lock inc %[val]; # 0x7fffffff
+	jo  2f
+1:	...
+
+					lock dec %[val]; # 0x80000000
+					jo  2f
+				1:	...
+
+
+
+
+2:	mov $0x7fffffff, %[val]
+	jmp 1b
+
+				2:	mov $0x80000000, %[val]
+					jmp 1b
+
+
+
+
+	~~~~//~~~~
+
+
+	lock inc %val; #0x80000000
+	....
+
+	lock inc %val; 0xffffffff
+	lock inc %val; 0x00000000
