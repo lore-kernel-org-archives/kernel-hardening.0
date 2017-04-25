@@ -1,200 +1,114 @@
-From: Matt Brown <matt@nmatt.com>
-Date: Tue, 25 Apr 2017 00:15:12 -0400
-Message-Id: <20170425041512.13189-3-matt@nmatt.com>
-In-Reply-To: <20170425041512.13189-1-matt@nmatt.com>
-References: <20170425041512.13189-1-matt@nmatt.com>
-Subject: [kernel-hardening] [PATCH v5 2/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: serge@hallyn.com, jmorris@namei.org, gregkh@linuxfoundation.org, jslaby@suse.com, corbet@lwn.net, keescook@chromium.org
-Cc: akpm@linux-foundation.org, jannh@google.com, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org, Matt Brown <matt@nmatt.com>
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Tue, 25 Apr 2017 08:23:24 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170425062324.pdpi5v7ypobw74ki@gmail.com>
+References: <20170410164420.64003-1-thgarnie@google.com>
+ <CAGXu5j+J67zC9tcncacHTDvXKMF3HZuPCivk-Uz4J6h-cEv-qQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+J67zC9tcncacHTDvXKMF3HZuPCivk-Uz4J6h-cEv-qQ@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v7 1/4] syscalls: Restore address limit after a syscall
+To: Kees Cook <keescook@chromium.org>
+Cc: Thomas Garnier <thgarnie@google.com>, Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Andrew Morton <akpm@linux-foundation.org>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, "linux-s390@vger.kernel.org" <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, "x86@kernel.org" <x86@kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-This introduces the tiocsti_restrict sysctl, whose default is controlled via
-CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this control restricts
-all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
 
-This patch depends on patch 1/2
+* Kees Cook <keescook@chromium.org> wrote:
 
-This patch was inspired from GRKERNSEC_HARDEN_TTY.
+> On Mon, Apr 10, 2017 at 9:44 AM, Thomas Garnier <thgarnie@google.com> wrote:
+> > This patch ensures a syscall does not return to user-mode with a kernel
+> > address limit. If that happened, a process can corrupt kernel-mode
+> > memory and elevate privileges.
+> >
+> > For example, it would mitigation this bug:
+> >
+> > - https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+> >
+> > The CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE option is also
+> > added so each architecture can optimize this change.
+> >
+> > Signed-off-by: Thomas Garnier <thgarnie@google.com>
+> > Tested-by: Kees Cook <keescook@chromium.org>
+> 
+> Ingo, I think this series is ready. Can you pull it? (And if not, what
+> should next steps be?)
 
-This patch would have prevented
-https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
-conditions:
-* non-privileged container
-* container run inside new user namespace
+I have some feedback for other patches in this series, plus for this one as well:
 
-Possible effects on userland:
+> > +/*
+> > + * Called before coming back to user-mode. Returning to user-mode with an
+> > + * address limit different than USER_DS can allow to overwrite kernel memory.
+> > + */
+> > +static inline void verify_pre_usermode_state(void) {
+> > +       BUG_ON(!segment_eq(get_fs(), USER_DS));
+> > +}
 
-There could be a few user programs that would be effected by this
-change.
-See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
-notable programs are: agetty, csh, xemacs and tcsh
+That's not standard kernel coding style.
 
-However, I still believe that this change is worth it given that the
-Kconfig defaults to n. This will be a feature that is turned on for the
-same reason that people activate it when using grsecurity. Users of this
-opt-in feature will realize that they are choosing security over some OS
-features like unprivileged TIOCSTI ioctls, as should be clear in the
-Kconfig help message.
+Also, patch titles should start with a verb - 75% of the series doesn't.
 
-Threat Model/Patch Rational:
+> > +#ifndef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
+> > +#define __CHECK_USER_CALLER() \
+> > +       bool user_caller = segment_eq(get_fs(), USER_DS)
+> > +#define __VERIFY_PRE_USERMODE_STATE() \
+> > +       if (user_caller) verify_pre_usermode_state()
+> > +#else
+> > +#define __CHECK_USER_CALLER()
+> > +#define __VERIFY_PRE_USERMODE_STATE()
+> > +asmlinkage void address_limit_check_failed(void);
+> > +#endif
 
->From grsecurity's config for GRKERNSEC_HARDEN_TTY.
+> > +#ifdef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
 
- | There are very few legitimate uses for this functionality and it
- | has made vulnerabilities in several 'su'-like programs possible in
- | the past.  Even without these vulnerabilities, it provides an
- | attacker with an easy mechanism to move laterally among other
- | processes within the same user's compromised session.
+That Kconfig name is way too long.
 
-So if one process within a tty session becomes compromised it can follow
-that additional processes, that are thought to be in different security
-boundaries, can be compromised as a result. When using a program like su
-or sudo, these additional processes could be in a tty session where TTY file
-descriptors are indeed shared over privilege boundaries.
+Plus please don't put logical operations into Kconfig names.
 
-This is also an excellent writeup about the issue:
-<http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
+> > +/*
+> > + * This function is called when an architecture specific implementation detected
+> > + * an invalid address limit. The generic user-mode state checker will finish on
+> > + * the appropriate BUG_ON.
+> > + */
+> > +asmlinkage void address_limit_check_failed(void)
+> > +{
+> > +       verify_pre_usermode_state();
+> > +       panic("address_limit_check_failed called with a valid user-mode state");
+> > +}
+> > +#endif
 
-When user namespaces are in use, the check for the capability
-CAP_SYS_ADMIN is done against the user namespace that originally opened
-the tty.
+Awful naming all around:
 
-Signed-off-by: Matt Brown <matt@nmatt.com>
----
- Documentation/sysctl/kernel.txt | 21 +++++++++++++++++++++
- drivers/tty/tty_io.c            |  6 ++++++
- include/linux/tty.h             |  2 ++
- kernel/sysctl.c                 | 12 ++++++++++++
- security/Kconfig                | 13 +++++++++++++
- 5 files changed, 54 insertions(+)
+	verify_pre_usermode_state()
+	address_limit_check_failed()
 
-diff --git a/Documentation/sysctl/kernel.txt b/Documentation/sysctl/kernel.txt
-index bac23c1..f7985cf 100644
---- a/Documentation/sysctl/kernel.txt
-+++ b/Documentation/sysctl/kernel.txt
-@@ -89,6 +89,7 @@ show up in /proc/sys/kernel:
- - sysctl_writes_strict
- - tainted
- - threads-max
-+- tiocsti_restrict
- - unknown_nmi_panic
- - watchdog
- - watchdog_thresh
-@@ -987,6 +988,26 @@ available RAM pages threads-max is reduced accordingly.
- 
- ==============================================================
- 
-+tiocsti_restrict:
-+
-+This toggle indicates whether unprivileged users are prevented
-+from using the TIOCSTI ioctl to inject commands into other processes
-+which share a tty session.
-+
-+When tiocsti_restrict is set to (0) there are no restrictions(accept
-+the default restriction of only being able to injection commands into
-+one's own tty). When tiocsti_restrict is set to (1), users must
-+have CAP_SYS_ADMIN to use the TIOCSTI ioctl.
-+
-+When user namespaces are in use, the check for the capability
-+CAP_SYS_ADMIN is done against the user namespace that originally
-+opened the tty.
-+
-+The kernel config option CONFIG_SECURITY_TIOCSTI_RESTRICT sets the
-+default value of tiocsti_restrict.
-+
-+==============================================================
-+
- unknown_nmi_panic:
- 
- The value in this file affects behavior of handling NMI. When the
-diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
-index c276814..fe68d14 100644
---- a/drivers/tty/tty_io.c
-+++ b/drivers/tty/tty_io.c
-@@ -2297,11 +2297,17 @@ static int tty_fasync(int fd, struct file *filp, int on)
-  *	FIXME: may race normal receive processing
-  */
- 
-+int tiocsti_restrict = IS_ENABLED(CONFIG_SECURITY_TIOCSTI_RESTRICT);
-+
- static int tiocsti(struct tty_struct *tty, char __user *p)
- {
- 	char ch, mbz = 0;
- 	struct tty_ldisc *ld;
- 
-+	if (tiocsti_restrict && !ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)) {
-+		pr_warn_ratelimited("TIOCSTI ioctl call blocked for non-privileged process\n");
-+		return -EPERM;
-+	}
- 	if ((current->signal->tty != tty) && !capable(CAP_SYS_ADMIN))
- 		return -EPERM;
- 	if (get_user(ch, p))
-diff --git a/include/linux/tty.h b/include/linux/tty.h
-index d902d42..2fd7f49 100644
---- a/include/linux/tty.h
-+++ b/include/linux/tty.h
-@@ -344,6 +344,8 @@ struct tty_file_private {
- 	struct list_head list;
- };
- 
-+extern int tiocsti_restrict;
-+
- /* tty magic number */
- #define TTY_MAGIC		0x5401
- 
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index acf0a5a..68d1363 100644
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -67,6 +67,7 @@
- #include <linux/kexec.h>
- #include <linux/bpf.h>
- #include <linux/mount.h>
-+#include <linux/tty.h>
- 
- #include <linux/uaccess.h>
- #include <asm/processor.h>
-@@ -833,6 +834,17 @@ static struct ctl_table kern_table[] = {
- 		.extra2		= &two,
- 	},
- #endif
-+#if defined CONFIG_TTY
-+	{
-+		.procname	= "tiocsti_restrict",
-+		.data		= &tiocsti_restrict,
-+		.maxlen		= sizeof(int),
-+		.mode		= 0644,
-+		.proc_handler	= proc_dointvec_minmax_sysadmin,
-+		.extra1		= &zero,
-+		.extra2		= &one,
-+	},
-+#endif
- 	{
- 		.procname	= "ngroups_max",
- 		.data		= &ngroups_max,
-diff --git a/security/Kconfig b/security/Kconfig
-index 3ff1bf9..7d13331 100644
---- a/security/Kconfig
-+++ b/security/Kconfig
-@@ -18,6 +18,19 @@ config SECURITY_DMESG_RESTRICT
- 
- 	  If you are unsure how to answer this question, answer N.
- 
-+config SECURITY_TIOCSTI_RESTRICT
-+	bool "Restrict unprivileged use of tiocsti command injection"
-+	default n
-+	help
-+	  This enforces restrictions on unprivileged users injecting commands
-+	  into other processes which share a tty session using the TIOCSTI
-+	  ioctl. This option makes TIOCSTI use require CAP_SYS_ADMIN.
-+
-+	  If this option is not selected, no restrictions will be enforced
-+	  unless the tiocsti_restrict sysctl is explicitly set to (1).
-+
-+	  If you are unsure how to answer this question, answer N.
-+
- config SECURITY
- 	bool "Enable different security models"
- 	depends on SYSFS
--- 
-2.10.2
+Both names start with very common names that makes one read these again and again. 
+(And yes, there's lots of bad names in the kernel, but we should not follow bad 
+examples.)
+
+Best practice for such functionality is to use a common prefix that is both easy 
+to recognize and easy to skip. For example we could use 'addr_limit_check' as the 
+prefix:
+
+	addr_limit_check_failed()
+	addr_limit_check_syscall()
+
+No need to over-specify it that it's a "pre" check - it's obvious from existing 
+implementation and should be documented in the function itself for new 
+implementations.
+
+Harmonize the Kconfig namespace to the common prefix as well, i.e. use something 
+like:
+
+	CONFIG_ADDR_LIMIT_CHECK
+
+No need to add 'ARCH' I think - an architecture that enables this should get it 
+unconditionally.
+
+etc.
+
+It's all cobbled together I'm afraid and will need more iterations.
+
+Thanks,
+
+	Ingo
