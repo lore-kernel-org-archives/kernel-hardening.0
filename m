@@ -1,27 +1,66 @@
-References: <20170425140809.23881-1-Jason@zx2c4.com>
-From: Sergei Shtylyov <sergei.shtylyov@cogentembedded.com>
-Message-ID: <00e2b74b-69cd-07c5-6a0e-5b3e856a783e@cogentembedded.com>
-Date: Tue, 25 Apr 2017 18:42:44 +0300
-MIME-Version: 1.0
-In-Reply-To: <20170425140809.23881-1-Jason@zx2c4.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent
- overflow
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>, netdev@vger.kernel.org, linux-kernel@vger.kernel.org, davem@davemloft.net, David.Laight@aculab.com, kernel-hardening@lists.openwall.com
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Tue, 25 Apr 2017 17:52:11 +0200
+Message-Id: <20170425155215.4835-1-Jason@zx2c4.com>
+In-Reply-To: <20170425.111717.1973239615715123840.davem@davemloft.net>
+References: <20170425.111717.1973239615715123840.davem@davemloft.net>
+Subject: [kernel-hardening] [PATCH v5 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to prevent overflow
+To: netdev@vger.kernel.org, linux-kernel@vger.kernel.org, David.Laight@aculab.com, kernel-hardening@lists.openwall.com, davem@davemloft.net
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hello!
+This is a defense-in-depth measure in response to bugs like
+4d6fa57b4dab ("macsec: avoid heap overflow in skb_to_sgvec")
 
-On 04/25/2017 05:08 PM, Jason A. Donenfeld wrote:
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+This is a resend of v4 with all the other child commits along with it.
 
-> This is a defense-in-depth measure in response to bugs like
-> 4d6fa57b4dab0d77f4d8e9d9c73d1e63f6fe8fee.
+ net/core/skbuff.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
 
-    You need to also specify the summary line enclosed in (""). And it's 
-enough to specify 12 digits of SHA1 ID...
-
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-[...]
-
-MBR, Sergei
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index f86bf69cfb8d..e75640006d78 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -3489,7 +3489,9 @@ void __init skb_init(void)
+  *	@len: Length of buffer space to be mapped
+  *
+  *	Fill the specified scatter-gather list with mappings/pointers into a
+- *	region of the buffer space attached to a socket buffer.
++ *	region of the buffer space attached to a socket buffer. Returns either
++ *	the number of scatterlist items used, or -EMSGSIZE if the contents
++ *	could not fit.
+  */
+ static int
+ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+@@ -3517,6 +3519,8 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 		end = start + skb_frag_size(&skb_shinfo(skb)->frags[i]);
+ 		if ((copy = end - offset) > 0) {
+ 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
++			if (elt && sg_is_last(&sg[elt - 1]))
++				return -EMSGSIZE;
+ 
+ 			if (copy > len)
+ 				copy = len;
+@@ -3537,6 +3541,9 @@ __skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int len)
+ 
+ 		end = start + frag_iter->len;
+ 		if ((copy = end - offset) > 0) {
++			if (elt && sg_is_last(&sg[elt - 1]))
++				return -EMSGSIZE;
++
+ 			if (copy > len)
+ 				copy = len;
+ 			elt += __skb_to_sgvec(frag_iter, sg+elt, offset - start,
+@@ -3581,6 +3588,9 @@ int skb_to_sgvec(struct sk_buff *skb, struct scatterlist *sg, int offset, int le
+ {
+ 	int nsg = __skb_to_sgvec(skb, sg, offset, len);
+ 
++	if (nsg <= 0)
++		return nsg;
++
+ 	sg_mark_end(&sg[nsg - 1]);
+ 
+ 	return nsg;
+-- 
+2.12.2
