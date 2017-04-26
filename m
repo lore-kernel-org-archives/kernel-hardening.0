@@ -1,31 +1,42 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
-References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
-From: Kees Cook <keescook@chromium.org>
-Date: Wed, 26 Apr 2017 15:04:27 -0700
-Message-ID: <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+In-Reply-To: <1493123038-30590-6-git-send-email-tixxdz@gmail.com>
+References: <1493123038-30590-1-git-send-email-tixxdz@gmail.com> <1493123038-30590-6-git-send-email-tixxdz@gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Wed, 26 Apr 2017 15:09:09 -0700
+Message-ID: <CALCETrXM7-NBnBcXbuuhDJZyUFLT7iRfcGGvaqUhDJBGkYJgcQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
-To: =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>
-Cc: "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Subject: [kernel-hardening] Re: [PATCH RFC v2 5/6] proc: instantiate only pids that we can ptrace
+ on 'limit_pids=1' mount option
+To: Djalal Harouni <tixxdz@gmail.com>
+Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jeff Layton <jlayton@poochiereds.net>, "J. Bruce Fields" <bfields@fieldses.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Ingo Molnar <mingo@kernel.org>, "Eric W. Biederman" <ebiederm@xmission.com>, Oleg Nesterov <oleg@redhat.com>, Michal Hocko <mhocko@suse.com>, Jonathan Corbet <corbet@lwn.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, Apr 26, 2017 at 2:05 PM, Daniel Cegie=C5=82ka
-<daniel.cegielka@gmail.com> wrote:
-> https://grsecurity.net/passing_the_baton_faq.php
+On Tue, Apr 25, 2017 at 5:23 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> If "limit_pids=1" mount option is set then do not instantiate pids that
+> we can not ptrace. "limit_pids=1" means that procfs should only contain
+> pids that the caller can ptrace.
+>
+> Cc: Kees Cook <keescook@chromium.org>
+> Cc: Andy Lutomirski <luto@kernel.org>
+> Signed-off-by: Djalal Harouni <tixxdz@gmail.com>
+> ---
+>  fs/proc/base.c | 9 +++++++++
+>  1 file changed, 9 insertions(+)
+>
+> diff --git a/fs/proc/base.c b/fs/proc/base.c
+> index 2e0f661..a663284 100644
+> --- a/fs/proc/base.c
+> +++ b/fs/proc/base.c
+> @@ -3149,6 +3149,7 @@ struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, unsign
+>         unsigned tgid;
+>         struct proc_fs_info *fs_info = proc_sb(dir->i_sb);
+>         struct pid_namespace *ns = fs_info->pid_ns;
+> +       int limit_pids = proc_fs_limit_pids(fs_info);
 
-Yeah, I'm sad to see them go. PaX Team was just last night helping
-with some details of PAX_REFCOUNT as it could appear in the upstream
-refcount_t API. I hope they'll still help out from time to time.
+Shouldn't the addition of proc_fs_limit_pids() be in this patch?
 
-It does underscore the critical need to upstream stuff, though. Forks
-of projects might disappear at any time. :(
+Also, can we name it something self-documented?
+"ptraceable_pids_only=1", perhaps?  Or even pids=ptraceable (as
+opposed to pids=all or maybe other choices in the future)?
 
--Kees
-
---=20
-Kees Cook
-Pixel Security
+--Andy
