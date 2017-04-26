@@ -1,74 +1,51 @@
+Sender: Ingo Molnar <mingo.kernel.org@gmail.com>
+Date: Wed, 26 Apr 2017 10:12:29 +0200
+From: Ingo Molnar <mingo@kernel.org>
+Message-ID: <20170426081229.6wnugrs7w3at4xry@gmail.com>
+References: <20170410164420.64003-1-thgarnie@google.com>
+ <20170425063305.hwjuxupa37rwe6zj@gmail.com>
+ <CAJcbSZH7Y6iBy3T3iWyh_AaFJ+TidP7E9iQEuCbShQrcTKGoyw@mail.gmail.com>
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <5900026E.29602.1FC65392@pageexec.freemail.hu>
-References: <20170421220939.GA65363@beast> <58FF3273.8060.1C99E526@pageexec.freemail.hu>
- <CAGXu5jJF0g7Yw+2PDw_woyv0GsCOrX61noMu00p-hSO4Thi65Q@mail.gmail.com> <5900026E.29602.1FC65392@pageexec.freemail.hu>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 25 Apr 2017 21:42:39 -0700
-Message-ID: <CAGXu5jJDQKCiMpqDaLyDQ74ZH7LZ=zwB68+k2arGpWNeq9f1aA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH] x86/refcount: Implement fast refcount_t handling
-To: PaX Team <pageexec@freemail.hu>
-Cc: Peter Zijlstra <peterz@infradead.org>, LKML <linux-kernel@vger.kernel.org>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jann Horn <jann@thejh.net>, "David S. Miller" <davem@davemloft.net>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAJcbSZH7Y6iBy3T3iWyh_AaFJ+TidP7E9iQEuCbShQrcTKGoyw@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v7 1/4] syscalls: Restore address limit after a syscall
+To: Thomas Garnier <thgarnie@google.com>
+Cc: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Arnd Bergmann <arnd@arndb.de>, Dave Hansen <dave.hansen@intel.com>, Andrew Morton <akpm@linux-foundation.org>, David Howells <dhowells@redhat.com>, =?iso-8859-1?Q?Ren=E9?= Nyffenegger <mail@renenyffenegger.ch>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Stephen Smalley <sds@tycho.nsa.gov>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>, linux-s390 <linux-s390@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, the arch/x86 maintainers <x86@kernel.org>, linux-arm-kernel@lists.infradead.org, Kernel Hardening <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, Apr 25, 2017 at 7:14 PM, PaX Team <pageexec@freemail.hu> wrote:
-> On 25 Apr 2017 at 9:39, Kees Cook wrote:
->
->> On Tue, Apr 25, 2017 at 4:26 AM, PaX Team <pageexec@freemail.hu> wrote:
->> > INT_MAX threads would be needed when the leaking path is locked so
->> > that it can only be exercised once and you'll need to get normal
->> > (balanced) paths preempted just after the increment. if the leaking
->> > path is lockless (can be exercised in parallel without bounds) then
->> > 2 threads are enough where the one triggering the signed overflow
->> > would have to be preempted while the other one does INT_MAX increments
->> > and trigger the UAF. this is where the other mechanisms i talked about
->> > in the past become relevant: preemption or interrupts can be disabled
->> > or negative refcount values can be detected and acted upon (your blind
->> > copy-pasting effort passed upon this latter opportunity by not
->> > specializing the 'jo' into 'js' for the refcount case).
->>
->> Well, it's not "blind" -- I'm trying to bring the code as-is to
->> upstream for discussion/examination with as little functional
->> differences as possible so it's easier to compare apples to apples.
->
-> you copied code from a version which is at least 2 major kernel revisions
-> behind (so much for those apples)
 
-Hmm, this was from your 4.9 port. Linus hasn't quite released 4.11
-yet, so that's actually "at most 2 major kernel revisions behind". :)
-Regardless, I'd be happy to refresh the port. Will you share a URL to
-your latest rebase against upstream?
+* Thomas Garnier <thgarnie@google.com> wrote:
 
-> you chose the one version which had a
-> bug that you didn't spot nor fix properly, you didn't realize the opportunity
-> that a special refcount type represents, you claimed refcount underflows
-> aren't exploitable but copied code that would detect signed underflow, you
-> didn't understand the limits and edge cases i explained above... need i go
+> >> +#ifdef CONFIG_ARCH_NO_SYSCALL_VERIFY_PRE_USERMODE_STATE
+> >> +/*
+> >> + * This function is called when an architecture specific implementation detected
+> >> + * an invalid address limit. The generic user-mode state checker will finish on
+> >> + * the appropriate BUG_ON.
+> >> + */
+> >> +asmlinkage void address_limit_check_failed(void)
+> >> +{
+> >> +     verify_pre_usermode_state();
+> >> +     panic("address_limit_check_failed called with a valid user-mode state");
+> >
+> > It's very unconstructive to unconditionally panic the system, just because some
+> > kernel code leaked the address limit! Do a warn-once printout and kill the current
+> > task (i.e. don't continue execution), but don't crash everything else!
+> 
+> The original change did not crash the kernel for this exact reason.
+> Through reviews, there was an overall agreement that the kernel should
+> not continue in this state.
 
-As I said, I was trying to minimize changes to your implementation,
-which included the bug and the other issues. The point of this was to
-share it with others, and work collaboratively on it. I think this
-clearly succeeded with benefits to both upstream and PaX: Jann spotted
-the fix for the bug causing weird crashes I saw when doing initial
-testing, you pointed out the benefit of using js over jo, I've
-reorganized the RMWcc macros for more easily adding trailing
-instructions, Peter is thinking about ways around the protection, etc.
+Ok, I guess we can try that - but the panic message is still pretty misleading:
 
-> on? doesn't leave one with great confidence in your ability to understand
-> and maintain this code...
+	panic("address_limit_check_failed called with a valid user-mode state");
 
-Well, that's your opinion. I think the patch and its discussion helped
-several people, including myself, understand this code. Since many
-people will share its maintenance, I think this is the right way to
-handle upstreaming these kinds of things. I don't claim to be
-omniscient, just persistent. Getting this protection into upstream
-means every Linux user will benefit from what you created, which I
-think is awesome; this whole class of refcount flaws goes away. Thank
-you for writing it, sharing it, and discussing it!
+... so it was called with a _valid_ user-mode state, and we crash due to something 
+valid? Huh?
 
--Kees
+( Also, the style rule applies to kernel messages as well: function names should 
+  be referred to as "function_name()". )
 
--- 
-Kees Cook
-Pixel Security
+Thanks,
+
+	Ingo
