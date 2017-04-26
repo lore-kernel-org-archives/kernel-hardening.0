@@ -1,79 +1,80 @@
+Date: Wed, 26 Apr 2017 13:47:32 +0100
+From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
+Message-ID: <20170426134732.7579ebdd@lxorguk.ukuu.org.uk>
+In-Reply-To: <CAG48ez31W30Qqmf5ZZ1_eVQC0uobBrva3_zgRdzejztFLzKoPg@mail.gmail.com>
+References: <20170425041512.13189-1-matt@nmatt.com>
+	<20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
+	<CAG48ez0uYkAg65iBZ8cKLxzFyEK=Axt=NP7jnmQkFp4rN=0GzA@mail.gmail.com>
+	<20170425203015.1ae62057@lxorguk.ukuu.org.uk>
+	<CAG48ez2u8Op1ej9Z3z+PNaeEqh2f3LKnUqQku+g6asGc3K6q9g@mail.gmail.com>
+	<20170425222135.2859b1a8@lxorguk.ukuu.org.uk>
+	<CAG48ez31W30Qqmf5ZZ1_eVQC0uobBrva3_zgRdzejztFLzKoPg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <87r30ifmwz.fsf@rustcorp.com.au>
-References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
- <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <87r30ifmwz.fsf@rustcorp.com.au>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Wed, 26 Apr 2017 11:06:12 +0200
-Message-ID: <CAEiveUfVyLVrCgjniA+7eutv=OGQ2LwBCx0V7JLiySeJz3c5ZQ@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
- autoload restriction
-To: Rusty Russell <rusty@rustcorp.com.au>
-Cc: Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andy Lutomirski <luto@kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, kernel-hardening@lists.openwall.com, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, Zendyani <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
+Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require
+ CAP_SYS_ADMIN
+To: Jann Horn <jannh@google.com>
+Cc: Matt Brown <matt@nmatt.com>, serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hi Rusty,
+> open() what? As far as I know, for System-V PTYs, there is no path you can
+> open() that will give you the PTY master. Am I missing something?
 
-On Mon, Apr 24, 2017 at 6:29 AM, Rusty Russell <rusty@rustcorp.com.au> wrote:
-> Djalal Harouni <tixxdz@gmail.com> writes:
->> When value is (1), task must have CAP_SYS_MODULE to be able to trigger a
->> module auto-load operation, or CAP_NET_ADMIN for modules with a
->> 'netdev-%s' alias.
->
-> Sorry, the magic 'netdev-' prefix is a crawling horror.  To do this
+Sorry brain fade - no.
+> 
+> >> > If I want to do the equvalent of the TIOCSTI attack then I fork a process
+> >> > and exit the parent. The child can now use ptrace to reprogram your shell
+> >> > to do whatever interesting things it likes (eg running child processes
+> >> > called "su" via a second pty/tty pair). Not exactly rocket science.  
+> >>
+> >> Why would the child be able to ptrace the shell? AFAICS, in the most
+> >> relevant scenarios, the child can't ptrace the shell because the
+> >> shell has a different UID (in the case of e.g. su or sudo). In other  
+> >
+> > If I am the attacker wanting to type something into your su when you go
+> > and su from my account, or where the user account is trojanned I do the
+> > following
+> >
+> > fork
+> > exit parent
+> > child ptraces the shell (same uid as it's not setuid)
+> >
+> > You type "su" return
+> > The modified shell opens a new pty/tty pair and runs su over it
+> > My ptrace hooks watch the pty/tty traffic until you go to the loo
+> > My ptrace hooks switch the console
+> > My ptrace hooks type lots of stuff and hack your machine while eating the
+> > output
+> >
+> > and you come back, do stuff and then exit
+> >
+> > And if you are in X it's even easier and I don't even need to care about
+> > sessions or anything. X has no mechanism to sanely fix the problem, but
+> > Wayland does.  
+> 
+> I think the "When using a program like su or sudo" in the patch description
+> refers to the usecase where you go from a more privileged context (e.g. a
+> root shell) to a less privileged one (e.g. a shell as a service-specific
+> account used to run a daemon), not the other way around.
 
-Yes I agree, that's the not the best part. I added it for backward
-compatibility since I did notice that some network daemon retain
-CAP_NET_ADMIN for this case. The aim of the patches is to get modules
-autoload covered with CAP_SYS_MODULE and make it more like explicit
-modules loading.
+Which is the sudo case and why sudo uses a separate pty/tty pair as it's
+not just TIOCSTI that's an issue but there are a load of ioctls that do
+things like cause signals to the process or are just annoying -
+vhangup(), changing the speed etc
 
-> properly, you need to hand the capability (if any) from the
-> request_module() call.  Probably by adding a new request_module_cap and
-> making request_module() call that, then fixing up the callers.
+(And for console changing the keymap - which is a nasty one)
 
-Hmm, sorry Rusty I'm a bit confused, when you refer to "callers", you
-mean request_module() callers ?
+> [However, I do think that it's a nice side effect of this patch that it will
+> prevent a malicious program from directly injecting something like an
+> SSH command into my shell in a sufficiently hardened environment
+> (with LSM restrictions that prevent the malicious program from opening
+> SSH keyfiles or executing another program that can do that). Although
+> you could argue that in such a case, the LSM should be taking care of
+> blocking TIOCSTI.]
 
-If so, I'm not sure that the best thing here since it may defeat the
-purpose of this feature if we allow to pass capabilities.
+I would submit that creating a new pty/tty pair is the proper answer for
+that case however. Making the tty calls respect namespaces is however
+still a no-brainer IMHO.
 
-Right now we have modules autoload that can be triggered without
-privileges, or with CAP_SYS_ADMIN, CAP_NET_ADMIN, CAP_SYS_MODULE...
-and some caps may allow to load other modules to resolve symbols etc.
-
-The public exploits did target CAP_NET_ADMIN, if we offer a way to
-pass in capabilities it will be used it as it is the case now without
-it, not to mention that some capabilities are overloaded, exploits
-will continue for these ones.
-
-The goal is to narrow modules autoload only to CAP_SYS_MODULE or
-disable it completely for process trees. Later you can give
-CAP_SYS_MODULE and you are sure that only /lib/modules/ will be
-autoloaded, no arbitrary loads by using seccomp filter on module
-syscalls, or separate the process in two one with CAP_SYS_MODULE and
-the other with its own capabilities and feature use.
-
-I also don't like that 'netdev-%s' but it is for compatibility for
-specific cases, maybe there are others that we may have to add. But I
-would prefer if we narrow it down to only CAP_SYS_MODULE.
-
-How about I move all permission checks to security/commoncap.c
-helpers, the module logic part will only contain set and read sysctl
-"modules_autoload" and "task->modules_autoload" ?
-
-I already added cap_kernel_module_request() which is called by
-request_module(), so instead of counting on module to do the
-permission check I will open code it inside
-security/commoncap.c:cap_kernel_module_request() like other capability
-helpers and note that CAP_NET_ADMIN 'netdev-%s' alias is only for
-compatibility. This way we prevent that other capabilities get exposed
-or targeted for exploitation. Do you think that this will work ?
-
-Thanks!
-
-> Cheers,
-> Rusty.
-
--- 
-tixxdz
+Alan
