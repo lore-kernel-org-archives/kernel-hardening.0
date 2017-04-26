@@ -1,87 +1,125 @@
-References: <20170425041512.13189-1-matt@nmatt.com>
- <20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
- <CAG48ez0uYkAg65iBZ8cKLxzFyEK=Axt=NP7jnmQkFp4rN=0GzA@mail.gmail.com>
- <20170425203015.1ae62057@lxorguk.ukuu.org.uk>
- <CAG48ez2u8Op1ej9Z3z+PNaeEqh2f3LKnUqQku+g6asGc3K6q9g@mail.gmail.com>
- <20170425222135.2859b1a8@lxorguk.ukuu.org.uk>
- <CAG48ez31W30Qqmf5ZZ1_eVQC0uobBrva3_zgRdzejztFLzKoPg@mail.gmail.com>
- <20170426134732.7579ebdd@lxorguk.ukuu.org.uk>
-From: Matt Brown <matt@nmatt.com>
-Message-ID: <07bec2b1-c945-fc6e-0238-28acb21b5cfb@nmatt.com>
-Date: Wed, 26 Apr 2017 10:21:36 -0400
-MIME-Version: 1.0
-In-Reply-To: <20170426134732.7579ebdd@lxorguk.ukuu.org.uk>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require
- CAP_SYS_ADMIN
-To: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>, Jann Horn <jannh@google.com>
-Cc: serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
+From: Thomas Garnier <thgarnie@google.com>
+Date: Wed, 26 Apr 2017 11:34:22 -0700
+Message-Id: <20170426183425.32158-1-thgarnie@google.com>
+Subject: [kernel-hardening] [PATCH v8 1/4] syscalls: Verify address limit before returning to user-mode
+To: Martin Schwidefsky <schwidefsky@de.ibm.com>, Heiko Carstens <heiko.carstens@de.ibm.com>, Dave Hansen <dave.hansen@intel.com>, Arnd Bergmann <arnd@arndb.de>, David Howells <dhowells@redhat.com>, =?UTF-8?q?Ren=C3=A9=20Nyffenegger?= <mail@renenyffenegger.ch>, Thomas Garnier <thgarnie@google.com>, Andrew Morton <akpm@linux-foundation.org>, "Paul E . McKenney" <paulmck@linux.vnet.ibm.com>, Ingo Molnar <mingo@kernel.org>, "Eric W . Biederman" <ebiederm@xmission.com>, Thomas Gleixner <tglx@linutronix.de>, Oleg Nesterov <oleg@redhat.com>, Pavel Tikhomirov <ptikhomirov@virtuozzo.com>, Ingo Molnar <mingo@redhat.com>, "H . Peter Anvin" <hpa@zytor.com>, Andy Lutomirski <luto@kernel.org>, Paolo Bonzini <pbonzini@redhat.com>, Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Josh Poimboeuf <jpoimboe@redhat.com>, Borislav Petkov <bp@alien8.de>, Brian Gerst <brgerst@gmail.com>, "Kirill A . Shutemov" <kirill.shutemov@linux.intel.com>, Christian Borntraeger <borntraeger@de.ibm.com>, Russell King <linux@armlinux.org.uk>, Will Deacon <will.deacon@arm.com>, Catalin Marinas <catalin.marinas@arm.com>, Mark Rutland <mark.rutland@arm.com>, James Morse <james.morse@arm.com>
+Cc: linux-s390@vger.kernel.org, linux-kernel@vger.kernel.org, linux-api@vger.kernel.org, x86@kernel.org, linux-arm-kernel@lists.infradead.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/26/2017 08:47 AM, One Thousand Gnomes wrote:
->> open() what? As far as I know, for System-V PTYs, there is no path you can
->> open() that will give you the PTY master. Am I missing something?
->
-> Sorry brain fade - no.
->>
->>>>> If I want to do the equvalent of the TIOCSTI attack then I fork a process
->>>>> and exit the parent. The child can now use ptrace to reprogram your shell
->>>>> to do whatever interesting things it likes (eg running child processes
->>>>> called "su" via a second pty/tty pair). Not exactly rocket science.
->>>>
->>>> Why would the child be able to ptrace the shell? AFAICS, in the most
->>>> relevant scenarios, the child can't ptrace the shell because the
->>>> shell has a different UID (in the case of e.g. su or sudo). In other
->>>
->>> If I am the attacker wanting to type something into your su when you go
->>> and su from my account, or where the user account is trojanned I do the
->>> following
->>>
->>> fork
->>> exit parent
->>> child ptraces the shell (same uid as it's not setuid)
->>>
->>> You type "su" return
->>> The modified shell opens a new pty/tty pair and runs su over it
->>> My ptrace hooks watch the pty/tty traffic until you go to the loo
->>> My ptrace hooks switch the console
->>> My ptrace hooks type lots of stuff and hack your machine while eating the
->>> output
->>>
->>> and you come back, do stuff and then exit
->>>
->>> And if you are in X it's even easier and I don't even need to care about
->>> sessions or anything. X has no mechanism to sanely fix the problem, but
->>> Wayland does.
->>
->> I think the "When using a program like su or sudo" in the patch description
->> refers to the usecase where you go from a more privileged context (e.g. a
->> root shell) to a less privileged one (e.g. a shell as a service-specific
->> account used to run a daemon), not the other way around.
->
-> Which is the sudo case and why sudo uses a separate pty/tty pair as it's
-> not just TIOCSTI that's an issue but there are a load of ioctls that do
-> things like cause signals to the process or are just annoying -
-> vhangup(), changing the speed etc
->
-> (And for console changing the keymap - which is a nasty one)
->
+Ensure that a syscall does not return to user-mode with a kernel address
+limit. If that happens, a process can corrupt kernel-mode memory and
+elevate privileges [1].
 
-Are any of these annoyances potential security issues? I would be happy
-to add patches or modify this one to include extra hardening measures.
+The CONFIG_ADDR_LIMIT_CHECK option disables the generic check so each
+architecture can create optimized versions.
 
->> [However, I do think that it's a nice side effect of this patch that it will
->> prevent a malicious program from directly injecting something like an
->> SSH command into my shell in a sufficiently hardened environment
->> (with LSM restrictions that prevent the malicious program from opening
->> SSH keyfiles or executing another program that can do that). Although
->> you could argue that in such a case, the LSM should be taking care of
->> blocking TIOCSTI.]
->
-> I would submit that creating a new pty/tty pair is the proper answer for
-> that case however. Making the tty calls respect namespaces is however
-> still a no-brainer IMHO.
->
-> Alan
->
+[1] https://bugs.chromium.org/p/project-zero/issues/detail?id=990
+
+Signed-off-by: Thomas Garnier <thgarnie@google.com>
+Tested-by: Kees Cook <keescook@chromium.org>
+---
+Based on next-20170426
+---
+ arch/s390/Kconfig        |  1 +
+ include/linux/syscalls.h | 27 ++++++++++++++++++++++++++-
+ init/Kconfig             |  6 ++++++
+ kernel/sys.c             | 13 +++++++++++++
+ 4 files changed, 46 insertions(+), 1 deletion(-)
+
+diff --git a/arch/s390/Kconfig b/arch/s390/Kconfig
+index d25435d94b6e..164de1d24e92 100644
+--- a/arch/s390/Kconfig
++++ b/arch/s390/Kconfig
+@@ -103,6 +103,7 @@ config S390
+ 	select ARCH_INLINE_WRITE_UNLOCK_BH
+ 	select ARCH_INLINE_WRITE_UNLOCK_IRQ
+ 	select ARCH_INLINE_WRITE_UNLOCK_IRQRESTORE
++	select ADDR_LIMIT_CHECK
+ 	select ARCH_SAVE_PAGE_KEYS if HIBERNATION
+ 	select ARCH_SUPPORTS_ATOMIC_RMW
+ 	select ARCH_SUPPORTS_DEFERRED_STRUCT_PAGE_INIT
+diff --git a/include/linux/syscalls.h b/include/linux/syscalls.h
+index 980c3c9b06f8..ebde64f1622c 100644
+--- a/include/linux/syscalls.h
++++ b/include/linux/syscalls.h
+@@ -191,6 +191,28 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+ 	SYSCALL_METADATA(sname, x, __VA_ARGS__)			\
+ 	__SYSCALL_DEFINEx(x, sname, __VA_ARGS__)
+ 
++
++/*
++ * Called before coming back to user-mode. Returning to user-mode with an
++ * address limit different than USER_DS can allow to overwrite kernel memory.
++ */
++static inline void addr_limit_check_syscall(void)
++{
++	BUG_ON(!segment_eq(get_fs(), USER_DS));
++}
++
++#ifndef CONFIG_ADDR_LIMIT_CHECK
++#define __CHECK_USERMODE_SYSCALL() \
++	bool user_caller = segment_eq(get_fs(), USER_DS)
++#define __VERIFY_ADDR_LIMIT() \
++	if (user_caller) addr_limit_check_syscall()
++#else
++#define __CHECK_USERMODE_SYSCALL()
++#define __VERIFY_ADDR_LIMIT()
++asmlinkage void addr_limit_check_failed(void) __noreturn;
++#endif
++
++
+ #define __PROTECT(...) asmlinkage_protect(__VA_ARGS__)
+ #define __SYSCALL_DEFINEx(x, name, ...)					\
+ 	asmlinkage long sys##name(__MAP(x,__SC_DECL,__VA_ARGS__))	\
+@@ -199,7 +221,10 @@ extern struct trace_event_functions exit_syscall_print_funcs;
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__));	\
+ 	asmlinkage long SyS##name(__MAP(x,__SC_LONG,__VA_ARGS__))	\
+ 	{								\
+-		long ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		long ret;						\
++		__CHECK_USERMODE_SYSCALL();				\
++		ret = SYSC##name(__MAP(x,__SC_CAST,__VA_ARGS__));	\
++		__VERIFY_ADDR_LIMIT();					\
+ 		__MAP(x,__SC_TEST,__VA_ARGS__);				\
+ 		__PROTECT(x, ret,__MAP(x,__SC_ARGS,__VA_ARGS__));	\
+ 		return ret;						\
+diff --git a/init/Kconfig b/init/Kconfig
+index 42a346b0df43..599d9fe30703 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1961,6 +1961,12 @@ config PROFILING
+ config TRACEPOINTS
+ 	bool
+ 
++config ADDR_LIMIT_CHECK
++	bool
++	help
++	  Disable the generic address limit check. Allow each architecture to
++	  optimize how and when the verification is done.
++
+ source "arch/Kconfig"
+ 
+ endmenu		# General setup
+diff --git a/kernel/sys.c b/kernel/sys.c
+index 8a94b4eabcaa..a1cbcd715d62 100644
+--- a/kernel/sys.c
++++ b/kernel/sys.c
+@@ -2458,3 +2458,16 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
+ 	return 0;
+ }
+ #endif /* CONFIG_COMPAT */
++
++#ifdef CONFIG_ADDR_LIMIT_CHECK
++/*
++ * Used when an architecture specific implementation detects an invalid address
++ * limit. This function does not return.
++ */
++asmlinkage void addr_limit_check_failed(void)
++{
++	/* Try to fail on the generic address limit check */
++	addr_limit_check_syscall();
++	panic("Invalid address limit before returning to user-mode");
++}
++#endif
+-- 
+2.13.0.rc0.306.g87b477812d-goog
