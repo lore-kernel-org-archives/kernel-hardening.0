@@ -1,48 +1,63 @@
-Date: Thu, 27 Apr 2017 13:34:21 +0100
-From: One Thousand Gnomes <gnomes@lxorguk.ukuu.org.uk>
-Message-ID: <20170427133421.22255fd1@lxorguk.ukuu.org.uk>
-In-Reply-To: <07bec2b1-c945-fc6e-0238-28acb21b5cfb@nmatt.com>
-References: <20170425041512.13189-1-matt@nmatt.com>
-	<20170425144746.0d8721a3@lxorguk.ukuu.org.uk>
-	<CAG48ez0uYkAg65iBZ8cKLxzFyEK=Axt=NP7jnmQkFp4rN=0GzA@mail.gmail.com>
-	<20170425203015.1ae62057@lxorguk.ukuu.org.uk>
-	<CAG48ez2u8Op1ej9Z3z+PNaeEqh2f3LKnUqQku+g6asGc3K6q9g@mail.gmail.com>
-	<20170425222135.2859b1a8@lxorguk.ukuu.org.uk>
-	<CAG48ez31W30Qqmf5ZZ1_eVQC0uobBrva3_zgRdzejztFLzKoPg@mail.gmail.com>
-	<20170426134732.7579ebdd@lxorguk.ukuu.org.uk>
-	<07bec2b1-c945-fc6e-0238-28acb21b5cfb@nmatt.com>
+Date: Thu, 27 Apr 2017 13:30:16 +0200
+From: Sabrina Dubroca <sd@queasysnail.net>
+Message-ID: <20170427113016.GA12448@bistromath.localdomain>
+References: <20170425155215.4835-1-Jason@zx2c4.com>
+ <20170425184734.26563-1-Jason@zx2c4.com>
+ <CAHmME9qDmcvzF_xeaxegC2RpBOs8PziJOaKEqv6Z_X1pUFbR0w@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require
- CAP_SYS_ADMIN
-To: Matt Brown <matt@nmatt.com>
-Cc: Jann Horn <jannh@google.com>, serge@hallyn.com, jmorris@namei.org, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, jslaby@suse.com, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, kernel-hardening@lists.openwall.com, linux-security-module@vger.kernel.org, linux-kernel@vger.kernel.org, linux-doc@vger.kernel.org
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <CAHmME9qDmcvzF_xeaxegC2RpBOs8PziJOaKEqv6Z_X1pUFbR0w@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v6 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to
+ prevent overflow
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, David Laight <David.Laight@aculab.com>, kernel-hardening@lists.openwall.com, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-> > Which is the sudo case and why sudo uses a separate pty/tty pair as it's
-> > not just TIOCSTI that's an issue but there are a load of ioctls that do
-> > things like cause signals to the process or are just annoying -
-> > vhangup(), changing the speed etc
-> >
-> > (And for console changing the keymap - which is a nasty one)
-> >  
-> 
-> Are any of these annoyances potential security issues? I would be happy
-> to add patches or modify this one to include extra hardening measures.
+2017-04-27, 11:21:51 +0200, Jason A. Donenfeld wrote:
+> However, perhaps there's the chance that fraglist skbs having
+> separate fraglists are actually forbidden? Is this the case?
 
-Or you could just use pty/tty pairs properly the way sudo and other
-applications do perfectly well.
+Hmm, I think this can actually happen:
 
-Lots of them are potential security issues - if I sent your console to
-1x1 char, change the font and keymap you'd proably be peeved 8-)
+    /*  net/ipv4/ip_fragment.c  */
+    static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
+    			 struct net_device *dev)
+    {
+    
+    ...
+    
+    	/* If the first fragment is fragmented itself, we split
+    	 * it to two chunks: the first with data and paged part
+    	 * and the second, holding only fragments. */
+    	if (skb_has_frag_list(head)) {
+    		struct sk_buff *clone;
+    		int i, plen = 0;
+    
+    		clone = alloc_skb(0, GFP_ATOMIC);
+    		if (!clone)
+    			goto out_nomem;
+    		clone->next = head->next;
+    		head->next = clone;
+    		skb_shinfo(clone)->frag_list = skb_shinfo(head)->frag_list;
+    		skb_frag_list_init(head);
+    		for (i = 0; i < skb_shinfo(head)->nr_frags; i++)
+    			plen += skb_frag_size(&skb_shinfo(head)->frags[i]);
+    		clone->len = clone->data_len = head->data_len - plen;
+    		head->data_len -= clone->len;
+    		head->len -= clone->len;
+    		clone->csum = 0;
+    		clone->ip_summed = head->ip_summed;
+    		add_frag_mem_limit(qp->q.net, clone->truesize);
+    	}
+    
+    ...
+    }
+    
 
-It's not about hardening against all these (which would break lots of
-legitimate use cases), it's about having the affected applications do the
-right thing.
+You can test that with a vxlan tunnel on top of a vxlan tunnel ("real"
+MTU is 1500, first tunnel MTU set to 10000, second tunnel MTU set to
+40000 -- or anything, as long as they both get fragmented).
 
-It makes sense that TIOCSTI honours namespaces. However it and everything
-else are correctly handled by creating the lower security level process
-with its own pty/tty pair.
-
-Alan
+-- 
+Sabrina
