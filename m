@@ -1,30 +1,20 @@
 MIME-Version: 1.0
-In-Reply-To: <20170425184734.26563-1-Jason@zx2c4.com>
+In-Reply-To: <20170427113016.GA12448@bistromath.localdomain>
 References: <20170425155215.4835-1-Jason@zx2c4.com> <20170425184734.26563-1-Jason@zx2c4.com>
+ <CAHmME9qDmcvzF_xeaxegC2RpBOs8PziJOaKEqv6Z_X1pUFbR0w@mail.gmail.com> <20170427113016.GA12448@bistromath.localdomain>
 From: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Date: Thu, 27 Apr 2017 11:21:51 +0200
-Message-ID: <CAHmME9qDmcvzF_xeaxegC2RpBOs8PziJOaKEqv6Z_X1pUFbR0w@mail.gmail.com>
+Date: Thu, 27 Apr 2017 14:04:14 +0200
+Message-ID: <CAHmME9oa3LYsnBgguxFqbJwps1ai=cuHHEgSpfY36AQHAN5r1Q@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v6 1/5] skbuff: return -EMSGSIZE in skb_to_sgvec to
  prevent overflow
-To: Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, David Laight <David.Laight@aculab.com>, kernel-hardening@lists.openwall.com, David Miller <davem@davemloft.net>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>
+To: Sabrina Dubroca <sd@queasysnail.net>
+Cc: Netdev <netdev@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, David Laight <David.Laight@aculab.com>, kernel-hardening@lists.openwall.com, David Miller <davem@davemloft.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-Hey Dave,
+On Thu, Apr 27, 2017 at 1:30 PM, Sabrina Dubroca <sd@queasysnail.net> wrote:
+> Hmm, I think this can actually happen:
 
-David Laight and I have been discussing offlist. It occurred to both
-of us that this could just be turned into a loop because perhaps this
-is actually just tail-recursive. Upon further inspection, however, the
-way the current algorithm works, it's possible that each of the
-fraglist skbs has its own fraglist, which would make this into tree
-recursion, which is why in the first place I wanted to place that
-limit on it. If that's the case, then the patch I proposed above is
-the best way forward. However, perhaps there's the chance that
-fraglist skbs having separate fraglists are actually forbidden? Is
-this the case? Are there other parts of the API that enforce this
-contract? Is it something we could safely rely on here? If you say
-yes, I'll send a v7 that makes this into a non-recursive loop.
+Alright, perhaps better to err on the side of caution, then.
 
-Regards,
 Jason
