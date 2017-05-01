@@ -1,104 +1,129 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170501155454.iujra24k3f65xwkq@treble>
-References: <1493160997-126108-3-git-send-email-keescook@chromium.org>
- <201704270938.I52YmjxT%fengguang.wu@intel.com> <CAGXu5jKyZ954aRHg_7xhXP0CJBiJ8TV7y-dH5viwzfEj8+D6_w@mail.gmail.com>
- <20170501155454.iujra24k3f65xwkq@treble>
+In-Reply-To: <20170501163009.kbemdhpsabdrsfex@treble>
+References: <1493160997-126108-1-git-send-email-keescook@chromium.org>
+ <1493160997-126108-3-git-send-email-keescook@chromium.org> <20170501163009.kbemdhpsabdrsfex@treble>
 From: Kees Cook <keescook@chromium.org>
-Date: Mon, 1 May 2017 10:28:53 -0700
-Message-ID: <CAGXu5j+OKnHB2POjyBMGc8RXWbgDzi3xiZFBa5Jz0-jNJeOpqg@mail.gmail.com>
+Date: Mon, 1 May 2017 10:36:59 -0700
+Message-ID: <CAGXu5jKoeB7tbxfcLC03tFnjYKYt+ZHtk_jruQJ887dPHJ-Gag@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
 Subject: [kernel-hardening] Re: [PATCH v2 2/2] x86, refcount: Implement fast refcount overflow protection
 To: Josh Poimboeuf <jpoimboe@redhat.com>
 Cc: LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 1, 2017 at 8:54 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
-> On Thu, Apr 27, 2017 at 01:22:05PM -0700, Kees Cook wrote:
->> On Wed, Apr 26, 2017 at 6:31 PM, kbuild test robot <lkp@intel.com> wrote:
->> > Hi Kees,
->> >
->> > [auto build test WARNING on next-20170424]
->> > [cannot apply to tip/x86/core linus/master linux/master v4.9-rc8 v4.9-rc7 v4.9-rc6 v4.11-rc8]
->> > [if your patch is applied to the wrong git tree, please drop us a note to help improve the system]
->> >
->> > url:    https://github.com/0day-ci/linux/commits/Kees-Cook/x86-refcount-Implement-fast-refcount-overflow/20170426-210530
->> > config: x86_64-allmodconfig (attached as .config)
->> > compiler: gcc-6 (Debian 6.2.0-3) 6.2.0 20160901
->> > reproduce:
->> >         # save the attached .config to linux build tree
->> >         make ARCH=x86_64
->> >
->> > All warnings (new ones prefixed by >>):
->> >
->> >>> drivers//scsi/scsi_scan.o: warning: objtool: .text.refcount_overflow+0x5: special: can't find orig instruction
->>
->> Hi Josh,
->>
->> I'm seeing this error being generated on areas that are using a
->> cross-section exception handler. I can't quite see why the .o checker
->> is unhappy, so I figured I'd ask you first. :)
->>
->> The code is generated with calls to __REFCOUNT_CHECK() which is
->> defined like this:
->>
->> +#define __REFCOUNT_EXCEPTION(size)                     \
->> +       ".if "__stringify(size)" == 4\n\t"              \
->> +       ".pushsection .text.refcount_overflow\n"        \
->> +       ".elseif "__stringify(size)" == -4\n\t"         \
->> +       ".pushsection .text.refcount_underflow\n"       \
->> +       ".else\n"                                       \
->> +       ".error \"invalid size\"\n"                     \
->> +       ".endif\n"                                      \
->> +       "111:\tlea %[counter],%%"_ASM_CX"\n\t"          \
->> +       "int $"__stringify(X86_REFCOUNT_VECTOR)"\n"     \
->> +       "222:\n\t"                                      \
->> +       ".popsection\n"                                 \
->> +       "333:\n"                                        \
->> +       _ASM_EXTABLE(222b, 333b)
+On Mon, May 1, 2017 at 9:30 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
+>> +#define __REFCOUNT_EXCEPTION(size)                   \
+>> +     ".if "__stringify(size)" == 4\n\t"              \
+>> +     ".pushsection .text.refcount_overflow\n"        \
+>> +     ".elseif "__stringify(size)" == -4\n\t"         \
+>> +     ".pushsection .text.refcount_underflow\n"       \
+>> +     ".else\n"                                       \
+>> +     ".error \"invalid size\"\n"                     \
+>> +     ".endif\n"                                      \
+>> +     "111:\tlea %[counter],%%"_ASM_CX"\n\t"          \
+>> +     "int $"__stringify(X86_REFCOUNT_VECTOR)"\n"     \
+>> +     "222:\n\t"                                      \
+>> +     ".popsection\n"                                 \
+>> +     "333:\n"                                        \
+>> +     _ASM_EXTABLE(222b, 333b)
+>
+> The 'size' argument doesn't seem to correspond to an actual size of
+> anything.  Its value '4' or '-4' only seems to indicate whether it's an
+> overflow or an underflow.
+
+This is to allow for expansion to refcount64_t if we ever move to it,
+then we'll have 4 cases: 4, -4, 8, -8.
+
+> Also there's some inconsistent use of "\n\t" on some lines, with "\n" on
+> others.
+
+It's not inconsistent, it's leaving directives at column 0, and
+section and instructions at tab-stop 1.
+
+>> +dotraplinkage void do_refcount_error(struct pt_regs *regs, long error_code)
+>> +{
+>> +     const char *str = NULL;
 >> +
->> +#define __REFCOUNT_CHECK(size)                         \
->> +       "js 111f\n"                                     \
->> +       __REFCOUNT_EXCEPTION(size)
+>> +     BUG_ON(!(regs->flags & X86_EFLAGS_SF));
 >> +
->> +#define __REFCOUNT_ERROR(size)                         \
->> +       "jmp 111f\n"                                    \
->> +       __REFCOUNT_EXCEPTION(size)
->>
->> I assume it doesn't like seeing an exception split across .text and
->> .text.refcount_overflow, but I haven't been able to figure out how
->> that distinction would be made by the checker. :P
+>> +#define range_check(size, dir, type, value)                             \
+>> +     do {                                                               \
+>> +             if ((unsigned long)__##size##_##dir##_start <= regs->ip && \
+>> +                 regs->ip < (unsigned long)__##size##_##dir##_end) {    \
+>> +                     *(type *)regs->cx = (value);                       \
+>> +                     str = #size " " #dir;                              \
+>> +             }                                                          \
+>> +     } while (0)
 >
-> This code uses the exception table a little differently than normal.
-> Usually it's used for catching page faults, where the exception table
-> points to the faulting instruction.
+> An interrupt was used, not a faulting exception, so regs->ip refers to
+> the address *after* the 'int' instruction.  So the beginning of the
+> range should be exclusive, and the end of the range should be inclusive,
+> like:
 >
-> But instead of a page fault, here it's doing a software interrupt.  So
-> the __ex_table entry doesn't point to the 'int 0x81' instruction, it
-> points to the instruction immediately after it.  In this case there
-> isn't actually an instruction there, which is why objtool is
-> complaining.
+>> +             if ((unsigned long)__##size##_##dir##_start < regs->ip &&  \
+>> +                 regs->ip <= (unsigned long)__##size##_##dir##_end) {   \
 
-What would it take to adjust objtool for this case?
+Ah, yes, good catch.
 
+>> +
+>> +     /*
+>> +      * Reset to INT_MAX in both cases to attempt to let system
+>> +      * continue operating.
+>> +      */
+>> +     range_check(refcount,   overflow,  int, INT_MAX);
+>> +     range_check(refcount,   underflow, int, INT_MAX);
 >
-> Is it superfluous to use the exception table here, when a simple 'jmp
-> 333f' could be used instead after the 'int'?
+> I think "range_check" doesn't adequately describe the macro.  In
+> addition to checking, it has a subtle side effect: it updates the
+> counter value with INT_MAX.
+>
+> It's not clear why the 'size' argument has its name.  Also, three of the
+> arguments are always called with the same value.  Anyway I suspect the
+> code would be more readable if it were open coded without the macro.
 
-I thought the exception tables were needed to have the trap handler
-notice it correctly, and do the right thing as far as continuing
-execution. (This is currently written as a survivable condition: the
-kernel can keep running even though it will kill the userspace
-process.)
+Yeah, and I think I may drop the over/under distinction, since I think
+I've convinced myself that we always need to reset to the same
+position regardless of direction. This was originally for handling
+generic atomic_t operations, not refcount_t... PeterZ may convince me
+yet, but I'll send the next version without the over/under
+distinction.
 
-> Also it looks like the handler sends a SIGKILL to the current task.  I
-> wonder if something like BUG_ON() could be used instead of implementing
-> a custom error interrupt.
+>> +#ifdef CONFIG_FAST_REFCOUNT
+>> +static DEFINE_RATELIMIT_STATE(refcount_ratelimit, 15 * HZ, 3);
+>> +
+>> +void refcount_error_report(struct pt_regs *regs, const char *kind)
+>> +{
+>> +     do_send_sig_info(SIGKILL, SEND_SIG_FORCED, current, true);
+>> +
+>> +     if (!__ratelimit(&refcount_ratelimit))
+>> +             return;
+>> +
+>> +     pr_emerg("%s detected in: %s:%d, uid/euid: %u/%u\n",
+>> +             kind ? kind : "refcount error",
+>> +             current->comm, task_pid_nr(current),
+>> +             from_kuid_munged(&init_user_ns, current_uid()),
+>> +             from_kuid_munged(&init_user_ns, current_euid()));
+>> +     print_symbol(KERN_EMERG "refcount error occurred at: %s\n",
+>> +             instruction_pointer(regs));
+>> +     preempt_disable();
+>> +     show_regs(regs);
+>> +     preempt_enable();
+>> +}
+>
+> Why is preemption disabled before calling show_regs()?
 
-It's a rate limited report, but it must always kill. BUG doesn't fit
-this usage case (I've got similar problems with other areas; my
-intention is go create something that is configurable WARN vs Oops,
-respects panic_on_oops, etc, but this doesn't exist yet).
+I thought it was to avoid interleaving show_regs() output (I can't
+think of a way regs would be externally modified).
+
+>> +EXPORT_SYMBOL(refcount_error_report);
+>
+> Why is this exported?  It looks like it's only called internally from
+> traps.c.
+
+Ah yes, good point. I'll drop this.
+
+Thanks for the review!
 
 -Kees
 
