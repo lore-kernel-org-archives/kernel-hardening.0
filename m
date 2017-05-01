@@ -1,109 +1,121 @@
+Date: Mon, 1 May 2017 17:33:50 -0500
+From: Josh Poimboeuf <jpoimboe@redhat.com>
+Message-ID: <20170501223350.6lxjyvkwz4fwjyqd@treble>
+References: <1493160997-126108-3-git-send-email-keescook@chromium.org>
+ <201704270938.I52YmjxT%fengguang.wu@intel.com>
+ <CAGXu5jKyZ954aRHg_7xhXP0CJBiJ8TV7y-dH5viwzfEj8+D6_w@mail.gmail.com>
+ <20170501155454.iujra24k3f65xwkq@treble>
+ <CAGXu5j+OKnHB2POjyBMGc8RXWbgDzi3xiZFBa5Jz0-jNJeOpqg@mail.gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
-References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
- <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
-From: Mathias Krause <minipli@googlemail.com>
-Date: Tue, 2 May 2017 00:01:55 +0200
-Message-ID: <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+In-Reply-To: <CAGXu5j+OKnHB2POjyBMGc8RXWbgDzi3xiZFBa5Jz0-jNJeOpqg@mail.gmail.com>
+Subject: [kernel-hardening] Re: [PATCH v2 2/2] x86, refcount: Implement fast refcount overflow
+ protection
 To: Kees Cook <keescook@chromium.org>
-Cc: =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Cc: LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 27 April 2017 at 00:04, Kees Cook <keescook@chromium.org> wrote:
-> On Wed, Apr 26, 2017 at 2:05 PM, Daniel Cegie=C5=82ka
-> <daniel.cegielka@gmail.com> wrote:
->> https://grsecurity.net/passing_the_baton_faq.php
->
-> Yeah, I'm sad to see them go. PaX Team was just last night helping
-> with some details of PAX_REFCOUNT as it could appear in the upstream
-> refcount_t API. I hope they'll still help out from time to time.
->
-> It does underscore the critical need to upstream stuff, though. Forks
-> of projects might disappear at any time. :(
+On Mon, May 01, 2017 at 10:28:53AM -0700, Kees Cook wrote:
+> On Mon, May 1, 2017 at 8:54 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
+> > On Thu, Apr 27, 2017 at 01:22:05PM -0700, Kees Cook wrote:
+> >> +#define __REFCOUNT_EXCEPTION(size)                     \
+> >> +       ".if "__stringify(size)" == 4\n\t"              \
+> >> +       ".pushsection .text.refcount_overflow\n"        \
+> >> +       ".elseif "__stringify(size)" == -4\n\t"         \
+> >> +       ".pushsection .text.refcount_underflow\n"       \
+> >> +       ".else\n"                                       \
+> >> +       ".error \"invalid size\"\n"                     \
+> >> +       ".endif\n"                                      \
+> >> +       "111:\tlea %[counter],%%"_ASM_CX"\n\t"          \
+> >> +       "int $"__stringify(X86_REFCOUNT_VECTOR)"\n"     \
+> >> +       "222:\n\t"                                      \
+> >> +       ".popsection\n"                                 \
+> >> +       "333:\n"                                        \
+> >> +       _ASM_EXTABLE(222b, 333b)
+> >> +
+> >> +#define __REFCOUNT_CHECK(size)                         \
+> >> +       "js 111f\n"                                     \
+> >> +       __REFCOUNT_EXCEPTION(size)
+> >> +
+> >> +#define __REFCOUNT_ERROR(size)                         \
+> >> +       "jmp 111f\n"                                    \
+> >> +       __REFCOUNT_EXCEPTION(size)
+> >>
+> >> I assume it doesn't like seeing an exception split across .text and
+> >> .text.refcount_overflow, but I haven't been able to figure out how
+> >> that distinction would be made by the checker. :P
+> >
+> > This code uses the exception table a little differently than normal.
+> > Usually it's used for catching page faults, where the exception table
+> > points to the faulting instruction.
+> >
+> > But instead of a page fault, here it's doing a software interrupt.  So
+> > the __ex_table entry doesn't point to the 'int 0x81' instruction, it
+> > points to the instruction immediately after it.  In this case there
+> > isn't actually an instruction there, which is why objtool is
+> > complaining.
+> 
+> What would it take to adjust objtool for this case?
 
-Now, since grsecurity and PaX went private, quite a few users
-(including me) are left in the dark and are, to say the least,
-slightly pissed. But not everybody seems to be barking at the right
-tree. So I've a few comments and questions for the KSPP.
+I still need to think about it some more. I doubt it would be
+straightforward.  But I am ok with making such a change, if it makes
+sense to do so.
 
-I think the main reason for Brad and PaX Team to make their work
-private is the increased amount of work KSSP has put on them without
-providing any valuable work in return. They just don't want to be
-forced to maintain and fix-up the variants of grsecurity/PaX features
-KSPP lands upstream. And no, the work of KSPP does not make their life
-easier, in fact, it makes it harder. Harder for two reasons: First,
-the code does not end up verbatim, it's always changed, taken out of
-context and "enhanced". Second is the loose of control over the code.
-But let me elaborate those two a little further.
+> > Is it superfluous to use the exception table here, when a simple 'jmp
+> > 333f' could be used instead after the 'int'?
+> 
+> I thought the exception tables were needed to have the trap handler
+> notice it correctly, and do the right thing as far as continuing
+> execution. (This is currently written as a survivable condition: the
+> kernel can keep running even though it will kill the userspace
+> process.)
 
-The first point directly forces them to think through the upstream
-incarnation of a feature, how it differs from their original one and,
-for those parts, how to fix them up to work properly to fit their
-needs, to fit their security requirements. Those changes generate a
-lot of conflicts with their version of the code which takes time to
-fiddle out. As happened for __ro_after_init, MEMORY_SANITIZE,
-USERCOPY,... which only went in in reduced and modified form,
-generating needless work on their side -- from their point of view.
+Nothing needs to be done to make it continue execution, because regs->ip
+will already have the address immediately after the 'int' instruction,
+which is where the iret will return.  So fixup_exception() isn't needed.
 
-The second point, the loose of control over the code, is even worse.
-Not getting any more conflicts when porting the grsecurity/PaX patch
-to a new kernel release makes changes to code that used to live in
-grsecurity/PaX probably go unnoticed. And, as it seem to be the case,
-upstream developers are not always familiar with all the gory details
-and might introduce weaknesses and bugs. This not only makes upstream
-Linux less secure, it makes grsecurity and PaX less secure, too.
+Instead, along with the aforementioned 'jmp 333f',  you could move the
+refcount_error_report() call to outside the fixup_exception() clause:
 
-So I can understand why they've done this. Still, with the loose of
-the public availability of the patch, Linux security has suffered a
-lot. Not only is upstream far far away to reach a level that is
-available today in grsecurity and PaX, no, it also won't benefit from
-new developments any more. What a great achievement! :(
+if (!user_mode(regs)) {
+	if (fixup_exception(regs, trapnr))
+		return 0;
 
-*sigh*
+	if (fixup_bug(regs, trapnr))
+		return 0;
 
-I think the intention of the KSPP is good -- making vanilla Linux more
-secure. But the way it does its work harms overall Linux security. It
-does hurt mine, that's for sure! I know the value of grsecurity and
-PaX in particular and know how easy it still is to exploit a vanilla
-Linux. Features like KERNEXEC and RAP make it almost impossible for an
-attacker to abuse a memory corruption bug in the kernel. Many unnamed
-features -- unnamed because not under an #ifdef -- make exploiting
-use-after-free bugs much less interesting or reduce the race window
-for TOCTTOU bugs involving user copy operations. None of this can be
-found in vanilla Linux. Probably never will...
+	if (IS_ENABLED(CONFIG_FAST_REFCOUNT) && trapnr == X86_REFCOUNT_VECTOR) {
+		refcount_error_report(regs, str);
+		return 0;
+	}
 
-So, here's my list of questions for the KSPP:
-1/ When will I be able to switch to a vanilla Linux kernel that is
-equivalently hardened as a grsecurity/PaX kernel used to be?
-2/ Who will maintain this code and how?
-3/ Who ensures the coverage and quality won't suffer for each new
-kernel release?
+(For better readability the refcount parts could be moved to a
+fixup_refcount() function.)
 
-Judging from the planed EOL for the v4.9 LTS kernel -- the last one a
-grsecurity patch was publicly available for --, there are less than
-two years to finish the work for item 1 to ensure a secure and smooth
-transition from grsecurity to upstream Linux. Will the KSPP be able to
-achieve this?... I have my doubts.
+Or, another way to handle it would be to use a real exception.  One idea
+would be to share UD0 with WARN somehow, and handle it with fixup_bug().
+At least then, IMO, the error handling code would be closer to where it
+belongs, with WARN and BUG.
 
-Even if so, item 3 will be a hard problem to solve as the Linux kernel
-development model does not support such a tree-wide review point in
-the release cycle. Assuming there are people able and willing to judge
-and review the code base for required changes (e.g. atomic_t ->
-refcount_t changes or function pointer cleanups for RAP), how would
-those be able to simply get in those changes at, say, time of rc5? --
-without having to argue with a horde of maintainers of the individual
-subsystems involved?
+But stepping back a bit, why is the interrupt/exception even needed?  Is
+there a reason why it can't do the stack dump from the context of the
+original overflow?  i.e., instead of 'int 0x81', just call the error
+handler directly.  Which could then WARN, send the self-signal, update
+the refcount to INT_MAX, etc.
 
-Quite a lot of questions. The external patch solved them all by not
-having to deal with upstream Linux development and not having the code
-available until it's ready. But now it's gone and no adequate
-replacement is on the horizon. What will KSPP do about it? I had a
-reasonably secure kernel, now it's gone. :(
+> > Also it looks like the handler sends a SIGKILL to the current task.  I
+> > wonder if something like BUG_ON() could be used instead of implementing
+> > a custom error interrupt.
+> 
+> It's a rate limited report, but it must always kill. BUG doesn't fit
+> this usage case (I've got similar problems with other areas; my
+> intention is go create something that is configurable WARN vs Oops,
+> respects panic_on_oops, etc, but this doesn't exist yet).
 
+Yeah, it would be good to make BUG and WARN flexible enough such that we
+don't need these custom errors, so we can get more consistent error
+handling behavior.
 
-Regards,
-Mathias
+-- 
+Josh
