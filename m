@@ -1,132 +1,109 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170501163009.kbemdhpsabdrsfex@treble>
-References: <1493160997-126108-1-git-send-email-keescook@chromium.org>
- <1493160997-126108-3-git-send-email-keescook@chromium.org> <20170501163009.kbemdhpsabdrsfex@treble>
-From: Kees Cook <keescook@chromium.org>
-Date: Mon, 1 May 2017 10:36:59 -0700
-Message-ID: <CAGXu5jKoeB7tbxfcLC03tFnjYKYt+ZHtk_jruQJ887dPHJ-Gag@mail.gmail.com>
+In-Reply-To: <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+From: Mathias Krause <minipli@googlemail.com>
+Date: Tue, 2 May 2017 00:01:55 +0200
+Message-ID: <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v2 2/2] x86, refcount: Implement fast refcount overflow protection
-To: Josh Poimboeuf <jpoimboe@redhat.com>
-Cc: LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Transfer-Encoding: quoted-printable
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Kees Cook <keescook@chromium.org>
+Cc: =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 1, 2017 at 9:30 AM, Josh Poimboeuf <jpoimboe@redhat.com> wrote:
->> +#define __REFCOUNT_EXCEPTION(size)                   \
->> +     ".if "__stringify(size)" == 4\n\t"              \
->> +     ".pushsection .text.refcount_overflow\n"        \
->> +     ".elseif "__stringify(size)" == -4\n\t"         \
->> +     ".pushsection .text.refcount_underflow\n"       \
->> +     ".else\n"                                       \
->> +     ".error \"invalid size\"\n"                     \
->> +     ".endif\n"                                      \
->> +     "111:\tlea %[counter],%%"_ASM_CX"\n\t"          \
->> +     "int $"__stringify(X86_REFCOUNT_VECTOR)"\n"     \
->> +     "222:\n\t"                                      \
->> +     ".popsection\n"                                 \
->> +     "333:\n"                                        \
->> +     _ASM_EXTABLE(222b, 333b)
+On 27 April 2017 at 00:04, Kees Cook <keescook@chromium.org> wrote:
+> On Wed, Apr 26, 2017 at 2:05 PM, Daniel Cegie=C5=82ka
+> <daniel.cegielka@gmail.com> wrote:
+>> https://grsecurity.net/passing_the_baton_faq.php
 >
-> The 'size' argument doesn't seem to correspond to an actual size of
-> anything.  Its value '4' or '-4' only seems to indicate whether it's an
-> overflow or an underflow.
-
-This is to allow for expansion to refcount64_t if we ever move to it,
-then we'll have 4 cases: 4, -4, 8, -8.
-
-> Also there's some inconsistent use of "\n\t" on some lines, with "\n" on
-> others.
-
-It's not inconsistent, it's leaving directives at column 0, and
-section and instructions at tab-stop 1.
-
->> +dotraplinkage void do_refcount_error(struct pt_regs *regs, long error_code)
->> +{
->> +     const char *str = NULL;
->> +
->> +     BUG_ON(!(regs->flags & X86_EFLAGS_SF));
->> +
->> +#define range_check(size, dir, type, value)                             \
->> +     do {                                                               \
->> +             if ((unsigned long)__##size##_##dir##_start <= regs->ip && \
->> +                 regs->ip < (unsigned long)__##size##_##dir##_end) {    \
->> +                     *(type *)regs->cx = (value);                       \
->> +                     str = #size " " #dir;                              \
->> +             }                                                          \
->> +     } while (0)
+> Yeah, I'm sad to see them go. PaX Team was just last night helping
+> with some details of PAX_REFCOUNT as it could appear in the upstream
+> refcount_t API. I hope they'll still help out from time to time.
 >
-> An interrupt was used, not a faulting exception, so regs->ip refers to
-> the address *after* the 'int' instruction.  So the beginning of the
-> range should be exclusive, and the end of the range should be inclusive,
-> like:
->
->> +             if ((unsigned long)__##size##_##dir##_start < regs->ip &&  \
->> +                 regs->ip <= (unsigned long)__##size##_##dir##_end) {   \
+> It does underscore the critical need to upstream stuff, though. Forks
+> of projects might disappear at any time. :(
 
-Ah, yes, good catch.
+Now, since grsecurity and PaX went private, quite a few users
+(including me) are left in the dark and are, to say the least,
+slightly pissed. But not everybody seems to be barking at the right
+tree. So I've a few comments and questions for the KSPP.
 
->> +
->> +     /*
->> +      * Reset to INT_MAX in both cases to attempt to let system
->> +      * continue operating.
->> +      */
->> +     range_check(refcount,   overflow,  int, INT_MAX);
->> +     range_check(refcount,   underflow, int, INT_MAX);
->
-> I think "range_check" doesn't adequately describe the macro.  In
-> addition to checking, it has a subtle side effect: it updates the
-> counter value with INT_MAX.
->
-> It's not clear why the 'size' argument has its name.  Also, three of the
-> arguments are always called with the same value.  Anyway I suspect the
-> code would be more readable if it were open coded without the macro.
+I think the main reason for Brad and PaX Team to make their work
+private is the increased amount of work KSSP has put on them without
+providing any valuable work in return. They just don't want to be
+forced to maintain and fix-up the variants of grsecurity/PaX features
+KSPP lands upstream. And no, the work of KSPP does not make their life
+easier, in fact, it makes it harder. Harder for two reasons: First,
+the code does not end up verbatim, it's always changed, taken out of
+context and "enhanced". Second is the loose of control over the code.
+But let me elaborate those two a little further.
 
-Yeah, and I think I may drop the over/under distinction, since I think
-I've convinced myself that we always need to reset to the same
-position regardless of direction. This was originally for handling
-generic atomic_t operations, not refcount_t... PeterZ may convince me
-yet, but I'll send the next version without the over/under
-distinction.
+The first point directly forces them to think through the upstream
+incarnation of a feature, how it differs from their original one and,
+for those parts, how to fix them up to work properly to fit their
+needs, to fit their security requirements. Those changes generate a
+lot of conflicts with their version of the code which takes time to
+fiddle out. As happened for __ro_after_init, MEMORY_SANITIZE,
+USERCOPY,... which only went in in reduced and modified form,
+generating needless work on their side -- from their point of view.
 
->> +#ifdef CONFIG_FAST_REFCOUNT
->> +static DEFINE_RATELIMIT_STATE(refcount_ratelimit, 15 * HZ, 3);
->> +
->> +void refcount_error_report(struct pt_regs *regs, const char *kind)
->> +{
->> +     do_send_sig_info(SIGKILL, SEND_SIG_FORCED, current, true);
->> +
->> +     if (!__ratelimit(&refcount_ratelimit))
->> +             return;
->> +
->> +     pr_emerg("%s detected in: %s:%d, uid/euid: %u/%u\n",
->> +             kind ? kind : "refcount error",
->> +             current->comm, task_pid_nr(current),
->> +             from_kuid_munged(&init_user_ns, current_uid()),
->> +             from_kuid_munged(&init_user_ns, current_euid()));
->> +     print_symbol(KERN_EMERG "refcount error occurred at: %s\n",
->> +             instruction_pointer(regs));
->> +     preempt_disable();
->> +     show_regs(regs);
->> +     preempt_enable();
->> +}
->
-> Why is preemption disabled before calling show_regs()?
+The second point, the loose of control over the code, is even worse.
+Not getting any more conflicts when porting the grsecurity/PaX patch
+to a new kernel release makes changes to code that used to live in
+grsecurity/PaX probably go unnoticed. And, as it seem to be the case,
+upstream developers are not always familiar with all the gory details
+and might introduce weaknesses and bugs. This not only makes upstream
+Linux less secure, it makes grsecurity and PaX less secure, too.
 
-I thought it was to avoid interleaving show_regs() output (I can't
-think of a way regs would be externally modified).
+So I can understand why they've done this. Still, with the loose of
+the public availability of the patch, Linux security has suffered a
+lot. Not only is upstream far far away to reach a level that is
+available today in grsecurity and PaX, no, it also won't benefit from
+new developments any more. What a great achievement! :(
 
->> +EXPORT_SYMBOL(refcount_error_report);
->
-> Why is this exported?  It looks like it's only called internally from
-> traps.c.
+*sigh*
 
-Ah yes, good point. I'll drop this.
+I think the intention of the KSPP is good -- making vanilla Linux more
+secure. But the way it does its work harms overall Linux security. It
+does hurt mine, that's for sure! I know the value of grsecurity and
+PaX in particular and know how easy it still is to exploit a vanilla
+Linux. Features like KERNEXEC and RAP make it almost impossible for an
+attacker to abuse a memory corruption bug in the kernel. Many unnamed
+features -- unnamed because not under an #ifdef -- make exploiting
+use-after-free bugs much less interesting or reduce the race window
+for TOCTTOU bugs involving user copy operations. None of this can be
+found in vanilla Linux. Probably never will...
 
-Thanks for the review!
+So, here's my list of questions for the KSPP:
+1/ When will I be able to switch to a vanilla Linux kernel that is
+equivalently hardened as a grsecurity/PaX kernel used to be?
+2/ Who will maintain this code and how?
+3/ Who ensures the coverage and quality won't suffer for each new
+kernel release?
 
--Kees
+Judging from the planed EOL for the v4.9 LTS kernel -- the last one a
+grsecurity patch was publicly available for --, there are less than
+two years to finish the work for item 1 to ensure a secure and smooth
+transition from grsecurity to upstream Linux. Will the KSPP be able to
+achieve this?... I have my doubts.
 
--- 
-Kees Cook
-Pixel Security
+Even if so, item 3 will be a hard problem to solve as the Linux kernel
+development model does not support such a tree-wide review point in
+the release cycle. Assuming there are people able and willing to judge
+and review the code base for required changes (e.g. atomic_t ->
+refcount_t changes or function pointer cleanups for RAP), how would
+those be able to simply get in those changes at, say, time of rc5? --
+without having to argue with a horde of maintainers of the individual
+subsystems involved?
+
+Quite a lot of questions. The external patch solved them all by not
+having to deal with upstream Linux development and not having the code
+available until it's ready. But now it's gone and no adequate
+replacement is on the horizon. What will KSPP do about it? I had a
+reasonably secure kernel, now it's gone. :(
+
+
+Regards,
+Mathias
