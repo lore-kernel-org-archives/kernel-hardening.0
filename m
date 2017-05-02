@@ -1,50 +1,37 @@
-Date: Mon, 1 May 2017 17:45:42 -0500
-From: Josh Poimboeuf <jpoimboe@redhat.com>
-Message-ID: <20170501224542.bbfhs7c4x2wibomz@treble>
-References: <1493160997-126108-1-git-send-email-keescook@chromium.org>
- <1493160997-126108-3-git-send-email-keescook@chromium.org>
- <20170501163009.kbemdhpsabdrsfex@treble>
- <CAGXu5jKoeB7tbxfcLC03tFnjYKYt+ZHtk_jruQJ887dPHJ-Gag@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-In-Reply-To: <CAGXu5jKoeB7tbxfcLC03tFnjYKYt+ZHtk_jruQJ887dPHJ-Gag@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v2 2/2] x86, refcount: Implement fast refcount overflow
- protection
-To: Kees Cook <keescook@chromium.org>
-Cc: LKML <linux-kernel@vger.kernel.org>, Peter Zijlstra <peterz@infradead.org>, PaX Team <pageexec@freemail.hu>, Jann Horn <jannh@google.com>, Eric Biggers <ebiggers3@gmail.com>, Christoph Hellwig <hch@infradead.org>, "axboe@kernel.dk" <axboe@kernel.dk>, James Bottomley <James.Bottomley@hansenpartnership.com>, Elena Reshetova <elena.reshetova@intel.com>, Hans Liljestrand <ishkamiel@gmail.com>, David Windsor <dwindsor@gmail.com>, "x86@kernel.org" <x86@kernel.org>, Ingo Molnar <mingo@kernel.org>, Arnd Bergmann <arnd@arndb.de>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, "David S. Miller" <davem@davemloft.net>, Rik van Riel <riel@redhat.com>, linux-arch <linux-arch@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1493683745.2530.2.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Mon, 01 May 2017 20:09:05 -0400
+In-Reply-To: <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+References: 
+	<CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>	
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+	 <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Mathias Krause <minipli@googlemail.com>, Kees Cook <keescook@chromium.org>
+Cc: Daniel =?UTF-8?Q?Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, May 01, 2017 at 10:36:59AM -0700, Kees Cook wrote:
-> >> +#ifdef CONFIG_FAST_REFCOUNT
-> >> +static DEFINE_RATELIMIT_STATE(refcount_ratelimit, 15 * HZ, 3);
-> >> +
-> >> +void refcount_error_report(struct pt_regs *regs, const char *kind)
-> >> +{
-> >> +     do_send_sig_info(SIGKILL, SEND_SIG_FORCED, current, true);
-> >> +
-> >> +     if (!__ratelimit(&refcount_ratelimit))
-> >> +             return;
-> >> +
-> >> +     pr_emerg("%s detected in: %s:%d, uid/euid: %u/%u\n",
-> >> +             kind ? kind : "refcount error",
-> >> +             current->comm, task_pid_nr(current),
-> >> +             from_kuid_munged(&init_user_ns, current_uid()),
-> >> +             from_kuid_munged(&init_user_ns, current_euid()));
-> >> +     print_symbol(KERN_EMERG "refcount error occurred at: %s\n",
-> >> +             instruction_pointer(regs));
-> >> +     preempt_disable();
-> >> +     show_regs(regs);
-> >> +     preempt_enable();
-> >> +}
-> >
-> > Why is preemption disabled before calling show_regs()?
-> 
-> I thought it was to avoid interleaving show_regs() output (I can't
-> think of a way regs would be externally modified).
+On Tue, 2017-05-02 at 00:01 +0200, Mathias Krause wrote:
 
-This code is running from interrupt context, so preemption shouldn't be
-an issue unless I'm missing something.
+> I think the intention of the KSPP is good -- making vanilla Linux
+> more
+> secure. But the way it does its work harms overall Linux security. It
+> does hurt mine, that's for sure!
 
--- 
-Josh
+Yeah, no. The grsecurity people produced patches
+that were used on maybe a few tens of thousands
+of systems, while the KSPP code will end up
+enhancing the security of over a billion Android
+devices.
+
+Those Android devices are more likely to require
+hardening, too, since they do not receive security
+updates as quickly as the systems maintained by
+grsecurity users.
+
+Integrating hardening into the upstream kernel is
+a good thing for security, not a bad thing.
