@@ -1,115 +1,56 @@
-From: Tycho Andersen <tycho@docker.com>
-Date: Tue,  2 May 2017 10:29:32 -0600
-Message-Id: <20170502162932.12578-1-tycho@docker.com>
-Subject: [kernel-hardening] [PATCH] ata-sff: always map page before data transfer
-To: Tejun Heo <tj@kernel.org>, Juerg Haefliger <juerg.haefliger@hpe.com>
-Cc: linux-ide@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com, Tycho Andersen <tycho@docker.com>
+MIME-Version: 1.0
+In-Reply-To: <CAEiveUf22RQ6awvCKJ4p5OxZCPAyhOfpLBQXFLJ=tev3zDfL+g@mail.gmail.com>
+References: <1493123038-30590-1-git-send-email-tixxdz@gmail.com>
+ <1493123038-30590-5-git-send-email-tixxdz@gmail.com> <CALCETrWOjLnfCgpAJs6tTjLXeNHjqPQa5qSZpztcnbR2kN5A2w@mail.gmail.com>
+ <CAEiveUf22RQ6awvCKJ4p5OxZCPAyhOfpLBQXFLJ=tev3zDfL+g@mail.gmail.com>
+From: Andy Lutomirski <luto@kernel.org>
+Date: Tue, 2 May 2017 09:33:46 -0700
+Message-ID: <CALCETrV4SjQE_NM4=j0JgRGBjOVY4o=iu0=ruuvzSuGRUPgNbg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH RFC v2 4/6] proc: support mounting private procfs
+ instances inside same pid namespace
+To: Djalal Harouni <tixxdz@gmail.com>, "Eric W. Biederman" <ebiederm@xmission.com>
+Cc: Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jeff Layton <jlayton@poochiereds.net>, "J. Bruce Fields" <bfields@fieldses.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Michal Hocko <mhocko@suse.com>, Jonathan Corbet <corbet@lwn.net>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-The XPFO [1] patchset may unmap pages from physmap if they happened to be
-destined for userspace. If such a page is unmapped, it needs to be
-remapped. Rather than test if a page is in the highmem/xpfo unmapped state,
-Christoph suggested [2] that we simply always map the page.
+On Tue, May 2, 2017 at 7:29 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> On Thu, Apr 27, 2017 at 12:13 AM, Andy Lutomirski <luto@kernel.org> wrote:
+>> On Tue, Apr 25, 2017 at 5:23 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
+> [...]
+>>> We have to align procfs and modernize it to have a per mount context
+>>> where at least the mount option do not propagate to all other mounts,
+>>> then maybe we can continue to implement new features. One example is to
+>>> require CAP_SYS_ADMIN in the init user namespace on some /proc/* which are
+>>> not pids and which are are not virtualized by design, or CAP_NET_ADMIN
+>>> inside userns on the net bits that are virtualized, etc.
+>>> These mount options won't propagate to previous mounts, and the system
+>>> will continue to be usable.
+>>>
+>>> Ths patch introduces the new 'limit_pids' mount option as it was also
+>>> suggesed by Andy Lutomirski [1]. When this option is passed we
+>>> automatically create a private procfs instance. This is not the default
+>>> behaviour since we do not want to break userspace and we do not want to
+>>> provide different devices IDs by default, please see [1] for why.
+>>
+>> I think that calling the option to make a separate instance
+>> "limit_pids" is extremely counterintuitive.
+>
+> Ok.
+>
+>> My strong preference would be to make proc *always* make a separate
+>> instance (unless it's a bind mount) and to make it work.  If that
+>> means fudging stat() output, so be it.
+>
+> I also agree, but as said if we change stat(), userspace won't be able
+> to notice if these two proc instances are really separated, the device
+> ID is the only indication here.
 
-Suggested-by: Christoph Hellwig <hch@infradead.org>
-Signed-off-by: Tycho Andersen <tycho@docker.com>
-CC: Juerg Haefliger <juerg.haefliger@hpe.com>
-CC: Tejun Heo <tj@kernel.org>
+I re-read all the threads and I'm still not convinced I see why we
+need new_instance to be non-default.  It's true that the device
+numbers of /proc/ns/* matter, but if you look (with stat -L, for
+example), they're *already* not tied to the procfs instance.
 
-[1]: https://lkml.org/lkml/2016/11/4/245
-[2]: https://lkml.org/lkml/2016/11/4/253
----
-I don't understand all the factors at play here, so thoughts are definitely
-welcome.
----
- drivers/ata/libata-sff.c | 50 +++++++++++++++++-------------------------------
- 1 file changed, 18 insertions(+), 32 deletions(-)
-
-diff --git a/drivers/ata/libata-sff.c b/drivers/ata/libata-sff.c
-index 2bd92dc..8da2572 100644
---- a/drivers/ata/libata-sff.c
-+++ b/drivers/ata/libata-sff.c
-@@ -703,6 +703,7 @@ static void ata_pio_sector(struct ata_queued_cmd *qc)
- 	struct page *page;
- 	unsigned int offset;
- 	unsigned char *buf;
-+	unsigned long flags;
- 
- 	if (qc->curbytes == qc->nbytes - qc->sect_size)
- 		ap->hsm_task_state = HSM_ST_LAST;
-@@ -716,24 +717,16 @@ static void ata_pio_sector(struct ata_queued_cmd *qc)
- 
- 	DPRINTK("data %s\n", qc->tf.flags & ATA_TFLAG_WRITE ? "write" : "read");
- 
--	if (PageHighMem(page)) {
--		unsigned long flags;
--
--		/* FIXME: use a bounce buffer */
--		local_irq_save(flags);
--		buf = kmap_atomic(page);
-+	/* FIXME: use a bounce buffer */
-+	local_irq_save(flags);
-+	buf = kmap_atomic(page);
- 
--		/* do the actual data transfer */
--		ap->ops->sff_data_xfer(qc, buf + offset, qc->sect_size,
--				       do_write);
-+	/* do the actual data transfer */
-+	ap->ops->sff_data_xfer(qc, buf + offset, qc->sect_size,
-+			       do_write);
- 
--		kunmap_atomic(buf);
--		local_irq_restore(flags);
--	} else {
--		buf = page_address(page);
--		ap->ops->sff_data_xfer(qc, buf + offset, qc->sect_size,
--				       do_write);
--	}
-+	kunmap_atomic(buf);
-+	local_irq_restore(flags);
- 
- 	if (!do_write && !PageSlab(page))
- 		flush_dcache_page(page);
-@@ -836,6 +829,7 @@ static int __atapi_pio_bytes(struct ata_queued_cmd *qc, unsigned int bytes)
- 	struct page *page;
- 	unsigned char *buf;
- 	unsigned int offset, count, consumed;
-+	unsigned long flags;
- 
- next_sg:
- 	sg = qc->cursg;
-@@ -861,24 +855,16 @@ static int __atapi_pio_bytes(struct ata_queued_cmd *qc, unsigned int bytes)
- 
- 	DPRINTK("data %s\n", qc->tf.flags & ATA_TFLAG_WRITE ? "write" : "read");
- 
--	if (PageHighMem(page)) {
--		unsigned long flags;
--
--		/* FIXME: use bounce buffer */
--		local_irq_save(flags);
--		buf = kmap_atomic(page);
-+	/* FIXME: use bounce buffer */
-+	local_irq_save(flags);
-+	buf = kmap_atomic(page);
- 
--		/* do the actual data transfer */
--		consumed = ap->ops->sff_data_xfer(qc, buf + offset,
--								count, rw);
-+	/* do the actual data transfer */
-+	consumed = ap->ops->sff_data_xfer(qc, buf + offset,
-+							count, rw);
- 
--		kunmap_atomic(buf);
--		local_irq_restore(flags);
--	} else {
--		buf = page_address(page);
--		consumed = ap->ops->sff_data_xfer(qc, buf + offset,
--								count, rw);
--	}
-+	kunmap_atomic(buf);
-+	local_irq_restore(flags);
- 
- 	bytes -= min(bytes, consumed);
- 	qc->curbytes += count;
--- 
-2.9.3
+I'm okay with adding new_instance to be on the safe side, but I'd like
+it to be done in a way that we could make it become the default some
+day without breaking anything.  This means that we need to be rather
+careful about how new_instance and hidepid interact.
