@@ -1,103 +1,83 @@
-MIME-Version: 1.0
-In-Reply-To: <CALCETrV4SjQE_NM4=j0JgRGBjOVY4o=iu0=ruuvzSuGRUPgNbg@mail.gmail.com>
-References: <1493123038-30590-1-git-send-email-tixxdz@gmail.com>
- <1493123038-30590-5-git-send-email-tixxdz@gmail.com> <CALCETrWOjLnfCgpAJs6tTjLXeNHjqPQa5qSZpztcnbR2kN5A2w@mail.gmail.com>
- <CAEiveUf22RQ6awvCKJ4p5OxZCPAyhOfpLBQXFLJ=tev3zDfL+g@mail.gmail.com> <CALCETrV4SjQE_NM4=j0JgRGBjOVY4o=iu0=ruuvzSuGRUPgNbg@mail.gmail.com>
-From: Djalal Harouni <tixxdz@gmail.com>
-Date: Wed, 3 May 2017 17:18:42 +0200
-Message-ID: <CAEiveUfs4n1xU+5c_c-cz9FY1_JDi1_0jQAcYycnwqm6TM5ddA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH RFC v2 4/6] proc: support mounting private procfs
- instances inside same pid namespace
-To: Andy Lutomirski <luto@kernel.org>
-Cc: "Eric W. Biederman" <ebiederm@xmission.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Kees Cook <keescook@chromium.org>, Andrew Morton <akpm@linux-foundation.org>, Linux FS Devel <linux-fsdevel@vger.kernel.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jeff Layton <jlayton@poochiereds.net>, "J. Bruce Fields" <bfields@fieldses.org>, Alexander Viro <viro@zeniv.linux.org.uk>, Alexey Dobriyan <adobriyan@gmail.com>, Ingo Molnar <mingo@kernel.org>, Oleg Nesterov <oleg@redhat.com>, Michal Hocko <mhocko@suse.com>, Jonathan Corbet <corbet@lwn.net>
+Message-ID: <1493837804.20270.10.camel@redhat.com>
+From: Rik van Riel <riel@redhat.com>
+Date: Wed, 03 May 2017 14:56:44 -0400
+In-Reply-To: <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+References: 
+	<CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+	 <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+	 <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+	 <1493683745.2530.2.camel@redhat.com>
+	 <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
+	 <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+	 <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+Content-Type: multipart/signed; micalg="pgp-sha256";
+	protocol="application/pgp-signature"; boundary="=-w7wcBz9F2B8qYvxejyjT"
+Mime-Version: 1.0
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Shawn <citypw@gmail.com>, Kees Cook <keescook@chromium.org>
+Cc: Mathias Krause <minipli@googlemail.com>, Daniel =?UTF-8?Q?Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 2, 2017 at 6:33 PM, Andy Lutomirski <luto@kernel.org> wrote:
-> On Tue, May 2, 2017 at 7:29 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> On Thu, Apr 27, 2017 at 12:13 AM, Andy Lutomirski <luto@kernel.org> wrote:
->>> On Tue, Apr 25, 2017 at 5:23 AM, Djalal Harouni <tixxdz@gmail.com> wrote:
->> [...]
->>>> We have to align procfs and modernize it to have a per mount context
->>>> where at least the mount option do not propagate to all other mounts,
->>>> then maybe we can continue to implement new features. One example is to
->>>> require CAP_SYS_ADMIN in the init user namespace on some /proc/* which are
->>>> not pids and which are are not virtualized by design, or CAP_NET_ADMIN
->>>> inside userns on the net bits that are virtualized, etc.
->>>> These mount options won't propagate to previous mounts, and the system
->>>> will continue to be usable.
->>>>
->>>> Ths patch introduces the new 'limit_pids' mount option as it was also
->>>> suggesed by Andy Lutomirski [1]. When this option is passed we
->>>> automatically create a private procfs instance. This is not the default
->>>> behaviour since we do not want to break userspace and we do not want to
->>>> provide different devices IDs by default, please see [1] for why.
->>>
->>> I think that calling the option to make a separate instance
->>> "limit_pids" is extremely counterintuitive.
->>
->> Ok.
->>
->>> My strong preference would be to make proc *always* make a separate
->>> instance (unless it's a bind mount) and to make it work.  If that
->>> means fudging stat() output, so be it.
->>
->> I also agree, but as said if we change stat(), userspace won't be able
->> to notice if these two proc instances are really separated, the device
->> ID is the only indication here.
->
-> I re-read all the threads and I'm still not convinced I see why we
-> need new_instance to be non-default.  It's true that the device
-> numbers of /proc/ns/* matter, but if you look (with stat -L, for
-> example), they're *already* not tied to the procfs instance.
 
-Hmm, indeed, so the namespace FDs point internally to the internal
-proc mount that is created during pidns initialization, this means
-NS_GET_PARENT ioctl won't change which is good, only things that
-relate on stat()ing other inodes may notice.
+--=-w7wcBz9F2B8qYvxejyjT
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
+On Wed, 2017-05-03 at 12:50 +0800, Shawn wrote:
 
->
-> I'm okay with adding new_instance to be on the safe side, but I'd like
-> it to be done in a way that we could make it become the default some
-> day without breaking anything.  This means that we need to be rather
-> careful about how new_instance and hidepid interact.
+> The fragmentation of Android eco-system may be inevitable. The whole
+> chains is too long from ASOP/BSP/Vendors and it affect the security
+> fix being delivered to the end user. According to my own statistic
+> from my customers, there will be more than 7 millions of Android
+> phone
+> will be using some features of PaX/Grsec this year.
 
-Sounds good, from the devpts history it seems that "newinstance" was
-used to absorb new changes/updates easily, and it was made a no-op
-only recently with commit eedf265aa003b4 "devpts: Make each mount of
-devpts an independent filesystem."  last year, where the initial
-introduction was via commit 2a1b2dc0c83bbfc24 "Enable multiple
-instances of devpts"  in 2009
+That is great news. I am glad to hear the hardening features
+are being used on that many phones.
 
-Starting from this: 1) "hidepid" works withe the "gid" membership
-option which is sticky, I would like to avoid this combination, plus
-2) "hidepid" now changes the pid namespace option.
+Of course, given the fragmentation of the eco-system, the
+only thing that can get the hardening on all of the (new)
+phones in the future will be getting the hardening features
+into the upstream kernel.
 
-With "newinstance" set:
+> btw: I share the same view with Mathias Krause and other ppl who
+> really concern the real sense of security. I like KSPP in the 1st
+> place. But now I lost PaX/Grsecurity test patch. Who should I blame?
 
-* "hidepid" instead of changing the pid namespace options, it will
-only affect the new procfs instance.
+I am not sure anyone deserves blame for this situation.
 
-* Changing "hidepid" value during a remount of a *private* procfs
-instance will only affect that procfs instance and not the pid
-namespace or the other shared procfs mounts.
+Spender has been doing what is best for his business,
+and his work is an important asset for security-minded
+people.
 
-* "pids=ptraceable" makes /proc/ show only pids that the caller can
-ptrace. Together with NO_NEW_PRIVS set, it makes a good privacy
-measure.
-"pids=ptraceable" is also for *LSM* so we guarantee that there is a
-ptrace security hook there for LSMs and that there are no relations or
-exceptions between "pids=ptraceable" and "hidepid" / "gid" mount
-options. This will benefit Yama LSM later.
+Kees and the other KSPP contributors have been doing what
+is best for the community, and wide-spread adoption of
+hardening functionality.
 
-* "pids=ptraceable" will take precedence over "hidepid"
+The important question to ask is "what do we do now?"
 
+I suspect the answer is upstreaming more and more of the
+grsecurity functionality, so nobody needs to carry around
+that patch any more.
 
-I assume defaulting later to new instances should continue to work, comments ?
+--=20
+All rights reversed
+--=-w7wcBz9F2B8qYvxejyjT
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: This is a digitally signed message part
+Content-Transfer-Encoding: 7bit
 
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
 
-Thanks!
+iQEcBAABCAAGBQJZCifsAAoJEM553pKExN6DwCAIAJQG4Gmm8608kIwXyuF2aAzJ
+DKnDvNur7JfOidqBbOUrvh0qo87l2vVmDMVRKBU3XsYhW1GdpcvdTW5c6Hmg2USt
+f1oUvadEeJfKqXopSNyfsRMUBfJa9aPgWqoZNODwIFDnpBVumj+rcUBAqrWTLiBe
+5+Qtb0ly9hvfrgFJn8vA8TyedLt+a+RYopjvWFG81qJz6KDn0ABmYg3lKvB3mXsy
+sHg3ObVJkqcZB353dhF28aT8DJ9ww3FRvJp2k+pcnApa/ykCpbOp/fTJ2V4AIGhp
+RMcl9Ks3DHXaVirUndXAjGeGJB5zo+Ub+R9bnZynmn82b4W6OfLCvKXLD994kZ8=
+=Vnn6
+-----END PGP SIGNATURE-----
 
--- 
-tixxdz
+--=-w7wcBz9F2B8qYvxejyjT--
