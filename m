@@ -1,130 +1,68 @@
 MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+Content-Type: text/plain; charset=US-ASCII;
+ format=flowed
+Content-Transfer-Encoding: 7bit
+Date: Wed, 03 May 2017 10:59:09 +0200
+From: David Gens <david.gens@cs.tu-darmstadt.de>
+In-Reply-To: <CA+rthh_Tx+XeZmuCGebe5zXTadYRo_YOqaPfoM7LKbdZNYUtFg@mail.gmail.com>
 References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
  <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
  <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
- <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
- <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
-From: Shawn <citypw@gmail.com>
-Date: Wed, 3 May 2017 12:50:39 +0800
-Message-ID: <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
+ <8708035924881b2aceb280d9a6bdd14e@cs.tu-darmstadt.de>
+ <CA+rthh_Tx+XeZmuCGebe5zXTadYRo_YOqaPfoM7LKbdZNYUtFg@mail.gmail.com>
+Message-ID: <366c82cdbeb4daf06dc441214a69f6cd@cs.tu-darmstadt.de>
 Subject: Re: [kernel-hardening] It looks like there will be no more public
  versions of PaX and Grsec.
-To: Kees Cook <keescook@chromium.org>
-Cc: Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Mathias Krause <minipli@googlemail.com>
+Cc: Kees Cook <keescook@chromium.org>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Wed, May 3, 2017 at 2:55 AM, Kees Cook <keescook@chromium.org> wrote:
-> On Tue, May 2, 2017 at 7:46 AM, Shawn <citypw@gmail.com> wrote:
->> On Tue, May 2, 2017 at 8:09 AM, Rik van Riel <riel@redhat.com> wrote:
->>> On Tue, 2017-05-02 at 00:01 +0200, Mathias Krause wrote:
->>>
->>>> I think the intention of the KSPP is good -- making vanilla Linux
->>>> more
->>>> secure. But the way it does its work harms overall Linux security. It
->>>> does hurt mine, that's for sure!
->>>
->>> Yeah, no. The grsecurity people produced patches
->>> that were used on maybe a few tens of thousands
->>> of systems, while the KSPP code will end up
->>> enhancing the security of over a billion Android
->>> devices.
->>>
->> Are you serious think KSPP can solve Android security issue without
->> changing the current Android eco-system? It's about one billion
->> Android device( most are old armv7 based) can be exploited and being
->> used by criminal and BIGBROs( NSA/CIA/PLA/whatever-A*/etc) with low
->> cost. I made hardened PoC( based on PaX + PXN + some code hardening)
->> for Nexus 7 2013 back in 2015. It proved that it can defeat "massive"
->> exp without much perf impact. But I don't see any sign those cellphone
->> vendors would port any KSPP features into the old devices. How about
->> new phone? I ported a couple of KSPP features( all originally done or
->> inspired by PaX/Grsecurity) to Pixel XL:
->>
->> https://github.com/hardenedlinux/armv7-nexus7-grsec
->
-> I would love it if things would get rolled out to older phones. This
-> isn't something upstream has much influence over, though. But we have
-> to look to the future. Eventually all the old phones will get
-> replaced, and the new ones will be running newer kernels, etc.
->
-> The problem with the phone (and IoT) ecosystem is an entirely separate
-> problem. There are some folks chipping away at it, but it's tangential
-> to upstream gaining more defenses. I'd also note that this problem
-> isn't solved by grsecurity either --- how many phones are running the
-> grsecurity patch?
->
-The fragmentation of Android eco-system may be inevitable. The whole
-chains is too long from ASOP/BSP/Vendors and it affect the security
-fix being delivered to the end user. According to my own statistic
-from my customers, there will be more than 7 millions of Android phone
-will be using some features of PaX/Grsec this year. I've been pushing
-those "simplified" mitigation from PaX/Grsecurity to some vendors.
-That's why I have to find out what exploitable bugs is possible to
-turned to be "massive" exp and which one is being massive used
-already. To me, it's obviously my problem solved by PaX/Grsecurity. I
-can't wait for Google's hepl to solve the problem. I shared what I
-found about "massive" exp with you and other Google folksl at last
-linux security summit. I really appreciate you guys helped some
-patches goes into AOSP. But it's just a starting point. Maybe in
-Google's point of view, everybody should buy the new phone( btw, I
-really love Pixel XL). But I have responsible to taking care of old
-devices.
+On 2017-05-02 23:27, Mathias Krause wrote:
+> On 2 May 2017 at 13:11, David Gens <david.gens@cs.tu-darmstadt.de> 
+> wrote:
+>> So tell me how exactly a PaX-hardened kernel with a memory-corruption 
+>> bug
+>> prevents an adversary from modifying critical data, such as the page 
+>> tables
+>> in a data-only attack?
+> 
+> It doesn't as it has not mitigation for data-only attacks yet. But
+> neither does a vanilla kernel. It's even worse on vanilla Linux where
+> the page tables simply can be written to with a write-what-where
+> primitive. PaX can, however, protect the page tables from getting
+> modified by having them write-protected. So yes, that makes it more
+> secure.
+> 
+>> IMHO the "PaX mitigates Memory-corruption" argument
+>> is wishful thinking, and now that PaX is gone users cannot fool 
+>> themselves
+>> any longer into thinking "My System is Secure". That awareness is 
+>> actually
+>> good no?
+> 
+> What about KERNEXEC and CONSTIFY taking care of protecting a lot of
+> data structures? What about SIZE_OVERFLOW successfully preventing know
+> overflow bugs, like the various keys related ones? What about RAP,
+> ensuring control flow integrity? That's nothing, you say? Ridiculous.
 
+Nope, I never said that. I said it is insufficient to mitigate memory 
+corruption.
+Actually, KSPP even has the potential to improve things here. Granted, 
+for the time
+being these PaX features are unavailable, but that was a one-sided 
+political decision,
+and blaming others (based on non-factual claims) is not helping.
 
->> Google's Pixel/Pixel2 may be the one of few cellphones can getting
->> benefit from KSPP. Otherwise, my own phone is running with much more
->> hardening features than Android O( released in Oct?) but it's still
->> not secure enough to defeat customized exploit.
->>
->>> Those Android devices are more likely to require
->>> hardening, too, since they do not receive security
->>> updates as quickly as the systems maintained by
->>> grsecurity users.
->>>
->> Don't worry about it. PaX/Grsecurity can defeat multiple public
->> exploits without any fix. Maybe some ppl will go to maintain 4.9 LTS.
->
-> This is kind of true. RAP was x86_64 only, so it didn't help armv7 nor
-> arm64. Hardened usercopy wasn't ported by grsecurity to arm64
-> (upstream did that, though it was trivial). UDEREF wasn't ported by
-> grsecurity to arm64, ARM filled that gap by inventing the mechanisms
-> to provide PAN emulation. There are all kinds of other protections
-> aren't arch-specific (e.g. heap hardening). Those would make good
-> things to focus on upstreaming if you were interested. CopperheadOS is
-> using a bunch of those things already:
->
-> https://github.com/CopperheadOS/kernel_google_marlin/commits/nougat-mr2-release
->
-Yeah, I know the history. Intel/ARM never credited PaX/Grsecurity
-about the contribution of KERNEXEC/UDEREF, which is the origins of
-hardware implementation, e.g: SMEP/SMAP in x86, PXN/PAN in
-armv7/arm64. I don't blame Spender/PaX team;-) I thank to ARM
-maintainers who did those mitigation for arm64. But I thank more to
-PaX/Grsecurity who created it from nothing.
+I guess it would be nice to have a list of features that will be ported 
+into KSPP,
+e.g., sorted by priority, and then users could easily check when to 
+switch from the
+last PaX patches. But thats not how kernel development works 
+(traditionally), because
+developers push features they (or their employers) are interested in.
 
-btw: I share the same view with Mathias Krause and other ppl who
-really concern the real sense of security. I like KSPP in the 1st
-place. But now I lost PaX/Grsecurity test patch. Who should I blame? I
-think we made our point very clear here:
+> Thanks,
+> Mathias
 
-https://hardenedlinux.github.io/announcement/2017/04/29/hardenedlinux-statement2.html
-
-> So really, upstreaming defenses has really helped the future phone
-> ecosystem, even if the "don't update old devices" attitude continues
-> to not change with vendors.
->
-Agree! I'm afraid I can't help much on upstream because that's not my
-customer want in short-term. S0rry, my idealist side never fit in
-KSPP.
-
-
-
--- 
-GNU powered it...
-GPL protect it...
-God blessing it...
-
-regards
-Shawn
+Best,
+David
