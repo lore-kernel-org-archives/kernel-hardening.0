@@ -1,74 +1,99 @@
-Message-ID: <1493839649.2133.1.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Wed, 03 May 2017 15:27:29 -0400
-In-Reply-To: <1493838148.20270.12.camel@redhat.com>
-References: 
-	<CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
-	 <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
-	 <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
-	 <1493683745.2530.2.camel@redhat.com>
-	 <CA+rthh_JNuXHmVBE8vz-CxQZwJsW=NR8DUfGq5aMHj42VFkpog@mail.gmail.com>
-	 <1493838148.20270.12.camel@redhat.com>
-Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-W0bPJ/D3oh6snzqMlny3"
-Mime-Version: 1.0
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
-To: Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>
-Cc: Kees Cook <keescook@chromium.org>, Daniel =?UTF-8?Q?Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <20170425041512.13189-1-matt@nmatt.com>
+References: <20170425041512.13189-1-matt@nmatt.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Wed, 3 May 2017 12:30:11 -0700
+Message-ID: <CAGXu5jLzrCXSsc3rOteRO6bxRg7oon3qtzR+q--oj_iXb736yA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
+To: Matt Brown <matt@nmatt.com>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>, James Morris <jmorris@namei.org>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Jonathan Corbet <corbet@lwn.net>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
+On Mon, Apr 24, 2017 at 9:15 PM, Matt Brown <matt@nmatt.com> wrote:
+> This patchset introduces the tiocsti_restrict sysctl, whose default is
+> controlled via CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this
+> control restricts all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
+>
+> This patch was inspired from GRKERNSEC_HARDEN_TTY.
+>
+> This patch would have prevented
+> https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
+> conditions:
+> * non-privileged container
+> * container run inside new user namespace
+>
+> Possible effects on userland:
+>
+> There could be a few user programs that would be effected by this
+> change.
+> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
+> notable programs are: agetty, csh, xemacs and tcsh
+>
+> However, I still believe that this change is worth it given that the
+> Kconfig defaults to n. This will be a feature that is turned on for the
+> same reason that people activate it when using grsecurity. Users of this
+> opt-in feature will realize that they are choosing security over some OS
+> features like unprivileged TIOCSTI ioctls, as should be clear in the
+> Kconfig help message.
+>
+> Threat Model/Patch Rational:
+>
+> From grsecurity's config for GRKERNSEC_HARDEN_TTY.
+>
+>  | There are very few legitimate uses for this functionality and it
+>  | has made vulnerabilities in several 'su'-like programs possible in
+>  | the past.  Even without these vulnerabilities, it provides an
+>  | attacker with an easy mechanism to move laterally among other
+>  | processes within the same user's compromised session.
+>
+> So if one process within a tty session becomes compromised it can follow
+> that additional processes, that are thought to be in different security
+> boundaries, can be compromised as a result. When using a program like su
+> or sudo, these additional processes could be in a tty session where TTY file
+> descriptors are indeed shared over privilege boundaries.
+>
+> This is also an excellent writeup about the issue:
+> <http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
+>
+> When user namespaces are in use, the check for the capability
+> CAP_SYS_ADMIN is done against the user namespace that originally opened
+> the tty.
 
---=-W0bPJ/D3oh6snzqMlny3
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+This looks like it's ready to go. Greg, can you include this in your
+tree? That seems like the best place, even though it touches a few
+areas.
 
-> Maintainers integrate code one patch series at a
-> time. That is not a constraint you can work around,
-> because code does need to be reviewed.
+Please consider it:
 
-By not requiring fixes for issues like undefined function pointer usage
-or other undefined behavior to be split up in hundreds of patches to go
-through many different maintainers / many different trees. The same goes
-for things like basic constification  (i.e. const and __ro_after_init)
-that are clear cut and don't involve a performance compromise (so an
-equivalent to pax_{open_close}_kernel would be different).
+Reviewed-by: Kees Cook <keescook@chromium.org>
 
-It's extremely unrealistic to get type-based Control Flow Integrity like
-RAP for the mainline kernel if the fixes cannot be queued up in a single
-tree. It also deters people from working on any of these small,
-incremental improvements since they need to split it all up and try to
-deal with dozens of maintainers, with most of the patches being lost.
-See what happened to past attempts at this stuff.
+Thanks!
 
-Of course it needs to be reviewed and hopefully tested, but for fixing
-clear cases of undefined behavior (i.e. those caught by UBSan or other
-sanitizers and not covered by flags like -fno-strict-overflow -fno-
-strict-aliasing) or uncontroversial things like missing const (without
-other code changes beyond making pointers const), it should be possible
-to land fixes via one tree. It isn't an issue that's specific to
-security patches.
---=-W0bPJ/D3oh6snzqMlny3
-Content-Type: application/pgp-signature; name="signature.asc"
-Content-Description: This is a digitally signed message part
-Content-Transfer-Encoding: 7bit
+-Kees
 
------BEGIN PGP SIGNATURE-----
 
-iQJKBAABCAA0FiEEZe7+AiEI4rcIy/z3+ecS5Zr18ioFAlkKLyEWHGRhbmllbG1p
-Y2F5QGdtYWlsLmNvbQAKCRD55xLlmvXyKg6FD/9FHq3cT5II+JYjezNd8bSRAhGN
-9Mv0gFG/5nbpVblaNVDWmf2bYsFuBYc1CrQl0EU5lEQ8PFhWDuV5JbZNYZlQPUQr
-oa5VPSybgvaj/n4/19NZUyxQPPNPI/kp7VQeLNfybmoaV2dimU/iYVgVNOVnTrA0
-bSPrnfVFgsT0E2Ldu/lTooNU4pzLnEi6CHr3jcBQaM2sDuduNWzNnsHZR3Pi2Ol4
-Fuis7RfL/PDkRJrO36ufnatc6OX0Mev3eSrFPUt1Yp3xpHhz//bY2vPWJDFtMpv8
-rhag9qIKQnmO3/HZqHOwlmSmtdZCibPFaWeTldP0Vv7qLnUC3PR+Y0uUtapzbR0Z
-kppJl4sxaQSJM3FwXRwzIGjz+/rGWJycH3SbSAWIB55lku83Wy5//5iyivcLH6xG
-Ug5BcWJIrHRzuGciF9PFiV9UC2XwxgB30Uu0p8Rgk1k3CkhFxx3vkbaSIqKwrhBx
-w7CZJ4ax2XoadyntBloA0zHd4ukDLYldjGlvQskju4hPyWbGSAr81YuNEsF4hyld
-RbuMZitW76q99bBSUgQYiuq5PhsZfNpyknkWAqS4rTeVnYcQZJY65NA101EE7Rbh
-xsUYHXDICQn+ZbQ607UQtNz/lFxsVua0GPlJn4f2jiiLhF1r08WO2mX47n+6XJUb
-Sug9u4076GHEFUaAyA==
-=vMIT
------END PGP SIGNATURE-----
+>
+> # Changes since v4:
+> * fixed typo
+>
+> # Changes since v3:
+> * use get_user_ns and put_user_ns to take and drop references to the owner
+>   user namespace because CONFIG_USER_NS is an option
+>
+> # Changes since v2:
+> * take/drop reference to user namespace on tty struct alloc/free to prevent
+>   use-after-free.
+>
+> # Changes since v1:
+> * added owner_user_ns to tty_struct to enable capability checks against
+>   the namespace that created the tty.
+> * rewording in different places to make patchset purpose clear
+> * Added Documentation
 
---=-W0bPJ/D3oh6snzqMlny3--
+
+
+-- 
+Kees Cook
+Pixel Security
