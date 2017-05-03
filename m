@@ -1,62 +1,130 @@
 MIME-Version: 1.0
-Sender: keescook@google.com
-In-Reply-To: <20170502105853.yz3ny6lyso6isdvx@mwanda>
-References: <143C0AFC63FC204CB0C55BB88F3A8ABB33419ED1@EX02.corp.qihoo.net> <20170502105853.yz3ny6lyso6isdvx@mwanda>
-From: Kees Cook <keescook@chromium.org>
-Date: Tue, 2 May 2017 16:42:33 -0700
-Message-ID: <CAGXu5j+sqS_LfuS5Jy2-AfYmRyKWhsyBo9bqHrnnyQ+ONA4nMA@mail.gmail.com>
+In-Reply-To: <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+ <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+ <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
+ <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+From: Shawn <citypw@gmail.com>
+Date: Wed, 3 May 2017 12:50:39 +0800
+Message-ID: <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-Subject: [kernel-hardening] Re: [PATCH] ipx: call ipxitf_put() in ioctl error path
-To: Dan Carpenter <dan.carpenter@oracle.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
-Cc: "David S. Miller" <davem@davemloft.net>, Network Development <netdev@vger.kernel.org>, "security@kernel.org" <security@kernel.org>, "secalert@redhat.com" <secalert@redhat.com>
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Kees Cook <keescook@chromium.org>
+Cc: Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Tue, May 2, 2017 at 3:58 AM, Dan Carpenter <dan.carpenter@oracle.com> wr=
-ote:
-> We should call ipxitf_put() if the copy_to_user() fails.
+On Wed, May 3, 2017 at 2:55 AM, Kees Cook <keescook@chromium.org> wrote:
+> On Tue, May 2, 2017 at 7:46 AM, Shawn <citypw@gmail.com> wrote:
+>> On Tue, May 2, 2017 at 8:09 AM, Rik van Riel <riel@redhat.com> wrote:
+>>> On Tue, 2017-05-02 at 00:01 +0200, Mathias Krause wrote:
+>>>
+>>>> I think the intention of the KSPP is good -- making vanilla Linux
+>>>> more
+>>>> secure. But the way it does its work harms overall Linux security. It
+>>>> does hurt mine, that's for sure!
+>>>
+>>> Yeah, no. The grsecurity people produced patches
+>>> that were used on maybe a few tens of thousands
+>>> of systems, while the KSPP code will end up
+>>> enhancing the security of over a billion Android
+>>> devices.
+>>>
+>> Are you serious think KSPP can solve Android security issue without
+>> changing the current Android eco-system? It's about one billion
+>> Android device( most are old armv7 based) can be exploited and being
+>> used by criminal and BIGBROs( NSA/CIA/PLA/whatever-A*/etc) with low
+>> cost. I made hardened PoC( based on PaX + PXN + some code hardening)
+>> for Nexus 7 2013 back in 2015. It proved that it can defeat "massive"
+>> exp without much perf impact. But I don't see any sign those cellphone
+>> vendors would port any KSPP features into the old devices. How about
+>> new phone? I ported a couple of KSPP features( all originally done or
+>> inspired by PaX/Grsecurity) to Pixel XL:
+>>
+>> https://github.com/hardenedlinux/armv7-nexus7-grsec
 >
-> Reported-by: =E6=9D=8E=E5=BC=BA <liqiang6-s@360.cn>
-> Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+> I would love it if things would get rolled out to older phones. This
+> isn't something upstream has much influence over, though. But we have
+> to look to the future. Eventually all the old phones will get
+> replaced, and the new ones will be running newer kernels, etc.
 >
-> diff --git a/net/ipx/af_ipx.c b/net/ipx/af_ipx.c
-> index 8a9219ff2e77..fa31ef29e3fa 100644
-> --- a/net/ipx/af_ipx.c
-> +++ b/net/ipx/af_ipx.c
-> @@ -1168,11 +1168,10 @@ static int ipxitf_ioctl(unsigned int cmd, void __=
-user *arg)
->                 sipx->sipx_network      =3D ipxif->if_netnum;
->                 memcpy(sipx->sipx_node, ipxif->if_node,
->                         sizeof(sipx->sipx_node));
-> -               rc =3D -EFAULT;
-> +               rc =3D 0;
->                 if (copy_to_user(arg, &ifr, sizeof(ifr)))
-> -                       break;
-> +                       rc =3D -EFAULT;
->                 ipxitf_put(ipxif);
-> -               rc =3D 0;
->                 break;
->         }
->         case SIOCAIPXITFCRT:
+> The problem with the phone (and IoT) ecosystem is an entirely separate
+> problem. There are some folks chipping away at it, but it's tangential
+> to upstream gaining more defenses. I'd also note that this problem
+> isn't solved by grsecurity either --- how many phones are running the
+> grsecurity patch?
+>
+The fragmentation of Android eco-system may be inevitable. The whole
+chains is too long from ASOP/BSP/Vendors and it affect the security
+fix being delivered to the end user. According to my own statistic
+from my customers, there will be more than 7 millions of Android phone
+will be using some features of PaX/Grsec this year. I've been pushing
+those "simplified" mitigation from PaX/Grsecurity to some vendors.
+That's why I have to find out what exploitable bugs is possible to
+turned to be "massive" exp and which one is being massive used
+already. To me, it's obviously my problem solved by PaX/Grsecurity. I
+can't wait for Google's hepl to solve the problem. I shared what I
+found about "massive" exp with you and other Google folksl at last
+linux security summit. I really appreciate you guys helped some
+patches goes into AOSP. But it's just a starting point. Maybe in
+Google's point of view, everybody should buy the new phone( btw, I
+really love Pixel XL). But I have responsible to taking care of old
+devices.
 
-This refcount overflow flaw (and resulting use-after-free) appears to
-be reachable from unprivileged userspace, though I think it requires
-an interface already be configured, so this is likely not much risk to
-most users. Someone more familiar with IPX should double-check...
 
-And, of course, I should point out this flaw would have been blocked
-entirely by using refcount_t:
-https://lkml.org/lkml/2017/3/17/193
+>> Google's Pixel/Pixel2 may be the one of few cellphones can getting
+>> benefit from KSPP. Otherwise, my own phone is running with much more
+>> hardening features than Android O( released in Oct?) but it's still
+>> not secure enough to defeat customized exploit.
+>>
+>>> Those Android devices are more likely to require
+>>> hardening, too, since they do not receive security
+>>> updates as quickly as the systems maintained by
+>>> grsecurity users.
+>>>
+>> Don't worry about it. PaX/Grsecurity can defeat multiple public
+>> exploits without any fix. Maybe some ppl will go to maintain 4.9 LTS.
+>
+> This is kind of true. RAP was x86_64 only, so it didn't help armv7 nor
+> arm64. Hardened usercopy wasn't ported by grsecurity to arm64
+> (upstream did that, though it was trivial). UDEREF wasn't ported by
+> grsecurity to arm64, ARM filled that gap by inventing the mechanisms
+> to provide PAN emulation. There are all kinds of other protections
+> aren't arch-specific (e.g. heap hardening). Those would make good
+> things to focus on upstreaming if you were interested. CopperheadOS is
+> using a bunch of those things already:
+>
+> https://github.com/CopperheadOS/kernel_google_marlin/commits/nougat-mr2-release
+>
+Yeah, I know the history. Intel/ARM never credited PaX/Grsecurity
+about the contribution of KERNEXEC/UDEREF, which is the origins of
+hardware implementation, e.g: SMEP/SMAP in x86, PXN/PAN in
+armv7/arm64. I don't blame Spender/PaX team;-) I thank to ARM
+maintainers who did those mitigation for arm64. But I thank more to
+PaX/Grsecurity who created it from nothing.
 
-And if it didn't require a configured interface, it would be mitigated
-with module autoload blocking:
-https://lkml.org/lkml/2017/4/19/1088
+btw: I share the same view with Mathias Krause and other ppl who
+really concern the real sense of security. I like KSPP in the 1st
+place. But now I lost PaX/Grsecurity test patch. Who should I blame? I
+think we made our point very clear here:
 
-(Yes, yes, I know both are still being worked on, but this is a good
-example to show another case where they'd have been useful.)
+https://hardenedlinux.github.io/announcement/2017/04/29/hardenedlinux-statement2.html
 
--Kees
+> So really, upstreaming defenses has really helped the future phone
+> ecosystem, even if the "don't update old devices" attitude continues
+> to not change with vendors.
+>
+Agree! I'm afraid I can't help much on upstream because that's not my
+customer want in short-term. S0rry, my idealist side never fit in
+KSPP.
 
---=20
-Kees Cook
-Pixel Security
+
+
+-- 
+GNU powered it...
+GPL protect it...
+God blessing it...
+
+regards
+Shawn
