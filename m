@@ -1,69 +1,108 @@
-Message-ID: <1493837804.20270.10.camel@redhat.com>
+Message-ID: <1493838148.20270.12.camel@redhat.com>
 From: Rik van Riel <riel@redhat.com>
-Date: Wed, 03 May 2017 14:56:44 -0400
-In-Reply-To: <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+Date: Wed, 03 May 2017 15:02:28 -0400
+In-Reply-To: <CA+rthh_JNuXHmVBE8vz-CxQZwJsW=NR8DUfGq5aMHj42VFkpog@mail.gmail.com>
 References: 
 	<CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
 	 <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
 	 <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
 	 <1493683745.2530.2.camel@redhat.com>
-	 <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
-	 <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
-	 <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+	 <CA+rthh_JNuXHmVBE8vz-CxQZwJsW=NR8DUfGq5aMHj42VFkpog@mail.gmail.com>
 Content-Type: multipart/signed; micalg="pgp-sha256";
-	protocol="application/pgp-signature"; boundary="=-w7wcBz9F2B8qYvxejyjT"
+	protocol="application/pgp-signature"; boundary="=-6YuwsMWrd09wHn3Nyh0x"
 Mime-Version: 1.0
 Subject: Re: [kernel-hardening] It looks like there will be no more public
  versions of PaX and Grsec.
-To: Shawn <citypw@gmail.com>, Kees Cook <keescook@chromium.org>
-Cc: Mathias Krause <minipli@googlemail.com>, Daniel =?UTF-8?Q?Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+To: Mathias Krause <minipli@googlemail.com>
+Cc: Kees Cook <keescook@chromium.org>, Daniel =?UTF-8?Q?Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
 
---=-w7wcBz9F2B8qYvxejyjT
+--=-6YuwsMWrd09wHn3Nyh0x
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-On Wed, 2017-05-03 at 12:50 +0800, Shawn wrote:
+On Tue, 2017-05-02 at 23:16 +0200, Mathias Krause wrote:
+> On 2 May 2017 at 02:09, Rik van Riel <riel@redhat.com> wrote:
+> > On Tue, 2017-05-02 at 00:01 +0200, Mathias Krause wrote:
+> >=20
+> > > I think the intention of the KSPP is good -- making vanilla Linux
+> > > more
+> > > secure. But the way it does its work harms overall Linux
+> > > security. It
+> > > does hurt mine, that's for sure!
+> >=20
+> > Yeah, no.
+>=20
+> Well, yes, it does! Losing access to the grsecurity patch makes the
+> systems I do care about much less secure.
 
-> The fragmentation of Android eco-system may be inevitable. The whole
-> chains is too long from ASOP/BSP/Vendors and it affect the security
-> fix being delivered to the end user. According to my own statistic
-> from my customers, there will be more than 7 millions of Android
-> phone
-> will be using some features of PaX/Grsec this year.
+Your systems are not necessarily representative of the
+overall security of all Linux systems in the world,
+though.
 
-That is great news. I am glad to hear the hardening features
-are being used on that many phones.
+> > The grsecurity people produced patches
+> > that were used on maybe a few tens of thousands
+> > of systems,
+>=20
+> Where did you pull that number from? Out of thin air, I guess. I
+> know,
+> for sure, there are many more installations.
 
-Of course, given the fragmentation of the eco-system, the
-only thing that can get the hardening on all of the (new)
-phones in the future will be getting the hardening features
-into the upstream kernel.
+I have seen a few emails suggesting there are millions
+of systems with grsecurity patches around, and I got
+the number wrong by several orders of magnitude.
 
-> btw: I share the same view with Mathias Krause and other ppl who
-> really concern the real sense of security. I like KSPP in the 1st
-> place. But now I lost PaX/Grsecurity test patch. Who should I blame?
+However, that does not invalidate my original point:
+the number of grsecurity protected systems is only a tiny
+fraction of the entire Linux installed base.
 
-I am not sure anyone deserves blame for this situation.
+It would be good to get hardening functionality upstream,
+in order to get a majority of Linux systems (that get
+deployed in the future) hardened out of the box.
 
-Spender has been doing what is best for his business,
-and his work is an important asset for security-minded
-people.
+> > Those Android devices are more likely to require
+> > hardening, too, since they do not receive security
+> > updates as quickly as the systems maintained by
+> > grsecurity users.
+>=20
+> Why couldn't those devices benefit from grsecurity as well? Couldn't
+> google or Samsung just integrate grsecurity into their Android
+> kernels? They're far away from vanilla Linux anyway, so why not add
+> just another patch to provide some matured security code base to
+> protect those billion of Android devices? I'd guess, if a big player
+> like google would sponsor / pay grsecurity to provide a patch for the
+> relevant Android kernels, all sides would be happy: grsecurity for
+> getting wider adoption, Android users for having secured systems.
 
-Kees and the other KSPP contributors have been doing what
-is best for the community, and wide-spread adoption of
-hardening functionality.
+They could, but the reality is many vendors will not
+bother enabling hardening features unless the code is
+already there and enabled by default in the upstream
+kernel.
 
-The important question to ask is "what do we do now?"
+> > Integrating hardening into the upstream kernel is
+> > a good thing for security, not a bad thing.
+>=20
+> I never said it's a bad thing. Indeed I'm all for making vanilla
+> Linux
+> more secure. Just how KSPP tries to do it is IMHO wrong. Ripping
+> hunks
+> out of grsecurity and trying to integrate them into vanilla Linux
+> without understanding all the interdependencies or even the features
+> themselves, how would that provide security? By chance, maybe. But
+> not
+> intentional, as that requires having thought of every corner case and
+> boundary condition.
 
-I suspect the answer is upstreaming more and more of the
-grsecurity functionality, so nobody needs to carry around
-that patch any more.
+How would you do it?
+
+Maintainers integrate code one patch series at a
+time. That is not a constraint you can work around,
+because code does need to be reviewed.
 
 --=20
 All rights reversed
---=-w7wcBz9F2B8qYvxejyjT
+--=-6YuwsMWrd09wHn3Nyh0x
 Content-Type: application/pgp-signature; name="signature.asc"
 Content-Description: This is a digitally signed message part
 Content-Transfer-Encoding: 7bit
@@ -71,13 +110,13 @@ Content-Transfer-Encoding: 7bit
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQEcBAABCAAGBQJZCifsAAoJEM553pKExN6DwCAIAJQG4Gmm8608kIwXyuF2aAzJ
-DKnDvNur7JfOidqBbOUrvh0qo87l2vVmDMVRKBU3XsYhW1GdpcvdTW5c6Hmg2USt
-f1oUvadEeJfKqXopSNyfsRMUBfJa9aPgWqoZNODwIFDnpBVumj+rcUBAqrWTLiBe
-5+Qtb0ly9hvfrgFJn8vA8TyedLt+a+RYopjvWFG81qJz6KDn0ABmYg3lKvB3mXsy
-sHg3ObVJkqcZB353dhF28aT8DJ9ww3FRvJp2k+pcnApa/ykCpbOp/fTJ2V4AIGhp
-RMcl9Ks3DHXaVirUndXAjGeGJB5zo+Ub+R9bnZynmn82b4W6OfLCvKXLD994kZ8=
-=Vnn6
+iQEcBAABCAAGBQJZCilEAAoJEM553pKExN6DCkQH/ipT11hGIhtDAgXZBFfAmqIw
+McnxxnEXv1sudn57o9RyE5E/HjqXYCLA7VpxJf+J9IWJIT0jcr8AB8imlKMJyYXh
+rrsfQ8hvGStsfZxp+tALVi+kuQRtBCDGAGbNz+y6wC9N8LS2BcV0WDbz5SIaFZZT
+EM+97RputsoAwA/fr+vCzX3e2VSrVVLyhAYFYpWYkdIJwSIDKN37sYH3vjM8dgAI
+Bay91eeHeOHxxBrOs5NyNNzapigimOZYy3aXJ4GUWgAytitEDkb4fWrX9MKdeUzz
+eDwUR7dicqNaT5ANlW03JiCI3NdH4ZVagJxj0d9b0TGMwump7OHTrbdKkMc3r2w=
+=DTjT
 -----END PGP SIGNATURE-----
 
---=-w7wcBz9F2B8qYvxejyjT--
+--=-6YuwsMWrd09wHn3Nyh0x--
