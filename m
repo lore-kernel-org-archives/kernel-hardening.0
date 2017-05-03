@@ -1,96 +1,92 @@
 MIME-Version: 1.0
 Sender: keescook@google.com
-In-Reply-To: <20170425041512.13189-1-matt@nmatt.com>
-References: <20170425041512.13189-1-matt@nmatt.com>
+In-Reply-To: <20170424135751.GA9030@mail.hallyn.com>
+References: <20170424051512.20420-1-matt@nmatt.com> <20170424051512.20420-2-matt@nmatt.com>
+ <20170424135751.GA9030@mail.hallyn.com>
 From: Kees Cook <keescook@chromium.org>
-Date: Wed, 3 May 2017 12:30:11 -0700
-Message-ID: <CAGXu5jLzrCXSsc3rOteRO6bxRg7oon3qtzR+q--oj_iXb736yA@mail.gmail.com>
+Date: Wed, 3 May 2017 12:32:07 -0700
+Message-ID: <CAGXu5jLFkDB31W7uje3LaEujDrnvndQX9JK_hs47nc2dpbyNtQ@mail.gmail.com>
 Content-Type: text/plain; charset=UTF-8
-Subject: [kernel-hardening] Re: [PATCH v5 0/2] security: tty: make TIOCSTI ioctl require CAP_SYS_ADMIN
-To: Matt Brown <matt@nmatt.com>
-Cc: "Serge E. Hallyn" <serge@hallyn.com>, James Morris <jmorris@namei.org>, Greg KH <gregkh@linuxfoundation.org>, Jiri Slaby <jslaby@suse.com>, Jonathan Corbet <corbet@lwn.net>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
+Subject: [kernel-hardening] Re: [PATCH v4 1/2] tiocsti-restrict : Add owner user namespace to tty_struct
+To: "Serge E. Hallyn" <serge@hallyn.com>, Greg KH <gregkh@linuxfoundation.org>
+Cc: Matt Brown <matt@nmatt.com>, James Morris <jmorris@namei.org>, Jiri Slaby <jslaby@suse.com>, Jonathan Corbet <corbet@lwn.net>, Andrew Morton <akpm@linux-foundation.org>, Jann Horn <jannh@google.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, linux-security-module <linux-security-module@vger.kernel.org>, LKML <linux-kernel@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Mon, Apr 24, 2017 at 9:15 PM, Matt Brown <matt@nmatt.com> wrote:
-> This patchset introduces the tiocsti_restrict sysctl, whose default is
-> controlled via CONFIG_SECURITY_TIOCSTI_RESTRICT. When activated, this
-> control restricts all TIOCSTI ioctl calls from non CAP_SYS_ADMIN users.
+On Mon, Apr 24, 2017 at 6:57 AM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> Quoting Matt Brown (matt@nmatt.com):
+>> This patch adds struct user_namespace *owner_user_ns to the tty_struct.
+>> Then it is set to current_user_ns() in the alloc_tty_struct function.
+>>
+>> This is done to facilitate capability checks against the original user
+>> namespace that allocated the tty.
+>>
+>> E.g. ns_capable(tty->owner_user_ns,CAP_SYS_ADMIN)
+>>
+>> This combined with the use of user namespace's will allow hardening
+>> protections to be built to mitigate container escapes that utilize TTY
+>> ioctls such as TIOCSTI.
+>>
+>> See: https://bugzilla.redhat.com/show_bug.cgi?id=1411256
+>>
+>> Signed-off-by: Matt Brown <matt@nmatt.com>
 >
-> This patch was inspired from GRKERNSEC_HARDEN_TTY.
->
-> This patch would have prevented
-> https://bugzilla.redhat.com/show_bug.cgi?id=1411256 under the following
-> conditions:
-> * non-privileged container
-> * container run inside new user namespace
->
-> Possible effects on userland:
->
-> There could be a few user programs that would be effected by this
-> change.
-> See: <https://codesearch.debian.net/search?q=ioctl%5C%28.*TIOCSTI>
-> notable programs are: agetty, csh, xemacs and tcsh
->
-> However, I still believe that this change is worth it given that the
-> Kconfig defaults to n. This will be a feature that is turned on for the
-> same reason that people activate it when using grsecurity. Users of this
-> opt-in feature will realize that they are choosing security over some OS
-> features like unprivileged TIOCSTI ioctls, as should be clear in the
-> Kconfig help message.
->
-> Threat Model/Patch Rational:
->
-> From grsecurity's config for GRKERNSEC_HARDEN_TTY.
->
->  | There are very few legitimate uses for this functionality and it
->  | has made vulnerabilities in several 'su'-like programs possible in
->  | the past.  Even without these vulnerabilities, it provides an
->  | attacker with an easy mechanism to move laterally among other
->  | processes within the same user's compromised session.
->
-> So if one process within a tty session becomes compromised it can follow
-> that additional processes, that are thought to be in different security
-> boundaries, can be compromised as a result. When using a program like su
-> or sudo, these additional processes could be in a tty session where TTY file
-> descriptors are indeed shared over privilege boundaries.
->
-> This is also an excellent writeup about the issue:
-> <http://www.halfdog.net/Security/2012/TtyPushbackPrivilegeEscalation/>
->
-> When user namespaces are in use, the check for the capability
-> CAP_SYS_ADMIN is done against the user namespace that originally opened
-> the tty.
+> Acked-by: Serge Hallyn <serge@hallyn.com>
 
-This looks like it's ready to go. Greg, can you include this in your
-tree? That seems like the best place, even though it touches a few
-areas.
+This Ack didn't end up in the v5, but I think it stands, yes?
 
-Please consider it:
-
-Reviewed-by: Kees Cook <keescook@chromium.org>
-
-Thanks!
+Greg, is the v5 okay to pull for you or would a v6 with Acks/Reviews
+included be preferred?
 
 -Kees
 
-
 >
-> # Changes since v4:
-> * fixed typo
->
-> # Changes since v3:
-> * use get_user_ns and put_user_ns to take and drop references to the owner
->   user namespace because CONFIG_USER_NS is an option
->
-> # Changes since v2:
-> * take/drop reference to user namespace on tty struct alloc/free to prevent
->   use-after-free.
->
-> # Changes since v1:
-> * added owner_user_ns to tty_struct to enable capability checks against
->   the namespace that created the tty.
-> * rewording in different places to make patchset purpose clear
-> * Added Documentation
+>> ---
+>>  drivers/tty/tty_io.c | 2 ++
+>>  include/linux/tty.h  | 2 ++
+>>  2 files changed, 4 insertions(+)
+>>
+>> diff --git a/drivers/tty/tty_io.c b/drivers/tty/tty_io.c
+>> index e6d1a65..c276814 100644
+>> --- a/drivers/tty/tty_io.c
+>> +++ b/drivers/tty/tty_io.c
+>> @@ -171,6 +171,7 @@ static void free_tty_struct(struct tty_struct *tty)
+>>       put_device(tty->dev);
+>>       kfree(tty->write_buf);
+>>       tty->magic = 0xDEADDEAD;
+>> +     put_user_ns(tty->owner_user_ns);
+>>       kfree(tty);
+>>  }
+>>
+>> @@ -3191,6 +3192,7 @@ struct tty_struct *alloc_tty_struct(struct tty_driver *driver, int idx)
+>>       tty->index = idx;
+>>       tty_line_name(driver, idx, tty->name);
+>>       tty->dev = tty_get_device(tty);
+>> +     tty->owner_user_ns = get_user_ns(current_user_ns());
+>>
+>>       return tty;
+>>  }
+>> diff --git a/include/linux/tty.h b/include/linux/tty.h
+>> index 1017e904..d902d42 100644
+>> --- a/include/linux/tty.h
+>> +++ b/include/linux/tty.h
+>> @@ -12,6 +12,7 @@
+>>  #include <uapi/linux/tty.h>
+>>  #include <linux/rwsem.h>
+>>  #include <linux/llist.h>
+>> +#include <linux/user_namespace.h>
+>>
+>>
+>>  /*
+>> @@ -333,6 +334,7 @@ struct tty_struct {
+>>       /* If the tty has a pending do_SAK, queue it here - akpm */
+>>       struct work_struct SAK_work;
+>>       struct tty_port *port;
+>> +     struct user_namespace *owner_user_ns;
+>>  };
+>>
+>>  /* Each of a tty's open files has private_data pointing to tty_file_private */
+>> --
+>> 2.10.2
 
 
 
