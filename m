@@ -1,18 +1,50 @@
-References: <20170504133209.3053-1-danielmicay@gmail.com>
-From: Arjan van de Ven <arjan@linux.intel.com>
-Message-ID: <e358b217-7bae-07bb-4245-12d62513c733@linux.intel.com>
-Date: Thu, 4 May 2017 06:33:15 -0700
+Date: Thu, 4 May 2017 02:51:34 -0700
+From: Christoph Hellwig <hch@infradead.org>
+Message-ID: <20170504095134.GA14372@infradead.org>
+References: <20170502162932.12578-1-tycho@docker.com>
 MIME-Version: 1.0
-In-Reply-To: <20170504133209.3053-1-danielmicay@gmail.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: [PATCH] use get_random_long for the per-task stack canary
-To: Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, Ingo Molnar <mingo@elte.hu>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
-Cc: stable@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170502162932.12578-1-tycho@docker.com>
+Subject: [kernel-hardening] Re: [PATCH] ata-sff: always map page before data transfer
+To: Tycho Andersen <tycho@docker.com>
+Cc: Tejun Heo <tj@kernel.org>, Juerg Haefliger <juerg.haefliger@hpe.com>, linux-ide@vger.kernel.org, linux-kernel@vger.kernel.org, kernel-hardening@lists.openwall.com
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 5/4/2017 6:32 AM, Daniel Micay wrote:
-> The stack canary is an unsigned long and should be fully initialized to
-> random data rather than only 32 bits of random data.
+> I don't understand all the factors at play here, so thoughts are definitely
+> welcome.
 
-that makes sense to me... ack
+I don't fully understand the old code either.  One thing that is weird
+is the "use a bounce buffer comment" which doesn't make any sense.
+
+The other is the local_irq_save, which isn't really needed for
+kmap_atomic to start with, but maybe that's the reason why the original
+author didn't want to do it unconditionally?
+
+So based on that:
+
+> +	/* FIXME: use a bounce buffer */
+
+drop this comment..
+
+> +	local_irq_save(flags);
+
+.. remove the local_irq_save/local_irq_restore ..
+
+> +	/* do the actual data transfer */
+> +	ap->ops->sff_data_xfer(qc, buf + offset, qc->sect_size,
+> +			       do_write);
+
+.. and a nice alittle cleanup move the do_write onto the previous line.
+
+> +	/* FIXME: use bounce buffer */
+> +	local_irq_save(flags);
+> +	buf = kmap_atomic(page);
+>  
+> +	/* do the actual data transfer */
+> +	consumed = ap->ops->sff_data_xfer(qc, buf + offset,
+> +							count, rw);
+
+And same here.
+
+And we should be fine.
