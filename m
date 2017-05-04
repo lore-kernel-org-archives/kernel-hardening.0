@@ -1,170 +1,121 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
-From: Laura Abbott <labbott@redhat.com>
-Message-ID: <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
-Date: Thu, 4 May 2017 09:49:55 -0700
 MIME-Version: 1.0
-In-Reply-To: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 8bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Igor Stoppa <igor.stoppa@huawei.com>, Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+In-Reply-To: <20170504160356.GA16988@kroah.com>
+References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+ <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+ <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
+ <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+ <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+ <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
+ <CABniQZNYUzDTiEnd5AzJ6rJ=VPvT_ph0RK38sPS+u=BjXVQ+Jw@mail.gmail.com> <20170504160356.GA16988@kroah.com>
+From: Shawn <citypw@gmail.com>
+Date: Fri, 5 May 2017 01:12:37 +0800
+Message-ID: <CABniQZPkV7fcsneOML2hu=EKoAbesqXg=hryj8Yim2=iJM=vjg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Greg KH <gregkh@linuxfoundation.org>
+Cc: Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-[adding kernel-hardening since I think there would be interest]
+Hi Greg
 
-On 05/03/2017 05:06 AM, Igor Stoppa wrote:
-> Hello,
-> 
-> please review my (longish) line of thoughts, below.
-> 
-> I've restructured them so that they should be easier to follow.
-> 
-> 
-> Observations
-> ------------
-> 
-> * it is currently possible, by using prefix "__read_only", to have the
-> linker place a static variable into a special memory region, which will
-> become write-protected at the end of the init phase.
-> 
-> * the purpose is to write-protect data which is not expected to change,
-> ever, after it has been initialized.
-> 
-> * The mechanism used for locking down the memory region is to program
-> the MMU to trap writes to said region. It is fairly efficient and
-> HW-backed, so it doesn't introduce any major overhead, but the MMU deals
-> only with pages or supersets of pages, hence the need to collect all the
-> soon-to-be-read-only data - and only that - into the "special region".
-> The "__read_only" modifier is the admission ticket.
-> 
-> * the write-protecting feature helps supporting memory integrity in
-> general and can also help spotting rogue writes, whatever their origin
-> might be: uninitialized or expired pointers, wrong pointer arithmetic, etc.
-> 
-> 
-> 
-> Problem
-> -------
-> 
-> The feature is available only for *static* data - it will not work with
-> something like a linked list that is put together during init, for example.
-> 
-> 
-> 
-> Wish
-> ----
-> 
-> My starting point are the policy DB of SE Linux and the LSM Hooks, but
-> eventually I would like to extend the protection also to other
-> subsystems, in a way that can be merged into mainline.
-> 
-> 
-> 
-> Analysis
-> --------
-> 
-> * the solution I come up with has to be as little invasive as possible,
-> at least for what concerns the various subsystems whose integrity I want
-> to enhance.
-> 
-> * In most, if not all, the cases that could be enhanced, the code will
-> be calling kmalloc/vmalloc, indicating GFP_KERNEL as the desired type of
-> memory.
-> 
-> * I suspect/hope that the various maintainer won't object too much if my
-> changes are limited to replacing GFP_KERNEL with some other macro, for
-> example what I previously called GFP_LOCKABLE, provided I can ensure that:
-> 
->   -1) no penalty is introduced, at least when the extra protection
->       feature is not enabled, iow nobody has to suffer from my changes.
->       This means that GFP_LOCKABLE should fall back to GFP_KERNEL, when
->       it's not enabled.
-> 
->   -2) when the extra protection feature is enabled, the code still
->       works as expected, as long as the data identified for this
->       enhancement is really unmodified after init.
-> 
-> * In my quest for improved memory integrity, I will deal with very
-> different memory size being allocated, so if I start writing my own
-> memory allocator, starting from a page-aligned chunk of normal memory,
-> at best I will end up with a replica of kmalloc, at worst with something
-> buggy. Either way, it will be extremely harder to push other subsystems
-> to use it.
-> I probably wouldn't like it either, if I was a maintainer.
-> 
-> * While I do not strictly need a new memory zone, memory zones are what
-> kmalloc understands at the moment: AFAIK, it is not possible to tell
-> kmalloc from which memory pool it should fish out the memory, other than
-> having a reference to a memory zone.
-> If it was possible to aim kmalloc at arbitrary memory pools, probably we
-> would not be having this exchange right now. And probably there would
-> not be so many other folks trying to have their memory zone of interest
-> being merged. However I suspect this solution would be sub-optimal for
-> the normal use cases, because there would be the extra overhead of
-> passing the reference to the memory pool, instead of encoding it into
-> bitfields, together with other information.
-> 
-> * there are very slim chances (to be optimistic :) that I can get away
-> with having my custom zone merged, because others are trying with
-> similar proposals and they get rejected, so maybe I can have better luck
-> if I propose something that can also work for others.
-> 
-> * currently memory zones are mapped 1:1 to bits in crowded a bitmask,
-> but not all these zones are really needed in a typical real system, some
-> are kept for backward compatibility and supporting distros, which cannot
-> know upfront the quirks of the HW they will be running on.
-> 
-> 
-> Conclusions
-> -----------
-> 
-> * the solution that seems to be more likely to succeed is to remove the
-> 1:1 mapping between optional zones and their respective bits.
-> 
-> * the bits previously assigned to the optional zones would become
-> available for mapping whatever zone a system integrator wants to support.
-> 
-> 
-> Cons:
-> There would be still a hard constraint on the maximum number of zones
-> available simultaneously, so one will have to choose which of the
-> optional zones to enable, and be ready to deal with own zone
-> disappearing (ex: fall back to normal memory and give up some/all
-> functionality)
-> 
-> Pros:
-> * No bit would go to waste: those who want to have own custom zone could
-> make a better use of the allocated-but-not-necessary-to-them bits.
-> * There would be a standard way for people to add non-standard zones.
-> * It doesn't alter the hot paths that are critical to efficient memory
-> handling.
-> 
-> So it seems a win-win scenario, apart from the fact that I will probably
-> have to reshuffle a certain amount of macros :-)
-> 
-> 
-> P.S.
-> There was an early advice of creating and using a custom-made memory
-> allocator, I hope it's now clear why I don't think it's viable: it might
-> work if I use it only for further code that I will write, but it really
-> doesn't seem the best way to convince other subsystem maintainers to
-> take in my changes, if I suggest them to give up the super optimized
-> kmalloc (and friends) in favor of some homebrew allocator I wrote :-/
-> 
-> 
+On Fri, May 5, 2017 at 12:03 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
+> On Thu, May 04, 2017 at 10:11:04PM +0800, Shawn wrote:
+>> That announcement only represented the POV from a group of ppl. From
+>> my( and other ppl from HardenedLinux) perspective, Linux foundation is
+>> a commercial company and very good at PR but zero integrity to us.
+>
+> A slight correction here please.  The LF is a non-profit organization[1]
+> set up to promote Linux and allow companies who want to see Linux
+> succeed, get together and do this.  The LF happens to sponsor a few
+> kernel developers (me and Linus), but they can not tell us what to do at
+> all.
+>
+Oh, that's new to me. LF is a non-profit organization. Maybe some
+"rumors" isn't true: I thought LF hired two "sales" people in HK last
+year? Can you confirm that?
 
-BPF takes the approach of calling set_memory_ro to mark regions as
-read only. I'm certainly over simplifying but it sounds like this
-is mostly a mechanism to have this happen mostly automatically.
-Can you provide any more details about tradeoffs of the two approaches?
+Otherwise, which NGO's runner has $344,220 salary per year?
+http://news.idg.no/cw/art.cfm?id=5A9F8343-BAA1-6432-72A26555784BF05E
 
-arm and arm64 have the added complexity of using larger
-page sizes on the linear map so dynamic mapping/unmapping generally
-doesn't work. arm64 supports DEBUG_PAGEALLOC by mapping with only
-pages but this is generally only wanted as a debug mechanism.
-I don't know if you've given this any thought at all.
+LF is growing so fast, look at that. Compensation is seems very
+promising even in 2013:
+https://projects.propublica.org/nonprofits/organizations/460503801
 
-Thanks,
-Laura
+$499,705 is the total compensation in 2014? Wow..why this magic
+number? Because $500,000 would be excessive?
+http://pdfs.citizenaudit.org/2016_02_EO/46-0503801_990O_201412.pdf
+
+> They also are a place that companies have come together to help with the
+> state of security in the Linux and Open Source ecosystem, starting CII
+> which offers grants to anyone who wants to get paid to do security work
+> (new features, support, audits, etc.)  CII doesn't make any money, it
+> gives money away!  Of course it does press releases saying what projects
+> it funds in order to get other projects and people to submit project
+> proposals to continue this work.  I know of at least 2 new kernel
+> security projects that recently got funding because of this.
+>
+> So there is no "integrity" that the LF can, or can not, have when it
+> comes to anyone here as the LF doesn't actually _do_ anything when it
+> comes to kernel development (again, other than funding 2 developers
+> directly).
+>
+I'm curious what's your offical relationship with Google? Cu'z you
+have this account( gregkh@google.com) from Google:
+https://android.googlesource.com/kernel/common.git/+/e88bb963b88d5579805b90e8d505739692095042
+
+But you seems still working for LF, aren't you?:
+https://www.linuxfoundation.org/about/linux-foundation-fellows
+
+>> They don't respect individuals and the community.
+>
+> That's a load of crap, really.  The LF has always had a kernel community
+> developer as a full board member, and sponsors conferences, travel
+> funding, hardware acquisition, intern programs, and lots of other stuff.
+> I don't know of any kernel community request that the LF has _not_
+> funded, do you?
+>
+Really? That's also new to me. Let me give you some hints:
+
+The Linux Foundation: Not a Friend of Desktop Linux, the GPL, or Openness:
+http://fossforce.com/2017/04/lin-desktop-linux-gpl-openness/
+
+OpenSSL after Heartbleed:
+https://lwn.net/Articles/703000/
+
+Linux Foundation quietly drops community representation:
+https://mjg59.dreamwidth.org/39546.html
+
+> The LF is all about making the whole community work well together, and
+> that includes both individual developers and companies as this is a
+> symbiotic relationship (companies use Linux, fund its development,
+> create new hardware for Linux to run on, etc.)  Without one part of the
+> group, Linux would not succeed at all, and they know that quite well.
+>
+> If the LF didn't "individuals and the community", I know I wouldn't be
+> working for them.
+>
+> So I don't know why anyone would be "upset" at the LF here, all they
+> have done is actually fund people to do kernel security work, including
+> members of the grsecurity team!  How is doing that somehow "bad"?  Do
+> you want to go back to 2+ years ago when they were not doing this
+> funding at all?
+>
+> And does no one remember how things were before there was a LF?  Do you
+> really want to go back to those days?  Were they somehow better than
+> things are now?  As someone who remembers those times quite well, I can
+> assure you that they were not.
+>
+In my very "narrow" POV( only as FLOSS supporter and security
+consutlant), KSPP would be so much better without LF's involvement and
+PR
+
+
+-- 
+GNU powered it...
+GPL protect it...
+God blessing it...
+
+regards
+Shawn
