@@ -1,23 +1,250 @@
-Message-ID: <1493906699.29205.1.camel@redhat.com>
-From: Rik van Riel <riel@redhat.com>
-Date: Thu, 04 May 2017 10:04:59 -0400
-In-Reply-To: <20170504133209.3053-1-danielmicay@gmail.com>
-References: <20170504133209.3053-1-danielmicay@gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Subject: Re: [kernel-hardening] [PATCH] use get_random_long for the per-task
- stack canary
-To: Daniel Micay <danielmicay@gmail.com>, Kees Cook <keescook@chromium.org>, Arjan van Ven <arjan@linux.intel.com>, Ingo Molnar <mingo@elte.hu>, kernel-hardening@lists.openwall.com, LKML <linux-kernel@vger.kernel.org>
-Cc: stable@vger.kernel.org
+MIME-Version: 1.0
+In-Reply-To: <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
+References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+ <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+ <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
+ <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+ <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com> <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
+From: Shawn <citypw@gmail.com>
+Date: Thu, 4 May 2017 22:11:04 +0800
+Message-ID: <CABniQZNYUzDTiEnd5AzJ6rJ=VPvT_ph0RK38sPS+u=BjXVQ+Jw@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Kees Cook <keescook@chromium.org>
+Cc: Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, 2017-05-04 at 09:32 -0400, Daniel Micay wrote:
-> The stack canary is an unsigned long and should be fully initialized
-> to
-> random data rather than only 32 bits of random data.
-> 
-> Cc: stable@vger.kernel.org
-> Signed-off-by: Daniel Micay <danielmicay@gmail.com>
-> 
-Acked-by: Rik van Riel <riel@redhat.com>
+On Thu, May 4, 2017 at 1:45 PM, Kees Cook <keescook@chromium.org> wrote:
+>> btw: I share the same view with Mathias Krause and other ppl who
+>> really concern the real sense of security. I like KSPP in the 1st
+>> place. But now I lost PaX/Grsecurity test patch. Who should I blame? I
+>> think we made our point very clear here:
+>>
+>> https://hardenedlinux.github.io/announcement/2017/04/29/hardenedlinux-statement2.html
+>
+> Well, there's exactly one group that decided to pull the patches. If
+> you want to assign blame, I think it's clear it falls squarely on
+> their shoulders.
+>
+> To the first point at your URL, there's a lot of inaccuracies. KSPP is
+> an upstream group; CII funds individuals (not the whole of KSPP) that
+> make independent proposals. In fact, the very first CII funded person
+> was ephox from grsecurity. So ... if CII funding contributors to
+> upstream was the problem, then grsecurity created their own problem?
+> That makes no sense.
+>
+> As for "hardly accomplished anything compared to grsecurity" that's a
+> pretty unfair comparison to make. Upstream has been really focusing on
+> this for maybe 2 years at best now? And grsecurity has been doing it
+> for over a decade? And besides, "upstream doesn't have all of
+> grsecurity upstreamed" isn't a reason to blame upstream for grsecurity
+> going private.
+>
+> How can you say "introduced more bugs"? I'd be happy to fix them, if
+> you see them. And as I talked about in my reply to Mathias, of course
+> things look incomplete in upstream: they're being developed like
+> everything else in upstream: incrementally. It is not possible to just
+> fork-lift everything from grsecurity into upstream. It's just not how
+> upstream development works.
+>
+> To this notion that there is some kind of conspiracy by LF to snub
+> grsecurity is just flat out silly. LF isn't upstream (though, sure,
+> they support a lot of the work). Upstream developers can't control
+> what or how LF says things (and few of us have time to deal with
+> that). If you look at things in upstream that came from grsecurity,
+> you'll see plenty of credit given. That sure seems like upstream
+> "revealing the truth to the public". Look at the copyright notices in
+> the gcc plugins, in mm/usercopy.c, and the notes in the Kconfigs, and
+> the commit messages. Look at my own blog posts covering the features,
+> look at the KSPP wiki page. The vast majority of things attributable
+> to grsecurity, do, in fact, give credit. So upstream certainly isn't
+> "blatantly stealing credit from grsecurity", so why would LF? And if
+> this single PR statement from LF is still seen as a sudden marketing
+> war against grsecurity, then I would ask "How is making the patches
+> private the solution?" Grsecurity has spent over a decade mocking and
+> berating upstream (just look at LWN), so how does a single article
+> from LF suddenly undo all their work to differentiate themselves? This
+> whole line of reasoning is convoluted, and frankly, has absolutely
+> nothing to do with upstream's efforts to protect Linux users.
+>
+I don't have the problem with ephox funded by CII for upstreaming GCC
+plugins. I blame LF/CII's( I can't speak for other ppl from
+HardenedLinux) PR because they've been doing PR since the day 1 of
+KSPP. A lot of ppl being misled by their improper PR including BLUG(
+Beijing GNU/Linux User Group) and my customers. I don't know how LF
+sells their "service" or "membership" and what stories they tell to
+enterprise management. Eventually some of my customers indeed being
+affected by some false sense of security advertisement about linux
+security. As a security consultant, how am I suppose to answer the
+question like "there are a bunch of exploits in the wild and the
+linux( KSPP?) can't mitigate, which isn't the stories we've had heard"
+from customers? I understand it's unfair to compare KSPP with
+PaX/Grsecurity. But the fact is there are multiple exploitable bugs in
+the wild that's the reason I can not rely on KSPP now:
+
+https://github.com/hardenedlinux/grsecurity-101-tutorials/blob/master/kernel_vuln_exp.md
+
+You may still remember those days that "one null-ptr deref exploit can
+rule them all". It was my nightmare that endless breaches from both
+outside and inside. PaX's KERNEXEC/UDEREF saved my time back then. As
+the evidences show that PaX/Grsec is still the most effective defense
+in RING0 so far.
+
+That announcement only represented the POV from a group of ppl. From
+my( and other ppl from HardenedLinux) perspective, Linux foundation is
+a commercial company and very good at PR but zero integrity to us.
+They don't respect individuals and the community. But I never said
+KSPP don't credited PaX/Grsecurity in the commits or Kconfig. I've
+been reviewing you guys work, which porting some pieces of
+PaX/Grsecurity code/features to the mainline. I'm glad to see linux
+kernel is raising the bar. I translated KSPP documentation into
+Chinese and let more ppl( both community and commercial customers need
+education) know there are some ppl care security and trying to achieve
+the security level what PaX/Grsecurity can provided. But what LF PR
+does is really harmful to my efforts. I'll have to spend my extra time
+on explanation and writing reports for those victims( customers, other
+vendors, even one of my investors). As I see, LF was trying to
+sabotage the small open source consulting business like mine.
+
+Otherwise, I don't care about Spender's personality stuff. All I
+concern is the practical defense solution to protect our asset from
+those threats not only from Ring 0. Both fortunate and unfortunate
+that PaX/Grsec is still an option. We build our defense solution based
+on PaX/Grsecurity and some of our work is open source at
+HardenedLinux's github.
+
+> It'd be nice if I could convince you otherwise (see my reply to
+> Mathias), but upstream hasn't "created more work" for grsecurity. And
+> even if you still believe that, making their patches private doesn't
+> reduce the amount of work they have to do. It just forces people to
+> pay them.
+>
+> You later speak of philosophy, so let me ask you: if they've forced
+> their users to pay for access because their features were being
+> upstreamed, then they do not want these protections available to
+> everyone, they want them available only to those who would pay for
+> them. To me, though, it still can't be this simplistic. They've mostly
+> rejected spending free time to upstream things, they've mostly
+> rejected being paid to upstream things, and their efforts to be paid
+> to just work on grsecurity in the open (see the CII thread from a
+> while back) haven't worked, or are insufficient in some way. What is
+> it that grsecurity wants?
+>
+> It looks very much like they want to stay a fork and be paid for it. I
+> certainly can't blame them for this; upstreaming is hard and as
+> Mathias says, they lose a certain level of control over the results.
+> Fundamentally, it's their time; they can do whatever they want with
+> it. And looking to be paid for your time is of course perfectly
+> sensible. But if this desire to stay a fork is true, then their
+> primary goal is NOT protecting as many people as possible, it's
+> protecting a subset of people as perfectly as they can. Again, this is
+> fine. Upstream and grsecurity can coexist in this state (since again,
+> upstreaming doesn't increase their work), and this was the state for
+> over a decade. But suddenly grsecurity went private.
+>
+> So it would appear that grsecurity couldn't make enough money with
+> their patches staying public, so they've made them private. If that's
+> true, then it means that everyone who was using grsecurity but wasn't
+> a sponsor of grsecurity's work holds some level of responsibility for
+> grsecurity's decision.
+>
+> It could be argued that upstream is "using grsecurity but wasn't a
+> sponsor", but this would be missing an important point: upstream's
+> contribution to grsecurity is Linux itself, which has giant value.
+> (And for my part personally, I did everything I could to pay
+> grsecurity, and succeeded a couple times over the years.) With this we
+> have come back around to looking at the GPL, which you mentioned. This
+> is specifically what the GPL was created to protect against. Why
+> hasn't grsecurity paid money to the tens of thousands of contributors
+> to the Linux kernel? Because they don't have to, and that is part of
+> the understanding about using the GPL for a project: everyone
+> contributes what they can, and everyone benefits. And if there are
+> forks, people can use each other's work so no one is risking being in
+> a situation where someone is unfairly benefiting from someone else's
+> work.
+>
+> You had invoked RMS, so, here we are. It looks like grsecurity has
+> gone private because upstream started exercising the princples of the
+> GPL to expand how many upstream users would benefit from grsecurity's
+> work in the same way grsecurity's users benefited from upstream's
+> work. In answer to "who should I blame?" I'd say this is squarely on
+> grsecurity, not anyone else. They've chosen to benefit from upstream's
+> future work without making their future work available to upstream.
+>
+> But maybe this is all wrong. Neither of us can speak for grsecurity,
+> nor know their motivations. I've always tried to avoid these kinds of
+> discussions for that very reason, and to stay focused on the technical
+> work. I can only truly speak for myself. I was faced with a seemingly
+> simple problem: Linux users need to be protected, the vast majority of
+> Linux users run upstream-derived kernels, but many of the best
+> defenses lived in grsecurity. What I'd learned from working at an
+> industry group (OSDL, the pre-LF), working at a distro (Canonical on
+> Ubuntu), and now working on devices and services (Google), is that
+> engineering teams in most places won't risk basing their work on a
+> fork of upstream, whether it be support concerns, cost concerns,
+> complexity concerns, or whatever. At the end of the day, it was clear
+> that the only path forward was to focus upstream on the same defense
+> principles grsecurity espoused, and to then start porting or creating
+> these kinds of defenses in upstream. (Which is the very thing
+> grsecurity told upstream to do at the first Linux Security Summit in
+> 2010!) Doing this work was very time consuming, so I tried to collect
+> interested people together to work under a single umbrella to help
+> change the upstream culture, examine flaws, port or invent defenses,
+> test, document, etc.
+>
+Maybe you are right from your perspective. I appreciate what you've
+contributed to the FLOSS community since you were working for
+Canonical. Upstream is good but it's always raising the bar but never
+being good enough for the defensive side. It never bothers me when I
+worked for two towers of GNU/Linux vendor( SUSE/RH). It bothers me now
+and the desert of the real is happening every single day, while spend
+another years of waiting is not practical to those who concerns their
+security.
+
+Speaking of GPL, closing the public access isn't violate GPL
+technically. On the other hand, the authors of PaX/Grsecurity can do
+anything they want. It's their rights. To be honest, ppl who concerns
+security are minority. It's sad to see this group of ppl lost test
+patch. They shared their work with FLOSS world for 16 years. I don't
+think I have the rights to blame them. Anyway, I'd still blame LF.
+
+> So, in the end, I can't speak to grsecurity's true motivations, but I
+> can speak to mine, and what I'd like upstream to be doing: protecting
+> as many Linux users as completely as possible. What's possible in
+> upstream differs from what was possible in grsecurity, so no one
+> should expect the same things between the two. Comparing the two
+> projects is fraught with error, and blaming anyone other than
+> grsecurity for going private is ridiculous.
+>
+>> Agree! I'm afraid I can't help much on upstream because that's not my
+>> customer want in short-term. S0rry, my idealist side never fit in
+>> KSPP.
+>
+> Sure, understood. I'm delighted you've spent time getting kernel
+> hardening stuff landed in AOSP, though; for vendors that can be
+> convinced to care about backporting these things, it's great to have a
+> place to point to for them to get your work! And it's fine not to
+> contribute to upstream, since luckily there will be some people who
+> can. Upstream will continue to work on security defenses, but at the
+> very least, it'd be nice if people would be constructive in their
+> criticisms. We've gone over a decade with grsecurity's frequently
+> toxic rhetoric only alienating people instead of productively working
+> together to reach what should be the common goal of security work:
+> defending users.
+>
+Yeah, we have different battle to fight with. I truely hope KSPP can
+be an alternative mitigation solution in the future because the users
+could get benefit from open competitions. I think PaX team and Spender
+never fear to compete with any other defense solution.
+
+
+
+-- 
+GNU powered it...
+GPL protect it...
+God blessing it...
+
+regards
+Shawn
