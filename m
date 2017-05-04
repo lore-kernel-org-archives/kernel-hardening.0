@@ -1,250 +1,287 @@
-MIME-Version: 1.0
-In-Reply-To: <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
-References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
- <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
- <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
- <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
- <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
- <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com> <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
-From: Shawn <citypw@gmail.com>
-Date: Thu, 4 May 2017 22:11:04 +0800
-Message-ID: <CABniQZNYUzDTiEnd5AzJ6rJ=VPvT_ph0RK38sPS+u=BjXVQ+Jw@mail.gmail.com>
-Content-Type: text/plain; charset=UTF-8
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
-To: Kees Cook <keescook@chromium.org>
-Cc: Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu,  4 May 2017 10:24:35 -0400
+Message-Id: <20170504142435.10175-1-danielmicay@gmail.com>
+Subject: [kernel-hardening] [PATCH] add the option of fortified string.h functions
+To: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com
+Cc: Daniel Micay <danielmicay@gmail.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 4, 2017 at 1:45 PM, Kees Cook <keescook@chromium.org> wrote:
->> btw: I share the same view with Mathias Krause and other ppl who
->> really concern the real sense of security. I like KSPP in the 1st
->> place. But now I lost PaX/Grsecurity test patch. Who should I blame? I
->> think we made our point very clear here:
->>
->> https://hardenedlinux.github.io/announcement/2017/04/29/hardenedlinux-statement2.html
->
-> Well, there's exactly one group that decided to pull the patches. If
-> you want to assign blame, I think it's clear it falls squarely on
-> their shoulders.
->
-> To the first point at your URL, there's a lot of inaccuracies. KSPP is
-> an upstream group; CII funds individuals (not the whole of KSPP) that
-> make independent proposals. In fact, the very first CII funded person
-> was ephox from grsecurity. So ... if CII funding contributors to
-> upstream was the problem, then grsecurity created their own problem?
-> That makes no sense.
->
-> As for "hardly accomplished anything compared to grsecurity" that's a
-> pretty unfair comparison to make. Upstream has been really focusing on
-> this for maybe 2 years at best now? And grsecurity has been doing it
-> for over a decade? And besides, "upstream doesn't have all of
-> grsecurity upstreamed" isn't a reason to blame upstream for grsecurity
-> going private.
->
-> How can you say "introduced more bugs"? I'd be happy to fix them, if
-> you see them. And as I talked about in my reply to Mathias, of course
-> things look incomplete in upstream: they're being developed like
-> everything else in upstream: incrementally. It is not possible to just
-> fork-lift everything from grsecurity into upstream. It's just not how
-> upstream development works.
->
-> To this notion that there is some kind of conspiracy by LF to snub
-> grsecurity is just flat out silly. LF isn't upstream (though, sure,
-> they support a lot of the work). Upstream developers can't control
-> what or how LF says things (and few of us have time to deal with
-> that). If you look at things in upstream that came from grsecurity,
-> you'll see plenty of credit given. That sure seems like upstream
-> "revealing the truth to the public". Look at the copyright notices in
-> the gcc plugins, in mm/usercopy.c, and the notes in the Kconfigs, and
-> the commit messages. Look at my own blog posts covering the features,
-> look at the KSPP wiki page. The vast majority of things attributable
-> to grsecurity, do, in fact, give credit. So upstream certainly isn't
-> "blatantly stealing credit from grsecurity", so why would LF? And if
-> this single PR statement from LF is still seen as a sudden marketing
-> war against grsecurity, then I would ask "How is making the patches
-> private the solution?" Grsecurity has spent over a decade mocking and
-> berating upstream (just look at LWN), so how does a single article
-> from LF suddenly undo all their work to differentiate themselves? This
-> whole line of reasoning is convoluted, and frankly, has absolutely
-> nothing to do with upstream's efforts to protect Linux users.
->
-I don't have the problem with ephox funded by CII for upstreaming GCC
-plugins. I blame LF/CII's( I can't speak for other ppl from
-HardenedLinux) PR because they've been doing PR since the day 1 of
-KSPP. A lot of ppl being misled by their improper PR including BLUG(
-Beijing GNU/Linux User Group) and my customers. I don't know how LF
-sells their "service" or "membership" and what stories they tell to
-enterprise management. Eventually some of my customers indeed being
-affected by some false sense of security advertisement about linux
-security. As a security consultant, how am I suppose to answer the
-question like "there are a bunch of exploits in the wild and the
-linux( KSPP?) can't mitigate, which isn't the stories we've had heard"
-from customers? I understand it's unfair to compare KSPP with
-PaX/Grsecurity. But the fact is there are multiple exploitable bugs in
-the wild that's the reason I can not rely on KSPP now:
+This adds support for compiling with a rough equivalent to the glibc
+_FORTIFY_SOURCE=1 feature, providing compile-time and runtime buffer
+overflow checks for string.h functions when the compiler determines the
+size of the source or destination buffer at compile-time. Unlike glibc,
+it covers buffer reads in addition to writes.
 
-https://github.com/hardenedlinux/grsecurity-101-tutorials/blob/master/kernel_vuln_exp.md
+GNU C __builtin_*_chk intrinsics are avoided because they're only
+designed to detect write overflows and are overly complex. A single
+inline branch works for everything but strncat while those intrinsics
+would force the creation of a bunch of extra non-inline wrappers that
+aren't able to receive the detected source buffer size.
 
-You may still remember those days that "one null-ptr deref exploit can
-rule them all". It was my nightmare that endless breaches from both
-outside and inside. PaX's KERNEXEC/UDEREF saved my time back then. As
-the evidences show that PaX/Grsec is still the most effective defense
-in RING0 so far.
+This detects various undefined uses of memcpy, etc. at compile-time
+outside of non-core kernel code, and in the arm64 vdso code, so there
+will need to be a series of fixes applied (mainly memcpy -> strncpy for
+copying string constants to avoid copying past the end of the source).
+It isn't particularly bad, but there are likely some issues that occur
+during regular use at runtime (none found so far).
 
-That announcement only represented the POV from a group of ppl. From
-my( and other ppl from HardenedLinux) perspective, Linux foundation is
-a commercial company and very good at PR but zero integrity to us.
-They don't respect individuals and the community. But I never said
-KSPP don't credited PaX/Grsecurity in the commits or Kconfig. I've
-been reviewing you guys work, which porting some pieces of
-PaX/Grsecurity code/features to the mainline. I'm glad to see linux
-kernel is raising the bar. I translated KSPP documentation into
-Chinese and let more ppl( both community and commercial customers need
-education) know there are some ppl care security and trying to achieve
-the security level what PaX/Grsecurity can provided. But what LF PR
-does is really harmful to my efforts. I'll have to spend my extra time
-on explanation and writing reports for those victims( customers, other
-vendors, even one of my investors). As I see, LF was trying to
-sabotage the small open source consulting business like mine.
+Future improvements left out of initial implementation for simplicity,
+as it's all quite optional and can be done incrementally:
 
-Otherwise, I don't care about Spender's personality stuff. All I
-concern is the practical defense solution to protect our asset from
-those threats not only from Ring 0. Both fortunate and unfortunate
-that PaX/Grsec is still an option. We build our defense solution based
-on PaX/Grsecurity and some of our work is open source at
-HardenedLinux's github.
+The fortified string functions should place a limit on reads from the
+source. For strcat/strcpy, these could just be a variant of strlcat /
+strlcpy using the size limit as a bound on both the source and
+destination, with the return value only reporting whether truncation
+occurred rather than providing the source length. It would be an easier
+API for developers to use too and not that it really matters but it
+would be more efficient for the case where truncation is intended.
 
-> It'd be nice if I could convince you otherwise (see my reply to
-> Mathias), but upstream hasn't "created more work" for grsecurity. And
-> even if you still believe that, making their patches private doesn't
-> reduce the amount of work they have to do. It just forces people to
-> pay them.
->
-> You later speak of philosophy, so let me ask you: if they've forced
-> their users to pay for access because their features were being
-> upstreamed, then they do not want these protections available to
-> everyone, they want them available only to those who would pay for
-> them. To me, though, it still can't be this simplistic. They've mostly
-> rejected spending free time to upstream things, they've mostly
-> rejected being paid to upstream things, and their efforts to be paid
-> to just work on grsecurity in the open (see the CII thread from a
-> while back) haven't worked, or are insufficient in some way. What is
-> it that grsecurity wants?
->
-> It looks very much like they want to stay a fork and be paid for it. I
-> certainly can't blame them for this; upstreaming is hard and as
-> Mathias says, they lose a certain level of control over the results.
-> Fundamentally, it's their time; they can do whatever they want with
-> it. And looking to be paid for your time is of course perfectly
-> sensible. But if this desire to stay a fork is true, then their
-> primary goal is NOT protecting as many people as possible, it's
-> protecting a subset of people as perfectly as they can. Again, this is
-> fine. Upstream and grsecurity can coexist in this state (since again,
-> upstreaming doesn't increase their work), and this was the state for
-> over a decade. But suddenly grsecurity went private.
->
-> So it would appear that grsecurity couldn't make enough money with
-> their patches staying public, so they've made them private. If that's
-> true, then it means that everyone who was using grsecurity but wasn't
-> a sponsor of grsecurity's work holds some level of responsibility for
-> grsecurity's decision.
->
-> It could be argued that upstream is "using grsecurity but wasn't a
-> sponsor", but this would be missing an important point: upstream's
-> contribution to grsecurity is Linux itself, which has giant value.
-> (And for my part personally, I did everything I could to pay
-> grsecurity, and succeeded a couple times over the years.) With this we
-> have come back around to looking at the GPL, which you mentioned. This
-> is specifically what the GPL was created to protect against. Why
-> hasn't grsecurity paid money to the tens of thousands of contributors
-> to the Linux kernel? Because they don't have to, and that is part of
-> the understanding about using the GPL for a project: everyone
-> contributes what they can, and everyone benefits. And if there are
-> forks, people can use each other's work so no one is risking being in
-> a situation where someone is unfairly benefiting from someone else's
-> work.
->
-> You had invoked RMS, so, here we are. It looks like grsecurity has
-> gone private because upstream started exercising the princples of the
-> GPL to expand how many upstream users would benefit from grsecurity's
-> work in the same way grsecurity's users benefited from upstream's
-> work. In answer to "who should I blame?" I'd say this is squarely on
-> grsecurity, not anyone else. They've chosen to benefit from upstream's
-> future work without making their future work available to upstream.
->
-> But maybe this is all wrong. Neither of us can speak for grsecurity,
-> nor know their motivations. I've always tried to avoid these kinds of
-> discussions for that very reason, and to stay focused on the technical
-> work. I can only truly speak for myself. I was faced with a seemingly
-> simple problem: Linux users need to be protected, the vast majority of
-> Linux users run upstream-derived kernels, but many of the best
-> defenses lived in grsecurity. What I'd learned from working at an
-> industry group (OSDL, the pre-LF), working at a distro (Canonical on
-> Ubuntu), and now working on devices and services (Google), is that
-> engineering teams in most places won't risk basing their work on a
-> fork of upstream, whether it be support concerns, cost concerns,
-> complexity concerns, or whatever. At the end of the day, it was clear
-> that the only path forward was to focus upstream on the same defense
-> principles grsecurity espoused, and to then start porting or creating
-> these kinds of defenses in upstream. (Which is the very thing
-> grsecurity told upstream to do at the first Linux Security Summit in
-> 2010!) Doing this work was very time consuming, so I tried to collect
-> interested people together to work under a single umbrella to help
-> change the upstream culture, examine flaws, port or invent defenses,
-> test, document, etc.
->
-Maybe you are right from your perspective. I appreciate what you've
-contributed to the FLOSS community since you were working for
-Canonical. Upstream is good but it's always raising the bar but never
-being good enough for the defensive side. It never bothers me when I
-worked for two towers of GNU/Linux vendor( SUSE/RH). It bothers me now
-and the desert of the real is happening every single day, while spend
-another years of waiting is not practical to those who concerns their
-security.
+It should be possible to optionally use __builtin_object_size(x, 1) for
+some functions (C strings) to detect intra-object overflows (like
+glibc's _FORTIFY_SOURCE=2), but for now this takes the conservative
+approach to avoid likely compatibility issues.
 
-Speaking of GPL, closing the public access isn't violate GPL
-technically. On the other hand, the authors of PaX/Grsecurity can do
-anything they want. It's their rights. To be honest, ppl who concerns
-security are minority. It's sad to see this group of ppl lost test
-patch. They shared their work with FLOSS world for 16 years. I don't
-think I have the rights to blame them. Anyway, I'd still blame LF.
+The error reporting could be made friendlier by splitting up the
+compile-time error for reads and writes. The runtime error could also
+directly report the buffer and copy sizes.
 
-> So, in the end, I can't speak to grsecurity's true motivations, but I
-> can speak to mine, and what I'd like upstream to be doing: protecting
-> as many Linux users as completely as possible. What's possible in
-> upstream differs from what was possible in grsecurity, so no one
-> should expect the same things between the two. Comparing the two
-> projects is fraught with error, and blaming anyone other than
-> grsecurity for going private is ridiculous.
->
->> Agree! I'm afraid I can't help much on upstream because that's not my
->> customer want in short-term. S0rry, my idealist side never fit in
->> KSPP.
->
-> Sure, understood. I'm delighted you've spent time getting kernel
-> hardening stuff landed in AOSP, though; for vendors that can be
-> convinced to care about backporting these things, it's great to have a
-> place to point to for them to get your work! And it's fine not to
-> contribute to upstream, since luckily there will be some people who
-> can. Upstream will continue to work on security defenses, but at the
-> very least, it'd be nice if people would be constructive in their
-> criticisms. We've gone over a decade with grsecurity's frequently
-> toxic rhetoric only alienating people instead of productively working
-> together to reach what should be the common goal of security work:
-> defending users.
->
-Yeah, we have different battle to fight with. I truely hope KSPP can
-be an alternative mitigation solution in the future because the users
-could get benefit from open competitions. I think PaX team and Spender
-never fear to compete with any other defense solution.
+It may make sense to have the compile-time checks in a separate
+configuration option since they wouldn't have a runtime performance cost
+if there was an ifdef for the runtime check. However, the runtime cost
+of these checks is already quite low (much lower than SSP) and as long
+as some people are using it with allyesconfig, the issues will be found
+for any in-tree code.
 
+Signed-off-by: Daniel Micay <danielmicay@gmail.com>
+---
+ arch/x86/boot/compressed/misc.c |   5 ++
+ include/linux/string.h          | 161 ++++++++++++++++++++++++++++++++++++++++
+ lib/string.c                    |   8 ++
+ security/Kconfig                |   6 ++
+ 4 files changed, 180 insertions(+)
 
-
+diff --git a/arch/x86/boot/compressed/misc.c b/arch/x86/boot/compressed/misc.c
+index b3c5a5f030ce..43691238a21d 100644
+--- a/arch/x86/boot/compressed/misc.c
++++ b/arch/x86/boot/compressed/misc.c
+@@ -409,3 +409,8 @@ asmlinkage __visible void *extract_kernel(void *rmode, memptr heap,
+ 	debug_putstr("done.\nBooting the kernel.\n");
+ 	return output;
+ }
++
++void fortify_panic(const char *name)
++{
++	error("detected buffer overflow");
++}
+diff --git a/include/linux/string.h b/include/linux/string.h
+index 26b6f6a66f83..3bd429c9593a 100644
+--- a/include/linux/string.h
++++ b/include/linux/string.h
+@@ -169,4 +169,165 @@ static inline const char *kbasename(const char *path)
+ 	return tail ? tail + 1 : path;
+ }
+ 
++#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
++#define __RENAME(x) __asm__(#x)
++
++void fortify_panic(const char *name) __noreturn __cold;
++void __buffer_overflow(void) __compiletime_error("buffer overflow");
++
++#if !defined(__NO_FORTIFY) && defined(__OPTIMIZE__) && defined(CONFIG_FORTIFY_SOURCE)
++__FORTIFY_INLINE char *strcpy(char *p, const char *q)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (p_size == (size_t)-1)
++		return __builtin_strcpy(p, q);
++	if (strlcpy(p, q, p_size) >= p_size)
++		fortify_panic(__func__);
++	return p;
++}
++
++__FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __builtin_strncpy(p, q, size);
++}
++
++__FORTIFY_INLINE char *strcat(char *p, const char *q)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (p_size == (size_t)-1)
++		return __builtin_strcat(p, q);
++	if (strlcat(p, q, p_size) >= p_size)
++		fortify_panic(__func__);
++	return p;
++}
++
++__FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
++{
++	size_t p_len, copy_len;
++	size_t p_size = __builtin_object_size(p, 0);
++	if (p_size == (size_t)-1)
++		return __builtin_strncat(p, q, count);
++	p_len = __builtin_strlen(p);
++	copy_len = strnlen(q, count);
++	if (p_size < p_len + copy_len + 1)
++		fortify_panic(__func__);
++	__builtin_memcpy(p + p_len, q, copy_len);
++	p[p_len + copy_len] = '\0';
++	return p;
++}
++
++__FORTIFY_INLINE __kernel_size_t strlen(const char *p)
++{
++	__kernel_size_t ret;
++	size_t p_size = __builtin_object_size(p, 0);
++	if (p_size == (size_t)-1)
++		return __builtin_strlen(p);
++	ret = strnlen(p, p_size);
++	if (p_size <= ret)
++		fortify_panic(__func__);
++	return ret;
++}
++
++extern __kernel_size_t __real_strnlen(const char *, __kernel_size_t) __RENAME(strnlen);
++__FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	__kernel_size_t ret = __real_strnlen(p, maxlen < p_size ? maxlen : p_size);
++	if (p_size <= ret)
++		fortify_panic(__func__);
++	return ret;
++}
++
++__FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __builtin_memset(p, c, size);
++}
++
++__FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	size_t q_size = __builtin_object_size(q, 0);
++	if (__builtin_constant_p(size) && (p_size < size || q_size < size))
++		__buffer_overflow();
++	if (p_size < size || q_size < size)
++		fortify_panic(__func__);
++	return __builtin_memcpy(p, q, size);
++}
++
++__FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	size_t q_size = __builtin_object_size(q, 0);
++	if (__builtin_constant_p(size) && (p_size < size || q_size < size))
++		__buffer_overflow();
++	if (p_size < size || q_size < size)
++		fortify_panic(__func__);
++	return __builtin_memmove(p, q, size);
++}
++
++extern void *__real_memscan(void *, int, __kernel_size_t) __RENAME(memscan);
++__FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __real_memscan(p, c, size);
++}
++
++__FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	size_t q_size = __builtin_object_size(q, 0);
++	if (__builtin_constant_p(size) && (p_size < size || q_size < size))
++		__buffer_overflow();
++	if (p_size < size || q_size < size)
++		fortify_panic(__func__);
++	return __builtin_memcmp(p, q, size);
++}
++
++__FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __builtin_memchr(p, c, size);
++}
++
++void *__real_memchr_inv(const void *s, int c, size_t n) __RENAME(memchr_inv);
++__FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __real_memchr_inv(p, c, size);
++}
++
++extern void *__real_kmemdup(const void *src, size_t len, gfp_t gfp) __RENAME(kmemdup);
++__FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
++{
++	size_t p_size = __builtin_object_size(p, 0);
++	if (__builtin_constant_p(size) && p_size < size)
++		__buffer_overflow();
++	if (p_size < size)
++		fortify_panic(__func__);
++	return __real_kmemdup(p, size, gfp);
++}
++#endif
++
+ #endif /* _LINUX_STRING_H_ */
+diff --git a/lib/string.c b/lib/string.c
+index b5c9a1168d3a..ca356e537e24 100644
+--- a/lib/string.c
++++ b/lib/string.c
+@@ -19,6 +19,8 @@
+  * -  Kissed strtok() goodbye
+  */
+ 
++#define __NO_FORTIFY
++
+ #include <linux/types.h>
+ #include <linux/string.h>
+ #include <linux/ctype.h>
+@@ -952,3 +954,9 @@ char *strreplace(char *s, char old, char new)
+ 	return s;
+ }
+ EXPORT_SYMBOL(strreplace);
++
++void fortify_panic(const char *name)
++{
++	panic("detected buffer overflow in %s", name);
++}
++EXPORT_SYMBOL(fortify_panic);
+diff --git a/security/Kconfig b/security/Kconfig
+index 93027fdf47d1..0e5035d720ce 100644
+--- a/security/Kconfig
++++ b/security/Kconfig
+@@ -154,6 +154,12 @@ config HARDENED_USERCOPY_PAGESPAN
+ 	  been removed. This config is intended to be used only while
+ 	  trying to find such users.
+ 
++config FORTIFY_SOURCE
++	bool "Harden common functions against buffer overflows"
++	help
++	  Detect overflows of buffers in common functions where the compiler
++	  can determine the buffer size.
++
+ config STATIC_USERMODEHELPER
+ 	bool "Force all usermode helper calls through a single binary"
+ 	help
 -- 
-GNU powered it...
-GPL protect it...
-God blessing it...
-
-regards
-Shawn
+2.12.2
