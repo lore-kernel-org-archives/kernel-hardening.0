@@ -1,62 +1,56 @@
-Date: Thu, 4 May 2017 09:58:33 -0500
-From: "Serge E. Hallyn" <serge@hallyn.com>
-Message-ID: <20170504145832.GA28002@mail.hallyn.com>
-References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
- <1492640420-27345-3-git-send-email-tixxdz@gmail.com>
- <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
- <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
- <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
- <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
- <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
- <CAEiveUdbQcfn1xC5xWMv91vL_uR1MGTvARqw-E4GDTMUZ6t=bA@mail.gmail.com>
- <CAEiveUf4p1A1fggwibN+kJW7ruasQCmzr6=GSpTZXoyjJuz00Q@mail.gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAEiveUf4p1A1fggwibN+kJW7ruasQCmzr6=GSpTZXoyjJuz00Q@mail.gmail.com>
-Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
- autoload restriction
-To: Djalal Harouni <tixxdz@gmail.com>
-Cc: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "Serge E. Hallyn" <serge@hallyn.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
+In-Reply-To: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+References: <9df77051-ac01-bfe9-3cf7-4c2ecbcb9292@iaik.tugraz.at>
+From: Thomas Garnier <thgarnie@google.com>
+Date: Thu, 4 May 2017 08:28:52 -0700
+Message-ID: <CAJcbSZHcAi37FfFBKF4MsC3WM-RY5ar_e1pgMScb=S3+_-wqVQ@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] [RFC, PATCH] x86_64: KAISER - do not map
+ kernel in user mode
+To: Daniel Gruss <daniel.gruss@iaik.tugraz.at>
+Cc: kernel list <linux-kernel@vger.kernel.org>, Kernel Hardening <kernel-hardening@lists.openwall.com>, "clementine.maurice@iaik.tugraz.at" <clementine.maurice@iaik.tugraz.at>, "moritz.lipp@iaik.tugraz.at" <moritz.lipp@iaik.tugraz.at>, Michael Schwarz <michael.schwarz@iaik.tugraz.at>, Richard Fellner <richard.fellner@student.tugraz.at>, "Kirill A. Shutemov" <kirill.shutemov@linux.intel.com>, Ingo Molnar <mingo@kernel.org>, "anders.fogh@gdata-adan.de" <anders.fogh@gdata-adan.de>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Thu, May 04, 2017 at 03:07:49PM +0200, Djalal Harouni wrote:
-> On Sat, Apr 22, 2017 at 2:17 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
-> > On Sat, Apr 22, 2017 at 1:28 AM, Andy Lutomirski <luto@amacapital.net> wrote:
-> [...]
-> >>
-> >> My point is that all of these need some way to handle configuration
-> >> and inheritance, and I don't think that a bunch of per-task prctls is
-> >> the right way.  As just an example, saying that interactive users can
-> >> autoload modules but other users can't, or that certain systemd
-> >> services can, etc, might be nice.  Linus already complained that he
-> >> (i.e. user "torvalds" or whatever) should be able to profile the
-> >> kernel but that other uids should not be able to.
-> >
-> > Neat, maybe this could already be achieved with this interface and
-> > systemd-logind,  "ModulesAutoloadUsers=andy" in logind.conf where
-> > "andy" is the only logged-in user able to trigger and autoload kernel
-> > modules. However maybe we should not restrict too much other bits or
-> > functionality of the other users, please let me will follow up later
-> > on it.
-> >
-> >> I personally like my implicit_rights idea, and it might be interesting
-> >> to prototype it.
-> >
-> 
-> Andy following on the idea of per user settings, I'm curious did you
-> manage to make some advance on how to store the user settings ? the
-> user database format is old and not extensible, there was cgmanager or
+On Thu, May 4, 2017 at 3:02 AM, Daniel Gruss
+<daniel.gruss@iaik.tugraz.at> wrote:
+> After several recent works [1,2,3] KASLR on x86_64 was basically considered
+> dead by many researchers. We have been working on an efficient but effective
+> fix for this problem and found that not mapping the kernel space when
+> running in user mode is the solution to this problem [4] (the corresponding
+> paper [5] will be presented at ESSoS17).
+>
+> With this RFC patch we allow anybody to configure their kernel with the flag
+> CONFIG_KAISER to add our defense mechanism.
+>
+> If there are any questions we would love to answer them.
+> We also appreciate any comments!
+>
+> Cheers,
+> Daniel (+ the KAISER team from Graz University of Technology)
+>
+> [1] http://www.ieee-security.org/TC/SP2013/papers/4977a191.pdf
+> [2]
+> https://www.blackhat.com/docs/us-16/materials/us-16-Fogh-Using-Undocumented-CPU-Behaviour-To-See-Into-Kernel-Mode-And-Break-KASLR-In-The-Process.pdf
+> [3]
+> https://www.blackhat.com/docs/us-16/materials/us-16-Jang-Breaking-Kernel-Address-Space-Layout-Randomization-KASLR-With-Intel-TSX.pdf
+> [4] https://github.com/IAIK/KAISER
+> [5] https://gruss.cc/files/kaiser.pdf
+>
+>
 
-(v2 is under very very early consideration, would love to stay in the loop
-as this is considered)
+Please read the documentation on submitting patches [1] and coding style [2].
 
-> other libcgroup but for resources, and no simple thing for such
-> restrictions example: "RestrictLinuxModules=user" that will prevent
-> such users from making/loading extra Linux features/modules that are
-> not already available...
-> 
-> Thanks!
-> 
-> -- 
-> tixxdz
+I have two questions:
+
+ - How this approach prevent the hardware attacks you mentioned? You
+still have to keep a part of _text in the pagetable and an attacker
+could discover it no? (and deduce the kernel base address). You also
+need to make it clear that btb attacks are still possible.
+ - What is the perf impact?
+
+[1] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/process/submitting-patches.rst
+[2] https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/process/coding-style.rst
+
+Thanks,
+-- 
+Thomas
