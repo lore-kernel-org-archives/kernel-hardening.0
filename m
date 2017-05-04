@@ -1,78 +1,113 @@
-Date: Thu, 4 May 2017 10:23:55 -0700
-From: Greg KH <gregkh@linuxfoundation.org>
-Message-ID: <20170504172355.GA27000@kroah.com>
-References: <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
- <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
- <1493683745.2530.2.camel@redhat.com>
- <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
- <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
- <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
- <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com>
- <CABniQZNYUzDTiEnd5AzJ6rJ=VPvT_ph0RK38sPS+u=BjXVQ+Jw@mail.gmail.com>
- <20170504160356.GA16988@kroah.com>
- <CABniQZPkV7fcsneOML2hu=EKoAbesqXg=hryj8Yim2=iJM=vjg@mail.gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CABniQZPkV7fcsneOML2hu=EKoAbesqXg=hryj8Yim2=iJM=vjg@mail.gmail.com>
-Subject: Re: [kernel-hardening] It looks like there will be no more public
- versions of PaX and Grsec.
-To: Shawn <citypw@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, Daniel =?utf-8?B?Q2VnaWXFgmth?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Message-ID: <1493920184.1596.4.camel@gmail.com>
+From: Daniel Micay <danielmicay@gmail.com>
+Date: Thu, 04 May 2017 13:49:44 -0400
+In-Reply-To: <20170504154850.GE20461@leverpostej>
+References: <20170504142435.10175-1-danielmicay@gmail.com>
+	 <20170504154850.GE20461@leverpostej>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
+ functions
+To: Mark Rutland <mark.rutland@arm.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 05, 2017 at 01:12:37AM +0800, Shawn wrote:
-> Hi Greg
+On Thu, 2017-05-04 at 16:48 +0100, Mark Rutland wrote:
+> Hi,
 > 
-> On Fri, May 5, 2017 at 12:03 AM, Greg KH <gregkh@linuxfoundation.org> wrote:
-> > On Thu, May 04, 2017 at 10:11:04PM +0800, Shawn wrote:
-> >> That announcement only represented the POV from a group of ppl. From
-> >> my( and other ppl from HardenedLinux) perspective, Linux foundation is
-> >> a commercial company and very good at PR but zero integrity to us.
-> >
-> > A slight correction here please.  The LF is a non-profit organization[1]
-> > set up to promote Linux and allow companies who want to see Linux
-> > succeed, get together and do this.  The LF happens to sponsor a few
-> > kernel developers (me and Linus), but they can not tell us what to do at
-> > all.
-> >
-> Oh, that's new to me. LF is a non-profit organization. Maybe some
-> "rumors" isn't true: I thought LF hired two "sales" people in HK last
-> year? Can you confirm that?
-
-And it's always been a non-profit, that should not be a surprise.
-
-And I don't have any idea what a "sales" person at the LF would do,
-perhaps the fact that the LF is hiring people to work with local
-companies to become members?  Why not ask them what they do?
-
-> > So there is no "integrity" that the LF can, or can not, have when it
-> > comes to anyone here as the LF doesn't actually _do_ anything when it
-> > comes to kernel development (again, other than funding 2 developers
-> > directly).
-> >
-> I'm curious what's your offical relationship with Google? Cu'z you
-> have this account( gregkh@google.com) from Google:
-> https://android.googlesource.com/kernel/common.git/+/e88bb963b88d5579805b90e8d505739692095042
+> From a glance, in the arm64 vdso case, that's due to the definition of
+> vdso_start as a char giving it a single byte size.
 > 
-> But you seems still working for LF, aren't you?:
-> https://www.linuxfoundation.org/about/linux-foundation-fellows
+> We can/should probably use char[] for vdso_{start,end} on arm/arm64 as
+> we do for other linker symbols (and x86 and tile do for
+> vdso_{start,end}), i.e.
 
-What does my google account have to do with the LF?  I've had that
-account for many many years now, to help Google out with kernel security
-work, including stable kernel releases.
+Yeah, I think that's the right approach, and this also applies to
+features like -fsanitize=object-size in UBSan. I worked around it by
+bypassing the function with __builtin_memcmp as I did for the other
+cases I ran into, but they should all be fixed properly upstream.
 
-I have lots of other email addresses too, doesn't everyone?  :)
+> ---->8----
+> diff --git a/arch/arm64/kernel/vdso.c b/arch/arm64/kernel/vdso.c
+> index 41b6e31..ae35f18 100644
+> --- a/arch/arm64/kernel/vdso.c
+> +++ b/arch/arm64/kernel/vdso.c
+> @@ -37,7 +37,7 @@
+>  #include <asm/vdso.h>
+>  #include <asm/vdso_datapage.h>
+>  
+> -extern char vdso_start, vdso_end;
+> +extern char vdso_start[], vdso_end[];
+>  static unsigned long vdso_pages __ro_after_init;
+>  
+>  /*
+> @@ -125,14 +125,14 @@ static int __init vdso_init(void)
+>         struct page **vdso_pagelist;
+>         unsigned long pfn;
+>  
+> -       if (memcmp(&vdso_start, "\177ELF", 4)) {
+> +       if (memcmp(vdso_start, "\177ELF", 4)) {
+>                 pr_err("vDSO is not a valid ELF object!\n");
+>                 return -EINVAL;
+>         }
+>  
+> -       vdso_pages = (&vdso_end - &vdso_start) >> PAGE_SHIFT;
+> +       vdso_pages = (vdso_end - vdso_start) >> PAGE_SHIFT;
+>         pr_info("vdso: %ld pages (%ld code @ %p, %ld data @ %p)\n",
+> -               vdso_pages + 1, vdso_pages, &vdso_start, 1L,
+> vdso_data);
+> +               vdso_pages + 1, vdso_pages, vdso_start, 1L,
+> vdso_data);
+>  
+>         /* Allocate the vDSO pagelist, plus a page for the data. */
+>         vdso_pagelist = kcalloc(vdso_pages + 1, sizeof(struct page *),
+> @@ -145,7 +145,7 @@ static int __init vdso_init(void)
+>  
+>  
+>         /* Grab the vDSO code pages. */
+> -       pfn = sym_to_pfn(&vdso_start);
+> +       pfn = sym_to_pfn(vdso_start);
+>  
+>         for (i = 0; i < vdso_pages; i++)
+>                 vdso_pagelist[i + 1] = pfn_to_page(pfn + i);
+> ---->8----
+> 
+> With that fixed, I see we also need a fortify_panic() for the EFI
+> stub.
+> 
+> I'm not sure if the x86 EFI stub gets linked with the
+> boot/compressed/misc.c version below, and/or whether it's safe for the
+> EFI stub to call that.
+> 
+> ... with an EFI stub fortify_panic() hacked in, I can build an arm64
+> kernel
+> with this applied. It dies at some point after exiting EFI boot
+> services; i
+> don't know whether it made it out of the stub and into the kernel
+> proper.
 
-And yes, I still work for the LF.
+Could start with #define __NO_FORTIFY above the #include sections there
+instead (or -D__NO_FORTIFY as a compiler flag), which will skip
+fortifying those for now. I'm successfully using this on a non-EFI ARM64
+3.18 LTS kernel, so it should be close to working on other systems (but
+not necessarily with messy drivers). The x86 EFI workaround works.
 
-> In my very "narrow" POV( only as FLOSS supporter and security
-> consutlant), KSPP would be so much better without LF's involvement and
-> PR
+> > It isn't particularly bad, but there are likely some issues that
+> > occur
+> > during regular use at runtime (none found so far).
+> 
+> It might be worth seeing if anyone can throw syzkaller and friends at
+> this.
 
-So the funding of grsecurity developers to get features merged into
-mainline was bad?  That's a very strange viewpoint of "so much better".
+It tends to find stack buffer overflows, etc. not detected by ASan, so
+that'd be nice. Can expand coverage a bit to some heap allocations with these, but I expect slab debugging and ASan already found most of what these would uncover:
 
-good luck!
+https://github.com/thestinger/linux-hardened/commit/6efe84cdb88f73e8b8c59b59a8ea46fa4b1bdab1.patch
+https://github.com/thestinger/linux-hardened/commit/d342da362c5f852c1666dce461bc82521b6711e4.patch
 
-greg k-h
+Unfortunately, ksize means alloc_size on kmalloc is not 100% correct
+since the extra space from size class rounding falls outside of what it
+will claim to be the size of the allocation. C standard libraries with
+_FORTIFY_SOURCE seem to ignore this problem for malloc_usable_size. It
+doesn't have many uses though.
