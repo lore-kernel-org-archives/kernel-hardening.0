@@ -1,138 +1,120 @@
-Message-ID: <1494005884.5150.6.camel@gmail.com>
-From: Daniel Micay <danielmicay@gmail.com>
-Date: Fri, 05 May 2017 13:38:04 -0400
-In-Reply-To: <20170505103839.GB699@leverpostej>
-References: <20170504142435.10175-1-danielmicay@gmail.com>
-	 <20170504154850.GE20461@leverpostej> <1493920184.1596.4.camel@gmail.com>
-	 <20170504180917.GB19929@leverpostej> <20170505103839.GB699@leverpostej>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
- functions
-To: Mark Rutland <mark.rutland@arm.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
+MIME-Version: 1.0
+Sender: keescook@google.com
+In-Reply-To: <1098301241.3672962.1493880428616@mail.yahoo.com>
+References: <CAPLrYES-1WDi0TTdWG7Ds-u1URNeiahNhE9VAE4rLHMw7oYktg@mail.gmail.com>
+ <CAGXu5j+Oncz0SgEH4QYx_dhLhits9d8ixQxGwScYCGrNVfdjAQ@mail.gmail.com>
+ <CA+rthh-CO287OpGun1-zYc-V632jSHRuwp=Hm0cAnbo1waJKsw@mail.gmail.com>
+ <1493683745.2530.2.camel@redhat.com> <CABniQZPEfptcLgBtbd5_GO5n8P6SxxkJMpqTCFazM8RCB4qKZQ@mail.gmail.com>
+ <CAGXu5jKqptmWwAgsDNtTRzN-r_JYBtVoNaPbpwN+_stfY4yrQA@mail.gmail.com>
+ <CABniQZMoX6h0dQk5Xa_kwnbV5NSVpE3EDAD4+TU9CM4Hx9TjuA@mail.gmail.com>
+ <CAGXu5jKpRafmuNaGMEn_N9jrvt2zkysB0TXOWs6pfCsDhYgkeA@mail.gmail.com> <1098301241.3672962.1493880428616@mail.yahoo.com>
+From: Kees Cook <keescook@chromium.org>
+Date: Fri, 5 May 2017 12:54:24 -0700
+Message-ID: <CAGXu5jLN4_eZktfa7N1vOkmXdba4=T7E5qGa8z5aL9W9awNsrg@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: Re: [kernel-hardening] It looks like there will be no more public
+ versions of PaX and Grsec.
+To: Lionel Debroux <lionel_debroux@yahoo.fr>
+Cc: Shawn <citypw@gmail.com>, Rik van Riel <riel@redhat.com>, Mathias Krause <minipli@googlemail.com>, =?UTF-8?Q?Daniel_Cegie=C5=82ka?= <daniel.cegielka@gmail.com>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, 2017-05-05 at 11:38 +0100, Mark Rutland wrote:
-> On Thu, May 04, 2017 at 07:09:17PM +0100, Mark Rutland wrote:
-> > On Thu, May 04, 2017 at 01:49:44PM -0400, Daniel Micay wrote:
-> > > On Thu, 2017-05-04 at 16:48 +0100, Mark Rutland wrote:
-> > > > ... with an EFI stub fortify_panic() hacked in, I can build an
-> > > > arm64
-> > > > kernel with this applied. It dies at some point after exiting
-> > > > EFI
-> > > > boot services; i don't know whether it made it out of the stub
-> > > > and
-> > > > into the kernel proper.
-> > > 
-> > > Could start with #define __NO_FORTIFY above the #include sections
-> > > there
-> > > instead (or -D__NO_FORTIFY as a compiler flag), which will skip
-> > > fortifying those for now.
-> > 
-> > Neat. Given there are a few files, doing the latter for the stub is
-> > the
-> > simplest option.
-> > 
-> > > I'm successfully using this on a non-EFI ARM64 3.18 LTS kernel, so
-> > > it
-> > > should be close to working on other systems (but not necessarily
-> > > with
-> > > messy drivers). The x86 EFI workaround works.
-> > 
-> > FWIW, I've been playing atop of next-20170504, with a tonne of other
-> > debug options enabled (including KASAN_INLINE).
-> > 
-> > From a quick look with a JTAG debugger, the CPU got out of the stub
-> > and
-> > into the kernel. It looks like it's dying initialising KASAN, where
-> > the
-> > vectors appear to have been corrupted.
-> 
-> 
-> ... though it's a worring that __memcpy() is overridden. I think we
-> need
-> to be more careful with the way we instrument the string functions.
+On Wed, May 3, 2017 at 11:47 PM, Lionel Debroux <lionel_debroux@yahoo.fr> wrote:
+>> It'd be nice if I could convince you otherwise (see my reply to
+>> Mathias), but upstream hasn't "created more work" for grsecurity.
+>> [...]
+>> (since again, upstreaming doesn't increase their work)
+> Uh, do you really mean that ?
+> Because on the contrary, it's a (real) _fact_ that upstreaming
+> something directly taken from, or inspired by, the PaX/grsecurity
 
-I don't think there's any way for the fortify code to be intercepting
-__memcpy. There's a memcpy function in arch/x86/boot/compressed/string.c
-defined via __memcpy and that appears to be working.
+I think it would be noise compared to all the regular work needed when
+doing forward porting, yes. As I said in my reply to Mathias, I think
+some things make it harder, some things make it easier, and others
+don't change anything. Other stuff happening in upstream can be WAY
+more disruptive, like rewriting x86_64 entry code. I bet that was
+terrible to do a forward port after.
 
-A shot in the dark is that it might not happen if a __real_memcpy alias
-via __RENAME is used instead of __builtin_memcpy, but I'm not sure how
-or why this is breaking in the first place.
+> work _does_ increase their work, through at least three
+> well-identified mechanisms:
+> * adjusting their work to match upstream's changes. That's relatively
+> simple if the changes are pure renames, but as we know, upstream
+> changes are not always (not often, even, they'd probably say) that
+> simple - and do not always come without drawbacks on complexity or
+> protective abilities, either. spender has been posting (complaining)
+> multiple times about that, giving specific examples - which you may
+> have seen by yourself.
 
-> FWIW, with that, and the previous bits, I can boot a next-20170504
-> kernel with this applied.
-> 
-> However, I get a KASAN splat from the SLUB init code, even though
-> that's
-> deliberately not instrumented by KASAN:
-> 
-> [    0.000000]
-> ==================================================================
-> [    0.000000] BUG: KASAN: slab-out-of-bounds in
-> kmem_cache_alloc+0x2ec/0x438
-> [    0.000000] Write of size 352 at addr ffff800936802000 by task
-> swapper/0
-> [    0.000000] 
-> [    0.000000] CPU: 0 PID: 0 Comm: swapper Not tainted 4.11.0-next-
-> 20170504-00002-g760cfdb-dirty #15
-> [    0.000000] Hardware name: ARM Juno development board (r1) (DT)
-> [    0.000000] Call trace:
-> [    0.000000] [<ffff2000080949c8>] dump_backtrace+0x0/0x538
-> [    0.000000] [<ffff2000080951a0>] show_stack+0x20/0x30
-> [    0.000000] [<ffff200008c125a0>] dump_stack+0x120/0x188
-> [    0.000000] [<ffff20000857ac04>]
-> print_address_description+0x10c/0x380
-> [    0.000000] [<ffff20000857b354>] kasan_report+0x12c/0x3b8
-> [    0.000000] [<ffff200008579d54>] check_memory_region+0x144/0x1a0
-> [    0.000000] [<ffff20000857a1f4>] memset+0x2c/0x50
-> [    0.000000] [<ffff2000085730bc>] kmem_cache_alloc+0x2ec/0x438
-> [    0.000000] [<ffff20000a937528>] bootstrap+0x34/0x28c
-> [    0.000000] [<ffff20000a937804>] kmem_cache_init+0x84/0x118
-> [    0.000000] [<ffff20000a9014bc>] start_kernel+0x2f8/0x644
-> [    0.000000] [<ffff20000a9001e8>] __primary_switched+0x6c/0x74
-> [    0.000000] 
-> [    0.000000] Allocated by task 0:
-> [    0.000000] (stack is not available)
-> [    0.000000] 
-> [    0.000000] Freed by task 0:
-> [    0.000000] (stack is not available)
-> [    0.000000] 
-> [    0.000000] The buggy address belongs to the object at
-> ffff800936802000
-> [    0.000000]  which belongs to the cache kmem_cache of size 352
-> [    0.000000] The buggy address is located 0 bytes inside of
-> [    0.000000]  352-byte region [ffff800936802000, ffff800936802160)
-> [    0.000000] The buggy address belongs to the page:
-> [    0.000000] page:ffff7e0024da0080 count:1 mapcount:0
-> mapping:          (null) index:0x0 compound_mapcount: 0
-> [    0.000000] flags: 0x1fffc00000008100(slab|head)
-> [    0.000000] raw: 1fffc00000008100 0000000000000000 0000000000000000
-> 0000000180100010
-> [    0.000000] raw: dead000000000100 dead000000000200 ffff20000aa2c068
-> 0000000000000000
-> [    0.000000] page dumped because: kasan: bad access detected
-> [    0.000000] 
-> [    0.000000] Memory state around the buggy address:
-> [    0.000000]  ffff800936801f00: ff ff ff ff ff ff ff ff ff ff ff ff
-> ff ff ff ff
-> [    0.000000]  ffff800936801f80: ff ff ff ff ff ff ff ff ff ff ff ff
-> ff ff ff ff
-> [    0.000000] >ffff800936802000: fc fc fc fc fc fc fc fc fc fc fc fc
-> fc fc fc fc
-> [    0.000000]                    ^
-> [    0.000000]  ffff800936802080: fc fc fc fc fc fc fc fc fc fc fc fc
-> fc fc fc fc
-> [    0.000000]  ffff800936802100: fc fc fc fc fc fc fc fc fc fc fc fc
-> fc fc fc fc
-> [    0.000000]
-> ==================================================================
+This is what I think is covered by regular upstreaming, mentioned
+above. On the level, it looks like it's not a meaningfully different
+amount of work. Maybe I'm wrong, but you can go look at the evidence I
+linked to about how forward porting was performed in the past.
 
-I'm not sure about this either. I'd like to avoid needing !KASAN since
-these are useful when paired together for finding bugs...
+> * helping upstream perform the integration in the first place. They
+> had to spend much time helping the mainlining process of some bits.
+> See it indirectly in spender's posts questioning mainline's ability
+> to perform _sustained_ maintenance of the integrated features (even
+> if they received some minor fixes on some GCC plugins in return for
+> the integration, as you mentioned).
 
-ASan is incompatible with glibc _FORTIFY_SOURCE, but this is much
-different (no _chk functions) and it *should* just work already.
+Well, again, they get all of upstream. The hardened usercopy
+upstreaming triggered a massive uaccess rewrite that means all of the
+arch-specific code has gone away so there's one place for usercopy
+stuff. That implies both reduction in forward porting work and
+evidence of "sustained maintenance". My little typo fix patch was
+something I sent because I noticed it affected things that weren't yet
+upstream, so it felt silly not to send it since I was right there
+looking at the code.
+
+> Don't let spender's usual writing style (not necessarily more abrasive
+> than Linus', BTW) shadow the technical reasons behind his complaints,
+> some are arguably valid.
+
+Neither of their styles excuse the other, but yes, I absolutely
+understand that if I can dig through the mockery and insults, I can
+almost always find very compelling technical analysis from grsecurity.
+
+> * unapplying, one by one, the hunks mentioned earlier for improvements
+> related to (mostly) CONSTIFY, RANDSTRUCT, RAP. They've been carrying
+> these patches for years, with very little maintenance: the vast
+> majority of these hunks didn't change from one upstream version to the
+> next one. We've already discussed at length the non-technical reasons
+> why nobody picked them up.
+
+Well, again, the evidence in the recent kernel patches would indicate
+that's not how things have been dealt with.
+
+> To tell the truth, the fact that upstreaming said changes does, as a
+> matter of fact, increase their work load was the second, auxiliary
+> reason why, after several patches in 2010 and 2012, I didn't spend
+> more of my free time mainlining some of these small, scattered changes,
+> rather than on other endeavours. I find myself caring quite a bit less
+> about that second reason now that the patches have become private, but
+> the main reason of the dishearteningly expensive mainlining process
+> largely remains valid... I do understand the need for reviews in
+> general, but CONSTIFY or RANDSTRUCT-related hunks are arguably special.
+
+Just out of curiosity, what changes did you upstream and what was
+communicated to you about them being disruptive?
+
+Constify is quite special-purpose, yes. Randstruct less so (and
+linux-next now only needs a few more fix-ups, I've upstreamed the rest
+I've identified).
+
+>> And even if you still believe that, making their patches private
+>> doesn't reduce the amount of work they have to do. It just forces
+>> people to pay them.
+> Yes, that is true. Arguably, in some ways, since making their patches
+> private increases the incentive to mainline hunks thereof, it
+> _increases_ their work over some areas in the short and mid-term.
+
+I wish grsecurity had responded to my requests for guidance about how
+to make their forward-porting easier. Having that kind of work myself
+in the past, I'll just continue to try to organize things in ways that
+seems the least disruptive to me, and make suggestions to other people
+about doing the same.
+
+-Kees
+
+-- 
+Kees Cook
+Pixel Security
