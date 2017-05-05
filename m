@@ -1,66 +1,67 @@
-References: <9200d87d-33b6-2c70-0095-e974a30639fd@huawei.com>
- <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
-From: Igor Stoppa <igor.stoppa@huawei.com>
-Message-ID: <0b55343e-4305-a9f1-2b17-51c3c734aea6@huawei.com>
-Date: Fri, 5 May 2017 13:42:27 +0300
+Date: Fri, 5 May 2017 11:52:47 +0100
+From: Mark Rutland <mark.rutland@arm.com>
+Message-ID: <20170505105247.GC699@leverpostej>
+References: <20170504142435.10175-1-danielmicay@gmail.com>
+ <20170504154850.GE20461@leverpostej>
+ <1493920184.1596.4.camel@gmail.com>
+ <20170504180917.GB19929@leverpostej>
+ <20170505103839.GB699@leverpostej>
 MIME-Version: 1.0
-In-Reply-To: <a445774f-a307-25aa-d44e-c523a7a42da6@redhat.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Subject: [kernel-hardening] Re: RFC v2: post-init-read-only protection for data allocated
- dynamically
-To: Laura Abbott <labbott@redhat.com>, Michal Hocko <mhocko@kernel.org>
-Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170505103839.GB699@leverpostej>
+Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
+ functions
+To: Daniel Micay <danielmicay@gmail.com>
+Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On 04/05/17 19:49, Laura Abbott wrote:
-> [adding kernel-hardening since I think there would be interest]
+On Fri, May 05, 2017 at 11:38:39AM +0100, Mark Rutland wrote:
+> On Thu, May 04, 2017 at 07:09:17PM +0100, Mark Rutland wrote:
+> From a walk up the call chain, I saw mm/kasan/kasan.c's memcpy was being
+> called recursively. Somehow the fortified memcpy() instrumentation
+> results in kasan's memcpy() calling itself rather than __memcpy().
+> 
+> The resulting stack overflow ends up clobbering the vectors (adn
+> everythigg else) as this is happening early at boot when everything is
+> mapepd RW.
+> 
+> That can be avoided with:
+> 
+> ---->8----
+> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
+> index f742596..b5327f5 100644
+> --- a/drivers/firmware/efi/libstub/Makefile
+> +++ b/drivers/firmware/efi/libstub/Makefile
+> @@ -18,7 +18,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)  += -I$(srctree)/scripts/dtc/libfdt
+>  
+>  KBUILD_CFLAGS                  := $(cflags-y) -DDISABLE_BRANCH_PROFILING \
+>                                    $(call cc-option,-ffreestanding) \
+> -                                  $(call cc-option,-fno-stack-protector)
+> +                                  $(call cc-option,-fno-stack-protector) \
+> +                                  -D__NO_FORTIFY
+>  
+>  GCOV_PROFILE                   := n
+>  KASAN_SANITIZE                 := n
+> ---->8----
 
-thank you, I overlooked this
+Whoops; wrong diff. That should have been:
 
+---->8----
+diff --git a/mm/kasan/Makefile b/mm/kasan/Makefile
+index 2976a9e..747423b 100644
+--- a/mm/kasan/Makefile
++++ b/mm/kasan/Makefile
+@@ -5,6 +5,7 @@ KCOV_INSTRUMENT := n
+ CFLAGS_REMOVE_kasan.o = -pg
+ # Function splitter causes unnecessary splits in __asan_load1/__asan_store1
+ # see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63533
+-CFLAGS_kasan.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector)
++CFLAGS_kasan.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector) \
++                 -D__NO_FORTIFY
+ 
+ obj-y := kasan.o report.o kasan_init.o quarantine.o
+---->8----
 
-> BPF takes the approach of calling set_memory_ro to mark regions as
-> read only. I'm certainly over simplifying but it sounds like this
-> is mostly a mechanism to have this happen mostly automatically.
-> Can you provide any more details about tradeoffs of the two approaches?
-
-I am not sure I understand the question ...
-For what I can understand, the bpf is marking as read only something
-that spans across various pages, which is fine.
-The payload to be protected is already organized in such pages.
-
-But in the case I have in mind, I have various, heterogeneous chunks of
-data, coming from various subsystems, not necessarily page aligned.
-And, even if they were page aligned, most likely they would be far
-smaller than a page, even a 4k page.
-
-The first problem I see, is how to compact them into pages, ensuring
-that no rwdata manages to infiltrate the range.
-
-The actual mechanism for marking pages as read only is not relevant at
-this point, if I understand your question correctly, since set_memory_ro
-is walking the pages it receives as parameter.
-
-> arm and arm64 have the added complexity of using larger
-> page sizes on the linear map so dynamic mapping/unmapping generally
-> doesn't work. 
-
-Do you mean that a page could be 16MB and therefore it would not be
-possible to get a smaller chunk?
-
-> arm64 supports DEBUG_PAGEALLOC by mapping with only
-> pages but this is generally only wanted as a debug mechanism.
-> I don't know if you've given this any thought at all.
-
-Since the beginning I have thought about this feature as an opt-in
-feature. I am aware that it can have drawbacks, but I think it would be
-valuable as debugging tool even where it's not feasible to keep it
-always-on.
-
-OTOH on certain systems it can be sufficiently appealing to be kept on,
-even if it eats up some more memory.
-
-If this doesn't answer your question, could you please detail it more?
-
----
-thanks, igor
+Thanks,
+Mark.
