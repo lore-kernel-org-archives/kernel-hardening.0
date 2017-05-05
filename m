@@ -1,67 +1,63 @@
-Date: Fri, 5 May 2017 11:52:47 +0100
-From: Mark Rutland <mark.rutland@arm.com>
-Message-ID: <20170505105247.GC699@leverpostej>
-References: <20170504142435.10175-1-danielmicay@gmail.com>
- <20170504154850.GE20461@leverpostej>
- <1493920184.1596.4.camel@gmail.com>
- <20170504180917.GB19929@leverpostej>
- <20170505103839.GB699@leverpostej>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170505103839.GB699@leverpostej>
-Subject: Re: [kernel-hardening] [PATCH] add the option of fortified string.h
- functions
-To: Daniel Micay <danielmicay@gmail.com>
-Cc: Kees Cook <keescook@chromium.org>, kernel-hardening@lists.openwall.com, ard.biesheuvel@linaro.org, matt@codeblueprint.co.uk
+In-Reply-To: <20170504145832.GA28002@mail.hallyn.com>
+References: <1492640420-27345-1-git-send-email-tixxdz@gmail.com>
+ <1492640420-27345-3-git-send-email-tixxdz@gmail.com> <CALCETrXFp-apnfRPg9qx6E7g3KDU8DanBW1pMUnA1zShrB5xKg@mail.gmail.com>
+ <CAGXu5jJ5dm8yJJ34tEyOP78OxUr2awXmNhm6RaVP8jE4q+L5Ng@mail.gmail.com>
+ <CALCETrUueOx1tqj+Ru93KGpy2HHR-A_GQ6DrAppiomkPTtX7Lw@mail.gmail.com>
+ <CAGXu5jJBp6VHvDP9182hJgvzS2sBUbUFpmZZ+196K2FcEHUxzw@mail.gmail.com>
+ <CALCETrVZ2KH4s2uGW2J3zUQ8RNsrq=N7pJP=YDqd=+cp6fJW=g@mail.gmail.com>
+ <CAEiveUdbQcfn1xC5xWMv91vL_uR1MGTvARqw-E4GDTMUZ6t=bA@mail.gmail.com>
+ <CAEiveUf4p1A1fggwibN+kJW7ruasQCmzr6=GSpTZXoyjJuz00Q@mail.gmail.com> <20170504145832.GA28002@mail.hallyn.com>
+From: Djalal Harouni <tixxdz@gmail.com>
+Date: Fri, 5 May 2017 15:06:59 +0200
+Message-ID: <CAEiveUfhnUGz19UzeM9h3Q_6pCWXsN1Q89uDjCFLc9U94rtjUA@mail.gmail.com>
+Content-Type: text/plain; charset=UTF-8
+Subject: [kernel-hardening] Re: [PATCH v3 2/2] modules:capabilities: add a per-task modules
+ autoload restriction
+To: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Andy Lutomirski <luto@amacapital.net>, Kees Cook <keescook@chromium.org>, Andy Lutomirski <luto@kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, Andrew Morton <akpm@linux-foundation.org>, "kernel-hardening@lists.openwall.com" <kernel-hardening@lists.openwall.com>, LSM List <linux-security-module@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, Dongsu Park <dpark@posteo.net>, Casey Schaufler <casey@schaufler-ca.com>, James Morris <james.l.morris@oracle.com>, Paul Moore <paul@paul-moore.com>, Tetsuo Handa <penguin-kernel@i-love.sakura.ne.jp>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Jonathan Corbet <corbet@lwn.net>, Jessica Yu <jeyu@redhat.com>, Rusty Russell <rusty@rustcorp.com.au>, Arnaldo Carvalho de Melo <acme@redhat.com>, Mauro Carvalho Chehab <mchehab@kernel.org>, Ingo Molnar <mingo@kernel.org>, belakhdar abdeldjalil <zendyani@gmail.com>, Peter Zijlstra <peterz@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <kernel-hardening.lists.openwall.com>
 
-On Fri, May 05, 2017 at 11:38:39AM +0100, Mark Rutland wrote:
-> On Thu, May 04, 2017 at 07:09:17PM +0100, Mark Rutland wrote:
-> From a walk up the call chain, I saw mm/kasan/kasan.c's memcpy was being
-> called recursively. Somehow the fortified memcpy() instrumentation
-> results in kasan's memcpy() calling itself rather than __memcpy().
-> 
-> The resulting stack overflow ends up clobbering the vectors (adn
-> everythigg else) as this is happening early at boot when everything is
-> mapepd RW.
-> 
-> That can be avoided with:
-> 
-> ---->8----
-> diff --git a/drivers/firmware/efi/libstub/Makefile b/drivers/firmware/efi/libstub/Makefile
-> index f742596..b5327f5 100644
-> --- a/drivers/firmware/efi/libstub/Makefile
-> +++ b/drivers/firmware/efi/libstub/Makefile
-> @@ -18,7 +18,8 @@ cflags-$(CONFIG_EFI_ARMSTUB)  += -I$(srctree)/scripts/dtc/libfdt
->  
->  KBUILD_CFLAGS                  := $(cflags-y) -DDISABLE_BRANCH_PROFILING \
->                                    $(call cc-option,-ffreestanding) \
-> -                                  $(call cc-option,-fno-stack-protector)
-> +                                  $(call cc-option,-fno-stack-protector) \
-> +                                  -D__NO_FORTIFY
->  
->  GCOV_PROFILE                   := n
->  KASAN_SANITIZE                 := n
-> ---->8----
+Hi Serge,
 
-Whoops; wrong diff. That should have been:
+On Thu, May 4, 2017 at 4:58 PM, Serge E. Hallyn <serge@hallyn.com> wrote:
+> On Thu, May 04, 2017 at 03:07:49PM +0200, Djalal Harouni wrote:
+>> On Sat, Apr 22, 2017 at 2:17 PM, Djalal Harouni <tixxdz@gmail.com> wrote:
+>> > On Sat, Apr 22, 2017 at 1:28 AM, Andy Lutomirski <luto@amacapital.net> wrote:
+>> [...]
+>> >>
+>> >> My point is that all of these need some way to handle configuration
+>> >> and inheritance, and I don't think that a bunch of per-task prctls is
+>> >> the right way.  As just an example, saying that interactive users can
+>> >> autoload modules but other users can't, or that certain systemd
+>> >> services can, etc, might be nice.  Linus already complained that he
+>> >> (i.e. user "torvalds" or whatever) should be able to profile the
+>> >> kernel but that other uids should not be able to.
+>> >
+>> > Neat, maybe this could already be achieved with this interface and
+>> > systemd-logind,  "ModulesAutoloadUsers=andy" in logind.conf where
+>> > "andy" is the only logged-in user able to trigger and autoload kernel
+>> > modules. However maybe we should not restrict too much other bits or
+>> > functionality of the other users, please let me will follow up later
+>> > on it.
+>> >
+>> >> I personally like my implicit_rights idea, and it might be interesting
+>> >> to prototype it.
+>> >
+>>
+>> Andy following on the idea of per user settings, I'm curious did you
+>> manage to make some advance on how to store the user settings ? the
+>> user database format is old and not extensible, there was cgmanager or
+>
+> (v2 is under very very early consideration, would love to stay in the loop
+> as this is considered)
+>
 
----->8----
-diff --git a/mm/kasan/Makefile b/mm/kasan/Makefile
-index 2976a9e..747423b 100644
---- a/mm/kasan/Makefile
-+++ b/mm/kasan/Makefile
-@@ -5,6 +5,7 @@ KCOV_INSTRUMENT := n
- CFLAGS_REMOVE_kasan.o = -pg
- # Function splitter causes unnecessary splits in __asan_load1/__asan_store1
- # see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63533
--CFLAGS_kasan.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector)
-+CFLAGS_kasan.o := $(call cc-option, -fno-conserve-stack -fno-stack-protector) \
-+                 -D__NO_FORTIFY
- 
- obj-y := kasan.o report.o kasan_init.o quarantine.o
----->8----
+For user database I'm not aware of any code, but it seems that if the
+database or settings are adapted to today use cases then
+systemd-logind may use them. Yes if there is something I'll Cc'you.
 
-Thanks,
-Mark.
+Thanks!
+
+-- 
+tixxdz
